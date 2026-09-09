@@ -54,6 +54,17 @@ Create `.env.local` (never committed) with:
 More variables arrive with the contract deployment and the relayer; each is documented here when the
 code that reads it lands.
 
+## Contract
+
+`contracts/GiftEscrow.sol` holds every gift: creation and funding in one transaction through the funder's
+EIP-3009 authorization (its nonce is derived from the gift terms), claim by the recipient's account, daily
+check-ins attested by the evidence signer, draining of missed days after a one-day catch-up window,
+withdrawal of what is earned, refund of what is not. Guards come from Lock-in's escrow: attestation
+freshness, clock skew, nullifiers, identity binding, pauses, typed errors. `forge test --network monad`
+runs the unit suite, the accounting fuzz and the typehash parity pin; with `MONAD_RPC_URL` set it also
+runs the mainnet fork test of the real AUSD funding path. `pnpm deploy:gift-escrow` deploys and
+`pnpm check:gift-escrow` verifies a deployment against the expected configuration.
+
 ## Verification path
 
 Every Reclaim proof is verified server side (`app/api/duolingo/verify`) with the TEE attestation

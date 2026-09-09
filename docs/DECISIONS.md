@@ -175,6 +175,30 @@ party platform or API, `[U]` not verified).
   4.9.6 as in Lock-in, for the verifiers and for `GiftEscrow` alike. The plan's mention of 5.6.1 is
   withdrawn.
 
+## D18, 10 Sep 2026, how progress turns into days (GiftEscrow accrual rule)
+
+- Statement: the spec gives `creditedDays = min(elapsed, floor(deltaXp / dailyTarget))` without saying
+  what happens to the leftover metric. `GiftEscrow.checkIn` anchors the metric on the last CREDITED
+  point: when the metric limits the credit, the anchor moves by exactly `credit * dailyTarget` and the
+  remainder (always below one day) carries to the next check-in; when the open days limit the credit
+  (a binge), the anchor jumps to the observed metric and the excess is discarded, never banked for
+  future days. A check-in that credits nothing is refused (`InsufficientProgress`), so it costs no
+  nullifier and no gas. The window opens the UTC day after the baseline; `startsAt` is therefore set
+  at the baseline, not at creation.
+- Source: design decision while writing the contract, 10 Sep 2026; both branches are unit-tested and
+  the fuzz test checks that every unit of a gift ends with the recipient or the refund destination.
+- Consequence: partial lessons add up across days, a marathon day cannot buy a week off, and the
+  keeper cadence never decides what counts as missed.
+
+## D19, 10 Sep 2026, a salt in the gift terms
+
+- Statement: the funding nonce is derived from the terms (D12). Without a per-gift salt, a funder
+  repeating an identical gift (same contact, amount, target, duration) would sign an EIP-3009
+  authorization AUSD refuses as already used.
+- Source: unit test `testTwoGiftsWithIdenticalTermsNeedDistinctSalts`, 10 Sep 2026.
+- Consequence: `GiftParams.salt` (random, chosen by the funder's app) is part of the hashed terms and of
+  the funding nonce.
+
 ## D17, 10 Sep 2026, Serwist through its Turbopack integration
 
 - Statement: Next 16 builds with Turbopack by default, and Serwist's webpack plugin (the template's

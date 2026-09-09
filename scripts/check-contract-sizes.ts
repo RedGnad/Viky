@@ -6,6 +6,7 @@ import { readFile } from "node:fs/promises";
 const MONAD_MAX_RUNTIME_BYTES = 128 * 1024;
 
 const productionArtifacts = [
+  ["GiftEscrow", "out/GiftEscrow.sol/GiftEscrow.json"],
   ["VikyReclaimVerifier", "out/VikyReclaimVerifier.sol/VikyReclaimVerifier.json"],
   ["VikyStravaClaimParser", "out/VikyStravaReclaimVerifier.sol/VikyStravaClaimParser.json"],
   ["VikyStravaReclaimVerifier", "out/VikyStravaReclaimVerifier.sol/VikyStravaReclaimVerifier.json"],

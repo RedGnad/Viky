@@ -19,8 +19,10 @@
     "test": "pnpm test:policy && pnpm test:solidity",
     "test:policy": "tsx --test test/*.test.ts",
     "test:solidity": "forge test --network monad -vvv",
-    "build:contracts": "forge build",
-    "check:contract-sizes": "tsx scripts/check-contract-sizes.ts"
+    "build:contracts": "forge build && tsx scripts/export-gift-abi.ts",
+    "check:contract-sizes": "tsx scripts/check-contract-sizes.ts",
+    "deploy:gift-escrow": "tsx scripts/deploy-gift-escrow.ts",
+    "check:gift-escrow": "tsx scripts/check-gift-escrow.ts"
   },
   "dependencies": {
     "@category-labs/mera": "0.2.0",
