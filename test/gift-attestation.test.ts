@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { keccak256, recoverTypedDataAddress, stringToHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { contactHash } from "../src/contact-hash";
 import {
   CHECK_IN_TYPEHASH,
   CHECK_IN_TYPES,
@@ -15,7 +16,10 @@ import {
   CLAIM_TYPES,
   DUOLINGO_GOAL_PROVIDER_ID,
   evidenceSignerAddress,
+  FUND_NONCE_TAG,
+  fundingNonce,
   GIFT_DOMAIN,
+  hashGiftParams,
   identityPseudonym,
   serialiseMessage,
   signCheckIn,
@@ -26,21 +30,38 @@ import {
 const CONTRACT = "0x00000000000000000000000000000000000000E5" as const;
 const RECIPIENT = "0x79C53151315FaD9163f75a65A8Bd4D04a10e1e45" as const;
 
-// The exact hex the contract must produce. Pinned here first; test/GiftTypehashParity.t.sol asserts the same.
-const PIN_CHECK_IN_TH = keccak256(
-  stringToHex(
-    "CheckIn(uint256 giftId,address recipient,bytes32 identityHash,bytes32 providerId,uint64 metricValue,uint64 observedAt,bytes32 nullifier,uint64 issuedAt,uint64 expiresAt)",
-  ),
-);
-const PIN_CLAIM_TH = keccak256(stringToHex("Claim(uint256 giftId,address recipient,bytes32 contactHash,uint64 issuedAt,uint64 expiresAt)"));
-const PIN_WITHDRAW_TH = keccak256(stringToHex("Withdraw(uint256 giftId,address to,uint256 amount,uint256 nonce,uint64 deadline)"));
+// The exact hex the contract produces (see test/GiftTypehashParity.t.sol, which pins the same values).
+const PIN_CHECK_IN_TH = "0x9d466a7ca50fa84a8a3809bebe71bfcb6d60214fb0f8f371d9920593436a90bd";
+const PIN_CLAIM_TH = "0x2cc2ef1342b642e75667cc06ec45e6fcd050584c714b83316da1360cdfa9a44f";
+const PIN_WITHDRAW_TH = "0x934fbda9a8be236a524d3f7d43c9cc2c829b9a8ab1c9e54726f96800fa14137e";
+const PIN_FUND_NONCE_TAG = "0x778db84091eb415c574d04413372a2e9ce3882b8dbf9b23ad62e7ceef3f52408";
+const PIN_CONTACT = "0x051ba1efa40687e649c5a3403f00a0031510d61c8355521acc2eac285f4a7a7c";
+const PIN_PARAMS_HASH = "0x32fa16f869d1afa32edc136fee91a503f143f3b6b1122b9774c47d4803d85bf2";
+const PIN_FUNDING_NONCE = "0x1f43cae02ca8df344a572307cad4a8c47cb1ec23a3c234d96eacf201e86ec5ee";
 
-test("the typehashes are the keccak of the exact type strings", () => {
+test("the typehashes and the funding nonce match the Solidity pin", () => {
   assert.equal(CHECK_IN_TYPEHASH, PIN_CHECK_IN_TH);
   assert.equal(CLAIM_TYPEHASH, PIN_CLAIM_TH);
   assert.equal(WITHDRAW_TYPEHASH, PIN_WITHDRAW_TH);
+  assert.equal(FUND_NONCE_TAG, PIN_FUND_NONCE_TAG);
   assert.equal(DUOLINGO_GOAL_PROVIDER_ID, keccak256(stringToHex("cdf8cb3b-2976-4413-ab2d-693ae5028380@1.0.8")));
   assert.deepEqual(GIFT_DOMAIN, { name: "Viky Gift", version: "1", chainId: 143 });
+
+  assert.equal(contactHash("ama@example.com"), PIN_CONTACT);
+  const params = {
+    funder: "0x00000000000000000000000000000000000A11cE",
+    refundTo: "0x00000000000000000000000000000000000A11cE",
+    recipientContactHash: PIN_CONTACT,
+    goalType: 1,
+    dailyTarget: 10,
+    durationDays: 7,
+    amount: 5_000_000n,
+    salt: "0x0000000000000000000000000000000000000000000000000000000000000001",
+  } as const;
+  assert.equal(hashGiftParams(params), PIN_PARAMS_HASH);
+  assert.equal(fundingNonce(params), PIN_FUNDING_NONCE);
+  assert.notEqual(fundingNonce({ ...params, amount: 5_000_001n }), PIN_FUNDING_NONCE, "the nonce binds the terms");
+  assert.notEqual(fundingNonce({ ...params, salt: `0x${"02".padStart(64, "0")}` }), PIN_FUNDING_NONCE, "the salt separates twins");
 });
 
 test("a signed check-in recovers to the evidence signer, and a tampered value does not", async () => {

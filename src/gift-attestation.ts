@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { keccak256, stringToHex, type Hex } from "viem";
+import { encodeAbiParameters, keccak256, parseAbiParameters, stringToHex, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { DUOLINGO_PROVIDER_KEY } from "./duolingo-proof-policy";
 
@@ -69,6 +69,42 @@ export const WITHDRAW_TYPEHASH = keccak256(
 
 /** Attestations are accepted for ten minutes (the contract's MAX_ATTESTATION_AGE). */
 export const ATTESTATION_TTL_SECONDS = 10 * 60;
+
+/** The funder's EIP-3009 nonce is derived from the gift terms: one signature pays and consents (D12). */
+export const FUND_NONCE_TAG = keccak256(stringToHex("viky.fund.v1"));
+
+export type GiftParams = {
+  funder: Hex;
+  refundTo: Hex;
+  recipientContactHash: Hex;
+  goalType: number;
+  dailyTarget: number;
+  durationDays: number;
+  amount: bigint;
+  /** Random per gift, so identical terms still get distinct funding nonces. */
+  salt: Hex;
+};
+
+/** `GiftEscrow.hashGiftParams`, byte for byte. */
+export function hashGiftParams(p: GiftParams): Hex {
+  return keccak256(
+    encodeAbiParameters(parseAbiParameters("address, address, bytes32, uint8, uint32, uint32, uint256, bytes32"), [
+      p.funder,
+      p.refundTo,
+      p.recipientContactHash,
+      p.goalType,
+      p.dailyTarget,
+      p.durationDays,
+      p.amount,
+      p.salt,
+    ]),
+  );
+}
+
+/** `GiftEscrow.fundingNonce`, the nonce the funder signs in `ReceiveWithAuthorization`. */
+export function fundingNonce(p: GiftParams): Hex {
+  return keccak256(encodeAbiParameters(parseAbiParameters("bytes32, bytes32"), [FUND_NONCE_TAG, hashGiftParams(p)]));
+}
 
 /** Goal types of the escrow registry. A new service is a new entry, never a new contract. */
 export const GOAL_TYPE_DUOLINGO_XP = 1;
