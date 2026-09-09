@@ -18,12 +18,17 @@
     "typecheck": "tsc --noEmit",
     "test": "pnpm test:policy && pnpm test:solidity",
     "test:policy": "tsx --test test/*.test.ts",
-    "test:solidity": "forge test --network monad -vvv"
+    "test:solidity": "forge test --network monad -vvv",
+    "build:contracts": "forge build",
+    "check:contract-sizes": "tsx scripts/check-contract-sizes.ts"
   },
   "dependencies": {
     "@category-labs/mera": "0.2.0",
+    "@neondatabase/serverless": "1.1.0",
+    "@reclaimprotocol/js-sdk": "5.8.2",
     "@scure/bip32": "2.4.0",
     "@scure/bip39": "2.4.0",
+    "dotenv": "17.4.2",
     "next": "16.3.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -31,6 +36,10 @@
     "web-push": "3.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@openzeppelin/contracts": "4.9.6",
+    "@openzeppelin/contracts-upgradeable": "4.9.6",
+    "@reclaimprotocol/solidity-sdk": "github:reclaimprotocol/reclaim-solidity-sdk#3326a4e4b7d747b3f06d027a7c40ec8612bd0b5a",
     "@serwist/turbopack": "9.5.12",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "22.20.2",

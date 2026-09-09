@@ -1,0 +1,20 @@
+[profile.default]
+src = "contracts"
+test = "test"
+script = "script"
+out = "out"
+libs = ["node_modules", "lib"]
+auto_detect_solc = true
+# Official Foundry 1.8+: Monad gas model, opcode pricing, precompiles and the 128 KiB contract limit.
+network = "monad"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+code_size_limit = 131072
+# Real captured proofs bind a personal account to a personal Duolingo or Strava profile, so they are NOT
+# committed. They live in a gitignored private directory; the real-proof tests skip when it is absent, and the
+# synthetic suites keep the grammar covered in public CI.
+fs_permissions = [{ access = "read", path = "./private-fixtures" }]
+
+[rpc_endpoints]
+monad = "${MONAD_RPC_URL}"
