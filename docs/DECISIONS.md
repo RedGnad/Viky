@@ -164,3 +164,23 @@ party platform or API, `[U]` not verified).
 - Source: owner's amendment, 10 Sep 2026.
 - Consequence: `LockInStravaReclaimVerifier.sol` and its real-proof tests are ported at the same
   rank as Duolingo. Order after the fiat chain: on-chain conditions, GitHub contributions, Strava.
+
+## D16, 10 Sep 2026, OpenZeppelin stays at 4.9.6
+
+- Statement: the pinned Reclaim Solidity SDK (`reclaimprotocol/reclaim-solidity-sdk@3326a4e`)
+  imports `@openzeppelin/contracts/utils/cryptography/ECDSA.sol` and the 4.x upgradeable contracts,
+  and Foundry resolves one `@openzeppelin/contracts/` remapping per project.
+- Source [O]: the SDK's imports and `package.json` at the pinned commit; Lock-in's `remappings.txt`.
+- Consequence: `@openzeppelin/contracts` and `@openzeppelin/contracts-upgradeable` are pinned at
+  4.9.6 as in Lock-in, for the verifiers and for `GiftEscrow` alike. The plan's mention of 5.6.1 is
+  withdrawn.
+
+## D17, 10 Sep 2026, Serwist through its Turbopack integration
+
+- Statement: Next 16 builds with Turbopack by default, and Serwist's webpack plugin (the template's
+  `@serwist/next` setup) has a separate Turbopack quick guide: `@serwist/turbopack`, a route
+  `app/serwist/[path]/route.ts` that bundles the worker with esbuild, and a `SerwistProvider`.
+- Source [O]: `serwist.pages.dev/docs/next/turbo`, npm `@serwist/turbopack@9.5.12`.
+- Consequence: the service worker is served from `/serwist/sw.js`, precached entries are injected at
+  build time (20 entries on the first build), and the offline fallback `/~offline` is registered under a
+  revision that changes with every deployment.
