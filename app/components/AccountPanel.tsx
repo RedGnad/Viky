@@ -1,0 +1,76 @@
+"use client";
+import { useState } from "react";
+import { useAccount } from "@/src/account/provider";
+
+// The only account screen of the skeleton: create with Face ID or fingerprint, or sign in.
+// Consumer words only: no wallet, no key, no chain.
+export function AccountPanel() {
+  const { address, hasCredential, status, error, createAccount, signIn, signOut, clearError } = useAccount();
+  const [displayName, setDisplayName] = useState("");
+  const busy = status === "busy";
+
+  if (address) {
+    return (
+      <section className="space-y-4 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+        <p className="font-medium">You are signed in.</p>
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
+          Your account is protected by your passkey. Nothing to remember, nothing to write down.
+        </p>
+        <button type="button" onClick={signOut} className="rounded-lg border px-4 py-2 text-sm">
+          Sign out
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-4 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+      <form
+        className="space-y-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void createAccount(displayName);
+        }}
+      >
+        <label className="block text-sm font-medium" htmlFor="display-name">
+          Your first name
+        </label>
+        <input
+          id="display-name"
+          name="displayName"
+          autoComplete="given-name"
+          value={displayName}
+          onChange={(event) => {
+            setDisplayName(event.target.value);
+            if (error) clearError();
+          }}
+          className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700"
+          placeholder="Ama"
+          disabled={busy}
+        />
+        <button
+          type="submit"
+          disabled={busy || displayName.trim().length === 0}
+          className="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-50"
+        >
+          {busy ? "One moment" : "Create my account with Face ID or fingerprint"}
+        </button>
+      </form>
+
+      <button
+        type="button"
+        onClick={() => void signIn()}
+        disabled={busy}
+        className="w-full rounded-lg border px-4 py-2 text-sm disabled:opacity-50"
+      >
+        {hasCredential ? "Sign in" : "I already have an account"}
+      </button>
+
+      {error ? (
+        <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+          {error.guidance}
+        </p>
+      ) : null}
+    </section>
+  );
+}
