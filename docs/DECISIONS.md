@@ -208,3 +208,20 @@ party platform or API, `[U]` not verified).
 - Consequence: the service worker is served from `/serwist/sw.js`, precached entries are injected at
   build time (20 entries on the first build), and the offline fallback `/~offline` is registered under a
   revision that changes with every deployment.
+
+## D20, 10 Sep 2026, Mercuryo minimums decide the amounts of the first chain
+
+- Statement: Mercuryo's public API gives, for EUR, a buy minimum of 25 EUR and a maximum of 15,000 EUR
+  (card, Google Pay, Apple Pay), with a fee of 0.95 EUR on 25 EUR (about 3.8 %). On the sell side
+  (MON to EUR) the quote endpoint refuses amounts below about 150 MON (about 3 EUR gross at 0.0202
+  EUR per MON) and charges a flat 3.00 EUR up to about 100 EUR (3.84 EUR on 100.87 EUR). The gift
+  contract itself accepts 1.00 AUSD.
+- Source [P]: `api.mercuryo.io/v1.6/lib/currencies` (`fiat_payment_methods.EUR.limits`), and
+  `api.mercuryo.io/v1.6/public/convert` probes for buy (0.1 to 1,000 EUR) and sell (100 to 5,000
+  MON), 10 Sep 2026.
+- Consequence: the first chain cannot be tested with 1 EUR. Leg 1 buys the 25 EUR minimum; the gift
+  is $20.00 over 7 days (about $2.86 per day) so that several credited days sold together exceed the
+  3 EUR flat fee and land a visible amount on the bank account; the remaining AUSD stays in the
+  funder's account for a second gift. A single day of a small gift is below the sell minimum: the
+  exit leg is run on every credited day so far, not on one day. The spec's "small amounts" are
+  bounded from below by the on-ramp, not by the contract.

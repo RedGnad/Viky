@@ -26,14 +26,14 @@ record; the fields are filled in as the chain runs.
 
 | # | leg | who | what to record | result |
 |---|---|---|---|---|
-| 1 | Mercuryo Buy, card to MON on Monad, destination = the funder's account | user | order id, EUR paid, MON received, fee, time to arrival, KYC steps | |
+| 1 | Mercuryo Buy, card to MON on Monad, destination = the funder's account; 25 EUR, the EUR minimum measured on 10 Sep 2026 (D20) | user | order id, EUR paid, MON received, fee, time to arrival, KYC steps | |
 | 2 | Swap all MON to AUSD through Kuru Flow, from the funder's account (`/dev/fund`) | user taps, agent watches | tx hash, MON in, AUSD out, slippage, gas used vs limit | |
-| 3 | `createGift` with the funder's single EIP-3009 signature (`/dev/fund`) | user taps | tx hash, gift id, amount, daily target, duration, gas used vs limit, seconds to "Funded" | |
+| 3 | `createGift` with the funder's single EIP-3009 signature (`/dev/fund`); $20.00 over 7 days at 10 XP per day, so that the exit leg can sell more than Mercuryo's 3 EUR flat fee (D20) | user taps | tx hash, gift id, amount, daily target, duration, gas used vs limit, seconds to "Funded" | |
 | 4 | Recipient: passkey on a second account, `/g/<id>?t=…` | user | seconds from link tap to "is in your name", provider used (iCloud Keychain, Google Password Manager) | |
 | 5 | `claim` through the link | user taps | tx hash, gas used | |
 | 6 | Baseline check-in through Reclaim (`portal`) | user signs in to Duolingo | session id, seconds in the verification tab, TEE attested (yes/no), tx hash | |
 | 7 | Next UTC day: a lesson, a check-in | user | XP before and after, `CheckInAccepted` tx hash, credited days | |
-| 8 | `withdrawEarnedWithIntent` of one day | user taps | tx hash, AUSD in the recipient's account | |
+| 8 | `withdrawEarnedWithIntent` of every credited day so far (one day is below the sell minimum, D20) | user taps | tx hash, AUSD in the recipient's account | |
 | 9 | Exit: 0.05 MON top-up, approve, swap AUSD to MON (`/dev/exit`) | user taps | three tx hashes, MON out | |
 | 10 | Mercuryo Sell, MON to EUR (SEPA) | user | order id, EUR received, fee, time; or the refusal (region, minimum, account) verbatim | |
 | 11 | One day skipped on purpose; after its catch-up window, `pnpm keeper` drains it | agent | `DaysDrained` tx hash | |
