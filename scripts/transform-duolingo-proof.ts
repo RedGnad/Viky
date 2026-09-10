@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../src/load-env";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { type Proof } from "@reclaimprotocol/js-sdk";

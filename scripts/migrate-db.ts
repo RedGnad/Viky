@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../src/load-env";
 import { ensureGiftSchema } from "../src/gift-store";
 import { ensureProofSessionSchema } from "../src/proof-session-store";
 

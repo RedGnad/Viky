@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../../src/load-env";
 import { createPublicClient, formatEther, getAddress, http, isAddress, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { AUSD_DOMAIN } from "../../src/ausd-authorization";

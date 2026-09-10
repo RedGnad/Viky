@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../src/load-env";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fetchStatusUrl, ReclaimProofRequest, type Proof } from "@reclaimprotocol/js-sdk";
