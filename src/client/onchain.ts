@@ -62,3 +62,38 @@ export async function approveAusd(account: LocalAccount, spender: Hex, amount: b
   const data = encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [spender, amount] });
   return (await sendWithExplicitGas(account, { to: AUSD_ADDRESS, data })).hash;
 }
+
+export async function transferAusd(account: LocalAccount, to: Hex, amount: bigint): Promise<Hash> {
+  const data = encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [to, amount] });
+  return (await sendWithExplicitGas(account, { to: AUSD_ADDRESS, data })).hash;
+}
+
+/**
+ * Sends the whole MON balance minus the gas of the transfer itself. Monad charges gas on the declared
+ * limit, so a plain transfer to an EOA declares exactly 21,000; a contract recipient gets the estimate
+ * with the usual margin. The fee cap is passed explicitly so the reserve is computed on the same number
+ * the node will charge against.
+ */
+export async function sendAllMon(account: LocalAccount, to: Hex): Promise<{ hash: Hash; amount: bigint }> {
+  const publicClient = browserPublicClient();
+  const [balance, fees, estimate] = await Promise.all([
+    publicClient.getBalance({ address: account.address }),
+    publicClient.estimateFeesPerGas(),
+    publicClient.estimateGas({ account: account.address, to, value: 1n }),
+  ]);
+  const gas = estimate === 21_000n ? estimate : addMonadGasBuffer(estimate);
+  const amount = balance - gas * fees.maxFeePerGas;
+  if (amount <= 0n) throw new Error("Nothing left to send after the transfer's own gas");
+  const hash = await browserWalletClient(account).sendTransaction({
+    account,
+    chain: monadChain,
+    to,
+    value: amount,
+    gas,
+    maxFeePerGas: fees.maxFeePerGas,
+    maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+  });
+  const receipt = await waitForFinality(publicClient, hash);
+  if (receipt.status !== "success") throw new Error("The transfer was included but did not succeed");
+  return { hash, amount };
+}

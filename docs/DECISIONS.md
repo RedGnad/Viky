@@ -242,3 +242,24 @@ party platform or API, `[U]` not verified).
   as host and the publisher as a non-professional individual; `NEXT_PUBLIC_CONTACT_EMAIL` fills the
   contact when the user chooses one. Both pages are to be re-read before the first person outside the
   team uses Viky (KT4).
+
+## D22, 11 Sep 2026, the first chain is split: on-chain core now, fiat legs on the intended rail
+
+- Statement: the only self-serve fiat rail (Mercuryo's consumer widget) is the one the product is meant
+  to replace: the funder leaves Viky, chooses a currency, pastes an account identifier and sees "MON".
+  The two rails that remove that screen both depend on a third party and neither has been requested:
+  Calm (bank transfer paying AUSD directly; tenant by call) and a Mercuryo partner widget with the
+  destination pre-filled (application, KYB and a sales manager, not self-serve; URL parameters are
+  ignored without a `widget_id`, checked 11 Sep 2026). Spending 30 EUR on the consumer widget would
+  measure the worst case and lock the money for about a week (D20).
+- Source: `help.mercuryo.io/hc/en-gb/articles/14495549557277-Becoming-a-partner`,
+  `widget.docs.mercuryo.io`, a browser run of `exchange.mercuryo.io` on 11 Sep 2026 up to the "Entrez
+  l'adresse du portefeuille" screen (EUR leg "Alimenté par CRIPTAN TRADE S.L."), the plan's user-owned
+  item "Calm: book the Calendly call" (not done), the funder's own objection on 11 Sep 2026.
+- Consequence: KT1 runs in two parts. Part one, now and at no fiat cost: MON sent from the funder's own
+  wallet, then every Viky-owned leg on mainnet (single-signature funding by the passkey account, claim,
+  Reclaim check-ins, withdraw, drain, refund) and a crypto-native exit ("Send back" on `/dev/exit`).
+  Part two, the fiat legs, only on the rail Viky will ship, once Calm or a Mercuryo partner account
+  exists; the consumer-widget run stays available as a ten-minute fallback record. Until part two runs,
+  KT1 as written in the spec is unanswered and the record says so. The rail requests (Calm call,
+  Mercuryo partner application) are the funder's, because they engage an identity.

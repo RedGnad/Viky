@@ -94,7 +94,7 @@ export function FundPanel() {
       <header>
         <h1 className="text-2xl font-semibold">Fund a gift (dev)</h1>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          The funder side of the first mainnet chain. Buy MON to the address below on Mercuryo, swap it to AUSD, fund a gift with one signature.
+          The funder side of the first mainnet chain. Send MON to the address below from a wallet you control (or buy it there on Mercuryo), swap it to AUSD, fund a gift with one signature.
         </p>
       </header>
 

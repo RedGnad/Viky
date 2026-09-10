@@ -4,8 +4,10 @@
 > mainnet, small amounts. Nothing in this repository is called working until this page holds a
 > transaction hash for every on-chain leg. Amounts are small on purpose; every fee is recorded.
 
-Status: IN PROGRESS (preconditions met on 10 Sep 2026, legs not run). This page is the protocol and the
-record; the fields are filled in as the chain runs.
+Status: IN PROGRESS. Preconditions met on 10 Sep 2026. On 11 Sep 2026 the test was split (D22): the
+on-chain core runs first with MON sent from the funder's own wallet (legs 1b to 9, then 10b, 11, 12);
+the fiat legs (1a, 10a) run on the rail Viky intends to ship, once that rail exists. This page is the
+protocol and the record; the fields are filled in as the chain runs.
 
 ## Preconditions (`pnpm spike:preflight` must print only `ok` lines)
 
@@ -26,7 +28,8 @@ record; the fields are filled in as the chain runs.
 
 | # | leg | who | what to record | result |
 |---|---|---|---|---|
-| 1 | Mercuryo Buy, card to MON on Monad, destination = the funder's account; 30 EUR (the funder's choice, above the 25 EUR minimum measured on 10 Sep 2026, D20) | user | order id, EUR paid, MON received, fee, time to arrival, KYC steps | |
+| 1a | Fiat in, on the intended rail (Calm bank transfer paying AUSD, or a Mercuryo partner widget with the destination pre-filled). Fallback record only: Mercuryo consumer Buy, 30 EUR (25 EUR minimum, D20), destination pasted by hand | user | order id, EUR paid, MON or AUSD received, fee, time to arrival, KYC steps | pending the rail (D22) |
+| 1b | Crypto-native entry: MON sent from a wallet the funder controls to the funder's Viky account (SPEC 9.1, "AUSD held on Monad" family) | user | tx hash, MON received, time to arrival | |
 | 2 | Swap all MON to AUSD through Kuru Flow, from the funder's account (`/dev/fund`) | user taps, agent watches | tx hash, MON in, AUSD out, slippage, gas used vs limit | |
 | 3 | `createGift` with the funder's single EIP-3009 signature (`/dev/fund`); $20.00 over 7 days at 10 XP per day, so that the exit leg can sell more than Mercuryo's 3 EUR flat fee (D20) | user taps | tx hash, gift id, amount, daily target, duration, gas used vs limit, seconds to "Funded" | |
 | 4 | Recipient: passkey on a second account, `/g/<id>?t=…` | user | seconds from link tap to "is in your name", provider used (iCloud Keychain, Google Password Manager) | |
@@ -35,7 +38,8 @@ record; the fields are filled in as the chain runs.
 | 7 | Next UTC day: a lesson, a check-in | user | XP before and after, `CheckInAccepted` tx hash, credited days | |
 | 8 | `withdrawEarnedWithIntent` of every credited day so far (one day is below the sell minimum, D20) | user taps | tx hash, AUSD in the recipient's account | |
 | 9 | Exit: 0.05 MON top-up, approve, swap AUSD to MON (`/dev/exit`) | user taps | three tx hashes, MON out | |
-| 10 | Mercuryo Sell, MON to EUR, payout to the funder's own card (Mercuryo's help centre, 10 Sep 2026: the widget pays out to a card; the Mercuryo IBAN account needs a Mercuryo Wallet, whose EEA registrations are paused; selling is unavailable in the UK) | user | order id, EUR received, fee, time from crypto sent to money on the card; or the refusal (region, minimum, account) verbatim | |
+| 10a | Fiat out, on the intended rail; fallback record only: Mercuryo Sell, MON to EUR, payout to the funder's own card (Mercuryo's help centre, 10 Sep 2026: the widget pays out to a card; the Mercuryo IBAN account needs a Mercuryo Wallet, whose EEA registrations are paused; selling is unavailable in the UK) | user | order id, EUR received, fee, time from crypto sent to money on the card; or the refusal (region, minimum, account) verbatim | pending the rail (D22) |
+| 10b | Crypto-native exit: everything sent back to a wallet the person controls (`/dev/exit`, "Send back") | user taps | tx hashes, AUSD or MON received in the wallet | |
 | 11 | One day skipped on purpose; after its catch-up window, `pnpm keeper` drains it | agent | `DaysDrained` tx hash | |
 | 12 | `refundUnearned`: the missed day goes back to the funder | agent | tx hash, AUSD back in the funder's account | |
 
