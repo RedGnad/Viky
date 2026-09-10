@@ -283,8 +283,14 @@ party platform or API, `[U]` not verified).
   `api/endpoints/{accounts,routes,transactions}/overview.md`, `instant-settlement.md`,
   `instant-settlement/core-concepts.md`, `instant-settlement/smart-contracts/pair-contract.md`,
   `instant-settlement/protocol-deployments.md`, `cast call` on the pair, 11 Sep 2026.
-- Consequence: "instant settlement" in the bounty is plausibly Agora's product, not only Monad's
-  finality. The AUSD to USDC leg before a card (Immersve needs USDC, SPEC 9.2) should go through
+- Nuance (strategy review, 11 Sep 2026): the bounty page links a single official Agora resource,
+  `docs.agora.finance/contract-overview`, neither the Public API nor Instant Settlement, and none of
+  the eight idea accordions of the Consumer track cites them. The reading "instant settlement means
+  their product" is therefore a hypothesis drawn from the bounty's wording and the docs index, not
+  from a link. The docs describe no public whitelisting procedure on mainnet, only Sepolia faucets and
+  a testnet whitelister.
+- Consequence: "instant settlement" in the bounty is ambiguous: Agora's whitelisted pair, or AUSD
+  settling in about a second on Monad. The AUSD to USDC leg before a card (Immersve needs USDC, SPEC 9.2) should go through
   Agora's pair rather than Kuru, if a hackathon team can be whitelisted. The Public API is a USD
   business treasury tool, not a rail for a French funder paying in euros. Three questions for the Agora
   workshop of 11 Sep 2026, 17:30 GMT+2 (the only documented place to ask): does a PWA count as a
