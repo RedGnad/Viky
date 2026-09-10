@@ -263,3 +263,30 @@ party platform or API, `[U]` not verified).
   exists; the consumer-widget run stays available as a ten-minute fallback record. Until part two runs,
   KT1 as written in the spec is unanswered and the record says so. The rail requests (Calm call,
   Mercuryo partner application) are the funder's, because they engage an identity.
+
+## D23, 11 Sep 2026, what the Agora bounty actually points at
+
+- Statement: the bounty page (hackathon.monad.xyz/tracks, Agora Payments Bounty, read 11 Sep 2026)
+  says "Teams should build against Agora's public API documentation and staging environment", judges
+  "implementation quality, real-world usability, business viability of the payments flow", and wants "a
+  working demo showing passkey onboarding, an AUSD balance, and a completed send/receive transaction
+  settled instantly". Agora's documentation has two products neither the spec nor the plan mentions:
+  (1) the Agora Public API (`api.agora.finance`, organisation API keys from the Agora dashboard, routes
+  fiat to AUSD and back; bank accounts are USD only with US routing numbers, wallets on EVM or Solana,
+  no staging base URL documented); (2) the Instant Settlement protocol, a fixed-price AUSD/USDC pair.
+  On Monad mainnet the pair `0xf33286E3222D1c829dACeac48c0Ec651F6452470` (factory
+  `0x8468587Af422ad440F58a57E955eCA6A970b5375`) holds 5,352,685 AUSD and 2,552,173 USDC, quotes
+  10 AUSD for 10 USDC, and both purchase fees read 0. The docs state that swaps need the
+  `APPROVED_SWAPPER` role (KYC whitelist); the contract's source is not verified on Sourcify, so the
+  role check could not be read on chain.
+- Source: the bounty detail page, `docs.agora.finance/llms.txt` index, `api.md`, `api/authentication.md`,
+  `api/endpoints/{accounts,routes,transactions}/overview.md`, `instant-settlement.md`,
+  `instant-settlement/core-concepts.md`, `instant-settlement/smart-contracts/pair-contract.md`,
+  `instant-settlement/protocol-deployments.md`, `cast call` on the pair, 11 Sep 2026.
+- Consequence: "instant settlement" in the bounty is plausibly Agora's product, not only Monad's
+  finality. The AUSD to USDC leg before a card (Immersve needs USDC, SPEC 9.2) should go through
+  Agora's pair rather than Kuru, if a hackathon team can be whitelisted. The Public API is a USD
+  business treasury tool, not a rail for a French funder paying in euros. Three questions for the Agora
+  workshop of 11 Sep 2026, 17:30 GMT+2 (the only documented place to ask): does a PWA count as a
+  "mobile app" (KT2); how does a team get whitelisted on the Monad pair and what "staging environment"
+  means; is any non-USD fiat route planned. Nothing is built on these until the answers exist.
