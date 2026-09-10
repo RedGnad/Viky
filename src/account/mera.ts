@@ -95,10 +95,14 @@ function openSession(prfOutput: Uint8Array): Address {
 }
 
 /** Creates a new passkey and opens a session. One biometric prompt, sometimes two on older authenticators. */
+/** Label shown by the passkey provider when the person leaves the optional name empty. */
+export const DEFAULT_PASSKEY_LABEL = "Viky account";
+
 export async function createAccount(displayName: string): Promise<Address> {
   requireBrowser();
-  const name = displayName.trim();
-  if (name.length === 0) throw accountError("UNKNOWN");
+  // The label only lives in the passkey provider (iCloud Keychain, Google Password Manager); it is
+  // never sent to Viky's server, never stored by the app and never written on chain.
+  const name = displayName.trim() || DEFAULT_PASSKEY_LABEL;
   try {
     const created = await createPasskeyWithPrfOutput({
       rp: { id: relyingPartyId(), name: RELYING_PARTY_NAME },

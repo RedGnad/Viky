@@ -53,8 +53,21 @@ Create `.env.local` (never committed) with:
 | `RELAYER_PRIVATE_KEY` | key of the relayer that pays the gas of every relayed step; kept above 12 MON |
 | `NEXT_PUBLIC_GIFT_ESCROW_ADDRESS` | the gift contract, for the funder's signature and the recipient's intent in the browser |
 | `NEXT_PUBLIC_APP_URL` | origin used in claim links (defaults to the request origin) |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | contact shown on `/legal`; the page says one is coming until it is set |
 | `DEPLOYER_PRIVATE_KEY`, `EVIDENCE_SIGNER_ADDRESS`, `OWNER_ADDRESS` | inputs of `pnpm deploy:gift-escrow` and `pnpm check:gift-escrow` |
 | `VIKY_DEV_PAGES` | `1` serves the dev-only pages `/dev/fund` and `/dev/exit` and their routes; never set in production |
+
+## Pages
+
+| page | what |
+|---|---|
+| `/` | create or open the passkey account; the name asked for is optional and stays in the device's passkey manager |
+| `/g/<id>?t=...` | the recipient's gift page from a claim link |
+| `/judges` | the only page with contract addresses; shows the signed-in account when reached through the home page link |
+| `/privacy`, `/legal` | what is kept, who processes it, who publishes and hosts the site |
+| `/dev/fund`, `/dev/exit` | first-chain dev pages, served only with `VIKY_DEV_PAGES=1` |
+
+The functions run in Vercel's Paris region (`vercel.json`), next to the Frankfurt database.
 
 ## Routes
 

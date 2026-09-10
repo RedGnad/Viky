@@ -225,3 +225,20 @@ party platform or API, `[U]` not verified).
   funder's account for a second gift. A single day of a small gift is below the sell minimum: the
   exit leg is run on every credited day so far, not on one day. The spec's "small amounts" are
   bounded from below by the on-ramp, not by the contract.
+
+## D21, 11 Sep 2026, personal data stays in the EU and the passkey label stays on the device
+
+- Statement: the passkey creation asked for a first name; that name is only the WebAuthn `user.name`
+  label held by the device's passkey manager, the Mera SDK makes no network call, and Viky's server
+  receives only the account's public identifier and a challenge signature. Vercel functions ran in
+  `iad1` (Washington) while the Neon database is in Frankfurt. French law lets a non-professional
+  publisher keep their identity with the host instead of publishing it (LCEN, article 6-III-2).
+- Source: `src/account/mera.ts`, `node_modules/@category-labs/mera/dist/passkey.js` (no `fetch`),
+  `app/api/account/*`, the production deploy log of 10 Sep 2026 (`iad1`), Vercel terms section 22.3.4
+  (Vercel Inc., Covina, CA), LCEN article 6-III-2.
+- Consequence: the name field is optional with the neutral label "Viky account" and an explanation
+  under it; `vercel.json` pins the functions to `cdg1` (Paris), verified with the `x-vercel-id`
+  header; `/privacy` and `/legal` describe the actual stores, processors and retention, name Vercel
+  as host and the publisher as a non-professional individual; `NEXT_PUBLIC_CONTACT_EMAIL` fills the
+  contact when the user chooses one. Both pages are to be re-read before the first person outside the
+  team uses Viky (KT4).

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AccountPanel } from "./components/AccountPanel";
 
 export const metadata: Metadata = {
@@ -19,6 +20,17 @@ export default function Page() {
         </p>
       </header>
       <AccountPanel />
+      <footer className="flex gap-4 text-xs" style={{ color: "var(--muted)" }}>
+        <Link href="/privacy" className="underline">
+          Privacy
+        </Link>
+        <Link href="/legal" className="underline">
+          Legal
+        </Link>
+        <Link href="/judges" className="underline">
+          For judges
+        </Link>
+      </footer>
     </main>
   );
 }
