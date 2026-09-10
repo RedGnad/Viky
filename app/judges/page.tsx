@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 
 // The only page where contract addresses appear. Consumer screens never show them.
 export default function JudgesPage() {
+  const escrow = process.env.NEXT_PUBLIC_GIFT_ESCROW_ADDRESS?.trim();
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-12">
       <header className="space-y-2">
@@ -28,7 +29,18 @@ export default function JudgesPage() {
           <dt style={{ color: "var(--muted)" }}>AUSD</dt>
           <dd className="break-all font-mono">{AUSD_ADDRESS}</dd>
           <dt style={{ color: "var(--muted)" }}>Gift contract</dt>
-          <dd>Not deployed yet. Nothing is claimed as working until the first gift has run end to end on mainnet.</dd>
+          <dd className="break-all">
+            {escrow ? (
+              <>
+                <span className="font-mono">{escrow}</span>{" "}
+                (<a className="underline" href={`https://monadvision.com/address/${escrow}`}>MonadVision</a>, source verified through Sourcify)
+              </>
+            ) : (
+              "Not deployed yet."
+            )}{" "}
+            Nothing is claimed as working until the first gift has run end to end on mainnet; the record is in
+            docs/spikes/KT1.md.
+          </dd>
         </dl>
       </section>
 

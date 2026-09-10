@@ -4,19 +4,23 @@
 > mainnet, small amounts. Nothing in this repository is called working until this page holds a
 > transaction hash for every on-chain leg. Amounts are small on purpose; every fee is recorded.
 
-Status: NOT RUN. This page is the protocol and the record; the fields are filled in as the chain runs.
+Status: IN PROGRESS (preconditions met on 10 Sep 2026, legs not run). This page is the protocol and the
+record; the fields are filled in as the chain runs.
 
 ## Preconditions (`pnpm spike:preflight` must print only `ok` lines)
 
 | item | value |
 |---|---|
-| deployed `GiftEscrow` | (address, deployment tx) |
-| `pnpm check:gift-escrow` | (output) |
-| relayer | (address, MON balance before) |
-| evidence signer | (address) |
-| Reclaim app | configured (id not recorded here) |
-| database | migrated (`pnpm db:migrate`) |
-| preview hostname | (the Vercel URL the passkeys were created on; throwaway) |
+| deployed `GiftEscrow` | `0xE04CD59bB93765333200a9da01df83149D4C4d67`, deployment tx `0x338c6ebe35a2c0dc45be43494bd96b8dfa73a73f3927d2f56fb4cd7460267d85`, code hash `0x170626ea03b8d0f880ae63be5c41de8f5067c5ef4f68f2970a8564e5b1a6579f`, deployed 10 Sep 2026 by the owner key `0xe14cED34373E4dff9650232D32961654312C9834` (deploy gas estimate 3,154,382 at 102 gwei) |
+| post-deploy transactions | `registerGoal(1, keccak("cdf8cb3b-2976-4413-ab2d-693ae5028380@1.0.8"))` `0x84ac70f066eb947e979f0c6dbcf6b2fa583c6e4f917903ee317c4292c755cae7`; `setCreationPaused(false)` `0xaabf9529e62ee6d0daaa24ef339587f503454d187e89d621597e48e2373f576a`; `setCheckInPaused(false)` `0x174fd43a1714f0a7799d5d65debc195095e269c0c9ffc4154b9c442fda34cf62` |
+| source verification | Sourcify (Monad endpoint `sourcify-api-monad.blockvision.org`), runtime match `exact_match`, match id 1745123, verified 10 Sep 2026 15:16 UTC |
+| `pnpm check:gift-escrow` | all `ok`: chain 143, token AUSD, evidence signer `0x85702Eaaa6B8694A61a6FbBff2634FCd7E644d9a`, Duolingo goal registered (`0x00ccb800c6854f7f4a1d3d5f2cef2ab187afdc5dd61336eabcd1c5cd9006134b`), creation and check-in open, domain `Viky Gift` v1 chain 143, owner `0xe14cED34373E4dff9650232D32961654312C9834`, 0 gifts |
+| relayer | `0x150d3066F615FC012a40E7779dB748D53F7CCFE4`, 15 MON before the first leg |
+| evidence signer | `0x85702Eaaa6B8694A61a6FbBff2634FCd7E644d9a` (holds no funds) |
+| Reclaim app | configured (id not recorded here); `ReclaimProofRequest.init` for provider `cdf8cb3b-2976-4413-ab2d-693ae5028380@1.0.8` returned a `portal.reclaimprotocol.org` request URL on 10 Sep 2026 |
+| database | Neon (Frankfurt, free plan) provisioned through the Vercel marketplace on 10 Sep 2026; `pnpm db:migrate` created `viky_proof_sessions`, `viky_gifts`, `viky_relayed` |
+| `pnpm spike:preflight` | 16 `ok` lines, no `FAIL`, 10 Sep 2026 |
+| preview hostname | `viky-two.vercel.app` (throwaway; every passkey created there is throwaway) |
 
 ## Legs
 
