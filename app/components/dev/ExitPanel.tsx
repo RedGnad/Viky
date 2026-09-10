@@ -1,17 +1,18 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { formatEther, type Hex } from "viem";
+import { formatEther, isAddress, type Hex } from "viem";
 import { useAccount } from "@/src/account/provider";
 import * as mera from "@/src/account/mera";
 import { postJson } from "@/src/client/api";
-import { approveAusd, readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
+import { approveAusd, readAusdBalance, readMonBalance, sendAllMon, sendWithExplicitGas, transferAusd } from "@/src/client/onchain";
 import { formatAusd } from "@/src/gift-reader";
 import { AUSD_ADDRESS } from "@/src/monad/chain";
 import { AccountPanel } from "../AccountPanel";
 
-// Dev page: the recipient's exit for KT1. AUSD to MON through Kuru (the recipient's own transactions,
-// gas topped up by the relayer), then Mercuryo Sell in the person's own hands. Plumbing is visible here
-// on purpose; the productised exit is a later task.
+// Dev page: the exit of KT1, for whichever account is signed in (recipient or funder). Either AUSD to MON
+// through Kuru (the account's own transactions, gas topped up by the relayer) then Mercuryo Sell in the
+// person's own hands, or everything sent back to a wallet the person controls (the crypto-native exit,
+// used while the fiat rail is not the intended one). Plumbing is visible here on purpose.
 
 const NATIVE_MON = "0x0000000000000000000000000000000000000000";
 const MERCURYO_SELL = "https://exchange.mercuryo.io/?type=sell&currency=MON&network=MONAD";
@@ -24,6 +25,8 @@ export function ExitPanel() {
   const [ausd, setAusd] = useState<bigint | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [destination, setDestination] = useState("");
+  const destinationOk = isAddress(destination);
 
   const say = (line: string) => setLog((lines) => [...lines, `${new Date().toISOString().slice(11, 19)} ${line}`]);
 
@@ -72,12 +75,44 @@ export function ExitPanel() {
     }
   };
 
+  const sendBackAusd = async () => {
+    const account = mera.currentAccount();
+    if (!account || !destinationOk || ausd === null || ausd === 0n) return;
+    setBusy(true);
+    try {
+      say(`send ${formatAusd(ausd)} to ${destination}`);
+      const hash = await transferAusd(account, destination, ausd);
+      say(`AUSD sent, finalised: ${hash}`);
+      await refresh();
+    } catch (error) {
+      say(`AUSD send failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendBackMon = async () => {
+    const account = mera.currentAccount();
+    if (!account || !destinationOk || mon === null || mon === 0n) return;
+    setBusy(true);
+    try {
+      say(`send all MON to ${destination}`);
+      const sent = await sendAllMon(account, destination);
+      say(`${formatEther(sent.amount)} MON sent, finalised: ${sent.hash}`);
+      await refresh();
+    } catch (error) {
+      say(`MON send failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-12">
       <header>
         <h1 className="text-2xl font-semibold">Exit (dev)</h1>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          The recipient side of the first mainnet chain: AUSD to MON with the recipient&apos;s own transactions, then Mercuryo Sell.
+          The exit of the first mainnet chain, for the signed-in account: AUSD to MON with the account&apos;s own transactions then Mercuryo Sell, or everything sent back to a wallet you control.
         </p>
       </header>
 
@@ -105,6 +140,29 @@ export function ExitPanel() {
           </div>
         </section>
       )}
+
+      {address ? (
+        <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+          <h2 className="font-medium">Send back to a wallet you control</h2>
+          <input
+            value={destination}
+            onChange={(e) => setDestination(e.target.value.trim())}
+            placeholder="0x… a Monad account you control"
+            className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 font-mono text-sm dark:border-gray-700"
+          />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={sendBackAusd} disabled={busy || !destinationOk || !ausd} className="rounded-lg bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-50">
+              Send all AUSD
+            </button>
+            <button type="button" onClick={sendBackMon} disabled={busy || !destinationOk || !mon} className="rounded-lg bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-50">
+              Send all MON (keeps only the transfer&apos;s gas)
+            </button>
+          </div>
+          <p className="text-xs" style={{ color: "var(--muted)" }}>
+            Sending AUSD needs a little MON for gas: use the top-up button above first if MON is 0.
+          </p>
+        </section>
+      ) : null}
 
       <section className="rounded-2xl border border-gray-200 p-5 font-mono text-xs dark:border-gray-800">
         {log.length === 0 ? <p style={{ color: "var(--muted)" }}>log</p> : log.map((line, index) => <p key={index}>{line}</p>)}
