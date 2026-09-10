@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../src/load-env";
 import { createPublicClient, getAddress, http, isAddress, type Hex } from "viem";
 import { DUOLINGO_GOAL_PROVIDER_ID, GIFT_DOMAIN, GOAL_TYPE_DUOLINGO_XP } from "../src/gift-attestation";
 import { giftEscrowAbi } from "../src/gift-escrow-abi";

@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../src/load-env";
 import { readGift, readNextGiftId } from "../src/gift-reader";
 import { relayDrain, relayFinalise, relayRefund } from "../src/gift-relay";
 import { escrowAddress, relayerClients, relayerPreflight, RelayerError } from "../src/relayer";
