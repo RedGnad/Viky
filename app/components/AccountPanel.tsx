@@ -33,24 +33,27 @@ export function AccountPanel() {
         }}
       >
         <label className="block text-sm font-medium" htmlFor="display-name">
-          Your first name
+          A name for this account on your device (optional)
         </label>
         <input
           id="display-name"
           name="displayName"
-          autoComplete="given-name"
+          autoComplete="off"
           value={displayName}
           onChange={(event) => {
             setDisplayName(event.target.value);
             if (error) clearError();
           }}
           className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700"
-          placeholder="Ama"
+          placeholder="Viky account"
           disabled={busy}
         />
+        <p className="text-xs" style={{ color: "var(--muted)" }}>
+          Only your device uses it, to label your passkey. Viky never receives it.
+        </p>
         <button
           type="submit"
-          disabled={busy || displayName.trim().length === 0}
+          disabled={busy}
           className="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-50"
         >
           {busy ? "One moment" : "Create my account with Face ID or fingerprint"}

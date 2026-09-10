@@ -11,7 +11,7 @@ export function JudgesAccount() {
         <p className="break-all font-mono text-sm">{address}</p>
       ) : (
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          Not signed in. Create or open an account on the home page; the address appears here.
+          Not signed in. Create or open an account on the home page, then follow its &quot;For judges&quot; link: the session lives in memory, so the address appears here only through that link, not after a reload.
         </p>
       )}
     </section>
