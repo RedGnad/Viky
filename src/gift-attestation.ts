@@ -1,119 +1,17 @@
 import { createHmac } from "node:crypto";
-import { encodeAbiParameters, keccak256, parseAbiParameters, stringToHex, type Hex } from "viem";
+import type { Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { DUOLINGO_PROVIDER_KEY } from "./duolingo-proof-policy";
+import { ATTESTATION_TTL_SECONDS, CHECK_IN_TYPES, CLAIM_TYPES, GIFT_DOMAIN } from "./gift-terms";
+
+export * from "./gift-terms";
 
 /**
  * The EIP-712 attestations the gift escrow accepts, signed by the evidence signer after a Reclaim proof
  * has been verified server side with its TEE attestation. Ported from Lock-in's Duolingo attestation
  * module: same signing pattern, same pseudonymous identity, new types. Every value here must match
  * contracts/GiftEscrow.sol byte for byte and is pinned by a cross-language test (test/GiftTypehashParity.t.sol
- * and test/gift-attestation.test.ts): if either side drifts, its side fails.
+ * and test/gift-attestation.test.ts): if either side drifts, its side fails. Server only: it reads keys.
  */
-
-export const CHAIN_ID = 143;
-
-export const GIFT_DOMAIN = {
-  name: "Viky Gift",
-  version: "1",
-  chainId: CHAIN_ID,
-} as const;
-
-/** Provider-neutral check-in: the gift's goal type fixes how `metricValue` is read. */
-export const CHECK_IN_TYPES = {
-  CheckIn: [
-    { name: "giftId", type: "uint256" },
-    { name: "recipient", type: "address" },
-    { name: "identityHash", type: "bytes32" },
-    { name: "providerId", type: "bytes32" },
-    { name: "metricValue", type: "uint64" },
-    { name: "observedAt", type: "uint64" },
-    { name: "nullifier", type: "bytes32" },
-    { name: "issuedAt", type: "uint64" },
-    { name: "expiresAt", type: "uint64" },
-  ],
-} as const;
-
-export const CLAIM_TYPES = {
-  Claim: [
-    { name: "giftId", type: "uint256" },
-    { name: "recipient", type: "address" },
-    { name: "contactHash", type: "bytes32" },
-    { name: "issuedAt", type: "uint64" },
-    { name: "expiresAt", type: "uint64" },
-  ],
-} as const;
-
-/** Signed by the recipient's own account, not by the evidence signer; defined here for the parity pin. */
-export const WITHDRAW_TYPES = {
-  Withdraw: [
-    { name: "giftId", type: "uint256" },
-    { name: "to", type: "address" },
-    { name: "amount", type: "uint256" },
-    { name: "nonce", type: "uint256" },
-    { name: "deadline", type: "uint64" },
-  ],
-} as const;
-
-export const CHECK_IN_TYPEHASH = keccak256(
-  stringToHex(
-    "CheckIn(uint256 giftId,address recipient,bytes32 identityHash,bytes32 providerId,uint64 metricValue,uint64 observedAt,bytes32 nullifier,uint64 issuedAt,uint64 expiresAt)",
-  ),
-);
-export const CLAIM_TYPEHASH = keccak256(
-  stringToHex("Claim(uint256 giftId,address recipient,bytes32 contactHash,uint64 issuedAt,uint64 expiresAt)"),
-);
-export const WITHDRAW_TYPEHASH = keccak256(
-  stringToHex("Withdraw(uint256 giftId,address to,uint256 amount,uint256 nonce,uint64 deadline)"),
-);
-
-/** Attestations are accepted for ten minutes (the contract's MAX_ATTESTATION_AGE). */
-export const ATTESTATION_TTL_SECONDS = 10 * 60;
-
-/** The funder's EIP-3009 nonce is derived from the gift terms: one signature pays and consents (D12). */
-export const FUND_NONCE_TAG = keccak256(stringToHex("viky.fund.v1"));
-
-export type GiftParams = {
-  funder: Hex;
-  refundTo: Hex;
-  recipientContactHash: Hex;
-  goalType: number;
-  dailyTarget: number;
-  durationDays: number;
-  amount: bigint;
-  /** Random per gift, so identical terms still get distinct funding nonces. */
-  salt: Hex;
-};
-
-/** `GiftEscrow.hashGiftParams`, byte for byte. */
-export function hashGiftParams(p: GiftParams): Hex {
-  return keccak256(
-    encodeAbiParameters(parseAbiParameters("address, address, bytes32, uint8, uint32, uint32, uint256, bytes32"), [
-      p.funder,
-      p.refundTo,
-      p.recipientContactHash,
-      p.goalType,
-      p.dailyTarget,
-      p.durationDays,
-      p.amount,
-      p.salt,
-    ]),
-  );
-}
-
-/** `GiftEscrow.fundingNonce`, the nonce the funder signs in `ReceiveWithAuthorization`. */
-export function fundingNonce(p: GiftParams): Hex {
-  return keccak256(encodeAbiParameters(parseAbiParameters("bytes32, bytes32"), [FUND_NONCE_TAG, hashGiftParams(p)]));
-}
-
-/** Goal types of the escrow registry. A new service is a new entry, never a new contract. */
-export const GOAL_TYPE_DUOLINGO_XP = 1;
-export const GOAL_TYPE_GITHUB_CONTRIBUTIONS = 2;
-export const GOAL_TYPE_ONCHAIN = 3;
-export const GOAL_TYPE_STRAVA_DISTANCE = 4;
-
-/** The registry's providerId for Duolingo: the verifier's PROVIDER_KEY, keccak of `<id>@<version>`. */
-export const DUOLINGO_GOAL_PROVIDER_ID: Hex = DUOLINGO_PROVIDER_KEY;
 
 /**
  * The pseudonymous identity bound to a gift: HMAC of the provider's profile id under a server-held
@@ -182,3 +80,5 @@ export function serialiseMessage(message: CheckInMessage | ClaimMessage): Record
     Object.entries(message).map(([key, value]) => [key, typeof value === "bigint" ? value.toString() : value]),
   ) as Record<string, string | number>;
 }
+
+export { ATTESTATION_TTL_SECONDS };
