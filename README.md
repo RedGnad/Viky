@@ -50,9 +50,24 @@ Create `.env.local` (never committed) with:
 | `MONAD_RPC_URL` | RPC used by Foundry scripts and the relayer |
 | `VIKY_PRIVATE_FIXTURES` | directory of real captured proofs for the real-proof tests (default `private-fixtures`) |
 | `ACCOUNT_ADDRESS`, `DUOLINGO_USERNAME` | inputs of `scripts/capture-duolingo-proof.ts` |
+| `RELAYER_PRIVATE_KEY` | key of the relayer that pays the gas of every relayed step; kept above 12 MON |
+| `NEXT_PUBLIC_GIFT_ESCROW_ADDRESS` | the gift contract, for the funder's signature and the recipient's intent in the browser |
+| `NEXT_PUBLIC_APP_URL` | origin used in claim links (defaults to the request origin) |
+| `DEPLOYER_PRIVATE_KEY`, `EVIDENCE_SIGNER_ADDRESS`, `OWNER_ADDRESS` | inputs of `pnpm deploy:gift-escrow` and `pnpm check:gift-escrow` |
+| `VIKY_DEV_PAGES` | `1` serves the dev-only pages `/dev/fund` and `/dev/exit` and their routes; never set in production |
 
-More variables arrive with the contract deployment and the relayer; each is documented here when the
-code that reads it lands.
+## Routes
+
+| route | who | what |
+|---|---|---|
+| `POST /api/account/challenge`, `POST /api/account/session` | browser | the passkey account signs a challenge silently and gets a twelve-hour cookie |
+| `POST /api/gift/create` | funder | creates and funds a gift with the funder's single EIP-3009 signature, returns the claim link |
+| `POST /api/gift/claim` | recipient | binds the signed-in account to the gift of a claim link |
+| `POST /api/duolingo/session`, `POST /api/duolingo/verify` | recipient | opens a Reclaim session for a baseline or a day, verifies it (TEE required), attests and relays the check-in |
+| `POST /api/gift/check-in` | recipient | relays a recorded check-in again if the first submission failed |
+| `POST /api/gift/withdraw` | recipient | relays a signed withdraw intent |
+| `GET /api/gift/<id>` | anyone | the gift's numbers for its screens |
+| `pnpm keeper` | operator | drains missed days and finalises ended gifts |
 
 ## Contract
 

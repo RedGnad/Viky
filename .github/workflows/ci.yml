@@ -61,7 +61,7 @@ jobs:
         run: forge fmt --check
 
       - name: Build contracts
-        run: forge build --network monad
+        run: forge build
 
       - name: Check Monad contract sizes
         run: pnpm check:contract-sizes

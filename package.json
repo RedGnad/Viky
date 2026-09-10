@@ -22,7 +22,12 @@
     "build:contracts": "forge build && tsx scripts/export-gift-abi.ts",
     "check:contract-sizes": "tsx scripts/check-contract-sizes.ts",
     "deploy:gift-escrow": "tsx scripts/deploy-gift-escrow.ts",
-    "check:gift-escrow": "tsx scripts/check-gift-escrow.ts"
+    "check:gift-escrow": "tsx scripts/check-gift-escrow.ts",
+    "db:migrate": "tsx scripts/migrate-db.ts",
+    "keeper": "tsx scripts/keeper.ts",
+    "spike:preflight": "tsx scripts/spike/preflight.ts",
+    "proof:capture": "tsx scripts/capture-duolingo-proof.ts",
+    "proof:transform": "tsx scripts/transform-duolingo-proof.ts"
   },
   "dependencies": {
     "@category-labs/mera": "0.2.0",

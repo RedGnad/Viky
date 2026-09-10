@@ -6,9 +6,12 @@ import { accountAuthErrorStatus, accountAuthPublicMessage, readAccountAuthSessio
 import { readJsonBody } from "@/src/api-guard";
 import { DUOLINGO_PROVIDER_ID, DUOLINGO_PROVIDER_VERSION } from "@/src/duolingo-proof-policy";
 import { verifyDuolingoSession, VerificationError, type ReclaimStatus, type SdkVerification } from "@/src/duolingo-verification";
+import { contractRefusal } from "@/src/gift-api";
 import { signCheckIn } from "@/src/gift-attestation";
+import { relayCheckIn } from "@/src/gift-relay";
 import { consumeAndSaveVerification, loadLatestEvidence, loadProofSession } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { RelayerError } from "@/src/relayer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,7 +61,23 @@ export async function POST(request: Request) {
       { sessionId: String(body.sessionId ?? "").trim(), account: auth.account },
     );
 
-    return NextResponse.json({ ...result, attested: true }, { headers: { "Cache-Control": "no-store" } });
+    // The attestation expires in ten minutes: relay it now. A contract refusal is reported as such, with
+    // its reason, not hidden behind a generic failure.
+    let relayed: { hash: string; creditedDays: number } | null = null;
+    let refusal: { code: string; message: string } | null = null;
+    if (process.env.RELAYER_PRIVATE_KEY?.trim()) {
+      try {
+        const submitted = await relayCheckIn(result.sessionId);
+        relayed = { hash: submitted.hash, creditedDays: submitted.creditedDays };
+      } catch (error) {
+        if (error instanceof RelayerError && error.code === "REVERTED") {
+          refusal = contractRefusal(error.contractError) ?? { code: "REFUSED", message: "This could not be recorded." };
+        } else {
+          throw error;
+        }
+      }
+    }
+    return NextResponse.json({ ...result, attested: true, relayed, refusal }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const authStatus = accountAuthErrorStatus(error);
     if (authStatus) {

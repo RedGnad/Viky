@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Address } from "viem";
+import { signInToServer, signOutOfServer } from "../client/server-session";
 import { type AccountError, toAccountError } from "./errors";
 import * as mera from "./mera";
 
@@ -35,7 +36,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     setError(undefined);
     try {
       await action();
+      // The passkey account also signs the browser in to Viky's server, silently: the session cookie is
+      // what lets every later step name the account without ever taking it from a form.
+      const account = mera.currentAccount();
+      if (account) await signInToServer(account);
     } catch (caught) {
+      mera.signOut();
       setError(toAccountError(caught));
     } finally {
       setStatus("idle");
@@ -50,7 +56,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       error,
       createAccount: (displayName) => run(() => mera.createAccount(displayName)),
       signIn: () => run(() => mera.signIn()),
-      signOut: () => mera.signOut(),
+      signOut: () => {
+        mera.signOut();
+        void signOutOfServer();
+      },
       clearError: () => setError(undefined),
     }),
     [address, hasCredential, status, error, run],
