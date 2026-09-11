@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AccountPanel } from "./components/AccountPanel";
+import { MyGifts } from "./components/MyGifts";
 
 export const metadata: Metadata = {
   title: "Viky",
@@ -20,6 +21,7 @@ export default function Page() {
         </p>
       </header>
       <AccountPanel />
+      <MyGifts />
       <footer className="flex gap-4 text-xs" style={{ color: "var(--muted)" }}>
         <Link href="/privacy" className="underline">
           Privacy
