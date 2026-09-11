@@ -13,6 +13,11 @@ export const giftEscrowAbi = [
         "name": "evidenceSigner_",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "firstGiftId_",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "nonpayable"
@@ -1628,6 +1633,11 @@ export const giftEscrowAbi = [
   {
     "type": "error",
     "name": "InvalidEvidenceSigner",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidGiftId",
     "inputs": []
   },
   {

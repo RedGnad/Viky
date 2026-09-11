@@ -145,7 +145,8 @@ contract GiftEscrow is Ownable, ReentrancyGuard, EIP712 {
 
     IERC20 public immutable token;
     address public evidenceSigner;
-    uint256 public nextGiftId = 1;
+    /// @dev Starts where the previous deployment stopped, so a gift id names one gift across Viky's deployments.
+    uint256 public nextGiftId;
     bool public creationPaused;
     bool public checkInPaused;
 
@@ -188,6 +189,7 @@ contract GiftEscrow is Ownable, ReentrancyGuard, EIP712 {
     event CheckInPauseUpdated(bool paused);
 
     error InvalidAddress();
+    error InvalidGiftId();
     error InvalidTokenDecimals();
     error InvalidAmount();
     error InvalidDuration();
@@ -229,11 +231,13 @@ contract GiftEscrow is Ownable, ReentrancyGuard, EIP712 {
     error CancellationClosed();
     error FinalisationTooEarly();
 
-    constructor(IERC20 token_, address evidenceSigner_) EIP712("Viky Gift", "1") {
+    constructor(IERC20 token_, address evidenceSigner_, uint256 firstGiftId_) EIP712("Viky Gift", "1") {
         if (address(token_) == address(0) || evidenceSigner_ == address(0)) revert InvalidAddress();
         if (IERC20Metadata(address(token_)).decimals() != 6) revert InvalidTokenDecimals();
+        if (firstGiftId_ == 0) revert InvalidGiftId();
         token = token_;
         evidenceSigner = evidenceSigner_;
+        nextGiftId = firstGiftId_;
         // Fail closed: the deployer unpauses once the deployment has been checked.
         creationPaused = true;
         checkInPaused = true;

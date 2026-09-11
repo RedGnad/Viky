@@ -28,7 +28,7 @@ contract GiftTypehashParityTest {
 
     function setUp() public {
         VM.chainId(143);
-        escrow = new GiftEscrow(new MockAUSD(), VM.addr(1));
+        escrow = new GiftEscrow(new MockAUSD(), VM.addr(1), 1);
     }
 
     function testTypehashesMatchTheTypeScriptPin() public view {

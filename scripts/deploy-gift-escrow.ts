@@ -65,16 +65,20 @@ async function main() {
   const tokenCode = await publicClient.getCode({ address: AUSD_ADDRESS });
   if (!tokenCode || tokenCode === "0x") throw new Error("AUSD has no code at the pinned address");
 
-  console.log(JSON.stringify({ deployer: account.address, balanceMon: formatEther(balance), evidenceSigner, owner: owner ?? account.address }, null, 2));
+  // Gift ids continue across deployments (D30): the new contract starts where the previous one stopped.
+  const firstGiftId = BigInt(process.env.FIRST_GIFT_ID?.trim() || "1");
+  if (firstGiftId < 1n) throw new Error("FIRST_GIFT_ID must be at least 1");
 
-  const constructorArguments = encodeAbiParameters([{ type: "address" }, { type: "address" }], [AUSD_ADDRESS, evidenceSigner]);
+  console.log(JSON.stringify({ deployer: account.address, balanceMon: formatEther(balance), evidenceSigner, owner: owner ?? account.address, firstGiftId: firstGiftId.toString() }, null, 2));
+
+  const constructorArguments = encodeAbiParameters([{ type: "address" }, { type: "address" }, { type: "uint256" }], [AUSD_ADDRESS, evidenceSigner, firstGiftId]);
   const deployGas = addMonadGasBuffer(
     await publicClient.estimateGas({
       account: account.address,
       data: (artifact.bytecode.object + constructorArguments.slice(2)) as Hex,
     }),
   );
-  const deployHash = await walletClient.deployContract({ abi, bytecode: artifact.bytecode.object, args: [AUSD_ADDRESS, evidenceSigner], gas: deployGas });
+  const deployHash = await walletClient.deployContract({ abi, bytecode: artifact.bytecode.object, args: [AUSD_ADDRESS, evidenceSigner, firstGiftId], gas: deployGas });
   const deployReceipt = await waitForFinality(publicClient, deployHash);
   const address = deployReceipt.contractAddress;
   if (!address) throw new Error("Deployment produced no contract address");
