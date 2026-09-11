@@ -42,6 +42,8 @@ Create `.env.local` (never committed) with:
 | `SESSION_SIGNING_SECRET` | HMAC key (32+ characters) for the account challenge and the 12 h session cookie |
 | `DATABASE_URL` | Neon Postgres connection string for the verification session rows |
 | `RECLAIM_APP_ID`, `RECLAIM_APP_SECRET` | Reclaim application credentials; the secret also verifies the TEE attestation |
+| `RECLAIM_ZKFETCH_APP_ID`, `RECLAIM_ZKFETCH_APP_SECRET` | Reclaim "Public Data (zkFetch)" application, used by the public mode's attested reads of the Duolingo profile (D27); zkFetch must be switched on for it in the dev tool |
+| `CRON_SECRET` | bearer token Vercel sends to `/api/cron/daily`; the daily pass runs only with it |
 | `DUOLINGO_PROVIDER_ID`, `DUOLINGO_PROVIDER_VERSION` | optional cross-check against the pinned provider `cdf8cb3b-2976-4413-ab2d-693ae5028380@1.0.8` |
 | `RECLAIM_VERIFICATION_MODE` | `portal` (default) or `app`, the Reclaim delivery channel |
 | `IDENTITY_HMAC_KEY` | base64 key of the pseudonymous identity bound to a gift |
@@ -76,11 +78,16 @@ The functions run in Vercel's Paris region (`vercel.json`), next to the Frankfur
 | `POST /api/account/challenge`, `POST /api/account/session` | browser | the passkey account signs a challenge silently and gets a twelve-hour cookie |
 | `POST /api/gift/create` | funder | creates and funds a gift with the funder's single EIP-3009 signature, returns the claim link |
 | `POST /api/gift/claim` | recipient | binds the signed-in account to the gift of a claim link |
-| `POST /api/duolingo/session`, `POST /api/duolingo/verify` | recipient | opens a Reclaim session for a baseline or a day, verifies it (TEE required), attests and relays the check-in |
+| `POST /api/gift/<id>/account` | recipient | names their Duolingo; returns the code to put in the display name for a minute (D27) |
+| `POST /api/gift/<id>/bind` | recipient | first attested read of the public profile: proves the code, binds the identity, opens the window |
+| `POST /api/gift/<id>/count` | recipient | a count now instead of waiting for the daily pass; same read, same proof |
+| `GET /api/cron/daily` | Vercel cron (00:30 UTC) | the daily pass: count every bound gift, drain, finalise |
+| `POST /api/duolingo/session`, `POST /api/duolingo/verify` | recipient (private sources only) | opens a Reclaim session for a baseline or a day, verifies it (TEE required), attests and relays the check-in |
 | `POST /api/gift/check-in` | recipient | relays a recorded check-in again if the first submission failed |
 | `POST /api/gift/withdraw` | recipient | relays a signed withdraw intent |
 | `GET /api/gift/<id>` | anyone | the gift's numbers for its screens |
-| `pnpm keeper` | operator | drains missed days and finalises ended gifts |
+| `pnpm keeper` | operator | the same daily pass from a terminal (`--refund` also sends back what is refundable) |
+| `pnpm register:goal` | owner | registers the Duolingo goal's provider id on the escrow (idempotent) |
 
 ## Contract
 

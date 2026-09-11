@@ -25,6 +25,7 @@ export function FundPanel() {
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [contact, setContact] = useState("");
+  const [duolingoUsername, setDuolingoUsername] = useState("");
   const [dollars, setDollars] = useState("5");
   const [target, setTarget] = useState("10");
   const [days, setDays] = useState("7");
@@ -74,6 +75,7 @@ export function FundPanel() {
       const result = await createGift({
         account,
         contact,
+        duolingoUsername: duolingoUsername.trim() || undefined,
         goalType: GOAL_TYPE_DUOLINGO_XP,
         dailyTarget: Number(target),
         durationDays: Number(days),
@@ -120,6 +122,7 @@ export function FundPanel() {
           <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
             <h2 className="font-medium">Create and fund</h2>
             <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="recipient email or +phone" className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700" />
+            <input value={duolingoUsername} onChange={(e) => setDuolingoUsername(e.target.value)} placeholder="their Duolingo username, if you know it (optional)" className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700" />
             <div className="grid grid-cols-3 gap-2">
               <input value={dollars} onChange={(e) => setDollars(e.target.value)} placeholder="dollars" className="rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700" />
               <input value={target} onChange={(e) => setTarget(e.target.value)} placeholder="XP per day" className="rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700" />

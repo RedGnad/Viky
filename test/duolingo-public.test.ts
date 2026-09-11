@@ -1,0 +1,125 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { describe, it } from "node:test";
+import {
+  BINDING_CODE_ALPHABET,
+  BINDING_CODE_LENGTH,
+  displayNameHasCode,
+  duolingoProfileUrl,
+  DUOLINGO_PUBLIC_PROVIDER_ID,
+  isValidDuolingoUsername,
+  newBindingCode,
+} from "../src/duolingo-public-terms";
+import { fetchPublicProfile, profileFromProof, PROFILE_RESPONSE_MATCHES, PublicProfileError, type ZkFetchProof } from "../src/duolingo-public";
+
+// A proof shaped like zkFetch's output, carrying the parameters Reclaim extracts with our regexes.
+function proofFor(username: string, extracted: Record<string, string>, overrides: Partial<ZkFetchProof["claimData"]> = {}): ZkFetchProof {
+  return {
+    claimData: {
+      provider: "http",
+      parameters: JSON.stringify({ url: duolingoProfileUrl(username), method: "GET", responseMatches: PROFILE_RESPONSE_MATCHES }),
+      context: JSON.stringify({ extractedParameters: extracted, providerHash: "0xabc" }),
+      identifier: "0x" + "ab".repeat(32),
+      timestampS: 1_789_000_000,
+      ...overrides,
+    },
+    signatures: ["0x" + "cd".repeat(65)],
+  };
+}
+
+const ZIA_LEARNS = { id: "990000000006", totalXp: "156020", username: "Zia_learns", name: "Zia_learns", streak: "3939" };
+
+describe("public Duolingo terms", () => {
+  it("accepts real usernames and refuses anything that could reshape the URL", () => {
+    assert.ok(isValidDuolingoUsername("ama_learns"));
+    assert.ok(isValidDuolingoUsername("Zia_learns"));
+    assert.ok(!isValidDuolingoUsername(""));
+    assert.ok(!isValidDuolingoUsername("a b"));
+    assert.ok(!isValidDuolingoUsername("x&y=z"));
+    assert.equal(duolingoProfileUrl("ama learns"), "https://www.duolingo.com/2017-06-30/users?username=ama%20learns");
+  });
+
+  it("generates codes from the unambiguous alphabet only", () => {
+    let byte = 0;
+    const code = newBindingCode(() => byte++ % 256);
+    assert.equal(code.length, BINDING_CODE_LENGTH);
+    for (const c of code) assert.ok(BINDING_CODE_ALPHABET.includes(c));
+    assert.ok(!/[O0I1]/.test(code));
+  });
+
+  it("finds the code in a display name regardless of case, spaces and dashes", () => {
+    assert.ok(displayNameHasCode("Ama vk-7k3q", "VK7K3Q"));
+    assert.ok(displayNameHasCode("VK7K3Q", "vk7k3q"));
+    assert.ok(displayNameHasCode("Ama V K 7 K 3 Q", "VK7K3Q"));
+    assert.ok(!displayNameHasCode("Ama", "VK7K3Q"));
+    assert.ok(!displayNameHasCode("Ama VK7K3", "VK7K3Q"));
+    assert.ok(!displayNameHasCode("anything", "short"));
+  });
+
+  it("has a fixed provider id for the goal registry", () => {
+    assert.match(DUOLINGO_PUBLIC_PROVIDER_ID, /^0x[0-9a-f]{64}$/);
+  });
+});
+
+describe("profileFromProof", () => {
+  it("reads the profile and binds the nullifier to the proof identifier", () => {
+    const profile = profileFromProof(proofFor("zia_learns", ZIA_LEARNS), "zia_learns");
+    assert.equal(profile.profileId, "990000000006");
+    assert.equal(profile.totalXp, 156020);
+    assert.equal(profile.streak, 3939);
+    assert.equal(profile.displayName, "Zia_learns");
+    assert.equal(profile.username, "Zia_learns");
+    assert.equal(profile.observedAt, 1_789_000_000);
+    assert.match(profile.nullifier, /^0x[0-9a-f]{64}$/);
+    const again = profileFromProof(proofFor("zia_learns", ZIA_LEARNS, { identifier: "0x" + "ef".repeat(32) }), "zia_learns");
+    assert.notEqual(again.nullifier, profile.nullifier);
+  });
+
+  it("refuses a proof about another URL, method or username", () => {
+    assert.throws(() => profileFromProof(proofFor("other", ZIA_LEARNS), "zia_learns"), (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_MISMATCH");
+    assert.throws(
+      () => profileFromProof(proofFor("zia_learns", ZIA_LEARNS, { parameters: JSON.stringify({ url: duolingoProfileUrl("zia_learns"), method: "POST" }) }), "zia_learns"),
+      (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_MISMATCH",
+    );
+    assert.throws(() => profileFromProof(proofFor("zia_learns", { ...ZIA_LEARNS, username: "someone" }), "zia_learns"), (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_MISMATCH");
+  });
+
+  it("refuses an incomplete or malformed proof", () => {
+    assert.throws(() => profileFromProof(proofFor("zia_learns", { ...ZIA_LEARNS, totalXp: "" }), "zia_learns"), (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_INVALID");
+    assert.throws(() => profileFromProof(proofFor("zia_learns", ZIA_LEARNS, { identifier: "nope" }), "zia_learns"), (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_INVALID");
+    assert.throws(() => profileFromProof(proofFor("zia_learns", ZIA_LEARNS, { context: "{" }), "zia_learns"), (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_INVALID");
+  });
+
+  it("matches the regexes' first hit to the user-level fields on real responses", () => {
+    for (const name of ["zia_learns", "duolingo"]) {
+      let raw: string;
+      try {
+        raw = readFileSync(`private-fixtures/duolingo-public-${name}.json`, "utf8");
+      } catch {
+        return; // fixture absent: skipped
+      }
+      const expected = (JSON.parse(raw) as { users: Array<Record<string, unknown>> }).users[0];
+      const extracted: Record<string, string> = {};
+      for (const match of PROFILE_RESPONSE_MATCHES) {
+        const m = new RegExp(match.value).exec(raw);
+        assert.ok(m?.groups, `no match for ${match.value}`);
+        Object.assign(extracted, m.groups);
+      }
+      assert.equal(extracted.id, String(expected.id));
+      assert.equal(extracted.totalXp, String(expected.totalXp));
+      assert.equal(extracted.username, String(expected.username));
+      assert.equal(extracted.name, String(expected.name));
+    }
+  });
+});
+
+describe("fetchPublicProfile", () => {
+  it("verifies before reading and types every failure", async () => {
+    const ok = await fetchPublicProfile("zia_learns", { zkFetch: async () => proofFor("zia_learns", ZIA_LEARNS), verify: async () => true });
+    assert.equal(ok.totalXp, 156020);
+    await assert.rejects(fetchPublicProfile("bad name", { zkFetch: async () => proofFor("zia_learns", ZIA_LEARNS), verify: async () => true }), (e: unknown) => e instanceof PublicProfileError && e.code === "INVALID_USERNAME");
+    await assert.rejects(fetchPublicProfile("zia_learns", { zkFetch: async () => proofFor("zia_learns", ZIA_LEARNS), verify: async () => false }), (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_INVALID");
+    await assert.rejects(fetchPublicProfile("nobody", { zkFetch: async () => { throw new Error("Response match not found for regex"); }, verify: async () => true }), (e: unknown) => e instanceof PublicProfileError && e.code === "PROFILE_NOT_FOUND");
+    await assert.rejects(fetchPublicProfile("zia_learns", { zkFetch: async () => { throw new Error("socket hang up"); }, verify: async () => true }), (e: unknown) => e instanceof PublicProfileError && e.code === "FETCH_FAILED");
+  });
+});

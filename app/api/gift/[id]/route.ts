@@ -4,6 +4,7 @@ import { checkInDayIndex, formatAusd, readGift, utcDayOf } from "@/src/gift-read
 import { loadGift, loadRelayed } from "@/src/gift-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { escrowAddress } from "@/src/relayer";
+import { readAccountAuthSession } from "@/src/account-auth-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,9 +27,24 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const missedSoFar = gift.drainedDays;
     const opened = gift.recipient !== null;
     const connected = gift.startDay !== 0;
+    let viewerIsRecipient = false;
+    try {
+      const session = readAccountAuthSession(request);
+      viewerIsRecipient = gift.recipient !== null && session.account.toLowerCase() === gift.recipient.toLowerCase();
+    } catch {
+      viewerIsRecipient = false;
+    }
+    const goalAccount = {
+      username: record?.goalUsername ?? null,
+      source: record?.usernameSource ?? null,
+      bound: record?.boundAt !== null && record?.boundAt !== undefined,
+      code: viewerIsRecipient ? (record?.bindingCode ?? null) : null,
+      codeExpiresAt: viewerIsRecipient ? (record?.bindingCodeExpiresAt?.toISOString() ?? null) : null,
+    };
     return NextResponse.json(
       {
         giftId: id,
+        goalAccount,
         goalType: gift.goalType,
         dailyTarget: gift.dailyTarget,
         durationDays: gift.durationDays,

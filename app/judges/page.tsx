@@ -44,6 +44,23 @@ export default function JudgesPage() {
         </dl>
       </section>
 
+      <section className="space-y-2">
+        <h2 className="font-medium">How progress is verified</h2>
+        <p className="text-sm">
+          Duolingo runs in public mode: once a day, Viky&apos;s keeper reads the recipient&apos;s public profile
+          through an attested fetch (Reclaim zkFetch, TEE mode). The attestor signs Duolingo&apos;s response, the
+          evidence signer turns the signed reading into an EIP-712 check-in, and the contract credits or refuses
+          it. The person signs in to nothing and installs nothing; account ownership is proved once, either by the
+          funder naming the account or by a short code the recipient places in their Duolingo display name.
+        </p>
+        <p className="text-sm">
+          Two accepted risks, written here on purpose: the profile endpoint is unofficial (the same risk class as a
+          provider schema drift, watched by the same tests), and each attested read costs money on Reclaim&apos;s side
+          (their public price starts at $0.10 per verification; one read per recipient per day, never per gift).
+          Private sources keep the user-proof path through the Reclaim verifier app.
+        </p>
+      </section>
+
       <JudgesAccount />
     </main>
   );
