@@ -350,3 +350,32 @@ party platform or API, `[U]` not verified).
   switching `RECLAIM_APP_ID` and `RECLAIM_APP_SECRET`. The verification primitive (zkTLS, TEE
   attestation required) stays; the choice left to the funder and the strategy side is the
   onboarding cost per platform, see D24 for the alternatives.
+
+## D26, 11 Sep 2026, zkFetch: attested public data with no gesture from the person (candidate, decision pending)
+
+- Statement: Reclaim ships `@reclaimprotocol/zk-fetch` (1.1.0, 28 Jul 2026): a server (or a browser
+  holding a session signature) makes an HTTPS request and receives a Reclaim proof of the response,
+  `responseMatches` extracting fields, `useTee: true` per request, verified with `verifyProof` from
+  the js-sdk and transformed with `transformForOnchain` for the same on-chain verifier family as user
+  proofs. It needs the application id and secret, nothing from the end user. Duolingo's public profile
+  endpoint returns `totalXp`, `name` and `id` for a username (D24).
+- Source: `registry.npmjs.org/@reclaimprotocol/zk-fetch` readme (install, `ReclaimClient`, `zkFetch`,
+  `useTee`, `verifyProof`, `transformForOnchain`, session signatures with `allowedUrls`); D24 for the
+  endpoint.
+- What it would give: a daily check-in with no button, no login, no install: the keeper fetches a
+  TEE-attested proof of the person's public profile once a day and the evidence signer attests
+  `totalXp` from it, so the money accrues "as you go" exactly as the tagline says, and every
+  check-in stays verifiable by a third party (the attestor signed Duolingo's response, not Viky).
+  Account ownership proved once, without a password: the person puts a short code shown on their gift
+  page into their Duolingo display name for a minute; a zkFetch proof of the profile carrying that
+  code binds the profile id to the gift. The same pattern covers GitHub (public contributions, a code
+  in the bio). Private data (Strava) keeps the user proof through the verifier app.
+- What it costs or leaves open: the unofficial endpoint can change (same risk class as KT3, the
+  schema to confirm becomes the public one); a person with a private Duolingo profile must make it
+  public; zkFetch pricing and rate limits are not stated in the readme; the goal registry needs a
+  new provider id for Duolingo (owner call, no contract change, D14); about a day of work (fetch
+  module, ownership step on the gift page, keeper job, tests, DECISIONS update).
+- Consequence: nothing built until the funder and the strategy side choose between (a) the verifier
+  app path (install once on Android, App Clip on iPhone, D25) and (b) zkFetch on public data with
+  the display-name binding. Both keep the verification attested by Reclaim; they differ in what the
+  person has to do every day: an app, or nothing.
