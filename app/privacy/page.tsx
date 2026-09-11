@@ -37,7 +37,7 @@ export default function PrivacyPage() {
             <strong>If you fund a gift:</strong> the gift terms (amount, goal, daily target, duration) and the recipient&apos;s email or phone number as a one-way fingerprint only. The fingerprint is what the database and the public program hold; the plain email or number is never stored.
           </li>
           <li>
-            <strong>If you receive a gift:</strong> your Duolingo username and Duolingo profile id, kept in the database with each verification; a keyed pseudonym of that profile id, which is what the public program sees; the progress value you proved and the verification proof produced with Reclaim, kept as the record of each check-in.
+            <strong>If you receive a gift:</strong> your Duolingo username, profile id and display name (as read at each attested reading, including the short code you add to it once), kept in the database with each reading; a keyed pseudonym of that profile id, which is what the public program sees; your total XP as read, and the attested proof of the reading (produced with Reclaim), kept as the record of each day.
           </li>
           <li>
             <strong>Every visit:</strong> a session cookie (<span className="font-mono">__Host-viky-session</span>, 12 hours, signed, holds your account identifier) and a request counter keyed by the IP of your connection, held in memory for a few minutes to slow down abuse. No analytics scripts, no advertising, no tracking cookies.
