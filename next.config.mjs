@@ -6,7 +6,7 @@ const nextConfig = {
   reactStrictMode: true,
   // Reclaim's zkFetch stack (attestor core, zk circuits, optional native re2) is loaded at runtime from
   // node_modules rather than bundled: its dynamic imports and resource files do not survive bundling.
-  serverExternalPackages: ["@reclaimprotocol/zk-fetch", "@reclaimprotocol/attestor-core", "@reclaimprotocol/zk-symmetric-crypto", "@reclaimprotocol/js-sdk", "re2", "@swc/core", "pino"],
+  serverExternalPackages: ["@reclaimprotocol/zk-fetch", "@reclaimprotocol/attestor-core", "@reclaimprotocol/zk-symmetric-crypto", "re2", "@swc/core", "pino"],
   outputFileTracingIncludes: {
     "/api/**": [
       "./node_modules/.pnpm/@reclaimprotocol+attestor-core*/node_modules/@reclaimprotocol/attestor-core/**",

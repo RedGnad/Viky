@@ -70,7 +70,29 @@ export class PublicProfileError extends Error {
 export type PublicProfileDeps = {
   zkFetch: (url: string, matches: readonly ResponseMatch[]) => Promise<ZkFetchProof>;
   verify: (proof: ZkFetchProof) => Promise<boolean>;
+  /** Attestor addresses whose signature is accepted; defaults to Reclaim's production attestor. */
+  attestors?: readonly string[];
 };
+
+/**
+ * Reclaim's production attestor, the same address the Duolingo session verifier pins on chain. Measured
+ * on 11 Sep 2026: a zkFetch in TEE mode returns `witnesses: [{ id: <this address>, url:
+ * "wss://attestor.reclaimprotocol.org:444/ws" }]`. Override with RECLAIM_ATTESTOR_ADDRESSES (comma separated).
+ */
+export const DEFAULT_ATTESTORS: readonly string[] = ["0x244897572368Eadf65bfBc5aec98D8e5443a9072"];
+
+export function allowedAttestors(): readonly string[] {
+  const configured = process.env.RECLAIM_ATTESTOR_ADDRESSES?.split(",").map((a) => a.trim()).filter(Boolean);
+  return configured && configured.length > 0 ? configured : DEFAULT_ATTESTORS;
+}
+
+/** True when every witness of the proof is a pinned attestor. A proof without witnesses is refused. */
+export function attestorAccepted(proof: ZkFetchProof, attestors: readonly string[]): boolean {
+  const witnesses = Array.isArray(proof.witnesses) ? (proof.witnesses as Array<{ id?: unknown }>) : [];
+  if (witnesses.length === 0) return false;
+  const allowed = new Set(attestors.map((a) => a.toLowerCase()));
+  return witnesses.every((w) => typeof w?.id === "string" && allowed.has(w.id.toLowerCase()));
+}
 
 function parseJson(value: string, what: string): Record<string, unknown> {
   try {
@@ -144,15 +166,63 @@ export async function fetchPublicProfile(username: string, deps: PublicProfileDe
     throw new PublicProfileError("PROOF_INVALID", "The proof could not be verified", { cause: error });
   }
   if (!valid) throw new PublicProfileError("PROOF_INVALID", "The proof did not verify");
+  if (!attestorAccepted(proof, deps.attestors ?? allowedAttestors())) throw new PublicProfileError("PROOF_INVALID", "The proof was not signed by a pinned attestor");
   return profileFromProof(proof, username);
 }
 
-/** The production dependencies: Reclaim's zkFetch client in TEE mode and the js-sdk verifier. Server only. */
+/**
+ * Fetches through the attested-fetch worker (scripts/zkfetch-worker.ts) when ZKFETCH_WORKER_URL is set:
+ * Vercel functions run Node with `--no-experimental-require-module`, which zk-fetch's CommonJS build
+ * cannot load, so the fetch runs elsewhere and only the proof comes back. The signature check and the
+ * attestor pin stay here, so the worker cannot forge a reading.
+ */
+async function workerZkFetch(url: string): Promise<ZkFetchProof> {
+  const base = process.env.ZKFETCH_WORKER_URL!.trim().replace(/\/$/, "");
+  const secret = process.env.ZKFETCH_WORKER_SECRET?.trim();
+  if (!secret) throw new PublicProfileError("NOT_CONFIGURED", "The attested fetch worker is not configured");
+  const username = new URL(url).searchParams.get("username") ?? "";
+  const response = await fetch(`${base}/read`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${secret}` },
+    body: JSON.stringify({ username }),
+    signal: AbortSignal.timeout(90_000),
+  });
+  const body = (await response.json().catch(() => ({}))) as { proof?: ZkFetchProof; error?: string; message?: string };
+  if (response.status === 404) throw new Error(`Response match not found: ${body.message ?? "no profile"}`);
+  if (!response.ok || !body.proof) throw new Error(`worker ${response.status}: ${body.message ?? body.error ?? "no proof"}`);
+  return body.proof;
+}
+
+/** The dependencies used by the routes and the daily pass: the worker when configured, else the local client. */
 export async function reclaimPublicProfileDeps(): Promise<PublicProfileDeps> {
+  if (process.env.ZKFETCH_WORKER_URL?.trim()) {
+    const { verifyProof } = await import("@reclaimprotocol/js-sdk");
+    return {
+      zkFetch: (url) => workerZkFetch(url),
+      verify: async (proof) => (await verifyProof(proof as never, { dangerouslyDisableContentValidation: true } as never)).isVerified === true,
+    };
+  }
+  return reclaimLocalProfileDeps();
+}
+
+/**
+ * The local dependencies: Reclaim's zkFetch client in TEE mode and the js-sdk verifier. Server only.
+ * Content validation is Viky's own (`profileFromProof` checks URL, method and username against the
+ * proof), so the SDK's provider-hash validation is disabled; the SDK checks the attestor signature and
+ * Viky pins the attestor address. Measured on 11 Sep 2026: the proof object carries no attestor TEE
+ * attestation in zk-fetch 1.1.0, so that attestation is not verified here; the fetch itself runs through
+ * Reclaim's TEE client (`useTee`).
+ */
+export async function reclaimLocalProfileDeps(): Promise<PublicProfileDeps> {
   const appId = process.env.RECLAIM_ZKFETCH_APP_ID?.trim();
   const appSecret = process.env.RECLAIM_ZKFETCH_APP_SECRET?.trim();
   if (!appId || !appSecret) throw new PublicProfileError("NOT_CONFIGURED", "The attested fetch is not configured");
-  const [{ ReclaimClient }, { verifyProof }] = await Promise.all([import("@reclaimprotocol/zk-fetch"), import("@reclaimprotocol/js-sdk")]);
+  // Real runtime imports (the bundler leaves them alone): zk-fetch is CommonJS and requires ESM-only
+  // packages, which only Node's own loader can resolve.
+  const [{ ReclaimClient }, { verifyProof }] = await Promise.all([
+    import(/* turbopackIgnore: true */ "@reclaimprotocol/zk-fetch") as Promise<typeof import("@reclaimprotocol/zk-fetch")>,
+    import(/* turbopackIgnore: true */ "@reclaimprotocol/js-sdk") as Promise<typeof import("@reclaimprotocol/js-sdk")>,
+  ]);
   const client = new ReclaimClient(appId, appSecret);
   return {
     zkFetch: async (url, matches) =>
@@ -162,10 +232,8 @@ export async function reclaimPublicProfileDeps(): Promise<PublicProfileDeps> {
         { responseMatches: matches.map((m) => ({ ...m })) } as never,
       )) as unknown as ZkFetchProof,
     verify: async (proof) => {
-      // Content validation is Viky's own (profileFromProof checks URL, method and username against the
-      // proof); the SDK checks the attestor signature and, in TEE mode, the attestor's attestation.
-      const result = await verifyProof(proof as never, { dangerouslyDisableContentValidation: true, attestorTeeAttestation: {} } as never);
-      return result.isVerified === true && result.isAttestorTeeAttestationVerified === true;
+      const result = await verifyProof(proof as never, { dangerouslyDisableContentValidation: true } as never);
+      return result.isVerified === true;
     },
   };
 }

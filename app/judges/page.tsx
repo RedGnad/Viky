@@ -48,9 +48,12 @@ export default function JudgesPage() {
         <h2 className="font-medium">How progress is verified</h2>
         <p className="text-sm">
           Duolingo runs in public mode: once a day, Viky&apos;s keeper reads the recipient&apos;s public profile
-          through an attested fetch (Reclaim zkFetch, TEE mode). The attestor signs Duolingo&apos;s response, the
-          evidence signer turns the signed reading into an EIP-712 check-in, and the contract credits or refuses
-          it. The person signs in to nothing and installs nothing; account ownership is proved once, either by the
+          through an attested fetch (Reclaim zkFetch through Reclaim&apos;s TEE client). The attestor signs
+          Duolingo&apos;s response; Viky verifies that signature, pins the attestor&apos;s address (the same one the
+          on-chain Duolingo verifier pins) and checks the proof is about the right URL and username; the evidence
+          signer then turns the signed reading into an EIP-712 check-in, and the contract credits or refuses it.
+          What is not verified: the attestor&apos;s own TEE attestation, which zk-fetch 1.1.0 does not put in the
+          proof. The person signs in to nothing and installs nothing; account ownership is proved once, either by the
           funder naming the account or by a short code the recipient places in their Duolingo display name.
         </p>
         <p className="text-sm">

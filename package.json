@@ -5,7 +5,7 @@
   "description": "The money is already in their name. A conditional gift on Monad, released as verified progress accrues, refunded for every missed day.",
   "packageManager": "pnpm@10.33.0",
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -32,7 +32,9 @@
     "spike:preflight": "tsx scripts/spike/preflight.ts",
     "proof:capture": "tsx scripts/capture-duolingo-proof.ts",
     "proof:transform": "tsx scripts/transform-duolingo-proof.ts",
-    "register:goal": "tsx scripts/register-goal.ts"
+    "register:goal": "tsx scripts/register-goal.ts",
+    "count:gift": "tsx scripts/count-gift.ts",
+    "zkfetch:worker": "tsx scripts/zkfetch-worker.ts"
   },
   "dependencies": {
     "@category-labs/mera": "0.2.0",
