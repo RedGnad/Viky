@@ -47,10 +47,17 @@ const noCredential = () => false;
 export function AccountProvider({ children }: { children: ReactNode }) {
   // The account module is the source of truth; React mirrors it. The server snapshot is always
   // "signed out", so the first paint matches on both sides.
-  const address = useSyncExternalStore(mera.subscribe, mera.currentAddress, noAddress);
+  const signedInAddress = useSyncExternalStore(mera.subscribe, mera.currentAddress, noAddress);
   const hasCredential = useSyncExternalStore(mera.subscribe, mera.hasStoredCredential, noCredential);
   const [status, setStatus] = useState<AccountStatus>("idle");
   const [error, setError] = useState<AccountError | undefined>(undefined);
+  const [serverSessionFor, setServerSessionFor] = useState<Address | undefined>(undefined);
+
+  // The passkey opens the signing session first and Viky's server accepts the browser a moment later.
+  // The account is announced to the rest of the app only once both are true, because a screen that
+  // learns about it in between asks the server for this person's gifts with no session yet, is refused,
+  // and keeps that refusal on screen with nothing to retry.
+  const address = signedInAddress !== undefined && signedInAddress === serverSessionFor ? signedInAddress : undefined;
 
   const run = useCallback(async (action: () => Promise<Address>) => {
     setStatus("busy");
@@ -60,9 +67,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       // The passkey account also signs the browser in to Viky's server, silently: the session cookie is
       // what lets every later step name the account without ever taking it from a form.
       const account = mera.currentAccount();
-      if (account) await withTimeout(signInToServer(account), SERVER_TIMEOUT_MS);
+      if (account) {
+        await withTimeout(signInToServer(account), SERVER_TIMEOUT_MS);
+        setServerSessionFor(account.address);
+      }
     } catch (caught) {
       mera.signOut();
+      setServerSessionFor(undefined);
       setError(toAccountError(caught));
     } finally {
       setStatus("idle");
@@ -79,6 +90,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       signIn: () => run(() => mera.signIn()),
       signOut: () => {
         mera.signOut();
+        setServerSessionFor(undefined);
         void signOutOfServer();
       },
       clearError: () => setError(undefined),
