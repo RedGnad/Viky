@@ -254,10 +254,10 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
             </p>
           ) : null}
           <p className="text-sm" style={{ color: "var(--muted)" }}>
-            Do your lesson; nothing else. Your Duolingo: {account.username}.
+            Do your lesson; nothing else. Each morning Viky reads your Duolingo ({account.username}) and counts the day before.
           </p>
           <button type="button" onClick={count} disabled={working || gift.todayDayIndex === 0} className="w-full rounded-lg border px-4 py-3 text-sm disabled:opacity-50">
-            {busy === "counting" ? "Reading your profile" : "Count today now"}
+            {busy === "counting" ? "Reading your profile" : "Count now"}
           </button>
         </section>
       ) : null}

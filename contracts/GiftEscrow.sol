@@ -56,8 +56,11 @@ contract GiftEscrow is Ownable, ReentrancyGuard, EIP712 {
     uint32 public constant MAX_DURATION_DAYS = 90;
     uint256 public constant MAX_ATTESTATION_AGE = 10 minutes;
     uint256 public constant MAX_CLOCK_SKEW = 1 minutes;
-    /// @dev A day can be covered until the end of the next day; only then can it be drained (DECISIONS.md D13).
-    uint256 public constant CATCH_UP_WINDOW = 1 days;
+    /// @dev A day can be covered until the end of the next day (DECISIONS.md D13), and is judged by the reading
+    ///      taken the morning after that: it becomes drainable only once that reading has had time to run, so a
+    ///      drain called just after midnight can never pre-empt a catch-up (DECISIONS.md D30).
+    uint256 public constant READING_GRACE = 6 hours;
+    uint256 public constant CATCH_UP_WINDOW = 1 days + READING_GRACE;
     uint256 public constant UNCLAIMED_REFUND_DELAY = 14 days;
     uint256 private constant DAY = 1 days;
 
@@ -331,9 +334,12 @@ contract GiftEscrow is Ownable, ReentrancyGuard, EIP712 {
     }
 
     /// @notice Records verified progress. The first accepted check-in is the baseline: it binds the identity,
-    ///         anchors the metric and opens the window the next UTC day. Later check-ins credit the earliest open
-    ///         days in order; a binge inside the catch-up window is allowed, partial progress below one day
-    ///         carries to the next check-in, and excess beyond the open days is discarded (never banked).
+    ///         anchors the metric and opens the window the next UTC day. Later check-ins judge only days that are
+    ///         over: a reading observed on day `d` credits the earliest open days up to `d - 1`, never `d` itself,
+    ///         so a lesson taken on the last day counts when it is read the next morning, and progress made
+    ///         before the window can never pay for a missed window day (DECISIONS.md D30). A binge inside the
+    ///         catch-up window is allowed, partial progress below one day carries to the next check-in, and
+    ///         excess beyond the open days is discarded (never banked).
     function checkIn(uint256 giftId, CheckInAttestation calldata a) external nonReentrant {
         if (checkInPaused) revert CheckInIsPaused();
         Gift storage g = _gift(giftId);
@@ -365,9 +371,9 @@ contract GiftEscrow is Ownable, ReentrancyGuard, EIP712 {
 
         if (a.identityHash != g.identityHash) revert IdentityMismatch();
         if (a.metricValue < g.baselineValue) revert MetricDecreased();
-        uint32 today = _dayOf(a.observedAt);
-        if (today < g.startDay) revert OutsideWindow();
-        uint32 upper = today > g.endDay ? g.endDay : today;
+        uint32 lastCompleteDay = _dayOf(a.observedAt) - 1;
+        if (lastCompleteDay < g.startDay) revert OutsideWindow();
+        uint32 upper = lastCompleteDay > g.endDay ? g.endDay : lastCompleteDay;
         if (upper <= g.settledThroughDay) revert NothingToCredit();
 
         uint32 elapsed = upper - g.settledThroughDay;
