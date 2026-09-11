@@ -22,6 +22,7 @@ protocol and the record; the fields are filled in as the chain runs.
 | Reclaim app | configured (id not recorded here); `ReclaimProofRequest.init` for provider `cdf8cb3b-2976-4413-ab2d-693ae5028380@1.0.8` returned a `portal.reclaimprotocol.org` request URL on 10 Sep 2026 |
 | database | Neon (Frankfurt, free plan) provisioned through the Vercel marketplace on 10 Sep 2026; `pnpm db:migrate` created `viky_proof_sessions`, `viky_gifts`, `viky_relayed` |
 | `pnpm spike:preflight` | 16 `ok` lines, no `FAIL`, 10 Sep 2026 |
+| corrected `GiftEscrow` (D30, D35) | `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233`, deployment tx `0x3b7f0619421e2bc3e9a57774bca9018be13d44b812a700b839ba80abe0def4bd`, code hash `0xee67c892c3e571a7d070c3af863f6a165c49f4ebbd92ba459eba5b3c9b6c787a`, deployed 11 Sep 2026 18:45 UTC with `firstGiftId = 2` read from the contract it replaces. Post-deploy: `registerGoal(1, keccak("viky:provider:duolingo-public-zkfetch:v1"))` `0xc79c4f961a8951d988d63a688bd1fd5c3e599bdc23361a7ee37e70b56a676017`; `setCreationPaused(false)` `0x8bcb01fc8a0211fab040998154346c3fd7dd3ef1574481136643cd09044befc2`; `setCheckInPaused(false)` `0x73007fb9fd502197a09300843083ff4cf6552d93832d48772fe64d1f13838313`. Sourcify runtime match `exact_match`, match id 1768534. On chain: `CATCH_UP_WINDOW` 108000 s, `READING_GRACE` 21600 s, `nextGiftId` 2. **This chain (gift 1) keeps running on the contract above it**; gift 2 onwards is created here |
 | preview hostname | `viky-two.vercel.app` (throwaway; every passkey created there is throwaway) |
 
 ## Legs

@@ -55,7 +55,8 @@ async function main() {
     console.log(`${passed ? "ok  " : "FAIL"} ${label}: ${value}`);
   }
   console.log(`info owner: ${owner}`);
-  console.log(`info gifts created so far: ${Number(nextGiftId) - 1}`);
+  // Gift ids continue across deployments (D30), so the count is not the id minus one.
+  console.log(`info next gift id: ${nextGiftId}`);
   if (!ok) throw new Error("GiftEscrow does not match the expected configuration");
 }
 

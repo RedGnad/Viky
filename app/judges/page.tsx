@@ -9,6 +9,9 @@ export const metadata: Metadata = {
 // The only page where contract addresses appear. Consumer screens never show them.
 export default function JudgesPage() {
   const escrow = process.env.NEXT_PUBLIC_GIFT_ESCROW_ADDRESS?.trim();
+  // Gifts created before the D30 corrections keep running on the contract that holds them, and every
+  // gift record names its own contract, so both are listed here for as long as the older one holds one.
+  const earlierEscrow = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-12">
       <header className="space-y-2">
@@ -41,6 +44,18 @@ export default function JudgesPage() {
             Nothing is claimed as working until the first gift has run end to end on mainnet; the record is in
             docs/spikes/KT1.md.
           </dd>
+          {earlierEscrow ? (
+            <>
+              <dt style={{ color: "var(--muted)" }}>Earlier gift contract</dt>
+              <dd className="break-all">
+                <span className="font-mono">{earlierEscrow}</span>{" "}
+                (<a className="underline" href={`https://monadvision.com/address/${earlierEscrow}`}>MonadVision</a>, source verified through Sourcify).
+                It holds the gifts created before the day-counting corrections of DECISIONS.md D30 and keeps running
+                them to the end. Gift ids never restart: the newer contract continues the sequence, and every gift
+                record names the contract that holds it.
+              </dd>
+            </>
+          ) : null}
         </dl>
       </section>
 
