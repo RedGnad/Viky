@@ -609,4 +609,12 @@ party platform or API, `[U]` not verified).
   release path in the contract does. Nothing is claimed about it until it exists: the product today is for
   daily goals, and the education, sport and freelance segments are only partly served by that. Put to the
   advisor, since the segments named for Viky are largely one-shot and this decides what we may claim.
+- The lesson, stated plainly: the contract was made extensible along one axis and rigid along the other.
+  The goal registry maps a goal type to a provider, so a new *source* of truth (Strava, GitHub) costs no
+  contract change. The *shape* of the release, a day at a time over a fixed window, is written into
+  `checkIn` itself, so a new shape costs a new contract. We generalised where the pressure was easy to see
+  and hardcoded where it was not. That is the thing to carry into the milestone work, not the number 7.
+- What it does not cost: waiting. Each gift is served by the contract that holds it (D30), which is already
+  running with two contracts at once, so a milestone contract can be deployed while gifts 1 and 2 finish
+  where they are. No money in flight blocks a contract change any more.
 
