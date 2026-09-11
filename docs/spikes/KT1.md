@@ -64,3 +64,30 @@ protocol and the record; the fields are filled in as the chain runs.
 To be written when every leg above has a result. If the exit leg fails, the spec's downgrade applies
 (funder crypto-native only for the window; cross-border claim downgraded) and is recorded in
 `docs/DECISIONS.md`.
+
+## Second chain, 11 Sep 2026: gift 2, the corrected contract and the funder screen
+
+Run to prove the funder screen and the corrected contract before either meets a real user. It cost no new
+money: it used the change left over from the first purchase.
+
+| step | result |
+|---|---|
+| created | through `/fund`, the funder screen, not a dev page. $1.00, 1 XP a day, 7 days, $0.142857 a day. Gift id 2 on `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233`, the corrected contract, whose numbering continued from the earlier one rather than restarting |
+| recorded | present both on chain and in the app's own record, which is the failure the contract review warned about and the reason `saveGift` now fails loudly on a colliding id |
+| claimed | opened from the claim link with the recipient account, on the preview hostname the link carried |
+| bound | immediately, with no code to place: the funder had named the Duolingo account, so D27's binding code was not needed |
+| friction | reported by the recipient as very low, in their words. Not timed, so KT5 still has no measurement |
+| window | 12 to 18 Sep, the same days as gift 1 |
+
+**A checkable prediction, written before the fact.** The two gifts sit on contracts with different day
+rules, so the morning pass of 12 Sep must treat them differently:
+
+- Gift 1, on the earlier contract, credits its first day, because that contract credits the day a reading
+  is taken on, using the progress made before it.
+- Gift 2, on the corrected contract, credits nothing and is refused `OutsideWindow`, because a reading on
+  12 Sep can only settle days that are over, and the first day of its window is 12 Sep itself. It credits
+  that day at the pass of 13 Sep.
+
+If both credit on 12 Sep, the D30 correction is not live where it should be. If neither does, the pass or
+the worker is broken. The difference is the evidence.
+
