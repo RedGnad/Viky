@@ -424,3 +424,19 @@ party platform or API, `[U]` not verified).
   system CA store, which the Go TEE client needs; without it: "x509: certificate signed by unknown
   authority"). Railway's default builder ignored the start command and served the Next app; the
   explicit Dockerfile removes that ambiguity. Unauthenticated calls get 401.
+
+## D28, 11 Sep 2026, KT3 is superseded for Duolingo by the public mode
+
+- Statement: KT3 asked whether the live Duolingo schema of the zkTLS session provider
+  (`cdf8cb3b-2976-4413-ab2d-693ae5028380@1.0.8`) still matches the on-chain verifier's grammar, which
+  decided whether `LIVE_SCHEMA_CONFIRMED` could be set. Since D27 the Duolingo goal no longer uses the
+  session proof: the registry holds the public provider id, and the number comes from an attested read
+  of the public profile. The fields read there (`id`, `totalXp`, `username`, `name`, `streak`) are
+  checked against real responses by `test/duolingo-public.test.ts`, and every daily read re-attests
+  them; a drift makes the read fail with a typed refusal rather than credit a wrong number.
+- Source: D27; `src/duolingo-public.ts`; the baseline of gift 1 (tx `0x95770ded…0c76`) and the read of
+  11 Sep 2026 12:06 UTC from Railway (8401 XP).
+- Consequence: `LIVE_SCHEMA_CONFIRMED` stays `false`; the on-chain Reclaim verifier is not on the v1
+  path (SPEC 7.1: the evidence signer is), and the session-proof capture is only needed if the
+  verifier-app path is ever used for a private source. The live-schema risk now lives in the public
+  endpoint and is written on the judges page as an accepted risk.
