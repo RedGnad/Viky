@@ -440,3 +440,25 @@ party platform or API, `[U]` not verified).
   path (SPEC 7.1: the evidence signer is), and the session-proof capture is only needed if the
   verifier-app path is ever used for a private source. The live-schema risk now lives in the public
   endpoint and is written on the judges page as an accepted risk.
+
+## D29, 11 Sep 2026, Calm now carries card and bank transfer straight to AUSD on Monad, with any signer
+
+- Statement: Calm's release v0.13.0 (9 Sep 2026) changes three facts the spec relied on. Card is
+  Live (two providers, `card` and `card[stripe]`, with Card, Apple Pay and Google Pay rows, 53
+  markets), next to bank transfer Live (ACH/wire USD, SEPA EUR, Faster Payments GBP, KYC the first
+  time). Monad (`143`) takes `destinationToken="AUSD"`, "never shown to the end user". Wallet
+  authentication is removed: no SIWE, no Privy or Dynamic token; every request carries a publishable
+  key pinned to an origin allowlist, and `<CalmProvider>` takes the app's own `address`,
+  `sendTransaction`, `signTypedData` and `waitForReceipt`: "any stack that can produce an address and
+  sign will work", so Mera passkey accounts fit as they are. A sandbox API exists
+  (`api.sandbox.calmtreasury.xyz`). The card quote API prices either a fiat spend or an exact crypto
+  output and has an `amount_below_minimum` refusal. Account access is still by call (no self-serve
+  dashboard sign-up), and the docs describe no off-ramp back to a bank.
+- Source: `docs.calmtreasury.xyz` `changelog.md` (v0.13.0), `onramps.md`, `chains.md`,
+  `sdk/react/CalmProvider.md`, `sdk/react/CalmDialog.md`, `api/authentication.md`, `api/card/quote.md`,
+  read 11 Sep 2026.
+- Consequence: SPEC 9.1 is out of date on two points (card "coming soon", SDK tied to wagmi, Privy or
+  Dynamic). With a Calm account, the funder's entry becomes card, Apple Pay, Google Pay or SEPA, and
+  AUSD lands in the funder's Viky account directly: no "buy MON", no pasted identifier, no swap. The
+  exit still needs another path (keep the balance, send back, a card program, or Mercuryo Sell).
+  The call with Calm (11 Sep 2026) decides whether an individual publisher can hold the account.
