@@ -8,7 +8,7 @@ import {
 import { toViemAccount } from "@category-labs/mera/viem";
 import type { Address, LocalAccount } from "viem";
 import { deriveEvmPrivateKey } from "./derive";
-import { accountError, toAccountError } from "./errors";
+import { accountError, passkeyEnvironmentProblem, toAccountError } from "./errors";
 
 /**
  * The whole account layer: a passkey (Face ID, fingerprint, security key) whose PRF output derives
@@ -27,6 +27,13 @@ const listeners = new Set<() => void>();
 
 function requireBrowser(): void {
   if (typeof window === "undefined") throw accountError("NOT_IN_BROWSER");
+}
+
+/** Refuses, with guidance, the browsers where the passkey prompt would never come back. */
+function requirePasskeyCapableBrowser(): void {
+  requireBrowser();
+  const problem = passkeyEnvironmentProblem(window.navigator.userAgent, typeof window.PublicKeyCredential !== "undefined");
+  if (problem) throw accountError(problem);
 }
 
 /** React subscribes here (useSyncExternalStore); every session or credential change notifies. */
@@ -99,7 +106,7 @@ function openSession(prfOutput: Uint8Array): Address {
 export const DEFAULT_PASSKEY_LABEL = "Viky account";
 
 export async function createAccount(displayName: string): Promise<Address> {
-  requireBrowser();
+  requirePasskeyCapableBrowser();
   // The label only lives in the passkey provider (iCloud Keychain, Google Password Manager); it is
   // never sent to Viky's server, never stored by the app and never written on chain.
   const name = displayName.trim() || DEFAULT_PASSKEY_LABEL;
@@ -117,7 +124,7 @@ export async function createAccount(displayName: string): Promise<Address> {
 
 /** Reopens the account from an existing passkey. Falls back to the platform picker when nothing is stored. */
 export async function signIn(): Promise<Address> {
-  requireBrowser();
+  requirePasskeyCapableBrowser();
   const known = storedCredential();
   try {
     const result = await getPasskeyPrfOutput({ rpId: relyingPartyId(), credential: known });

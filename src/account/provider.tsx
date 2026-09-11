@@ -2,8 +2,29 @@
 import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Address } from "viem";
 import { signInToServer, signOutOfServer } from "../client/server-session";
-import { type AccountError, toAccountError } from "./errors";
+import { type AccountError, accountError, toAccountError } from "./errors";
 import * as mera from "./mera";
+
+// A passkey prompt that never comes back (in-app browsers, a dismissed system sheet the page never
+// hears about) or a server that never answers must not leave "One moment" on the screen forever.
+const CEREMONY_TIMEOUT_MS = 60_000;
+const SERVER_TIMEOUT_MS = 20_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(accountError("TIMED_OUT")), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
 
 export type AccountStatus = "idle" | "busy";
 
@@ -35,11 +56,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     setStatus("busy");
     setError(undefined);
     try {
-      await action();
+      await withTimeout(action(), CEREMONY_TIMEOUT_MS);
       // The passkey account also signs the browser in to Viky's server, silently: the session cookie is
       // what lets every later step name the account without ever taking it from a form.
       const account = mera.currentAccount();
-      if (account) await signInToServer(account);
+      if (account) await withTimeout(signInToServer(account), SERVER_TIMEOUT_MS);
     } catch (caught) {
       mera.signOut();
       setError(toAccountError(caught));

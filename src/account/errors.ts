@@ -7,6 +7,8 @@ export type AccountErrorCode =
   | "SESSION_ENDED"
   | "NO_CREDENTIAL"
   | "NOT_IN_BROWSER"
+  | "UNSUPPORTED_BROWSER"
+  | "TIMED_OUT"
   | "UNKNOWN";
 
 /**
@@ -34,6 +36,9 @@ const GUIDANCE: Record<AccountErrorCode, string> = {
   SESSION_ENDED: "You were signed out. Sign in again to continue.",
   NO_CREDENTIAL: "No account is saved on this device yet. Create one, or sign in with a passkey you already have.",
   NOT_IN_BROWSER: "Accounts can only be created in a browser.",
+  UNSUPPORTED_BROWSER:
+    "This page is open inside another app, which cannot create a passkey. Copy the link and open it in Chrome or Safari, then try again.",
+  TIMED_OUT: "Your device did not answer. If this page is open inside another app, open it in Chrome or Safari; otherwise check your connection and try again.",
   UNKNOWN: "Something went wrong on our side. Nothing was changed. Please try again.",
 };
 
@@ -63,4 +68,15 @@ export function toAccountError(error: unknown): AccountError {
 
 export function accountError(code: AccountErrorCode): AccountError {
   return new AccountError(code, GUIDANCE[code]);
+}
+
+/**
+ * Pure check of the browser environment, testable without a DOM. In-app browsers (a messaging or
+ * mail app opening a link inside itself) either lack WebAuthn or never answer the passkey prompt,
+ * which the person sees as an endless "One moment". Refuse early, with the way out.
+ */
+export function passkeyEnvironmentProblem(userAgent: string, hasWebAuthn: boolean): AccountErrorCode | undefined {
+  if (!hasWebAuthn) return "UNSUPPORTED_BROWSER";
+  const inAppBrowser = /; ?wv\)|FBAN|FBAV|FB_IAB|Instagram|Line\/|Snapchat|TikTok|BytedanceWebview|Telegram|GSA\/|DuckDuckGo\/[0-9]+ Mobile/i.test(userAgent);
+  return inAppBrowser ? "UNSUPPORTED_BROWSER" : undefined;
 }
