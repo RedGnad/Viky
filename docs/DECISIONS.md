@@ -572,4 +572,10 @@ party platform or API, `[U]` not verified).
      as a correction inside D30; the docstring is corrected and the misnamed test renamed.
 - Consequence: the redeployment carries the D30 corrections and the gift-id constructor argument, nothing
   else. `FIRST_GIFT_ID` is set to the `nextGiftId()` read from the contract being replaced.
-
+- Deployed, 11 Sep 2026 18:45 UTC: `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233`, transaction
+  `0x3b7f0619421e2bc3e9a57774bca9018be13d44b812a700b839ba80abe0def4bd`, first gift id 2 (read from the
+  contract it replaces, which stopped at 2), Duolingo goal registered, creation and check-in unpaused,
+  owner unchanged. Source verified through Sourcify on the Monad endpoint, runtime `exact_match`, match id
+  1768534. On chain the new constants read back as `CATCH_UP_WINDOW` 108000 seconds (30 hours) and
+  `READING_GRACE` 21600 seconds. Gift 1 stays on `0xE04CD59bB93765333200a9da01df83149D4C4d67` until it is
+  finalised, because its record names that contract; both are listed on the judges page.
