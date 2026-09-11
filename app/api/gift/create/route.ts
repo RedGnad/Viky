@@ -102,6 +102,7 @@ export async function POST(request: Request) {
       durationDays,
       amount,
       createdTx: created.hash,
+      escrow: created.escrow,
       goalUsername: duolingoUsername,
     });
 

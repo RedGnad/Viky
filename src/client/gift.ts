@@ -100,6 +100,7 @@ export function countNow(giftId: string): Promise<PublicOutcome> {
 }
 
 export type GiftStatus = {
+  escrow: Hex;
   goalAccount: GoalAccount;
   giftId: string;
   goalType: number;
@@ -176,8 +177,8 @@ export async function runCheckIn(input: {
 }
 
 /** Takes what is already the recipient's: an intent signed by their own account, submitted by the relayer. */
-export async function withdrawEarned(input: { account: LocalAccount; giftId: string; amount: bigint; nonce: bigint }): Promise<{ sent: boolean }> {
-  const escrow = escrowAddressFromEnv();
+export async function withdrawEarned(input: { account: LocalAccount; giftId: string; escrow: Hex; amount: bigint; nonce: bigint }): Promise<{ sent: boolean }> {
+  const escrow = input.escrow;
   const deadline = BigInt(Math.floor(Date.now() / 1_000) + 10 * 60);
   const message = { giftId: BigInt(input.giftId), to: getAddress(input.account.address), amount: input.amount, nonce: input.nonce, deadline };
   const signature = await input.account.signTypedData(withdrawIntentTypedData(escrow, message));

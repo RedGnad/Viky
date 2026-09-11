@@ -485,4 +485,53 @@ party platform or API, `[U]` not verified).
   from the contract that holds it (the escrow of each gift stored with its record), which lands with the
   funder screen. Gift 1's expected outcome under the old rule (lessons through 16 Sep, none on 17 and 18)
   is unchanged: six days credited, one returned.
+- Follow-up, same day: serving each gift from the contract that holds it is implemented, not deferred.
+  Every gift record carries the contract it was created on; a record without one is refused rather than
+  served by the configured contract, so a redeployment can never silently point gift 1 at the new
+  contract. The migration stamps gift 1 before any change of the configured contract, and a test pins
+  the rule: after the configured contract changes, gift 1 still resolves to the old one.
+
+## D31, 11 Sep 2026, KT2 passed: a progressive web app counts as a mobile app
+
+- Statement: a progressive web app qualifies as the "mobile app" the Agora payments bounty asks for.
+- Source: the Metropolis support answer, relayed by the funder on 11 Sep 2026.
+- Consequence: KT2 is answered, yes. No native wrapper is built and the Expo shell leaves the plan. The
+  install prompt stays the only mobile-app surface, offered after the first successful count.
+
+## D32, 11 Sep 2026, Calm has no account for us: Mercuryo is the entry rail
+
+- Statement: Calm does not open partner accounts to us. They serve trading platforms that are already
+  live. There is no sandbox key and no path to a live key for Viky today.
+- Source: the Calm call, 11 Sep 2026.
+- Consequence: D29 stays as a record of what their product does and is no longer a plan. The entry rail
+  is the Mercuryo consumer widget, driven by the funder's own hands and card, with the minimums measured
+  in D20: 25 EUR minimum purchase, about 3.8 % in fees. The funder screen is built around that widget
+  rather than around an embedded provider, and KT1's fiat legs run on Mercuryo.
+
+## D33, 11 Sep 2026, the production hostname is viky.cash
+
+- Statement: viky.cash is bought. The Mera relying party id is the hostname the app is served from
+  (`src/account/mera.ts` reads `window.location.hostname`), so it becomes viky.cash with no code change
+  and is never hardcoded. A passkey is bound to its hostname forever (D10).
+- Source: the funder, 11 Sep 2026; the Mera guide read on 9 Sep 2026.
+- Consequence: viky.cash is added to the Vercel project, with www redirecting to the apex. The preview
+  hostname keeps being served until gift 1 is finalised, because both accounts of gift 1 are bound to
+  it and nothing about gift 1 moves. Every gift created from now on is created on viky.cash. The Reclaim
+  application origins, the legal page and the gift links follow. The stateless test is then run again on
+  viky.cash itself: an account created there signs back in from a second browser with the passkey alone.
+
+## D34, 11 Sep 2026, Agora Instant Settlement has no place in the current flow
+
+- Statement: money enters and leaves Viky in MON, and the Instant Settlement pair converts only AUSD and
+  USDC, so there is nothing in the current flow for it to settle. The pair on Monad is
+  `0xf33286E3222D1c829dACeac48c0Ec651F6452470`; its whitelist holds 72 addresses today, of which 10 carry
+  code, and a single whitelister can add to it.
+- Source: the strategy review of 11 Sep 2026, measured on chain; Agora's examples repository
+  github.com/agora-finance/stable-swap-examples (read on 11 Sep 2026: quotes, maximum swap amounts,
+  swaps and pair reserves for AUSD and USDC; the review reports it targets Fuji with the same factory as
+  Monad).
+- Consequence: nothing is built for it, and the payments bounty is not pursued through this pair. It
+  becomes relevant only when both hold: Agora whitelists one of our contracts, and a step of the flow
+  actually runs in USDC (an Immersve card, or funding in USDC). Even then it goes in a separate router
+  contract, never inside GiftEscrow, which keeps holding one asset.
 

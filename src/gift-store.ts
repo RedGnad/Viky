@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS viky_relayed (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS viky_relayed_gift ON viky_relayed (gift_id, created_at DESC);
+ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS escrow text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS goal_username text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS username_source text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS binding_code text;
@@ -68,6 +69,8 @@ export type GiftRecord = Readonly<{
   recipient: string | null;
   createdTx: Hex;
   claimedTx: Hex | null;
+  /** The contract that holds this gift (D30: several deployments serve their own gifts). */
+  escrow: Hex | null;
   /** Public mode (D27): the account read by the attested fetch, who named it, and the binding state. */
   goalUsername: string | null;
   usernameSource: "funder" | "recipient" | null;
@@ -105,16 +108,30 @@ export async function saveGift(input: {
   durationDays: number;
   amount: bigint;
   createdTx: Hex;
+  /** The contract the gift was created on. */
+  escrow: Hex;
   /** Set when the funder knows the recipient's account: no binding code is needed then (D27). */
   goalUsername?: string;
 }): Promise<void> {
   await sql()`
     INSERT INTO viky_gifts
-      (gift_id, funder, contact_hash, claim_token_hash, goal_type, daily_target, duration_days, amount, created_tx, goal_username, username_source)
+      (gift_id, funder, contact_hash, claim_token_hash, goal_type, daily_target, duration_days, amount, created_tx, escrow, goal_username, username_source)
     VALUES (${input.giftId}, ${input.funder.toLowerCase()}, ${input.contactHash}, ${claimTokenHash(input.claimToken)},
             ${input.goalType}, ${input.dailyTarget}, ${input.durationDays}, ${input.amount.toString()}, ${input.createdTx},
-            ${input.goalUsername ?? null}, ${input.goalUsername ? "funder" : null})
+            ${input.escrow.toLowerCase()}, ${input.goalUsername ?? null}, ${input.goalUsername ? "funder" : null})
     ON CONFLICT (gift_id) DO NOTHING`;
+}
+
+/** Records which contract holds gifts saved before the column existed (a one-off, run by the migration). */
+export async function backfillEscrow(escrow: Hex): Promise<number> {
+  const rows = await sql()`UPDATE viky_gifts SET escrow = ${escrow.toLowerCase()} WHERE escrow IS NULL RETURNING gift_id`;
+  return rows.length;
+}
+
+/** Every gift the app knows, for the daily pass. */
+export async function loadAllGifts(): Promise<GiftRecord[]> {
+  const rows = await sql()`SELECT * FROM viky_gifts ORDER BY gift_id`;
+  return rows.map(toRecord);
 }
 
 /** The recipient names their own account; a fresh code must then be proved in the display name. */
@@ -156,6 +173,7 @@ function toRecord(row: Record<string, unknown>): GiftRecord {
     recipient: row.recipient === null || row.recipient === undefined ? null : String(row.recipient),
     createdTx: String(row.created_tx) as Hex,
     claimedTx: row.claimed_tx === null || row.claimed_tx === undefined ? null : (String(row.claimed_tx) as Hex),
+    escrow: row.escrow === null || row.escrow === undefined ? null : (String(row.escrow) as Hex),
     goalUsername: row.goal_username === null || row.goal_username === undefined ? null : String(row.goal_username),
     usernameSource: row.username_source === "funder" || row.username_source === "recipient" ? row.username_source : null,
     bindingCode: row.binding_code === null || row.binding_code === undefined ? null : String(row.binding_code),

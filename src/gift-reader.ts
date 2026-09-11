@@ -85,10 +85,6 @@ export async function readGift(escrow: Hex, giftId: string, client: PublicClient
   };
 }
 
-export async function readNextGiftId(escrow: Hex, client: PublicClient = giftPublicClient()): Promise<bigint> {
-  return client.readContract({ address: escrow, abi: giftEscrowAbi as unknown as Abi, functionName: "nextGiftId" }) as Promise<bigint>;
-}
-
 /** UTC day number of a timestamp, as the contract computes it. */
 export function utcDayOf(timestampSeconds: number): number {
   return Math.floor(timestampSeconds / 86_400);

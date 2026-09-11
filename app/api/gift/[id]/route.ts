@@ -3,7 +3,7 @@ import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { checkInDayIndex, formatAusd, readGift, utcDayOf } from "@/src/gift-reader";
 import { loadGift, loadRelayed } from "@/src/gift-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { escrowAddress } from "@/src/relayer";
+import { escrowOf } from "@/src/relayer";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 
 export const runtime = "nodejs";
@@ -21,7 +21,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const { id } = await context.params;
     if (!/^\d{1,78}$/.test(id)) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
 
-    const [gift, record, relayed] = await Promise.all([readGift(escrowAddress(), id), loadGift(id), loadRelayed(id)]);
+    const [record, relayed] = await Promise.all([loadGift(id), loadRelayed(id)]);
+    if (!record) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
+    const escrow = escrowOf(record);
+    const gift = await readGift(escrow, id);
     const now = Math.floor(Date.now() / 1_000);
     const today = utcDayOf(now);
     const missedSoFar = gift.drainedDays;
@@ -44,6 +47,8 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     return NextResponse.json(
       {
         giftId: id,
+        // Used by the recipient's browser to sign a withdraw intent for the right contract; never displayed.
+        escrow,
         goalAccount,
         goalType: gift.goalType,
         dailyTarget: gift.dailyTarget,

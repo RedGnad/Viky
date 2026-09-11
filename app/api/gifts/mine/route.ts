@@ -4,7 +4,7 @@ import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { formatAusd, readGift } from "@/src/gift-reader";
 import { loadGiftsOf } from "@/src/gift-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { escrowAddress } from "@/src/relayer";
+import { escrowOf } from "@/src/relayer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,10 +20,9 @@ export async function GET(request: Request) {
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
     const auth = readAccountAuthSession(request);
     const records = await loadGiftsOf(auth.account);
-    const escrow = escrowAddress();
     const gifts = await Promise.all(
       records.map(async (record) => {
-        const gift = await readGift(escrow, record.giftId);
+        const gift = await readGift(escrowOf(record), record.giftId);
         const role = record.funder.toLowerCase() === auth.account.toLowerCase() ? "funder" : "recipient";
         return {
           giftId: record.giftId,
