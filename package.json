@@ -34,7 +34,8 @@
     "proof:transform": "tsx scripts/transform-duolingo-proof.ts",
     "register:goal": "tsx scripts/register-goal.ts",
     "count:gift": "tsx scripts/count-gift.ts",
-    "zkfetch:worker": "tsx scripts/zkfetch-worker.ts"
+    "zkfetch:worker": "tsx scripts/zkfetch-worker.ts",
+    "check:words": "tsx scripts/check-consumer-words.ts"
   },
   "dependencies": {
     "@category-labs/mera": "0.2.0",

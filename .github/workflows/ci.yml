@@ -57,6 +57,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Check consumer screens for forbidden words
+        run: pnpm check:words
+
       - name: Check Solidity formatting
         run: forge fmt --check
 

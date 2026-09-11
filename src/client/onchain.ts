@@ -83,7 +83,7 @@ export async function sendAllMon(account: LocalAccount, to: Hex): Promise<{ hash
   ]);
   const gas = estimate === 21_000n ? estimate : addMonadGasBuffer(estimate);
   const amount = balance - gas * fees.maxFeePerGas;
-  if (amount <= 0n) throw new Error("Nothing left to send after the transfer's own gas");
+  if (amount <= 0n) throw new Error("Nothing left to send once the transfer fee is kept");
   const hash = await browserWalletClient(account).sendTransaction({
     account,
     chain: monadChain,
