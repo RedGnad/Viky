@@ -416,6 +416,11 @@ party platform or API, `[U]` not verified).
   a Vercel cron at 00:30 UTC and to `pnpm keeper`. Vercel functions start Node 24 with
   `--no-experimental-require-module` (read from `process.execArgv` on 11 Sep 2026), and zk-fetch is a
   CommonJS build that requires ESM-only packages, so the fetch cannot run inside a Vercel function:
-  it runs in a small worker (`pnpm zkfetch:worker`, on the operator's machine through an ngrok tunnel
-  for the first gift, on a Node host afterwards) and Vercel verifies the returned proof (attestor
-  signature, pinned address, URL and username). Measured through the worker from Vercel: 5.4 s.
+  it runs in a small worker (`pnpm zkfetch:worker`) and Vercel verifies the returned proof (attestor
+  signature, pinned address, URL and username). Measured through the worker from Vercel: 5.4 s. The
+  worker ran on the operator's machine behind an ngrok tunnel for the baseline of gift 1, then moved
+  to Railway the same day (project `viky`, service `zkfetch-worker`,
+  `zkfetch-worker-production.up.railway.app`, built from `Dockerfile`: Node 24 on Debian plus the
+  system CA store, which the Go TEE client needs; without it: "x509: certificate signed by unknown
+  authority"). Railway's default builder ignored the start command and served the Next app; the
+  explicit Dockerfile removes that ambiguity. Unauthenticated calls get 401.
