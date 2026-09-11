@@ -58,11 +58,16 @@ describe("passkeyEnvironmentProblem", () => {
     assert.equal(passkeyEnvironmentProblem(safariIos, true), undefined);
   });
 
+  it("refuses OEM browsers outside the support matrix (Mi Browser on 11 Sep 2026 never showed a prompt)", () => {
+    const miBrowser = "Mozilla/5.0 (Linux; U; Android 14; fr-fr; 23090RA98G Build/UKQ1.230917.001) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/118.0.5993.48 Mobile Safari/537.36 XiaoMi/MiuiBrowser/18.3.20";
+    assert.equal(passkeyEnvironmentProblem(miBrowser, true), "UNSUPPORTED_BROWSER");
+    assert.match(accountError("UNSUPPORTED_BROWSER").guidance, /Chrome \(Android\) or Safari \(iPhone\)/);
+  });
+
   it("refuses in-app browsers and browsers without WebAuthn, with a way out", () => {
     assert.equal(passkeyEnvironmentProblem(androidWebView, true), "UNSUPPORTED_BROWSER");
     assert.equal(passkeyEnvironmentProblem(instagramIos, true), "UNSUPPORTED_BROWSER");
     assert.equal(passkeyEnvironmentProblem(chromeAndroid, false), "UNSUPPORTED_BROWSER");
-    assert.match(accountError("UNSUPPORTED_BROWSER").guidance, /Chrome or Safari/);
     assert.match(accountError("TIMED_OUT").guidance, /did not answer/);
   });
 });
