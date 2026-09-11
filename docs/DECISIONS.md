@@ -296,3 +296,34 @@ party platform or API, `[U]` not verified).
   workshop of 11 Sep 2026, 17:30 GMT+2 (the only documented place to ask): does a PWA count as a
   "mobile app" (KT2); how does a team get whitelisted on the Monad pair and what "staging environment"
   means; is any non-USD fiat route planned. Nothing is built on these until the answers exist.
+
+## D24, 11 Sep 2026, the Duolingo login inside Reclaim's portal is the wall for a non-crypto person (decision pending)
+
+- Statement: at the baseline check-in of gift 1, the recipient (the funder testing on a Xiaomi in
+  Chrome) hit the same wall Lock-in had: Reclaim's `portal` channel runs the Duolingo sign-in in a
+  remote browser, so the "Continue with Google" button demands the Google id and password again, then
+  a two-step verification (new device for Google), and the remote screen is blurry. Duolingo's public
+  profile endpoint, `GET /2017-06-30/users?username=<name>` (already used to resolve usernames, D9),
+  returns `totalXp` and `streak` for any username with no session at all (checked 11 Sep 2026 on two
+  public accounts). The zkTLS check-in attests the same number, `totalXp`, from Duolingo's private XP
+  request. What the zkTLS proof adds is the ownership of the account (the person proved their own
+  session) and a TLS-attested data origin; in v1 the contract trusts the evidence signer either way
+  (SPEC 7.1).
+- Source: the recipient's report on 11 Sep 2026; `src/duolingo-proof-policy.ts` (evidence field
+  `totalXp`); `curl` of the public endpoint for `duolingo` (1370 XP) and `luis` (156,020 XP);
+  `duolingo.com/settings/profile` lets a person change their display name.
+- Options on the table, none chosen yet:
+  1. Public profile for every daily check-in (no login, ever, after setup) with ownership proved
+     once by a code the recipient puts in their Duolingo display name for a minute (server reads the
+     public `name`, binds, the person reverts). No password, no remote browser, thirty seconds.
+     Costs: the data origin is our server reading a public endpoint (no TLS proof); a new provider
+     id registered for the Duolingo goal (D14 makes that a registry entry, not a contract change);
+     the unofficial endpoint can change (same risk class as KT3).
+  2. Keep zkTLS and switch to Reclaim's `app` channel (S1, a config switch): the sign-in happens in
+     the Reclaim Verifier app on the person's own phone. Costs: installing a third-party app; Google
+     sign-in inside an app web view is often refused by Google; untested.
+  3. Hybrid: zkTLS once at the baseline for ownership, public profile for the daily check-ins.
+     Halves the pain, keeps the first-day wall.
+- Consequence: the wall is a design fact, not a bug; the choice is between verification purity and
+  the "my grandmother uses the app" bar the track scores. To be decided by the funder with the
+  strategy side; gift 1 continues on the current path meanwhile so the rest of the chain is measured.
