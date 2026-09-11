@@ -588,3 +588,25 @@ party platform or API, `[U]` not verified).
   1768534. On chain the new constants read back as `CATCH_UP_WINDOW` 108000 seconds (30 hours) and
   `READING_GRACE` 21600 seconds. Gift 1 stays on `0xE04CD59bB93765333200a9da01df83149D4C4d67` until it is
   finalised, because its record names that contract; both are listed on the judges page.
+
+## D36, 11 Sep 2026, Viky does one shape of goal, and it is not the one-shot one
+
+- Statement: every gift today accrues day by day. The amount is split into `amount / durationDays`, each
+  day is earned by a daily metric and each missed day drains back, and the duration is bounded to 7 to 90
+  days by `MIN_DURATION_DAYS` and `MAX_DURATION_DAYS`. The funder asked what happens to "100 euros if you
+  get that diploma", or to a mission delivered tomorrow. The answer is that Viky cannot express it. The
+  question was raised by the funder on 11 Sep 2026 while testing the funder screen.
+- Source: `contracts/GiftEscrow.sol` (`MIN_DURATION_DAYS = 7`, `checkIn` day arithmetic); `docs/SPEC.md`
+  line 84 states "duration (7 to 90 days)" and gives no reason for the floor, so the floor has no recorded
+  justification. Recording that absence is the point of this entry.
+- Why lowering the floor to one day would not answer it: with a duration of one day the whole amount rides
+  on a single day, but that day is still judged by a daily metric, the window still opens only the day
+  after the first reading, and the release is still a delta over a target rather than an event that either
+  happened or did not. A diploma, a certification and a delivered mission are none of those things.
+- Consequence: a one-shot goal is a second shape, not a parameter. It needs a milestone goal type where a
+  single verified event releases the whole amount, with a deadline after which everything returns to the
+  funder. The goal registry already carries a goal type per provider, so the registry does not change; the
+  release path in the contract does. Nothing is claimed about it until it exists: the product today is for
+  daily goals, and the education, sport and freelance segments are only partly served by that. Put to the
+  advisor, since the segments named for Viky are largely one-shot and this decides what we may claim.
+

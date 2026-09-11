@@ -57,6 +57,7 @@ export function FundGift() {
   const [problem, setProblem] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedGift | null>(null);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const working = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -197,14 +198,27 @@ export function FundGift() {
           Send them this link. They open it, connect their Duolingo once, and the money becomes theirs day by
           day. Whatever they do not earn comes back to you by itself.
         </p>
-        <p className="break-all rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-800">{created.claimUrl}</p>
+        <p className="select-all break-all rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-800">{created.claimUrl}</p>
         <button
           type="button"
-          onClick={() => void navigator.clipboard.writeText(created.claimUrl).then(() => setCopied(true))}
+          onClick={() => {
+            // Some browsers refuse the copy silently. Say which of the two happened, never nothing.
+            void navigator.clipboard
+              .writeText(created.claimUrl)
+              .then(() => {
+                setLinkCopied(true);
+                setProblem(null);
+              })
+              .catch(() => {
+                setLinkCopied(false);
+                setProblem("Your browser would not let us copy it. Press and hold the link above, then choose Copy.");
+              });
+          }}
           className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white"
         >
-          Copy the link
+          {linkCopied ? "Copied" : "Copy the link"}
         </button>
+        {problem ? <p className="text-sm text-red-600">{problem}</p> : null}
       </section>
     );
   }
