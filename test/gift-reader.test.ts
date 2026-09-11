@@ -21,11 +21,20 @@ test("money is shown as dollars with two decimals, never raw units", () => {
 });
 
 test("every contract refusal maps to a sentence a person can act on", () => {
-  assert.deepEqual(contractRefusal("InsufficientProgress"), { code: "NOT_ENOUGH_PROGRESS", message: "Not enough progress yet for a full day. Keep going and check in again." });
+  assert.deepEqual(contractRefusal("InsufficientProgress"), { code: "NOT_ENOUGH_PROGRESS", message: "Not enough yet for a full day. One more lesson and it counts." });
   assert.equal(contractRefusal("SomethingNew")?.code, "REFUSED");
   assert.equal(contractRefusal(undefined), null);
   const forbidden = /\b(wallet|gas|chain|seed|token|transaction hash|address)\b/i;
-  for (const name of ["InsufficientProgress", "NothingToCredit", "OutsideWindow", "NullifierAlreadyUsed", "IdentityMismatch", "AlreadyClaimed", "InsufficientEarned", "IntentExpired"]) {
-    assert.doesNotMatch(contractRefusal(name)?.message ?? "", forbidden, name);
+  const names = [
+    "InsufficientProgress", "NothingToCredit", "OutsideWindow", "NullifierAlreadyUsed", "IdentityMismatch",
+    "AlreadyClaimed", "InsufficientEarned", "IntentExpired", "MetricDecreased", "StaleObservation",
+    "AttestationExpired", "ProviderMismatch", "GiftIsCancelled", "AlreadyFinalised", "NotClaimed",
+  ];
+  for (const name of names) {
+    const message = contractRefusal(name)?.message ?? "";
+    assert.doesNotMatch(message, forbidden, name);
+    // Nobody checks in by hand any more: a reading happens on its own every morning (D27, D30).
+    assert.doesNotMatch(message, /check in|check-in/i, `${name} still asks the person to check in`);
+    assert.ok(message.length > 12 && message.endsWith("."), `${name} has no readable sentence`);
   }
 });
