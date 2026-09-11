@@ -11,7 +11,8 @@ import { signCheckIn } from "@/src/gift-attestation";
 import { relayCheckIn } from "@/src/gift-relay";
 import { consumeAndSaveVerification, loadLatestEvidence, loadProofSession } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { RelayerError } from "@/src/relayer";
+import { loadGift } from "@/src/gift-store";
+import { escrowOf, RelayerError } from "@/src/relayer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,8 +35,16 @@ export async function POST(request: Request) {
 
     const appId = process.env.RECLAIM_APP_ID?.trim() ?? "";
     const appSecret = process.env.RECLAIM_APP_SECRET?.trim() ?? "";
-    const escrow = process.env.GIFT_ESCROW_ADDRESS?.trim();
-    const escrowAddress = escrow && isAddress(escrow) ? (escrow as Hex) : undefined;
+    const sessionId = String(body.sessionId ?? "").trim();
+    // Fail closed before any database access, with the same typed code the core would raise.
+    const configured = process.env.GIFT_ESCROW_ADDRESS?.trim();
+    if (!configured || !isAddress(configured)) {
+      throw new VerificationError("NOT_CONFIGURED", "The gift contract is not configured", 503);
+    }
+    const session = /^[a-zA-Z0-9_-]{6,200}$/.test(sessionId) ? await loadProofSession(sessionId) : null;
+    // The check-in is signed for the contract that holds this gift (D30). With no session the core
+    // refuses with UNKNOWN_SESSION before anything is signed, so the configured contract stands in.
+    const giftEscrow: Hex = session ? escrowOf(await loadGift(session.giftId)) : (configured as Hex);
 
     const result = await verifyDuolingoSession(
       {
@@ -53,12 +62,12 @@ export async function POST(request: Request) {
           } as never);
           return verified as unknown as SdkVerification;
         },
-        signCheckIn: (message) => signCheckIn(message, escrowAddress as Hex),
+        signCheckIn: (message) => signCheckIn(message, giftEscrow),
         appId,
-        escrowAddress,
+        escrowAddress: giftEscrow,
         now: () => Math.floor(Date.now() / 1_000),
       },
-      { sessionId: String(body.sessionId ?? "").trim(), account: auth.account },
+      { sessionId, account: auth.account },
     );
 
     // The attestation expires in ten minutes: relay it now. A contract refusal is reported as such, with
@@ -67,7 +76,7 @@ export async function POST(request: Request) {
     let refusal: { code: string; message: string } | null = null;
     if (process.env.RELAYER_PRIVATE_KEY?.trim()) {
       try {
-        const submitted = await relayCheckIn(result.sessionId);
+        const submitted = await relayCheckIn(result.sessionId, giftEscrow);
         relayed = { hash: submitted.hash, creditedDays: submitted.creditedDays };
       } catch (error) {
         if (error instanceof RelayerError && error.code === "REVERTED") {

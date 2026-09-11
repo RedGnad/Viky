@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAddress, parseEther } from "viem";
 import { requireOperator } from "@/src/dev-access";
-import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
+import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { monadChain, waitForFinality } from "@/src/monad/chain";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { relayerClients, relayerPreflight } from "@/src/relayer";

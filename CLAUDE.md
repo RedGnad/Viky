@@ -19,9 +19,10 @@ files it cites (in the sibling `Master/data/` folder, read only).
   on-chain (not simulated), invisible blockchain for a non-crypto user, a named consumer segment,
   five real users, and a path to the next hundred.
 - Account layer: Mera passkeys only (no Privy, no Dynamic, no seed phrase, no custody backend).
-- Production hostname and passkey `rpId`: TO BE CHOSEN (viky.io is registered by someone else).
-  Passkeys are bound to it forever: no real user creates an account before the app is served from
-  it; preview hostnames are throwaway.
+- Production hostname: **viky.cash** (bought 11 Sep). Passkey `rpId` = `viky.cash` (no `www`), never
+  hardcoded elsewhere, never changed: passkeys are bound to it forever. `viky-two.vercel.app` keeps
+  serving until gift 1 is finalised (its accounts are bound to that host); every new gift lives on
+  viky.cash. Reclaim application, legal page and OAuth redirects use viky.cash.
 - Asset: AUSD on Monad mainnet (`0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a`, 6 decimals, EIP-3009).
 - Shell: PWA (Next.js, the Foundation template's `main` branch with Privy stripped by hand; the
   `no-privy` branch mentioned in the docs does not exist).

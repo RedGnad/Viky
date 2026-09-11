@@ -6,7 +6,8 @@ import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { readGift } from "@/src/gift-reader";
 import { relayWithdraw } from "@/src/gift-relay";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { escrowAddress } from "@/src/relayer";
+import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
+import { loadGift } from "@/src/gift-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,13 +42,17 @@ export async function POST(request: Request) {
       throw new GiftApiError("INVALID_REQUEST", "Please try again");
     }
 
-    const gift = await readGift(escrowAddress(), giftId);
+    assertGiftContractConfigured();
+    const record = await loadGift(giftId);
+    if (!record) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
+    const escrow = escrowOf(record);
+    const gift = await readGift(escrow, giftId);
     if (!gift.recipient || gift.recipient.toLowerCase() !== auth.account.toLowerCase()) {
       throw new GiftApiError("NOT_YOURS", "Only the person the gift is for can take it", 403);
     }
     if (amount <= 0n || amount > gift.earnedBalance) throw new GiftApiError("NOT_ENOUGH_EARNED", "That is more than what is yours so far", 409);
 
-    const result = await relayWithdraw({ giftId, to: getAddress(to), amount, nonce, deadline, signature: signature as Hex });
+    const result = await relayWithdraw({ giftId, escrow, to: getAddress(to), amount, nonce, deadline, signature: signature as Hex });
     return NextResponse.json({ giftId, sent: true, amount: amount.toString(), hash: result.hash }, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);

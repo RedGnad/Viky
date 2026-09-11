@@ -3,6 +3,7 @@ import {
   createWalletClient,
   decodeErrorResult,
   formatEther,
+  getAddress,
   http,
   parseEther,
   type Abi,
@@ -62,10 +63,33 @@ export function relayerClients(): RelayerClients {
   return cached;
 }
 
+/** The contract new gifts are created on. Existing gifts are served by the contract that holds them. */
 export function escrowAddress(): Hex {
   const value = process.env.GIFT_ESCROW_ADDRESS?.trim();
   if (!value || !/^0x[0-9a-fA-F]{40}$/.test(value)) throw new RelayerError("NOT_CONFIGURED", "The gift contract is not configured");
-  return value as Hex;
+  return getAddress(value);
+}
+
+/**
+ * Fails closed on a deployment with no contract configured. Routes call it after the cheap checks on
+ * the request and before any database or chain access, so a misconfigured deployment never half-acts.
+ */
+export function assertGiftContractConfigured(): void {
+  escrowAddress();
+}
+
+/**
+ * The contract holding a gift, read from the gift's own record. A record without one is refused rather
+ * than served by the configured contract: after a redeployment that fallback would silently point an
+ * older gift at the new contract, where it does not exist (D30). The migration stamps every gift saved
+ * before the column existed, and `saveGift` has stamped every gift since.
+ */
+export function escrowOf(record: { escrow: Hex | null } | null | undefined): Hex {
+  const value = record?.escrow?.trim();
+  if (!value || !/^0x[0-9a-fA-F]{40}$/.test(value)) {
+    throw new RelayerError("NOT_CONFIGURED", "This gift is not served by this deployment");
+  }
+  return getAddress(value);
 }
 
 /** Refuses to relay below the reserve plus a working margin, and off Monad mainnet. */
@@ -106,10 +130,11 @@ export type RelayResult = Readonly<{ hash: Hash; receipt: TransactionReceipt }>;
 export async function relay(
   functionName: GiftFunction,
   args: readonly unknown[],
+  escrow: Hex = escrowAddress(),
   clients: RelayerClients = relayerClients(),
 ): Promise<RelayResult> {
   await relayerPreflight(clients);
-  const address = escrowAddress();
+  const address = escrow;
   const abi = giftEscrowAbi as unknown as Abi;
   try {
     // Simulate first: a refusal costs nothing and comes back with its typed error.

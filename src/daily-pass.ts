@@ -1,8 +1,9 @@
-import { readGift, readNextGiftId } from "./gift-reader";
+import type { Hex } from "viem";
+import { readGift } from "./gift-reader";
 import { relayDrain, relayFinalise, relayRefund } from "./gift-relay";
-import { loadBoundGifts } from "./gift-store";
+import { loadAllGifts, loadBoundGifts } from "./gift-store";
 import { runPublicCheckIn, type PublicCheckInOutcome } from "./duolingo-public-checkin";
-import { escrowAddress, relayerClients, relayerPreflight, RelayerError } from "./relayer";
+import { escrowOf, relayerClients, relayerPreflight, RelayerError } from "./relayer";
 
 /**
  * The daily pass of the keeper (D27): count every bound gift from its public profile, then drain the
@@ -16,7 +17,6 @@ export type DailyPassLine = { giftId: string; step: "count" | "drain" | "finalis
 export async function dailyPass(options: { refund?: boolean; now?: () => number } = {}): Promise<{ relayer: string; balanceWei: string; lines: DailyPassLine[] }> {
   const clients = relayerClients();
   const { balance } = await relayerPreflight(clients);
-  const escrow = escrowAddress();
   const lines: DailyPassLine[] = [];
 
   for (const gift of await loadBoundGifts()) {
@@ -24,14 +24,21 @@ export async function dailyPass(options: { refund?: boolean; now?: () => number 
     lines.push(describe(outcome));
   }
 
-  const next = await readNextGiftId(escrow, clients.publicClient);
-  for (let id = 1n; id < next; id += 1n) {
-    const giftId = id.toString();
+  for (const record of await loadAllGifts()) {
+    const giftId = record.giftId;
+    let escrow: Hex;
+    try {
+      escrow = escrowOf(record);
+    } catch (error) {
+      // One unreadable record must never stop the pass for every other gift.
+      lines.push({ giftId, step: "drain", result: error instanceof Error ? error.message : "no contract recorded" });
+      continue;
+    }
     const gift = await readGift(escrow, giftId, clients.publicClient);
     if (gift.cancelled || gift.finalised || gift.startDay === 0) continue;
-    lines.push(await attempt(giftId, "drain", () => relayDrain(giftId)));
-    lines.push(await attempt(giftId, "finalise", () => relayFinalise(giftId)));
-    if (options.refund) lines.push(await attempt(giftId, "refund", () => relayRefund(giftId)));
+    lines.push(await attempt(giftId, "drain", () => relayDrain(giftId, escrow)));
+    lines.push(await attempt(giftId, "finalise", () => relayFinalise(giftId, escrow)));
+    if (options.refund) lines.push(await attempt(giftId, "refund", () => relayRefund(giftId, escrow)));
   }
   return { relayer: clients.address, balanceWei: balance.toString(), lines };
 }

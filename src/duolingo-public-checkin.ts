@@ -7,7 +7,7 @@ import { checkInDayIndex, readGift, utcDayOf } from "./gift-reader";
 import { relayCheckIn } from "./gift-relay";
 import { loadGift, loadRelayed, markBound, type GiftRecord } from "./gift-store";
 import { consumeAndSaveVerification, saveProofSession } from "./proof-session-store";
-import { escrowAddress, RelayerError } from "./relayer";
+import { escrowOf, RelayerError } from "./relayer";
 
 /**
  * The public mode (D27): one attested read of the recipient's public Duolingo profile becomes one
@@ -50,7 +50,7 @@ export async function runPublicCheckIn(input: { giftId: string; purpose: PublicC
   if (purpose === "bind" && record.boundAt) return { kind: "already", giftId, reason: "already_bound" };
   if (purpose === "count" && !record.boundAt) return { kind: "already", giftId, reason: "not_bound" };
 
-  const escrow = escrowAddress();
+  const escrow = escrowOf(record);
   const onChain = await readGift(escrow, giftId);
   if (onChain.cancelled) return { kind: "already", giftId, reason: "cancelled" };
   if (onChain.finalised) return { kind: "already", giftId, reason: "finished" };
@@ -116,7 +116,7 @@ export async function runPublicCheckIn(input: { giftId: string; purpose: PublicC
   });
 
   try {
-    const relayed = await relayCheckIn(sessionId);
+    const relayed = await relayCheckIn(sessionId, escrow);
     if (purpose === "bind") {
       await markBound(giftId, profile.profileId);
       return { kind: "bound", giftId, totalXp: profile.totalXp, hash: relayed.hash };
