@@ -24,6 +24,7 @@ function proofFor(username: string, extracted: Record<string, string>, overrides
       ...overrides,
     },
     signatures: ["0x" + "cd".repeat(65)],
+    witnesses: [{ id: "0x244897572368eadf65bfbc5aec98d8e5443a9072", url: "wss://attestor.reclaimprotocol.org:444/ws" }],
   };
 }
 
@@ -121,5 +122,14 @@ describe("fetchPublicProfile", () => {
     await assert.rejects(fetchPublicProfile("luis", { zkFetch: async () => proofFor("luis", LUIS), verify: async () => false }), (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_INVALID");
     await assert.rejects(fetchPublicProfile("nobody", { zkFetch: async () => { throw new Error("Response match not found for regex"); }, verify: async () => true }), (e: unknown) => e instanceof PublicProfileError && e.code === "PROFILE_NOT_FOUND");
     await assert.rejects(fetchPublicProfile("luis", { zkFetch: async () => { throw new Error("socket hang up"); }, verify: async () => true }), (e: unknown) => e instanceof PublicProfileError && e.code === "FETCH_FAILED");
+  });
+
+  it("refuses a proof signed by an attestor that is not pinned, or with no witness at all", async () => {
+    const foreign = { ...proofFor("luis", LUIS), witnesses: [{ id: "0x" + "11".repeat(20), url: "wss://elsewhere" }] };
+    await assert.rejects(fetchPublicProfile("luis", { zkFetch: async () => foreign, verify: async () => true }), (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_INVALID");
+    const none = { ...proofFor("luis", LUIS), witnesses: [] };
+    await assert.rejects(fetchPublicProfile("luis", { zkFetch: async () => none, verify: async () => true }), (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_INVALID");
+    const ok = await fetchPublicProfile("luis", { zkFetch: async () => foreign, verify: async () => true, attestors: ["0x" + "11".repeat(20)] });
+    assert.equal(ok.totalXp, 156020);
   });
 });

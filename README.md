@@ -44,6 +44,7 @@ Create `.env.local` (never committed) with:
 | `RECLAIM_APP_ID`, `RECLAIM_APP_SECRET` | Reclaim application credentials; the secret also verifies the TEE attestation |
 | `RECLAIM_ZKFETCH_APP_ID`, `RECLAIM_ZKFETCH_APP_SECRET` | Reclaim "Public Data (zkFetch)" application, used by the public mode's attested reads of the Duolingo profile (D27); zkFetch must be switched on for it in the dev tool |
 | `CRON_SECRET` | bearer token Vercel sends to `/api/cron/daily`; the daily pass runs only with it |
+| `ZKFETCH_WORKER_URL`, `ZKFETCH_WORKER_SECRET` | the attested-fetch worker (`pnpm zkfetch:worker`), needed on Vercel because its functions start Node with `--no-experimental-require-module`, which zk-fetch's CommonJS build cannot load; the worker only fetches, Vercel verifies the attestor signature |
 | `DUOLINGO_PROVIDER_ID`, `DUOLINGO_PROVIDER_VERSION` | optional cross-check against the pinned provider `cdf8cb3b-2976-4413-ab2d-693ae5028380@1.0.8` |
 | `RECLAIM_VERIFICATION_MODE` | `portal` (default) or `app`, the Reclaim delivery channel |
 | `IDENTITY_HMAC_KEY` | base64 key of the pseudonymous identity bound to a gift |
@@ -88,6 +89,8 @@ The functions run in Vercel's Paris region (`vercel.json`), next to the Frankfur
 | `GET /api/gift/<id>` | anyone | the gift's numbers for its screens |
 | `pnpm keeper` | operator | the same daily pass from a terminal (`--refund` also sends back what is refundable) |
 | `pnpm register:goal` | owner | registers the Duolingo goal's provider id on the escrow (idempotent) |
+| `pnpm zkfetch:worker [port]` | operator | the attested-fetch worker for the public mode; runs where Node can load zk-fetch |
+| `pnpm count:gift <id> [bind\|count]` | operator | binds or counts one gift from a terminal, same code path as the routes |
 
 ## Contract
 

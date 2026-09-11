@@ -405,3 +405,17 @@ party platform or API, `[U]` not verified).
 - Source: the strategy review of 11 Sep 2026, relayed by the funder; D24 to D26 for the facts.
 - Consequence: build now. The verifier-app path (Reclaim session and verify routes, `app` channel)
   stays in the code as the mode for private sources.
+- Built and measured, 11 Sep 2026: zkFetch needs a "Public Data (zkFetch)" application with zkFetch
+  switched on in the dev tool (a plain application answers "Application not found"). A read of a
+  public profile in TEE mode takes about 5 s and returns a proof signed by Reclaim's production
+  attestor `0x244897572368Eadf65bfBc5aec98D8e5443a9072` (the address the on-chain Duolingo verifier
+  pins); `verifyProof` accepts it in 0.4 s with content validation disabled (Viky validates URL,
+  method and username itself). The proof object of zk-fetch 1.1.0 carries no attestor TEE
+  attestation, so Viky verifies the signature and pins the attestor, and says so on the judges page.
+  Goal 1 re-registered to the public provider id on mainnet (`0x768ae8…6c71`). Daily pass wired to
+  a Vercel cron at 00:30 UTC and to `pnpm keeper`. Vercel functions start Node 24 with
+  `--no-experimental-require-module` (read from `process.execArgv` on 11 Sep 2026), and zk-fetch is a
+  CommonJS build that requires ESM-only packages, so the fetch cannot run inside a Vercel function:
+  it runs in a small worker (`pnpm zkfetch:worker`, on the operator's machine through an ngrok tunnel
+  for the first gift, on a Node host afterwards) and Vercel verifies the returned proof (attestor
+  signature, pinned address, URL and username). Measured through the worker from Vercel: 5.4 s.
