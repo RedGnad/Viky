@@ -53,7 +53,7 @@ contract GiftEscrowTest {
         recipient = VM.addr(RECIPIENT_KEY);
         other = VM.addr(OTHER_KEY);
         token = new MockAUSD();
-        escrow = new GiftEscrow(token, evidenceSigner);
+        escrow = new GiftEscrow(token, evidenceSigner, 1);
         require(escrow.creationPaused() && escrow.checkInPaused(), "not fail-closed");
         escrow.setCreationPaused(false);
         escrow.setCheckInPaused(false);
@@ -316,6 +316,13 @@ contract GiftEscrowTest {
         _checkIn(giftId, IDENTITY, 1000 + TARGET * 100, t);
         GiftEscrow.Gift memory g = escrow.getGift(giftId);
         require(g.creditedDays == DURATION && g.settledThroughDay == g.endDay, "capped at the last day");
+    }
+
+    function testGiftIdsContinueFromTheConfiguredFirstId() public {
+        GiftEscrow next = new GiftEscrow(token, evidenceSigner, 2);
+        require(next.nextGiftId() == 2, "the sequence continues from the previous deployment");
+        VM.expectRevert(GiftEscrow.InvalidGiftId.selector);
+        new GiftEscrow(token, evidenceSigner, 0);
     }
 
     // --- the daily reading (D30): a day is judged the morning after it -------------------------------

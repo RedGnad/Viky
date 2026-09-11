@@ -57,7 +57,7 @@ Create `.env.local` (never committed) with:
 | `NEXT_PUBLIC_GIFT_ESCROW_ADDRESS` | the gift contract, for the funder's signature and the recipient's intent in the browser |
 | `NEXT_PUBLIC_APP_URL` | origin used in claim links (defaults to the request origin) |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | contact shown on `/legal`; the page says one is coming until it is set |
-| `DEPLOYER_PRIVATE_KEY`, `EVIDENCE_SIGNER_ADDRESS`, `OWNER_ADDRESS` | inputs of `pnpm deploy:gift-escrow` and `pnpm check:gift-escrow` |
+| `DEPLOYER_PRIVATE_KEY`, `EVIDENCE_SIGNER_ADDRESS`, `OWNER_ADDRESS`, `FIRST_GIFT_ID` | inputs of `pnpm deploy:gift-escrow` and `pnpm check:gift-escrow`; `FIRST_GIFT_ID` continues the gift numbering of the previous deployment |
 | `VIKY_DEV_PAGES`, `VIKY_OPERATOR_ACCOUNTS` | dev pages (`/dev/*`) and dev routes (`/api/dev/*`) answer only when `VIKY_DEV_PAGES=1` and the signed-in account is in the operator list; everyone else gets a 404. Removed after KT1's crypto half |
 
 ## Pages

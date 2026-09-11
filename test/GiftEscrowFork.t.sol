@@ -56,7 +56,7 @@ contract GiftEscrowForkTest {
         ausd.transfer(funder, AMOUNT);
         require(ausd.balanceOf(funder) == AMOUNT, "test funder not funded");
 
-        GiftEscrow escrow = new GiftEscrow(IERC20(AUSD), VM.addr(EVIDENCE_KEY));
+        GiftEscrow escrow = new GiftEscrow(IERC20(AUSD), VM.addr(EVIDENCE_KEY), 1);
         escrow.setCreationPaused(false);
         escrow.registerGoal(1, keccak256("cdf8cb3b-2976-4413-ab2d-693ae5028380@1.0.8"));
 
