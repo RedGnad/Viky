@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MeraError } from "@category-labs/mera";
-import { accountError, AccountError, isAccountError, toAccountError } from "../src/account/errors";
+import { accountError, AccountError, isAccountError, passkeyEnvironmentProblem, toAccountError } from "../src/account/errors";
 
 describe("toAccountError", () => {
   it("turns a missing PRF into the guided refusal (refusal case 3)", () => {
@@ -44,5 +44,25 @@ describe("toAccountError", () => {
     ] as const) {
       assert.doesNotMatch(accountError(code).guidance, forbidden, `guidance for ${code}`);
     }
+  });
+});
+
+describe("passkeyEnvironmentProblem", () => {
+  const chromeAndroid = "Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36";
+  const safariIos = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
+  const androidWebView = "Mozilla/5.0 (Linux; Android 15; Pixel 8 Build/AP3A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/140.0.0.0 Mobile Safari/537.36";
+  const instagramIos = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 340.0.0.0";
+
+  it("accepts real browsers", () => {
+    assert.equal(passkeyEnvironmentProblem(chromeAndroid, true), undefined);
+    assert.equal(passkeyEnvironmentProblem(safariIos, true), undefined);
+  });
+
+  it("refuses in-app browsers and browsers without WebAuthn, with a way out", () => {
+    assert.equal(passkeyEnvironmentProblem(androidWebView, true), "UNSUPPORTED_BROWSER");
+    assert.equal(passkeyEnvironmentProblem(instagramIos, true), "UNSUPPORTED_BROWSER");
+    assert.equal(passkeyEnvironmentProblem(chromeAndroid, false), "UNSUPPORTED_BROWSER");
+    assert.match(accountError("UNSUPPORTED_BROWSER").guidance, /Chrome or Safari/);
+    assert.match(accountError("TIMED_OUT").guidance, /did not answer/);
   });
 });
