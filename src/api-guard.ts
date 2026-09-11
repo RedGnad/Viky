@@ -1,11 +1,13 @@
-// Ported from Lock-in unchanged: same-origin check and a bounded JSON body reader for every route.
+// Ported from Lock-in: same-origin check and a bounded JSON body reader for every route. Refusals are
+// typed (RequestError) so a route answers them as 4xx with their sentence.
+import { RequestError } from "./request-error";
 
 const JSON_CONTENT_TYPE = "application/json";
 
 export function assertSameOrigin(request: Request): void {
   const fetchSite = request.headers.get("sec-fetch-site");
   if (fetchSite === "cross-site") {
-    throw new Error("Cross-site requests are not allowed");
+    throw new RequestError("CROSS_SITE", "Cross-site requests are not allowed");
   }
 
   const origin = request.headers.get("origin");
@@ -19,10 +21,10 @@ export function assertSameOrigin(request: Request): void {
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error();
     originHost = parsed.host;
   } catch {
-    throw new Error("Invalid request origin");
+    throw new RequestError("BAD_ORIGIN", "Invalid request origin");
   }
   if (originHost.toLowerCase() !== host.toLowerCase()) {
-    throw new Error("Cross-origin requests are not allowed");
+    throw new RequestError("CROSS_ORIGIN", "Cross-origin requests are not allowed");
   }
 }
 
@@ -30,19 +32,19 @@ export async function readJsonBody<T>(request: Request, maxBytes: number): Promi
   assertSameOrigin(request);
   const contentType = request.headers.get("content-type")?.toLowerCase() || "";
   if (!contentType.startsWith(JSON_CONTENT_TYPE)) {
-    throw new Error("Content-Type must be application/json");
+    throw new RequestError("BAD_CONTENT_TYPE", "Content-Type must be application/json", 415);
   }
   const declaredLength = Number(request.headers.get("content-length") || 0);
   if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
-    throw new Error("Request body is too large");
+    throw new RequestError("BODY_TOO_LARGE", "Request body is too large", 413);
   }
   const payload = await request.arrayBuffer();
   if (payload.byteLength === 0 || payload.byteLength > maxBytes) {
-    throw new Error(payload.byteLength === 0 ? "Request body is empty" : "Request body is too large");
+    throw payload.byteLength === 0 ? new RequestError("EMPTY_BODY", "Request body is empty") : new RequestError("BODY_TOO_LARGE", "Request body is too large", 413);
   }
   try {
     return JSON.parse(new TextDecoder().decode(payload)) as T;
   } catch {
-    throw new Error("Request body is not valid JSON");
+    throw new RequestError("BAD_JSON", "Request body is not valid JSON");
   }
 }

@@ -1,4 +1,5 @@
 import { keccak256, stringToHex, type Hex } from "viem";
+import { RequestError } from "./request-error";
 
 /**
  * The recipient contact a funder names is stored on-chain only as a hash, and the claim attestation
@@ -15,12 +16,12 @@ export function normaliseContact(input: string): NormalisedContact {
   const trimmed = input.trim();
   if (trimmed.includes("@")) {
     const value = trimmed.toLowerCase();
-    if (!EMAIL.test(value)) throw new Error("Enter a valid email");
+    if (!EMAIL.test(value)) throw new RequestError("INVALID_CONTACT", "Enter a valid email");
     return { kind: "email", value };
   }
   let digits = trimmed.replace(/[\s().-]/g, "");
   if (digits.startsWith("00")) digits = `+${digits.slice(2)}`;
-  if (!/^\+[1-9]\d{6,14}$/.test(digits)) throw new Error("Enter a phone number with its country code");
+  if (!/^\+[1-9]\d{6,14}$/.test(digits)) throw new RequestError("INVALID_CONTACT", "Enter a phone number with its country code");
   return { kind: "phone", value: digits };
 }
 
