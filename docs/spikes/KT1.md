@@ -29,7 +29,7 @@ protocol and the record; the fields are filled in as the chain runs.
 | # | leg | who | what to record | result |
 |---|---|---|---|---|
 | 1a | Fiat in, on the intended rail (Calm bank transfer paying AUSD, or a Mercuryo partner widget with the destination pre-filled). Fallback record only: Mercuryo consumer Buy, 30 EUR (25 EUR minimum, D20), destination pasted by hand | user | order id, EUR paid, MON or AUSD received, fee, time to arrival, KYC steps | pending the rail (D22) |
-| 1b | Crypto-native entry: MON sent from a wallet the funder controls to the funder's Viky account (SPEC 9.1, "AUSD held on Monad" family) | user | tx hash, MON received, time to arrival | |
+| 1b | Crypto-native entry: MON sent from a wallet the funder controls to the funder's Viky account (SPEC 9.1, "AUSD held on Monad" family) | user | tx hash, MON received, time to arrival | 1,500.00 MON received by `0x350aF869ABa6ff26AB33517ECd3E38ACaF107761` at 00:16:32 UTC on 11 Sep 2026 (balance polled every 30 s, previous poll 0); tx hash to add from the funder's wallet |
 | 2 | Swap all MON to AUSD through Kuru Flow, from the funder's account (`/dev/fund`) | user taps, agent watches | tx hash, MON in, AUSD out, slippage, gas used vs limit | |
 | 3 | `createGift` with the funder's single EIP-3009 signature (`/dev/fund`); $20.00 over 7 days at 10 XP per day, so that the exit leg can sell more than Mercuryo's 3 EUR flat fee (D20) | user taps | tx hash, gift id, amount, daily target, duration, gas used vs limit, seconds to "Funded" | |
 | 4 | Recipient: passkey on a second account, `/g/<id>?t=…` | user | seconds from link tap to "is in your name", provider used (iCloud Keychain, Google Password Manager) | |
