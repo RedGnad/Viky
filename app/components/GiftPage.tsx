@@ -49,6 +49,9 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
   const [notice, setNotice] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [typedUsername, setTypedUsername] = useState("");
+  // A name that does not resolve must not trap the person on the code step for ever: the server accepts
+  // a new one for as long as nothing is bound, so the screen has to offer it.
+  const [renaming, setRenaming] = useState(false);
   const token = linkKey;
 
   const reload = useCallback(
@@ -95,6 +98,9 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       const username = typedUsername.trim();
       if (!username) throw new ScreenError("Enter your Duolingo username");
       await nameGoalAccount(giftId, username);
+      // A fresh code was issued for the new name, so the code step takes over again.
+      setRenaming(false);
+      setTypedUsername("");
       return null;
     });
 
@@ -207,7 +213,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         </section>
       ) : null}
 
-      {!gift.cancelled && signedIn && gift.opened && !account.bound && account.source !== "funder" && !account.code ? (
+      {!gift.cancelled && signedIn && gift.opened && !account.bound && account.source !== "funder" && (!account.code || renaming) ? (
         <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
           <label className="block text-sm font-medium" htmlFor="duolingo-username">
             Your Duolingo username
@@ -226,10 +232,15 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
           <p className="text-xs" style={{ color: "var(--muted)" }}>
             No password, no sign-in: your lessons are read from your public profile. Next, a short code proves the profile is yours.
           </p>
+          {renaming ? (
+            <button type="button" onClick={() => setRenaming(false)} className="w-full rounded-lg border px-4 py-2 text-sm">
+              Keep the name I had
+            </button>
+          ) : null}
         </section>
       ) : null}
 
-      {!gift.cancelled && signedIn && gift.opened && !account.bound && account.source === "recipient" && account.code ? (
+      {!gift.cancelled && signedIn && gift.opened && !account.bound && account.source === "recipient" && account.code && !renaming ? (
         <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
           <p className="font-medium">Prove {account.username} is yours</p>
           <p className="text-sm">
@@ -240,8 +251,11 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
             {busy === "binding" ? "Reading your profile" : "I added it"}
           </button>
           <p className="text-xs" style={{ color: "var(--muted)" }}>
-            You can remove the code right after. Wrong username? Reload this page and enter it again.
+            You can remove the code right after.
           </p>
+          <button type="button" onClick={() => setRenaming(true)} className="w-full rounded-lg border px-4 py-2 text-sm">
+            That is not my Duolingo name
+          </button>
         </section>
       ) : null}
 
@@ -256,9 +270,24 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
           <p className="text-sm" style={{ color: "var(--muted)" }}>
             Do your lesson; nothing else. Each morning Viky reads your Duolingo ({account.username}) and counts the day before.
           </p>
+          {gift.missedDays > 0 ? (
+            <p className="text-sm" style={{ color: "var(--muted)" }}>
+              {gift.returnedDisplay} has gone back so far, for {gift.missedDays} {gift.missedDays === 1 ? "day" : "days"} without a lesson. The days ahead are still yours to take.
+            </p>
+          ) : null}
           <button type="button" onClick={count} disabled={working || gift.todayDayIndex === 0} className="w-full rounded-lg border px-4 py-3 text-sm disabled:opacity-50">
             {busy === "counting" ? "Reading your profile" : "Count now"}
           </button>
+        </section>
+      ) : null}
+
+      {!gift.cancelled && signedIn && gift.opened && gift.finished ? (
+        <section className="space-y-2 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+          <p className="font-medium">This gift is finished.</p>
+          <p className="text-sm" style={{ color: "var(--muted)" }}>
+            {gift.creditedDays} of {gift.durationDays} days were yours, so {gift.alreadyTheirsDisplay} is yours to keep.
+            {gift.missedDays > 0 ? ` The other ${gift.missedDays} went back to the person who sent it.` : ""}
+          </p>
         </section>
       ) : null}
 
