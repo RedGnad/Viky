@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Footer } from "./components/Footer";
 import { AccountPanel } from "./components/AccountPanel";
 import { MyGifts } from "./components/MyGifts";
 
@@ -28,17 +29,7 @@ export default function Page() {
       >
         Put money behind someone&apos;s goal
       </Link>
-      <footer className="flex gap-4 text-xs" style={{ color: "var(--muted)" }}>
-        <Link href="/privacy" className="underline">
-          Privacy
-        </Link>
-        <Link href="/legal" className="underline">
-          Legal
-        </Link>
-        <Link href="/judges" className="underline">
-          For judges
-        </Link>
-      </footer>
+      <Footer current="/" />
     </main>
   );
 }

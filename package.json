@@ -35,7 +35,8 @@
     "register:goal": "tsx scripts/register-goal.ts",
     "count:gift": "tsx scripts/count-gift.ts",
     "zkfetch:worker": "tsx scripts/zkfetch-worker.ts",
-    "check:words": "tsx scripts/check-consumer-words.ts"
+    "check:words": "tsx scripts/check-consumer-words.ts",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "@category-labs/mera": "0.2.0",
@@ -55,6 +56,7 @@
     "@electric-sql/pglite": "0.5.8",
     "@openzeppelin/contracts": "4.9.6",
     "@openzeppelin/contracts-upgradeable": "4.9.6",
+    "@playwright/test": "^1.63.0",
     "@reclaimprotocol/solidity-sdk": "github:reclaimprotocol/reclaim-solidity-sdk#3326a4e4b7d747b3f06d027a7c40ec8612bd0b5a",
     "@serwist/turbopack": "9.5.12",
     "@tailwindcss/postcss": "4.3.3",

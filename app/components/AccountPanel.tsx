@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { FIELD, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./ui";
 import { useAccount } from "@/src/account/provider";
 
 // The only account screen of the skeleton: create with Face ID or fingerprint, or sign in.
@@ -16,7 +17,7 @@ export function AccountPanel() {
         <p className="text-sm" style={{ color: "var(--muted)" }}>
           Your account is protected by your passkey. Nothing to remember, nothing to write down.
         </p>
-        <button type="button" onClick={signOut} className="rounded-lg border px-4 py-2 text-sm">
+        <button type="button" onClick={signOut} className={INLINE_BUTTON}>
           Sign out
         </button>
       </section>
@@ -44,7 +45,7 @@ export function AccountPanel() {
             setDisplayName(event.target.value);
             if (error) clearError();
           }}
-          className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700"
+          className={FIELD}
           placeholder="Viky account"
           disabled={busy}
         />
@@ -54,7 +55,7 @@ export function AccountPanel() {
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-50"
+          className={PRIMARY_BUTTON}
         >
           {busy ? "One moment" : "Create my account with Face ID or fingerprint"}
         </button>
@@ -64,7 +65,7 @@ export function AccountPanel() {
         type="button"
         onClick={() => void signIn()}
         disabled={busy}
-        className="w-full rounded-lg border px-4 py-2 text-sm disabled:opacity-50"
+        className={SECONDARY_BUTTON}
       >
         {hasCredential ? "Sign in" : "I already have an account"}
       </button>

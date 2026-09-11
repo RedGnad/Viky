@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Footer } from "../components/Footer";
 import { FundGift } from "../components/FundGift";
 
 export const metadata: Metadata = {
@@ -17,17 +17,7 @@ export default function FundPage() {
         </p>
       </header>
       <FundGift />
-      <footer className="flex gap-4 text-xs" style={{ color: "var(--muted)" }}>
-        <Link href="/" className="underline">
-          Home
-        </Link>
-        <Link href="/privacy" className="underline">
-          Privacy
-        </Link>
-        <Link href="/legal" className="underline">
-          Legal
-        </Link>
-      </footer>
+      <Footer current="/fund" />
     </main>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import * as mera from "@/src/account/mera";
+import { INLINE_BUTTON } from "./ui";
 import { useAccount } from "@/src/account/provider";
 
 /**
@@ -38,7 +39,7 @@ export function SessionScope() {
         It closes itself after {mera.SESSION_IDLE_MINUTES} quiet minutes, and asks for your face or fingerprint again.
         Closing in {minutes}:{String(seconds).padStart(2, "0")}.
       </p>
-      <button type="button" onClick={() => mera.signOut()} className="rounded-lg border px-3 py-1">
+      <button type="button" onClick={() => mera.signOut()} className={INLINE_BUTTON}>
         Close it now
       </button>
     </section>
