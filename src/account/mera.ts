@@ -19,10 +19,13 @@ import { accountError, passkeyEnvironmentProblem, toAccountError } from "./error
 export const CREDENTIAL_STORAGE_KEY = "viky.credential";
 export const RELYING_PARTY_NAME = "Viky";
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+/** How long an unused signing session stays open. Shown on screen, so the person knows what is open. */
+export const SESSION_IDLE_MINUTES = IDLE_TIMEOUT_MS / 60_000;
 
 let session: Secp256k1SigningSession | undefined;
 let account: LocalAccount | undefined;
 let idleTimer: ReturnType<typeof setTimeout> | undefined;
+let idleDeadlineMs: number | undefined;
 const listeners = new Set<() => void>();
 
 function requireBrowser(): void {
@@ -83,7 +86,16 @@ export function hasStoredCredential(): boolean {
 
 function armIdleTimer(): void {
   if (idleTimer) clearTimeout(idleTimer);
+  idleDeadlineMs = Date.now() + IDLE_TIMEOUT_MS;
   idleTimer = setTimeout(signOut, IDLE_TIMEOUT_MS);
+}
+
+/**
+ * When the open session closes itself if nothing else is signed. Every signature pushes it back, so a
+ * screen that shows it reads this again rather than counting down from a remembered value.
+ */
+export function sessionExpiresAtMs(): number | undefined {
+  return account ? idleDeadlineMs : undefined;
 }
 
 function openSession(prfOutput: Uint8Array): Address {
@@ -147,6 +159,7 @@ export function signOut(): void {
   session?.end();
   session = undefined;
   account = undefined;
+  idleDeadlineMs = undefined;
   if (wasSignedIn) notify();
 }
 

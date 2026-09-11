@@ -1,21 +1,15 @@
 import { NextResponse } from "next/server";
 import { getAddress, isAddress } from "viem";
-import { requireOperator } from "@/src/dev-access";
 import { readJsonBody } from "@/src/api-guard";
+import { requireOperator } from "@/src/dev-access";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
+import { kuruQuote } from "@/src/kuru";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const KURU = "https://ws.kuru.io";
-export const NATIVE_MON = "0x0000000000000000000000000000000000000000";
-
-/**
- * Dev-only plumbing for the first mainnet chain (KT1): a Kuru Flow quote for the signed-in account,
- * fetched server side because Kuru's token endpoint is rate-limited per address and the calldata is
- * then sent by the person's own account from the browser. Never part of a consumer screen.
- */
+/** Operator only: the same quote as the funder screen, for any pair, used while running KT1 by hand. */
 export async function POST(request: Request) {
   try {
     const auth = requireOperator(request);
@@ -32,44 +26,8 @@ export async function POST(request: Request) {
       throw new GiftApiError("INVALID_REQUEST", "Invalid amount");
     }
     if (amount <= 0n) throw new GiftApiError("INVALID_REQUEST", "Invalid amount");
-
-    const userAddress = getAddress(auth.account);
-    const tokenResponse = await fetch(`${KURU}/api/generate-token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_address: userAddress }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!tokenResponse.ok) throw new GiftApiError("QUOTE_UNAVAILABLE", "The exchange is not answering. Try again shortly.", 503);
-    const { token } = (await tokenResponse.json()) as { token?: string };
-    if (!token) throw new GiftApiError("QUOTE_UNAVAILABLE", "The exchange is not answering. Try again shortly.", 503);
-
-    const quoteResponse = await fetch(`${KURU}/api/quote`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ userAddress, tokenIn, tokenOut, amount: amount.toString(), autoSlippage: true }),
-      signal: AbortSignal.timeout(15_000),
-    });
-    const quote = (await quoteResponse.json()) as {
-      status?: string;
-      output?: string;
-      minOut?: string;
-      message?: string | null;
-      transaction?: { to?: string; calldata?: string; value?: string };
-    };
-    if (!quoteResponse.ok || quote.status !== "success" || !quote.transaction?.to || !quote.transaction.calldata) {
-      throw new GiftApiError("QUOTE_UNAVAILABLE", quote.message || "No route for this swap right now.", 503);
-    }
-    return NextResponse.json(
-      {
-        output: quote.output,
-        minOut: quote.minOut,
-        to: getAddress(quote.transaction.to),
-        data: quote.transaction.calldata.startsWith("0x") ? quote.transaction.calldata : `0x${quote.transaction.calldata}`,
-        value: quote.transaction.value ?? "0",
-      },
-      { headers: NO_STORE },
-    );
+    const quote = await kuruQuote({ userAddress: getAddress(auth.account), tokenIn, tokenOut, amount });
+    return NextResponse.json(quote, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);
   }

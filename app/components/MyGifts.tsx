@@ -56,6 +56,9 @@ export function MyGifts() {
         <p className="text-sm" style={{ color: "var(--muted)" }}>
           When someone puts money in your name, their link brings you here. When you send one, it appears here too.
         </p>
+        <Link href="/fund" className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white">
+          Put money behind someone&apos;s goal
+        </Link>
       </section>
     );
   }
