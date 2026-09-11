@@ -191,7 +191,7 @@ contract GiftEscrowTest {
 
     function testOneDayIsCreditedAndBecomesTheRecipients() public {
         uint256 giftId = _baselined();
-        uint256 t = _dayStart(day0 + 1) + 1 hours;
+        uint256 t = _readAt(day0 + 2);
         VM.warp(t);
         _checkIn(giftId, IDENTITY, 1010, t);
         GiftEscrow.Gift memory g = escrow.getGift(giftId);
@@ -202,7 +202,7 @@ contract GiftEscrowTest {
 
     function testBingeCreditsEveryOpenDayAndDiscardsTheExcess() public {
         uint256 giftId = _baselined();
-        uint256 t = _dayStart(day0 + 2) + 1 hours;
+        uint256 t = _readAt(day0 + 3);
         VM.warp(t);
         _checkIn(giftId, IDENTITY, 1050, t); // 50 XP for two open days: two credited, the rest is not banked
         GiftEscrow.Gift memory g = escrow.getGift(giftId);
@@ -217,14 +217,14 @@ contract GiftEscrowTest {
 
     function testPartialProgressCarriesToTheNextCheckIn() public {
         uint256 giftId = _baselined();
-        uint256 t1 = _dayStart(day0 + 1) + 1 hours;
+        uint256 t1 = _readAt(day0 + 2);
         VM.warp(t1);
         GiftEscrow.CheckInAttestation memory short_ =
             _checkInAttestation(giftId, recipient, IDENTITY, DUOLINGO_PROVIDER, 1006, uint64(t1), EVIDENCE_KEY);
         VM.expectRevert(GiftEscrow.InsufficientProgress.selector);
         escrow.checkIn(giftId, short_);
 
-        uint256 t2 = _dayStart(day0 + 2) + 1 hours;
+        uint256 t2 = _readAt(day0 + 3);
         VM.warp(t2);
         _checkIn(giftId, IDENTITY, 1012, t2); // 12 XP since the anchor: one day, 2 XP carried
         GiftEscrow.Gift memory g = escrow.getGift(giftId);
@@ -237,7 +237,7 @@ contract GiftEscrowTest {
 
     function testCheckInRefusals() public {
         uint256 giftId = _baselined();
-        uint256 t = _dayStart(day0 + 1) + 1 hours;
+        uint256 t = _readAt(day0 + 2);
         VM.warp(t);
 
         // Provider mismatch: a Strava attestation on a Duolingo gift.
@@ -318,16 +318,93 @@ contract GiftEscrowTest {
         require(g.creditedDays == DURATION && g.settledThroughDay == g.endDay, "capped at the last day");
     }
 
+    // --- the daily reading (D30): a day is judged the morning after it -------------------------------
+
+    /// @dev The daily pass reads each recipient at 00:30 UTC. A reading closes the days before its own
+    ///      day, never its own day: a lesson taken on day d is judged by the reading of day d + 1.
+    function _readAt(uint32 day) private pure returns (uint256) {
+        return _dayStart(day) + 30 minutes;
+    }
+
+    function testAReadingNeverCreditsItsOwnDay() public {
+        uint256 giftId = _baselined();
+        // The first window day, late evening, lesson done: that day is not over, nothing to credit yet.
+        uint256 evening = _dayStart(day0 + 1) + 23 hours;
+        VM.warp(evening);
+        GiftEscrow.CheckInAttestation memory early =
+            _checkInAttestation(giftId, recipient, IDENTITY, DUOLINGO_PROVIDER, 1010, uint64(evening), EVIDENCE_KEY);
+        VM.expectRevert(GiftEscrow.OutsideWindow.selector);
+        escrow.checkIn(giftId, early);
+        // The next morning's reading credits it.
+        VM.warp(_readAt(day0 + 2));
+        _checkIn(giftId, IDENTITY, 1010, _readAt(day0 + 2));
+        GiftEscrow.Gift memory g = escrow.getGift(giftId);
+        require(g.creditedDays == 1 && g.settledThroughDay == day0 + 1, "day one credited the next morning");
+    }
+
+    function testTheLastDayCountsWhenReadTheNextMorning() public {
+        uint256 giftId = _baselined();
+        // One lesson on each window day, and one more on the baseline day itself.
+        for (uint32 k = 2; k <= DURATION + 1; k++) {
+            uint256 t = _readAt(day0 + k);
+            VM.warp(t);
+            _checkIn(giftId, IDENTITY, uint64(1000 + TARGET * k), t);
+        }
+        GiftEscrow.Gift memory g = escrow.getGift(giftId);
+        require(g.creditedDays == DURATION && g.settledThroughDay == g.endDay, "the last day counted the next morning");
+    }
+
+    function testALessonBeforeTheWindowNeverPaysForAMissedDay() public {
+        uint256 giftId = _baselined();
+        // A lesson on the baseline day, then one per window day except the last one.
+        for (uint32 k = 2; k <= DURATION; k++) {
+            uint256 t = _readAt(day0 + k);
+            VM.warp(t);
+            _checkIn(giftId, IDENTITY, uint64(1000 + TARGET * k), t);
+        }
+        // The morning after the last day: no new lesson, nothing to credit.
+        uint256 last = _readAt(day0 + DURATION + 1);
+        VM.warp(last);
+        GiftEscrow.CheckInAttestation memory none = _checkInAttestation(
+            giftId, recipient, IDENTITY, DUOLINGO_PROVIDER, uint64(1000 + TARGET * DURATION), uint64(last), EVIDENCE_KEY
+        );
+        VM.expectRevert(GiftEscrow.InsufficientProgress.selector);
+        escrow.checkIn(giftId, none);
+        GiftEscrow.Gift memory g = escrow.getGift(giftId);
+        require(g.creditedDays == DURATION - 1, "six lessons in the window, six days");
+        VM.warp(_dayStart(day0 + DURATION + 2) + 6 hours);
+        escrow.finalise(giftId);
+        g = escrow.getGift(giftId);
+        require(g.creditedDays == DURATION - 1 && g.drainedDays == 1, "the missed last day goes back");
+    }
+
+    function testADayIsNeverDrainedBeforeTheMorningReadingThatCouldCoverIt() public {
+        uint256 giftId = _baselined();
+        // Day one missed; two lessons on day two cover it. Someone calls drain just after midnight.
+        VM.warp(_dayStart(day0 + 3) + 1);
+        VM.expectRevert(GiftEscrow.NothingToDrain.selector);
+        escrow.drain(giftId);
+        // The morning reading credits both days.
+        VM.warp(_readAt(day0 + 3));
+        _checkIn(giftId, IDENTITY, 1020, _readAt(day0 + 3));
+        GiftEscrow.Gift memory g = escrow.getGift(giftId);
+        require(g.creditedDays == 2 && g.settledThroughDay == day0 + 2, "caught up");
+        VM.warp(_dayStart(day0 + 3) + 6 hours);
+        VM.expectRevert(GiftEscrow.NothingToDrain.selector);
+        escrow.drain(giftId);
+    }
+
     // --- drain ------------------------------------------------------------------------------------------
 
     function testDrainWaitsForTheCatchUpWindowThenMovesMissedDaysOnly() public {
         uint256 giftId = _baselined();
-        // Day day0+1 can be covered until the end of day day0+2: nothing to drain a second before that.
-        VM.warp(_dayStart(day0 + 3) - 1);
+        // Day day0+1 can be covered until the end of day day0+2 and is judged by the next morning's reading:
+        // nothing to drain a second before that reading's grace ends.
+        VM.warp(_dayStart(day0 + 3) + 6 hours - 1);
         VM.expectRevert(GiftEscrow.NothingToDrain.selector);
         escrow.drain(giftId);
 
-        VM.warp(_dayStart(day0 + 3));
+        VM.warp(_dayStart(day0 + 3) + 6 hours);
         escrow.drain(giftId);
         GiftEscrow.Gift memory g = escrow.getGift(giftId);
         require(g.drainedDays == 1 && g.settledThroughDay == day0 + 1, "day one drained");
@@ -336,11 +413,11 @@ contract GiftEscrowTest {
         VM.expectRevert(GiftEscrow.NothingToDrain.selector);
         escrow.drain(giftId);
 
-        // The recipient covers day day0+2 in time; day day0+3 is then missed.
-        uint256 t = _dayStart(day0 + 3) + 1 hours;
+        // The recipient covers day day0+2 in time (read on day0+3); day day0+3 is then missed.
+        uint256 t = _dayStart(day0 + 3) + 7 hours;
         VM.warp(t);
         _checkIn(giftId, IDENTITY, 1010, t);
-        VM.warp(_dayStart(day0 + 5));
+        VM.warp(_dayStart(day0 + 5) + 6 hours);
         escrow.drain(giftId);
         g = escrow.getGift(giftId);
         require(
@@ -360,7 +437,7 @@ contract GiftEscrowTest {
 
     function testRecipientWithdrawsDirectlyOrThroughASignedIntent() public {
         uint256 giftId = _baselined();
-        uint256 t = _dayStart(day0 + 2) + 1 hours;
+        uint256 t = _readAt(day0 + 3);
         VM.warp(t);
         _checkIn(giftId, IDENTITY, 1020, t); // two days
         require(escrow.earnedBalance(giftId) == 2 * PER_DAY, "earned");
@@ -402,7 +479,7 @@ contract GiftEscrowTest {
         VM.expectRevert(GiftEscrow.NothingToRefund.selector);
         escrow.refundUnearned(giftId);
 
-        VM.warp(_dayStart(day0 + 4));
+        VM.warp(_dayStart(day0 + 4) + 6 hours);
         escrow.drain(giftId); // days day0+1 and day0+2 missed
         uint256 before = token.balanceOf(funder);
         escrow.refundUnearned(giftId);
@@ -472,15 +549,15 @@ contract GiftEscrowTest {
         uint256 giftId = escrow.createGift(p, _authorization(p, FUNDER_KEY));
         _claim(giftId);
         _checkIn(giftId, IDENTITY, 1000, START);
-        uint256 t = _dayStart(day0 + 1) + 1 hours;
+        uint256 t = _readAt(day0 + 2);
         VM.warp(t);
         _checkIn(giftId, IDENTITY, 1010, t);
 
-        VM.warp(_dayStart(day0 + DURATION + 2) - 1);
+        VM.warp(_dayStart(day0 + DURATION + 2) + 6 hours - 1);
         VM.expectRevert(GiftEscrow.FinalisationTooEarly.selector);
         escrow.finalise(giftId);
 
-        VM.warp(_dayStart(day0 + DURATION + 2));
+        VM.warp(_dayStart(day0 + DURATION + 2) + 6 hours);
         escrow.finalise(giftId);
         GiftEscrow.Gift memory g = escrow.getGift(giftId);
         require(g.finalised && g.creditedDays == 1 && g.drainedDays == DURATION - 1, "settled");
@@ -507,8 +584,8 @@ contract GiftEscrowTest {
         uint64 metric = 1000;
         _checkIn(giftId, IDENTITY, metric, START);
 
-        for (uint32 day = 1; day <= duration + 2; ++day) {
-            uint256 t = _dayStart(day0 + day) + 1 hours + (seed % 3600);
+        for (uint32 day = 1; day <= duration + 3; ++day) {
+            uint256 t = _dayStart(day0 + day) + 30 minutes + (seed % 3600);
             VM.warp(t);
             seed = uint256(keccak256(abi.encode(seed, day)));
             if (seed % 4 != 0) {
@@ -522,7 +599,7 @@ contract GiftEscrowTest {
                 try escrow.drain(giftId) {} catch {}
             }
         }
-        VM.warp(_dayStart(day0 + duration + 2));
+        VM.warp(_dayStart(day0 + duration + 3) + 6 hours);
         escrow.finalise(giftId);
         GiftEscrow.Gift memory g = escrow.getGift(giftId);
         require(g.creditedDays + g.drainedDays == duration, "every day settled once");

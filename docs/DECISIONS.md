@@ -462,3 +462,27 @@ party platform or API, `[U]` not verified).
   AUSD lands in the funder's Viky account directly: no "buy MON", no pasted identifier, no swap. The
   exit still needs another path (keep the balance, send back, a card program, or Mercuryo Sell).
   The call with Calm (11 Sep 2026) decides whether an individual publisher can hold the account.
+
+## D30, 11 Sep 2026, a day is judged by the reading of the morning after it
+
+- Statement: with the daily pass reading every recipient at 00:30 UTC, the deployed contract credited a
+  reading to the day it was taken on, using progress made the day before. Four consequences, each now
+  reproduced by a Foundry test that fails on the deployed code: a lesson taken on a gift's last day is
+  refused as "nothing to credit" when read the next morning (the strategy review's finding); a lesson
+  taken on the baseline day, before the window, can pay for a missed window day; a reading credits the
+  very day it is taken on; and anyone calling `drain` between midnight and the morning reading can drain a
+  day the recipient had covered on its catch-up day.
+- Source: `test/GiftEscrow.t.sol` (`testTheLastDayCountsWhenReadTheNextMorning`,
+  `testALessonBeforeTheWindowNeverPaysForAMissedDay`, `testAReadingNeverCreditsItsOwnDay`,
+  `testADayIsNeverDrainedBeforeTheMorningReadingThatCouldCoverIt`), run against the deployed source on
+  11 Sep 2026: four failures; the strategy review of 11 Sep 2026.
+- Consequence: `checkIn` now credits only completed days: a reading observed on day `d` settles the
+  earliest open days up to `d - 1`. A day becomes drainable only once the morning reading after its
+  catch-up day has had time to run: `CATCH_UP_WINDOW` = 1 day + `READING_GRACE` (6 hours). All 62
+  Solidity tests pass, the accounting fuzz test included. The result of a day appears the next morning,
+  which the gift page now says. Deployment: gift 1 stays on the deployed contract until it is finalised
+  (about 21 Sep); the corrected contract is deployed before gift 2, and the app then serves each gift
+  from the contract that holds it (the escrow of each gift stored with its record), which lands with the
+  funder screen. Gift 1's expected outcome under the old rule (lessons through 16 Sep, none on 17 and 18)
+  is unchanged: six days credited, one returned.
+
