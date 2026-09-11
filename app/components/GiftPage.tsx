@@ -29,14 +29,32 @@ function screenMessage(error: unknown): string {
 
 class ScreenError extends Error {}
 
-function outcomeMessage(outcome: PublicOutcome, whenCounted: (days: number) => string): string {
+/** Why nothing happened, in the person's own situation. "Nothing to do right now" tells them nothing. */
+const NOTHING_TO_DO: Record<string, string> = {
+  counted_today: "Viky already read your Duolingo today. Come back tomorrow.",
+  not_bound: "Connect your Duolingo first.",
+  not_opened: "Open the gift first.",
+  no_account: "Add your Duolingo name first.",
+  already_bound: "Your Duolingo is already connected. Nothing else to do.",
+  finished: "This gift is finished.",
+  cancelled: "This gift was taken back before it was opened.",
+};
+
+/**
+ * What the person reads after an attested reading. `codeWasUsed` matters: when the person who sent the
+ * gift named the Duolingo account, no code was ever placed in a display name, so telling them to take it
+ * out is nonsense.
+ */
+function outcomeMessage(outcome: PublicOutcome, codeWasUsed: boolean, whenCounted: (days: number) => string): string {
   switch (outcome.kind) {
     case "bound":
-      return "Done. From tomorrow, every day with your lesson is yours, counted by itself. You can remove the code from your name.";
+      return codeWasUsed
+        ? "Done. From tomorrow, every day with your lesson is yours, counted by itself. You can take the code out of your name now."
+        : "Done. From tomorrow, every day with your lesson is yours, counted by itself. Nothing else to do.";
     case "counted":
       return whenCounted(outcome.creditedDays);
     case "already":
-      return outcome.reason === "counted_today" ? "Today is already counted." : "Nothing to do right now.";
+      return NOTHING_TO_DO[outcome.reason] ?? "Nothing to do right now.";
     case "refused":
       return outcome.message;
   }
@@ -105,13 +123,19 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       return null;
     });
 
+  // A code exists only when the recipient named the account themselves. When the sender named it, there
+  // was never anything to put in a display name, and nothing to take out of one afterwards.
+  const codeWasUsed = () => gift?.goalAccount.source === "recipient";
+
   // The first attested read: proves the code is in the name (when the recipient named the account) and starts the count.
   const bind = () =>
-    run("binding", async () => outcomeMessage(await bindGoalAccount(giftId), () => "Counting."));
+    run("binding", async () => outcomeMessage(await bindGoalAccount(giftId), codeWasUsed(), () => "Counting."));
 
   const count = () =>
     run("counting", async () =>
-      outcomeMessage(await countNow(giftId), (days) => (days === 0 ? "Read. Nothing new to count yet." : days === 1 ? "Today is yours." : `${days} days are yours.`)),
+      outcomeMessage(await countNow(giftId), codeWasUsed(), (days) =>
+        days === 0 ? "Read. Nothing new to count yet." : days === 1 ? "One more day is yours." : `${days} more days are yours.`,
+      ),
     );
 
   const take = () =>
