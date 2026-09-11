@@ -20,6 +20,7 @@ const server = createServer(async (request, response) => {
     response.writeHead(status, { "content-type": "application/json", "cache-control": "no-store" });
     response.end(JSON.stringify(body));
   };
+  if (request.method === "GET" && request.url === "/health") return reply(200, { ok: true, worker: "zkfetch", at: new Date().toISOString() });
   if (request.method !== "POST" || request.url !== "/read") return reply(404, { error: "Not found" });
   if (request.headers.authorization !== `Bearer ${secret}`) return reply(401, { error: "Not allowed" });
   let raw = "";
