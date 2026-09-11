@@ -70,9 +70,17 @@ export function AccountPanel() {
       </button>
 
       {error ? (
-        <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
-          {error.guidance}
-        </p>
+        <div role="alert" className="space-y-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+          <p>{error.guidance}</p>
+          {error.code === "UNSUPPORTED_BROWSER" && /Android/i.test(navigator.userAgent) ? (
+            <a
+              className="inline-block rounded-lg bg-blue-600 px-3 py-1 text-white"
+              href={`intent://${window.location.host}${window.location.pathname}${window.location.search}#Intent;scheme=https;package=com.android.chrome;end`}
+            >
+              Open this page in Chrome
+            </a>
+          ) : null}
+        </div>
       ) : null}
     </section>
   );

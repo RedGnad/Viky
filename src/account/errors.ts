@@ -37,7 +37,7 @@ const GUIDANCE: Record<AccountErrorCode, string> = {
   NO_CREDENTIAL: "No account is saved on this device yet. Create one, or sign in with a passkey you already have.",
   NOT_IN_BROWSER: "Accounts can only be created in a browser.",
   UNSUPPORTED_BROWSER:
-    "This page is open inside another app, which cannot create a passkey. Copy the link and open it in Chrome or Safari, then try again.",
+    "This browser cannot create a passkey for Viky. Copy the link and open it in Chrome (Android) or Safari (iPhone), then try again.",
   TIMED_OUT: "Your device did not answer. If this page is open inside another app, open it in Chrome or Safari; otherwise check your connection and try again.",
   UNKNOWN: "Something went wrong on our side. Nothing was changed. Please try again.",
 };
@@ -78,5 +78,8 @@ export function accountError(code: AccountErrorCode): AccountError {
 export function passkeyEnvironmentProblem(userAgent: string, hasWebAuthn: boolean): AccountErrorCode | undefined {
   if (!hasWebAuthn) return "UNSUPPORTED_BROWSER";
   const inAppBrowser = /; ?wv\)|FBAN|FBAV|FB_IAB|Instagram|Line\/|Snapchat|TikTok|BytedanceWebview|Telegram|GSA\/|DuckDuckGo\/[0-9]+ Mobile/i.test(userAgent);
-  return inAppBrowser ? "UNSUPPORTED_BROWSER" : undefined;
+  // OEM browsers outside Mera's authenticator matrix; Mi Browser was observed on 11 Sep 2026 to open
+  // no passkey prompt at all (the page waited forever).
+  const oemBrowser = /MiuiBrowser|XiaoMi\/|UCBrowser|HuaweiBrowser|HeyTapBrowser|VivoBrowser/i.test(userAgent);
+  return inAppBrowser || oemBrowser ? "UNSUPPORTED_BROWSER" : undefined;
 }
