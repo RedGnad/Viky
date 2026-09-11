@@ -525,6 +525,15 @@ party platform or API, `[U]` not verified).
   it and nothing about gift 1 moves. Every gift created from now on is created on viky.cash. The Reclaim
   application origins, the legal page and the gift links follow. The stateless test is then run again on
   viky.cash itself: an account created there signs back in from a second browser with the passkey alone.
+- Refinement, same day: a claim link follows the hostname the funder created the gift on, rather than being
+  pinned to viky.cash. While both hostnames serve, an account exists on one of them and not the other, so a
+  gift made from the preview hostname must hand out a preview link or its recipient could not open it with
+  the account they already have. `NEXT_PUBLIC_APP_URL` is therefore left unset and the create route uses the
+  request's own origin. It is pinned again once the preview hostname stops serving, after gift 1 finalises.
+- Note on Reclaim: the origins registered in the Reclaim portal matter only for the session path, where a
+  person proves a private source in their own browser. Duolingo runs in public mode (D27), where the fetch
+  is attested server side and no browser origin is involved, so gift 1's daily counting does not depend on
+  which hostname is registered there.
 
 ## D34, 11 Sep 2026, Agora Instant Settlement has no place in the current flow
 

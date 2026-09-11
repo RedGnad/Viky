@@ -22,6 +22,12 @@ export default function Page() {
       </header>
       <AccountPanel />
       <MyGifts />
+      <Link
+        href="/fund"
+        className="rounded-lg border border-gray-300 px-4 py-3 text-center text-sm font-medium dark:border-gray-700"
+      >
+        Put money behind someone&apos;s goal
+      </Link>
       <footer className="flex gap-4 text-xs" style={{ color: "var(--muted)" }}>
         <Link href="/privacy" className="underline">
           Privacy
