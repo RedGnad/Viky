@@ -327,3 +327,26 @@ party platform or API, `[U]` not verified).
 - Consequence: the wall is a design fact, not a bug; the choice is between verification purity and
   the "my grandmother uses the app" bar the track scores. To be decided by the funder with the
   strategy side; gift 1 continues on the current path meanwhile so the rest of the chain is measured.
+
+## D25, 11 Sep 2026, spike S1: on Android the zkTLS verifier must be installed once; the Reclaim app carries Lock-in's name
+
+- Statement: with `RECLAIM_VERIFICATION_MODE=app` the baseline check-in on the Xiaomi (Chrome) opened
+  the Play Store asking to install "Reclaim Verifier" instead of an Instant App. Reclaim's own post
+  explains why: Google discontinued Play Instant ("Starting December 2025, Instant Apps cannot be
+  published through Google Play"), and since the week of 4 Nov 2025 Reclaim's Android flow is
+  "redirected once to the Play Store to install the app. After installation, it opens automatically
+  and verification continues right away" (deferred deep link). The post says nothing about iOS App
+  Clips. The consent screen also read "Lock In wants to connect", because the Reclaim application
+  credentials are borrowed from Lock-in (D22 sources); the name shown is the application's name on
+  the Reclaim dashboard.
+- Source: the recipient's run on 11 Sep 2026; `blog.reclaimprotocol.org/posts/moving-beyond-google-play-instant`;
+  `docs.reclaimprotocol.org/api-key` (an application is created on `dev.reclaimprotocol.org`, "New
+  Application", the secret is shown once).
+- Consequence: on Android, a zkTLS check-in through Reclaim costs one app install per device, then
+  the deferred link brings the person back; the daily check-in afterwards is what S1 still has to
+  measure (does the login persist in the verifier). The verifiable path is therefore not install-free
+  on Android; on iPhone the App Clip is to be tested. The app name is fixed by creating a "Viky"
+  application on the Reclaim dashboard with the same Duolingo provider (the funder's account), then
+  switching `RECLAIM_APP_ID` and `RECLAIM_APP_SECRET`. The verification primitive (zkTLS, TEE
+  attestation required) stays; the choice left to the funder and the strategy side is the
+  onboarding cost per platform, see D24 for the alternatives.
