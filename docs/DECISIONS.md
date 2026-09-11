@@ -618,3 +618,34 @@ party platform or API, `[U]` not verified).
   running with two contracts at once, so a milestone contract can be deployed while gifts 1 and 2 finish
   where they are. No money in flight blocks a contract change any more.
 
+## D37, 11 Sep 2026, the order of the remaining work
+
+- Statement: the strategy review set the order of the blocks that remain before the freeze. No dates per
+  block: each one is finished when its own criterion is met, and only then does the next begin.
+  1. **A pass over the words and the look of both journeys.** The funder, from the home page to the link
+     they hand over. The recipient, from the link to "the money is in your name", then the mornings, then
+     taking it. Every state gets its own words (waiting for the card payment, funded, a day credited, a day
+     missed, taking the money), and every failure gets a way out (no passkey support, a refused browser, a
+     name that does not resolve, a profile that is private). No forbidden word, and readable one handed on a
+     phone. One simple visual system: one typeface, one palette, one set of components. No graphic identity
+     yet. The browser test belongs to this block, not a later one.
+  2. **The way out through Mercuryo Sell, inside the app**, so the recipient sees a payout and nothing else.
+  3. **The first real gifts, with people close to the funder.** KT5 is timed here, on a phone that has never
+     seen Viky, including placing the code in the display name.
+  4. **The milestone shape**: a `MilestoneGift` contract, verified through a certificate and through
+     Chess.com, reviewed in a separate session before it is deployed.
+  5. **The encrypted note from the passkey's second key, the Envio index, and a judges page that shows a
+     refusal happening in under thirty seconds.**
+  6. **Strava in connected mode if the rest holds**, then hardening, then the freeze.
+- Source: the strategy review of 11 Sep 2026, evening.
+- On the milestone block, recorded because it reverses a recommendation: D36 recommended not building the
+  one-shot shape before the freeze, on the ground that the bottleneck is verification rather than release
+  logic, and that a milestone with no credible source would be a demo. The review decided to build it and
+  answered that objection directly by naming the sources: a certificate, and Chess.com. Chess.com is a
+  public profile of the same family as the Duolingo one already running, so the attested public read of D27
+  carries over. The objection is met, and the block is in the order.
+- Two standing obligations that belong to no block: record the result of the written prediction on the
+  00:30 pass of 12 Sep, whichever way it falls; and on the day gift 1 produces its first drain, keep the
+  transaction hashes and a capture of the screen, because a day coming back to the funder by itself is the
+  central scene of the submission video.
+
