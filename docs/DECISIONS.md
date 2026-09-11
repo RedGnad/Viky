@@ -379,3 +379,29 @@ party platform or API, `[U]` not verified).
   app path (install once on Android, App Clip on iPhone, D25) and (b) zkFetch on public data with
   the display-name binding. Both keep the verification attested by Reclaim; they differ in what the
   person has to do every day: an app, or nothing.
+
+## D27, 11 Sep 2026, decision: zkFetch on public data, zero daily gesture; the verifier app stays the exception
+
+- Statement: the strategy side chose D26 option (b) after checking its three load-bearing facts
+  itself (the public Duolingo profile returns XP without a session; Google removed Play Instant;
+  attested zkFetch exists, with secret headers). Reasoning recorded with the decision: the loss
+  effect measured by Patel and Volpp holds because the withholding is automatic; a recipient who
+  must sign in again every day in a blurry remote browser is not in that experience, and ours gave
+  up at the first check-in. Mode 3 does not degrade the demo, it breaks the mechanism the product
+  sells. On account ownership: in a bet, impersonation robs the other players; in a gift, a wrong
+  account only harms the funder who chose it, never a third party. So the funder enters the
+  Duolingo username if they know it; otherwise the recipient enters it and proves control with a
+  code placed in their display name for a minute, a practice common to verification bots for
+  gamers (Roblox, osu!, Chess.com), the very population of Duolingo learners. Both options on the
+  same screen.
+- Build order: (1) Duolingo in public mode, unblocks gift 1; (2) Strava in connected mode ("Connect
+  with Strava", the ported verifier, ten athletes cover KT4; two daily sources on one contract prove
+  Viky is not a Duolingo product); (3) diplomas and badges by Coursera or Credly link, the
+  organisers' literal example, third because a one-off milestone needs a "milestone" goal type in
+  the contract; (4) mode 3 measured once on gift 1, outside the demo, so its cost is a number.
+- Two accepted risks, to be written on the judges page: the endpoint is unofficial (same risk class
+  as the live schema); zkFetch is priced "from $0.10 per verification" per Reclaim's site, one fetch
+  per recipient per day, never per gift, exact figure to obtain.
+- Source: the strategy review of 11 Sep 2026, relayed by the funder; D24 to D26 for the facts.
+- Consequence: build now. The verifier-app path (Reclaim session and verify routes, `app` channel)
+  stays in the code as the mode for private sources.
