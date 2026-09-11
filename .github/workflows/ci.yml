@@ -79,3 +79,11 @@ jobs:
 
       - name: Build application
         run: pnpm build
+
+      - name: Install the browser used by the screen tests
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Runs against the built app with no database and nobody signed in, which is the state of every
+      # first visit, so it needs no secret. It sees text that only exists once React has run.
+      - name: Test the screens in a browser
+        run: pnpm test:browser

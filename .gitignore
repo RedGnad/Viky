@@ -27,3 +27,7 @@ next-env.d.ts
 
 # Notes for the strategy side: never published
 private-notes/
+
+# Browser test output
+test-results/
+playwright-report/

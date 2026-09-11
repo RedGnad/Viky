@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as mera from "@/src/account/mera";
+import { CARD, FIELD, INLINE_BUTTON, PRIMARY_BUTTON } from "./ui";
 import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
 import { createGift, type CreatedGift } from "@/src/client/gift";
@@ -214,7 +215,7 @@ export function FundGift() {
                 setProblem("Your browser would not let us copy it. Press and hold the link above, then choose Copy.");
               });
           }}
-          className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white"
+          className={PRIMARY_BUTTON}
         >
           {linkCopied ? "Copied" : "Copy the link"}
         </button>
@@ -225,19 +226,19 @@ export function FundGift() {
 
   return (
     <div className="space-y-6">
-      <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+      <section className={CARD}>
         <h2 className="font-medium">Who is it for, and for what</h2>
         <input
           value={contact}
           onChange={(event) => setContact(event.target.value)}
           placeholder="Their email or phone"
-          className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700"
+          className={FIELD}
         />
         <input
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           placeholder="Their Duolingo name, if you know it"
-          className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700"
+          className={FIELD}
         />
         <div className="grid grid-cols-3 gap-2">
           <label className="text-xs" style={{ color: "var(--muted)" }}>
@@ -246,7 +247,7 @@ export function FundGift() {
               value={dollars}
               onChange={(event) => setDollars(event.target.value)}
               inputMode="decimal"
-              className="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-base dark:border-gray-700"
+              className={FIELD}
             />
           </label>
           <label className="text-xs" style={{ color: "var(--muted)" }}>
@@ -255,7 +256,7 @@ export function FundGift() {
               value={target}
               onChange={(event) => setTarget(event.target.value)}
               inputMode="numeric"
-              className="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-base dark:border-gray-700"
+              className={FIELD}
             />
           </label>
           <label className="text-xs" style={{ color: "var(--muted)" }}>
@@ -264,7 +265,7 @@ export function FundGift() {
               value={days}
               onChange={(event) => setDays(event.target.value)}
               inputMode="numeric"
-              className="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-base dark:border-gray-700"
+              className={FIELD}
             />
           </label>
         </div>
@@ -274,7 +275,7 @@ export function FundGift() {
         </p>
       </section>
 
-      <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+      <section className={CARD}>
         <h2 className="font-medium">Your money</h2>
         <p className="text-2xl font-semibold">{balance === null ? "..." : formatAusd(balance)}</p>
         {!enough ? (
@@ -298,7 +299,7 @@ export function FundGift() {
             <button
               type="button"
               onClick={() => void navigator.clipboard.writeText(address).then(() => setCopied(true)).catch(() => setCopied(false))}
-              className="rounded-lg border px-3 py-2"
+              className={INLINE_BUTTON}
             >
               Copy my deposit line
             </button>
@@ -308,7 +309,7 @@ export function FundGift() {
           type="button"
           onClick={() => void start()}
           disabled={!ready || step === "converting" || step === "giving"}
-          className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white disabled:opacity-50"
+          className={PRIMARY_BUTTON}
         >
           {step === "giving" ? "Putting it in their name" : step === "converting" ? "Getting it ready" : enough ? "Put it in their name" : "Add money and give"}
         </button>

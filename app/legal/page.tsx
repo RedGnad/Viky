@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Footer } from "../components/Footer";
 
 export const metadata: Metadata = {
   title: "Legal notice",
@@ -55,9 +56,7 @@ export default function LegalPage() {
         </p>
       </section>
 
-      <footer className="text-xs" style={{ color: "var(--muted)" }}>
-        <Link className="underline" href="/privacy">Privacy</Link> · <Link className="underline" href="/">Home</Link>
-      </footer>
+      <Footer current="/legal" />
     </main>
   );
 }

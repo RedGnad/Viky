@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { CARD, FIELD, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./ui";
 import { useAccount } from "@/src/account/provider";
 import * as mera from "@/src/account/mera";
 import { ApiError } from "@/src/client/api";
@@ -196,25 +197,25 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       ) : null}
 
       {!gift.cancelled && signedIn && !gift.opened ? (
-        <button type="button" onClick={open} disabled={working || !token} className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white disabled:opacity-50">
+        <button type="button" onClick={open} disabled={working || !token} className={PRIMARY_BUTTON}>
           {busy === "opening" ? "Opening" : "Open my gift"}
         </button>
       ) : null}
 
       {!gift.cancelled && signedIn && gift.opened && !account.bound && account.source === "funder" && account.username ? (
-        <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+        <section className={CARD}>
           <p className="font-medium">Your Duolingo: {account.username}</p>
           <p className="text-sm" style={{ color: "var(--muted)" }}>
             Named by the person who sent this. Nothing to sign in to, nothing to install: your lessons are read from your public profile.
           </p>
-          <button type="button" onClick={bind} disabled={working} className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white disabled:opacity-50">
+          <button type="button" onClick={bind} disabled={working} className={PRIMARY_BUTTON}>
             {busy === "binding" ? "Reading your profile" : "Start counting"}
           </button>
         </section>
       ) : null}
 
       {!gift.cancelled && signedIn && gift.opened && !account.bound && account.source !== "funder" && (!account.code || renaming) ? (
-        <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+        <section className={CARD}>
           <label className="block text-sm font-medium" htmlFor="duolingo-username">
             Your Duolingo username
           </label>
@@ -222,18 +223,18 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
             id="duolingo-username"
             value={typedUsername}
             onChange={(event) => setTypedUsername(event.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700"
+            className={FIELD}
             placeholder="ama_learns"
             disabled={working}
           />
-          <button type="button" onClick={name} disabled={working || typedUsername.trim().length === 0} className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white disabled:opacity-50">
+          <button type="button" onClick={name} disabled={working || typedUsername.trim().length === 0} className={PRIMARY_BUTTON}>
             {busy === "naming" ? "One moment" : "Continue"}
           </button>
           <p className="text-xs" style={{ color: "var(--muted)" }}>
             No password, no sign-in: your lessons are read from your public profile. Next, a short code proves the profile is yours.
           </p>
           {renaming ? (
-            <button type="button" onClick={() => setRenaming(false)} className="w-full rounded-lg border px-4 py-2 text-sm">
+            <button type="button" onClick={() => setRenaming(false)} className={SECONDARY_BUTTON}>
               Keep the name I had
             </button>
           ) : null}
@@ -241,26 +242,26 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       ) : null}
 
       {!gift.cancelled && signedIn && gift.opened && !account.bound && account.source === "recipient" && account.code && !renaming ? (
-        <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+        <section className={CARD}>
           <p className="font-medium">Prove {account.username} is yours</p>
           <p className="text-sm">
             In Duolingo, open Profile, then Settings, then Name, and add this code to your name for a minute:
           </p>
           <p className="text-center font-mono text-3xl tracking-widest">{account.code}</p>
-          <button type="button" onClick={bind} disabled={working} className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white disabled:opacity-50">
+          <button type="button" onClick={bind} disabled={working} className={PRIMARY_BUTTON}>
             {busy === "binding" ? "Reading your profile" : "I added it"}
           </button>
           <p className="text-xs" style={{ color: "var(--muted)" }}>
             You can remove the code right after.
           </p>
-          <button type="button" onClick={() => setRenaming(true)} className="w-full rounded-lg border px-4 py-2 text-sm">
+          <button type="button" onClick={() => setRenaming(true)} className={SECONDARY_BUTTON}>
             That is not my Duolingo name
           </button>
         </section>
       ) : null}
 
       {!gift.cancelled && signedIn && account.bound && !gift.finished ? (
-        <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+        <section className={CARD}>
           <p className="font-medium">{gift.todayDayIndex === 0 ? "Counting starts tomorrow." : `Day ${gift.todayDayIndex} of ${gift.durationDays}. Counted by itself, every day.`}</p>
           {gift.todayDayIndex === 0 ? (
             <p className="text-sm" style={{ color: "var(--muted)" }}>
@@ -275,7 +276,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
               {gift.returnedDisplay} has gone back so far, for {gift.missedDays} {gift.missedDays === 1 ? "day" : "days"} without a lesson. The days ahead are still yours to take.
             </p>
           ) : null}
-          <button type="button" onClick={count} disabled={working || gift.todayDayIndex === 0} className="w-full rounded-lg border px-4 py-3 text-sm disabled:opacity-50">
+          <button type="button" onClick={count} disabled={working || gift.todayDayIndex === 0} className={SECONDARY_BUTTON}>
             {busy === "counting" ? "Reading your profile" : "Count now"}
           </button>
         </section>
@@ -292,7 +293,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       ) : null}
 
       {signedIn && gift.opened && BigInt(gift.earned) > 0n ? (
-        <button type="button" onClick={take} disabled={working} className="w-full rounded-lg border px-4 py-3 font-medium disabled:opacity-50">
+        <button type="button" onClick={take} disabled={working} className={SECONDARY_BUTTON}>
           {busy === "taking" ? "One moment" : `Take ${gift.earnedDisplay}`}
         </button>
       ) : null}
