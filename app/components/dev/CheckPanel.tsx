@@ -51,7 +51,6 @@ export function CheckPanel() {
   useEffect(() => {
     void Promise.resolve().then(probe);
     // The probe reads the browser once on mount; it does not depend on React state.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const testPrompt = async () => {
