@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { accountAuthErrorStatus, accountAuthPublicMessage } from "./account-auth-server";
 import { RelayerError } from "./relayer";
+import { RequestError } from "./request-error";
 
 /** Shared response helpers of the gift routes: every refusal carries a typed code and a plain sentence. */
 
@@ -51,6 +52,7 @@ export function giftErrorResponse(error: unknown): NextResponse {
   const authStatus = accountAuthErrorStatus(error);
   if (authStatus) return NextResponse.json({ error: accountAuthPublicMessage(error), code: "SIGN_IN_REQUIRED" }, { status: authStatus, headers: NO_STORE });
   if (error instanceof GiftApiError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status, headers: NO_STORE });
+  if (error instanceof RequestError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status, headers: NO_STORE });
   if (error instanceof RelayerError) {
     if (error.code === "REVERTED") {
       const known = error.contractError ? CONTRACT_REFUSALS[error.contractError] : undefined;
