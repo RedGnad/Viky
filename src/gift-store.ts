@@ -113,13 +113,21 @@ export async function saveGift(input: {
   /** Set when the funder knows the recipient's account: no binding code is needed then (D27). */
   goalUsername?: string;
 }): Promise<void> {
-  await sql()`
+  const inserted = await sql()`
     INSERT INTO viky_gifts
       (gift_id, funder, contact_hash, claim_token_hash, goal_type, daily_target, duration_days, amount, created_tx, escrow, goal_username, username_source)
     VALUES (${input.giftId}, ${input.funder.toLowerCase()}, ${input.contactHash}, ${claimTokenHash(input.claimToken)},
             ${input.goalType}, ${input.dailyTarget}, ${input.durationDays}, ${input.amount.toString()}, ${input.createdTx},
             ${input.escrow.toLowerCase()}, ${input.goalUsername ?? null}, ${input.goalUsername ? "funder" : null})
-    ON CONFLICT (gift_id) DO NOTHING`;
+    ON CONFLICT (gift_id) DO NOTHING
+    RETURNING gift_id`;
+  if (inserted.length > 0) return;
+  // The id is taken. The same funding transaction is a retry and is fine; a different one means two
+  // contracts minted the same id, and staying silent would lose a gift whose money is already in
+  // escrow (D35). Fail loudly instead: the funder sees a failure rather than a link that never works.
+  const existing = await loadGift(input.giftId);
+  if (existing && existing.createdTx.toLowerCase() === input.createdTx.toLowerCase()) return;
+  throw new Error(`Gift ${input.giftId} is already recorded with a different funding transaction`);
 }
 
 /** Records which contract holds gifts saved before the column existed (a one-off, run by the migration). */

@@ -361,9 +361,9 @@ contract GiftEscrowTest {
         require(g.creditedDays == DURATION && g.settledThroughDay == g.endDay, "the last day counted the next morning");
     }
 
-    function testALessonBeforeTheWindowNeverPaysForAMissedDay() public {
+    function testAMissedDayInTheWindowGoesBackToTheFunder() public {
         uint256 giftId = _baselined();
-        // A lesson on the baseline day, then one per window day except the last one.
+        // A lesson read on each window day except the last one.
         for (uint32 k = 2; k <= DURATION; k++) {
             uint256 t = _readAt(day0 + k);
             VM.warp(t);

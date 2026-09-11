@@ -65,9 +65,28 @@ async function main() {
   const tokenCode = await publicClient.getCode({ address: AUSD_ADDRESS });
   if (!tokenCode || tokenCode === "0x") throw new Error("AUSD has no code at the pinned address");
 
-  // Gift ids continue across deployments (D30): the new contract starts where the previous one stopped.
-  const firstGiftId = BigInt(process.env.FIRST_GIFT_ID?.trim() || "1");
+  // Gift ids continue across deployments (D30). This is never guessed: a new contract that restarted at
+  // 1 would mint an id an existing gift already uses, and that gift's record would silently survive
+  // untouched while a real funded gift became invisible to the app (D35). The value is required, and
+  // checked against the contract being replaced whenever there is one.
+  const declared = process.env.FIRST_GIFT_ID?.trim();
+  if (!declared || !/^[0-9]+$/.test(declared)) {
+    throw new Error("Refusing to deploy: set FIRST_GIFT_ID to the nextGiftId() of the contract being replaced (1 for the very first deployment)");
+  }
+  const firstGiftId = BigInt(declared);
   if (firstGiftId < 1n) throw new Error("FIRST_GIFT_ID must be at least 1");
+  const previous = process.env.GIFT_ESCROW_ADDRESS?.trim();
+  if (previous && /^0x[0-9a-fA-F]{40}$/.test(previous)) {
+    const expected = (await publicClient.readContract({
+      address: previous as Hex,
+      abi,
+      functionName: "nextGiftId",
+    })) as bigint;
+    if (firstGiftId !== expected) {
+      throw new Error(`Refusing to deploy: FIRST_GIFT_ID is ${firstGiftId}, but ${previous} stopped at ${expected}`);
+    }
+    console.log(JSON.stringify({ step: "continuity", previous, nextGiftId: expected.toString() }, null, 2));
+  }
 
   console.log(JSON.stringify({ deployer: account.address, balanceMon: formatEther(balance), evidenceSigner, owner: owner ?? account.address, firstGiftId: firstGiftId.toString() }, null, 2));
 

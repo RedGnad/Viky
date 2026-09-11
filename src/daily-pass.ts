@@ -8,18 +8,27 @@ import { escrowOf, relayerClients, relayerPreflight, RelayerError } from "./rela
 /**
  * The daily pass of the keeper (D27): count every bound gift from its public profile, then drain the
  * days whose catch-up window has closed, finalise ended gifts, and optionally send back what is
- * refundable. Run by `pnpm keeper` and by the daily cron route. Every line of the report is one
- * relayed transaction, a typed refusal, or a skip with its reason; nothing is silent.
+ * refundable. Every line of the report is one relayed transaction, a typed refusal, or a skip with its
+ * reason; nothing is silent.
+ *
+ * It runs twice a day, and the split matters (D35). The counting pass runs just after midnight UTC, so a
+ * reading credits everything earned up to the end of yesterday, as late as a recipient can legitimately
+ * be. Settling cannot run then: a day only becomes drainable six hours later (D30), so draining at
+ * midnight would leave it open for another whole day, and the next morning's reading could pay for a day
+ * whose catch-up had already expired. A second pass after the grace, with `count: false`, settles those
+ * days at the moment D13 allows, without making the counting pass less forgiving.
  */
 
 export type DailyPassLine = { giftId: string; step: "count" | "drain" | "finalise" | "refund"; result: string; hash?: string };
 
-export async function dailyPass(options: { refund?: boolean; now?: () => number } = {}): Promise<{ relayer: string; balanceWei: string; lines: DailyPassLine[] }> {
+export async function dailyPass(
+  options: { refund?: boolean; count?: boolean; now?: () => number } = {},
+): Promise<{ relayer: string; balanceWei: string; lines: DailyPassLine[] }> {
   const clients = relayerClients();
   const { balance } = await relayerPreflight(clients);
   const lines: DailyPassLine[] = [];
 
-  for (const gift of await loadBoundGifts()) {
+  for (const gift of options.count === false ? [] : await loadBoundGifts()) {
     const outcome: PublicCheckInOutcome = await runPublicCheckIn({ giftId: gift.giftId, purpose: "count" });
     lines.push(describe(outcome));
   }

@@ -165,3 +165,27 @@ test("each gift keeps the contract that holds it, across a redeployment", async 
   if (previous === undefined) delete process.env.GIFT_ESCROW_ADDRESS;
   else process.env.GIFT_ESCROW_ADDRESS = previous;
 });
+
+test("a gift id that is already recorded fails loudly unless it is the same funding transaction", async () => {
+  const base = {
+    funder: "0xAbC0000000000000000000000000000000000001",
+    contactHash: "0x21" as const,
+    goalType: 1,
+    dailyTarget: 10,
+    durationDays: 7,
+    amount: 20_000_000n,
+    escrow: "0x00000000000000000000000000000000000000e1" as const,
+  };
+  await saveGift({ ...base, giftId: "9300", claimToken: newClaimToken(), createdTx: "0xaa" });
+
+  // The same funding transaction is a retry of one gift and changes nothing.
+  await saveGift({ ...base, giftId: "9300", claimToken: newClaimToken(), createdTx: "0xAA" });
+  assert.equal((await loadGift("9300"))?.createdTx, "0xaa");
+
+  // A different one means two contracts minted the same id: refuse rather than drop a funded gift.
+  await assert.rejects(
+    saveGift({ ...base, giftId: "9300", claimToken: newClaimToken(), createdTx: "0xbb" }),
+    /already recorded with a different funding transaction/,
+  );
+});
+
