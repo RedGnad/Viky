@@ -1,38 +1,31 @@
 "use client";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAccount } from "@/src/account/provider";
 import * as mera from "@/src/account/mera";
 import { ApiError } from "@/src/client/api";
-import { claimGift, loadGiftStatus, runCheckIn, withdrawEarned, type GiftStatus } from "@/src/client/gift";
+import { bindGoalAccount, claimGift, countNow, loadGiftStatus, nameGoalAccount, withdrawEarned, type GiftStatus, type PublicOutcome } from "@/src/client/gift";
 import { AccountPanel } from "./AccountPanel";
 
 /**
  * The recipient's whole journey on one screen: see the money in their name, open it with a passkey,
- * connect Duolingo, check in each day, take what is theirs. Words a person understands; the
- * verification tab is Reclaim's, the rest is here.
+ * name their Duolingo once (or find it already named by the funder), then nothing: every day is read
+ * from their public profile by an attested fetch and counted by itself (D27). Words a person
+ * understands; no tab, no password, no app to install.
  */
 
-type Busy = "idle" | "opening" | "connecting" | "checking" | "taking";
+type Busy = "idle" | "opening" | "naming" | "binding" | "counting" | "taking";
 
-const USERNAME_KEY = (giftId: string) => `viky.duolingo.username.${giftId}`;
-const never = () => () => {};
-const emptyName = () => "";
-
-function readStoredUsername(giftId: string): string {
-  try {
-    return window.localStorage.getItem(USERNAME_KEY(giftId)) ?? "";
-  } catch {
-    return "";
+function outcomeMessage(outcome: PublicOutcome, whenCounted: (days: number) => string): string {
+  switch (outcome.kind) {
+    case "bound":
+      return "Done. From tomorrow, every day with your lesson is yours, counted by itself. You can remove the code from your name.";
+    case "counted":
+      return whenCounted(outcome.creditedDays);
+    case "already":
+      return outcome.reason === "counted_today" ? "Today is already counted." : "Nothing to do right now.";
+    case "refused":
+      return outcome.message;
   }
-}
-
-function openInNewTab(): (url: string) => void {
-  // Opened synchronously in the click so browsers do not block it; the address is set once known.
-  const tab = window.open("", "_blank");
-  return (url: string) => {
-    if (tab) tab.location.href = url;
-    else window.open(url, "_blank");
-  };
 }
 
 export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string | null }) {
@@ -42,10 +35,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
   const [busy, setBusy] = useState<Busy>("idle");
   const [notice, setNotice] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  // The Duolingo username typed on this device is remembered for the daily check-ins.
-  const storedUsername = useSyncExternalStore(never, () => readStoredUsername(giftId), emptyName);
-  const [typedUsername, setTypedUsername] = useState<string | null>(null);
-  const username = typedUsername ?? storedUsername;
+  const [typedUsername, setTypedUsername] = useState("");
   const token = linkKey;
 
   const reload = useCallback(
@@ -83,35 +73,26 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
     run("opening", async () => {
       if (!token) throw new Error("This link is missing its key. Ask for the link again.");
       await claimGift(giftId, token);
-      return "It is yours. Connect your Duolingo to start counting.";
+      return "It is yours.";
     });
 
-  const connect = () => {
-    const openUrl = openInNewTab();
-    return run("connecting", async () => {
-      const name = username.trim();
-      if (!name) throw new Error("Enter your Duolingo username");
-      try {
-        window.localStorage.setItem(USERNAME_KEY(giftId), name);
-      } catch {
-        // storage unavailable
-      }
-      const outcome = await runCheckIn({ giftId, phase: "baseline", dayIndex: 0, username: name, openUrl });
-      if (outcome.refusal) return outcome.refusal.message;
-      return "Connected. From tomorrow, every day with your lesson is yours.";
+  // The recipient names their Duolingo; a code comes back to put in the display name for a minute.
+  const name = () =>
+    run("naming", async () => {
+      const username = typedUsername.trim();
+      if (!username) throw new Error("Enter your Duolingo username");
+      await nameGoalAccount(giftId, username);
+      return null;
     });
-  };
 
-  const checkIn = () => {
-    const openUrl = openInNewTab();
-    return run("checking", async () => {
-      if (!gift) return null;
-      const outcome = await runCheckIn({ giftId, phase: "check-in", dayIndex: gift.todayDayIndex, username: username.trim(), openUrl });
-      if (outcome.refusal) return outcome.refusal.message;
-      const days = outcome.relayed?.creditedDays ?? 0;
-      return days === 0 ? "Recorded." : days === 1 ? "Today is yours." : `${days} days are yours.`;
-    });
-  };
+  // The first attested read: proves the code is in the name (when the recipient named the account) and starts the count.
+  const bind = () =>
+    run("binding", async () => outcomeMessage(await bindGoalAccount(giftId), () => "Counting."));
+
+  const count = () =>
+    run("counting", async () =>
+      outcomeMessage(await countNow(giftId), (days) => (days === 0 ? "Read. Nothing new to count yet." : days === 1 ? "Today is yours." : `${days} days are yours.`)),
+    );
 
   const take = () =>
     run("taking", async () => {
@@ -139,6 +120,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
 
   const signedIn = Boolean(address);
   const working = busy !== "idle" || accountStatus === "busy";
+  const account = gift.goalAccount;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-12">
@@ -200,33 +182,64 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         </button>
       ) : null}
 
-      {!gift.cancelled && signedIn && gift.opened && !gift.connected ? (
+      {!gift.cancelled && signedIn && gift.opened && !account.bound && account.source === "funder" && account.username ? (
+        <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+          <p className="font-medium">Your Duolingo: {account.username}</p>
+          <p className="text-sm" style={{ color: "var(--muted)" }}>
+            Named by the person who sent this. Nothing to sign in to, nothing to install: your lessons are read from your public profile.
+          </p>
+          <button type="button" onClick={bind} disabled={working} className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white disabled:opacity-50">
+            {busy === "binding" ? "Reading your profile" : "Start counting"}
+          </button>
+        </section>
+      ) : null}
+
+      {!gift.cancelled && signedIn && gift.opened && !account.bound && account.source !== "funder" && !account.code ? (
         <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
           <label className="block text-sm font-medium" htmlFor="duolingo-username">
             Your Duolingo username
           </label>
           <input
             id="duolingo-username"
-            value={username}
+            value={typedUsername}
             onChange={(event) => setTypedUsername(event.target.value)}
             className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700"
             placeholder="ama_learns"
             disabled={working}
           />
-          <button type="button" onClick={connect} disabled={working || username.trim().length === 0} className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white disabled:opacity-50">
-            {busy === "connecting" ? "Waiting for Duolingo" : "Connect Duolingo"}
+          <button type="button" onClick={name} disabled={working || typedUsername.trim().length === 0} className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white disabled:opacity-50">
+            {busy === "naming" ? "One moment" : "Continue"}
           </button>
           <p className="text-xs" style={{ color: "var(--muted)" }}>
-            A verification tab opens. Sign in to Duolingo there; it checks your progress and closes. Two to thirty seconds.
+            No password, no sign-in: your lessons are read from your public profile. Next, a short code proves the profile is yours.
           </p>
         </section>
       ) : null}
 
-      {!gift.cancelled && signedIn && gift.connected && !gift.finished ? (
+      {!gift.cancelled && signedIn && gift.opened && !account.bound && account.source === "recipient" && account.code ? (
         <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
-          <p className="font-medium">{gift.todayDayIndex === 0 ? "Counting starts tomorrow." : `Day ${gift.todayDayIndex}: check in after your lesson.`}</p>
-          <button type="button" onClick={checkIn} disabled={working || gift.todayDayIndex === 0} className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white disabled:opacity-50">
-            {busy === "checking" ? "Waiting for Duolingo" : "Check in today"}
+          <p className="font-medium">Prove {account.username} is yours</p>
+          <p className="text-sm">
+            In Duolingo, open Profile, then Settings, then Name, and add this code to your name for a minute:
+          </p>
+          <p className="text-center font-mono text-3xl tracking-widest">{account.code}</p>
+          <button type="button" onClick={bind} disabled={working} className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white disabled:opacity-50">
+            {busy === "binding" ? "Reading your profile" : "I added it"}
+          </button>
+          <p className="text-xs" style={{ color: "var(--muted)" }}>
+            You can remove the code right after. Wrong username? Reload this page and enter it again.
+          </p>
+        </section>
+      ) : null}
+
+      {!gift.cancelled && signedIn && account.bound && !gift.finished ? (
+        <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+          <p className="font-medium">{gift.todayDayIndex === 0 ? "Counting starts tomorrow." : `Day ${gift.todayDayIndex} of ${gift.durationDays}. Counted by itself, every day.`}</p>
+          <p className="text-sm" style={{ color: "var(--muted)" }}>
+            Do your lesson; nothing else. Your Duolingo: {account.username}.
+          </p>
+          <button type="button" onClick={count} disabled={working || gift.todayDayIndex === 0} className="w-full rounded-lg border px-4 py-3 text-sm disabled:opacity-50">
+            {busy === "counting" ? "Reading your profile" : "Count today now"}
           </button>
         </section>
       ) : null}

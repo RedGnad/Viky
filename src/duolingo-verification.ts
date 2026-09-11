@@ -10,7 +10,7 @@ import {
 } from "./duolingo-proof-policy";
 import {
   ATTESTATION_TTL_SECONDS,
-  DUOLINGO_GOAL_PROVIDER_ID,
+  DUOLINGO_SESSION_PROVIDER_ID,
   identityPseudonym,
   serialiseMessage,
   type CheckInMessage,
@@ -177,7 +177,7 @@ export async function verifyDuolingoSession(deps: VerificationDeps, input: { ses
     giftId: BigInt(session.giftId),
     recipient: session.account as Hex,
     identityHash: identityPseudonym("duolingo", evidence.profileId),
-    providerId: DUOLINGO_GOAL_PROVIDER_ID,
+    providerId: DUOLINGO_SESSION_PROVIDER_ID,
     metricValue: BigInt(evidence.totalXp),
     observedAt: BigInt(evidence.observedAt),
     nullifier: evidence.eventNullifier,

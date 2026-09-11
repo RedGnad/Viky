@@ -124,7 +124,7 @@ export async function pruneExpiredProofSessions(): Promise<void> {
  */
 export async function consumeAndSaveVerification(input: {
   sessionId: string;
-  evidence: DuolingoEvidence;
+  evidence: DuolingoEvidence | Record<string, unknown>;
   attestation: StoredAttestation;
   proofs: unknown;
 }): Promise<boolean> {

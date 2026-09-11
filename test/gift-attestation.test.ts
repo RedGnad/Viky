@@ -15,6 +15,7 @@ import {
   CLAIM_TYPEHASH,
   CLAIM_TYPES,
   DUOLINGO_GOAL_PROVIDER_ID,
+  DUOLINGO_SESSION_PROVIDER_ID,
   evidenceSignerAddress,
   FUND_NONCE_TAG,
   fundingNonce,
@@ -44,7 +45,10 @@ test("the typehashes and the funding nonce match the Solidity pin", () => {
   assert.equal(CLAIM_TYPEHASH, PIN_CLAIM_TH);
   assert.equal(WITHDRAW_TYPEHASH, PIN_WITHDRAW_TH);
   assert.equal(FUND_NONCE_TAG, PIN_FUND_NONCE_TAG);
-  assert.equal(DUOLINGO_GOAL_PROVIDER_ID, keccak256(stringToHex("cdf8cb3b-2976-4413-ab2d-693ae5028380@1.0.8")));
+  // The registry id for Duolingo is the public mode since D27; the session-proof id stays pinned for the verifier-app path.
+  assert.equal(DUOLINGO_SESSION_PROVIDER_ID, keccak256(stringToHex("cdf8cb3b-2976-4413-ab2d-693ae5028380@1.0.8")));
+  assert.equal(DUOLINGO_GOAL_PROVIDER_ID, keccak256(stringToHex("viky:provider:duolingo-public-zkfetch:v1")));
+  assert.equal(DUOLINGO_GOAL_PROVIDER_ID, "0x95160f9e5c0e1752b7128f3aeffd36d5906b2cedb43432391d1dc6c7ec958e34");
   assert.deepEqual(GIFT_DOMAIN, { name: "Viky Gift", version: "1", chainId: 143 });
 
   assert.equal(contactHash("ama@example.com"), PIN_CONTACT);

@@ -21,6 +21,8 @@ export function randomSalt(): Hex {
 export type CreateGiftInput = {
   account: LocalAccount;
   contact: string;
+  /** The recipient's Duolingo username, when the funder knows it (no code needed then, D27). */
+  duolingoUsername?: string;
   goalType: number;
   dailyTarget: number;
   durationDays: number;
@@ -52,6 +54,7 @@ export async function createGift(input: CreateGiftInput): Promise<CreatedGift> {
   const authorization = toContractAuthorization(message, signature);
   return postJson<CreatedGift>("/api/gift/create", {
     contact: input.contact,
+    duolingoUsername: input.duolingoUsername,
     goalType: params.goalType,
     dailyTarget: params.dailyTarget,
     durationDays: params.durationDays,
@@ -69,7 +72,35 @@ export async function createGift(input: CreateGiftInput): Promise<CreatedGift> {
   });
 }
 
+/** The recipient's account for the public mode (D27); the code is only ever sent to the signed-in recipient. */
+export type GoalAccount = {
+  username: string | null;
+  source: "funder" | "recipient" | null;
+  bound: boolean;
+  code: string | null;
+  codeExpiresAt: string | null;
+};
+
+export type PublicOutcome =
+  | { kind: "bound"; giftId: string; totalXp: number; hash: string }
+  | { kind: "counted"; giftId: string; totalXp: number; creditedDays: number; hash: string }
+  | { kind: "already"; giftId: string; reason: string }
+  | { kind: "refused"; giftId: string; code: string; message: string; totalXp?: number };
+
+export function nameGoalAccount(giftId: string, username: string): Promise<{ giftId: string; username: string; code: string; expiresAt: string }> {
+  return postJson(`/api/gift/${giftId}/account`, { username });
+}
+
+export function bindGoalAccount(giftId: string): Promise<PublicOutcome> {
+  return postJson(`/api/gift/${giftId}/bind`, {});
+}
+
+export function countNow(giftId: string): Promise<PublicOutcome> {
+  return postJson(`/api/gift/${giftId}/count`, {});
+}
+
 export type GiftStatus = {
+  goalAccount: GoalAccount;
   giftId: string;
   goalType: number;
   dailyTarget: number;

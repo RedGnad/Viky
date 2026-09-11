@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAddress, isAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
+import { isValidDuolingoUsername } from "@/src/duolingo-public-terms";
 import { contactHash } from "@/src/contact-hash";
 import { fundingNonce, type GiftParams } from "@/src/gift-attestation";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
@@ -15,6 +16,7 @@ export const maxDuration = 60;
 
 type CreateBody = {
   contact?: string;
+  duolingoUsername?: string;
   goalType?: number;
   dailyTarget?: number;
   durationDays?: number;
@@ -38,6 +40,10 @@ export async function POST(request: Request) {
     const rate = checkRateLimit("relay", request, auth.account);
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
     const body = await readJsonBody<CreateBody>(request, 8 * 1_024);
+    const duolingoUsername = String(body.duolingoUsername ?? "").trim() || undefined;
+    if (duolingoUsername && !isValidDuolingoUsername(duolingoUsername)) {
+      throw new GiftApiError("INVALID_USERNAME", "That does not look like a Duolingo username.", 400);
+    }
 
     const contact = String(body.contact ?? "");
     const goalType = Number(body.goalType);
@@ -96,6 +102,7 @@ export async function POST(request: Request) {
       durationDays,
       amount,
       createdTx: created.hash,
+      goalUsername: duolingoUsername,
     });
 
     const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin;

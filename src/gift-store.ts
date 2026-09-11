@@ -35,6 +35,12 @@ CREATE TABLE IF NOT EXISTS viky_relayed (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS viky_relayed_gift ON viky_relayed (gift_id, created_at DESC);
+ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS goal_username text;
+ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS username_source text;
+ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS binding_code text;
+ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS binding_code_expires_at timestamptz;
+ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS bound_at timestamptz;
+ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS goal_profile_id text;
 `;
 
 let executor: SqlExecutor | undefined;
@@ -62,6 +68,13 @@ export type GiftRecord = Readonly<{
   recipient: string | null;
   createdTx: Hex;
   claimedTx: Hex | null;
+  /** Public mode (D27): the account read by the attested fetch, who named it, and the binding state. */
+  goalUsername: string | null;
+  usernameSource: "funder" | "recipient" | null;
+  bindingCode: string | null;
+  bindingCodeExpiresAt: Date | null;
+  boundAt: Date | null;
+  goalProfileId: string | null;
 }>;
 
 export async function ensureGiftSchema(): Promise<void> {
@@ -92,13 +105,43 @@ export async function saveGift(input: {
   durationDays: number;
   amount: bigint;
   createdTx: Hex;
+  /** Set when the funder knows the recipient's account: no binding code is needed then (D27). */
+  goalUsername?: string;
 }): Promise<void> {
   await sql()`
     INSERT INTO viky_gifts
-      (gift_id, funder, contact_hash, claim_token_hash, goal_type, daily_target, duration_days, amount, created_tx)
+      (gift_id, funder, contact_hash, claim_token_hash, goal_type, daily_target, duration_days, amount, created_tx, goal_username, username_source)
     VALUES (${input.giftId}, ${input.funder.toLowerCase()}, ${input.contactHash}, ${claimTokenHash(input.claimToken)},
-            ${input.goalType}, ${input.dailyTarget}, ${input.durationDays}, ${input.amount.toString()}, ${input.createdTx})
+            ${input.goalType}, ${input.dailyTarget}, ${input.durationDays}, ${input.amount.toString()}, ${input.createdTx},
+            ${input.goalUsername ?? null}, ${input.goalUsername ? "funder" : null})
     ON CONFLICT (gift_id) DO NOTHING`;
+}
+
+/** The recipient names their own account; a fresh code must then be proved in the display name. */
+export async function setRecipientUsername(giftId: string, username: string, code: string, expiresAt: Date): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE viky_gifts
+       SET goal_username = ${username}, username_source = 'recipient', binding_code = ${code},
+           binding_code_expires_at = ${expiresAt.toISOString()}
+     WHERE gift_id = ${giftId} AND bound_at IS NULL
+     RETURNING gift_id`;
+  return rows.length === 1;
+}
+
+/** Records the proved binding; the code is cleared so it can never be reused. */
+export async function markBound(giftId: string, profileId: string): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE viky_gifts
+       SET bound_at = now(), goal_profile_id = ${profileId}, binding_code = NULL, binding_code_expires_at = NULL
+     WHERE gift_id = ${giftId} AND bound_at IS NULL
+     RETURNING gift_id`;
+  return rows.length === 1;
+}
+
+/** Gifts the keeper reads every day: bound to an account, opened by a recipient. */
+export async function loadBoundGifts(): Promise<GiftRecord[]> {
+  const rows = await sql()`SELECT * FROM viky_gifts WHERE bound_at IS NOT NULL AND recipient IS NOT NULL ORDER BY gift_id`;
+  return rows.map(toRecord);
 }
 
 function toRecord(row: Record<string, unknown>): GiftRecord {
@@ -113,7 +156,19 @@ function toRecord(row: Record<string, unknown>): GiftRecord {
     recipient: row.recipient === null || row.recipient === undefined ? null : String(row.recipient),
     createdTx: String(row.created_tx) as Hex,
     claimedTx: row.claimed_tx === null || row.claimed_tx === undefined ? null : (String(row.claimed_tx) as Hex),
+    goalUsername: row.goal_username === null || row.goal_username === undefined ? null : String(row.goal_username),
+    usernameSource: row.username_source === "funder" || row.username_source === "recipient" ? row.username_source : null,
+    bindingCode: row.binding_code === null || row.binding_code === undefined ? null : String(row.binding_code),
+    bindingCodeExpiresAt: toDate(row.binding_code_expires_at),
+    boundAt: toDate(row.bound_at),
+    goalProfileId: row.goal_profile_id === null || row.goal_profile_id === undefined ? null : String(row.goal_profile_id),
   };
+}
+
+function toDate(value: unknown): Date | null {
+  if (value === null || value === undefined) return null;
+  const date = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 export async function loadGift(giftId: string): Promise<GiftRecord | null> {

@@ -5,15 +5,18 @@ import {
   claimTokenHash,
   configureGiftStore,
   ensureGiftSchema,
+  loadBoundGifts,
   loadGift,
   loadGiftForClaim,
   loadGiftsOf,
   loadRelayed,
+  markBound,
   markClaimed,
   newClaimToken,
   recordRelayed,
   relayedForSession,
   saveGift,
+  setRecipientUsername,
 } from "../src/gift-store";
 import type { SqlExecutor } from "../src/proof-session-store";
 
@@ -94,4 +97,37 @@ test("relayed transactions are recorded per gift and per session", async () => {
   );
   assert.equal(await relayedForSession("s1"), `0x${"dd".repeat(32)}`);
   assert.equal(await relayedForSession("s2"), null);
+});
+
+test("the public mode binding: funder-named account needs no code, recipient-named account needs one, bound once", async () => {
+  const funderNamed = "9001";
+  await saveGift({ giftId: funderNamed, funder: "0xAbC0000000000000000000000000000000000001", contactHash: "0x11", claimToken: newClaimToken(), goalType: 1, dailyTarget: 10, durationDays: 7, amount: 20_000_000n, createdTx: "0x01", goalUsername: "ama_learns" });
+  const a = await loadGift(funderNamed);
+  assert.equal(a?.goalUsername, "ama_learns");
+  assert.equal(a?.usernameSource, "funder");
+  assert.equal(a?.bindingCode, null);
+  assert.equal(a?.boundAt, null);
+
+  const recipientNamed = "9002";
+  await saveGift({ giftId: recipientNamed, funder: "0xAbC0000000000000000000000000000000000001", contactHash: "0x12", claimToken: newClaimToken(), goalType: 1, dailyTarget: 10, durationDays: 7, amount: 20_000_000n, createdTx: "0x02" });
+  const expires = new Date(Date.now() + 60_000);
+  assert.equal(await setRecipientUsername(recipientNamed, "luis", "VK7K3Q", expires), true);
+  const b = await loadGift(recipientNamed);
+  assert.equal(b?.goalUsername, "luis");
+  assert.equal(b?.usernameSource, "recipient");
+  assert.equal(b?.bindingCode, "VK7K3Q");
+  assert.ok(b?.bindingCodeExpiresAt instanceof Date);
+
+  // Only opened (claimed) and bound gifts are read by the keeper.
+  assert.equal(await markClaimed(recipientNamed, "0xdef0000000000000000000000000000000000002", "0x03"), true);
+  assert.deepEqual((await loadBoundGifts()).map((g) => g.giftId).filter((id) => id === recipientNamed), []);
+  assert.equal(await markBound(recipientNamed, "14"), true);
+  const c = await loadGift(recipientNamed);
+  assert.equal(c?.goalProfileId, "14");
+  assert.equal(c?.bindingCode, null, "the code is cleared once proved");
+  assert.ok(c?.boundAt instanceof Date);
+  assert.deepEqual((await loadBoundGifts()).map((g) => g.giftId).filter((id) => id === recipientNamed), [recipientNamed]);
+  // Binding is one-way: a second bind or a new code is refused.
+  assert.equal(await markBound(recipientNamed, "15"), false);
+  assert.equal(await setRecipientUsername(recipientNamed, "other", "ABCDEF", expires), false);
 });

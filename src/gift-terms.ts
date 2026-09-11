@@ -1,4 +1,5 @@
 import { encodeAbiParameters, keccak256, parseAbiParameters, stringToHex, type Hex } from "viem";
+import { DUOLINGO_PUBLIC_PROVIDER_ID } from "./duolingo-public-terms";
 import { DUOLINGO_PROVIDER_KEY } from "./duolingo-proof-policy";
 
 /**
@@ -73,8 +74,13 @@ export const GOAL_TYPE_GITHUB_CONTRIBUTIONS = 2;
 export const GOAL_TYPE_ONCHAIN = 3;
 export const GOAL_TYPE_STRAVA_DISTANCE = 4;
 
-/** The registry's providerId for Duolingo: the verifier's PROVIDER_KEY, keccak of `<id>@<version>`. */
-export const DUOLINGO_GOAL_PROVIDER_ID: Hex = DUOLINGO_PROVIDER_KEY;
+/**
+ * The registry's providerId for Duolingo. Since D27 it is the public mode (an attested read of the
+ * public profile); the session-proof id below is kept for the verifier-app path, which the registry
+ * no longer accepts for Duolingo.
+ */
+export const DUOLINGO_GOAL_PROVIDER_ID: Hex = DUOLINGO_PUBLIC_PROVIDER_ID;
+export const DUOLINGO_SESSION_PROVIDER_ID: Hex = DUOLINGO_PROVIDER_KEY;
 
 /** The funder's EIP-3009 nonce is derived from the gift terms: one signature pays and consents (D12). */
 export const FUND_NONCE_TAG = keccak256(stringToHex("viky.fund.v1"));
