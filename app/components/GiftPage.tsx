@@ -235,6 +235,11 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       {!gift.cancelled && signedIn && account.bound && !gift.finished ? (
         <section className="space-y-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
           <p className="font-medium">{gift.todayDayIndex === 0 ? "Counting starts tomorrow." : `Day ${gift.todayDayIndex} of ${gift.durationDays}. Counted by itself, every day.`}</p>
+          {gift.todayDayIndex === 0 ? (
+            <p className="text-sm" style={{ color: "var(--muted)" }}>
+              Everything you learn from now on already counts toward tomorrow, the first day.
+            </p>
+          ) : null}
           <p className="text-sm" style={{ color: "var(--muted)" }}>
             Do your lesson; nothing else. Your Duolingo: {account.username}.
           </p>

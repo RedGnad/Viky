@@ -1,0 +1,12 @@
+# Railway (Nixpacks) builds the attested-fetch worker only: Node 24, pnpm, no Next build.
+[phases.setup]
+nixPkgs = ["nodejs_24", "pnpm"]
+
+[phases.install]
+cmds = ["pnpm install --frozen-lockfile --prod=false"]
+
+[phases.build]
+cmds = ["echo 'worker: nothing to build'"]
+
+[start]
+cmd = "pnpm zkfetch:worker"
