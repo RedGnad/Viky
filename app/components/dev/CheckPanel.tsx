@@ -20,10 +20,6 @@ export function CheckPanel() {
   const [log, setLog] = useState<string[]>([]);
   const say = (line: string) => setLog((lines) => [...lines, `${new Date().toISOString().slice(11, 19)} ${line}`]);
 
-  useEffect(() => {
-    void Promise.resolve().then(probe);
-  }, []);
-
   function probe() {
     const webAuthn = typeof window.PublicKeyCredential !== "undefined";
     const problem = passkeyEnvironmentProblem(navigator.userAgent, webAuthn);
@@ -51,6 +47,12 @@ export function CheckPanel() {
       setFacts((f) => (f ? { ...f, conditionalMediation: "not exposed" } : f));
     }
   }
+
+  useEffect(() => {
+    void Promise.resolve().then(probe);
+    // The probe reads the browser once on mount; it does not depend on React state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const testPrompt = async () => {
     const started = performance.now();
