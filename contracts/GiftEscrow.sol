@@ -340,10 +340,11 @@ contract GiftEscrow is Ownable, ReentrancyGuard, EIP712 {
     /// @notice Records verified progress. The first accepted check-in is the baseline: it binds the identity,
     ///         anchors the metric and opens the window the next UTC day. Later check-ins judge only days that are
     ///         over: a reading observed on day `d` credits the earliest open days up to `d - 1`, never `d` itself,
-    ///         so a lesson taken on the last day counts when it is read the next morning, and progress made
-    ///         before the window can never pay for a missed window day (DECISIONS.md D30). A binge inside the
-    ///         catch-up window is allowed, partial progress below one day carries to the next check-in, and
-    ///         excess beyond the open days is discarded (never banked).
+    ///         so a lesson taken on the last day counts when it is read the next morning (DECISIONS.md D30).
+    ///         Progress made after the baseline reading counts from then on, the rest of the baseline day
+    ///         included, so it can pay for the window's first open days; what it can never pay for is a day
+    ///         already settled. A binge inside the catch-up window is allowed, partial progress below one day
+    ///         carries to the next check-in, and excess beyond the open days is discarded (never banked).
     function checkIn(uint256 giftId, CheckInAttestation calldata a) external nonReentrant {
         if (checkInPaused) revert CheckInIsPaused();
         Gift storage g = _gift(giftId);

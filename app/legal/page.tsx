@@ -15,8 +15,8 @@ export default function LegalPage() {
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Legal notice</h1>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          Viky is an early product being tested with a handful of people. This page says who runs it
-          and who hosts it.
+          Viky is an early product being tested with a handful of people. This notice covers viky.cash
+          and says who runs it and who hosts it.
         </p>
       </header>
 

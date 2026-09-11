@@ -468,14 +468,20 @@ party platform or API, `[U]` not verified).
 - Statement: with the daily pass reading every recipient at 00:30 UTC, the deployed contract credited a
   reading to the day it was taken on, using progress made the day before. Four consequences, each now
   reproduced by a Foundry test that fails on the deployed code: a lesson taken on a gift's last day is
-  refused as "nothing to credit" when read the next morning (the strategy review's finding); a lesson
-  taken on the baseline day, before the window, can pay for a missed window day; a reading credits the
-  very day it is taken on; and anyone calling `drain` between midnight and the morning reading can drain a
-  day the recipient had covered on its catch-up day.
+  refused as "nothing to credit" when read the next morning (the strategy review's finding); a reading
+  credits the very day it is taken on; and anyone calling `drain` between midnight and the morning reading
+  can drain a day the recipient had covered on its catch-up day.
 - Source: `test/GiftEscrow.t.sol` (`testTheLastDayCountsWhenReadTheNextMorning`,
-  `testALessonBeforeTheWindowNeverPaysForAMissedDay`, `testAReadingNeverCreditsItsOwnDay`,
+  `testAMissedDayInTheWindowGoesBackToTheFunder`, `testAReadingNeverCreditsItsOwnDay`,
   `testADayIsNeverDrainedBeforeTheMorningReadingThatCouldCoverIt`), run against the deployed source on
   11 Sep 2026: four failures; the strategy review of 11 Sep 2026.
+- Correction, same day, from the contract review recorded in D35: an earlier draft of this entry claimed
+  the change stops progress made before the window from paying for a missed window day. That is not true
+  and was never true. Progress made after the baseline reading, the rest of the baseline day included, is
+  inside the delta at the first crediting reading, and there is no way to re-anchor at the start of the
+  window. It is bounded by the open days, it requires real verified progress, and the deployed contract
+  behaves the same way, so it is not a regression; the claim is withdrawn rather than the behaviour
+  changed. The contract docstring is corrected to match.
 - Consequence: `checkIn` now credits only completed days: a reading observed on day `d` settles the
   earliest open days up to `d - 1`. A day becomes drainable only once the morning reading after its
   catch-up day has had time to run: `CATCH_UP_WINDOW` = 1 day + `READING_GRACE` (6 hours). All 62
@@ -534,4 +540,36 @@ party platform or API, `[U]` not verified).
   becomes relevant only when both hold: Agora whitelists one of our contracts, and a step of the flow
   actually runs in USDC (an Immersve card, or funding in USDC). Even then it goes in a separate router
   contract, never inside GiftEscrow, which keeps holding one asset.
+
+## D35, 11 Sep 2026, the contract review before the redeployment
+
+- Statement: the D30 and gift-id changes to `GiftEscrow` were reviewed in a separate session, against the
+  diff `d1c8e6c..da7a2bc`, before any mainnet deployment. Verdict: safe to deploy, on one condition. The
+  day arithmetic is correct, including a reading at the first second of a day and a baseline just before
+  midnight; credited and drained days cannot overlap, double count, or leave a day unsettled, and the
+  accounting invariants hold under the fuzz test; the longer catch-up window moves `finalise` later
+  without breaking anything that depends on it.
+- Source: contract review of 11 Sep 2026, every claim reproduced by execution in a scratch copy outside
+  the repository.
+- Findings and what was done with each:
+  1. The deploy script defaulted `FIRST_GIFT_ID` to 1. A new contract starting at 1 would mint an id that
+     an existing gift already uses; `saveGift` would drop the row on conflict, and a gift whose money is
+     already in escrow would become invisible to the app. Fixed outside the contract: the script now
+     refuses to run without an explicit value and checks it against the `nextGiftId()` of the contract
+     being replaced, and `saveGift` now fails loudly on a colliding id instead of silently doing nothing.
+  2. The only drainer was the 00:30 pass, which under the new grace can settle only up to day X-3, so a
+     missed day stayed open a further day and the next morning's reading could pay for a day whose
+     catch-up had expired. Fixed outside the contract: a second pass at 07:00 UTC drains and finalises
+     only, after the six-hour grace. The counting pass keeps running at 00:30 and stays as forgiving as
+     it was.
+  3. `_dayOf(observedAt) - 1` underflows to a panic rather than a typed refusal, but only for an
+     observation dated before 2 January 1970, which takes a compromised evidence signer. Accepted, not
+     fixed: the redeployment carries the D30 corrections only, and the state is unchanged either way.
+  4. A `firstGiftId_` of `type(uint256).max` is accepted by the constructor and would brick gift creation
+     on the first call, atomically and without moving money. Accepted, not fixed, for the same reason:
+     the value now comes from a script that checks it against the contract being replaced.
+  5. The claim that progress before the window can never pay for a missed window day is false. Recorded
+     as a correction inside D30; the docstring is corrected and the misnamed test renamed.
+- Consequence: the redeployment carries the D30 corrections and the gift-id constructor argument, nothing
+  else. `FIRST_GIFT_ID` is set to the `nextGiftId()` read from the contract being replaced.
 
