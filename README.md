@@ -58,7 +58,7 @@ Create `.env.local` (never committed) with:
 | `NEXT_PUBLIC_APP_URL` | origin used in claim links (defaults to the request origin) |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | contact shown on `/legal`; the page says one is coming until it is set |
 | `DEPLOYER_PRIVATE_KEY`, `EVIDENCE_SIGNER_ADDRESS`, `OWNER_ADDRESS` | inputs of `pnpm deploy:gift-escrow` and `pnpm check:gift-escrow` |
-| `VIKY_DEV_PAGES` | `1` serves the dev-only pages `/dev/fund` and `/dev/exit` and their routes; never set in production |
+| `VIKY_DEV_PAGES`, `VIKY_OPERATOR_ACCOUNTS` | dev pages (`/dev/*`) and dev routes (`/api/dev/*`) answer only when `VIKY_DEV_PAGES=1` and the signed-in account is in the operator list; everyone else gets a 404. Removed after KT1's crypto half |
 
 ## Pages
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAddress, parseEther } from "viem";
-import { readAccountAuthSession } from "@/src/account-auth-server";
+import { requireOperator } from "@/src/dev-access";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { monadChain, waitForFinality } from "@/src/monad/chain";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
@@ -18,8 +18,7 @@ const TOP_UP = parseEther("0.05");
  */
 export async function POST(request: Request) {
   try {
-    if (process.env.VIKY_DEV_PAGES !== "1") throw new GiftApiError("NOT_FOUND", "Not found", 404);
-    const auth = readAccountAuthSession(request);
+    const auth = requireOperator(request);
     const rate = checkRateLimit("relay", request, auth.account);
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
 
