@@ -15,6 +15,19 @@ import { AccountPanel } from "./AccountPanel";
 
 type Busy = "idle" | "opening" | "naming" | "binding" | "counting" | "taking";
 
+/**
+ * What the person reads when something fails: our own sentences (server refusals, account guidance, the
+ * page's own checks) verbatim, anything else (a library error, a network stack trace) as one plain line,
+ * so no technical word ever reaches the screen.
+ */
+function screenMessage(error: unknown): string {
+  if (error instanceof ApiError) return error.message;
+  if (error instanceof ScreenError) return error.message;
+  return "Something went wrong. Nothing was changed. Please try again.";
+}
+
+class ScreenError extends Error {}
+
 function outcomeMessage(outcome: PublicOutcome, whenCounted: (days: number) => string): string {
   switch (outcome.kind) {
     case "bound":
@@ -63,7 +76,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       if (message) setNotice(message);
       await reload();
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : "Something went wrong. Nothing was changed.");
+      setProblem(screenMessage(error));
     } finally {
       setBusy("idle");
     }
@@ -71,7 +84,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
 
   const open = () =>
     run("opening", async () => {
-      if (!token) throw new Error("This link is missing its key. Ask for the link again.");
+      if (!token) throw new ScreenError("This link is missing its key. Ask for the link again.");
       await claimGift(giftId, token);
       return "It is yours.";
     });
@@ -80,7 +93,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
   const name = () =>
     run("naming", async () => {
       const username = typedUsername.trim();
-      if (!username) throw new Error("Enter your Duolingo username");
+      if (!username) throw new ScreenError("Enter your Duolingo username");
       await nameGoalAccount(giftId, username);
       return null;
     });
@@ -97,7 +110,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
   const take = () =>
     run("taking", async () => {
       const account = mera.currentAccount();
-      if (!account || !gift) throw new Error("Sign in first.");
+      if (!account || !gift) throw new ScreenError("Sign in first.");
       await withdrawEarned({ account, giftId, amount: BigInt(gift.earned), nonce: BigInt(gift.withdrawNonce) });
       return `${gift.earnedDisplay} is now in your account.`;
     });

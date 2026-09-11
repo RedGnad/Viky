@@ -59,10 +59,9 @@ export function giftErrorResponse(error: unknown): NextResponse {
     }
     return NextResponse.json({ error: "Viky is not ready for this yet. Nothing was changed.", code: error.code }, { status: 503, headers: NO_STORE });
   }
-  return NextResponse.json(
-    { error: error instanceof Error ? error.message : "Something went wrong. Nothing was changed.", code: "FAILED" },
-    { status: 400, headers: NO_STORE },
-  );
+  // Anything else is a library or infrastructure error: its text is for our logs, never for the person.
+  console.error("gift route failed:", error);
+  return NextResponse.json({ error: "Something went wrong. Nothing was changed.", code: "FAILED" }, { status: 500, headers: NO_STORE });
 }
 
 export function contractRefusal(name: string | undefined): { code: string; message: string } | null {
