@@ -89,7 +89,7 @@ The functions run in Vercel's Paris region (`vercel.json`), next to the Frankfur
 | `GET /api/gift/<id>` | anyone | the gift's numbers for its screens |
 | `pnpm keeper` | operator | the same daily pass from a terminal (`--refund` also sends back what is refundable) |
 | `pnpm register:goal` | owner | registers the Duolingo goal's provider id on the escrow (idempotent) |
-| `pnpm zkfetch:worker [port]` | operator | the attested-fetch worker for the public mode; runs where Node can load zk-fetch |
+| `pnpm zkfetch:worker [port]` | operator | the attested-fetch worker for the public mode; deployed on Railway from `Dockerfile` (`railway up --service zkfetch-worker`) |
 | `pnpm count:gift <id> [bind\|count]` | operator | binds or counts one gift from a terminal, same code path as the routes |
 
 ## Contract
