@@ -747,3 +747,29 @@ party platform or API, `[U]` not verified).
   screen before anyone is sent anywhere, and they come from the object, so a better rail improves what the
   person reads at the same moment it improves what they pay.
 
+## D43, 12 Sep 2026, the milestone contract, and the one rule it rests on
+
+- Statement: `contracts/MilestoneGift.sol` exists, the second shape D36 said was missing. A funder sets an
+  amount aside for one verified milestone with a deadline: reach it in time and the whole amount is the
+  recipient's at once, let the deadline pass and the whole amount goes back. Nothing accrues and nothing is
+  credited in parts. It allows a duration of one day, which the daily contract cannot express and which was
+  the funder's own example, a mission delivered tomorrow.
+- Source: built 12 Sep 2026 against D36 and D37; 22 Foundry tests, all passing, including a fuzz test over
+  random amounts and durations asserting that every unit ends with the recipient or the funder and none
+  stays in the contract. Runtime size 11,435 bytes, well inside Monad's limit.
+- **The rule the contract rests on.** A milestone is earned only if it was not already reached. The first
+  accepted proof records where the person stood and is refused with `AlreadyThere` if they were at or past
+  the target. Without it, someone who already held the diploma, or already had the rating, would be paid
+  for nothing, which is the one failure this shape invites and the daily contract never could. It is the
+  first thing to check in any review of this contract.
+- What is deliberately identical to the daily contract, so a reviewer compares rather than relearns: one
+  EIP-3009 signature that is both the payment and the consent to these exact terms, the goal registry
+  mapping a goal type to the provider its proofs must carry, the evidence signer, and the same guards on
+  freshness, clock skew, replay, identity and pausing. The funding tag differs
+  (`viky.milestone.fund.v1`), so a signature meant for one contract can never fund a gift in the other,
+  and a test pins that.
+- What it does not have yet: no verification source is registered. The two the review named are a
+  certificate and Chess.com, and Chess.com is of the same family as the Duolingo profile already running,
+  so the attested public read of D27 carries over. Nothing is deployed, and nothing will be until a review
+  in a separate session has looked at it, as D37 requires.
+
