@@ -22,6 +22,7 @@ type MyGift = {
   finished: boolean;
   cancelled: boolean;
   earnedDisplay: string;
+  theirsDisplay: string;
   returnedDisplay: string;
 };
 
@@ -82,7 +83,9 @@ export function MyGifts() {
                     : `Counting: ${gift.creditedDays} of ${gift.durationDays} days done, ${gift.missedDays} missed.`}
           </p>
           <p className="text-sm">
-            {gift.role === "recipient" ? `Yours so far: ${gift.earnedDisplay}` : `Came back so far: ${gift.returnedDisplay}`}
+            {gift.role === "recipient"
+              ? `Yours so far: ${gift.earnedDisplay}`
+              : `Theirs so far: ${gift.theirsDisplay}. Came back to you: ${gift.returnedDisplay}.`}
           </p>
         </Link>
       ))}

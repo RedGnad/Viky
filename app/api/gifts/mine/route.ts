@@ -37,6 +37,7 @@ export async function GET(request: Request) {
           finished: gift.finalised,
           cancelled: gift.cancelled,
           earnedDisplay: formatAusd(gift.earnedBalance),
+          theirsDisplay: formatAusd(BigInt(gift.creditedDays) * gift.perDay),
           returnedDisplay: formatAusd(gift.refundedToFunder),
         };
       }),

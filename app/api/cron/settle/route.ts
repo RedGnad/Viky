@@ -7,8 +7,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * The settling pass (D35): drain and finalise only, run after the six-hour reading grace of D30, which is
- * the first moment a missed day may be settled. It never counts, so it can never race the morning reading.
+ * The settling pass (D35): drain, finalise, and send back what a missed day freed, run after the six-hour
+ * reading grace of D30, which is the first moment a missed day may be settled. It never counts, so it can
+ * never race the morning reading.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET?.trim();
@@ -16,7 +17,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Not allowed" }, { status: 401, headers: NO_STORE });
   }
   try {
-    const report = await dailyPass({ count: false });
+    // Draining only moves a missed day out of the gift. Sending it is what makes the promise true, so
+    // the settling pass does both: nobody should have to ask for their own money back (D38).
+    const report = await dailyPass({ count: false, refund: true });
     return NextResponse.json(report, { headers: NO_STORE });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "The settling pass failed" }, { status: 500, headers: NO_STORE });

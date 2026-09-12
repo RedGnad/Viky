@@ -649,3 +649,21 @@ party platform or API, `[U]` not verified).
   transaction hashes and a capture of the screen, because a day coming back to the funder by itself is the
   central scene of the submission video.
 
+## D38, 12 Sep 2026, a missed day is sent back, not parked
+
+- Statement: the product promise is that every missed day comes back to the funder. Until tonight it did
+  not. `drain` only moves a missed day out of the gift and into a refundable bucket inside the contract;
+  `refundUnearned` is what actually sends it, and neither scheduled pass ever called it. The money would
+  have sat in the contract until somebody ran the keeper by hand with a flag. Found while reading the
+  funder's own list of gifts with the funder, who could see what had come back and nothing else.
+- Source: `app/api/cron/daily/route.ts` and `app/api/cron/settle/route.ts` both called `dailyPass()`
+  without `refund`, read on 12 Sep 2026; `scripts/keeper.ts` exposes it only behind `--refund`.
+- Consequence: the settling pass now drains, finalises and sends back, in that order, once a day after the
+  reading grace. Sending costs about 170,000 gas, a fraction of a cent at the current base fee, so there is
+  no reason to make anyone ask for their own money. The funder's list also stopped telling half the story:
+  it showed what had come back and never what had been earned, which is the half that says the gift is
+  working. It now says both.
+- What this does not change: the contract was always correct, the money was never at risk and never
+  anywhere but the gift. What was wrong was that a promise made on the screen depended on somebody running
+  a command.
+
