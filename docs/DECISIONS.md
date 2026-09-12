@@ -713,3 +713,19 @@ party platform or API, `[U]` not verified).
   the build: the measured path of D20, swapping to MON and selling through Mercuryo's consumer widget, is
   what gets built, and a partner widget would only replace the last step.
 
+## D41, 12 Sep 2026, the way out is built on the consumer widget, and is unproven
+
+- Statement: block 2 of D37, the way out, is built. What a gift earned sits in the recipient's own account;
+  the screen turns it into something the payout service takes, hands the person to Mercuryo's page, and
+  sends it where that page tells them. Viky pays for the two steps it costs them, guarded so it is not a
+  tap anyone can turn: the account must already hold something to convert, which only a gift gives it.
+- Source: Mercuryo's own minimums measured in D20 on 10 Sep 2026, a sell quote refused below roughly 150
+  MON and a flat 3.00 EUR fee up to about 100 EUR; D32, their consumer page takes no parameters from us.
+- Consequence and its honesty: the fee is stated on the screen before anything is done, because on a small
+  amount it takes most of it, and a floor sits above their refusal so nobody is sent to a page that will
+  turn them away. **No payout has ever been made.** The screen is recorded in `docs/SCREEN-CLAIMS.md` with
+  every line marked as not run, and nothing may claim the way out works until one has gone through.
+- What would replace it: a Mercuryo partner widget, where the amount and the destination are filled in for
+  the person and they see only a payout. That is the question sent to Arthur at Mercuryo (D40), still
+  unanswered. Until then the person does three things on someone else's page, which is the honest state.
+

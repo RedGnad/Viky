@@ -60,6 +60,21 @@ says so, and that is the work queue.
 | "Take $X" | X is theirs and can be moved now | `earnedBalance`, and the contract refuses more | `test/GiftEscrow.t.sol` withdraw |
 | every refusal sentence | it names the real reason, and never asks for a step that no longer exists | `CONTRACT_REFUSALS` maps each typed contract error to one sentence | `test/gift-reader.test.ts`, which also fails on a forbidden word or a sentence that still says "check in" |
 
+## The way out
+
+`app/components/CashOut.tsx`, `app/api/exit/quote/route.ts`, `app/api/exit/gas/route.ts`.
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "Yours to take out" | it is what the person holds now, after everything already credited | their own balance read from the chain | **none yet** |
+| "This is too small to pay out yet." | the payout service would refuse it | a floor above the refusal measured in D20 | **none yet** |
+| "They keep a flat 3 EUR whatever the amount" | that is the payout service's own fee | measured in D20, 10 Sep 2026 | **not testable by us**, and to be re-read before the freeze |
+| "Getting it ready" then "ready to be paid out" | the money is in a form the payout service takes | Viky pays for the two steps, then the person's own account converts it | **not yet run end to end**: no payout has ever been made |
+| "Viky sends your money to them" | it goes where the payout service asked, and nowhere else | the person pastes the line and their own account sends it | **none yet** |
+
+**Nothing on this screen has been run end to end.** No payout has ever left Viky. Until one has, this
+screen is a path we believe in, not a path we have walked, and nothing anywhere may claim otherwise.
+
 ## The account, on every screen
 
 `app/components/AccountPanel.tsx`, `src/account/provider.tsx`, `src/account/mera.ts`.
