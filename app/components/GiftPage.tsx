@@ -317,6 +317,12 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       ) : null}
 
       {signedIn && gift.opened && BigInt(gift.earned) > 0n ? (
+        <a href="/cash-out" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-center text-sm dark:border-gray-700">
+          Take it out to your card or bank
+        </a>
+      ) : null}
+
+      {signedIn && gift.opened && BigInt(gift.earned) > 0n ? (
         <button type="button" onClick={take} disabled={working} className={SECONDARY_BUTTON}>
           {busy === "taking" ? "One moment" : `Take ${gift.earnedDisplay}`}
         </button>
