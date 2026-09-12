@@ -757,10 +757,9 @@ party platform or API, `[U]` not verified).
 - Source: built 12 Sep 2026 against D36 and D37; 22 Foundry tests, all passing, including a fuzz test over
   random amounts and durations asserting that every unit ends with the recipient or the funder and none
   stays in the contract. Runtime size 11,435 bytes, well inside Monad's limit.
-- **The rule the contract rests on.** A milestone is earned only if it was not already reached. The first
-  accepted proof records where the person stood and is refused with `AlreadyThere` if they were at or past
-  the target. Without it, someone who already held the diploma, or already had the rating, would be paid
-  for nothing, which is the one failure this shape invites and the daily contract never could. It is the
+- **The rule the contract rests on**, as first written and since corrected: a milestone is earned only if it
+  was not already reached. The first draft enforced it by refusing a first proof at or past the target. That
+  was not enough, and the review of D44 showed why; read D44 for the rule that replaced it. It remains the
   first thing to check in any review of this contract.
 - What is deliberately identical to the daily contract, so a reviewer compares rather than relearns: one
   EIP-3009 signature that is both the payment and the consent to these exact terms, the goal registry
@@ -772,4 +771,43 @@ party platform or API, `[U]` not verified).
   certificate and Chess.com, and Chess.com is of the same family as the Duolingo profile already running,
   so the attested public read of D27 carries over. Nothing is deployed, and nothing will be until a review
   in a separate session has looked at it, as D37 requires.
+
+## D44, 12 Sep 2026, the milestone review stopped the deployment, and it was right to
+
+- Statement: the review of `MilestoneGift` in a separate session returned **do not deploy**, on the very rule
+  D43 said the contract rested on. The rule was written as "the first proof is refused if the person is
+  already at or past the target". A refusal reverts, and a revert undoes everything, including the record
+  that the reading was ever seen. The rule was therefore not "they had not reached it" but "the first
+  reading they chose to submit was below the target". On a metric that can fall, and the first source named
+  for this contract is a Chess.com rating, someone already at 1520 could lose two games, take their first
+  reading at 1499, win one game, and take the whole amount for a one point climb. My own test pinned that
+  path as intended behaviour, which is worse than the flaw.
+- Source: contract review of 12 Sep 2026, every finding reproduced by execution in a scratch copy outside
+  the repository, including a fuzz over 2000 random interleavings of all eight entry points.
+- Consequence, the rule rewritten. A milestone is now about the climb, not the arrival, and the funder signs
+  two numbers rather than one: the target, and `maximumStart`, the highest starting point they will pay a
+  climb from. The first reading is always recorded as the start, whatever it says, so there is nothing to
+  retry. A start above what the funder accepted can never settle, and the gift returns at its deadline. Both
+  halves are needed: recording the first reading closes the retry, and the funder's second number closes the
+  same trick played before the first reading is ever taken. `startingValue` is now read, where before it was
+  written and never used again, which should have told me something.
+- The other findings, all fixed in the same pass:
+  1. The first reading had no lower bound on when it was observed, so a year-old reading could be the start
+     while the clock still ran from now. Bounded by the same ten minutes as everything else.
+  2. The deadline judged the transaction, not the reading. A reading taken two minutes before the end that
+     landed a moment after it lost the whole gift to the keeper. The deadline now judges `observedAt`, and a
+     six hour grace lets a reading taken in time still arrive, with `expire` held back by the same grace.
+     This is the protection the daily contract already had for its catch-up (D30) and that I had dropped
+     here, where a miss costs the whole gift rather than one day.
+  3. The wait for a first reading ran from the funding, so opening the link on the thirteenth day left one
+     day to act and on the fourteenth left none. It runs from the claim, as the daily contract does.
+  4. A gift already returned could still be opened, `cancel` did not report its refund the way the daily
+     contract does, an error was declared and never used, and a zero provider raised a different error than
+     the sibling for the same mistake.
+  5. Gift records elsewhere key on the id alone, so an id could have meant two different gifts across the
+     two contracts. Milestone ids now start at 1,000,000 and the constructor refuses anything lower, so the
+     ranges cannot meet.
+- State: 29 tests on this contract, 92 across the suite, all passing. The test for the main finding was
+  checked by putting the flaw back and watching it fail. Still not deployed: the corrected contract goes
+  back for review before it is.
 
