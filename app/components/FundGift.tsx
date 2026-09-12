@@ -219,6 +219,17 @@ export function FundGift() {
 
   return (
     <div className="space-y-6">
+      {!enough ? (
+        <section className={CARD}>
+          <p className="font-medium">Before you start</p>
+          <p className="text-sm" style={{ color: "var(--muted)" }}>
+            Paying by card is done by {WAY_IN.name}, and the smallest payment they take is {WAY_IN.smallest},
+            whatever you decide to put behind the goal. Whatever is left over stays in your account, for the
+            next goal or to send to your card later. Nothing is lost.
+          </p>
+        </section>
+      ) : null}
+
       <section className={CARD}>
         <h2 className="font-medium">Who is it for, and for what</h2>
         <input
@@ -273,9 +284,8 @@ export function FundGift() {
         <p className="text-2xl font-semibold">{balance === null ? "..." : formatAusd(balance)}</p>
         {!enough ? (
           <p className="text-sm" style={{ color: "var(--muted)" }}>
-            You do not have enough yet. Paying by card is handled by {WAY_IN.name} on their own page: their
-            smallest purchase is {WAY_IN.smallest} and they keep {WAY_IN.fee} of it. You can put the rest behind
-            another goal later.
+            You do not have enough yet, so the next step opens {WAY_IN.name} to pay by card. They keep{" "}
+            {WAY_IN.fee} of what you pay.
           </p>
         ) : null}
         {step === "waiting" ? (

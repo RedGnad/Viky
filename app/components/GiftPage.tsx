@@ -143,7 +143,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       const account = mera.currentAccount();
       if (!account || !gift) throw new ScreenError("Sign in first.");
       await withdrawEarned({ account, giftId, escrow: gift.escrow, amount: BigInt(gift.earned), nonce: BigInt(gift.withdrawNonce) });
-      return `${gift.earnedDisplay} is now in your account.`;
+      return `${gift.earnedDisplay} is now in your account. From the home page you can send it to your card or bank.`;
     });
 
   if (loadError) {
@@ -314,12 +314,6 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
             {gift.missedDays > 0 ? ` The other ${gift.missedDays} went back to the person who sent it.` : ""}
           </p>
         </section>
-      ) : null}
-
-      {signedIn && gift.opened && BigInt(gift.earned) > 0n ? (
-        <a href="/cash-out" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-center text-sm dark:border-gray-700">
-          Take it out to your card or bank
-        </a>
       ) : null}
 
       {signedIn && gift.opened && BigInt(gift.earned) > 0n ? (

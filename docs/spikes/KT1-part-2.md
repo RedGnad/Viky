@@ -48,12 +48,12 @@ the screen where the column asks for one.
 | # | leg | who | what to record | capture |
 |---|---|---|---|---|
 | 1 | Sign in on viky.cash with a new passkey, open the funder screen | funder | that the gift list says "No gift yet" and no error appears | yes |
-| 2 | Fill the gift: about 10 EUR, 7 days, 10 XP a day, no Duolingo name | funder | the amount typed, and that the screen refuses anything it would have to guess at | no |
+| 2 | Fill the gift: about 10 EUR, 7 days, 10 XP a day, no Duolingo name | funder | **that the card minimum was read before filling the form, not discovered after**, the amount typed, and that the screen refuses anything it would have to guess at | no |
 | 3 | Tap "Add money and give": the deposit line is copied and Mercuryo opens | funder | that the line was copied, and the exact wording of the waiting state | yes |
 | 4 | On Mercuryo: buy 25 EUR of MON on Monad, paste the line, pay by card | funder | euros charged, fee shown, every document asked for, **how long their checks took, as a measurement**, and minutes from payment to arrival. **If refused, their exact words** | yes |
 | 5 | The page notices the money and converts it by itself | funder | minutes from payment to the screen changing, the conversion hash, and how much the 25 EUR finally became | yes |
 | 6 | The gift is created and the link appears | funder | the gift id, the creation hash, seconds from conversion to "It is in their name", and that the copy button says "Copied" | yes |
-| 7 | **Pay out the leftover** from the funder's account: /cash-out, get it ready, open Mercuryo, paste their line, send | funder | the top-up, approval, conversion and sending hashes; what Mercuryo asked for and **how long their checks took**; **euros actually arrived, and when**. If refused, their exact words | yes |
+| 7 | **Pay out the leftover** from the funder's account, reached from the home page rather than by typing a link: /cash-out, get it ready, open Mercuryo, paste their line, send | funder | the top-up, approval, conversion and sending hashes; what Mercuryo asked for and **how long their checks took**; **euros actually arrived, and when**. If refused, their exact words | yes |
 | 8 | Open the link on a device that has never seen Viky, create a passkey, open the gift | recipient | **seconds from opening the link to "is in your name"**, taps, anything that made them hesitate. This is KT5 | yes |
 | 9 | Name the Duolingo account, place the code in the display name, start counting | recipient | seconds to place the code, whether the first read found it, and the words shown when it succeeded | yes |
 | 10 | The next morning, a day is counted with nobody touching anything | nobody | the check-in hash, the day credited, the amount now theirs | yes |

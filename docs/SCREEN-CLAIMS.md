@@ -34,6 +34,8 @@ says so, and that is the work queue.
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
+| "the smallest payment they take is 25 EUR, whatever you decide to put behind the goal" | it is said before the form, not after it | shown above the form whenever the person will need to add money, so a smaller gift is never decided in ignorance of the rail's floor | **none yet** |
+| "Whatever is left over stays in your account" | the leftover really is theirs and reachable | it sits in their own account, and the home page offers to take it out whenever it holds anything | **none yet** |
 | the balance under "Your money" | it is this account's spendable balance now | `readAusdBalance` reads the chain on every refresh | **none yet** |
 | the amount typed into "How much" | exactly that amount is taken, never more | `dollarsToUnits` reads the text and refuses anything it would have to guess at; it never goes through a number | `test/screen-claims.test.ts` |
 | "their smallest purchase is 25 EUR and they keep about 3.8%" | Mercuryo's own terms today | measured by hand (D20) | **not testable by us**: a third party's terms, to be re-read before the freeze |
