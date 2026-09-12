@@ -91,3 +91,26 @@ rules, so the morning pass of 12 Sep must treat them differently:
 If both credit on 12 Sep, the D30 correction is not live where it should be. If neither does, the pass or
 the worker is broken. The difference is the evidence.
 
+## The prediction, settled: the morning pass of 12 Sep 2026
+
+The pass fired on its own between 00:32 and 00:40 UTC, with nobody watching and nobody tapping anything.
+It behaved exactly as written the evening before, which is the first proof that the counting runs by
+itself and that the D30 correction is live where it should be and only there.
+
+| gift | contract | what the pass did | evidence |
+|---|---|---|---|
+| 1 | the earlier one | credited one day, $2.857142 became the recipient's | `0x5aa6752fc8c7db2526a5e5bafe6aeb91e09bd1cbe0cf3d4a6bc5e8f65f664ffd`, block 104,040,581 |
+| 2 | the corrected one | read the profile at 8,417 XP and was refused, nothing relayed, nothing credited | the pass reports `refused: NOT_STARTED (8417 XP)` |
+
+Replaying the pass a few minutes later reports, per gift and verbatim: gift 1 `skipped: counted_today`,
+gift 2 `refused: NOT_STARTED (8417 XP)`, and for both `NothingToDrain` and `FinalisationTooEarly`.
+
+Why the difference is the proof. Both gifts have the same window, the same recipient and the same
+lessons. At 00:40 UTC on 12 Sep the only day that is over is 11 Sep, and both windows open on 12 Sep. The
+earlier contract credited 12 Sep anyway, before that day had begun, using the lesson of the day before:
+that is exactly the behaviour D30 removed. The corrected contract judged only finished days, found none
+inside the window yet, and refused. It will credit 12 Sep at the pass of 13 Sep.
+
+Still ahead, and the one the submission video needs: the first drain, the moment a missed day goes back to
+the funder by itself. The hashes and a capture are to be kept the day it happens.
+
