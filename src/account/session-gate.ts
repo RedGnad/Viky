@@ -11,3 +11,13 @@ export function announcedAccount(passkeyAccount: Address | undefined, serverAcce
   if (passkeyAccount === undefined || serverAccepted === undefined) return undefined;
   return passkeyAccount === serverAccepted ? passkeyAccount : undefined;
 }
+
+/**
+ * How long the open session has left, for the screen to show. Never negative and never stale: the screen
+ * reads the deadline again every second, because every signature pushes it back.
+ */
+export function sessionRemaining(expiresAtMs: number | undefined, nowMs: number): { minutes: number; seconds: number } | undefined {
+  if (expiresAtMs === undefined) return undefined;
+  const left = Math.max(0, expiresAtMs - nowMs);
+  return { minutes: Math.floor(left / 60_000), seconds: Math.floor((left % 60_000) / 1_000) };
+}

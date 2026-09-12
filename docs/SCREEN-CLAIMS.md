@@ -35,6 +35,7 @@ says so, and that is the work queue.
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
 | the balance under "Your money" | it is this account's spendable balance now | `readAusdBalance` reads the chain on every refresh | **none yet** |
+| the amount typed into "How much" | exactly that amount is taken, never more | `dollarsToUnits` reads the text and refuses anything it would have to guess at; it never goes through a number | `test/screen-claims.test.ts` |
 | "their smallest purchase is 25 EUR and they keep about 3.8%" | Mercuryo's own terms today | measured by hand (D20) | **not testable by us**: a third party's terms, to be re-read before the freeze |
 | "Waiting for your payment. Keep this page open." | the page is really watching | a poll every eight seconds while the step is open | **none yet** |
 | "Your deposit line is copied." | the clipboard actually took it | the copy is awaited and its failure is caught and said | **none yet**, and the failure path matters: the button used to say nothing either way |
@@ -69,14 +70,16 @@ says so, and that is the work queue.
 | "Your account is protected by your passkey. Nothing to remember, nothing to write down." | no secret is stored anywhere we hold | the key is derived from the passkey and lives in memory only | `test/mera-derivation.test.ts` |
 | each account failure sentence | it is the real cause and offers a way out | typed `AccountError` with its guidance | `test/account-errors.test.ts` |
 | "What this device can do for you right now" | that list is what the open session can actually sign | the session signs the person's own account only | **none yet** |
-| "Closing in m:ss" | the session really closes then | the idle deadline is read again every second, and every signature pushes it back | **none yet** |
+| "Closing in m:ss" | the session really closes then, and the number is never negative or stale | `sessionRemaining` clamps at zero, read again every second because every signature pushes the deadline back | `test/screen-claims.test.ts` |
 
 ## Known gaps, in the order they matter
 
-1. The balance shown on the funder screen, and the waiting state that watches for a card payment.
-2. The session scope's promises: what the open session may sign, and when it closes.
+1. The balance shown on the funder screen, and the waiting state that watches for a card payment. Both
+   need a browser and a signed-in account, which is the next thing the browser tests have to reach.
+2. "What this device can do for you right now": the list of what the open session may sign.
 3. The clipboard, whose failure path is the one a person meets when the browser refuses the copy.
 
-Closed so far: "You are signed in", which is where the sign-in race lived, and "Theirs so far", which
-would have shown a funder that their gift had earned nothing the moment the recipient took the money.
-Both tests were checked by breaking the rule and watching them fail.
+Closed so far: "You are signed in", which is where the sign-in race lived; "Theirs so far", which
+would have shown a funder that their gift had earned nothing the moment the recipient took the money; the
+amount typed, which took a dollar more than written for any figure like 20.999 and read 1e3 as a thousand
+dollars; and the session countdown. Each test was checked by breaking the rule and watching it fail.
