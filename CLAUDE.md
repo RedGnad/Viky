@@ -36,10 +36,26 @@ files it cites (in the sibling `Master/data/` folder, read only).
 - Never say "nobody does this": Beeminder, StickK, Forfeit exist. Our difference is the third-party
   funder, money allocated in the recipient's name, verified release, automatic refund.
 - Nothing is "working" or "live" until it has run once end to end on mainnet with real amounts.
+- Every sentence a screen shows about money or state names the code path that makes it true, once,
+  in `docs/SCREEN-CLAIMS.md`, and has a test that exercises that path. Three real defects (a missed
+  day never sent back, a sign-in race, a message about a code never given) lived in the gap between
+  what the screen promised and what the code did; tests that check the code against itself do not
+  find them.
 
 ## Words the user must never see
 wallet, gas, chain, seed, token, transaction hash, address. Amounts are shown as $ or € with two
 decimals. The judges page is the only place where contract addresses appear.
+
+## What the screen promises (D39)
+Tests check that the code does what the code says. Nothing was checking that the code does what the
+*screen* says, and every serious defect of 11 and 12 Sep lived in that gap: a promise that a missed day
+comes back, while nothing sent it (D38); an account announced before the server had accepted it; a message
+telling someone to remove a code they were never given.
+- Every sentence a screen shows about money or about the state of a gift is written in
+  `docs/SCREEN-CLAIMS.md`, next to what must be true for it and the code path that makes it true.
+- Each of those sentences has a test that exercises that path, not just the function underneath it. A test
+  that would not fail if the promise stopped being kept is not one.
+- A new sentence about money or state is added to that file in the same commit that adds the sentence.
 
 ## Engineering rules
 - Code, comments, commits, docs: English. No em dash or en dash anywhere; use commas, colons,

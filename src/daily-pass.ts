@@ -1,39 +1,77 @@
 import type { Hex } from "viem";
-import { readGift } from "./gift-reader";
+import { runPublicCheckIn, type PublicCheckInOutcome } from "./duolingo-public-checkin";
+import { readGift, type GiftState } from "./gift-reader";
 import { relayDrain, relayFinalise, relayRefund } from "./gift-relay";
 import { loadAllGifts, loadBoundGifts } from "./gift-store";
-import { runPublicCheckIn, type PublicCheckInOutcome } from "./duolingo-public-checkin";
 import { escrowOf, relayerClients, relayerPreflight, RelayerError } from "./relayer";
 
 /**
- * The daily pass of the keeper (D27): count every bound gift from its public profile, then drain the
- * days whose catch-up window has closed, finalise ended gifts, and optionally send back what is
- * refundable. Every line of the report is one relayed transaction, a typed refusal, or a skip with its
- * reason; nothing is silent.
+ * The keeper's pass (D27): read every bound gift from its public profile and credit what is owed, then
+ * settle the days whose catch-up window has closed, finalise gifts that are over, and send back what a
+ * missed day freed. Every line of the report is one relayed transaction, a typed refusal, or a skip with
+ * its reason; nothing is silent.
  *
- * It runs twice a day, and the split matters (D35). The counting pass runs just after midnight UTC, so a
- * reading credits everything earned up to the end of yesterday, as late as a recipient can legitimately
- * be. Settling cannot run then: a day only becomes drainable six hours later (D30), so draining at
- * midnight would leave it open for another whole day, and the next morning's reading could pay for a day
- * whose catch-up had already expired. A second pass after the grace, with `count: false`, settles those
- * days at the moment D13 allows, without making the counting pass less forgiving.
+ * It runs twice a day and the split matters (D35). Counting runs just after midnight UTC so a reading
+ * credits everything earned up to the end of yesterday, as late as a recipient can legitimately be.
+ * Settling cannot run then: a day only becomes drainable six hours later (D30), so draining at midnight
+ * would leave it open another whole day and the next morning's reading could pay for a day whose catch-up
+ * had expired. The second pass settles at the moment D13 allows, without making counting less forgiving.
  */
 
 export type DailyPassLine = { giftId: string; step: "count" | "drain" | "finalise" | "refund"; result: string; hash?: string };
 
-export async function dailyPass(
-  options: { refund?: boolean; count?: boolean; now?: () => number } = {},
-): Promise<{ relayer: string; balanceWei: string; lines: DailyPassLine[] }> {
+/** Which of the pass's jobs a run does. Named, so the two schedules cannot drift apart by accident. */
+export type PassPlan = Readonly<{ count: boolean; refund: boolean }>;
+
+/** Just after midnight UTC: read and credit. Settling anything here would be too early (D35). */
+export const COUNTING_PASS: PassPlan = { count: true, refund: false };
+
+/**
+ * After the reading grace: settle the missed days and send them back. The refund is not optional. Draining
+ * only moves a missed day out of the gift; sending it is what makes "a piece comes back to you" true, and
+ * for a while nothing did it (D38).
+ */
+export const SETTLING_PASS: PassPlan = { count: false, refund: true };
+
+export type DailyPassDeps = {
+  boundGifts: () => Promise<ReadonlyArray<{ giftId: string }>>;
+  allGifts: () => Promise<ReadonlyArray<{ giftId: string; escrow: Hex | null }>>;
+  read: (escrow: Hex, giftId: string) => Promise<Pick<GiftState, "cancelled" | "finalised" | "startDay">>;
+  count: (giftId: string) => Promise<PublicCheckInOutcome>;
+  drain: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
+  finalise: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
+  refund: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
+  start: () => Promise<{ address: string; balance: bigint }>;
+};
+
+function liveDeps(): DailyPassDeps {
   const clients = relayerClients();
-  const { balance } = await relayerPreflight(clients);
+  return {
+    boundGifts: loadBoundGifts,
+    allGifts: loadAllGifts,
+    read: (escrow, giftId) => readGift(escrow, giftId, clients.publicClient),
+    count: (giftId) => runPublicCheckIn({ giftId, purpose: "count" }),
+    drain: relayDrain,
+    finalise: relayFinalise,
+    refund: relayRefund,
+    start: async () => ({ address: clients.address, balance: (await relayerPreflight(clients)).balance }),
+  };
+}
+
+export async function dailyPass(
+  plan: PassPlan = COUNTING_PASS,
+  deps: DailyPassDeps = liveDeps(),
+): Promise<{ relayer: string; balanceWei: string; lines: DailyPassLine[] }> {
+  const { address, balance } = await deps.start();
   const lines: DailyPassLine[] = [];
 
-  for (const gift of options.count === false ? [] : await loadBoundGifts()) {
-    const outcome: PublicCheckInOutcome = await runPublicCheckIn({ giftId: gift.giftId, purpose: "count" });
-    lines.push(describe(outcome));
+  if (plan.count) {
+    for (const gift of await deps.boundGifts()) {
+      lines.push(describe(await deps.count(gift.giftId)));
+    }
   }
 
-  for (const record of await loadAllGifts()) {
+  for (const record of await deps.allGifts()) {
     const giftId = record.giftId;
     let escrow: Hex;
     try {
@@ -43,13 +81,13 @@ export async function dailyPass(
       lines.push({ giftId, step: "drain", result: error instanceof Error ? error.message : "no contract recorded" });
       continue;
     }
-    const gift = await readGift(escrow, giftId, clients.publicClient);
+    const gift = await deps.read(escrow, giftId);
     if (gift.cancelled || gift.finalised || gift.startDay === 0) continue;
-    lines.push(await attempt(giftId, "drain", () => relayDrain(giftId, escrow)));
-    lines.push(await attempt(giftId, "finalise", () => relayFinalise(giftId, escrow)));
-    if (options.refund) lines.push(await attempt(giftId, "refund", () => relayRefund(giftId, escrow)));
+    lines.push(await attempt(giftId, "drain", () => deps.drain(giftId, escrow)));
+    lines.push(await attempt(giftId, "finalise", () => deps.finalise(giftId, escrow)));
+    if (plan.refund) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
   }
-  return { relayer: clients.address, balanceWei: balance.toString(), lines };
+  return { relayer: address, balanceWei: balance.toString(), lines };
 }
 
 function describe(outcome: PublicCheckInOutcome): DailyPassLine {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { dailyPass } from "@/src/daily-pass";
+import { dailyPass, SETTLING_PASS } from "@/src/daily-pass";
 import { NO_STORE } from "@/src/gift-api";
 
 export const runtime = "nodejs";
@@ -17,9 +17,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Not allowed" }, { status: 401, headers: NO_STORE });
   }
   try {
-    // Draining only moves a missed day out of the gift. Sending it is what makes the promise true, so
-    // the settling pass does both: nobody should have to ask for their own money back (D38).
-    const report = await dailyPass({ count: false, refund: true });
+    const report = await dailyPass(SETTLING_PASS);
     return NextResponse.json(report, { headers: NO_STORE });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "The settling pass failed" }, { status: 500, headers: NO_STORE });
