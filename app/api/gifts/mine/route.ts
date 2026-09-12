@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
-import { formatAusd, readGift } from "@/src/gift-reader";
+import { formatAusd, readGift, theirsSoFar } from "@/src/gift-reader";
 import { loadGiftsOf } from "@/src/gift-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { escrowOf } from "@/src/relayer";
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
           finished: gift.finalised,
           cancelled: gift.cancelled,
           earnedDisplay: formatAusd(gift.earnedBalance),
-          theirsDisplay: formatAusd(BigInt(gift.creditedDays) * gift.perDay),
+          theirsDisplay: formatAusd(theirsSoFar(gift)),
           returnedDisplay: formatAusd(gift.refundedToFunder),
         };
       }),

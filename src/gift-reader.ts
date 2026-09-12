@@ -85,6 +85,15 @@ export async function readGift(escrow: Hex, giftId: string, client: PublicClient
   };
 }
 
+/**
+ * What the recipient has earned in total, whether or not they have taken it. Never use `earnedBalance` for
+ * this: that is what is left to take, and it drops to zero the moment they take it, which would tell a
+ * funder their gift had earned nothing.
+ */
+export function theirsSoFar(gift: Pick<GiftState, "creditedDays" | "perDay">): bigint {
+  return BigInt(gift.creditedDays) * gift.perDay;
+}
+
 /** UTC day number of a timestamp, as the contract computes it. */
 export function utcDayOf(timestampSeconds: number): number {
   return Math.floor(timestampSeconds / 86_400);
