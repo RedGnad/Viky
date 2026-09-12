@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import * as mera from "@/src/account/mera";
+import { sessionRemaining } from "@/src/account/session-gate";
 import { INLINE_BUTTON } from "./ui";
 import { useAccount } from "@/src/account/provider";
 
@@ -11,21 +12,19 @@ import { useAccount } from "@/src/account/provider";
  */
 export function SessionScope() {
   const { address } = useAccount();
-  const [remainingMs, setRemainingMs] = useState<number | null>(null);
+  const [remaining, setRemaining] = useState<{ minutes: number; seconds: number } | null>(null);
 
   useEffect(() => {
     const tick = () => {
-      const at = mera.sessionExpiresAtMs();
-      setRemainingMs(at === undefined ? null : Math.max(0, at - Date.now()));
+      setRemaining(sessionRemaining(mera.sessionExpiresAtMs(), Date.now()) ?? null);
     };
     tick();
     const timer = setInterval(tick, 1_000);
     return () => clearInterval(timer);
   }, [address]);
 
-  if (!address || remainingMs === null) return null;
-  const minutes = Math.floor(remainingMs / 60_000);
-  const seconds = Math.floor((remainingMs % 60_000) / 1_000);
+  if (!address || remaining === null) return null;
+  const { minutes, seconds } = remaining;
 
   return (
     <section className="space-y-2 rounded-2xl border border-gray-200 p-4 text-sm dark:border-gray-800">

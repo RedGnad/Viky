@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { announcedAccount } from "../src/account/session-gate";
+import { announcedAccount, sessionRemaining } from "../src/account/session-gate";
 import { theirsSoFar } from "../src/gift-reader";
+import { AmountError, dollarsToUnits, MIN_GIFT_UNITS } from "../src/money";
 
 /**
  * Tests for the sentences the screens show about money and about the state of a gift
@@ -36,3 +37,31 @@ test('"Theirs so far" counts what was earned, not what is left to take', () => {
   assert.equal(theirsSoFar(afterThreeDays), 3n * perDay);
   assert.notEqual(theirsSoFar(afterThreeDays), earnedBalanceAfterTakingItAll);
 });
+
+test("the amount taken is exactly the amount typed", () => {
+  // Two defects this pins, both found by reading the screen against the code on 12 Sep 2026:
+  // "20.999" became $21.00 and took a dollar more than the person wrote, and "1e3" was read as $1,000.
+  assert.equal(dollarsToUnits("20"), 20_000_000n);
+  assert.equal(dollarsToUnits("20.50"), 20_500_000n);
+  assert.equal(dollarsToUnits("20.5"), 20_500_000n);
+  assert.equal(dollarsToUnits(" 1 "), 1_000_000n);
+  assert.equal(dollarsToUnits("1,50"), 1_500_000n, "a comma is what half the world types");
+
+  for (const typed of ["20.999", "1e3", "0x14", "-3", "abc", "", "  ", "20.", ".5", "1 000", "Infinity", "20.5.1"]) {
+    assert.throws(() => dollarsToUnits(typed), AmountError, `"${typed}" must be refused, never guessed at`);
+  }
+
+  // Never silently below the contract's own floor: the person is told, not refused by the chain later.
+  assert.throws(() => dollarsToUnits("0"), /smallest gift is \$1\.00/);
+  assert.throws(() => dollarsToUnits("0.99"), /smallest gift is \$1\.00/);
+  assert.equal(dollarsToUnits("1.00"), MIN_GIFT_UNITS);
+});
+
+test("the session countdown never shows a negative or a stale number", () => {
+  assert.equal(sessionRemaining(undefined, 1_000), undefined, "a closed session shows no countdown");
+  assert.deepEqual(sessionRemaining(1_000 + 61_000, 1_000), { minutes: 1, seconds: 1 });
+  assert.deepEqual(sessionRemaining(1_000, 1_000), { minutes: 0, seconds: 0 }, "at the deadline it is zero");
+  assert.deepEqual(sessionRemaining(1_000, 999_999), { minutes: 0, seconds: 0 }, "past the deadline it stays zero");
+  assert.deepEqual(sessionRemaining(1_000 + 10 * 60_000, 1_000), { minutes: 10, seconds: 0 }, "a fresh session shows its full length");
+});
+

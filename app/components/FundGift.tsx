@@ -7,6 +7,7 @@ import { ApiError, postJson } from "@/src/client/api";
 import { createGift, type CreatedGift } from "@/src/client/gift";
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
 import { formatAusd } from "@/src/gift-reader";
+import { AmountError, dollarsToUnits } from "@/src/money";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
 import { AccountPanel } from "./AccountPanel";
 import { SessionScope } from "./SessionScope";
@@ -32,14 +33,9 @@ const POLL_MS = 8_000;
 
 type Step = "form" | "waiting" | "converting" | "giving" | "done";
 
-function dollarsToUnits(value: string): bigint {
-  const cents = Math.round(Number(value) * 100);
-  if (!Number.isFinite(cents) || cents <= 0) throw new Error("Enter how much you want to put behind the goal");
-  return BigInt(cents) * 10_000n;
-}
-
 function readable(error: unknown): string {
   if (error instanceof ApiError) return error.message;
+  if (error instanceof AmountError) return error.message;
   if (error instanceof Error && error.message && error.message.length < 160) return error.message;
   return "Something went wrong. Nothing was taken. Please try again.";
 }
