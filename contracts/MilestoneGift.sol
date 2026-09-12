@@ -35,10 +35,17 @@ interface IERC3009Receiver {
 ///         goal registry maps a goal type to the provider its proofs must carry, and every proof is attested
 ///         off chain by the evidence signer and checked here for signer, freshness, replay and identity.
 ///
-///         The security of this shape lives in one rule. A milestone is only earned if it was not already
-///         reached: the first accepted proof records where the person stood and is refused if they were
-///         already past the target. Without it, someone who already had the diploma, or already had the
-///         rating, would be paid for doing nothing, which is the failure this whole contract exists to avoid.
+///         The security of this shape lives in one rule, and the rule is about the climb, not the arrival. A
+///         funder signs two numbers: the target to reach, and the highest starting point they will pay from.
+///         The first reading is always recorded as the start, whatever it says, and a milestone pays only if
+///         that recorded start was at or below the highest the funder accepted.
+///
+///         Both halves matter. Recording the first reading whatever it says leaves the recipient no way to
+///         retry until a reading suits them: an earlier draft refused a start at or past the target, and a
+///         refusal reverts, so the contract kept no memory of it. On a metric that can fall, a rating for
+///         instance, someone already at 1520 could lose two games, start at 1499, win one, and take the whole
+///         amount for a one point climb. And the highest accepted start is what stops the same trick being
+///         played before the first reading is ever taken, which no memory of refusals could catch.
 contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
     using SafeERC20 for IERC20;
 
@@ -63,7 +70,15 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
     uint256 public constant MAX_ATTESTATION_AGE = 10 minutes;
     uint256 public constant MAX_CLOCK_SKEW = 1 minutes;
     /// @dev A gift nobody ever opens, or opens and never starts, comes back rather than sitting here for ever.
+    ///      Measured from the claim once there is one, so opening the link late does not shorten the wait.
     uint256 public constant DORMANT_REFUND_DELAY = 14 days;
+    /// @dev A reading taken before the deadline may still be submitted for a while after it, so the keeper's
+    ///      call to `expire` can never beat a proof that was verifiably in time. The deadline judges the
+    ///      reading; this grace judges the transaction. The daily contract protects its catch-up the same way.
+    uint256 public constant PROOF_GRACE = 6 hours;
+    /// @dev Milestone gifts are numbered from here up, so an id can never mean two different gifts across the
+    ///      two contracts. Records elsewhere key on the id alone, and a collision would merge two gifts.
+    uint256 public constant FIRST_ID_FLOOR = 1_000_000;
     uint256 private constant DAY = 1 days;
 
     /// @dev `salt` lets two gifts with identical terms still get distinct funding nonces.
@@ -73,6 +88,9 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         bytes32 recipientContactHash;
         uint8 goalType;
         uint64 target;
+        /// @dev The highest starting point the funder will pay a climb from. Signed with the rest of the
+        ///      terms, so it is the funder's number and nobody else's.
+        uint64 maximumStart;
         uint32 durationDays;
         uint256 amount;
         bytes32 salt;
@@ -125,6 +143,7 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         bytes32 recipientContactHash;
         uint8 goalType;
         uint64 target;
+        uint64 maximumStart;
         uint32 durationDays;
         uint256 amount;
         uint256 earned;
@@ -161,6 +180,7 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         bytes32 indexed recipientContactHash,
         uint8 goalType,
         uint64 target,
+        uint64 maximumStart,
         uint32 durationDays,
         uint256 amount
     );
@@ -210,9 +230,9 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
     error IdentityMismatch();
     error ProviderMismatch();
     error StaleObservation();
-    error AlreadyThere();
+    error InvalidMaximumStart();
+    error StartTooHigh();
     error NotThereYet();
-    error NoStartRecorded();
     error DeadlinePassed();
     error AlreadySettled();
     error TooEarly();
@@ -227,7 +247,7 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
     constructor(IERC20 token_, address evidenceSigner_, uint256 firstGiftId_) EIP712("Viky Milestone", "1") {
         if (address(token_) == address(0) || evidenceSigner_ == address(0)) revert InvalidAddress();
         if (IERC20Metadata(address(token_)).decimals() != 6) revert InvalidTokenDecimals();
-        if (firstGiftId_ == 0) revert InvalidGiftId();
+        if (firstGiftId_ < FIRST_ID_FLOOR) revert InvalidGiftId();
         token = token_;
         evidenceSigner = evidenceSigner_;
         nextGiftId = firstGiftId_;
@@ -241,7 +261,15 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
     function hashParams(MilestoneParams calldata p) public pure returns (bytes32) {
         return keccak256(
             abi.encode(
-                p.funder, p.refundTo, p.recipientContactHash, p.goalType, p.target, p.durationDays, p.amount, p.salt
+                p.funder,
+                p.refundTo,
+                p.recipientContactHash,
+                p.goalType,
+                p.target,
+                p.maximumStart,
+                p.durationDays,
+                p.amount,
+                p.salt
             )
         );
     }
@@ -264,6 +292,8 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         if (p.recipientContactHash == bytes32(0)) revert InvalidContactHash();
         if (goalProviders[p.goalType] == bytes32(0)) revert UnknownGoal();
         if (p.target == 0) revert InvalidTarget();
+        // A climb has to be a climb: a starting point at or above the target would pay for standing still.
+        if (p.maximumStart >= p.target) revert InvalidMaximumStart();
         if (p.durationDays < MIN_DURATION_DAYS || p.durationDays > MAX_DURATION_DAYS) revert InvalidDuration();
         if (p.amount < MIN_AMOUNT || p.amount > MAX_AMOUNT) revert InvalidAmount();
         if (a.nonce != fundingNonce(p)) revert InvalidAuthorizationNonce();
@@ -282,12 +312,21 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         g.recipientContactHash = p.recipientContactHash;
         g.goalType = p.goalType;
         g.target = p.target;
+        g.maximumStart = p.maximumStart;
         g.durationDays = p.durationDays;
         g.amount = p.amount;
         g.fundedAt = uint64(block.timestamp);
 
         emit GiftCreated(
-            giftId, p.funder, p.refundTo, p.recipientContactHash, p.goalType, p.target, p.durationDays, p.amount
+            giftId,
+            p.funder,
+            p.refundTo,
+            p.recipientContactHash,
+            p.goalType,
+            p.target,
+            p.maximumStart,
+            p.durationDays,
+            p.amount
         );
         emit GiftFunded(giftId, p.amount);
     }
@@ -299,6 +338,7 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
     function claim(uint256 giftId, ClaimAttestation calldata c) external nonReentrant {
         Gift storage g = _gift(giftId);
         if (g.cancelled) revert GiftIsCancelled();
+        if (g.settled) revert AlreadySettled();
         if (g.recipient != address(0)) revert AlreadyClaimed();
         if (c.recipient == address(0)) revert InvalidAddress();
         if (c.contactHash != g.recipientContactHash) revert ContactMismatch();
@@ -315,11 +355,13 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
 
     // --- proving the milestone --------------------------------------------------------------------------
 
-    /// @notice Records verified progress toward the one milestone. The first accepted proof is the starting
-    ///         point: it binds the identity, records where the person stood, and starts the clock. It is refused
-    ///         if they are already at or past the target, because a milestone that was already reached was never
-    ///         earned. Every later proof either reaches the target, and the whole amount becomes the recipient's
-    ///         at once, or it does not, and nothing changes.
+    /// @notice Records verified progress toward the one milestone. The first proof is the starting point,
+    ///         whatever it says: it binds the identity, records where the person stood, and starts the clock.
+    ///         It is never refused for standing too high, because a refusal would leave no trace and the
+    ///         recipient could simply try again from a reading that suited them. A start above what the funder
+    ///         accepted is recorded instead, and no later proof can settle the gift, which then returns at its
+    ///         deadline. Every later proof either reaches the target from an accepted start, and the whole
+    ///         amount becomes the recipient's at once, or it does not, and nothing changes.
     function prove(uint256 giftId, ProofAttestation calldata a) external nonReentrant {
         if (proofPaused) revert ProofIsPaused();
         Gift storage g = _gift(giftId);
@@ -332,13 +374,16 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         if (usedNullifiers[a.nullifier]) revert NullifierAlreadyUsed();
         _validateAttestationWindow(a.issuedAt, a.expiresAt);
         if (uint256(a.observedAt) > block.timestamp + MAX_CLOCK_SKEW) revert InvalidAttestationWindow();
+        // Bounded below as well as above. On the first proof there is no previous reading to compare with, and
+        // an old reading as a starting point would be pure advantage to the recipient.
+        if (uint256(a.observedAt) + MAX_ATTESTATION_AGE < block.timestamp) revert StaleObservation();
         if (a.observedAt <= g.lastProofAt) revert StaleObservation();
         _verifyProofSignature(giftId, a);
         usedNullifiers[a.nullifier] = true;
 
         if (g.identityHash == bytes32(0)) {
-            // Already there means nothing was earned. This is the rule the whole contract rests on.
-            if (a.metricValue >= g.target) revert AlreadyThere();
+            // Recorded whatever it says. Refusing here would revert, leaving no memory of the reading, and the
+            // recipient could keep trying until one suited them. This is the rule the contract rests on.
             g.identityHash = a.identityHash;
             g.startingValue = a.metricValue;
             g.lastProofAt = a.observedAt;
@@ -349,8 +394,14 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         }
 
         if (a.identityHash != g.identityHash) revert IdentityMismatch();
-        if (block.timestamp > g.deadline) revert DeadlinePassed();
+        // The deadline judges the reading; the grace judges the transaction. A reading taken in time is not
+        // lost because the keeper submitted it a moment late, and `expire` cannot open until the grace ends.
+        if (uint256(a.observedAt) > g.deadline) revert DeadlinePassed();
+        if (block.timestamp > uint256(g.deadline) + PROOF_GRACE) revert DeadlinePassed();
         g.lastProofAt = a.observedAt;
+        // The climb the funder signed for. A start above it can never settle, so the gift returns at its
+        // deadline; the screens say so as soon as the start is recorded.
+        if (g.startingValue > g.maximumStart) revert StartTooHigh();
         if (a.metricValue < g.target) revert NotThereYet();
 
         g.settled = true;
@@ -370,9 +421,13 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
 
         bool started = g.identityHash != bytes32(0);
         if (started) {
-            if (block.timestamp <= g.deadline) revert TooEarly();
-        } else if (block.timestamp < uint256(g.fundedAt) + DORMANT_REFUND_DELAY) {
-            revert TooEarly();
+            // Not until a reading taken before the deadline can no longer arrive.
+            if (block.timestamp <= uint256(g.deadline) + PROOF_GRACE) revert TooEarly();
+        } else {
+            // Measured from the claim once there is one: opening the link on the last day must not leave a
+            // recipient with no time at all to take a first reading.
+            uint256 from = g.claimedAt == 0 ? g.fundedAt : g.claimedAt;
+            if (block.timestamp < from + DORMANT_REFUND_DELAY) revert TooEarly();
         }
 
         g.settled = true;
@@ -426,6 +481,7 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         g.refundable = 0;
         g.refundedToFunder += amount;
         _push(g.refundTo, amount);
+        emit UnearnedRefunded(giftId, g.refundTo, amount);
         emit GiftCancelled(giftId, amount);
     }
 
@@ -433,7 +489,7 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
 
     function registerGoal(uint8 goalType, bytes32 providerId) external onlyOwner {
         if (goalType == 0) revert InvalidGoalType();
-        if (providerId == bytes32(0)) revert UnknownGoal();
+        if (providerId == bytes32(0)) revert InvalidProofHash();
         goalProviders[goalType] = providerId;
         emit GoalRegistered(goalType, providerId);
     }

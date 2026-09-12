@@ -24,6 +24,8 @@ contract MilestoneGiftTest {
     uint256 private constant START = 1_800_000_000;
     uint256 private constant AMOUNT = 100_000_000; // 100 AUSD, the shape of "100 if you get that diploma"
     uint64 private constant TARGET = 1500; // a rating to reach, or 1 for a certificate
+    uint64 private constant MAX_START = 1300; // the highest starting point the funder will pay a climb from
+    uint256 private constant FIRST_ID = 1_000_000;
     uint32 private constant DURATION = 90;
     uint8 private constant GOAL_CHESS = 1;
     bytes32 private constant CHESS_PROVIDER = keccak256("viky:provider:chess-public:v1");
@@ -49,7 +51,7 @@ contract MilestoneGiftTest {
         recipient = VM.addr(RECIPIENT_KEY);
         other = VM.addr(OTHER_KEY);
         token = new MockAUSD();
-        gift = new MilestoneGift(token, evidenceSigner, 1);
+        gift = new MilestoneGift(token, evidenceSigner, FIRST_ID);
         require(gift.creationPaused() && gift.proofPaused(), "not fail-closed");
         gift.setCreationPaused(false);
         gift.setProofPaused(false);
@@ -119,24 +121,56 @@ contract MilestoneGiftTest {
 
     // --- the rule the contract rests on -----------------------------------------------------------------
 
-    /// @dev Someone who already has the diploma, or already has the rating, earned nothing. If this rule ever
-    ///      goes, the contract pays for what was already true before the gift existed.
-    function testAMilestoneAlreadyReachedIsRefusedAtTheStart() public {
+    /// @dev The finding that stopped the first deployment. The rule used to refuse a start at or past the
+    ///      target, and a refusal reverts, so the contract kept no memory of it. On a rating, which falls when
+    ///      you lose, someone at 1520 could lose two games, start at 1499, win one, and take the whole amount
+    ///      for a one point climb. The first reading is now the start whatever it says, and the funder signs
+    ///      the highest start they will pay from.
+    function testARecipientCannotRetryUntilAReadingSuitsThem() public {
         uint256 id = _claimed();
-        uint64 now_ = uint64(VM.getBlockTimestamp());
-        MilestoneGift.ProofAttestation memory exactly =
-            _proof(id, recipient, IDENTITY, CHESS_PROVIDER, TARGET, now_, EVIDENCE_KEY);
-        VM.expectRevert(MilestoneGift.AlreadyThere.selector);
-        gift.prove(id, exactly);
+        uint64 at = uint64(VM.getBlockTimestamp());
 
-        MilestoneGift.ProofAttestation memory beyond =
-            _proof(id, recipient, IDENTITY, CHESS_PROVIDER, TARGET + 500, now_, EVIDENCE_KEY);
-        VM.expectRevert(MilestoneGift.AlreadyThere.selector);
-        gift.prove(id, beyond);
-
-        // Nothing was written: the gift is still open to a start below the target.
+        // A first reading far above what the funder accepted. It is recorded, not refused.
+        gift.prove(id, _proof(id, recipient, IDENTITY, CHESS_PROVIDER, 1520, at, EVIDENCE_KEY));
         MilestoneGift.Gift memory g = gift.getGift(id);
-        require(g.identityHash == bytes32(0) && g.deadline == 0, "nothing recorded");
+        require(g.identityHash == IDENTITY && g.startingValue == 1520, "the first reading is the start");
+
+        // Dipping below the target and climbing back now settles nothing, for ever.
+        VM.warp(START + 2 hours);
+        MilestoneGift.ProofAttestation memory sandbagged =
+            _proof(id, recipient, IDENTITY, CHESS_PROVIDER, 1499, uint64(VM.getBlockTimestamp()), EVIDENCE_KEY);
+        VM.expectRevert(MilestoneGift.StartTooHigh.selector);
+        gift.prove(id, sandbagged);
+
+        VM.warp(START + 3 hours);
+        MilestoneGift.ProofAttestation memory climbed =
+            _proof(id, recipient, IDENTITY, CHESS_PROVIDER, TARGET + 100, uint64(VM.getBlockTimestamp()), EVIDENCE_KEY);
+        VM.expectRevert(MilestoneGift.StartTooHigh.selector);
+        gift.prove(id, climbed);
+
+        require(gift.getGift(id).earned == 0, "nothing was ever earned");
+
+        // And the money goes back to the funder at the deadline, as an unreached milestone.
+        VM.warp(START + uint256(DURATION) * 1 days + 6 hours + 1);
+        gift.expire(id);
+        require(gift.refundableBalance(id) == AMOUNT, "it all goes back");
+    }
+
+    function testAStartingPointAtOrAboveTheTargetIsRefusedInTheTerms() public {
+        _expectCreateRevert(_paramsFrom(AMOUNT, DURATION, TARGET, TARGET), MilestoneGift.InvalidMaximumStart.selector);
+        _expectCreateRevert(
+            _paramsFrom(AMOUNT, DURATION, TARGET, TARGET + 1), MilestoneGift.InvalidMaximumStart.selector
+        );
+    }
+
+    /// @dev An old reading as a starting point would be pure advantage: the clock runs from now either way.
+    function testTheFirstReadingCannotBeAnOldOne() public {
+        uint256 id = _claimed();
+        VM.warp(START + 1 hours);
+        MilestoneGift.ProofAttestation memory old =
+            _proof(id, recipient, IDENTITY, CHESS_PROVIDER, 1200, uint64(START), EVIDENCE_KEY);
+        VM.expectRevert(MilestoneGift.StaleObservation.selector);
+        gift.prove(id, old);
     }
 
     function testTheFirstProofRecordsWhereTheyStoodAndStartsTheClock() public {
@@ -291,7 +325,7 @@ contract MilestoneGiftTest {
         VM.expectRevert(MilestoneGift.TooEarly.selector);
         gift.expire(id);
 
-        VM.warp(START + uint256(DURATION) * 1 days + 1);
+        VM.warp(START + uint256(DURATION) * 1 days + 6 hours + 1);
         gift.expire(id);
         require(gift.refundableBalance(id) == AMOUNT, "all of it comes back");
 
@@ -326,10 +360,68 @@ contract MilestoneGiftTest {
 
     function testExpiringTwiceIsRefused() public {
         uint256 id = _started(1200);
-        VM.warp(START + uint256(DURATION) * 1 days + 1);
+        VM.warp(START + uint256(DURATION) * 1 days + 6 hours + 1);
         gift.expire(id);
         VM.expectRevert(MilestoneGift.AlreadySettled.selector);
         gift.expire(id);
+    }
+
+    /// @dev The deadline judges the reading, not the transaction. A reading taken two minutes before the end
+    ///      that lands a moment after it was losing the whole gift to the keeper.
+    function testAReadingTakenInTimeStillCountsIfItArrivesAMomentLate() public {
+        uint256 id = _started(1200);
+        uint256 deadline = START + uint256(DURATION) * 1 days;
+        uint64 observed = uint64(deadline - 2 minutes);
+        VM.warp(deadline - 2 minutes);
+        MilestoneGift.ProofAttestation memory inTime =
+            _proof(id, recipient, IDENTITY, CHESS_PROVIDER, TARGET, observed, EVIDENCE_KEY);
+
+        // It arrives after the deadline, inside the grace.
+        VM.warp(deadline + 1 minutes);
+        gift.prove(id, inTime);
+        require(gift.getGift(id).earned == AMOUNT, "a reading taken in time is not lost to the clock");
+    }
+
+    function testTheKeeperCannotExpireWhileSuchAReadingCouldStillArrive() public {
+        uint256 id = _started(1200);
+        uint256 deadline = START + uint256(DURATION) * 1 days;
+        VM.warp(deadline + 1);
+        VM.expectRevert(MilestoneGift.TooEarly.selector);
+        gift.expire(id);
+
+        VM.warp(deadline + 6 hours + 1);
+        gift.expire(id);
+        require(gift.refundableBalance(id) == AMOUNT, "and then it goes back");
+    }
+
+    /// @dev Opening the link on the last day must not leave someone with no time to take a first reading.
+    function testTheWaitForAFirstReadingRunsFromTheDayItWasOpened() public {
+        uint256 id = _create();
+        VM.warp(START + 13 days);
+        gift.claim(id, _claimAttestation(id, recipient, CONTACT, EVIDENCE_KEY));
+
+        VM.warp(START + 14 days + 1);
+        VM.expectRevert(MilestoneGift.TooEarly.selector);
+        gift.expire(id);
+
+        VM.warp(START + 13 days + 14 days);
+        gift.expire(id);
+        require(gift.refundableBalance(id) == AMOUNT, "returned only after the full wait from opening");
+    }
+
+    function testAGiftThatIsOverCannotBeOpened() public {
+        uint256 id = _create();
+        VM.warp(START + 14 days);
+        gift.expire(id);
+        MilestoneGift.ClaimAttestation memory late = _claimAttestation(id, recipient, CONTACT, EVIDENCE_KEY);
+        VM.expectRevert(MilestoneGift.AlreadySettled.selector);
+        gift.claim(id, late);
+    }
+
+    function testMilestoneIdsCannotCollideWithTheDailyContract() public {
+        VM.expectRevert(MilestoneGift.InvalidGiftId.selector);
+        new MilestoneGift(token, evidenceSigner, FIRST_ID - 1);
+        require(gift.nextGiftId() >= FIRST_ID, "numbered well clear of the other contract");
     }
 
     // --- taking it and giving it back -------------------------------------------------------------------
@@ -395,7 +487,7 @@ contract MilestoneGiftTest {
                 _proof(id, recipient, IDENTITY, CHESS_PROVIDER, TARGET, uint64(VM.getBlockTimestamp()), EVIDENCE_KEY)
             );
         } else {
-            VM.warp(START + uint256(duration) * 1 days + 1);
+            VM.warp(START + uint256(duration) * 1 days + 6 hours + 1);
             gift.expire(id);
         }
 
@@ -416,12 +508,20 @@ contract MilestoneGiftTest {
         private
         returns (MilestoneGift.MilestoneParams memory)
     {
+        return _paramsFrom(amount, duration, target, target == 0 ? 0 : target - 200);
+    }
+
+    function _paramsFrom(uint256 amount, uint32 duration, uint64 target, uint64 maximumStart)
+        private
+        returns (MilestoneGift.MilestoneParams memory)
+    {
         return MilestoneGift.MilestoneParams({
             funder: funder,
             refundTo: funder,
             recipientContactHash: CONTACT,
             goalType: GOAL_CHESS,
             target: target,
+            maximumStart: maximumStart,
             durationDays: duration,
             amount: amount,
             salt: keccak256(abi.encode("salt", ++saltSeed))
@@ -451,6 +551,7 @@ contract MilestoneGiftTest {
                         p.recipientContactHash,
                         p.goalType,
                         p.target,
+                        p.maximumStart,
                         p.durationDays,
                         p.amount,
                         p.salt
