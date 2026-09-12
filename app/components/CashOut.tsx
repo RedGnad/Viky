@@ -6,15 +6,17 @@ import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
 import { approveAusd, readAusdBalance, sendAllMon, sendWithExplicitGas } from "@/src/client/onchain";
 import { formatAusd } from "@/src/gift-reader";
+import { WAY_OUT } from "@/src/rails";
 import { AccountPanel } from "./AccountPanel";
 import { SessionScope } from "./SessionScope";
 import { CARD, FIELD, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./ui";
 
 /**
  * The way out. What a gift earned lives in the person's own account; this turns it into money on their
- * card or in their bank. Mercuryo does the payout on their own page, and their consumer page takes no
- * parameters from us (D32), so the person is handed to it and comes back with the line it gives them.
- * Their fees are stated before anything is done, because on a small amount they eat most of it (D20).
+ * card or in their bank. Which company pays it out is one object, `WAY_OUT` (D42), so replacing it changes
+ * nothing here. Today's rail takes no parameters from us (D32), so the person is handed to its page and
+ * comes back with the line it gives them. Its fees are stated before anything is done, because on a small
+ * amount they eat most of it (D20).
  */
 
 // Measured in D20: their quote refuses roughly below 4 dollars, and they keep a flat 3 EUR whatever the
@@ -25,7 +27,6 @@ const SMALLEST_PAYOUT = 5_000_000n;
 // more flattering than the truth. Stated so nobody hands a third of a small gift to a payout service
 // without being told first.
 const FEE_UNDER_A_TENTH = 40_000_000n;
-const PAYOUT_PAGE = "https://exchange.mercuryo.io/?type=sell&currency=MON&network=MONAD";
 
 type Step = "look" | "preparing" | "ready" | "sending" | "sent";
 
@@ -86,7 +87,7 @@ export function CashOut() {
     try {
       await sendAllMon(account, destination.trim() as Hex);
       setStep("sent");
-      setNotice("Sent. Mercuryo pays it out to you from here.");
+      setNotice(`Sent. ${WAY_OUT.name} pays it out to you from here.`);
     } catch (error) {
       setProblem(readable(error));
       setStep("ready");
@@ -107,8 +108,7 @@ export function CashOut() {
           </p>
         ) : (
           <p className="text-sm" style={{ color: "var(--muted)" }}>
-            Paying it out is done by Mercuryo on their own page, and they keep a flat 3 EUR whatever the
-            amount.{" "}
+            Paying it out is done by {WAY_OUT.name} on their own page, and they keep {WAY_OUT.fee}.{" "}
             {holding !== null && holding >= FEE_UNDER_A_TENTH
               ? "At this size that is less than a tenth of what you get."
               : "Above about $40.00 that is less than a tenth of what you get; below it, they take a big bite. Nothing is lost by waiting: it stays yours until you ask for it."}
@@ -126,12 +126,12 @@ export function CashOut() {
 
       {step === "ready" || step === "sending" || step === "sent" ? (
         <section className={CARD}>
-          <p className="font-medium">Two steps, on Mercuryo&apos;s page</p>
+          <p className="font-medium">Two steps, on {WAY_OUT.name}&apos;s page</p>
           <ol className="list-decimal space-y-2 pl-5 text-sm" style={{ color: "var(--muted)" }}>
             <li>Open their page, say how much you want and where you want it, and they give you a line to copy.</li>
             <li>Come back, paste it below, and Viky sends your money to them.</li>
           </ol>
-          <a href={PAYOUT_PAGE} target="_blank" rel="noopener noreferrer" className={SECONDARY_BUTTON}>
+          <a href={WAY_OUT.page} target="_blank" rel="noopener noreferrer" className={SECONDARY_BUTTON}>
             Open the payout page
           </a>
           <input

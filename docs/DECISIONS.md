@@ -729,3 +729,21 @@ party platform or API, `[U]` not verified).
   the person and they see only a payout. That is the question sent to Arthur at Mercuryo (D40), still
   unanswered. Until then the person does three things on someone else's page, which is the honest state.
 
+## D42, 12 Sep 2026, the rail is one object, and Calm comes back later with something to show
+
+- Statement: adding money and taking it out are steps of the journey, not steps of a provider. Which
+  company stands behind them is a single object, `src/rails.ts`, holding the name shown on screen, the page
+  opened beside ours, the smallest amount it accepts and the fee it keeps. No screen names a company
+  anywhere else. Replacing the rail is replacing that object, with no change to a single step the person
+  takes; a partner rail would keep the same shape and only drop the handing over, because the amount and
+  the destination would already be filled in.
+- Source: the strategy review of 12 Sep 2026; the measurements the object carries are D20 and D32.
+- Consequence for Calm: D32 recorded that they open no account to us today, and the reason they gave is
+  that they serve platforms that are already live. That is a reason with a remedy. They are approached
+  again after the design pass and the second wave of real gifts, with a product that is dressed and with
+  the numbers those gifts produced, rather than with a description. Until then Mercuryo's consumer page is
+  the rail, and it is the one the run sheet exercises.
+- What this does not mean: the journey is not neutral about what the rail costs. The fees are stated on
+  screen before anyone is sent anywhere, and they come from the object, so a better rail improves what the
+  person reads at the same moment it improves what they pay.
+

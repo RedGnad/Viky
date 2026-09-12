@@ -8,22 +8,19 @@ import { createGift, type CreatedGift } from "@/src/client/gift";
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
 import { formatAusd } from "@/src/gift-reader";
 import { AmountError, dollarsToUnits } from "@/src/money";
+import { WAY_IN } from "@/src/rails";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
 import { AccountPanel } from "./AccountPanel";
 import { SessionScope } from "./SessionScope";
 
 /**
  * The funder's screen. Someone puts money behind another person's goal, pays for it with a card, and
- * never sees what carries it. Card payments go through Mercuryo's consumer page (D32), which ignores
- * any parameter we could pass, so the person's deposit line is copied for them and the page is opened
- * beside this one. While it stays open this screen watches for the money, turns it into what a gift
+ * never sees what carries it. Which company takes the card is one object, `WAY_IN` (D42), so replacing it
+ * changes nothing here. Today's rail ignores any parameter we could pass (D32), so the person's deposit
+ * line is copied for them and its page is opened beside this one. While it stays open this screen watches for the money, turns it into what a gift
  * holds, and creates the gift, asking for a signature only when the open session has closed (D33).
  */
 
-// Mercuryo's own minimum purchase and fee, measured in D20. Shown before their page is opened, never after.
-const MERCURYO_MINIMUM_EUR = 25;
-const MERCURYO_FEE = "about 3.8%";
-const MERCURYO_URL = "https://exchange.mercuryo.io";
 // What stays behind to pay for the conversion itself. The gift is submitted by Viky's relayer, so
 // nothing more is needed afterwards.
 const CONVERSION_RESERVE_WEI = 200_000_000_000_000_000n;
@@ -183,7 +180,7 @@ export function FundGift() {
     } catch {
       setCopied(false);
     }
-    window.open(MERCURYO_URL, "_blank", "noopener,noreferrer");
+    window.open(WAY_IN.page, "_blank", "noopener,noreferrer");
     setStep("waiting");
   };
 
@@ -276,8 +273,8 @@ export function FundGift() {
         <p className="text-2xl font-semibold">{balance === null ? "..." : formatAusd(balance)}</p>
         {!enough ? (
           <p className="text-sm" style={{ color: "var(--muted)" }}>
-            You do not have enough yet. Paying by card is handled by Mercuryo on their own page: their smallest
-            purchase is {MERCURYO_MINIMUM_EUR} EUR and they keep {MERCURYO_FEE} of it. You can put the rest behind
+            You do not have enough yet. Paying by card is handled by {WAY_IN.name} on their own page: their
+            smallest purchase is {WAY_IN.smallest} and they keep {WAY_IN.fee} of it. You can put the rest behind
             another goal later.
           </p>
         ) : null}
@@ -286,8 +283,8 @@ export function FundGift() {
             <p className="font-medium">Waiting for your payment. Keep this page open.</p>
             <p style={{ color: "var(--muted)" }}>
               {copied
-                ? "Your deposit line is copied. On Mercuryo's page choose Monad, paste it where they ask where to send, and pay with your card."
-                : "On Mercuryo's page choose Monad, then come back here and tap Copy my deposit line."}
+                ? `Your deposit line is copied. On ${WAY_IN.name}'s page choose Monad, paste it where they ask where to send, and pay with your card.`
+                : `On ${WAY_IN.name}'s page choose Monad, then come back here and tap Copy my deposit line.`}
             </p>
             {pending !== null && pending > 0n ? (
               <p style={{ color: "var(--muted)" }}>Something arrived and is being made ready.</p>
