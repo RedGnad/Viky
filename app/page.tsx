@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Footer } from "./components/Footer";
 import { AccountPanel } from "./components/AccountPanel";
 import { MyGifts } from "./components/MyGifts";
+import { YourMoney } from "./components/YourMoney";
 
 export const metadata: Metadata = {
   title: "Viky",
@@ -22,6 +23,7 @@ export default function Page() {
         </p>
       </header>
       <AccountPanel />
+      <YourMoney />
       <MyGifts />
       <Link
         href="/fund"
