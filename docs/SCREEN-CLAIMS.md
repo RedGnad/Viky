@@ -73,7 +73,9 @@ says so, and that is the work queue.
 | "Viky sends your money to them" | it goes where the payout service asked, and nowhere else | the person pastes the line and their own account sends it | **none yet** |
 
 **Nothing on this screen has been run end to end.** No payout has ever left Viky. Until one has, this
-screen is a path we believe in, not a path we have walked, and nothing anywhere may claim otherwise.
+screen is a path we believe in, not a path we have walked, and nothing anywhere may claim otherwise. The
+run that settles each line, and the leg that settles it, is `docs/spikes/KT1-part-2.md`; each line above
+changes from "none yet" to the date it ran, on the day it runs.
 
 ## The account, on every screen
 
