@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { dailyPass } from "@/src/daily-pass";
+import { dailyPass, COUNTING_PASS } from "@/src/daily-pass";
 import { NO_STORE } from "@/src/gift-api";
 
 export const runtime = "nodejs";
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Not allowed" }, { status: 401, headers: NO_STORE });
   }
   try {
-    const report = await dailyPass();
+    const report = await dailyPass(COUNTING_PASS);
     return NextResponse.json(report, { headers: NO_STORE });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "The daily pass failed" }, { status: 500, headers: NO_STORE });

@@ -667,3 +667,30 @@ party platform or API, `[U]` not verified).
   anywhere but the gift. What was wrong was that a promise made on the screen depended on somebody running
   a command.
 
+## D39, 12 Sep 2026, the screen's promises are checked against the code
+
+- Statement: three real defects in two days lived in the same gap. Our tests check that the code does what
+  the code says; nothing checked that the code does what the screen says. The defects: a screen promising
+  that a missed day comes back while nothing ever sent it (D38); an account announced to the app before
+  the server had accepted the browser, so the gift list asked with no session and kept the refusal on
+  screen; and a message telling someone to take a code out of their display name when the sender had named
+  the account and no code had ever been issued. None was found by a test, a review or an audit. All three
+  were found by reading the words on the screen against what the code does, twice from a screenshot.
+- Source: the strategy review of 12 Sep 2026, which adopted the discipline; the three defects are recorded
+  in D38, and in the commits of 11 and 12 Sep 2026.
+- Consequence: every sentence a screen shows about money or the state of a gift is written in
+  `docs/SCREEN-CLAIMS.md` beside what must be true for it and the code path that makes it true, and each
+  one carries a test that exercises that path. A test that would not fail if the promise stopped being
+  kept does not count. The rule is in `CLAUDE.md` and a new sentence is added in the same commit that adds
+  the sentence. The first such test is `test/daily-pass.test.ts`, which fails in three places if the
+  settling pass stops sending a missed day back; that was checked by reintroducing the defect.
+- Three answers from the same review, recorded so they stop consuming attention:
+  1. **The entity question is closed for the hackathon.** Calm is out and Mercuryo's consumer widget needs
+     no partner account, so nothing in the current path requires a company.
+  2. **The visual system**: structure now, and the skin before the second wave of real gifts, never after
+     the freeze. The submission video is shot on the real interface, not on the test harness. "The real
+     interface comes later" does not mean after the freeze.
+  3. **The first automatic return has still never run on mainnet.** It happens at gift 1's first missed
+     day, inside its 12 to 18 Sep window. That day: keep the transaction hashes and a capture. It is the
+     first time the money will travel back on its own, and it is the scene the submission video needs.
+

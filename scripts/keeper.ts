@@ -1,5 +1,5 @@
 import "../src/load-env";
-import { dailyPass } from "../src/daily-pass";
+import { COUNTING_PASS, dailyPass, SETTLING_PASS } from "../src/daily-pass";
 
 /**
  * The self-run keeper (the organisers' own recommendation while Chainlink Automation is not confirmed on
@@ -11,7 +11,7 @@ import { dailyPass } from "../src/daily-pass";
  */
 
 async function main() {
-  const report = await dailyPass({ refund: process.argv.includes("--refund") });
+  const report = await dailyPass(process.argv.includes("--settle") ? SETTLING_PASS : COUNTING_PASS);
   console.log(JSON.stringify({ relayer: report.relayer, balanceWei: report.balanceWei }));
   for (const line of report.lines) console.log(JSON.stringify(line));
 }
