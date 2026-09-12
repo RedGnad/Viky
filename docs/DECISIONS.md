@@ -500,7 +500,10 @@ party platform or API, `[U]` not verified).
 ## D31, 11 Sep 2026, KT2 passed: a progressive web app counts as a mobile app
 
 - Statement: a progressive web app qualifies as the "mobile app" the Agora payments bounty asks for.
-- Source: the Metropolis support answer, relayed by the funder on 11 Sep 2026.
+- Source: answered directly by Drake Evans, Agora's co-founder and chief technical officer, on the
+  bounty's own wording, through the Metropolis mentor channel, relayed by the funder on 12 Sep 2026:
+  a progressive web app qualifies as a submission. This replaces the earlier and weaker source, a portal
+  support answer: the question is now answered by the person who set the bounty.
 - Consequence: KT2 is answered, yes. No native wrapper is built and the Expo shell leaves the plan. The
   install prompt stays the only mobile-app surface, offered after the first successful count.
 
@@ -693,4 +696,20 @@ party platform or API, `[U]` not verified).
   3. **The first automatic return has still never run on mainnet.** It happens at gift 1's first missed
      day, inside its 12 to 18 Sep window. That day: keep the transaction hashes and a capture. It is the
      first time the money will travel back on its own, and it is the scene the submission video needs.
+
+## D40, 12 Sep 2026, the mentor questions that are out
+
+- Statement: four questions were sent through the Metropolis mentor channel on 11 Sep 2026, closing a
+  point I had left open in two reports by recording, wrongly, that none had been sent. I had drafted them
+  and never had the means to send them; the funder sent four.
+- Source: the funder's own mentor page, read on 12 Sep 2026.
+- State: **Drake Evans** (Agora), answered, a progressive web app qualifies, see D31. **Antons K.**
+  (EU and UK payment licences), pending, on whether our non-custodial setup needs CASP authorisation after
+  MiCA's transitional period and which component would trigger it. **Arthur** (Mercuryo), pending, on a
+  partner widget for a small team during Metropolis and on whether AUSD is listed on Monad or a swap to
+  MON is required first. **Stephen Edvi** (Blink), pending, on what winning consumer payment products
+  understood about their users.
+- Consequence: Arthur's answer is on the critical path of the way out, block 2 of D37. It does not block
+  the build: the measured path of D20, swapping to MON and selling through Mercuryo's consumer widget, is
+  what gets built, and a partner widget would only replace the last step.
 

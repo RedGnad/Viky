@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useMemo, useState, useSyncExter
 import type { Address } from "viem";
 import { signInToServer, signOutOfServer } from "../client/server-session";
 import { type AccountError, accountError, toAccountError } from "./errors";
+import { announcedAccount } from "./session-gate";
 import * as mera from "./mera";
 
 // A passkey prompt that never comes back (in-app browsers, a dismissed system sheet the page never
@@ -53,11 +54,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<AccountError | undefined>(undefined);
   const [serverSessionFor, setServerSessionFor] = useState<Address | undefined>(undefined);
 
-  // The passkey opens the signing session first and Viky's server accepts the browser a moment later.
-  // The account is announced to the rest of the app only once both are true, because a screen that
-  // learns about it in between asks the server for this person's gifts with no session yet, is refused,
-  // and keeps that refusal on screen with nothing to retry.
-  const address = signedInAddress !== undefined && signedInAddress === serverSessionFor ? signedInAddress : undefined;
+  const address = announcedAccount(signedInAddress, serverSessionFor);
 
   const run = useCallback(async (action: () => Promise<Address>) => {
     setStatus("busy");

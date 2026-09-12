@@ -21,7 +21,7 @@ says so, and that is the work queue.
 |---|---|---|---|
 | "No gift yet." | the signed-in account is neither funder nor recipient of any gift | `loadGiftsOf` matches on both roles | `test/gift-store.test.ts` |
 | "Counting: X of Y days done, Z missed." | X is the days credited on chain, Z the days drained | `readGift` reads `creditedDays` and `drainedDays` from the contract | `test/GiftEscrow.t.sol` crediting, draining and the accounting fuzz |
-| "Theirs so far: $A." | A is what the recipient has earned, whether or not they have taken it | `creditedDays * perDay`, not the withdrawable balance, which drops when they take it | **none yet** |
+| "Theirs so far: $A." | A is what the recipient has earned, whether or not they have taken it | `theirsSoFar`, which is `creditedDays * perDay`, never the withdrawable balance, which drops when they take it | `test/screen-claims.test.ts` |
 | "Came back to you: $B." | B has actually left the contract and reached the funder | `refundedToFunder` on chain, raised only by `refundUnearned`, which the settling pass calls | `test/daily-pass.test.ts` (this is D38) |
 | "Not opened yet." | nobody has claimed it | `gift.recipient` is unset on chain | `test/GiftEscrow.t.sol` claim |
 | "Opened. Name the Duolingo account to start counting." | claimed, but no account bound | `record.boundAt` is null | `test/gift-store.test.ts` binding |
@@ -65,7 +65,7 @@ says so, and that is the work queue.
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
-| "You are signed in." | the passkey session is open **and** the server has accepted this browser | the provider announces the account only once both hold | **none yet**, and this is the sign-in race: it was found from a screenshot |
+| "You are signed in." | the passkey session is open **and** the server has accepted this browser | `announcedAccount` gates it on both naming the same account | `test/screen-claims.test.ts` |
 | "Your account is protected by your passkey. Nothing to remember, nothing to write down." | no secret is stored anywhere we hold | the key is derived from the passkey and lives in memory only | `test/mera-derivation.test.ts` |
 | each account failure sentence | it is the real cause and offers a way out | typed `AccountError` with its guidance | `test/account-errors.test.ts` |
 | "What this device can do for you right now" | that list is what the open session can actually sign | the session signs the person's own account only | **none yet** |
@@ -73,8 +73,10 @@ says so, and that is the work queue.
 
 ## Known gaps, in the order they matter
 
-1. "You are signed in." has no test, and it is where the sign-in race lived.
-2. "Theirs so far" and the balance on the funder screen have no test.
-3. The session scope's promises have no test.
-4. The clipboard and the waiting states have none, and their failure paths are the ones a person meets
-   when something goes wrong.
+1. The balance shown on the funder screen, and the waiting state that watches for a card payment.
+2. The session scope's promises: what the open session may sign, and when it closes.
+3. The clipboard, whose failure path is the one a person meets when the browser refuses the copy.
+
+Closed so far: "You are signed in", which is where the sign-in race lived, and "Theirs so far", which
+would have shown a funder that their gift had earned nothing the moment the recipient took the money.
+Both tests were checked by breaking the rule and watching them fail.
