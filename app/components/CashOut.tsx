@@ -20,6 +20,11 @@ import { CARD, FIELD, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./
 // Measured in D20: their quote refuses roughly below 4 dollars, and they keep a flat 3 EUR whatever the
 // amount. The floor here sits above their refusal so nobody is sent to a page that will turn them away.
 const SMALLEST_PAYOUT = 5_000_000n;
+// Where their flat fee stops being a large bite. Three euros is under a tenth of thirty euros, and forty
+// dollars is above thirty euros at any exchange rate worth planning for, so the figure shown is never
+// more flattering than the truth. Stated so nobody hands a third of a small gift to a payout service
+// without being told first.
+const FEE_UNDER_A_TENTH = 40_000_000n;
 const PAYOUT_PAGE = "https://exchange.mercuryo.io/?type=sell&currency=MON&network=MONAD";
 
 type Step = "look" | "preparing" | "ready" | "sending" | "sent";
@@ -97,13 +102,16 @@ export function CashOut() {
         <p className="text-3xl font-semibold">{holding === null ? "..." : formatAusd(holding)}</p>
         {!enough ? (
           <p className="text-sm" style={{ color: "var(--muted)" }}>
-            This is too small to pay out yet. Keep going: it grows with every day you do your lesson, and you
-            can take it out whenever you like.
+            This is too small to pay out yet. It stays yours either way, and it grows with every day you do
+            your lesson.
           </p>
         ) : (
           <p className="text-sm" style={{ color: "var(--muted)" }}>
-            Paying it out is done by Mercuryo on their own page. They keep a flat 3 EUR whatever the amount,
-            so on a small sum most of it goes to them. Waiting until it is bigger costs you nothing.
+            Paying it out is done by Mercuryo on their own page, and they keep a flat 3 EUR whatever the
+            amount.{" "}
+            {holding !== null && holding >= FEE_UNDER_A_TENTH
+              ? "At this size that is less than a tenth of what you get."
+              : "Above about $40.00 that is less than a tenth of what you get; below it, they take a big bite. Nothing is lost by waiting: it stays yours until you ask for it."}
           </p>
         )}
       </section>
