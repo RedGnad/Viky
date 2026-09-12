@@ -67,7 +67,8 @@ says so, and that is the work queue.
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
 | "Yours to take out" | it is what the person holds now, after everything already credited | their own balance read from the chain | **none yet** |
-| "This is too small to pay out yet." | the payout service would refuse it | a floor above the refusal measured in D20 | **none yet** |
+| "This is too small to pay out yet." and "It stays yours either way" | the payout service would refuse it, and nothing is lost by waiting | a floor above the refusal measured in D20; the balance is the person's own and no deadline touches it | **none yet** |
+| "Above about $40.00 that is less than a tenth of what you get" | their flat fee really is under a tenth from there | 3 EUR is under a tenth of 30 EUR, and 40 dollars is above 30 euros at any rate worth planning for, so the figure is never more flattering than the truth | **none yet** |
 | "They keep a flat 3 EUR whatever the amount" | that is the payout service's own fee | measured in D20, 10 Sep 2026 | **not testable by us**, and to be re-read before the freeze |
 | "Getting it ready" then "ready to be paid out" | the money is in a form the payout service takes | Viky pays for the two steps, then the person's own account converts it | **not yet run end to end**: no payout has ever been made |
 | "Viky sends your money to them" | it goes where the payout service asked, and nowhere else | the person pastes the line and their own account sends it | **none yet** |

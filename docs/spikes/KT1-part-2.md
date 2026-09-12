@@ -50,10 +50,10 @@ the screen where the column asks for one.
 | 1 | Sign in on viky.cash with a new passkey, open the funder screen | funder | that the gift list says "No gift yet" and no error appears | yes |
 | 2 | Fill the gift: about 10 EUR, 7 days, 10 XP a day, no Duolingo name | funder | the amount typed, and that the screen refuses anything it would have to guess at | no |
 | 3 | Tap "Add money and give": the deposit line is copied and Mercuryo opens | funder | that the line was copied, and the exact wording of the waiting state | yes |
-| 4 | On Mercuryo: buy 25 EUR of MON on Monad, paste the line, pay by card | funder | euros charged, fee shown, every document asked for, minutes from payment to arrival. **If refused, their exact words** | yes |
+| 4 | On Mercuryo: buy 25 EUR of MON on Monad, paste the line, pay by card | funder | euros charged, fee shown, every document asked for, **how long their checks took, as a measurement**, and minutes from payment to arrival. **If refused, their exact words** | yes |
 | 5 | The page notices the money and converts it by itself | funder | minutes from payment to the screen changing, the conversion hash, and how much the 25 EUR finally became | yes |
 | 6 | The gift is created and the link appears | funder | the gift id, the creation hash, seconds from conversion to "It is in their name", and that the copy button says "Copied" | yes |
-| 7 | **Pay out the leftover** from the funder's account: /cash-out, get it ready, open Mercuryo, paste their line, send | funder | the top-up, approval, conversion and sending hashes; what Mercuryo asked for; **euros actually arrived, and when**. If refused, their exact words | yes |
+| 7 | **Pay out the leftover** from the funder's account: /cash-out, get it ready, open Mercuryo, paste their line, send | funder | the top-up, approval, conversion and sending hashes; what Mercuryo asked for and **how long their checks took**; **euros actually arrived, and when**. If refused, their exact words | yes |
 | 8 | Open the link on a device that has never seen Viky, create a passkey, open the gift | recipient | **seconds from opening the link to "is in your name"**, taps, anything that made them hesitate. This is KT5 | yes |
 | 9 | Name the Duolingo account, place the code in the display name, start counting | recipient | seconds to place the code, whether the first read found it, and the words shown when it succeeded | yes |
 | 10 | The next morning, a day is counted with nobody touching anything | nobody | the check-in hash, the day credited, the amount now theirs | yes |
@@ -70,7 +70,8 @@ the exact leg that changes each one, and each is to be dated in that file the da
 | the sentence | run when | by |
 |---|---|---|
 | "Yours to take out" shows the right amount | the balance on the screen matches what the gift paid | leg 7 |
-| "This is too small to pay out yet." | seen at least once below the floor, or noted as never seen | leg 11, early in the week |
+| "This is too small to pay out yet." and "It stays yours either way" | seen at least once below the floor, or noted as never seen | leg 11, early in the week |
+| "Above about $40.00 that is less than a tenth" | the fee Mercuryo charged is compared with a tenth of the payout | leg 7 |
 | "They keep a flat 3 EUR whatever the amount" | the fee Mercuryo actually charged is compared with it | leg 7 |
 | "Getting it ready" then "ready to be paid out" | the conversion finishes and the amount is right | leg 7 |
 | "Viky sends your money to them" | the money reaches Mercuryo and they accept it | leg 7 |
@@ -83,6 +84,9 @@ Until leg 7 is done, nothing anywhere may say the way out works. When it is done
 
 Written before starting, so the answer is not invented afterwards.
 
+- **Mercuryo takes time over their checks.** This is neither a refusal nor a defect: it is a number, and
+  the number is the point. Record how long from submitting a document to being allowed to continue, and
+  keep going. A rail that takes a day to admit someone is a fact about the product, not a fault in it.
 - **Mercuryo refuses the card, the region or the documents.** Record their words, mark legs 4 and 7
   refused, and the rail question reopens. The gift itself is unaffected: it does not need euros to work.
 - **The payout minimum turns out to be higher than measured.** Record the real figure, and the size of a
