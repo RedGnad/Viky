@@ -87,7 +87,9 @@ export const COURSERA_CERTIFICATE: AttestedSource = {
     { type: "regex", value: '"lastName":"(?<lastName>[^"]*)"' },
     { type: "regex", value: '"courseId":"(?<courseId>[^"]+)"' },
     { type: "regex", value: '"certificateCode":"(?<certificateCode>[A-Z0-9]+)"' },
-    { type: "regex", value: '"grantedAt":(?<grantedAt>\\d{10,16})' },
+    // Milliseconds, not seconds: 1594224731127 on every page read. Pinned to thirteen digits so a pattern
+    // that also matched seconds cannot quietly hand a thousand-fold wrong date to the contract.
+    { type: "regex", value: '"grantedAt":(?<grantedAt>\\d{13})' },
   ],
 };
 

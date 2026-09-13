@@ -56,6 +56,9 @@ test("a Coursera certificate page answers with everything the proof needs", () =
   for (const m of COURSERA_CERTIFICATE.matches) assert.match(page, new RegExp(m.value), m.value);
   const granted = new RegExp(COURSERA_CERTIFICATE.matches[4].value).exec(page);
   assert.equal(granted?.groups?.grantedAt, "1594224731127", "the day it was granted, in milliseconds");
+  // Seconds would be a date in 1970 once divided again, so the pattern must not accept them at all.
+  const inSeconds = '{"grantedAt":1594224731}';
+  assert.equal(new RegExp(COURSERA_CERTIFICATE.matches[4].value).test(inSeconds), false, "seconds are not milliseconds");
 
   assert.ok(COURSERA_CERTIFICATE.accepts("3S3AANA8JQTN"));
   assert.ok(COURSERA_CERTIFICATE.accepts("MQQRRYLUXB"));
