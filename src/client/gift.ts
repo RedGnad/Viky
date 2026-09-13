@@ -100,6 +100,7 @@ export function countNow(giftId: string): Promise<PublicOutcome> {
 }
 
 export type GiftStatus = {
+  youAreTheRecipient: boolean;
   escrow: Hex;
   goalAccount: GoalAccount;
   giftId: string;

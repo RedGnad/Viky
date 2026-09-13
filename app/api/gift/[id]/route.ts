@@ -47,6 +47,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     return NextResponse.json(
       {
         giftId: id,
+        // Which side of the gift the person reading this is on. Without it every screen showed the
+        // recipient's words and the recipient's buttons to whoever was signed in, and a funder was offered a
+        // "take it" the contract then refused.
+        youAreTheRecipient: viewerIsRecipient,
         // Used by the recipient's browser to sign a withdraw intent for the right contract; never displayed.
         escrow,
         goalAccount,
