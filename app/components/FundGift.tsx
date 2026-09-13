@@ -7,6 +7,7 @@ import { ApiError, postJson } from "@/src/client/api";
 import { createGift, type CreatedGift } from "@/src/client/gift";
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
 import { formatAusd } from "@/src/gift-reader";
+import { nextFundingStep } from "@/src/funding-step";
 import { AmountError, dollarsToUnits } from "@/src/money";
 import { WAY_IN } from "@/src/rails";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
@@ -21,11 +22,6 @@ import { SessionScope } from "./SessionScope";
  * holds, and creates the gift, asking for a signature only when the open session has closed (D33).
  */
 
-// What stays behind to pay for the conversion itself. The gift is submitted by Viky's relayer, so
-// nothing more is needed afterwards.
-const CONVERSION_RESERVE_WEI = 200_000_000_000_000_000n;
-// Below this, an arriving balance is dust rather than a card payment worth converting.
-const ARRIVAL_FLOOR_WEI = 50_000_000_000_000_000n;
 const POLL_MS = 8_000;
 
 type Step = "form" | "waiting" | "converting" | "giving" | "done";
@@ -93,15 +89,15 @@ export function FundGift() {
       try {
         await refresh();
         const [held, arriving] = await Promise.all([readAusdBalance(address), readMonBalance(address)]);
-        const wanted = dollarsToUnits(dollars);
-        if (held >= wanted) {
+        const next = nextFundingStep({ held, arriving, wanted: dollarsToUnits(dollars) });
+        if (next.do === "give") {
           working.current = true;
           setStep("giving");
           setNotice("Your money is here. Putting it behind the goal.");
           await give();
           return;
         }
-        if (arriving > ARRIVAL_FLOOR_WEI + CONVERSION_RESERVE_WEI) {
+        if (next.do === "convert") {
           working.current = true;
           setStep("converting");
           setNotice("Your payment arrived. Getting it ready, a few seconds.");
@@ -113,7 +109,7 @@ export function FundGift() {
             return;
           }
           const quote = await postJson<{ to: `0x${string}`; data: `0x${string}`; value: string }>("/api/fund/quote", {
-            amount: (arriving - CONVERSION_RESERVE_WEI).toString(),
+            amount: next.amount.toString(),
           });
           await sendWithExplicitGas(account, { to: quote.to, data: quote.data, value: BigInt(quote.value) });
           await refresh();

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { announcedAccount, sessionRemaining } from "../src/account/session-gate";
 import { theirsSoFar } from "../src/gift-reader";
+import { ARRIVAL_FLOOR, CONVERSION_RESERVE, nextFundingStep } from "../src/funding-step";
 import { AmountError, dollarsToUnits, MIN_GIFT_UNITS } from "../src/money";
 
 /**
@@ -65,3 +66,38 @@ test("the session countdown never shows a negative or a stale number", () => {
   assert.deepEqual(sessionRemaining(1_000 + 10 * 60_000, 1_000), { minutes: 10, seconds: 0 }, "a fresh session shows its full length");
 });
 
+
+test("the funder screen converts a payment that arrived, and never one that did not", () => {
+  const wanted = 20_000_000n;
+
+  // Enough already: make the gift, convert nothing.
+  assert.deepEqual(nextFundingStep({ held: wanted, arriving: 10n ** 18n, wanted }), { do: "give" });
+  assert.deepEqual(nextFundingStep({ held: wanted + 1n, arriving: 0n, wanted }), { do: "give" });
+
+  // Nothing there, or only dust: keep waiting, and never convert what would cost more than it brings.
+  assert.deepEqual(nextFundingStep({ held: 0n, arriving: 0n, wanted }), { do: "wait", sawSomething: false });
+  assert.deepEqual(nextFundingStep({ held: 0n, arriving: ARRIVAL_FLOOR, wanted }), { do: "wait", sawSomething: true });
+  assert.deepEqual(nextFundingStep({ held: 0n, arriving: ARRIVAL_FLOOR + CONVERSION_RESERVE, wanted }), {
+    do: "wait",
+    sawSomething: true,
+  });
+
+  // A real payment: convert it, keeping back exactly what the conversion costs.
+  const payment = 10n ** 18n;
+  assert.deepEqual(nextFundingStep({ held: 0n, arriving: payment, wanted }), {
+    do: "convert",
+    amount: payment - CONVERSION_RESERVE,
+  });
+
+  // Half the gift already there and a payment arriving: the payment is still converted, never skipped.
+  assert.deepEqual(nextFundingStep({ held: wanted / 2n, arriving: payment, wanted }), {
+    do: "convert",
+    amount: payment - CONVERSION_RESERVE,
+  });
+
+  // What is converted is never more than what arrived.
+  for (const arriving of [payment, payment * 25n, ARRIVAL_FLOOR + CONVERSION_RESERVE + 1n]) {
+    const step = nextFundingStep({ held: 0n, arriving, wanted });
+    if (step.do === "convert") assert.ok(step.amount < arriving, `converted ${step.amount} of ${arriving}`);
+  }
+});

@@ -39,7 +39,7 @@ says so, and that is the work queue.
 | the balance under "Your money" | it is this account's spendable balance now | `readAusdBalance` reads the chain on every refresh | **none yet** |
 | the amount typed into "How much" | exactly that amount is taken, never more | `dollarsToUnits` reads the text and refuses anything it would have to guess at; it never goes through a number | `test/screen-claims.test.ts` |
 | "their smallest purchase is 25 EUR and they keep about 3.8%" | Mercuryo's own terms today | measured by hand (D20) | **not testable by us**: a third party's terms, to be re-read before the freeze |
-| "Waiting for your payment. Keep this page open." | the page is really watching | a poll every eight seconds while the step is open | **none yet** |
+| "Waiting for your payment. Keep this page open." | the page is really watching, converts what arrived and never what did not | `nextFundingStep` decides from the two balances alone, so the branch can be tested without a chain | `test/screen-claims.test.ts`, checked by making it convert dust and watching it fail |
 | "Your deposit line is copied." | the clipboard actually took it | the copy is awaited and its failure is caught and said | **none yet**, and the failure path matters: the button used to say nothing either way |
 | "Putting it in their name" then "It is in their name." | the gift exists on chain and the money is in it | `relayCreateGift` waits for finality before returning, and the funder's single signature is both the payment and the consent to these exact terms | `test/GiftEscrow.t.sol` create and fund, `test/gift-routes.test.ts` |
 | the claim link | it opens this gift and nobody else's | the link carries a token whose hash alone is stored | `test/gift-store.test.ts` claim token |
@@ -126,10 +126,13 @@ each. A reviewer checks the contract against the sentences, never against the te
 
 ## Known gaps, in the order they matter
 
-1. The balance shown on the funder screen, and the waiting state that watches for a card payment. Both
-   need a browser and a signed-in account, which is the next thing the browser tests have to reach.
-2. "What this device can do for you right now": the list of what the open session may sign.
-3. The clipboard, whose failure path is the one a person meets when the browser refuses the copy.
+1. The balance shown on the funder screen and on the way out: both are a chain read with nothing to decide,
+   and testing them needs a browser with a signed-in account, which the browser tests cannot reach yet.
+2. "What this device can do for you right now": the list of what the open session may sign. The list is
+   words, not a rule the code enforces, so what it needs is a reader checking it against the routes, not a
+   test. Worth doing once before the freeze.
+3. The clipboard, whose failure path is the one a person meets when the browser refuses the copy. Both
+   branches say something now, which is what was missing; proving it needs a browser that refuses.
 
 Closed so far: "You are signed in", which is where the sign-in race lived; "Theirs so far", which
 would have shown a funder that their gift had earned nothing the moment the recipient took the money; the
