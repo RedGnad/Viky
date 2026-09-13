@@ -92,6 +92,25 @@ changes from "none yet" to the date it ran, on the day it runs.
 | "What this device can do for you right now" | that list is what the open session can actually sign | the session signs the person's own account only | **none yet** |
 | "Closing in m:ss" | the session really closes then, and the number is never negative or stale | `sessionRemaining` clamps at zero, read again every second because every signature pushes the deadline back | `test/screen-claims.test.ts` |
 
+## What the milestone contract promises
+
+Not a screen, the same discipline one level down (D45). The sentences are in D45; here is what exercises
+each. A reviewer checks the contract against the sentences, never against the tests.
+
+| the promise | exercised by |
+|---|---|
+| The first reading is always the start | `testARecipientCannotRetryUntilAReadingSuitsThem`, `testTheFirstProofRecordsWhereTheyStoodAndStartsTheClock` |
+| A start above what the funder accepted never pays | `testARecipientCannotRetryUntilAReadingSuitsThem`, checked by putting the flaw back and watching it fail |
+| A milestone already reached is not a milestone | the same test, on a measure that falls |
+| The deadline judges the reading, not the transaction | `testAReadingTakenInTimeStillCountsIfItArrivesAMomentLate`, `testTheKeeperCannotExpireWhileSuchAReadingCouldStillArrive` |
+| An old reading is never a start | `testTheFirstReadingCannotBeAnOldOne` |
+| The wait runs from the day it was opened | `testTheWaitForAFirstReadingRunsFromTheDayItWasOpened` |
+| All or nothing, once | `testReachingTheTargetGivesTheWholeAmountAtOnce`, `testAReachedMilestoneCannotBeExpired`, `testExpiringTwiceIsRefused` |
+| Every unit ends with somebody | `testFuzzEveryUnitEndsWithSomebody` |
+| A gift that is over cannot be reopened | `testAGiftThatIsOverCannotBeOpened`, `testTheFunderTakesItBackOnlyBeforeItIsOpened` |
+| An identifier means one gift | `testMilestoneIdsCannotCollideWithTheDailyContract` |
+| The funder answers one question, and the ceiling is computed | `test/milestone-terms.test.ts` |
+
 ## Known gaps, in the order they matter
 
 1. The balance shown on the funder screen, and the waiting state that watches for a card payment. Both
