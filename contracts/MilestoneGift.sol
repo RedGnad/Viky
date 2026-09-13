@@ -84,6 +84,11 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
     /// @dev A gift nobody ever opens, or opens and never starts, comes back rather than sitting here for ever.
     ///      Measured from the claim once there is one, so opening the link late does not shorten the wait.
     uint256 public constant DORMANT_REFUND_DELAY = 14 days;
+    /// @dev How long after its deadline a certificate granted in time may still be submitted. A granting day
+    ///      is historical, so waiting gains the recipient nothing and a short window would only take the gift
+    ///      away for being slow to open the app. Bounded all the same: the funder's money must not wait for
+    ///      ever on a proof that may never come.
+    uint256 public constant LATE_PROOF_WINDOW = 14 days;
     /// @dev A reading taken before the deadline may still be submitted for a while after it, so the keeper's
     ///      call to `expire` can never beat a proof that was verifiably in time. The deadline judges the
     ///      reading; this grace judges the transaction. The daily contract protects its catch-up the same way.
@@ -194,10 +199,14 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
 
     mapping(uint256 => Gift) private gifts;
     mapping(uint8 => bytes32) public goalProviders;
+    /// @dev The shape a goal is proved in, fixed when the goal is registered. Without it a gift could be
+    ///      declared in the wrong shape for its source, and a rating proved as "having it or not" would settle
+    ///      the whole amount on a single reading, with no start recorded and no climb at all.
+    mapping(uint8 => uint8) public goalShapes;
     mapping(bytes32 => bool) public usedNullifiers;
     mapping(uint256 => uint256) public withdrawNonces;
 
-    event GoalRegistered(uint8 indexed goalType, bytes32 indexed providerId);
+    event GoalRegistered(uint8 indexed goalType, bytes32 indexed providerId, uint8 shape);
     event GiftCreated(
         uint256 indexed giftId,
         address indexed funder,
@@ -324,6 +333,9 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         if (p.funder == address(0) || p.refundTo == address(0)) revert InvalidAddress();
         if (p.recipientContactHash == bytes32(0)) revert InvalidContactHash();
         if (goalProviders[p.goalType] == bytes32(0)) revert UnknownGoal();
+        // The shape belongs to the goal, not to the terms: a source that moves is proved as a climb and
+        // nothing else, whatever the funder's app puts in this field.
+        if (p.shape != goalShapes[p.goalType]) revert InvalidShape();
         if (p.target == 0) revert InvalidTarget();
         if (p.shape == SHAPE_CLIMB) {
             // A climb has to be a climb: a starting point at or above the target would pay for standing still.
@@ -421,6 +433,9 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         if (a.recipient != g.recipient) revert IdentityMismatch();
         if (a.providerId != goalProviders[g.goalType]) revert ProviderMismatch();
         if (a.nullifier == bytes32(0) || a.identityHash == bytes32(0)) revert InvalidProofHash();
+        // A climb is proved by readings, never by a date. Refusing the field outright stops the two shapes
+        // borrowing each other's rules through an attestation.
+        if (g.shape == SHAPE_CLIMB && a.eventAt != 0) revert InvalidShape();
         if (usedNullifiers[a.nullifier]) revert NullifierAlreadyUsed();
         _validateAttestationWindow(a.issuedAt, a.expiresAt);
         if (uint256(a.observedAt) > block.timestamp + MAX_CLOCK_SKEW) revert InvalidAttestationWindow();
@@ -440,11 +455,18 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         usedNullifiers[a.nullifier] = true;
 
         if (g.shape == SHAPE_HAVE_OR_NOT) {
-            // Nothing to start: the page only exists once the thing is granted. What pays is the day it says.
+            // Nothing to start: the page only exists once the thing is granted. What pays is the day it says,
+            // and a day is a day. Comparing it against the hour the funder happened to pay would refuse a
+            // certificate granted that same morning and cut the last day short at that same hour.
             if (a.identityHash != g.subject) revert IdentityMismatch();
-            if (a.eventAt < g.fundedAt) revert EarnedBeforeTheGift();
-            if (a.eventAt > g.deadline) revert DeadlinePassed();
-            if (block.timestamp > uint256(g.deadline) + PROOF_GRACE) revert DeadlinePassed();
+            if (a.eventAt == 0 || uint256(a.eventAt) > block.timestamp) revert InvalidAttestationWindow();
+            if (_dayOf(a.eventAt) < _dayOf(g.fundedAt)) revert EarnedBeforeTheGift();
+            if (_dayOf(a.eventAt) > _dayOf(g.deadline)) revert DeadlinePassed();
+            // Two weeks to submit, not six hours. A granting day is historical and permanent: the page says
+            // the same thing for ever, so waiting gains the recipient nothing, and a short window would take
+            // the whole gift away for being slow to open the app. The climb's grace is short because a
+            // reading is a snapshot that goes stale; this is not one.
+            if (block.timestamp > uint256(g.deadline) + LATE_PROOF_WINDOW) revert DeadlinePassed();
             if (a.metricValue < g.target) revert NotThereYet();
             g.lastProofAt = a.observedAt;
             g.settled = true;
@@ -486,31 +508,27 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
     /// @notice Sends the whole amount back once the milestone can no longer be reached: the deadline has passed,
     ///         or nobody ever opened the gift or started it. Anyone may call it; the keeper does, daily.
     function expire(uint256 giftId) external nonReentrant {
+        // While proofs are paused nothing can be saved, so nothing may be taken back either: a pause across a
+        // deadline would otherwise pay the funder for a milestone the recipient simply could not submit.
+        if (proofPaused) revert ProofIsPaused();
         Gift storage g = _gift(giftId);
         if (g.cancelled) revert GiftIsCancelled();
         if (g.settled) revert AlreadySettled();
-        if (g.refundable > 0 || g.refundedToFunder > 0) revert AlreadySettled();
 
-        bool started = g.shape == SHAPE_HAVE_OR_NOT || g.identityHash != bytes32(0);
-        if (
-            started && g.recipient == address(0)
-                && block.timestamp >= uint256(g.fundedAt) + DORMANT_REFUND_DELAY + PROOF_GRACE
-        ) {
-            // Nobody ever opened it. The funder waits the dormant delay, never the whole deadline.
-            g.settled = true;
-            g.refundable = g.amount;
-            emit GiftExpired(giftId, g.amount);
-            return;
-        }
-        if (started) {
-            // Not until a reading taken before the deadline can no longer arrive.
+        if (g.recipient == address(0)) {
+            // Nobody ever opened it. The funder waits the dormant delay, never the whole deadline, which for a
+            // certificate could be a year away.
+            if (block.timestamp < uint256(g.fundedAt) + DORMANT_REFUND_DELAY + PROOF_GRACE) revert TooEarly();
+        } else if (g.shape == SHAPE_HAVE_OR_NOT) {
+            // Not until a certificate granted in time can no longer be submitted.
+            if (block.timestamp <= uint256(g.deadline) + LATE_PROOF_WINDOW) revert TooEarly();
+        } else if (g.identityHash != bytes32(0)) {
+            // A climb under way: not until a reading taken before the deadline can no longer arrive.
             if (block.timestamp <= uint256(g.deadline) + PROOF_GRACE) revert TooEarly();
         } else {
-            // Measured from the claim once there is one: opening the link on the last day must not leave a
-            // recipient with no time at all to take a first reading.
-            uint256 from = g.claimedAt == 0 ? g.fundedAt : g.claimedAt;
-            // The same grace as the deadline: the keeper must not land in the same block as a first reading.
-            if (block.timestamp < from + DORMANT_REFUND_DELAY + PROOF_GRACE) revert TooEarly();
+            // A climb nobody ever started, measured from the day it was opened, so opening the link late never
+            // leaves a recipient with no time at all to take a first reading.
+            if (block.timestamp < uint256(g.claimedAt) + DORMANT_REFUND_DELAY + PROOF_GRACE) revert TooEarly();
         }
 
         g.settled = true;
@@ -572,11 +590,13 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
 
     // --- the owner --------------------------------------------------------------------------------------
 
-    function registerGoal(uint8 goalType, bytes32 providerId) external onlyOwner {
+    function registerGoal(uint8 goalType, bytes32 providerId, uint8 shape) external onlyOwner {
         if (goalType == 0) revert InvalidGoalType();
         if (providerId == bytes32(0)) revert InvalidProofHash();
+        if (shape != SHAPE_CLIMB && shape != SHAPE_HAVE_OR_NOT) revert InvalidShape();
         goalProviders[goalType] = providerId;
-        emit GoalRegistered(goalType, providerId);
+        goalShapes[goalType] = shape;
+        emit GoalRegistered(goalType, providerId, shape);
     }
 
     function setEvidenceSigner(address newSigner) external onlyOwner {
@@ -652,6 +672,13 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         uint256 balanceBefore = token.balanceOf(to);
         token.safeTransfer(to, amount);
         if (token.balanceOf(to) != balanceBefore + amount) revert TransferShortfall();
+    }
+
+    /// @dev The UTC day a moment falls in, as the daily contract computes it. A granting day is a day, and
+    ///      comparing it against an hour is what refused a certificate granted on the funder's own morning.
+    function _dayOf(uint256 timestamp) private pure returns (uint32) {
+        // forge-lint: disable-next-line(unsafe-typecast)
+        return uint32(timestamp / DAY);
     }
 
     function _gift(uint256 giftId) private view returns (Gift storage g) {

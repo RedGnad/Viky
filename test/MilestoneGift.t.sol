@@ -58,8 +58,8 @@ contract MilestoneGiftTest {
         require(gift.creationPaused() && gift.proofPaused(), "not fail-closed");
         gift.setCreationPaused(false);
         gift.setProofPaused(false);
-        gift.registerGoal(GOAL_CHESS, CHESS_PROVIDER);
-        gift.registerGoal(GOAL_CERTIFICATE, CERTIFICATE_PROVIDER);
+        gift.registerGoal(GOAL_CHESS, CHESS_PROVIDER, gift.SHAPE_CLIMB());
+        gift.registerGoal(GOAL_CERTIFICATE, CERTIFICATE_PROVIDER, gift.SHAPE_HAVE_OR_NOT());
         token.mint(funder, 1_000_000_000);
     }
 
@@ -359,8 +359,9 @@ contract MilestoneGiftTest {
 
     function testACertificateEarnedAfterTheDeadlineNeverPays() public {
         uint256 id = _certificate();
-        uint64 granted = uint64(START + uint256(DURATION) * 1 days + 1);
-        VM.warp(START + uint256(DURATION) * 1 days + 2 hours);
+        // The day after the deadline's day. A granting day is a day: later on the deadline's own day counts.
+        uint64 granted = uint64(START + uint256(DURATION + 1) * 1 days);
+        VM.warp(START + uint256(DURATION + 1) * 1 days + 2 hours);
         MilestoneGift.ProofAttestation memory late = _proofOf(
             id, recipient, SUBJECT, CERTIFICATE_PROVIDER, 1, granted, uint64(VM.getBlockTimestamp()), EVIDENCE_KEY
         );
@@ -400,12 +401,19 @@ contract MilestoneGiftTest {
         require(gift.getGift(id).earned == AMOUNT, "our lateness is ours");
     }
 
-    function testACertificateNotObtainedComesBackAtItsDate() public {
+    function testACertificateNotObtainedComesBackOnceItCanNoLongerBeProved() public {
         uint256 id = _certificate();
-        VM.warp(START + uint256(DURATION) * 1 days + 1);
+        uint256 deadline = START + uint256(DURATION) * 1 days;
+
+        // Not while a certificate granted in time could still be submitted.
+        VM.warp(deadline + 6 hours + 1);
         VM.expectRevert(MilestoneGift.TooEarly.selector);
         gift.expire(id);
-        VM.warp(START + uint256(DURATION) * 1 days + 6 hours + 1);
+        VM.warp(deadline + 14 days);
+        VM.expectRevert(MilestoneGift.TooEarly.selector);
+        gift.expire(id);
+
+        VM.warp(deadline + 14 days + 1);
         gift.expire(id);
         require(gift.refundableBalance(id) == AMOUNT, "it all goes back");
     }
@@ -434,6 +442,122 @@ contract MilestoneGiftTest {
         MilestoneGift.MilestoneParams memory nonsense = _certificateParams(AMOUNT, DURATION);
         nonsense.shape = 7;
         _expectCreateRevert(nonsense, MilestoneGift.InvalidShape.selector);
+    }
+
+    /// @dev The finding that stopped the third deployment. A granting day was compared against the hour the
+    ///      funder happened to pay, so a certificate granted that same morning could never pay, and the last
+    ///      day was cut short at that same hour.
+    function testACertificateGrantedOnTheFundersOwnDayPays() public {
+        uint256 id = _certificate();
+        // Midnight of the day the funder paid, which is before the funding instant but the same day.
+        uint64 granted = uint64((START / 1 days) * 1 days);
+        require(granted < START, "earlier in the day than the funding");
+        VM.warp(START + 2 days);
+        gift.prove(
+            id,
+            _proofOf(
+                id, recipient, SUBJECT, CERTIFICATE_PROVIDER, 1, granted, uint64(VM.getBlockTimestamp()), EVIDENCE_KEY
+            )
+        );
+        require(gift.getGift(id).earned == AMOUNT, "granted the day they paid, so it counts");
+    }
+
+    function testACertificateGrantedLaterOnTheDeadlineDayPays() public {
+        uint256 id = _certificate();
+        uint256 deadline = START + uint256(DURATION) * 1 days;
+        uint64 granted = uint64(((deadline / 1 days) * 1 days) + 23 hours);
+        require(granted > deadline, "later in the day than the deadline instant");
+        VM.warp(deadline + 1 days);
+        gift.prove(
+            id,
+            _proofOf(
+                id, recipient, SUBJECT, CERTIFICATE_PROVIDER, 1, granted, uint64(VM.getBlockTimestamp()), EVIDENCE_KEY
+            )
+        );
+        require(gift.getGift(id).earned == AMOUNT, "the deadline day belongs to them");
+    }
+
+    /// @dev A granting day is historical: it says the same thing for ever, so being slow to open the app must
+    ///      not cost the whole gift. Six hours was the climb's rule, borrowed where it did not belong.
+    function testACertificateGrantedInTimeSurvivesDaysOfSilence() public {
+        uint256 id = _certificate();
+        uint256 deadline = START + uint256(DURATION) * 1 days;
+        VM.warp(deadline + 10 days);
+        gift.prove(
+            id,
+            _proofOf(
+                id,
+                recipient,
+                SUBJECT,
+                CERTIFICATE_PROVIDER,
+                1,
+                uint64(START + 10 days),
+                uint64(VM.getBlockTimestamp()),
+                EVIDENCE_KEY
+            )
+        );
+        require(gift.getGift(id).earned == AMOUNT, "they did it in time, so they are paid");
+    }
+
+    function testAGrantingDayInTheFutureNeverPays() public {
+        uint256 id = _certificate();
+        VM.warp(START + 10 days);
+        MilestoneGift.ProofAttestation memory ahead = _proofOf(
+            id,
+            recipient,
+            SUBJECT,
+            CERTIFICATE_PROVIDER,
+            1,
+            uint64(VM.getBlockTimestamp() + 1 days),
+            uint64(VM.getBlockTimestamp()),
+            EVIDENCE_KEY
+        );
+        VM.expectRevert(MilestoneGift.InvalidAttestationWindow.selector);
+        gift.prove(id, ahead);
+    }
+
+    /// @dev A rating proved as "having it or not" would settle the whole amount on one reading, with no start
+    ///      recorded and no climb at all. The shape belongs to the goal, not to whoever fills in the terms.
+    function testAGoalIsProvedInItsOwnShapeOrNotAtAll() public {
+        MilestoneGift.MilestoneParams memory ratingAsCertificate =
+            _shaped(AMOUNT, DURATION, TARGET, 0, gift.SHAPE_HAVE_OR_NOT(), SUBJECT);
+        ratingAsCertificate.goalType = GOAL_CHESS;
+        _expectCreateRevert(ratingAsCertificate, MilestoneGift.InvalidShape.selector);
+
+        MilestoneGift.MilestoneParams memory certificateAsClimb =
+            _shaped(AMOUNT, DURATION, TARGET, TARGET - 200, gift.SHAPE_CLIMB(), bytes32(0));
+        certificateAsClimb.goalType = GOAL_CERTIFICATE;
+        _expectCreateRevert(certificateAsClimb, MilestoneGift.InvalidShape.selector);
+    }
+
+    function testAClimbCarriesNoGrantingDay() public {
+        uint256 id = _claimed();
+        MilestoneGift.ProofAttestation memory dated = _proofOf(
+            id,
+            recipient,
+            IDENTITY,
+            CHESS_PROVIDER,
+            1200,
+            uint64(START - 1 days),
+            uint64(VM.getBlockTimestamp()),
+            EVIDENCE_KEY
+        );
+        VM.expectRevert(MilestoneGift.InvalidShape.selector);
+        gift.prove(id, dated);
+    }
+
+    /// @dev While proofs are paused nothing can be saved, so nothing may be taken back: the pause would
+    ///      otherwise pay the funder for a milestone the recipient simply could not submit.
+    function testAPauseNeverHandsTheGiftBack() public {
+        uint256 id = _started(1200);
+        VM.warp(START + uint256(DURATION) * 1 days + 7 hours);
+        gift.setProofPaused(true);
+        VM.expectRevert(MilestoneGift.ProofIsPaused.selector);
+        gift.expire(id);
+
+        gift.setProofPaused(false);
+        gift.expire(id);
+        require(gift.refundableBalance(id) == AMOUNT, "and once proofs are open again it settles");
     }
 
     // --- the deadline -----------------------------------------------------------------------------------

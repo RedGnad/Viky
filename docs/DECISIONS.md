@@ -846,8 +846,15 @@ which shape they speak of; those that say neither hold for both.
    before the deadline. Something obtained the week before was not earned by this gift.
 8. **The deadline is a date the funder can see**, fixed when they paid, not counted from anything the
    recipient does later.
-9. **It pays only for the person and the thing the funder named**, both bound into the terms they signed,
-   so a proof of somebody else's certificate, or of another course, pays nothing.
+9. **It pays only for what the funder named, and only into the hands of the person they sent the link to.**
+   The person and the thing are bound into the terms the funder signed, and a proof for another course pays
+   nothing. **What this does not do**, and the third review was right to call the wider sentence false:
+   Coursera has no field its holder can edit, so there is no way to prove that a given certificate belongs
+   to the recipient rather than to a namesake who took the same course in the same window. Duolingo and
+   Chess.com both have an editable display name, which is how a short code proves ownership there. The gift
+   still goes only to the account that opened the funder's link, so the exposure is a recipient presenting
+   somebody else's certificate, not a stranger taking the gift. It is recorded rather than hidden, and D49
+   carries what would close it.
 
 *Both shapes.*
 
@@ -963,4 +970,51 @@ which shape they speak of; those that say neither hold for both.
   until after the deadline, and we never read in between, the source's date moves past the deadline and the
   proof fails. With a daily reading that needs every reading to fail for the whole window. It is bounded and
   it is ours to keep small, not theirs to pay for.
+
+## D49, 13 Sep 2026, the third review: three promises broken, and one that no code can keep
+
+- Statement: the third review returned **do not deploy**. Ten promises of D45 held, three broke. All three
+  are fixed; the third is fixed by narrowing the sentence, because no code could have kept it.
+- Source: contract review of 13 Sep 2026, sixty-three reproductions run outside the repository, including
+  512 random interleavings of every entry point across four gifts of both shapes.
+- **This review did not run on the model the project rule names.** The Fable allowance was exhausted, so it
+  ran on Opus, in a fresh session with no knowledge of the author's reasoning, which is where the value of a
+  review lies. It found three real defects, so it was not a wasted pass. A Fable pass before deployment is
+  still open if the strategy side wants one.
+- **Promise 7 broken, and it is the one that mattered.** The certificate window compared an attested granting
+  *day* against two *instants*: the moment the funder paid, and the moment of the deadline. A certificate
+  granted earlier on the very day the funder paid could never pay, and the last day was cut short at the
+  funding hour. Worse, the six hour grace was applied to the submission of a historical date. A recipient who
+  earned the certificate on day 29 of a 30 day gift and opened the app on day 32 lost the whole gift, and the
+  funder was paid for a milestone that was genuinely reached. The arithmetic is now in UTC days, as the daily
+  contract has always done it, and the submission window is fourteen days rather than six hours: a granting
+  day is historical and permanent, so waiting gains the recipient nothing, while a short window only punishes
+  being slow to open the app. It is bounded all the same, because the funder's money must not wait for ever
+  on a proof that may never come. `expire` follows the same window.
+- **Promise 10 broken by a pause.** `prove` was pausable and `expire` was not, so an owner pause spanning a
+  deadline handed the whole gift back while the only call that could have saved it was shut. `expire` now
+  refuses while proofs are paused. The daily contract has the same asymmetry, where it costs one day; here it
+  cost everything.
+- **Promise 9 broken, and no code can keep it.** The sentence said a proof of somebody else's certificate
+  pays nothing. The contract's half is sound, one equality against a value the funder signed, but no value
+  satisfies both halves: the certificate code cannot exist when the funder signs, so what is signed is a name
+  and a course, which is not unique. Coursera has no field its holder can edit, so there is no ownership step
+  of the kind the binding code gives us on Duolingo and Chess.com. The promise is narrowed to what is true
+  and the gap is written down rather than dressed up. What would close it, for the strategy side to weigh:
+  restrict the certificate shape to sources that do have an editable field; or have the recipient name the
+  code at the start and prove ownership by a second reading; or accept it, since the gift still reaches only
+  the account that opened the funder's link, so the exposure is a recipient using a namesake's certificate
+  and never a stranger taking the gift.
+- **Also fixed:** the shape was not tied to the goal, so a rating declared as "having it or not" would have
+  settled the whole amount on a single reading with no climb at all, which is exactly what D48 proposes doing
+  next and this contract is immutable; a shape is now fixed when a goal is registered, and a climb refuses to
+  carry a granting day. A granting day in the future settled today. Two guards could never fire and hid the
+  ones that could. The pattern reading the granting date accepted seconds as well as milliseconds, which
+  would have refused every proof rather than paid a wrong one, but nothing said so anywhere.
+- **Left open, and recorded rather than decided:** one certificate can pay two gifts, which may be right or
+  wrong depending on what a funder means; and if the attestor ever scopes a nullifier to the certificate
+  rather than to the gift, the second gift would be permanently dead. Both must be settled before the
+  attestor for this shape is written.
+- State: 49 tests on this contract, 112 across the suite, 13,240 bytes. The three fixes were each checked by
+  putting the defect back and watching the test fail. Still not deployed.
 
