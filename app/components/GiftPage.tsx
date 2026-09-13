@@ -165,6 +165,11 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
   const signedIn = Boolean(address);
   const working = busy !== "idle" || accountStatus === "busy";
   const account = gift.goalAccount;
+  // Everything below used to speak to the recipient whoever was reading. A funder signed in on their own
+  // gift was shown "is in your name" and offered a "take it" the contract refuses, with no way to tell from
+  // the screen which of the two accounts they were in.
+  const mine = gift.youAreTheRecipient;
+  const theirs = signedIn && !mine;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-12">
@@ -172,26 +177,31 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         <p className="text-sm" style={{ color: "var(--muted)" }}>
           Viky
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight">{gift.amountDisplay} is in your name.</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          {theirs ? `You put ${gift.amountDisplay} in their name.` : `${gift.amountDisplay} is in your name.`}
+        </h1>
         <p className="text-lg leading-snug">
-          Someone put it there for your Duolingo. It becomes yours as you go: {gift.perDayDisplay} for each day with your lesson,
-          for {gift.durationDays} days.
+          {theirs
+            ? `It becomes theirs as they go: ${gift.perDayDisplay} for each day with their lesson, for ${gift.durationDays} days.`
+            : `Someone put it there for your Duolingo. It becomes yours as you go: ${gift.perDayDisplay} for each day with your lesson, for ${gift.durationDays} days.`}
         </p>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          {gift.perDayDisplay} goes back to them for each day without it. Nobody else ever profits from a missed day.
+          {theirs
+            ? `${gift.perDayDisplay} comes back to you for each day without it. Nobody else ever profits from a missed day.`
+            : `${gift.perDayDisplay} goes back to them for each day without it. Nobody else ever profits from a missed day.`}
         </p>
       </header>
 
       <section className="grid grid-cols-2 gap-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
         <div>
           <p className="text-xs" style={{ color: "var(--muted)" }}>
-            Yours so far
+            {theirs ? "Theirs so far" : "Yours so far"}
           </p>
           <p className="text-2xl font-semibold">{gift.alreadyTheirsDisplay}</p>
         </div>
         <div>
           <p className="text-xs" style={{ color: "var(--muted)" }}>
-            Went back
+            {theirs ? "Came back to you" : "Went back"}
           </p>
           <p className="text-2xl font-semibold">{gift.returnedDisplay}</p>
         </div>
@@ -220,13 +230,20 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         </section>
       ) : null}
 
+      {theirs && gift.opened ? (
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
+          This gift is being earned by the person you sent it to. There is nothing for you to do: what they
+          earn is theirs, and what they miss comes back to you by itself.
+        </p>
+      ) : null}
+
       {!gift.cancelled && signedIn && !gift.opened ? (
         <button type="button" onClick={open} disabled={working || !token} className={PRIMARY_BUTTON}>
           {busy === "opening" ? "Opening" : "Open my gift"}
         </button>
       ) : null}
 
-      {!gift.cancelled && signedIn && gift.opened && !account.bound && account.source === "funder" && account.username ? (
+      {!gift.cancelled && mine && !account.bound && account.source === "funder" && account.username ? (
         <section className={CARD}>
           <p className="font-medium">Your Duolingo: {account.username}</p>
           <p className="text-sm" style={{ color: "var(--muted)" }}>
@@ -238,7 +255,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         </section>
       ) : null}
 
-      {!gift.cancelled && signedIn && gift.opened && !account.bound && account.source !== "funder" && (!account.code || renaming) ? (
+      {!gift.cancelled && mine && !account.bound && account.source !== "funder" && (!account.code || renaming) ? (
         <section className={CARD}>
           <label className="block text-sm font-medium" htmlFor="duolingo-username">
             Your Duolingo username
@@ -265,7 +282,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         </section>
       ) : null}
 
-      {!gift.cancelled && signedIn && gift.opened && !account.bound && account.source === "recipient" && account.code && !renaming ? (
+      {!gift.cancelled && mine && !account.bound && account.source === "recipient" && account.code && !renaming ? (
         <section className={CARD}>
           <p className="font-medium">Prove {account.username} is yours</p>
           <p className="text-sm">
@@ -284,7 +301,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         </section>
       ) : null}
 
-      {!gift.cancelled && signedIn && account.bound && !gift.finished ? (
+      {!gift.cancelled && mine && account.bound && !gift.finished ? (
         <section className={CARD}>
           <p className="font-medium">{gift.todayDayIndex === 0 ? "Counting starts tomorrow." : `Day ${gift.todayDayIndex} of ${gift.durationDays}. Counted by itself, every day.`}</p>
           {gift.todayDayIndex === 0 ? (
@@ -306,7 +323,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         </section>
       ) : null}
 
-      {!gift.cancelled && signedIn && gift.opened && gift.finished ? (
+      {!gift.cancelled && signedIn && gift.finished ? (
         <section className="space-y-2 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
           <p className="font-medium">This gift is finished.</p>
           <p className="text-sm" style={{ color: "var(--muted)" }}>
@@ -316,7 +333,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         </section>
       ) : null}
 
-      {signedIn && gift.opened && BigInt(gift.earned) > 0n ? (
+      {mine && BigInt(gift.earned) > 0n ? (
         <button type="button" onClick={take} disabled={working} className={SECONDARY_BUTTON}>
           {busy === "taking" ? "One moment" : `Take ${gift.earnedDisplay}`}
         </button>

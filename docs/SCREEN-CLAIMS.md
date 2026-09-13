@@ -59,7 +59,7 @@ says so, and that is the work queue.
 | "One more day is yours." | a day was credited by that reading | `creditedDays` rose by that many | `test/GiftEscrow.t.sol` crediting |
 | "$R has gone back so far, for N days without a lesson." | R has reached the funder and N days were drained | `refundedToFunder` and `drainedDays` | `test/daily-pass.test.ts` for the sending |
 | "This gift is finished." | finalised on chain, nothing more can change | `gift.finalised` | `test/GiftEscrow.t.sol` finalise |
-| "Take $X" | X is theirs and can be moved now | `earnedBalance`, and the contract refuses more | `test/GiftEscrow.t.sol` withdraw |
+| "Take $X" | X is theirs, can be moved now, **and the person reading is the one who may move it** | `earnedBalance`, and the contract refuses more; the button is offered only when the server says this account is the recipient, computed from the chain and never from anything the browser sends | `test/GiftEscrow.t.sol` withdraw; the role gate itself has **no test yet** |
 | every refusal sentence | it names the real reason, and never asks for a step that no longer exists | `CONTRACT_REFUSALS` maps each typed contract error to one sentence | `test/gift-reader.test.ts`, which also fails on a forbidden word or a sentence that still says "check in" |
 
 ## The way out
@@ -136,11 +136,11 @@ this is where the two worst defects of 11 and 12 September came from.
 | "Nothing to do right now" said nothing, in seven different situations | 12 Sep | each says the real reason now |
 | The way out could only be reached from a gift that had already earned something, so a funder paying out their own leftover had no path at all | 12 Sep | the home page offers it whenever the account holds anything |
 | The card minimum was under the form, so the gift amount was chosen before knowing 25 EUR had to be paid | 12 Sep | said above the form now |
-| **The same address serves both roles and only the passkey differs, so the funder could not find where the recipient signs in.** Twice. | 13 Sep | **open**: nothing on screen says which account you are in, or how to be the other one |
+| **The same address serves both roles and only the passkey differs, so the funder could not find where the recipient signs in.** Twice. | 13 Sep | partly fixed: the gift page now speaks to whichever side is reading, but the home page still does not say which account you are in |
+| **The gift page showed the recipient's words and the recipient's buttons to whoever was signed in.** A funder read "$20.00 is in your name", was offered "Take $2.85", and the contract refused it: the screen promised something the code forbids | 13 Sep | fixed the same evening |
 
-The last one has no fix yet, and it is the one that keeps costing time. The gift list distinguishes the two
-roles in words, but only once you are signed in as the right one, which is no help when the question is
-which one you are. Worth an hour before the first real recipients, not a redesign.
+What is left: the home page still does not say which of your accounts you are signed in as, which is the
+question when you hold both. Worth an hour before the first real recipients, not a redesign.
 
 ## Known gaps, in the order they matter
 
