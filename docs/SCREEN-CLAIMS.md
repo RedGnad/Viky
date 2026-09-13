@@ -111,6 +111,19 @@ each. A reviewer checks the contract against the sentences, never against the te
 | An identifier means one gift | `testMilestoneIdsCannotCollideWithTheDailyContract` |
 | The funder answers one question, and the ceiling is computed | `test/milestone-terms.test.ts` |
 
+### The certificate shape
+
+| the promise | exercised by |
+|---|---|
+| No starting point, the granting day is what pays | `testACertificateEarnedInsideTheGiftPays` |
+| Only something granted inside the gift pays | `testACertificateEarnedBeforeTheGiftNeverPays`, `testACertificateEarnedAfterTheDeadlineNeverPays` |
+| The deadline is a date the funder sees | `testTheDeadlineOfACertificateIsADateTheFunderSees` |
+| Only the person and the thing the funder named | `testAnotherPersonsCertificateNeverPays` |
+| Our lateness is ours | `testACertificateReadingSurvivesHoursOfOurOwnLateness` |
+| It comes back at its date, and sooner if nobody opens it | `testACertificateNotObtainedComesBackAtItsDate`, `testACertificateGiftNobodyOpensComesBackWithoutWaitingForItsDate` |
+| The two shapes cannot borrow each other's terms | `testTheTwoShapesCannotBorrowEachOthersTerms` |
+| The page really carries what the proof needs | `test/attested-sources.test.ts`, from six real certificates |
+
 ## Known gaps, in the order they matter
 
 1. The balance shown on the funder screen, and the waiting state that watches for a card payment. Both

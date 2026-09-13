@@ -33,6 +33,9 @@ contract MilestoneGiftTest {
     bytes32 private constant CONTACT = keccak256("viky:contact:v1:email:ama@example.com");
     bytes32 private constant IDENTITY = keccak256("identity:ama");
     bytes32 private constant OTHER_IDENTITY = keccak256("identity:someone-else");
+    bytes32 private constant SUBJECT = keccak256("Ama Diallo|A4W_GyDjEeW5Rwo0txKkgQ");
+    uint8 private constant GOAL_CERTIFICATE = 2;
+    bytes32 private constant CERTIFICATE_PROVIDER = keccak256("viky:provider:coursera-certificate:v1");
 
     MockAUSD private token;
     MilestoneGift private gift;
@@ -56,6 +59,7 @@ contract MilestoneGiftTest {
         gift.setCreationPaused(false);
         gift.setProofPaused(false);
         gift.registerGoal(GOAL_CHESS, CHESS_PROVIDER);
+        gift.registerGoal(GOAL_CERTIFICATE, CERTIFICATE_PROVIDER);
         token.mint(funder, 1_000_000_000);
     }
 
@@ -318,6 +322,120 @@ contract MilestoneGiftTest {
         gift.prove(second, afterwards);
     }
 
+    // --- having it or not: the certificate shape ---------------------------------------------------------
+
+    /// @dev No public page says "not yet obtained": the page appears the day the thing is granted. So there is
+    ///      no starting point to record, and what pays is the day the page itself gives.
+    function testACertificateEarnedInsideTheGiftPays() public {
+        uint256 id = _certificate();
+        uint64 granted = uint64(START + 30 days);
+        VM.warp(START + 31 days);
+        gift.prove(
+            id,
+            _proofOf(
+                id, recipient, SUBJECT, CERTIFICATE_PROVIDER, 1, granted, uint64(VM.getBlockTimestamp()), EVIDENCE_KEY
+            )
+        );
+        MilestoneGift.Gift memory g = gift.getGift(id);
+        require(g.settled && g.earned == AMOUNT, "the whole amount, at once");
+    }
+
+    function testTheDeadlineOfACertificateIsADateTheFunderSees() public {
+        uint256 id = _certificate();
+        require(gift.getGift(id).deadline == uint64(START + uint256(DURATION) * 1 days), "fixed when they paid");
+    }
+
+    /// @dev A certificate obtained before the gift existed was not earned by it.
+    function testACertificateEarnedBeforeTheGiftNeverPays() public {
+        uint256 id = _certificate();
+        uint64 granted = uint64(START - 1 days);
+        VM.warp(START + 10 days);
+        MilestoneGift.ProofAttestation memory before = _proofOf(
+            id, recipient, SUBJECT, CERTIFICATE_PROVIDER, 1, granted, uint64(VM.getBlockTimestamp()), EVIDENCE_KEY
+        );
+        VM.expectRevert(MilestoneGift.EarnedBeforeTheGift.selector);
+        gift.prove(id, before);
+    }
+
+    function testACertificateEarnedAfterTheDeadlineNeverPays() public {
+        uint256 id = _certificate();
+        uint64 granted = uint64(START + uint256(DURATION) * 1 days + 1);
+        VM.warp(START + uint256(DURATION) * 1 days + 2 hours);
+        MilestoneGift.ProofAttestation memory late = _proofOf(
+            id, recipient, SUBJECT, CERTIFICATE_PROVIDER, 1, granted, uint64(VM.getBlockTimestamp()), EVIDENCE_KEY
+        );
+        VM.expectRevert(MilestoneGift.DeadlinePassed.selector);
+        gift.prove(id, late);
+    }
+
+    /// @dev Somebody else's certificate is somebody else's. The funder signed the person and the thing.
+    function testAnotherPersonsCertificateNeverPays() public {
+        uint256 id = _certificate();
+        VM.warp(START + 10 days);
+        MilestoneGift.ProofAttestation memory theirs = _proofOf(
+            id,
+            recipient,
+            keccak256("Someone Else|other-course"),
+            CERTIFICATE_PROVIDER,
+            1,
+            uint64(START + 5 days),
+            uint64(VM.getBlockTimestamp()),
+            EVIDENCE_KEY
+        );
+        VM.expectRevert(MilestoneGift.IdentityMismatch.selector);
+        gift.prove(id, theirs);
+    }
+
+    /// @dev The reading may be hours old here: what it says is a date in the past either way, and holding the
+    ///      first reading to ten minutes is what silently cancelled the grace once already (D46).
+    function testACertificateReadingSurvivesHoursOfOurOwnLateness() public {
+        uint256 id = _certificate();
+        uint256 deadline = START + uint256(DURATION) * 1 days;
+        uint64 observed = uint64(deadline - 2 minutes);
+        VM.warp(deadline + 5 hours);
+        gift.prove(
+            id,
+            _proofOf(id, recipient, SUBJECT, CERTIFICATE_PROVIDER, 1, uint64(START + 10 days), observed, EVIDENCE_KEY)
+        );
+        require(gift.getGift(id).earned == AMOUNT, "our lateness is ours");
+    }
+
+    function testACertificateNotObtainedComesBackAtItsDate() public {
+        uint256 id = _certificate();
+        VM.warp(START + uint256(DURATION) * 1 days + 1);
+        VM.expectRevert(MilestoneGift.TooEarly.selector);
+        gift.expire(id);
+        VM.warp(START + uint256(DURATION) * 1 days + 6 hours + 1);
+        gift.expire(id);
+        require(gift.refundableBalance(id) == AMOUNT, "it all goes back");
+    }
+
+    function testACertificateGiftNobodyOpensComesBackWithoutWaitingForItsDate() public {
+        MilestoneGift.MilestoneParams memory p = _certificateParams(AMOUNT, 365);
+        uint256 id = gift.createGift(p, _authorization(p, FUNDER_KEY));
+        VM.warp(START + 14 days + 6 hours + 1);
+        gift.expire(id);
+        require(gift.refundableBalance(id) == AMOUNT, "the funder does not wait a year for a link nobody opened");
+    }
+
+    function testTheTwoShapesCannotBorrowEachOthersTerms() public {
+        MilestoneGift.MilestoneParams memory climbWithSubject = _paramsFrom(AMOUNT, DURATION, TARGET, TARGET - 200);
+        climbWithSubject.subject = SUBJECT;
+        _expectCreateRevert(climbWithSubject, MilestoneGift.InvalidSubject.selector);
+
+        MilestoneGift.MilestoneParams memory certificateWithCeiling = _certificateParams(AMOUNT, DURATION);
+        certificateWithCeiling.maximumStart = 1;
+        _expectCreateRevert(certificateWithCeiling, MilestoneGift.InvalidMaximumStart.selector);
+
+        MilestoneGift.MilestoneParams memory certificateWithoutSubject = _certificateParams(AMOUNT, DURATION);
+        certificateWithoutSubject.subject = bytes32(0);
+        _expectCreateRevert(certificateWithoutSubject, MilestoneGift.InvalidSubject.selector);
+
+        MilestoneGift.MilestoneParams memory nonsense = _certificateParams(AMOUNT, DURATION);
+        nonsense.shape = 7;
+        _expectCreateRevert(nonsense, MilestoneGift.InvalidShape.selector);
+    }
+
     // --- the deadline -----------------------------------------------------------------------------------
 
     function testTheWholeAmountGoesBackWhenTheDeadlinePasses() public {
@@ -560,6 +678,22 @@ contract MilestoneGiftTest {
 
     function _paramsFrom(uint256 amount, uint32 duration, uint64 target, uint64 maximumStart)
         private
+        returns (MilestoneGift.MilestoneParams memory p)
+    {
+        p = _shaped(amount, duration, target, maximumStart, gift.SHAPE_CLIMB(), bytes32(0));
+        p.goalType = GOAL_CHESS;
+    }
+
+    function _certificateParams(uint256 amount, uint32 duration)
+        private
+        returns (MilestoneGift.MilestoneParams memory p)
+    {
+        p = _shaped(amount, duration, 1, 0, gift.SHAPE_HAVE_OR_NOT(), SUBJECT);
+        p.goalType = GOAL_CERTIFICATE;
+    }
+
+    function _shaped(uint256 amount, uint32 duration, uint64 target, uint64 maximumStart, uint8 shape, bytes32 subject)
+        private
         returns (MilestoneGift.MilestoneParams memory)
     {
         return MilestoneGift.MilestoneParams({
@@ -567,8 +701,10 @@ contract MilestoneGiftTest {
             refundTo: funder,
             recipientContactHash: CONTACT,
             goalType: GOAL_CHESS,
+            shape: shape,
             target: target,
             maximumStart: maximumStart,
+            subject: subject,
             durationDays: duration,
             amount: amount,
             salt: keccak256(abi.encode("salt", ++saltSeed))
@@ -597,8 +733,10 @@ contract MilestoneGiftTest {
                         p.refundTo,
                         p.recipientContactHash,
                         p.goalType,
+                        p.shape,
                         p.target,
                         p.maximumStart,
+                        p.subject,
                         p.durationDays,
                         p.amount,
                         p.salt
@@ -638,6 +776,12 @@ contract MilestoneGiftTest {
         );
     }
 
+    function _certificate() private returns (uint256 id) {
+        MilestoneGift.MilestoneParams memory p = _certificateParams(AMOUNT, DURATION);
+        id = gift.createGift(p, _authorization(p, FUNDER_KEY));
+        gift.claim(id, _claimAttestation(id, recipient, CONTACT, EVIDENCE_KEY));
+    }
+
     function _reached() private returns (uint256 id) {
         id = _started(1200);
         VM.warp(START + 10 days);
@@ -672,6 +816,19 @@ contract MilestoneGiftTest {
         uint64 metric,
         uint64 observedAt,
         uint256 key
+    ) private returns (MilestoneGift.ProofAttestation memory) {
+        return _proofOf(giftId, who, identity, provider, metric, 0, observedAt, key);
+    }
+
+    function _proofOf(
+        uint256 giftId,
+        address who,
+        bytes32 identity,
+        bytes32 provider,
+        uint64 metric,
+        uint64 eventAt,
+        uint64 observedAt,
+        uint256 key
     ) private returns (MilestoneGift.ProofAttestation memory a) {
         uint64 issuedAt = uint64(VM.getBlockTimestamp());
         a = MilestoneGift.ProofAttestation({
@@ -679,6 +836,7 @@ contract MilestoneGiftTest {
             identityHash: identity,
             providerId: provider,
             metricValue: metric,
+            eventAt: eventAt,
             observedAt: observedAt,
             nullifier: keccak256(abi.encode("nullifier", ++nullifierSeed)),
             issuedAt: issuedAt,
@@ -697,6 +855,7 @@ contract MilestoneGiftTest {
                 a.identityHash,
                 a.providerId,
                 a.metricValue,
+                a.eventAt,
                 a.observedAt,
                 a.nullifier,
                 a.issuedAt,

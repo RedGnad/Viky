@@ -35,7 +35,19 @@ interface IERC3009Receiver {
 ///         goal registry maps a goal type to the provider its proofs must carry, and every proof is attested
 ///         off chain by the evidence signer and checked here for signer, freshness, replay and identity.
 ///
-///         The security of this shape lives in one rule, and the rule is about the climb, not the arrival. A
+///         There are two shapes of milestone, because there are two shapes of thing to prove.
+///
+///         **A climb**, for something measured that moves: a rating, a count. The rule is about the climb,
+///         not the arrival, and it is described below.
+///
+///         **Having it or not**, for something that is granted once and has a date: a certificate. There is
+///         no starting point to record, because no public page says "not yet obtained"; the only page there
+///         is appears the day the thing is granted. So the proof carries the day it was granted, attested,
+///         and the contract pays when that day falls between the day the gift was funded and its deadline.
+///         The deadline is fixed at funding, so the funder signs a date they can see, and the attestation
+///         must match the person and the course the funder named, which they signed with the rest.
+///
+///         The security of the climb lives in one rule, and the rule is about the climb, not the arrival. A
 ///         funder signs two numbers: the target to reach, and the highest starting point they will pay from.
 ///         The first reading is always recorded as the start, whatever it says, and a milestone pays only if
 ///         that recorded start was at or below the highest the funder accepted.
@@ -53,7 +65,7 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
     bytes32 public constant CLAIM_TYPEHASH =
         keccak256("Claim(uint256 giftId,address recipient,bytes32 contactHash,uint64 issuedAt,uint64 expiresAt)");
     bytes32 public constant PROOF_TYPEHASH = keccak256(
-        "Proof(uint256 giftId,address recipient,bytes32 identityHash,bytes32 providerId,uint64 metricValue,uint64 observedAt,bytes32 nullifier,uint64 issuedAt,uint64 expiresAt)"
+        "Proof(uint256 giftId,address recipient,bytes32 identityHash,bytes32 providerId,uint64 metricValue,uint64 eventAt,uint64 observedAt,bytes32 nullifier,uint64 issuedAt,uint64 expiresAt)"
     );
     bytes32 public constant WITHDRAW_TYPEHASH =
         keccak256("Withdraw(uint256 giftId,address to,uint256 amount,uint256 nonce,uint64 deadline)");
@@ -79,6 +91,11 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
     /// @dev Milestone gifts are numbered from here up, so an id can never mean two different gifts across the
     ///      two contracts. Records elsewhere key on the id alone, and a collision would merge two gifts.
     uint256 public constant FIRST_ID_FLOOR = 1_000_000;
+
+    /// @dev Something measured that moves: the first reading is the start, and the climb is what pays.
+    uint8 public constant SHAPE_CLIMB = 0;
+    /// @dev Something granted once, with a date: no start, and the granting day is what pays.
+    uint8 public constant SHAPE_HAVE_OR_NOT = 1;
     uint256 private constant DAY = 1 days;
 
     /// @dev `salt` lets two gifts with identical terms still get distinct funding nonces.
@@ -87,10 +104,14 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         address refundTo;
         bytes32 recipientContactHash;
         uint8 goalType;
+        uint8 shape;
         uint64 target;
-        /// @dev The highest starting point the funder will pay a climb from. Signed with the rest of the
-        ///      terms, so it is the funder's number and nobody else's.
+        /// @dev A climb only: the highest starting point the funder will pay a climb from. Signed with the
+        ///      rest of the terms, so it is the funder's number and nobody else's. Zero for the other shape.
         uint64 maximumStart;
+        /// @dev Having it or not only: what the funder named, the person and the thing, bound into one hash
+        ///      and signed with the terms, so a proof of somebody else's certificate cannot pay. Zero for a climb.
+        bytes32 subject;
         uint32 durationDays;
         uint256 amount;
         bytes32 salt;
@@ -121,6 +142,8 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         bytes32 identityHash;
         bytes32 providerId;
         uint64 metricValue;
+        /// @dev Having it or not: the day the thing was granted, as the page itself says it. Zero for a climb.
+        uint64 eventAt;
         uint64 observedAt;
         bytes32 nullifier;
         uint64 issuedAt;
@@ -142,8 +165,10 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         address recipient;
         bytes32 recipientContactHash;
         uint8 goalType;
+        uint8 shape;
         uint64 target;
         uint64 maximumStart;
+        bytes32 subject;
         uint32 durationDays;
         uint256 amount;
         uint256 earned;
@@ -179,10 +204,13 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         address refundTo,
         bytes32 indexed recipientContactHash,
         uint8 goalType,
+        uint8 shape,
         uint64 target,
         uint64 maximumStart,
+        bytes32 subject,
         uint32 durationDays,
-        uint256 amount
+        uint256 amount,
+        uint64 deadline
     );
     event GiftFunded(uint256 indexed giftId, uint256 amount);
     event GiftClaimed(uint256 indexed giftId, address indexed recipient);
@@ -230,6 +258,9 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
     error IdentityMismatch();
     error ProviderMismatch();
     error StaleObservation();
+    error InvalidShape();
+    error InvalidSubject();
+    error EarnedBeforeTheGift();
     error InvalidMaximumStart();
     error StartTooHigh();
     error NotThereYet();
@@ -265,8 +296,10 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
                 p.refundTo,
                 p.recipientContactHash,
                 p.goalType,
+                p.shape,
                 p.target,
                 p.maximumStart,
+                p.subject,
                 p.durationDays,
                 p.amount,
                 p.salt
@@ -292,8 +325,17 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         if (p.recipientContactHash == bytes32(0)) revert InvalidContactHash();
         if (goalProviders[p.goalType] == bytes32(0)) revert UnknownGoal();
         if (p.target == 0) revert InvalidTarget();
-        // A climb has to be a climb: a starting point at or above the target would pay for standing still.
-        if (p.maximumStart >= p.target) revert InvalidMaximumStart();
+        if (p.shape == SHAPE_CLIMB) {
+            // A climb has to be a climb: a starting point at or above the target would pay for standing still.
+            if (p.maximumStart >= p.target) revert InvalidMaximumStart();
+            if (p.subject != bytes32(0)) revert InvalidSubject();
+        } else if (p.shape == SHAPE_HAVE_OR_NOT) {
+            // Nothing to start from, and a proof must name the person and the thing the funder named.
+            if (p.maximumStart != 0) revert InvalidMaximumStart();
+            if (p.subject == bytes32(0)) revert InvalidSubject();
+        } else {
+            revert InvalidShape();
+        }
         if (p.durationDays < MIN_DURATION_DAYS || p.durationDays > MAX_DURATION_DAYS) revert InvalidDuration();
         if (p.amount < MIN_AMOUNT || p.amount > MAX_AMOUNT) revert InvalidAmount();
         if (a.nonce != fundingNonce(p)) revert InvalidAuthorizationNonce();
@@ -311,11 +353,16 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         g.refundTo = p.refundTo;
         g.recipientContactHash = p.recipientContactHash;
         g.goalType = p.goalType;
+        g.shape = p.shape;
         g.target = p.target;
         g.maximumStart = p.maximumStart;
+        g.subject = p.subject;
         g.durationDays = p.durationDays;
         g.amount = p.amount;
         g.fundedAt = uint64(block.timestamp);
+        // Having it or not runs to a date the funder can see, counted from the moment they paid. A climb
+        // cannot: nobody knows when the recipient will take their first reading.
+        if (p.shape == SHAPE_HAVE_OR_NOT) g.deadline = uint64(block.timestamp + uint256(p.durationDays) * DAY);
 
         emit GiftCreated(
             giftId,
@@ -323,10 +370,13 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
             p.refundTo,
             p.recipientContactHash,
             p.goalType,
+            p.shape,
             p.target,
             p.maximumStart,
+            p.subject,
             p.durationDays,
-            p.amount
+            p.amount,
+            g.deadline
         );
         emit GiftFunded(giftId, p.amount);
     }
@@ -379,16 +429,33 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         // same bound to a later proof would undo the grace below, because a reading could then never arrive
         // more than ten minutes after it was taken, and a reading taken in time would be lost to our own
         // lateness. Later proofs are bounded by `lastProofAt`, by the deadline, and by their own nullifier.
-        if (g.identityHash == bytes32(0) && uint256(a.observedAt) + MAX_ATTESTATION_AGE < block.timestamp) {
+        if (
+            g.shape == SHAPE_CLIMB && g.identityHash == bytes32(0)
+                && uint256(a.observedAt) + MAX_ATTESTATION_AGE < block.timestamp
+        ) {
             revert StaleObservation();
         }
         if (a.observedAt <= g.lastProofAt) revert StaleObservation();
         _verifyProofSignature(giftId, a);
         usedNullifiers[a.nullifier] = true;
 
+        if (g.shape == SHAPE_HAVE_OR_NOT) {
+            // Nothing to start: the page only exists once the thing is granted. What pays is the day it says.
+            if (a.identityHash != g.subject) revert IdentityMismatch();
+            if (a.eventAt < g.fundedAt) revert EarnedBeforeTheGift();
+            if (a.eventAt > g.deadline) revert DeadlinePassed();
+            if (block.timestamp > uint256(g.deadline) + PROOF_GRACE) revert DeadlinePassed();
+            if (a.metricValue < g.target) revert NotThereYet();
+            g.lastProofAt = a.observedAt;
+            g.settled = true;
+            g.earned = g.amount;
+            emit MilestoneReached(giftId, g.recipient, a.metricValue, a.eventAt, g.amount);
+            return;
+        }
+
         if (g.identityHash == bytes32(0)) {
             // Recorded whatever it says. Refusing here would revert, leaving no memory of the reading, and the
-            // recipient could keep trying until one suited them. This is the rule the contract rests on.
+            // recipient could keep trying until one suited them. This is the rule the climb rests on.
             g.identityHash = a.identityHash;
             g.startingValue = a.metricValue;
             g.lastProofAt = a.observedAt;
@@ -424,7 +491,17 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         if (g.settled) revert AlreadySettled();
         if (g.refundable > 0 || g.refundedToFunder > 0) revert AlreadySettled();
 
-        bool started = g.identityHash != bytes32(0);
+        bool started = g.shape == SHAPE_HAVE_OR_NOT || g.identityHash != bytes32(0);
+        if (
+            started && g.recipient == address(0)
+                && block.timestamp >= uint256(g.fundedAt) + DORMANT_REFUND_DELAY + PROOF_GRACE
+        ) {
+            // Nobody ever opened it. The funder waits the dormant delay, never the whole deadline.
+            g.settled = true;
+            g.refundable = g.amount;
+            emit GiftExpired(giftId, g.amount);
+            return;
+        }
         if (started) {
             // Not until a reading taken before the deadline can no longer arrive.
             if (block.timestamp <= uint256(g.deadline) + PROOF_GRACE) revert TooEarly();
@@ -552,6 +629,7 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
                 a.identityHash,
                 a.providerId,
                 a.metricValue,
+                a.eventAt,
                 a.observedAt,
                 a.nullifier,
                 a.issuedAt,

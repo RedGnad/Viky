@@ -66,7 +66,32 @@ export const CHESS_RATINGS: AttestedSource = {
   matches: [{ type: "regex", value: '"chess_(?<mode>rapid|blitz|bullet|daily)":\\{"last":\\{"rating":(?<rating>\\d+)' }],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_RATINGS];
+/**
+ * A Coursera certificate, read from its public verification page. No account is needed and the page carries,
+ * in one answer, who it was granted to, which course, the code itself, and the day it was granted.
+ *
+ * Verified on 13 Sep 2026 against six certificates granted between May 2014 and July 2023, all sharing the
+ * same shape. The most recent one reachable was 2023: the codes that are public are the ones people put in
+ * a profile years ago. Nine years of stability is a better sign than a single fresh page, but it is not the
+ * same as one, and a change of shape would break a test here rather than a gift.
+ *
+ * `/verify/<code>` redirects, so the page after the redirect is what is read.
+ */
+export const COURSERA_CERTIFICATE: AttestedSource = {
+  id: "coursera-certificate",
+  service: "Coursera",
+  accepts: (account) => /^[A-Z0-9]{8,20}$/.test(account),
+  url: (account) => `https://www.coursera.org/account/accomplishments/verify/${encodeURIComponent(account.toUpperCase())}`,
+  matches: [
+    { type: "regex", value: '"firstName":"(?<firstName>[^"]*)"' },
+    { type: "regex", value: '"lastName":"(?<lastName>[^"]*)"' },
+    { type: "regex", value: '"courseId":"(?<courseId>[^"]+)"' },
+    { type: "regex", value: '"certificateCode":"(?<certificateCode>[A-Z0-9]+)"' },
+    { type: "regex", value: '"grantedAt":(?<grantedAt>\\d{10,16})' },
+  ],
+};
+
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_RATINGS, COURSERA_CERTIFICATE];
 
 /** The source with that name, or nothing. An unknown name is refused rather than guessed at. */
 export function attestedSource(id: string): AttestedSource | undefined {
