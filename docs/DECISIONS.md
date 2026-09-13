@@ -936,3 +936,31 @@ which shape they speak of; those that say neither hold for both.
 - Credly stays off the menu until a real badge page has been read the same way.
 - State: 42 tests on this contract, 105 across the suite. 12,979 bytes. Still not deployed.
 
+## D48, 13 Sep 2026, a climb should be judged by the day the source itself gives (proposal)
+
+- The question, from the strategy review: Chess.com refreshes its public statistics at most every twelve
+  hours while the proof grace is six, so should a climb be judged by the date the source gives rather than
+  by the time the reading was taken? This entry records what was measured and what it recommends. **Not
+  decided, and nothing is built on it**: it changes the contract, and the contract's third review has not
+  run.
+- **Measured on 13 Sep 2026**, five public accounts, every mode: the date the ratings page gives is not a
+  refresh time at all. It is the day of the last rated game in that mode, and it ranged from three hours old
+  to fourteen months old across the accounts read. So the twelve hours are not a delay before we can see a
+  change; they are a delay before a change exists to see.
+- **What that means.** A rating became what it is at the moment of that last game. That moment, and not the
+  moment we managed to fetch the page, is when the milestone was reached. Judging by it is not a way around
+  a refresh delay, it is the correct reading of what the source says.
+- **And it can only help the recipient.** The last game always happened before we read the page, so the
+  source's date is always at or before the reading. Anything that passes today under "we read it in time"
+  also passes under "the source says it happened in time", and some things that fail today would pass.
+  The dependence on when our own keeper managed to read disappears, which is the same principle as promise
+  10: our lateness is ours.
+- **Recommendation: yes.** Carry the source's own date in `eventAt`, the field the certificate shape already
+  has, and judge a climb's deadline against it for both shapes. The goal type must also fix which mode is
+  read, since the page gives a rating and a date per mode, and a gift for a rapid rating must not be settled
+  by a bullet one.
+- **The residual risk, stated rather than hidden**: if the recipient crosses the target and keeps playing
+  until after the deadline, and we never read in between, the source's date moves past the deadline and the
+  proof fails. With a daily reading that needs every reading to fail for the whole window. It is bounded and
+  it is ours to keep small, not theirs to pay for.
+
