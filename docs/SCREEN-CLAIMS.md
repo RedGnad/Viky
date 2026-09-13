@@ -124,6 +124,24 @@ each. A reviewer checks the contract against the sentences, never against the te
 | The two shapes cannot borrow each other's terms | `testTheTwoShapesCannotBorrowEachOthersTerms` |
 | The page really carries what the proof needs | `test/attested-sources.test.ts`, from six real certificates |
 
+## Found by watching someone use it
+
+Not promises broken, but places the product misled or lost the person. Recorded when they happen, because
+this is where the two worst defects of 11 and 12 September came from.
+
+| what happened | when | state |
+|---|---|---|
+| The gift list told a funder what had come back and never what had been earned, which is the half that says the gift works | 12 Sep | fixed the same day |
+| A wrong Duolingo name trapped the recipient on the code step for ever, while the text told them to reload, which did nothing | 12 Sep | fixed the same day |
+| "Nothing to do right now" said nothing, in seven different situations | 12 Sep | each says the real reason now |
+| The way out could only be reached from a gift that had already earned something, so a funder paying out their own leftover had no path at all | 12 Sep | the home page offers it whenever the account holds anything |
+| The card minimum was under the form, so the gift amount was chosen before knowing 25 EUR had to be paid | 12 Sep | said above the form now |
+| **The same address serves both roles and only the passkey differs, so the funder could not find where the recipient signs in.** Twice. | 13 Sep | **open**: nothing on screen says which account you are in, or how to be the other one |
+
+The last one has no fix yet, and it is the one that keeps costing time. The gift list distinguishes the two
+roles in words, but only once you are signed in as the right one, which is no help when the question is
+which one you are. Worth an hour before the first real recipients, not a redesign.
+
 ## Known gaps, in the order they matter
 
 1. The balance shown on the funder screen and on the way out: both are a chain read with nothing to decide,
