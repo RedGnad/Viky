@@ -342,7 +342,7 @@ contract MilestoneGiftTest {
         VM.expectRevert(MilestoneGift.TooEarly.selector);
         gift.expire(id);
 
-        VM.warp(START + 14 days);
+        VM.warp(START + 14 days + 6 hours);
         gift.expire(id);
         require(gift.refundableBalance(id) == AMOUNT, "all of it comes back");
     }
@@ -366,20 +366,44 @@ contract MilestoneGiftTest {
         gift.expire(id);
     }
 
-    /// @dev The deadline judges the reading, not the transaction. A reading taken two minutes before the end
-    ///      that lands a moment after it was losing the whole gift to the keeper.
-    function testAReadingTakenInTimeStillCountsIfItArrivesAMomentLate() public {
+    /// @dev The deadline judges the reading, not the transaction. The first version of this test allowed one
+    ///      minute of lateness, which the ten minute staleness bound already permitted, so it could not see
+    ///      that the six hour grace did nothing. Five hours is a delay only the grace can survive.
+    function testAReadingTakenInTimeSurvivesHoursOfOurOwnLateness() public {
         uint256 id = _started(1200);
         uint256 deadline = START + uint256(DURATION) * 1 days;
         uint64 observed = uint64(deadline - 2 minutes);
-        VM.warp(deadline - 2 minutes);
+
+        // Our relayer is down for five hours across the deadline. The attestation is re-issued when it comes
+        // back, for the same reading, which is what the evidence signer does.
+        VM.warp(deadline + 5 hours);
         MilestoneGift.ProofAttestation memory inTime =
             _proof(id, recipient, IDENTITY, CHESS_PROVIDER, TARGET, observed, EVIDENCE_KEY);
-
-        // It arrives after the deadline, inside the grace.
-        VM.warp(deadline + 1 minutes);
         gift.prove(id, inTime);
-        require(gift.getGift(id).earned == AMOUNT, "a reading taken in time is not lost to the clock");
+        require(gift.getGift(id).earned == AMOUNT, "our lateness is ours, never theirs to pay for");
+    }
+
+    /// @dev And the bound that does belong to a first reading is still there.
+    function testTheGraceDoesNotLetAnOldReadingStartAGift() public {
+        uint256 id = _claimed();
+        VM.warp(START + 5 hours);
+        MilestoneGift.ProofAttestation memory old =
+            _proof(id, recipient, IDENTITY, CHESS_PROVIDER, 1200, uint64(START), EVIDENCE_KEY);
+        VM.expectRevert(MilestoneGift.StaleObservation.selector);
+        gift.prove(id, old);
+    }
+
+    function testProveAndExpireAreNeverBothShut() public {
+        uint256 id = _started(1200);
+        uint256 deadline = START + uint256(DURATION) * 1 days;
+        uint64 observed = uint64(deadline - 1 minutes);
+
+        // The moment expire opens, a reading taken in time can no longer arrive, and not one second before.
+        VM.warp(deadline + 6 hours);
+        MilestoneGift.ProofAttestation memory lastMoment =
+            _proof(id, recipient, IDENTITY, CHESS_PROVIDER, TARGET, observed, EVIDENCE_KEY);
+        gift.prove(id, lastMoment);
+        require(gift.getGift(id).earned == AMOUNT, "the last instant of the grace still pays");
     }
 
     function testTheKeeperCannotExpireWhileSuchAReadingCouldStillArrive() public {
@@ -404,18 +428,41 @@ contract MilestoneGiftTest {
         VM.expectRevert(MilestoneGift.TooEarly.selector);
         gift.expire(id);
 
-        VM.warp(START + 13 days + 14 days);
+        VM.warp(START + 13 days + 14 days + 6 hours);
         gift.expire(id);
         require(gift.refundableBalance(id) == AMOUNT, "returned only after the full wait from opening");
     }
 
     function testAGiftThatIsOverCannotBeOpened() public {
         uint256 id = _create();
-        VM.warp(START + 14 days);
+        VM.warp(START + 14 days + 6 hours);
         gift.expire(id);
         MilestoneGift.ClaimAttestation memory late = _claimAttestation(id, recipient, CONTACT, EVIDENCE_KEY);
         VM.expectRevert(MilestoneGift.AlreadySettled.selector);
         gift.claim(id, late);
+    }
+
+    function testAGiftReturnedAtItsDeadlineCannotBeClosedAgain() public {
+        uint256 id = _create();
+        VM.warp(START + 14 days + 6 hours + 1);
+        gift.expire(id);
+        VM.expectRevert(MilestoneGift.AlreadySettled.selector);
+        VM.prank(funder);
+        gift.cancel(id);
+    }
+
+    function testTheKeeperCannotBeatAFirstReadingEither() public {
+        uint256 id = _claimed();
+        VM.warp(START + 14 days + 1);
+        VM.expectRevert(MilestoneGift.TooEarly.selector);
+        gift.expire(id);
+
+        // Still time to start it, right up to the grace.
+        VM.warp(START + 14 days + 5 hours);
+        gift.prove(
+            id, _proof(id, recipient, IDENTITY, CHESS_PROVIDER, 1200, uint64(VM.getBlockTimestamp()), EVIDENCE_KEY)
+        );
+        require(gift.getGift(id).identityHash == IDENTITY, "a first reading still lands inside the grace");
     }
 
     function testMilestoneIdsCannotCollideWithTheDailyContract() public {

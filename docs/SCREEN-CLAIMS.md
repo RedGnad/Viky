@@ -102,12 +102,12 @@ each. A reviewer checks the contract against the sentences, never against the te
 | The first reading is always the start | `testARecipientCannotRetryUntilAReadingSuitsThem`, `testTheFirstProofRecordsWhereTheyStoodAndStartsTheClock` |
 | A start above what the funder accepted never pays | `testARecipientCannotRetryUntilAReadingSuitsThem`, checked by putting the flaw back and watching it fail |
 | A milestone already reached is not a milestone | the same test, on a measure that falls |
-| The deadline judges the reading, not the transaction | `testAReadingTakenInTimeStillCountsIfItArrivesAMomentLate`, `testTheKeeperCannotExpireWhileSuchAReadingCouldStillArrive` |
-| An old reading is never a start | `testTheFirstReadingCannotBeAnOldOne` |
+| The deadline judges the reading, not the transaction | `testAReadingTakenInTimeSurvivesHoursOfOurOwnLateness`, `testProveAndExpireAreNeverBothShut`, `testTheKeeperCannotExpireWhileSuchAReadingCouldStillArrive`, checked by putting the defect back |
+| An old reading is never a start | `testTheFirstReadingCannotBeAnOldOne`, `testTheGraceDoesNotLetAnOldReadingStartAGift` |
 | The wait runs from the day it was opened | `testTheWaitForAFirstReadingRunsFromTheDayItWasOpened` |
 | All or nothing, once | `testReachingTheTargetGivesTheWholeAmountAtOnce`, `testAReachedMilestoneCannotBeExpired`, `testExpiringTwiceIsRefused` |
 | Every unit ends with somebody | `testFuzzEveryUnitEndsWithSomebody` |
-| A gift that is over cannot be reopened | `testAGiftThatIsOverCannotBeOpened`, `testTheFunderTakesItBackOnlyBeforeItIsOpened` |
+| A gift that is over cannot be reopened, or closed twice | `testAGiftThatIsOverCannotBeOpened`, `testTheFunderTakesItBackOnlyBeforeItIsOpened`, `testAGiftReturnedAtItsDeadlineCannotBeClosedAgain` |
 | An identifier means one gift | `testMilestoneIdsCannotCollideWithTheDailyContract` |
 | The funder answers one question, and the ceiling is computed | `test/milestone-terms.test.ts` |
 
