@@ -6,7 +6,7 @@ import { useAccount } from "@/src/account/provider";
 // The only account screen of the skeleton: create with Face ID or fingerprint, or sign in.
 // Consumer words only: no wallet, no key, no chain.
 export function AccountPanel() {
-  const { address, hasCredential, status, error, createAccount, signIn, signOut, clearError } = useAccount();
+  const { address, hasCredential, status, error, createAccount, signIn, signOut, useAnotherAccount, clearError } = useAccount();
   const [displayName, setDisplayName] = useState("");
   const busy = status === "busy";
 
@@ -17,9 +17,14 @@ export function AccountPanel() {
         <p className="text-sm" style={{ color: "var(--muted)" }}>
           Your account is protected by your passkey. Nothing to remember, nothing to write down.
         </p>
-        <button type="button" onClick={signOut} className={INLINE_BUTTON}>
-          Sign out
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={signOut} className={INLINE_BUTTON}>
+            Sign out
+          </button>
+          <button type="button" onClick={useAnotherAccount} className={INLINE_BUTTON}>
+            Use another account
+          </button>
+        </div>
       </section>
     );
   }
@@ -69,6 +74,12 @@ export function AccountPanel() {
       >
         {hasCredential ? "Sign in" : "I already have an account"}
       </button>
+
+      {hasCredential ? (
+        <button type="button" onClick={useAnotherAccount} disabled={busy} className={INLINE_BUTTON}>
+          Use another account
+        </button>
+      ) : null}
 
       {error ? (
         <div role="alert" className="space-y-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">

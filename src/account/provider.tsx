@@ -37,6 +37,12 @@ export type AccountContextValue = {
   createAccount: (displayName: string) => Promise<void>;
   signIn: () => Promise<void>;
   signOut: () => void;
+  /**
+   * Signs out and lets go of the passkey this device remembers, so the next sign-in offers the choice again.
+   * Someone who holds two accounts, a funder and a recipient, had no way back to the other one: sign-in
+   * always reused the remembered passkey and nothing on screen said which account that was.
+   */
+  useAnotherAccount: () => void;
   clearError: () => void;
 };
 
@@ -88,6 +94,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       signOut: () => {
         mera.signOut();
         setServerSessionFor(undefined);
+        void signOutOfServer();
+      },
+      useAnotherAccount: () => {
+        mera.forgetCredential();
+        setServerSessionFor(undefined);
+        setError(undefined);
         void signOutOfServer();
       },
       clearError: () => setError(undefined),
