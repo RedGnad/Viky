@@ -67,5 +67,5 @@ export function checkTarget(shape: MilestoneShape, standingToday: number, target
 /** What the screen says, in the funder's own words, before they sign. */
 export function inPlainWords(shape: MilestoneShape, standingToday: number, target: number): string {
   if (shape.allOrNothing) return `The gift is theirs when they have it, and comes back to you if they do not get it in time.`;
-  return `Today they are at ${standingToday}. The gift is theirs when they reach ${target}, and only if they start from under ${startingCeiling(shape, standingToday, target)}.`;
+  return `Today they are at ${standingToday}. The gift is theirs when they reach ${target}, and only if they start from ${startingCeiling(shape, standingToday, target)} or under.`;
 }

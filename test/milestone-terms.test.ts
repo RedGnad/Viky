@@ -15,7 +15,7 @@ test("the funder chooses one number, and the ceiling comes from where the person
   assert.equal(smallestTarget(CHESS_RATING, 1420), 1470);
   assert.equal(
     inPlainWords(CHESS_RATING, 1420, 1500),
-    "Today they are at 1420. The gift is theirs when they reach 1500, and only if they start from under 1430.",
+    "Today they are at 1420. The gift is theirs when they reach 1500, and only if they start from 1430 or under.",
   );
 });
 

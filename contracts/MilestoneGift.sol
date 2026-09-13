@@ -374,9 +374,14 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         if (usedNullifiers[a.nullifier]) revert NullifierAlreadyUsed();
         _validateAttestationWindow(a.issuedAt, a.expiresAt);
         if (uint256(a.observedAt) > block.timestamp + MAX_CLOCK_SKEW) revert InvalidAttestationWindow();
-        // Bounded below as well as above. On the first proof there is no previous reading to compare with, and
-        // an old reading as a starting point would be pure advantage to the recipient.
-        if (uint256(a.observedAt) + MAX_ATTESTATION_AGE < block.timestamp) revert StaleObservation();
+        // Bounded below, but only for the reading that starts a gift: there is no previous reading to compare
+        // it with, and an old one as a starting point would be pure advantage to the recipient. Applying the
+        // same bound to a later proof would undo the grace below, because a reading could then never arrive
+        // more than ten minutes after it was taken, and a reading taken in time would be lost to our own
+        // lateness. Later proofs are bounded by `lastProofAt`, by the deadline, and by their own nullifier.
+        if (g.identityHash == bytes32(0) && uint256(a.observedAt) + MAX_ATTESTATION_AGE < block.timestamp) {
+            revert StaleObservation();
+        }
         if (a.observedAt <= g.lastProofAt) revert StaleObservation();
         _verifyProofSignature(giftId, a);
         usedNullifiers[a.nullifier] = true;
@@ -427,7 +432,8 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
             // Measured from the claim once there is one: opening the link on the last day must not leave a
             // recipient with no time at all to take a first reading.
             uint256 from = g.claimedAt == 0 ? g.fundedAt : g.claimedAt;
-            if (block.timestamp < from + DORMANT_REFUND_DELAY) revert TooEarly();
+            // The same grace as the deadline: the keeper must not land in the same block as a first reading.
+            if (block.timestamp < from + DORMANT_REFUND_DELAY + PROOF_GRACE) revert TooEarly();
         }
 
         g.settled = true;
@@ -476,6 +482,8 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         if (msg.sender != g.funder) revert NotFunder();
         if (g.recipient != address(0)) revert AlreadyClaimed();
         if (g.cancelled) revert GiftIsCancelled();
+        // Already returned by the deadline: closing it again would pay nothing and say twice that it ended.
+        if (g.settled) revert AlreadySettled();
         uint256 amount = g.amount - g.refundedToFunder;
         g.cancelled = true;
         g.refundable = 0;

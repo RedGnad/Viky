@@ -827,7 +827,10 @@ party platform or API, `[U]` not verified).
 2. **A start above what the funder accepted never pays.** The funder signs a highest accepted starting
    point along with the target; a gift started above it can never settle, and comes back at its deadline.
 3. **A milestone already reached is not a milestone.** The two promises above exist so that nobody is paid
-   for what was already true before the gift existed, including on a measure that can fall.
+   for what was already true, including on a measure that can fall. What the contract can actually check is
+   the first reading, not the day the gift was created, so the sentence is: nobody is paid for what was
+   already true **when the gift was started**. For a thing that is had or not had, a certificate, that makes
+   opening the link before the event part of the deal, and the screens say so (D46).
 4. **The deadline judges the reading, not the transaction.** A reading taken before the deadline still pays
    if it arrives a little after, and the keeper cannot return the money while such a reading could still
    arrive. Our relayer's lateness is ours, never the recipient's to pay for.
@@ -847,8 +850,45 @@ party platform or API, `[U]` not verified).
   is the highest starting point you will pay a climb from" is about the contract. So the screen reads where
   the person stands today, adds a small margin for an ordinary day's movement, signs that as the ceiling
   with the rest of the terms, and says it in words: "Today they are at 1420. The gift is theirs when they
-  reach 1500, and only if they start from under 1430." A target too close to today is refused on the screen,
+  reach 1500, and only if they start from 1430 or under." A target too close to today is refused on the screen,
   with a minimum climb. For a certificate the ceiling is zero and the question never appears.
 - That reading at creation is a plain one, not attested, and deliberately so: it decides what the funder is
   shown and agrees to, with their own eyes and their own money. Every reading that moves money is attested.
+
+## D46, 13 Sep 2026, the second milestone review, and the two rules it sent back to the product
+
+- Statement: the second review checked the contract against the ten sentences of D45 rather than against the
+  tests, as instructed, and returned **do not deploy** on one of them. Nine held. The one that broke, promise
+  4, was broken by my own fix from the first review, which is the same pattern the discipline exists to stop.
+- Source: contract review of 13 Sep 2026, sixteen reproductions run outside the repository, including 512
+  random interleavings of every entry point.
+- **What broke, and how.** The first review asked for a lower bound on when a reading was observed, so that
+  an old reading could not start a gift. I applied it to every proof instead of only to the first. The same
+  review had just added a six hour grace so that a reading taken before the deadline could still arrive
+  after it. The two fixes cancelled each other: no reading could arrive more than ten minutes after it was
+  taken, so the grace did nothing, and `prove` was shut from the deadline plus ten minutes while `expire`
+  only opened at the deadline plus six hours. For five hours and fifty minutes neither worked, and a relayer
+  outage across a deadline cost the recipient the whole gift, which is the exact thing promise 4 forbids.
+  My test could not see it because it allowed one minute of lateness, inside the ten the bound permitted.
+  The bound now applies to the first reading only; later proofs are held by the previous reading, by the
+  deadline, and by their own nullifier. The test now uses five hours, a delay only the grace survives, and
+  it was checked by putting the defect back.
+- Also fixed in the same pass: a gift already returned at its deadline could be closed a second time by the
+  funder, paying nothing but ending the same gift twice for anything reading the events; the keeper could
+  land in the same block as a first reading on the dormant path, which now carries the same grace as the
+  deadline; the screen said "start from under 1430" where the contract pays at exactly 1430, so the words
+  now say "1430 or under"; and the deploy script refuses to start the daily contract inside the milestone
+  numbering range, which only the script can prevent since the live contract has no ceiling.
+- **Two things the review sent back to the product rather than to the contract.**
+  1. **A certificate must be opened before it is earned.** The contract can only judge the first reading, so
+     a diploma obtained on Wednesday and a link opened on Thursday gives a first reading that is already at
+     the target, which can never pay. The founding example of D36 fails if the recipient ignores the link
+     until after the exam. This is not fixable on chain without trusting an unattested number, so it is a
+     sentence the screens must carry: the gift has to be opened, and the account named, before the thing is
+     obtained. The funder's screen says it when the gift is made, and the recipient's link says it first.
+  2. **A milestone has a duration, not a date.** The clock starts at the first reading, so "a mission
+     delivered tomorrow" is a day from opening, not a day from Tuesday. The funder screen must say what it
+     signs, in days from the moment the recipient starts.
+- State: 33 tests on this contract, 96 across the suite. Still not deployed. Nine of ten promises held on
+  the second pass; the tenth is fixed, and the fix goes back for a third look before any money touches it.
 

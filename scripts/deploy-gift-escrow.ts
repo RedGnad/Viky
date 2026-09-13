@@ -75,6 +75,9 @@ async function main() {
   }
   const firstGiftId = BigInt(declared);
   if (firstGiftId < 1n) throw new Error("FIRST_GIFT_ID must be at least 1");
+  // Milestone gifts are numbered from a million up and records elsewhere key on the id alone, so the daily
+  // contract must never be told to start inside that range (D45, promise 10).
+  if (firstGiftId >= 1_000_000n) throw new Error("FIRST_GIFT_ID must stay below 1,000,000, which is where milestone gifts begin");
   const previous = process.env.GIFT_ESCROW_ADDRESS?.trim();
   if (previous && /^0x[0-9a-fA-F]{40}$/.test(previous)) {
     const expected = (await publicClient.readContract({
