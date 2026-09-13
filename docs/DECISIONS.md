@@ -811,3 +811,44 @@ party platform or API, `[U]` not verified).
   checked by putting the flaw back and watching it fail. Still not deployed: the corrected contract goes
   back for review before it is.
 
+## D45, 13 Sep 2026, what the milestone contract promises, in sentences
+
+- Statement: the rules of `MilestoneGift` written as sentences, so the second review checks the contract
+  against what the product promises rather than against the tests. The lesson of D44 is that a test encodes
+  what its author believed, and mine pinned the flaw as intended behaviour; sentences written before the
+  review cannot do that, because they say what the promise is, not what the code does.
+- Source: the strategy review of 12 Sep 2026, adopting at the contract level the discipline D39 set for
+  screens.
+
+**The promises. A reviewer should be able to break any of these, or say plainly that they hold.**
+
+1. **The first reading is always the start.** Whatever it says, it is recorded, and there is never a second
+   chance to start from a reading that suits the recipient better.
+2. **A start above what the funder accepted never pays.** The funder signs a highest accepted starting
+   point along with the target; a gift started above it can never settle, and comes back at its deadline.
+3. **A milestone already reached is not a milestone.** The two promises above exist so that nobody is paid
+   for what was already true before the gift existed, including on a measure that can fall.
+4. **The deadline judges the reading, not the transaction.** A reading taken before the deadline still pays
+   if it arrives a little after, and the keeper cannot return the money while such a reading could still
+   arrive. Our relayer's lateness is ours, never the recipient's to pay for.
+5. **An old reading is never a start.** A reading must be recent to begin a gift, as it must be to end one.
+6. **The wait for a first reading runs from the day the gift was opened**, not from the day it was funded,
+   so opening the link late never shortens the time to begin.
+7. **All or nothing, once.** A milestone is reached and the whole amount becomes the recipient's, or the
+   deadline passes and the whole amount goes back. Never both, never in parts, never twice.
+8. **Every unit ends with somebody.** For every gift: what the recipient took, plus what the funder got
+   back, plus what the contract still holds for it, equals the amount that went in.
+9. **A gift that is over cannot be reopened**, and a gift nobody claimed can be taken back by the funder
+   until somebody does.
+10. **An identifier means one gift.** Milestone gifts are numbered from a range the daily contract can never
+    reach, because records elsewhere key on the identifier alone.
+
+- The funder answers one question, not two (this review). "What should they reach" is about the gift; "what
+  is the highest starting point you will pay a climb from" is about the contract. So the screen reads where
+  the person stands today, adds a small margin for an ordinary day's movement, signs that as the ceiling
+  with the rest of the terms, and says it in words: "Today they are at 1420. The gift is theirs when they
+  reach 1500, and only if they start from under 1430." A target too close to today is refused on the screen,
+  with a minimum climb. For a certificate the ceiling is zero and the question never appears.
+- That reading at creation is a plain one, not attested, and deliberately so: it decides what the funder is
+  shown and agrees to, with their own eyes and their own money. Every reading that moves money is attested.
+
