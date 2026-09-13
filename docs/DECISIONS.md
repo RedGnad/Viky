@@ -821,30 +821,47 @@ party platform or API, `[U]` not verified).
   screens.
 
 **The promises. A reviewer should be able to break any of these, or say plainly that they hold.**
+There are two shapes of milestone, because there are two shapes of thing to prove. Promises 1 to 13 say
+which shape they speak of; those that say neither hold for both.
+
+*A climb, for something measured that moves: a rating, a count.*
 
 1. **The first reading is always the start.** Whatever it says, it is recorded, and there is never a second
    chance to start from a reading that suits the recipient better.
 2. **A start above what the funder accepted never pays.** The funder signs a highest accepted starting
    point along with the target; a gift started above it can never settle, and comes back at its deadline.
-3. **A milestone already reached is not a milestone.** The two promises above exist so that nobody is paid
-   for what was already true, including on a measure that can fall. What the contract can actually check is
-   the first reading, not the day the gift was created, so the sentence is: nobody is paid for what was
-   already true **when the gift was started**. For a thing that is had or not had, a certificate, that makes
-   opening the link before the event part of the deal, and the screens say so (D46).
-4. **The deadline judges the reading, not the transaction.** A reading taken before the deadline still pays
-   if it arrives a little after, and the keeper cannot return the money while such a reading could still
-   arrive. Our relayer's lateness is ours, never the recipient's to pay for.
-5. **An old reading is never a start.** A reading must be recent to begin a gift, as it must be to end one.
-6. **The wait for a first reading runs from the day the gift was opened**, not from the day it was funded,
-   so opening the link late never shortens the time to begin.
-7. **All or nothing, once.** A milestone is reached and the whole amount becomes the recipient's, or the
-   deadline passes and the whole amount goes back. Never both, never in parts, never twice.
-8. **Every unit ends with somebody.** For every gift: what the recipient took, plus what the funder got
-   back, plus what the contract still holds for it, equals the amount that went in.
-9. **A gift that is over cannot be reopened**, and a gift nobody claimed can be taken back by the funder
-   until somebody does.
-10. **An identifier means one gift.** Milestone gifts are numbered from a range the daily contract can never
-    reach, because records elsewhere key on the identifier alone.
+3. **Nobody is paid for what was already true when the gift was started.** Promises 1 and 2 exist for that,
+   including on a measure that can fall.
+4. **An old reading is never a start.** A reading must be recent to begin a climb. It does not have to be
+   recent to end one, and holding a later proof to the same bound is what silently cancelled the grace of
+   promise 6 once already.
+5. **The clock starts at the first reading**, so a climb has a duration and not a date, and the wait for
+   that first reading runs from the day the gift was opened, never from the day it was funded.
+
+*Having it or not, for something granted once, with a date: a certificate.*
+
+6. **There is no starting point, because no public page says "not yet obtained".** The page exists only
+   once the thing is granted, so the proof carries the day it was granted, as the page itself states it.
+7. **It pays only for something granted inside the gift**: on or after the day the funder paid, and on or
+   before the deadline. Something obtained the week before was not earned by this gift.
+8. **The deadline is a date the funder can see**, fixed when they paid, not counted from anything the
+   recipient does later.
+9. **It pays only for the person and the thing the funder named**, both bound into the terms they signed,
+   so a proof of somebody else's certificate, or of another course, pays nothing.
+
+*Both shapes.*
+
+10. **The deadline judges the reading, not the transaction.** A reading taken before the deadline still pays
+    if it arrives a little after, and the keeper cannot return the money while such a reading could still
+    arrive. Our relayer's lateness is ours, never the recipient's to pay for.
+11. **All or nothing, once.** The milestone is reached and the whole amount becomes the recipient's, or the
+    deadline passes and the whole amount goes back. Never both, never in parts, never twice.
+12. **Every unit ends with somebody.** For every gift: what the recipient took, plus what the funder got
+    back, plus what the contract still holds for it, equals the amount that went in.
+13. **A gift that is over cannot be reopened or closed again**, a gift nobody claimed can be taken back by
+    the funder until somebody does, and a gift nobody ever opens comes back without waiting for its
+    deadline. An identifier means one gift: milestone gifts are numbered from a range the daily contract
+    can never reach, because records elsewhere key on the identifier alone.
 
 - The funder answers one question, not two (this review). "What should they reach" is about the gift; "what
   is the highest starting point you will pay a climb from" is about the contract. So the screen reads where
@@ -879,16 +896,43 @@ party platform or API, `[U]` not verified).
   deadline; the screen said "start from under 1430" where the contract pays at exactly 1430, so the words
   now say "1430 or under"; and the deploy script refuses to start the daily contract inside the milestone
   numbering range, which only the script can prevent since the live contract has no ceiling.
-- **Two things the review sent back to the product rather than to the contract.**
-  1. **A certificate must be opened before it is earned.** The contract can only judge the first reading, so
-     a diploma obtained on Wednesday and a link opened on Thursday gives a first reading that is already at
-     the target, which can never pay. The founding example of D36 fails if the recipient ignores the link
-     until after the exam. This is not fixable on chain without trusting an unattested number, so it is a
-     sentence the screens must carry: the gift has to be opened, and the account named, before the thing is
-     obtained. The funder's screen says it when the gift is made, and the recipient's link says it first.
-  2. **A milestone has a duration, not a date.** The clock starts at the first reading, so "a mission
-     delivered tomorrow" is a day from opening, not a day from Tuesday. The funder screen must say what it
-     signs, in days from the moment the recipient starts.
+- **One thing the review sent back to the product, and it turned out to be worse than that.** I wrote that a
+  certificate must be opened before it is earned, and that the alternative was not fixable on chain without
+  trusting an unattested number. Both halves were wrong, and D47 records the correction: no Coursera page
+  says "not yet obtained" at all, so the trap was not a timing accident but every certificate gift, even one
+  opened the same day; and the verification page carries the granting date itself, attested like anything
+  else. The contract now has a second shape for it and the sentence is withdrawn.
+- **A climb has a duration, not a date.** Its clock starts at the first reading, so "a mission delivered
+  tomorrow" is a day from the moment they start, not a day from Tuesday. The funder screen must say what it
+  signs. This does not apply to the certificate shape, whose deadline is fixed when the funder pays.
 - State: 33 tests on this contract, 96 across the suite. Still not deployed. Nine of ten promises held on
   the second pass; the tenth is fixed, and the fix goes back for a third look before any money touches it.
+
+## D47, 13 Sep 2026, no page says "not yet obtained", so a certificate needs its own shape
+
+- Statement: I recorded in D46 that a certificate gift fails when the link is opened after the thing is
+  earned, and called it a timing problem the screens should warn about. That understated it, and my reason
+  for not fixing it on chain was wrong. The strategy review checked and found that **no public Coursera page
+  shows "not yet obtained" at all**: `coursera.org/user/<id>` and `/learner/<id>` show nothing of the kind,
+  and `api/memberships.v1` and `api/profiles.v1` answer 405 and 403. The only page that exists appears the
+  day the thing is granted. So a first reading of a certificate is always the certificate, always above a
+  ceiling of zero, and a certificate gift could never pay, whenever the link was opened.
+- The reason I gave for not fixing it, that it would need trusting an unattested number, was also wrong:
+  `coursera.org/verify/<code>` carries, without any account and in one answer, the first name, the last
+  name, the course, the code, and the day it was granted.
+- Source: the strategy review of 13 Sep 2026 for the pages that show nothing; verified here the same day on
+  six real certificates granted between May 2014 and July 2023, all carrying `firstName`, `lastName`,
+  `courseId`, `certificateCode` and `grantedAt` in the same response, with `/verify/<code>` redirecting to
+  `/account/accomplishments/verify/<code>`, which is the page that is read. The most recent one reachable
+  was 2023: publicly shared codes are the ones people put in a profile years ago, so nine years of a stable
+  shape is the evidence, not a fresh page. A change of shape breaks a test here rather than a gift.
+- Consequence: `MilestoneGift` now carries two shapes. **A climb** for something measured that moves, which
+  is unchanged. **Having it or not** for something granted once: no first reading, no ceiling, and the proof
+  carries the granting day the page itself states. It pays when that day falls on or after the day the
+  funder paid and on or before the deadline, and the deadline is fixed at funding, so the funder signs a
+  date they can see. The attestation must also match the person and the course the funder named, both bound
+  into the terms they signed, so somebody else's certificate pays nothing. The promises of D45 are rewritten
+  for both shapes, and the two sentences D46 sent back to the product are withdrawn.
+- Credly stays off the menu until a real badge page has been read the same way.
+- State: 42 tests on this contract, 105 across the suite. 12,979 bytes. Still not deployed.
 
