@@ -59,7 +59,7 @@ says so, and that is the work queue.
 | "One more day is yours." | a day was credited by that reading | `creditedDays` rose by that many | `test/GiftEscrow.t.sol` crediting |
 | "$R has gone back so far, for N days without a lesson." | R has reached the funder and N days were drained | `refundedToFunder` and `drainedDays` | `test/daily-pass.test.ts` for the sending |
 | "This gift is finished." | finalised on chain, nothing more can change | `gift.finalised` | `test/GiftEscrow.t.sol` finalise |
-| "Take $X" | X is theirs, can be moved now, **and the person reading is the one who may move it** | `earnedBalance`, and the contract refuses more; the button is offered only when the server says this account is the recipient, computed from the chain and never from anything the browser sends | `test/GiftEscrow.t.sol` withdraw; the role gate itself has **no test yet** |
+| "Take $X" | X is theirs, can be moved now, **and the person reading is the one who may move it** | `earnedBalance`, and the contract refuses more; the button is offered only when the server says this account is the recipient, computed from the chain and never from anything the browser sends; the signature is put in canonical form before relaying (D51) | `test/GiftEscrow.t.sol` withdraw, `test/signature.test.ts`; the role gate has **no test yet**, and **no withdrawal has ever completed** |
 | every refusal sentence | it names the real reason, and never asks for a step that no longer exists | `CONTRACT_REFUSALS` maps each typed contract error to one sentence | `test/gift-reader.test.ts`, which also fails on a forbidden word or a sentence that still says "check in" |
 
 ## The way out
@@ -139,6 +139,7 @@ this is where the two worst defects of 11 and 12 September came from.
 | **The same address serves both roles and only the passkey differs, so the funder could not find where the recipient signs in.** Twice. | 13 Sep | partly fixed: the gift page now speaks to whichever side is reading, but the home page still does not say which account you are in |
 | **The gift page showed the recipient's words and the recipient's buttons to whoever was signed in.** A funder read "$20.00 is in your name", was offered "Take $2.85", and the contract refused it: the screen promised something the code forbids | 13 Sep | fixed the same evening |
 
+| **No withdrawal had ever worked, and the error said nothing.** The contract's library refuses two signature shapes with a plain string, which our code could not name, so three attempts all read "This could not be recorded" | 14 Sep | signatures are reshaped before relaying; whether it completes is still unproven |
 | **There was no way to sign in as another account.** Sign-in always reused the passkey the device remembered, so someone holding both a funder and a recipient account could never reach the second one | 13 Sep | fixed the same evening: "Use another account", signed in or out |
 
 What is left: the home page still does not say which of your accounts you are signed in as, which is the

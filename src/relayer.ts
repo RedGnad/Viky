@@ -141,6 +141,12 @@ export async function relay(
     await clients.publicClient.simulateContract({ address, abi, functionName, args: args as never, account: clients.address });
   } catch (error) {
     const name = decodeContractError(error);
+    if (!name) {
+      // Not a typed error: an older library inside the contract can revert with a plain string, and the
+      // whole reason then vanishes on its way to the person. Keep it, at least in the log.
+      const raw = error instanceof Error ? error.message.split("\n").find((line) => /revert|reason/i.test(line)) : undefined;
+      console.error(`contract refused without a typed error: ${raw?.trim() ?? String(error).slice(0, 200)}`);
+    }
     throw new RelayerError("REVERTED", name ? `The contract refused: ${name}` : "The contract refused the transaction", name);
   }
   const hash = await clients.walletClient.writeContract({

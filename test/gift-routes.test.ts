@@ -122,7 +122,9 @@ test("a route that needs the relayer fails closed with a typed code when it is n
   const cookie = await cookieFor(A);
   delete process.env.GIFT_ESCROW_ADDRESS;
   const response = await withdrawPost(
-    post("/api/gift/withdraw", { giftId: "1", to: A.address, amount: "1", nonce: "0", deadline: "1", signature: `0x${"11".repeat(65)}` }, { cookie }),
+    // A well shaped signature: the route now reshapes and checks the shape before it looks at anything else,
+    // so 65 bytes of the same digit no longer reaches the configuration check (D51).
+    post("/api/gift/withdraw", { giftId: "1", to: A.address, amount: "1", nonce: "0", deadline: "1", signature: `0x${"11".repeat(64)}1b` }, { cookie }),
   );
   assert.equal(response.status, 503);
   assert.equal((await json(response)).code, "NOT_CONFIGURED");
