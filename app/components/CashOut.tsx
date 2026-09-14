@@ -4,6 +4,7 @@ import { isAddress, type Hex } from "viem";
 import * as mera from "@/src/account/mera";
 import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
+import { sendOwnMoney } from "@/src/client/gift";
 import { approveAusd, readAusdBalance, sendAllMon, sendWithExplicitGas } from "@/src/client/onchain";
 import { formatAusd } from "@/src/gift-reader";
 import { WAY_OUT } from "@/src/rails";
@@ -28,7 +29,7 @@ const SMALLEST_PAYOUT = 5_000_000n;
 // without being told first.
 const FEE_UNDER_A_TENTH = 40_000_000n;
 
-type Step = "look" | "preparing" | "ready" | "sending" | "sent";
+type Step = "look" | "preparing" | "ready" | "sending" | "sent" | "toAccount" | "sentToAccount";
 
 function readable(error: unknown): string {
   if (error instanceof ApiError) return error.message;
@@ -40,6 +41,7 @@ export function CashOut() {
   const [holding, setHolding] = useState<bigint | null>(null);
   const [step, setStep] = useState<Step>("look");
   const [destination, setDestination] = useState("");
+  const [ownAccount, setOwnAccount] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -76,6 +78,23 @@ export function CashOut() {
     } catch (error) {
       setProblem(readable(error));
       setStep("look");
+    }
+  };
+
+  // One signature and nothing else. Their account never calls a contract, which on Monad is not a nicety:
+  // an account below the 10 MON reserve cannot call one at all (D53), and a recipient holds no MON.
+  const sendToOwnAccount = async () => {
+    setProblem(null);
+    setNotice(null);
+    const account = mera.currentAccount();
+    if (!account || holding === null || !isAddress(ownAccount.trim())) return;
+    try {
+      await sendOwnMoney({ account, to: ownAccount.trim() as Hex, amount: holding });
+      setStep("sentToAccount");
+      setNotice("Sent. It is in your other account now.");
+      await refresh();
+    } catch (error) {
+      setProblem(readable(error));
     }
   };
 
@@ -120,6 +139,42 @@ export function CashOut() {
         <button type="button" onClick={() => void prepare()} className={PRIMARY_BUTTON}>
           Get it ready
         </button>
+      ) : null}
+
+      {step === "look" && holding !== null && holding > 0n ? (
+        <button type="button" onClick={() => setStep("toAccount")} className={SECONDARY_BUTTON}>
+          Send it to another account of mine
+        </button>
+      ) : null}
+
+      {step === "toAccount" || step === "sentToAccount" ? (
+        <section className={CARD}>
+          <p className="font-medium">Send it to another account of yours</p>
+          <p className="text-sm" style={{ color: "var(--muted)" }}>
+            Any amount, no fee beyond what it costs to move, which Viky pays. Useful for putting what you
+            earned together in one place before taking it out.
+          </p>
+          <input
+            value={ownAccount}
+            onChange={(event) => setOwnAccount(event.target.value)}
+            placeholder="Paste the line of your other account"
+            className={FIELD}
+            disabled={step === "sentToAccount"}
+          />
+          <button
+            type="button"
+            onClick={() => void sendToOwnAccount()}
+            disabled={!isAddress(ownAccount.trim()) || step === "sentToAccount"}
+            className={PRIMARY_BUTTON}
+          >
+            {step === "sentToAccount" ? "Sent" : "Send it"}
+          </button>
+          {step !== "sentToAccount" ? (
+            <button type="button" onClick={() => setStep("look")} className={INLINE_BUTTON}>
+              Not now
+            </button>
+          ) : null}
+        </section>
       ) : null}
 
       {step === "preparing" ? <p className="text-sm">Getting it ready. This takes a few seconds.</p> : null}

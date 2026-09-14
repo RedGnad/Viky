@@ -26,6 +26,28 @@ export const RECEIVE_WITH_AUTHORIZATION_TYPES = {
   ],
 } as const;
 
+/**
+ * The same thing for a plain transfer, which is how anyone moves their own AUSD without holding MON.
+ *
+ * This matters more than it looks. Monad reserves 10 MON per account, and an account below that can make no
+ * contract call at all, ever (DECISIONS.md D53): moving an ERC-20 is a contract call, so a recipient whose
+ * account holds only what we gave it for gas could never move their own money. With this they sign, and
+ * Viky's relayer submits. Their account needs nothing.
+ *
+ * Unlike the funding authorization, `to` is whoever they chose, so this is checked against nothing but their
+ * own signature, which is exactly what a transfer of their own money should require.
+ */
+export const TRANSFER_WITH_AUTHORIZATION_TYPES = {
+  TransferWithAuthorization: [
+    { name: "from", type: "address" },
+    { name: "to", type: "address" },
+    { name: "value", type: "uint256" },
+    { name: "validAfter", type: "uint256" },
+    { name: "validBefore", type: "uint256" },
+    { name: "nonce", type: "bytes32" },
+  ],
+} as const;
+
 /** An authorization stays valid for one hour: long enough for a funder, short enough to be harmless if lost. */
 export const AUTHORIZATION_VALIDITY_SECONDS = 60 * 60;
 
@@ -80,4 +102,25 @@ export function toContractAuthorization(message: ReceiveAuthorizationMessage, si
   const { v, r, s, yParity } = parseSignature(signature);
   const recovery = v !== undefined ? Number(v) : yParity === undefined ? 27 : 27 + yParity;
   return { validAfter: message.validAfter, validBefore: message.validBefore, nonce: message.nonce, v: recovery, r, s };
+}
+
+export function transferAuthorizationMessage(input: { from: Hex; to: Hex; value: bigint; nonce: Hex; nowSeconds?: number }): ReceiveAuthorizationMessage {
+  const now = BigInt(input.nowSeconds ?? Math.floor(Date.now() / 1_000));
+  return {
+    from: input.from,
+    to: input.to,
+    value: input.value,
+    validAfter: 0n,
+    validBefore: now + BigInt(AUTHORIZATION_VALIDITY_SECONDS),
+    nonce: input.nonce,
+  };
+}
+
+export function transferAuthorizationTypedData(message: ReceiveAuthorizationMessage) {
+  return {
+    domain: AUSD_DOMAIN,
+    types: TRANSFER_WITH_AUTHORIZATION_TYPES,
+    primaryType: "TransferWithAuthorization" as const,
+    message,
+  };
 }

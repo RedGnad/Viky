@@ -75,6 +75,8 @@ says so, and that is the work queue.
 | "Getting it ready" then "ready to be paid out" | the money is in a form the payout service takes | Viky pays for the two steps, then the person's own account converts it | **not yet run end to end**: no payout has ever been made |
 | "Viky sends your money to them" | it goes where the payout service asked, and nowhere else | the person pastes the line and their own account sends it | **none yet** |
 
+| "Send it to another account of mine" | it moves without the person's account needing anything | AUSD's own signed transfer, submitted by the relayer, so no contract call comes from their account (D53) | `test/send-own-money.test.ts`, which also proves changing what they signed breaks it. **Not yet run end to end** |
+
 **Nothing on this screen has been run end to end.** No payout has ever left Viky. Until one has, this
 screen is a path we believe in, not a path we have walked, and nothing anywhere may claim otherwise. The
 run that settles each line, and the leg that settles it, is `docs/spikes/KT1-part-2.md`; each line above

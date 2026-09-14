@@ -1133,3 +1133,34 @@ which shape they speak of; those that say neither hold for both.
   hackathon also grants a Tenderly licence whose whole purpose is to show why a mined transaction failed,
   and it would have answered this in seconds.
 
+## D53, 14 Sep 2026, an account below the reserve can make no contract call, so no user account ever should
+
+- Statement: Monad reserves 10 MON per account, and an account holding less can make **no contract call at
+  all**. Not a costlier one, none. Its only possible transaction is a direct transfer of MON that empties it.
+  Measured, not deduced: a fresh account funded with 0.05 MON and then 0.50 MON was refused a contract call
+  both times with "Signer had insufficient balance", the same words the funder had been reading, and a
+  transfer of MON that did not empty the account was refused too.
+- Source: `docs.monad.xyz/developer-essentials/reserve-balance`, which states the reserve, and that the
+  emptying exception "applies exclusively to direct value transfers from undelegated accounts"; and the
+  measurements above on mainnet, 14 Sep 2026.
+- **What it broke.** The way out asked the recipient's own account to approve an exchange and then to swap,
+  two contract calls. No recipient could ever have done either: we top their account up with 0.05 MON, which
+  is not merely too little, it is the wrong shape of answer. The same rule stopped the funder moving $2.86
+  from one of their own accounts to another, which is what surfaced it.
+- **The principle it forces, and it is a good one.** A person's account must never need to make a contract
+  call. Ever. Viky's relayer is the sender for everything and pays for everything; the person signs an
+  intention and the contract checks that signature. That was already true of every gift, which is why every
+  gift worked. It was not true of the way out, and that is the only reason the way out did not.
+- Consequence, built the same day: AUSD's own `transferWithAuthorization` (confirmed on chain, standard
+  EIP-3009 typehash) lets a person sign a transfer that anyone may submit. Moving your own money now takes
+  one signature and no MON, through `/api/send`, and the way out offers it beside the payout. The relayer
+  chooses nothing: the signature names the destination, the amount and the deadline, and a test proves that
+  changing any of them breaks it. The 0.05 MON top-up is left only for the operator pages and is on the list
+  to delete with them.
+- Still to do, and it is the same shape: the payout itself still asks the recipient's account to approve and
+  swap. It needs a router the relayer calls, which takes the AUSD by signed authorization, exchanges it, and
+  sends the result on. Until that exists, the payout works only for an account holding more than 10 MON.
+- **How this was found.** Not by reading the documentation, which said it plainly and which I had open
+  earlier the same night for a different question. By the funder trying to move his own money five times and
+  refusing to accept "this could not be recorded" as an answer.
+

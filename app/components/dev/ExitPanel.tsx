@@ -78,6 +78,18 @@ export function ExitPanel() {
   const sendBackAusd = async () => {
     const account = mera.currentAccount();
     if (!account || !destinationOk || ausd === null || ausd === 0n) return;
+    // Pay for it first. Letting the send run against an empty account produced a forty line trace saying
+    // "insufficient balance", which is true and useless: the account cannot pay for its own transaction and
+    // only we can fix that. A contract call cannot use Monad's emptying exception, so the balance has to be
+    // there before, not after.
+    try {
+      const topped = await postJson<{ toppedUp: boolean; reason?: string }>("/api/dev/gas-top-up", {});
+      say(topped.toppedUp ? "topped up first" : `no top-up needed (${topped.reason})`);
+      await refresh();
+    } catch (error) {
+      say(`could not top up: ${error instanceof Error ? error.message : String(error)}`);
+      return;
+    }
     setBusy(true);
     try {
       say(`send ${formatAusd(ausd)} to ${destination}`);
