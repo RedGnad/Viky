@@ -10,6 +10,25 @@
 
 import { PAYOUT_MINIMUM } from "./exit-plan";
 
+/**
+ * Where this rail serves nobody, read from its own availability page on 14 Sep 2026 (updated there 2 Sep).
+ * It decides who a gift can be sent to, so it is a fact about the product and not a footnote: a recipient in
+ * one of these countries can be given a gift and can earn it, and can never turn it into money.
+ *
+ * Senegal and Ivory Coast are deliberately absent from this list and were checked for: the cross-border
+ * gifts of the pilot are aimed there, and at France and the rest of the union outside Hungary and Iceland.
+ */
+export const RAIL_CLOSED_IN: readonly string[] = [
+  "Abkhazia", "Afghanistan", "Algeria", "Angola", "Antarctica", "Aland Islands", "Bangladesh", "Barbados",
+  "Belarus", "Bolivia", "Burundi", "Cambodia", "Central African Republic", "Chile", "China", "Colombia",
+  "Congo", "Costa Rica", "Crimea and the occupied territories of eastern Ukraine", "Cuba",
+  "Democratic Republic of the Congo", "Ecuador", "French Guiana", "French Polynesia", "Guam", "Guatemala",
+  "Guinea-Bissau", "Haiti", "Honduras", "Hungary", "Iceland", "Iran", "Iraq", "Kosovo", "Lebanon", "Liberia",
+  "Libya", "Mali", "Morocco", "Myanmar", "Nepal", "Nicaragua", "North Korea", "Pakistan", "Palestine",
+  "Panama", "Papua New Guinea", "Russian Federation", "Sierra Leone", "Somalia", "South Ossetia",
+  "South Sudan", "Sudan", "Syria", "Tunisia", "Venezuela", "Western Sahara", "Yemen", "Zimbabwe",
+];
+
 export type RailHandoff = Readonly<{
   /** The company doing the payment. Named on screen because they are the ones taking the money. */
   name: string;
@@ -29,6 +48,8 @@ export type RailHandoff = Readonly<{
   fee: string;
   /** Anything that stops a person before they start, in the order they would meet it. Measured, never guessed. */
   conditions: readonly string[];
+  /** Countries where this rail will not serve anybody, whatever else is true. */
+  closedIn: readonly string[];
   /** True while the person has to carry something across by hand. A partner rail sets this to false. */
   byHand: true;
 }>;
@@ -40,6 +61,7 @@ export const WAY_IN: RailHandoff = {
   smallest: "25 EUR",
   fee: "about 3.8%",
   conditions: ["Identity check the first time, once.", "A card in your name."],
+  closedIn: RAIL_CLOSED_IN,
   byHand: true,
 };
 
@@ -48,7 +70,7 @@ export const WAY_IN: RailHandoff = {
  *
  * The figures here were wrong until 14 Sep: this said the smallest payout was about five dollars and the fee
  * a flat three euros. Their own limits endpoint says the smallest sell order is 879.889 of the coin, close to
- * twenty one dollars at the rate of that day, and their fee runs to 3.95 % with a floor near three euros. A
+ * twenty one dollars at the rate of that day, and their fee runs to 3.95 % with a floor of four euros. A
  * twenty dollar gift therefore cannot be cashed out here at all, which is a fact about the product and not a
  * detail of the rail, so it is written where a screen can read it.
  */
@@ -57,12 +79,12 @@ export const WAY_OUT: RailHandoff = {
   page: "https://exchange.mercuryo.io/?type=sell&currency=MON&network=MONAD",
   smallest: "about $21.00",
   smallestInCoin: PAYOUT_MINIMUM,
-  fee: "up to 3.95%, and never less than about 3 EUR",
+  fee: "up to 3.95%, and never less than 4 EUR",
   conditions: [
-    "Identity check before your first payout.",
+    "Identity check before your first payout, once.",
     "It goes back to a card, in euros or dollars. Not to a bank account.",
-    "Not available in the United Kingdom.",
     "Once you place the order you have six hours to send it. Viky sends it in one go, straight away.",
   ],
+  closedIn: [...RAIL_CLOSED_IN, "United Kingdom"],
   byHand: true,
 };
