@@ -1273,3 +1273,37 @@ so, and `docs/spikes/KT1-part-2.md` is narrowed to the entry alone, legs 1 to 6.
   themselves during an outage. Closing that needs the contract to know whether a reading was attempted, which
   it cannot. Worth stating on the judges page rather than solving.
 
+## D58, 14 Sep 2026, the design decisions, and two things I had described wrongly
+
+- Statement: the strategy review settled the design questions and corrected two claims of mine. Recorded
+  together because the corrections matter more than the decisions.
+- **Settled.** One home, and every action is a run of screens with a back and no menu; a tab bar only if
+  three real destinations ever appear. The recipient's passkey is asked at "take the gift", not when the link
+  opens. Terms are frozen once accepted, which the contract already enforces. A link nobody opens is refunded
+  fourteen days after funding, and the funder may cancel only before it is opened; a gift opened but never
+  connected to a goal is refunded fourteen days after the opening, which is the case I had not mentioned.
+  Only our own reading failures protect a recipient; a profile turned private or a name changed does not.
+- **Correction 1: the outage protection is ours, not the contract's.** D57 holds the drain when our reading
+  failed, but `drain` is callable by anyone, so a funder who can call a contract could still close the day
+  during an outage. For a pilot among people who know each other that is acceptable. What is not acceptable
+  is a screen that promises it. The wording everywhere, including the judges page, is "Viky waits before
+  closing a day when the reading failed on its side", and never a guarantee. For a later contract: reserve
+  the drain to the keeper for a period, then open it to anyone after a longer one.
+- **Correction 2: the claim link is a bearer link, and I said otherwise.** I told the funder the opening
+  attestation "checks the contact matches the one the funder named". It does not. The route checks the link's
+  secret and then copies the stored contact hash into the attestation, so the contract's comparison is our
+  own value against itself: a consistency check, never an identity check. Anyone holding the link takes the
+  gift. The funder screen now says so at the moment it matters: whoever opens this link takes the gift, send
+  it only to them.
+  **The real lock exists and needed no new code**: the Duolingo name, when the funder fills it in. The
+  recipient cannot then change it, so only that profile can ever earn the gift, whoever opened the link, and
+  the rest returns to the funder. The field is now presented as what it is rather than as a convenience.
+- **The four states of a day**: earned; returned to [name]; still catchable until [local time]; and one for a
+  day not yet judged, whose wording is the reviewer's to choose because "not yet read" speaks to nobody. The
+  display marks today.
+- **Notifications**: the recipient gets at most one reminder a day. The funder gets three moments, not every
+  credited day, since every day is a movement of money and daily notice would be noise.
+- **Order of work, and it binds me**: no design pass now. Mockups come first, directed by the funder, and I
+  implement once, afterwards. Until then I work only on what is not seen: the open points of the exit router,
+  the logic of the rail step, and the data behind the day states and the notifications.
+
