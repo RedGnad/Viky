@@ -49,6 +49,21 @@ contract MockExchange {
     }
 }
 
+/// @dev Stands in for the exchange Viky actually calls: an address that holds no logic of its own and names
+///      a second contract, which its owner may replace at any moment. What the router must notice.
+contract ForwardingExchange is MockExchange {
+    address public getRouter;
+
+    constructor(IERC20 token_, address target) MockExchange(token_) {
+        getRouter = target;
+    }
+
+    /// @dev What the exchange's owner can do at any moment, and the reason the router checks before calling.
+    function pointAt(address target) external {
+        getRouter = target;
+    }
+}
+
 /// @dev A destination that hands its money straight back, which used to look exactly like being paid.
 contract BouncingPayee {
     receive() external payable {

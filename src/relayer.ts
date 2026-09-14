@@ -149,9 +149,14 @@ const RUNAWAY_GAS = 2_000_000n;
  */
 export async function relayGasLimit(
   clients: RelayerClients,
-  call: { address: Hex; abi: Abi; functionName: GiftFunction; args: readonly unknown[] },
+  call: { address: Hex; abi: Abi; functionName: string; args: readonly unknown[]; value?: bigint },
+  /**
+   * A recorded figure to stay above, for calls whose cost is known in advance. The way out has none on
+   * purpose: it carries an exchange's own call inside it, so nobody can write down what it costs. Estimating
+   * is the only honest number there, which is what D52 cost us to learn.
+   */
+  floor = 0n,
 ): Promise<bigint> {
-  const floor = giftGasLimit(call.functionName);
   let estimated: bigint;
   try {
     estimated = await clients.publicClient.estimateContractGas({
@@ -160,10 +165,13 @@ export async function relayGasLimit(
       functionName: call.functionName,
       args: call.args as never,
       account: clients.address,
+      value: call.value,
     });
   } catch {
     // An estimate can fail for reasons the call itself survives. Fall back to the recorded figure rather
-    // than refusing: it is the behaviour we had before, and it is never the lower of the two.
+    // than refusing: it is the behaviour we had before, and it is never the lower of the two. With no
+    // recorded figure there is nothing to fall back to, and declaring a guess is how D52 happened: refuse.
+    if (floor === 0n) throw new RelayerError("NOT_CONFIGURED", "Viky could not work out what this costs. Nothing was changed.");
     return floor;
   }
   const wanted = addMonadGasBuffer(estimated);
@@ -202,7 +210,7 @@ export async function relay(
   // proxy that costs more: the withdrawal path was declared 172,000 against a real cost near 170,000, which
   // is not a margin (D52). Estimated against the chain now, with the same margin on top, and the recorded
   // figure kept only as a floor so a suspiciously low estimate cannot under-declare either.
-  const gas = await relayGasLimit(clients, { address, abi, functionName, args });
+  const gas = await relayGasLimit(clients, { address, abi, functionName, args }, giftGasLimit(functionName));
   const hash = await clients.walletClient.writeContract({
     address,
     abi,

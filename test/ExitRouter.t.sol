@@ -3,7 +3,7 @@ pragma solidity 0.8.30;
 
 import {ExitRouter} from "../contracts/ExitRouter.sol";
 import {MockAUSD} from "./mocks/MockAUSD.sol";
-import {BouncingPayee, GreedyPayee, MockExchange} from "./mocks/MockExchange.sol";
+import {BouncingPayee, ForwardingExchange, GreedyPayee, MockExchange} from "./mocks/MockExchange.sol";
 
 interface VmExit {
     function addr(uint256 privateKey) external returns (address);
@@ -40,7 +40,7 @@ contract ExitRouterTest {
         token = new MockAUSD();
         exchange = new MockExchange(token);
         router = new ExitRouter(token);
-        router.setExchangeAllowed(address(exchange), true);
+        router.setExchangeAllowed(address(exchange), true, address(0));
         token.mint(owner, 1_000_000_000);
         // The exchange has native coin to give back, as a real one does.
         VM.deal(address(exchange), 100 ether);
@@ -250,9 +250,9 @@ contract ExitRouterTest {
     ///      signed authorization, since the token requires the recipient to be the caller.
     function testTheTokenAndThisContractCanNeverBeTheExchange() public {
         VM.expectRevert(ExitRouter.ExchangeNotEligible.selector);
-        router.setExchangeAllowed(address(token), true);
+        router.setExchangeAllowed(address(token), true, address(0));
         VM.expectRevert(ExitRouter.ExchangeNotEligible.selector);
-        router.setExchangeAllowed(address(router), true);
+        router.setExchangeAllowed(address(router), true, address(0));
 
         // And refused at the call as well, whatever the list happens to hold.
         (ExitRouter.ExitTerms memory t, bytes memory call_) = _termsWith(AMOUNT, 1, payoutTo, address(token));
@@ -286,12 +286,52 @@ contract ExitRouterTest {
         require(payoutTo.balance == AMOUNT - 1_000_000, "and two were exchanged");
     }
 
+    // --- an exchange that is only a signpost ------------------------------------------------------------
+
+    /// @dev The exchange Viky calls is one of these: the quote names the signpost, not what it points at, so
+    ///      allowing what it points at instead would break the very calldata the quote asked for.
+    function testAForwardingExchangeWorksWhileItStillPointsWhereItWasAllowed() public {
+        ForwardingExchange signpost = new ForwardingExchange(token, address(0xA11CE));
+        router.setExchangeAllowed(address(signpost), true, address(0xA11CE));
+        VM.deal(address(signpost), 100 ether);
+
+        (ExitRouter.ExitTerms memory t, bytes memory call_) = _termsWith(AMOUNT, 1, payoutTo, address(signpost));
+        ExitRouter.Authorization memory a = _authorization(t, OWNER_KEY);
+        VM.prank(relayer);
+        router.exit(t, a, call_);
+        require(payoutTo.balance == AMOUNT, "paid, through the signpost");
+    }
+
+    /// @dev And the moment its owner moves it, we stop instead of handing an allowance and hand-written
+    ///      calldata to a contract nobody has looked at.
+    function testAForwardingExchangeThatMovedIsRefused() public {
+        ForwardingExchange signpost = new ForwardingExchange(token, address(0xA11CE));
+        router.setExchangeAllowed(address(signpost), true, address(0xA11CE));
+        VM.deal(address(signpost), 100 ether);
+        signpost.pointAt(address(0xDEAD));
+
+        (ExitRouter.ExitTerms memory t, bytes memory call_) = _termsWith(AMOUNT, 1, payoutTo, address(signpost));
+        ExitRouter.Authorization memory a = _authorization(t, OWNER_KEY);
+        VM.prank(relayer);
+        VM.expectRevert(ExitRouter.ExchangeMoved.selector);
+        router.exit(t, a, call_);
+        require(token.allowance(address(router), address(signpost)) == 0, "and it was never given anything");
+    }
+
+    /// @dev Closing an exchange must not leave its old target behind, to be honoured if it is ever reopened.
+    function testClosingAnExchangeForgetsWhereItHadToPoint() public {
+        ForwardingExchange signpost = new ForwardingExchange(token, address(0xA11CE));
+        router.setExchangeAllowed(address(signpost), true, address(0xA11CE));
+        router.setExchangeAllowed(address(signpost), false, address(0xA11CE));
+        require(router.mustPointAt(address(signpost)) == address(0), "forgotten");
+    }
+
     // --- the owner's own doors --------------------------------------------------------------------------
 
     function testOnlyTheOwnerOpensAnExchangeOrSweeps() public {
         VM.prank(relayer);
         (bool allowed,) = address(router)
-            .call(abi.encodeWithSelector(ExitRouter.setExchangeAllowed.selector, address(exchange), false));
+            .call(abi.encodeWithSelector(ExitRouter.setExchangeAllowed.selector, address(exchange), false, address(0)));
         require(!allowed, "not the relayer's to decide");
 
         VM.prank(relayer);
