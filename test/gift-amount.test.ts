@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   cashableOnItsOwn,
   payoutFloorInDollars,
+  payoutFloorInWords,
   roughlyInDollars,
   SMALLEST_CARD_PAYMENT_EUR,
   SUGGESTED_GIFT_EUR,
@@ -26,9 +27,17 @@ test("what a card payment becomes inside Viky matches what was measured on 14 Se
   assert.equal(roughlyInDollars(0.1), 0, "a payment too small to clear the reserve is worth nothing");
 });
 
-test("the payout floor is about twenty one dollars", () => {
+/**
+ * The floor is fixed in the rail's own coin, never in dollars, so its dollar value moves with the rate every
+ * day. That is why a person is told "about $21" and never a figure to the cent: a cent-exact promise could be
+ * broken by the rate before they finished reading it. This pins the arithmetic and the hedged words apart.
+ */
+test("the payout floor is about twenty one dollars, and is only ever said as about", () => {
   const floor = payoutFloorInDollars();
   assert.ok(floor > 20 && floor < 21.5, `floor was ${floor}`);
+  assert.equal(payoutFloorInWords(), "about $21");
+  // The cent-exact figure is ours to compute with and never a person's to read.
+  assert.doesNotMatch(payoutFloorInWords(), /\d\.\d/, "no screen may carry cents on a floor that moves daily");
 });
 
 /** This is the whole reason the suggested amount is what it is. */

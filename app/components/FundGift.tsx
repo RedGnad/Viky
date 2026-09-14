@@ -290,7 +290,7 @@ export function FundGift() {
         {!enough ? (
           <p className="text-sm" style={{ color: "var(--muted)" }}>
             You do not have enough yet, so the next step opens {WAY_IN.name} to pay by card. They keep{" "}
-            {WAY_IN.fee} of what you pay.
+            {WAY_IN.fee} of what you pay, and they check who you are the first time, once.
           </p>
         ) : null}
         {step === "waiting" ? (
