@@ -35,6 +35,8 @@ export class RelayerError extends Error {
     readonly code: RelayerErrorCode,
     message: string,
     readonly contractError?: string,
+    /** The refusal exactly as the chain gave it, when it carried no typed error to name. Operators only. */
+    readonly rawReason?: string,
   ) {
     super(message);
     this.name = "RelayerError";
@@ -109,6 +111,21 @@ export function decodeContractError(error: unknown, abi: Abi = giftEscrowAbi as 
     if (!value || typeof value !== "object" || depth > 6) return undefined;
     const candidate = value as { data?: unknown; cause?: unknown; name?: string; errorName?: string };
     if (typeof candidate.errorName === "string") return candidate.errorName;
+    // The shape viem actually produces for a typed revert: the name arrives decoded, inside `data`, one
+    // layer down. Reading only the hex form missed every one of them, and a refusal the contract named
+    // perfectly well reached the person as "this could not be recorded" (D51).
+    if (candidate.data && typeof candidate.data === "object") {
+      const decoded = candidate.data as { errorName?: unknown; args?: unknown };
+      if (typeof decoded.errorName === "string") {
+        // "Error" is what Solidity calls a refusal written as a sentence rather than as a named error, and
+        // the sentence itself is its only argument. A library inside the contract can refuse this way, so
+        // the sentence is the name here: without it the reason is lost and nothing can be said to anyone.
+        if (decoded.errorName === "Error" && Array.isArray(decoded.args) && typeof decoded.args[0] === "string") {
+          return decoded.args[0];
+        }
+        return decoded.errorName;
+      }
+    }
     if (typeof candidate.data === "string" && candidate.data.startsWith("0x") && candidate.data.length >= 10) {
       try {
         return decodeErrorResult({ abi, data: candidate.data as Hex }).errorName;
@@ -141,13 +158,11 @@ export async function relay(
     await clients.publicClient.simulateContract({ address, abi, functionName, args: args as never, account: clients.address });
   } catch (error) {
     const name = decodeContractError(error);
-    if (!name) {
-      // Not a typed error: an older library inside the contract can revert with a plain string, and the
-      // whole reason then vanishes on its way to the person. Keep it, at least in the log.
-      const raw = error instanceof Error ? error.message.split("\n").find((line) => /revert|reason/i.test(line)) : undefined;
-      console.error(`contract refused without a typed error: ${raw?.trim() ?? String(error).slice(0, 200)}`);
-    }
-    throw new RelayerError("REVERTED", name ? `The contract refused: ${name}` : "The contract refused the transaction", name);
+    // Not a typed error means an older library inside the contract reverted with a plain string, and the
+    // whole reason used to vanish on its way to the person. Keep it on the error itself.
+    const raw = name ? undefined : (error instanceof Error ? error.message : String(error)).slice(0, 400).replace(/\s+/g, " ");
+    if (raw) console.error(`contract refused without a typed error: ${raw}`);
+    throw new RelayerError("REVERTED", name ? `The contract refused: ${name}` : "The contract refused the transaction", name, raw);
   }
   const hash = await clients.walletClient.writeContract({
     address,

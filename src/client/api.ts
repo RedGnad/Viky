@@ -1,16 +1,19 @@
 /** Browser-side calls to Viky's own routes: same origin, cookie included, typed refusals surfaced. */
 
-export type ApiFailure = Readonly<{ status: number; code: string; message: string }>;
+export type ApiFailure = Readonly<{ status: number; code: string; message: string; detail?: string }>;
 
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
+  /** Technical text the server sends only to one of our own accounts, never to a person using Viky. */
+  readonly detail?: string;
 
   constructor(failure: ApiFailure) {
     super(failure.message);
     this.name = "ApiError";
     this.status = failure.status;
     this.code = failure.code;
+    this.detail = failure.detail;
   }
 }
 
@@ -42,11 +45,12 @@ async function unwrap<T>(response: Response): Promise<T> {
     data = null;
   }
   if (!response.ok) {
-    const failure = (data ?? {}) as { error?: string; code?: string };
+    const failure = (data ?? {}) as { error?: string; code?: string; detail?: string };
     throw new ApiError({
       status: response.status,
       code: failure.code ?? (response.status === 401 ? "SIGN_IN_REQUIRED" : "FAILED"),
       message: failure.error ?? "Something went wrong. Nothing was changed.",
+      detail: failure.detail,
     });
   }
   return data as T;
