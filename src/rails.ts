@@ -8,6 +8,8 @@
  * handing over: the amount and the destination would already be filled in.
  */
 
+import { PAYOUT_MINIMUM } from "./exit-plan";
+
 export type RailHandoff = Readonly<{
   /** The company doing the payment. Named on screen because they are the ones taking the money. */
   name: string;
@@ -18,7 +20,15 @@ export type RailHandoff = Readonly<{
    * Measured, never guessed: see the decision each one cites.
    */
   smallest: string;
+  /**
+   * The same smallest amount as the rail itself counts it, when we enforce it. The sentence above is for a
+   * person and drifts with the rate; this is the number a route refuses below, and the two are checked
+   * against each other so a screen can never promise a floor the code does not keep.
+   */
+  smallestInCoin?: bigint;
   fee: string;
+  /** Anything that stops a person before they start, in the order they would meet it. Measured, never guessed. */
+  conditions: readonly string[];
   /** True while the person has to carry something across by hand. A partner rail sets this to false. */
   byHand: true;
 }>;
@@ -29,14 +39,30 @@ export const WAY_IN: RailHandoff = {
   page: "https://exchange.mercuryo.io",
   smallest: "25 EUR",
   fee: "about 3.8%",
+  conditions: ["Identity check the first time, once.", "A card in your name."],
   byHand: true,
 };
 
-/** Taking it out (D20, D41). */
+/**
+ * Taking it out (D20, D41, and corrected by D59 and D60).
+ *
+ * The figures here were wrong until 14 Sep: this said the smallest payout was about five dollars and the fee
+ * a flat three euros. Their own limits endpoint says the smallest sell order is 879.889 of the coin, close to
+ * twenty one dollars at the rate of that day, and their fee runs to 3.95 % with a floor near three euros. A
+ * twenty dollar gift therefore cannot be cashed out here at all, which is a fact about the product and not a
+ * detail of the rail, so it is written where a screen can read it.
+ */
 export const WAY_OUT: RailHandoff = {
   name: "Mercuryo",
   page: "https://exchange.mercuryo.io/?type=sell&currency=MON&network=MONAD",
-  smallest: "about $5.00",
-  fee: "a flat 3 EUR whatever the amount",
+  smallest: "about $21.00",
+  smallestInCoin: PAYOUT_MINIMUM,
+  fee: "up to 3.95%, and never less than about 3 EUR",
+  conditions: [
+    "Identity check before your first payout.",
+    "It goes back to a card, in euros or dollars. Not to a bank account.",
+    "Not available in the United Kingdom.",
+    "Once you place the order you have six hours to send it. Viky sends it in one go, straight away.",
+  ],
   byHand: true,
 };

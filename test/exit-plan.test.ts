@@ -87,3 +87,10 @@ test("the payout minimum is the one the service publishes, not one we chose", ()
   assert.ok(shownFloor(126_505_864_465_022_796_899n) < PAYOUT_MINIMUM, "a few dollars cannot be cashed out");
   assert.equal(floorInWords(PAYOUT_MINIMUM), "879.8892");
 });
+
+test("what the rail step says is the smallest payout is the number the route enforces", async () => {
+  const { WAY_OUT } = await import("../src/rails.js");
+  assert.equal(WAY_OUT.smallestInCoin, PAYOUT_MINIMUM);
+  // The old figure was five dollars and it was wrong by a factor of four (D60).
+  assert.match(WAY_OUT.smallest, /21/);
+});
