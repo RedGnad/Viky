@@ -75,16 +75,19 @@ test("the funder screen converts a payment that arrived, and never one that did 
   assert.deepEqual(nextFundingStep({ held: wanted, arriving: 10n ** 18n, wanted }), { do: "give" });
   assert.deepEqual(nextFundingStep({ held: wanted + 1n, arriving: 0n, wanted }), { do: "give" });
 
-  // Nothing there, or only dust: keep waiting, and never convert what would cost more than it brings.
+  // Nothing there, or not enough above the reserve: keep waiting. Converting below Monad's 10 MON reserve
+  // is refused by the chain, so a small arrival is not something to act on (D56).
   assert.deepEqual(nextFundingStep({ held: 0n, arriving: 0n, wanted }), { do: "wait", sawSomething: false });
   assert.deepEqual(nextFundingStep({ held: 0n, arriving: ARRIVAL_FLOOR, wanted }), { do: "wait", sawSomething: true });
   assert.deepEqual(nextFundingStep({ held: 0n, arriving: ARRIVAL_FLOOR + CONVERSION_RESERVE, wanted }), {
     do: "wait",
     sawSomething: true,
   });
+  // Whatever it decides to convert, what stays behind clears the reserve.
+  assert.ok(CONVERSION_RESERVE > 10n * 10n ** 18n, "more than the 10 MON the chain reserves");
 
-  // A real payment: convert it, keeping back exactly what the conversion costs.
-  const payment = 10n ** 18n;
+  // A real payment: 25 EUR buys roughly 1,163 MON, so this is the ordinary case.
+  const payment = 1_163n * 10n ** 18n;
   assert.deepEqual(nextFundingStep({ held: 0n, arriving: payment, wanted }), {
     do: "convert",
     amount: payment - CONVERSION_RESERVE,
