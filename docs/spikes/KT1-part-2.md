@@ -1,4 +1,8 @@
-# KT1 part two: euros in, euros out, run by the funder alone
+# KT1 part two: euros in, run by the funder alone
+
+**Narrowed on 14 Sep 2026 to the entry alone, legs 1 to 6.** The payout is out of this run until `ExitRouter`
+is deployed and wired, because the screen it used asked the person's own account to make contract calls,
+which Monad refuses below its 10 MON reserve (D53). Legs 7 and 11 return when the router does.
 
 The half of the first chain that has never run. Part one proved everything between the two ends: a gift
 funded, claimed, bound, counted by itself, on mainnet with real money. This proves the two ends, the card
@@ -53,14 +57,21 @@ the screen where the column asks for one.
 | 4 | On Mercuryo: buy 25 EUR of MON on Monad, paste the line, pay by card | funder | euros charged, fee shown, every document asked for, **how long their checks took, as a measurement**, and minutes from payment to arrival. **If refused, their exact words** | yes |
 | 5 | The page notices the money and converts it by itself | funder | minutes from payment to the screen changing, the conversion hash, and how much the 25 EUR finally became | yes |
 | 6 | The gift is created and the link appears | funder | the gift id, the creation hash, seconds from conversion to "It is in their name", and that the copy button says "Copied" | yes |
-| 7 | **Pay out the leftover** from the funder's account, reached from the home page rather than by typing a link: /cash-out, get it ready, open Mercuryo, paste their line, send | funder | the top-up, approval, conversion and sending hashes; what Mercuryo asked for and **how long their checks took**; **euros actually arrived, and when**. If refused, their exact words | yes |
+| ~~7~~ | **Postponed to the router's arrival.** Was: pay out the leftover from the funder's account: /cash-out, get it ready, open Mercuryo, paste their line, send | funder | the top-up, approval, conversion and sending hashes; what Mercuryo asked for and **how long their checks took**; **euros actually arrived, and when**. If refused, their exact words | yes |
 | 8 | Open the link on a device that has never seen Viky, create a passkey, open the gift | recipient | **seconds from opening the link to "is in your name"**, taps, anything that made them hesitate. This is KT5 | yes |
 | 9 | Name the Duolingo account, place the code in the display name, start counting | recipient | seconds to place the code, whether the first read found it, and the words shown when it succeeded | yes |
 | 10 | The next morning, a day is counted with nobody touching anything | nobody | the check-in hash, the day credited, the amount now theirs | yes |
 | 11 | At the end, the recipient takes the money and pays it out. **Taking it ran on 14 Sep 2026**: $2.857142, `0x46c0410f71ff5fbda94d74be15da930f80bd3051a1c065fcbb13b3292ac9bb56`, block 104,636,947, after the gas defect of D52. Paying it out is still untried | recipient | the withdrawal hash, then the same as leg 7, and the euros that arrived | yes |
 | 12 | A day skipped on purpose, then the settling pass sends it back | nobody | the drain and refund hashes, and the funder's screen before and after. **This is the scene for the video** | yes |
 
-Legs 1 to 7 can all be done in one sitting. Legs 8 to 12 follow the gift's own week.
+Legs 1 to 6 can all be done in one sitting. Legs 8 to 10 and 12 follow the gift's own week. Legs 7 and 11,
+the two payouts, wait for `ExitRouter`.
+
+**One thing measured before any of this, on 14 Sep 2026.** Buying 25 EUR puts roughly 1,163 MON in the
+funder's account, at 0.0232 AUSD per MON. The conversion to what a gift holds now leaves **11 MON** behind
+rather than 0.2: Monad reserves 10 per account and refuses a contract call that would end below it, so the
+old figure risked a conversion the chain simply will not take, and euros stuck as MON. It costs about $0.26
+of the purchase and leaves the account able to act again afterwards.
 
 ## What each sentence of the way out is waiting for
 

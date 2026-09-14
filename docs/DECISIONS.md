@@ -1224,3 +1224,31 @@ which shape they speak of; those that say neither hold for both.
 - State: 21 tests on this contract, 133 across the Solidity suite. **Still not deployed**, and still not
   wired to anything.
 
+## D56, 14 Sep 2026, no entity during Metropolis, so one rail and one shape of exit
+
+- Statement: the funder has no active company for the duration of Metropolis. Ramp in production, a Mercuryo
+  partner account, Calm and Immersve all require one, so all four are out of reach. The only rail usable for
+  both directions is Mercuryo's consumer widget, driven by the person's own hands and card.
+- Source: the strategy review of 14 Sep 2026, evening.
+- Consequence for the plan: the entity question recorded as closed in D49 is closed for a second reason, and
+  the partner paths recorded in D29 and D32 stay shut for the whole event. `ExitRouter` stops being an
+  improvement and becomes the only exit we can have: without an entity there is no custodial payout to fall
+  back on, so it is unfrozen and goes to a second review, then deployment, then the Mercuryo sell step.
+  `MilestoneGift` stays frozen.
+
+**Measured before the funder spends anything.** The conversion after a card purchase used to leave 0.2 MON
+behind. Monad reserves 10 MON per account and refuses a contract call that would end below it (D53), so that
+figure risked a conversion the chain will not take, with the euros stuck as MON and nothing to show for them.
+Measured on 14 Sep: a call leaving 0.2 MON from a 14.27 MON balance was accepted by the node, while an
+account starting at 0.50 MON was refused outright, so the rule depends on where the balance starts and I
+could not test execution without risking the owner key. Rather than let the funder pay on an uncertainty,
+both funding paths now keep **11 MON**. At 0.0232 AUSD per MON that is about $0.26 of a 25 EUR purchase, and
+it leaves the account able to act again afterwards instead of stranded.
+
+**The payout is out of the tester's journey.** `CashOut` asked the person's own account to approve an
+exchange and then swap, two contract calls, which no recipient can make. It could never have worked for
+anybody, so leaving it in place would have been a promise the product cannot keep. What remains is moving
+your own money with one signature, which works and has now run for real. In its place, a sentence and no
+button: paying out to a card is coming, and the money stays theirs meanwhile. `docs/SCREEN-CLAIMS.md` says
+so, and `docs/spikes/KT1-part-2.md` is narrowed to the entry alone, legs 1 to 6.
+

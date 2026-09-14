@@ -64,23 +64,18 @@ says so, and that is the work queue.
 
 ## The way out
 
-`app/components/CashOut.tsx`, `app/api/exit/quote/route.ts`, `app/api/exit/gas/route.ts`.
+`app/components/CashOut.tsx`, `app/api/send/route.ts`.
+
+Paying out to a card is **not on this screen**, and that is a decision rather than an omission (D56): the
+only version we had asked the person's own account to approve an exchange and then swap, and Monad refuses
+a contract call from an account below its 10 MON reserve, which every recipient is. It returns through
+`ExitRouter`, where the relayer does the calling.
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
-| "Yours to take out" | it is what the person holds now, after everything already credited | their own balance read from the chain | **none yet** |
-| "This is too small to pay out yet." and "It stays yours either way" | the payout service would refuse it, and nothing is lost by waiting | a floor above the refusal measured in D20; the balance is the person's own and no deadline touches it | **none yet** |
-| "Above about $40.00 that is less than a tenth of what you get" | their flat fee really is under a tenth from there | 3 EUR is under a tenth of 30 EUR, and 40 dollars is above 30 euros at any rate worth planning for, so the figure is never more flattering than the truth | **none yet** |
-| "They keep a flat 3 EUR whatever the amount" | that is the payout service's own fee | measured in D20, 10 Sep 2026 | **not testable by us**, and to be re-read before the freeze |
-| "Getting it ready" then "ready to be paid out" | the money is in a form the payout service takes | Viky pays for the two steps, then the person's own account converts it | **not yet run end to end**: no payout has ever been made |
-| "Viky sends your money to them" | it goes where the payout service asked, and nowhere else | the person pastes the line and their own account sends it | **none yet** |
-
-| "Send it to another account of mine" | it moves without the person's account needing anything | AUSD's own signed transfer, submitted by the relayer, so no contract call comes from their account (D53) | `test/send-own-money.test.ts`, which also proves changing what they signed breaks it. **Not yet run end to end** |
-
-**Nothing on this screen has been run end to end.** No payout has ever left Viky. Until one has, this
-screen is a path we believe in, not a path we have walked, and nothing anywhere may claim otherwise. The
-run that settles each line, and the leg that settles it, is `docs/spikes/KT1-part-2.md`; each line above
-changes from "none yet" to the date it ran, on the day it runs.
+| "Yours to take out" | it is what the person holds now | their own balance read from the chain | **none yet** |
+| "Sending it to your card or your bank is coming. Your money stays yours in the meantime" | it really is theirs, and nothing expires | it sits in their own account; no gift deadline touches money already taken | `test/GiftEscrow.t.sol` withdraw |
+| "Send it to another account of mine" | it moves without their account needing anything | AUSD's own signed transfer, submitted by the relayer, so no contract call comes from their account | `test/send-own-money.test.ts`, and **run for real on 14 Sep 2026**, $2.86 from the recipient's account to the funder's |
 
 ## The account, on every screen
 

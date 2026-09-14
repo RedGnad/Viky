@@ -7,10 +7,15 @@
  * two balances, and nothing else.
  */
 
-/** What stays behind to pay for the conversion itself. */
-export const CONVERSION_RESERVE = 200_000_000_000_000_000n;
-/** Below this, an arriving balance is dust left over from something else, not a card payment. */
-export const ARRIVAL_FLOOR = 50_000_000_000_000_000n;
+/**
+ * What stays behind after the conversion, and it is not a gas reserve: Monad holds 10 MON per account, and
+ * an account that ends below it cannot make a contract call (D53, D56). Leaving 0.2 MON behind, as this did,
+ * risked a conversion that the chain refuses and euros stuck as MON. Eleven costs about $0.26 of a 25 EUR
+ * purchase, measured on 14 Sep 2026 at 0.0232 AUSD per MON, and it leaves the account able to act again.
+ */
+export const CONVERSION_RESERVE = 11_000_000_000_000_000_000n;
+/** Below this much above the reserve, an arriving balance is not a card payment worth converting. */
+export const ARRIVAL_FLOOR = 1_000_000_000_000_000_000n;
 
 export type FundingStep =
   | { do: "give" }

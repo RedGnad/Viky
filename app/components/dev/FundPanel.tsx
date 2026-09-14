@@ -14,7 +14,9 @@ import { AccountPanel } from "../AccountPanel";
 // Dev page: addresses and plumbing are shown on purpose. This is the funder side of KT1, not a product screen.
 
 const NATIVE_MON = "0x0000000000000000000000000000000000000000";
-const GAS_RESERVE_WEI = 200_000_000_000_000_000n; // 0.2 MON kept for the swap's own gas
+// Eleven MON, not a gas reserve: an account that ends a contract call below Monad's 10 MON reserve is
+// refused, so a conversion that leaves less than that can simply fail (D56).
+const GAS_RESERVE_WEI = 11_000_000_000_000_000_000n;
 
 type Quote = { output: string; minOut: string; to: Hex; data: Hex; value: string };
 
