@@ -57,7 +57,7 @@ the screen where the column asks for one.
 | 8 | Open the link on a device that has never seen Viky, create a passkey, open the gift | recipient | **seconds from opening the link to "is in your name"**, taps, anything that made them hesitate. This is KT5 | yes |
 | 9 | Name the Duolingo account, place the code in the display name, start counting | recipient | seconds to place the code, whether the first read found it, and the words shown when it succeeded | yes |
 | 10 | The next morning, a day is counted with nobody touching anything | nobody | the check-in hash, the day credited, the amount now theirs | yes |
-| 11 | At the end, the recipient takes the money and pays it out | recipient | the withdrawal hash, then the same as leg 7, and the euros that arrived | yes |
+| 11 | At the end, the recipient takes the money and pays it out. **Taking it ran on 14 Sep 2026**: $2.857142, `0x46c0410f71ff5fbda94d74be15da930f80bd3051a1c065fcbb13b3292ac9bb56`, block 104,636,947, after the gas defect of D52. Paying it out is still untried | recipient | the withdrawal hash, then the same as leg 7, and the euros that arrived | yes |
 | 12 | A day skipped on purpose, then the settling pass sends it back | nobody | the drain and refund hashes, and the funder's screen before and after. **This is the scene for the video** | yes |
 
 Legs 1 to 7 can all be done in one sitting. Legs 8 to 12 follow the gift's own week.
