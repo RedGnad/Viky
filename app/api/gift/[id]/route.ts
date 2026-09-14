@@ -51,6 +51,9 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         // recipient's words and the recipient's buttons to whoever was signed in, and a funder was offered a
         // "take it" the contract then refused.
         youAreTheRecipient: viewerIsRecipient,
+        // How long a day stays catchable on the contract that holds this gift. The two live contracts do not
+        // agree, which is a defect recorded in D50, so the screen is told rather than left to assume.
+        catchUpSeconds: escrow.toLowerCase() === "0xe04cd59bb93765333200a9da01df83149d4c4d67" ? 86_400 : 86_400 + 6 * 3_600,
         // Used by the recipient's browser to sign a withdraw intent for the right contract; never displayed.
         escrow,
         goalAccount,
