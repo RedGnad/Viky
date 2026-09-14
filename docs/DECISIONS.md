@@ -1018,3 +1018,29 @@ which shape they speak of; those that say neither hold for both.
 - State: 49 tests on this contract, 112 across the suite, 13,240 bytes. The three fixes were each checked by
   putting the defect back and watching the test fail. Still not deployed.
 
+## D50, 14 Sep 2026, the catch-up window is arbitrary and invisible, and a day is not the person's day
+
+- Statement: the funder, using the product as a recipient, asked why a missed day was "still catchable",
+  said he did not remember choosing it, and asked what "tomorrow morning" meant. All three parts of that are
+  fair, and two of them are defects.
+- **What holds.** The reason for a catch-up window at all (D13) is sound: without one, the moment our own
+  daily pass happens to read would decide what counts as missed, and a day would count or not depending on
+  our cron. The window makes the contract decide, not our schedule.
+- **What does not hold.**
+  1. **The length is a round number with no reasoning behind it.** D13 says one day and gives no why. Six
+     hours, or three days, would have been recorded the same way.
+  2. **A day is a UTC day, which is nobody's day.** Midnight UTC is two in the morning in Paris, so a person
+     doing their lesson at 23:30 sees it counted against the next day, and a deadline lands in the middle of
+     their night. The contract cannot know a person's time zone, but the screens can, and say nothing.
+  3. **The two live contracts no longer agree.** Gift 1 catches up for 24 hours, gift 2 for 30, because D30
+     added the reading grace to `CATCH_UP_WINDOW` rather than beside it. One promise, two behaviours, by
+     accident rather than by choice.
+  4. **Nothing on any screen says a day is still catchable, or until when.** The funder had to ask. A real
+     recipient has nobody to ask, and will read "1 of 7 done, 0 missed" on the third day and conclude the
+     product is broken or lenient, neither of which is true.
+- Consequence, and what is not decided here: (4) is a screen fix and is being done now, saying the deadline
+  in the reader's own time. (1), (2) and (3) change the contract and are not mine to settle alone. The
+  question for the strategy side: should a day be the recipient's local day rather than a UTC day, should
+  the window have a stated length and reason, and should the two contracts be reconciled, given that gift 1
+  finishes around 20 Sep and could simply be allowed to end under the old rule.
+

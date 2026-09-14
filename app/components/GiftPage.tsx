@@ -6,6 +6,7 @@ import * as mera from "@/src/account/mera";
 import { ApiError } from "@/src/client/api";
 import { bindGoalAccount, claimGift, countNow, loadGiftStatus, nameGoalAccount, withdrawEarned, type GiftStatus, type PublicOutcome } from "@/src/client/gift";
 import { AccountPanel } from "./AccountPanel";
+import { catchUpDay, deadlineInWords } from "@/src/catch-up";
 
 /**
  * The recipient's whole journey on one screen: see the money in their name, open it with a passkey,
@@ -71,6 +72,19 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
   // A name that does not resolve must not trap the person on the code step for ever: the server accepts
   // a new one for as long as nothing is bound, so the screen has to offer it.
   const [renaming, setRenaming] = useState(false);
+  // The catch-up deadline is a moment, so the screen has to know the time. Kept in state and stepped once a
+  // minute rather than read during a render, and it lets the words change as the deadline comes closer.
+  const [nowMs, setNowMs] = useState(0);
+
+  useEffect(() => {
+    const tick = () => setNowMs(Date.now());
+    const timer = setInterval(tick, 60_000);
+    const first = setTimeout(tick, 0);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(first);
+    };
+  }, []);
   const token = linkKey;
 
   const reload = useCallback(
@@ -170,6 +184,9 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
   // the screen which of the two accounts they were in.
   const mine = gift.youAreTheRecipient;
   const theirs = signedIn && !mine;
+  // The day that is neither counted nor lost. Without naming it, the third day of a window reads
+  // "1 of 7 done, 0 missed" and looks broken (D50).
+  const catchUp = nowMs === 0 ? undefined : catchUpDay(gift, gift.catchUpSeconds, nowMs);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-12">
@@ -312,6 +329,13 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
           <p className="text-sm" style={{ color: "var(--muted)" }}>
             Do your lesson; nothing else. Each morning Viky reads your Duolingo ({account.username}) and counts the day before.
           </p>
+          {catchUp ? (
+            <p className="text-sm font-medium">
+              {theirs
+                ? `Yesterday is not counted yet, and not lost either: a lesson before ${deadlineInWords(catchUp.deadlineMs, nowMs)} still earns that day.`
+                : `Yesterday is not counted yet, and not lost either. Do a lesson before ${deadlineInWords(catchUp.deadlineMs, nowMs)} and it still counts. Two lessons and you are back up to date.`}
+            </p>
+          ) : null}
           {gift.missedDays > 0 ? (
             <p className="text-sm" style={{ color: "var(--muted)" }}>
               {gift.returnedDisplay} has gone back so far, for {gift.missedDays} {gift.missedDays === 1 ? "day" : "days"} without a lesson. The days ahead are still yours to take.

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { announcedAccount, sessionRemaining } from "../src/account/session-gate";
 import { theirsSoFar } from "../src/gift-reader";
+import { catchUpDay, deadlineInWords } from "../src/catch-up";
 import { ARRIVAL_FLOOR, CONVERSION_RESERVE, nextFundingStep } from "../src/funding-step";
 import { AmountError, dollarsToUnits, MIN_GIFT_UNITS } from "../src/money";
 
@@ -100,4 +101,37 @@ test("the funder screen converts a payment that arrived, and never one that did 
     const step = nextFundingStep({ held: 0n, arriving, wanted });
     if (step.do === "convert") assert.ok(step.amount < arriving, `converted ${step.amount} of ${arriving}`);
   }
+});
+
+test("a day that is neither counted nor lost is named, with the moment it stops being catchable", () => {
+  const DAY = 86_400_000;
+  const window = { startDay: 20_708, endDay: 20_714, creditedDays: 1, missedDays: 0 };
+  const catchUp = 86_400 + 6 * 3_600; // the newer contract: 30 hours
+
+  // Day 20709 is open, and catchable until 30 hours after the end of it.
+  const onDayThree = 20_710 * DAY + 3_600_000;
+  const open = catchUpDay(window, catchUp, onDayThree);
+  assert.equal(open?.day, 20_709);
+  assert.equal(open?.deadlineMs, 20_710 * DAY + catchUp * 1_000);
+
+  // Today is never "catchable": it is simply not over.
+  assert.equal(catchUpDay(window, catchUp, 20_709 * DAY + 3_600_000), undefined);
+  // Nothing open once everything so far is settled.
+  assert.equal(catchUpDay({ ...window, creditedDays: 2 }, catchUp, onDayThree), undefined);
+  // Nor once the deadline has passed: by then it is a missed day, and the screen says that instead.
+  assert.equal(catchUpDay(window, catchUp, open!.deadlineMs + 1), undefined);
+  // Nor beyond the end of the window.
+  assert.equal(catchUpDay({ ...window, creditedDays: 7 }, catchUp, onDayThree), undefined);
+  // Nor before anything has started.
+  assert.equal(catchUpDay({ ...window, startDay: 0 }, catchUp, onDayThree), undefined);
+
+  // The two live contracts disagree, which is D50's third point; both are expressible.
+  assert.equal(catchUpDay(window, 86_400, onDayThree)?.deadlineMs, 20_710 * DAY + 86_400_000);
+});
+
+test("the deadline is said in words, never as a day number", () => {
+  const base = Date.UTC(2026, 8, 14, 12, 0);
+  assert.match(deadlineInWords(base + 3_600_000, base, "en-GB"), /^today at /);
+  assert.match(deadlineInWords(base + 20 * 3_600_000, base, "en-GB"), /^tomorrow at /);
+  assert.match(deadlineInWords(base + 72 * 3_600_000, base, "en-GB"), /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) at /);
 });
