@@ -1348,3 +1348,66 @@ and it is the one we enforce. Verified-user caps are 10,000 EUR per transaction,
 earned, it still could not be cashed out on its own. So the way out is not available to every gift, and
 saying so early is part of the product. It also sets a floor under what a first gift should be worth if the
 funder intends the recipient to be able to take it as money, which belongs on the funder's screen.
+
+## D61, 14 Sep 2026: the fifth review, and two tests that were not tests
+
+**Statement.** `ExitRouter` was reviewed a second time, against the promises in plain sentences, with the
+tests read last. The verdict was **do not deploy**, the fifth in a row, and it was right again. Everything it
+found is fixed and every fix is held by a test that was verified by putting the defect back.
+
+**What it found in the contract.**
+
+1. **The token refund was uncapped.** `exit` handed the payer everything of the token that arrived during the
+   exchange call, without asking where it came from, while the calldata sent to that exchange is the signer's
+   to write. An exchange with any way to move a third party's tokens into this contract would have turned
+   that refund into a way to collect them: everyone who ever approved that exchange would have been reachable.
+   The exchange we use cannot, and the reviewer read its bytecode to say so: its only `transferFrom` takes
+   from its caller, and it holds no `delegatecall` and sits behind no proxy. That is a fact about a contract
+   somebody else owns, which is not a thing to rest on. Now capped at what was pulled, `UnexpectedTokens`.
+2. **Two refusals had no name.** An allowed exchange that turned out not to forward made every payout revert
+   with empty data, and an exchange handing back more than it took underflowed into a panic. Both now refuse
+   with a typed error. The second was the same bug as the first finding, seen from the other end.
+3. **The payout stipend was a constant aimed at an address nobody has read.** A payout service's deposit
+   address is usually an ordinary account, but if one ever cost more than 100,000 to pay, nobody could ever
+   be paid and there would be no repair short of deploying again. Now settable by the owner between 30,000
+   and 1,000,000.
+4. **A comment claimed a protection Monad does not give.** It said the bounded stipend stops a destination
+   that burns gas from making the relayer pay again and again. Monad charges the limit a transaction
+   declares, not what it uses (D52), so it does nothing of the sort. What the bound actually does is keep
+   enough gas on our side of the call to hand the person their surplus and check the money really left. The
+   comment says that now. This is the same class of defect as D38 and D58: a sentence about money that no
+   code path makes true.
+5. **Opening an exchange again after closing it silently dropped the pin**, since closing forgets it. Now the
+   contract asks the exchange itself whether it forwards: a forwarder cannot be allowed without a pin
+   (`PinRequired`) or with one that is already stale (`ExchangeMoved`), and one that forwards nothing cannot
+   be given a pin at all.
+6. **Ownership could be renounced**, which would have frozen the allowlist and the sweep for good. Refused.
+
+**What it found in the tests, and this is the part worth keeping.** Two tests passed while proving nothing,
+and the reviewer proved it by mutation rather than by reading:
+
+- `testAnExchangeCannotTakeMoreThanItWasGiven` had the exchange ask for exactly its allowance, so nothing
+  ever failed. Widening the allowance to expose stranded tokens left all 25 tests green.
+- `testTheReceiptSaysWhatWasActuallyExchanged` asserted balances and never read the event it is named after.
+  Putting back the exact receipt defect that D55 records as found and fixed left all 25 tests green. A screen
+  reading that event would have told someone three dollars when it was two.
+
+Both are rewritten and both were checked the same way: the defect goes back, the test must fail. It does.
+By this repository's own rule (D39), a test that would not fail if the promise stopped being kept is not a
+test, and these two were exactly that.
+
+**A false fact in the plan, corrected here.** The build plan and two reports say OpenZeppelin 5.6.1. The
+repository resolves `@openzeppelin/contracts` to **4.9.6** (`package.json`, `remappings.txt`). That is why
+`security/ReentrancyGuard.sol` is the right import path and why `Ownable` needs no constructor argument. The
+contract would not compile against 5.x. Also recorded so nobody rediscovers it at verification time:
+`ExitRouter` needs `via_ir` with the optimizer at 200, or the deployed bytecode will not match the source.
+
+**Two things left open, on purpose, for the screens rather than the contract.**
+
+- Because the destination is sent exactly the order and the surplus goes back to the person, somebody who
+  moves the market between the quote and the transaction can take the whole margin between them. Tightening
+  the slippage we ask the exchange for shrinks that margin at the cost of more refusals; that is a knob to
+  turn with real measurements, not a guess.
+- That surplus reaches the person as native coin, which by this contract's own reason for existing (D53) they
+  cannot spend without another payout. It is a few cents and it is theirs, but it belongs in
+  `docs/SCREEN-CLAIMS.md` when the payout screen is wired, not hidden.

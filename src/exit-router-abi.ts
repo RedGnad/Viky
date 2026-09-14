@@ -31,7 +31,20 @@ export const exitRouterAbi = [
   },
   {
     "type": "function",
-    "name": "PAYOUT_GAS",
+    "name": "MAX_PAYOUT_GAS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIN_PAYOUT_GAS",
     "inputs": [],
     "outputs": [
       {
@@ -315,10 +328,23 @@ export const exitRouterAbi = [
   },
   {
     "type": "function",
+    "name": "payoutGas",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "renounceOwnership",
     "inputs": [],
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -338,6 +364,19 @@ export const exitRouterAbi = [
         "name": "pointsAt",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setPayoutGas",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -470,6 +509,19 @@ export const exitRouterAbi = [
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "PayoutGasSet",
+    "inputs": [
+      {
+        "name": "payoutGas",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "error",
     "name": "DeadlinePassed",
     "inputs": []
@@ -506,12 +558,22 @@ export const exitRouterAbi = [
   },
   {
     "type": "error",
+    "name": "OwnershipIsNotRenounceable",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "PayoutFailed",
     "inputs": []
   },
   {
     "type": "error",
     "name": "PayoutNotDelivered",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PinRequired",
     "inputs": []
   },
   {
@@ -527,6 +589,11 @@ export const exitRouterAbi = [
   {
     "type": "error",
     "name": "TransferShortfall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UnexpectedTokens",
     "inputs": []
   }
 ] as const;

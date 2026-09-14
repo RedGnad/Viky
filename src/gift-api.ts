@@ -74,6 +74,9 @@ const CONTRACT_REFUSALS: Record<string, { code: string; message: string; status:
   ExchangeNotAllowed: { code: "NOT_CONFIGURED", message: "Viky is not ready for this yet. Nothing was taken.", status: 503 },
   ExchangeNotEligible: { code: "NOT_CONFIGURED", message: "Viky is not ready for this yet. Nothing was taken.", status: 503 },
   TermsMismatch: { code: "NOT_CONFIGURED", message: "Viky is not ready for this yet. Nothing was taken.", status: 503 },
+  UnexpectedTokens: { code: "NOT_CONFIGURED", message: "Viky stopped before doing anything, because the exchange did something it does not normally do. Nothing was taken.", status: 503 },
+  PinRequired: { code: "NOT_CONFIGURED", message: "Viky is not ready for this yet. Nothing was taken.", status: 503 },
+  OwnershipIsNotRenounceable: { code: "NOT_CONFIGURED", message: "Viky is not ready for this yet. Nothing was taken.", status: 503 },
 };
 
 /**
