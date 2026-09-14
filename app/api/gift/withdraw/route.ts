@@ -8,6 +8,7 @@ import { relayWithdraw } from "@/src/gift-relay";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
 import { loadGift } from "@/src/gift-store";
+import { canonicalSignature } from "@/src/signature";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,8 +30,15 @@ export async function POST(request: Request) {
     if (!/^\d{1,78}$/.test(giftId)) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
     const to = String(body.to ?? auth.account);
     if (!isAddress(to)) throw new GiftApiError("INVALID_DESTINATION", "The destination is invalid");
-    const signature = String(body.signature ?? "");
-    if (!/^0x[0-9a-fA-F]{130}$/.test(signature)) throw new GiftApiError("INVALID_SIGNATURE", "Please try again");
+    // Reshaped rather than taken as given: the contract's library refuses a recovery byte outside 27 and 28,
+    // and an s in the upper half of the curve, and refuses both with a plain string that reaches the person
+    // as "this could not be recorded". Neither reshaping changes who signed (D51).
+    let signature: Hex;
+    try {
+      signature = canonicalSignature(String(body.signature ?? ""));
+    } catch {
+      throw new GiftApiError("INVALID_SIGNATURE", "Please try again");
+    }
     let amount: bigint;
     let nonce: bigint;
     let deadline: bigint;
@@ -52,7 +60,7 @@ export async function POST(request: Request) {
     }
     if (amount <= 0n || amount > gift.earnedBalance) throw new GiftApiError("NOT_ENOUGH_EARNED", "That is more than what is yours so far", 409);
 
-    const result = await relayWithdraw({ giftId, escrow, to: getAddress(to), amount, nonce, deadline, signature: signature as Hex });
+    const result = await relayWithdraw({ giftId, escrow, to: getAddress(to), amount, nonce, deadline, signature });
     return NextResponse.json({ giftId, sent: true, amount: amount.toString(), hash: result.hash }, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);

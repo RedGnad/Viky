@@ -1057,3 +1057,33 @@ which shape they speak of; those that say neither hold for both.
   the window have a stated length and reason, and should the two contracts be reconciled, given that gift 1
   finishes around 20 Sep and could simply be allowed to end under the old rule.
 
+## D51, 14 Sep 2026, no withdrawal had ever worked, and the reason was invisible by construction
+
+- Statement: the funder tried to take what a gift had earned, the first withdrawal ever attempted in the
+  project, and read "This could not be recorded" three times. That sentence is what our code says when a
+  contract refusal cannot be decoded, and it names nothing.
+- **What the refusal actually was.** Simulating on chain settled it: `withdrawEarned` called directly by the
+  recipient succeeds, so the account, the amount, the contract state and the token transfer are all sound.
+  Only the signed path fails, and it fails inside OpenZeppelin's ECDSA, which refuses two shapes with a plain
+  string rather than a typed error: a recovery byte outside 27 and 28, and an `s` in the upper half of the
+  curve (EIP-2, against malleability). A plain string carries no name, so nothing could map it to a sentence.
+  Both shapes were reproduced on the live contract to confirm they are undecodable.
+- Source: `cast call` against `0xE04CD59bB93765333200a9da01df83149D4C4d67` on 14 Sep 2026: the direct
+  withdrawal returns success, a well shaped signature from the wrong signer returns the typed
+  `InvalidRecipientSignature`, a low recovery byte returns `ECDSA: invalid signature`, and an upper half `s`
+  returns `ECDSA: invalid signature 's' value`.
+- Consequence: every signature is put in canonical form before it is relayed, in `src/signature.ts`. Neither
+  reshaping changes who signed, which is why EIP-2 could require the low form in the first place, so this can
+  only turn a signature the contract would refuse into the same signature it accepts. A test proves both
+  refused shapes recover to the same address after reshaping.
+- **Three failures of ours, not of the person's.**
+  1. Sixteen of the contract's forty-two refusals had no sentence at all, so they all arrived as "this could
+     not be recorded". They have one now, and an unnamed refusal is written to the log.
+  2. A refusal that is not a typed error had nowhere to go, so the reason vanished between the contract and
+     us. The raw reason is kept now.
+  3. The withdrawal path had never run, and nothing said so. `docs/SCREEN-CLAIMS.md` marked "Take $X" as
+     exercised by a Foundry test, which tests the contract and cannot see a signature produced by a browser.
+     A contract test passing is not a path working.
+- Still open: which of the two shapes the browser actually produced. Both are now accepted, so the next
+  attempt settles it by succeeding; if it still fails, the cause is elsewhere and the log will name it.
+
