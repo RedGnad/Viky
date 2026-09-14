@@ -36,10 +36,22 @@ export function roughlyInDollars(euros: number): number {
   return Math.round(coins * DOLLARS_PER_COIN * 100) / 100;
 }
 
-/** The payout rail's smallest order, in dollars, at the same measured rate. */
+/**
+ * The payout rail's smallest order, in dollars, at the same measured rate. For our own arithmetic only.
+ *
+ * Never put this number on a screen. The rail's floor is fixed in its own coin, not in dollars, so the dollar
+ * figure moves every day with the rate: the same floor read $20.56 on 14 Sep and will read something else
+ * tomorrow. A figure to the cent would be a promise the rate can break by lunchtime. `payoutFloorInWords` is
+ * what a person sees.
+ */
 export function payoutFloorInDollars(): number {
   const coins = Number(PAYOUT_MINIMUM / 1_000_000_000_000n) / 1_000_000;
   return Math.round(coins * DOLLARS_PER_COIN * 100) / 100;
+}
+
+/** What a person is told, rounded to a whole dollar and hedged, because the exact figure moves daily. */
+export function payoutFloorInWords(): string {
+  return `about $${Math.round(payoutFloorInDollars())}`;
 }
 
 /**
