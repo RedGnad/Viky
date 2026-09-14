@@ -1252,3 +1252,24 @@ your own money with one signature, which works and has now run for real. In its 
 button: paying out to a card is coming, and the money stays theirs meanwhile. `docs/SCREEN-CLAIMS.md` says
 so, and `docs/spikes/KT1-part-2.md` is narrowed to the entry alone, legs 1 to 6.
 
+## D57, 14 Sep 2026, our own failure must not take someone's day
+
+- Statement: the design research found that Viky took a day away on the clock alone, whether or not the
+  reading had succeeded. Confirmed in the code and fixed the same hour: the daily pass counted, then drained
+  unconditionally, so a worker outage, a source outage or an attestor outage cost the person a day they had
+  earned. Duolingo repairs streaks broken by its own downtime and Beeminder checks a failure is real before
+  charging; we did neither.
+- Source: the design research of 14 Sep 2026; `src/daily-pass.ts` as it stood, where the drain ran after the
+  count with nothing between them.
+- Consequence: a gift whose reading was refused for a reason of ours is left alone for the rest of that pass,
+  and the report says so. Because only a drain closes a day, and `checkIn` has no deadline of its own, the
+  day stays open and the next working reading can still credit it. This is the principle D46 already forced
+  on the milestone contract, applied where it was missing: our lateness is ours, never theirs to pay for.
+- **What is deliberately not covered**, and the distinction is the whole point: a profile that turned
+  private, a name that no longer resolves, a code absent from a display name. Those are true answers about
+  the person's own account, and holding the gift open for them would let anyone stop the clock by hiding
+  their profile. Only `FETCH_FAILED`, `PROOF_INVALID`, `PROOF_MISMATCH` and `NOT_CONFIGURED` hold it.
+- Known limit, written rather than hidden: `drain` is permissionless, so a funder could still settle a day
+  themselves during an outage. Closing that needs the contract to know whether a reading was attempted, which
+  it cannot. Worth stating on the judges page rather than solving.
+

@@ -79,3 +79,62 @@ test("every gift is settled, not just the first", async () => {
   await dailyPass(SETTLING_PASS, deps);
   assert.deepEqual(calls, ["drain:1", "finalise:1", "refund:1", "drain:2", "finalise:2", "refund:2"]);
 });
+
+test("a gift whose reading failed on our side is not settled that day", async () => {
+  // The defect this pins (D57): the pass drained on the clock alone, so a worker outage, a source outage or
+  // an attestor outage took a day from someone who had done the work.
+  const calls: string[] = [];
+  const deps = {
+    boundGifts: async () => [{ giftId: "1" }, { giftId: "2" }],
+    allGifts: async () => [
+      { giftId: "1", escrow: ESCROW },
+      { giftId: "2", escrow: ESCROW },
+    ],
+    read: async () => LIVE,
+    count: async (giftId: string) => {
+      calls.push(`count:${giftId}`);
+      return giftId === "1"
+        ? ({ kind: "refused", giftId, code: "FETCH_FAILED", message: "the source could not be read" } as const)
+        : ({ kind: "already", giftId, reason: "counted_today" } as const);
+    },
+    drain: async (giftId: string) => {
+      calls.push(`drain:${giftId}`);
+      return { hash: "0xd" };
+    },
+    finalise: async (giftId: string) => {
+      calls.push(`finalise:${giftId}`);
+      return { hash: "0xf" };
+    },
+    refund: async (giftId: string) => {
+      calls.push(`refund:${giftId}`);
+      return { hash: "0xr" };
+    },
+    start: async () => ({ address: "0xrelayer", balance: 12n }),
+  } as never;
+
+  const report = await dailyPass(COUNTING_PASS, deps);
+  assert.ok(!calls.some((c) => c.endsWith(":1")) || calls.filter((c) => c.startsWith("drain:1")).length === 0, "nothing settled against a reading that failed");
+  assert.deepEqual(calls, ["count:1", "count:2", "drain:2", "finalise:2"]);
+  assert.ok(report.lines.some((l) => l.giftId === "1" && /reading failed/.test(l.result)), "and the report says why");
+});
+
+test("a refusal about the person's own account is not an excuse to hold the gift open", async () => {
+  // Otherwise anyone could stop the clock by making their profile private.
+  const calls: string[] = [];
+  const deps = {
+    boundGifts: async () => [{ giftId: "1" }],
+    allGifts: async () => [{ giftId: "1", escrow: ESCROW }],
+    read: async () => LIVE,
+    count: async (giftId: string) => ({ kind: "refused", giftId, code: "PROFILE_NOT_FOUND", message: "no public profile" }) as const,
+    drain: async (giftId: string) => {
+      calls.push(`drain:${giftId}`);
+      return { hash: "0xd" };
+    },
+    finalise: async () => ({ hash: "0xf" }),
+    refund: async () => ({ hash: "0xr" }),
+    start: async () => ({ address: "0xrelayer", balance: 12n }),
+  } as never;
+
+  await dailyPass(COUNTING_PASS, deps);
+  assert.deepEqual(calls, ["drain:1"], "the day is settled as any other");
+});
