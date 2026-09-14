@@ -19,7 +19,7 @@ export class GiftApiError extends Error {
 }
 
 /** What the contract's typed errors mean to a person. Unknown names fall back to the name itself. */
-const CONTRACT_REFUSALS: Record<string, { code: string; message: string; status: 400 | 409 }> = {
+const CONTRACT_REFUSALS: Record<string, { code: string; message: string; status: 400 | 404 | 409 | 503 }> = {
   InsufficientProgress: { code: "NOT_ENOUGH_PROGRESS", message: "Not enough yet for a full day. One more lesson and it counts.", status: 409 },
   NothingToCredit: { code: "NOTHING_TO_CREDIT", message: "Everything up to yesterday is already counted. Come back tomorrow.", status: 409 },
   OutsideWindow: { code: "NOT_STARTED", message: "Your gift starts counting tomorrow.", status: 409 },
@@ -46,6 +46,24 @@ const CONTRACT_REFUSALS: Record<string, { code: string; message: string; status:
   NothingToDrain: { code: "NOTHING_TO_DRAIN", message: "No missed day to settle yet.", status: 409 },
   FinalisationTooEarly: { code: "TOO_EARLY", message: "The gift is not over yet.", status: 409 },
   NothingToRefund: { code: "NOTHING_TO_REFUND", message: "Nothing to send back yet.", status: 409 },
+  // Sixteen refusals had no sentence, so a person met "This could not be recorded", which says nothing and
+  // hides which rule stopped them. Some of these should never reach anybody; they still say something true.
+  NotRecipient: { code: "NOT_YOURS", message: "Only the person the gift is for can take it.", status: 409 },
+  NotFunder: { code: "NOT_YOURS", message: "Only the person who sent this gift can do that.", status: 409 },
+  CancellationClosed: { code: "ALREADY_OPENED", message: "This gift was already opened, so it cannot be taken back.", status: 409 },
+  NoBaseline: { code: "NOT_STARTED", message: "This gift has not started counting yet.", status: 409 },
+  GiftNotFound: { code: "UNKNOWN_GIFT", message: "This gift does not exist.", status: 404 },
+  InvalidAddress: { code: "INVALID_DESTINATION", message: "That destination is not valid.", status: 400 },
+  InvalidAmount: { code: "INVALID_AMOUNT", message: "That amount is not allowed.", status: 400 },
+  InvalidDuration: { code: "INVALID_DURATION", message: "That number of days is not allowed.", status: 400 },
+  InvalidDailyTarget: { code: "INVALID_TARGET", message: "That daily target is not allowed.", status: 400 },
+  InvalidContactHash: { code: "INVALID_CONTACT", message: "That way of reaching them is not valid.", status: 400 },
+  InvalidGoalType: { code: "GOAL_NOT_OFFERED", message: "This goal is not offered yet.", status: 400 },
+  InvalidGiftId: { code: "UNKNOWN_GIFT", message: "This gift does not exist.", status: 404 },
+  InvalidProofHash: { code: "REFUSED", message: "That reading could not be used. Try again in a minute.", status: 409 },
+  InvalidEvidenceSigner: { code: "REFUSED", message: "That reading was not signed by Viky. Nothing was changed.", status: 409 },
+  InvalidTokenDecimals: { code: "NOT_CONFIGURED", message: "Viky is not ready for this yet. Nothing was changed.", status: 503 },
+  TransferShortfall: { code: "REFUSED", message: "The money did not move as expected, so nothing was changed.", status: 409 },
 };
 
 export function giftErrorResponse(error: unknown): NextResponse {
@@ -57,6 +75,7 @@ export function giftErrorResponse(error: unknown): NextResponse {
     if (error.code === "REVERTED") {
       const known = error.contractError ? CONTRACT_REFUSALS[error.contractError] : undefined;
       if (known) return NextResponse.json({ error: known.message, code: known.code, contractError: error.contractError }, { status: known.status, headers: NO_STORE });
+      console.error(`contract refusal with no message: ${error.contractError ?? "undecodable"}`);
       return NextResponse.json({ error: "This could not be recorded.", code: "REFUSED", contractError: error.contractError ?? null }, { status: 409, headers: NO_STORE });
     }
     return NextResponse.json({ error: "Viky is not ready for this yet. Nothing was changed.", code: error.code }, { status: 503, headers: NO_STORE });
@@ -69,5 +88,9 @@ export function giftErrorResponse(error: unknown): NextResponse {
 export function contractRefusal(name: string | undefined): { code: string; message: string } | null {
   if (!name) return null;
   const known = CONTRACT_REFUSALS[name];
-  return known ? { code: known.code, message: known.message } : { code: "REFUSED", message: "This could not be recorded." };
+  if (known) return { code: known.code, message: known.message };
+  // A refusal with no sentence is a gap in the table, not a fact about the person. Say so in the log, so the
+  // next one is named rather than guessed at from a screenshot.
+  console.error(`contract refusal with no message: ${name}`);
+  return { code: "REFUSED", message: "This could not be recorded." };
 }
