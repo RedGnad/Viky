@@ -44,7 +44,8 @@ says so, and that is the work queue.
 | "check what you pasted starts and ends like this", with six characters and four | the person can compare what is in the rail's field against what is theirs, before they pay | the first and last characters of their own identifier, taken from the signed-in account and nothing else | **none yet**, and the failure it guards against, paying into the wrong hands, is not recoverable |
 | "Your deposit line is copied." | the clipboard actually took it | the copy is awaited and its failure is caught and said | **none yet**, and the failure path matters: the button used to say nothing either way |
 | "Putting it in their name" then "It is in their name." | the gift exists on chain and the money is in it | `relayCreateGift` waits for finality before returning, and the funder's single signature is both the payment and the consent to these exact terms | `test/GiftEscrow.t.sol` create and fund, `test/gift-routes.test.ts` |
-| the claim link | it opens this gift and nobody else's | the link carries a token whose hash alone is stored | `test/gift-store.test.ts` claim token |
+| "Whoever opens this link takes the gift, so send it only to them" | it is true: the link is a bearer link | the route checks the link's secret, then copies the stored contact hash into the attestation, so the contract compares our own value against itself. There is no identity check anywhere, and saying otherwise was wrong (D58) | `test/gift-store.test.ts` claim token, for the secret only |
+| "only that Duolingo can then earn this gift, whoever opens the link" | naming the goal account really does lock it | the recipient cannot change a name the funder set, and every credited day is bound to that profile | `test/gift-store.test.ts` binding, `test/GiftEscrow.t.sol` identity |
 
 ## The recipient screen
 

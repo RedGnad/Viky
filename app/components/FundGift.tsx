@@ -185,8 +185,9 @@ export function FundGift() {
       <section className="space-y-4 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
         <p className="text-lg font-medium">It is in their name.</p>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          Send them this link. They open it, connect their Duolingo once, and the money becomes theirs day by
-          day. Whatever they do not earn comes back to you by itself.
+          Whoever opens this link takes the gift, so send it only to {contact.trim() || "them"} and to nobody
+          else. They open it, and the money becomes theirs day by day. Whatever they do not earn comes back to
+          you by itself.
         </p>
         <p className="select-all break-all rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-800">{created.claimUrl}</p>
         <button
@@ -244,6 +245,10 @@ export function FundGift() {
           placeholder="Their Duolingo name, if you know it"
           className={FIELD}
         />
+        <p className="text-xs" style={{ color: "var(--muted)" }}>
+          Naming it is the surest thing you can do: only that Duolingo can then earn this gift, whoever opens
+          the link. Leave it empty and they name their own.
+        </p>
         <div className="grid grid-cols-3 gap-2">
           <label className="text-xs" style={{ color: "var(--muted)" }}>
             How much
