@@ -3,7 +3,7 @@ pragma solidity 0.8.30;
 
 import {ExitRouter} from "../contracts/ExitRouter.sol";
 import {MockAUSD} from "./mocks/MockAUSD.sol";
-import {MockExchange} from "./mocks/MockExchange.sol";
+import {BouncingPayee, GreedyPayee, MockExchange} from "./mocks/MockExchange.sol";
 
 interface VmExit {
     function addr(uint256 privateKey) external returns (address);
@@ -226,6 +226,66 @@ contract ExitRouterTest {
         router.exit(noFloor, a3, c3);
     }
 
+    // --- what the review found ---------------------------------------------------------------------------
+
+    /// @dev A payout call that does not revert is not a payment. Paying into this contract, or into one that
+    ///      hands the money back, used to return success and emit a full receipt while nothing left.
+    function testMoneyThatDoesNotLeaveIsNotAPayment() public {
+        (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
+            _exit(AMOUNT, 1, address(router));
+        VM.prank(relayer);
+        VM.expectRevert(ExitRouter.InvalidAddress.selector);
+        router.exit(t, a, call_);
+
+        BouncingPayee bounce = new BouncingPayee();
+        (ExitRouter.ExitTerms memory t2, ExitRouter.Authorization memory a2, bytes memory c2) =
+            _exit(AMOUNT, 1, address(bounce));
+        VM.prank(relayer);
+        VM.expectRevert(ExitRouter.PayoutNotDelivered.selector);
+        router.exit(t2, a2, c2);
+        require(address(router).balance == 0, "and nothing was left here");
+    }
+
+    /// @dev The token as the exchange would let a caller aim this contract's own pull at somebody else's
+    ///      signed authorization, since the token requires the recipient to be the caller.
+    function testTheTokenAndThisContractCanNeverBeTheExchange() public {
+        VM.expectRevert(ExitRouter.ExchangeNotEligible.selector);
+        router.setExchangeAllowed(address(token), true);
+        VM.expectRevert(ExitRouter.ExchangeNotEligible.selector);
+        router.setExchangeAllowed(address(router), true);
+
+        // And refused at the call as well, whatever the list happens to hold.
+        (ExitRouter.ExitTerms memory t, bytes memory call_) = _termsWith(AMOUNT, 1, payoutTo, address(token));
+        ExitRouter.Authorization memory a = _authorization(t, OWNER_KEY);
+        VM.prank(relayer);
+        VM.expectRevert(ExitRouter.ExchangeNotEligible.selector);
+        router.exit(t, a, call_);
+    }
+
+    /// @dev A destination that burns everything it is given must cost a known amount once, not make the
+    ///      relayer pay again and again for a signature that is never spent.
+    function testADestinationThatBurnsGasIsBounded() public {
+        GreedyPayee greedy = new GreedyPayee();
+        (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
+            _exit(AMOUNT, 1, address(greedy));
+        VM.prank(relayer);
+        VM.expectRevert(ExitRouter.PayoutFailed.selector);
+        router.exit{gas: 2_000_000}(t, a, call_);
+    }
+
+    /// @dev The receipt says what was exchanged, not what was taken and partly given back.
+    function testTheReceiptSaysWhatWasActuallyExchanged() public {
+        exchange.setKeepBack(1_000_000);
+        (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
+            _exit(AMOUNT, 1, payoutTo);
+        uint256 before = token.balanceOf(owner);
+        VM.prank(relayer);
+        router.exit(t, a, call_);
+        // 3 in, 1 back, so 2 exchanged: the event must not claim 3.
+        require(token.balanceOf(owner) == before - AMOUNT + 1_000_000, "one came back");
+        require(payoutTo.balance == AMOUNT - 1_000_000, "and two were exchanged");
+    }
+
     // --- the owner's own doors --------------------------------------------------------------------------
 
     function testOnlyTheOwnerOpensAnExchangeOrSweeps() public {
@@ -262,7 +322,7 @@ contract ExitRouterTest {
     {
         call_ = abi.encodeWithSelector(MockExchange.swap.selector, amount, address(router));
         t = ExitRouter.ExitTerms({
-            owner: owner,
+            payer: owner,
             payoutTo: to,
             amount: amount,
             minOut: minOut,
@@ -291,14 +351,14 @@ contract ExitRouterTest {
             abi.encode(
                 keccak256("viky.exit.v1"),
                 keccak256(
-                    abi.encode(t.owner, t.payoutTo, t.amount, t.minOut, t.exchange, t.callHash, t.deadline, t.salt)
+                    abi.encode(t.payer, t.payoutTo, t.amount, t.minOut, t.exchange, t.callHash, t.deadline, t.salt)
                 )
             )
         );
         bytes32 structHash = keccak256(
             abi.encode(
                 token.RECEIVE_WITH_AUTHORIZATION_TYPEHASH(),
-                t.owner,
+                t.payer,
                 address(router),
                 t.amount,
                 a.validAfter,
