@@ -221,7 +221,11 @@ export function FundGift() {
           <p className="text-sm" style={{ color: "var(--muted)" }}>
             Paying by card is done by {WAY_IN.name}, and the smallest payment they take is {WAY_IN.smallest},
             whatever you decide to put behind the goal. Whatever is left over stays in your account, for the
-            next goal or to send to your card later. Nothing is lost.
+            next goal. Nothing is lost.
+          </p>
+          <p className="text-sm" style={{ color: "var(--muted)" }}>
+            Their page opens on something else by default, so you will have to set it yourself: Buy, pay in
+            EUR, receive MON, on the Monad network. The next screen walks you through it.
           </p>
         </section>
       ) : null}
@@ -285,23 +289,42 @@ export function FundGift() {
           </p>
         ) : null}
         {step === "waiting" ? (
-          <div className="space-y-2 text-sm">
+          <div className="space-y-3 text-sm">
             <p className="font-medium">Waiting for your payment. Keep this page open.</p>
             <p style={{ color: "var(--muted)" }}>
-              {copied
-                ? `Your deposit line is copied. On ${WAY_IN.name}'s page choose Monad, paste it where they ask where to send, and pay with your card.`
-                : `On ${WAY_IN.name}'s page choose Monad, then come back here and tap Copy my deposit line.`}
+              {WAY_IN.name}&apos;s page opens on something else by default, so set each of these yourself:
             </p>
+            <ol className="list-decimal space-y-1 pl-5" style={{ color: "var(--muted)" }}>
+              <li>Choose Buy, not sell.</li>
+              <li>Pay in EUR, and type how much.</li>
+              <li>Choose to receive MON.</li>
+              <li>Choose the Monad network.</li>
+              <li>Paste your identifier where they ask where to send it.</li>
+            </ol>
+            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+              <p style={{ color: "var(--muted)" }}>Before you pay, check what you pasted starts and ends like this:</p>
+              <p className="font-mono text-base">
+                {address.slice(0, 6)}
+                <span style={{ color: "var(--muted)" }}> ... </span>
+                {address.slice(-4)}
+              </p>
+            </div>
+            {copied ? <p style={{ color: "var(--muted)" }}>Copied and ready to paste.</p> : null}
             {pending !== null && pending > 0n ? (
               <p style={{ color: "var(--muted)" }}>Something arrived and is being made ready.</p>
             ) : null}
-            <button
-              type="button"
-              onClick={() => void navigator.clipboard.writeText(address).then(() => setCopied(true)).catch(() => setCopied(false))}
-              className={INLINE_BUTTON}
-            >
-              Copy my deposit line
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void navigator.clipboard.writeText(address).then(() => setCopied(true)).catch(() => setCopied(false))}
+                className={INLINE_BUTTON}
+              >
+                Copy my identifier again
+              </button>
+              <a href={WAY_IN.page} target="_blank" rel="noopener noreferrer" className={INLINE_BUTTON}>
+                Open {WAY_IN.name} again
+              </a>
+            </div>
           </div>
         ) : null}
         <button
