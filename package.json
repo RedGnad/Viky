@@ -26,6 +26,7 @@
     "build:contracts": "forge build && tsx scripts/export-gift-abi.ts",
     "check:contract-sizes": "tsx scripts/check-contract-sizes.ts",
     "deploy:gift-escrow": "tsx scripts/deploy-gift-escrow.ts",
+    "deploy:exit-router": "tsx scripts/deploy-exit-router.ts",
     "check:gift-escrow": "tsx scripts/check-gift-escrow.ts",
     "db:migrate": "tsx scripts/migrate-db.ts",
     "keeper": "tsx scripts/keeper.ts",
@@ -36,7 +37,8 @@
     "count:gift": "tsx scripts/count-gift.ts",
     "zkfetch:worker": "tsx scripts/zkfetch-worker.ts",
     "check:words": "tsx scripts/check-consumer-words.ts",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "capture:refund": "tsx scripts/capture-refund.ts"
   },
   "dependencies": {
     "@category-labs/mera": "0.2.0",
