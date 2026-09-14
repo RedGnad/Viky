@@ -1173,3 +1173,15 @@ which shape they speak of; those that say neither hold for both.
   earlier the same night for a different question. By the funder trying to move his own money five times and
   refusing to accept "this could not be recorded" as an answer.
 
+## D54, 14 Sep 2026, the model a review runs on is the funder's call, not mine
+
+- Statement: which model a session or a review runs on is decided by the funder, at the moment, with whatever
+  is available. I am not to weigh it, flag it as a deviation, or ask before using what is there.
+- Source: the funder, 14 Sep 2026, after I had twice recorded an Opus review as a departure from an earlier
+  instruction that reserved certain work for another model.
+- Consequence: the earlier instruction is superseded. Reviews are recorded by what they found, not by what
+  ran them. D49 and any other entry noting the model as a caveat should be read as history, not as a debt.
+- What does not change: a contract is still reviewed in a separate session, against the promises written in
+  plain sentences rather than against its tests, before it is deployed. That discipline is the point, and it
+  has found a real defect every time, on every model it has run on.
+
