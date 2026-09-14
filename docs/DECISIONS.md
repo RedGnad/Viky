@@ -216,6 +216,14 @@ party platform or API, `[U]` not verified).
   (MON to EUR) the quote endpoint refuses amounts below about 150 MON (about 3 EUR gross at 0.0202
   EUR per MON) and charges a flat 3.00 EUR up to about 100 EUR (3.84 EUR on 100.87 EUR). The gift
   contract itself accepts 1.00 AUSD.
+- **Both sell figures here are wrong and were corrected on 14 Sep.** The smallest sell order is
+  879.889249290954315600 MON, not about 150 (D60, read from `/v1.6/lib/limits/sell`), and the fee is up to
+  3.95 % with a floor of **4 EUR**, not a flat 3.00 EUR (Mercuryo's own help pages, read 14 Sep; a live MON
+  quote that day returned a 3.00 EUR minimum fee, so the two disagree and the screens carry the higher one,
+  which is the one that can disappoint nobody). The buy figures stand and were re-measured on 14 Sep: 25 EUR
+  still buys 1230.845 MON with a 0.95 EUR fee, 3.8 %.
+- The consequence written below is therefore also wrong where it says a few credited days clear the sell
+  fee: no gift of $20 can be cashed out at all through this rail. See D60 and D62.
 - Source [P]: `api.mercuryo.io/v1.6/lib/currencies` (`fiat_payment_methods.EUR.limits`), and
   `api.mercuryo.io/v1.6/public/convert` probes for buy (0.1 to 1,000 EUR) and sell (100 to 5,000
   MON), 10 Sep 2026.
@@ -1411,3 +1419,51 @@ contract would not compile against 5.x. Also recorded so nobody rediscovers it a
 - That surplus reaches the person as native coin, which by this contract's own reason for existing (D53) they
   cannot spend without another payout. It is a few cents and it is theirs, but it belongs in
   `docs/SCREEN-CLAIMS.md` when the payout screen is wired, not hidden.
+
+## D62, 14 Sep 2026: what a gift is worth, who can cash one, and where the money for the two tests comes from
+
+Three answers from the advisor, with what I measured against each.
+
+**1. No separate top-up. One card payment covers both tests.** The funder's card purchase of tonight pays for
+the entry test and leaves the rest to test the way out. At 35 EUR: a test gift of $3 to $5, the remainder
+stays in their account for the payout. At 25 EUR, if it is already paid: a test gift of $3.
+
+*Measured, and it is better than the instruction assumed.* End to end on 14 Sep, the rail's 3.8 % and the
+unspendable 11 coins both removed, 25 EUR becomes **$28.51** inside Viky and 35 EUR becomes **$40.01**. So
+after a $3 test gift, a 25 EUR purchase leaves **$25.51** against a payout floor near $20.56: comfortable,
+not "just above". The way out is tested as soon as `ExitRouter` is reviewed again after the fixes of D61,
+then deployed and wired.
+
+**2. The gift amount has two levels: a hard floor of 25 EUR and a suggested 50 EUR.** The floor is not ours,
+it is the smallest card payment the way in accepts (D20). The suggestion exists so an ordinary gift is one
+the recipient can actually cash.
+
+*Measured.* 50 EUR becomes **$57.28** inside Viky, so five days out of seven leaves the recipient **$40.91**,
+which clears the payout floor with room. The same five days out of seven on a 25 EUR gift leaves **$20.36**,
+which does not clear it. That single comparison is the whole reason the suggestion is 50 and not 25, and it
+is pinned by a test rather than remembered (`test/gift-amount.test.ts`).
+
+*What the funder's screen must say, when the mockups reach it:* the recipient can be paid out on their card
+from about **$21 earned**, and earnings stay in their account **across gifts**, so a gift too small to cash
+today is waiting rather than lost. The 879.889 figure comes from my own reading of their limits endpoint and
+the advisor could not re-read it without a partner identifier, so the source stays written here: `GET
+https://api.mercuryo.io/v1.6/lib/limits/sell`, 14 Sep 2026, MON on MONAD to EUR.
+
+**3. The named segment does not change. What changes is what we say, and where the pilot can send gifts.**
+
+- To be paid out, the recipient needs a **bank card** and a **one-off identity check** at the partner. That
+  is the Wise shape: identity is asked when money is taken out, not when an account is opened. It goes on the
+  payout screen and in the pitch. Note for accuracy: the partner requires identity verification to buy as
+  well as to sell, so the funder meets it at their card payment; the recipient meets it only at the payout.
+- **Selling is closed in the United Kingdom**, and the partner serves nobody at all in 59 countries and
+  territories, read from their own availability page on 14 Sep (updated there 2 Sep): Algeria, Hungary,
+  Iceland, Mali, Morocco and Tunisia among them. The full list is held in `src/rails.ts` as data, because it
+  decides who a gift can be sent to: a recipient in one of those countries can be given a gift, can earn it,
+  and can never turn it into money.
+- Senegal and Ivory Coast are **not** on that list, checked for by name. The pilot's cross-border gifts
+  therefore aim at France, the union outside Hungary and Iceland, Senegal or Ivory Coast.
+
+**And one rule extended.** The discipline of D39, that every sentence about money names the code path that
+makes it true, now covers **code comments and reports**, not only screens. Four sentences in a row have been
+found claiming a protection no code path gave (D38, D58 twice, D61). A comment is read by whoever changes the
+code next, which makes a false one more dangerous than a false screen, not less.
