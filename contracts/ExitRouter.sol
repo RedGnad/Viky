@@ -48,9 +48,19 @@ contract ExitRouter is Ownable, ReentrancyGuard {
 
     /// @dev Distinct from the gift contracts' tags, so one signature can never be spent on another contract.
     bytes32 public constant EXIT_NONCE_TAG = keccak256("viky.exit.v1");
-    /// @dev What a destination gets to spend receiving its money. Generous for any ordinary account or
-    ///      contract, and bounded so one that burns gas on purpose costs the relayer a known amount once.
-    uint256 public constant PAYOUT_GAS = 100_000;
+    /// @dev What a destination gets to spend receiving its money, and what this contract keeps for itself.
+    ///
+    ///      It is NOT a protection for the relayer: Monad charges the limit a transaction declares rather
+    ///      than what it uses (D52), so a destination that burns everything costs the relayer the same
+    ///      whatever this says. What it does is keep enough gas on this side of the call to hand the person
+    ///      their surplus and check that the money really left, instead of dying inside the destination.
+    ///
+    ///      Settable because it is aimed at an address nobody here has inspected: a payout service's deposit
+    ///      address is usually an ordinary account, but if one ever costs more than this to pay, every exit
+    ///      would fail with no repair short of deploying again.
+    uint256 public payoutGas = 100_000;
+    uint256 public constant MIN_PAYOUT_GAS = 30_000;
+    uint256 public constant MAX_PAYOUT_GAS = 1_000_000;
 
     /// @dev What the person signed: everything that decides where their money ends up.
     struct ExitTerms {
@@ -92,6 +102,7 @@ contract ExitRouter is Ownable, ReentrancyGuard {
     mapping(address => address) public mustPointAt;
 
     event ExchangeAllowed(address indexed exchange, bool allowed, address mustPointAt);
+    event PayoutGasSet(uint256 payoutGas);
     event Exited(
         address indexed payer,
         address indexed payoutTo,
@@ -108,6 +119,9 @@ contract ExitRouter is Ownable, ReentrancyGuard {
     error ExchangeNotAllowed();
     error ExchangeNotEligible();
     error ExchangeMoved();
+    error UnexpectedTokens();
+    error PinRequired();
+    error OwnershipIsNotRenounceable();
     error PayoutNotDelivered();
     error TermsMismatch();
     error DeadlinePassed();
@@ -158,7 +172,13 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         if (block.timestamp > t.deadline) revert DeadlinePassed();
         if (!allowedExchanges[t.exchange]) revert ExchangeNotAllowed();
         address pinned = mustPointAt[t.exchange];
-        if (pinned != address(0) && IForwardingExchange(t.exchange).getRouter() != pinned) revert ExchangeMoved();
+        if (pinned != address(0)) {
+            // Asked rather than called, so an exchange that turns out not to forward at all is refused with a
+            // name instead of reverting with nothing anybody can read.
+            (bool answered, address pointsAt) = _pointsAt(t.exchange);
+            if (!answered) revert ExchangeNotEligible();
+            if (pointsAt != pinned) revert ExchangeMoved();
+        }
         // What will be said to the exchange is part of what they signed, so the relayer cannot say anything
         // else: a different swap, a different recipient inside the call, a different anything.
         if (keccak256(exchangeCall) != t.callHash) revert TermsMismatch();
@@ -184,7 +204,15 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         if (amountOut < t.minOut) revert TooLittleBack();
 
         // Anything the exchange did not take goes straight back to them; this contract keeps nothing.
+        //
+        // Never more than was pulled, though. This hands `tokenLeft` to whoever signed the terms without
+        // asking where it came from, and the calldata sent to the exchange is theirs to write. An exchange
+        // with any way to move somebody else's tokens here would turn that into a way to collect them as
+        // "left over": everyone who ever approved that exchange would be reachable. The exchange we use
+        // cannot (its only transferFrom takes from its caller, read from its bytecode on 14 Sep), which is a
+        // fact about a contract somebody else owns and not something to rest on.
         uint256 tokenLeft = token.balanceOf(address(this)) - tokenBefore;
+        if (tokenLeft > t.amount) revert UnexpectedTokens();
         if (tokenLeft > 0) token.safeTransfer(t.payer, tokenLeft);
 
         // Exactly the order, and the rest straight back to them.
@@ -195,15 +223,13 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         // not something a person's payout may rest on, so we never test it: what the exchange gave above the
         // order is theirs and goes back to them in the same transaction.
         //
-        // The stipend is bounded so a destination that burns everything it is given cannot make the relayer
-        // pay for a transaction that was never going to finish, over and over, with the signature unspent.
         uint256 returned = amountOut - t.minOut;
-        (bool paid,) = t.payoutTo.call{value: t.minOut, gas: PAYOUT_GAS}("");
+        (bool paid,) = t.payoutTo.call{value: t.minOut, gas: payoutGas}("");
         if (!paid) revert PayoutFailed();
         // A person's account is an ordinary one that cannot refuse a transfer, so this cannot be how a payout
         // fails; it reverts rather than leaving their surplus here if one ever could.
         if (returned > 0) {
-            (bool back,) = t.payer.call{value: returned, gas: PAYOUT_GAS}("");
+            (bool back,) = t.payer.call{value: returned, gas: payoutGas}("");
             if (!back) revert PayoutFailed();
         }
         // Delivered, not merely "the call did not revert": a destination that hands the money straight back
@@ -220,9 +246,39 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         if (exchange == address(0)) revert InvalidAddress();
         // Refused here as well as at the call, so the list itself can never hold either of them.
         if (exchange == address(token) || exchange == address(this)) revert ExchangeNotEligible();
+        if (allowed) {
+            // Whether it forwards is asked here, not trusted to whoever is typing. Closing an exchange
+            // forgets its pin, so opening one again with nothing would otherwise quietly drop the check that
+            // is the only thing standing between us and a target its own owner replaced.
+            (bool forwards, address pointsAtNow) = _pointsAt(exchange);
+            if (forwards && pointsAt == address(0)) revert PinRequired();
+            if (forwards && pointsAt != pointsAtNow) revert ExchangeMoved();
+            if (!forwards && pointsAt != address(0)) revert ExchangeNotEligible();
+        }
         allowedExchanges[exchange] = allowed;
         mustPointAt[exchange] = allowed ? pointsAt : address(0);
         emit ExchangeAllowed(exchange, allowed, pointsAt);
+    }
+
+    function setPayoutGas(uint256 value) external onlyOwner {
+        if (value < MIN_PAYOUT_GAS || value > MAX_PAYOUT_GAS) revert InvalidAmount();
+        payoutGas = value;
+        emit PayoutGasSet(value);
+    }
+
+    /// @dev Giving up ownership would freeze the allowlist and the sweep for good, with no way back.
+    function renounceOwnership() public view override onlyOwner {
+        revert OwnershipIsNotRenounceable();
+    }
+
+    /// @dev Whether this exchange forwards, and to where. Never reverts: an address that does not answer
+    ///      simply does not forward, which is a fact and not a failure.
+    function _pointsAt(address exchange) private view returns (bool forwards, address pointsAt) {
+        (bool ok, bytes memory data) =
+            exchange.staticcall(abi.encodeWithSelector(IForwardingExchange.getRouter.selector));
+        if (!ok || data.length != 32) return (false, address(0));
+        address answer = abi.decode(data, (address));
+        return (answer != address(0), answer);
     }
 
     /// @dev The contract is not meant to hold anything between transactions. If an exchange ever leaves

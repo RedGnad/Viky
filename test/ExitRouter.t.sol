@@ -3,7 +3,7 @@ pragma solidity 0.8.30;
 
 import {ExitRouter} from "../contracts/ExitRouter.sol";
 import {MockAUSD} from "./mocks/MockAUSD.sol";
-import {BouncingPayee, ForwardingExchange, GreedyPayee, MockExchange} from "./mocks/MockExchange.sol";
+import {BouncingPayee, CostlyPayee, ForwardingExchange, GreedyPayee, MockExchange} from "./mocks/MockExchange.sol";
 
 interface VmExit {
     function addr(uint256 privateKey) external returns (address);
@@ -12,11 +12,21 @@ interface VmExit {
     function prank(address sender) external;
     function deal(address who, uint256 amount) external;
     function expectRevert(bytes4 selector) external;
+    function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData) external;
     function chainId(uint256 newChainId) external;
     function getBlockTimestamp() external view returns (uint256);
 }
 
 contract ExitRouterTest {
+    event Exited(
+        address indexed payer,
+        address indexed payoutTo,
+        uint256 amountIn,
+        uint256 paidOut,
+        uint256 returned,
+        address indexed exchange
+    );
+
     VmExit private constant VM = VmExit(address(uint160(uint256(keccak256("hevm cheat code")))));
     uint256 private constant OWNER_KEY = 0x5EC;
     uint256 private constant OTHER_KEY = 0x07E;
@@ -184,16 +194,36 @@ contract ExitRouterTest {
         require(token.allowance(address(router), address(exchange)) == 0, "and nothing is left after a bad one");
     }
 
+    /// @dev The allowance is exactly what they signed for, so an exchange reaching past it fails rather than
+    ///      helping itself to whatever is stranded here. Written so it reaches past it for real: it used to
+    ///      ask for exactly the allowance, which is to say it tested nothing at all.
     function testAnExchangeCannotTakeMoreThanItWasGiven() public {
         exchange.setKeepBack(1_000_000);
-        exchange.setGrab(true);
+        // Past the allowance, which is exactly the amount signed for: 2 taken plus 1.5 is 3.5 against 3.
+        exchange.setGrab(1_500_000);
         token.mint(address(router), 500_000); // something stranded here from before
         (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
             _exit(AMOUNT, 1, payoutTo);
         VM.prank(relayer);
-        // The allowance is exactly what they signed for, so taking more simply fails.
+        VM.expectRevert(ExitRouter.ExchangeFailed.selector);
         router.exit(t, a, call_);
         require(token.balanceOf(address(router)) == 500_000, "what was stranded is untouched");
+        require(token.allowance(address(router), address(exchange)) == 0, "and no allowance is left behind");
+    }
+
+    /// @dev The refund of what the exchange did not take asks no questions about where it came from, so it is
+    ///      capped at what was pulled. Without the cap, an exchange with any way to move somebody else's
+    ///      tokens into this contract would turn that refund into a way to collect them.
+    function testMoreOfTheTokenThanWasPulledIsRefusedRatherThanHandedOut() public {
+        token.mint(address(exchange), 5_000_000);
+        exchange.setKeepBack(1_000_000);
+        exchange.setDeliverBack(3_000_000); // more arrives than this exit ever pulled
+        (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
+            _exit(AMOUNT, 1, payoutTo);
+        VM.prank(relayer);
+        VM.expectRevert(ExitRouter.UnexpectedTokens.selector);
+        router.exit(t, a, call_);
+        require(token.balanceOf(address(router)) == 0, "and nothing stayed here");
     }
 
     function testAnExpiredSignatureIsRefused() public {
@@ -273,17 +303,25 @@ contract ExitRouterTest {
         router.exit{gas: 2_000_000}(t, a, call_);
     }
 
-    /// @dev The receipt says what was exchanged, not what was taken and partly given back.
+    /// @dev The receipt says what was exchanged, not what was taken and partly given back. This asserts the
+    ///      event itself: asserting only balances left the receipt free to say anything, and a screen reading
+    ///      it would have told someone three dollars when it was two.
     function testTheReceiptSaysWhatWasActuallyExchanged() public {
         exchange.setKeepBack(1_000_000);
+        uint256 order = AMOUNT - 1_400_000;
         (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
-            _exit(AMOUNT, AMOUNT - 1_000_000, payoutTo);
+            _exit(AMOUNT, order, payoutTo);
         uint256 before = token.balanceOf(owner);
+
+        // 3 in, 1 back, so 2 exchanged: the receipt must not claim 3.
+        VM.expectEmit(true, true, true, true);
+        emit Exited(owner, payoutTo, AMOUNT - 1_000_000, order, AMOUNT - 1_000_000 - order, address(exchange));
         VM.prank(relayer);
         router.exit(t, a, call_);
-        // 3 in, 1 back, so 2 exchanged: the event must not claim 3.
-        require(token.balanceOf(owner) == before - AMOUNT + 1_000_000, "one came back");
-        require(payoutTo.balance == AMOUNT - 1_000_000, "and two were exchanged");
+
+        require(token.balanceOf(owner) == before - AMOUNT + 1_000_000, "one came back as it was");
+        require(owner.balance == AMOUNT - 1_000_000 - order, "and the surplus of the exchange came back too");
+        require(payoutTo.balance == order, "and the order was sent exactly");
     }
 
     /// @dev A payout service holds an order for a precise amount, and does not say what it does with anything
@@ -341,6 +379,64 @@ contract ExitRouterTest {
         router.setExchangeAllowed(address(signpost), true, address(0xA11CE));
         router.setExchangeAllowed(address(signpost), false, address(0xA11CE));
         require(router.mustPointAt(address(signpost)) == address(0), "forgotten");
+    }
+
+    /// @dev Closing an exchange forgets its pin, so opening it again with nothing would quietly drop the only
+    ///      check standing between us and a target its owner replaced. It cannot be opened without one.
+    function testAForwarderCannotBeOpenedWithoutSayingWhereItMustPoint() public {
+        ForwardingExchange signpost = new ForwardingExchange(token, address(0xA11CE));
+        VM.expectRevert(ExitRouter.PinRequired.selector);
+        router.setExchangeAllowed(address(signpost), true, address(0));
+    }
+
+    /// @dev And it cannot be opened with a pin that was already stale when it was typed.
+    function testAPinThatIsAlreadyWrongIsRefusedAtTheDoor() public {
+        ForwardingExchange signpost = new ForwardingExchange(token, address(0xA11CE));
+        VM.expectRevert(ExitRouter.ExchangeMoved.selector);
+        router.setExchangeAllowed(address(signpost), true, address(0xDEAD));
+    }
+
+    /// @dev An exchange that forwards nothing takes no pin, rather than one that could never be checked.
+    function testAnExchangeThatForwardsNothingTakesNoPin() public {
+        VM.expectRevert(ExitRouter.ExchangeNotEligible.selector);
+        router.setExchangeAllowed(address(exchange), true, address(0xA11CE));
+    }
+
+    // --- paying a destination nobody has inspected ------------------------------------------------------
+
+    /// @dev The payout service's deposit address is not ours and has not been read. If one ever costs more to
+    ///      pay than the stipend, a fixed stipend would mean nobody could ever be paid and no way back short
+    ///      of deploying again.
+    function testADestinationThatCostsMoreToPayCanBeMadePayable() public {
+        CostlyPayee costly = new CostlyPayee();
+        router.setPayoutGas(30_000);
+        (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
+            _exit(AMOUNT, AMOUNT, address(costly));
+        VM.prank(relayer);
+        VM.expectRevert(ExitRouter.PayoutFailed.selector);
+        router.exit(t, a, call_);
+
+        router.setPayoutGas(300_000);
+        (t, a, call_) = _exit(AMOUNT, AMOUNT, address(costly));
+        VM.prank(relayer);
+        router.exit(t, a, call_);
+        require(address(costly).balance == AMOUNT, "paid once there was enough to pay with");
+    }
+
+    function testTheStipendStaysWithinBounds() public {
+        VM.expectRevert(ExitRouter.InvalidAmount.selector);
+        router.setPayoutGas(29_999);
+        VM.expectRevert(ExitRouter.InvalidAmount.selector);
+        router.setPayoutGas(1_000_001);
+        VM.prank(relayer);
+        (bool moved,) = address(router).call(abi.encodeWithSelector(ExitRouter.setPayoutGas.selector, 200_000));
+        require(!moved, "not the relayer's to set");
+    }
+
+    /// @dev Giving up ownership would freeze the allowlist and the sweep for good, with no way back.
+    function testOwnershipCannotBeGivenUp() public {
+        VM.expectRevert(ExitRouter.OwnershipIsNotRenounceable.selector);
+        router.renounceOwnership();
     }
 
     // --- the owner's own doors --------------------------------------------------------------------------

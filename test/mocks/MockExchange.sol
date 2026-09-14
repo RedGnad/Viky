@@ -12,8 +12,12 @@ contract MockExchange {
     uint256 public rateDenominator = 1;
     bool public refuse;
     uint256 public keepBack;
-    /// @dev Set by a test that wants the exchange to try to pull more than it was given.
-    bool public grab;
+    /// @dev How much more than it was given the exchange tries to pull. The allowance is exactly the amount,
+    ///      so anything above zero must fail, which is the point of the test that sets it.
+    uint256 public grab;
+    /// @dev Token this exchange hands over rather than takes, so a router can be shown holding more of it
+    ///      afterwards than it ever pulled.
+    uint256 public deliverBack;
 
     constructor(IERC20 token_) {
         token = token_;
@@ -34,15 +38,22 @@ contract MockExchange {
         keepBack = value;
     }
 
-    function setGrab(bool value) external {
+    function setGrab(uint256 value) external {
         grab = value;
+    }
+
+    function setDeliverBack(uint256 value) external {
+        deliverBack = value;
     }
 
     /// @dev The call a router makes: pull `amount` of the token, send native coin back.
     function swap(uint256 amount, address to) external {
         require(!refuse, "exchange refused");
         uint256 taken = amount - keepBack;
-        token.transferFrom(msg.sender, address(this), grab ? amount : taken);
+        token.transferFrom(msg.sender, address(this), taken + grab);
+        // Stands in for anything that puts somebody else's token into the router during the call: a rebate,
+        // a refund, or an exchange reaching into an allowance that was never ours.
+        if (deliverBack > 0) token.transfer(msg.sender, deliverBack);
         uint256 out = (taken * rateNumerator) / rateDenominator;
         (bool ok,) = to.call{value: out}("");
         require(ok, "payout failed");
@@ -69,6 +80,18 @@ contract BouncingPayee {
     receive() external payable {
         (bool ok,) = msg.sender.call{value: msg.value}("");
         ok; // the point is that this destination keeps nothing while reporting success
+    }
+}
+
+/// @dev A destination that costs real gas to pay, the way a custodial deposit contract might. Nobody has
+///      inspected the payout service's deposit address, which is why what it is given must be settable.
+contract CostlyPayee {
+    uint256[8] private slots;
+
+    receive() external payable {
+        for (uint256 i = 0; i < 8; i++) {
+            slots[i] = block.timestamp + i + 1;
+        }
     }
 }
 
