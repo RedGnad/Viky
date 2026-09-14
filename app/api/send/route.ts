@@ -1,0 +1,104 @@
+import { NextResponse } from "next/server";
+import { erc20Abi, getAddress, isAddress, type Abi, type Hex } from "viem";
+import { readAccountAuthSession } from "@/src/account-auth-server";
+import { readJsonBody } from "@/src/api-guard";
+import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
+import { monadChain, waitForFinality, AUSD_ADDRESS } from "@/src/monad/chain";
+import { addMonadGasBuffer } from "@/src/monad-gas";
+import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { relayerClients, relayerPreflight, RelayerError } from "@/src/relayer";
+import { canonicalSignature } from "@/src/signature";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+/** Only the six fields the token itself checks, so nothing here can redirect what the person signed. */
+const TRANSFER_ABI = [
+  {
+    type: "function",
+    name: "transferWithAuthorization",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "from", type: "address" },
+      { name: "to", type: "address" },
+      { name: "value", type: "uint256" },
+      { name: "validAfter", type: "uint256" },
+      { name: "validBefore", type: "uint256" },
+      { name: "nonce", type: "bytes32" },
+      { name: "signature", type: "bytes" },
+    ],
+    outputs: [],
+  },
+] as const satisfies Abi;
+
+/**
+ * Moves someone's own AUSD where they asked, from an authorization they signed. Viky's relayer submits it
+ * and pays, as it does for everything else.
+ *
+ * This exists because Monad reserves 10 MON per account and an account below that can make no contract call
+ * at all (D53). Moving an ERC-20 is a contract call, so a person holding only their gift could never move it
+ * themselves. The token accepts a signed authorization instead, and the signature is the whole authority:
+ * the server chooses nothing, and cannot send anywhere the person did not sign for.
+ */
+export async function POST(request: Request) {
+  try {
+    const auth = readAccountAuthSession(request);
+    const rate = checkRateLimit("relay", request, auth.account);
+    if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
+
+    const body = await readJsonBody<{ to?: string; value?: string; validAfter?: string; validBefore?: string; nonce?: string; signature?: string }>(request, 4 * 1_024);
+    const to = String(body.to ?? "");
+    if (!isAddress(to)) throw new GiftApiError("INVALID_DESTINATION", "That destination is not valid.");
+    const nonce = String(body.nonce ?? "");
+    if (!/^0x[0-9a-fA-F]{64}$/.test(nonce)) throw new GiftApiError("INVALID_REQUEST", "Please try again");
+    let signature: Hex;
+    try {
+      signature = canonicalSignature(String(body.signature ?? ""));
+    } catch {
+      throw new GiftApiError("INVALID_SIGNATURE", "Please try again");
+    }
+    let value: bigint;
+    let validAfter: bigint;
+    let validBefore: bigint;
+    try {
+      value = BigInt(String(body.value ?? ""));
+      validAfter = BigInt(String(body.validAfter ?? ""));
+      validBefore = BigInt(String(body.validBefore ?? ""));
+    } catch {
+      throw new GiftApiError("INVALID_REQUEST", "Please try again");
+    }
+    if (value <= 0n) throw new GiftApiError("INVALID_AMOUNT", "Enter an amount");
+
+    // The sender is the signed-in account and nobody else: a signature for someone else's money is not
+    // ours to relay, whatever the token would make of it.
+    const from = getAddress(auth.account);
+    const clients = relayerClients();
+    await relayerPreflight(clients);
+
+    const held = (await clients.publicClient.readContract({ address: AUSD_ADDRESS, abi: erc20Abi, functionName: "balanceOf", args: [from] })) as bigint;
+    if (held < value) throw new GiftApiError("NOT_ENOUGH", "That is more than you have.", 409);
+
+    const args = [from, getAddress(to), value, validAfter, validBefore, nonce as Hex, signature] as const;
+    try {
+      await clients.publicClient.simulateContract({ address: AUSD_ADDRESS, abi: TRANSFER_ABI, functionName: "transferWithAuthorization", args, account: clients.address });
+    } catch {
+      throw new GiftApiError("REFUSED", "That could not be sent. Please try again.", 409);
+    }
+    const estimate = await clients.publicClient.estimateContractGas({ address: AUSD_ADDRESS, abi: TRANSFER_ABI, functionName: "transferWithAuthorization", args, account: clients.address });
+    const hash = await clients.walletClient.writeContract({
+      address: AUSD_ADDRESS,
+      abi: TRANSFER_ABI,
+      functionName: "transferWithAuthorization",
+      args,
+      gas: addMonadGasBuffer(estimate),
+      account: clients.walletClient.account!,
+      chain: monadChain,
+    });
+    const receipt = await waitForFinality(clients.publicClient, hash);
+    if (receipt.status !== "success") throw new RelayerError("REVERTED", "That could not be sent. Nothing was taken.");
+    return NextResponse.json({ sent: true, hash }, { headers: NO_STORE });
+  } catch (error) {
+    return giftErrorResponse(error);
+  }
+}

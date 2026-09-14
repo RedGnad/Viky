@@ -1,5 +1,11 @@
 import { getAddress, type Hex, type LocalAccount } from "viem";
-import { receiveAuthorizationMessage, receiveAuthorizationTypedData, toContractAuthorization } from "../ausd-authorization";
+import {
+  receiveAuthorizationMessage,
+  receiveAuthorizationTypedData,
+  toContractAuthorization,
+  transferAuthorizationMessage,
+  transferAuthorizationTypedData,
+} from "../ausd-authorization";
 import { contactHash } from "../contact-hash";
 import { fundingNonce, withdrawIntentTypedData, type GiftParams } from "../gift-terms";
 import { ApiError, getJson, postJson } from "./api";
@@ -190,6 +196,29 @@ export async function withdrawEarned(input: { account: LocalAccount; giftId: str
     amount: message.amount.toString(),
     nonce: message.nonce.toString(),
     deadline: message.deadline.toString(),
+    signature,
+  });
+}
+
+/**
+ * Sends someone's own AUSD where they choose, with one signature and nothing else. Their account never makes
+ * a contract call and never needs any MON, which on Monad is not a nicety: an account below the 10 MON
+ * reserve cannot make a contract call at all (D53).
+ */
+export async function sendOwnMoney(input: { account: LocalAccount; to: Hex; amount: bigint }): Promise<{ sent: boolean; hash: Hex }> {
+  const message = transferAuthorizationMessage({
+    from: getAddress(input.account.address),
+    to: getAddress(input.to),
+    value: input.amount,
+    nonce: randomSalt(),
+  });
+  const signature = await input.account.signTypedData(transferAuthorizationTypedData(message));
+  return postJson("/api/send", {
+    to: message.to,
+    value: message.value.toString(),
+    validAfter: message.validAfter.toString(),
+    validBefore: message.validBefore.toString(),
+    nonce: message.nonce,
     signature,
   });
 }
