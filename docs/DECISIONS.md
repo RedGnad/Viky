@@ -1023,9 +1023,22 @@ which shape they speak of; those that say neither hold for both.
 - Statement: the funder, using the product as a recipient, asked why a missed day was "still catchable",
   said he did not remember choosing it, and asked what "tomorrow morning" meant. All three parts of that are
   fair, and two of them are defects.
-- **What holds.** The reason for a catch-up window at all (D13) is sound: without one, the moment our own
-  daily pass happens to read would decide what counts as missed, and a day would count or not depending on
-  our cron. The window makes the contract decide, not our schedule.
+- **Correction to my own explanation, made the same day.** I first told the funder the window existed because
+  otherwise the moment our daily pass happens to read would decide what counts as missed. That is misleading,
+  and he pushed back correctly. The contract's deadline is fixed and computable: a day `d` stops being
+  catchable at `dayStart(d + 1) + CATCH_UP_WINDOW`, an instant that owes nothing to when anything runs.
+- **What the window actually is.** Two separate things were bundled into one number.
+  1. **A technical minimum, which is small.** Judging a day cannot happen at the exact instant it ends: the
+     reading takes seconds, and a cron on this plan can fire up to an hour late. Some gap is needed so the
+     daily reading is never racing the drain for the same day. An hour or two would do.
+  2. **A product grace, which is the other twenty-three hours.** Miss a day, and you can still earn it by
+     doing double the next day. That is a choice about how forgiving the product is, not a constraint, and
+     it is the part nobody ever argued for. It was recorded in D13 as a design decision and approved inside
+     a long plan, which is not the same as being chosen.
+- The honest question for the strategy side is therefore not "how long should the window be" but "do we want
+  the grace at all". Without it a missed day is lost at the end of that day, which is simpler to say and
+  harsher to live. With it the product forgives one day at a time, which is kinder and needs a sentence on
+  screen that did not exist until today.
 - **What does not hold.**
   1. **The length is a round number with no reasoning behind it.** D13 says one day and gives no why. Six
      hours, or three days, would have been recorded the same way.
