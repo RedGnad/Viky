@@ -7,6 +7,12 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /// @dev The EIP-3009 entry AUSD exposes. `to` must be the caller, so a signed authorization can only land here.
+/// @dev The shape of a forwarding exchange: one that holds no logic itself and passes calls to another
+///      contract its own owner can change. The exchange Viky uses is one of these.
+interface IForwardingExchange {
+    function getRouter() external view returns (address);
+}
+
 interface IERC3009Receiver {
     function receiveWithAuthorization(
         address from,
@@ -75,8 +81,16 @@ contract ExitRouter is Ownable, ReentrancyGuard {
     /// @dev Exchanges the owner has allowed. The terms already name one and the signature binds it, so this
     ///      is the second lock: even a signature produced by a compromised app cannot reach anywhere else.
     mapping(address => bool) public allowedExchanges;
+    /// @dev What an allowed exchange must still be pointing at, when it is a forwarder whose owner can change
+    ///      that at any time. The one Viky uses is exactly that: the address a quote asks us to call holds no
+    ///      logic and passes everything to a second contract its owner may replace between the quote and the
+    ///      moment the relayer sends. The floor already keeps the money safe if that happens, since too little
+    ///      coming back reverts the whole transaction. This is the other half: we refuse before handing an
+    ///      allowance and hand-written calldata to a contract nobody has looked at, and the refusal says why.
+    ///      Zero means the exchange forwards nothing and there is nothing to check.
+    mapping(address => address) public mustPointAt;
 
-    event ExchangeAllowed(address indexed exchange, bool allowed);
+    event ExchangeAllowed(address indexed exchange, bool allowed, address mustPointAt);
     event Exited(
         address indexed payer, address indexed payoutTo, uint256 amountIn, uint256 amountOut, address indexed exchange
     );
@@ -85,6 +99,7 @@ contract ExitRouter is Ownable, ReentrancyGuard {
     error InvalidAmount();
     error ExchangeNotAllowed();
     error ExchangeNotEligible();
+    error ExchangeMoved();
     error PayoutNotDelivered();
     error TermsMismatch();
     error DeadlinePassed();
@@ -134,6 +149,8 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         if (t.amount == 0 || t.minOut == 0) revert InvalidAmount();
         if (block.timestamp > t.deadline) revert DeadlinePassed();
         if (!allowedExchanges[t.exchange]) revert ExchangeNotAllowed();
+        address pinned = mustPointAt[t.exchange];
+        if (pinned != address(0) && IForwardingExchange(t.exchange).getRouter() != pinned) revert ExchangeMoved();
         // What will be said to the exchange is part of what they signed, so the relayer cannot say anything
         // else: a different swap, a different recipient inside the call, a different anything.
         if (keccak256(exchangeCall) != t.callHash) revert TermsMismatch();
@@ -175,12 +192,14 @@ contract ExitRouter is Ownable, ReentrancyGuard {
 
     // --- the owner --------------------------------------------------------------------------------------
 
-    function setExchangeAllowed(address exchange, bool allowed) external onlyOwner {
+    /// @param pointsAt what a forwarding exchange must still be pointing at, or zero when it forwards nothing.
+    function setExchangeAllowed(address exchange, bool allowed, address pointsAt) external onlyOwner {
         if (exchange == address(0)) revert InvalidAddress();
         // Refused here as well as at the call, so the list itself can never hold either of them.
         if (exchange == address(token) || exchange == address(this)) revert ExchangeNotEligible();
         allowedExchanges[exchange] = allowed;
-        emit ExchangeAllowed(exchange, allowed);
+        mustPointAt[exchange] = allowed ? pointsAt : address(0);
+        emit ExchangeAllowed(exchange, allowed, pointsAt);
     }
 
     /// @dev The contract is not meant to hold anything between transactions. If an exchange ever leaves
