@@ -20,6 +20,16 @@ import { escrowOf, relayerClients, relayerPreflight, RelayerError } from "./rela
 
 export type DailyPassLine = { giftId: string; step: "count" | "drain" | "finalise" | "refund"; result: string; hash?: string };
 
+/**
+ * Refusals that say something broke on our side rather than something the person did. A reading refused for
+ * one of these is no evidence at all, so nothing may be settled against it.
+ *
+ * Deliberately not here: a profile that turned private, a name that no longer resolves, a code that is not
+ * in the display name. Those are real answers about the person's own account, and holding the gift open for
+ * them would let anyone stop the clock by hiding their profile.
+ */
+const OURS_TO_FIX: ReadonlySet<string> = new Set(["FETCH_FAILED", "PROOF_INVALID", "PROOF_MISMATCH", "NOT_CONFIGURED"]);
+
 /** Which of the pass's jobs a run does. Named, so the two schedules cannot drift apart by accident. */
 export type PassPlan = Readonly<{ count: boolean; refund: boolean }>;
 
@@ -65,14 +75,26 @@ export async function dailyPass(
   const { address, balance } = await deps.start();
   const lines: DailyPassLine[] = [];
 
+  // A gift whose reading failed for a reason of ours is left alone for the rest of the pass. Draining it
+  // would take a day from someone who did the work, because our worker, the source, or the attestor was
+  // down. Our failures are ours, never theirs to pay for (D57). The day stays open and the next working
+  // reading can still credit it, because only a drain closes a day.
+  const unread = new Set<string>();
+
   if (plan.count) {
     for (const gift of await deps.boundGifts()) {
-      lines.push(describe(await deps.count(gift.giftId)));
+      const outcome = await deps.count(gift.giftId);
+      if (outcome.kind === "refused" && OURS_TO_FIX.has(outcome.code)) unread.add(gift.giftId);
+      lines.push(describe(outcome));
     }
   }
 
   for (const record of await deps.allGifts()) {
     const giftId = record.giftId;
+    if (unread.has(giftId)) {
+      lines.push({ giftId, step: "drain", result: "held: today's reading failed on our side" });
+      continue;
+    }
     let escrow: Hex;
     try {
       escrow = escrowOf(record);
