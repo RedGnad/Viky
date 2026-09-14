@@ -1,6 +1,14 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { EXIT_WINDOW_SECONDS, floorInWords, planExit, shownFloor, type OpenExit } from "../src/exit-plan.js";
+import {
+  EXIT_WINDOW_SECONDS,
+  floorInWords,
+  PAYOUT_MAXIMUM,
+  PAYOUT_MINIMUM,
+  planExit,
+  shownFloor,
+  type OpenExit,
+} from "../src/exit-plan.js";
 
 const ONE = 1_000_000_000_000_000_000n;
 const PAYOUT = "0x00000000000000000000000000000000000A11cE" as const;
@@ -65,4 +73,17 @@ test("a signed set of terms holds until it expires, so no second signature can e
 
 test("the window is short, because a signature nobody used is still spendable until it ends", () => {
   assert.ok(EXIT_WINDOW_SECONDS <= 20 * 60 && EXIT_WINDOW_SECONDS >= 5 * 60);
+});
+
+/**
+ * The payout service will not take a small order at all, so this is a product fact before it is a number:
+ * some whole gifts are worth less than the smallest payout (D60).
+ */
+test("the payout minimum is the one the service publishes, not one we chose", () => {
+  assert.equal(PAYOUT_MINIMUM, 879_889_249_290_954_315_600n);
+  assert.equal(PAYOUT_MAXIMUM, 513_493_669_141_047_227_556_000n);
+  assert.ok(PAYOUT_MINIMUM < PAYOUT_MAXIMUM);
+  // What three dollars converted to on 14 Sep, which is nowhere near enough to be paid out.
+  assert.ok(shownFloor(126_505_864_465_022_796_899n) < PAYOUT_MINIMUM, "a few dollars cannot be cashed out");
+  assert.equal(floorInWords(PAYOUT_MINIMUM), "879.8892");
 });

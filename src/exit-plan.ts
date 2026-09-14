@@ -33,6 +33,18 @@ export function floorInWords(floor: bigint): string {
 }
 
 /**
+ * The least a payout service will take.
+ *
+ * Measured at their own limits endpoint on 14 Sep 2026 (`/v1.6/lib/limits/sell`, MON on MONAD to EUR):
+ * 879.889249290954315600 is their minimum and 513,493.669141047227556 their maximum. This is not a detail of
+ * ours to soften: below it the order cannot be placed at all, so the person must be told before they start
+ * rather than after they have read a figure and left Viky. At the rate of that day it is close to twenty one
+ * dollars, which is more than some whole gifts (D60).
+ */
+export const PAYOUT_MINIMUM = 879_889_249_290_954_315_600n;
+export const PAYOUT_MAXIMUM = 513_493_669_141_047_227_556_000n;
+
+/**
  * How long a prepared way out stays alive. Long enough to read a screen, sign, and be relayed twice if the
  * first attempt fails; short enough that somebody who walks away is not held back for long, because a
  * signature they made is spendable until it expires.

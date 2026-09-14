@@ -50,7 +50,7 @@ contract ExitRouterTest {
 
     function testItTakesTheMoneyExchangesItAndPaysWhereTheySigned() public {
         (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
-            _exit(AMOUNT, 1, payoutTo);
+            _exit(AMOUNT, AMOUNT, payoutTo);
         uint256 before = payoutTo.balance;
 
         VM.prank(relayer);
@@ -65,7 +65,7 @@ contract ExitRouterTest {
     function testTheOwnerSendsNothingAndNeedsNothing() public {
         require(owner.balance == 0, "the owner holds no native coin at all");
         (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
-            _exit(AMOUNT, 1, payoutTo);
+            _exit(AMOUNT, AMOUNT, payoutTo);
         VM.prank(relayer);
         router.exit(t, a, call_);
         require(payoutTo.balance == AMOUNT, "and they were still paid");
@@ -277,13 +277,30 @@ contract ExitRouterTest {
     function testTheReceiptSaysWhatWasActuallyExchanged() public {
         exchange.setKeepBack(1_000_000);
         (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
-            _exit(AMOUNT, 1, payoutTo);
+            _exit(AMOUNT, AMOUNT - 1_000_000, payoutTo);
         uint256 before = token.balanceOf(owner);
         VM.prank(relayer);
         router.exit(t, a, call_);
         // 3 in, 1 back, so 2 exchanged: the event must not claim 3.
         require(token.balanceOf(owner) == before - AMOUNT + 1_000_000, "one came back");
         require(payoutTo.balance == AMOUNT - 1_000_000, "and two were exchanged");
+    }
+
+    /// @dev A payout service holds an order for a precise amount, and does not say what it does with anything
+    ///      else (D59). So the order is what it is sent, and whatever the exchange gave beyond it is theirs.
+    function testTheOrderIsSentExactlyAndTheRestGoesBackToThem() public {
+        uint256 order = AMOUNT - 400_000;
+        (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
+            _exit(AMOUNT, order, payoutTo);
+        uint256 theirsBefore = owner.balance;
+
+        VM.prank(relayer);
+        uint256 out = router.exit(t, a, call_);
+
+        require(out == AMOUNT, "the exchange gave more than the order");
+        require(payoutTo.balance == order, "the order was sent exactly, never more");
+        require(owner.balance == theirsBefore + (AMOUNT - order), "and the rest went back to them");
+        require(address(router).balance == 0, "the router kept nothing");
     }
 
     // --- an exchange that is only a signpost ------------------------------------------------------------
@@ -295,7 +312,7 @@ contract ExitRouterTest {
         router.setExchangeAllowed(address(signpost), true, address(0xA11CE));
         VM.deal(address(signpost), 100 ether);
 
-        (ExitRouter.ExitTerms memory t, bytes memory call_) = _termsWith(AMOUNT, 1, payoutTo, address(signpost));
+        (ExitRouter.ExitTerms memory t, bytes memory call_) = _termsWith(AMOUNT, AMOUNT, payoutTo, address(signpost));
         ExitRouter.Authorization memory a = _authorization(t, OWNER_KEY);
         VM.prank(relayer);
         router.exit(t, a, call_);
