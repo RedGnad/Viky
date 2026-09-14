@@ -8,6 +8,7 @@ import { relayWithdraw } from "@/src/gift-relay";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
 import { loadGift } from "@/src/gift-store";
+import { isOperator } from "@/src/dev-access";
 import { canonicalSignature } from "@/src/signature";
 
 export const runtime = "nodejs";
@@ -21,8 +22,10 @@ type WithdrawBody = { giftId?: string; to?: string; amount?: string; nonce?: str
  * account. The relayer only pays the gas: the contract checks the signature against the recipient.
  */
 export async function POST(request: Request) {
+  let operatorAccount: string | undefined;
   try {
     const auth = readAccountAuthSession(request);
+    operatorAccount = auth.account;
     const rate = checkRateLimit("relay", request, auth.account);
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
     const body = await readJsonBody<WithdrawBody>(request, 4 * 1_024);
@@ -63,6 +66,6 @@ export async function POST(request: Request) {
     const result = await relayWithdraw({ giftId, escrow, to: getAddress(to), amount, nonce, deadline, signature });
     return NextResponse.json({ giftId, sent: true, amount: amount.toString(), hash: result.hash }, { headers: NO_STORE });
   } catch (error) {
-    return giftErrorResponse(error);
+    return giftErrorResponse(error, isOperator(operatorAccount));
   }
 }

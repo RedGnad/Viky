@@ -1084,6 +1084,21 @@ which shape they speak of; those that say neither hold for both.
   3. The withdrawal path had never run, and nothing said so. `docs/SCREEN-CLAIMS.md` marked "Take $X" as
      exercised by a Foundry test, which tests the contract and cannot see a signature produced by a browser.
      A contract test passing is not a path working.
-- Still open: which of the two shapes the browser actually produced. Both are now accepted, so the next
-  attempt settles it by succeeding; if it still fails, the cause is elsewhere and the log will name it.
+- **The real cause, found the next morning by tracing rather than guessing.** Everything above is true and
+  worth keeping, but none of it was the reason the message said nothing. Our own error decoder
+  (`decodeContractError`) looked for the refusal's name in two places: on the error itself, and in a `data`
+  field holding raw hex. Viem puts it in neither: it arrives already decoded, as an object inside `data`,
+  one layer down. So **every typed refusal from the contract was invisible to us** and fell through to the
+  generic sentence. The decoder had no test at all.
+  Found by replaying the browser's exact path with our own functions against the live contract, which showed
+  the digest matching, the signature well formed, and `InvalidRecipientSignature` sitting plainly in the
+  error one level below where we were looking.
+- Also fixed with it: a refusal Solidity writes as a sentence rather than a named error arrives as the name
+  "Error" with the sentence as its only argument. Returning the name alone lost the only part that says
+  anything, and that is exactly how a library inside the contract refuses a signature it does not like.
+- **The lesson, and it is mine.** I changed four things on hypotheses before measuring: the recovery byte,
+  the signature shape, sixteen missing messages, an operator-visible detail. The last two were worth doing
+  and the first two are harmless, but none of them was the cause, and the funder was right to say so. The
+  thing that found it took twenty minutes: run our own code against the real contract and print what comes
+  back at every layer. A refusal nobody can read is not a hint to guess from, it is the first bug to fix.
 

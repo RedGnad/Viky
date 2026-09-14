@@ -23,7 +23,8 @@ type Busy = "idle" | "opening" | "naming" | "binding" | "counting" | "taking";
  * so no technical word ever reaches the screen.
  */
 function screenMessage(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
+  // `detail` arrives only for one of our own accounts, and only when a refusal had no name to give.
+  if (error instanceof ApiError) return error.detail ? `${error.message} (${error.detail})` : error.message;
   if (error instanceof ScreenError) return error.message;
   return "Something went wrong. Nothing was changed. Please try again.";
 }

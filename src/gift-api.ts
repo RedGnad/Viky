@@ -66,7 +66,11 @@ const CONTRACT_REFUSALS: Record<string, { code: string; message: string; status:
   TransferShortfall: { code: "REFUSED", message: "The money did not move as expected, so nothing was changed.", status: 409 },
 };
 
-export function giftErrorResponse(error: unknown): NextResponse {
+/**
+ * `forOperator` adds the refusal exactly as the chain gave it. Only ever true for one of our own accounts
+ * (src/dev-access.ts): it is technical text, and a person using Viky must never meet it.
+ */
+export function giftErrorResponse(error: unknown, forOperator = false): NextResponse {
   const authStatus = accountAuthErrorStatus(error);
   if (authStatus) return NextResponse.json({ error: accountAuthPublicMessage(error), code: "SIGN_IN_REQUIRED" }, { status: authStatus, headers: NO_STORE });
   if (error instanceof GiftApiError) return NextResponse.json({ error: error.message, code: error.code }, { status: error.status, headers: NO_STORE });
@@ -76,7 +80,10 @@ export function giftErrorResponse(error: unknown): NextResponse {
       const known = error.contractError ? CONTRACT_REFUSALS[error.contractError] : undefined;
       if (known) return NextResponse.json({ error: known.message, code: known.code, contractError: error.contractError }, { status: known.status, headers: NO_STORE });
       console.error(`contract refusal with no message: ${error.contractError ?? "undecodable"}`);
-      return NextResponse.json({ error: "This could not be recorded.", code: "REFUSED", contractError: error.contractError ?? null }, { status: 409, headers: NO_STORE });
+      return NextResponse.json(
+        { error: "This could not be recorded.", code: "REFUSED", contractError: error.contractError ?? null, detail: forOperator ? error.rawReason : undefined },
+        { status: 409, headers: NO_STORE },
+      );
     }
     return NextResponse.json({ error: "Viky is not ready for this yet. Nothing was changed.", code: error.code }, { status: 503, headers: NO_STORE });
   }
