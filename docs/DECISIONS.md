@@ -1157,9 +1157,18 @@ which shape they speak of; those that say neither hold for both.
   chooses nothing: the signature names the destination, the amount and the deadline, and a test proves that
   changing any of them breaks it. The 0.05 MON top-up is left only for the operator pages and is on the list
   to delete with them.
-- Still to do, and it is the same shape: the payout itself still asks the recipient's account to approve and
-  swap. It needs a router the relayer calls, which takes the AUSD by signed authorization, exchanges it, and
-  sends the result on. Until that exists, the payout works only for an account holding more than 10 MON.
+- The payout was the other half, and `contracts/ExitRouter.sol` is it, written the same day. The relayer
+  calls it; it takes the AUSD by the person's signed authorization, exchanges it, and sends the proceeds
+  where they asked. Their account does nothing and needs nothing.
+  **The signature is what decides everything.** AUSD's authorization binds only who, how much, and a nonce,
+  so the nonce is the hash of the terms: the destination, the least that may come back, which exchange, and
+  the exact bytes that will be said to it. Change any of them and the token refuses the nonce. It is the same
+  trick that funds a gift with one signature, so there is one idea to check rather than two, and the tests
+  prove a relayer cannot redirect the money, lower the floor, or alter the call. An exchange must also be one
+  the owner allowed, which is a second lock in case a signature is ever produced by something compromised.
+  The contract keeps nothing: what an exchange does not take goes back to the person in the same call, no
+  allowance survives whether the exchange succeeded or failed, and the owner can sweep anything stranded.
+  17 tests, 4,310 bytes. **Not deployed**: D37 requires a review in a separate session first.
 - **How this was found.** Not by reading the documentation, which said it plainly and which I had open
   earlier the same night for a different question. By the funder trying to move his own money five times and
   refusing to accept "this could not be recorded" as an answer.
