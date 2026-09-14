@@ -1185,3 +1185,42 @@ which shape they speak of; those that say neither hold for both.
   plain sentences rather than against its tests, before it is deployed. That discipline is the point, and it
   has found a real defect every time, on every model it has run on.
 
+## D55, 14 Sep 2026, the exit router review: a payment that was not one, and a door left open
+
+- Statement: the review of `ExitRouter` returned **do not deploy**. Six of seven promises held; one broke,
+  and a second was found to hold only by accident. Both are fixed and pinned by tests that were checked by
+  putting each defect back.
+- Source: contract review of 14 Sep 2026, 42 tests in a scratch copy outside the repository, including two
+  against the real AUSD on a mainnet fork and a 5,000 run fuzz.
+- **Promise 5 broken: a payment that was not one.** The payout checked only that the call did not revert,
+  never that the money left. A destination that hands it straight back, and the router's own address,
+  both returned success: the person's AUSD was gone, a full receipt was emitted saying they had been paid,
+  and the proceeds sat in the contract reachable only by us. Fixed twice over: the router's own address is
+  refused as a destination, and the balance is checked after the payout, so delivery is the test rather
+  than politeness.
+- **Promise 7 held only by accident.** Nothing stopped the token itself being allowlisted as an exchange.
+  Since AUSD requires the recipient of an authorization to be the caller, that would let anyone aim this
+  contract's own pull at a third party's signed exit and take the proceeds as "left over". The review
+  reproduced it by deleting one unrelated guard: 100 AUSD moved from one person to another. What stopped it
+  on the shipped code was the floor on what must come back, which is not what the docstring said was
+  protecting anything. The token and the contract itself are now refused as exchanges, both when the list is
+  set and when the call is made.
+- Also fixed: the receipt claimed the whole amount was exchanged when part had been given back, so a screen
+  reading events would have told someone $3.00 when it was $2.00; and a destination is now given a bounded
+  amount of gas, so one that burns everything costs the relayer a known amount once instead of repeatedly
+  while the signature stays unspent. `ExitTerms.owner` is renamed `payer`, because `owner()` in the same
+  contract is Viky and confusing the two is exactly how an earlier contract broke.
+- Recorded rather than fixed, for the wiring that comes next:
+  1. **Kuru Flow is a forwarder with a changeable target.** The review read on chain that the address in D8
+     exposes `setRouter(address)` and points at another contract today. Allowlisting it grants a live
+     allowance plus arbitrary calldata to whatever its owner points at next. Either allowlist what it points
+     at, or accept it knowingly and write it on the judges page.
+  2. **Gas must be estimated per call**, as D52 concluded. The review measured 313,520 against the real AUSD
+     with a trivial exchange, more than against the mock, and the real exchange is on top of that.
+  3. **A signature signed twice is spendable twice.** The salt makes each independent, so an app that lets
+     someone retry must reuse the same terms rather than sign new ones.
+  4. The floor on what comes back is only as good as the number the screen puts in front of the person. No
+     contract can fix that; it belongs in the screen claims when the payout is wired.
+- State: 21 tests on this contract, 133 across the Solidity suite. **Still not deployed**, and still not
+  wired to anything.
+

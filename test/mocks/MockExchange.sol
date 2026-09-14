@@ -48,3 +48,19 @@ contract MockExchange {
         require(ok, "payout failed");
     }
 }
+
+/// @dev A destination that hands its money straight back, which used to look exactly like being paid.
+contract BouncingPayee {
+    receive() external payable {
+        (bool ok,) = msg.sender.call{value: msg.value}("");
+        ok; // the point is that this destination keeps nothing while reporting success
+    }
+}
+
+/// @dev A destination that burns whatever gas it is given, so the relayer pays for nothing.
+contract GreedyPayee {
+    receive() external payable {
+        uint256 n;
+        while (true) n = uint256(keccak256(abi.encode(n)));
+    }
+}

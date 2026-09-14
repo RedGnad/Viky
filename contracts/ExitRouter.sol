@@ -42,11 +42,15 @@ contract ExitRouter is Ownable, ReentrancyGuard {
 
     /// @dev Distinct from the gift contracts' tags, so one signature can never be spent on another contract.
     bytes32 public constant EXIT_NONCE_TAG = keccak256("viky.exit.v1");
+    /// @dev What a destination gets to spend receiving its money. Generous for any ordinary account or
+    ///      contract, and bounded so one that burns gas on purpose costs the relayer a known amount once.
+    uint256 public constant PAYOUT_GAS = 100_000;
 
     /// @dev What the person signed: everything that decides where their money ends up.
     struct ExitTerms {
-        /// @dev Whose money. The authorization is checked against this by the token itself.
-        address owner;
+        /// @dev Whose money. The authorization is checked against this by the token itself. Named `payer`
+        ///      and not `owner`, because `owner()` here is Viky and confusing the two would be a way to lose money.
+        address payer;
         /// @dev Where the proceeds go. Theirs to choose, and nobody else can change it.
         address payoutTo;
         uint256 amount;
@@ -74,12 +78,14 @@ contract ExitRouter is Ownable, ReentrancyGuard {
 
     event ExchangeAllowed(address indexed exchange, bool allowed);
     event Exited(
-        address indexed owner, address indexed payoutTo, uint256 amountIn, uint256 amountOut, address indexed exchange
+        address indexed payer, address indexed payoutTo, uint256 amountIn, uint256 amountOut, address indexed exchange
     );
 
     error InvalidAddress();
     error InvalidAmount();
     error ExchangeNotAllowed();
+    error ExchangeNotEligible();
+    error PayoutNotDelivered();
     error TermsMismatch();
     error DeadlinePassed();
     error TransferShortfall();
@@ -96,7 +102,7 @@ contract ExitRouter is Ownable, ReentrancyGuard {
 
     function hashTerms(ExitTerms calldata t) public pure returns (bytes32) {
         return
-            keccak256(abi.encode(t.owner, t.payoutTo, t.amount, t.minOut, t.exchange, t.callHash, t.deadline, t.salt));
+            keccak256(abi.encode(t.payer, t.payoutTo, t.amount, t.minOut, t.exchange, t.callHash, t.deadline, t.salt));
     }
 
     /// @notice The nonce the authorization must carry. One signature is therefore both the payment and the
@@ -114,9 +120,17 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         nonReentrant
         returns (uint256 amountOut)
     {
-        if (t.owner == address(0) || t.payoutTo == address(0) || t.exchange == address(0)) {
+        if (t.payer == address(0) || t.payoutTo == address(0) || t.exchange == address(0)) {
             revert InvalidAddress();
         }
+        // Paying into this contract would look exactly like a payment and be none: the call succeeds, the
+        // event says the money was delivered, and it sits here reachable only by us.
+        if (t.payoutTo == address(this)) revert InvalidAddress();
+        // The exchange may never be the token or this contract. Both would let a caller aim the router's own
+        // `receiveWithAuthorization` at somebody else's signed authorization, since the token requires the
+        // recipient to be the caller, and take the proceeds as "left over". The floor on what must come back
+        // happens to stop it today, which is not a reason to leave it standing.
+        if (t.exchange == address(token) || t.exchange == address(this)) revert ExchangeNotEligible();
         if (t.amount == 0 || t.minOut == 0) revert InvalidAmount();
         if (block.timestamp > t.deadline) revert DeadlinePassed();
         if (!allowedExchanges[t.exchange]) revert ExchangeNotAllowed();
@@ -131,7 +145,7 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         // these terms, so nothing here can be swapped for anything else.
         IERC3009Receiver(address(token))
             .receiveWithAuthorization(
-                t.owner, address(this), t.amount, a.validAfter, a.validBefore, exitNonce(t), a.v, a.r, a.s
+                t.payer, address(this), t.amount, a.validAfter, a.validBefore, exitNonce(t), a.v, a.r, a.s
             );
         if (token.balanceOf(address(this)) != tokenBefore + t.amount) revert TransferShortfall();
 
@@ -146,18 +160,25 @@ contract ExitRouter is Ownable, ReentrancyGuard {
 
         // Anything the exchange did not take goes straight back to them; this contract keeps nothing.
         uint256 tokenLeft = token.balanceOf(address(this)) - tokenBefore;
-        if (tokenLeft > 0) token.safeTransfer(t.owner, tokenLeft);
+        if (tokenLeft > 0) token.safeTransfer(t.payer, tokenLeft);
 
-        (bool paid,) = t.payoutTo.call{value: amountOut}("");
+        // A bounded stipend, so a destination that burns everything it is given cannot make the relayer pay
+        // for a transaction that was never going to finish, over and over, with the signature still unspent.
+        (bool paid,) = t.payoutTo.call{value: amountOut, gas: PAYOUT_GAS}("");
         if (!paid) revert PayoutFailed();
+        // Delivered, not merely "the call did not revert": a destination that hands the money straight back
+        // returns success, and the person would be told they were paid while nothing left.
+        if (address(this).balance != nativeBefore) revert PayoutNotDelivered();
 
-        emit Exited(t.owner, t.payoutTo, t.amount, amountOut, t.exchange);
+        emit Exited(t.payer, t.payoutTo, t.amount - tokenLeft, amountOut, t.exchange);
     }
 
     // --- the owner --------------------------------------------------------------------------------------
 
     function setExchangeAllowed(address exchange, bool allowed) external onlyOwner {
         if (exchange == address(0)) revert InvalidAddress();
+        // Refused here as well as at the call, so the list itself can never hold either of them.
+        if (exchange == address(token) || exchange == address(this)) revert ExchangeNotEligible();
         allowedExchanges[exchange] = allowed;
         emit ExchangeAllowed(exchange, allowed);
     }
