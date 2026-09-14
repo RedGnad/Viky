@@ -151,13 +151,14 @@ export function CashOut() {
         <section className={CARD}>
           <p className="font-medium">Send it to another account of yours</p>
           <p className="text-sm" style={{ color: "var(--muted)" }}>
-            Any amount, no fee beyond what it costs to move, which Viky pays. Useful for putting what you
-            earned together in one place before taking it out.
+            Any amount, and nothing to pay: Viky covers what it costs to move. Useful for putting what you
+            earned in one place before taking it out. Sign in to your other account and open its
+            &quot;For judges&quot; page to find its identifier.
           </p>
           <input
             value={ownAccount}
             onChange={(event) => setOwnAccount(event.target.value)}
-            placeholder="Paste the line of your other account"
+            placeholder="Paste your other account's identifier"
             className={FIELD}
             disabled={step === "sentToAccount"}
           />
@@ -192,7 +193,7 @@ export function CashOut() {
           <input
             value={destination}
             onChange={(event) => setDestination(event.target.value)}
-            placeholder="Paste the line they gave you"
+            placeholder="Paste what they asked you to copy"
             className={FIELD}
             disabled={step === "sending" || step === "sent"}
           />
