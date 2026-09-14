@@ -186,6 +186,215 @@ five motion techniques.
 
 To be written from the second research pass.
 
-## 3. WCAG 2.2, web.dev and Nielsen Norman Group
+## 3. web.dev and Chrome for Developers
 
-To be written from the second and third research passes.
+### 3.1 The viewport tag, exactly
+
+The recommended tag is `width=device-width, initial-scale=1`, and nothing else. **[O]**
+`https://web.dev/articles/responsive-web-design-basics`
+
+On `minimum-scale`, `maximum-scale` and `user-scalable`, verbatim: "We don't recommend using these attributes
+because they can prevent the user from zooming the viewport, potentially causing accessibility issues."
+**[O]** same URL. There is a measurable threshold behind it: the accessibility audit requires no
+`user-scalable="no"` and `maximum-scale` **not less than 5**. **[O]**
+`https://developer.chrome.com/docs/lighthouse/accessibility/scoring`
+
+A second number worth knowing, because it is a cost and not a preference: "Tap interactions may be delayed by
+up to **300 milliseconds** if the viewport is not optimized for mobile." **[O]**
+`https://developer.chrome.com/docs/performance/insights/viewport` (published 8 Oct 2025)
+
+**`viewport-fit=cover`**: if you want "full access to the screen, even the invisible area", add it, and then
+use the insets. The same page warns that you can then "render pixels behind rounded corners and notches, so
+you should always use safe margins or paddings for the critical content and interactive elements". **[O]**
+`https://web.dev/learn/pwa/app-design`
+
+### 3.2 Safe areas, and the bottom bar trap
+
+The four variables, with fallbacks, because they behave like custom properties: **[O]**
+`https://web.dev/learn/design/screen-configurations`
+
+```css
+padding-bottom: env(safe-area-inset-bottom, 1em);
+```
+
+What makes them work is `viewport-fit=cover`: the page then "will take up the entire viewport and safely pad
+the document with device-provided inset values". **[O]** same URL. What they resolve to **without** `cover`
+is not stated anywhere in web.dev or the Chrome docs: the pages only say `cover` is what makes them work, so
+always pass a fallback. **[NV]**
+
+For anything pinned to the bottom, Chrome publishes an explicit anti-pattern and a replacement. **[O]**
+`https://developer.chrome.com/docs/css-ui/edge-to-edge`
+
+- Do **not** write `padding-bottom: env(safe-area-inset-bottom, 0px)` on a bottom-anchored bar: "it results
+  in layout thrashing", and "Chrome won't slide the chin away as you scroll when it detects this pattern".
+- Use `safe-area-max-inset-bottom` for the padding and `bottom: calc(env(safe-area-inset-bottom, 0px) -
+  var(--safe-area-max-inset-bottom))` for the offset. Chrome has a fast path for exactly that `calc(env(...)
+  +/- ...)` shape, so only `bottom` recomputes.
+- The recommended fallback is **36px**, and the reason is stated: Safari on iOS in Single Tab Mode has a
+  maximum bottom offset of 36px in portrait.
+
+The iOS home indicator is never named on web.dev either. **[NV]** The official facts are the notch, the
+rounded corners, and that 36px figure. So our reason for padding the bottom is the Android gesture bar and
+the browser chin, which are both documented, and not a rule about the home indicator that neither Apple nor
+web.dev currently publishes.
+
+### 3.3 Height units, and the `100vh` trap
+
+**[O]** `https://web.dev/blog/viewport-units`
+
+- `vh` does not change with dynamic toolbars, so "elements sized to be `100vh` tall will bleed out of the
+  viewport": too tall on load, correct only once the browser UI has retracted.
+- `sv*` assumes the UI expanded, `lv*` assumes it retracted, both stable. `dv*` tracks between them and is
+  "clamped between their `lv*` and `sv*` counterparts".
+- Support: Chrome 108, Firefox 101, Safari 15.4.
+- Three caveats, all ours to respect: no viewport unit accounts for scrollbars, so `100vw` is "a little bit
+  too wide" with classic scrollbars; dynamic values "do not update at 60fps" and are throttled; the on-screen
+  keyboard is not part of the UA UI, so it does not affect any of them.
+
+web.dev issues no directive to prefer one. Choosing `svh` where nothing may ever be clipped and `dvh` only
+where a jump is acceptable is our inference from those statements. **[NV]**
+
+### 3.4 Tap targets: the number is 48, not 44
+
+- "A minimum recommended touch target size is around **48** device independent pixels", which "corresponds to
+  around 9mm, which is about the size of a person's finger pad area". Spacing: "about **8 pixels** apart,
+  horizontally and vertically". A 24px glyph reaches 48 through padding. **[O]**
+  `https://web.dev/articles/accessible-tap-targets`
+- The audit: it fails only when the target is smaller than 48 by 48 **and** at least 25 % of the area within
+  48px of its centre overlaps another target. "Tap targets that are 48 px by 48 px never fail the audit." And
+  "8 px between tap targets is a good starting point, but is not always enough spacing." **[O]**
+  `https://developer.chrome.com/docs/lighthouse/seo/tap-targets`. The audit still exists: no deprecation
+  banner, and it is in neither the replaced nor the removed list of Lighthouse 13. **[O]**
+- Grow the target for a coarse pointer with `@media (pointer: coarse)`, and never shrink it for a fine one.
+  **[O]** `https://web.dev/learn/design/interaction`
+
+**What Viky takes: 48.** Four sources give four floors, Apple 44 pt, web.dev 48 dp, NN/g 1 cm (about 38 px)
+and WCAG 2.2 24 px, so the only defensible choice is the largest. Our test asserted 44, which passed every
+floor but the one that is easiest to measure and the one an audit will actually run.
+
+One removal worth recording: the **font-size audit was removed in Lighthouse 13**, "there are no signals that
+this remains an SEO concern today". Its historical numbers, still on the page, were that text under 12px is
+often hard to read on mobile. **[O]** `https://developer.chrome.com/docs/lighthouse/seo/font-size`
+
+### 3.5 Line length, and where breakpoints come from
+
+Three official numbers, and they do not quite agree, which is worth saying rather than smoothing:
+
+- "an ideal column should contain **70 to 80 characters** per line (about 8 to 10 words in English)" **[O]**
+  `https://web.dev/articles/responsive-web-design-basics`
+- **45 to 75** characters is "a satisfactory line length"; "The **66**-character line ... is widely regarded
+  as ideal"; 40 to 50 for multiple columns. The recommended implementation is `max-inline-size: 66ch`,
+  explicitly preferred over a pixel width, because `ch` scales with the font. **[O]**
+  `https://web.dev/learn/design/typography/`
+- `max-width: 60ch` as the worked sizing example. **[O]** `https://web.dev/learn/css/sizing`
+
+On breakpoints: "It's best to choose your breakpoints based on your content rather than popular device
+sizes", and the worked example breaks where "the lines of text become uncomfortably long". **[O]**
+`https://web.dev/learn/design/media-queries`. And: "Don't define breakpoints based on device classes, or any
+product, brand name, or operating system." **[O]** `https://web.dev/articles/responsive-web-design-basics`
+
+Container queries are presented as complementary to media queries, and neither page says one replaces the
+other. **[O]** `https://web.dev/learn/css/container-queries`
+
+### 3.6 Horizontal scrolling
+
+"users are used to scrolling websites vertically but not horizontally", and the named cause is a fixed-size
+image, with the fix being "giving all images a `max-width` of `100%`". **[O]**
+`https://web.dev/articles/responsive-web-design-basics`. The second documented cause is `100vw` with classic
+scrollbars. **[O]** The old Lighthouse detection route (`window.innerWidth` versus `outerWidth`) sits on a
+page that states PWA testing in Lighthouse is deprecated, so our own browser test is the detection. **[O]**
+
+## 4. Nielsen Norman Group
+
+### 4.1 Visual hierarchy, with limits that are numbers
+
+**[O]** `https://www.nngroup.com/articles/visual-hierarchy-ux-definition/`
+
+- Hierarchy is carried by contrast, not hue: "It's not the actual color of an element that creates the
+  hierarchy, but rather the contrast in value and saturation."
+- "Use no more than **3** contrast variations for complex designs."
+- "Use no more than **3** sizes", and their concrete web scale: **14 to 16px body, 18 to 22px subheader, up
+  to 32px header**.
+- "Limit how many elements are big to a maximum of **2**".
+- Group by proximity: tighten space inside a group, widen it between groups.
+- The squint test: blur the design at **5, 10 and 20px** radii and see what survives.
+
+### 4.2 Where attention actually goes
+
+- **57 %** of page-viewing time above the fold, **74 %** in the first two screenfuls, more than **42 %** in
+  the top fifth of the page, more than **65 %** in the top 40 %. 120 participants, over 130,000 fixations.
+  **[O]** `https://www.nngroup.com/articles/scrolling-and-attention/`
+- "the 100 pixels just above the fold were viewed **102 %** more than the 100 pixels just below"; the average
+  difference above versus below is **84 %**. 57,453 fixations. **[O]**
+  `https://www.nngroup.com/articles/page-fold-manifesto/`
+- People read "at most **28 %** of the words during an average visit; 20 % is more likely". **[O]**
+  `https://www.nngroup.com/articles/how-little-do-users-read/`
+
+**Consequence for Viky**: the money and the state of the days belong in the first screenful, above anything
+explanatory. Not as a style preference: as the measured place where two thirds of attention is.
+
+### 4.3 Forms, and the one measured difference
+
+**[O]** `https://www.nngroup.com/articles/web-form-design/`
+
+The ten recommendations include: keep it short, group related fields, **one column**, logical order, **no
+placeholder text**, field size matched to the input, mark optional and required, explain formatting, no reset
+button, visible specific errors.
+
+The measured support, and it is the strongest number in this whole research: forms that follow the guidelines
+get **78 %** first-try submissions against **42 %** for forms that violate them, users "almost twice as
+likely to submit the form with no errors from the first try" (Seckler et al., CHI '14). **[O]**
+
+- One column, with the reason: "Multiple columns interrupt the vertical momentum of moving down the form."
+  **[O]**
+- "Limit the form to only **1 or 2** optional fields, and clearly label them as optional." **[O]**
+- Labels go **above** the field: "Not inside, not below." **[O]**
+  `https://www.nngroup.com/articles/mobile-input-checklist/`
+- Avoid drop-downs for 2 or 3 options that could be radio buttons. **[O]**
+
+### 4.4 Older users, and what NN/g does and does not publish
+
+Seniors are 65+. Success rate **55.3 %** against **74.5 %** for ages 21 to 55; time on task 7:49 against
+5:28; errors 2.4 against 1.1. Rated capacities: vision **82 % versus 95 %**, dexterity **73 % versus 95 %**,
+memory **49 % versus 63 %**. "95 % of seniors were rated as methodical" against 35 % of younger users, and it
+bought them no better results. **[O]** `https://www.nngroup.com/articles/usability-seniors-improvements/`
+
+Font size, from the same page: "Sites that target seniors should use at least **12-point** fonts as the
+default", and every site should let people resize. **[O]**
+
+**An important negative.** NN/g's article on low contrast contains exactly one number, "Use at least an 8-pt
+font", and **no contrast ratio at all**: it defers to W3C 1.4.3. **[O, negative]**
+`https://www.nngroup.com/articles/low-contrast/` So the 4.5:1 figure is WCAG's, and attributing it to NN/g
+would be wrong. What NN/g does contribute qualitatively: low-contrast elements do not stand out when
+scanning, glare makes mobile worse, and dimmed text is read as disabled or as the current location, which
+sends a wrong signal.
+
+Touch targets, all ages rather than older-specific: "minimum size should be **1cm x 1cm**". **[O]**
+`https://www.nngroup.com/articles/touch-target-size/`
+
+### 4.5 Two rules we will not follow, because the data says not to
+
+- **The three-click rule "has not been supported by data in any published studies to date."** The one study
+  cited found that drop-off does not increase beyond three clicks and satisfaction does not decrease.
+  **[O]** `https://www.nngroup.com/articles/3-click-rule/` So counting taps is not a target. What matters is
+  the wording of labels and the visible state of the money.
+- Interaction cost does matter, but "there are no universal thresholds": 4 easy clicks beat 5 easy clicks,
+  and counting alone is insufficient. Response time does have thresholds: under 1 second feels seamless,
+  under 10 seconds keeps attention. **[O]**
+  `https://www.nngroup.com/articles/interaction-elasticity/`
+
+And one limit we will follow: designs exceeding **2 disclosure levels** typically have low usability.
+**[O]** `https://www.nngroup.com/articles/progressive-disclosure/`
+
+### 4.6 Reading on a phone is not the problem it is said to be
+
+276 participants, 1,629 cases: comprehension on mobile was about **3 percentage points higher** than on a
+computer (95 % CI 1 to 5 %, p = 0.0006), which the article itself calls "not practically significant". The
+real cost is speed, "about **30 milliseconds** more on each word" for hard passages. **[O]**
+`https://www.nngroup.com/articles/mobile-content-is-twice-as-difficult/` (the page now refutes its own old
+title). Conclusion: a small screen costs nothing on easy content and costs reading speed on hard content, so
+the work is to make the content easy rather than to fear the screen.
+
+## 5. Material Design 3, and WCAG 2.2
+
+To be written from the remaining research pass.
