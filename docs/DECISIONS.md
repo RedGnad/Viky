@@ -1307,3 +1307,44 @@ so, and `docs/spikes/KT1-part-2.md` is narrowed to the entry alone, legs 1 to 6.
   implement once, afterwards. Until then I work only on what is not seen: the open points of the exit router,
   the logic of the rail step, and the data behind the day states and the notifications.
 
+
+## D59, 14 Sep 2026: the payout service does not say what it does with the wrong amount, so we never send it
+
+**Statement.** The way out sends the payout service exactly the amount of the order it is holding, and hands
+whatever the exchange gave beyond that straight back to the person, in the same transaction.
+
+**Source.** Mercuryo's own material, read in full on 14 Sep 2026: the help centre article on selling
+("How do I sell cryptocurrency using Mercuryo"), the widget documentation off-ramp guide, the OOR API guide,
+and both Terms of Service. The single sentence they devote to the subject says that sending more or less than
+the requested amount "may delay processing or prevent your transaction from being completed". There is no
+published re-quote, no refund threshold, no hold-pending rule, and no policy for an excess. The words
+overpay, underpay, partial and excess appear nowhere in 107 help articles or 61 documentation pages.
+
+**Consequence.** `ExitRouter.exit` pays `minOut` exactly, not `amountOut`, and returns the difference to the
+payer. The terms' `minOut` is therefore the order, not merely a floor, and the screen's figure, the order and
+the signature are one number. This costs the person a little native coin left in their account, which is
+theirs and which nothing in Viky spends; the alternative was resting a payout on behaviour nobody documents.
+
+**Also measured, and it binds the screens.** The order must be sent within **6 hours** of being created
+(widget documentation); our own window is fifteen minutes. Two Mercuryo sources disagree about where late
+coins land, which is another reason not to be late. Payout is **card only, EUR and USD**, not SEPA: the
+consumer widget's bank payout is behind a waitlist. Selling is **not available in the United Kingdom**.
+Valid KYC is required before a sell can proceed. Their fee is up to 3.95 % with a minimum near 3 to 4 euros.
+If the price moves more than 5 % between quote and deposit they will not create the transaction and return
+the deposit.
+
+## D60, 14 Sep 2026: nobody can be paid out less than about twenty one dollars
+
+**Statement.** The smallest sell order the payout service accepts for MON to EUR is 879.889249290954315600
+MON, and the largest is 513,493.669141047227556. Viky refuses to quote outside that, with a sentence, before
+the person leaves to place the order.
+
+**Source.** `GET https://api.mercuryo.io/v1.6/lib/limits/sell`, read 14 Sep 2026. Their help centre article
+states a 25 EUR minimum while this endpoint returns 15.00 EUR; the coin figure above is the one that decides,
+and it is the one we enforce. Verified-user caps are 10,000 EUR per transaction, 30,000 daily, 50,000 monthly.
+
+**Consequence, and it is a product fact and not a detail.** At the rate measured the same day (3 AUSD bought
+126.5 MON) the minimum is close to **twenty one dollars**. Gift 1 is twenty dollars: finished and fully
+earned, it still could not be cashed out on its own. So the way out is not available to every gift, and
+saying so early is part of the product. It also sets a floor under what a first gift should be worth if the
+funder intends the recipient to be able to take it as money, which belongs on the funder's screen.

@@ -60,7 +60,8 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         /// @dev Where the proceeds go. Theirs to choose, and nobody else can change it.
         address payoutTo;
         uint256 amount;
-        /// @dev The least that may come back, so a bad exchange rate cannot be forced on them.
+        /// @dev The order. It is the least that may come back from the exchange, and it is also exactly what
+        ///      the destination is sent: a payout service is owed an amount, not an approximation of one.
         uint256 minOut;
         /// @dev Which exchange is called, and exactly what is said to it.
         address exchange;
@@ -92,7 +93,14 @@ contract ExitRouter is Ownable, ReentrancyGuard {
 
     event ExchangeAllowed(address indexed exchange, bool allowed, address mustPointAt);
     event Exited(
-        address indexed payer, address indexed payoutTo, uint256 amountIn, uint256 amountOut, address indexed exchange
+        address indexed payer,
+        address indexed payoutTo,
+        uint256 amountIn,
+        /// @dev What the destination was actually sent, which is the order exactly, never more.
+        uint256 paidOut,
+        /// @dev What the exchange gave beyond the order, handed straight back to the person.
+        uint256 returned,
+        address indexed exchange
     );
 
     error InvalidAddress();
@@ -179,15 +187,30 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         uint256 tokenLeft = token.balanceOf(address(this)) - tokenBefore;
         if (tokenLeft > 0) token.safeTransfer(t.payer, tokenLeft);
 
-        // A bounded stipend, so a destination that burns everything it is given cannot make the relayer pay
-        // for a transaction that was never going to finish, over and over, with the signature still unspent.
-        (bool paid,) = t.payoutTo.call{value: amountOut, gas: PAYOUT_GAS}("");
+        // Exactly the order, and the rest straight back to them.
+        //
+        // The destination is a payout service holding an order for a precise amount. Asked what it does when
+        // what arrives differs from that order, its own documentation says only that a different amount "may
+        // delay processing or prevent your transaction from being completed" (D59). An undefined answer is
+        // not something a person's payout may rest on, so we never test it: what the exchange gave above the
+        // order is theirs and goes back to them in the same transaction.
+        //
+        // The stipend is bounded so a destination that burns everything it is given cannot make the relayer
+        // pay for a transaction that was never going to finish, over and over, with the signature unspent.
+        uint256 returned = amountOut - t.minOut;
+        (bool paid,) = t.payoutTo.call{value: t.minOut, gas: PAYOUT_GAS}("");
         if (!paid) revert PayoutFailed();
+        // A person's account is an ordinary one that cannot refuse a transfer, so this cannot be how a payout
+        // fails; it reverts rather than leaving their surplus here if one ever could.
+        if (returned > 0) {
+            (bool back,) = t.payer.call{value: returned, gas: PAYOUT_GAS}("");
+            if (!back) revert PayoutFailed();
+        }
         // Delivered, not merely "the call did not revert": a destination that hands the money straight back
         // returns success, and the person would be told they were paid while nothing left.
         if (address(this).balance != nativeBefore) revert PayoutNotDelivered();
 
-        emit Exited(t.payer, t.payoutTo, t.amount - tokenLeft, amountOut, t.exchange);
+        emit Exited(t.payer, t.payoutTo, t.amount - tokenLeft, t.minOut, returned, t.exchange);
     }
 
     // --- the owner --------------------------------------------------------------------------------------

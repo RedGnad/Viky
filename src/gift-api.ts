@@ -64,6 +64,16 @@ const CONTRACT_REFUSALS: Record<string, { code: string; message: string; status:
   InvalidEvidenceSigner: { code: "REFUSED", message: "That reading was not signed by Viky. Nothing was changed.", status: 409 },
   InvalidTokenDecimals: { code: "NOT_CONFIGURED", message: "Viky is not ready for this yet. Nothing was changed.", status: 503 },
   TransferShortfall: { code: "REFUSED", message: "The money did not move as expected, so nothing was changed.", status: 409 },
+  // The way out. Its refusals all end the same way on purpose: their money did not move.
+  TooLittleBack: { code: "RATE_MOVED", message: "The rate moved, so this would have paid you less than you were shown. Nothing was taken.", status: 409 },
+  DeadlinePassed: { code: "TOO_SLOW", message: "This took too long. Nothing was taken. Ask for a new quote.", status: 409 },
+  ExchangeFailed: { code: "EXCHANGE_REFUSED", message: "The exchange could not do it right now. Nothing was taken.", status: 409 },
+  PayoutFailed: { code: "PAYOUT_REFUSED", message: "The money could not reach that destination. Nothing was taken.", status: 409 },
+  PayoutNotDelivered: { code: "PAYOUT_REFUSED", message: "The money could not reach that destination. Nothing was taken.", status: 409 },
+  ExchangeMoved: { code: "NOT_CONFIGURED", message: "Viky stopped before doing anything, because the exchange changed. Nothing was taken.", status: 503 },
+  ExchangeNotAllowed: { code: "NOT_CONFIGURED", message: "Viky is not ready for this yet. Nothing was taken.", status: 503 },
+  ExchangeNotEligible: { code: "NOT_CONFIGURED", message: "Viky is not ready for this yet. Nothing was taken.", status: 503 },
+  TermsMismatch: { code: "NOT_CONFIGURED", message: "Viky is not ready for this yet. Nothing was taken.", status: 503 },
 };
 
 /**
