@@ -79,9 +79,26 @@ export function giftErrorResponse(error: unknown, forOperator = false): NextResp
     if (error.code === "REVERTED") {
       const known = error.contractError ? CONTRACT_REFUSALS[error.contractError] : undefined;
       if (known) return NextResponse.json({ error: known.message, code: known.code, contractError: error.contractError }, { status: known.status, headers: NO_STORE });
+      // Put the reason in the sentence itself for one of our own accounts. A page already open, or served
+      // from a cache, shows the message and may not know about any newer field, and the reason is the whole
+      // point of asking someone to try again.
+      const reason = error.contractError ?? error.rawReason;
+      if (forOperator && reason) {
+        return NextResponse.json(
+          { error: `This could not be recorded: ${reason}`, code: "REFUSED", contractError: error.contractError ?? null, detail: reason },
+          { status: 409, headers: NO_STORE },
+        );
+      }
       console.error(`contract refusal with no message: ${error.contractError ?? "undecodable"}`);
       return NextResponse.json(
-        { error: "This could not be recorded.", code: "REFUSED", contractError: error.contractError ?? null, detail: forOperator ? error.rawReason : undefined },
+        {
+          error: "This could not be recorded.",
+          code: "REFUSED",
+          contractError: error.contractError ?? null,
+          // Whatever the chain gave, decoded name or raw text. Showing it only when nothing decoded was the
+          // wrong test: a refusal can be named and still have no sentence of ours to map to.
+          detail: forOperator ? (error.contractError ?? error.rawReason) : undefined,
+        },
         { status: 409, headers: NO_STORE },
       );
     }

@@ -16,6 +16,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { giftEscrowAbi } from "./gift-escrow-abi";
 import { giftGasLimit, type GiftFunction } from "./gift-gas";
+import { addMonadGasBuffer } from "./monad-gas";
 import { MONAD_CHAIN_ID, monadChain, monadRpcUrl, waitForFinality } from "./monad/chain";
 
 /**
@@ -138,6 +139,38 @@ export function decodeContractError(error: unknown, abi: Abi = giftEscrowAbi as 
   return walk(error, 0);
 }
 
+/** Nothing Viky does should ever need this much; beyond it something is wrong and no money is risked. */
+const RUNAWAY_GAS = 2_000_000n;
+
+/**
+ * What to declare for one call. The estimate is what the chain says this exact call costs right now, in its
+ * current state and against the real token, which is the only number that means anything on a chain that
+ * charges the declared limit.
+ */
+export async function relayGasLimit(
+  clients: RelayerClients,
+  call: { address: Hex; abi: Abi; functionName: GiftFunction; args: readonly unknown[] },
+): Promise<bigint> {
+  const floor = giftGasLimit(call.functionName);
+  let estimated: bigint;
+  try {
+    estimated = await clients.publicClient.estimateContractGas({
+      address: call.address,
+      abi: call.abi,
+      functionName: call.functionName,
+      args: call.args as never,
+      account: clients.address,
+    });
+  } catch {
+    // An estimate can fail for reasons the call itself survives. Fall back to the recorded figure rather
+    // than refusing: it is the behaviour we had before, and it is never the lower of the two.
+    return floor;
+  }
+  const wanted = addMonadGasBuffer(estimated);
+  if (wanted > RUNAWAY_GAS) throw new RelayerError("NOT_CONFIGURED", "Viky is not ready for this yet. Nothing was changed.");
+  return wanted > floor ? wanted : floor;
+}
+
 export type RelayResult = Readonly<{ hash: Hash; receipt: TransactionReceipt }>;
 
 /**
@@ -164,12 +197,18 @@ export async function relay(
     if (raw) console.error(`contract refused without a typed error: ${raw}`);
     throw new RelayerError("REVERTED", name ? `The contract refused: ${name}` : "The contract refused the transaction", name, raw);
   }
+  // Monad charges the limit that is declared, not what is used, so the docs ask for an accurate one rather
+  // than a generous one. Ours came from a Foundry suite running against a mock token, and the real AUSD is a
+  // proxy that costs more: the withdrawal path was declared 172,000 against a real cost near 170,000, which
+  // is not a margin (D52). Estimated against the chain now, with the same margin on top, and the recorded
+  // figure kept only as a floor so a suspiciously low estimate cannot under-declare either.
+  const gas = await relayGasLimit(clients, { address, abi, functionName, args });
   const hash = await clients.walletClient.writeContract({
     address,
     abi,
     functionName,
     args: args as never,
-    gas: giftGasLimit(functionName),
+    gas,
     account: clients.walletClient.account!,
     chain: monadChain,
   });

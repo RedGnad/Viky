@@ -1102,3 +1102,34 @@ which shape they speak of; those that say neither hold for both.
   thing that found it took twenty minutes: run our own code against the real contract and print what comes
   back at every layer. A refusal nobody can read is not a hint to guess from, it is the first bug to fix.
 
+## D52, 14 Sep 2026, the gas limits came from a mock token, and one of them was too low to work
+
+- Statement: no withdrawal had ever succeeded, and the reason was not the signature. The transaction was
+  submitted and mined, and it failed there. A transaction that fails after being mined returns no error data
+  at all, which is the one path that produces "This could not be recorded" with no reason even for an
+  operator, and it matches exactly what the funder saw.
+- **The evidence, measured rather than reasoned.** The withdrawal counter on gift 1 is still zero and the
+  recipient holds nothing, so nothing ever landed. Yet the relayer's balance fell from 14.8377 to 14.6447
+  MON over the attempts, and nothing else it does explains that: it paid for transactions that were mined
+  and failed. Since the simulation passes before anything is sent, **the signature was always valid**, and
+  three of my earlier guesses were wrong for that reason alone.
+- **The cause.** A direct withdrawal costs 143,446 units against the real AUSD, measured on chain. The
+  signed path adds a signature recovery, a fresh storage slot for the withdrawal counter, and 65 bytes of
+  signature in the call, so roughly 170,000. We declared 172,000. That is not a margin.
+- **Where the number came from, and this is the part that matters.** Every figure in `src/gift-gas.ts` was
+  the highest usage seen in the Foundry suite, which runs against a **mock** token. A test double in tests
+  is normal and right; taking its gas figures as production limits is not, and the file said so in its own
+  comment ("with the mock token") without anyone reading it as a warning. The paths that had run, creating
+  and claiming and counting, happened to have enough room. The one that had never run did not.
+- Consequence: what is declared is now what the chain says the call costs, plus the 7.5 % Monad margin, with
+  the recorded figures kept only as a floor so a low estimate cannot under-declare either, and a runaway
+  estimate refused rather than paid for. Monad charges the declared limit and its own documentation asks for
+  an accurate one for exactly that reason, so this is the documented approach rather than a precaution.
+- **How I should have found it, and did not.** I changed four things on hypotheses before measuring
+  anything: the recovery byte, the signature shape, sixteen missing sentences, an operator-visible detail.
+  The funder stopped me and asked whether there was a rigorous procedure for analysing our own code. There
+  was one available the whole time and I did not use it: read the platform's own documentation on how gas is
+  charged, and measure the real cost against the real contract. Both took minutes once attempted. The
+  hackathon also grants a Tenderly licence whose whole purpose is to show why a mined transaction failed,
+  and it would have answered this in seconds.
+
