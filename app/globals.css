@@ -1,23 +1,82 @@
 @import "tailwindcss";
 
+/**
+ * Every value here comes from src/design-tokens.ts, and test/design-tokens.test.ts fails if the two stop
+ * agreeing. The reason each number is what it is lives in that file and in docs/design/research.md; this is
+ * only where the browser reads them.
+ *
+ * The palette is neutral on purpose. The art direction has not been chosen, and when it is, it replaces the
+ * colours below without touching a spacing, a size or a target, because nothing about the layout depends on
+ * a hue.
+ */
+
 :root {
+  /* Neutral palette, measured: text 17.93:1, muted 6.42:1, accent 6.70:1, control outline 3.42:1. */
   --background: #ffffff;
-  --foreground: #171717;
-  --muted: #6b7280;
+  --text: #171717;
+  --muted: #595f6a;
   --accent: #1d4ed8;
+  --on-accent: #ffffff;
+  --control-border: #8a8a93;
+  --divider: #e4e4e7;
+
+  /* Material's 8dp scale, the steps we use. */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+  --space-xxxl: 48px;
+
+  /* Four levels and no more: money, title, body, help. */
+  --type-money: 32px;
+  --type-money-leading: 40px;
+  --type-title: 22px;
+  --type-title-leading: 28px;
+  --type-body: 16px;
+  --type-body-leading: 24px;
+  --type-help: 14px;
+  --type-help-leading: 20px;
+
+  /* Material's shape scale, the steps we use. */
+  --radius-control: 12px;
+  --radius-card: 16px;
+  --radius-sheet: 28px;
+
+  /* The one number every source agrees on, and the gap that satisfies Apple's bezelled case too. */
+  --tap-target: 48px;
+  --tap-gap: 12px;
+
+  /* Material publishes 16 on a phone and 24 from 600px; Apple no longer publishes any. */
+  --page-margin: 16px;
+  --app-column-max: 480px;
+  --prose-max: 60ch;
+
+  color-scheme: light dark;
+}
+
+@media (min-width: 600px) {
+  :root {
+    --page-margin: 24px;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --muted: #9ca3af;
+    /* Measured: text 16.80:1, muted 8.21:1, accent 7.74:1, control outline 4.32:1. */
+    --background: #0b0b0c;
+    --text: #ededed;
+    --muted: #a1a8b3;
     --accent: #60a5fa;
+    --on-accent: #0b0b0c;
+    --control-border: #75757f;
+    --divider: #27272a;
   }
 }
 
 body {
-  color: var(--foreground);
+  color: var(--text);
   background: var(--background);
   font-family:
     system-ui,
@@ -25,4 +84,43 @@ body {
     "Segoe UI",
     Roboto,
     sans-serif;
+  font-size: var(--type-body);
+  line-height: var(--type-body-leading);
+  /*
+   * The device insets, which exist only because the viewport is declared with viewport-fit=cover in
+   * app/layout.tsx. Always with a fallback, because what they resolve to without cover is documented
+   * nowhere. The bottom one is padded here, on the document, and never on a bar pinned to the bottom:
+   * Chrome detects that pattern and stops sliding its own chin away.
+   */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+/*
+ * Nothing may push the page sideways. WCAG 1.4.10 asks the layout to work at 320 CSS pixels with no
+ * two-dimensional scrolling, and a fixed-size image is the cause web.dev names.
+ */
+img,
+svg,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/*
+ * Apple's own techniques for Reduce Motion: replace transitions with fades, drop bounce, avoid animating
+ * depth. Apple's guidelines never mention CSS, so the mapping onto this query is our inference; the
+ * substance is theirs.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -3,7 +3,17 @@ pragma solidity 0.8.30;
 
 import {ExitRouter} from "../contracts/ExitRouter.sol";
 import {MockAUSD} from "./mocks/MockAUSD.sol";
-import {BouncingPayee, CostlyPayee, ForwardingExchange, GreedyPayee, MockExchange} from "./mocks/MockExchange.sol";
+import {
+    BouncingPayee,
+    CostlyPayee,
+    DirtyForwarder,
+    ForwarderPointingNowhere,
+    ForwardingExchange,
+    GreedyPayee,
+    MockExchange,
+    ReenteringExchange,
+    TalkativeForwarder
+} from "./mocks/MockExchange.sol";
 
 interface VmExit {
     function addr(uint256 privateKey) external returns (address);
@@ -178,6 +188,19 @@ contract ExitRouterTest {
     }
 
     /// @dev An allowance left behind would be somebody else's to spend later.
+    /// @dev The case that matters and was missing: the exchange takes only part of what it was allowed, and
+    ///      the transaction succeeds. Both halves of the older test were self-fulfilling, one because the
+    ///      exchange spent the whole allowance and one because it reverted before spending any, so deleting
+    ///      the line that resets the allowance changed nothing anybody could see.
+    function testAnAllowanceOnlyPartlySpentIsStillResetToZero() public {
+        exchange.setKeepBack(1_000_000);
+        (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
+            _exit(AMOUNT, AMOUNT - 1_000_000, payoutTo);
+        VM.prank(relayer);
+        router.exit(t, a, call_);
+        require(token.allowance(address(router), address(exchange)) == 0, "nothing spendable is left over");
+    }
+
     function testNoAllowanceIsLeftBehindEitherWay() public {
         (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
             _exit(AMOUNT, 1, payoutTo);
@@ -292,8 +315,11 @@ contract ExitRouterTest {
         router.exit(t, a, call_);
     }
 
-    /// @dev A destination that burns everything it is given must cost a known amount once, not make the
-    ///      relayer pay again and again for a signature that is never spent.
+    /// @dev A destination that burns whatever gas it is given must not take the rest of the transaction down
+    ///      with it: the stipend is bounded so there is gas left on our side to hand back the surplus and
+    ///      check the money really left. It does NOT save the relayer anything, because Monad charges the
+    ///      limit a transaction declares rather than what it uses (D52, D61). The older comment here claimed
+    ///      it did, which is one more sentence about money that no code path made true.
     function testADestinationThatBurnsGasIsBounded() public {
         GreedyPayee greedy = new GreedyPayee();
         (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
@@ -428,15 +454,92 @@ contract ExitRouterTest {
         router.setPayoutGas(29_999);
         VM.expectRevert(ExitRouter.InvalidAmount.selector);
         router.setPayoutGas(1_000_001);
+        // And the ends of the range are usable, which is the half a bounds test usually forgets.
+        router.setPayoutGas(30_000);
+        require(router.payoutGas() == 30_000, "the floor is allowed");
+        router.setPayoutGas(1_000_000);
+        require(router.payoutGas() == 1_000_000, "the ceiling is allowed");
         VM.prank(relayer);
         (bool moved,) = address(router).call(abi.encodeWithSelector(ExitRouter.setPayoutGas.selector, 200_000));
         require(!moved, "not the relayer's to set");
     }
 
     /// @dev Giving up ownership would freeze the allowlist and the sweep for good, with no way back.
-    function testOwnershipCannotBeGivenUp() public {
+    function testOwnershipCannotBeGivenUpButCanStillBeHandedOver() public {
         VM.expectRevert(ExitRouter.OwnershipIsNotRenounceable.selector);
         router.renounceOwnership();
+        // The risk the override creates is that it breaks the handover too, which is the whole point of
+        // having an owner at all: a multisig has to be able to take it.
+        router.transferOwnership(payoutTo);
+        require(router.owner() == payoutTo, "handed over");
+        VM.prank(payoutTo);
+        (bool gone,) = address(router).call(abi.encodeWithSelector(ExitRouter.renounceOwnership.selector));
+        require(!gone, "and the new owner cannot give it up either");
+    }
+
+    // --- the guards nothing was exercising -------------------------------------------------------------
+
+    /// @dev Deleting `nonReentrant` used to leave every test green, and the whole native accounting rests on
+    ///      it: the amount out is a balance delta, so a second entry inside the first would read it wrong.
+    function testTheExchangeCannotComeBackInWhileItHoldsTheAllowance() public {
+        ReenteringExchange reentering = new ReenteringExchange(token, address(router));
+        router.setExchangeAllowed(address(reentering), true, address(0));
+        VM.deal(address(reentering), 10 ether);
+
+        // A real `exit` call, built here so nothing fails merely for being malformed: only then does the
+        // reason distinguish the guard from anything else.
+        (ExitRouter.ExitTerms memory t, bytes memory call_) = _termsWith(AMOUNT, AMOUNT, payoutTo, address(reentering));
+        ExitRouter.Authorization memory a = _authorization(t, OWNER_KEY);
+        reentering.setReentryCall(abi.encodeCall(ExitRouter.exit, (t, a, call_)));
+
+        VM.prank(relayer);
+        router.exit(t, a, call_);
+
+        require(reentering.reentryTried(), "it did try to come back in");
+        require(
+            keccak256(reentering.reentryRevert())
+                == keccak256(abi.encodeWithSignature("Error(string)", "ReentrancyGuard: reentrant call")),
+            "and it was the guard that refused it, not something else"
+        );
+        require(token.balanceOf(address(router)) == 0, "and nothing of theirs stayed here");
+    }
+
+    /// @dev A token that credits less than it promised must stop everything. No real token does this; a badly
+    ///      upgraded proxy would, and this contract is pointed at a proxy.
+    function testATokenThatCreditsLessThanItPromisedStopsEverything() public {
+        token.setShortfall(1);
+        (ExitRouter.ExitTerms memory t, ExitRouter.Authorization memory a, bytes memory call_) =
+            _exit(AMOUNT, AMOUNT, payoutTo);
+        VM.prank(relayer);
+        VM.expectRevert(ExitRouter.TransferShortfall.selector);
+        router.exit(t, a, call_);
+    }
+
+    /// @dev An exchange that answers with something unreadable is refused at the door, not at the payout, and
+    ///      never with empty revert data. Decoding straight into an address used to throw on a dirty word.
+    function testAnExchangeWhoseAnswerCannotBeReadIsRefusedAtTheDoor() public {
+        // Built before the expectation, or the creation itself is what gets expected to revert.
+        address dirty = address(new DirtyForwarder());
+        address talkative = address(new TalkativeForwarder());
+
+        VM.expectRevert(ExitRouter.ExchangeNotEligible.selector);
+        router.setExchangeAllowed(dirty, true, address(0xA11CE));
+        VM.expectRevert(ExitRouter.ExchangeNotEligible.selector);
+        router.setExchangeAllowed(dirty, true, address(0));
+        VM.expectRevert(ExitRouter.ExchangeNotEligible.selector);
+        router.setExchangeAllowed(talkative, true, address(0));
+        require(!router.allowedExchanges(dirty) && !router.allowedExchanges(talkative), "neither was allowed");
+    }
+
+    /// @dev And one that answers with nowhere is refused too. Allowing it would store a zero pin, which means
+    ///      the check is skipped for ever, and its owner could then point it anywhere at all.
+    function testAForwarderPointingNowhereCannotBeAllowedAtAll() public {
+        address nowhere = address(new ForwarderPointingNowhere());
+        VM.expectRevert(ExitRouter.ExchangeNotEligible.selector);
+        router.setExchangeAllowed(nowhere, true, address(0));
+        VM.expectRevert(ExitRouter.ExchangeNotEligible.selector);
+        router.setExchangeAllowed(nowhere, true, address(0xA11CE));
+        require(!router.allowedExchanges(nowhere), "and it was never allowed");
     }
 
     // --- the owner's own doors --------------------------------------------------------------------------

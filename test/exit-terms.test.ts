@@ -27,6 +27,9 @@ test("the tag, the terms and the nonce match the contract's pin", () => {
 test("every field is part of what was signed, so no relayer can change one quietly", () => {
   const base = exitNonce(TERMS);
   const variants: ExitTerms[] = [
+    // The payer was missing from this list, which is the one field whose omission would let a relayer spend
+    // somebody else's authorization on terms of its own.
+    { ...TERMS, payer: "0x0000000000000000000000000000000000000B0b" },
     { ...TERMS, payoutTo: "0x00000000000000000000000000000000000A11cE" },
     { ...TERMS, amount: 3_000_001n },
     { ...TERMS, minOut: 125_000_000_000_000_000_000n },

@@ -75,6 +75,65 @@ contract ForwardingExchange is MockExchange {
     }
 }
 
+/// @dev Answers `getRouter` with a word whose top bits are dirty, which is what an assembly getter, a Vyper
+///      getter or a packed storage slot returns. `abi.decode(data, (address))` used to revert on this with no
+///      data at all, which is exactly the failure asking instead of calling was supposed to remove.
+contract DirtyForwarder {
+    fallback() external {
+        assembly {
+            mstore(0, not(0))
+            return(0, 32)
+        }
+    }
+}
+
+/// @dev Answers with two words rather than one.
+contract TalkativeForwarder {
+    function getRouter() external pure returns (address, address) {
+        return (address(0xA11CE), address(0xB0B));
+    }
+}
+
+/// @dev Answers, and points nowhere. Allowing it would mean the pin can never be checked.
+contract ForwarderPointingNowhere {
+    address public getRouter;
+}
+
+/// @dev Comes back through the front door while it holds the router's allowance, and remembers exactly how it
+///      was refused instead of swallowing it.
+///
+///      The reason has to be recorded rather than propagated, because a test that only checks the exit failed
+///      proves nothing: an undersized or wrong call fails on its own, guard or no guard. The calldata is
+///      handed in by the test so it is a real, well-formed `exit` call, and then only the reason tells the two
+///      apart: the reentrancy guard with it, the token refusing a spent nonce without it.
+contract ReenteringExchange {
+    IERC20 public immutable token;
+    address private immutable router;
+    bytes public reentryRevert;
+    bool public reentryTried;
+    bytes private reentryCall;
+
+    constructor(IERC20 token_, address router_) {
+        token = token_;
+        router = router_;
+    }
+
+    receive() external payable {}
+
+    function setReentryCall(bytes calldata call_) external {
+        reentryCall = call_;
+    }
+
+    function swap(uint256 amount, address to) external {
+        (bool ok, bytes memory reason) = router.call(reentryCall);
+        reentryTried = true;
+        reentryRevert = ok ? bytes("it was not refused at all") : reason;
+        token.transferFrom(msg.sender, address(this), amount);
+        (bool paid,) = to.call{value: amount}("");
+        require(paid, "payout failed");
+    }
+}
+
 /// @dev A destination that hands its money straight back, which used to look exactly like being paid.
 contract BouncingPayee {
     receive() external payable {

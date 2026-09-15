@@ -37,10 +37,22 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * The viewport, exactly as web.dev recommends it, plus the one addition a phone-shaped app needs.
+ *
+ * `width=device-width, initial-scale=1` and nothing else: `maximum-scale` and `user-scalable` are left unset
+ * because they "can prevent the user from zooming the viewport, potentially causing accessibility issues",
+ * and an audit fails a page that sets them. `viewport-fit=cover` is what makes `env(safe-area-inset-*)` work
+ * at all, and without it the insets in globals.css would be padding nothing. It also means the page now
+ * renders behind rounded corners and notches, which is why those insets exist.
+ */
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0b0c" },
   ],
 };
 
