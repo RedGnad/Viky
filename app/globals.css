@@ -5,20 +5,31 @@
  * agreeing. The reason each number is what it is lives in that file and in docs/design/research.md; this is
  * only where the browser reads them.
  *
- * The palette is neutral on purpose. The art direction has not been chosen, and when it is, it replaces the
- * colours below without touching a spacing, a size or a target, because nothing about the layout depends on
- * a hue.
+ * Three appearance blocks, in this order, because the reader has three answers and not two: light, dark
+ * because the system says so, and dark because the person said so. A person who chooses light on a phone set
+ * to dark has to win, which is why the media query excludes an explicit light choice rather than assuming
+ * nobody made one.
  */
 
 :root {
-  /* Neutral palette, measured: text 17.93:1, muted 6.42:1, accent 6.70:1, control outline 3.42:1. */
-  --background: #ffffff;
-  --text: #171717;
-  --muted: #595f6a;
-  --accent: #1d4ed8;
-  --on-accent: #ffffff;
-  --control-border: #8a8a93;
-  --divider: #e4e4e7;
+  /* Day. Measured: text 12.39:1 on the ground and 16.83:1 on a surface, muted 5.49 and 7.45, outline 3.64
+     and 4.94. The accent is two colours because it does two jobs: a bright fill carrying dark words at
+     6.62:1, and a darker one for words themselves at 5.67 and 7.70. */
+  --background: #FFD84D;
+  --surface: #FFFDF5;
+  --text: #241A05;
+  --muted: #5C5340;
+  --accent: #FF7A3D;
+  --on-accent: #241A05;
+  --accent-text: #962D0E;
+  --control-border: #776E5E;
+  --divider: #E8DFC4;
+
+  --day-settled: #7FD46A;
+  --day-catchable: #7FC4F5;
+  --day-about-to-return: #FFA95C;
+  --day-today: #FF9BC4;
+  --day-to-come: #FFFDF5;
 
   /* Material's 8dp scale, the steps we use. */
   --space-xs: 4px;
@@ -39,10 +50,10 @@
   --type-help: 14px;
   --type-help-leading: 20px;
 
-  /* Material's shape scale, the steps we use. */
-  --radius-control: 12px;
-  --radius-card: 16px;
-  --radius-sheet: 28px;
+  /* The round end of Material's shape scale, because the world is round. */
+  --radius-control: 16px;
+  --radius-card: 28px;
+  --radius-sheet: 48px;
 
   /* The one number every source agrees on, and the gap that satisfies Apple's bezelled case too. */
   --tap-target: 48px;
@@ -62,17 +73,44 @@
   }
 }
 
+/* Dark because the system says so, and only while the person has not asked for light. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    /* Measured: text 16.80:1, muted 8.21:1, accent 7.74:1, control outline 4.32:1. */
-    --background: #0b0b0c;
-    --text: #ededed;
-    --muted: #a1a8b3;
-    --accent: #60a5fa;
-    --on-accent: #0b0b0c;
-    --control-border: #75757f;
-    --divider: #27272a;
+  :root:not([data-theme="light"]) {
+    --background: #221A38;
+    --surface: #332A50;
+    --text: #F7EFFF;
+    --muted: #BCAFD4;
+    --accent: #FFB03A;
+    --on-accent: #221A38;
+    --accent-text: #FFC061;
+    --control-border: #9A8FB5;
+    --divider: #453A63;
+
+    --day-settled: #2F6427;
+    --day-catchable: #2F6C96;
+    --day-about-to-return: #8A5320;
+    --day-today: #8C3D60;
+    --day-to-come: #332A50;
   }
+}
+
+/* Dark because the person said so, whatever their system says. */
+:root[data-theme="dark"] {
+  --background: #221A38;
+  --surface: #332A50;
+  --text: #F7EFFF;
+  --muted: #BCAFD4;
+  --accent: #FFB03A;
+  --on-accent: #221A38;
+  --accent-text: #FFC061;
+  --control-border: #9A8FB5;
+  --divider: #453A63;
+
+  --day-settled: #2F6427;
+  --day-catchable: #2F6C96;
+  --day-about-to-return: #8A5320;
+  --day-today: #8C3D60;
+  --day-to-come: #332A50;
 }
 
 body {

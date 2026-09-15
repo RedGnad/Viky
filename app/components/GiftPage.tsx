@@ -330,7 +330,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       ) : null}
 
       {!gift.cancelled && signedIn && gift.finished ? (
-        <section className="space-y-2 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+        <section className="space-y-2 rounded-[var(--radius-card)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-lg)]">
           <p className="font-medium">This gift is finished.</p>
           <p className="text-sm" style={{ color: "var(--muted)" }}>
             {gift.creditedDays} of {gift.durationDays} days were yours, so {gift.alreadyTheirsDisplay} is yours to keep.
@@ -345,9 +345,9 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         </button>
       ) : null}
 
-      {notice ? <p className="rounded-lg bg-green-50 p-3 text-sm text-green-900 dark:bg-green-950 dark:text-green-100">{notice}</p> : null}
+      {notice ? <p className="rounded-[var(--radius-control)] bg-green-50 p-3 text-sm text-green-900 dark:bg-green-950 dark:text-green-100">{notice}</p> : null}
       {problem ? (
-        <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+        <p role="alert" className="rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
           {problem}
         </p>
       ) : null}

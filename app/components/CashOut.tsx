@@ -120,7 +120,7 @@ export function CashOut() {
 
       {notice ? <p className="text-sm">{notice}</p> : null}
       {problem ? (
-        <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+        <p role="alert" className="rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
           {problem}
         </p>
       ) : null}

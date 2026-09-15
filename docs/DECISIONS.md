@@ -1515,3 +1515,40 @@ person who sent it" until one is.
 reentrancy test that passed with the guard deleted, because the call it made would have failed anyway. It was
 caught by mutation and not by reading. The rule stands and is worth restating in the strongest form: a test
 is not a test until the defect has been put back and the test has been watched to fail.
+
+## D64, 15 Sep 2026: the art direction, and a switch between day and night
+
+**The funder chose a bright, round, daylit world.** It is in, and it went in the way the foundation was built
+for: **not one measurement moved**. No spacing, no text size, no tap target, no breakpoint, no margin. Only
+the colours and three radii changed, and a test now asserts exactly that, so a future theme cannot quietly
+take the layout with it.
+
+**How a saturated palette stays legible, which is not by toning it down.** Apple: apply colour "to the
+background rather than to symbols or text", and never let colour carry meaning alone. Material: every surface
+is paired with a foreground chosen against it. So the ground is a colour, the words sit on a calm surface,
+and every pair is measured. The palette: a sunny ground `#FFD84D` with near-white warm cards by day, a deep
+plum `#221A38` with lighter cards by night.
+
+**Four colours were chosen by eye and failed the measurement**, which is the whole argument for measuring:
+
+- the obvious bright red gave white text **3.96:1**;
+- the first outline gave **2.74:1** against the yellow ground, though it passed on a card;
+- the first night green gave **4.36:1**;
+- and the accent turned out to be two colours doing two jobs. As a **fill** it can be bright, because what
+  sits on it is dark text at 6.62:1; as **words** it has to be dark itself, 5.67:1 on the ground and 7.70:1
+  on a card. One colour cannot do both without being either unreadable as text or drab as a button.
+
+One consequence worth stating: the primary button's bright fill is only 1.87:1 against the page, so what
+identifies it as a control is no longer its fill. It carries an outline, and WCAG 1.4.11 is satisfied by that
+rather than by the colour.
+
+**Day, night, or follow the phone.** Three answers, not two. Apple asks apps to avoid an appearance setting
+of their own, because two settings that disagree read as a fault; keeping "follow my phone" as the default
+means they only ever disagree when somebody has deliberately made them. A person who picks day on a phone set
+to dark wins, which only works because the media query excludes an explicit light choice, and a test pins
+that. The choice is applied by an inline script before the first paint, or a chosen appearance flashes the
+other one first.
+
+**Every hardcoded colour left over from before the tokens is gone** from the screens a person meets: the
+greys, the blue buttons, the amber notices. The operator's own pages under `app/components/dev/` still carry
+theirs, which is deliberate for now and written here so it is not mistaken for an oversight.

@@ -53,7 +53,7 @@ export function DayRow({
             key={day.dayNumber}
             aria-label={label(day, funder, nowMs)}
             title={label(day, funder, nowMs)}
-            className={`flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] flex-col items-center justify-center rounded-[var(--radius-control)] border ${outline(day)}`}
+            className={`flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] flex-col items-center justify-center rounded-[var(--radius-control)] border ${skin(day)}`}
           >
             <span aria-hidden className="text-[length:var(--type-body)] leading-none">
               {DAY_MARK[day.state]}
@@ -90,18 +90,22 @@ function label(day: Day, funder: string, nowMs: number): string {
   return day.deadlineMs ? `${words}, until ${deadlineInWords(day.deadlineMs, nowMs)}` : words;
 }
 
-/** The outline carries the state as well as the mark, and never the colour on its own. */
-function outline(day: Day): string {
+/**
+ * A surface and an outline per state. The colour is the quick read and the mark beside it is the real one:
+ * every published guideline says never to rely on hue alone, and every one of these surfaces carries the
+ * appearance's own text at 4.5:1 or better, measured in test/design-tokens.test.ts.
+ */
+function skin(day: Day): string {
   switch (day.state) {
     case "settled":
-      return "border-[var(--control-border)]";
+      return "bg-[var(--day-settled)] border-[var(--control-border)]";
     case "catchable":
-      return "border-2 border-[var(--accent)]";
+      return "bg-[var(--day-catchable)] border-2 border-[var(--text)]";
     case "aboutToReturn":
-      return "border-dashed border-[var(--control-border)]";
+      return "bg-[var(--day-about-to-return)] border-dashed border-[var(--control-border)]";
     case "today":
-      return "border-2 border-[var(--text)]";
+      return "bg-[var(--day-today)] border-2 border-[var(--text)]";
     case "toCome":
-      return "border-[var(--divider)]";
+      return "bg-[var(--day-to-come)] border-[var(--divider)]";
   }
 }

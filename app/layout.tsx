@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { AccountProvider } from "@/src/account/provider";
+import { THEME_BOOT_SCRIPT } from "@/src/theme";
 
 const APP_NAME = "Viky";
 const APP_DEFAULT_TITLE = "Viky";
@@ -60,6 +61,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="en" dir="ltr">
       <body className="antialiased">
+        {/* Before anything is painted, so a chosen appearance never flashes the other one first. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         <SerwistProvider swUrl="/serwist/sw.js">
           <AccountProvider>{children}</AccountProvider>
         </SerwistProvider>

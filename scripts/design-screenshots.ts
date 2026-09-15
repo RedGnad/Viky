@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { chromium } from "@playwright/test";
 
 /**
- * A picture of every screen at the three widths the design pass is judged at.
+ * A picture of every screen at the three widths the design pass is judged at, in both appearances.
  *
  * They are the signed-out states, because a passkey cannot be replayed by a script: what a person meets on a
  * first visit is exactly what this captures, and the states behind an account are the catalogue's job
@@ -26,16 +26,23 @@ async function main() {
   const browser = await chromium.launch();
   try {
     for (const size of WIDTHS) {
-      const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, deviceScaleFactor: 2 });
+      for (const appearance of ["light", "dark"] as const) {
+      const context = await browser.newContext({
+        viewport: { width: size.width, height: size.height },
+        deviceScaleFactor: 2,
+        colorScheme: appearance,
+      });
       const page = await context.newPage();
       for (const path of PAGES) {
         const response = await page.goto(`${base}${path}`, { waitUntil: "networkidle" });
         if (!response || response.status() >= 400) throw new Error(`${path} answered ${response?.status()}`);
-        const file = resolve(out, `${path === "/" ? "home" : path.slice(1).replace(/\//g, "-")}-${size.name}.png`);
+        const name = path === "/" ? "home" : path.slice(1).replace(/\//g, "-");
+        const file = resolve(out, `${name}-${size.name}${appearance === "dark" ? "-night" : ""}.png`);
         await page.screenshot({ path: file, fullPage: true });
         console.log(`wrote ${file}`);
       }
       await context.close();
+      }
     }
   } finally {
     await browser.close();

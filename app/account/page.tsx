@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AccountPanel } from "../components/AccountPanel";
 import { Screen } from "../components/Screen";
 import { SessionScope } from "../components/SessionScope";
+import { ThemeSwitch } from "../components/ThemeSwitch";
 import { CARD, HELP, PROSE } from "../components/ui";
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function Page() {
     <Screen title="Account" back="/" backLabel="Back to my gifts">
       <AccountPanel />
       <SessionScope />
+      <ThemeSwitch />
 
       <section className={CARD}>
         <h2 className="font-medium">Lost your phone?</h2>

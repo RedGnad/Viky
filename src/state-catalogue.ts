@@ -235,6 +235,7 @@ export const ACCOUNT_SCREEN: readonly CatalogueScreen[] = [
     file: "app/account/page.tsx",
     states: [
       { name: "The one page off the journeys", when: "reached from the single link at the foot of any screen", says: ["Account", "Lost your phone?", "Privacy", "Legal", "For judges"] },
+
       {
         name: "Help",
         when: "somebody is stuck",
@@ -245,10 +246,30 @@ export const ACCOUNT_SCREEN: readonly CatalogueScreen[] = [
   },
 ];
 
+/** The one control that changes the whole product's appearance, and the only one of its kind. */
+export const APPEARANCE_SCREEN: readonly CatalogueScreen[] = [
+  {
+    screen: "How it looks, on the Account page",
+    file: "app/components/ThemeSwitch.tsx",
+    states: [
+      {
+        name: "Following the phone",
+        when: "nobody has chosen, which is where everyone starts",
+        says: ["How it looks", "Day", "Night", "Follow my phone", "Viky follows your phone, so it turns dark when everything else does."],
+      },
+      {
+        name: "A choice of their own",
+        when: "somebody picked day or night",
+        says: ["Viky stays this way, whatever your phone is set to."],
+      },
+    ],
+  },
+];
+
 export const JOURNEYS: ReadonlyArray<{ who: string; screens: readonly CatalogueScreen[] }> = [
   { who: "The person who gives", screens: FUNDER_JOURNEY },
   { who: "The person the gift is for", screens: RECIPIENT_JOURNEY },
-  { who: "Both of them", screens: ACCOUNT_SCREEN },
+  { who: "Both of them", screens: [...ACCOUNT_SCREEN, ...APPEARANCE_SCREEN] },
 ];
 
 /** Every state, flattened, for counting and for the tests. */
