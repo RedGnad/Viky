@@ -4,7 +4,7 @@ import { AccountPanel } from "../components/AccountPanel";
 import { Screen } from "../components/Screen";
 import { SessionScope } from "../components/SessionScope";
 import { ThemeSwitch } from "../components/ThemeSwitch";
-import { CARD, HELP, PROSE, TITLE } from "../components/ui";
+import { HELP, PROSE, STICKER, TITLE } from "../components/ui";
 
 export const metadata: Metadata = {
   title: "Account",
@@ -18,9 +18,9 @@ export const metadata: Metadata = {
  * one way forward and one way back. They live here now, and every screen reaches this one place.
  */
 const PAGES = [
-  { href: "/privacy", label: "Privacy", what: "what Viky keeps, and what it never sees" },
-  { href: "/legal", label: "Legal", what: "who runs Viky and under what terms" },
-  { href: "/judges", label: "For judges", what: "the contracts, and how to check them yourself" },
+  { href: "/privacy", label: "Privacy", what: "what Viky keeps, and what it never sees", sticker: STICKER.pink },
+  { href: "/legal", label: "Legal", what: "who runs Viky and under what terms", sticker: STICKER.lilac },
+  { href: "/judges", label: "For judges", what: "the contracts, and how to check them yourself", sticker: STICKER.sun },
 ] as const;
 
 export default function Page() {
@@ -33,7 +33,7 @@ export default function Page() {
       aside={
         <>
 
-      <section className={CARD}>
+      <section className={STICKER.mint}>
         <h2 className={TITLE}>Lost your phone?</h2>
         <p className={PROSE}>
           Your account lives in your passkey, and your passkey is kept by Apple, Google or your password
@@ -44,7 +44,7 @@ export default function Page() {
 
       <nav className="flex flex-col gap-[var(--tap-gap)]">
         {PAGES.map((page) => (
-          <Link key={page.href} href={page.href} className={`${CARD} block`}>
+          <Link key={page.href} href={page.href} className={`${page.sticker} block`}>
             <span className="font-medium">{page.label}</span>
             <span className={`block ${HELP}`}>{page.what}</span>
           </Link>

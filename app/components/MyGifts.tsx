@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAccount } from "@/src/account/provider";
 import { getJson } from "@/src/client/api";
-import { BODY, CARD, HELP, MONEY, TITLE } from "./ui";
+import { BODY, HELP, MONEY, STICKER, TITLE } from "./ui";
 
 /**
  * After sign-in on the home page: every gift of this account, found from the passkey alone. Opening
@@ -53,7 +53,7 @@ export function MyGifts() {
   if (gifts === null) return <p className={HELP}>Looking for your gifts</p>;
   if (gifts.length === 0) {
     return (
-      <section className={CARD}>
+      <section className={STICKER.lilac}>
         <p className="font-medium">No gift yet.</p>
         <p className={HELP}>
           When someone puts money in your name, their link brings you here. When you send one, it appears here too.
@@ -80,7 +80,7 @@ function GiftGroup({ title, gifts }: { title: string; gifts: MyGift[] }) {
     <section className="flex flex-col gap-[var(--space-md)]">
       <h2 className={TITLE}>{title}</h2>
       {gifts.map((gift) => (
-        <Link key={gift.giftId} href={`/g/${gift.giftId}`} className={`${CARD} block`}>
+        <Link key={gift.giftId} href={`/g/${gift.giftId}`} className={`${gift.role === "recipient" ? STICKER.mint : STICKER.pink} block`}>
           <p className={MONEY}>{gift.role === "recipient" ? gift.earnedDisplay : gift.theirsDisplay}</p>
           <p className={HELP}>
             {gift.role === "recipient"

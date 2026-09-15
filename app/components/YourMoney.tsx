@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAccount } from "@/src/account/provider";
 import { readAusdBalance } from "@/src/client/onchain";
 import { formatAusd } from "@/src/gift-reader";
-import { CARD, HELP, MONEY, SECONDARY_BUTTON } from "./ui";
+import { HELP, MONEY, SECONDARY_BUTTON, STICKER } from "./ui";
 
 /**
  * Money sitting in the person's own account, whoever they are. A recipient lands here after taking what a
@@ -32,7 +32,7 @@ export function YourMoney() {
   if (!address || holding === null || holding <= 0n) return null;
 
   return (
-    <section className={CARD}>
+    <section className={STICKER.sun}>
       <p className={HELP}>In your account</p>
       <p className={MONEY}>{formatAusd(holding)}</p>
       <p className={HELP}>

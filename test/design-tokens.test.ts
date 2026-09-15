@@ -363,9 +363,12 @@ test("a sticker card redefines every role inside it to the ink measured on its f
   }
   assert.match(ui, /\[--control-relief:0_6px_0_var\(--on-sticker\)\]/);
   assert.match(ui, /\[--surface:var\(--sticker-paper\)\]/);
-  // At night the mint and the primary button are the same lime, so no mint sticker on giving holds one.
-  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
-  for (const mint of fund.split("STICKER.mint").slice(1)) {
-    assert.doesNotMatch(mint.slice(0, mint.indexOf("</section>")), /PRIMARY_BUTTON/);
+  // At night the mint and the primary button are the same lime, so no mint sticker anywhere holds one.
+  for (const file of globSync("app/**/*.tsx")) {
+    const source = readFileSync(file, "utf8");
+    for (const mint of source.split("STICKER.mint").slice(1)) {
+      const card = mint.slice(0, mint.search(/<\/(section|Link)>/));
+      assert.doesNotMatch(card, /PRIMARY_BUTTON/, `a mint sticker in ${file} holds a primary button`);
+    }
   }
 });

@@ -9,7 +9,7 @@ import { readAusdBalance } from "@/src/client/onchain";
 import { formatAusd, formatAusdExact } from "@/src/gift-reader";
 import { AccountPanel } from "./AccountPanel";
 import { SessionScope } from "./SessionScope";
-import { CARD, FIELD, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
+import { FIELD, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, STICKER, TITLE } from "./ui";
 
 /**
  * What a gift earned, and what the person can do with it today: move all of it to another account of theirs, from
@@ -67,7 +67,7 @@ export function CashOut() {
 
   return (
     <div className="space-y-[var(--space-xl)]">
-      <section className={CARD}>
+      <section className={STICKER.sun}>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Yours to take out
         </p>
@@ -84,7 +84,7 @@ export function CashOut() {
       ) : null}
 
       {step === "toAccount" || step === "sentToAccount" ? (
-        <section className={CARD}>
+        <section className={STICKER.pink}>
           <h2 className={TITLE}>Send it to another account of yours</h2>
           <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
             {/* The whole balance leaves, to the last of its six decimals, so that is what is written (D72). */}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DayRow } from "../DayRow";
 import { Drop } from "../Drop";
 import { Moment } from "../Moment";
-import { BODY, CARD, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON, STICKER, TITLE } from "../ui";
+import { BODY, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON, STICKER, TITLE } from "../ui";
 
 /**
  * Every screen that matters, drawn from example data, so a design pass can be looked at rather than
@@ -262,7 +262,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     quotes: ["Your Duolingo username", "You can remove the code right after."],
     render: () => (
       <>
-        <section className={CARD}>
+        <section className={STICKER.pink}>
           <h2 className={TITLE}>Your Duolingo username</h2>
           <input readOnly value="ama_learns" className={FIELD} />
           <p className={HELP}>
@@ -270,7 +270,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
             the profile is yours.
           </p>
         </section>
-        <section className={CARD}>
+        <section className={STICKER.lilac}>
           <p className={BODY}>
             In Duolingo, open Profile, then Settings, then Name, and add this code to your name for a minute:
           </p>
@@ -299,7 +299,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
           earnedDisplay="$21.42"
           returnedDisplay="$7.14"
         />
-        <section className={CARD}>
+        <section className={STICKER.mint}>
           <p className={BODY}>Do your lesson; nothing else. Each morning Viky reads your Duolingo and counts the day before.</p>
           <p className="font-medium">
             Yesterday is not counted yet, and not lost either: a lesson before tomorrow at 8:00 still earns that
@@ -336,7 +336,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     quotes: ["Gone back"],
     render: () => (
       <>
-        <section className={CARD}>
+        <section className={STICKER.lilac}>
           <div className="flex items-center gap-[var(--space-md)]">
             <Drop mood="sorry" size={56} />
             <div>
@@ -375,12 +375,12 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     ],
     render: () => (
       <>
-        <section className={CARD}>
+        <section className={STICKER.sun}>
           <p className={HELP}>Yours to take out</p>
           <p className={MONEY}>$28.56</p>
           <p className={HELP}>Your money stays yours, and nothing about it expires.</p>
         </section>
-        <section className={CARD}>
+        <section className={STICKER.pink}>
           <h2 className={TITLE}>Send it to another account of yours</h2>
           <p className={HELP}>
             All of it goes, $28.564213 exactly, and nothing to pay: Viky covers what it costs to move.
