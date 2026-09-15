@@ -4,6 +4,8 @@ import { withSerwist } from "@serwist/turbopack";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Without this, `next dev` started by an AI agent writes Next's own rules block into CLAUDE.md.
+  agentRules: false,
   // Reclaim's zkFetch stack (attestor core, zk circuits, optional native re2) is loaded at runtime from
   // node_modules rather than bundled: its dynamic imports and resource files do not survive bundling.
   serverExternalPackages: ["@reclaimprotocol/zk-fetch", "@reclaimprotocol/attestor-core", "@reclaimprotocol/zk-symmetric-crypto", "re2", "@swc/core", "pino"],
