@@ -57,6 +57,19 @@ telling someone to remove a code they were never given.
   that would not fail if the promise stopped being kept is not one.
 - A new sentence about money or state is added to that file in the same commit that adds the sentence.
 
+## Use the tools before asking, and before reporting
+
+- **Judging a screen means opening the app and using it.** Not reading the code, not generating a screenshot
+  and looking at it: that is marking my own work, and it can only show what I already knew I wrote. Open
+  viky.cash in the browser, fill the fields, press the buttons, go through the whole journey. Every real
+  defect found so far on the screens (the action below the fold, two controls both called Back, the passkey
+  asked for before anything useful) was found that way and by nothing else.
+- **Never ask the user for something a tool can get.** Which page, what it looks like, whether it deployed,
+  what an API returns, what a file contains: check, then speak. Asking is the last resort and it comes with a
+  list of what was tried.
+- **A capability I have is a capability I use without being reminded.** If the user has to tell me I can open
+  a browser, read a database, or run the thing, the failure already happened.
+
 ## Engineering rules
 - Code, comments, commits, docs: English. No em dash or en dash anywhere; use commas, colons,
   parentheses or two sentences.

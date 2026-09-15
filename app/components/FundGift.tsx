@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as mera from "@/src/account/mera";
-import { BODY, CARD, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
+import Link from "next/link";
+import { ACTION_BAR, BACK_LINK, BODY, CARD, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, TITLE } from "./ui";
 import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
 import { createGift, type CreatedGift } from "@/src/client/gift";
@@ -245,6 +246,9 @@ export function FundGift() {
   if (step === "form" && stage === "account") {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
+        <button type="button" onClick={() => setStage("check")} className={BACK_LINK}>
+          Back
+        </button>
         <section className={CARD}>
           <h2 className={TITLE}>One account, and then you can pay</h2>
           <p className={HELP}>
@@ -253,9 +257,6 @@ export function FundGift() {
           </p>
         </section>
         <AccountPanel />
-        <button type="button" onClick={() => setStage("check")} className={SECONDARY_BUTTON}>
-          Back
-        </button>
         <SessionScope />
       </div>
     );
@@ -264,6 +265,9 @@ export function FundGift() {
   if (step === "form" && stage === "who") {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
+        <Link href="/" className={BACK_LINK}>
+          Back to my gifts
+        </Link>
         <section className={CARD}>
           <h2 className={TITLE}>Who is it for, and for what</h2>
           <label className="flex flex-col gap-[var(--space-xs)]">
@@ -295,6 +299,9 @@ export function FundGift() {
   if (step === "form" && stage === "howMuch") {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
+        <button type="button" onClick={() => setStage("who")} className={BACK_LINK}>
+          Back
+        </button>
         <section className={CARD}>
           <h2 className={TITLE}>How much, and for how long</h2>
           <label className="flex flex-col gap-[var(--space-xs)]">
@@ -317,12 +324,11 @@ export function FundGift() {
           <p className={HELP}>And each day they miss, the same comes back to you.</p>
         </section>
 
-        <button type="button" onClick={() => setStage("check")} disabled={!ready} className={PRIMARY_BUTTON}>
-          Continue
-        </button>
-        <button type="button" onClick={() => setStage("who")} className={SECONDARY_BUTTON}>
-          Back
-        </button>
+        <div className={ACTION_BAR}>
+          <button type="button" onClick={() => setStage("check")} disabled={!ready} className={PRIMARY_BUTTON}>
+            Continue
+          </button>
+        </div>
         {problem ? <p className={BODY}>{problem}</p> : null}
         <SessionScope />
       </div>
@@ -332,6 +338,9 @@ export function FundGift() {
   if (step === "form" && stage === "check") {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
+        <button type="button" onClick={() => setStage("howMuch")} className={BACK_LINK}>
+          Back
+        </button>
         <section className={CARD}>
           <h2 className={TITLE}>Check this over</h2>
           <dl className="flex flex-col gap-[var(--space-sm)]">
@@ -382,18 +391,17 @@ export function FundGift() {
           </section>
         ) : null}
 
-        {address ? (
-          <button type="button" onClick={() => void start()} disabled={!ready} className={PRIMARY_BUTTON}>
-            {enough ? "Put it in their name" : "Add money and give"}
-          </button>
-        ) : (
-          <button type="button" onClick={() => setStage("account")} disabled={!ready} className={PRIMARY_BUTTON}>
-            Continue
-          </button>
-        )}
-        <button type="button" onClick={() => setStage("howMuch")} className={SECONDARY_BUTTON}>
-          Back
-        </button>
+        <div className={ACTION_BAR}>
+          {address ? (
+            <button type="button" onClick={() => void start()} disabled={!ready} className={PRIMARY_BUTTON}>
+              {enough ? "Put it in their name" : "Add money and give"}
+            </button>
+          ) : (
+            <button type="button" onClick={() => setStage("account")} disabled={!ready} className={PRIMARY_BUTTON}>
+              Continue
+            </button>
+          )}
+        </div>
         {notice ? <p className={BODY}>{notice}</p> : null}
         {problem ? <p className={BODY}>{problem}</p> : null}
         <SessionScope />
