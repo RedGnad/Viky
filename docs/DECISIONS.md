@@ -1893,3 +1893,10 @@ an empty column, beside a home of stickers and big type. It had the look's token
 **Measured, and not put through a review pass**, which the funder asked to do themselves: the paper holds the
 stickers' ink at 16.35:1 by day and 16.69:1 at night, and the lowest pair inside any sticker is that ink on lilac at
 night, 4.84:1. Both are tested, and so is the rule that mint holds no primary button.
+
+**And then every other card, the same evening.** The account panel is yellow wherever it appears; what the open
+session can do is lilac; how it looks is pink, its chosen option filled with paper because every outline inside a
+sticker is the same ink; lost your phone is mint, and the three pages beside it pink, lilac and yellow. Money in the
+account is yellow, a gift received mint and a gift given pink. On a gift, the recipient's steps are yellow, pink and
+lilac, then mint while it counts and once it is finished; on the way out, yellow then pink. The rule on mint is
+tested across every screen.
