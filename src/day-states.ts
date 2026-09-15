@@ -109,11 +109,16 @@ export function dayInWords(day: Day, funderName: string): string {
   }
 }
 
-/** A single character per state, so the row reads without colour and without a legend beside every cell. */
-export const DAY_MARK: Record<DayState, string> = {
-  settled: "●",
-  catchable: "◑",
-  aboutToReturn: "○",
-  today: "◆",
-  toCome: "·",
+/**
+ * A shape per state, so the row reads without colour and without a legend beside every cell. They are drawn in
+ * app/components/DayRow.tsx rather than typed: as characters, no face the product loads had them, so the phone's
+ * own fonts drew them instead.
+ */
+export type DayMark = "full" | "half" | "ring" | "diamond" | "dot";
+export const DAY_MARK: Record<DayState, DayMark> = {
+  settled: "full",
+  catchable: "half",
+  aboutToReturn: "ring",
+  today: "diamond",
+  toCome: "dot",
 };

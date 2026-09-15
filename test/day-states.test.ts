@@ -76,6 +76,8 @@ test("each state has a mark of its own, so colour is never the only carrier", ()
   const marks = Object.values(DAY_MARK);
   assert.equal(new Set(marks).size, marks.length);
   assert.equal(marks.length, 5);
+  // Names of shapes the row draws, never characters: no face the product loads has the geometric ones.
+  assert.ok(marks.every((mark) => /^[a-z]+$/.test(mark)));
 });
 
 test("a finished gift shows every day settled and nothing still to come", () => {
