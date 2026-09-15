@@ -22,11 +22,19 @@ export type FundingStep =
   | { do: "convert"; amount: bigint }
   | { do: "wait"; sawSomething: boolean };
 
+/**
+ * Whether what sits in the account is a card payment worth turning into what a gift holds, rather than dust. The same
+ * test decides what the waiting page converts and what the check offers to use (D74).
+ */
+export function paymentArrived(arriving: bigint): boolean {
+  return arriving > ARRIVAL_FLOOR + CONVERSION_RESERVE;
+}
+
 export function nextFundingStep(input: { held: bigint; arriving: bigint; wanted: bigint }): FundingStep {
   // Enough already: the gift can be made, and nothing else should be converted.
   if (input.held >= input.wanted) return { do: "give" };
   // Something arrived, and enough of it that converting leaves more than it costs.
-  if (input.arriving > ARRIVAL_FLOOR + CONVERSION_RESERVE) {
+  if (paymentArrived(input.arriving)) {
     return { do: "convert", amount: input.arriving - CONVERSION_RESERVE };
   }
   // Nothing worth acting on. `sawSomething` only changes what the person is told, never what is done.

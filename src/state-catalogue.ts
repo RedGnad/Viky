@@ -54,7 +54,7 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
           "Each day they reach it, this becomes theirs",
           "And each day they miss, the same comes back to you.",
         ],
-        gap: "the amount opens at 50 dollars and there is no hard floor on the field itself. The floor that exists is the rail's: nothing under 25 EUR can be paid in at all (D62).",
+        gap: "the amount opens at 25 dollars, what one smallest card payment covers (D72), and there is no hard floor on the field itself. The floor that exists is the rail's: nothing under 25 EUR can be paid in at all (D62).",
       },
       {
         name: "Checking it over",
@@ -100,8 +100,18 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
       },
       {
         name: "The session closed mid-way",
-        when: "the passkey session idled out before the gift was made",
-        says: ["Your session closed. Sign in again to finish."],
+        when: "the passkey session idled out before the gift was made, often while the card payment was still on its way",
+        says: [
+          "Your session closed while you were paying",
+          "Nothing is lost. The gift you set up is kept on this device, and whatever you paid stays in your account.",
+          "Your session closed. Sign in again to finish.",
+        ],
+      },
+      {
+        name: "Back after the session closed",
+        when: "the same account signs in on this page again, with a gift set up and not yet made",
+        says: ["gift is still set up, and it goes ahead as soon as your payment is here.", "Set up a different gift instead", "Use the payment that arrived"],
+        gap: "the gift is kept on one device. Coming back on another phone finds the payment in the account and no gift set up: the funder sets it up again, and the check offers to use the payment that arrived.",
       },
       {
         name: "Made, and the link to send",
