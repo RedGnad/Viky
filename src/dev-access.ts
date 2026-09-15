@@ -59,3 +59,15 @@ export async function operatorCanSeeDevPages(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * The design gallery, which is a different thing from the operator's pages and needs a different door.
+ *
+ * The operator lock exists because those pages move money, and it has a side effect nobody wanted: nothing
+ * can photograph a screen behind it, so the only captures anybody could take were of the six pages a signed
+ * out visitor sees. That is not a product. This page renders example data with no working control on it, so
+ * it needs no account, and it is off unless this is explicitly switched on, which production never does.
+ */
+export function galleryOpen(environment: Record<string, string | undefined> = process.env): boolean {
+  return environment.VIKY_DESIGN_GALLERY === "1";
+}

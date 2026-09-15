@@ -1,13 +1,29 @@
 "use client";
-import { useState } from "react";
-import { CARD, FIELD, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./ui";
+import { useEffect, useState } from "react";
+import { CARD, FIELD, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./ui";
 import { useAccount } from "@/src/account/provider";
+import { checkPasskeySupport, passkeyFallbackWords, type PasskeySupport } from "@/src/account/passkey-support";
 
-// The only account screen of the skeleton: create with Face ID or fingerprint, or sign in.
-// Consumer words only: no wallet, no key, no chain.
+/**
+ * Creating an account, or coming back to one. Consumer words only.
+ *
+ * Two things changed in the design pass, and both were the same mistake. The first thing on the card used to
+ * be an optional field for naming the device, so the first thing a person met in Viky was a question that
+ * does not matter: it is behind a disclosure now, which is what progressive disclosure is for. And the
+ * primary action ran to two lines on a 375 pixel phone, which is a label problem rather than a layout one:
+ * it says what it does, and how it does it moved to the line underneath.
+ */
 export function AccountPanel() {
   const { address, hasCredential, status, error, createAccount, signIn, signOut, useAnotherAccount, clearError } = useAccount();
   const [displayName, setDisplayName] = useState("");
+  const [naming, setNaming] = useState(false);
+  // Asked once, and only in the browser. A desktop with no fingerprint reader cannot make an account, and
+  // finding that out by pressing the button is the worst way to find it out.
+  const [support, setSupport] = useState<PasskeySupport>("checking");
+  useEffect(() => {
+    void checkPasskeySupport().then(setSupport);
+  }, []);
+  const cannot = passkeyFallbackWords(support);
   const busy = status === "busy";
 
   if (address) {
@@ -32,38 +48,44 @@ export function AccountPanel() {
   return (
     <section className={CARD}>
       <form
-        className="space-y-3"
+        className="flex flex-col gap-[var(--space-md)]"
         onSubmit={(event) => {
           event.preventDefault();
           void createAccount(displayName);
         }}
       >
-        <label className="block text-sm font-medium" htmlFor="display-name">
-          A name for this account on your device (optional)
-        </label>
-        <input
-          id="display-name"
-          name="displayName"
-          autoComplete="off"
-          value={displayName}
-          onChange={(event) => {
-            setDisplayName(event.target.value);
-            if (error) clearError();
-          }}
-          className={FIELD}
-          placeholder="Viky account"
-          disabled={busy}
-        />
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          Only your device uses it, to label your passkey. Viky never receives it.
-        </p>
-        <button
-          type="submit"
-          disabled={busy}
-          className={PRIMARY_BUTTON}
-        >
-          {busy ? "One moment" : "Create my account with Face ID or fingerprint"}
+        <button type="submit" disabled={busy || cannot !== null} className={PRIMARY_BUTTON}>
+          {busy ? "One moment" : "Create my account"}
         </button>
+        <p className={HELP}>
+          {cannot ?? "Your face or your fingerprint, and nothing to remember. No password, no code by text."}
+        </p>
+
+        {naming ? (
+          <>
+            <label className={HELP} htmlFor="display-name">
+              A name for this account on your device
+            </label>
+            <input
+              id="display-name"
+              name="displayName"
+              autoComplete="off"
+              value={displayName}
+              onChange={(event) => {
+                setDisplayName(event.target.value);
+                if (error) clearError();
+              }}
+              className={FIELD}
+              placeholder="Viky account"
+              disabled={busy}
+            />
+            <p className={HELP}>Only your device uses it, to label your passkey. Viky never receives it.</p>
+          </>
+        ) : (
+          <button type="button" onClick={() => setNaming(true)} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+            Name this device (optional)
+          </button>
+        )}
       </form>
 
       <button

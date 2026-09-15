@@ -129,11 +129,31 @@ test.describe("what the design pass promised", () => {
     expect(padding.top).toBeTruthy();
   });
 
-  test("the single column stops growing on a wide screen", async ({ page }) => {
+  /**
+   * A journey stays narrow at every size, because a form and a line of text both read badly wide. A
+   * destination does not: capping it at a journey's width is what made Viky mobile only rather than mobile
+   * first, a strip floating in the middle of a desktop.
+   */
+  test("a journey stays a narrow column however wide the screen is", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/fund");
+    const width = await page.locator("main").evaluate((el) => el.getBoundingClientRect().width);
+    expect(width).toBeLessThanOrEqual(480 + 48 + 1);
+  });
+
+  test("a destination uses the screen it is given, and splits where two panes fit", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
-    const width = await page.locator("main").evaluate((el) => el.getBoundingClientRect().width);
-    // 480 plus the 24 margin each side that Material publishes from 600 pixels upward.
-    expect(width).toBeLessThanOrEqual(480 + 48 + 1);
+    const wide = await page.locator("main").evaluate((el) => el.getBoundingClientRect().width);
+    expect(wide, "a destination is wider than a journey on a desktop").toBeGreaterThan(480 + 48);
+
+    // And below the width where two panes fit, it is one column again rather than two cramped ones.
+    await page.setViewportSize({ width: 800, height: 900 });
+    await page.goto("/");
+    const columns = await page
+      .locator("main > div")
+      .first()
+      .evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length);
+    expect(columns, "two panes must not appear before they fit").toBe(1);
   });
 });

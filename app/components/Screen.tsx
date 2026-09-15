@@ -3,31 +3,47 @@ import type { ReactNode } from "react";
 import { TITLE } from "./ui";
 
 /**
- * The shape of every screen, in one place.
+ * The shape of every screen, in one place, and there are two shapes because there are two kinds of screen.
  *
- * The margin, the column width and the vertical rhythm were decided per screen before this existed, which is
- * why the home page centred itself vertically while the funder screen did not. Now there is one answer: a
- * single column, 16px of margin on a phone and 24px from 600px wide, capped at 480px so a line of prose can
- * never run past what any published range calls readable.
+ * A **journey** is one thing at a time with a way back: give a gift, take one, connect Duolingo, take money
+ * out. It stays a narrow column at every size, because a line of text and a form both read badly wide and
+ * because a journey has nothing to put beside itself.
  *
- * `back` is what makes a journey a journey: the structure has no menu and no tabs, because GOV.UK asks for no
+ * A **destination** is read rather than walked through: the home, and a gift. It grows with the screen, and
+ * from 840 pixels it becomes two panes, because that is the first width where two of Material's own 360
+ * default panes plus its 24 spacer and two 24 margins actually fit.
+ *
+ * Capping the whole product at a journey's width was the mistake this replaces: it made Viky mobile only
+ * rather than mobile first, a narrow strip floating in the middle of a desktop with two thirds of the screen
+ * empty. A line length is a rule about text and about forms, never about a container.
+ *
+ * `back` is what makes a journey a journey. The structure has no menu and no tabs: GOV.UK asks for no
  * navigation links when a service has a clear end-to-end path, and Apple reserves a tab bar for navigating
- * rather than for acting. A screen in a journey offers exactly one way back.
+ * rather than for acting. A screen in a journey offers exactly one way back; a destination offers none.
  */
 export function Screen({
   title,
   back,
   backLabel = "Back",
+  layout = "journey",
+  aside,
   children,
 }: Readonly<{
   title?: string;
-  /** Where the one way back goes. A destination has none; a step in a journey always does. */
   back?: string;
   backLabel?: string;
+  layout?: "journey" | "destination";
+  /**
+   * The second pane, on a destination. Below 840 it simply follows the first, in one column, so nothing is
+   * hidden from a phone and nothing is invented for a desktop.
+   */
+  aside?: ReactNode;
   children: ReactNode;
 }>) {
+  const width = layout === "journey" ? "max-w-[var(--app-column-max)]" : "max-w-[var(--destination-max)] [@media(min-width:840px)]:max-w-[1100px]";
+
   return (
-    <main className="mx-auto flex w-full max-w-[var(--app-column-max)] flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-xl)]">
+    <main className={`mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-xl)]`}>
       {back || title ? (
         <header className="flex flex-col gap-[var(--space-sm)]">
           {back ? (
@@ -41,7 +57,15 @@ export function Screen({
           {title ? <h1 className={TITLE}>{title}</h1> : null}
         </header>
       ) : null}
-      {children}
+
+      {layout === "destination" && aside ? (
+        <div className="grid gap-[var(--space-xl)] [@media(min-width:840px)]:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] [@media(min-width:840px)]:items-start">
+          <div className="flex flex-col gap-[var(--space-xl)]">{children}</div>
+          <div className="flex flex-col gap-[var(--space-xl)]">{aside}</div>
+        </div>
+      ) : (
+        children
+      )}
     </main>
   );
 }

@@ -8,8 +8,10 @@ import {
   CONTROL_COLOURS,
   DAY_SURFACES,
   GROUNDS,
+  DESTINATION_MAX,
   PAGE_MARGIN,
   PROSE_MAX_CH,
+  TWO_PANE_FROM,
   RADIUS,
   SPACE,
   TAP_GAP,
@@ -93,13 +95,18 @@ test("every surface a day can wear carries the reader's text at 4.5:1", () => {
 
 test("the art direction changed the colours and nothing else", () => {
   // The whole argument for building the foundation on neutral colours first: swapping the palette must not
-  // have moved a measurement. If a future theme needs one of these changed, that is a decision and not a
-  // side effect, and this is where it gets noticed.
+  // move a measurement. If one of these changes, it has to be a decision somebody took, and this is where it
+  // gets noticed rather than slipping through with a theme.
+  //
+  // It has already caught one. The line length went from 60 to 66 on 15 Sep, which was not the art direction
+  // at all but a separate call: 60 was the value inside all three published ranges, 66 is web.dev's own
+  // stated ideal and six characters past Material's ceiling. Recorded in D65.
   assert.equal(TAP_TARGET, 48);
   assert.equal(TAP_GAP, 12);
   assert.equal(PAGE_MARGIN.compact, 16);
+  assert.equal(PAGE_MARGIN.medium, 24);
   assert.equal(APP_COLUMN_MAX, 480);
-  assert.equal(PROSE_MAX_CH, 60);
+  assert.equal(PROSE_MAX_CH, 66);
   assert.equal(TYPE.body.size, 16);
   assert.equal(SPACE.lg, 16);
 });
@@ -129,6 +136,7 @@ test("the stylesheet says what the tokens say", () => {
   assert.equal(cssVariable("page-margin"), `${PAGE_MARGIN.compact}px`);
   assert.equal(cssVariable("app-column-max"), `${APP_COLUMN_MAX}px`);
   assert.equal(cssVariable("prose-max"), `${PROSE_MAX_CH}ch`);
+  assert.equal(cssVariable("destination-max"), `${DESTINATION_MAX}px`);
   assert.equal(cssVariable("space-lg"), `${SPACE.lg}px`);
   assert.equal(cssVariable("radius-card"), `${RADIUS.card}px`);
   assert.equal(cssVariable("type-money"), `${TYPE.money.size}px`);
@@ -176,7 +184,19 @@ test("the tap target satisfies every source, including the strictest accessibili
   assert.ok(TAP_GAP >= 12, "Apple's bezelled spacing");
 });
 
-test("the column can never make a line of prose too long", () => {
-  // 480 pixels at a 16 pixel body is about 53 characters, inside Material's 40 to 60 and everyone else's.
+test("a journey stays narrow enough that prose can never run too long", () => {
+  // 480 pixels at a 16 pixel body is about 53 characters, inside every published range.
   assert.ok(APP_COLUMN_MAX / TYPE.body.size < PROSE_MAX_CH);
+});
+
+/**
+ * Why 840 and not a device size: web.dev asks for breakpoints chosen from content. Two panes need Material's
+ * own 360 default twice, its 24 spacer, and a 24 margin each side. Anything narrower is two cramped columns.
+ */
+test("two panes begin at the first width where two panes actually fit", () => {
+  const needed = 360 * 2 + 24 + PAGE_MARGIN.medium * 2;
+  assert.ok(TWO_PANE_FROM >= needed, `two panes need ${needed}, the breakpoint is ${TWO_PANE_FROM}`);
+  assert.ok(TWO_PANE_FROM - needed < 100, "and it is not so far past it that a whole size class is wasted");
+  assert.ok(DESTINATION_MAX > APP_COLUMN_MAX, "a destination is wider than a journey");
+  assert.ok(DESTINATION_MAX < TWO_PANE_FROM, "and narrower than the width at which it splits");
 });

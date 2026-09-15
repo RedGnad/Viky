@@ -30,20 +30,33 @@ test.describe("the screens a person meets", () => {
     });
   }
 
-  test("a first visit is offered a way in, and never a dead end", async ({ page }) => {
+  /**
+   * Rewritten on 15 Sep because the decision changed, not because the test was wrong. It used to assert that
+   * a first visit meets the passkey button on the home page. It now asserts the opposite, which is what GOV.UK
+   * and Apple both ask for: say what this is, offer the thing itself, and let the account wait until it is
+   * needed. If the account ever climbs back to the top of the home page, this fails.
+   */
+  test("a first visit is told what this is and offered the gift, not an account", async ({ page }) => {
     await page.goto("/");
-    // The account panel is the only way in, and it must be reachable without scrolling past the fold.
-    await expect(page.getByRole("button", { name: /Face ID or fingerprint/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /already have an account|Sign in/i })).toBeVisible();
-    // Nothing may claim the person is signed in before they are.
+    await expect(page.getByRole("heading", { name: /already in their name/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Offer a gift$/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /already have an account/i })).toBeVisible();
+    // No passkey prompt on the home page at all, and nothing claiming a session that does not exist.
+    await expect(page.getByRole("button", { name: /Create my account/i })).toHaveCount(0);
     await expect(page.getByText("You are signed in.")).toHaveCount(0);
   });
 
-  test("the funder screen asks for sign-in before it asks for money", async ({ page }) => {
+  /**
+   * Also rewritten, and it is the same decision from the other end: composing a gift needs nobody's identity,
+   * so the funder journey starts with the gift and the passkey arrives just before money does. The guard that
+   * matters now is that no amount is ever asked for on the first screen, and no account is either.
+   */
+  test("the funder journey starts with the gift, not with an account", async ({ page }) => {
     await page.goto("/fund");
-    await expect(page.getByRole("button", { name: /Face ID or fingerprint/i })).toBeVisible();
-    // The amount fields belong behind the account, never in front of it.
-    await expect(page.getByPlaceholder(/email or phone/i)).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /Who is it for/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Create my account/i })).toHaveCount(0);
+    // One question per screen: the amount belongs to the next one.
+    await expect(page.getByText(/How much, in dollars/i)).toHaveCount(0);
   });
 
   test("every tap target is big enough for a thumb", async ({ page }) => {

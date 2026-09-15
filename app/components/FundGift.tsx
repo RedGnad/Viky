@@ -37,7 +37,7 @@ type Step = "form" | "waiting" | "converting" | "giving" | "done";
  * They are three screens rather than three sections because the last one is a check: GOV.UK asks for one
  * before a confirmation, and Baymard measures abandonment when a cost appears for the first time at payment.
  */
-type Stage = "who" | "howMuch" | "check";
+type Stage = "who" | "howMuch" | "check" | "account";
 
 function readable(error: unknown): string {
   if (error instanceof ApiError) return error.message;
@@ -149,14 +149,6 @@ export function FundGift() {
     };
   }, [step, address, dollars, refresh, give]);
 
-  if (!address) {
-    return (
-      <div className="space-y-6">
-        <AccountPanel />
-      </div>
-    );
-  }
-
   const enough = (() => {
     try {
       return balance !== null && balance >= dollarsToUnits(dollars);
@@ -170,6 +162,13 @@ export function FundGift() {
   const start = async () => {
     setProblem(null);
     setNotice(null);
+    // The account exists by the time this runs: the check screen sends somebody without one to make it
+    // first. Stated rather than assumed, because the whole point of the change was that the two stages
+    // before this need nobody.
+    if (!address) {
+      setStage("account");
+      return;
+    }
     try {
       dollarsToUnits(dollars);
     } catch (error) {
@@ -242,6 +241,25 @@ export function FundGift() {
       return null;
     }
   })();
+
+  if (step === "form" && stage === "account") {
+    return (
+      <div className="flex flex-col gap-[var(--space-xl)]">
+        <section className={CARD}>
+          <h2 className={TITLE}>One account, and then you can pay</h2>
+          <p className={HELP}>
+            The money is held in your name until they earn it, so it needs somewhere of yours to be held. Your
+            face or your fingerprint is the whole account: no password, no code by text, nothing to remember.
+          </p>
+        </section>
+        <AccountPanel />
+        <button type="button" onClick={() => setStage("check")} className={SECONDARY_BUTTON}>
+          Back
+        </button>
+        <SessionScope />
+      </div>
+    );
+  }
 
   if (step === "form" && stage === "who") {
     return (
@@ -364,9 +382,15 @@ export function FundGift() {
           </section>
         ) : null}
 
-        <button type="button" onClick={() => void start()} disabled={!ready} className={PRIMARY_BUTTON}>
-          {enough ? "Put it in their name" : "Add money and give"}
-        </button>
+        {address ? (
+          <button type="button" onClick={() => void start()} disabled={!ready} className={PRIMARY_BUTTON}>
+            {enough ? "Put it in their name" : "Add money and give"}
+          </button>
+        ) : (
+          <button type="button" onClick={() => setStage("account")} disabled={!ready} className={PRIMARY_BUTTON}>
+            Continue
+          </button>
+        )}
         <button type="button" onClick={() => setStage("howMuch")} className={SECONDARY_BUTTON}>
           Back
         </button>
@@ -399,9 +423,9 @@ export function FundGift() {
             <div className="rounded-[var(--radius-control)] border border-[var(--divider)] p-[var(--space-md)]">
               <p className={HELP}>Before you pay, check what you pasted starts and ends like this:</p>
               <p className="font-mono text-[length:var(--type-body)]">
-                {address.slice(0, 6)}
+                {address!.slice(0, 6)}
                 <span style={{ color: "var(--muted)" }}> ... </span>
-                {address.slice(-4)}
+                {address!.slice(-4)}
               </p>
             </div>
             {copied ? <p className={HELP}>Copied and ready to paste.</p> : null}
@@ -409,7 +433,7 @@ export function FundGift() {
             <div className="flex flex-wrap gap-[var(--tap-gap)]">
               <button
                 type="button"
-                onClick={() => void navigator.clipboard.writeText(address).then(() => setCopied(true)).catch(() => setCopied(false))}
+                onClick={() => void navigator.clipboard.writeText(address!).then(() => setCopied(true)).catch(() => setCopied(false))}
                 className={INLINE_BUTTON}
               >
                 Copy my identifier again

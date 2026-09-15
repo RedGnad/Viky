@@ -10,13 +10,37 @@ import { chromium } from "@playwright/test";
  * (/dev/states) rather than a screenshot's. Run against a built app: `pnpm start` then `pnpm design:shots`.
  */
 
+/**
+ * Four widths, each a decision rather than a device: the narrow phone, the wide phone, the width where a
+ * destination has grown but not split, and the width where it is two panes.
+ */
 const WIDTHS = [
   { name: "375", width: 375, height: 812 },
   { name: "430", width: 430, height: 932 },
-  { name: "desktop", width: 1280, height: 900 },
+  { name: "768", width: 768, height: 1024 },
+  { name: "1280", width: 1280, height: 900 },
 ] as const;
 
 const PAGES = ["/", "/fund", "/cash-out", "/account", "/privacy", "/legal"] as const;
+
+/**
+ * The screens that matter, which live behind a passkey in the product and are rendered from example data at
+ * /dev/screens so they can be photographed at all. Kept in step with the gallery by test/gallery.test.ts.
+ */
+const EXAMPLE_SLUGS = [
+  "funder-who",
+  "funder-amount",
+  "funder-check",
+  "funder-rail",
+  "funder-ready",
+  "recipient-card",
+  "recipient-duolingo",
+  "recipient-days",
+  "recipient-earned",
+  "recipient-returned",
+  "recipient-money",
+  "recipient-finished",
+] as const;
 
 async function main() {
   const base = process.env.VIKY_BROWSER_TEST_URL ?? "http://127.0.0.1:3000";
@@ -33,7 +57,11 @@ async function main() {
         colorScheme: appearance,
       });
       const page = await context.newPage();
-      for (const path of PAGES) {
+      const paths = [...PAGES, ...EXAMPLE_SLUGS.map((slug) => `/dev/screens/${slug}`)];
+      // The example screens are the product; the six public pages are only its edges. Both, in day light,
+      // and the public pages again at night.
+      for (const path of paths) {
+        if (appearance === "dark" && path.startsWith("/dev/")) continue;
         const response = await page.goto(`${base}${path}`, { waitUntil: "networkidle" });
         if (!response || response.status() >= 400) throw new Error(`${path} answered ${response?.status()}`);
         const name = path === "/" ? "home" : path.slice(1).replace(/\//g, "-");
