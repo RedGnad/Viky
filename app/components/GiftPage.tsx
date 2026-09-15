@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { BODY, CARD, FIELD, HELP, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON } from "./ui";
+import { AMOUNT_IN_TITLE, BODY, CARD, DISPLAY, FIELD, HELP, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON, TITLE } from "./ui";
 import { useAccount } from "@/src/account/provider";
 import * as mera from "@/src/account/mera";
 import { ApiError } from "@/src/client/api";
@@ -257,11 +257,11 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
 
       {!gift.cancelled && mine && !account.bound && account.source === "recipient" && account.code && !renaming ? (
         <section className={CARD}>
-          <p className="font-medium">Prove {account.username} is yours</p>
+          <h2 className={TITLE}>Prove {account.username} is yours</h2>
           <p className="text-[length:var(--type-help)]">
             In Duolingo, open Profile, then Settings, then Name, and add this code to your name for a minute:
           </p>
-          <p className="text-center font-mono text-[length:var(--type-money)] tracking-widest">{account.code}</p>
+          <p className="text-center text-[length:var(--type-money)] font-semibold tracking-widest">{account.code}</p>
           <button type="button" onClick={bind} disabled={working} className={PRIMARY_BUTTON}>
             {busy === "binding" ? "Reading your profile" : "I added it"}
           </button>
@@ -304,7 +304,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       ) : null}
 
       {!gift.cancelled && signedIn && gift.finished ? (
-        <section className="space-y-[var(--space-sm)] rounded-[var(--radius-card)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-lg)]">
+        <section className={CARD}>
           <p className="font-medium">This gift is finished.</p>
           <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
             {gift.creditedDays} of {gift.durationDays} days were yours, so {gift.alreadyTheirsDisplay} is yours to keep.
@@ -319,9 +319,9 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         </button>
       ) : null}
 
-      {notice ? <p className="rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--joy)] p-[var(--space-md)] text-[length:var(--type-help)]">{notice}</p> : null}
+      {notice ? <p className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--joy)] p-[var(--space-md)] text-[length:var(--type-help)]">{notice}</p> : null}
       {problem ? (
-        <p role="alert" className="rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
+        <p role="alert" className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
           {problem}
         </p>
       ) : null}
@@ -335,9 +335,18 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       backLabel="Back to my gifts"
       aside={<div className="flex flex-col gap-[var(--space-xl)]">{actions}</div>}
     >
-      <header className="flex flex-col gap-[var(--space-sm)]">
-        <h1 className="text-[length:var(--type-money)] leading-[var(--type-money-leading)] font-semibold">
-          {theirs ? `You put ${gift.amountDisplay} in their name.` : `${gift.amountDisplay} is in your name.`}
+      <header className="flex flex-col gap-[var(--space-lg)]">
+        {/* The page's own title, with the amount handed back to the text face, as every amount is. */}
+        <h1 className={DISPLAY}>
+          {theirs ? (
+            <>
+              You put <span className={AMOUNT_IN_TITLE}>{gift.amountDisplay}</span> in their name.
+            </>
+          ) : (
+            <>
+              <span className={AMOUNT_IN_TITLE}>{gift.amountDisplay}</span> is in your name.
+            </>
+          )}
         </h1>
         <p className={PROSE}>
           {theirs

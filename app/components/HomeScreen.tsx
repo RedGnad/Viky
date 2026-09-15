@@ -17,10 +17,9 @@ import { CONTROL_STACK, DISPLAY, HELP, MONEY, PRIMARY_BUTTON, PROSE, SECONDARY_B
  * has no number to read: for them the top of the page was a passkey prompt for a product nobody had
  * described, which is what GOV.UK's start page pattern exists to prevent.
  *
- * A first visit wears the poster look the funder chose on 15 Sep, and it is the first screen to wear it: the
- * promise and both ways in on one side, the stickers on the other, then how it works in three sticker cards.
- * On a phone all of it is one column, and the title, the promise and both buttons come before any scroll.
- * Somebody signed in still sees the calm look until their screens join it.
+ * A first visit was the first screen to wear the poster look the funder chose on 15 Sep: the promise and both
+ * ways in on one side, the stickers on the other, then how it works in three sticker cards. On a phone all of it
+ * is one column, and the title, the promise and both buttons come before any scroll.
  */
 const STEPS = [
   { n: "1", what: "You choose who it is for, how much, and for how long.", fill: "var(--sticker-sun)" },
@@ -33,7 +32,7 @@ export function HomeScreen() {
 
   if (!address) {
     return (
-      <Screen layout="destination" look="poster">
+      <Screen layout="destination">
         <div className="grid items-center gap-[var(--space-xl)] [@media(min-width:840px)]:grid-cols-[1.15fr_1fr]">
           <section className="flex flex-col gap-[var(--space-lg)]">
             <h1 className={DISPLAY}>The money is already in their name</h1>

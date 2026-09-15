@@ -212,10 +212,10 @@ export const THEME_STORAGE_KEY = "viky.theme";
  * type and the same stickers in the colours of the third, an indigo ground and an acid green accent, and the
  * outlines turn light.
  *
- * It is a look rather than a new value for the colours above because only some screens wear it so far: the
- * signed-out home, then the whole funder journey (D69, D70). A screen joins by passing `look="poster"` to
- * `Screen`, and every control, title and card inside it picks the look up through the same variables, so the
- * screens that follow inherit it without styling of their own. The others keep the calm look above until they join.
+ * It arrived as a look rather than as new values for the colours above, one screen at a time: the signed-out
+ * home, then the funder journey, then every other screen (D69, D70, D71). Every screen drawn through `Screen`
+ * wears it now, and every control, title and card inside picks it up through the same variables. The calm values
+ * above remain only for the operator's own pages under app/dev, which do not use `Screen`.
  *
  * Every pair is measured as above by test/design-tokens.test.ts, with one addition the look needs: the words
  * set on a sticker are measured against every fill a sticker can wear.

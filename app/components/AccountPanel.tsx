@@ -109,11 +109,11 @@ export function AccountPanel() {
       ) : null}
 
       {error ? (
-        <div role="alert" className="space-y-[var(--space-sm)] rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
+        <div role="alert" className="space-y-[var(--space-sm)] rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
           <p>{error.guidance}</p>
           {error.code === "UNSUPPORTED_BROWSER" && /Android/i.test(navigator.userAgent) ? (
             <a
-              className="inline-flex min-h-[var(--tap-target)] items-center rounded-full border border-[var(--control-border)] bg-[var(--accent)] px-[var(--space-lg)] text-[length:var(--type-help)] font-medium text-[var(--on-accent)]"
+              className={`${INLINE_BUTTON} bg-[var(--accent)] font-medium text-[var(--on-accent)]`}
               href={`intent://${window.location.host}${window.location.pathname}${window.location.search}#Intent;scheme=https;package=com.android.chrome;end`}
             >
               Open this page in Chrome

@@ -172,7 +172,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
             </ol>
             <div className="rounded-[var(--radius-control)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-md)]">
               <p className={HELP}>Before you pay, check what you pasted starts and ends like this:</p>
-              <p className="font-mono text-[length:var(--type-body)]">
+              <p className="text-[length:var(--type-body)] tabular-nums">
                 0x350aF8<span style={{ color: "var(--muted)" }}> ... </span>7761
               </p>
             </div>
@@ -361,7 +361,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
         <span className={PRIMARY_BUTTON}>Send it to my card</span>
         <span className={SECONDARY_BUTTON}>Send it to another account of mine</span>
         <section className={CARD}>
-          <h2 className="font-medium">What a card payout needs</h2>
+          <h2 className={TITLE}>What a card payout needs</h2>
           <ul className={`list-disc pl-5 ${HELP}`}>
             <li>About $21, and you have $28.56.</li>
             <li>A bank card in your name, in euros or dollars.</li>

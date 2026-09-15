@@ -9,7 +9,7 @@ import { readAusdBalance } from "@/src/client/onchain";
 import { formatAusd } from "@/src/gift-reader";
 import { AccountPanel } from "./AccountPanel";
 import { SessionScope } from "./SessionScope";
-import { CARD, FIELD, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./ui";
+import { CARD, FIELD, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
 
 /**
  * What a gift earned, and what the person can do with it today.
@@ -74,7 +74,7 @@ export function CashOut() {
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Yours to take out
         </p>
-        <p className="text-[length:var(--type-money)] font-semibold">{holding === null ? "..." : formatAusd(holding)}</p>
+        <p className={MONEY}>{holding === null ? "..." : formatAusd(holding)}</p>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Sending it to your card or your bank is coming. Your money stays yours in the meantime, and nothing
           about it expires.
@@ -89,7 +89,7 @@ export function CashOut() {
 
       {step === "toAccount" || step === "sentToAccount" ? (
         <section className={CARD}>
-          <p className="font-medium">Send it to another account of yours</p>
+          <h2 className={TITLE}>Send it to another account of yours</h2>
           <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
             Any amount, and nothing to pay: Viky covers what it costs to move. Useful for putting what you
             earned in one place before taking it out. Sign in to your other account and open its
@@ -120,7 +120,7 @@ export function CashOut() {
 
       {notice ? <p className="text-[length:var(--type-help)]">{notice}</p> : null}
       {problem ? (
-        <p role="alert" className="rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
+        <p role="alert" className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
           {problem}
         </p>
       ) : null}

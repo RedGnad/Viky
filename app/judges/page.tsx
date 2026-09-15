@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import { Screen } from "../components/Screen";
 import { JudgesAccount } from "../components/JudgesAccount";
+import { DISPLAY, TITLE } from "../components/ui";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadRpcUrl } from "@/src/monad/chain";
 
 export const metadata: Metadata = {
   title: "For judges",
 };
 
-// The only page where contract addresses appear. Consumer screens never show them.
+// The only page where contract addresses appear. Consumer screens never show them. They are set in the text face
+// like every other word: a monospace face would be the system's, and hex has no letter a text face confuses.
 export default function JudgesPage() {
   const escrow = process.env.NEXT_PUBLIC_GIFT_ESCROW_ADDRESS?.trim();
   // Gifts created before the D30 corrections keep running on the contract that holds them, and every
@@ -15,8 +17,8 @@ export default function JudgesPage() {
   const earlierEscrow = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
   return (
     <Screen layout="document" back="/account" backLabel="Back to my account">
-      <header className="space-y-[var(--space-sm)]">
-        <h1 className="text-[length:var(--type-money)] font-semibold">For judges</h1>
+      <header className="space-y-[var(--space-lg)]">
+        <h1 className={DISPLAY}>For judges</h1>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Everything verifiable about Viky in one screen. Nothing here is shown to funders or
           recipients.
@@ -24,19 +26,21 @@ export default function JudgesPage() {
       </header>
 
       <section className="space-y-[var(--space-sm)]">
-        <h2 className="font-medium">Network</h2>
-        <dl className="grid grid-cols-[10rem_1fr] gap-y-[var(--space-xs)] text-[length:var(--type-help)]">
+        <h2 className={TITLE}>Network</h2>
+        {/* On a phone each label sits above its value: two columns there left a value 198 pixels, and breaking
+            anywhere to fit an address broke every sentence beside it mid-word. Only an unbreakable string breaks now. */}
+        <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] text-[length:var(--type-help)] [@media(min-width:600px)]:grid-cols-[10rem_1fr]">
           <dt className="text-[var(--muted)]">Chain</dt>
           <dd>Monad mainnet, chain id {MONAD_CHAIN_ID}</dd>
           <dt className="text-[var(--muted)]">RPC</dt>
-          <dd className="break-all font-mono">{monadRpcUrl()}</dd>
+          <dd className="[overflow-wrap:anywhere]">{monadRpcUrl()}</dd>
           <dt className="text-[var(--muted)]">AUSD</dt>
-          <dd className="break-all font-mono">{AUSD_ADDRESS}</dd>
+          <dd className="[overflow-wrap:anywhere]">{AUSD_ADDRESS}</dd>
           <dt className="text-[var(--muted)]">Gift contract</dt>
-          <dd className="break-all">
+          <dd className="[overflow-wrap:anywhere]">
             {escrow ? (
               <>
-                <span className="font-mono">{escrow}</span>{" "}
+                {escrow}{" "}
                 (<a className="underline" href={`https://monadvision.com/address/${escrow}`}>MonadVision</a>, source verified through Sourcify)
               </>
             ) : (
@@ -48,8 +52,8 @@ export default function JudgesPage() {
           {earlierEscrow ? (
             <>
               <dt className="text-[var(--muted)]">Earlier gift contract</dt>
-              <dd className="break-all">
-                <span className="font-mono">{earlierEscrow}</span>{" "}
+              <dd className="[overflow-wrap:anywhere]">
+                {earlierEscrow}{" "}
                 (<a className="underline" href={`https://monadvision.com/address/${earlierEscrow}`}>MonadVision</a>, source verified through Sourcify).
                 It holds the gifts created before the day-counting corrections of DECISIONS.md D30 and keeps running
                 them to the end. Gift ids never restart: the newer contract continues the sequence, and every gift
@@ -61,7 +65,7 @@ export default function JudgesPage() {
       </section>
 
       <section className="space-y-[var(--space-sm)]">
-        <h2 className="font-medium">How progress is verified</h2>
+        <h2 className={TITLE}>How progress is verified</h2>
         <p className="text-[length:var(--type-help)]">
           Duolingo runs in public mode: once a day, Viky&apos;s keeper reads the recipient&apos;s public profile
           through an attested fetch (Reclaim zkFetch through Reclaim&apos;s TEE client). The attestor signs
