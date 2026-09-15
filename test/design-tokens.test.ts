@@ -10,6 +10,7 @@ import {
   GROUNDS,
   DESTINATION_MAX,
   PAGE_MARGIN,
+  POSTER_CARD,
   POSTER_COLOURS,
   POSTER_CONTROL,
   POSTER_TYPE,
@@ -276,6 +277,14 @@ test("the stylesheet's poster look says what the tokens say, and night says it b
   assert.equal(variableIn(wide, "type-display-leading"), `${POSTER_TYPE.display.expanded.lineHeight}px`);
 });
 
+test("a card's edge is a divider hairline in the calm look and a sticker's outline in the poster look", () => {
+  assert.equal(cssVariable("card-border-width"), "1px");
+  assert.equal(cssVariable("card-border"), "var(--divider)");
+  const day = rule(`:root:has(${POSTER})`);
+  assert.equal(variableIn(day, "card-border-width"), `${POSTER_CARD.borderWidth}px`);
+  assert.equal(variableIn(day, "card-border"), "var(--sticker-outline)");
+});
+
 test("the poster look's faces are loaded by next/font and defined on the whole document", () => {
   const fonts = readFileSync("app/fonts.ts", "utf8");
   assert.match(fonts, /from "next\/font\/google"/);
@@ -288,9 +297,13 @@ test("the poster look's faces are loaded by next/font and defined on the whole d
 
 /**
  * The calm look stays on every screen that has not asked for the poster one. When a screen joins, this list
- * grows, and that is a decision somebody took rather than something a shared class did on its own.
+ * grows, and that is a decision somebody took rather than something a shared class did on its own. Screen itself
+ * is left out, because it is where the look is declared rather than a screen that wears it.
  */
-test("only the signed-out home wears the poster look so far", () => {
-  const wearers = globSync("app/**/*.tsx").filter((file) => readFileSync(file, "utf8").includes('look="poster"'));
-  assert.deepEqual(wearers, ["app/components/HomeScreen.tsx"]);
+test("the poster look is worn by the signed-out home, the funder journey and the funder's example screens only", () => {
+  const wearers = globSync("app/**/*.tsx")
+    .filter((file) => file !== "app/components/Screen.tsx")
+    .filter((file) => readFileSync(file, "utf8").includes('"poster"'))
+    .sort();
+  assert.deepEqual(wearers, ["app/components/HomeScreen.tsx", "app/dev/screens/[slug]/page.tsx", "app/fund/page.tsx"]);
 });

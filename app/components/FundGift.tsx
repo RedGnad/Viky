@@ -199,7 +199,7 @@ export function FundGift() {
 
   if (step === "done" && created) {
     return (
-      <section className="space-y-[var(--space-lg)] rounded-[var(--radius-card)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-lg)]">
+      <section className="space-y-[var(--space-lg)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-lg)]">
         <p className="text-[length:var(--type-title)] font-medium">It is in their name.</p>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Whoever opens this link takes the gift, so send it only to {contact.trim() || "them"} and to nobody

@@ -1742,3 +1742,29 @@ fill a sticker can wear.
 **What cannot be photographed** is the signed-in home, because a passkey cannot be replayed by a script. Its branch
 of HomeScreen is unchanged, and every class it uses resolves to the calm values, since nothing on it asks for the
 poster look.
+
+## D70, 15 Sep 2026: the funder journey joins the poster look, all of it
+
+**What the funder chose.** The screen after the home was the first step of giving. A look changes by page, and every
+step of giving (who, how much, the check, the account, the wait for the payment, the gift ready) is the one page
+/fund, so the funder chose the whole journey rather than its first screen: a look that changed between two steps of
+the same gift would read as a fault.
+
+**What it took, and nothing more.** `look="poster"` on that page; the same look on the funder's example screens in
+the gallery, so a capture of one is what a funder meets; and one pair of tokens the home had not needed, a card's
+edge, which is a divider hairline in the calm look and the sticker outline at 2 pixels in the poster look. The two
+sections of the journey that drew their own edge, the gift ready and what the open session can do, read those tokens
+too. No screen's words, order or behaviour changed.
+
+**Measured.**
+
+- Walking the journey as a signed-out person at 390x844 and 1440x900, by day and by night, from the home through
+  "Offer a gift" to the first step, how much, the check and the account step, with nothing created and nothing paid:
+  every glyph was drawn by Anton or DM Sans; the lowest words are 5.36:1 by day (the label of Continue on the tomato)
+  and 8.20:1 by night; field and button outlines are 14.17:1 or more; card edges are 15.10:1 by day and 16.69:1 by
+  night. On the first step, the way back, the title, both fields and Continue sit inside the first screen at both
+  sizes.
+- The 80 whole-page captures, against the build before this change: 54 are identical to the pixel, the 24 of the
+  funder journey and of the funder's example screens changed as intended, and the last two differ only in the two
+  places that differ between two captures of one unchanged build.
+- The browser tests pass on that build.

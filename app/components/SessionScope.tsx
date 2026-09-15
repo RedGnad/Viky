@@ -27,7 +27,7 @@ export function SessionScope() {
   const { minutes, seconds } = remaining;
 
   return (
-    <section className="space-y-[var(--space-sm)] rounded-[var(--radius-card)] border border-[var(--divider)] p-[var(--space-lg)] text-[length:var(--type-help)]">
+    <section className="space-y-[var(--space-sm)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--card-border)] p-[var(--space-lg)] text-[length:var(--type-help)]">
       <p className="font-medium">What this device can do for you right now</p>
       <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)] text-[var(--muted)]" >
         <li>Put money behind a goal in someone&apos;s name, for the amounts you type.</li>
