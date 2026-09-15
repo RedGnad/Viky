@@ -1826,3 +1826,49 @@ taking money out, offline, and two gifts) and the twelve example screens, 88 mea
 **What cannot be photographed** is anything behind a passkey: the signed-in home, a gift opened by its recipient,
 taking money out with money to take, what the open session can do. Those states draw the same components the example
 screens draw, through the same variables, but they were not seen in a browser.
+
+## D72, 15 Sep 2026: what the funder met buying a gift for real, and no promise of a card or a bank
+
+The funder made the whole purchase on viky.cash tonight, and the advisor wrote up eight defects from it.
+
+1. **The account step had no way forward.** Once the account existed it showed only the account panel and the
+   session, and the funder had to guess that Back led to the payment. An account step with an account now shows
+   the check again, with its button to pay (`fundingStageShown`, tested).
+2. **Nothing said how much to buy.** The screen suggested $50, the rail's smallest payment of 25 EUR brings about
+   $28.50, and the page then waited for a gift that could not be made. The check and the waiting screen now say to
+   pay at least N EUR, from `eurosToBuy`: what the account is short of, in whole euros at the rates measured on
+   14 Sep with a tenth added for the rate, never below 25 EUR, recomputed from the balance on every refresh. The
+   margin costs the funder nothing, because whatever is left over stays in their account. The suggested gift is
+   now $25, what one smallest payment covers; the $50 rested on the payout floor of D62, which point 7 removes.
+3. **The rail asks whose destination it is**, the person's own or a platform's, custodial or not, and the steps did
+   not say. The true answer is their own, non-custodial: the key is derived from the passkey on the device and held
+   by nobody else. The steps now say so, without the forbidden word the rail itself uses.
+4. **"Any amount" sent the whole balance**, and **5. the balance showed two decimals where the signature moved
+   six.** The sentence now says all of it goes and writes the amount to its last decimal (`formatAusdExact`,
+   tested against the value the screen sends). This is the one screen that shows more than the two decimals
+   CLAUDE.md asks for, because the funder's instruction for it is the later one.
+6. **The email or phone protected nothing.** The claim route copies the stored hash into the attestation, so the
+   contract compares our own value with itself, and Viky writes to nobody. It was mandatory and first, and all it
+   left was a fingerprint on a public ledger, which a phone number does not survive. It is gone: a new gift carries
+   `NO_CONTACT_HASH`, a fixed non-zero value, because the contract refuses zero. A page loaded before the change
+   still sends a contact and signed its hash into the terms, so the route still accepts one. The Duolingo name is
+   the only field, with why it protects the gift, and the step says Viky never writes to them. The privacy page
+   says only gifts made before today hold a fingerprint.
+7. **The card rail pays out to no card in France or the rest of the EEA.** Mercuryo's help centre article "In which
+   countries can I make an off-ramp (sell) transaction?", created 15 Sep 2026 at 10:45 UTC
+   (help.mercuryo.io/hc/en-gb/articles/39157544835613, read tonight through the help centre's own API because the
+   page answers a script with 403), marks neither Visa nor Mastercard for every EU country, Iceland, Liechtenstein,
+   Norway and the United States. Senegal keeps Visa and not Mastercard; a country the article does not list keeps
+   both. Their currencies endpoint (`https://api.mercuryo.io/v1.6/lib/currencies`, read tonight) restricts MON on
+   MONAD only in `gb`, and for buying as well as selling, which `src/rails.ts` had wrong: the way in is marked
+   closed there too now.
+
+   So no screen promises a card or a bank: not the gift page after taking money, not the check step, not the way
+   out ("card or bank is coming", "somewhere you can spend it"), not the privacy and legal pages' sales, and not the
+   example screens. The payout floor helpers and their tests went with the promise. `ExitRouter` is not deployed and
+   is not wired to Mercuryo.
+
+   **A risk for any rail after this one.** `ExitRouter` pays the MON out through an internal call, and nothing
+   guarantees that a deposit service credits a deposit arriving that way rather than as a plain transfer. Whatever
+   it is ever pointed at must first be shown to credit one, with a small amount.
+8. **Nothing on screen names another way out.** The funder is testing one tonight, and that decision comes after.
