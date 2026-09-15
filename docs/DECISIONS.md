@@ -1872,3 +1872,24 @@ The funder made the whole purchase on viky.cash tonight, and the advisor wrote u
    guarantees that a deposit service credits a deposit arriving that way rather than as a plain transfer. Whatever
    it is ever pointed at must first be shown to credit one, with a small amount.
 8. **Nothing on screen names another way out.** The funder is testing one tonight, and that decision comes after.
+
+## D73, 15 Sep 2026: giving looks like the poster, not like a form in its colours
+
+**What the funder saw.** Every step of /fund wore the poster's colours and faces and still read as a white form in
+an empty column, beside a home of stickers and big type. It had the look's tokens and none of its composition.
+
+**What changed.**
+
+- Each card of giving is a sticker: one of the four sticker fills, the look's outline and a hard shadow. Who it is
+  for is pink; how much is yellow, with what a day is worth in mint; the check is lilac, mint and pink; the payment
+  and the gift ready are yellow; the account step is lilac. A sticker redefines the roles inside it (words, help,
+  links, field and button outlines, reliefs) to the ink measured on its fills, and puts fields on paper, so nothing
+  inside has to know it sits on a colour. Mint never holds a primary button, because at night the two are the same
+  lime.
+- On a wide screen the look's picture stands on each side of the column, where there was only cream. It takes no
+  pointer and is not drawn below 1100 pixels, where the column needs the room.
+- The example screens of giving draw the same stickers.
+
+**Measured, and not put through a review pass**, which the funder asked to do themselves: the paper holds the
+stickers' ink at 16.35:1 by day and 16.69:1 at night, and the lowest pair inside any sticker is that ink on lilac at
+night, 4.84:1. Both are tested, and so is the rule that mint holds no primary button.
