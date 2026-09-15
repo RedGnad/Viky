@@ -170,7 +170,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
               <li>Choose the Monad network.</li>
               <li>Paste your identifier where they ask where to send it.</li>
             </ol>
-            <div className="rounded-[var(--radius-control)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-md)]">
+            <div className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)]">
               <p className={HELP}>Before you pay, check what you pasted starts and ends like this:</p>
               <p className="text-[length:var(--type-body)] tabular-nums">
                 0x350aF8<span style={{ color: "var(--muted)" }}> ... </span>7761
@@ -204,7 +204,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
           <p className={HELP}>
             Whoever opens this link takes the gift, so send it only to ama@example.com and to nobody else.
           </p>
-          <p className="select-all break-all rounded-[var(--radius-control)] border border-[var(--divider)] p-[var(--space-md)] text-[length:var(--type-help)]">
+          <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] p-[var(--space-md)] text-[length:var(--type-help)]">
             https://viky.cash/g/3?k=example
           </p>
         </section>
