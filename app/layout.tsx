@@ -53,8 +53,9 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0b0c" },
+    // The poster look's grounds, so the browser's own bar matches the page it sits on.
+    { media: "(prefers-color-scheme: light)", color: "#FFF3D9" },
+    { media: "(prefers-color-scheme: dark)", color: "#1C1035" },
   ],
 };
 

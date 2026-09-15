@@ -4,7 +4,7 @@ import { AccountPanel } from "../components/AccountPanel";
 import { Screen } from "../components/Screen";
 import { SessionScope } from "../components/SessionScope";
 import { ThemeSwitch } from "../components/ThemeSwitch";
-import { CARD, HELP, PROSE } from "../components/ui";
+import { CARD, HELP, PROSE, TITLE } from "../components/ui";
 
 export const metadata: Metadata = {
   title: "Account",
@@ -34,7 +34,7 @@ export default function Page() {
         <>
 
       <section className={CARD}>
-        <h2 className="font-medium">Lost your phone?</h2>
+        <h2 className={TITLE}>Lost your phone?</h2>
         <p className={PROSE}>
           Your account lives in your passkey, and your passkey is kept by Apple, Google or your password
           manager rather than by Viky. Sign in on the new phone the same way you did on the old one, and

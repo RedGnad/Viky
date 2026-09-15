@@ -296,14 +296,36 @@ test("the poster look's faces are loaded by next/font and defined on the whole d
 });
 
 /**
- * The calm look stays on every screen that has not asked for the poster one. When a screen joins, this list
- * grows, and that is a decision somebody took rather than something a shared class did on its own. Screen itself
- * is left out, because it is where the look is declared rather than a screen that wears it.
+ * The poster look is the product's look: every page a person can open is drawn through `Screen`, and `Screen`
+ * wears it. A page that bypassed `Screen` would fall back to the calm values, which only the operator's own pages
+ * under app/dev still use.
  */
-test("the poster look is worn by the signed-out home, the funder journey and the funder's example screens only", () => {
-  const wearers = globSync("app/**/*.tsx")
-    .filter((file) => file !== "app/components/Screen.tsx")
-    .filter((file) => readFileSync(file, "utf8").includes('"poster"'))
-    .sort();
-  assert.deepEqual(wearers, ["app/components/HomeScreen.tsx", "app/dev/screens/[slug]/page.tsx", "app/fund/page.tsx"]);
+test("every page a person can open is drawn through Screen, and Screen wears the poster look", () => {
+  assert.match(readFileSync("app/components/Screen.tsx", "utf8"), /data-look="poster"/);
+  const pages = globSync("app/**/page.tsx").filter((file) => !file.startsWith("app/dev/")).sort();
+  const drawnThroughScreen = (file: string) => /from "[^"]*(Screen|GiftPage)"/.test(readFileSync(file, "utf8"));
+  assert.deepEqual(pages.filter((file) => !drawnThroughScreen(file)), []);
+  assert.ok(pages.length >= 9, `only ${pages.length} pages found`);
+});
+
+/**
+ * The number inside a day's cell was set in the muted colour, which is 4.04:1 on a day that can still be caught, by
+ * day, and 3.06:1 at night. It is set in the text colour now, and this keeps the muted one off the cells.
+ */
+test("a day's number is set in the text colour, because the muted one fails on the bright cells", () => {
+  assert.ok(contrastRatio(POSTER_COLOURS.light.muted, DAY_SURFACES.light.catchable) < TEXT_CONTRAST_MINIMUM);
+  assert.ok(contrastRatio(POSTER_COLOURS.dark.muted, DAY_SURFACES.dark.catchable) < TEXT_CONTRAST_MINIMUM);
+  const row = readFileSync("app/components/DayRow.tsx", "utf8");
+  const cell = row.slice(row.indexOf("<li"), row.indexOf("</li>"));
+  assert.doesNotMatch(cell, /HELP|--muted/);
+});
+
+/** A day's cell keeps the calm state colours, so the poster look's words are measured on every one of them. */
+test("the poster look's words stay readable on every day a gift can show, by day and by night", () => {
+  for (const appearance of ["light", "dark"] as Appearance[]) {
+    for (const [state, surface] of Object.entries(DAY_SURFACES[appearance])) {
+      const ratio = contrastRatio(POSTER_COLOURS[appearance].text, surface);
+      assert.ok(ratio >= TEXT_CONTRAST_MINIMUM, `poster ${appearance} words on a ${state} day are ${ratio.toFixed(2)}:1`);
+    }
+  }
 });

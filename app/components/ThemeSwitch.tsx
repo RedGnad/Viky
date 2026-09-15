@@ -1,7 +1,7 @@
 "use client";
 import { useSyncExternalStore } from "react";
 import { applyThemeChoice, readThemeChoice, subscribeToThemeChoice, themeChoiceOnServer, type ThemeChoice } from "@/src/theme";
-import { CARD, HELP, INLINE_BUTTON } from "./ui";
+import { CARD, HELP, INLINE_BUTTON, TITLE } from "./ui";
 
 /**
  * Light, dark, or whatever the phone says.
@@ -25,7 +25,7 @@ export function ThemeSwitch() {
 
   return (
     <section className={CARD}>
-      <h2 className="font-medium">How it looks</h2>
+      <h2 className={TITLE}>How it looks</h2>
       <div className="flex flex-wrap gap-[var(--tap-gap)]" role="group" aria-label="How Viky looks">
         {CHOICES.map((option) => {
           const chosen = option.value === choice;

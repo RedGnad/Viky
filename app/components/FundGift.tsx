@@ -200,7 +200,7 @@ export function FundGift() {
   if (step === "done" && created) {
     return (
       <section className="space-y-[var(--space-lg)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-lg)]">
-        <p className="text-[length:var(--type-title)] font-medium">It is in their name.</p>
+        <h2 className={TITLE}>It is in their name.</h2>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Whoever opens this link takes the gift, so send it only to {contact.trim() || "them"} and to nobody
           else. They open it, and the money becomes theirs day by day. Whatever they do not earn comes back to
@@ -430,7 +430,7 @@ export function FundGift() {
             </ol>
             <div className="rounded-[var(--radius-control)] border border-[var(--divider)] p-[var(--space-md)]">
               <p className={HELP}>Before you pay, check what you pasted starts and ends like this:</p>
-              <p className="font-mono text-[length:var(--type-body)]">
+              <p className="text-[length:var(--type-body)] tabular-nums">
                 {address!.slice(0, 6)}
                 <span className="text-[var(--muted)]"> ... </span>
                 {address!.slice(-4)}

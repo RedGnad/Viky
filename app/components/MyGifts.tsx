@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAccount } from "@/src/account/provider";
 import { getJson } from "@/src/client/api";
-import { BODY, CARD, HELP, MONEY } from "./ui";
+import { BODY, CARD, HELP, MONEY, TITLE } from "./ui";
 
 /**
  * After sign-in on the home page: every gift of this account, found from the passkey alone. Opening
@@ -78,7 +78,7 @@ export function MyGifts() {
 function GiftGroup({ title, gifts }: { title: string; gifts: MyGift[] }) {
   return (
     <section className="flex flex-col gap-[var(--space-md)]">
-      <h2 className="font-medium">{title}</h2>
+      <h2 className={TITLE}>{title}</h2>
       {gifts.map((gift) => (
         <Link key={gift.giftId} href={`/g/${gift.giftId}`} className={`${CARD} block`}>
           <p className={MONEY}>{gift.role === "recipient" ? gift.earnedDisplay : gift.theirsDisplay}</p>

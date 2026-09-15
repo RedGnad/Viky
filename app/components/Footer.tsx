@@ -14,7 +14,7 @@ export function Footer({ current }: { current?: string }) {
     <footer className="flex">
       <Link
         href="/account"
-        className="inline-flex min-h-[var(--tap-target)] items-center text-[length:var(--type-help)] text-[var(--muted)] underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+        className="inline-flex min-h-[var(--tap-target)] items-center text-[length:var(--type-help)] text-[var(--muted)] underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
       >
         Account, help and legal
       </Link>

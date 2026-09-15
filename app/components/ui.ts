@@ -12,9 +12,9 @@
  * - Radii, spacing and text sizes come from Material's published scales instead of being picked per screen.
  * - Buttons are fully round and cards take Material's extra large radius, which is the art direction the
  *   funder chose arriving through the tokens: not one measurement above them moved.
- * - The families, a title's weight, the width of a control's outline and the relief under it are variables too.
- *   A screen that asks for the poster look (Screen's `look`) gets Anton titles, DM Sans everywhere else and
- *   pressed-key buttons from these same classes, and a screen that does not ask looks exactly as it did.
+ * - The families, a title's weight, the width of a control's outline and the relief under it are variables too,
+ *   so the poster look every screen wears (Screen) gives Anton titles, DM Sans everywhere else and pressed-key
+ *   buttons through these same classes.
  */
 
 const TAP = "min-h-[var(--tap-target)] inline-flex items-center justify-center gap-[var(--space-sm)]";
@@ -67,6 +67,12 @@ export const HELP = "text-[length:var(--type-help)] leading-[var(--type-help-lea
  */
 export const DISPLAY =
   "text-[length:var(--type-display)] leading-[var(--type-display-leading)] font-[family-name:var(--font-title)] [font-weight:var(--font-title-weight)]";
+
+/**
+ * An amount inside a title. Amounts are set in the text face wherever they appear, so a title that states one hands
+ * the amount back to it, at the title's own size.
+ */
+export const AMOUNT_IN_TITLE = "font-[family-name:var(--font-text)] font-bold tabular-nums";
 
 /** Prose is capped so a line never runs past what every published range agrees is readable. */
 export const PROSE = `${BODY} max-w-[var(--prose-max)]`;

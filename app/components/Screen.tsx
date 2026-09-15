@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { TITLE } from "./ui";
+import { DISPLAY, TITLE } from "./ui";
 
 /**
  * The shape of every screen, in one place, and there are two shapes because there are two kinds of screen.
@@ -25,13 +25,17 @@ import { TITLE } from "./ui";
  * `back` is what makes a journey a journey. The structure has no menu and no tabs: GOV.UK asks for no
  * navigation links when a service has a clear end-to-end path, and Apple reserves a tab bar for navigating
  * rather than for acting. A screen in a journey offers exactly one way back; a destination offers none.
+ *
+ * Every screen wears the poster look, the direction the funder chose on 15 Sep. The `data-look="poster"` below is
+ * what app/globals.css hands to the whole document, so a screen drawn through this component inherits the look
+ * without styling of its own (D71). A destination and a document open with the display title, the page's own; a
+ * journey's title is one step's, so it keeps the ordinary title size.
  */
 export function Screen({
   title,
   back,
   backLabel = "Back",
   layout = "journey",
-  look,
   aside,
   children,
 }: Readonly<{
@@ -39,13 +43,6 @@ export function Screen({
   back?: string;
   backLabel?: string;
   layout?: "journey" | "destination" | "document";
-  /**
-   * The look the screen wears. Left out, it is the calm look every other screen wears today. `poster` is the
-   * direction the funder chose on 15 Sep, which app/globals.css hands to the whole document while this screen
-   * is on it. The signed-out home and the funder journey ask for it so far; a screen that follows joins by asking
-   * too.
-   */
-  look?: "poster";
   /**
    * The second pane, on a destination. Below 840 it simply follows the first, in one column, so nothing is
    * hidden from a phone and nothing is invented for a desktop.
@@ -74,7 +71,7 @@ export function Screen({
 
   return (
     <main
-      data-look={look}
+      data-look="poster"
       className={`mx-auto flex ${layout === "journey" ? "min-h-[100svh] " : ""}w-full ${width} flex-col px-[var(--page-margin)] py-[var(--space-xl)]`}
     >
       <div className={`${inner} flex w-full flex-col gap-[var(--space-xl)]`}>
@@ -90,7 +87,7 @@ export function Screen({
               {backLabel}
             </Link>
           ) : null}
-          {title ? <h1 className={TITLE}>{title}</h1> : null}
+          {title ? <h1 className={layout === "journey" ? TITLE : DISPLAY}>{title}</h1> : null}
         </header>
       ) : null}
 
