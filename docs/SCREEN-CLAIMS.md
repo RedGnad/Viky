@@ -93,7 +93,8 @@ Visa and no Mastercard in France or anywhere else in the EEA, by its own help ce
 | "Yours to take out" | it is what the person holds now | their own balance read from the chain | **none yet** |
 | "Your money stays yours, and nothing about it expires." | it really is theirs, and nothing expires | it sits in their own account; no gift deadline touches money already taken | `test/GiftEscrow.t.sol` withdraw |
 | "Send it to another account of mine" | it moves without their account needing anything | AUSD's own signed transfer, submitted by the relayer, so no contract call comes from their account | `test/send-own-money.test.ts`, and **run for real on 14 Sep 2026**, $2.86 from the recipient's account to the funder's |
-| "All of it goes, $X exactly" | X is the whole balance the signature moves, to the last of its six decimals | the send takes the balance read from the chain, and `formatAusdExact` writes every decimal the coin has. It replaced "Any amount", which the send never offered (D72) | `test/screen-claims.test.ts`, which also checks that the screen writes the very value it sends |
+| "Exactly what you type leaves your account, to the last of its six decimals", and the button "Send $X" | X is the amount typed, and exactly that is what the signature moves | the field opens on the whole balance written in full (`exactAmountText`), `amountToSend` reads the text to the last decimal, and the send carries that value and no rounded copy of it (D75) | `test/send-amount.test.ts`, `test/screen-claims.test.ts` |
+| "You have $X. Send that or less.", and the refusals for anything the coin cannot carry | the account really holds X, and the button stays shut until the amount can leave | `amountToSend` compares against the balance read from the chain and returns the refusal the screen shows (D75) | `test/send-amount.test.ts` |
 
 ## The account, on every screen
 

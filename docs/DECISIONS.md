@@ -1929,6 +1929,8 @@ several hours when the network is busy, so a ten minute session closes during mo
   coming back makes a second account, and the gift and the payment stay on the first. Found by replaying the evening
   with a virtual passkey rather than by reading the code.
 - What just happened is said above the instructions rather than under the buttons, where "Welcome back" first landed.
+- On the waiting screen the accent goes to reopening the rail's page, which is the only thing there is to press once
+  the tab is closed. The reviewer found that screen had no accent at all.
 - "Keep this page open" is gone, because it was never true protection: the session closed whether the page stayed
   open or not, and an hour of watching a page is not something to ask for. The screen says the page can be left, and
   says the opposite only when the device refused to keep the gift. Beside the way out of a gift picked up again, it
@@ -1938,3 +1940,21 @@ several hours when the network is busy, so a ten minute session closes during mo
 
 **Not solved.** The terms live on one device. Coming back on another phone finds the payment in the account and no
 gift set up: the funder sets it up again, and the check offers the payment that arrived.
+
+## D75, 16 Sep 2026: money leaves in the amount that was typed, to the last decimal
+
+**Why.** A payout service is ordered for a quantity and expects exactly that quantity to arrive. Ramp's own terms,
+read at the source (rampnetwork.com/terms-of-service, UK terms last updated 20 July 2026): "You must at all times
+accurately enter the quantity of the Digital Asset you are seeking to trade via the Off-Ramp Service prior to
+submitting your Order", and over or under declaring "may result in an Order Failure causing Ramp Network to refund
+you, minus any applicable network fees". The advisor dated the terms 13 July; what the page says today is 20 July,
+and that is the date recorded here. Viky sent the whole balance, six decimals and all, so no order could match it.
+
+**What changed.** The way out has an amount field, opened on the whole balance written in full, editable, read to the
+last of the coin's six decimals (`amountToSend`). Exactly what is typed is what the signature moves, and the button
+says it: "Send $28.564213". More than the account holds is refused above the field, with the figure it does hold, and
+so is anything the coin cannot carry; the button stays shut until the amount can leave. The screen no longer says all
+of it goes, because it no longer does.
+
+**What is not on the screen.** No payout service is named, and nothing says where the money goes next: that decision
+is the funder's and it has not been taken (D72, point 8).
