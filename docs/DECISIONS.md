@@ -1467,3 +1467,51 @@ https://api.mercuryo.io/v1.6/lib/limits/sell`, 14 Sep 2026, MON on MONAD to EUR.
 makes it true, now covers **code comments and reports**, not only screens. Four sentences in a row have been
 found claiming a protection no code path gave (D38, D58 twice, D61). A comment is read by whoever changes the
 code next, which makes a false one more dangerous than a false screen, not less.
+
+## D63, 15 Sep 2026: the design pass, and what reading the sources changed
+
+The research is in `docs/design/research.md`, every claim marked **[O]** read at the official page, **[W]**
+secondary, **[NV]** unverified, with the routes that failed recorded so nobody repeats them. Both Apple and
+Material answer a plain fetch with an empty JavaScript shell; Apple serves each page as a data file at
+`developer.apple.com/tutorials/data/design/human-interface-guidelines/<slug>.json`, and Material loads its
+content from `_dsm` endpoints named in its own bundle. Without those two routes this research returns nothing,
+which is presumably why so much of what circulates about both is second hand.
+
+**What the research changed, each with the source that changed it.**
+
+| what it was | what it is | who said so |
+|---|---|---|
+| four CSS variables, no scales | a spacing scale, a type scale, a shape scale, a grid and a breakpoint, all from published systems | Material 3 |
+| a tap floor of 44, cited as "platform guidance" with nobody named | **48**, the only figure every source accepts, and it clears WCAG 2.5.5 at AAA rather than 2.5.8 at AA | web.dev 48, Material 48, Apple 44, WCAG 44 and 24 |
+| nothing between stacked controls | **12**, which satisfies web.dev's 8 and Apple's bezelled 12 | Apple, web.dev |
+| a control outline at **1.48:1** | **3.42:1** light, **4.32:1** dark, and a test that fails below 3:1 | WCAG 1.4.11 |
+| no contrast ever measured | every text colour held to **4.5:1** at every size, measured in the browser on every page | WCAG 1.4.3 |
+| no `viewport-fit`, so the device insets were padding nothing | declared, insets applied on the document with fallbacks, never as padding on a pinned bar | web.dev, Chrome |
+| three paragraphs of explanation above the money | ordered by who is reading: money first for somebody who has gifts, what Viky is first for a first visit | NN/g 57 % above the fold, GOV.UK start pages |
+| amount, daily target and length in a three-column grid | one question per screen, one field per row, and a check screen before anything is paid | NN/g 78 % against 42 % first-try, GOV.UK, Baymard |
+| four links in a footer on every screen | one link, to an Account page that holds them | GOV.UK: no navigation links when the path is end to end |
+| prose free to run the full width | capped at **60ch**, the widest value inside all three published ranges | Material 40 to 60, web.dev 45 to 75, NN/g 50 to 75 |
+| no maximum width on a desktop | a single column capped at 480, which is narrower than the prose limit | derived, and marked as derived: nobody publishes this |
+
+**Two rules that shape the art direction, and they came from the sources rather than from taste.** Apple
+states no rule against saturation anywhere: "saturated colours hurt legibility" is not their claim, and the
+measurable rule is the contrast ratio. What Apple does state is that colour goes "to the background rather
+than to symbols or text", and that colour may never be the only carrier of meaning. Material says the same
+thing structurally: its palette works because every surface is paired with a foreground chosen against it.
+So a joyful, colourful direction is not in tension with any published guidance, provided the colour lives in
+shapes and surfaces and every piece of text still clears its ratio. The palette shipped today is neutral and
+the art direction replaces it without touching a single measurement.
+
+**What the pass could not do, and why it is not hidden.** D58 asks for four states of a day and three of them
+exist: catchable with its deadline in local time, about to come back, today, still to come. The fourth,
+whether a settled day was earned or returned, **cannot be derived**: the contract publishes those as counts
+and settles days in order, so earning days one and three then missing two reads exactly like earning one and
+two then missing three. The totals are shown beside the row and the per-day split waits for the event index.
+D58 also asks for "returned to [name]"; no first name is collected from either side, so the screen says "the
+person who sent it" until one is.
+
+**Five tests that passed while proving nothing** have now been found in this repository, four of them in
+`test/ExitRouter.t.sol`. The fifth was written during this pass, by me, as the fix for the fourth: a
+reentrancy test that passed with the guard deleted, because the call it made would have failed anyway. It was
+caught by mutation and not by reading. The rule stands and is worth restating in the strongest form: a test
+is not a test until the defect has been put back and the test has been watched to fail.

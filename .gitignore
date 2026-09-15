@@ -31,3 +31,4 @@ private-notes/
 # Browser test output
 test-results/
 playwright-report/
+docs/design/screens/
