@@ -1929,6 +1929,10 @@ several hours when the network is busy, so a ten minute session closes during mo
   coming back makes a second account, and the gift and the payment stay on the first. Found by replaying the evening
   with a virtual passkey rather than by reading the code.
 - What just happened is said above the instructions rather than under the buttons, where "Welcome back" first landed.
+- "Keep this page open" is gone, because it was never true protection: the session closed whether the page stayed
+  open or not, and an hour of watching a page is not something to ask for. The screen says the page can be left, and
+  says the opposite only when the device refused to keep the gift. Beside the way out of a gift picked up again, it
+  says what happens to a payment already made: it stays in the account, for this gift or the next.
 - The waiting page does not keep the session open. It still closes itself after ten quiet minutes, as the session
   panel promises, and the next conversion still asks for a signature.
 
