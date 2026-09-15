@@ -1,7 +1,7 @@
 "use client";
 import { useSyncExternalStore } from "react";
 import { applyThemeChoice, readThemeChoice, subscribeToThemeChoice, themeChoiceOnServer, type ThemeChoice } from "@/src/theme";
-import { CARD, HELP, INLINE_BUTTON, TITLE } from "./ui";
+import { HELP, INLINE_BUTTON, STICKER, TITLE } from "./ui";
 
 /**
  * Light, dark, or whatever the phone says.
@@ -10,7 +10,7 @@ import { CARD, HELP, INLINE_BUTTON, TITLE } from "./ui";
  * their own, because two settings that disagree look like a fault. Keeping "follow my phone" as the starting
  * point means the two only ever disagree when somebody has deliberately made them.
  *
- * The chosen option is marked with a word as well as its outline, because colour is never the only carrier.
+ * The chosen option is marked with a word as well as its fill, because colour is never the only carrier.
  */
 const CHOICES: ReadonlyArray<{ value: ThemeChoice; label: string }> = [
   { value: "light", label: "Day" },
@@ -24,7 +24,7 @@ export function ThemeSwitch() {
   const choice = useSyncExternalStore(subscribeToThemeChoice, readThemeChoice, themeChoiceOnServer);
 
   return (
-    <section className={CARD}>
+    <section className={STICKER.pink}>
       <h2 className={TITLE}>How it looks</h2>
       <div className="flex flex-wrap gap-[var(--tap-gap)]" role="group" aria-label="How Viky looks">
         {CHOICES.map((option) => {
@@ -35,9 +35,9 @@ export function ThemeSwitch() {
               type="button"
               aria-pressed={chosen}
               onClick={() => applyThemeChoice(option.value)}
-              // The chosen outline is twice the width through the same variable the button reads, because a
-              // separate width class loses to it and the outline would silently drop back to a hairline.
-              className={`${INLINE_BUTTON} ${chosen ? "[--control-border-width:2px] border-[var(--accent-text)] font-medium" : ""}`}
+              // The chosen option is filled with paper and set in medium: inside a sticker every outline is the same
+              // ink, so an outline alone could no longer tell it apart (D73).
+              className={`${INLINE_BUTTON} ${chosen ? "bg-[var(--surface)] font-medium" : ""}`}
             >
               {option.label}
               {chosen ? <span className="sr-only"> (chosen)</span> : null}

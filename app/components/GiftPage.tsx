@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { AMOUNT_IN_TITLE, BODY, CARD, DISPLAY, FIELD, HELP, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON, TITLE } from "./ui";
+import { AMOUNT_IN_TITLE, BODY, DISPLAY, FIELD, HELP, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON, STICKER, TITLE } from "./ui";
 import { useAccount } from "@/src/account/provider";
 import * as mera from "@/src/account/mera";
 import { ApiError } from "@/src/client/api";
@@ -217,7 +217,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       ) : null}
 
       {!gift.cancelled && mine && !account.bound && account.source === "funder" && account.username ? (
-        <section className={CARD}>
+        <section className={STICKER.sun}>
           <p className="font-medium">Your Duolingo: {account.username}</p>
           <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
             Named by the person who sent this. Nothing to sign in to, nothing to install: your lessons are read from your public profile.
@@ -229,7 +229,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       ) : null}
 
       {!gift.cancelled && mine && !account.bound && account.source !== "funder" && (!account.code || renaming) ? (
-        <section className={CARD}>
+        <section className={STICKER.pink}>
           <label className="block text-[length:var(--type-help)] font-medium" htmlFor="duolingo-username">
             Your Duolingo username
           </label>
@@ -256,7 +256,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       ) : null}
 
       {!gift.cancelled && mine && !account.bound && account.source === "recipient" && account.code && !renaming ? (
-        <section className={CARD}>
+        <section className={STICKER.lilac}>
           <h2 className={TITLE}>Prove {account.username} is yours</h2>
           <p className="text-[length:var(--type-help)]">
             In Duolingo, open Profile, then Settings, then Name, and add this code to your name for a minute:
@@ -275,7 +275,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       ) : null}
 
       {!gift.cancelled && mine && account.bound && !gift.finished ? (
-        <section className={CARD}>
+        <section className={STICKER.mint}>
           <p className="font-medium">{gift.todayDayIndex === 0 ? "Counting starts tomorrow." : `Day ${gift.todayDayIndex} of ${gift.durationDays}. Counted by itself, every day.`}</p>
           {gift.todayDayIndex === 0 ? (
             <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
@@ -304,7 +304,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       ) : null}
 
       {!gift.cancelled && signedIn && gift.finished ? (
-        <section className={CARD}>
+        <section className={STICKER.mint}>
           <p className="font-medium">This gift is finished.</p>
           <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
             {gift.creditedDays} of {gift.durationDays} days were yours, so {gift.alreadyTheirsDisplay} is yours to keep.
