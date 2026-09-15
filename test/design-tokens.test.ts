@@ -329,3 +329,22 @@ test("the poster look's words stay readable on every day a gift can show, by day
     }
   }
 });
+
+/**
+ * The drop's face sits on its accent fill. It was drawn in the text colour, which at night is cream on the acid green
+ * at 1.10:1, and the reviewer found the face all but gone. It takes the colour measured against the accent now.
+ */
+test("the drop's face is drawn in the colour measured on the accent, never in the text colour", () => {
+  assert.ok(contrastRatio(POSTER_COLOURS.dark.text, POSTER_COLOURS.dark.accent) < NON_TEXT_CONTRAST_MINIMUM);
+  const drop = readFileSync("app/components/Drop.tsx", "utf8");
+  const face = drop.slice(drop.indexOf("function Face"));
+  assert.doesNotMatch(face, /var\(--text\)/);
+  assert.match(face, /var\(--on-accent\)/);
+});
+
+/** A day still to come was edged with the divider, which left it the one box on the row without the look's outline. */
+test("a day still to come is edged like a card, so the poster look outlines it", () => {
+  const row = readFileSync("app/components/DayRow.tsx", "utf8");
+  const toCome = row.slice(row.indexOf('case "toCome"'));
+  assert.match(toCome.slice(0, toCome.indexOf("}")), /border-\[var\(--card-border\)\]/);
+});
