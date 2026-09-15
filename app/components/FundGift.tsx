@@ -368,7 +368,7 @@ export function FundGift() {
         </section>
 
         <section className={CARD}>
-          <h2 className="font-medium">What they can do with it</h2>
+          <h2 className={TITLE}>What they can do with it</h2>
           <p className={HELP}>
             What they earn is theirs straight away. To send it to their card they need {payoutFloorInWords()},
             and earnings add up from one gift to the next, so a small gift is waiting rather than gone.
@@ -377,7 +377,7 @@ export function FundGift() {
 
         {!enough ? (
           <section className={CARD}>
-            <h2 className="font-medium">Paying for it</h2>
+            <h2 className={TITLE}>Paying for it</h2>
             <p className={HELP}>
               You do not have enough in your account yet, so the next step opens {WAY_IN.name} to pay by card.
               The smallest payment they take is {WAY_IN.smallest}, they keep {WAY_IN.fee} of what you pay, and

@@ -1754,7 +1754,9 @@ the same gift would read as a fault.
 the gallery, so a capture of one is what a funder meets; and one pair of tokens the home had not needed, a card's
 edge, which is a divider hairline in the calm look and the sticker outline at 2 pixels in the poster look. The two
 sections of the journey that drew their own edge, the gift ready and what the open session can do, read those tokens
-too. No screen's words, order or behaviour changed.
+too. And the two section headings inside the check step's cards, which had been set as bold text, take the title
+style, because the direction puts every title in Anton; the reviewer found them. No screen's words, order or
+behaviour changed.
 
 **Measured.**
 
