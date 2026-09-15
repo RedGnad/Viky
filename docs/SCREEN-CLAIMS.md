@@ -59,6 +59,7 @@ says so, and that is the work queue.
 | "Use the payment that arrived", and "A card payment has already arrived in your account." | a card payment sits in the account, not yet converted | `paymentArrived`, the same test the waiting page converts on (D74) | `test/screen-claims.test.ts` |
 | "Mercuryo says most payments take 30 to 60 minutes, and sometimes several hours." | their own help centre says so | "How can I check the status of my transaction?", edited there on 16 Jul 2026 and read on 16 Sep (D74) | **not testable by us**, a third party's words, to be re-read before the freeze |
 | "Finish the gift you set up", on the signed-in home | a gift set up on this device for this account is not made yet | the same `loadPendingGift` (D74) | `test/pending-gift.test.ts` |
+| "A gift is waiting for your payment" and "Sign in to pick it up", on the first step with nobody signed in | this device holds a gift set up and not made | `hasPendingGift` reads the same record without naming an account, which is all there is after a reload; the button opens the account step, and signing in picks the gift up (D74) | `test/pending-gift.test.ts` |
 
 ## The recipient screen
 
