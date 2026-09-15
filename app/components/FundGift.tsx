@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as mera from "@/src/account/mera";
-import { CARD, FIELD, INLINE_BUTTON, PRIMARY_BUTTON } from "./ui";
+import { BODY, CARD, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
 import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
 import { createGift, type CreatedGift } from "@/src/client/gift";
@@ -10,6 +10,7 @@ import { formatAusd } from "@/src/gift-reader";
 import { nextFundingStep } from "@/src/funding-step";
 import { AmountError, dollarsToUnits } from "@/src/money";
 import { WAY_IN } from "@/src/rails";
+import { payoutFloorInWords } from "@/src/gift-amount";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
 import { AccountPanel } from "./AccountPanel";
 import { SessionScope } from "./SessionScope";
@@ -26,6 +27,18 @@ const POLL_MS = 8_000;
 
 type Step = "form" | "waiting" | "converting" | "giving" | "done";
 
+/**
+ * The three questions, asked one screen at a time, because a form that follows the guidelines gets 78 % of
+ * its submissions right the first time against 42 % for one that does not, and the largest single guideline
+ * behind that number is one column with one thing per row (NN/g, Seckler et al.). The amount, the daily
+ * target and the length used to sit side by side in a three-column grid, which at 320 pixels is three
+ * cramped boxes and at any width interrupts the way down the form.
+ *
+ * They are three screens rather than three sections because the last one is a check: GOV.UK asks for one
+ * before a confirmation, and Baymard measures abandonment when a cost appears for the first time at payment.
+ */
+type Stage = "who" | "howMuch" | "check";
+
 function readable(error: unknown): string {
   if (error instanceof ApiError) return error.message;
   if (error instanceof AmountError) return error.message;
@@ -36,9 +49,13 @@ function readable(error: unknown): string {
 export function FundGift() {
   const { address } = useAccount();
   const [step, setStep] = useState<Step>("form");
+  const [stage, setStage] = useState<Stage>("who");
   const [contact, setContact] = useState("");
   const [username, setUsername] = useState("");
-  const [dollars, setDollars] = useState("20");
+  // The field is in dollars and D62 settles the suggestion in euros, 50, so this is the round dollar figure
+  // beside it. What matters about it is measured: earned five days out of seven it still clears the smallest
+  // payout the rail will take, which a 25 EUR gift does not.
+  const [dollars, setDollars] = useState("50");
   const [target, setTarget] = useState("10");
   const [days, setDays] = useState("7");
   const [balance, setBalance] = useState<bigint | null>(null);
@@ -214,111 +231,182 @@ export function FundGift() {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {!enough ? (
+  // What one day is worth, live, because it is the number that makes a gift feel like a gift rather than a
+  // transfer. Computed from what they typed and never stored, so it cannot disagree with the amount.
+  const perDay = (() => {
+    try {
+      const total = dollarsToUnits(dollars);
+      const length = BigInt(Math.max(1, Number(days)));
+      return total / length;
+    } catch {
+      return null;
+    }
+  })();
+
+  if (step === "form" && stage === "who") {
+    return (
+      <div className="flex flex-col gap-[var(--space-xl)]">
         <section className={CARD}>
-          <p className="font-medium">Before you start</p>
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
-            Paying by card is done by {WAY_IN.name}, and the smallest payment they take is {WAY_IN.smallest},
-            whatever you decide to put behind the goal. Whatever is left over stays in your account, for the
-            next goal. Nothing is lost.
-          </p>
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
-            Their page opens on something else by default, so you will have to set it yourself: Buy, pay in
-            EUR, receive MON, on the Monad network. The next screen walks you through it.
+          <h2 className={TITLE}>Who is it for, and for what</h2>
+          <label className="flex flex-col gap-[var(--space-xs)]">
+            <span className={HELP}>Their email or phone</span>
+            <input value={contact} onChange={(event) => setContact(event.target.value)} className={FIELD} />
+          </label>
+          <label className="flex flex-col gap-[var(--space-xs)]">
+            <span className={HELP}>Their Duolingo name, if you know it</span>
+            <input value={username} onChange={(event) => setUsername(event.target.value)} className={FIELD} />
+          </label>
+          <p className={HELP}>
+            Naming it is the surest thing you can do: only that Duolingo can then earn this gift, whoever opens
+            the link. Leave it empty and they name their own.
           </p>
         </section>
-      ) : null}
+        <button
+          type="button"
+          onClick={() => setStage("howMuch")}
+          disabled={contact.trim().length === 0}
+          className={PRIMARY_BUTTON}
+        >
+          Continue
+        </button>
+        <SessionScope />
+      </div>
+    );
+  }
 
-      <section className={CARD}>
-        <h2 className="font-medium">Who is it for, and for what</h2>
-        <input
-          value={contact}
-          onChange={(event) => setContact(event.target.value)}
-          placeholder="Their email or phone"
-          className={FIELD}
-        />
-        <input
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          placeholder="Their Duolingo name, if you know it"
-          className={FIELD}
-        />
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          Naming it is the surest thing you can do: only that Duolingo can then earn this gift, whoever opens
-          the link. Leave it empty and they name their own.
-        </p>
-        <div className="grid grid-cols-3 gap-2">
-          <label className="text-xs" style={{ color: "var(--muted)" }}>
-            How much
-            <input
-              value={dollars}
-              onChange={(event) => setDollars(event.target.value)}
-              inputMode="decimal"
-              className={FIELD}
-            />
+  if (step === "form" && stage === "howMuch") {
+    return (
+      <div className="flex flex-col gap-[var(--space-xl)]">
+        <section className={CARD}>
+          <h2 className={TITLE}>How much, and for how long</h2>
+          <label className="flex flex-col gap-[var(--space-xs)]">
+            <span className={HELP}>How much, in dollars</span>
+            <input value={dollars} onChange={(event) => setDollars(event.target.value)} inputMode="decimal" className={FIELD} />
           </label>
-          <label className="text-xs" style={{ color: "var(--muted)" }}>
-            XP a day
-            <input
-              value={target}
-              onChange={(event) => setTarget(event.target.value)}
-              inputMode="numeric"
-              className={FIELD}
-            />
+          <label className="flex flex-col gap-[var(--space-xs)]">
+            <span className={HELP}>For how many days, seven at least</span>
+            <input value={days} onChange={(event) => setDays(event.target.value)} inputMode="numeric" className={FIELD} />
           </label>
-          <label className="text-xs" style={{ color: "var(--muted)" }}>
-            For how many days
-            <input
-              value={days}
-              onChange={(event) => setDays(event.target.value)}
-              inputMode="numeric"
-              className={FIELD}
-            />
+          <label className="flex flex-col gap-[var(--space-xs)]">
+            <span className={HELP}>XP a day to earn one day</span>
+            <input value={target} onChange={(event) => setTarget(event.target.value)} inputMode="numeric" className={FIELD} />
           </label>
-        </div>
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          Seven days at least. Each day they reach the target, that day&apos;s share becomes theirs. Each day they
-          miss comes back to you.
-        </p>
-      </section>
+        </section>
 
-      <section className={CARD}>
-        <h2 className="font-medium">Your money</h2>
-        <p className="text-2xl font-semibold">{balance === null ? "..." : formatAusd(balance)}</p>
-        {!enough ? (
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
-            You do not have enough yet, so the next step opens {WAY_IN.name} to pay by card. They keep{" "}
-            {WAY_IN.fee} of what you pay, and they check who you are the first time, once.
+        <section className={CARD}>
+          <p className={HELP}>Each day they reach it, this becomes theirs</p>
+          <p className={MONEY}>{perDay === null ? "..." : formatAusd(perDay)}</p>
+          <p className={HELP}>And each day they miss, the same comes back to you.</p>
+        </section>
+
+        <button type="button" onClick={() => setStage("check")} disabled={!ready} className={PRIMARY_BUTTON}>
+          Continue
+        </button>
+        <button type="button" onClick={() => setStage("who")} className={SECONDARY_BUTTON}>
+          Back
+        </button>
+        {problem ? <p className={BODY}>{problem}</p> : null}
+        <SessionScope />
+      </div>
+    );
+  }
+
+  if (step === "form" && stage === "check") {
+    return (
+      <div className="flex flex-col gap-[var(--space-xl)]">
+        <section className={CARD}>
+          <h2 className={TITLE}>Check this over</h2>
+          <dl className="flex flex-col gap-[var(--space-sm)]">
+            <div className="flex items-baseline justify-between gap-[var(--space-md)]">
+              <dt className={HELP}>In their name</dt>
+              <dd className={BODY}>{(() => { try { return formatAusd(dollarsToUnits(dollars)); } catch { return "..."; } })()}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-[var(--space-md)]">
+              <dt className={HELP}>Theirs for each day earned</dt>
+              <dd className={BODY}>{perDay === null ? "..." : formatAusd(perDay)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-[var(--space-md)]">
+              <dt className={HELP}>Over</dt>
+              <dd className={BODY}>{days} days, {target} XP a day</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-[var(--space-md)]">
+              <dt className={HELP}>First day counted</dt>
+              <dd className={BODY}>the day after they connect Duolingo</dd>
+            </div>
+          </dl>
+          <p className={HELP}>
+            A day they miss comes back to you by itself, the morning after. Nothing of this is kept by anyone if
+            they stop.
           </p>
+        </section>
+
+        <section className={CARD}>
+          <h2 className="font-medium">What they can do with it</h2>
+          <p className={HELP}>
+            What they earn is theirs straight away. To send it to their card they need {payoutFloorInWords()},
+            and earnings add up from one gift to the next, so a small gift is waiting rather than gone.
+          </p>
+        </section>
+
+        {!enough ? (
+          <section className={CARD}>
+            <h2 className="font-medium">Paying for it</h2>
+            <p className={HELP}>
+              You do not have enough in your account yet, so the next step opens {WAY_IN.name} to pay by card.
+              The smallest payment they take is {WAY_IN.smallest}, they keep {WAY_IN.fee} of what you pay, and
+              they check who you are the first time, once. Whatever is left over stays in your account for the
+              next gift.
+            </p>
+            <p className={HELP}>
+              Their page opens on something else by default, so you will set it yourself: Buy, pay in EUR,
+              receive MON, on the Monad network. The next screen walks you through it.
+            </p>
+          </section>
         ) : null}
+
+        <button type="button" onClick={() => void start()} disabled={!ready} className={PRIMARY_BUTTON}>
+          {enough ? "Put it in their name" : "Add money and give"}
+        </button>
+        <button type="button" onClick={() => setStage("howMuch")} className={SECONDARY_BUTTON}>
+          Back
+        </button>
+        {notice ? <p className={BODY}>{notice}</p> : null}
+        {problem ? <p className={BODY}>{problem}</p> : null}
+        <SessionScope />
+      </div>
+    );
+  }
+
+  // Waiting for the card payment, then converting, then giving. One screen, because it is one wait.
+  return (
+    <div className="flex flex-col gap-[var(--space-xl)]">
+      <section className={CARD}>
+        <h2 className={TITLE}>Your money</h2>
+        <p className={MONEY}>{balance === null ? "..." : formatAusd(balance)}</p>
         {step === "waiting" ? (
-          <div className="space-y-3 text-sm">
+          <div className="flex flex-col gap-[var(--space-md)]">
             <p className="font-medium">Waiting for your payment. Keep this page open.</p>
-            <p style={{ color: "var(--muted)" }}>
+            <p className={HELP}>
               {WAY_IN.name}&apos;s page opens on something else by default, so set each of these yourself:
             </p>
-            <ol className="list-decimal space-y-1 pl-5" style={{ color: "var(--muted)" }}>
+            <ol className={`list-decimal pl-5 ${HELP}`}>
               <li>Choose Buy, not sell.</li>
               <li>Pay in EUR, and type how much.</li>
               <li>Choose to receive MON.</li>
               <li>Choose the Monad network.</li>
               <li>Paste your identifier where they ask where to send it.</li>
             </ol>
-            <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
-              <p style={{ color: "var(--muted)" }}>Before you pay, check what you pasted starts and ends like this:</p>
-              <p className="font-mono text-base">
+            <div className="rounded-[var(--radius-control)] border border-[var(--divider)] p-[var(--space-md)]">
+              <p className={HELP}>Before you pay, check what you pasted starts and ends like this:</p>
+              <p className="font-mono text-[length:var(--type-body)]">
                 {address.slice(0, 6)}
                 <span style={{ color: "var(--muted)" }}> ... </span>
                 {address.slice(-4)}
               </p>
             </div>
-            {copied ? <p style={{ color: "var(--muted)" }}>Copied and ready to paste.</p> : null}
-            {pending !== null && pending > 0n ? (
-              <p style={{ color: "var(--muted)" }}>Something arrived and is being made ready.</p>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
+            {copied ? <p className={HELP}>Copied and ready to paste.</p> : null}
+            {pending !== null && pending > 0n ? <p className={HELP}>Something arrived and is being made ready.</p> : null}
+            <div className="flex flex-wrap gap-[var(--tap-gap)]">
               <button
                 type="button"
                 onClick={() => void navigator.clipboard.writeText(address).then(() => setCopied(true)).catch(() => setCopied(false))}
@@ -332,16 +420,11 @@ export function FundGift() {
             </div>
           </div>
         ) : null}
-        <button
-          type="button"
-          onClick={() => void start()}
-          disabled={!ready || step === "converting" || step === "giving"}
-          className={PRIMARY_BUTTON}
-        >
-          {step === "giving" ? "Putting it in their name" : step === "converting" ? "Getting it ready" : enough ? "Put it in their name" : "Add money and give"}
-        </button>
-        {notice ? <p className="text-sm">{notice}</p> : null}
-        {problem ? <p className="text-sm text-red-600">{problem}</p> : null}
+        {step === "converting" || step === "giving" ? (
+          <p className={BODY}>{step === "giving" ? "Putting it in their name" : "Getting it ready"}</p>
+        ) : null}
+        {notice ? <p className={BODY}>{notice}</p> : null}
+        {problem ? <p className={BODY}>{problem}</p> : null}
       </section>
 
       <SessionScope />

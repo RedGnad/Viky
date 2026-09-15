@@ -39,10 +39,35 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
         says: ["Sign in first."],
       },
       {
-        name: "Choosing what the gift is",
-        when: "signed in, filling the form",
-        says: ["Who is it for, and for what", "How much", "XP a day", "For how many days", "Their email or phone", "Their Duolingo name, if you know it"],
-        gap: "no minimum and no suggested amount are offered yet. D62 settles them: a hard floor of 25 EUR and a suggested 50 EUR, with a line saying the recipient can be paid out from about $21 earned and that earnings add up across gifts.",
+        name: "Who it is for",
+        when: "signed in, first question of three",
+        says: ["Who is it for, and for what", "Their email or phone", "Their Duolingo name, if you know it"],
+      },
+      {
+        name: "How much, and for how long",
+        when: "the second question, once there is somebody to give to",
+        says: [
+          "How much, and for how long",
+          "How much, in dollars",
+          "For how many days, seven at least",
+          "XP a day to earn one day",
+          "Each day they reach it, this becomes theirs",
+          "And each day they miss, the same comes back to you.",
+        ],
+        gap: "the amount opens at 50 dollars and there is no hard floor on the field itself. The floor that exists is the rail's: nothing under 25 EUR can be paid in at all (D62).",
+      },
+      {
+        name: "Checking it over",
+        when: "the third screen, before anything is signed or paid",
+        says: [
+          "Check this over",
+          "In their name",
+          "Theirs for each day earned",
+          "First day counted",
+          "A day they miss comes back to you by itself, the morning after.",
+          "What they can do with it",
+          "Paying for it",
+        ],
       },
       {
         name: "Not enough money yet, the rail step",
@@ -96,10 +121,11 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
     ],
   },
   {
-    screen: "The gifts I have given",
+    screen: "What I give, on the home page",
     file: "app/components/MyGifts.tsx",
     states: [
-      { name: "None yet", when: "this account is neither funder nor recipient of anything", says: [], gap: "the sentence is 'No gift yet.' and lives in the page, not here." },
+      { name: "None yet", when: "this account is neither funder nor recipient of anything", says: ["No gift yet."] },
+      { name: "Two blocks, never one list", when: "the account is on both sides of at least one gift", says: ["What I receive", "What I give"] },
       { name: "Not opened", when: "nobody has claimed the link", says: ["Not opened yet."] },
       { name: "Opened, no goal", when: "claimed, but no Duolingo account bound", says: ["Opened. Name the Duolingo account to start counting."] },
       { name: "Taken back", when: "the funder cancelled before it was opened", says: ["Taken back before it was opened."] },
@@ -139,6 +165,23 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
     ],
   },
   {
+    screen: "Money in the account, on the home page",
+    file: "app/components/YourMoney.tsx",
+    states: [
+      {
+        name: "The account holds something",
+        when: "anything at all is in the account, from a gift taken or a payment left over",
+        says: ["In your account", "Earnings add up here from one gift to the next, so a small gift is waiting rather than gone."],
+      },
+      {
+        name: "The account holds nothing",
+        when: "there is no money",
+        says: [],
+        gap: "the block is hidden rather than shown empty, which is right for somebody who has never had money here and wrong for somebody who has just spent theirs: they see nothing where a figure was.",
+      },
+    ],
+  },
+  {
     screen: "Their money",
     file: "app/components/CashOut.tsx",
     states: [
@@ -160,9 +203,27 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
   },
 ];
 
+/** Everything that is not a gift and not money, which is what keeps the rest of the product menu-free. */
+export const ACCOUNT_SCREEN: readonly CatalogueScreen[] = [
+  {
+    screen: "Account",
+    file: "app/account/page.tsx",
+    states: [
+      { name: "The one page off the journeys", when: "reached from the single link at the foot of any screen", says: ["Account", "Lost your phone?", "Privacy", "Legal", "For judges"] },
+      {
+        name: "Help",
+        when: "somebody is stuck",
+        says: [],
+        gap: "there is no help beyond the lost-phone paragraph. What a person actually gets stuck on is not known yet, because nobody outside has used this.",
+      },
+    ],
+  },
+];
+
 export const JOURNEYS: ReadonlyArray<{ who: string; screens: readonly CatalogueScreen[] }> = [
   { who: "The person who gives", screens: FUNDER_JOURNEY },
   { who: "The person the gift is for", screens: RECIPIENT_JOURNEY },
+  { who: "Both of them", screens: ACCOUNT_SCREEN },
 ];
 
 /** Every state, flattened, for counting and for the tests. */
