@@ -1552,3 +1552,93 @@ other one first.
 **Every hardcoded colour left over from before the tokens is gone** from the screens a person meets: the
 greys, the blue buttons, the amber notices. The operator's own pages under `app/components/dev/` still carry
 theirs, which is deliberate for now and written here so it is not mistaken for an oversight.
+
+## D65, 15 Sep 2026: the design pass was foundations, not a product, and the correction
+
+**The finding first, because it is the useful part.** The funder looked at the pass and said he could not see
+what had changed. He was right, and the reason is worth keeping: thirty six captures of six signed-out pages
+are not a design pass on a product. The screens that matter all live behind a passkey, a passkey cannot be
+replayed by a script, and I had treated that as a fact of life rather than as the thing to solve. Four more
+findings from the same look, all correct:
+
+1. **The account came first.** The home and the funder journey both asked for a passkey before anything, which
+   is the opposite of what the research says and of what D58 settled.
+2. **The hierarchy was upside down.** The first thing on the main card was an optional field for naming a
+   device. The title was barely larger than the text around it.
+3. **The primary action wrapped to two lines** at 375 pixels: "Create my account with Face ID or fingerprint".
+4. **The space was wasted.** Half the screen empty on a phone, and a narrow strip floating in the middle of a
+   desktop.
+5. **There was no art direction, only colours.** No round shapes, no character, no illustration, no movement.
+
+**What was done about each.**
+
+- A **gallery of example screens** at `/dev/screens`, twelve of them, rendered from example data with the real
+  blocks. It opens on a switch of its own rather than behind the operator lock, because the operator lock
+  exists to protect pages that move money and has the side effect that nothing can photograph a screen. This
+  page moves nothing and has no working control on it. `test/gallery.test.ts` keeps it honest: every sentence
+  it claims as built must exist word for word in the component it names, and a screen that does not exist yet
+  says so on its own face.
+- **The decided order is back.** Signed out, the home says what Viky is and offers the gift, with the account
+  second. Composing a gift needs nobody's identity, so the funder journey runs three screens before an account
+  is mentioned and the passkey arrives on its own screen, just before money does.
+- **The optional field is behind a disclosure**, the action is first, and the label is one line: "Create my
+  account", with the face and the fingerprint on the line underneath.
+- **An art direction, not a palette.** A drop with five expressions, organic shapes behind the four moments
+  that deserve them, and one slow movement that the reduced-motion setting switches off. What is taken from
+  the game the funder pointed at is its principles, round shapes and plain joy; never its characters, which
+  belong to Sony.
+- **Joy moved off the ground.** The sunny colour was the background of every screen, so a form, an amount and
+  a card payment all happened on a party. There are three surfaces now: calm for the ordinary screen, a card
+  for words, and the joyful one worn only when a gift is ready, a day is earned, a gift is opened or a gift is
+  over. Every text colour is measured against all three.
+
+**And one more false sentence caught, by looking at a picture.** The first day row drew four green cells for a
+week with three days earned and one missed, because `settled` was green. A settled day is earned **or**
+returned and the counts cannot say which, so green was a claim nothing supported. Finished is now a colour of
+its own and the two totals sit beside the row, where they are known. The screenshot found it; no test would
+have.
+
+## D66, 15 Sep 2026: mobile only was not mobile first, and the breakpoints that fix it
+
+**Statement.** `APP_COLUMN_MAX = 480` was applied to the whole product, justified by line length. That is a
+rule about text and about forms, and it was never a rule about a container: the result was a narrow strip
+floating in the middle of a desktop with two thirds of the screen empty.
+
+**What changes.** A screen is one of two things.
+
+- A **journey** is one thing at a time with a way back: give, take a gift, connect Duolingo, take money out.
+  It stays a narrow column at every size, 480 pixels, about 53 characters at a 16 pixel body.
+- A **destination** is read rather than walked through: the home and a gift. It grows to 680 between 600 and
+  840, and becomes two panes above that.
+
+**The two breakpoints are chosen from the content**, which is what web.dev asks for ("choose your breakpoints
+based on your content rather than popular device sizes"), and both land on a boundary Material publishes,
+which is a good sign rather than the reason:
+
+- **600**, where the margin grows from 16 to 24. Below it, 16 more pixels of margin on a 375 pixel screen is a
+  tenth of the line.
+- **840**, the first width where two panes actually fit: Material's own default fixed pane is 360 and its
+  spacer 24, so two of them plus two 24 margins is 792. Anything narrower is two cramped columns pretending to
+  be a layout. A test asserts that arithmetic rather than the number.
+
+**The line length went from 60 to 66 characters**, and the trade-off is stated rather than smoothed: 60 was
+the value inside all three published ranges, 66 is web.dev's own stated ideal and NN/g's range, and it is six
+characters past the ceiling Material publishes. The guard test that asserts the art direction moved no
+measurement caught this change, which is what it is for.
+
+**The signed-out home on a desktop is a landing page**: the promise and the drop on one side, the one action
+on the other, then how it works in three steps. Not a phone screen stretched.
+
+**Account creation on a desktop.** A passkey needs a platform authenticator, and a desktop without one cannot
+make an account at all. The screen now checks with
+`PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()`, disables the button and says what to do
+instead: open viky.cash on a phone, the same account works on both. What this cannot detect is whether the PRF
+extension works, which is what the account is derived from, and that only becomes knowable by trying; the
+typed `PRF_UNAVAILABLE` failure still carries that case.
+
+**Captures and tests now run at four widths**, 375, 430, 768 and 1280, each a decision rather than a device:
+the narrow phone, the wide phone, the width where a destination has grown but not split, and the width where
+it is two panes. 320 is checked separately, because WCAG 1.4.10 asks for it and no real device is that narrow.
+
+**The layout stays loose on purpose**: mockups are coming and they take precedence over every visual choice
+above. What must survive them is the measurement underneath, not the arrangement.

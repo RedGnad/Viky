@@ -47,13 +47,16 @@ export function DayRow({
 
   return (
     <section className="flex flex-col gap-[var(--space-md)]">
-      <ol className="flex flex-wrap gap-[var(--space-sm)]" aria-label="Every day of this gift">
+      {/* Seven to a row, sized so a whole week fits across the narrowest phone. These are not tap targets: a
+          person reads them and cannot press them, so the 48 pixel floor does not apply and forcing it would
+          push a week onto two lines for nothing. */}
+      <ol className="grid grid-cols-7 gap-[var(--space-sm)]" aria-label="Every day of this gift">
         {days.map((day) => (
           <li
             key={day.dayNumber}
             aria-label={label(day, funder, nowMs)}
             title={label(day, funder, nowMs)}
-            className={`flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] flex-col items-center justify-center rounded-[var(--radius-control)] border ${skin(day)}`}
+            className={`flex aspect-square flex-col items-center justify-center rounded-[var(--radius-control)] border ${skin(day)}`}
           >
             <span aria-hidden className="text-[length:var(--type-body)] leading-none">
               {DAY_MARK[day.state]}

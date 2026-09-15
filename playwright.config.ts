@@ -22,12 +22,19 @@ export default defineConfig({
    * wide one, and the desktop is where a single-column app has to stop growing. 320 is checked inside the
    * accessibility spec instead, because WCAG 1.4.10 Reflow asks for it and no real device is that narrow.
    */
+  /**
+   * Four widths, and each one is a decision rather than a device: 375 the narrow phone, 430 the wide one, 768
+   * the width where a destination has grown but has not split, and 1280 where it is two panes. 320 is checked
+   * inside the accessibility spec, because WCAG 1.4.10 asks for it and no real device is that narrow.
+   *
+   * All four run on the same engine on purpose: the widths are what is being tested, and asking CI to install
+   * a second browser to measure a margin is a cost with no finding behind it.
+   */
   projects: [
-    // Both phones run on the same engine on purpose: the widths are what is being tested, and asking CI to
-    // install a second browser to measure a margin is a cost with no finding behind it.
     { name: "phone 375", use: { ...devices["Pixel 7"], viewport: { width: 375, height: 667 } } },
     { name: "phone 430", use: { ...devices["Pixel 7"], viewport: { width: 430, height: 932 } } },
-    { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } } },
+    { name: "tablet 768", use: { ...devices["Desktop Chrome"], viewport: { width: 768, height: 1024 } } },
+    { name: "desktop 1280", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } } },
   ],
   webServer: process.env.VIKY_BROWSER_TEST_URL
     ? undefined

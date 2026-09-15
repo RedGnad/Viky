@@ -12,11 +12,13 @@
  */
 
 :root {
-  /* Day. Measured: text 12.39:1 on the ground and 16.83:1 on a surface, muted 5.49 and 7.45, outline 3.64
-     and 4.94. The accent is two colours because it does two jobs: a bright fill carrying dark words at
-     6.62:1, and a darker one for words themselves at 5.67 and 7.70. */
-  --background: #FFD84D;
-  --surface: #FFFDF5;
+  /* Day. Three things to sit on, and every text colour measured against all three: text 16.22 on the ground,
+     17.14 on a surface, 12.39 on the joyful one; muted 7.18 / 7.59 / 5.49; the outline 4.76 / 5.03 / 3.64.
+     The accent is two colours because it does two jobs: a bright fill carrying dark words at 6.62:1, and a
+     darker one for words themselves at 7.42 / 7.84 / 5.67. */
+  --background: #FFF8EA;
+  --surface: #FFFFFF;
+  --joy: #FFD84D;
   --text: #241A05;
   --muted: #5C5340;
   --accent: #FF7A3D;
@@ -25,11 +27,11 @@
   --control-border: #776E5E;
   --divider: #E8DFC4;
 
-  --day-settled: #7FD46A;
+  --day-settled: #E3D6BC;
   --day-catchable: #7FC4F5;
   --day-about-to-return: #FFA95C;
   --day-today: #FF9BC4;
-  --day-to-come: #FFFDF5;
+  --day-to-come: #FFFFFF;
 
   /* Material's 8dp scale, the steps we use. */
   --space-xs: 4px;
@@ -62,7 +64,8 @@
   /* Material publishes 16 on a phone and 24 from 600px; Apple no longer publishes any. */
   --page-margin: 16px;
   --app-column-max: 480px;
-  --prose-max: 60ch;
+  --prose-max: 66ch;
+  --destination-max: 680px;
 
   color-scheme: light dark;
 }
@@ -76,41 +79,43 @@
 /* Dark because the system says so, and only while the person has not asked for light. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: #221A38;
-    --surface: #332A50;
+    --background: #1B1430;
+    --surface: #2A2246;
+    --joy: #4A2E6B;
     --text: #F7EFFF;
     --muted: #BCAFD4;
     --accent: #FFB03A;
-    --on-accent: #221A38;
+    --on-accent: #1B1430;
     --accent-text: #FFC061;
     --control-border: #9A8FB5;
     --divider: #453A63;
 
-    --day-settled: #2F6427;
+    --day-settled: #463C6B;
     --day-catchable: #2F6C96;
     --day-about-to-return: #8A5320;
     --day-today: #8C3D60;
-    --day-to-come: #332A50;
+    --day-to-come: #2A2246;
   }
 }
 
 /* Dark because the person said so, whatever their system says. */
 :root[data-theme="dark"] {
-  --background: #221A38;
-  --surface: #332A50;
+  --background: #1B1430;
+  --surface: #2A2246;
+  --joy: #4A2E6B;
   --text: #F7EFFF;
   --muted: #BCAFD4;
   --accent: #FFB03A;
-  --on-accent: #221A38;
+  --on-accent: #1B1430;
   --accent-text: #FFC061;
   --control-border: #9A8FB5;
   --divider: #453A63;
 
-  --day-settled: #2F6427;
+  --day-settled: #463C6B;
   --day-catchable: #2F6C96;
   --day-about-to-return: #8A5320;
   --day-today: #8C3D60;
-  --day-to-come: #332A50;
+  --day-to-come: #2A2246;
 }
 
 body {
@@ -145,6 +150,20 @@ svg,
 video {
   max-width: 100%;
   height: auto;
+}
+
+/*
+ * The one movement in the product: a slow bob at a moment worth celebrating. Small, slow, and never on
+ * anything a person is trying to read or tap. The reduced-motion block below switches it off, which is
+ * Apple's own instruction applied through the query they never mention.
+ */
+@keyframes viky-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.viky-bob {
+  animation: viky-bob 2.4s ease-in-out infinite;
 }
 
 /*

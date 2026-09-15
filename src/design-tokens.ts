@@ -69,18 +69,43 @@ export const TAP_GAP = 12;
 export const RADIUS = { control: 16, card: 28, sheet: 48, full: 9999 } as const;
 
 /**
- * The widest a line of prose may be. Material says 40 to 60 characters, web.dev 45 to 75 with 66 ideal, NN/g
- * 50 to 75. 60 is the widest value inside all three ranges, and `ch` is what web.dev asks for over a pixel
- * width because it scales with the reader's font size.
+ * The widest a line of prose may be. Material says 40 to 60 characters, web.dev 45 to 75 with "the
+ * 66-character line ... widely regarded as ideal", NN/g 50 to 75.
+ *
+ * 66 rather than 60, and the trade-off is stated rather than smoothed: it is web.dev's own stated ideal and
+ * sits inside NN/g's range, and it is six characters past the ceiling Material publishes. Sixty was the value
+ * inside all three, which is the safer claim and the narrower column; 66 is the one two of the three call
+ * best. `ch` is what web.dev asks for over a pixel width, because it scales with the reader's own font size.
  */
-export const PROSE_MAX_CH = 60;
+export const PROSE_MAX_CH = 66;
 
 /**
- * How wide the single column gets on a large screen. No source publishes a number for this, so it is derived
- * rather than cited: 30rem is 480 CSS pixels, which at a 16 pixel body is about 53 characters, inside every
- * line-length range above. So prose can never be too wide, whatever a screen does.
+ * How wide a **journey** gets, at any size. A journey is one thing at a time with a way back, so it stays a
+ * narrow column on a large screen rather than stretching: 480 CSS pixels is about 53 characters at a 16 pixel
+ * body, comfortably inside every published line-length range.
+ *
+ * This used to be the width of the whole product, which made Viky mobile only rather than mobile first: a
+ * narrow strip floating in the middle of a desktop screen, with the other two thirds of it empty. A line
+ * length is a rule about text and about forms. It was never a rule about a container.
  */
 export const APP_COLUMN_MAX = 480;
+
+/**
+ * How wide a **destination** gets, and where it becomes two panes. A destination is the home and a gift: a
+ * person reads them rather than walks through them, and there is more than one thing worth seeing at once.
+ *
+ * Both breakpoints are chosen from what the content needs, which is what web.dev asks for ("choose your
+ * breakpoints based on your content rather than popular device sizes"), and both happen to land on a
+ * boundary Material publishes, which is a good sign rather than the reason:
+ *
+ * - **600**: Material's compact-to-medium boundary, and where our margin grows from 16 to 24. Below it,
+ *   giving up 16 more pixels of a 375 pixel screen to margin is a tenth of the line.
+ * - **840**: the first width where two panes actually fit. Material's own default for a fixed pane is 360 and
+ *   its spacer is 24, so two of them plus two 24 margins is 792. Anything narrower is two cramped columns
+ *   pretending to be a layout.
+ */
+export const DESTINATION_MAX = 680;
+export const TWO_PANE_FROM = 840;
 
 /** The smallest width the layout must survive, from WCAG 1.4.10 Reflow: 320 CSS pixels, no sideways scroll. */
 export const REFLOW_MIN_WIDTH = 320;
@@ -99,13 +124,21 @@ export type Appearance = "light" | "dark";
  * Three of these were chosen by eye first and failed: the obvious bright red gave white text 3.96:1, the
  * first outline gave 2.74:1 on the yellow ground, and the first green gave 4.36:1 at night. That is what the
  * measurement is for, and it is why a theme can be swapped without anybody having to be careful.
+ *
+ * Corrected on 15 Sep, and the correction matters more than the palette: the sunny colour was the ground of
+ * every screen, so a form, an amount and a card payment all sat on a party. Joy belongs to the moments that
+ * deserve it, and money belongs on something calm. There are three things to sit on now, `background` for
+ * the ordinary screen, `surface` for what carries words, and `joy` for the four moments that are not
+ * ordinary, and every text colour is measured against all three.
  */
 export const COLOURS: Record<Appearance, Record<string, string>> = {
   light: {
-    /** The page itself, which is a colour rather than an absence of one. */
-    background: "#FFD84D",
-    /** What carries words: near white, warm, so the yellow does not sit under a paragraph. */
-    surface: "#FFFDF5",
+    /** The ordinary screen: warm paper, calm enough to read an amount on. */
+    background: "#FFF8EA",
+    /** What carries words inside it. */
+    surface: "#FFFFFF",
+    /** The sunny one, worn only at a moment worth celebrating. Dark words on it at 12.39:1. */
+    joy: "#FFD84D",
     /** 12.39:1 on the ground, 16.83:1 on a surface. */
     text: "#241A05",
     /** 5.49:1 on the ground, 7.45:1 on a surface. */
@@ -128,15 +161,17 @@ export const COLOURS: Record<Appearance, Record<string, string>> = {
     divider: "#E8DFC4",
   },
   dark: {
-    background: "#221A38",
-    surface: "#332A50",
+    background: "#1B1430",
+    surface: "#2A2246",
+    /** The same idea after dark: a richer violet rather than a brighter one. Light words on it at 9.90:1. */
+    joy: "#4A2E6B",
     /** 14.73:1 on the ground, 11.81:1 on a surface. */
     text: "#F7EFFF",
     /** 8.03:1 and 6.44:1. */
     muted: "#BCAFD4",
     /** Dark words on it at 9.05:1. */
     accent: "#FFB03A",
-    onAccent: "#221A38",
+    onAccent: "#1B1430",
     /** As words: 10.19:1 on the ground, 8.17:1 on a surface. */
     accentText: "#FFC061",
     /** 5.48:1 and 4.39:1. */
@@ -149,10 +184,16 @@ export const COLOURS: Record<Appearance, Record<string, string>> = {
  * A surface per state of a day, so the row reads at a glance. Colour is never the only carrier: each state
  * also has a mark of its own and a name a screen reader says (src/day-states.ts). Every one of these carries
  * the appearance's own text colour at 4.5:1 or better, which is what makes a bright row safe.
+ *
+ * `settled` is deliberately not green, and the reason is the whole discipline in one colour. A settled day is
+ * either earned or returned and the contract's counts cannot say which (src/day-states.ts), so a green cell
+ * would be a claim nothing supports. The first draft of this row drew four green days for a week with three
+ * earned and one missed, which is exactly the sentence about money that no code path makes true. Finished is
+ * a colour of its own, and the two totals are printed beside the row where they are known.
  */
 export const DAY_SURFACES: Record<Appearance, Record<string, string>> = {
-  light: { settled: "#7FD46A", catchable: "#7FC4F5", aboutToReturn: "#FFA95C", today: "#FF9BC4", toCome: "#FFFDF5" },
-  dark: { settled: "#2F6427", catchable: "#2F6C96", aboutToReturn: "#8A5320", today: "#8C3D60", toCome: "#332A50" },
+  light: { settled: "#E3D6BC", catchable: "#7FC4F5", aboutToReturn: "#FFA95C", today: "#FF9BC4", toCome: "#FFFFFF" },
+  dark: { settled: "#463C6B", catchable: "#2F6C96", aboutToReturn: "#8A5320", today: "#8C3D60", toCome: "#2A2246" },
 };
 
 /** Which colours carry text, and must therefore clear 4.5:1 on the ground and on a surface alike. */
@@ -160,7 +201,7 @@ export const TEXT_COLOURS = ["text", "muted", "accentText"] as const;
 /** Which colours identify a control, and must therefore clear 3:1 on both. */
 export const CONTROL_COLOURS = ["controlBorder"] as const;
 /** The two things a colour can sit on. Every text colour is measured against both, never just one. */
-export const GROUNDS = ["background", "surface"] as const;
+export const GROUNDS = ["background", "surface", "joy"] as const;
 
 /** Where the chosen appearance is kept, so a reload does not flash the other one. */
 export const THEME_STORAGE_KEY = "viky.theme";
