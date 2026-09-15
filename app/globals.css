@@ -9,6 +9,9 @@
  * because the system says so, and dark because the person said so. A person who chooses light on a phone set
  * to dark has to win, which is why the media query excludes an explicit light choice rather than assuming
  * nobody made one.
+ *
+ * Then the same three again for the poster look, which a screen asks for, after the calm look it replaces on
+ * that screen.
  */
 
 :root {
@@ -67,6 +70,28 @@
   --prose-max: 66ch;
   --destination-max: 680px;
 
+  /* The two families every screen reads. In the calm look both are the system face it has always used; the
+     poster look below swaps in Anton and DM Sans. */
+  --font-text: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-title: var(--font-text);
+  --font-title-weight: 600;
+
+  /* A control's outline and the relief under it: a hairline and no relief in the calm look. */
+  --control-border-width: 1px;
+  --control-relief: 0 0 #0000;
+
+  /* The single opening title a look may size on its own; in the calm look it is the money size it already used. */
+  --type-display: var(--type-money);
+  --type-display-leading: var(--type-money-leading);
+
+  /* Stickers belong to the poster look; here they fall back to calm colours so nothing is ever left unset. */
+  --sticker-outline: var(--control-border);
+  --on-sticker: var(--text);
+  --sticker-sun: var(--joy);
+  --sticker-pink: var(--joy);
+  --sticker-mint: var(--joy);
+  --sticker-lilac: var(--joy);
+
   color-scheme: light dark;
 }
 
@@ -118,15 +143,96 @@
   --day-to-come: #2A2246;
 }
 
+/*
+ * The poster look (POSTER_COLOURS, POSTER_TYPE and POSTER_CONTROL in src/design-tokens.ts), worn by any screen
+ * that renders `data-look="poster"`. :has() gives it to the whole document rather than to that screen's box, so
+ * the ground under a notch and past the end of a scroll wears it too. The two fonts are the variables next/font
+ * defines on the document (app/fonts.ts).
+ */
+:root:has([data-look="poster"]) {
+  --background: #FFF3D9;
+  --surface: #FFFDF7;
+  --joy: #FFD84D;
+  --text: #3B0A2A;
+  --muted: #72465E;
+  --accent: #FF5A36;
+  --on-accent: #3B0A2A;
+  --accent-text: #9E2A14;
+  --control-border: #3B0A2A;
+  --divider: #EAD6B0;
+  --sticker-outline: #3B0A2A;
+  --on-sticker: #3B0A2A;
+  --sticker-sun: #FFD84D;
+  --sticker-pink: #F7B7D8;
+  --sticker-mint: #BDEBC8;
+  --sticker-lilac: #C9C6FF;
+
+  --font-title: var(--font-anton);
+  --font-text: var(--font-dm-sans);
+  --font-title-weight: 400;
+  --type-display: 60px;
+  --type-display-leading: 56px;
+  --type-title: 36px;
+  --type-title-leading: 38px;
+
+  --control-border-width: 2px;
+  --control-relief: 0 6px 0 var(--control-border);
+}
+
+/* The opening title grows where a destination splits into two panes. */
+@media (min-width: 840px) {
+  :root:has([data-look="poster"]) {
+    --type-display: 104px;
+    --type-display-leading: 96px;
+  }
+}
+
+/* Night because the system says so, and only while the person has not asked for light. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):has([data-look="poster"]) {
+    --background: #1C1035;
+    --surface: #2A1D4E;
+    --joy: #4A2E6B;
+    --text: #FFF6E9;
+    --muted: #C4B8E6;
+    --accent: #C6FF4D;
+    --on-accent: #1C1035;
+    --accent-text: #C6FF4D;
+    --control-border: #FFF6E9;
+    --divider: #3A2C66;
+    --sticker-outline: #FFF6E9;
+    --on-sticker: #1C1035;
+    --sticker-sun: #FFD84D;
+    --sticker-pink: #FF5FA2;
+    --sticker-mint: #C6FF4D;
+    --sticker-lilac: #8B6CFF;
+  }
+}
+
+/* Night because the person said so, whatever their system says. */
+:root[data-theme="dark"]:has([data-look="poster"]) {
+  --background: #1C1035;
+  --surface: #2A1D4E;
+  --joy: #4A2E6B;
+  --text: #FFF6E9;
+  --muted: #C4B8E6;
+  --accent: #C6FF4D;
+  --on-accent: #1C1035;
+  --accent-text: #C6FF4D;
+  --control-border: #FFF6E9;
+  --divider: #3A2C66;
+  --sticker-outline: #FFF6E9;
+  --on-sticker: #1C1035;
+  --sticker-sun: #FFD84D;
+  --sticker-pink: #FF5FA2;
+  --sticker-mint: #C6FF4D;
+  --sticker-lilac: #8B6CFF;
+}
+
 body {
   color: var(--text);
   background: var(--background);
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  font-family: var(--font-text);
   font-size: var(--type-body);
   line-height: var(--type-body-leading);
   /*

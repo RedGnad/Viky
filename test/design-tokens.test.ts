@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { readFileSync } from "node:fs";
+import { globSync, readFileSync } from "node:fs";
 import { contrastRatio, NON_TEXT_CONTRAST_MINIMUM, TEXT_CONTRAST_MINIMUM } from "../src/contrast.js";
 import {
   APP_COLUMN_MAX,
@@ -10,7 +10,11 @@ import {
   GROUNDS,
   DESTINATION_MAX,
   PAGE_MARGIN,
+  POSTER_COLOURS,
+  POSTER_CONTROL,
+  POSTER_TYPE,
   PROSE_MAX_CH,
+  STICKER_FILLS,
   TWO_PANE_FROM,
   RADIUS,
   SPACE,
@@ -38,6 +42,24 @@ function cssVariable(name: string, inDark = false): string {
   assert.ok(match, `--${name} is missing from globals.css${inDark ? " in dark" : ""}`);
   return match![1].trim();
 }
+
+/** The body of the first rule written with exactly this selector, up to its closing brace. */
+function rule(selector: string, from = 0): string {
+  const start = css.indexOf(`${selector} {`, from);
+  assert.ok(start >= 0, `${selector} is missing from globals.css`);
+  return css.slice(start, css.indexOf("}", start));
+}
+
+function variableIn(block: string, name: string): string {
+  const match = block.match(new RegExp(`--${name}:\\s*([^;]+);`));
+  assert.ok(match, `--${name} is missing from ${block.slice(0, 60)}`);
+  return match![1].trim();
+}
+
+/** A token's role as the stylesheet names it: stickerOutline becomes sticker-outline. */
+const cssName = (role: string) => role.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+
+const POSTER = '[data-look="poster"]';
 
 test("every colour that carries text clears 4.5:1 on both surfaces, in both appearances", () => {
   for (const appearance of ["light", "dark"] as Appearance[]) {
@@ -199,4 +221,76 @@ test("two panes begin at the first width where two panes actually fit", () => {
   assert.ok(TWO_PANE_FROM - needed < 100, "and it is not so far past it that a whole size class is wasted");
   assert.ok(DESTINATION_MAX > APP_COLUMN_MAX, "a destination is wider than a journey");
   assert.ok(DESTINATION_MAX < TWO_PANE_FROM, "and narrower than the width at which it splits");
+});
+
+/**
+ * The poster look is held to the same measurement as the calm one, by day and by night, with one addition of
+ * its own: the words it sets on a sticker are measured against every fill a sticker can wear.
+ */
+test("the poster look's words clear 4.5:1 and its outlines 3:1, by day and by night", () => {
+  for (const appearance of ["light", "dark"] as Appearance[]) {
+    const palette = POSTER_COLOURS[appearance];
+    for (const ground of GROUNDS) {
+      for (const role of TEXT_COLOURS) {
+        const ratio = contrastRatio(palette[role], palette[ground]);
+        assert.ok(ratio >= TEXT_CONTRAST_MINIMUM, `poster ${appearance} ${role} is ${ratio.toFixed(2)}:1 on the ${ground}`);
+      }
+      for (const role of [...CONTROL_COLOURS, "stickerOutline"]) {
+        const ratio = contrastRatio(palette[role], palette[ground]);
+        assert.ok(ratio >= NON_TEXT_CONTRAST_MINIMUM, `poster ${appearance} ${role} is ${ratio.toFixed(2)}:1 on the ${ground}`);
+      }
+    }
+    const onAccent = contrastRatio(palette.onAccent, palette.accent);
+    assert.ok(onAccent >= TEXT_CONTRAST_MINIMUM, `poster ${appearance} words on the accent are ${onAccent.toFixed(2)}:1`);
+    for (const fill of STICKER_FILLS) {
+      const ratio = contrastRatio(palette.onSticker, palette[fill]);
+      assert.ok(ratio >= TEXT_CONTRAST_MINIMUM, `poster ${appearance} words on ${fill} are ${ratio.toFixed(2)}:1`);
+    }
+  }
+});
+
+test("the stylesheet's poster look says what the tokens say, and night says it both ways", () => {
+  const day = rule(`:root:has(${POSTER})`);
+  const nightByThePhone = rule(`:root:not([data-theme="light"]):has(${POSTER})`);
+  const nightByChoice = rule(`:root[data-theme="dark"]:has(${POSTER})`);
+  for (const [role, value] of Object.entries(POSTER_COLOURS.light)) {
+    assert.equal(variableIn(day, cssName(role)), value, `day ${role}`);
+  }
+  for (const [role, value] of Object.entries(POSTER_COLOURS.dark)) {
+    assert.equal(variableIn(nightByThePhone, cssName(role)), value, `night by the phone ${role}`);
+    assert.equal(variableIn(nightByChoice, cssName(role)), value, `night by choice ${role}`);
+  }
+
+  assert.equal(variableIn(day, "font-title"), "var(--font-anton)");
+  assert.equal(variableIn(day, "font-text"), "var(--font-dm-sans)");
+  assert.equal(variableIn(day, "font-title-weight"), String(POSTER_TYPE.titleWeight));
+  assert.equal(variableIn(day, "type-display"), `${POSTER_TYPE.display.compact.size}px`);
+  assert.equal(variableIn(day, "type-display-leading"), `${POSTER_TYPE.display.compact.lineHeight}px`);
+  assert.equal(variableIn(day, "type-title"), `${POSTER_TYPE.title.size}px`);
+  assert.equal(variableIn(day, "type-title-leading"), `${POSTER_TYPE.title.lineHeight}px`);
+  assert.equal(variableIn(day, "control-border-width"), `${POSTER_CONTROL.borderWidth}px`);
+  assert.equal(variableIn(day, "control-relief"), `0 ${POSTER_CONTROL.reliefDepth}px 0 var(--control-border)`);
+
+  const wide = rule(`:root:has(${POSTER})`, css.indexOf("@media (min-width: 840px)"));
+  assert.equal(variableIn(wide, "type-display"), `${POSTER_TYPE.display.expanded.size}px`);
+  assert.equal(variableIn(wide, "type-display-leading"), `${POSTER_TYPE.display.expanded.lineHeight}px`);
+});
+
+test("the poster look's faces are loaded by next/font and defined on the whole document", () => {
+  const fonts = readFileSync("app/fonts.ts", "utf8");
+  assert.match(fonts, /from "next\/font\/google"/);
+  assert.match(fonts, /Anton\(\{[^}]*variable: "--font-anton"/);
+  assert.match(fonts, /DM_Sans\(\{[^}]*variable: "--font-dm-sans"/);
+  const layout = readFileSync("app/layout.tsx", "utf8");
+  assert.match(layout, /<html[^>]*anton\.variable/);
+  assert.match(layout, /<html[^>]*dmSans\.variable/);
+});
+
+/**
+ * The calm look stays on every screen that has not asked for the poster one. When a screen joins, this list
+ * grows, and that is a decision somebody took rather than something a shared class did on its own.
+ */
+test("only the signed-out home wears the poster look so far", () => {
+  const wearers = globSync("app/**/*.tsx").filter((file) => readFileSync(file, "utf8").includes('look="poster"'));
+  assert.deepEqual(wearers, ["app/components/HomeScreen.tsx"]);
 });

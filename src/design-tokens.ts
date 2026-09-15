@@ -205,3 +205,89 @@ export const GROUNDS = ["background", "surface", "joy"] as const;
 
 /** Where the chosen appearance is kept, so a reload does not flash the other one. */
 export const THEME_STORAGE_KEY = "viky.theme";
+
+/**
+ * The poster look: the direction the funder chose on 15 Sep, out of four previews. By day it is the first of
+ * them, a cream ground, a tomato accent, plum ink, Anton titles and outlined stickers. By night it keeps the same
+ * type and the same stickers in the colours of the third, an indigo ground and an acid green accent, and the
+ * outlines turn light.
+ *
+ * It is a look rather than a new value for the colours above because only the signed-out home wears it for now.
+ * A screen joins by passing `look="poster"` to `Screen`, and every control, title and card inside it picks the
+ * look up through the same variables, so the screens that follow inherit it without styling of their own. The
+ * others keep the calm look above until they join.
+ *
+ * Every pair is measured as above by test/design-tokens.test.ts, with one addition the look needs: the words
+ * set on a sticker are measured against every fill a sticker can wear.
+ */
+export const POSTER_COLOURS: Record<Appearance, Record<string, string>> = {
+  light: {
+    background: "#FFF3D9",
+    surface: "#FFFDF7",
+    joy: "#FFD84D",
+    /** 15.10:1 on the ground, 16.35:1 on a surface, 12.02:1 on joy. */
+    text: "#3B0A2A",
+    /** 6.93:1, 7.50:1 and 5.51:1. */
+    muted: "#72465E",
+    /**
+     * Carrying plum words at 5.36:1. The fill itself is only 2.82:1 against the cream, so what identifies a
+     * button is its plum outline at 15.10:1 (WCAG 1.4.11), as the outline already did in the calm look.
+     */
+    accent: "#FF5A36",
+    onAccent: "#3B0A2A",
+    /** As words: 6.82:1 on the ground, 7.39:1 on a surface, 5.43:1 on joy. */
+    accentText: "#9E2A14",
+    controlBorder: "#3B0A2A",
+    divider: "#EAD6B0",
+    /** The outline every sticker wears, the ink itself: 15.10:1 on the ground. */
+    stickerOutline: "#3B0A2A",
+    /** The words on a sticker: 10.07:1 on the pink, which is the lowest. */
+    onSticker: "#3B0A2A",
+    stickerSun: "#FFD84D",
+    stickerPink: "#F7B7D8",
+    stickerMint: "#BDEBC8",
+    stickerLilac: "#C9C6FF",
+  },
+  dark: {
+    background: "#1C1035",
+    surface: "#2A1D4E",
+    joy: "#4A2E6B",
+    /** 16.69:1 on the ground, 14.17:1 on a surface, 10.35:1 on joy. */
+    text: "#FFF6E9",
+    /** 9.66:1, 8.20:1 and 5.99:1. */
+    muted: "#C4B8E6",
+    /** Indigo words on it at 15.16:1, and 15.16:1 against the ground. */
+    accent: "#C6FF4D",
+    onAccent: "#1C1035",
+    /** As words: 15.16:1, 12.87:1 and 9.40:1. */
+    accentText: "#C6FF4D",
+    /** Light at night, as the stickers' outlines are: 16.69:1 on the ground. */
+    controlBorder: "#FFF6E9",
+    divider: "#3A2C66",
+    stickerOutline: "#FFF6E9",
+    /** Indigo words on a bright sticker: 4.84:1 on the violet, which is the lowest. */
+    onSticker: "#1C1035",
+    stickerSun: "#FFD84D",
+    stickerPink: "#FF5FA2",
+    stickerMint: "#C6FF4D",
+    stickerLilac: "#8B6CFF",
+  },
+};
+
+/** The fills a sticker can wear, each of which must carry `onSticker` at 4.5:1. */
+export const STICKER_FILLS = ["stickerSun", "stickerPink", "stickerMint", "stickerLilac"] as const;
+
+/**
+ * The poster look's type. Titles are set in Anton, which has a single weight, so they ask for 400 rather than let
+ * the browser invent a bold. Everything else is DM Sans, amounts and button labels included, at the four levels
+ * above. The look adds one size, `display`, for the single title a destination opens with, and sets section
+ * titles larger, because a condensed face at 22 pixels reads smaller than a text face at the same size.
+ */
+export const POSTER_TYPE = {
+  display: { compact: { size: 60, lineHeight: 56 }, expanded: { size: 104, lineHeight: 96 } },
+  title: { size: 36, lineHeight: 38 },
+  titleWeight: 400,
+} as const;
+
+/** The poster look's controls: a 2 pixel outline and a relief underneath, the pressed key of the direction. */
+export const POSTER_CONTROL = { borderWidth: 2, reliefDepth: 6 } as const;

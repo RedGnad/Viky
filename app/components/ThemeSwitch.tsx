@@ -35,7 +35,9 @@ export function ThemeSwitch() {
               type="button"
               aria-pressed={chosen}
               onClick={() => applyThemeChoice(option.value)}
-              className={`${INLINE_BUTTON} ${chosen ? "border-2 border-[var(--accent-text)] font-medium" : ""}`}
+              // The chosen outline is twice the width through the same variable the button reads, because a
+              // separate width class loses to it and the outline would silently drop back to a hairline.
+              className={`${INLINE_BUTTON} ${chosen ? "[--control-border-width:2px] border-[var(--accent-text)] font-medium" : ""}`}
             >
               {option.label}
               {chosen ? <span className="sr-only"> (chosen)</span> : null}
