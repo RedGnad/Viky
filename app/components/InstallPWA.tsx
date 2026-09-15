@@ -47,7 +47,7 @@ export const InstallPWA = () => {
 
   return (
     <div className="fixed right-6 bottom-6 z-50">
-      <div className="max-w-sm rounded-xl border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+      <div className="max-w-sm rounded-[var(--radius-card)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-lg)] shadow-lg">
         <div className="flex items-center gap-3">
           <div className="flex-1">
             <h4 className="text-sm font-semibold">Keep Viky on your home screen</h4>
@@ -59,7 +59,7 @@ export const InstallPWA = () => {
             <button
               type="button"
               onClick={() => promptInstall?.prompt()}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+              className="inline-flex min-h-[var(--tap-target)] items-center rounded-full border border-[var(--control-border)] bg-[var(--accent)] px-[var(--space-lg)] text-[length:var(--type-help)] font-medium text-[var(--on-accent)]"
             >
               Add
             </button>
@@ -67,14 +67,14 @@ export const InstallPWA = () => {
             <button
               type="button"
               onClick={() => setShowIOSInstructions((value) => !value)}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+              className="inline-flex min-h-[var(--tap-target)] items-center rounded-full border border-[var(--control-border)] bg-[var(--accent)] px-[var(--space-lg)] text-[length:var(--type-help)] font-medium text-[var(--on-accent)]"
             >
               How?
             </button>
           ) : null}
         </div>
         {showIOSInstructions && isIOSDevice ? (
-          <ol className="mt-4 list-decimal space-y-1 border-t border-gray-200 pt-4 pl-4 text-xs dark:border-gray-700">
+          <ol className="mt-4 list-decimal space-y-1 border-t border-[var(--divider)] pt-4 pl-4 text-xs">
             <li>Tap the Share button.</li>
             <li>Scroll down and tap &quot;Add to Home Screen&quot;.</li>
             <li>Tap &quot;Add&quot;.</li>

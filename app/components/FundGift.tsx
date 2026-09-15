@@ -199,14 +199,14 @@ export function FundGift() {
 
   if (step === "done" && created) {
     return (
-      <section className="space-y-4 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+      <section className="space-y-4 rounded-[var(--radius-card)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-lg)]">
         <p className="text-lg font-medium">It is in their name.</p>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
           Whoever opens this link takes the gift, so send it only to {contact.trim() || "them"} and to nobody
           else. They open it, and the money becomes theirs day by day. Whatever they do not earn comes back to
           you by itself.
         </p>
-        <p className="select-all break-all rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-800">{created.claimUrl}</p>
+        <p className="select-all break-all rounded-[var(--radius-control)] border border-[var(--divider)] p-3 text-sm">{created.claimUrl}</p>
         <button
           type="button"
           onClick={() => {
@@ -226,7 +226,7 @@ export function FundGift() {
         >
           {linkCopied ? "Copied" : "Copy the link"}
         </button>
-        {problem ? <p className="text-sm text-red-600">{problem}</p> : null}
+        {problem ? <p className="text-sm text-[var(--accent-text)]">{problem}</p> : null}
       </section>
     );
   }

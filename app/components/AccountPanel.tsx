@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { FIELD, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./ui";
+import { CARD, FIELD, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./ui";
 import { useAccount } from "@/src/account/provider";
 
 // The only account screen of the skeleton: create with Face ID or fingerprint, or sign in.
@@ -12,7 +12,7 @@ export function AccountPanel() {
 
   if (address) {
     return (
-      <section className="space-y-4 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+      <section className={CARD}>
         <p className="font-medium">You are signed in.</p>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
           Your account is protected by your passkey. Nothing to remember, nothing to write down.
@@ -30,7 +30,7 @@ export function AccountPanel() {
   }
 
   return (
-    <section className="space-y-4 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+    <section className={CARD}>
       <form
         className="space-y-3"
         onSubmit={(event) => {
@@ -82,11 +82,11 @@ export function AccountPanel() {
       ) : null}
 
       {error ? (
-        <div role="alert" className="space-y-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+        <div role="alert" className="space-y-2 rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
           <p>{error.guidance}</p>
           {error.code === "UNSUPPORTED_BROWSER" && /Android/i.test(navigator.userAgent) ? (
             <a
-              className="inline-block rounded-lg bg-blue-600 px-3 py-1 text-white"
+              className="inline-flex min-h-[var(--tap-target)] items-center rounded-full border border-[var(--control-border)] bg-[var(--accent)] px-[var(--space-lg)] text-[length:var(--type-help)] font-medium text-[var(--on-accent)]"
               href={`intent://${window.location.host}${window.location.pathname}${window.location.search}#Intent;scheme=https;package=com.android.chrome;end`}
             >
               Open this page in Chrome

@@ -6,6 +6,8 @@ import {
   APP_COLUMN_MAX,
   COLOURS,
   CONTROL_COLOURS,
+  DAY_SURFACES,
+  GROUNDS,
   PAGE_MARGIN,
   PROSE_MAX_CH,
   RADIUS,
@@ -26,22 +28,29 @@ import {
 const css = readFileSync("app/globals.css", "utf8");
 
 function cssVariable(name: string, inDark = false): string {
-  const dark = css.slice(css.indexOf("prefers-color-scheme: dark"));
+  // The explicit block, because that is the one a person's own choice uses; a separate test pins that the
+  // media query carries the same values.
+  const dark = css.slice(css.indexOf('[data-theme="dark"]'));
   const source = inDark ? dark : css.slice(0, css.indexOf("@media"));
   const match = source.match(new RegExp(`--${name}:\\s*([^;]+);`));
   assert.ok(match, `--${name} is missing from globals.css${inDark ? " in dark" : ""}`);
   return match![1].trim();
 }
 
-test("every colour that carries text clears 4.5:1 on its own background, in both appearances", () => {
+test("every colour that carries text clears 4.5:1 on both surfaces, in both appearances", () => {
   for (const appearance of ["light", "dark"] as Appearance[]) {
     const palette = COLOURS[appearance];
     for (const role of TEXT_COLOURS) {
-      const ratio = contrastRatio(palette[role], palette.background);
-      assert.ok(
-        ratio >= TEXT_CONTRAST_MINIMUM,
-        `${appearance} ${role} is ${ratio.toFixed(2)}:1 on the background, below ${TEXT_CONTRAST_MINIMUM}`,
-      );
+      // Both, never just one. The page ground is a colour now, so a value that clears the card and fails the
+      // ground would put unreadable words on whatever sits outside a card. That happened twice while this
+      // palette was being chosen.
+      for (const ground of GROUNDS) {
+        const ratio = contrastRatio(palette[role], palette[ground]);
+        assert.ok(
+          ratio >= TEXT_CONTRAST_MINIMUM,
+          `${appearance} ${role} is ${ratio.toFixed(2)}:1 on the ${ground}, below ${TEXT_CONTRAST_MINIMUM}`,
+        );
+      }
     }
     // The primary action is text on the accent rather than on the background, so it is its own pair.
     const onAccent = contrastRatio(palette.onAccent, palette.accent);
@@ -53,11 +62,13 @@ test("a control's outline clears 3:1, because it is what identifies the control"
   for (const appearance of ["light", "dark"] as Appearance[]) {
     const palette = COLOURS[appearance];
     for (const role of CONTROL_COLOURS) {
-      const ratio = contrastRatio(palette[role], palette.background);
-      assert.ok(
-        ratio >= NON_TEXT_CONTRAST_MINIMUM,
-        `${appearance} ${role} is ${ratio.toFixed(2)}:1, below ${NON_TEXT_CONTRAST_MINIMUM} (WCAG 1.4.11)`,
-      );
+      for (const ground of GROUNDS) {
+        const ratio = contrastRatio(palette[role], palette[ground]);
+        assert.ok(
+          ratio >= NON_TEXT_CONTRAST_MINIMUM,
+          `${appearance} ${role} is ${ratio.toFixed(2)}:1 on the ${ground}, below ${NON_TEXT_CONTRAST_MINIMUM} (WCAG 1.4.11)`,
+        );
+      }
     }
   }
 });
@@ -67,12 +78,46 @@ test("the outline we replaced really did fail, so this is not a precaution", () 
   assert.ok(contrastRatio("#d4d4d8", "#ffffff") < NON_TEXT_CONTRAST_MINIMUM);
 });
 
+/**
+ * The bright row of days is the one place a saturated colour sits under a word. Each of these was chosen for
+ * the state it carries and then measured; the first green failed at night and was darkened until it did not.
+ */
+test("every surface a day can wear carries the reader's text at 4.5:1", () => {
+  for (const appearance of ["light", "dark"] as Appearance[]) {
+    for (const [state, surface] of Object.entries(DAY_SURFACES[appearance])) {
+      const ratio = contrastRatio(COLOURS[appearance].text, surface);
+      assert.ok(ratio >= TEXT_CONTRAST_MINIMUM, `${appearance} ${state} is ${ratio.toFixed(2)}:1`);
+    }
+  }
+});
+
+test("the art direction changed the colours and nothing else", () => {
+  // The whole argument for building the foundation on neutral colours first: swapping the palette must not
+  // have moved a measurement. If a future theme needs one of these changed, that is a decision and not a
+  // side effect, and this is where it gets noticed.
+  assert.equal(TAP_TARGET, 48);
+  assert.equal(TAP_GAP, 12);
+  assert.equal(PAGE_MARGIN.compact, 16);
+  assert.equal(APP_COLUMN_MAX, 480);
+  assert.equal(PROSE_MAX_CH, 60);
+  assert.equal(TYPE.body.size, 16);
+  assert.equal(SPACE.lg, 16);
+});
+
+test("a person who chooses an appearance beats the phone that disagrees", () => {
+  // Light chosen on a dark phone has to win, which only works if the media query excludes an explicit
+  // choice. Without the :not(), the phone wins and the control looks broken.
+  assert.match(css, /@media \(prefers-color-scheme: dark\)\s*\{\s*:root:not\(\[data-theme="light"\]\)/);
+  assert.match(css, /:root\[data-theme="dark"\]/);
+});
+
 test("the stylesheet says what the tokens say", () => {
   assert.equal(cssVariable("background"), COLOURS.light.background);
   assert.equal(cssVariable("text"), COLOURS.light.text);
   assert.equal(cssVariable("muted"), COLOURS.light.muted);
   assert.equal(cssVariable("accent"), COLOURS.light.accent);
   assert.equal(cssVariable("control-border"), COLOURS.light.controlBorder);
+  assert.equal(cssVariable("surface"), COLOURS.light.surface);
   assert.equal(cssVariable("background", true), COLOURS.dark.background);
   assert.equal(cssVariable("text", true), COLOURS.dark.text);
   assert.equal(cssVariable("muted", true), COLOURS.dark.muted);

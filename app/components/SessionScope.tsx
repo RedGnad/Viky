@@ -27,7 +27,7 @@ export function SessionScope() {
   const { minutes, seconds } = remaining;
 
   return (
-    <section className="space-y-2 rounded-2xl border border-gray-200 p-4 text-sm dark:border-gray-800">
+    <section className="space-y-2 rounded-[var(--radius-card)] border border-[var(--divider)] p-4 text-sm">
       <p className="font-medium">What this device can do for you right now</p>
       <ul className="list-disc space-y-1 pl-5" style={{ color: "var(--muted)" }}>
         <li>Put money behind a goal in someone&apos;s name, for the amounts you type.</li>

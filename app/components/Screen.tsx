@@ -33,7 +33,7 @@ export function Screen({
           {back ? (
             <Link
               href={back}
-              className="inline-flex min-h-[var(--tap-target)] items-center self-start text-[length:var(--type-body)] text-[var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+              className="inline-flex min-h-[var(--tap-target)] items-center self-start text-[length:var(--type-body)] text-[var(--accent-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
             >
               {backLabel}
             </Link>
