@@ -1900,3 +1900,32 @@ sticker is the same ink; lost your phone is mint, and the three pages beside it 
 account is yellow, a gift received mint and a gift given pink. On a gift, the recipient's steps are yellow, pink and
 lilac, then mint while it counts and once it is finished; on the way out, yellow then pink. The rule on mint is
 tested across every screen.
+
+## D74, 16 Sep 2026: a card payment longer than the session no longer loses the gift
+
+**Measured on 15 Sep.** The funder ordered on Mercuryo at 22:13 and the coins arrived at 22:25:24 (block
+105,127,933, 1,231.69 MON, transaction 0x429f517a...7e14, read on chain). The passkey session closes after ten
+minutes without a signature: the account left the page, and the effect watching for the payment stopped with it. The
+coins stayed in the account, converted into nothing and given to nobody. The waiting screen also read the closed
+account's identifier with a non-null assertion, so a render without one ended the page. Mercuryo's own help centre
+("How can I check the status of my transaction?", edited 16 Jul) says most payments take 30 to 60 minutes and
+several hours when the network is busy, so a ten minute session closes during most of them.
+
+**What changed.**
+
+- The gift's terms are written to the device when the rail opens: the Duolingo name when given, how much, how long,
+  the target, and whose account set it up. When that same account is signed in on /fund again, within 72 hours, the
+  page goes back to waiting, says "Welcome back", and converts and gives as before. Making the gift forgets them, and
+  the waiting screen offers to set up a different gift instead.
+- When the session closes during the wait, the page says so, says nothing is lost, and asks to sign in; signing in
+  on the same page picks up where it stopped. If the device refused to keep the terms, it says they last while the
+  page stays open, and nothing more.
+- A payment already in the account is used before the funder is sent to pay again: the check offers "Use the
+  payment that arrived", decided by the same test the waiting page converts on. A payment left behind, like the one
+  of 15 Sep, can still become a gift that way.
+- The signed-in home says "Finish the gift you set up" while there is one.
+- The waiting page does not keep the session open. It still closes itself after ten quiet minutes, as the session
+  panel promises, and the next conversion still asks for a signature.
+
+**Not solved.** The terms live on one device. Coming back on another phone finds the payment in the account and no
+gift set up: the funder sets it up again, and the check offers the payment that arrived.
