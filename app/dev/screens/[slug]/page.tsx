@@ -16,8 +16,10 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const { slug } = await params;
   const screen = EXAMPLE_SCREENS.find((candidate) => candidate.slug === slug);
   if (!screen) notFound();
+  // The funder's example screens wear the look the funder journey wears, so a capture of one is what a funder
+  // meets; the recipient's keep the calm look until their own screens join it.
   return (
-    <Screen>
+    <Screen look={screen.who === "funder" ? "poster" : undefined}>
       <p className={`${HELP} rounded-full border border-[var(--control-border)] px-[var(--space-md)] py-[var(--space-xs)] text-center`}>
         Example data{screen.builtFrom ? "" : ", and this screen is not built yet"}
       </p>

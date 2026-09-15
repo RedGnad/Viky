@@ -32,9 +32,13 @@ export const SECONDARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} 
 /** A secondary action that sits beside others rather than filling the width. */
 export const INLINE_BUTTON = `${TAP} ${FOCUS} rounded-full ${OUTLINE} ${RELIEF} px-[var(--space-lg)] py-[var(--space-sm)] text-[length:var(--type-help)] disabled:opacity-50`;
 
-/** A box that groups one step of a journey. Its edge is a divider, not a control: no ratio is required. */
+/**
+ * A box that groups one step of a journey. Its edge is a divider hairline in the calm look and a sticker's outline
+ * in the poster look. It is not a control, so no ratio is required of it, though the poster outline clears 3:1 on
+ * the ground and on the card alike.
+ */
 export const CARD =
-  "space-y-[var(--space-md)] rounded-[var(--radius-card)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-lg)]";
+  "space-y-[var(--space-md)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-lg)]";
 
 /**
  * A card drawn as a sticker: the look's sticker outline around a fill the caller picks from the sticker colours,

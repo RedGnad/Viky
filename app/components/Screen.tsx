@@ -42,7 +42,8 @@ export function Screen({
   /**
    * The look the screen wears. Left out, it is the calm look every other screen wears today. `poster` is the
    * direction the funder chose on 15 Sep, which app/globals.css hands to the whole document while this screen
-   * is on it. Only the signed-out home asks for it so far; a screen that follows joins by asking too.
+   * is on it. The signed-out home and the funder journey ask for it so far; a screen that follows joins by asking
+   * too.
    */
   look?: "poster";
   /**

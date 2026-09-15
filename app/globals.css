@@ -80,6 +80,10 @@
   --control-border-width: 1px;
   --control-relief: 0 0 #0000;
 
+  /* A card's edge: a divider hairline in the calm look, a sticker's outline in the poster look. */
+  --card-border-width: 1px;
+  --card-border: var(--divider);
+
   /* The single opening title a look may size on its own; in the calm look it is the money size it already used. */
   --type-display: var(--type-money);
   --type-display-leading: var(--type-money-leading);
@@ -144,10 +148,10 @@
 }
 
 /*
- * The poster look (POSTER_COLOURS, POSTER_TYPE and POSTER_CONTROL in src/design-tokens.ts), worn by any screen
- * that renders `data-look="poster"`. :has() gives it to the whole document rather than to that screen's box, so
- * the ground under a notch and past the end of a scroll wears it too. The two fonts are the variables next/font
- * defines on the document (app/fonts.ts).
+ * The poster look (POSTER_COLOURS, POSTER_TYPE, POSTER_CONTROL and POSTER_CARD in src/design-tokens.ts), worn by
+ * any screen that renders `data-look="poster"`. :has() gives it to the whole document rather than to that
+ * screen's box, so the ground under a notch and past the end of a scroll wears it too. The two fonts are the
+ * variables next/font defines on the document (app/fonts.ts).
  */
 :root:has([data-look="poster"]) {
   --background: #FFF3D9;
@@ -177,6 +181,9 @@
 
   --control-border-width: 2px;
   --control-relief: 0 6px 0 var(--control-border);
+
+  --card-border-width: 2px;
+  --card-border: var(--sticker-outline);
 }
 
 /* The opening title grows where a destination splits into two panes. */
