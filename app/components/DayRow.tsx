@@ -1,5 +1,5 @@
 "use client";
-import { DAY_MARK, dayInWords, giftDays, type Day } from "@/src/day-states";
+import { DAY_MARK, dayInWords, giftDays, type Day, type DayMark } from "@/src/day-states";
 import { deadlineInWords } from "@/src/catch-up";
 import { HELP, MONEY } from "./ui";
 
@@ -58,10 +58,9 @@ export function DayRow({
             title={label(day, funder, nowMs)}
             className={`flex aspect-square flex-col items-center justify-center rounded-[var(--radius-control)] border ${skin(day)}`}
           >
-            <span aria-hidden className="text-[length:var(--type-body)] leading-none">
-              {DAY_MARK[day.state]}
-            </span>
-            <span aria-hidden className={HELP}>
+            <Mark shape={DAY_MARK[day.state]} />
+            {/* In the text colour rather than the muted one, which falls below 4.5:1 on the brightest cells. */}
+            <span aria-hidden className="text-[length:var(--type-help)] leading-[var(--type-help-leading)]">
               {day.number}
             </span>
           </li>
@@ -85,6 +84,27 @@ export function DayRow({
         </div>
       </dl>
     </section>
+  );
+}
+
+/**
+ * A state's mark, drawn in the cell's own text colour. It was a character until 15 Sep, and neither face the product
+ * loads has those characters, so the phone's fonts drew them: three different ones on one row of seven days.
+ */
+function Mark({ shape }: Readonly<{ shape: DayMark }>) {
+  return (
+    <svg aria-hidden focusable="false" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      {shape === "full" ? <circle cx="8" cy="8" r="5" /> : null}
+      {shape === "half" ? (
+        <>
+          <circle cx="8" cy="8" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M8 3.5a4.5 4.5 0 0 1 0 9Z" />
+        </>
+      ) : null}
+      {shape === "ring" ? <circle cx="8" cy="8" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.5" /> : null}
+      {shape === "diamond" ? <path d="M8 2.5 13.5 8 8 13.5 2.5 8Z" /> : null}
+      {shape === "dot" ? <circle cx="8" cy="8" r="2" /> : null}
+    </svg>
   );
 }
 
