@@ -230,7 +230,8 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
             Mercuryo says most payments take 30 to 60 minutes, and sometimes several hours.
           </p>
         </section>
-        <span className={SECONDARY_BUTTON}>Sign in</span>
+        <span className={PRIMARY_BUTTON}>Sign in</span>
+        <span className={SECONDARY_BUTTON}>Create my account</span>
       </>
     ),
   },
@@ -252,10 +253,10 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
         <section className={STICKER.sun}>
           <h2 className={TITLE}>Your money</h2>
           <p className={MONEY}>$0.00</p>
-          <p className="font-medium">Waiting for your payment. Keep this page open.</p>
-          <p className={HELP}>
+          <p className={BODY}>
             Welcome back. Your $25.00 gift is still set up, and it goes ahead as soon as your payment is here.
           </p>
+          <p className="font-medium">Waiting for your payment. Keep this page open.</p>
           <span className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
             Set up a different gift instead
           </span>

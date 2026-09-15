@@ -44,6 +44,15 @@ test("the device says a gift is waiting without naming whose it is", () => {
   assert.equal(pendingGiftExists(JSON.stringify({ savedAtMs: NOW }), NOW), false);
 });
 
+/** Coming back is not the same as arriving: a second account would leave the gift and the payment on the first. */
+test("on the screen after a closed session, signing in leads and making an account follows", () => {
+  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
+  assert.match(fund, /<AccountPanel returning \/>/);
+  const panel = readFileSync("app/components/AccountPanel.tsx", "utf8");
+  assert.match(panel, /className=\{returning \? PRIMARY_BUTTON : SECONDARY_BUTTON\}/, "sign in leads when somebody comes back");
+  assert.match(panel, /className=\{returning \? SECONDARY_BUTTON : PRIMARY_BUTTON\}/, "and making an account follows it");
+});
+
 /** What is kept is what the gift is made from, and nothing else: D72 asks for no contact, so none is kept or sent. */
 test("the terms kept are exactly the terms the gift is made from", () => {
   const fund = readFileSync("app/components/FundGift.tsx", "utf8");
