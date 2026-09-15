@@ -20,10 +20,13 @@ export function Moment({
   children,
 }: Readonly<{ mood?: Mood; headline: string; amount?: string; children?: ReactNode }>) {
   return (
-    <section className="relative overflow-hidden rounded-[var(--radius-sheet)] bg-[var(--joy)] px-[var(--space-lg)] py-[var(--space-xxl)] text-center">
+    <section className="relative overflow-hidden rounded-[var(--radius-sheet)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--joy)] px-[var(--space-lg)] py-[var(--space-xxl)] text-center">
       {/* Two soft blobs, behind everything, purely decorative and never carrying meaning. */}
-      <svg aria-hidden focusable="false" className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 300 200">
-        <path d="M-20 60c40-50 90 10 140-20s110 20 130-30v200H-20Z" fill="var(--surface)" opacity="0.28" />
+      {/* The height is set inline because the document's rule that stops an image pushing the page sideways gives
+          every svg an automatic height, which stopped the blobs short of the bottom with a hard edge showing. The
+          wave runs past the right edge for the same reason: it used to end at 250 of 300. */}
+      <svg aria-hidden focusable="false" className="pointer-events-none absolute inset-0 w-full" style={{ height: "100%" }} preserveAspectRatio="none" viewBox="0 0 300 200">
+        <path d="M-20 60c40-50 90 10 140-20s130 20 200-30v200H-20Z" fill="var(--surface)" opacity="0.28" />
         <circle cx="262" cy="34" r="34" fill="var(--surface)" opacity="0.35" />
         <circle cx="36" cy="168" r="26" fill="var(--surface)" opacity="0.3" />
       </svg>
