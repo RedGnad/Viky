@@ -98,7 +98,12 @@ export function AccountPanel() {
       </button>
 
       {hasCredential ? (
-        <button type="button" onClick={useAnotherAccount} disabled={busy} className={INLINE_BUTTON}>
+        <button
+          type="button"
+          onClick={useAnotherAccount}
+          disabled={busy}
+          className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}
+        >
           Use another account
         </button>
       ) : null}

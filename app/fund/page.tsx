@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 /** A journey: one thing at a time, one way back, a narrow column at every size. */
 export default function FundPage() {
   return (
-    <Screen>
+    <Screen title="Offer a gift">
       <FundGift />
       <Footer current="/fund" />
     </Screen>

@@ -25,7 +25,7 @@ const PAGES = [
 
 export default function Page() {
   return (
-    <Screen title="Account" back="/" backLabel="Back to my gifts">
+    <Screen layout="destination" title="Account" back="/" backLabel="Back to my gifts">
       <AccountPanel />
       <SessionScope />
       <ThemeSwitch />

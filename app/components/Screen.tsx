@@ -9,9 +9,14 @@ import { TITLE } from "./ui";
  * out. It stays a narrow column at every size, because a line of text and a form both read badly wide and
  * because a journey has nothing to put beside itself.
  *
- * A **destination** is read rather than walked through: the home, and a gift. It grows with the screen, and
- * from 840 pixels it becomes two panes, because that is the first width where two of Material's own 360
- * default panes plus its 24 spacer and two 24 margins actually fit.
+ * A **destination** is read rather than walked through: the home, a gift, the account. It grows with the
+ * screen, and from 840 pixels it becomes two panes, because that is the first width where two of Material's
+ * own 360 default panes plus its 24 spacer and two 24 margins actually fit.
+ *
+ * A **document** is a wall of prose: privacy, the legal notice. It is capped at the line length and nothing
+ * else, because the opposite mistake to a narrow strip is a legal page whose lines run 115 characters across
+ * a desktop. Both were live at the same time, on different pages, and both are what "not a design pass"
+ * looks like.
  *
  * Capping the whole product at a journey's width was the mistake this replaces: it made Viky mobile only
  * rather than mobile first, a narrow strip floating in the middle of a desktop with two thirds of the screen
@@ -32,7 +37,7 @@ export function Screen({
   title?: string;
   back?: string;
   backLabel?: string;
-  layout?: "journey" | "destination";
+  layout?: "journey" | "destination" | "document";
   /**
    * The second pane, on a destination. Below 840 it simply follows the first, in one column, so nothing is
    * hidden from a phone and nothing is invented for a desktop.
@@ -40,7 +45,12 @@ export function Screen({
   aside?: ReactNode;
   children: ReactNode;
 }>) {
-  const width = layout === "journey" ? "max-w-[var(--app-column-max)]" : "max-w-[var(--destination-max)] [@media(min-width:840px)]:max-w-[1100px]";
+  const width =
+    layout === "journey"
+      ? "max-w-[var(--app-column-max)]"
+      : layout === "document"
+        ? "max-w-[var(--prose-max)]"
+        : "max-w-[var(--destination-max)] [@media(min-width:840px)]:max-w-[1100px]";
 
   /**
    * A journey sits in the middle of a tall screen instead of clinging to the top of it. Found by opening the
