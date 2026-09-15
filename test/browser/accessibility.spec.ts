@@ -108,6 +108,27 @@ test.describe("what the design pass promised", () => {
     }
   });
 
+  /**
+   * The way back comes before the heading, on every page that has both.
+   *
+   * This exists because I shipped the opposite twice. `Screen` renders a title above its children, so a page
+   * that passes a title AND lets its children render their own back link puts the title first. I fixed it,
+   * then re-broke it with the next change and did not look again; the funder journey went out to both hosts
+   * with the title above the way back. A rule nobody can re-break by accident is worth more than the fix.
+   */
+  for (const path of PAGES) {
+    test(`${path}: the way back comes before the heading`, async ({ page }) => {
+      await page.goto(path);
+      const back = page.getByRole("link", { name: /^Back/i }).first();
+      const heading = page.getByRole("heading").first();
+      if ((await back.count()) === 0 || (await heading.count()) === 0) return;
+      const backBox = await back.boundingBox();
+      const headingBox = await heading.boundingBox();
+      if (!backBox || !headingBox) return;
+      expect(backBox.y, `${path} puts its heading above the way back`).toBeLessThan(headingBox.y);
+    });
+  }
+
   test("the viewport lets people zoom, and asks for the device insets", async ({ page }) => {
     await page.goto("/");
     const content = await page.locator('meta[name="viewport"]').getAttribute("content");
