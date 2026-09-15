@@ -265,7 +265,10 @@ export const POSTER_COLOURS: Record<Appearance, Record<string, string>> = {
     controlBorder: "#FFF6E9",
     divider: "#3A2C66",
     stickerOutline: "#FFF6E9",
-    /** Indigo words on a bright sticker: 4.84:1 on the violet, which is the lowest. */
+    /**
+     * Indigo words on a bright sticker, and the outline of a motif drawn on one: 4.84:1 on the violet, which is the
+     * lowest. The light outline above would all but vanish on the yellow and the lime.
+     */
     onSticker: "#1C1035",
     stickerSun: "#FFD84D",
     stickerPink: "#FF5FA2",
