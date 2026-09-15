@@ -227,7 +227,24 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
     file: "app/components/CashOut.tsx",
     states: [
       { name: "What is theirs", when: "the gift has earned anything", says: ["Yours to take out"] },
-      { name: "Moving it to another account of theirs", when: "they hold something", says: ["Send it to another account of mine", "Paste your other account's identifier", "Sent. It is in your other account now."] },
+      {
+        name: "Moving it to another account of theirs",
+        when: "they hold something",
+        says: [
+          "Send it to another account of mine",
+          "Exactly what you type leaves your account, to the last of its six decimals",
+          "How much leaves",
+          "Your account holds",
+          "Paste your other account's identifier",
+          "is in your other account now.",
+        ],
+      },
+      {
+        name: "More than the account holds",
+        when: "the amount typed is above the balance, or is not an amount the coin can carry",
+        says: [],
+        gap: "the refusal is written in src/send-amount.ts rather than on the screen, because the screen shows whichever one applies: the balance it does hold, six decimals at most, or an amount above zero. The button stays shut until the amount is one that can leave (D75).",
+      },
       {
         name: "Paying out to a card or a bank",
         when: "they want money rather than a balance",

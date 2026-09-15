@@ -201,7 +201,9 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
             <p className={HELP}>Copied and ready to paste.</p>
             <div className="flex flex-wrap gap-[var(--tap-gap)]">
               <span className={INLINE_BUTTON}>Copy my identifier again</span>
-              <span className={INLINE_BUTTON}>Open Mercuryo again</span>
+              <span className={`${INLINE_BUTTON} bg-[var(--accent)] font-medium text-[var(--on-accent)]`}>
+                Open Mercuryo again
+              </span>
             </div>
           </div>
         </section>
@@ -438,7 +440,9 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
       "Yours to take out",
       "Your money stays yours, and nothing about it expires.",
       "Send it to another account of yours",
-      "exactly, and nothing to pay: Viky covers what it costs to move.",
+      "Exactly what you type leaves your account, to the last of its six decimals",
+      "How much leaves",
+      "Your account holds",
     ],
     render: () => (
       <>
@@ -450,10 +454,16 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
         <section className={STICKER.pink}>
           <h2 className={TITLE}>Send it to another account of yours</h2>
           <p className={HELP}>
-            All of it goes, $28.564213 exactly, and nothing to pay: Viky covers what it costs to move.
+            Exactly what you type leaves your account, to the last of its six decimals, and nothing to pay: Viky
+            covers what it costs to move.
           </p>
+          <label className="flex flex-col gap-[var(--space-xs)]">
+            <span className={HELP}>How much leaves</span>
+            <input readOnly value="28.564213" className={FIELD} />
+          </label>
+          <p className={HELP}>Your account holds $28.564213.</p>
           <input readOnly placeholder="Paste your other account's identifier" className={FIELD} />
-          <span className={PRIMARY_BUTTON}>Send it</span>
+          <span className={PRIMARY_BUTTON}>Send $28.564213</span>
         </section>
       </>
     ),

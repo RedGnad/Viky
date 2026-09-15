@@ -9,7 +9,8 @@ import { readAusdBalance } from "@/src/client/onchain";
 import { formatAusd, formatAusdExact } from "@/src/gift-reader";
 import { AccountPanel } from "./AccountPanel";
 import { SessionScope } from "./SessionScope";
-import { FIELD, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, STICKER, TITLE } from "./ui";
+import { amountToSend, exactAmountText } from "@/src/send-amount";
+import { FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, STICKER, TITLE } from "./ui";
 
 /**
  * What a gift earned, and what the person can do with it today: move all of it to another account of theirs, from
@@ -32,6 +33,9 @@ export function CashOut() {
   const [holding, setHolding] = useState<bigint | null>(null);
   const [step, setStep] = useState<Step>("look");
   const [ownAccount, setOwnAccount] = useState("");
+  // What leaves, typed to the last of the coin's six decimals. A payout service is ordered for a quantity and expects
+  // that quantity to arrive, so sending a whole balance made every such order wrong (D75).
+  const [amount, setAmount] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -50,15 +54,18 @@ export function CashOut() {
 
   // One signature and nothing else. Their account never calls a contract, which on Monad is not a nicety:
   // an account below the 10 MON reserve cannot call one at all (D53), and a recipient holds no MON.
+  const sending = amountToSend(amount, holding ?? 0n);
+
   const sendToOwnAccount = async () => {
     setProblem(null);
     setNotice(null);
     const account = mera.currentAccount();
-    if (!account || holding === null || !isAddress(ownAccount.trim())) return;
+    if (!account || holding === null || !isAddress(ownAccount.trim()) || sending.units === undefined) return;
+    const leaving = sending.units;
     try {
-      await sendOwnMoney({ account, to: ownAccount.trim() as Hex, amount: holding });
+      await sendOwnMoney({ account, to: ownAccount.trim() as Hex, amount: leaving });
       setStep("sentToAccount");
-      setNotice("Sent. It is in your other account now.");
+      setNotice(`Sent. ${formatAusdExact(leaving)} is in your other account now.`);
       await refresh();
     } catch (error) {
       setProblem(readable(error));
@@ -78,7 +85,16 @@ export function CashOut() {
       </section>
 
       {step === "look" && holding !== null && holding > 0n ? (
-        <button type="button" onClick={() => setStep("toAccount")} className={SECONDARY_BUTTON}>
+        <button
+          type="button"
+          onClick={() => {
+            // The field opens on the whole balance, in full, because that is the common case and because a figure
+            // rounded to the cent would be the one thing the order must not carry (D75).
+            setAmount(exactAmountText(holding));
+            setStep("toAccount");
+          }}
+          className={SECONDARY_BUTTON}
+        >
           Send it to another account of mine
         </button>
       ) : null}
@@ -87,11 +103,21 @@ export function CashOut() {
         <section className={STICKER.pink}>
           <h2 className={TITLE}>Send it to another account of yours</h2>
           <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
-            {/* The whole balance leaves, to the last of its six decimals, so that is what is written (D72). */}
-            All of it goes, {holding === null ? "..." : formatAusdExact(holding)} exactly, and nothing to pay: Viky
-            covers what it costs to move. Useful for putting what you earned in one place. Sign in to your other
-            account and open its &quot;For judges&quot; page to find its identifier.
+            Exactly what you type leaves your account, to the last of its six decimals, and nothing to pay: Viky
+            covers what it costs to move. Sign in to your other account and open its &quot;For judges&quot; page to
+            find its identifier.
           </p>
+          <label className="flex flex-col gap-[var(--space-xs)]">
+            <span className={HELP}>How much leaves</span>
+            <input
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              inputMode="decimal"
+              className={FIELD}
+              disabled={step === "sentToAccount"}
+            />
+          </label>
+          <p className={HELP}>Your account holds {holding === null ? "..." : formatAusdExact(holding)}.</p>
           <input
             value={ownAccount}
             onChange={(event) => setOwnAccount(event.target.value)}
@@ -99,13 +125,18 @@ export function CashOut() {
             className={FIELD}
             disabled={step === "sentToAccount"}
           />
+          {step === "toAccount" && amount.trim() !== "" && sending.refusal ? (
+            <p role="alert" className={HELP}>
+              {sending.refusal}
+            </p>
+          ) : null}
           <button
             type="button"
             onClick={() => void sendToOwnAccount()}
-            disabled={!isAddress(ownAccount.trim()) || step === "sentToAccount"}
+            disabled={!isAddress(ownAccount.trim()) || sending.units === undefined || step === "sentToAccount"}
             className={PRIMARY_BUTTON}
           >
-            {step === "sentToAccount" ? "Sent" : "Send it"}
+            {step === "sentToAccount" ? "Sent" : sending.units === undefined ? "Send it" : `Send ${formatAusdExact(sending.units)}`}
           </button>
           {step !== "sentToAccount" ? (
             <button type="button" onClick={() => setStep("look")} className={INLINE_BUTTON}>
