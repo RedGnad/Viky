@@ -69,13 +69,13 @@ export function CashOut() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-[var(--space-xl)]">
       <section className={CARD}>
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
+        <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Yours to take out
         </p>
-        <p className="text-3xl font-semibold">{holding === null ? "..." : formatAusd(holding)}</p>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+        <p className="text-[length:var(--type-money)] font-semibold">{holding === null ? "..." : formatAusd(holding)}</p>
+        <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Sending it to your card or your bank is coming. Your money stays yours in the meantime, and nothing
           about it expires.
         </p>
@@ -90,7 +90,7 @@ export function CashOut() {
       {step === "toAccount" || step === "sentToAccount" ? (
         <section className={CARD}>
           <p className="font-medium">Send it to another account of yours</p>
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
+          <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
             Any amount, and nothing to pay: Viky covers what it costs to move. Useful for putting what you
             earned in one place before taking it out. Sign in to your other account and open its
             &quot;For judges&quot; page to find its identifier.
@@ -118,7 +118,7 @@ export function CashOut() {
         </section>
       ) : null}
 
-      {notice ? <p className="text-sm">{notice}</p> : null}
+      {notice ? <p className="text-[length:var(--type-help)]">{notice}</p> : null}
       {problem ? (
         <p role="alert" className="rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
           {problem}

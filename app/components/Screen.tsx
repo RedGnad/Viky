@@ -45,11 +45,13 @@ export function Screen({
   return (
     <main className={`mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-xl)]`}>
       {back || title ? (
-        <header className="flex flex-col gap-[var(--space-sm)]">
+        <header className="flex flex-col items-start gap-[var(--space-sm)]">
+          {/* Pulled left by its own padding so the word stays flush with the page margin while the target
+              around it is a full 48 wide. A short label is the usual way a back link ends up too small. */}
           {back ? (
             <Link
               href={back}
-              className="inline-flex min-h-[var(--tap-target)] items-center self-start text-[length:var(--type-body)] text-[var(--accent-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
+              className="-ml-[var(--space-md)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center px-[var(--space-md)] text-[length:var(--type-body)] text-[var(--accent-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
             >
               {backLabel}
             </Link>

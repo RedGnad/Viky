@@ -64,19 +64,19 @@ export default function PushSubscription() {
   };
 
   return (
-    <div className="space-y-2 text-sm">
-      <div className="flex gap-2">
-        <button type="button" onClick={subscribe} disabled={Boolean(subscription)} className="rounded-lg border px-3 py-1">
+    <div className="space-y-[var(--space-sm)] text-[length:var(--type-help)]">
+      <div className="flex gap-[var(--space-sm)]">
+        <button type="button" onClick={subscribe} disabled={Boolean(subscription)} className="rounded-[var(--radius-control)] border px-[var(--space-md)] py-[var(--space-xs)]">
           Turn on notifications
         </button>
-        <button type="button" onClick={unsubscribe} disabled={!subscription} className="rounded-lg border px-3 py-1">
+        <button type="button" onClick={unsubscribe} disabled={!subscription} className="rounded-[var(--radius-control)] border px-[var(--space-md)] py-[var(--space-xs)]">
           Turn off
         </button>
-        <button type="button" onClick={sendTest} disabled={!subscription} className="rounded-lg border px-3 py-1">
+        <button type="button" onClick={sendTest} disabled={!subscription} className="rounded-[var(--radius-control)] border px-[var(--space-md)] py-[var(--space-xs)]">
           Send a test
         </button>
       </div>
-      {status ? <p style={{ color: "var(--muted)" }}>{status}</p> : null}
+      {status ? <p className="text-[var(--muted)]">{status}</p> : null}
     </div>
   );
 }

@@ -198,14 +198,14 @@ export function FundGift() {
 
   if (step === "done" && created) {
     return (
-      <section className="space-y-4 rounded-[var(--radius-card)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-lg)]">
-        <p className="text-lg font-medium">It is in their name.</p>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+      <section className="space-y-[var(--space-lg)] rounded-[var(--radius-card)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-lg)]">
+        <p className="text-[length:var(--type-title)] font-medium">It is in their name.</p>
+        <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Whoever opens this link takes the gift, so send it only to {contact.trim() || "them"} and to nobody
           else. They open it, and the money becomes theirs day by day. Whatever they do not earn comes back to
           you by itself.
         </p>
-        <p className="select-all break-all rounded-[var(--radius-control)] border border-[var(--divider)] p-3 text-sm">{created.claimUrl}</p>
+        <p className="select-all break-all rounded-[var(--radius-control)] border border-[var(--divider)] p-[var(--space-md)] text-[length:var(--type-help)]">{created.claimUrl}</p>
         <button
           type="button"
           onClick={() => {
@@ -225,7 +225,7 @@ export function FundGift() {
         >
           {linkCopied ? "Copied" : "Copy the link"}
         </button>
-        {problem ? <p className="text-sm text-[var(--accent-text)]">{problem}</p> : null}
+        {problem ? <p className="text-[length:var(--type-help)] text-[var(--accent-text)]">{problem}</p> : null}
       </section>
     );
   }
@@ -413,7 +413,7 @@ export function FundGift() {
             <p className={HELP}>
               {WAY_IN.name}&apos;s page opens on something else by default, so set each of these yourself:
             </p>
-            <ol className={`list-decimal pl-5 ${HELP}`}>
+            <ol className={`list-decimal pl-[var(--space-lg)] ${HELP}`}>
               <li>Choose Buy, not sell.</li>
               <li>Pay in EUR, and type how much.</li>
               <li>Choose to receive MON.</li>
@@ -424,7 +424,7 @@ export function FundGift() {
               <p className={HELP}>Before you pay, check what you pasted starts and ends like this:</p>
               <p className="font-mono text-[length:var(--type-body)]">
                 {address!.slice(0, 6)}
-                <span style={{ color: "var(--muted)" }}> ... </span>
+                <span className="text-[var(--muted)]"> ... </span>
                 {address!.slice(-4)}
               </p>
             </div>

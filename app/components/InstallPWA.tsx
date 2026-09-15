@@ -48,10 +48,10 @@ export const InstallPWA = () => {
   return (
     <div className="fixed right-6 bottom-6 z-50">
       <div className="max-w-sm rounded-[var(--radius-card)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-lg)] shadow-lg">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-[var(--space-md)]">
           <div className="flex-1">
-            <h4 className="text-sm font-semibold">Keep Viky on your home screen</h4>
-            <p className="text-xs" style={{ color: "var(--muted)" }}>
+            <h4 className="text-[length:var(--type-help)] font-semibold">Keep Viky on your home screen</h4>
+            <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
               One tap to see your progress. Optional.
             </p>
           </div>
@@ -74,7 +74,7 @@ export const InstallPWA = () => {
           ) : null}
         </div>
         {showIOSInstructions && isIOSDevice ? (
-          <ol className="mt-4 list-decimal space-y-1 border-t border-[var(--divider)] pt-4 pl-4 text-xs">
+          <ol className="mt-[var(--space-lg)] list-decimal space-y-[var(--space-xs)] border-t border-[var(--divider)] pt-[var(--space-lg)] pl-[var(--space-lg)] text-[length:var(--type-help)]">
             <li>Tap the Share button.</li>
             <li>Scroll down and tap &quot;Add to Home Screen&quot;.</li>
             <li>Tap &quot;Add&quot;.</li>

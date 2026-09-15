@@ -30,10 +30,10 @@ export function AccountPanel() {
     return (
       <section className={CARD}>
         <p className="font-medium">You are signed in.</p>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+        <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Your account is protected by your passkey. Nothing to remember, nothing to write down.
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-[var(--space-sm)]">
           <button type="button" onClick={signOut} className={INLINE_BUTTON}>
             Sign out
           </button>
@@ -104,7 +104,7 @@ export function AccountPanel() {
       ) : null}
 
       {error ? (
-        <div role="alert" className="space-y-2 rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
+        <div role="alert" className="space-y-[var(--space-sm)] rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
           <p>{error.guidance}</p>
           {error.code === "UNSUPPORTED_BROWSER" && /Android/i.test(navigator.userAgent) ? (
             <a

@@ -27,14 +27,14 @@ export function SessionScope() {
   const { minutes, seconds } = remaining;
 
   return (
-    <section className="space-y-2 rounded-[var(--radius-card)] border border-[var(--divider)] p-4 text-sm">
+    <section className="space-y-[var(--space-sm)] rounded-[var(--radius-card)] border border-[var(--divider)] p-[var(--space-lg)] text-[length:var(--type-help)]">
       <p className="font-medium">What this device can do for you right now</p>
-      <ul className="list-disc space-y-1 pl-5" style={{ color: "var(--muted)" }}>
+      <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)] text-[var(--muted)]" >
         <li>Put money behind a goal in someone&apos;s name, for the amounts you type.</li>
         <li>Move money that is already yours back to you.</li>
         <li>Nothing else, and nothing by itself: each one starts from a tap of yours.</li>
       </ul>
-      <p style={{ color: "var(--muted)" }}>
+      <p className="text-[var(--muted)]">
         It closes itself after {mera.SESSION_IDLE_MINUTES} quiet minutes, and asks for your face or fingerprint again.
         Closing in {minutes}:{String(seconds).padStart(2, "0")}.
       </p>

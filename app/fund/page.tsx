@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
 import { Footer } from "../components/Footer";
 import { FundGift } from "../components/FundGift";
+import { Screen } from "../components/Screen";
+import { PROSE } from "../components/ui";
 
 export const metadata: Metadata = {
-  title: "Put money behind a goal",
+  title: "Offer a gift",
 };
 
+/** A journey: one thing at a time, one way back, a narrow column at every size. */
 export default function FundPage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-12">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Put money behind a goal</h1>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
-          It goes into their name straight away. They earn it day by day, and whatever they do not earn comes
-          back to you.
-        </p>
-      </header>
+    <Screen title="Offer a gift" back="/" backLabel="Back">
+      <p className={PROSE}>
+        It goes into their name straight away. They earn it day by day, and whatever they do not earn comes
+        back to you.
+      </p>
       <FundGift />
       <Footer current="/fund" />
-    </main>
+    </Screen>
   );
 }

@@ -1642,3 +1642,31 @@ it is two panes. 320 is checked separately, because WCAG 1.4.10 asks for it and 
 
 **The layout stays loose on purpose**: mockups are coming and they take precedence over every visual choice
 above. What must survive them is the measurement underneath, not the arrangement.
+
+## D67, 15 Sep 2026: the pass had reached two pages out of eight
+
+**Statement.** The funder looked again and said some pages were still mobile only and still had no art
+direction. He was right, and the number is the useful part: **two pages of eight** had been converted. The
+home and the account page used the shared layout; the funder journey, taking money out, privacy, legal, the
+judges page, the offline page and a gift itself all still set their own width in place, `max-w-md` or
+`max-w-2xl` with their own margins, and still carried the Tailwind scale rather than the tokens.
+
+**Why it happened, because the pattern is worth naming.** I built the foundation, converted the two screens I
+was actively working on, measured those two, and reported the foundation as the pass. A design system that
+one screen uses is not a design system; it is one styled screen and a lot of unused variables. Nothing in the
+tests caught it, because every test I had written measured the pages it was pointed at.
+
+**What was done.** All eight now go through one `Screen`, which is also what makes the journey and
+destination distinction real rather than a description: a journey is a narrow column at every size, a
+destination grows and splits into two panes at 840. A gift is a destination now, with the days and what they
+are worth on one side and everything a person can do about it on the other. Seventy six hardcoded values
+across twelve files, the text sizes, the spacing steps, the radii and the last white, green, amber and blue
+surfaces, are gone; only the operator's own pages under `app/components/dev/` still carry theirs.
+
+**And a defect the conversion surfaced**: the back link was 36 pixels wide, because a short label makes a
+small target however tall it is. It is pulled left by its own padding now, so the word stays flush with the
+page margin while the target around it is a full 48.
+
+**What to take from it.** The check that would have caught this is not a test, it is a list: every page, and
+which layout it uses. The browser tests now run over every public page at four widths, which is that list
+made executable, and it is the reason the back link was found rather than shipped.
