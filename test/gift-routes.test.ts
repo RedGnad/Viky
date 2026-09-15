@@ -89,6 +89,11 @@ test("create refuses malformed terms with a typed code before any relay", async 
       { contact: "ama@example.com", goalType: 1, dailyTarget: 10, durationDays: 7, amount: "5000000", salt: `0x${"01".repeat(32)}`, authorization: { nonce: `0x${"02".repeat(32)}`, r: `0x${"03".repeat(32)}`, s: `0x${"04".repeat(32)}`, v: 27 } },
       "TERMS_MISMATCH",
     ],
+    // No contact at all is what the funder's page sends since D72, so it goes on to the terms, never to INVALID_CONTACT.
+    [
+      { goalType: 1, dailyTarget: 10, durationDays: 7, amount: "5000000", salt: `0x${"01".repeat(32)}`, authorization: { nonce: `0x${"02".repeat(32)}`, r: `0x${"03".repeat(32)}`, s: `0x${"04".repeat(32)}`, v: 27 } },
+      "TERMS_MISMATCH",
+    ],
   ];
   for (const [body, code] of cases) {
     const response = await createPost(post("/api/gift/create", body, { cookie }));

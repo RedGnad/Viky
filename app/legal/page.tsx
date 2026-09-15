@@ -54,7 +54,7 @@ export default function LegalPage() {
           Viky is not a bank, a payment institution or an investment service, and nothing on it is
           financial advice. Money placed behind a goal is held by a published program on the Monad
           network under rules both people can read on the <Link className="underline" href="/judges">judges page</Link>.
-          Buying and selling with a card is done by Mercuryo under Mercuryo&apos;s own terms.
+          Buying with a card is done by Mercuryo under Mercuryo&apos;s own terms.
         </p>
       </section>
 

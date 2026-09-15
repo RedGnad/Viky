@@ -8,10 +8,10 @@ import { ApiError, postJson } from "@/src/client/api";
 import { createGift, type CreatedGift } from "@/src/client/gift";
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
 import { formatAusd } from "@/src/gift-reader";
-import { nextFundingStep } from "@/src/funding-step";
+import { fundingStageShown, nextFundingStep, type FundingStage } from "@/src/funding-step";
 import { AmountError, dollarsToUnits } from "@/src/money";
 import { WAY_IN } from "@/src/rails";
-import { payoutFloorInWords } from "@/src/gift-amount";
+import { eurosToBuy, SUGGESTED_GIFT_DOLLARS } from "@/src/gift-amount";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
 import { AccountPanel } from "./AccountPanel";
 import { SessionScope } from "./SessionScope";
@@ -38,7 +38,7 @@ type Step = "form" | "waiting" | "converting" | "giving" | "done";
  * They are three screens rather than three sections because the last one is a check: GOV.UK asks for one
  * before a confirmation, and Baymard measures abandonment when a cost appears for the first time at payment.
  */
-type Stage = "who" | "howMuch" | "check" | "account";
+type Stage = FundingStage;
 
 function readable(error: unknown): string {
   if (error instanceof ApiError) return error.message;
@@ -51,12 +51,10 @@ export function FundGift() {
   const { address } = useAccount();
   const [step, setStep] = useState<Step>("form");
   const [stage, setStage] = useState<Stage>("who");
-  const [contact, setContact] = useState("");
   const [username, setUsername] = useState("");
-  // The field is in dollars and D62 settles the suggestion in euros, 50, so this is the round dollar figure
-  // beside it. What matters about it is measured: earned five days out of seven it still clears the smallest
-  // payout the rail will take, which a 25 EUR gift does not.
-  const [dollars, setDollars] = useState("50");
+  // What one smallest card payment covers, so an ordinary first gift needs one payment and not two. The fifty it
+  // replaced rested on the smallest payout the rail would take to a card, and no such payout exists here (D72).
+  const [dollars, setDollars] = useState(String(SUGGESTED_GIFT_DOLLARS));
   const [target, setTarget] = useState("10");
   const [days, setDays] = useState("7");
   const [balance, setBalance] = useState<bigint | null>(null);
@@ -86,7 +84,6 @@ export function FundGift() {
     if (!account) throw new Error("Sign in first.");
     const result = await createGift({
       account,
-      contact: contact.trim(),
       duolingoUsername: username.trim() || undefined,
       goalType: GOAL_TYPE_DUOLINGO_XP,
       dailyTarget: Number(target),
@@ -96,7 +93,7 @@ export function FundGift() {
     setCreated(result);
     setStep("done");
     await refresh();
-  }, [contact, username, target, days, dollars, refresh]);
+  }, [username, target, days, dollars, refresh]);
 
   // While the payment page is open beside this one: watch for the money, convert it, then give.
   useEffect(() => {
@@ -158,7 +155,7 @@ export function FundGift() {
     }
   })();
 
-  const ready = contact.trim().length > 0 && Number(target) > 0 && Number(days) >= 7;
+  const ready = Number(target) > 0 && Number(days) >= 7;
 
   const start = async () => {
     setProblem(null);
@@ -202,8 +199,8 @@ export function FundGift() {
       <section className="space-y-[var(--space-lg)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-lg)]">
         <h2 className={TITLE}>It is in their name.</h2>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
-          Whoever opens this link takes the gift, so send it only to {contact.trim() || "them"} and to nobody
-          else. They open it, and the money becomes theirs day by day. Whatever they do not earn comes back to
+          Whoever opens this link takes the gift, so send it only to the person it is for, and to nobody else.
+          They open it, and the money becomes theirs day by day. Whatever they do not earn comes back to
           you by itself.
         </p>
         <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] p-[var(--space-md)] text-[length:var(--type-help)]">{created.claimUrl}</p>
@@ -243,7 +240,18 @@ export function FundGift() {
     }
   })();
 
-  if (step === "form" && stage === "account") {
+  // What the account is still short of for this gift, in what the card rail must be paid. Said before the rail opens
+  // and again beside it, because a payment that falls short leaves this page waiting for a gift it cannot make (D72).
+  const toBuy = (() => {
+    try {
+      return eurosToBuy(dollarsToUnits(dollars) - (balance ?? 0n));
+    } catch {
+      return 0;
+    }
+  })();
+  const shown = fundingStageShown(stage, Boolean(address));
+
+  if (step === "form" && shown === "account") {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         <button type="button" onClick={() => setStage("check")} className={BACK_LINK}>
@@ -262,18 +270,17 @@ export function FundGift() {
     );
   }
 
-  if (step === "form" && stage === "who") {
+  if (step === "form" && shown === "who") {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         <Link href="/" className={BACK_LINK}>
           Back to my gifts
         </Link>
+        {/* The Duolingo name is the one thing asked, because it is the one thing here that protects the gift. The
+            email or phone that came first protected nothing: the claim checks the link alone and Viky never writes
+            to anybody, so it only left a fingerprint of them on a public ledger (D72). */}
         <section className={CARD}>
           <h1 className={TITLE}>Who is it for, and for what</h1>
-          <label className="flex flex-col gap-[var(--space-xs)]">
-            <span className={HELP}>Their email or phone</span>
-            <input value={contact} onChange={(event) => setContact(event.target.value)} className={FIELD} />
-          </label>
           <label className="flex flex-col gap-[var(--space-xs)]">
             <span className={HELP}>Their Duolingo name, if you know it</span>
             <input value={username} onChange={(event) => setUsername(event.target.value)} className={FIELD} />
@@ -282,11 +289,11 @@ export function FundGift() {
             Naming it is the surest thing you can do: only that Duolingo can then earn this gift, whoever opens
             the link. Leave it empty and they name their own.
           </p>
+          <p className={HELP}>Viky never writes to them. You send them the link yourself, once the gift is ready.</p>
         </section>
         <button
           type="button"
           onClick={() => setStage("howMuch")}
-          disabled={contact.trim().length === 0}
           className={PRIMARY_BUTTON}
         >
           Continue
@@ -296,7 +303,7 @@ export function FundGift() {
     );
   }
 
-  if (step === "form" && stage === "howMuch") {
+  if (step === "form" && shown === "howMuch") {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         <button type="button" onClick={() => setStage("who")} className={BACK_LINK}>
@@ -335,7 +342,7 @@ export function FundGift() {
     );
   }
 
-  if (step === "form" && stage === "check") {
+  if (step === "form" && shown === "check") {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         <button type="button" onClick={() => setStage("howMuch")} className={BACK_LINK}>
@@ -370,8 +377,7 @@ export function FundGift() {
         <section className={CARD}>
           <h2 className={TITLE}>What they can do with it</h2>
           <p className={HELP}>
-            What they earn is theirs straight away. To send it to their card they need {payoutFloorInWords()},
-            and earnings add up from one gift to the next, so a small gift is waiting rather than gone.
+            What they earn is theirs straight away, and it adds up in their account from one gift to the next.
           </p>
         </section>
 
@@ -380,7 +386,7 @@ export function FundGift() {
             <h2 className={TITLE}>Paying for it</h2>
             <p className={HELP}>
               You do not have enough in your account yet, so the next step opens {WAY_IN.name} to pay by card.
-              The smallest payment they take is {WAY_IN.smallest}, they keep {WAY_IN.fee} of what you pay, and
+              To cover this gift, pay at least {toBuy} EUR. The smallest payment they take is {WAY_IN.smallest}, they keep {WAY_IN.fee} of what you pay, and
               they check who you are the first time, once. Whatever is left over stays in your account for the
               next gift.
             </p>
@@ -423,10 +429,13 @@ export function FundGift() {
             </p>
             <ol className={`list-decimal pl-[var(--space-lg)] ${HELP}`}>
               <li>Choose Buy, not sell.</li>
-              <li>Pay in EUR, and type how much.</li>
+              <li>{toBuy > 0 ? `Pay in EUR, at least ${toBuy} EUR.` : "Pay in EUR, and type how much."}</li>
               <li>Choose to receive MON.</li>
               <li>Choose the Monad network.</li>
               <li>Paste your identifier where they ask where to send it.</li>
+              {/* Their page asks what kind of destination it is. The key behind it is made on this device from the
+                  passkey and held by nobody else, so the true answer is the person's own, non-custodial (D72). */}
+              <li>When they ask whose it is, choose your own, non-custodial, not an exchange or a platform.</li>
             </ol>
             <div className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] p-[var(--space-md)]">
               <p className={HELP}>Before you pay, check what you pasted starts and ends like this:</p>

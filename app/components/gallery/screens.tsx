@@ -43,17 +43,13 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     who: "funder",
     title: "Who it is for",
     hierarchy:
-      "The question, then the two fields, then why naming the goal account matters. One thing per screen, one field per row: forms that follow that get 78 % first-try submissions against 42 % (NN/g, Seckler et al.).",
+      "The question, then its one field, then why naming the goal account matters, then that Viky writes to nobody. One thing per screen, one field per row: forms that follow that get 78 % first-try submissions against 42 % (NN/g, Seckler et al.).",
     builtFrom: "app/components/FundGift.tsx",
-    quotes: ["Who is it for, and for what", "Their email or phone", "Their Duolingo name, if you know it"],
+    quotes: ["Who is it for, and for what", "Their Duolingo name, if you know it", "Viky never writes to them. You send them the link yourself, once the gift is ready."],
     render: () => (
       <>
         <section className={CARD}>
           <h2 className={TITLE}>Who is it for, and for what</h2>
-          <label className="flex flex-col gap-[var(--space-xs)]">
-            <span className={HELP}>Their email or phone</span>
-            <input readOnly value="ama@example.com" className={FIELD} />
-          </label>
           <label className="flex flex-col gap-[var(--space-xs)]">
             <span className={HELP}>Their Duolingo name, if you know it</span>
             <input readOnly value="ama_learns" className={FIELD} />
@@ -62,6 +58,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
             Naming it is the surest thing you can do: only that Duolingo can then earn this gift, whoever opens
             the link. Leave it empty and they name their own.
           </p>
+          <p className={HELP}>Viky never writes to them. You send them the link yourself, once the gift is ready.</p>
         </section>
         <span className={PRIMARY_BUTTON}>Continue</span>
       </>
@@ -108,7 +105,15 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     hierarchy:
       "The four facts, then the missed-day rule, then what they can do with it, then the cost. The cost is last and it is on the screen before anything is paid: Baymard measures 12 % abandonment when a cost first appears at payment.",
     builtFrom: "app/components/FundGift.tsx",
-    quotes: ["Check this over", "In their name", "Theirs for each day earned", "First day counted", "What they can do with it"],
+    quotes: [
+      "Check this over",
+      "In their name",
+      "Theirs for each day earned",
+      "First day counted",
+      "What they can do with it",
+      "and it adds up in their account from one gift to the next.",
+      "To cover this gift, pay at least",
+    ],
     render: () => (
       <>
         <section className={CARD}>
@@ -139,8 +144,14 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
         <section className={CARD}>
           <h2 className={TITLE}>What they can do with it</h2>
           <p className={HELP}>
-            What they earn is theirs straight away. To send it to their card they need about $21, and earnings
-            add up from one gift to the next, so a small gift is waiting rather than gone.
+            What they earn is theirs straight away, and it adds up in their account from one gift to the next.
+          </p>
+        </section>
+        <section className={CARD}>
+          <h2 className={TITLE}>Paying for it</h2>
+          <p className={HELP}>
+            You do not have enough in your account yet, so the next step opens Mercuryo to pay by card. To cover
+            this gift, pay at least 49 EUR.
           </p>
         </section>
         <span className={PRIMARY_BUTTON}>Continue</span>
@@ -152,9 +163,16 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     who: "funder",
     title: "Paying by card",
     hierarchy:
-      "The five steps in the order the other page asks for them, then the check on what was pasted, then the two ways back. Their page cannot be pre-filled, so every one of these is a thing a person does by hand and the screen has to carry it.",
+      "The six steps in the order the other page asks for them, the amount to buy among them, then the check on what was pasted, then the two ways back. Their page cannot be pre-filled, so every one of these is a thing a person does by hand and the screen has to carry it.",
     builtFrom: "app/components/FundGift.tsx",
-    quotes: ["Waiting for your payment. Keep this page open.", "Choose Buy, not sell.", "Choose the Monad network.", "Copy my identifier again"],
+    quotes: [
+      "Waiting for your payment. Keep this page open.",
+      "Choose Buy, not sell.",
+      "Pay in EUR, at least",
+      "Choose the Monad network.",
+      "When they ask whose it is, choose your own, non-custodial, not an exchange or a platform.",
+      "Copy my identifier again",
+    ],
     render: () => (
       <>
         <section className={CARD}>
@@ -165,10 +183,11 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
             <p className={HELP}>Mercuryo&apos;s page opens on something else by default, so set each of these yourself:</p>
             <ol className={`list-decimal pl-5 ${HELP}`}>
               <li>Choose Buy, not sell.</li>
-              <li>Pay in EUR, and type how much.</li>
+              <li>Pay in EUR, at least 49 EUR.</li>
               <li>Choose to receive MON.</li>
               <li>Choose the Monad network.</li>
               <li>Paste your identifier where they ask where to send it.</li>
+              <li>When they ask whose it is, choose your own, non-custodial, not an exchange or a platform.</li>
             </ol>
             <div className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)]">
               <p className={HELP}>Before you pay, check what you pasted starts and ends like this:</p>
@@ -202,7 +221,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
         </Moment>
         <section className={CARD}>
           <p className={HELP}>
-            Whoever opens this link takes the gift, so send it only to ama@example.com and to nobody else.
+            Whoever opens this link takes the gift, so send it only to the person it is for, and to nobody else.
           </p>
           <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] p-[var(--space-md)] text-[length:var(--type-help)]">
             https://viky.cash/g/3?k=example
@@ -344,29 +363,30 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
   {
     slug: "recipient-money",
     who: "recipient",
-    title: "Taking it out",
+    title: "Their money",
     hierarchy:
-      "What they hold, then the two things they can do with it, then what the card payout needs. The conditions are on this screen and not at the end of it: a floor discovered after a journey is a journey wasted.",
-    builtFrom: "app/components/YourMoney.tsx",
-    quotes: ["In your account", "Earnings add up here from one gift to the next, so a small gift is waiting rather than gone."],
+      "What they hold, then the one thing they can do with it today: send all of it to another account of theirs, with the exact amount that leaves written out before they sign. Nothing here offers a card or a bank, because nothing can pay one (D72).",
+    builtFrom: "app/components/CashOut.tsx",
+    quotes: [
+      "Yours to take out",
+      "Your money stays yours, and nothing about it expires.",
+      "Send it to another account of yours",
+      "exactly, and nothing to pay: Viky covers what it costs to move.",
+    ],
     render: () => (
       <>
         <section className={CARD}>
-          <p className={HELP}>In your account</p>
+          <p className={HELP}>Yours to take out</p>
           <p className={MONEY}>$28.56</p>
-          <p className={HELP}>
-            Earnings add up here from one gift to the next, so a small gift is waiting rather than gone.
-          </p>
+          <p className={HELP}>Your money stays yours, and nothing about it expires.</p>
         </section>
-        <span className={PRIMARY_BUTTON}>Send it to my card</span>
-        <span className={SECONDARY_BUTTON}>Send it to another account of mine</span>
         <section className={CARD}>
-          <h2 className={TITLE}>What a card payout needs</h2>
-          <ul className={`list-disc pl-5 ${HELP}`}>
-            <li>About $21, and you have $28.56.</li>
-            <li>A bank card in your name, in euros or dollars.</li>
-            <li>One identity check at the partner, the first time only.</li>
-          </ul>
+          <h2 className={TITLE}>Send it to another account of yours</h2>
+          <p className={HELP}>
+            All of it goes, $28.564213 exactly, and nothing to pay: Viky covers what it costs to move.
+          </p>
+          <input readOnly placeholder="Paste your other account's identifier" className={FIELD} />
+          <span className={PRIMARY_BUTTON}>Send it</span>
         </section>
       </>
     ),

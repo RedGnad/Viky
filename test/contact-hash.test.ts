@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { contactHash, normaliseContact } from "../src/contact-hash";
+import { contactHash, NO_CONTACT_HASH, normaliseContact } from "../src/contact-hash";
+
+test("a gift that names no contact carries a fixed value the contract accepts, and that names nobody", () => {
+  assert.match(NO_CONTACT_HASH, /^0x[0-9a-f]{64}$/);
+  assert.notEqual(NO_CONTACT_HASH, `0x${"0".repeat(64)}`, "the contract refuses a zero hash");
+  assert.notEqual(NO_CONTACT_HASH, contactHash("ama@example.com"));
+});
 
 test("emails are trimmed and lowercased, phones reduced to E.164", () => {
   assert.deepEqual(normaliseContact("  Ama@Example.COM "), { kind: "email", value: "ama@example.com" });

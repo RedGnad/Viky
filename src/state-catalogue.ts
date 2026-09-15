@@ -41,7 +41,7 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
       {
         name: "Who it is for",
         when: "signed in, first question of three",
-        says: ["Who is it for, and for what", "Their email or phone", "Their Duolingo name, if you know it"],
+        says: ["Who is it for, and for what", "Their Duolingo name, if you know it", "Viky never writes to them. You send them the link yourself, once the gift is ready."],
       },
       {
         name: "How much, and for how long",
@@ -74,7 +74,8 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
         when: "the account holds less than the gift is worth",
         says: [
           "Choose Buy, not sell.",
-          "Pay in EUR, and type how much.",
+          "Pay in EUR, at least",
+          "When they ask whose it is, choose your own, non-custodial, not an exchange or a platform.",
           "Choose to receive MON.",
           "Choose the Monad network.",
           "Paste your identifier where they ask where to send it.",
@@ -213,16 +214,10 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       { name: "What is theirs", when: "the gift has earned anything", says: ["Yours to take out"] },
       { name: "Moving it to another account of theirs", when: "they hold something", says: ["Send it to another account of mine", "Paste your other account's identifier", "Sent. It is in your other account now."] },
       {
-        name: "Paying out to a card",
+        name: "Paying out to a card or a bank",
         when: "they want money rather than a balance",
         says: [],
-        gap: "not built. It waits on ExitRouter being reviewed, deployed and wired. When it is: it needs a bank card and a one-off identity check at the partner, it cannot pay out below about $21, it is closed in the United Kingdom and in 59 countries, and it goes to a card in euros or dollars, never a bank account (D59, D60, D62).",
-      },
-      {
-        name: "Below the payout floor",
-        when: "they hold something, but less than the smallest order the rail takes",
-        says: [],
-        gap: "the refusal exists in the route (BELOW_PAYOUT_MINIMUM) and has no screen. It must say that earnings add up across gifts, so a small gift is waiting rather than lost.",
+        gap: "not offered, and promised nowhere on screen. The card rail pays out to no Visa and no Mastercard in France or anywhere else in the EEA, by its own help centre article of 15 Sep, and ExitRouter is neither deployed nor wired to it (D72). Nothing about another way out is written until the funder decides.",
       },
     ],
   },

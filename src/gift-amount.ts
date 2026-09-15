@@ -1,13 +1,10 @@
-import { PAYOUT_MINIMUM } from "./exit-plan";
-
 /**
- * What a gift should be worth, and why the floor is not ours.
+ * What a gift should be worth, and what a funder must pay for it.
  *
- * Two different numbers get confused if they are not written down together. The funder cannot put in less
- * than the card rail's own smallest payment, so that is a hard floor on the first gift anybody makes. And the
- * recipient cannot turn earnings into money on their card below the payout rail's own smallest order, which
- * at the rate measured on 14 Sep is close to twenty one dollars (D60). Neither is a rule of Viky's; both
- * decide what a gift is worth making.
+ * One floor is not ours: the funder cannot pay less than the card rail's smallest payment. There used to be a
+ * second, the smallest payout the rail would take to a card, and the suggested amount was built on it. The rail
+ * pays out to no card in France or anywhere else in the EEA (D72), so that floor decides nothing any more and is
+ * gone from here.
  *
  * Measured on 14 Sep 2026, end to end, the rail's own fee and the unspendable reserve both taken out:
  * 25 EUR becomes $28.51, 35 EUR becomes $40.01, 50 EUR becomes $57.26. Those are not proportional to each
@@ -17,8 +14,11 @@ import { PAYOUT_MINIMUM } from "./exit-plan";
 
 /** The smallest card payment the way in accepts (D20). Nothing smaller can start a gift at all. */
 export const SMALLEST_CARD_PAYMENT_EUR = 25;
-/** What the funder's screen offers before they choose, so an ordinary gift is one the recipient can cash. */
-export const SUGGESTED_GIFT_EUR = 50;
+/**
+ * What the funder's screen offers before they choose: the round dollar amount one smallest card payment covers, so
+ * an ordinary first gift takes one payment rather than two (D72).
+ */
+export const SUGGESTED_GIFT_DOLLARS = 25;
 
 /**
  * The three measurements the rest of this rests on, taken on 14 Sep 2026: what one euro buys of the coin
@@ -29,6 +29,13 @@ const COIN_PER_EURO = 49.2338;
 const DOLLARS_PER_COIN = 0.023372;
 const UNSPENDABLE_COINS = 11;
 
+/**
+ * How far the rate may move against a funder before what they were told to buy falls short. The rates above are a
+ * day's measurement and the coin moves daily; a margin costs the funder nothing, because whatever is left over stays
+ * in their own account for the next gift.
+ */
+const RATE_MARGIN = 1.1;
+
 /** What a card payment is worth inside Viky, at the rate measured. An estimate, and named as one. */
 export function roughlyInDollars(euros: number): number {
   const coins = euros * COIN_PER_EURO - UNSPENDABLE_COINS;
@@ -37,30 +44,16 @@ export function roughlyInDollars(euros: number): number {
 }
 
 /**
- * The payout rail's smallest order, in dollars, at the same measured rate. For our own arithmetic only.
+ * How many whole euros a funder must pay on the card rail to cover what their account is short of (D72).
  *
- * Never put this number on a screen. The rail's floor is fixed in its own coin, not in dollars, so the dollar
- * figure moves every day with the rate: the same floor read $20.56 on 14 Sep and will read something else
- * tomorrow. A figure to the cent would be a promise the rate can break by lunchtime. `payoutFloorInWords` is
- * what a person sees.
+ * The defect it answers: the screen suggested $50, the funder bought the rail's smallest 25 EUR, received about
+ * $28.50, and the page went on waiting for a gift that could not be made, because nothing had said how much to buy.
+ * It inverts `roughlyInDollars` with a tenth added for the rate, and never goes below the smallest payment the rail
+ * would take.
  */
-export function payoutFloorInDollars(): number {
-  const coins = Number(PAYOUT_MINIMUM / 1_000_000_000_000n) / 1_000_000;
-  return Math.round(coins * DOLLARS_PER_COIN * 100) / 100;
-}
-
-/** What a person is told, rounded to a whole dollar and hedged, because the exact figure moves daily. */
-export function payoutFloorInWords(): string {
-  return `about $${Math.round(payoutFloorInDollars())}`;
-}
-
-/**
- * Whether a gift of this many euros, earned this many days out of its length, leaves the recipient enough to
- * be paid out on its own. The honest answer for a small gift is no, and the screen says so rather than
- * letting them find out at the end. It is only ever "on its own": earnings stay in the recipient's account
- * across gifts, so a gift too small to cash today is waiting rather than lost.
- */
-export function cashableOnItsOwn(euros: number, earnedDays: number, durationDays: number): boolean {
-  if (durationDays <= 0 || earnedDays <= 0) return false;
-  return (roughlyInDollars(euros) * earnedDays) / durationDays >= payoutFloorInDollars();
+export function eurosToBuy(shortfallUnits: bigint): number {
+  if (shortfallUnits <= 0n) return 0;
+  const dollars = Number(shortfallUnits) / 1_000_000;
+  const coins = dollars / DOLLARS_PER_COIN + UNSPENDABLE_COINS;
+  return Math.max(SMALLEST_CARD_PAYMENT_EUR, Math.ceil((coins / COIN_PER_EURO) * RATE_MARGIN));
 }

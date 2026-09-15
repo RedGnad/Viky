@@ -6,21 +6,18 @@ import { useAccount } from "@/src/account/provider";
 import { ApiError } from "@/src/client/api";
 import { sendOwnMoney } from "@/src/client/gift";
 import { readAusdBalance } from "@/src/client/onchain";
-import { formatAusd } from "@/src/gift-reader";
+import { formatAusd, formatAusdExact } from "@/src/gift-reader";
 import { AccountPanel } from "./AccountPanel";
 import { SessionScope } from "./SessionScope";
 import { CARD, FIELD, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
 
 /**
- * What a gift earned, and what the person can do with it today.
+ * What a gift earned, and what the person can do with it today: move all of it to another account of theirs, from
+ * one signature, and nothing else.
  *
- * Paying out to a card is not here, and that is deliberate rather than unfinished: the only way we had asked
- * the person's own account to approve an exchange and then swap, two contract calls, and Monad refuses a
- * contract call from an account below its 10 MON reserve (D53). A recipient holds a gift and no MON, so that
- * screen could never have worked for anybody. It comes back through `ExitRouter`, where the relayer does the
- * calling and the person only signs.
- *
- * What is here works today and needs nothing of them: moving their own money, from one signature.
+ * Nothing here promises a card or a bank. The card rail's own help centre, in an article published on 15 Sep, lists
+ * France and the rest of the EEA among the places it pays out to no Visa and no Mastercard, which is where the
+ * pilot's recipients are, and `ExitRouter` is neither deployed nor wired to it (D72).
  */
 
 type Step = "look" | "toAccount" | "sentToAccount";
@@ -76,8 +73,7 @@ export function CashOut() {
         </p>
         <p className={MONEY}>{holding === null ? "..." : formatAusd(holding)}</p>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
-          Sending it to your card or your bank is coming. Your money stays yours in the meantime, and nothing
-          about it expires.
+          Your money stays yours, and nothing about it expires.
         </p>
       </section>
 
@@ -91,9 +87,10 @@ export function CashOut() {
         <section className={CARD}>
           <h2 className={TITLE}>Send it to another account of yours</h2>
           <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
-            Any amount, and nothing to pay: Viky covers what it costs to move. Useful for putting what you
-            earned in one place before taking it out. Sign in to your other account and open its
-            &quot;For judges&quot; page to find its identifier.
+            {/* The whole balance leaves, to the last of its six decimals, so that is what is written (D72). */}
+            All of it goes, {holding === null ? "..." : formatAusdExact(holding)} exactly, and nothing to pay: Viky
+            covers what it costs to move. Useful for putting what you earned in one place. Sign in to your other
+            account and open its &quot;For judges&quot; page to find its identifier.
           </p>
           <input
             value={ownAccount}

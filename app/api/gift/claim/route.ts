@@ -13,8 +13,8 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * Binds the signed-in account to the gift its claim link points to. The link secret proves the
- * caller received what the funder sent to the named contact; the evidence signer attests it and the
+ * Binds the signed-in account to the gift its claim link points to. The link secret is all that is
+ * checked, so whoever holds the link takes the gift (D58, D72); the evidence signer attests it and the
  * relayer submits. The money is already in the recipient's name; this is where it gets an account.
  */
 export async function POST(request: Request) {

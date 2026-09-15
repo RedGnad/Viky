@@ -26,7 +26,7 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)]">
           <li>The name you give your account: it stays in your device&apos;s passkey manager (iCloud Keychain, Google Password Manager, 1Password) as a label. Viky has no copy.</li>
           <li>Your Duolingo password: you sign in to Duolingo inside Reclaim&apos;s verification page, never on Viky.</li>
-          <li>Your card number or identity documents: card purchases and sales happen on Mercuryo, which runs its own identity checks under its own privacy policy.</li>
+          <li>Your card number or identity documents: card purchases happen on Mercuryo, which runs its own identity checks under its own privacy policy.</li>
         </ul>
       </section>
 
@@ -37,7 +37,7 @@ export default function PrivacyPage() {
             <strong>Your account&apos;s public identifier.</strong> Created on your device from your passkey. Kept in our database with each gift you fund or receive, and visible on the Monad network, a public ledger.
           </li>
           <li>
-            <strong>If you fund a gift:</strong> the gift terms (amount, goal, daily target, duration) and the recipient&apos;s email or phone number as a one-way fingerprint only. The fingerprint is what the database and the public program hold; the plain email or number is never stored.
+            <strong>If you fund a gift:</strong> the gift terms (amount, goal, daily target, duration). Gifts made before 15 September 2026 also hold the recipient&apos;s email or phone number as a one-way fingerprint, in the database and in the public program; the plain email or number was never stored, and gifts made since ask for neither.
           </li>
           <li>
             <strong>If you receive a gift:</strong> your Duolingo username, profile id and display name (as read at each attested reading, including the short code you add to it once), kept in the database with each reading; a keyed pseudonym of that profile id, which is what the public program sees; your total XP as read, and the attested proof of the reading (produced with Reclaim), kept as the record of each day.
@@ -58,9 +58,9 @@ export default function PrivacyPage() {
           <li><strong>Neon</strong> hosts the database (Frankfurt, Germany).</li>
           <li><strong>Reclaim Protocol</strong> runs the verification of your Duolingo progress; its attestation service sees your Duolingo session in the way its protocol describes, and Viky receives only the proof.</li>
           <li><strong>Duolingo</strong> answers a public profile lookup for the username you enter.</li>
-          <li><strong>Mercuryo</strong> handles card purchases and sales, with its own account and identity checks.</li>
+          <li><strong>Mercuryo</strong> handles card purchases, with its own account and identity checks.</li>
           <li><strong>Kuru</strong> provides the exchange used to convert between currencies; it sees your account identifier and the amount.</li>
-          <li><strong>The Monad network</strong> is public and permanent: account identifiers, gift terms, the contact fingerprint, the identity pseudonym, every check-in and every amount moved can be read by anyone and cannot be erased.</li>
+          <li><strong>The Monad network</strong> is public and permanent: account identifiers, gift terms, the contact fingerprint of gifts made before 15 September 2026, the identity pseudonym, every check-in and every amount moved can be read by anyone and cannot be erased.</li>
         </ul>
       </section>
 
