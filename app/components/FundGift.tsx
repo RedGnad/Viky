@@ -206,7 +206,7 @@ export function FundGift() {
           else. They open it, and the money becomes theirs day by day. Whatever they do not earn comes back to
           you by itself.
         </p>
-        <p className="select-all break-all rounded-[var(--radius-control)] border border-[var(--divider)] p-[var(--space-md)] text-[length:var(--type-help)]">{created.claimUrl}</p>
+        <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] p-[var(--space-md)] text-[length:var(--type-help)]">{created.claimUrl}</p>
         <button
           type="button"
           onClick={() => {
@@ -428,7 +428,7 @@ export function FundGift() {
               <li>Choose the Monad network.</li>
               <li>Paste your identifier where they ask where to send it.</li>
             </ol>
-            <div className="rounded-[var(--radius-control)] border border-[var(--divider)] p-[var(--space-md)]">
+            <div className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] p-[var(--space-md)]">
               <p className={HELP}>Before you pay, check what you pasted starts and ends like this:</p>
               <p className="text-[length:var(--type-body)] tabular-nums">
                 {address!.slice(0, 6)}
