@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Screen } from "../components/Screen";
 import Link from "next/link";
 import { Footer } from "../components/Footer";
 
@@ -10,27 +11,27 @@ export const metadata: Metadata = {
 // that actually holds the data. Update it whenever a store or a processor changes.
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-12">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">Privacy</h1>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+    <Screen layout="destination" back="/account" backLabel="Back to my account">
+      <header className="space-y-[var(--space-sm)]">
+        <h1 className="text-[length:var(--type-money)] font-semibold">Privacy</h1>
+        <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           What Viky keeps about you, where it goes, and for how long. This describes the current test
           version and is updated before anyone outside the team uses Viky.
         </p>
       </header>
 
-      <section className="space-y-2 text-sm">
+      <section className="space-y-[var(--space-sm)] text-[length:var(--type-help)]">
         <h2 className="font-medium">What Viky never receives</h2>
-        <ul className="list-disc space-y-1 pl-5">
+        <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)]">
           <li>The name you give your account: it stays in your device&apos;s passkey manager (iCloud Keychain, Google Password Manager, 1Password) as a label. Viky has no copy.</li>
           <li>Your Duolingo password: you sign in to Duolingo inside Reclaim&apos;s verification page, never on Viky.</li>
           <li>Your card number or identity documents: card purchases and sales happen on Mercuryo, which runs its own identity checks under its own privacy policy.</li>
         </ul>
       </section>
 
-      <section className="space-y-2 text-sm">
+      <section className="space-y-[var(--space-sm)] text-[length:var(--type-help)]">
         <h2 className="font-medium">What Viky keeps, and where</h2>
-        <ul className="list-disc space-y-1 pl-5">
+        <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)]">
           <li>
             <strong>Your account&apos;s public identifier.</strong> Created on your device from your passkey. Kept in our database with each gift you fund or receive, and visible on the Monad network, a public ledger.
           </li>
@@ -49,9 +50,9 @@ export default function PrivacyPage() {
         </ul>
       </section>
 
-      <section className="space-y-2 text-sm">
+      <section className="space-y-[var(--space-sm)] text-[length:var(--type-help)]">
         <h2 className="font-medium">Who processes it</h2>
-        <ul className="list-disc space-y-1 pl-5">
+        <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)]">
           <li><strong>Vercel</strong> hosts the application (Paris region) and keeps standard request logs.</li>
           <li><strong>Neon</strong> hosts the database (Frankfurt, Germany).</li>
           <li><strong>Reclaim Protocol</strong> runs the verification of your Duolingo progress; its attestation service sees your Duolingo session in the way its protocol describes, and Viky receives only the proof.</li>
@@ -62,9 +63,9 @@ export default function PrivacyPage() {
         </ul>
       </section>
 
-      <section className="space-y-2 text-sm">
+      <section className="space-y-[var(--space-sm)] text-[length:var(--type-help)]">
         <h2 className="font-medium">How long</h2>
-        <ul className="list-disc space-y-1 pl-5">
+        <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)]">
           <li>A verification session that is never completed is deleted after 24 hours.</li>
           <li>Completed verifications and gift records are kept as long as the gift exists and afterwards as its record, until you ask for their deletion.</li>
           <li>The session cookie expires after 12 hours; request counters after a few minutes.</li>
@@ -72,7 +73,7 @@ export default function PrivacyPage() {
         </ul>
       </section>
 
-      <section className="space-y-2 text-sm">
+      <section className="space-y-[var(--space-sm)] text-[length:var(--type-help)]">
         <h2 className="font-medium">Your rights</h2>
         <p>
           You can ask what Viky holds about you, have it corrected, or have the database records deleted
@@ -82,6 +83,6 @@ export default function PrivacyPage() {
       </section>
 
       <Footer current="/privacy" />
-    </main>
+    </Screen>
   );
 }

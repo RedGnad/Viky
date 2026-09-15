@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { CARD, FIELD, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./ui";
+import { BODY, CARD, FIELD, HELP, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON } from "./ui";
 import { useAccount } from "@/src/account/provider";
 import * as mera from "@/src/account/mera";
 import { ApiError } from "@/src/client/api";
@@ -8,6 +8,7 @@ import { bindGoalAccount, claimGift, countNow, loadGiftStatus, nameGoalAccount, 
 import { AccountPanel } from "./AccountPanel";
 import { catchUpDay, deadlineInWords } from "@/src/catch-up";
 import { DayRow } from "./DayRow";
+import { Screen } from "./Screen";
 
 /**
  * The recipient's whole journey on one screen: see the money in their name, open it with a passkey,
@@ -164,17 +165,16 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
 
   if (loadError) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 px-6 py-12">
-        <h1 className="text-2xl font-semibold">Viky</h1>
-        <p>{loadError}</p>
-      </main>
+      <Screen title="Viky">
+        <p className={BODY}>{loadError}</p>
+      </Screen>
     );
   }
   if (!gift) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12">
-        <p style={{ color: "var(--muted)" }}>One moment</p>
-      </main>
+      <Screen>
+        <p className={HELP}>One moment</p>
+      </Screen>
     );
   }
 
@@ -190,21 +190,161 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
   // "1 of 7 done, 0 missed" and looks broken (D50).
   const catchUp = nowMs === 0 ? undefined : catchUpDay(gift, gift.catchUpSeconds, nowMs);
 
-  return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-12">
-      <header className="space-y-3">
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
-          Viky
+  // The second pane of a gift: everything a person can do about it, beside the days rather than under
+  // them. Below 840 it simply follows them, in one column, so a phone loses nothing.
+  const actions = (
+    <>
+      {gift.cancelled ? <p className={BODY}>This gift was taken back before it was opened.</p> : null}
+
+      {!gift.cancelled && !signedIn ? (
+        <section className="space-y-[var(--space-md)]">
+          <p className="font-medium">{gift.opened ? "Sign in to see your gift." : "Create your account to open it. Nothing to install."}</p>
+          <AccountPanel />
+        </section>
+      ) : null}
+
+      {theirs && gift.opened ? (
+        <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
+          This gift is being earned by the person you sent it to. There is nothing for you to do: what they
+          earn is theirs, and what they miss comes back to you by itself.
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight">
+      ) : null}
+
+      {!gift.cancelled && signedIn && !gift.opened ? (
+        <button type="button" onClick={open} disabled={working || !token} className={PRIMARY_BUTTON}>
+          {busy === "opening" ? "Opening" : "Open my gift"}
+        </button>
+      ) : null}
+
+      {!gift.cancelled && mine && !account.bound && account.source === "funder" && account.username ? (
+        <section className={CARD}>
+          <p className="font-medium">Your Duolingo: {account.username}</p>
+          <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
+            Named by the person who sent this. Nothing to sign in to, nothing to install: your lessons are read from your public profile.
+          </p>
+          <button type="button" onClick={bind} disabled={working} className={PRIMARY_BUTTON}>
+            {busy === "binding" ? "Reading your profile" : "Start counting"}
+          </button>
+        </section>
+      ) : null}
+
+      {!gift.cancelled && mine && !account.bound && account.source !== "funder" && (!account.code || renaming) ? (
+        <section className={CARD}>
+          <label className="block text-[length:var(--type-help)] font-medium" htmlFor="duolingo-username">
+            Your Duolingo username
+          </label>
+          <input
+            id="duolingo-username"
+            value={typedUsername}
+            onChange={(event) => setTypedUsername(event.target.value)}
+            className={FIELD}
+            placeholder="ama_learns"
+            disabled={working}
+          />
+          <button type="button" onClick={name} disabled={working || typedUsername.trim().length === 0} className={PRIMARY_BUTTON}>
+            {busy === "naming" ? "One moment" : "Continue"}
+          </button>
+          <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
+            No password, no sign-in: your lessons are read from your public profile. Next, a short code proves the profile is yours.
+          </p>
+          {renaming ? (
+            <button type="button" onClick={() => setRenaming(false)} className={SECONDARY_BUTTON}>
+              Keep the name I had
+            </button>
+          ) : null}
+        </section>
+      ) : null}
+
+      {!gift.cancelled && mine && !account.bound && account.source === "recipient" && account.code && !renaming ? (
+        <section className={CARD}>
+          <p className="font-medium">Prove {account.username} is yours</p>
+          <p className="text-[length:var(--type-help)]">
+            In Duolingo, open Profile, then Settings, then Name, and add this code to your name for a minute:
+          </p>
+          <p className="text-center font-mono text-[length:var(--type-money)] tracking-widest">{account.code}</p>
+          <button type="button" onClick={bind} disabled={working} className={PRIMARY_BUTTON}>
+            {busy === "binding" ? "Reading your profile" : "I added it"}
+          </button>
+          <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
+            You can remove the code right after.
+          </p>
+          <button type="button" onClick={() => setRenaming(true)} className={SECONDARY_BUTTON}>
+            That is not my Duolingo name
+          </button>
+        </section>
+      ) : null}
+
+      {!gift.cancelled && mine && account.bound && !gift.finished ? (
+        <section className={CARD}>
+          <p className="font-medium">{gift.todayDayIndex === 0 ? "Counting starts tomorrow." : `Day ${gift.todayDayIndex} of ${gift.durationDays}. Counted by itself, every day.`}</p>
+          {gift.todayDayIndex === 0 ? (
+            <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
+              Everything you learn from now on already counts toward tomorrow, the first day.
+            </p>
+          ) : null}
+          <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
+            Do your lesson; nothing else. Each morning Viky reads your Duolingo ({account.username}) and counts the day before.
+          </p>
+          {catchUp ? (
+            <p className="text-[length:var(--type-help)] font-medium">
+              {theirs
+                ? `Yesterday is not counted yet, and not lost either: a lesson before ${deadlineInWords(catchUp.deadlineMs, nowMs)} still earns that day.`
+                : `Yesterday is not counted yet, and not lost either. Do a lesson before ${deadlineInWords(catchUp.deadlineMs, nowMs)} and it still counts. Two lessons and you are back up to date.`}
+            </p>
+          ) : null}
+          {gift.missedDays > 0 ? (
+            <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
+              {gift.returnedDisplay} has gone back so far, for {gift.missedDays} {gift.missedDays === 1 ? "day" : "days"} without a lesson. The days ahead are still yours to take.
+            </p>
+          ) : null}
+          <button type="button" onClick={count} disabled={working || gift.todayDayIndex === 0} className={SECONDARY_BUTTON}>
+            {busy === "counting" ? "Reading your profile" : "Count now"}
+          </button>
+        </section>
+      ) : null}
+
+      {!gift.cancelled && signedIn && gift.finished ? (
+        <section className="space-y-[var(--space-sm)] rounded-[var(--radius-card)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-lg)]">
+          <p className="font-medium">This gift is finished.</p>
+          <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
+            {gift.creditedDays} of {gift.durationDays} days were yours, so {gift.alreadyTheirsDisplay} is yours to keep.
+            {gift.missedDays > 0 ? ` The other ${gift.missedDays} went back to the person who sent it.` : ""}
+          </p>
+        </section>
+      ) : null}
+
+      {mine && BigInt(gift.earned) > 0n ? (
+        <button type="button" onClick={take} disabled={working} className={SECONDARY_BUTTON}>
+          {busy === "taking" ? "One moment" : `Take ${gift.earnedDisplay}`}
+        </button>
+      ) : null}
+
+      {notice ? <p className="rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--joy)] p-[var(--space-md)] text-[length:var(--type-help)]">{notice}</p> : null}
+      {problem ? (
+        <p role="alert" className="rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
+          {problem}
+        </p>
+      ) : null}
+    </>
+  );
+
+  return (
+    <Screen
+      layout="destination"
+      back="/"
+      backLabel="Back to my gifts"
+      aside={<div className="flex flex-col gap-[var(--space-xl)]">{actions}</div>}
+    >
+      <header className="flex flex-col gap-[var(--space-sm)]">
+        <h1 className="text-[length:var(--type-money)] leading-[var(--type-money-leading)] font-semibold">
           {theirs ? `You put ${gift.amountDisplay} in their name.` : `${gift.amountDisplay} is in your name.`}
         </h1>
-        <p className="text-lg leading-snug">
+        <p className={PROSE}>
           {theirs
             ? `It becomes theirs as they go: ${gift.perDayDisplay} for each day with their lesson, for ${gift.durationDays} days.`
             : `Someone put it there for your Duolingo. It becomes yours as you go: ${gift.perDayDisplay} for each day with your lesson, for ${gift.durationDays} days.`}
         </p>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+        <p className={HELP}>
           {theirs
             ? `${gift.perDayDisplay} comes back to you for each day without it. Nobody else ever profits from a missed day.`
             : `${gift.perDayDisplay} goes back to them for each day without it. Nobody else ever profits from a missed day.`}
@@ -220,137 +360,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         returnedDisplay={gift.returnedDisplay}
       />
 
-      {gift.cancelled ? <p>This gift was taken back before it was opened.</p> : null}
-
-      {!gift.cancelled && !signedIn ? (
-        <section className="space-y-3">
-          <p className="font-medium">{gift.opened ? "Sign in to see your gift." : "Create your account to open it. Nothing to install."}</p>
-          <AccountPanel />
-        </section>
-      ) : null}
-
-      {theirs && gift.opened ? (
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
-          This gift is being earned by the person you sent it to. There is nothing for you to do: what they
-          earn is theirs, and what they miss comes back to you by itself.
-        </p>
-      ) : null}
-
-      {!gift.cancelled && signedIn && !gift.opened ? (
-        <button type="button" onClick={open} disabled={working || !token} className={PRIMARY_BUTTON}>
-          {busy === "opening" ? "Opening" : "Open my gift"}
-        </button>
-      ) : null}
-
-      {!gift.cancelled && mine && !account.bound && account.source === "funder" && account.username ? (
-        <section className={CARD}>
-          <p className="font-medium">Your Duolingo: {account.username}</p>
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
-            Named by the person who sent this. Nothing to sign in to, nothing to install: your lessons are read from your public profile.
-          </p>
-          <button type="button" onClick={bind} disabled={working} className={PRIMARY_BUTTON}>
-            {busy === "binding" ? "Reading your profile" : "Start counting"}
-          </button>
-        </section>
-      ) : null}
-
-      {!gift.cancelled && mine && !account.bound && account.source !== "funder" && (!account.code || renaming) ? (
-        <section className={CARD}>
-          <label className="block text-sm font-medium" htmlFor="duolingo-username">
-            Your Duolingo username
-          </label>
-          <input
-            id="duolingo-username"
-            value={typedUsername}
-            onChange={(event) => setTypedUsername(event.target.value)}
-            className={FIELD}
-            placeholder="ama_learns"
-            disabled={working}
-          />
-          <button type="button" onClick={name} disabled={working || typedUsername.trim().length === 0} className={PRIMARY_BUTTON}>
-            {busy === "naming" ? "One moment" : "Continue"}
-          </button>
-          <p className="text-xs" style={{ color: "var(--muted)" }}>
-            No password, no sign-in: your lessons are read from your public profile. Next, a short code proves the profile is yours.
-          </p>
-          {renaming ? (
-            <button type="button" onClick={() => setRenaming(false)} className={SECONDARY_BUTTON}>
-              Keep the name I had
-            </button>
-          ) : null}
-        </section>
-      ) : null}
-
-      {!gift.cancelled && mine && !account.bound && account.source === "recipient" && account.code && !renaming ? (
-        <section className={CARD}>
-          <p className="font-medium">Prove {account.username} is yours</p>
-          <p className="text-sm">
-            In Duolingo, open Profile, then Settings, then Name, and add this code to your name for a minute:
-          </p>
-          <p className="text-center font-mono text-3xl tracking-widest">{account.code}</p>
-          <button type="button" onClick={bind} disabled={working} className={PRIMARY_BUTTON}>
-            {busy === "binding" ? "Reading your profile" : "I added it"}
-          </button>
-          <p className="text-xs" style={{ color: "var(--muted)" }}>
-            You can remove the code right after.
-          </p>
-          <button type="button" onClick={() => setRenaming(true)} className={SECONDARY_BUTTON}>
-            That is not my Duolingo name
-          </button>
-        </section>
-      ) : null}
-
-      {!gift.cancelled && mine && account.bound && !gift.finished ? (
-        <section className={CARD}>
-          <p className="font-medium">{gift.todayDayIndex === 0 ? "Counting starts tomorrow." : `Day ${gift.todayDayIndex} of ${gift.durationDays}. Counted by itself, every day.`}</p>
-          {gift.todayDayIndex === 0 ? (
-            <p className="text-sm" style={{ color: "var(--muted)" }}>
-              Everything you learn from now on already counts toward tomorrow, the first day.
-            </p>
-          ) : null}
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
-            Do your lesson; nothing else. Each morning Viky reads your Duolingo ({account.username}) and counts the day before.
-          </p>
-          {catchUp ? (
-            <p className="text-sm font-medium">
-              {theirs
-                ? `Yesterday is not counted yet, and not lost either: a lesson before ${deadlineInWords(catchUp.deadlineMs, nowMs)} still earns that day.`
-                : `Yesterday is not counted yet, and not lost either. Do a lesson before ${deadlineInWords(catchUp.deadlineMs, nowMs)} and it still counts. Two lessons and you are back up to date.`}
-            </p>
-          ) : null}
-          {gift.missedDays > 0 ? (
-            <p className="text-sm" style={{ color: "var(--muted)" }}>
-              {gift.returnedDisplay} has gone back so far, for {gift.missedDays} {gift.missedDays === 1 ? "day" : "days"} without a lesson. The days ahead are still yours to take.
-            </p>
-          ) : null}
-          <button type="button" onClick={count} disabled={working || gift.todayDayIndex === 0} className={SECONDARY_BUTTON}>
-            {busy === "counting" ? "Reading your profile" : "Count now"}
-          </button>
-        </section>
-      ) : null}
-
-      {!gift.cancelled && signedIn && gift.finished ? (
-        <section className="space-y-2 rounded-[var(--radius-card)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-lg)]">
-          <p className="font-medium">This gift is finished.</p>
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
-            {gift.creditedDays} of {gift.durationDays} days were yours, so {gift.alreadyTheirsDisplay} is yours to keep.
-            {gift.missedDays > 0 ? ` The other ${gift.missedDays} went back to the person who sent it.` : ""}
-          </p>
-        </section>
-      ) : null}
-
-      {mine && BigInt(gift.earned) > 0n ? (
-        <button type="button" onClick={take} disabled={working} className={SECONDARY_BUTTON}>
-          {busy === "taking" ? "One moment" : `Take ${gift.earnedDisplay}`}
-        </button>
-      ) : null}
-
-      {notice ? <p className="rounded-[var(--radius-control)] bg-green-50 p-3 text-sm text-green-900 dark:bg-green-950 dark:text-green-100">{notice}</p> : null}
-      {problem ? (
-        <p role="alert" className="rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
-          {problem}
-        </p>
-      ) : null}
-    </main>
+    </Screen>
   );
 }
+

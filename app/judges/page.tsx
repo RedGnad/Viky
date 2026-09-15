@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Screen } from "../components/Screen";
 import { JudgesAccount } from "../components/JudgesAccount";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadRpcUrl } from "@/src/monad/chain";
 
@@ -13,25 +14,25 @@ export default function JudgesPage() {
   // gift record names its own contract, so both are listed here for as long as the older one holds one.
   const earlierEscrow = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-12">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">For judges</h1>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+    <Screen layout="destination" back="/account" backLabel="Back to my account">
+      <header className="space-y-[var(--space-sm)]">
+        <h1 className="text-[length:var(--type-money)] font-semibold">For judges</h1>
+        <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Everything verifiable about Viky in one screen. Nothing here is shown to funders or
           recipients.
         </p>
       </header>
 
-      <section className="space-y-2">
+      <section className="space-y-[var(--space-sm)]">
         <h2 className="font-medium">Network</h2>
-        <dl className="grid grid-cols-[10rem_1fr] gap-y-1 text-sm">
-          <dt style={{ color: "var(--muted)" }}>Chain</dt>
+        <dl className="grid grid-cols-[10rem_1fr] gap-y-[var(--space-xs)] text-[length:var(--type-help)]">
+          <dt className="text-[var(--muted)]">Chain</dt>
           <dd>Monad mainnet, chain id {MONAD_CHAIN_ID}</dd>
-          <dt style={{ color: "var(--muted)" }}>RPC</dt>
+          <dt className="text-[var(--muted)]">RPC</dt>
           <dd className="break-all font-mono">{monadRpcUrl()}</dd>
-          <dt style={{ color: "var(--muted)" }}>AUSD</dt>
+          <dt className="text-[var(--muted)]">AUSD</dt>
           <dd className="break-all font-mono">{AUSD_ADDRESS}</dd>
-          <dt style={{ color: "var(--muted)" }}>Gift contract</dt>
+          <dt className="text-[var(--muted)]">Gift contract</dt>
           <dd className="break-all">
             {escrow ? (
               <>
@@ -46,7 +47,7 @@ export default function JudgesPage() {
           </dd>
           {earlierEscrow ? (
             <>
-              <dt style={{ color: "var(--muted)" }}>Earlier gift contract</dt>
+              <dt className="text-[var(--muted)]">Earlier gift contract</dt>
               <dd className="break-all">
                 <span className="font-mono">{earlierEscrow}</span>{" "}
                 (<a className="underline" href={`https://monadvision.com/address/${earlierEscrow}`}>MonadVision</a>, source verified through Sourcify).
@@ -59,9 +60,9 @@ export default function JudgesPage() {
         </dl>
       </section>
 
-      <section className="space-y-2">
+      <section className="space-y-[var(--space-sm)]">
         <h2 className="font-medium">How progress is verified</h2>
-        <p className="text-sm">
+        <p className="text-[length:var(--type-help)]">
           Duolingo runs in public mode: once a day, Viky&apos;s keeper reads the recipient&apos;s public profile
           through an attested fetch (Reclaim zkFetch through Reclaim&apos;s TEE client). The attestor signs
           Duolingo&apos;s response; Viky verifies that signature, pins the attestor&apos;s address (the same one the
@@ -71,7 +72,7 @@ export default function JudgesPage() {
           proof. The person signs in to nothing and installs nothing; account ownership is proved once, either by the
           funder naming the account or by a short code the recipient places in their Duolingo display name.
         </p>
-        <p className="text-sm">
+        <p className="text-[length:var(--type-help)]">
           Two accepted risks, written here on purpose: the profile endpoint is unofficial (the same risk class as a
           provider schema drift, watched by the same tests), and each attested read costs money on Reclaim&apos;s side
           (their public price starts at $0.10 per verification; one read per recipient per day, never per gift).
@@ -80,6 +81,6 @@ export default function JudgesPage() {
       </section>
 
       <JudgesAccount />
-    </main>
+    </Screen>
   );
 }

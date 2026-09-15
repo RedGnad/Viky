@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Screen } from "../components/Screen";
 import Link from "next/link";
 import { Footer } from "../components/Footer";
 
@@ -12,16 +13,16 @@ export const metadata: Metadata = {
 export default function LegalPage() {
   const contact = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim();
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-12">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">Legal notice</h1>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+    <Screen layout="destination" back="/account" backLabel="Back to my account">
+      <header className="space-y-[var(--space-sm)]">
+        <h1 className="text-[length:var(--type-money)] font-semibold">Legal notice</h1>
+        <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Viky is an early product being tested with a handful of people. This notice covers viky.cash
           and says who runs it and who hosts it.
         </p>
       </header>
 
-      <section className="space-y-2 text-sm">
+      <section className="space-y-[var(--space-sm)] text-[length:var(--type-help)]">
         <h2 className="font-medium">Publisher</h2>
         <p>
           Viky is published by a private individual on a non-professional basis. As French law allows
@@ -40,13 +41,13 @@ export default function LegalPage() {
         </p>
       </section>
 
-      <section className="space-y-2 text-sm">
+      <section className="space-y-[var(--space-sm)] text-[length:var(--type-help)]">
         <h2 className="font-medium">Host</h2>
         <p>Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, United States. The application runs in Vercel&apos;s Paris region.</p>
         <p>The database is provided by Neon and runs in Frankfurt, Germany.</p>
       </section>
 
-      <section className="space-y-2 text-sm">
+      <section className="space-y-[var(--space-sm)] text-[length:var(--type-help)]">
         <h2 className="font-medium">What Viky is not</h2>
         <p>
           Viky is not a bank, a payment institution or an investment service, and nothing on it is
@@ -57,6 +58,6 @@ export default function LegalPage() {
       </section>
 
       <Footer current="/legal" />
-    </main>
+    </Screen>
   );
 }
