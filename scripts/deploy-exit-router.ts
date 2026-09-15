@@ -82,16 +82,27 @@ async function main() {
   const exchangeCode = await publicClient.getCode({ address: exchange });
   if (!exchangeCode || exchangeCode === "0x") throw new Error(`The exchange ${exchange} has no code`);
 
-  // Where it points today. Zero means it forwards nothing and there is nothing to pin.
-  let pointsAt: Hex = "0x0000000000000000000000000000000000000000";
+  // Where it points today. An address with no such function forwards nothing and takes no pin; an address
+  // that answers must answer with somewhere real, because a zero answer cannot be pinned and the contract
+  // refuses to allow it. This used to pass a zero straight through to the allowlist, which would have
+  // deployed the router with the check permanently off and only a printed 0x0 to say so.
+  const ZERO = "0x0000000000000000000000000000000000000000";
+  let pointsAt: Hex = ZERO;
+  let answers = true;
   try {
     pointsAt = (await publicClient.readContract({ address: exchange, abi: FORWARDER_ABI, functionName: "getRouter" })) as Hex;
   } catch {
     // Not a forwarder, which is a fact and not a failure.
+    answers = false;
   }
-  if (pointsAt !== "0x0000000000000000000000000000000000000000") {
+  if (answers) {
+    if (getAddress(pointsAt) === ZERO) {
+      throw new Error(`Refusing to deploy: ${exchange} answers getRouter with nothing, so its target cannot be pinned`);
+    }
     const targetCode = await publicClient.getCode({ address: pointsAt });
     if (!targetCode || targetCode === "0x") throw new Error(`The exchange forwards to ${pointsAt}, which has no code`);
+    console.log(`\nRead this before approving the next transaction: ${exchange} currently forwards to ${pointsAt}.`);
+    console.log("That is what gets pinned, and the router refuses every payout if it ever changes.\n");
   }
 
   console.log(JSON.stringify({ deployer: account.address, balanceMon: formatEther(balance), exchange, pointsAt, owner: owner ?? account.address }, null, 2));

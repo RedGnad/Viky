@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAccount } from "@/src/account/provider";
 import { getJson } from "@/src/client/api";
+import { BODY, CARD, HELP, MONEY } from "./ui";
 
 /**
  * After sign-in on the home page: every gift of this account, found from the passkey alone. Opening
@@ -48,47 +49,56 @@ export function MyGifts() {
   }, [address]);
 
   if (!address) return null;
-  if (problem) return <p className="text-sm text-amber-900">{problem}</p>;
-  if (gifts === null) return <p className="text-sm" style={{ color: "var(--muted)" }}>Looking for your gifts</p>;
+  if (problem) return <p className={BODY}>{problem}</p>;
+  if (gifts === null) return <p className={HELP}>Looking for your gifts</p>;
   if (gifts.length === 0) {
     return (
-      <section className="space-y-2 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
+      <section className={CARD}>
         <p className="font-medium">No gift yet.</p>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+        <p className={HELP}>
           When someone puts money in your name, their link brings you here. When you send one, it appears here too.
         </p>
-        <Link href="/fund" className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white">
-          Put money behind someone&apos;s goal
-        </Link>
       </section>
     );
   }
+
+  // Two blocks, never one list. A person is on one side or the other of any given gift, and the two mean
+  // opposite things: one is money becoming theirs, the other money leaving and partly coming back.
+  const received = gifts.filter((gift) => gift.role === "recipient");
+  const given = gifts.filter((gift) => gift.role === "funder");
+
   return (
-    <section className="space-y-3">
-      <h2 className="font-medium">Your gifts</h2>
+    <>
+      {received.length > 0 ? <GiftGroup title="What I receive" gifts={received} /> : null}
+      {given.length > 0 ? <GiftGroup title="What I give" gifts={given} /> : null}
+    </>
+  );
+}
+
+function GiftGroup({ title, gifts }: { title: string; gifts: MyGift[] }) {
+  return (
+    <section className="flex flex-col gap-[var(--space-md)]">
+      <h2 className="font-medium">{title}</h2>
       {gifts.map((gift) => (
-        <Link key={gift.giftId} href={`/g/${gift.giftId}`} className="block rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
-          <p className="text-lg font-semibold">
-            {gift.amountDisplay} {gift.role === "recipient" ? "in your name" : "you put in someone's name"}
-          </p>
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
-            {gift.cancelled
-              ? "Taken back before it was opened."
-              : gift.finished
-                ? `Finished: ${gift.creditedDays} of ${gift.durationDays} days done.`
-                : !gift.opened
-                  ? "Not opened yet."
-                  : !gift.counting
-                    ? "Opened. Name the Duolingo account to start counting."
-                    : `Counting: ${gift.creditedDays} of ${gift.durationDays} days done, ${gift.missedDays} missed.`}
-          </p>
-          <p className="text-sm">
+        <Link key={gift.giftId} href={`/g/${gift.giftId}`} className={`${CARD} block`}>
+          <p className={MONEY}>{gift.role === "recipient" ? gift.earnedDisplay : gift.theirsDisplay}</p>
+          <p className={HELP}>
             {gift.role === "recipient"
-              ? `Yours so far: ${gift.earnedDisplay}`
-              : `Theirs so far: ${gift.theirsDisplay}. Came back to you: ${gift.returnedDisplay}.`}
+              ? `yours so far, out of ${gift.amountDisplay}`
+              : `theirs so far, out of ${gift.amountDisplay}. Came back to you: ${gift.returnedDisplay}.`}
           </p>
+          <p className={BODY}>{stateInWords(gift)}</p>
         </Link>
       ))}
     </section>
   );
+}
+
+/** One sentence for the state of a gift, and the same sentence whichever side of it a person is on. */
+function stateInWords(gift: MyGift): string {
+  if (gift.cancelled) return "Taken back before it was opened.";
+  if (gift.finished) return `Finished: ${gift.creditedDays} of ${gift.durationDays} days done.`;
+  if (!gift.opened) return "Not opened yet.";
+  if (!gift.counting) return "Opened. Name the Duolingo account to start counting.";
+  return `Counting: ${gift.creditedDays} of ${gift.durationDays} days done, ${gift.missedDays} missed.`;
 }

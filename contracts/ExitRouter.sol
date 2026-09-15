@@ -173,11 +173,11 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         if (!allowedExchanges[t.exchange]) revert ExchangeNotAllowed();
         address pinned = mustPointAt[t.exchange];
         if (pinned != address(0)) {
-            // Asked rather than called, so an exchange that turns out not to forward at all is refused with a
-            // name instead of reverting with nothing anybody can read.
-            (bool answered, address pointsAt) = _pointsAt(t.exchange);
-            if (!answered) revert ExchangeNotEligible();
-            if (pointsAt != pinned) revert ExchangeMoved();
+            // A pin exists only for an exchange that answered with a readable address when it was allowed,
+            // so anything else now means it is no longer what it was: silent, unreadable, or pointing
+            // elsewhere all get the same name, because to us they are the same fact.
+            (bool answers, bool readable, address pointsAt) = _pointsAt(t.exchange);
+            if (!answers || !readable || pointsAt != pinned) revert ExchangeMoved();
         }
         // What will be said to the exchange is part of what they signed, so the relayer cannot say anything
         // else: a different swap, a different recipient inside the call, a different anything.
@@ -205,12 +205,21 @@ contract ExitRouter is Ownable, ReentrancyGuard {
 
         // Anything the exchange did not take goes straight back to them; this contract keeps nothing.
         //
-        // Never more than was pulled, though. This hands `tokenLeft` to whoever signed the terms without
-        // asking where it came from, and the calldata sent to the exchange is theirs to write. An exchange
-        // with any way to move somebody else's tokens here would turn that into a way to collect them as
-        // "left over": everyone who ever approved that exchange would be reachable. The exchange we use
-        // cannot (its only transferFrom takes from its caller, read from its bytecode on 14 Sep), which is a
-        // fact about a contract somebody else owns and not something to rest on.
+        // Bounded by what was pulled, which is not the same as safe, and the difference is worth writing
+        // down rather than being reassured by.
+        //
+        // This hands `tokenLeft` to whoever signed the terms without asking where it came from, and the
+        // calldata sent to the exchange is theirs to write. `tokenLeft` is a balance delta, so an exchange
+        // that both spends part of our allowance and moves a third party's tokens in nets out under this
+        // cap: pull 600,000 of the 1,000,000 allowed and bring 600,000 of somebody else's, and the delta is
+        // exactly 1,000,000. The cap stops the amount growing past one exit's worth; it does not stop that
+        // exit. Capping at the unspent allowance instead would be exact, and would refuse the ordinary
+        // exchange that pulls everything and refunds the remainder, which is a shape we need.
+        //
+        // What actually keeps this shut is the allowlist plus the pin: the exchange we use cannot move
+        // anybody else's tokens, because its only transferFrom takes from its own caller, read from its
+        // bytecode on 14 Sep. That is a fact about a contract somebody else owns, so it is defence in depth
+        // that this cap bounds rather than a guarantee this cap provides.
         uint256 tokenLeft = token.balanceOf(address(this)) - tokenBefore;
         if (tokenLeft > t.amount) revert UnexpectedTokens();
         if (tokenLeft > 0) token.safeTransfer(t.payer, tokenLeft);
@@ -250,10 +259,19 @@ contract ExitRouter is Ownable, ReentrancyGuard {
             // Whether it forwards is asked here, not trusted to whoever is typing. Closing an exchange
             // forgets its pin, so opening one again with nothing would otherwise quietly drop the check that
             // is the only thing standing between us and a target its own owner replaced.
-            (bool forwards, address pointsAtNow) = _pointsAt(exchange);
-            if (forwards && pointsAt == address(0)) revert PinRequired();
-            if (forwards && pointsAt != pointsAtNow) revert ExchangeMoved();
-            if (!forwards && pointsAt != address(0)) revert ExchangeNotEligible();
+            //
+            // Three states, because collapsing them to two is how a hole appears. An address with no such
+            // function does not forward, and takes no pin. An address that answers with something we cannot
+            // read, or that answers with nowhere, is refused outright: pinning it is impossible and allowing
+            // it unpinned would mean the check never runs, which is worse than refusing a valid exchange.
+            (bool answers, bool readable, address pointsAtNow) = _pointsAt(exchange);
+            if (!answers) {
+                if (pointsAt != address(0)) revert ExchangeNotEligible();
+            } else {
+                if (!readable || pointsAtNow == address(0)) revert ExchangeNotEligible();
+                if (pointsAt == address(0)) revert PinRequired();
+                if (pointsAt != pointsAtNow) revert ExchangeMoved();
+            }
         }
         allowedExchanges[exchange] = allowed;
         mustPointAt[exchange] = allowed ? pointsAt : address(0);
@@ -271,14 +289,23 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         revert OwnershipIsNotRenounceable();
     }
 
-    /// @dev Whether this exchange forwards, and to where. Never reverts: an address that does not answer
-    ///      simply does not forward, which is a fact and not a failure.
-    function _pointsAt(address exchange) private view returns (bool forwards, address pointsAt) {
+    /// @dev Three things about an exchange, and it never reverts, which the previous version claimed while
+    ///      `abi.decode(data, (address))` still threw on a word whose top bits were dirty. A forwarder with
+    ///      an assembly getter, a Vyper getter or a packed slot returns exactly such a word, and the whole
+    ///      point of asking rather than calling was to refuse with a name rather than with empty data.
+    /// @return answers whether the address has such a function at all.
+    /// @return readable whether what it gave back can be read as an address.
+    /// @return pointsAt where it points, when both of the above hold.
+    function _pointsAt(address exchange) private view returns (bool answers, bool readable, address pointsAt) {
         (bool ok, bytes memory data) =
             exchange.staticcall(abi.encodeWithSelector(IForwardingExchange.getRouter.selector));
-        if (!ok || data.length != 32) return (false, address(0));
-        address answer = abi.decode(data, (address));
-        return (answer != address(0), answer);
+        if (!ok) return (false, false, address(0));
+        if (data.length != 32) return (true, false, address(0));
+        uint256 word = abi.decode(data, (uint256));
+        // Decoded as a word and checked, rather than decoded as an address and hoped for. Masking the top
+        // bits away would be guessing at what it meant; refusing says we could not tell.
+        if (word > type(uint160).max) return (true, false, address(0));
+        return (true, true, address(uint160(word)));
     }
 
     /// @dev The contract is not meant to hold anything between transactions. If an exchange ever leaves

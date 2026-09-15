@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAccount } from "@/src/account/provider";
 import { readAusdBalance } from "@/src/client/onchain";
 import { formatAusd } from "@/src/gift-reader";
-import { CARD, SECONDARY_BUTTON } from "./ui";
+import { CARD, HELP, MONEY, SECONDARY_BUTTON } from "./ui";
 
 /**
  * Money sitting in the person's own account, whoever they are. A recipient lands here after taking what a
@@ -33,12 +33,11 @@ export function YourMoney() {
 
   return (
     <section className={CARD}>
-      <p className="text-xs" style={{ color: "var(--muted)" }}>
-        In your account
-      </p>
-      <p className="text-2xl font-semibold">{formatAusd(holding)}</p>
-      <p className="text-sm" style={{ color: "var(--muted)" }}>
-        Yours to keep, to put behind another goal, or to send to your card or bank.
+      <p className={HELP}>In your account</p>
+      <p className={MONEY}>{formatAusd(holding)}</p>
+      <p className={HELP}>
+        Yours to keep, to put behind another goal, or to take out. Earnings add up here from one gift to the
+        next, so a small gift is waiting rather than gone.
       </p>
       <Link href="/cash-out" className={SECONDARY_BUTTON}>
         Take it out

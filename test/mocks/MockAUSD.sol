@@ -43,6 +43,13 @@ contract MockAUSD is ERC20 {
         return _authorizationStates[authorizer][nonce];
     }
 
+    /// @dev How much less than promised this token actually credits. Zero for every ordinary test.
+    uint256 public shortfall;
+
+    function setShortfall(uint256 value) external {
+        shortfall = value;
+    }
+
     function receiveWithAuthorization(
         address from,
         address to,
@@ -63,6 +70,8 @@ contract MockAUSD is ERC20 {
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), structHash));
         if (ECDSA.recover(digest, v, r, s) != from) revert InvalidSignature();
         _authorizationStates[from][nonce] = true;
-        _transfer(from, to, value);
+        // A token that credits less than it promised is what `TransferShortfall` exists for. No real token
+        // does this; a proxy upgraded badly, or a fee-on-transfer token slipped into the configuration, would.
+        _transfer(from, to, value - shortfall);
     }
 }
