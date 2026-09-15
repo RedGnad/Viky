@@ -1770,3 +1770,59 @@ behaviour changed.
   funder journey and of the funder's example screens changed as intended, and the last two differ only in the two
   places that differ between two captures of one unchanged build.
 - The browser tests pass on that build.
+
+## D71, 15 Sep 2026: every screen wears the poster look
+
+**What the funder asked.** Not to be handed the pages one at a time: the direction was chosen for the product, so it
+goes on every screen a person can open, found by walking the real site rather than by waiting for a list.
+
+**What it took.** `Screen` renders `data-look="poster"` itself instead of waiting to be asked, so every page drawn
+through it wears the look, and `test/design-tokens.test.ts` holds every page outside app/dev to being drawn through
+it. The calm values remain only for the operator's own pages under app/dev, which do not use `Screen`. Then the
+titles, because the direction puts every title in Anton:
+
+- a destination and a document open with the display title (the account, a gift, privacy, the legal notice, the
+  judges page); a journey's title is one step's, so it keeps the title size (taking money out, each step of giving);
+- every section heading that was set as bold text takes the title style: how it looks, lost your phone, what I
+  receive and what I give, what this device can do for you, sending to another account, proving a Duolingo name is
+  yours, and the gift being ready;
+- the one title that states an amount, a gift's, hands the amount back to DM Sans, as every amount is.
+
+An alert's edge and a moment's edge read the card tokens, and the browser's own bar takes the look's two grounds. The
+card offering to install Viky is rendered nowhere, so it was left as it was.
+
+**What measuring found, beyond the look.**
+
+- The marks in a day's cell were characters that neither face has, so the phone's fonts drew them: Arial, Hiragino
+  Sans and Lucida Grande on one row of seven days. They are drawn shapes now.
+- The number in a day's cell was in the muted colour: 4.04:1 on a day that can still be caught, by day, and 3.06:1
+  at night. The calm look had the same fault. It is in the text colour now, and a test keeps the muted one off the
+  cells.
+- Addresses and codes were set in a monospace face, which is always the system's. They are in DM Sans: hex has no
+  letter a text face confuses.
+- A moment's soft shapes stopped short of its bottom with a hard edge showing, because the document's rule that stops
+  an svg pushing the page sideways gives it an automatic height, and the wave itself ended at 250 of 300.
+- On a phone, the judges page's two columns left a value 198 pixels and broke every sentence mid-word to fit an
+  address beside it. The label sits above its value there now, and only an unbreakable string breaks.
+- The focus ring of "Account, help and legal" was the accent fill, 2.82:1 on the cream. It is the accent colour for
+  words now, like every other control's.
+
+**And what the reviewer caught.** At night the drop's face was drawn in the text colour, cream on the acid green at
+1.10:1, and all but vanished on every moment; it takes the colour measured against the accent now, the same plum by
+day. And a day still to come was edged with the divider, the one box on its row without the look's outline, pale by
+day and a dim violet at night; it takes a card's edge. A test holds each. The same hairline had stayed on the two boxes
+inside giving, around the identifier to check before paying and around the gift's link, and they take a card's edge
+too.
+
+**Measured**, on the built app with the example screens switched on, at 390x844 and 1440x900, by day and by night:
+the ten pages a signed-out person can open (the home, giving, the account, privacy, the legal notice, the judges page,
+taking money out, offline, and two gifts) and the twelve example screens, 88 measurements in all.
+
+- Every glyph was drawn by Anton or DM Sans, from Chrome's own record of the fonts it rendered.
+- The lowest words are 5.36:1 by day (the label of Offer a gift on the tomato) and 5.29:1 by night (a day's number on
+  a day that can still be caught); control outlines are 14.17:1 or more, and card edges 15.10:1 or more.
+- On every one of the ten pages, the title sits entirely inside the first screen, and nothing scrolls sideways.
+
+**What cannot be photographed** is anything behind a passkey: the signed-in home, a gift opened by its recipient,
+taking money out with money to take, what the open session can do. Those states draw the same components the example
+screens draw, through the same variables, but they were not seen in a browser.
