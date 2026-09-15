@@ -38,7 +38,8 @@
     "zkfetch:worker": "tsx scripts/zkfetch-worker.ts",
     "check:words": "tsx scripts/check-consumer-words.ts",
     "test:browser": "playwright test",
-    "capture:refund": "tsx scripts/capture-refund.ts"
+    "capture:refund": "tsx scripts/capture-refund.ts",
+    "design:shots": "tsx scripts/design-screenshots.ts"
   },
   "dependencies": {
     "@category-labs/mera": "0.2.0",
