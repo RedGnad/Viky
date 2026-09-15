@@ -62,6 +62,23 @@ export function pendingGiftFor(raw: string | null, account: string | undefined, 
   return gift as PendingGift;
 }
 
+/**
+ * Whether this device holds a gift set up and not made, whoever set it up. The first step asks it with nobody signed
+ * in, because after a reload that step is all a funder sees and nothing there offered a way back to their gift.
+ */
+export function pendingGiftExists(raw: string | null, nowMs: number): boolean {
+  if (!raw) return false;
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return false;
+  }
+  const record = value as Record<string, unknown> | null;
+  const account = record && typeof record.account === "string" ? record.account : undefined;
+  return account !== undefined && pendingGiftFor(raw, account, nowMs) !== undefined;
+}
+
 /** Writes the terms down, and says whether the device kept them: private browsing can refuse. */
 export function savePendingGift(terms: PendingGiftTerms): boolean {
   try {
@@ -77,6 +94,14 @@ export function loadPendingGift(account: string): PendingGift | undefined {
     return pendingGiftFor(window.localStorage.getItem(PENDING_GIFT_STORAGE_KEY), account, Date.now());
   } catch {
     return undefined;
+  }
+}
+
+export function hasPendingGift(): boolean {
+  try {
+    return pendingGiftExists(window.localStorage.getItem(PENDING_GIFT_STORAGE_KEY), Date.now());
+  } catch {
+    return false;
   }
 }
 
