@@ -39,7 +39,10 @@ test("a state with no words says what is missing, rather than looking finished",
 });
 
 test("both journeys are there, and every state says what puts a person in it", () => {
-  assert.equal(JOURNEYS.length, 2);
+  const who = JOURNEYS.map((journey) => journey.who);
+  assert.ok(who.some((name) => /gives/.test(name)), "the person who gives");
+  assert.ok(who.some((name) => /gift is for/.test(name)), "the person the gift is for");
+  assert.ok(JOURNEYS.length >= 2);
   for (const { who, screens } of JOURNEYS) {
     assert.ok(who.length > 0);
     assert.ok(screens.length > 0);
