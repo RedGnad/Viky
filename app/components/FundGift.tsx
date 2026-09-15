@@ -552,7 +552,14 @@ export function FundGift() {
               >
                 Copy my identifier again
               </button>
-              <a href={WAY_IN.page} target="_blank" rel="noopener noreferrer" className={INLINE_BUTTON}>
+              {/* The one thing there is to press on a screen that waits, so it takes the accent: somebody who closed
+                  the rail's tab has nowhere else to go (D74). */}
+              <a
+                href={WAY_IN.page}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${INLINE_BUTTON} bg-[var(--accent)] font-medium text-[var(--on-accent)]`}
+              >
                 Open {WAY_IN.name} again
               </a>
             </div>
