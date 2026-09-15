@@ -137,7 +137,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
           </p>
         </section>
         <section className={CARD}>
-          <h2 className="font-medium">What they can do with it</h2>
+          <h2 className={TITLE}>What they can do with it</h2>
           <p className={HELP}>
             What they earn is theirs straight away. To send it to their card they need about $21, and earnings
             add up from one gift to the next, so a small gift is waiting rather than gone.
