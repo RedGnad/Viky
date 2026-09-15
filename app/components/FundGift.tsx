@@ -514,7 +514,13 @@ export function FundGift() {
         {problem ? <p className={BODY}>{problem}</p> : null}
         {step === "waiting" ? (
           <div className="flex flex-col gap-[var(--space-md)]">
-            <p className="font-medium">Waiting for your payment. Keep this page open.</p>
+            {/* The page no longer has to be watched: the gift outlives the session and the page (D74). Telling
+                somebody to keep a page open for an hour never protected them, because the session closed anyway. */}
+            <p className="font-medium">
+              {keptOnDevice
+                ? "Waiting for your payment. You can leave this page: the gift is kept, and Viky picks it up when you come back."
+                : "Waiting for your payment. Keep this page open: this device would not keep the gift."}
+            </p>
             <p className={HELP}>
               {WAY_IN.name}&apos;s page opens on something else by default, so set each of these yourself:
             </p>
@@ -564,6 +570,7 @@ export function FundGift() {
             >
               Set up a different gift instead
             </button>
+            <p className={HELP}>Whatever you paid stays in your account, for this gift or the next one.</p>
           </div>
         ) : null}
         {step === "converting" || step === "giving" ? (
