@@ -36,7 +36,9 @@ export function Drop({ mood = "happy", size = 72 }: Readonly<{ mood?: Mood; size
 }
 
 function Face({ mood }: { mood: Mood }) {
-  const eye = "var(--text)";
+  // The face sits on the accent fill, so it takes the colour measured against that fill. The text colour it used to
+  // take is cream at night, on an acid green, where the face all but vanished.
+  const eye = "var(--on-accent)";
   if (mood === "resting") {
     return (
       <g stroke={eye} strokeWidth="3.5" strokeLinecap="round" fill="none">
@@ -56,7 +58,7 @@ function Face({ mood }: { mood: Mood }) {
 }
 
 function Mouth({ mood }: { mood: Mood }) {
-  const stroke = "var(--text)";
+  const stroke = "var(--on-accent)";
   switch (mood) {
     case "cheering":
       // Wide open, which is the only one that reads as a shout rather than a smile.

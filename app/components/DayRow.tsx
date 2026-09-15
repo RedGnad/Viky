@@ -129,6 +129,8 @@ function skin(day: Day): string {
     case "today":
       return "bg-[var(--day-today)] border-2 border-[var(--text)]";
     case "toCome":
-      return "bg-[var(--day-to-come)] border-[var(--divider)]";
+      // A card's edge rather than a divider, so a day still to come is outlined like every other sticker in the poster
+      // look; the calm look's card edge is that same divider.
+      return "bg-[var(--day-to-come)] border-[var(--card-border)]";
   }
 }
