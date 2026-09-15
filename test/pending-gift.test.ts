@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
-import { PENDING_GIFT_MAX_AGE_MS, pendingGiftFor, pendingGiftToStore } from "../src/pending-gift";
+import { PENDING_GIFT_MAX_AGE_MS, pendingGiftExists, pendingGiftFor, pendingGiftToStore } from "../src/pending-gift";
 
 /**
  * The gift a funder set up before paying survives the session closing (D74). On 15 Sep the card payment took twelve
@@ -29,6 +30,30 @@ test("it never comes back for another account, or once it is old", () => {
   assert.equal(pendingGiftFor(stored, A, NOW - 10 * 60_000), undefined, "saved in the future is not a gift anybody set up");
   // The rail's help centre says a payment can take several hours when the network is busy.
   assert.ok(PENDING_GIFT_MAX_AGE_MS >= 6 * 60 * 60_000);
+});
+
+/**
+ * After a reload there is nobody signed in to name, and the first step is all the funder sees. It says a gift is
+ * waiting, so this answers without an account, and only for a gift that could still be picked up.
+ */
+test("the device says a gift is waiting without naming whose it is", () => {
+  assert.equal(pendingGiftExists(pendingGiftToStore(terms, NOW), NOW + 12 * 60_000), true);
+  assert.equal(pendingGiftExists(pendingGiftToStore(terms, NOW), NOW + PENDING_GIFT_MAX_AGE_MS + 1), false);
+  assert.equal(pendingGiftExists(null, NOW), false);
+  assert.equal(pendingGiftExists("{", NOW), false);
+  assert.equal(pendingGiftExists(JSON.stringify({ savedAtMs: NOW }), NOW), false);
+});
+
+/** What is kept is what the gift is made from, and nothing else: D72 asks for no contact, so none is kept or sent. */
+test("the terms kept are exactly the terms the gift is made from", () => {
+  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
+  assert.match(fund, /savePendingGift\(\{ account: address, username, dollars, days, target \}\)/);
+  const call = fund.slice(fund.indexOf("await createGift({"), fund.indexOf("setCreated(result)"));
+  assert.match(call, /duolingoUsername: username\.trim\(\) \|\| undefined/);
+  assert.match(call, /dailyTarget: Number\(target\)/);
+  assert.match(call, /durationDays: Number\(days\)/);
+  assert.match(call, /amount: dollarsToUnits\(dollars\)/);
+  assert.doesNotMatch(call, /contact/i, "no contact is asked for, kept or sent (D72)");
 });
 
 test("anything unreadable, or terms the gift would refuse, is not picked up", () => {

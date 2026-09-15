@@ -1,8 +1,8 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import * as mera from "@/src/account/mera";
 import Link from "next/link";
-import { ACTION_BAR, BACK_LINK, BODY, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, STICKER, TITLE } from "./ui";
+import { ACTION_BAR, BACK_LINK, BODY, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, STICKER, TITLE } from "./ui";
 import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
 import { createGift, type CreatedGift } from "@/src/client/gift";
@@ -13,7 +13,7 @@ import { AmountError, dollarsToUnits } from "@/src/money";
 import { WAY_IN } from "@/src/rails";
 import { eurosToBuy, SUGGESTED_GIFT_DOLLARS } from "@/src/gift-amount";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
-import { forgetPendingGift, loadPendingGift, savePendingGift } from "@/src/pending-gift";
+import { forgetPendingGift, hasPendingGift, loadPendingGift, savePendingGift } from "@/src/pending-gift";
 import { AccountPanel } from "./AccountPanel";
 import { SessionScope } from "./SessionScope";
 
@@ -26,6 +26,10 @@ import { SessionScope } from "./SessionScope";
  */
 
 const POLL_MS = 8_000;
+
+/** The device is asked once, in the browser only, so the server's first paint and the browser's agree. */
+const never = () => () => {};
+const nothingKept = () => false;
 
 type Step = "form" | "waiting" | "converting" | "giving" | "done";
 
@@ -68,6 +72,9 @@ export function FundGift() {
   // Whether the device kept the gift's terms when the rail opened. Private browsing can refuse, and then the gift
   // lasts only as long as this page stays open, which the screen must say rather than promise more (D74).
   const [keptOnDevice, setKeptOnDevice] = useState(false);
+  // A gift set up on this device and not made, read without naming an account: after a reload there is nobody signed
+  // in to name, and the first step was all the funder saw, with no way back to the gift they had paid for (D74).
+  const somethingToPickUp = useSyncExternalStore(never, hasPendingGift, nothingKept);
   const working = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -310,6 +317,17 @@ export function FundGift() {
         <Link href="/" className={BACK_LINK}>
           Back to my gifts
         </Link>
+        {!address && somethingToPickUp ? (
+          <section className={STICKER.lilac}>
+            <h2 className={TITLE}>A gift is waiting for your payment</h2>
+            <p className={HELP}>
+              You set one up on this device and it is not made yet. Sign in and Viky picks it up where it stopped.
+            </p>
+            <button type="button" onClick={() => setStage("account")} className={SECONDARY_BUTTON}>
+              Sign in to pick it up
+            </button>
+          </section>
+        ) : null}
         {/* The Duolingo name is the one thing asked, because it is the one thing here that protects the gift. The
             email or phone that came first protected nothing: the claim checks the link alone and Viky never writes
             to anybody, so it only left a fingerprint of them on a public ledger (D72). */}

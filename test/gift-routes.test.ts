@@ -102,6 +102,8 @@ test("create refuses malformed terms with a typed code before any relay", async 
   }
   const badContact = await createPost(post("/api/gift/create", { contact: "not-a-contact", goalType: 1, dailyTarget: 10, durationDays: 7, amount: "5000000", salt: `0x${"01".repeat(32)}`, authorization: { nonce: `0x${"02".repeat(32)}`, r: `0x${"03".repeat(32)}`, s: `0x${"04".repeat(32)}`, v: 27 } }, { cookie }));
   assert.equal(badContact.status, 400);
+  // A contact is asked for nowhere since D72, and none is sent; one that arrives malformed is still refused by name.
+  assert.match(String((await json(badContact)).code), /CONTACT/);
 });
 
 test("claim, check-in, withdraw and status refuse malformed identifiers with typed codes", async () => {

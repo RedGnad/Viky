@@ -114,6 +114,11 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
         gap: "the gift is kept on one device. Coming back on another phone finds the payment in the account and no gift set up: the funder sets it up again, and the check offers to use the payment that arrived.",
       },
       {
+        name: "A gift waiting, nobody signed in",
+        when: "the page was reloaded after the session closed, so the first step is all there is",
+        says: ["A gift is waiting for your payment", "Sign in to pick it up"],
+      },
+      {
         name: "Made, and the link to send",
         when: "the gift exists on chain",
         says: ["It is in their name.", "Copy the link"],

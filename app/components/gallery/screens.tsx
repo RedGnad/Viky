@@ -235,6 +235,35 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     ),
   },
   {
+    slug: "funder-resumed",
+    who: "funder",
+    title: "Back, with the gift still set up",
+    hierarchy:
+      "That the gift is still there, then the wait it went back to, then the way out of it. The terms were kept on the device when the rail opened, so signing in again is all it takes; nothing is asked twice (D74).",
+    builtFrom: "app/components/FundGift.tsx",
+    quotes: [
+      "Your money",
+      "gift is still set up, and it goes ahead as soon as your payment is here.",
+      "Waiting for your payment. Keep this page open.",
+      "Set up a different gift instead",
+    ],
+    render: () => (
+      <>
+        <section className={STICKER.sun}>
+          <h2 className={TITLE}>Your money</h2>
+          <p className={MONEY}>$0.00</p>
+          <p className="font-medium">Waiting for your payment. Keep this page open.</p>
+          <p className={HELP}>
+            Welcome back. Your $25.00 gift is still set up, and it goes ahead as soon as your payment is here.
+          </p>
+          <span className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+            Set up a different gift instead
+          </span>
+        </section>
+      </>
+    ),
+  },
+  {
     slug: "funder-ready",
     who: "funder",
     title: "The gift is ready",
