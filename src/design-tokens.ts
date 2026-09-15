@@ -247,6 +247,8 @@ export const POSTER_COLOURS: Record<Appearance, Record<string, string>> = {
     stickerPink: "#F7B7D8",
     stickerMint: "#BDEBC8",
     stickerLilac: "#C9C6FF",
+    /** What a field sits on inside a sticker, so a typed value never runs over a colour: the ink on it is 16.35:1. */
+    stickerPaper: "#FFFDF7",
   },
   dark: {
     background: "#1C1035",
@@ -274,6 +276,8 @@ export const POSTER_COLOURS: Record<Appearance, Record<string, string>> = {
     stickerPink: "#FF5FA2",
     stickerMint: "#C6FF4D",
     stickerLilac: "#8B6CFF",
+    /** Cream at night, because the ink inside a sticker is indigo: 16.69:1 on it. */
+    stickerPaper: "#FFF6E9",
   },
 };
 

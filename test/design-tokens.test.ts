@@ -247,6 +247,9 @@ test("the poster look's words clear 4.5:1 and its outlines 3:1, by day and by ni
       const ratio = contrastRatio(palette.onSticker, palette[fill]);
       assert.ok(ratio >= TEXT_CONTRAST_MINIMUM, `poster ${appearance} words on ${fill} are ${ratio.toFixed(2)}:1`);
     }
+    // A field inside a sticker sits on paper and is typed in the sticker's own ink.
+    const onPaper = contrastRatio(palette.onSticker, palette.stickerPaper);
+    assert.ok(onPaper >= TEXT_CONTRAST_MINIMUM, `poster ${appearance} words on a sticker's paper are ${onPaper.toFixed(2)}:1`);
   }
 });
 
@@ -347,4 +350,22 @@ test("a day still to come is edged like a card, so the poster look outlines it",
   const row = readFileSync("app/components/DayRow.tsx", "utf8");
   const toCome = row.slice(row.indexOf('case "toCome"'));
   assert.match(toCome.slice(0, toCome.indexOf("}")), /border-\[var\(--card-border\)\]/);
+});
+
+/**
+ * A sticker card holds fields, help and buttons that were all written for the page ground. It stays readable only
+ * because it redefines every role they read to the ink measured on the sticker fills, and puts fields on paper.
+ */
+test("a sticker card redefines every role inside it to the ink measured on its fills", () => {
+  const ui = readFileSync("app/components/ui.ts", "utf8");
+  for (const role of ["text", "muted", "accent-text", "control-border", "card-border", "divider"]) {
+    assert.match(ui, new RegExp(`\\[--${role}:var\\(--on-sticker\\)\\]`), `--${role} is not redefined inside a sticker`);
+  }
+  assert.match(ui, /\[--control-relief:0_6px_0_var\(--on-sticker\)\]/);
+  assert.match(ui, /\[--surface:var\(--sticker-paper\)\]/);
+  // At night the mint and the primary button are the same lime, so no mint sticker on giving holds one.
+  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
+  for (const mint of fund.split("STICKER.mint").slice(1)) {
+    assert.doesNotMatch(mint.slice(0, mint.indexOf("</section>")), /PRIMARY_BUTTON/);
+  }
 });

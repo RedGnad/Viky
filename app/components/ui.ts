@@ -49,6 +49,24 @@ export const STICKER_CARD =
   "space-y-[var(--space-md)] rounded-[var(--radius-card)] border-[length:var(--control-border-width)] border-[var(--sticker-outline)] p-[var(--space-lg)] text-[var(--on-sticker)]";
 
 /**
+ * A card that holds a form or a statement, drawn as a sticker: one of the look's four fills, its outline and a hard
+ * shadow. Everything inside reads the roles, so the sticker redefines them to the ink measured on its fills (words,
+ * help, links, field and button outlines, reliefs) and puts fields on paper. Nothing inside has to know it sits on a
+ * colour (D73).
+ *
+ * Mint is for cards without a primary button: at night the mint and the button are the same lime.
+ */
+const STICKER_SCOPE =
+  "space-y-[var(--space-md)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--sticker-outline)] [box-shadow:0_8px_0_var(--sticker-outline)] p-[var(--space-lg)] text-[var(--on-sticker)] [--text:var(--on-sticker)] [--muted:var(--on-sticker)] [--accent-text:var(--on-sticker)] [--control-border:var(--on-sticker)] [--card-border:var(--on-sticker)] [--divider:var(--on-sticker)] [--control-relief:0_6px_0_var(--on-sticker)] [--surface:var(--sticker-paper)]";
+
+export const STICKER = {
+  sun: `${STICKER_SCOPE} bg-[var(--sticker-sun)]`,
+  pink: `${STICKER_SCOPE} bg-[var(--sticker-pink)]`,
+  mint: `${STICKER_SCOPE} bg-[var(--sticker-mint)]`,
+  lilac: `${STICKER_SCOPE} bg-[var(--sticker-lilac)]`,
+} as const;
+
+/**
  * A line the person types into. Its border identifies it, so it carries the control colour, and it sits on a
  * surface rather than on the page ground so a paragraph of yellow never runs under a value being typed.
  */
