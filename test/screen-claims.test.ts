@@ -145,10 +145,11 @@ test("the amount written before sending all of it is exactly the amount that lea
     const [whole, fraction] = formatAusdExact(units).slice(1).split(".");
     assert.equal(BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, "0")), units, `nothing of ${units} rounded away`);
   }
-  // And the screen writes the very balance it sends, never a rounded copy of it.
+  // And what leaves is what was typed, never a rounded copy of it, in a field that opens on the whole balance (D75).
   const cashOut = readFileSync("app/components/CashOut.tsx", "utf8");
-  assert.match(cashOut, /sendOwnMoney\(\{ account, to: ownAccount\.trim\(\) as Hex, amount: holding \}\)/);
-  assert.match(cashOut, /formatAusdExact\(holding\)/);
+  assert.match(cashOut, /sendOwnMoney\(\{ account, to: ownAccount\.trim\(\) as Hex, amount: leaving \}\)/);
+  assert.match(cashOut, /const leaving = sending\.units;/);
+  assert.match(cashOut, /setAmount\(exactAmountText\(holding\)\)/);
 });
 
 test("a day that is neither counted nor lost is named, with the moment it stops being catchable", () => {
