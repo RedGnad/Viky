@@ -495,7 +495,9 @@ export function FundGift() {
             {WAY_IN.name} says most payments take 30 to 60 minutes, and sometimes several hours.
           </p>
         </section>
-        <AccountPanel />
+        {/* Signing in leads here, and making an account follows. The other way round, somebody coming back to their
+            gift makes a second account, and the gift and the payment stay on the first one (D74). */}
+        <AccountPanel returning />
       </div>
     );
   }
@@ -506,6 +508,10 @@ export function FundGift() {
       <section className={STICKER.sun}>
         <h1 className={TITLE}>Your money</h1>
         <p className={MONEY}>{balance === null ? "..." : formatAusd(balance)}</p>
+        {/* Whatever just happened comes before the instructions, not after them: somebody coming back to a gift read
+            "Welcome back" under the buttons, at the very bottom of the card (D74). */}
+        {notice ? <p className={BODY}>{notice}</p> : null}
+        {problem ? <p className={BODY}>{problem}</p> : null}
         {step === "waiting" ? (
           <div className="flex flex-col gap-[var(--space-md)]">
             <p className="font-medium">Waiting for your payment. Keep this page open.</p>
@@ -563,8 +569,6 @@ export function FundGift() {
         {step === "converting" || step === "giving" ? (
           <p className={BODY}>{step === "giving" ? "Putting it in their name" : "Getting it ready"}</p>
         ) : null}
-        {notice ? <p className={BODY}>{notice}</p> : null}
-        {problem ? <p className={BODY}>{problem}</p> : null}
       </section>
 
       <SessionScope />

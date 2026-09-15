@@ -12,8 +12,12 @@ import { checkPasskeySupport, passkeyFallbackWords, type PasskeySupport } from "
  * does not matter: it is behind a disclosure now, which is what progressive disclosure is for. And the
  * primary action ran to two lines on a 375 pixel phone, which is a label problem rather than a layout one:
  * it says what it does, and how it does it moved to the line underneath.
+ *
+ * `returning` swaps which of the two leads. Somebody whose session closed in the middle of paying for a gift is not
+ * making an account, they are coming back to one, and making a second would leave the gift and the payment on the
+ * first (D74).
  */
-export function AccountPanel() {
+export function AccountPanel({ returning = false }: Readonly<{ returning?: boolean }>) {
   const { address, hasCredential, status, error, createAccount, signIn, signOut, useAnotherAccount, clearError } = useAccount();
   const [displayName, setDisplayName] = useState("");
   const [naming, setNaming] = useState(false);
@@ -45,57 +49,77 @@ export function AccountPanel() {
     );
   }
 
+  const signInButton = (
+    <button
+      type="button"
+      onClick={() => void signIn()}
+      disabled={busy}
+      className={returning ? PRIMARY_BUTTON : SECONDARY_BUTTON}
+    >
+      {hasCredential ? "Sign in" : "I already have an account"}
+    </button>
+  );
+
+  const makeAnAccount = (
+    <form
+      className="flex flex-col gap-[var(--space-md)]"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void createAccount(displayName);
+      }}
+    >
+      <button type="submit" disabled={busy || cannot !== null} className={returning ? SECONDARY_BUTTON : PRIMARY_BUTTON}>
+        {busy ? "One moment" : "Create my account"}
+      </button>
+      <p className={HELP}>
+        {cannot ?? "Your face or your fingerprint, and nothing to remember. No password, no code by text."}
+      </p>
+
+      {naming ? (
+        <>
+          <label className={HELP} htmlFor="display-name">
+            A name for this account on your device
+          </label>
+          <input
+            id="display-name"
+            name="displayName"
+            autoComplete="off"
+            value={displayName}
+            onChange={(event) => {
+              setDisplayName(event.target.value);
+              if (error) clearError();
+            }}
+            className={FIELD}
+            placeholder="Viky account"
+            disabled={busy}
+          />
+          <p className={HELP}>Only your device uses it, to label your passkey. Viky never receives it.</p>
+        </>
+      ) : (
+        <button type="button" onClick={() => setNaming(true)} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+          Name this device (optional)
+        </button>
+      )}
+    </form>
+  );
+
   return (
     <section className={STICKER.sun}>
-      <form
-        className="flex flex-col gap-[var(--space-md)]"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void createAccount(displayName);
-        }}
-      >
-        <button type="submit" disabled={busy || cannot !== null} className={PRIMARY_BUTTON}>
-          {busy ? "One moment" : "Create my account"}
-        </button>
-        <p className={HELP}>
-          {cannot ?? "Your face or your fingerprint, and nothing to remember. No password, no code by text."}
-        </p>
-
-        {naming ? (
-          <>
-            <label className={HELP} htmlFor="display-name">
-              A name for this account on your device
-            </label>
-            <input
-              id="display-name"
-              name="displayName"
-              autoComplete="off"
-              value={displayName}
-              onChange={(event) => {
-                setDisplayName(event.target.value);
-                if (error) clearError();
-              }}
-              className={FIELD}
-              placeholder="Viky account"
-              disabled={busy}
-            />
-            <p className={HELP}>Only your device uses it, to label your passkey. Viky never receives it.</p>
-          </>
-        ) : (
-          <button type="button" onClick={() => setNaming(true)} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
-            Name this device (optional)
-          </button>
-        )}
-      </form>
-
-      <button
-        type="button"
-        onClick={() => void signIn()}
-        disabled={busy}
-        className={SECONDARY_BUTTON}
-      >
-        {hasCredential ? "Sign in" : "I already have an account"}
-      </button>
+      {returning ? (
+        <>
+          {signInButton}
+          <p className={HELP}>
+            The same passkey you made your account with. Making another account here would leave your gift and your
+            payment on the first one.
+          </p>
+          {makeAnAccount}
+        </>
+      ) : (
+        <>
+          {makeAnAccount}
+          {signInButton}
+        </>
+      )}
 
       {hasCredential ? (
         <button
