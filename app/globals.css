@@ -95,6 +95,7 @@
   --sticker-pink: var(--joy);
   --sticker-mint: var(--joy);
   --sticker-lilac: var(--joy);
+  --sticker-paper: var(--surface);
 
   color-scheme: light dark;
 }
@@ -170,6 +171,7 @@
   --sticker-pink: #F7B7D8;
   --sticker-mint: #BDEBC8;
   --sticker-lilac: #C9C6FF;
+  --sticker-paper: #FFFDF7;
 
   --font-title: var(--font-anton);
   --font-text: var(--font-dm-sans);
@@ -213,6 +215,7 @@
     --sticker-pink: #FF5FA2;
     --sticker-mint: #C6FF4D;
     --sticker-lilac: #8B6CFF;
+    --sticker-paper: #FFF6E9;
   }
 }
 
@@ -234,6 +237,7 @@
   --sticker-pink: #FF5FA2;
   --sticker-mint: #C6FF4D;
   --sticker-lilac: #8B6CFF;
+  --sticker-paper: #FFF6E9;
 }
 
 body {

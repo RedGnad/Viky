@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DayRow } from "../DayRow";
 import { Drop } from "../Drop";
 import { Moment } from "../Moment";
-import { BODY, CARD, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON, TITLE } from "../ui";
+import { BODY, CARD, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON, STICKER, TITLE } from "../ui";
 
 /**
  * Every screen that matters, drawn from example data, so a design pass can be looked at rather than
@@ -48,7 +48,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     quotes: ["Who is it for, and for what", "Their Duolingo name, if you know it", "Viky never writes to them. You send them the link yourself, once the gift is ready."],
     render: () => (
       <>
-        <section className={CARD}>
+        <section className={STICKER.pink}>
           <h2 className={TITLE}>Who is it for, and for what</h2>
           <label className="flex flex-col gap-[var(--space-xs)]">
             <span className={HELP}>Their Duolingo name, if you know it</span>
@@ -74,7 +74,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     quotes: ["How much, and for how long", "How much, in dollars", "Each day they reach it, this becomes theirs", "And each day they miss, the same comes back to you."],
     render: () => (
       <>
-        <section className={CARD}>
+        <section className={STICKER.sun}>
           <h2 className={TITLE}>How much, and for how long</h2>
           <label className="flex flex-col gap-[var(--space-xs)]">
             <span className={HELP}>How much, in dollars</span>
@@ -89,7 +89,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
             <input readOnly value="10" className={FIELD} />
           </label>
         </section>
-        <section className={CARD}>
+        <section className={STICKER.mint}>
           <p className={HELP}>Each day they reach it, this becomes theirs</p>
           <p className={MONEY}>$7.14</p>
           <p className={HELP}>And each day they miss, the same comes back to you.</p>
@@ -116,7 +116,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     ],
     render: () => (
       <>
-        <section className={CARD}>
+        <section className={STICKER.lilac}>
           <h2 className={TITLE}>Check this over</h2>
           <dl className="flex flex-col gap-[var(--space-sm)]">
             <div className={ROW}>
@@ -141,13 +141,13 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
             they stop.
           </p>
         </section>
-        <section className={CARD}>
+        <section className={STICKER.mint}>
           <h2 className={TITLE}>What they can do with it</h2>
           <p className={HELP}>
             What they earn is theirs straight away, and it adds up in their account from one gift to the next.
           </p>
         </section>
-        <section className={CARD}>
+        <section className={STICKER.pink}>
           <h2 className={TITLE}>Paying for it</h2>
           <p className={HELP}>
             You do not have enough in your account yet, so the next step opens Mercuryo to pay by card. To cover
@@ -175,7 +175,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     ],
     render: () => (
       <>
-        <section className={CARD}>
+        <section className={STICKER.sun}>
           <h2 className={TITLE}>Your money</h2>
           <p className={MONEY}>$0.00</p>
           <div className="flex flex-col gap-[var(--space-md)]">
@@ -219,11 +219,11 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
           Ama opens the link, and the money becomes theirs day by day. Whatever they do not earn comes back to
           you by itself.
         </Moment>
-        <section className={CARD}>
+        <section className={STICKER.sun}>
           <p className={HELP}>
             Whoever opens this link takes the gift, so send it only to the person it is for, and to nobody else.
           </p>
-          <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] p-[var(--space-md)] text-[length:var(--type-help)]">
+          <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
             https://viky.cash/g/3?k=example
           </p>
         </section>

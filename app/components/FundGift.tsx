@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as mera from "@/src/account/mera";
 import Link from "next/link";
-import { ACTION_BAR, BACK_LINK, BODY, CARD, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, TITLE } from "./ui";
+import { ACTION_BAR, BACK_LINK, BODY, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, STICKER, TITLE } from "./ui";
 import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
 import { createGift, type CreatedGift } from "@/src/client/gift";
@@ -196,14 +196,14 @@ export function FundGift() {
 
   if (step === "done" && created) {
     return (
-      <section className="space-y-[var(--space-lg)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-lg)]">
+      <section className={STICKER.sun}>
         <h2 className={TITLE}>It is in their name.</h2>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Whoever opens this link takes the gift, so send it only to the person it is for, and to nobody else.
           They open it, and the money becomes theirs day by day. Whatever they do not earn comes back to
           you by itself.
         </p>
-        <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] p-[var(--space-md)] text-[length:var(--type-help)]">{created.claimUrl}</p>
+        <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">{created.claimUrl}</p>
         <button
           type="button"
           onClick={() => {
@@ -257,7 +257,7 @@ export function FundGift() {
         <button type="button" onClick={() => setStage("check")} className={BACK_LINK}>
           Back
         </button>
-        <section className={CARD}>
+        <section className={STICKER.lilac}>
           <h1 className={TITLE}>One account, and then you can pay</h1>
           <p className={HELP}>
             The money is held in your name until they earn it, so it needs somewhere of yours to be held. Your
@@ -279,7 +279,7 @@ export function FundGift() {
         {/* The Duolingo name is the one thing asked, because it is the one thing here that protects the gift. The
             email or phone that came first protected nothing: the claim checks the link alone and Viky never writes
             to anybody, so it only left a fingerprint of them on a public ledger (D72). */}
-        <section className={CARD}>
+        <section className={STICKER.pink}>
           <h1 className={TITLE}>Who is it for, and for what</h1>
           <label className="flex flex-col gap-[var(--space-xs)]">
             <span className={HELP}>Their Duolingo name, if you know it</span>
@@ -309,7 +309,7 @@ export function FundGift() {
         <button type="button" onClick={() => setStage("who")} className={BACK_LINK}>
           Back
         </button>
-        <section className={CARD}>
+        <section className={STICKER.sun}>
           <h1 className={TITLE}>How much, and for how long</h1>
           <label className="flex flex-col gap-[var(--space-xs)]">
             <span className={HELP}>How much, in dollars</span>
@@ -325,7 +325,7 @@ export function FundGift() {
           </label>
         </section>
 
-        <section className={CARD}>
+        <section className={STICKER.mint}>
           <p className={HELP}>Each day they reach it, this becomes theirs</p>
           <p className={MONEY}>{perDay === null ? "..." : formatAusd(perDay)}</p>
           <p className={HELP}>And each day they miss, the same comes back to you.</p>
@@ -348,7 +348,7 @@ export function FundGift() {
         <button type="button" onClick={() => setStage("howMuch")} className={BACK_LINK}>
           Back
         </button>
-        <section className={CARD}>
+        <section className={STICKER.lilac}>
           <h1 className={TITLE}>Check this over</h1>
           <dl className="flex flex-col gap-[var(--space-sm)]">
             <div className="flex items-baseline justify-between gap-[var(--space-md)]">
@@ -374,7 +374,7 @@ export function FundGift() {
           </p>
         </section>
 
-        <section className={CARD}>
+        <section className={STICKER.mint}>
           <h2 className={TITLE}>What they can do with it</h2>
           <p className={HELP}>
             What they earn is theirs straight away, and it adds up in their account from one gift to the next.
@@ -382,7 +382,7 @@ export function FundGift() {
         </section>
 
         {!enough ? (
-          <section className={CARD}>
+          <section className={STICKER.pink}>
             <h2 className={TITLE}>Paying for it</h2>
             <p className={HELP}>
               You do not have enough in your account yet, so the next step opens {WAY_IN.name} to pay by card.
@@ -418,7 +418,7 @@ export function FundGift() {
   // Waiting for the card payment, then converting, then giving. One screen, because it is one wait.
   return (
     <div className="flex flex-col gap-[var(--space-xl)]">
-      <section className={CARD}>
+      <section className={STICKER.sun}>
         <h1 className={TITLE}>Your money</h1>
         <p className={MONEY}>{balance === null ? "..." : formatAusd(balance)}</p>
         {step === "waiting" ? (
@@ -437,7 +437,7 @@ export function FundGift() {
                   passkey and held by nobody else, so the true answer is the person's own, non-custodial (D72). */}
               <li>When they ask whose it is, choose your own, non-custodial, not an exchange or a platform.</li>
             </ol>
-            <div className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] p-[var(--space-md)]">
+            <div className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)]">
               <p className={HELP}>Before you pay, check what you pasted starts and ends like this:</p>
               <p className="text-[length:var(--type-body)] tabular-nums">
                 {address!.slice(0, 6)}
