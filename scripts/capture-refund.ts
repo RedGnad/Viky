@@ -43,7 +43,10 @@ async function main() {
     console.log(`  earned         ${gift.creditedDays} day(s)`);
     console.log(`  missed         ${gift.drainedDays} day(s)`);
     console.log(`  sent back      $${formatUnits(gift.refundedToFunder, 6)}`);
-    console.log(`  waiting to go  $${formatUnits(gift.refundable, 6)}`);
+    // `refundable` is a running total of everything that has ever become refundable, not what is left to
+    // send: the contract sends `refundable - refundedToFunder`, which it exposes as `refundableBalance`.
+    // Printing the total under "waiting to go" said a refund was still owed the moment after it was paid.
+    console.log(`  waiting to go  $${formatUnits(gift.refundableBalance, 6)}`);
 
     if (gift.drainedDays === 0) {
       console.log("  nothing has been settled as missed yet, so there is nothing to show");

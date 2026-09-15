@@ -1670,3 +1670,31 @@ page margin while the target around it is a full 48.
 **What to take from it.** The check that would have caught this is not a test, it is a list: every page, and
 which layout it uses. The browser tests now run over every public page at four widths, which is that list
 made executable, and it is the reason the back link was found rather than shipped.
+
+## D68, 15 Sep 2026: the missed day came back on its own, and the record of it
+
+**It ran.** The one leg of the product that had never happened, and the central scene of the video, happened
+this morning with nobody touching anything.
+
+| gift | day closed as missed | sent back to the funder |
+|---|---|---|
+| 1 | `0x1599c019d58e460a8490b8da5bd053cb326ea5692e1b3e52fb4495552596c23a`, block 104,892,532 | `0x1adb2c5fde7470cfb863014cf2ebbfffaf03214648f69f9493b5372a7504f238`, block 104,976,670, **$2.857142** |
+| 2 | `0x11ab4f276ad9c4c2b02b9a9ae5861235ad114a9bd39626d9d05d89ff3c666201`, block 104,976,674 | `0xbd72fd16604372cf7d8511d72117309aab880f3f7b847d3a3cc4c9c470f073d8`, block 104,976,678, **$0.142857** |
+
+The funder's account went from $0.00 to **$2.999999**, which is the two refunds to the unit.
+
+**It happened in two halves, and the halves are a day apart on purpose.** Gift 1's day was closed as missed
+by the counting pass at 00:30 UTC, because that pass drains even though it never refunds, and the money then
+sat in the refundable bucket for six and a half hours until the settling pass at 07:00 sent it. Gift 2 was
+drained and refunded in the same 07:00 pass, because its catch-up window ran to 06:00 and the earlier pass
+could not touch it. Both behaviours are what D35 designed and neither had ever been seen.
+
+**And a false money sentence in the capture script itself**, found by reading its own output rather than by a
+test. It printed `refundable` under "waiting to go", but `refundable` is a running total of everything that
+has ever become refundable, not what is left to send: the contract sends `refundable - refundedToFunder`.
+So the moment a refund landed, the script said the same amount was still waiting to go. Corrected to
+`refundableBalance`, which is the outstanding figure the contract exposes for exactly this.
+
+That is the fifth sentence about money found saying something no code path made true, and the first one found
+in a tool rather than on a screen. The rule holds wherever a number is printed, not only where a person reads
+it.
