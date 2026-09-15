@@ -47,3 +47,23 @@ export const PROSE = `${BODY} max-w-[var(--prose-max)]`;
 
 /** Stacked controls, spaced so Apple's bezelled minimum is met without anybody remembering it. */
 export const CONTROL_STACK = "flex flex-col gap-[var(--tap-gap)]";
+
+/**
+ * One way back, and it looks the same wherever it is. Pulled left by its own padding so the word stays flush
+ * with the page margin while the target around it is a full 48 wide.
+ */
+export const BACK_LINK =
+  "-ml-[var(--space-md)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center self-start px-[var(--space-md)] text-[length:var(--type-body)] text-[var(--accent-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]";
+
+/**
+ * The action a screen is asking for, kept where a thumb is and where the eye ends up, instead of below
+ * whatever explaining the screen had to do.
+ *
+ * Found by using the product rather than by looking at a picture of it: on a 390 pixel phone the Continue
+ * button sat under three fields and two cards on every screen of the funder journey, so every step began with
+ * a scroll to find out what the step was. The bottom inset is added to the bar's own padding and the bar is
+ * not pinned with `position: fixed`, so Chrome still slides its own chin away (developer.chrome.com,
+ * edge-to-edge): a sticky element is the pattern its guidance leaves open.
+ */
+export const ACTION_BAR =
+  "sticky bottom-0 -mx-[var(--page-margin)] flex flex-col gap-[var(--tap-gap)] border-t border-[var(--divider)] bg-[var(--background)] px-[var(--page-margin)] pt-[var(--space-md)] pb-[calc(var(--space-md)+env(safe-area-inset-bottom,0px))]";
