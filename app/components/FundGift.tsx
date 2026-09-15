@@ -8,11 +8,12 @@ import { ApiError, postJson } from "@/src/client/api";
 import { createGift, type CreatedGift } from "@/src/client/gift";
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
 import { formatAusd } from "@/src/gift-reader";
-import { fundingStageShown, nextFundingStep, type FundingStage } from "@/src/funding-step";
+import { fundingStageShown, nextFundingStep, paymentArrived, type FundingStage } from "@/src/funding-step";
 import { AmountError, dollarsToUnits } from "@/src/money";
 import { WAY_IN } from "@/src/rails";
 import { eurosToBuy, SUGGESTED_GIFT_DOLLARS } from "@/src/gift-amount";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
+import { forgetPendingGift, loadPendingGift, savePendingGift } from "@/src/pending-gift";
 import { AccountPanel } from "./AccountPanel";
 import { SessionScope } from "./SessionScope";
 
@@ -64,6 +65,9 @@ export function FundGift() {
   const [created, setCreated] = useState<CreatedGift | null>(null);
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  // Whether the device kept the gift's terms when the rail opened. Private browsing can refuse, and then the gift
+  // lasts only as long as this page stays open, which the screen must say rather than promise more (D74).
+  const [keptOnDevice, setKeptOnDevice] = useState(false);
   const working = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -91,6 +95,8 @@ export function FundGift() {
       amount: dollarsToUnits(dollars),
     });
     setCreated(result);
+    // Made, so nothing is left to pick up again on this device (D74).
+    forgetPendingGift();
     setStep("done");
     await refresh();
   }, [username, target, days, dollars, refresh]);
@@ -147,6 +153,25 @@ export function FundGift() {
     };
   }, [step, address, dollars, refresh, give]);
 
+  // A card payment can outlast the passkey session: the rail says most take 30 to 60 minutes, the one of 15 Sep took
+  // twelve, and the session closes after ten without a signature. So the gift set up before paying is picked up again
+  // as soon as its own account is signed in on this page, wherever the person had left it (D74).
+  useEffect(() => {
+    if (!address || step !== "form") return;
+    const saved = loadPendingGift(address);
+    if (!saved) return;
+    void Promise.resolve().then(() => {
+      setUsername(saved.username);
+      setDollars(saved.dollars);
+      setDays(saved.days);
+      setTarget(saved.target);
+      setKeptOnDevice(true);
+      setProblem(null);
+      setNotice(`Welcome back. Your ${formatAusd(dollarsToUnits(saved.dollars))} gift is still set up, and it goes ahead as soon as your payment is here.`);
+      setStep("waiting");
+    });
+  }, [address, step]);
+
   const enough = (() => {
     try {
       return balance !== null && balance >= dollarsToUnits(dollars);
@@ -156,6 +181,9 @@ export function FundGift() {
   })();
 
   const ready = Number(target) > 0 && Number(days) >= 7;
+  // A card payment already in the account and not yet turned into what a gift holds, like the one of 15 Sep after its
+  // session closed. It is used before the funder is sent to pay a second time (D74).
+  const arrived = pending !== null && paymentArrived(pending);
 
   const start = async () => {
     setProblem(null);
@@ -181,6 +209,12 @@ export function FundGift() {
         setProblem(readable(error));
         setStep("form");
       }
+      return;
+    }
+    // Written down before anything else, so a payment that outlasts the session does not lose the gift (D74).
+    setKeptOnDevice(savePendingGift({ account: address, username, dollars, days, target }));
+    if (arrived) {
+      setStep("waiting");
       return;
     }
     // Both the copy and the new page must happen inside the tap, or the browser blocks them.
@@ -381,7 +415,17 @@ export function FundGift() {
           </p>
         </section>
 
-        {!enough ? (
+        {!enough && arrived ? (
+          <section className={STICKER.pink}>
+            <h2 className={TITLE}>Paying for it</h2>
+            <p className={HELP}>
+              A card payment has already arrived in your account. The next step turns it into this gift, and says
+              how much more to pay if it falls short.
+            </p>
+          </section>
+        ) : null}
+
+        {!enough && !arrived ? (
           <section className={STICKER.pink}>
             <h2 className={TITLE}>Paying for it</h2>
             <p className={HELP}>
@@ -400,7 +444,7 @@ export function FundGift() {
         <div className={ACTION_BAR}>
           {address ? (
             <button type="button" onClick={() => void start()} disabled={!ready} className={PRIMARY_BUTTON}>
-              {enough ? "Put it in their name" : "Add money and give"}
+              {enough ? "Put it in their name" : arrived ? "Use the payment that arrived" : "Add money and give"}
             </button>
           ) : (
             <button type="button" onClick={() => setStage("account")} disabled={!ready} className={PRIMARY_BUTTON}>
@@ -411,6 +455,29 @@ export function FundGift() {
         {notice ? <p className={BODY}>{notice}</p> : null}
         {problem ? <p className={BODY}>{problem}</p> : null}
         <SessionScope />
+      </div>
+    );
+  }
+
+  // The session closed while the page waited. What was paid stays in the account and the gift stays set up, so the
+  // page says so and asks for the one thing it needs to go on: the account back. It used to read the closed account's
+  // identifier here regardless, and without one the page ended (D74).
+  if (!address) {
+    return (
+      <div className="flex flex-col gap-[var(--space-xl)]">
+        <section className={STICKER.lilac}>
+          <h1 className={TITLE}>Your session closed while you were paying</h1>
+          <p className={BODY}>
+            {keptOnDevice
+              ? "Nothing is lost. The gift you set up is kept on this device, and whatever you paid stays in your account."
+              : "Nothing is lost. The gift you set up is kept while this page stays open, and whatever you paid stays in your account."}
+          </p>
+          <p className={HELP}>
+            Sign in again and Viky picks up where it stopped: your payment becomes the gift as soon as it is here.{" "}
+            {WAY_IN.name} says most payments take 30 to 60 minutes, and sometimes several hours.
+          </p>
+        </section>
+        <AccountPanel />
       </div>
     );
   }
@@ -440,9 +507,9 @@ export function FundGift() {
             <div className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)]">
               <p className={HELP}>Before you pay, check what you pasted starts and ends like this:</p>
               <p className="text-[length:var(--type-body)] tabular-nums">
-                {address!.slice(0, 6)}
+                {address.slice(0, 6)}
                 <span className="text-[var(--muted)]"> ... </span>
-                {address!.slice(-4)}
+                {address.slice(-4)}
               </p>
             </div>
             {copied ? <p className={HELP}>Copied and ready to paste.</p> : null}
@@ -450,7 +517,7 @@ export function FundGift() {
             <div className="flex flex-wrap gap-[var(--tap-gap)]">
               <button
                 type="button"
-                onClick={() => void navigator.clipboard.writeText(address!).then(() => setCopied(true)).catch(() => setCopied(false))}
+                onClick={() => void navigator.clipboard.writeText(address).then(() => setCopied(true)).catch(() => setCopied(false))}
                 className={INLINE_BUTTON}
               >
                 Copy my identifier again
@@ -459,6 +526,20 @@ export function FundGift() {
                 Open {WAY_IN.name} again
               </a>
             </div>
+            {/* The way out of a gift picked up again that the funder no longer wants. What they paid stays theirs. */}
+            <button
+              type="button"
+              onClick={() => {
+                forgetPendingGift();
+                setNotice(null);
+                setProblem(null);
+                setStage("who");
+                setStep("form");
+              }}
+              className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}
+            >
+              Set up a different gift instead
+            </button>
           </div>
         ) : null}
         {step === "converting" || step === "giving" ? (

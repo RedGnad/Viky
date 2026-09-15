@@ -206,6 +206,35 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     ),
   },
   {
+    slug: "funder-session-closed",
+    who: "funder",
+    title: "The session closed while paying",
+    hierarchy:
+      "What happened, then that nothing is lost, then the one thing to do: sign in again. A card payment can outlast the ten minute session, and on 15 Sep one did; the gift set up before paying is kept, and the page goes on the moment the account is back (D74).",
+    builtFrom: "app/components/FundGift.tsx",
+    quotes: [
+      "Your session closed while you were paying",
+      "Nothing is lost. The gift you set up is kept on this device, and whatever you paid stays in your account.",
+      "Sign in again and Viky picks up where it stopped: your payment becomes the gift as soon as it is here.",
+      "says most payments take 30 to 60 minutes, and sometimes several hours.",
+    ],
+    render: () => (
+      <>
+        <section className={STICKER.lilac}>
+          <h2 className={TITLE}>Your session closed while you were paying</h2>
+          <p className={BODY}>
+            Nothing is lost. The gift you set up is kept on this device, and whatever you paid stays in your account.
+          </p>
+          <p className={HELP}>
+            Sign in again and Viky picks up where it stopped: your payment becomes the gift as soon as it is here.
+            Mercuryo says most payments take 30 to 60 minutes, and sometimes several hours.
+          </p>
+        </section>
+        <span className={SECONDARY_BUTTON}>Sign in</span>
+      </>
+    ),
+  },
+  {
     slug: "funder-ready",
     who: "funder",
     title: "The gift is ready",

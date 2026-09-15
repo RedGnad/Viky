@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useAccount } from "@/src/account/provider";
+import { loadPendingGift } from "@/src/pending-gift";
 import { Footer } from "./Footer";
 import { MyGifts } from "./MyGifts";
 import { Screen } from "./Screen";
@@ -81,8 +82,9 @@ export function HomeScreen() {
       }
     >
       <YourMoney />
+      {/* A gift set up on this device and not made yet is finished on the page it was started on (D74). */}
       <Link href="/fund" className={PRIMARY_BUTTON}>
-        Offer a gift
+        {loadPendingGift(address) ? "Finish the gift you set up" : "Offer a gift"}
       </Link>
       <Link href="/account" className={`${HELP} underline`}>
         Account, help and legal

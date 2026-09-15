@@ -4,7 +4,7 @@ import test from "node:test";
 import { announcedAccount, sessionRemaining } from "../src/account/session-gate";
 import { formatAusdExact, theirsSoFar } from "../src/gift-reader";
 import { catchUpDay, deadlineInWords } from "../src/catch-up";
-import { ARRIVAL_FLOOR, CONVERSION_RESERVE, fundingStageShown, nextFundingStep } from "../src/funding-step";
+import { ARRIVAL_FLOOR, CONVERSION_RESERVE, fundingStageShown, nextFundingStep, paymentArrived } from "../src/funding-step";
 import { AmountError, dollarsToUnits, MIN_GIFT_UNITS } from "../src/money";
 
 /**
@@ -115,6 +115,23 @@ test("once there is an account, the account step gives way to the check and its 
     assert.equal(fundingStageShown(stage, true), stage);
     assert.equal(fundingStageShown(stage, false), stage);
   }
+});
+
+test("a payment that outlasts the session is used where it sits, and the waiting page never reads a closed account", () => {
+  // The defect of 15 Sep: the payment took twelve minutes, the session closed after ten, and nothing was made of it.
+  // The same test decides what the waiting page converts and what the check offers to use.
+  assert.equal(paymentArrived(ARRIVAL_FLOOR + CONVERSION_RESERVE), false);
+  assert.equal(paymentArrived(ARRIVAL_FLOOR + CONVERSION_RESERVE + 1n), true);
+  for (const arriving of [0n, ARRIVAL_FLOOR, 1_231n * 10n ** 18n]) {
+    const converts = nextFundingStep({ held: 0n, arriving, wanted: 25_000_000n }).do === "convert";
+    assert.equal(converts, paymentArrived(arriving), `${arriving}`);
+  }
+  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
+  assert.doesNotMatch(fund, /address!/, "a closed session leaves no account to read");
+  // The terms are written down before the rail opens, and forgotten once the gift is made.
+  assert.ok(fund.indexOf("savePendingGift(") > 0 && fund.indexOf("savePendingGift(") < fund.indexOf("window.open(WAY_IN.page"));
+  const give = fund.slice(fund.indexOf("const give = useCallback"), fund.indexOf("// While the payment page is open"));
+  assert.match(give, /forgetPendingGift\(\)/);
 });
 
 test("the amount written before sending all of it is exactly the amount that leaves", () => {
