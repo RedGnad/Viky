@@ -1725,12 +1725,19 @@ asked: today, the signed-out home alone.
   first screen. The browser tests pass on the final build.
 - The screens that must not change: 80 whole-page captures (fund, account, cash-out, privacy, legal, judges,
   offline, the gallery and its twelve example screens, at both sizes, by day and by night) taken before the change
-  and after it. 78 are identical to the pixel. The other two differ by 18 pixels in one place on cash-out, and that
-  page differs by the same 18 pixels between two captures of one unchanged build.
+  and after it. Depending on the run, 75 to 78 are identical to the pixel, and every one that is not differs in one
+  of two places only: 23 to 25 pixels on one line near the top of the account page, and 9 to 18 pixels on
+  cash-out. Both places differ by the same amounts between two captures of one unchanged build.
 
 **And the defect that comparison caught.** The first build changed the account page: the chosen option of How it
 looks lost its 2 pixel outline, because its own `border-2` lost to the width variable the shared button now reads.
 Every test passed with it. The option now sets that variable to 2 pixels instead.
+
+**And the one the reviewer caught.** At night, a motif drawn on a sticker kept the light outline of the sticker's
+own edge, cream on the yellow sun and on the lime ticket, where it all but vanished. The measurement had compared
+every outline with the page and none with the sticker underneath. A motif is now outlined in the colour measured for
+words on a sticker, which is the same plum by day, and the tokens test already holds that colour to 4.5:1 on every
+fill a sticker can wear.
 
 **What cannot be photographed** is the signed-in home, because a passkey cannot be replayed by a script. Its branch
 of HomeScreen is unchanged, and every class it uses resolves to the calm values, since nothing on it asks for the
