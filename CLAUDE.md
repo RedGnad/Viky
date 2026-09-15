@@ -67,6 +67,8 @@ telling someone to remove a code they were never given.
 - **Never ask the user for something a tool can get.** Which page, what it looks like, whether it deployed,
   what an API returns, what a file contains: check, then speak. Asking is the last resort and it comes with a
   list of what was tried.
+- **Two hostnames serve this app**, viky.cash and viky-two.vercel.app. Checking one is checking half. A
+  defect was shipped to both while I was looking at neither.
 - **A capability I have is a capability I use without being reminded.** If the user has to tell me I can open
   a browser, read a database, or run the thing, the failure already happened.
 
