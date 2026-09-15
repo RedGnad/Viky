@@ -21,8 +21,10 @@ there. Those matter as much as the numbers, because a missing rule is where inve
 |---|---|---|
 | four CSS variables, no scales | a spacing scale, a type scale and a grid are all published, with numbers | Material 3, Apple |
 | no `viewport-fit`, so device insets ignored | insets need `viewport-fit=cover` plus `env(safe-area-inset-*)` to exist at all | web.dev |
-| 44 px tap floor, invented as "platform guidance" | it is real, and it is Apple's Buttons page; Apple's Accessibility page now says 28 pt, and WCAG 2.2 says 24 px | see the conflict in 1.1 |
-| no spacing rule between targets | Apple publishes 12 pt and 24 pt, depending on whether the control has a bezel | Apple |
+| 44 px tap floor, cited as "platform guidance" with nobody named | four sources, four floors: web.dev 48 dp, Apple 44 pt, NN/g 1 cm, WCAG 2.2 24 px. We take **48** | 1.1 and 3.4 |
+| no spacing rule between targets | Apple publishes 12 pt and 24 pt by bezel; web.dev publishes 8 px | Apple, web.dev |
+| no line-length limit, so text can run the full width | 45 to 75 characters, 66 ideal, and `66ch` rather than a pixel width | web.dev |
+| explanation above the money on the home page | two thirds of attention is in the top 40 % of the page | NN/g |
 | contrast never measured | 4.5:1, and 3:1 only above a stated point size | WCAG, Apple |
 | `100vh` unchecked | `100vh` is the documented mobile trap; `dvh` and friends exist for it | web.dev |
 
@@ -49,10 +51,11 @@ Apple states two different things on two current pages, and both are official.
 The older wording everyone quotes, "minimum tappable area of 44x44 points", is gone: neither "minimum
 tappable" nor "tappable area" appears anywhere in the 63 pages. **[O, negative]**
 
-**What Viky takes**: 44 px as the floor for anything a person taps. It is the stricter of the two Apple
-framings, it is what the Buttons page still requires of a button, and it is comfortably above WCAG 2.2's
-24x24 (see 3.4). Our browser test already asserted 44 while citing "platform guidance" without naming it;
-the number was right and the citation was not.
+**Viky does not take either number, because web.dev publishes a larger one**: see 3.4. Apple's 44 pt is the
+stricter of its own two framings and is what the Buttons page still requires, but 48 dp satisfies Apple,
+web.dev, NN/g and WCAG at once. What this section settles is that our old citation was empty: the test said
+"platform guidance" without naming anyone, and the number it used was neither the strictest available nor
+traceable.
 
 ### 1.2 Spacing between targets
 
@@ -395,6 +398,186 @@ real cost is speed, "about **30 milliseconds** more on each word" for hard passa
 title). Conclusion: a small screen costs nothing on easy content and costs reading speed on hard content, so
 the work is to make the content easy rather than to fear the screen.
 
-## 5. Material Design 3, and WCAG 2.2
+## 5. Material Design 3
 
-To be written from the remaining research pass.
+Material's pages are an Angular application that answers a plain fetch with "This website requires
+JavaScript". The route that works: read `/static/angular/main.<hash>.js`, take `environment.carbonVersion`
+and the slug-to-file table out of it, then fetch `https://m3.material.io/_dsm/content/m3/<carbonVersion>/
+<fileId>`, and the token values from `/_dsm/data/dsdb-m3/<carbonVersion>/<TYPE>.<hash>.json`. The
+`carbonVersion` read on 15 Sep 2026 was `2026-09-09_06-00-49`; it changes, so it must be re-read rather than
+reused. Everything below was read in one of those files. **[O]**
+
+### 5.1 Breakpoints and margins, which is where our page margin comes from
+
+**[O]** `https://m3.material.io/foundations/layout/breakpoints`
+
+| breakpoint | width | panes |
+|---|---|---|
+| compact | under 600dp | 1 |
+| medium | 600 to 839dp | 1, or 2 |
+| expanded | 840 to 1199dp | 1, or 2 recommended |
+| large | 1200 to 1599dp | 1, or 2 recommended |
+| extra large | 1600dp and above | 1 to 3 |
+
+Margins: **16dp** leading and trailing on compact, **24dp** from medium upward, with a 24dp spacer between
+panes. Padding "is measured in increments of 4dp". **[O]**
+
+Two honest negatives. The word **gutter** does not appear on any current M3 page read (thirteen pages
+grepped): M3 now names margin, spacer, padding and gap only, so any "gutter equals 16dp" figure is **[NV]**.
+And M3 **no longer publishes a column count per breakpoint** as a specification: the old
+`applying-layout/window-size-classes` page is gone and now redirects to breakpoints, and the only column
+numbers left are figure captions. **[O, negative]** The familiar 4 / 12 / 12 table cannot be cited today.
+
+M3 does publish a line-length rule: "keep text between **40 to 60 characters per line**" across all
+breakpoints. **[O]**
+
+### 5.2 The spacing system
+
+The system is an **8dp scale**, stated as "space100 = 8dp", with smaller nested units at 0.25x, 0.5x, 0.75x
+and 1.25x. Eighteen steps, read from the measurement token file: **[O]**
+`https://m3.material.io/styles/spacing`
+
+0, 2, 4, 6, **8**, 10, 12, 14, **16**, 20, **24**, **32**, 36, 40, **48**, 56, 64, 72 dp.
+
+A caveat that must be recorded rather than glossed: the page's own availability table marks these tokens
+**Unavailable** for Web and Android Views, and says "The spacing system tokens are only used on Jetpack
+Compose". **[O]** So we are taking the published *scale*, which is a design system, and not claiming a token
+contract that Material does not offer the web.
+
+### 5.3 The type scale
+
+Thirty styles, fifteen baseline and fifteen emphasized, in five roles. The baseline set, in the same context
+the Typography page itself renders: **[O]** `https://m3.material.io/styles/typography`
+
+| role | size | line height | weight | tracking |
+|---|---|---|---|---|
+| Display Large / Medium / Small | 57 / 45 / 36 | 64 / 52 / 44 | 400 | -0.25 / 0 / 0 |
+| Headline Large / Medium / Small | 32 / 28 / 24 | 40 / 36 / 32 | 400 | 0 |
+| Title Large / Medium / Small | 22 / 16 / 14 | 28 / 24 / 20 | 400 / 500 / 500 | 0 / 0.15 / 0.1 |
+| Body Large / Medium / Small | 16 / 14 / 12 | 24 / 20 / 16 | 400 | 0.5 / 0.25 / 0.4 |
+| Label Large / Medium / Small | 14 / 12 / 11 | 20 / 16 / 16 | 500 | 0.1 / 0.5 / 0.5 |
+
+The emphasized set keeps every size and line height and changes only the weight. Line-height guidance:
+about **1.2x** the size for title, headline and display, around **1.5x** for body and label. **[O]**
+
+### 5.4 Touch targets, agreeing with web.dev
+
+**[O]** `https://m3.material.io/foundations/designing`
+
+- Touch targets "at least **48 x 48dp**", about 9mm, with a recommended physical range of 7 to 10mm.
+- Pointer targets, for a mouse or stylus, minimum **44 x 44dp**.
+- "targets separated by **8dp** of space or more".
+- The worked examples are exactly our case: a 24dp icon inside a 48dp target, and a 36dp-high button with a
+  48dp target.
+- The Density sections put it in our units: "The default target size should be at least **48x48 CSS
+  pixels**", and keep it there "even if the visual element, such as an icon, is smaller". **[O]**
+
+M3 also notes on the same page that "iOS recommends 44 x 44dp targets", which is the conflict from 1.1 seen
+from the other side. Two systems, one number that satisfies both: 48.
+
+### 5.5 Shape and elevation
+
+Corner radius, ten steps: **0, 4, 8, 12, 16, 20, 28, 32, 48** dp and **full**. **[O]**
+`https://m3.material.io/styles/shape`
+
+Elevation, six levels: **0, 1, 3, 6, 8, 12** dp. Levels 0 to 3 are resting states; 4 and 5 are reserved for
+interaction such as hover and drag. The tokens carry no shadow and no colour: each platform decides. **[O]**
+`https://m3.material.io/styles/elevation`
+
+### 5.6 Colour, and the pairing rule that matters for a colourful theme
+
+**[O]** `https://m3.material.io/styles/color/roles` and `.../color/system`
+
+- Twenty six standard roles in six groups. "The color system is built on accessible color pairings. These
+  color pairs provide an accessible minimum **3:1** contrast."
+- An "on" role is "for text or icons on top of its paired parent color". Container roles are fills and
+  "should not be used for text or icons".
+- The rule that protects a saturated palette: "apply colors only in the intended pairs or layering orders",
+  because improper combinations "may break contrast necessary for visual accessibility".
+- Tonal palettes run tone **0 to 100**. Worked examples: tones 50 and 98 give 3:1, tones **30 and 98 give
+  7:1**. Three contrast levels exist, standard, medium (minimum 3:1) and high (7:1).
+- Text contrast, stated plainly: "Material aims for two main text contrast levels: 3:1 for large text, 4.5:1
+  for small text", with on-surface as the default text colour. **[O]**
+  `https://m3.material.io/styles/typography`
+
+**This is the mechanism the funder's colourful direction needs.** A saturated world stays legible not by
+being toned down but by pairing every surface with a foreground colour chosen against it. That is a system,
+and it is the one both published systems use.
+
+## 6. WCAG 2.2
+
+`w3.org` refuses a plain fetch behind Cloudflare even with a full browser header set; fetching through a
+different client works. The normative glossary could not be read in place, so the definitions below come from
+the Key Terms sections of the Understanding pages, which quote the same glossary. Still w3.org, still **[O]**,
+and the distinction is kept where it matters.
+
+### 6.1 Contrast
+
+- **1.4.3 Contrast (Minimum), AA**: at least **4.5:1** for normal text, **3:1** for large-scale text. **[O]**
+  `https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum`
+- Large scale is defined as "at least 18 point or 14 point bold". The Intent prose adds that these are
+  "equivalent to approximately **18.5px and 24px**". That px figure is in the prose, not in the normative
+  glossary, and is cited as such. **[O]**
+- Values "should not be rounded (e.g., 4.499:1 would not meet the 4.5:1 threshold)". **[O]**
+- **1.4.6 Contrast (Enhanced), AAA**: **7:1** normal, **4.5:1** large. **[O]**
+- **1.4.11 Non-text Contrast, AA**: **3:1** for what is required to identify a user interface component and
+  its state, and for parts of graphics required to understand the content. **[O]**
+
+### 6.2 Target size, and why 48 is not overkill
+
+- **2.5.8 Target Size (Minimum), AA, new in WCAG 2.2**: at least **24 by 24 CSS pixels**, with five
+  exceptions. The first is the one worth knowing: an undersized target passes if a **24 CSS pixel diameter
+  circle** centred on it does not intersect another target's circle. So the legal floor is really about size
+  **or** spacing. **[O]** `https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum`
+- **2.5.5 Target Size (Enhanced), AAA**: at least **44 by 44 CSS pixels**. **[O]**
+
+Our 48 clears the AAA criterion, not merely the AA one. That is the answer to "is 48 overkill": it is the
+number at which the two design systems and the strictest accessibility level all agree.
+
+### 6.3 Text spacing and reflow, which decide whether a layout survives a real person
+
+- **1.4.12 Text Spacing, AA**: content must survive the reader setting line height to **1.5x** the font
+  size, paragraph spacing to **2x**, letter spacing to **0.12x** and word spacing to **0.16x**, with no loss
+  of content or function. **[O]** `https://www.w3.org/WAI/WCAG22/Understanding/text-spacing`
+- **1.4.10 Reflow, AA**: usable with no two-dimensional scrolling at a width equivalent to **320 CSS
+  pixels** and a height equivalent to **256 CSS pixels**, which is a 1280 by 1024 viewport at 400 % zoom.
+  **[O]** `https://www.w3.org/WAI/WCAG22/Understanding/reflow`
+
+Reflow is the criterion that makes our own no-horizontal-scroll test a legal requirement rather than a
+preference, and 320 is narrower than any phone we test: it is the real floor.
+
+### 6.4 What is new in 2.2
+
+Nine criteria. Of the ones above, only **2.5.8 Target Size (Minimum), AA** is new in 2.2. Reflow, Non-text
+Contrast, Text Spacing and Target Size (Enhanced) came in 2.1; the two contrast criteria are from 2.0. Also
+in 2.2: 4.1.1 Parsing was removed as obsolete. **[O]**
+`https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/`
+
+Three others in that list touch us directly and are recorded for the pass that follows: **3.2.6 Consistent
+Help (A)**, **3.3.7 Redundant Entry (A)** and **3.3.8 Accessible Authentication (Minimum) (AA)**. A product
+whose account is a passkey and whose journeys ask for a Duolingo name has something to answer on all three.
+
+## 7. Where the sources disagree, and what Viky does
+
+| question | the answers | what we take, and why |
+|---|---|---|
+| smallest tap target | web.dev 48 dp, M3 48 dp, Apple 44 pt, WCAG AAA 44 px, WCAG AA 24 px, NN/g 1 cm | **48**. The largest, and the only one that satisfies every source at once |
+| spacing between targets | web.dev 8 px, M3 8 dp, Apple 12 pt bezelled or 24 pt not | **12** between stacked controls, which also satisfies Apple's bezelled case |
+| page margin on a phone | M3 16 dp; Apple no longer publishes one | **16**, cited to M3, because Apple deleted its tables on 9 Sep 2026 |
+| longest line of prose | M3 40 to 60 characters, web.dev 45 to 75 with 66 ideal, NN/g 50 to 75 | **60ch**, the widest value inside all three ranges |
+| body text size | Apple 17 pt default and 11 pt floor, M3 16, NN/g 14 to 16 | **16 px**, which is the browser default and inside every range |
+| contrast for text | WCAG 4.5:1 normal and 3:1 large, Apple the same, M3 the same | **4.5:1 for every size**. We do not use the large-text relaxation: our largest text is money |
+
+## 8. What this research did not settle
+
+- No source publishes a maximum width for a single-column app on a desktop. Ours is chosen from the prose
+  limit instead: the app column is narrower than 60 characters, so prose can never exceed the limit. **[NV]**
+  as a sourced number, and stated as a derivation.
+- What `env(safe-area-inset-*)` resolves to without `viewport-fit=cover` is documented nowhere in the two
+  source sets. We always pass a fallback. **[NV]**
+- Whether `svh` or `dvh` is preferred: web.dev describes, never recommends. Ours is an inference. **[NV]**
+- Apple's own mapping of its accessibility settings to CSS media queries does not exist: the guidelines never
+  mention the web. **[O, negative]** Our use of `prefers-reduced-motion` and `prefers-color-scheme` is an
+  inference from the substance of the guidance, which is itself official.
+- NN/g publishes no contrast ratio anywhere: it defers to WCAG. Attributing 4.5:1 to NN/g would be wrong.
+  **[O, negative]**
