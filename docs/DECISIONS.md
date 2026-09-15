@@ -1923,7 +1923,12 @@ several hours when the network is busy, so a ten minute session closes during mo
 - A payment already in the account is used before the funder is sent to pay again: the check offers "Use the
   payment that arrived", decided by the same test the waiting page converts on. A payment left behind, like the one
   of 15 Sep, can still become a gift that way.
-- The signed-in home says "Finish the gift you set up" while there is one.
+- The signed-in home says "Finish the gift you set up" while there is one, and the first step says a gift is waiting
+  when nobody is signed in at all, which after a reload is the only screen there is.
+- On the screen after a closed session, signing in leads and making an account follows: the other way round, somebody
+  coming back makes a second account, and the gift and the payment stay on the first. Found by replaying the evening
+  with a virtual passkey rather than by reading the code.
+- What just happened is said above the instructions rather than under the buttons, where "Welcome back" first landed.
 - The waiting page does not keep the session open. It still closes itself after ten quiet minutes, as the session
   panel promises, and the next conversion still asks for a signature.
 
