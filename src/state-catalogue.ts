@@ -86,7 +86,7 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
       {
         name: "Waiting for the payment",
         when: "the rail's page has been opened and nothing has arrived",
-        says: ["Waiting for your payment. Keep this page open.", "Copy my identifier again"],
+        says: ["Waiting for your payment. You can leave this page", "Copy my identifier again"],
       },
       {
         name: "Something arrived",

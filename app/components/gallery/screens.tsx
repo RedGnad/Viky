@@ -166,7 +166,7 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
       "The six steps in the order the other page asks for them, the amount to buy among them, then the check on what was pasted, then the two ways back. Their page cannot be pre-filled, so every one of these is a thing a person does by hand and the screen has to carry it.",
     builtFrom: "app/components/FundGift.tsx",
     quotes: [
-      "Waiting for your payment. Keep this page open.",
+      "Waiting for your payment. You can leave this page",
       "Choose Buy, not sell.",
       "Pay in EUR, at least",
       "Choose the Monad network.",
@@ -179,7 +179,10 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
           <h2 className={TITLE}>Your money</h2>
           <p className={MONEY}>$0.00</p>
           <div className="flex flex-col gap-[var(--space-md)]">
-            <p className="font-medium">Waiting for your payment. Keep this page open.</p>
+            <p className="font-medium">
+              Waiting for your payment. You can leave this page: the gift is kept, and Viky picks it up when you come
+              back.
+            </p>
             <p className={HELP}>Mercuryo&apos;s page opens on something else by default, so set each of these yourself:</p>
             <ol className={`list-decimal pl-5 ${HELP}`}>
               <li>Choose Buy, not sell.</li>
@@ -245,8 +248,9 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     quotes: [
       "Your money",
       "gift is still set up, and it goes ahead as soon as your payment is here.",
-      "Waiting for your payment. Keep this page open.",
+      "Waiting for your payment. You can leave this page",
       "Set up a different gift instead",
+      "Whatever you paid stays in your account, for this gift or the next one.",
     ],
     render: () => (
       <>
@@ -256,10 +260,14 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
           <p className={BODY}>
             Welcome back. Your $25.00 gift is still set up, and it goes ahead as soon as your payment is here.
           </p>
-          <p className="font-medium">Waiting for your payment. Keep this page open.</p>
+          <p className="font-medium">
+            Waiting for your payment. You can leave this page: the gift is kept, and Viky picks it up when you come
+            back.
+          </p>
           <span className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
             Set up a different gift instead
           </span>
+          <p className={HELP}>Whatever you paid stays in your account, for this gift or the next one.</p>
         </section>
       </>
     ),
