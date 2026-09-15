@@ -1,13 +1,6 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import {
-  cashableOnItsOwn,
-  payoutFloorInDollars,
-  payoutFloorInWords,
-  roughlyInDollars,
-  SMALLEST_CARD_PAYMENT_EUR,
-  SUGGESTED_GIFT_EUR,
-} from "../src/gift-amount.js";
+import { eurosToBuy, roughlyInDollars, SMALLEST_CARD_PAYMENT_EUR, SUGGESTED_GIFT_DOLLARS } from "../src/gift-amount.js";
 import { RAIL_CLOSED_IN, WAY_IN, WAY_OUT } from "../src/rails.js";
 
 /**
@@ -28,35 +21,27 @@ test("what a card payment becomes inside Viky matches what was measured on 14 Se
 });
 
 /**
- * The floor is fixed in the rail's own coin, never in dollars, so its dollar value moves with the rate every
- * day. That is why a person is told "about $21" and never a figure to the cent: a cent-exact promise could be
- * broken by the rate before they finished reading it. This pins the arithmetic and the hedged words apart.
+ * The defect of 15 Sep: the screen suggested $50, the funder bought the rail's smallest 25 EUR, received about
+ * $28.50, and the page waited for a gift that could not be made, because nothing said how much to buy.
  */
-test("the payout floor is about twenty one dollars, and is only ever said as about", () => {
-  const floor = payoutFloorInDollars();
-  assert.ok(floor > 20 && floor < 21.5, `floor was ${floor}`);
-  assert.equal(payoutFloorInWords(), "about $21");
-  // The cent-exact figure is ours to compute with and never a person's to read.
-  assert.doesNotMatch(payoutFloorInWords(), /\d\.\d/, "no screen may carry cents on a floor that moves daily");
+test("what the funder is told to buy always covers what the account is short of", () => {
+  assert.equal(eurosToBuy(0n), 0, "nothing short, nothing to buy");
+  assert.equal(eurosToBuy(-5n), 0);
+  assert.equal(eurosToBuy(1_000_000n), SMALLEST_CARD_PAYMENT_EUR, "never below the rail's smallest payment");
+  assert.equal(eurosToBuy(50_000_000n), 49);
+  for (const dollars of [1, 5, 20, 25, 28, 40, 50, 75, 100, 250, 500]) {
+    const euros = eurosToBuy(BigInt(dollars) * 1_000_000n);
+    assert.ok(Number.isInteger(euros), "whole euros, which is what their page takes");
+    // Covered at the rate measured, and still covered if the rate has moved 9 % against the funder since.
+    assert.ok(roughlyInDollars(euros) * 0.91 >= dollars, `${euros} EUR for $${dollars} becomes $${roughlyInDollars(euros)}`);
+  }
 });
 
-/** This is the whole reason the suggested amount is what it is. */
-test("fifty euros earned five days of seven can be cashed out, twenty five cannot", () => {
-  assert.equal(cashableOnItsOwn(SUGGESTED_GIFT_EUR, 5, 7), true);
-  assert.equal(cashableOnItsOwn(SMALLEST_CARD_PAYMENT_EUR, 5, 7), false);
-  // And a finished gift at the smallest card payment only just clears it, which is why it is not the default.
-  assert.equal(cashableOnItsOwn(SMALLEST_CARD_PAYMENT_EUR, 7, 7), true);
-});
-
-test("nothing is cashable out of nothing", () => {
-  assert.equal(cashableOnItsOwn(50, 0, 7), false);
-  assert.equal(cashableOnItsOwn(50, 5, 0), false);
-});
-
-test("the smallest gift is the rail's floor, and the suggestion is twice it", () => {
+test("the suggested gift is what one smallest card payment covers", () => {
   assert.equal(SMALLEST_CARD_PAYMENT_EUR, 25);
-  assert.equal(SUGGESTED_GIFT_EUR, 50);
   assert.match(WAY_IN.smallest, /25/);
+  assert.equal(eurosToBuy(BigInt(SUGGESTED_GIFT_DOLLARS) * 1_000_000n), SMALLEST_CARD_PAYMENT_EUR);
+  assert.ok(roughlyInDollars(SMALLEST_CARD_PAYMENT_EUR) >= SUGGESTED_GIFT_DOLLARS);
 });
 
 /**
@@ -70,9 +55,10 @@ test("the countries the rails will not serve are the ones their own page lists",
   for (const country of ["Senegal", "Ivory Coast", "France", "Belgium"]) {
     assert.ok(!RAIL_CLOSED_IN.includes(country), `${country} must not be listed as closed`);
   }
-  // Selling is shut in the United Kingdom while buying is not, so only the way out carries it.
+  // The coin is shut in the United Kingdom both ways: their currencies endpoint lists gb for buying it and for
+  // selling it (D72). This once said buying was open there.
   assert.ok(WAY_OUT.closedIn.includes("United Kingdom"));
-  assert.ok(!WAY_IN.closedIn.includes("United Kingdom"));
+  assert.ok(WAY_IN.closedIn.includes("United Kingdom"));
 });
 
 test("the way out says a card and an identity check, because both stop people", () => {

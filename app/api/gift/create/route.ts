@@ -3,7 +3,7 @@ import { getAddress, isAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { isValidDuolingoUsername } from "@/src/duolingo-public-terms";
-import { contactHash } from "@/src/contact-hash";
+import { contactHash, NO_CONTACT_HASH } from "@/src/contact-hash";
 import { fundingNonce, type GiftParams } from "@/src/gift-attestation";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { relayCreateGift } from "@/src/gift-relay";
@@ -30,7 +30,8 @@ const HEX32 = /^0x[0-9a-fA-F]{64}$/;
 
 /**
  * Creates and funds a gift with the funder's single EIP-3009 signature. The funder is the signed-in
- * account, never a body field; the contact is hashed here and never stored; the relayer submits and
+ * account, never a body field; no contact is asked for since D72, though a page loaded before then still sends
+ * one and signed its hash into the terms, so that one is hashed here and never stored; the relayer submits and
  * waits for finality before "Funded" is ever said. The answer carries the claim link to hand to the
  * recipient.
  */
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
       throw new GiftApiError("INVALID_USERNAME", "That does not look like a Duolingo username.", 400);
     }
 
-    const contact = String(body.contact ?? "");
+    const contact = String(body.contact ?? "").trim();
     const goalType = Number(body.goalType);
     const dailyTarget = Number(body.dailyTarget);
     const durationDays = Number(body.durationDays);
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
     const params: GiftParams = {
       funder: getAddress(auth.account),
       refundTo: getAddress(refundToRaw),
-      recipientContactHash: contactHash(contact),
+      recipientContactHash: contact ? contactHash(contact) : NO_CONTACT_HASH,
       goalType,
       dailyTarget,
       durationDays,

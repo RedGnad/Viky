@@ -112,3 +112,14 @@ export function formatAusd(units: bigint): string {
   const cents = (units % 1_000_000n) / 10_000n;
   return `$${whole.toString()}.${cents.toString().padStart(2, "0")}`;
 }
+
+/**
+ * An amount to the last of the six decimals the coin has, for the one place a person must read exactly what leaves:
+ * sending all of their money, where the balance shows two decimals and the signature moves six (D72). Zeros past the
+ * cents are dropped, so a round amount still reads as one.
+ */
+export function formatAusdExact(units: bigint): string {
+  const whole = units / 1_000_000n;
+  const fraction = (units % 1_000_000n).toString().padStart(6, "0").replace(/0{1,4}$/, "");
+  return `$${whole.toString()}.${fraction}`;
+}

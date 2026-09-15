@@ -76,7 +76,6 @@ export function FundPanel() {
       say(`create gift: ${formatAusd(units)} to ${contact}, ${target} XP/day, ${days} days`);
       const result = await createGift({
         account,
-        contact,
         duolingoUsername: duolingoUsername.trim() || undefined,
         goalType: GOAL_TYPE_DUOLINGO_XP,
         dailyTarget: Number(target),

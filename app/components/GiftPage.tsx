@@ -160,7 +160,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
       const account = mera.currentAccount();
       if (!account || !gift) throw new ScreenError("Sign in first.");
       await withdrawEarned({ account, giftId, escrow: gift.escrow, amount: BigInt(gift.earned), nonce: BigInt(gift.withdrawNonce) });
-      return `${gift.earnedDisplay} is now in your account. From the home page you can send it to your card or bank.`;
+      return `${gift.earnedDisplay} is now in your account.`;
     });
 
   if (loadError) {

@@ -6,7 +6,7 @@ import {
   transferAuthorizationMessage,
   transferAuthorizationTypedData,
 } from "../ausd-authorization";
-import { contactHash } from "../contact-hash";
+import { NO_CONTACT_HASH } from "../contact-hash";
 import { fundingNonce, withdrawIntentTypedData, type GiftParams } from "../gift-terms";
 import { ApiError, getJson, postJson } from "./api";
 
@@ -26,7 +26,6 @@ export function randomSalt(): Hex {
 
 export type CreateGiftInput = {
   account: LocalAccount;
-  contact: string;
   /** The recipient's Duolingo username, when the funder knows it (no code needed then, D27). */
   duolingoUsername?: string;
   goalType: number;
@@ -48,7 +47,8 @@ export async function createGift(input: CreateGiftInput): Promise<CreatedGift> {
   const params: GiftParams = {
     funder,
     refundTo: input.refundTo ? getAddress(input.refundTo) : funder,
-    recipientContactHash: contactHash(input.contact),
+    // No contact is asked for any more: it protected nothing and left a fingerprint on a public ledger (D72).
+    recipientContactHash: NO_CONTACT_HASH,
     goalType: input.goalType,
     dailyTarget: input.dailyTarget,
     durationDays: input.durationDays,
@@ -59,7 +59,6 @@ export async function createGift(input: CreateGiftInput): Promise<CreatedGift> {
   const signature = await input.account.signTypedData(receiveAuthorizationTypedData(message));
   const authorization = toContractAuthorization(message, signature);
   return postJson<CreatedGift>("/api/gift/create", {
-    contact: input.contact,
     duolingoUsername: input.duolingoUsername,
     goalType: params.goalType,
     dailyTarget: params.dailyTarget,

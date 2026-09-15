@@ -61,12 +61,17 @@ export const WAY_IN: RailHandoff = {
   smallest: "25 EUR",
   fee: "about 3.8%",
   conditions: ["Identity check the first time, once.", "A card in your name."],
-  closedIn: RAIL_CLOSED_IN,
+  // Buying the coin is shut in the United Kingdom as well as selling it: their own currencies endpoint lists `gb`
+  // under both `restricted_countries_onramp` and `restricted_countries_offramp` for MON on MONAD, read on 15 Sep
+  // 2026 at https://api.mercuryo.io/v1.6/lib/currencies (D72).
+  closedIn: [...RAIL_CLOSED_IN, "United Kingdom"],
   byHand: true,
 };
 
 /**
- * Taking it out (D20, D41, and corrected by D59 and D60).
+ * Taking it out (D20, D41, and corrected by D59 and D60). Offered to nobody, and not to be wired (D72): the rail's
+ * own help centre published on 15 Sep that it pays out to no Visa and no Mastercard in France, anywhere else in the
+ * EEA, or the United States. What follows is kept as the record of what was measured.
  *
  * The figures here were wrong until 14 Sep: this said the smallest payout was about five dollars and the fee
  * a flat three euros. Their own limits endpoint says the smallest sell order is 879.889 of the coin, close to

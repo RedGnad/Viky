@@ -32,3 +32,15 @@ export function nextFundingStep(input: { held: bigint; arriving: bigint; wanted:
   // Nothing worth acting on. `sawSomething` only changes what the person is told, never what is done.
   return { do: "wait", sawSomething: input.arriving > 0n };
 }
+
+/** The steps of giving before any money moves: who, how much, the check, and an account when there is none. */
+export type FundingStage = "who" | "howMuch" | "check" | "account";
+
+/**
+ * The step a funder sees. The account step exists to make an account, so once there is one it has nothing left to
+ * offer, and on 15 Sep it offered nothing at all: the funder made their account and had to guess that Back led to
+ * the payment. An account step with an account shows the check again, with its button to pay.
+ */
+export function fundingStageShown(stage: FundingStage, signedIn: boolean): FundingStage {
+  return stage === "account" && signedIn ? "check" : stage;
+}

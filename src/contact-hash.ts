@@ -25,6 +25,14 @@ export function normaliseContact(input: string): NormalisedContact {
   return { kind: "phone", value: digits };
 }
 
+/**
+ * What a gift carries where a contact used to be, since 15 Sep 2026 (D72). The contact protected nothing: the claim
+ * route copies the stored hash into the attestation, so the contract compares our own value with itself, and Viky
+ * never writes to anybody. All it left behind was a fingerprint of an email or a phone number on a public ledger,
+ * which a phone number does not survive. The contract refuses a zero hash, so this is a fixed value naming nobody.
+ */
+export const NO_CONTACT_HASH: Hex = keccak256(stringToHex("viky:contact:v1:none"));
+
 export function contactHash(input: string): Hex {
   const contact = normaliseContact(input);
   return keccak256(stringToHex(`viky:contact:v1:${contact.kind}:${contact.value}`));

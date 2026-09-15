@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { announcedAccount, sessionRemaining } from "../src/account/session-gate";
-import { theirsSoFar } from "../src/gift-reader";
+import { formatAusdExact, theirsSoFar } from "../src/gift-reader";
 import { catchUpDay, deadlineInWords } from "../src/catch-up";
-import { ARRIVAL_FLOOR, CONVERSION_RESERVE, nextFundingStep } from "../src/funding-step";
+import { ARRIVAL_FLOOR, CONVERSION_RESERVE, fundingStageShown, nextFundingStep } from "../src/funding-step";
 import { AmountError, dollarsToUnits, MIN_GIFT_UNITS } from "../src/money";
 
 /**
@@ -104,6 +105,33 @@ test("the funder screen converts a payment that arrived, and never one that did 
     const step = nextFundingStep({ held: 0n, arriving, wanted });
     if (step.do === "convert") assert.ok(step.amount < arriving, `converted ${step.amount} of ${arriving}`);
   }
+});
+
+test("once there is an account, the account step gives way to the check and its button to pay", () => {
+  // The defect of 15 Sep: the funder made their account on this step and was left with nothing to press but Back.
+  assert.equal(fundingStageShown("account", true), "check");
+  assert.equal(fundingStageShown("account", false), "account");
+  for (const stage of ["who", "howMuch", "check"] as const) {
+    assert.equal(fundingStageShown(stage, true), stage);
+    assert.equal(fundingStageShown(stage, false), stage);
+  }
+});
+
+test("the amount written before sending all of it is exactly the amount that leaves", () => {
+  // The defect of 15 Sep: the balance read to the cent while the signature moved all six decimals.
+  assert.equal(formatAusdExact(28_564_213n), "$28.564213");
+  assert.equal(formatAusdExact(28_560_000n), "$28.56");
+  assert.equal(formatAusdExact(28_500_000n), "$28.50");
+  assert.equal(formatAusdExact(28_560_010n), "$28.56001");
+  assert.equal(formatAusdExact(0n), "$0.00");
+  for (const units of [1n, 999_999n, 2_857_142n, 28_564_213n, 123_456_789_012n]) {
+    const [whole, fraction] = formatAusdExact(units).slice(1).split(".");
+    assert.equal(BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, "0")), units, `nothing of ${units} rounded away`);
+  }
+  // And the screen writes the very balance it sends, never a rounded copy of it.
+  const cashOut = readFileSync("app/components/CashOut.tsx", "utf8");
+  assert.match(cashOut, /sendOwnMoney\(\{ account, to: ownAccount\.trim\(\) as Hex, amount: holding \}\)/);
+  assert.match(cashOut, /formatAusdExact\(holding\)/);
 });
 
 test("a day that is neither counted nor lost is named, with the moment it stops being catchable", () => {

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function CashOutPage() {
   return (
     <Screen title="Take your money out" back="/" backLabel="Back to my gifts">
-      <p className={PROSE}>What you have earned is already yours. This sends it somewhere you can spend it.</p>
+      <p className={PROSE}>What you have earned is already yours. From here you can send it to another account of yours.</p>
       <CashOut />
       <Footer current="/cash-out" />
     </Screen>
