@@ -155,13 +155,38 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
   },
   {
     screen: "The days of a gift",
-    file: "app/components/GiftPage.tsx",
+    file: "app/components/DayRow.tsx",
     states: [
-      { name: "Days counted", when: "always, once counting has started", says: ["Days done", "Days missed"] },
-      { name: "Earned", when: "the day was credited", says: [], gap: "D58 settles four day states: earned, returned to the funder by name, still catchable until a local time, and a day not yet judged. Only the totals exist today; the four states are not built." },
-      { name: "Returned", when: "the day was drained and sent back", says: ["Came back to you"], gap: "the funder's name is not in it yet." },
-      { name: "Still catchable", when: "yesterday is unearned and its window has not closed", says: [], gap: "the deadline is shown in the reader's own time elsewhere; the day itself has no state." },
-      { name: "Not yet judged", when: "today, which nobody can have missed yet", says: [], gap: "the wording is the reviewer's to choose. 'Not yet read' speaks to nobody (D58)." },
+      {
+        name: "The whole gift in one row",
+        when: "counting has started, so there is a window",
+        says: ["Yours so far", "Theirs so far", "Gone back", "Came back to you"],
+      },
+      {
+        name: "A day finished",
+        when: "the day is settled, earned or returned",
+        says: [],
+        gap: "it says finished and not which of the two, and that is deliberate. The contract publishes earned and returned as totals and settles days in order, so the counts do not determine the sequence: earning days one and three then missing two reads exactly like earning one and two then missing three. The totals are printed beside the row; the split per day waits for the event index.",
+      },
+      {
+        name: "A day still catchable",
+        when: "a day behind whose window has not closed",
+        says: [],
+        gap: "the mark and the spoken label carry it, with the deadline in the reader's own time. There is no visible sentence on the cell itself, which is right at this size and wrong if the row is ever the only thing on screen.",
+      },
+      {
+        name: "A day about to come back",
+        when: "its window has closed and nothing has drained it yet",
+        says: [],
+        gap: "the state exists and is spoken as going back to the person who sent it. Naming them needs a first name, and nothing in Viky collects one from either side, so D58's 'returned to [name]' cannot be kept yet.",
+      },
+      {
+        name: "Today",
+        when: "the day in progress, which nobody can have missed",
+        says: [],
+        gap: "marked with its own outline and mark. This is the state whose absence made a recipient on day three read '1 of 7 done, 0 missed' and conclude the product was broken (D50).",
+      },
+      { name: "Still to come", when: "any day after today inside the window", says: [], gap: "drawn faintly, with no sentence of its own, because there is nothing to say about it yet." },
     ],
   },
   {

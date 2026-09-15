@@ -7,6 +7,7 @@ import { ApiError } from "@/src/client/api";
 import { bindGoalAccount, claimGift, countNow, loadGiftStatus, nameGoalAccount, withdrawEarned, type GiftStatus, type PublicOutcome } from "@/src/client/gift";
 import { AccountPanel } from "./AccountPanel";
 import { catchUpDay, deadlineInWords } from "@/src/catch-up";
+import { DayRow } from "./DayRow";
 
 /**
  * The recipient's whole journey on one screen: see the money in their name, open it with a passkey,
@@ -210,34 +211,14 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         </p>
       </header>
 
-      <section className="grid grid-cols-2 gap-3 rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
-        <div>
-          <p className="text-xs" style={{ color: "var(--muted)" }}>
-            {theirs ? "Theirs so far" : "Yours so far"}
-          </p>
-          <p className="text-2xl font-semibold">{gift.alreadyTheirsDisplay}</p>
-        </div>
-        <div>
-          <p className="text-xs" style={{ color: "var(--muted)" }}>
-            {theirs ? "Came back to you" : "Went back"}
-          </p>
-          <p className="text-2xl font-semibold">{gift.returnedDisplay}</p>
-        </div>
-        <div>
-          <p className="text-xs" style={{ color: "var(--muted)" }}>
-            Days done
-          </p>
-          <p className="text-xl">
-            {gift.creditedDays} of {gift.durationDays}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs" style={{ color: "var(--muted)" }}>
-            Days missed
-          </p>
-          <p className="text-xl">{gift.missedDays}</p>
-        </div>
-      </section>
+      <DayRow
+        gift={gift}
+        catchUpSeconds={gift.catchUpSeconds}
+        nowMs={nowMs}
+        readerIsRecipient={mine}
+        earnedDisplay={gift.alreadyTheirsDisplay}
+        returnedDisplay={gift.returnedDisplay}
+      />
 
       {gift.cancelled ? <p>This gift was taken back before it was opened.</p> : null}
 

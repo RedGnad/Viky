@@ -1,0 +1,84 @@
+import { strict as assert } from "node:assert";
+import test from "node:test";
+import { DAY_MARK, dayInWords, giftDays } from "../src/day-states.js";
+
+/**
+ * The states of a day, and the one the counts cannot give. A recipient on the third day once read
+ * "1 of 7 done, 0 missed" and concluded something was broken (D50); this is what replaces that arithmetic.
+ */
+
+const DAY = 86_400_000;
+const START = 20_708; // 12 Sep 2026
+const CATCH_UP = 30 * 3_600; // the corrected contract's window
+
+const gift = (over: Partial<Parameters<typeof giftDays>[0]> = {}) => ({
+  startDay: START,
+  endDay: START + 6,
+  durationDays: 7,
+  creditedDays: 1,
+  missedDays: 0,
+  ...over,
+});
+
+/** 14 Sep at noon: day one settled, day two behind, day three today. */
+const noonOn = (dayNumber: number) => dayNumber * DAY + 12 * 3_600_000;
+
+test("before the first reading there is no window, and no days", () => {
+  const { days, earned } = giftDays(gift({ startDay: 0, creditedDays: 0 }), CATCH_UP, noonOn(START));
+  assert.deepEqual(days, []);
+  assert.equal(earned, 0);
+});
+
+test("a day behind that a reading can still earn says so, with its deadline", () => {
+  const { days } = giftDays(gift(), CATCH_UP, noonOn(START + 2));
+  assert.equal(days.length, 7);
+  assert.equal(days[0].state, "settled");
+  assert.equal(days[1].state, "catchable");
+  assert.ok(days[1].deadlineMs && days[1].deadlineMs > noonOn(START + 2), "and it has not passed");
+  assert.equal(days[2].state, "today");
+  assert.equal(days[3].state, "toCome");
+});
+
+test("once the window has closed the day is going back, not still winnable", () => {
+  // 15 Sep at noon: day two of the gift (13 Sep) closed at 06:00 UTC on the 15th.
+  const { days } = giftDays(gift(), CATCH_UP, noonOn(START + 3));
+  assert.equal(days[1].state, "aboutToReturn");
+  assert.equal(days[1].deadlineMs, undefined);
+  assert.equal(days[2].state, "aboutToReturn", "and so is the day after it, which nothing has settled");
+  assert.equal(days[3].state, "today");
+});
+
+test("today is never a missed day, whatever the arithmetic says", () => {
+  const { days } = giftDays(gift({ creditedDays: 0 }), CATCH_UP, noonOn(START));
+  assert.equal(days[0].state, "today");
+  assert.ok(days.slice(1).every((day) => day.state === "toCome"));
+});
+
+test("the totals come from the contract and the order does not, which is stated rather than guessed", () => {
+  const { days, earned, returned } = giftDays(gift({ creditedDays: 2, missedDays: 1 }), CATCH_UP, noonOn(START + 4));
+  assert.equal(earned, 2);
+  assert.equal(returned, 1);
+  // Three settled days, and not one of them claims which of the two it was.
+  assert.deepEqual(
+    days.slice(0, 3).map((day) => day.state),
+    ["settled", "settled", "settled"],
+  );
+});
+
+test("every day says what it is in words, and the funder is named rather than blamed", () => {
+  const { days } = giftDays(gift(), CATCH_UP, noonOn(START + 3));
+  assert.equal(dayInWords(days[1], "Ama"), "Day 2, going back to Ama");
+  assert.equal(dayInWords(days[0], "Ama"), "Day 1, finished");
+  assert.match(dayInWords(days[3], "Ama"), /today/);
+});
+
+test("each state has a mark of its own, so colour is never the only carrier", () => {
+  const marks = Object.values(DAY_MARK);
+  assert.equal(new Set(marks).size, marks.length);
+  assert.equal(marks.length, 5);
+});
+
+test("a finished gift shows every day settled and nothing still to come", () => {
+  const { days } = giftDays(gift({ creditedDays: 4, missedDays: 3 }), CATCH_UP, noonOn(START + 10));
+  assert.ok(days.every((day) => day.state === "settled"));
+});
