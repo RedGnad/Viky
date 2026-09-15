@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 // that actually holds the data. Update it whenever a store or a processor changes.
 export default function PrivacyPage() {
   return (
-    <Screen layout="destination" back="/account" backLabel="Back to my account">
+    <Screen layout="document" back="/account" backLabel="Back to my account">
       <header className="space-y-[var(--space-sm)]">
         <h1 className="text-[length:var(--type-money)] font-semibold">Privacy</h1>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >

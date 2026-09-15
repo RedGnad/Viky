@@ -14,7 +14,7 @@ export default function JudgesPage() {
   // gift record names its own contract, so both are listed here for as long as the older one holds one.
   const earlierEscrow = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
   return (
-    <Screen layout="destination" back="/account" backLabel="Back to my account">
+    <Screen layout="document" back="/account" backLabel="Back to my account">
       <header className="space-y-[var(--space-sm)]">
         <h1 className="text-[length:var(--type-money)] font-semibold">For judges</h1>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >

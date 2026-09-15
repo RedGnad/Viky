@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function LegalPage() {
   const contact = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim();
   return (
-    <Screen layout="destination" back="/account" backLabel="Back to my account">
+    <Screen layout="document" back="/account" backLabel="Back to my account">
       <header className="space-y-[var(--space-sm)]">
         <h1 className="text-[length:var(--type-money)] font-semibold">Legal notice</h1>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
