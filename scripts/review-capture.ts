@@ -3,19 +3,19 @@ import { resolve } from "node:path";
 import { chromium, devices, type BrowserContext, type Page } from "@playwright/test";
 
 /**
- * Pictures of exactly what fits on the screen at the two sizes a review is judged at, 390x844 and 1440x900,
- * taken from the site a person meets.
+ * Pictures of exactly what fits on the screen at the two sizes a review is judged at, 390x844 and 1440x900, in
+ * day and in night, taken from the site a person meets.
  *
  * Why a script: on 15 Sep, Chrome driven through its extension answered success to every resize while the page
  * stayed at 1440x788, so nothing seen that way could speak for either size. This browser belongs to the script,
  * each file name carries the size read back from the image file itself, and the run fails if that is not the
- * size asked for.
+ * size asked for, or if the page did not see the appearance asked for.
  *
  * The walk is a person's: open the home page of the URL's site, then click visible links until the URL is
- * reached, photographing every screen on the way. When no walk of visible links leads there at a size (a page
- * only ever opened from a shared link, or one reached through a button), the URL is typed instead, and both the
- * console and captures.md say so. Each size is captured in a browser with nothing stored, so the site sees
- * nobody signed in: a passkey cannot be replayed by a script.
+ * reached, photographing every screen on the way. When no walk of visible links leads there (a page only ever
+ * opened from a shared link, or one reached through a button), the URL is typed instead, and both the console
+ * and captures.md say so. Every size and appearance is captured in a browser with nothing stored, so the site
+ * sees nobody signed in and no appearance chosen in the product: a passkey cannot be replayed by a script.
  *
  * Usage: `pnpm review:capture https://viky.cash/fund`. It prints the folder last, and that folder is what the
  * reviewer is given. captures.md is written after every image, so a folder without it is a run that failed.
@@ -26,14 +26,14 @@ import { chromium, devices, type BrowserContext, type Page } from "@playwright/t
  * a file name is the size of the screen and not a multiple of it.
  */
 const SIZES = [
-  {
-    name: "390x844",
-    use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: "light" },
-  },
-  {
-    name: "1440x900",
-    use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, colorScheme: "light" },
-  },
+  { name: "390x844", use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 } },
+  { name: "1440x900", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } },
+] as const;
+
+/** Day and night, set the way a phone sets them, so the product follows the setting as it does for a person. */
+const APPEARANCES = [
+  { name: "day", colorScheme: "light" },
+  { name: "night", colorScheme: "dark" },
 ] as const;
 
 /** How many links the search may follow before it stops looking and types the URL. */
@@ -43,10 +43,21 @@ const SEARCH_LIMIT = 40;
 const FILE_LINK = /\.(pdf|zip|png|jpe?g|gif|svg|webp|ico|json|txt|xml|csv|webmanifest)$/i;
 
 type Size = (typeof SIZES)[number];
+type Appearance = (typeof APPEARANCES)[number];
 type Link = { href: string; text: string; index: number };
 type Screen = { key: string; parent?: string; href?: string; text?: string };
 type Search = { walk?: Screen[]; followed: number; complete: boolean };
-type Row = { file: string; asked: string; image: string; viewport: string; scrolled: number; page: string; reachedBy: string };
+type Row = {
+  file: string;
+  asked: string;
+  appearance: string;
+  seen: string;
+  image: string;
+  viewport: string;
+  scrolled: number;
+  page: string;
+  reachedBy: string;
+};
 
 /** Two addresses are the same screen when they differ only by a fragment or a trailing slash. */
 function screenKey(address: string): string {
@@ -145,9 +156,10 @@ async function visibleLinks(page: Page): Promise<Link[]> {
 }
 
 /**
- * The shortest walk of visible-link clicks from the home page to the target, searched at the size being captured,
- * because a link a phone hides is not one a phone user can follow. Pages are opened directly while searching, in a
- * browser of their own; the walk is then replayed by clicking, in a browser that has seen none of them.
+ * The shortest walk of visible-link clicks from the home page to the target, searched at the size and appearance
+ * being captured, because a link a phone hides is not one a phone user can follow. Pages are opened directly
+ * while searching, in a browser of their own; the walk is then replayed by clicking, in a browser that has seen
+ * none of them.
  */
 async function searchWalk(context: BrowserContext, home: string, target: string): Promise<Search> {
   const page = await context.newPage();
@@ -191,52 +203,71 @@ async function searchWalk(context: BrowserContext, home: string, target: string)
   return { followed, complete: true };
 }
 
-/** Photographs what fits on the screen, names the file after the size read back from it, and refuses any other size. */
-async function photograph(page: Page, size: Size, step: number, reachedBy: string, folder: string): Promise<Row> {
-  const seen = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight, scrolled: Math.round(window.scrollY) }));
-  const provisional = resolve(folder, `.${step}-${size.name}.partial.png`);
+/**
+ * Photographs what fits on the screen, names the file after the size read back from it and the appearance, and
+ * refuses any other size and any page that did not see the appearance asked for.
+ */
+async function photograph(page: Page, size: Size, appearance: Appearance, step: number, reachedBy: string, folder: string): Promise<Row> {
+  const seen = await page.evaluate(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+    scrolled: Math.round(window.scrollY),
+    night: window.matchMedia("(prefers-color-scheme: dark)").matches,
+  }));
+  const provisional = resolve(folder, `.${step}-${size.name}-${appearance.name}.partial.png`);
   await page.screenshot({ path: provisional });
   const image = pngSize(readFileSync(provisional));
-  const file = `${String(step).padStart(2, "0")}-${slugOf(page.url())}-${image.width}x${image.height}.png`;
+  const file = `${String(step).padStart(2, "0")}-${slugOf(page.url())}-${image.width}x${image.height}-${appearance.name}.png`;
   renameSync(provisional, resolve(folder, file));
   const row: Row = {
     file,
     asked: size.name,
+    appearance: appearance.name,
+    seen: seen.night ? "night" : "day",
     image: `${image.width}x${image.height}`,
     viewport: `${seen.width}x${seen.height}`,
     scrolled: seen.scrolled,
     page: page.url(),
     reachedBy,
   };
-  console.log(`${file}  page viewport ${row.viewport}, scrolled ${row.scrolled}: ${reachedBy}`);
+  console.log(`${file}  page viewport ${row.viewport}, page saw ${row.seen}, scrolled ${row.scrolled}: ${reachedBy}`);
   if (row.viewport !== size.name) console.warn(`  the page reported a viewport of ${row.viewport} on a ${size.name} screen`);
   if (row.scrolled !== 0) console.warn(`  the page was scrolled ${row.scrolled} pixels when it was taken`);
   if (row.image !== size.name) throw new Error(`${file} came out ${row.image}, not the ${size.name} asked for`);
+  if (row.seen !== appearance.name) throw new Error(`${file} was taken in ${row.seen}, not the ${appearance.name} asked for`);
   return row;
 }
 
-/** Walks to the target the way a person would at this size, photographing every screen on the way. */
-async function captureWalk(context: BrowserContext, size: Size, home: string, target: string, search: Search, folder: string): Promise<Row[]> {
+/** Walks to the target the way a person would at this size and appearance, photographing every screen on the way. */
+async function captureWalk(
+  context: BrowserContext,
+  size: Size,
+  appearance: Appearance,
+  home: string,
+  target: string,
+  search: Search,
+  folder: string,
+): Promise<Row[]> {
   const page = await context.newPage();
   const rows: Row[] = [];
   const homeAnswer = await open(page, home);
-  rows.push(await photograph(page, size, 1, `opened the home page${homeAnswer}`, folder));
+  rows.push(await photograph(page, size, appearance, 1, `opened the home page${homeAnswer}`, folder));
 
   if (!search.walk) {
     const why = search.complete
       ? `no walk of visible links from the home page leads here (all ${search.followed} such links were followed)`
       : `no walk of visible links from the home page was found within ${SEARCH_LIMIT} links followed`;
     const answer = await open(page, target);
-    rows.push(await photograph(page, size, 2, `typed the URL, because ${why}${answer}`, folder));
+    rows.push(await photograph(page, size, appearance, 2, `typed the URL, because ${why}${answer}`, folder));
     return rows;
   }
 
   for (const screen of search.walk.slice(1)) {
     const link = (await visibleLinks(page)).find((candidate) => screen.href !== undefined && screenKey(candidate.href) === screenKey(screen.href));
-    if (!link) throw new Error(`at ${size.name}, the link to ${screen.href} that the search followed is not visible on ${page.url()}`);
+    if (!link) throw new Error(`at ${size.name} in ${appearance.name}, the link to ${screen.href} that the search followed is not visible on ${page.url()}`);
     await Promise.all([page.waitForURL((url) => screenKey(url.href) === screen.key), page.locator("a[href]").nth(link.index).click()]);
     await settle(page);
-    rows.push(await photograph(page, size, rows.length + 1, `clicked the link "${link.text}"`, folder));
+    rows.push(await photograph(page, size, appearance, rows.length + 1, `clicked the link "${link.text}"`, folder));
   }
   return rows;
 }
@@ -248,14 +279,17 @@ function manifest(target: string, taken: string, chromiumVersion: string, rows: 
     "# Captures for review",
     "",
     `- Target: ${target}`,
-    `- Taken: ${taken}, in Chromium ${chromiumVersion}, light appearance.`,
-    "- Each size was captured in a browser with nothing stored, so the site saw nobody signed in.",
+    `- Taken: ${taken}, in Chromium ${chromiumVersion}.`,
+    "- Each size was captured in day and in night, with the browser's appearance set to light and then to dark, each time in a browser with nothing stored, so the site saw nobody signed in and no appearance chosen in the product.",
     "- Each image is only what fitted on the screen, without scrolling.",
-    "- image size: read from the image file. page viewport: window.innerWidth x window.innerHeight, as the page reported them. scrolled: window.scrollY when the image was taken.",
+    "- image size: read from the image file. page saw: the appearance the page's prefers-color-scheme query reported. page viewport: window.innerWidth x window.innerHeight, as the page reported them. scrolled: window.scrollY when the image was taken.",
     "",
-    "| file | size asked | image size | page viewport | scrolled | page | reached by |",
-    "|---|---|---|---|---|---|---|",
-    ...rows.map((row) => `| ${[row.file, row.asked, row.image, row.viewport, row.scrolled, row.page, row.reachedBy].map(cell).join(" | ")} |`),
+    "| file | size asked | appearance asked | page saw | image size | page viewport | scrolled | page | reached by |",
+    "|---|---|---|---|---|---|---|---|---|",
+    ...rows.map(
+      (row) =>
+        `| ${[row.file, row.asked, row.appearance, row.seen, row.image, row.viewport, row.scrolled, row.page, row.reachedBy].map(cell).join(" | ")} |`,
+    ),
     "",
   ].join("\n");
 }
@@ -274,12 +308,15 @@ async function main() {
   try {
     const rows: Row[] = [];
     for (const size of SIZES) {
-      const searching = await browser.newContext(size.use);
-      const search = await searchWalk(searching, home, target);
-      await searching.close();
-      const capturing = await browser.newContext(size.use);
-      rows.push(...(await captureWalk(capturing, size, home, target, search, folder)));
-      await capturing.close();
+      for (const appearance of APPEARANCES) {
+        const options = { ...size.use, colorScheme: appearance.colorScheme };
+        const searching = await browser.newContext(options);
+        const search = await searchWalk(searching, home, target);
+        await searching.close();
+        const capturing = await browser.newContext(options);
+        rows.push(...(await captureWalk(capturing, size, appearance, home, target, search, folder)));
+        await capturing.close();
+      }
     }
     writeFileSync(resolve(folder, "captures.md"), manifest(target, taken, browser.version(), rows));
     console.log(`\ncaptures for review: ${folder}`);
