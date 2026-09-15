@@ -250,7 +250,7 @@ export function FundGift() {
           Back
         </button>
         <section className={CARD}>
-          <h2 className={TITLE}>One account, and then you can pay</h2>
+          <h1 className={TITLE}>One account, and then you can pay</h1>
           <p className={HELP}>
             The money is held in your name until they earn it, so it needs somewhere of yours to be held. Your
             face or your fingerprint is the whole account: no password, no code by text, nothing to remember.
@@ -269,7 +269,7 @@ export function FundGift() {
           Back to my gifts
         </Link>
         <section className={CARD}>
-          <h2 className={TITLE}>Who is it for, and for what</h2>
+          <h1 className={TITLE}>Who is it for, and for what</h1>
           <label className="flex flex-col gap-[var(--space-xs)]">
             <span className={HELP}>Their email or phone</span>
             <input value={contact} onChange={(event) => setContact(event.target.value)} className={FIELD} />
@@ -303,7 +303,7 @@ export function FundGift() {
           Back
         </button>
         <section className={CARD}>
-          <h2 className={TITLE}>How much, and for how long</h2>
+          <h1 className={TITLE}>How much, and for how long</h1>
           <label className="flex flex-col gap-[var(--space-xs)]">
             <span className={HELP}>How much, in dollars</span>
             <input value={dollars} onChange={(event) => setDollars(event.target.value)} inputMode="decimal" className={FIELD} />
@@ -342,7 +342,7 @@ export function FundGift() {
           Back
         </button>
         <section className={CARD}>
-          <h2 className={TITLE}>Check this over</h2>
+          <h1 className={TITLE}>Check this over</h1>
           <dl className="flex flex-col gap-[var(--space-sm)]">
             <div className="flex items-baseline justify-between gap-[var(--space-md)]">
               <dt className={HELP}>In their name</dt>
@@ -413,7 +413,7 @@ export function FundGift() {
   return (
     <div className="flex flex-col gap-[var(--space-xl)]">
       <section className={CARD}>
-        <h2 className={TITLE}>Your money</h2>
+        <h1 className={TITLE}>Your money</h1>
         <p className={MONEY}>{balance === null ? "..." : formatAusd(balance)}</p>
         {step === "waiting" ? (
           <div className="flex flex-col gap-[var(--space-md)]">
