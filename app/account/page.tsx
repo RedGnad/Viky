@@ -25,10 +25,13 @@ const PAGES = [
 
 export default function Page() {
   return (
-    <Screen layout="destination" title="Account" back="/" backLabel="Back to my gifts">
-      <AccountPanel />
-      <SessionScope />
-      <ThemeSwitch />
+    <Screen
+      layout="destination"
+      title="Account"
+      back="/"
+      backLabel="Back to my gifts"
+      aside={
+        <>
 
       <section className={CARD}>
         <h2 className="font-medium">Lost your phone?</h2>
@@ -47,6 +50,12 @@ export default function Page() {
           </Link>
         ))}
       </nav>
+        </>
+      }
+    >
+      <AccountPanel />
+      <SessionScope />
+      <ThemeSwitch />
     </Screen>
   );
 }
