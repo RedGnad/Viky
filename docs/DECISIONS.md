@@ -1698,3 +1698,40 @@ So the moment a refund landed, the script said the same amount was still waiting
 That is the fifth sentence about money found saying something no code path made true, and the first one found
 in a tool rather than on a screen. The rule holds wherever a number is printed, not only where a person reads
 it.
+
+## D69, 15 Sep 2026: the poster look, on the signed-out home first
+
+**What the funder chose**, out of four previews: by day the first one (cream #FFF3D9, tomato #FF5A36, plum ink,
+Anton titles, DM Sans text, outlined stickers, a pill button in relief), and by night the same type and stickers in
+the colours of the third one (indigo #1C1035, acid green #C6FF4D), with the stickers' outlines turning light.
+Amounts and button labels are DM Sans. Both faces are loaded with next/font.
+
+**Why it is a look rather than new values for the tokens.** Everything had to go through the tokens so the screens
+that follow inherit it, and the signed-in home and the journeys had to stay as they are for now. Both hold because
+the poster look is a second set of values for the same variables, worn by a screen that renders
+`data-look="poster"` (Screen's `look`), and `:root:has()` hands it to the whole document. Every shared class reads
+variables that the calm look sets to exactly what they were: the families, a title's weight, a control's outline
+width (1 pixel) and its relief (none). A screen joins by asking, and `test/design-tokens.test.ts` lists who has
+asked: today, the signed-out home alone.
+
+**Measured rather than assumed.**
+
+- Contrast, by day and by night, in POSTER_COLOURS and tested: the lowest word on the home is the tomato button's
+  label at 5.36:1; outlines are 15.10:1 by day and 16.69:1 by night; the words on a sticker clear 4.5:1 on every
+  fill a sticker can wear. The tomato fill is only 2.82:1 against the cream, so a button is identified by its
+  outline, as it already was in the calm look.
+- In a browser, at 390x844 and 1440x900, by day and by night: every glyph on the home was drawn by Anton or DM Sans,
+  from Chrome's own record of the fonts it rendered, and the title, the promise and both buttons sit inside the
+  first screen. The browser tests pass on the final build.
+- The screens that must not change: 80 whole-page captures (fund, account, cash-out, privacy, legal, judges,
+  offline, the gallery and its twelve example screens, at both sizes, by day and by night) taken before the change
+  and after it. 78 are identical to the pixel. The other two differ by 18 pixels in one place on cash-out, and that
+  page differs by the same 18 pixels between two captures of one unchanged build.
+
+**And the defect that comparison caught.** The first build changed the account page: the chosen option of How it
+looks lost its 2 pixel outline, because its own `border-2` lost to the width variable the shared button now reads.
+Every test passed with it. The option now sets that variable to 2 pixels instead.
+
+**What cannot be photographed** is the signed-in home, because a passkey cannot be replayed by a script. Its branch
+of HomeScreen is unchanged, and every class it uses resolves to the calm values, since nothing on it asks for the
+poster look.

@@ -2,6 +2,7 @@ import { SerwistProvider } from "@serwist/turbopack/react";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import { anton, dmSans } from "./fonts";
 import { AccountProvider } from "@/src/account/provider";
 import { THEME_BOOT_SCRIPT } from "@/src/theme";
 
@@ -59,7 +60,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" dir="ltr">
+    // The poster look's font variables sit on the document itself, because app/globals.css reads them from :root.
+    <html lang="en" dir="ltr" className={`${anton.variable} ${dmSans.variable}`}>
       <body className="antialiased">
         {/* Before anything is painted, so a chosen appearance never flashes the other one first. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />

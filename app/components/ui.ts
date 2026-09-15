@@ -12,35 +12,57 @@
  * - Radii, spacing and text sizes come from Material's published scales instead of being picked per screen.
  * - Buttons are fully round and cards take Material's extra large radius, which is the art direction the
  *   funder chose arriving through the tokens: not one measurement above them moved.
+ * - The families, a title's weight, the width of a control's outline and the relief under it are variables too.
+ *   A screen that asks for the poster look (Screen's `look`) gets Anton titles, DM Sans everywhere else and
+ *   pressed-key buttons from these same classes, and a screen that does not ask looks exactly as it did.
  */
 
 const TAP = "min-h-[var(--tap-target)] inline-flex items-center justify-center gap-[var(--space-sm)]";
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]";
+/** The outline that identifies a control, and the relief under a button. A hairline and nothing in the calm look. */
+const OUTLINE = "border-[length:var(--control-border-width)] border-[var(--control-border)]";
+const RELIEF = "[box-shadow:var(--control-relief)]";
 
 /** The action a screen is asking for. One per screen, at most, so it means something. */
-export const PRIMARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full border border-[var(--control-border)] bg-[var(--accent)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] font-medium text-[var(--on-accent)] disabled:opacity-50`;
+export const PRIMARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} bg-[var(--accent)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] font-medium text-[var(--on-accent)] disabled:opacity-50`;
 
 /** Everything else a person may do from here. */
-export const SECONDARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full border border-[var(--control-border)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] disabled:opacity-50`;
+export const SECONDARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] disabled:opacity-50`;
 
 /** A secondary action that sits beside others rather than filling the width. */
-export const INLINE_BUTTON = `${TAP} ${FOCUS} rounded-full border border-[var(--control-border)] px-[var(--space-lg)] py-[var(--space-sm)] text-[length:var(--type-help)] disabled:opacity-50`;
+export const INLINE_BUTTON = `${TAP} ${FOCUS} rounded-full ${OUTLINE} ${RELIEF} px-[var(--space-lg)] py-[var(--space-sm)] text-[length:var(--type-help)] disabled:opacity-50`;
 
 /** A box that groups one step of a journey. Its edge is a divider, not a control: no ratio is required. */
 export const CARD =
   "space-y-[var(--space-md)] rounded-[var(--radius-card)] border border-[var(--divider)] bg-[var(--surface)] p-[var(--space-lg)]";
 
 /**
+ * A card drawn as a sticker: the look's sticker outline around a fill the caller picks from the sticker colours,
+ * with its words in the one colour measured against every such fill. Outside the poster look it falls back to an
+ * outlined card on the joyful colour.
+ */
+export const STICKER_CARD =
+  "space-y-[var(--space-md)] rounded-[var(--radius-card)] border-[length:var(--control-border-width)] border-[var(--sticker-outline)] p-[var(--space-lg)] text-[var(--on-sticker)]";
+
+/**
  * A line the person types into. Its border identifies it, so it carries the control colour, and it sits on a
  * surface rather than on the page ground so a paragraph of yellow never runs under a value being typed.
  */
-export const FIELD = `min-h-[var(--tap-target)] ${FOCUS} w-full rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--surface)] px-[var(--space-md)] py-[var(--space-sm)] text-[length:var(--type-body)]`;
+export const FIELD = `min-h-[var(--tap-target)] ${FOCUS} w-full rounded-[var(--radius-control)] ${OUTLINE} bg-[var(--surface)] px-[var(--space-md)] py-[var(--space-sm)] text-[length:var(--type-body)]`;
 
 /** The four levels of text, and there is no fifth. */
 export const MONEY = "text-[length:var(--type-money)] leading-[var(--type-money-leading)] font-semibold tabular-nums";
-export const TITLE = "text-[length:var(--type-title)] leading-[var(--type-title-leading)] font-semibold";
+export const TITLE =
+  "text-[length:var(--type-title)] leading-[var(--type-title-leading)] font-[family-name:var(--font-title)] [font-weight:var(--font-title-weight)]";
 export const BODY = "text-[length:var(--type-body)] leading-[var(--type-body-leading)]";
 export const HELP = "text-[length:var(--type-help)] leading-[var(--type-help-leading)] text-[var(--muted)]";
+
+/**
+ * The single title a destination opens with. In the calm look it is the money size, as the home's title always
+ * was; a look may give it a size of its own, which is the one exception to the four levels above.
+ */
+export const DISPLAY =
+  "text-[length:var(--type-display)] leading-[var(--type-display-leading)] font-[family-name:var(--font-title)] [font-weight:var(--font-title-weight)]";
 
 /** Prose is capped so a line never runs past what every published range agrees is readable. */
 export const PROSE = `${BODY} max-w-[var(--prose-max)]`;

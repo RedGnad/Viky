@@ -31,6 +31,7 @@ export function Screen({
   back,
   backLabel = "Back",
   layout = "journey",
+  look,
   aside,
   children,
 }: Readonly<{
@@ -38,6 +39,12 @@ export function Screen({
   back?: string;
   backLabel?: string;
   layout?: "journey" | "destination" | "document";
+  /**
+   * The look the screen wears. Left out, it is the calm look every other screen wears today. `poster` is the
+   * direction the funder chose on 15 Sep, which app/globals.css hands to the whole document while this screen
+   * is on it. Only the signed-out home asks for it so far; a screen that follows joins by asking too.
+   */
+  look?: "poster";
   /**
    * The second pane, on a destination. Below 840 it simply follows the first, in one column, so nothing is
    * hidden from a phone and nothing is invented for a desktop.
@@ -65,7 +72,10 @@ export function Screen({
   const inner = layout === "journey" ? "my-auto" : "";
 
   return (
-    <main className={`mx-auto flex ${layout === "journey" ? "min-h-[100svh] " : ""}w-full ${width} flex-col px-[var(--page-margin)] py-[var(--space-xl)]`}>
+    <main
+      data-look={look}
+      className={`mx-auto flex ${layout === "journey" ? "min-h-[100svh] " : ""}w-full ${width} flex-col px-[var(--page-margin)] py-[var(--space-xl)]`}
+    >
       <div className={`${inner} flex w-full flex-col gap-[var(--space-xl)]`}>
       {back || title ? (
         <header className="flex flex-col items-start gap-[var(--space-sm)]">
