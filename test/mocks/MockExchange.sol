@@ -3,11 +3,15 @@ pragma solidity 0.8.30;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-/// @dev Stands in for a real exchange in the router's tests: it takes the token by allowance and sends back
-///      native coin at a rate the test chooses, so a poor rate, a refusal and an exchange that keeps some of
-///      the token can all be exercised without the network.
+/// @dev Stands in for a real exchange in the router's tests: it takes one coin by allowance and hands back
+///      another at a rate the test chooses, so a poor rate, a refusal and an exchange that keeps some of what
+///      it was given can all be exercised without the network.
+///
+///      It can hand back either a token or the chain's own coin, because the router serves two payout
+///      services that want different ones and the coin is named per exit (D77).
 contract MockExchange {
     IERC20 public immutable token;
+    IERC20 public immutable outputToken;
     uint256 public rateNumerator = 1;
     uint256 public rateDenominator = 1;
     bool public refuse;
@@ -18,9 +22,12 @@ contract MockExchange {
     /// @dev Token this exchange hands over rather than takes, so a router can be shown holding more of it
     ///      afterwards than it ever pulled.
     uint256 public deliverBack;
+    /// @dev Whether it pays in the chain's own coin instead of the output token.
+    bool public payInNative;
 
-    constructor(IERC20 token_) {
+    constructor(IERC20 token_, IERC20 outputToken_) {
         token = token_;
+        outputToken = outputToken_;
     }
 
     receive() external payable {}
@@ -46,7 +53,11 @@ contract MockExchange {
         deliverBack = value;
     }
 
-    /// @dev The call a router makes: pull `amount` of the token, send native coin back.
+    function setPayInNative(bool value) external {
+        payInNative = value;
+    }
+
+    /// @dev The call a router makes: pull `amount` of the token, send the output coin back to `to`.
     function swap(uint256 amount, address to) external {
         require(!refuse, "exchange refused");
         uint256 taken = amount - keepBack;
@@ -55,8 +66,12 @@ contract MockExchange {
         // a refund, or an exchange reaching into an allowance that was never ours.
         if (deliverBack > 0) token.transfer(msg.sender, deliverBack);
         uint256 out = (taken * rateNumerator) / rateDenominator;
-        (bool ok,) = to.call{value: out}("");
-        require(ok, "payout failed");
+        if (payInNative) {
+            (bool ok,) = to.call{value: out}("");
+            require(ok, "payout failed");
+        } else {
+            require(outputToken.transfer(to, out), "payout failed");
+        }
     }
 }
 
@@ -65,7 +80,7 @@ contract MockExchange {
 contract ForwardingExchange is MockExchange {
     address public getRouter;
 
-    constructor(IERC20 token_, address target) MockExchange(token_) {
+    constructor(IERC20 token_, IERC20 outputToken_, address target) MockExchange(token_, outputToken_) {
         getRouter = target;
     }
 
@@ -108,17 +123,17 @@ contract ForwarderPointingNowhere {
 ///      apart: the reentrancy guard with it, the token refusing a spent nonce without it.
 contract ReenteringExchange {
     IERC20 public immutable token;
+    IERC20 public immutable outputToken;
     address private immutable router;
     bytes public reentryRevert;
     bool public reentryTried;
     bytes private reentryCall;
 
-    constructor(IERC20 token_, address router_) {
+    constructor(IERC20 token_, IERC20 outputToken_, address router_) {
         token = token_;
+        outputToken = outputToken_;
         router = router_;
     }
-
-    receive() external payable {}
 
     function setReentryCall(bytes calldata call_) external {
         reentryCall = call_;
@@ -129,35 +144,85 @@ contract ReenteringExchange {
         reentryTried = true;
         reentryRevert = ok ? bytes("it was not refused at all") : reason;
         token.transferFrom(msg.sender, address(this), amount);
-        (bool paid,) = to.call{value: amount}("");
-        require(paid, "payout failed");
+        require(outputToken.transfer(to, amount), "payout failed");
     }
 }
 
-/// @dev A destination that hands its money straight back, which used to look exactly like being paid.
+/// @dev An output token that keeps what it was asked to move: the router must notice that the coin never
+///      reached the person rather than reporting a payment that did not happen.
+contract StickyToken {
+    mapping(address => uint256) public balanceOf;
+    /// @dev Whose transfers this token swallows. Named rather than a flag on purpose: the exchange has to be
+    ///      able to deliver into the router for the test to mean anything, and a token that swallowed every
+    ///      transfer would fail at the delivery instead, proving nothing about the check being tested.
+    address public swallowFrom;
+
+    function setSwallowFrom(address who) external {
+        swallowFrom = who;
+    }
+
+    function mint(address to, uint256 amount) external {
+        balanceOf[to] += amount;
+    }
+
+    function transfer(address to, uint256 amount) external returns (bool) {
+        require(balanceOf[msg.sender] >= amount, "balance");
+        if (msg.sender == swallowFrom) return true;
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function transferFrom(address, address, uint256) external pure returns (bool) {
+        return true;
+    }
+
+    function approve(address, uint256) external pure returns (bool) {
+        return true;
+    }
+
+    function allowance(address, address) external pure returns (uint256) {
+        return 0;
+    }
+
+    function totalSupply() external pure returns (uint256) {
+        return 0;
+    }
+}
+
+/// @dev Refuses the chain's own coin outright. Paying one of these must fail loudly rather than report a
+///      payment that never happened.
 contract BouncingPayee {
     receive() external payable {
-        (bool ok,) = msg.sender.call{value: msg.value}("");
-        ok; // the point is that this destination keeps nothing while reporting success
+        revert("no thank you");
     }
 }
 
-/// @dev A destination that costs real gas to pay, the way a custodial deposit contract might. Nobody has
-///      inspected the payout service's deposit address, which is why what it is given must be settable.
+/// @dev Takes the coin and hands it straight back, so the call succeeds and the money never leaves. The
+///      balance check is the only thing that catches this.
+contract GivingItBackPayee {
+    receive() external payable {
+        (bool sent,) = msg.sender.call{value: msg.value}("");
+        sent;
+    }
+}
+
+/// @dev Burns whatever gas it is given. Without a bounded stipend it takes the whole transaction down, and
+///      there is then no gas left to check the money really left.
+contract GreedyPayee {
+    uint256 private sink;
+
+    receive() external payable {
+        while (true) sink += 1;
+    }
+}
+
+/// @dev Costs more to pay than the smallest stipend, so a fixed one would mean nobody could ever be paid and
+///      no way back short of deploying again.
 contract CostlyPayee {
     uint256[8] private slots;
 
     receive() external payable {
-        for (uint256 i = 0; i < 8; i++) {
-            slots[i] = block.timestamp + i + 1;
-        }
-    }
-}
-
-/// @dev A destination that burns whatever gas it is given, so the relayer pays for nothing.
-contract GreedyPayee {
-    receive() external payable {
-        uint256 n;
-        while (true) n = uint256(keccak256(abi.encode(n)));
+        for (uint256 i = 0; i < 8; i++) slots[i] = block.timestamp + i;
     }
 }

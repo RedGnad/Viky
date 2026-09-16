@@ -4,6 +4,16 @@ import { monad } from "viem/chains";
 export const MONAD_CHAIN_ID = 143;
 export const AUSD_ADDRESS = "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a" as const;
 export const AUSD_DECIMALS = 6;
+/**
+ * The coin the way out ends in, because the payout service takes this one and not what a gift holds (D76).
+ *
+ * Read on chain on 16 Sep 2026 at https://rpc.monad.xyz: 1798 bytes of code, `decimals` 6, symbol and name
+ * USDC, and `authorizationState` answers, so it carries EIP-3009 like AUSD does. The payout service names
+ * this same address in its own off-ramp asset list, which is what makes it the right one: sending a coin they
+ * do not watch for would be a payment nobody sees.
+ */
+export const USDC_ADDRESS = "0x754704Bc059F8C67012fEd69BC8A327a5aafb603" as const;
+export const USDC_DECIMALS = 6;
 export const PUBLIC_RPC_URL = "https://rpc.monad.xyz";
 
 /** Monad finalises k = 3 blocks after inclusion, about 1.2 s at 302 ms per block. */

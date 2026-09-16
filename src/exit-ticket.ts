@@ -5,18 +5,22 @@ import { GiftApiError } from "./gift-api";
 /**
  * The figure the screen showed, carried back to us intact.
  *
- * Between reading a figure and signing for it, the person leaves Viky: they place an order at the payout
- * service for exactly the amount they were shown, and come back with the destination it gave them. The floor
- * we then bind into their signature has to be that same figure, or the promise on the screen means nothing.
+ * The person reads what an exchange guarantees, and signs for it a moment later. The floor bound into their
+ * signature has to be that same figure, or the promise on the screen means nothing: a browser that could
+ * lower it between the two steps could accept a far worse rate on their behalf.
  *
  * So the figure is signed here rather than stored: the browser carries it, cannot change it, and we need no
  * row for something that lives four minutes. The account is inside it too, so one person's quote is worth
  * nothing to another.
+ *
+ * Nobody leaves Viky between these two steps any more (D76). Under the old order they went to the payout
+ * service first, ordered exactly the figure they had been shown, and came back with a destination; the order
+ * is placed afterwards now, for the coin that actually arrived, so this carries no destination at all.
  */
 
 const TICKET_TTL_SECONDS = 4 * 60;
 
-type Ticket = Readonly<{ account: string; amount: string; floor: string; shown: string; expiresAt: number }>;
+type Ticket = Readonly<{ account: string; amount: string; tokenOut: string; floor: string; shown: string; expiresAt: number }>;
 
 function secret(): string {
   const value = process.env.SESSION_SIGNING_SECRET?.trim();
@@ -28,10 +32,13 @@ function signatureFor(encoded: string): string {
   return createHmac("sha256", secret()).update(`viky-exit-quote:schema-1:${encoded}`).digest("base64url");
 }
 
-export function issueExitTicket(input: { account: Hex; amount: bigint; floor: bigint; shown: string; now?: Date }): string {
+export function issueExitTicket(input: { account: Hex; amount: bigint; tokenOut: Hex; floor: bigint; shown: string; now?: Date }): string {
   const payload: Ticket = {
     account: getAddress(input.account),
     amount: input.amount.toString(),
+    // Which coin, carried with the floor and signed with it. The floor only means anything in a coin, and a
+    // browser able to change one after the quote could ask for a corridor the figure was never quoted for.
+    tokenOut: getAddress(input.tokenOut),
     floor: input.floor.toString(),
     shown: input.shown,
     expiresAt: Math.floor((input.now?.getTime() ?? Date.now()) / 1_000) + TICKET_TTL_SECONDS,
@@ -40,7 +47,7 @@ export function issueExitTicket(input: { account: Hex; amount: bigint; floor: bi
   return `${encoded}.${signatureFor(encoded)}`;
 }
 
-export type ExitQuoteTicket = Readonly<{ account: Hex; amount: bigint; floor: bigint; shown: string }>;
+export type ExitQuoteTicket = Readonly<{ account: Hex; amount: bigint; tokenOut: Hex; floor: bigint; shown: string }>;
 
 /** Refuses anything that was not issued here, has expired, or belongs to somebody else. */
 export function readExitTicket(token: unknown, account: Hex, now: Date = new Date()): ExitQuoteTicket {
@@ -59,5 +66,11 @@ export function readExitTicket(token: unknown, account: Hex, now: Date = new Dat
   }
   if (!Number.isSafeInteger(payload.expiresAt) || payload.expiresAt * 1_000 <= now.getTime()) throw refuse();
   if (getAddress(payload.account) !== getAddress(account)) throw refuse();
-  return { account: getAddress(payload.account), amount: BigInt(payload.amount), floor: BigInt(payload.floor), shown: payload.shown };
+  return {
+    account: getAddress(payload.account),
+    amount: BigInt(payload.amount),
+    tokenOut: getAddress(payload.tokenOut),
+    floor: BigInt(payload.floor),
+    shown: payload.shown,
+  };
 }

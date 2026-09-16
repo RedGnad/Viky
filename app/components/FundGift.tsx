@@ -507,7 +507,19 @@ export function FundGift() {
     <div className="flex flex-col gap-[var(--space-xl)]">
       <section className={STICKER.sun}>
         <h1 className={TITLE}>Your money</h1>
-        <p className={MONEY}>{balance === null ? "..." : formatAusd(balance)}</p>
+        {/* While the payment is still on its way, the big figure is what is expected, not what is here. The
+            balance is zero until the money lands, so a large "$0.00" was the truth and still read as a
+            failure: the funder asked what it meant, which is the question a number should never raise. What
+            has actually arrived stays on the screen, smaller and below, so nothing is hidden (D76). */}
+        {step === "waiting" ? (
+          <>
+            <p className={MONEY}>{(() => { try { return formatAusd(dollarsToUnits(dollars)); } catch { return "..."; } })()}</p>
+            <p className={BODY}>Nothing has arrived yet. This is what your gift will hold.</p>
+            <p className={HELP}>In your account now: {balance === null ? "..." : formatAusd(balance)}</p>
+          </>
+        ) : (
+          <p className={MONEY}>{balance === null ? "..." : formatAusd(balance)}</p>
+        )}
         {/* Whatever just happened comes before the instructions, not after them: somebody coming back to a gift read
             "Welcome back" under the buttons, at the very bottom of the card (D74). */}
         {notice ? <p className={BODY}>{notice}</p> : null}

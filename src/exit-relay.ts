@@ -36,11 +36,18 @@ export function newSalt(): Hex {
 
 export type PreparedExit = Readonly<{ terms: ExitTerms; nonce: Hex; callData: Hex }>;
 
-/** Builds the terms one signature will cover. The floor comes from the caller, never from the quote. */
+/**
+ * Builds the terms one signature will cover. The floor comes from the caller, never from the quote.
+ *
+ * There is no destination to build in any more (D76): the proceeds go back to the payer, and the payer is the
+ * account the token itself checks the signature against, so where the money ends up is not a field a relayer
+ * could get wrong.
+ */
 export function buildExitTerms(input: {
   payer: Hex;
-  payoutTo: Hex;
   amount: bigint;
+  /** The coin that must come back, zero meaning the chain's own (D77). */
+  tokenOut: Hex;
   floor: bigint;
   exchange: Hex;
   callData: Hex;
@@ -49,8 +56,8 @@ export function buildExitTerms(input: {
 }): PreparedExit {
   const terms: ExitTerms = {
     payer: getAddress(input.payer),
-    payoutTo: getAddress(input.payoutTo),
     amount: input.amount,
+    tokenOut: getAddress(input.tokenOut),
     minOut: input.floor,
     exchange: getAddress(input.exchange),
     callHash: keccak256(input.callData),

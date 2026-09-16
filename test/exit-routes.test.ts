@@ -18,8 +18,10 @@ const ENV = { SESSION_SIGNING_SECRET: "test-account-session-secret-that-is-longe
 const A = privateKeyToAccount("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
 const ROUTER = "0x00000000000000000000000000000000000E1717";
 const EXCHANGE = "0xb3e6778480b2E488385E8205eA05E20060B813cb";
-const PAYOUT = "0x0000000000000000000000000000000000000B0b";
-const ONE = 1_000_000_000_000_000_000n;
+/** Six decimals: the coin that comes back is USDC, which the person then sends on themselves (D76). */
+const FLOOR = 2_997_000n;
+/** Which coin, named in the terms because the two payout services take different ones (D77). */
+const USDC = "0x754704Bc059F8C67012fEd69BC8A327a5aafb603";
 
 process.env.SESSION_SIGNING_SECRET = ENV.SESSION_SIGNING_SECRET;
 process.env.EXIT_ROUTER_ADDRESS = ROUTER;
@@ -49,17 +51,17 @@ async function json(response: Response): Promise<{ error?: string; code?: string
 }
 
 function ticketFor(amount: bigint, floor: bigint): string {
-  return issueExitTicket({ account: A.address, amount, floor, shown: "126.5058" });
+  return issueExitTicket({ account: A.address, amount, tokenOut: USDC as `0x${string}`, floor, shown: "$2.997" });
 }
 
-async function storedTerms(over: { signature?: `0x${string}`; payoutTo?: string; minOut?: bigint } = {}) {
+async function storedTerms(over: { signature?: `0x${string}`; minOut?: bigint } = {}) {
   const id = newExitId();
   await saveExit({
     id,
     account: A.address,
     amount: 3_000_000n,
-    payoutTo: (over.payoutTo ?? PAYOUT) as `0x${string}`,
-    minOut: over.minOut ?? 126n * ONE,
+    tokenOut: USDC as `0x${string}`,
+    minOut: over.minOut ?? FLOOR,
     exchange: EXCHANGE as `0x${string}`,
     callData: "0xce1e7030",
     callHash: `0x${"11".repeat(32)}`,
@@ -97,34 +99,23 @@ test("nobody signed in gets nowhere", async () => {
   }
 });
 
-test("a destination that is not one is refused before anything else", async () => {
-  const response = await preparePost(post("/api/exit/prepare", { payoutTo: "not an account", ticket: ticketFor(3_000_000n, 126n * ONE) }, { cookie }));
-  assert.equal(response.status, 400);
-  assert.equal((await json(response)).code, "INVALID_DESTINATION");
-});
-
-test("paying into Viky's own router would look like being paid and be nothing", async () => {
-  const response = await preparePost(post("/api/exit/prepare", { payoutTo: ROUTER, ticket: ticketFor(3_000_000n, 126n * ONE) }, { cookie }));
-  assert.equal((await json(response)).code, "INVALID_DESTINATION");
-});
-
 test("a floor the browser wrote itself is worth nothing", async () => {
-  const forged = Buffer.from(JSON.stringify({ account: A.address, amount: "3000000", floor: "1", shown: "0.0001", expiresAt: 9_999_999_999 })).toString("base64url");
-  const response = await preparePost(post("/api/exit/prepare", { payoutTo: PAYOUT, ticket: `${forged}.whatever` }, { cookie }));
+  const forged = Buffer.from(JSON.stringify({ account: A.address, amount: "3000000", tokenOut: USDC, floor: "1", shown: "$0.000001", expiresAt: 9_999_999_999 })).toString("base64url");
+  const response = await preparePost(post("/api/exit/prepare", { ticket: `${forged}.whatever` }, { cookie }));
   assert.equal(response.status, 409);
   assert.equal((await json(response)).code, "QUOTE_EXPIRED");
 });
 
 test("one person's quote is worth nothing to another", async () => {
   const other = privateKeyToAccount("0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d");
-  const theirs = issueExitTicket({ account: other.address, amount: 3_000_000n, floor: 126n * ONE, shown: "126.0000" });
-  const response = await preparePost(post("/api/exit/prepare", { payoutTo: PAYOUT, ticket: theirs }, { cookie }));
+  const theirs = issueExitTicket({ account: other.address, amount: 3_000_000n, tokenOut: USDC as `0x${string}`, floor: FLOOR, shown: "$2.997" });
+  const response = await preparePost(post("/api/exit/prepare", { ticket: theirs }, { cookie }));
   assert.equal((await json(response)).code, "QUOTE_EXPIRED");
 });
 
 test("asking again for the same thing gives back the terms already signed", async () => {
   const id = await storedTerms({ signature: "0xabcd" });
-  const response = await preparePost(post("/api/exit/prepare", { payoutTo: PAYOUT, ticket: ticketFor(3_000_000n, 126n * ONE) }, { cookie }));
+  const response = await preparePost(post("/api/exit/prepare", { ticket: ticketFor(3_000_000n, FLOOR) }, { cookie }));
   assert.equal(response.status, 200);
   const body = await json(response);
   assert.equal(body.id, id, "the same terms, not a second set");
@@ -133,7 +124,7 @@ test("asking again for the same thing gives back the terms already signed", asyn
 
 test("while one is signed, no second set of terms can be made for the same money", async () => {
   await storedTerms({ signature: "0xabcd" });
-  const response = await preparePost(post("/api/exit/prepare", { payoutTo: PAYOUT, ticket: ticketFor(5_000_000n, 126n * ONE) }, { cookie }));
+  const response = await preparePost(post("/api/exit/prepare", { ticket: ticketFor(5_000_000n, FLOOR) }, { cookie }));
   assert.equal(response.status, 409);
   assert.equal((await json(response)).code, "ALREADY_UNDER_WAY");
 });
@@ -155,8 +146,8 @@ test("terms whose window has closed are not relayed", async () => {
     id,
     account: A.address,
     amount: 3_000_000n,
-    payoutTo: PAYOUT as `0x${string}`,
-    minOut: 126n * ONE,
+    tokenOut: USDC as `0x${string}`,
+    minOut: FLOOR,
     exchange: EXCHANGE as `0x${string}`,
     callData: "0xce1e7030",
     callHash: `0x${"11".repeat(32)}`,

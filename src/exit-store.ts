@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS viky_exits (
   id text PRIMARY KEY,
   account text NOT NULL,
   amount text NOT NULL,
-  payout_to text NOT NULL,
+  token_out text NOT NULL,
   min_out text NOT NULL,
   exchange text NOT NULL,
   call_data text NOT NULL,
@@ -34,7 +34,20 @@ CREATE TABLE IF NOT EXISTS viky_exits (
   sent_at timestamptz
 );
 CREATE INDEX IF NOT EXISTS viky_exits_account ON viky_exits (account, created_at DESC);
+-- The destination is gone with form C (D76): the router hands the proceeds back to the person, who sends the
+-- payout service its coin themselves. A table made before that still carries the column, and it is NOT NULL,
+-- so every insert would fail against it. Written as its own statement because CREATE TABLE IF NOT EXISTS says
+-- nothing about a table that already exists.
+ALTER TABLE viky_exits DROP COLUMN IF EXISTS payout_to;
+-- And the coin came in with D77, since the two payout services take different ones. A default is given so an
+-- existing table with rows in it can take the column at all. Every row written since names its own coin.
+-- No semicolon belongs anywhere in these comments: this schema is split on semicolons and run statement by
+-- statement, so one inside a comment cuts the statement in half and every test that opens a database fails.
+ALTER TABLE viky_exits ADD COLUMN IF NOT EXISTS token_out text NOT NULL DEFAULT '';
 `;
+
+/** The chain's own coin, and what a row written before the coin was named reads as. */
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 
 let executor: SqlExecutor | undefined;
 
@@ -65,7 +78,8 @@ export type ExitRecord = Readonly<{
   id: string;
   account: Hex;
   amount: bigint;
-  payoutTo: Hex;
+  /** The coin that must come back, zero meaning the chain's own (D77). */
+  tokenOut: Hex;
   minOut: bigint;
   exchange: Hex;
   callData: Hex;
@@ -83,7 +97,10 @@ function toRecord(row: Record<string, unknown>): ExitRecord {
     id: String(row.id),
     account: getAddress(String(row.account)),
     amount: BigInt(String(row.amount)),
-    payoutTo: getAddress(String(row.payout_to)),
+    // A row written before the coin was named carries an empty string, and reading that as an account would
+    // throw rather than say what it is. Such a row is from the older terms and cannot be relayed against this
+    // contract anyway: its tag no longer matches, so the token would refuse the signature.
+    tokenOut: row.token_out ? getAddress(String(row.token_out)) : ZERO_ADDRESS,
     minOut: BigInt(String(row.min_out)),
     exchange: getAddress(String(row.exchange)),
     callData: String(row.call_data) as Hex,
@@ -122,8 +139,8 @@ export async function loadExit(id: string, account: string): Promise<ExitRecord 
 
 export async function saveExit(input: Omit<ExitRecord, "signature" | "txHash" | "state">): Promise<void> {
   await sql()`
-    INSERT INTO viky_exits (id, account, amount, payout_to, min_out, exchange, call_data, call_hash, salt, deadline, nonce, state)
-    VALUES (${input.id}, ${input.account.toLowerCase()}, ${input.amount.toString()}, ${input.payoutTo.toLowerCase()},
+    INSERT INTO viky_exits (id, account, amount, token_out, min_out, exchange, call_data, call_hash, salt, deadline, nonce, state)
+    VALUES (${input.id}, ${input.account.toLowerCase()}, ${input.amount.toString()}, ${input.tokenOut.toLowerCase()},
             ${input.minOut.toString()}, ${input.exchange.toLowerCase()}, ${input.callData}, ${input.callHash},
             ${input.salt}, ${input.deadline.toString()}, ${input.nonce}, 'prepared')`;
 }
@@ -154,5 +171,5 @@ export async function markExitSent(id: string, txHash: Hex): Promise<boolean> {
 
 /** What the planner needs and nothing more. */
 export function asOpenExit(record: ExitRecord): OpenExit {
-  return { id: record.id, amount: record.amount, payoutTo: record.payoutTo, minOut: record.minOut, signature: record.signature };
+  return { id: record.id, amount: record.amount, tokenOut: record.tokenOut, minOut: record.minOut, signature: record.signature };
 }

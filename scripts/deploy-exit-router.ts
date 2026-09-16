@@ -17,7 +17,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { kuruQuote, NATIVE_MON } from "../src/kuru";
 import { addMonadGasBuffer } from "../src/monad-gas";
-import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadRpcUrl, waitForFinality } from "../src/monad/chain";
+import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadRpcUrl, USDC_ADDRESS, waitForFinality } from "../src/monad/chain";
 
 /**
  * Deploys ExitRouter to Monad mainnet and opens it to exactly one exchange.
@@ -71,9 +71,27 @@ async function main() {
   }
   const tokenCode = await publicClient.getCode({ address: AUSD_ADDRESS });
   if (!tokenCode || tokenCode === "0x") throw new Error("AUSD has no code at the pinned address");
+  // The coin the router hands back (D76). Checked here because deploying against an address with no code
+  // would produce a router that can never pay anybody and cannot be pointed elsewhere afterwards.
+  const outCode = await publicClient.getCode({ address: USDC_ADDRESS });
+  if (!outCode || outCode === "0x") throw new Error("USDC has no code at the pinned address");
 
-  // Which exchange, asked rather than typed: whatever a live quote tells us to call is what we allow.
-  const quote = await kuruQuote({ userAddress: account.address, tokenIn: AUSD_ADDRESS, tokenOut: NATIVE_MON, amount: PROBE_AMOUNT });
+  // Which exchange, asked rather than typed: whatever a live quote tells us to call is what we allow. Asked
+  // for both corridors, because the two payout services take different coins and the exchange that serves one
+  // need not be the one that serves the other. Allowing only the coin we happen to be testing today would
+  // leave the other corridor dead on arrival, with no way to open it but another owner transaction.
+  const corridors = [
+    { name: "euro rail, stablecoin", tokenOut: USDC_ADDRESS as string },
+    { name: "card rail, the chain's own coin", tokenOut: NATIVE_MON as string },
+  ];
+  const exchanges = new Map<Hex, string>();
+  for (const corridor of corridors) {
+    const quoted = await kuruQuote({ userAddress: account.address, tokenIn: AUSD_ADDRESS, tokenOut: corridor.tokenOut, amount: PROBE_AMOUNT });
+    const where = getAddress(quoted.to);
+    console.log(`${corridor.name}: a live quote targets ${where}`);
+    if (!exchanges.has(where)) exchanges.set(where, corridor.name);
+  }
+  const quote = await kuruQuote({ userAddress: account.address, tokenIn: AUSD_ADDRESS, tokenOut: USDC_ADDRESS, amount: PROBE_AMOUNT });
   const exchange = getAddress(quote.to);
   const declared = process.env.EXIT_EXCHANGE_ADDRESS?.trim();
   if (declared && getAddress(declared) !== exchange) {
@@ -105,8 +123,10 @@ async function main() {
     console.log("That is what gets pinned, and the router refuses every payout if it ever changes.\n");
   }
 
-  console.log(JSON.stringify({ deployer: account.address, balanceMon: formatEther(balance), exchange, pointsAt, owner: owner ?? account.address }, null, 2));
+  console.log(JSON.stringify({ deployer: account.address, balanceMon: formatEther(balance), takes: AUSD_ADDRESS, givesBack: USDC_ADDRESS, exchange, pointsAt, owner: owner ?? account.address }, null, 2));
 
+  // One argument again: the coin coming back is named per exit inside the signed terms, because the two
+  // payout services take different ones and a router pinned to either would close the other's corridor (D77).
   const deployGas = addMonadGasBuffer(
     await publicClient.estimateGas({
       account: account.address,
