@@ -39,6 +39,22 @@ and the order puts the trial under the floor and `/api/exit/quote` refuses it wi
 refusal is correct and costs nothing, but it is a wasted attempt. **Ten dollars is the same experiment with
 three times the headroom.**
 
+**Decided: ten dollars**, on the funder's measurement as well as this one. The flat 1.99 EUR also weighs 29 % of
+an eight dollar sale against 23 % of a ten dollar one, so the smaller trial is both likelier to be refused and
+worse value for what it proves.
+
+**The way out was opened in production on 16 Sep for this trial**, under three conditions the funder set:
+
+1. The trial is ten dollars.
+2. **If it fails, remove `EXIT_ROUTER_ADDRESS` and `EXIT_EXCHANGE_ADDRESS` from production immediately.** That
+   puts every way out back to answering that Viky cannot pay out yet, which is true again the moment they are
+   gone. Nothing else has to be undone: the router keeps no money between transactions.
+3. **No link is published anywhere until the way out has paid somebody once.**
+
+**What nobody has seen yet.** Their sell screen has never been shown USDC on Monad from France. Their asset
+selector and their quote endpoint both over-promise for AUSD (D79), so neither is evidence for USDC either. Step
+5 below is the first time that screen is tested, and it is the step most likely to refuse.
+
 **Before starting.** The account doing it holds at least that much AUSD. The relayer holds more than 10 MON, or
 it can make no contract call at all (D53): it held 14.3587 on 16 Sep.
 
@@ -54,8 +70,17 @@ it can make no contract call at all (D53): it held 14.3587 on 16 Sep.
 6. Send exactly that to the account they give you. USDC moves on a signature, so Viky relays it and it costs
    nothing. The field takes all six decimals.
 
-**Write down**: what went in, what came out, what reached the bank, and how long each leg took. None of that is
-known yet, and no screen says anything about fees until it is.
+**Write down**, and these six exactly, because every sentence Viky is allowed to print about this rail depends on
+them and none of it is known yet:
+
+1. the hash of the exit;
+2. the USDC actually received;
+3. the amount sent on;
+4. the time the order was placed with the payout service;
+5. the time the bank transfer arrived;
+6. the euros actually received.
+
+No screen says anything about fees or timing until those six exist.
 
 **Refusals that are not faults.** `BELOW_PAYOUT_MINIMUM` (their floor, moved), `RATE_MOVED` (the exchange would
 now give less than was shown, so nothing is taken), `TOO_SLOW` (the signed terms last fifteen minutes),
