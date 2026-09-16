@@ -49,6 +49,15 @@ worse value for what it proves.
 2. **If it fails, remove `EXIT_ROUTER_ADDRESS` and `EXIT_EXCHANGE_ADDRESS` from production immediately.** That
    puts every way out back to answering that Viky cannot pay out yet, which is true again the moment they are
    gone. Nothing else has to be undone: the router keeps no money between transactions.
+
+   ```
+   vercel env rm EXIT_ROUTER_ADDRESS production --yes
+   vercel env rm EXIT_EXCHANGE_ADDRESS production --yes
+   ```
+
+   Removing them is not enough on its own: **an environment change only reaches a new deployment**, so the
+   build that is running keeps the old values until one is made. Redeploy after removing them, and check the
+   way out says Viky cannot pay out yet before walking away from it.
 3. **No link is published anywhere until the way out has paid somebody once.**
 
 **What nobody has seen yet.** Their sell screen has never been shown USDC on Monad from France. Their asset
