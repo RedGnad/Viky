@@ -84,15 +84,23 @@ async function main() {
     { name: "euro rail, stablecoin", tokenOut: USDC_ADDRESS as string },
     { name: "card rail, the chain's own coin", tokenOut: NATIVE_MON as string },
   ];
-  const exchanges = new Map<Hex, string>();
+  const exchanges = new Map<Hex, string[]>();
   for (const corridor of corridors) {
     const quoted = await kuruQuote({ userAddress: account.address, tokenIn: AUSD_ADDRESS, tokenOut: corridor.tokenOut, amount: PROBE_AMOUNT });
     const where = getAddress(quoted.to);
     console.log(`${corridor.name}: a live quote targets ${where}`);
-    if (!exchanges.has(where)) exchanges.set(where, corridor.name);
+    exchanges.set(where, [...(exchanges.get(where) ?? []), corridor.name]);
   }
-  const quote = await kuruQuote({ userAddress: account.address, tokenIn: AUSD_ADDRESS, tokenOut: USDC_ADDRESS, amount: PROBE_AMOUNT });
-  const exchange = getAddress(quote.to);
+  // Both corridors must land on the same exchange, and this refuses rather than deploying if they ever stop
+  // doing so. The contract could hold both in its allowlist, but the app compares a quote against a single
+  // EXIT_EXCHANGE_ADDRESS, so a second one would leave the router able to serve a corridor the routes refuse:
+  // half a way out, discovered by whoever is trying to be paid. Measured 16 Sep 2026: both route to the same
+  // address, so this passes today and fails loudly on the day that changes.
+  if (exchanges.size !== 1) {
+    const found = [...exchanges].map(([where, serves]) => `${where} (${serves.join(", ")})`).join(" and ");
+    throw new Error(`Refusing to deploy: the corridors route to different exchanges, ${found}, and the app can only name one`);
+  }
+  const exchange = [...exchanges.keys()][0];
   const declared = process.env.EXIT_EXCHANGE_ADDRESS?.trim();
   if (declared && getAddress(declared) !== exchange) {
     throw new Error(`Refusing to deploy: a live quote targets ${exchange}, but EXIT_EXCHANGE_ADDRESS says ${getAddress(declared)}`);
@@ -123,7 +131,24 @@ async function main() {
     console.log("That is what gets pinned, and the router refuses every payout if it ever changes.\n");
   }
 
-  console.log(JSON.stringify({ deployer: account.address, balanceMon: formatEther(balance), takes: AUSD_ADDRESS, givesBack: USDC_ADDRESS, exchange, pointsAt, owner: owner ?? account.address }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        deployer: account.address,
+        balanceMon: formatEther(balance),
+        takes: AUSD_ADDRESS,
+        // No single coin comes back any more: each exit names its own, so both corridors run through one
+        // router (D77). What is printed is which coins the corridors probed above actually asked for.
+        givesBack: corridors.map((corridor) => corridor.tokenOut),
+        exchange,
+        serves: exchanges.get(exchange),
+        pointsAt,
+        owner: owner ?? account.address,
+      },
+      null,
+      2,
+    ),
+  );
 
   // One argument again: the coin coming back is named per exit inside the signed terms, because the two
   // payout services take different ones and a router pinned to either would close the other's corridor (D77).
