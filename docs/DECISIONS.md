@@ -2012,8 +2012,9 @@ that refuses its payout, one that hands it straight back, and one that burns gas
 delegated account can both sign and run code). The terms and their parity pins, the store, the planner, the three
 routes, and the first client helper that signs an exit.
 
-**What is not built, and must not be implied anywhere.** The router is **not deployed**, so every way out answers that
-Viky cannot pay out yet. The smallest sale is read live from the euro service only; the card service publishes its own
+**What is not built, and must not be implied anywhere.** The router was deployed on 16 Sep at
+`0x8a1790dfd10cf1599bdaed5ec8bb46b2a6eb6223`, owned by the founder's own wallet and not by the key that deployed it
+(see `docs/OPERATIONS.md`). Deployed is not the same as working: nothing has passed through it. The smallest sale is read live from the euro service only; the card service publishes its own
 and Viky does not read it yet, so no figure of theirs is printed. Neither corridor has run once end to end with real
 money.
 
@@ -2053,3 +2054,23 @@ mechanism as AUSD", which is impossible for a coin that is not a token; the inte
 **Not printed, deliberately.** No figure about fees appears on any screen until a real amount has gone through one of
 these rails, at the funder's instruction. The figures are measured and recorded in `src/rails.ts` and simply not
 shown. No captures either, for the same reason.
+
+## D79, 16 Sep 2026: the widget decides, the API only prepares
+
+**The measurement.** Asked from France on 16 Sep, the euro service's own quote endpoint prices AUSD without
+complaint: **16.20 EUR net on 20.994751 AUSD, fee 1.99**, offering both SEPA and card. On the same day, in the
+same country, the funder cannot find AUSD in their widget at all, while other assets do appear there greyed out
+with a message about location.
+
+**The rule this settles.** Three sources disagreed: their published asset page says MiCA bars AUSD in the EU and
+the EEA, their quote endpoint sells it anyway, and their widget does not show it. The widget is what a real
+customer meets, so **the widget decides**. An endpoint that quotes is not a service that pays.
+
+**What follows, and it is general.** An API answer is good enough to prepare something and never good enough to
+promise it on a screen. This is the same shape as the earlier finding that the quote endpoint happily quoted
+assets and US states its own help centre bars: it enforces countries, not assets. Where the two disagree, Viky
+believes the more restrictive one and says nothing the customer's own screen would contradict.
+
+**What does not change.** France stays on USDC, and the router keeps its place: the coin comes back as the terms
+name it (D77), so nothing had to move to absorb this. What would have been wrong is building the French exit on
+an AUSD quote that a real customer can never reach.
