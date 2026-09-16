@@ -31,10 +31,30 @@ import { FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, ST
 
 type Step = "look" | "change" | "send" | "sent";
 
+/**
+ * What went wrong, in words that are true of this screen.
+ *
+ * On a screen about money nothing may arrive as a shrug. The first real attempt at the way out failed with the
+ * generic catch-all, which told the funder neither what had happened nor whether their money had moved; the
+ * cause was a table that had never been migrated, three steps away from anything they did (D80). That exact
+ * wording is asserted absent from this file by test/screen-claims.test.ts, which is why it is not quoted here
+ * even to explain itself. So a session that has closed says so and offers the way back, a refusal the contract named
+ * keeps its name, and everything left over still says the one thing that is always true here: nothing was
+ * taken. The router holds nothing between transactions, so that sentence is not reassurance, it is the design.
+ */
 function readable(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
+  if (error instanceof ApiError) {
+    if (error.code === "NOT_CONFIGURED") return "Viky cannot pay this out yet. Nothing was taken, and your money is where it was.";
+    if (error.code === "FAILED") return "Viky could not finish this, and nothing was taken. Your money is where it was. Please try again in a moment.";
+    return error.message;
+  }
   if (error instanceof Error && error.message) return error.message;
-  return "Something went wrong. Nothing was taken. Please try again.";
+  return "Viky could not finish this, and nothing was taken. Your money is where it was.";
+}
+
+/** A session that closed while they were away is not a failure to report, it is a door to reopen (D74). */
+function sessionClosed(error: unknown): boolean {
+  return error instanceof ApiError && error.code === "SIGN_IN_REQUIRED";
 }
 
 export function CashOut() {
@@ -53,6 +73,10 @@ export function CashOut() {
   const [amount, setAmount] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Set when the passkey session closed under the screen. Kept separately from `problem` because it is not a
+  // failure of anything: the amount they typed and the quote they read are still good, and what they need is
+  // the way back in rather than an apology (D74, D80).
+  const [closed, setClosed] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!address) return;
@@ -66,7 +90,36 @@ export function CashOut() {
       .catch(() => {});
   }, [refresh]);
 
-  if (!address) return <AccountPanel />;
+  // The session closes itself after ten quiet minutes, and placing an order with a payout service takes longer
+  // than that. So it closing is an expected part of this journey, not an error in it: the screen says what
+  // happened, says plainly that nothing moved, and asks for the one thing it needs (D74, D80). It used to
+  // replace the whole screen with a bare sign-in form, losing the amount they had typed and the quote they had
+  // read, and saying nothing about either.
+  if (!address || closed) {
+    return (
+      <div className="flex flex-col gap-[var(--space-xl)]">
+        <section className={STICKER.lilac}>
+          <h1 className={TITLE}>{closed ? "Your session closed while you were away" : "Sign in to see your money"}</h1>
+          {closed ? (
+            <>
+              <p className="text-[length:var(--type-body)]">
+                Nothing moved and nothing was taken. Your money is exactly where it was, and nothing about it
+                expires.
+              </p>
+              <p className={HELP}>
+                Sessions close on their own after {mera.SESSION_IDLE_MINUTES} quiet minutes. Placing an order
+                with a payout service takes longer than that, so this is normal rather than something going
+                wrong. Sign in again and pick up where you stopped.
+              </p>
+            </>
+          ) : null}
+        </section>
+        {/* Signing in leads, and making an account follows. The other way round, somebody coming back to their
+            own money makes a second account and their money stays on the first (D74). */}
+        <AccountPanel returning={closed} />
+      </div>
+    );
+  }
 
   const held = (coin: Coin): bigint | null => (holdings ? (holdings[coin.symbol] ?? 0n) : null);
   const gift = held(AUSD);
@@ -106,15 +159,22 @@ export function CashOut() {
     try {
       setQuote(await quoteWayOut({ amount: changing.units, coin: chosen.coin }));
     } catch (error) {
-      setProblem(readable(error));
+      if (sessionClosed(error)) setClosed(true);
+      else setProblem(readable(error));
     } finally {
       setBusy(false);
     }
   };
 
   const changeIt = async () => {
+    if (!quote) return;
     const account = mera.currentAccount();
-    if (!account || !quote) return;
+    // A closed session used to leave this function silently, with the button doing nothing at all and the
+    // screen saying nothing: worse than a wrong message, because there was nothing to read (D80).
+    if (!account) {
+      setClosed(true);
+      return;
+    }
     setBusy(true);
     setProblem(null);
     try {
@@ -125,7 +185,8 @@ export function CashOut() {
       setNotice(`Changed. At least ${result.shown} of ${quote.sells} is in your account now.`);
       await refresh();
     } catch (error) {
-      setProblem(readable(error));
+      if (sessionClosed(error)) setClosed(true);
+      else setProblem(readable(error));
     } finally {
       setBusy(false);
     }
@@ -134,8 +195,12 @@ export function CashOut() {
   const send = async () => {
     setProblem(null);
     setNotice(null);
+    if (!isAddress(ownAccount.trim()) || sending.units === undefined) return;
     const account = mera.currentAccount();
-    if (!account || !isAddress(ownAccount.trim()) || sending.units === undefined) return;
+    if (!account) {
+      setClosed(true);
+      return;
+    }
     const leaving = sending.units;
     const to = ownAccount.trim() as Hex;
     setBusy(true);
@@ -152,7 +217,8 @@ export function CashOut() {
       setStep("sent");
       await refresh();
     } catch (error) {
-      setProblem(readable(error));
+      if (sessionClosed(error)) setClosed(true);
+      else setProblem(readable(error));
     } finally {
       setBusy(false);
     }

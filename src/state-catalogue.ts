@@ -228,6 +228,16 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
     states: [
       { name: "What is theirs", when: "the gift has earned anything", says: ["Yours to take out"] },
       {
+        name: "The session closed while they were away",
+        when: "the passkey session timed out during the journey, which takes longer than the session lasts",
+        says: [
+          "Your session closed while you were away",
+          "Nothing moved and nothing was taken.",
+          "Sessions close on their own after",
+        ],
+        gap: "expected rather than exceptional: a session lasts ten quiet minutes and placing an order with a payout service takes longer. It used to do nothing at all, the button silently returning, with nothing on screen to read (D80).",
+      },
+      {
         name: "Moving it to another account of theirs",
         when: "they hold something",
         says: [
@@ -275,10 +285,10 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
         gap: "the order is placed for what actually arrived, never for what was quoted, because a payout service expects exactly the quantity it was ordered for (D75). Viky does not read that figure back off their page: the person reads it, and the amount field takes it to the last decimal.",
       },
       {
-        name: "No way out is wired yet",
-        when: "a way out is chosen while the router is not deployed",
+        name: "The way out cannot run",
+        when: "the router is not configured, or its table is not migrated",
         says: [],
-        gap: "every quote answers that Viky cannot pay out yet, from the route rather than the screen, because EXIT_ROUTER_ADDRESS is unset. Neither corridor has run once end to end with real money (D77).",
+        gap: "answered by the route rather than the screen, and always by name: NOT_CONFIGURED, never a shrug. A missing table used to arrive as an untyped error and reach the person as 'Something went wrong', which is what the first real attempt met (D80). The router is deployed and production is configured, but neither corridor has moved real money yet.",
       },
     ],
   },
