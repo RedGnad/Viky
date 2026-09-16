@@ -281,7 +281,12 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       {
         name: "Sending the changed money on to the service",
         when: "the money has been changed and an order is waiting for it",
-        says: ["Place your order with "],
+        says: [
+          "Place your order with ",
+          "asks where you are sending from, give them your account",
+          "Copy your identifier",
+          "Paste the identifier they give you",
+        ],
         gap: "the order is placed for what actually arrived, never for what was quoted, because a payout service expects exactly the quantity it was ordered for (D75). Viky does not read that figure back off their page: the person reads it, and the amount field takes it to the last decimal.",
       },
       {

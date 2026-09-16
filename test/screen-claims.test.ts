@@ -192,6 +192,29 @@ test("no failure about money arrives as a shrug, and a closed session says so", 
   }
 });
 
+/**
+ * The blocking defect of the first real exit, 16 Sep (D82). The payout service asks where the money is sent from
+ * before it gives its own identifier to send to, and this screen had no answer at that step: the funder had to find
+ * their identifier somewhere else. So after a change, in the order the service asks: the account's identifier with
+ * a copy button, then a field for theirs.
+ */
+test("after a change, the account's identifier comes first with a copy button, then the field for theirs", () => {
+  const cashOut = readFileSync("app/components/CashOut.tsx", "utf8");
+  const after = cashOut.slice(cashOut.indexOf("Your money is changed and it is in your own account"));
+  assert.ok(after.length > 0, "the step after a change exists");
+
+  const asked = after.indexOf("asks where you are sending from");
+  const copy = after.indexOf("navigator.clipboard.writeText(address)");
+  const paste = after.indexOf("Paste the identifier they give you");
+  assert.ok(asked > 0 && copy > asked, "the identifier is offered where the service asks for it, and copied whole");
+  assert.ok(paste > copy, "and only then the field for the identifier they give back");
+
+  // What is pasted goes into the send that exists, on the coin this way out hands back, never into a new path.
+  assert.match(after, /setOwnAccount\(depositTo\.trim\(\)\)/);
+  assert.match(after, /openSend\(received\)/);
+  assert.match(after, /disabled=\{!isAddress\(depositTo\.trim\(\)\)/, "the button stays shut until a real identifier is pasted");
+});
+
 test("a day that is neither counted nor lost is named, with the moment it stops being catchable", () => {
   const DAY = 86_400_000;
   const window = { startDay: 20_708, endDay: 20_714, creditedDays: 1, missedDays: 0 };

@@ -2212,3 +2212,30 @@ amount.
 
 **Why a live attempt cannot prove this fixed.** The defect is intermittent: a fresh trial will most likely
 succeed whatever we did. The proof has to be a test that builds the failing shape deliberately.
+
+## D82, 16 Sep 2026: the first real conversion, and the identifier the screen did not offer
+
+**What passed.** At 17:40:56 ten AUSD went through the router for the first time and came back as **9.999586
+USDC**, in transaction `0x7599b203c1897f6659b2c72a3603a57fd9002c8c2a92efc463d8db6bc2e1f3ae`, block 105,357,531,
+666,789 gas. The minimum bound into the terms was 9.995586, taken from the same quote as the bytes (D81). This is
+a conversion, not an exit: no euro has left, and nothing about fees or timing is written anywhere until one has.
+
+**It was a first attempt.** One row was stored for it and no `stale` row came before it, while the build carrying
+the retry had been live since 16:45. So the retry was available and was not needed. That says nothing yet about
+how often it will be.
+
+**The blocking defect the real journey found.** The payout service asks where the money is sent **from** before
+it gives its own identifier to send **to**. The way out's screen had no answer to that question: it never showed
+the account's own identifier, and the funder had to find it somewhere else, mid order.
+
+**The fix, in the order the service asks.** After a change the screen now offers the account's identifier at the
+step where the service asks for it, start and end shown for checking and a button that copies it whole, the same
+pattern the funding screen already used. Then a field for the identifier the service gives back, which opens the
+existing send on the coin this way out hands back. Nothing new moves money: the destination is simply no longer
+something the person has to fetch from another page.
+
+**Deliberately not done here, and left for the design pass.** The screen still says "at least" a figure when the
+exact one is known on receipt and the service requires it; "Back" still stands where a next step carrying the
+exact, copyable amount should be; six decimals are still asked of the person; and the instruction is still dense.
+
+**Not pushed while the funder was mid send**, because a push rebuilds production underneath a live journey.
