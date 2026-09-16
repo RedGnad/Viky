@@ -20,6 +20,47 @@ Ownership is **not** on the key that deployed it, and the deploy script refuses 
 Two standing commitments live in the way out. Neither is a bug, both are ongoing, and both were measured
 rather than assumed. Dates are the day the value was read.
 
+## The first real trial, and why it is not eight dollars
+
+Nothing has passed through the router. The first time money does, it should be small and watched.
+
+**Size.** Measured through the real quote path on 16 Sep 2026, against the euro service's own published floor of
+6.51 EUR at 1 USDC = 0.8668 EUR:
+
+| asked | floor the exchange guarantees | worth | margin over their minimum |
+|---|---|---|---|
+| $8 | 7.998428 USDC | 6.93 EUR | **0.42 EUR** |
+| $9 | 8.997986 USDC | 7.80 EUR | 1.29 EUR |
+| $10 | 9.997481 USDC | 8.67 EUR | 2.16 EUR |
+| $12 | 11.996800 USDC | 10.40 EUR | 3.89 EUR |
+
+Eight dollars clears their minimum by 42 cents. Their price moves, so a 6 % move against USDC between the quote
+and the order puts the trial under the floor and `/api/exit/quote` refuses it with `BELOW_PAYOUT_MINIMUM`. That
+refusal is correct and costs nothing, but it is a wasted attempt. **Ten dollars is the same experiment with
+three times the headroom.**
+
+**Before starting.** The account doing it holds at least that much AUSD. The relayer holds more than 10 MON, or
+it can make no contract call at all (D53): it held 14.3587 on 16 Sep.
+
+**In order.**
+
+1. Sign in, open the way out. Choose the euro service.
+2. Type the amount, ask what it would give, and read the floor and what it is worth. Nothing has moved yet.
+3. Change it. One signature, submitted by the relayer, and the account pays nothing. Wait for finality.
+4. The balance now shows USDC underneath what a gift holds. **Read what actually arrived**, which is at least
+   the floor and usually a little more.
+5. Place the order on the service's own page **for the amount that arrived**, never for the amount quoted: they
+   expect exactly the quantity ordered (D75).
+6. Send exactly that to the account they give you. USDC moves on a signature, so Viky relays it and it costs
+   nothing. The field takes all six decimals.
+
+**Write down**: what went in, what came out, what reached the bank, and how long each leg took. None of that is
+known yet, and no screen says anything about fees until it is.
+
+**Refusals that are not faults.** `BELOW_PAYOUT_MINIMUM` (their floor, moved), `RATE_MOVED` (the exchange would
+now give less than was shown, so nothing is taken), `TOO_SLOW` (the signed terms last fifteen minutes),
+`ALREADY_UNDER_WAY` (one way out at a time per account, so two live signatures for the same money cannot exist).
+
 ## 1. The pinned exchange points at a contract somebody else owns
 
 `ExitRouter` never calls an exchange without checking, in the same transaction, that it still forwards where it
