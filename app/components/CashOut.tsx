@@ -7,7 +7,7 @@ import { ApiError } from "@/src/client/api";
 import { quoteWayOut, takeTheWayOut, type WayOutQuote } from "@/src/client/exit";
 import { sendOwnMoney } from "@/src/client/gift";
 import { readCoinBalance, sendMon } from "@/src/client/onchain";
-import { AUSD, COINS, exactly, isNative, movesOnASignature, type Coin } from "@/src/coins";
+import { AUSD, coinAt, COINS, exactly, isNative, movesOnASignature, type Coin } from "@/src/coins";
 import { formatAusd } from "@/src/gift-reader";
 import { WAYS_OUT, type WayOut } from "@/src/rails";
 import { AccountPanel } from "./AccountPanel";
@@ -77,6 +77,11 @@ export function CashOut() {
   // failure of anything: the amount they typed and the quote they read are still good, and what they need is
   // the way back in rather than an apology (D74, D80).
   const [closed, setClosed] = useState(false);
+  // Where the payout service asks the money to be sent, pasted by the person, and whether their own identifier has
+  // just been copied. The service asks where the money comes from before it says where to send it, and the first
+  // real exit found this screen had no answer to give: the funder had to find the identifier somewhere else.
+  const [depositTo, setDepositTo] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!address) return;
@@ -363,11 +368,55 @@ export function CashOut() {
               </button>
             </div>
           ) : (
-            <div className="space-y-[var(--space-sm)]">
+            <div className="space-y-[var(--space-md)]">
               <p className="text-[length:var(--type-body)]">
                 Your money is changed and it is in your own account. Place your order with {chosen.name} for the
-                amount you actually received, then send exactly that amount to the account they give you.
+                amount you actually received.
               </p>
+              {/* In the order the service asks for things. It wants to know where the money comes from before it
+                  says where to send it, and on the first real exit this screen had nothing to offer at that step,
+                  so the funder had to find their own identifier somewhere else (D82). Shown start and end for
+                  checking, copied whole, exactly as the funding screen does it. */}
+              <div className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)] space-y-[var(--space-xs)]">
+                <p className={HELP}>When {chosen.name} asks where you are sending from, give them your account&apos;s identifier:</p>
+                <p className="text-[length:var(--type-body)] tabular-nums">
+                  {address.slice(0, 6)}
+                  <span className="text-[var(--muted)]"> ... </span>
+                  {address.slice(-4)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void navigator.clipboard.writeText(address).then(() => setCopied(true)).catch(() => setCopied(false))}
+                  className={SECONDARY_BUTTON}
+                >
+                  Copy your identifier
+                </button>
+                {copied ? <p className={HELP}>Copied and ready to paste.</p> : null}
+              </div>
+              <label className="flex flex-col gap-[var(--space-xs)]">
+                <span className={HELP}>Then paste the identifier {chosen.name} gives you to send to</span>
+                <input
+                  value={depositTo}
+                  onChange={(event) => setDepositTo(event.target.value)}
+                  placeholder="Paste the identifier they give you"
+                  className={FIELD}
+                />
+              </label>
+              <button
+                type="button"
+                disabled={!isAddress(depositTo.trim()) || !coinAt(chosen.coin)}
+                onClick={() => {
+                  const received = coinAt(chosen.coin);
+                  if (!received) return;
+                  // Into the send that already exists, with the destination they just pasted. The amount it opens on
+                  // is what the account holds of that coin, written in full, which is what an order must carry.
+                  setOwnAccount(depositTo.trim());
+                  openSend(received);
+                }}
+                className={PRIMARY_BUTTON}
+              >
+                Send it to {chosen.name}
+              </button>
               <button type="button" onClick={() => setStep("look")} className={INLINE_BUTTON}>
                 Back
               </button>

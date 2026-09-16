@@ -96,6 +96,16 @@ them and none of it is known yet:
 
 No screen says anything about fees or timing until those six exist.
 
+**The first real conversion, 16 Sep 2026 at 17:40:56.** Three of the six are known. It is a conversion and not
+yet an exit: no euro has left.
+
+1. exit hash `0x7599b203c1897f6659b2c72a3603a57fd9002c8c2a92efc463d8db6bc2e1f3ae`, block 105,357,531, success,
+   666,789 gas, **first attempt** (one stored row, no `stale` row before it, with the retry live since 16:45);
+2. USDC received: **9.999586**, against a bound minimum of 9.995586 from the same quote as the bytes;
+3. amount to send on: 9.999586.
+
+Still unknown: the order time, the time the transfer arrives, and the euros received.
+
 **Refusals that are not faults.** `BELOW_PAYOUT_MINIMUM` (their floor, moved), `RATE_MOVED` (the exchange would
 now give less than was shown, so nothing is taken), `TOO_SLOW` (the signed terms last fifteen minutes),
 `ALREADY_UNDER_WAY` (one way out at a time per account, so two live signatures for the same money cannot exist).
