@@ -60,9 +60,14 @@ worse value for what it proves.
    way out says Viky cannot pay out yet before walking away from it.
 3. **No link is published anywhere until the way out has paid somebody once.**
 
-**What nobody has seen yet.** Their sell screen has never been shown USDC on Monad from France. Their asset
-selector and their quote endpoint both over-promise for AUSD (D79), so neither is evidence for USDC either. Step
-5 below is the first time that screen is tested, and it is the step most likely to refuse.
+**What their sell screen accepts, measured in France on 16 Sep at 03:52.** Their order summary showed **"Sell
+117,67 USDC on Monad"**, paid to **"Bank transfer (FR76 … 2922)"**, **total payout 100,00 EUR**. So the coin and
+a SEPA payout to a French account are accepted all the way through order creation. This is the positive half of
+D79: the same screen that refuses AUSD outright takes USDC without complaint.
+
+**What that does not prove.** Everything after order creation. Nobody has yet seen their side credit a deposit
+sent from a Viky account, and nobody has seen the transfer arrive. Those are the two steps still unknown, and
+they are why nothing about timing or fees is printed anywhere.
 
 **Before starting.** The account doing it holds at least that much AUSD. The relayer holds more than 10 MON, or
 it can make no contract call at all (D53): it held 14.3587 on 16 Sep.

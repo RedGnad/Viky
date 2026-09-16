@@ -2076,6 +2076,12 @@ Two of them promise and one refuses, and the one that refuses is the last screen
 **Only the sell screen is authoritative.** An endpoint that quotes is not a service that pays, and neither is a
 dropdown that lists.
 
+**And the same screen says yes to the coin we chose**, which is the other half of the rule and was measured the
+same day at 03:52, from France: their order summary read "Sell 117,67 USDC on Monad", paid to "Bank transfer
+(FR76 … 2922)", total payout 100,00 EUR. So the rule is not "distrust them", it is "ask the screen that decides".
+USDC on Monad with a SEPA payout to a French account passes it; AUSD does not. Nothing after order creation is
+proven by this: not the deposit being credited, and not the transfer arriving.
+
 **And a rule about our own words.** A refusal shown on a Viky screen about what a rail will do must be **the
 rail's own sentence**, never one of ours dressed up as theirs. We may refuse early on a number they publish, and
 say it is theirs. We may not invent a refusal about who is allowed to sell, because that is the one thing only
