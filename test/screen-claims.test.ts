@@ -159,6 +159,39 @@ test("the amount written before sending all of it is exactly the amount that lea
   assert.match(cashOut, /sendMon\(account, to, leaving\)/);
 });
 
+/**
+ * The defect of 16 Sep: the first real attempt at the way out failed with "Something went wrong. Nothing was
+ * changed.", which said neither what had happened nor whether the money had moved. The cause was a table that
+ * had never been migrated, three steps away from anything the person did (D80).
+ *
+ * On a screen about money, no failure may arrive as a shrug.
+ */
+test("no failure about money arrives as a shrug, and a closed session says so", () => {
+  const cashOut = readFileSync("app/components/CashOut.tsx", "utf8");
+
+  assert.doesNotMatch(cashOut, /Something went wrong/, "the catch-all has no place on a screen about money");
+
+  // Branched on the typed code rather than on the server's prose, which can change without anybody noticing.
+  assert.match(cashOut, /error\.code === "NOT_CONFIGURED"/);
+  assert.match(cashOut, /error\.code === "FAILED"/);
+  assert.match(cashOut, /error\.code === "SIGN_IN_REQUIRED"/);
+
+  // A closed session is a door to reopen, not a failure to report: it is expected here, because the journey
+  // takes longer than the session lasts. It used to return silently, with nothing at all on screen to read.
+  assert.match(cashOut, /Your session closed while you were away/);
+  assert.match(cashOut, /Nothing moved and nothing was taken\./);
+  assert.match(cashOut, /setClosed\(true\)/);
+  assert.match(cashOut, /<AccountPanel returning=\{closed\} \/>/, "signing in leads, making an account follows (D74)");
+
+  // The timeout in the sentence is the one that arms the timer, never a number typed into prose.
+  assert.match(cashOut, /mera\.SESSION_IDLE_MINUTES/);
+
+  // And every remaining failure still says the one thing that is always true: the router keeps nothing.
+  for (const promise of [/Nothing was taken, and your money is where it was/, /nothing was taken\. Your money is where it was/]) {
+    assert.match(cashOut, promise);
+  }
+});
+
 test("a day that is neither counted nor lost is named, with the moment it stops being catchable", () => {
   const DAY = 86_400_000;
   const window = { startDay: 20_708, endDay: 20_714, creditedDays: 1, missedDays: 0 };

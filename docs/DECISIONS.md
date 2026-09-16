@@ -2089,3 +2089,47 @@ believes the more restrictive one and says nothing the customer's own screen wou
 **What does not change.** France stays on USDC, and the router keeps its place: the coin comes back as the terms
 name it (D77), so nothing had to move to absorb this. What would have been wrong is building the French exit on
 an AUSD quote that a real customer can never reach.
+
+## D80, 16 Sep 2026: the first real attempt failed, and the message told nobody anything
+
+**What happened.** The funder opened the way out in production and asked for ten dollars. The quote came back.
+The conversion then failed with **"Something went wrong. Nothing was changed."**, and that sentence is the whole
+defect: it says neither what happened nor whether their money moved.
+
+**The cause, from production's own logs.** Not either of the two things suspected.
+
+```
+03:56:16.80  λ POST /api/exit/quote     200
+03:56:36.88  λ POST /api/exit/prepare   500  NeonDbError: relation "viky_exits" does not exist
+```
+
+The table had **never been created in the production database**. `ensureExitSchema` is called only by
+`scripts/migrate-db.ts` and by the tests, and nobody had run the migration since the way out was written.
+Production held `viky_gifts`, `viky_proof_sessions` and `viky_relayed`, and nothing else.
+
+So the session was fine and the contract was never reached: nothing was signed, the relayer submitted nothing,
+its nonce stayed at 35, and the router is empty. Every check the funder made agreed with that, which is why the
+message was worse than useless: it pointed at nothing, while the truth was three steps away from anything they
+had done.
+
+**Why it arrived as a shrug.** `giftErrorResponse` names auth failures, `GiftApiError`, `RequestError` and
+`RelayerError`. A driver's error is none of those, so it fell to the last branch. **An untyped throw on a money
+route is a design fault, not an accident**: every refusal here is meant to be demonstrable.
+
+**Three fixes, in the order they matter.**
+
+1. The table exists now, created with production's own credentials. Its columns were checked afterwards:
+   `token_out` present, `payout_to` gone.
+2. A missing table or column is now a **typed** refusal, `NOT_CONFIGURED`, 503, "Viky cannot pay out yet.
+   Nothing was taken." It can never again reach anybody as "something went wrong".
+3. The screen no longer shrugs. A session that closed says so and offers the way back (D74's shape), a named
+   contract refusal keeps its name, and anything left over still says the one thing always true here: nothing
+   was taken, and the money is where it was. The router holds nothing between transactions, so that is the
+   design rather than reassurance.
+
+**And one silence that was worse than the message.** If the passkey session closed mid-flow, `changeIt` did
+`if (!account) return` and the button simply did nothing, with nothing on screen to read. Sessions close after
+ten quiet minutes and placing an order with a payout service takes longer than that, so **a session closing is
+an expected part of this journey**, not a failure in it.
+
+**Still not verified.** Nothing has passed through the router. The trial has not been run again.

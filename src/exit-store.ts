@@ -3,6 +3,7 @@ import { getAddress, type Hex } from "viem";
 import { neon } from "@neondatabase/serverless";
 import type { SqlExecutor } from "./proof-session-store";
 import type { OpenExit } from "./exit-plan";
+import { GiftApiError } from "./gift-api";
 
 /**
  * One way out at a time, per account, written down before anything is signed.
@@ -58,8 +59,24 @@ export function configureExitStore(custom: SqlExecutor | undefined): void {
 function sql(): SqlExecutor {
   if (executor) return executor;
   const url = process.env.DATABASE_URL?.trim();
-  if (!url) throw new Error("DATABASE_URL is not configured");
-  return neon(url) as unknown as SqlExecutor;
+  if (!url) throw new GiftApiError("NOT_CONFIGURED", "Viky is not ready for this yet. Nothing was taken.", 503);
+  const run = neon(url) as unknown as SqlExecutor;
+  // A database that has not been migrated throws an untyped error, and an untyped error is the one thing this
+  // project cannot show a person: it falls past every named refusal and arrives as "Something went wrong".
+  // That is exactly what the first real attempt at the way out met on 16 Sep, and the message told the funder
+  // nothing about what had happened or whether their money had moved (D80).
+  return (async (strings, ...values) => {
+    try {
+      return await run(strings, ...values);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/relation .* does not exist|column .* does not exist/i.test(message)) {
+        console.error(`the way out's table is not migrated: ${message}`);
+        throw new GiftApiError("NOT_CONFIGURED", "Viky cannot pay out yet. Nothing was taken.", 503);
+      }
+      throw error;
+    }
+  }) as SqlExecutor;
 }
 
 export async function ensureExitSchema(): Promise<void> {
