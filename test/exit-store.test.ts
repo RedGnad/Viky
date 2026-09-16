@@ -9,6 +9,7 @@ import {
   ensureExitSchema,
   loadExit,
   markExitSent,
+  markExitStale,
   newExitId,
   openExit,
   saveExit,
@@ -117,6 +118,40 @@ test("once it has landed it is no longer in the way", async () => {
   assert.equal(await markExitSent(t.id, "0xfeed"), true);
   assert.equal(await openExit(ACCOUNT), null);
   assert.equal(await markExitSent(t.id, "0xfeed"), false);
+});
+
+/**
+ * Terms the exchange refused because its route had moved are set aside, so the next attempt may quote again
+ * (D81). Without this a retry is impossible: while one set is signed, no second set may be made, because two
+ * live authorizations for the same money could both land.
+ */
+test("terms the exchange refused are set aside, and stop holding the account back", async () => {
+  const t = terms();
+  await saveExit(t);
+  await attachSignature(t.id, "0xabcd");
+  assert.equal((await openExit(ACCOUNT))?.id, t.id, "signed terms hold the account until they are dealt with");
+
+  assert.equal(await markExitStale(t.id), true);
+  assert.equal(await openExit(ACCOUNT), null, "set aside, so a fresh quote can be prepared");
+  assert.equal((await loadExit(t.id, ACCOUNT))?.state, "stale");
+});
+
+test("only signed terms can be set aside, and only once", async () => {
+  const unsigned = terms();
+  await saveExit(unsigned);
+  assert.equal(await markExitStale(unsigned.id), false, "nothing was signed, so there is nothing to set aside");
+
+  const landed = terms();
+  await saveExit(landed);
+  await attachSignature(landed.id, "0xabcd");
+  await markExitSent(landed.id, "0xfeed");
+  assert.equal(await markExitStale(landed.id), false, "what already landed is finished, not stale");
+
+  const once = terms();
+  await saveExit(once);
+  await attachSignature(once.id, "0xabcd");
+  assert.equal(await markExitStale(once.id), true);
+  assert.equal(await markExitStale(once.id), false, "and it cannot be set aside twice");
 });
 
 test("terms that have expired hold nobody back", async () => {
