@@ -85,7 +85,11 @@ export type WayOut = Readonly<{
   coin: Hex;
   /** Where it pays, in one sentence, in the words a person would use. */
   where: string;
-  /** What it costs, said before anybody starts. */
+  /**
+   * What it costs, measured at the source named below and **not printed on any screen yet**: nothing says a
+   * figure about fees until a real amount has actually gone through one of these (16 Sep). A fee nobody has
+   * paid is a claim rather than a fact, and this project only prints the second kind.
+   */
   fee: string;
   /** Anything that stops a person before they start, in the order they would meet it. */
   conditions: readonly string[];

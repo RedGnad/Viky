@@ -6,8 +6,9 @@ import { useAccount } from "@/src/account/provider";
 import { ApiError } from "@/src/client/api";
 import { quoteWayOut, takeTheWayOut, type WayOutQuote } from "@/src/client/exit";
 import { sendOwnMoney } from "@/src/client/gift";
-import { readAusdBalance } from "@/src/client/onchain";
-import { formatAusd, formatAusdExact } from "@/src/gift-reader";
+import { readCoinBalance, sendMon } from "@/src/client/onchain";
+import { AUSD, COINS, exactly, isNative, movesOnASignature, type Coin } from "@/src/coins";
+import { formatAusd } from "@/src/gift-reader";
 import { WAYS_OUT, type WayOut } from "@/src/rails";
 import { AccountPanel } from "./AccountPanel";
 import { SessionScope } from "./SessionScope";
@@ -19,37 +20,44 @@ import { FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, ST
  *
  * Two ways out are named here, not one, because no single payout service covers the people this is for: the euro one
  * refuses Senegal and Ivory Coast outright, and the card one pays nothing in France or the rest of the EEA (D77).
- * Each says where it pays, what it costs, and where that was read and when. Nobody is asked where they live: a list
- * of countries frozen into Viky would be wrong within weeks, and a wrong sentence about somebody's money is the thing
- * this refuses above all.
+ * Each says where it pays and where that was read, and nobody is asked where they live: a list of countries frozen
+ * into Viky would be wrong within weeks, and a wrong sentence about somebody's money is what this refuses above all.
+ *
+ * An account can hold three different things once the way out exists, so every one of them is read and every one can
+ * be sent. Two of them move on a signature Viky relays and pays for. The third is the network's own coin, which
+ * nobody can move on somebody else's behalf, so the person sends that themselves and the fee comes out of it. That
+ * difference is said on the screen rather than smoothed over, because "nothing to pay" is not true of all three.
  */
 
 type Step = "look" | "change" | "send" | "sent";
 
 function readable(error: unknown): string {
   if (error instanceof ApiError) return error.message;
+  if (error instanceof Error && error.message) return error.message;
   return "Something went wrong. Nothing was taken. Please try again.";
 }
 
 export function CashOut() {
   const { address } = useAccount();
-  const [holding, setHolding] = useState<bigint | null>(null);
+  const [holdings, setHoldings] = useState<Record<string, bigint> | null>(null);
   const [step, setStep] = useState<Step>("look");
   const [chosen, setChosen] = useState<WayOut | null>(null);
   const [changeAmount, setChangeAmount] = useState("");
   const [quote, setQuote] = useState<WayOutQuote | null>(null);
   const [changed, setChanged] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [sendCoin, setSendCoin] = useState<Coin>(AUSD);
   const [ownAccount, setOwnAccount] = useState("");
-  // What leaves, typed to the last of the coin's six decimals. A payout service is ordered for a quantity and expects
-  // that quantity to arrive, so sending a whole balance made every such order wrong (D75).
+  // What leaves, typed to the last decimal the coin has. A payout service is ordered for a quantity and expects that
+  // quantity to arrive, so sending a whole balance made every such order wrong (D75).
   const [amount, setAmount] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!address) return;
-    setHolding(await readAusdBalance(address));
+    const read = await Promise.all(COINS.map((coin) => readCoinBalance(coin, address)));
+    setHoldings(Object.fromEntries(COINS.map((coin, index) => [coin.symbol, read[index]])));
   }, [address]);
 
   useEffect(() => {
@@ -60,10 +68,16 @@ export function CashOut() {
 
   if (!address) return <AccountPanel />;
 
-  // One signature and nothing else. Their account never calls a contract, which on Monad is not a nicety:
-  // an account below the 10 MON reserve cannot call one at all (D53), and a recipient holds no MON.
-  const sending = amountToSend(amount, holding ?? 0n);
-  const changing = amountToSend(changeAmount, holding ?? 0n);
+  const held = (coin: Coin): bigint | null => (holdings ? (holdings[coin.symbol] ?? 0n) : null);
+  const gift = held(AUSD);
+  // Only what they actually have. A chooser offering coins nobody holds is noise on the one screen that should be
+  // plainest, and after a change there is usually exactly one thing worth sending.
+  const holdable = COINS.filter((coin) => (held(coin) ?? 0n) > 0n);
+
+  // One signature and nothing else, for the coins that allow it. Their account never calls a contract, which on
+  // Monad is not a nicety: an account below the 10 MON reserve cannot call one at all (D53).
+  const sending = amountToSend(amount, held(sendCoin) ?? 0n, sendCoin);
+  const changing = amountToSend(changeAmount, gift ?? 0n, AUSD);
 
   const pick = (way: WayOut) => {
     setChosen(way);
@@ -71,8 +85,18 @@ export function CashOut() {
     setChanged(null);
     setProblem(null);
     setNotice(null);
-    setChangeAmount(exactAmountText(holding ?? 0n));
+    setChangeAmount(exactAmountText(gift ?? 0n, AUSD));
     setStep("change");
+  };
+
+  const openSend = (coin: Coin) => {
+    setSendCoin(coin);
+    // The field opens on the whole balance, in full, because that is the common case and because a figure rounded to
+    // the cent would be the one thing an order must not carry (D75).
+    setAmount(exactAmountText(held(coin) ?? 0n, coin));
+    setProblem(null);
+    setNotice(null);
+    setStep("send");
   };
 
   const askWhatItWouldGive = async () => {
@@ -95,8 +119,8 @@ export function CashOut() {
     setProblem(null);
     try {
       const result = await takeTheWayOut({ account, ticket: quote.ticket });
-      // What the exchange guaranteed, which is the least that arrived. The figure the order must be created for is
-      // whatever actually landed, and the person reads that on the payout service's own page.
+      // What the exchange guaranteed, which is the least that arrived. The figure an order must be created for is
+      // whatever actually landed, and that is read from the account, not promised here.
       setChanged(result.shown);
       setNotice(`Changed. At least ${result.shown} of ${quote.sells} is in your account now.`);
       await refresh();
@@ -107,19 +131,30 @@ export function CashOut() {
     }
   };
 
-  const sendToOwnAccount = async () => {
+  const send = async () => {
     setProblem(null);
     setNotice(null);
     const account = mera.currentAccount();
-    if (!account || holding === null || !isAddress(ownAccount.trim()) || sending.units === undefined) return;
+    if (!account || !isAddress(ownAccount.trim()) || sending.units === undefined) return;
     const leaving = sending.units;
+    const to = ownAccount.trim() as Hex;
+    setBusy(true);
     try {
-      await sendOwnMoney({ account, to: ownAccount.trim() as Hex, amount: leaving });
+      if (isNative(sendCoin)) {
+        // Nobody can move the network's own coin for somebody else, so this is the person's own transaction and the
+        // fee comes out of the same coin. Said afterwards with the figure, because it is their money that paid it.
+        const { fee } = await sendMon(account, to, leaving);
+        setNotice(`Sent. ${exactly(leaving, sendCoin)} is in the other account, and sending it cost ${exactly(fee, sendCoin)}.`);
+      } else {
+        await sendOwnMoney({ account, to, amount: leaving, coin: sendCoin });
+        setNotice(`Sent. ${exactly(leaving, sendCoin)} is in the other account now.`);
+      }
       setStep("sent");
-      setNotice(`Sent. ${formatAusdExact(leaving)} is in your other account now.`);
       await refresh();
     } catch (error) {
       setProblem(readable(error));
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -127,13 +162,23 @@ export function CashOut() {
     <div className="space-y-[var(--space-xl)]">
       <section className={STICKER.sun}>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]">Yours to take out</p>
-        <p className={MONEY}>{holding === null ? "..." : formatAusd(holding)}</p>
+        <p className={MONEY}>{gift === null ? "..." : formatAusd(gift)}</p>
+        {/* What a gift holds is the headline. Anything the way out has already changed it into is shown under it, in
+            its own coin: after a change the headline is smaller than what they own, and a screen that hid the rest
+            would be telling somebody their money had gone. */}
+        {holdings
+          ? COINS.filter((coin) => coin !== AUSD && (held(coin) ?? 0n) > 0n).map((coin) => (
+              <p key={coin.symbol} className={HELP}>
+                Also in your account: {exactly(held(coin) ?? 0n, coin)}
+              </p>
+            ))
+          : null}
         <p className="text-[length:var(--type-help)] text-[var(--muted)]">
           Your money stays yours, and nothing about it expires.
         </p>
       </section>
 
-      {step === "look" && holding !== null && holding > 0n ? (
+      {step === "look" && holdings !== null && holdable.length > 0 ? (
         <div className="space-y-[var(--space-lg)]">
           <h2 className={TITLE}>Ways to be paid</h2>
           {/* Each one says where it pays and where that was read, so nobody has to take Viky's word for a sentence
@@ -143,14 +188,13 @@ export function CashOut() {
             <section key={way.name} className={index === 0 ? STICKER.pink : STICKER.lilac}>
               <h3 className={TITLE}>{way.name}</h3>
               <p className="text-[length:var(--type-body)]">{way.where}</p>
+              {/* What it costs is measured and recorded in src/rails.ts, and deliberately not printed here:
+                  nothing says a figure about fees until a real amount has actually gone through one of these
+                  (the funder's instruction, 16 Sep). A fee sentence nobody has paid is a claim, not a fact. */}
               <dl className="space-y-[var(--space-xs)]">
                 <div className="flex flex-wrap gap-[var(--space-xs)]">
                   <dt className={HELP}>What it buys:</dt>
                   <dd className={HELP}>{way.sells}</dd>
-                </div>
-                <div className="flex flex-wrap gap-[var(--space-xs)]">
-                  <dt className={HELP}>What it costs:</dt>
-                  <dd className={HELP}>{way.fee}</dd>
                 </div>
               </dl>
               <ul className={`list-disc pl-[var(--space-lg)] ${HELP}`}>
@@ -161,7 +205,7 @@ export function CashOut() {
               <p className={HELP}>
                 Read from {way.source}, {way.read}.
               </p>
-              <button type="button" onClick={() => pick(way)} className={PRIMARY_BUTTON}>
+              <button type="button" onClick={() => pick(way)} disabled={(gift ?? 0n) === 0n} className={PRIMARY_BUTTON}>
                 Use {way.name}
               </button>
             </section>
@@ -170,18 +214,13 @@ export function CashOut() {
             If neither of these pays where you live, nothing is lost: your money stays yours and nothing about it
             expires. You can also move it to another account of your own.
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              // The field opens on the whole balance, in full, because that is the common case and because a figure
-              // rounded to the cent would be the one thing an order must not carry (D75).
-              setAmount(exactAmountText(holding));
-              setStep("send");
-            }}
-            className={SECONDARY_BUTTON}
-          >
-            Send it to another account of mine
-          </button>
+          <div className="flex flex-wrap gap-[var(--tap-gap)]">
+            {holdable.map((coin) => (
+              <button key={coin.symbol} type="button" onClick={() => openSend(coin)} className={SECONDARY_BUTTON}>
+                {holdable.length === 1 ? "Send it to another account of mine" : `Send ${coin.symbol} to another account of mine`}
+              </button>
+            ))}
+          </div>
         </div>
       ) : null}
 
@@ -207,7 +246,7 @@ export function CashOut() {
               disabled={busy || changed !== null}
             />
           </label>
-          <p className={HELP}>Your account holds {holding === null ? "..." : formatAusdExact(holding)}.</p>
+          <p className={HELP}>Your account holds {gift === null ? "..." : exactly(gift, AUSD)}.</p>
           {changeAmount.trim() !== "" && changing.refusal ? (
             <p role="alert" className={HELP}>
               {changing.refusal}
@@ -242,7 +281,7 @@ export function CashOut() {
                 </button>
               ) : (
                 <button type="button" onClick={() => void changeIt()} disabled={busy} className={PRIMARY_BUTTON}>
-                  {busy ? "Changing..." : `Change ${formatAusdExact(changing.units ?? 0n)}`}
+                  {busy ? "Changing..." : `Change ${exactly(changing.units ?? 0n, AUSD)}`}
                 </button>
               )}
               <button
@@ -258,14 +297,10 @@ export function CashOut() {
               </button>
             </div>
           ) : (
-            // What is true after the change, and no more. The last step of the journey, sending the changed money to
-            // the address the payout service gives you, has no path in Viky yet: what moves money here is tied to
-            // what a gift holds, not to what the exchange handed back (D77). Saying so is the only honest thing:
-            // implying the journey finishes would be a sentence about money that no code makes true.
             <div className="space-y-[var(--space-sm)]">
               <p className="text-[length:var(--type-body)]">
-                Your money is changed and it is in your own account. Viky cannot yet send it on to {chosen.name}, so
-                that last step is not available here today.
+                Your money is changed and it is in your own account. Place your order with {chosen.name} for the
+                amount you actually received, then send exactly that amount to the account they give you.
               </p>
               <button type="button" onClick={() => setStep("look")} className={INLINE_BUTTON}>
                 Back
@@ -277,11 +312,13 @@ export function CashOut() {
 
       {step === "send" || step === "sent" ? (
         <section className={STICKER.pink}>
-          <h2 className={TITLE}>Send it to another account of yours</h2>
+          <h2 className={TITLE}>Send {sendCoin.symbol} to another account</h2>
           <p className="text-[length:var(--type-help)] text-[var(--muted)]">
-            Exactly what you type leaves your account, to the last of its six decimals, and nothing to pay: Viky
-            covers what it costs to move. Sign in to your other account and open its &quot;For judges&quot; page to
-            find its identifier.
+            {movesOnASignature(sendCoin)
+              ? "Exactly what you type leaves your account, to the last decimal, and nothing to pay: Viky covers what it costs to move."
+              : `Exactly what you type leaves your account, to the last decimal. ${sendCoin.symbol} is the network's own coin, so nobody can send it for you: it goes from your own account and what it costs to send comes out of your ${sendCoin.symbol}.`}{" "}
+            To reach another account of your own, sign in to it and open its &quot;For judges&quot; page to find its
+            identifier.
           </p>
           <label className="flex flex-col gap-[var(--space-xs)]">
             <span className={HELP}>How much leaves</span>
@@ -293,11 +330,11 @@ export function CashOut() {
               disabled={step === "sent"}
             />
           </label>
-          <p className={HELP}>Your account holds {holding === null ? "..." : formatAusdExact(holding)}.</p>
+          <p className={HELP}>Your account holds {held(sendCoin) === null ? "..." : exactly(held(sendCoin)!, sendCoin)}.</p>
           <input
             value={ownAccount}
             onChange={(event) => setOwnAccount(event.target.value)}
-            placeholder="Paste your other account's identifier"
+            placeholder="Paste the account's identifier"
             className={FIELD}
             disabled={step === "sent"}
           />
@@ -308,11 +345,11 @@ export function CashOut() {
           ) : null}
           <button
             type="button"
-            onClick={() => void sendToOwnAccount()}
-            disabled={!isAddress(ownAccount.trim()) || sending.units === undefined || step === "sent"}
+            onClick={() => void send()}
+            disabled={busy || !isAddress(ownAccount.trim()) || sending.units === undefined || step === "sent"}
             className={PRIMARY_BUTTON}
           >
-            {step === "sent" ? "Sent" : sending.units === undefined ? "Send it" : `Send ${formatAusdExact(sending.units)}`}
+            {step === "sent" ? "Sent" : sending.units === undefined ? "Send it" : `Send ${exactly(sending.units, sendCoin)}`}
           </button>
           {step !== "sent" ? (
             <button type="button" onClick={() => setStep("look")} className={INLINE_BUTTON}>
