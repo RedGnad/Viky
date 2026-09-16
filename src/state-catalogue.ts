@@ -232,12 +232,18 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
         when: "they hold something",
         says: [
           "Send it to another account of mine",
-          "Exactly what you type leaves your account, to the last of its six decimals",
+          "Exactly what you type leaves your account, to the last decimal",
           "How much leaves",
           "Your account holds",
-          "Paste your other account's identifier",
-          "is in your other account now.",
+          "Paste the account's identifier",
+          "is in the other account now.",
         ],
+      },
+      {
+        name: "Sending the network's own coin",
+        when: "what is leaving is MON rather than a coin that moves on a signature",
+        says: ["is the network's own coin, so nobody can send it for you"],
+        gap: "this is the one movement Viky cannot make for somebody, and the screen says so instead of smoothing it over. An authorization is a feature of a token contract and the network's own coin is not one, so the person's own account sends it and the fee comes out of the same coin. What that fee actually was is said afterwards, with the figure, because it was their money that paid it.",
       },
       {
         name: "More than the account holds",
@@ -248,7 +254,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       {
         name: "Choosing how to be paid",
         when: "they hold something",
-        says: ["Ways to be paid", "What it buys:", "What it costs:", "Read from"],
+        says: ["Ways to be paid", "What it buys:", "Read from"],
         gap: "two services are named, never one, because neither covers everybody: the euro one refuses Senegal and Ivory Coast outright, which is where the pilot's gifts are aimed, and the card one makes no card payout in France or the rest of the EEA (D77). Each carries where it pays, its source, and the date that source was read. Nobody is asked where they live, and no list of countries is held in the code, because both lists move.",
       },
       {
@@ -265,8 +271,8 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       {
         name: "Sending the changed money on to the service",
         when: "the money has been changed and an order is waiting for it",
-        says: ["Viky cannot yet send it on to"],
-        gap: "there is no code path for it at all. What moves money here is tied to what a gift holds, not to what the exchange handed back, so the screen says the step is unavailable rather than implying the journey finishes (D77).",
+        says: ["Place your order with "],
+        gap: "the order is placed for what actually arrived, never for what was quoted, because a payout service expects exactly the quantity it was ordered for (D75). Viky does not read that figure back off their page: the person reads it, and the amount field takes it to the last decimal.",
       },
       {
         name: "No way out is wired yet",

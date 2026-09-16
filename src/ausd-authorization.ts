@@ -1,4 +1,5 @@
 import { parseSignature, type Hex } from "viem";
+import type { Coin } from "./coins";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID } from "./monad/chain";
 
 /**
@@ -14,6 +15,24 @@ export const AUSD_DOMAIN = {
   chainId: MONAD_CHAIN_ID,
   verifyingContract: AUSD_ADDRESS,
 } as const;
+
+/**
+ * The same thing for whichever coin is moving (D77). Since the way out exists, an account can hold a second
+ * stablecoin as well as what a gift holds, and each token has its own domain: a signature made under the wrong
+ * name or version is simply refused, so this is read from the coin rather than assumed.
+ *
+ * The chain's own coin has no domain at all and never reaches here: nothing can be signed on its behalf,
+ * because an authorization is a feature of a token contract and it is not one.
+ */
+export function domainFor(coin: Coin) {
+  if (!coin.domain) throw new Error(`${coin.symbol} cannot be moved by a signature: it is the chain's own coin`);
+  return {
+    name: coin.domain.name,
+    version: coin.domain.version,
+    chainId: MONAD_CHAIN_ID,
+    verifyingContract: coin.address,
+  } as const;
+}
 
 export const RECEIVE_WITH_AUTHORIZATION_TYPES = {
   ReceiveWithAuthorization: [
@@ -116,9 +135,10 @@ export function transferAuthorizationMessage(input: { from: Hex; to: Hex; value:
   };
 }
 
-export function transferAuthorizationTypedData(message: ReceiveAuthorizationMessage) {
+export function transferAuthorizationTypedData(message: ReceiveAuthorizationMessage, coin?: Coin) {
   return {
-    domain: AUSD_DOMAIN,
+    // Defaults to what a gift holds, so every existing caller keeps the domain it already signed under.
+    domain: coin ? domainFor(coin) : AUSD_DOMAIN,
     types: TRANSFER_WITH_AUTHORIZATION_TYPES,
     primaryType: "TransferWithAuthorization" as const,
     message,

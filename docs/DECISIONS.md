@@ -2013,8 +2013,43 @@ delegated account can both sign and run code). The terms and their parity pins, 
 routes, and the first client helper that signs an exit.
 
 **What is not built, and must not be implied anywhere.** The router is **not deployed**, so every way out answers that
-Viky cannot pay out yet. The last step of the journey has no code path at all: `sendOwnMoney` and `/api/send` are
-pinned to AUSD, so sending the **changed** coin to a deposit address is not possible from Viky today, and the screen
-says so rather than implying the journey completes. The smallest sale is read live from the euro service only; the
-card service publishes its own and Viky does not read it yet, so no figure of theirs is printed. Neither corridor has
-run once end to end with real money.
+Viky cannot pay out yet. The smallest sale is read live from the euro service only; the card service publishes its own
+and Viky does not read it yet, so no figure of theirs is printed. Neither corridor has run once end to end with real
+money.
+
+## D78, 16 Sep 2026: money moves in three coins, and one of them Viky cannot move for you
+
+**Why, measured rather than felt.** The funder refused the deployment in the order I proposed it, and was right:
+`app/api/send/route.ts` was pinned to AUSD in four separate places, so the moment the way out changed money into
+something else, none of it could be sent on. A router deployed before that would have been an immutable contract with
+no journey behind it.
+
+**The order, theirs:** the send first, then one deployment, then the real trial at about eight dollars, then the full
+withdrawal.
+
+**What changed.** One place now describes the coins (`src/coins.ts`): what each is called, its address, its decimals,
+and the EIP-3009 domain measured on chain. The send route takes a coin instead of assuming one. The amount field
+reads to the last decimal **that coin** has. The screen reads all three balances and shows what a gift holds as the
+headline, with anything the way out has already produced beneath it, because after a change the headline is smaller
+than what somebody owns and hiding the rest would tell them their money had gone.
+
+**Two decimal widths that are not the same number.** The stablecoins have six, the network's own coin has eighteen.
+The parser was fixed at six. Against an eighteen-decimal amount it would have cut twelve digits off, which reads like
+a rounding error and is most of the money. `test/send-amount.test.ts` now covers both widths.
+
+**Two domains that are not the same either.** AUSD signs under "Agora Dollar" version 1. USDC on Monad signs under
+"USDC" version 2, read on chain at `rpc.monad.xyz` on 16 Sep, where `transferWithAuthorization` is present (an empty
+probe reverts with "FiatTokenV2: authorization is expired"). A signature made under the wrong one is not slightly
+wrong, it is refused by the token and nothing says why. A test now proves a signature for one coin does not move the
+other.
+
+**The one thing Viky cannot do for somebody, and it is on the screen.** MON is the network's own coin, so there is no
+authorization to sign: nobody can move it on another person's behalf. The route refuses it with `SENT_BY_THEMSELVES`,
+and the browser uses the person's own transaction, which checks that the amount **and** the fee both fit before
+sending and says afterwards what the fee actually was. So "nothing to pay, Viky covers what it costs to move" is now
+printed only where it is true, and the other sentence where it is not. This was asked for as "the same signed
+mechanism as AUSD", which is impossible for a coin that is not a token; the intent was met the only way it can be.
+
+**Not printed, deliberately.** No figure about fees appears on any screen until a real amount has gone through one of
+these rails, at the funder's instruction. The figures are measured and recorded in `src/rails.ts` and simply not
+shown. No captures either, for the same reason.

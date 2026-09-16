@@ -6,6 +6,7 @@ import {
   transferAuthorizationMessage,
   transferAuthorizationTypedData,
 } from "../ausd-authorization";
+import { AUSD, movesOnASignature, type Coin } from "../coins";
 import { NO_CONTACT_HASH } from "../contact-hash";
 import { fundingNonce, withdrawIntentTypedData, type GiftParams } from "../gift-terms";
 import { ApiError, getJson, postJson } from "./api";
@@ -204,15 +205,23 @@ export async function withdrawEarned(input: { account: LocalAccount; giftId: str
  * a contract call and never needs any MON, which on Monad is not a nicety: an account below the 10 MON
  * reserve cannot make a contract call at all (D53).
  */
-export async function sendOwnMoney(input: { account: LocalAccount; to: Hex; amount: bigint }): Promise<{ sent: boolean; hash: Hex }> {
+export async function sendOwnMoney(input: { account: LocalAccount; to: Hex; amount: bigint; coin?: Coin }): Promise<{ sent: boolean; hash: Hex }> {
+  // Defaults to what a gift holds. Since the way out exists an account can hold a second stablecoin too, and
+  // each one is signed under its own domain: a signature made under the wrong name or version is simply
+  // refused by the token, so the coin decides the domain rather than a constant (D77).
+  const coin = input.coin ?? AUSD;
+  if (!movesOnASignature(coin)) {
+    throw new Error(`${coin.symbol} is the network's own coin and is sent from the person's own account`);
+  }
   const message = transferAuthorizationMessage({
     from: getAddress(input.account.address),
     to: getAddress(input.to),
     value: input.amount,
     nonce: randomSalt(),
   });
-  const signature = await input.account.signTypedData(transferAuthorizationTypedData(message));
+  const signature = await input.account.signTypedData(transferAuthorizationTypedData(message, coin));
   return postJson("/api/send", {
+    coin: coin.address,
     to: message.to,
     value: message.value.toString(),
     validAfter: message.validAfter.toString(),

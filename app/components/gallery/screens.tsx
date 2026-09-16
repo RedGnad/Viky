@@ -434,36 +434,84 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     who: "recipient",
     title: "Their money",
     hierarchy:
-      "What they hold, then the one thing they can do with it today: send all of it to another account of theirs, with the exact amount that leaves written out before they sign. Nothing here offers a card or a bank, because nothing can pay one (D72).",
+      "What they hold, then how they can be paid, then the movement Viky can make for them. Two services are named rather than one, because neither covers everybody: the euro one refuses Senegal and Ivory Coast outright, and the card one pays nothing in France or the rest of the EEA (D77). Each carries where it pays and the date that was read at the source, and nobody is asked where they live. No figure about fees appears anywhere until a real amount has gone through one of them.",
     builtFrom: "app/components/CashOut.tsx",
     quotes: [
       "Yours to take out",
       "Your money stays yours, and nothing about it expires.",
-      "Send it to another account of yours",
-      "Exactly what you type leaves your account, to the last of its six decimals",
+      "Ways to be paid",
+      "What it buys:",
+      "Read from",
+      "If neither of these pays where you live",
+      "Send it to another account of mine",
+      "Exactly what you type leaves your account, to the last decimal",
+      "is the network's own coin, so nobody can send it for you",
       "How much leaves",
       "Your account holds",
+      "Paste the account's identifier",
     ],
     render: () => (
       <>
         <section className={STICKER.sun}>
           <p className={HELP}>Yours to take out</p>
           <p className={MONEY}>$28.56</p>
+          {/* After a change an account holds more than a gift does, and a screen showing only the gift would
+              tell somebody their money had gone. */}
+          <p className={HELP}>Also in your account: 12.50 USDC</p>
           <p className={HELP}>Your money stays yours, and nothing about it expires.</p>
         </section>
+        <h2 className={TITLE}>Ways to be paid</h2>
         <section className={STICKER.pink}>
-          <h2 className={TITLE}>Send it to another account of yours</h2>
+          <h3 className={TITLE}>Ramp</h3>
+          <p className={BODY}>
+            Pays into a bank account in euros across the euro area, France included, and to a card in many other
+            countries. It does not serve Senegal or Ivory Coast at all.
+          </p>
+          <p className={HELP}>What it buys: USDC on Monad</p>
+          <p className={HELP}>Read from Ramp&apos;s own payout-methods list and asset page, 16 Sep 2026.</p>
+          <span className={PRIMARY_BUTTON}>Use Ramp</span>
+        </section>
+        <section className={STICKER.lilac}>
+          <h3 className={TITLE}>Mercuryo</h3>
+          <p className={BODY}>
+            Pays onto a Visa or Mastercard card, which is how it reaches Senegal and Ivory Coast. It makes no card
+            payout in France, anywhere else in the EEA, or the United States.
+          </p>
+          <p className={HELP}>What it buys: MON on Monad</p>
+          <p className={HELP}>Read from Mercuryo&apos;s own currencies endpoint and help centre, 16 Sep 2026.</p>
+          <span className={PRIMARY_BUTTON}>Use Mercuryo</span>
+        </section>
+        <p className={HELP}>
+          If neither of these pays where you live, nothing is lost: your money stays yours and nothing about it
+          expires. You can also move it to another account of your own.
+        </p>
+        <span className={SECONDARY_BUTTON}>Send it to another account of mine</span>
+        <section className={STICKER.pink}>
+          <h2 className={TITLE}>Send USDC to another account</h2>
           <p className={HELP}>
-            Exactly what you type leaves your account, to the last of its six decimals, and nothing to pay: Viky
-            covers what it costs to move.
+            Exactly what you type leaves your account, to the last decimal, and nothing to pay: Viky covers what it
+            costs to move. To reach another account of your own, sign in to it and open its &quot;For judges&quot;
+            page to find its identifier.
           </p>
           <label className="flex flex-col gap-[var(--space-xs)]">
             <span className={HELP}>How much leaves</span>
             <input readOnly value="28.564213" className={FIELD} />
           </label>
           <p className={HELP}>Your account holds $28.564213.</p>
-          <input readOnly placeholder="Paste your other account's identifier" className={FIELD} />
+          <input readOnly placeholder="Paste the account&apos;s identifier" className={FIELD} />
           <span className={PRIMARY_BUTTON}>Send $28.564213</span>
+        </section>
+        {/* The one movement Viky cannot make for somebody. An authorization is a feature of a token contract,
+            and the network's own coin is not one, so the person sends it and the fee comes out of it. */}
+        <section className={STICKER.lilac}>
+          <h2 className={TITLE}>Send MON to another account</h2>
+          <p className={HELP}>
+            Exactly what you type leaves your account, to the last decimal. MON is the network&apos;s own coin, so
+            nobody can send it for you: it goes from your own account and what it costs to send comes out of your
+            MON.
+          </p>
+          <p className={HELP}>Your account holds 138.436143573911778147 MON.</p>
+          <span className={PRIMARY_BUTTON}>Send 138.436143573911778147 MON</span>
         </section>
       </>
     ),

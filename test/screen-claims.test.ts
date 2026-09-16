@@ -147,9 +147,16 @@ test("the amount written before sending all of it is exactly the amount that lea
   }
   // And what leaves is what was typed, never a rounded copy of it, in a field that opens on the whole balance (D75).
   const cashOut = readFileSync("app/components/CashOut.tsx", "utf8");
-  assert.match(cashOut, /sendOwnMoney\(\{ account, to: ownAccount\.trim\(\) as Hex, amount: leaving \}\)/);
   assert.match(cashOut, /const leaving = sending\.units;/);
-  assert.match(cashOut, /setAmount\(exactAmountText\(holding\)\)/);
+  // Whichever coin is leaving (D77): the amount typed, read to the decimals that coin has, and the coin the
+  // person chose. An account can hold three different things once the way out exists, and each is read, typed
+  // and sent in its own right rather than through whatever a gift happens to hold.
+  assert.match(cashOut, /amountToSend\(amount, held\(sendCoin\) \?\? 0n, sendCoin\)/);
+  assert.match(cashOut, /setAmount\(exactAmountText\(held\(coin\) \?\? 0n, coin\)\)/);
+  assert.match(cashOut, /sendOwnMoney\(\{ account, to, amount: leaving, coin: sendCoin \}\)/);
+  // The network's own coin takes the other path, because nobody can move it on somebody else's behalf. The
+  // same `leaving` goes into it, so the exact amount holds on both branches and not only on the relayed one.
+  assert.match(cashOut, /sendMon\(account, to, leaving\)/);
 });
 
 test("a day that is neither counted nor lost is named, with the moment it stops being catchable", () => {
