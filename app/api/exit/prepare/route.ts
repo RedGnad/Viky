@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAddress, isAddress } from "viem";
+import { getAddress } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { AUSD_ADDRESS } from "@/src/monad/chain";
@@ -8,7 +8,7 @@ import { buildExitTerms, exitExchangeAddress, exitRouterAddress, heldAusd, newSa
 import { asOpenExit, discardExit, newExitId, openExit, saveExit } from "@/src/exit-store";
 import { readExitTicket } from "@/src/exit-ticket";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
-import { kuruQuote, NATIVE_MON } from "@/src/kuru";
+import { kuruQuote } from "@/src/kuru";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
@@ -34,18 +34,14 @@ export async function POST(request: Request) {
     const router = exitRouterAddress();
     const exchange = exitExchangeAddress();
 
-    const body = await readJsonBody<{ ticket?: string; payoutTo?: string }>(request, 8 * 1_024);
-    const payoutTo = String(body.payoutTo ?? "").trim();
-    if (!isAddress(payoutTo)) throw new GiftApiError("INVALID_DESTINATION", "That destination is not valid.");
-    const destination = getAddress(payoutTo);
-    // Paying into the router or the token would look exactly like being paid and be nothing at all.
-    if (destination === router || destination === getAddress(AUSD_ADDRESS)) {
-      throw new GiftApiError("INVALID_DESTINATION", "That destination is not valid.");
-    }
+    // No destination is asked for here any more (D76). The proceeds come back to the person, and they send
+    // the payout service its coin themselves afterwards, so there is nothing at this step that could be
+    // pointed at the wrong account.
+    const body = await readJsonBody<{ ticket?: string }>(request, 8 * 1_024);
     const ticket = readExitTicket(body.ticket, account);
 
     const open = await openExit(account);
-    const plan = planExit(open ? asOpenExit(open) : null, { amount: ticket.amount, payoutTo: destination, minOut: ticket.floor });
+    const plan = planExit(open ? asOpenExit(open) : null, { amount: ticket.amount, tokenOut: ticket.tokenOut, minOut: ticket.floor });
     if (plan.kind === "reuse") {
       return NextResponse.json(termsResponse(open!, ticket.shown, open!.signature !== null), { headers: NO_STORE });
     }
@@ -63,7 +59,9 @@ export async function POST(request: Request) {
     // Fresh calldata, because a route is only good for a moment. The floor is not refreshed with it: it is
     // what they were shown. If the exchange can no longer reach it, they are told now rather than after they
     // have signed and watched a transaction refuse.
-    const quote = await kuruQuote({ userAddress: router, tokenIn: AUSD_ADDRESS, tokenOut: NATIVE_MON, amount: ticket.amount });
+    // The same coin the quote was made in, taken from the ticket rather than from the request, so nothing
+    // between the two steps can send them down the other corridor (D77).
+    const quote = await kuruQuote({ userAddress: router, tokenIn: AUSD_ADDRESS, tokenOut: ticket.tokenOut, amount: ticket.amount });
     if (getAddress(quote.to) !== exchange) throw new GiftApiError("NOT_CONFIGURED", "Viky cannot pay out yet.", 503);
     if (BigInt(quote.minOut) < ticket.floor) {
       throw new GiftApiError("RATE_MOVED", "The rate moved, so this would pay you less than you were shown. Ask for a new quote.", 409);
@@ -73,8 +71,8 @@ export async function POST(request: Request) {
     const deadline = BigInt(Math.floor(Date.now() / 1_000) + EXIT_WINDOW_SECONDS);
     const prepared = buildExitTerms({
       payer: account,
-      payoutTo: destination,
       amount: ticket.amount,
+      tokenOut: ticket.tokenOut,
       floor: ticket.floor,
       exchange,
       callData: quote.data,
@@ -86,7 +84,7 @@ export async function POST(request: Request) {
       id,
       account,
       amount: prepared.terms.amount,
-      payoutTo: prepared.terms.payoutTo,
+      tokenOut: prepared.terms.tokenOut,
       minOut: prepared.terms.minOut,
       exchange: prepared.terms.exchange,
       callData: prepared.callData,

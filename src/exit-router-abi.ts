@@ -57,6 +57,19 @@ export const exitRouterAbi = [
   },
   {
     "type": "function",
+    "name": "NATIVE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "allowedExchanges",
     "inputs": [
       {
@@ -89,14 +102,14 @@ export const exitRouterAbi = [
             "internalType": "address"
           },
           {
-            "name": "payoutTo",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
             "name": "amount",
             "type": "uint256",
             "internalType": "uint256"
+          },
+          {
+            "name": "tokenOut",
+            "type": "address",
+            "internalType": "address"
           },
           {
             "name": "minOut",
@@ -187,14 +200,14 @@ export const exitRouterAbi = [
             "internalType": "address"
           },
           {
-            "name": "payoutTo",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
             "name": "amount",
             "type": "uint256",
             "internalType": "uint256"
+          },
+          {
+            "name": "tokenOut",
+            "type": "address",
+            "internalType": "address"
           },
           {
             "name": "minOut",
@@ -248,14 +261,14 @@ export const exitRouterAbi = [
             "internalType": "address"
           },
           {
-            "name": "payoutTo",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
             "name": "amount",
             "type": "uint256",
             "internalType": "uint256"
+          },
+          {
+            "name": "tokenOut",
+            "type": "address",
+            "internalType": "address"
           },
           {
             "name": "minOut",
@@ -390,6 +403,11 @@ export const exitRouterAbi = [
         "name": "to",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "what",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -457,25 +475,19 @@ export const exitRouterAbi = [
         "internalType": "address"
       },
       {
-        "name": "payoutTo",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
         "name": "amountIn",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
-        "name": "paidOut",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
+        "name": "tokenOut",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        "name": "returned",
+        "name": "amountOut",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -574,6 +586,11 @@ export const exitRouterAbi = [
   {
     "type": "error",
     "name": "PinRequired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SameToken",
     "inputs": []
   },
   {

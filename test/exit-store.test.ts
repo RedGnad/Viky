@@ -28,17 +28,19 @@ function pgliteExecutor(database: PGlite): SqlExecutor {
 }
 
 const ACCOUNT = "0x00000000000000000000000000000000000A11cE";
-const PAYOUT = "0x0000000000000000000000000000000000000B0b";
+const SOMEBODY_ELSE = "0x0000000000000000000000000000000000000B0b";
 const EXCHANGE = "0xb3e6778480b2E488385E8205eA05E20060B813cb";
-const ONE = 1_000_000_000_000_000_000n;
+/** The coin one of the two payout services takes; the other takes the chain's own (D77). */
+const USDC = "0x754704Bc059F8C67012fEd69BC8A327a5aafb603";
 
 function terms(over: Partial<Omit<ExitRecord, "signature" | "txHash" | "state">> = {}) {
   return {
     id: newExitId(),
     account: ACCOUNT as `0x${string}`,
     amount: 3_000_000n,
-    payoutTo: PAYOUT as `0x${string}`,
-    minOut: 126n * ONE,
+    tokenOut: USDC as `0x${string}`,
+    // Six decimals, because what comes back is USDC and the person sends it on themselves (D76).
+    minOut: 2_997_000n,
     exchange: EXCHANGE as `0x${string}`,
     callData: "0xce1e7030" as `0x${string}`,
     callHash: `0x${"11".repeat(32)}` as `0x${string}`,
@@ -70,7 +72,8 @@ test("a prepared way out is found again, with its terms and its calldata", async
   const found = await openExit(ACCOUNT);
   assert.equal(found?.id, t.id);
   assert.equal(found?.amount, 3_000_000n);
-  assert.equal(found?.minOut, 126n * ONE);
+  assert.equal(found?.tokenOut, USDC);
+  assert.equal(found?.minOut, 2_997_000n);
   assert.equal(found?.callData, "0xce1e7030");
   assert.equal(found?.signature, null);
   assert.equal(found?.state, "prepared");
@@ -81,7 +84,7 @@ test("the same terms are relayed again rather than signed again", async () => {
   await saveExit(t);
   assert.equal(await attachSignature(t.id, "0xabcd"), true);
   const found = await openExit(ACCOUNT);
-  const plan = planExit(asOpenExit(found!), { amount: t.amount, payoutTo: t.payoutTo, minOut: t.minOut });
+  const plan = planExit(asOpenExit(found!), { amount: t.amount, tokenOut: t.tokenOut, minOut: t.minOut });
   assert.deepEqual(plan, { kind: "reuse", id: t.id });
   assert.equal(found?.signature, "0xabcd");
 });
@@ -124,6 +127,19 @@ test("terms that have expired hold nobody back", async () => {
 test("one account never sees another's way out", async () => {
   const t = terms();
   await saveExit(t);
-  assert.equal(await openExit(PAYOUT), null);
-  assert.equal(await loadExit(t.id, PAYOUT), null);
+  assert.equal(await openExit(SOMEBODY_ELSE), null);
+  assert.equal(await loadExit(t.id, SOMEBODY_ELSE), null);
+});
+
+/**
+ * The destination column is gone (D76), and a table made before that still has it, declared NOT NULL. Running
+ * the schema again has to drop it, or every insert against an existing database fails while every test on a
+ * fresh one passes. That is the shape of bug that only ever shows up in production.
+ */
+test("a table made when terms still had a destination takes the new inserts", async () => {
+  await db.query("ALTER TABLE viky_exits ADD COLUMN IF NOT EXISTS payout_to text NOT NULL DEFAULT ''");
+  await ensureExitSchema();
+  const t = terms();
+  await saveExit(t);
+  assert.equal((await openExit(ACCOUNT))?.id, t.id);
 });

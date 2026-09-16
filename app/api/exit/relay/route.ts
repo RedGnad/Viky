@@ -59,8 +59,8 @@ export async function POST(request: Request) {
     const { hash } = await relayExit({
       terms: {
         payer: record.account,
-        payoutTo: record.payoutTo,
         amount: record.amount,
+        tokenOut: record.tokenOut,
         minOut: record.minOut,
         exchange: record.exchange,
         callHash: record.callHash,

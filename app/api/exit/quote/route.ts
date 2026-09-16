@@ -2,28 +2,32 @@ import { NextResponse } from "next/server";
 import { getAddress } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
-import { floorInWords, PAYOUT_MAXIMUM, PAYOUT_MINIMUM, shownFloor } from "@/src/exit-plan";
 import { exitExchangeAddress, exitRouterAddress, heldAusd } from "@/src/exit-relay";
 import { issueExitTicket } from "@/src/exit-ticket";
+import { formatAusdExact } from "@/src/gift-reader";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
-import { kuruQuote, NATIVE_MON } from "@/src/kuru";
-import { AUSD_ADDRESS } from "@/src/monad/chain";
+import { kuruQuote } from "@/src/kuru";
+import { AUSD_ADDRESS, USDC_ADDRESS } from "@/src/monad/chain";
+import { inFiat, payoutAsset, withinPayoutRange } from "@/src/ramp";
+import { WAYS_OUT } from "@/src/rails";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * What the way out is worth, for the signed-in account only.
+ * What an exchange would give for the amount they chose, in the coin the way out they picked takes.
  *
- * The figure returned is the exchange's guaranteed floor, not its hoped-for output, and it is truncated to
- * the decimals the screen prints. That is the whole point: the person reads this figure, leaves Viky, and
- * places an order at the payout service for exactly it. Whatever we show, we then bind into their signature
- * (src/exit-plan.ts), so they are delivered at least the order they placed or nothing moves at all. Showing
- * the hoped-for figure instead would turn every ordinary bit of slippage into a failed payout.
+ * The figure returned is the exchange's guaranteed floor, not its hoped-for output, and it is what the
+ * signature binds: at least this much comes back or nothing moves at all.
  *
- * It comes back signed (src/exit-ticket.ts) so the browser carries it to the next step without being able to
- * lower it.
+ * Under form C (D76) this figure is no longer a promise anybody has to act on before it exists. The order at
+ * the payout service is placed afterwards, for the coin that actually arrived, so the floor is only what it
+ * says it is, protection against the rate moving while the transaction is in flight. That is why nothing here
+ * truncates it to what a screen can print.
+ *
+ * Which coin comes from the person's own choice of way out (D77), and travels on inside the ticket so the
+ * step that asks for a signature cannot be pointed at the other corridor.
  */
 export async function POST(request: Request) {
   try {
@@ -35,7 +39,7 @@ export async function POST(request: Request) {
     const router = exitRouterAddress();
     const exchange = exitExchangeAddress();
 
-    const body = await readJsonBody<{ amount?: string }>(request, 1_024);
+    const body = await readJsonBody<{ amount?: string; coin?: string }>(request, 1_024);
     let amount: bigint;
     try {
       amount = BigInt(String(body.amount ?? ""));
@@ -43,26 +47,64 @@ export async function POST(request: Request) {
       throw new GiftApiError("INVALID_REQUEST", "Please try again");
     }
     if (amount <= 0n) throw new GiftApiError("INVALID_AMOUNT", "Enter an amount");
+
+    // The coin has to be one of the ways out we actually offer. Anything else would be a corridor nobody has
+    // read the terms of, quoted against a payout service that may never have heard of it.
+    const wanted = String(body.coin ?? "").trim().toLowerCase();
+    const way = WAYS_OUT.find((out) => out.coin.toLowerCase() === wanted);
+    if (!way) throw new GiftApiError("UNKNOWN_WAY_OUT", "Choose how you want to be paid.");
+
     const held = await heldAusd(account);
     if (held < amount) throw new GiftApiError("NOT_ENOUGH", "That is more than you have.", 409);
 
     // Quoted as the router, because the router is what will call the exchange. The exchange's calldata names
     // no account of its own (measured 14 Sep): the proceeds go to whoever calls it, which is the router.
-    const quote = await kuruQuote({ userAddress: router, tokenIn: AUSD_ADDRESS, tokenOut: NATIVE_MON, amount });
+    const quote = await kuruQuote({ userAddress: router, tokenIn: AUSD_ADDRESS, tokenOut: way.coin, amount });
     if (getAddress(quote.to) !== exchange) throw new GiftApiError("NOT_CONFIGURED", "Viky cannot pay out yet.", 503);
 
-    const floor = shownFloor(BigInt(quote.minOut));
+    const floor = BigInt(quote.minOut);
     if (floor <= 0n) throw new GiftApiError("QUOTE_UNAVAILABLE", "No route for this right now. Try again shortly.", 503);
-    // Said here rather than at the end of the journey: below their minimum the order cannot be placed at
-    // all, and a person should learn that before they leave Viky to place it (D60).
-    if (floor < PAYOUT_MINIMUM) {
-      throw new GiftApiError("BELOW_PAYOUT_MINIMUM", "This is under the smallest payout the service will take. Wait until you have a little more.", 409);
+
+    // Whether this payout service would take a sale of this size today, asked of them, never remembered: they
+    // publish it in their own currency and it moves with the rate. Only one of the two publishes it somewhere
+    // we can read, so only that one is checked here; the other's own page refuses at the order, and its
+    // conditions are on the screen before anybody starts.
+    let payout: { currency: string; worth: number; smallest: number; largest: number } | undefined;
+    if (getAddress(way.coin) === getAddress(USDC_ADDRESS)) {
+      const asset = await payoutAsset();
+      // They name the coin's own contract in that list, and it must be the one this router hands back. If they
+      // ever move to another, the swap would still work and the payout would be watched for somewhere else.
+      if (getAddress(asset.address) !== getAddress(USDC_ADDRESS)) {
+        throw new GiftApiError("NOT_CONFIGURED", "Viky cannot pay out yet.", 503);
+      }
+      const range = withinPayoutRange(floor, asset);
+      if (range.tooSmall) {
+        throw new GiftApiError(
+          "BELOW_PAYOUT_MINIMUM",
+          `The smallest sale ${way.name} takes today is ${asset.minFiat.toFixed(2)} ${asset.currency}. This is worth about ${range.fiat.toFixed(2)} ${asset.currency}. You can still move it to another account of yours.`,
+          409,
+        );
+      }
+      if (range.tooLarge) {
+        throw new GiftApiError(
+          "ABOVE_PAYOUT_MAXIMUM",
+          `The largest sale ${way.name} takes today is ${asset.maxFiat.toFixed(2)} ${asset.currency}. Take it out in two goes.`,
+          409,
+        );
+      }
+      payout = {
+        currency: asset.currency,
+        worth: Number(inFiat(floor, asset).toFixed(2)),
+        smallest: asset.minFiat,
+        largest: asset.maxFiat,
+      };
     }
-    if (floor > PAYOUT_MAXIMUM) {
-      throw new GiftApiError("ABOVE_PAYOUT_MAXIMUM", "This is more than the service will pay out at once. Take it out in two goes.", 409);
-    }
-    const shown = floorInWords(floor);
-    return NextResponse.json({ shown, ticket: issueExitTicket({ account, amount, floor, shown }) }, { headers: NO_STORE });
+
+    const shown = formatAusdExact(floor);
+    return NextResponse.json(
+      { shown, sells: way.sells, name: way.name, payout, ticket: issueExitTicket({ account, amount, tokenOut: way.coin, floor, shown }) },
+      { headers: NO_STORE },
+    );
   } catch (error) {
     return giftErrorResponse(error);
   }

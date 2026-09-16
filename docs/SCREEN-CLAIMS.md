@@ -82,11 +82,19 @@ says so, and that is the work queue.
 
 ## The way out
 
-`app/components/CashOut.tsx`, `app/api/send/route.ts`.
+`app/components/CashOut.tsx`, `app/api/send/route.ts`, `app/api/exit/*`, `src/rails.ts`.
 
-Paying out to a card or a bank is **not on this screen and promised on none**. The card rail pays out to no
-Visa and no Mastercard in France or anywhere else in the EEA, by its own help centre article of 15 Sep, and
-`ExitRouter` is neither deployed nor wired to it (D72). Nothing about another way out is written on a screen.
+**Two services are named, never one** (D77). Neither covers everybody: the euro one refuses Senegal and Ivory
+Coast outright, which is where the pilot's cross-border gifts are aimed, and the card one makes no card payout
+in France, the rest of the EEA or the United States. Each is shown with where it pays, what it costs, and the
+source and date that sentence was read from. **Nobody is asked where they live**, and no list of countries is
+copied into the code: one of those lists changed on 15 Sep and the other dates from June, so a frozen copy
+would be false within weeks.
+
+**The router is not deployed**, so every way out currently answers that Viky cannot pay out yet, and **the last
+step has no code path at all**: what moves money here is tied to what a gift holds, not to what the exchange
+handed back, so sending the changed money on to a payout service is not possible from Viky today. The screen
+says so in those words rather than implying the journey finishes.
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
@@ -95,6 +103,10 @@ Visa and no Mastercard in France or anywhere else in the EEA, by its own help ce
 | "Send it to another account of mine" | it moves without their account needing anything | AUSD's own signed transfer, submitted by the relayer, so no contract call comes from their account | `test/send-own-money.test.ts`, and **run for real on 14 Sep 2026**, $2.86 from the recipient's account to the funder's |
 | "Exactly what you type leaves your account, to the last of its six decimals", and the button "Send $X" | X is the amount typed, and exactly that is what the signature moves | the field opens on the whole balance written in full (`exactAmountText`), `amountToSend` reads the text to the last decimal, and the send carries that value and no rounded copy of it (D75) | `test/send-amount.test.ts`, `test/screen-claims.test.ts` |
 | "You have $X. Send that or less.", and the refusals for anything the coin cannot carry | the account really holds X, and the button stays shut until the amount can leave | `amountToSend` compares against the balance read from the chain and returns the refusal the screen shows (D75) | `test/send-amount.test.ts` |
+| each way out's "where it pays" sentence, its cost, and "Read from X, DATE" | every clause was read at that source on that date, and nothing is inferred from the other service's list | `src/rails.ts` holds the sentence beside the endpoint it came from: payout methods and the MiCA asset page for the euro one, the currencies endpoint and the help centre for the card one. Selling restrictions for MON on Monad are exactly `["gb"]`; the absence of card payouts in France and the EEA is a separate fact from a separate source, and the two are kept apart | `test/gift-amount.test.ts` checks both name who they cannot serve and both carry a source and a dated reading |
+| "You would get at least $X of USDC on Monad" | X is the exchange's guaranteed floor, not its hoped-for output, and the signature binds it | `/api/exit/quote` returns `minOut` from a live quote and signs it into the ticket, so the browser cannot raise or lower it; the contract refuses anything below it with `TooLittleBack` | `test/ExitRouter.t.sol` (`testAPoorRateIsRefused...`, both coins), `test/exit-routes.test.ts` |
+| "That is worth about N EUR today. Ramp takes sales from A to B EUR." | N, A and B are that service's own figures as of this request | `src/ramp.ts` reads their off-ramp asset list at each quote and never caches it for long, because the figures move with the rate | **none yet**: a live third-party endpoint, re-read rather than pinned |
+| "Viky cannot yet send it on to X" | it really cannot | `sendOwnMoney` and `/api/send` are pinned to AUSD, and nothing moves the coin the exchange hands back | **the absence is the claim**; no code path exists to contradict it |
 
 ## The account, on every screen
 

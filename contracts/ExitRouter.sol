@@ -6,13 +6,13 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-/// @dev The EIP-3009 entry AUSD exposes. `to` must be the caller, so a signed authorization can only land here.
 /// @dev The shape of a forwarding exchange: one that holds no logic itself and passes calls to another
 ///      contract its own owner can change. The exchange Viky uses is one of these.
 interface IForwardingExchange {
     function getRouter() external view returns (address);
 }
 
+/// @dev The EIP-3009 entry AUSD exposes. `to` must be the caller, so a signed authorization can only land here.
 interface IERC3009Receiver {
     function receiveWithAuthorization(
         address from,
@@ -28,50 +28,60 @@ interface IERC3009Receiver {
 }
 
 /// @title  ExitRouter
-/// @notice Turns what a gift earned into money a person can be paid, in one transaction that Viky's relayer
-///         submits and pays for. The person signs once and their own account does nothing.
+/// @notice Turns what a gift earned into the coin a payout service takes, and hands it to the person. One
+///         transaction, submitted and paid for by Viky's relayer; the person signs once and their own account
+///         calls nothing.
 /// @dev    This exists because of one rule of the chain (DECISIONS.md D53): Monad reserves 10 MON per account
 ///         and an account below that can make **no contract call at all**. A recipient holds a gift and no
-///         MON, so they can neither approve an exchange nor swap. Every other part of Viky already worked
-///         this way, the person signing and the relayer sending, which is why every other part worked.
+///         MON, so they can neither approve an exchange nor swap.
+///
+///         **What this contract does not do is as important as what it does (D76).** It never pays a payout
+///         service. The exchanged coin goes to the person, and they send it on themselves with a signature of
+///         their own. The reason is that a payout service credits an order by watching for a deposit, and a
+///         native transfer made by a contract is an internal transfer: it is in no block's transaction list
+///         and in no receipt, so anything reading the chain the ordinary way does not see it. Nobody at any
+///         such service says in public whether an order paid that way is credited at all. A transfer from the
+///         person's own account leaves the trace every detector reads, and asks nobody's permission. So the
+///         router stops one step earlier than it used to, and the step it dropped is the one that was a bet.
+///
+///         **The coin that comes back is named in the terms, not fixed at deployment (D77).** Two payout
+///         services cover different countries and want different coins: one sells a stablecoin and serves the
+///         euro area, the other sells the chain's own coin and serves places the first refuses outright. A
+///         router pinned to either coin would close the corridor the other one serves, and the people that
+///         would shut out are exactly the recipients the pilot exists for. So `tokenOut` travels inside the
+///         signature like everything else, and zero means the chain's own coin.
 ///
 ///         The whole safety of this contract is that **one signature says everything**. AUSD's authorization
-///         binds only who, how much, and a nonce, so the nonce here *is* the hash of the terms: where the
-///         money goes, the least that may come back, which exchange, and exactly what will be said to it. A
-///         relayer that changes any of those produces a nonce the token will not accept. The same trick
-///         funds a gift with a single signature, so there is one idea to check, not two.
+///         binds only who, how much, and a nonce, so the nonce here *is* the hash of the terms: how much is
+///         taken, which coin must come back, the least of it, which exchange, and exactly what will be said
+///         to it. A relayer that changes any of those produces a nonce the token will not accept. The same
+///         trick funds a gift with a single signature, so there is one idea to check, not two.
 ///
 ///         The contract holds nothing between transactions. Whatever it receives leaves in the same call, to
-///         the person's chosen destination, and anything left over goes back to them.
+///         the person who signed, and nowhere else.
 contract ExitRouter is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @dev Distinct from the gift contracts' tags, so one signature can never be spent on another contract.
-    bytes32 public constant EXIT_NONCE_TAG = keccak256("viky.exit.v1");
-    /// @dev What a destination gets to spend receiving its money, and what this contract keeps for itself.
-    ///
-    ///      It is NOT a protection for the relayer: Monad charges the limit a transaction declares rather
-    ///      than what it uses (D52), so a destination that burns everything costs the relayer the same
-    ///      whatever this says. What it does is keep enough gas on this side of the call to hand the person
-    ///      their surplus and check that the money really left, instead of dying inside the destination.
-    ///
-    ///      Settable because it is aimed at an address nobody here has inspected: a payout service's deposit
-    ///      address is usually an ordinary account, but if one ever costs more than this to pay, every exit
-    ///      would fail with no repair short of deploying again.
-    uint256 public payoutGas = 100_000;
-    uint256 public constant MIN_PAYOUT_GAS = 30_000;
-    uint256 public constant MAX_PAYOUT_GAS = 1_000_000;
+    /// @dev v3 with the terms themselves: v1 named a destination and v2 fixed the output coin outside the
+    ///      terms, so bytes signed for either describe something this contract would now read differently.
+    bytes32 public constant EXIT_NONCE_TAG = keccak256("viky.exit.v3");
 
-    /// @dev What the person signed: everything that decides where their money ends up.
+    /// @dev The chain's own coin, as `tokenOut` names it.
+    address public constant NATIVE = address(0);
+
+    /// @dev What the person signed: everything that decides what happens to their money.
     struct ExitTerms {
-        /// @dev Whose money. The authorization is checked against this by the token itself. Named `payer`
-        ///      and not `owner`, because `owner()` here is Viky and confusing the two would be a way to lose money.
+        /// @dev Whose money, and where the proceeds go: the same account either way. The authorization is
+        ///      checked against this by the token itself. Named `payer` and not `owner`, because `owner()`
+        ///      here is Viky and confusing the two would be a way to lose money.
         address payer;
-        /// @dev Where the proceeds go. Theirs to choose, and nobody else can change it.
-        address payoutTo;
         uint256 amount;
-        /// @dev The order. It is the least that may come back from the exchange, and it is also exactly what
-        ///      the destination is sent: a payout service is owed an amount, not an approximation of one.
+        /// @dev The coin that must come back, zero meaning the chain's own. Inside the signature because the
+        ///      person chose which payout service they are heading for, and the two take different coins.
+        address tokenOut;
+        /// @dev The least that may come back, counted in that coin. A floor, and nothing else: no order rests
+        ///      on it, because this contract no longer pays an order.
         uint256 minOut;
         /// @dev Which exchange is called, and exactly what is said to it.
         address exchange;
@@ -88,7 +98,9 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         bytes32 s;
     }
 
+    /// @dev What a gift holds, and what is taken from the person by their signature.
     IERC20 public immutable token;
+
     /// @dev Exchanges the owner has allowed. The terms already name one and the signature binds it, so this
     ///      is the second lock: even a signature produced by a compromised app cannot reach anywhere else.
     mapping(address => bool) public allowedExchanges;
@@ -101,17 +113,18 @@ contract ExitRouter is Ownable, ReentrancyGuard {
     ///      Zero means the exchange forwards nothing and there is nothing to check.
     mapping(address => address) public mustPointAt;
 
+    /// @dev Gas allowed to the person's own account when the coin coming back is the chain's own. It saves the
+    ///      relayer nothing, because Monad charges the limit a transaction declares rather than what it uses
+    ///      (D52, D61). What it buys is the guarantee that gas is left on our side afterwards to check the
+    ///      money really left, instead of a payee able to take the whole transaction down with it.
+    uint256 public payoutGas = 100_000;
+    uint256 public constant MIN_PAYOUT_GAS = 30_000;
+    uint256 public constant MAX_PAYOUT_GAS = 1_000_000;
+
     event ExchangeAllowed(address indexed exchange, bool allowed, address mustPointAt);
     event PayoutGasSet(uint256 payoutGas);
     event Exited(
-        address indexed payer,
-        address indexed payoutTo,
-        uint256 amountIn,
-        /// @dev What the destination was actually sent, which is the order exactly, never more.
-        uint256 paidOut,
-        /// @dev What the exchange gave beyond the order, handed straight back to the person.
-        uint256 returned,
-        address indexed exchange
+        address indexed payer, uint256 amountIn, address indexed tokenOut, uint256 amountOut, address indexed exchange
     );
 
     error InvalidAddress();
@@ -122,24 +135,29 @@ contract ExitRouter is Ownable, ReentrancyGuard {
     error UnexpectedTokens();
     error PinRequired();
     error OwnershipIsNotRenounceable();
+    error PayoutFailed();
     error PayoutNotDelivered();
     error TermsMismatch();
     error DeadlinePassed();
     error TransferShortfall();
     error ExchangeFailed();
     error TooLittleBack();
-    error PayoutFailed();
+    error SameToken();
 
     constructor(IERC20 token_) {
         if (address(token_) == address(0)) revert InvalidAddress();
         token = token_;
     }
 
+    /// @dev So an exchange can hand back the chain's own coin. Nothing else is expected to arrive, and
+    ///      anything that does leaves with the next exit or by the sweep.
+    receive() external payable {}
+
     // --- terms ------------------------------------------------------------------------------------------
 
     function hashTerms(ExitTerms calldata t) public pure returns (bytes32) {
         return
-            keccak256(abi.encode(t.payer, t.payoutTo, t.amount, t.minOut, t.exchange, t.callHash, t.deadline, t.salt));
+            keccak256(abi.encode(t.payer, t.amount, t.tokenOut, t.minOut, t.exchange, t.callHash, t.deadline, t.salt));
     }
 
     /// @notice The nonce the authorization must carry. One signature is therefore both the payment and the
@@ -150,24 +168,26 @@ contract ExitRouter is Ownable, ReentrancyGuard {
 
     // --- the exit ---------------------------------------------------------------------------------------
 
-    /// @notice Takes the person's AUSD by their signed authorization, exchanges it exactly as they signed
-    ///         for, and sends what comes back where they asked. Anyone may submit it; Viky's relayer does.
+    /// @notice Takes the person's AUSD by their signed authorization, exchanges it exactly as they signed for,
+    ///         and hands them everything that came back. Anyone may submit it; Viky's relayer does.
     function exit(ExitTerms calldata t, Authorization calldata a, bytes calldata exchangeCall)
         external
         nonReentrant
         returns (uint256 amountOut)
     {
-        if (t.payer == address(0) || t.payoutTo == address(0) || t.exchange == address(0)) {
-            revert InvalidAddress();
+        if (t.payer == address(0) || t.exchange == address(0)) revert InvalidAddress();
+        // The exchange may never be the token or this contract. The token would let a caller aim the router's
+        // own `receiveWithAuthorization` at somebody else's signed authorization, since the token requires the
+        // recipient to be the caller, and take the proceeds as "left over". Nor may it be the coin coming
+        // back, for the same reason applied to whatever that coin turns out to be.
+        if (t.exchange == address(token) || t.exchange == address(this) || t.exchange == t.tokenOut) {
+            revert ExchangeNotEligible();
         }
-        // Paying into this contract would look exactly like a payment and be none: the call succeeds, the
-        // event says the money was delivered, and it sits here reachable only by us.
-        if (t.payoutTo == address(this)) revert InvalidAddress();
-        // The exchange may never be the token or this contract. Both would let a caller aim the router's own
-        // `receiveWithAuthorization` at somebody else's signed authorization, since the token requires the
-        // recipient to be the caller, and take the proceeds as "left over". The floor on what must come back
-        // happens to stop it today, which is not a reason to leave it standing.
-        if (t.exchange == address(token) || t.exchange == address(this)) revert ExchangeNotEligible();
+        // One accounting rests on the two coins being different: what came in is measured on one balance and
+        // what goes out on the other. The same address for both would let the refund and the payout read each
+        // other, and the surplus check would pass on money that never arrived.
+        if (t.tokenOut == address(token)) revert SameToken();
+        if (t.tokenOut == address(this)) revert InvalidAddress();
         if (t.amount == 0 || t.minOut == 0) revert InvalidAmount();
         if (block.timestamp > t.deadline) revert DeadlinePassed();
         if (!allowedExchanges[t.exchange]) revert ExchangeNotAllowed();
@@ -184,7 +204,7 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         if (keccak256(exchangeCall) != t.callHash) revert TermsMismatch();
 
         uint256 tokenBefore = token.balanceOf(address(this));
-        uint256 nativeBefore = address(this).balance;
+        uint256 outBefore = _heldOf(t.tokenOut);
 
         // The token checks the authorization against the owner and the nonce, and the nonce is the hash of
         // these terms, so nothing here can be swapped for anything else.
@@ -200,7 +220,7 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         token.forceApprove(t.exchange, 0);
         if (!ok) revert ExchangeFailed();
 
-        amountOut = address(this).balance - nativeBefore;
+        amountOut = _heldOf(t.tokenOut) - outBefore;
         if (amountOut < t.minOut) revert TooLittleBack();
 
         // Anything the exchange did not take goes straight back to them; this contract keeps nothing.
@@ -224,28 +244,26 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         if (tokenLeft > t.amount) revert UnexpectedTokens();
         if (tokenLeft > 0) token.safeTransfer(t.payer, tokenLeft);
 
-        // Exactly the order, and the rest straight back to them.
-        //
-        // The destination is a payout service holding an order for a precise amount. Asked what it does when
-        // what arrives differs from that order, its own documentation says only that a different amount "may
-        // delay processing or prevent your transaction from being completed" (D59). An undefined answer is
-        // not something a person's payout may rest on, so we never test it: what the exchange gave above the
-        // order is theirs and goes back to them in the same transaction.
-        //
-        uint256 returned = amountOut - t.minOut;
-        (bool paid,) = t.payoutTo.call{value: t.minOut, gas: payoutGas}("");
-        if (!paid) revert PayoutFailed();
-        // A person's account is an ordinary one that cannot refuse a transfer, so this cannot be how a payout
-        // fails; it reverts rather than leaving their surplus here if one ever could.
-        if (returned > 0) {
-            (bool back,) = t.payer.call{value: returned, gas: payoutGas}("");
-            if (!back) revert PayoutFailed();
+        // Everything that came back, to the person who signed, and to nobody else. There is no order to pay
+        // exactly and no surplus to split: what a payout service is owed is sent by the person themselves,
+        // from their own account, in a transfer any detector can see (D76).
+        if (t.tokenOut == NATIVE) {
+            (bool paid,) = t.payer.call{value: amountOut, gas: payoutGas}("");
+            if (!paid) revert PayoutFailed();
+        } else {
+            IERC20(t.tokenOut).safeTransfer(t.payer, amountOut);
         }
-        // Delivered, not merely "the call did not revert": a destination that hands the money straight back
-        // returns success, and the person would be told they were paid while nothing left.
-        if (address(this).balance != nativeBefore) revert PayoutNotDelivered();
+        // Delivered, not merely "the call did not revert": a token that quietly keeps what it was asked to
+        // move, or a payee that hands the coin straight back, would otherwise leave the person told they were
+        // paid while their money sat here.
+        if (_heldOf(t.tokenOut) != outBefore) revert PayoutNotDelivered();
 
-        emit Exited(t.payer, t.payoutTo, t.amount - tokenLeft, t.minOut, returned, t.exchange);
+        emit Exited(t.payer, t.amount - tokenLeft, t.tokenOut, amountOut, t.exchange);
+    }
+
+    /// @dev What this contract holds of a coin, the chain's own included.
+    function _heldOf(address what) private view returns (uint256) {
+        return what == NATIVE ? address(this).balance : IERC20(what).balanceOf(address(this));
     }
 
     // --- the owner --------------------------------------------------------------------------------------
@@ -278,6 +296,8 @@ contract ExitRouter is Ownable, ReentrancyGuard {
         emit ExchangeAllowed(exchange, allowed, pointsAt);
     }
 
+    /// @dev Bounded at both ends so a stipend can be corrected without deploying again, and so nobody can set
+    ///      it to something that makes every payout of the chain's own coin fail.
     function setPayoutGas(uint256 value) external onlyOwner {
         if (value < MIN_PAYOUT_GAS || value > MAX_PAYOUT_GAS) revert InvalidAmount();
         payoutGas = value;
@@ -309,17 +329,20 @@ contract ExitRouter is Ownable, ReentrancyGuard {
     }
 
     /// @dev The contract is not meant to hold anything between transactions. If an exchange ever leaves
-    ///      something behind, this returns it rather than leaving it stranded.
-    function sweep(address to) external onlyOwner {
+    ///      something behind, this returns it rather than leaving it stranded. `what` is the coin to return,
+    ///      zero meaning the chain's own, because the coins that pass through here are named per exit now and
+    ///      no fixed list of them exists to walk.
+    function sweep(address to, address what) external onlyOwner {
         if (to == address(0)) revert InvalidAddress();
-        uint256 left = token.balanceOf(address(this));
-        if (left > 0) token.safeTransfer(to, left);
-        if (address(this).balance > 0) {
-            (bool ok,) = to.call{value: address(this).balance}("");
-            if (!ok) revert PayoutFailed();
+        if (what == NATIVE) {
+            uint256 left = address(this).balance;
+            if (left > 0) {
+                (bool sent,) = to.call{value: left}("");
+                if (!sent) revert PayoutFailed();
+            }
+        } else {
+            uint256 left = IERC20(what).balanceOf(address(this));
+            if (left > 0) IERC20(what).safeTransfer(to, left);
         }
     }
-
-    /// @dev Exchanges send the proceeds here before they are passed on, in the same transaction.
-    receive() external payable {}
 }

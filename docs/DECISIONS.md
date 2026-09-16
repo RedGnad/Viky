@@ -1958,3 +1958,63 @@ of it goes, because it no longer does.
 
 **What is not on the screen.** No payout service is named, and nothing says where the money goes next: that decision
 is the funder's and it has not been taken (D72, point 8).
+
+## D76, 16 Sep 2026: the router pays the person, never the payout service
+
+**The question, asked before any code.** `ExitRouter` paid a destination directly with `payoutTo.call{value}`. Does a
+deposit service credit an order paid that way, by a contract?
+
+**The answer, and why it is a refusal rather than a finding.** A native transfer made by a contract is an internal
+transfer. It is in no block's transaction list and in no receipt, so anything reading the chain the ordinary way does
+not see it. No payout service states in public whether an order paid that way is credited at all. Building on that
+would have been a bet with somebody else's money, and the way to stop betting is to stop one step earlier.
+
+**Form C, chosen by the funder.** The router takes the AUSD on one signature, exchanges it, and hands the whole
+proceeds back to **the person who signed**. They then send the payout service its coin themselves, from their own
+account, in a transfer every detector reads. Nobody's permission is needed for that.
+
+**What that removed.** `payoutTo`, the order-and-surplus split, `payoutGas` for a stranger's address, and with them a
+class of question. There is no order to pay exactly, so the floor is only a floor: protection against the rate moving
+while the transaction is in flight. The screens follow the facts rather than the reverse, as the funder put it: change
+the money first, read what actually arrived, create the order for that figure, then send exactly that with the amount
+field of D75.
+
+**The tag moved with the terms**, so no signature made for the old shape can be replayed against a contract that reads
+those bytes differently. `test/ExitTermsParity.t.sol` pins both halves.
+
+## D77, 16 Sep 2026: two ways out, and the coin travels inside the signature
+
+**What was measured, and what it overturned.** Wiring the way out to a single euro payout service would have closed
+the pilot's own corridor. Read at the source on 16 Sep 2026:
+
+- Their payout-methods list (`api.ramp.network/api/host-api/v3/payout-methods`) holds 5 methods over 120 countries.
+  **Senegal and Ivory Coast are in none of them**, their currencies endpoint returns nothing sellable for either, and
+  a live quote for both answers 403. Those two countries are exactly where the pilot's cross-border gifts are aimed.
+- The other service's currencies endpoint (`api.mercuryo.io/v1.6/lib/currencies`) restricts selling MON on Monad in
+  `["gb"]` and nowhere else, so both countries are open there. What it cannot do is pay in France or the rest of the
+  EEA, which is a payout fact and not a currency one (D72, their help centre, 15 Sep).
+- Their own asset page states that under **MiCA** several stablecoins, **AUSD among them**, cannot be bought or sold
+  in the EU or the EEA, and names USDC as one that can. So for somebody in France, selling what a gift holds is not
+  available at all: the exchange step is not a convenience, it is the only lawful route out.
+
+**The decision.** Both ways out exist, and between them the corridors are covered. The screen names what exists, each
+with where it pays, its source and the date that source was read, and the person chooses. **No country list is copied
+into our code**: one of these lists changed on 15 Sep and the other dates from June, so a frozen copy would be false
+within weeks, and a false sentence about somebody's money is what D39 forbids. Nobody is asked where they live.
+
+**The consequence on the contract, integrated before deploying it.** The two services take different coins, so the
+coin coming back is a field of the signed terms (`tokenOut`, zero meaning the chain's own) rather than a constant set
+at deployment. A router pinned to either coin would have closed the other corridor for good. The tag moved again. The
+native path returns for that corridor, but only ever to pay **the person**, so D76 stands unchanged.
+
+**What is built and proven.** The contract and its 43 tests, both coins and both delivery paths, including a payer
+that refuses its payout, one that hands it straight back, and one that burns gas (made real with `etch`, since a
+delegated account can both sign and run code). The terms and their parity pins, the store, the planner, the three
+routes, and the first client helper that signs an exit.
+
+**What is not built, and must not be implied anywhere.** The router is **not deployed**, so every way out answers that
+Viky cannot pay out yet. The last step of the journey has no code path at all: `sendOwnMoney` and `/api/send` are
+pinned to AUSD, so sending the **changed** coin to a deposit address is not possible from Viky today, and the screen
+says so rather than implying the journey completes. The smallest sale is read live from the euro service only; the
+card service publishes its own and Viky does not read it yet, so no figure of theirs is printed. Neither corridor has
+run once end to end with real money.
