@@ -2062,9 +2062,24 @@ complaint: **16.20 EUR net on 20.994751 AUSD, fee 1.99**, offering both SEPA and
 same country, the funder cannot find AUSD in their widget at all, while other assets do appear there greyed out
 with a message about location.
 
-**The rule this settles.** Three sources disagreed: their published asset page says MiCA bars AUSD in the EU and
-the EEA, their quote endpoint sells it anyway, and their widget does not show it. The widget is what a real
-customer meets, so **the widget decides**. An endpoint that quotes is not a service that pays.
+**The rule this settles.** Four sources from the same company disagree, and the funder walked the widget to find
+out which one is telling the truth:
+
+| source | what it says about selling AUSD from France |
+|---|---|
+| their published asset page | MiCA bars it in the EU and the EEA |
+| their quote endpoint | sells it: 16.20 EUR net on 20.994751 AUSD, fee 1.99, SEPA and card |
+| their widget's asset selector | lists AUSD on Monad under **"available in your location"** |
+| their sell screen, the last one | **"Selling AUSD is not supported in your location yet"** |
+
+Two of them promise and one refuses, and the one that refuses is the last screen before somebody's money moves.
+**Only the sell screen is authoritative.** An endpoint that quotes is not a service that pays, and neither is a
+dropdown that lists.
+
+**And a rule about our own words.** A refusal shown on a Viky screen about what a rail will do must be **the
+rail's own sentence**, never one of ours dressed up as theirs. We may refuse early on a number they publish, and
+say it is theirs. We may not invent a refusal about who is allowed to sell, because that is the one thing only
+their last screen knows.
 
 **What follows, and it is general.** An API answer is good enough to prepare something and never good enough to
 promise it on a screen. This is the same shape as the earlier finding that the quote endpoint happily quoted
