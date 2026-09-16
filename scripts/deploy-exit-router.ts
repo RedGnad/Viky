@@ -69,6 +69,14 @@ async function main() {
   if (balance < MIN_DEPLOYER_BALANCE) {
     throw new Error(`Refusing to deploy: deployer ${account.address} holds ${formatEther(balance)} MON, below the 10 MON reserve plus margin`);
   }
+  // Ownership does not stay on the key that deployed the contract (the funder's decision, 16 Sep). It carries
+  // the exchange allowlist and the sweep and cannot be renounced, so it belongs where it was chosen to belong
+  // rather than wherever the deploy happened to run. Encoded here rather than written in a note, because a
+  // note is read after the irreversible thing and a refusal is read before it.
+  if (!owner) throw new Error("Refusing to deploy: set OWNER_ADDRESS. Ownership is not left on the deployment key");
+  if (owner === account.address) {
+    throw new Error(`Refusing to deploy: OWNER_ADDRESS is the deployer ${account.address}, so ownership would stay on the deployment key`);
+  }
   const tokenCode = await publicClient.getCode({ address: AUSD_ADDRESS });
   if (!tokenCode || tokenCode === "0x") throw new Error("AUSD has no code at the pinned address");
   // The coin the router hands back (D76). Checked here because deploying against an address with no code
@@ -149,6 +157,14 @@ async function main() {
       2,
     ),
   );
+
+  // Everything above this line is a read. With DRY_RUN set, nothing below it happens: the one irreversible
+  // step in this project can be inspected in full, with real addresses and a real pin target, before anybody
+  // approves it. Without that, the only way to see the plan was to carry it out.
+  if (process.env.DRY_RUN) {
+    console.log("\nDRY_RUN: every check passed and nothing was sent. Unset DRY_RUN to deploy for real.");
+    return;
+  }
 
   // One argument again: the coin coming back is named per exit inside the signed terms, because the two
   // payout services take different ones and a router pinned to either would close the other's corridor (D77).
