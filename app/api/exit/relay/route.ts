@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { getAddress } from "viem";
+import { getAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { alreadySpent, relayExit, toExitAuthorization } from "@/src/exit-relay";
-import { attachSignature, loadExit, markExitSent } from "@/src/exit-store";
+import { attachSignature, loadExit, markExitSent, markExitStale } from "@/src/exit-store";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
+import { RelayerError } from "@/src/relayer";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { canonicalSignature } from "@/src/signature";
 
@@ -56,20 +57,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ paid: true, hash: record.txHash }, { headers: NO_STORE });
     }
 
-    const { hash } = await relayExit({
-      terms: {
-        payer: record.account,
-        amount: record.amount,
-        tokenOut: record.tokenOut,
-        minOut: record.minOut,
-        exchange: record.exchange,
-        callHash: record.callHash,
-        deadline: record.deadline,
-        salt: record.salt,
-      },
-      authorization: toExitAuthorization(0n, record.deadline, record.signature!),
-      callData: record.callData,
-    });
+    // A route that moved between the quote and here is not a refusal to report, it is a retry to offer. The
+    // exchange checks its own engraved minimum, which sits 0.040 % under what it quoted, and that margin does
+    // not survive a human delay: the attempt of 16 Sep lost 0.3 %, seven times it (D81). These terms are set
+    // aside so the next attempt can quote again, and the browser is told to ask for a new price rather than
+    // shown a failure it can do nothing about.
+    let hash: Hex;
+    try {
+      ({ hash } = await relayExit({
+        terms: {
+          payer: record.account,
+          amount: record.amount,
+          tokenOut: record.tokenOut,
+          minOut: record.minOut,
+          exchange: record.exchange,
+          callHash: record.callHash,
+          deadline: record.deadline,
+          salt: record.salt,
+        },
+        authorization: toExitAuthorization(0n, record.deadline, record.signature!),
+        callData: record.callData,
+      }));
+    } catch (error) {
+      if (error instanceof RelayerError && error.contractError === "ExchangeFailed") {
+        await markExitStale(id);
+        throw new GiftApiError(
+          "QUOTE_STALE",
+          "The exchange's price moved while you were signing. Nothing was taken. Viky will ask for a new one.",
+          409,
+        );
+      }
+      throw error;
+    }
     await markExitSent(id, hash);
     return NextResponse.json({ paid: true, hash }, { headers: NO_STORE });
   } catch (error) {

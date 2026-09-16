@@ -2139,3 +2139,76 @@ ten quiet minutes and placing an order with a payout service takes longer than t
 an expected part of this journey**, not a failure in it.
 
 **Still not verified.** Nothing has passed through the router. The trial has not been run again.
+
+## D81, 16 Sep 2026: the exchange refused its own bytes, and no number could have told us
+
+**What happened.** The ten dollar trial reached the exchange and was refused with `ExchangeFailed`. Nothing was
+taken: the relayer's nonce never moved, because the refusal came from `simulateContract` and no transaction was
+ever submitted.
+
+**Why the contract could not say more.** `exit` does `(bool ok,) = t.exchange.call(exchangeCall)` and throws the
+reason away, so on mainnet it can only ever report `ExchangeFailed`. The cause had to be found off chain.
+
+**Found on a fork, with the bytes that actually failed** (`test/ExitRouterFork.t.sol`, replaying the `call_data`
+`prepare` had stored):
+
+| run | result |
+|---|---|
+| stored bytes, latest block | refused, `0x5264a63f` |
+| stored bytes, **their own block** | refused, `0x5264a63f` |
+| fresh bytes, that same old block | **succeeded**, 9,999,167 out |
+| stored bytes, embedded minimum lowered to 1 | **succeeded**, 9,968,242 out |
+| fresh bytes, embedded minimum doubled | refused, `0x5264a63f` |
+
+So the route inside those bytes could deliver 9,968,242 and was asked for 9,998,810. `0x5264a63f` is the
+exchange's own minimum check, identified by moving that number alone and watching the refusal appear and
+disappear. It is in the entry contract's bytecode and in neither signature registry.
+
+**The cause.** The engraved minimum sits a constant 0.040 % under what the route says it will deliver, measured
+over sixteen quotes, so the exchange is coherent when it quotes. That margin does not survive a human delay:
+between the quote and the relay the route moved 0.3 %, seven times the margin.
+
+**Two things that are not the cause**, both of which I proposed and the evidence refused:
+
+- **The caller.** The same bytes fail identically from a contract and from an account that is its own origin.
+  The router's shape was never the problem.
+- **Two quotes disagreeing.** `prepare` did bind the floor from the shown quote while relaying a second quote's
+  bytes, which is a real fault and is fixed. But the two numbers were **identical**, and over sixteen quotes the
+  engraved minimum always equals the announced one, so comparing them can never catch anything. I wrote such a
+  check, called it a protection, and its own unit test passed only because I had built the fake payload with
+  mismatched numbers, encoding my assumption instead of the measurement. A check that cannot fail is worse than
+  none: it implies a cover that does not exist. It is deleted.
+
+**The lesson to keep.** This exchange leaves 0.040 % of margin, and asking it for slippage explicitly returns a
+minimum **equal to the output**, which is none at all. So no setting buys safety here, and no arithmetic of ours
+makes a moved route fill.
+
+**What was done.**
+
+1. The floor is bound from the quote whose bytes are relayed, never from the ticket. One signature, one quote.
+2. The word-one check is gone.
+3. **No simulation at prepare.** The router holds no authorization then, so it would fail on the authorization
+   rather than the swap, and making it meaningful needs non-standard state overrides for balance and allowance
+   slots. `relayExit` already simulates after signing, which is where the answer actually is.
+4. **A retry instead.** A relay refused for a moved route sets those terms aside (`stale`) and the browser asks
+   for a new price, new terms and a new signature, three attempts in all.
+
+**How well the retry works is not known, and the first estimate was wrong.** It was sized on the funder's
+sample, fifteen pairs of quotes taken thirty seconds apart with none unfillable, which suggested one retry
+would collapse the odds. Then a fork run executed a quote seconds after fetching it and the route delivered
+9,992,703 against the 9,995,387 engraved in its own bytes: short by 2,684 units, **0.027 %**, well inside the
+0.040 % margin and a tenth of the 0.3 % excursion that failed the real attempt. One refusal on one attempt is
+not a rate, but it was enough to retire the claim that a single retry is provably sufficient.
+
+Six freshly fetched quotes were then executed on a fork within seconds of fetching: **six filled, none
+refused**. So the ordinary case is healthy and the refusal was a genuine intermittent rather than the norm,
+which is the better news. It still does not give a rate, and it does not say what was different about the one
+that failed. The retry is therefore a reasonable measure of **unknown strength**: good enough to ship, not
+something to call proven, and the thing to watch when real money starts moving.
+
+**What a retry does not undo.** The set-aside signature stays valid until its deadline and `exit` is open to
+anyone. What bounds it is the fifteen minute window and the fact that the same account rarely holds twice the
+amount.
+
+**Why a live attempt cannot prove this fixed.** The defect is intermittent: a fresh trial will most likely
+succeed whatever we did. The proof has to be a test that builds the failing shape deliberately.

@@ -88,8 +88,20 @@ export async function ensureExitSchema(): Promise<void> {
   }
 }
 
-/** `prepared` until the person signs, `signed` while a live authorization exists, `sent` once it landed. */
-export type ExitState = "prepared" | "signed" | "sent";
+/**
+ * `prepared` until the person signs, `signed` while a live authorization exists, `sent` once it landed, and
+ * `stale` when the exchange refused these bytes because its route had moved (D81).
+ *
+ * `stale` exists so a retry is possible at all: while one set of terms is signed, no second set may be made,
+ * because two live authorizations for the same money could both land. Terms the exchange has already refused
+ * are set aside instead, and the next attempt is free to quote again.
+ *
+ * What that does not do is unmake the signature. It stays valid until its deadline, and `exit` is open to
+ * anyone, so in principle those bytes could still be relayed by somebody holding them. What makes that harmless
+ * in practice is that the route refused them and the same account rarely holds twice the amount, and what makes
+ * it bounded is the fifteen minute window. Said plainly rather than left implied.
+ */
+export type ExitState = "prepared" | "signed" | "sent" | "stale";
 
 export type ExitRecord = Readonly<{
   id: string;
@@ -176,6 +188,18 @@ export async function attachSignature(id: string, signature: Hex): Promise<boole
   const rows = await sql()`
     UPDATE viky_exits SET signature = ${signature}, signed_at = now(), state = 'signed'
      WHERE id = ${id} AND state = 'prepared' RETURNING id`;
+  return rows.length === 1;
+}
+
+/**
+ * Sets aside terms the exchange refused because its route had moved, so the next attempt may quote again.
+ * Only terms that were signed and never landed: anything already sent is finished, and anything unsigned can
+ * simply be discarded.
+ */
+export async function markExitStale(id: string): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE viky_exits SET state = 'stale'
+     WHERE id = ${id} AND state = 'signed' RETURNING id`;
   return rows.length === 1;
 }
 

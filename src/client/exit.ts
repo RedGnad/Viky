@@ -1,6 +1,6 @@
 import { getAddress, type Hex, type LocalAccount } from "viem";
 import { receiveAuthorizationTypedData, type ReceiveAuthorizationMessage } from "../ausd-authorization";
-import { postJson } from "./api";
+import { ApiError, postJson } from "./api";
 
 /**
  * The way out, from the browser: ask what an exchange would give, then sign once.
@@ -52,7 +52,37 @@ export type WayOutResult = Readonly<{ paid: boolean; hash: Hex | null; shown: st
  * follows that: a second live authorization for the same money would mean only one of the two needs to land
  * for the account to be debited, and if both land it is debited twice (src/exit-plan.ts).
  */
+/**
+ * How many times the whole thing is attempted, signature included.
+ *
+ * The exchange engraves a minimum into its own bytes that sits 0.040 % under what it quotes, and that margin
+ * does not survive a human delay: the attempt of 16 Sep lost 0.3 % between the quote and the relay, seven times
+ * it, and the exchange refused its own bytes (D81). Asking that exchange for more slippage returns a minimum
+ * equal to the output, no margin at all, so nothing can be bought here. What works is asking again: across
+ * fifteen pairs of quotes taken thirty seconds apart, not one was unfillable, so a single retry collapses the
+ * chance of a run of them. Three attempts, because the second costs a passkey prompt and the third is already
+ * charity to a very unlucky minute.
+ */
+const ATTEMPTS = 3;
+
 export async function takeTheWayOut(input: { account: LocalAccount; ticket: string }): Promise<WayOutResult> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await oneAttempt(input);
+    } catch (error) {
+      // Only a route that moved is worth asking again for. Everything else is a real answer: too little back,
+      // a closed session, an amount they do not hold, a service that cannot pay. Retrying those would just ask
+      // somebody to sign the same refusal twice.
+      const moved = error instanceof ApiError && error.code === "QUOTE_STALE";
+      if (!moved || attempt >= ATTEMPTS) throw error;
+    }
+  }
+}
+
+async function oneAttempt(input: { account: LocalAccount; ticket: string }): Promise<WayOutResult> {
+  // A fresh set of terms each time, because the bytes and the floor both come from one new quote: that is the
+  // whole point of asking again. The ticket is the person's own price from before, and it still holds them to
+  // no worse than what they read.
   const prepared = await postJson<PreparedTerms>("/api/exit/prepare", { ticket: input.ticket });
 
   let signature: Hex | undefined;
