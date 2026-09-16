@@ -1,5 +1,22 @@
 # What an operator has to know
 
+## What is deployed
+
+`ExitRouter` on Monad mainnet, 16 Sep 2026.
+
+| what | value |
+|---|---|
+| the router | `0x8a1790dfd10cf1599bdaed5ec8bb46b2a6eb6223` |
+| deployment | `0xf8d9e1fe7e45fac84aa113a50c8f7f4ff95a3c451764a3d83809bbb24b6dac5c` |
+| allowing the exchange, pinned | `0x534dc955359a9647be792d59cd7f4aa9138bcff4be1b1d32464784b201c3925a` |
+| handing ownership to the founder | `0x886bb648a458d44919a46a46ce3237504b2fe3a19b1cc54b7987407c6e85662e` |
+| owner | `0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64` |
+
+It takes AUSD and hands back whichever coin the signed terms name, so one router serves both corridors. It is
+not upgradeable. `EXIT_ROUTER_ADDRESS` and `EXIT_EXCHANGE_ADDRESS` are what point the app at it.
+
+Ownership is **not** on the key that deployed it, and the deploy script refuses to run if it would be.
+
 Two standing commitments live in the way out. Neither is a bug, both are ongoing, and both were measured
 rather than assumed. Dates are the day the value was read.
 

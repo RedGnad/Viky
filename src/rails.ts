@@ -107,6 +107,12 @@ export type WayOut = Readonly<{
  * among them, cannot be bought or sold in the EU or the EEA, and names USDC as one that can. So the exchange
  * step is not a convenience here, it is the only lawful route out for somebody in France, which is why the
  * router hands back the coin the terms name (D77).
+ *
+ * Their quote endpoint disagrees with their own widget, and the widget wins (D79). Asked from France on
+ * 16 Sep 2026 it priced AUSD quite happily: 16.20 EUR net on 20.994751 AUSD, fee 1.99, offering SEPA and card.
+ * The widget a real customer meets does not list AUSD at all, while other assets appear in it greyed out with
+ * a message about location. An endpoint that quotes is not a service that pays: the API is for preparing, and
+ * never for promising. So France stays on USDC, and no screen offers what only an API would sell.
  */
 export const WAY_OUT_EURO: WayOut = {
   name: "Ramp",
