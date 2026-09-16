@@ -38,6 +38,7 @@
     "zkfetch:worker": "tsx scripts/zkfetch-worker.ts",
     "check:words": "tsx scripts/check-consumer-words.ts",
     "test:browser": "playwright test",
+    "review:capture-connected": "tsx scripts/capture-connected.ts",
     "capture:refund": "tsx scripts/capture-refund.ts",
     "design:shots": "tsx scripts/design-screenshots.ts",
     "review:capture": "tsx scripts/review-capture.ts"
