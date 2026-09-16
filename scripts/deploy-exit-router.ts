@@ -41,6 +41,9 @@ function required(name: string): string {
 const MIN_DEPLOYER_BALANCE = parseEther("11");
 /** Small enough to cost nothing, large enough that the exchange returns a real route. */
 const PROBE_AMOUNT = 3_000_000n;
+/** The exchange rate limits per address, so the corridors are asked one at a time with a gap between. */
+const PROBE_ATTEMPTS = 4;
+const PROBE_SPACING_MS = 3_000;
 
 const FORWARDER_ABI = [
   { type: "function", name: "getRouter", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
@@ -94,7 +97,26 @@ async function main() {
   ];
   const exchanges = new Map<Hex, string[]>();
   for (const corridor of corridors) {
-    const quoted = await kuruQuote({ userAddress: account.address, tokenIn: AUSD_ADDRESS, tokenOut: corridor.tokenOut, amount: PROBE_AMOUNT });
+    // Spaced and retried, because the exchange rate limits per address and answers a burst with "no route",
+    // which reads exactly like no liquidity and is not: the same quote a few seconds later succeeds. Probing
+    // both corridors back to back made this script abort halfway through its own checks, which is a poor
+    // property for the one step that cannot be undone.
+    let quoted: Awaited<ReturnType<typeof kuruQuote>> | undefined;
+    let refusal: unknown;
+    for (let attempt = 1; attempt <= PROBE_ATTEMPTS && !quoted; attempt += 1) {
+      if (attempt > 1) await new Promise((resolve) => setTimeout(resolve, PROBE_SPACING_MS));
+      try {
+        quoted = await kuruQuote({ userAddress: account.address, tokenIn: AUSD_ADDRESS, tokenOut: corridor.tokenOut, amount: PROBE_AMOUNT });
+      } catch (error) {
+        refusal = error;
+        console.log(`${corridor.name}: attempt ${attempt} of ${PROBE_ATTEMPTS} was refused, waiting`);
+      }
+    }
+    if (!quoted) {
+      throw new Error(
+        `Refusing to deploy: no quote for the ${corridor.name} after ${PROBE_ATTEMPTS} spaced attempts (${refusal instanceof Error ? refusal.message : String(refusal)})`,
+      );
+    }
     const where = getAddress(quoted.to);
     console.log(`${corridor.name}: a live quote targets ${where}`);
     exchanges.set(where, [...(exchanges.get(where) ?? []), corridor.name]);
