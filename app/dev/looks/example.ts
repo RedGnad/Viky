@@ -101,7 +101,7 @@ export const FROM_MAMAN: { gift: GiftSummary; days: CharacterState[]; dates: str
 export const LAST_VISIT = { settledDays: 1, homeEuros: 6.54, yoursDollars: 2, yoursNow: 4 } as const;
 
 /** The link a gift is sent by, as a messaging app shows it (brief, section 7 bis). */
-export const LINK_PREVIEW = { funder: "Maman", amount: "$25.00" } as const;
+export const PREVIEW_EXAMPLE = { funder: "Maman", amount: "$25.00" } as const;
 
 export const MAMAN_RANGE = "13 Sep to 19 Sep";
 
