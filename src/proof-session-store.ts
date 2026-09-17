@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import { databaseUrl } from "./database-guard";
 import type { Hex } from "viem";
 import type { DuolingoEvidence } from "./duolingo-proof-policy";
 
@@ -46,8 +47,7 @@ export function configureProofSessionStore(custom: SqlExecutor | undefined): voi
 
 function sql(): SqlExecutor {
   if (executor) return executor;
-  const url = process.env.DATABASE_URL?.trim();
-  if (!url) throw new Error("DATABASE_URL is not configured");
+  const url = databaseUrl();
   return neon(url) as unknown as SqlExecutor;
 }
 

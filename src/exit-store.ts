@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { databaseUrl } from "./database-guard";
 import { getAddress, type Hex } from "viem";
 import { neon } from "@neondatabase/serverless";
 import type { SqlExecutor } from "./proof-session-store";
@@ -58,8 +59,8 @@ export function configureExitStore(custom: SqlExecutor | undefined): void {
 
 function sql(): SqlExecutor {
   if (executor) return executor;
-  const url = process.env.DATABASE_URL?.trim();
-  if (!url) throw new GiftApiError("NOT_CONFIGURED", "Viky is not ready for this yet. Nothing was taken.", 503);
+  if (!process.env.DATABASE_URL?.trim()) throw new GiftApiError("NOT_CONFIGURED", "Viky is not ready for this yet. Nothing was taken.", 503);
+  const url = databaseUrl();
   const run = neon(url) as unknown as SqlExecutor;
   // A database that has not been migrated throws an untyped error, and an untyped error is the one thing this
   // project cannot show a person: it falls past every named refusal and arrives as "Something went wrong".
