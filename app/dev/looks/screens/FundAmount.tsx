@@ -9,9 +9,9 @@ import { labHref, TO_NOE } from "../example";
  * One step of offering a gift, "How much, and for how long?" (flow F3, as app/components/FundGift.tsx lays it out):
  * two fields, what one day is worth, and Continue. A step where money is chosen: no character.
  */
-export function FundAmount({ look }: Readonly<{ look: string }>) {
+export function FundAmount() {
   return (
-    <Shell kind="task" back={labHref(look, "home")} caption={FUND.step(4, 5)} step={FUND.amount.title}>
+    <Shell kind="task" back={labHref("home")} caption={FUND.step(4, 5)} step={FUND.amount.title}>
       <div className="flex flex-col gap-[var(--space-xl)]">
         <Field id="lab-dollars" label={FUND.amount.dollarsLabel} help={FUND.amount.dollarsHelp(undefined)} value={TO_NOE.amount.slice(1)} inputMode="decimal" />
         <Field id="lab-days" label={FUND.amount.daysLabel} help={FUND.amount.daysHelp} value={String(TO_NOE.days)} inputMode="numeric" />
@@ -20,7 +20,7 @@ export function FundAmount({ look }: Readonly<{ look: string }>) {
           <p className={MONEY}>{TO_NOE.perDay}</p>
           <p className={HELP}>{FUND.amount.missed}</p>
         </section>
-        <Link href={labHref(look, "review")} className={PRIMARY_BUTTON}>
+        <Link href={labHref("review")} className={PRIMARY_BUTTON}>
           {FUND.continue}
         </Link>
       </div>

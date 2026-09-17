@@ -120,57 +120,59 @@ export type Appearance = "light" | "dark";
  * backgrounds and large, low-emphasis areas", primary "for the most prominent components ... high-emphasis
  * buttons, and active states". Apple: "Refrain from adding color to the background of multiple controls".
  *
- * By day it is direction 1, chosen on 15 Sep: cream ground, plum ink, tomato accent. By night the same three
- * roles, an indigo ground, cream ink, and an accent of the same family as the tomato, chosen by measure: the
- * acid green it replaces was a fourth colour and read as a crypto interface. Every pair is measured by
- * test/design-tokens.test.ts, never picked by eye: words at 4.5:1 on both grounds, a control's edge at 3:1.
+ * The look is "Ink and sun", chosen by the founder on 17 Sep 2026 from the three built in the laboratory and from
+ * two trials made on the product itself: a cool neutral ground, deep indigo ink, and the sun as the one accent.
+ * Between day and night the ground and the ink change places and the sun does not move: the founder's rule, and the
+ * practice of the references (Wise and Cash App each keep one brand colour in both modes). The night sun is therefore
+ * the day's sun, chosen by eye and then measured at 11.71:1 on the night ground, never derived by a formula.
  *
- * Retired on 17 Sep as backgrounds, with the audit's four-colour home screen as the reason: the joyful yellow,
- * the four stickers, the five day surfaces. A day says its state in words and by its shape (src/day-states.ts).
+ * Every pair below is measured by test/design-tokens.test.ts, never picked by eye alone: words at 4.5:1 on both
+ * grounds, a control's edge at 3:1. A day says its state in words and by its shape (src/day-states.ts), and the
+ * colours of the characters are their own roles (CHARACTERS), never a background and never text.
  */
 export const COLOURS: Record<Appearance, Record<string, string>> = {
   light: {
-    /** The ground: warm cream, calm enough to read an amount on. */
-    background: "#FFF3D9",
+    /** The ground: a cool neutral with almost no chroma, calm enough to read an amount on. */
+    background: "#F6F4FB",
     /** The surface a card, a field, the bar and the rail sit on. */
-    surface: "#FFFDF7",
-    /** Plum ink: 15.10:1 on the ground, 16.35:1 on a surface. */
-    text: "#3B0A2A",
-    /** 6.93:1 on the ground, 7.50:1 on a surface. */
-    muted: "#72465E",
+    surface: "#FFFFFF",
+    /** Indigo ink: 15.81:1 on the ground, 17.24:1 on a surface. */
+    text: "#1E1633",
+    /** 6.53:1 on the ground, 7.13:1 on a surface. */
+    muted: "#5B5470",
     /**
-     * The tomato fill of the one primary action on a screen, carrying plum words at 5.36:1. The fill itself is
-     * 2.82:1 against the cream, so what identifies a button is its plum outline (WCAG 1.4.11).
+     * The sun, the fill of the one primary action on a screen, carrying ink words at 10.91:1. The fill itself is
+     * 1.45:1 against the ground, so what identifies a button is its ink outline (WCAG 1.4.11), as Cash App builds
+     * its green "to work with black text".
      */
-    accent: "#FF5A36",
-    onAccent: "#3B0A2A",
-    /** The accent as words, a darker tomato: 6.82:1 on the ground, 7.39:1 on a surface. */
-    accentText: "#9E2A14",
-    /** A control's edge is the ink itself: 15.10:1. */
-    controlBorder: "#3B0A2A",
-    /** A card's edge and a rule: 1.36:1, a hairline that groups and never identifies a control. */
-    divider: "#EAD6B0",
+    accent: "#FFC531",
+    onAccent: "#1E1633",
+    /** Links are the ink, underlined, in this look: the accent stays the one thing that fills a button. */
+    accentText: "#1E1633",
+    /** A control's edge is the ink itself: 15.81:1. */
+    controlBorder: "#1E1633",
+    /** A card's edge and a rule: 1.23:1, a hairline that groups and never identifies a control. */
+    divider: "#E0DCEB",
   },
   dark: {
-    background: "#1C1035",
-    surface: "#2A1D4E",
-    /** Cream ink: 16.69:1 on the ground, 14.17:1 on a surface. */
-    text: "#FFF6E9",
-    /** 9.66:1 and 8.20:1. */
-    muted: "#C4B8E6",
+    background: "#151026",
+    surface: "#211A38",
+    /** The ink and the ground change places: 16.45:1 on the ground, 14.69:1 on a surface. */
+    text: "#F3F0FA",
+    /** 8.45:1 and 7.55:1. */
+    muted: "#B3ABC9",
     /**
-     * The tomato after dark, one step lighter so it stands off the indigo: indigo words on it at 6.97:1, and the
-     * fill itself 6.97:1 against the ground and 5.92:1 against a surface, so at night the fill alone identifies
-     * the button. Measured on 17 Sep 2026 against #FF5A36 (5.76 / 4.89) and #FF8A6E (7.76 / 6.58); this is the
-     * closest to the day's tomato that clears every pair with room.
+     * The same sun as the day, which is the point: the hero hue does not change between the modes, and an accent
+     * this light needs no night value of its own. Measured on 17 Sep 2026 against the two candidates the founder
+     * compared on the product (#F7B51B, 10.21:1, and #FFD053, 12.70:1): this one reads 11.71:1 on the night ground
+     * and 10.46:1 on a night surface, so after dark the fill alone identifies the button.
      */
-    accent: "#FF7A5C",
-    onAccent: "#1C1035",
-    /** The accent as words, lighter still: 8.31:1 on the ground, 7.05:1 on a surface. */
-    accentText: "#FF9478",
-    /** Light at night: 16.69:1. */
-    controlBorder: "#FFF6E9",
-    divider: "#3A2C66",
+    accent: "#FFC531",
+    onAccent: "#151026",
+    accentText: "#F3F0FA",
+    /** Light at night: 16.45:1. */
+    controlBorder: "#F3F0FA",
+    divider: "#352C52",
   },
 };
 
@@ -181,26 +183,49 @@ export const CONTROL_COLOURS = ["controlBorder"] as const;
 /** The two things a colour can sit on. Every text colour is measured against both, never just one. */
 export const GROUNDS = ["background", "surface"] as const;
 
-/** Where the chosen appearance is kept, so a reload does not flash the other one. */
-export const THEME_STORAGE_KEY = "viky.theme";
+/**
+ * The characters' own colours (the art direction brief of 17 Sep 2026, section 5): three secondary colours and no
+ * more, living only inside a character, never as text and never as a background. Coral for a day earned and the
+ * gift's box, sky for today and the ribbon, lilac for what is to come or went back; none of them is the sun, so a
+ * character never competes with the one action on a screen. The face is the ink by day and the ground by night, and
+ * clears 7:1 on every one of them. The night values are a step less saturated, because "In dark environments, colors
+ * appear bright and saturated" (Apple). Never grey (Duolingo: "never use gray").
+ *
+ * A character is not held to 3:1 against the ground: a day's state is always said in words beside it (rule D of the
+ * product structure), so a body never carries meaning alone. Its face is, against the body.
+ */
+export const CHARACTERS: Record<Appearance, Record<string, string>> = {
+  light: { one: "#FF7F8E", two: "#5AB4FF", three: "#B79BFF", face: "#1E1633", shadow: "#1E1633" },
+  dark: { one: "#FF8C98", two: "#6DBDFB", three: "#BBA3FA", face: "#151026", shadow: "#08060F" },
+};
+
+/** How much of the shadow's colour shows under a character: a tint of the ink by day, a deeper one at night. */
+export const CHARACTER_SHADOW_OPACITY: Record<Appearance, number> = { light: 0.12, dark: 0.45 };
 
 /**
- * The type of direction 1. Anton, a single-weight condensed face, sets exactly one display title per destination
- * (Gifts, You, the promise without an account) and the mark at the top of every screen; it asks for 400 rather
- * than let the browser invent a bold. DM Sans sets everything else, section titles, amounts and buttons included,
- * at the four levels above. A section title is DM Sans at 22, semibold: Anton at that size read smaller than the
- * text face beside it, and the structure of 17 Sep keeps Anton out of tasks, amounts and buttons altogether.
+ * The relief under a button, which is what a press collapses (brief, section 6). By day it is the ink, the pressed
+ * key of the look. At night it is a shade under the ground, 1.09:1, read as depth: the cream slab the founder saw on
+ * the capture of 17 Sep was the ink after dark, and it read as a thick white edge (brief, section 8).
+ */
+export const RELIEF: Record<Appearance, string> = { light: "#1E1633", dark: "#08060F" };
+
+/**
+ * The type of the look. Fredoka, round and geometric, a relative of the characters, sets exactly one display title per
+ * destination (Gifts, You, the promise without an account) and the mark at the top of every screen, at 600 rather than
+ * letting the browser invent a bold. DM Sans sets everything else, section titles, amounts and buttons included, at
+ * the four levels above. Duolingo's rule: past ten words, the text face. The display sizes are the ones Fredoka needs
+ * to hold the promise without running past three lines on a phone.
  */
 export const DISPLAY_TYPE = {
-  display: { compact: { size: 60, lineHeight: 56 }, expanded: { size: 104, lineHeight: 96 } },
+  display: { compact: { size: 48, lineHeight: 52 }, expanded: { size: 88, lineHeight: 92 } },
   mark: { size: 28, lineHeight: 32 },
-  titleWeight: 400,
+  titleWeight: 600,
 } as const;
 
-/** The controls of direction 1: a 2 pixel ink outline and a 6 pixel relief underneath, the pressed key. */
-export const CONTROL = { borderWidth: 2, reliefDepth: 6 } as const;
+/** The controls: a 2 pixel ink outline and a 4 pixel relief underneath, the pressed key of the look. */
+export const CONTROL = { borderWidth: 2, reliefDepth: 4 } as const;
 
-/** A card's edge: a hairline divider. A card groups; it is not a control, so it carries no relief and no ink edge. */
+/** A card's edge: a hairline divider. A card groups; it is not a control, so it carries no relief and no hard shadow. */
 export const CARD = { borderWidth: 1 } as const;
 
 /**
@@ -210,279 +235,6 @@ export const CARD = { borderWidth: 1 } as const;
  * for an icon and a label of one word.
  */
 export const NAV = { barHeight: 64, railWidth: 88, from: TWO_PANE_FROM } as const;
-
-/**
- * The looks laboratory (the art direction brief of 17 Sep 2026, sections 3, 4 and 9): three looks, each a set of tokens
- * laid over the same kit, rendered at /dev/looks on example data so the funder can choose on boards. Nothing here
- * reaches a product screen: `COLOURS` above is still the one look the product wears, and app/globals.css still says
- * only that. A look is drawn only inside the laboratory's own frame (app/dev/looks), which is off unless the design
- * gallery is switched on (src/dev-access.ts, `galleryOpen`).
- *
- * The method is the same for all three (brief, section 3): a neutral ground with little chroma, a surface one tone off
- * it, one ink and its faded tone, one accent reserved for the primary action, the active destination and a moment of
- * success, and up to three secondary colours that live only inside the characters. Links are ink, underlined, in all
- * three, so the accent as words is the ink itself.
- *
- * Every value is the brief's starting value, and every ratio below was measured on 17 Sep 2026 with the WCAG formula
- * (`src/contrast.ts`): they reproduce the brief's own figures to the hundredth, so no value had to move. What the brief
- * left open was chosen by measure and says so: the divider, the relief after dark, and the characters' ranges.
- * `test/looks.test.ts` recomputes every ratio recorded here and fails if one stops being true.
- */
-
-export type LookId = "paper-tomato" | "ink-sun" | "white-violet";
-
-/** The roles a look adds to the nine of `COLOURS`: the relief under a control, and what a character is made of. */
-export type LookColours = Readonly<{
-  background: string;
-  surface: string;
-  text: string;
-  muted: string;
-  accent: string;
-  onAccent: string;
-  accentText: string;
-  controlBorder: string;
-  divider: string;
-  /** The relief under a button, or null when the look has none. */
-  relief: string | null;
-  /** The short range of a look's characters, three and no more (brief, section 5). Never text, never a background. */
-  character1: string;
-  character2: string;
-  character3: string;
-  /** The eyes and mouth: the ink by day, the ground by night, dark on every character in both. */
-  face: string;
-  /** The pill under a character: this colour at `shadowOpacity`, a tint of the ink rather than a grey. */
-  shadow: string;
-  shadowOpacity: number;
-}>;
-
-export type Look = Readonly<{
-  id: LookId;
-  number: 1 | 2 | 3;
-  name: string;
-  intention: string;
-  colours: Readonly<Record<Appearance, LookColours>>;
-  /**
-   * What identifies the primary button. "ink" where the accent fill stands under 3:1 against a ground it sits on, so
-   * the ink outline does it (WCAG 1.4.11, as Cash App builds its green "to work with black text"); "fill" where the
-   * accent alone clears 3:1 on both grounds.
-   */
-  accentEdge: Readonly<Record<Appearance, "ink" | "fill">>;
-  /** How far the relief stands under a button, which is how far a button travels when it is pressed. 0 is no relief. */
-  reliefDepth: number;
-  /** The title face, the weight it is set in, and the display sizes that face needs to hold one short promise. */
-  type: Readonly<{
-    face: "bricolage" | "fredoka";
-    titleWeight: number;
-    display: Readonly<{ compact: Readonly<{ size: number; lineHeight: number }>; expanded: Readonly<{ size: number; lineHeight: number }> }>;
-  }>;
-  /** Every pair measured, as "foreground/background": ratio, to the hundredth, per appearance. */
-  ratios: Readonly<Record<Appearance, Readonly<Record<string, number>>>>;
-}>;
-
-/**
- * The three characters' colours are rounder in the evening: the night values are a step less saturated, because "In
- * dark environments, colors appear bright and saturated" (Apple). None of them is grey, none is the accent, and none is
- * yellow, which is the accent of look 2 and the colour most likely to read as a character somebody else owns.
- *
- * The characters are not held to 3:1 against the ground: a day's state is always said in words beside it (rule D of
- * the product structure), so a body never carries meaning alone. Its face is, against the body, and clears 7:1.
- */
-export const LOOKS: readonly Look[] = [
-  {
-    id: "paper-tomato",
-    number: 1,
-    name: "Paper and tomato",
-    intention: "Direction 1 corrected by the method: the same warmth, on a neutral ground.",
-    colours: {
-      light: {
-        background: "#FBF7EF",
-        surface: "#FFFFFF",
-        text: "#2A0F24",
-        muted: "#6A5263",
-        accent: "#FF5A36",
-        onAccent: "#2A0F24",
-        accentText: "#2A0F24",
-        controlBorder: "#2A0F24",
-        /** Chosen by measure: 1.24:1 on the ground, a hairline that groups and never identifies. */
-        divider: "#E8DFCF",
-        relief: "#2A0F24",
-        /** Marigold for a day earned and the gift's box, sea for today, lavender for what is to come or went back. */
-        character1: "#FFA94D",
-        character2: "#4EC3C9",
-        character3: "#B8A7F2",
-        face: "#2A0F24",
-        shadow: "#2A0F24",
-        shadowOpacity: 0.12,
-      },
-      dark: {
-        background: "#1A1226",
-        surface: "#261B36",
-        text: "#F6EFE6",
-        muted: "#B9ABC4",
-        accent: "#FF8562",
-        onAccent: "#1A1226",
-        accentText: "#F6EFE6",
-        controlBorder: "#F6EFE6",
-        divider: "#3A2D4B",
-        /**
-         * The relief after dark is a shadow, not a slab of cream: the capture of 17 Sep read the ink relief as a thick
-         * white edge (brief, section 8). A shade under the ground, 1.10:1, which reads as depth and never as a border.
-         */
-        relief: "#0B0711",
-        character1: "#F4A95A",
-        character2: "#5DC0C5",
-        character3: "#AE9FE8",
-        face: "#1A1226",
-        shadow: "#0B0711",
-        shadowOpacity: 0.45,
-      },
-    },
-    accentEdge: { light: "ink", dark: "fill" },
-    reliefDepth: 5,
-    type: { face: "bricolage", titleWeight: 700, display: { compact: { size: 48, lineHeight: 50 }, expanded: { size: 88, lineHeight: 88 } } },
-    ratios: {
-      light: { "text/background": 16.48, "text/surface": 17.61, "muted/background": 6.55, "muted/surface": 7.00, "onAccent/accent": 5.68, "accent/background": 2.90, "accent/surface": 3.10, "controlBorder/background": 16.48, "controlBorder/surface": 17.61, "divider/background": 1.24, "relief/background": 16.48, "face/character1": 9.26, "face/character2": 8.37, "face/character3": 8.26, "character1/background": 1.78, "character2/background": 1.97, "character3/background": 2.00, "character1/surface": 1.90, "character2/surface": 2.11, "character3/surface": 2.13 },
-      dark: { "text/background": 15.89, "text/surface": 14.24, "muted/background": 8.36, "muted/surface": 7.49, "onAccent/accent": 7.58, "accent/background": 7.58, "accent/surface": 6.80, "controlBorder/background": 15.89, "controlBorder/surface": 14.24, "divider/background": 1.43, "relief/background": 1.10, "face/character1": 9.21, "face/character2": 8.47, "face/character3": 7.70, "character1/background": 9.21, "character2/background": 8.47, "character3/background": 7.70, "character1/surface": 8.26, "character2/surface": 7.59, "character3/surface": 6.90 },
-    },
-  },
-  {
-    id: "ink-sun",
-    number: 2,
-    name: "Ink and sun",
-    intention: "The most like a gift: sun yellow on a cool neutral, opposite hues.",
-    colours: {
-      light: {
-        background: "#F6F4FB",
-        surface: "#FFFFFF",
-        text: "#1E1633",
-        muted: "#5B5470",
-        accent: "#FFC531",
-        onAccent: "#1E1633",
-        accentText: "#1E1633",
-        controlBorder: "#1E1633",
-        divider: "#E0DCEB",
-        relief: "#1E1633",
-        /** Coral, sky and lilac: a confetti range, and never the yellow of the accent. */
-        character1: "#FF7F8E",
-        character2: "#5AB4FF",
-        character3: "#B79BFF",
-        face: "#1E1633",
-        shadow: "#1E1633",
-        shadowOpacity: 0.12,
-      },
-      dark: {
-        background: "#151026",
-        surface: "#211A38",
-        text: "#F3F0FA",
-        muted: "#B3ABC9",
-        accent: "#FFD053",
-        onAccent: "#151026",
-        accentText: "#F3F0FA",
-        controlBorder: "#F3F0FA",
-        divider: "#352C52",
-        relief: "#08060F",
-        character1: "#FF8C98",
-        character2: "#6DBDFB",
-        character3: "#BBA3FA",
-        face: "#151026",
-        shadow: "#08060F",
-        shadowOpacity: 0.45,
-      },
-    },
-    accentEdge: { light: "ink", dark: "fill" },
-    reliefDepth: 4,
-    type: { face: "fredoka", titleWeight: 600, display: { compact: { size: 48, lineHeight: 52 }, expanded: { size: 88, lineHeight: 92 } } },
-    ratios: {
-      light: { "text/background": 15.81, "text/surface": 17.24, "muted/background": 6.53, "muted/surface": 7.13, "onAccent/accent": 10.91, "accent/background": 1.45, "accent/surface": 1.58, "controlBorder/background": 15.81, "controlBorder/surface": 17.24, "divider/background": 1.23, "relief/background": 15.81, "face/character1": 7.13, "face/character2": 7.72, "face/character3": 7.51, "character1/background": 2.22, "character2/background": 2.05, "character3/background": 2.10, "character1/surface": 2.42, "character2/surface": 2.23, "character3/surface": 2.30 },
-      dark: { "text/background": 16.45, "text/surface": 14.69, "muted/background": 8.45, "muted/surface": 7.55, "onAccent/accent": 12.70, "accent/background": 12.70, "accent/surface": 11.34, "controlBorder/background": 16.45, "controlBorder/surface": 14.69, "divider/background": 1.44, "relief/background": 1.09, "face/character1": 8.34, "face/character2": 9.10, "face/character3": 8.58, "character1/background": 8.34, "character2/background": 9.10, "character3/background": 8.58, "character1/surface": 7.45, "character2/surface": 8.13, "character3/surface": 7.67 },
-    },
-  },
-  {
-    id: "white-violet",
-    number: 3,
-    name: "White and violet",
-    intention: "The calmest, the most like trust.",
-    colours: {
-      light: {
-        background: "#FAFAFC",
-        surface: "#FFFFFF",
-        text: "#16131F",
-        muted: "#5A5668",
-        accent: "#5B3FE0",
-        onAccent: "#FFFFFF",
-        accentText: "#16131F",
-        controlBorder: "#16131F",
-        divider: "#E4E3EA",
-        /** No relief: the calm look is flat, and a flat button answers a press by sinking a little instead. */
-        relief: null,
-        /** Peach, powder blue and rose: soft, and far enough from the violet never to be read as a second accent. */
-        character1: "#FFB08A",
-        character2: "#8DB6F2",
-        character3: "#F2A5C4",
-        face: "#16131F",
-        shadow: "#16131F",
-        shadowOpacity: 0.1,
-      },
-      dark: {
-        background: "#121019",
-        surface: "#1D1A28",
-        text: "#F2F1F6",
-        muted: "#ABA7BA",
-        accent: "#9C8BFF",
-        onAccent: "#121019",
-        accentText: "#F2F1F6",
-        controlBorder: "#F2F1F6",
-        divider: "#302C3D",
-        relief: null,
-        character1: "#F4AE8E",
-        character2: "#92B4EC",
-        character3: "#E9A8C3",
-        face: "#121019",
-        shadow: "#08070B",
-        shadowOpacity: 0.45,
-      },
-    },
-    accentEdge: { light: "fill", dark: "fill" },
-    reliefDepth: 0,
-    type: { face: "bricolage", titleWeight: 600, display: { compact: { size: 44, lineHeight: 48 }, expanded: { size: 76, lineHeight: 80 } } },
-    ratios: {
-      light: { "text/background": 17.56, "text/surface": 18.31, "muted/background": 6.79, "muted/surface": 7.08, "onAccent/accent": 6.50, "accent/background": 6.23, "accent/surface": 6.50, "controlBorder/background": 17.56, "controlBorder/surface": 18.31, "divider/background": 1.22, "face/character1": 10.31, "face/character2": 8.81, "face/character3": 9.55, "character1/background": 1.70, "character2/background": 1.99, "character3/background": 1.84, "character1/surface": 1.78, "character2/surface": 2.08, "character3/surface": 1.92 },
-      dark: { "text/background": 16.78, "text/surface": 15.19, "muted/background": 8.05, "muted/surface": 7.29, "onAccent/accent": 6.78, "accent/background": 6.78, "accent/surface": 6.14, "controlBorder/background": 16.78, "controlBorder/surface": 15.19, "divider/background": 1.39, "face/character1": 10.14, "face/character2": 8.94, "face/character3": 9.74, "character1/background": 10.14, "character2/background": 8.94, "character3/background": 9.74, "character1/surface": 9.18, "character2/surface": 8.09, "character3/surface": 8.82 },
-    },
-  },
-];
-
-/**
- * Look 2 was chosen by the founder on 17 Sep 2026. One question is left to the eye before it is finished: which sun at
- * night. Three candidates, drawn side by side at /dev/looks/ink-sun/<screen>?sun=<id>. The founder's rule: the hero hue
- * does not change between the modes, so every candidate stays within a few degrees of the day's sun. This departs from
- * the brief's section 3 ("the night accent is lighter"): two of the three are not lighter, and that is the question.
- *
- * Each ratio is measured on 17 Sep 2026 and recomputed by test/looks.test.ts: the fill against the night ground and the
- * night surface, and the words on it, which are the night ground.
- */
-export const NIGHT_SUN_TRIALS = [
-  {
-    id: "same",
-    hex: "#FFC531",
-    name: "The day's sun",
-    ratios: { "accent/background": 11.71, "accent/surface": 10.46, "onAccent/accent": 11.71 },
-  },
-  {
-    id: "amber",
-    hex: "#F7B51B",
-    name: "More amber",
-    ratios: { "accent/background": 10.21, "accent/surface": 9.12, "onAccent/accent": 10.21 },
-  },
-  {
-    id: "lighter",
-    hex: "#FFD053",
-    name: "Lighter, the current one",
-    ratios: { "accent/background": 12.70, "accent/surface": 11.34, "onAccent/accent": 12.70 },
-  },
-] as const;
-
-export type NightSunTrial = (typeof NIGHT_SUN_TRIALS)[number];
 
 /**
  * The easing curves and springs the motion is built from, as Material publishes them in its own token files, read on

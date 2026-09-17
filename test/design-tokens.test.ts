@@ -1,10 +1,12 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
 import { globSync, readFileSync } from "node:fs";
-import { contrastRatio, NON_TEXT_CONTRAST_MINIMUM, TEXT_CONTRAST_MINIMUM } from "../src/contrast.js";
+import { contrastRatio, NON_TEXT_CONTRAST_MINIMUM, parseHex, relativeLuminance, TEXT_CONTRAST_MINIMUM } from "../src/contrast.js";
 import {
   APP_COLUMN_MAX,
   CARD,
+  CHARACTERS,
+  CHARACTER_SHADOW_OPACITY,
   COLOURS,
   CONTROL,
   CONTROL_COLOURS,
@@ -15,6 +17,7 @@ import {
   PAGE_MARGIN,
   PROSE_MAX_CH,
   RADIUS,
+  RELIEF,
   SPACE,
   TAP_GAP,
   TAP_TARGET,
@@ -35,10 +38,34 @@ import {
 
 const css = readFileSync("app/globals.css", "utf8");
 
+/** OKLCH lightness, chroma and hue, from the published OKLab matrices: "neutral" and "not the accent" are measurable. */
+function oklch(hex: string): { lightness: number; chroma: number; hue: number } {
+  const { r, g, b } = parseHex(hex);
+  const linear = (value: number) => {
+    const c = value / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const [R, G, B] = [linear(r), linear(g), linear(b)];
+  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
+  const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
+  const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
+  const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
+  const bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+  return {
+    lightness: 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    chroma: Math.hypot(a, bb),
+    hue: ((Math.atan2(bb, a) * 180) / Math.PI + 360) % 360,
+  };
+}
+
+const hueDistance = (one: number, two: number) => {
+  const d = Math.abs(one - two) % 360;
+  return d > 180 ? 360 - d : d;
+};
+
 function cssVariable(name: string, inDark = false): string {
-  // The explicit block, because that is the one a person's own choice uses; a separate test pins that the
-  // media query carries the same values.
-  const dark = css.slice(css.indexOf('[data-theme="dark"]'));
+  // Day is the first block; night is the one block behind the device's own question, and there is no other.
+  const dark = css.slice(css.indexOf("@media (prefers-color-scheme: dark)"));
   const source = inDark ? dark : css.slice(0, css.indexOf("@media"));
   const match = source.match(new RegExp(`--${name}:\\s*([^;]+);`));
   assert.ok(match, `--${name} is missing from globals.css${inDark ? " in dark" : ""}`);
@@ -95,24 +122,75 @@ test("the outline we replaced really did fail, so this is not a precaution", () 
 
 /**
  * At night the accent fill is what identifies the active destination of the bar and the primary button, so it is
- * measured against both grounds as a control is. The acid green it replaced was a fourth colour; the tomato of the
- * night is the day's tomato one step lighter, and this pins that it stayed in the family.
+ * measured against both grounds as a control is. The founder's rule of 17 Sep 2026, and the practice of the references:
+ * the hero hue does not change between the modes, and a sun this light needs no night value of its own.
  */
-test("the night accent stands off both grounds on its own, and is the day's tomato, not another colour", () => {
+test("the sun is the same colour by day and by night, and stands off both night grounds on its own", () => {
+  assert.equal(COLOURS.dark.accent, COLOURS.light.accent);
   for (const ground of GROUNDS) {
     const ratio = contrastRatio(COLOURS.dark.accent, COLOURS.dark[ground]);
-    assert.ok(ratio >= NON_TEXT_CONTRAST_MINIMUM, `night accent is ${ratio.toFixed(2)}:1 on the ${ground}`);
+    assert.ok(ratio >= NON_TEXT_CONTRAST_MINIMUM, `the night sun is ${ratio.toFixed(2)}:1 on the ${ground}`);
   }
-  // Same hue family: red channel at its top, green in the middle, blue lowest, by day and by night.
-  for (const appearance of ["light", "dark"] as Appearance[]) {
-    const hex = COLOURS[appearance].accent;
-    const [r, g, b] = [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
-    assert.ok(r > g && g > b && r === 255, `${appearance} accent ${hex} is not in the tomato family`);
-  }
-  assert.doesNotMatch(css, /#C6FF4D/i, "the acid green is gone from the stylesheet");
+  // Chosen by eye and then measured, as the brief asks: this is the figure the founder chose it on.
+  assert.equal(contrastRatio(COLOURS.dark.accent, COLOURS.dark.background).toFixed(2), "11.71");
+  assert.doesNotMatch(css, /#FF5A36|#FF7A5C|#C6FF4D/i, "a colour of a look we no longer wear is still in the stylesheet");
 });
 
-test("three colours per appearance and no fourth background: no joy, no sticker, no day surface", () => {
+/**
+ * By day the sun is 1.45:1 on the ground, so what identifies a button is its ink outline (WCAG 1.4.11), the way Cash App
+ * builds its green "to work with black text". At night the fill alone does it. Both are measured, never assumed.
+ */
+test("a button is identified by its ink outline where the fill is too close to the ground, and the outline is always there", () => {
+  assert.ok(contrastRatio(COLOURS.light.accent, COLOURS.light.background) < NON_TEXT_CONTRAST_MINIMUM);
+  const ui = readFileSync("app/components/ui.ts", "utf8");
+  const primary = ui.slice(ui.indexOf("export const PRIMARY_BUTTON"), ui.indexOf("export const SECONDARY_BUTTON"));
+  assert.match(primary, /\$\{OUTLINE\}/, "the primary button carries the outline that identifies it");
+});
+
+/**
+ * The characters' colours (the art direction brief of 17 Sep 2026, section 5): three and no more, never grey, never the
+ * accent, and a face that reads on every one of them. They live only inside a character: never text, never a background.
+ */
+test("the characters have three colours, none grey, none the sun, and a face that reads on each of them", () => {
+  for (const appearance of ["light", "dark"] as Appearance[]) {
+    const palette = CHARACTERS[appearance];
+    const range = [palette.one, palette.two, palette.three];
+    assert.equal(new Set(range).size, 3);
+    const accent = oklch(COLOURS[appearance].accent);
+    for (const colour of range) {
+      const measured = oklch(colour);
+      assert.ok(measured.chroma >= 0.08, `${colour} is too close to grey`);
+      assert.ok(hueDistance(measured.hue, accent.hue) >= 20, `${colour} reads as the sun`);
+      const face = contrastRatio(palette.face, colour);
+      assert.ok(face >= NON_TEXT_CONTRAST_MINIMUM, `a face on ${colour} is ${face.toFixed(2)}:1`);
+    }
+    assert.ok(CHARACTER_SHADOW_OPACITY[appearance] > 0 && CHARACTER_SHADOW_OPACITY[appearance] < 1);
+  }
+  // Only the character draws with them: never a word, never a ground.
+  const painters = globSync("app/**/*.{ts,tsx}").filter((file) => /var\(--character-/.test(readFileSync(file, "utf8")));
+  assert.deepEqual(painters.sort(), ["app/kit/Character.tsx"]);
+});
+
+/** The ground is neutral, which is what the cream of the poster look was not: its chroma is a tenth of that one's. */
+test("the ground is neutral by day and by night", () => {
+  assert.ok(oklch(COLOURS.light.background).chroma <= 0.02);
+  assert.ok(oklch(COLOURS.dark.background).chroma <= 0.05);
+  // The cream #FFF3D9 the founder rejected measures 0.036, and the indigo #1C1035 beside it 0.070.
+  assert.ok(oklch("#FFF3D9").chroma > 0.03);
+  for (const appearance of ["light", "dark"] as Appearance[]) {
+    const { background, surface } = COLOURS[appearance];
+    assert.ok(Math.abs(oklch(surface).chroma - oklch(background).chroma) <= 0.02, `${appearance} surface is a colour of its own`);
+  }
+});
+
+/** The relief after dark is a shadow under the ground, never the ink: that is what read as a thick white edge. */
+test("the relief is the ink by day and a shadow at night", () => {
+  assert.equal(RELIEF.light, COLOURS.light.text);
+  assert.notEqual(RELIEF.dark, COLOURS.dark.text);
+  assert.ok(relativeLuminance(RELIEF.dark) < relativeLuminance(COLOURS.dark.background));
+});
+
+test("three colours per appearance and no fourth background: no joy, no sticker, no day surface, no look layered over another", () => {
   for (const appearance of ["light", "dark"] as Appearance[]) {
     assert.deepEqual(
       Object.keys(COLOURS[appearance]).sort(),
@@ -121,6 +199,9 @@ test("three colours per appearance and no fourth background: no joy, no sticker,
   }
   assert.doesNotMatch(css, /--joy|--sticker-|--day-/, "a retired background token is still in the stylesheet");
   assert.doesNotMatch(css, /data-look/, "one look, not one layered over another");
+  for (const file of globSync("app/**/*.{ts,tsx}")) {
+    assert.doesNotMatch(readFileSync(file, "utf8"), /\bSTICKER\b/, `${file} still names a sticker of the poster look`);
+  }
   for (const file of globSync("app/**/*.{ts,tsx}")) {
     const source = readFileSync(file, "utf8");
     assert.doesNotMatch(source, /var\(--joy\)|var\(--sticker-|var\(--day-/, `${file} paints a retired background`);
@@ -142,22 +223,31 @@ test("the art direction changed the colours and nothing else", () => {
   assert.equal(SPACE.lg, 16);
 });
 
-test("a person who chooses an appearance beats the phone that disagrees", () => {
-  // Light chosen on a dark phone has to win, which only works if the media query excludes an explicit
-  // choice. Without the :not(), the phone wins and the control looks broken.
-  assert.match(css, /@media \(prefers-color-scheme: dark\)\s*\{\s*:root:not\(\[data-theme="light"\]\)/);
-  assert.match(css, /:root\[data-theme="dark"\]/);
+test("the app follows the device: one night block, nothing chosen, nothing stored", () => {
+  // Apple: "Avoid offering an app-specific appearance setting". Two settings that disagree read as a bug, and the way
+  // to stop them disagreeing is to have one (the art direction brief of 17 Sep 2026, section 7).
+  assert.match(css, /@media \(prefers-color-scheme: dark\)\s*\{\s*:root \{/);
+  assert.doesNotMatch(css, /data-theme/, "an appearance chosen in the product is gone");
+  for (const file of [...globSync("app/**/*.{ts,tsx}"), ...globSync("src/**/*.ts")]) {
+    assert.doesNotMatch(readFileSync(file, "utf8"), /data-theme|viky\.theme/, `${file} still remembers an appearance`);
+  }
 });
 
-test("the stylesheet says what the tokens say, and night says it both ways", () => {
+test("the stylesheet says what the tokens say, by day and by night", () => {
   for (const [role, value] of Object.entries(COLOURS.light)) {
     assert.equal(cssVariable(cssName(role)), value, `day ${role}`);
   }
-  const nightByThePhone = rule(':root:not([data-theme="light"])');
-  const nightByChoice = rule(':root[data-theme="dark"]');
+  const night = rule(":root", css.indexOf("@media (prefers-color-scheme: dark)"));
   for (const [role, value] of Object.entries(COLOURS.dark)) {
-    assert.equal(variableIn(nightByThePhone, cssName(role)), value, `night by the phone ${role}`);
-    assert.equal(variableIn(nightByChoice, cssName(role)), value, `night by choice ${role}`);
+    assert.equal(variableIn(night, cssName(role)), value, `night ${role}`);
+  }
+  for (const appearance of ["light", "dark"] as Appearance[]) {
+    const block = appearance === "light" ? css.slice(0, css.indexOf("@media")) : night;
+    for (const [role, value] of Object.entries(CHARACTERS[appearance])) {
+      assert.equal(variableIn(block, `character-${role === "one" ? "1" : role === "two" ? "2" : role === "three" ? "3" : role}`), value, `${appearance} character ${role}`);
+    }
+    assert.equal(variableIn(block, "character-shadow-opacity"), String(CHARACTER_SHADOW_OPACITY[appearance]));
+    assert.equal(variableIn(block, "control-relief-colour"), RELIEF[appearance], `${appearance} relief`);
   }
 
   assert.equal(cssVariable("tap-target"), `${TAP_TARGET}px`);
@@ -176,12 +266,11 @@ test("the stylesheet says what the tokens say, and night says it both ways", () 
   assert.equal(cssVariable("type-display-leading"), `${DISPLAY_TYPE.display.compact.lineHeight}px`);
   assert.equal(cssVariable("type-mark"), `${DISPLAY_TYPE.mark.size}px`);
   assert.equal(cssVariable("font-title-weight"), String(DISPLAY_TYPE.titleWeight));
-  assert.equal(cssVariable("font-title"), "var(--font-anton)");
+  assert.equal(cssVariable("font-title"), "var(--font-fredoka)");
   assert.equal(cssVariable("font-text"), "var(--font-dm-sans)");
   assert.equal(cssVariable("control-border-width"), `${CONTROL.borderWidth}px`);
-  assert.equal(cssVariable("control-relief"), `0 ${CONTROL.reliefDepth}px 0 var(--control-border)`);
+  assert.equal(cssVariable("control-relief-depth"), `${CONTROL.reliefDepth}px`);
   assert.equal(cssVariable("card-border-width"), `${CARD.borderWidth}px`);
-  assert.equal(cssVariable("card-border"), "var(--divider)");
   assert.equal(cssVariable("nav-bar-height"), `${NAV.barHeight}px`);
   assert.equal(cssVariable("nav-rail-width"), `${NAV.railWidth}px`);
 
@@ -250,24 +339,25 @@ test("the rail begins where Material's expanded breakpoint begins, and the colum
 test("the faces are loaded by next/font and defined on the whole document", () => {
   const fonts = readFileSync("app/fonts.ts", "utf8");
   assert.match(fonts, /from "next\/font\/google"/);
-  assert.match(fonts, /Anton\(\{[^}]*variable: "--font-anton"/);
+  assert.match(fonts, /Fredoka\(\{[^}]*variable: "--font-fredoka"/);
   assert.match(fonts, /DM_Sans\(\{[^}]*variable: "--font-dm-sans"/);
+  assert.doesNotMatch(fonts, /Anton/, "the poster look's face is gone");
   const layout = readFileSync("app/layout.tsx", "utf8");
-  assert.match(layout, /<html[^>]*anton\.variable/);
+  assert.match(layout, /<html[^>]*fredoka\.variable/);
   assert.match(layout, /<html[^>]*dmSans\.variable/);
 });
 
 /**
- * Anton sets exactly one display title per destination and the mark, and nothing else: no section title, no
+ * Fredoka sets exactly one display title per destination and the mark, and nothing else: no section title, no
  * amount, no button, nothing inside a task (structure of 17 Sep, section 12, item 7).
  */
-test("Anton is the display title and the mark, and nothing else", () => {
+test("the title face is the display title and the mark, and nothing else", () => {
   const ui = readFileSync("app/components/ui.ts", "utf8");
-  const anton = (ui.match(/var\(--font-title\)/g) ?? []).length;
-  assert.equal(anton, 2, "DISPLAY and MARK, and no other class, name the title face");
+  const titleFace = (ui.match(/var\(--font-title\)/g) ?? []).length;
+  assert.equal(titleFace, 2, "DISPLAY and MARK, and no other class, name the title face");
   assert.doesNotMatch(ui.slice(ui.indexOf("export const TITLE"), ui.indexOf("export const BODY")), /font-title/);
   for (const file of globSync("app/**/*.tsx")) {
-    assert.doesNotMatch(readFileSync(file, "utf8"), /var\(--font-title\)|font-\[family-name:var\(--font-title\)\]/, `${file} sets Anton itself`);
+    assert.doesNotMatch(readFileSync(file, "utf8"), /var\(--font-title\)|font-\[family-name:var\(--font-title\)\]/, `${file} sets the title face itself`);
   }
 });
 
@@ -284,7 +374,7 @@ test("every page a person can open is drawn through the shell", () => {
   assert.ok(pages.length >= 9, `only ${pages.length} pages found`);
 });
 
-test("Anton is never in a task: no task screen sets a title in the display face (structure, item 7)", () => {
+test("the title face is never in a task: no task screen sets a title in it (structure, item 7)", () => {
   for (const file of globSync("app/components/*.tsx")) {
     const source = readFileSync(file, "utf8");
     assert.doesNotMatch(source, /\bDISPLAY\b/, `${file} is a task and uses the display face`);

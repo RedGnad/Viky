@@ -1,19 +1,23 @@
 "use client";
 import { useSyncExternalStore } from "react";
 import { stripOf, type StripDay } from "@/src/day-states";
+import { Character, type CharacterState } from "./Character";
+import { ArrivalDay } from "./Motion";
 
 /**
- * The days of a gift as one strip, small enough for a card: the image of progress the card carries under its title
- * (Material: "Cards can serve as entry points"; the card of the structure, section 6). One segment per day, in ink and
- * surface only: filled when earned, struck through and faded when it went back, a thick outline today, dashed while
- * still catchable, faded and dashed while going back, a hairline still to come (structure, section 7).
+ * The days of a gift as one strip of small characters: the image of progress the card carries under its title
+ * (Material: "Cards can serve as entry points"; the card of the structure, section 6). Each day is the character of its
+ * state (the art direction brief of 17 Sep 2026, section 5), at the small size, which is the shape and the colour with
+ * no face: a full circle earned, a faded one leaving to the left when it went back, an upright triangle today, the same
+ * leaning while it can still be caught up, a low rounded rectangle still to come.
  *
  * A settled day is drawn from the keeper's record per day when it has one, at its date (D86); a day settled before the
  * record falls back to the counts, earned first (`stripOf`).
  *
  * It is a picture of a sentence the card already says in words ("Counting: 3 of 7 days done, 0 missed."), so it is
  * hidden from a screen reader rather than read twice. Before the first reading a gift has no dated days yet, so the
- * strip is its length, every day still to come, which is what is true.
+ * strip is its length, every day still to come, which is what is true. Each day sits inside the screen's arrival, which
+ * plays it only if it changed since the last visit (app/kit/Motion.tsx).
  */
 
 type Shape = Readonly<{ startDay: number; endDay: number; durationDays: number; creditedDays: number; missedDays: number }>;
@@ -27,35 +31,51 @@ const thisMinute = () => Math.floor(Date.now() / 60_000) * 60_000;
 const noClock = () => 0;
 
 export function DayStrip({
+  id,
   gift,
   catchUpSeconds,
   records = [],
-}: Readonly<{ gift: Shape; catchUpSeconds: number; records?: readonly { day: number; outcome: "earned" | "returned" }[] }>) {
+}: Readonly<{ id: string; gift: Shape; catchUpSeconds: number; records?: readonly { day: number; outcome: "earned" | "returned" }[] }>) {
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   return (
-    <span aria-hidden className="flex h-[10px] w-full gap-[3px]">
+    <span aria-hidden className="flex h-[24px] w-full items-end gap-[4px]">
       {stripOf(gift, catchUpSeconds, nowMs, records).map((day, index) => (
-        <span key={index} data-day={day} className={`relative h-full min-w-0 flex-1 rounded-full ${segment(day)}`}>
-          {day === "returned" ? <span className="absolute inset-x-[2px] top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-[var(--text)]" /> : null}
+        <span key={index} data-day={day} className="flex h-full min-w-0 max-w-[24px] flex-1 items-end">
+          <ArrivalDay gift={id} index={index}>
+            <Character state={characterOf(day)} size="small" className="h-auto w-full" />
+          </ArrivalDay>
         </span>
       ))}
     </span>
   );
 }
 
-function segment(day: StripDay): string {
+/**
+ * A day's state as a character. A day whose window has closed and which nothing has drained yet is drawn as one still
+ * to be judged, leaning, because it has not come back yet and saying otherwise would be inventing it.
+ */
+export function characterOf(day: StripDay): CharacterState {
   switch (day) {
     case "earned":
-      return "bg-[var(--text)]";
+      return "earned";
     case "returned":
-      return "border border-[var(--text)] opacity-45";
+      return "returned";
     case "today":
-      return "border-2 border-[var(--text)]";
+      return "today";
     case "catchable":
-      return "border-2 border-dashed border-[var(--text)]";
     case "aboutToReturn":
-      return "border border-dashed border-[var(--control-border)] opacity-60";
+      return "catchable";
     case "toCome":
-      return "border border-[var(--card-border)]";
+      return "toCome";
   }
+}
+
+/** Every day of a gift as its character, which is what an arrival compares against the last visit. */
+export function charactersOf(
+  gift: Shape,
+  catchUpSeconds: number,
+  nowMs: number,
+  records: readonly { day: number; outcome: "earned" | "returned" }[] = [],
+): CharacterState[] {
+  return stripOf(gift, catchUpSeconds, nowMs, records).map(characterOf);
 }

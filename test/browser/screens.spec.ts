@@ -40,8 +40,10 @@ test.describe("the screens a person meets", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: /already in their name/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /^Offer a gift$/i })).toBeVisible();
-    // The way in for somebody who has an account is a link to You, named for what it does (product structure, S1).
-    await expect(page.getByRole("link", { name: /^Sign in$/i })).toBeVisible();
+    // The one door, in the header rather than in the body, named for both of the things it does (brief, section 7).
+    await expect(page.getByRole("button", { name: /^Sign in or create account$/i })).toBeVisible();
+    // The body asks for one thing and one only: the gift.
+    await expect(page.locator("main").getByRole("link", { name: /^Offer a gift$/i })).toHaveCount(1);
     // No passkey prompt on the home page at all, and nothing claiming a session that does not exist.
     await expect(page.getByRole("button", { name: /Create my account/i })).toHaveCount(0);
     await expect(page.getByText("You are signed in.")).toHaveCount(0);

@@ -12,15 +12,17 @@
  * - Radii, spacing and text sizes come from Material's published scales instead of being picked per screen.
  * - Buttons are fully round and cards take Material's extra large radius, which is the art direction the
  *   funder chose arriving through the tokens: not one measurement above them moved.
- * - The families, the width of a control's outline and the relief under it are variables too, so direction 1
- *   gives one Anton title per destination, DM Sans everywhere else and pressed-key buttons through these classes.
+ * - The families, the width of a control's outline and the relief under it are variables too, so the look gives one
+ *   Fredoka title per destination, DM Sans everywhere else and pressed-key buttons through these classes.
+ * - Links are the ink, underlined (the art direction brief of 17 Sep 2026, section 4): the accent stays the one thing
+ *   that fills a button, so a link is told apart by its underline rather than by a colour of its own.
  */
 
 const TAP = "min-h-[var(--tap-target)] inline-flex items-center justify-center gap-[var(--space-sm)]";
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]";
-/** The outline that identifies a control, and the relief under a button. A hairline and nothing in the calm look. */
+/** The outline that identifies a control, and the relief under a button, which a press collapses (globals.css). */
 const OUTLINE = "border-[length:var(--control-border-width)] border-[var(--control-border)]";
-const RELIEF = "[box-shadow:var(--control-relief)]";
+const RELIEF = "control-relief";
 
 /**
  * The action a screen is asking for. One per screen, at most, so it means something. Shut, it gives the accent back:
@@ -44,13 +46,6 @@ export const CARD =
   "space-y-[var(--space-md)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-lg)]";
 
 /**
- * The names the task screens still use for their cards. Every one of them is the surface card now, so a task
- * rebuilt later on its own line already wears the three colours; the names go when the last task is rebuilt.
- */
-export const STICKER_CARD = CARD;
-export const STICKER = { sun: CARD, pink: CARD, mint: CARD, lilac: CARD } as const;
-
-/**
  * A line the person types into. Its border identifies it, so it carries the control colour, and it sits on a
  * surface rather than on the page ground so a paragraph of yellow never runs under a value being typed.
  */
@@ -63,7 +58,7 @@ export const BODY = "text-[length:var(--type-body)] leading-[var(--type-body-lea
 export const HELP = "text-[length:var(--type-help)] leading-[var(--type-help-leading)] text-[var(--muted)]";
 
 /**
- * The single title a destination opens with, in Anton: once per destination, never in a task, never on an amount
+ * The single title a destination opens with, in Fredoka: once per destination, never in a task, never on an amount
  * or a button (structure of 17 Sep, section 12, item 7).
  */
 export const DISPLAY =
@@ -90,7 +85,7 @@ export const CONTROL_STACK = "flex flex-col gap-[var(--tap-gap)]";
  * with the page margin while the target around it is a full 48 wide.
  */
 export const BACK_LINK =
-  "-ml-[var(--space-md)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center self-start px-[var(--space-md)] text-[length:var(--type-body)] text-[var(--accent-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]";
+  "-ml-[var(--space-md)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center self-start px-[var(--space-md)] text-[length:var(--type-body)] underline underline-offset-[3px] text-[var(--accent-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]";
 
 /**
  * The action a screen is asking for, kept where a thumb is and where the eye ends up, instead of below

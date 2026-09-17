@@ -1,33 +1,21 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ExampleAccountProvider } from "@/src/account/provider";
-import type { Look } from "@/src/design-tokens";
-import { bricolage, fredoka } from "./fonts";
 import type { Forced } from "./lab";
-import { labStylesheet, lookStylesheet } from "./look-css";
+import { appearanceStylesheet } from "./lab-css";
 
 export const LAB_METADATA: Metadata = { robots: { index: false, follow: false } };
 
 /**
- * The frame a look is drawn in: its variables, its title face, and, for the screens of somebody signed in, an account
- * that exists only on screen so the bar of destinations draws. Everything the look changes is scoped to this frame.
+ * The frame a screen is drawn in. The look is the product's, from app/globals.css and the document's own faces, so the
+ * frame adds two things and no more: the appearance a capture asks for, and, for the screens of somebody signed in, an
+ * account that exists only on screen so the bar of destinations draws.
  */
-export function LabFrame({
-  look,
-  appearance,
-  signedIn = false,
-  nightAccent,
-  children,
-}: Readonly<{ look: Look; appearance: Forced; signedIn?: boolean; nightAccent?: string; children: ReactNode }>) {
+export function LabFrame({ appearance, signedIn = false, children }: Readonly<{ appearance: Forced; signedIn?: boolean; children: ReactNode }>) {
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `${labStylesheet()}\n${lookStylesheet(look, nightAccent)}` }} />
-      <div
-        className={`viky-lab ${bricolage.variable} ${fredoka.variable}`}
-        data-lab-look={look.id}
-        data-lab-appearance={appearance}
-        data-lab-relief={look.reliefDepth === 0 ? "none" : "raised"}
-      >
+      <style dangerouslySetInnerHTML={{ __html: appearanceStylesheet() }} />
+      <div className="viky-lab" data-lab-appearance={appearance}>
         {signedIn ? <ExampleAccountProvider>{children}</ExampleAccountProvider> : children}
       </div>
     </>

@@ -2537,3 +2537,32 @@ by the settling pass.
 - **The rehearsal gift.** The founder's new Chess.com account will start near RD 350. While the condition is not live,
   an account that runs Viky may still make a gift from a rating that has not settled, and its step says so in a
   sentence of its own; once `live` is true nobody may, operators included, and a test holds both.
+
+## D88, 17 Sep 2026: one look, "Ink and sun", and what it changed
+
+The art direction was chosen on the product rather than on a mockup. Three looks were built as three sets of tokens on
+the same kit and photographed on the same six screens, day and night, at 390 and 1440; the founder chose look 2, "Ink and
+sun", and then settled two questions the laboratory had left open. This is what the product now carries.
+
+- **The colours.** A cool neutral ground, indigo ink, and the sun `#FFC531` as the one accent. Ground and ink change
+  places between day and night; the sun does not move. The night sun was chosen by eye between three candidates seen on
+  the product, and then measured: 11.71:1 on the night ground, against 10.21:1 for a more amber one and 12.70:1 for a
+  lighter one. So the rule is no longer "the night accent is lighter" but "the hero hue does not change between the
+  modes, and the night value is measured". By day the sun is 1.45:1 on the ground, so an ink outline is what identifies
+  a button (WCAG 1.4.11); at night the fill does it alone.
+- **The type.** Fredoka sets the one display title per destination and the mark; DM Sans sets everything else, amounts
+  and buttons included. Anton is gone with the poster look, and so are looks 1 and 3.
+- **The characters.** The days of a gift are characters, in `app/kit/Character.tsx`: three shapes, flat colour, no
+  outline, a face only at the large size, three secondary colours that live only inside them. They draw the strip on a
+  card, the row of days on a gift's page, and the state of a milestone; a screen where a sum is confirmed stays bare.
+- **The movement.** Everything answers a gesture and nothing runs on a clock (`app/kit/Motion.tsx`): a press, the
+  arrival on a screen replaying what changed since the last visit in under two seconds, a first appearance while
+  scrolling, and a pointer's hover. All of it is cut under reduced motion.
+- **One door.** The page without an account has one action in its body and "Sign in or create account" in its header,
+  which opens the passkey at once and only then a panel. The appearance setting is gone from You: the app follows the
+  device from the first pixel, so two settings can never disagree.
+- **Outside the app.** A gift's link carries an image drawn by the look (`app/api/gift/[id]/preview-image`), naming the
+  funder only when the address carries the link's key, and the icon is the gift character on the sun.
+
+The laboratory stays at `/dev/looks`, behind the design gallery switch that production never sets, because the screens
+behind an account cannot be photographed any other way.

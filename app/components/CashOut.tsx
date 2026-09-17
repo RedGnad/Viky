@@ -17,7 +17,7 @@ import { formatAusd } from "@/src/gift-reader";
 import { feeSentence, WAYS_OUT, type WayOut } from "@/src/rails";
 import { CASH_OUT as W } from "@/src/sentences";
 import { AccountPanel } from "./AccountPanel";
-import { BODY, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, STICKER, TITLE } from "./ui";
+import {BODY, CARD, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE} from "./ui";
 
 /**
  * The way out, rebuilt from docs/design/flows.md (states W1 to W13) on 17 Sep 2026.
@@ -349,7 +349,7 @@ export function CashOut() {
     const way = chosen ?? firstReady ?? null;
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
-        <section className={STICKER.lilac}>
+        <section className={CARD}>
           <h1 className={TITLE}>{closed ? W.closedTitle : W.signInToSee}</h1>
           <p className={BODY}>{closed ? W.closedBody : W.signedOutBody}</p>
           {closed && ready && way ? <p className={HELP}>{W.closedWhere(ready.number, way.name)}</p> : null}
@@ -367,7 +367,7 @@ export function CashOut() {
     ) : null;
 
   const moneyCard = (
-    <section className={STICKER.sun}>
+    <section className={CARD}>
       {/* When the dollar coins are empty and something is ready for a payout service, that figure is the headline:
           a big zero above money that exists is what the audit found on the card branch (its finding 15.5). */}
       <p className={HELP}>{holdings !== null && dollarsHeld === 0n && firstReady ? W.readyLabel(firstReady.name) : W.yourMoney}</p>
@@ -409,7 +409,7 @@ export function CashOut() {
       <div className="flex flex-col gap-[var(--space-xl)]">
         {moneyCard}
         {WAYS_OUT.map((way, index) => (
-          <section key={way.name} className={index === 0 ? STICKER.pink : STICKER.lilac}>
+          <section key={way.name} className={index === 0 ? CARD : CARD}>
             <h2 className={TITLE}>{way.name}</h2>
             <p className={BODY}>{way.where}</p>
             <p className={BODY}>
@@ -451,7 +451,7 @@ export function CashOut() {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         {moneyCard}
-        <section className={STICKER.sun}>
+        <section className={CARD}>
           <h2 className={TITLE}>{W.step1}</h2>
           {stage === "amount" ? (
             <>
@@ -535,7 +535,7 @@ export function CashOut() {
       <div className="flex flex-col gap-[var(--space-xl)]">
         {moneyCard}
         {stage === "sent" && sent ? (
-          <section className={STICKER.mint}>
+          <section className={CARD}>
             <p className={BODY}>{W.sent(sent.number, sent.name, sent.when, sent.reference)}</p>
             <p className={HELP}>{W.sentPays(chosen.name, chosen.pays, !isNative(coin))}</p>
             {sent.cost ? <p className={HELP}>{W.sendingCost(sent.cost)}</p> : null}
@@ -544,7 +544,7 @@ export function CashOut() {
             </a>
           </section>
         ) : ready ? (
-          <section className={STICKER.sun}>
+          <section className={CARD}>
             <p className={BODY}>{W.ready(ready.number)}</p>
             <p className={HELP}>{W.stays(dustInWords(ready.dust, coin.decimals))}</p>
 
@@ -624,7 +624,7 @@ export function CashOut() {
   return (
     <div className="flex flex-col gap-[var(--space-xl)]">
       {moneyCard}
-      <section className={STICKER.lilac}>
+      <section className={CARD}>
         <h2 className={TITLE}>{W.own.title}</h2>
         {stage === "ownSent" && sent ? (
           <>

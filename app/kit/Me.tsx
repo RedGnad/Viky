@@ -6,17 +6,20 @@ import { useAccount } from "@/src/account/provider";
 import { getJson, putJson } from "@/src/client/api";
 import { DISPLAY_CURRENCIES, proposedDisplayCurrency, type DisplayCurrency } from "@/src/display-currency";
 import { ME as W } from "@/src/sentences";
-import { applyThemeChoice, readThemeChoice, subscribeToThemeChoice, themeChoiceOnServer, type ThemeChoice } from "@/src/theme";
-import { AccountPanel } from "../components/AccountPanel";
 import { CARD, HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../components/ui";
 import { ChoiceList } from "./ChoiceList";
 import { Install } from "./Install";
+import { SignInDoor } from "./SignInDoor";
 import { Shell } from "./Shell";
 
 /**
- * Me, in the order the structure gives it (section 4): the display currency, the appearance, "Signed in on this
- * device until 14:20" and sign out, installing Viky, then, folded, the account's code for a payout service, then
- * Help, Privacy, Legal notice, For judges as text links. The countdown is gone: the session is one sentence.
+ * Me, in the order the structure gives it (section 4): the display currency, "Signed in on this device until 14:20" and
+ * sign out, installing Viky, then, folded, the account's code for a payout service, then Help, Privacy, Legal notice,
+ * For judges as text links. The countdown is gone: the session is one sentence.
+ *
+ * No appearance setting: the app follows the device from the first pixel (the art direction brief of 17 Sep 2026,
+ * section 7; Apple: "Avoid offering an app-specific appearance setting"). Without an account, this page carries the
+ * same one door as the page without an account, and nothing else to do.
  */
 const never = () => () => {};
 const deviceLanguage = () => navigator.language;
@@ -25,7 +28,6 @@ const noLanguage = () => undefined;
 export function Me() {
   const { address, signOut, useAnotherAccount } = useAccount();
   const language = useSyncExternalStore(never, deviceLanguage, noLanguage);
-  const theme = useSyncExternalStore(subscribeToThemeChoice, readThemeChoice, themeChoiceOnServer);
   const [chosen, setChosen] = useState<{ address: string; currency: DisplayCurrency | null } | undefined>(undefined);
   const [saved, setSaved] = useState(false);
   const [until, setUntil] = useState<string | null>(null);
@@ -71,8 +73,8 @@ export function Me() {
 
   if (!address) {
     return (
-      <Shell kind="destination" active="me" title={W.title}>
-        <AccountPanel />
+      <Shell kind="destination" active="me" title={W.title} action={<SignInDoor />}>
+        <p className={HELP}>{W.signedOut}</p>
         <Links signedIn={false} />
       </Shell>
     );
@@ -89,16 +91,6 @@ export function Me() {
           options={DISPLAY_CURRENCIES.map((value) => ({ value, label: W.currencies[value], help: value === proposed ? W.proposed : undefined }))}
         />
         {saved ? <p className={HELP} role="status">{W.currencySaved}</p> : null}
-      </section>
-
-      <section className={CARD}>
-        <ChoiceList<ThemeChoice>
-          name="appearance"
-          legend={W.appearance}
-          value={theme}
-          onChange={applyThemeChoice}
-          options={(["light", "dark", "system"] as const).map((value) => ({ value, label: W.appearances[value] }))}
-        />
       </section>
 
       <section className={CARD}>

@@ -219,7 +219,8 @@ export function Arrival({ storageKey, gifts, amount = false, children }: Readonl
         });
         writeLastSeen(key, settled);
       }
-      if (reduced() || earned.length + returned.length === 0) return;
+      // Nothing changed at all: nothing to replay. An amount that changed on its own still counts, last and alone.
+      if (reduced() || (earned.length + returned.length === 0 && !amount)) return;
       const schedule: ArrivalSchedule = arrivalSchedule(earned.length, returned.length, amount, ARRIVAL_TIMINGS);
       const days = new Map<string, { moment: "earned" | "returned"; delay: number }>();
       earned.forEach((id, index) => days.set(id, { moment: "earned", delay: schedule.earnedAt[index] }));
@@ -262,9 +263,9 @@ export function ArrivalDay({ gift, index, children }: Readonly<{ gift: string; i
  * changed. A screen reader reads the value itself, never a number on the way, and a device that asks for reduced motion
  * is only ever shown the value itself.
  */
-export function ArrivalAmount({ from, to, symbol }: Readonly<{ from: number; to: number; symbol: string }>) {
+export function ArrivalAmount({ from, to, symbol, decimals = 2, after = "" }: Readonly<{ from: number; to: number; symbol: string; decimals?: number; after?: string }>) {
   const plan = useContext(ArrivalContext);
-  const format = (value: number) => `${symbol}${value.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const format = (value: number) => `${symbol}${value.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${after}`;
   const [shown, setShown] = useState(to);
   useEffect(() => {
     if (plan.amountAt === null || from === to) return;
@@ -281,7 +282,7 @@ export function ArrivalAmount({ from, to, symbol }: Readonly<{ from: number; to:
   return (
     <>
       <span aria-hidden data-count-settled={shown === to ? "true" : "false"} className="motion-reduce:hidden">
-        {format(Math.round(shown * 100) / 100)}
+        {format(decimals === 0 ? Math.round(shown) : Math.round(shown * 100) / 100)}
       </span>
       <span aria-hidden className="hidden motion-reduce:inline">
         {format(to)}
@@ -363,4 +364,36 @@ export function Gaze({ children }: Readonly<{ children: ReactNode }>) {
       {children}
     </span>
   );
+}
+
+/**
+ * What this device last saw of a number, so an arrival can count from it to what it is now. It is read once, as an
+ * external store, and remembered as soon as it is read, so a second visit finds nothing to replay. A device that keeps
+ * nothing simply never counts.
+ */
+function readSeen(key: string): number | undefined {
+  try {
+    const stored = window.localStorage.getItem(key);
+    return stored === null || !Number.isFinite(Number(stored)) ? undefined : Number(stored);
+  } catch {
+    return undefined;
+  }
+}
+
+const neverChanges = () => () => {};
+const nothingSeen = () => undefined;
+
+export function useLastSeen(key: string, value: number | undefined): number | undefined {
+  const stored = useSyncExternalStore(neverChanges, () => readSeen(key), nothingSeen);
+  // Frozen at the first render, because the effect below is about to write over it.
+  const [seen] = useState(stored);
+  useEffect(() => {
+    if (value === undefined) return;
+    try {
+      window.localStorage.setItem(key, String(value));
+    } catch {
+      // A device that keeps nothing sees every arrival as a first one, which is harmless.
+    }
+  }, [key, value]);
+  return seen;
 }

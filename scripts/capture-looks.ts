@@ -3,14 +3,12 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync 
 import { basename, resolve } from "node:path";
 import { chromium, devices, type Browser, type Page } from "@playwright/test";
 import { FORBIDDEN_WORDS } from "../src/consumer-words";
-import { LOOKS } from "../src/design-tokens";
 import { SCREENS } from "../app/dev/looks/example";
 
 /**
- * The boards the funder chooses a look from (art direction brief, section 9): the six screens of the laboratory in
- * each of the three looks, at 390x844 and 1440x900, in day and in night; a seventh board per look with what is met
- * outside the app (section 7 bis), the link preview at 1200x630 and the icon at 512 and 180; and one short recording of
- * the motion per look, every movement in it answering a gesture (section 6).
+ * The boards the look is read on (art direction brief, section 9): the six screens of the laboratory at 390x844 and
+ * 1440x900, in day and in night, one board per size; and one short recording of the motion, every movement in it
+ * answering a gesture (section 6). One look now, "Ink and sun", which the product itself wears.
  *
  * Run against a built app with the design gallery switched on, never against next dev (its badge lands in pictures):
  *   pnpm build && VIKY_DESIGN_GALLERY=1 pnpm start --port 3107
@@ -41,7 +39,7 @@ const APPEARANCES = [
 /** What the example data says Home holds, which is what the amount must read once the page has run. */
 const HOME_AMOUNT = "€9.54";
 
-type Shot = { look: string; screen: string; size: string; appearance: string; file: string; height: number; checks: string[] };
+type Shot = { screen: string; size: string; appearance: string; file: string; height: number; checks: string[] };
 
 export function pngSize(file: string): { width: number; height: number } {
   const bytes = readFileSync(file);
@@ -67,15 +65,15 @@ export async function settle(page: Page): Promise<void> {
   await page.waitForTimeout(400);
 }
 
-async function captureScreen(browser: Browser, base: string, folder: string, look: string, screen: (typeof SCREENS)[number], size: (typeof SIZES)[number], appearance: (typeof APPEARANCES)[number]): Promise<Shot> {
+async function captureScreen(browser: Browser, base: string, folder: string, screen: (typeof SCREENS)[number], size: (typeof SIZES)[number], appearance: (typeof APPEARANCES)[number]): Promise<Shot> {
   const context = await browser.newContext({ ...size.device, viewport: size.viewport, deviceScaleFactor: 1, colorScheme: appearance.colorScheme, reducedMotion: "reduce" });
   const page = await context.newPage();
   const failures: string[] = [];
   page.on("pageerror", (error) => failures.push(String(error)));
-  const address = `${base}/dev/looks/${look}/${screen.id}`;
+  const address = `${base}/dev/looks/${screen.id}`;
   const response = await page.goto(address);
   await settle(page);
-  const where = `${look} ${screen.id} ${size.name} ${appearance.name}`;
+  const where = `${screen.id} ${size.name} ${appearance.name}`;
   const checks: string[] = [];
 
   if ((response?.status() ?? 0) !== 200) throw new Error(`${where}: the server answered ${response?.status()}`);
@@ -128,38 +126,18 @@ async function captureScreen(browser: Browser, base: string, folder: string, loo
   if (failures.length > 0) throw new Error(`${where}: the page threw ${failures.join("; ")}`);
 
   await page.addStyleTag({ content: "[data-lab-tool] { display: none !important; }" });
-  const firstScreen = resolve(folder, "screens", `${look}-${screen.id}-${size.name}-${appearance.name}-first-screen.png`);
+  const firstScreen = resolve(folder, "screens", `${screen.id}-${size.name}-${appearance.name}-first-screen.png`);
   await page.screenshot({ path: firstScreen });
   const height = await page.evaluate(() => document.documentElement.scrollHeight);
   await page.setViewportSize({ width: size.viewport.width, height: Math.max(height, size.viewport.height) });
   await settle(page);
-  const file = resolve(folder, "screens", `${look}-${screen.id}-${size.name}-${appearance.name}.png`);
+  const file = resolve(folder, "screens", `${screen.id}-${size.name}-${appearance.name}.png`);
   await page.screenshot({ path: file });
   const image = pngSize(file);
   if (image.width !== size.viewport.width) throw new Error(`${where}: the picture came out ${image.width} wide`);
   await context.close();
   console.log(`${basename(file)}  ${checks.join(", ")}`);
-  return { look, screen: screen.id, size: size.name, appearance: appearance.name, file, height: image.height, checks };
-}
-
-/** What is met outside the app, in one look: the link preview and the icon, each at the exact size asked for. */
-async function captureOutside(browser: Browser, base: string, folder: string, look: string): Promise<{ preview: string; icons: string[] }> {
-  const shoot = async (path: string, width: number, height: number, name: string) => {
-    const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1, colorScheme: "light", reducedMotion: "reduce" });
-    const response = await page.goto(`${base}${path}`);
-    if ((response?.status() ?? 0) !== 200) throw new Error(`${path}: the server answered ${response?.status()}`);
-    await settle(page);
-    const file = resolve(folder, "outside", name);
-    await page.screenshot({ path: file, clip: { x: 0, y: 0, width, height } });
-    await page.close();
-    const size = pngSize(file);
-    if (size.width !== width || size.height !== height) throw new Error(`${name} came out ${size.width}x${size.height}`);
-    console.log(`${name}  ${width}x${height}`);
-    return file;
-  };
-  const preview = await shoot(`/dev/looks/${look}/preview`, 1200, 630, `${look}-link-preview-1200x630.png`);
-  const icons = [await shoot(`/dev/looks/${look}/icon?size=512`, 512, 512, `${look}-icon-512.png`), await shoot(`/dev/looks/${look}/icon?size=180`, 180, 180, `${look}-icon-180.png`)];
-  return { preview, icons };
+  return { screen: screen.id, size: size.name, appearance: appearance.name, file, height: image.height, checks };
 }
 
 /** An HTML page of pictures, photographed whole: the board. */
@@ -209,12 +187,12 @@ async function press(page: Page, selector: string, holdMs = 300): Promise<void> 
 }
 
 /**
- * The motion of one look, recorded as a person would meet it, at the width of a phone but with a pointer so the hover
- * can be seen: arriving plays what changed, a pointer circles a character and lifts a button, a press answers, the
- * success of a press brings the gift, scrolling reveals the cards once, and "Replay arrival" plays the arrival again.
- * Kept as a webm and turned into an mp4 and a GIF with ffmpeg.
+ * The motion, recorded as a person would meet it, at the width of a phone but with a pointer so the hover can be seen:
+ * arriving plays what changed, a pointer circles a character and lifts a button, a press answers, the success of a
+ * press brings the gift, scrolling reveals the cards once, and "Replay arrival" plays the arrival again. Kept as a
+ * webm and turned into an mp4 and a GIF with ffmpeg.
  */
-async function recordMotion(browser: Browser, base: string, folder: string, look: string): Promise<string[]> {
+async function recordMotion(browser: Browser, base: string, folder: string): Promise<string[]> {
   const raw = resolve(folder, "motion", ".raw");
   mkdirSync(raw, { recursive: true });
   const context = await browser.newContext({
@@ -226,7 +204,7 @@ async function recordMotion(browser: Browser, base: string, folder: string, look
     recordVideo: { dir: raw, size: { width: 390, height: 844 } },
   });
   const page = await context.newPage();
-  await page.goto(`${base}/dev/looks/${look}/motion?appearance=day`);
+  await page.goto(`${base}/dev/looks/motion?appearance=day`);
   await page.waitForTimeout(2300);
   const character = await page.locator("[data-gaze] svg").nth(2).boundingBox();
   if (character) {
@@ -254,18 +232,18 @@ async function recordMotion(browser: Browser, base: string, folder: string, look
   const video = page.video();
   await context.close();
   const recorded = await video?.path();
-  if (!recorded) throw new Error(`${look}: no recording`);
-  const webm = resolve(folder, "motion", `${look}-motion.webm`);
+  if (!recorded) throw new Error("no recording");
+  const webm = resolve(folder, "motion", "motion.webm");
   renameSync(recorded, webm);
   const outputs = [webm];
   try {
-    const mp4 = resolve(folder, "motion", `${look}-motion.mp4`);
+    const mp4 = resolve(folder, "motion", "motion.mp4");
     execFileSync("ffmpeg", ["-loglevel", "error", "-y", "-i", webm, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", mp4]);
-    const gif = resolve(folder, "motion", `${look}-motion.gif`);
+    const gif = resolve(folder, "motion", "motion.gif");
     execFileSync("ffmpeg", ["-loglevel", "error", "-y", "-i", webm, "-vf", "fps=20,scale=390:-1:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4", gif]);
     outputs.push(mp4, gif);
   } catch (error) {
-    console.warn(`${look}: ffmpeg could not convert the recording (${error instanceof Error ? error.message : error}); the webm stays`);
+    console.warn(`ffmpeg could not convert the recording (${error instanceof Error ? error.message : error}); the webm stays`);
   }
   rmSync(raw, { recursive: true, force: true });
   return outputs;
@@ -275,7 +253,7 @@ async function recordMotion(browser: Browser, base: string, folder: string, look
  * How long an arrival really lasts in the browser, measured by the page itself: from the first frame anything moves to
  * the last, animations and the counting amount alike. It must end under two seconds (brief, section 6).
  */
-async function measureArrival(browser: Browser, base: string, look: string, screen: "home" | "gift"): Promise<number> {
+async function measureArrival(browser: Browser, base: string, screen: "home" | "gift"): Promise<number> {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: "light", reducedMotion: "no-preference" });
   // As text, so the watcher reaches the page exactly as written, with nothing a compiler added to it.
   await context.addInitScript(`
@@ -296,19 +274,19 @@ async function measureArrival(browser: Browser, base: string, look: string, scre
     })();
   `);
   const page = await context.newPage();
-  await page.goto(`${base}/dev/looks/${look}/${screen}`);
+  await page.goto(`${base}/dev/looks/${screen}`);
   await page.waitForTimeout(4500);
   const { start, end } = await page.evaluate(() => (window as unknown as { __arrival: { start: number; end: number } }).__arrival);
   await context.close();
-  if (start === 0) throw new Error(`${look} ${screen}: nothing moved on arrival`);
+  if (start === 0) throw new Error(`${screen}: nothing moved on arrival`);
   return Math.round(end - start);
 }
 
 /** Under reduced motion nothing may move: two pictures of the motion page, taken seconds apart, must be identical. */
-async function stillUnderReducedMotion(browser: Browser, base: string, look: string): Promise<boolean> {
+async function stillUnderReducedMotion(browser: Browser, base: string): Promise<boolean> {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: "light", reducedMotion: "reduce" });
   const page = await context.newPage();
-  await page.goto(`${base}/dev/looks/${look}/motion?appearance=day`);
+  await page.goto(`${base}/dev/looks/motion?appearance=day`);
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(250);
   const early = await page.screenshot();
@@ -324,73 +302,46 @@ async function main() {
   const folder = claimFolder();
   mkdirSync(resolve(folder, "screens"), { recursive: true });
   mkdirSync(resolve(folder, "motion"), { recursive: true });
-  mkdirSync(resolve(folder, "outside"), { recursive: true });
   const browser = await chromium.launch();
   const taken = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   try {
     const shots: Shot[] = [];
-    for (const look of LOOKS) {
-      for (const screen of SCREENS) {
-        for (const size of SIZES) {
-          for (const appearance of APPEARANCES) shots.push(await captureScreen(browser, base, folder, look.id, screen, size, appearance));
-        }
+    for (const screen of SCREENS) {
+      for (const size of SIZES) {
+        for (const appearance of APPEARANCES) shots.push(await captureScreen(browser, base, folder, screen, size, appearance));
       }
     }
-    const find = (look: string, screen: string, size: string, appearance: string) =>
-      shots.find((shot) => shot.look === look && shot.screen === screen && shot.size === size && shot.appearance === appearance) as Shot;
+    const find = (screen: string, size: string, appearance: string) =>
+      shots.find((shot) => shot.screen === screen && shot.size === size && shot.appearance === appearance) as Shot;
 
     const boards: string[] = [];
-    for (const look of LOOKS) {
-      const phone = SCREENS.map((screen) =>
-        APPEARANCES.map((appearance) => picture(find(look.id, screen.id, "390", appearance.name), 1, `${screen.name}, ${appearance.name}`)).join(""),
-      ).join("");
-      const desktop = SCREENS.map(
-        (screen) => `<div class="row">${APPEARANCES.map((appearance) => picture(find(look.id, screen.id, "1440", appearance.name), 0.5, `${screen.name}, ${appearance.name}`)).join("")}</div>`,
+    for (const size of SIZES) {
+      const scale = size.name === "390" ? 1 : 0.5;
+      const rows = SCREENS.map(
+        (screen) => `<div class="row">${APPEARANCES.map((appearance) => picture(find(screen.id, size.name, appearance.name), scale, `${screen.name}, ${appearance.name}`)).join("")}</div>`,
       ).join("<br>");
       boards.push(
         await board(
           browser,
           folder,
-          `board-${look.number}-${look.id}`,
-          `${look.number}. ${look.name}`,
-          `<p>${look.intention} Example data. The dashed line is where the first screen ends.</p><h2>390 x 844</h2><div class="row" style="flex-wrap: wrap">${phone}</div><h2>1440 x 900, at half size</h2>${desktop}`,
+          `board-${size.name}`,
+          `Ink and sun, ${size.viewport.width} x ${size.viewport.height}`,
+          `<p>The six screens, day and night${scale === 1 ? "" : ", at half size"}. Example data. The dashed line is where the first screen ends.</p>${rows}`,
         ),
       );
-    }
-    for (const look of LOOKS) {
-      const { preview, icons } = await captureOutside(browser, base, folder, look.id);
-      const icon = (file: string, size: number) =>
-        `<figure><figcaption>Icon, ${size}, as the phone rounds it and as the file is</figcaption><div class="row"><img src="outside/${basename(file)}" width="${size}" height="${size}" style="border-radius:${Math.round(size * 0.2237)}px"><img src="outside/${basename(file)}" width="${size}" height="${size}"></div></figure>`;
-      boards.push(
-        await board(
-          browser,
-          folder,
-          `board-${look.number}-${look.id}-7-outside`,
-          `${look.number}. ${look.name}: outside the app`,
-          `<p>Where the person meets Viky most (brief, section 7 bis). Example data.</p><h2>The link preview, 1200 x 630</h2><figure><div class="shot" style="width:1200px"><img src="outside/${basename(preview)}" width="1200" height="630"></div></figure><h2>The icon</h2><div class="row">${icon(icons[0], 512)}${icon(icons[1], 180)}</div>`,
-        ),
-      );
-    }
-    for (const screen of SCREENS) {
-      const columns = LOOKS.flatMap((look) => APPEARANCES.map((appearance) => picture(find(look.id, screen.id, "390", appearance.name), 1, `${look.number}. ${look.name}, ${appearance.name}`))).join("");
-      boards.push(await board(browser, folder, `compare-${screen.id}-390`, `${screen.name}, the three looks at 390`, `<div class="row">${columns}</div>`));
     }
 
-    const motion: string[] = [];
-    const still: Record<string, boolean> = {};
     const arrivals: string[] = [];
-    for (const look of LOOKS) {
-      for (const screen of ["home", "gift"] as const) {
-        const ms = await measureArrival(browser, base, look.id, screen);
-        if (ms >= 2000) throw new Error(`${look.id} ${screen}: the arrival lasted ${ms} ms`);
-        arrivals.push(`${look.id} ${screen} ${ms} ms`);
-        console.log(`${look.id} ${screen}: arrival measured at ${ms} ms`);
-      }
-      motion.push(...(await recordMotion(browser, base, folder, look.id)));
-      still[look.id] = await stillUnderReducedMotion(browser, base, look.id);
-      if (!still[look.id]) throw new Error(`${look.id}: something moved under reduced motion`);
-      console.log(`${look.id}: motion recorded, and nothing moves under reduced motion`);
+    for (const screen of ["home", "gift"] as const) {
+      const ms = await measureArrival(browser, base, screen);
+      if (ms >= 2000) throw new Error(`${screen}: the arrival lasted ${ms} ms`);
+      arrivals.push(`${screen} ${ms} ms`);
+      console.log(`${screen}: arrival measured at ${ms} ms`);
     }
+    const motion = await recordMotion(browser, base, folder);
+    const still = await stillUnderReducedMotion(browser, base);
+    if (!still) throw new Error("something moved under reduced motion");
+    console.log("motion recorded, and nothing moves under reduced motion");
 
     const cell = (value: string | number) => String(value).replace(/\|/g, "\\|");
     writeFileSync(
@@ -400,12 +351,10 @@ async function main() {
         "",
         `- Taken ${taken} from ${base}, in Chromium ${browser.version()}, on example data.`,
         "- Each screen was opened in a browser with nothing stored, with the appearance set by the device and reduced motion on, then photographed whole: the viewport was grown to the page's height, so a bar of destinations sits at the bottom of the picture. The file ending in -first-screen is only what fits on the screen.",
-        "- Boards: one per look with its six screens (board-N-look), a seventh per look with the link preview and the icon (board-N-look-7-outside), and one per screen comparing the three looks at 390 (compare-*). The pictures of the link preview and the icon are in outside/, at their exact sizes.",
+        "- Boards: one per size (board-390, board-1440), each holding the six screens in day and in night.",
         `- Arrival, measured in the browser from the first frame anything moved to the last, at 390 with motion allowed, on a first visit: ${arrivals.join(", ")}. Each under the brief's two seconds.`,
         "- In every picture of a screen, the column holds at most one accent surface; the bar of destinations is the accent's second use, as the product structure allows.",
-        `- Motion: one recording per look in motion/, as webm, mp4 and gif. Under reduced motion, two pictures of each motion page taken 4.5 seconds apart were identical and no animation was running: ${Object.entries(still)
-          .map(([look, ok]) => `${look} ${ok ? "yes" : "no"}`)
-          .join(", ")}.`,
+        `- Motion: one recording in motion/, as webm, mp4 and gif. Under reduced motion, two pictures of the motion page taken 4.5 seconds apart were identical and no animation was running: ${still ? "yes" : "no"}.`,
         "",
         "## Boards",
         "",
@@ -417,9 +366,9 @@ async function main() {
         "",
         "## Every screen and what was checked",
         "",
-        "| look | screen | size | appearance | picture height | checks |",
-        "|---|---|---|---|---|---|",
-        ...shots.map((shot) => `| ${[shot.look, shot.screen, shot.size, shot.appearance, shot.height, shot.checks.join("; ")].map(cell).join(" | ")} |`),
+        "| screen | size | appearance | picture height | checks |",
+        "|---|---|---|---|---|",
+        ...shots.map((shot) => `| ${[shot.screen, shot.size, shot.appearance, shot.height, shot.checks.join("; ")].map(cell).join(" | ")} |`),
         "",
       ].join("\n"),
     );
@@ -429,8 +378,7 @@ async function main() {
   }
 }
 
-// Run only when this file is the script, so the trials script can reuse the helpers above.
-if (process.argv[1]?.endsWith("capture-looks.ts")) main().catch((error) => {
+main().catch((error) => {
   console.error("LOOKS_CAPTURE_FAILED:", error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
