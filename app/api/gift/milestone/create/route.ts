@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       throw new GiftApiError("INVALID_AUTHORIZATION", "The signed authorization is malformed");
     }
 
-    const maximumStart = startingCeiling(milestone.shape, standing, target);
+    const maximumStart = startingCeiling(milestone.shape, target);
     const params: MilestoneParams = {
       funder: getAddress(auth.account),
       refundTo: getAddress(refundToRaw),
@@ -150,7 +150,7 @@ export async function POST(request: Request) {
       if (now.rating > maximumStart) {
         throw new GiftApiError(
           "STANDING_MOVED",
-          `They are at ${now.rating} now, above the ${maximumStart} this gift would start from, so it could never be earned. Nothing was taken. Choose the rating again.`,
+          `They are at ${now.rating} now, already at the ${target} this gift is for, so it could never be earned. Nothing was taken. Choose the rating again.`,
           409,
         );
       }

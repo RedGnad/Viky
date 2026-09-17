@@ -112,7 +112,12 @@ test("the plain read answers who and where, and says which failure it met", asyn
     "https://api.chess.com/pub/player/erik": { status: 200, body: { player_id: 41, username: "erik", name: "Erik" } },
     "https://api.chess.com/pub/player/erik/stats": {
       status: 200,
-      body: { chess_daily: { last: { rating: 1502, date: 1789650995, rd: 63 } }, chess_rapid: { last: { rating: 1904, date: 1764957051, rd: 80 } }, chess_bullet: { last: { rating: 1712, date: 1782332751, rd: 42 } } },
+      body: {
+        chess_daily: { last: { rating: 1502, date: 1789650995, rd: 63 } },
+        // A best of its own beside the last reading, and a cadence without one: both measured on 17 Sep 2026.
+        chess_rapid: { last: { rating: 1904, date: 1764957051, rd: 80 }, best: { rating: 1904, date: 1647475349 } },
+        chess_bullet: { last: { rating: 1712, date: 1782332751, rd: 42 }, best: { rating: 2071, date: 1298134178 } },
+      },
     },
     "https://api.chess.com/pub/player/bar": { status: 200, body: { player_id: 347202211, username: "bar" } },
     "https://api.chess.com/pub/player/bar/stats": { status: 200, body: { chess_rapid: { last: { rating: 1705, date: 1775022187 } }, fide: 0 } },
@@ -126,9 +131,9 @@ test("the plain read answers who and where, and says which failure it met", asyn
     const page = pages[url] ?? { status: 503, body: null };
     return new Response(JSON.stringify(page.body), { status: page.status });
   };
-  assert.deepEqual(await readChessStanding("Erik", "rapid", fetcher), { username: "erik", playerId: "41", rating: 1904, ratedAt: 1764957051, rd: 80 });
-  assert.deepEqual(await readChessStanding("Erik", "bullet", fetcher), { username: "erik", playerId: "41", rating: 1712, ratedAt: 1782332751, rd: 42 });
-  assert.deepEqual(await readChessStanding("bar", "blitz", fetcher), { username: "bar", playerId: "347202211", rating: null, ratedAt: null, rd: null });
+  assert.deepEqual(await readChessStanding("Erik", "rapid", fetcher), { username: "erik", playerId: "41", rating: 1904, ratedAt: 1764957051, rd: 80, best: 1904 });
+  assert.deepEqual(await readChessStanding("Erik", "bullet", fetcher), { username: "erik", playerId: "41", rating: 1712, ratedAt: 1782332751, rd: 42, best: 2071 });
+  assert.deepEqual(await readChessStanding("bar", "blitz", fetcher), { username: "bar", playerId: "347202211", rating: null, ratedAt: null, rd: null, best: null });
   await assert.rejects(readChessStanding("nobody-zz9", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "PROFILE_NOT_FOUND");
   await assert.rejects(readChessStanding("down", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "FETCH_FAILED");
   await assert.rejects(readChessStanding("flaky", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "FETCH_FAILED", "a ratings page failing is not a player missing");
@@ -165,5 +170,7 @@ test("a rating has settled below the RD measured on 17 Sep 2026, and not at it, 
   assert.equal(ratingHasSettled(350), false);
   assert.equal(ratingHasSettled(null), false);
   assert.equal(CHESS_MILESTONE.settled, ratingHasSettled, "the register refuses what the reading says has not settled");
-  assert.deepEqual(ratingOfStats({ chess_blitz: { last: { rating: 800, date: 1741705144 } } }, "blitz"), { rating: 800, ratedAt: 1741705144, rd: null }, "a block without an RD has none");
+  assert.deepEqual(ratingOfStats({ chess_blitz: { last: { rating: 800, date: 1741705144 } } }, "blitz"), { rating: 800, ratedAt: 1741705144, rd: null, best: null }, "a block without an RD, or without a best, has neither");
+  // SevyB, the founder's own account on 17 Sep 2026: a rapid rating, no best block at all.
+  assert.deepEqual(ratingOfStats({ chess_rapid: { last: { rating: 383, date: 1789673410, rd: 156 } } }, "rapid"), { rating: 383, ratedAt: 1789673410, rd: 156, best: null });
 });

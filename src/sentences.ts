@@ -100,7 +100,7 @@ export const GIFT_CARD = {
   milestoneMissed: (target: number) => `Did not reach ${target} in time.`,
   /** "$25.00, by 1 Oct 2026" once started; "$25.00, within 30 days of connecting" before. */
   milestoneAmount: (total: string, by: string) => `${total}, ${by}`,
-  milestoneStartTooHigh: (start: number, ceiling: number) => `Started at ${start}, above ${ceiling}: it cannot be earned, and goes back at the end.`,
+  milestoneStartTooHigh: (start: number, target: number) => `Already at ${target} when it was connected (${start}): it cannot count it, and goes back at the end.`,
 } as const;
 
 /** "Léa's", for a name the funder typed. */
@@ -434,17 +434,15 @@ export const MILESTONE_FUND = {
       cadence: "Which rating",
       today: "Where they stand today",
       reach: "They reach",
-      from: "Only if they start from",
       goes: "Goes in their name",
       long: "How long they have",
       ifNot: "If they do not reach it",
     },
-    orUnder: (ceiling: number) => `${ceiling} or under`,
     allBack: "All of it comes back to you",
     howItWorks: (source: string, target: number, time: string) =>
       `Their first reading is taken when they connect ${source}, and that is where they start. After that Viky reads their rating every day, at about ${time} your time, and the first reading at ${target} or more makes all of it theirs at once.`,
-    whyCeiling: (ceiling: number) =>
-      `If they are already above ${ceiling} when they connect, the gift cannot be earned and comes back to you at the end: a gift is for a climb, not for where they already are.`,
+    whyCeiling: (target: number) =>
+      `If they have already reached ${target} when they connect, this gift cannot count it and comes back to you at the end: a gift is for a climb, not for where they already are.`,
     fourteenDays: "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
   },
   account: {
@@ -475,7 +473,7 @@ export const MILESTONE_ACTIONS = {
   connectTitle: (source: string) => `Connect ${source}`,
   givenName: (source: string, username: string) => `Your ${source} name, as it was given: ${username}.`,
   whyCode: (source: string) => `To prove it is yours, you put a short code in your ${source} name for a minute. Nothing to install, no password.`,
-  firstReading: (ceiling: number) => `Your first reading is where you start. If you are above ${ceiling} then, this gift cannot be earned, so connect before you play.`,
+  firstReading: (target: number) => `Your first reading is where you start. If you have already reached ${target} when you connect, this gift cannot count it, so connect before you play.`,
   getCode: "Get my code",
   gettingCode: "One moment",
   proveTitle: (username: string) => `Prove ${username} is yours`,
@@ -484,10 +482,10 @@ export const MILESTONE_ACTIONS = {
   removeAfter: "You can take the code out right after. It works for an hour.",
   newCode: "Get a new code",
   theirsNotConnected: "Opened, not connected yet. If they do not connect within 14 days, it all comes back to you.",
-  startTooHighMine: (start: number, ceiling: number) =>
-    `You started at ${start}, above the ${ceiling} this gift was set up for, so it cannot be earned. It goes back at the end.`,
-  startTooHighTheirs: (start: number, ceiling: number) =>
-    `They started at ${start}, above ${ceiling}, so it cannot be earned. It comes back to you at the end.`,
+  startTooHighMine: (start: number, target: number, funder: string | null) =>
+    `You had already reached ${target} when you connected: you were at ${start}, so this gift cannot count it. Ask ${funder ?? "the person who sent it"} for a new one. It goes back to them at the end.`,
+  startTooHighTheirs: (start: number, target: number, recipient: string | null) =>
+    `${recipient ?? "They"} had already reached ${target} when they connected, at ${start}, so this gift cannot count it. It comes back to you at the end.`,
   overdue: "Time is up. It is being closed, and all of it goes back.",
   opened: "It is yours to earn.",
   take: (amount: string) => `Take ${amount}`,
@@ -501,7 +499,8 @@ export const MILESTONE_ACTIONS = {
   failed: "That did not go through, and nothing was changed. Try again.",
   outcome: {
     started: (start: number, target: number) => `Done. You start at ${start}. Reach ${target} and all of it is yours. You can take the code out of your name now.`,
-    startedAbove: (start: number, ceiling: number) => `Recorded. You start at ${start}, above ${ceiling}, so this gift cannot be earned. It goes back at the end.`,
+    startedAbove: (start: number, target: number) =>
+      `Recorded: you are at ${start}, already at the ${target} this gift is for, so it cannot count it. Ask for a new one; this one goes back at the end.`,
     reached: (rating: number) => `Read: ${rating}. You reached it, and all of it is yours.`,
     notYet: (rating: number, target: number) => `Read: ${rating}. ${target - rating} to go.`,
     already: {

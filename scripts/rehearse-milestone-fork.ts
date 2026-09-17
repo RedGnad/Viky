@@ -96,7 +96,7 @@ async function main() {
       goalType: chessGoalType(cadence),
       shape: 0,
       target: BigInt(target),
-      maximumStart: BigInt(startingCeiling(CHESS_MILESTONE.shape, standing.rating!, target)),
+      maximumStart: BigInt(startingCeiling(CHESS_MILESTONE.shape, target)),
       subject: ZERO_SUBJECT,
       durationDays: days,
       amount,
@@ -150,7 +150,7 @@ async function main() {
     { giftId, purpose: "reach", force: true },
     {
       ...live,
-      plain: async () => ({ username: standing.username, playerId: standing.playerId, rating: target + 6, ratedAt: now, rd: 42 }),
+      plain: async () => ({ username: standing.username, playerId: standing.playerId, rating: target + 6, ratedAt: now, rd: 42, best: target + 6 }),
       attest: async () => ({ username: standing.username, playerId: standing.playerId, name: null, mode: cadence, rating: target + 6, ratedAt: now, rd: 42, observedAt: now + 5, nullifier: keccak256(toHex("fed reading")), proofs: [] }),
     },
   );

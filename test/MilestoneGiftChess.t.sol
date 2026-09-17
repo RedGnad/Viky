@@ -111,6 +111,28 @@ contract MilestoneGiftChessTest {
         require(gift.getGift(id).earned == AMOUNT, "the rapid rating settles it");
     }
 
+    /// @dev What the app signs since D91: one below the target, and nothing tighter. A recipient who simply played
+    ///      between the payment and the connection used to lose everything; only a start already at the target is left
+    ///      to refuse, because it would pay for nothing.
+    function testAStartWellAboveTheDayOfThePaymentStillPays() public {
+        uint256 id = _startedAt(RAPID, TODAY + 60, TARGET - 1); // 1480: two ordinary wins above the day the funder paid
+        VM.warp(START + 2 days);
+        gift.prove(id, _proof(id, _provider("rapid"), TARGET, _now()));
+        require(gift.getGift(id).earned == AMOUNT, "a climb the recipient really made still pays");
+    }
+
+    function testAStartAlreadyAtTheTargetNeverPaysAndComesBack() public {
+        uint256 id = _startedAt(RAPID, TARGET, TARGET - 1);
+        VM.warp(START + 2 days);
+        MilestoneGift.ProofAttestation memory later = _proof(id, _provider("rapid"), TARGET + 40, _now());
+        VM.expectRevert(MilestoneGift.StartTooHigh.selector);
+        gift.prove(id, later);
+        VM.warp(START + uint256(DURATION) * 1 days + 6 hours + 1);
+        gift.expire(id);
+        gift.refundUnearned(id);
+        require(token.balanceOf(funder) == 1_000_000_000, "and every unit goes back to the funder");
+    }
+
     // --- the rule, with a funder's numbers -------------------------------------------------------------
 
     function testTheScreensNumbersPayExactlyWhereTheySay() public {
@@ -195,6 +217,10 @@ contract MilestoneGiftChessTest {
     }
 
     function _startedAt(uint8 goal, uint64 rating) private returns (uint256 id) {
+        return _startedAt(goal, rating, CEILING);
+    }
+
+    function _startedAt(uint8 goal, uint64 rating, uint64 ceiling) private returns (uint256 id) {
         MilestoneGift.MilestoneParams memory p = MilestoneGift.MilestoneParams({
             funder: funder,
             refundTo: funder,
@@ -202,7 +228,7 @@ contract MilestoneGiftChessTest {
             goalType: goal,
             shape: 0,
             target: TARGET,
-            maximumStart: CEILING,
+            maximumStart: ceiling,
             subject: bytes32(0),
             durationDays: DURATION,
             amount: AMOUNT,

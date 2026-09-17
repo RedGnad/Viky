@@ -137,7 +137,7 @@ test("a rating still settling is refused before anything is relayed, to everybod
         goalType: 1,
         shape: SHAPE_CLIMB,
         target: 1954n,
-        maximumStart: 1914n,
+        maximumStart: 1953n,
         subject: ZERO_SUBJECT,
         durationDays: 30,
         amount: 25_000_000n,

@@ -37,6 +37,8 @@ export type MilestoneCondition = Readonly<{
     today: (standing: number, cadence: string) => string;
     /** The one-line value of the check screen's "Today" row. */
     todayRow: (standing: number, cadence: string) => string;
+    /** The best that account ever held in that cadence, under today's reading. Information, never a refusal. */
+    best: (best: number) => string;
     reading: string;
     refusals: Readonly<{
       nameShape: string;
@@ -86,6 +88,7 @@ export const CHESS_MILESTONE: MilestoneCondition = {
     targetLabel: "The rating they reach",
     today: (standing, cadence) => `Today they are at ${standing} in ${cadence.toLowerCase()}.`,
     todayRow: (standing, cadence) => `${standing} in ${cadence.toLowerCase()}`,
+    best: (best) => `Their best ever: ${best}.`,
     reading: "Reading their rating",
     refusals: {
       nameShape: "A Chess.com name has three to twenty-five letters, figures, hyphens or underscores, like hikaru.",

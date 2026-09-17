@@ -48,7 +48,7 @@ function screenMessage(error: unknown): string {
 function outcomeMessage(outcome: MilestoneOutcome, status: MilestoneStatus): string {
   switch (outcome.kind) {
     case "started":
-      return outcome.aboveAccepted ? A.outcome.startedAbove(outcome.rating, status.maximumStart) : A.outcome.started(outcome.rating, status.target);
+      return outcome.aboveAccepted ? A.outcome.startedAbove(outcome.rating, status.target) : A.outcome.started(outcome.rating, status.target);
     case "reached":
       return A.outcome.reached(outcome.rating);
     case "notYet":
@@ -205,7 +205,7 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
           <h2 className={TITLE}>{A.connectTitle(source)}</h2>
           {account.username ? <p className={BODY}>{A.givenName(source, account.username)}</p> : null}
           <p className={HELP}>{A.whyCode(source)}</p>
-          <p className="font-medium">{A.firstReading(status.maximumStart)}</p>
+          <p className="font-medium">{A.firstReading(status.target)}</p>
           <button type="button" onClick={() => void code()} disabled={working} className={PRIMARY_BUTTON}>
             {busy === "code" ? A.gettingCode : account.code ? A.newCode : A.getCode}
           </button>
@@ -217,7 +217,7 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
           <h2 className={TITLE}>{A.proveTitle(account.username)}</h2>
           <p className={BODY}>{milestone?.words.codeSteps}</p>
           <p className="text-center text-[length:var(--type-money)] font-semibold tracking-widest">{account.code}</p>
-          <p className="font-medium">{A.firstReading(status.maximumStart)}</p>
+          <p className="font-medium">{A.firstReading(status.target)}</p>
           <button type="button" onClick={() => void start()} disabled={working} className={PRIMARY_BUTTON}>
             {busy === "starting" ? A.addedBusy : A.added}
           </button>
@@ -227,7 +227,7 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
 
       {readerIsFunder && status.phase === "opened" ? <p className={BODY}>{A.theirsNotConnected}</p> : null}
       {status.phase === "startTooHigh" && status.startReading !== null ? (
-        <p className={BODY}>{mine ? A.startTooHighMine(status.startReading, status.maximumStart) : A.startTooHighTheirs(status.startReading, status.maximumStart)}</p>
+        <p className={BODY}>{mine ? A.startTooHighMine(status.startReading, status.target, funder) : A.startTooHighTheirs(status.startReading, status.target, recipient)}</p>
       ) : null}
       {status.phase === "overdue" ? <p className={BODY}>{A.overdue}</p> : null}
 

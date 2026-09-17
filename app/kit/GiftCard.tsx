@@ -99,6 +99,6 @@ function milestoneStateInWords(status: MilestoneStatus): string {
   if (status.reached) return W.milestoneReached(status.target);
   if (status.finished) return W.milestoneMissed(status.target);
   if (!status.opened) return W.notOpened;
-  if (status.phase === "startTooHigh" && status.startReading !== null) return W.milestoneStartTooHigh(status.startReading, status.maximumStart);
+  if (status.phase === "startTooHigh" && status.startReading !== null) return W.milestoneStartTooHigh(status.startReading, status.target);
   return status.todayReading === null ? W.milestoneNotRead(status.target) : W.milestoneToday(status.todayReading, status.target);
 }

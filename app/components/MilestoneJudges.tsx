@@ -122,6 +122,15 @@ export function MilestoneJudges() {
           short of the target and records nothing. Only a reading at or past the target is attested and sent.
         </li>
         <li>Where the person stood when the funder chose is a plain read too: it sets what the funder signs, with their own eyes, and moves nothing.</li>
+        <li>
+          A gift whose target was already reached when the recipient connected pays nothing: the first reading is the start, a start at or
+          past the target can never settle, and the whole amount goes back at the deadline. The screens say so before and after; nobody else
+          keeps any of it.
+        </li>
+        <li>
+          The climb is measured from the rating on the day the funder paid, read again just before the money moves. A rating that happened to
+          be low that day, after a bad session, makes the climb easier than it looks, and nothing here corrects for that.
+        </li>
         <li>Chess.com publishes no rule for what its name field accepts; the code is six letters so that any name field takes it.</li>
       </ul>
     </section>

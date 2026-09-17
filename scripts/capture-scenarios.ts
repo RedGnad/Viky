@@ -391,7 +391,7 @@ export const SCENARIOS: Scenario[] = [
       await s.api("GET", /\/api\/chess\/standing\?/, ({ hit }) =>
         hit === 1
           ? { status: 404, body: { error: "No rating in that cadence yet.", code: "NO_RATING" } }
-          : { status: 200, body: { username: "lea_plays", mode: "rapid", rating: 1450, rd: 45, settled: true, readAt: new Date().toISOString() } },
+          : { status: 200, body: { username: "lea_plays", mode: "rapid", rating: 1450, rd: 45, best: 1510, settled: true, readAt: new Date().toISOString() } },
         "GET /api/chess/standing, as Chess.com answers: no blitz rating, then 1450 in rapid",
       );
       await s.api(
@@ -423,7 +423,7 @@ export const SCENARIOS: Scenario[] = [
       await s.text("Choose 1500 or more");
       await s.shot("funder milestone", "target too close", "On that step: Rapid, Read their rating, 1470 typed");
       await s.page.getByLabel("The rating they reach").fill("1500");
-      await s.text("only if they start from 1460 or under");
+      await s.text("The gift is theirs when they reach 1500.");
       await s.shot("funder milestone", "today's reading and the target", "On that step: 1500 typed");
       await s.click(exact("Continue"));
       await s.text("How much, and how long do they have?");

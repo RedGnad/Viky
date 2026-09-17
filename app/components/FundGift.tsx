@@ -13,7 +13,7 @@ import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY, isMilestoneRequest } from
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
 import { conditionById, liveConditions, type Condition } from "@/src/conditions";
 import { cadenceOf, milestoneOf, type MilestoneCondition } from "@/src/milestone-conditions";
-import { checkTarget, inPlainWords, MilestoneTermsError, smallestTarget, startingCeiling } from "@/src/milestone-terms";
+import { checkTarget, inPlainWords, MilestoneTermsError, smallestTarget } from "@/src/milestone-terms";
 import { whenInWords } from "@/src/display-currency";
 import { twoDecimalsDown } from "@/src/exit-steps";
 import { CONVERSION_RESERVE, nextFundingStep, paymentArrived } from "@/src/funding-step";
@@ -72,6 +72,8 @@ type Draft = Readonly<{
   standingFor: string;
   /** Whether that reading had settled (D90); an unsettled one only ever reaches an operator's rehearsal gift. */
   standingSettled?: boolean;
+  /** The best that account ever held in the cadence read, when the source gives one: shown, never judged (D91). */
+  standingBest?: number | null;
 }>;
 
 const EMPTY_DRAFT: Draft = {
@@ -780,6 +782,7 @@ export function FundGift() {
           standingReadAt: found.readAt,
           standingFor: standingKey(found.username, cadence.id),
           standingSettled: found.settled,
+          standingBest: found.best,
           target: String(smallestTarget(milestone.shape, found.rating)),
         });
         setReading({ busy: false });
@@ -845,6 +848,7 @@ export function FundGift() {
                 inputMode="numeric"
               />
               {climb.target !== null ? <p className={BODY}>{inPlainWords(milestone.shape, standing, climb.target)}</p> : null}
+              {draft.standingBest !== null && draft.standingBest !== undefined ? <p className={HELP}>{milestone.words.best(draft.standingBest)}</p> : null}
               {draft.standingSettled === false ? <p className="font-medium">{M.detail.settlingRehearsal}</p> : null}
             </div>
           ) : null}
@@ -1021,7 +1025,6 @@ export function FundGift() {
               note: M.detail.readAt(new Date(draft.standingReadAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })),
             },
             { label: M.check.rows.reach, value: String(climb.target), change: "detail" },
-            { label: M.check.rows.from, value: M.check.orUnder(startingCeiling(milestone.shape, draft.standing, climb.target)) },
             { label: M.check.rows.goes, value: gift, note: about, change: "amount" },
             { label: M.check.rows.long, value: milestone.words.durationInWords(days), change: "amount" },
             { label: M.check.rows.ifNot, value: M.check.allBack },
@@ -1038,7 +1041,6 @@ export function FundGift() {
       { label: W.check.rows.firstDay, value: W.check.firstDay(condition.source) },
       { label: W.check.rows.ends, value: W.check.ends(length.days), change: "amount" },
     ];
-    const ceiling = milestone && draft.standing !== null && climb.target !== null ? startingCeiling(milestone.shape, draft.standing, climb.target) : null;
     return (
       <Shell kind="task" back="/" caption={caption("check")} step={W.check.title}>
         <dl className="flex flex-col divide-y divide-[var(--divider)] border-y border-[var(--divider)]">
@@ -1060,10 +1062,10 @@ export function FundGift() {
         </dl>
 
         <section className="flex flex-col gap-[var(--space-sm)]">
-          {milestone && climb.target !== null && ceiling !== null ? (
+          {milestone && climb.target !== null ? (
             <>
               <p className={BODY}>{M.check.howItWorks(condition.source, climb.target, settlingTimeInWords(nowMs))}</p>
-              <p className={BODY}>{M.check.whyCeiling(ceiling)}</p>
+              <p className={BODY}>{M.check.whyCeiling(climb.target)}</p>
             </>
           ) : (
             <p className={BODY}>{W.check.missed(settlingTimeInWords(nowMs))}</p>

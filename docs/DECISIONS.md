@@ -2588,3 +2588,26 @@ behind an account cannot be photographed any other way.
 - Words. The sentences are in `src/sentences.ts`, a name only when the gift carries one, and what was done yesterday is
   the register's word ("yesterday's lesson"), so no sentence names a source. The founder's draft said "$3.57 is hers";
   it is written "is theirs", because Viky is never told anybody's gender and a guess would be wrong on a real person.
+
+## D92, 17 Sep 2026: the highest accepted start is one below the target, and nothing tighter
+
+- Statement: the funder signed a ceiling of today's reading plus ten (D45, `startMargin`). The founder found what that
+  does to an honest recipient: between the payment and the connection they play, two wins put them over the ceiling,
+  and the gift is dead without anybody cheating. On a rating whose RD is 156, as the founder's own new account, one
+  game can do it.
+- What the tight ceiling was for is already done elsewhere: the creation reads the rating, reads it again just before
+  the money moves, and refuses any target under `minimumClimb` (50) above it. The target is therefore already a real
+  climb from the day the funder paid. The only start left worth refusing is one **already at or past the target**,
+  which would pay for nothing.
+- Consequence, in the app alone; the contract only ever insisted on `maximumStart < target`, so nothing about it
+  changes: `startingCeiling` is `target - 1` and `startMargin` is gone. The funder's step says "Today they are at 1420.
+  The gift is theirs when they reach 1500." and no longer names a starting ceiling; the check loses that row and keeps
+  "If they have already reached 1500 when they connect, this gift cannot count it and comes back to you at the end".
+  The recipient's page says it in plain words when it happens: "You had already reached 1500 when you connected: you
+  were at 1520, so this gift cannot count it. Ask Maman for a new one." The funder reads the same fact from their side.
+- The funder's step also shows the best that account ever held in that cadence, under today's reading ("Their best
+  ever: 1510."), as information and never as a refusal. Measured on 17 Sep 2026: `best` is a block beside `last` and a
+  young account has none, so the line is shown only when the page gives one.
+- Tests: a start two ordinary wins above the day of the payment settles as any other; a start already at the target
+  never settles, the money goes back, and the words say why; the funder's sentence. The RD threshold of D90 is
+  untouched.

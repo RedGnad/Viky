@@ -99,6 +99,8 @@ export type ChessStanding = Readonly<{
   rating: number | null;
   /** Unix seconds of the game the rating comes from, as the page gives it. */
   ratedAt: number | null;
+  /** The best rating this account ever held in that cadence, when the page gives one. Shown, never judged. */
+  best: number | null;
   /** The rating's Glicko RD, null when the cadence was never played or the page gives none. */
   rd: number | null;
 }>;
@@ -114,12 +116,21 @@ export function playerOfProfile(body: unknown): { username: string; playerId: st
 }
 
 /** One cadence's rating from an answer of `/pub/player/{name}/stats`, or null when that cadence was never played. */
-export function ratingOfStats(body: unknown, mode: ChessMode): { rating: number; ratedAt: number; rd: number | null } | null {
+export function ratingOfStats(body: unknown, mode: ChessMode): { rating: number; ratedAt: number; rd: number | null; best: number | null } | null {
   if (!body || typeof body !== "object") return null;
   const block = (body as Record<string, unknown>)[`chess_${mode}`];
   const last = block && typeof block === "object" ? (block as Record<string, unknown>).last : undefined;
   if (!last || typeof last !== "object") return null;
   const { rating, date, rd } = last as Record<string, unknown>;
   if (typeof rating !== "number" || !Number.isSafeInteger(rating) || rating <= 0) return null;
-  return { rating, ratedAt: typeof date === "number" && Number.isSafeInteger(date) ? date : 0, rd: typeof rd === "number" && Number.isSafeInteger(rd) && rd >= 0 ? rd : null };
+  // `best` is a block of its own beside `last`, and a young account has none: measured on 17 Sep 2026, SevyB had a
+  // rapid rating and no best at all, while magnuscarlsen, bar and briosa77 had one in every cadence they played.
+  const best = (block as Record<string, unknown>).best;
+  const bestRating = best && typeof best === "object" ? (best as Record<string, unknown>).rating : undefined;
+  return {
+    rating,
+    ratedAt: typeof date === "number" && Number.isSafeInteger(date) ? date : 0,
+    rd: typeof rd === "number" && Number.isSafeInteger(rd) && rd >= 0 ? rd : null,
+    best: typeof bestRating === "number" && Number.isSafeInteger(bestRating) && bestRating > 0 ? bestRating : null,
+  };
 }
