@@ -1,4 +1,5 @@
 import { isMeraError } from "@category-labs/mera";
+import { ApiError } from "../client/api";
 
 export type AccountErrorCode =
   | "PRF_UNAVAILABLE"
@@ -9,6 +10,7 @@ export type AccountErrorCode =
   | "NOT_IN_BROWSER"
   | "UNSUPPORTED_BROWSER"
   | "TIMED_OUT"
+  | "RATE_LIMITED"
   | "UNKNOWN";
 
 /**
@@ -39,6 +41,9 @@ const GUIDANCE: Record<AccountErrorCode, string> = {
   UNSUPPORTED_BROWSER:
     "This browser cannot create a passkey for Viky. Copy the link and open it in Chrome (Android) or Safari (iPhone), then try again.",
   TIMED_OUT: "Your device did not answer. If this page is open inside another app, open it in Chrome or Safari; otherwise check your connection and try again.",
+  // The server's own limit, said as what it is. It used to arrive as UNKNOWN, which told somebody signing back
+  // in to their money that something had gone wrong on our side (design pass, screen 3.3).
+  RATE_LIMITED: "Too many sign-ins in ten minutes. Wait a few minutes, then sign in again.",
   UNKNOWN: "Something went wrong on our side. Nothing was changed. Please try again.",
 };
 
@@ -49,6 +54,10 @@ export function isAccountError(error: unknown): error is AccountError {
 /** Maps any thrown value to an `AccountError`; Mera error codes keep their meaning. */
 export function toAccountError(error: unknown): AccountError {
   if (isAccountError(error)) return error;
+  // The server's sign-in routes refuse a burst with a typed 429; nothing else they say is for the person.
+  if (error instanceof ApiError && (error.code === "RATE_LIMITED" || error.status === 429)) {
+    return new AccountError("RATE_LIMITED", GUIDANCE.RATE_LIMITED, { cause: error });
+  }
   if (isMeraError(error)) {
     switch (error.code) {
       case "PRF_UNAVAILABLE":

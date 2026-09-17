@@ -8,6 +8,7 @@ import { monadChain, waitForFinality } from "@/src/monad/chain";
 import { addMonadGasBuffer } from "@/src/monad-gas";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { relayerClients, relayerPreflight, RelayerError } from "@/src/relayer";
+import { recordSend, sendReference } from "@/src/send-store";
 import { canonicalSignature } from "@/src/signature";
 
 export const runtime = "nodejs";
@@ -113,7 +114,15 @@ export async function POST(request: Request) {
     });
     const receipt = await waitForFinality(clients.publicClient, hash);
     if (receipt.status !== "success") throw new RelayerError("REVERTED", "That could not be sent. Nothing was taken.");
-    return NextResponse.json({ sent: true, hash }, { headers: NO_STORE });
+    // Written down once it is final, so the confirmation has a reference to print (decision 7). The money moved
+    // whether or not this row lands, so a store that refuses is logged rather than turned into a refusal.
+    let reference = sendReference(hash);
+    try {
+      reference = (await recordSend({ account: from, coin: coin.address, destination: getAddress(to), amount: value, txHash: hash })).reference;
+    } catch (error) {
+      console.error(`a send landed and could not be recorded: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    return NextResponse.json({ sent: true, reference, sentAtMs: Date.now() }, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);
   }

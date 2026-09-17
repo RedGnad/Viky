@@ -110,6 +110,26 @@ Still unknown: the order time, the time the transfer arrives, and the euros rece
 now give less than was shown, so nothing is taken), `TOO_SLOW` (the signed terms last fifteen minutes),
 `ALREADY_UNDER_WAY` (one way out at a time per account, so two live signatures for the same money cannot exist).
 
+## Before deploying the build of 17 Sep 2026: two new tables
+
+The way out records every send in `viky_sends`, and each account keeps its display currency in `viky_accounts`.
+Both are created by the migration, which must run against the production database before that build serves
+anybody, exactly as `viky_exits` had to (D80):
+
+```
+vercel env pull .env.ops.local --environment=production
+set -a && source .env.ops.local && set +a && pnpm db:migrate
+```
+
+Never `.env.production.local`: Next loads that file itself under `next build` and `next start`, so a local
+production server, the capture run included, would quietly read the production database. `.env.ops.local` is a
+name Next never loads and git ignores. `src/load-env.ts` reads `.env.local` then `.env`, and a value already in
+the process environment wins, which is why the production values are exported into the shell first.
+
+`pnpm db:migrate` is idempotent and prints the six tables it made or found. Neither table is read before a send;
+a missing `viky_sends` is logged and the send still answers its reference, and a missing `viky_accounts` leaves
+every account on the currency its device proposes.
+
 ## 1. The pinned exchange points at a contract somebody else owns
 
 `ExitRouter` never calls an exchange without checking, in the same transaction, that it still forwards where it

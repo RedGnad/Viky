@@ -81,14 +81,14 @@ export async function POST(request: Request) {
       if (range.tooSmall) {
         throw new GiftApiError(
           "BELOW_PAYOUT_MINIMUM",
-          `The smallest sale ${way.name} takes today is ${asset.minFiat.toFixed(2)} ${asset.currency}. This is worth about ${range.fiat.toFixed(2)} ${asset.currency}. You can still move it to another account of yours.`,
+          `${way.name} takes at least ${asset.minFiat.toFixed(2)} ${asset.currency}, about $${(asset.minFiat / asset.price).toFixed(2)} today. Send at least that.`,
           409,
         );
       }
       if (range.tooLarge) {
         throw new GiftApiError(
           "ABOVE_PAYOUT_MAXIMUM",
-          `The largest sale ${way.name} takes today is ${asset.maxFiat.toFixed(2)} ${asset.currency}. Take it out in two goes.`,
+          `${way.name} takes at most ${asset.maxFiat.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${asset.currency} in one sale, about $${(asset.maxFiat / asset.price).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. Send less than that.`,
           409,
         );
       }

@@ -205,7 +205,7 @@ export async function withdrawEarned(input: { account: LocalAccount; giftId: str
  * a contract call and never needs any MON, which on Monad is not a nicety: an account below the 10 MON
  * reserve cannot make a contract call at all (D53).
  */
-export async function sendOwnMoney(input: { account: LocalAccount; to: Hex; amount: bigint; coin?: Coin }): Promise<{ sent: boolean; hash: Hex }> {
+export async function sendOwnMoney(input: { account: LocalAccount; to: Hex; amount: bigint; coin?: Coin }): Promise<{ sent: boolean; reference: string; sentAtMs: number }> {
   // Defaults to what a gift holds. Since the way out exists an account can hold a second stablecoin too, and
   // each one is signed under its own domain: a signature made under the wrong name or version is simply
   // refused by the token, so the coin decides the domain rather than a constant (D77).

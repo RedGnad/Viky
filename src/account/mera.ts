@@ -18,15 +18,38 @@ import { accountError, passkeyEnvironmentProblem, toAccountError } from "./error
 
 export const CREDENTIAL_STORAGE_KEY = "viky.credential";
 export const RELYING_PARTY_NAME = "Viky";
-const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
-/** How long an unused signing session stays open. Shown on screen, so the person knows what is open. */
-export const SESSION_IDLE_MINUTES = IDLE_TIMEOUT_MS / 60_000;
+/**
+ * How long an unused signing session stays open, in minutes, on an ordinary screen and on a money screen.
+ *
+ * Ten was the only length, and it was shorter than the task it guarded: placing an order with a payout service
+ * or paying by card takes longer, and the session closed under the person mid way (D74, D80). Money screens ask
+ * for thirty (decision 2 of the design pass, 17 Sep 2026), everything else keeps ten. The length in force is
+ * shown on screen through `sessionIdleMinutes()`, so the sentence and the timer can never disagree.
+ */
+export const DEFAULT_IDLE_MINUTES = 10;
+export const MONEY_SCREEN_IDLE_MINUTES = 30;
 
+let idleMinutes = DEFAULT_IDLE_MINUTES;
 let session: Secp256k1SigningSession | undefined;
 let account: LocalAccount | undefined;
 let idleTimer: ReturnType<typeof setTimeout> | undefined;
 let idleDeadlineMs: number | undefined;
 const listeners = new Set<() => void>();
+
+/** The length in force now, for a screen to print beside its countdown. */
+export function sessionIdleMinutes(): number {
+  return idleMinutes;
+}
+
+/**
+ * Changes how long the open session may stay unused, and re-arms it at once when one is open. A money screen
+ * sets thirty on entry and puts ten back on leaving, so the longer length never outlives the screen that needed it.
+ */
+export function setSessionIdleMinutes(minutes: number): void {
+  idleMinutes = minutes;
+  if (account) armIdleTimer();
+  notify();
+}
 
 function requireBrowser(): void {
   if (typeof window === "undefined") throw accountError("NOT_IN_BROWSER");
@@ -86,8 +109,9 @@ export function hasStoredCredential(): boolean {
 
 function armIdleTimer(): void {
   if (idleTimer) clearTimeout(idleTimer);
-  idleDeadlineMs = Date.now() + IDLE_TIMEOUT_MS;
-  idleTimer = setTimeout(signOut, IDLE_TIMEOUT_MS);
+  const timeoutMs = idleMinutes * 60_000;
+  idleDeadlineMs = Date.now() + timeoutMs;
+  idleTimer = setTimeout(signOut, timeoutMs);
 }
 
 /**

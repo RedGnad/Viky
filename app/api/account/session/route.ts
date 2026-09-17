@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   try {
     const rate = checkRateLimit("session", request);
     if (!rate.allowed) {
-      return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
+      return NextResponse.json({ error: "Too many sign-ins in ten minutes. Wait a few minutes, then sign in again.", code: "RATE_LIMITED" }, { status: 429, headers: rateLimitResponseHeaders(rate) });
     }
     const body = await readJsonBody<{ challenge?: string; signature?: string }>(request, 8 * 1_024);
     const session = await issueAccountAuthSession({

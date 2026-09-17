@@ -15,9 +15,10 @@ import { checkPasskeySupport, passkeyFallbackWords, type PasskeySupport } from "
  *
  * `returning` swaps which of the two leads. Somebody whose session closed in the middle of paying for a gift is not
  * making an account, they are coming back to one, and making a second would leave the gift and the payment on the
- * first (D74).
+ * first (D74). `signInOnly` goes further, for a session that closed on a money screen: signing in is the only thing
+ * offered, because there the other two controls can only strand the money (flows W11, 17 Sep 2026).
  */
-export function AccountPanel({ returning = false }: Readonly<{ returning?: boolean }>) {
+export function AccountPanel({ returning = false, signInOnly = false }: Readonly<{ returning?: boolean; signInOnly?: boolean }>) {
   const { address, hasCredential, status, error, createAccount, signIn, signOut, useAnotherAccount, clearError } = useAccount();
   const [displayName, setDisplayName] = useState("");
   const [naming, setNaming] = useState(false);
@@ -105,7 +106,12 @@ export function AccountPanel({ returning = false }: Readonly<{ returning?: boole
 
   return (
     <section className={STICKER.sun}>
-      {returning ? (
+      {signInOnly ? (
+        <>
+          {signInButton}
+          <p className={HELP}>The same passkey you made your account with.</p>
+        </>
+      ) : returning ? (
         <>
           {signInButton}
           <p className={HELP}>
@@ -121,7 +127,7 @@ export function AccountPanel({ returning = false }: Readonly<{ returning?: boole
         </>
       )}
 
-      {hasCredential ? (
+      {hasCredential && !signInOnly ? (
         <button
           type="button"
           onClick={useAnotherAccount}

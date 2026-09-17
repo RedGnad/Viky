@@ -397,7 +397,7 @@ export const SCENARIOS: Scenario[] = [
   },
 ];
 
-/** The way out, with the figures of the first real conversion of 16 Sep where a figure was needed. */
+/** The way out, rebuilt on flows W1 to W13, with the figures of the first real conversion of 16 Sep where a figure was needed. */
 function withdrawal(): Scenario[] {
   const WAY = `${HOME}, with money in the account: Take it out`;
   const QUOTE = {
@@ -419,49 +419,60 @@ function withdrawal(): Scenario[] {
       nonce: `0x${"11".repeat(32)}`,
     },
   };
+  /** The ECB's rates of 16 Sep 2026, as the rates route answers them, read at the time of the run. */
+  const RATES = { rates: { date: "2026-09-16", usdPerEur: 1.1537, eurPerUsd: 1 / 1.1537, xofPerUsd: 655.957 / 1.1537, readAtMs: Date.now() } };
   const before = { AUSD: 20_994_751n, USDC: 0n, MON: 0n };
   const after = { AUSD: 10_994_751n, USDC: 9_999_586n, MON: 0n };
 
-  /** From home to a quote on screen, which every refusal after the quote starts from. */
-  const toQuote = async (s: Session) => {
+  const gifts = (s: Session) => s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
+  const rates = (s: Session) => s.api("GET", "/api/rates", () => ({ status: 200, body: RATES }), "GET /api/rates");
+  const currency = (s: Session, chosen: "EUR" | "XOF" | null) =>
+    s.api("GET", "/api/account/preferences", () => ({ status: 200, body: { displayCurrency: chosen } }), "GET /api/account/preferences");
+  const quoteOk = (s: Session) => s.api("POST", "/api/exit/quote", () => ({ status: 200, body: QUOTE }), "POST /api/exit/quote");
+  /** From home to the review of step 1, which every refusal after the price starts from. */
+  const toReview = async (s: Session) => {
     await s.signIn();
     await s.click("Take it out");
-    await s.click("Use Ramp");
-    await s.page.getByLabel("How much to change").fill("10");
-    await s.click("See what you would get");
+    await s.click("Send to my bank");
+    await s.page.getByLabel("How much do you want to send to your bank?").fill("10");
+    await s.click("See what you will get");
+    await s.text("You will get at least 9.99 to send.");
   };
-  const quoteOk = (s: Session) => s.api("POST", "/api/exit/quote", () => ({ status: 200, body: QUOTE }), "POST /api/exit/quote");
-  const gifts = (s: Session) => s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
 
   return [
     {
-      name: "withdrawal: the base screen with AUSD alone, and the choice of rail",
+      name: "withdrawal: the base screen, dollars",
       run: async (s) => {
         await s.reset(before);
         await gifts(s);
+        await rates(s);
+        await currency(s, null);
         await s.signIn();
         await s.click("Take it out");
-        await s.text("Ways to be paid");
-        await s.shot("withdrawal", "base, AUSD alone", `${WAY}`);
-        await s.shot("withdrawal", "choice of rail", `${WAY}, then scroll to "Ways to be paid"`, { scrollTo: "Ways to be paid" });
+        await s.text("Send to my bank");
+        await s.shot("withdrawal", "base", `${WAY}`);
       },
     },
     {
-      name: "withdrawal: the base screen with AUSD and USDC",
-      run: async (s) => {
-        await s.reset(after);
-        await gifts(s);
-        await s.signIn();
-        await s.click("Take it out");
-        await s.text("Also in your account:");
-        await s.shot("withdrawal", "base, AUSD and USDC", `${WAY}, after a change has left USDC in the account`);
-      },
-    },
-    {
-      name: "withdrawal: change, quote, changed, identifier, exact amount, sent",
+      name: "withdrawal: the base screen, read in euros",
       run: async (s) => {
         await s.reset(before);
         await gifts(s);
+        await rates(s);
+        await currency(s, "EUR");
+        await s.signIn();
+        await s.click("Take it out");
+        await s.text(/rate of 16 Sep\b/);
+        await s.shot("withdrawal", "base, read in euros", `${WAY}, on an account whose display currency is the euro`);
+      },
+    },
+    {
+      name: "withdrawal: step 1, the review, ready with steps 2 and 3, copied, pasted, the review before sending, sent",
+      run: async (s) => {
+        await s.reset(before);
+        await gifts(s);
+        await rates(s);
+        await currency(s, null);
         await quoteOk(s);
         await s.api("POST", "/api/exit/prepare", () => ({ status: 200, body: PREPARED }), "POST /api/exit/prepare");
         await s.api("POST", "/api/exit/relay", () => {
@@ -470,82 +481,119 @@ function withdrawal(): Scenario[] {
         }, "POST /api/exit/relay");
         await s.api("POST", "/api/send", () => {
           s.holdings = { AUSD: after.AUSD, USDC: 0n, MON: 0n };
-          return { status: 200, body: { sent: true, hash: HASH } };
+          return { status: 200, body: { sent: true, reference: "7599b203", sentAtMs: Date.now() } };
         }, "POST /api/send");
 
         await s.signIn();
         await s.click("Take it out");
-        await s.click("Use Ramp");
-        await s.page.getByLabel("How much to change").waitFor({ state: "visible" });
-        await s.shot("withdrawal", "change, before the quote", `${WAY}, Use Ramp`);
+        await s.click("Send to my bank");
+        await s.page.getByLabel("How much do you want to send to your bank?").waitFor({ state: "visible" });
+        await s.shot("withdrawal", "step 1, how much", `${WAY}, Send to my bank`);
 
-        await s.page.getByLabel("How much to change").fill("10");
-        await s.click("See what you would get");
-        await s.text("You would get at least $9.995586 of USDC on Monad.");
-        await s.shot("withdrawal", "quote shown", `${WAY}, Use Ramp, type 10, See what you would get`);
+        await s.page.getByLabel("How much do you want to send to your bank?").fill("10");
+        await s.click("See what you will get");
+        await s.text("You will get at least 9.99 to send.");
+        await s.shot("withdrawal", "step 1, the review", `${WAY}, Send to my bank, type 10, See what you will get`);
 
-        await s.click(/^Change \$/);
-        await s.text("Your money is changed and it is in your own account.", 40_000);
-        await s.shot("withdrawal", "changed", `${WAY}, Use Ramp, type 10, See what you would get, Change $10.00`);
+        await s.click("Get 9.99 ready");
+        await s.text("Ready: 9.99", 40_000);
+        await s.shot("withdrawal", "ready, steps 2 and 3", `${WAY}, Send to my bank, type 10, See what you will get, Get 9.99 ready`);
 
-        await s.click("Copy your identifier");
-        await s.text("Copied and ready to paste.");
-        await s.shot("withdrawal", "identifier step", "After the change: Copy your identifier", { scrollTo: "Copied and ready to paste." });
+        await s.click(exact("Copy"));
+        await s.text(exact("Copied"));
+        await s.shot("withdrawal", "the code copied", "On the ready screen: Copy", { scrollTo: /^Copied$/ });
 
-        await s.page.getByPlaceholder("Paste the identifier they give you").fill(DEPOSIT);
-        await s.click("Send it to Ramp");
-        await s.page.getByLabel("How much leaves").waitFor({ state: "visible" });
-        await s.shot("withdrawal", "send with the exact amount", "After the change: paste the identifier Ramp gives, Send it to Ramp");
+        await s.page.getByLabel("Paste the code Ramp gives you to send to").fill(DEPOSIT);
+        await s.shot("withdrawal", "step 3, the code pasted", "On the ready screen: paste the code Ramp gives", { scrollTo: "Step 3 of 3: Send it" });
 
-        await s.click(/^Send \$/);
-        await s.text(/^Sent\./, 40_000);
-        await s.shot("withdrawal", "sent", "On the send: Send $9.999586");
+        await s.click("Send 9.99 to Ramp");
+        await s.text("Send 9.99 to Ramp. This cannot be undone.");
+        await s.shot("withdrawal", "the review before sending", "After pasting: Send 9.99 to Ramp", { scrollTo: "This cannot be undone." });
+
+        await s.click(exact("Send"));
+        await s.text(/^Sent 9\.99 to Ramp on /, 40_000);
+        await s.shot("withdrawal", "sent", "On the review: Send");
       },
     },
     {
-      name: "withdrawal refusal: not enough",
+      name: "withdrawal: reloaded with 9.99 ready, resumed at step 2",
       run: async (s) => {
-        await s.reset(before);
+        await s.reset(after);
         await gifts(s);
-        await s.api("POST", "/api/exit/quote", () => ({ status: 409, body: { error: "That is more than you have.", code: "NOT_ENOUGH" } }), "POST /api/exit/quote");
-        await toQuote(s);
-        await s.text("That is more than you have.");
-        await s.shot("withdrawal", "refused, not enough", `${WAY}, Use Ramp, type 10, See what you would get`, { scrollTo: "That is more than you have." });
+        await rates(s);
+        await currency(s, null);
+        await s.signIn();
+        await s.text("9.99 of it is ready to send to Ramp.");
+        await s.shot("withdrawal", "home with 9.99 ready", `${HOME}, after a change left 9.99 ready for Ramp`);
+        await s.click("Take it out");
+        await s.text("Ready: 9.99");
+        await s.shot("withdrawal", "resumed at step 2", `${WAY}, after a change left 9.99 ready: the steps open on the second`);
       },
     },
     {
-      name: "withdrawal refusal: the rate moved",
+      name: "withdrawal: the card branch, resumed at step 2",
+      run: async (s) => {
+        // Above the eleven the account cannot spend (the reserve), 138.436143573911778147 of the chain's own coin.
+        await s.reset({ AUSD: 0n, USDC: 0n, MON: 11_000_000_000_000_000_000n + 138_436_143_573_911_778_147n });
+        await gifts(s);
+        await rates(s);
+        await currency(s, "XOF");
+        // What 138.43 is worth, as the price answers it: about $3.24 at the rate measured on 14 Sep 2026.
+        await s.api("POST", "/api/fund/quote", () => ({ status: 200, body: { output: "3240000", minOut: "3230000", to: ESCROW, data: "0x", value: "0" } }), "POST /api/fund/quote");
+        await s.signIn();
+        await s.click("Take it out");
+        await s.text("Ready: 138.43");
+        await s.text(/about \$3\.24/);
+        await s.shot("withdrawal", "the card branch, ready", `${WAY}, with only what the card service buys in the account, on an account whose display currency is the CFA franc`);
+      },
+    },
+    {
+      name: "withdrawal refusal: more than the account holds",
       run: async (s) => {
         await s.reset(before);
         await gifts(s);
+        await rates(s);
+        await currency(s, null);
+        await s.signIn();
+        await s.click("Take it out");
+        await s.click("Send to my bank");
+        await s.page.getByLabel("How much do you want to send to your bank?").fill("25");
+        await s.text("That is more than your $20.99.");
+        await s.shot("withdrawal", "refused, more than the account holds", `${WAY}, Send to my bank, type 25`, { scrollTo: "That is more than your $20.99." });
+      },
+    },
+    {
+      name: "withdrawal refusal: the price moved",
+      run: async (s) => {
+        await s.reset(before);
+        await gifts(s);
+        await rates(s);
+        await currency(s, null);
         await quoteOk(s);
-        await s.api("POST", "/api/exit/prepare", () => ({
-          status: 409,
-          body: { error: "The rate moved, so this would pay you less than you were shown. Nothing was taken. Ask for a new quote.", code: "RATE_MOVED" },
-        }), "POST /api/exit/prepare");
-        await toQuote(s);
-        await s.click(/^Change \$/);
-        await s.text(/The rate moved/);
-        await s.shot("withdrawal", "refused, the rate moved", `${WAY}, Use Ramp, type 10, See what you would get, Change $10.00`, { scrollTo: /The rate moved/ });
+        await s.api("POST", "/api/exit/prepare", () => ({ status: 409, body: { error: "The rate moved, so this would have paid you less than you were shown. Nothing was taken.", code: "RATE_MOVED" } }), "POST /api/exit/prepare");
+        await toReview(s);
+        await s.click("Get 9.99 ready");
+        await s.text("The price changed before you confirmed. Nothing was taken.");
+        await s.shot("withdrawal", "refused, the price moved", `${WAY}, Send to my bank, type 10, See what you will get, Get 9.99 ready`, { scrollTo: "See the new price" });
       },
     },
     {
-      name: "withdrawal refusal: the exchange refuses, three times",
+      name: "withdrawal refusal: the price kept changing, three times",
       run: async (s) => {
         await s.reset(before);
         await gifts(s);
+        await rates(s);
+        await currency(s, null);
         await quoteOk(s);
         await s.api("POST", "/api/exit/prepare", () => ({ status: 200, body: PREPARED }), "POST /api/exit/prepare");
         await s.api("POST", "/api/exit/relay", () => ({
           status: 409,
           body: { error: "The exchange's price moved while you were signing. Nothing was taken. Viky will ask for a new one.", code: "QUOTE_STALE" },
         }), "POST /api/exit/relay");
-        await toQuote(s);
-        await s.click(/^Change \$/);
-        await s.text(/The exchange's price moved/, 60_000);
-        await s.shot("withdrawal", "refused, the exchange refused three times", `${WAY}, Use Ramp, type 10, See what you would get, Change $10.00 (asked again twice by itself)`, {
-          scrollTo: /The exchange's price moved/,
-        });
+        await toReview(s);
+        await s.click("Get 9.99 ready");
+        await s.text("The price kept changing and Viky stopped after three tries.", 60_000);
+        await s.shot("withdrawal", "refused, the price kept changing", `${WAY}, Send to my bank, type 10, See what you will get, Get 9.99 ready (asked again twice by itself)`, { scrollTo: /^Try again$/ });
       },
     },
     {
@@ -553,44 +601,41 @@ function withdrawal(): Scenario[] {
       run: async (s) => {
         await s.reset(before);
         await gifts(s);
+        await rates(s);
+        await currency(s, null);
         await quoteOk(s);
         await s.api("POST", "/api/exit/prepare", () => ({ status: 401, body: { error: "Account authentication is required", code: "SIGN_IN_REQUIRED" } }), "POST /api/exit/prepare");
-        await toQuote(s);
-        await s.click(/^Change \$/);
+        await toReview(s);
+        await s.click("Get 9.99 ready");
         await s.text("Your session closed while you were away", 30_000);
-        await s.shot("withdrawal", "refused, the session closed", `${WAY}, Use Ramp, type 10, See what you would get, Change $10.00, with the server session expired`);
+        await s.shot("withdrawal", "the session closed", `${WAY}, Send to my bank, type 10, See what you will get, Get 9.99 ready, with the server session expired`);
       },
     },
     {
-      name: "withdrawal: the session closing on its own, seen from the way out",
+      name: "withdrawal: the session closed on its own, with 9.99 ready",
+      run: async (s) => {
+        await s.reset(after);
+        await gifts(s);
+        await rates(s);
+        await currency(s, null);
+        // A direct navigation opens the page with no signing session, which is what a session closing on its own leaves.
+        await s.goto("/cash-out");
+        await s.text("Sign in to see your money");
+        await s.shot("withdrawal", "session closed on its own", "The way out opened with no session (what thirty quiet minutes leave), with 9.99 ready");
+      },
+    },
+    {
+      name: "withdrawal: to another Viky account of mine",
       run: async (s) => {
         await s.reset(before);
         await gifts(s);
+        await rates(s);
+        await currency(s, null);
         await s.signIn();
         await s.click("Take it out");
-        await s.click("Close it now");
-        await s.settle();
-        await s.shot("withdrawal", "session closed on its own", `${WAY}, Close it now (what ten quiet minutes do on their own)`);
-      },
-    },
-    {
-      name: "withdrawal: sending the network's own coin",
-      run: async (s) => {
-        await s.reset({ AUSD: 0n, USDC: 0n, MON: 138_436_143_573_911_778_147n });
-        await gifts(s);
-        // The home page offers "Take it out" only when the account holds AUSD, so somebody holding only the
-        // network's own coin has no link to the way out at all. Reached the only way they could: by its address.
-        await s.goto("/cash-out");
-        await s.budgetSignIn();
-        await s.page.getByRole("button", { name: /^Sign in$/ }).first().click();
-        await s.text("Yours to take out", 30_000);
-        await s.click(/Send it to another account of mine|Send MON to another account of mine/);
-        await s.text("is the network's own coin, so nobody can send it for you");
-        await s.shot(
-          "withdrawal",
-          "send MON, the network's own coin",
-          "Typed the address /cash-out, because home offers no way out when the account holds no AUSD; Sign in, Send it to another account of mine",
-        );
+        await s.click("Send to another Viky account of mine");
+        await s.page.getByLabel("Paste that account's code").waitFor({ state: "visible" });
+        await s.shot("withdrawal", "to another Viky account of mine", `${WAY}, Send to another Viky account of mine`);
       },
     },
   ];

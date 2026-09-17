@@ -35,7 +35,7 @@ export function SessionScope() {
         <li>Nothing else, and nothing by itself: each one starts from a tap of yours.</li>
       </ul>
       <p className="text-[var(--muted)]">
-        It closes itself after {mera.SESSION_IDLE_MINUTES} quiet minutes, and asks for your face or fingerprint again.
+        It closes itself after {mera.sessionIdleMinutes()} quiet minutes, and asks for your face or fingerprint again.
         Closing in {minutes}:{String(seconds).padStart(2, "0")}.
       </p>
       <button type="button" onClick={() => mera.signOut()} className={INLINE_BUTTON}>
