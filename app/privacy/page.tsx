@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { Screen } from "../components/Screen";
+import { Shell } from "../kit/Shell";
 import Link from "next/link";
-import { Footer } from "../components/Footer";
 import { DISPLAY, TITLE } from "../components/ui";
 
 export const metadata: Metadata = {
@@ -12,7 +11,7 @@ export const metadata: Metadata = {
 // that actually holds the data. Update it whenever a store or a processor changes.
 export default function PrivacyPage() {
   return (
-    <Screen layout="document" back="/account" backLabel="Back to my account">
+    <Shell kind="document" back="/me">
       <header className="space-y-[var(--space-lg)]">
         <h1 className={DISPLAY}>Privacy</h1>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
@@ -82,8 +81,6 @@ export default function PrivacyPage() {
           <Link className="underline" href="/legal">legal notice</Link>.
         </p>
       </section>
-
-      <Footer current="/privacy" />
-    </Screen>
+    </Shell>
   );
 }

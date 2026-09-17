@@ -113,87 +113,65 @@ export const REFLOW_MIN_WIDTH = 320;
 export type Appearance = "light" | "dark";
 
 /**
- * The art direction the funder chose: a bright, round, daylit world, and the same world after dark.
+ * Three colours per appearance, and not one more, each deduced from a role (the product structure of 17 Sep
+ * 2026, section 7): the ground the page is, the surface that groups words, the ink they are set in, and the one
+ * accent, reserved for the primary button and the active destination of the bar. NN/g: "Limit your palette to
+ * three colors" and "Reserve the accent color for what you want to stand out the most". Material: surface "for
+ * backgrounds and large, low-emphasis areas", primary "for the most prominent components ... high-emphasis
+ * buttons, and active states". Apple: "Refrain from adding color to the background of multiple controls".
  *
- * It is built the way both published systems say a saturated palette stays legible, which is not by toning it
- * down. Apple: apply colour "to the background rather than to symbols or text", and never let colour be the
- * only carrier of meaning. Material: every surface is paired with a foreground colour chosen against it. So
- * the colour lives in the ground and in the shapes, the words sit on a calm surface, and every pair below is
- * measured rather than picked.
+ * By day it is direction 1, chosen on 15 Sep: cream ground, plum ink, tomato accent. By night the same three
+ * roles, an indigo ground, cream ink, and an accent of the same family as the tomato, chosen by measure: the
+ * acid green it replaces was a fourth colour and read as a crypto interface. Every pair is measured by
+ * test/design-tokens.test.ts, never picked by eye: words at 4.5:1 on both grounds, a control's edge at 3:1.
  *
- * Three of these were chosen by eye first and failed: the obvious bright red gave white text 3.96:1, the
- * first outline gave 2.74:1 on the yellow ground, and the first green gave 4.36:1 at night. That is what the
- * measurement is for, and it is why a theme can be swapped without anybody having to be careful.
- *
- * Corrected on 15 Sep, and the correction matters more than the palette: the sunny colour was the ground of
- * every screen, so a form, an amount and a card payment all sat on a party. Joy belongs to the moments that
- * deserve it, and money belongs on something calm. There are three things to sit on now, `background` for
- * the ordinary screen, `surface` for what carries words, and `joy` for the four moments that are not
- * ordinary, and every text colour is measured against all three.
+ * Retired on 17 Sep as backgrounds, with the audit's four-colour home screen as the reason: the joyful yellow,
+ * the four stickers, the five day surfaces. A day says its state in words and by its shape (src/day-states.ts).
  */
 export const COLOURS: Record<Appearance, Record<string, string>> = {
   light: {
-    /** The ordinary screen: warm paper, calm enough to read an amount on. */
-    background: "#FFF8EA",
-    /** What carries words inside it. */
-    surface: "#FFFFFF",
-    /** The sunny one, worn only at a moment worth celebrating. Dark words on it at 12.39:1. */
-    joy: "#FFD84D",
-    /** 12.39:1 on the ground, 16.83:1 on a surface. */
-    text: "#241A05",
-    /** 5.49:1 on the ground, 7.45:1 on a surface. */
-    muted: "#5C5340",
+    /** The ground: warm cream, calm enough to read an amount on. */
+    background: "#FFF3D9",
+    /** The surface a card, a field, the bar and the rail sit on. */
+    surface: "#FFFDF7",
+    /** Plum ink: 15.10:1 on the ground, 16.35:1 on a surface. */
+    text: "#3B0A2A",
+    /** 6.93:1 on the ground, 7.50:1 on a surface. */
+    muted: "#72465E",
     /**
-     * The bright fill of the action a screen is asking for, carrying dark words at 6.62:1. Its own contrast
-     * against the page is only 1.87:1, which is why the button also has an outline: what identifies a control
-     * may not rest on a fill that pale against its ground (WCAG 1.4.11).
+     * The tomato fill of the one primary action on a screen, carrying plum words at 5.36:1. The fill itself is
+     * 2.82:1 against the cream, so what identifies a button is its plum outline (WCAG 1.4.11).
      */
-    accent: "#FF7A3D",
-    onAccent: "#241A05",
-    /**
-     * The same idea used as words rather than as a fill, which is a different job and needs a different
-     * colour: 5.67:1 on the ground and 7.70:1 on a surface. Trying to make one colour do both is how an
-     * accent ends up either unreadable as text or drab as a button.
-     */
-    accentText: "#962D0E",
-    /** 3.64:1 on the ground, 4.94:1 on a surface, so a control is identifiable wherever it sits. */
-    controlBorder: "#776E5E",
-    divider: "#E8DFC4",
+    accent: "#FF5A36",
+    onAccent: "#3B0A2A",
+    /** The accent as words, a darker tomato: 6.82:1 on the ground, 7.39:1 on a surface. */
+    accentText: "#9E2A14",
+    /** A control's edge is the ink itself: 15.10:1. */
+    controlBorder: "#3B0A2A",
+    /** A card's edge and a rule: 1.36:1, a hairline that groups and never identifies a control. */
+    divider: "#EAD6B0",
   },
   dark: {
-    background: "#1B1430",
-    surface: "#2A2246",
-    /** The same idea after dark: a richer violet rather than a brighter one. Light words on it at 9.90:1. */
-    joy: "#4A2E6B",
-    /** 14.73:1 on the ground, 11.81:1 on a surface. */
-    text: "#F7EFFF",
-    /** 8.03:1 and 6.44:1. */
-    muted: "#BCAFD4",
-    /** Dark words on it at 9.05:1. */
-    accent: "#FFB03A",
-    onAccent: "#1B1430",
-    /** As words: 10.19:1 on the ground, 8.17:1 on a surface. */
-    accentText: "#FFC061",
-    /** 5.48:1 and 4.39:1. */
-    controlBorder: "#9A8FB5",
-    divider: "#453A63",
+    background: "#1C1035",
+    surface: "#2A1D4E",
+    /** Cream ink: 16.69:1 on the ground, 14.17:1 on a surface. */
+    text: "#FFF6E9",
+    /** 9.66:1 and 8.20:1. */
+    muted: "#C4B8E6",
+    /**
+     * The tomato after dark, one step lighter so it stands off the indigo: indigo words on it at 6.97:1, and the
+     * fill itself 6.97:1 against the ground and 5.92:1 against a surface, so at night the fill alone identifies
+     * the button. Measured on 17 Sep 2026 against #FF5A36 (5.76 / 4.89) and #FF8A6E (7.76 / 6.58); this is the
+     * closest to the day's tomato that clears every pair with room.
+     */
+    accent: "#FF7A5C",
+    onAccent: "#1C1035",
+    /** The accent as words, lighter still: 8.31:1 on the ground, 7.05:1 on a surface. */
+    accentText: "#FF9478",
+    /** Light at night: 16.69:1. */
+    controlBorder: "#FFF6E9",
+    divider: "#3A2C66",
   },
-};
-
-/**
- * A surface per state of a day, so the row reads at a glance. Colour is never the only carrier: each state
- * also has a mark of its own and a name a screen reader says (src/day-states.ts). Every one of these carries
- * the appearance's own text colour at 4.5:1 or better, which is what makes a bright row safe.
- *
- * `settled` is deliberately not green, and the reason is the whole discipline in one colour. A settled day is
- * either earned or returned and the contract's counts cannot say which (src/day-states.ts), so a green cell
- * would be a claim nothing supports. The first draft of this row drew four green days for a week with three
- * earned and one missed, which is exactly the sentence about money that no code path makes true. Finished is
- * a colour of its own, and the two totals are printed beside the row where they are known.
- */
-export const DAY_SURFACES: Record<Appearance, Record<string, string>> = {
-  light: { settled: "#E3D6BC", catchable: "#7FC4F5", aboutToReturn: "#FFA95C", today: "#FF9BC4", toCome: "#FFFFFF" },
-  dark: { settled: "#463C6B", catchable: "#2F6C96", aboutToReturn: "#8A5320", today: "#8C3D60", toCome: "#2A2246" },
 };
 
 /** Which colours carry text, and must therefore clear 4.5:1 on the ground and on a surface alike. */
@@ -201,103 +179,34 @@ export const TEXT_COLOURS = ["text", "muted", "accentText"] as const;
 /** Which colours identify a control, and must therefore clear 3:1 on both. */
 export const CONTROL_COLOURS = ["controlBorder"] as const;
 /** The two things a colour can sit on. Every text colour is measured against both, never just one. */
-export const GROUNDS = ["background", "surface", "joy"] as const;
+export const GROUNDS = ["background", "surface"] as const;
 
 /** Where the chosen appearance is kept, so a reload does not flash the other one. */
 export const THEME_STORAGE_KEY = "viky.theme";
 
 /**
- * The poster look: the direction the funder chose on 15 Sep, out of four previews. By day it is the first of
- * them, a cream ground, a tomato accent, plum ink, Anton titles and outlined stickers. By night it keeps the same
- * type and the same stickers in the colours of the third, an indigo ground and an acid green accent, and the
- * outlines turn light.
- *
- * It arrived as a look rather than as new values for the colours above, one screen at a time: the signed-out
- * home, then the funder journey, then every other screen (D69, D70, D71). Every screen drawn through `Screen`
- * wears it now, and every control, title and card inside picks it up through the same variables. The calm values
- * above remain only for the operator's own pages under app/dev, which do not use `Screen`.
- *
- * Every pair is measured as above by test/design-tokens.test.ts, with one addition the look needs: the words
- * set on a sticker are measured against every fill a sticker can wear.
+ * The type of direction 1. Anton, a single-weight condensed face, sets exactly one display title per destination
+ * (Gifts, You, the promise without an account) and the mark at the top of every screen; it asks for 400 rather
+ * than let the browser invent a bold. DM Sans sets everything else, section titles, amounts and buttons included,
+ * at the four levels above. A section title is DM Sans at 22, semibold: Anton at that size read smaller than the
+ * text face beside it, and the structure of 17 Sep keeps Anton out of tasks, amounts and buttons altogether.
  */
-export const POSTER_COLOURS: Record<Appearance, Record<string, string>> = {
-  light: {
-    background: "#FFF3D9",
-    surface: "#FFFDF7",
-    joy: "#FFD84D",
-    /** 15.10:1 on the ground, 16.35:1 on a surface, 12.02:1 on joy. */
-    text: "#3B0A2A",
-    /** 6.93:1, 7.50:1 and 5.51:1. */
-    muted: "#72465E",
-    /**
-     * Carrying plum words at 5.36:1. The fill itself is only 2.82:1 against the cream, so what identifies a
-     * button is its plum outline at 15.10:1 (WCAG 1.4.11), as the outline already did in the calm look.
-     */
-    accent: "#FF5A36",
-    onAccent: "#3B0A2A",
-    /** As words: 6.82:1 on the ground, 7.39:1 on a surface, 5.43:1 on joy. */
-    accentText: "#9E2A14",
-    controlBorder: "#3B0A2A",
-    divider: "#EAD6B0",
-    /** The outline every sticker wears, the ink itself: 15.10:1 on the ground. */
-    stickerOutline: "#3B0A2A",
-    /** The words on a sticker: 10.07:1 on the pink, which is the lowest. */
-    onSticker: "#3B0A2A",
-    stickerSun: "#FFD84D",
-    stickerPink: "#F7B7D8",
-    stickerMint: "#BDEBC8",
-    stickerLilac: "#C9C6FF",
-    /** What a field sits on inside a sticker, so a typed value never runs over a colour: the ink on it is 16.35:1. */
-    stickerPaper: "#FFFDF7",
-  },
-  dark: {
-    background: "#1C1035",
-    surface: "#2A1D4E",
-    joy: "#4A2E6B",
-    /** 16.69:1 on the ground, 14.17:1 on a surface, 10.35:1 on joy. */
-    text: "#FFF6E9",
-    /** 9.66:1, 8.20:1 and 5.99:1. */
-    muted: "#C4B8E6",
-    /** Indigo words on it at 15.16:1, and 15.16:1 against the ground. */
-    accent: "#C6FF4D",
-    onAccent: "#1C1035",
-    /** As words: 15.16:1, 12.87:1 and 9.40:1. */
-    accentText: "#C6FF4D",
-    /** Light at night, as the stickers' outlines are: 16.69:1 on the ground. */
-    controlBorder: "#FFF6E9",
-    divider: "#3A2C66",
-    stickerOutline: "#FFF6E9",
-    /**
-     * Indigo words on a bright sticker, and the outline of a motif drawn on one: 4.84:1 on the violet, which is the
-     * lowest. The light outline above would all but vanish on the yellow and the lime.
-     */
-    onSticker: "#1C1035",
-    stickerSun: "#FFD84D",
-    stickerPink: "#FF5FA2",
-    stickerMint: "#C6FF4D",
-    stickerLilac: "#8B6CFF",
-    /** Cream at night, because the ink inside a sticker is indigo: 16.69:1 on it. */
-    stickerPaper: "#FFF6E9",
-  },
-};
-
-/** The fills a sticker can wear, each of which must carry `onSticker` at 4.5:1. */
-export const STICKER_FILLS = ["stickerSun", "stickerPink", "stickerMint", "stickerLilac"] as const;
-
-/**
- * The poster look's type. Titles are set in Anton, which has a single weight, so they ask for 400 rather than let
- * the browser invent a bold. Everything else is DM Sans, amounts and button labels included, at the four levels
- * above. The look adds one size, `display`, for the single title a destination opens with, and sets section
- * titles larger, because a condensed face at 22 pixels reads smaller than a text face at the same size.
- */
-export const POSTER_TYPE = {
+export const DISPLAY_TYPE = {
   display: { compact: { size: 60, lineHeight: 56 }, expanded: { size: 104, lineHeight: 96 } },
-  title: { size: 36, lineHeight: 38 },
+  mark: { size: 28, lineHeight: 32 },
   titleWeight: 400,
 } as const;
 
-/** The poster look's controls: a 2 pixel outline and a relief underneath, the pressed key of the direction. */
-export const POSTER_CONTROL = { borderWidth: 2, reliefDepth: 6 } as const;
+/** The controls of direction 1: a 2 pixel ink outline and a 6 pixel relief underneath, the pressed key. */
+export const CONTROL = { borderWidth: 2, reliefDepth: 6 } as const;
 
-/** The poster look's cards: a sticker's outline at 2 pixels, where the calm look draws a divider hairline. */
-export const POSTER_CARD = { borderWidth: 2 } as const;
+/** A card's edge: a hairline divider. A card groups; it is not a control, so it carries no relief and no ink edge. */
+export const CARD = { borderWidth: 1 } as const;
+
+/**
+ * The navigation: a bar of three destinations at the bottom below the expanded breakpoint, a rail on the left
+ * from it (Material: "Don't use navigation bars for desktop layouts. Instead, use a navigation rail"). The bar is
+ * 64 tall, above Material's 48 minimum touch target with the label beneath the icon; the rail is 88 wide, room
+ * for an icon and a label of one word.
+ */
+export const NAV = { barHeight: 64, railWidth: 88, from: TWO_PANE_FROM } as const;

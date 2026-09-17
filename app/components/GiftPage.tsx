@@ -9,7 +9,7 @@ import { bindGoalAccount, claimGift, countNow, loadGiftStatus, nameGoalAccount, 
 import { AccountPanel } from "./AccountPanel";
 import { catchUpDay, deadlineInWords } from "@/src/catch-up";
 import { DayRow } from "./DayRow";
-import { Screen } from "./Screen";
+import { Shell } from "../kit/Shell";
 
 /**
  * The recipient's whole journey on one screen: see the money in their name, open it with a passkey,
@@ -168,16 +168,16 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
 
   if (loadError) {
     return (
-      <Screen title="Viky">
+      <Shell kind="task" back="/gifts">
         <p className={BODY}>{loadError}</p>
-      </Screen>
+      </Shell>
     );
   }
   if (!gift) {
     return (
-      <Screen>
+      <Shell kind="task" back="/gifts">
         <p className={HELP}>One moment</p>
-      </Screen>
+      </Shell>
     );
   }
 
@@ -322,7 +322,7 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         </button>
       ) : null}
 
-      {notice ? <p className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--joy)] p-[var(--space-md)] text-[length:var(--type-help)]">{notice}</p> : null}
+      {notice ? <p className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">{notice}</p> : null}
       {problem ? (
         <p role="alert" className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">
           {problem}
@@ -332,12 +332,8 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
   );
 
   return (
-    <Screen
-      layout="destination"
-      back="/"
-      backLabel="Back to my gifts"
-      aside={<div className="flex flex-col gap-[var(--space-xl)]">{actions}</div>}
-    >
+    // On the task shell since 17 Sep: the mark, one way back to Gifts, a narrow column. Rebuilt on its own line, S3.
+    <Shell kind="task" back="/gifts">
       <header className="flex flex-col gap-[var(--space-lg)]">
         {/* The page's own title, with the amount handed back to the text face, as every amount is. */}
         <h1 className={DISPLAY}>
@@ -372,7 +368,8 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
         returnedDisplay={gift.returnedDisplay}
       />
 
-    </Screen>
+      <div className="flex flex-col gap-[var(--space-xl)]">{actions}</div>
+    </Shell>
   );
 }
 

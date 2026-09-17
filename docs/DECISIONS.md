@@ -2290,3 +2290,46 @@ sign-in routes answer a typed `RATE_LIMITED`. The judges page leaves the person'
 
 **Delivered in this entry: the withdrawal journey**, states W1 to W13, with changes 1, 2, 3 and 6, the typed rate
 limit and "Your code". The funder, recipient, home and account journeys follow, each in its own conversation.
+
+## D84, 17 Sep 2026: the product entire, then the journeys on it
+
+**The unit of work changed.** After the withdrawal screens were rebuilt from their flows and accepted, the founder
+stopped the screen-by-screen pass: the product is built entire, and the journeys are placed on it. The structure is
+the founder's document of 17 Sep, read with its two sourced supports (the references of six money apps and the
+platform guides; Reclaim and the legal pages of the sources) and the six rules of the specification, which hold on
+every screen. Seven decisions were listed to be contested against the code before the first line, and two were
+raised: the legal notice and the privacy page must stay reachable without an account once the footer is gone (two
+text links on the promise page, nowhere else), and "Who is it for?" as a first step has nothing to ask while no
+first name is collected (left to the funder journey's own line).
+
+**What the product is now.** With an account, three destinations in a bar below 840 pixels and a rail from 840:
+Home (the money, "Offer a gift", "Take it out" as soon as the account holds anything, what is moving), Gifts (given
+and received), Me (the display currency, the appearance, "Signed in on this device until 14:20", installing Viky,
+the account's code folded away, then Help, Privacy, Legal notice, For judges). Offering, taking out and a gift's
+page are tasks that open over the destinations with the bar hidden and one way back. Without an account, the promise
+page and a gift opened from a link; nothing to navigate to. The footer and "Account, help and legal" are gone from
+every screen; Screen.tsx's "no menu and no tabs" was the rule of a one-use service, and Viky is an app of money with
+a balance and gifts that last weeks, which is why every reference has a bar (Material: three to five destinations;
+Apple: a tab bar navigates, it does not act).
+
+**Three colours per appearance, each with a role.** Ground, surface, ink, accent. The accent is the primary button
+and the active destination of the bar, and nothing else. The four stickers, the joyful yellow and the five day
+surfaces are gone as backgrounds; a day says its state in words and by its shape. At night the acid green is replaced
+by the day's tomato one step lighter, `#FF7A5C`, chosen by measure: indigo words on it at 6.97:1, the fill 6.97:1
+against the ground and 5.92:1 against a surface, `#FF9478` as words at 8.31:1 and 7.05:1. Direction 1 stays for the
+rest: Anton for one display title per destination and the mark, DM Sans everywhere else, the relief on buttons; cards
+lose the hard shadow, because a card groups and is not a control. One look, no longer a poster look layered over a
+calm one.
+
+**The register of conditions is the spine.** `src/conditions.ts` holds every condition with its shape, its link, its
+reading and its words; a screen reads it and never names a source itself. Only a condition wired from end to end is
+live, and only live conditions are offered: today the Duolingo lesson. Chess.com's rating and Coursera's certificate
+are written with their words and turn live on their own lines, once their contract is deployed and a real gift has
+run. Strava only through its official API, and only after the disclosure question is answered: the zkTLS providers
+exist and their use breaks Strava's terms of 1 Jan 2026, and the verifier already in this repository stays unwired.
+
+**Delivered in this entry, S1**: the shell and the kit in `app/kit/`, Home, Gifts, Me, the help page, the register,
+the tasks and documents placed on the shell, the retired components removed (Footer, Stickers, Drop, Moment,
+Screen, HomeScreen, MyGifts, YourMoney, YourCode, SessionScope, ThemeSwitch, InstallPWA, the example gallery). The
+lines that follow, in the founder's order: S2 Offer a gift with "What will they do?", C2 Chess.com, S3 the gift's
+page, S4 Take it out placed again, C3 Coursera, S5 the judges page, C4 Strava, C5 the in-session proof.

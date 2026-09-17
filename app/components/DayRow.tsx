@@ -114,23 +114,22 @@ function label(day: Day, funder: string, nowMs: number): string {
 }
 
 /**
- * A surface and an outline per state. The colour is the quick read and the mark beside it is the real one:
- * every published guideline says never to rely on hue alone, and every one of these surfaces carries the
- * appearance's own text at 4.5:1 or better, measured in test/design-tokens.test.ts.
+ * A state by its shape, in the three roles and no fourth colour (structure of 17 Sep 2026, section 7): a settled
+ * day is filled with ink, a day still to catch is dashed, a day about to go back is faded, today wears a thick
+ * outline, a day to come a thin one. The mark inside and the words a screen reader hears carry the same state.
+ * Earned against returned per day waits for the keeper's per-day record, on the gift page's own line.
  */
 function skin(day: Day): string {
   switch (day.state) {
     case "settled":
-      return "bg-[var(--day-settled)] border-[var(--control-border)]";
+      return "bg-[var(--text)] text-[var(--background)] border-[var(--text)]";
     case "catchable":
-      return "bg-[var(--day-catchable)] border-2 border-[var(--text)]";
+      return "bg-[var(--surface)] border-2 border-dashed border-[var(--text)]";
     case "aboutToReturn":
-      return "bg-[var(--day-about-to-return)] border-dashed border-[var(--control-border)]";
+      return "bg-[var(--surface)] border-dashed border-[var(--control-border)] opacity-60";
     case "today":
-      return "bg-[var(--day-today)] border-2 border-[var(--text)]";
+      return "bg-[var(--surface)] border-[3px] border-[var(--text)]";
     case "toCome":
-      // A card's edge rather than a divider, so a day still to come is outlined like every other sticker in the poster
-      // look; the calm look's card edge is that same divider.
-      return "bg-[var(--day-to-come)] border-[var(--card-border)]";
+      return "bg-[var(--surface)] border-[var(--card-border)]";
   }
 }

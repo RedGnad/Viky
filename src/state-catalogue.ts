@@ -137,15 +137,21 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
     ],
   },
   {
-    screen: "What I give, on the home page",
-    file: "app/components/MyGifts.tsx",
+    screen: "Gifts, and what is moving on Home",
+    file: "src/sentences.ts",
     states: [
-      { name: "None yet", when: "this account is neither funder nor recipient of anything", says: ["No gift yet."] },
-      { name: "Two blocks, never one list", when: "the account is on both sides of at least one gift", says: ["What I receive", "What I give"] },
-      { name: "Not opened", when: "nobody has claimed the link", says: ["Not opened yet."] },
-      { name: "Opened, no goal", when: "claimed, but no Duolingo account bound", says: ["Opened. Name the Duolingo account to start counting."] },
-      { name: "Taken back", when: "the funder cancelled before it was opened", says: ["Taken back before it was opened."] },
+      { name: "None yet", when: "this account is neither funder nor recipient of anything", says: ["No gift yet. Offer one, or open a link someone sent you."] },
+      { name: "Two groups on Gifts, never one list", when: "the account is on both sides of at least one gift", says: ["Given", "Received"] },
+      { name: "One card for a gift, everywhere", when: "a gift is listed on Home or on Gifts", says: ["For you", "For whoever opens the link", "Not opened yet.", "Taken back before it was opened.", "Open"] },
       { name: "Could not be loaded", when: "the list itself failed", says: ["Your gifts could not be loaded."] },
+    ],
+  },
+  {
+    screen: "The register of conditions",
+    file: "src/conditions.ts",
+    states: [
+      { name: "Opened, not connected", when: "claimed, but nothing bound yet: the card says what to connect, in the register's words", says: ["Opened. Connect Duolingo to start counting."] },
+      { name: "What will they do?", when: "the funder chooses a condition; only what is live is offered", says: ["A Duolingo lesson each day"] },
     ],
   },
 ];
@@ -300,40 +306,25 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
   },
 ];
 
-/** Everything that is not a gift and not money, which is what keeps the rest of the product menu-free. */
+/** Everything that is not a gift and not money: the third destination. */
 export const ACCOUNT_SCREEN: readonly CatalogueScreen[] = [
   {
-    screen: "Account",
-    file: "app/account/page.tsx",
+    screen: "You",
+    file: "src/sentences.ts",
     states: [
-      { name: "The one page off the journeys", when: "reached from the single link at the foot of any screen", says: ["Account", "Lost your phone?", "Privacy", "Legal", "For judges"] },
-
-      {
-        name: "Help",
-        when: "somebody is stuck",
-        says: [],
-        gap: "there is no help beyond the lost-phone paragraph. What a person actually gets stuck on is not known yet, because nobody outside has used this.",
-      },
+      { name: "The third destination", when: "reached from the bar or the rail, signed in", says: ["You", "Money shown in", "How it looks", "Signed in on this device until", "Sign out", "Need your code for a payout service?", "Help", "Privacy", "Legal notice", "For judges"] },
+      { name: "Help", when: "somebody is stuck", says: ["Five questions, answered in the words the screens use."] },
     ],
   },
 ];
 
-/** The one control that changes the whole product's appearance, and the only one of its kind. */
+/** The one control that changes the whole product's appearance, on You. */
 export const APPEARANCE_SCREEN: readonly CatalogueScreen[] = [
   {
-    screen: "How it looks, on the Account page",
-    file: "app/components/ThemeSwitch.tsx",
+    screen: "How it looks, on You",
+    file: "src/sentences.ts",
     states: [
-      {
-        name: "Following the phone",
-        when: "nobody has chosen, which is where everyone starts",
-        says: ["How it looks", "Day", "Night", "Follow my phone", "Viky follows your phone, so it turns dark when everything else does."],
-      },
-      {
-        name: "A choice of their own",
-        when: "somebody picked day or night",
-        says: ["Viky stays this way, whatever your phone is set to."],
-      },
+      { name: "Following the phone", when: "nobody has chosen, which is where everyone starts", says: ["Day", "Night", "Follow my phone"] },
     ],
   },
 ];

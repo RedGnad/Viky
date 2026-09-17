@@ -143,7 +143,7 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
           <p>{error.guidance}</p>
           {error.code === "UNSUPPORTED_BROWSER" && /Android/i.test(navigator.userAgent) ? (
             <a
-              className={`${INLINE_BUTTON} bg-[var(--accent)] font-medium text-[var(--on-accent)]`}
+              className={`${INLINE_BUTTON} font-medium`}
               href={`intent://${window.location.host}${window.location.pathname}${window.location.search}#Intent;scheme=https;package=com.android.chrome;end`}
             >
               Open this page in Chrome

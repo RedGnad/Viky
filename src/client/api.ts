@@ -27,6 +27,16 @@ export async function postJson<T>(path: string, body: unknown): Promise<T> {
   return unwrap<T>(response);
 }
 
+export async function putJson<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return unwrap<T>(response);
+}
+
 export async function getJson<T>(path: string): Promise<T> {
   const response = await fetch(path, { credentials: "same-origin", cache: "no-store" });
   return unwrap<T>(response);

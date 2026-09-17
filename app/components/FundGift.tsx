@@ -16,7 +16,6 @@ import { eurosToBuy, SUGGESTED_GIFT_DOLLARS } from "@/src/gift-amount";
 import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
 import { forgetPendingGift, hasPendingGift, loadPendingGift, savePendingGift } from "@/src/pending-gift";
 import { AccountPanel } from "./AccountPanel";
-import { SessionScope } from "./SessionScope";
 
 /**
  * The funder's screen. Someone puts money behind another person's goal, pays for it with a card, and
@@ -309,7 +308,6 @@ export function FundGift() {
           </p>
         </section>
         <AccountPanel />
-        <SessionScope />
       </div>
     );
   }
@@ -353,7 +351,6 @@ export function FundGift() {
         >
           Continue
         </button>
-        <SessionScope />
       </div>
     );
   }
@@ -392,7 +389,6 @@ export function FundGift() {
           </button>
         </div>
         {problem ? <p className={BODY}>{problem}</p> : null}
-        <SessionScope />
       </div>
     );
   }
@@ -475,7 +471,6 @@ export function FundGift() {
         </div>
         {notice ? <p className={BODY}>{notice}</p> : null}
         {problem ? <p className={BODY}>{problem}</p> : null}
-        <SessionScope />
       </div>
     );
   }
@@ -599,8 +594,6 @@ export function FundGift() {
           <p className={BODY}>{step === "giving" ? "Putting it in their name" : "Getting it ready"}</p>
         ) : null}
       </section>
-
-      <SessionScope />
     </div>
   );
 }

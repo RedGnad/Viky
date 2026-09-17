@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { Screen } from "../components/Screen";
+import { Shell } from "../kit/Shell";
 import Link from "next/link";
-import { Footer } from "../components/Footer";
 import { DISPLAY, TITLE } from "../components/ui";
 
 export const metadata: Metadata = {
@@ -14,7 +13,7 @@ export const metadata: Metadata = {
 export default function LegalPage() {
   const contact = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim();
   return (
-    <Screen layout="document" back="/account" backLabel="Back to my account">
+    <Shell kind="document" back="/me">
       <header className="space-y-[var(--space-lg)]">
         <h1 className={DISPLAY}>Legal notice</h1>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
@@ -57,8 +56,6 @@ export default function LegalPage() {
           Buying with a card is done by Mercuryo under Mercuryo&apos;s own terms.
         </p>
       </section>
-
-      <Footer current="/legal" />
-    </Screen>
+    </Shell>
   );
 }

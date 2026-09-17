@@ -1,14 +1,6 @@
-import type { Metadata } from "next";
-import { HomeScreen } from "./components/HomeScreen";
+import { Home } from "./kit/Home";
 
-export const metadata: Metadata = {
-  title: "Viky",
-};
-
-/**
- * The one destination. Its shape and its order both depend on whether anybody is signed in, which only the
- * browser knows, so the whole screen including its frame lives in `HomeScreen`.
- */
+/** The one destination a person opens Viky on, whatever they are here for (structure of 17 Sep 2026, section 4). */
 export default function Page() {
-  return <HomeScreen />;
+  return <Home />;
 }
