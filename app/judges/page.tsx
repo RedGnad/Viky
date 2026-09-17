@@ -3,6 +3,7 @@ import { Shell } from "../kit/Shell";
 import { JudgesAccount } from "../components/JudgesAccount";
 import { DISPLAY, TITLE } from "../components/ui";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadRpcUrl } from "@/src/monad/chain";
+import { MilestoneJudges } from "../components/MilestoneJudges";
 
 export const metadata: Metadata = {
   title: "For judges",
@@ -83,6 +84,8 @@ export default function JudgesPage() {
           Private sources keep the user-proof path through the Reclaim verifier app.
         </p>
       </section>
+
+      <MilestoneJudges />
 
       <JudgesAccount />
     </Shell>

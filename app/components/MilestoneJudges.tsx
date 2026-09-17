@@ -1,0 +1,115 @@
+import { CHESS_MODES, chessGoalType, chessProviderId } from "@/src/chess-com";
+import { MILESTONE_EVIDENCE as E } from "@/src/milestone-evidence";
+import { PUBLIC_RPC_URL } from "@/src/monad/chain";
+import { TITLE } from "./ui";
+
+const HELP = "text-[length:var(--type-help)]";
+const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
+const CODE = "block [overflow-wrap:anywhere] rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-sm)] text-[length:var(--type-help)]";
+
+function Explorer({ tx }: Readonly<{ tx: string }>) {
+  return (
+    <a className="underline [overflow-wrap:anywhere]" href={`https://monadvision.com/tx/${tx}`}>
+      {tx}
+    </a>
+  );
+}
+
+/**
+ * The milestone contract on the judges page (C2): where it is, one call anybody can make, one refusal anybody can
+ * reproduce, and what is not proven, written as it is. Only facts recorded in src/milestone-evidence.ts are printed.
+ */
+export function MilestoneJudges() {
+  const address = process.env.NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS?.trim();
+  if (!address) return null;
+  return (
+    <section className="space-y-[var(--space-sm)]">
+      <h2 className={TITLE}>A milestone: a Chess.com rating</h2>
+      <p className={HELP}>
+        MilestoneGift holds a gift for one thing rather than a habit: the whole amount becomes the recipient&apos;s the first time an
+        attested reading shows the rating reached, or all of it goes back when the time runs out. Contract{" "}
+        <a className="underline [overflow-wrap:anywhere]" href={`https://monadvision.com/address/${address}`}>
+          {address}
+        </a>
+        {E.sourcifyMatch ? `, source verified through Sourcify (match ${E.sourcifyMatch})` : ""}
+        {E.deployTx ? (
+          <>
+            , deployed in <Explorer tx={E.deployTx} />
+          </>
+        ) : null}
+        . Owned by the founder&apos;s key, not by the key that deployed it. Gift numbers start at 1,000,000, so no number can mean a daily gift
+        and a milestone gift at once.
+      </p>
+      <p className={HELP}>
+        The rule it rests on (DECISIONS.md D44): the funder signs the target and the highest start they pay a climb from; the first reading
+        is recorded as the start whatever it says, so a recipient cannot retry until a reading suits them, and a start above what the funder
+        accepted can never pay. Each cadence is its own goal with its own provider id, so a blitz rating can never settle a rapid gift:
+      </p>
+      <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
+        {CHESS_MODES.map((mode) => (
+          <li key={mode} className="[overflow-wrap:anywhere]">
+            goal {chessGoalType(mode)}, {mode}: {chessProviderId(mode)}
+          </li>
+        ))}
+      </ul>
+      <p className={HELP}>
+        How a reading is made: two attested reads through Reclaim zkFetch and Reclaim&apos;s TEE client, api.chess.com/pub/player/&lt;name&gt; for
+        the player id (the identity a gift is bound to, which survives a change of name) and /stats for the cadence&apos;s rating. Viky verifies
+        the attestor&apos;s signature, pins its address, and checks each proof is about exactly that page and exactly those patterns; the
+        evidence signer then signs an EIP-712 Proof under the domain &quot;Viky Milestone&quot;, and the contract accepts or refuses it. The first
+        reading also reads the profile&apos;s name, where the recipient puts a one-hour code to prove the account is theirs.
+      </p>
+      {E.giftId ? (
+        <>
+          <p className={HELP}>
+            The first real milestone gift is gift {E.giftId}.
+            {E.createTx ? (
+              <>
+                {" "}
+                Funded in <Explorer tx={E.createTx} />.
+              </>
+            ) : null}
+            {E.claimTx ? (
+              <>
+                {" "}
+                Opened in <Explorer tx={E.claimTx} />.
+              </>
+            ) : null}
+            {E.startTx ? (
+              <>
+                {" "}
+                Started by its first attested reading in <Explorer tx={E.startTx} />.
+              </>
+            ) : null}{" "}
+            Its state, as anyone can read it:
+          </p>
+          <code className={CODE}>{`cast call ${address} "getGift(uint256)" ${E.giftId} --rpc-url ${PUBLIC_RPC_URL}`}</code>
+        </>
+      ) : null}
+      {E.refusal ? (
+        <>
+          <p className={HELP}>
+            A refusal anyone can reproduce: the contract answers {E.refusal.error} ({E.refusal.selector}).
+          </p>
+          <code className={CODE}>{E.refusal.command}</code>
+        </>
+      ) : null}
+      <p className={HELP}>What is not proven, written as it is:</p>
+      <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
+        <li>The attestor&apos;s own TEE attestation is not in the proof zk-fetch returns, so it is not verified; its signature and address are.</li>
+        <li>The evidence signer is a key Viky holds. The contract trusts its signature, and anyone holding that key could sign a reading.</li>
+        <li>
+          The contract judges when a reading was taken, not when the rated game was played. Viky reads twice a day, and the recipient can ask
+          for a reading at any time; a rating reached and then lost again between two readings, or reached in the last hours and first read
+          after the deadline, does not pay (DECISIONS.md D48).
+        </li>
+        <li>
+          Below the target, a day&apos;s reading is a plain read of the public page and carries no proof, because the contract refuses a reading
+          short of the target and records nothing. Only a reading at or past the target is attested and sent.
+        </li>
+        <li>Where the person stood when the funder chose is a plain read too: it sets what the funder signs, with their own eyes, and moves nothing.</li>
+        <li>Chess.com publishes no rule for what its name field accepts; the code is six letters so that any name field takes it.</li>
+      </ul>
+    </section>
+  );
+}

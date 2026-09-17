@@ -3,6 +3,9 @@ import { catchUpSecondsOf } from "@/src/catch-up";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { checkInDayIndex, formatAusd, readGift, utcDayOf } from "@/src/gift-reader";
 import { holdsGiftLink, lastRefundAt, loadGift, loadRelayed, loadSettledDays } from "@/src/gift-store";
+import { milestoneErrorResponse } from "@/src/milestone-api";
+import { isMilestoneGiftId } from "@/src/milestone-protocol";
+import { milestoneStatusResponse } from "@/src/milestone-routes";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { escrowOf } from "@/src/relayer";
 import { readAccountAuthSession } from "@/src/account-auth-server";
@@ -28,6 +31,8 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     const [record, relayed, recordedDays, refundedAt] = await Promise.all([loadGift(id), loadRelayed(id), loadSettledDays([id]), lastRefundAt(id)]);
     if (!record) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
+    // A milestone gift has its own contract and its own shape of state (C2): `kind: "milestone"` tells the page.
+    if (isMilestoneGiftId(id)) return await milestoneStatusResponse(request, record).catch((error: unknown) => milestoneErrorResponse(error));
     const escrow = escrowOf(record);
     const gift = await readGift(escrow, id);
     const now = Math.floor(Date.now() / 1_000);

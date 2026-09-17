@@ -1,0 +1,116 @@
+import { getAddress, type Hex, type LocalAccount } from "viem";
+import { receiveAuthorizationMessage, receiveAuthorizationTypedData, toContractAuthorization } from "../ausd-authorization";
+import { NO_CONTACT_HASH } from "../contact-hash";
+import type { MilestoneCondition } from "../milestone-conditions";
+import type { MilestoneStatus } from "../milestone-view";
+import { milestoneFundingNonce, SHAPE_CLIMB, ZERO_SUBJECT, type MilestoneParams } from "../milestone-protocol";
+import { startingCeiling } from "../milestone-terms";
+import { getJson, postJson } from "./api";
+import { randomSalt, type CreatedGift } from "./gift";
+
+/** Browser-side steps of a milestone gift (C2). Every step that moves money is signed by the person's own account. */
+
+export function milestoneAddressFromEnv(): Hex {
+  const value = process.env.NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS?.trim();
+  if (!value || !/^0x[0-9a-fA-F]{40}$/.test(value)) throw new Error("The milestone contract is not configured");
+  return getAddress(value);
+}
+
+export type Standing = Readonly<{ username: string; mode: string; rating: number; readAt: string }>;
+
+/** Where a person stands today in one cadence, read plainly by Viky's route before any money moves. */
+export function readStanding(path: string, username: string, cadence: string): Promise<Standing> {
+  return getJson(`${path}?username=${encodeURIComponent(username)}&mode=${encodeURIComponent(cadence)}`);
+}
+
+/** The ids of the conditions this viewer may offer: the live ones, and for an account that runs Viky, the wired ones. */
+export function loadOfferedConditions(): Promise<{ ids: string[]; preview: string[] }> {
+  return getJson("/api/conditions");
+}
+
+/**
+ * One passkey signature: the EIP-3009 authorization whose nonce is the hash of these exact terms, the target and the
+ * highest start included. The server rebuilds both from the same inputs and refuses anything else.
+ */
+export async function createMilestoneGift(input: {
+  account: LocalAccount;
+  milestone: MilestoneCondition;
+  cadenceGoalType: number;
+  cadence: string;
+  username: string;
+  standing: number;
+  standingReadAt: string;
+  target: number;
+  durationDays: number;
+  amount: bigint;
+  recipientName?: string;
+  funderName?: string;
+}): Promise<CreatedGift> {
+  const contract = milestoneAddressFromEnv();
+  const funder = getAddress(input.account.address);
+  const params: MilestoneParams = {
+    funder,
+    refundTo: funder,
+    recipientContactHash: NO_CONTACT_HASH,
+    goalType: input.cadenceGoalType,
+    shape: SHAPE_CLIMB,
+    target: BigInt(input.target),
+    maximumStart: BigInt(startingCeiling(input.milestone.shape, input.standing, input.target)),
+    subject: ZERO_SUBJECT,
+    durationDays: input.durationDays,
+    amount: input.amount,
+    salt: randomSalt(),
+  };
+  const message = receiveAuthorizationMessage({ funder, escrow: contract, amount: input.amount, nonce: milestoneFundingNonce(params) });
+  const signature = await input.account.signTypedData(receiveAuthorizationTypedData(message));
+  const authorization = toContractAuthorization(message, signature);
+  return postJson<CreatedGift>("/api/gift/milestone/create", {
+    conditionId: input.milestone.condition.id,
+    username: input.username,
+    cadence: input.cadence,
+    target: input.target,
+    standing: input.standing,
+    standingReadAt: input.standingReadAt,
+    durationDays: input.durationDays,
+    amount: input.amount.toString(),
+    refundTo: funder,
+    salt: params.salt,
+    recipientName: input.recipientName,
+    funderName: input.funderName,
+    authorization: {
+      validAfter: authorization.validAfter.toString(),
+      validBefore: authorization.validBefore.toString(),
+      nonce: authorization.nonce,
+      v: authorization.v,
+      r: authorization.r,
+      s: authorization.s,
+    },
+  });
+}
+
+/** What a reading did, as src/milestone-reading.ts types it. */
+export type MilestoneOutcome =
+  | { kind: "started"; giftId: string; rating: number; hash: string; aboveAccepted: boolean; deadline: number }
+  | { kind: "reached"; giftId: string; rating: number; hash: string }
+  | { kind: "notYet"; giftId: string; rating: number; target: number; attested: boolean }
+  | { kind: "already"; giftId: string; reason: string }
+  | { kind: "refused"; giftId: string; code: string; message: string; rating?: number };
+
+export function loadMilestoneStatus(giftId: string, linkKey?: string | null): Promise<MilestoneStatus> {
+  return getJson<MilestoneStatus>(`/api/gift/${giftId}${linkKey ? `?t=${encodeURIComponent(linkKey)}` : ""}`);
+}
+
+/** A fresh code for the name the funder gave, sent only to the recipient signed in. */
+export function requestMilestoneCode(giftId: string): Promise<{ giftId: string; username: string; code: string; expiresAt: string }> {
+  return postJson(`/api/gift/${giftId}/account`, {});
+}
+
+/** The first reading: the code in the name, and where they start. */
+export function startMilestone(giftId: string): Promise<MilestoneOutcome> {
+  return postJson(`/api/gift/${giftId}/bind`, {});
+}
+
+/** A reading on demand. */
+export function checkMilestone(giftId: string): Promise<MilestoneOutcome> {
+  return postJson(`/api/gift/${giftId}/count`, {});
+}

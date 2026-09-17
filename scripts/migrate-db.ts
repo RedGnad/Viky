@@ -2,6 +2,7 @@ import "../src/load-env";
 import { backfillEscrow, ensureGiftSchema } from "../src/gift-store";
 import { ensureExitSchema } from "../src/exit-store";
 import { ensureProofSessionSchema } from "../src/proof-session-store";
+import { ensureMilestoneSchema } from "../src/milestone-store";
 import { ensurePreferencesSchema } from "../src/preferences-store";
 import { ensureSendsSchema } from "../src/send-store";
 
@@ -11,6 +12,7 @@ async function main() {
   if (!process.env.DATABASE_URL?.trim()) throw new Error("DATABASE_URL is not configured");
   await ensureProofSessionSchema();
   await ensureGiftSchema();
+  await ensureMilestoneSchema();
   await ensureExitSchema();
   await ensureSendsSchema();
   await ensurePreferencesSchema();
@@ -21,7 +23,7 @@ async function main() {
     if (!/^0x[0-9a-fA-F]{40}$/.test(backfill)) throw new Error("BACKFILL_ESCROW is not a contract identifier");
     console.log(`escrow recorded for ${await backfillEscrow(backfill as `0x${string}`)} earlier gift(s)`);
   }
-  console.log("schema ready: viky_proof_sessions, viky_gifts, viky_relayed, viky_days, viky_exits, viky_sends, viky_accounts");
+  console.log("schema ready: viky_proof_sessions, viky_gifts, viky_relayed, viky_days, viky_milestone_gifts, viky_milestone_readings, viky_exits, viky_sends, viky_accounts");
 }
 
 main().catch((error) => {

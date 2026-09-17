@@ -5,6 +5,9 @@ import { DuolingoProfileError, resolvePublicDuolingoProfile } from "@/src/duolin
 import { BINDING_CODE_TTL_SECONDS, isValidDuolingoUsername, newBindingCode } from "@/src/duolingo-public-terms";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { loadGift, setRecipientUsername } from "@/src/gift-store";
+import { milestoneErrorResponse } from "@/src/milestone-api";
+import { isMilestoneGiftId } from "@/src/milestone-protocol";
+import { milestoneAccount } from "@/src/milestone-routes";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
@@ -23,6 +26,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const { id } = await context.params;
     const auth = readAccountAuthSession(request);
     const body = await readJsonBody<{ username?: string }>(request, 1_024);
+    // A milestone gift reads the name the funder gave; the recipient proves it with a code, or follows a rename (C2).
+    if (isMilestoneGiftId(id)) return await milestoneAccount(request, id, body).catch((error: unknown) => milestoneErrorResponse(error));
     const username = String(body.username ?? "").trim();
     if (!isValidDuolingoUsername(username)) throw new GiftApiError("INVALID_USERNAME", "That does not look like a Duolingo username.", 400);
     const gift = await loadGift(id);

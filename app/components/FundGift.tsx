@@ -8,9 +8,12 @@ import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { checkSourceName, prepareGift, submitGift, type CreatedGift } from "@/src/client/gift";
+import { createMilestoneGift, loadOfferedConditions, readStanding } from "@/src/client/milestone";
 import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY } from "@/src/gift-attempt";
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
 import { conditionById, liveConditions, type Condition } from "@/src/conditions";
+import { cadenceOf, milestoneOf, type MilestoneCondition } from "@/src/milestone-conditions";
+import { checkTarget, inPlainWords, MilestoneTermsError, smallestTarget, startingCeiling } from "@/src/milestone-terms";
 import { whenInWords } from "@/src/display-currency";
 import { twoDecimalsDown } from "@/src/exit-steps";
 import { CONVERSION_RESERVE, nextFundingStep, paymentArrived } from "@/src/funding-step";
@@ -21,7 +24,7 @@ import { AmountError, dollarsToUnits } from "@/src/money";
 import { settlingTimeInWords } from "@/src/pass-schedule";
 import { forgetPendingGift, loadPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
 import { WAY_IN } from "@/src/rails";
-import { FUND as W } from "@/src/sentences";
+import { FUND as W, MILESTONE_FUND as M } from "@/src/sentences";
 import { ChoiceList } from "../kit/ChoiceList";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { Shell } from "../kit/Shell";
@@ -61,9 +64,29 @@ type Draft = Readonly<{
   dollars: string;
   days: string;
   target: string;
+  /** A milestone's cadence, and where the person stood in it, read for exactly this name and cadence (C2). */
+  cadence: string;
+  standing: number | null;
+  standingReadAt: string;
+  standingFor: string;
 }>;
 
-const EMPTY_DRAFT: Draft = { recipientName: "", funderName: "", conditionId: null, username: "", dollars: String(SUGGESTED_GIFT_DOLLARS), days: "7", target: "" };
+const EMPTY_DRAFT: Draft = {
+  recipientName: "",
+  funderName: "",
+  conditionId: null,
+  username: "",
+  dollars: String(SUGGESTED_GIFT_DOLLARS),
+  days: "7",
+  target: "",
+  cadence: "",
+  standing: null,
+  standingReadAt: "",
+  standingFor: "",
+};
+
+/** The name and the cadence a reading of where someone stands was taken for: a reading of anything else is no reading. */
+const standingKey = (username: string, cadence: string) => `${username.trim().toLowerCase()}|${cadence}`;
 
 /** The gift once made, kept for the tab: the link exists nowhere else, and a reload must not lose it. */
 type Made = Readonly<{
@@ -74,6 +97,9 @@ type Made = Readonly<{
   conditionId: string;
   amount: string;
   days: number;
+  /** A milestone's goal in words and its target, for the confirmation (C2). */
+  goal?: string;
+  target?: number;
 }>;
 
 type Phase = "waiting" | "converting" | "giving" | "short" | "failed";
@@ -122,7 +148,12 @@ function unitsOf(dollars: string): { units: bigint | null; refusal: string | und
   }
 }
 
-function daysOf(days: string): { days: number | null; refusal: string | undefined } {
+function daysOf(days: string, milestone?: MilestoneCondition): { days: number | null; refusal: string | undefined } {
+  if (milestone) {
+    const { min, max } = milestone.duration;
+    const value = Number(days.trim());
+    return /^\d{1,3}$/.test(days.trim()) && value >= min && value <= max ? { days: value, refusal: undefined } : { days: null, refusal: milestone.words.durationShape(min, max) };
+  }
   if (!/^\d{1,3}$/.test(days.trim())) return { days: null, refusal: W.amount.refusals.daysShape };
   const value = Number(days.trim());
   if (value < 7) return { days: null, refusal: W.amount.refusals.daysLow };
@@ -136,6 +167,19 @@ function targetOf(condition: Condition | undefined, target: string): { target: n
   const value = Number(target.trim());
   if (value < condition.target.min) return { target: null, refusal: condition.target.tooLow };
   return { target: value, refusal: undefined };
+}
+
+/** A milestone's target, refused under its field when it is not a climb from where they stand today (D45). */
+function climbOf(milestone: MilestoneCondition | undefined, standing: number | null, target: string): { target: number | null; refusal: string | undefined } {
+  if (!milestone || standing === null) return { target: null, refusal: undefined };
+  if (!/^\d{1,5}$/.test(target.trim())) return { target: null, refusal: milestone.words.refusals.targetShape };
+  const value = Number(target.trim());
+  try {
+    checkTarget(milestone.shape, standing, value);
+    return { target: value, refusal: undefined };
+  } catch (error) {
+    return { target: null, refusal: error instanceof MilestoneTermsError ? error.message : milestone.words.refusals.targetShape };
+  }
 }
 
 /** A route's own typed sentence when it gave one; one plain line otherwise, never a library's words. */
@@ -166,6 +210,10 @@ export function FundGift() {
   const [phase, setPhase] = useState<Phase>("waiting");
   const [arrivedFigure, setArrivedFigure] = useState<string | undefined>(undefined);
   const [problem, setProblem] = useState<string | null>(null);
+  const [problemCode, setProblemCode] = useState<string | null>(null);
+  const [reading, setReading] = useState<{ busy: boolean; nameRefusal?: string; cadenceRefusal?: string }>({ busy: false });
+  // What this viewer may offer beyond the live register: nothing, unless the account runs Viky (src/client/milestone.ts).
+  const [preview, setPreview] = useState<{ ids: readonly string[]; loaded: boolean }>({ ids: [], loaded: false });
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const [copyRefused, setCopyRefused] = useState<"code" | "link" | null>(null);
   const [keptOnDevice, setKeptOnDevice] = useState(true);
@@ -178,10 +226,14 @@ export function FundGift() {
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
 
   const money = useDisplayCurrency(address);
-  const condition = draft.conditionId ? liveConditions().find((entry) => entry.id === draft.conditionId) : undefined;
+  const offered: readonly Condition[] = [...liveConditions(), ...preview.ids.map((id) => conditionById(id)).filter((entry): entry is Condition => entry !== undefined)];
+  const condition = draft.conditionId ? offered.find((entry) => entry.id === draft.conditionId) : undefined;
   const nameLink = condition?.link.kind === "username" ? condition.link : undefined;
-  // The condition's own detail: the name a source reads, and what counts as a day (structure, section 5, step 3).
-  const hasDetail = Boolean(nameLink || condition?.target);
+  const milestone = milestoneOf(condition);
+  const cadence = milestone ? cadenceOf(milestone, draft.cadence) : undefined;
+  // The condition's own detail: the name a source reads, and what counts as a day or the rating to reach (structure,
+  // section 5, step 3).
+  const hasDetail = Boolean(nameLink || condition?.target || milestone);
   const numbered: Step[] = ["who", "what", ...(hasDetail || !condition ? (["detail"] as Step[]) : []), "amount", "check"];
 
   const recipientRefusal = nameRefusal(giftNameProblem(draft.recipientName), W.who.refusals.recipientEmpty);
@@ -189,10 +241,14 @@ export function FundGift() {
   const namesReady = !recipientRefusal && !funderRefusal;
   const shapeRefusal = nameLink?.check && draft.username.trim() !== "" && !nameLink.check.valid(draft.username.trim()) ? nameLink.check.refusals.shape : undefined;
   const amount = unitsOf(draft.dollars);
-  const length = daysOf(draft.days);
+  const length = daysOf(draft.days, milestone);
   const daily = targetOf(condition, draft.target);
+  // A reading counts only for the name and the cadence it was taken for.
+  const standingFresh = milestone !== undefined && draft.standing !== null && draft.standingFor === standingKey(draft.username, draft.cadence);
+  const climb = climbOf(milestone, standingFresh ? draft.standing : null, draft.target);
+  const detailReady = milestone ? standingFresh && climb.target !== null && cadence !== undefined : daily.target !== null;
   const amountReady = amount.units !== null && length.days !== null;
-  const termsReady = amountReady && daily.target !== null;
+  const termsReady = amountReady && detailReady;
   const perDay = amount.units !== null && length.days !== null ? amount.units / BigInt(length.days) : null;
   const exact = perDay !== null && length.days !== null && amount.units !== null && perDay * BigInt(length.days) === amount.units;
   const recipient = tidyGiftName(draft.recipientName);
@@ -207,6 +263,7 @@ export function FundGift() {
   };
   const go = (next: Step) => {
     setProblem(null);
+    setProblemCode(null);
     window.history.pushState(null, "", `?step=${next}`);
     window.scrollTo(0, 0);
   };
@@ -225,6 +282,22 @@ export function FundGift() {
       .then(() => refresh())
       .catch(() => {});
   }, [refresh]);
+
+  // Asked again when the account changes: signing in as an account that runs Viky is what shows a condition before it is live.
+  useEffect(() => {
+    let live = true;
+    loadOfferedConditions().then(
+      (result) => {
+        if (live) setPreview({ ids: result.preview, loaded: true });
+      },
+      () => {
+        if (live) setPreview({ ids: [], loaded: true });
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [address]);
 
   // A step reached without what it needs goes to the first question it lacks; a gift kept on this device for this
   // account is picked up where it stopped (D74); the account step has nothing to offer once there is an account.
@@ -249,6 +322,10 @@ export function FundGift() {
             dollars: saved.dollars,
             days: saved.days,
             target: saved.target,
+            cadence: saved.cadence ?? "",
+            standing: saved.standing ?? null,
+            standingReadAt: saved.standingReadAt ?? "",
+            standingFor: saved.cadence ? standingKey(saved.username, saved.cadence) : "",
           };
           writeSession(DRAFT_KEY, next);
           setDraft(next);
@@ -267,13 +344,15 @@ export function FundGift() {
       return;
     }
     if (step === "who") return;
+    // A condition this account may offer before it is live is only known once the server has said so.
+    if (draft.conditionId && !condition && !preview.loaded) return;
     if (!namesReady) replace("who");
     else if (!condition) replace("what");
-    else if (step !== "detail" && daily.target === null) replace("detail");
+    else if (step !== "detail" && !detailReady) replace("detail");
     else if ((step === "check" || step === "account") && !amountReady) replace("amount");
     // `replace` and the values it reads change on every render; the step and the account are what decide.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [browser, step, address, made]);
+  }, [browser, step, address, made, preview.loaded]);
 
   // On the check, a card payment sitting in the account is valued before it is used (audit C, 9.1).
   useEffect(() => {
@@ -294,7 +373,26 @@ export function FundGift() {
   const give = useCallback(async () => {
     const account = mera.currentAccount();
     if (!account) throw new Error(W.failures.signInFirst);
-    if (!condition || amount.units === null || length.days === null || daily.target === null || condition.goalType === null) throw new Error(W.failures.other);
+    if (!condition || amount.units === null || length.days === null) throw new Error(W.failures.other);
+    let result: CreatedGift;
+    if (milestone) {
+      if (!cadence || draft.standing === null || climb.target === null) throw new Error(W.failures.other);
+      result = await createMilestoneGift({
+        account,
+        milestone,
+        cadenceGoalType: cadence.goalType,
+        cadence: cadence.id,
+        username: draft.username.trim(),
+        standing: draft.standing,
+        standingReadAt: draft.standingReadAt,
+        target: climb.target,
+        durationDays: length.days,
+        amount: amount.units,
+        recipientName: recipient,
+        funderName: funder,
+      });
+    } else {
+    if (daily.target === null || condition.goalType === null) throw new Error(W.failures.other);
     // Signed once for these terms and sent again as it is on every retry, so the server finds the same creation and
     // never pays for the gift twice (D87).
     const terms = {
@@ -320,7 +418,6 @@ export function FundGift() {
         amount: amount.units,
       }));
     writeSession(GIFT_ATTEMPT_KEY, { terms, request });
-    let result: CreatedGift;
     try {
       result = await submitGift(request);
     } catch (error) {
@@ -328,6 +425,7 @@ export function FundGift() {
       throw error;
     }
     writeSession(GIFT_ATTEMPT_KEY, null);
+    }
     const record: Made = {
       giftId: result.giftId,
       claimUrl: result.claimUrl,
@@ -336,6 +434,7 @@ export function FundGift() {
       conditionId: condition.id,
       amount: amount.units.toString(),
       days: length.days,
+      ...(milestone && cadence && climb.target !== null ? { goal: milestone.words.goal(climb.target, cadence.label), target: climb.target } : {}),
     };
     writeSession(MADE_KEY, record);
     writeSession(DRAFT_KEY, null);
@@ -346,7 +445,7 @@ export function FundGift() {
     setDraft(EMPTY_DRAFT);
     replace("done");
     window.scrollTo(0, 0);
-  }, [condition, amount.units, length.days, daily.target, draft.username, recipient, funder]);
+  }, [condition, milestone, cadence, climb.target, draft.standing, draft.standingReadAt, amount.units, length.days, daily.target, draft.username, recipient, funder]);
 
   // While paying: watch the account, turn what arrived into what a gift holds, then make the gift.
   useEffect(() => {
@@ -368,6 +467,7 @@ export function FundGift() {
             // A refusal to make the gift is said once, with a way to try again: retrying by itself every few seconds
             // would repeat a refusal nobody has read (F11).
             setProblem(readable(error));
+            setProblemCode(error instanceof ApiError ? error.code : null);
             setPhase("failed");
           }
           working.current = false;
@@ -435,6 +535,7 @@ export function FundGift() {
         dollars,
         days: draft.days,
         target: draft.target,
+        ...(milestone && draft.standing !== null ? { cadence: draft.cadence, standing: draft.standing, standingReadAt: draft.standingReadAt } : {}),
       }),
     );
   };
@@ -480,6 +581,7 @@ export function FundGift() {
   // F10. It is in their name.
   if (step === "done" && made) {
     const madeCondition = conditionById(made.conditionId);
+    const madeMilestone = made.goal !== undefined && made.target !== undefined;
     const units = BigInt(made.amount);
     const day = units / BigInt(made.days);
     const about = money.about(units);
@@ -487,7 +589,11 @@ export function FundGift() {
       <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.made.title(formatAusd(units), made.recipientName)}>
         <section className="flex flex-col gap-[var(--space-sm)]">
           {about ? <p className={HELP}>{about}</p> : null}
-          <p className={BODY}>{W.made.terms(formatAusd(units), made.days, formatAusd(day), day * BigInt(made.days) === units, madeCondition?.source ?? "")}</p>
+          <p className={BODY}>
+            {madeMilestone
+              ? M.made.terms(formatAusd(units), made.goal ?? "", made.days, madeCondition?.source ?? "")
+              : W.made.terms(formatAusd(units), made.days, formatAusd(day), day * BigInt(made.days) === units, madeCondition?.source ?? "")}
+          </p>
           <p className={HELP}>{W.made.reference(whenInWords(made.atMs), made.giftId)}</p>
         </section>
         <section className={CARD}>
@@ -511,7 +617,10 @@ export function FundGift() {
         <section className="flex flex-col gap-[var(--space-md)]">
           <h2 className={TITLE}>{W.made.nextTitle}</h2>
           <ol className={`flex list-decimal flex-col gap-[var(--space-sm)] pl-[var(--space-lg)] ${BODY}`}>
-            {W.made.next(made.recipientName, madeCondition?.words.theyConnect ?? W.made.theyConnectAny, madeCondition?.words.eachDay ?? "", formatAusd(day), settlingTimeInWords(made.atMs)).map((line) => (
+            {(madeMilestone
+              ? M.made.next(made.recipientName, madeCondition?.source ?? "", made.target ?? 0, made.days, settlingTimeInWords(made.atMs))
+              : W.made.next(made.recipientName, madeCondition?.words.theyConnect ?? W.made.theyConnectAny, madeCondition?.words.eachDay ?? "", formatAusd(day), settlingTimeInWords(made.atMs))
+            ).map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ol>
@@ -604,23 +713,130 @@ export function FundGift() {
   // ---------------------------------------------------------------------------------------------------------------
   // What will they do? Only what works from end to end, nothing chosen for them (structure, section 5).
   if (step === "what") {
-    const live = liveConditions();
+    // liveConditions() is what everybody is offered; `offered` adds, for an account that runs Viky only, a condition
+    // wired from end to end whose first real gift has not run yet, and says so under it.
     return (
       <Shell kind="task" back="/" caption={caption("what")} step={W.what.title}>
         <ChoiceList
           name="condition"
           legend={W.what.title}
           legendHidden
-          options={live.map((entry) => ({ value: entry.id, label: entry.name, help: entry.help }))}
+          options={offered.map((entry) => ({ value: entry.id, label: entry.name, help: entry.live ? entry.help : `${entry.help} ${M.operatorOnly}` }))}
           value={condition?.id ?? null}
           onChange={(id) => {
-            const chosen = live.find((entry) => entry.id === id);
-            update({ conditionId: id, target: draft.target || String(chosen?.target?.suggested ?? "") });
+            const chosen = offered.find((entry) => entry.id === id);
+            if (!chosen) return;
+            const chosenMilestone = milestoneOf(chosen);
+            // Moving between a daily condition and a milestone changes what the target and the days mean.
+            const sameKind = condition?.kind === chosen.kind;
+            update({
+              conditionId: id,
+              target: sameKind ? draft.target : chosen.target ? String(chosen.target.suggested) : "",
+              days: sameKind ? draft.days : String(chosenMilestone ? chosenMilestone.duration.suggested : 7),
+            });
           }}
         />
         <button type="button" disabled={!condition} onClick={() => go(hasDetail ? "detail" : "amount")} className={PRIMARY_BUTTON}>
           {W.continue}
         </button>
+      </Shell>
+    );
+  }
+
+  // ---------------------------------------------------------------------------------------------------------------
+  // A milestone's detail (C2): whose rating, which one, and the rating to reach, with where they stand today read
+  // before anything is chosen, because the target is only a climb from there (D45).
+  if (step === "detail" && condition && milestone && nameLink) {
+    const typed = draft.username.trim();
+    const nameShape = typed !== "" && !milestone.validName(typed) ? milestone.words.refusals.nameShape : undefined;
+    const readNow = async () => {
+      if (!milestone.validName(typed)) {
+        setReading({ busy: false, nameRefusal: milestone.words.refusals.nameShape });
+        return;
+      }
+      if (!cadence) {
+        setReading({ busy: false, cadenceRefusal: milestone.words.refusals.noCadence });
+        return;
+      }
+      setReading({ busy: true });
+      try {
+        const found = await readStanding(milestone.standingPath, typed, cadence.id);
+        update({
+          username: found.username,
+          standing: found.rating,
+          standingReadAt: found.readAt,
+          standingFor: standingKey(found.username, cadence.id),
+          target: String(smallestTarget(milestone.shape, found.rating)),
+        });
+        setReading({ busy: false });
+      } catch (error) {
+        const code = error instanceof ApiError ? error.code : "";
+        if (code === "NO_RATING") setReading({ busy: false, cadenceRefusal: milestone.words.refusals.noRating(cadence.label) });
+        else if (code === "NO_SUCH_PROFILE") setReading({ busy: false, nameRefusal: milestone.words.refusals.notFound });
+        else if (code === "INVALID_USERNAME") setReading({ busy: false, nameRefusal: milestone.words.refusals.nameShape });
+        else setReading({ busy: false, nameRefusal: milestone.words.refusals.unavailable });
+      }
+    };
+    const standing = standingFresh ? draft.standing : null;
+    return (
+      <Shell kind="task" back="/" caption={caption("detail")} step={condition.detailTitle}>
+        <form
+          className="flex flex-col gap-[var(--space-xl)]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!standingFresh) void readNow();
+            else if (climb.target !== null) go("amount");
+            else setTouched((current) => ({ ...current, target: true }));
+          }}
+        >
+          <div className="flex flex-col gap-[var(--space-sm)]">
+            <Field
+              id="source-name"
+              label={nameLink.label}
+              help={nameLink.help}
+              value={draft.username}
+              onChange={(value) => {
+                update({ username: value });
+                setReading({ busy: false });
+              }}
+              refusal={nameShape ?? reading.nameRefusal}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {nameLink.why ? <p className={HELP}>{nameLink.why}</p> : null}
+          </div>
+          <div className="flex flex-col gap-[var(--space-xs)]">
+            <ChoiceList
+              name="cadence"
+              legend={milestone.words.cadenceQuestion}
+              options={milestone.cadences.map((entry) => ({ value: entry.id, label: entry.label, help: entry.help }))}
+              value={cadence?.id ?? null}
+              onChange={(id) => {
+                update({ cadence: id });
+                setReading({ busy: false });
+              }}
+            />
+            <FieldRefusal id="cadence-refusal">{reading.cadenceRefusal}</FieldRefusal>
+          </div>
+          {standing !== null && cadence ? (
+            <div className="flex flex-col gap-[var(--space-sm)]">
+              <Field
+                id="gift-target"
+                label={milestone.words.targetLabel}
+                help={`${milestone.words.today(standing, cadence.label)} ${M.detail.smallest(smallestTarget(milestone.shape, standing))}`}
+                value={draft.target}
+                onChange={(value) => update({ target: value })}
+                refusal={draft.target.trim() === "" && !touched.target ? undefined : climb.refusal}
+                onBlur={() => setTouched((current) => ({ ...current, target: true }))}
+                inputMode="numeric"
+              />
+              {climb.target !== null ? <p className={BODY}>{inPlainWords(milestone.shape, standing, climb.target)}</p> : null}
+            </div>
+          ) : null}
+          <button type="submit" disabled={reading.busy || nameShape !== undefined || (standingFresh && climb.target === null)} className={PRIMARY_BUTTON}>
+            {reading.busy ? M.detail.reading : standingFresh ? W.continue : M.detail.read}
+          </button>
+        </form>
       </Shell>
     );
   }
@@ -701,7 +917,7 @@ export function FundGift() {
   if (step === "amount" && condition) {
     const about = amount.units !== null ? money.about(amount.units) : undefined;
     return (
-      <Shell kind="task" back="/" caption={caption("amount")} step={W.amount.title}>
+      <Shell kind="task" back="/" caption={caption("amount")} step={milestone ? M.amount.title : W.amount.title}>
         <form
           className="flex flex-col gap-[var(--space-xl)]"
           onSubmit={(event) => {
@@ -721,20 +937,29 @@ export function FundGift() {
           />
           <Field
             id="gift-days"
-            label={W.amount.daysLabel}
-            help={W.amount.daysHelp}
+            label={milestone ? milestone.words.durationLabel : W.amount.daysLabel}
+            help={milestone ? milestone.words.durationHelp : W.amount.daysHelp}
             value={draft.days}
             onChange={(value) => update({ days: value })}
             refusal={draft.days.trim() === "" && !touched.days ? undefined : length.refusal}
             onBlur={() => setTouched((current) => ({ ...current, days: true }))}
             inputMode="numeric"
           />
-          {/* What one day is worth, live, computed from what they typed and never stored, so it cannot disagree. */}
-          <section className={CARD} aria-live="polite">
-            <p className={HELP}>{condition.words.earnedDay}</p>
-            <p className={MONEY}>{perDay === null ? "…" : `${exact ? "" : "about "}${formatAusd(perDay)}`}</p>
-            <p className={HELP}>{W.amount.missed}</p>
-          </section>
+          {/* What one day is worth, live, computed from what they typed and never stored, so it cannot disagree. A milestone
+              has no days to share it over: all of it, when they reach it. */}
+          {milestone ? (
+            <section className={CARD} aria-live="polite">
+              <p className={HELP}>{condition.words.earnedDay}</p>
+              <p className={MONEY}>{amount.units === null ? "…" : formatAusd(amount.units)}</p>
+              <p className={HELP}>{milestone.words.ifNot}</p>
+            </section>
+          ) : (
+            <section className={CARD} aria-live="polite">
+              <p className={HELP}>{condition.words.earnedDay}</p>
+              <p className={MONEY}>{perDay === null ? "…" : `${exact ? "" : "about "}${formatAusd(perDay)}`}</p>
+              <p className={HELP}>{W.amount.missed}</p>
+            </section>
+          )}
           <button type="submit" disabled={!amountReady} className={PRIMARY_BUTTON}>
             {W.continue}
           </button>
@@ -751,7 +976,7 @@ export function FundGift() {
     if (step === "account") {
       return (
         <Shell kind="task" back="/" backLabel={W.backToCheck} step={W.account.title}>
-          <p className={BODY}>{W.account.yourGift(gift, recipient, length.days)}</p>
+          <p className={BODY}>{milestone ? M.account.yourGift(gift, recipient) : W.account.yourGift(gift, recipient, length.days)}</p>
           <p className={HELP}>{W.account.why}</p>
           <AccountPanel />
         </Shell>
@@ -766,7 +991,28 @@ export function FundGift() {
     const stays = Math.floor(Number(held) / 1_000_000 + arrives - Number(units) / 1_000_000);
     const about = money.about(units);
     // Every term the funder chose has a way back to its question; the first day is not a choice, so it has none.
-    const rows: Array<{ label: string; value: string; note?: string; change?: Step }> = [
+    const days = length.days;
+    const climbRows: Array<{ label: string; value: string; note?: string; change?: Step }> =
+      milestone && cadence && standingFresh && draft.standing !== null && climb.target !== null
+        ? [
+            { label: W.check.rows.for, value: recipient, change: "who" },
+            { label: W.check.rows.from, value: funder, change: "who" },
+            { label: W.check.rows.what, value: condition.name, change: "what" },
+            { label: nameLink?.row ?? M.check.rows.name, value: draft.username.trim(), change: "detail" },
+            { label: M.check.rows.cadence, value: cadence.label, change: "detail" },
+            {
+              label: M.check.rows.today,
+              value: milestone.words.todayRow(draft.standing, cadence.label),
+              note: M.detail.readAt(new Date(draft.standingReadAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })),
+            },
+            { label: M.check.rows.reach, value: String(climb.target), change: "detail" },
+            { label: M.check.rows.from, value: M.check.orUnder(startingCeiling(milestone.shape, draft.standing, climb.target)) },
+            { label: M.check.rows.goes, value: gift, note: about, change: "amount" },
+            { label: M.check.rows.long, value: milestone.words.durationInWords(days), change: "amount" },
+            { label: M.check.rows.ifNot, value: M.check.allBack },
+          ]
+        : [];
+    const rows: Array<{ label: string; value: string; note?: string; change?: Step }> = milestone ? climbRows : [
       { label: W.check.rows.for, value: recipient, change: "who" },
       { label: W.check.rows.from, value: funder, change: "who" },
       { label: W.check.rows.what, value: condition.name, change: "what" },
@@ -777,6 +1023,7 @@ export function FundGift() {
       { label: W.check.rows.firstDay, value: W.check.firstDay(condition.source) },
       { label: W.check.rows.ends, value: W.check.ends(length.days), change: "amount" },
     ];
+    const ceiling = milestone && draft.standing !== null && climb.target !== null ? startingCeiling(milestone.shape, draft.standing, climb.target) : null;
     return (
       <Shell kind="task" back="/" caption={caption("check")} step={W.check.title}>
         <dl className="flex flex-col divide-y divide-[var(--divider)] border-y border-[var(--divider)]">
@@ -798,10 +1045,17 @@ export function FundGift() {
         </dl>
 
         <section className="flex flex-col gap-[var(--space-sm)]">
-          <p className={BODY}>{W.check.missed(settlingTimeInWords(nowMs))}</p>
+          {milestone && climb.target !== null && ceiling !== null ? (
+            <>
+              <p className={BODY}>{M.check.howItWorks(condition.source, climb.target, settlingTimeInWords(nowMs))}</p>
+              <p className={BODY}>{M.check.whyCeiling(ceiling)}</p>
+            </>
+          ) : (
+            <p className={BODY}>{W.check.missed(settlingTimeInWords(nowMs))}</p>
+          )}
           <p className={BODY}>{W.check.namesSeen(recipient, funder)}</p>
           <p className="font-medium">{W.check.linkRisk(recipient)}</p>
-          <p className={BODY}>{W.check.fourteenDays}</p>
+          <p className={BODY}>{milestone ? M.check.fourteenDays : W.check.fourteenDays}</p>
         </section>
 
         {short ? (
@@ -853,7 +1107,7 @@ export function FundGift() {
             {phase === "converting" ? W.arrived.gettingReady : W.arrived.putting(arrivedFigure, gift, recipient)}
           </p>
           {/* The gift stays in sight while it is being made (audit C, 10.3). */}
-          <p className={HELP}>{W.account.yourGift(gift, recipient, length.days ?? 0)}</p>
+          <p className={HELP}>{milestone ? M.account.yourGift(gift, recipient) : W.account.yourGift(gift, recipient, length.days ?? 0)}</p>
         </Shell>
       );
     }
@@ -894,16 +1148,32 @@ export function FundGift() {
       return (
         <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
           {problem ? <FieldRefusal id="give-refused">{problem}</FieldRefusal> : null}
-          <button
-            type="button"
-            onClick={() => {
-              setProblem(null);
-              setPhase("waiting");
-            }}
-            className={PRIMARY_BUTTON}
-          >
-            {W.failures.tryAgain}
-          </button>
+          {problemCode === "STANDING_MOVED" ? (
+            // Their rating moved past what the gift could start from while the payment arrived: the same terms would be
+            // refused again, so the way on is to read where they stand and choose again. The payment stays in the account.
+            <button
+              type="button"
+              onClick={() => {
+                update({ standing: null, standingFor: "" });
+                setPhase("waiting");
+                go("detail");
+              }}
+              className={PRIMARY_BUTTON}
+            >
+              {M.failures.standingMoved}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setProblem(null);
+                setPhase("waiting");
+              }}
+              className={PRIMARY_BUTTON}
+            >
+              {W.failures.tryAgain}
+            </button>
+          )}
           <p className={HELP}>{W.waiting.staysInAccount}</p>
         </Shell>
       );
@@ -915,7 +1185,7 @@ export function FundGift() {
       <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.waiting.title(toBuy)}>
         <section className="flex flex-col gap-[var(--space-xs)]">
           <p className={HELP}>{W.waiting.inAccountNow(balance === null ? "…" : formatAusd(held))}</p>
-          <p className={BODY}>{W.account.yourGift(gift, recipient, length.days ?? 0)}</p>
+          <p className={BODY}>{milestone ? M.account.yourGift(gift, recipient) : W.account.yourGift(gift, recipient, length.days ?? 0)}</p>
         </section>
         {problem ? <FieldRefusal id="waiting-refused">{problem}</FieldRefusal> : null}
         <section className={CARD}>

@@ -10,6 +10,8 @@ import { AUSD, movesOnASignature, type Coin } from "../coins";
 import { NO_CONTACT_HASH } from "../contact-hash";
 import { fundingNonce, withdrawIntentTypedData, type GiftParams } from "../gift-terms";
 import { ApiError, getJson, postJson } from "./api";
+import { isMilestoneGiftId, milestoneWithdrawTypedData } from "../milestone-protocol";
+import type { MilestoneStatus } from "../milestone-view";
 
 /** Browser-side flows of a gift. Every step that moves money is signed by the person's own account. */
 
@@ -205,6 +207,8 @@ export type GiftSummary = {
   earnedDisplay: string;
   theirsDisplay: string;
   returnedDisplay: string;
+  /** Present on a milestone gift, whose card draws the climb rather than days (C2). */
+  milestone?: MilestoneStatus;
 };
 
 /** Every gift of the signed-in account, newest first, as funder or recipient. */
@@ -268,7 +272,9 @@ export async function withdrawEarned(input: { account: LocalAccount; giftId: str
   const escrow = input.escrow;
   const deadline = BigInt(Math.floor(Date.now() / 1_000) + 10 * 60);
   const message = { giftId: BigInt(input.giftId), to: getAddress(input.account.address), amount: input.amount, nonce: input.nonce, deadline };
-  const signature = await input.account.signTypedData(withdrawIntentTypedData(escrow, message));
+  // Each contract signs under its own name, so the gift's number decides the domain (C2).
+  const typedData = isMilestoneGiftId(input.giftId) ? milestoneWithdrawTypedData(escrow, message) : withdrawIntentTypedData(escrow, message);
+  const signature = await input.account.signTypedData(typedData);
   return postJson("/api/gift/withdraw", {
     giftId: input.giftId,
     to: message.to,

@@ -1,4 +1,4 @@
-import { DUOLINGO_DAILY } from "./conditions";
+import { conditionById, DUOLINGO_DAILY } from "./conditions";
 import { dollarsToUnits } from "./money";
 
 /**
@@ -30,6 +30,10 @@ export type PendingGiftTerms = Readonly<{
   dollars: string;
   days: string;
   target: string;
+  /** A milestone's cadence, and where the person stood when the funder chose: the ceiling they sign is built on it (C2). */
+  cadence?: string;
+  standing?: number;
+  standingReadAt?: string;
 }>;
 export type PendingGift = PendingGiftTerms & Readonly<{ savedAtMs: number }>;
 
@@ -59,6 +63,9 @@ export function pendingGiftFor(raw: string | null, account: string | undefined, 
     dollars: text("dollars"),
     days: text("days"),
     target: text("target"),
+    ...(text("cadence") !== undefined ? { cadence: text("cadence") } : {}),
+    ...(typeof record.standing === "number" ? { standing: record.standing } : {}),
+    ...(text("standingReadAt") !== undefined ? { standingReadAt: text("standingReadAt") } : {}),
     savedAtMs: typeof record.savedAtMs === "number" ? record.savedAtMs : undefined,
   };
   if (!gift.account || gift.username === undefined || !gift.dollars || !gift.days || !gift.target || gift.savedAtMs === undefined) {
@@ -73,7 +80,10 @@ export function pendingGiftFor(raw: string | null, account: string | undefined, 
   } catch {
     return undefined;
   }
-  if (!(Number(gift.days) >= 7) || !(Number(gift.target) > 0)) return undefined;
+  // A daily gift runs seven days at least; a milestone may be a single day (D43), and needs where they stood.
+  const milestone = conditionById(gift.conditionId)?.kind === "milestone";
+  if (!(Number(gift.days) >= (milestone ? 1 : 7)) || !(Number(gift.target) > 0)) return undefined;
+  if (milestone && (gift.cadence === undefined || gift.standing === undefined || gift.standingReadAt === undefined)) return undefined;
   return gift as PendingGift;
 }
 

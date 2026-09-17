@@ -10,6 +10,9 @@ import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
 import { loadGift } from "@/src/gift-store";
 import { isOperator } from "@/src/dev-access";
 import { canonicalSignature } from "@/src/signature";
+import { milestoneErrorResponse } from "@/src/milestone-api";
+import { isMilestoneGiftId } from "@/src/milestone-protocol";
+import { milestoneWithdraw } from "@/src/milestone-routes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,6 +57,12 @@ export async function POST(request: Request) {
     }
 
     assertGiftContractConfigured();
+    // A milestone gift is taken from its own contract, under its own signing domain (C2).
+    if (isMilestoneGiftId(giftId)) {
+      return await milestoneWithdraw({ account: auth.account, giftId, to, amount, nonce, deadline, signature }).catch((error: unknown) =>
+        milestoneErrorResponse(error, isOperator(operatorAccount)),
+      );
+    }
     const record = await loadGift(giftId);
     if (!record) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
     const escrow = escrowOf(record);
