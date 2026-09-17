@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   attestedSource,
   attestedSourceIds,
+  CHESS_PLAYER,
   CHESS_PROFILE,
   CHESS_RATINGS,
   COURSERA_CERTIFICATE,
@@ -10,7 +11,16 @@ import {
 } from "../src/attested-sources";
 
 test("only the listed sources exist, and an unknown name is refused", () => {
-  assert.deepEqual([...attestedSourceIds()].sort(), ["chess-profile", "chess-ratings", "coursera-certificate", "duolingo-profile"]);
+  assert.deepEqual([...attestedSourceIds()].sort(), [
+    "chess-player",
+    "chess-profile",
+    "chess-ratings-blitz",
+    "chess-ratings-bullet",
+    "chess-ratings-daily",
+    "chess-ratings-rapid",
+    "coursera-certificate",
+    "duolingo-profile",
+  ]);
   assert.equal(attestedSource("duolingo-profile"), DUOLINGO_PROFILE);
   assert.equal(attestedSource("anything-else"), undefined);
   assert.equal(attestedSource(""), undefined);
@@ -29,22 +39,33 @@ test("a caller cannot steer the reading anywhere else", () => {
 test("each source reads the page it says it reads", () => {
   assert.equal(DUOLINGO_PROFILE.url("ama"), "https://www.duolingo.com/2017-06-30/users?username=ama");
   assert.equal(CHESS_PROFILE.url("Erik"), "https://api.chess.com/pub/player/erik", "Chess.com names are lower case");
-  assert.equal(CHESS_RATINGS.url("Erik"), "https://api.chess.com/pub/player/erik/stats");
-  for (const source of [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_RATINGS, COURSERA_CERTIFICATE]) {
+  assert.equal(CHESS_PLAYER.url("Erik"), "https://api.chess.com/pub/player/erik");
+  assert.equal(CHESS_RATINGS.rapid.url("Erik"), "https://api.chess.com/pub/player/erik/stats");
+  for (const source of [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), COURSERA_CERTIFICATE]) {
     assert.match(source.url("someone"), /^https:\/\//, `${source.id} must be read over a secure connection`);
     assert.ok(source.matches.length > 0, `${source.id} must require something of the answer`);
   }
 });
 
 test("the patterns match what those pages actually answer", () => {
-  // Captured from the real pages on 12 Sep 2026, so a change of shape breaks a test rather than a gift.
-  const chessProfile = '{"player_id":41,"url":"https://www.chess.com/member/erik","name":"Erik","username":"erik"}';
+  // Captured from the real pages on 17 Sep 2026, so a change of shape breaks a test rather than a gift.
+  const chessProfile =
+    '{"avatar":"https://images.chesscomfiles.com/uploads/v1/user/41.5434c4ff.200x200o.5b102889d835.jpeg","player_id":41,"@id":"https://api.chess.com/pub/player/erik","url":"https://www.chess.com/member/erik","name":"Erik","username":"erik","followers":10297}';
   for (const m of CHESS_PROFILE.matches) assert.match(chessProfile, new RegExp(m.value), m.value);
+  const noName = '{"player_id":347202211,"@id":"https://api.chess.com/pub/player/bar","url":"https://www.chess.com/member/bar","username":"bar","followers":16}';
+  for (const m of CHESS_PLAYER.matches) assert.match(noName, new RegExp(m.value), m.value);
+  assert.equal(CHESS_PROFILE.matches.every((m) => new RegExp(m.value).test(noName)), false, "a binding needs a name to hold the code");
 
-  const chessStats = '{"chess_daily":{"last":{"rating":1493,"date":1789213782,"rd":63}},"chess_rapid":{"last":{"rating":1904,"date":1764957051,"rd":80}}}';
-  const rating = new RegExp(CHESS_RATINGS.matches[0].value).exec(chessStats);
-  assert.equal(rating?.groups?.mode, "daily");
-  assert.equal(rating?.groups?.rating, "1493");
+  // hikaru's page lists daily first, then rapid, bullet and blitz. Each cadence must read its own block.
+  const chessStats =
+    '{"chess_daily":{"last":{"rating":2239,"date":1770563021,"rd":103}},"chess960_daily":{"last":{"rating":1231,"date":1444458214,"rd":230}},"chess_rapid":{"last":{"rating":2838,"date":1786796329,"rd":44}},"chess_bullet":{"last":{"rating":3403,"date":1789235988,"rd":30}},"chess_blitz":{"last":{"rating":3410,"date":1789613471,"rd":31}}}';
+  const read = (mode: keyof typeof CHESS_RATINGS) => new RegExp(CHESS_RATINGS[mode].matches[0].value).exec(chessStats)?.groups;
+  assert.deepEqual({ ...read("rapid") }, { rating: "2838", date: "1786796329" });
+  assert.deepEqual({ ...read("blitz") }, { rating: "3410", date: "1789613471" });
+  assert.deepEqual({ ...read("bullet") }, { rating: "3403", date: "1789235988" });
+  assert.deepEqual({ ...read("daily") }, { rating: "2239", date: "1770563021" }, "chess960_daily is another game");
+  const neverPlayedBlitz = '{"chess_rapid":{"last":{"rating":1705,"date":1775022187,"rd":197}},"fide":0}';
+  assert.equal(new RegExp(CHESS_RATINGS.blitz.matches[0].value).test(neverPlayedBlitz), false, "a cadence never played has no rating");
 
   const duolingo = '{"users":[{"id":12345,"totalXp":8401,"username":"ama","name":"Ama","streak":3}]}';
   for (const m of DUOLINGO_PROFILE.matches) assert.match(duolingo, new RegExp(m.value), m.value);

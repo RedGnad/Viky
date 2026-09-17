@@ -36,8 +36,17 @@ const SURFACES = [
   "src/gift-api.ts",
   "src/client/*.ts",
   "src/duolingo-public-checkin.ts",
+  // The milestone gift (C2): the half of the register it adds, the refusals its routes and its reading send, and the
+  // route that reads where someone stands before a gift is offered.
+  "src/milestone-conditions.ts",
+  "src/milestone-api.ts",
+  "src/milestone-reading.ts",
+  "src/milestone-routes.ts",
+  "app/api/chess/**/*.ts",
+  "app/api/conditions/**/*.ts",
 ];
-const EXCLUDED = new Set(["app/components/JudgesAccount.tsx"]);
+// The judges page is the one place addresses and the words of the chain may appear, and these two components are only on it.
+const EXCLUDED = new Set(["app/components/JudgesAccount.tsx", "app/components/MilestoneJudges.tsx"]);
 
 const files = [...new Set(SURFACES.flatMap((pattern) => globSync(pattern)))].filter((file) => !EXCLUDED.has(file)).sort();
 const findings = files.flatMap((file) => scanSource(file, readFileSync(file, "utf8")));

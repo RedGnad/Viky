@@ -3,7 +3,7 @@ import { conditionById, conditionOfGoal } from "@/src/conditions";
 import type { GiftSummary } from "@/src/client/gift";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { dateInWords } from "@/src/moments";
-import { GIFT_CARD as W } from "@/src/sentences";
+import { GIFT_CARD as W, MILESTONE_PAGE as M } from "@/src/sentences";
 import { BODY, CARD, HELP } from "../components/ui";
 import { DayStrip } from "./DayStrip";
 import { MilestoneMeter } from "./MilestoneMeter";
@@ -15,7 +15,9 @@ import { MilestoneMeter } from "./MilestoneMeter";
  * and for what; under it the image of progress, the state in words, and one line of amounts. For what comes from the
  * register and never from the card (item 10). A daily gift draws its days, a milestone its meter.
  */
-export function GiftCard({ gift, milestone, still = false }: Readonly<{ gift: GiftSummary; milestone?: MilestoneStatus; still?: boolean }>) {
+export function GiftCard({ gift, milestone: given, still = false }: Readonly<{ gift: GiftSummary; milestone?: MilestoneStatus; still?: boolean }>) {
+  // On Home and Gifts a milestone gift arrives inside its summary (C2); at the head of its page, beside it.
+  const milestone = given ?? gift.milestone;
   const condition = milestone ? conditionById(milestone.conditionId) : conditionOfGoal(gift.goalType);
   const started = gift.opened && (gift.counting || gift.finished || gift.creditedDays + gift.missedDays > 0);
   const body = (
@@ -34,7 +36,7 @@ export function GiftCard({ gift, milestone, still = false }: Readonly<{ gift: Gi
       {milestone ? <MilestoneMeter status={milestone} /> : <DayStrip gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} />}
       <span className={`block ${BODY}`}>{milestone ? milestoneStateInWords(milestone) : stateInWords(gift, condition?.words.connect)}</span>
       <span className={`block ${HELP} tabular-nums`}>
-        {milestone ? W.milestoneAmount(milestone.amountDisplay, dateInWords(milestone.deadlineMs)) : amountsInWords(gift, started)}
+        {milestone ? W.milestoneAmount(milestone.amountDisplay, milestoneBy(milestone)) : amountsInWords(gift, started)}
       </span>
     </>
   );
@@ -73,10 +75,16 @@ export function stateInWords(gift: GiftSummary, connect: string | undefined): st
   return W.counting(gift.creditedDays, gift.durationDays, gift.missedDays);
 }
 
+/** "by 17 Oct 2026" once the first reading has started the clock, "within 30 days of connecting" before it (D46). */
+export function milestoneBy(status: Pick<MilestoneStatus, "deadlineMs" | "durationDays">): string {
+  return status.deadlineMs === null ? M.withinDays(status.durationDays) : M.byDate(dateInWords(status.deadlineMs));
+}
+
 function milestoneStateInWords(status: MilestoneStatus): string {
   if (status.cancelled) return W.takenBack;
   if (status.reached) return W.milestoneReached(status.target);
   if (status.finished) return W.milestoneMissed(status.target);
   if (!status.opened) return W.notOpened;
+  if (status.phase === "startTooHigh" && status.startReading !== null) return W.milestoneStartTooHigh(status.startReading, status.maximumStart);
   return status.todayReading === null ? W.milestoneNotRead(status.target) : W.milestoneToday(status.todayReading, status.target);
 }

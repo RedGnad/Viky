@@ -1,5 +1,7 @@
 import "../src/load-env";
 import { createServer } from "node:http";
+import { classifyFetchFailure, localAttestedFetch } from "../src/attested-read";
+import { attestedSource } from "../src/attested-sources";
 import { fetchPublicProfile, PublicProfileError, reclaimLocalProfileDeps } from "../src/duolingo-public";
 
 /**
@@ -7,6 +9,11 @@ import { fetchPublicProfile, PublicProfileError, reclaimLocalProfileDeps } from 
  * (Vercel functions start Node with `--no-experimental-require-module`, which zk-fetch's CommonJS build
  * cannot survive). It only fetches and returns the proof; the caller verifies the attestor signature
  * itself, so a compromised worker could delay a reading but never forge one.
+ *
+ * Two shapes of request. `{ source, account }` names a page from src/attested-sources.ts and the account to read
+ * there; the worker builds the URL itself and never takes one from its caller (C2, Chess.com). `{ username }` is the
+ * Duolingo request the app sent before sources existed, kept so a deployment of the app can never meet a worker that
+ * no longer understands it.
  *
  * Usage: ZKFETCH_WORKER_SECRET=<secret> pnpm zkfetch:worker [port]
  */
@@ -28,12 +35,32 @@ const server = createServer(async (request, response) => {
     raw += chunk;
     if (raw.length > 4_096) return reply(413, { error: "Too large" });
   }
-  let username = "";
+  let body: { username?: unknown; source?: unknown; account?: unknown };
   try {
-    username = String((JSON.parse(raw) as { username?: unknown }).username ?? "");
+    body = JSON.parse(raw) as typeof body;
   } catch {
     return reply(400, { error: "Bad JSON" });
   }
+
+  if (body.source !== undefined) {
+    const source = attestedSource(String(body.source));
+    const account = String(body.account ?? "");
+    if (!source) return reply(400, { error: "UNKNOWN_SOURCE" });
+    if (!source.accepts(account)) return reply(400, { error: "INVALID_ACCOUNT" });
+    try {
+      const proof = await localAttestedFetch(source, account);
+      console.log(JSON.stringify({ at: new Date().toISOString(), source: source.id, account, ms: Date.now() - started, ok: true }));
+      return reply(200, { proof });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const code = classifyFetchFailure(message, source).code;
+      console.log(JSON.stringify({ at: new Date().toISOString(), source: source.id, account, ms: Date.now() - started, ok: false, code, message }));
+      // zkFetch's own words go back, so the caller reads a refusal exactly as it would read a local one.
+      return reply(code === "NOT_FOUND" ? 404 : code === "NO_MATCH" ? 422 : 502, { error: code, message });
+    }
+  }
+
+  const username = String(body.username ?? "");
   try {
     const profile = await fetchPublicProfile(username, await reclaimLocalProfileDeps());
     console.log(JSON.stringify({ at: new Date().toISOString(), username, ms: Date.now() - started, ok: true, totalXp: profile.totalXp }));

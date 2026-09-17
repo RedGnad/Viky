@@ -618,7 +618,7 @@ function milestoneGift(over: Record<string, unknown> = {}) {
     youAreTheRecipient: true,
     youAreTheFunder: false,
     names: { recipientName: "Léa", funderName: "Maman" },
-    goalAccount: { username: "lea_plays" },
+    goalAccount: { username: "lea_plays", bound: true, code: null, codeExpiresAt: null },
     amount: "50000000",
     amountDisplay: "$50.00",
     startReading: 1450,
@@ -626,6 +626,7 @@ function milestoneGift(over: Record<string, unknown> = {}) {
     todayReading: 1472,
     readAtMs: Date.now() - 3 * 3_600_000,
     deadlineMs: Date.now() + 20 * 86_400_000,
+    durationDays: 30,
     opened: true,
     connected: true,
     reached: false,
@@ -637,8 +638,13 @@ function milestoneGift(over: Record<string, unknown> = {}) {
     takenDisplay: "$0.00",
     returnedDisplay: "$0.00",
     createdAtChain: Math.floor(Date.now() / 1000) - 3 * 86_400,
+    claimedAtChain: Math.floor(Date.now() / 1000) - 2 * 86_400,
     withdrawNonce: "0",
     escrow: ESCROW,
+    phase: "climbing",
+    cadence: { id: "rapid", label: "Rapid" },
+    maximumStart: 1460,
+    standingAtOffer: 1450,
     ...over,
   };
 }
@@ -664,16 +670,34 @@ function milestone(): Scenario[] {
       },
     },
     {
+      name: "milestone: opened, connecting with a code",
+      run: async (s) => {
+        await open(
+          s,
+          milestoneGift({
+            phase: "opened",
+            connected: false,
+            startReading: null,
+            todayReading: null,
+            readAtMs: null,
+            deadlineMs: null,
+            goalAccount: { username: "lea_plays", bound: false, code: "KXQPRT", codeExpiresAt: new Date(Date.now() + 50 * 60_000).toISOString() },
+          }),
+        );
+        await s.shot("milestone", "opened, connecting with a code", "A milestone gift's page, opened and not connected: the code for the name the funder gave (simulated data)", { real: "replaced: GET /api/gift/[id] with a simulated milestone gift" });
+      },
+    },
+    {
       name: "milestone: reached, read by the funder",
       run: async (s) => {
-        await open(s, milestoneGift({ youAreTheRecipient: false, youAreTheFunder: true, todayReading: 1503, reached: true, reachedAtMs: Date.now() - 86_400_000, earned: "50000000", earnedDisplay: "$50.00" }));
+        await open(s, milestoneGift({ youAreTheRecipient: false, youAreTheFunder: true, todayReading: 1503, reached: true, finished: true, phase: "reached", reachedAtMs: Date.now() - 86_400_000, earned: "50000000", earnedDisplay: "$50.00" }));
         await s.shot("milestone", "reached, the funder's reading", "A milestone gift's page, signed in as the funder, reached (simulated data until C2)", { real: "replaced: GET /api/gift/[id] with a simulated milestone gift" });
       },
     },
     {
       name: "milestone: not reached in time",
       run: async (s) => {
-        await open(s, milestoneGift({ todayReading: 1488, finished: true, deadlineMs: Date.now() - 2 * 86_400_000, returnedDisplay: "$50.00" }));
+        await open(s, milestoneGift({ todayReading: 1488, finished: true, phase: "returned", deadlineMs: Date.now() - 2 * 86_400_000, returnedDisplay: "$50.00" }));
         await s.shot("milestone", "not reached in time", "A milestone gift's page, signed in as the person it is for, past the deadline (simulated data until C2)", { real: "replaced: GET /api/gift/[id] with a simulated milestone gift" });
       },
     },

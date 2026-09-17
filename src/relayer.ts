@@ -193,14 +193,26 @@ export async function relay(
   /** Called with the transaction's hash as soon as it is submitted, before finality: a caller that records it can find the transaction again if anything after fails (D87). */
   onSubmitted?: (hash: Hash) => Promise<void>,
 ): Promise<RelayResult> {
+  return relayCall({ address: escrow, abi: giftEscrowAbi as unknown as Abi, floor: giftGasLimit(functionName) }, functionName, args, clients);
+}
+
+/** The contract a relayed call goes to: where it is, what it speaks, and the recorded figure its gas stays above. */
+export type RelayTarget = Readonly<{ address: Hex; abi: Abi; floor: bigint }>;
+
+/** The same submission for any contract the relayer serves: the daily gift contract and the milestone one (C2). */
+export async function relayCall(
+  target: RelayTarget,
+  functionName: string,
+  args: readonly unknown[],
+  clients: RelayerClients = relayerClients(),
+): Promise<RelayResult> {
   await relayerPreflight(clients);
-  const address = escrow;
-  const abi = giftEscrowAbi as unknown as Abi;
+  const { address, abi } = target;
   try {
     // Simulate first: a refusal costs nothing and comes back with its typed error.
     await clients.publicClient.simulateContract({ address, abi, functionName, args: args as never, account: clients.address });
   } catch (error) {
-    const name = decodeContractError(error);
+    const name = decodeContractError(error, abi);
     // Not a typed error means an older library inside the contract reverted with a plain string, and the
     // whole reason used to vanish on its way to the person. Keep it on the error itself.
     const raw = name ? undefined : (error instanceof Error ? error.message : String(error)).slice(0, 400).replace(/\s+/g, " ");
@@ -212,7 +224,7 @@ export async function relay(
   // proxy that costs more: the withdrawal path was declared 172,000 against a real cost near 170,000, which
   // is not a margin (D52). Estimated against the chain now, with the same margin on top, and the recorded
   // figure kept only as a floor so a suspiciously low estimate cannot under-declare either.
-  const gas = await relayGasLimit(clients, { address, abi, functionName, args }, giftGasLimit(functionName));
+  const gas = await relayGasLimit(clients, { address, abi, functionName, args }, target.floor);
   const hash = await clients.walletClient.writeContract({
     address,
     abi,

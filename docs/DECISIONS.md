@@ -2431,3 +2431,40 @@ receipt, with the key hash of the attempt that made them: the gift is then in th
 fourteen days unopened. A creation with nothing submitted is called abandoned after an hour if its authorization was
 never used; one whose authorization was used with no transaction recorded is reported for an operator.
 
+## D88, 17 Sep 2026: the Chess.com milestone, wired from end to end before it is offered (C2)
+
+**What was measured first.** An attested read of `api.chess.com/pub/player/erik` and `/stats` through Reclaim zkFetch and
+its TEE client: both verified, both signed by the pinned attestor, about four seconds each, twenty-six through the
+worker with its start. The refusals are distinguishable: an unknown name ends the fetch with HTTP 404, a profile with no
+name or a cadence never played is refused by the attestor as `Regex "…" didn't match`. Without a user agent Chess.com
+answers 403 with a challenge page. The name field is absent from a profile until the person fills it in, and Chess.com
+lets a username change every ninety days.
+
+**What that changed.**
+1. **One reading per cadence.** The written pattern for the ratings page took whichever cadence came first, `daily` for
+   hikaru and `rapid` for magnuscarlsen, and its test pinned that. Each cadence is now its own source, its own goal type
+   on the contract (rapid 1, blitz 2, bullet 3, daily 4) and its own provider id, so a blitz rating can never settle a
+   rapid gift (D48). A proof must also carry exactly the source's patterns, or a worker could pass one off for another.
+2. **A reading is two proofs.** The ratings page carries no identity, so each reading also proves the profile:
+   `player_id` is what a gift is bound to, and a change of name is followed once a proof shows the new name is the same
+   player.
+3. **The code is always asked.** The funder must name the account, because the target is a climb from where it stands
+   today; the recipient proves it is theirs with a six-letter code in the profile's name, letters only because Chess.com
+   publishes no rule for that field.
+4. **Below the target, the keeper only looks.** The contract refuses a reading short of the target and records nothing,
+   so an attested one there costs a proof and changes nothing. A plain read decides whether to take one; a failed plain
+   read goes on to the proof. Both daily passes read, to halve the gap D48 records.
+5. **A gift is refused, not made, when the rating has already passed the highest start** by the time the payment
+   arrives (`STANDING_MOVED`): it could never pay.
+6. **The first real gift is made before the condition is offered.** An account that runs Viky sees the condition on
+   "What will they do?" marked as offered to nobody else, and the create route accepts it only from such an account.
+   `live: true` is the last change.
+
+**Not changed:** `MilestoneGift.sol` is byte for byte the contract of D49 (13,240 bytes). Its three review fixes of D49
+were each checked by putting the defect back; no separate review has read them since.
+
+**Rehearsed before mainnet.** The deployment ran on a local fork with the real deployer's nonce and balance (expected
+address `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e`, about 0.40 MON at 102 gwei, ownership read back as the founder's),
+then `scripts/rehearse-milestone-fork.ts` ran the routes on it: a gift made, opened, started by a real attested reading
+of erik at 1904, released by a reading at the target, taken by the recipient, and a second gift nobody opened sent back
+by the settling pass.

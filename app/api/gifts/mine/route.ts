@@ -4,6 +4,8 @@ import { catchUpSecondsOf } from "@/src/catch-up";
 import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { formatAusd, readGift, theirsSoFar } from "@/src/gift-reader";
 import { loadGiftsOf, loadSettledDays } from "@/src/gift-store";
+import { isMilestoneGiftId } from "@/src/milestone-protocol";
+import { loadMilestoneStatus } from "@/src/milestone-status";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { escrowOf } from "@/src/relayer";
 
@@ -24,8 +26,39 @@ export async function GET(request: Request) {
     const recordedDays = await loadSettledDays(records.map((record) => record.giftId));
     const gifts = await Promise.all(
       records.map(async (record) => {
-        const gift = await readGift(escrowOf(record), record.giftId);
         const role = record.funder.toLowerCase() === auth.account.toLowerCase() ? "funder" : "recipient";
+        // A milestone gift has no days to draw: its card carries the climb instead (C2).
+        if (isMilestoneGiftId(record.giftId)) {
+          const { status, state } = await loadMilestoneStatus(record, { isRecipient: role === "recipient", isFunder: role === "funder", holdsTheLink: false });
+          return {
+            giftId: record.giftId,
+            role,
+            goalType: state.goalType,
+            goalUsername: record.goalUsername,
+            usernameSource: record.usernameSource,
+            recipientName: record.recipientName,
+            funderName: record.funderName,
+            catchUpSeconds: 0,
+            days: [],
+            fundedAt: state.fundedAt,
+            startDay: 0,
+            endDay: 0,
+            amountDisplay: status.amountDisplay,
+            perDayDisplay: status.amountDisplay,
+            durationDays: state.durationDays,
+            creditedDays: 0,
+            missedDays: 0,
+            opened: status.opened,
+            counting: status.connected,
+            finished: status.finished,
+            cancelled: status.cancelled,
+            earnedDisplay: status.earnedDisplay,
+            theirsDisplay: status.reached ? status.amountDisplay : "$0.00",
+            returnedDisplay: status.returnedDisplay,
+            milestone: status,
+          };
+        }
+        const gift = await readGift(escrowOf(record), record.giftId);
         return {
           giftId: record.giftId,
           role,

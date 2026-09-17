@@ -1,3 +1,5 @@
+import { CHESS_USER_AGENT, chessProfileUrl, chessRatingPattern, chessStatsUrl, isValidChessUsername, type ChessMode } from "./chess-com";
+
 /**
  * The public pages Viky is allowed to read, and nothing else. Browser safe, and shared by the app and the
  * attested-fetch worker so both agree on exactly one list.
@@ -19,6 +21,8 @@ export type AttestedSource = Readonly<{
   url: (account: string) => string;
   /** What the answer must contain for the proof to be worth anything. */
   matches: readonly ResponseMatch[];
+  /** The user agent the page is read with, when the site asks for one of its own. */
+  userAgent?: string;
 }>;
 
 /** Duolingo's public profile: the identity, the display name, and the experience total (D27). */
@@ -37,15 +41,17 @@ export const DUOLINGO_PROFILE: AttestedSource = {
 };
 
 /**
- * Chess.com's public profile. `player_id` is the identity that survives a change of username, and `name`
- * is the field a person can edit, which is where a binding code goes, exactly as on Duolingo.
- * Measured on 12 Sep 2026 against api.chess.com/pub/player/erik.
+ * Chess.com's public profile, for the binding: `player_id` is the identity that survives a change of username, and
+ * `name` is the field a person can edit, which is where a binding code goes, exactly as on Duolingo. Chess.com leaves
+ * `name` out of the answer entirely when the person never filled it in (measured on 17 Sep 2026 on foo, bar and
+ * test123), so this reading refuses a profile without one, which is the right answer for a binding: no name, no code.
  */
 export const CHESS_PROFILE: AttestedSource = {
   id: "chess-profile",
   service: "Chess.com",
-  accepts: (account) => /^[A-Za-z0-9_-]{3,25}$/.test(account),
-  url: (account) => `https://api.chess.com/pub/player/${encodeURIComponent(account.toLowerCase())}`,
+  accepts: isValidChessUsername,
+  url: chessProfileUrl,
+  userAgent: CHESS_USER_AGENT,
   matches: [
     { type: "regex", value: '"player_id":(?<playerId>\\d+)' },
     { type: "regex", value: '"username":"(?<username>[^"]+)"' },
@@ -54,16 +60,42 @@ export const CHESS_PROFILE: AttestedSource = {
 };
 
 /**
- * Chess.com's public ratings. A separate page from the profile, so proving a milestone means two readings:
- * one that says who this is, one that says where they stand. Measured on 12 Sep 2026: every rating arrives
- * as `"chess_rapid":{"last":{"rating":1904,...}}`.
+ * The same page for every later reading, without the name: who this username is today, whether or not they ever
+ * filled in a name. Read beside each rating, because the ratings page carries no identity of its own.
  */
-export const CHESS_RATINGS: AttestedSource = {
-  id: "chess-ratings",
+export const CHESS_PLAYER: AttestedSource = {
+  id: "chess-player",
   service: "Chess.com",
-  accepts: CHESS_PROFILE.accepts,
-  url: (account) => `${CHESS_PROFILE.url(account)}/stats`,
-  matches: [{ type: "regex", value: '"chess_(?<mode>rapid|blitz|bullet|daily)":\\{"last":\\{"rating":(?<rating>\\d+)' }],
+  accepts: isValidChessUsername,
+  url: chessProfileUrl,
+  userAgent: CHESS_USER_AGENT,
+  matches: [
+    { type: "regex", value: '"player_id":(?<playerId>\\d+)' },
+    { type: "regex", value: '"username":"(?<username>[^"]+)"' },
+  ],
+};
+
+/**
+ * Chess.com's public ratings, one reading per cadence. The page lists its cadences in no fixed order, so a single
+ * pattern for "any cadence" returned whichever came first: `daily` for hikaru, `rapid` for magnuscarlsen, measured on
+ * 17 Sep 2026. Each cadence is therefore its own source with its own pattern, and the goal type of a gift names one.
+ */
+function chessRatings(mode: ChessMode): AttestedSource {
+  return {
+    id: `chess-ratings-${mode}`,
+    service: "Chess.com",
+    accepts: isValidChessUsername,
+    url: chessStatsUrl,
+    userAgent: CHESS_USER_AGENT,
+    matches: [{ type: "regex", value: chessRatingPattern(mode) }],
+  };
+}
+
+export const CHESS_RATINGS: Readonly<Record<ChessMode, AttestedSource>> = {
+  rapid: chessRatings("rapid"),
+  blitz: chessRatings("blitz"),
+  bullet: chessRatings("bullet"),
+  daily: chessRatings("daily"),
 };
 
 /**
@@ -93,7 +125,7 @@ export const COURSERA_CERTIFICATE: AttestedSource = {
   ],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_RATINGS, COURSERA_CERTIFICATE];
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), COURSERA_CERTIFICATE];
 
 /** The source with that name, or nothing. An unknown name is refused rather than guessed at. */
 export function attestedSource(id: string): AttestedSource | undefined {

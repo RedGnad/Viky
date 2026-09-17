@@ -1,0 +1,114 @@
+import type { Hex } from "viem";
+import { loadAllGifts } from "./gift-store";
+import { canExpire, milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
+import { MILESTONE_OURS_TO_FIX, runMilestoneReading, type MilestoneOutcome } from "./milestone-reading";
+import { relayExpire, relayMilestoneRefund } from "./milestone-relay";
+import { isMilestoneGiftId } from "./milestone-protocol";
+import { escrowOf, RelayerError } from "./relayer";
+
+/**
+ * The keeper's pass over milestone gifts (C2), run inside both daily passes (src/daily-pass.ts).
+ *
+ * Every pass reads each gift still climbing, and the first reading at or past the target releases the whole gift.
+ * Reading in both passes rather than one halves the longest wait between two readings, which matters because the
+ * contract judges the reading, not the day: a target reached in the evening and first read after the deadline is
+ * lost, and our schedule is the only thing between the two (D48 records that risk, and the recipient's page offers a
+ * reading on demand for the same reason).
+ *
+ * The settling pass then closes what can no longer be reached, by the contract's own rules (`canExpire`), and sends the
+ * whole amount back. A gift whose reading failed on our side in this pass is held: it is not closed on a pass that
+ * could not read it (D57), even though a reading after the deadline could not have saved it, so that nobody has to
+ * reason about which of our failures were harmless.
+ */
+
+export type MilestonePassLine = { giftId: string; step: "read" | "expire" | "refund"; result: string; hash?: string };
+
+export type MilestonePassDeps = {
+  gifts: () => Promise<ReadonlyArray<{ giftId: string; escrow: Hex | null }>>;
+  read: (contract: Hex, giftId: string) => Promise<MilestoneState>;
+  reach: (giftId: string) => Promise<MilestoneOutcome>;
+  expire: (giftId: string, contract: Hex) => Promise<{ hash: string }>;
+  refund: (giftId: string, contract: Hex) => Promise<{ hash: string }>;
+  now: () => number;
+};
+
+export function liveMilestonePassDeps(): MilestonePassDeps {
+  return {
+    gifts: async () => (await loadAllGifts()).filter((record) => isMilestoneGiftId(record.giftId)),
+    read: (contract, giftId) => readMilestoneGift(contract, giftId),
+    reach: (giftId) => runMilestoneReading({ giftId, purpose: "reach" }),
+    expire: relayExpire,
+    refund: relayMilestoneRefund,
+    now: () => Math.floor(Date.now() / 1_000),
+  };
+}
+
+function describe(outcome: MilestoneOutcome): string {
+  switch (outcome.kind) {
+    case "reached":
+      return `reached at ${outcome.rating}`;
+    case "started":
+      return `started at ${outcome.rating}`;
+    case "notYet":
+      return `not yet: ${outcome.rating} of ${outcome.target}${outcome.attested ? ", attested" : ""}`;
+    case "already":
+      return `skipped: ${outcome.reason}`;
+    case "refused":
+      return `refused: ${outcome.code}${outcome.rating !== undefined ? ` (${outcome.rating})` : ""}`;
+  }
+}
+
+async function attempt(giftId: string, step: "expire" | "refund", action: () => Promise<{ hash: string }>): Promise<MilestonePassLine> {
+  try {
+    const result = await action();
+    return { giftId, step, result: "sent", hash: result.hash };
+  } catch (error) {
+    if (error instanceof RelayerError && error.code === "REVERTED") return { giftId, step, result: `refused: ${error.contractError ?? "unknown"}` };
+    throw error;
+  }
+}
+
+export async function milestonePass(settle: boolean, deps: MilestonePassDeps = liveMilestonePassDeps()): Promise<MilestonePassLine[]> {
+  const lines: MilestonePassLine[] = [];
+  for (const record of await deps.gifts()) {
+    try {
+      lines.push(...(await passOne(record, settle, deps)));
+    } catch (error) {
+      // One gift that cannot be read today never stops the pass for the others, and the report says which.
+      lines.push({ giftId: record.giftId, step: "read", result: `failed: ${error instanceof Error ? error.message.slice(0, 200) : String(error)}` });
+    }
+  }
+  return lines;
+}
+
+async function passOne(record: { giftId: string; escrow: Hex | null }, settle: boolean, deps: MilestonePassDeps): Promise<MilestonePassLine[]> {
+  const lines: MilestonePassLine[] = [];
+  const giftId = record.giftId;
+  let contract: Hex;
+  try {
+    contract = escrowOf(record);
+  } catch (error) {
+    return [{ giftId, step: "read", result: error instanceof Error ? error.message : "no contract recorded" }];
+  }
+  let state = await deps.read(contract, giftId);
+  let held = false;
+  if (milestonePhase(state, deps.now()) === "climbing") {
+    const outcome = await deps.reach(giftId);
+    lines.push({ giftId, step: "read", result: describe(outcome), hash: "hash" in outcome ? outcome.hash : undefined });
+    held = outcome.kind === "refused" && MILESTONE_OURS_TO_FIX.has(outcome.code);
+    if (outcome.kind === "reached") state = await deps.read(contract, giftId);
+  }
+  if (!settle) return lines;
+  if (held) {
+    lines.push({ giftId, step: "expire", result: "held: today's reading failed on our side" });
+    return lines;
+  }
+  if (canExpire(state, deps.now())) {
+    const line = await attempt(giftId, "expire", () => deps.expire(giftId, contract));
+    lines.push(line);
+    if (line.result !== "sent") return lines;
+    state = await deps.read(contract, giftId);
+  }
+  if (state.refundable > 0n) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, contract)));
+  return lines;
+}

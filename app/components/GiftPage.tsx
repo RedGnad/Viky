@@ -87,7 +87,7 @@ export function GiftPage({ giftId, linkKey }: Readonly<{ giftId: string; linkKey
       </Shell>
     );
   }
-  if (status.kind === "milestone") return <MilestoneGiftPage status={status} />;
+  if (status.kind === "milestone") return <MilestoneGiftPage status={status} linkKey={linkKey} reload={reload} />;
   return <DailyGiftPage gift={status} linkKey={linkKey} reload={reload} />;
 }
 

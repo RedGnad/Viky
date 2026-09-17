@@ -27,6 +27,7 @@
     "check:contract-sizes": "tsx scripts/check-contract-sizes.ts",
     "deploy:gift-escrow": "tsx scripts/deploy-gift-escrow.ts",
     "deploy:exit-router": "tsx scripts/deploy-exit-router.ts",
+    "deploy:milestone-gift": "tsx scripts/deploy-milestone-gift.ts",
     "check:gift-escrow": "tsx scripts/check-gift-escrow.ts",
     "db:migrate": "tsx scripts/migrate-db.ts",
     "backfill:days": "tsx scripts/backfill-days.ts",

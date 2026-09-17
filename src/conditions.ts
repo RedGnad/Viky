@@ -199,7 +199,10 @@ export const DUOLINGO_DAILY: Condition = {
   },
 };
 
-/** C2, written with its words, live once MilestoneGift is deployed and a real gift has run on it. */
+/**
+ * C2, the milestone on Chess.com. Its cadences, its target question and its refusals are the milestone half of the
+ * register (src/milestone-conditions.ts). Live once MilestoneGift is deployed and a real gift has run on it.
+ */
 export const CHESS_RATING: Condition = {
   id: "chess-rating",
   kind: "milestone",
@@ -207,14 +210,35 @@ export const CHESS_RATING: Condition = {
   live: false,
   source: "Chess.com",
   name: "Reach a chess rating on Chess.com",
-  help: "Their public Chess.com rating, read every morning. Nothing to install, no password.",
-  link: { kind: "username", label: "Their Chess.com name", help: "The name on their Chess.com profile.", example: "hikaru", row: "Their Chess.com name", noneGiven: "They name their own when they open it" },
-  reading: "chess-ratings",
+  help: "Their public Chess.com rating, read every day. Nothing to install, no password.",
+  link: {
+    kind: "username",
+    label: "Their Chess.com name",
+    help: "The name on their Chess.com profile, like hikaru. It is needed to read where they stand today.",
+    why: "Only that Chess.com account can earn this gift, and they prove it is theirs with a short code when they open it.",
+    example: "hikaru",
+    row: "Their Chess.com name",
+    noneGiven: "Not given",
+    // The name is checked by reading where they stand in the chosen cadence, before any money moves. The rule is
+    // Chess.com's own, the same as `isValidChessUsername`, which a test holds equal to it.
+    check: {
+      valid: (value) => /^[A-Za-z0-9_-]{3,25}$/.test(value),
+      path: "/api/chess/standing",
+      refusals: {
+        shape: "A Chess.com name has three to twenty-five letters, figures, hyphens or underscores, like hikaru.",
+        notFound: "No Chess.com player goes by that name. Check the spelling.",
+        unavailable: "Chess.com is not answering. Try again in a moment.",
+      },
+    },
+  },
+  detailTitle: "Their Chess.com, and the rating they reach",
+  // The reading that connects them. Each later reading is their cadence's own (src/milestone-conditions.ts).
+  reading: "chess-profile",
   words: {
-    earnedDay: "When they reach it, this becomes theirs",
-    connect: "Opened. Connect Chess.com to start reading.",
-    doIt: "Play; nothing else. Each morning Viky reads your Chess.com rating.",
-    eachDay: "the day they reach it",
+    earnedDay: "When they reach it, all of this becomes theirs",
+    connect: "Opened. Connect Chess.com to start.",
+    doIt: "Play; nothing else. Viky reads your Chess.com rating every day.",
+    eachDay: "the first reading at the rating",
   },
 };
 

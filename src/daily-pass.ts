@@ -5,6 +5,8 @@ import { liveCreationDeps } from "./gift-creation-live";
 import { readGift, type GiftState } from "./gift-reader";
 import { relayDrain, relayFinalise, relayRefund } from "./gift-relay";
 import { loadAllGifts, loadBoundGifts } from "./gift-store";
+import { milestonePass } from "./milestone-pass";
+import { isMilestoneGiftId } from "./milestone-protocol";
 import { escrowOf, relayerClients, relayerPreflight, RelayerError } from "./relayer";
 
 /**
@@ -20,7 +22,7 @@ import { escrowOf, relayerClients, relayerPreflight, RelayerError } from "./rela
  * had expired. The second pass settles at the moment D13 allows, without making counting less forgiving.
  */
 
-export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain" | "finalise" | "refund"; result: string; hash?: string };
+export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain" | "finalise" | "refund" | "read" | "expire"; result: string; hash?: string };
 
 /**
  * Refusals that say something broke on our side rather than something the person did. A reading refused for
@@ -74,6 +76,8 @@ export type DailyPassDeps = {
   nowSeconds?: () => number;
   /** Completes the creations whose record failed after their money moved (D87); absent in the tests of the other steps. */
   completeCreations?: () => Promise<readonly CreationLine[]>;
+  /** The milestone gifts' own pass (src/milestone-pass.ts), told whether this pass settles. */
+  milestones?: (settle: boolean) => Promise<DailyPassLine[]>;
 };
 
 function liveDeps(): DailyPassDeps {
@@ -88,6 +92,7 @@ function liveDeps(): DailyPassDeps {
     refund: relayRefund,
     start: async () => ({ address: clients.address, balance: (await relayerPreflight(clients)).balance }),
     completeCreations: () => completePendingCreations(liveCreationDeps()),
+    milestones: (settle) => milestonePass(settle),
   };
 }
 
@@ -112,15 +117,17 @@ export async function dailyPass(
   // reading can still credit it, because only a drain closes a day.
   const unread = new Set<string>();
 
+  // Milestone gifts live on their own contract and have their own pass, below. Read with this contract's ABI they
+  // would fail, and one failure here stops the pass for every daily gift after it.
   if (plan.count) {
-    for (const gift of await deps.boundGifts()) {
+    for (const gift of (await deps.boundGifts()).filter((entry) => !isMilestoneGiftId(entry.giftId))) {
       const outcome = await deps.count(gift.giftId);
       if (outcome.kind === "refused" && OURS_TO_FIX.has(outcome.code)) unread.add(gift.giftId);
       lines.push(describe(outcome));
     }
   }
 
-  for (const record of await deps.allGifts()) {
+  for (const record of (await deps.allGifts()).filter((entry) => !isMilestoneGiftId(entry.giftId))) {
     const giftId = record.giftId;
     if (unread.has(giftId)) {
       lines.push({ giftId, step: "drain", result: "held: today's reading failed on our side" });
@@ -147,6 +154,7 @@ export async function dailyPass(
     lines.push(await attempt(giftId, "finalise", () => deps.finalise(giftId, escrow)));
     if (plan.refund) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
   }
+  if (deps.milestones) lines.push(...(await deps.milestones(plan.refund)));
   return { relayer: address, balanceWei: balance.toString(), lines };
 }
 

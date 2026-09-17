@@ -3,6 +3,9 @@ import { readAccountAuthSession } from "@/src/account-auth-server";
 import { runPublicCheckIn } from "@/src/duolingo-public-checkin";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { loadGift } from "@/src/gift-store";
+import { milestoneErrorResponse } from "@/src/milestone-api";
+import { isMilestoneGiftId } from "@/src/milestone-protocol";
+import { milestoneBind } from "@/src/milestone-routes";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
@@ -15,6 +18,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const rate = checkRateLimit("verify", request);
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
     const { id } = await context.params;
+    // A milestone gift's first reading is its start, recorded on its own contract (C2).
+    if (isMilestoneGiftId(id)) return await milestoneBind(request, id).catch((error: unknown) => milestoneErrorResponse(error));
     const auth = readAccountAuthSession(request);
     const gift = await loadGift(id);
     if (!gift || !gift.recipient || gift.recipient.toLowerCase() !== auth.account.toLowerCase()) throw new GiftApiError("NOT_RECIPIENT", "Open the gift first.", 403);

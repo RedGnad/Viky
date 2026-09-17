@@ -79,7 +79,9 @@ export const GIFT_CARD = {
   milestoneNotRead: (target: number) => `Target ${target}. Not read yet.`,
   milestoneReached: (target: number) => `Reached ${target}.`,
   milestoneMissed: (target: number) => `Did not reach ${target} in time.`,
-  milestoneAmount: (total: string, deadline: string) => `${total}, by ${deadline}`,
+  /** "$25.00, by 1 Oct 2026" once started; "$25.00, within 30 days of connecting" before. */
+  milestoneAmount: (total: string, by: string) => `${total}, ${by}`,
+  milestoneStartTooHigh: (start: number, ceiling: number) => `Started at ${start}, above ${ceiling}: it cannot be earned, and goes back at the end.`,
 } as const;
 
 /** "Léa's", for a name the funder typed. */
@@ -367,18 +369,129 @@ export const GIFT_PAGE = {
  */
 export const MILESTONE_PAGE = {
   target: (target: number, source: string) => `Reach ${target} on ${source}`,
-  ruleYours: (target: number, deadline: string) => `It is yours when you reach ${target}, by ${deadline}. Checked every morning.`,
-  ruleTheirs: (target: number, deadline: string) => `It is theirs when they reach ${target}, by ${deadline}. Checked every morning.`,
+  /** "by 17 Oct 2026" once the first reading has started the clock; "within 30 days of connecting" before (D46). */
+  byDate: (date: string) => `by ${date}`,
+  withinDays: (days: number) => `within ${days} ${days === 1 ? "day" : "days"} of connecting`,
+  ruleYours: (target: number, by: string, time: string) => `It is yours when you reach ${target}, ${by}. Checked every day at about ${time} your time.`,
+  ruleTheirs: (target: number, by: string, time: string) => `It is theirs when they reach ${target}, ${by}. Checked every day at about ${time} your time.`,
   startedAt: (reading: number) => `Started at ${reading}.`,
   lastRead: (moment: string) => `Last read ${moment} your time.`,
-  notReadYet: "Not read yet: the first reading is the morning after it is connected.",
-  atDeadlineYours: (deadline: string, amount: string, funder: string | null) =>
-    `If you reach it by ${deadline}, the ${amount} is yours. If not, it goes back to ${funder ?? "them"}.`,
-  atDeadlineTheirs: (deadline: string, amount: string) => `If they reach it by ${deadline}, the ${amount} is theirs. If not, it comes back to you.`,
+  notReadYetYours: (source: string) => `Not read yet: the first reading is taken when you connect ${source}, and it is where you start.`,
+  notReadYetTheirs: (source: string) => `Not read yet: the first reading is taken when they connect ${source}, and it is where they start.`,
+  atDeadlineYours: (by: string, amount: string, funder: string | null) => `If you reach it ${by}, the ${amount} is yours. If not, it goes back to ${funder ?? "them"}.`,
+  atDeadlineTheirs: (by: string, amount: string) => `If they reach it ${by}, the ${amount} is theirs. If not, it comes back to you.`,
   reachedYours: (date: string, amount: string) => `Reached on ${date}: the ${amount} is yours.`,
   reachedTheirs: (date: string, amount: string) => `Reached on ${date}: the ${amount} is theirs.`,
-  missedYours: (deadline: string, amount: string, funder: string | null) => `Not reached by ${deadline}: the ${amount} went back to ${funder ?? "them"}.`,
-  missedTheirs: (deadline: string, amount: string) => `Not reached by ${deadline}: the ${amount} came back to you.`,
+  /** "by 17 Oct 2026", or "in time" for a gift that was never started. */
+  inTime: "in time",
+  missedYours: (by: string, amount: string, funder: string | null) => `Not reached ${by}: the ${amount} went back to ${funder ?? "them"}.`,
+  missedTheirs: (by: string, amount: string) => `Not reached ${by}: the ${amount} came back to you.`,
+} as const;
+
+/**
+ * Offering a milestone gift (C2): the same flow as FUND, where a milestone asks different things. What a condition,
+ * its cadences and its reading are called comes from the register (src/conditions.ts, src/milestone-conditions.ts);
+ * `source` below is always the register's word, never one written here.
+ */
+export const MILESTONE_FUND = {
+  detail: {
+    read: "Read their rating",
+    reading: "Reading their rating",
+    smallest: (smallest: number) => `${smallest} or more, so the gift is worth earning.`,
+    readAgain: "The name or the rating changed. Read their rating again.",
+    readAt: (time: string) => `Read at ${time}.`,
+  },
+  amount: {
+    title: "How much, and how long do they have?",
+  },
+  check: {
+    rows: {
+      name: "Their name there",
+      cadence: "Which rating",
+      today: "Where they stand today",
+      reach: "They reach",
+      from: "Only if they start from",
+      goes: "Goes in their name",
+      long: "How long they have",
+      ifNot: "If they do not reach it",
+    },
+    orUnder: (ceiling: number) => `${ceiling} or under`,
+    allBack: "All of it comes back to you",
+    howItWorks: (source: string, target: number, time: string) =>
+      `Their first reading is taken when they connect ${source}, and that is where they start. After that Viky reads their rating every day, at about ${time} your time, and the first reading at ${target} or more makes all of it theirs at once.`,
+    whyCeiling: (ceiling: number) =>
+      `If they are already above ${ceiling} when they connect, the gift cannot be earned and comes back to you at the end: a gift is for a climb, not for where they already are.`,
+    fourteenDays: "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
+  },
+  account: {
+    yourGift: (amount: string, recipient: string) => `Your gift: ${amount} for ${recipient}.`,
+  },
+  made: {
+    terms: (amount: string, goal: string, days: number, source: string) =>
+      `${amount} when they reach ${goal}, within ${days} ${days === 1 ? "day" : "days"} of connecting ${source}. All of it, at once, or all of it back to you.`,
+    next: (recipient: string, source: string, target: number, days: number, time: string) => [
+      `${recipient} opens the link and puts a short code in their ${source} name, once. That first reading is where they start.`,
+      `Viky reads their rating every day at about ${time} your time. The first reading at ${target} or more puts all of it in ${recipient}'s name.`,
+      `If they do not reach it within ${days} ${days === 1 ? "day" : "days"} of connecting, all of it comes back to your account. If nobody opens the link within 14 days, it all comes back too.`,
+    ],
+  },
+  failures: {
+    standingMoved: "Choose the rating again",
+  },
+  operatorOnly: "Not offered to anyone yet. You see it because this account runs Viky.",
+} as const;
+
+/**
+ * What a person can do on a milestone gift's page (C2): open it, connect the account with a code, ask for a reading,
+ * take it. The page itself, and what it says of where the gift stands, is `MILESTONE_PAGE` (S3).
+ */
+export const MILESTONE_ACTIONS = {
+  checkNow: "Check now",
+  checking: "Reading your rating",
+  connectTitle: (source: string) => `Connect ${source}`,
+  givenName: (source: string, username: string) => `Your ${source} name, as it was given: ${username}.`,
+  whyCode: (source: string) => `To prove it is yours, you put a short code in your ${source} name for a minute. Nothing to install, no password.`,
+  firstReading: (ceiling: number) => `Your first reading is where you start. If you are above ${ceiling} then, this gift cannot be earned, so connect before you play.`,
+  getCode: "Get my code",
+  gettingCode: "One moment",
+  proveTitle: (username: string) => `Prove ${username} is yours`,
+  added: "I added it",
+  addedBusy: "Reading your profile",
+  removeAfter: "You can take the code out right after. It works for an hour.",
+  newCode: "Get a new code",
+  theirsNotConnected: "Opened, not connected yet. If they do not connect within 14 days, it all comes back to you.",
+  startTooHighMine: (start: number, ceiling: number) =>
+    `You started at ${start}, above the ${ceiling} this gift was set up for, so it cannot be earned. It goes back at the end.`,
+  startTooHighTheirs: (start: number, ceiling: number) =>
+    `They started at ${start}, above ${ceiling}, so it cannot be earned. It comes back to you at the end.`,
+  overdue: "Time is up. It is being closed, and all of it goes back.",
+  opened: "It is yours to earn.",
+  take: (amount: string) => `Take ${amount}`,
+  takeReviewTitle: (amount: string) => `Take ${amount} into your account`,
+  takeRows: { goes: "Goes to", account: "Your Viky account", stays: "Stays in the gift" },
+  nothingLeft: "$0.00",
+  takeConfirm: (amount: string) => `Take ${amount}`,
+  notNow: "Not now",
+  taking: "Taking it",
+  taken: (amount: string, when: string, giftId: string) => `${amount} is in your account, ${when}. Reference: gift ${giftId}.`,
+  failed: "That did not go through, and nothing was changed. Try again.",
+  outcome: {
+    started: (start: number, target: number) => `Done. You start at ${start}. Reach ${target} and all of it is yours. You can take the code out of your name now.`,
+    startedAbove: (start: number, ceiling: number) => `Recorded. You start at ${start}, above ${ceiling}, so this gift cannot be earned. It goes back at the end.`,
+    reached: (rating: number) => `Read: ${rating}. You reached it, and all of it is yours.`,
+    notYet: (rating: number, target: number) => `Read: ${rating}. ${target - rating} to go.`,
+    already: {
+      read_recently: "Your rating was read a moment ago.",
+      finished: "This gift is finished.",
+      cancelled: "This gift was taken back before it was opened.",
+      start_too_high: "This gift can no longer be earned.",
+      deadline_passed: "The time for this gift is over.",
+      not_bound: "Connect first.",
+      already_bound: "Already connected. Nothing else to do.",
+      not_opened: "Open the gift first.",
+      no_account: "Nothing to read yet.",
+    },
+  },
 } as const;
 
 /**

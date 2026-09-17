@@ -5,6 +5,9 @@ import { readJsonBody } from "@/src/api-guard";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { relayClaim } from "@/src/gift-relay";
 import { loadGiftForClaim, markClaimed } from "@/src/gift-store";
+import { milestoneErrorResponse } from "@/src/milestone-api";
+import { isMilestoneGiftId } from "@/src/milestone-protocol";
+import { milestoneClaim } from "@/src/milestone-routes";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
 
@@ -31,6 +34,8 @@ export async function POST(request: Request) {
     assertGiftContractConfigured();
     const gift = await loadGiftForClaim(giftId, token);
     if (!gift) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid or was already used", 404);
+    // A milestone gift is opened on its own contract (C2), with the same link and the same rule.
+    if (isMilestoneGiftId(giftId)) return await milestoneClaim({ record: gift, recipient: auth.account }).catch((error: unknown) => milestoneErrorResponse(error));
 
     const result = await relayClaim({ giftId, escrow: escrowOf(gift), recipient: getAddress(auth.account), contactHash: gift.contactHash });
     await markClaimed(giftId, auth.account, result.hash);
