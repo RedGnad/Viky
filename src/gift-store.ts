@@ -402,15 +402,17 @@ export async function loadPendingCreations(startedBefore: Date, kind: "daily" | 
  * One row per settled day, written from the receipt of the transaction that settled it (src/day-record.ts). A day is
  * settled once on chain, so a second write of the same day keeps the first row.
  */
-export async function recordSettledDays(giftId: string, days: readonly SettledDay[], txHash: Hex): Promise<number> {
-  let written = 0;
+export async function recordSettledDays(giftId: string, days: readonly SettledDay[], txHash: Hex): Promise<SettledDay[]> {
+  const written: SettledDay[] = [];
   for (const entry of days) {
     const rows = await sql()`
       INSERT INTO viky_days (gift_id, day, outcome, tx_hash)
       VALUES (${giftId}, ${entry.day}, ${entry.outcome}, ${txHash})
       ON CONFLICT (gift_id, day) DO NOTHING
       RETURNING day`;
-    written += rows.length;
+    // The days this call wrote, not the days it was given: a day already settled is not news, and the morning
+    // message is sent from what was written (src/morning-send.ts).
+    if (rows.length > 0) written.push(entry);
   }
   return written;
 }

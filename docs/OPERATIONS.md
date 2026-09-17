@@ -179,6 +179,17 @@ Done on 17 Sep 2026, in this order, and each step read back before the next:
    branch. The service has no repository attached, so a push to main does not redeploy it. Checked after: `/health`, a
    `{ source, account }` read with its proof, a refused source, and the `{ username }` read the Duolingo path still sends.
 
+## Before deploying the build of N1: the subscriptions table and the push keys
+
+1. `viky_push` (one row per browser and gift) and `viky_told` (one row per gift and subject, so a day is told about
+   once): `pnpm db:migrate`, then both read back. Additive, and nothing in the running build touches them.
+2. The VAPID key pair, generated with `web-push` and put in Vercel for Production, Preview and Development:
+   `NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, `WEB_PUSH_EMAIL` (`mailto:` is added by the code). The
+   private key is in Vercel and in `.env.local` only: it has never been in a conversation, a commit or a log. The
+   public key is public by design, it is what a browser subscribes with.
+3. Without the three, nothing is sent and nothing fails: the button says so and the route answers `PUSH_NOT_CONFIGURED`.
+   Changing the key pair later invalidates every subscription made with the old one, so the rows would have to go too.
+
 ## Money paths to audit
 
 Each entry is a path where money can move while the record of it fails, with what to do about it. Nothing here is
@@ -255,6 +266,8 @@ offered a gift: each stopped on the check, with "Not now".
 | `0x7a356970252fbf027a6196A041A5674E51E7C5E1` | 17 Sep 2026, 15:53 UTC | D87 check of the creation path: a throwaway key with no money, signed in through the challenge route; it left one row in `viky_creations`, abandoned, nonce `0x7fd26be5…`, and nothing on chain |
 | `0xaF04621441F940B468ca6f9aDb21fb2205Ef01C7` | 17 Sep 2026, 17:03 UTC | database guard deployment check, 390x844 day |
 | `0x011c3B117Ac05bF0a5B8A969D24B90c2c553b8F0` | 17 Sep 2026, 17:04 UTC | database guard deployment check, 1440x900 night |
+| `0xb852A09f26d14ECDd70A46281e29B02aF671f3Fa` | 17 Sep 2026, 20:14 UTC | preview and development database check, 390x844 day |
+| `0x50687Bd4697aD2D775f5f7f9dB0f0E81bd855642` | 17 Sep 2026, 20:14 UTC | preview and development database check, 1440x900 night |
 
 The row `0xb12e0c72209bd4becfdafa96a8f3e7ebc93b8376`, euros, 02:56 UTC the same day, was not written by a check and
 is not listed here.

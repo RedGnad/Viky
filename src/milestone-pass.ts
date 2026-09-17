@@ -5,6 +5,8 @@ import { completePendingMilestoneCreations } from "./milestone-creation";
 import { canExpire, milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
 import { MILESTONE_OURS_TO_FIX, runMilestoneReading, type MilestoneOutcome } from "./milestone-reading";
 import { relayExpire, relayMilestoneRefund } from "./milestone-relay";
+import { tellAboutMilestone } from "./morning-send";
+import { liveTellingDeps } from "./morning-send-live";
 import { isMilestoneGiftId } from "./milestone-protocol";
 import { escrowOf, RelayerError } from "./relayer";
 
@@ -105,7 +107,10 @@ async function passOne(record: { giftId: string; escrow: Hex | null }, settle: b
     const outcome = await deps.reach(giftId);
     lines.push({ giftId, step: "read", result: describe(outcome), hash: "hash" in outcome ? outcome.hash : undefined });
     held = outcome.kind === "refused" && MILESTONE_OURS_TO_FIX.has(outcome.code);
-    if (outcome.kind === "reached") state = await deps.read(contract, giftId);
+    if (outcome.kind === "reached") {
+      await tellAboutMilestone(giftId, "reached", liveTellingDeps());
+      state = await deps.read(contract, giftId);
+    }
   }
   if (!settle) return lines;
   if (held) {
@@ -116,6 +121,7 @@ async function passOne(record: { giftId: string; escrow: Hex | null }, settle: b
     const line = await attempt(giftId, "expire", () => deps.expire(giftId, contract));
     lines.push(line);
     if (line.result !== "sent") return lines;
+    await tellAboutMilestone(giftId, "expired", liveTellingDeps());
     state = await deps.read(contract, giftId);
   }
   if (state.refundable > 0n) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, contract)));

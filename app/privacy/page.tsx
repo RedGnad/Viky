@@ -45,6 +45,9 @@ export default function PrivacyPage() {
             <strong>If you receive a gift:</strong> your Duolingo username, profile id and display name (as read at each attested reading, including the short code you add to it once), kept in the database with each reading; a keyed pseudonym of that profile id, which is what the public program sees; your total XP as read, and the attested proof of the reading (produced with Reclaim), kept as the record of each day.
           </li>
           <li>
+            <strong>If you ask Viky to tell you each morning:</strong> the private delivery link your browser creates for this device, with the two keys it gives us to encrypt what we send, kept in our database with the gift it is for and your account&apos;s identifier. It is not a phone number and it names no person: it is how your browser&apos;s notification service reaches this one browser. We send one sentence a day at most, about that gift. &quot;Stop telling me&quot;, on the gift&apos;s page, deletes it, and so does the first refusal from your notification service.
+          </li>
+          <li>
             <strong>Every visit:</strong> a session cookie (__Host-viky-session, 12 hours, signed, holds your account identifier) and a request counter keyed by the IP of your connection, held in memory for a few minutes to slow down abuse. No analytics scripts, no advertising, no tracking cookies.
           </li>
           <li>

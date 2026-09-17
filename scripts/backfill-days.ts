@@ -31,7 +31,7 @@ async function main() {
       const receipt = await client.getTransactionReceipt({ hash: relayed.txHash as Hex });
       const days = settledDaysFromLogs(gift.giftId, receipt.logs);
       found += days.length;
-      if (!dryRun && days.length > 0) written += await recordSettledDays(gift.giftId, days, relayed.txHash as Hex);
+      if (!dryRun && days.length > 0) written += (await recordSettledDays(gift.giftId, days, relayed.txHash as Hex)).length;
       for (const day of days) console.log(`  gift ${gift.giftId} day ${day.day} ${day.outcome} (${relayed.kind} ${relayed.txHash.slice(0, 10)})`);
     }
     console.log(`gift ${gift.giftId}: ${before} day(s) already recorded, ${found} found in relayed receipts, ${dryRun ? "nothing written (dry run)" : `${written} written`}`);

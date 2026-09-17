@@ -4,6 +4,8 @@ import { ATTESTATION_TTL_SECONDS, signClaim, type GiftParams } from "./gift-atte
 import { giftEscrowAbi } from "./gift-escrow-abi";
 import { settledDaysFromLogs } from "./day-record";
 import { recordRelayed, recordSettledDays, relayedForSession } from "./gift-store";
+import { tellAboutDays } from "./morning-send";
+import { liveTellingDeps } from "./morning-send-live";
 import { loadAttestation } from "./proof-session-store";
 import { escrowAddress, relay, RelayerError, relayerClients, type RelayResult } from "./relayer";
 
@@ -110,7 +112,10 @@ export async function relayFinalise(giftId: string, escrow: Hex): Promise<RelayR
  */
 async function recordDays(giftId: string, result: RelayResult): Promise<void> {
   try {
-    await recordSettledDays(giftId, settledDaysFromLogs(giftId, result.receipt.logs), result.hash);
+    const written = await recordSettledDays(giftId, settledDaysFromLogs(giftId, result.receipt.logs), result.hash);
+    // The morning message goes from the record's own write and nowhere else, so a phone is told exactly what was
+    // settled, once (N1). It cannot fail this: sending is caught inside.
+    await tellAboutDays(giftId, written, liveTellingDeps());
   } catch (error) {
     console.error(`day record not written for gift ${giftId}, ${result.hash}: ${error instanceof Error ? error.message : String(error)}`);
   }
