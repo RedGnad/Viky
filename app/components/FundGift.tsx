@@ -7,7 +7,8 @@ import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
-import { checkSourceName, createGift, type CreatedGift } from "@/src/client/gift";
+import { checkSourceName, prepareGift, submitGift, type CreatedGift } from "@/src/client/gift";
+import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY } from "@/src/gift-attempt";
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
 import { conditionById, liveConditions, type Condition } from "@/src/conditions";
 import { whenInWords } from "@/src/display-currency";
@@ -294,16 +295,39 @@ export function FundGift() {
     const account = mera.currentAccount();
     if (!account) throw new Error(W.failures.signInFirst);
     if (!condition || amount.units === null || length.days === null || daily.target === null || condition.goalType === null) throw new Error(W.failures.other);
-    const result: CreatedGift = await createGift({
-      account,
-      duolingoUsername: draft.username.trim() || undefined,
+    // Signed once for these terms and sent again as it is on every retry, so the server finds the same creation and
+    // never pays for the gift twice (D87).
+    const terms = {
+      account: account.address,
+      username: draft.username.trim(),
       recipientName: recipient,
       funderName: funder,
       goalType: condition.goalType,
       dailyTarget: daily.target,
       durationDays: length.days,
-      amount: amount.units,
-    });
+      amount: amount.units.toString(),
+    };
+    const request =
+      attemptFor(readSession(GIFT_ATTEMPT_KEY), terms) ??
+      (await prepareGift({
+        account,
+        duolingoUsername: terms.username || undefined,
+        recipientName: recipient,
+        funderName: funder,
+        goalType: condition.goalType,
+        dailyTarget: daily.target,
+        durationDays: length.days,
+        amount: amount.units,
+      }));
+    writeSession(GIFT_ATTEMPT_KEY, { terms, request });
+    let result: CreatedGift;
+    try {
+      result = await submitGift(request);
+    } catch (error) {
+      if (error instanceof ApiError && forgetsAttempt(error.code)) writeSession(GIFT_ATTEMPT_KEY, null);
+      throw error;
+    }
+    writeSession(GIFT_ATTEMPT_KEY, null);
     const record: Made = {
       giftId: result.giftId,
       claimUrl: result.claimUrl,

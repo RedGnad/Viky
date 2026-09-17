@@ -1,5 +1,7 @@
 import type { Hex } from "viem";
 import { runPublicCheckIn, type PublicCheckInOutcome } from "./duolingo-public-checkin";
+import { completePendingCreations, type CreationLine } from "./gift-creation";
+import { liveCreationDeps } from "./gift-creation-live";
 import { readGift, type GiftState } from "./gift-reader";
 import { relayDrain, relayFinalise, relayRefund } from "./gift-relay";
 import { loadAllGifts, loadBoundGifts } from "./gift-store";
@@ -18,7 +20,7 @@ import { escrowOf, relayerClients, relayerPreflight, RelayerError } from "./rela
  * had expired. The second pass settles at the moment D13 allows, without making counting less forgiving.
  */
 
-export type DailyPassLine = { giftId: string; step: "count" | "drain" | "finalise" | "refund"; result: string; hash?: string };
+export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain" | "finalise" | "refund"; result: string; hash?: string };
 
 /**
  * Refusals that say something broke on our side rather than something the person did. A reading refused for
@@ -70,6 +72,8 @@ export type DailyPassDeps = {
   refund: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
   start: () => Promise<{ address: string; balance: bigint }>;
   nowSeconds?: () => number;
+  /** Completes the creations whose record failed after their money moved (D87); absent in the tests of the other steps. */
+  completeCreations?: () => Promise<readonly CreationLine[]>;
 };
 
 function liveDeps(): DailyPassDeps {
@@ -83,6 +87,7 @@ function liveDeps(): DailyPassDeps {
     finalise: relayFinalise,
     refund: relayRefund,
     start: async () => ({ address: clients.address, balance: (await relayerPreflight(clients)).balance }),
+    completeCreations: () => completePendingCreations(liveCreationDeps()),
   };
 }
 
@@ -92,6 +97,14 @@ export async function dailyPass(
 ): Promise<{ relayer: string; balanceWei: string; lines: DailyPassLine[] }> {
   const { address, balance } = await deps.start();
   const lines: DailyPassLine[] = [];
+
+  // First, a gift whose money moved and whose record failed becomes a gift, so the rest of this pass, and the
+  // fourteen-day return, can see it (D87).
+  if (deps.completeCreations) {
+    for (const line of await deps.completeCreations()) {
+      lines.push({ giftId: line.giftId ?? `creation ${line.nonce.slice(0, 10)}`, step: "create", result: line.result });
+    }
+  }
 
   // A gift whose reading failed for a reason of ours is left alone for the rest of the pass. Draining it
   // would take a day from someone who did the work, because our worker, the source, or the attestor was

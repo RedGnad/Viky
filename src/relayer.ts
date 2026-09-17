@@ -190,6 +190,8 @@ export async function relay(
   args: readonly unknown[],
   escrow: Hex = escrowAddress(),
   clients: RelayerClients = relayerClients(),
+  /** Called with the transaction's hash as soon as it is submitted, before finality: a caller that records it can find the transaction again if anything after fails (D87). */
+  onSubmitted?: (hash: Hash) => Promise<void>,
 ): Promise<RelayResult> {
   await relayerPreflight(clients);
   const address = escrow;
@@ -220,6 +222,14 @@ export async function relay(
     account: clients.walletClient.account!,
     chain: monadChain,
   });
+  if (onSubmitted) {
+    try {
+      await onSubmitted(hash);
+    } catch (error) {
+      // The transaction is out; failing to note it must not stop us waiting for it.
+      console.error(`submitted ${hash} but could not record it: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
   const receipt = await waitForFinality(clients.publicClient, hash);
   if (receipt.status !== "success") {
     throw new RelayerError("REVERTED", "The transaction was included but reverted");
