@@ -62,9 +62,28 @@ export function chessStatsUrl(username: string): string {
   return `${chessProfileUrl(username)}/stats`;
 }
 
-/** The pattern that reads one cadence's current rating and the moment of the game it comes from. */
+/**
+ * The pattern that reads one cadence's current rating, the moment of the game it comes from, and its RD. Measured on
+ * 17 Sep 2026 over 275 rating blocks of 109 profiles: 274 carry `rd`, always right after `date`; the one without it
+ * was a blitz block at 800. A reading without an RD is refused, which is also what the funder's step does with it.
+ */
 export function chessRatingPattern(mode: ChessMode): string {
-  return `"chess_${mode}":\\{"last":\\{"rating":(?<rating>\\d+),"date":(?<date>\\d+)`;
+  return `"chess_${mode}":\\{"last":\\{"rating":(?<rating>\\d+),"date":(?<date>\\d+),"rd":(?<rd>\\d+)`;
+}
+
+/**
+ * The highest RD at which a rating moves by about ten points a game, which is what the milestone terms rest on
+ * (src/milestone-terms.ts: a start margin of 10, a smallest climb of 50). "The Glicko RD value used to calculate
+ * ratings changes", in Chess.com's words, and Chess.com publishes no RD above which a rating is still provisional, so
+ * this is measured (DECISIONS.md D89, `scripts/measure-chess-rd.ts`): over the last twenty rated games of 72 profile
+ * and cadence pairs on 17 Sep 2026, below 60 the median change per game was 1 to 13 points and the largest 18; from
+ * 60 to 79 the medians ran from 5 to 28 and the largest reached 88; above 80, 129.
+ */
+export const CHESS_SETTLED_RD_BELOW = 60;
+
+/** Whether a rating has settled enough for a climb to measure anything. An unknown RD has not. */
+export function ratingHasSettled(rd: number | null): boolean {
+  return rd !== null && rd < CHESS_SETTLED_RD_BELOW;
 }
 
 /**
@@ -80,6 +99,8 @@ export type ChessStanding = Readonly<{
   rating: number | null;
   /** Unix seconds of the game the rating comes from, as the page gives it. */
   ratedAt: number | null;
+  /** The rating's Glicko RD, null when the cadence was never played or the page gives none. */
+  rd: number | null;
 }>;
 
 /** The player an answer of `/pub/player/{name}` describes, or nothing when it is not one. */
@@ -93,12 +114,12 @@ export function playerOfProfile(body: unknown): { username: string; playerId: st
 }
 
 /** One cadence's rating from an answer of `/pub/player/{name}/stats`, or null when that cadence was never played. */
-export function ratingOfStats(body: unknown, mode: ChessMode): { rating: number; ratedAt: number } | null {
+export function ratingOfStats(body: unknown, mode: ChessMode): { rating: number; ratedAt: number; rd: number | null } | null {
   if (!body || typeof body !== "object") return null;
   const block = (body as Record<string, unknown>)[`chess_${mode}`];
   const last = block && typeof block === "object" ? (block as Record<string, unknown>).last : undefined;
   if (!last || typeof last !== "object") return null;
-  const { rating, date } = last as Record<string, unknown>;
+  const { rating, date, rd } = last as Record<string, unknown>;
   if (typeof rating !== "number" || !Number.isSafeInteger(rating) || rating <= 0) return null;
-  return { rating, ratedAt: typeof date === "number" && Number.isSafeInteger(date) ? date : 0 };
+  return { rating, ratedAt: typeof date === "number" && Number.isSafeInteger(date) ? date : 0, rd: typeof rd === "number" && Number.isSafeInteger(rd) && rd >= 0 ? rd : null };
 }

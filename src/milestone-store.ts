@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS viky_milestone_readings (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS viky_milestone_readings_gift ON viky_milestone_readings (gift_id, created_at DESC);
+ALTER TABLE viky_milestone_readings ADD COLUMN IF NOT EXISTS rd integer;
 `;
 
 let executor: SqlExecutor | undefined;
@@ -122,6 +123,8 @@ export type MilestoneReading = Readonly<{
   playerId: string | null;
   rating: number | null;
   ratedAt: number | null;
+  /** The rating's RD when it was read (D89). */
+  rd?: number | null;
   observedAt: number;
   nullifier: Hex | null;
   outcome: ReadingOutcome;
@@ -133,9 +136,9 @@ export type MilestoneReading = Readonly<{
 export async function recordReading(reading: MilestoneReading): Promise<void> {
   await sql()`
     INSERT INTO viky_milestone_readings
-      (gift_id, purpose, attested, username, player_id, rating, rated_at, observed_at, nullifier, outcome, tx_hash, proofs)
+      (gift_id, purpose, attested, username, player_id, rating, rated_at, rd, observed_at, nullifier, outcome, tx_hash, proofs)
     VALUES (${reading.giftId}, ${reading.purpose}, ${reading.attested}, ${reading.username}, ${reading.playerId}, ${reading.rating},
-            ${reading.ratedAt}, ${reading.observedAt}, ${reading.nullifier}, ${reading.outcome}, ${reading.txHash},
+            ${reading.ratedAt}, ${reading.rd ?? null}, ${reading.observedAt}, ${reading.nullifier}, ${reading.outcome}, ${reading.txHash},
             ${reading.proofs === undefined ? null : JSON.stringify(reading.proofs)})`;
 }
 
@@ -149,6 +152,7 @@ function toReading(row: Record<string, unknown>): MilestoneReading {
     playerId: row.player_id === null || row.player_id === undefined ? null : String(row.player_id),
     rating: optionalNumber(row.rating),
     ratedAt: optionalNumber(row.rated_at),
+    rd: optionalNumber(row.rd),
     observedAt: Number(row.observed_at),
     nullifier: row.nullifier === null || row.nullifier === undefined ? null : (String(row.nullifier) as Hex),
     outcome: String(row.outcome) as ReadingOutcome,

@@ -16,7 +16,7 @@ export function milestoneAddressFromEnv(): Hex {
   return getAddress(value);
 }
 
-export type Standing = Readonly<{ username: string; mode: string; rating: number; readAt: string }>;
+export type Standing = Readonly<{ username: string; mode: string; rating: number; rd: number | null; settled: boolean; readAt: string }>;
 
 /** Where a person stands today in one cadence, read plainly by Viky's route before any money moves. */
 export function readStanding(path: string, username: string, cadence: string): Promise<Standing> {
