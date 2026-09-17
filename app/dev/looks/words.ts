@@ -18,9 +18,3 @@ export const LAB = {
   motion: "Motion",
   replayArrival: "Replay arrival",
 } as const;
-
-/** The link preview's image (brief, section 7 bis): who put how much in your name. The amount is set in the text face. */
-export const PREVIEW = {
-  before: (funder: string) => `${funder} put `,
-  after: " in your name",
-} as const;

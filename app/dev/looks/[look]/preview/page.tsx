@@ -3,12 +3,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Character } from "@/app/kit/Character";
 import { AMOUNT_IN_TITLE, DISPLAY, MARK } from "@/app/components/ui";
-import { NAV } from "@/src/sentences";
-import { LINK_PREVIEW } from "../../example";
+import { LINK_PREVIEW, NAV } from "@/src/sentences";
+import { PREVIEW_EXAMPLE } from "../../example";
 import { requireLab } from "../../lab";
 import { LAB_METADATA, LabFrame } from "../../LabFrame";
 import { lookById } from "../../look-css";
-import { PREVIEW } from "../../words";
 
 export const metadata: Metadata = { ...LAB_METADATA, title: "Looks laboratory, link preview (dev)" };
 
@@ -21,6 +20,8 @@ export default async function Page({ params }: Readonly<{ params: Promise<{ look
   await requireLab();
   const look = lookById((await params).look);
   if (!look) notFound();
+  // The product's own sentence (src/sentences.ts), with the amount handed to the text face.
+  const [before, after] = LINK_PREVIEW.named(PREVIEW_EXAMPLE.funder, PREVIEW_EXAMPLE.amount).split(PREVIEW_EXAMPLE.amount);
   const type = { "--type-display": "80px", "--type-display-leading": "84px", "--type-mark": "40px", "--type-mark-leading": "44px" } as CSSProperties;
   return (
     <LabFrame look={look} appearance="day">
@@ -29,9 +30,9 @@ export default async function Page({ params }: Readonly<{ params: Promise<{ look
         <div className="flex flex-col gap-[28px]">
           <span className={MARK}>{NAV.mark}</span>
           <p className={DISPLAY}>
-            {PREVIEW.before(LINK_PREVIEW.funder)}
-            <span className={AMOUNT_IN_TITLE}>{LINK_PREVIEW.amount}</span>
-            {PREVIEW.after}
+            {before}
+            <span className={AMOUNT_IN_TITLE}>{PREVIEW_EXAMPLE.amount}</span>
+            {after}
           </p>
         </div>
       </div>
