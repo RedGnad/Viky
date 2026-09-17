@@ -548,6 +548,167 @@ contract MilestoneGiftTest {
 
     /// @dev While proofs are paused nothing can be saved, so nothing may be taken back: the pause would
     ///      otherwise pay the funder for a milestone the recipient simply could not submit.
+    // --- a pause across a deadline (the fourth review, 17 Sep 2026) ---------------------------------------
+
+    /// @dev The defect the fourth review found in the pause fix of D49. `expire` refused during a pause, but once it
+    ///      ended `prove` still refused past deadline + grace and `expire` opened at that same instant. A target
+    ///      reached an hour before the deadline, during a pause from two hours before to seven after, was lost.
+    function testAPauseAcrossTheDeadlineGivesTheWholeGraceBackAfterItEnds() public {
+        uint256 id = _started(1200);
+        uint256 deadline = START + uint256(DURATION) * 1 days;
+        VM.warp(deadline - 2 hours);
+        gift.setProofPaused(true);
+        VM.warp(deadline + 7 hours);
+        gift.setProofPaused(false);
+
+        VM.expectRevert(MilestoneGift.TooEarly.selector);
+        gift.expire(id);
+        gift.prove(
+            id, _proof(id, recipient, IDENTITY, CHESS_PROVIDER, TARGET, uint64(deadline - 1 hours), EVIDENCE_KEY)
+        );
+        require(gift.getGift(id).earned == AMOUNT, "reached in time, and a pause of ours took nothing");
+    }
+
+    function testAfterAPauseAcrossTheDeadlineTheGraceIsWholeAndNoLonger() public {
+        uint256 kept = _started(1200);
+        uint256 lost = _started(1200);
+        uint256 deadline = START + uint256(DURATION) * 1 days;
+        VM.warp(deadline - 2 hours);
+        gift.setProofPaused(true);
+        VM.warp(deadline + 7 hours);
+        gift.setProofPaused(false);
+        uint256 resumed = deadline + 7 hours;
+
+        VM.warp(resumed + 6 hours);
+        gift.prove(
+            kept, _proof(kept, recipient, IDENTITY, CHESS_PROVIDER, TARGET, uint64(deadline - 1 hours), EVIDENCE_KEY)
+        );
+        require(gift.getGift(kept).earned == AMOUNT, "the last instant of the grace after the pause still pays");
+        VM.expectRevert(MilestoneGift.TooEarly.selector);
+        gift.expire(lost);
+
+        VM.warp(resumed + 6 hours + 1);
+        MilestoneGift.ProofAttestation memory late =
+            _proof(lost, recipient, IDENTITY, CHESS_PROVIDER, TARGET, uint64(deadline - 1 hours), EVIDENCE_KEY);
+        VM.expectRevert(MilestoneGift.DeadlinePassed.selector);
+        gift.prove(lost, late);
+        gift.expire(lost);
+        require(gift.refundableBalance(lost) == AMOUNT, "and then it goes back, as without a pause");
+    }
+
+    function testAPauseEntirelyBeforeTheDeadlineChangesNothing() public {
+        uint256 id = _started(1200);
+        uint256 deadline = START + uint256(DURATION) * 1 days;
+        VM.warp(deadline - 5 hours);
+        gift.setProofPaused(true);
+        VM.warp(deadline - 3 hours);
+        gift.setProofPaused(false);
+
+        VM.warp(deadline + 6 hours + 1);
+        MilestoneGift.ProofAttestation memory late =
+            _proof(id, recipient, IDENTITY, CHESS_PROVIDER, TARGET, uint64(deadline - 1 hours), EVIDENCE_KEY);
+        VM.expectRevert(MilestoneGift.DeadlinePassed.selector);
+        gift.prove(id, late);
+        gift.expire(id);
+        require(gift.refundableBalance(id) == AMOUNT, "the grace ends where it always did");
+    }
+
+    function testAPauseAcrossTheLateWindowOfACertificateGivesItBack() public {
+        uint256 id = _certificate();
+        uint256 deadline = START + uint256(DURATION) * 1 days;
+        VM.warp(deadline + 13 days);
+        gift.setProofPaused(true);
+        VM.warp(deadline + 15 days);
+        gift.setProofPaused(false);
+
+        VM.expectRevert(MilestoneGift.TooEarly.selector);
+        gift.expire(id);
+        gift.prove(
+            id,
+            _proofOf(
+                id,
+                recipient,
+                SUBJECT,
+                CERTIFICATE_PROVIDER,
+                1,
+                uint64(START + 10 days),
+                uint64(VM.getBlockTimestamp()),
+                EVIDENCE_KEY
+            )
+        );
+        require(gift.getGift(id).earned == AMOUNT, "a certificate granted in time survives a pause over its window");
+    }
+
+    function testAPauseAcrossTheWaitForAFirstReadingGivesItBack() public {
+        uint256 id = _claimed();
+        VM.warp(START + 13 days);
+        gift.setProofPaused(true);
+        VM.warp(START + 15 days);
+        gift.setProofPaused(false);
+
+        VM.expectRevert(MilestoneGift.TooEarly.selector);
+        gift.expire(id);
+        gift.prove(
+            id, _proof(id, recipient, IDENTITY, CHESS_PROVIDER, 1200, uint64(VM.getBlockTimestamp()), EVIDENCE_KEY)
+        );
+        require(gift.getGift(id).identityHash == IDENTITY, "the start a pause blocked can still be taken");
+
+        uint256 other = _claimedAt(START);
+        VM.warp(START + 15 days + 6 hours - 1);
+        VM.expectRevert(MilestoneGift.TooEarly.selector);
+        gift.expire(other);
+        VM.warp(START + 15 days + 6 hours);
+        gift.expire(other);
+        require(
+            gift.refundableBalance(other) == AMOUNT,
+            "and a gift never started still goes back, the grace after the pause"
+        );
+    }
+
+    function testOnlyTheEndOfAPauseMovesTheClock() public {
+        uint64 opened = gift.proofResumedAt();
+        VM.warp(START + 1 days);
+        gift.setProofPaused(false);
+        require(gift.proofResumedAt() == opened, "opening what is already open is not the end of a pause");
+        gift.setProofPaused(true);
+        require(gift.proofResumedAt() == opened, "pausing is not resuming");
+        VM.warp(START + 2 days);
+        gift.setProofPaused(false);
+        require(gift.proofResumedAt() == uint64(START + 2 days), "the end of a pause is recorded");
+    }
+
+    /// @dev For any pause and any moment it ends: a reading taken before the deadline, submitted within the grace
+    ///      after the later of the deadline and the pause's end, pays; and the gift cannot be taken back before then.
+    function testFuzzAReadingTakenInTimeIsNeverLostToAPause(
+        uint32 pauseStartSeed,
+        uint32 pauseLengthSeed,
+        uint32 submitSeed
+    ) public {
+        uint256 id = _started(1200);
+        uint256 deadline = START + uint256(DURATION) * 1 days;
+        uint256 pauseStart = deadline - 1 days + (uint256(pauseStartSeed) % (1 days + 6 hours));
+        uint256 pauseEnd = pauseStart + 1 minutes + (uint256(pauseLengthSeed) % 3 days);
+        VM.warp(pauseStart);
+        gift.setProofPaused(true);
+        VM.warp(pauseEnd);
+        gift.setProofPaused(false);
+
+        uint256 from = pauseEnd > deadline ? pauseEnd : deadline;
+        // Submitted once proofs are open and the reading has been taken, at any moment up to the end of the grace.
+        uint256 observed = deadline - 1 minutes;
+        uint256 earliest = pauseEnd > observed ? pauseEnd : observed;
+        uint256 submitAt = earliest + (uint256(submitSeed) % (from + 6 hours - earliest + 1));
+        VM.warp(submitAt);
+        if (submitAt <= from + 6 hours) {
+            VM.expectRevert(MilestoneGift.TooEarly.selector);
+            gift.expire(id);
+        }
+        gift.prove(
+            id, _proof(id, recipient, IDENTITY, CHESS_PROVIDER, TARGET, uint64(deadline - 1 minutes), EVIDENCE_KEY)
+        );
+        require(gift.getGift(id).earned == AMOUNT, "a reading taken in time pays");
+    }
+
     function testAPauseNeverHandsTheGiftBack() public {
         uint256 id = _started(1200);
         VM.warp(START + uint256(DURATION) * 1 days + 7 hours);
@@ -556,8 +717,15 @@ contract MilestoneGiftTest {
         gift.expire(id);
 
         gift.setProofPaused(false);
+        // Proofs reopened at deadline + 7 hours, so a reading taken in time has its whole grace from then (the fourth
+        // review): the gift settles once that grace has passed, and not the moment proofs reopen.
+        VM.expectRevert(MilestoneGift.TooEarly.selector);
         gift.expire(id);
-        require(gift.refundableBalance(id) == AMOUNT, "and once proofs are open again it settles");
+        VM.warp(START + uint256(DURATION) * 1 days + 13 hours + 1);
+        gift.expire(id);
+        require(
+            gift.refundableBalance(id) == AMOUNT, "and once proofs are open again and the grace has run, it settles"
+        );
     }
 
     // --- the deadline -----------------------------------------------------------------------------------
@@ -775,6 +943,16 @@ contract MilestoneGiftTest {
                 id,
                 _proof(id, recipient, IDENTITY, CHESS_PROVIDER, TARGET, uint64(VM.getBlockTimestamp()), EVIDENCE_KEY)
             );
+        } else if (seed % 3 == 0) {
+            // A pause across the deadline, of any length: the gift still settles once, after the whole grace.
+            uint256 deadline = START + uint256(duration) * 1 days;
+            VM.warp(deadline - 1 hours);
+            gift.setProofPaused(true);
+            uint256 resumed = deadline + (seed % 3 days);
+            VM.warp(resumed);
+            gift.setProofPaused(false);
+            VM.warp((resumed > deadline ? resumed : deadline) + 6 hours + 1);
+            gift.expire(id);
         } else {
             VM.warp(START + uint256(duration) * 1 days + 6 hours + 1);
             gift.expire(id);
@@ -886,6 +1064,13 @@ contract MilestoneGiftTest {
     function _create() private returns (uint256) {
         MilestoneGift.MilestoneParams memory p = _params(AMOUNT, DURATION, TARGET);
         return gift.createGift(p, _authorization(p, FUNDER_KEY));
+    }
+
+    function _claimedAt(uint256 at) private returns (uint256 id) {
+        uint256 now_ = VM.getBlockTimestamp();
+        VM.warp(at);
+        id = _claimed();
+        VM.warp(now_);
     }
 
     function _claimed() private returns (uint256 id) {

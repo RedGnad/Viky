@@ -2460,11 +2460,33 @@ lets a username change every ninety days.
    "What will they do?" marked as offered to nobody else, and the create route accepts it only from such an account.
    `live: true` is the last change.
 
-**Not changed:** `MilestoneGift.sol` is byte for byte the contract of D49 (13,240 bytes). Its three review fixes of D49
-were each checked by putting the defect back; no separate review has read them since.
+**Not changed here:** `MilestoneGift.sol` was, at this entry, byte for byte the contract of D49 (13,240 bytes), whose
+three review fixes nobody had read since. The fourth review read them, and D88 records what it found and what changed.
 
 **Rehearsed before mainnet.** The deployment ran on a local fork with the real deployer's nonce and balance (expected
 address `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e`, about 0.40 MON at 102 gwei, ownership read back as the founder's),
 then `scripts/rehearse-milestone-fork.ts` ran the routes on it: a gift made, opened, started by a real attested reading
 of erik at 1904, released by a reading at the target, taken by the recipient, and a second gift nobody opened sent back
 by the settling pass.
+
+## D88, 17 Sep 2026: the fourth review, and a pause that still took a gift reached in time
+
+- Statement: the fourth review of `MilestoneGift`, in the strategy session on Fable, read the whole contract against
+  the promises of D45. Ten held. Promise 10 broke inside the pause fix of D49: `expire` refused during a pause, but once
+  the pause ended `prove` still refused past the deadline plus the grace, and `expire` opened at that same instant.
+  A target reached an hour before the deadline, during a pause from two hours before it to seven after, was lost to the
+  funder. The same shape held for a certificate's late window and for the wait for a first reading.
+- Consequence: `setProofPaused(false)` records `proofResumedAt` when it ends a pause, and only then. In `prove` and in
+  `expire`, those three windows count from the later of their own moment and `proofResumedAt`. A pause that ended
+  before the moment changes nothing; a pause that ran across it gives the whole window back from its end. The wait for
+  a gift nobody opened is not moved, because opening a gift is not paused.
+- Tested first: six tests written against the contract as it was, five of them failing on it (the one that passed is
+  the pause entirely before a deadline, which must change nothing), then passing on the fix; a fuzz over any pause and
+  any moment of submission; pauses added to the accounting fuzz; both fuzzes at 4,096 runs. Checked the other way too:
+  with the defect put back the six fail, and with every reopening recorded the test for it fails. The existing test of
+  D49 now waits for the grace after the pause, as the rule says. The keeper mirrors it (`canExpire` reads `proofPaused`
+  and `proofResumedAt`).
+- Deployed as asked: the four Chess.com cadences only, every one a climb, and a refusal if any fifth goal is registered.
+  No "having it or not" goal until the two questions D49 left open are settled. The judges page says what the owner
+  can and cannot do, including the limit of "cannot move money": the evidence signer, which the owner can replace,
+  attests who opened a gift and what a reading said.

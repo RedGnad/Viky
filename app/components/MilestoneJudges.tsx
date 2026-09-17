@@ -94,6 +94,20 @@ export function MilestoneJudges() {
           <code className={CODE}>{E.refusal.command}</code>
         </>
       ) : null}
+      <p className={HELP}>What the owner can do, and what it cannot, read from the contract:</p>
+      <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
+        <li>Pause and reopen new gifts, and pause and reopen readings. While readings are paused nothing can be taken back, and every window a pause ran across (the grace after a deadline, the wait for a first reading) counts again from the moment readings reopen.</li>
+        <li>Replace the evidence signer, and register a goal or change the provider id its readings must carry, which applies to gifts already made on that goal.</li>
+        <li>Hand the ownership over, or renounce it; renounced while readings are paused, the gifts under way could never settle.</li>
+        <li>
+          Move money: no. No function lets the owner send AUSD anywhere. Money leaves only to a gift&apos;s recipient, from what was earned and at
+          their signed request, or to the refund address the funder signed, from what was not earned. The terms a funder signed cannot be changed.
+        </li>
+        <li>
+          What that does not cover: the evidence signer attests who opened a gift and what a reading said, so whoever holds its key, which the
+          owner can replace, could open a gift nobody has opened yet and attest a reading for it.
+        </li>
+      </ul>
       <p className={HELP}>What is not proven, written as it is:</p>
       <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
         <li>The attestor&apos;s own TEE attestation is not in the proof zk-fetch returns, so it is not verified; its signature and address are.</li>

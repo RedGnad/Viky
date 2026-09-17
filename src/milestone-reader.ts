@@ -36,6 +36,9 @@ export type MilestoneState = Readonly<{
   settled: boolean;
   earnedBalance: bigint;
   withdrawNonce: bigint;
+  /** The contract's switch for readings, and when it was last reopened after a pause (the fourth review). */
+  proofPaused: boolean;
+  proofResumedAt: number;
 }>;
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -44,10 +47,12 @@ const ZERO_HASH = `0x${"0".repeat(64)}`;
 export async function readMilestoneGift(contract: Hex, giftId: string, client: PublicClient = giftPublicClient()): Promise<MilestoneState> {
   const abi = milestoneGiftAbi as unknown as Abi;
   const id = BigInt(giftId);
-  const [gift, earnedBalance, withdrawNonce] = await Promise.all([
+  const [gift, earnedBalance, withdrawNonce, proofPaused, proofResumedAt] = await Promise.all([
     client.readContract({ address: contract, abi, functionName: "getGift", args: [id] }) as Promise<Record<string, unknown>>,
     client.readContract({ address: contract, abi, functionName: "earnedBalance", args: [id] }) as Promise<bigint>,
     client.readContract({ address: contract, abi, functionName: "withdrawNonces", args: [id] }) as Promise<bigint>,
+    client.readContract({ address: contract, abi, functionName: "proofPaused" }) as Promise<boolean>,
+    client.readContract({ address: contract, abi, functionName: "proofResumedAt" }) as Promise<bigint | number>,
   ]);
   const recipient = getAddress(String(gift.recipient));
   return {
@@ -76,6 +81,8 @@ export async function readMilestoneGift(contract: Hex, giftId: string, client: P
     settled: Boolean(gift.settled),
     earnedBalance,
     withdrawNonce,
+    proofPaused: Boolean(proofPaused),
+    proofResumedAt: Number(proofResumedAt),
   };
 }
 
@@ -117,13 +124,19 @@ export function canStillReach(gift: PhaseInput, nowSeconds: number): boolean {
 }
 
 /**
- * Whether `expire` would be accepted now, for a climb, by the contract's own rules: a gift nobody opened after the
- * dormant delay and the grace, a gift opened and never started likewise from the claim, a started one once its
- * deadline and the grace have passed. Never while a reading taken in time could still arrive.
+ * Whether `expire` would be accepted now, for a climb, by the contract's own rules: never while readings are paused; a
+ * gift nobody opened after the dormant delay and the grace; a gift opened and never started likewise from the claim;
+ * a started one once its deadline and the grace have passed. A window a pause ran across is counted from the pause's
+ * end, as the contract counts it (`_afterPauses`), so the keeper never takes back what a reading taken in time can
+ * still reach.
  */
-export function canExpire(gift: Pick<MilestoneState, "cancelled" | "settled" | "recipient" | "identityHash" | "fundedAt" | "claimedAt" | "deadline" | "shape">, nowSeconds: number): boolean {
-  if (gift.cancelled || gift.settled || gift.shape !== SHAPE_CLIMB) return false;
+export function canExpire(
+  gift: Pick<MilestoneState, "cancelled" | "settled" | "recipient" | "identityHash" | "fundedAt" | "claimedAt" | "deadline" | "shape" | "proofPaused" | "proofResumedAt">,
+  nowSeconds: number,
+): boolean {
+  if (gift.proofPaused || gift.cancelled || gift.settled || gift.shape !== SHAPE_CLIMB) return false;
+  const afterPauses = (moment: number) => Math.max(moment, gift.proofResumedAt);
   if (gift.recipient === null) return nowSeconds >= gift.fundedAt + MILESTONE_DORMANT_SECONDS + MILESTONE_PROOF_GRACE_SECONDS;
-  if (gift.identityHash === ZERO_HASH) return nowSeconds >= gift.claimedAt + MILESTONE_DORMANT_SECONDS + MILESTONE_PROOF_GRACE_SECONDS;
-  return nowSeconds > gift.deadline + MILESTONE_PROOF_GRACE_SECONDS;
+  if (gift.identityHash === ZERO_HASH) return nowSeconds >= afterPauses(gift.claimedAt + MILESTONE_DORMANT_SECONDS) + MILESTONE_PROOF_GRACE_SECONDS;
+  return nowSeconds > afterPauses(gift.deadline) + MILESTONE_PROOF_GRACE_SECONDS;
 }

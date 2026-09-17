@@ -114,6 +114,9 @@ async function main() {
   const dailyNext = (await publicClient.readContract({ address: dailyContract, abi: giftEscrowAbi as unknown as Abi, functionName: "nextGiftId" })) as bigint;
   if (dailyNext >= MILESTONE_FIRST_ID) throw new Error(`Refusing to deploy: the daily contract is at gift ${dailyNext}, inside the milestone numbering`);
 
+  // Only the four cadences of Chess.com, every one a climb. No "having it or not" goal is registered on this instance
+  // until the two questions D49 left open are settled: whether one certificate may pay two gifts, and what a nullifier
+  // is scoped to.
   const steps: Step[] = [
     ...CHESS_MODES.map((mode) => ({
       name: `register Chess.com ${mode} as a climb`,
@@ -210,6 +213,8 @@ async function main() {
   for (const goal of readBack.goals) {
     if (goal.provider !== chessProviderId(goal.cadence) || goal.shape !== SHAPE_CLIMB) throw new Error(`The ${goal.cadence} goal did not register as it should`);
   }
+  const fifth = await read("goalProviders", [CHESS_MODES.length + 1]);
+  if (fifth !== `0x${"0".repeat(64)}`) throw new Error("A goal beyond the four cadences is registered, and none should be");
 
   console.log("\nAdd to .env.local and to the Vercel environment:");
   console.log(`MILESTONE_GIFT_ADDRESS=${address}`);

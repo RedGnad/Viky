@@ -882,6 +882,19 @@ export const milestoneGiftAbi = [
   },
   {
     "type": "function",
+    "name": "proofResumedAt",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "prove",
     "inputs": [
       {
