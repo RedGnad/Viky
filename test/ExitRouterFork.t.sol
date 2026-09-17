@@ -129,7 +129,9 @@ contract ExitRouterForkTest {
         if (data.length == 0) return "(empty: the exchange reverted with no data at all)";
         if (data.length >= 4 && data[0] == 0x08 && data[1] == 0xc3 && data[2] == 0x79 && data[3] == 0xa0) {
             bytes memory body = new bytes(data.length - 4);
-            for (uint256 i = 0; i < body.length; i++) body[i] = data[i + 4];
+            for (uint256 i = 0; i < body.length; i++) {
+                body[i] = data[i + 4];
+            }
             return string(abi.encodePacked('Error("', abi.decode(body, (string)), '")'));
         }
         return _hex(data);
@@ -150,9 +152,13 @@ contract ExitRouterForkTest {
     function _number(uint256 value) private pure returns (string memory) {
         if (value == 0) return "0";
         uint256 length;
-        for (uint256 v = value; v != 0; v /= 10) length++;
+        for (uint256 v = value; v != 0; v /= 10) {
+            length++;
+        }
         bytes memory out = new bytes(length);
-        for (uint256 v = value; v != 0; v /= 10) out[--length] = bytes1(uint8(48 + (v % 10)));
+        for (uint256 v = value; v != 0; v /= 10) {
+            out[--length] = bytes1(uint8(48 + (v % 10)));
+        }
         return string(out);
     }
 }
