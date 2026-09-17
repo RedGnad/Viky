@@ -40,6 +40,8 @@ const CLIMBING: MilestoneState = {
   settled: false,
   earnedBalance: 0n,
   withdrawNonce: 0n,
+  proofPaused: false,
+  proofResumedAt: 1_700_000_000,
 };
 
 /** A chain of one gift that moves as the pass acts on it, and the list of what the pass did. */
@@ -163,10 +165,29 @@ test("the phases say what the contract would do", () => {
   assert.equal(canExpire({ ...CLIMBING, settled: true }, DEADLINE + 10 * 86_400), false, "a settled gift is never closed twice");
 });
 
+test("the keeper takes nothing back while readings are paused, and counts a window a pause ran across from its end", () => {
+  const after = DEADLINE + MILESTONE_PROOF_GRACE_SECONDS + 1;
+  assert.equal(canExpire({ ...CLIMBING, proofPaused: true }, after + 30 * 86_400), false, "never during a pause");
+  // The fourth review's case: a pause from two hours before the deadline to seven after.
+  const resumed = DEADLINE + 7 * 3_600;
+  assert.equal(canExpire({ ...CLIMBING, proofResumedAt: resumed }, after), false);
+  assert.equal(canExpire({ ...CLIMBING, proofResumedAt: resumed }, resumed + MILESTONE_PROOF_GRACE_SECONDS), false);
+  assert.equal(canExpire({ ...CLIMBING, proofResumedAt: resumed }, resumed + MILESTONE_PROOF_GRACE_SECONDS + 1), true);
+  // A pause that ended before the deadline changes nothing.
+  assert.equal(canExpire({ ...CLIMBING, proofResumedAt: DEADLINE - 3 * 3_600 }, after), true);
+  // The wait for a first reading, the same way.
+  const unstarted = { ...CLIMBING, identityHash: ZERO, deadline: 0, proofResumedAt: FUNDED + 60 + 15 * 86_400 } as MilestoneState;
+  assert.equal(canExpire(unstarted, FUNDED + 60 + MILESTONE_DORMANT_SECONDS + MILESTONE_PROOF_GRACE_SECONDS), false);
+  assert.equal(canExpire(unstarted, FUNDED + 60 + 15 * 86_400 + MILESTONE_PROOF_GRACE_SECONDS), true);
+});
+
 test("the delays mirrored here are the contract's own", () => {
   const contract = readFileSync("contracts/MilestoneGift.sol", "utf8");
   assert.match(contract, /DORMANT_REFUND_DELAY = 14 days;/);
   assert.match(contract, /PROOF_GRACE = 6 hours;/);
+  assert.match(contract, /return moment > proofResumedAt \? moment : proofResumedAt;/, "the contract counts from the end of a pause as canExpire does");
+  assert.match(contract, /if \(block\.timestamp <= _afterPauses\(g\.deadline\) \+ PROOF_GRACE\) revert TooEarly\(\);/);
+  assert.match(contract, /if \(block\.timestamp < _afterPauses\(uint256\(g\.claimedAt\) \+ DORMANT_REFUND_DELAY\) \+ PROOF_GRACE\)/);
   assert.equal(MILESTONE_DORMANT_SECONDS, 14 * 86_400);
   assert.equal(MILESTONE_PROOF_GRACE_SECONDS, 6 * 3_600);
 });

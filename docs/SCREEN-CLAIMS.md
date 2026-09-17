@@ -188,6 +188,7 @@ each. A reviewer checks the contract against the sentences, never against the te
 | A start above what the funder accepted never pays | `testARecipientCannotRetryUntilAReadingSuitsThem`, checked by putting the flaw back and watching it fail |
 | A milestone already reached is not a milestone | the same test, on a measure that falls |
 | The deadline judges the reading, not the transaction | `testAReadingTakenInTimeSurvivesHoursOfOurOwnLateness`, `testProveAndExpireAreNeverBothShut`, `testTheKeeperCannotExpireWhileSuchAReadingCouldStillArrive`, checked by putting the defect back |
+| A pause of ours never takes a gift earned in time (D88) | `testAPauseAcrossTheDeadlineGivesTheWholeGraceBackAfterItEnds`, `testAfterAPauseAcrossTheDeadlineTheGraceIsWholeAndNoLonger`, `testAPauseEntirelyBeforeTheDeadlineChangesNothing`, `testAPauseAcrossTheLateWindowOfACertificateGivesItBack`, `testAPauseAcrossTheWaitForAFirstReadingGivesItBack`, `testOnlyTheEndOfAPauseMovesTheClock`, `testFuzzAReadingTakenInTimeIsNeverLostToAPause`, written failing first and checked by putting the defect back; the keeper's mirror in `test/milestone-pass.test.ts` |
 | An old reading is never a start | `testTheFirstReadingCannotBeAnOldOne`, `testTheGraceDoesNotLetAnOldReadingStartAGift` |
 | The wait runs from the day it was opened | `testTheWaitForAFirstReadingRunsFromTheDayItWasOpened` |
 | All or nothing, once | `testReachingTheTargetGivesTheWholeAmountAtOnce`, `testAReachedMilestoneCannotBeExpired`, `testExpiringTwiceIsRefused` |

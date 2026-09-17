@@ -196,6 +196,10 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
     uint256 public nextGiftId;
     bool public creationPaused;
     bool public proofPaused;
+    /// @dev When proofs were last reopened after a pause. Every window a pause could have shut, the grace after a
+    ///      climb's deadline, a certificate's late window and the wait for a first reading, is counted from the later
+    ///      of its own moment and this one, so a pause of ours never takes a gift that was earned in time.
+    uint64 public proofResumedAt;
 
     mapping(uint256 => Gift) private gifts;
     mapping(uint8 => bytes32) public goalProviders;
@@ -466,7 +470,7 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
             // the same thing for ever, so waiting gains the recipient nothing, and a short window would take
             // the whole gift away for being slow to open the app. The climb's grace is short because a
             // reading is a snapshot that goes stale; this is not one.
-            if (block.timestamp > uint256(g.deadline) + LATE_PROOF_WINDOW) revert DeadlinePassed();
+            if (block.timestamp > _afterPauses(g.deadline) + LATE_PROOF_WINDOW) revert DeadlinePassed();
             if (a.metricValue < g.target) revert NotThereYet();
             g.lastProofAt = a.observedAt;
             g.settled = true;
@@ -491,7 +495,8 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         // The deadline judges the reading; the grace judges the transaction. A reading taken in time is not
         // lost because the keeper submitted it a moment late, and `expire` cannot open until the grace ends.
         if (uint256(a.observedAt) > g.deadline) revert DeadlinePassed();
-        if (block.timestamp > uint256(g.deadline) + PROOF_GRACE) revert DeadlinePassed();
+        // Counted from the end of a pause that ran past the deadline, so the grace is whole once proofs reopen.
+        if (block.timestamp > _afterPauses(g.deadline) + PROOF_GRACE) revert DeadlinePassed();
         g.lastProofAt = a.observedAt;
         // The climb the funder signed for. A start above it can never settle, so the gift returns at its
         // deadline; the screens say so as soon as the start is recorded.
@@ -521,14 +526,17 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
             if (block.timestamp < uint256(g.fundedAt) + DORMANT_REFUND_DELAY + PROOF_GRACE) revert TooEarly();
         } else if (g.shape == SHAPE_HAVE_OR_NOT) {
             // Not until a certificate granted in time can no longer be submitted.
-            if (block.timestamp <= uint256(g.deadline) + LATE_PROOF_WINDOW) revert TooEarly();
+            if (block.timestamp <= _afterPauses(g.deadline) + LATE_PROOF_WINDOW) revert TooEarly();
         } else if (g.identityHash != bytes32(0)) {
             // A climb under way: not until a reading taken before the deadline can no longer arrive.
-            if (block.timestamp <= uint256(g.deadline) + PROOF_GRACE) revert TooEarly();
+            if (block.timestamp <= _afterPauses(g.deadline) + PROOF_GRACE) revert TooEarly();
         } else {
             // A climb nobody ever started, measured from the day it was opened, so opening the link late never
-            // leaves a recipient with no time at all to take a first reading.
-            if (block.timestamp < uint256(g.claimedAt) + DORMANT_REFUND_DELAY + PROOF_GRACE) revert TooEarly();
+            // leaves a recipient with no time at all to take a first reading, and from the end of a pause that
+            // shut that first reading out when its wait ran out.
+            if (block.timestamp < _afterPauses(uint256(g.claimedAt) + DORMANT_REFUND_DELAY) + PROOF_GRACE) {
+                revert TooEarly();
+            }
         }
 
         g.settled = true;
@@ -611,6 +619,8 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
     }
 
     function setProofPaused(bool paused) external onlyOwner {
+        // Only the end of a pause is recorded: reopening what was already open moves no window.
+        if (proofPaused && !paused) proofResumedAt = uint64(block.timestamp);
         proofPaused = paused;
         emit ProofPauseUpdated(paused);
     }
@@ -672,6 +682,12 @@ contract MilestoneGift is Ownable, ReentrancyGuard, EIP712 {
         uint256 balanceBefore = token.balanceOf(to);
         token.safeTransfer(to, amount);
         if (token.balanceOf(to) != balanceBefore + amount) revert TransferShortfall();
+    }
+
+    /// @dev The later of a moment and the end of the last pause. A pause that ended before the moment changes nothing;
+    ///      one that ran past it moves the moment to its end, so the window after it is whole (the fourth review).
+    function _afterPauses(uint256 moment) private view returns (uint256) {
+        return moment > proofResumedAt ? moment : proofResumedAt;
     }
 
     /// @dev The UTC day a moment falls in, as the daily contract computes it. A granting day is a day, and
