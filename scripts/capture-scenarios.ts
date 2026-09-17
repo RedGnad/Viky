@@ -380,6 +380,64 @@ export const SCENARIOS: Scenario[] = [
     },
   },
 
+  {
+    name: "funder milestone: what, their chess.com and the rating, how much, check, made",
+    run: async (s) => {
+      await s.reset({ AUSD: 30_000_000n, USDC: 0n, MON: 0n });
+      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
+      // Until C2 is live the condition is offered to an account that runs Viky only; the run is signed in as nobody's
+      // operator, so the answer that account would get is given.
+      await s.api("GET", "/api/conditions", () => ({ status: 200, body: { ids: ["duolingo-daily"], preview: ["chess-rating"] } }), "GET /api/conditions, as an account that runs Viky");
+      await s.api("GET", /\/api\/chess\/standing\?/, ({ hit }) =>
+        hit === 1
+          ? { status: 404, body: { error: "No rating in that cadence yet.", code: "NO_RATING" } }
+          : { status: 200, body: { username: "lea_plays", mode: "rapid", rating: 1450, readAt: new Date().toISOString() } },
+        "GET /api/chess/standing, as Chess.com answers: no blitz rating, then 1450 in rapid",
+      );
+      await s.api(
+        "POST",
+        "/api/gift/milestone/create",
+        () => ({ status: 200, body: { giftId: "1000000", claimUrl: `${s.base}/g/1000000?t=${CLAIM_TOKEN}`, funded: true } }),
+        "POST /api/gift/milestone/create",
+      );
+      await s.signIn();
+      await s.click("Offer a gift");
+      await s.page.getByLabel("Their first name").fill("Léa");
+      await s.page.getByLabel("Your name, as they know you").fill("Maman");
+      await s.click(exact("Continue"));
+      await s.text("Reach a chess rating on Chess.com");
+      await s.shot("funder milestone", "what will they do", `${HOME}: Offer a gift, Léa and Maman, Continue`);
+      await s.page.getByLabel("Reach a chess rating on Chess.com").check();
+      await s.click(exact("Continue"));
+      await s.text("Their Chess.com, and the rating they reach");
+      await s.page.getByLabel("Their Chess.com name").fill("lea_plays");
+      await s.page.getByLabel("Blitz").check();
+      await s.click(exact("Read their rating"));
+      await s.text("They have no blitz rating yet.");
+      await s.shot("funder milestone", "no rating in that cadence", "On that step: lea_plays, Blitz, Read their rating");
+      await s.page.getByLabel("Rapid").check();
+      await s.click(exact("Read their rating"));
+      await s.text("Today they are at 1450 in rapid.");
+      await s.page.getByLabel("The rating they reach").fill("1470");
+      await s.page.getByLabel("The rating they reach").blur();
+      await s.text("Choose 1500 or more");
+      await s.shot("funder milestone", "target too close", "On that step: Rapid, Read their rating, 1470 typed");
+      await s.page.getByLabel("The rating they reach").fill("1500");
+      await s.text("only if they start from 1460 or under");
+      await s.shot("funder milestone", "today's reading and the target", "On that step: 1500 typed");
+      await s.click(exact("Continue"));
+      await s.text("How much, and how long do they have?");
+      await s.shot("funder milestone", "how much and how long", "On that step: Continue");
+      await s.click(exact("Continue"));
+      await s.text("Check this over");
+      await s.shot("funder milestone", "check", "On that step: Continue, with $30.00 in the account");
+      await s.click("Put $25.00 in Léa's name");
+      await s.text("$25.00 is in Léa's name.", 40_000);
+      await s.shot("funder milestone", "made, with the link", "On the check: Put $25.00 in Léa's name");
+      await s.forgetKept();
+    },
+  },
+
   // ---------------------------------------------------------------------------------------------------------
   // Recipient, from the link to counting.
   {
@@ -685,6 +743,42 @@ function milestone(): Scenario[] {
           }),
         );
         await s.shot("milestone", "opened, connecting with a code", "A milestone gift's page, opened and not connected: the code for the name the funder gave (simulated data)", { real: "replaced: GET /api/gift/[id] with a simulated milestone gift" });
+      },
+    },
+    {
+      name: "milestone: the code is added, and the first reading starts the climb",
+      run: async (s) => {
+        let current: Record<string, unknown> = milestoneGift({
+          phase: "opened",
+          connected: false,
+          startReading: null,
+          todayReading: null,
+          readAtMs: null,
+          deadlineMs: null,
+          goalAccount: { username: "lea_plays", bound: false, code: null, codeExpiresAt: null },
+        });
+        await s.reset();
+        await s.api("POST", `/api/gift/${GIFT_ID}/account`, () => {
+          current = { ...current, goalAccount: { username: "lea_plays", bound: false, code: "KXQPRT", codeExpiresAt: new Date(Date.now() + 3_600_000).toISOString() } };
+          return { status: 200, body: { giftId: GIFT_ID, username: "lea_plays", code: "KXQPRT", expiresAt: new Date(Date.now() + 3_600_000).toISOString() } };
+        }, "POST /api/gift/[id]/account");
+        await s.api("POST", `/api/gift/${GIFT_ID}/bind`, () => {
+          current = milestoneGift({ startReading: 1455, todayReading: 1455, readAtMs: Date.now(), deadlineMs: Date.now() + 30 * 86_400_000 });
+          return { status: 200, body: { kind: "started", giftId: GIFT_ID, rating: 1455, hash: "0x1", aboveAccepted: false, deadline: Math.floor(Date.now() / 1000) + 30 * 86_400 } };
+        }, "POST /api/gift/[id]/bind");
+        await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card()] } }), "GET /api/gifts/mine");
+        await s.api("GET", GIFT_READ, () => ({ status: 200, body: current }), "GET /api/gift/[id], a simulated milestone gift");
+        await s.signIn();
+        await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
+        await s.settle();
+        await s.text("Connect Chess.com", 30_000);
+        await s.shot("milestone", "opened, connect", "A milestone gift's page, opened and not connected (simulated data)", { real: "replaced: GET /api/gift/[id] with a simulated milestone gift" });
+        await s.click("Get my code");
+        await s.text("Prove lea_plays is yours");
+        await s.shot("milestone", "the code for the name given", "On that page: Get my code", { real: "replaced: POST /api/gift/[id]/account" });
+        await s.click("I added it");
+        await s.text("Done. You start at 1455.");
+        await s.shot("milestone", "started", "On that page: I added it", { real: "replaced: POST /api/gift/[id]/bind, the attested reading" });
       },
     },
     {

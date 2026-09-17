@@ -135,7 +135,7 @@ async function main() {
 
   response = await statusRoute(new Request(`${ORIGIN}/api/gift/${giftId}`, { headers: headers(recipientCookie) }), { params: Promise.resolve({ id: giftId }) });
   const view = (await response.json()) as Record<string, unknown>;
-  console.log("STEP status", response.status, JSON.stringify({ phase: view.phase, start: view.start, target: view.target, maximumStart: view.maximumStart, deadline: view.deadline, latest: view.latest }));
+  console.log("STEP status", response.status, JSON.stringify({ phase: view.phase, startReading: view.startReading, target: view.target, maximumStart: view.maximumStart, deadlineMs: view.deadlineMs, todayReading: view.todayReading }));
 
   console.log("STEP reach below", JSON.stringify(await runMilestoneReading({ giftId, purpose: "reach", force: true }, live)));
   const now = Math.floor(Date.now() / 1_000);
