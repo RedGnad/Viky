@@ -275,6 +275,9 @@ offered a gift: each stopped on the check, with "Not now".
 | `0x011c3B117Ac05bF0a5B8A969D24B90c2c553b8F0` | 17 Sep 2026, 17:04 UTC | database guard deployment check, 1440x900 night |
 | `0xb852A09f26d14ECDd70A46281e29B02aF671f3Fa` | 17 Sep 2026, 20:14 UTC | preview and development database check, 390x844 day |
 | `0x50687Bd4697aD2D775f5f7f9dB0f0E81bd855642` | 17 Sep 2026, 20:14 UTC | preview and development database check, 1440x900 night |
+| `0xfEAc57C6792293dc9f13c854622D8be252f86986` | 17 Sep 2026, 21:09 UTC | morning message deployment check, 390x844 day |
+| `0xA4a2072Ff361fF3DFE17FbC14F60F788d65030cE` | 17 Sep 2026, 21:10 UTC | morning message deployment check, 1440x900 night |
+| not read back | 17 Sep 2026, 21:12 UTC | one account made on the deployment from before the look changed, to say whether the reload defect was already there (it was). Its code was not read back before the passkey went, and an account writes no row, so nothing names it anywhere |
 
 The row `0xb12e0c72209bd4becfdafa96a8f3e7ebc93b8376`, euros, 02:56 UTC the same day, was not written by a check and
 is not listed here.
