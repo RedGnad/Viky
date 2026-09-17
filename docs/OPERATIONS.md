@@ -189,6 +189,13 @@ Done on 17 Sep 2026, in this order, and each step read back before the next:
    public key is public by design, it is what a browser subscribes with.
 3. Without the three, nothing is sent and nothing fails: the button says so and the route answers `PUSH_NOT_CONFIGURED`.
    Changing the key pair later invalidates every subscription made with the old one, so the rows would have to go too.
+4. Checked end to end against a real push service before the deploy: `pnpm build && (PORT=3100 pnpm start &)`, then
+   `pnpm check:morning-push`. Ten checks on 17 Sep 2026: a browser subscribed at `updates.push.services.mozilla.com`,
+   the route took it, the keeper's sending encrypted and posted it, and the service worker drew "Viky" with
+   "Léa did yesterday's lesson. $3.57 is theirs."; the same day sent nothing a second time, and a subscription the
+   service refused was deleted at once. **Chrome cannot be used for this**: under automation it refuses to register
+   with its push service ("Registration failed - permission denied") even with the notification permission granted,
+   in Chrome and in Chromium, headless or not. Firefox's service is the standard one, so the path is the same.
 
 ## Money paths to audit
 
