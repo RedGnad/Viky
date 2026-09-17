@@ -61,6 +61,11 @@ function courseError(error: unknown, coursePattern: string): CourseReadError {
       // course. Only a miss on the course pattern alone says the account is not learning it.
       if (error.pattern === coursePattern) return new CourseReadError("NO_SUCH_COURSE", "That profile carries no such course", { cause: error });
       return new CourseReadError("PROFILE_NOT_FOUND", "No public Duolingo profile with that username", { cause: error });
+    case "REFUSED":
+    case "NOT_ACCEPTED":
+      // Duolingo's public profile answers 404 for a username nobody has. A 403 or a 400 is Duolingo refusing us, which
+      // is ours to fix and never a fact about the person's account (U3 added those two codes for a source that has them).
+      return new CourseReadError("FETCH_FAILED", "Duolingo would not answer that reading", { cause: error });
     default:
       return new CourseReadError(error.code, error.message, { cause: error });
   }

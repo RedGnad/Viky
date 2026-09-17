@@ -276,6 +276,34 @@ export const CHESS_RATING: Condition = {
   },
 };
 
+/**
+ * U3, the one supervised result of the four read on 18 Sep 2026: the test is recorded, the identity checked against a
+ * document, and the session reviewed by examiners. `live` stays false until a real gift has run on it and the founder
+ * has settled the question of Duolingo's terms on automated reading.
+ */
+export const DUOLINGO_ENGLISH_TEST: Condition = {
+  id: "duolingo-english-test",
+  kind: "milestone",
+  goalType: null,
+  live: false,
+  source: "Duolingo English Test",
+  name: "Reach a score on the Duolingo English Test",
+  help: "A test taken under watch, with an identity document and examiners. The result has a page they choose to share.",
+  link: {
+    kind: "link",
+    label: "The link to your certificate",
+    help: "In your Duolingo English Test account, open your certificate, press Get Shareable Link, and paste the link here.",
+  },
+  reading: "det-certificate",
+  words: {
+    earnedDay: "When they reach that score, all of this becomes theirs",
+    connect: "Opened. Share the Duolingo English Test certificate's link once the test is done.",
+    doIt: "Take the test. When the certificate is ready, make its link shareable and paste it here.",
+    eachDay: "the day of the test",
+    preview: "A score on the Duolingo English Test: the gift is yours when you reach it.",
+  },
+};
+
 /** C3, written with its words, live once a real certificate gift has run. */
 export const COURSERA_CERTIFICATE: Condition = {
   id: "coursera-certificate",
@@ -295,7 +323,7 @@ export const COURSERA_CERTIFICATE: Condition = {
   },
 };
 
-export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, COURSERA_CERTIFICATE];
+export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE];
 
 /** What "What will they do?" lists: only what works from end to end today. */
 export function liveConditions(): readonly Condition[] {

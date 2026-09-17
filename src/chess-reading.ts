@@ -133,6 +133,11 @@ function chessError(error: unknown, ratingPattern: string, namePattern: string, 
       // A profile without a readable status included: nothing is settled on a reading that could not see whether the
       // account is closed, and PROOF_INVALID is the code the keeper holds a gift on.
       return new ChessReadError("PROOF_INVALID", "The profile did not carry what a reading needs", { cause: error });
+    case "REFUSED":
+    case "NOT_ACCEPTED":
+      // Chess.com says nothing about a player with a 403 or a 400: its public pages answer 404 for an unknown name and
+      // 429 when we ask too fast. Either of these is Chess.com refusing us, which is ours to fix, never the player's.
+      return new ChessReadError("FETCH_FAILED", "Chess.com would not answer that reading", { cause: error });
     default:
       return new ChessReadError(error.code, error.message, { cause: error });
   }

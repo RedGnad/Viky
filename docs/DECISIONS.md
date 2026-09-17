@@ -2808,3 +2808,35 @@ behind an account cannot be photographed any other way.
   read an inconsistency where there is a hostname. The page now says it, and reads every figure of those two gifts
   from the contract while it is served: days earned, days gone back, days not settled yet, what was taken out, what
   went back, and each settled day by its date.
+## D100, 18 Sep 2026: a gift on a supervised result, read three fields deep (U3, C3)
+
+- Statement: the first source whose result the person cannot award themselves is the Duolingo English Test, chosen
+  against Coursera, edX and Lichess in the report of 18 Sep 2026. The test is recorded, the identity checked against a
+  document, and the session reviewed by examiners. What Viky reads is the page its taker chose to make public.
+- **Three fields, and the reason.** The answer behind a certificate page carries the score, the day of the test, the
+  name, the sub-scores, a date of birth and a link to the photograph taken on the day. The reading matches three of
+  them: the score, the day, the name. The other three are matched by no pattern, returned by nothing, and stored
+  nowhere; the attestor sees the whole answer, and the privacy page says so in those words. A gift needs a result, a
+  date and whose it is, and a product that fetches more than it needs has already lost the argument about why.
+- **The name is the binding, with the gap D49 wrote down.** The certificate has no field its holder can edit, so
+  there is no short code as on Duolingo and Chess.com. The funder types the name, it is hashed into the terms as the
+  contract's `subject`, and a proof carrying another name pays nothing. Two people with the same name, the same
+  result and the same window still cannot be told apart, which is promise 9 exactly as D49 narrowed it.
+- Names are compared as a set of words, accents, case, punctuation and order removed, because the certificate prints
+  a legal name surname first with a comma while a funder types the name they use. A name missing a part is another
+  name: it refuses rather than guesses.
+- **A withdrawn link is a fact about the page, not a failure of ours.** The answer is 403 once the taker makes the
+  certificate private again and 400 once it passes its two years, both measured on real certificates on 18 Sep 2026.
+  The attested reading now tells those apart from a failure to read, because the keeper holds a gift open on our own
+  failures: a link somebody withdrew would otherwise be held until its deadline instead of refused in words.
+- **Well inside two years.** Their terms: after two years a certificate is marked expired and can no longer be
+  shared. The contract already caps a deadline at a year, and this condition caps itself at 180 days, so a
+  certificate a gift pays for is at most half its life old when it is proved.
+- **The two questions of D49 are answered as the report proposes**, and the founder has accepted them: one
+  certificate may pay several gifts, one per funder; the nullifier is scoped to the reading and carries the gift,
+  never the certificate, because `usedNullifiers` is one mapping for the whole contract.
+- `live` stays false. It opens when a real gift has run end to end on it and the founder has settled whether we read
+  Duolingo automatically at all: their terms forbid "data mining, robots, scraping" to obtain their content, which is
+  the same clause the daily Duolingo reading already runs under, and a written request is the honest move.
+- Lichess is prepared at the same time and offers nothing yet: four goals, numbered above Chess.com's, waiting in the
+  same registration session. Coursera comes after.

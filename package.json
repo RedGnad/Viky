@@ -48,7 +48,9 @@
     "looks:capture": "tsx scripts/capture-looks.ts",
     "capture:appearance": "tsx scripts/capture-appearance.ts",
     "make:icon": "tsx scripts/make-icon.ts",
-    "check:morning-push": "tsx scripts/check-morning-push.ts"
+    "check:morning-push": "tsx scripts/check-morning-push.ts",
+    "register:milestone-goals": "tsx scripts/register-milestone-goals.ts",
+    "check:milestone-goals": "CHECK_ONLY=1 DRY_RUN=1 tsx scripts/register-milestone-goals.ts"
   },
   "dependencies": {
     "@category-labs/mera": "0.2.0",
