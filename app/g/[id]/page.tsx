@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { giftPreview } from "@/src/gift-preview";
 import { GiftPage } from "../../components/GiftPage";
@@ -10,21 +11,35 @@ function keyOf(t: string | undefined): string | null {
   return typeof t === "string" && /^[A-Za-z0-9_-]{16,64}$/.test(t) ? t : null;
 }
 
+/** Where this page is being served from, so the preview's image is named by an address a messaging app can fetch. */
+async function origin(): Promise<string> {
+  const incoming = await headers();
+  const host = incoming.get("x-forwarded-host") ?? incoming.get("host") ?? "viky.cash";
+  const proto = incoming.get("x-forwarded-proto") ?? (host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
 /**
- * What a messaging app shows for the link (src/gift-preview.ts). The title is absolute, so the preview reads the
- * sentence and not the site's title template. Messaging apps fetch without JavaScript, and Next.js renders the
- * metadata in the head for the crawlers it knows (WhatsApp, facebookexternalhit, Twitterbot, Slackbot, Discordbot).
+ * What a messaging app shows for the link (src/gift-preview.ts): the sentence, one line under it, and the image the
+ * look draws (app/api/gift/[id]/preview-image). The title is absolute, so the preview reads the sentence and not the
+ * site's title template. Messaging apps fetch without JavaScript, and Next.js renders the metadata in the head for the
+ * crawlers it knows (WhatsApp, facebookexternalhit, Twitterbot, Slackbot, Discordbot).
+ *
+ * The image carries the link's key too, so it says the funder's name exactly where the page says it, and "Someone"
+ * everywhere else.
  */
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { id } = await props.params;
   const { t } = await props.searchParams;
   if (!/^\d{1,78}$/.test(id)) return {};
   const preview = await giftPreview(id, keyOf(t));
+  const linkKey = keyOf(t);
+  const image = { url: `${await origin()}/api/gift/${id}/preview-image${linkKey ? `?t=${encodeURIComponent(linkKey)}` : ""}`, width: 1200, height: 630, alt: preview.title };
   return {
     title: { absolute: preview.title },
     description: preview.description,
-    openGraph: { type: "website", siteName: "Viky", title: { absolute: preview.title }, description: preview.description },
-    twitter: { card: "summary", title: preview.title, description: preview.description },
+    openGraph: { type: "website", siteName: "Viky", title: { absolute: preview.title }, description: preview.description, images: [image] },
+    twitter: { card: "summary_large_image", title: preview.title, description: preview.description, images: [image] },
     // A gift's page is for the person holding its link, not for a search engine.
     robots: { index: false, follow: false },
   };

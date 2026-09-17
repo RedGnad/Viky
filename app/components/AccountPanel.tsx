@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { FIELD, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON, STICKER } from "./ui";
+import {CARD, FIELD, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON} from "./ui";
 import { useAccount } from "@/src/account/provider";
 import { checkPasskeySupport, passkeyFallbackWords, type PasskeySupport } from "@/src/account/passkey-support";
 
@@ -33,7 +33,7 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
 
   if (address) {
     return (
-      <section className={STICKER.sun}>
+      <section className={CARD}>
         <p className="font-medium">You are signed in.</p>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
           Your account is protected by your passkey. Nothing to remember, nothing to write down.
@@ -105,7 +105,7 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
   );
 
   return (
-    <section className={STICKER.sun}>
+    <section className={CARD}>
       {signInOnly ? (
         <>
           {signInButton}

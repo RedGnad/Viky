@@ -1,26 +1,32 @@
+"use client";
 import Link from "next/link";
 import { Character } from "@/app/kit/Character";
+import { useMinute } from "@/app/kit/clock";
+import { exampleGift } from "@/app/kit/example-gift";
+import { GiftCard } from "@/app/kit/GiftCard";
 import { Gaze, Reveal } from "@/app/kit/Motion";
 import { Shell } from "@/app/kit/Shell";
 import { BODY, DISPLAY, HELP, INLINE_BUTTON, PRIMARY_BUTTON, PROSE, TITLE } from "@/app/components/ui";
-import { HOME, ME } from "@/src/sentences";
-import { FROM_MAMAN, labHref } from "../example";
-import { LAB } from "../words";
-import { ExampleGiftCard } from "./parts";
+import { DOOR, HOME, ME } from "@/src/sentences";
+import { labHref } from "../example";
 
 /**
  * The page without an account (brief, section 7): one action in its body, "Offer a gift", and the door, "Sign in or
  * create account", a small outlined button in the header opposite the mark, visible without competing with the action.
- * It shows the product rather than describing it: the gift character, and a real gift card labelled as an example.
+ * It shows the product rather than describing it: the gift character, and the product's one example gift card.
+ *
+ * The door is a link here and the product's own button there (app/kit/SignInDoor.tsx), because a passkey has nothing to
+ * open in a laboratory; it carries the product's word for it and looks exactly the same.
  */
-export function Welcome({ look }: Readonly<{ look: string }>) {
+export function Welcome() {
+  const nowMs = useMinute();
   return (
     <Shell
       kind="destination"
       active="home"
       action={
-        <Link href={labHref(look, "home")} className={INLINE_BUTTON}>
-          {LAB.signInOrCreate}
+        <Link href={labHref("home")} className={INLINE_BUTTON}>
+          {DOOR.open}
         </Link>
       }
     >
@@ -31,13 +37,13 @@ export function Welcome({ look }: Readonly<{ look: string }>) {
         <h1 className={DISPLAY}>{HOME.promise}</h1>
         <p className={PROSE}>{HOME.promiseBody}</p>
         <div className="flex w-full max-w-[420px] flex-col pt-[var(--space-sm)]">
-          <Link href={labHref(look, "amount")} className={PRIMARY_BUTTON}>
+          <Link href={labHref("amount")} className={PRIMARY_BUTTON}>
             {HOME.offer}
           </Link>
         </div>
       </section>
       <Reveal>
-        <ExampleGiftCard gift={FROM_MAMAN.gift} days={FROM_MAMAN.days} example />
+        <GiftCard gift={exampleGift(nowMs)} example />
       </Reveal>
       <Reveal className="flex flex-col gap-[var(--space-md)]">
         <h2 className={TITLE}>{HOME.howItWorks}</h2>

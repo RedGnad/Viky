@@ -12,10 +12,10 @@ import { labHref, TO_NOE } from "../example";
  * the person here, and the gift character answers that gesture once (brief, section 6); then the terms, the link to
  * send and what happens next.
  */
-export function Made({ look }: Readonly<{ look: string }>) {
+export function Made() {
   const condition = DUOLINGO_DAILY;
   return (
-    <Shell kind="task" back={labHref(look, "home")} backLabel={W.backToGifts} backFollows step={W.made.title(TO_NOE.amount, TO_NOE.recipient)}>
+    <Shell kind="task" back={labHref("home")} backLabel={W.backToGifts} backFollows step={W.made.title(TO_NOE.amount, TO_NOE.recipient)}>
       <Success>
         <Gaze>
           <Character state="gift" className="h-auto w-[120px] self-center" />
@@ -43,7 +43,7 @@ export function Made({ look }: Readonly<{ look: string }>) {
           ))}
         </ol>
       </Reveal>
-      <Link href={labHref(look, "gift")} className={SECONDARY_BUTTON}>
+      <Link href={labHref("gift")} className={SECONDARY_BUTTON}>
         {W.made.seeIt}
       </Link>
     </Shell>

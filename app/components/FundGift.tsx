@@ -19,6 +19,7 @@ import { twoDecimalsDown } from "@/src/exit-steps";
 import { CONVERSION_RESERVE, nextFundingStep, paymentArrived } from "@/src/funding-step";
 import { eurosToBuy, roughlyInDollars, SUGGESTED_GIFT_DOLLARS } from "@/src/gift-amount";
 import { giftNameProblem, tidyGiftName, type GiftNameProblem } from "@/src/gift-names";
+import { rememberGiftLink } from "@/src/gift-link-memory";
 import { formatAusd } from "@/src/gift-reader";
 import { AmountError, dollarsToUnits } from "@/src/money";
 import { settlingTimeInWords } from "@/src/pass-schedule";
@@ -440,6 +441,8 @@ export function FundGift() {
       ...(milestone && cadence && climb.target !== null ? { goal: milestone.words.goal(climb.target, cadence.label), target: climb.target } : {}),
     };
     writeSession(MADE_KEY, record);
+    // This device keeps the link, so the gift's page can offer it again long after this screen is gone.
+    rememberGiftLink(result.giftId, result.claimUrl);
     writeSession(DRAFT_KEY, null);
     // Made, so nothing is left to pick up again on this device (D74).
     forgetPendingGift();

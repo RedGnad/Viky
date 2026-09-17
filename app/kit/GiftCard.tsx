@@ -15,32 +15,46 @@ import { MilestoneMeter } from "./MilestoneMeter";
  * and for what; under it the image of progress, the state in words, and one line of amounts. For what comes from the
  * register and never from the card (item 10). A daily gift draws its days, a milestone its meter.
  */
-export function GiftCard({ gift, milestone: given, still = false }: Readonly<{ gift: GiftSummary; milestone?: MilestoneStatus; still?: boolean }>) {
+export function GiftCard({ gift, milestone: given, still = false, example = false }: Readonly<{ gift: GiftSummary; milestone?: MilestoneStatus; still?: boolean; example?: boolean }>) {
   // On Home and Gifts a milestone gift arrives inside its summary (C2); at the head of its page, beside it.
   const milestone = given ?? gift.milestone;
   const condition = milestone ? conditionById(milestone.conditionId) : conditionOfGoal(gift.goalType);
   const started = gift.opened && (gift.counting || gift.finished || gift.creditedDays + gift.missedDays > 0);
   const body = (
     <>
+      {/* The one example in the product, on the page without an account, and it says so (rule of integrity). */}
+      {example ? (
+        <span className="inline-flex self-start rounded-full border-[length:var(--card-border-width)] border-[var(--control-border)] px-[var(--space-sm)] text-[length:var(--type-help)] leading-[var(--type-help-leading)] font-medium">
+          {W.example}
+        </span>
+      ) : null}
       <span className="flex items-start justify-between gap-[var(--space-md)]">
         <span className="flex min-w-0 flex-col">
           <span className="text-[length:var(--type-title)] leading-[var(--type-title-leading)] font-semibold break-words">{whoInWords(gift)}</span>
           <span className={BODY}>{condition?.name ?? ""}</span>
         </span>
-        {still ? null : (
+        {still || example ? null : (
           <svg aria-hidden focusable="false" width="24" height="24" viewBox="0 0 24 24" className="mt-[2px] shrink-0">
             <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
       </span>
-      {milestone ? <MilestoneMeter status={milestone} /> : <DayStrip gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} />}
+      {/*
+        A daily gift's card draws its days, except at the head of its own page, where the row of days below says it once.
+        A milestone has no days, so its character and its meter stay, and grow to the large size on its own page.
+      */}
+      {milestone ? (
+        <MilestoneMeter status={milestone} size={still ? "large" : "small"} />
+      ) : still ? null : (
+        <DayStrip id={gift.giftId} gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} />
+      )}
       <span className={`block ${BODY}`}>{milestone ? milestoneStateInWords(milestone) : stateInWords(gift, condition?.words.connect)}</span>
       <span className={`block ${HELP} tabular-nums`}>
         {milestone ? W.milestoneAmount(milestone.amountDisplay, milestoneBy(milestone)) : amountsInWords(gift, started)}
       </span>
     </>
   );
-  if (still) return <section className={`${CARD} block`}>{body}</section>;
+  if (still || example) return <section className={`${CARD} flex flex-col`}>{body}</section>;
   return (
     <Link
       href={`/g/${gift.giftId}`}

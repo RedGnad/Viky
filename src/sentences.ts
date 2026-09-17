@@ -29,7 +29,6 @@ export const HOME = {
     "Put money behind someone's goal. It becomes theirs as they make verified progress, and whatever they do not earn comes back to you. Nobody profits from anyone failing.",
   offer: "Offer a gift",
   finish: "Finish the gift you set up",
-  signIn: "Sign in",
   howItWorks: "How it works",
   steps: [
     "You choose who it is for, what they will do, how much, and for how long.",
@@ -37,6 +36,8 @@ export const HOME = {
     "Each day they miss comes back to you, by itself. Nobody profits from anyone failing.",
   ],
   inAccount: "In your account",
+  /** Under the amount at display size: what is approximate, when the rate was read, and the dollars themselves. */
+  aboutRate: (date: string, dollars: string) => `About, at the rate of ${date}: ${dollars}`,
   keep: "Yours to keep, to put behind another goal, or to take out.",
   takeItOut: "Take it out",
   readyLine: (name: string, number: string) => `${number} of it is ready to send to ${name}.`,
@@ -46,6 +47,22 @@ export const HOME = {
   empty: "No gift yet. Offer one, or open a link someone sent you.",
   loading: "Looking for your gifts",
   failed: "Your gifts could not be loaded.",
+} as const;
+
+/**
+ * The one door into an account (the art direction brief of 17 Sep 2026, section 7). FIDO's research on 128 people from
+ * 32 companies: "display a single, discoverable call to action to sign in or create a new account", because some people
+ * "are uncertain whether they have an account". Pressing it opens the passkey at once; the panel only appears when that
+ * does not work, which is when the person has no passkey here or waved the sheet away.
+ */
+export const DOOR = {
+  open: "Sign in or create account",
+  how: "Your face or your fingerprint, and nothing to remember.",
+  create: "Create your account",
+  again: "Try again",
+  notNow: "Not now",
+  busy: "One moment",
+  title: "Sign in or create account",
 } as const;
 
 /** Gifts: everything given and received. */
@@ -64,6 +81,8 @@ export const GIFTS = {
  * existed falls back to what is known.
  */
 export const GIFT_CARD = {
+  /** The label on the one example card, on the page without an account: it is never passed off as somebody's gift. */
+  example: "Example",
   forYou: "For you",
   forWhoever: "For whoever opens the link",
   forName: (name: string) => `For ${name}`,
@@ -296,6 +315,9 @@ export const GIFT_PAGE = {
   notYetBody: (funder: string | null) => `The money stays in your name. Nothing counts until you connect, and after 14 days unconnected it goes back to ${funder ?? "them"}.`,
   copyCode: "Copy the code",
   copied: "Copied",
+  /** Only on the device that made the gift, which is the only one holding the link (it carries the key). */
+  copyLinkAgain: "Copy the link again",
+  linkOnlyHere: "Only this device kept it: the link carries the key that opens the gift.",
   copyRefused: "Your browser would not let us copy it. Press and hold the code, then choose Copy.",
   validUntil: (moment: string) => `Valid until ${moment} your time. After that, ask for a new one here.`,
   expired: "This code has expired.",
@@ -515,8 +537,6 @@ export const ME = {
   currencies: { USD: "US dollars", EUR: "Euros", XOF: "CFA francs" },
   proposed: "what your phone suggests",
   currencySaved: "Saved.",
-  appearance: "How it looks",
-  appearances: { light: "Day", dark: "Night", system: "Follow my phone" },
   signedInUntil: (time: string) => `Signed in on this device until ${time}.`,
   signedOut: "Not signed in on this device.",
   signOut: "Sign out",

@@ -1,14 +1,31 @@
 import { milestoneProgress, type MilestoneStatus } from "@/src/milestone-view";
+import { Character, type CharacterState } from "./Character";
+import { Gaze } from "./Motion";
 
 /**
- * A milestone's progress as one bar, in ink on the surface: the start on the left, the target on the right, today's
- * reading filled between them (structure, section 6). A picture of the sentence beside it, so it is hidden from a
- * screen reader. Nothing is drawn as reached until the keeper has read it reached.
+ * What a milestone gift has done so far: its character, and one bar in ink on the surface, the start on the left, the
+ * target on the right, today's reading filled between them (structure, section 6). A milestone has no days, so it has
+ * one character rather than a strip of them (the art direction brief of 17 Sep 2026, section 5): asleep until it is
+ * opened, awake while it is being reached for, smiling when it is reached, and leaving when the date passed without it.
+ * A picture of the sentence beside it, so it is hidden from a screen reader. Nothing is drawn as reached until the
+ * keeper has read it reached.
  */
-export function MilestoneMeter({ status, startLabel, targetLabel }: Readonly<{ status: MilestoneStatus; startLabel?: string; targetLabel?: string }>) {
+export function milestoneCharacter(status: MilestoneStatus): CharacterState {
+  if (status.reached) return "earned";
+  if (status.cancelled || status.finished) return "returned";
+  if (!status.opened) return "toCome";
+  return "today";
+}
+
+export function MilestoneMeter({ status, startLabel, targetLabel, size = "small" }: Readonly<{ status: MilestoneStatus; startLabel?: string; targetLabel?: string; size?: "small" | "large" }>) {
   const progress = milestoneProgress(status);
+  const character = (
+    <Character state={milestoneCharacter(status)} size={size} className={size === "large" ? "h-auto w-[72px] shrink-0" : "h-auto w-[24px] shrink-0"} />
+  );
   return (
-    <span aria-hidden className="flex flex-col gap-[var(--space-xs)]">
+    <span aria-hidden className="flex items-center gap-[var(--space-md)]">
+      {size === "large" ? <Gaze>{character}</Gaze> : character}
+      <span className="flex flex-1 flex-col gap-[var(--space-xs)]">
       <span className="relative block h-[10px] w-full overflow-hidden rounded-full border border-[var(--control-border)] bg-[var(--surface)]">
         <span className="absolute inset-y-0 left-0 rounded-full bg-[var(--text)]" style={{ width: `${Math.round(progress * 100)}%` }} />
       </span>
@@ -18,6 +35,7 @@ export function MilestoneMeter({ status, startLabel, targetLabel }: Readonly<{ s
           <span>{targetLabel}</span>
         </span>
       ) : null}
+      </span>
     </span>
   );
 }

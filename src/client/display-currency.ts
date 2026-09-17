@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { aboutInDisplayCurrency, proposedDisplayCurrency, SHOWN_IN_DOLLARS, type DisplayCurrency } from "../display-currency";
+import { aboutInDisplayCurrency, figureInDisplayCurrency, proposedDisplayCurrency, SHOWN_IN_DOLLARS, type DisplayCurrency, type DisplayFigure } from "../display-currency";
 import { ratesUsable, type Rates } from "../rates";
 import { getJson } from "./api";
 
@@ -18,6 +18,8 @@ export type DisplayMoney = Readonly<{
   rates: Rates | undefined;
   /** "about 9.53 EUR (rate of 16 Sep)", or nothing when the dollar stands alone. */
   about: (units: bigint) => string | undefined;
+  /** The amount as the display size shows it: the symbol and the number, and the rate's day for the caption. */
+  figure: (units: bigint) => DisplayFigure;
   /** The line to print once on a screen that wanted to convert and could not. Empty when it could, or never wanted to. */
   unavailable: string | undefined;
 }>;
@@ -74,6 +76,7 @@ export function useDisplayCurrency(address: string | undefined): DisplayMoney {
     currency,
     rates,
     about: (units) => aboutInDisplayCurrency(units, currency, rates),
+    figure: (units) => figureInDisplayCurrency(units, currency, rates),
     unavailable: currency !== "USD" && !rates ? SHOWN_IN_DOLLARS : undefined,
   };
 }

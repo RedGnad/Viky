@@ -96,3 +96,38 @@ export function aboutInDisplayCurrency(units: bigint, currency: DisplayCurrency,
 
 /** The one line a screen prints when it wanted to convert and could not. */
 export const SHOWN_IN_DOLLARS = "Shown in dollars: the exchange rate could not be read today.";
+
+/**
+ * The amount at display size, which is the one thing a person opens Viky to read (the art direction brief of 17 Sep
+ * 2026, section 8): at that size, the symbol and the number and nothing else, on one line. "about", the rate's date and
+ * the dollars go in the caption under it, which `aboutInDisplayCurrency` and the screen's own words carry.
+ *
+ * The CFA franc has no symbol in use, so its name follows the number; it has no subunit either, so it is whole.
+ */
+export type DisplayFigure = Readonly<{
+  /** What the display size shows, "€9.54" or "6,000 CFA". */
+  text: string;
+  /** The number itself, so an amount that changed can count up to it. */
+  value: number;
+  symbol: string;
+  decimals: number;
+  after: string;
+  /** Set when the figure is converted, so the caption can say "about" and name the rate's day. */
+  rateDate: string | undefined;
+}>;
+
+export function figureInDisplayCurrency(units: bigint, currency: DisplayCurrency, rates: Rates | undefined): DisplayFigure {
+  const dollars = Number(units) / DOLLAR_UNITS;
+  const plain = (value: number, symbol: string, decimals: number, after = "", rateDate?: string): DisplayFigure => ({
+    text: `${symbol}${value.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${after}`,
+    value,
+    symbol,
+    decimals,
+    after,
+    rateDate,
+  });
+  if (currency === "USD" || !rates) return plain(dollars, "$", 2);
+  const when = rateDateInWords(rates.date);
+  if (currency === "EUR") return plain(dollars * rates.eurPerUsd, "€", 2, "", when);
+  return plain(Math.round(dollars * rates.xofPerUsd), "", 0, " CFA", when);
+}

@@ -94,7 +94,7 @@ test("an arrival plays the days earned, then the days gone back, then the amount
   assert.ok(example.endMs < 2000);
 });
 
-test("every movement answers a gesture: nothing plays on a clock, nothing repeats, and reduced motion stops all of it", async () => {
+test("every movement answers a gesture: nothing plays on a clock, nothing repeats, and reduced motion stops all of it", () => {
   const source = readFileSync("app/kit/Motion.tsx", "utf8");
   assert.match(source, /prefers-reduced-motion: reduce/);
   assert.match(source, /\(hover: hover\) and \(pointer: fine\)/, "hover answers a pointer only");
@@ -102,10 +102,16 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
   assert.doesNotMatch(source, /setInterval|setTimeout/, "nothing waits for a clock to start");
   assert.match(source, /IntersectionObserver/, "a reveal answers the scroll");
   assert.match(source, /pointermove/, "a gaze answers the pointer");
-  const { labStylesheet } = await import("../app/dev/looks/look-css.js");
-  const css = labStylesheet();
-  assert.doesNotMatch(css, /animation|infinite/, "the stylesheet plays no animation, only the press and the hover");
-  assert.ok(css.includes(`${MOTION.press.durationMs}ms ${MOTION.press.easing}`), "the press is the token's duration and curve");
+
+  // The press and the hover are the two movements the stylesheet plays, because they answer a finger and a pointer.
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.doesNotMatch(css, /@keyframes|animation-name|infinite/, "the stylesheet plays no animation of its own");
+  assert.ok(css.includes(`--press-duration: ${MOTION.press.durationMs}ms`), "the press lasts what the token says");
+  assert.ok(css.includes(`--press-easing: ${MOTION.press.easing}`), "the press is the token's curve");
+  assert.ok(css.includes(`--hover-duration: ${MOTION.hover.durationMs}ms`), "the hover lasts what the token says");
+  assert.ok(css.includes(`--hover-lift: ${MOTION.hover.lift}px`), "a pointer lifts a button by what the token says");
   assert.match(css, /@media \(hover: hover\) and \(pointer: fine\)/, "a button lifts under a pointer only");
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+  assert.match(reduced, /\.control-relief:is\(:active, :hover\)/, "under reduced motion a press gives way but nothing travels");
 });

@@ -9,13 +9,16 @@ import { ApiError } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { bindGoalAccount, claimGift, countNow, loadGiftStatus, nameGoalAccount, withdrawEarned, type GiftStatus, type GiftSummary, type PublicOutcome } from "@/src/client/gift";
 import { conditionOfGoal } from "@/src/conditions";
+import { giftLinkOnThisDevice } from "@/src/gift-link-memory";
 import { stripFromRecord } from "@/src/day-states";
 import { whenInWords } from "@/src/display-currency";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { contractDayInWords, contractRangeInWords, dateInWords, momentInWords, nextPassMs } from "@/src/moments";
 import { COUNTING_PASS_UTC } from "@/src/pass-schedule";
 import { GIFT_PAGE as W } from "@/src/sentences";
+import { charactersOf } from "../kit/DayStrip";
 import { DayRow } from "../kit/DayRow";
+import { Arrival } from "../kit/Motion";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { GiftCard } from "../kit/GiftCard";
 import { Notice } from "../kit/Notice";
@@ -138,6 +141,7 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
   const [reviewing, setReviewing] = useState(false);
   const [taken, setTaken] = useState<Taken | null>(null);
   const [copied, setCopied] = useState<"yes" | "refused" | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
   // Whether somebody was signed in on this page before the session went: then it closed while they were away (R12).
   const [hadAccount, setHadAccount] = useState(false);
   if (address && !hadAccount) setHadAccount(true);
@@ -423,6 +427,23 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
     )
   ) : null;
 
+  /**
+   * The link again, and only on the device that made the gift: it is the one thing the server cannot hand back, because
+   * the link carries the key that opens the gift and prints the two names.
+   */
+  const keptLink = browser && readerIsFunder ? giftLinkOnThisDevice(gift.giftId) : null;
+  const copyLink = (link: string) => navigator.clipboard.writeText(link).then(() => setCopiedLink(true)).catch(() => setCopiedLink(false));
+  const linkAgain =
+    keptLink && !gift.opened ? (
+      <section className={CARD}>
+        <p className="break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--background)] p-[var(--space-md)] text-[length:var(--type-help)] select-all">{keptLink}</p>
+        <button type="button" onClick={() => void copyLink(keptLink)} className={SECONDARY_BUTTON}>
+          {copiedLink ? W.copied : W.copyLinkAgain}
+        </button>
+        <p className={HELP}>{W.linkOnlyHere}</p>
+      </section>
+    ) : null;
+
   const takenBlock = taken ? (
     <section className={CARD} role="status">
       <p className="font-medium">{W.taken(taken.amount, whenInWords(taken.atMs), gift.giftId, taken.take)}</p>
@@ -455,7 +476,7 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
           ) : null}
         </div>
       )}
-      {browser ? <DayRow gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} readerIsFunder={readerIsFunder} /> : null}
+      {browser ? <DayRow id={gift.giftId} gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} readerIsFunder={readerIsFunder} /> : null}
       {!fromRecord ? <p className={HELP}>{W.fromCountsNote}</p> : null}
       <dl className="flex flex-col divide-y divide-[var(--divider)] border-y border-[var(--divider)]">
         <Total label={readerIsFunder ? W.theirsSoFar : W.yoursSoFar} value={W.amountDays(gift.alreadyTheirsDisplay, gift.creditedDays)} />
@@ -481,11 +502,18 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
     </section>
   ) : null;
 
+  // What changed on this gift since this device last opened it, replayed once on arrival (brief, section 6).
+  const arriving = nowMs === 0 ? [] : charactersOf(gift, gift.catchUpSeconds, nowMs, gift.days);
   return (
+    <Arrival
+      storageKey="viky.seen.days"
+      gifts={[{ id: gift.giftId, days: arriving, lastSeen: arriving.filter((day) => day === "earned" || day === "returned").length }]}
+    >
     <Shell kind="task" {...back} step={title}>
       <GiftCard gift={summary} still />
       {takenBlock}
       {takeBlock}
+      {linkAgain}
       {notice ? (
         <Notice role="status">
           <span>{notice}</span>
@@ -496,6 +524,7 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
       {countingBlock}
       {readerIsFunder ? <p className={HELP}>{W.made(dateInWords(gift.createdAtChain * 1_000), gift.giftId)}</p> : null}
     </Shell>
+    </Arrival>
   );
 }
 

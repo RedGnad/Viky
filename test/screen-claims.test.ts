@@ -6,7 +6,8 @@ import { formatAusdExact, theirsSoFar } from "../src/gift-reader";
 import { catchUpDay, deadlineInWords } from "../src/catch-up";
 import { ARRIVAL_FLOOR, CONVERSION_RESERVE, fundingStageShown, nextFundingStep, paymentArrived } from "../src/funding-step";
 import { AmountError, dollarsToUnits, MIN_GIFT_UNITS } from "../src/money";
-import { CASH_OUT } from "../src/sentences";
+import { exampleGift } from "../app/kit/example-gift.js";
+import { CASH_OUT, GIFT_CARD } from "../src/sentences";
 
 /**
  * Tests for the sentences the screens show about money and about the state of a gift
@@ -254,4 +255,20 @@ test("the deadline is said in words, never as a day number", () => {
   assert.match(deadlineInWords(base + 3_600_000, base, "en-GB"), /^today at /);
   assert.match(deadlineInWords(base + 20 * 3_600_000, base, "en-GB"), /^tomorrow at /);
   assert.match(deadlineInWords(base + 72 * 3_600_000, base, "en-GB"), /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) at /);
+});
+
+/**
+ * The one example in the product, on the page without an account. The rule of integrity: data that is not real is
+ * labelled, never passed off as somebody's. And it has to read as a gift in progress, or it shows nothing.
+ */
+test("the example gift says it is an example, and reads as a gift under way", () => {
+  assert.equal(GIFT_CARD.example, "Example");
+  const now = Date.UTC(2026, 8, 17, 10, 0, 0);
+  const example = exampleGift(now);
+  assert.equal(example.giftId, "example", "it can never be mistaken for a gift number");
+  const today = Math.floor(now / 86_400_000);
+  assert.ok(example.startDay < today && example.endDay > today, "it is neither finished nor waiting to start");
+  assert.equal(example.creditedDays + example.missedDays, 3);
+  assert.equal(example.durationDays, 7);
+  assert.ok(example.opened && example.counting && !example.finished && !example.cancelled);
 });

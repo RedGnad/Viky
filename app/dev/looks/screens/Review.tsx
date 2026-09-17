@@ -9,7 +9,7 @@ import { labHref, TO_NOE } from "../example";
  * "Check this over" (flow F4, as app/components/FundGift.tsx lays it out): what the person is about to confirm, row by
  * row, and one button. A screen where a sum is confirmed stays bare: never a character here (brief, section 5).
  */
-export function Review({ look }: Readonly<{ look: string }>) {
+export function Review() {
   const link = DUOLINGO_DAILY.link;
   const rows: Array<{ label: string; value: string; change: boolean }> = [
     { label: W.check.rows.for, value: TO_NOE.recipient, change: true },
@@ -23,7 +23,7 @@ export function Review({ look }: Readonly<{ look: string }>) {
     { label: W.check.rows.ends, value: W.check.ends(TO_NOE.days), change: true },
   ];
   return (
-    <Shell kind="task" back={labHref(look, "amount")} caption={W.step(5, 5)} step={W.check.title}>
+    <Shell kind="task" back={labHref("amount")} caption={W.step(5, 5)} step={W.check.title}>
       <dl className="flex flex-col divide-y divide-[var(--divider)] border-y border-[var(--divider)]">
         {rows.map((row) => (
           <div key={row.label} className="flex items-start justify-between gap-[var(--space-md)] py-[var(--space-md)]">
@@ -48,10 +48,10 @@ export function Review({ look }: Readonly<{ look: string }>) {
       </section>
       <p className={HELP}>{W.check.fromAccount(TO_NOE.held)}</p>
       <div className="flex flex-col gap-[var(--tap-gap)]">
-        <Link href={labHref(look, "made")} className={PRIMARY_BUTTON}>
+        <Link href={labHref("made")} className={PRIMARY_BUTTON}>
           {W.check.putIt(TO_NOE.amount, TO_NOE.recipient)}
         </Link>
-        <Link href={labHref(look, "home")} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+        <Link href={labHref("home")} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
           {W.notNow}
         </Link>
       </div>

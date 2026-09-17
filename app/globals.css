@@ -5,25 +5,33 @@
  * agreeing. The reason each number is what it is lives in that file and in docs/design/research.md; this is
  * only where the browser reads them.
  *
- * Three appearance blocks, in this order, because the reader has three answers and not two: light, dark
- * because the system says so, and dark because the person said so. A person who chooses light on a phone set
- * to dark has to win, which is why the media query excludes an explicit light choice rather than assuming
- * nobody made one.
+ * Two appearance blocks and no more: the app follows the device from the first pixel (the art direction brief of
+ * 17 Sep 2026, section 7; Apple: "Avoid offering an app-specific appearance setting"). There is nothing to choose
+ * and nothing stored, so nothing can disagree with the phone.
  *
- * One look, direction 1, on every screen: three colours per appearance, each with a role (src/design-tokens.ts).
+ * One look, "Ink and sun", chosen by the founder on 17 Sep 2026: three colours per appearance, each with a role, the
+ * sun the same by day and by night, and the characters' three secondary colours, which live only inside a character.
  */
 
 :root {
-  /* Day: cream ground, a paper surface, plum ink, one tomato accent. Every pair is measured in the tokens file. */
-  --background: #FFF3D9;
-  --surface: #FFFDF7;
-  --text: #3B0A2A;
-  --muted: #72465E;
-  --accent: #FF5A36;
-  --on-accent: #3B0A2A;
-  --accent-text: #9E2A14;
-  --control-border: #3B0A2A;
-  --divider: #EAD6B0;
+  /* Day: a cool neutral ground, a white surface, indigo ink, one sun. Every pair is measured in the tokens file. */
+  --background: #F6F4FB;
+  --surface: #FFFFFF;
+  --text: #1E1633;
+  --muted: #5B5470;
+  --accent: #FFC531;
+  --on-accent: #1E1633;
+  --accent-text: #1E1633;
+  --control-border: #1E1633;
+  --divider: #E0DCEB;
+
+  /* The characters' own colours, never text and never a background (brief, section 5). */
+  --character-1: #FF7F8E;
+  --character-2: #5AB4FF;
+  --character-3: #B79BFF;
+  --character-face: #1E1633;
+  --character-shadow: #1E1633;
+  --character-shadow-opacity: 0.12;
 
   /* Material's 8dp scale, the steps we use. */
   --space-xs: 4px;
@@ -44,9 +52,9 @@
   --type-help: 14px;
   --type-help-leading: 20px;
 
-  /* The one display title a destination opens with, and the mark at the top of every screen, both in Anton. */
-  --type-display: 60px;
-  --type-display-leading: 56px;
+  /* The one display title a destination opens with, and the mark at the top of every screen, both in Fredoka. */
+  --type-display: 48px;
+  --type-display-leading: 52px;
   --type-mark: 28px;
   --type-mark-leading: 32px;
 
@@ -69,20 +77,28 @@
   --nav-bar-height: 64px;
   --nav-rail-width: 88px;
 
-  /* The two families every screen reads: Anton for the display title and the mark, DM Sans for everything else. */
+  /* The two families every screen reads: Fredoka for the display title and the mark, DM Sans for everything else. */
   --font-text: var(--font-dm-sans);
-  --font-title: var(--font-anton);
-  --font-title-weight: 400;
+  --font-title: var(--font-fredoka);
+  --font-title-weight: 600;
 
-  /* A control's outline and the relief under it: the pressed key of direction 1. */
+  /* A control's outline and the relief under it: the pressed key of the look. */
   --control-border-width: 2px;
-  --control-relief: 0 6px 0 var(--control-border);
+  --control-relief-depth: 4px;
+  --control-relief-colour: #1E1633;
+  --control-relief: 0 var(--control-relief-depth) 0 var(--control-relief-colour);
 
   /* A card's edge: a hairline that groups, never a control's outline and never a hard shadow. */
   --card-border-width: 1px;
-  --card-border: var(--divider);
+  --card-border: #E0DCEB;
 
-  color-scheme: light dark;
+  /* The movement a stylesheet plays, from MOTION in src/design-tokens.ts: a press, and a pointer's hover. */
+  --press-duration: 120ms;
+  --press-easing: cubic-bezier(0.2, 0, 0, 1);
+  --hover-duration: 200ms;
+  --hover-lift: 2px;
+
+  color-scheme: light;
 }
 
 @media (min-width: 600px) {
@@ -94,37 +110,34 @@
 /* The display title grows where the screen is wide. */
 @media (min-width: 840px) {
   :root {
-    --type-display: 104px;
-    --type-display-leading: 96px;
+    --type-display: 88px;
+    --type-display-leading: 92px;
   }
 }
 
-/* Night because the system says so, and only while the person has not asked for light. */
+/* Night, because the device says so, which is the only way it is ever asked for. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --background: #1C1035;
-    --surface: #2A1D4E;
-    --text: #FFF6E9;
-    --muted: #C4B8E6;
-    --accent: #FF7A5C;
-    --on-accent: #1C1035;
-    --accent-text: #FF9478;
-    --control-border: #FFF6E9;
-    --divider: #3A2C66;
+  :root {
+    --background: #151026;
+    --surface: #211A38;
+    --text: #F3F0FA;
+    --muted: #B3ABC9;
+    --accent: #FFC531;
+    --on-accent: #151026;
+    --accent-text: #F3F0FA;
+    --control-border: #F3F0FA;
+    --divider: #352C52;
+    --card-border: #352C52;
+    --character-1: #FF8C98;
+    --character-2: #6DBDFB;
+    --character-3: #BBA3FA;
+    --character-face: #151026;
+    --character-shadow: #08060F;
+    --character-shadow-opacity: 0.45;
+    /* A shade under the ground, read as depth: the ink after dark read as a thick white edge. */
+    --control-relief-colour: #08060F;
+    color-scheme: dark;
   }
-}
-
-/* Night because the person said so, whatever their system says. */
-:root[data-theme="dark"] {
-  --background: #1C1035;
-  --surface: #2A1D4E;
-  --text: #FFF6E9;
-  --muted: #C4B8E6;
-  --accent: #FF7A5C;
-  --on-accent: #1C1035;
-  --accent-text: #FF9478;
-  --control-border: #FFF6E9;
-  --divider: #3A2C66;
 }
 
 body {
@@ -157,9 +170,48 @@ video {
 }
 
 /*
+ * The press, and the hover of a pointer (brief, section 6). A finger presses: the relief collapses and the button
+ * travels its own depth. A pointer hovers: the button lifts by as much, and its relief grows, which a phone never
+ * sees because a phone has no hover. Both answer a gesture; nothing here starts by itself.
+ */
+.control-relief {
+  box-shadow: var(--control-relief);
+  transition:
+    transform var(--press-duration) var(--press-easing),
+    box-shadow var(--press-duration) var(--press-easing);
+}
+
+.control-relief:active:not(:disabled) {
+  transform: translateY(var(--control-relief-depth));
+  box-shadow: 0 0 0 0 transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .control-relief:hover:not(:active):not(:disabled) {
+    transform: translateY(calc(-1 * var(--hover-lift)));
+    box-shadow: 0 calc(var(--control-relief-depth) + var(--hover-lift)) 0 var(--control-relief-colour);
+    transition-duration: var(--hover-duration);
+  }
+}
+
+/*
+ * The amount a person opens Viky to read never breaks onto a second line (brief, section 8): the symbol and the
+ * number stay together and the size gives way first. `--amount-chars` is how many characters the amount has.
+ */
+.money-display-box {
+  container-type: inline-size;
+}
+
+.money-display {
+  white-space: nowrap;
+  font-size: min(var(--type-display), calc(100cqi / (var(--amount-chars, 6) * 0.62)));
+  line-height: 1.1;
+}
+
+/*
  * Apple's own techniques for Reduce Motion: replace transitions with fades, drop bounce, avoid animating
  * depth. Apple's guidelines never mention CSS, so the mapping onto this query is our inference; the
- * substance is theirs.
+ * substance is theirs. The press still gives way under the finger; nothing travels.
  */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -169,5 +221,13 @@ video {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .control-relief {
+    transition: none;
+  }
+
+  .control-relief:is(:active, :hover):not(:disabled) {
+    transform: none;
   }
 }

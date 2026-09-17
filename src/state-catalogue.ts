@@ -316,19 +316,28 @@ export const ACCOUNT_SCREEN: readonly CatalogueScreen[] = [
     screen: "You",
     file: "src/sentences.ts",
     states: [
-      { name: "The third destination", when: "reached from the bar or the rail, signed in", says: ["You", "Money shown in", "How it looks", "Signed in on this device until", "Sign out", "Need your code for a payout service?", "Help", "Privacy", "Legal notice", "For judges"] },
+      { name: "The third destination", when: "reached from the bar or the rail, signed in", says: ["You", "Money shown in", "Signed in on this device until", "Sign out", "Need your code for a payout service?", "Help", "Privacy", "Legal notice", "For judges"] },
+      { name: "Without an account", when: "reached from the bar or the rail with nobody signed in", says: ["You", "Not signed in on this device.", "Sign in or create account"] },
       { name: "Help", when: "somebody is stuck", says: ["Five questions, answered in the words the screens use."] },
     ],
   },
 ];
 
-/** The one control that changes the whole product's appearance, on You. */
-export const APPEARANCE_SCREEN: readonly CatalogueScreen[] = [
+/**
+ * The one door into an account (the art direction brief of 17 Sep 2026, section 7). The appearance is no longer one of
+ * these screens: there is nothing to choose, because the app follows the device from the first pixel.
+ */
+export const DOOR_SCREEN: readonly CatalogueScreen[] = [
   {
-    screen: "How it looks, on You",
+    screen: "The door, in the header",
     file: "src/sentences.ts",
     states: [
-      { name: "Following the phone", when: "nobody has chosen, which is where everyone starts", says: ["Day", "Night", "Follow my phone"] },
+      { name: "Closed", when: "on the page without an account and on You, with nobody signed in", says: ["Sign in or create account"] },
+      {
+        name: "Open",
+        when: "the passkey did not open, because this device holds none for Viky or the sheet was waved away",
+        says: ["Your face or your fingerprint, and nothing to remember.", "Create your account", "Try again", "Not now"],
+      },
     ],
   },
 ];
@@ -336,7 +345,7 @@ export const APPEARANCE_SCREEN: readonly CatalogueScreen[] = [
 export const JOURNEYS: ReadonlyArray<{ who: string; screens: readonly CatalogueScreen[] }> = [
   { who: "The person who gives", screens: FUNDER_JOURNEY },
   { who: "The person the gift is for", screens: RECIPIENT_JOURNEY },
-  { who: "Both of them", screens: [...ACCOUNT_SCREEN, ...APPEARANCE_SCREEN] },
+  { who: "Both of them", screens: [...ACCOUNT_SCREEN, ...DOOR_SCREEN] },
 ];
 
 /** Every state, flattened, for counting and for the tests. */

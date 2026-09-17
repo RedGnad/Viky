@@ -1,5 +1,6 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Character, type CharacterState } from "../app/kit/Character.js";
@@ -87,4 +88,14 @@ test("on the app's icon the gift is drawn in the hero colour, and nowhere else d
   for (const state of STATES) assert.doesNotMatch(draw(state), /var\(--accent\)|var\(--on-accent\)/);
   // The tone is for the gift only: a day asked for it keeps its range.
   assert.equal(renderToStaticMarkup(createElement(Character, { state: "earned", tone: "hero" })).includes("--accent"), false);
+});
+
+/**
+ * The gift on the link preview image and on the icon is written into a file, because a route may not import
+ * react-dom/server. One drawing all the same: this fails if the file stops being what the component draws.
+ */
+test("the gift written into a file is the gift the component draws", async () => {
+  const { characterSvg } = await import("../app/kit/character-svg.js");
+  const written = readFileSync("app/kit/gift-hero.svg", "utf8").trim();
+  assert.equal(written, characterSvg("gift", { tone: "hero" }), "run pnpm make:icon after changing the character");
 });
