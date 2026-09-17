@@ -155,7 +155,7 @@ test("the register's name check is Chess.com's own rule, and the milestone half 
   assert.equal(CHESS_MILESTONE.words.refusals.notFound, check?.refusals.notFound);
 });
 
-test("a rating has settled below the RD measured on 17 Sep 2026, and not at it, nor without an RD (D89)", () => {
+test("a rating has settled below the RD measured on 17 Sep 2026, and not at it, nor without an RD (D90)", () => {
   assert.equal(CHESS_SETTLED_RD_BELOW, 60);
   // Low: hikaru's blitz, 31. High: a new account, 350 as Chess.com starts one; bar's rapid, 197. None: never played.
   assert.equal(ratingHasSettled(31), true);

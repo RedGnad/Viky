@@ -14,7 +14,7 @@ import { CHESS_MODES, type ChessMode } from "../src/chess-com";
 
 const UA = "Viky/1.0 (+https://viky.cash)";
 const API = "https://api.chess.com/pub";
-/** The names read on 17 Sep 2026: players of every level named in D86, then accounts from Luxembourg's public list. */
+/** The names read on 17 Sep 2026: players of every level named in D88, then accounts from Luxembourg's public list. */
 const NAMED = ["hikaru", "magnuscarlsen", "danielnaroditsky", "erik", "john", "abc", "bar"];
 const SAMPLED_FROM_COUNTRY = "LU";
 const SAMPLE_SIZE = 40;

@@ -193,7 +193,7 @@ export async function relay(
   /** Called with the transaction's hash as soon as it is submitted, before finality: a caller that records it can find the transaction again if anything after fails (D87). */
   onSubmitted?: (hash: Hash) => Promise<void>,
 ): Promise<RelayResult> {
-  return relayCall({ address: escrow, abi: giftEscrowAbi as unknown as Abi, floor: giftGasLimit(functionName) }, functionName, args, clients);
+  return relayCall({ address: escrow, abi: giftEscrowAbi as unknown as Abi, floor: giftGasLimit(functionName) }, functionName, args, clients, onSubmitted);
 }
 
 /** The contract a relayed call goes to: where it is, what it speaks, and the recorded figure its gas stays above. */
@@ -205,6 +205,8 @@ export async function relayCall(
   functionName: string,
   args: readonly unknown[],
   clients: RelayerClients = relayerClients(),
+  /** As for `relay`: told the transaction's hash the moment it is submitted (D87). */
+  onSubmitted?: (hash: Hash) => Promise<void>,
 ): Promise<RelayResult> {
   await relayerPreflight(clients);
   const { address, abi } = target;

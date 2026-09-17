@@ -66,7 +66,7 @@ test("the patterns match what those pages actually answer", () => {
   assert.deepEqual({ ...read("daily") }, { rating: "2239", date: "1770563021", rd: "103" }, "chess960_daily is another game");
   const neverPlayedBlitz = '{"chess_rapid":{"last":{"rating":1705,"date":1775022187,"rd":197}},"fide":0}';
   assert.equal(new RegExp(CHESS_RATINGS.blitz.matches[0].value).test(neverPlayedBlitz), false, "a cadence never played has no rating");
-  // The one block of 275 read on 17 Sep 2026 that carried no RD: no RD, no reading (D89).
+  // The one block of 275 read on 17 Sep 2026 that carried no RD: no RD, no reading (D90).
   const noRd = '{"chess_blitz":{"last":{"rating":800,"date":1741705144}}}';
   assert.equal(new RegExp(CHESS_RATINGS.blitz.matches[0].value).test(noRd), false, "a rating without its RD is not read");
 

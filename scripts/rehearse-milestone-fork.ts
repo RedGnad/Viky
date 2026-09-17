@@ -77,8 +77,8 @@ async function main() {
   execSync(`cast send ${AUSD} "transfer(address,uint256)" ${funder.address} 20000000 --from ${POOL} --unlocked --rpc-url ${RPC}`, { stdio: "ignore" });
   console.log("STEP funder funded with 20 AUSD", funder.address);
 
-  // A settled rating (its RD under the threshold of D89), so the ordinary path runs and not an operator's exception. Any
-  // public account with one will do: Chess.com's ratings page of a single player can fail for a while (D89).
+  // A settled rating (its RD under the threshold of D90), so the ordinary path runs and not an operator's exception. Any
+  // public account with one will do: Chess.com's ratings page of a single player can fail for a while (D90).
   const player = process.env.REHEARSAL_PLAYER?.trim() || "magnuscarlsen";
   const cadence = (process.env.REHEARSAL_CADENCE?.trim() || "bullet") as ChessMode;
   const standing = await readChessStanding(player, cadence);

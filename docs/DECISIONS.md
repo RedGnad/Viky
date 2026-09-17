@@ -2456,12 +2456,16 @@ lets a username change every ninety days.
    read goes on to the proof. Both daily passes read, to halve the gap D48 records.
 5. **A gift is refused, not made, when the rating has already passed the highest start** by the time the payment
    arrives (`STANDING_MOVED`): it could never pay.
-6. **The first real gift is made before the condition is offered.** An account that runs Viky sees the condition on
+6. **Made in D87's order.** A milestone gift's creation is recorded before its money moves and completed from its
+   transaction by a retry or by the milestone pass, carrying the milestone's own record (condition, cadence, where they
+   stood) until the gift exists; the page signs once and sends the same request on every retry. The reads before the
+   money moves are skipped only for a creation whose money may already have moved.
+7. **The first real gift is made before the condition is offered.** An account that runs Viky sees the condition on
    "What will they do?" marked as offered to nobody else, and the create route accepts it only from such an account.
    `live: true` is the last change.
 
 **Not changed here:** `MilestoneGift.sol` was, at this entry, byte for byte the contract of D49 (13,240 bytes), whose
-three review fixes nobody had read since. The fourth review read them, and D88 records what it found and what changed.
+three review fixes nobody had read since. The fourth review read them, and D89 records what it found and what changed.
 
 **Rehearsed before mainnet.** The deployment ran on a local fork with the real deployer's nonce and balance (expected
 address `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e`, about 0.40 MON at 102 gwei, ownership read back as the founder's),
@@ -2469,7 +2473,7 @@ then `scripts/rehearse-milestone-fork.ts` ran the routes on it: a gift made, ope
 of erik at 1904, released by a reading at the target, taken by the recipient, and a second gift nobody opened sent back
 by the settling pass.
 
-## D88, 17 Sep 2026: the fourth review, and a pause that still took a gift reached in time
+## D89, 17 Sep 2026: the fourth review, and a pause that still took a gift reached in time
 
 - Statement: the fourth review of `MilestoneGift`, in the strategy session on Fable, read the whole contract against
   the promises of D45. Ten held. Promise 10 broke inside the pause fix of D49: `expire` refused during a pause, but once
@@ -2491,14 +2495,14 @@ by the settling pass.
   can and cannot do, including the limit of "cannot move money": the evidence signer, which the owner can replace,
   attests who opened a gift and what a reading said.
 
-## D89, 17 Sep 2026: a rating that has not settled cannot carry a climb, measured before it was refused
+## D90, 17 Sep 2026: a rating that has not settled cannot carry a climb, measured before it was refused
 
 - Statement: the milestone terms assume a chess rating moves about ten points a game (a start margin of 10, a smallest
   climb of 50). Chess.com's ratings page gives, beside each rating, "the Glicko RD value used to calculate ratings
   changes" (its Published Data API page), and its help centre says a new player's rating "will fluctuate significantly
   during your first few games" without giving any RD or number of games. On a new or rarely played account the
   assumption fails: the climb signed measures nothing and the highest accepted start can be jumped in one game.
-- **What was measured, 17 Sep 2026.** `scripts/measure-chess-rd.ts`, 15:36 UTC: 47 profiles, the seven named in D86 and
+- **What was measured, 17 Sep 2026.** `scripts/measure-chess-rd.ts`, 15:36 UTC: 47 profiles, the seven named in D88 and
   forty spread over Luxembourg's public list of 5,094 players (joined from 2007 to 4 days before), every cadence with
   an RD. For each profile and cadence, the RD the stats page gives now, and the absolute rating change over its last
   rated games (up to twenty), read from the monthly archives, where each game carries the rating after it. The 72 pairs

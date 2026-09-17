@@ -123,7 +123,7 @@ export type MilestoneReading = Readonly<{
   playerId: string | null;
   rating: number | null;
   ratedAt: number | null;
-  /** The rating's RD when it was read (D89). */
+  /** The rating's RD when it was read (D90). */
   rd?: number | null;
   observedAt: number;
   nullifier: Hex | null;

@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS viky_creations (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS viky_creations_pending ON viky_creations (status, started_at);
+ALTER TABLE viky_creations ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'daily';
+ALTER TABLE viky_creations ADD COLUMN IF NOT EXISTS milestone jsonb;
 CREATE TABLE IF NOT EXISTS viky_days (
   gift_id text NOT NULL,
   day integer NOT NULL,
@@ -311,7 +313,13 @@ export type CreationRow = Readonly<{
   txHash: Hex | null;
   giftId: string | null;
   startedAt: Date;
+  /** Which contract the creation is for: a daily gift, or a milestone gift with what its own record needs (C2). */
+  kind?: "daily" | "milestone";
+  milestone?: MilestoneCreationFacts | null;
 }>;
+
+/** What a milestone gift's own record keeps (src/milestone-store.ts), carried by its creation until the gift is recorded. */
+export type MilestoneCreationFacts = Readonly<{ conditionId: string; mode: string; standingAtOffer: number; standingReadAt: string }>;
 
 function toCreation(row: Record<string, unknown>): CreationRow {
   const text = (value: unknown) => (value === null || value === undefined ? null : String(value));
@@ -332,6 +340,8 @@ function toCreation(row: Record<string, unknown>): CreationRow {
     txHash: text(row.tx_hash) as Hex | null,
     giftId: text(row.gift_id),
     startedAt: toDate(row.started_at) ?? new Date(0),
+    kind: row.kind === "milestone" ? "milestone" : "daily",
+    milestone: row.milestone && typeof row.milestone === "object" ? (row.milestone as MilestoneCreationFacts) : typeof row.milestone === "string" ? (JSON.parse(row.milestone) as MilestoneCreationFacts) : null,
   };
 }
 
@@ -340,9 +350,10 @@ export async function beginCreation(
   input: Omit<CreationRow, "status" | "txHash" | "giftId" | "startedAt">,
 ): Promise<{ inserted: true } | { inserted: false; existing: CreationRow }> {
   const rows = await sql()`
-    INSERT INTO viky_creations (nonce, funder, contact_hash, goal_type, daily_target, duration_days, amount, goal_username, recipient_name, funder_name, claim_token_hash)
+    INSERT INTO viky_creations (nonce, funder, contact_hash, goal_type, daily_target, duration_days, amount, goal_username, recipient_name, funder_name, claim_token_hash, kind, milestone)
     VALUES (${input.nonce.toLowerCase()}, ${input.funder.toLowerCase()}, ${input.contactHash}, ${input.goalType}, ${input.dailyTarget}, ${input.durationDays},
-            ${input.amount.toString()}, ${input.goalUsername}, ${input.recipientName}, ${input.funderName}, ${input.claimTokenHash})
+            ${input.amount.toString()}, ${input.goalUsername}, ${input.recipientName}, ${input.funderName}, ${input.claimTokenHash},
+            ${input.kind ?? "daily"}, ${input.milestone ? JSON.stringify(input.milestone) : null})
     ON CONFLICT (nonce) DO NOTHING
     RETURNING nonce`;
   if (rows.length > 0) return { inserted: true };
@@ -381,8 +392,9 @@ export async function abandonCreation(nonce: Hex): Promise<void> {
 }
 
 /** Creations still pending that started before this moment, oldest first. */
-export async function loadPendingCreations(startedBefore: Date): Promise<CreationRow[]> {
-  const rows = await sql()`SELECT * FROM viky_creations WHERE status = 'pending' AND started_at < ${startedBefore.toISOString()} ORDER BY started_at`;
+/** Pending creations of one kind: each contract's pass completes its own, read back with its own events (C2). */
+export async function loadPendingCreations(startedBefore: Date, kind: "daily" | "milestone" = "daily"): Promise<CreationRow[]> {
+  const rows = await sql()`SELECT * FROM viky_creations WHERE status = 'pending' AND kind = ${kind} AND started_at < ${startedBefore.toISOString()} ORDER BY started_at`;
   return rows.map(toCreation);
 }
 

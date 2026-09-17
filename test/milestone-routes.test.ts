@@ -9,6 +9,10 @@ import { POST as createPost } from "../app/api/gift/milestone/create/route";
 import { GET as standingGet } from "../app/api/chess/standing/route";
 import { GET as conditionsGet } from "../app/api/conditions/route";
 import { CHESS_RATING } from "../src/conditions";
+import { PGlite } from "@electric-sql/pglite";
+import { configureGiftStore, ensureGiftSchema } from "../src/gift-store";
+import { configureMilestoneStore, ensureMilestoneSchema } from "../src/milestone-store";
+import type { SqlExecutor } from "../src/proof-session-store";
 
 const ORIGIN = "https://viky.test";
 const ENV = { SESSION_SIGNING_SECRET: "test-account-session-secret-that-is-longer-than-32-bytes" };
@@ -107,9 +111,19 @@ function chessPages(rapid: { rating: number; date: number; rd: number } | null):
   }) as typeof fetch;
 }
 
-test("a rating still settling is refused before anything is relayed, to everybody once the condition is live (D89)", async () => {
+test("a rating still settling is refused before anything is relayed, to everybody once the condition is live (D90)", async () => {
   const realFetch = globalThis.fetch;
   const wasLive = CHESS_RATING.live;
+  // The creation is recorded before any relay (D87), so this test has a database; it has no relayer.
+  const db = new PGlite();
+  const exec: SqlExecutor = async (strings, ...values) => {
+    const text = strings.reduce((query, part, index) => `${query}${part}${index < values.length ? `$${index + 1}` : ""}`, "");
+    return (await db.query<Record<string, unknown>>(text, values)).rows;
+  };
+  configureGiftStore(exec);
+  configureMilestoneStore(exec);
+  await ensureGiftSchema();
+  await ensureMilestoneSchema();
   try {
     // Signed over the terms the route rebuilds, so the refusal met is the rating's and not the signature's.
     const { receiveAuthorizationMessage, receiveAuthorizationTypedData, toContractAuthorization } = await import("../src/ausd-authorization");
@@ -168,5 +182,8 @@ test("a rating still settling is refused before anything is relayed, to everybod
   } finally {
     globalThis.fetch = realFetch;
     (CHESS_RATING as { live: boolean }).live = wasLive;
+    configureGiftStore(undefined);
+    configureMilestoneStore(undefined);
+    await db.close();
   }
 });
