@@ -234,9 +234,9 @@ test("a gift keeps its two names beside the link, and only the link's key proves
 /** The record per day (D86): one row per settled day, the first write kept, read back by gift. */
 test("settled days are recorded once per day and read back by gift, in day order", async () => {
   const hash = `0x${"d1".repeat(32)}` as const;
-  assert.equal(await recordSettledDays("77", [{ day: 20_709, outcome: "returned" }, { day: 20_708, outcome: "earned" }], hash), 2);
+  assert.equal((await recordSettledDays("77", [{ day: 20_709, outcome: "returned" }, { day: 20_708, outcome: "earned" }], hash)).length, 2);
   // The same day written again, by a retry or a backfill, keeps the first row.
-  assert.equal(await recordSettledDays("77", [{ day: 20_708, outcome: "returned" }], `0x${"d2".repeat(32)}`), 0);
+  assert.equal((await recordSettledDays("77", [{ day: 20_708, outcome: "returned" }], `0x${"d2".repeat(32)}`)).length, 0);
   const days = await loadSettledDays(["77", "1", "nothing"]);
   assert.deepEqual(days.get("77"), [
     { day: 20_708, outcome: "earned" },

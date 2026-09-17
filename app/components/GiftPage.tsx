@@ -21,6 +21,7 @@ import { DayRow } from "../kit/DayRow";
 import { Arrival } from "../kit/Motion";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { GiftCard } from "../kit/GiftCard";
+import { MorningMessage } from "../kit/MorningMessage";
 import { Notice } from "../kit/Notice";
 import { Shell } from "../kit/Shell";
 import { AccountPanel } from "./AccountPanel";
@@ -478,6 +479,7 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
       )}
       {browser ? <DayRow id={gift.giftId} gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} readerIsFunder={readerIsFunder} /> : null}
       {!fromRecord ? <p className={HELP}>{W.fromCountsNote}</p> : null}
+      <MorningMessage giftId={gift.giftId} yours={mine || readerIsFunder} />
       <dl className="flex flex-col divide-y divide-[var(--divider)] border-y border-[var(--divider)]">
         <Total label={readerIsFunder ? W.theirsSoFar : W.yoursSoFar} value={W.amountDays(gift.alreadyTheirsDisplay, gift.creditedDays)} />
         {mine ? <Total label={W.alreadyTaken} value={gift.takenDisplay} /> : null}

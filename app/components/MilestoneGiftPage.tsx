@@ -15,6 +15,7 @@ import { settlingTimeInWords } from "@/src/pass-schedule";
 import { GIFT_PAGE as G, MILESTONE_ACTIONS as A, MILESTONE_PAGE as W, NAV } from "@/src/sentences";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { GiftCard } from "../kit/GiftCard";
+import { MorningMessage } from "../kit/MorningMessage";
 import { Shell } from "../kit/Shell";
 import { AccountPanel } from "./AccountPanel";
 import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
@@ -183,6 +184,7 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
             {busy === "checking" ? A.checking : A.checkNow}
           </button>
         ) : null}
+        <MorningMessage giftId={status.giftId} yours={mine || readerIsFunder} />
       </section>
 
       {!address && !status.cancelled ? (

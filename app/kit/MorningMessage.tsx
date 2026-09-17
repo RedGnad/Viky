@@ -1,0 +1,167 @@
+"use client";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { morningStep, type MorningStep } from "@/src/morning-message";
+import { MORNING as W } from "@/src/sentences";
+import { HELP, SECONDARY_BUTTON } from "../components/ui";
+
+/**
+ * Being told each morning, on a gift's page (N1, 17 Sep 2026).
+ *
+ * Viky asks for no daily gesture, so the day's outcome has to arrive without one. This is the only place a person is
+ * asked, and only ever after a press: iOS grants push to an installed web app alone, and only when the request answers
+ * a press (webkit.org, 16 Feb 2023), so nothing is asked on load, on any phone. On an iPhone still in Safari the press
+ * explains installing instead, because there the browser has nothing to grant.
+ *
+ * Self-contained on purpose: one line puts it on a page, and nothing outside it knows it exists.
+ */
+
+const isIOS = () => typeof window !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
+const isStandalone = () => {
+  if (typeof window === "undefined") return false;
+  const nav = window.navigator as Navigator & { standalone?: boolean };
+  return Boolean(nav.standalone) || window.matchMedia("(display-mode: standalone)").matches;
+};
+const never = () => () => {};
+const serverFalse = () => false;
+const canPush = () => typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const permissionNow = (): "default" | "granted" | "denied" => (canPush() ? Notification.permission : "default");
+const serverDefault = (): "default" => "default";
+
+/** The VAPID public key, as the browser wants it: bytes, not text. */
+function keyBytes(base64: string): BufferSource {
+  const padded = (base64 + "=".repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = window.atob(padded);
+  const bytes = new Uint8Array(new ArrayBuffer(raw.length));
+  for (let index = 0; index < raw.length; index += 1) bytes[index] = raw.charCodeAt(index);
+  return bytes;
+}
+
+type Told = { endpoint: string; keys: { p256dh: string; auth: string } };
+
+function told(subscription: PushSubscription): Told {
+  const json = subscription.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+  return { endpoint: json.endpoint ?? subscription.endpoint, keys: { p256dh: json.keys?.p256dh ?? "", auth: json.keys?.auth ?? "" } };
+}
+
+export function MorningMessage({ giftId, yours }: { giftId: string; yours: boolean }) {
+  const onIOS = useSyncExternalStore(never, isIOS, serverFalse);
+  const standalone = useSyncExternalStore(never, isStandalone, serverFalse);
+  const supported = useSyncExternalStore(never, canPush, serverFalse);
+  // What the browser says now, until this page's own press changes it: read, never stored twice.
+  const granted = useSyncExternalStore(never, permissionNow, serverDefault);
+  const [asked, setAsked] = useState<"default" | "granted" | "denied" | null>(null);
+  const permission = asked ?? granted;
+  const [subscribed, setSubscribed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [showHow, setShowHow] = useState(false);
+  const [refusal, setRefusal] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!yours || !canPush()) return;
+    let alive = true;
+    void (async () => {
+      const registration = await navigator.serviceWorker.ready;
+      const existing = await registration.pushManager.getSubscription();
+      if (!existing || !alive) return;
+      // The same browser can be subscribed to another gift: only the server knows about this one.
+      const answer = await fetch(`/api/gift/${giftId}/notify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intent: "check", subscription: told(existing) }),
+      }).catch(() => null);
+      const state = answer?.ok ? ((await answer.json()) as { on?: boolean }) : null;
+      if (alive && state?.on) setSubscribed(true);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [giftId, yours]);
+
+  const start = useCallback(async () => {
+    setRefusal(null);
+    const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
+    if (!publicKey) {
+      setRefusal(W.failed);
+      return;
+    }
+    setBusy(true);
+    try {
+      // The request answers this press and nothing else: that is the only shape iOS accepts, and the only one worth
+      // asking anywhere.
+      const granted = await Notification.requestPermission();
+      setAsked(granted);
+      if (granted !== "granted") {
+        setRefusal(W.refused);
+        return;
+      }
+      const registration = await navigator.serviceWorker.ready;
+      const subscription =
+        (await registration.pushManager.getSubscription()) ??
+        (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) }));
+      const answer = await fetch(`/api/gift/${giftId}/notify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intent: "on", subscription: told(subscription) }),
+      });
+      if (!answer.ok) {
+        setRefusal(W.failed);
+        return;
+      }
+      setSubscribed(true);
+    } catch {
+      setRefusal(W.failed);
+    } finally {
+      setBusy(false);
+    }
+  }, [giftId]);
+
+  const stop = useCallback(async () => {
+    setBusy(true);
+    setRefusal(null);
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const existing = await registration.pushManager.getSubscription();
+      if (existing) {
+        await fetch(`/api/gift/${giftId}/notify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ intent: "off", subscription: told(existing) }),
+        });
+      }
+      setSubscribed(false);
+    } catch {
+      setRefusal(W.failed);
+    } finally {
+      setBusy(false);
+    }
+  }, [giftId]);
+
+  if (!yours) return null;
+  const step: MorningStep = morningStep({ supported, onIOS, standalone, permission, subscribed });
+  if (step === "unsupported") return null;
+  if (step === "on") {
+    return (
+      <div className="flex flex-col gap-[var(--space-xs)]">
+        <p className={HELP}>{W.asked}</p>
+        <button type="button" onClick={() => void stop()} disabled={busy} className={SECONDARY_BUTTON}>
+          {W.stop}
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-[var(--space-xs)]">
+      <button
+        type="button"
+        onClick={() => (step === "install" ? setShowHow((open) => !open) : void start())}
+        disabled={busy || step === "refused"}
+        className={SECONDARY_BUTTON}
+      >
+        {W.ask}
+      </button>
+      {step === "install" && showHow ? <p className={HELP}>{W.installFirst}</p> : null}
+      {step === "refused" ? <p className={HELP}>{W.refused}</p> : null}
+      {refusal ? <p className={HELP}>{refusal}</p> : null}
+    </div>
+  );
+}

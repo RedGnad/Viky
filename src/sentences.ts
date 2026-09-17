@@ -530,6 +530,43 @@ export const LINK_PREVIEW = {
   fromCondition: (name: string) => `${name}. It becomes yours as you go.`,
 } as const;
 
+/**
+ * The morning message: what a phone says when nobody opened the app. The product promises no daily gesture, so the
+ * day's outcome has to reach the person without one. One sentence, sent once a day for a gift, to whoever asked for
+ * it. A name appears only when the gift carries one, and no sentence here names a source: the word for what was done
+ * comes from the register (src/conditions.ts).
+ */
+export const MORNING = {
+  /** The notification's own title, above the sentence. Never a name: a lock screen shows it to whoever is looking. */
+  title: "Viky",
+  ask: "Tell me each morning",
+  asked: "Viky tells you each morning.",
+  stop: "Stop telling me",
+  stopped: "Viky stays quiet.",
+  refused: "Your phone is not letting Viky tell you. Turn notifications on for Viky in your phone's settings.",
+  failed: "That did not work. Try again.",
+  /** iPhone outside the Home Screen: Safari has no push there, so installing comes first (webkit.org, 16 Feb 2023). */
+  installFirst: "Add Viky to your Home Screen first. Then Viky can tell you each morning.",
+  recipient: {
+    earned: (amount: string) => `Yesterday counted. ${amount} is yours.`,
+    returnedTo: (funder: string) => `Yesterday went back to ${funder}. Today still counts.`,
+    returned: "Yesterday went back. Today still counts.",
+    reached: (amount: string) => `You reached it. ${amount} is yours.`,
+    expiredTo: (amount: string, funder: string) => `The time is up. ${amount} went back to ${funder}.`,
+    expired: (amount: string) => `The time is up. ${amount} went back.`,
+  },
+  funder: {
+    /** "Léa did yesterday's lesson.": the second half is the register's, so no sentence here names a source. */
+    didIt: (name: string, yesterday: string, amount: string) => `${name} did ${yesterday}. ${amount} is theirs.`,
+    countedNamed: (name: string, amount: string) => `${name} counted yesterday. ${amount} is theirs.`,
+    counted: (amount: string) => `Yesterday counted. ${amount} is theirs.`,
+    returned: (amount: string) => `Yesterday came back to you: ${amount}.`,
+    reachedNamed: (name: string, amount: string) => `${name} reached it. ${amount} is theirs.`,
+    reached: (amount: string) => `It is reached. ${amount} is theirs.`,
+    expired: (amount: string) => `The time is up. ${amount} came back to you.`,
+  },
+} as const;
+
 /** Me: the account, in the order the structure gives it. */
 export const ME = {
   title: "You",

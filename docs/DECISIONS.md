@@ -2566,3 +2566,25 @@ sun", and then settled two questions the laboratory had left open. This is what 
 
 The laboratory stays at `/dev/looks`, behind the design gallery switch that production never sets, because the screens
 behind an account cannot be photographed any other way.
+## D91, 17 Sep 2026: the morning message, the only thing Viky sends
+
+- Statement: a person who is told "you have nothing to do each day" cannot be asked to open an app to find out what
+  happened. So the outcome of a settled day reaches the phone itself: one sentence, once a day for a gift, to whoever
+  asked for it, on both sides of the gift.
+- What it is. A `MorningMessage` button on a gift's page, for the recipient and the funder signed in. The press asks
+  the browser for permission and subscribes; the row holds the browser's notification address, the two keys it needs
+  and the gift. "Stop telling me" deletes it, and so does the first refusal from a push service, which is the only
+  honest signal that a browser is gone.
+- Where the sending starts. At the keeper's own write of the per-day record (D86) and nowhere else, so what a phone is
+  told is exactly what the contract settled, never a second judgement about it. The write is the source; `viky_told`
+  holds the subject, so a day is told about once even if the record is written twice. A milestone reached or expired is
+  told from the milestone pass the same way.
+- iOS. Web push there exists only for a web app added to the Home Screen, on 16.4 and later, and only when the request
+  answers a press (webkit.org, 16 Feb 2023). So nothing is ever asked on load, and an iPhone still in Safari is offered
+  installing first rather than told its browser cannot.
+- What replaced what. The template's `/api/notification` sent any text to any subscription its caller supplied: anybody
+  who knew a browser's address could have written a notification from Viky to it. It is deleted. The route that stands
+  takes a gift and the caller's own browser, nothing else, and only from the two people the gift is between.
+- Words. The sentences are in `src/sentences.ts`, a name only when the gift carries one, and what was done yesterday is
+  the register's word ("yesterday's lesson"), so no sentence names a source. The founder's draft said "$3.57 is hers";
+  it is written "is theirs", because Viky is never told anybody's gender and a guess would be wrong on a real person.
