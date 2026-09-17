@@ -252,7 +252,8 @@ Accounts made on viky.cash to check a deployment, each with a virtual passkey in
 when the check ends: nobody can sign in to them again. They hold no money and no gift. **They never count as users**,
 in any number given to anybody, and a count of accounts must leave them out.
 
-An account leaves no row of its own on the server. The S1 checks chose a currency on Me, which writes `viky_accounts`;
+Each run of the signed-in check makes one account per size, so the run that verifies a deployment is listed by the
+next commit rather than by its own. An account leaves no row of its own on the server. The S1 checks chose a currency on Me, which writes `viky_accounts`;
 the S2, S3 and D87 checks did not, and read each account's code on Me instead, so those seven have no row anywhere, except
 the throwaway key's creation row. None of them
 offered a gift: each stopped on the check, with "Not now".
@@ -278,6 +279,8 @@ offered a gift: each stopped on the check, with "Not now".
 | `0xfEAc57C6792293dc9f13c854622D8be252f86986` | 17 Sep 2026, 21:09 UTC | morning message deployment check, 390x844 day |
 | `0xA4a2072Ff361fF3DFE17FbC14F60F788d65030cE` | 17 Sep 2026, 21:10 UTC | morning message deployment check, 1440x900 night |
 | not read back | 17 Sep 2026, 21:12 UTC | one account made on the deployment from before the look changed, to say whether the reload defect was already there (it was). Its code was not read back before the passkey went, and an account writes no row, so nothing names it anywhere |
+| `0xB7490e8d135D5d4c2e0a88B5aEB9B57C81238dC2` | 17 Sep 2026, 21:44 UTC | check of the deployment that carries this list, 390x844 day |
+| `0x0Ebf35EaC562Fd42a58Bca7e13133C9163B7B7ba` | 17 Sep 2026, 21:44 UTC | check of the deployment that carries this list, 1440x900 night |
 
 The row `0xb12e0c72209bd4becfdafa96a8f3e7ebc93b8376`, euros, 02:56 UTC the same day, was not written by a check and
 is not listed here.
