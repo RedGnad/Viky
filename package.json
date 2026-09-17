@@ -44,7 +44,8 @@
     "capture:refund": "tsx scripts/capture-refund.ts",
     "design:shots": "tsx scripts/design-screenshots.ts",
     "review:capture": "tsx scripts/review-capture.ts",
-    "looks:capture": "tsx scripts/capture-looks.ts"
+    "looks:capture": "tsx scripts/capture-looks.ts",
+    "looks:trials": "tsx scripts/capture-look-trials.ts"
   },
   "dependencies": {
     "@category-labs/mera": "0.2.0",

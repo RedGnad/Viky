@@ -453,6 +453,38 @@ export const LOOKS: readonly Look[] = [
 ];
 
 /**
+ * Look 2 was chosen by the founder on 17 Sep 2026. One question is left to the eye before it is finished: which sun at
+ * night. Three candidates, drawn side by side at /dev/looks/ink-sun/<screen>?sun=<id>. The founder's rule: the hero hue
+ * does not change between the modes, so every candidate stays within a few degrees of the day's sun. This departs from
+ * the brief's section 3 ("the night accent is lighter"): two of the three are not lighter, and that is the question.
+ *
+ * Each ratio is measured on 17 Sep 2026 and recomputed by test/looks.test.ts: the fill against the night ground and the
+ * night surface, and the words on it, which are the night ground.
+ */
+export const NIGHT_SUN_TRIALS = [
+  {
+    id: "same",
+    hex: "#FFC531",
+    name: "The day's sun",
+    ratios: { "accent/background": 11.71, "accent/surface": 10.46, "onAccent/accent": 11.71 },
+  },
+  {
+    id: "amber",
+    hex: "#F7B51B",
+    name: "More amber",
+    ratios: { "accent/background": 10.21, "accent/surface": 9.12, "onAccent/accent": 10.21 },
+  },
+  {
+    id: "lighter",
+    hex: "#FFD053",
+    name: "Lighter, the current one",
+    ratios: { "accent/background": 12.70, "accent/surface": 11.34, "onAccent/accent": 12.70 },
+  },
+] as const;
+
+export type NightSunTrial = (typeof NIGHT_SUN_TRIALS)[number];
+
+/**
  * The easing curves and springs the motion is built from, as Material publishes them in its own token files, read on
  * 17 Sep 2026: the web tokens (github.com/material-components/material-web, tokens/versions/latest/sass/
  * _md-sys-motion.scss) for the curves, durations and standard springs, and Jetpack Compose's

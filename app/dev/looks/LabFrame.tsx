@@ -16,11 +16,12 @@ export function LabFrame({
   look,
   appearance,
   signedIn = false,
+  nightAccent,
   children,
-}: Readonly<{ look: Look; appearance: Forced; signedIn?: boolean; children: ReactNode }>) {
+}: Readonly<{ look: Look; appearance: Forced; signedIn?: boolean; nightAccent?: string; children: ReactNode }>) {
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `${labStylesheet()}\n${lookStylesheet(look)}` }} />
+      <style dangerouslySetInnerHTML={{ __html: `${labStylesheet()}\n${lookStylesheet(look, nightAccent)}` }} />
       <div
         className={`viky-lab ${bricolage.variable} ${fredoka.variable}`}
         data-lab-look={look.id}

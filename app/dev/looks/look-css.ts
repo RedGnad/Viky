@@ -16,8 +16,8 @@ export function lookById(id: string): Look | undefined {
 
 export const LOOK_IDS = LOOKS.map((look) => look.id) as readonly LookId[];
 
-function declarations(look: Look, appearance: Appearance): string {
-  const c = look.colours[appearance];
+function declarations(look: Look, appearance: Appearance, nightAccent?: string): string {
+  const c = appearance === "dark" && nightAccent ? { ...look.colours.dark, accent: nightAccent } : look.colours[appearance];
   const navEdge = contrastRatio(c.accent, c.surface) >= NON_TEXT_CONTRAST_MINIMUM ? "transparent" : c.controlBorder;
   return [
     `--background: ${c.background};`,
@@ -47,16 +47,19 @@ function declarations(look: Look, appearance: Appearance): string {
   ].join(" ");
 }
 
-/** One look's variables: day by default, night when the device is dark or the frame asks for night. */
-export function lookStylesheet(look: Look): string {
+/**
+ * One look's variables: day by default, night when the device is dark or the frame asks for night. `nightAccent` tries
+ * another accent after dark, and nothing else: a trial of the night sun (NIGHT_SUN_TRIALS).
+ */
+export function lookStylesheet(look: Look, nightAccent?: string): string {
   const frame = `.viky-lab[data-lab-look="${look.id}"]`;
   const face = look.type.face === "bricolage" ? "var(--font-bricolage)" : "var(--font-fredoka)";
   const { compact, expanded } = look.type.display;
   return [
     `${frame} { ${declarations(look, "light")} --font-title: ${face}; --font-title-weight: ${look.type.titleWeight}; --type-display: ${compact.size}px; --type-display-leading: ${compact.lineHeight}px; --lab-relief-depth: ${look.reliefDepth}px; }`,
     `@media (min-width: 840px) { ${frame} { --type-display: ${expanded.size}px; --type-display-leading: ${expanded.lineHeight}px; } }`,
-    `@media (prefers-color-scheme: dark) { ${frame}:not([data-lab-appearance="day"]) { ${declarations(look, "dark")} } }`,
-    `${frame}[data-lab-appearance="night"] { ${declarations(look, "dark")} }`,
+    `@media (prefers-color-scheme: dark) { ${frame}:not([data-lab-appearance="day"]) { ${declarations(look, "dark", nightAccent)} } }`,
+    `${frame}[data-lab-appearance="night"] { ${declarations(look, "dark", nightAccent)} }`,
   ].join("\n");
 }
 

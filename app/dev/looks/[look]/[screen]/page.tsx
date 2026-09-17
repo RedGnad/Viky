@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { screenById } from "../../example";
-import { forcedAppearance, requireLab } from "../../lab";
+import { forcedAppearance, nightSunTrial, requireLab } from "../../lab";
 import { LAB_METADATA, LabFrame } from "../../LabFrame";
 import { lookById } from "../../look-css";
 import { ReplayArrival } from "../../ReplayArrival";
@@ -17,7 +17,8 @@ export const metadata: Metadata = { ...LAB_METADATA, title: "Looks laboratory (d
 type Props = Readonly<{ params: Promise<{ look: string; screen: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }>;
 
 /**
- * One of the six screens (brief, section 9) in one look, on example data. `?appearance=day|night` overrides the device.
+ * One of the six screens (brief, section 9) in one look, on example data. `?appearance=day|night` overrides the device,
+ * and on look 2 `?sun=same|amber|lighter` tries a night sun (NIGHT_SUN_TRIALS).
  * The two screens that have an arrival carry the laboratory's "Replay arrival", which pictures of the screens leave out.
  */
 export default async function Page({ params, searchParams }: Props) {
@@ -26,9 +27,11 @@ export default async function Page({ params, searchParams }: Props) {
   const look = lookById(lookId);
   const screen = screenById(screenId);
   if (!look || !screen) notFound();
-  const appearance = forcedAppearance((await searchParams).appearance);
+  const query = await searchParams;
+  const appearance = forcedAppearance(query.appearance);
+  const sun = nightSunTrial(look.id, query.sun);
   return (
-    <LabFrame look={look} appearance={appearance} signedIn={screen.id !== "welcome"}>
+    <LabFrame look={look} appearance={appearance} signedIn={screen.id !== "welcome"} nightAccent={sun?.hex}>
       {screen.id === "welcome" ? <Welcome look={look.id} /> : null}
       {screen.id === "home" ? <HomeScreen look={look.id} /> : null}
       {screen.id === "gift" ? <GiftScreen look={look.id} /> : null}
