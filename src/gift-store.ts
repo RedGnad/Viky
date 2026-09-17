@@ -79,6 +79,10 @@ CREATE TABLE IF NOT EXISTS viky_days (
   recorded_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (gift_id, day)
 );
+-- Which verification session credited this day, so a day earned can be traced to the one claim that earned it and
+-- back to the proof kept in viky_proof_sessions (U2, the public journal). A day that went back has none: nothing was
+-- read, and that absence is the honest answer.
+ALTER TABLE viky_days ADD COLUMN IF NOT EXISTS proof_session_id text;
 `;
 
 let executor: SqlExecutor | undefined;
@@ -421,12 +425,14 @@ export async function loadPendingCreations(startedBefore: Date, kind: "daily" | 
  * One row per settled day, written from the receipt of the transaction that settled it (src/day-record.ts). A day is
  * settled once on chain, so a second write of the same day keeps the first row.
  */
-export async function recordSettledDays(giftId: string, days: readonly SettledDay[], txHash: Hex): Promise<SettledDay[]> {
+export async function recordSettledDays(giftId: string, days: readonly SettledDay[], txHash: Hex, sessionId?: string): Promise<SettledDay[]> {
   const written: SettledDay[] = [];
   for (const entry of days) {
+    // Only a day that was earned carries a session: a day that went back was settled by a drain, which reads nothing.
+    const session = entry.outcome === "earned" ? (sessionId ?? null) : null;
     const rows = await sql()`
-      INSERT INTO viky_days (gift_id, day, outcome, tx_hash)
-      VALUES (${giftId}, ${entry.day}, ${entry.outcome}, ${txHash})
+      INSERT INTO viky_days (gift_id, day, outcome, tx_hash, proof_session_id)
+      VALUES (${giftId}, ${entry.day}, ${entry.outcome}, ${txHash}, ${session})
       ON CONFLICT (gift_id, day) DO NOTHING
       RETURNING day`;
     // The days this call wrote, not the days it was given: a day already settled is not news, and the morning

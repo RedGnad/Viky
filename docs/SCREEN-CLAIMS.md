@@ -42,6 +42,24 @@ destinations in a bar below 840 pixels and a rail from 840, tasks opening over t
 | "Copy the link again", on a gift's page, to the funder | only the device that made the gift can offer it, because only it kept the link, which carries the key | `rememberGiftLink` at creation and `giftLinkOnThisDevice` on the page; nothing is asked of the server | **none yet** for the clipboard |
 | no footer anywhere; Privacy and Legal notice as two text links on the promise page only | the documents stay reachable without an account, and nothing else is a footer | `Home` signed out prints the two links; no other screen prints them; `Me` holds the four | `test/design-tokens.test.ts` (no retired background), a reader for the links |
 
+## The judges page, and what a proof is worth
+
+`app/judges/page.tsx` with `app/judges/JudgesConditions.tsx`, `JudgesReliability.tsx`, `JudgesVerify.tsx` and
+`JudgesContracts.tsx`, fed by `src/condition-proof.ts`, `src/pass-log.ts`, `src/proof-journal.ts` and
+`src/judges-chain.ts`. Every figure on that page comes from a query or from a call made while the page is served.
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| what each condition proves, in four answers: where the data comes from, whether the account is theirs, who acted, what the source does about cheating | the answers are the register's own, the same ones the funder reads when choosing, and none of them claims the person was seen doing the activity | `CONDITION_PROOFS` in `src/condition-proof.ts`; the chooser prints `inShort` beside each option in `FundGift` | `test/condition-proof.test.ts` (every condition answered, no answer stronger than the code) |
+| "Read each morning from Duolingo. It proves the account did the lesson, not who held the phone." | a reading is an attested fetch of Duolingo's own endpoint, verified against a pinned attestor, and nothing about the reading identifies the person at the keyboard | `fetchPublicProfile` verifies the signature and pins the attestor, `profileFromProof` pins the URL and the username; the account is tied once by a code in the display name or by the funder naming it | `test/duolingo-public.test.ts`, `test/conditions.test.ts` |
+| "Viky never pays an account Chess.com has closed" | every reading refuses an account whose published status is closed, and the whole amount goes back at the deadline | the standing read on each reading refuses `closed` and `closed:fair_play_violations` | `test/chess-com.test.ts` |
+| the reliability figures: passes run and on time, readings attempted and answered, days held and days lost through our own fault | each figure is one query against the journal every pass writes, counted since the day that journal was switched on, and a pass that never ran leaves no row | `src/pass-log.ts` (`passesSince`, `readingTotals`, `heldDays`), written by `dailyPass` | `test/pass-log.test.ts` |
+| "Days lost because of us: 0" whenever the journal says so | a reading that fails for a reason of ours holds the day open instead of draining it | `OURS_TO_FIX` in `src/daily-pass.ts` holds the gift for the rest of the pass; the journal records the held day and reads back whether it was later earned or returned | `test/daily-pass.test.ts`, `test/pass-log.test.ts` |
+| for every settled day: what happened, the transaction, and the fingerprint of the claim | all three are already public, and the fingerprint is the nullifier the contract stores against replay | `dailyJournal` in `src/proof-journal.ts`, from `viky_days` joined to the session that credited the day | `test/proof-journal.test.ts` |
+| "Check this day yourself", on a gift's page | the proof is handed only to the funder and to the recipient, and the command re-verifies the day with no key | `app/api/gift/[id]/proof/route.ts` refuses anybody else with `NOT_IN_THIS_GIFT`; `scripts/verify-day.ts` checks the identifier, the attestor, the fingerprint and the chain | `test/proof-journal.test.ts` (the refusal) |
+| one public example a judge can replay | the example is only ever one of Viky's own gifts, published with the account holder's agreement, and the page says so when there is none | `exampleForJudges` takes the operator's accounts as an argument, so no other gift can be returned | `test/proof-journal.test.ts` |
+| each contract's owner, pauses, one call and one refusal | they are read from the chain while the page is served, and what cannot be read is said rather than left blank | `src/judges-chain.ts` reads `owner()`, the pause flags, and a view for a gift number nobody created, which the contract refuses in its own words | **none yet**: it is a live read, and a reader checks it against `cast` |
+
 ## Offering a gift
 
 `app/components/FundGift.tsx`, its words in `src/sentences.ts` (`FUND`) and in the register `src/conditions.ts`; under

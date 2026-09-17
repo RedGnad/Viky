@@ -1,13 +1,24 @@
 import type { Metadata } from "next";
 import { Shell } from "../kit/Shell";
 import { JudgesAccount } from "../components/JudgesAccount";
+import { MilestoneJudges } from "../components/MilestoneJudges";
 import { DISPLAY, TITLE } from "../components/ui";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadRpcUrl } from "@/src/monad/chain";
-import { MilestoneJudges } from "../components/MilestoneJudges";
+import { JudgesConditions } from "./JudgesConditions";
+import { JudgesContracts } from "./JudgesContracts";
+import { JudgesReliability } from "./JudgesReliability";
+import { JudgesVerify } from "./JudgesVerify";
 
 export const metadata: Metadata = {
   title: "For judges",
 };
+
+// Read while it is served: the owner of each contract, the pauses, the reliability figures and the example to
+// re-verify all come from the chain and from the journal at that moment, never from something written down here.
+export const dynamic = "force-dynamic";
+
+const HELP = "text-[length:var(--type-help)]";
+const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
 
 // The only page where contract addresses appear. Consumer screens never show them. They are set in the text face
 // like every other word: a monospace face would be the system's, and hex has no letter a text face confuses.
@@ -20,9 +31,9 @@ export default function JudgesPage() {
     <Shell kind="document" back="/me">
       <header className="space-y-[var(--space-lg)]">
         <h1 className={DISPLAY}>For judges</h1>
-        <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
-          Everything verifiable about Viky in one screen. Nothing here is shown to funders or
-          recipients.
+        <p className={MUTED}>
+          Everything verifiable about Viky in one screen, and everything that is not, written as it is. Nothing here is
+          shown to funders or recipients.
         </p>
       </header>
 
@@ -58,8 +69,7 @@ export default function JudgesPage() {
               0xa01ae787c52409157ec83aa95cc2ca2a4dca4a2caaab3caef8ea8c5650dfa009
             </a>
             , so registering a goal, replacing the evidence signer or pausing now needs that wallet&apos;s own signature, and no
-            second key can. What an owner cannot do is move money: no function lets it. It can renounce, which would freeze the
-            goals, the signer and the pauses as they are and leave every gift running.
+            second key can. Each owner is read again from the chain further down, with what that owner can and cannot do.
           </dd>
           {earlierEscrow ? (
             <>
@@ -76,19 +86,27 @@ export default function JudgesPage() {
         </dl>
       </section>
 
+      <JudgesConditions />
+
+      <JudgesReliability />
+
+      <JudgesVerify />
+
+      <JudgesContracts />
+
       <section className="space-y-[var(--space-sm)]">
-        <h2 className={TITLE}>How progress is verified</h2>
-        <p className="text-[length:var(--type-help)]">
-          Duolingo runs in public mode: once a day, Viky&apos;s keeper reads the recipient&apos;s public profile
-          through an attested fetch (Reclaim zkFetch through Reclaim&apos;s TEE client). The attestor signs
-          Duolingo&apos;s response; Viky verifies that signature, pins the attestor&apos;s address (the same one the
-          on-chain Duolingo verifier pins) and checks the proof is about the right URL and username; the evidence
-          signer then turns the signed reading into an EIP-712 check-in, and the contract credits or refuses it.
-          What is not verified: the attestor&apos;s own TEE attestation, which zk-fetch 1.1.0 does not put in the
-          proof. The person signs in to nothing and installs nothing; account ownership is proved once, either by the
-          funder naming the account or by a short code the recipient places in their Duolingo display name.
+        <h2 className={TITLE}>How a day is read</h2>
+        <p className={HELP}>
+          Duolingo runs in public mode: once a day, Viky&apos;s keeper reads the recipient&apos;s public profile through
+          an attested fetch (Reclaim zkFetch through Reclaim&apos;s TEE client). The attestor signs Duolingo&apos;s
+          response; Viky verifies that signature, pins the attestor&apos;s address (the same one the on-chain Duolingo
+          verifier pins) and checks the proof is about the right URL and username; the evidence signer then turns the
+          signed reading into an EIP-712 check-in, and the contract credits or refuses it. What is not verified: the
+          attestor&apos;s own TEE attestation, which zk-fetch 1.1.0 does not put in the proof. The person signs in to
+          nothing and installs nothing; account ownership is proved once, either by the funder naming the account or by
+          a short code the recipient places in their Duolingo display name.
         </p>
-        <p className="text-[length:var(--type-help)]">
+        <p className={HELP}>
           Hardened on 18 Sep 2026, from Duolingo&apos;s own public profile (U1): a gift can be counted on one course rather
           than on the experience total. The funder picks the course from that profile&apos;s own courses, the daily reading is
           anchored on that course&apos;s id, and experience won in another course is not in the reading at all. Measured that
@@ -104,12 +122,54 @@ export default function JudgesPage() {
           from, so it counts the whole profile; and the course a gift counts is recorded by Viky, like the account name, not
           signed into the terms on the chain.
         </p>
-        <p className="text-[length:var(--type-help)]">
-          Two accepted risks, written here on purpose: the profile endpoint is unofficial (the same risk class as a
-          provider schema drift, watched by the same tests), and each attested read costs money on Reclaim&apos;s side
-          (their public price starts at $0.10 per verification; one read per recipient per day, never per gift).
-          Private sources keep the user-proof path through the Reclaim verifier app.
+        <p className={HELP}>
+          What a reading costs, written here on purpose: each attested read is paid on Reclaim&apos;s side (their public
+          price starts at $0.10 per verification; one read per recipient per day, never per gift). Private sources keep
+          the user-proof path through the Reclaim verifier app.
         </p>
+      </section>
+
+      <section className="space-y-[var(--space-sm)]">
+        <h2 className={TITLE}>Risks and holes, written as they are</h2>
+        <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
+          <li>
+            <strong>Duolingo&apos;s terms.</strong> The profile Viky reads is a public endpoint Duolingo does not
+            document, and Duolingo&apos;s terms say &quot;You may not use any data mining, robots, scraping, or similar
+            data gathering or extraction methods&quot;. Viky reads one profile per recipient per day. The risk is
+            accepted and spread by having several conditions rather than one; the shape of that endpoint is pinned by
+            the tests, like any other source that could drift, and if it changes or closes, the reading fails on our
+            side, which holds the day open rather than taking it away from anybody.
+          </li>
+          <li>
+            <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:
+            Coursera verifies identity once per account, and says some programmes require it while others only check a
+            name. That condition is not open yet, and this is what it will prove when it is.
+          </li>
+          <li>
+            <strong>The homonym.</strong> A gift is bound to an account on the source, not to a person. Two people can
+            share a display name, and the funder can name the wrong account when they offer the gift. The code in the
+            display name proves that whoever put it there controls that account; it does not prove they are the person
+            the funder had in mind. A gift sent to the wrong account with the right name would count that account&apos;s
+            work.
+          </li>
+          <li>
+            <strong>The milestone, two limits.</strong> A target reached before the account is connected pays nothing:
+            the first reading is recorded as the starting point whatever it says, so the climb is measured from there.
+            And a rating that drops back before the reading that would have paid it does not pay either, because the
+            contract judges the reading, not the game: it reads twice a day, and a rating reached and lost between two
+            readings never settles.
+          </li>
+          <li>
+            <strong>The way out.</strong> Viky can say that the payout service reports the payment as completed. It can
+            never say the money arrived in a bank: the bank leg is outside anything Viky can read, and no screen claims
+            otherwise.
+          </li>
+          <li>
+            <strong>Our own key.</strong> A reading counts because Viky&apos;s evidence signer signed it. That key can
+            credit a day; it cannot move money, change a gift&apos;s terms, or take anything back. The journal on this
+            page is what makes a signature without a real reading behind it detectable.
+          </li>
+        </ul>
       </section>
 
       <MilestoneJudges />

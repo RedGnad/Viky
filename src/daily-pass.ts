@@ -2,11 +2,12 @@ import type { Hex } from "viem";
 import { runPublicCheckIn, type PublicCheckInOutcome } from "./duolingo-public-checkin";
 import { completePendingCreations, type CreationLine } from "./gift-creation";
 import { liveCreationDeps } from "./gift-creation-live";
-import { readGift, type GiftState } from "./gift-reader";
+import { readGift, utcDayOf, type GiftState } from "./gift-reader";
 import { relayDrain, relayFinalise, relayRefund } from "./gift-relay";
 import { loadAllGifts, loadBoundGifts } from "./gift-store";
 import { milestonePass } from "./milestone-pass";
 import { isMilestoneGiftId } from "./milestone-protocol";
+import { recordPass, type NewPass, type PassHold, type PassPlanName } from "./pass-log";
 import { escrowOf, relayerClients, relayerPreflight, RelayerError } from "./relayer";
 
 /**
@@ -35,17 +36,17 @@ export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain"
 const OURS_TO_FIX: ReadonlySet<string> = new Set(["FETCH_FAILED", "PROOF_INVALID", "PROOF_MISMATCH", "NOT_CONFIGURED"]);
 
 /** Which of the pass's jobs a run does. Named, so the two schedules cannot drift apart by accident. */
-export type PassPlan = Readonly<{ count: boolean; refund: boolean }>;
+export type PassPlan = Readonly<{ name: PassPlanName; count: boolean; refund: boolean }>;
 
 /** Just after midnight UTC: read and credit. Settling anything here would be too early (D35). */
-export const COUNTING_PASS: PassPlan = { count: true, refund: false };
+export const COUNTING_PASS: PassPlan = { name: "counting", count: true, refund: false };
 
 /**
  * After the reading grace: settle the missed days and send them back. The refund is not optional. Draining
  * only moves a missed day out of the gift; sending it is what makes "a piece comes back to you" true, and
  * for a while nothing did it (D38).
  */
-export const SETTLING_PASS: PassPlan = { count: false, refund: true };
+export const SETTLING_PASS: PassPlan = { name: "settling", count: false, refund: true };
 
 /**
  * How long a gift may wait unopened, or opened and never connected, before its whole amount can go back to the funder:
@@ -78,6 +79,8 @@ export type DailyPassDeps = {
   completeCreations?: () => Promise<readonly CreationLine[]>;
   /** The milestone gifts' own pass (src/milestone-pass.ts), told whether this pass settles. */
   milestones?: (settle: boolean) => Promise<DailyPassLine[]>;
+  /** Writes this run to the pass journal (src/pass-log.ts), one row per run; absent in the tests of the other steps. */
+  journal?: (pass: NewPass) => Promise<void>;
 };
 
 function liveDeps(): DailyPassDeps {
@@ -93,12 +96,82 @@ function liveDeps(): DailyPassDeps {
     start: async () => ({ address: clients.address, balance: (await relayerPreflight(clients)).balance }),
     completeCreations: () => completePendingCreations(liveCreationDeps()),
     milestones: (settle) => milestonePass(settle),
+    journal: recordPass,
   };
 }
 
+/** What the run counts as it goes, for the journal. Gathered from what happened, never worked out afterwards. */
+type RunTally = {
+  readingsAttempted: number;
+  readingsSucceeded: number;
+  holds: PassHold[];
+  failures: Record<string, number>;
+};
+
+/**
+ * The day a hold is about: the day that has just ended. The counting pass runs just after midnight UTC and credits
+ * what was earned up to the end of yesterday, so yesterday is the day a failed reading leaves unproved, and the day
+ * the rest of the pass would have settled against that missing reading.
+ */
+function heldDay(nowSeconds: number): number {
+  return utcDayOf(nowSeconds) - 1;
+}
+
+/** The code a thrown failure is counted under: its own, when it carries one. */
+function failureCode(error: unknown): string {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === "string" && code.length > 0 ? code : "PASS_FAILED";
+}
+
+function countFailure(run: RunTally, code: string): void {
+  run.failures[code] = (run.failures[code] ?? 0) + 1;
+}
+
+async function writeJournal(deps: DailyPassDeps, plan: PassPlan, startedAt: number, endedAt: number, run: RunTally): Promise<void> {
+  if (!deps.journal) return;
+  try {
+    await deps.journal({
+      plan: plan.name,
+      startedAt: new Date(startedAt * 1_000),
+      endedAt: new Date(endedAt * 1_000),
+      readingsAttempted: run.readingsAttempted,
+      readingsSucceeded: run.readingsSucceeded,
+      holds: run.holds,
+      failures: run.failures,
+    });
+  } catch (error) {
+    // The journal records the pass, it is never a condition of it: a pass that did its work keeps it, as the day
+    // record does when its own write fails (src/gift-relay.ts).
+    console.error(`pass not journalled: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Runs the pass and writes exactly one journal row for it, whether it finished or threw. A run that stopped part way
+ * still did what it did up to there, and its own failure is counted as an error like any other of ours.
+ */
 export async function dailyPass(
   plan: PassPlan = COUNTING_PASS,
   deps: DailyPassDeps = liveDeps(),
+): Promise<{ relayer: string; balanceWei: string; lines: DailyPassLine[] }> {
+  const clock = () => (deps.nowSeconds ? deps.nowSeconds() : Math.floor(Date.now() / 1_000));
+  const startedAt = clock();
+  const run: RunTally = { readingsAttempted: 0, readingsSucceeded: 0, holds: [], failures: {} };
+  try {
+    return await runPass(plan, deps, run, clock);
+  } catch (error) {
+    countFailure(run, failureCode(error));
+    throw error;
+  } finally {
+    await writeJournal(deps, plan, startedAt, clock(), run);
+  }
+}
+
+async function runPass(
+  plan: PassPlan,
+  deps: DailyPassDeps,
+  run: RunTally,
+  clock: () => number,
 ): Promise<{ relayer: string; balanceWei: string; lines: DailyPassLine[] }> {
   const { address, balance } = await deps.start();
   const lines: DailyPassLine[] = [];
@@ -121,8 +194,14 @@ export async function dailyPass(
   // would fail, and one failure here stops the pass for every daily gift after it.
   if (plan.count) {
     for (const gift of (await deps.boundGifts()).filter((entry) => !isMilestoneGiftId(entry.giftId))) {
+      run.readingsAttempted += 1;
       const outcome = await deps.count(gift.giftId);
-      if (outcome.kind === "refused" && OURS_TO_FIX.has(outcome.code)) unread.add(gift.giftId);
+      if (outcome.kind === "counted" || outcome.kind === "bound") run.readingsSucceeded += 1;
+      if (outcome.kind === "refused" && OURS_TO_FIX.has(outcome.code)) {
+        unread.add(gift.giftId);
+        run.holds.push({ giftId: gift.giftId, day: heldDay(clock()) });
+        countFailure(run, outcome.code);
+      }
       lines.push(describe(outcome));
     }
   }
@@ -146,8 +225,7 @@ export async function dailyPass(
     if (gift.startDay === 0) {
       // Nothing to drain or finalise before a first reading. A gift nobody opened, or nobody connected, is sent back
       // whole once the contract allows it, and only by the settling pass, which is the one that sends money back.
-      const now = deps.nowSeconds ? deps.nowSeconds() : Math.floor(Date.now() / 1_000);
-      if (plan.refund && unstartedAndOverdue(gift, now)) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
+      if (plan.refund && unstartedAndOverdue(gift, clock())) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
       continue;
     }
     lines.push(await attempt(giftId, "drain", () => deps.drain(giftId, escrow)));

@@ -17,6 +17,7 @@ import { contractDayInWords, contractRangeInWords, dateInWords, momentInWords, n
 import { COUNTING_PASS_UTC } from "@/src/pass-schedule";
 import { GIFT_PAGE as W } from "@/src/sentences";
 import { charactersOf } from "../kit/DayStrip";
+import { CheckThisDay } from "../kit/CheckThisDay";
 import { DayRow } from "../kit/DayRow";
 import { Arrival } from "../kit/Motion";
 import { FieldRefusal } from "../kit/FieldRefusal";
@@ -479,6 +480,8 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
       )}
       {browser ? <DayRow id={gift.giftId} gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} readerIsFunder={readerIsFunder} /> : null}
       {!fromRecord ? <p className={HELP}>{W.fromCountsNote}</p> : null}
+      {/* The proof of a day goes only to the two people the gift is between (U2), so it is offered only to them. */}
+      {mine || readerIsFunder ? <CheckThisDay giftId={gift.giftId} days={gift.days} /> : null}
       <MorningMessage giftId={gift.giftId} yours={mine || readerIsFunder} />
       <dl className="flex flex-col divide-y divide-[var(--divider)] border-y border-[var(--divider)]">
         <Total label={readerIsFunder ? W.theirsSoFar : W.yoursSoFar} value={W.amountDays(gift.alreadyTheirsDisplay, gift.creditedDays)} />
