@@ -2,7 +2,9 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { COLOURS } from "@/src/design-tokens";
+import { galleryOpen } from "@/src/dev-access";
 import { giftPreview } from "@/src/gift-preview";
+import { LINK_PREVIEW } from "@/src/sentences";
 
 /**
  * The image a messaging app shows under a gift's link (the art direction brief of 17 Sep 2026, section 7 bis): the gift
@@ -44,7 +46,12 @@ async function giftDrawing(): Promise<string> {
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await context.params;
   if (!/^\d{1,78}$/.test(id)) return new Response("Not found", { status: 404 });
-  const preview = await giftPreview(id, key(new URL(request.url).searchParams.get("t")));
+  const asked = new URL(request.url).searchParams;
+  // The design gallery, which production never switches on, can ask for the longest sentence this image ever draws.
+  const preview =
+    asked.has("demo") && galleryOpen()
+      ? { title: LINK_PREVIEW.named("Maman", "$25.00"), description: LINK_PREVIEW.asYouGo }
+      : await giftPreview(id, key(asked.get("t")));
   const [display, text, gift] = await Promise.all([face("Fredoka-SemiBold.ttf"), face("DMSans-Bold.ttf"), giftDrawing()]);
   const look = COLOURS.light;
 
@@ -68,12 +75,21 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={gift} width={340} height={340} alt="" />
-        <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 28, maxWidth: 620 }}>
           <div style={{ fontFamily: "Fredoka", fontSize: 40 }}>Viky</div>
-          <div style={{ fontFamily: "Fredoka", fontSize: 80, lineHeight: 1.05, display: "flex", flexWrap: "wrap" }}>
-            <span>{before}</span>
-            {amount ? <span style={{ fontFamily: "DM Sans" }}>{amount}</span> : null}
-            <span>{after}</span>
+          {/* The words wrap, the amount stays in the text face, and the spaces around it survive being three pieces. */}
+          <div style={{ fontFamily: "Fredoka", fontSize: 64, lineHeight: 1.15, display: "flex", flexWrap: "wrap", alignItems: "baseline" }}>
+            {before.split(" ").filter(Boolean).map((word, index) => (
+              <span key={`${word}-${index}`} style={{ marginRight: 16 }}>
+                {word}
+              </span>
+            ))}
+            {amount ? <span style={{ fontFamily: "DM Sans", marginRight: 16 }}>{amount}</span> : null}
+            {after.split(" ").filter(Boolean).map((word, index) => (
+              <span key={`after-${word}-${index}`} style={{ marginRight: 16 }}>
+                {word}
+              </span>
+            ))}
           </div>
         </div>
       </div>
