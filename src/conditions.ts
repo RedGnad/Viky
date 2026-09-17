@@ -58,6 +58,22 @@ export type DailyTarget = Readonly<{
   tooLow: string;
 }>;
 
+/**
+ * A source that holds several courses, of which exactly one counts (U1). Asked only when the funder gave the account
+ * name, because the list comes from that account's own public page; without a name the gift counts the whole profile,
+ * as every gift did before.
+ */
+export type ConditionCourse = Readonly<{
+  /** "Which course counts?" */
+  label: string;
+  help: string;
+  /** The line of the check screen, and what the gift's page says when the account is not learning it any more. */
+  row: string;
+  missing: (course: string) => string;
+  /** What the whole profile counting looks like on the check screen, when no course was chosen. */
+  wholeProfile: string;
+}>;
+
 export type Condition = Readonly<{
   /** Stable, and what a gift's terms could name one day; never printed. */
   id: string;
@@ -80,6 +96,8 @@ export type Condition = Readonly<{
   detailTitle?: string;
   /** A daily condition's bar for one day, asked on the detail step; a milestone has its own target and none of this. */
   target?: DailyTarget;
+  /** The one course a day is counted on (U1), asked on the same step once the source has answered with its courses. */
+  course?: ConditionCourse;
   /** The reading the keeper or the recipient makes, by its id in src/attested-sources.ts. */
   reading: string;
   words: Readonly<{
@@ -162,6 +180,13 @@ export const DUOLINGO_DAILY: Condition = {
     },
   },
   detailTitle: "Their Duolingo, and what counts as a day",
+  course: {
+    label: "Which course counts?",
+    help: "Only this course earns a day. Experience won in another course does not count.",
+    row: "Which course",
+    missing: (course) => `This Duolingo is not learning ${course} any more, so no day can be counted. Ask for a new gift: nothing is lost, and the whole amount goes back at the end.`,
+    wholeProfile: "Any course on that profile",
+  },
   target: {
     label: "XP they reach for a day to count",
     inWords: (value) => `${value} XP a day`,

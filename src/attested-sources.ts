@@ -1,4 +1,5 @@
 import { CHESS_USER_AGENT, chessProfileUrl, chessRatingPattern, chessStatsUrl, chessStatusPattern, isValidChessUsername, type ChessMode } from "./chess-com";
+import { duolingoCourseXpPattern, duolingoProfileUrl, isDuolingoCourseId } from "./duolingo-public-terms";
 
 /**
  * The public pages Viky is allowed to read, and nothing else. Browser safe, and shared by the app and the
@@ -39,6 +40,34 @@ export const DUOLINGO_PROFILE: AttestedSource = {
     { type: "regex", value: '"streak":(?<streak>\\d+)' },
   ],
 };
+
+/** How a course source names itself, and the one shape `attestedSource` will build one from. */
+export const DUOLINGO_COURSE_PREFIX = "duolingo-course-";
+
+/**
+ * The same public profile, read for one course rather than for the experience total (U1). One source per course, as
+ * Chess.com has one per cadence: the pattern is anchored on the course id, so experience won in another course is not
+ * in the reading at all, and a course the profile does not carry makes the reading fail rather than return zero.
+ *
+ * These are built on demand rather than listed, because the list would be Duolingo's whole catalogue. The course id is
+ * checked against `isDuolingoCourseId` before anything is built, here and in the worker, so nothing a caller writes
+ * ever reaches a pattern or a URL.
+ */
+export function duolingoCourseSource(courseId: string): AttestedSource | undefined {
+  if (!isDuolingoCourseId(courseId)) return undefined;
+  return {
+    id: `${DUOLINGO_COURSE_PREFIX}${courseId}`,
+    service: "Duolingo",
+    accepts: DUOLINGO_PROFILE.accepts,
+    url: duolingoProfileUrl,
+    matches: [
+      { type: "regex", value: '"id":(?<id>\\d+)' },
+      { type: "regex", value: '"username":"(?<username>[^"]+)"' },
+      { type: "regex", value: '"name":"(?<name>[^"]*)"' },
+      { type: "regex", value: duolingoCourseXpPattern(courseId) },
+    ],
+  };
+}
 
 /**
  * Chess.com's public profile, for the binding: `player_id` is the identity that survives a change of username, and
@@ -135,7 +164,10 @@ const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_P
 
 /** The source with that name, or nothing. An unknown name is refused rather than guessed at. */
 export function attestedSource(id: string): AttestedSource | undefined {
-  return ALL.find((source) => source.id === id);
+  const listed = ALL.find((source) => source.id === id);
+  if (listed) return listed;
+  // One Duolingo course, built from its id alone and only when that id is one Duolingo could have (U1).
+  return id.startsWith(DUOLINGO_COURSE_PREFIX) ? duolingoCourseSource(id.slice(DUOLINGO_COURSE_PREFIX.length)) : undefined;
 }
 
 export function attestedSourceIds(): readonly string[] {

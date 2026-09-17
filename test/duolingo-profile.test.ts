@@ -8,7 +8,7 @@ test("resolves the exact public username to a stable uint64 profile id", () => {
       { users: [{ id: 123, username: "SomeoneElse" }, { id: 477033640, username: "Ama" }] },
       "ama",
     ),
-    { id: "477033640", username: "Ama" },
+    { id: "477033640", username: "Ama", courses: [], currentCourseId: null },
   );
 });
 

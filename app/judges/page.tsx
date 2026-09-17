@@ -50,6 +50,17 @@ export default function JudgesPage() {
             Nothing is claimed as working until the first gift has run end to end on mainnet; the record is in
             docs/spikes/KT1.md.
           </dd>
+          <dt className="text-[var(--muted)]">Who owns the contracts</dt>
+          <dd className="[overflow-wrap:anywhere]">
+            One wallet owns all three (gifts, milestone gifts, the way out): 0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64, the
+            founder&apos;s, not the key that deployed them. The gift contract was handed over on 18 Sep 2026 in{" "}
+            <a className="underline" href="https://monadvision.com/tx/0xa01ae787c52409157ec83aa95cc2ca2a4dca4a2caaab3caef8ea8c5650dfa009">
+              0xa01ae787c52409157ec83aa95cc2ca2a4dca4a2caaab3caef8ea8c5650dfa009
+            </a>
+            , so registering a goal, replacing the evidence signer or pausing now needs that wallet&apos;s own signature, and no
+            second key can. What an owner cannot do is move money: no function lets it. It can renounce, which would freeze the
+            goals, the signer and the pauses as they are and leave every gift running.
+          </dd>
           {earlierEscrow ? (
             <>
               <dt className="text-[var(--muted)]">Earlier gift contract</dt>
@@ -76,6 +87,22 @@ export default function JudgesPage() {
           What is not verified: the attestor&apos;s own TEE attestation, which zk-fetch 1.1.0 does not put in the
           proof. The person signs in to nothing and installs nothing; account ownership is proved once, either by the
           funder naming the account or by a short code the recipient places in their Duolingo display name.
+        </p>
+        <p className="text-[length:var(--type-help)]">
+          Hardened on 18 Sep 2026, from Duolingo&apos;s own public profile (U1): a gift can be counted on one course rather
+          than on the experience total. The funder picks the course from that profile&apos;s own courses, the daily reading is
+          anchored on that course&apos;s id, and experience won in another course is not in the reading at all. Measured that
+          day over 19 public profiles and 74 courses: every course carries its id, its title and its experience, and the sum
+          of the courses is exactly the total the profile prints. A course gift is its own goal on the contract (goal 5,
+          provider id keccak256(&quot;viky:provider:duolingo-course-zkfetch:v1&quot;), registered in{" "}
+          <a className="underline" href="https://monadvision.com/tx/0xcaadaca7d0d3d362eb1112b3e45f66a1116d4335166283bf837053cf5fee8a69">
+            0xcaadaca7…8a69
+          </a>
+          ) and its identity is the person and the course together, pinned by the contract at the first reading. So a reading
+          of another course, or of the whole profile, cannot settle it, and gifts made before this keep counting the total
+          exactly as they did. What this does not cover: a gift whose funder did not name the account has no course to choose
+          from, so it counts the whole profile; and the course a gift counts is recorded by Viky, like the account name, not
+          signed into the terms on the chain.
         </p>
         <p className="text-[length:var(--type-help)]">
           Two accepted risks, written here on purpose: the profile endpoint is unofficial (the same risk class as a

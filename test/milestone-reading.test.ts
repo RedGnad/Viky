@@ -31,6 +31,8 @@ const RECORD: GiftRecord = {
   claimedTx: `0x${"bb".repeat(32)}`,
   escrow: CONTRACT,
   goalUsername: "erik",
+  goalCourse: null,
+  goalCourseTitle: null,
   usernameSource: "funder",
   bindingCode: "KXQPRT",
   bindingCodeExpiresAt: new Date((NOW + 1_800) * 1_000),
