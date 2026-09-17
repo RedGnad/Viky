@@ -258,7 +258,9 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
     actions.push(
       <section key="account" className="flex flex-col gap-[var(--space-md)]">
         <p className="font-medium">{gift.opened ? W.signInToSee : W.createToOpen}</p>
-        <AccountPanel returning={gift.opened} />
+        {/* An opened gift is somebody's already: whoever reads it here without an account is coming back to one, so
+            signing in is all there is to offer, and the panel's sentence about a gift and a payment is not theirs. */}
+        {gift.opened ? <AccountPanel returning signInOnly /> : <AccountPanel />}
       </section>,
     );
   }

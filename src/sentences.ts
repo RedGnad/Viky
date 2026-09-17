@@ -258,6 +258,9 @@ export const FUND = {
 /** "1 day", "2 days". */
 const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
 
+/** A sentence that may open on a figure written "about $2.85" starts with a capital all the same. */
+const sentence = (text: string) => `${text[0].toUpperCase()}${text.slice(1)}`;
+
 /**
  * A gift's page, flows R1 to R12, read by the person it is for or by the funder (R11). What depends on the source is in
  * the register (`recipient` words); the names are the ones given when the gift was offered, and a gift made before
@@ -275,8 +278,8 @@ export const GIFT_PAGE = {
   becomesTheirs: (perDay: string, eachDay: string, when: string) => `It becomes theirs as they go: ${perDay} for ${eachDay}, ${when}.`,
   forDaysFromConnecting: (count: number) => `for ${days(count)} from the day after it is connected`,
   goesBackToThem: (perDay: string, funder: string | null) =>
-    `${perDay} goes back to ${funder ?? "them"} for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.`,
-  comesBackToYou: (perDay: string) => `${perDay} comes back to you for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.`,
+    sentence(`${perDay} goes back to ${funder ?? "them"} for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.`),
+  comesBackToYou: (perDay: string) => sentence(`${perDay} comes back to you for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.`),
   openBy: (date: string, funder: string | null) => `Open it by ${date}: after 14 days unopened, it goes back to ${funder ?? "them"}.`,
 
   createToOpen: "Create your account to open it. Nothing to install.",
