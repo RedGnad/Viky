@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Screen } from "../components/Screen";
-import { Moment } from "../components/Moment";
+import { Notice } from "../kit/Notice";
+import { Shell } from "../kit/Shell";
 
 export const metadata: Metadata = {
   title: "Offline",
@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <Screen>
-      <Moment mood="resting" headline="You are offline">Viky needs a connection to show a gift. Your money is safe; nothing changes while you are away.</Moment>
-    </Screen>
+    <Shell kind="task">
+      <Notice title="You are offline">Viky needs a connection to show a gift. Your money is safe; nothing changes while you are away.</Notice>
+    </Shell>
   );
 }

@@ -27,6 +27,14 @@ export async function GET(request: Request) {
         return {
           giftId: record.giftId,
           role,
+          // What the card says the gift is for and whom, read from the register by the screen (C1): the goal type,
+          // the name the funder gave when they gave one, and when it was made, so the newest comes first.
+          goalType: gift.goalType,
+          goalUsername: record.goalUsername,
+          usernameSource: record.usernameSource,
+          fundedAt: gift.fundedAt,
+          startDay: gift.startDay,
+          endDay: gift.endDay,
           amountDisplay: formatAusd(gift.amount),
           perDayDisplay: formatAusd(gift.perDay),
           durationDays: gift.durationDays,
@@ -42,6 +50,8 @@ export async function GET(request: Request) {
         };
       }),
     );
+    // Newest first, by the moment the money went in, which is what "what's moving" shows first (structure, Home).
+    gifts.sort((a, b) => b.fundedAt - a.fundedAt);
     return NextResponse.json({ account: auth.account, gifts }, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);

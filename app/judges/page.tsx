@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Screen } from "../components/Screen";
+import { Shell } from "../kit/Shell";
 import { JudgesAccount } from "../components/JudgesAccount";
 import { DISPLAY, TITLE } from "../components/ui";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadRpcUrl } from "@/src/monad/chain";
@@ -16,7 +16,7 @@ export default function JudgesPage() {
   // gift record names its own contract, so both are listed here for as long as the older one holds one.
   const earlierEscrow = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
   return (
-    <Screen layout="document" back="/account" backLabel="Back to my account">
+    <Shell kind="document" back="/me">
       <header className="space-y-[var(--space-lg)]">
         <h1 className={DISPLAY}>For judges</h1>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
@@ -85,6 +85,6 @@ export default function JudgesPage() {
       </section>
 
       <JudgesAccount />
-    </Screen>
+    </Shell>
   );
 }

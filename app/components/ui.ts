@@ -12,9 +12,8 @@
  * - Radii, spacing and text sizes come from Material's published scales instead of being picked per screen.
  * - Buttons are fully round and cards take Material's extra large radius, which is the art direction the
  *   funder chose arriving through the tokens: not one measurement above them moved.
- * - The families, a title's weight, the width of a control's outline and the relief under it are variables too,
- *   so the poster look every screen wears (Screen) gives Anton titles, DM Sans everywhere else and pressed-key
- *   buttons through these same classes.
+ * - The families, the width of a control's outline and the relief under it are variables too, so direction 1
+ *   gives one Anton title per destination, DM Sans everywhere else and pressed-key buttons through these classes.
  */
 
 const TAP = "min-h-[var(--tap-target)] inline-flex items-center justify-center gap-[var(--space-sm)]";
@@ -33,38 +32,19 @@ export const SECONDARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} 
 export const INLINE_BUTTON = `${TAP} ${FOCUS} rounded-full ${OUTLINE} ${RELIEF} px-[var(--space-lg)] py-[var(--space-sm)] text-[length:var(--type-help)] disabled:opacity-50`;
 
 /**
- * A box that groups one step of a journey. Its edge is a divider hairline in the calm look and a sticker's outline
- * in the poster look. It is not a control, so no ratio is required of it, though the poster outline clears 3:1 on
- * the ground and on the card alike.
+ * A box that groups: a surface with a hairline edge and no relief, because a card groups words and is not a control
+ * (the product structure of 17 Sep 2026, section 7). Every card in the product is this one; the four coloured
+ * stickers it replaces were four backgrounds where the three sources allow one.
  */
 export const CARD =
   "space-y-[var(--space-md)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-lg)]";
 
 /**
- * A card drawn as a sticker: the look's sticker outline around a fill the caller picks from the sticker colours,
- * with its words in the one colour measured against every such fill. Outside the poster look it falls back to an
- * outlined card on the joyful colour.
+ * The names the task screens still use for their cards. Every one of them is the surface card now, so a task
+ * rebuilt later on its own line already wears the three colours; the names go when the last task is rebuilt.
  */
-export const STICKER_CARD =
-  "space-y-[var(--space-md)] rounded-[var(--radius-card)] border-[length:var(--control-border-width)] border-[var(--sticker-outline)] p-[var(--space-lg)] text-[var(--on-sticker)]";
-
-/**
- * A card that holds a form or a statement, drawn as a sticker: one of the look's four fills, its outline and a hard
- * shadow. Everything inside reads the roles, so the sticker redefines them to the ink measured on its fills (words,
- * help, links, field and button outlines, reliefs) and puts fields on paper. Nothing inside has to know it sits on a
- * colour (D73).
- *
- * Mint is for cards without a primary button: at night the mint and the button are the same lime.
- */
-const STICKER_SCOPE =
-  "space-y-[var(--space-md)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--sticker-outline)] [box-shadow:0_8px_0_var(--sticker-outline)] p-[var(--space-lg)] text-[var(--on-sticker)] [--text:var(--on-sticker)] [--muted:var(--on-sticker)] [--accent-text:var(--on-sticker)] [--control-border:var(--on-sticker)] [--card-border:var(--on-sticker)] [--divider:var(--on-sticker)] [--control-relief:0_6px_0_var(--on-sticker)] [--surface:var(--sticker-paper)]";
-
-export const STICKER = {
-  sun: `${STICKER_SCOPE} bg-[var(--sticker-sun)]`,
-  pink: `${STICKER_SCOPE} bg-[var(--sticker-pink)]`,
-  mint: `${STICKER_SCOPE} bg-[var(--sticker-mint)]`,
-  lilac: `${STICKER_SCOPE} bg-[var(--sticker-lilac)]`,
-} as const;
+export const STICKER_CARD = CARD;
+export const STICKER = { sun: CARD, pink: CARD, mint: CARD, lilac: CARD } as const;
 
 /**
  * A line the person types into. Its border identifies it, so it carries the control colour, and it sits on a
@@ -74,17 +54,20 @@ export const FIELD = `min-h-[var(--tap-target)] ${FOCUS} w-full rounded-[var(--r
 
 /** The four levels of text, and there is no fifth. */
 export const MONEY = "text-[length:var(--type-money)] leading-[var(--type-money-leading)] font-semibold tabular-nums";
-export const TITLE =
-  "text-[length:var(--type-title)] leading-[var(--type-title-leading)] font-[family-name:var(--font-title)] [font-weight:var(--font-title-weight)]";
+export const TITLE = "text-[length:var(--type-title)] leading-[var(--type-title-leading)] font-semibold";
 export const BODY = "text-[length:var(--type-body)] leading-[var(--type-body-leading)]";
 export const HELP = "text-[length:var(--type-help)] leading-[var(--type-help-leading)] text-[var(--muted)]";
 
 /**
- * The single title a destination opens with. In the calm look it is the money size, as the home's title always
- * was; a look may give it a size of its own, which is the one exception to the four levels above.
+ * The single title a destination opens with, in Anton: once per destination, never in a task, never on an amount
+ * or a button (structure of 17 Sep, section 12, item 7).
  */
 export const DISPLAY =
   "text-[length:var(--type-display)] leading-[var(--type-display-leading)] font-[family-name:var(--font-title)] [font-weight:var(--font-title-weight)]";
+
+/** The mark at the top of every screen, the same face at a size that is not a title. */
+export const MARK =
+  "text-[length:var(--type-mark)] leading-[var(--type-mark-leading)] font-[family-name:var(--font-title)] [font-weight:var(--font-title-weight)]";
 
 /**
  * An amount inside a title. Amounts are set in the text face wherever they appear, so a title that states one hands

@@ -247,7 +247,16 @@ export class Session {
     let full: string | undefined;
     if (seen.tall) {
       full = `${name}--full.png`;
-      await this.page.screenshot({ path: resolve(this.folder, full), fullPage: true });
+      // The whole page is taken through a screen as tall as the page, not with Playwright's fullPage: that one keeps
+      // a bar fixed to the bottom of the screen where the first screen had it, across the middle of the page and over
+      // whatever sits there, while a screen as tall as the page puts the bar at its foot, where the phone shows it
+      // once scrolled to the end.
+      const pageHeight = await this.page.evaluate(() => document.documentElement.scrollHeight);
+      await this.page.setViewportSize({ width: this.size.use.viewport.width, height: pageHeight });
+      await this.page.waitForTimeout(300);
+      await this.page.screenshot({ path: resolve(this.folder, full) });
+      await this.page.setViewportSize(this.size.use.viewport);
+      await this.page.waitForTimeout(300);
       const fullImage = pngSize(readFileSync(resolve(this.folder, full)));
       if (fullImage.width !== this.size.use.viewport.width) throw new Error(`${full} is ${fullImage.width} wide`);
     }
@@ -275,8 +284,8 @@ export class Session {
 
   /**
    * Signs in again. The passkey session lives in memory, so any direct navigation signs the page out; this goes
-   * to the account page, signs in with the passkey this browser already holds, and returns home by the link, which
-   * keeps the session. Every scenario that starts signed in starts here.
+   * to Me, signs in with the passkey this browser already holds, and returns home by the bar, which keeps the
+   * session. Every scenario that starts signed in starts here.
    */
   async budgetSignIn(): Promise<void> {
     if (this.signIns >= SIGN_IN_BUDGET && this.restart) {
@@ -289,13 +298,14 @@ export class Session {
 
   async signIn(): Promise<void> {
     await this.budgetSignIn();
-    await this.goto("/account");
-    const signedIn = this.page.getByText("You are signed in.").first();
+    await this.goto("/me");
+    const signedIn = this.page.getByText(/Signed in on this device until/).first();
     if (!(await signedIn.isVisible().catch(() => false))) {
       await this.page.getByRole("button", { name: /^Sign in$/ }).first().click();
       await signedIn.waitFor({ state: "visible", timeout: 30_000 });
     }
-    await this.click("Back to my gifts");
+    await this.page.getByRole("link", { name: "Home", exact: true }).first().click();
+    await this.settle();
   }
 
   /** Clears what a funding scenario leaves on the device, so it cannot change the next screen. */
@@ -421,9 +431,9 @@ async function runIn(
   // Running one scenario on its own still needs an account, which the full run makes on the funding journey.
   if (pick && !chosen.some((scenario) => scenario.name.startsWith("funder: the account step"))) {
     await session.budgetSignIn();
-    await session.goto("/account");
+    await session.goto("/me");
     await page.getByRole("button", { name: "Create my account" }).first().click();
-    await page.getByText("You are signed in.").first().waitFor({ state: "visible", timeout: 40_000 });
+    await page.getByText(/Signed in on this device until/).first().waitFor({ state: "visible", timeout: 40_000 });
   }
 
   console.log(`\n${size.name} ${appearance.name}`);
@@ -457,7 +467,7 @@ function manifest(base: string, taken: string, commit: string, chromiumVersion: 
     "",
     `- Taken ${taken}, against ${base}: a local production build (\`pnpm build\`, \`pnpm start\`) of commit \`${commit}\`, in Chromium ${chromiumVersion}.`,
     "- Two sizes, 390x844 and 1440x900, each in day and in night, set as a phone sets them. Each of the four ran in its own browser with nothing stored.",
-    "- File names: `journey--state--size--appearance.png` is what fits on the screen. `--full.png` beside it is the whole page, taken whenever the page is taller than the screen, because an audit needs what is below the fold too.",
+    "- File names: `journey--state--size--appearance.png` is what fits on the screen. `--full.png` beside it is the whole page, taken whenever the page is taller than the screen, because an audit needs what is below the fold too. It is taken through a screen as tall as the page, so a bar fixed to the bottom of the screen sits at the foot of the page, where the phone shows it once scrolled to the end.",
     "- A few states are also photographed scrolled to the part that matters (a refusal, the day row, a button further down). The path says so.",
     "",
     "## How these were reached, and what is not real",
@@ -509,7 +519,7 @@ function manifest(base: string, taken: string, commit: string, chromiumVersion: 
 
   lines.push("## Not captured", "");
   lines.push(
-    "- **Help.** There is no help control anywhere in the product: no button, link or disclosure. The only help-like content is the always visible \"Lost your phone?\" section on the account page, which is in the account captures (see the full-page images).",
+    "- **Help.** Since 17 Sep 2026 a help page exists, reached from Me; it is in the account captures.",
   );
   if (misses.length === 0) {
     lines.push("- Every other state asked for was captured at both sizes, in day and in night.");

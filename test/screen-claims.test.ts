@@ -184,9 +184,9 @@ test("no failure about money arrives as a shrug, and a closed session says so", 
   assert.match(cashOut, /setClosed\(true\)/);
   assert.match(cashOut, /<AccountPanel returning signInOnly \/>/, "Sign in alone, whichever way the session went");
 
-  // The length in the sentence is the one that arms the timer, never a number typed into prose.
-  const scope = readFileSync("app/components/SessionScope.tsx", "utf8");
-  assert.match(scope, /mera\.sessionIdleMinutes\(\)/);
+  // The moment in the sentence on Me is the timer's own deadline, never a number typed into prose.
+  const me = readFileSync("app/kit/Me.tsx", "utf8");
+  assert.match(me, /mera\.sessionExpiresAtMs\(\)/);
 
   // And every failure that ends a gesture still says the one thing that is always true: the router keeps nothing.
   for (const promise of [CASH_OUT.failures.notConfigured, CASH_OUT.failures.rateMoved, CASH_OUT.failures.keptChanging, CASH_OUT.failures.other, CASH_OUT.failures.notSent("Ramp")]) {

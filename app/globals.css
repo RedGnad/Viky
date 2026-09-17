@@ -10,31 +10,20 @@
  * to dark has to win, which is why the media query excludes an explicit light choice rather than assuming
  * nobody made one.
  *
- * Then the same three again for the poster look, which a screen asks for, after the calm look it replaces on
- * that screen.
+ * One look, direction 1, on every screen: three colours per appearance, each with a role (src/design-tokens.ts).
  */
 
 :root {
-  /* Day. Three things to sit on, and every text colour measured against all three: text 16.22 on the ground,
-     17.14 on a surface, 12.39 on the joyful one; muted 7.18 / 7.59 / 5.49; the outline 4.76 / 5.03 / 3.64.
-     The accent is two colours because it does two jobs: a bright fill carrying dark words at 6.62:1, and a
-     darker one for words themselves at 7.42 / 7.84 / 5.67. */
-  --background: #FFF8EA;
-  --surface: #FFFFFF;
-  --joy: #FFD84D;
-  --text: #241A05;
-  --muted: #5C5340;
-  --accent: #FF7A3D;
-  --on-accent: #241A05;
-  --accent-text: #962D0E;
-  --control-border: #776E5E;
-  --divider: #E8DFC4;
-
-  --day-settled: #E3D6BC;
-  --day-catchable: #7FC4F5;
-  --day-about-to-return: #FFA95C;
-  --day-today: #FF9BC4;
-  --day-to-come: #FFFFFF;
+  /* Day: cream ground, a paper surface, plum ink, one tomato accent. Every pair is measured in the tokens file. */
+  --background: #FFF3D9;
+  --surface: #FFFDF7;
+  --text: #3B0A2A;
+  --muted: #72465E;
+  --accent: #FF5A36;
+  --on-accent: #3B0A2A;
+  --accent-text: #9E2A14;
+  --control-border: #3B0A2A;
+  --divider: #EAD6B0;
 
   /* Material's 8dp scale, the steps we use. */
   --space-xs: 4px;
@@ -55,6 +44,12 @@
   --type-help: 14px;
   --type-help-leading: 20px;
 
+  /* The one display title a destination opens with, and the mark at the top of every screen, both in Anton. */
+  --type-display: 60px;
+  --type-display-leading: 56px;
+  --type-mark: 28px;
+  --type-mark-leading: 32px;
+
   /* The round end of Material's shape scale, because the world is round. */
   --radius-control: 16px;
   --radius-card: 28px;
@@ -70,32 +65,22 @@
   --prose-max: 66ch;
   --destination-max: 680px;
 
-  /* The two families every screen reads. In the calm look both are the system face it has always used; the
-     poster look below swaps in Anton and DM Sans. */
-  --font-text: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-title: var(--font-text);
-  --font-title-weight: 600;
+  /* The bar of three destinations below 840, the rail from 840 (src/design-tokens.ts, NAV). */
+  --nav-bar-height: 64px;
+  --nav-rail-width: 88px;
 
-  /* A control's outline and the relief under it: a hairline and no relief in the calm look. */
-  --control-border-width: 1px;
-  --control-relief: 0 0 #0000;
+  /* The two families every screen reads: Anton for the display title and the mark, DM Sans for everything else. */
+  --font-text: var(--font-dm-sans);
+  --font-title: var(--font-anton);
+  --font-title-weight: 400;
 
-  /* A card's edge: a divider hairline in the calm look, a sticker's outline in the poster look. */
+  /* A control's outline and the relief under it: the pressed key of direction 1. */
+  --control-border-width: 2px;
+  --control-relief: 0 6px 0 var(--control-border);
+
+  /* A card's edge: a hairline that groups, never a control's outline and never a hard shadow. */
   --card-border-width: 1px;
   --card-border: var(--divider);
-
-  /* The single opening title a look may size on its own; in the calm look it is the money size it already used. */
-  --type-display: var(--type-money);
-  --type-display-leading: var(--type-money-leading);
-
-  /* Stickers belong to the poster look; here they fall back to calm colours so nothing is ever left unset. */
-  --sticker-outline: var(--control-border);
-  --on-sticker: var(--text);
-  --sticker-sun: var(--joy);
-  --sticker-pink: var(--joy);
-  --sticker-mint: var(--joy);
-  --sticker-lilac: var(--joy);
-  --sticker-paper: var(--surface);
 
   color-scheme: light dark;
 }
@@ -106,91 +91,9 @@
   }
 }
 
-/* Dark because the system says so, and only while the person has not asked for light. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --background: #1B1430;
-    --surface: #2A2246;
-    --joy: #4A2E6B;
-    --text: #F7EFFF;
-    --muted: #BCAFD4;
-    --accent: #FFB03A;
-    --on-accent: #1B1430;
-    --accent-text: #FFC061;
-    --control-border: #9A8FB5;
-    --divider: #453A63;
-
-    --day-settled: #463C6B;
-    --day-catchable: #2F6C96;
-    --day-about-to-return: #8A5320;
-    --day-today: #8C3D60;
-    --day-to-come: #2A2246;
-  }
-}
-
-/* Dark because the person said so, whatever their system says. */
-:root[data-theme="dark"] {
-  --background: #1B1430;
-  --surface: #2A2246;
-  --joy: #4A2E6B;
-  --text: #F7EFFF;
-  --muted: #BCAFD4;
-  --accent: #FFB03A;
-  --on-accent: #1B1430;
-  --accent-text: #FFC061;
-  --control-border: #9A8FB5;
-  --divider: #453A63;
-
-  --day-settled: #463C6B;
-  --day-catchable: #2F6C96;
-  --day-about-to-return: #8A5320;
-  --day-today: #8C3D60;
-  --day-to-come: #2A2246;
-}
-
-/*
- * The poster look (POSTER_COLOURS, POSTER_TYPE, POSTER_CONTROL and POSTER_CARD in src/design-tokens.ts), worn by
- * any screen that renders `data-look="poster"`. :has() gives it to the whole document rather than to that
- * screen's box, so the ground under a notch and past the end of a scroll wears it too. The two fonts are the
- * variables next/font defines on the document (app/fonts.ts).
- */
-:root:has([data-look="poster"]) {
-  --background: #FFF3D9;
-  --surface: #FFFDF7;
-  --joy: #FFD84D;
-  --text: #3B0A2A;
-  --muted: #72465E;
-  --accent: #FF5A36;
-  --on-accent: #3B0A2A;
-  --accent-text: #9E2A14;
-  --control-border: #3B0A2A;
-  --divider: #EAD6B0;
-  --sticker-outline: #3B0A2A;
-  --on-sticker: #3B0A2A;
-  --sticker-sun: #FFD84D;
-  --sticker-pink: #F7B7D8;
-  --sticker-mint: #BDEBC8;
-  --sticker-lilac: #C9C6FF;
-  --sticker-paper: #FFFDF7;
-
-  --font-title: var(--font-anton);
-  --font-text: var(--font-dm-sans);
-  --font-title-weight: 400;
-  --type-display: 60px;
-  --type-display-leading: 56px;
-  --type-title: 36px;
-  --type-title-leading: 38px;
-
-  --control-border-width: 2px;
-  --control-relief: 0 6px 0 var(--control-border);
-
-  --card-border-width: 2px;
-  --card-border: var(--sticker-outline);
-}
-
-/* The opening title grows where a destination splits into two panes. */
+/* The display title grows where the screen is wide. */
 @media (min-width: 840px) {
-  :root:has([data-look="poster"]) {
+  :root {
     --type-display: 104px;
     --type-display-leading: 96px;
   }
@@ -198,46 +101,30 @@
 
 /* Night because the system says so, and only while the person has not asked for light. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]):has([data-look="poster"]) {
+  :root:not([data-theme="light"]) {
     --background: #1C1035;
     --surface: #2A1D4E;
-    --joy: #4A2E6B;
     --text: #FFF6E9;
     --muted: #C4B8E6;
-    --accent: #C6FF4D;
+    --accent: #FF7A5C;
     --on-accent: #1C1035;
-    --accent-text: #C6FF4D;
+    --accent-text: #FF9478;
     --control-border: #FFF6E9;
     --divider: #3A2C66;
-    --sticker-outline: #FFF6E9;
-    --on-sticker: #1C1035;
-    --sticker-sun: #FFD84D;
-    --sticker-pink: #FF5FA2;
-    --sticker-mint: #C6FF4D;
-    --sticker-lilac: #8B6CFF;
-    --sticker-paper: #FFF6E9;
   }
 }
 
 /* Night because the person said so, whatever their system says. */
-:root[data-theme="dark"]:has([data-look="poster"]) {
+:root[data-theme="dark"] {
   --background: #1C1035;
   --surface: #2A1D4E;
-  --joy: #4A2E6B;
   --text: #FFF6E9;
   --muted: #C4B8E6;
-  --accent: #C6FF4D;
+  --accent: #FF7A5C;
   --on-accent: #1C1035;
-  --accent-text: #C6FF4D;
+  --accent-text: #FF9478;
   --control-border: #FFF6E9;
   --divider: #3A2C66;
-  --sticker-outline: #FFF6E9;
-  --on-sticker: #1C1035;
-  --sticker-sun: #FFD84D;
-  --sticker-pink: #FF5FA2;
-  --sticker-mint: #C6FF4D;
-  --sticker-lilac: #8B6CFF;
-  --sticker-paper: #FFF6E9;
 }
 
 body {
@@ -267,20 +154,6 @@ svg,
 video {
   max-width: 100%;
   height: auto;
-}
-
-/*
- * The one movement in the product: a slow bob at a moment worth celebrating. Small, slow, and never on
- * anything a person is trying to read or tap. The reduced-motion block below switches it off, which is
- * Apple's own instruction applied through the query they never mention.
- */
-@keyframes viky-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-.viky-bob {
-  animation: viky-bob 2.4s ease-in-out infinite;
 }
 
 /*

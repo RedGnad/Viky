@@ -13,20 +13,27 @@ None of the three needed cleverness to find. They needed somebody to read the se
 A test in the last column means a test that fails if the promise stops being kept. Where there is none, it
 says so, and that is the work queue.
 
-## The gift list, on the home page
+## Home, Gifts and You: the three destinations
 
-`app/components/MyGifts.tsx`, fed by `app/api/gifts/mine/route.ts`.
+`app/kit/Home.tsx`, `app/kit/Gifts.tsx`, `app/kit/Me.tsx`, `app/kit/GiftCard.tsx`, `app/kit/MoneyHero.tsx`, fed by
+`app/api/gifts/mine/route.ts` and `src/conditions.ts`. Rebuilt on 17 Sep 2026 on the product structure: three
+destinations in a bar below 840 pixels and a rail from 840, tasks opening over them with the bar hidden.
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
-| "No gift yet." | the signed-in account is neither funder nor recipient of any gift | `loadGiftsOf` matches on both roles | `test/gift-store.test.ts` |
-| "Counting: X of Y days done, Z missed." | X is the days credited on chain, Z the days drained | `readGift` reads `creditedDays` and `drainedDays` from the contract | `test/GiftEscrow.t.sol` crediting, draining and the accounting fuzz |
-| "Theirs so far: $A." | A is what the recipient has earned, whether or not they have taken it | `theirsSoFar`, which is `creditedDays * perDay`, never the withdrawable balance, which drops when they take it | `test/screen-claims.test.ts` |
-| "Came back to you: $B." | B has actually left the contract and reached the funder | `refundedToFunder` on chain, raised only by `refundUnearned`, which the settling pass calls | `test/daily-pass.test.ts` (this is D38) |
-| "Not opened yet." | nobody has claimed it | `gift.recipient` is unset on chain | `test/GiftEscrow.t.sol` claim |
-| "Opened. Name the Duolingo account to start counting." | claimed, but no account bound | `record.boundAt` is null | `test/gift-store.test.ts` binding |
-| "Taken back before it was opened." | the funder cancelled before any claim | `gift.cancelled`; the contract refuses `cancel` after a claim | `test/GiftEscrow.t.sol` cancel |
-| "Finished: X of Y days done." | the gift is finalised on chain | `gift.finalised` | `test/GiftEscrow.t.sol` finalise |
+| the bar and the rail, three destinations, nothing without an account | there are exactly three, they are hidden in a task, and nobody without an account sees them | `Nav` draws nothing without an account and only `Shell kind="destination"` mounts it; a task is `Shell kind="task"` | `test/design-tokens.test.ts` (every page through the shell) |
+| "In your account", the figure, "Yours to keep, to put behind another goal, or to take out." | it is everything the account holds that is money, of all three coins, in the account's own currency | `useHoldings` reads every coin in `COINS`; `MoneyHero` adds the two dollar coins, converts with the rate of `/api/rates` and prints the dollar beneath, and leads with the ready figure when the account holds nothing but what the card service buys | `test/exit-steps.test.ts`, `test/display-currency.test.ts` |
+| "Take it out" on Home | the account holds anything at all, of any coin above the reserve | `holdsAnything` | `test/exit-steps.test.ts` for the reserve |
+| "Offer a gift", or "Finish the gift you set up" | a gift set up on this device for this account is not made yet | `loadPendingGift` (D74) | `test/pending-gift.test.ts` |
+| "What's moving", up to three cards, newest first, then "See all gifts" | the three newest of the account's gifts, by the moment the money went in | `/api/gifts/mine` sorts by `fundedAt` read from the contract | `test/gift-store.test.ts` for the list |
+| a gift card: "For ama_learns" or "For whoever opens the link" or "For you", the condition's name, "$25.00, $3.57 a day for 7 days", the state | for whom is the name the funder gave, or nobody, or the reader; for what comes from the register and never from the card; the state is the contract's | `GiftCard` reads `goalUsername` and `role` from the route, the name from `conditionOfGoal(goalType)`; the state sentences are the old ones, in `src/sentences.ts` | `test/conditions.test.ts` (no source named in the kit), `test/state-catalogue.test.ts` |
+| "Counting: X of Y days done, Z missed." and "Finished: X of Y days done, Z missed." | X is the days credited on chain, Z the days drained, and the count of missed days survives the end | `readGift` reads `creditedDays` and `drainedDays`; the finished sentence keeps Z | `test/GiftEscrow.t.sol` crediting, draining and the accounting fuzz |
+| "Opened. Connect Duolingo to start counting." | claimed, but no account bound, and the source is the gift's own | `record.boundAt` is null; the sentence is the register's `words.connect` | `test/gift-store.test.ts` binding, `test/conditions.test.ts` |
+| "Money shown in" with US dollars, Euros, CFA francs, and "what your phone suggests" beside one | the choice is the account's, kept on the server, and the proposal is the device's | `PUT /api/account/preferences` into `viky_accounts`; `proposedDisplayCurrency(navigator.language)` | `test/send-store.test.ts`, `test/display-currency.test.ts` |
+| "Signed in on this device until 14:20." | that is when the signing session closes by itself unless something is signed | `mera.sessionExpiresAtMs()`, read again every half minute | `test/screen-claims.test.ts` |
+| "Need your code for a payout service?", folded, with the code and "Copy your code" | the code is this account's own | the signed-in account's identifier; the copy is awaited and its refusal said | **none yet** for the clipboard |
+| "Help" leads to five questions answered in the screens' own words | every answer is a sentence some screen keeps true | `HELP.questions` in `src/sentences.ts`, each answer taken from a sentence already listed in this file | **none yet**: a reader checks the five against this file |
+| no footer anywhere; Privacy and Legal notice as two text links on the promise page only | the documents stay reachable without an account, and nothing else is a footer | `Home` signed out prints the two links; no other screen prints them; `Me` holds the four | `test/design-tokens.test.ts` (no retired background), a reader for the links |
 
 ## The funder screen
 
@@ -120,7 +127,7 @@ down and never rounded up, because the payout service is ordered for such a numb
 | every refusal, under the element in cause | it names the real reason, with the figure when there is one, and never as a shrug | `refusalText` branches on the typed code; the figures come from the route that measured them (`NOT_ENOUGH`, `BELOW_PAYOUT_MINIMUM`, `ABOVE_PAYOUT_MAXIMUM`); nothing on this screen reads "Something went wrong" | `test/screen-claims.test.ts` |
 | "Send to another Viky account of mine", "Paste that account's code", "Send $X" | the money moves to the code pasted, exactly the two-decimal amount typed, on a signature the relayer submits | `dollarsToChange` reads the text to two decimals, as on step 1, with the maximum in the help line; the code is refused when it is the account's own; `/api/send` relays the signed authorization. What a gift holds goes this way, or the euro coin when no gift money is left; the chain's own coin never does, it goes to the card service through the steps | `test/send-amount.test.ts`, `test/screen-claims.test.ts` |
 
-## The account, on every screen
+## The account panel, wherever a person signs in
 
 `app/components/AccountPanel.tsx`, `src/account/provider.tsx`, `src/account/mera.ts`.
 
@@ -128,9 +135,7 @@ down and never rounded up, because the payout service is ordered for such a numb
 |---|---|---|---|
 | "You are signed in." | the passkey session is open **and** the server has accepted this browser | `announcedAccount` gates it on both naming the same account | `test/screen-claims.test.ts` |
 | "Your account is protected by your passkey. Nothing to remember, nothing to write down." | no secret is stored anywhere we hold | the key is derived from the passkey and lives in memory only | `test/mera-derivation.test.ts` |
-| each account failure sentence | it is the real cause and offers a way out | typed `AccountError` with its guidance | `test/account-errors.test.ts` |
-| "What this device can do for you right now" | that list is what the open session can actually sign | the session signs the person's own account only | **none yet** |
-| "Closing in m:ss" | the session really closes then, and the number is never negative or stale | `sessionRemaining` clamps at zero, read again every second because every signature pushes the deadline back | `test/screen-claims.test.ts` |
+| each account failure sentence | it is the real cause and offers a way out | typed `AccountError` with its guidance, the server's limit included | `test/account-errors.test.ts` |
 
 ## What the milestone contract promises
 

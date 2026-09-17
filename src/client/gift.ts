@@ -134,6 +134,35 @@ export type GiftStatus = {
   recorded: Array<{ kind: string; txHash: string; blockNumber: string | null }>;
 };
 
+/** A gift as the list of the account's gifts describes it, which is what a card draws on. */
+export type GiftSummary = {
+  giftId: string;
+  role: "funder" | "recipient";
+  goalType: number;
+  goalUsername: string | null;
+  usernameSource: "funder" | "recipient" | null;
+  fundedAt: number;
+  startDay: number;
+  endDay: number;
+  amountDisplay: string;
+  perDayDisplay: string;
+  durationDays: number;
+  creditedDays: number;
+  missedDays: number;
+  opened: boolean;
+  counting: boolean;
+  finished: boolean;
+  cancelled: boolean;
+  earnedDisplay: string;
+  theirsDisplay: string;
+  returnedDisplay: string;
+};
+
+/** Every gift of the signed-in account, newest first, as funder or recipient. */
+export function loadMyGifts(): Promise<{ account: string; gifts: GiftSummary[] }> {
+  return getJson("/api/gifts/mine");
+}
+
 export function loadGiftStatus(giftId: string): Promise<GiftStatus> {
   return getJson<GiftStatus>(`/api/gift/${giftId}`);
 }

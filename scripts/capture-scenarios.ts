@@ -84,6 +84,12 @@ function card(over: Record<string, unknown> = {}) {
   return {
     giftId: GIFT_ID,
     role: "recipient",
+    goalType: 1,
+    goalUsername: null,
+    usernameSource: null,
+    fundedAt: Math.floor(Date.now() / 1000) - 5 * 86_400,
+    startDay: TODAY - 5,
+    endDay: TODAY + 1,
     amountDisplay: "$7.00",
     perDayDisplay: "$1.00",
     durationDays: 7,
@@ -144,7 +150,7 @@ export const SCENARIOS: Scenario[] = [
       await s.reset();
       await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
       await s.signIn();
-      await s.text("No gift yet.");
+      await s.text("No gift yet. Offer one, or open a link someone sent you.");
       await s.shot("home", "signed in, no gift", `${HOME}`);
     },
   },
@@ -190,7 +196,7 @@ export const SCENARIOS: Scenario[] = [
         "GET /api/gifts/mine",
       );
       await s.signIn();
-      await s.text(/Finished: 6 of 7 days done\./);
+      await s.text(/Finished: 6 of 7 days done, 1 missed\./);
       await s.shot("home", "signed in, gifts finished", `${HOME}, with one gift received and one given, both finished, and $6.00 in the account`);
     },
   },
@@ -202,6 +208,9 @@ export const SCENARIOS: Scenario[] = [
     run: async (s) => {
       await s.reset();
       await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
+      // The session closes by itself after thirty quiet minutes on a money screen; the page's clock is driven so
+      // those minutes pass in a moment, which is the only honest way to photograph what they leave.
+      await s.page.clock.install({ time: Date.now() });
       await s.signIn();
       await s.click("Offer a gift");
       await s.text("Who is it for, and for what");
@@ -218,9 +227,9 @@ export const SCENARIOS: Scenario[] = [
       await s.text("Nothing has arrived yet. This is what your gift will hold.");
       await s.shot("funder", "waiting for the payment", `${HOME}: Offer a gift, type a Duolingo name, Continue, Continue, Add money and give (the card service opens in a new tab, closed here)`);
 
-      await s.click("Close it now");
+      await s.page.clock.runFor(31 * 60_000);
       await s.text("Your session closed while you were paying");
-      await s.shot("funder", "session closed while waiting", "On the waiting screen: Close it now (what ten quiet minutes do on their own)");
+      await s.shot("funder", "session closed while waiting", "On the waiting screen, thirty-one quiet minutes later (the page's clock driven forward)");
 
       await s.page.reload();
       await s.settle();
@@ -369,30 +378,46 @@ export const SCENARIOS: Scenario[] = [
   // ---------------------------------------------------------------------------------------------------------
   // Account, legal, judges.
   {
-    name: "account, legal, privacy, judges",
+    name: "gifts and me: the two other destinations, then help, legal, privacy, judges",
+    run: async (s) => {
+      await s.reset({ AUSD: 2_000_000n, USDC: 0n, MON: 0n });
+      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card(), card({ giftId: "4", role: "funder", amountDisplay: "$25.00", perDayDisplay: "$3.57", creditedDays: 3, missedDays: 0, earnedDisplay: "$10.71", theirsDisplay: "$10.71", returnedDisplay: "$0.00", goalUsername: "ama_learns" })] } }), "GET /api/gifts/mine");
+      await s.api("GET", "/api/account/preferences", () => ({ status: 200, body: { displayCurrency: null } }), "GET /api/account/preferences");
+      await s.signIn();
+      await s.page.getByRole("link", { name: "Gifts", exact: true }).first().click();
+      await s.settle();
+      await s.text(exact("Received"));
+      await s.shot("gifts", "gifts, given and received", `${HOME}: Gifts in the bar`);
+      await s.page.getByRole("link", { name: "Me", exact: true }).first().click();
+      await s.settle();
+      await s.text(/Signed in on this device until/);
+      await s.shot("me", "me, signed in", `${HOME}: Me in the bar`);
+      await s.page.getByText("Need your code for a payout service?").first().click();
+      await s.settle();
+      await s.shot("me", "me, the code unfolded", "On Me: Need your code for a payout service?", { scrollTo: "Copy your code" });
+      const link = (href: string) => s.page.locator(`a[href="${href}"]`).first();
+      for (const [href, state] of [["/help", "help"], ["/legal", "legal"], ["/privacy", "privacy"], ["/judges", "judges, signed in"]] as const) {
+        await link(href).click();
+        await s.settle();
+        await s.shot("me", state, `${HOME}: Me, ${state.split(",")[0]}`);
+        await s.page.goBack();
+        await s.settle();
+      }
+    },
+  },
+  {
+    name: "signed out: home, me and gifts",
     run: async (s) => {
       await s.reset();
-      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
-      await s.signIn();
-      await s.click("Account, help and legal");
-      await s.text("You are signed in.");
-      await s.shot("account", "account, signed in", `${HOME}: Account, help and legal`);
-      // These three are cards whose whole text is the link, so their accessible names are longer than the label
-      // ("Legal who runs Viky and under what terms"). Found by where they lead instead.
-      const card = (href: string) => s.page.locator(`a[href="${href}"]`).first();
-      await card("/legal").click();
-      await s.settle();
-      await s.shot("account", "legal", `${HOME}: Account, help and legal, Legal`);
-      await s.page.goBack();
-      await s.settle();
-      await card("/privacy").click();
-      await s.settle();
-      await s.shot("account", "privacy", `${HOME}: Account, help and legal, Privacy`);
-      await s.page.goBack();
-      await s.settle();
-      await card("/judges").click();
-      await s.settle();
-      await s.shot("account", "judges, signed in", `${HOME}: Account, help and legal, For judges`);
+      await s.goto("/");
+      await s.text("The money is already in their name");
+      await s.shot("home", "signed out", "The door with no session: the promise, the two ways in, how it works, and the two documents the law asks for");
+      await s.goto("/me");
+      await s.text("Create my account");
+      await s.shot("me", "me, signed out", "The address /me with no session");
+      await s.goto("/gifts");
+      await s.text("Sign in to see your gifts.");
+      await s.shot("gifts", "gifts, signed out", "The address /gifts with no session");
     },
   },
 ];
