@@ -75,6 +75,11 @@ export const GIFT_CARD = {
   takenBack: "Taken back before it was opened.",
   theirsOf: (theirs: string, total: string, back: string) => `${theirs} of ${total} theirs, ${back} back to you`,
   yoursOf: (yours: string, total: string, back: string) => `${yours} of ${total} yours, ${back} gone back`,
+  milestoneToday: (reading: number, target: number) => `Today: ${reading}, target ${target}.`,
+  milestoneNotRead: (target: number) => `Target ${target}. Not read yet.`,
+  milestoneReached: (target: number) => `Reached ${target}.`,
+  milestoneMissed: (target: number) => `Did not reach ${target} in time.`,
+  milestoneAmount: (total: string, deadline: string) => `${total}, by ${deadline}`,
 } as const;
 
 /** "Léa's", for a name the funder typed. */
@@ -234,8 +239,9 @@ export const FUND = {
     copyRefused: "Your browser would not let us copy it. Press and hold the link above, then choose Copy.",
     onlyThem: (recipient: string) => `Whoever opens this link takes the gift, so send it only to ${recipient}.`,
     nextTitle: "What happens next",
-    next: (recipient: string, source: string, eachDay: string, perDay: string, time: string) => [
-      `${recipient} opens the link and connects their ${source}.`,
+    theyConnectAny: "connects what they will do",
+    next: (recipient: string, theyConnect: string, eachDay: string, perDay: string, time: string) => [
+      `${recipient} opens the link and ${theyConnect}.`,
       `From the day after, ${eachDay} puts ${perDay} in ${their(recipient)} name.`,
       `A day they miss and do not catch up the next day comes back to your account the morning after, at about ${time} your time. If nobody opens the link within 14 days, it all comes back.`,
     ],
@@ -247,6 +253,129 @@ export const FUND = {
     signInFirst: "Sign in first.",
     tryAgain: "Try again",
   },
+} as const;
+
+/** "1 day", "2 days". */
+const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
+
+/**
+ * A gift's page, flows R1 to R12, read by the person it is for or by the funder (R11). What depends on the source is in
+ * the register (`recipient` words); the names are the ones given when the gift was offered, and a gift made before
+ * them keeps the sentence it had.
+ */
+export const GIFT_PAGE = {
+  aboutViky: "About Viky",
+  backToGifts: "Back to my gifts",
+  loading: "One moment",
+  notFound: "This gift could not be found.",
+
+  titleYours: (funder: string | null, amount: string) => (funder ? `${funder} put ${amount} in your name.` : `${amount} is in your name.`),
+  titleTheirs: (recipient: string | null, amount: string) => (recipient ? `You put ${amount} in ${their(recipient)} name.` : `You put ${amount} in their name.`),
+  becomesYours: (perDay: string, eachDay: string, when: string) => `It becomes yours as you go: ${perDay} for ${eachDay}, ${when}.`,
+  becomesTheirs: (perDay: string, eachDay: string, when: string) => `It becomes theirs as they go: ${perDay} for ${eachDay}, ${when}.`,
+  forDaysFromConnecting: (count: number) => `for ${days(count)} from the day after it is connected`,
+  goesBackToThem: (perDay: string, funder: string | null) =>
+    `${perDay} goes back to ${funder ?? "them"} for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.`,
+  comesBackToYou: (perDay: string) => `${perDay} comes back to you for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.`,
+  openBy: (date: string, funder: string | null) => `Open it by ${date}: after 14 days unopened, it goes back to ${funder ?? "them"}.`,
+
+  createToOpen: "Create your account to open it. Nothing to install.",
+  signInToSee: "Sign in to see your gift.",
+  openMyGift: "Open my gift",
+  opening: "Opening",
+  missingKey: "This link is missing its key. Ask for the link again.",
+  openedByOther: "This gift was already opened by the person it is for.",
+
+  continue: "Continue",
+  checking: "Checking the name",
+  notYetBody: (funder: string | null) => `The money stays in your name. Nothing counts until you connect, and after 14 days unconnected it goes back to ${funder ?? "them"}.`,
+  copyCode: "Copy the code",
+  copied: "Copied",
+  copyRefused: "Your browser would not let us copy it. Press and hold the code, then choose Copy.",
+  validUntil: (moment: string) => `Valid until ${moment} your time. After that, ask for a new one here.`,
+  expired: "This code has expired.",
+  newCode: "Get a new code",
+  iAddedIt: "I added it",
+  reading: "Reading your profile",
+  removeAfter: "You can take the code out of your name as soon as this screen says it is done.",
+  keepMyName: "Keep the name I had",
+  namedWrong: (funder: string | null) => `Ask ${funder ?? "the person who sent it"} to check the name. Nothing counts until it is right.`,
+  startCounting: "Start counting",
+  notSeenYet: "Wait a minute and press again, or get a new code.",
+  codeOut: "You can take the code out of your name now.",
+
+  counting: (range: string) => `Counting: ${range}.`,
+  dayOf: (day: number, total: number, range: string) => `Day ${day} of ${total}, ${range}.`,
+  nextReading: (moment: string) => `Next reading: ${moment} your time.`,
+  yoursSoFar: "Yours so far",
+  theirsSoFar: "Theirs so far",
+  alreadyTaken: "Already taken",
+  backToFunder: (funder: string | null) => (funder ? `Back to ${funder}` : "Back to them"),
+  cameBackToYou: "Came back to you",
+  amountDays: (amount: string, count: number) => `${amount}, ${days(count)}`,
+  inYourAccount: (moment: string) => `It is in your account, last sent back ${moment} your time.`,
+  countNow: "Count now",
+  readCounted: (count: number) => (count === 0 ? "Read. Nothing new to count yet." : count === 1 ? "One more day is yours." : `${count} more days are yours.`),
+  nothingToDo: {
+    not_bound: "Connect first.",
+    not_opened: "Open the gift first.",
+    no_account: "Add your name first.",
+    already_bound: "Already connected. Nothing else to do.",
+    finished: "This gift is finished.",
+    cancelled: "This gift went back before it started counting.",
+  } as Record<string, string>,
+
+  take: (amount: string) => `Take ${amount}`,
+  takeReview: (amount: string) => `Take ${amount} into your account. It stays yours: from your account you can send it to your bank. Nothing to pay.`,
+  notNow: "Not now",
+  taking: "Taking it",
+  taken: (amount: string, when: string, giftId: string, take: number) => `${amount} is in your account, ${when}. Reference: gift ${giftId}, take ${take}.`,
+  stillInGift: (earned: string, left: number) => `Still in the gift: ${earned} earned and not taken. ${left === 0 ? "No day to come." : `${days(left)} to come.`}`,
+  sendToBank: "Send it to my bank",
+
+  finished: (range: string) => `This gift is finished. ${range}.`,
+  daysYours: (count: number, total: number, amount: string) => `${count} of ${total} days were yours: ${amount}.`,
+  daysTheirs: (count: number, total: number, amount: string) => `${count} of ${total} days were theirs: ${amount}.`,
+  wentBackTo: (count: number, funder: string | null, amount: string) => `${days(count)} went back to ${funder ?? "them"}: ${amount}.`,
+  cameBack: (count: number, amount: string) => `${days(count)} came back to you: ${amount}.`,
+  wentBackBeforeStart: "This gift went back before it started counting.",
+  beingEarned: "There is nothing for you to do: what they earn is theirs, and what they miss comes back to you by itself.",
+  made: (date: string, giftId: string) => `Made ${date}. Reference: gift ${giftId}.`,
+
+  closedTitle: "Your session closed while you were away",
+  closedBody: "Nothing moved and nothing was taken.",
+
+  dayWords: {
+    earned: "earned",
+    returnedYours: "back to them",
+    returnedTheirs: "back to you",
+    catchable: "catch up",
+    aboutToReturn: "not judged yet",
+    today: "today",
+    toCome: "to come",
+  },
+  daysLabel: "Every day of this gift",
+  fromCountsNote: "Some days here are drawn from the totals, earned first and then the days that went back, because they were settled before Viky kept a record of each day.",
+} as const;
+
+/**
+ * A milestone gift's page, built against the register and shown for real once a milestone condition is live (C2).
+ * The target and the readings are the gift's own data; the source's name is the register's.
+ */
+export const MILESTONE_PAGE = {
+  target: (target: number, source: string) => `Reach ${target} on ${source}`,
+  ruleYours: (target: number, deadline: string) => `It is yours when you reach ${target}, by ${deadline}. Checked every morning.`,
+  ruleTheirs: (target: number, deadline: string) => `It is theirs when they reach ${target}, by ${deadline}. Checked every morning.`,
+  startedAt: (reading: number) => `Started at ${reading}.`,
+  lastRead: (moment: string) => `Last read ${moment} your time.`,
+  notReadYet: "Not read yet: the first reading is the morning after it is connected.",
+  atDeadlineYours: (deadline: string, amount: string, funder: string | null) =>
+    `If you reach it by ${deadline}, the ${amount} is yours. If not, it goes back to ${funder ?? "them"}.`,
+  atDeadlineTheirs: (deadline: string, amount: string) => `If they reach it by ${deadline}, the ${amount} is theirs. If not, it comes back to you.`,
+  reachedYours: (date: string, amount: string) => `Reached on ${date}: the ${amount} is yours.`,
+  reachedTheirs: (date: string, amount: string) => `Reached on ${date}: the ${amount} is theirs.`,
+  missedYours: (deadline: string, amount: string, funder: string | null) => `Not reached by ${deadline}: the ${amount} went back to ${funder ?? "them"}.`,
+  missedTheirs: (deadline: string, amount: string) => `Not reached by ${deadline}: the ${amount} came back to you.`,
 } as const;
 
 /** Me: the account, in the order the structure gives it. */

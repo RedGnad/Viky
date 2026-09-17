@@ -116,7 +116,9 @@ export function countNow(giftId: string): Promise<PublicOutcome> {
 }
 
 export type GiftStatus = {
+  kind: "daily";
   youAreTheRecipient: boolean;
+  youAreTheFunder: boolean;
   catchUpSeconds: number;
   escrow: Hex;
   goalAccount: GoalAccount;
@@ -124,7 +126,9 @@ export type GiftStatus = {
   goalType: number;
   dailyTarget: number;
   durationDays: number;
+  amount: string;
   amountDisplay: string;
+  perDay: string;
   perDayDisplay: string;
   opened: boolean;
   connected: boolean;
@@ -137,10 +141,15 @@ export type GiftStatus = {
   earnedDisplay: string;
   alreadyTheirsDisplay: string;
   returnedDisplay: string;
+  takenDisplay: string;
+  days: Array<{ day: number; outcome: "earned" | "returned" }>;
+  lastReturnAtMs: number | null;
+  createdAtChain: number;
+  claimedAtChain: number;
+  withdrawNonce: string;
   todayDayIndex: number;
   startDay: number;
   endDay: number;
-  withdrawNonce: string;
   recorded: Array<{ kind: string; txHash: string; blockNumber: string | null }>;
   /** Given only to whoever holds the link, or to the funder or the recipient signed in. */
   names: { recipientName: string | null; funderName: string | null } | null;
@@ -157,6 +166,7 @@ export type GiftSummary = {
   funderName: string | null;
   /** How long a day stays catchable on the contract that holds this gift, so the card's days are drawn as the page's. */
   catchUpSeconds: number;
+  days: Array<{ day: number; outcome: "earned" | "returned" }>;
   fundedAt: number;
   startDay: number;
   endDay: number;

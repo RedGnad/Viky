@@ -8,8 +8,8 @@ import { stripOf, type StripDay } from "@/src/day-states";
  * surface only: filled when earned, struck through and faded when it went back, a thick outline today, dashed while
  * still catchable, faded and dashed while going back, a hairline still to come (structure, section 7).
  *
- * Earned and returned are drawn from the counts, earned first, because the contract does not say which day was which
- * (`stripOf`); the keeper's record per day puts them in their order on the gift page's own line, S3.
+ * A settled day is drawn from the keeper's record per day when it has one, at its date (D86); a day settled before the
+ * record falls back to the counts, earned first (`stripOf`).
  *
  * It is a picture of a sentence the card already says in words ("Counting: 3 of 7 days done, 0 missed."), so it is
  * hidden from a screen reader rather than read twice. Before the first reading a gift has no dated days yet, so the
@@ -26,11 +26,15 @@ function everyMinute(changed: () => void): () => void {
 const thisMinute = () => Math.floor(Date.now() / 60_000) * 60_000;
 const noClock = () => 0;
 
-export function DayStrip({ gift, catchUpSeconds }: Readonly<{ gift: Shape; catchUpSeconds: number }>) {
+export function DayStrip({
+  gift,
+  catchUpSeconds,
+  records = [],
+}: Readonly<{ gift: Shape; catchUpSeconds: number; records?: readonly { day: number; outcome: "earned" | "returned" }[] }>) {
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   return (
     <span aria-hidden className="flex h-[10px] w-full gap-[3px]">
-      {stripOf(gift, catchUpSeconds, nowMs).map((day, index) => (
+      {stripOf(gift, catchUpSeconds, nowMs, records).map((day, index) => (
         <span key={index} data-day={day} className={`relative h-full min-w-0 flex-1 rounded-full ${segment(day)}`}>
           {day === "returned" ? <span className="absolute inset-x-[2px] top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-[var(--text)]" /> : null}
         </span>

@@ -21,7 +21,7 @@ async function main() {
     if (!/^0x[0-9a-fA-F]{40}$/.test(backfill)) throw new Error("BACKFILL_ESCROW is not a contract identifier");
     console.log(`escrow recorded for ${await backfillEscrow(backfill as `0x${string}`)} earlier gift(s)`);
   }
-  console.log("schema ready: viky_proof_sessions, viky_gifts, viky_relayed, viky_exits, viky_sends, viky_accounts");
+  console.log("schema ready: viky_proof_sessions, viky_gifts, viky_relayed, viky_days, viky_exits, viky_sends, viky_accounts");
 }
 
 main().catch((error) => {

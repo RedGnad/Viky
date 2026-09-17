@@ -3,7 +3,7 @@ import { readAccountAuthSession } from "@/src/account-auth-server";
 import { catchUpSecondsOf } from "@/src/catch-up";
 import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { formatAusd, readGift, theirsSoFar } from "@/src/gift-reader";
-import { loadGiftsOf } from "@/src/gift-store";
+import { loadGiftsOf, loadSettledDays } from "@/src/gift-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { escrowOf } from "@/src/relayer";
 
@@ -21,6 +21,7 @@ export async function GET(request: Request) {
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
     const auth = readAccountAuthSession(request);
     const records = await loadGiftsOf(auth.account);
+    const recordedDays = await loadSettledDays(records.map((record) => record.giftId));
     const gifts = await Promise.all(
       records.map(async (record) => {
         const gift = await readGift(escrowOf(record), record.giftId);
@@ -37,6 +38,8 @@ export async function GET(request: Request) {
           recipientName: record.recipientName,
           funderName: record.funderName,
           catchUpSeconds: catchUpSecondsOf(escrowOf(record)),
+          // The keeper's record per day, so a card draws each day at its date (D86).
+          days: recordedDays.get(record.giftId) ?? [],
           fundedAt: gift.fundedAt,
           startDay: gift.startDay,
           endDay: gift.endDay,

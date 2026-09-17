@@ -91,7 +91,44 @@ export type Condition = Readonly<{
     doIt: string;
     /** A day that counts, as the confirmation's next steps say it: "each day with a lesson". */
     eachDay: string;
+    /** What the person does once the link is open, on the funder's confirmation: "connects their Duolingo". */
+    theyConnect?: string;
   }>;
+  /**
+   * What the gift's page says to the person it is for, and to the funder reading the same page (flows R1 to R12).
+   * Only a condition whose page is built carries it; the page falls back to the register's other words otherwise.
+   */
+  recipient?: RecipientWords;
+}>;
+
+/** The words of a gift's page that depend on the source: how to connect it, how to prove it, what a day is. */
+export type RecipientWords = Readonly<{
+  /** "each day with your lesson", and the funder's reading of it. */
+  eachDayYours: string;
+  eachDayTheirs: string;
+  /** Opened, not connected yet. */
+  stillNeeds: string;
+  connectTitle: string;
+  usernameLabel: string;
+  usernameHelp: string;
+  typeToContinue: string;
+  noPassword: string;
+  notYet: string;
+  /** The proof that the account is theirs, when they named it themselves. */
+  proveTitle: (username: string) => string;
+  proveSteps: string;
+  slowToShow: string;
+  /** When the funder named the account. */
+  namedBy: (username: string, funder: string) => string;
+  notMine: string;
+  /** Connected. */
+  countingFrom: (firstDay: string) => string;
+  reads: string;
+  /** A day that is neither counted nor lost yet, to each side. */
+  catchUpYours: (deadline: string) => string;
+  catchUpTheirs: (deadline: string) => string;
+  /** The outcome of a reading that found nothing new today. */
+  alreadyRead: string;
 }>;
 
 export const DUOLINGO_DAILY: Condition = {
@@ -134,6 +171,28 @@ export const DUOLINGO_DAILY: Condition = {
     connect: "Opened. Connect Duolingo to start counting.",
     doIt: "Do your lesson; nothing else. Each morning Viky reads your Duolingo and counts the day before.",
     eachDay: "each day with a lesson",
+    theyConnect: "connects their Duolingo",
+  },
+  recipient: {
+    eachDayYours: "each day with your lesson",
+    eachDayTheirs: "each day with their lesson",
+    stillNeeds: "The gift is in your name. It still needs your Duolingo to start counting.",
+    connectTitle: "Connect your Duolingo",
+    usernameLabel: "Your Duolingo username",
+    usernameHelp: "The name under your picture in Duolingo, like ama_learns. Your profile must be public.",
+    typeToContinue: "Type your Duolingo name to continue.",
+    noPassword: "No password, no sign-in: your lessons are read from your public profile. Next, a short code proves the profile is yours.",
+    notYet: "I do not have Duolingo yet",
+    proveTitle: (username) => `Prove ${username} is yours`,
+    proveSteps: "In Duolingo, open Profile, then Settings, then Name, and add this code to your name:",
+    slowToShow: "Duolingo can take a minute to show a new name. If Viky cannot see the code yet, wait a minute and press again.",
+    namedBy: (username, funder) => `Your Duolingo: ${username}. Named by ${funder}. Nothing to sign in to, nothing to install: your lessons are read from your public profile.`,
+    notMine: "That is not my Duolingo name",
+    countingFrom: (firstDay) => `Done. From tomorrow, ${firstDay}, every day with your lesson is yours, counted by itself.`,
+    reads: "Viky reads your Duolingo every day at that time and counts the day before.",
+    catchUpYours: (deadline) => `Yesterday is not counted yet, and not lost either. Do a lesson before ${deadline} your time and it still counts.`,
+    catchUpTheirs: (deadline) => `Yesterday is not counted yet, and not lost either: a lesson before ${deadline} your time still earns that day.`,
+    alreadyRead: "Viky already read your Duolingo today. Come back tomorrow.",
   },
 };
 

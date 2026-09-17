@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
+import { DuolingoProfileError, resolvePublicDuolingoProfile } from "@/src/duolingo-profile";
 import { BINDING_CODE_TTL_SECONDS, isValidDuolingoUsername, newBindingCode } from "@/src/duolingo-public-terms";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { loadGift, setRecipientUsername } from "@/src/gift-store";
@@ -11,7 +12,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * The recipient names their own Duolingo account (the funder did not). A fresh code is issued; the
- * person puts it in their Duolingo display name for a minute and the bind route proves it (D27).
+ * person puts it in their Duolingo display name for a minute and the bind route proves it (D27). The name is read
+ * from Duolingo's public profile first, so a name nobody has is refused here, under the field, rather than after the
+ * person has put a code into a profile that does not exist (decision 10 of the drawn flows).
  */
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -26,6 +29,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (!gift || !gift.recipient || gift.recipient.toLowerCase() !== auth.account.toLowerCase()) throw new GiftApiError("NOT_RECIPIENT", "Open the gift first.", 403);
     if (gift.boundAt) throw new GiftApiError("ALREADY_BOUND", "This gift is already counting.", 409);
     if (gift.usernameSource === "funder" && gift.goalUsername) throw new GiftApiError("NAMED_BY_FUNDER", "The person who sent this gift already named your account.", 409);
+    try {
+      await resolvePublicDuolingoProfile(username);
+    } catch (error) {
+      if (error instanceof DuolingoProfileError && error.code === "NO_SUCH_PROFILE") {
+        throw new GiftApiError("NO_SUCH_PROFILE", "No public Duolingo profile goes by that name. Check the spelling in Duolingo, under your picture.", 400);
+      }
+      throw new GiftApiError("SOURCE_UNAVAILABLE", "Duolingo is not answering. Try again in a moment.", 503);
+    }
     const code = newBindingCode(() => crypto.getRandomValues(new Uint8Array(1))[0]);
     const expiresAt = new Date(Date.now() + BINDING_CODE_TTL_SECONDS * 1_000);
     const saved = await setRecipientUsername(id, username, code, expiresAt);

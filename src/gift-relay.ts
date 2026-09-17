@@ -2,7 +2,8 @@ import { parseEventLogs, type Abi, type Hex } from "viem";
 import type { ContractAuthorization } from "./ausd-authorization";
 import { ATTESTATION_TTL_SECONDS, signClaim, type GiftParams } from "./gift-attestation";
 import { giftEscrowAbi } from "./gift-escrow-abi";
-import { recordRelayed, relayedForSession } from "./gift-store";
+import { settledDaysFromLogs } from "./day-record";
+import { recordRelayed, recordSettledDays, relayedForSession } from "./gift-store";
 import { loadAttestation } from "./proof-session-store";
 import { escrowAddress, relay, RelayerError, type RelayResult } from "./relayer";
 
@@ -67,6 +68,7 @@ export async function relayCheckIn(sessionId: string, escrow: Hex): Promise<Rela
   const result = await relay("checkIn", [giftId, attestation], escrow);
   const credited = Number(eventArg(result, "CheckInAccepted", "creditedDays"));
   await recordRelayed({ giftId, kind: "check-in", sessionId, txHash: result.hash, blockNumber: result.receipt.blockNumber });
+  await recordDays(giftId, result);
   return { hash: result.hash, creditedDays: credited, alreadyRelayed: false };
 }
 
@@ -90,13 +92,28 @@ export async function relayWithdraw(input: {
 export async function relayDrain(giftId: string, escrow: Hex): Promise<RelayResult> {
   const result = await relay("drain", [giftId], escrow);
   await recordRelayed({ giftId, kind: "drain", txHash: result.hash, blockNumber: result.receipt.blockNumber });
+  await recordDays(giftId, result);
   return result;
 }
 
 export async function relayFinalise(giftId: string, escrow: Hex): Promise<RelayResult> {
   const result = await relay("finalise", [giftId], escrow);
   await recordRelayed({ giftId, kind: "finalise", txHash: result.hash, blockNumber: result.receipt.blockNumber });
+  await recordDays(giftId, result);
   return result;
+}
+
+/**
+ * Writes the days a transaction settled, from its own receipt. The transaction is final by now and the money has
+ * moved, so a failed write never turns it into a failure: it is logged, the day falls back to the counts on screen,
+ * and `scripts/backfill-days.ts` writes it again from the recorded transaction.
+ */
+async function recordDays(giftId: string, result: RelayResult): Promise<void> {
+  try {
+    await recordSettledDays(giftId, settledDaysFromLogs(giftId, result.receipt.logs), result.hash);
+  } catch (error) {
+    console.error(`day record not written for gift ${giftId}, ${result.hash}: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 export async function relayRefund(giftId: string, escrow: Hex): Promise<RelayResult> {

@@ -1,5 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import type { Hex } from "viem";
+import type { SettledDay } from "./day-record";
 import { configureProofSessionStore, type SqlExecutor } from "./proof-session-store";
 import { neon } from "@neondatabase/serverless";
 
@@ -44,6 +45,14 @@ ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS bound_at timestamptz;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS goal_profile_id text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS recipient_name text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS funder_name text;
+CREATE TABLE IF NOT EXISTS viky_days (
+  gift_id text NOT NULL,
+  day integer NOT NULL,
+  outcome text NOT NULL,
+  tx_hash text NOT NULL,
+  recorded_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (gift_id, day)
+);
 `;
 
 let executor: SqlExecutor | undefined;
@@ -255,6 +264,44 @@ export async function recordRelayed(input: { giftId: string; kind: RelayedKind; 
   await sql()`
     INSERT INTO viky_relayed (gift_id, kind, session_id, tx_hash, block_number)
     VALUES (${input.giftId}, ${input.kind}, ${input.sessionId ?? null}, ${input.txHash}, ${input.blockNumber === undefined ? null : input.blockNumber.toString()})`;
+}
+
+/**
+ * One row per settled day, written from the receipt of the transaction that settled it (src/day-record.ts). A day is
+ * settled once on chain, so a second write of the same day keeps the first row.
+ */
+export async function recordSettledDays(giftId: string, days: readonly SettledDay[], txHash: Hex): Promise<number> {
+  let written = 0;
+  for (const entry of days) {
+    const rows = await sql()`
+      INSERT INTO viky_days (gift_id, day, outcome, tx_hash)
+      VALUES (${giftId}, ${entry.day}, ${entry.outcome}, ${txHash})
+      ON CONFLICT (gift_id, day) DO NOTHING
+      RETURNING day`;
+    written += rows.length;
+  }
+  return written;
+}
+
+/** The recorded days of these gifts, by gift. Days settled before the record existed are simply absent. */
+export async function loadSettledDays(giftIds: readonly string[]): Promise<Map<string, SettledDay[]>> {
+  const byGift = new Map<string, SettledDay[]>();
+  if (giftIds.length === 0) return byGift;
+  const rows = await sql()`SELECT gift_id, day, outcome FROM viky_days WHERE gift_id = ANY(${giftIds as string[]}) ORDER BY gift_id, day`;
+  for (const row of rows) {
+    const outcome = row.outcome === "earned" || row.outcome === "returned" ? row.outcome : undefined;
+    if (!outcome) continue;
+    const list = byGift.get(String(row.gift_id)) ?? [];
+    list.push({ day: Number(row.day), outcome });
+    byGift.set(String(row.gift_id), list);
+  }
+  return byGift;
+}
+
+/** When the last missed day was sent back to the funder, from the recorded refund transactions. */
+export async function lastRefundAt(giftId: string): Promise<Date | null> {
+  const rows = await sql()`SELECT created_at FROM viky_relayed WHERE gift_id = ${giftId} AND kind = 'refund' ORDER BY created_at DESC LIMIT 1`;
+  return rows.length === 0 ? null : toDate(rows[0].created_at);
 }
 
 export async function loadRelayed(giftId: string): Promise<Array<{ kind: RelayedKind; sessionId: string | null; txHash: Hex; blockNumber: bigint | null }>> {

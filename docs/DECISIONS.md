@@ -2372,3 +2372,36 @@ Anton off its title now.
 money first and records the gift after, so a deploy before `pnpm db:migrate` would leave a funded gift with no record
 and no link. Migrate production, read the schema back, then deploy.
 
+## D86, 17 Sep 2026: a gift's page on the product, and a record of every settled day
+
+**The page.** Flows R1 to R12 and the funder's reading (R11) on one page, `/g/[id]`, on the task shell. Its head is the
+same gift card as on Home and Gifts, standing still. Its title names the other side: "Maman put $7.00 in your name." to
+the person it is for, "You put $7.00 in Léa's name." to the funder; a gift made before the names keeps "$7.00 is in
+your name.". Every amount is in the text face. Every day of the gift is drawn at its date with its state in words
+under it, the next reading is dated in the reader's clock, and the missed days stay counted once the gift is finished.
+Taking what is earned goes through a review and ends on a confirmation with the time and a reference, "gift 3, take
+1", counted by the contract's own withdraw nonce. The session closing on the page is a door to reopen, with signing in
+alone. What depends on the source is the register's `recipient` words; the Chess.com entry is left to its own line.
+
+**A record of every settled day (D83, point 4).** The contract settles days in order and publishes two counts, so the
+counts cannot say which day was earned and which went back. Its events can: `CheckInAccepted` and `DaysDrained` name
+the first and last day they settled. The keeper decodes them from the receipt of every check-in, drain and finalise it
+relays and writes one row per day in `viky_days`, the first write kept. A failed write never fails the relay, which is
+final by then; `pnpm backfill:days` writes the days of every transaction recorded in `viky_relayed` again from their
+receipts. A day settled by a transaction Viky did not relay has no row and falls back to the counts, earned first, and
+the page says so. Read on 17 Sep before writing anything: gifts 1 and 2 each have their first day earned and the next
+three returned in their relayed receipts, and gift 3 has nothing settled yet.
+
+**The route (decision 13 of the flows).** `GET /api/gift/[id]` also answers `youAreTheFunder`, so a funder and a
+recipient are told apart before anybody opens the gift, the recorded days, the amount already taken, and the time of
+the last refund Viky relayed. The naming route reads the Duolingo name from the public profile before issuing a code.
+
+**The milestone variant, for C2.** `src/milestone-view.ts` is the shape the gift route answers for a gift held by the
+milestone contract, `kind: "milestone"`: the condition's id, the start, the target, the last reading and its time, the
+deadline, reached or not. `MilestoneGiftPage` draws it against the register and never offers a gesture the route cannot
+answer yet; the capture run draws it from simulated data until a milestone condition is live.
+
+**Not built.** "Copy the link again" for the funder (R11): the link's key is stored only as a hash, so no page can show
+it after the confirmation closes, and keeping it is a decision about the bearer risk. The refusal of an expired code has
+no test of its own.
+

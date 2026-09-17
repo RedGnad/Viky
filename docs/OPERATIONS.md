@@ -137,6 +137,38 @@ They are nullable, so the code already in production ignores them; the create ro
 relayed the money, so they must exist before S2 serves anybody. Same two commands as above, then read the columns
 back.
 
+## Before deploying the build of S3: the record of settled days
+
+`viky_days` holds one row per settled day of every gift (D86). The keeper writes it on every relay once the build is
+live; nothing reads it before then, and the gift route answers an empty list without it. Migrate, then write the days
+already settled from the relayed receipts, after a dry run:
+
+```
+set -a && source .env.ops.local && set +a && pnpm db:migrate
+set -a && source .env.ops.local && set +a && pnpm backfill:days --dry-run
+set -a && source .env.ops.local && set +a && pnpm backfill:days
+```
+
+## Money paths to audit
+
+Each entry is a path where money can move while the record of it fails, with what to do about it. Nothing here is
+built until it is decided.
+
+1. **Making a gift relays the money, then records the gift.** `app/api/gift/create/route.ts` calls `relayCreateGift`
+   and only then `saveGift`. If the save fails (the database refuses, times out, or the function is cut off), the gift
+   is funded on chain and has no row: no claim link works, because a claim looks the key's hash up in `viky_gifts`, and
+   the funder never sees the link. The money is not lost, since `refundUnearned` sends an unopened gift back after
+   fourteen days, but the settling pass reads gifts from `viky_gifts`, so nothing calls it for this one either.
+   **Proposed: record first, then relay, then complete.** Before relaying, insert the row as pending with everything
+   known then: the authorization's nonce (the hash of the exact terms), the funder, the terms, the names, the source's
+   name and the key's hash. Relay. Then write the gift id and the transaction hash onto the pending row. A pending row
+   whose completion failed is completed by the settling pass, which reads the funder's authorization state for that
+   nonce and, when it was used, finds the `GiftCreated` event in the recorded or searched receipt. A create request
+   retried with the same nonce finds the row instead of relaying twice: a complete row answers that the gift is made;
+   a pending one is completed and given a fresh key, which is safe because a failed completion ends the first request
+   with an error, so its link, the only place the old key was shown, never left the function. Recovery alone, keeping
+   the order, cannot give the link back: the key exists only in the function's memory once the relay has returned.
+
 ## Test accounts in production
 
 Accounts made on viky.cash to check a deployment, each with a virtual passkey in a headless browser that is gone
