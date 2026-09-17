@@ -10,9 +10,10 @@ const nextConfig = {
   // node_modules rather than bundled: its dynamic imports and resource files do not survive bundling.
   serverExternalPackages: ["@reclaimprotocol/zk-fetch", "@reclaimprotocol/attestor-core", "@reclaimprotocol/zk-symmetric-crypto", "re2", "@swc/core", "pino"],
   outputFileTracingIncludes: {
-    // The picture a messaging app shows under a gift's link is drawn on the server, from these files.
-    "/api/gift/[id]/preview-image": ["./app/fonts/*.ttf", "./app/kit/gift-hero.svg"],
     "/api/**": [
+      // The picture a messaging app shows under a gift's link is drawn on the server, from these two faces and this drawing.
+      "./app/fonts/*.ttf",
+      "./app/kit/gift-hero.svg",
       "./node_modules/.pnpm/@reclaimprotocol+attestor-core*/node_modules/@reclaimprotocol/attestor-core/**",
       "./node_modules/.pnpm/@reclaimprotocol+zk-symmetric-crypto*/node_modules/@reclaimprotocol/zk-symmetric-crypto/**",
       "./node_modules/.pnpm/@reclaimprotocol+zk-fetch*/node_modules/@reclaimprotocol/zk-fetch/**",

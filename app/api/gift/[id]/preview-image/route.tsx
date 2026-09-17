@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { COLOURS } from "@/src/design-tokens";
 import { giftPreview } from "@/src/gift-preview";
@@ -22,11 +22,14 @@ export const contentType = "image/png";
 
 const key = (value: string | null) => (value !== null && /^[A-Za-z0-9_-]{16,64}$/.test(value) ? value : null);
 
-/** Read from the file itself: a file is not something this runtime will fetch, and the build traces these paths. */
-const beside = (path: string) => fileURLToPath(new URL(path, import.meta.url));
+/**
+ * Read from the project's own root: a file is not something this runtime will fetch, and where the compiled chunk sits
+ * is not where the files land once deployed. next.config.mjs keeps both of them beside the function.
+ */
+const inProject = (path: string) => join(process.cwd(), path);
 
 async function face(file: string): Promise<Buffer> {
-  return readFile(beside(`../../../../fonts/${file}`));
+  return readFile(inProject(`app/fonts/${file}`));
 }
 
 /**
@@ -34,7 +37,7 @@ async function face(file: string): Promise<Buffer> {
  * because a route may not import react-dom/server. A test fails if the file and the component ever disagree.
  */
 async function giftDrawing(): Promise<string> {
-  const svg = await readFile(beside("../../../../kit/gift-hero.svg"));
+  const svg = await readFile(inProject("app/kit/gift-hero.svg"));
   return `data:image/svg+xml;base64,${svg.toString("base64")}`;
 }
 
