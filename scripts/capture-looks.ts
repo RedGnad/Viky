@@ -43,16 +43,16 @@ const HOME_AMOUNT = "€9.54";
 
 type Shot = { look: string; screen: string; size: string; appearance: string; file: string; height: number; checks: string[] };
 
-function pngSize(file: string): { width: number; height: number } {
+export function pngSize(file: string): { width: number; height: number } {
   const bytes = readFileSync(file);
   return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
 }
 
-function claimFolder(): string {
+export function claimFolder(prefix = "looks"): string {
   const day = new Date().toISOString().slice(0, 10);
   mkdirSync(resolve("review-captures"), { recursive: true });
   for (let copy = 1; ; copy += 1) {
-    const folder = resolve("review-captures", copy === 1 ? `looks-${day}` : `looks-${day}-${copy}`);
+    const folder = resolve("review-captures", copy === 1 ? `${prefix}-${day}` : `${prefix}-${day}-${copy}`);
     if (!existsSync(folder)) {
       mkdirSync(folder, { recursive: true });
       return folder;
@@ -60,7 +60,7 @@ function claimFolder(): string {
   }
 }
 
-async function settle(page: Page): Promise<void> {
+export async function settle(page: Page): Promise<void> {
   await page.waitForLoadState("load");
   await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => undefined);
   await page.evaluate(() => document.fonts.ready);
@@ -163,7 +163,7 @@ async function captureOutside(browser: Browser, base: string, folder: string, lo
 }
 
 /** An HTML page of pictures, photographed whole: the board. */
-async function board(browser: Browser, folder: string, name: string, title: string, body: string): Promise<string> {
+export async function board(browser: Browser, folder: string, name: string, title: string, body: string): Promise<string> {
   const html = resolve(folder, `.${name}.html`);
   writeFileSync(
     html,
@@ -429,7 +429,8 @@ async function main() {
   }
 }
 
-main().catch((error) => {
+// Run only when this file is the script, so the trials script can reuse the helpers above.
+if (process.argv[1]?.endsWith("capture-looks.ts")) main().catch((error) => {
   console.error("LOOKS_CAPTURE_FAILED:", error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });

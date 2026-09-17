@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { globSync, readFileSync } from "node:fs";
 import { contrastRatio, NON_TEXT_CONTRAST_MINIMUM, parseHex, relativeLuminance, TEXT_CONTRAST_MINIMUM } from "../src/contrast.js";
-import { COLOURS, CONTROL_COLOURS, GROUNDS, LOOKS, TEXT_COLOURS, type Appearance, type LookColours } from "../src/design-tokens.js";
+import { COLOURS, CONTROL_COLOURS, GROUNDS, LOOKS, NIGHT_SUN_TRIALS, TEXT_COLOURS, type Appearance, type LookColours } from "../src/design-tokens.js";
 
 /**
  * The three looks of the laboratory are held to the same measurements as the product's one look, and to the method of
@@ -258,4 +258,27 @@ test("the page without an account has one action in its body, and the door is a 
   assert.equal((source.match(/className=\{PRIMARY_BUTTON\}/g) ?? []).length, 1, "one action in the body");
   assert.match(source, /action=\{\s*<Link[^>]*className=\{INLINE_BUTTON\}>\s*\{LAB\.signInOrCreate\}/, "the door sits in the header");
   assert.doesNotMatch(source, /SECONDARY_BUTTON/);
+});
+
+test("the night suns tried for look 2 each read on the night grounds, carry words, and keep the day's hue", () => {
+  const sun = LOOKS.find((look) => look.id === "ink-sun");
+  assert.ok(sun);
+  assert.deepEqual(
+    NIGHT_SUN_TRIALS.map((trial) => trial.hex),
+    ["#FFC531", "#F7B51B", "#FFD053"],
+  );
+  const dayHue = oklch(sun.colours.light.accent).hue;
+  for (const trial of NIGHT_SUN_TRIALS) {
+    const palette = { ...sun.colours.dark, accent: trial.hex };
+    for (const [pair, ratio] of Object.entries(trial.ratios)) {
+      const [foreground, background] = pair.split("/");
+      const measured = contrastRatio(colourOf(palette, foreground), colourOf(palette, background));
+      assert.equal(measured.toFixed(2), ratio.toFixed(2), `${trial.id} ${pair}`);
+    }
+    assert.ok(contrastRatio(palette.onAccent, trial.hex) >= TEXT_CONTRAST_MINIMUM, `${trial.id} words on it`);
+    for (const ground of GROUNDS) assert.ok(contrastRatio(trial.hex, palette[ground]) >= NON_TEXT_CONTRAST_MINIMUM, `${trial.id} on the ${ground}`);
+    // The founder's rule: the hero hue does not change between the modes.
+    assert.ok(hueDistance(oklch(trial.hex).hue, dayHue) <= 5, `${trial.id} moved ${hueDistance(oklch(trial.hex).hue, dayHue).toFixed(1)} degrees`);
+  }
+  assert.equal(NIGHT_SUN_TRIALS[0].hex, sun.colours.light.accent, "the first candidate is the day's sun itself");
 });
