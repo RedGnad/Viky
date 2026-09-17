@@ -150,8 +150,8 @@ async function main() {
     { giftId, purpose: "reach", force: true },
     {
       ...live,
-      plain: async () => ({ username: standing.username, playerId: standing.playerId, rating: target + 6, ratedAt: now, rd: 42, best: target + 6 }),
-      attest: async () => ({ username: standing.username, playerId: standing.playerId, name: null, mode: cadence, rating: target + 6, ratedAt: now, rd: 42, observedAt: now + 5, nullifier: keccak256(toHex("fed reading")), proofs: [] }),
+      plain: async () => ({ username: standing.username, playerId: standing.playerId, status: standing.status, rating: target + 6, ratedAt: now, rd: 42, best: target + 6 }),
+      attest: async () => ({ username: standing.username, playerId: standing.playerId, status: standing.status, name: null, mode: cadence, rating: target + 6, ratedAt: now, rd: 42, observedAt: now + 5, nullifier: keccak256(toHex("fed reading")), proofs: [] }),
     },
   );
   console.log("STEP reach at target (fed reading)", JSON.stringify(reached));

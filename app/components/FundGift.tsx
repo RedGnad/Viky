@@ -790,6 +790,8 @@ export function FundGift() {
         const code = error instanceof ApiError ? error.code : "";
         if (code === "NO_RATING") setReading({ busy: false, cadenceRefusal: milestone.words.refusals.noRating(cadence.label) });
         else if (code === "NO_SUCH_PROFILE") setReading({ busy: false, nameRefusal: milestone.words.refusals.notFound });
+        // The source has closed the account: the name is the thing to change, so the refusal sits under the name (U1).
+        else if (code === "ACCOUNT_CLOSED") setReading({ busy: false, nameRefusal: milestone.words.refusals.closed });
         else if (code === "INVALID_USERNAME") setReading({ busy: false, nameRefusal: milestone.words.refusals.nameShape });
         else setReading({ busy: false, nameRefusal: milestone.words.refusals.unavailable });
       }

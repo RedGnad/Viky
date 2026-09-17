@@ -53,6 +53,7 @@ const MESSAGES: Readonly<Record<string, string>> = {
   PROFILE_NOT_FOUND: "Chess.com has no player by that name now. If the name was changed, give the new one.",
   NO_NAME: "Your Chess.com profile has no name yet. Put the code in your name, save, and try again.",
   NO_RATING: "There is no rating in this cadence on that account.",
+  ACCOUNT_CLOSED: "Chess.com has closed this account, so this gift can no longer be earned.",
   CODE_EXPIRED: "The code has expired. Ask for a new one.",
   CODE_NOT_IN_NAME: "The code is not in your Chess.com name yet. Add it, save, wait a moment, and try again.",
   OTHER_PLAYER: "That name belongs to another Chess.com player than the one this gift is for.",
@@ -98,6 +99,28 @@ export const RECENT_READING_SECONDS = 30 * 60;
 
 function refused(giftId: string, code: string, rating?: number, message?: string): MilestoneOutcome {
   return { kind: "refused", giftId, code, message: message ?? MESSAGES[code] ?? "This could not be recorded.", rating };
+}
+
+/**
+ * A closed account, written down where the gift's pages read it (U1). Nothing is sent to the contract: the gift is
+ * held until its deadline, and the whole amount goes back to the funder then, exactly as for a target not reached.
+ */
+async function accountClosed(giftId: string, username: string, deps: MilestoneReadingDeps): Promise<MilestoneOutcome> {
+  await deps.record({
+    giftId,
+    purpose: "look",
+    attested: false,
+    username,
+    playerId: null,
+    rating: null,
+    ratedAt: null,
+    rd: null,
+    observedAt: deps.now(),
+    nullifier: null,
+    outcome: "refused:ACCOUNT_CLOSED",
+    txHash: null,
+  });
+  return refused(giftId, "ACCOUNT_CLOSED");
 }
 
 function readingOf(giftId: string, purpose: ReadingPurpose, attested: AttestedChessReading, outcome: MilestoneReading["outcome"], txHash: Hex | null): MilestoneReading {
@@ -152,6 +175,7 @@ export async function runMilestoneReading(
     try {
       reading = await deps.attest({ username, mode, withName: true });
     } catch (error) {
+      if (error instanceof ChessReadError && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
       if (error instanceof ChessReadError) return refused(giftId, error.code);
       throw error;
     }
@@ -183,8 +207,10 @@ export async function runMilestoneReading(
       return { kind: "notYet", giftId, rating: standing.rating, target, attested: false };
     }
   } catch (error) {
-    // A name that no longer resolves is a fact about the account, and the proof would say the same thing.
+    // A name that no longer resolves, or an account Chess.com has closed, is a fact about the account: the proof would
+    // say the same thing, so no proof is paid for.
     if (error instanceof ChessReadError && error.code === "PROFILE_NOT_FOUND") return refused(giftId, "PROFILE_NOT_FOUND");
+    if (error instanceof ChessReadError && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
     if (!(error instanceof ChessReadError)) throw error;
   }
 
@@ -192,6 +218,7 @@ export async function runMilestoneReading(
   try {
     reading = await deps.attest({ username, mode, withName: false });
   } catch (error) {
+    if (error instanceof ChessReadError && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
     if (error instanceof ChessReadError) return refused(giftId, error.code);
     throw error;
   }

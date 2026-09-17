@@ -48,6 +48,8 @@ export type MilestoneCondition = Readonly<{
       targetShape: string;
       noCadence: string;
       settling: string;
+      /** Chess.com has closed the account (U1): the funder is refused before anything is paid. */
+      closed: string;
     }>;
     /** "When they reach 1500 in rapid". */
     goal: (target: number, cadence: string) => string;
@@ -62,6 +64,8 @@ export type MilestoneCondition = Readonly<{
     ifNot: string;
     /** Where, on the source's own site, the recipient puts the code. */
     codeSteps: string;
+    /** The source has closed the account (U1). The same sentence for both sides: it says the fact, and accuses nobody. */
+    accountClosed: string;
   }>;
 }>;
 
@@ -98,6 +102,7 @@ export const CHESS_MILESTONE: MilestoneCondition = {
       targetShape: "Write the rating as a number, like 1500.",
       noCadence: "Choose which rating.",
       settling: "This rating is still settling: they need a few more games first.",
+      closed: "Chess.com has closed this account, so nothing on it can be earned.",
     },
     goal: (target, cadence) => `${target} in ${cadence.toLowerCase()}`,
     durationLabel: "Days they have to reach it",
@@ -108,6 +113,7 @@ export const CHESS_MILESTONE: MilestoneCondition = {
     ifNot: "If they do not reach it in time, all of it comes back to you. Nothing is kept by anybody else.",
     // Chess.com's help centre, read 17 Sep 2026: Settings, then Profile, then the Details section, first and last name.
     codeSteps: "On Chess.com, open Settings, then Profile. In Details, add this code to your first name, and save:",
+    accountClosed: "Chess.com has closed this account, so this gift can no longer be earned.",
   },
 };
 

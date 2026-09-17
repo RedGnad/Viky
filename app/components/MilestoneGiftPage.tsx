@@ -179,7 +179,7 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
           {status.readAtMs !== null && nowMs !== 0 ? W.lastRead(momentInWords(status.readAtMs, nowMs)) : readerIsFunder ? W.notReadYetTheirs(source) : W.notReadYetYours(source)}
         </p>
         <p className={status.reached || status.finished ? "font-medium" : HELP}>{outcome}</p>
-        {status.phase === "climbing" && mine ? (
+        {status.phase === "climbing" && mine && !status.accountClosed ? (
           <button type="button" onClick={() => void check()} disabled={working} className={SECONDARY_BUTTON}>
             {busy === "checking" ? A.checking : A.checkNow}
           </button>
@@ -200,7 +200,7 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
         </button>
       ) : null}
 
-      {mine && status.phase === "opened" && !codeUsable ? (
+      {mine && status.phase === "opened" && !codeUsable && !status.accountClosed ? (
         <section className={CARD}>
           <h2 className={TITLE}>{A.connectTitle(source)}</h2>
           {account.username ? <p className={BODY}>{A.givenName(source, account.username)}</p> : null}
@@ -213,7 +213,7 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
         </section>
       ) : null}
 
-      {mine && status.phase === "opened" && codeUsable && account.username ? (
+      {mine && status.phase === "opened" && codeUsable && account.username && !status.accountClosed ? (
         <section className={CARD}>
           <h2 className={TITLE}>{A.proveTitle(account.username)}</h2>
           <p className={BODY}>{milestone?.words.codeSteps}</p>
@@ -227,7 +227,9 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
         </section>
       ) : null}
 
-      {readerIsFunder && status.phase === "opened" ? <p className={BODY}>{A.theirsNotConnected}</p> : null}
+      {/* The source has closed the account (U1): nothing can be connected or read, and no gesture is offered that would be refused. */}
+      {status.accountClosed && !status.finished ? <p className="font-medium">{milestone?.words.accountClosed}</p> : null}
+      {readerIsFunder && status.phase === "opened" && !status.accountClosed ? <p className={BODY}>{A.theirsNotConnected}</p> : null}
       {status.phase === "startTooHigh" && status.startReading !== null ? (
         <p className={BODY}>{mine ? A.startTooHighMine(status.startReading, status.target, funder) : A.startTooHighTheirs(status.startReading, status.target, recipient)}</p>
       ) : null}

@@ -1,4 +1,4 @@
-import { CHESS_USER_AGENT, chessProfileUrl, chessRatingPattern, chessStatsUrl, isValidChessUsername, type ChessMode } from "./chess-com";
+import { CHESS_USER_AGENT, chessProfileUrl, chessRatingPattern, chessStatsUrl, chessStatusPattern, isValidChessUsername, type ChessMode } from "./chess-com";
 
 /**
  * The public pages Viky is allowed to read, and nothing else. Browser safe, and shared by the app and the
@@ -45,6 +45,9 @@ export const DUOLINGO_PROFILE: AttestedSource = {
  * `name` is the field a person can edit, which is where a binding code goes, exactly as on Duolingo. Chess.com leaves
  * `name` out of the answer entirely when the person never filled it in (measured on 17 Sep 2026 on foo, bar and
  * test123), so this reading refuses a profile without one, which is the right answer for a binding: no name, no code.
+ *
+ * `status` is read with them, on this reading and on every later one (U1): it is where Chess.com publishes that it has
+ * closed an account, and a closed account can neither be bound nor reach a target here.
  */
 export const CHESS_PROFILE: AttestedSource = {
   id: "chess-profile",
@@ -56,12 +59,14 @@ export const CHESS_PROFILE: AttestedSource = {
     { type: "regex", value: '"player_id":(?<playerId>\\d+)' },
     { type: "regex", value: '"username":"(?<username>[^"]+)"' },
     { type: "regex", value: '"name":"(?<name>[^"]*)"' },
+    { type: "regex", value: chessStatusPattern() },
   ],
 };
 
 /**
- * The same page for every later reading, without the name: who this username is today, whether or not they ever
- * filled in a name. Read beside each rating, because the ratings page carries no identity of its own.
+ * The same page for every later reading, without the name: who this username is today, what Chess.com says of the
+ * account, whether or not they ever filled in a name. Read beside each rating, because the ratings page carries no
+ * identity of its own.
  */
 export const CHESS_PLAYER: AttestedSource = {
   id: "chess-player",
@@ -72,6 +77,7 @@ export const CHESS_PLAYER: AttestedSource = {
   matches: [
     { type: "regex", value: '"player_id":(?<playerId>\\d+)' },
     { type: "regex", value: '"username":"(?<username>[^"]+)"' },
+    { type: "regex", value: chessStatusPattern() },
   ],
 };
 

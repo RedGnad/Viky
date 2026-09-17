@@ -167,6 +167,16 @@ export async function latestRating(giftId: string): Promise<MilestoneReading | n
   return rows[0] ? toReading(rows[0]) : null;
 }
 
+/**
+ * The last reading of any kind, refusals included, which is what says whether Chess.com has closed the account (U1).
+ * `latestRating` cannot answer that: a closed account has no rating to record.
+ */
+export async function lastReading(giftId: string): Promise<MilestoneReading | null> {
+  const rows = await sql()`
+    SELECT * FROM viky_milestone_readings WHERE gift_id = ${giftId} ORDER BY observed_at DESC, id DESC LIMIT 1`;
+  return rows[0] ? toReading(rows[0]) : null;
+}
+
 /** The readings that moved something on the contract, oldest first, for the judges page. */
 export async function attestedReadings(giftId: string): Promise<MilestoneReading[]> {
   const rows = await sql()`
