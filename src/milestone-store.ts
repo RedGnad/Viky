@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import type { Hex } from "viem";
+import { databaseUrl } from "./database-guard";
 import type { SqlExecutor } from "./proof-session-store";
 
 /**
@@ -52,9 +53,7 @@ export function configureMilestoneStore(custom: SqlExecutor | undefined): void {
 
 function sql(): SqlExecutor {
   if (executor) return executor;
-  const url = process.env.DATABASE_URL?.trim();
-  if (!url) throw new Error("DATABASE_URL is not configured");
-  return neon(url) as unknown as SqlExecutor;
+  return neon(databaseUrl()) as unknown as SqlExecutor;
 }
 
 export async function ensureMilestoneSchema(): Promise<void> {
