@@ -199,24 +199,34 @@ built until it is decided.
    with an error, so its link, the only place the old key was shown, never left the function. Recovery alone, keeping
    the order, cannot give the link back: the key exists only in the function's memory once the relay has returned.
 
-## The local database
+## The test database
 
-Until 17 Sep 2026 `.env.local` named the production database: `vercel env pull` writes the Development environment,
-and on Vercel the Development and Preview environments carry the production URL. Development is to name the `local`
-branch once it exists, so a pull never brings production back; until then a pull that does is stopped by the guard. A server started on this machine,
-and the capture run's four servers, read real gifts and could have written to them. Two things now keep that from
-happening:
+Until 17 Sep 2026 one database served everything. `.env.local` named production, because `vercel env pull` writes the
+Development environment and the three Vercel environments shared a single `DATABASE_URL`. A server started on this
+machine, the capture run's four servers, and every preview deployment of every test branch read real gifts and could
+have written to them. Three things now keep that from happening:
 
-- **A Neon branch for local work and the capture runs**, named `local`, in the same Neon project. `.env.local` names
-  that branch and never production. A branch has its own endpoint, so its host is not production's.
-- **A guard.** A Next.js server outside a running Vercel deployment stops at start if its database is production's
-  (`instrumentation.ts`), and every script refuses it on load (`src/load-env.ts`), unless the command sets
+- **A Neon branch**, named `local`, in the same Neon project, made schema-only on 17 Sep 2026 and migrated: it holds
+  the tables and no rows. A branch has its own endpoint, so its host is not production's.
+- **Three separate values in Vercel.** `DATABASE_URL` and `DATABASE_URL_UNPOOLED` are now declared once per
+  environment: Production names production, Preview and Development name the `local` branch. Removing a variable for
+  one environment removes it for all three (the CLI does not narrow), so the order is: pull production to a file, remove,
+  add production back from that file, then add the other two. Check the result with `vercel env ls`: three rows per
+  name, one environment each. Preview and Production are stored as secrets, which a pull cannot read back, so the
+  proof that preview reads the branch is a preview deployment answering that gift 1 does not exist.
+- **A guard.** Only a running production deployment may use the production database. A Next.js server stops at start
+  otherwise (`instrumentation.ts`), and every script refuses on load (`src/load-env.ts`), unless the command sets
   `VIKY_ALLOW_PRODUCTION_DATABASE=1`. A running deployment is recognised by `VERCEL=1` together with `VERCEL_REGION`,
-  which Vercel sets at runtime only; a pulled env file carries `VERCEL=1` and no region, so it is not mistaken for one.
-  Only a hash of the production host is in the repository.
+  which Vercel sets at runtime only, and `VERCEL_ENV=production`: a pulled env file carries `VERCEL=1` and no region,
+  and a preview deployment carries a region and `VERCEL_ENV=preview`. Only a hash of the production host is in the
+  repository.
 
-Until the branch exists, `.env.local` has no database at all: pages and the capture runs work, and a route that needs
-the database answers that it is not configured.
+The guard is the part that holds without anybody remembering. The Neon integration rewrites its variables when it is
+reconnected, and the day it puts production back into Preview, a preview deployment refuses to start rather than write
+into real gifts.
+
+The other variables the Neon integration wrote (`POSTGRES_*`, `PG*`) still name production in all three environments.
+No code reads them: the stores connect through `databaseUrl()`, which reads `DATABASE_URL` alone.
 
 ## Test accounts in production
 
@@ -243,6 +253,8 @@ offered a gift: each stopped on the check, with "Not now".
 | `0xD304A192B1b6389954b7079A6D5cCF783C9950eA` | 17 Sep 2026, 15:54 UTC | D87 deployment check, 390x844 day |
 | `0x6e9A0A7f84824FA16604e1A18F587E22EC50FF41` | 17 Sep 2026, 15:55 UTC | D87 deployment check, 1440x900 night |
 | `0x7a356970252fbf027a6196A041A5674E51E7C5E1` | 17 Sep 2026, 15:53 UTC | D87 check of the creation path: a throwaway key with no money, signed in through the challenge route; it left one row in `viky_creations`, abandoned, nonce `0x7fd26be5…`, and nothing on chain |
+| `0xaF04621441F940B468ca6f9aDb21fb2205Ef01C7` | 17 Sep 2026, 17:03 UTC | database guard deployment check, 390x844 day |
+| `0x011c3B117Ac05bF0a5B8A969D24B90c2c553b8F0` | 17 Sep 2026, 17:04 UTC | database guard deployment check, 1440x900 night |
 
 The row `0xb12e0c72209bd4becfdafa96a8f3e7ebc93b8376`, euros, 02:56 UTC the same day, was not written by a check and
 is not listed here.

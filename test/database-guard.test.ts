@@ -26,18 +26,34 @@ test("a local run with no database, or another database, goes ahead", () => {
   assert.throws(() => databaseUrl({}), /DATABASE_URL is not configured/);
 });
 
-test("the production database is refused locally, and allowed on Vercel or when an operator command says so", () => {
+test("the production database is refused everywhere but a running production deployment", () => {
   // The production host is known only by its fingerprint, so a stand-in host plays it here.
   const standIn = "postgresql://u:p@ep-stand-in-000000-pooler.eu-central-1.aws.neon.tech/db";
   const production = String(databaseFingerprint(standIn));
+  const deployed = { VERCEL: "1", VERCEL_REGION: "cdg1" };
   assert.throws(() => assertDatabaseAllowed({ DATABASE_URL: standIn }, production), ProductionDatabaseRefused);
   assert.throws(() => assertDatabaseAllowed({ DATABASE_URL: standIn.replace("-pooler", "") }, production), ProductionDatabaseRefused, "pooled or direct");
   assert.throws(() => assertDatabaseAllowed({ DATABASE_URL: standIn, VERCEL: "0", VIKY_ALLOW_PRODUCTION_DATABASE: "yes" }, production), ProductionDatabaseRefused, "only the exact words open it");
-  // A running deployment has a region; a production env file pulled onto a laptop says VERCEL=1 and has none.
-  assert.doesNotThrow(() => assertDatabaseAllowed({ DATABASE_URL: standIn, VERCEL: "1", VERCEL_REGION: "cdg1" }, production));
+  assert.doesNotThrow(() => assertDatabaseAllowed({ DATABASE_URL: standIn, ...deployed, VERCEL_ENV: "production" }, production));
   assert.throws(() => assertDatabaseAllowed({ DATABASE_URL: standIn, VERCEL: "1", VERCEL_ENV: "production" }, production), ProductionDatabaseRefused, "a pulled env file is not a deployment");
   assert.doesNotThrow(() => assertDatabaseAllowed({ DATABASE_URL: standIn, VIKY_ALLOW_PRODUCTION_DATABASE: "1" }, production));
   assert.doesNotThrow(() => assertDatabaseAllowed({ DATABASE_URL: LOCAL }, production));
+});
+
+test("a preview or development deployment is refused the production database, however it got the URL", () => {
+  const standIn = "postgresql://u:p@ep-stand-in-000000-pooler.eu-central-1.aws.neon.tech/db";
+  const production = String(databaseFingerprint(standIn));
+  const deployed = { VERCEL: "1", VERCEL_REGION: "cdg1" };
+  // Every test branch a developer deploys used to write into real gifts, because the preview environment carried the
+  // production URL. The stored value is fixed now; this is the part that holds if the Neon integration writes it back.
+  for (const environment of ["preview", "development", undefined]) {
+    assert.throws(
+      () => assertDatabaseAllowed({ DATABASE_URL: standIn, ...deployed, VERCEL_ENV: environment }, production),
+      ProductionDatabaseRefused,
+      `a ${environment ?? "nameless"} deployment must not reach production`,
+    );
+    assert.doesNotThrow(() => assertDatabaseAllowed({ DATABASE_URL: LOCAL, ...deployed, VERCEL_ENV: environment }, production));
+  }
 });
 
 test("every store connects through the guard, a local server checks it at start, and scripts check it on load", () => {
