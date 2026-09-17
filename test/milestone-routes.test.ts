@@ -112,11 +112,10 @@ test("a rating still settling is refused before anything is relayed, to everybod
   const wasLive = CHESS_RATING.live;
   try {
     // Signed over the terms the route rebuilds, so the refusal met is the rating's and not the signature's.
-    const { privateKeyToAccount: account } = await import("viem/accounts");
     const { receiveAuthorizationMessage, receiveAuthorizationTypedData, toContractAuthorization } = await import("../src/ausd-authorization");
     const { milestoneFundingNonce, SHAPE_CLIMB, ZERO_SUBJECT } = await import("../src/milestone-protocol");
     const { NO_CONTACT_HASH } = await import("../src/contact-hash");
-    const signed = async (who: ReturnType<typeof account>) => {
+    const signed = async (who: typeof FUNDER) => {
       const params = {
         funder: who.address,
         refundTo: who.address,
