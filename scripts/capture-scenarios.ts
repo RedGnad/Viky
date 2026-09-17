@@ -391,7 +391,7 @@ export const SCENARIOS: Scenario[] = [
       await s.api("GET", /\/api\/chess\/standing\?/, ({ hit }) =>
         hit === 1
           ? { status: 404, body: { error: "No rating in that cadence yet.", code: "NO_RATING" } }
-          : { status: 200, body: { username: "lea_plays", mode: "rapid", rating: 1450, readAt: new Date().toISOString() } },
+          : { status: 200, body: { username: "lea_plays", mode: "rapid", rating: 1450, rd: 45, settled: true, readAt: new Date().toISOString() } },
         "GET /api/chess/standing, as Chess.com answers: no blitz rating, then 1450 in rapid",
       );
       await s.api(

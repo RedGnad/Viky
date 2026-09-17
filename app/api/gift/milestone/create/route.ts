@@ -138,6 +138,10 @@ export async function POST(request: Request) {
       throw new GiftApiError("SOURCE_UNAVAILABLE", `${milestone.words.refusals.unavailable} The gift was not made and nothing was taken.`, 503);
     }
     if (now.rating === null) throw new GiftApiError("NO_RATING", `${milestone.words.refusals.noRating(cadence.label)} Nothing was taken.`, 400);
+    // A rating that has not settled moves far more than ten points a game, so the climb signed would measure nothing (D89).
+    // An account that runs Viky may still make one while the condition is not live, for the rehearsal gift only.
+    const rehearsal = !milestone.condition.live && isOperator(auth.account);
+    if (!milestone.settled(now.rd) && !rehearsal) throw new GiftApiError("RATING_SETTLING", `${milestone.words.refusals.settling} Nothing was taken.`, 409);
     if (now.rating > maximumStart) {
       throw new GiftApiError(
         "STANDING_MOVED",

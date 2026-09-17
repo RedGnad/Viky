@@ -22,7 +22,9 @@ export type MilestoneShape = Readonly<{
 
 /**
  * A chess rating moves by roughly ten points a game, so ten absorbs the ordinary. Fifty is about five net
- * wins: below that the gift would pay for a normal afternoon.
+ * wins: below that the gift would pay for a normal afternoon. Measured on 17 Sep 2026 (D89): true of a rating whose RD
+ * is under 60, where the median change per game ran from 1 to 13 points, and false above it, which is why a cadence
+ * whose rating has not settled is refused (`ratingHasSettled` in src/chess-com.ts).
  */
 export const CHESS_RATING: MilestoneShape = { startMargin: 10, minimumClimb: 50, allOrNothing: false };
 

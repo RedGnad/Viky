@@ -8,6 +8,7 @@ import { ACCOUNT_AUTH_COOKIE_NAME, createAccountAuthChallenge, issueAccountAuthS
 import { POST as createPost } from "../app/api/gift/milestone/create/route";
 import { GET as standingGet } from "../app/api/chess/standing/route";
 import { GET as conditionsGet } from "../app/api/conditions/route";
+import { CHESS_RATING } from "../src/conditions";
 
 const ORIGIN = "https://viky.test";
 const ENV = { SESSION_SIGNING_SECRET: "test-account-session-secret-that-is-longer-than-32-bytes" };
@@ -94,4 +95,79 @@ test("the standing route refuses a cadence it does not know before reading anyth
   const response = await standingGet(new Request(`${ORIGIN}/api/chess/standing?username=erik&mode=chess960`));
   assert.equal(response.status, 400);
   assert.equal(((await response.json()) as { code: string }).code, "INVALID_MODE");
+});
+
+/** Chess.com's two pages for erik, as the plain read before any relay gets them, with the rapid RD given. */
+function chessPages(rapid: { rating: number; date: number; rd: number } | null): typeof fetch {
+  return (async (input: string | URL | Request) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url === "https://api.chess.com/pub/player/erik") return new Response(JSON.stringify({ player_id: 41, username: "erik", name: "Erik" }), { status: 200 });
+    if (url === "https://api.chess.com/pub/player/erik/stats") return new Response(JSON.stringify(rapid ? { chess_rapid: { last: rapid } } : { fide: 0 }), { status: 200 });
+    return new Response("{}", { status: 404 });
+  }) as typeof fetch;
+}
+
+test("a rating still settling is refused before anything is relayed, to everybody once the condition is live (D89)", async () => {
+  const realFetch = globalThis.fetch;
+  const wasLive = CHESS_RATING.live;
+  try {
+    // Signed over the terms the route rebuilds, so the refusal met is the rating's and not the signature's.
+    const { privateKeyToAccount: account } = await import("viem/accounts");
+    const { receiveAuthorizationMessage, receiveAuthorizationTypedData, toContractAuthorization } = await import("../src/ausd-authorization");
+    const { milestoneFundingNonce, SHAPE_CLIMB, ZERO_SUBJECT } = await import("../src/milestone-protocol");
+    const { NO_CONTACT_HASH } = await import("../src/contact-hash");
+    const signed = async (who: ReturnType<typeof account>) => {
+      const params = {
+        funder: who.address,
+        refundTo: who.address,
+        recipientContactHash: NO_CONTACT_HASH,
+        goalType: 1,
+        shape: SHAPE_CLIMB,
+        target: 1954n,
+        maximumStart: 1914n,
+        subject: ZERO_SUBJECT,
+        durationDays: 30,
+        amount: 25_000_000n,
+        salt: TERMS.salt as `0x${string}`,
+      };
+      process.env.MILESTONE_GIFT_ADDRESS = "0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e";
+      const message = receiveAuthorizationMessage({ funder: who.address, escrow: "0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e", amount: 25_000_000n, nonce: milestoneFundingNonce(params) });
+      const a = toContractAuthorization(message, await who.signTypedData(receiveAuthorizationTypedData(message)));
+      return { ...TERMS, refundTo: who.address, authorization: { validAfter: a.validAfter.toString(), validBefore: a.validBefore.toString(), nonce: a.nonce, v: a.v, r: a.r, s: a.s } };
+    };
+    delete process.env.MILESTONE_GIFT_ADDRESS;
+
+    // High RD, a new account's: refused by name to a funder once live.
+    (CHESS_RATING as { live: boolean }).live = true;
+    globalThis.fetch = chessPages({ rating: 1904, date: 1764957051, rd: 350 });
+    let response = await createPost(post(await signed(FUNDER), await cookieFor(FUNDER)));
+    let body = (await response.json()) as { code: string; error: string };
+    assert.equal(response.status, 409);
+    assert.equal(body.code, "RATING_SETTLING");
+    assert.match(body.error, /This rating is still settling: they need a few more games first\. Nothing was taken\./);
+    // Live, the operator is refused too: the exception is for the rehearsal, before anybody is offered it.
+    response = await createPost(post(await signed(OPERATOR), await cookieFor(OPERATOR)));
+    assert.equal(((await response.json()) as { code: string }).code, "RATING_SETTLING");
+
+    // Low RD goes past the rating and stops only where this test has no relayer.
+    globalThis.fetch = chessPages({ rating: 1904, date: 1764957051, rd: 42 });
+    response = await createPost(post(await signed(FUNDER), await cookieFor(FUNDER)));
+    body = (await response.json()) as { code: string; error: string };
+    assert.notEqual(body.code, "RATING_SETTLING");
+    assert.equal(body.code, "NOT_CONFIGURED");
+
+    // No block for this cadence: nothing to climb from.
+    globalThis.fetch = chessPages(null);
+    response = await createPost(post(await signed(FUNDER), await cookieFor(FUNDER)));
+    assert.equal(((await response.json()) as { code: string }).code, "NO_RATING");
+
+    // Not live: the operator's rehearsal gift may start from a rating still settling, and nobody else's.
+    (CHESS_RATING as { live: boolean }).live = false;
+    globalThis.fetch = chessPages({ rating: 1904, date: 1764957051, rd: 350 });
+    response = await createPost(post(await signed(OPERATOR), await cookieFor(OPERATOR)));
+    assert.equal(((await response.json()) as { code: string }).code, "NOT_CONFIGURED", "past the rating check, for the rehearsal only");
+  } finally {
+    globalThis.fetch = realFetch;
+    (CHESS_RATING as { live: boolean }).live = wasLive;
+  }
 });

@@ -78,6 +78,7 @@ function attested(rating: number, extra: Partial<AttestedChessReading> = {}): At
     mode: "rapid",
     rating,
     ratedAt: NOW - 7_200,
+    rd: 42,
     observedAt: NOW - 5,
     nullifier: `0x${"ee".repeat(32)}`,
     proofs: [],
@@ -94,7 +95,7 @@ function harness(record: GiftRecord, state: MilestoneState, overrides: Partial<M
     readState: async () => state,
     plain: async () => {
       calls.push("plain");
-      return { username: "erik", playerId: "41", rating: 1904, ratedAt: NOW - 7_200 };
+      return { username: "erik", playerId: "41", rating: 1904, ratedAt: NOW - 7_200, rd: 42 };
     },
     attest: async (input) => {
       calls.push(`attest:${input.withName ? "withName" : "rating"}`);
@@ -165,7 +166,7 @@ test("below the target the keeper only looks, and pays for no proof", async () =
 
 test("at the target the reading is attested, and the attested reading alone releases the gift", async () => {
   const run = harness(BOUND, CLIMBING, {
-    plain: async () => ({ username: "erik", playerId: "41", rating: 1960, ratedAt: NOW - 60 }),
+    plain: async () => ({ username: "erik", playerId: "41", rating: 1960, ratedAt: NOW - 60, rd: 42 }),
     attest: async () => attested(1960),
   });
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, run.deps);
@@ -175,7 +176,7 @@ test("at the target the reading is attested, and the attested reading alone rele
 
   // The plain read said yes and the attested one says no: the attested one decides, and nothing is sent.
   const disagree = harness(BOUND, CLIMBING, {
-    plain: async () => ({ username: "erik", playerId: "41", rating: 1960, ratedAt: NOW - 60 }),
+    plain: async () => ({ username: "erik", playerId: "41", rating: 1960, ratedAt: NOW - 60, rd: 42 }),
     attest: async () => attested(1950),
   });
   const short = await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, disagree.deps);
@@ -203,7 +204,7 @@ test("a reading that cannot be taken is a typed refusal the pass can hold on, an
 });
 
 test("another player under the same name never pays, and a renamed account is said as such", async () => {
-  const taken = harness(BOUND, CLIMBING, { plain: async () => ({ username: "erik", playerId: "999", rating: 2400, ratedAt: NOW }) });
+  const taken = harness(BOUND, CLIMBING, { plain: async () => ({ username: "erik", playerId: "999", rating: 2400, ratedAt: NOW, rd: 42 }) });
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, taken.deps);
   assert.equal(outcome.kind === "refused" && outcome.code, "OTHER_PLAYER");
   assert.deepEqual(taken.calls, [], "no proof is paid for and nothing is sent");
@@ -215,7 +216,7 @@ test("another player under the same name never pays, and a renamed account is sa
 
 test("the contract's refusal is recorded with the reading and said in the milestone's own words", async () => {
   const run = harness(BOUND, CLIMBING, {
-    plain: async () => ({ username: "erik", playerId: "41", rating: 1960, ratedAt: NOW }),
+    plain: async () => ({ username: "erik", playerId: "41", rating: 1960, ratedAt: NOW, rd: 42 }),
     attest: async () => attested(1960),
     prove: async () => Promise.reject(new RelayerError("REVERTED", "The contract refused: DeadlinePassed", "DeadlinePassed")),
   });

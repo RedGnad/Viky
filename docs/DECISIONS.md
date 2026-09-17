@@ -2490,3 +2490,42 @@ by the settling pass.
   No "having it or not" goal until the two questions D49 left open are settled. The judges page says what the owner
   can and cannot do, including the limit of "cannot move money": the evidence signer, which the owner can replace,
   attests who opened a gift and what a reading said.
+
+## D89, 17 Sep 2026: a rating that has not settled cannot carry a climb, measured before it was refused
+
+- Statement: the milestone terms assume a chess rating moves about ten points a game (a start margin of 10, a smallest
+  climb of 50). Chess.com's ratings page gives, beside each rating, "the Glicko RD value used to calculate ratings
+  changes" (its Published Data API page), and its help centre says a new player's rating "will fluctuate significantly
+  during your first few games" without giving any RD or number of games. On a new or rarely played account the
+  assumption fails: the climb signed measures nothing and the highest accepted start can be jumped in one game.
+- **What was measured, 17 Sep 2026.** `scripts/measure-chess-rd.ts`, 15:36 UTC: 47 profiles, the seven named in D86 and
+  forty spread over Luxembourg's public list of 5,094 players (joined from 2007 to 4 days before), every cadence with
+  an RD. For each profile and cadence, the RD the stats page gives now, and the absolute rating change over its last
+  rated games (up to twenty), read from the monthly archives, where each game carries the rating after it. The 72 pairs
+  with at least five such changes:
+
+  | RD now | pairs | median change per game | largest change seen |
+  |---|---|---|---|
+  | under 40 | 18 | 2 to 9 | 15 |
+  | 40 to 59 | 21 | 1 to 13 | 18 |
+  | 60 to 79 | 20 | 5 to 28 | 88 |
+  | 80 to 99 | 9 | 8 to 38 | 90 |
+  | 100 and over | 4 | 8 to 51 | 129 |
+
+  Accounts four days to three months old sat between RD 63 and 84 after twenty to forty games in a cadence; an account
+  with five rapid games showed 197. The RD is the one after the last game, so it is paired with the changes that led to
+  it, not with each change; the break at 60 is plain all the same. A second read at 15:45 UTC, 275 rating blocks of 109
+  profiles: 274 carry `rd`, always right after `date`; the one without it was a blitz block at 800.
+- Consequence, no threshold guessed: a rating has settled when its RD is under **60** (`CHESS_SETTLED_RD_BELOW`), the
+  band where the ten points hold. Both readings read the RD: the plain read returns it, the attested pattern requires it
+  (a block without one is not read), and every reading records it. The funder's step refuses a cadence that has not
+  settled, under the cadence: "This rating is still settling: they need a few more games first." The create route reads
+  again and refuses it before anything is relayed (`RATING_SETTLING`).
+- **Found on the way.** From 15:50 to at least 15:53 UTC, erik's ratings page answered 404 "An internal error has
+  occurred" while his profile answered 200 and hikaru's, magnuscarlsen's and john's ratings pages answered. The attested
+  read called any 404 "no such player", which would have told a recipient their account was gone. A 404 now means that
+  only on the profile; on the ratings page it is Chess.com failing (`FETCH_FAILED`), which the keeper holds on (D57).
+  The rehearsal reads any settled public rating (`REHEARSAL_PLAYER`, magnuscarlsen's bullet at RD 49 by default).
+- **The rehearsal gift.** The founder's new Chess.com account will start near RD 350. While the condition is not live,
+  an account that runs Viky may still make a gift from a rating that has not settled, and its step says so in a
+  sentence of its own; once `live` is true nobody may, operators included, and a test holds both.

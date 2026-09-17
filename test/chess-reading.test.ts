@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { classifyFetchFailure, type AttestedReadDeps } from "../src/attested-read";
 import { CHESS_PLAYER, CHESS_PROFILE, CHESS_RATINGS, type AttestedSource } from "../src/attested-sources";
-import { CHESS_MODES, chessRatingPattern, isValidChessUsername, playerOfProfile, ratingOfStats } from "../src/chess-com";
+import { CHESS_MODES, CHESS_SETTLED_RD_BELOW, chessRatingPattern, isValidChessUsername, playerOfProfile, ratingHasSettled, ratingOfStats } from "../src/chess-com";
 import { attestChessRating, ChessReadError, readChessStanding, type PlainFetch } from "../src/chess-reading";
 import { CHESS_RATING } from "../src/conditions";
 import type { ZkFetchProof } from "../src/duolingo-public";
@@ -32,7 +32,7 @@ function honest(overrides: Partial<Record<string, (source: AttestedSource, accou
       if (custom) return custom(source, account);
       if (source.id === CHESS_PROFILE.id) return proofOf(source.url(account), source.matches, { playerId: "41", username: "erik", name: "Erik KXQPRT" });
       if (source.id === CHESS_PLAYER.id) return proofOf(source.url(account), source.matches, { playerId: "41", username: "erik" });
-      return proofOf(source.url(account), source.matches, { rating: "1904", date: "1764957051" }, 1_789_653_330, `0x${"5b".repeat(32)}`);
+      return proofOf(source.url(account), source.matches, { rating: "1904", date: "1764957051", rd: "80" }, 1_789_653_330, `0x${"5b".repeat(32)}`);
     },
     verify: async () => true,
     attestors: [ATTESTOR],
@@ -45,6 +45,7 @@ test("an attested reading is two proofs, the player and the cadence's rating, an
   assert.equal(reading.name, "Erik KXQPRT");
   assert.equal(reading.rating, 1904);
   assert.equal(reading.observedAt, 1_789_653_330, "the contract judges the time the rating was read");
+  assert.equal(reading.rd, 80, "the RD is read with the rating, attested");
   assert.equal(reading.proofs.length, 2);
   const without = await attestChessRating({ username: "erik", mode: "rapid", withName: false }, honest());
   assert.equal(without.name, null);
@@ -102,15 +103,22 @@ test("zkFetch's refusals, as measured, become the right typed refusal", async ()
   assert.equal(await code(failing(noName, CHESS_PROFILE.id), true), "NO_NAME");
   assert.equal(await code(failing(noBlitz, CHESS_RATINGS.blitz.id), false, "blitz"), "NO_RATING");
   assert.equal(await code(failing("socket hang up", CHESS_RATINGS.rapid.id), false), "FETCH_FAILED");
+  // The ratings page answering 404 for a player whose profile answered: Chess.com's own failure, measured 17 Sep 2026.
+  assert.equal(await code(failing(notFound, CHESS_RATINGS.rapid.id), false), "FETCH_FAILED", "never 'no such player'");
 });
 
 test("the plain read answers who and where, and says which failure it met", async () => {
   const pages: Record<string, { status: number; body: unknown }> = {
     "https://api.chess.com/pub/player/erik": { status: 200, body: { player_id: 41, username: "erik", name: "Erik" } },
-    "https://api.chess.com/pub/player/erik/stats": { status: 200, body: { chess_daily: { last: { rating: 1502, date: 1789650995 } }, chess_rapid: { last: { rating: 1904, date: 1764957051 } } } },
+    "https://api.chess.com/pub/player/erik/stats": {
+      status: 200,
+      body: { chess_daily: { last: { rating: 1502, date: 1789650995, rd: 63 } }, chess_rapid: { last: { rating: 1904, date: 1764957051, rd: 80 } }, chess_bullet: { last: { rating: 1712, date: 1782332751, rd: 42 } } },
+    },
     "https://api.chess.com/pub/player/bar": { status: 200, body: { player_id: 347202211, username: "bar" } },
     "https://api.chess.com/pub/player/bar/stats": { status: 200, body: { chess_rapid: { last: { rating: 1705, date: 1775022187 } }, fide: 0 } },
     "https://api.chess.com/pub/player/nobody-zz9": { status: 404, body: { code: 0, message: "User not found." } },
+    "https://api.chess.com/pub/player/flaky": { status: 200, body: { player_id: 7, username: "flaky" } },
+    "https://api.chess.com/pub/player/flaky/stats": { status: 404, body: { code: 0, message: "An internal error has occurred. Please contact Chess.com Developer's Forum for further help" } },
   };
   const seen: string[] = [];
   const fetcher: PlainFetch = async (url, init) => {
@@ -118,10 +126,12 @@ test("the plain read answers who and where, and says which failure it met", asyn
     const page = pages[url] ?? { status: 503, body: null };
     return new Response(JSON.stringify(page.body), { status: page.status });
   };
-  assert.deepEqual(await readChessStanding("Erik", "rapid", fetcher), { username: "erik", playerId: "41", rating: 1904, ratedAt: 1764957051 });
-  assert.deepEqual(await readChessStanding("bar", "blitz", fetcher), { username: "bar", playerId: "347202211", rating: null, ratedAt: null });
+  assert.deepEqual(await readChessStanding("Erik", "rapid", fetcher), { username: "erik", playerId: "41", rating: 1904, ratedAt: 1764957051, rd: 80 });
+  assert.deepEqual(await readChessStanding("Erik", "bullet", fetcher), { username: "erik", playerId: "41", rating: 1712, ratedAt: 1782332751, rd: 42 });
+  assert.deepEqual(await readChessStanding("bar", "blitz", fetcher), { username: "bar", playerId: "347202211", rating: null, ratedAt: null, rd: null });
   await assert.rejects(readChessStanding("nobody-zz9", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "PROFILE_NOT_FOUND");
   await assert.rejects(readChessStanding("down", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "FETCH_FAILED");
+  await assert.rejects(readChessStanding("flaky", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "FETCH_FAILED", "a ratings page failing is not a player missing");
   await assert.rejects(readChessStanding("a b", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "INVALID_USERNAME");
   assert.ok(seen.every((agent) => agent.startsWith("Viky/")), "Chess.com answers a request without a user agent with a challenge page");
 });
@@ -143,4 +153,17 @@ test("the register's name check is Chess.com's own rule, and the milestone half 
   assert.deepEqual(CHESS_MILESTONE.cadences.map((cadence) => cadence.id), [...CHESS_MODES]);
   assert.equal(CHESS_MILESTONE.words.refusals.nameShape, check?.refusals.shape);
   assert.equal(CHESS_MILESTONE.words.refusals.notFound, check?.refusals.notFound);
+});
+
+test("a rating has settled below the RD measured on 17 Sep 2026, and not at it, nor without an RD (D89)", () => {
+  assert.equal(CHESS_SETTLED_RD_BELOW, 60);
+  // Low: hikaru's blitz, 31. High: a new account, 350 as Chess.com starts one; bar's rapid, 197. None: never played.
+  assert.equal(ratingHasSettled(31), true);
+  assert.equal(ratingHasSettled(59), true);
+  assert.equal(ratingHasSettled(60), false);
+  assert.equal(ratingHasSettled(197), false);
+  assert.equal(ratingHasSettled(350), false);
+  assert.equal(ratingHasSettled(null), false);
+  assert.equal(CHESS_MILESTONE.settled, ratingHasSettled, "the register refuses what the reading says has not settled");
+  assert.deepEqual(ratingOfStats({ chess_blitz: { last: { rating: 800, date: 1741705144 } } }, "blitz"), { rating: 800, ratedAt: 1741705144, rd: null }, "a block without an RD has none");
 });

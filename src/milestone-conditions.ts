@@ -1,4 +1,4 @@
-import { CHESS_MODES, chessGoalType, isValidChessUsername, type ChessMode } from "./chess-com";
+import { CHESS_MODES, chessGoalType, isValidChessUsername, ratingHasSettled, type ChessMode } from "./chess-com";
 import { CHESS_RATING, conditionById, type Condition } from "./conditions";
 import { CHESS_RATING as CHESS_RATING_SHAPE, type MilestoneShape } from "./milestone-terms";
 
@@ -24,6 +24,11 @@ export type MilestoneCondition = Readonly<{
   /** Viky's route that reads where a person stands today, plainly, before any money moves. */
   standingPath: string;
   validName: (value: string) => boolean;
+  /**
+   * Whether a reading has settled enough for the climb the funder signs to measure anything, from what the source gives
+   * beside the number (for Chess.com, its RD, D89). A funder is refused a cadence that has not.
+   */
+  settled: (rd: number | null) => boolean;
   duration: Readonly<{ min: number; max: number; suggested: number }>;
   words: Readonly<{
     cadenceQuestion: string;
@@ -40,6 +45,7 @@ export type MilestoneCondition = Readonly<{
       unavailable: string;
       targetShape: string;
       noCadence: string;
+      settling: string;
     }>;
     /** "When they reach 1500 in rapid". */
     goal: (target: number, cadence: string) => string;
@@ -73,6 +79,7 @@ export const CHESS_MILESTONE: MilestoneCondition = {
   cadences: CHESS_CADENCES,
   standingPath: "/api/chess/standing",
   validName: isValidChessUsername,
+  settled: ratingHasSettled,
   duration: { min: 1, max: 365, suggested: 30 },
   words: {
     cadenceQuestion: "Which rating?",
@@ -87,6 +94,7 @@ export const CHESS_MILESTONE: MilestoneCondition = {
       unavailable: "Chess.com is not answering. Try again in a moment.",
       targetShape: "Write the rating as a number, like 1500.",
       noCadence: "Choose which rating.",
+      settling: "This rating is still settling: they need a few more games first.",
     },
     goal: (target, cadence) => `${target} in ${cadence.toLowerCase()}`,
     durationLabel: "Days they have to reach it",

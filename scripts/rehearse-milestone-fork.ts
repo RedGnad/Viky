@@ -11,6 +11,7 @@ import { POST as withdrawRoute } from "../app/api/gift/withdraw/route";
 import { GET as mineRoute } from "../app/api/gifts/mine/route";
 import { ACCOUNT_AUTH_COOKIE_NAME, createAccountAuthChallenge, issueAccountAuthSession } from "../src/account-auth-server";
 import { receiveAuthorizationMessage, receiveAuthorizationTypedData, toContractAuthorization } from "../src/ausd-authorization";
+import { CHESS_SETTLED_RD_BELOW, chessGoalType, type ChessMode } from "../src/chess-com";
 import { attestChessRating, readChessStanding } from "../src/chess-reading";
 import { NO_CONTACT_HASH } from "../src/contact-hash";
 import { configureGiftStore, ensureGiftSchema } from "../src/gift-store";
@@ -76,8 +77,14 @@ async function main() {
   execSync(`cast send ${AUSD} "transfer(address,uint256)" ${funder.address} 20000000 --from ${POOL} --unlocked --rpc-url ${RPC}`, { stdio: "ignore" });
   console.log("STEP funder funded with 20 AUSD", funder.address);
 
-  const standing = await readChessStanding("erik", "rapid");
-  if (standing.rating === null) throw new Error("erik has no rapid rating any more; pick another public account");
+  // A settled rating (its RD under the threshold of D89), so the ordinary path runs and not an operator's exception. Any
+  // public account with one will do: Chess.com's ratings page of a single player can fail for a while (D89).
+  const player = process.env.REHEARSAL_PLAYER?.trim() || "magnuscarlsen";
+  const cadence = (process.env.REHEARSAL_CADENCE?.trim() || "bullet") as ChessMode;
+  const standing = await readChessStanding(player, cadence);
+  if (standing.rating === null || standing.rd === null || standing.rd >= CHESS_SETTLED_RD_BELOW) {
+    throw new Error(`${player}'s ${cadence} rating is not settled (RD ${standing.rd}); set REHEARSAL_PLAYER and REHEARSAL_CADENCE to another public account`);
+  }
   const target = standing.rating + CHESS_MILESTONE.shape.minimumClimb;
   const contract = getAddress(process.env.MILESTONE_GIFT_ADDRESS ?? "");
   const cookie = await cookieFor(funder);
@@ -86,7 +93,7 @@ async function main() {
       funder: funder.address,
       refundTo: funder.address,
       recipientContactHash: NO_CONTACT_HASH,
-      goalType: 1,
+      goalType: chessGoalType(cadence),
       shape: 0,
       target: BigInt(target),
       maximumStart: BigInt(startingCeiling(CHESS_MILESTONE.shape, standing.rating!, target)),
@@ -99,8 +106,8 @@ async function main() {
     const a = toContractAuthorization(message, await funder.signTypedData(receiveAuthorizationTypedData(message)));
     return {
       conditionId: "chess-rating",
-      username: "Erik",
-      cadence: "rapid",
+      username: player,
+      cadence,
       target,
       standing: standing.rating,
       standingReadAt: new Date().toISOString(),
@@ -108,7 +115,7 @@ async function main() {
       amount: amount.toString(),
       refundTo: funder.address,
       salt: params.salt,
-      recipientName: "Erik",
+      recipientName: "Magnus",
       funderName: "Sam",
       authorization: { validAfter: a.validAfter.toString(), validBefore: a.validBefore.toString(), nonce: a.nonce, v: a.v, r: a.r, s: a.s },
     };
@@ -130,7 +137,7 @@ async function main() {
   console.log("STEP code", response.status, JSON.stringify(coded));
 
   const live = liveMilestoneReadingDeps();
-  const started = await runMilestoneReading({ giftId, purpose: "start" }, { ...live, attest: async (input) => ({ ...(await attestChessRating(input)), name: `Erik ${coded.code}` }) });
+  const started = await runMilestoneReading({ giftId, purpose: "start" }, { ...live, attest: async (input) => ({ ...(await attestChessRating(input)), name: `Rehearsal ${coded.code}` }) });
   console.log("STEP start (real proofs)", JSON.stringify(started));
 
   response = await statusRoute(new Request(`${ORIGIN}/api/gift/${giftId}`, { headers: headers(recipientCookie) }), { params: Promise.resolve({ id: giftId }) });
@@ -143,8 +150,8 @@ async function main() {
     { giftId, purpose: "reach", force: true },
     {
       ...live,
-      plain: async () => ({ username: "erik", playerId: "41", rating: target + 6, ratedAt: now }),
-      attest: async () => ({ username: "erik", playerId: "41", name: null, mode: "rapid", rating: target + 6, ratedAt: now, observedAt: now + 5, nullifier: keccak256(toHex("fed reading")), proofs: [] }),
+      plain: async () => ({ username: standing.username, playerId: standing.playerId, rating: target + 6, ratedAt: now, rd: 42 }),
+      attest: async () => ({ username: standing.username, playerId: standing.playerId, name: null, mode: cadence, rating: target + 6, ratedAt: now, rd: 42, observedAt: now + 5, nullifier: keccak256(toHex("fed reading")), proofs: [] }),
     },
   );
   console.log("STEP reach at target (fed reading)", JSON.stringify(reached));

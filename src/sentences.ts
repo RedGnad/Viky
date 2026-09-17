@@ -400,6 +400,8 @@ export const MILESTONE_FUND = {
     smallest: (smallest: number) => `${smallest} or more, so the gift is worth earning.`,
     readAgain: "The name or the rating changed. Read their rating again.",
     readAt: (time: string) => `Read at ${time}.`,
+    settlingRehearsal:
+      "This rating is still settling, so one game can move it far more than this climb. Offered here only because this account runs Viky and nobody else is offered this yet: for a rehearsal gift, not for anyone's real one.",
   },
   amount: {
     title: "How much, and how long do they have?",

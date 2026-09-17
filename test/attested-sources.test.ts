@@ -60,12 +60,15 @@ test("the patterns match what those pages actually answer", () => {
   const chessStats =
     '{"chess_daily":{"last":{"rating":2239,"date":1770563021,"rd":103}},"chess960_daily":{"last":{"rating":1231,"date":1444458214,"rd":230}},"chess_rapid":{"last":{"rating":2838,"date":1786796329,"rd":44}},"chess_bullet":{"last":{"rating":3403,"date":1789235988,"rd":30}},"chess_blitz":{"last":{"rating":3410,"date":1789613471,"rd":31}}}';
   const read = (mode: keyof typeof CHESS_RATINGS) => new RegExp(CHESS_RATINGS[mode].matches[0].value).exec(chessStats)?.groups;
-  assert.deepEqual({ ...read("rapid") }, { rating: "2838", date: "1786796329" });
-  assert.deepEqual({ ...read("blitz") }, { rating: "3410", date: "1789613471" });
-  assert.deepEqual({ ...read("bullet") }, { rating: "3403", date: "1789235988" });
-  assert.deepEqual({ ...read("daily") }, { rating: "2239", date: "1770563021" }, "chess960_daily is another game");
+  assert.deepEqual({ ...read("rapid") }, { rating: "2838", date: "1786796329", rd: "44" });
+  assert.deepEqual({ ...read("blitz") }, { rating: "3410", date: "1789613471", rd: "31" });
+  assert.deepEqual({ ...read("bullet") }, { rating: "3403", date: "1789235988", rd: "30" });
+  assert.deepEqual({ ...read("daily") }, { rating: "2239", date: "1770563021", rd: "103" }, "chess960_daily is another game");
   const neverPlayedBlitz = '{"chess_rapid":{"last":{"rating":1705,"date":1775022187,"rd":197}},"fide":0}';
   assert.equal(new RegExp(CHESS_RATINGS.blitz.matches[0].value).test(neverPlayedBlitz), false, "a cadence never played has no rating");
+  // The one block of 275 read on 17 Sep 2026 that carried no RD: no RD, no reading (D89).
+  const noRd = '{"chess_blitz":{"last":{"rating":800,"date":1741705144}}}';
+  assert.equal(new RegExp(CHESS_RATINGS.blitz.matches[0].value).test(noRd), false, "a rating without its RD is not read");
 
   const duolingo = '{"users":[{"id":12345,"totalXp":8401,"username":"ama","name":"Ama","streak":3}]}';
   for (const m of DUOLINGO_PROFILE.matches) assert.match(duolingo, new RegExp(m.value), m.value);

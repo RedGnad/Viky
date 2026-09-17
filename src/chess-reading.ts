@@ -61,10 +61,11 @@ export async function readChessStanding(username: string, mode: ChessMode, fetch
   if (profile.status === 404) throw new ChessReadError("PROFILE_NOT_FOUND", "No Chess.com player goes by that name");
   const player = profile.status === 200 ? playerOfProfile(profile.body) : null;
   if (!player) throw new ChessReadError("FETCH_FAILED", `Chess.com answered ${profile.status}`);
+  // A ratings page that does not answer 200 is Chess.com failing, even as a 404: the profile just said the player exists.
   const stats = await readJson(chessStatsUrl(username), fetchImpl);
   if (stats.status !== 200 || !stats.body || typeof stats.body !== "object") throw new ChessReadError("FETCH_FAILED", `Chess.com answered ${stats.status}`);
   const rating = ratingOfStats(stats.body, mode);
-  return { username: player.username, playerId: player.playerId, rating: rating?.rating ?? null, ratedAt: rating?.ratedAt ?? null };
+  return { username: player.username, playerId: player.playerId, rating: rating?.rating ?? null, ratedAt: rating?.ratedAt ?? null, rd: rating?.rd ?? null };
 }
 
 // --- attested --------------------------------------------------------------------------------------------------
@@ -78,6 +79,8 @@ export type AttestedChessReading = Readonly<{
   rating: number;
   /** When the rated game behind this rating ended, as the page says it. Recorded, never judged by the contract. */
   ratedAt: number;
+  /** The rating's Glicko RD, as the page gives it: how far one game can move it. */
+  rd: number;
   /** The attestor's time of the ratings read: what the contract judges. */
   observedAt: number;
   /** From the ratings proof: one reading, one use. */
@@ -88,13 +91,18 @@ export type AttestedChessReading = Readonly<{
 /** How far apart the two halves of a reading may be taken. Seconds in practice; minutes would mean something is off. */
 const HALVES_APART_SECONDS = 5 * 60;
 
-function chessError(error: unknown, ratingPattern: string, namePattern: string): ChessReadError {
+function chessError(error: unknown, ratingPattern: string, namePattern: string, half: "profile" | "ratings"): ChessReadError {
   if (!(error instanceof AttestedReadError)) return new ChessReadError("FETCH_FAILED", "Chess.com could not be read right now", { cause: error });
   switch (error.code) {
     case "INVALID_ACCOUNT":
       return new ChessReadError("INVALID_USERNAME", "That is not a Chess.com name", { cause: error });
     case "NOT_FOUND":
-      return new ChessReadError("PROFILE_NOT_FOUND", "No Chess.com player goes by that name", { cause: error });
+      // Only the profile says who exists. The ratings page of a player whose profile was just read also answers 404, with
+      // "An internal error has occurred" (erik, 17 Sep 2026 15:50 UTC, while hikaru's answered): that is Chess.com failing,
+      // not the player missing, and it must never tell a recipient their account is gone.
+      return half === "profile"
+        ? new ChessReadError("PROFILE_NOT_FOUND", "No Chess.com player goes by that name", { cause: error })
+        : new ChessReadError("FETCH_FAILED", "Chess.com could not give the ratings right now", { cause: error });
     case "NO_MATCH":
       if (error.pattern === ratingPattern) return new ChessReadError("NO_RATING", "No rating in that cadence yet", { cause: error });
       if (error.pattern === namePattern) return new ChessReadError("NO_NAME", "That profile has no name", { cause: error });
@@ -116,9 +124,13 @@ export async function attestChessRating(
   let ratings: AttestedReading;
   try {
     profile = await attestedRead(profileSource.id, input.username, deps);
+  } catch (error) {
+    throw chessError(error, ratingPattern, namePattern, "profile");
+  }
+  try {
     ratings = await attestedRead(ratingSource.id, input.username, deps);
   } catch (error) {
-    throw chessError(error, ratingPattern, namePattern);
+    throw chessError(error, ratingPattern, namePattern, "ratings");
   }
   const playerId = profile.values.playerId ?? "";
   const username = profile.values.username ?? "";
@@ -127,7 +139,10 @@ export async function attestChessRating(
   if (username.toLowerCase() !== input.username.toLowerCase()) throw new ChessReadError("PROOF_MISMATCH", "The profile reading is about another name");
   const rating = Number(ratings.values.rating ?? "");
   const ratedAt = Number(ratings.values.date ?? "0");
-  if (!Number.isSafeInteger(rating) || rating <= 0 || !Number.isSafeInteger(ratedAt)) throw new ChessReadError("PROOF_INVALID", "The ratings reading is incomplete");
+  const rd = Number(ratings.values.rd ?? "");
+  if (!Number.isSafeInteger(rating) || rating <= 0 || !Number.isSafeInteger(ratedAt) || !Number.isSafeInteger(rd) || rd < 0) {
+    throw new ChessReadError("PROOF_INVALID", "The ratings reading is incomplete");
+  }
   if (Math.abs(ratings.observedAt - profile.observedAt) > HALVES_APART_SECONDS) throw new ChessReadError("PROOF_MISMATCH", "The two halves of the reading were taken too far apart");
   return {
     username,
@@ -136,6 +151,7 @@ export async function attestChessRating(
     mode: input.mode,
     rating,
     ratedAt,
+    rd,
     observedAt: ratings.observedAt,
     nullifier: ratings.nullifier,
     proofs: [profile.proof, ratings.proof],

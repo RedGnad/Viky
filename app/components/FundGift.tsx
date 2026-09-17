@@ -69,6 +69,8 @@ type Draft = Readonly<{
   standing: number | null;
   standingReadAt: string;
   standingFor: string;
+  /** Whether that reading had settled (D89); an unsettled one only ever reaches an operator's rehearsal gift. */
+  standingSettled?: boolean;
 }>;
 
 const EMPTY_DRAFT: Draft = {
@@ -761,11 +763,19 @@ export function FundGift() {
       setReading({ busy: true });
       try {
         const found = await readStanding(milestone.standingPath, typed, cadence.id);
+        // A rating still settling moves far more than a climb can measure (D89): refused, except to an account that runs
+        // Viky offering a condition that is not live yet, which is how the rehearsal gift is made, and it is told so.
+        if (!found.settled && condition.live) {
+          update({ standing: null, standingFor: "" });
+          setReading({ busy: false, cadenceRefusal: milestone.words.refusals.settling });
+          return;
+        }
         update({
           username: found.username,
           standing: found.rating,
           standingReadAt: found.readAt,
           standingFor: standingKey(found.username, cadence.id),
+          standingSettled: found.settled,
           target: String(smallestTarget(milestone.shape, found.rating)),
         });
         setReading({ busy: false });
@@ -831,6 +841,7 @@ export function FundGift() {
                 inputMode="numeric"
               />
               {climb.target !== null ? <p className={BODY}>{inPlainWords(milestone.shape, standing, climb.target)}</p> : null}
+              {draft.standingSettled === false ? <p className="font-medium">{M.detail.settlingRehearsal}</p> : null}
             </div>
           ) : null}
           <button type="submit" disabled={reading.busy || nameShape !== undefined || (standingFresh && climb.target === null)} className={PRIMARY_BUTTON}>
