@@ -45,6 +45,25 @@ ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS bound_at timestamptz;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS goal_profile_id text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS recipient_name text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS funder_name text;
+CREATE TABLE IF NOT EXISTS viky_creations (
+  nonce text PRIMARY KEY,
+  funder text NOT NULL,
+  contact_hash text NOT NULL,
+  goal_type smallint NOT NULL,
+  daily_target integer NOT NULL,
+  duration_days integer NOT NULL,
+  amount text NOT NULL,
+  goal_username text,
+  recipient_name text,
+  funder_name text,
+  claim_token_hash text NOT NULL,
+  status text NOT NULL DEFAULT 'pending',
+  tx_hash text,
+  gift_id text,
+  started_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS viky_creations_pending ON viky_creations (status, started_at);
 CREATE TABLE IF NOT EXISTS viky_days (
   gift_id text NOT NULL,
   day integer NOT NULL,
@@ -126,7 +145,9 @@ export async function saveGift(input: {
   giftId: string;
   funder: string;
   contactHash: Hex;
-  claimToken: string;
+  /** The link's key, hashed here; or its hash already, when a pending creation is completed later (D87). */
+  claimToken?: string;
+  claimTokenHash?: string;
   goalType: number;
   dailyTarget: number;
   durationDays: number;
@@ -140,11 +161,13 @@ export async function saveGift(input: {
   recipientName?: string;
   funderName?: string;
 }): Promise<void> {
+  const keyHash = input.claimTokenHash ?? (input.claimToken === undefined ? undefined : claimTokenHash(input.claimToken));
+  if (!keyHash) throw new Error("A gift is saved with its link's key or the key's hash");
   const inserted = await sql()`
     INSERT INTO viky_gifts
       (gift_id, funder, contact_hash, claim_token_hash, goal_type, daily_target, duration_days, amount, created_tx, escrow, goal_username, username_source,
        recipient_name, funder_name)
-    VALUES (${input.giftId}, ${input.funder.toLowerCase()}, ${input.contactHash}, ${claimTokenHash(input.claimToken)},
+    VALUES (${input.giftId}, ${input.funder.toLowerCase()}, ${input.contactHash}, ${keyHash},
             ${input.goalType}, ${input.dailyTarget}, ${input.durationDays}, ${input.amount.toString()}, ${input.createdTx},
             ${input.escrow.toLowerCase()}, ${input.goalUsername ?? null}, ${input.goalUsername ? "funder" : null},
             ${input.recipientName ?? null}, ${input.funderName ?? null})
@@ -264,6 +287,102 @@ export async function recordRelayed(input: { giftId: string; kind: RelayedKind; 
   await sql()`
     INSERT INTO viky_relayed (gift_id, kind, session_id, tx_hash, block_number)
     VALUES (${input.giftId}, ${input.kind}, ${input.sessionId ?? null}, ${input.txHash}, ${input.blockNumber === undefined ? null : input.blockNumber.toString()})`;
+}
+
+/**
+ * A gift being made, recorded before its money is relayed (D87): the authorization's nonce, which is the hash of the
+ * exact terms, names the creation; everything needed to record the gift is kept with it, and the transaction's hash
+ * is written the moment it is submitted.
+ */
+export type CreationRow = Readonly<{
+  nonce: Hex;
+  funder: string;
+  contactHash: Hex;
+  goalType: number;
+  dailyTarget: number;
+  durationDays: number;
+  amount: bigint;
+  goalUsername: string | null;
+  recipientName: string | null;
+  funderName: string | null;
+  claimTokenHash: string;
+  status: "pending" | "complete" | "abandoned";
+  txHash: Hex | null;
+  giftId: string | null;
+  startedAt: Date;
+}>;
+
+function toCreation(row: Record<string, unknown>): CreationRow {
+  const text = (value: unknown) => (value === null || value === undefined ? null : String(value));
+  const status = row.status === "complete" || row.status === "abandoned" ? row.status : "pending";
+  return {
+    nonce: String(row.nonce) as Hex,
+    funder: String(row.funder),
+    contactHash: String(row.contact_hash) as Hex,
+    goalType: Number(row.goal_type),
+    dailyTarget: Number(row.daily_target),
+    durationDays: Number(row.duration_days),
+    amount: BigInt(String(row.amount)),
+    goalUsername: text(row.goal_username),
+    recipientName: text(row.recipient_name),
+    funderName: text(row.funder_name),
+    claimTokenHash: String(row.claim_token_hash),
+    status,
+    txHash: text(row.tx_hash) as Hex | null,
+    giftId: text(row.gift_id),
+    startedAt: toDate(row.started_at) ?? new Date(0),
+  };
+}
+
+/** Records a creation before its relay, or finds the one already recorded under the same nonce. */
+export async function beginCreation(
+  input: Omit<CreationRow, "status" | "txHash" | "giftId" | "startedAt">,
+): Promise<{ inserted: true } | { inserted: false; existing: CreationRow }> {
+  const rows = await sql()`
+    INSERT INTO viky_creations (nonce, funder, contact_hash, goal_type, daily_target, duration_days, amount, goal_username, recipient_name, funder_name, claim_token_hash)
+    VALUES (${input.nonce.toLowerCase()}, ${input.funder.toLowerCase()}, ${input.contactHash}, ${input.goalType}, ${input.dailyTarget}, ${input.durationDays},
+            ${input.amount.toString()}, ${input.goalUsername}, ${input.recipientName}, ${input.funderName}, ${input.claimTokenHash})
+    ON CONFLICT (nonce) DO NOTHING
+    RETURNING nonce`;
+  if (rows.length > 0) return { inserted: true };
+  const existing = await loadCreation(input.nonce);
+  if (!existing) throw new Error(`Creation ${input.nonce} is neither new nor recorded`);
+  return { inserted: false, existing };
+}
+
+export async function loadCreation(nonce: Hex): Promise<CreationRow | null> {
+  const rows = await sql()`SELECT * FROM viky_creations WHERE nonce = ${nonce.toLowerCase()}`;
+  return rows.length === 0 ? null : toCreation(rows[0]);
+}
+
+/** Takes a pending creation over for a new attempt, with the key of this attempt; only if nobody took it since. */
+export async function restartCreation(nonce: Hex, claimTokenHashOfAttempt: string, previousStart: Date): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE viky_creations SET started_at = now(), tx_hash = NULL, status = 'pending', claim_token_hash = ${claimTokenHashOfAttempt}
+     WHERE nonce = ${nonce.toLowerCase()} AND status IN ('pending', 'abandoned')
+       AND date_trunc('milliseconds', started_at) = date_trunc('milliseconds', ${previousStart.toISOString()}::timestamptz)
+     RETURNING nonce`;
+  return rows.length === 1;
+}
+
+export async function markCreationSubmitted(nonce: Hex, txHash: Hex): Promise<void> {
+  await sql()`UPDATE viky_creations SET tx_hash = ${txHash} WHERE nonce = ${nonce.toLowerCase()} AND status = 'pending'`;
+}
+
+export async function completeCreation(nonce: Hex, giftId: string, txHash: Hex, claimTokenHashOfLink: string): Promise<void> {
+  await sql()`
+    UPDATE viky_creations SET status = 'complete', gift_id = ${giftId}, tx_hash = ${txHash}, claim_token_hash = ${claimTokenHashOfLink}
+     WHERE nonce = ${nonce.toLowerCase()}`;
+}
+
+export async function abandonCreation(nonce: Hex): Promise<void> {
+  await sql()`UPDATE viky_creations SET status = 'abandoned' WHERE nonce = ${nonce.toLowerCase()} AND status = 'pending'`;
+}
+
+/** Creations still pending that started before this moment, oldest first. */
+export async function loadPendingCreations(startedBefore: Date): Promise<CreationRow[]> {
+  const rows = await sql()`SELECT * FROM viky_creations WHERE status = 'pending' AND started_at < ${startedBefore.toISOString()} ORDER BY started_at`;
+  return rows.map(toCreation);
 }
 
 /**

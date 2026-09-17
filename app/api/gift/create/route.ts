@@ -8,8 +8,8 @@ import { DuolingoProfileError, resolvePublicDuolingoProfile } from "@/src/duolin
 import { giftNameProblem, tidyGiftName } from "@/src/gift-names";
 import { fundingNonce, type GiftParams } from "@/src/gift-attestation";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
-import { relayCreateGift } from "@/src/gift-relay";
-import { newClaimToken, saveGift } from "@/src/gift-store";
+import { makeGift } from "@/src/gift-creation";
+import { liveCreationDeps } from "@/src/gift-creation-live";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
@@ -114,31 +114,27 @@ export async function POST(request: Request) {
       }
     }
 
-    const created = await relayCreateGift(params, {
-      validAfter: BigInt(String(a.validAfter ?? "0")),
-      validBefore: BigInt(String(a.validBefore ?? "0")),
-      nonce: String(a.nonce) as Hex,
-      v: Number(a.v),
-      r: String(a.r) as Hex,
-      s: String(a.s) as Hex,
-    });
-
-    const claimToken = newClaimToken();
-    await saveGift({
-      giftId: created.giftId,
-      funder: params.funder,
-      contactHash: params.recipientContactHash,
-      claimToken,
-      goalType,
-      dailyTarget,
-      durationDays,
-      amount,
-      createdTx: created.hash,
-      escrow: created.escrow,
-      goalUsername: duolingoUsername,
-      recipientName,
-      funderName,
-    });
+    // Recorded before the money moves, relayed, then recorded as a gift (D87): a failure between the relay and the
+    // record leaves a pending creation that a retry of these terms, or the keeper's pass, completes.
+    const created = await makeGift(
+      {
+        params,
+        nonce: String(a.nonce) as Hex,
+        authorization: {
+          validAfter: BigInt(String(a.validAfter ?? "0")),
+          validBefore: BigInt(String(a.validBefore ?? "0")),
+          nonce: String(a.nonce) as Hex,
+          v: Number(a.v),
+          r: String(a.r) as Hex,
+          s: String(a.s) as Hex,
+        },
+        goalUsername: duolingoUsername,
+        recipientName,
+        funderName,
+      },
+      liveCreationDeps(),
+    );
+    const claimToken = created.claimToken;
 
     const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin;
     return NextResponse.json(

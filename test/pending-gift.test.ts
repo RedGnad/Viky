@@ -63,8 +63,8 @@ test("the terms kept are exactly the terms the gift is made from", () => {
   for (const field of ["recipientName: recipient", "funderName: funder", "conditionId: condition?.id", "username: draft.username.trim()", "dollars", "days: draft.days", "target: draft.target"]) {
     assert.ok(kept.includes(field), `the device keeps ${field}`);
   }
-  const call = fund.slice(fund.indexOf("await createGift({"), fund.indexOf("const record: Made"));
-  assert.match(call, /duolingoUsername: draft\.username\.trim\(\) \|\| undefined/);
+  const call = fund.slice(fund.indexOf("await prepareGift({"), fund.indexOf("const record: Made"));
+  assert.match(call, /duolingoUsername: terms\.username \|\| undefined/);
   assert.match(call, /recipientName: recipient/);
   assert.match(call, /funderName: funder/);
   assert.match(call, /goalType: condition\.goalType/);

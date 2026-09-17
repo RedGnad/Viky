@@ -2405,3 +2405,29 @@ answer yet; the capture run draws it from simulated data until a milestone condi
 it after the confirmation closes, and keeping it is a decision about the bearer risk. The refusal of an expired code has
 no test of its own.
 
+## D87, 17 Sep 2026: a gift is recorded before its money moves
+
+**The hole.** Making a gift relayed the money, then recorded the gift. A record that failed between the two (the
+database refusing, a function cut off) left a funded gift with no row: no link that works, since a claim looks the key's
+hash up in `viky_gifts`, and no pass that would send it back after fourteen days, since the pass reads gifts from the
+same table. Found while writing D86, listed in `docs/OPERATIONS.md`, fix accepted by the founder.
+
+**The order now.** The creation is recorded first, pending, in `viky_creations`, under the authorization's nonce, the
+hash of the exact terms, which cannot be spent twice; everything needed to record the gift is kept with it. The relay
+writes the transaction's hash onto the row the moment it is submitted, before finality. Only then is the gift recorded
+and the creation marked complete. `src/gift-creation.ts` holds the order, with its dependencies injected, so each
+failure is tested without a chain or a database.
+
+**A retry.** The same signed request sent again finds its row instead of relaying twice: a complete creation answers
+`ALREADY_MADE`; a pending one with a transaction is completed from the chain's receipt and given a fresh key, since the
+attempt that failed ended in an error and its key was never shown; one still inside its two-minute lease answers
+`IN_PROGRESS`; one whose money moved with no transaction recorded answers `BEING_RECORDED`; one refused before anything
+was submitted is marked abandoned at once, so the same terms may go again. The funder's page keeps the request it signed
+for the tab and sends that same request on "Try again": signing again draws a new salt, which to the server is a new
+gift, and could pay for the same gift twice.
+
+**The keeper.** Every pass first completes the creations still pending past their lease, from their transaction's
+receipt, with the key hash of the attempt that made them: the gift is then in the funder's gifts and goes back after
+fourteen days unopened. A creation with nothing submitted is called abandoned after an hour if its authorization was
+never used; one whose authorization was used with no transaction recorded is reported for an operator.
+

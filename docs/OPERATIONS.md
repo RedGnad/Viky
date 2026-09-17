@@ -149,12 +149,17 @@ set -a && source .env.ops.local && set +a && pnpm backfill:days --dry-run
 set -a && source .env.ops.local && set +a && pnpm backfill:days
 ```
 
+## Before deploying the build of D87: the creations table
+
+`viky_creations` records a gift being made before its money moves (D87). The create route of that build writes it
+first, so the table must exist before the build serves anybody: `pnpm db:migrate`, then read the table back.
+
 ## Money paths to audit
 
 Each entry is a path where money can move while the record of it fails, with what to do about it. Nothing here is
 built until it is decided.
 
-1. **Making a gift relays the money, then records the gift.** `app/api/gift/create/route.ts` calls `relayCreateGift`
+1. **Making a gift relays the money, then records the gift.** Decided and built, D87. `app/api/gift/create/route.ts` calls `relayCreateGift`
    and only then `saveGift`. If the save fails (the database refuses, times out, or the function is cut off), the gift
    is funded on chain and has no row: no claim link works, because a claim looks the key's hash up in `viky_gifts`, and
    the funder never sees the link. The money is not lost, since `refundUnearned` sends an unopened gift back after

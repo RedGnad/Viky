@@ -46,11 +46,25 @@ export function checkSourceName(path: string, name: string): Promise<{ username:
   return getJson(`${path}?username=${encodeURIComponent(name)}`);
 }
 
+/** The body of a creation request, signed once and sent as many times as it takes (D87). */
+export type GiftRequest = Readonly<{
+  duolingoUsername?: string;
+  recipientName?: string;
+  funderName?: string;
+  goalType: number;
+  dailyTarget: number;
+  durationDays: number;
+  amount: string;
+  refundTo: string;
+  salt: Hex;
+  authorization: { validAfter: string; validBefore: string; nonce: Hex; v: number; r: Hex; s: Hex };
+}>;
+
 /**
  * One passkey-derived signature: the EIP-3009 authorization whose nonce is the hash of these exact
  * terms. The server recomputes the nonce from the same inputs and refuses anything else.
  */
-export async function createGift(input: CreateGiftInput): Promise<CreatedGift> {
+export async function prepareGift(input: CreateGiftInput): Promise<GiftRequest> {
   const escrow = escrowAddressFromEnv();
   const funder = getAddress(input.account.address);
   const params: GiftParams = {
@@ -67,7 +81,7 @@ export async function createGift(input: CreateGiftInput): Promise<CreatedGift> {
   const message = receiveAuthorizationMessage({ funder, escrow, amount: input.amount, nonce: fundingNonce(params) });
   const signature = await input.account.signTypedData(receiveAuthorizationTypedData(message));
   const authorization = toContractAuthorization(message, signature);
-  return postJson<CreatedGift>("/api/gift/create", {
+  return {
     duolingoUsername: input.duolingoUsername,
     recipientName: input.recipientName,
     funderName: input.funderName,
@@ -85,7 +99,16 @@ export async function createGift(input: CreateGiftInput): Promise<CreatedGift> {
       r: authorization.r,
       s: authorization.s,
     },
-  });
+  };
+}
+
+/** Sends a signed creation. The same request sent again finds its creation on the server rather than paying twice. */
+export function submitGift(request: GiftRequest): Promise<CreatedGift> {
+  return postJson<CreatedGift>("/api/gift/create", request);
+}
+
+export async function createGift(input: CreateGiftInput): Promise<CreatedGift> {
+  return submitGift(await prepareGift(input));
 }
 
 /** The recipient's account for the public mode (D27); the code is only ever sent to the signed-in recipient. */

@@ -5,7 +5,7 @@ import { giftEscrowAbi } from "./gift-escrow-abi";
 import { settledDaysFromLogs } from "./day-record";
 import { recordRelayed, recordSettledDays, relayedForSession } from "./gift-store";
 import { loadAttestation } from "./proof-session-store";
-import { escrowAddress, relay, RelayerError, type RelayResult } from "./relayer";
+import { escrowAddress, relay, RelayerError, relayerClients, type RelayResult } from "./relayer";
 
 /**
  * The relayed operations of a gift, one function per contract entry point. Each submits with the
@@ -18,9 +18,9 @@ const abi = giftEscrowAbi as unknown as Abi;
 export type CreatedGift = Readonly<{ giftId: string; hash: Hex; blockNumber: bigint; escrow: Hex }>;
 
 /** New gifts are always created on the current contract; the record keeps which one. */
-export async function relayCreateGift(params: GiftParams, authorization: ContractAuthorization): Promise<CreatedGift> {
+export async function relayCreateGift(params: GiftParams, authorization: ContractAuthorization, onSubmitted?: (hash: Hex) => Promise<void>): Promise<CreatedGift> {
   const escrow = escrowAddress();
-  const result = await relay("createGift", [params, authorization], escrow);
+  const result = await relay("createGift", [params, authorization], escrow, undefined, onSubmitted);
   const giftId = eventArg(result, "GiftCreated", "giftId");
   await recordRelayed({ giftId, kind: "create", txHash: result.hash, blockNumber: result.receipt.blockNumber });
   return { giftId, hash: result.hash, blockNumber: result.receipt.blockNumber, escrow };
@@ -120,6 +120,25 @@ export async function relayRefund(giftId: string, escrow: Hex): Promise<RelayRes
   const result = await relay("refundUnearned", [giftId], escrow);
   await recordRelayed({ giftId, kind: "refund", txHash: result.hash, blockNumber: result.receipt.blockNumber });
   return result;
+}
+
+/**
+ * What a submitted creation came to, read back from the chain: the gift it made, a revert, or nothing yet. Used to
+ * complete a creation whose record failed after its relay (D87).
+ */
+export async function createdGiftOf(txHash: Hex): Promise<{ kind: "made"; giftId: string; escrow: Hex; blockNumber: bigint } | { kind: "reverted" } | { kind: "unknown" }> {
+  const client = relayerClients().publicClient;
+  let receipt;
+  try {
+    receipt = await client.getTransactionReceipt({ hash: txHash });
+  } catch {
+    return { kind: "unknown" };
+  }
+  if (receipt.status !== "success") return { kind: "reverted" };
+  const logs = parseEventLogs({ abi, logs: receipt.logs, eventName: "GiftCreated" });
+  const first = logs[0] as { args?: Record<string, unknown>; address?: string } | undefined;
+  if (!first?.args?.giftId) return { kind: "reverted" };
+  return { kind: "made", giftId: String(first.args.giftId), escrow: String(first.address) as Hex, blockNumber: receipt.blockNumber };
 }
 
 function eventArg(result: RelayResult, eventName: string, argument: string): string {
