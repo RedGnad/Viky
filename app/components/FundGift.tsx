@@ -8,8 +8,8 @@ import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { checkSourceName, prepareGift, submitGift, type CreatedGift } from "@/src/client/gift";
-import { createMilestoneGift, loadOfferedConditions, readStanding } from "@/src/client/milestone";
-import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY } from "@/src/gift-attempt";
+import { loadOfferedConditions, prepareMilestoneGift, readStanding, submitMilestoneGift } from "@/src/client/milestone";
+import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY, isMilestoneRequest } from "@/src/gift-attempt";
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
 import { conditionById, liveConditions, type Condition } from "@/src/conditions";
 import { cadenceOf, milestoneOf, type MilestoneCondition } from "@/src/milestone-conditions";
@@ -69,7 +69,7 @@ type Draft = Readonly<{
   standing: number | null;
   standingReadAt: string;
   standingFor: string;
-  /** Whether that reading had settled (D89); an unsettled one only ever reaches an operator's rehearsal gift. */
+  /** Whether that reading had settled (D90); an unsettled one only ever reaches an operator's rehearsal gift. */
   standingSettled?: boolean;
 }>;
 
@@ -376,15 +376,28 @@ export function FundGift() {
     const account = mera.currentAccount();
     if (!account) throw new Error(W.failures.signInFirst);
     if (!condition || amount.units === null || length.days === null) throw new Error(W.failures.other);
-    let result: CreatedGift;
-    if (milestone) {
+    // Signed once for these terms and sent again as it is on every retry, so the server finds the same creation and
+    // never pays for the gift twice (D87). A milestone's target and starting reading are part of its terms.
+    const terms = {
+      account: account.address,
+      username: draft.username.trim(),
+      recipientName: recipient,
+      funderName: funder,
+      goalType: milestone ? (cadence?.goalType ?? 0) : (condition.goalType ?? 0),
+      dailyTarget: milestone ? 0 : (daily.target ?? 0),
+      durationDays: length.days,
+      amount: amount.units.toString(),
+      ...(milestone ? { target: climb.target ?? 0, standing: draft.standing ?? 0 } : {}),
+    };
+    let request = attemptFor(readSession(GIFT_ATTEMPT_KEY), terms);
+    if (!request && milestone) {
       if (!cadence || draft.standing === null || climb.target === null) throw new Error(W.failures.other);
-      result = await createMilestoneGift({
+      request = await prepareMilestoneGift({
         account,
         milestone,
         cadenceGoalType: cadence.goalType,
         cadence: cadence.id,
-        username: draft.username.trim(),
+        username: terms.username,
         standing: draft.standing,
         standingReadAt: draft.standingReadAt,
         target: climb.target,
@@ -393,23 +406,10 @@ export function FundGift() {
         recipientName: recipient,
         funderName: funder,
       });
-    } else {
-    if (daily.target === null || condition.goalType === null) throw new Error(W.failures.other);
-    // Signed once for these terms and sent again as it is on every retry, so the server finds the same creation and
-    // never pays for the gift twice (D87).
-    const terms = {
-      account: account.address,
-      username: draft.username.trim(),
-      recipientName: recipient,
-      funderName: funder,
-      goalType: condition.goalType,
-      dailyTarget: daily.target,
-      durationDays: length.days,
-      amount: amount.units.toString(),
-    };
-    const request =
-      attemptFor(readSession(GIFT_ATTEMPT_KEY), terms) ??
-      (await prepareGift({
+    }
+    if (!request) {
+      if (daily.target === null || condition.goalType === null) throw new Error(W.failures.other);
+      request = await prepareGift({
         account,
         duolingoUsername: terms.username || undefined,
         recipientName: recipient,
@@ -418,16 +418,17 @@ export function FundGift() {
         dailyTarget: daily.target,
         durationDays: length.days,
         amount: amount.units,
-      }));
+      });
+    }
     writeSession(GIFT_ATTEMPT_KEY, { terms, request });
+    let result: CreatedGift;
     try {
-      result = await submitGift(request);
+      result = isMilestoneRequest(request) ? await submitMilestoneGift(request) : await submitGift(request);
     } catch (error) {
       if (error instanceof ApiError && forgetsAttempt(error.code)) writeSession(GIFT_ATTEMPT_KEY, null);
       throw error;
     }
     writeSession(GIFT_ATTEMPT_KEY, null);
-    }
     const record: Made = {
       giftId: result.giftId,
       claimUrl: result.claimUrl,
@@ -763,7 +764,7 @@ export function FundGift() {
       setReading({ busy: true });
       try {
         const found = await readStanding(milestone.standingPath, typed, cadence.id);
-        // A rating still settling moves far more than a climb can measure (D89): refused, except to an account that runs
+        // A rating still settling moves far more than a climb can measure (D90): refused, except to an account that runs
         // Viky offering a condition that is not live yet, which is how the rehearsal gift is made, and it is told so.
         if (!found.settled && condition.live) {
           update({ standing: null, standingFor: "" });

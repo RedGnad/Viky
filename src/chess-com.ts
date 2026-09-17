@@ -75,7 +75,7 @@ export function chessRatingPattern(mode: ChessMode): string {
  * The highest RD at which a rating moves by about ten points a game, which is what the milestone terms rest on
  * (src/milestone-terms.ts: a start margin of 10, a smallest climb of 50). "The Glicko RD value used to calculate
  * ratings changes", in Chess.com's words, and Chess.com publishes no RD above which a rating is still provisional, so
- * this is measured (DECISIONS.md D89, `scripts/measure-chess-rd.ts`): over the last twenty rated games of 72 profile
+ * this is measured (DECISIONS.md D90, `scripts/measure-chess-rd.ts`): over the last twenty rated games of 72 profile
  * and cadence pairs on 17 Sep 2026, below 60 the median change per game was 1 to 13 points and the largest 18; from
  * 60 to 79 the medians ran from 5 to 28 and the largest reached 88; above 80, 129.
  */

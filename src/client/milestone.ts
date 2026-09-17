@@ -28,11 +28,28 @@ export function loadOfferedConditions(): Promise<{ ids: string[]; preview: strin
   return getJson("/api/conditions");
 }
 
+/** The request a funder's page signs once and sends as it is on every retry (D87). */
+export type MilestoneGiftRequest = Readonly<{
+  conditionId: string;
+  username: string;
+  cadence: string;
+  target: number;
+  standing: number;
+  standingReadAt: string;
+  durationDays: number;
+  amount: string;
+  refundTo: string;
+  salt: Hex;
+  recipientName?: string;
+  funderName?: string;
+  authorization: { validAfter: string; validBefore: string; nonce: Hex; v: number; r: Hex; s: Hex };
+}>;
+
 /**
  * One passkey signature: the EIP-3009 authorization whose nonce is the hash of these exact terms, the target and the
  * highest start included. The server rebuilds both from the same inputs and refuses anything else.
  */
-export async function createMilestoneGift(input: {
+export async function prepareMilestoneGift(input: {
   account: LocalAccount;
   milestone: MilestoneCondition;
   cadenceGoalType: number;
@@ -45,7 +62,7 @@ export async function createMilestoneGift(input: {
   amount: bigint;
   recipientName?: string;
   funderName?: string;
-}): Promise<CreatedGift> {
+}): Promise<MilestoneGiftRequest> {
   const contract = milestoneAddressFromEnv();
   const funder = getAddress(input.account.address);
   const params: MilestoneParams = {
@@ -64,7 +81,7 @@ export async function createMilestoneGift(input: {
   const message = receiveAuthorizationMessage({ funder, escrow: contract, amount: input.amount, nonce: milestoneFundingNonce(params) });
   const signature = await input.account.signTypedData(receiveAuthorizationTypedData(message));
   const authorization = toContractAuthorization(message, signature);
-  return postJson<CreatedGift>("/api/gift/milestone/create", {
+  return {
     conditionId: input.milestone.condition.id,
     username: input.username,
     cadence: input.cadence,
@@ -85,7 +102,11 @@ export async function createMilestoneGift(input: {
       r: authorization.r,
       s: authorization.s,
     },
-  });
+  };
+}
+
+export function submitMilestoneGift(request: MilestoneGiftRequest): Promise<CreatedGift> {
+  return postJson<CreatedGift>("/api/gift/milestone/create", request);
 }
 
 /** What a reading did, as src/milestone-reading.ts types it. */

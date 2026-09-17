@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * the name on the step that describes the gift, before any account exists, so this needs no sign-in, and it reads the
  * same public pages the keeper reads. It answers the name as Chess.com spells it, the player's rating in that cadence,
  * and when it was read: that reading is what the funder's ceiling is built on and what the screen shows them. It also
- * answers the rating's RD and whether that has settled (D89): the screen refuses a cadence that has not, and the create
+ * answers the rating's RD and whether that has settled (D90): the screen refuses a cadence that has not, and the create
  * route refuses it again before anything is relayed.
  */
 export async function GET(request: Request) {

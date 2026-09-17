@@ -1,5 +1,7 @@
 import type { Hex } from "viem";
+import type { CreationLine } from "./gift-creation";
 import { loadAllGifts } from "./gift-store";
+import { completePendingMilestoneCreations } from "./milestone-creation";
 import { canExpire, milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
 import { MILESTONE_OURS_TO_FIX, runMilestoneReading, type MilestoneOutcome } from "./milestone-reading";
 import { relayExpire, relayMilestoneRefund } from "./milestone-relay";
@@ -21,7 +23,7 @@ import { escrowOf, RelayerError } from "./relayer";
  * reason about which of our failures were harmless.
  */
 
-export type MilestonePassLine = { giftId: string; step: "read" | "expire" | "refund"; result: string; hash?: string };
+export type MilestonePassLine = { giftId: string; step: "create" | "read" | "expire" | "refund"; result: string; hash?: string };
 
 export type MilestonePassDeps = {
   gifts: () => Promise<ReadonlyArray<{ giftId: string; escrow: Hex | null }>>;
@@ -30,6 +32,8 @@ export type MilestonePassDeps = {
   expire: (giftId: string, contract: Hex) => Promise<{ hash: string }>;
   refund: (giftId: string, contract: Hex) => Promise<{ hash: string }>;
   now: () => number;
+  /** Completes the milestone creations whose record failed after their money moved (D87). */
+  completeCreations?: () => Promise<readonly CreationLine[]>;
 };
 
 export function liveMilestonePassDeps(): MilestonePassDeps {
@@ -40,6 +44,7 @@ export function liveMilestonePassDeps(): MilestonePassDeps {
     expire: relayExpire,
     refund: relayMilestoneRefund,
     now: () => Math.floor(Date.now() / 1_000),
+    completeCreations: () => completePendingMilestoneCreations(),
   };
 }
 
@@ -70,6 +75,10 @@ async function attempt(giftId: string, step: "expire" | "refund", action: () => 
 
 export async function milestonePass(settle: boolean, deps: MilestonePassDeps = liveMilestonePassDeps()): Promise<MilestonePassLine[]> {
   const lines: MilestonePassLine[] = [];
+  // First, a milestone gift whose money moved and whose record failed becomes a gift, so this pass can see it (D87).
+  if (deps.completeCreations) {
+    for (const line of await deps.completeCreations()) lines.push({ giftId: line.giftId ?? `creation ${line.nonce.slice(0, 10)}`, step: "create", result: line.result });
+  }
   for (const record of await deps.gifts()) {
     try {
       lines.push(...(await passOne(record, settle, deps)));

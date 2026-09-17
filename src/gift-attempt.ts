@@ -1,4 +1,5 @@
 import type { GiftRequest } from "./client/gift";
+import type { MilestoneGiftRequest } from "./client/milestone";
 
 /**
  * The creation a funder's page last sent, kept for the tab so "Try again" sends the same signed request (D87).
@@ -21,9 +22,14 @@ export type AttemptTerms = Readonly<{
   dailyTarget: number;
   durationDays: number;
   amount: string;
+  /** A milestone's terms beyond those every gift has: its target and where they stood when it was chosen (C2). */
+  target?: number;
+  standing?: number;
 }>;
 
-export type KeptAttempt = Readonly<{ terms: AttemptTerms; request: GiftRequest }>;
+export type AnyGiftRequest = GiftRequest | MilestoneGiftRequest;
+
+export type KeptAttempt = Readonly<{ terms: AttemptTerms; request: AnyGiftRequest }>;
 
 function sameTerms(a: AttemptTerms, b: AttemptTerms): boolean {
   return (
@@ -34,12 +40,14 @@ function sameTerms(a: AttemptTerms, b: AttemptTerms): boolean {
     a.goalType === b.goalType &&
     a.dailyTarget === b.dailyTarget &&
     a.durationDays === b.durationDays &&
-    a.amount === b.amount
+    a.amount === b.amount &&
+    a.target === b.target &&
+    a.standing === b.standing
   );
 }
 
 /** The request kept for exactly these terms, or nothing: other terms, another account, or anything unreadable. */
-export function attemptFor(kept: unknown, terms: AttemptTerms): GiftRequest | undefined {
+export function attemptFor(kept: unknown, terms: AttemptTerms): AnyGiftRequest | undefined {
   if (!kept || typeof kept !== "object") return undefined;
   const value = kept as Partial<KeptAttempt>;
   if (!value.terms || !value.request || typeof value.request !== "object" || !value.request.authorization) return undefined;
@@ -54,4 +62,9 @@ export function attemptFor(kept: unknown, terms: AttemptTerms): GiftRequest | un
 export function forgetsAttempt(code: string | undefined): boolean {
   if (!code) return false;
   return !["IN_PROGRESS", "BEING_RECORDED", "SIGN_IN_REQUIRED", "RATE_LIMITED", "SOURCE_UNAVAILABLE", "QUOTE_UNAVAILABLE", "NOT_CONFIGURED"].includes(code);
+}
+
+/** Whether a kept request is a milestone gift's, which goes to its own route. */
+export function isMilestoneRequest(request: AnyGiftRequest): request is MilestoneGiftRequest {
+  return "conditionId" in request;
 }

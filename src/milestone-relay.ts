@@ -5,7 +5,7 @@ import { signMilestoneClaim, signMilestoneProof } from "./milestone-attestation"
 import { milestoneGasLimit, type MilestoneFunction } from "./milestone-gas";
 import { milestoneGiftAbi } from "./milestone-gift-abi";
 import { MILESTONE_ATTESTATION_TTL_SECONDS, type MilestoneParams, type MilestoneProofMessage } from "./milestone-protocol";
-import { relayCall, RelayerError, type RelayResult } from "./relayer";
+import { relayCall, RelayerError, relayerClients, type RelayResult } from "./relayer";
 
 /**
  * The relayed operations of a milestone gift, one function per entry point of `MilestoneGift`, as src/gift-relay.ts
@@ -22,8 +22,24 @@ export function milestoneAddress(): Hex {
   return getAddress(value);
 }
 
-function call(contract: Hex, functionName: MilestoneFunction, args: readonly unknown[]): Promise<RelayResult> {
-  return relayCall({ address: contract, abi, floor: milestoneGasLimit(functionName) }, functionName, args);
+function call(contract: Hex, functionName: MilestoneFunction, args: readonly unknown[], onSubmitted?: (hash: Hex) => Promise<void>): Promise<RelayResult> {
+  return relayCall({ address: contract, abi, floor: milestoneGasLimit(functionName) }, functionName, args, undefined, onSubmitted);
+}
+
+/** What a submitted milestone creation came to, read back from the chain, as `createdGiftOf` does for a daily one (D87). */
+export async function createdMilestoneOf(txHash: Hex): Promise<{ kind: "made"; giftId: string; escrow: Hex } | { kind: "reverted" } | { kind: "unknown" }> {
+  const client = relayerClients().publicClient;
+  let receipt;
+  try {
+    receipt = await client.getTransactionReceipt({ hash: txHash });
+  } catch {
+    return { kind: "unknown" };
+  }
+  if (receipt.status !== "success") return { kind: "reverted" };
+  const logs = parseEventLogs({ abi, logs: receipt.logs, eventName: "GiftCreated" });
+  const first = logs[0] as { args?: Record<string, unknown>; address?: string } | undefined;
+  if (!first?.args?.giftId) return { kind: "reverted" };
+  return { kind: "made", giftId: String(first.args.giftId), escrow: getAddress(String(first.address)) };
 }
 
 function eventOf(result: RelayResult, eventName: string): Record<string, unknown> | undefined {
@@ -33,9 +49,9 @@ function eventOf(result: RelayResult, eventName: string): Record<string, unknown
 
 export type CreatedMilestone = Readonly<{ giftId: string; hash: Hex; contract: Hex }>;
 
-export async function relayCreateMilestone(params: MilestoneParams, authorization: ContractAuthorization): Promise<CreatedMilestone> {
+export async function relayCreateMilestone(params: MilestoneParams, authorization: ContractAuthorization, onSubmitted?: (hash: Hex) => Promise<void>): Promise<CreatedMilestone> {
   const contract = milestoneAddress();
-  const result = await call(contract, "createGift", [params, authorization]);
+  const result = await call(contract, "createGift", [params, authorization], onSubmitted);
   const created = eventOf(result, "GiftCreated");
   if (!created?.giftId) throw new RelayerError("NOT_FINALISED", "The GiftCreated event was not found in the receipt");
   const giftId = String(created.giftId);

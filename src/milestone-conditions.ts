@@ -26,7 +26,7 @@ export type MilestoneCondition = Readonly<{
   validName: (value: string) => boolean;
   /**
    * Whether a reading has settled enough for the climb the funder signs to measure anything, from what the source gives
-   * beside the number (for Chess.com, its RD, D89). A funder is refused a cadence that has not.
+   * beside the number (for Chess.com, its RD, D90). A funder is refused a cadence that has not.
    */
   settled: (rd: number | null) => boolean;
   duration: Readonly<{ min: number; max: number; suggested: number }>;
