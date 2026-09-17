@@ -210,3 +210,312 @@ export const CARD = { borderWidth: 1 } as const;
  * for an icon and a label of one word.
  */
 export const NAV = { barHeight: 64, railWidth: 88, from: TWO_PANE_FROM } as const;
+
+/**
+ * The looks laboratory (the art direction brief of 17 Sep 2026, sections 3, 4 and 9): three looks, each a set of tokens
+ * laid over the same kit, rendered at /dev/looks on example data so the funder can choose on boards. Nothing here
+ * reaches a product screen: `COLOURS` above is still the one look the product wears, and app/globals.css still says
+ * only that. A look is drawn only inside the laboratory's own frame (app/dev/looks), which is off unless the design
+ * gallery is switched on (src/dev-access.ts, `galleryOpen`).
+ *
+ * The method is the same for all three (brief, section 3): a neutral ground with little chroma, a surface one tone off
+ * it, one ink and its faded tone, one accent reserved for the primary action, the active destination and a moment of
+ * success, and up to three secondary colours that live only inside the characters. Links are ink, underlined, in all
+ * three, so the accent as words is the ink itself.
+ *
+ * Every value is the brief's starting value, and every ratio below was measured on 17 Sep 2026 with the WCAG formula
+ * (`src/contrast.ts`): they reproduce the brief's own figures to the hundredth, so no value had to move. What the brief
+ * left open was chosen by measure and says so: the divider, the relief after dark, and the characters' ranges.
+ * `test/looks.test.ts` recomputes every ratio recorded here and fails if one stops being true.
+ */
+
+export type LookId = "paper-tomato" | "ink-sun" | "white-violet";
+
+/** The roles a look adds to the nine of `COLOURS`: the relief under a control, and what a character is made of. */
+export type LookColours = Readonly<{
+  background: string;
+  surface: string;
+  text: string;
+  muted: string;
+  accent: string;
+  onAccent: string;
+  accentText: string;
+  controlBorder: string;
+  divider: string;
+  /** The relief under a button, or null when the look has none. */
+  relief: string | null;
+  /** The short range of a look's characters, three and no more (brief, section 5). Never text, never a background. */
+  character1: string;
+  character2: string;
+  character3: string;
+  /** The eyes and mouth: the ink by day, the ground by night, dark on every character in both. */
+  face: string;
+  /** The pill under a character: this colour at `shadowOpacity`, a tint of the ink rather than a grey. */
+  shadow: string;
+  shadowOpacity: number;
+}>;
+
+export type Look = Readonly<{
+  id: LookId;
+  number: 1 | 2 | 3;
+  name: string;
+  intention: string;
+  colours: Readonly<Record<Appearance, LookColours>>;
+  /**
+   * What identifies the primary button. "ink" where the accent fill stands under 3:1 against a ground it sits on, so
+   * the ink outline does it (WCAG 1.4.11, as Cash App builds its green "to work with black text"); "fill" where the
+   * accent alone clears 3:1 on both grounds.
+   */
+  accentEdge: Readonly<Record<Appearance, "ink" | "fill">>;
+  /** How far the relief stands under a button, which is how far a button travels when it is pressed. 0 is no relief. */
+  reliefDepth: number;
+  /** The title face, the weight it is set in, and the display sizes that face needs to hold one short promise. */
+  type: Readonly<{
+    face: "bricolage" | "fredoka";
+    titleWeight: number;
+    display: Readonly<{ compact: Readonly<{ size: number; lineHeight: number }>; expanded: Readonly<{ size: number; lineHeight: number }> }>;
+  }>;
+  /** Every pair measured, as "foreground/background": ratio, to the hundredth, per appearance. */
+  ratios: Readonly<Record<Appearance, Readonly<Record<string, number>>>>;
+}>;
+
+/**
+ * The three characters' colours are rounder in the evening: the night values are a step less saturated, because "In
+ * dark environments, colors appear bright and saturated" (Apple). None of them is grey, none is the accent, and none is
+ * yellow, which is the accent of look 2 and the colour most likely to read as a character somebody else owns.
+ *
+ * The characters are not held to 3:1 against the ground: a day's state is always said in words beside it (rule D of
+ * the product structure), so a body never carries meaning alone. Its face is, against the body, and clears 7:1.
+ */
+export const LOOKS: readonly Look[] = [
+  {
+    id: "paper-tomato",
+    number: 1,
+    name: "Paper and tomato",
+    intention: "Direction 1 corrected by the method: the same warmth, on a neutral ground.",
+    colours: {
+      light: {
+        background: "#FBF7EF",
+        surface: "#FFFFFF",
+        text: "#2A0F24",
+        muted: "#6A5263",
+        accent: "#FF5A36",
+        onAccent: "#2A0F24",
+        accentText: "#2A0F24",
+        controlBorder: "#2A0F24",
+        /** Chosen by measure: 1.24:1 on the ground, a hairline that groups and never identifies. */
+        divider: "#E8DFCF",
+        relief: "#2A0F24",
+        /** Marigold for a day earned and the gift's box, sea for today, lavender for what is to come or went back. */
+        character1: "#FFA94D",
+        character2: "#4EC3C9",
+        character3: "#B8A7F2",
+        face: "#2A0F24",
+        shadow: "#2A0F24",
+        shadowOpacity: 0.12,
+      },
+      dark: {
+        background: "#1A1226",
+        surface: "#261B36",
+        text: "#F6EFE6",
+        muted: "#B9ABC4",
+        accent: "#FF8562",
+        onAccent: "#1A1226",
+        accentText: "#F6EFE6",
+        controlBorder: "#F6EFE6",
+        divider: "#3A2D4B",
+        /**
+         * The relief after dark is a shadow, not a slab of cream: the capture of 17 Sep read the ink relief as a thick
+         * white edge (brief, section 8). A shade under the ground, 1.10:1, which reads as depth and never as a border.
+         */
+        relief: "#0B0711",
+        character1: "#F4A95A",
+        character2: "#5DC0C5",
+        character3: "#AE9FE8",
+        face: "#1A1226",
+        shadow: "#0B0711",
+        shadowOpacity: 0.45,
+      },
+    },
+    accentEdge: { light: "ink", dark: "fill" },
+    reliefDepth: 5,
+    type: { face: "bricolage", titleWeight: 700, display: { compact: { size: 48, lineHeight: 50 }, expanded: { size: 88, lineHeight: 88 } } },
+    ratios: {
+      light: { "text/background": 16.48, "text/surface": 17.61, "muted/background": 6.55, "muted/surface": 7.00, "onAccent/accent": 5.68, "accent/background": 2.90, "accent/surface": 3.10, "controlBorder/background": 16.48, "controlBorder/surface": 17.61, "divider/background": 1.24, "relief/background": 16.48, "face/character1": 9.26, "face/character2": 8.37, "face/character3": 8.26, "character1/background": 1.78, "character2/background": 1.97, "character3/background": 2.00, "character1/surface": 1.90, "character2/surface": 2.11, "character3/surface": 2.13 },
+      dark: { "text/background": 15.89, "text/surface": 14.24, "muted/background": 8.36, "muted/surface": 7.49, "onAccent/accent": 7.58, "accent/background": 7.58, "accent/surface": 6.80, "controlBorder/background": 15.89, "controlBorder/surface": 14.24, "divider/background": 1.43, "relief/background": 1.10, "face/character1": 9.21, "face/character2": 8.47, "face/character3": 7.70, "character1/background": 9.21, "character2/background": 8.47, "character3/background": 7.70, "character1/surface": 8.26, "character2/surface": 7.59, "character3/surface": 6.90 },
+    },
+  },
+  {
+    id: "ink-sun",
+    number: 2,
+    name: "Ink and sun",
+    intention: "The most like a gift: sun yellow on a cool neutral, opposite hues.",
+    colours: {
+      light: {
+        background: "#F6F4FB",
+        surface: "#FFFFFF",
+        text: "#1E1633",
+        muted: "#5B5470",
+        accent: "#FFC531",
+        onAccent: "#1E1633",
+        accentText: "#1E1633",
+        controlBorder: "#1E1633",
+        divider: "#E0DCEB",
+        relief: "#1E1633",
+        /** Coral, sky and lilac: a confetti range, and never the yellow of the accent. */
+        character1: "#FF7F8E",
+        character2: "#5AB4FF",
+        character3: "#B79BFF",
+        face: "#1E1633",
+        shadow: "#1E1633",
+        shadowOpacity: 0.12,
+      },
+      dark: {
+        background: "#151026",
+        surface: "#211A38",
+        text: "#F3F0FA",
+        muted: "#B3ABC9",
+        accent: "#FFD053",
+        onAccent: "#151026",
+        accentText: "#F3F0FA",
+        controlBorder: "#F3F0FA",
+        divider: "#352C52",
+        relief: "#08060F",
+        character1: "#FF8C98",
+        character2: "#6DBDFB",
+        character3: "#BBA3FA",
+        face: "#151026",
+        shadow: "#08060F",
+        shadowOpacity: 0.45,
+      },
+    },
+    accentEdge: { light: "ink", dark: "fill" },
+    reliefDepth: 4,
+    type: { face: "fredoka", titleWeight: 600, display: { compact: { size: 48, lineHeight: 52 }, expanded: { size: 88, lineHeight: 92 } } },
+    ratios: {
+      light: { "text/background": 15.81, "text/surface": 17.24, "muted/background": 6.53, "muted/surface": 7.13, "onAccent/accent": 10.91, "accent/background": 1.45, "accent/surface": 1.58, "controlBorder/background": 15.81, "controlBorder/surface": 17.24, "divider/background": 1.23, "relief/background": 15.81, "face/character1": 7.13, "face/character2": 7.72, "face/character3": 7.51, "character1/background": 2.22, "character2/background": 2.05, "character3/background": 2.10, "character1/surface": 2.42, "character2/surface": 2.23, "character3/surface": 2.30 },
+      dark: { "text/background": 16.45, "text/surface": 14.69, "muted/background": 8.45, "muted/surface": 7.55, "onAccent/accent": 12.70, "accent/background": 12.70, "accent/surface": 11.34, "controlBorder/background": 16.45, "controlBorder/surface": 14.69, "divider/background": 1.44, "relief/background": 1.09, "face/character1": 8.34, "face/character2": 9.10, "face/character3": 8.58, "character1/background": 8.34, "character2/background": 9.10, "character3/background": 8.58, "character1/surface": 7.45, "character2/surface": 8.13, "character3/surface": 7.67 },
+    },
+  },
+  {
+    id: "white-violet",
+    number: 3,
+    name: "White and violet",
+    intention: "The calmest, the most like trust.",
+    colours: {
+      light: {
+        background: "#FAFAFC",
+        surface: "#FFFFFF",
+        text: "#16131F",
+        muted: "#5A5668",
+        accent: "#5B3FE0",
+        onAccent: "#FFFFFF",
+        accentText: "#16131F",
+        controlBorder: "#16131F",
+        divider: "#E4E3EA",
+        /** No relief: the calm look is flat, and a flat button answers a press by sinking a little instead. */
+        relief: null,
+        /** Peach, powder blue and rose: soft, and far enough from the violet never to be read as a second accent. */
+        character1: "#FFB08A",
+        character2: "#8DB6F2",
+        character3: "#F2A5C4",
+        face: "#16131F",
+        shadow: "#16131F",
+        shadowOpacity: 0.1,
+      },
+      dark: {
+        background: "#121019",
+        surface: "#1D1A28",
+        text: "#F2F1F6",
+        muted: "#ABA7BA",
+        accent: "#9C8BFF",
+        onAccent: "#121019",
+        accentText: "#F2F1F6",
+        controlBorder: "#F2F1F6",
+        divider: "#302C3D",
+        relief: null,
+        character1: "#F4AE8E",
+        character2: "#92B4EC",
+        character3: "#E9A8C3",
+        face: "#121019",
+        shadow: "#08070B",
+        shadowOpacity: 0.45,
+      },
+    },
+    accentEdge: { light: "fill", dark: "fill" },
+    reliefDepth: 0,
+    type: { face: "bricolage", titleWeight: 600, display: { compact: { size: 44, lineHeight: 48 }, expanded: { size: 76, lineHeight: 80 } } },
+    ratios: {
+      light: { "text/background": 17.56, "text/surface": 18.31, "muted/background": 6.79, "muted/surface": 7.08, "onAccent/accent": 6.50, "accent/background": 6.23, "accent/surface": 6.50, "controlBorder/background": 17.56, "controlBorder/surface": 18.31, "divider/background": 1.22, "face/character1": 10.31, "face/character2": 8.81, "face/character3": 9.55, "character1/background": 1.70, "character2/background": 1.99, "character3/background": 1.84, "character1/surface": 1.78, "character2/surface": 2.08, "character3/surface": 1.92 },
+      dark: { "text/background": 16.78, "text/surface": 15.19, "muted/background": 8.05, "muted/surface": 7.29, "onAccent/accent": 6.78, "accent/background": 6.78, "accent/surface": 6.14, "controlBorder/background": 16.78, "controlBorder/surface": 15.19, "divider/background": 1.39, "face/character1": 10.14, "face/character2": 8.94, "face/character3": 9.74, "character1/background": 10.14, "character2/background": 8.94, "character3/background": 9.74, "character1/surface": 9.18, "character2/surface": 8.09, "character3/surface": 8.82 },
+    },
+  },
+];
+
+/**
+ * The easing curves and springs the motion is built from, as Material publishes them in its own token files, read on
+ * 17 Sep 2026: the web tokens (github.com/material-components/material-web, tokens/versions/latest/sass/
+ * _md-sys-motion.scss) for the curves, durations and standard springs, and Jetpack Compose's
+ * (github.com/androidx/androidx, compose/material3/.../tokens/ExpressiveMotionTokens.kt) for the expressive springs,
+ * which the web tokens do not carry. A spring is a damping ratio and a stiffness on a unit mass; src/motion.ts turns
+ * one into a curve a browser can play.
+ */
+export const EASING = {
+  standard: "cubic-bezier(0.2, 0, 0, 1)",
+  standardAccelerate: "cubic-bezier(0.3, 0, 1, 1)",
+  standardDecelerate: "cubic-bezier(0, 0, 0, 1)",
+  emphasizedAccelerate: "cubic-bezier(0.3, 0, 0.8, 0.15)",
+  emphasizedDecelerate: "cubic-bezier(0.05, 0.7, 0.1, 1)",
+} as const;
+
+export const SPRING = {
+  /** Expressive, fast, for position and size: overshoots by about a tenth, then settles in under half a second. */
+  expressiveFastSpatial: { damping: 0.6, stiffness: 800 },
+  /** Expressive, default, for position and size: a softer arrival. */
+  expressiveDefaultSpatial: { damping: 0.8, stiffness: 380 },
+  /** For colour and opacity, in both schemes: critically damped, because those must never overshoot. */
+  effects: { damping: 1, stiffness: 1600 },
+} as const;
+
+/**
+ * The motion of the brief (section 6). The founder's rule of 17 Sep: every movement answers a gesture of the person.
+ * The product promises no daily gesture, so a day completing live is seen by nobody; nothing plays on a clock and
+ * nothing loops. Four triggers, and no other:
+ * - the press: the relief collapses; and the gift character, once, when a gesture succeeds (a gift made, money taken);
+ * - the arrival on a screen: what changed since the last visit plays once, in order, the days earned, then the days
+ *   gone back, then the amount counting, all of it in under two seconds;
+ * - the entry into view while scrolling: a short appearance, once, with nothing behind it moving and no parallax;
+ * - the hover, with a pointer only: a character looks at the cursor, a button lifts; never information, because a phone
+ *   has no hover (WCAG 1.4.13 governs anything that appears on hover, and nothing here appears).
+ *
+ * Material's expressive scheme for a day earned and the gift, its standard scheme for the rest, overshoot only on
+ * position and size. The personality decides the ties, first word first (brief, section 2: Simple. Warm. Fair. Juicy.):
+ * when a movement would stand between a person and a sum, the movement yields, which is why the amount counts last.
+ * Everything is skipped when the device asks for reduced motion (WCAG 2.3.3).
+ */
+export const MOTION = {
+  /** A button pressed: the relief collapses and the button travels its depth. Between Material's short2 and short3. */
+  press: { durationMs: 120, easing: EASING.standard },
+  /** A day earned, on arrival: it gathers, jumps once, lands, and its face opens on the landing spring. */
+  earned: {
+    gatherMs: 80,
+    riseMs: 170,
+    fallMs: 130,
+    riseBy: 0.38,
+    landing: SPRING.expressiveFastSpatial,
+  },
+  /** A day gone back, on arrival: it slides to the left and fades to its resting opacity. Material's medium2. */
+  returned: { durationMs: 300, easing: EASING.standard, fromOffset: 0.22 },
+  /** The amount, on arrival and last: it counts to its value once, in under a second. Material's extra-long1. */
+  count: { durationMs: 700, easing: EASING.standard },
+  /** The whole arrival, whatever changed: under two seconds, the days a little apart from each other. */
+  arrival: { budgetMs: 2000, staggerMs: 120 },
+  /** A gift made or money taken, answering the press that did it: the gift character arrives once, its bow a beat after. */
+  gift: { spatial: SPRING.expressiveFastSpatial, effects: SPRING.effects, fromScale: 0.55, bowDelayMs: 120 },
+  /** Something scrolled into view for the first time: it appears, rising a few pixels. Material's medium1. */
+  reveal: { durationMs: 250, easing: EASING.standard, rise: 8 },
+  /** A pointer over a button lifts it; over a character, its face turns towards the pointer. Material's short4. */
+  hover: { durationMs: 200, easing: EASING.standard, lift: 2, gaze: 2.5 },
+  /** WCAG 2.2.2 Pause, Stop, Hide: nothing that starts by itself may last past five seconds without a way to stop it. */
+  ceilingMs: 5000,
+} as const;
