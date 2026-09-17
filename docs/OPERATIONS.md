@@ -176,7 +176,7 @@ when the check ends: nobody can sign in to them again. They hold no money and no
 in any number given to anybody, and a count of accounts must leave them out.
 
 An account leaves no row of its own on the server. The S1 checks chose a currency on Me, which writes `viky_accounts`;
-the S2 checks did not, and read each account's code on Me instead, so those three have no row anywhere. None of them
+the S2 and S3 checks did not, and read each account's code on Me instead, so those five have no row anywhere. None of them
 offered a gift: each stopped on the check, with "Not now".
 
 | account | made | why |
@@ -188,6 +188,8 @@ offered a gift: each stopped on the check, with "Not now".
 | `0xc28b113c4FCac8b8968948f244a661EcD882ba41` | 17 Sep 2026, 13:23 UTC | S2 deployment check, 390x844 day |
 | `0x88205f6821cb84aCe9ace80FB4d7b498Cfd67C1c` | 17 Sep 2026, 13:24 UTC | S2 deployment check, 1440x900 night |
 | `0xCBFadD1E4C62c5dA345B495245c7B91918e7EE21` | 17 Sep 2026, 13:25 UTC | S2 deployment check, rerun at 390x844 day |
+| `0x9ea22C6835572973CdCB3C4cC58f7c020D00494B` | 17 Sep 2026, 14:41 UTC | S3 deployment check, 390x844 day |
+| `0x019112293A1e79b4a14FD984C82F4698898a361d` | 17 Sep 2026, 14:41 UTC | S3 deployment check, 1440x900 night |
 
 The row `0xb12e0c72209bd4becfdafa96a8f3e7ebc93b8376`, euros, 02:56 UTC the same day, was not written by a check and
 is not listed here.

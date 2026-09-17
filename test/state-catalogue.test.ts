@@ -59,3 +59,10 @@ test("the states nobody has built are visible as such", () => {
   const gaps = everyState().filter((s) => s.state.says.length === 0);
   assert.ok(gaps.length >= 5, "a catalogue with no gaps is not being honest about a product this unfinished");
 });
+
+test("a gift page sentence that opens on an estimated figure still starts with a capital", async () => {
+  const { GIFT_PAGE } = await import("../src/sentences.js");
+  assert.match(GIFT_PAGE.goesBackToThem("about $2.85", null), /^About \$2\.85 goes back to them/);
+  assert.match(GIFT_PAGE.comesBackToYou("about $2.85"), /^About \$2\.85 comes back to you/);
+  assert.match(GIFT_PAGE.goesBackToThem("$1.00", "Maman"), /^\$1\.00 goes back to Maman/);
+});
