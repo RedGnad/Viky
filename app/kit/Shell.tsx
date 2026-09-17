@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { DISPLAY, TITLE } from "../components/ui";
+import { DISPLAY, HELP, TITLE } from "../components/ui";
 import { BackLink } from "./BackLink";
 import { Mark } from "./Mark";
 import { Nav, type Destination } from "./Nav";
@@ -17,7 +17,17 @@ import { Nav, type Destination } from "./Nav";
  */
 type Props =
   | Readonly<{ kind: "destination"; active: Destination; title?: string; children: ReactNode }>
-  | Readonly<{ kind: "task"; back?: string; backLabel?: string; step?: string; children: ReactNode }>
+  | Readonly<{
+      kind: "task";
+      back?: string;
+      backLabel?: string;
+      /** The back link goes to `back` itself rather than one step back through the browser's history. */
+      backFollows?: boolean;
+      /** "Step 2 of 5", above the step's title, in the help size (GOV.UK's caption). */
+      caption?: string;
+      step?: ReactNode;
+      children: ReactNode;
+    }>
   | Readonly<{ kind: "document"; back?: string; backLabel?: string; children: ReactNode }>;
 
 export function Shell(props: Props) {
@@ -39,10 +49,14 @@ export function Shell(props: Props) {
         <main className={`mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-lg)]`}>
           <header className="flex flex-col items-start gap-[var(--space-sm)]">
             <Mark />
-            {props.kind === "task" && props.back ? <BackLink href={props.back} label={props.backLabel} /> : null}
+            {props.kind === "task" && props.back ? <BackLink href={props.back} label={props.backLabel} follow={props.backFollows} /> : null}
             {props.kind === "document" && props.back ? <BackLink href={props.back} label={props.backLabel} /> : null}
+            {props.kind === "task" && props.caption ? <p className={HELP}>{props.caption}</p> : null}
             {props.kind === "task" && props.step ? <h1 className={TITLE}>{props.step}</h1> : null}
-            {props.kind === "destination" && props.title ? <h1 className={DISPLAY}>{props.title}</h1> : null}
+            {/* Room between the mark and a destination's title, which grows with the title: the two faces touched at 1 440. */}
+            {props.kind === "destination" && props.title ? (
+              <h1 className={`${DISPLAY} mt-[var(--space-sm)] [@media(min-width:840px)]:mt-[var(--space-xl)]`}>{props.title}</h1>
+            ) : null}
           </header>
           {props.children}
         </main>

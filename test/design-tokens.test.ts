@@ -278,7 +278,17 @@ test("Anton is the display title and the mark, and nothing else", () => {
 test("every page a person can open is drawn through the shell", () => {
   const pages = globSync("app/**/page.tsx").filter((file) => !file.startsWith("app/dev/")).sort();
   // A page that only redirects draws nothing, so it needs no shell.
-  const drawnThroughShell = (file: string) => /from "[^"]*(kit\/Shell|kit\/Home|kit\/Gifts|kit\/Me|GiftPage)"|\bredirect\(/.test(readFileSync(file, "utf8"));
+  // A task whose steps each draw their own shell counts too: the offer of a gift draws one per step.
+  const drawnThroughShell = (file: string) => /from "[^"]*(kit\/Shell|kit\/Home|kit\/Gifts|kit\/Me|GiftPage|FundGift)"|\bredirect\(/.test(readFileSync(file, "utf8"));
   assert.deepEqual(pages.filter((file) => !drawnThroughShell(file)), []);
   assert.ok(pages.length >= 9, `only ${pages.length} pages found`);
+});
+
+test("Anton is never in a task: no task screen sets a title in the display face (structure, item 7)", () => {
+  for (const file of globSync("app/components/*.tsx")) {
+    const source = readFileSync(file, "utf8");
+    assert.doesNotMatch(source, /\bDISPLAY\b/, `${file} is a task and uses the display face`);
+  }
+  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
+  assert.match(fund, /from "\.\.\/kit\/Shell"/, "every step of offering a gift draws the shell");
 });

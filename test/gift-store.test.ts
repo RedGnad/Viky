@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test, { after, before } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { getAddress } from "viem";
 import {
   claimTokenHash,
   configureGiftStore,
+  holdsGiftLink,
   ensureGiftSchema,
   backfillEscrow,
   loadAllGifts,
@@ -189,3 +191,39 @@ test("a gift id that is already recorded fails loudly unless it is the same fund
   );
 });
 
+
+/**
+ * The two names of a gift (17 Sep 2026) live beside the link and nowhere on chain, and they are given only to whoever
+ * holds the link, or to the funder or the recipient: gift numbers follow each other, so a public read would let anyone
+ * collect first names gift after gift.
+ */
+test("a gift keeps its two names beside the link, and only the link's key proves holding it", async () => {
+  const token = newClaimToken();
+  await saveGift({
+    giftId: "77",
+    funder: FUNDER,
+    contactHash: CONTACT,
+    claimToken: token,
+    goalType: 1,
+    dailyTarget: 10,
+    durationDays: 7,
+    amount: 25_000_000n,
+    createdTx: `0x${"77".repeat(32)}`,
+    escrow: "0x00000000000000000000000000000000000000e1",
+    recipientName: "Léa",
+    funderName: "Maman",
+  });
+  const gift = await loadGift("77");
+  assert.equal(gift?.recipientName, "Léa");
+  assert.equal(gift?.funderName, "Maman");
+  assert.ok(gift && holdsGiftLink(gift, token));
+  assert.ok(gift && !holdsGiftLink(gift, `${token}x`));
+  assert.ok(gift && !holdsGiftLink(gift, null));
+  assert.ok(gift && !holdsGiftLink(gift, ""));
+  // A gift made before the names existed has none, and says so rather than inventing one.
+  assert.equal((await loadGift("1"))?.recipientName, null);
+
+  const route = readFileSync("app/api/gift/[id]/route.ts", "utf8");
+  assert.match(route, /const names = viewerIsRecipient \|\| viewerIsFunder \|\| holdsTheLink \? \{ recipientName: record\.recipientName, funderName: record\.funderName \} : null;/);
+  assert.match(route, /holdsGiftLink\(record, new URL\(request\.url\)\.searchParams\.get\("t"\)\)/);
+});

@@ -1,89 +1,222 @@
 "use client";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import * as mera from "@/src/account/mera";
 import { useMoneySession } from "@/src/account/money-session";
-import Link from "next/link";
-import { ACTION_BAR, BACK_LINK, BODY, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, STICKER, TITLE } from "./ui";
 import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
-import { createGift, type CreatedGift } from "@/src/client/gift";
+import { useDisplayCurrency } from "@/src/client/display-currency";
+import { checkSourceName, createGift, type CreatedGift } from "@/src/client/gift";
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
+import { conditionById, liveConditions, type Condition } from "@/src/conditions";
+import { whenInWords } from "@/src/display-currency";
+import { twoDecimalsDown } from "@/src/exit-steps";
+import { CONVERSION_RESERVE, nextFundingStep, paymentArrived } from "@/src/funding-step";
+import { eurosToBuy, roughlyInDollars, SUGGESTED_GIFT_DOLLARS } from "@/src/gift-amount";
+import { giftNameProblem, tidyGiftName, type GiftNameProblem } from "@/src/gift-names";
 import { formatAusd } from "@/src/gift-reader";
-import { fundingStageShown, nextFundingStep, paymentArrived, type FundingStage } from "@/src/funding-step";
 import { AmountError, dollarsToUnits } from "@/src/money";
+import { settlingTimeInWords } from "@/src/pass-schedule";
+import { forgetPendingGift, loadPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
 import { WAY_IN } from "@/src/rails";
-import { eurosToBuy, SUGGESTED_GIFT_DOLLARS } from "@/src/gift-amount";
-import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
-import { forgetPendingGift, hasPendingGift, loadPendingGift, savePendingGift } from "@/src/pending-gift";
+import { FUND as W } from "@/src/sentences";
+import { ChoiceList } from "../kit/ChoiceList";
+import { FieldRefusal } from "../kit/FieldRefusal";
+import { Shell } from "../kit/Shell";
 import { AccountPanel } from "./AccountPanel";
+import { BODY, CARD, FIELD, HELP, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
 
 /**
- * The funder's screen. Someone puts money behind another person's goal, pays for it with a card, and
- * never sees what carries it. Which company takes the card is one object, `WAY_IN` (D42), so replacing it
- * changes nothing here. Today's rail ignores any parameter we could pass (D32), so the person's deposit
- * line is copied for them and its page is opened beside this one. While it stays open this screen watches for the money, turns it into what a gift
- * holds, and creates the gift, asking for a signature only when the open session has closed (D33).
+ * Offering a gift, flows F1 to F11 on the product structure of 17 Sep 2026 (section 5).
+ *
+ * One question per page, each with its own address (`?step=`), so the phone's own back gesture goes one step back and
+ * the shell's back link sits at the same place on every step: who it is for, what they will do, the condition's own
+ * detail, how much and for how long, then the check. What was typed is kept for the tab (sessionStorage), so a reload
+ * loses nothing and a step reached without what it needs sends the person to the first question it lacks.
+ *
+ * Then the money. Someone pays by card and never sees what carries it. Which company takes the card is one object,
+ * `WAY_IN` (D42), and its page ignores anything we could pass (D32), so the person sets it by hand from a list in its
+ * own words. The terms are written to the device before its page opens (D74): a card payment can outlast the session,
+ * and the gift is picked up again when the same account signs in. The page watches the account, turns what arrived
+ * into what a gift holds, and makes the gift with one signature (D33).
+ *
+ * Nothing on these screens names a source: what a condition is called, what its name field asks, what counts as a
+ * day, all come from the register (src/conditions.ts). The words are in src/sentences.ts, `FUND`.
  */
 
 const POLL_MS = 8_000;
+const DRAFT_KEY = "viky.giftDraft";
+const MADE_KEY = "viky.giftMade";
 
-/** The device is asked once, in the browser only, so the server's first paint and the browser's agree. */
+type Step = "who" | "what" | "detail" | "amount" | "check" | "account" | "paying" | "done";
+const ALL_STEPS: readonly Step[] = ["who", "what", "detail", "amount", "check", "account", "paying", "done"];
+
+type Draft = Readonly<{
+  recipientName: string;
+  funderName: string;
+  conditionId: string | null;
+  username: string;
+  dollars: string;
+  days: string;
+  target: string;
+}>;
+
+const EMPTY_DRAFT: Draft = { recipientName: "", funderName: "", conditionId: null, username: "", dollars: String(SUGGESTED_GIFT_DOLLARS), days: "7", target: "" };
+
+/** The gift once made, kept for the tab: the link exists nowhere else, and a reload must not lose it. */
+type Made = Readonly<{
+  giftId: string;
+  claimUrl: string;
+  atMs: number;
+  recipientName: string;
+  conditionId: string;
+  amount: string;
+  days: number;
+}>;
+
+type Phase = "waiting" | "converting" | "giving" | "short" | "failed";
+
+function readSession<T>(key: string): T | null {
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSession(key: string, value: unknown): void {
+  try {
+    if (value === null) window.sessionStorage.removeItem(key);
+    else window.sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // A tab that refuses storage keeps the draft in memory for as long as it stays open.
+  }
+}
+
 const never = () => () => {};
-const nothingKept = () => false;
+const inBrowser = () => true;
+const onServer = () => false;
+const canShare = () => typeof navigator !== "undefined" && typeof navigator.share === "function";
+function everyMinute(changed: () => void): () => void {
+  const timer = setInterval(changed, 60_000);
+  return () => clearInterval(timer);
+}
+const thisMinute = () => Math.floor(Date.now() / 60_000) * 60_000;
+const noClock = () => 0;
 
-type Step = "form" | "waiting" | "converting" | "giving" | "done";
+function nameRefusal(problem: GiftNameProblem | undefined, empty: string): string | undefined {
+  if (problem === "empty") return empty;
+  if (problem === "tooLong") return W.who.refusals.tooLong;
+  if (problem === "notText") return W.who.refusals.notText;
+  return undefined;
+}
 
-/**
- * The three questions, asked one screen at a time, because a form that follows the guidelines gets 78 % of
- * its submissions right the first time against 42 % for one that does not, and the largest single guideline
- * behind that number is one column with one thing per row (NN/g, Seckler et al.). The amount, the daily
- * target and the length used to sit side by side in a three-column grid, which at 320 pixels is three
- * cramped boxes and at any width interrupts the way down the form.
- *
- * They are three screens rather than three sections because the last one is a check: GOV.UK asks for one
- * before a confirmation, and Baymard measures abandonment when a cost appears for the first time at payment.
- */
-type Stage = FundingStage;
+function unitsOf(dollars: string): { units: bigint | null; refusal: string | undefined } {
+  try {
+    return { units: dollarsToUnits(dollars), refusal: undefined };
+  } catch (error) {
+    return { units: null, refusal: error instanceof AmountError ? error.message : W.failures.other };
+  }
+}
 
+function daysOf(days: string): { days: number | null; refusal: string | undefined } {
+  if (!/^\d{1,3}$/.test(days.trim())) return { days: null, refusal: W.amount.refusals.daysShape };
+  const value = Number(days.trim());
+  if (value < 7) return { days: null, refusal: W.amount.refusals.daysLow };
+  if (value > 90) return { days: null, refusal: W.amount.refusals.daysHigh };
+  return { days: value, refusal: undefined };
+}
+
+function targetOf(condition: Condition | undefined, target: string): { target: number | null; refusal: string | undefined } {
+  if (!condition?.target) return { target: 1, refusal: undefined };
+  if (!/^\d{1,5}$/.test(target.trim())) return { target: null, refusal: W.amount.refusals.targetShape };
+  const value = Number(target.trim());
+  if (value < condition.target.min) return { target: null, refusal: condition.target.tooLow };
+  return { target: value, refusal: undefined };
+}
+
+/** A route's own typed sentence when it gave one; one plain line otherwise, never a library's words. */
 function readable(error: unknown): string {
   if (error instanceof ApiError) return error.message;
   if (error instanceof AmountError) return error.message;
-  if (error instanceof Error && error.message && error.message.length < 160) return error.message;
-  return "Something went wrong. Nothing was taken. Please try again.";
+  return W.failures.other;
 }
 
 export function FundGift() {
-  const { address } = useAccount();
-  const [step, setStep] = useState<Step>("form");
+  const { address, signIn, status: accountStatus } = useAccount();
   // Money moves on this screen, so the session stays open thirty minutes rather than ten (decision 2, 17 Sep 2026).
   useMoneySession();
-  const [stage, setStage] = useState<Stage>("who");
-  const [username, setUsername] = useState("");
-  // What one smallest card payment covers, so an ordinary first gift needs one payment and not two. The fifty it
-  // replaced rested on the smallest payout the rail would take to a card, and no such payout exists here (D72).
-  const [dollars, setDollars] = useState(String(SUGGESTED_GIFT_DOLLARS));
-  const [target, setTarget] = useState("10");
-  const [days, setDays] = useState("7");
+  const browser = useSyncExternalStore(never, inBrowser, onServer);
+  const sharing = useSyncExternalStore(never, canShare, onServer);
+  const params = useSearchParams();
+  const asked = params.get("step");
+  const step: Step = ALL_STEPS.includes(asked as Step) ? (asked as Step) : "who";
+
+  const [draft, setDraft] = useState<Draft>(() => (typeof window === "undefined" ? EMPTY_DRAFT : { ...EMPTY_DRAFT, ...(readSession<Draft>(DRAFT_KEY) ?? {}) }));
+  const [made, setMade] = useState<Made | null>(() => (typeof window === "undefined" ? null : readSession<Made>(MADE_KEY)));
+  const [kept, setKept] = useState<PendingGift | undefined>(() => (typeof window === "undefined" ? undefined : peekPendingGift()));
+  const [touched, setTouched] = useState<Readonly<Record<string, boolean>>>({});
+  const [nameCheck, setNameCheck] = useState<{ checking: boolean; refusal?: string; checked?: string }>({ checking: false });
   const [balance, setBalance] = useState<bigint | null>(null);
   const [pending, setPending] = useState<bigint | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [arrivedWorth, setArrivedWorth] = useState<string | null | "unknown">(null);
+  const [phase, setPhase] = useState<Phase>("waiting");
+  const [arrivedFigure, setArrivedFigure] = useState<string | undefined>(undefined);
   const [problem, setProblem] = useState<string | null>(null);
-  const [created, setCreated] = useState<CreatedGift | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
-  // Whether the device kept the gift's terms when the rail opened. Private browsing can refuse, and then the gift
-  // lasts only as long as this page stays open, which the screen must say rather than promise more (D74).
-  const [keptOnDevice, setKeptOnDevice] = useState(false);
-  // A gift set up on this device and not made, read without naming an account: after a reload there is nobody signed
-  // in to name, and the first step was all the funder saw, with no way back to the gift they had paid for (D74).
-  const somethingToPickUp = useSyncExternalStore(never, hasPendingGift, nothingKept);
+  const [copied, setCopied] = useState<"code" | "link" | null>(null);
+  const [copyRefused, setCopyRefused] = useState<"code" | "link" | null>(null);
+  const [keptOnDevice, setKeptOnDevice] = useState(true);
   const working = useRef(false);
+  // Whether an account was signed in on this page before it went: then the session closed while paying (F8), rather
+  // than a page opened again with nobody signed in (F9). Stored the way React stores what an earlier render saw.
+  const [hadAccount, setHadAccount] = useState(false);
+  if (address && !hadAccount) setHadAccount(true);
+  // The reader's clock, read once a minute: the settling hour is said in it.
+  const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
+
+  const money = useDisplayCurrency(address);
+  const condition = draft.conditionId ? liveConditions().find((entry) => entry.id === draft.conditionId) : undefined;
+  const nameLink = condition?.link.kind === "username" ? condition.link : undefined;
+  // The condition's own detail: the name a source reads, and what counts as a day (structure, section 5, step 3).
+  const hasDetail = Boolean(nameLink || condition?.target);
+  const numbered: Step[] = ["who", "what", ...(hasDetail || !condition ? (["detail"] as Step[]) : []), "amount", "check"];
+
+  const recipientRefusal = nameRefusal(giftNameProblem(draft.recipientName), W.who.refusals.recipientEmpty);
+  const funderRefusal = nameRefusal(giftNameProblem(draft.funderName), W.who.refusals.funderEmpty);
+  const namesReady = !recipientRefusal && !funderRefusal;
+  const shapeRefusal = nameLink?.check && draft.username.trim() !== "" && !nameLink.check.valid(draft.username.trim()) ? nameLink.check.refusals.shape : undefined;
+  const amount = unitsOf(draft.dollars);
+  const length = daysOf(draft.days);
+  const daily = targetOf(condition, draft.target);
+  const amountReady = amount.units !== null && length.days !== null;
+  const termsReady = amountReady && daily.target !== null;
+  const perDay = amount.units !== null && length.days !== null ? amount.units / BigInt(length.days) : null;
+  const exact = perDay !== null && length.days !== null && amount.units !== null && perDay * BigInt(length.days) === amount.units;
+  const recipient = tidyGiftName(draft.recipientName);
+  const funder = tidyGiftName(draft.funderName);
+
+  const update = (change: Partial<Draft>) => {
+    setDraft((current) => {
+      const next = { ...current, ...change };
+      writeSession(DRAFT_KEY, next);
+      return next;
+    });
+  };
+  const go = (next: Step) => {
+    setProblem(null);
+    window.history.pushState(null, "", `?step=${next}`);
+    window.scrollTo(0, 0);
+  };
+  const replace = (next: Step) => window.history.replaceState(null, "", `?step=${next}`);
 
   const refresh = useCallback(async () => {
     if (!address) return;
     const [held, arriving] = await Promise.all([readAusdBalance(address), readMonBalance(address)]);
     setBalance(held);
     setPending(arriving);
+    return { held, arriving };
   }, [address]);
 
   useEffect(() => {
@@ -92,66 +225,157 @@ export function FundGift() {
       .catch(() => {});
   }, [refresh]);
 
+  // A step reached without what it needs goes to the first question it lacks; a gift kept on this device for this
+  // account is picked up where it stopped (D74); the account step has nothing to offer once there is an account.
+  useEffect(() => {
+    if (!browser) return;
+    if (step === "done") {
+      if (!made) replace("who");
+      return;
+    }
+    const complete = namesReady && condition !== undefined && termsReady;
+    if (address && (step === "who" || step === "paying")) {
+      const saved = loadPendingGift(address);
+      // Picked up on the first step, or on the paying step of a tab that has not got the terms (another tab, a new
+      // window): the device's copy is the one that counts.
+      if (saved && (step === "who" || !complete)) {
+        void Promise.resolve().then(() => {
+          const next: Draft = {
+            recipientName: saved.recipientName,
+            funderName: saved.funderName,
+            conditionId: saved.conditionId,
+            username: saved.username,
+            dollars: saved.dollars,
+            days: saved.days,
+            target: saved.target,
+          };
+          writeSession(DRAFT_KEY, next);
+          setDraft(next);
+          replace("paying");
+        });
+        return;
+      }
+    }
+    if (step === "account" && address) {
+      replace("check");
+      return;
+    }
+    if (step === "paying") {
+      // Paying needs the terms, from this tab or from the device; without either there is nothing to pay for.
+      if (address ? !loadPendingGift(address) && !complete : !hadAccount && !kept) replace(complete ? "check" : "who");
+      return;
+    }
+    if (step === "who") return;
+    if (!namesReady) replace("who");
+    else if (!condition) replace("what");
+    else if (step !== "detail" && daily.target === null) replace("detail");
+    else if ((step === "check" || step === "account") && !amountReady) replace("amount");
+    // `replace` and the values it reads change on every render; the step and the account are what decide.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [browser, step, address, made]);
+
+  // On the check, a card payment sitting in the account is valued before it is used (audit C, 9.1).
+  useEffect(() => {
+    if (step !== "check" || !address || pending === null || !paymentArrived(pending)) return;
+    let live = true;
+    postJson<{ output: string }>("/api/fund/quote", { amount: (pending - CONVERSION_RESERVE).toString() })
+      .then((quote) => {
+        if (live) setArrivedWorth(formatAusd(BigInt(quote.output)));
+      })
+      .catch(() => {
+        if (live) setArrivedWorth("unknown");
+      });
+    return () => {
+      live = false;
+    };
+  }, [step, address, pending]);
+
   const give = useCallback(async () => {
     const account = mera.currentAccount();
-    if (!account) throw new Error("Sign in first.");
-    const result = await createGift({
+    if (!account) throw new Error(W.failures.signInFirst);
+    if (!condition || amount.units === null || length.days === null || daily.target === null || condition.goalType === null) throw new Error(W.failures.other);
+    const result: CreatedGift = await createGift({
       account,
-      duolingoUsername: username.trim() || undefined,
-      goalType: GOAL_TYPE_DUOLINGO_XP,
-      dailyTarget: Number(target),
-      durationDays: Number(days),
-      amount: dollarsToUnits(dollars),
+      duolingoUsername: draft.username.trim() || undefined,
+      recipientName: recipient,
+      funderName: funder,
+      goalType: condition.goalType,
+      dailyTarget: daily.target,
+      durationDays: length.days,
+      amount: amount.units,
     });
-    setCreated(result);
+    const record: Made = {
+      giftId: result.giftId,
+      claimUrl: result.claimUrl,
+      atMs: Date.now(),
+      recipientName: recipient,
+      conditionId: condition.id,
+      amount: amount.units.toString(),
+      days: length.days,
+    };
+    writeSession(MADE_KEY, record);
+    writeSession(DRAFT_KEY, null);
     // Made, so nothing is left to pick up again on this device (D74).
     forgetPendingGift();
-    setStep("done");
-    await refresh();
-  }, [username, target, days, dollars, refresh]);
+    setKept(undefined);
+    setMade(record);
+    setDraft(EMPTY_DRAFT);
+    replace("done");
+    window.scrollTo(0, 0);
+  }, [condition, amount.units, length.days, daily.target, draft.username, recipient, funder]);
 
-  // While the payment page is open beside this one: watch for the money, convert it, then give.
+  // While paying: watch the account, turn what arrived into what a gift holds, then make the gift.
   useEffect(() => {
-    if (step !== "waiting" || !address) return;
+    if (step !== "paying" || !address || amount.units === null || phase === "short" || phase === "failed") return;
+    const wanted = amount.units;
     let live = true;
     const look = async () => {
       if (!live || working.current) return;
       try {
-        await refresh();
-        const [held, arriving] = await Promise.all([readAusdBalance(address), readMonBalance(address)]);
-        const next = nextFundingStep({ held, arriving, wanted: dollarsToUnits(dollars) });
+        const read = await refresh();
+        if (!read) return;
+        const next = nextFundingStep({ held: read.held, arriving: read.arriving, wanted });
         if (next.do === "give") {
           working.current = true;
-          setStep("giving");
-          setNotice("Your money is here. Putting it behind the goal.");
-          await give();
+          setPhase("giving");
+          try {
+            await give();
+          } catch (error) {
+            // A refusal to make the gift is said once, with a way to try again: retrying by itself every few seconds
+            // would repeat a refusal nobody has read (F11).
+            setProblem(readable(error));
+            setPhase("failed");
+          }
+          working.current = false;
           return;
         }
         if (next.do === "convert") {
           working.current = true;
-          setStep("converting");
-          setNotice("Your payment arrived. Getting it ready, a few seconds.");
+          setPhase("converting");
           const account = mera.currentAccount();
           if (!account) {
-            setStep("waiting");
-            setProblem("Your session closed. Sign in again to finish.");
             working.current = false;
             return;
           }
-          const quote = await postJson<{ to: `0x${string}`; data: `0x${string}`; value: string }>("/api/fund/quote", {
-            amount: next.amount.toString(),
-          });
-          await sendWithExplicitGas(account, { to: quote.to, data: quote.data, value: BigInt(quote.value) });
-          await refresh();
+          try {
+            const quote = await postJson<{ to: `0x${string}`; data: `0x${string}`; value: string }>("/api/fund/quote", { amount: next.amount.toString() });
+            await sendWithExplicitGas(account, { to: quote.to, data: quote.data, value: BigInt(quote.value) });
+          } catch {
+            setProblem(W.arrived.priceMoved);
+            setPhase("waiting");
+            working.current = false;
+            return;
+          }
+          const after = await readAusdBalance(address);
+          setBalance(after);
+          setArrivedFigure(formatAusd(after - read.held));
+          setProblem(null);
           working.current = false;
-          setStep("waiting");
-          setNotice("Ready. Putting it behind the goal.");
+          setPhase(after >= wanted ? "giving" : "short");
           return;
         }
-      } catch (error) {
-        working.current = false;
-        setProblem(readable(error));
-        setStep("waiting");
+      } catch {
+        // A read that failed is read again at the next look; nothing was moved.
       }
     };
     void look();
@@ -160,440 +384,616 @@ export function FundGift() {
       live = false;
       clearInterval(timer);
     };
-  }, [step, address, dollars, refresh, give]);
+  }, [step, address, amount.units, phase, refresh, give]);
 
-  // A card payment can outlast the passkey session: the rail says most take 30 to 60 minutes, the one of 15 Sep took
-  // twelve, and the session closes after ten without a signature. So the gift set up before paying is picked up again
-  // as soon as its own account is signed in on this page, wherever the person had left it (D74).
-  useEffect(() => {
-    if (!address || step !== "form") return;
-    const saved = loadPendingGift(address);
-    if (!saved) return;
-    void Promise.resolve().then(() => {
-      setUsername(saved.username);
-      setDollars(saved.dollars);
-      setDays(saved.days);
-      setTarget(saved.target);
-      setKeptOnDevice(true);
-      setProblem(null);
-      setNotice(`Welcome back. Your ${formatAusd(dollarsToUnits(saved.dollars))} gift is still set up, and it goes ahead as soon as your payment is here.`);
-      setStep("waiting");
-    });
-  }, [address, step]);
+  const copy = (what: "code" | "link", text: string) => {
+    void navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        setCopied(what);
+        setCopyRefused(null);
+      })
+      .catch(() => {
+        setCopied(null);
+        setCopyRefused(what);
+      });
+  };
 
-  const enough = (() => {
-    try {
-      return balance !== null && balance >= dollarsToUnits(dollars);
-    } catch {
-      return false;
-    }
-  })();
+  const keepOnDevice = (dollars = draft.dollars) => {
+    if (!address) return;
+    setKeptOnDevice(
+      savePendingGift({
+        account: address,
+        recipientName: recipient,
+        funderName: funder,
+        conditionId: condition?.id ?? "",
+        username: draft.username.trim(),
+        dollars,
+        days: draft.days,
+        target: draft.target,
+      }),
+    );
+  };
 
-  const ready = Number(target) > 0 && Number(days) >= 7;
-  // A card payment already in the account and not yet turned into what a gift holds, like the one of 15 Sep after its
-  // session closed. It is used before the funder is sent to pay a second time (D74).
-  const arrived = pending !== null && paymentArrived(pending);
-
-  const start = async () => {
+  const commit = async (enough: boolean, arrived: boolean) => {
     setProblem(null);
-    setNotice(null);
-    // The account exists by the time this runs: the check screen sends somebody without one to make it
-    // first. Stated rather than assumed, because the whole point of the change was that the two stages
-    // before this need nobody.
     if (!address) {
-      setStage("account");
-      return;
-    }
-    try {
-      dollarsToUnits(dollars);
-    } catch (error) {
-      setProblem(readable(error));
+      go("account");
       return;
     }
     if (enough) {
-      setStep("giving");
-      try {
-        await give();
-      } catch (error) {
-        setProblem(readable(error));
-        setStep("form");
-      }
+      setPhase("giving");
+      go("paying");
       return;
     }
     // Written down before anything else, so a payment that outlasts the session does not lose the gift (D74).
-    setKeptOnDevice(savePendingGift({ account: address, username, dollars, days, target }));
-    if (arrived) {
-      setStep("waiting");
-      return;
-    }
-    // Both the copy and the new page must happen inside the tap, or the browser blocks them.
-    try {
-      await navigator.clipboard.writeText(address);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-    window.open(WAY_IN.page, "_blank", "noopener,noreferrer");
-    setStep("waiting");
+    keepOnDevice();
+    setPhase("waiting");
+    // The card service's page opens inside the tap, or the browser blocks it.
+    if (!arrived) window.open(WAY_IN.page, "_blank", "noopener,noreferrer");
+    go("paying");
   };
 
-  if (step === "done" && created) {
+  const differentGift = () => {
+    forgetPendingGift();
+    setKept(undefined);
+    writeSession(DRAFT_KEY, null);
+    setDraft(EMPTY_DRAFT);
+    setPhase("waiting");
+    setProblem(null);
+    replace("who");
+  };
+
+  if (!browser) {
     return (
-      <section className={STICKER.sun}>
-        <h2 className={TITLE}>It is in their name.</h2>
-        <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
-          Whoever opens this link takes the gift, so send it only to the person it is for, and to nobody else.
-          They open it, and the money becomes theirs day by day. Whatever they do not earn comes back to
-          you by itself.
-        </p>
-        <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)]">{created.claimUrl}</p>
-        <button
-          type="button"
-          onClick={() => {
-            // Some browsers refuse the copy silently. Say which of the two happened, never nothing.
-            void navigator.clipboard
-              .writeText(created.claimUrl)
-              .then(() => {
-                setLinkCopied(true);
-                setProblem(null);
-              })
-              .catch(() => {
-                setLinkCopied(false);
-                setProblem("Your browser would not let us copy it. Press and hold the link above, then choose Copy.");
-              });
-          }}
-          className={PRIMARY_BUTTON}
-        >
-          {linkCopied ? "Copied" : "Copy the link"}
-        </button>
-        {problem ? <p className="text-[length:var(--type-help)] text-[var(--accent-text)]">{problem}</p> : null}
-      </section>
+      <Shell kind="task">
+        <p className={HELP}>One moment</p>
+      </Shell>
     );
   }
 
-  // What one day is worth, live, because it is the number that makes a gift feel like a gift rather than a
-  // transfer. Computed from what they typed and never stored, so it cannot disagree with the amount.
-  const perDay = (() => {
-    try {
-      const total = dollarsToUnits(dollars);
-      const length = BigInt(Math.max(1, Number(days)));
-      return total / length;
-    } catch {
-      return null;
-    }
-  })();
-
-  // What the account is still short of for this gift, in what the card rail must be paid. Said before the rail opens
-  // and again beside it, because a payment that falls short leaves this page waiting for a gift it cannot make (D72).
-  const toBuy = (() => {
-    try {
-      return eurosToBuy(dollarsToUnits(dollars) - (balance ?? 0n));
-    } catch {
-      return 0;
-    }
-  })();
-  const shown = fundingStageShown(stage, Boolean(address));
-
-  if (step === "form" && shown === "account") {
+  // ---------------------------------------------------------------------------------------------------------------
+  // F10. It is in their name.
+  if (step === "done" && made) {
+    const madeCondition = conditionById(made.conditionId);
+    const units = BigInt(made.amount);
+    const day = units / BigInt(made.days);
+    const about = money.about(units);
     return (
-      <div className="flex flex-col gap-[var(--space-xl)]">
-        <button type="button" onClick={() => setStage("check")} className={BACK_LINK}>
-          Back
-        </button>
-        <section className={STICKER.lilac}>
-          <h1 className={TITLE}>One account, and then you can pay</h1>
-          <p className={HELP}>
-            The money is held in your name until they earn it, so it needs somewhere of yours to be held. Your
-            face or your fingerprint is the whole account: no password, no code by text, nothing to remember.
-          </p>
+      <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.made.title(formatAusd(units), made.recipientName)}>
+        <section className="flex flex-col gap-[var(--space-sm)]">
+          {about ? <p className={HELP}>{about}</p> : null}
+          <p className={BODY}>{W.made.terms(formatAusd(units), made.days, formatAusd(day), day * BigInt(made.days) === units, madeCondition?.source ?? "")}</p>
+          <p className={HELP}>{W.made.reference(whenInWords(made.atMs), made.giftId)}</p>
         </section>
-        <AccountPanel />
-      </div>
-    );
-  }
-
-  if (step === "form" && shown === "who") {
-    return (
-      <div className="flex flex-col gap-[var(--space-xl)]">
-        <Link href="/" className={BACK_LINK}>
-          Back to my gifts
-        </Link>
-        {!address && somethingToPickUp ? (
-          <section className={STICKER.lilac}>
-            <h2 className={TITLE}>A gift is waiting for your payment</h2>
-            <p className={HELP}>
-              You set one up on this device and it is not made yet. Sign in and Viky picks it up where it stopped.
-            </p>
-            <button type="button" onClick={() => setStage("account")} className={SECONDARY_BUTTON}>
-              Sign in to pick it up
-            </button>
-          </section>
-        ) : null}
-        {/* The Duolingo name is the one thing asked, because it is the one thing here that protects the gift. The
-            email or phone that came first protected nothing: the claim checks the link alone and Viky never writes
-            to anybody, so it only left a fingerprint of them on a public ledger (D72). */}
-        <section className={STICKER.pink}>
-          <h1 className={TITLE}>Who is it for, and for what</h1>
-          <label className="flex flex-col gap-[var(--space-xs)]">
-            <span className={HELP}>Their Duolingo name, if you know it</span>
-            <input value={username} onChange={(event) => setUsername(event.target.value)} className={FIELD} />
-          </label>
-          <p className={HELP}>
-            Naming it is the surest thing you can do: only that Duolingo can then earn this gift, whoever opens
-            the link. Leave it empty and they name their own.
-          </p>
-          <p className={HELP}>Viky never writes to them. You send them the link yourself, once the gift is ready.</p>
-        </section>
-        <button
-          type="button"
-          onClick={() => setStage("howMuch")}
-          className={PRIMARY_BUTTON}
-        >
-          Continue
-        </button>
-      </div>
-    );
-  }
-
-  if (step === "form" && shown === "howMuch") {
-    return (
-      <div className="flex flex-col gap-[var(--space-xl)]">
-        <button type="button" onClick={() => setStage("who")} className={BACK_LINK}>
-          Back
-        </button>
-        <section className={STICKER.sun}>
-          <h1 className={TITLE}>How much, and for how long</h1>
-          <label className="flex flex-col gap-[var(--space-xs)]">
-            <span className={HELP}>How much, in dollars</span>
-            <input value={dollars} onChange={(event) => setDollars(event.target.value)} inputMode="decimal" className={FIELD} />
-          </label>
-          <label className="flex flex-col gap-[var(--space-xs)]">
-            <span className={HELP}>For how many days, seven at least</span>
-            <input value={days} onChange={(event) => setDays(event.target.value)} inputMode="numeric" className={FIELD} />
-          </label>
-          <label className="flex flex-col gap-[var(--space-xs)]">
-            <span className={HELP}>XP a day to earn one day</span>
-            <input value={target} onChange={(event) => setTarget(event.target.value)} inputMode="numeric" className={FIELD} />
-          </label>
-        </section>
-
-        <section className={STICKER.mint}>
-          <p className={HELP}>Each day they reach it, this becomes theirs</p>
-          <p className={MONEY}>{perDay === null ? "..." : formatAusd(perDay)}</p>
-          <p className={HELP}>And each day they miss, the same comes back to you.</p>
-        </section>
-
-        <div className={ACTION_BAR}>
-          <button type="button" onClick={() => setStage("check")} disabled={!ready} className={PRIMARY_BUTTON}>
-            Continue
+        <section className={CARD}>
+          <h2 className={TITLE}>{W.made.linkTitle}</h2>
+          <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--background)] p-[var(--space-md)] text-[length:var(--type-help)]">{made.claimUrl}</p>
+          <button type="button" onClick={() => copy("link", made.claimUrl)} className={PRIMARY_BUTTON}>
+            {copied === "link" ? W.made.copied : W.made.copy}
           </button>
-        </div>
-        {problem ? <p className={BODY}>{problem}</p> : null}
-      </div>
+          {copyRefused === "link" ? <FieldRefusal id="link-refused">{W.made.copyRefused}</FieldRefusal> : null}
+          {sharing ? (
+            <button
+              type="button"
+              onClick={() => void navigator.share({ title: "Viky", text: W.made.shareText(made.recipientName), url: made.claimUrl }).catch(() => undefined)}
+              className={SECONDARY_BUTTON}
+            >
+              {W.made.share}
+            </button>
+          ) : null}
+          <p className={HELP}>{W.made.onlyThem(made.recipientName)}</p>
+        </section>
+        <section className="flex flex-col gap-[var(--space-md)]">
+          <h2 className={TITLE}>{W.made.nextTitle}</h2>
+          <ol className={`flex list-decimal flex-col gap-[var(--space-sm)] pl-[var(--space-lg)] ${BODY}`}>
+            {W.made.next(made.recipientName, madeCondition?.source ?? "", madeCondition?.words.eachDay ?? "", formatAusd(day), settlingTimeInWords(made.atMs)).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ol>
+        </section>
+        <Link href={`/g/${made.giftId}`} className={SECONDARY_BUTTON}>
+          {W.made.seeIt}
+        </Link>
+      </Shell>
     );
   }
 
-  if (step === "form" && shown === "check") {
+  // ---------------------------------------------------------------------------------------------------------------
+  // F9. A gift waiting on this device, and nobody signed in: one path.
+  if (!address && kept && step !== "account" && !hadAccount) {
     return (
-      <div className="flex flex-col gap-[var(--space-xl)]">
-        <button type="button" onClick={() => setStage("howMuch")} className={BACK_LINK}>
-          Back
+      <Shell kind="task" back="/" step={W.waitingGift.title}>
+        <p className={BODY}>{kept.recipientName ? W.waitingGift.which(formatAusd(dollarsToUnits(kept.dollars)), kept.recipientName) : W.waitingGift.whichUnnamed(formatAusd(dollarsToUnits(kept.dollars)))}</p>
+        <button type="button" onClick={() => void signIn()} disabled={accountStatus === "busy"} className={PRIMARY_BUTTON}>
+          {W.waitingGift.signIn}
         </button>
-        <section className={STICKER.lilac}>
-          <h1 className={TITLE}>Check this over</h1>
-          <dl className="flex flex-col gap-[var(--space-sm)]">
-            <div className="flex items-baseline justify-between gap-[var(--space-md)]">
-              <dt className={HELP}>In their name</dt>
-              <dd className={BODY}>{(() => { try { return formatAusd(dollarsToUnits(dollars)); } catch { return "..."; } })()}</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-[var(--space-md)]">
-              <dt className={HELP}>Theirs for each day earned</dt>
-              <dd className={BODY}>{perDay === null ? "..." : formatAusd(perDay)}</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-[var(--space-md)]">
-              <dt className={HELP}>Over</dt>
-              <dd className={BODY}>{days} days, {target} XP a day</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-[var(--space-md)]">
-              <dt className={HELP}>First day counted</dt>
-              <dd className={BODY}>the day after they connect Duolingo</dd>
-            </div>
-          </dl>
-          <p className={HELP}>
-            A day they miss comes back to you by itself, the morning after. Nothing of this is kept by anyone if
-            they stop.
-          </p>
-        </section>
-
-        <section className={STICKER.mint}>
-          <h2 className={TITLE}>What they can do with it</h2>
-          <p className={HELP}>
-            What they earn is theirs straight away, and it adds up in their account from one gift to the next.
-          </p>
-        </section>
-
-        {!enough && arrived ? (
-          <section className={STICKER.pink}>
-            <h2 className={TITLE}>Paying for it</h2>
-            <p className={HELP}>
-              A card payment has already arrived in your account. The next step turns it into this gift, and says
-              how much more to pay if it falls short.
-            </p>
-          </section>
-        ) : null}
-
-        {!enough && !arrived ? (
-          <section className={STICKER.pink}>
-            <h2 className={TITLE}>Paying for it</h2>
-            <p className={HELP}>
-              You do not have enough in your account yet, so the next step opens {WAY_IN.name} to pay by card.
-              To cover this gift, pay at least {toBuy} EUR. The smallest payment they take is {WAY_IN.smallest}, they keep {WAY_IN.fee} of what you pay, and
-              they check who you are the first time, once. Whatever is left over stays in your account for the
-              next gift.
-            </p>
-            <p className={HELP}>
-              Their page opens on something else by default, so you will set it yourself: Buy, pay in EUR,
-              receive MON, on the Monad network. The next screen walks you through it.
-            </p>
-          </section>
-        ) : null}
-
-        <div className={ACTION_BAR}>
-          {address ? (
-            <button type="button" onClick={() => void start()} disabled={!ready} className={PRIMARY_BUTTON}>
-              {enough ? "Put it in their name" : arrived ? "Use the payment that arrived" : "Add money and give"}
-            </button>
-          ) : (
-            <button type="button" onClick={() => setStage("account")} disabled={!ready} className={PRIMARY_BUTTON}>
-              Continue
-            </button>
-          )}
+        <div className="flex flex-col gap-[var(--space-xs)]">
+          <button type="button" onClick={differentGift} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+            {W.waiting.different}
+          </button>
+          <p className={HELP}>{W.waitingGift.staysInAccount}</p>
         </div>
-        {notice ? <p className={BODY}>{notice}</p> : null}
-        {problem ? <p className={BODY}>{problem}</p> : null}
-      </div>
+      </Shell>
     );
   }
 
-  // The session closed while the page waited. What was paid stays in the account and the gift stays set up, so the
-  // page says so and asks for the one thing it needs to go on: the account back. It used to read the closed account's
-  // identifier here regardless, and without one the page ended (D74).
-  if (!address) {
+  // ---------------------------------------------------------------------------------------------------------------
+  // F8. The session closed while paying.
+  if (!address && step === "paying") {
+    const units = amount.units ?? 0n;
     return (
-      <div className="flex flex-col gap-[var(--space-xl)]">
-        <section className={STICKER.lilac}>
-          <h1 className={TITLE}>Your session closed while you were paying</h1>
-          <p className={BODY}>
-            {keptOnDevice
-              ? "Nothing is lost. The gift you set up is kept on this device, and whatever you paid stays in your account."
-              : "Nothing is lost. The gift you set up is kept while this page stays open, and whatever you paid stays in your account."}
-          </p>
-          <p className={HELP}>
-            Sign in again and Viky picks up where it stopped: your payment becomes the gift as soon as it is here.{" "}
-            {WAY_IN.name} says most payments take 30 to 60 minutes, and sometimes several hours.
-          </p>
-        </section>
-        {/* Signing in leads here, and making an account follows. The other way round, somebody coming back to their
-            gift makes a second account, and the gift and the payment stay on the first one (D74). */}
-        <AccountPanel returning />
-      </div>
+      <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.closed.title}>
+        <p className={BODY}>{keptOnDevice ? W.closed.kept(formatAusd(units), recipient) : W.closed.keptWhileOpen(formatAusd(units), recipient)}</p>
+        <p className={HELP}>{W.closed.signInAgain}</p>
+        <AccountPanel returning signInOnly />
+      </Shell>
     );
   }
 
-  // Waiting for the card payment, then converting, then giving. One screen, because it is one wait.
-  return (
-    <div className="flex flex-col gap-[var(--space-xl)]">
-      <section className={STICKER.sun}>
-        <h1 className={TITLE}>Your money</h1>
-        {/* While the payment is still on its way, the big figure is what is expected, not what is here. The
-            balance is zero until the money lands, so a large "$0.00" was the truth and still read as a
-            failure: the funder asked what it meant, which is the question a number should never raise. What
-            has actually arrived stays on the screen, smaller and below, so nothing is hidden (D76). */}
-        {step === "waiting" ? (
-          <>
-            <p className={MONEY}>{(() => { try { return formatAusd(dollarsToUnits(dollars)); } catch { return "..."; } })()}</p>
-            <p className={BODY}>Nothing has arrived yet. This is what your gift will hold.</p>
-            <p className={HELP}>In your account now: {balance === null ? "..." : formatAusd(balance)}</p>
-          </>
-        ) : (
-          <p className={MONEY}>{balance === null ? "..." : formatAusd(balance)}</p>
-        )}
-        {/* Whatever just happened comes before the instructions, not after them: somebody coming back to a gift read
-            "Welcome back" under the buttons, at the very bottom of the card (D74). */}
-        {notice ? <p className={BODY}>{notice}</p> : null}
-        {problem ? <p className={BODY}>{problem}</p> : null}
-        {step === "waiting" ? (
-          <div className="flex flex-col gap-[var(--space-md)]">
-            {/* The page no longer has to be watched: the gift outlives the session and the page (D74). Telling
-                somebody to keep a page open for an hour never protected them, because the session closed anyway. */}
-            <p className="font-medium">
-              {keptOnDevice
-                ? "Waiting for your payment. You can leave this page: the gift is kept, and Viky picks it up when you come back."
-                : "Waiting for your payment. Keep this page open: this device would not keep the gift."}
-            </p>
-            <p className={HELP}>
-              {WAY_IN.name}&apos;s page opens on something else by default, so set each of these yourself:
-            </p>
-            <ol className={`list-decimal pl-[var(--space-lg)] ${HELP}`}>
-              <li>Choose Buy, not sell.</li>
-              <li>{toBuy > 0 ? `Pay in EUR, at least ${toBuy} EUR.` : "Pay in EUR, and type how much."}</li>
-              <li>Choose to receive MON.</li>
-              <li>Choose the Monad network.</li>
-              <li>Paste your identifier where they ask where to send it.</li>
-              {/* Their page asks what kind of destination it is. The key behind it is made on this device from the
-                  passkey and held by nobody else, so the true answer is the person's own, non-custodial (D72). */}
-              <li>When they ask whose it is, choose your own, non-custodial, not an exchange or a platform.</li>
-            </ol>
-            <div className="rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)]">
-              <p className={HELP}>Before you pay, check what you pasted starts and ends like this:</p>
-              <p className="text-[length:var(--type-body)] tabular-nums">
-                {address.slice(0, 6)}
-                <span className="text-[var(--muted)]"> ... </span>
-                {address.slice(-4)}
-              </p>
+  const caption = (current: Step) => W.step(numbered.indexOf(current) + 1, numbered.length);
+
+  // ---------------------------------------------------------------------------------------------------------------
+  // F2. Who is it for?
+  if (step === "who") {
+    return (
+      <Shell kind="task" back="/" caption={caption("who")} step={W.who.title}>
+        <form
+          className="flex flex-col gap-[var(--space-xl)]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (namesReady) go("what");
+            else setTouched({ recipient: true, funder: true });
+          }}
+        >
+          <Field
+            id="recipient-name"
+            label={W.who.recipientLabel}
+            value={draft.recipientName}
+            onChange={(value) => update({ recipientName: value })}
+            onBlur={() => setTouched((current) => ({ ...current, recipient: true }))}
+            refusal={touched.recipient || giftNameProblem(draft.recipientName) !== "empty" ? recipientRefusal : undefined}
+            autoComplete="off"
+          />
+          <Field
+            id="funder-name"
+            label={W.who.funderLabel}
+            help={W.who.funderHelp}
+            value={draft.funderName}
+            onChange={(value) => update({ funderName: value })}
+            onBlur={() => setTouched((current) => ({ ...current, funder: true }))}
+            refusal={touched.funder || giftNameProblem(draft.funderName) !== "empty" ? funderRefusal : undefined}
+            autoComplete="nickname"
+          />
+          <div className="flex flex-col gap-[var(--space-sm)]">
+            <p className={HELP}>{W.who.seen}</p>
+            <p className={HELP}>{W.who.neverWrites}</p>
+          </div>
+          <button type="submit" disabled={!namesReady} className={PRIMARY_BUTTON}>
+            {W.continue}
+          </button>
+        </form>
+      </Shell>
+    );
+  }
+
+  // ---------------------------------------------------------------------------------------------------------------
+  // What will they do? Only what works from end to end, nothing chosen for them (structure, section 5).
+  if (step === "what") {
+    const live = liveConditions();
+    return (
+      <Shell kind="task" back="/" caption={caption("what")} step={W.what.title}>
+        <ChoiceList
+          name="condition"
+          legend={W.what.title}
+          legendHidden
+          options={live.map((entry) => ({ value: entry.id, label: entry.name, help: entry.help }))}
+          value={condition?.id ?? null}
+          onChange={(id) => {
+            const chosen = live.find((entry) => entry.id === id);
+            update({ conditionId: id, target: draft.target || String(chosen?.target?.suggested ?? "") });
+          }}
+        />
+        <button type="button" disabled={!condition} onClick={() => go(hasDetail ? "detail" : "amount")} className={PRIMARY_BUTTON}>
+          {W.continue}
+        </button>
+      </Shell>
+    );
+  }
+
+  // ---------------------------------------------------------------------------------------------------------------
+  // The condition's own detail: for a source read by name, that name, checked before any money moves (decision 10);
+  // for a daily condition, what counts as a day.
+  if (step === "detail" && condition && hasDetail) {
+    const typed = draft.username.trim();
+    const refusal = shapeRefusal ?? (nameCheck.checked === undefined && nameCheck.refusal ? nameCheck.refusal : undefined);
+    const next = async () => {
+      if (daily.target === null) return;
+      if (!nameLink || typed === "" || !nameLink.check || nameCheck.checked === typed) {
+        go("amount");
+        return;
+      }
+      setNameCheck({ checking: true });
+      try {
+        const found = await checkSourceName(nameLink.check.path, typed);
+        update({ username: found.username });
+        setNameCheck({ checking: false, checked: found.username });
+        go("amount");
+      } catch (error) {
+        const code = error instanceof ApiError ? error.code : "";
+        const refusals = nameLink.check.refusals;
+        setNameCheck({ checking: false, refusal: code === "NO_SUCH_PROFILE" ? refusals.notFound : code === "INVALID_USERNAME" ? refusals.shape : refusals.unavailable });
+      }
+    };
+    return (
+      <Shell kind="task" back="/" caption={caption("detail")} step={condition.detailTitle ?? nameLink?.label}>
+        <form
+          className="flex flex-col gap-[var(--space-xl)]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void next();
+          }}
+        >
+          {nameLink ? (
+            <div className="flex flex-col gap-[var(--space-sm)]">
+              <Field
+                id="source-name"
+                label={nameLink.label}
+                labelHidden={!condition.detailTitle}
+                help={nameLink.help}
+                value={draft.username}
+                onChange={(value) => {
+                  update({ username: value });
+                  setNameCheck({ checking: false });
+                }}
+                refusal={refusal}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              {nameLink.why ? <p className={HELP}>{nameLink.why}</p> : null}
             </div>
-            {copied ? <p className={HELP}>Copied and ready to paste.</p> : null}
-            {pending !== null && pending > 0n ? <p className={HELP}>Something arrived and is being made ready.</p> : null}
-            <div className="flex flex-wrap gap-[var(--tap-gap)]">
-              <button
-                type="button"
-                onClick={() => void navigator.clipboard.writeText(address).then(() => setCopied(true)).catch(() => setCopied(false))}
-                className={INLINE_BUTTON}
-              >
-                Copy my identifier again
-              </button>
-              {/* The one thing there is to press on a screen that waits, so it takes the accent: somebody who closed
-                  the rail's tab has nowhere else to go (D74). */}
-              <a
-                href={WAY_IN.page}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`${INLINE_BUTTON} bg-[var(--accent)] font-medium text-[var(--on-accent)]`}
-              >
-                Open {WAY_IN.name} again
-              </a>
+          ) : null}
+          {condition.target ? (
+            <Field
+              id="gift-target"
+              label={condition.target.label}
+              value={draft.target}
+              onChange={(value) => update({ target: value })}
+              refusal={draft.target.trim() === "" && !touched.target ? undefined : daily.refusal}
+              onBlur={() => setTouched((current) => ({ ...current, target: true }))}
+              inputMode="numeric"
+            />
+          ) : null}
+          <button type="submit" disabled={shapeRefusal !== undefined || daily.target === null || nameCheck.checking} className={PRIMARY_BUTTON}>
+            {nameCheck.checking ? W.detail.checking : W.continue}
+          </button>
+        </form>
+      </Shell>
+    );
+  }
+
+  // ---------------------------------------------------------------------------------------------------------------
+  // F3. How much, and for how long?
+  if (step === "amount" && condition) {
+    const about = amount.units !== null ? money.about(amount.units) : undefined;
+    return (
+      <Shell kind="task" back="/" caption={caption("amount")} step={W.amount.title}>
+        <form
+          className="flex flex-col gap-[var(--space-xl)]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (amountReady) go("check");
+          }}
+        >
+          <Field
+            id="gift-dollars"
+            label={W.amount.dollarsLabel}
+            help={W.amount.dollarsHelp(about)}
+            value={draft.dollars}
+            onChange={(value) => update({ dollars: value })}
+            refusal={draft.dollars.trim() === "" && !touched.dollars ? undefined : amount.refusal}
+            onBlur={() => setTouched((current) => ({ ...current, dollars: true }))}
+            inputMode="decimal"
+          />
+          <Field
+            id="gift-days"
+            label={W.amount.daysLabel}
+            help={W.amount.daysHelp}
+            value={draft.days}
+            onChange={(value) => update({ days: value })}
+            refusal={draft.days.trim() === "" && !touched.days ? undefined : length.refusal}
+            onBlur={() => setTouched((current) => ({ ...current, days: true }))}
+            inputMode="numeric"
+          />
+          {/* What one day is worth, live, computed from what they typed and never stored, so it cannot disagree. */}
+          <section className={CARD} aria-live="polite">
+            <p className={HELP}>{condition.words.earnedDay}</p>
+            <p className={MONEY}>{perDay === null ? "…" : `${exact ? "" : "about "}${formatAusd(perDay)}`}</p>
+            <p className={HELP}>{W.amount.missed}</p>
+          </section>
+          <button type="submit" disabled={!amountReady} className={PRIMARY_BUTTON}>
+            {W.continue}
+          </button>
+        </form>
+      </Shell>
+    );
+  }
+
+  // ---------------------------------------------------------------------------------------------------------------
+  // F4. Check this over, and F5, one account first.
+  if ((step === "check" || step === "account") && condition && amount.units !== null && length.days !== null && perDay !== null) {
+    const units = amount.units;
+    const gift = formatAusd(units);
+    if (step === "account") {
+      return (
+        <Shell kind="task" back="/" backLabel={W.backToCheck} step={W.account.title}>
+          <p className={BODY}>{W.account.yourGift(gift, recipient, length.days)}</p>
+          <p className={HELP}>{W.account.why}</p>
+          <AccountPanel />
+        </Shell>
+      );
+    }
+    const enough = balance !== null && balance >= units;
+    const arrived = !enough && pending !== null && paymentArrived(pending);
+    const short = !enough && !arrived && address !== undefined;
+    const held = balance ?? 0n;
+    const euros = eurosToBuy(units - held);
+    const arrives = roughlyInDollars(euros);
+    const stays = Math.floor(Number(held) / 1_000_000 + arrives - Number(units) / 1_000_000);
+    const about = money.about(units);
+    // Every term the funder chose has a way back to its question; the first day is not a choice, so it has none.
+    const rows: Array<{ label: string; value: string; note?: string; change?: Step }> = [
+      { label: W.check.rows.for, value: recipient, change: "who" },
+      { label: W.check.rows.from, value: funder, change: "who" },
+      { label: W.check.rows.what, value: condition.name, change: "what" },
+      ...(nameLink ? [{ label: nameLink.row, value: draft.username.trim() || nameLink.noneGiven, change: "detail" as Step }] : []),
+      { label: W.check.rows.goes, value: gift, note: about, change: "amount" },
+      { label: W.check.rows.dayEarned, value: W.check.dayEarned(formatAusd(perDay), exact, length.days), change: "amount" },
+      ...(condition.target && daily.target !== null ? [{ label: W.check.rows.dayCounts, value: condition.target.inWords(daily.target), change: "detail" as Step }] : []),
+      { label: W.check.rows.firstDay, value: W.check.firstDay(condition.source) },
+      { label: W.check.rows.ends, value: W.check.ends(length.days), change: "amount" },
+    ];
+    return (
+      <Shell kind="task" back="/" caption={caption("check")} step={W.check.title}>
+        <dl className="flex flex-col divide-y divide-[var(--divider)] border-y border-[var(--divider)]">
+          {rows.map((row) => (
+            <div key={row.label} className="flex items-start justify-between gap-[var(--space-md)] py-[var(--space-md)]">
+              <div className="flex min-w-0 flex-col gap-[var(--space-xs)]">
+                <dt className={HELP}>{row.label}</dt>
+                <dd className={`${BODY} break-words`}>{row.value}</dd>
+                {row.note ? <dd className={HELP}>{row.note}</dd> : null}
+              </div>
+              {row.change ? (
+                <button type="button" onClick={() => go(row.change as Step)} className="inline-flex min-h-[var(--tap-target)] shrink-0 items-center text-[length:var(--type-help)] text-[var(--accent-text)] underline">
+                  {W.change}
+                  <span className="sr-only"> {row.label.toLowerCase()}</span>
+                </button>
+              ) : null}
             </div>
-            {/* The way out of a gift picked up again that the funder no longer wants. What they paid stays theirs. */}
+          ))}
+        </dl>
+
+        <section className="flex flex-col gap-[var(--space-sm)]">
+          <p className={BODY}>{W.check.missed(settlingTimeInWords(nowMs))}</p>
+          <p className={BODY}>{W.check.namesSeen(recipient, funder)}</p>
+          <p className="font-medium">{W.check.linkRisk(recipient)}</p>
+          <p className={BODY}>{W.check.fourteenDays}</p>
+        </section>
+
+        {short ? (
+          <section className={CARD}>
+            <h2 className={TITLE}>{W.check.paying}</h2>
+            <dl className="flex flex-col gap-[var(--space-sm)]">
+              <Line label={W.check.youPay} value={W.check.byCard(euros)} />
+              {held > 0n ? <Line label={W.check.alreadyHeld} value={formatAusd(held)} /> : null}
+              <Line label={W.check.arrives} value={W.check.aboutDollars(Math.floor(arrives))} />
+              <Line label={W.check.rows.goes} value={gift} />
+              {stays > 0 ? <Line label={W.check.staysYours} value={W.check.aboutDollars(stays)} /> : null}
+            </dl>
+            <p className={HELP}>{W.check.fee(WAY_IN.name, WAY_IN.fee)}</p>
+            <p className={HELP}>{W.check.delay(WAY_IN.name)}</p>
+          </section>
+        ) : null}
+        {arrived ? (
+          <section className={CARD}>
+            <h2 className={TITLE}>{W.check.paying}</h2>
+            <p className={BODY}>{arrivedWorth && arrivedWorth !== "unknown" ? W.check.arrivedWorth(arrivedWorth) : W.check.arrivedLater}</p>
+            <p className={HELP}>{W.check.arrivedUse(gift, recipient)}</p>
+          </section>
+        ) : null}
+        {enough ? <p className={HELP}>{W.check.fromAccount(formatAusd(held))}</p> : null}
+
+        <div className="flex flex-col gap-[var(--tap-gap)]">
+          <button type="button" onClick={() => void commit(enough, arrived)} disabled={Boolean(address) && balance === null} className={PRIMARY_BUTTON}>
+            {!address ? W.continue : enough ? W.check.putIt(gift, recipient) : arrived ? W.check.useArrived : W.check.pay(euros)}
+          </button>
+          <Link href="/" className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+            {W.notNow}
+          </Link>
+        </div>
+        {problem ? <FieldRefusal id="check-refused">{problem}</FieldRefusal> : null}
+      </Shell>
+    );
+  }
+
+  // ---------------------------------------------------------------------------------------------------------------
+  // F6 and F7. Paying: the wait, the payment arriving, the gift being made.
+  if (step === "paying" && address && amount.units !== null && condition) {
+    const units = amount.units;
+    const gift = formatAusd(units);
+    const held = balance ?? 0n;
+    if (phase === "converting" || phase === "giving") {
+      return (
+        <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
+          <p className={BODY} aria-live="polite">
+            {phase === "converting" ? W.arrived.gettingReady : W.arrived.putting(arrivedFigure, gift, recipient)}
+          </p>
+          {/* The gift stays in sight while it is being made (audit C, 10.3). */}
+          <p className={HELP}>{W.account.yourGift(gift, recipient, length.days ?? 0)}</p>
+        </Shell>
+      );
+    }
+    if (phase === "short" && arrivedFigure) {
+      const more = eurosToBuy(units - held);
+      const makeIt = twoDecimalsDown(held, 6);
+      return (
+        <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
+          <p className={BODY}>{W.arrived.short(arrivedFigure, gift, more, `$${makeIt}`)}</p>
+          <button
+            type="button"
+            onClick={() => {
+              window.open(WAY_IN.page, "_blank", "noopener,noreferrer");
+              setPhase("waiting");
+            }}
+            className={PRIMARY_BUTTON}
+          >
+            {W.arrived.payMore(more)}
+          </button>
+          {held >= 1_000_000n ? (
             <button
               type="button"
               onClick={() => {
-                forgetPendingGift();
-                setNotice(null);
-                setProblem(null);
-                setStage("who");
-                setStep("form");
+                update({ dollars: makeIt });
+                keepOnDevice(makeIt);
+                setPhase("waiting");
+                go("check");
               }}
-              className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}
+              className={SECONDARY_BUTTON}
             >
-              Set up a different gift instead
+              {W.arrived.makeIt(`$${makeIt}`)}
             </button>
-            <p className={HELP}>Whatever you paid stays in your account, for this gift or the next one.</p>
-          </div>
-        ) : null}
-        {step === "converting" || step === "giving" ? (
-          <p className={BODY}>{step === "giving" ? "Putting it in their name" : "Getting it ready"}</p>
-        ) : null}
-      </section>
+          ) : null}
+        </Shell>
+      );
+    }
+    if (phase === "failed") {
+      return (
+        <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
+          {problem ? <FieldRefusal id="give-refused">{problem}</FieldRefusal> : null}
+          <button
+            type="button"
+            onClick={() => {
+              setProblem(null);
+              setPhase("waiting");
+            }}
+            className={PRIMARY_BUTTON}
+          >
+            {W.failures.tryAgain}
+          </button>
+          <p className={HELP}>{W.waiting.staysInAccount}</p>
+        </Shell>
+      );
+    }
+    const toBuy = balance === null ? undefined : eurosToBuy(units - held);
+    const start = address.slice(0, 4);
+    const end = address.slice(-4);
+    return (
+      <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.waiting.title(toBuy)}>
+        <section className="flex flex-col gap-[var(--space-xs)]">
+          <p className={HELP}>{W.waiting.inAccountNow(balance === null ? "…" : formatAusd(held))}</p>
+          <p className={BODY}>{W.account.yourGift(gift, recipient, length.days ?? 0)}</p>
+        </section>
+        {problem ? <FieldRefusal id="waiting-refused">{problem}</FieldRefusal> : null}
+        <section className={CARD}>
+          <p className="font-medium">{W.waiting.setThese(WAY_IN.name)}</p>
+          <ul className={`flex flex-col gap-[var(--space-xs)] ${BODY}`}>
+            {W.waiting.settings(toBuy).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+          <p className={HELP}>{W.waiting.theirWords(WAY_IN.name)}</p>
+          <p className="font-medium">{W.waiting.codeLabel(WAY_IN.name)}</p>
+          <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--background)] p-[var(--space-md)] text-[length:var(--type-help)] tabular-nums">{address}</p>
+          <button type="button" onClick={() => copy("code", address)} className={SECONDARY_BUTTON}>
+            {copied === "code" ? W.waiting.copied : W.waiting.copy}
+          </button>
+          {copyRefused === "code" ? <FieldRefusal id="code-refused">{W.waiting.copyRefused}</FieldRefusal> : null}
+          <p className={HELP}>{W.waiting.startsEnds(start, end)}</p>
+        </section>
+        <p className={BODY}>
+          {W.check.delay(WAY_IN.name)} {keptOnDevice ? W.waiting.leave : W.waiting.stay}
+        </p>
+        <a href={WAY_IN.page} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON}>
+          {W.waiting.openAgain(WAY_IN.name)}
+        </a>
+        <div className="flex flex-col gap-[var(--space-xs)]">
+          <button type="button" onClick={differentGift} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+            {W.waiting.different}
+          </button>
+          <p className={HELP}>{W.waiting.staysInAccount}</p>
+        </div>
+      </Shell>
+    );
+  }
+
+  // Between two states while the page corrects its address.
+  return (
+    <Shell kind="task">
+      <p className={HELP}>One moment</p>
+    </Shell>
+  );
+}
+
+/** A labelled line of text, its help under the label, its refusal under the field it is about. */
+function Field({
+  id,
+  label,
+  labelHidden = false,
+  help,
+  value,
+  onChange,
+  onBlur,
+  refusal,
+  inputMode,
+  autoComplete,
+  spellCheck,
+}: Readonly<{
+  id: string;
+  label: string;
+  labelHidden?: boolean;
+  help?: string;
+  value: string;
+  onChange: (value: string) => void;
+  onBlur?: () => void;
+  refusal?: string;
+  inputMode?: "decimal" | "numeric";
+  autoComplete?: string;
+  spellCheck?: boolean;
+}>) {
+  const described = [help ? `${id}-help` : "", refusal ? `${id}-refusal` : ""].filter(Boolean).join(" ") || undefined;
+  return (
+    <div className="flex flex-col gap-[var(--space-xs)]">
+      <label htmlFor={id} className={labelHidden ? "sr-only" : "font-medium"}>
+        {label}
+      </label>
+      {help ? (
+        <p id={`${id}-help`} className={HELP}>
+          {help}
+        </p>
+      ) : null}
+      <input
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
+        inputMode={inputMode}
+        autoComplete={autoComplete}
+        spellCheck={spellCheck}
+        aria-invalid={refusal ? true : undefined}
+        aria-describedby={described}
+        className={`${FIELD} ${refusal ? "border-[3px]" : ""}`}
+      />
+      {/* Under the field in cause (rule F of the specification). */}
+      <FieldRefusal id={`${id}-refusal`}>{refusal}</FieldRefusal>
+    </div>
+  );
+}
+
+function Line({ label, value }: Readonly<{ label: string; value: ReactNode }>) {
+  return (
+    <div className="flex items-baseline justify-between gap-[var(--space-md)]">
+      <dt className={HELP}>{label}</dt>
+      <dd className={`${BODY} text-right tabular-nums`}>{value}</dd>
     </div>
   );
 }

@@ -39,6 +39,9 @@ export default function PrivacyPage() {
             <strong>If you fund a gift:</strong> the gift terms (amount, goal, daily target, duration). Gifts made before 15 September 2026 also hold the recipient&apos;s email or phone number as a one-way fingerprint, in the database and in the public program; the plain email or number was never stored, and gifts made since ask for neither.
           </li>
           <li>
+            <strong>The two names on a gift:</strong> the first name of the person it is for and the name of the person who sends it, as the sender types them. Kept in our database with the gift&apos;s link, never in the public program. They are shown to whoever opens the link, and to the sender and the recipient when signed in, and to nobody else.
+          </li>
+          <li>
             <strong>If you receive a gift:</strong> your Duolingo username, profile id and display name (as read at each attested reading, including the short code you add to it once), kept in the database with each reading; a keyed pseudonym of that profile id, which is what the public program sees; your total XP as read, and the attested proof of the reading (produced with Reclaim), kept as the record of each day.
           </li>
           <li>

@@ -130,6 +130,32 @@ the process environment wins, which is why the production values are exported in
 a missing `viky_sends` is logged and the send still answers its reference, and a missing `viky_accounts` leaves
 every account on the currency its device proposes.
 
+## Before deploying the build of S2: two columns for the names
+
+A gift keeps the two names given when it is offered in `viky_gifts.recipient_name` and `viky_gifts.funder_name` (D85).
+They are nullable, so the code already in production ignores them; the create route of S2 writes them after it has
+relayed the money, so they must exist before S2 serves anybody. Same two commands as above, then read the columns
+back.
+
+## Test accounts in production
+
+Accounts made on viky.cash to check a deployment, each with a virtual passkey in a headless browser that is gone
+when the check ends: nobody can sign in to them again. They hold no money and no gift. **They never count as users**,
+in any number given to anybody, and a count of accounts must leave them out.
+
+An account leaves no row of its own on the server; these are known because each check chose a currency on Me, which
+writes `viky_accounts`.
+
+| account | made | why |
+|---|---|---|
+| `0xff098cd674abbaff26019fffc5542fbde4f09672` | 17 Sep 2026, 03:01 UTC | S1 deployment check, 390x844 day |
+| `0x767d8f483f5ebb21323458ed22cfb8315cbcc6b7` | 17 Sep 2026, 03:01 UTC | S1 deployment check, 390x844 night |
+| `0xd75640785adb940ffa24299304aa5fe315dc687c` | 17 Sep 2026, 03:02 UTC | S1 deployment check, 1440x900 day |
+| `0x2baa0ab555b8e4e277e71ffc9ae3b09e2818e117` | 17 Sep 2026, 03:02 UTC | S1 deployment check, 1440x900 night |
+
+The row `0xb12e0c72209bd4becfdafa96a8f3e7ebc93b8376`, euros, 02:56 UTC the same day, was not written by a check and
+is not listed here.
+
 ## 1. The pinned exchange points at a contract somebody else owns
 
 `ExitRouter` never calls an exchange without checking, in the same transaction, that it still forwards where it

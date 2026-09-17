@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { catchUpSecondsOf } from "@/src/catch-up";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { checkInDayIndex, formatAusd, readGift, utcDayOf } from "@/src/gift-reader";
-import { loadGift, loadRelayed } from "@/src/gift-store";
+import { holdsGiftLink, loadGift, loadRelayed } from "@/src/gift-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { escrowOf } from "@/src/relayer";
 import { readAccountAuthSession } from "@/src/account-auth-server";
@@ -13,6 +14,10 @@ export const dynamic = "force-dynamic";
  * The state of a gift for its screens: what is already the recipient's, what came back, which day it
  * is. Numbers are raw units plus a formatted dollar string; the transaction list serves the judges
  * page only. Reading a gift needs no sign-in: the contract is public and the page is reached by link.
+ *
+ * The two names are not public. Gift numbers follow each other, so anyone could read gift after gift; the names go
+ * only to a request that carries the link's key, or to the funder or the recipient signed in. That is what the check
+ * screen promises the funder: the names show to whoever has the link.
  */
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -31,12 +36,17 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const opened = gift.recipient !== null;
     const connected = gift.startDay !== 0;
     let viewerIsRecipient = false;
+    let viewerIsFunder = false;
     try {
       const session = readAccountAuthSession(request);
       viewerIsRecipient = gift.recipient !== null && session.account.toLowerCase() === gift.recipient.toLowerCase();
+      viewerIsFunder = session.account.toLowerCase() === gift.funder.toLowerCase();
     } catch {
       viewerIsRecipient = false;
+      viewerIsFunder = false;
     }
+    const holdsTheLink = holdsGiftLink(record, new URL(request.url).searchParams.get("t"));
+    const names = viewerIsRecipient || viewerIsFunder || holdsTheLink ? { recipientName: record.recipientName, funderName: record.funderName } : null;
     const goalAccount = {
       username: record?.goalUsername ?? null,
       source: record?.usernameSource ?? null,
@@ -53,10 +63,11 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         youAreTheRecipient: viewerIsRecipient,
         // How long a day stays catchable on the contract that holds this gift. The two live contracts do not
         // agree, which is a defect recorded in D50, so the screen is told rather than left to assume.
-        catchUpSeconds: escrow.toLowerCase() === "0xe04cd59bb93765333200a9da01df83149d4c4d67" ? 86_400 : 86_400 + 6 * 3_600,
+        catchUpSeconds: catchUpSecondsOf(escrow),
         // Used by the recipient's browser to sign a withdraw intent for the right contract; never displayed.
         escrow,
         goalAccount,
+        names,
         goalType: gift.goalType,
         dailyTarget: gift.dailyTarget,
         durationDays: gift.durationDays,

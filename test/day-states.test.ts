@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { DAY_MARK, dayInWords, giftDays } from "../src/day-states.js";
+import { DAY_MARK, dayInWords, giftDays, stripOf } from "../src/day-states.js";
 
 /**
  * The states of a day, and the one the counts cannot give. A recipient on the third day once read
@@ -83,4 +83,33 @@ test("each state has a mark of its own, so colour is never the only carrier", ()
 test("a finished gift shows every day settled and nothing still to come", () => {
   const { days } = giftDays(gift({ creditedDays: 4, missedDays: 3 }), CATCH_UP, noonOn(START + 10));
   assert.ok(days.every((day) => day.state === "settled"));
+});
+
+/**
+ * A gift card's strip (founder's correction of 17 Sep 2026): a day earned and a day that went back were drawn alike,
+ * so "2 of 7 days done, 1 missed" and "3 of 7 days done, 0 missed" gave the same picture. Gift 1, in production, has
+ * missed days.
+ */
+test("two gifts whose counts differ never draw the same strip, and the strip carries the counts", () => {
+  const now = noonOn(START + 5);
+  const counting = { startDay: START, endDay: START + 6, durationDays: 7 };
+  const oneMissed = stripOf({ ...counting, creditedDays: 2, missedDays: 1 }, CATCH_UP, now);
+  const noneMissed = stripOf({ ...counting, creditedDays: 3, missedDays: 0 }, CATCH_UP, now);
+  assert.notDeepEqual(oneMissed, noneMissed);
+  assert.deepEqual(oneMissed.slice(0, 3), ["earned", "earned", "returned"]);
+  assert.deepEqual(noneMissed.slice(0, 3), ["earned", "earned", "earned"]);
+
+  // Every split of the same settled days gives its own strip, and the strip holds exactly the counts.
+  const seen = new Set<string>();
+  for (let credited = 0; credited <= 5; credited += 1) {
+    const strip = stripOf({ ...counting, creditedDays: credited, missedDays: 5 - credited }, CATCH_UP, noonOn(START + 6));
+    assert.equal(strip.filter((day) => day === "earned").length, credited);
+    assert.equal(strip.filter((day) => day === "returned").length, 5 - credited);
+    assert.equal(strip.length, 7);
+    seen.add(strip.join(","));
+  }
+  assert.equal(seen.size, 6, "six splits, six different strips");
+
+  // Before the first reading, the strip is the gift's length, every day still to come.
+  assert.deepEqual(stripOf({ ...counting, startDay: 0, creditedDays: 0, missedDays: 0 }, CATCH_UP, now), Array(7).fill("toCome"));
 });

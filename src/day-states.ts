@@ -88,6 +88,26 @@ export function giftDays(gift: GiftShape, catchUpSeconds: number, nowMs: number)
   return { days, earned: gift.creditedDays, returned: gift.missedDays };
 }
 
+/** One segment of a gift card's strip of days. */
+export type StripDay = "earned" | "returned" | "catchable" | "aboutToReturn" | "today" | "toCome";
+
+/**
+ * The strip a gift card draws: the counts, then the days still open. The contract gives how many days were earned and
+ * how many came back, not which (see the top of this file), so until the keeper's record per day exists (S3) the strip
+ * draws `creditedDays` earned segments, then `missedDays` returned ones, then the days not yet settled as `giftDays`
+ * finds them. Two gifts whose counts differ never draw the same strip, which is what the card's picture must say: a
+ * day earned and a day that went back are not the same thing (audit D, founder's correction of 17 Sep 2026).
+ */
+export function stripOf(gift: GiftShape, catchUpSeconds: number, nowMs: number): readonly StripDay[] {
+  if (gift.startDay === 0 || nowMs === 0) return Array.from({ length: gift.durationDays }, () => "toCome");
+  const credited = Math.max(0, gift.creditedDays);
+  const missed = Math.max(0, gift.missedDays);
+  return giftDays(gift, catchUpSeconds, nowMs).days.map((day, index) => {
+    if (day.state !== "settled") return day.state;
+    return index < credited ? "earned" : index < credited + missed ? "returned" : "earned";
+  });
+}
+
 /**
  * What each state says, in words, because colour may never be the only carrier: Apple asks for "visual
  * indicators, like distinct shapes or icons, in addition to color", and every published guideline says never

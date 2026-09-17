@@ -22,8 +22,12 @@ const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 const OUTLINE = "border-[length:var(--control-border-width)] border-[var(--control-border)]";
 const RELIEF = "[box-shadow:var(--control-relief)]";
 
-/** The action a screen is asking for. One per screen, at most, so it means something. */
-export const PRIMARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} bg-[var(--accent)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] font-medium text-[var(--on-accent)] disabled:opacity-50`;
+/**
+ * The action a screen is asking for. One per screen, at most, so it means something. Shut, it gives the accent back:
+ * a faded accent is a fourth colour at night (a brown on the indigo ground), so a button that cannot be pressed yet is
+ * a surface with muted words and no relief, and it takes the accent the moment it can.
+ */
+export const PRIMARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} bg-[var(--accent)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] font-medium text-[var(--on-accent)] disabled:border-[var(--card-border)] disabled:bg-[var(--surface)] disabled:text-[var(--muted)] disabled:[box-shadow:none]`;
 
 /** Everything else a person may do from here. */
 export const SECONDARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] disabled:opacity-50`;

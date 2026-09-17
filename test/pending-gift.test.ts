@@ -11,7 +11,7 @@ import { PENDING_GIFT_MAX_AGE_MS, pendingGiftExists, pendingGiftFor, pendingGift
 const A = "0x350aF869ABa6ff26AB33517ECd3E38ACaF107761";
 const B = "0x91C964e745ffd6265c75df33cA9137D81c3c454d";
 const NOW = Date.UTC(2026, 8, 15, 20, 13);
-const terms = { account: A, username: "ama_learns", dollars: "25", days: "7", target: "10" };
+const terms = { account: A, recipientName: "Léa", funderName: "Maman", conditionId: "duolingo-daily", username: "ama_learns", dollars: "25", days: "7", target: "10" };
 
 test("the gift set up before paying comes back for the account that set it up", () => {
   const stored = pendingGiftToStore(terms, NOW);
@@ -44,10 +44,13 @@ test("the device says a gift is waiting without naming whose it is", () => {
   assert.equal(pendingGiftExists(JSON.stringify({ savedAtMs: NOW }), NOW), false);
 });
 
-/** Coming back is not the same as arriving: a second account would leave the gift and the payment on the first. */
-test("on the screen after a closed session, signing in leads and making an account follows", () => {
+/**
+ * Coming back is not the same as arriving: a second account would leave the gift and the payment on the first. Since
+ * the drawn flows (F8), the screen after a closed session offers signing in and nothing else.
+ */
+test("on the screen after a closed session, signing in is the only thing offered", () => {
   const fund = readFileSync("app/components/FundGift.tsx", "utf8");
-  assert.match(fund, /<AccountPanel returning \/>/);
+  assert.match(fund, /<AccountPanel returning signInOnly \/>/);
   const panel = readFileSync("app/components/AccountPanel.tsx", "utf8");
   assert.match(panel, /className=\{returning \? PRIMARY_BUTTON : SECONDARY_BUTTON\}/, "sign in leads when somebody comes back");
   assert.match(panel, /className=\{returning \? SECONDARY_BUTTON : PRIMARY_BUTTON\}/, "and making an account follows it");
@@ -56,13 +59,28 @@ test("on the screen after a closed session, signing in leads and making an accou
 /** What is kept is what the gift is made from, and nothing else: D72 asks for no contact, so none is kept or sent. */
 test("the terms kept are exactly the terms the gift is made from", () => {
   const fund = readFileSync("app/components/FundGift.tsx", "utf8");
-  assert.match(fund, /savePendingGift\(\{ account: address, username, dollars, days, target \}\)/);
-  const call = fund.slice(fund.indexOf("await createGift({"), fund.indexOf("setCreated(result)"));
-  assert.match(call, /duolingoUsername: username\.trim\(\) \|\| undefined/);
-  assert.match(call, /dailyTarget: Number\(target\)/);
-  assert.match(call, /durationDays: Number\(days\)/);
-  assert.match(call, /amount: dollarsToUnits\(dollars\)/);
+  const kept = fund.slice(fund.indexOf("savePendingGift({"), fund.indexOf("}),", fund.indexOf("savePendingGift({")));
+  for (const field of ["recipientName: recipient", "funderName: funder", "conditionId: condition?.id", "username: draft.username.trim()", "dollars", "days: draft.days", "target: draft.target"]) {
+    assert.ok(kept.includes(field), `the device keeps ${field}`);
+  }
+  const call = fund.slice(fund.indexOf("await createGift({"), fund.indexOf("const record: Made"));
+  assert.match(call, /duolingoUsername: draft\.username\.trim\(\) \|\| undefined/);
+  assert.match(call, /recipientName: recipient/);
+  assert.match(call, /funderName: funder/);
+  assert.match(call, /goalType: condition\.goalType/);
+  assert.match(call, /dailyTarget: daily\.target/);
+  assert.match(call, /durationDays: length\.days/);
+  assert.match(call, /amount: amount\.units/);
   assert.doesNotMatch(call, /contact/i, "no contact is asked for, kept or sent (D72)");
+});
+
+test("a gift kept on a device before the names existed is still picked up, as the lesson it was", () => {
+  const before = JSON.stringify({ account: A.toLowerCase(), username: "ama_learns", dollars: "25", days: "7", target: "10", savedAtMs: NOW });
+  const back = pendingGiftFor(before, A, NOW + 60_000);
+  assert.equal(back?.recipientName, "");
+  assert.equal(back?.funderName, "");
+  assert.equal(back?.conditionId, "duolingo-daily");
+  assert.equal(pendingGiftFor(pendingGiftToStore(terms, NOW), A, NOW + 1)?.recipientName, "Léa");
 });
 
 test("anything unreadable, or terms the gift would refuse, is not picked up", () => {

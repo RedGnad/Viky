@@ -9,7 +9,7 @@ import { BACK_LINK } from "../components/ui";
  * returns to Gifts and one who came from Home returns to Home; with no history, which is a link opened cold, it
  * goes where the task says it belongs.
  */
-export function BackLink({ href, label = NAV.back }: Readonly<{ href: string; label?: string }>) {
+export function BackLink({ href, label = NAV.back, follow = false }: Readonly<{ href: string; label?: string; follow?: boolean }>) {
   const router = useRouter();
   return (
     <a
@@ -17,7 +17,9 @@ export function BackLink({ href, label = NAV.back }: Readonly<{ href: string; la
       className={BACK_LINK}
       onClick={(event) => {
         event.preventDefault();
-        if (window.history.length > 1) router.back();
+        // `follow` names a place rather than a step back: once a gift is paid for or made, going back a step would
+        // offer to pay or to make it again, so the link goes where it says.
+        if (!follow && window.history.length > 1) router.back();
         else router.push(href);
       }}
     >

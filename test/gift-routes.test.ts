@@ -83,6 +83,7 @@ test("create refuses malformed terms with a typed code before any relay", async 
     [{ contact: "ama@example.com", goalType: 0, dailyTarget: 10, durationDays: 7, amount: "5000000" }, "GOAL_NOT_OFFERED"],
     [{ contact: "ama@example.com", goalType: 1, dailyTarget: 0, durationDays: 7, amount: "5000000" }, "INVALID_TARGET"],
     [{ contact: "ama@example.com", goalType: 1, dailyTarget: 10, durationDays: 6, amount: "5000000" }, "INVALID_DURATION"],
+    [{ goalType: 1, dailyTarget: 10, durationDays: 91, amount: "5000000" }, "INVALID_DURATION"],
     [{ contact: "ama@example.com", goalType: 1, dailyTarget: 10, durationDays: 7, amount: "999999" }, "INVALID_AMOUNT"],
     [{ contact: "ama@example.com", goalType: 1, dailyTarget: 10, durationDays: 7, amount: "5000000", salt: "nope" }, "INVALID_SALT"],
     [
@@ -100,6 +101,18 @@ test("create refuses malformed terms with a typed code before any relay", async 
     assert.equal(response.status, 400, code);
     assert.equal((await json(response)).code, code);
   }
+  // The two names are words for people and are checked before any relay, by name (17 Sep 2026).
+  for (const [names, which] of [
+    [{ recipientName: "a".repeat(41) }, /their first name in 40 characters/],
+    [{ funderName: "<script>" }, /your name with letters/],
+  ] as const) {
+    const refused = await createPost(post("/api/gift/create", { ...names, goalType: 1, dailyTarget: 10, durationDays: 7, amount: "5000000" }, { cookie }));
+    assert.equal(refused.status, 400);
+    const body = await json(refused);
+    assert.equal(body.code, "INVALID_NAME");
+    assert.match(String(body.error), which);
+  }
+
   const badContact = await createPost(post("/api/gift/create", { contact: "not-a-contact", goalType: 1, dailyTarget: 10, durationDays: 7, amount: "5000000", salt: `0x${"01".repeat(32)}`, authorization: { nonce: `0x${"02".repeat(32)}`, r: `0x${"03".repeat(32)}`, s: `0x${"04".repeat(32)}`, v: 27 } }, { cookie }));
   assert.equal(badContact.status, 400);
   // A contact is asked for nowhere since D72, and none is sent; one that arrives malformed is still refused by name.

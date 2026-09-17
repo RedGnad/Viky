@@ -8,8 +8,9 @@
  *
  * Every sentence that states an amount or a state is listed in docs/SCREEN-CLAIMS.md with the code path that
  * makes it true. No sentence here names a coin, a network, or an identifier: when a third party demands one, it
- * is "the code" that party asks for. No sentence here names a source either: those words are in the register,
- * src/conditions.ts.
+ * is "the code" that party asks for. The one exception is the card service's own page, which cannot be prefilled
+ * (D32): its two settings are quoted in its words, with a sentence saying they need no understanding (flows F6).
+ * No sentence here names a source either: those words are in the register, src/conditions.ts.
  */
 
 /** The three destinations of the bar and the rail, and the mark. */
@@ -57,19 +58,195 @@ export const GIFTS = {
   signInFirst: "Sign in to see your gifts.",
 } as const;
 
-/** One card for a gift, wherever it appears: for whom, for what, how much, its state. */
+/**
+ * One card for a gift, wherever it appears: for whom, for what, how much, its state. The funder reads who it is for,
+ * the recipient who it is from, by the names given on the first step of offering it; a gift made before the names
+ * existed falls back to what is known.
+ */
 export const GIFT_CARD = {
   forYou: "For you",
   forWhoever: "For whoever opens the link",
   forName: (name: string) => `For ${name}`,
+  fromName: (name: string) => `From ${name}`,
   amountDaily: (total: string, perDay: string, days: number) => `${total}, ${perDay} a day for ${days} days`,
   notOpened: "Not opened yet.",
   counting: (done: number, of: number, missed: number) => `Counting: ${done} of ${of} days done, ${missed} missed.`,
   finished: (done: number, of: number, missed: number) => `Finished: ${done} of ${of} days done, ${missed} missed.`,
   takenBack: "Taken back before it was opened.",
-  yours: (amount: string) => `${amount} yours so far`,
-  theirs: (amount: string, back: string) => `${amount} theirs so far, ${back} came back to you`,
-  open: "Open",
+  theirsOf: (theirs: string, total: string, back: string) => `${theirs} of ${total} theirs, ${back} back to you`,
+  yoursOf: (yours: string, total: string, back: string) => `${yours} of ${total} yours, ${back} gone back`,
+} as const;
+
+/** "Léa's", for a name the funder typed. */
+const their = (name: string) => `${name}'s`;
+
+/**
+ * Offering a gift, flows F1 to F11 on the product structure: who it is for, what they will do, the condition's own
+ * detail, how much and for how long, the check, then paying, the wait, and the confirmation. Nothing here names a
+ * source: what a condition is called, what its name field asks and what counts as a day come from the register, and
+ * the card service's name comes from `WAY_IN`.
+ */
+export const FUND = {
+  step: (number: number, of: number) => `Step ${number} of ${of}`,
+  continue: "Continue",
+  backToGifts: "Back to my gifts",
+  backToCheck: "Back to the check",
+  notNow: "Not now",
+  change: "Change",
+
+  who: {
+    title: "Who is it for?",
+    recipientLabel: "Their first name",
+    funderLabel: "Your name, as they know you",
+    funderHelp: "Like Maman, or Tom: the gift says who it is from.",
+    seen: "Both names show on the gift, to them and to whoever opens its link.",
+    neverWrites: "Viky never writes to them. You send them the link yourself, once the gift is ready.",
+    refusals: {
+      recipientEmpty: "Write their first name.",
+      funderEmpty: "Write your name, as they know you.",
+      tooLong: "40 characters at most.",
+      notText: "Letters, spaces, dots, apostrophes or hyphens only.",
+    },
+  },
+
+  what: { title: "What will they do?" },
+
+  detail: { checking: "Checking the name" },
+
+  amount: {
+    title: "How much, and for how long?",
+    dollarsLabel: "How much, in dollars",
+    dollarsHelp: (about: string | undefined) => (about ? `At least $1.00. ${about[0].toUpperCase()}${about.slice(1)}.` : "At least $1.00."),
+    daysLabel: "For how many days",
+    daysHelp: "7 at least, 90 at most.",
+    missed: "And each day they miss, the same comes back to you.",
+    refusals: { daysShape: "Whole days, like 7.", daysLow: "7 days at least.", daysHigh: "90 days at most.", targetShape: "A whole number, like 10." },
+  },
+
+  check: {
+    title: "Check this over",
+    rows: {
+      for: "For",
+      from: "From",
+      what: "What they will do",
+      goes: "Goes in their name",
+      dayEarned: "A day earned",
+      dayCounts: "What counts as a day",
+      firstDay: "First day counted",
+      ends: "Ends",
+    },
+    dayEarned: (perDay: string, exact: boolean, days: number) => `${exact ? "" : "about "}${perDay}, over ${days} days`,
+    firstDay: (source: string) => `The day after they connect ${source}`,
+    ends: (days: number) => `${days} days after that`,
+    missed: (time: string) =>
+      `A day they miss can still be caught up the next day. If it is not, it comes back to you by itself the morning after, at about ${time} your time.`,
+    namesSeen: (recipient: string, funder: string) => `${recipient} and ${funder} show on the gift, to whoever opens its link.`,
+    linkRisk: (recipient: string) => `The link you will get opens the gift for whoever opens it first. Send it only to ${recipient}.`,
+    fourteenDays: "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
+    paying: "Paying for it",
+    youPay: "You pay",
+    byCard: (euros: number) => `${euros} EUR by card`,
+    alreadyHeld: "Already in your account",
+    arrives: "Arrives in your account",
+    aboutDollars: (dollars: number) => `about $${dollars}`,
+    staysYours: "Stays yours",
+    fee: (name: string, fee: string) => `${name} keeps ${fee} of what you pay, and checks who you are the first time, once.`,
+    delay: (name: string) => `${name} says most payments take 30 to 60 minutes, and sometimes several hours.`,
+    arrivedWorth: (dollars: string) => `A card payment is in your account: about ${dollars}.`,
+    arrivedLater: "A card payment is in your account. Its value in dollars will show once the price answers.",
+    arrivedUse: (amount: string, recipient: string) =>
+      `Using it turns it into dollars, a few seconds, then puts ${amount} in ${their(recipient)} name. If it falls short, the next screen says how much more to pay.`,
+    fromAccount: (held: string) => `It comes from your account, which holds ${held}.`,
+    pay: (euros: number) => `Pay ${euros} EUR by card`,
+    useArrived: "Use the payment that arrived",
+    putIt: (amount: string, recipient: string) => `Put ${amount} in ${their(recipient)} name`,
+  },
+
+  account: {
+    title: "One account, and then you can pay",
+    yourGift: (amount: string, recipient: string, days: number) => `Your gift: ${amount} for ${recipient}, ${days} days.`,
+    why: "The money is held in your name until they earn it, so it needs somewhere of yours to be held.",
+  },
+
+  waiting: {
+    title: (euros: number | undefined) => (euros ? `Waiting for your ${euros} EUR payment` : "Waiting for your payment"),
+    inAccountNow: (held: string) => `In your account now: ${held}`,
+    setThese: (name: string) => `On ${name}'s page, set these yourself:`,
+    settings: (euros: number | undefined) => [
+      "Pick: Buy.",
+      euros ? `Pay: ${euros} EUR.` : "Pay: in EUR.",
+      "Receive: MON.",
+      "Network: Monad.",
+      "Send to: the code below.",
+      "Whose it is: your own.",
+    ],
+    theirWords: (name: string) => `MON and Monad are the two words ${name} uses for the money it delivers to Viky. You never have to understand them.`,
+    codeLabel: (name: string) => `The code to give ${name}`,
+    copy: "Copy the code",
+    copied: "Copied",
+    copyRefused: "Your browser would not let us copy it. Press and hold the code, then choose Copy.",
+    startsEnds: (start: string, end: string) => `Before you pay, check what you pasted starts with ${start} and ends with ${end}.`,
+    leave: "You can leave this page: the gift is kept, and Viky picks it up when you come back.",
+    stay: "Keep this page open: this device would not keep the gift.",
+    openAgain: (name: string) => `Open ${name} again`,
+    different: "Set up a different gift instead",
+    staysInAccount: "Whatever you paid stays in your account, for this gift or the next one.",
+  },
+
+  arrived: {
+    title: "Your payment arrived",
+    gettingReady: "Getting it ready, a few seconds.",
+    putting: (arrived: string | undefined, amount: string, recipient: string) =>
+      `${arrived ? `${arrived} arrived. ` : ""}Putting ${amount} in ${their(recipient)} name.`,
+    short: (arrived: string, amount: string, euros: number, held: string) =>
+      `${arrived} arrived, less than the ${amount} for this gift. Pay ${euros} EUR more, or make the gift ${held}.`,
+    payMore: (euros: number) => `Pay ${euros} EUR more`,
+    makeIt: (held: string) => `Make it ${held}`,
+    priceMoved: "The price changed and nothing was changed. Viky will try again in a moment.",
+  },
+
+  closed: {
+    title: "Your session closed while you were paying",
+    kept: (amount: string, recipient: string) => `Nothing is lost. Your ${amount} gift for ${recipient} is kept on this device, and whatever you paid stays in your account.`,
+    keptWhileOpen: (amount: string, recipient: string) =>
+      `Nothing is lost. Your ${amount} gift for ${recipient} is kept while this page stays open, and whatever you paid stays in your account.`,
+    signInAgain: "Sign in again and Viky picks up where it stopped: your payment becomes the gift as soon as it is here.",
+  },
+
+  waitingGift: {
+    title: "A gift is waiting for your payment",
+    which: (amount: string, recipient: string) => `${amount} for ${recipient}, set up on this device and not made yet.`,
+    whichUnnamed: (amount: string) => `${amount}, set up on this device and not made yet.`,
+    signIn: "Sign in to pick it up",
+    staysInAccount: "Whatever you paid stays in your account.",
+  },
+
+  made: {
+    title: (amount: string, recipient: string) => `${amount} is in ${their(recipient)} name.`,
+    terms: (amount: string, days: number, perDay: string, exact: boolean, source: string) =>
+      `${amount} over ${days} days, ${exact ? "" : "about "}${perDay} a day, first day counted the day after they connect ${source}.`,
+    reference: (when: string, giftId: string) => `Made ${when}. Reference: gift ${giftId}.`,
+    linkTitle: "The link",
+    copy: "Copy the link",
+    copied: "Copied",
+    share: "Share",
+    shareText: (recipient: string) => `${recipient}, this is for you.`,
+    copyRefused: "Your browser would not let us copy it. Press and hold the link above, then choose Copy.",
+    onlyThem: (recipient: string) => `Whoever opens this link takes the gift, so send it only to ${recipient}.`,
+    nextTitle: "What happens next",
+    next: (recipient: string, source: string, eachDay: string, perDay: string, time: string) => [
+      `${recipient} opens the link and connects their ${source}.`,
+      `From the day after, ${eachDay} puts ${perDay} in ${their(recipient)} name.`,
+      `A day they miss and do not catch up the next day comes back to your account the morning after, at about ${time} your time. If nobody opens the link within 14 days, it all comes back.`,
+    ],
+    seeIt: "See this gift",
+  },
+
+  failures: {
+    other: "That did not go through, and nothing was taken. Try again.",
+    signInFirst: "Sign in first.",
+    tryAgain: "Try again",
+  },
 } as const;
 
 /** Me: the account, in the order the structure gives it. */
@@ -109,7 +286,7 @@ export const HELP = {
     },
     {
       q: "How does a gift work?",
-      a: "Money is put in someone's name, tied to what they do, for a number of days. Each day they do it, that day's share becomes theirs. Each day they miss comes back to whoever paid, by itself, the morning after. Nobody else ever profits from a missed day.",
+      a: "Money is put in someone's name, tied to what they do, for a number of days. Each day they do it, that day's share becomes theirs. A day they miss can still be caught up the next day; if it is not, it comes back to whoever paid, by itself, the morning after. Nobody else ever profits from a missed day.",
     },
     {
       q: "My session closed. Did anything move?",

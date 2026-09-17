@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { checkInDayIndex, formatAusd, utcDayOf } from "../src/gift-reader";
+import { checkInDayIndex, formatAusd, theirsSoFar, utcDayOf } from "../src/gift-reader";
 import { contractRefusal } from "../src/gift-api";
 
 test("day arithmetic matches the contract: UTC day numbers and the index inside the window", () => {
@@ -37,4 +37,11 @@ test("every contract refusal maps to a sentence a person can act on", () => {
     assert.doesNotMatch(message, /check in|check-in/i, `${name} still asks the person to check in`);
     assert.ok(message.length > 12 && message.endsWith("."), `${name} has no readable sentence`);
   }
+});
+
+test("a card's theirs is every credited day, taken or not, so taking it never makes a gift look empty", () => {
+  // $25.00 over 7 days: three credited days are $10.714284 theirs, printed $10.71, whatever is left to take.
+  assert.equal(theirsSoFar({ creditedDays: 3, perDay: 3_571_428n }), 10_714_284n);
+  assert.equal(formatAusd(theirsSoFar({ creditedDays: 3, perDay: 3_571_428n })), "$10.71");
+  assert.equal(theirsSoFar({ creditedDays: 0, perDay: 3_571_428n }), 0n);
 });

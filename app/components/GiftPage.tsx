@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { AMOUNT_IN_TITLE, BODY, DISPLAY, FIELD, HELP, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON, STICKER, TITLE } from "./ui";
+import { AMOUNT_IN_TITLE, BODY, FIELD, HELP, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON, STICKER, TITLE } from "./ui";
 import { useAccount } from "@/src/account/provider";
 import * as mera from "@/src/account/mera";
 import { useMoneySession } from "@/src/account/money-session";
@@ -95,14 +95,14 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
 
   const reload = useCallback(
     () =>
-      loadGiftStatus(giftId).then(
+      loadGiftStatus(giftId, linkKey).then(
         (status) => {
           setGift(status);
           setLoadError(null);
         },
         (error: unknown) => setLoadError(error instanceof ApiError ? error.message : "This gift could not be found."),
       ),
-    [giftId],
+    [giftId, linkKey],
   );
 
   useEffect(() => {
@@ -335,8 +335,9 @@ export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string 
     // On the task shell since 17 Sep: the mark, one way back to Gifts, a narrow column. Rebuilt on its own line, S3.
     <Shell kind="task" back="/gifts">
       <header className="flex flex-col gap-[var(--space-lg)]">
-        {/* The page's own title, with the amount handed back to the text face, as every amount is. */}
-        <h1 className={DISPLAY}>
+        {/* The page's own title, in the text face: a gift's page is a task, and Anton is never in a task (structure,
+            section 12, item 7). The rest of the page is rebuilt on its own line, S3, with the gift card at its head. */}
+        <h1 className={TITLE}>
           {theirs ? (
             <>
               You put <span className={AMOUNT_IN_TITLE}>{gift.amountDisplay}</span> in their name.

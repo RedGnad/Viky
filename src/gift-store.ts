@@ -1,12 +1,12 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import type { Hex } from "viem";
 import { configureProofSessionStore, type SqlExecutor } from "./proof-session-store";
 import { neon } from "@neondatabase/serverless";
 
 /**
  * Off-chain state of a gift that the contract cannot hold: the claim link secret (hashed), the contact
- * hash it was issued for, and the transaction hashes of each relayed step for the judges page. The
- * contact itself is never stored: the funder sends the link.
+ * hash it was issued for, the two names people call each other by (src/gift-names.ts), and the transaction
+ * hashes of each relayed step for the judges page. The contact itself is never stored: the funder sends the link.
  */
 
 export const GIFT_SCHEMA = `
@@ -42,6 +42,8 @@ ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS binding_code text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS binding_code_expires_at timestamptz;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS bound_at timestamptz;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS goal_profile_id text;
+ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS recipient_name text;
+ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS funder_name text;
 `;
 
 let executor: SqlExecutor | undefined;
@@ -78,6 +80,11 @@ export type GiftRecord = Readonly<{
   bindingCodeExpiresAt: Date | null;
   boundAt: Date | null;
   goalProfileId: string | null;
+  /** The first name of the person it is for, and the funder's name as they know them. Null on gifts made before 17 Sep. */
+  recipientName: string | null;
+  funderName: string | null;
+  /** The hash of the link's key, never the key: kept so a request can prove it holds the link. */
+  claimTokenHash: string;
 }>;
 
 export async function ensureGiftSchema(): Promise<void> {
@@ -98,6 +105,14 @@ export function claimTokenHash(token: string): string {
   return createHash("sha256").update(`viky:claim:v1:${token}`).digest("hex");
 }
 
+/** Whether a key is this gift's link key, compared without telling a guesser how close they came. */
+export function holdsGiftLink(record: Pick<GiftRecord, "claimTokenHash">, token: string | null): boolean {
+  if (!token) return false;
+  const given = Buffer.from(claimTokenHash(token), "hex");
+  const kept = Buffer.from(record.claimTokenHash, "hex");
+  return given.length === kept.length && timingSafeEqual(given, kept);
+}
+
 export async function saveGift(input: {
   giftId: string;
   funder: string;
@@ -112,13 +127,18 @@ export async function saveGift(input: {
   escrow: Hex;
   /** Set when the funder knows the recipient's account: no binding code is needed then (D27). */
   goalUsername?: string;
+  /** Checked by `giftNameProblem` before this is called; a page loaded before the names existed sends neither. */
+  recipientName?: string;
+  funderName?: string;
 }): Promise<void> {
   const inserted = await sql()`
     INSERT INTO viky_gifts
-      (gift_id, funder, contact_hash, claim_token_hash, goal_type, daily_target, duration_days, amount, created_tx, escrow, goal_username, username_source)
+      (gift_id, funder, contact_hash, claim_token_hash, goal_type, daily_target, duration_days, amount, created_tx, escrow, goal_username, username_source,
+       recipient_name, funder_name)
     VALUES (${input.giftId}, ${input.funder.toLowerCase()}, ${input.contactHash}, ${claimTokenHash(input.claimToken)},
             ${input.goalType}, ${input.dailyTarget}, ${input.durationDays}, ${input.amount.toString()}, ${input.createdTx},
-            ${input.escrow.toLowerCase()}, ${input.goalUsername ?? null}, ${input.goalUsername ? "funder" : null})
+            ${input.escrow.toLowerCase()}, ${input.goalUsername ?? null}, ${input.goalUsername ? "funder" : null},
+            ${input.recipientName ?? null}, ${input.funderName ?? null})
     ON CONFLICT (gift_id) DO NOTHING
     RETURNING gift_id`;
   if (inserted.length > 0) return;
@@ -188,6 +208,9 @@ function toRecord(row: Record<string, unknown>): GiftRecord {
     bindingCodeExpiresAt: toDate(row.binding_code_expires_at),
     boundAt: toDate(row.bound_at),
     goalProfileId: row.goal_profile_id === null || row.goal_profile_id === undefined ? null : String(row.goal_profile_id),
+    recipientName: row.recipient_name === null || row.recipient_name === undefined ? null : String(row.recipient_name),
+    funderName: row.funder_name === null || row.funder_name === undefined ? null : String(row.funder_name),
+    claimTokenHash: String(row.claim_token_hash),
   };
 }
 

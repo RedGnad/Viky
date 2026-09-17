@@ -2333,3 +2333,42 @@ the tasks and documents placed on the shell, the retired components removed (Foo
 Screen, HomeScreen, MyGifts, YourMoney, YourCode, SessionScope, ThemeSwitch, InstallPWA, the example gallery). The
 lines that follow, in the founder's order: S2 Offer a gift with "What will they do?", C2 Chess.com, S3 the gift's
 page, S4 Take it out placed again, C3 Coursera, S5 the judges page, C4 Strava, C5 the in-session proof.
+
+## D85, 17 Sep 2026: offering a gift on the product, with the two names
+
+**The names come back.** The founder replaced decision 4 of the drawn flows ("No first name"): the first step asks
+"Their first name" and "Your name, as they know you". Audit C found the funder never named to the recipient
+(severity 3), and every money app of the benchmark names the other side; Wise and PayPal ask for the recipient first.
+The names are words for people, never terms: two columns of `viky_gifts`, `recipient_name` and `funder_name`, and
+nothing in the contract or the signed terms. Required on the screen; the route accepts a request without them, so a
+page loaded before this change still makes its gift. Gift numbers follow each other, so `GET /api/gift/[id]` gives the
+names only with the link's key, or to the funder or the recipient signed in, and the check says before paying that
+they show to whoever opens the link. The card says "For Léa" to the funder and "From Maman" to the recipient.
+
+**The order**, one question per page, each its own address: who it is for, what they will do, the condition's own
+detail (for Duolingo, their name, if known), how much and for how long, the check; then one account if there is none,
+the payment, the confirmation. What they will do lists only live conditions, nothing chosen for them.
+
+**Three accepted decisions of the flows made true under the screens.** Decision 10: a Duolingo name is read from
+the public profile before any money moves, on the step (`/api/duolingo/profile`) and again by the create route before
+relaying; "10 XP is about one short lesson" stays off the screen, because Duolingo's help renders in JavaScript and no
+page read on 17 Sep gives a figure. Decision 5: the settling pass sends back a gift nobody opened fourteen days after
+funding, or nobody connected fourteen days after opening, which the contract already allowed and nothing called; on
+17 Sep all three gifts in production have started, so it sends nothing today. Decision 12: the two pass hours are
+named in `src/pass-schedule.ts` and a test holds them equal to `vercel.json`, so "at about 9:00 AM your time" follows
+the schedule.
+
+**The kit, for S2 and S3.** The gift card opens as a whole, its title says for whom and for what, a strip of days
+sits under it, then the state and one line of amounts. The strip draws the counts, earned days filled then returned
+days struck through and faded, because the contract does not say which day was which; the founder asked for it after a
+first version drew both alike, and gift 1 in production has missed days. The daily target is asked with the name, on the
+condition's own step, not with the amount. The account's money is set at the display size in the text
+face, out of a card. Radios are drawn in ink on the surface, since the browser's own was a grey disc at night. A
+primary button that cannot be pressed yet gives the accent back and wears the surface. A milestone's meter waits for
+the first milestone gift (C2); the card at the head of a gift's page waits for that page's line (S3), which also takes
+Anton off its title now.
+
+**Order of going live.** The two columns must exist before the code that writes them: the create route relays the
+money first and records the gift after, so a deploy before `pnpm db:migrate` would leave a funded gift with no record
+and no link. Migrate production, read the schema back, then deploy.
+
