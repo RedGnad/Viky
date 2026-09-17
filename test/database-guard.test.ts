@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { globSync, readFileSync } from "node:fs";
 import test from "node:test";
 import { assertDatabaseAllowed, databaseFingerprint, databaseUrl, PRODUCTION_DATABASE_FINGERPRINT, ProductionDatabaseRefused } from "../src/database-guard";
 
@@ -41,7 +41,10 @@ test("the production database is refused locally, and allowed on Vercel or when 
 });
 
 test("every store connects through the guard, a local server checks it at start, and scripts check it on load", () => {
-  for (const store of ["src/gift-store.ts", "src/preferences-store.ts", "src/proof-session-store.ts", "src/send-store.ts", "src/exit-store.ts"]) {
+  // Every file that opens a Neon connection, found rather than listed, so a store added later is covered too.
+  const stores = globSync("src/**/*.ts").filter((file) => file !== "src/database-guard.ts" && /\bneon\(/.test(readFileSync(file, "utf8")));
+  assert.ok(stores.length >= 6, `only ${stores.length} stores found`);
+  for (const store of stores) {
     const source = readFileSync(store, "utf8");
     assert.match(source, /databaseUrl\(\)/, `${store} connects through the guard`);
     assert.doesNotMatch(source, /neon\(process\.env\.DATABASE_URL/, `${store} never reads the URL around it`);
