@@ -2467,6 +2467,10 @@ lets a username change every ninety days.
 **Not changed here:** `MilestoneGift.sol` was, at this entry, byte for byte the contract of D49 (13,240 bytes), whose
 three review fixes nobody had read since. The fourth review read them, and D89 records what it found and what changed.
 
+**Deployed, 17 Sep 2026 16:36 UTC,** after the fourth review (D89) and the RD (D90), with the founder's go-ahead:
+`0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e`, deployment `0x12d91b78…7806e1`, ownership with the founder
+(`0xe2ad6791…3181e8d`), Sourcify exact match 1855380, 0.406 MON. The steps and their checks are in OPERATIONS.md.
+
 **Rehearsed before mainnet.** The deployment ran on a local fork with the real deployer's nonce and balance (expected
 address `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e`, about 0.40 MON at 102 gwei, ownership read back as the founder's),
 then `scripts/rehearse-milestone-fork.ts` ran the routes on it: a gift made, opened, started by a real attested reading

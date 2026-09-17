@@ -18,8 +18,9 @@ export type MilestoneEvidence = Readonly<{
 }>;
 
 export const MILESTONE_EVIDENCE: MilestoneEvidence = {
-  deployTx: null,
-  sourcifyMatch: null,
+  // Deployed 17 Sep 2026 16:36 UTC, block 105,654,716; Sourcify exact match at creation and at runtime, 16:37 UTC.
+  deployTx: "0x12d91b784d5abcb14ed7941c6de60b3eeb73fc978209653dbdd5c6fb9f7806e1",
+  sourcifyMatch: "1855380",
   giftId: null,
   createTx: null,
   claimTx: null,
