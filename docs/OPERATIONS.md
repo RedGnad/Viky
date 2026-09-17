@@ -275,6 +275,33 @@ npx vercel@latest env add VIKY_OPERATOR_ACCOUNTS production --value "0x350aF8…
 Two things to know before running it. Removing a variable removes it for every environment it names, so pull the
 current value first and put the whole list back in one go. And this list is the same one that opens the dev pages
 (`VIKY_DEV_PAGES`), one of which moves the relayer's MON: adding an account gives it those pages too.
+## The goals of the milestone contract, and the session that registers them
+
+A goal on `MilestoneGift` is three things: a number, the provider id every proof for it must carry, and the shape it
+is judged by. `src/milestone-goals.ts` is the whole list, and the founder registers what is missing in one session,
+as the owner, after the handover of `GiftEscrow`.
+
+| goal | source | shape | state |
+|---|---|---|---|
+| 1 to 4 | Chess.com, rapid, blitz, bullet, daily | climb | registered at deployment, 17 Sep 2026 |
+| 5 | Duolingo English Test, the overall score | having it or not | to register |
+| 6 to 9 | Lichess, bullet, blitz, rapid, classical | climb | to register, and nothing is offered on them yet |
+
+**The session, in order.** Each step is read back before the next, and nothing is typed twice.
+
+1. `pnpm check:milestone-goals` from any machine, with no key: it prints the plan and ends non-zero while anything is
+   missing. Run it first so the list on screen is the list you are about to sign.
+2. `DRY_RUN=1 pnpm register:milestone-goals` with `MILESTONE_GIFT_ADDRESS` set: same plan, plus the gas each call
+   takes and what the whole session costs at today's price. Still nothing sent.
+3. `set -a && source .env.ops.local && set +a && pnpm register:milestone-goals` with `DEPLOYER_PRIVATE_KEY` set to the
+   **owner's** key. It refuses to send anything if that key is not the owner, sends one `registerGoal` per missing
+   goal, waits for finality on each, and then reads every goal of the list back from the chain.
+4. `pnpm check:milestone-goals` again: it must end clean, with nothing missing.
+
+**What it will not do.** It never overwrites. A number already registered to another provider id, or to the same
+provider under another shape, stops the whole run before anything is sent, because a live gift keys on that number
+and moving it under one would change what settles it. It is idempotent, so a session interrupted halfway is finished
+by running it again.
 
 ## Money paths to audit
 

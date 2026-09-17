@@ -1,4 +1,5 @@
 import { CHESS_USER_AGENT, chessProfileUrl, chessRatingPattern, chessStatsUrl, chessStatusPattern, isValidChessUsername, type ChessMode } from "./chess-com";
+import { detDataUrl, isValidDetAlias } from "./duolingo-english-test";
 import { duolingoCourseXpPattern, duolingoProfileUrl, isDuolingoCourseId } from "./duolingo-public-terms";
 
 /**
@@ -160,7 +161,31 @@ export const COURSERA_CERTIFICATE: AttestedSource = {
   ],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), COURSERA_CERTIFICATE];
+/**
+ * A Duolingo English Test result, read from the answer behind the page its taker chose to make public (U3).
+ *
+ * Three patterns and no more, on purpose. The answer also carries the taker's date of birth and a link to their
+ * photograph: nothing here matches them, so nothing carries them out of the attestor, and the privacy page says that
+ * the attestor sees the whole answer while Viky is given three fields of it.
+ *
+ * Measured on 18 Sep 2026 on two live certificates: the score is a bare number, the day of the test is a plain
+ * `YYYY-MM-DD`, and the name is printed surname first with a comma inside the string, which is why the name pattern
+ * takes everything up to the closing quote.
+ */
+export const DET_CERTIFICATE: AttestedSource = {
+  id: "det-certificate",
+  service: "Duolingo English Test",
+  accepts: isValidDetAlias,
+  url: detDataUrl,
+  userAgent: CHESS_USER_AGENT,
+  matches: [
+    { type: "regex", value: '"overall_score":(?<overallScore>\\d{1,3})' },
+    { type: "regex", value: '"test_date":"(?<testDate>\\d{4}-\\d{2}-\\d{2})"' },
+    { type: "regex", value: '"full_name":"(?<fullName>[^"]+)"' },
+  ],
+};
+
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), COURSERA_CERTIFICATE, DET_CERTIFICATE];
 
 /** The source with that name, or nothing. An unknown name is refused rather than guessed at. */
 export function attestedSource(id: string): AttestedSource | undefined {

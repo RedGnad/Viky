@@ -1,6 +1,8 @@
 import { CHESS_MODES, chessGoalType, isValidChessUsername, ratingHasSettled, type ChessMode } from "./chess-com";
-import { CHESS_RATING, conditionById, type Condition } from "./conditions";
-import { CHESS_RATING as CHESS_RATING_SHAPE, type MilestoneShape } from "./milestone-terms";
+import { CHESS_RATING, conditionById, DUOLINGO_ENGLISH_TEST, type Condition } from "./conditions";
+import { detAliasOf, DET_DURATION_DAYS, DET_MAX_SCORE, DET_MIN_SCORE, DET_SCORE_STEP } from "./duolingo-english-test";
+import { DET_GOAL_TYPE } from "./milestone-goals";
+import { CERTIFICATE as CERTIFICATE_SHAPE, CHESS_RATING as CHESS_RATING_SHAPE, type MilestoneShape } from "./milestone-terms";
 
 /**
  * The milestone half of the register of conditions (src/conditions.ts). A milestone asks the funder more than a daily
@@ -136,4 +138,124 @@ export function cadenceOf(milestone: MilestoneCondition, id: string): MilestoneC
 /** The cadence a milestone gift's goal type on the contract stands for. */
 export function cadenceOfGoal(milestone: MilestoneCondition, goalType: number): MilestoneCadence | undefined {
   return milestone.cadences.find((cadence) => cadence.goalType === goalType);
+}
+
+/**
+ * The other shape of milestone: something granted once, with a day on it (D47). It asks the funder nothing about a
+ * cadence and nothing about where the person stands, because no public page says "not yet obtained": the page exists
+ * only once the thing is granted. What the funder signs is the person, the score to reach, and a date.
+ *
+ * It is kept beside the climb rather than folded into it. The two ask different questions, and a type that pretended
+ * otherwise would make every screen ask which half of itself it meant.
+ */
+export type CertificateCondition = Readonly<{
+  condition: Condition;
+  shape: MilestoneShape;
+  /** The goal type on the milestone contract; its shape is fixed there when the goal is registered. */
+  goalType: number;
+  /** Viky's route that reads a pasted certificate, plainly, before any money moves. */
+  readPath: string;
+  /** True of something that could be a link to this source's certificate. */
+  validLink: (value: string) => boolean;
+  target: Readonly<{
+    label: string;
+    help: string;
+    min: number;
+    max: number;
+    step: number;
+    suggested: number;
+    /** "120 on the test", on the check screen. */
+    inWords: (value: number) => string;
+  }>;
+  duration: Readonly<{ min: number; max: number; suggested: number }>;
+  words: Readonly<{
+    /** The question of the funder's detail step, which is also its title. */
+    detailQuestion: string;
+    /** The name the funder types, which the certificate must carry for the gift to pay. */
+    nameLabel: string;
+    nameHelp: string;
+    /** What the recipient is asked for on their own page. */
+    linkLabel: string;
+    linkHelp: string;
+    /** What the gift pays for, on the check screen. */
+    goal: (target: number) => string;
+    durationLabel: string;
+    durationHelp: string;
+    durationShape: (min: number, max: number) => string;
+    durationInWords: (days: number) => string;
+    whenReached: string;
+    ifNot: string;
+    refusals: Readonly<{
+      targetShape: string;
+      nameShape: string;
+      linkShape: string;
+      /** The taker has made the certificate private again, or it has run out of its two years. */
+      notPublic: string;
+      expired: string;
+      notFound: string;
+      unavailable: string;
+      /** The certificate is in somebody else's name. */
+      anotherName: string;
+      below: (target: number, score: number) => string;
+      beforeTheGift: string;
+      afterTheDeadline: string;
+    }>;
+  }>;
+}>;
+
+export const DET_MILESTONE: CertificateCondition = {
+  condition: DUOLINGO_ENGLISH_TEST,
+  shape: CERTIFICATE_SHAPE,
+  goalType: DET_GOAL_TYPE,
+  readPath: "/api/det/certificate",
+  validLink: (value) => detAliasOf(value) !== undefined,
+  target: {
+    label: "The score they reach",
+    help: "The test is scored from 10 to 160, in fives. Most universities ask for something between 100 and 125.",
+    min: DET_MIN_SCORE,
+    max: DET_MAX_SCORE,
+    step: DET_SCORE_STEP,
+    suggested: 120,
+    inWords: (value) => `${value} on the test`,
+  },
+  duration: DET_DURATION_DAYS,
+  words: {
+    detailQuestion: "Their name, and the score to reach",
+    nameLabel: "Their full name, as on their identity document",
+    nameHelp: "The certificate prints the name they sat the test under. If it does not match, the gift cannot pay.",
+    linkLabel: "The link to your certificate",
+    linkHelp: "Open your certificate, press Get Shareable Link, and paste the link here.",
+    goal: (target) => `Reach ${target} on the test`,
+    durationLabel: "How long do they have?",
+    durationHelp: "The test must be taken inside that time, and the day on the certificate is what counts.",
+    durationShape: (min, max) => `Between ${min} and ${max} days.`,
+    durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
+    whenReached: "When they reach that score, all of this becomes theirs",
+    ifNot: "If they do not reach it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    refusals: {
+      targetShape: `A score between ${DET_MIN_SCORE} and ${DET_MAX_SCORE}, in fives.`,
+      nameShape: "Type their name as it will appear on the certificate.",
+      linkShape: "That is not a certificate link. It looks like certs.duolingo.com followed by a code.",
+      notPublic: "That certificate is not public. Open it and press Get Shareable Link, then try again.",
+      expired: "That certificate has expired. A result can only be shared for two years after the test.",
+      notFound: "No certificate answers to that link. Check that you copied the whole link.",
+      unavailable: "The certificate could not be read right now. Try again in a moment.",
+      anotherName: "That certificate is in another name, so this gift cannot pay for it.",
+      below: (target, score) => `That certificate is ${score}. This gift is for ${target}.`,
+      beforeTheGift: "That test was taken before this gift was made, so it is not what the gift is for.",
+      afterTheDeadline: "That test was taken after this gift's last day.",
+    },
+  },
+};
+
+const CERTIFICATES: readonly CertificateCondition[] = [DET_MILESTONE];
+
+/** The certificate detail of a condition, or nothing when the condition is not one. */
+export function certificateOf(condition: Condition | undefined): CertificateCondition | undefined {
+  if (!condition || condition.kind !== "milestone") return undefined;
+  return CERTIFICATES.find((entry) => entry.condition.id === condition.id);
+}
+
+export function certificateById(conditionId: string): CertificateCondition | undefined {
+  return certificateOf(conditionById(conditionId));
 }

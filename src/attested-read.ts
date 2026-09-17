@@ -19,6 +19,10 @@ export type AttestedReadErrorCode =
   | "NOT_FOUND"
   /** The page answered, and one of the patterns found nothing in it. `pattern` says which. */
   | "NO_MATCH"
+  /** The source answered that this account may not be read: a page its owner has taken private again (403). */
+  | "REFUSED"
+  /** The source answered that the request is no longer one it will serve: a certificate past its life (400). */
+  | "NOT_ACCEPTED"
   | "FETCH_FAILED"
   | "PROOF_INVALID"
   | "PROOF_MISMATCH"
@@ -104,9 +108,18 @@ export function readingOfProof(source: AttestedSource, account: string, proof: Z
  * What zkFetch's refusals mean, measured on 17 Sep 2026 against Chess.com: an unknown account ends the protocol with
  * "HTTP response status 404 is not a success status", and a page without what a pattern needs is refused by the
  * attestor with `Regex "<pattern>" didn't match`. Anything else is a failure to read, not a fact about the account.
+ *
+ * 403 and 400 are read the same way, because a source can answer that a page is no longer for us rather than that it
+ * is missing: a Duolingo English Test certificate answers 403 once its taker takes it private again and 400 once it
+ * has expired (both measured on 18 Sep 2026 on real certificates, U3). Those are facts about the page, not failures
+ * of ours, and the difference matters: the keeper holds a gift open on `FETCH_FAILED`, so a link somebody withdrew
+ * would otherwise be held for ever instead of refused. Only the 404 phrasing has been seen from the worker itself;
+ * the other two are mapped by the same phrasing and confirmed on the first real reading.
  */
 export function classifyFetchFailure(message: string, source: AttestedSource): AttestedReadError {
   if (/HTTP response status 404|received HTTP 404/i.test(message)) return new AttestedReadError("NOT_FOUND", "Nothing answers to that name");
+  if (/HTTP response status 403|received HTTP 403/i.test(message)) return new AttestedReadError("REFUSED", "That page is not public any more");
+  if (/HTTP response status 400|received HTTP 400/i.test(message)) return new AttestedReadError("NOT_ACCEPTED", "The source will not serve that any more");
   if (/didn't match|did not match/i.test(message)) {
     const pattern = source.matches.find((match) => message.includes(match.value))?.value;
     return new AttestedReadError("NO_MATCH", "The page does not carry what this reading needs", pattern);

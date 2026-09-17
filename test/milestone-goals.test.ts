@@ -1,0 +1,98 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+import { chessGoalType, chessProviderId, CHESS_MODES } from "../src/chess-com";
+import { detProviderId } from "../src/duolingo-english-test";
+import { LICHESS_CADENCES, lichessCadenceOfGoal, lichessGoalType, lichessProviderId } from "../src/lichess";
+import { DET_GOAL_TYPE, milestoneGoal, MILESTONE_GOALS, planFor } from "../src/milestone-goals";
+import { SHAPE_CLIMB, SHAPE_HAVE_OR_NOT } from "../src/milestone-protocol";
+
+/**
+ * The goals of the milestone contract. A goal is a number a live gift keys on, so the thing these tests defend is
+ * that no number and no provider id ever moves under a gift that is already running.
+ */
+
+const EMPTY = `0x${"0".repeat(64)}`;
+
+/**
+ * Pinned on 18 Sep 2026. These are what `registerGoal` writes on chain: change the string a provider id is built
+ * from and a gift already funded stops settling, with nothing on any screen able to say why. A test that fails here
+ * is telling you to register a new goal, not to edit an old one.
+ */
+const PINNED: Readonly<Record<number, string>> = {
+  1: "0x56c9a42f353c58f8ef74b979c6a74fa6144562aed8f7fe5cf93c9cbeeef93b40",
+  2: "0xc57bd1392946f1743380ebedbe6561e03e5a6e8bdaa6af8879b89caa5dc3fd36",
+  3: "0x2b19a55b3e63943851b302dd0601451792be3cb97fadfa8047cb876900084330",
+  4: "0xb55b5e37e9fa879c5bc5adbffa5ca98372cc00d8fe21279e827cf9c94d3706e3",
+  5: "0x40571f8a16381ad3ae74621e5f08a72449af281bd1bd4edc251bc5f4fe0914e9",
+  6: "0xc5352935f86d6c61779eb944d628fcaf492580c96b9bbfb1b1bfa5225c05554e",
+  7: "0x8188eca2f6e4d66aebcf562dd719762acfc0648f8f46e922b529dd56a5f5f565",
+  8: "0x8e6313da9dfe60c26972ecd2d17f6665b69e7b18d3ee50bb44ab9b7b0fb5b576",
+  9: "0x77bafaec0915f482b7065034b60237003234c67ee837bbd8163f03ca0dfdce32",
+};
+
+test("every goal has its own number and its own provider id", () => {
+  const numbers = MILESTONE_GOALS.map((goal) => goal.goalType);
+  const providers = MILESTONE_GOALS.map((goal) => goal.providerId.toLowerCase());
+  assert.equal(new Set(numbers).size, numbers.length, "two goals share a number");
+  assert.equal(new Set(providers).size, providers.length, "two goals share a provider id");
+  for (const goal of MILESTONE_GOALS) {
+    assert.ok(goal.goalType > 0 && goal.goalType < 256, `${goal.goalType} is not a goal type the contract takes`);
+    assert.notEqual(goal.providerId, EMPTY, "the contract refuses an empty provider id");
+    assert.ok(goal.shape === SHAPE_CLIMB || goal.shape === SHAPE_HAVE_OR_NOT);
+  }
+});
+
+test("no provider id moves under a gift that is already running", () => {
+  for (const goal of MILESTONE_GOALS) assert.equal(goal.providerId, PINNED[goal.goalType], `${goal.source} ${goal.detail}`);
+});
+
+test("the four Chess.com cadences keep the numbers they were deployed with", () => {
+  for (const mode of CHESS_MODES) {
+    const goal = milestoneGoal(chessGoalType(mode));
+    assert.ok(goal, mode);
+    assert.equal(goal.providerId, chessProviderId(mode));
+    assert.equal(goal.shape, SHAPE_CLIMB, "a rating moves, so it is proved as a climb and nothing else");
+  }
+  assert.deepEqual(CHESS_MODES.map(chessGoalType), [1, 2, 3, 4]);
+});
+
+test("the supervised result is one goal, judged as having it or not", () => {
+  const goal = milestoneGoal(DET_GOAL_TYPE);
+  assert.ok(goal);
+  assert.equal(goal.goalType, 5, "five, because one to four are Chess.com's");
+  assert.equal(goal.shape, SHAPE_HAVE_OR_NOT);
+  assert.equal(goal.providerId, detProviderId());
+});
+
+test("the Lichess cadences sit above the others, each a climb of its own", () => {
+  for (const cadence of LICHESS_CADENCES) {
+    const goal = milestoneGoal(lichessGoalType(cadence));
+    assert.ok(goal, cadence);
+    assert.equal(goal.shape, SHAPE_CLIMB);
+    assert.equal(goal.providerId, lichessProviderId(cadence));
+    assert.equal(lichessCadenceOfGoal(goal.goalType), cadence);
+    assert.ok(goal.goalType > 4, "one to four belong to Chess.com");
+  }
+  // One house's proof can never settle the other's gift, even for the same cadence.
+  assert.notEqual(lichessProviderId("blitz"), chessProviderId("blitz"));
+});
+
+test("the session adds and never overwrites", () => {
+  const goal = MILESTONE_GOALS[0];
+  assert.equal(planFor(goal, { provider: goal.providerId, shape: goal.shape }), "registered");
+  assert.equal(planFor(goal, { provider: EMPTY, shape: 0 }), "missing");
+  // A number registered to another provider, or to the same provider under another shape, stops the run.
+  assert.equal(planFor(goal, { provider: `0x${"11".repeat(32)}`, shape: goal.shape }), "taken");
+  assert.equal(planFor(goal, { provider: goal.providerId, shape: SHAPE_HAVE_OR_NOT }), "taken");
+  // Case is not a difference: the chain answers lowercase.
+  assert.equal(planFor(goal, { provider: goal.providerId.toUpperCase().replace("0X", "0x"), shape: goal.shape }), "registered");
+});
+
+test("the session reads back every goal, not only the ones it sent", () => {
+  const script = readFileSync("scripts/register-milestone-goals.ts", "utf8");
+  assert.match(script, /for \(const \[index, goal\] of MILESTONE_GOALS\.entries\(\)\)/, "the read back walks the whole list");
+  assert.match(script, /Refusing to run: goal .* is registered to something else/);
+  assert.match(script, /this key is .* and the owner is/, "it checks the key is the owner before sending");
+  assert.match(script, /DRY_RUN/, "it can be run empty first");
+});

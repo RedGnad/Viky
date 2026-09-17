@@ -20,6 +20,7 @@ test("only the listed sources exist, and an unknown name is refused", () => {
     "chess-ratings-daily",
     "chess-ratings-rapid",
     "coursera-certificate",
+    "det-certificate",
     "duolingo-profile",
   ]);
   assert.equal(attestedSource("duolingo-profile"), DUOLINGO_PROFILE);
