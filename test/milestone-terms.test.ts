@@ -10,22 +10,18 @@ import {
   startingCeiling,
 } from "../src/milestone-terms";
 
-test("the funder chooses one number, and the ceiling comes from where the person stands", () => {
-  assert.equal(startingCeiling(CHESS_RATING, 1420, 1500), 1430);
+test("the funder chooses one number, and what is refused is only a start already at the target (D91)", () => {
+  // The ceiling used to be today's reading plus ten, which killed a gift for a recipient who simply played two
+  // winning games between paying and connecting. It is one below the target now, and nothing tighter.
+  assert.equal(startingCeiling(CHESS_RATING, 1500), 1499);
   assert.equal(smallestTarget(CHESS_RATING, 1420), 1470);
-  assert.equal(
-    inPlainWords(CHESS_RATING, 1420, 1500),
-    "Today they are at 1420. The gift is theirs when they reach 1500, and only if they start from 1430 or under.",
-  );
+  assert.equal(inPlainWords(CHESS_RATING, 1420, 1500), "Today they are at 1420. The gift is theirs when they reach 1500.");
+  assert.doesNotMatch(inPlainWords(CHESS_RATING, 1420, 1500), /start from/);
 });
 
 test("the ceiling is always below the target, which is what the contract also insists on", () => {
-  // A target just above today would otherwise produce a ceiling at or above it, and the contract would
-  // refuse the terms after the funder had already agreed to them.
-  for (const standing of [0, 5, 1420, 2800]) {
-    for (const target of [standing + 1, standing + 5, standing + 50, standing + 400]) {
-      assert.ok(startingCeiling(CHESS_RATING, standing, target) < target, `${standing} -> ${target}`);
-    }
+  for (const target of [1, 5, 50, 400, 1500, 2800]) {
+    assert.ok(startingCeiling(CHESS_RATING, target) < target, `target ${target}`);
   }
 });
 
@@ -37,7 +33,7 @@ test("a target too close to today is refused before anyone signs", () => {
 });
 
 test("a certificate asks no question about a starting point", () => {
-  assert.equal(startingCeiling(CERTIFICATE, 0, 1), 0);
+  assert.equal(startingCeiling(CERTIFICATE, 1), 0);
   checkTarget(CERTIFICATE, 0, 1);
   assert.throws(() => checkTarget(CERTIFICATE, 1, 1), /already have it/);
   assert.match(inPlainWords(CERTIFICATE, 0, 1), /^The gift is theirs when they have it/);

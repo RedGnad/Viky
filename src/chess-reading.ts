@@ -65,7 +65,7 @@ export async function readChessStanding(username: string, mode: ChessMode, fetch
   const stats = await readJson(chessStatsUrl(username), fetchImpl);
   if (stats.status !== 200 || !stats.body || typeof stats.body !== "object") throw new ChessReadError("FETCH_FAILED", `Chess.com answered ${stats.status}`);
   const rating = ratingOfStats(stats.body, mode);
-  return { username: player.username, playerId: player.playerId, rating: rating?.rating ?? null, ratedAt: rating?.ratedAt ?? null, rd: rating?.rd ?? null };
+  return { username: player.username, playerId: player.playerId, rating: rating?.rating ?? null, ratedAt: rating?.ratedAt ?? null, rd: rating?.rd ?? null, best: rating?.best ?? null };
 }
 
 // --- attested --------------------------------------------------------------------------------------------------

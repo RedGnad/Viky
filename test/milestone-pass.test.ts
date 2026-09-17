@@ -6,6 +6,7 @@ import { canExpire, milestonePhase, type MilestoneState } from "../src/milestone
 import { milestonePass, type MilestonePassDeps } from "../src/milestone-pass";
 import type { MilestoneOutcome } from "../src/milestone-reading";
 import { MILESTONE_DORMANT_SECONDS, MILESTONE_PROOF_GRACE_SECONDS } from "../src/milestone-protocol";
+import { MILESTONE_ACTIONS } from "../src/sentences";
 
 const CONTRACT = "0x00000000000000000000000000000000000000c2" as const;
 const ZERO = `0x${"0".repeat(64)}` as const;
@@ -179,6 +180,18 @@ test("the keeper takes nothing back while readings are paused, and counts a wind
   const unstarted = { ...CLIMBING, identityHash: ZERO, deadline: 0, proofResumedAt: FUNDED + 60 + 15 * 86_400 } as MilestoneState;
   assert.equal(canExpire(unstarted, FUNDED + 60 + MILESTONE_DORMANT_SECONDS + MILESTONE_PROOF_GRACE_SECONDS), false);
   assert.equal(canExpire(unstarted, FUNDED + 60 + 15 * 86_400 + MILESTONE_PROOF_GRACE_SECONDS), true);
+});
+
+test("since D91 the only start refused is one already at the target, and the words say why", () => {
+  const ceiling = BigInt(Number(CLIMBING.target) - 1);
+  // Two ordinary wins above the day the funder paid: that is the climb, and it settles as any other.
+  assert.equal(milestonePhase({ ...CLIMBING, maximumStart: ceiling, startingValue: ceiling }, STARTED), "climbing");
+  assert.equal(milestonePhase({ ...CLIMBING, maximumStart: ceiling, startingValue: CLIMBING.target }, STARTED), "startTooHigh");
+  const mine = MILESTONE_ACTIONS.startTooHighMine(1520, 1500, "Maman");
+  assert.match(mine, /already reached 1500 when you connected/);
+  assert.match(mine, /Ask Maman for a new one/);
+  assert.doesNotMatch(mine, /ceiling|maximum|above the/i, "no jargon, and no number nobody was ever shown");
+  assert.match(MILESTONE_ACTIONS.startTooHighTheirs(1520, 1500, "Léa"), /Léa had already reached 1500 when they connected/);
 });
 
 test("the delays mirrored here are the contract's own", () => {

@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       const standing = await readChessStanding(username, mode);
       if (standing.rating === null) throw new GiftApiError("NO_RATING", "No rating in that cadence yet.", 404);
       return NextResponse.json(
-        { username: standing.username, mode, rating: standing.rating, rd: standing.rd, settled: CHESS_MILESTONE.settled(standing.rd), readAt: new Date().toISOString() },
+        { username: standing.username, mode, rating: standing.rating, rd: standing.rd, best: standing.best, settled: CHESS_MILESTONE.settled(standing.rd), readAt: new Date().toISOString() },
         { headers: NO_STORE },
       );
     } catch (error) {

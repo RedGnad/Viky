@@ -200,7 +200,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       { name: "Before the deadline", when: "a milestone gift connected and read", says: ["Checked every day at about", "Started at", "Last read", "If not, it"] },
       { name: "Reached or not", when: "the keeper read it reached, or the deadline passed", says: ["Reached on", "Not reached"] },
       { name: "Opening, connecting and taking a milestone gift", when: "the recipient's gestures on a milestone gift (C2)", says: ["Get my code", "I added it", "Check now", "into your account"] },
-      { name: "Started above what the funder accepted", when: "the first reading was above the highest start the funder signed", says: ["this gift was set up for, so it cannot be earned"] },
+      { name: "Already there when it was connected", when: "the first reading was already at the rating the gift is for (D91)", says: ["had already reached", "cannot count it"] },
       {
         name: "A Chess.com name changed after connecting",
         when: "the recipient renamed the account on Chess.com, which it allows every ninety days",
