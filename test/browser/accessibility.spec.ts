@@ -162,19 +162,23 @@ test.describe("what the design pass promised", () => {
     expect(width).toBeLessThanOrEqual(480 + 48 + 1);
   });
 
-  test("a destination uses the screen it is given, and splits where two panes fit", async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/");
-    const wide = await page.locator("main").evaluate((el) => el.getBoundingClientRect().width);
-    expect(wide, "a destination is wider than a journey on a desktop").toBeGreaterThan(480 + 48);
-
-    // And below the width where two panes fit, it is one column again rather than two cramped ones.
-    await page.setViewportSize({ width: 800, height: 900 });
-    await page.goto("/");
-    const columns = await page
-      .locator("main > div")
-      .first()
-      .evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length);
-    expect(columns, "two panes must not appear before they fit").toBe(1);
+  /**
+   * Rewritten with the product structure of 17 Sep 2026: a destination is one column at every width, wider than a task
+   * on a desktop, and never two panes stacked side by side without a reason (section 12, item 16).
+   */
+  test("a destination is one column, wider than a journey on a desktop", async ({ page }) => {
+    for (const width of [800, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+      await expect(page.locator("main")).toBeVisible();
+      const layout = await page.locator("main").evaluate((el) => ({
+        width: el.getBoundingClientRect().width,
+        display: getComputedStyle(el).display,
+        direction: getComputedStyle(el).flexDirection,
+      }));
+      expect(layout.display, `at ${width}, the destination is a column`).toBe("flex");
+      expect(layout.direction, `at ${width}, the destination is a column`).toBe("column");
+      if (width === 1440) expect(layout.width, "a destination is wider than a journey on a desktop").toBeGreaterThan(480 + 48);
+    }
   });
 });

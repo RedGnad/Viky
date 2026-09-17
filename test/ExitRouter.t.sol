@@ -85,7 +85,9 @@ contract ExitRouterTest {
 
         require(out == AMOUNT, "what the exchange gave");
         require(usdc.balanceOf(owner) == before + AMOUNT, "and it reached the person who signed");
-        require(token.balanceOf(address(router)) == 0 && usdc.balanceOf(address(router)) == 0, "the router keeps nothing");
+        require(
+            token.balanceOf(address(router)) == 0 && usdc.balanceOf(address(router)) == 0, "the router keeps nothing"
+        );
     }
 
     /// @dev The other corridor, and the reason the coin is in the terms at all: one payout service sells the
@@ -504,7 +506,8 @@ contract ExitRouterTest {
         router.setExchangeAllowed(address(signpost), true, address(0xA11CE));
         usdc.mint(address(signpost), 100_000_000);
 
-        (ExitRouter.ExitTerms memory t, bytes memory call_) = _termsWith(AMOUNT, address(usdc), AMOUNT, address(signpost));
+        (ExitRouter.ExitTerms memory t, bytes memory call_) =
+            _termsWith(AMOUNT, address(usdc), AMOUNT, address(signpost));
         ExitRouter.Authorization memory a = _authorization(t, OWNER_KEY);
         VM.prank(relayer);
         router.exit(t, a, call_);
@@ -641,8 +644,7 @@ contract ExitRouterTest {
         require(!allowed, "not the relayer's to decide");
 
         VM.prank(relayer);
-        (bool swept,) =
-            address(router).call(abi.encodeWithSelector(ExitRouter.sweep.selector, relayer, address(token)));
+        (bool swept,) = address(router).call(abi.encodeWithSelector(ExitRouter.sweep.selector, relayer, address(token)));
         require(!swept, "nor the relayer's to take");
     }
 

@@ -223,6 +223,8 @@ contract CostlyPayee {
     uint256[8] private slots;
 
     receive() external payable {
-        for (uint256 i = 0; i < 8; i++) slots[i] = block.timestamp + i;
+        for (uint256 i = 0; i < 8; i++) {
+            slots[i] = block.timestamp + i;
+        }
     }
 }

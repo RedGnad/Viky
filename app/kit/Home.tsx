@@ -49,11 +49,11 @@ export function Home() {
             ))}
           </ol>
         </section>
-        <p className={`${HELP} flex flex-wrap gap-[var(--space-lg)]`}>
-          <Link href="/privacy" className="underline">
+        <p className={`${HELP} flex flex-wrap gap-x-[var(--space-lg)]`}>
+          <Link href="/privacy" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
             {ME.privacy}
           </Link>
-          <Link href="/legal" className="underline">
+          <Link href="/legal" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
             {ME.legal}
           </Link>
         </p>
