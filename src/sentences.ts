@@ -381,6 +381,18 @@ export const MILESTONE_PAGE = {
   missedTheirs: (deadline: string, amount: string) => `Not reached by ${deadline}: the ${amount} came back to you.`,
 } as const;
 
+/**
+ * The preview a messaging app draws from a gift's link, the first thing the person it is for sees. The funder's name
+ * only when the link carries its key; "Someone" otherwise, so a guessed gift number never names anybody.
+ */
+export const LINK_PREVIEW = {
+  named: (funder: string, amount: string) => `${funder} put ${amount} in your name`,
+  someone: (amount: string) => `Someone put ${amount} in your name`,
+  unknown: "A gift on Viky",
+  asYouGo: "It becomes yours as you go.",
+  fromCondition: (name: string) => `${name}. It becomes yours as you go.`,
+} as const;
+
 /** Me: the account, in the order the structure gives it. */
 export const ME = {
   title: "You",
