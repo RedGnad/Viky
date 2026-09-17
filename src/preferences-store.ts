@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import { databaseUrl } from "./database-guard";
 import type { SqlExecutor } from "./proof-session-store";
 import { type DisplayCurrency, isDisplayCurrency } from "./display-currency";
 
@@ -26,8 +27,7 @@ export function configurePreferencesStore(custom: SqlExecutor | undefined): void
 
 function sql(): SqlExecutor {
   if (executor) return executor;
-  const url = process.env.DATABASE_URL?.trim();
-  if (!url) throw new Error("DATABASE_URL is not configured");
+  const url = databaseUrl();
   return neon(url) as unknown as SqlExecutor;
 }
 

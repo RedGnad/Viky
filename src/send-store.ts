@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { databaseUrl } from "./database-guard";
 import { neon } from "@neondatabase/serverless";
 import { getAddress, type Hex } from "viem";
 import { GiftApiError } from "./gift-api";
@@ -35,8 +36,8 @@ export function configureSendStore(custom: SqlExecutor | undefined): void {
 
 function sql(): SqlExecutor {
   if (executor) return executor;
-  const url = process.env.DATABASE_URL?.trim();
-  if (!url) throw new GiftApiError("NOT_CONFIGURED", "Viky is not ready for this yet.", 503);
+  if (!process.env.DATABASE_URL?.trim()) throw new GiftApiError("NOT_CONFIGURED", "Viky is not ready for this yet.", 503);
+  const url = databaseUrl();
   return neon(url) as unknown as SqlExecutor;
 }
 

@@ -1,4 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { databaseUrl } from "./database-guard";
 import type { Hex } from "viem";
 import type { SettledDay } from "./day-record";
 import { configureProofSessionStore, type SqlExecutor } from "./proof-session-store";
@@ -85,8 +86,7 @@ export function configureGiftStore(custom: SqlExecutor | undefined): void {
 
 function sql(): SqlExecutor {
   if (executor) return executor;
-  const url = process.env.DATABASE_URL?.trim();
-  if (!url) throw new Error("DATABASE_URL is not configured");
+  const url = databaseUrl();
   return neon(url) as unknown as SqlExecutor;
 }
 
