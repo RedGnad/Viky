@@ -16,7 +16,14 @@ import { Nav, type Destination } from "./Nav";
  * a column and the mark, which is all a person without an account has anywhere to go.
  */
 type Props =
-  | Readonly<{ kind: "destination"; active: Destination; title?: string; children: ReactNode }>
+  | Readonly<{
+      kind: "destination";
+      active: Destination;
+      title?: string;
+      /** One small action in the header, opposite the mark: the door, on the page without an account (brief, section 7). */
+      action?: ReactNode;
+      children: ReactNode;
+    }>
   | Readonly<{
       kind: "task";
       back?: string;
@@ -48,7 +55,14 @@ export function Shell(props: Props) {
       <div className={room}>
         <main className={`mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-lg)]`}>
           <header className="flex flex-col items-start gap-[var(--space-sm)]">
-            <Mark />
+            {props.kind === "destination" && props.action ? (
+              <div className="flex w-full items-center justify-between gap-[var(--space-md)]">
+                <Mark />
+                {props.action}
+              </div>
+            ) : (
+              <Mark />
+            )}
             {props.kind === "task" && props.back ? <BackLink href={props.back} label={props.backLabel} follow={props.backFollows} /> : null}
             {props.kind === "document" && props.back ? <BackLink href={props.back} label={props.backLabel} /> : null}
             {props.kind === "task" && props.caption ? <p className={HELP}>{props.caption}</p> : null}

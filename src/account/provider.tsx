@@ -115,3 +115,26 @@ export function useAccount(): AccountContextValue {
   if (!value) throw new Error("useAccount must be used inside AccountProvider");
   return value;
 }
+
+/**
+ * An account that exists only on screen, for the design laboratory at /dev/looks: the bar of destinations draws only
+ * for somebody signed in, so without this the screens of a signed-in person could not be photographed at all. It can
+ * sign nobody in and holds no key; every action does nothing. No product screen uses it.
+ */
+export function ExampleAccountProvider({ children }: { children: ReactNode }) {
+  const value = useMemo<AccountContextValue>(
+    () => ({
+      address: "0x000000000000000000000000000000000000dEaD",
+      hasCredential: true,
+      status: "idle",
+      error: undefined,
+      createAccount: async () => undefined,
+      signIn: async () => undefined,
+      signOut: () => undefined,
+      useAnotherAccount: () => undefined,
+      clearError: () => undefined,
+    }),
+    [],
+  );
+  return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
+}
