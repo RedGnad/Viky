@@ -28,8 +28,18 @@ const GIFT_READ = new RegExp(`/api/gift/${GIFT_ID}(\\?.*)?$`);
 /** A gift as GET /api/gift/[id] describes it, starting from nobody having opened it. */
 function gift(over: Record<string, unknown> = {}) {
   return {
+    kind: "daily",
     giftId: GIFT_ID,
     youAreTheRecipient: false,
+    youAreTheFunder: false,
+    names: { recipientName: "Léa", funderName: "Maman" },
+    amount: "7000000",
+    perDay: "1000000",
+    takenDisplay: "$0.00",
+    days: [],
+    lastReturnAtMs: null,
+    createdAtChain: Math.floor(Date.now() / 1000) - 2 * 86_400,
+    claimedAtChain: 0,
     catchUpSeconds: 108_000,
     escrow: ESCROW,
     goalAccount: { username: null, source: null, bound: false, code: null, codeExpiresAt: null },
@@ -65,6 +75,13 @@ function gift(over: Record<string, unknown> = {}) {
  */
 const EVERY_DAY = {
   opened: true,
+  // The keeper's record for the three settled days: earned, then one that went back, then earned again, so the row
+  // shows each at its date rather than the order the counts alone would give (D86).
+  days: [
+    { day: TODAY - 5, outcome: "earned" },
+    { day: TODAY - 4, outcome: "returned" },
+    { day: TODAY - 3, outcome: "earned" },
+  ],
   connected: true,
   goalAccount: { username: "ama_learns", source: "recipient", bound: true, code: null, codeExpiresAt: null },
   startDay: TODAY - 5,
@@ -92,6 +109,7 @@ function card(over: Record<string, unknown> = {}) {
     recipientName: "Léa",
     funderName: "Maman",
     catchUpSeconds: 108_000,
+    days: [],
     fundedAt: Math.floor(Date.now() / 1000) - 5 * 86_400,
     startDay: TODAY - 5,
     endDay: TODAY + 1,
@@ -365,16 +383,17 @@ export const SCENARIOS: Scenario[] = [
   // ---------------------------------------------------------------------------------------------------------
   // Recipient, from the link to counting.
   {
-    name: "recipient: signed in on the link, claim, name Duolingo, code, counting",
+    name: "recipient: signed in on the link, open, name refused then named, code, counting",
     run: async (s) => {
       await s.reset();
       let current = gift();
       await s.api("GET", GIFT_READ, () => ({ status: 200, body: current }), "GET /api/gift/[id]");
       await s.api("POST", "/api/gift/claim", () => {
-        current = gift({ opened: true, youAreTheRecipient: true });
+        current = gift({ opened: true, youAreTheRecipient: true, claimedAtChain: Math.floor(Date.now() / 1000) });
         return { status: 200, body: { giftId: GIFT_ID, opened: true } };
       }, "POST /api/gift/claim");
-      await s.api("POST", `/api/gift/${GIFT_ID}/account`, () => {
+      await s.api("POST", `/api/gift/${GIFT_ID}/account`, ({ hit }) => {
+        if (hit === 1) return { status: 400, body: { error: "No public Duolingo profile goes by that name. Check the spelling in Duolingo, under your picture.", code: "NO_SUCH_PROFILE" } };
         current = gift({ opened: true, youAreTheRecipient: true, goalAccount: { username: "ama_learns", source: "recipient", bound: false, code: "K7PX2M", codeExpiresAt: new Date(Date.now() + 3_600_000).toISOString() } });
         return { status: 200, body: { giftId: GIFT_ID, username: "ama_learns", code: "K7PX2M", expiresAt: new Date(Date.now() + 3_600_000).toISOString() } };
       }, "POST /api/gift/[id]/account");
@@ -394,14 +413,43 @@ export const SCENARIOS: Scenario[] = [
       await s.page.getByLabel("Your Duolingo username").waitFor({ state: "visible", timeout: 30_000 });
       await s.shot("recipient", "name their Duolingo", "On the link, signed in: Open my gift");
 
+      await s.page.getByLabel("Your Duolingo username").fill("ama_learnz");
+      await s.click(exact("Continue"));
+      await s.text(/No public Duolingo profile goes by that name/);
+      await s.shot("recipient", "name their Duolingo, nobody by that name", "After opening it: type a name Duolingo does not have, Continue (the answer is replaced)");
+
       await s.page.getByLabel("Your Duolingo username").fill("ama_learns");
       await s.click(exact("Continue"));
       await s.text("Prove ama_learns is yours");
       await s.shot("recipient", "code to add", "After opening it: type the Duolingo username, Continue");
 
       await s.click("I added it");
-      await s.text("Counting starts tomorrow.", 30_000);
+      await s.text(/^Counting: /, 30_000);
       await s.shot("recipient", "counting started", "On the code screen: I added it");
+    },
+  },
+  {
+    name: "recipient: the code expired, and named by the funder",
+    run: async (s) => {
+      await s.reset();
+      let current = gift({ opened: true, youAreTheRecipient: true, goalAccount: { username: "ama_learns", source: "recipient", bound: false, code: "K7PX2M", codeExpiresAt: new Date(Date.now() - 60_000).toISOString() } });
+      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card({ opened: true, counting: false, creditedDays: 0, missedDays: 0, startDay: 0, endDay: 0 })] } }), "GET /api/gifts/mine");
+      await s.api("GET", GIFT_READ, () => ({ status: 200, body: current }), "GET /api/gift/[id]");
+      await s.signIn();
+      await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
+      await s.settle();
+      await s.text("This code has expired.", 30_000);
+      await s.shot("recipient", "code expired", `${HOME}: the gift under "What's moving", an hour after the code was given`);
+
+      current = gift({ opened: true, youAreTheRecipient: true, goalAccount: { username: "ama_learns", source: "funder", bound: false, code: null, codeExpiresAt: null } });
+      await s.page.reload();
+      await s.settle();
+      await s.signIn();
+      await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
+      await s.settle();
+      await s.text(/Named by Maman/, 30_000);
+      await s.click("That is not my Duolingo name");
+      await s.shot("recipient", "named by the funder", `${HOME}: the gift under "What's moving", named by the funder: That is not my Duolingo name`);
     },
   },
   {
@@ -409,25 +457,79 @@ export const SCENARIOS: Scenario[] = [
     run: async (s) => {
       await s.reset();
       let current = gift({ ...EVERY_DAY, youAreTheRecipient: true });
-      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card()] } }), "GET /api/gifts/mine");
+      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card({ days: EVERY_DAY.days })] } }), "GET /api/gifts/mine");
       await s.api("GET", GIFT_READ, () => ({ status: 200, body: current }), "GET /api/gift/[id]");
       await s.api("POST", "/api/gift/withdraw", () => {
-        current = gift({ ...EVERY_DAY, youAreTheRecipient: true, earned: "0", earnedDisplay: "$0.00" });
+        current = gift({ ...EVERY_DAY, youAreTheRecipient: true, earned: "0", earnedDisplay: "$0.00", takenDisplay: "$2.00", withdrawNonce: "1" });
         return { status: 200, body: { giftId: GIFT_ID, sent: true, amount: "2000000", hash: HASH } };
       }, "POST /api/gift/withdraw");
       await s.signIn();
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
       await s.page.getByRole("list", { name: "Every day of this gift" }).waitFor({ state: "visible", timeout: 30_000 });
-      // "Every day of this gift" is the list's accessible name, not text on the screen, so it is found by its role.
-      await s.shot("recipient", "every day state", `${HOME}: the gift under "What I receive"`, {
-        scrollTo: s.page.getByRole("list", { name: "Every day of this gift" }),
-      });
-      await s.page.getByRole("button", { name: "Take $2.00" }).waitFor({ state: "visible" });
-      await s.shot("recipient", "take what is earned", `${HOME}: the gift under "What I receive"`, { scrollTo: /^Take \$2\.00$/ });
+      await s.shot("recipient", "every day state", `${HOME}: the gift under "What's moving"`);
       await s.click("Take $2.00");
-      await s.text("$2.00 is now in your account.", 30_000);
-      await s.shot("recipient", "earned money taken", 'On the gift: Take $2.00', { scrollTo: "$2.00 is now in your account." });
+      await s.text("Take $2.00 into your account.", 30_000);
+      await s.shot("recipient", "take, the review", 'On the gift: Take $2.00');
+      await s.page.getByRole("button", { name: "Take $2.00" }).last().click();
+      await s.settle();
+      await s.text(/Reference: gift 3, take 1\./, 30_000);
+      await s.shot("recipient", "earned money taken", "On the review: Take $2.00");
+    },
+  },
+  {
+    name: "recipient: finished, with days from before the record",
+    run: async (s) => {
+      await s.reset();
+      const finished = gift({
+        opened: true,
+        connected: true,
+        finished: true,
+        youAreTheRecipient: true,
+        goalAccount: { username: "ama_learns", source: "recipient", bound: true, code: null, codeExpiresAt: null },
+        startDay: TODAY - 9,
+        endDay: TODAY - 3,
+        creditedDays: 6,
+        missedDays: 1,
+        daysLeft: 0,
+        earned: "2000000",
+        earnedDisplay: "$2.00",
+        alreadyTheirsDisplay: "$6.00",
+        takenDisplay: "$4.00",
+        returnedDisplay: "$1.00",
+        todayDayIndex: 7,
+        withdrawNonce: "2",
+        // Only the last four days were settled after the record existed.
+        days: [
+          { day: TODAY - 6, outcome: "earned" },
+          { day: TODAY - 5, outcome: "returned" },
+          { day: TODAY - 4, outcome: "earned" },
+          { day: TODAY - 3, outcome: "earned" },
+        ],
+      });
+      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card({ finished: true, counting: true, startDay: TODAY - 9, endDay: TODAY - 3, creditedDays: 6, missedDays: 1, theirsDisplay: "$6.00", returnedDisplay: "$1.00" })] } }), "GET /api/gifts/mine");
+      await s.api("GET", GIFT_READ, () => ({ status: 200, body: finished }), "GET /api/gift/[id]");
+      await s.signIn();
+      await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
+      await s.settle();
+      await s.text("This gift is finished.", 30_000);
+      await s.shot("recipient", "finished", `${HOME}: a finished gift under "What's moving"`);
+    },
+  },
+  {
+    name: "recipient: the session closed on the gift's page",
+    run: async (s) => {
+      await s.reset();
+      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card({ days: EVERY_DAY.days })] } }), "GET /api/gifts/mine");
+      await s.api("GET", GIFT_READ, () => ({ status: 200, body: gift({ ...EVERY_DAY, youAreTheRecipient: true }) }), "GET /api/gift/[id]");
+      await s.page.clock.install({ time: Date.now() });
+      await s.signIn();
+      await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
+      await s.settle();
+      await s.page.getByRole("list", { name: "Every day of this gift" }).waitFor({ state: "visible", timeout: 30_000 });
+      await s.page.clock.runFor(31 * 60_000);
+      await s.text("Your session closed while you were away", 30_000);
+      await s.shot("recipient", "session closed on the gift", "On the gift, thirty-one quiet minutes later (the page's clock driven forward)");
     },
   },
 
@@ -437,15 +539,24 @@ export const SCENARIOS: Scenario[] = [
     name: "donor page",
     run: async (s) => {
       await s.reset();
-      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card({ role: "funder" })] } }), "GET /api/gifts/mine");
-      await s.api("GET", GIFT_READ, () => ({ status: 200, body: gift({ ...EVERY_DAY, youAreTheRecipient: false }) }), "GET /api/gift/[id]");
+      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card({ role: "funder", days: EVERY_DAY.days })] } }), "GET /api/gifts/mine");
+      await s.api(
+        "GET",
+        GIFT_READ,
+        () => ({ status: 200, body: gift({ ...EVERY_DAY, youAreTheRecipient: false, youAreTheFunder: true, lastReturnAtMs: Date.now() - 20 * 3_600_000 }) }),
+        "GET /api/gift/[id]",
+      );
       await s.signIn();
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
-      await s.text("This gift is being earned by the person you sent it to.", 30_000);
+      await s.text(/You put \$7\.00 in Léa's name\./, 30_000);
       await s.shot("donor", "a gift being earned", `${HOME}: the gift under "What's moving"`);
     },
   },
+
+  // ---------------------------------------------------------------------------------------------------------
+  // A milestone gift's page, on simulated data: no route answers a milestone gift until C2 is live.
+  ...milestone(),
 
   // ---------------------------------------------------------------------------------------------------------
   // The way out.
@@ -497,6 +608,77 @@ export const SCENARIOS: Scenario[] = [
     },
   },
 ];
+
+/** A milestone gift as the page reads it (src/milestone-view.ts), simulated: the route answers one once C2 is live. */
+function milestoneGift(over: Record<string, unknown> = {}) {
+  return {
+    kind: "milestone",
+    giftId: GIFT_ID,
+    conditionId: "chess-rating",
+    youAreTheRecipient: true,
+    youAreTheFunder: false,
+    names: { recipientName: "Léa", funderName: "Maman" },
+    goalAccount: { username: "lea_plays" },
+    amount: "50000000",
+    amountDisplay: "$50.00",
+    startReading: 1450,
+    target: 1500,
+    todayReading: 1472,
+    readAtMs: Date.now() - 3 * 3_600_000,
+    deadlineMs: Date.now() + 20 * 86_400_000,
+    opened: true,
+    connected: true,
+    reached: false,
+    reachedAtMs: null,
+    finished: false,
+    cancelled: false,
+    earned: "0",
+    earnedDisplay: "$0.00",
+    takenDisplay: "$0.00",
+    returnedDisplay: "$0.00",
+    createdAtChain: Math.floor(Date.now() / 1000) - 3 * 86_400,
+    withdrawNonce: "0",
+    escrow: ESCROW,
+    ...over,
+  };
+}
+
+function milestone(): Scenario[] {
+  const open = async (s: Session, body: Record<string, unknown>) => {
+    await s.reset();
+    // The session lives in memory, so the page is reached by a click from Home rather than typed: a card whose read is
+    // replaced by the simulated milestone gift.
+    await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card()] } }), "GET /api/gifts/mine");
+    await s.api("GET", GIFT_READ, () => ({ status: 200, body }), "GET /api/gift/[id], a simulated milestone gift");
+    await s.signIn();
+    await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
+    await s.settle();
+    await s.text(/Reach 1500 on Chess\.com/, 30_000);
+  };
+  return [
+    {
+      name: "milestone: before the deadline, to the person it is for",
+      run: async (s) => {
+        await open(s, milestoneGift());
+        await s.shot("milestone", "before the deadline", "A milestone gift's page, signed in as the person it is for (simulated data until C2)", { real: "replaced: GET /api/gift/[id] with a simulated milestone gift" });
+      },
+    },
+    {
+      name: "milestone: reached, read by the funder",
+      run: async (s) => {
+        await open(s, milestoneGift({ youAreTheRecipient: false, youAreTheFunder: true, todayReading: 1503, reached: true, reachedAtMs: Date.now() - 86_400_000, earned: "50000000", earnedDisplay: "$50.00" }));
+        await s.shot("milestone", "reached, the funder's reading", "A milestone gift's page, signed in as the funder, reached (simulated data until C2)", { real: "replaced: GET /api/gift/[id] with a simulated milestone gift" });
+      },
+    },
+    {
+      name: "milestone: not reached in time",
+      run: async (s) => {
+        await open(s, milestoneGift({ todayReading: 1488, finished: true, deadlineMs: Date.now() - 2 * 86_400_000, returnedDisplay: "$50.00" }));
+        await s.shot("milestone", "not reached in time", "A milestone gift's page, signed in as the person it is for, past the deadline (simulated data until C2)", { real: "replaced: GET /api/gift/[id] with a simulated milestone gift" });
+      },
+    },
+  ];
+}
 
 /** The way out, rebuilt on flows W1 to W13, with the figures of the first real conversion of 16 Sep where a figure was needed. */
 function withdrawal(): Scenario[] {

@@ -33,9 +33,8 @@ test("every condition names a reading that exists, and a milestone has no goal t
 });
 
 test("no destination, card, or step of offering a gift names a source in its own words: the register does", () => {
-  // The kit is what the structure builds, and offering a gift was rebuilt on it (S2). The gift page names Duolingo
-  // until its own line, S3.
-  for (const file of [...globSync("app/kit/**/*.tsx"), "app/components/FundGift.tsx", "src/sentences.ts", "src/pending-gift.ts"]) {
+  // The kit is what the structure builds; offering a gift (S2) and a gift's page (S3) were rebuilt on it.
+  for (const file of [...globSync("app/kit/**/*.tsx"), "app/components/FundGift.tsx", "app/components/GiftPage.tsx", "app/components/MilestoneGiftPage.tsx", "src/sentences.ts", "src/pending-gift.ts"]) {
     const source = readFileSync(file, "utf8");
     assert.doesNotMatch(source, /Duolingo|Chess\.com|Coursera|Strava/, `${file} names a source itself`);
   }

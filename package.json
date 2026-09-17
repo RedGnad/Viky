@@ -29,6 +29,7 @@
     "deploy:exit-router": "tsx scripts/deploy-exit-router.ts",
     "check:gift-escrow": "tsx scripts/check-gift-escrow.ts",
     "db:migrate": "tsx scripts/migrate-db.ts",
+    "backfill:days": "tsx scripts/backfill-days.ts",
     "keeper": "tsx scripts/keeper.ts",
     "spike:preflight": "tsx scripts/spike/preflight.ts",
     "proof:capture": "tsx scripts/capture-duolingo-proof.ts",

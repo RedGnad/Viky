@@ -487,7 +487,7 @@ export function FundGift() {
         <section className="flex flex-col gap-[var(--space-md)]">
           <h2 className={TITLE}>{W.made.nextTitle}</h2>
           <ol className={`flex list-decimal flex-col gap-[var(--space-sm)] pl-[var(--space-lg)] ${BODY}`}>
-            {W.made.next(made.recipientName, madeCondition?.source ?? "", madeCondition?.words.eachDay ?? "", formatAusd(day), settlingTimeInWords(made.atMs)).map((line) => (
+            {W.made.next(made.recipientName, madeCondition?.words.theyConnect ?? W.made.theyConnectAny, madeCondition?.words.eachDay ?? "", formatAusd(day), settlingTimeInWords(made.atMs)).map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ol>

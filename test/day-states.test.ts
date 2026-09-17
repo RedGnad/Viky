@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { DAY_MARK, dayInWords, giftDays, stripOf } from "../src/day-states.js";
+import { DAY_MARK, dayInWords, giftDays, stripFromRecord, stripOf } from "../src/day-states.js";
 
 /**
  * The states of a day, and the one the counts cannot give. A recipient on the third day once read
@@ -112,4 +112,30 @@ test("two gifts whose counts differ never draw the same strip, and the strip car
 
   // Before the first reading, the strip is the gift's length, every day still to come.
   assert.deepEqual(stripOf({ ...counting, startDay: 0, creditedDays: 0, missedDays: 0 }, CATCH_UP, now), Array(7).fill("toCome"));
+});
+
+/**
+ * The keeper's record per day (D86): a settled day takes the outcome the contract's events gave it, so a day earned
+ * after a missed one is drawn after it. Days with no record fall back to the counts.
+ */
+test("a recorded day is drawn at its date, and unrecorded days fall back to the counts without double counting", () => {
+  const now = noonOn(START + 5);
+  const counting = { startDay: START, endDay: START + 6, durationDays: 7, creditedDays: 2, missedDays: 1 };
+  // Missed the first day, earned the next two: the counts alone would draw earned, earned, returned.
+  const record = [
+    { day: START, outcome: "returned" as const },
+    { day: START + 1, outcome: "earned" as const },
+    { day: START + 2, outcome: "earned" as const },
+  ];
+  assert.deepEqual(stripOf(counting, CATCH_UP, now, record).slice(0, 3), ["returned", "earned", "earned"]);
+  assert.deepEqual(stripOf(counting, CATCH_UP, now).slice(0, 3), ["earned", "earned", "returned"]);
+  assert.equal(stripFromRecord(counting, CATCH_UP, now, record), true);
+
+  // Only the last settled day is recorded: the other two come from what the counts leave.
+  const partial = [{ day: START + 2, outcome: "earned" as const }];
+  assert.deepEqual(stripOf(counting, CATCH_UP, now, partial).slice(0, 3), ["earned", "returned", "earned"]);
+  assert.equal(stripFromRecord(counting, CATCH_UP, now, partial), false);
+  const strip = stripOf(counting, CATCH_UP, now, partial);
+  assert.equal(strip.filter((day) => day === "earned").length, 2);
+  assert.equal(strip.filter((day) => day === "returned").length, 1);
 });

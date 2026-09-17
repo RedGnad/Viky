@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { catchUpSecondsOf } from "@/src/catch-up";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { checkInDayIndex, formatAusd, readGift, utcDayOf } from "@/src/gift-reader";
-import { holdsGiftLink, loadGift, loadRelayed } from "@/src/gift-store";
+import { holdsGiftLink, lastRefundAt, loadGift, loadRelayed, loadSettledDays } from "@/src/gift-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { escrowOf } from "@/src/relayer";
 import { readAccountAuthSession } from "@/src/account-auth-server";
@@ -26,7 +26,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const { id } = await context.params;
     if (!/^\d{1,78}$/.test(id)) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
 
-    const [record, relayed] = await Promise.all([loadGift(id), loadRelayed(id)]);
+    const [record, relayed, recordedDays, refundedAt] = await Promise.all([loadGift(id), loadRelayed(id), loadSettledDays([id]), lastRefundAt(id)]);
     if (!record) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
     const escrow = escrowOf(record);
     const gift = await readGift(escrow, id);
@@ -61,6 +61,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         // recipient's words and the recipient's buttons to whoever was signed in, and a funder was offered a
         // "take it" the contract then refused.
         youAreTheRecipient: viewerIsRecipient,
+        // Before anybody opens the gift the recipient is nobody, so "not the recipient" also describes the funder;
+        // the page needs to know which of the two is reading (decision 13 of the drawn flows).
+        youAreTheFunder: viewerIsFunder,
+        kind: "daily",
         // How long a day stays catchable on the contract that holds this gift. The two live contracts do not
         // agree, which is a defect recorded in D50, so the screen is told rather than left to assume.
         catchUpSeconds: catchUpSecondsOf(escrow),
@@ -88,6 +92,14 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         alreadyTheirsDisplay: formatAusd(BigInt(gift.creditedDays) * gift.perDay),
         returned: gift.refundedToFunder.toString(),
         returnedDisplay: formatAusd(gift.refundedToFunder),
+        // What the recipient has already taken out of the gift, as the contract counts it.
+        takenDisplay: formatAusd(gift.withdrawnByRecipient),
+        // Which settled day was earned and which went back, from the keeper's record (D86); days settled before the
+        // record existed are absent and the page falls back to the counts for them.
+        days: recordedDays.get(id) ?? [],
+        // When missed days were last sent back to the funder: the time of the last refund Viky relayed.
+        lastReturnAtMs: refundedAt ? refundedAt.getTime() : null,
+        claimedAtChain: gift.claimedAt,
         returnable: gift.refundableBalance.toString(),
         todayDayIndex: checkInDayIndex(gift, now),
         startDay: gift.startDay,

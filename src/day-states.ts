@@ -88,24 +88,45 @@ export function giftDays(gift: GiftShape, catchUpSeconds: number, nowMs: number)
   return { days, earned: gift.creditedDays, returned: gift.missedDays };
 }
 
-/** One segment of a gift card's strip of days. */
+/** One day of a gift as a strip or a row draws it. */
 export type StripDay = "earned" | "returned" | "catchable" | "aboutToReturn" | "today" | "toCome";
 
 /**
- * The strip a gift card draws: the counts, then the days still open. The contract gives how many days were earned and
- * how many came back, not which (see the top of this file), so until the keeper's record per day exists (S3) the strip
- * draws `creditedDays` earned segments, then `missedDays` returned ones, then the days not yet settled as `giftDays`
- * finds them. Two gifts whose counts differ never draw the same strip, which is what the card's picture must say: a
- * day earned and a day that went back are not the same thing (audit D, founder's correction of 17 Sep 2026).
+ * Every day of a gift, in order, as it is drawn: earned, returned, or still open.
+ *
+ * A settled day takes its outcome from the keeper's record per day when one exists (src/day-record.ts, D86): the
+ * contract's own events say which day was which. A settled day with no record, settled before the record existed or
+ * by a transaction Viky did not relay, falls back to the counts: the credited days not yet placed are drawn first as
+ * earned, then the missed ones as returned, because the contract gives how many and not which (founder's correction of
+ * 17 Sep 2026). Two gifts whose counts differ never draw the same strip either way.
  */
-export function stripOf(gift: GiftShape, catchUpSeconds: number, nowMs: number): readonly StripDay[] {
+export function stripOf(gift: GiftShape, catchUpSeconds: number, nowMs: number, records: readonly { day: number; outcome: "earned" | "returned" }[] = []): readonly StripDay[] {
   if (gift.startDay === 0 || nowMs === 0) return Array.from({ length: gift.durationDays }, () => "toCome");
-  const credited = Math.max(0, gift.creditedDays);
-  const missed = Math.max(0, gift.missedDays);
-  return giftDays(gift, catchUpSeconds, nowMs).days.map((day, index) => {
+  const days = giftDays(gift, catchUpSeconds, nowMs).days;
+  const known = new Map(records.map((entry) => [entry.day, entry.outcome]));
+  let earnedLeft = Math.max(0, gift.creditedDays - days.filter((day) => day.state === "settled" && known.get(day.dayNumber) === "earned").length);
+  let returnedLeft = Math.max(0, gift.missedDays - days.filter((day) => day.state === "settled" && known.get(day.dayNumber) === "returned").length);
+  return days.map((day) => {
     if (day.state !== "settled") return day.state;
-    return index < credited ? "earned" : index < credited + missed ? "returned" : "earned";
+    const recorded = known.get(day.dayNumber);
+    if (recorded) return recorded;
+    if (earnedLeft > 0) {
+      earnedLeft -= 1;
+      return "earned";
+    }
+    if (returnedLeft > 0) {
+      returnedLeft -= 1;
+      return "returned";
+    }
+    return "earned";
   });
+}
+
+/** Whether every settled day of this gift is drawn from the record rather than from the counts. */
+export function stripFromRecord(gift: GiftShape, catchUpSeconds: number, nowMs: number, records: readonly { day: number }[]): boolean {
+  if (gift.startDay === 0 || nowMs === 0) return true;
+  const known = new Set(records.map((entry) => entry.day));
+  return giftDays(gift, catchUpSeconds, nowMs).days.every((day) => day.state !== "settled" || known.has(day.dayNumber));
 }
 
 /**
@@ -131,7 +152,7 @@ export function dayInWords(day: Day, funderName: string): string {
 
 /**
  * A shape per state, so the row reads without colour and without a legend beside every cell. They are drawn in
- * app/components/DayRow.tsx rather than typed: as characters, no face the product loads had them, so the phone's
+ * app/kit/DayRow.tsx rather than typed: as characters, no face the product loads had them, so the phone's
  * own fonts drew them instead.
  */
 export type DayMark = "full" | "half" | "ring" | "diamond" | "dot";
