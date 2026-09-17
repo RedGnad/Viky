@@ -213,6 +213,8 @@ test("the pass calls a creation abandoned only when its money never moved, and a
       durationDays: 7,
       amount: params.amount,
       goalUsername: null,
+    goalCourse: null,
+    goalCourseTitle: null,
       recipientName: null,
       funderName: null,
       claimTokenHash: claimTokenHash("never-shown"),

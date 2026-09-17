@@ -12,6 +12,7 @@ import { loadOfferedConditions, prepareMilestoneGift, readStanding, submitMilest
 import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY, isMilestoneRequest } from "@/src/gift-attempt";
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
 import { conditionById, liveConditions, type Condition } from "@/src/conditions";
+import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { cadenceOf, milestoneOf, type MilestoneCondition } from "@/src/milestone-conditions";
 import { checkTarget, inPlainWords, MilestoneTermsError, smallestTarget } from "@/src/milestone-terms";
 import { whenInWords } from "@/src/display-currency";
@@ -65,6 +66,9 @@ type Draft = Readonly<{
   dollars: string;
   days: string;
   target: string;
+  /** The one course a day is counted on, and the title its source gives it, when the source holds several (U1). */
+  course: string;
+  courseTitle: string;
   /** A milestone's cadence, and where the person stood in it, read for exactly this name and cadence (C2). */
   cadence: string;
   standing: number | null;
@@ -84,6 +88,8 @@ const EMPTY_DRAFT: Draft = {
   dollars: String(SUGGESTED_GIFT_DOLLARS),
   days: "7",
   target: "",
+  course: "",
+  courseTitle: "",
   cadence: "",
   standing: null,
   standingReadAt: "",
@@ -209,6 +215,8 @@ export function FundGift() {
   const [kept, setKept] = useState<PendingGift | undefined>(() => (typeof window === "undefined" ? undefined : peekPendingGift()));
   const [touched, setTouched] = useState<Readonly<Record<string, boolean>>>({});
   const [nameCheck, setNameCheck] = useState<{ checking: boolean; refusal?: string; checked?: string }>({ checking: false });
+  /** What the source answered about that name: its courses, and the one it says is current (U1). */
+  const [courses, setCourses] = useState<{ forName: string; list: readonly { id: string; title: string; xp: number }[] }>({ forName: "", list: [] });
   const [balance, setBalance] = useState<bigint | null>(null);
   const [pending, setPending] = useState<bigint | null>(null);
   const [arrivedWorth, setArrivedWorth] = useState<string | null | "unknown">(null);
@@ -327,6 +335,8 @@ export function FundGift() {
             dollars: saved.dollars,
             days: saved.days,
             target: saved.target,
+            course: saved.course ?? "",
+            courseTitle: saved.courseTitle ?? "",
             cadence: saved.cadence ?? "",
             standing: saved.standing ?? null,
             standingReadAt: saved.standingReadAt ?? "",
@@ -386,7 +396,9 @@ export function FundGift() {
       username: draft.username.trim(),
       recipientName: recipient,
       funderName: funder,
-      goalType: milestone ? (cadence?.goalType ?? 0) : (condition.goalType ?? 0),
+      // A gift counted on one course is its own goal on the contract (U1), so the course is part of the terms signed.
+      goalType: milestone ? (cadence?.goalType ?? 0) : draft.course ? GOAL_TYPE_DUOLINGO_COURSE_XP : (condition.goalType ?? 0),
+      course: milestone ? "" : draft.course,
       dailyTarget: milestone ? 0 : (daily.target ?? 0),
       durationDays: length.days,
       amount: amount.units.toString(),
@@ -411,13 +423,14 @@ export function FundGift() {
       });
     }
     if (!request) {
-      if (daily.target === null || condition.goalType === null) throw new Error(W.failures.other);
+      if (daily.target === null || terms.goalType === 0) throw new Error(W.failures.other);
       request = await prepareGift({
         account,
         duolingoUsername: terms.username || undefined,
+        course: terms.course || undefined,
         recipientName: recipient,
         funderName: funder,
-        goalType: condition.goalType,
+        goalType: terms.goalType,
         dailyTarget: daily.target,
         durationDays: length.days,
         amount: amount.units,
@@ -453,7 +466,7 @@ export function FundGift() {
     setDraft(EMPTY_DRAFT);
     replace("done");
     window.scrollTo(0, 0);
-  }, [condition, milestone, cadence, climb.target, draft.standing, draft.standingReadAt, amount.units, length.days, daily.target, draft.username, recipient, funder]);
+  }, [condition, milestone, cadence, climb.target, draft.standing, draft.standingReadAt, draft.course, amount.units, length.days, daily.target, draft.username, recipient, funder]);
 
   // While paying: watch the account, turn what arrived into what a gift holds, then make the gift.
   useEffect(() => {
@@ -543,6 +556,7 @@ export function FundGift() {
         dollars,
         days: draft.days,
         target: draft.target,
+        ...(draft.course ? { course: draft.course, courseTitle: draft.courseTitle } : {}),
         ...(milestone && draft.standing !== null ? { cadence: draft.cadence, standing: draft.standing, standingReadAt: draft.standingReadAt } : {}),
       }),
     );
@@ -868,6 +882,9 @@ export function FundGift() {
   if (step === "detail" && condition && hasDetail) {
     const typed = draft.username.trim();
     const refusal = shapeRefusal ?? (nameCheck.checked === undefined && nameCheck.refusal ? nameCheck.refusal : undefined);
+    // The courses of the name that was checked, and nothing else: a name typed again asks the source again.
+    const theirCourses = courses.forName === typed.toLowerCase() ? courses.list : [];
+    const asksCourse = condition.course !== undefined && theirCourses.length > 0;
     const next = async () => {
       if (daily.target === null) return;
       if (!nameLink || typed === "" || !nameLink.check || nameCheck.checked === typed) {
@@ -879,6 +896,16 @@ export function FundGift() {
         const found = await checkSourceName(nameLink.check.path, typed);
         update({ username: found.username });
         setNameCheck({ checking: false, checked: found.username });
+        const list = found.courses ?? [];
+        setCourses({ forName: found.username.toLowerCase(), list });
+        // A source that holds several courses asks which one counts before the gift goes on (U1): the one it says is
+        // current is proposed, and the step stays open so the funder sees the question rather than passing it.
+        if (condition.course && list.length > 0) {
+          const chosen = list.find((one) => one.id === found.currentCourseId) ?? list[0];
+          update({ username: found.username, course: chosen.id, courseTitle: chosen.title });
+          return;
+        }
+        update({ course: "", courseTitle: "" });
         go("amount");
       } catch (error) {
         const code = error instanceof ApiError ? error.code : "";
@@ -912,6 +939,21 @@ export function FundGift() {
                 spellCheck={false}
               />
               {nameLink.why ? <p className={HELP}>{nameLink.why}</p> : null}
+            </div>
+          ) : null}
+          {asksCourse && condition.course ? (
+            <div className="flex flex-col gap-[var(--space-xs)]">
+              <ChoiceList
+                name="course"
+                legend={condition.course.label}
+                options={theirCourses.map((one) => ({ value: one.id, label: one.title }))}
+                value={draft.course || null}
+                onChange={(id) => {
+                  const chosen = theirCourses.find((one) => one.id === id);
+                  update({ course: id, courseTitle: chosen?.title ?? "" });
+                }}
+              />
+              <p className={HELP}>{condition.course.help}</p>
             </div>
           ) : null}
           {condition.target ? (
@@ -1037,6 +1079,8 @@ export function FundGift() {
       { label: W.check.rows.from, value: funder, change: "who" },
       { label: W.check.rows.what, value: condition.name, change: "what" },
       ...(nameLink ? [{ label: nameLink.row, value: draft.username.trim() || nameLink.noneGiven, change: "detail" as Step }] : []),
+      // Which course counts is part of what the funder is paying for, so it has a line of its own (U1).
+      ...(condition.course ? [{ label: condition.course.row, value: draft.courseTitle || condition.course.wholeProfile, change: "detail" as Step }] : []),
       { label: W.check.rows.goes, value: gift, note: about, change: "amount" },
       { label: W.check.rows.dayEarned, value: W.check.dayEarned(formatAusd(perDay), exact, length.days), change: "amount" },
       ...(condition.target && daily.target !== null ? [{ label: W.check.rows.dayCounts, value: condition.target.inWords(daily.target), change: "detail" as Step }] : []),

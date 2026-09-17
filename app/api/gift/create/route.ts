@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { getAddress, isAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
-import { isValidDuolingoUsername } from "@/src/duolingo-public-terms";
+import { isDuolingoCourseId, isValidDuolingoUsername } from "@/src/duolingo-public-terms";
 import { contactHash, NO_CONTACT_HASH } from "@/src/contact-hash";
 import { DuolingoProfileError, resolvePublicDuolingoProfile } from "@/src/duolingo-profile";
 import { giftNameProblem, tidyGiftName } from "@/src/gift-names";
 import { fundingNonce, type GiftParams } from "@/src/gift-attestation";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { makeGift } from "@/src/gift-creation";
+import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { liveCreationDeps } from "@/src/gift-creation-live";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
@@ -22,6 +23,8 @@ type CreateBody = {
   recipientName?: string;
   funderName?: string;
   goalType?: number;
+  /** Which course a day is counted on, for a gift made on one course (U1). */
+  course?: string;
   dailyTarget?: number;
   durationDays?: number;
   amount?: string;
@@ -103,15 +106,31 @@ export async function POST(request: Request) {
       throw new GiftApiError("TERMS_MISMATCH", "The signed terms do not match the gift");
     }
 
+    // A gift counted on one course says so in its goal type, and the course is read back from the profile before the
+    // money moves: a course nobody is learning could never count a day (U1).
+    const course = String(body.course ?? "").trim() || undefined;
+    if (course && !isDuolingoCourseId(course)) throw new GiftApiError("INVALID_COURSE", "Choose which course counts.", 400);
+    if (course && goalType !== GOAL_TYPE_DUOLINGO_COURSE_XP) throw new GiftApiError("TERMS_MISMATCH", "The signed terms do not match the gift");
+    if (!course && goalType === GOAL_TYPE_DUOLINGO_COURSE_XP) throw new GiftApiError("INVALID_COURSE", "Choose which course counts.", 400);
+    let courseTitle: string | undefined;
     if (duolingoUsername) {
+      let profile: Awaited<ReturnType<typeof resolvePublicDuolingoProfile>>;
       try {
-        await resolvePublicDuolingoProfile(duolingoUsername);
+        profile = await resolvePublicDuolingoProfile(duolingoUsername);
       } catch (error) {
         if (error instanceof DuolingoProfileError && error.code === "NO_SUCH_PROFILE") {
           throw new GiftApiError("NO_SUCH_PROFILE", "No public Duolingo profile goes by that name. Nothing was taken.", 400);
         }
         throw new GiftApiError("SOURCE_UNAVAILABLE", "Duolingo is not answering, so the gift was not made and nothing was taken. Try again in a moment.", 503);
       }
+      if (course) {
+        const found = profile.courses.find((one) => one.id === course);
+        if (!found) throw new GiftApiError("NO_SUCH_COURSE", "That profile is not learning that course any more. Choose again. Nothing was taken.", 409);
+        courseTitle = found.title;
+      }
+    } else if (course) {
+      // No name to read: the course is the recipient's to prove, so nothing here can say it exists yet.
+      throw new GiftApiError("INVALID_COURSE", "Give their Duolingo name to choose a course.", 400);
     }
 
     // Recorded before the money moves, relayed, then recorded as a gift (D87): a failure between the relay and the
@@ -129,6 +148,8 @@ export async function POST(request: Request) {
           s: String(a.s) as Hex,
         },
         goalUsername: duolingoUsername,
+        goalCourse: course,
+        goalCourseTitle: courseTitle,
         recipientName,
         funderName,
       },

@@ -132,11 +132,23 @@ function card(over: Record<string, unknown> = {}) {
 const HOME = "Signed in, on the home page";
 
 /** The way to the check, as a person clicks it. */
-const TO_THE_CHECK = "Léa and Maman, Continue, A Duolingo lesson each day, Continue, ama_learns, Continue, Continue (the check)";
+const TO_THE_CHECK = "Léa and Maman, Continue, A Duolingo lesson each day, Continue, ama_learns, Continue, Spanish, Continue, Continue (the check)";
 
-/** The public read of a Duolingo name, answered as Duolingo answers for a name that exists. */
+/**
+ * The public read of a Duolingo name, answered as Duolingo answers for a name that exists: the name as it spells it,
+ * the courses that profile carries, and the one it says is current (U1).
+ */
+const COURSES = [
+  { id: "DUOLINGO_ES_EN", title: "Spanish", xp: 1200 },
+  { id: "DUOLINGO_IT_EN", title: "Italian", xp: 40 },
+];
 async function nameCheck(s: Session): Promise<void> {
-  await s.api("GET", /\/api\/duolingo\/profile\?/, () => ({ status: 200, body: { username: "ama_learns" } }), "GET /api/duolingo/profile");
+  await s.api(
+    "GET",
+    /\/api\/duolingo\/profile\?/,
+    () => ({ status: 200, body: { username: "ama_learns", courses: COURSES, currentCourseId: "DUOLINGO_ES_EN" } }),
+    "GET /api/duolingo/profile",
+  );
 }
 
 /** From the first question to the check, with the terms every funder scenario uses. */
@@ -147,6 +159,9 @@ async function toTheCheck(s: Session): Promise<void> {
   await s.page.getByLabel("A Duolingo lesson each day").check();
   await s.click(exact("Continue"));
   await s.page.getByLabel("Their Duolingo name, if you know it").fill("ama_learns");
+  await s.click(exact("Continue"));
+  // The name read answers with the profile's courses, so the step asks which one counts before it goes on (U1).
+  await s.text("Which course counts?");
   await s.click(exact("Continue"));
   await s.text("How much, and for how long?");
   await s.click(exact("Continue"));
@@ -269,6 +284,9 @@ export const SCENARIOS: Scenario[] = [
       await s.page.getByLabel("Their Duolingo name, if you know it").fill("ama_learns");
       await s.text("Their Duolingo, and what counts as a day");
       await s.shot("funder", "their duolingo and what counts as a day", `${HOME}: Offer a gift, Léa and Maman, Continue, A Duolingo lesson each day, Continue, ama_learns typed`);
+      await s.click(exact("Continue"));
+      await s.text("Which course counts?");
+      await s.shot("funder", "which course counts", `${HOME}: Offer a gift, Léa and Maman, Continue, A Duolingo lesson each day, Continue, ama_learns, Continue`);
       await s.click(exact("Continue"));
       await s.text("How much, and for how long?");
       await s.shot("funder", "how much", `${HOME}: ${TO_THE_CHECK.replace(", Continue, Continue (the check)", "")}`);

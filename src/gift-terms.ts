@@ -73,6 +73,8 @@ export const GOAL_TYPE_DUOLINGO_XP = 1;
 export const GOAL_TYPE_GITHUB_CONTRIBUTIONS = 2;
 export const GOAL_TYPE_ONCHAIN = 3;
 export const GOAL_TYPE_STRAVA_DISTANCE = 4;
+/** One Duolingo course rather than the experience total (U1): registered on the escrow on 18 Sep 2026. */
+export const GOAL_TYPE_DUOLINGO_COURSE_XP = 5;
 
 /**
  * The registry's providerId for Duolingo. Since D27 it is the public mode (an attested read of the

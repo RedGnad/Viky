@@ -119,6 +119,60 @@ test("create refuses malformed terms with a typed code before any relay", async 
   assert.match(String((await json(badContact)).code), /CONTACT/);
 });
 
+test("a gift counted on one course is refused before any relay when the course is not one to count (U1)", async () => {
+  const cookie = await cookieFor(A);
+  const { fundingNonce } = await import("../src/gift-attestation");
+  const { GOAL_TYPE_DUOLINGO_COURSE_XP } = await import("../src/gift-terms");
+  const { NO_CONTACT_HASH } = await import("../src/contact-hash");
+  const { receiveAuthorizationMessage, receiveAuthorizationTypedData, toContractAuthorization } = await import("../src/ausd-authorization");
+  const { getAddress } = await import("viem");
+
+  const base = { goalType: GOAL_TYPE_DUOLINGO_COURSE_XP, dailyTarget: 10, durationDays: 7, amount: "5000000", salt: `0x${"01".repeat(32)}` } as const;
+  // Signed over exactly these terms, so what is met is the course's refusal and never the signature's.
+  const params = {
+    funder: getAddress(A.address),
+    refundTo: getAddress(A.address),
+    recipientContactHash: NO_CONTACT_HASH,
+    goalType: base.goalType,
+    dailyTarget: base.dailyTarget,
+    durationDays: base.durationDays,
+    amount: BigInt(base.amount),
+    salt: base.salt as `0x${string}`,
+  };
+  const escrow = getAddress(`0x${"cc".repeat(20)}`);
+  process.env.NEXT_PUBLIC_GIFT_ESCROW_ADDRESS = escrow;
+  const message = receiveAuthorizationMessage({ funder: params.funder, escrow, amount: params.amount, nonce: fundingNonce(params) });
+  const signature = await A.signTypedData(receiveAuthorizationTypedData(message));
+  const a = toContractAuthorization(message, signature);
+  const authorization = { validAfter: a.validAfter.toString(), validBefore: a.validBefore.toString(), nonce: a.nonce, v: a.v, r: a.r, s: a.s };
+
+  // A course of the wrong shape, and a course with nobody to read it on, are refused before anything is read.
+  const shape = await createPost(post("/api/gift/create", { ...base, course: "not a course", duolingoUsername: "ama_learns", authorization }, { cookie }));
+  assert.equal((await json(shape)).code, "INVALID_COURSE");
+  const nameless = await createPost(post("/api/gift/create", { ...base, course: "DUOLINGO_ES_EN", authorization }, { cookie }));
+  assert.equal((await json(nameless)).code, "INVALID_COURSE");
+  // The goal type and the course must say the same thing: a course on the total's goal is refused as terms that differ.
+  const wrongGoal = await createPost(post("/api/gift/create", { ...base, goalType: 1, course: "DUOLINGO_ES_EN", duolingoUsername: "ama_learns", authorization }, { cookie }));
+  assert.equal((await json(wrongGoal)).code, "TERMS_MISMATCH");
+
+  // And a course the profile does not carry, read again just before the money would move.
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({ users: [{ id: 477033640, username: "ama_learns", courses: [{ id: "DUOLINGO_IT_EN", title: "Italian", xp: 40 }], currentCourseId: "DUOLINGO_IT_EN" }] }),
+      { status: 200 },
+    )) as typeof fetch;
+  try {
+    const gone = await createPost(post("/api/gift/create", { ...base, course: "DUOLINGO_ES_EN", duolingoUsername: "ama_learns", authorization }, { cookie }));
+    const body = await json(gone);
+    assert.equal(gone.status, 409);
+    assert.equal(body.code, "NO_SUCH_COURSE");
+    assert.match(String(body.error), /Nothing was taken/);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
 test("claim, check-in, withdraw and status refuse malformed identifiers with typed codes", async () => {
   const cookie = await cookieFor(A);
   const claim = await claimPost(post("/api/gift/claim", { giftId: "x", token: "short" }, { cookie }));

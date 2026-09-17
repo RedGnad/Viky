@@ -179,6 +179,32 @@ Done on 17 Sep 2026, in this order, and each step read back before the next:
    branch. The service has no repository attached, so a push to main does not redeploy it. Checked after: `/health`, a
    `{ source, account }` read with its proof, a refused source, and the `{ username }` read the Duolingo path still sends.
 
+## Before the course reading of U1: goal 5 on the daily contract, and one owner for all three
+
+Done on 18 Sep 2026, with the key that deployed `GiftEscrow`, which was still its owner, and read back each time.
+
+| what | value |
+|---|---|
+| the daily contract | `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233` |
+| goal 5 registered, one course's experience | `registerGoal(5, 0x8f940d06b0eb5122941908713583a1aef4c026ab396ce91c93348d460cf89629)`, tx `0xcaadaca7d0d3d362eb1112b3e45f66a1116d4335166283bf837053cf5fee8a69`, block 105,733,380, 65,238 gas |
+| the provider id it holds | `keccak256("viky:provider:duolingo-course-zkfetch:v1")`, read back equal |
+| ownership handed to the founder | tx `0xa01ae787c52409157ec83aa95cc2ca2a4dca4a2caaab3caef8ea8c5650dfa009`, block 105,733,449, 38,360 gas |
+| owner now | `0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64`, the same wallet as `MilestoneGift` and `ExitRouter` |
+
+Before the build of U1 serves anybody, the gift table needs the two columns a course gift is recorded in
+(`goal_course`, `goal_course_title` on `viky_gifts` and on `viky_creations`): `pnpm db:migrate`, then the columns read
+back from `information_schema`. They are additive and nothing in the running build touches them.
+
+The order matters: goal 1 (the experience total) keeps every gift already made, goal 5 carries the reading of one
+course, and nothing can settle across the two because the contract checks an attestation's provider id against the
+gift's goal. Registering another goal, or replacing the evidence signer, now needs the founder's own signature: there
+is no second key left that can. The address was compared character by character with `MilestoneGift.owner()` read from
+the chain before the transfer was sent, and all three owners were read back after it.
+
+`GiftEscrow` uses OpenZeppelin's `Ownable` as it comes, so its owner can also renounce, which `ExitRouter` forbids.
+Renouncing would leave the goals, the evidence signer and the two pauses frozen as they are; money would keep moving,
+since no owner function touches it.
+
 ## Before deploying the build of N1: the subscriptions table and the push keys
 
 1. `viky_push` (one row per browser and gift) and `viky_told` (one row per gift and subject, so a day is told about

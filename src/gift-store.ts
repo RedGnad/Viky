@@ -46,6 +46,8 @@ ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS bound_at timestamptz;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS goal_profile_id text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS recipient_name text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS funder_name text;
+ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS goal_course text;
+ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS goal_course_title text;
 CREATE TABLE IF NOT EXISTS viky_creations (
   nonce text PRIMARY KEY,
   funder text NOT NULL,
@@ -67,6 +69,8 @@ CREATE TABLE IF NOT EXISTS viky_creations (
 CREATE INDEX IF NOT EXISTS viky_creations_pending ON viky_creations (status, started_at);
 ALTER TABLE viky_creations ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'daily';
 ALTER TABLE viky_creations ADD COLUMN IF NOT EXISTS milestone jsonb;
+ALTER TABLE viky_creations ADD COLUMN IF NOT EXISTS goal_course text;
+ALTER TABLE viky_creations ADD COLUMN IF NOT EXISTS goal_course_title text;
 CREATE TABLE IF NOT EXISTS viky_days (
   gift_id text NOT NULL,
   day integer NOT NULL,
@@ -105,6 +109,9 @@ export type GiftRecord = Readonly<{
   escrow: Hex | null;
   /** Public mode (D27): the account read by the attested fetch, who named it, and the binding state. */
   goalUsername: string | null;
+  /** The one course a day is counted on, and the title its source gives it, when the gift counts a course (U1). */
+  goalCourse: string | null;
+  goalCourseTitle: string | null;
   usernameSource: "funder" | "recipient" | null;
   bindingCode: string | null;
   bindingCodeExpiresAt: Date | null;
@@ -159,6 +166,9 @@ export async function saveGift(input: {
   escrow: Hex;
   /** Set when the funder knows the recipient's account: no binding code is needed then (D27). */
   goalUsername?: string;
+  /** The course a day is counted on, and the title Duolingo gives it, when the gift counts one course (U1). */
+  goalCourse?: string;
+  goalCourseTitle?: string;
   /** Checked by `giftNameProblem` before this is called; a page loaded before the names existed sends neither. */
   recipientName?: string;
   funderName?: string;
@@ -168,11 +178,11 @@ export async function saveGift(input: {
   const inserted = await sql()`
     INSERT INTO viky_gifts
       (gift_id, funder, contact_hash, claim_token_hash, goal_type, daily_target, duration_days, amount, created_tx, escrow, goal_username, username_source,
-       recipient_name, funder_name)
+       recipient_name, funder_name, goal_course, goal_course_title)
     VALUES (${input.giftId}, ${input.funder.toLowerCase()}, ${input.contactHash}, ${keyHash},
             ${input.goalType}, ${input.dailyTarget}, ${input.durationDays}, ${input.amount.toString()}, ${input.createdTx},
             ${input.escrow.toLowerCase()}, ${input.goalUsername ?? null}, ${input.goalUsername ? "funder" : null},
-            ${input.recipientName ?? null}, ${input.funderName ?? null})
+            ${input.recipientName ?? null}, ${input.funderName ?? null}, ${input.goalCourse ?? null}, ${input.goalCourseTitle ?? null})
     ON CONFLICT (gift_id) DO NOTHING
     RETURNING gift_id`;
   if (inserted.length > 0) return;
@@ -237,6 +247,8 @@ function toRecord(row: Record<string, unknown>): GiftRecord {
     claimedTx: row.claimed_tx === null || row.claimed_tx === undefined ? null : (String(row.claimed_tx) as Hex),
     escrow: row.escrow === null || row.escrow === undefined ? null : (String(row.escrow) as Hex),
     goalUsername: row.goal_username === null || row.goal_username === undefined ? null : String(row.goal_username),
+    goalCourse: row.goal_course === null || row.goal_course === undefined ? null : String(row.goal_course),
+    goalCourseTitle: row.goal_course_title === null || row.goal_course_title === undefined ? null : String(row.goal_course_title),
     usernameSource: row.username_source === "funder" || row.username_source === "recipient" ? row.username_source : null,
     bindingCode: row.binding_code === null || row.binding_code === undefined ? null : String(row.binding_code),
     bindingCodeExpiresAt: toDate(row.binding_code_expires_at),
@@ -306,6 +318,9 @@ export type CreationRow = Readonly<{
   durationDays: number;
   amount: bigint;
   goalUsername: string | null;
+  /** The one course a day is counted on, and its title, when the gift counts a course (U1). */
+  goalCourse: string | null;
+  goalCourseTitle: string | null;
   recipientName: string | null;
   funderName: string | null;
   claimTokenHash: string;
@@ -333,6 +348,8 @@ function toCreation(row: Record<string, unknown>): CreationRow {
     durationDays: Number(row.duration_days),
     amount: BigInt(String(row.amount)),
     goalUsername: text(row.goal_username),
+    goalCourse: text(row.goal_course),
+    goalCourseTitle: text(row.goal_course_title),
     recipientName: text(row.recipient_name),
     funderName: text(row.funder_name),
     claimTokenHash: String(row.claim_token_hash),
@@ -350,9 +367,11 @@ export async function beginCreation(
   input: Omit<CreationRow, "status" | "txHash" | "giftId" | "startedAt">,
 ): Promise<{ inserted: true } | { inserted: false; existing: CreationRow }> {
   const rows = await sql()`
-    INSERT INTO viky_creations (nonce, funder, contact_hash, goal_type, daily_target, duration_days, amount, goal_username, recipient_name, funder_name, claim_token_hash, kind, milestone)
+    INSERT INTO viky_creations (nonce, funder, contact_hash, goal_type, daily_target, duration_days, amount, goal_username, goal_course, goal_course_title,
+                                recipient_name, funder_name, claim_token_hash, kind, milestone)
     VALUES (${input.nonce.toLowerCase()}, ${input.funder.toLowerCase()}, ${input.contactHash}, ${input.goalType}, ${input.dailyTarget}, ${input.durationDays},
-            ${input.amount.toString()}, ${input.goalUsername}, ${input.recipientName}, ${input.funderName}, ${input.claimTokenHash},
+            ${input.amount.toString()}, ${input.goalUsername}, ${input.goalCourse}, ${input.goalCourseTitle},
+            ${input.recipientName}, ${input.funderName}, ${input.claimTokenHash},
             ${input.kind ?? "daily"}, ${input.milestone ? JSON.stringify(input.milestone) : null})
     ON CONFLICT (nonce) DO NOTHING
     RETURNING nonce`;

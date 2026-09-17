@@ -36,6 +36,16 @@ const APPEARANCES = [
   { name: "night", colorScheme: "dark" },
 ] as const;
 
+/**
+ * The one door of the look chosen on 17 Sep: it looks for a passkey first and offers to create one when it finds none,
+ * so a browser with nothing stored goes through both. Creating an account lands on Home, signed in.
+ */
+async function openTheDoor(page: Page): Promise<void> {
+  await page.getByRole("button", { name: /^Sign in or create account$/ }).first().click();
+  const create = page.getByRole("button", { name: /^Create (your|my) account$/ }).first();
+  if (await create.waitFor({ state: "visible", timeout: 20_000 }).then(() => true).catch(() => false)) await create.click();
+}
+
 type Size = (typeof SIZES)[number];
 type Appearance = (typeof APPEARANCES)[number];
 
@@ -301,8 +311,12 @@ export class Session {
     await this.goto("/me");
     const signedIn = this.page.getByText(/Signed in on this device until/).first();
     if (!(await signedIn.isVisible().catch(() => false))) {
-      await this.page.getByRole("button", { name: /^Sign in$/ }).first().click();
-      await signedIn.waitFor({ state: "visible", timeout: 30_000 });
+      await openTheDoor(this.page);
+      // Signing in leaves the You page as it is; creating an account lands on Home. Either says the account is there.
+      await Promise.race([
+        signedIn.waitFor({ state: "visible", timeout: 40_000 }),
+        this.page.getByRole("link", { name: "Offer a gift" }).first().waitFor({ state: "visible", timeout: 40_000 }),
+      ]);
     }
     await this.page.getByRole("link", { name: "Home", exact: true }).first().click();
     await this.settle();
@@ -439,8 +453,8 @@ async function runIn(
   if (pick && !chosen.some((scenario) => scenario.name.startsWith("funder: the account step"))) {
     await session.budgetSignIn();
     await session.goto("/me");
-    await page.getByRole("button", { name: "Create my account" }).first().click();
-    await page.getByText(/Signed in on this device until/).first().waitFor({ state: "visible", timeout: 40_000 });
+    await openTheDoor(page);
+    await page.getByRole("link", { name: "Offer a gift" }).first().waitFor({ state: "visible", timeout: 40_000 });
   }
 
   console.log(`\n${size.name} ${appearance.name}`);

@@ -46,6 +46,8 @@ export type CreationDeps = Readonly<{
     createdTx: Hex;
     escrow: Hex;
     goalUsername?: string;
+    goalCourse?: string;
+    goalCourseTitle?: string;
     recipientName?: string;
     funderName?: string;
   }) => Promise<void>;
@@ -60,6 +62,9 @@ export type CreationInput = Readonly<{
   authorization: ContractAuthorization;
   nonce: Hex;
   goalUsername?: string;
+  /** The course a day is counted on, and the title its source gives it, for a gift made on one course (U1). */
+  goalCourse?: string;
+  goalCourseTitle?: string;
   recipientName?: string;
   funderName?: string;
 }>;
@@ -83,6 +88,8 @@ async function record(row: Omit<CreationRow, "status" | "txHash" | "giftId" | "s
     createdTx: made.hash,
     escrow: made.escrow,
     goalUsername: row.goalUsername ?? undefined,
+    goalCourse: row.goalCourse ?? undefined,
+    goalCourseTitle: row.goalCourseTitle ?? undefined,
     recipientName: row.recipientName ?? undefined,
     funderName: row.funderName ?? undefined,
   });
@@ -106,6 +113,8 @@ export async function makeGift(input: CreationInput, deps: CreationDeps): Promis
     durationDays: input.params.durationDays,
     amount: input.params.amount,
     goalUsername: input.goalUsername ?? null,
+    goalCourse: input.goalCourse ?? null,
+    goalCourseTitle: input.goalCourseTitle ?? null,
     recipientName: input.recipientName ?? null,
     funderName: input.funderName ?? null,
     claimTokenHash: keyHash,

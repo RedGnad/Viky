@@ -30,6 +30,9 @@ export type PendingGiftTerms = Readonly<{
   dollars: string;
   days: string;
   target: string;
+  /** The one course a day is counted on, and its title, when the funder chose one (U1). */
+  course?: string;
+  courseTitle?: string;
   /** A milestone's cadence, and where the person stood when the funder chose: the ceiling they sign is built on it (C2). */
   cadence?: string;
   standing?: number;
@@ -63,6 +66,8 @@ export function pendingGiftFor(raw: string | null, account: string | undefined, 
     dollars: text("dollars"),
     days: text("days"),
     target: text("target"),
+    ...(text("course") !== undefined ? { course: text("course") } : {}),
+    ...(text("courseTitle") !== undefined ? { courseTitle: text("courseTitle") } : {}),
     ...(text("cadence") !== undefined ? { cadence: text("cadence") } : {}),
     ...(typeof record.standing === "number" ? { standing: record.standing } : {}),
     ...(text("standingReadAt") !== undefined ? { standingReadAt: text("standingReadAt") } : {}),

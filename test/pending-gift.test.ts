@@ -60,14 +60,16 @@ test("on the screen after a closed session, signing in is the only thing offered
 test("the terms kept are exactly the terms the gift is made from", () => {
   const fund = readFileSync("app/components/FundGift.tsx", "utf8");
   const kept = fund.slice(fund.indexOf("savePendingGift({"), fund.indexOf("}),", fund.indexOf("savePendingGift({")));
-  for (const field of ["recipientName: recipient", "funderName: funder", "conditionId: condition?.id", "username: draft.username.trim()", "dollars", "days: draft.days", "target: draft.target"]) {
+  for (const field of ["recipientName: recipient", "funderName: funder", "conditionId: condition?.id", "username: draft.username.trim()", "dollars", "days: draft.days", "target: draft.target", "course: draft.course"]) {
     assert.ok(kept.includes(field), `the device keeps ${field}`);
   }
   const call = fund.slice(fund.indexOf("await prepareGift({"), fund.indexOf("const record: Made"));
   assert.match(call, /duolingoUsername: terms\.username \|\| undefined/);
   assert.match(call, /recipientName: recipient/);
   assert.match(call, /funderName: funder/);
-  assert.match(call, /goalType: condition\.goalType/);
+  // Since U1 the goal type is part of the terms signed, because a gift counted on one course is its own goal.
+  assert.match(call, /goalType: terms\.goalType/);
+  assert.match(call, /course: terms\.course \|\| undefined/);
   assert.match(call, /dailyTarget: daily\.target/);
   assert.match(call, /durationDays: length\.days/);
   assert.match(call, /amount: amount\.units/);

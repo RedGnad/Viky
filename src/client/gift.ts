@@ -31,6 +31,8 @@ export type CreateGiftInput = {
   account: LocalAccount;
   /** The recipient's Duolingo username, when the funder knows it (no code needed then, D27). */
   duolingoUsername?: string;
+  /** The one course a day is counted on, chosen from that profile's own courses (U1). */
+  course?: string;
   /** Words for people, stored beside the link and never signed into the terms (src/gift-names.ts). */
   recipientName?: string;
   funderName?: string;
@@ -43,14 +45,22 @@ export type CreateGiftInput = {
 
 export type CreatedGift = { giftId: string; claimUrl: string; funded: boolean };
 
-/** Whether a public profile goes by this name on the condition's source, and how that source spells it. */
-export function checkSourceName(path: string, name: string): Promise<{ username: string }> {
+/**
+ * Whether a public profile goes by this name on the condition's source, how that source spells it, and the courses it
+ * carries with the one it says is current, for a source that holds several (U1).
+ */
+export function checkSourceName(
+  path: string,
+  name: string,
+): Promise<{ username: string; courses?: readonly { id: string; title: string; xp: number }[]; currentCourseId?: string | null }> {
   return getJson(`${path}?username=${encodeURIComponent(name)}`);
 }
 
 /** The body of a creation request, signed once and sent as many times as it takes (D87). */
 export type GiftRequest = Readonly<{
   duolingoUsername?: string;
+  /** The one course a day is counted on, when the funder chose one (U1). */
+  course?: string;
   recipientName?: string;
   funderName?: string;
   goalType: number;
@@ -85,6 +95,7 @@ export async function prepareGift(input: CreateGiftInput): Promise<GiftRequest> 
   const authorization = toContractAuthorization(message, signature);
   return {
     duolingoUsername: input.duolingoUsername,
+    course: input.course,
     recipientName: input.recipientName,
     funderName: input.funderName,
     goalType: params.goalType,

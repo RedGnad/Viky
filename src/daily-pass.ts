@@ -161,13 +161,13 @@ export async function dailyPass(
 function describe(outcome: PublicCheckInOutcome): DailyPassLine {
   switch (outcome.kind) {
     case "counted":
-      return { giftId: outcome.giftId, step: "count", result: `counted, ${outcome.creditedDays} day(s) credited, ${outcome.totalXp} XP`, hash: outcome.hash };
+      return { giftId: outcome.giftId, step: "count", result: `counted, ${outcome.creditedDays} day(s) credited, ${outcome.xp} XP`, hash: outcome.hash };
     case "bound":
-      return { giftId: outcome.giftId, step: "count", result: `bound, ${outcome.totalXp} XP`, hash: outcome.hash };
+      return { giftId: outcome.giftId, step: "count", result: `bound, ${outcome.xp} XP`, hash: outcome.hash };
     case "already":
       return { giftId: outcome.giftId, step: "count", result: `skipped: ${outcome.reason}` };
     case "refused":
-      return { giftId: outcome.giftId, step: "count", result: `refused: ${outcome.code}${outcome.totalXp !== undefined ? ` (${outcome.totalXp} XP)` : ""}` };
+      return { giftId: outcome.giftId, step: "count", result: `refused: ${outcome.code}${outcome.xp !== undefined ? ` (${outcome.xp} XP)` : ""}` };
   }
 }
 

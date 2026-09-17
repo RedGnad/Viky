@@ -2638,3 +2638,29 @@ behind an account cannot be photographed any other way.
 - What this does not do: it catches what Chess.com catches, when Chess.com catches it. A player cheating and not yet
   detected reads as `basic`, and a closure that lands after a gift has settled changes nothing. Chess.com's policy
   does not cover games against bots. This is written on the judges page with its source and its date.
+
+## D94, 18 Sep 2026: a Duolingo gift counts one course, and the chain can tell the two apart (U1)
+
+- Statement: counting the experience total pays for any lesson in any course, which is the easiest thing to game and
+  the furthest from what a funder meant. A gift can now be made on one course: the funder picks it from the courses
+  that account's own public profile carries, the daily reading is anchored on that course's id, and experience won
+  anywhere else is not in the reading at all.
+- What was measured, 18 Sep 2026, over 19 public profiles and 74 course objects: every course carries `id`, `title`
+  and `xp`; the keys of a course object come in one order on every profile (`authorId, fromLanguage, healthEnabled,
+  id, learningLanguage, placementTestAvailable, preload, title, xp, crowns`); a course object holds no object of its
+  own, so a pattern anchored on the id and stopped by the end of that object cannot run into the next course; and the
+  sum of the courses is exactly the `totalXp` the profile prints, on all 19. Course ids read `DUOLINGO_<learning>_<from>`,
+  with a region on some (`DUOLINGO_NL-NL_EN`, `DUOLINGO_ZH-CN_RO`).
+- On the chain. A course gift is goal 5 of `GiftEscrow`, registered on 18 Sep 2026 with the provider id
+  `keccak256("viky:provider:duolingo-course-zkfetch:v1")` (tx `0xcaadaca7…8a69`, read back). The contract refuses an
+  attestation whose provider id is not its goal's, so a course reading can never settle a gift made on the total, nor
+  the other way round. The identity a course gift is bound to is the person **and** the course
+  (`checkInSubject`): the contract pins it at the first reading and refuses any later reading carrying another, so a
+  gift for Spanish cannot be settled by a reading of German on the same profile. Every gift made before this keeps
+  goal 1, the total, and exactly the identity it already had.
+- The same transaction ended the last thing the deployment key could still do alone: ownership of `GiftEscrow` went to
+  the founder's wallet (`0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64`, tx `0xa01ae787…a009`), the wallet that already
+  owned `MilestoneGift` and `ExitRouter`. Registering another goal now needs the founder's own signature.
+- What this does not cover, written on the judges page as it is: a gift whose funder did not name the account has no
+  course to choose from and counts the whole profile, as before; and the course, like the account name, is recorded by
+  Viky rather than signed into the terms on the chain. The first reading is what pins it where nobody can move it.

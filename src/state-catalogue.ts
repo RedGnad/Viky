@@ -143,6 +143,16 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
     states: [
       { name: "Opened, not connected", when: "claimed, but nothing bound yet: the card says what to connect, in the register's words", says: ["Opened. Connect Duolingo to start counting."] },
       { name: "What will they do?", when: "the funder chooses a condition; only what is live is offered", says: ["A Duolingo lesson each day"] },
+      {
+        name: "Which course counts",
+        when: "the funder gave the account name and the source answered with several courses (U1)",
+        says: ["Which course counts?", "Only this course earns a day. Experience won in another course does not count."],
+      },
+      {
+        name: "The account stopped learning that course",
+        when: "the gift counts one course and the profile no longer carries it: nothing can be counted, and the whole amount goes back",
+        says: ["any more, so no day can be counted. Ask for a new gift"],
+      },
     ],
   },
 ];

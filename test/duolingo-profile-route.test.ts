@@ -17,11 +17,24 @@ function ask(username: string, ip: string): Request {
   return new Request(`https://viky.test/api/duolingo/profile?username=${encodeURIComponent(username)}`, { headers: { "x-forwarded-for": ip } });
 }
 
-test("a name Duolingo knows comes back spelled as Duolingo spells it", async () => {
-  globalThis.fetch = (async () => new Response(JSON.stringify({ users: [{ id: 477033640, username: "Ama_Learns" }] }), { status: 200 })) as typeof fetch;
+test("a name Duolingo knows comes back spelled as Duolingo spells it, with the courses that profile carries", async () => {
+  // The shape measured on 18 Sep 2026: each course carries its id, the title Duolingo prints and its own experience.
+  const courses = [
+    { authorId: "duolingo", fromLanguage: "en", id: "DUOLINGO_ES_EN", learningLanguage: "es", title: "Spanish", xp: 1200 },
+    { authorId: "duolingo", fromLanguage: "en", id: "DUOLINGO_IT_EN", learningLanguage: "it", title: "Italian", xp: 40 },
+  ];
+  globalThis.fetch = (async () =>
+    new Response(JSON.stringify({ users: [{ id: 477033640, username: "Ama_Learns", courses, currentCourseId: "DUOLINGO_IT_EN" }] }), { status: 200 })) as typeof fetch;
   const response = await profileGet(ask("ama_learns", "10.0.0.1"));
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { username: "Ama_Learns" });
+  assert.deepEqual(await response.json(), {
+    username: "Ama_Learns",
+    courses: [
+      { id: "DUOLINGO_ES_EN", title: "Spanish", xp: 1200 },
+      { id: "DUOLINGO_IT_EN", title: "Italian", xp: 40 },
+    ],
+    currentCourseId: "DUOLINGO_IT_EN",
+  });
 });
 
 test("no such name, a name of the wrong shape, and Duolingo not answering are three refusals, each typed", async () => {

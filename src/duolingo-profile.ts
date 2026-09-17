@@ -1,5 +1,7 @@
-// Ported from Lock-in unchanged. The public endpoint answers only this exact request shape: adding a
-// `fields` query parameter makes it return an empty object (checked 9 Sep 2026, DECISIONS.md D9).
+// Ported from Lock-in, then extended with the courses a profile carries (U1). The public endpoint answers only this
+// exact request shape: adding a `fields` query parameter makes it return an empty object (checked 9 Sep 2026, D9).
+
+import { isDuolingoCourseId } from "./duolingo-public-terms";
 
 const USERNAME = /^[A-Za-z0-9._-]{1,64}$/;
 const PROFILE_ID = /^[1-9]\d{0,19}$/;
@@ -24,7 +26,31 @@ export class DuolingoProfileError extends Error {
 export type PublicDuolingoProfile = Readonly<{
   id: string;
   username: string;
+  /** The courses the profile carries, as Duolingo names them, and the one it says is current (U1). */
+  courses: readonly DuolingoCourse[];
+  currentCourseId: string | null;
 }>;
+
+/** One course of a public profile: its id, the title Duolingo prints, and the experience won in it. */
+export type DuolingoCourse = Readonly<{ id: string; title: string; xp: number }>;
+
+/**
+ * The courses of a profile answer, in the order Duolingo gives them. Measured on 18 Sep 2026 over 19 public profiles
+ * and 74 courses: each carries `id`, `title` and `xp`, and the sum of the experience of the courses is exactly the
+ * `totalXp` the profile prints. A course object that is not that shape is left out rather than guessed at.
+ */
+function coursesOf(value: unknown): readonly DuolingoCourse[] {
+  if (!Array.isArray(value)) return [];
+  const courses: DuolingoCourse[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const { id, title, xp } = item as { id?: unknown; title?: unknown; xp?: unknown };
+    if (typeof id !== "string" || !isDuolingoCourseId(id) || typeof title !== "string" || title.length === 0) continue;
+    if (typeof xp !== "number" || !Number.isSafeInteger(xp) || xp < 0) continue;
+    courses.push({ id, title, xp });
+  }
+  return courses;
+}
 
 export function parsePublicDuolingoProfile(value: unknown, requestedUsername: string): PublicDuolingoProfile {
   if (!USERNAME.test(requestedUsername)) throw new DuolingoProfileError("INVALID_USERNAME", "Enter a valid Duolingo username");
@@ -39,12 +65,15 @@ export function parsePublicDuolingoProfile(value: unknown, requestedUsername: st
   }) as { id?: unknown; username?: unknown } | undefined;
   const id = candidate?.id === undefined ? "" : String(candidate.id);
   const username = typeof candidate?.username === "string" ? candidate.username : "";
+  const courses = coursesOf((candidate as { courses?: unknown } | undefined)?.courses);
+  const current = (candidate as { currentCourseId?: unknown } | undefined)?.currentCourseId;
+  const currentCourseId = typeof current === "string" && isDuolingoCourseId(current) ? current : null;
   // No user by that exact name is the one answer that is about the name itself.
   if (!candidate) throw new DuolingoProfileError("NO_SUCH_PROFILE", "Duolingo profile could not be resolved");
   if (!PROFILE_ID.test(id) || BigInt(id) > (1n << 64n) - 1n || !USERNAME.test(username)) {
     throw new DuolingoProfileError("SOURCE_UNAVAILABLE", "Duolingo profile could not be resolved");
   }
-  return { id, username };
+  return { id, username, courses, currentCourseId };
 }
 
 export async function resolvePublicDuolingoProfile(usernameInput: string): Promise<PublicDuolingoProfile> {
