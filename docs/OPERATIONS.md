@@ -154,6 +154,28 @@ set -a && source .env.ops.local && set +a && pnpm backfill:days
 `viky_creations` records a gift being made before its money moves (D87). The create route of that build writes it
 first, so the table must exist before the build serves anybody: `pnpm db:migrate`, then read the table back.
 
+## Before deploying the build of C2: the milestone tables, the contract, the worker
+
+Done on 17 Sep 2026, in this order, and each step read back before the next:
+
+1. `viky_milestone_gifts`, `viky_milestone_readings` (with `rd`) and the `kind` and `milestone` columns of
+   `viky_creations`: `set -a && source .env.ops.local && set +a && pnpm db:migrate` from the C2 branch, then the
+   columns read back from `information_schema`. The creation already in production kept `kind = 'daily'`.
+2. `MilestoneGift` at `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e`: `forge build && DRY_RUN=1 pnpm deploy:milestone-gift`,
+   then without `DRY_RUN`. Deployment `0x12d91b784d5abcb14ed7941c6de60b3eeb73fc978209653dbdd5c6fb9f7806e1`, block
+   105,654,716; four cadences registered, creation and readings opened, ownership handed to
+   `0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64` in `0xe2ad67911d2cc980a82f56a4f8981e88953745b2747fe058216a61d833181e8d`;
+   owner, switches, goals 1 to 4 and an empty goal 5 read back from the chain. 0.406 MON.
+3. Source: `forge verify-contract <address> contracts/MilestoneGift.sol:MilestoneGift --chain 143 --verifier sourcify
+   --verifier-url https://sourcify-api-monad.blockvision.org --constructor-args <AUSD, evidence signer, 1000000>`:
+   `exact_match` at creation and runtime, match 1855380.
+4. Vercel production: `MILESTONE_GIFT_ADDRESS` and `NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS`, added with `--value` and
+   `--no-sensitive` (a new production variable is sensitive by default and pulls back empty, which hides a mistake),
+   then pulled back.
+5. The attested-fetch worker: `railway link -p viky -s zkfetch-worker -e production`, then `railway up --ci` from the
+   branch. The service has no repository attached, so a push to main does not redeploy it. Checked after: `/health`, a
+   `{ source, account }` read with its proof, a refused source, and the `{ username }` read the Duolingo path still sends.
+
 ## Money paths to audit
 
 Each entry is a path where money can move while the record of it fails, with what to do about it. Nothing here is
