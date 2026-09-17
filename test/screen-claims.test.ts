@@ -6,6 +6,7 @@ import { formatAusdExact, theirsSoFar } from "../src/gift-reader";
 import { catchUpDay, deadlineInWords } from "../src/catch-up";
 import { ARRIVAL_FLOOR, CONVERSION_RESERVE, fundingStageShown, nextFundingStep, paymentArrived } from "../src/funding-step";
 import { AmountError, dollarsToUnits, MIN_GIFT_UNITS } from "../src/money";
+import { CASH_OUT } from "../src/sentences";
 
 /**
  * Tests for the sentences the screens show about money and about the state of a gift
@@ -145,18 +146,15 @@ test("the amount written before sending all of it is exactly the amount that lea
     const [whole, fraction] = formatAusdExact(units).slice(1).split(".");
     assert.equal(BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, "0")), units, `nothing of ${units} rounded away`);
   }
-  // And what leaves is what was typed, never a rounded copy of it, in a field that opens on the whole balance (D75).
+  // And what leaves is exactly the two-decimal number that was ordered at the payout service, on both branches:
+  // relayed for the stablecoin, sent by the person's own account for the chain's own coin (D75, D77, flows W7 to W9).
   const cashOut = readFileSync("app/components/CashOut.tsx", "utf8");
-  assert.match(cashOut, /const leaving = sending\.units;/);
-  // Whichever coin is leaving (D77): the amount typed, read to the decimals that coin has, and the coin the
-  // person chose. An account can hold three different things once the way out exists, and each is read, typed
-  // and sent in its own right rather than through whatever a gift happens to hold.
-  assert.match(cashOut, /amountToSend\(amount, held\(sendCoin\) \?\? 0n, sendCoin\)/);
-  assert.match(cashOut, /setAmount\(exactAmountText\(held\(coin\) \?\? 0n, coin\)\)/);
-  assert.match(cashOut, /sendOwnMoney\(\{ account, to, amount: leaving, coin: sendCoin \}\)/);
-  // The network's own coin takes the other path, because nobody can move it on somebody else's behalf. The
-  // same `leaving` goes into it, so the exact amount holds on both branches and not only on the relayed one.
+  assert.match(cashOut, /const leaving = ready\.units;/);
+  assert.match(cashOut, /sendOwnMoney\(\{ account, to, amount: leaving, coin \}\)/);
   assert.match(cashOut, /sendMon\(account, to, leaving\)/);
+  // To another account of the person's own, the amount typed leaves, read to the last decimal that coin has.
+  assert.match(cashOut, /dollarsToChange\(ownAmount, held\(ownCoin\), W\.refusals\)/, "two decimals, as on step 1 (flows W13)");
+  assert.match(cashOut, /const leaving = ownSending\.units;/);
 });
 
 /**
@@ -168,27 +166,31 @@ test("the amount written before sending all of it is exactly the amount that lea
  */
 test("no failure about money arrives as a shrug, and a closed session says so", () => {
   const cashOut = readFileSync("app/components/CashOut.tsx", "utf8");
+  const sentences = readFileSync("src/sentences.ts", "utf8");
 
   assert.doesNotMatch(cashOut, /Something went wrong/, "the catch-all has no place on a screen about money");
+  assert.doesNotMatch(sentences, /Something went wrong/);
 
   // Branched on the typed code rather than on the server's prose, which can change without anybody noticing.
-  assert.match(cashOut, /error\.code === "NOT_CONFIGURED"/);
-  assert.match(cashOut, /error\.code === "FAILED"/);
+  assert.match(cashOut, /case "NOT_CONFIGURED":/);
+  assert.match(cashOut, /case "FAILED":/);
   assert.match(cashOut, /error\.code === "SIGN_IN_REQUIRED"/);
 
   // A closed session is a door to reopen, not a failure to report: it is expected here, because the journey
-  // takes longer than the session lasts. It used to return silently, with nothing at all on screen to read.
-  assert.match(cashOut, /Your session closed while you were away/);
-  assert.match(cashOut, /Nothing moved and nothing was taken\./);
+  // takes longer than the session lasts. Signing in is the only thing offered, since a second account would
+  // strand the money (flows W11).
+  assert.equal(CASH_OUT.closedTitle, "Your session closed while you were away");
+  assert.match(CASH_OUT.closedBody, /Nothing moved and nothing was taken\./);
   assert.match(cashOut, /setClosed\(true\)/);
-  assert.match(cashOut, /<AccountPanel returning=\{closed\} \/>/, "signing in leads, making an account follows (D74)");
+  assert.match(cashOut, /<AccountPanel returning signInOnly \/>/, "Sign in alone, whichever way the session went");
 
-  // The timeout in the sentence is the one that arms the timer, never a number typed into prose.
-  assert.match(cashOut, /mera\.SESSION_IDLE_MINUTES/);
+  // The length in the sentence is the one that arms the timer, never a number typed into prose.
+  const scope = readFileSync("app/components/SessionScope.tsx", "utf8");
+  assert.match(scope, /mera\.sessionIdleMinutes\(\)/);
 
-  // And every remaining failure still says the one thing that is always true: the router keeps nothing.
-  for (const promise of [/Nothing was taken, and your money is where it was/, /nothing was taken\. Your money is where it was/]) {
-    assert.match(cashOut, promise);
+  // And every failure that ends a gesture still says the one thing that is always true: the router keeps nothing.
+  for (const promise of [CASH_OUT.failures.notConfigured, CASH_OUT.failures.rateMoved, CASH_OUT.failures.keptChanging, CASH_OUT.failures.other, CASH_OUT.failures.notSent("Ramp")]) {
+    assert.match(promise, /[Nn]othing was taken|nothing left your account/);
   }
 });
 
@@ -198,21 +200,27 @@ test("no failure about money arrives as a shrug, and a closed session says so", 
  * their identifier somewhere else. So after a change, in the order the service asks: the account's identifier with
  * a copy button, then a field for theirs.
  */
-test("after a change, the account's identifier comes first with a copy button, then the field for theirs", () => {
+test("on the second step the account's code comes first with a copy button, then the field for the service's", () => {
+  // The blocking defect of the first real exit (D82): the payout service asks where the money is sent from before it
+  // gives its own code to send to, and the screen had no answer. Now, in the order the service asks: the code, whole and
+  // copyable, then the field for theirs, whose button stays shut until what is pasted is a code and not the person's own.
   const cashOut = readFileSync("app/components/CashOut.tsx", "utf8");
-  const after = cashOut.slice(cashOut.indexOf("Your money is changed and it is in your own account"));
-  assert.ok(after.length > 0, "the step after a change exists");
+  const give = cashOut.indexOf("W.giveThisCode(");
+  const copy = cashOut.indexOf("onClick={copyCode}");
+  const paste = cashOut.indexOf("W.pasteTheCode(");
+  assert.ok(give > 0 && copy > give, "the code is offered where the service asks for it, and copied whole");
+  assert.ok(paste > copy, "and only then the field for the code they give back");
+  assert.match(cashOut, /disabled=\{busy \|\| deposit\.trim\(\) === "" \|\| problemWithCode !== null\}/);
+  assert.match(CASH_OUT.codeRefusals.own("Ramp"), /your own code/);
+});
 
-  const asked = after.indexOf("asks where you are sending from");
-  const copy = after.indexOf("navigator.clipboard.writeText(address)");
-  const paste = after.indexOf("Paste the identifier they give you");
-  assert.ok(asked > 0 && copy > asked, "the identifier is offered where the service asks for it, and copied whole");
-  assert.ok(paste > copy, "and only then the field for the identifier they give back");
-
-  // What is pasted goes into the send that exists, on the coin this way out hands back, never into a new path.
-  assert.match(after, /setOwnAccount\(depositTo\.trim\(\)\)/);
-  assert.match(after, /openSend\(received\)/);
-  assert.match(after, /disabled=\{!isAddress\(depositTo\.trim\(\)\)/, "the button stays shut until a real identifier is pasted");
+test("money screens keep the session open thirty minutes, everything else ten (decision 2)", () => {
+  const mera = readFileSync("src/account/mera.ts", "utf8");
+  assert.match(mera, /DEFAULT_IDLE_MINUTES = 10;/);
+  assert.match(mera, /MONEY_SCREEN_IDLE_MINUTES = 30;/);
+  for (const screen of ["app/components/CashOut.tsx", "app/components/FundGift.tsx", "app/components/GiftPage.tsx"]) {
+    assert.match(readFileSync(screen, "utf8"), /useMoneySession\(\);/, `${screen} is a money screen`);
+  }
 });
 
 test("a day that is neither counted nor lost is named, with the moment it stops being catchable", () => {

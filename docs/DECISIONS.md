@@ -2239,3 +2239,54 @@ exact one is known on receipt and the service requires it; "Back" still stands w
 exact, copyable amount should be; six decimals are still asked of the person; and the instruction is still dense.
 
 **Not pushed while the funder was mid send**, because a push rebuilds production underneath a live journey.
+
+## D83, 17 Sep 2026: the screens are rebuilt from drawn flows, and six things change under them
+
+**The method.** A design audit of every signed-in state (42 states, four audits against one grid) was read in
+full, and a specification was written from it, screen by screen, with the founder's decisions of 17 Sep. The
+screen layer is rebuilt journey by journey from flows drawn out of that specification, `docs/design/flows.md`,
+never patched: withdrawal first, then the funder, the recipient, the home page, the account page. One conversation
+per journey. A screen is finished when its captures at 390x844 and 1440x900, in day and in night, have been read
+by the reviewer against the grid and no finding of severity 3 or 4 remains.
+
+**What the flows settled, and the founder confirmed.** The person never reads a money name, a network name or
+an identifier; when a third party demands one, it is "the code Ramp asks for", shown whole and copied in one
+gesture. One figure per fact, two decimals for the person, the exact figure only where a third party requires it.
+Before any irreversible gesture a review; after it a confirmation with the amount, a reference, the time and the
+next step. Every refusal is typed and sits under the element in cause. A third party's published fee and delay go
+on its card with their source and date: they are that party's facts. No sentence of ours about what happened on
+the way out until the bank credit of 16 Sep is reported; that day, the first sentence delivered is the one with
+the measured figures.
+
+**Six changes under the screens, each accepted by the founder, and nothing else moves below them.**
+
+1. The way out is reachable as soon as the account holds anything: the home page reads all three coins.
+2. Money screens keep the signing session open thirty minutes rather than ten, and coming back after it closed
+   resumes the exact state, derived from what the account holds and the server knows, never from memory.
+3. One display currency per account, proposed from the device's language tag and never asked by a question,
+   changeable on the account page: euros in France, CFA francs in Senegal and Ivory Coast, dollars elsewhere. The
+   gift stays in dollars on chain. Every converted figure carries "about" and the date of the rate; the dollar stays
+   readable beside it on reviews and confirmations. The rate is the ECB's daily reference file, named and dated in
+   `src/rails.ts` as `RATE_SOURCE`; the CFA franc is derived through its fixed parity with the euro, sourced twice:
+   the figure on the BCEAO's exchange-rate page of 16 Sep 2026, the fixed parity itself in Council Decision
+   98/683/EC of 23 November 1998. After three days without a read the dollar shows alone and the screen says so.
+   No rate is ever invented.
+4. The keeper writes a per-day record at every credit and every drain, so a day can say whether it was earned or
+   went back. The contract publishes two counts and settles in order, which cannot tell the two apart (D58).
+   Delivered with the recipient journey.
+5. The settling pass includes gifts nobody opened, or nobody connected, older than fourteen days, so the
+   contract's `refundUnearned` is actually called for them and "it comes back to you" becomes true of the product,
+   not only of the contract. Delivered with the funder journey.
+6. A `viky_sends` table records every send of a person's own money once it is final, and the reference a person
+   reads is the hash in short form.
+
+**Also decided.** The language follows the device with English as the fallback; only English is written for the
+event, and every sentence of a journey lives in one file, `src/sentences.ts`, so French is added without touching a
+screen. "Ana" exists nowhere: the Duolingo name is used when known, "their" otherwise. Dollars are typed and the
+display currency is read beside them. The Duolingo name a funder types is checked by a public read before any
+money moves. The account page shows the account's own code under "Your code" with one line of use. The two
+sign-in routes answer a typed `RATE_LIMITED`. The judges page leaves the person's path. The gift route gains
+`youAreTheFunder` and the time of each return.
+
+**Delivered in this entry: the withdrawal journey**, states W1 to W13, with changes 1, 2, 3 and 6, the typed rate
+limit and "Your code". The funder, recipient, home and account journeys follow, each in its own conversation.

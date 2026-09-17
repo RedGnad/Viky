@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
 import { eurosToBuy, roughlyInDollars, SMALLEST_CARD_PAYMENT_EUR, SUGGESTED_GIFT_DOLLARS } from "../src/gift-amount.js";
-import { RAIL_CLOSED_IN, WAY_IN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT } from "../src/rails.js";
+import { feeSentence, RAIL_CLOSED_IN, WAY_IN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT } from "../src/rails.js";
 
 /**
  * These are the numbers the funder's screen will rest on, and every one of them is a measurement rather than
@@ -68,17 +68,20 @@ test("the countries the rails will not serve are the ones their own page lists",
  */
 test("the ways out cover each other's gaps, and each says where it pays", () => {
   assert.equal(WAYS_OUT.length, 2);
-  assert.match(WAY_OUT_EURO.where, /Senegal|Ivory Coast/i, "the euro rail says who it cannot serve");
-  assert.match(WAY_OUT_CARD.where, /Senegal|Ivory Coast/i, "and the card rail says who it reaches");
-  assert.match(WAY_OUT_CARD.where, /France|EEA/i, "and where it pays nothing");
+  assert.ok(WAY_OUT_EURO.conditions.some((c) => /Senegal|Ivory Coast/i.test(c)), "the euro rail says who it cannot serve");
+  assert.match(WAY_OUT_CARD.where, /where Ramp does not serve/i, "and the card rail says it is the other one's complement");
+  assert.ok(WAY_OUT_CARD.conditions.some((c) => /France|EEA/i.test(c)), "and where it pays nothing");
   // Each stands on a source with a date, so nobody has to take our word for a sentence about their money.
   for (const out of WAYS_OUT) {
     assert.ok(out.source.length > 0 && /20\d\d/.test(out.read), `${out.name} must say what was read and when`);
     assert.ok(out.conditions.some((c) => /identity check/i.test(c)));
     assert.ok(out.sells.length > 0 && out.coin.startsWith("0x"));
   }
-  assert.match(WAY_OUT_CARD.fee, /4 EUR/);
-  assert.match(WAY_OUT_EURO.fee, /1\.99 EUR/);
+  // Their published fee is three facts, not a sentence, so the card and the review build the same words from them.
+  assert.equal(WAY_OUT_CARD.fee.minimum, 4);
+  assert.equal(WAY_OUT_EURO.fee.minimum, 1.99);
+  assert.equal(feeSentence(WAY_OUT_EURO), "Ramp keeps 0.99 % with a minimum of 1.99 EUR");
+  assert.equal(feeSentence(WAY_OUT_CARD), "Mercuryo keeps up to 3.95 % with a minimum of 4.00 EUR");
 });
 
 /**

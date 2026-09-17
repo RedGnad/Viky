@@ -4,6 +4,7 @@ import { AccountPanel } from "../components/AccountPanel";
 import { Screen } from "../components/Screen";
 import { SessionScope } from "../components/SessionScope";
 import { ThemeSwitch } from "../components/ThemeSwitch";
+import { YourCode } from "../components/YourCode";
 import { HELP, PROSE, STICKER, TITLE } from "../components/ui";
 
 export const metadata: Metadata = {
@@ -54,6 +55,7 @@ export default function Page() {
       }
     >
       <AccountPanel />
+      <YourCode />
       <SessionScope />
       <ThemeSwitch />
     </Screen>

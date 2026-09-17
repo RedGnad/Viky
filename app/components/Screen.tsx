@@ -58,21 +58,17 @@ export function Screen({
         : "max-w-[var(--destination-max)] [@media(min-width:840px)]:max-w-[1100px]";
 
   /**
-   * A journey sits in the middle of a tall screen instead of clinging to the top of it. Found by opening the
-   * product on a desktop rather than by photographing it: one short card at the top of a 900 pixel page,
-   * with the bottom half dead, is what "mobile only" actually looks like, and centring the column was the
-   * missing half of keeping it narrow.
-   *
-   * Done with `my-auto` on the inner block rather than `justify-center` on the outer one, because
-   * `justify-content: center` clips the top of anything taller than the screen and a long step would lose
-   * its own heading.
+   * A journey used to sit in the middle of a tall screen, and it does not any more. Centring a short step moved
+   * "Back to my gifts" and the title by up to a hundred pixels between one step of the way out and the next, on
+   * every screen of a journey about money (the reviewer's finding of 17 Sep 2026, decided by the founder the
+   * same day): the way back stays in the same place on every screen, whatever the step holds.
    */
-  const inner = layout === "journey" ? "my-auto" : "";
+  const inner = "";
 
   return (
     <main
       data-look="poster"
-      className={`mx-auto flex ${layout === "journey" ? "min-h-[100svh] " : ""}w-full ${width} flex-col px-[var(--page-margin)] py-[var(--space-xl)]`}
+      className={`mx-auto flex w-full ${width} flex-col px-[var(--page-margin)] py-[var(--space-xl)]`}
     >
       <div className={`${inner} flex w-full flex-col gap-[var(--space-xl)]`}>
       {back || title ? (

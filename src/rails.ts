@@ -72,6 +72,22 @@ export const WAY_IN: RailHandoff = {
 };
 
 /**
+ * What a payout service keeps, as they publish it. Structured rather than a sentence, so the card and the
+ * review can each build their own sentence from the same three facts and never disagree (decision 1 of the
+ * design pass, 17 Sep 2026: their published fee and delay are their facts, and they go on the card with their
+ * source and date).
+ */
+export type PublishedFee = Readonly<{
+  /** The share they keep, in percent of what is sold. */
+  percent: number;
+  /** True when the percent is a ceiling they publish ("up to"), false when it is the rate itself. */
+  upTo: boolean;
+  /** Never less than this much, in `currency`. */
+  minimum: number;
+  currency: string;
+}>;
+
+/**
  * One way out of the two. What a person needs before they choose one, and nothing they would have to take on
  * trust: every sentence here was read at the source named, on the date named.
  */
@@ -79,18 +95,16 @@ export type WayOut = Readonly<{
   name: string;
   /** Their own sell page, opened beside ours. */
   page: string;
-  /** What this service buys, and therefore the coin the router must hand back (D77). */
+  /** What this service buys, and therefore the coin the router must hand back (D77). Never printed. */
   sells: string;
   /** That coin on chain. Zero is the chain's own coin, which is how `ExitTerms.tokenOut` names it. */
   coin: Hex;
   /** Where it pays, in one sentence, in the words a person would use. */
   where: string;
-  /**
-   * What it costs, measured at the source named below and **not printed on any screen yet**: nothing says a
-   * figure about fees until a real amount has actually gone through one of these (16 Sep). A fee nobody has
-   * paid is a claim rather than a fact, and this project only prints the second kind.
-   */
-  fee: string;
+  /** What they keep, as they publish it, and the sentence built from it for the card. */
+  fee: PublishedFee;
+  /** How soon they pay, in their own words. */
+  pays: string;
   /** Anything that stops a person before they start, in the order they would meet it. */
   conditions: readonly string[];
   /** Where the sentences above were read, and when. Shown on screen, so nobody has to take our word for it. */
@@ -99,6 +113,12 @@ export type WayOut = Readonly<{
   /** True while the person has to carry something across by hand. */
   byHand: true;
 }>;
+
+/** "Ramp keeps 0.99 % with a minimum of 1.99 EUR", built from the published figures and never retyped. */
+export function feeSentence(way: WayOut): string {
+  const share = `${way.fee.upTo ? "up to " : ""}${way.fee.percent} %`;
+  return `${way.name} keeps ${share} with a minimum of ${way.fee.minimum.toFixed(2)} ${way.fee.currency}`;
+}
 
 /**
  * Selling a stablecoin for a bank transfer in euros.
@@ -119,14 +139,13 @@ export const WAY_OUT_EURO: WayOut = {
   page: "https://app.ramp.network/?swapAsset=MONAD_USDC&flow=offramp",
   sells: "USDC on Monad",
   coin: USDC_ADDRESS,
-  where:
-    "Pays into a bank account in euros across the euro area, France included, and to a card in many other countries. It does not serve Senegal or Ivory Coast at all.",
-  fee: "0.99% for a bank transfer, and never less than 1.99 EUR",
+  where: "To your bank account, in euros.",
+  fee: { percent: 0.99, upTo: false, minimum: 1.99, currency: "EUR" },
+  pays: "within 2 business days",
   conditions: [
     "Identity check before your first payout, once.",
-    "The account or card must be in your own name.",
-    "A bank transfer arrives within two working days, and in about ten seconds where instant transfers work.",
-    "The smallest and largest sale move with the rate, so Viky reads them from them at the moment you ask.",
+    "The account must be in your own name.",
+    "It does not serve Senegal or Ivory Coast.",
   ],
   // Payout methods and their countries: https://api.ramp.network/api/host-api/v3/payout-methods (SEPA in 35
   // countries including fr, card in 119 not including us; neither lists sn or ci). Their currencies endpoint
@@ -151,20 +170,21 @@ export const WAY_OUT_CARD: WayOut = {
   page: "https://exchange.mercuryo.io/?type=sell&currency=MON&network=MONAD",
   sells: "MON on Monad",
   coin: NATIVE_OUT,
-  where:
-    "Pays onto a Visa or Mastercard card, which is how it reaches Senegal and Ivory Coast. It makes no card payout in France, anywhere else in the EEA, or the United States.",
-  fee: "up to 3.95%, and never less than 4 EUR",
+  where: "To your card, where Ramp does not serve.",
+  fee: { percent: 3.95, upTo: true, minimum: 4, currency: "EUR" },
+  pays: "onto a Visa or Mastercard card",
   conditions: [
     "Identity check before your first payout, once.",
-    "It goes back to a card, not to a bank account.",
+    "The card must be in your own name.",
+    "No card payout in France, the rest of the EEA, or the United States.",
     "Selling is shut in the United Kingdom.",
-    "Once you place the order you have six hours to send it.",
+    "Once you place the order, Mercuryo gives you six hours to send it.",
   ],
   // Selling restrictions for MON on MONAD: https://api.mercuryo.io/v1.6/lib/currencies, where
   // `restricted_countries_offramp` is exactly ["gb"], read 16 Sep 2026. The absence of card payouts in France,
   // the EEA and the United States is their help centre article of 15 Sep 2026 (D72). Fee and the six hour
   // window from their limits endpoint, read 14 Sep 2026 (D59, D60).
-  source: "Mercuryo's own currencies endpoint and help centre",
+  source: "Mercuryo's own list of currencies and help centre",
   read: "16 Sep 2026 (payout countries 15 Sep 2026)",
   byHand: true,
 };
@@ -174,3 +194,30 @@ export const WAY_OUT_CARD: WayOut = {
  * pilot's corridors, and which one fits is something the person knows and Viky does not ask.
  */
 export const WAYS_OUT: readonly WayOut[] = [WAY_OUT_EURO, WAY_OUT_CARD];
+
+/**
+ * Where a converted figure comes from, so a screen can say "about 9.53 EUR (rate of 16 Sep)" and mean it.
+ *
+ * The gift stays in dollars on chain; each account reads it in one display currency (decision 1 of the design
+ * pass, 17 Sep 2026). One daily read gives both currencies offered: the euro against the dollar comes from the
+ * source below, and the CFA franc has a fixed parity with the euro, so it is derived rather than read. No rate is
+ * ever invented: when the source has not answered for three days, the dollar shows alone and the screen says so.
+ *
+ * The parity is sourced twice. The figure, 655.957 per euro, buying and selling, is on the BCEAO's manual
+ * exchange-rate page of 16 Sep 2026 (https://www.bceao.int/fr/content/cours-de-change). The fixed parity itself,
+ * guaranteed by a budgetary commitment of the French Treasury and in force since 1 January 1999, is Council
+ * Decision 98/683/EC of 23 November 1998 (https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:31998D0683),
+ * whose text carries the guarantee and not the figure. Both read 17 Sep 2026.
+ */
+export const RATE_SOURCE = {
+  name: "European Central Bank, euro foreign exchange reference rates",
+  /** The daily file, one line per currency against the euro, dated by its own `time` attribute. */
+  url: "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml",
+  /** Published around 16:00 CET on TARGET working days, so a Friday's figure is the latest until Monday. */
+  read: "17 Sep 2026",
+  /** After this long without an answer from the source, no converted figure is shown at all. */
+  staleAfterDays: 3,
+  /** The CFA franc per euro, fixed. See above for where it comes from. */
+  cfaFrancsPerEuro: 655.957,
+  cfaSource: "BCEAO manual exchange rates, 16 Sep 2026, and Council Decision 98/683/EC",
+} as const;

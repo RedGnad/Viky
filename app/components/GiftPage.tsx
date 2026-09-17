@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AMOUNT_IN_TITLE, BODY, DISPLAY, FIELD, HELP, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON, STICKER, TITLE } from "./ui";
 import { useAccount } from "@/src/account/provider";
 import * as mera from "@/src/account/mera";
+import { useMoneySession } from "@/src/account/money-session";
 import { ApiError } from "@/src/client/api";
 import { bindGoalAccount, claimGift, countNow, loadGiftStatus, nameGoalAccount, withdrawEarned, type GiftStatus, type PublicOutcome } from "@/src/client/gift";
 import { AccountPanel } from "./AccountPanel";
@@ -66,6 +67,8 @@ function outcomeMessage(outcome: PublicOutcome, codeWasUsed: boolean, whenCounte
 
 export function GiftPage({ giftId, linkKey }: { giftId: string; linkKey: string | null }) {
   const { address, status: accountStatus } = useAccount();
+  // Money moves on this screen, so the session stays open thirty minutes rather than ten (decision 2, 17 Sep 2026).
+  useMoneySession();
   const [gift, setGift] = useState<GiftStatus | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState<Busy>("idle");

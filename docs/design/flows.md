@@ -108,7 +108,9 @@ after the Ramp states.
   reloaded state when something is).
 - **On screen**:
   - `Take your money out` [spec]
-  - `Your money: $10.99` [spec]
+  - `Your money: $10.99` [spec], and when a change left something ready, `9.99 of it is ready to send to Ramp.`
+    [proposed, accepted on 17 Sep in place of the spec's `Ready to send to Ramp: 9.99`, so the figure is read as
+    part of the total and not beside it]
   - Ramp card: `To your bank account, in euros. Ramp keeps 0.99 % with a minimum of 1.99 EUR, and pays within
     2 business days.` [spec] [open 1]
   - Mercuryo card: `To your card, where Ramp does not serve.` [spec]
@@ -150,8 +152,10 @@ after the Ramp states.
 
 - **Reached by**: W3, once the quote answered.
 - **On screen**:
-  - `You will get at least 9.99 to send. Ramp will turn that into about 8.60 EUR, minus its 1.99 EUR fee. Nothing
-    leaves your account yet.` [spec] [open 1 for the fee clause]
+  - `You will get at least 9.99 to send. Ramp will turn that into about 8.60 EUR, minus its 1.99 EUR fee: about
+    6.61 EUR on your bank account. Nothing leaves your account yet.` [spec, corrected by the founder on 17 Sep
+    after the second review: the net is said, and the fee printed is the one that applies, the larger of the
+    share and the minimum]
   - Small, under it: `That is $10.99 of your money.` [proposed, rule 7: the dollar stays readable on a review]
   - Button: `Get 9.99 ready` [spec]
   - Secondary: `Not now` returns to W3 with the amount kept.
@@ -235,8 +239,8 @@ after the Ramp states.
 
 - **Reached by**: W8, once the send is final.
 - **On screen**:
-  - `Sent 9.99 to Ramp at 23:41. Ramp pays your bank within 2 business days. Reference: [id].` [spec] [open 1
-    for the delay clause, open 7 for the reference]
+  - `Sent 9.99 to Ramp on 17 Sep 2026 at 23:41. Reference: [id].` then `Ramp pays your bank within 2 business
+    days.` [spec, with the date added: rule 5 asks for it, accepted by the founder on 17 Sep]
   - Link: `Open Ramp to follow it` [spec], to Ramp's page.
   - `Back to my gifts`.
   - The three steps above are gone: the account no longer holds anything ready, so W2 is what a reload shows.

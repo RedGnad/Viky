@@ -434,84 +434,65 @@ export const EXAMPLE_SCREENS: readonly ExampleScreen[] = [
     who: "recipient",
     title: "Their money",
     hierarchy:
-      "What they hold, then how they can be paid, then the movement Viky can make for them. Two services are named rather than one, because neither covers everybody: the euro one refuses Senegal and Ivory Coast outright, and the card one pays nothing in France or the rest of the EEA (D77). Each carries where it pays and the date that was read at the source, and nobody is asked where they live. No figure about fees appears anywhere until a real amount has gone through one of them.",
-    builtFrom: "app/components/CashOut.tsx",
+      "What they hold, in their own currency with the dollar under it, then the way out in three numbered steps on one card: get it ready, place the order with the payout service, send it. Which step is open is read from what the account holds, never from memory, so a reload lands on the same step. The person only meets two-decimal numbers, cut down and never rounded up, because the payout service is ordered for such a number. Rebuilt on 17 Sep 2026 from docs/design/flows.md, states W1 to W13; its sentences live in src/sentences.ts.",
+    builtFrom: "src/sentences.ts",
     quotes: [
-      "Yours to take out",
-      "Your money stays yours, and nothing about it expires.",
-      "Ways to be paid",
-      "What it buys:",
-      "Read from",
-      "If neither of these pays where you live",
-      "Send it to another account of mine",
-      "Exactly what you type leaves your account, to the last decimal",
-      "is the network's own coin, so nobody can send it for you",
-      "How much leaves",
-      "Your account holds",
-      "Paste the account's identifier",
+      "Your money",
+      "Send to my bank",
+      "Send to my card",
+      "Send to another Viky account of mine",
+      "Step 1 of 3: Get it ready",
+      "Nothing leaves your account yet.",
+      "Step 2 of 3: Place your order with",
+      "asks where you are sending from, give them this code",
+      "Step 3 of 3: Send it",
+      "This cannot be undone.",
     ],
     render: () => (
       <>
         <section className={STICKER.sun}>
-          <p className={HELP}>Yours to take out</p>
-          <p className={MONEY}>$28.56</p>
-          {/* After a change an account holds more than a gift does, and a screen showing only the gift would
-              tell somebody their money had gone. */}
-          <p className={HELP}>Also in your account: 12.50 USDC</p>
-          <p className={HELP}>Your money stays yours, and nothing about it expires.</p>
+          <p className={HELP}>Your money</p>
+          <p className={MONEY}>about 9.53 EUR</p>
+          <p className={HELP}>$10.99, rate of 16 Sept</p>
         </section>
-        <h2 className={TITLE}>Ways to be paid</h2>
         <section className={STICKER.pink}>
           <h3 className={TITLE}>Ramp</h3>
-          <p className={BODY}>
-            Pays into a bank account in euros across the euro area, France included, and to a card in many other
-            countries. It does not serve Senegal or Ivory Coast at all.
-          </p>
-          <p className={HELP}>What it buys: USDC on Monad</p>
+          <p className={BODY}>To your bank account, in euros.</p>
+          <p className={BODY}>Ramp keeps 0.99 % with a minimum of 1.99 EUR, and pays within 2 business days.</p>
           <p className={HELP}>Read from Ramp&apos;s own payout-methods list and asset page, 16 Sep 2026.</p>
-          <span className={PRIMARY_BUTTON}>Use Ramp</span>
+          <span className={PRIMARY_BUTTON}>Send to my bank</span>
         </section>
         <section className={STICKER.lilac}>
           <h3 className={TITLE}>Mercuryo</h3>
+          <p className={BODY}>To your card, where Ramp does not serve.</p>
+          <span className={PRIMARY_BUTTON}>Send to my card</span>
+        </section>
+        <span className={`${HELP} underline`}>Send to another Viky account of mine</span>
+        <section className={STICKER.sun}>
+          <h2 className={TITLE}>Step 1 of 3: Get it ready</h2>
           <p className={BODY}>
-            Pays onto a Visa or Mastercard card, which is how it reaches Senegal and Ivory Coast. It makes no card
-            payout in France, anywhere else in the EEA, or the United States.
+            You will get at least 9.99 to send. Ramp will turn that into about 8.66 EUR, minus its 1.99 EUR fee. Nothing
+            leaves your account yet.
           </p>
-          <p className={HELP}>What it buys: MON on Monad</p>
-          <p className={HELP}>Read from Mercuryo&apos;s own currencies endpoint and help centre, 16 Sep 2026.</p>
-          <span className={PRIMARY_BUTTON}>Use Mercuryo</span>
+          <span className={PRIMARY_BUTTON}>Get 9.99 ready</span>
         </section>
-        <p className={HELP}>
-          If neither of these pays where you live, nothing is lost: your money stays yours and nothing about it
-          expires. You can also move it to another account of your own.
-        </p>
-        <span className={SECONDARY_BUTTON}>Send it to another account of mine</span>
-        <section className={STICKER.pink}>
-          <h2 className={TITLE}>Send USDC to another account</h2>
-          <p className={HELP}>
-            Exactly what you type leaves your account, to the last decimal, and nothing to pay: Viky covers what it
-            costs to move. To reach another account of your own, sign in to it and open its &quot;For judges&quot;
-            page to find its identifier.
+        <section className={STICKER.sun}>
+          <p className={BODY}>Ready: 9.99</p>
+          <p className={HELP}>Less than 0.01 stays in your account.</p>
+          <h2 className={TITLE}>Step 2 of 3: Place your order with Ramp</h2>
+          <span className={PRIMARY_BUTTON}>Order 9.99 on Ramp</span>
+          <p className={BODY}>When Ramp asks where you are sending from, give them this code</p>
+          <p className="break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)] tabular-nums">
+            0xe9944cb3F108429182e21f1d44cE8a1cF5b61E9b
           </p>
+          <span className={SECONDARY_BUTTON}>Copy</span>
+          <h2 className={TITLE}>Step 3 of 3: Send it</h2>
           <label className="flex flex-col gap-[var(--space-xs)]">
-            <span className={HELP}>How much leaves</span>
-            <input readOnly value="28.564213" className={FIELD} />
+            <span className={BODY}>Paste the code Ramp gives you to send to</span>
+            <input readOnly className={FIELD} />
           </label>
-          <p className={HELP}>Your account holds $28.564213.</p>
-          <input readOnly placeholder="Paste the account&apos;s identifier" className={FIELD} />
-          <span className={PRIMARY_BUTTON}>Send $28.564213</span>
-        </section>
-        {/* The one movement Viky cannot make for somebody. An authorization is a feature of a token contract,
-            and the network's own coin is not one, so the person sends it and the fee comes out of it. */}
-        <section className={STICKER.lilac}>
-          <h2 className={TITLE}>Send MON to another account</h2>
-          <p className={HELP}>
-            Exactly what you type leaves your account, to the last decimal. MON is the network&apos;s own coin, so
-            nobody can send it for you: it goes from your own account and what it costs to send comes out of your
-            MON.
-          </p>
-          <p className={HELP}>Your account holds 138.436143573911778147 MON.</p>
-          <span className={PRIMARY_BUTTON}>Send 138.436143573911778147 MON</span>
+          <p className={BODY}>Send 9.99 to Ramp. This cannot be undone.</p>
+          <span className={PRIMARY_BUTTON}>Send</span>
         </section>
       </>
     ),

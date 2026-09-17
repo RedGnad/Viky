@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import * as mera from "@/src/account/mera";
+import { useMoneySession } from "@/src/account/money-session";
 import Link from "next/link";
 import { ACTION_BAR, BACK_LINK, BODY, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, STICKER, TITLE } from "./ui";
 import { useAccount } from "@/src/account/provider";
@@ -55,6 +56,8 @@ function readable(error: unknown): string {
 export function FundGift() {
   const { address } = useAccount();
   const [step, setStep] = useState<Step>("form");
+  // Money moves on this screen, so the session stays open thirty minutes rather than ten (decision 2, 17 Sep 2026).
+  useMoneySession();
   const [stage, setStage] = useState<Stage>("who");
   const [username, setUsername] = useState("");
   // What one smallest card payment covers, so an ordinary first gift needs one payment and not two. The fifty it
