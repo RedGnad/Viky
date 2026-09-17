@@ -1,3 +1,4 @@
+import { isValidDuolingoUsername } from "./duolingo-public-terms";
 import { GOAL_TYPE_DUOLINGO_XP } from "./gift-terms";
 
 /**
@@ -17,12 +18,45 @@ import { GOAL_TYPE_DUOLINGO_XP } from "./gift-terms";
 
 export type ConditionKind = "daily" | "milestone";
 
+/**
+ * How a funder's typed name is checked before any money moves: its shape here, its existence by a public read on
+ * Viky's own route (decision 10 of the drawn flows), and the refusal for each, said under the field.
+ */
+export type NameCheck = Readonly<{
+  valid: (value: string) => boolean;
+  /** Viky's route that reads the source's public profile by name. */
+  path: string;
+  refusals: Readonly<{ shape: string; notFound: string; unavailable: string }>;
+}>;
+
 /** How a person is tied to what they will do. */
 export type ConditionLink =
   /** A public name on the source's site, which the funder may give or the recipient names. */
-  | Readonly<{ kind: "username"; label: string; help: string; example: string }>
+  | Readonly<{
+      kind: "username";
+      /** The question on the funder's step, which is also its title. */
+      label: string;
+      help: string;
+      /** Why giving it protects the gift, said once under the field. */
+      why?: string;
+      example: string;
+      /** The line of the check screen, and what it says when the funder left the name empty. */
+      row: string;
+      noneGiven: string;
+      check?: NameCheck;
+    }>
   /** A public page of the source the recipient hands over. */
   | Readonly<{ kind: "link"; label: string; help: string }>;
+
+/** What a daily condition asks of a day, and how the funder sets it on "How much, and for how long". */
+export type DailyTarget = Readonly<{
+  label: string;
+  /** "10 XP a day", on the check screen. */
+  inWords: (value: number) => string;
+  suggested: number;
+  min: number;
+  tooLow: string;
+}>;
 
 export type Condition = Readonly<{
   /** Stable, and what a gift's terms could name one day; never printed. */
@@ -39,6 +73,13 @@ export type Condition = Readonly<{
   /** One line of help under that radio. */
   help: string;
   link: ConditionLink;
+  /**
+   * The title of the step that asks the condition's own detail (structure, section 5, step 3): who is read, and what
+   * counts. A condition with nothing to ask of the funder has none, and the step is skipped.
+   */
+  detailTitle?: string;
+  /** A daily condition's bar for one day, asked on the detail step; a milestone has its own target and none of this. */
+  target?: DailyTarget;
   /** The reading the keeper or the recipient makes, by its id in src/attested-sources.ts. */
   reading: string;
   words: Readonly<{
@@ -48,6 +89,8 @@ export type Condition = Readonly<{
     connect: string;
     /** The recipient's own instruction while counting, with the source named. */
     doIt: string;
+    /** A day that counts, as the confirmation's next steps say it: "each day with a lesson". */
+    eachDay: string;
   }>;
 }>;
 
@@ -63,13 +106,34 @@ export const DUOLINGO_DAILY: Condition = {
     kind: "username",
     label: "Their Duolingo name, if you know it",
     help: "The name under their picture in Duolingo, like ama_learns. Leave it empty and they name their own.",
+    why: "Naming it is the surest thing you can do: only that Duolingo can then earn this gift, whoever opens the link.",
     example: "ama_learns",
+    row: "Their Duolingo name",
+    noneGiven: "They name their own when they open it",
+    check: {
+      valid: isValidDuolingoUsername,
+      path: "/api/duolingo/profile",
+      refusals: {
+        shape: "A Duolingo name has letters, figures, dots, hyphens or underscores, like ama_learns.",
+        notFound: "No public Duolingo profile goes by that name. Check the spelling, or leave it empty.",
+        unavailable: "Duolingo is not answering. Try again in a moment, or leave it empty.",
+      },
+    },
+  },
+  detailTitle: "Their Duolingo, and what counts as a day",
+  target: {
+    label: "XP they reach for a day to count",
+    inWords: (value) => `${value} XP a day`,
+    suggested: 10,
+    min: 1,
+    tooLow: "At least 1 XP.",
   },
   reading: "duolingo-profile",
   words: {
     earnedDay: "Each day they reach it, this becomes theirs",
     connect: "Opened. Connect Duolingo to start counting.",
     doIt: "Do your lesson; nothing else. Each morning Viky reads your Duolingo and counts the day before.",
+    eachDay: "each day with a lesson",
   },
 };
 
@@ -82,12 +146,13 @@ export const CHESS_RATING: Condition = {
   source: "Chess.com",
   name: "Reach a chess rating on Chess.com",
   help: "Their public Chess.com rating, read every morning. Nothing to install, no password.",
-  link: { kind: "username", label: "Their Chess.com name", help: "The name on their Chess.com profile.", example: "hikaru" },
+  link: { kind: "username", label: "Their Chess.com name", help: "The name on their Chess.com profile.", example: "hikaru", row: "Their Chess.com name", noneGiven: "They name their own when they open it" },
   reading: "chess-ratings",
   words: {
     earnedDay: "When they reach it, this becomes theirs",
     connect: "Opened. Connect Chess.com to start reading.",
     doIt: "Play; nothing else. Each morning Viky reads your Chess.com rating.",
+    eachDay: "the day they reach it",
   },
 };
 
@@ -106,6 +171,7 @@ export const COURSERA_CERTIFICATE: Condition = {
     earnedDay: "When they get it, this becomes theirs",
     connect: "Opened. Share the Coursera certificate's link when you have it.",
     doIt: "Finish the course. When the certificate is yours, share its link here.",
+    eachDay: "the day the certificate is shared",
   },
 };
 

@@ -32,10 +32,34 @@ test("every condition names a reading that exists, and a milestone has no goal t
   }
 });
 
-test("no destination or card names a source in its own words: the register does", () => {
-  // The kit is what the structure builds; a task screen still on its old line may name Duolingo until its line.
-  for (const file of globSync("app/kit/**/*.tsx")) {
+test("no destination, card, or step of offering a gift names a source in its own words: the register does", () => {
+  // The kit is what the structure builds, and offering a gift was rebuilt on it (S2). The gift page names Duolingo
+  // until its own line, S3.
+  for (const file of [...globSync("app/kit/**/*.tsx"), "app/components/FundGift.tsx", "src/sentences.ts", "src/pending-gift.ts"]) {
     const source = readFileSync(file, "utf8");
     assert.doesNotMatch(source, /Duolingo|Chess\.com|Coursera|Strava/, `${file} names a source itself`);
   }
+});
+
+test("what a funder is offered comes from the register: the question, its check, and what counts as a day", () => {
+  const live = liveConditions();
+  for (const condition of live) {
+    assert.ok(condition.goalType !== null, `${condition.id} is live, so a gift can be made on it`);
+    assert.ok(condition.words.eachDay.length > 0);
+    if (condition.link.kind === "username") {
+      assert.ok(condition.link.row.length > 0 && condition.link.noneGiven.length > 0);
+      assert.ok(condition.link.check, `${condition.id} is live and read by name, so the name is checked before money moves`);
+      assert.equal(condition.link.check?.valid(condition.link.example), true, "its own example passes its own check");
+      assert.equal(condition.link.check?.valid("not a name!"), false);
+    }
+    if (condition.target || condition.link.kind === "username") {
+      assert.ok(condition.detailTitle, `${condition.id} asks the funder something on the detail step, so that step has a title`);
+    }
+    if (condition.kind === "daily") {
+      assert.ok(condition.target, `${condition.id} is daily, so a day has a bar`);
+      assert.ok((condition.target?.suggested ?? 0) >= (condition.target?.min ?? 1));
+    }
+  }
+  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
+  assert.match(fund, /liveConditions\(\)/, "the list of what they will do is the live register");
 });

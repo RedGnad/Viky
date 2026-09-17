@@ -1,3 +1,4 @@
+import { DUOLINGO_DAILY } from "./conditions";
 import { dollarsToUnits } from "./money";
 
 /**
@@ -9,9 +10,9 @@ import { dollarsToUnits } from "./money";
  * payments take 30 to 60 minutes. So the terms are written down when the rail opens, and read back when the same
  * account is signed in on the page again, whether the page stayed open or was opened again later.
  *
- * Only the terms are kept, and only here: a Duolingo name when one was given, how much, for how long, the daily
- * target, and whose account set it up. Nothing here moves money. The page still converts only what arrived and gives
- * only with a signature (D33).
+ * Only the terms are kept, and only here: the two names, the condition, the source's name when one was given, how
+ * much, for how long, the daily target, and whose account set it up. Nothing here moves money. The page still converts
+ * only what arrived and gives only with a signature (D33).
  */
 
 export const PENDING_GIFT_STORAGE_KEY = "viky.pendingGift";
@@ -19,7 +20,17 @@ export const PENDING_GIFT_STORAGE_KEY = "viky.pendingGift";
 /** How long a gift set up and not yet made is picked up again: well past the several hours a payment can take. */
 export const PENDING_GIFT_MAX_AGE_MS = 72 * 60 * 60 * 1000;
 
-export type PendingGiftTerms = Readonly<{ account: string; username: string; dollars: string; days: string; target: string }>;
+export type PendingGiftTerms = Readonly<{
+  account: string;
+  recipientName: string;
+  funderName: string;
+  /** An id of src/conditions.ts. A gift kept before the register existed was the first condition, the daily lesson. */
+  conditionId: string;
+  username: string;
+  dollars: string;
+  days: string;
+  target: string;
+}>;
 export type PendingGift = PendingGiftTerms & Readonly<{ savedAtMs: number }>;
 
 export function pendingGiftToStore(terms: PendingGiftTerms, nowMs: number): string {
@@ -40,6 +51,10 @@ export function pendingGiftFor(raw: string | null, account: string | undefined, 
   const text = (key: string) => (typeof record[key] === "string" ? (record[key] as string) : undefined);
   const gift = {
     account: text("account"),
+    // Kept since 17 Sep; a gift kept on a device before then has neither name, and it is still picked up.
+    recipientName: text("recipientName") ?? "",
+    funderName: text("funderName") ?? "",
+    conditionId: text("conditionId") ?? DUOLINGO_DAILY.id,
     username: text("username"),
     dollars: text("dollars"),
     days: text("days"),
@@ -92,6 +107,18 @@ export function savePendingGift(terms: PendingGiftTerms): boolean {
 export function loadPendingGift(account: string): PendingGift | undefined {
   try {
     return pendingGiftFor(window.localStorage.getItem(PENDING_GIFT_STORAGE_KEY), account, Date.now());
+  } catch {
+    return undefined;
+  }
+}
+
+/** The gift kept on this device, whoever set it up: what the page says is waiting, before anybody signs in. */
+export function peekPendingGift(): PendingGift | undefined {
+  try {
+    const raw = window.localStorage.getItem(PENDING_GIFT_STORAGE_KEY);
+    if (!pendingGiftExists(raw, Date.now())) return undefined;
+    const account = (JSON.parse(String(raw)) as { account: string }).account;
+    return pendingGiftFor(raw, account, Date.now());
   } catch {
     return undefined;
   }

@@ -29,6 +29,9 @@ export type CreateGiftInput = {
   account: LocalAccount;
   /** The recipient's Duolingo username, when the funder knows it (no code needed then, D27). */
   duolingoUsername?: string;
+  /** Words for people, stored beside the link and never signed into the terms (src/gift-names.ts). */
+  recipientName?: string;
+  funderName?: string;
   goalType: number;
   dailyTarget: number;
   durationDays: number;
@@ -37,6 +40,11 @@ export type CreateGiftInput = {
 };
 
 export type CreatedGift = { giftId: string; claimUrl: string; funded: boolean };
+
+/** Whether a public profile goes by this name on the condition's source, and how that source spells it. */
+export function checkSourceName(path: string, name: string): Promise<{ username: string }> {
+  return getJson(`${path}?username=${encodeURIComponent(name)}`);
+}
 
 /**
  * One passkey-derived signature: the EIP-3009 authorization whose nonce is the hash of these exact
@@ -61,6 +69,8 @@ export async function createGift(input: CreateGiftInput): Promise<CreatedGift> {
   const authorization = toContractAuthorization(message, signature);
   return postJson<CreatedGift>("/api/gift/create", {
     duolingoUsername: input.duolingoUsername,
+    recipientName: input.recipientName,
+    funderName: input.funderName,
     goalType: params.goalType,
     dailyTarget: params.dailyTarget,
     durationDays: params.durationDays,
@@ -132,6 +142,8 @@ export type GiftStatus = {
   endDay: number;
   withdrawNonce: string;
   recorded: Array<{ kind: string; txHash: string; blockNumber: string | null }>;
+  /** Given only to whoever holds the link, or to the funder or the recipient signed in. */
+  names: { recipientName: string | null; funderName: string | null } | null;
 };
 
 /** A gift as the list of the account's gifts describes it, which is what a card draws on. */
@@ -141,6 +153,10 @@ export type GiftSummary = {
   goalType: number;
   goalUsername: string | null;
   usernameSource: "funder" | "recipient" | null;
+  recipientName: string | null;
+  funderName: string | null;
+  /** How long a day stays catchable on the contract that holds this gift, so the card's days are drawn as the page's. */
+  catchUpSeconds: number;
   fundedAt: number;
   startDay: number;
   endDay: number;
@@ -163,8 +179,9 @@ export function loadMyGifts(): Promise<{ account: string; gifts: GiftSummary[] }
   return getJson("/api/gifts/mine");
 }
 
-export function loadGiftStatus(giftId: string): Promise<GiftStatus> {
-  return getJson<GiftStatus>(`/api/gift/${giftId}`);
+/** The link's key, when the page was opened from it, is what lets the names come back with the gift. */
+export function loadGiftStatus(giftId: string, linkKey?: string | null): Promise<GiftStatus> {
+  return getJson<GiftStatus>(`/api/gift/${giftId}${linkKey ? `?t=${encodeURIComponent(linkKey)}` : ""}`);
 }
 
 export function claimGift(giftId: string, token: string): Promise<{ giftId: string; opened: boolean }> {

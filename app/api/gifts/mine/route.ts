@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { readAccountAuthSession } from "@/src/account-auth-server";
+import { catchUpSecondsOf } from "@/src/catch-up";
 import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { formatAusd, readGift, theirsSoFar } from "@/src/gift-reader";
 import { loadGiftsOf } from "@/src/gift-store";
@@ -32,6 +33,10 @@ export async function GET(request: Request) {
           goalType: gift.goalType,
           goalUsername: record.goalUsername,
           usernameSource: record.usernameSource,
+          // The two names the card says "For" and "From" with. This account is the funder or the recipient.
+          recipientName: record.recipientName,
+          funderName: record.funderName,
+          catchUpSeconds: catchUpSecondsOf(escrowOf(record)),
           fundedAt: gift.fundedAt,
           startDay: gift.startDay,
           endDay: gift.endDay,

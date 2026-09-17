@@ -310,7 +310,14 @@ export class Session {
 
   /** Clears what a funding scenario leaves on the device, so it cannot change the next screen. */
   async forgetKept(): Promise<void> {
-    await this.page.evaluate(() => window.localStorage.removeItem("viky.pendingGift")).catch(() => undefined);
+    await this.page
+      .evaluate(() => {
+        window.localStorage.removeItem("viky.pendingGift");
+        // What a funder typed and the gift they made are kept for the tab since the rebuild of 17 Sep.
+        window.sessionStorage.removeItem("viky.giftDraft");
+        window.sessionStorage.removeItem("viky.giftMade");
+      })
+      .catch(() => undefined);
   }
 
   /** Records a state that could not be captured, and where it stopped when there is a page to show. */

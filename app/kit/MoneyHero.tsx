@@ -2,22 +2,27 @@
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { formatAusd } from "@/src/gift-reader";
 import { HOME as W } from "@/src/sentences";
-import { CARD, HELP, MONEY } from "../components/ui";
+import { AMOUNT_IN_TITLE, HELP } from "../components/ui";
 import { dollarsHeld, firstReady, type Holdings } from "./money";
 
 /**
- * The money of the account, first on Home, and its title: "In your account" is the page's heading, at the help
- * size, so Home has a heading a machine can read without a word in the title face (structure, section 4). The
- * display currency leads when the account has one, the dollar stays readable under it with the rate's date; when
+ * The money of the account, first on Home, and its title (structure, section 4: "Home has no display title, the money
+ * is its title"). So it is set at the display size, in the text face, because Anton is never on an amount (item 7),
+ * and on the page ground rather than in a box: a card groups things, and the money is not one thing among others.
+ * "In your account" above it is the page's heading for a machine, at the help size.
+ *
+ * The display currency leads when the account has one, the dollar stays readable under it with the rate's date; when
  * the account holds nothing but what the card service buys, that figure leads and no zero dollar is printed.
  */
+const AMOUNT = `text-[length:var(--type-display)] leading-[var(--type-display-leading)] ${AMOUNT_IN_TITLE} tracking-[-0.02em] break-words`;
+
 export function MoneyHero({ address, holdings }: Readonly<{ address: string; holdings: Holdings | null }>) {
   const money = useDisplayCurrency(address);
   if (holdings === null) {
     return (
-      <section className={CARD}>
+      <section className="flex flex-col gap-[var(--space-xs)]">
         <h1 className={HELP}>{W.inAccount}</h1>
-        <p className={MONEY}>…</p>
+        <p className={AMOUNT}>…</p>
       </section>
     );
   }
@@ -25,27 +30,27 @@ export function MoneyHero({ address, holdings }: Readonly<{ address: string; hol
   const ready = firstReady(holdings);
   if (dollars === 0n && ready) {
     return (
-      <section className={CARD}>
+      <section className="flex flex-col gap-[var(--space-xs)]">
         <h1 className={HELP}>{W.readyLabel(ready.way.name)}</h1>
-        <p className={MONEY}>{ready.ready.number}</p>
+        <p className={AMOUNT}>{ready.ready.number}</p>
         <p className={HELP}>{W.keep}</p>
       </section>
     );
   }
   const about = money.about(dollars);
   return (
-    <section className={CARD}>
+    <section className="flex flex-col gap-[var(--space-xs)]">
       <h1 className={HELP}>{W.inAccount}</h1>
       {about ? (
         <>
-          <p className={MONEY}>{about.replace(/ \(rate of .*\)$/, "")}</p>
+          <p className={AMOUNT}>{about.replace(/ \(rate of .*\)$/, "")}</p>
           <p className={HELP}>
             {formatAusd(dollars)}, {about.match(/\((rate of .*)\)$/)?.[1]}
           </p>
         </>
       ) : (
         <>
-          <p className={MONEY}>{formatAusd(dollars)}</p>
+          <p className={AMOUNT}>{formatAusd(dollars)}</p>
           {money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
         </>
       )}

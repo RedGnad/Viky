@@ -16,7 +16,9 @@ below resolves here.
 2. **The Mercuryo list.** `Whose it is: your own.`
 3. **A day earned against a day returned.** The keeper writes a per-day record at every credit and every
    drain. Fourth change under the screens, accepted.
-4. **"Ana".** The Duolingo name when known, `their` otherwise. No first name.
+4. **"Ana".** The Duolingo name when known, `their` otherwise. No first name. **Replaced the same day by the founder**:
+   the first step asks "Their first name" and "Your name, as they know you", stored beside the link and never in the
+   contract (D85). F2 to F10 below still show the earlier wording; the screens follow D85.
 5. **The fourteen days.** The settling pass includes unopened and unconnected gifts older than fourteen days
    (`src/daily-pass.ts` skips them today). Fifth change under the screens, accepted.
 6. **The rate source.** `RATE_SOURCE` in `src/rails.ts`: the ECB's daily read, dated by its own `time`

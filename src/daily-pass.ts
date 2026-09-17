@@ -43,15 +43,33 @@ export const COUNTING_PASS: PassPlan = { count: true, refund: false };
  */
 export const SETTLING_PASS: PassPlan = { count: false, refund: true };
 
+/**
+ * How long a gift may wait unopened, or opened and never connected, before its whole amount can go back to the funder:
+ * the contract's `UNCLAIMED_REFUND_DELAY`, fourteen days, mirrored here and checked against the contract's source by a
+ * test. The check screen promises "If nobody opens it within 14 days, it comes back to you", and until 17 Sep nothing
+ * made that true: the pass skipped every gift that had not started (decision 5 of the drawn flows).
+ */
+export const UNCLAIMED_REFUND_DELAY_SECONDS = 14 * 86_400;
+
+type PassGift = Pick<GiftState, "cancelled" | "finalised" | "startDay" | "recipient" | "fundedAt" | "claimedAt">;
+
+/** Whether a gift that never started has waited long enough for the contract to send all of it back. */
+export function unstartedAndOverdue(gift: PassGift, nowSeconds: number): boolean {
+  if (gift.cancelled || gift.finalised || gift.startDay !== 0) return false;
+  const since = gift.recipient === null ? gift.fundedAt : gift.claimedAt;
+  return since > 0 && nowSeconds >= since + UNCLAIMED_REFUND_DELAY_SECONDS;
+}
+
 export type DailyPassDeps = {
   boundGifts: () => Promise<ReadonlyArray<{ giftId: string }>>;
   allGifts: () => Promise<ReadonlyArray<{ giftId: string; escrow: Hex | null }>>;
-  read: (escrow: Hex, giftId: string) => Promise<Pick<GiftState, "cancelled" | "finalised" | "startDay">>;
+  read: (escrow: Hex, giftId: string) => Promise<PassGift>;
   count: (giftId: string) => Promise<PublicCheckInOutcome>;
   drain: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
   finalise: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
   refund: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
   start: () => Promise<{ address: string; balance: bigint }>;
+  nowSeconds?: () => number;
 };
 
 function liveDeps(): DailyPassDeps {
@@ -104,7 +122,14 @@ export async function dailyPass(
       continue;
     }
     const gift = await deps.read(escrow, giftId);
-    if (gift.cancelled || gift.finalised || gift.startDay === 0) continue;
+    if (gift.cancelled || gift.finalised) continue;
+    if (gift.startDay === 0) {
+      // Nothing to drain or finalise before a first reading. A gift nobody opened, or nobody connected, is sent back
+      // whole once the contract allows it, and only by the settling pass, which is the one that sends money back.
+      const now = deps.nowSeconds ? deps.nowSeconds() : Math.floor(Date.now() / 1_000);
+      if (plan.refund && unstartedAndOverdue(gift, now)) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
+      continue;
+    }
     lines.push(await attempt(giftId, "drain", () => deps.drain(giftId, escrow)));
     lines.push(await attempt(giftId, "finalise", () => deps.finalise(giftId, escrow)));
     if (plan.refund) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));

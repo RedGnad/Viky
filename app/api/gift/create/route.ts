@@ -4,6 +4,8 @@ import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { isValidDuolingoUsername } from "@/src/duolingo-public-terms";
 import { contactHash, NO_CONTACT_HASH } from "@/src/contact-hash";
+import { DuolingoProfileError, resolvePublicDuolingoProfile } from "@/src/duolingo-profile";
+import { giftNameProblem, tidyGiftName } from "@/src/gift-names";
 import { fundingNonce, type GiftParams } from "@/src/gift-attestation";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { relayCreateGift } from "@/src/gift-relay";
@@ -17,6 +19,8 @@ export const maxDuration = 60;
 type CreateBody = {
   contact?: string;
   duolingoUsername?: string;
+  recipientName?: string;
+  funderName?: string;
   goalType?: number;
   dailyTarget?: number;
   durationDays?: number;
@@ -34,7 +38,20 @@ const HEX32 = /^0x[0-9a-fA-F]{64}$/;
  * one and signed its hash into the terms, so that one is hashed here and never stored; the relayer submits and
  * waits for finality before "Funded" is ever said. The answer carries the claim link to hand to the
  * recipient.
+ *
+ * The two names (src/gift-names.ts) are checked here and stored beside the link, never signed into the terms. A page
+ * loaded before they existed sends neither, and its gift is still made. A Duolingo name is read from Duolingo's public
+ * profile before anything is relayed, so no money goes behind a name nobody can read (decision 10 of the drawn flows).
  */
+function checkedName(value: unknown, which: "their first name" | "your name"): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  const problem = giftNameProblem(String(value));
+  if (problem === "empty") return undefined;
+  if (problem === "tooLong") throw new GiftApiError("INVALID_NAME", `Write ${which} in 40 characters or fewer.`);
+  if (problem === "notText") throw new GiftApiError("INVALID_NAME", `Write ${which} with letters, spaces, dots, apostrophes or hyphens.`);
+  return tidyGiftName(String(value));
+}
+
 export async function POST(request: Request) {
   try {
     const auth = readAccountAuthSession(request);
@@ -45,6 +62,9 @@ export async function POST(request: Request) {
     if (duolingoUsername && !isValidDuolingoUsername(duolingoUsername)) {
       throw new GiftApiError("INVALID_USERNAME", "That does not look like a Duolingo username.", 400);
     }
+
+    const recipientName = checkedName(body.recipientName, "their first name");
+    const funderName = checkedName(body.funderName, "your name");
 
     const contact = String(body.contact ?? "").trim();
     const goalType = Number(body.goalType);
@@ -83,6 +103,17 @@ export async function POST(request: Request) {
       throw new GiftApiError("TERMS_MISMATCH", "The signed terms do not match the gift");
     }
 
+    if (duolingoUsername) {
+      try {
+        await resolvePublicDuolingoProfile(duolingoUsername);
+      } catch (error) {
+        if (error instanceof DuolingoProfileError && error.code === "NO_SUCH_PROFILE") {
+          throw new GiftApiError("NO_SUCH_PROFILE", "No public Duolingo profile goes by that name. Nothing was taken.", 400);
+        }
+        throw new GiftApiError("SOURCE_UNAVAILABLE", "Duolingo is not answering, so the gift was not made and nothing was taken. Try again in a moment.", 503);
+      }
+    }
+
     const created = await relayCreateGift(params, {
       validAfter: BigInt(String(a.validAfter ?? "0")),
       validBefore: BigInt(String(a.validBefore ?? "0")),
@@ -105,6 +136,8 @@ export async function POST(request: Request) {
       createdTx: created.hash,
       escrow: created.escrow,
       goalUsername: duolingoUsername,
+      recipientName,
+      funderName,
     });
 
     const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin;

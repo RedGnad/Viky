@@ -9,6 +9,17 @@
 
 export type CatchUp = Readonly<{ day: number; deadlineMs: number }>;
 
+/** The first contract, whose catch-up window is one day; every later one allows thirty hours (D50). */
+const ONE_DAY_CATCH_UP_ESCROW = "0xe04cd59bb93765333200a9da01df83149d4c4d67";
+
+/**
+ * How long a day stays catchable on the contract that holds a gift. The two live contracts do not agree, which is a
+ * defect recorded in D50, so every screen is told rather than left to assume; the gift page and the cards read it here.
+ */
+export function catchUpSecondsOf(escrow: string): number {
+  return escrow.toLowerCase() === ONE_DAY_CATCH_UP_ESCROW ? 86_400 : 86_400 + 6 * 3_600;
+}
+
 /**
  * The open day and its deadline, or nothing when every day so far is settled. `catchUpSeconds` differs per
  * contract, which is itself a defect recorded in D50: gift 1 has 24 hours, gifts made since have 30.

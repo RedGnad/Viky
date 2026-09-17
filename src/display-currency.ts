@@ -70,7 +70,8 @@ export function rateDateInWords(date: string): string {
 /** "17 Sep 2026 at 02:05", for a confirmation: the date a person can quote, and the time in their own clock. */
 export function whenInWords(atMs: number): string {
   const at = new Date(atMs);
-  const time = at.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  // The hour as the reader's clock writes it: "5:58 AM" in English, "05:58" in French, never "05:58 AM".
+  const time = at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   return `${at.getDate()} ${MONTHS[at.getMonth()]} ${at.getFullYear()} at ${time}`;
 }
 

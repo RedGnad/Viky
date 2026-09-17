@@ -24,7 +24,7 @@ To check one reworked screen, run its scenario at all four combinations, for exa
 
 ---
 
-Since 17 Sep 2026 the run signs in through Me and comes back by the bar, the withdrawal states follow the drawn flows (W1 to W13), and the home, gifts and me states follow the product structure; a funder's session is closed by driving the page's clock thirty-one minutes forward, since the session is a sentence and no longer a button. A whole page is taken through a screen as tall as the page rather than with Playwright's fullPage, so the bar fixed to the bottom sits at the foot of the page instead of across its middle.
+Since 17 Sep 2026 the run signs in through Me and comes back by the bar, the withdrawal states follow the drawn flows (W1 to W13), and the home, gifts and me states follow the product structure; a funder's session is closed by driving the page's clock thirty-one minutes forward, since the session is a sentence and no longer a button. A whole page is taken through a screen as tall as the page rather than with Playwright's fullPage, so the bar fixed to the bottom sits at the foot of the page instead of across its middle. Since S2 the funder states follow the rebuilt offer: the two names, what they will do, their Duolingo name read before any money moves, the refusals under their fields, and the check in its three cases (paying by card, a payment arrived, enough in the account). The screen for a payment that falls short is not captured: it follows a conversion, and the run refuses every broadcast.
 
 What follows is the `captures.md` of the first run, on 16 Sep 2026 at commit `34d6cec`. The file names it lists belong to that run's folder, which is not in the repository.
 
