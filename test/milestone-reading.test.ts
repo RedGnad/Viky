@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import type { Hex } from "viem";
 import { chessProviderId } from "../src/chess-com";
 import { ChessReadError, nameHasChessCode, newChessCode, CHESS_CODE_ALPHABET, CHESS_CODE_LENGTH, type AttestedChessReading } from "../src/chess-reading";
 import type { GiftRecord } from "../src/gift-store";
 import type { MilestoneState } from "../src/milestone-reader";
-import { runMilestoneReading, type MilestoneReadingDeps } from "../src/milestone-reading";
+import { MILESTONE_OURS_TO_FIX, runMilestoneReading, type MilestoneReadingDeps } from "../src/milestone-reading";
 import type { MilestoneProofMessage } from "../src/milestone-protocol";
+import { milestoneStatusOf } from "../src/milestone-status";
+import type { MilestoneReading } from "../src/milestone-store";
+import { CHESS_MILESTONE } from "../src/milestone-conditions";
 import { RelayerError } from "../src/relayer";
 
 const NOW = 1_789_650_000;
@@ -74,6 +78,7 @@ function attested(rating: number, extra: Partial<AttestedChessReading> = {}): At
   return {
     username: "erik",
     playerId: "41",
+    status: "staff",
     name: null,
     mode: "rapid",
     rating,
@@ -95,7 +100,7 @@ function harness(record: GiftRecord, state: MilestoneState, overrides: Partial<M
     readState: async () => state,
     plain: async () => {
       calls.push("plain");
-      return { username: "erik", playerId: "41", rating: 1904, ratedAt: NOW - 7_200, rd: 42, best: 1950 };
+      return { username: "erik", playerId: "41", status: "basic", rating: 1904, ratedAt: NOW - 7_200, rd: 42, best: 1950 };
     },
     attest: async (input) => {
       calls.push(`attest:${input.withName ? "withName" : "rating"}`);
@@ -166,7 +171,7 @@ test("below the target the keeper only looks, and pays for no proof", async () =
 
 test("at the target the reading is attested, and the attested reading alone releases the gift", async () => {
   const run = harness(BOUND, CLIMBING, {
-    plain: async () => ({ username: "erik", playerId: "41", rating: 1960, ratedAt: NOW - 60, rd: 42, best: 1950 }),
+    plain: async () => ({ username: "erik", playerId: "41", status: "basic", rating: 1960, ratedAt: NOW - 60, rd: 42, best: 1950 }),
     attest: async () => attested(1960),
   });
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, run.deps);
@@ -176,7 +181,7 @@ test("at the target the reading is attested, and the attested reading alone rele
 
   // The plain read said yes and the attested one says no: the attested one decides, and nothing is sent.
   const disagree = harness(BOUND, CLIMBING, {
-    plain: async () => ({ username: "erik", playerId: "41", rating: 1960, ratedAt: NOW - 60, rd: 42, best: 1950 }),
+    plain: async () => ({ username: "erik", playerId: "41", status: "basic", rating: 1960, ratedAt: NOW - 60, rd: 42, best: 1950 }),
     attest: async () => attested(1950),
   });
   const short = await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, disagree.deps);
@@ -204,7 +209,7 @@ test("a reading that cannot be taken is a typed refusal the pass can hold on, an
 });
 
 test("another player under the same name never pays, and a renamed account is said as such", async () => {
-  const taken = harness(BOUND, CLIMBING, { plain: async () => ({ username: "erik", playerId: "999", rating: 2400, ratedAt: NOW, rd: 42, best: 1950 }) });
+  const taken = harness(BOUND, CLIMBING, { plain: async () => ({ username: "erik", playerId: "999", status: "basic", rating: 2400, ratedAt: NOW, rd: 42, best: 1950 }) });
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, taken.deps);
   assert.equal(outcome.kind === "refused" && outcome.code, "OTHER_PLAYER");
   assert.deepEqual(taken.calls, [], "no proof is paid for and nothing is sent");
@@ -216,13 +221,54 @@ test("another player under the same name never pays, and a renamed account is sa
 
 test("the contract's refusal is recorded with the reading and said in the milestone's own words", async () => {
   const run = harness(BOUND, CLIMBING, {
-    plain: async () => ({ username: "erik", playerId: "41", rating: 1960, ratedAt: NOW, rd: 42, best: 1950 }),
+    plain: async () => ({ username: "erik", playerId: "41", status: "basic", rating: 1960, ratedAt: NOW, rd: 42, best: 1950 }),
     attest: async () => attested(1960),
     prove: async () => Promise.reject(new RelayerError("REVERTED", "The contract refused: DeadlinePassed", "DeadlinePassed")),
   });
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, run.deps);
   assert.deepEqual(outcome, { kind: "refused", giftId: "1000000", code: "TIME_IS_UP", message: "The time for this gift is over.", rating: 1960 });
   assert.deepEqual(run.recorded, ["reach:attested:refused:DeadlinePassed"]);
+});
+
+test("an account Chess.com has closed is bound to nothing, earns nothing, and is written down for both pages (U1)", async () => {
+  const closed = new ChessReadError("ACCOUNT_CLOSED", "Chess.com has closed this account");
+  // The first reading: nothing is proved, so the gift is never bound, and the code stays unused.
+  const first = harness(RECORD, OPENED, {
+    attest: async () => {
+      throw closed;
+    },
+  });
+  const start = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, first.deps);
+  assert.equal(start.kind === "refused" && start.code, "ACCOUNT_CLOSED");
+  assert.equal(start.kind === "refused" && start.message, "Chess.com has closed this account, so this gift can no longer be earned.");
+  assert.deepEqual(first.calls, [], "nothing was proved, and nothing bound");
+  assert.deepEqual(first.recorded, ["look:plain:refused:ACCOUNT_CLOSED"], "the pages read it from here");
+
+  // A later reading, closed while the plain read looks: no proof is paid for, because the proof would say the same.
+  const later = harness(BOUND, CLIMBING, {
+    plain: async () => {
+      throw closed;
+    },
+  });
+  const reach = await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, later.deps);
+  assert.equal(reach.kind === "refused" && reach.code, "ACCOUNT_CLOSED");
+  assert.deepEqual(later.calls, [], "no attested reading is paid for");
+  assert.deepEqual(later.recorded, ["look:plain:refused:ACCOUNT_CLOSED"]);
+
+  // Closed between the look and the proof: the attested reading refuses it too, and still nothing is sent.
+  const between = harness(BOUND, CLIMBING, {
+    plain: async () => ({ username: "erik", playerId: "41", status: "basic", rating: 2400, ratedAt: NOW, rd: 42, best: 2400 }),
+    attest: async () => {
+      throw closed;
+    },
+  });
+  const proved = await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, between.deps);
+  assert.equal(proved.kind === "refused" && proved.code, "ACCOUNT_CLOSED");
+  assert.deepEqual(between.proved, [], "nothing reached the contract");
+
+  // The refusal is about the account, not about us: the pass does not hold the gift on it, so it comes back at the end.
+  assert.equal(MILESTONE_OURS_TO_FIX.has("ACCOUNT_CLOSED"), false);
+  assert.equal(MILESTONE_OURS_TO_FIX.has("PROOF_INVALID"), true, "a profile without a status is ours to fix, and holds the gift");
 });
 
 test("nothing is read for a gift that cannot move any more, or twice in one pass", async () => {
@@ -240,6 +286,35 @@ test("nothing is read for a gift that cannot move any more, or twice in one pass
   assert.deepEqual(await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, recent.deps), { kind: "already", giftId: "1000000", reason: "read_recently" });
   const forced = harness(BOUND, CLIMBING, { readRecently: async () => true });
   assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, forced.deps)).kind, "notYet", "the recipient's own request is always read");
+});
+
+test("a closed account is what both pages read, and neither side is offered a gesture the route would refuse (U1)", () => {
+  const reading = (outcome: MilestoneReading["outcome"]): MilestoneReading => ({
+    giftId: "1000000",
+    purpose: "look",
+    attested: false,
+    username: "erik",
+    playerId: null,
+    rating: null,
+    ratedAt: null,
+    rd: null,
+    observedAt: NOW,
+    nullifier: null,
+    outcome,
+    txHash: null,
+  });
+  const viewer = { isRecipient: true, isFunder: false, holdsTheLink: false };
+  const build = (last: MilestoneReading | null) =>
+    milestoneStatusOf({ record: BOUND, milestone: null, state: CLIMBING, contract: CONTRACT, latest: null, last, reachedAt: null, viewer, nowSeconds: NOW });
+  assert.equal(build(reading("refused:ACCOUNT_CLOSED")).accountClosed, true);
+  assert.equal(build(reading("notYet")).accountClosed, false, "a reading that went through says the account is open");
+  assert.equal(build(null).accountClosed, false, "no reading yet says nothing about the account");
+
+  // One sentence for both sides: it says what Chess.com did, and accuses nobody.
+  assert.equal(CHESS_MILESTONE.words.accountClosed, "Chess.com has closed this account, so this gift can no longer be earned.");
+  const page = readFileSync("app/components/MilestoneGiftPage.tsx", "utf8");
+  assert.match(page, /status\.accountClosed && !status\.finished \? <p className="font-medium">\{milestone\?\.words\.accountClosed\}<\/p> : null/);
+  assert.equal(page.match(/&& !status\.accountClosed/g)?.length, 4, "no code, no proof, no check, and no wait for a connection");
 });
 
 test("the Chess.com code is letters only and found whatever surrounds it", () => {

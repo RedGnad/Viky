@@ -105,11 +105,31 @@ test("the standing route refuses a cadence it does not know before reading anyth
 function chessPages(rapid: { rating: number; date: number; rd: number } | null): typeof fetch {
   return (async (input: string | URL | Request) => {
     const url = String(input instanceof Request ? input.url : input);
-    if (url === "https://api.chess.com/pub/player/erik") return new Response(JSON.stringify({ player_id: 41, username: "erik", name: "Erik" }), { status: 200 });
+    if (url === "https://api.chess.com/pub/player/erik") return new Response(JSON.stringify({ player_id: 41, username: "erik", name: "Erik", status: "staff" }), { status: 200 });
     if (url === "https://api.chess.com/pub/player/erik/stats") return new Response(JSON.stringify(rapid ? { chess_rapid: { last: rapid } } : { fide: 0 }), { status: 200 });
     return new Response("{}", { status: 404 });
   }) as typeof fetch;
 }
+
+test("the standing route refuses an account Chess.com has closed, before any money moves (U1)", async () => {
+  const realFetch = globalThis.fetch;
+  // Measured on 18 Sep 2026: dubov answers 200 with status "closed", and its ratings page answers as any other.
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url === "https://api.chess.com/pub/player/dubov") return new Response(JSON.stringify({ player_id: 28129450, username: "dubov", status: "closed" }), { status: 200 });
+    if (url === "https://api.chess.com/pub/player/dubov/stats") return new Response(JSON.stringify({ chess_rapid: { last: { rating: 990, date: 1620668644, rd: 40 } } }), { status: 200 });
+    return new Response("{}", { status: 404 });
+  }) as typeof fetch;
+  try {
+    const response = await standingGet(new Request(`${ORIGIN}/api/chess/standing?username=dubov&mode=rapid`));
+    assert.equal(response.status, 409);
+    const body = (await response.json()) as { code: string; error: string };
+    assert.equal(body.code, "ACCOUNT_CLOSED");
+    assert.equal(body.error, "Chess.com has closed this account, so nothing on it can be earned.");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
 
 test("a rating still settling is refused before anything is relayed, to everybody once the condition is live (D90)", async () => {
   const realFetch = globalThis.fetch;

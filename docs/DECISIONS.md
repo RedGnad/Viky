@@ -2611,3 +2611,30 @@ behind an account cannot be photographed any other way.
 - Tests: a start two ordinary wins above the day of the payment settles as any other; a start already at the target
   never settles, the money goes back, and the words say why; the funder's sentence. The RD threshold of D90 is
   untouched.
+
+## D93, 18 Sep 2026: a Chess.com account its own police has closed can earn nothing here (U1)
+
+- Statement: Chess.com publishes the standing of an account on the same public profile Viky already reads, in the
+  documented field `status`, whose values it lists as "closed, closed:fair_play_violations, basic, premium, mod,
+  staff". Its Fair Play policy, which forbids engines, third party help and a lent account, says Chess.com "may close
+  your account and label it publicly closed for Fair Play violations". So the source's own police is readable, and a
+  gift can rest on it: an account it has closed can neither be connected to a gift nor reach its target.
+- What was measured, 18 Sep 2026: hikaru `premium`, magnuscarlsen `premium`, danielnaroditsky `premium`, erik `staff`,
+  SevyB `basic`, dubov `closed`. A closed account still serves its profile and its ratings pages exactly as any other,
+  so nothing but `status` says it. `closed:fair_play_violations` is Chess.com's documented value and was not met in
+  this sample: it changes nothing here, because any status that is `closed` or begins with `closed:` is refused. Forty
+  club matches and sixty tournament groups were read for a live `fair_play_removals` list and all were empty.
+- The rule. `status` is read with the identity on every reading, the plain one and the attested one
+  (`chessStatusPattern` in the attested source, so it is signed with the rest). A closed account gets:
+  - the funder's step and the create route refused before any money moves ("Chess.com has closed this account, so
+    nothing on it can be earned.");
+  - no binding, and no attested reading sent, whatever the rating says;
+  - one sentence on the gift's page, the same for both sides ("Chess.com has closed this account, so this gift can no
+    longer be earned."), and no gesture beside it that the routes would refuse;
+  - the gift held until its deadline and the whole amount returned to the funder then, exactly as for a target not
+    reached. Nobody profits from the closure, us included.
+- A profile whose `status` cannot be read is not an open account: it is a reading that failed on our side
+  (`PROOF_INVALID`, which the keeper holds a gift on). Nothing is paid and nothing is taken back that day.
+- What this does not do: it catches what Chess.com catches, when Chess.com catches it. A player cheating and not yet
+  detected reads as `basic`, and a closure that lands after a gift has settled changes nothing. Chess.com's policy
+  does not cover games against bots. This is written on the judges page with its source and its date.

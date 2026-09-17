@@ -7,8 +7,8 @@ import { keccak256, stringToHex, type Hex } from "viem";
  * in", read-only, unlimited serial access, no key, and a user agent with a contact is recommended
  * (chess.com/news/view/published-data-api, read 17 Sep 2026). Measured the same day on real answers:
  *
- * - `/pub/player/{name}` carries `player_id`, `username` and, only when the person filled it in, `name`. The name
- *   is the field a person edits, so it is where a binding code goes, as on Duolingo. `player_id` does not change
+ * - `/pub/player/{name}` carries `player_id`, `username`, `status` and, only when the person filled it in, `name`. The
+ *   name is the field a person edits, so it is where a binding code goes, as on Duolingo. `player_id` does not change
  *   when a username does, so it is the identity a gift is bound to.
  * - `/pub/player/{name}/stats` carries one block per cadence, `"chess_rapid":{"last":{"rating":1904,"date":...}}`,
  *   in no fixed order (hikaru's begins with daily, magnuscarlsen's with rapid), and a cadence never played has no
@@ -72,6 +72,25 @@ export function chessRatingPattern(mode: ChessMode): string {
 }
 
 /**
+ * The account's standing with Chess.com itself, which the profile publishes as `status`. Chess.com documents the six
+ * values ("closed, closed:fair_play_violations, basic, premium, mod, staff") and its Fair Play policy says what a
+ * closed one can mean: "we may close your account and label it publicly closed for Fair Play violations". Measured on
+ * 18 Sep 2026: hikaru premium, magnuscarlsen premium, danielnaroditsky premium, erik staff, SevyB basic, dubov closed.
+ * A closed account still serves its profile and its ratings, so the status is the only thing that says so.
+ */
+export function chessStatusPattern(): string {
+  return '"status":"(?<status>[a-z_:]+)"';
+}
+
+/**
+ * Whether Chess.com has closed this account, whatever reason it gives with it. An unread status is not an answer: the
+ * caller treats it as a reading that failed on our side, never as an open account.
+ */
+export function accountIsClosed(status: string | null): boolean {
+  return status === "closed" || (status !== null && status.startsWith("closed:"));
+}
+
+/**
  * The highest RD at which a rating moves by about ten points a game, which is what the milestone terms rest on
  * (src/milestone-terms.ts: a start margin of 10, a smallest climb of 50). "The Glicko RD value used to calculate
  * ratings changes", in Chess.com's words, and Chess.com publishes no RD above which a rating is still provisional, so
@@ -95,6 +114,8 @@ export const CHESS_USER_AGENT = "Viky/1.0 (+https://viky.cash)";
 export type ChessStanding = Readonly<{
   username: string;
   playerId: string;
+  /** What Chess.com says of the account itself: basic, premium, staff, or closed. */
+  status: string;
   /** Null when the cadence has never been played on this account. */
   rating: number | null;
   /** Unix seconds of the game the rating comes from, as the page gives it. */
@@ -105,14 +126,20 @@ export type ChessStanding = Readonly<{
   rd: number | null;
 }>;
 
-/** The player an answer of `/pub/player/{name}` describes, or nothing when it is not one. */
-export function playerOfProfile(body: unknown): { username: string; playerId: string; name: string | null } | null {
+/**
+ * The player an answer of `/pub/player/{name}` describes, or nothing when it is not one. A profile without a readable
+ * `status` is not one: the status is what says whether Chess.com has closed the account, and a reading that cannot see
+ * it must fail on our side rather than pass for an open account.
+ */
+export function playerOfProfile(body: unknown): { username: string; playerId: string; status: string; name: string | null } | null {
   if (!body || typeof body !== "object") return null;
   const record = body as Record<string, unknown>;
   const playerId = record.player_id;
   const username = record.username;
+  const status = record.status;
   if (typeof playerId !== "number" || !Number.isSafeInteger(playerId) || typeof username !== "string" || username.length === 0) return null;
-  return { username, playerId: String(playerId), name: typeof record.name === "string" ? record.name : null };
+  if (typeof status !== "string" || status.length === 0) return null;
+  return { username, playerId: String(playerId), status, name: typeof record.name === "string" ? record.name : null };
 }
 
 /** One cadence's rating from an answer of `/pub/player/{name}/stats`, or null when that cadence was never played. */

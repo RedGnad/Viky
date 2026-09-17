@@ -2,7 +2,17 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { classifyFetchFailure, type AttestedReadDeps } from "../src/attested-read";
 import { CHESS_PLAYER, CHESS_PROFILE, CHESS_RATINGS, type AttestedSource } from "../src/attested-sources";
-import { CHESS_MODES, CHESS_SETTLED_RD_BELOW, chessRatingPattern, isValidChessUsername, playerOfProfile, ratingHasSettled, ratingOfStats } from "../src/chess-com";
+import {
+  accountIsClosed,
+  CHESS_MODES,
+  CHESS_SETTLED_RD_BELOW,
+  chessRatingPattern,
+  chessStatusPattern,
+  isValidChessUsername,
+  playerOfProfile,
+  ratingHasSettled,
+  ratingOfStats,
+} from "../src/chess-com";
 import { attestChessRating, ChessReadError, readChessStanding, type PlainFetch } from "../src/chess-reading";
 import { CHESS_RATING } from "../src/conditions";
 import type { ZkFetchProof } from "../src/duolingo-public";
@@ -30,8 +40,8 @@ function honest(overrides: Partial<Record<string, (source: AttestedSource, accou
     zkFetch: async (source, account) => {
       const custom = overrides[source.id];
       if (custom) return custom(source, account);
-      if (source.id === CHESS_PROFILE.id) return proofOf(source.url(account), source.matches, { playerId: "41", username: "erik", name: "Erik KXQPRT" });
-      if (source.id === CHESS_PLAYER.id) return proofOf(source.url(account), source.matches, { playerId: "41", username: "erik" });
+      if (source.id === CHESS_PROFILE.id) return proofOf(source.url(account), source.matches, { playerId: "41", username: "erik", name: "Erik KXQPRT", status: "staff" });
+      if (source.id === CHESS_PLAYER.id) return proofOf(source.url(account), source.matches, { playerId: "41", username: "erik", status: "staff" });
       return proofOf(source.url(account), source.matches, { rating: "1904", date: "1764957051", rd: "80" }, 1_789_653_330, `0x${"5b".repeat(32)}`);
     },
     verify: async () => true,
@@ -59,13 +69,13 @@ test("a proof of the right page read with a looser pattern is refused, so one ca
 });
 
 test("a proof about another page, another name, or taken far from its other half is refused", async () => {
-  const otherPage = honest({ [CHESS_PLAYER.id]: (source) => proofOf(source.url("hikaru"), source.matches, { playerId: "15448422", username: "hikaru" }) });
+  const otherPage = honest({ [CHESS_PLAYER.id]: (source) => proofOf(source.url("hikaru"), source.matches, { playerId: "15448422", username: "hikaru", status: "premium" }) });
   await assert.rejects(attestChessRating({ username: "erik", mode: "rapid", withName: false }, otherPage), (error: unknown) => error instanceof ChessReadError && error.code === "PROOF_MISMATCH");
 
-  const otherName = honest({ [CHESS_PLAYER.id]: (source, account) => proofOf(source.url(account), source.matches, { playerId: "15448422", username: "hikaru" }) });
+  const otherName = honest({ [CHESS_PLAYER.id]: (source, account) => proofOf(source.url(account), source.matches, { playerId: "15448422", username: "hikaru", status: "premium" }) });
   await assert.rejects(attestChessRating({ username: "erik", mode: "rapid", withName: false }, otherName), (error: unknown) => error instanceof ChessReadError && error.code === "PROOF_MISMATCH");
 
-  const apart = honest({ [CHESS_PLAYER.id]: (source, account) => proofOf(source.url(account), source.matches, { playerId: "41", username: "erik" }, 1_789_653_330 - 3_600) });
+  const apart = honest({ [CHESS_PLAYER.id]: (source, account) => proofOf(source.url(account), source.matches, { playerId: "41", username: "erik", status: "staff" }, 1_789_653_330 - 3_600) });
   await assert.rejects(attestChessRating({ username: "erik", mode: "rapid", withName: false }, apart), (error: unknown) => error instanceof ChessReadError && error.code === "PROOF_MISMATCH");
 
   const unsigned: AttestedReadDeps = { ...honest(), verify: async () => false };
@@ -109,7 +119,7 @@ test("zkFetch's refusals, as measured, become the right typed refusal", async ()
 
 test("the plain read answers who and where, and says which failure it met", async () => {
   const pages: Record<string, { status: number; body: unknown }> = {
-    "https://api.chess.com/pub/player/erik": { status: 200, body: { player_id: 41, username: "erik", name: "Erik" } },
+    "https://api.chess.com/pub/player/erik": { status: 200, body: { player_id: 41, username: "erik", name: "Erik", status: "staff" } },
     "https://api.chess.com/pub/player/erik/stats": {
       status: 200,
       body: {
@@ -119,10 +129,17 @@ test("the plain read answers who and where, and says which failure it met", asyn
         chess_bullet: { last: { rating: 1712, date: 1782332751, rd: 42 }, best: { rating: 2071, date: 1298134178 } },
       },
     },
-    "https://api.chess.com/pub/player/bar": { status: 200, body: { player_id: 347202211, username: "bar" } },
+    "https://api.chess.com/pub/player/bar": { status: 200, body: { player_id: 347202211, username: "bar", status: "basic" } },
     "https://api.chess.com/pub/player/bar/stats": { status: 200, body: { chess_rapid: { last: { rating: 1705, date: 1775022187 } }, fide: 0 } },
     "https://api.chess.com/pub/player/nobody-zz9": { status: 404, body: { code: 0, message: "User not found." } },
-    "https://api.chess.com/pub/player/flaky": { status: 200, body: { player_id: 7, username: "flaky" } },
+    "https://api.chess.com/pub/player/flaky": { status: 200, body: { player_id: 7, username: "flaky", status: "premium" } },
+    // Measured on 18 Sep 2026: dubov answers 200 with status "closed", and its ratings page answers as any other.
+    "https://api.chess.com/pub/player/dubov": { status: 200, body: { player_id: 28129450, username: "dubov", status: "closed" } },
+    "https://api.chess.com/pub/player/dubov/stats": { status: 200, body: { chess_rapid: { last: { rating: 990, date: 1620668644, rd: 105 } } } },
+    "https://api.chess.com/pub/player/unfair": { status: 200, body: { player_id: 5, username: "unfair", status: "closed:fair_play_violations" } },
+    "https://api.chess.com/pub/player/unfair/stats": { status: 200, body: { chess_rapid: { last: { rating: 2200, date: 1789650995, rd: 45 } } } },
+    "https://api.chess.com/pub/player/nostatus": { status: 200, body: { player_id: 9, username: "nostatus" } },
+    "https://api.chess.com/pub/player/nostatus/stats": { status: 200, body: { chess_rapid: { last: { rating: 1500, date: 1789650995, rd: 45 } } } },
     "https://api.chess.com/pub/player/flaky/stats": { status: 404, body: { code: 0, message: "An internal error has occurred. Please contact Chess.com Developer's Forum for further help" } },
   };
   const seen: string[] = [];
@@ -131,14 +148,73 @@ test("the plain read answers who and where, and says which failure it met", asyn
     const page = pages[url] ?? { status: 503, body: null };
     return new Response(JSON.stringify(page.body), { status: page.status });
   };
-  assert.deepEqual(await readChessStanding("Erik", "rapid", fetcher), { username: "erik", playerId: "41", rating: 1904, ratedAt: 1764957051, rd: 80, best: 1904 });
-  assert.deepEqual(await readChessStanding("Erik", "bullet", fetcher), { username: "erik", playerId: "41", rating: 1712, ratedAt: 1782332751, rd: 42, best: 2071 });
-  assert.deepEqual(await readChessStanding("bar", "blitz", fetcher), { username: "bar", playerId: "347202211", rating: null, ratedAt: null, rd: null, best: null });
+  assert.deepEqual(await readChessStanding("Erik", "rapid", fetcher), { username: "erik", playerId: "41", status: "staff", rating: 1904, ratedAt: 1764957051, rd: 80, best: 1904 });
+  assert.deepEqual(await readChessStanding("Erik", "bullet", fetcher), { username: "erik", playerId: "41", status: "staff", rating: 1712, ratedAt: 1782332751, rd: 42, best: 2071 });
+  assert.deepEqual(await readChessStanding("bar", "blitz", fetcher), { username: "bar", playerId: "347202211", status: "basic", rating: null, ratedAt: null, rd: null, best: null });
   await assert.rejects(readChessStanding("nobody-zz9", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "PROFILE_NOT_FOUND");
   await assert.rejects(readChessStanding("down", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "FETCH_FAILED");
   await assert.rejects(readChessStanding("flaky", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "FETCH_FAILED", "a ratings page failing is not a player missing");
   await assert.rejects(readChessStanding("a b", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "INVALID_USERNAME");
   assert.ok(seen.every((agent) => agent.startsWith("Viky/")), "Chess.com answers a request without a user agent with a challenge page");
+});
+
+test("an account Chess.com has closed is refused, and a profile without a status is a reading that failed on our side", async () => {
+  // Chess.com documents six values for `status` ("closed, closed:fair_play_violations, basic, premium, mod, staff") and
+  // its Fair Play policy says it may "close your account and label it publicly closed for Fair Play violations".
+  // Measured on 18 Sep 2026: hikaru premium, erik staff, SevyB basic, dubov closed.
+  assert.equal(accountIsClosed("basic"), false);
+  assert.equal(accountIsClosed("premium"), false);
+  assert.equal(accountIsClosed("staff"), false);
+  assert.equal(accountIsClosed("mod"), false);
+  assert.equal(accountIsClosed("closed"), true);
+  assert.equal(accountIsClosed("closed:fair_play_violations"), true);
+  assert.equal(accountIsClosed(null), false, "an unread status is not an answer: the caller treats it as a failed reading");
+
+  const pages: Record<string, { status: number; body: unknown }> = {
+    "https://api.chess.com/pub/player/dubov": { status: 200, body: { player_id: 28129450, username: "dubov", status: "closed" } },
+    "https://api.chess.com/pub/player/dubov/stats": { status: 200, body: { chess_rapid: { last: { rating: 990, date: 1620668644, rd: 105 } } } },
+    "https://api.chess.com/pub/player/unfair": { status: 200, body: { player_id: 5, username: "unfair", status: "closed:fair_play_violations" } },
+    "https://api.chess.com/pub/player/nostatus": { status: 200, body: { player_id: 9, username: "nostatus" } },
+    "https://api.chess.com/pub/player/plain": { status: 200, body: { player_id: 3, username: "plain", status: "basic" } },
+    "https://api.chess.com/pub/player/plain/stats": { status: 200, body: { chess_rapid: { last: { rating: 1500, date: 1789650995, rd: 45 } } } },
+  };
+  const fetcher: PlainFetch = async (url) => {
+    const page = pages[url] ?? { status: 503, body: null };
+    return new Response(JSON.stringify(page.body), { status: page.status });
+  };
+  const closedCode = async (name: string) =>
+    await readChessStanding(name, "rapid", fetcher).then(
+      () => "read",
+      (error: unknown) => (error instanceof ChessReadError ? error.code : "other"),
+    );
+  assert.equal(await closedCode("dubov"), "ACCOUNT_CLOSED", "a closed account is read, and refused");
+  assert.equal(await closedCode("unfair"), "ACCOUNT_CLOSED");
+  assert.equal(await closedCode("nostatus"), "FETCH_FAILED", "no status is our reading failing, never an open account");
+  assert.equal((await readChessStanding("plain", "rapid", fetcher)).status, "basic", "a basic account is read as it always was");
+
+  // Attested, the same answers: the status is read beside the identity, on the first reading and on every later one.
+  const closedProof = (status: string) => (source: AttestedSource, account: string) =>
+    proofOf(source.url(account), source.matches, { playerId: "41", username: "erik", name: "Erik KXQPRT", status });
+  for (const status of ["closed", "closed:fair_play_violations"]) {
+    for (const withName of [true, false]) {
+      const deps = honest({ [CHESS_PROFILE.id]: closedProof(status), [CHESS_PLAYER.id]: closedProof(status) });
+      await assert.rejects(
+        attestChessRating({ username: "erik", mode: "rapid", withName }, deps),
+        (error: unknown) => error instanceof ChessReadError && error.code === "ACCOUNT_CLOSED",
+        `${status}, ${withName ? "first reading" : "later reading"}`,
+      );
+    }
+  }
+  const noStatus = honest({
+    [CHESS_PLAYER.id]: (source, account) => proofOf(source.url(account), source.matches, { playerId: "41", username: "erik" }),
+  });
+  await assert.rejects(
+    attestChessRating({ username: "erik", mode: "rapid", withName: false }, noStatus),
+    (error: unknown) => error instanceof ChessReadError && error.code === "PROOF_INVALID",
+    "the keeper holds the gift on this code, and nothing is paid or given back on it",
+  );
+  assert.ok(CHESS_PLAYER.matches.some((match) => match.value === chessStatusPattern()), "every later reading reads the status too");
+  assert.ok(CHESS_PROFILE.matches.some((match) => match.value === chessStatusPattern()));
 });
 
 test("the page parsers read what the pages hold, and nothing else", () => {

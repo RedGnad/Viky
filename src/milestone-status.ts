@@ -3,7 +3,7 @@ import { formatAusd } from "./gift-reader";
 import type { GiftRecord } from "./gift-store";
 import { cadenceOfGoal, CHESS_MILESTONE, milestoneById } from "./milestone-conditions";
 import { milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
-import { attestedReadings, latestRating, loadMilestoneGift, type MilestoneRecord, type MilestoneReading } from "./milestone-store";
+import { attestedReadings, lastReading, latestRating, loadMilestoneGift, type MilestoneRecord, type MilestoneReading } from "./milestone-store";
 import type { MilestoneStatus } from "./milestone-view";
 import { escrowOf } from "./relayer";
 
@@ -21,6 +21,7 @@ export function milestoneStatusOf(input: {
   state: MilestoneState;
   contract: Hex;
   latest: MilestoneReading | null;
+  last: MilestoneReading | null;
   reachedAt: number | null;
   viewer: Viewer;
   nowSeconds: number;
@@ -67,6 +68,7 @@ export function milestoneStatusOf(input: {
     escrow: input.contract,
     phase: milestonePhase(state, input.nowSeconds),
     cadence: { id: cadence?.id ?? "", label: cadence?.label ?? "" },
+    accountClosed: input.last?.outcome === "refused:ACCOUNT_CLOSED",
     maximumStart: Number(state.maximumStart),
     standingAtOffer: input.milestone?.standingAtOffer ?? null,
   };
@@ -75,13 +77,14 @@ export function milestoneStatusOf(input: {
 /** Everything a milestone gift's page and card need, read live, for one viewer. */
 export async function loadMilestoneStatus(record: GiftRecord, viewer: Viewer): Promise<{ status: MilestoneStatus; state: MilestoneState; contract: Hex }> {
   const contract = escrowOf(record);
-  const [state, milestone, latest, proven] = await Promise.all([
+  const [state, milestone, latest, last, proven] = await Promise.all([
     readMilestoneGift(contract, record.giftId),
     loadMilestoneGift(record.giftId),
     latestRating(record.giftId),
+    lastReading(record.giftId),
     attestedReadings(record.giftId),
   ]);
   const reachedAt = proven.find((reading) => reading.outcome === "reached")?.observedAt ?? null;
-  const status = milestoneStatusOf({ record, milestone, state, contract, latest, reachedAt, viewer, nowSeconds: Math.floor(Date.now() / 1_000) });
+  const status = milestoneStatusOf({ record, milestone, state, contract, latest, last, reachedAt, viewer, nowSeconds: Math.floor(Date.now() / 1_000) });
   return { status, state, contract };
 }

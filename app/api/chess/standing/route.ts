@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  * same public pages the keeper reads. It answers the name as Chess.com spells it, the player's rating in that cadence,
  * and when it was read: that reading is what the funder's ceiling is built on and what the screen shows them. It also
  * answers the rating's RD and whether that has settled (D90): the screen refuses a cadence that has not, and the create
- * route refuses it again before anything is relayed.
+ * route refuses it again before anything is relayed. An account Chess.com has closed is refused here too (U1).
  */
 export async function GET(request: Request) {
   try {
@@ -37,6 +37,8 @@ export async function GET(request: Request) {
       if (!(error instanceof ChessReadError)) throw error;
       if (error.code === "INVALID_USERNAME") throw new GiftApiError("INVALID_USERNAME", "That does not look like a Chess.com name.", 400);
       if (error.code === "PROFILE_NOT_FOUND") throw new GiftApiError("NO_SUCH_PROFILE", "No Chess.com player goes by that name.", 404);
+      // Chess.com publishes the closing of an account on the same profile page, and a closed one can earn nothing (U1).
+      if (error.code === "ACCOUNT_CLOSED") throw new GiftApiError("ACCOUNT_CLOSED", CHESS_MILESTONE.words.refusals.closed, 409);
       throw new GiftApiError("SOURCE_UNAVAILABLE", "Chess.com is not answering. Try again in a moment.", 503);
     }
   } catch (error) {

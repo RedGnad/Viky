@@ -9,6 +9,7 @@ import {
   COURSERA_CERTIFICATE,
   DUOLINGO_PROFILE,
 } from "../src/attested-sources";
+import { chessStatusPattern } from "../src/chess-com";
 
 test("only the listed sources exist, and an unknown name is refused", () => {
   assert.deepEqual([...attestedSourceIds()].sort(), [
@@ -48,13 +49,22 @@ test("each source reads the page it says it reads", () => {
 });
 
 test("the patterns match what those pages actually answer", () => {
-  // Captured from the real pages on 17 Sep 2026, so a change of shape breaks a test rather than a gift.
+  // Captured from the real pages, whole, so a change of shape breaks a test rather than a gift: the two profiles on
+  // 18 Sep 2026 (with the `status` every profile carries), the ratings pages on 17 Sep 2026.
   const chessProfile =
-    '{"avatar":"https://images.chesscomfiles.com/uploads/v1/user/41.5434c4ff.200x200o.5b102889d835.jpeg","player_id":41,"@id":"https://api.chess.com/pub/player/erik","url":"https://www.chess.com/member/erik","name":"Erik","username":"erik","followers":10297}';
+    '{"avatar":"https://images.chesscomfiles.com/uploads/v1/user/41.5434c4ff.200x200o.5b102889d835.jpeg","player_id":41,"@id":"https://api.chess.com/pub/player/erik","url":"https://www.chess.com/member/erik","name":"Erik","username":"erik","followers":10299,"country":"https://api.chess.com/pub/country/US","location":"Bay Area, CA","last_online":1789681439,"joined":1178556600,"status":"staff","is_streamer":false,"verified":false,"league":"Silver","streaming_platforms":[]}';
   for (const m of CHESS_PROFILE.matches) assert.match(chessProfile, new RegExp(m.value), m.value);
-  const noName = '{"player_id":347202211,"@id":"https://api.chess.com/pub/player/bar","url":"https://www.chess.com/member/bar","username":"bar","followers":16}';
+  const noName =
+    '{"player_id":347202211,"@id":"https://api.chess.com/pub/player/bar","url":"https://www.chess.com/member/bar","username":"bar","followers":16,"country":"https://api.chess.com/pub/country/AR","last_online":1789567621,"joined":1708776454,"status":"basic","is_streamer":false,"verified":false,"league":"Stone","streaming_platforms":[]}';
   for (const m of CHESS_PLAYER.matches) assert.match(noName, new RegExp(m.value), m.value);
   assert.equal(CHESS_PROFILE.matches.every((m) => new RegExp(m.value).test(noName)), false, "a binding needs a name to hold the code");
+
+  // dubov, an account Chess.com has closed, read on 18 Sep 2026: the same shape, and the status says so (U1).
+  const closed =
+    '{"avatar":"https://images.chesscomfiles.com/uploads/v1/user/28129450.c9c9e6ad.200x200o.73fd0c088ca9.gif","player_id":28129450,"@id":"https://api.chess.com/pub/player/dubov","url":"https://www.chess.com/member/Dubov","username":"dubov","followers":0,"country":"https://api.chess.com/pub/country/NL","last_online":1620662445,"joined":1462908315,"status":"closed","is_streamer":false,"verified":false,"streaming_platforms":[]}';
+  for (const m of CHESS_PLAYER.matches) assert.match(closed, new RegExp(m.value), m.value);
+  assert.equal(new RegExp(chessStatusPattern()).exec(closed)?.groups?.status, "closed");
+  assert.equal(new RegExp(chessStatusPattern()).exec(chessProfile)?.groups?.status, "staff");
 
   // hikaru's page lists daily first, then rapid, bullet and blitz. Each cadence must read its own block.
   const chessStats =

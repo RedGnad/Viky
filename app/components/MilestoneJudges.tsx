@@ -1,6 +1,7 @@
 import { CHESS_MODES, chessGoalType, chessProviderId } from "@/src/chess-com";
 import { MILESTONE_EVIDENCE as E } from "@/src/milestone-evidence";
 import { PUBLIC_RPC_URL } from "@/src/monad/chain";
+import { PINNED_RECLAIM_WITNESS } from "@/src/reclaim-proof-set";
 import { TITLE } from "./ui";
 
 const HELP = "text-[length:var(--type-help)]";
@@ -108,6 +109,22 @@ export function MilestoneJudges() {
           owner can replace, could open a gift nobody has opened yet and attest a reading for it.
         </li>
       </ul>
+      <p className={HELP}>What was hardened against cheating, with the source read and the day it was read:</p>
+      <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
+        <li>
+          18 Sep 2026, Chess.com&apos;s published data API and its Fair Play policy: an account Chess.com has closed can neither be connected to
+          a gift nor reach a target, and the whole amount goes back to the funder at the deadline, exactly as for a target not reached. The
+          standing is on the same public profile, in the documented field &quot;status&quot; (closed, closed:fair_play_violations, basic, premium,
+          mod, staff), and the policy says Chess.com &quot;may close your account and label it publicly closed for Fair Play violations&quot;. It is
+          read on every reading, plain and attested. Measured that day: hikaru premium, erik staff, SevyB basic, dubov closed. A profile whose
+          status cannot be read is a reading that failed on our side: nothing is paid and nothing is taken back that day.
+        </li>
+      </ul>
+      <p className={HELP}>
+        Whom a settlement trusts, exactly: each reading is a claim signed by Reclaim&apos;s attestor ({PINNED_RECLAIM_WITNESS}), whose TEE mode
+        Reclaim labels beta, and Viky&apos;s own evidence signer then signs it as an EIP-712 Proof the contract accepts. We trust those two keys,
+        and we say so: Reclaim writes that a third party must trust that the attestor did not collude with the user.
+      </p>
       <p className={HELP}>What is not proven, written as it is:</p>
       <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
         <li>The attestor&apos;s own TEE attestation is not in the proof zk-fetch returns, so it is not verified; its signature and address are.</li>

@@ -1,7 +1,17 @@
 import type { Hex } from "viem";
 import { attestedRead, AttestedReadError, reclaimAttestedReadDeps, type AttestedReadDeps, type AttestedReading } from "./attested-read";
 import { CHESS_PLAYER, CHESS_PROFILE, CHESS_RATINGS } from "./attested-sources";
-import { CHESS_USER_AGENT, chessProfileUrl, chessStatsUrl, isValidChessUsername, playerOfProfile, ratingOfStats, type ChessMode, type ChessStanding } from "./chess-com";
+import {
+  accountIsClosed,
+  CHESS_USER_AGENT,
+  chessProfileUrl,
+  chessStatsUrl,
+  isValidChessUsername,
+  playerOfProfile,
+  ratingOfStats,
+  type ChessMode,
+  type ChessStanding,
+} from "./chess-com";
 import type { ZkFetchProof } from "./duolingo-public";
 
 /**
@@ -23,6 +33,8 @@ export type ChessReadErrorCode =
   | "NO_NAME"
   /** The account has never played a rated game in that cadence. */
   | "NO_RATING"
+  /** Chess.com has closed the account (U1): nothing on it can be bound or earned. */
+  | "ACCOUNT_CLOSED"
   | "FETCH_FAILED"
   | "PROOF_INVALID"
   | "PROOF_MISMATCH"
@@ -59,13 +71,23 @@ export async function readChessStanding(username: string, mode: ChessMode, fetch
   if (!isValidChessUsername(username)) throw new ChessReadError("INVALID_USERNAME", "That is not a Chess.com name");
   const profile = await readJson(chessProfileUrl(username), fetchImpl);
   if (profile.status === 404) throw new ChessReadError("PROFILE_NOT_FOUND", "No Chess.com player goes by that name");
+  // A profile without a readable status is not a reading at all, so it fails on our side rather than passing for open.
   const player = profile.status === 200 ? playerOfProfile(profile.body) : null;
   if (!player) throw new ChessReadError("FETCH_FAILED", `Chess.com answered ${profile.status}`);
+  if (accountIsClosed(player.status)) throw new ChessReadError("ACCOUNT_CLOSED", "Chess.com has closed this account");
   // A ratings page that does not answer 200 is Chess.com failing, even as a 404: the profile just said the player exists.
   const stats = await readJson(chessStatsUrl(username), fetchImpl);
   if (stats.status !== 200 || !stats.body || typeof stats.body !== "object") throw new ChessReadError("FETCH_FAILED", `Chess.com answered ${stats.status}`);
   const rating = ratingOfStats(stats.body, mode);
-  return { username: player.username, playerId: player.playerId, rating: rating?.rating ?? null, ratedAt: rating?.ratedAt ?? null, rd: rating?.rd ?? null, best: rating?.best ?? null };
+  return {
+    username: player.username,
+    playerId: player.playerId,
+    status: player.status,
+    rating: rating?.rating ?? null,
+    ratedAt: rating?.ratedAt ?? null,
+    rd: rating?.rd ?? null,
+    best: rating?.best ?? null,
+  };
 }
 
 // --- attested --------------------------------------------------------------------------------------------------
@@ -73,6 +95,8 @@ export async function readChessStanding(username: string, mode: ChessMode, fetch
 export type AttestedChessReading = Readonly<{
   username: string;
   playerId: string;
+  /** What Chess.com says of the account, attested with the identity on every reading (U1). */
+  status: string;
   /** Present only on a reading taken with the name, the first one. */
   name: string | null;
   mode: ChessMode;
@@ -106,6 +130,8 @@ function chessError(error: unknown, ratingPattern: string, namePattern: string, 
     case "NO_MATCH":
       if (error.pattern === ratingPattern) return new ChessReadError("NO_RATING", "No rating in that cadence yet", { cause: error });
       if (error.pattern === namePattern) return new ChessReadError("NO_NAME", "That profile has no name", { cause: error });
+      // A profile without a readable status included: nothing is settled on a reading that could not see whether the
+      // account is closed, and PROOF_INVALID is the code the keeper holds a gift on.
       return new ChessReadError("PROOF_INVALID", "The profile did not carry what a reading needs", { cause: error });
     default:
       return new ChessReadError(error.code, error.message, { cause: error });
@@ -134,7 +160,10 @@ export async function attestChessRating(
   }
   const playerId = profile.values.playerId ?? "";
   const username = profile.values.username ?? "";
-  if (!/^\d{1,18}$/.test(playerId) || username.length === 0) throw new ChessReadError("PROOF_INVALID", "The profile reading is incomplete");
+  const status = profile.values.status ?? "";
+  if (!/^\d{1,18}$/.test(playerId) || username.length === 0 || status.length === 0) throw new ChessReadError("PROOF_INVALID", "The profile reading is incomplete");
+  // Read before the rating is looked at: a closed account can neither be bound nor reach a target (U1).
+  if (accountIsClosed(status)) throw new ChessReadError("ACCOUNT_CLOSED", "Chess.com has closed this account");
   // Both halves are about the name that was asked for, so one person's rating cannot be read under another's identity.
   if (username.toLowerCase() !== input.username.toLowerCase()) throw new ChessReadError("PROOF_MISMATCH", "The profile reading is about another name");
   const rating = Number(ratings.values.rating ?? "");
@@ -147,6 +176,7 @@ export async function attestChessRating(
   return {
     username,
     playerId,
+    status,
     name: input.withName ? (profile.values.name ?? "") : null,
     mode: input.mode,
     rating,

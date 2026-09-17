@@ -216,6 +216,22 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
     ],
   },
   {
+    screen: "A milestone gift's page, in the register's words",
+    file: "src/milestone-conditions.ts",
+    states: [
+      {
+        name: "The source closed the account",
+        when: "Chess.com closed the account a gift reads, which its public profile says (U1): no gesture is offered beside the sentence, and the gift goes back at the deadline",
+        says: ["Chess.com has closed this account, so this gift can no longer be earned."],
+      },
+      {
+        name: "Where the code goes",
+        when: "the recipient has a code to put in their name, and the register says where that field is",
+        says: ["On Chess.com, open Settings, then Profile. In Details, add this code to your first name, and save:"],
+      },
+    ],
+  },
+  {
     screen: "Money in the account, on the home page",
     file: "src/sentences.ts",
     states: [

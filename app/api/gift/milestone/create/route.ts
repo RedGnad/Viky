@@ -140,6 +140,7 @@ export async function POST(request: Request) {
       } catch (error) {
         if (error instanceof ChessReadError && error.code === "PROFILE_NOT_FOUND") throw new GiftApiError("NO_SUCH_PROFILE", `${milestone.words.refusals.notFound} Nothing was taken.`, 400);
         if (error instanceof ChessReadError && error.code === "INVALID_USERNAME") throw new GiftApiError("INVALID_USERNAME", milestone.words.refusals.nameShape, 400);
+        if (error instanceof ChessReadError && error.code === "ACCOUNT_CLOSED") throw new GiftApiError("ACCOUNT_CLOSED", `${milestone.words.refusals.closed} Nothing was taken.`, 409);
         throw new GiftApiError("SOURCE_UNAVAILABLE", `${milestone.words.refusals.unavailable} The gift was not made and nothing was taken.`, 503);
       }
       if (now.rating === null) throw new GiftApiError("NO_RATING", `${milestone.words.refusals.noRating(cadence.label)} Nothing was taken.`, 400);
