@@ -70,7 +70,7 @@ export async function relayCheckIn(sessionId: string, escrow: Hex): Promise<Rela
   const result = await relay("checkIn", [giftId, attestation], escrow);
   const credited = Number(eventArg(result, "CheckInAccepted", "creditedDays"));
   await recordRelayed({ giftId, kind: "check-in", sessionId, txHash: result.hash, blockNumber: result.receipt.blockNumber });
-  await recordDays(giftId, result);
+  await recordDays(giftId, result, sessionId);
   return { hash: result.hash, creditedDays: credited, alreadyRelayed: false };
 }
 
@@ -109,10 +109,13 @@ export async function relayFinalise(giftId: string, escrow: Hex): Promise<RelayR
  * Writes the days a transaction settled, from its own receipt. The transaction is final by now and the money has
  * moved, so a failed write never turns it into a failure: it is logged, the day falls back to the counts on screen,
  * and `scripts/backfill-days.ts` writes it again from the recorded transaction.
+ *
+ * A check-in also writes which verification session credited those days, which is what lets anybody follow a day
+ * earned back to the one claim that earned it (U2). A drain passes none: it read nothing.
  */
-async function recordDays(giftId: string, result: RelayResult): Promise<void> {
+async function recordDays(giftId: string, result: RelayResult, sessionId?: string): Promise<void> {
   try {
-    const written = await recordSettledDays(giftId, settledDaysFromLogs(giftId, result.receipt.logs), result.hash);
+    const written = await recordSettledDays(giftId, settledDaysFromLogs(giftId, result.receipt.logs), result.hash, sessionId);
     // The morning message goes from the record's own write and nowhere else, so a phone is told exactly what was
     // settled, once (N1). It cannot fail this: sending is caught inside.
     await tellAboutDays(giftId, written, liveTellingDeps());

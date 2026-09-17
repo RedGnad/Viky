@@ -7,7 +7,13 @@ import { HELP } from "../components/ui";
  * options or fewer). Native inputs, so the keyboard and the screen reader get them for free; each row is a full
  * tap target.
  */
-export type Choice<T extends string> = Readonly<{ value: T; label: string; help?: string }>;
+export type Choice<T extends string> = Readonly<{
+  value: T;
+  label: string;
+  help?: string;
+  /** A second line, quieter than the help: what choosing this option actually proves (src/condition-proof.ts). */
+  note?: string;
+}>;
 
 export function ChoiceList<T extends string>({
   name,
@@ -45,6 +51,7 @@ export function ChoiceList<T extends string>({
           <span className="flex flex-col">
             <span>{option.label}</span>
             {option.help ? <span className={HELP}>{option.help}</span> : null}
+            {option.note ? <span className={HELP}>{option.note}</span> : null}
           </span>
         </label>
       ))}

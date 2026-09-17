@@ -37,6 +37,7 @@
     "proof:transform": "tsx scripts/transform-duolingo-proof.ts",
     "register:goal": "tsx scripts/register-goal.ts",
     "count:gift": "tsx scripts/count-gift.ts",
+    "verify:day": "tsx scripts/verify-day.ts",
     "zkfetch:worker": "tsx scripts/zkfetch-worker.ts",
     "check:words": "tsx scripts/check-consumer-words.ts",
     "test:browser": "playwright test",

@@ -2664,3 +2664,30 @@ behind an account cannot be photographed any other way.
 - What this does not cover, written on the judges page as it is: a gift whose funder did not name the account has no
   course to choose from and counts the whole profile, as before; and the course, like the account name, is recorded by
   Viky rather than signed into the terms on the chain. The first reading is what pins it where nobody can move it.
+## D95, 18 Sep 2026: what a judge may re-verify, and what stays between the two people of a gift (U2)
+
+- Statement: everything that settles is published, and the thing that would name a person never is. For every settled
+  day of every gift, `/api/gift/<id>/journal` gives what happened, the transaction that settled it, and the
+  fingerprint of the claim it settled against. That fingerprint is already public: it is the nullifier the contract
+  stores so the same claim can never be used twice, `keccak("viky:zkfetch:" + claim identifier)`. The proof itself is
+  never in that answer: a Duolingo proof carries the account's name, its display name and its points, and Privacy
+  promises the public sees only a pseudonym.
+- The proof goes to two people and no one else. `/api/gift/<id>/proof?day=` and `?reading=` answer the funder and the
+  recipient of that gift, and refuse everybody else with a typed error (`NOT_IN_THIS_GIFT`, 403). On the gift's page,
+  "Check this day yourself" downloads that day and prints the one command that checks it: `pnpm verify:day --file`.
+  The command needs no key and no account. It recomputes the claim identifier from the signed claim, recovers the
+  attestor that signed it and compares it with the pinned one, recomputes the fingerprint, asks the contract whether
+  that fingerprint is recorded, and reads the transaction back.
+- One example is public, for judges, and it can only ever be one of Viky's own gifts: `exampleForJudges` takes the
+  operator's own accounts as an argument, so no other gift can be returned by it, whatever is asked. The account
+  holder agreed on 18 Sep 2026 that this one proof may be public. When there is no such day, the page says there is
+  none rather than showing a stand-in.
+- What a verified day proves: the source's own servers answered that, and the contract credited that day against that
+  one answer, which can never be replayed. What it does not prove: that the account belongs to the person the gift is
+  for, or that a human did the work. Reclaim writes the same about its attestor: a third party must trust that it did
+  not collude with the user.
+- The reliability figures are a journal, not an estimate. No table logged the passes, so `viky_passes` now takes one
+  row per pass (plan, start, end, readings attempted and answered, days held of our doing, errors). The judges page
+  counts from the day that journal was switched on and says which day that is. Nothing is back-filled: a pass that
+  never ran leaves no row, and shows as a run fewer, never as a late one. Days lost through our own fault are shown
+  as measured, beside the rule in the code that wants them to be zero.

@@ -11,6 +11,7 @@ import { checkSourceName, prepareGift, submitGift, type CreatedGift } from "@/sr
 import { loadOfferedConditions, prepareMilestoneGift, readStanding, submitMilestoneGift } from "@/src/client/milestone";
 import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY, isMilestoneRequest } from "@/src/gift-attempt";
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
+import { proofOfCondition } from "@/src/condition-proof";
 import { conditionById, liveConditions, type Condition } from "@/src/conditions";
 import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { cadenceOf, milestoneOf, type MilestoneCondition } from "@/src/milestone-conditions";
@@ -743,7 +744,13 @@ export function FundGift() {
           name="condition"
           legend={W.what.title}
           legendHidden
-          options={offered.map((entry) => ({ value: entry.id, label: entry.name, help: entry.live ? entry.help : `${entry.help} ${M.operatorOnly}` }))}
+          // Beside what each condition is, the one line saying what it proves, so a funder reads it before choosing (U2).
+          options={offered.map((entry) => ({
+            value: entry.id,
+            label: entry.name,
+            help: entry.live ? entry.help : `${entry.help} ${M.operatorOnly}`,
+            note: proofOfCondition(entry.id)?.inShort,
+          }))}
           value={condition?.id ?? null}
           onChange={(id) => {
             const chosen = offered.find((entry) => entry.id === id);

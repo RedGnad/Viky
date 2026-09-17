@@ -105,6 +105,15 @@ function parseJson(value: string, what: string): Record<string, unknown> {
 }
 
 /**
+ * The fingerprint of a claim: the nullifier the contract stores against replay, and the one thing about a proof that
+ * is safe to publish. It is derived from the claim's identifier alone, so anybody holding the proof can recompute it
+ * and compare it with what the chain accepted (scripts/verify-day.ts), and it says nothing about the person.
+ */
+export function claimFingerprint(identifier: string): Hex {
+  return keccak256(stringToHex(`viky:zkfetch:${identifier.toLowerCase()}`));
+}
+
+/**
  * Reads the profile out of a proof and checks the proof is about the expected request: the URL of the
  * public endpoint for that username, a GET, and a username that matches. Signature validity is the
  * verifier's job (`deps.verify`), done before this is called.
@@ -140,7 +149,7 @@ export function profileFromProof(proof: ZkFetchProof, expectedUsername: string):
     totalXp: Number(totalXp),
     streak: Number(streak),
     observedAt,
-    nullifier: keccak256(stringToHex(`viky:zkfetch:${identifier.toLowerCase()}`)),
+    nullifier: claimFingerprint(identifier),
     proof,
   };
 }
