@@ -6,7 +6,7 @@ import { canExpire, milestonePhase, type MilestoneState } from "../src/milestone
 import { milestonePass, type MilestonePassDeps } from "../src/milestone-pass";
 import type { MilestoneOutcome } from "../src/milestone-reading";
 import { MILESTONE_DORMANT_SECONDS, MILESTONE_PROOF_GRACE_SECONDS } from "../src/milestone-protocol";
-import { MILESTONE_ACTIONS } from "../src/sentences";
+import { MILESTONE_ACTIONS, MILESTONE_FUND } from "../src/sentences";
 
 const CONTRACT = "0x00000000000000000000000000000000000000c2" as const;
 const ZERO = `0x${"0".repeat(64)}` as const;
@@ -192,6 +192,21 @@ test("since D91 the only start refused is one already at the target, and the wor
   assert.match(mine, /Ask Maman for a new one/);
   assert.doesNotMatch(mine, /ceiling|maximum|above the/i, "no jargon, and no number nobody was ever shown");
   assert.match(MILESTONE_ACTIONS.startTooHighTheirs(1520, 1500, "Léa"), /Léa had already reached 1500 when they connected/);
+});
+
+test("before connecting, the recipient is told that only what comes after counts, and how long they then have", () => {
+  // The push to connect straight away is what makes a start already at the target rare, so it is on both cards
+  // the recipient can be on before the first reading, and the number of days is the gift's own.
+  assert.equal(MILESTONE_ACTIONS.connectNow(30), "Connect now: only what you reach after connecting counts. You then have 30 days.");
+  assert.equal(MILESTONE_ACTIONS.connectNow(1), "Connect now: only what you reach after connecting counts. You then have 1 day.");
+  const page = readFileSync("app/components/MilestoneGiftPage.tsx", "utf8");
+  assert.equal(page.match(/A\.connectNow\(status\.durationDays\)/g)?.length, 2, "the card asking for the code, and the card showing it");
+  // The funder's check keeps the fourteen days: the longest they can wait before it all comes back.
+  assert.equal(
+    MILESTONE_FUND.check.fourteenDays,
+    "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
+  );
+  assert.match(readFileSync("app/components/FundGift.tsx", "utf8"), /milestone \? M\.check\.fourteenDays : W\.check\.fourteenDays/);
 });
 
 test("the delays mirrored here are the contract's own", () => {
