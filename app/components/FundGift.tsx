@@ -7,12 +7,14 @@ import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { checkSourceName, prepareGift, submitGift, type CreatedGift } from "@/src/client/gift";
+import { prepareCertificateGift, submitCertificateGift } from "@/src/client/certificate-gift";
 import { loadOfferedConditions, prepareMilestoneGift, readStanding, submitMilestoneGift } from "@/src/client/milestone";
-import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY, isMilestoneRequest } from "@/src/gift-attempt";
+import { isValidDetScore, normaliseCertificateName } from "@/src/duolingo-english-test";
+import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY, isCertificateRequest, isMilestoneRequest } from "@/src/gift-attempt";
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
 import { conditionById, liveConditions, type Condition } from "@/src/conditions";
 import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
-import { cadenceOf, milestoneOf, type MilestoneCondition } from "@/src/milestone-conditions";
+import { cadenceOf, certificateOf, milestoneOf, type MilestoneCondition } from "@/src/milestone-conditions";
 import { checkTarget, inPlainWords, MilestoneTermsError, smallestTarget } from "@/src/milestone-terms";
 import { whenInWords } from "@/src/display-currency";
 import { twoDecimalsDown } from "@/src/exit-steps";
@@ -160,11 +162,11 @@ function unitsOf(dollars: string): { units: bigint | null; refusal: string | und
   }
 }
 
-function daysOf(days: string, milestone?: MilestoneCondition): { days: number | null; refusal: string | undefined } {
-  if (milestone) {
-    const { min, max } = milestone.duration;
+function daysOf(days: string, bounded?: { duration: { min: number; max: number }; words: { durationShape: (min: number, max: number) => string } }): { days: number | null; refusal: string | undefined } {
+  if (bounded) {
+    const { min, max } = bounded.duration;
     const value = Number(days.trim());
-    return /^\d{1,3}$/.test(days.trim()) && value >= min && value <= max ? { days: value, refusal: undefined } : { days: null, refusal: milestone.words.durationShape(min, max) };
+    return /^\d{1,3}$/.test(days.trim()) && value >= min && value <= max ? { days: value, refusal: undefined } : { days: null, refusal: bounded.words.durationShape(min, max) };
   }
   if (!/^\d{1,3}$/.test(days.trim())) return { days: null, refusal: W.amount.refusals.daysShape };
   const value = Number(days.trim());
@@ -246,10 +248,14 @@ export function FundGift() {
   const condition = draft.conditionId ? offered.find((entry) => entry.id === draft.conditionId) : undefined;
   const nameLink = condition?.link.kind === "username" ? condition.link : undefined;
   const milestone = milestoneOf(condition);
+  // The other shape of milestone: something granted once, with a day on it. It asks for a name and a score, and
+  // nothing about where anybody stands, because no page says "not yet obtained" (D47).
+  const certificate = certificateOf(condition);
+  const bounded = milestone ?? certificate;
   const cadence = milestone ? cadenceOf(milestone, draft.cadence) : undefined;
   // The condition's own detail: the name a source reads, and what counts as a day or the rating to reach (structure,
   // section 5, step 3).
-  const hasDetail = Boolean(nameLink || condition?.target || milestone);
+  const hasDetail = Boolean(nameLink || condition?.target || milestone || certificate);
   const numbered: Step[] = ["who", "what", ...(hasDetail || !condition ? (["detail"] as Step[]) : []), "amount", "check"];
 
   const recipientRefusal = nameRefusal(giftNameProblem(draft.recipientName), W.who.refusals.recipientEmpty);
@@ -257,12 +263,19 @@ export function FundGift() {
   const namesReady = !recipientRefusal && !funderRefusal;
   const shapeRefusal = nameLink?.check && draft.username.trim() !== "" && !nameLink.check.valid(draft.username.trim()) ? nameLink.check.refusals.shape : undefined;
   const amount = unitsOf(draft.dollars);
-  const length = daysOf(draft.days, milestone);
+  const length = daysOf(draft.days, bounded);
   const daily = targetOf(condition, draft.target);
   // A reading counts only for the name and the cadence it was taken for.
   const standingFresh = milestone !== undefined && draft.standing !== null && draft.standingFor === standingKey(draft.username, draft.cadence);
   const climb = climbOf(milestone, standingFresh ? draft.standing : null, draft.target);
-  const detailReady = milestone ? standingFresh && climb.target !== null && cadence !== undefined : daily.target !== null;
+  const personName = draft.username.trim();
+  const certificateName = certificate && normaliseCertificateName(personName).split(" ").filter(Boolean).length >= 2;
+  const certificateTarget = certificate && isValidDetScore(Number(draft.target));
+  const detailReady = milestone
+    ? standingFresh && climb.target !== null && cadence !== undefined
+    : certificate
+      ? Boolean(certificateName && certificateTarget)
+      : daily.target !== null;
   const amountReady = amount.units !== null && length.days !== null;
   const termsReady = amountReady && detailReady;
   const perDay = amount.units !== null && length.days !== null ? amount.units / BigInt(length.days) : null;
@@ -423,6 +436,18 @@ export function FundGift() {
       ...(milestone ? { target: climb.target ?? 0, standing: draft.standing ?? 0 } : {}),
     };
     let request = attemptFor(readSession(GIFT_ATTEMPT_KEY), terms);
+    if (!request && certificate) {
+      request = await prepareCertificateGift({
+        account,
+        certificate,
+        personName,
+        target: Number(draft.target),
+        durationDays: length.days,
+        amount: amount.units,
+        recipientName: recipient,
+        funderName: funder,
+      });
+    }
     if (!request && milestone) {
       if (!cadence || draft.standing === null || climb.target === null) throw new Error(W.failures.other);
       request = await prepareMilestoneGift({
@@ -457,7 +482,12 @@ export function FundGift() {
     writeSession(GIFT_ATTEMPT_KEY, { terms, request });
     let result: CreatedGift;
     try {
-      result = isMilestoneRequest(request) ? await submitMilestoneGift(request) : await submitGift(request);
+      // Three shapes of gift, three creations, and the attempt kept is whichever one was signed (D87).
+      result = isCertificateRequest(request)
+        ? await submitCertificateGift(request)
+        : isMilestoneRequest(request)
+          ? await submitMilestoneGift(request)
+          : await submitGift(request);
     } catch (error) {
       if (error instanceof ApiError && forgetsAttempt(error.code)) writeSession(GIFT_ATTEMPT_KEY, null);
       throw error;
@@ -472,6 +502,7 @@ export function FundGift() {
       amount: amount.units.toString(),
       days: length.days,
       ...(milestone && cadence && climb.target !== null ? { goal: milestone.words.goal(climb.target, cadence.label), target: climb.target } : {}),
+      ...(certificate && certificateTarget ? { goal: certificate.words.goal(Number(draft.target)), target: Number(draft.target) } : {}),
     };
     writeSession(MADE_KEY, record);
     // This device keeps the link, so the gift's page can offer it again long after this screen is gone.
@@ -484,7 +515,7 @@ export function FundGift() {
     setDraft(EMPTY_DRAFT);
     replace("done");
     window.scrollTo(0, 0);
-  }, [ensureSigner, condition, milestone, cadence, climb.target, draft.standing, draft.standingReadAt, draft.course, amount.units, length.days, daily.target, draft.username, recipient, funder]);
+  }, [ensureSigner, condition, milestone, certificate, certificateTarget, draft.target, personName, cadence, climb.target, draft.standing, draft.standingReadAt, draft.course, amount.units, length.days, daily.target, draft.username, recipient, funder]);
 
   // While paying: watch the account, turn what arrived into what a gift holds, then make the gift.
   useEffect(() => {
@@ -774,13 +805,18 @@ export function FundGift() {
           onChange={(id) => {
             const chosen = offered.find((entry) => entry.id === id);
             if (!chosen) return;
-            const chosenMilestone = milestoneOf(chosen);
-            // Moving between a daily condition and a milestone changes what the target and the days mean.
-            const sameKind = condition?.kind === chosen.kind;
+            const chosenCertificate = certificateOf(chosen);
+            const chosenBounded = milestoneOf(chosen) ?? chosenCertificate;
+            // Three shapes, three meanings for the same three fields: a daily target is not a rating to reach and not
+            // a score on an exam, a name is a username on one source or a person's legal name on a certificate, and
+            // the days are bounded differently. Anything carried over from another shape would be wrong, so nothing is.
+            const shapeOf = (entry: typeof chosen | undefined) => (!entry ? "none" : certificateOf(entry) ? "certificate" : milestoneOf(entry) ? "climb" : "daily");
+            const sameShape = shapeOf(condition) === shapeOf(chosen);
             update({
               conditionId: id,
-              target: sameKind ? draft.target : chosen.target ? String(chosen.target.suggested) : "",
-              days: sameKind ? draft.days : String(chosenMilestone ? chosenMilestone.duration.suggested : 7),
+              target: sameShape ? draft.target : String(chosenCertificate?.target.suggested ?? chosen.target?.suggested ?? ""),
+              days: sameShape ? draft.days : String(chosenBounded ? chosenBounded.duration.suggested : 7),
+              username: sameShape ? draft.username : "",
             });
           }}
         />
@@ -905,6 +941,49 @@ export function FundGift() {
   // ---------------------------------------------------------------------------------------------------------------
   // The condition's own detail: for a source read by name, that name, checked before any money moves (decision 10);
   // for a daily condition, what counts as a day.
+  // A certificate's detail (U3): the name the certificate will carry, and the score to reach. Nothing is read here,
+  // because the page a certificate has does not exist until the test has been sat.
+  if (step === "detail" && condition && certificate) {
+    const nameRefusal = personName !== "" && !certificateName ? certificate.words.refusals.nameShape : undefined;
+    const targetRefusal = draft.target.trim() !== "" && !certificateTarget ? certificate.words.refusals.targetShape : undefined;
+    return (
+      <Shell kind="task" back="/" caption={caption("detail")} step={certificate.words.detailQuestion}>
+        <form
+          className="flex flex-col gap-[var(--space-xl)]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (detailReady) go("amount");
+            else setTouched((current) => ({ ...current, target: true }));
+          }}
+        >
+          <Field
+            id="person-name"
+            label={certificate.words.nameLabel}
+            help={certificate.words.nameHelp}
+            value={draft.username}
+            onChange={(value) => update({ username: value })}
+            refusal={touched.target || personName !== "" ? nameRefusal : undefined}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <Field
+            id="certificate-target"
+            label={certificate.target.label}
+            help={certificate.target.help}
+            value={draft.target}
+            onChange={(value) => update({ target: value })}
+            refusal={targetRefusal}
+            onBlur={() => setTouched((current) => ({ ...current, target: true }))}
+            inputMode="numeric"
+          />
+          <button type="submit" disabled={!detailReady} className={PRIMARY_BUTTON}>
+            {W.continue}
+          </button>
+        </form>
+      </Shell>
+    );
+  }
+
   if (step === "detail" && condition && hasDetail) {
     const typed = draft.username.trim();
     const refusal = shapeRefusal ?? (nameCheck.checked === undefined && nameCheck.refusal ? nameCheck.refusal : undefined);
@@ -1006,7 +1085,7 @@ export function FundGift() {
   if (step === "amount" && condition) {
     const about = amount.units !== null ? money.about(amount.units) : undefined;
     return (
-      <Shell kind="task" back="/" caption={caption("amount")} step={milestone ? M.amount.title : W.amount.title}>
+      <Shell kind="task" back="/" caption={caption("amount")} step={bounded ? M.amount.title : W.amount.title}>
         <form
           className="flex flex-col gap-[var(--space-xl)]"
           onSubmit={(event) => {
@@ -1026,8 +1105,8 @@ export function FundGift() {
           />
           <Field
             id="gift-days"
-            label={milestone ? milestone.words.durationLabel : W.amount.daysLabel}
-            help={milestone ? milestone.words.durationHelp : W.amount.daysHelp}
+            label={bounded ? bounded.words.durationLabel : W.amount.daysLabel}
+            help={bounded ? bounded.words.durationHelp : W.amount.daysHelp}
             value={draft.days}
             onChange={(value) => update({ days: value })}
             refusal={draft.days.trim() === "" && !touched.days ? undefined : length.refusal}
@@ -1036,11 +1115,11 @@ export function FundGift() {
           />
           {/* What one day is worth, live, computed from what they typed and never stored, so it cannot disagree. A milestone
               has no days to share it over: all of it, when they reach it. */}
-          {milestone ? (
+          {bounded ? (
             <section className={CARD} aria-live="polite">
               <p className={HELP}>{condition.words.earnedDay}</p>
               <p className={MONEY}>{amount.units === null ? "…" : formatAusd(amount.units)}</p>
-              <p className={HELP}>{milestone.words.ifNot}</p>
+              <p className={HELP}>{bounded.words.ifNot}</p>
             </section>
           ) : (
             <section className={CARD} aria-live="polite">
@@ -1100,7 +1179,20 @@ export function FundGift() {
             { label: M.check.rows.ifNot, value: M.check.allBack },
           ]
         : [];
-    const rows: Array<{ label: string; value: string; note?: string; change?: Step }> = milestone ? climbRows : [
+    const certificateRows: Array<{ label: string; value: string; note?: string; change?: Step }> =
+      certificate && certificateName && certificateTarget
+        ? [
+            { label: W.check.rows.for, value: recipient, change: "who" },
+            { label: W.check.rows.from, value: funder, change: "who" },
+            { label: W.check.rows.what, value: condition.name, change: "what" },
+            { label: certificate.words.nameLabel, value: personName, change: "detail" },
+            { label: M.check.rows.reach, value: certificate.target.inWords(Number(draft.target)), change: "detail" },
+            { label: M.check.rows.goes, value: gift, note: about, change: "amount" },
+            { label: M.check.rows.long, value: certificate.words.durationInWords(days), change: "amount" },
+            { label: M.check.rows.ifNot, value: M.check.allBack },
+          ]
+        : [];
+    const rows: Array<{ label: string; value: string; note?: string; change?: Step }> = milestone ? climbRows : certificate ? certificateRows : [
       { label: W.check.rows.for, value: recipient, change: "who" },
       { label: W.check.rows.from, value: funder, change: "who" },
       { label: W.check.rows.what, value: condition.name, change: "what" },
@@ -1138,6 +1230,12 @@ export function FundGift() {
             <>
               <p className={BODY}>{M.check.howItWorks(condition.source, climb.target, settlingTimeInWords(nowMs))}</p>
               <p className={BODY}>{M.check.whyCeiling(climb.target)}</p>
+            </>
+          ) : certificate && certificateTarget ? (
+            <>
+              {/* What the certificate has to show, and what happens if none arrives: both said before anything is paid. */}
+              <p className={BODY}>{certificate.words.mustShow(personName, Number(draft.target))}</p>
+              <p className={BODY}>{certificate.words.ifNot}</p>
             </>
           ) : (
             <p className={BODY}>{W.check.missed(settlingTimeInWords(nowMs))}</p>

@@ -2840,3 +2840,14 @@ behind an account cannot be photographed any other way.
   the same clause the daily Duolingo reading already runs under, and a written request is the honest move.
 - Lichess is prepared at the same time and offers nothing yet: four goals, numbered above Chess.com's, waiting in the
   same registration session. Coursera comes after.
+- **The two screens, 18 Sep 2026.** The funder's flow gained the shape it was missing: the step that asks what they
+  will do offers the supervised result to an account that runs Viky, the detail step asks the name the certificate
+  will carry and the score to reach, the amount step bounds the days at 180, and the review says in one line what the
+  certificate has to show and what happens if none arrives. The recipient's page asks for the link, names the button
+  on Duolingo's own site that makes it public, says what is read and what is never kept, and answers each refusal in
+  its own words: taken private again, expired, another name, under the score, outside the days.
+- Nothing is read on the funder's side, because there is nothing to read: the page a certificate has does not exist
+  until the test has been sat. That is the whole difference from a climb, and it is why this shape has no ceiling.
+- The recipient's link is read plainly first and proved second, so a link that cannot pay is answered before anything
+  touches the contract. The alias is never stored: it is a key to a page carrying a date of birth and a photograph,
+  and nothing ever needs to read it again, because one reading settles the whole gift.

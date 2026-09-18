@@ -1,3 +1,4 @@
+import type { CertificateGiftRequest } from "./client/certificate-gift";
 import type { GiftRequest } from "./client/gift";
 import type { MilestoneGiftRequest } from "./client/milestone";
 
@@ -27,7 +28,8 @@ export type AttemptTerms = Readonly<{
   standing?: number;
 }>;
 
-export type AnyGiftRequest = GiftRequest | MilestoneGiftRequest;
+/** A certificate gift is signed the same way and kept the same way: one signature per set of terms (D87). */
+export type AnyGiftRequest = GiftRequest | MilestoneGiftRequest | CertificateGiftRequest;
 
 export type KeptAttempt = Readonly<{ terms: AttemptTerms; request: AnyGiftRequest }>;
 
@@ -65,6 +67,11 @@ export function forgetsAttempt(code: string | undefined): boolean {
 }
 
 /** Whether a kept request is a milestone gift's, which goes to its own route. */
+/** A certificate gift carries the name the certificate must show; a climb carries a cadence and a standing. */
+export function isCertificateRequest(request: AnyGiftRequest): request is CertificateGiftRequest {
+  return "personName" in request;
+}
+
 export function isMilestoneRequest(request: AnyGiftRequest): request is MilestoneGiftRequest {
-  return "conditionId" in request;
+  return "conditionId" in request && !isCertificateRequest(request);
 }

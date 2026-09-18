@@ -23,6 +23,10 @@ import { MONAD_CHAIN_ID, monadChain, monadRpcUrl, waitForFinality } from "../src
  *
  * Run it empty first: `DRY_RUN=1 pnpm register:milestone-goals` prints the plan and sends nothing.
  * Check it any time, from any machine, with no key at all: `pnpm check:milestone-goals`.
+ *
+ * `pnpm prepare:milestone-goals` writes the calls out instead of sending them: one `to`, `data` and gas per goal, to
+ * be signed from the owner's own wallet. That is the way the session is meant to run, because the owner is a wallet
+ * the founder holds and not a key in a file: nothing here ever needs that key.
  */
 
 const abi = milestoneGiftAbi as unknown as Abi;
@@ -85,6 +89,20 @@ async function main() {
   const fees = await publicClient.estimateFeesPerGas();
   const perGas = fees.maxFeePerGas ?? (await publicClient.getGasPrice());
   console.log(JSON.stringify({ toSend: missing.length, gasEach: gas.toString(), costAtMost: (gas * perGas * BigInt(missing.length)).toString() }));
+
+  // The calls, written out for the owner to sign from their own wallet. Nothing is sent and no key is read.
+  if (process.env.WALLET === "1") {
+    const calls = missing.map((goal) => ({
+      step: `register ${goal.source} ${goal.detail} as ${shapeInWords(goal.shape)}`,
+      to: address,
+      value: "0",
+      gas: gas.toString(),
+      data: encodeFunctionData({ abi, functionName: "registerGoal", args: [goal.goalType, goal.providerId, goal.shape] }),
+    }));
+    console.log(JSON.stringify({ chainId: MONAD_CHAIN_ID, from: await publicClient.readContract({ address, abi, functionName: "owner" }), calls }, null, 2));
+    console.log("Sign these from the owner's wallet, in this order, then run `pnpm check:milestone-goals`.");
+    return;
+  }
   if (process.env.DRY_RUN === "1") {
     console.log("DRY_RUN: nothing was sent");
     return;

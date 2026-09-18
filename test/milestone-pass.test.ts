@@ -5,7 +5,7 @@ import { COUNTING_PASS, dailyPass, SETTLING_PASS, type DailyPassDeps } from "../
 import { canExpire, milestonePhase, type MilestoneState } from "../src/milestone-reader";
 import { milestonePass, type MilestonePassDeps } from "../src/milestone-pass";
 import type { MilestoneOutcome } from "../src/milestone-reading";
-import { MILESTONE_DORMANT_SECONDS, MILESTONE_PROOF_GRACE_SECONDS } from "../src/milestone-protocol";
+import { MILESTONE_DORMANT_SECONDS, MILESTONE_PROOF_GRACE_SECONDS, ZERO_SUBJECT } from "../src/milestone-protocol";
 import { MILESTONE_ACTIONS, MILESTONE_FUND } from "../src/sentences";
 
 const CONTRACT = "0x00000000000000000000000000000000000000c2" as const;
@@ -24,6 +24,7 @@ const CLIMBING: MilestoneState = {
   goalType: 1,
   shape: 0,
   target: 1500n,
+  subject: ZERO_SUBJECT,
   maximumStart: 1430n,
   durationDays: 30,
   amount: 25_000_000n,

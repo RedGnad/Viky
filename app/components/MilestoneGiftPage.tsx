@@ -15,6 +15,7 @@ import { GIFT_PAGE as G, MILESTONE_ACTIONS as A, MILESTONE_PAGE as W, NAV } from
 import { CheckThisReading } from "../kit/CheckThisReading";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { GiftCard } from "../kit/GiftCard";
+import { CertificateProof } from "../kit/CertificateProof";
 import { MorningMessage } from "../kit/MorningMessage";
 import { Shell } from "../kit/Shell";
 import { AccountPanel } from "./AccountPanel";
@@ -73,6 +74,7 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
   const condition = conditionById(status.conditionId);
   const milestone = milestoneById(status.conditionId);
   const source = condition?.source ?? "";
+  const certificate = status.shape === "certificate";
   const readerIsFunder = status.youAreTheFunder;
   const mine = status.youAreTheRecipient;
   const funder = status.names?.funderName ?? null;
@@ -170,22 +172,30 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
       <section className={CARD}>
         <p className="font-medium">{W.target(status.target, source)}</p>
         {/* The rule is a promise about the future; once the keeper read it reached, or the deadline passed, the outcome says what happened instead. */}
-        {status.reached || status.finished || !readTime ? null : (
+        {status.reached || status.finished || !readTime || certificate ? null : (
           <p className={BODY}>{readerIsFunder ? W.ruleTheirs(status.target, by, readTime) : W.ruleYours(status.target, by, readTime)}</p>
         )}
-        {/* The card above carries the meter and today's figure; this says where the climb started and when it was read. */}
-        {status.startReading !== null ? <p className={HELP}>{W.startedAt(status.startReading)}</p> : null}
-        <p className={HELP}>
-          {status.readAtMs !== null && nowMs !== 0 ? W.lastRead(momentInWords(status.readAtMs, nowMs)) : readerIsFunder ? W.notReadYetTheirs(source) : W.notReadYetYours(source)}
-        </p>
+        {/* The card above carries the meter and today's figure; this says where the climb started and when it was read.
+            A certificate has neither: nothing is read until its holder shares the page, and one reading settles it. */}
+        {!certificate && status.startReading !== null ? <p className={HELP}>{W.startedAt(status.startReading)}</p> : null}
+        {certificate ? null : (
+          <p className={HELP}>
+            {status.readAtMs !== null && nowMs !== 0 ? W.lastRead(momentInWords(status.readAtMs, nowMs)) : readerIsFunder ? W.notReadYetTheirs(source) : W.notReadYetYours(source)}
+          </p>
+        )}
         <p className={status.reached || status.finished ? "font-medium" : HELP}>{outcome}</p>
-        {status.phase === "climbing" && mine && !status.accountClosed ? (
+        {!certificate && status.phase === "climbing" && mine && !status.accountClosed ? (
           <button type="button" onClick={() => void check()} disabled={working} className={SECONDARY_BUTTON}>
             {busy === "checking" ? A.checking : A.checkNow}
           </button>
         ) : null}
         <MorningMessage giftId={status.giftId} yours={mine || readerIsFunder} />
       </section>
+
+      {/* A supervised result is proved once, by the page its holder shares (U3). */}
+      {certificate && status.opened && !status.finished ? (
+        <CertificateProof giftId={status.giftId} conditionId={status.conditionId} yours={mine} onProved={() => reload?.()} />
+      ) : null}
 
       {!address && !status.cancelled ? (
         <section className="flex flex-col gap-[var(--space-md)]">

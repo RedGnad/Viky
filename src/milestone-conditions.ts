@@ -174,11 +174,17 @@ export type CertificateCondition = Readonly<{
     /** The name the funder types, which the certificate must carry for the gift to pay. */
     nameLabel: string;
     nameHelp: string;
-    /** What the recipient is asked for on their own page. */
+    /** What the recipient is asked for on their own page, and where they find it on the source's own site. */
     linkLabel: string;
     linkHelp: string;
+    /** What Viky reads from the page, and what it does not keep: said before the link is pasted, not after. */
+    whatIsRead: string;
+    check: string;
+    checking: string;
     /** What the gift pays for, on the check screen. */
     goal: (target: number) => string;
+    /** The review, in one line: what the certificate has to show for this gift to pay. */
+    mustShow: (name: string, target: number) => string;
     durationLabel: string;
     durationHelp: string;
     durationShape: (min: number, max: number) => string;
@@ -224,8 +230,14 @@ export const DET_MILESTONE: CertificateCondition = {
     nameLabel: "Their full name, as on their identity document",
     nameHelp: "The certificate prints the name they sat the test under. If it does not match, the gift cannot pay.",
     linkLabel: "The link to your certificate",
-    linkHelp: "Open your certificate, press Get Shareable Link, and paste the link here.",
+    linkHelp: 'In your Duolingo English Test account, open your certificate and press "Get Shareable Link". That is what makes the page public, and it is the link to paste here.',
+    whatIsRead:
+      "Viky reads three things from that page: your score, the day of the test, and the name printed on it. It keeps those with the gift and nothing else. Your date of birth and your photograph are on the same page and are never asked for, received or kept.",
+    check: "Check my certificate",
+    checking: "Reading your certificate",
     goal: (target) => `Reach ${target} on the test`,
+    mustShow: (name, target) =>
+      `The certificate has to be in the name ${name}, show ${target} or more, and carry a test date inside these days. Nothing else is read from it.`,
     durationLabel: "How long do they have?",
     durationHelp: "The test must be taken inside that time, and the day on the certificate is what counts.",
     durationShape: (min, max) => `Between ${min} and ${max} days.`,
@@ -258,4 +270,9 @@ export function certificateOf(condition: Condition | undefined): CertificateCond
 
 export function certificateById(conditionId: string): CertificateCondition | undefined {
   return certificateOf(conditionById(conditionId));
+}
+
+/** The certificate condition a gift's goal type on the contract stands for, which is how a reading finds its words. */
+export function certificateOfGoal(goalType: number): CertificateCondition | undefined {
+  return CERTIFICATES.find((entry) => entry.goalType === goalType);
 }

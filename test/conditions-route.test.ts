@@ -3,7 +3,7 @@ import test from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
 import { GET as conditions } from "../app/api/conditions/route";
 import { ACCOUNT_AUTH_COOKIE_NAME, createAccountAuthChallenge, issueAccountAuthSession } from "../src/account-auth-server";
-import { CHESS_MILESTONE } from "../src/milestone-conditions";
+import { CHESS_MILESTONE, DET_MILESTONE } from "../src/milestone-conditions";
 
 /**
  * Which conditions a person may offer. The Chess.com rehearsal hangs on this route: a condition that is wired and not
@@ -41,7 +41,11 @@ async function answerFor(cookie?: string): Promise<{ ids: string[]; preview: str
 
 test("an account that runs Viky is offered the condition that is wired and not live yet", async () => {
   const answer = await answerFor(await cookieFor(OPERATOR));
-  assert.deepEqual(answer.preview, [CHESS_MILESTONE.condition.id], "this is what reopens the Chess.com rehearsal");
+  assert.deepEqual(
+    answer.preview,
+    [CHESS_MILESTONE.condition.id, DET_MILESTONE.condition.id],
+    "the Chess.com rehearsal, and the supervised result whose first gift has to be made by somebody",
+  );
   assert.ok(answer.ids.includes("duolingo-daily"), "and the live ones are there for everybody");
 });
 
@@ -50,6 +54,7 @@ test("everybody else is offered the live conditions and nothing else", async () 
     const answer = await answerFor(cookie);
     assert.deepEqual(answer.preview, [], "a signed-in stranger and a stranger get the same answer here");
     assert.ok(!answer.ids.includes(CHESS_MILESTONE.condition.id));
+    assert.ok(!answer.ids.includes(DET_MILESTONE.condition.id), "a condition that is not live is in nobody else's list");
   }
 });
 
