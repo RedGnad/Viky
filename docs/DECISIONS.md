@@ -2781,3 +2781,30 @@ behind an account cannot be photographed any other way.
   reads "Signed in on this device." and, under it, that the passkey is asked again the moment money moves.
 - The mismatch case is kept explicit: if the key that opens derives another account than the cookie names, the
   browser is signed in again as that account. A screen showing one account while the key signs another never happens.
+
+## D99, 18 Sep 2026: a gift's page has a third reader, and they are told the truth from the title down
+
+- Found in production by the founder: signed in as neither of the two people of gift 1, `/g/1` read "$20.00 is in your
+  name". The page had two cases, the funder and the person the gift is for, and gave a third reader the second one's
+  words, with a single line at the bottom saying the gift had already been opened by somebody else.
+- Statement: there is a third voice, and it is the one a judge meets. From the title down, a reader who is neither of
+  the two reads the gift in the third person: what it is, who it is between, and where it stands. The card at the head
+  of the page names both sides ("From Maman, for Ama") instead of addressing the reader, the amounts line says "theirs"
+  and "gone back" rather than "yours", and a day that went back says "gone back" rather than "back to you".
+- Who is a reader: whoever meets a gift that is already opened and is neither its funder nor the person it is for.
+  Before a gift is opened, whoever holds the link **is** the person it is for, because the link is the key and opening
+  it is what makes them that person, so a reader never meets an unopened gift.
+- Two different questions, answered separately (`src/gift-voice.ts`). The words need no account: a reader with no
+  account may be the person the gift is for, coming back to sign in, and the third person is the only thing true of
+  both. Saying "this gift is not yours" needs one: it is said only to somebody signed in as neither of the two, with
+  the two names beside it.
+- No gesture: opening, connecting the account, asking for a reading now, taking the money, downloading the proof of a
+  day, being told each morning, copying the link again. Every one of them now reads from `gesturesFor(voice, gift)`
+  rather than from a condition of its own, so a reader cannot be offered one by an oversight in the tenth condition.
+  A test walks all seven for the three voices, and a gift taken back before it was opened offers none to anybody.
+- Also on the judges page (`src/judges-gifts.ts`): gifts 1 and 2 were made and opened on `viky-two.vercel.app`, before
+  `viky.cash` served the app. A passkey is bound to the hostname it was created on, so that account cannot sign in
+  here and the app cannot show its gifts. A judge reading the contract would find two gifts the app never mentions and
+  read an inconsistency where there is a hostname. The page now says it, and reads every figure of those two gifts
+  from the contract while it is served: days earned, days gone back, days not settled yet, what was taken out, what
+  went back, and each settled day by its date.

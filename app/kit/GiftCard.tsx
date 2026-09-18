@@ -67,6 +67,7 @@ export function GiftCard({ gift, milestone: given, still = false, example = fals
 
 /** For whom, on the funder's side; from whom, on the recipient's. The names given when it was offered come first. */
 export function whoInWords(gift: Pick<GiftSummary, "role" | "recipientName" | "funderName" | "goalUsername">): string {
+  if (gift.role === "reader") return W.fromFor(gift.funderName, gift.recipientName ?? gift.goalUsername);
   if (gift.role === "recipient") return gift.funderName ? W.fromName(gift.funderName) : W.forYou;
   if (gift.recipientName) return W.forName(gift.recipientName);
   return gift.goalUsername ? W.forName(gift.goalUsername) : W.forWhoever;
@@ -75,6 +76,7 @@ export function whoInWords(gift: Pick<GiftSummary, "role" | "recipientName" | "f
 /** One line of amounts: the terms until a day is counted, then how much of the whole is theirs and how much came back. */
 export function amountsInWords(gift: GiftSummary, started: boolean): string {
   if (!started || gift.cancelled) return W.amountDaily(gift.amountDisplay, gift.perDayDisplay, gift.durationDays);
+  if (gift.role === "reader") return W.theirsGoneBack(gift.theirsDisplay, gift.amountDisplay, gift.returnedDisplay);
   return gift.role === "recipient"
     ? W.yoursOf(gift.theirsDisplay, gift.amountDisplay, gift.returnedDisplay)
     : W.theirsOf(gift.theirsDisplay, gift.amountDisplay, gift.returnedDisplay);

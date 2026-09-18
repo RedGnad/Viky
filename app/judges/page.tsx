@@ -6,6 +6,7 @@ import { DISPLAY, TITLE } from "../components/ui";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadRpcUrl } from "@/src/monad/chain";
 import { JudgesConditions } from "./JudgesConditions";
 import { JudgesContracts } from "./JudgesContracts";
+import { JudgesEarlyGifts } from "./JudgesEarlyGifts";
 import { JudgesReliability } from "./JudgesReliability";
 import { JudgesVerify } from "./JudgesVerify";
 
@@ -100,6 +101,8 @@ export default function JudgesPage() {
       <JudgesVerify />
 
       <JudgesContracts />
+
+      <JudgesEarlyGifts />
 
       <section className="space-y-[var(--space-sm)]">
         <h2 className={TITLE}>How a day is read</h2>

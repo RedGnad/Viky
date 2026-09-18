@@ -30,14 +30,21 @@ export function DayRow({
   gift,
   catchUpSeconds,
   records,
-  readerIsFunder,
-}: Readonly<{ id: string; gift: Shape; catchUpSeconds: number; records: readonly { day: number; outcome: "earned" | "returned" }[]; readerIsFunder: boolean }>) {
+  voice,
+}: Readonly<{
+  id: string;
+  gift: Shape;
+  catchUpSeconds: number;
+  records: readonly { day: number; outcome: "earned" | "returned" }[];
+  /** Who is reading: a day that went back went back to them, to you, or, for a reader of neither side, just back. */
+  voice: "funder" | "recipient" | "reader";
+}>) {
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   if (nowMs === 0 || gift.startDay === 0) return null;
   const numbers = giftDays(gift, catchUpSeconds, nowMs).days.map((day) => day.dayNumber);
   const states = stripOf(gift, catchUpSeconds, nowMs, records);
-  const words = (state: (typeof states)[number]) =>
-    state === "returned" ? (readerIsFunder ? W.dayWords.returnedTheirs : W.dayWords.returnedYours) : W.dayWords[state];
+  const returned = voice === "funder" ? W.dayWords.returnedTheirs : voice === "recipient" ? W.dayWords.returnedYours : W.dayWords.returnedReading;
+  const words = (state: (typeof states)[number]) => (state === "returned" ? returned : W.dayWords[state]);
   return (
     <div className="@container">
       <ol className="grid grid-cols-4 gap-x-[var(--space-sm)] gap-y-[var(--space-lg)] @[420px]:grid-cols-7" aria-label={W.daysLabel}>
