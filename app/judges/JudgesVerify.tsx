@@ -1,6 +1,7 @@
 import { operatorAccounts } from "@/src/dev-access";
 import { exampleForJudges } from "@/src/proof-journal";
 import { TITLE } from "../components/ui";
+import { dateOfDay } from "@/src/day-record";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -32,8 +33,8 @@ export async function JudgesVerify() {
         <>
           <p className={HELP}>
             One example is public in full, from a gift of Viky&apos;s own, published with the account holder&apos;s
-            agreement: gift {example.giftId}, day {example.day}. Take it and check it, from a clone of this repository,
-            with no key and no account:
+            agreement: gift {example.giftId}, the day of {dateOfDay(example.day)}. Take it and check it, from a clone
+            of this repository, with no key and no account:
           </p>
           <code className={CODE}>pnpm verify:day</code>
           <p className={MUTED}>

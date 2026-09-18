@@ -143,6 +143,9 @@ test("the proof of a day goes to the funder and to the recipient, and to nobody 
   const kept = await proofOfDay("7", 20345);
   assert.equal(kept?.fingerprint, FINGERPRINT);
   assert.deepEqual(kept?.proof, { claimData: { identifier: "0xabc" } });
+  // The contract that holds the gift travels with the proof: the command that checks it asks the chain, and a judge
+  // or a funder running it from a fresh clone has nothing configured to tell it where to ask.
+  assert.equal(kept?.escrow, "0x00000000000000000000000000000000000000e1");
   assert.equal(await proofOfDay("7", 20346), null, "a day that went back has no proof to give");
 
   for (const account of [FUNDER, RECIPIENT]) {
@@ -167,6 +170,7 @@ test("the example a judge may replay is only ever one of Viky's own gifts", asyn
   assert.equal(example?.giftId, "7");
   assert.equal(example?.day, 20345);
   assert.equal(example?.fingerprint, FINGERPRINT);
+  assert.equal(example?.escrow, "0x00000000000000000000000000000000000000e1", "the example says which contract to ask");
   // Asked for anybody else's account, it finds nothing rather than falling back to whatever exists.
   assert.equal(await exampleForJudges([STRANGER.address]), null);
   assert.equal(await exampleForJudges([]), null);
