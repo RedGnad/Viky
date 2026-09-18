@@ -2691,3 +2691,35 @@ behind an account cannot be photographed any other way.
   counts from the day that journal was switched on and says which day that is. Nothing is back-filled: a pass that
   never ran leaves no row, and shows as a run fewer, never as a late one. Days lost through our own fault are shown
   as measured, beside the rule in the code that wants them to be zero.
+
+## D96, 18 Sep 2026: the rails are ordered by country, never hidden by it (R1)
+
+- Statement: no rail serves everybody, and which one fits is something the person's country decides. A guess about
+  that country is wrong often enough (a trip, a shared connection, a private network, a device bought abroad) that
+  hiding a way out on it would take somebody's money out of reach with no way back. So the guess **orders** the ways
+  out and preselects the first; both stay on the screen whatever it says, and the rail's own identity check remains
+  the only thing that actually decides.
+- Two signals, neither asked of the person: the country the platform reads from the connection
+  (`x-vercel-ip-country`, which a page cannot forge) and the region of the device's own language, which the browser
+  sends because the server cannot see it. They agree, nothing is asked. They differ, one question is:
+  "Where is your bank or card?", with those two countries as its two answers, and nothing is ordered until it is
+  answered. The answer is kept for the tab and orders cards, nothing else.
+- Availability is read at the rail, live, and no country list is copied into the repository (the rule of 16 Sep, and
+  one of these lists changed on 15 Sep). Measured on 18 Sep 2026:
+  - `GET https://api.ramp.network/api/host-api/v3/payout-methods`, public and keyless: SEPA in 35 countries (`fr`,
+    not `sn`, not `ci`, not `us`), CARD in 119 (`fr`, `gb`, not `sn`, not `ci`, not `us`), an American bank transfer
+    in `us`, PIX in `br`, SPEI in `mx`. A country in none of them is a country it pays nobody in.
+  - `GET https://api.mercuryo.io/v1.6/lib/currencies`: for `{currency: "MON", network: "MONAD"}`,
+    `restricted_countries_offramp` and `restricted_countries_onramp` are both exactly `["gb"]`.
+  - Its other limit, no card payout in France, the rest of the EEA or the United States, is in its help centre and
+    not in that answer, so it stays where it already is: in that rail's own conditions, on its card, with its date.
+- A read that fails answers "unknown", never "does not serve", and a failed read is held for thirty seconds against
+  ten minutes for an answer: one bad minute at a service must not leave every screen guessing.
+- The same question is asked at the way in, where there is one rail: the payment step says when that rail does not
+  sell where the person is, rather than sending them to a page that will refuse them.
+- **Verified lead, not built.** Ramp sells on Monad at purchase as well: their public asset list carries
+  `MONAD_AUSD` at `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a`, enabled, beside `MONAD_USDC` and `MONAD_MON`, with a
+  purchase floor of 6 EUR and fees of 0.99 % to 3.9 % (minimum 2.49 EUR), read 18 Sep 2026 at
+  `https://api.ramp.network/api/host-api/assets`. That is the coin gifts already hold, so a second way in for the
+  euro countries would need no exchange and no router, and would sit far under the card rail's 25 EUR floor. It
+  changes the money path, so it is written here and decided by the founder, not slipped in.

@@ -26,8 +26,10 @@ import { formatAusd } from "@/src/gift-reader";
 import { AmountError, dollarsToUnits } from "@/src/money";
 import { settlingTimeInWords } from "@/src/pass-schedule";
 import { forgetPendingGift, loadPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
+import { whereTheRailsServe } from "@/src/client/rails";
+import { countryInWords, type RailReach } from "@/src/rail-country";
 import { WAY_IN } from "@/src/rails";
-import { FUND as W, MILESTONE_FUND as M } from "@/src/sentences";
+import { CASH_OUT, FUND as W, MILESTONE_FUND as M } from "@/src/sentences";
 import { ChoiceList } from "../kit/ChoiceList";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { Shell } from "../kit/Shell";
@@ -235,6 +237,8 @@ export function FundGift() {
   // Whether an account was signed in on this page before it went: then the session closed while paying (F8), rather
   // than a page opened again with nobody signed in (F9). Stored the way React stores what an earlier render saw.
   const [hadAccount, setHadAccount] = useState(false);
+  /** What the rail that adds money says about this person's country, read live (R1). Never hides the way in. */
+  const [railIn, setRailIn] = useState<{ country: string | null; wayIn: RailReach }>({ country: null, wayIn: "unknown" });
   if (address && !hadAccount) setHadAccount(true);
   // The reader's clock, read once a minute: the settling hour is said in it.
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
@@ -296,6 +300,20 @@ export function FundGift() {
       .then(() => refresh())
       .catch(() => {});
   }, [refresh]);
+
+  // Asked once a screen exists: what the rail that adds money says about the country the connection and the device
+  // agree on. Nothing read is nothing said (R1).
+  useEffect(() => {
+    let live = true;
+    whereTheRailsServe()
+      .then((answer) => {
+        if (live) setRailIn({ country: answer.country, wayIn: answer.wayIn });
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
 
   // Asked again when the account changes: signing in as an account that runs Viky is what shows a condition before it is live.
   useEffect(() => {
@@ -1140,6 +1158,11 @@ export function FundGift() {
             </dl>
             <p className={HELP}>{W.check.fee(WAY_IN.name, WAY_IN.fee)}</p>
             <p className={HELP}>{W.check.delay(WAY_IN.name)}</p>
+            {/* The same logic as the way out (R1): the rail is asked live whether it sells where this person is, and
+                what it answers is said here rather than met as a refusal on its own page. Nothing is hidden. */}
+            {railIn.country && railIn.wayIn === "does-not" ? (
+              <p className={HELP}>{CASH_OUT.noPayInThere(WAY_IN.name, countryInWords(railIn.country) ?? railIn.country.toUpperCase())}</p>
+            ) : null}
           </section>
         ) : null}
         {arrived ? (

@@ -629,6 +629,13 @@ export const CASH_OUT = {
   worthLater: "Its value in dollars will show once the price answers.",
   sourceLine: (source: string, read: string) => `Read from ${source}, ${read}.`,
   anotherAccount: "Send to another Viky account of mine",
+  /**
+   * Where the person's bank or card is (R1). Asked once, and only when the two signals disagree; the answer orders the
+   * ways out and hides none of them. The line under a card is what that service itself says about that country today.
+   */
+  whereIsYours: "Where is your bank or card?",
+  noPayoutThere: (name: string, country: string) => `${name} lists no payout in ${country} today.`,
+  noPayInThere: (name: string, country: string) => `${name} does not sell there today: adding money from ${country} will be refused on their page.`,
   chooseBank: "Send to my bank",
   chooseCard: "Send to my card",
   nothingToSend: "Nothing to send yet.",

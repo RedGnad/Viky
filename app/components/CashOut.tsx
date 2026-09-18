@@ -14,6 +14,8 @@ import { AUSD, coinAt, COINS, exactly, isNative, USDC, type Coin } from "@/src/c
 import { whenInWords } from "@/src/display-currency";
 import { dollarsToChange, dustInWords, feeApplied, floorToOrder, readyFor, twoDecimalsDown, type Ready } from "@/src/exit-steps";
 import { formatAusd } from "@/src/gift-reader";
+import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
+import { countryInWords, orderWaysOut } from "@/src/rail-country";
 import { feeSentence, WAYS_OUT, type WayOut } from "@/src/rails";
 import { CASH_OUT as W } from "@/src/sentences";
 import { AccountPanel } from "./AccountPanel";
@@ -105,7 +107,29 @@ export function CashOut() {
   // What the coin the card service buys is worth in dollars, asked of the price and never guessed: the same quote
   // the funder screen converts with. "unavailable" when nothing answered, and the screen says so (founder, 17 Sep).
   const [worth, setWorth] = useState<{ units: bigint } | "unavailable" | undefined>(undefined);
+  // Where the rails serve, and the one answer the person may have given when the two signals disagreed (R1). Kept for
+  // the tab: it orders cards and nothing else, so it is never worth asking twice in one sitting and never worth keeping.
+  const [where, setWhere] = useState<RailsWhere | null>(null);
+  const [answeredCountry, setAnsweredCountry] = useState<string | null>(null);
   const resumed = useRef(false);
+
+  useEffect(() => {
+    let live = true;
+    whereTheRailsServe(answeredCountry)
+      .then((answer) => {
+        if (live) setWhere(answer);
+      })
+      .catch(() => {
+        // Nothing read is nothing ordered: the register's own order stands, and both ways stay on the screen.
+        if (live) setWhere(null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [answeredCountry]);
+
+  const countryNow = answeredCountry ?? where?.country ?? null;
+  const ordered = where && !where.ask ? orderWaysOut(WAYS_OUT, where.waysOut) : WAYS_OUT;
 
   const coinOf = (way: WayOut): Coin => coinAt(way.coin) ?? USDC;
 
@@ -408,9 +432,23 @@ export function CashOut() {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         {moneyCard}
+        {/* Two signals disagree about where this person is (a trip, a shared connection, a private network), so the
+            screen asks once. Until it is answered nothing is ordered, and nothing is hidden either (R1). */}
+        {where?.ask && !answeredCountry ? (
+          <section className={CARD}>
+            <h2 className={TITLE}>{W.whereIsYours}</h2>
+            <div className="flex flex-col gap-[var(--tap-gap)]">
+              {[where.fromDevice, where.fromConnection].filter((one): one is string => one !== null).map((code) => (
+                <button key={code} type="button" onClick={() => setAnsweredCountry(code)} className={SECONDARY_BUTTON}>
+                  {countryInWords(code) ?? code.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
         {/* One accent surface per screen: the accent is on the first way offered, the others carry the same action in the
             plain shape. Which one comes first is the order's business (R1), never a hidden or a missing card. */}
-        {WAYS_OUT.map((way, index) => (
+        {ordered.map((way, index) => (
           <section key={way.name} className={CARD}>
             <h2 className={TITLE}>{way.name}</h2>
             <p className={BODY}>{way.where}</p>
@@ -423,6 +461,9 @@ export function CashOut() {
               ))}
             </ul>
             <p className={HELP}>{W.sourceLine(way.source, way.read)}</p>
+            {/* What that service itself says about this country today, read live. A rail that could not be read says
+                nothing rather than something false, and the card stays where it is either way. */}
+            {countryNow && where?.waysOut[way.name] === "does-not" ? <p className={HELP}>{W.noPayoutThere(way.name, countryInWords(countryNow) ?? countryNow.toUpperCase())}</p> : null}
             <button type="button" onClick={() => start(way)} disabled={holdings === null || ausd === 0n} className={index === 0 ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
               {way.coin === USDC.address ? W.chooseBank : W.chooseCard}
             </button>

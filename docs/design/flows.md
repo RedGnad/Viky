@@ -121,6 +121,11 @@ after the Ramp states.
   - Below both, as a secondary link, not a button: `Send to another Viky account of mine` [spec] (W13).
 - **Then**: the Ramp card opens W3 (step 1 of 3). The Mercuryo card opens W3 for the Mercuryo branch. The
   secondary link opens W13. `Back to my gifts` returns home.
+- **Since R1 (18 Sep 2026)**: the two cards are **ordered** by what each rail answers about the person's country
+  today, and neither is ever hidden. Two signals decide it, the country of the connection and the region of the
+  device's language; when they disagree the screen asks `Where is your bank or card?` once, with those two countries
+  as its answers, and orders nothing until it is answered. A rail whose own list pays nobody there keeps its card,
+  with one line saying so (`Ramp lists no payout in Senegal today.`), and a rail that could not be read says nothing.
 - **Below**: nothing new. `WAYS_OUT` in `src/rails.ts` carries the name, the page, the coin the router hands back,
   the fee, the conditions, the source and the date. The words `USDC`, `AUSD`, `MON`, `Monad`, `identifier`,
   `exchange`, `quote` never appear: the `sells` field ("USDC on Monad") is for the code and is not printed. The

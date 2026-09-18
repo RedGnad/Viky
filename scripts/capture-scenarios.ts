@@ -844,6 +844,16 @@ function withdrawal(): Scenario[] {
   const after = { AUSD: 10_994_751n, USDC: 9_999_586n, MON: 0n };
 
   const gifts = (s: Session) => s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
+  /**
+   * Where the rails serve (R1), answered as the route answers it for somebody in France: both rails serve, so the
+   * order is the register's and no question is asked. The second shape, with the two signals disagreeing, is the one
+   * question the screen may ask.
+   */
+  const RAILS_FRANCE = { country: "fr", ask: false, fromConnection: "fr", fromDevice: "fr", waysOut: { Ramp: "serves", Mercuryo: "serves" }, wayIn: "serves" };
+  const RAILS_SENEGAL = { country: "sn", ask: false, fromConnection: "sn", fromDevice: "sn", waysOut: { Ramp: "does-not", Mercuryo: "serves" }, wayIn: "serves" };
+  const RAILS_ASK = { country: null, ask: true, fromConnection: "de", fromDevice: "sn", waysOut: { Ramp: "unknown", Mercuryo: "unknown" }, wayIn: "unknown" };
+  const rails = (s: Session, body: unknown = RAILS_FRANCE) =>
+    s.api("GET", /\/api\/rails\/where/, () => ({ status: 200, body }), "GET /api/rails/where");
   const rates = (s: Session) => s.api("GET", "/api/rates", () => ({ status: 200, body: RATES }), "GET /api/rates");
   const currency = (s: Session, chosen: "EUR" | "XOF" | null) =>
     s.api("GET", "/api/account/preferences", () => ({ status: 200, body: { displayCurrency: chosen } }), "GET /api/account/preferences");
@@ -865,6 +875,7 @@ function withdrawal(): Scenario[] {
         await s.reset(before);
         await gifts(s);
         await rates(s);
+        await rails(s);
         await currency(s, null);
         await s.signIn();
         await s.click("Take it out");
@@ -873,11 +884,39 @@ function withdrawal(): Scenario[] {
       },
     },
     {
+      name: "withdrawal: the base screen where the euro rail pays nobody, and the one question",
+      run: async (s) => {
+        // Senegal: the euro rail's own payout methods carry no country there, the card rail's list restricts nothing,
+        // so the card rail comes first and the other one stays on the screen with what its own service says.
+        await s.reset(before);
+        await gifts(s);
+        await rates(s);
+        await rails(s, RAILS_SENEGAL);
+        await currency(s, null);
+        await s.signIn();
+        await s.click("Take it out");
+        await s.text("Send to my card");
+        await s.shot("withdrawal", "ordered for where they are", `${WAY}, with the rails answering for Senegal`);
+
+        // The connection says one country and the device another (a trip, a shared connection, a private network).
+        await s.reset(before);
+        await gifts(s);
+        await rates(s);
+        await rails(s, RAILS_ASK);
+        await currency(s, null);
+        await s.signIn();
+        await s.click("Take it out");
+        await s.text("Where is your bank or card?");
+        await s.shot("withdrawal", "where is your bank or card", `${WAY}, with the two signals disagreeing`);
+      },
+    },
+    {
       name: "withdrawal: the base screen, read in euros",
       run: async (s) => {
         await s.reset(before);
         await gifts(s);
         await rates(s);
+        await rails(s);
         await currency(s, "EUR");
         await s.signIn();
         await s.click("Take it out");
@@ -891,6 +930,7 @@ function withdrawal(): Scenario[] {
         await s.reset(before);
         await gifts(s);
         await rates(s);
+        await rails(s);
         await currency(s, null);
         await quoteOk(s);
         await s.api("POST", "/api/exit/prepare", () => ({ status: 200, body: PREPARED }), "POST /api/exit/prepare");
@@ -940,6 +980,7 @@ function withdrawal(): Scenario[] {
         await s.reset(after);
         await gifts(s);
         await rates(s);
+        await rails(s);
         await currency(s, null);
         await s.signIn();
         await s.text("9.99 of it is ready to send to Ramp.");
@@ -956,6 +997,7 @@ function withdrawal(): Scenario[] {
         await s.reset({ AUSD: 0n, USDC: 0n, MON: 11_000_000_000_000_000_000n + 138_436_143_573_911_778_147n });
         await gifts(s);
         await rates(s);
+        await rails(s);
         await currency(s, "XOF");
         // What 138.43 is worth, as the price answers it: about $3.24 at the rate measured on 14 Sep 2026.
         await s.api("POST", "/api/fund/quote", () => ({ status: 200, body: { output: "3240000", minOut: "3230000", to: ESCROW, data: "0x", value: "0" } }), "POST /api/fund/quote");
@@ -972,6 +1014,7 @@ function withdrawal(): Scenario[] {
         await s.reset(before);
         await gifts(s);
         await rates(s);
+        await rails(s);
         await currency(s, null);
         await s.signIn();
         await s.click("Take it out");
@@ -987,6 +1030,7 @@ function withdrawal(): Scenario[] {
         await s.reset(before);
         await gifts(s);
         await rates(s);
+        await rails(s);
         await currency(s, null);
         await quoteOk(s);
         await s.api("POST", "/api/exit/prepare", () => ({ status: 409, body: { error: "The rate moved, so this would have paid you less than you were shown. Nothing was taken.", code: "RATE_MOVED" } }), "POST /api/exit/prepare");
@@ -1002,6 +1046,7 @@ function withdrawal(): Scenario[] {
         await s.reset(before);
         await gifts(s);
         await rates(s);
+        await rails(s);
         await currency(s, null);
         await quoteOk(s);
         await s.api("POST", "/api/exit/prepare", () => ({ status: 200, body: PREPARED }), "POST /api/exit/prepare");
@@ -1021,6 +1066,7 @@ function withdrawal(): Scenario[] {
         await s.reset(before);
         await gifts(s);
         await rates(s);
+        await rails(s);
         await currency(s, null);
         await quoteOk(s);
         await s.api("POST", "/api/exit/prepare", () => ({ status: 401, body: { error: "Account authentication is required", code: "SIGN_IN_REQUIRED" } }), "POST /api/exit/prepare");
@@ -1036,6 +1082,7 @@ function withdrawal(): Scenario[] {
         await s.reset(after);
         await gifts(s);
         await rates(s);
+        await rails(s);
         await currency(s, null);
         // A direct navigation opens the page with no signing session, which is what a session closing on its own leaves.
         await s.goto("/cash-out");
@@ -1049,6 +1096,7 @@ function withdrawal(): Scenario[] {
         await s.reset(before);
         await gifts(s);
         await rates(s);
+        await rails(s);
         await currency(s, null);
         await s.signIn();
         await s.click("Take it out");
