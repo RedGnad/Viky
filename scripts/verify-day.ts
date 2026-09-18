@@ -3,10 +3,12 @@ import { getIdentifierFromClaimInfo, recoverSignersOfSignedClaim, type Proof } f
 import { createPublicClient, hexToBytes, http, parseEventLogs, type Abi, type Hex } from "viem";
 import { claimFingerprint } from "../src/duolingo-public";
 import { giftEscrowAbi } from "../src/gift-escrow-abi";
+import { milestoneGiftAbi } from "../src/milestone-gift-abi";
+import { isMilestoneGiftId } from "../src/milestone-protocol";
 import { PINNED_RECLAIM_WITNESS } from "../src/reclaim-proof-set";
 
 /**
- * Re-verify one credited day of a gift, from outside Viky, in one command.
+ * Re-verify one credited day of a gift, or one reading of a milestone gift, from outside Viky, in one command.
  *
  * It needs no account, no key and no secret: a proof, a gift, a day, and a Monad RPC. It answers four questions, in
  * this order, and stops at the first one it cannot answer:
@@ -24,8 +26,10 @@ import { PINNED_RECLAIM_WITNESS } from "../src/reclaim-proof-set";
  * Usage:
  *   pnpm verify:day                                   the example Viky publishes, from viky.cash
  *   pnpm verify:day --site https://viky.cash          the same, against another deployment
- *   pnpm verify:day --file proof.json --gift 42 --day 20345 --fingerprint 0x...
+ *   pnpm verify:day --file proof.json --gift 42 --day 3 --fingerprint 0x...
  *                                                     a proof the funder or the recipient downloaded themselves
+ *   pnpm verify:day --file reading.json --gift 1000001 --reading 4
+ *                                                     the same for a milestone gift, which settles on a reading
  */
 
 type Answer = { question: string; verdict: "yes" | "no"; detail: string };
@@ -37,7 +41,14 @@ function argument(name: string): string | undefined {
   return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
-type Subject = Readonly<{ giftId: string; day: number; txHash?: string; fingerprint?: string; escrow?: string; proof: Proof }>;
+type Subject = Readonly<{ giftId: string; day?: number; readingId?: number; txHash?: string; fingerprint?: string; escrow?: string; proof: Proof }>;
+
+/** A milestone gift settles on its own contract, with its own events, and its gift numbers say which one it is. */
+const milestone = (giftId: string) => isMilestoneGiftId(giftId);
+const abiFor = (giftId: string) => (milestone(giftId) ? (milestoneGiftAbi as unknown as Abi) : (giftEscrowAbi as unknown as Abi));
+const contractFor = (giftId: string) =>
+  (milestone(giftId) ? process.env.NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS : process.env.NEXT_PUBLIC_GIFT_ESCROW_ADDRESS)?.trim();
+const what = (subject: Subject) => (subject.readingId === undefined ? `day ${subject.day}` : `reading ${subject.readingId}`);
 
 async function fromSite(site: string): Promise<Subject> {
   const answer = await fetch(new URL("/api/judges/example", site));
@@ -54,14 +65,18 @@ async function fromSite(site: string): Promise<Subject> {
 
 function fromFile(file: string): Subject {
   const giftId = argument("gift");
+  const asked = argument("reading");
   const day = Number(argument("day"));
-  if (!giftId || !Number.isInteger(day)) throw new Error("--file needs --gift and --day as well");
+  const readingId = Number(asked);
+  if (!giftId) throw new Error("--file needs --gift as well");
+  if (asked === undefined && !Number.isInteger(day)) throw new Error("--file needs --day, or --reading for a milestone gift");
+  if (asked !== undefined && !Number.isInteger(readingId)) throw new Error("--reading takes the number the gift's page printed");
   const content = JSON.parse(readFileSync(file, "utf8")) as { proof?: unknown; fingerprint?: string; giftId?: string; day?: number };
-  // The route hands back { giftId, day, fingerprint, proof }; a bare proof file works too.
+  // The route hands back { giftId, day or readingId, fingerprint, proof }; a bare proof file works too.
   const raw = content.proof ?? content;
   return {
     giftId,
-    day,
+    ...(asked === undefined ? { day } : { readingId }),
     fingerprint: argument("fingerprint") ?? content.fingerprint,
     escrow: argument("contract"),
     proof: (Array.isArray(raw) ? raw[0] : raw) as Proof,
@@ -104,12 +119,13 @@ async function main() {
     detail: published === undefined ? `${fingerprint}, with nothing published to compare it to` : sameFingerprint ? `${fingerprint}` : `${fingerprint}, but ${published} was published`,
   });
 
-  const contract = (subject.escrow ?? process.env.NEXT_PUBLIC_GIFT_ESCROW_ADDRESS)?.trim();
-  if (!contract) throw new Error("no gift contract to ask: pass --contract, or set NEXT_PUBLIC_GIFT_ESCROW_ADDRESS");
+  const contract = subject.escrow?.trim() || contractFor(subject.giftId);
+  if (!contract) throw new Error("no contract to ask: pass --contract, or set the contract address in the environment");
+  const abi = abiFor(subject.giftId);
   const chain = createPublicClient({ transport: http(RPC) });
   const used = (await chain.readContract({
     address: contract as Hex,
-    abi: giftEscrowAbi as unknown as Abi,
+    abi,
     functionName: "usedNullifiers",
     args: [fingerprint],
   })) as boolean;
@@ -121,24 +137,29 @@ async function main() {
 
   if (subject.txHash) {
     const receipt = await chain.getTransactionReceipt({ hash: subject.txHash as Hex });
-    const events = parseEventLogs({ abi: giftEscrowAbi as unknown as Abi, logs: receipt.logs, eventName: "CheckInAccepted", strict: false });
-    const credited = events.some((event) => {
+    // A day is credited by `CheckInAccepted`, which names the first and last day it counted. A milestone reading
+    // either records the start or reaches the target, and the contract publishes one event for each.
+    const names = milestone(subject.giftId) ? ["StartRecorded", "MilestoneReached"] : ["CheckInAccepted"];
+    const events = parseEventLogs({ abi, logs: receipt.logs, eventName: names, strict: false });
+    const settled = events.some((event) => {
       const args = (event as unknown as { args: Record<string, unknown> }).args;
-      return String(args.giftId) === subject.giftId && Number(args.fromDay) <= subject.day && subject.day <= Number(args.toDay);
+      if (String(args.giftId) !== subject.giftId) return false;
+      if (subject.day === undefined) return true;
+      return Number(args.fromDay) <= subject.day && subject.day <= Number(args.toDay);
     });
     answers.push({
-      question: `Did that transaction credit day ${subject.day} of gift ${subject.giftId}?`,
-      verdict: credited ? "yes" : "no",
-      detail: credited ? `${subject.txHash}, block ${receipt.blockNumber}` : `${subject.txHash} credits no such day`,
+      question: `Did that transaction settle ${what(subject)} of gift ${subject.giftId}?`,
+      verdict: settled ? "yes" : "no",
+      detail: settled ? `${subject.txHash}, block ${receipt.blockNumber}` : `${subject.txHash} settles no such thing`,
     });
   }
 
-  console.log(`Gift ${subject.giftId}, day ${subject.day}, on ${RPC}`);
+  console.log(`Gift ${subject.giftId}, ${what(subject)}, on ${RPC}`);
   for (const answer of answers) console.log(`  ${answer.verdict === "yes" ? "yes" : "NO "}  ${answer.question}  ${answer.detail}`);
   const allYes = answers.every((answer) => answer.verdict === "yes");
   console.log(
     allYes
-      ? "\nEvery answer is yes: Duolingo's own servers answered this, and the contract credited that day against this one claim.\nIt does not prove whose account it is, nor that a human did the lesson: the account is proved once, by a code in its display name or by the funder naming it."
+      ? `\nEvery answer is yes: the source's own servers answered this, and the contract settled ${what(subject)} against this one claim.\nIt does not prove whose account it is, nor that a human did the work: the account is proved once, by a code in its name or by the funder naming it.`
       : "\nAt least one answer is no. Nothing above is taken on trust: read the detail beside it.",
   );
   if (!allYes) process.exitCode = 1;

@@ -28,6 +28,9 @@ const STRANGER = privateKeyToAccount("0x5de4111afa1a4b94908f83103eb1f1706367c2e6
 const TX = `0x${"aa".repeat(32)}` as const;
 const FINGERPRINT = `0x${"cd".repeat(32)}`;
 const SESSION = "public:7:count:20345:cdcdcdcdcdcdcdcd";
+const OLD_TX = `0x${"bb".repeat(32)}` as const;
+const OLD_FINGERPRINT = `0x${"ef".repeat(32)}`;
+const OLD_SESSION = "public:8:count:20331:efefefefefefefef";
 
 let db: PGlite;
 
@@ -83,6 +86,31 @@ before(async () => {
   );
   await recordSettledDays("7", [{ day: 20345, outcome: "earned" }], TX, SESSION);
   await recordSettledDays("7", [{ day: 20346, outcome: "returned" }], TX);
+
+  // A gift whose days were settled before the column linking a day to its session existed: nothing on the row says
+  // which claim earned the day, and the link has to come back from the transaction that settled it.
+  await saveGift({
+    giftId: "8",
+    funder: FUNDER.address,
+    contactHash: `0x${"52".repeat(32)}`,
+    claimToken: newClaimToken(),
+    goalType: 1,
+    dailyTarget: 10,
+    durationDays: 7,
+    amount: 7_000_000n,
+    createdTx: OLD_TX,
+    escrow: "0x00000000000000000000000000000000000000e1",
+    goalUsername: "ama_learns",
+  });
+  await markClaimed("8", RECIPIENT.address, OLD_TX);
+  await db.query(
+    `INSERT INTO viky_proof_sessions (session_id, account, gift_id, phase, duolingo_username, duolingo_profile_id, consumed_at, attestation, proofs)
+     VALUES ($1, $2, '8', 'check-in', 'ama_learns', '123', now(), $3::jsonb, $4::jsonb)`,
+    [OLD_SESSION, RECIPIENT.address.toLowerCase(), JSON.stringify({ message: { nullifier: OLD_FINGERPRINT }, signature: "0x00" }), JSON.stringify({ claimData: { identifier: "0xdef" } })],
+  );
+  await db.query(`INSERT INTO viky_relayed (gift_id, kind, session_id, tx_hash) VALUES ('8', 'check-in', $1, $2)`, [OLD_SESSION, OLD_TX]);
+  // The same transaction credited one day and drained the day before it, which is what a catch-up check-in does.
+  await recordSettledDays("8", [{ day: 20330, outcome: "returned" }, { day: 20331, outcome: "earned" }], OLD_TX);
 });
 
 after(async () => {
@@ -142,4 +170,19 @@ test("the example a judge may replay is only ever one of Viky's own gifts", asyn
   // Asked for anybody else's account, it finds nothing rather than falling back to whatever exists.
   assert.equal(await exampleForJudges([STRANGER.address]), null);
   assert.equal(await exampleForJudges([]), null);
+});
+
+test("a day settled before the link was recorded is found again through the transaction that settled it", async () => {
+  const days = await dailyJournal("8");
+  assert.deepEqual(
+    days.map((day) => [day.day, day.outcome, day.fingerprint, day.proofKept]),
+    [
+      // The drained day shares that transaction, and it is not what the claim earned: it stays without a fingerprint.
+      [20330, "returned", null, false],
+      [20331, "earned", OLD_FINGERPRINT, true],
+    ],
+  );
+  const kept = await proofOfDay("8", 20331);
+  assert.deepEqual(kept?.proof, { claimData: { identifier: "0xdef" } });
+  assert.equal(await proofOfDay("8", 20330), null, "a drained day has no proof, whatever transaction it shares");
 });

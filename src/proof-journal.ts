@@ -15,6 +15,11 @@ import { databaseUrl } from "./database-guard";
  *
  * A day that went back carries no fingerprint: nothing was read, a drain settled it, and saying otherwise would be
  * inventing a proof that does not exist.
+ *
+ * Which session earned a day: the one recorded on the row, and for a day settled before that column existed, the
+ * session whose relayed transaction is this day's transaction (`viky_relayed`). Both are recorded facts and neither
+ * is a guess: one transaction carries one claim, so every day it *earned* was earned by that claim. A day that same
+ * transaction drained is not covered by that claim, so the fallback never reaches one.
  */
 
 export type SqlExecutor = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<Record<string, unknown>[]>;
@@ -60,7 +65,11 @@ export async function dailyJournal(giftId: string): Promise<JournalDay[]> {
   const rows = await sql()`
     SELECT d.day, d.outcome, d.tx_hash, s.attestation #>> '{message,nullifier}' AS fingerprint, s.proofs IS NOT NULL AS proof_kept
       FROM viky_days d
-      LEFT JOIN viky_proof_sessions s ON s.session_id = d.proof_session_id
+      LEFT JOIN viky_proof_sessions s ON s.session_id = COALESCE(
+                        d.proof_session_id,
+                        (SELECT r.session_id FROM viky_relayed r
+                          WHERE d.outcome = 'earned' AND r.tx_hash = d.tx_hash AND r.kind = 'check-in' AND r.session_id IS NOT NULL
+                          ORDER BY r.id LIMIT 1))
      WHERE d.gift_id = ${giftId}
      ORDER BY d.day`;
   return rows.flatMap((row) => {
@@ -109,7 +118,11 @@ export async function proofOfDay(giftId: string, day: number): Promise<KeptProof
   const rows = await sql()`
     SELECT s.proofs, s.attestation #>> '{message,nullifier}' AS fingerprint
       FROM viky_days d
-      JOIN viky_proof_sessions s ON s.session_id = d.proof_session_id
+      JOIN viky_proof_sessions s ON s.session_id = COALESCE(
+                        d.proof_session_id,
+                        (SELECT r.session_id FROM viky_relayed r
+                          WHERE d.outcome = 'earned' AND r.tx_hash = d.tx_hash AND r.kind = 'check-in' AND r.session_id IS NOT NULL
+                          ORDER BY r.id LIMIT 1))
      WHERE d.gift_id = ${giftId} AND d.day = ${day} AND d.outcome = 'earned'`;
   const row = rows[0];
   if (!row || row.proofs === null || row.proofs === undefined) return null;
@@ -140,7 +153,11 @@ export async function exampleForJudges(accounts: readonly string[]): Promise<Jud
     SELECT d.gift_id, d.day, d.tx_hash, g.recipient, s.attestation #>> '{message,nullifier}' AS fingerprint
       FROM viky_days d
       JOIN viky_gifts g ON g.gift_id = d.gift_id
-      JOIN viky_proof_sessions s ON s.session_id = d.proof_session_id
+      JOIN viky_proof_sessions s ON s.session_id = COALESCE(
+                        d.proof_session_id,
+                        (SELECT r.session_id FROM viky_relayed r
+                          WHERE d.outcome = 'earned' AND r.tx_hash = d.tx_hash AND r.kind = 'check-in' AND r.session_id IS NOT NULL
+                          ORDER BY r.id LIMIT 1))
      WHERE d.outcome = 'earned'
        AND s.proofs IS NOT NULL
        AND lower(g.recipient) = ANY(${lowered as string[]})

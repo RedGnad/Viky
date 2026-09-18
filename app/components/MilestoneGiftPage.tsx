@@ -13,6 +13,7 @@ import type { MilestoneStatus } from "@/src/milestone-view";
 import { dateInWords, momentInWords } from "@/src/moments";
 import { settlingTimeInWords } from "@/src/pass-schedule";
 import { GIFT_PAGE as G, MILESTONE_ACTIONS as A, MILESTONE_PAGE as W, NAV } from "@/src/sentences";
+import { CheckThisReading } from "../kit/CheckThisReading";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { GiftCard } from "../kit/GiftCard";
 import { MorningMessage } from "../kit/MorningMessage";
@@ -269,6 +270,8 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
           </Link>
         </section>
       ) : null}
+
+      {mine || readerIsFunder ? <CheckThisReading giftId={status.giftId} /> : null}
 
       {notice ? <p className={`${CARD} ${BODY}`}>{notice}</p> : null}
       {problem ? <FieldRefusal id="gift-refused">{problem}</FieldRefusal> : null}

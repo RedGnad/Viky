@@ -66,7 +66,7 @@ function threeGifts(): DailyPassDeps {
     ],
     read: async () => LIVE,
     count: async (giftId: string) => {
-      if (giftId === "1") return { kind: "counted", giftId, totalXp: 320, creditedDays: 1, hash: "0xc" } as const;
+      if (giftId === "1") return { kind: "counted", giftId, xp: 320, creditedDays: 1, hash: "0xc" } as const;
       if (giftId === "2") return { kind: "refused", giftId, code: "FETCH_FAILED", message: "the source could not be read" } as const;
       return { kind: "refused", giftId, code: "PROFILE_NOT_FOUND", message: "no public profile" } as const;
     },
@@ -141,7 +141,7 @@ test("a pass that falls over part way still writes what it did, and counts its o
   const stopAt = (error: Error): DailyPassDeps => ({
     ...threeGifts(),
     count: async (giftId: string) => {
-      if (giftId === "1") return { kind: "counted", giftId, totalXp: 320, creditedDays: 1, hash: "0xc" } as const;
+      if (giftId === "1") return { kind: "counted", giftId, xp: 320, creditedDays: 1, hash: "0xc" } as const;
       throw error;
     },
   });
