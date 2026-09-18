@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { globSync, readFileSync } from "node:fs";
 import { contrastRatio, NON_TEXT_CONTRAST_MINIMUM, parseHex, relativeLuminance, TEXT_CONTRAST_MINIMUM } from "../src/contrast.js";
+import { APPEARANCE } from "../src/sentences.js";
 import {
   APP_COLUMN_MAX,
   CARD,
@@ -223,23 +224,48 @@ test("the art direction changed the colours and nothing else", () => {
   assert.equal(SPACE.lg, 16);
 });
 
-test("the app follows the device: one night block, nothing chosen, nothing stored", () => {
-  // Apple: "Avoid offering an app-specific appearance setting". Two settings that disagree read as a bug, and the way
-  // to stop them disagreeing is to have one (the art direction brief of 17 Sep 2026, section 7).
-  assert.match(css, /@media \(prefers-color-scheme: dark\)\s*\{\s*:root \{/);
-  assert.doesNotMatch(css, /data-theme/, "an appearance chosen in the product is gone");
-  for (const file of [...globSync("app/**/*.{ts,tsx}"), ...globSync("src/**/*.ts")]) {
-    assert.doesNotMatch(readFileSync(file, "utf8"), /data-theme|viky\.theme/, `${file} still remembers an appearance`);
+test("the appearance follows the device until somebody chooses, and there are three states, not two", () => {
+  // Apple: "Avoid offering an app-specific appearance setting", because two settings that disagree read as a bug.
+  // The control is back all the same (D97, 18 Sep 2026), and the way the two stop disagreeing is that the device is
+  // the default and stays it until a person presses: "as your device" is a state, not the absence of one.
+  assert.match(css, /@media \(prefers-color-scheme: dark\)\s*\{\s*:root:not\(\[data-theme="light"\]\) \{/, "a chosen day does not survive a dark device");
+  assert.match(css, /:root\[data-theme="dark"\] \{/, "night cannot be asked for on a device set to light");
+
+  const control = readFileSync("app/kit/Appearance.tsx", "utf8");
+  assert.match(control, /system: "light", light: "dark", dark: "system"/, "one press no longer walks the three states in order");
+  assert.doesNotMatch(control, /--accent(?!-text)/, "the appearance control wears the accent, which belongs to the action and the destination");
+  assert.match(control, /h-\[var\(--tap-target\)\] w-\[var\(--tap-target\)\]/, "the target is no longer the measured one");
+  assert.match(control, /aria-label=\{W\[choice\]\}/, "an icon alone says neither where the product is nor what a press does");
+  for (const state of ["system", "light", "dark"] as const) {
+    // Every name says the state it is in and what the next press does, which is what a screen reader has to work with.
+    assert.match(APPEARANCE[state], /^Appearance: .+\. Press .+\.$/, `the name of ${state} says less than the state and the press`);
   }
+
+  // The choice lives in the person's own browser, and nowhere else: no account carries it, nothing is sent.
+  const theme = readFileSync("src/theme.ts", "utf8");
+  assert.match(theme, /localStorage\.setItem\(THEME_STORAGE_KEY/);
+  assert.match(theme, /delete document\.documentElement\.dataset\.theme/, "nothing hands the appearance back to the device");
+  assert.match(readFileSync("app/layout.tsx", "utf8"), /THEME_BOOT_SCRIPT/, "a chosen appearance would flash the other one on every load");
+
+  // In the header of every screen, not on some of them: the shell draws it beside the mark before it asks what kind
+  // of screen this is. `pnpm capture:appearance` photographs a destination, a task and a document to show it.
+  const shell = readFileSync("app/kit/Shell.tsx", "utf8");
+  const header = shell.slice(shell.indexOf("<header"), shell.indexOf("</header>"));
+  assert.match(header, /<Appearance \/>/, "the header lost the appearance control");
+  assert.doesNotMatch(header.slice(0, header.indexOf("<Appearance />")), /props\.kind === "[a-z]+" \?/, "the control is drawn on some kinds of screen only");
 });
 
 test("the stylesheet says what the tokens say, by day and by night", () => {
   for (const [role, value] of Object.entries(COLOURS.light)) {
     assert.equal(cssVariable(cssName(role)), value, `day ${role}`);
   }
-  const night = rule(":root", css.indexOf("@media (prefers-color-scheme: dark)"));
+  const night = rule(':root:not([data-theme="light"])', css.indexOf("@media (prefers-color-scheme: dark)"));
+  // Night asked for and night because of the device paint the same screen: one list of values, written twice, and a
+  // value that stops matching here is a screen that changes when a person presses rather than only its ground.
+  const chosenNight = rule(':root[data-theme="dark"]');
   for (const [role, value] of Object.entries(COLOURS.dark)) {
     assert.equal(variableIn(night, cssName(role)), value, `night ${role}`);
+    assert.equal(variableIn(chosenNight, cssName(role)), value, `chosen night ${role}`);
   }
   for (const appearance of ["light", "dark"] as Appearance[]) {
     const block = appearance === "light" ? css.slice(0, css.indexOf("@media")) : night;

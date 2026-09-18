@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { dmSans, fredoka } from "./fonts";
 import { AccountProvider } from "@/src/account/provider";
+import { THEME_BOOT_SCRIPT } from "@/src/theme";
 
 const APP_NAME = "Viky";
 const APP_DEFAULT_TITLE = "Viky";
@@ -63,6 +64,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     // The look's font variables sit on the document itself, because app/globals.css reads them from :root.
     <html lang="en" dir="ltr" className={`${fredoka.variable} ${dmSans.variable}`}>
       <body className="antialiased">
+        {/* Before anything is painted, so a chosen appearance never flashes the other one first (D97). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         <SerwistProvider swUrl="/serwist/sw.js">
           <AccountProvider>{children}</AccountProvider>
         </SerwistProvider>

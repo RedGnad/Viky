@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { DISPLAY, HELP, TITLE } from "../components/ui";
+import { Appearance } from "./Appearance";
 import { BackLink } from "./BackLink";
 import { Mark } from "./Mark";
 import { Nav, type Destination } from "./Nav";
@@ -14,6 +15,9 @@ import { Nav, type Destination } from "./Nav";
  *
  * The bar and the rail draw nothing without an account, so the promise page and a gift opened from a link are
  * a column and the mark, which is all a person without an account has anywhere to go.
+ *
+ * Opposite the mark, on every kind of screen, the appearance control (D97). Where a screen also has an action there,
+ * the appearance sits before it and stays the quieter of the two.
  */
 type Props =
   | Readonly<{
@@ -55,14 +59,13 @@ export function Shell(props: Props) {
       <div className={room}>
         <main className={`mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-lg)]`}>
           <header className="flex flex-col items-start gap-[var(--space-sm)]">
-            {props.kind === "destination" && props.action ? (
-              <div className="flex w-full items-center justify-between gap-[var(--space-md)]">
-                <Mark />
-                {props.action}
-              </div>
-            ) : (
+            <div className="flex w-full items-center justify-between gap-[var(--space-md)]">
               <Mark />
-            )}
+              <div className="flex items-center gap-[var(--space-sm)]">
+                <Appearance />
+                {props.kind === "destination" && props.action ? props.action : null}
+              </div>
+            </div>
             {props.kind === "task" && props.back ? <BackLink href={props.back} label={props.backLabel} follow={props.backFollows} /> : null}
             {props.kind === "document" && props.back ? <BackLink href={props.back} label={props.backLabel} /> : null}
             {props.kind === "task" && props.caption ? <p className={HELP}>{props.caption}</p> : null}

@@ -2723,3 +2723,32 @@ behind an account cannot be photographed any other way.
   `https://api.ramp.network/api/host-api/assets`. That is the coin gifts already hold, so a second way in for the
   euro countries would need no exchange and no router, and would sit far under the card rail's 25 EUR floor. It
   changes the money path, so it is written here and decided by the founder, not slipped in.
+
+## D97, 18 Sep 2026: the appearance control comes back, with three states and the device by default
+
+- Statement, and the reason, which is not a design one: the product is being shown before it is really put in front of
+  people, and somebody opening it on a device set to light would never see the night side of the work at all. So a
+  small control sits in the header of every screen, opposite the mark. It walks three states in this order: as your
+  device, day, night. The device is the default and stays it until somebody presses, which is what keeps the product
+  and the device from ever disagreeing unless a person asked them to.
+- The deviation is named rather than dressed up. Apple: "Avoid offering an app-specific appearance setting", because
+  two settings that disagree read as a bug. The brief of 17 Sep had removed the setting for exactly that reason, and
+  the founder amended its section 7 on 18 Sep. The control goes away when the product is really put in front of
+  people; D88, which removed it from Me, stands for everything else.
+- How it works, exactly as it did before the look removed it (`src/theme.ts`, restored from 7b2f649): the choice is
+  written on the document as `data-theme`, and removing that attribute hands the appearance back to the device. It is
+  remembered in the person's own browser under `viky.theme` and nowhere else: no account carries it and nothing is
+  sent. An inline script applies it before the first paint, so a chosen appearance never flashes the other one first.
+  React reads it through a store rather than an effect, so every copy of the control agrees the moment one changes it.
+- The stylesheet now says night twice, with the same values. `@media (prefers-color-scheme: dark)` is guarded by
+  `:root:not([data-theme="light"])`, so a chosen day survives a dark device, and `:root[data-theme="dark"]` paints the
+  night a person asked for on a device set to light. A test compares the two lists value by value.
+- What it looks like: an icon alone, a target of 48 by 48, in the ink and never in the accent, because the accent is
+  the action a screen asks for and the destination the person is on. Its accessible name says both the state it is in
+  and what the next press will do, since an icon says neither. On the page without an account it shares the header
+  line with the door and stays the quieter of the two; the one action in the body did not move.
+- Measured, 18 Sep 2026: six screens reachable without an account, in the three states, at 390x844 and 1440x900
+  (`pnpm capture:appearance`). Each state is captured against the device setting that proves it, and each image is
+  kept only if the ground the browser painted is the ground that state asks for and the control's own name says that
+  state. Signed-in screens are not in the set, because a passkey cannot be replayed by a script; they share the same
+  header.
