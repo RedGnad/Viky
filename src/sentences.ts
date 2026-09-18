@@ -40,7 +40,7 @@ export const HOME = {
   aboutRate: (date: string, dollars: string) => `About, at the rate of ${date}: ${dollars}`,
   keep: "Yours to keep, to put behind another goal, or to take out.",
   takeItOut: "Take it out",
-  readyLine: (name: string, number: string) => `${number} of it is ready to send to ${name}.`,
+  readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,
   readyLabel: (name: string) => `Ready to send to ${name}`,
   moving: "What's moving",
   seeAll: "See all gifts",
@@ -695,7 +695,7 @@ export const CASH_OUT = {
   title: "Take your money out",
   yourMoney: "Your money",
   rateNote: (about: string) => about,
-  readyLine: (name: string, number: string) => `${number} of it is ready to send to ${name}.`,
+  readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,
   readyLabel: (name: string) => `Ready to send to ${name}`,
   worthAbout: (dollars: string) => `about $${dollars}`,
   worthLater: "Its value in dollars will show once the price answers.",
@@ -727,21 +727,33 @@ export const CASH_OUT = {
     sendAllOfIt: "Send all of it",
   },
 
-  review: (number: string, name: string, payout: string | undefined) =>
-    `You will get at least ${number} to send.${payout ? ` ${payout}` : ""} Nothing leaves your account yet.`,
+  review: (amount: string, name: string, payout: string | undefined) =>
+    `You will get at least ${amount} to send.${payout ? ` ${payout}` : ""} Nothing leaves your account yet.`,
+  /**
+   * The card service buys the chain's own coin, so what a person gets there is a quantity of it and not dollars. The
+   * money they are spending leads, the quantity follows, and neither is left to be guessed (D104).
+   */
+  reviewGetting: (dollars: string, exact: string, name: string) =>
+    `You are sending ${dollars} of your money, and you will get at least ${exact} to send, which is the quantity ${name} asks for.`,
   reviewPayout: (name: string, euros: string, fee: string, net: string) =>
     `${name} will turn that into about ${euros}, minus its ${fee} fee: about ${net} on your bank account.`,
   reviewCard: (name: string) => `What ${name} pays onto your card is shown on their page.`,
   reviewDollars: (dollars: string) => `That is $${dollars} of your money.`,
   priceHolds: "This price holds for 4 minutes.",
   priceRefreshed: "The price was refreshed.",
-  getReady: (number: string) => `Get ${number} ready`,
-  gettingReady: (number: string) => `Getting ${number} ready. A few seconds.`,
+  getReady: (amount: string) => `Get ${amount} ready`,
+  gettingReady: (amount: string) => `Getting ${amount} ready. A few seconds.`,
 
-  ready: (number: string) => `Ready: ${number}`,
-  stays: (dust: string) => `${dust} stays in your account.`,
+  ready: (amount: string) => `Ready: ${amount}`,
+  /**
+   * What the service's two decimals leave behind. It is always under a hundredth of what that service buys, by
+   * construction (`readyFor` floors to two decimals), so it is said as the money it is on a dollar rail and as a
+   * fraction of what the service buys on the other: never as a number with nothing to hold on to (D104).
+   */
+  staysDollars: "Less than $0.01 stays in your account.",
+  staysQuantity: (name: string) => `Less than 0.01 of what ${name} buys stays in your account.`,
   step2: (name: string) => `Step 2 of 3: Place your order with ${name}`,
-  order: (number: string, name: string) => `Order ${number} on ${name}`,
+  order: (amount: string, name: string) => `Order ${amount} on ${name}`,
   giveThisCode: (name: string) => `When ${name} asks where you are sending from, give them this code`,
   copy: "Copy",
   copied: "Copied",
@@ -752,18 +764,23 @@ export const CASH_OUT = {
   step3: "Step 3 of 3: Send it",
   pasteTheCode: (name: string) => `Paste the code ${name} gives you to send to`,
   amountFixed: "Amount",
-  send: (number: string, name: string) => `Send ${number} to ${name}`,
+  /**
+   * The exact quantity the card service asks for, said once under the action it belongs to. A person decides on the
+   * dollars above it; this is what they paste or check on the service's own page, so it can never be dropped.
+   */
+  exactQuantity: (name: string, exact: string) => `${name} asks for the exact quantity: ${exact}. It is the same money, counted the way ${name} counts it.`,
+  send: (amount: string, name: string) => `Send ${amount} to ${name}`,
   codeRefusals: {
     shape: (name: string) => `That is not a code ${name} gives. It starts with 0x and is 42 characters long.`,
     own: (name: string) => `That is your own code. Paste the one ${name} shows you to send to.`,
   },
-  confirm: (number: string, name: string) => `Send ${number} to ${name}. This cannot be undone.`,
+  confirm: (amount: string, name: string) => `Send ${amount} to ${name}. This cannot be undone.`,
   confirmCard: "Sending costs a small amount of what you hold, said afterwards with its figure.",
   codeYouPasted: "The code you pasted:",
   sendButton: "Send",
-  sending: (number: string, name: string) => `Sending ${number} to ${name}`,
+  sending: (amount: string, name: string) => `Sending ${amount} to ${name}`,
 
-  sent: (number: string, name: string, when: string, reference: string) => `Sent ${number} to ${name} on ${when}. Reference: ${reference}.`,
+  sent: (amount: string, name: string, when: string, reference: string) => `Sent ${amount} to ${name} on ${when}. Reference: ${reference}.`,
   sentPays: (name: string, pays: string, bank: boolean) => (bank ? `${name} pays your bank ${pays}.` : `${name} pays ${pays}.`),
   pasteFirst: (name: string) => `Paste the code from ${name} to send it.`,
   sendingCost: (cost: string) => `Sending cost ${cost}.`,
@@ -771,7 +788,7 @@ export const CASH_OUT = {
 
   closedTitle: "Your session closed while you were away",
   closedBody: "Nothing moved and nothing was taken. Your money is exactly where it was, and nothing about it expires.",
-  closedWhere: (number: string, name: string) => `You were at step 2 of 3: ${number} is ready to send to ${name}.`,
+  closedWhere: (amount: string, name: string) => `You were at step 2 of 3: ${amount} is ready to send to ${name}.`,
   signInToSee: "Sign in to see your money",
   signedOutBody: "Nothing moved and nothing was taken. Your money is exactly where it was.",
 
@@ -807,7 +824,7 @@ export const CASH_OUT = {
 export const YOUR_MONEY = {
   label: "In your account",
   keep: "Yours to keep, to put behind another goal, or to take out.",
-  readyLine: (name: string, number: string) => `${number} of it is ready to send to ${name}.`,
+  readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,
   readyLabel: (name: string) => `Ready to send to ${name}`,
   takeItOut: "Take it out",
 } as const;

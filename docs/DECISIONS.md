@@ -2947,3 +2947,30 @@ behind an account cannot be photographed any other way.
   page already says of the two counters beside it.
 - Rows written before the column existed carry an empty object, which is what they knew. Nothing was back-filled and
   nothing was estimated, as with every figure on that page.
+
+## D104, 18 Sep 2026: on the way out, the money leads and the quantity follows
+
+- The defect, found by the founder in the relecture of 18 Sep: the way out said "Send 9.99 to Ramp. This cannot be
+  undone." and "Sent 9.99 to Ramp on 18 Sep 2026 at 9:15 AM." on the screen whose own heading read "$10.99". A number
+  with no symbol, on the one screen nothing can be taken back from. The same screen's other branch, sending to another
+  Viky account, already wrote the symbol.
+- The rule the founder set with the fix: **a person never reads a bare number, and never the name of a chain's own
+  coin.** So the amount they read, decide on and confirm is dollars, with "about" whenever it came from a conversion,
+  and the rate and its date are said beside it as everywhere else.
+- Why it could not be a symbol added in front of every number. The bank rail buys a dollar coin, so its number **is**
+  dollars: 9.99 means $9.99. The card rail buys the chain's own coin: the capture of 18 Sep shows 138.43 of it, worth
+  about $3.24. "$138.43" there would have been false by a factor of forty. The founder chose the shape when this was
+  put to him: dollars in front, the exact quantity after, in the technical line under the action.
+- What it looks like now. Bank rail: "Send $9.99 to Ramp. This cannot be undone." Card rail: "Send about $3.24 to
+  Mercuryo. This cannot be undone.", and under the button, in the help size, "Mercuryo asks for the exact quantity:
+  138.43. It is the same money, counted the way Mercuryo counts it." The confirmation follows the same shape.
+- One place composes both forms, `exitAmount` in `src/exit-amount.ts`, and the screen reads from it: every sentence of
+  the way out takes an amount that already carries its form and adds no symbol of its own, so no caller can produce
+  "$$9.99" and none can print a quantity as if it were money. A test walks the sentences to hold that.
+- Where no price answers, no dollar figure is invented: the quantity leads, with the same line under it saying what it
+  is, and the line that says the value in dollars will come when the price does. The dollars themselves are asked of
+  the same quote the funder screen converts with, for whatever is ready, not only for an account holding nothing else.
+- What stays behind is said the same way. The dust is always under a hundredth of what the service buys, because the
+  order is floored to two decimals, so the sentence is "Less than $0.01 stays in your account." on the dollar rail and
+  "Less than 0.01 of what Mercuryo buys stays in your account." on the other. `dustInWords` had no other caller and is
+  gone.

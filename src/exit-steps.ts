@@ -27,19 +27,6 @@ export function unitsOfTwoDecimals(text: string, decimals: number): bigint {
   return BigInt(whole) * 10n ** BigInt(decimals) + BigInt(fraction.padEnd(2, "0")) * 10n ** BigInt(decimals - 2);
 }
 
-/**
- * A dust of units, said honestly in two decimals: "Less than 0.01" under a cent, the exact figure when it is
- * one, and "About 0.01" otherwise, cut down and never rounded up. Empty when there is no dust at all.
- */
-export function dustInWords(units: bigint, decimals: number): string {
-  if (units <= 0n) return "";
-  const scale = 10n ** BigInt(decimals);
-  const cents = (units * 100n) / scale;
-  if (cents === 0n) return "Less than 0.01";
-  const said = `${cents / 100n}.${(cents % 100n).toString().padStart(2, "0")}`;
-  return units * 100n === cents * scale ? said : `About ${said}`;
-}
-
 export type Ready = Readonly<{
   /** The number to type at the payout service, two decimals, from what the account actually holds. */
   number: string;

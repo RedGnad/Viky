@@ -875,7 +875,7 @@ function withdrawal(): Scenario[] {
     await s.click("Send to my bank");
     await s.page.getByLabel("How much do you want to send to your bank?").fill("10");
     await s.click("See what you will get");
-    await s.text("You will get at least 9.99 to send.");
+    await s.text("You will get at least $9.99 to send.");
   };
 
   return [
@@ -961,12 +961,12 @@ function withdrawal(): Scenario[] {
 
         await s.page.getByLabel("How much do you want to send to your bank?").fill("10");
         await s.click("See what you will get");
-        await s.text("You will get at least 9.99 to send.");
+        await s.text("You will get at least $9.99 to send.");
         await s.shot("withdrawal", "step 1, the review", `${WAY}, Send to my bank, type 10, See what you will get`);
 
-        await s.click("Get 9.99 ready");
-        await s.text("Ready: 9.99", 40_000);
-        await s.shot("withdrawal", "ready, steps 2 and 3", `${WAY}, Send to my bank, type 10, See what you will get, Get 9.99 ready`);
+        await s.click("Get $9.99 ready");
+        await s.text("Ready: $9.99", 40_000);
+        await s.shot("withdrawal", "ready, steps 2 and 3", `${WAY}, Send to my bank, type 10, See what you will get, Get $9.99 ready`);
 
         await s.click(exact("Copy"));
         await s.text(exact("Copied"));
@@ -975,12 +975,12 @@ function withdrawal(): Scenario[] {
         await s.page.getByLabel("Paste the code Ramp gives you to send to").fill(DEPOSIT);
         await s.shot("withdrawal", "step 3, the code pasted", "On the ready screen: paste the code Ramp gives", { scrollTo: "Step 3 of 3: Send it" });
 
-        await s.click("Send 9.99 to Ramp");
-        await s.text("Send 9.99 to Ramp. This cannot be undone.");
-        await s.shot("withdrawal", "the review before sending", "After pasting: Send 9.99 to Ramp", { scrollTo: "This cannot be undone." });
+        await s.click("Send $9.99 to Ramp");
+        await s.text("Send $9.99 to Ramp. This cannot be undone.");
+        await s.shot("withdrawal", "the review before sending", "After pasting: Send $9.99 to Ramp", { scrollTo: "This cannot be undone." });
 
         await s.click(exact("Send"));
-        await s.text(/^Sent 9\.99 to Ramp on /, 40_000);
+        await s.text(/^Sent \$9\.99 to Ramp on /, 40_000);
         await s.shot("withdrawal", "sent", "On the review: Send");
       },
     },
@@ -993,10 +993,10 @@ function withdrawal(): Scenario[] {
         await rails(s);
         await currency(s, null);
         await s.signIn();
-        await s.text("9.99 of it is ready to send to Ramp.");
+        await s.text("$9.99 of it is ready to send to Ramp.");
         await s.shot("withdrawal", "home with 9.99 ready", `${HOME}, after a change left 9.99 ready for Ramp`);
         await s.click("Take it out");
-        await s.text("Ready: 9.99");
+        await s.text("Ready: $9.99");
         await s.shot("withdrawal", "resumed at step 2", `${WAY}, after a change left 9.99 ready: the steps open on the second`);
       },
     },
@@ -1013,8 +1013,9 @@ function withdrawal(): Scenario[] {
         await s.api("POST", "/api/fund/quote", () => ({ status: 200, body: { output: "3240000", minOut: "3230000", to: ESCROW, data: "0x", value: "0" } }), "POST /api/fund/quote");
         await s.signIn();
         await s.click("Take it out");
-        await s.text("Ready: 138.43");
-        await s.text(/about \$3\.24/);
+        // The money leads and the quantity follows (D104): "Ready: about $3.24", with 138.43 said under the action.
+        await s.text("Ready: about $3.24");
+        await s.text(/asks for the exact quantity: 138\.43/);
         await s.shot("withdrawal", "the card branch, ready", `${WAY}, with only what the card service buys in the account, on an account whose display currency is the CFA franc`);
       },
     },
@@ -1045,9 +1046,9 @@ function withdrawal(): Scenario[] {
         await quoteOk(s);
         await s.api("POST", "/api/exit/prepare", () => ({ status: 409, body: { error: "The rate moved, so this would have paid you less than you were shown. Nothing was taken.", code: "RATE_MOVED" } }), "POST /api/exit/prepare");
         await toReview(s);
-        await s.click("Get 9.99 ready");
+        await s.click("Get $9.99 ready");
         await s.text("The price changed before you confirmed. Nothing was taken.");
-        await s.shot("withdrawal", "refused, the price moved", `${WAY}, Send to my bank, type 10, See what you will get, Get 9.99 ready`, { scrollTo: "See the new price" });
+        await s.shot("withdrawal", "refused, the price moved", `${WAY}, Send to my bank, type 10, See what you will get, Get $9.99 ready`, { scrollTo: "See the new price" });
       },
     },
     {
@@ -1065,9 +1066,9 @@ function withdrawal(): Scenario[] {
           body: { error: "The exchange's price moved while you were signing. Nothing was taken. Viky will ask for a new one.", code: "QUOTE_STALE" },
         }), "POST /api/exit/relay");
         await toReview(s);
-        await s.click("Get 9.99 ready");
+        await s.click("Get $9.99 ready");
         await s.text("The price kept changing and Viky stopped after three tries.", 60_000);
-        await s.shot("withdrawal", "refused, the price kept changing", `${WAY}, Send to my bank, type 10, See what you will get, Get 9.99 ready (asked again twice by itself)`, { scrollTo: /^Try again$/ });
+        await s.shot("withdrawal", "refused, the price kept changing", `${WAY}, Send to my bank, type 10, See what you will get, Get $9.99 ready (asked again twice by itself)`, { scrollTo: /^Try again$/ });
       },
     },
     {
@@ -1081,9 +1082,9 @@ function withdrawal(): Scenario[] {
         await quoteOk(s);
         await s.api("POST", "/api/exit/prepare", () => ({ status: 401, body: { error: "Account authentication is required", code: "SIGN_IN_REQUIRED" } }), "POST /api/exit/prepare");
         await toReview(s);
-        await s.click("Get 9.99 ready");
+        await s.click("Get $9.99 ready");
         await s.text("Your session closed while you were away", 30_000);
-        await s.shot("withdrawal", "the session closed", `${WAY}, Send to my bank, type 10, See what you will get, Get 9.99 ready, with the server session expired`);
+        await s.shot("withdrawal", "the session closed", `${WAY}, Send to my bank, type 10, See what you will get, Get $9.99 ready, with the server session expired`);
       },
     },
     {

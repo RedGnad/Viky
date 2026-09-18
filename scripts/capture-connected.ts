@@ -309,7 +309,9 @@ export class Session {
   async signIn(): Promise<void> {
     await this.budgetSignIn();
     await this.goto("/me");
-    const signedIn = this.page.getByText(/Signed in on this device until/).first();
+    // Both sentences mean the account is here: "until <time>" while a signing session is open, and the plain one on
+    // every page load since D98, where the account survives the load and the key that signs does not.
+    const signedIn = this.page.getByText(/Signed in on this device/).first();
     if (!(await signedIn.isVisible().catch(() => false))) {
       await openTheDoor(this.page);
       // Signing in leaves the You page as it is; creating an account lands on Home. Either says the account is there.
