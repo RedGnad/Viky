@@ -308,6 +308,44 @@ provider under another shape, stops the whole run before anything is sent, becau
 and moving it under one would change what settles it. It is idempotent, so a session interrupted halfway is finished
 by running it again.
 
+## Deploying: three rules, and how to read what is live
+
+Three lines merge into `main` in parallel, and on 18 Sep 2026 the queue filled with builds nobody was reading while
+production served a commit four merges old. The founder set three rules that evening, and they hold from now on.
+
+1. **Only `main` builds.** A branch build serves nothing, because every check is made in production. `vercel.json`
+   carries it: `git.deploymentEnabled` names `main` true and both wildcards false. Two wildcards, because `*` does not
+   cross a slash in minimatch and a branch called `fix/thing` would still build without `**`. The rule is safe for
+   `main` by the documentation's own words, "If a branch matches multiple rules and at least one rule is true, a
+   deployment will occur", and by measurement: the merge that added it produced a production build of itself.
+2. **One production deployment at a time.** Before merging, read what production is serving. If it has not finished
+   the previous merge, wait.
+3. **Never cancel a production build**, running or queued. A queued branch build may be cancelled, and nothing else.
+
+**How to read the commit production is serving**, without the dashboard and without an account:
+
+```
+curl -s https://viky.cash/serwist/sw.js | grep -oE '[0-9a-f]{40}' | sort -u
+```
+
+The service worker precaches the offline page under the deployment's own commit, so that one hash is what is live.
+Check it against `git log` before believing a deployment list.
+
+**Two things that surprised us, written down so they do not surprise the next line.** Vercel cancels a superseded
+production build of the same branch by itself: `github.autoJobCancelation` defaults to true, which its documentation
+describes as building "without cancelling a build for the most recent commit" when set to false. And a build fired
+from a terminal carries the commit of the working tree it was fired from, so a `--prod` deploy made from an older
+checkout lands after newer merges and takes production backwards. In what order the platform lands what it has queued is
+not something we have watched it do, and the incident of that evening was precisely about builds not starting in
+order or at all, so no rule here rests on it: when the queue reaches zero, read the served hash, and redeploy from
+`main` only if it is not `main`'s head. One person does it, once, and says so to the others. What a person may see
+meanwhile is viky.cash serving an ancestor of `main` for a few minutes, which is not a reason to act.
+
+**When the platform itself is the problem**, read www.vercel-status.com before changing anything of ours. On the
+evening of 18 Sep two incidents ran in a row, "Elevated Errors Triggering Deployments" and "Deployment stuck in
+initializing state", and for twenty minutes no deployment of any kind was created. A configuration change looks
+exactly like an outage from here, so a rule is never reverted on a measurement taken during one.
+
 ## Money paths to audit
 
 Each entry is a path where money can move while the record of it fails, with what to do about it. Nothing here is
