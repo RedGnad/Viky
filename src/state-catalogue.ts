@@ -374,7 +374,7 @@ export const ACCOUNT_SCREEN: readonly CatalogueScreen[] = [
     screen: "You",
     file: "src/sentences.ts",
     states: [
-      { name: "The third destination", when: "reached from the bar or the rail, signed in", says: ["You", "Money shown in", "Signed in on this device until", "Sign out", "Need your code for a payout service?", "Help", "Privacy", "Legal notice", "For judges"] },
+      { name: "The third destination", when: "reached from the bar or the rail, signed in", says: ["You", "Money shown in", "Signed in on this device", "Sign out", "Need your code for a payout service?", "Help", "Privacy", "Legal notice", "For judges"] },
       { name: "Without an account", when: "reached from the bar or the rail with nobody signed in", says: ["You", "Not signed in on this device.", "Sign in or create account"] },
       { name: "Help", when: "somebody is stuck", says: ["Five questions, answered in the words the screens use."] },
     ],

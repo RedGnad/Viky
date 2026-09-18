@@ -13,13 +13,17 @@ import { SignInDoor } from "./SignInDoor";
 import { Shell } from "./Shell";
 
 /**
- * Me, in the order the structure gives it (section 4): the display currency, "Signed in on this device until 14:20" and
- * sign out, installing Viky, then, folded, the account's code for a payout service, then Help, Privacy, Legal notice,
- * For judges as text links. The countdown is gone: the session is one sentence.
+ * Me, in the order the structure gives it (section 4): the display currency, the session in one sentence and sign out,
+ * installing Viky, then, folded, the account's code for a payout service, then Help, Privacy, Legal notice, For judges
+ * as text links. The countdown is gone: the session is one sentence.
  *
- * No appearance setting: the app follows the device from the first pixel (the art direction brief of 17 Sep 2026,
- * section 7; Apple: "Avoid offering an app-specific appearance setting"). Without an account, this page carries the
- * same one door as the page without an account, and nothing else to do.
+ * Two sentences, one session each (D98). "Signed in on this device." is what a page load leaves: the account is here
+ * for twelve hours and the key that signs is not, so nothing is promised about signing. "Signed in on this device
+ * until 14:20." is said only while that signing session is actually open, and it names how long money can move
+ * without asking again.
+ *
+ * The appearance control is back, in the header of every screen rather than here (D97). Without an account, this page
+ * carries the same one door as the page without an account, and nothing else to do.
  */
 const never = () => () => {};
 const deviceLanguage = () => navigator.language;
