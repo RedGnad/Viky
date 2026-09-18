@@ -231,6 +231,27 @@ since no owner function touches it.
    with its push service ("Registration failed - permission denied") even with the notification permission granted,
    in Chrome and in Chromium, headless or not. Firefox's service is the standard one, so the path is the same.
 
+## What the Chess.com rehearsal is waiting for
+
+`/api/conditions` offers a condition that is wired and not live yet to an account on `VIKY_OPERATOR_ACCOUNTS`, and to
+nobody else. That is how the first real gift on a new condition gets made.
+
+Measured on 18 Sep 2026: the list in production holds two accounts, `0x350aF8…` and `0x91C964…`, and the founder's
+own account `0xb12e0C72209Bd4BECFDaFA96a8F3e7eBc93b8376` is not one of them. So the route answers him correctly and
+still shows no Chess.com: it is a line of configuration, not a defect, and the session fix of the same day does not
+change it.
+
+To open the rehearsal, add that account to the list and redeploy production, then read it back:
+
+```
+npx vercel@latest env rm VIKY_OPERATOR_ACCOUNTS production --yes
+npx vercel@latest env add VIKY_OPERATOR_ACCOUNTS production --value "0x350aF8…,0x91C964…,0xb12e0C72209Bd4BECFDaFA96a8F3e7eBc93b8376" --yes
+```
+
+Two things to know before running it. Removing a variable removes it for every environment it names, so pull the
+current value first and put the whole list back in one go. And this list is the same one that opens the dev pages
+(`VIKY_DEV_PAGES`), one of which moves the relayer's MON: adding an account gives it those pages too.
+
 ## Money paths to audit
 
 Each entry is a path where money can move while the record of it fails, with what to do about it. Nothing here is
