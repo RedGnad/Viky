@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { AUSD, MON, USDC } from "../src/coins";
-import { dollarsToChange, dustInWords, feeApplied, floorToOrder, readyFor, twoDecimalsDown, unitsOfTwoDecimals } from "../src/exit-steps";
+import { dollarsToChange, feeApplied, floorToOrder, readyFor, twoDecimalsDown, unitsOfTwoDecimals } from "../src/exit-steps";
 import { CONVERSION_RESERVE } from "../src/funding-step";
 import { WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT } from "../src/rails";
 import { CASH_OUT } from "../src/sentences";
@@ -32,13 +32,16 @@ test("the two-decimal number is exactly what leaves, in the coin's own units", (
   }
 });
 
-test("what stays behind is said honestly", () => {
-  assert.equal(dustInWords(0n, 6), "");
-  assert.equal(dustInWords(9_586n, 6), "Less than 0.01", "the dust of the first real conversion");
-  assert.equal(dustInWords(10_000n, 6), "0.01");
-  assert.equal(dustInWords(15_000n, 6), "About 0.01", "never rounded up to a figure that is not there");
-  assert.equal(dustInWords(1_234_567n, 6), "About 1.23");
-  assert.equal(dustInWords(6_143_573_911_778_147n, 18), "Less than 0.01");
+test("what stays behind is said honestly, and never as a number with nothing to hold on to", () => {
+  // The dust is always under a hundredth of what the service buys, because the order is floored to two decimals.
+  // On a dollar rail that hundredth is a cent; on the other it is a hundredth of what that service buys, and the
+  // sentence says so rather than printing a quantity a person cannot price (D104).
+  assert.equal(CASH_OUT.staysDollars, "Less than $0.01 stays in your account.");
+  assert.equal(CASH_OUT.staysQuantity("Mercuryo"), "Less than 0.01 of what Mercuryo buys stays in your account.");
+  const card = readyFor(WAY_OUT_CARD, MON, CONVERSION_RESERVE + 138_436_143_573_911_778_147n);
+  assert.ok(card && card.dust < 10n ** 16n, "the dust is under a hundredth of the coin, which is what the sentence says");
+  const bank = readyFor(WAY_OUT_EURO, USDC, 9_999_586n);
+  assert.ok(bank && bank.dust < 10_000n, "under a cent, which is what the dollar sentence says");
 });
 
 test("what is ready to send comes from the balance of the coin that service buys, above the reserve", () => {

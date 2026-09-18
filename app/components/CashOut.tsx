@@ -11,7 +11,8 @@ import { sendOwnMoney } from "@/src/client/gift";
 import { readCoinBalance, sendMon } from "@/src/client/onchain";
 import { AUSD, coinAt, COINS, exactly, isNative, USDC, type Coin } from "@/src/coins";
 import { whenInWords } from "@/src/display-currency";
-import { dollarsToChange, dustInWords, feeApplied, floorToOrder, readyFor, twoDecimalsDown, type Ready } from "@/src/exit-steps";
+import { exitAmount, type ExitAmount } from "@/src/exit-amount";
+import { dollarsToChange, feeApplied, floorToOrder, readyFor, twoDecimalsDown, type Ready } from "@/src/exit-steps";
 import { formatAusd } from "@/src/gift-reader";
 import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords, orderWaysOut } from "@/src/rail-country";
@@ -38,7 +39,7 @@ type Stage = "base" | "amount" | "review" | "getting" | "ready" | "confirm" | "s
 /** Where a refusal is shown: under the element that caused it, never in a box at the bottom of the page. */
 type Where = "amount" | "review" | "code" | "send" | "own";
 
-type Sent = Readonly<{ number: string; name: string; when: string; reference: string; cost?: string }>;
+type Sent = Readonly<{ amount: string; exact?: string; name: string; when: string; reference: string; cost?: string }>;
 
 /** A session that closed while they were away is not a failure to report, it is a door to reopen (D74, D80). */
 function sessionClosed(error: unknown): boolean {
@@ -163,12 +164,24 @@ export function CashOut() {
   const readyOf = (way: WayOut): Ready | undefined => (holdings ? readyFor(way, coinOf(way), held(coinOf(way))) : undefined);
   const firstReady = WAYS_OUT.find((way) => readyOf(way) !== undefined);
 
+  /** The dollars a card rail's ready amount is worth, once the price has answered, and nothing until then. */
+  const worthUnits = worth === undefined || worth === "unavailable" ? undefined : worth.units;
+  /** What a person reads (dollars) and what the service asks for (the exact quantity), for one way out (D104). */
+  const amountOf = (way: WayOut, ready: Ready): ExitAmount =>
+    exitAmount({ number: ready.number, native: isNative(coinOf(way)), worth: worthUnits });
+
   const changing = dollarsToChange(dollars, ausd, W.refusals);
   const maxToChange = twoDecimalsDown(ausd, AUSD.decimals);
 
   // The card branch with nothing else in the account: the ready figure leads, and its worth is asked once.
   const cardOnly = holdings !== null && dollarsHeld === 0n && firstReady !== undefined && isNative(coinOf(firstReady)) ? readyOf(firstReady) : undefined;
-  const cardOnlyUnits = cardOnly?.units;
+  /**
+   * What is ready on a card rail, whichever way the screen got there: the person decides on dollars, so the dollars
+   * are asked of the price for every state that names the amount, not only for the headline of an empty account
+   * (D104). One quote per amount, the same the funder screen converts with, and never a guess.
+   */
+  const cardWay = chosen && isNative(coinOf(chosen)) ? chosen : firstReady && isNative(coinOf(firstReady)) ? firstReady : undefined;
+  const cardOnlyUnits = cardWay ? readyOf(cardWay)?.units : undefined;
   useEffect(() => {
     if (cardOnlyUnits === undefined) return;
     let live = true;
@@ -314,7 +327,8 @@ export function CashOut() {
         reference = result.reference;
         atMs = result.sentAtMs;
       }
-      setSent({ number: ready.number, name: chosen.name, when: whenInWords(atMs), reference, cost });
+      const said = amountOf(chosen, ready);
+      setSent({ amount: said.lead, exact: said.exact, name: chosen.name, when: whenInWords(atMs), reference, cost });
       setDeposit("");
       await refresh();
       setStage("sent");
@@ -358,7 +372,7 @@ export function CashOut() {
     setStage("ownSending");
     try {
       const result = await sendOwnMoney({ account, to: getAddress(ownCode.trim()) as Hex, amount: leaving, coin: ownCoin });
-      setSent({ number: twoDecimalsDown(leaving, ownCoin.decimals), name: "", when: whenInWords(result.sentAtMs), reference: result.reference });
+      setSent({ amount: twoDecimalsDown(leaving, ownCoin.decimals), name: "", when: whenInWords(result.sentAtMs), reference: result.reference });
       setOwnCode("");
       await refresh();
       setStage("ownSent");
@@ -384,7 +398,12 @@ export function CashOut() {
         <section className={CARD}>
           <h1 className={TITLE}>{closed ? W.closedTitle : W.signInToSee}</h1>
           <p className={BODY}>{closed ? W.closedBody : W.signedOutBody}</p>
-          {closed && ready && way ? <p className={HELP}>{W.closedWhere(ready.number, way.name)}</p> : null}
+          {closed && ready && way ? (
+            <>
+              <p className={HELP}>{W.closedWhere(amountOf(way, ready).lead, way.name)}</p>
+              {amountOf(way, ready).exact ? <p className={HELP}>{W.exactQuantity(way.name, amountOf(way, ready).exact!)}</p> : null}
+            </>
+          ) : null}
         </section>
         <AccountPanel returning signInOnly />
       </div>
@@ -408,14 +427,16 @@ export function CashOut() {
         <p className={MONEY}>{W.oneMoment}</p>
       ) : dollarsHeld === 0n && firstReady ? (
         <>
-          <p className={MONEY}>{readyOf(firstReady)!.number}</p>
+          <p className={MONEY}>{amountOf(firstReady, readyOf(firstReady)!).lead}</p>
           {cardOnly ? (
             <p className={HELP}>
               {worth === undefined
                 ? W.oneMoment
                 : worth === "unavailable"
                   ? W.worthLater
-                  : `${W.worthAbout(twoDecimalsDown(worth.units, AUSD.decimals))}${money.about(worth.units) ? `, ${money.about(worth.units)}` : ""}`}
+                  : // The figure above is already the dollars (D104); this line carries the account's own currency
+                    // and the date of the rate, and says nothing when the account reads in dollars.
+                    (money.about(worth.units) ?? "")}
             </p>
           ) : null}
         </>
@@ -432,7 +453,9 @@ export function CashOut() {
           {money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
         </>
       )}
-      {firstReady && dollarsHeld > 0n && !isNative(coinOf(firstReady)) && stage !== "sent" ? <p className={BODY}>{W.readyLine(firstReady.name, readyOf(firstReady)!.number)}</p> : null}
+      {firstReady && dollarsHeld > 0n && !isNative(coinOf(firstReady)) && stage !== "sent" ? (
+        <p className={BODY}>{W.readyLine(firstReady.name, amountOf(firstReady, readyOf(firstReady)!).lead)}</p>
+      ) : null}
     </section>
   );
 
@@ -542,7 +565,15 @@ export function CashOut() {
                   so neither stays on the screen beside the refusal. */}
               {priceRefused ? null : (
                 <>
-                  <p className={BODY}>{W.review(orderNumber, chosen.name, payout)}</p>
+                  {/* The dollars a person is spending lead, whichever coin the service buys: on the bank rail the
+                      number ready to send is those dollars, on the card rail it is a quantity of the chain's own
+                      coin, and the quantity is said after the money rather than in its place (D104). */}
+                  <p className={BODY}>
+                    {bank
+                      ? W.review(`$${orderNumber}`, chosen.name, payout)
+                      : W.reviewGetting(formatAusd(changing.units ?? 0n), orderNumber, chosen.name)}
+                  </p>
+                  {bank ? null : <p className={BODY}>{payout}</p>}
                   <p className={HELP}>
                     {W.reviewDollars(changing.units !== undefined ? twoDecimalsDown(changing.units, AUSD.decimals) : dollars)}
                     {money.about(changing.units ?? 0n) ? ` ${money.about(changing.units ?? 0n)}.` : ""}
@@ -562,7 +593,9 @@ export function CashOut() {
                   </button>
                 ) : (
                   <button type="button" onClick={() => void getReady()} disabled={busy || stage === "getting"} className={PRIMARY_BUTTON}>
-                    {stage === "getting" ? W.gettingReady(orderNumber) : W.getReady(orderNumber)}
+                    {stage === "getting"
+                      ? W.gettingReady(bank ? `$${orderNumber}` : formatAusd(changing.units ?? 0n))
+                      : W.getReady(bank ? `$${orderNumber}` : formatAusd(changing.units ?? 0n))}
                   </button>
                 )}
                 {stage !== "getting" ? (
@@ -581,6 +614,14 @@ export function CashOut() {
   if ((stage === "ready" || stage === "confirm" || stage === "sending" || stage === "sent") && chosen) {
     const ready = readyOf(chosen);
     const coin = coinOf(chosen);
+    // What a person reads here, and the exact quantity the service asks for, said once under the action (D104).
+    const amount = ready ? amountOf(chosen, ready) : undefined;
+    const exactLine = amount?.exact ? (
+      <>
+        <p className={HELP}>{W.exactQuantity(chosen.name, amount.exact)}</p>
+        {amount.unpriced ? <p className={HELP}>{W.worthLater}</p> : null}
+      </>
+    ) : null;
     const problemWithCode = codeProblem();
     /** The screen is waiting for a code it can send to; until there is one, sending is not the action to press. */
     const sendable = deposit.trim() !== "" && problemWithCode === null;
@@ -589,7 +630,8 @@ export function CashOut() {
         {moneyCard}
         {stage === "sent" && sent ? (
           <section className={CARD}>
-            <p className={BODY}>{W.sent(sent.number, sent.name, sent.when, sent.reference)}</p>
+            <p className={BODY}>{W.sent(sent.amount, sent.name, sent.when, sent.reference)}</p>
+            {sent.exact ? <p className={HELP}>{W.exactQuantity(sent.name, sent.exact)}</p> : null}
             <p className={HELP}>{W.sentPays(chosen.name, chosen.pays, !isNative(coin))}</p>
             {sent.cost ? <p className={HELP}>{W.sendingCost(sent.cost)}</p> : null}
             <a href={chosen.page} target="_blank" rel="noopener noreferrer" className={SECONDARY_BUTTON}>
@@ -598,8 +640,8 @@ export function CashOut() {
           </section>
         ) : ready ? (
           <section className={CARD}>
-            <p className={BODY}>{W.ready(ready.number)}</p>
-            <p className={HELP}>{W.stays(dustInWords(ready.dust, coin.decimals))}</p>
+            <p className={BODY}>{W.ready(amount!.lead)}</p>
+            <p className={HELP}>{isNative(coin) ? W.staysQuantity(chosen.name) : W.staysDollars}</p>
             {/* What the screen is waiting for: a code that could be sent to. Until then, sending is not the live action. */}
 
             {stage === "ready" ? (
@@ -608,8 +650,9 @@ export function CashOut() {
                 {/* Steps 2 and 3 stand on one screen, so the accent marks the step the screen is waiting for: placing the
                     order while nothing has been pasted, sending once the code is there. Never both at once. */}
                 <a href={chosen.page} target="_blank" rel="noopener noreferrer" className={sendable ? SECONDARY_BUTTON : PRIMARY_BUTTON}>
-                  {W.order(ready.number, chosen.name)}
+                  {W.order(amount!.lead, chosen.name)}
                 </a>
+                {exactLine}
                 <p className={BODY}>{W.giveThisCode(chosen.name)}</p>
                 {/* Whole and wrapping, so it can be compared with what was pasted on the service's page (decision 9). */}
                 <p className="break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)] tabular-nums">{address}</p>
@@ -637,10 +680,10 @@ export function CashOut() {
                   <p className="break-all text-[length:var(--type-help)] tabular-nums">{deposit.trim()}</p>
                 ) : null}
                 <p className={HELP}>
-                  {W.amountFixed}: {ready.number}
+                  {W.amountFixed}: {amount!.lead}
                 </p>
                 <button type="button" onClick={() => setStage("confirm")} disabled={!sendable || busy} className={sendable ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
-                  {W.send(ready.number, chosen.name)}
+                  {W.send(amount!.lead, chosen.name)}
                 </button>
                 {deposit.trim() === "" ? <p className={HELP}>{W.pasteFirst(chosen.name)}</p> : null}
                 <Link href="/" className={INLINE_BUTTON}>
@@ -650,14 +693,15 @@ export function CashOut() {
             ) : null}
             {stage === "confirm" || stage === "sending" ? (
               <>
-                <p className={BODY}>{W.confirm(ready.number, chosen.name)}</p>
+                <p className={BODY}>{W.confirm(amount!.lead, chosen.name)}</p>
+                {exactLine}
                 {isNative(coin) ? <p className={HELP}>{W.confirmCard}</p> : null}
                 <p className={HELP}>{W.codeYouPasted}</p>
                 <p className="break-all text-[length:var(--type-help)] tabular-nums">{deposit.trim()}</p>
                 {alert("send")}
                 <div className="flex flex-wrap gap-[var(--tap-gap)]">
                   <button type="button" onClick={() => void send()} disabled={busy || stage === "sending"} className={PRIMARY_BUTTON}>
-                    {stage === "sending" ? W.sending(ready.number, chosen.name) : W.sendButton}
+                    {stage === "sending" ? W.sending(amount!.lead, chosen.name) : W.sendButton}
                   </button>
                   {stage !== "sending" ? (
                     <button type="button" onClick={() => { setStage("ready"); setProblem(null); }} className={INLINE_BUTTON}>
@@ -684,7 +728,7 @@ export function CashOut() {
         <h2 className={TITLE}>{W.own.title}</h2>
         {stage === "ownSent" && sent ? (
           <>
-            <p className={BODY}>{W.own.sent(sent.number, sent.when, sent.reference)}</p>
+            <p className={BODY}>{W.own.sent(sent.amount, sent.when, sent.reference)}</p>
           </>
         ) : (
           <>
