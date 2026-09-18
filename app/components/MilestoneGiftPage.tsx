@@ -210,7 +210,22 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
         </button>
       ) : null}
 
-      {mine && status.phase === "opened" && !codeUsable && !status.accountClosed ? (
+      {/* The funder named the account, so the first reading binds it and nothing is asked of the person's own profile
+          (D27). A code exists only where the recipient names their own account. */}
+      {mine && status.phase === "opened" && account.namedByFunder && !status.accountClosed ? (
+        <section className={CARD}>
+          <h2 className={TITLE}>{A.connectTitle(source)}</h2>
+          {account.username ? <p className={BODY}>{A.givenName(source, account.username)}</p> : null}
+          <p className={HELP}>{A.nothingToDo(source)}</p>
+          <p className="font-medium">{A.connectNow(status.durationDays)}</p>
+          <p className={HELP}>{A.firstReading(status.target)}</p>
+          <button type="button" onClick={() => void start()} disabled={working} className={PRIMARY_BUTTON}>
+            {busy === "starting" ? A.addedBusy : A.startReading(source)}
+          </button>
+        </section>
+      ) : null}
+
+      {mine && status.phase === "opened" && !account.namedByFunder && !codeUsable && !status.accountClosed ? (
         <section className={CARD}>
           <h2 className={TITLE}>{A.connectTitle(source)}</h2>
           {account.username ? <p className={BODY}>{A.givenName(source, account.username)}</p> : null}
@@ -223,7 +238,7 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
         </section>
       ) : null}
 
-      {mine && status.phase === "opened" && codeUsable && account.username && !status.accountClosed ? (
+      {mine && status.phase === "opened" && !account.namedByFunder && codeUsable && account.username && !status.accountClosed ? (
         <section className={CARD}>
           <h2 className={TITLE}>{A.proveTitle(account.username)}</h2>
           <p className={BODY}>{milestone?.words.codeSteps}</p>

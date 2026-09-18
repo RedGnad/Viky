@@ -23,7 +23,14 @@ export type MilestoneStatus = Readonly<{
   youAreTheFunder: boolean;
   names: { recipientName: string | null; funderName: string | null } | null;
   /** The account read, as the source spells it; the code only ever reaches the recipient signed in. */
-  goalAccount: { username: string | null; bound: boolean; code: string | null; codeExpiresAt: string | null };
+  goalAccount: {
+    username: string | null;
+    bound: boolean;
+    code: string | null;
+    codeExpiresAt: string | null;
+    /** True when the funder named the account: nothing is asked of the recipient's own profile then (D27). */
+    namedByFunder: boolean;
+  };
   amount: string;
   amountDisplay: string;
   /** Where the person stood when the gift was connected, and what they must reach. */

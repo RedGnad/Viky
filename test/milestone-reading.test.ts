@@ -76,6 +76,9 @@ const OPENED: MilestoneState = {
 };
 
 const CLIMBING: MilestoneState = { ...OPENED, identityHash: IDENTITY, startingValue: 1904n, lastProofAt: NOW - 86_400, deadline: NOW + 29 * 86_400 };
+/** The other half of D27: a gift whose recipient named their own account, which is the only case a code is for. */
+const THEIR_OWN: GiftRecord = { ...RECORD, usernameSource: "recipient" };
+
 const BOUND: GiftRecord = { ...RECORD, boundAt: new Date((NOW - 86_400) * 1_000), goalProfileId: "41", bindingCode: null, bindingCodeExpiresAt: null };
 
 function attested(rating: number, extra: Partial<AttestedChessReading> = {}): AttestedChessReading {
@@ -130,8 +133,26 @@ function harness(record: GiftRecord, state: MilestoneState, overrides: Partial<M
   return { calls, proved, recorded, deps };
 }
 
-test("the first reading proves the account with the code in its name, and is recorded as the start whatever it says", async () => {
-  const run = harness(RECORD, OPENED);
+test("the funder named the account, so the first reading binds it with no code and no name (D27)", async () => {
+  // The rule the daily path already followed: a code proves control only where the recipient named the account. The
+  // milestone path asked for one in both cases, which made a recipient edit their own profile for nothing, and blocked
+  // the rehearsal of 18 Sep. The reading is taken without the name, so a profile that has none works.
+  const run = harness(RECORD, OPENED, { attest: async () => attested(1904, { name: null }) });
+  const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps);
+  assert.equal(outcome.kind, "started");
+  assert.deepEqual(run.calls, ["prove", "bind"], "read without the name, then proved");
+
+  // A code sitting on that record changes nothing: it is not what binds this gift.
+  const withCode = harness({ ...RECORD, bindingCode: "KXQPRT" }, OPENED, { attest: async () => attested(1904, { name: null }) });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "start" }, withCode.deps)).kind, "started");
+
+  // Even a code that expired an hour ago: nothing here is waiting on it.
+  const stale = harness({ ...RECORD, bindingCodeExpiresAt: new Date((NOW - 3_600) * 1_000) }, OPENED, { attest: async () => attested(1904, { name: null }) });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "start" }, stale.deps)).kind, "started");
+});
+
+test("the recipient named their own account, so the code in the name is what binds it, and the start is recorded whatever it says", async () => {
+  const run = harness(THEIR_OWN, OPENED);
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps);
   assert.equal(outcome.kind, "started");
   assert.deepEqual(run.calls, ["attest:withName", "prove", "bind"]);
@@ -144,23 +165,23 @@ test("the first reading proves the account with the code in its name, and is rec
   assert.deepEqual(run.recorded, ["start:attested:started"]);
 
   // A start above what the funder accepted is still the start: the screen says so, and the gift comes back at the end.
-  const high = harness(RECORD, OPENED, { attest: async () => attested(1990, { name: "KXQPRT" }) });
+  const high = harness(THEIR_OWN, OPENED, { attest: async () => attested(1990, { name: "KXQPRT" }) });
   const above = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, high.deps);
   assert.equal(above.kind === "started" && above.aboveAccepted, true);
 });
 
-test("without the code in the name nothing is sent, and a stale code is refused before any reading", async () => {
-  const run = harness(RECORD, OPENED, { attest: async () => attested(1904, { name: "Erik" }) });
+test("an account the recipient named needs its code: without it nothing is sent, and a stale one is refused first", async () => {
+  const run = harness(THEIR_OWN, OPENED, { attest: async () => attested(1904, { name: "Erik" }) });
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps);
   assert.equal(outcome.kind === "refused" && outcome.code, "CODE_NOT_IN_NAME");
   assert.deepEqual(run.proved, []);
 
-  const expired = harness({ ...RECORD, bindingCodeExpiresAt: new Date((NOW - 1) * 1_000) }, OPENED);
+  const expired = harness({ ...THEIR_OWN, bindingCodeExpiresAt: new Date((NOW - 1) * 1_000) }, OPENED);
   const late = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, expired.deps);
   assert.equal(late.kind === "refused" && late.code, "CODE_EXPIRED");
   assert.deepEqual(expired.calls, [], "no reading is paid for");
 
-  const noName = harness(RECORD, OPENED, { attest: async () => Promise.reject(new ChessReadError("NO_NAME", "That profile has no name")) });
+  const noName = harness(THEIR_OWN, OPENED, { attest: async () => Promise.reject(new ChessReadError("NO_NAME", "That profile has no name")) });
   const empty = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, noName.deps);
   assert.equal(empty.kind === "refused" && empty.code, "NO_NAME");
 });
@@ -318,7 +339,7 @@ test("a closed account is what both pages read, and neither side is offered a ge
   assert.equal(CHESS_MILESTONE.words.accountClosed, "Chess.com has closed this account, so this gift can no longer be earned.");
   const page = readFileSync("app/components/MilestoneGiftPage.tsx", "utf8");
   assert.match(page, /status\.accountClosed && !status\.finished \? <p className="font-medium">\{milestone\?\.words\.accountClosed\}<\/p> : null/);
-  assert.equal(page.match(/&& !status\.accountClosed/g)?.length, 4, "no code, no proof, no check, and no wait for a connection");
+  assert.equal(page.match(/&& !status\.accountClosed/g)?.length, 5, "no reading, no code, no proof, no check, and no wait for a connection");
 });
 
 test("the Chess.com code is letters only and found whatever surrounds it", () => {
