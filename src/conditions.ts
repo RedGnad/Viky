@@ -19,6 +19,29 @@ import { GOAL_TYPE_DUOLINGO_XP } from "./gift-terms";
 export type ConditionKind = "daily" | "milestone";
 
 /**
+ * The families the chooser groups by, once there are enough conditions to need grouping (design audit of 16 Sep 2026,
+ * section 3). They live here and not on a screen: a family is a fact about what a person would be doing, like the
+ * condition itself, and a screen that invented its own headings would drift from the register the first time one
+ * moved.
+ *
+ * The titles are everyday verbs and name no source, because a heading that said Duolingo would turn the catalogue
+ * into a shelf of brands rather than of efforts. The order is ours and it is deliberate: learning and sitting an exam
+ * come first, because that is the door our segment walks through. Inside a family the order is alphabetical, the
+ * GOV.UK rule, so that an editor's choice is never read as advice.
+ */
+export type ConditionFamily = "language" | "course" | "play" | "move";
+
+export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>[] = [
+  { id: "language", title: "Learn a language" },
+  { id: "course", title: "Finish a course" },
+  { id: "play", title: "Play" },
+  { id: "move", title: "Move" },
+];
+
+/** From this many conditions on offer, the chooser stops being one list and becomes one section per family. */
+export const SECTIONS_FROM = 6;
+
+/**
  * How a funder's typed name is checked before any money moves: its shape here, its existence by a public read on
  * Viky's own route (decision 10 of the drawn flows), and the refusal for each, said under the field.
  */
@@ -84,6 +107,8 @@ export type Condition = Readonly<{
   live: boolean;
   /** The source's own name, the one word a screen may print about it. */
   source: string;
+  /** Which family the chooser files it under. */
+  family: ConditionFamily;
   /** The condition in words, as the radio on "What will they do?" reads it. */
   name: string;
   /**
@@ -164,6 +189,7 @@ export const DUOLINGO_DAILY: Condition = {
   goalType: GOAL_TYPE_DUOLINGO_XP,
   live: true,
   source: "Duolingo",
+  family: "language",
   name: "A Duolingo lesson each day",
   help: "Read each morning from their public Duolingo profile, with nothing to install: it proves the account did the lesson, not who held the phone.",
   link: {
@@ -243,6 +269,7 @@ export const CHESS_RATING: Condition = {
   goalType: null,
   live: false,
   source: "Chess.com",
+  family: "play",
   name: "Reach a chess rating on Chess.com",
   help: "Their public Chess.com rating, read every day: Chess.com polices cheating itself, and Viky never pays an account it has closed.",
   link: {
@@ -288,6 +315,7 @@ export const DUOLINGO_ENGLISH_TEST: Condition = {
   goalType: null,
   live: false,
   source: "Duolingo English Test",
+  family: "language",
   name: "Reach a score on the Duolingo English Test",
   help: "A test taken under watch, with an identity document and examiners. The result has a page they choose to share.",
   link: {
@@ -312,6 +340,7 @@ export const COURSERA_CERTIFICATE: Condition = {
   goalType: null,
   live: false,
   source: "Coursera",
+  family: "course",
   name: "Get a Coursera certificate",
   help: "The public page of the certificate, shared when they have it: Coursera checks identity once, not each piece of work.",
   link: { kind: "link", label: "The link to your certificate", help: "In Coursera, open the certificate and choose Share, then paste the link here." },
@@ -339,4 +368,24 @@ export function conditionOfGoal(goalType: number): Condition | undefined {
 
 export function conditionById(id: string): Condition | undefined {
   return CONDITIONS.find((condition) => condition.id === id);
+}
+
+/** One section of the chooser: a family, its title, and the conditions offered inside it, alphabetically. */
+export type ConditionSection = Readonly<{ family: ConditionFamily; title: string; conditions: readonly Condition[] }>;
+
+/**
+ * How the chooser should draw what it is offering (design audit, section 3).
+ *
+ * Under six conditions it stays one list, because sections over four items are furniture rather than help. From six
+ * it becomes one section per family, in the register's family order, alphabetical inside each, and a family with
+ * nothing offered does not appear at all: an empty heading would advertise something the chooser refuses to offer.
+ * Whichever shape it takes, the selection is single, and it is the same radio group.
+ */
+export function chooserSections(offered: readonly Condition[]): readonly ConditionSection[] | null {
+  if (offered.length < SECTIONS_FROM) return null;
+  return FAMILIES.map(({ id, title }) => ({
+    family: id,
+    title,
+    conditions: offered.filter((condition) => condition.family === id).sort((a, b) => a.name.localeCompare(b.name, "en")),
+  })).filter((section) => section.conditions.length > 0);
 }
