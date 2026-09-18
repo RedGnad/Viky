@@ -115,9 +115,12 @@
   }
 }
 
-/* Night, because the device says so, which is the only way it is ever asked for. */
+/*
+ * Night because the device says so, and only while nobody has asked for day. The appearance control writes
+ * `data-theme` on the document (src/theme.ts, D97); with nothing written, this is what paints the screen.
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --background: #151026;
     --surface: #211A38;
     --text: #F3F0FA;
@@ -138,6 +141,29 @@
     --control-relief-colour: #08060F;
     color-scheme: dark;
   }
+}
+
+/* Night because the person asked for it, whatever their device says. The values are the ones above. */
+:root[data-theme="dark"] {
+  --background: #151026;
+  --surface: #211A38;
+  --text: #F3F0FA;
+  --muted: #B3ABC9;
+  --accent: #FFC531;
+  --on-accent: #151026;
+  --accent-text: #F3F0FA;
+  --control-border: #F3F0FA;
+  --divider: #352C52;
+  --card-border: #352C52;
+  --character-1: #FF8C98;
+  --character-2: #6DBDFB;
+  --character-3: #BBA3FA;
+  --character-face: #151026;
+  --character-shadow: #08060F;
+  --character-shadow-opacity: 0.45;
+  /* A shade under the ground, read as depth: the ink after dark read as a thick white edge. */
+  --control-relief-colour: #08060F;
+  color-scheme: dark;
 }
 
 body {

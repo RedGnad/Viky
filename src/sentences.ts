@@ -55,6 +55,16 @@ export const HOME = {
  * "are uncertain whether they have an account". Pressing it opens the passkey at once; the panel only appears when that
  * does not work, which is when the person has no passkey here or waved the sheet away.
  */
+/**
+ * The appearance control (D97): one icon in the header, on every screen. Its name says where the product is now and
+ * what a press will do, because an icon alone says neither, and a reader that speaks the screen aloud has only this.
+ */
+export const APPEARANCE = {
+  system: "Appearance: as your device. Press for day.",
+  light: "Appearance: day. Press for night.",
+  dark: "Appearance: night. Press to follow your device again.",
+} as const;
+
 export const DOOR = {
   open: "Sign in or create account",
   how: "Your face or your fingerprint, and nothing to remember.",

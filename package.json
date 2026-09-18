@@ -46,6 +46,7 @@
     "design:shots": "tsx scripts/design-screenshots.ts",
     "review:capture": "tsx scripts/review-capture.ts",
     "looks:capture": "tsx scripts/capture-looks.ts",
+    "capture:appearance": "tsx scripts/capture-appearance.ts",
     "make:icon": "tsx scripts/make-icon.ts",
     "check:morning-push": "tsx scripts/check-morning-push.ts"
   },

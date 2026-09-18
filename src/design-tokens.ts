@@ -180,6 +180,14 @@ export const COLOURS: Record<Appearance, Record<string, string>> = {
 export const TEXT_COLOURS = ["text", "muted", "accentText"] as const;
 /** Which colours identify a control, and must therefore clear 3:1 on both. */
 export const CONTROL_COLOURS = ["controlBorder"] as const;
+/**
+ * Where the chosen appearance is kept, so a reload does not flash the other one.
+ *
+ * It came back on 18 Sep 2026 with the appearance control (D97): the product follows the device until somebody
+ * says otherwise, and what they say is remembered here, in their own browser and nowhere else.
+ */
+export const THEME_STORAGE_KEY = "viky.theme";
+
 /** The two things a colour can sit on. Every text colour is measured against both, never just one. */
 export const GROUNDS = ["background", "surface"] as const;
 
