@@ -408,8 +408,10 @@ export function CashOut() {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         {moneyCard}
+        {/* One accent surface per screen: the accent is on the first way offered, the others carry the same action in the
+            plain shape. Which one comes first is the order's business (R1), never a hidden or a missing card. */}
         {WAYS_OUT.map((way, index) => (
-          <section key={way.name} className={index === 0 ? CARD : CARD}>
+          <section key={way.name} className={CARD}>
             <h2 className={TITLE}>{way.name}</h2>
             <p className={BODY}>{way.where}</p>
             <p className={BODY}>
@@ -421,7 +423,7 @@ export function CashOut() {
               ))}
             </ul>
             <p className={HELP}>{W.sourceLine(way.source, way.read)}</p>
-            <button type="button" onClick={() => start(way)} disabled={holdings === null || ausd === 0n} className={PRIMARY_BUTTON}>
+            <button type="button" onClick={() => start(way)} disabled={holdings === null || ausd === 0n} className={index === 0 ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
               {way.coin === USDC.address ? W.chooseBank : W.chooseCard}
             </button>
             {holdings !== null && ausd === 0n ? <p className={HELP}>{W.nothingToSend}</p> : null}
@@ -531,6 +533,8 @@ export function CashOut() {
     const ready = readyOf(chosen);
     const coin = coinOf(chosen);
     const problemWithCode = codeProblem();
+    /** The screen is waiting for a code it can send to; until there is one, sending is not the action to press. */
+    const sendable = deposit.trim() !== "" && problemWithCode === null;
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         {moneyCard}
@@ -547,11 +551,14 @@ export function CashOut() {
           <section className={CARD}>
             <p className={BODY}>{W.ready(ready.number)}</p>
             <p className={HELP}>{W.stays(dustInWords(ready.dust, coin.decimals))}</p>
+            {/* What the screen is waiting for: a code that could be sent to. Until then, sending is not the live action. */}
 
             {stage === "ready" ? (
               <>
                 <h2 className={TITLE}>{W.step2(chosen.name)}</h2>
-                <a href={chosen.page} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON}>
+                {/* Steps 2 and 3 stand on one screen, so the accent marks the step the screen is waiting for: placing the
+                    order while nothing has been pasted, sending once the code is there. Never both at once. */}
+                <a href={chosen.page} target="_blank" rel="noopener noreferrer" className={sendable ? SECONDARY_BUTTON : PRIMARY_BUTTON}>
                   {W.order(ready.number, chosen.name)}
                 </a>
                 <p className={BODY}>{W.giveThisCode(chosen.name)}</p>
@@ -583,7 +590,7 @@ export function CashOut() {
                 <p className={HELP}>
                   {W.amountFixed}: {ready.number}
                 </p>
-                <button type="button" onClick={() => setStage("confirm")} disabled={busy || deposit.trim() === "" || problemWithCode !== null} className={PRIMARY_BUTTON}>
+                <button type="button" onClick={() => setStage("confirm")} disabled={!sendable || busy} className={sendable ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
                   {W.send(ready.number, chosen.name)}
                 </button>
                 {deposit.trim() === "" ? <p className={HELP}>{W.pasteFirst(chosen.name)}</p> : null}

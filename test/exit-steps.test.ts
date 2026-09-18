@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { AUSD, MON, USDC } from "../src/coins";
 import { dollarsToChange, dustInWords, feeApplied, floorToOrder, readyFor, twoDecimalsDown, unitsOfTwoDecimals } from "../src/exit-steps";
 import { CONVERSION_RESERVE } from "../src/funding-step";
-import { WAY_OUT_CARD, WAY_OUT_EURO } from "../src/rails";
+import { WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT } from "../src/rails";
 import { CASH_OUT } from "../src/sentences";
 
 /**
@@ -80,4 +81,20 @@ test("the floor the quote shows is cut to the number that can be ordered", () =>
   assert.equal(floorToOrder("$10"), "10.00");
   assert.equal(floorToOrder("$0.5"), "0.50");
   assert.equal(floorToOrder("$28.56"), "28.56");
+});
+
+/**
+ * Look 2 (D88) gives a screen one accent surface, and it marks the one action the screen is waiting for. The way out
+ * is where that was broken: two rails, two accent buttons, and steps 2 and 3 on one screen each carrying one.
+ */
+test("the way out shows one accent surface at a time, on the action it is waiting for (S4)", () => {
+  const screen = readFileSync("app/components/CashOut.tsx", "utf8");
+  // The base: the first way offered carries the accent, the others the same action in the plain shape.
+  assert.match(screen, /className=\{index === 0 \? PRIMARY_BUTTON : SECONDARY_BUTTON\}/);
+  // Steps 2 and 3 share a screen: placing the order leads until a code can be sent to, and then sending does.
+  assert.match(screen, /const sendable = deposit\.trim\(\) !== "" && problemWithCode === null;/);
+  assert.match(screen, /className=\{sendable \? SECONDARY_BUTTON : PRIMARY_BUTTON\}/, "the order button steps back");
+  assert.match(screen, /className=\{sendable \? PRIMARY_BUTTON : SECONDARY_BUTTON\}/, "and sending takes the accent");
+  // No rail names another on screen: what each serves is its own conditions, and the order is the screen's business.
+  for (const way of WAYS_OUT) for (const other of WAYS_OUT) if (other !== way) assert.doesNotMatch(way.where, new RegExp(other.name, "i"));
 });

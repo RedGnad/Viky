@@ -159,7 +159,8 @@ export const WAY_OUT_EURO: WayOut = {
 /**
  * Selling the chain's own coin for a card payout.
  *
- * This is the corridor the euro rail cannot serve. Their currencies endpoint restricts selling MON on Monad in
+ * This is the corridor the euro rail cannot serve. What each rail serves is said by that rail's own conditions and by
+ * the order the screen puts them in (R1), never by a sentence naming the other one. Their currencies endpoint restricts selling MON on Monad in
  * the United Kingdom and nowhere else, so Senegal and Ivory Coast are open here. What it cannot do is pay in
  * France or the rest of the EEA: that is not a currency restriction but a payout one, published in their own
  * help centre on 15 Sep, that no Visa and no Mastercard payout is made there (D72). The two facts come from
@@ -170,7 +171,7 @@ export const WAY_OUT_CARD: WayOut = {
   page: "https://exchange.mercuryo.io/?type=sell&currency=MON&network=MONAD",
   sells: "MON on Monad",
   coin: NATIVE_OUT,
-  where: "To your card, where Ramp does not serve.",
+  where: "To your card.",
   fee: { percent: 3.95, upTo: true, minimum: 4, currency: "EUR" },
   pays: "onto a Visa or Mastercard card",
   conditions: [

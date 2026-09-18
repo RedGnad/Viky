@@ -69,7 +69,10 @@ test("the countries the rails will not serve are the ones their own page lists",
 test("the ways out cover each other's gaps, and each says where it pays", () => {
   assert.equal(WAYS_OUT.length, 2);
   assert.ok(WAY_OUT_EURO.conditions.some((c) => /Senegal|Ivory Coast/i.test(c)), "the euro rail says who it cannot serve");
-  assert.match(WAY_OUT_CARD.where, /where Ramp does not serve/i, "and the card rail says it is the other one's complement");
+  // Since S4 no rail names the other one on screen: each says where it pays, and the order the screen puts them in
+  // is what says which one fits (R1).
+  assert.equal(WAY_OUT_CARD.where, "To your card.");
+  for (const out of WAYS_OUT) for (const other of WAYS_OUT) if (other !== out) assert.doesNotMatch(out.where, new RegExp(other.name, "i"), `${out.name} names ${other.name}`);
   assert.ok(WAY_OUT_CARD.conditions.some((c) => /France|EEA/i.test(c)), "and where it pays nothing");
   // Each stands on a source with a date, so nobody has to take our word for a sentence about their money.
   for (const out of WAYS_OUT) {
