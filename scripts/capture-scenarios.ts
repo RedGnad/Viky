@@ -272,14 +272,11 @@ export const SCENARIOS: Scenario[] = [
   // ---------------------------------------------------------------------------------------------------------
   // Funder.
   {
-    name: "funder: who, what, their name, how much, check, waiting, session closed, picked up",
+    name: "funder: who, what, their name, how much, check, waiting, expired, picked up",
     run: async (s) => {
       await s.reset();
       await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
       await nameCheck(s);
-      // The session closes by itself after thirty quiet minutes on a money screen; the page's clock is driven so
-      // those minutes pass in a moment, which is the only honest way to photograph what they leave.
-      await s.page.clock.install({ time: Date.now() });
       await s.signIn();
       await s.click("Offer a gift");
       await s.text("Who is it for?");
@@ -308,18 +305,24 @@ export const SCENARIOS: Scenario[] = [
       await s.text("Waiting for your 25 EUR payment");
       await s.shot("funder", "waiting for the payment", `${HOME}: Offer a gift, ${TO_THE_CHECK}, Pay 25 EUR with Ramp (the service's page opens in a new tab, closed here)`);
 
-      await s.page.clock.runFor(31 * 60_000);
-      await s.text("Your session closed while you were paying");
-      await s.shot("funder", "session closed while waiting", "On the waiting screen, thirty-one quiet minutes later (the page's clock driven forward)");
-
+      /**
+       * The session that ends here is the reading one, and it ends by expiring rather than by a quiet clock: since D98
+       * the account lives twelve hours in a cookie and the key that signs lives in the page, so thirty-one idle minutes
+       * take the key and leave the account. Dropping the cookie is what twelve hours do to it, and the screen a person
+       * meets on their next look is the gift still waiting for its payment.
+       *
+       * What was photographed here before, "Your session closed while you were paying", is not reachable any more:
+       * nothing on the funding screen drops the account in place. It is reported, not staged (relecture, line 4).
+       */
+      await s.page.context().clearCookies();
       await s.page.reload();
       await s.settle();
       await s.text("A gift is waiting for your payment");
-      await s.shot("funder", "picked up after a reload, before signing in", "On the session-closed screen, reload the page");
+      await s.shot("funder", "picked up after the session expired", "On the waiting screen, with the twelve-hour session expired: reload the page");
       await s.budgetSignIn();
       await s.click("Sign in to pick it up");
       await s.text("Waiting for your 25 EUR payment", 40_000);
-      await s.shot("funder", "picked up after a reload, signed in", "After the reload: Sign in to pick it up");
+      await s.shot("funder", "picked up after signing in again", "After the reload: Sign in to pick it up");
       await s.forgetKept();
     },
   },
@@ -489,8 +492,10 @@ export const SCENARIOS: Scenario[] = [
       }, "POST /api/gift/[id]/bind");
 
       await s.goto(`/g/${GIFT_ID}?t=${CLAIM_TOKEN}`);
+      // Signed in already, and it stays that way across the load since D98: the link opens on the gift itself rather
+      // than on a door, so there is no "Sign in" to press here any more.
       await s.budgetSignIn();
-      await s.page.getByRole("button", { name: /^Sign in$/ }).first().click();
+      await s.goto(`/g/${GIFT_ID}?t=${CLAIM_TOKEN}`);
       await s.page.getByRole("button", { name: "Open my gift" }).waitFor({ state: "visible", timeout: 40_000 });
       await s.settle();
       await s.shot("recipient", "link opened, signed in, before opening", "Opened from the link the funder sent, with an account already on this device: Sign in");
@@ -602,22 +607,13 @@ export const SCENARIOS: Scenario[] = [
       await s.shot("recipient", "finished", `${HOME}: a finished gift under "What's moving"`);
     },
   },
-  {
-    name: "recipient: the session closed on the gift's page",
-    run: async (s) => {
-      await s.reset();
-      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card({ days: EVERY_DAY.days })] } }), "GET /api/gifts/mine");
-      await s.api("GET", GIFT_READ, () => ({ status: 200, body: gift({ ...EVERY_DAY, youAreTheRecipient: true }) }), "GET /api/gift/[id]");
-      await s.page.clock.install({ time: Date.now() });
-      await s.signIn();
-      await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
-      await s.settle();
-      await s.page.getByRole("list", { name: "Every day of this gift" }).waitFor({ state: "visible", timeout: 30_000 });
-      await s.page.clock.runFor(31 * 60_000);
-      await s.text("Your session closed while you were away", 30_000);
-      await s.shot("recipient", "session closed on the gift", "On the gift, thirty-one quiet minutes later (the page's clock driven forward)");
-    },
-  },
+  /**
+   * Gone on 18 Sep 2026: "the session closed on the gift's page". Since D98 the account lives twelve hours in a cookie
+   * and only the key that signs closes with the page, so thirty-one idle minutes no longer take the account away, and
+   * nothing on a gift's page drops it in place. The screen that state photographed is still in the product
+   * (`GiftPage.tsx`, `!address && hadAccount`) and no path reaches it any more: it is reported rather than staged, and
+   * the founder decides whether the screen goes (relecture of 18 Sep, line 4).
+   */
 
   // ---------------------------------------------------------------------------------------------------------
   // The funder's own view of a gift.
@@ -663,7 +659,8 @@ export const SCENARIOS: Scenario[] = [
       await s.shot("gifts", "gifts, given and received", `${HOME}: Gifts in the bar`);
       await s.page.getByRole("link", { name: "Me", exact: true }).first().click();
       await s.settle();
-      await s.text(/Signed in on this device until/);
+      // Two sentences since D98, one per session: the account's is the one always there.
+      await s.text(/Signed in on this device/);
       await s.shot("me", "me, signed in", `${HOME}: Me in the bar`);
       await s.page.getByText("Need your code for a payout service?").first().click();
       await s.settle();
@@ -682,11 +679,16 @@ export const SCENARIOS: Scenario[] = [
     name: "signed out: home, me and gifts",
     run: async (s) => {
       await s.reset();
+      // The account's own session lives in a cookie for twelve hours (D98), so a scenario that wants nobody signed in
+      // has to drop it: reaching these screens by "not having signed in yet" stopped being enough the day the session
+      // started surviving a page load.
+      await s.page.context().clearCookies();
       await s.goto("/");
       await s.text("The money is already in their name");
       await s.shot("home", "signed out", "The door with no session: the promise, the two ways in, how it works, and the two documents the law asks for");
       await s.goto("/me");
-      await s.text("Create my account");
+      // Making an account happens at the one door in the header (brief, section 7), not in the body of this page.
+      await s.text("Not signed in on this device.");
       await s.shot("me", "me, signed out", "The address /me with no session");
       await s.goto("/gifts");
       await s.text("Sign in to see your gifts.");
