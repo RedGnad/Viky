@@ -285,6 +285,16 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
         says: ["Send to my bank", "Send to my card", "Send to another Viky account of mine", "Read from"],
       },
       {
+        name: "Where is your bank or card",
+        when: "the country of the connection and the region of the device disagree (R1): one question, and nothing ordered until it is answered",
+        says: ["Where is your bank or card?"],
+      },
+      {
+        name: "A way out that pays nobody there",
+        when: "a rail's own list has no payout in the country in force: it is put second and said plainly, never removed",
+        says: ["lists no payout in"],
+      },
+      {
         name: "Step 1, how much",
         when: "a way out was chosen",
         says: ["Step 1 of 3: Get it ready", "How much do you want to send to your bank?", "with two decimals at most", "See what you will get"],
