@@ -392,6 +392,9 @@ offered a gift: each stopped on the check, with "Not now".
 | not read back | 17 Sep 2026, 21:12 UTC | one account made on the deployment from before the look changed, to say whether the reload defect was already there (it was). Its code was not read back before the passkey went, and an account writes no row, so nothing names it anywhere |
 | `0xB7490e8d135D5d4c2e0a88B5aEB9B57C81238dC2` | 17 Sep 2026, 21:44 UTC | check of the deployment that carries this list, 390x844 day |
 | `0x0Ebf35EaC562Fd42a58Bca7e13133C9163B7B7ba` | 17 Sep 2026, 21:44 UTC | check of the deployment that carries this list, 1440x900 night |
+| `0x4F04D62013F938b9B1be5873AE9472180CA798A6` | 18 Sep 2026 | reproducing the session defect in production: it is the run that showed the server never lost the cookie |
+| `0xAA248d38AE02bf651b6F306A6AF295157CB9dAe5` | 18 Sep 2026 | checking the session fix: signed in, full load, reload, second tab, back to the funder flow |
+| `0xD186521D0a8B6f959c2Fa7327e8640788816cD5c` | 18 Sep 2026 | checking that the supervised result is offered to nobody but an operator |
 
 The row `0xb12e0c72209bd4becfdafa96a8f3e7ebc93b8376`, euros, 02:56 UTC the same day, was not written by a check and
 is not listed here.
