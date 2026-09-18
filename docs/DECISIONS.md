@@ -2992,3 +2992,26 @@ behind an account cannot be photographed any other way.
 - What still proves what: the funder's signature commits to the account (D102), the contract pins the player at that
   first reading and refuses any other afterwards, and the recipient who names their own account still proves it with
   the code. Nothing was loosened: what was removed was a step that proved nothing in the case it was asked for.
+
+## D106, 18 Sep 2026: a function carries the platform it runs on, and nothing else
+
+- Why it came up: the Vercel account went past its free limits, Functions Storage 76.6 GB against 10, Deployment
+  Storage 10.7 against 10. On Hobby an overage can cut the functionality for thirty days, which would take viky.cash
+  offline. The count of deployments is one half of it (327 on the project on 18 Sep, nine days' worth); the size of
+  each function is the other.
+- Measured, from the build's own trace files (`.next/server/**/*.nft.json`, every path they list, sizes on disk):
+  the heaviest function was `api/gift/[id]/preview-image` at 174.4 MB and every reading route at 149.3 MB. Inside the
+  heaviest one: 141.5 MB of `@reclaimprotocol/zk-fetch`'s native library, shipped in four platform builds inside one
+  package (linux/amd64 42.5 MB, linux/arm64 38.8 MB, darwin/amd64 31.4 MB, darwin/arm64 28.8 MB), plus 18.5 MB of
+  sharp's macOS binaries, which exist only on this laptop.
+- The cause was ours, not the package's: `outputFileTracingIncludes` asked for the whole of `zk-fetch/**` for every
+  `/api/**` route, so the tracer put all four platform builds into every function. The include now names what is
+  needed: `dist/**`, `package.json`, and `lib/linux/**`.
+- Both Linux builds stay. Nothing Vercel publishes says which CPU a function runs on, and a reading that cannot load
+  its library is the product stopping; 38.8 MB is not worth that. The macOS builds go: a function never runs macOS.
+- Measured after: the heaviest function 114.2 MB, the reading routes 89.0 MB, the sum over all traced routes from
+  5,882 MB to 3,533 MB, a cut of 40 %. An `outputFileTracingExcludes` also keeps the local capture folders
+  (`review-captures`, `test-results`) out of a laptop build, which had been adding 56 MB to a measurement.
+- Alongside it, and not in the repository: branch deployments are off (D105), 248 deployments older than 18 Sep were
+  removed one by one by id (never touching anything queued or building, the founder's rule), and the retention policy
+  is the founder's to set in the dashboard, which is the only place it lives.
