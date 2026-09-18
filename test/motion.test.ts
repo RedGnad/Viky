@@ -115,3 +115,17 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
   const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
   assert.match(reduced, /\.control-relief:is\(:active, :hover\)/, "under reduced motion a press gives way but nothing travels");
 });
+
+/**
+ * An amount that changed counts to its value once (brief, section 6), driven frame by frame rather than by the
+ * stylesheet, so `document.getAnimations()` never sees it. Every run that photographs a screen has to wait for the
+ * count, or it keeps a figure that was true for 200ms: the captures of 18 Sep showed $0.11, $0.24 and $0.78 for an
+ * account holding $2.00, which is how this was found (relecture, line 5).
+ */
+test("the amount says when it has arrived, and every capture run waits for it", () => {
+  const motion = readFileSync("app/kit/Motion.tsx", "utf8");
+  assert.match(motion, /data-count-settled=\{shown === to \? "true" : "false"\}/, "nothing says when the count is over");
+  for (const script of ["scripts/capture-connected.ts", "scripts/review-capture.ts", "scripts/capture-looks.ts"]) {
+    assert.match(readFileSync(script, "utf8"), /data-count-settled/, `${script} photographs a screen mid-count`);
+  }
+});
