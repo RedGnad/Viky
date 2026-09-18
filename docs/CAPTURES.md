@@ -11,6 +11,24 @@ pnpm review:capture-connected
 
 It starts a production server of that build for each size and appearance, on ports 3101 to 3104, signs in with a virtual passkey, walks every state, and writes the images with a `captures.md` into `review-captures/<time>-connected/`. That folder is gitignored: the images are never committed.
 
+## What changed on 18 Sep 2026, and what is no longer there
+
+The manifest below belongs to the run that wrote it; every run writes its own. Two things moved under it since, and
+the states they describe are gone rather than renamed:
+
+- **The session.** D98 split it in two: the account lives twelve hours in a cookie and the key that signs lives in the
+  page. Thirty-one idle minutes now take the key and leave the account, so a driven clock no longer produces a
+  signed-out screen. Where a state needed nobody signed in, the run drops the cookie, which is what twelve hours do.
+- **Two states are no longer reachable at all**, and are reported rather than staged: "Your session closed while you
+  were paying" (`FundGift.tsx`, F8) and "Your session closed while you were away" on a gift's page (`GiftPage.tsx`).
+  Both wait for the account to go while the screen stays open, and nothing there drops it any more: a reload lands on
+  "A gift is waiting for your payment" or on the ordinary signed-out gift. The screens are still in the product; the
+  founder decides whether they go. The way out's own closed screen is untouched, because that one is reached by the
+  server refusing a call, which still happens.
+- **The words the run waits for** followed the screens: the amounts on the way out carry their symbol (D104), Me says
+  "Signed in on this device" with or without a time after it, and /me signed out offers the door in the header rather
+  than a button in the body.
+
 Options, which can be combined:
 
 - `--only=390x844-day` runs one size and appearance (`390x844` or `1440x900`, with `day` or `night`).

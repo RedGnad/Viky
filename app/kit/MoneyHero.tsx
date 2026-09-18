@@ -1,6 +1,7 @@
 "use client";
 import type { CSSProperties } from "react";
 import { useDisplayCurrency } from "@/src/client/display-currency";
+import { exitAmount } from "@/src/exit-amount";
 import { formatAusd } from "@/src/gift-reader";
 import { HOME as W } from "@/src/sentences";
 import { AMOUNT_IN_TITLE, HELP } from "../components/ui";
@@ -61,7 +62,10 @@ export function MoneyHero({ address, holdings }: Readonly<{ address: string; hol
       </p>
       {figure.rateDate ? <p className={HELP}>{W.aboutRate(figure.rateDate, formatAusd(dollars))}</p> : null}
       {!figure.rateDate && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
-      {ready && !ready.native && dollars > 0n ? <p className={HELP}>{W.readyLine(ready.way.name, ready.ready.number)}</p> : null}
+      {/* The same rule as on the way out: what is ready is said as the money it is, never as a bare number (D104). */}
+      {ready && !ready.native && dollars > 0n ? (
+        <p className={HELP}>{W.readyLine(ready.way.name, exitAmount({ number: ready.ready.number, native: false }).lead)}</p>
+      ) : null}
       <p className={HELP}>{W.keep}</p>
     </section>
   );
