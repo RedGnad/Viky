@@ -51,7 +51,10 @@
     "check:morning-push": "tsx scripts/check-morning-push.ts",
     "register:milestone-goals": "tsx scripts/register-milestone-goals.ts",
     "check:milestone-goals": "CHECK_ONLY=1 DRY_RUN=1 tsx scripts/register-milestone-goals.ts",
-    "prepare:milestone-goals": "WALLET=1 tsx scripts/register-milestone-goals.ts"
+    "prepare:milestone-goals": "WALLET=1 tsx scripts/register-milestone-goals.ts",
+    "safe:create": "tsx scripts/safe-create.ts",
+    "safe:handover": "tsx scripts/safe-handover.ts",
+    "safe:action": "tsx scripts/safe-action.ts"
   },
   "dependencies": {
     "@category-labs/mera": "0.2.0",
