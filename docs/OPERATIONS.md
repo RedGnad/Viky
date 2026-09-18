@@ -237,6 +237,77 @@ handing ownership over moves no money.
 Renouncing would leave the goals, the evidence signer and the two pauses frozen as they are; money would keep moving,
 since no owner function touches it.
 
+## The Safe of two keys, and how an owner action is signed
+
+One key owns all four contracts today, so one key lost is the goals, the evidence signer and both pauses lost with it.
+A Safe of two keys, two of two, puts that behind two signatures. **Not done yet: as of 19 Sep 2026 the Safe does not
+exist and the owner of the four contracts is still `0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64`.** What follows is the
+procedure, and the table under it is filled the day it runs.
+
+Safe 1.4.1, the same version, factory and singleton as the Safe that already runs on Monad for Lock-In
+(`0xf1be884698B9Ba4438f529699eC92320427b4dA1`, created 15 Jul 2026). Read on Monad mainnet on 19 Sep 2026, each with
+code at its address: proxy factory `0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67`, L2 singleton
+`0x29fcB43b46531BcA003ddC8FCB67FFE91900C762`, fallback handler `0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99`.
+
+None of the three commands below holds a key or touches the database. They print what is to be signed, and they send
+only when the person running them puts a key in their own shell. `.env.local` carries the four addresses they need.
+
+**1. Make the Safe.** Run it once to see the address, then again with that same salt to send it.
+
+```
+SAFE_OWNERS="0xfirst,0xsecond" pnpm safe:create
+SEND=1 SAFE_SALT_NONCE=<the salt it printed> SAFE_SENDER_PRIVATE_KEY=0x… pnpm safe:create
+```
+
+The address is worked out before anything is sent, from the factory's own proxy code; `test/safe.test.ts` rebuilds
+Lock-In's Safe address from that Safe's real creation transaction, so the arithmetic is checked against a Safe that
+exists. After sending, the script reads the new Safe back and refuses to call it good unless it answers version 1.4.1,
+a threshold of two, and exactly the owners that were asked for.
+
+**2. Hand the four contracts over.** One call each, no second step, no way back.
+
+```
+SAFE_ADDRESS=0x… CONFIRM_OWNERS="0xfirst,0xsecond" pnpm safe:handover
+SEND=1 OWNER_PRIVATE_KEY=0x… SAFE_ADDRESS=0x… CONFIRM_OWNERS="0xfirst,0xsecond" pnpm safe:handover
+VERIFY=1 SAFE_ADDRESS=0x… CONFIRM_OWNERS="0xfirst,0xsecond" pnpm safe:handover
+```
+
+`CONFIRM_OWNERS` is the guard that matters: it is what catches a Safe that exists, works, and belongs to somebody
+else. The script also refuses an address with no code, an address that holds code but does not answer as a Safe, a
+threshold that is not two, and four contracts that do not all answer to the same owner.
+
+**3. Sign an owner action.** Three passes, and each can happen on a different machine.
+
+```
+SAFE_ADDRESS=0x… ACTION=creation-paused PAUSED=true TARGET=escrow pnpm safe:action
+SIGN=1 SIGNER_PRIVATE_KEY=0x… SAFE_ADDRESS=0x… ACTION=… pnpm safe:action        (once per key)
+SIGNATURES="0xfirst,0xsecond" SEND=1 EXECUTOR_PRIVATE_KEY=0x… SAFE_ADDRESS=0x… ACTION=… pnpm safe:action
+```
+
+`ACTION` is `creation-paused`, `checkin-paused` (the daily contract), `proof-paused` (the milestone contract),
+`evidence-signer` with `VALUE=0x…`, or `raw` with `TO` and `DATA`. `TARGET` is `escrow`, `earlier-escrow`, `milestone`
+or `router`. Registering a goal goes through `raw`: `WALLET=1 pnpm prepare:milestone-goals` prints the `to` and the
+`data` of each call, and those two go straight into `TO` and `DATA`, so the goal list stays in one place.
+
+The hash the first pass prints is the Safe's own: asked of the Safe contract with `getTransactionHash`, it answers the
+same bytes (checked on 19 Sep 2026 against Lock-In's Safe, `0x9228cb45…` for pausing creation at nonce 4). The last
+pass recovers both signers from the signatures themselves and refuses a signature from anybody who is not an owner,
+then runs the call against the chain's state before spending gas, so a wrong nonce or a signature over another
+transaction fails for nothing.
+
+What changes the day this runs: `pnpm register:goal` and `pnpm register:milestone-goals` with a key in the environment
+stop working, because no single key is the owner any more. Preparing the call and signing it twice replaces them, and
+rotating the evidence signer in an incident takes both keys and both people.
+
+| what | value |
+|---|---|
+| the Safe | not created yet |
+| owners | two keys of the founder, the second created by him |
+| `GiftEscrow` `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233` | not handed over yet |
+| earlier `GiftEscrow` `0xE04CD59bB93765333200a9da01df83149D4C4d67` | not handed over yet |
+| `MilestoneGift` `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e` | not handed over yet |
+| `ExitRouter` `0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223` | not handed over yet |
+
 ## Before deploying the build of N1: the subscriptions table and the push keys
 
 1. `viky_push` (one row per browser and gift) and `viky_told` (one row per gift and subject, so a day is told about
