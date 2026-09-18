@@ -254,6 +254,19 @@ each. A reviewer checks the contract against the sentences, never against the te
 | The two shapes cannot borrow each other's terms | `testTheTwoShapesCannotBorrowEachOthersTerms` |
 | The page really carries what the proof needs | `test/attested-sources.test.ts`, from six real certificates |
 
+## The legal notice, on what the people who run Viky can do
+
+`app/legal/page.tsx`, section "What Viky is not". Every sentence there is a claim about the program's own access
+control, so each is read back from `contracts/GiftEscrow.sol` by the test, not from memory.
+
+| the screen says | what must be true | what makes it true | exercised by |
+| --- | --- | --- | --- |
+| "The people who run Viky can do four things, and the program allows them nothing else: stop new gifts being offered, stop the daily readings, change the key that signs what a reading found, and add a goal a gift can be made on." | those four are the whole of what the owner alone may call, and there is no fifth | `onlyOwner` in `GiftEscrow.sol` marks exactly `setCreationPaused`, `setCheckInPaused`, `setEvidenceSigner`, `registerGoal` | `test/screen-claims.test.ts` (the legal notice says exactly what the program lets the operator do) |
+| "They can never move money, keep it, or send it somewhere else." | no function of the program sends money at the owner's asking | the two ways money leaves are `withdrawEarned`, which refuses anybody but the recipient, and `refundUnearned`, which pays `refundTo` and nothing else | `test/screen-claims.test.ts`; `test/GiftEscrow.t.sol` |
+| "anyone at all can ask for that: the program will send it nowhere else" | the refund needs no permission, and its destination is the one the funder signed | `refundUnearned` has no access control and calls `_push(g.refundTo, amount)` | `test/screen-claims.test.ts` (the refund is anybody's to call) |
+| "What is earned leaves only when the person the gift is for asks for it, signed by them." | nobody else can take what was earned, relayer included | `withdrawEarned` checks `msg.sender != g.recipient`; `withdrawEarnedWithIntent` recovers the recipient's own signature | `test/screen-claims.test.ts`; `test/GiftEscrow.t.sol` |
+| "the bank route pays in euros and does not serve Senegal or Ivory Coast; the card route ... makes no payout in France, the rest of the European Economic Area or the United States, and cannot sell at all in the United Kingdom" | the countries are the services' own published lists, quoted as the register holds them, with the day they were read | `WAY_OUT_EURO.conditions` and `WAY_OUT_CARD.conditions` in `src/rails.ts`, each with its `source` and `read` date | `test/screen-claims.test.ts` (the countries are the rails' own words) |
+
 ## Found by watching someone use it
 
 Not promises broken, but places the product misled or lost the person. Recorded when they happen, because
