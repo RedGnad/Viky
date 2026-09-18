@@ -97,6 +97,13 @@ export const GIFT_CARD = {
   forWhoever: "For whoever opens the link",
   forName: (name: string) => `For ${name}`,
   fromName: (name: string) => `From ${name}`,
+  /** Read by neither of the gift's two people: both sides named, and nothing addressed to the reader. */
+  fromFor: (funder: string | null, recipient: string | null) => {
+    if (funder && recipient) return `From ${funder}, for ${recipient}`;
+    if (funder) return `From ${funder}`;
+    if (recipient) return `For ${recipient}`;
+    return "Somebody else's gift";
+  },
   amountDaily: (total: string, perDay: string, days: number) => `${total}, ${perDay} a day for ${days} days`,
   notOpened: "Not opened yet.",
   counting: (done: number, of: number, missed: number) => `Counting: ${done} of ${of} days done, ${missed} missed.`,
@@ -104,6 +111,7 @@ export const GIFT_CARD = {
   takenBack: "Taken back before it was opened.",
   theirsOf: (theirs: string, total: string, back: string) => `${theirs} of ${total} theirs, ${back} back to you`,
   yoursOf: (yours: string, total: string, back: string) => `${yours} of ${total} yours, ${back} gone back`,
+  theirsGoneBack: (theirs: string, total: string, back: string) => `${theirs} of ${total} theirs, ${back} gone back`,
   milestoneToday: (reading: number, target: number) => `Today: ${reading}, target ${target}.`,
   milestoneNotRead: (target: number) => `Target ${target}. Not read yet.`,
   milestoneReached: (target: number) => `Reached ${target}.`,
@@ -305,6 +313,17 @@ export const GIFT_PAGE = {
 
   titleYours: (funder: string | null, amount: string) => (funder ? `${funder} put ${amount} in your name.` : `${amount} is in your name.`),
   titleTheirs: (recipient: string | null, amount: string) => (recipient ? `You put ${amount} in ${their(recipient)} name.` : `You put ${amount} in their name.`),
+  /**
+   * A gift read by somebody who is neither of its two people: a judge opening a link, most often, and anybody else the
+   * link reached. Everything they read is in the third person, because "in your name" would be a lie to them.
+   */
+  titleReading: (funder: string | null, recipient: string | null, amount: string) => {
+    if (funder && recipient) return `${funder} put ${amount} in ${their(recipient)} name.`;
+    if (funder) return `${funder} put ${amount} in someone else's name.`;
+    if (recipient) return `${amount} is in ${their(recipient)} name.`;
+    return `${amount} is in someone else's name.`;
+  },
+  notYours: "This gift is not yours. You can read where it stands; nothing here is yours to do.",
   becomesYours: (perDay: string, eachDay: string, when: string) => `It becomes yours as you go: ${perDay} for ${eachDay}, ${when}.`,
   becomesTheirs: (perDay: string, eachDay: string, when: string) => `It becomes theirs as they go: ${perDay} for ${eachDay}, ${when}.`,
   forDaysFromConnecting: (count: number) => `for ${days(count)} from the day after it is connected`,
@@ -319,6 +338,8 @@ export const GIFT_PAGE = {
   opening: "Opening",
   missingKey: "This link is missing its key. Ask for the link again.",
   openedByOther: "This gift was already opened by the person it is for.",
+  readingWhose: (funder: string | null, recipient: string | null) =>
+    `It is between ${funder ?? "the person who offered it"} and ${recipient ?? "the person it is for"}.`,
 
   continue: "Continue",
   checking: "Checking the name",
@@ -386,6 +407,8 @@ export const GIFT_PAGE = {
     earned: "earned",
     returnedYours: "back to them",
     returnedTheirs: "back to you",
+    /** A reader is neither of them, so a day that went back went back to somebody named, or to nobody they know. */
+    returnedReading: "gone back",
     catchable: "catch up",
     aboutToReturn: "not judged yet",
     today: "today",

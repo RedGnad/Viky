@@ -47,7 +47,7 @@ export function GiftScreen() {
               </p>
             )}
           </div>
-          <DayRow id={gift.giftId} gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} readerIsFunder={false} />
+          <DayRow id={gift.giftId} gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} voice="recipient" />
           <dl className="flex flex-col divide-y divide-[var(--divider)] border-y border-[var(--divider)]">
             <div className="flex items-baseline justify-between gap-[var(--space-md)] py-[var(--space-sm)]">
               <dt className={HELP}>{W.yoursSoFar}</dt>

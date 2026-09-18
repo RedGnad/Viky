@@ -194,7 +194,8 @@ export type GiftStatus = {
 /** A gift as the list of the account's gifts describes it, which is what a card draws on. */
 export type GiftSummary = {
   giftId: string;
-  role: "funder" | "recipient";
+  /** "reader" is neither of the gift's two people: a judge opening a link, and anybody else the link reached (D99). */
+  role: "funder" | "recipient" | "reader";
   goalType: number;
   goalUsername: string | null;
   usernameSource: "funder" | "recipient" | null;

@@ -22,6 +22,7 @@ import { Arrival } from "../kit/Motion";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { GiftCard } from "../kit/GiftCard";
 import { MorningMessage } from "../kit/MorningMessage";
+import { gesturesFor, notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
 import { Notice } from "../kit/Notice";
 import { Shell } from "../kit/Shell";
 import { AccountPanel } from "./AccountPanel";
@@ -96,10 +97,10 @@ export function GiftPage({ giftId, linkKey }: Readonly<{ giftId: string; linkKey
 }
 
 /** The card's own description of this gift, from the page's reading of it, so the head of the page is the same card. */
-export function summaryOf(gift: GiftStatus, readerIsFunder: boolean): GiftSummary {
+export function summaryOf(gift: GiftStatus, voice: Voice): GiftSummary {
   return {
     giftId: gift.giftId,
-    role: readerIsFunder ? "funder" : "recipient",
+    role: voice,
     goalType: gift.goalType,
     goalUsername: gift.goalAccount.source === "funder" ? gift.goalAccount.username : null,
     usernameSource: gift.goalAccount.source,
@@ -151,7 +152,12 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
   const words = condition?.recipient;
   const readerIsFunder = gift.youAreTheFunder;
   const mine = gift.youAreTheRecipient;
-  const outsider = Boolean(address) && gift.opened && !mine && !readerIsFunder;
+  // Who is reading, and what that person may do, both decided in one place (src/gift-voice.ts, D99). A reader is
+  // neither of the gift's two people: a judge following a link, most often, and they are offered no gesture at all.
+  const voice = voiceOf(gift);
+  const reading = voice === "reader";
+  const outsider = notTheirs(voice, Boolean(address));
+  const may = gesturesFor(voice, gift);
   const account = gift.goalAccount;
   const funder = gift.names?.funderName ?? null;
   const recipient = gift.names?.recipientName ?? (account.source === "funder" ? account.username : null);
@@ -221,9 +227,13 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
 
   const refusalAt = (where: Where) => (problem?.where === where ? <FieldRefusal id={`gift-${where}-refused`}>{problem.message}</FieldRefusal> : null);
 
-  const title = readerIsFunder ? W.titleTheirs(recipient, gift.amountDisplay) : W.titleYours(funder, gift.amountDisplay);
+  const title = reading
+    ? W.titleReading(funder, recipient, gift.amountDisplay)
+    : readerIsFunder
+      ? W.titleTheirs(recipient, gift.amountDisplay)
+      : W.titleYours(funder, gift.amountDisplay);
   const when = range ?? W.forDaysFromConnecting(gift.durationDays);
-  const summary = summaryOf(gift, readerIsFunder);
+  const summary = summaryOf(gift, voice);
   // Somebody whose session just closed still has gifts; only a reader who never had an account here is sent to the door.
   const back = address || hadAccount ? { back: "/gifts", backLabel: W.backToGifts } : { back: "/", backLabel: W.aboutViky, backFollows: true };
 
@@ -235,7 +245,7 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
       ) : gift.finished ? null : (
         <>
           <p className={BODY}>
-            {readerIsFunder
+            {readerIsFunder || reading
               ? W.becomesTheirs(perDay, words?.eachDayTheirs ?? condition?.words.eachDay ?? "", when)
               : W.becomesYours(perDay, words?.eachDayYours ?? condition?.words.eachDay ?? "", when)}
           </p>
@@ -270,9 +280,18 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
     );
   }
 
-  if (outsider) actions.push(<p key="outsider" className={BODY}>{W.openedByOther}</p>);
+  // Signed in as somebody who is neither of the two: say so plainly, and name the two people it is between. A reader
+  // with no account here is not told this, because they may be the person it is for, coming back to sign in.
+  if (outsider) {
+    actions.push(
+      <section key="outsider" className={CARD}>
+        <p className="font-medium">{W.notYours}</p>
+        <p className={BODY}>{W.readingWhose(funder, recipient)}</p>
+      </section>,
+    );
+  }
 
-  if (!gift.cancelled && address && !gift.opened && !readerIsFunder) {
+  if (may.openTheGift && address) {
     actions.push(
       <section key="open" className="flex flex-col gap-[var(--space-sm)]">
         <button type="button" onClick={open} disabled={working || !linkKey} className={PRIMARY_BUTTON}>
@@ -284,7 +303,7 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
   }
 
   // R5: the funder named the account.
-  if (!gift.cancelled && mine && !account.bound && account.source === "funder" && account.username && words) {
+  if (may.connectTheAccount && !account.bound && account.source === "funder" && account.username && words) {
     actions.push(
       <section key="named" className={CARD}>
         <p className={BODY}>{words.namedBy(account.username, funder ?? "the person who sent it")}</p>
@@ -301,7 +320,7 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
   }
 
   // R3: connect the account, when nobody named it, or to change a name that is not theirs.
-  const naming = !gift.cancelled && mine && !account.bound && account.source !== "funder" && (!account.code || renaming);
+  const naming = may.connectTheAccount && !account.bound && account.source !== "funder" && (!account.code || renaming);
   if (naming && words) {
     actions.push(
       <section key="name" className={CARD}>
@@ -355,7 +374,7 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
   }
 
   // R4: prove the account is theirs, with a code in its display name.
-  if (!gift.cancelled && mine && !account.bound && account.source === "recipient" && account.code && account.username && !renaming && words) {
+  if (may.connectTheAccount && !account.bound && account.source === "recipient" && account.code && account.username && !renaming && words) {
     const username = account.username;
     const code = account.code;
     actions.push(
@@ -403,10 +422,12 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
   }
 
   // R6 to R11: connected, counting, finished, and the funder's reading of it.
-  const counting = !gift.cancelled && gift.connected && (mine || readerIsFunder);
+  // A reader sees where the gift stands, because that is the whole of what a link is for; the gestures below are all
+  // gated on being one of the two people, so nothing here offers them anything to do (D99).
+  const counting = !gift.cancelled && gift.connected && (mine || readerIsFunder || reading);
   const nextReading = nowMs === 0 ? null : momentInWords(nextPassMs(COUNTING_PASS_UTC, nowMs), nowMs);
   const fromRecord = nowMs === 0 ? true : stripFromRecord(gift, gift.catchUpSeconds, nowMs, gift.days);
-  const takeOffered = mine && earned > 0n;
+  const takeOffered = may.takeTheMoney && earned > 0n;
 
   const takeBlock = takeOffered ? (
     reviewing ? (
@@ -432,7 +453,7 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
    * The link again, and only on the device that made the gift: it is the one thing the server cannot hand back, because
    * the link carries the key that opens the gift and prints the two names.
    */
-  const keptLink = browser && readerIsFunder ? giftLinkOnThisDevice(gift.giftId) : null;
+  const keptLink = browser && may.copyTheLink ? giftLinkOnThisDevice(gift.giftId) : null;
   const copyLink = (link: string) => navigator.clipboard.writeText(link).then(() => setCopiedLink(true)).catch(() => setCopiedLink(false));
   const linkAgain =
     keptLink && !gift.opened ? (
@@ -461,7 +482,7 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
         <div className="flex flex-col gap-[var(--space-xs)]">
           <p className="font-medium">{W.finished(range ?? "")}</p>
           <p className={BODY}>
-            {readerIsFunder
+            {readerIsFunder || reading
               ? W.daysTheirs(gift.creditedDays, gift.durationDays, gift.alreadyTheirsDisplay)
               : W.daysYours(gift.creditedDays, gift.durationDays, gift.alreadyTheirsDisplay)}
           </p>
@@ -477,14 +498,14 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
           ) : null}
         </div>
       )}
-      {browser ? <DayRow id={gift.giftId} gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} readerIsFunder={readerIsFunder} /> : null}
+      {browser ? <DayRow id={gift.giftId} gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} voice={voice} /> : null}
       {!fromRecord ? <p className={HELP}>{W.fromCountsNote}</p> : null}
       {/* The proof of a day goes only to the two people the gift is between (U2), so it is offered only to them. */}
-      {mine || readerIsFunder ? <CheckThisDay giftId={gift.giftId} days={gift.days} /> : null}
-      <MorningMessage giftId={gift.giftId} yours={mine || readerIsFunder} />
+      {may.seeTheProof ? <CheckThisDay giftId={gift.giftId} days={gift.days} /> : null}
+      <MorningMessage giftId={gift.giftId} yours={may.beTold} />
       <dl className="flex flex-col divide-y divide-[var(--divider)] border-y border-[var(--divider)]">
-        <Total label={readerIsFunder ? W.theirsSoFar : W.yoursSoFar} value={W.amountDays(gift.alreadyTheirsDisplay, gift.creditedDays)} />
-        {mine ? <Total label={W.alreadyTaken} value={gift.takenDisplay} /> : null}
+        <Total label={readerIsFunder || reading ? W.theirsSoFar : W.yoursSoFar} value={W.amountDays(gift.alreadyTheirsDisplay, gift.creditedDays)} />
+        {voice === "recipient" ? <Total label={W.alreadyTaken} value={gift.takenDisplay} /> : null}
         <Total
           label={readerIsFunder ? W.cameBackToYou : W.backToFunder(funder)}
           value={W.amountDays(gift.returnedDisplay, gift.missedDays)}
@@ -492,10 +513,12 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
         />
       </dl>
       {catchUp && !gift.finished && words ? (
-        <p className="font-medium">{readerIsFunder ? words.catchUpTheirs(momentInWords(catchUp.deadlineMs, nowMs)) : words.catchUpYours(momentInWords(catchUp.deadlineMs, nowMs))}</p>
+        <p className="font-medium">
+          {readerIsFunder || reading ? words.catchUpTheirs(momentInWords(catchUp.deadlineMs, nowMs)) : words.catchUpYours(momentInWords(catchUp.deadlineMs, nowMs))}
+        </p>
       ) : null}
       {readerIsFunder && !gift.finished ? <p className={HELP}>{W.beingEarned}</p> : null}
-      {mine && !gift.finished && gift.todayDayIndex > 0 ? (
+      {may.countNow && !gift.finished && gift.todayDayIndex > 0 ? (
         <div className="flex flex-col gap-[var(--space-sm)]">
           <button type="button" onClick={count} disabled={working} className={SECONDARY_BUTTON}>
             {busy === "counting" ? W.reading : W.countNow}
