@@ -35,9 +35,14 @@ export const SHAPE_CLIMB = 0;
 /** Something granted once, with a date. */
 export const SHAPE_HAVE_OR_NOT = 1;
 
-/** The contract's bounds, mirrored so a screen refuses what the contract would. */
+/** The floor is the contract's own, mirrored so a screen refuses what the contract would. The ceiling below is not. */
 export const MILESTONE_MIN_AMOUNT = 1_000_000n;
-export const MILESTONE_MAX_AMOUNT = 100_000_000_000n;
+/**
+ * The pilot's ceiling, a thousand dollars (mitigation b, 19 Sep 2026), held here rather than on chain: the contract's
+ * own `MAX_AMOUNT` stays at one hundred thousand and it is not redeployed. Raising this line raises the product's
+ * bound; the contract's is the one nobody can move.
+ */
+export const MILESTONE_MAX_AMOUNT = 1_000_000_000n;
 export const MILESTONE_MIN_DURATION_DAYS = 1;
 export const MILESTONE_MAX_DURATION_DAYS = 365;
 /** `MAX_ATTESTATION_AGE`: an attestation lives ten minutes, and the first reading of a climb may be no older. */

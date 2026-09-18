@@ -1,3 +1,4 @@
+import { PILOT_CAP_SENTENCE } from "./money";
 /**
  * Every sentence a person reads, in one place.
  *
@@ -161,6 +162,11 @@ export const FUND = {
     title: "How much, and for how long?",
     dollarsLabel: "How much, in dollars",
     dollarsHelp: (about: string | undefined) => (about ? `At least $1.00. ${about[0].toUpperCase()}${about.slice(1)}.` : "At least $1.00."),
+    /**
+     * The pilot's ceiling, said where the amount is chosen rather than met as a refusal afterwards (mitigation b,
+     * 19 Sep 2026). It is the sentence src/money.ts refuses with, so the step and the field never disagree.
+     */
+    pilotCap: PILOT_CAP_SENTENCE,
     daysLabel: "For how many days",
     daysHelp: "7 at least, 90 at most.",
     missed: "And each day they miss, the same comes back to you.",

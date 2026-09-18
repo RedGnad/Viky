@@ -101,7 +101,7 @@ export async function POST(request: Request) {
     } catch {
       throw new GiftApiError("INVALID_AMOUNT", "Enter an amount");
     }
-    if (amount < MILESTONE_MIN_AMOUNT || amount > MILESTONE_MAX_AMOUNT) throw new GiftApiError("INVALID_AMOUNT", "The gift must be between $1.00 and $100,000.00");
+    if (amount < MILESTONE_MIN_AMOUNT || amount > MILESTONE_MAX_AMOUNT) throw new GiftApiError("INVALID_AMOUNT", "The gift must be between $1.00 and $1,000.00");
     const standingReadAt = new Date(String(body.standingReadAt ?? ""));
     if (Number.isNaN(standingReadAt.getTime()) || standingReadAt.getTime() > Date.now() + 60_000) throw new GiftApiError("INVALID_READING", "Read where they stand again.");
     const refundToRaw = body.refundTo ? String(body.refundTo) : auth.account;

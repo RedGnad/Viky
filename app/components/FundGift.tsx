@@ -1100,7 +1100,7 @@ export function FundGift() {
           <Field
             id="gift-dollars"
             label={W.amount.dollarsLabel}
-            help={W.amount.dollarsHelp(about)}
+            help={`${W.amount.dollarsHelp(about)} ${W.amount.pilotCap}`}
             value={draft.dollars}
             onChange={(value) => update({ dollars: value })}
             refusal={draft.dollars.trim() === "" && !touched.dollars ? undefined : amount.refusal}

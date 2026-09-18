@@ -12,6 +12,7 @@ import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { makeGift } from "@/src/gift-creation";
 import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { liveCreationDeps } from "@/src/gift-creation-live";
+import { MAX_GIFT_UNITS, MIN_GIFT_UNITS } from "@/src/money";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
@@ -85,7 +86,10 @@ export async function POST(request: Request) {
     } catch {
       throw new GiftApiError("INVALID_AMOUNT", "Enter an amount");
     }
-    if (amount < 1_000_000n) throw new GiftApiError("INVALID_AMOUNT", "The gift must be at least $1.00");
+    if (amount < MIN_GIFT_UNITS) throw new GiftApiError("INVALID_AMOUNT", "The gift must be at least $1.00");
+    // Until today this route had a floor and no ceiling, so only the contract's one hundred thousand stood above it
+    // and the pilot's sentence on the amount step would have been false for a daily gift (mitigation b).
+    if (amount > MAX_GIFT_UNITS) throw new GiftApiError("INVALID_AMOUNT", "The gift must be between $1.00 and $1,000.00");
     const refundToRaw = body.refundTo ? String(body.refundTo) : auth.account;
     if (!isAddress(refundToRaw)) throw new GiftApiError("INVALID_REFUND", "The return destination is invalid");
     const salt = String(body.salt ?? "");
