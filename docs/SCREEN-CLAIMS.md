@@ -275,12 +275,10 @@ question when you hold both. Worth an hour before the first real recipients, not
    test. Worth doing once before the freeze.
 3. The clipboard, whose failure path is the one a person meets when the browser refuses the copy. Both
    branches say something now, which is what was missing; proving it needs a browser that refuses.
-4. **"Signed in on this device until 11:19 PM." does not survive a reload.** Measured on production on 17 Sep 2026:
-   an account is made, Me says it is signed in until a time, and reloading that same page says "Not signed in on this
-   device." The cookie is still there; the account's key is not, because it comes from the passkey and lives in the
-   page. The same reload loses it on the build from before the look was changed, so this is not the look's doing. The
-   sentence promises a session the page does not keep: either the page reopens the account on load, or the sentence
-   says what it really means.
+Closed on 18 Sep 2026: **the session now survives a page load.** The page asks the server who it is at load, so a
+reload, another tab and the way back from the card page all keep the account, and the passkey is asked at the first
+signature instead of at every load. Me says "Signed in on this device." while nothing can be signed yet, and keeps the
+sentence with a time in it for the signing window that really is open.
 
 Closed so far: "You are signed in", which is where the sign-in race lived; "Theirs so far", which
 would have shown a funder that their gift had earned nothing the moment the recipient took the money; the

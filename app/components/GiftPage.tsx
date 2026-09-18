@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
-import * as mera from "@/src/account/mera";
 import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
 import { catchUpDay } from "@/src/catch-up";
@@ -127,7 +126,7 @@ export function summaryOf(gift: GiftStatus, readerIsFunder: boolean): GiftSummar
 }
 
 function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; linkKey: string | null; reload: () => Promise<void> }>) {
-  const { address, status: accountStatus } = useAccount();
+  const { address, ensureSigner, status: accountStatus } = useAccount();
   // Money moves on this page, so the session stays open thirty minutes rather than ten (decision 2, 17 Sep 2026).
   useMoneySession();
   const money = useDisplayCurrency(address);
@@ -210,8 +209,8 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
   const count = () => run("counting", "count", async () => outcome(await countNow(gift.giftId)));
   const take = () =>
     run("taking", "take", async () => {
-      const signer = mera.currentAccount();
-      if (!signer) throw new ApiError({ status: 401, code: "SIGN_IN_REQUIRED", message: W.closedBody });
+      // The passkey is opened here, at the one moment a signature is needed, rather than assumed to be open.
+      const signer = await ensureSigner();
       const amount = gift.earnedDisplay;
       const takeNumber = Number(gift.withdrawNonce) + 1;
       await withdrawEarned({ account: signer, giftId: gift.giftId, escrow: gift.escrow, amount: earned, nonce: BigInt(gift.withdrawNonce) });

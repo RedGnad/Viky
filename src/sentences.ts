@@ -584,7 +584,15 @@ export const ME = {
   currencies: { USD: "US dollars", EUR: "Euros", XOF: "CFA francs" },
   proposed: "what your phone suggests",
   currencySaved: "Saved.",
+  /** Said while the signing session is open: what it names is how long money can move without asking again. */
   signedInUntil: (time: string) => `Signed in on this device until ${time}.`,
+  /**
+   * Said when this browser is signed in and nothing can be signed yet, which is every page load: the twelve hour
+   * session names the account, and the key that signs lives in the page and went with it. Promising a signing window
+   * that does not exist is what the old sentence did, on a screen that had just reopened.
+   */
+  signedIn: "Signed in on this device.",
+  passkeyWhenMoneyMoves: "Your face or fingerprint is asked again the moment money moves.",
   signedOut: "Not signed in on this device.",
   signOut: "Sign out",
   anotherAccount: "Use another account",
