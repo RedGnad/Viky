@@ -97,7 +97,7 @@ export async function reachOfWaysOut(country: string | null): Promise<Readonly<R
 }
 
 /**
- * The ways in, asked the same way (D98), with one difference worth naming:
+ * The ways in, asked the same way (D101), with one difference worth naming:
  *
  * - The rail that sells the chain's coin publishes what it will not sell, per coin and per country, in the same
  *   answer as its payouts (`restricted_countries_onramp`, `["gb"]` for MON on MONAD on 18 Sep 2026).

@@ -58,7 +58,7 @@ export type RailHandoff = Readonly<{
 }>;
 
 /**
- * One way in of the two (D98). What a person needs before they choose one, in their own words, and what the screens
+ * One way in of the two (D101). What a person needs before they choose one, in their own words, and what the screens
  * compute from: the coin that arrives decides whether anything has to be swapped afterwards, and the floor and the
  * fee decide what a card payment costs.
  */
@@ -88,7 +88,7 @@ export type WayIn = Readonly<{
 }>;
 
 /**
- * Adding money by buying what a gift already holds (D98). Their own asset list carries `MONAD_AUSD` at the address
+ * Adding money by buying what a gift already holds (D101). Their own asset list carries `MONAD_AUSD` at the address
  * this app pays gifts in, enabled, beside the chain's coin and the euro one, with a purchase floor of 6 EUR and fees
  * of 0.99 % to 3.9 % with a 2.49 EUR minimum, all read on 18 Sep 2026 at
  * `https://api.ramp.network/api/host-api/assets`. Nothing is swapped after it: what arrives is what a gift holds.

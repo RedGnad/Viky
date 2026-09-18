@@ -188,7 +188,7 @@ export const FUND = {
     linkRisk: (recipient: string) => `The link you will get opens the gift for whoever opens it first. Send it only to ${recipient}.`,
     fourteenDays: "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
     paying: "Paying for it",
-    /** One card per way in (D98): each says what it costs, what it delivers, and where its figures were read. */
+    /** One card per way in (D101): each says what it costs, what it delivers, and where its figures were read. */
     payingWith: (name: string) => `Paying with ${name}`,
     payWith: (name: string) => `Pay with ${name}`,
     payWithFor: (name: string, euros: number) => `Pay ${euros} EUR with ${name}`,
@@ -235,7 +235,7 @@ export const FUND = {
     ],
     theirWords: (name: string, delivers: { coin: string; network: string }) =>
       `${delivers.coin} and ${delivers.network} are the two words ${name} uses for the money it delivers to Viky. You never have to understand them.`,
-    /** What the wait ends with, which differs by rail (D98). */
+    /** What the wait ends with, which differs by rail (D101). */
     thenNothing: "When it lands, the gift is made straight away: there is nothing else to confirm.",
     thenChanged: "When it lands, you confirm one step that turns it into what the gift holds, and a little stays behind for it.",
     codeLabel: (name: string) => `The code to give ${name}`,

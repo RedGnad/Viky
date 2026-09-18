@@ -98,7 +98,7 @@ test("the two ways out do not take the same coin", () => {
 });
 
 /**
- * The second way in (D98): a rail that sells what a gift already holds. Nothing is swapped after it, so no reserve is
+ * The second way in (D101): a rail that sells what a gift already holds. Nothing is swapped after it, so no reserve is
  * left behind and no second price applies; what a person pays, less that rail's own fee, becomes dollars at the day's
  * euro rate. Every figure below is theirs, read on 18 Sep 2026 at `https://api.ramp.network/api/host-api/assets`:
  * a 6 EUR floor, 0.99 % to 3.9 %, and a 2.49 EUR minimum fee.

@@ -89,7 +89,7 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
       },
       {
         name: "The two ways in",
-        when: "the account is short: one card per way in, ordered by the country, each with its floor, its fee and its source (D98)",
+        when: "the account is short: one card per way in, ordered by the country, each with its floor, its fee and its source (D101)",
         says: ["Paying with", "takes nothing under", "What arrives is what the gift holds, so nothing is changed afterwards and nothing is left over.", "What arrives is changed into what the gift holds"],
       },
       {
