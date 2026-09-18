@@ -1,8 +1,9 @@
 import type { Hex } from "viem";
 import { formatAusd } from "./gift-reader";
 import type { GiftRecord } from "./gift-store";
-import { cadenceOfGoal, CHESS_MILESTONE, milestoneById } from "./milestone-conditions";
+import { cadenceOfGoal, certificateById, certificateOfGoal, CHESS_MILESTONE, milestoneById } from "./milestone-conditions";
 import { milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
+import { SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
 import { attestedReadings, lastReading, latestRating, loadMilestoneGift, type MilestoneRecord, type MilestoneReading } from "./milestone-store";
 import type { MilestoneStatus } from "./milestone-view";
 import { escrowOf } from "./relayer";
@@ -27,14 +28,18 @@ export function milestoneStatusOf(input: {
   nowSeconds: number;
 }): MilestoneStatus {
   const { record, state, viewer } = input;
-  const condition = milestoneById(input.milestone?.conditionId ?? "") ?? CHESS_MILESTONE;
-  const cadence = cadenceOfGoal(condition, state.goalType);
+  const conditionId = input.milestone?.conditionId ?? "";
+  // A certificate gift has no cadence and no standing: its words come from its own half of the register (U3).
+  const certificate = certificateById(conditionId) ?? certificateOfGoal(state.goalType);
+  const condition = milestoneById(conditionId) ?? (certificate ? undefined : CHESS_MILESTONE);
+  const cadence = condition ? cadenceOfGoal(condition, state.goalType) : undefined;
   const started = state.deadline > 0;
   const reached = state.settled && state.earned > 0n;
   return {
     kind: "milestone",
+    shape: state.shape === SHAPE_HAVE_OR_NOT ? "certificate" : "climb",
     giftId: record.giftId,
-    conditionId: condition.condition.id,
+    conditionId: (condition ?? certificate)?.condition.id ?? conditionId,
     youAreTheRecipient: viewer.isRecipient,
     youAreTheFunder: viewer.isFunder,
     names: viewer.isRecipient || viewer.isFunder || viewer.holdsTheLink ? { recipientName: record.recipientName, funderName: record.funderName } : null,

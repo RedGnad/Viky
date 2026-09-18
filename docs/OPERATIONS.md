@@ -284,19 +284,24 @@ as the owner, after the handover of `GiftEscrow`.
 | goal | source | shape | state |
 |---|---|---|---|
 | 1 to 4 | Chess.com, rapid, blitz, bullet, daily | climb | registered at deployment, 17 Sep 2026 |
-| 5 | Duolingo English Test, the overall score | having it or not | to register |
+| 5 | Duolingo English Test, the overall score | having it or not | to register, and the screens for it are built (U3) |
 | 6 to 9 | Lichess, bullet, blitz, rapid, classical | climb | to register, and nothing is offered on them yet |
 
-**The session, in order.** Each step is read back before the next, and nothing is typed twice.
+**The session, in order.** The owner is a wallet the founder holds, so the session is signed from that wallet and no
+key is ever read from a file. Each step is read back before the next.
 
 1. `pnpm check:milestone-goals` from any machine, with no key: it prints the plan and ends non-zero while anything is
    missing. Run it first so the list on screen is the list you are about to sign.
-2. `DRY_RUN=1 pnpm register:milestone-goals` with `MILESTONE_GIFT_ADDRESS` set: same plan, plus the gas each call
-   takes and what the whole session costs at today's price. Still nothing sent.
-3. `set -a && source .env.ops.local && set +a && pnpm register:milestone-goals` with `DEPLOYER_PRIVATE_KEY` set to the
-   **owner's** key. It refuses to send anything if that key is not the owner, sends one `registerGoal` per missing
-   goal, waits for finality on each, and then reads every goal of the list back from the chain.
-4. `pnpm check:milestone-goals` again: it must end clean, with nothing missing.
+2. `pnpm prepare:milestone-goals` with `MILESTONE_GIFT_ADDRESS` set: it writes out one call per missing goal, with its
+   `to`, its `data`, its gas and the chain id, and sends nothing. Every call goes to the milestone contract and carries
+   no value.
+3. Sign those calls from the owner's wallet, in the order printed. Each is a `registerGoal`, about 88,500 gas.
+4. `pnpm check:milestone-goals` again: it must end clean, with nothing missing. That is the read-back, from the chain
+   rather than from the receipts.
+
+There is also `pnpm register:milestone-goals`, which sends them itself from `DEPLOYER_PRIVATE_KEY`. It refuses to send
+anything if that key is not the owner. It exists for a machine that holds the owner's key, and the wallet route above
+is the one to use while the founder holds it.
 
 **What it will not do.** It never overwrites. A number already registered to another provider id, or to the same
 provider under another shape, stops the whole run before anything is sent, because a live gift keys on that number

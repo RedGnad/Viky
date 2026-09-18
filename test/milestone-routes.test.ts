@@ -64,7 +64,8 @@ test("a condition that is not live is offered to nobody but an account that runs
   const listed = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`, { headers: { cookie: await cookieFor(FUNDER) } }))).json()) as { ids: string[]; preview: string[] };
   assert.deepEqual(listed.preview, [], "a funder sees only what is live");
   const operator = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`, { headers: { cookie: await cookieFor(OPERATOR) } }))).json()) as { ids: string[]; preview: string[] };
-  assert.deepEqual(operator.preview, ["chess-rating"]);
+  // Two conditions are wired and not live: the Chess.com climb and the supervised result (U3).
+  assert.deepEqual(operator.preview, ["chess-rating", "duolingo-english-test"]);
   const anonymous = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`))).json()) as { preview: string[] };
   assert.deepEqual(anonymous.preview, []);
 });

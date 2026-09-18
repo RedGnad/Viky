@@ -1,3 +1,4 @@
+import { ZERO_SUBJECT } from "../src/milestone-protocol";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -52,6 +53,7 @@ const OPENED: MilestoneState = {
   goalType: 1,
   shape: 0,
   target: 1954n,
+  subject: ZERO_SUBJECT,
   maximumStart: 1914n,
   durationDays: 30,
   amount: 25_000_000n,

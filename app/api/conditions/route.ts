@@ -3,7 +3,7 @@ import { readAccountAuthSession } from "@/src/account-auth-server";
 import { liveConditions } from "@/src/conditions";
 import { isOperator } from "@/src/dev-access";
 import { NO_STORE } from "@/src/gift-api";
-import { CHESS_MILESTONE } from "@/src/milestone-conditions";
+import { CHESS_MILESTONE, DET_MILESTONE } from "@/src/milestone-conditions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  * yet, because a condition turns live only after a real gift has run on it, and that first gift has to be made by
  * someone. The screen marks those as offered to nobody else.
  */
-const WIRED_NOT_LIVE = [CHESS_MILESTONE.condition];
+const WIRED_NOT_LIVE = [CHESS_MILESTONE.condition, DET_MILESTONE.condition];
 
 export async function GET(request: Request) {
   let operator = false;

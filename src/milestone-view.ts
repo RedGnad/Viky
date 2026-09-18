@@ -11,6 +11,11 @@ import type { MilestonePhase } from "./milestone-reader";
 
 export type MilestoneStatus = Readonly<{
   kind: "milestone";
+  /**
+   * Which of the two shapes this gift is (D47). A climb is proved by readings the keeper takes; a certificate is
+   * proved once, by the page its holder shares, so the page asks for a link instead of drawing a meter.
+   */
+  shape: "climb" | "certificate";
   giftId: string;
   /** An id of src/conditions.ts: the source's name and words come from the register. */
   conditionId: string;

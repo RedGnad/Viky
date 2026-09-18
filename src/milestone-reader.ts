@@ -19,6 +19,8 @@ export type MilestoneState = Readonly<{
   shape: number;
   target: bigint;
   maximumStart: bigint;
+  /** Having it or not: the person and the thing the funder signed, which a proof must carry (D45 promise 9). */
+  subject: Hex;
   durationDays: number;
   amount: bigint;
   earned: bigint;
@@ -65,6 +67,7 @@ export async function readMilestoneGift(contract: Hex, giftId: string, client: P
     shape: Number(gift.shape),
     target: BigInt(gift.target as bigint),
     maximumStart: BigInt(gift.maximumStart as bigint),
+    subject: gift.subject as Hex,
     durationDays: Number(gift.durationDays),
     amount: gift.amount as bigint,
     earned: gift.earned as bigint,
