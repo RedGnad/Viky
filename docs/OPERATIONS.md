@@ -179,6 +179,30 @@ Done on 17 Sep 2026, in this order, and each step read back before the next:
    branch. The service has no repository attached, so a push to main does not redeploy it. Checked after: `/health`, a
    `{ source, account }` read with its proof, a refused source, and the `{ username }` read the Duolingo path still sends.
 
+## The operator list, and what it opens
+
+`VIKY_OPERATOR_ACCOUNTS` is a comma separated list of accounts, read on every request. Changing it:
+
+1. `vercel env pull` and read the current value. It is stored not sensitive on purpose, so it can be read back; a
+   sensitive variable pulls back empty, which hides a mistake (met on 17 Sep with the milestone address).
+2. Put the **whole list** back in one go (`vercel env rm` then `vercel env add ... --no-sensitive`), never an
+   addition to what is there: the variable holds one string.
+3. Redeploy, because a running deployment keeps the environment it was built with: `vercel redeploy <the production
+   deployment>`, which re-aliases viky.cash when it is ready.
+4. Pull again and read the value back, then check a real session.
+
+**It opens two doors, not one.** An account on this list sees the conditions that are wired but not live yet (a
+Chess.com gift, before it is offered to anybody), **and**, while `VIKY_DEV_PAGES` is on, the operator pages at `/dev`
+and the dev routes behind them, one of which sends 0.05 MON from the relayer. Measured on 18 Sep 2026 with a session
+of a key we hold, added to the list for the check and taken out after: `/api/conditions` answered
+`preview: ["chess-rating"]`, `/dev` served its page, and `/api/dev/gas-top-up` answered
+`{"toppedUp": false, "reason": "ENOUGH"}` because that account already held more than 0.05 MON. With the list back to
+what it should be, the same session gets `preview: []` and a 404 on both.
+
+So an account is put on this list only when both doors are meant for it. The dev pages exist for the first mainnet
+run (KT1) and their own comment says they are removed once its crypto half is done; until they are, `VIKY_DEV_PAGES`
+is what decides whether the second door exists at all.
+
 ## Before the course reading of U1: goal 5 on the daily contract, and one owner for all three
 
 Done on 18 Sep 2026, with the key that deployed `GiftEscrow`, which was still its owner, and read back each time.
