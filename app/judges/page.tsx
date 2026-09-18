@@ -63,13 +63,20 @@ export default function JudgesPage() {
           </dd>
           <dt className="text-[var(--muted)]">Who owns the contracts</dt>
           <dd className="[overflow-wrap:anywhere]">
-            One wallet owns all three (gifts, milestone gifts, the way out): 0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64, the
-            founder&apos;s, not the key that deployed them. The gift contract was handed over on 18 Sep 2026 in{" "}
+            One wallet owns all four (gifts, the earlier gift contract that still runs the first gifts, milestone gifts, the way
+            out): 0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64, the founder&apos;s, not the key that deployed them. The gift contract
+            was handed over on 18 Sep 2026 in{" "}
             <a className="underline" href="https://monadvision.com/tx/0xa01ae787c52409157ec83aa95cc2ca2a4dca4a2caaab3caef8ea8c5650dfa009">
-              0xa01ae787c52409157ec83aa95cc2ca2a4dca4a2caaab3caef8ea8c5650dfa009
+              0xa01ae787…a009
+            </a>{" "}
+            and the earlier one the same day in{" "}
+            <a className="underline" href="https://monadvision.com/tx/0xe6f5b531d9c6dd981b72f2be7dc7e2e2d0adca071e59fd78e532dae804043840">
+              0xe6f5b531…3840
             </a>
-            , so registering a goal, replacing the evidence signer or pausing now needs that wallet&apos;s own signature, and no
-            second key can. Each owner is read again from the chain further down, with what that owner can and cannot do.
+            , so registering a goal, replacing the evidence signer or pausing now needs that wallet&apos;s own signature on any of
+            them, and no second key can. Each owner is read again from the chain further down, with what that owner can and cannot
+            do. Handing ownership over moves no money: the earlier contract still holds the 8.571432 AUSD of its first gift, as it
+            did before.
           </dd>
           {earlierEscrow ? (
             <>
