@@ -12,7 +12,7 @@ import { loadOfferedConditions, prepareMilestoneGift, readStanding, submitMilest
 import { isValidDetScore, normaliseCertificateName } from "@/src/duolingo-english-test";
 import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY, isCertificateRequest, isMilestoneRequest } from "@/src/gift-attempt";
 import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
-import { conditionById, liveConditions, type Condition } from "@/src/conditions";
+import { chooserSections, conditionById, liveConditions, type Condition } from "@/src/conditions";
 import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { cadenceOf, certificateOf, milestoneOf, type MilestoneCondition } from "@/src/milestone-conditions";
 import { checkTarget, inPlainWords, MilestoneTermsError, smallestTarget } from "@/src/milestone-terms";
@@ -248,6 +248,8 @@ export function FundGift() {
   const money = useDisplayCurrency(address);
   const offered: readonly Condition[] = [...liveConditions(), ...preview.ids.map((id) => conditionById(id)).filter((entry): entry is Condition => entry !== undefined)];
   const condition = draft.conditionId ? offered.find((entry) => entry.id === draft.conditionId) : undefined;
+  // Null while the list is short enough to stay one list; the register decides, not this screen.
+  const sections = chooserSections(offered);
   const nameLink = condition?.link.kind === "username" ? condition.link : undefined;
   const milestone = milestoneOf(condition);
   // The other shape of milestone: something granted once, with a day on it. It asks for a name and a score, and
@@ -792,38 +794,49 @@ export function FundGift() {
   if (step === "what") {
     // liveConditions() is what everybody is offered; `offered` adds, for an account that runs Viky only, a condition
     // wired from end to end whose first real gift has not run yet, and says so under it.
+    //
+    // One line under each condition, from the register: what the source reads and what that is worth. It carried what
+    // U2's own line said, which sat under it and repeated it (founder, 18 Sep 2026).
+    const optionOf = (entry: Condition) => ({
+      value: entry.id,
+      label: entry.name,
+      help: entry.live ? entry.help : `${entry.help} ${M.operatorOnly}`,
+    });
+    const chooseCondition = (id: string) => {
+      const chosen = offered.find((entry) => entry.id === id);
+      if (!chosen) return;
+      const chosenCertificate = certificateOf(chosen);
+      const chosenBounded = milestoneOf(chosen) ?? chosenCertificate;
+      // Three shapes, three meanings for the same three fields: a daily target is not a rating to reach and not a
+      // score on an exam, a name is a username on one source or a person's legal name on a certificate, and the days
+      // are bounded differently. Anything carried over from another shape would be wrong, so nothing is.
+      const shapeOf = (entry: Condition | undefined) => (!entry ? "none" : certificateOf(entry) ? "certificate" : milestoneOf(entry) ? "climb" : "daily");
+      const sameShape = shapeOf(condition) === shapeOf(chosen);
+      update({
+        conditionId: id,
+        target: sameShape ? draft.target : String(chosenCertificate?.target.suggested ?? chosen.target?.suggested ?? ""),
+        days: sameShape ? draft.days : String(chosenBounded ? chosenBounded.duration.suggested : 7),
+        username: sameShape ? draft.username : "",
+      });
+    };
     return (
       <Shell kind="task" back="/" caption={caption("what")} step={W.what.title}>
-        <ChoiceList
-          name="condition"
-          legend={W.what.title}
-          legendHidden
-          // One line under each condition, from the register: what the source reads and what that is worth. It carried
-          // what U2's own line said, which sat under it and repeated it (founder, 18 Sep 2026).
-          options={offered.map((entry) => ({
-            value: entry.id,
-            label: entry.name,
-            help: entry.live ? entry.help : `${entry.help} ${M.operatorOnly}`,
-          }))}
-          value={condition?.id ?? null}
-          onChange={(id) => {
-            const chosen = offered.find((entry) => entry.id === id);
-            if (!chosen) return;
-            const chosenCertificate = certificateOf(chosen);
-            const chosenBounded = milestoneOf(chosen) ?? chosenCertificate;
-            // Three shapes, three meanings for the same three fields: a daily target is not a rating to reach and not
-            // a score on an exam, a name is a username on one source or a person's legal name on a certificate, and
-            // the days are bounded differently. Anything carried over from another shape would be wrong, so nothing is.
-            const shapeOf = (entry: typeof chosen | undefined) => (!entry ? "none" : certificateOf(entry) ? "certificate" : milestoneOf(entry) ? "climb" : "daily");
-            const sameShape = shapeOf(condition) === shapeOf(chosen);
-            update({
-              conditionId: id,
-              target: sameShape ? draft.target : String(chosenCertificate?.target.suggested ?? chosen.target?.suggested ?? ""),
-              days: sameShape ? draft.days : String(chosenBounded ? chosenBounded.duration.suggested : 7),
-              username: sameShape ? draft.username : "",
-            });
-          }}
-        />
+        {/* One list while there are few, one section per family from six on: the register decides which, and both are
+            the same radio group, so the choice stays single either way (design audit, section 3). */}
+        {sections === null ? (
+          <ChoiceList name="condition" legend={W.what.title} legendHidden options={offered.map(optionOf)} value={condition?.id ?? null} onChange={chooseCondition} />
+        ) : (
+          sections.map((section) => (
+            <ChoiceList
+              key={section.family}
+              name="condition"
+              legend={section.title}
+              options={section.conditions.map(optionOf)}
+              value={condition?.id ?? null}
+              onChange={chooseCondition}
+            />
+          ))
+        )}
         <button type="button" disabled={!condition} onClick={() => go(hasDetail ? "detail" : "amount")} className={PRIMARY_BUTTON}>
           {W.continue}
         </button>
