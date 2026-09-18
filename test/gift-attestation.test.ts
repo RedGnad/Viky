@@ -6,6 +6,7 @@ process.env.EVIDENCE_SIGNER_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944ba
 
 import assert from "node:assert/strict";
 import test from "node:test";
+import { giftSalt } from "../src/gift-terms";
 import { keccak256, recoverTypedDataAddress, stringToHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { contactHash } from "../src/contact-hash";
@@ -141,4 +142,35 @@ test("the identity is an HMAC pseudonym, not a bare hash of an enumerable id", (
   assert.notEqual(id, keccak256(stringToHex("viky:identity:v1:duolingo:477033640")));
   assert.notEqual(id, keccak256(stringToHex("477033640")));
   assert.equal(evidenceSignerAddress(), privateKeyToAccount(process.env.EVIDENCE_SIGNER_PRIVATE_KEY as `0x${string}`).address);
+});
+
+/**
+ * The salt is what makes one signature commit to the account a gift is read on, and to the course a day is counted in
+ * (D102). It used to be random, so between that signature and the first reading only Viky's own record said which
+ * account was meant. The contract pins the identity at the first reading; this closes the window before it.
+ */
+test("the salt says the account and the course, and stays unique per gift", () => {
+  const seed = `0x${"0a".repeat(32)}` as const;
+  const ama = giftSalt({ account: "ama_learns", course: "DUOLINGO_ES_EN", seed });
+
+  // The same three things always give the same salt, which is what lets the server rebuild it or refuse.
+  assert.equal(giftSalt({ account: "ama_learns", course: "DUOLINGO_ES_EN", seed }), ama);
+  // The account as the source spells it, as the person typed it, with a stray space: one account, one salt.
+  assert.equal(giftSalt({ account: "Ama_Learns", course: "DUOLINGO_ES_EN", seed }), ama);
+  assert.equal(giftSalt({ account: " ama_learns ", course: "DUOLINGO_ES_EN", seed }), ama);
+
+  // Anything else is another salt, so a signature for one gift cannot be offered for another.
+  assert.notEqual(giftSalt({ account: "someone_else", course: "DUOLINGO_ES_EN", seed }), ama);
+  assert.notEqual(giftSalt({ account: "ama_learns", course: "DUOLINGO_IT_EN", seed }), ama);
+  assert.notEqual(giftSalt({ account: "ama_learns", course: undefined, seed }), ama);
+  assert.notEqual(giftSalt({ account: "ama_learns", course: "DUOLINGO_ES_EN", seed: `0x${"0b".repeat(32)}` }), ama);
+
+  // The job it already had (D19): two gifts with the same terms still get distinct salts, through the seed.
+  assert.notEqual(giftSalt({ account: "ama_learns", seed: `0x${"01".repeat(32)}` }), giftSalt({ account: "ama_learns", seed: `0x${"02".repeat(32)}` }));
+
+  // A gift whose account nobody named yet is a salt of its own, and still a valid one.
+  assert.match(giftSalt({ seed }), /^0x[0-9a-f]{64}$/);
+
+  // The account and the course cannot be run together into one another: "ab" + "c" is not "a" + "bc".
+  assert.notEqual(giftSalt({ account: "ab", course: "c", seed }), giftSalt({ account: "a", course: "bc", seed }));
 });

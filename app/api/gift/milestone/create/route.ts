@@ -8,6 +8,7 @@ import { NO_CONTACT_HASH } from "@/src/contact-hash";
 import { isOperator } from "@/src/dev-access";
 import { GiftApiError, NO_STORE } from "@/src/gift-api";
 import { giftNameProblem, tidyGiftName } from "@/src/gift-names";
+import { giftSalt } from "@/src/gift-terms";
 import { loadCreation } from "@/src/gift-store";
 import { milestoneErrorResponse } from "@/src/milestone-api";
 import { cadenceOf, milestoneById } from "@/src/milestone-conditions";
@@ -32,6 +33,8 @@ type CreateBody = {
   amount?: string;
   refundTo?: string;
   salt?: string;
+  /** The random half of the salt, so the terms signed can be rebuilt here (D102). */
+  saltSeed?: string;
   recipientName?: string;
   funderName?: string;
   authorization?: { validAfter?: string; validBefore?: string; nonce?: string; v?: number; r?: string; s?: string };
@@ -105,6 +108,13 @@ export async function POST(request: Request) {
     if (!isAddress(refundToRaw)) throw new GiftApiError("INVALID_REFUND", "The return destination is invalid");
     const salt = String(body.salt ?? "");
     if (!HEX32.test(salt)) throw new GiftApiError("INVALID_SALT", "Please try again");
+    const saltSeed = String(body.saltSeed ?? "");
+    if (!HEX32.test(saltSeed)) throw new GiftApiError("INVALID_SALT", "Please try again");
+    // The salt is the account (D102): rebuilt from the name this request carries, so the signature cannot be for one
+    // Chess.com account and the gift for another. The cadence needs none of this: it is the goal type, already signed.
+    if (giftSalt({ account: username, seed: saltSeed as Hex }).toLowerCase() !== salt.toLowerCase()) {
+      throw new GiftApiError("TERMS_MISMATCH", "The signed terms do not match the gift");
+    }
     const a = body.authorization ?? {};
     if (!HEX32.test(String(a.nonce ?? "")) || !HEX32.test(String(a.r ?? "")) || !HEX32.test(String(a.s ?? "")) || (a.v !== 27 && a.v !== 28)) {
       throw new GiftApiError("INVALID_AUTHORIZATION", "The signed authorization is malformed");

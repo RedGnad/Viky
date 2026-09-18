@@ -9,6 +9,7 @@ import { POST as createPost } from "../app/api/gift/milestone/create/route";
 import { GET as standingGet } from "../app/api/chess/standing/route";
 import { GET as conditionsGet } from "../app/api/conditions/route";
 import { CHESS_RATING } from "../src/conditions";
+import { giftSalt } from "../src/gift-terms";
 import { PGlite } from "@electric-sql/pglite";
 import { configureGiftStore, ensureGiftSchema } from "../src/gift-store";
 import { configureMilestoneStore, ensureMilestoneSchema } from "../src/milestone-store";
@@ -39,6 +40,9 @@ function post(body: unknown, cookie?: string): Request {
   });
 }
 
+/** The random half of the salt; the rest of it is the Chess.com account, and the route rebuilds it (D102). */
+const SALT_SEED = `0x${"0a".repeat(32)}` as const;
+
 const TERMS = {
   conditionId: "chess-rating",
   username: "erik",
@@ -48,7 +52,8 @@ const TERMS = {
   standingReadAt: new Date(Date.now() - 60_000).toISOString(),
   durationDays: 30,
   amount: "25000000",
-  salt: `0x${"01".repeat(32)}`,
+  salt: giftSalt({ account: "erik", seed: SALT_SEED }),
+  saltSeed: SALT_SEED,
   authorization: { nonce: `0x${"02".repeat(32)}`, r: `0x${"03".repeat(32)}`, s: `0x${"04".repeat(32)}`, v: 27 },
 };
 
@@ -162,7 +167,7 @@ test("a rating still settling is refused before anything is relayed, to everybod
         subject: ZERO_SUBJECT,
         durationDays: 30,
         amount: 25_000_000n,
-        salt: TERMS.salt as `0x${string}`,
+        salt: TERMS.salt,
       };
       process.env.MILESTONE_GIFT_ADDRESS = "0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e";
       const message = receiveAuthorizationMessage({ funder: who.address, escrow: "0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e", amount: 25_000_000n, nonce: milestoneFundingNonce(params) });

@@ -7,6 +7,7 @@ import { contactHash, NO_CONTACT_HASH } from "@/src/contact-hash";
 import { DuolingoProfileError, resolvePublicDuolingoProfile } from "@/src/duolingo-profile";
 import { giftNameProblem, tidyGiftName } from "@/src/gift-names";
 import { fundingNonce, type GiftParams } from "@/src/gift-attestation";
+import { giftSalt } from "@/src/gift-terms";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { makeGift } from "@/src/gift-creation";
 import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
@@ -25,6 +26,8 @@ type CreateBody = {
   goalType?: number;
   /** Which course a day is counted on, for a gift made on one course (U1). */
   course?: string;
+  /** The random half of the salt, so the terms signed can be rebuilt here (D102). */
+  saltSeed?: string;
   dailyTarget?: number;
   durationDays?: number;
   amount?: string;
@@ -87,6 +90,14 @@ export async function POST(request: Request) {
     if (!isAddress(refundToRaw)) throw new GiftApiError("INVALID_REFUND", "The return destination is invalid");
     const salt = String(body.salt ?? "");
     if (!HEX32.test(salt)) throw new GiftApiError("INVALID_SALT", "Please try again");
+    const saltSeed = String(body.saltSeed ?? "");
+    if (!HEX32.test(saltSeed)) throw new GiftApiError("INVALID_SALT", "Please try again");
+    // A gift counted on one course says so in its goal type, and the course is part of what the salt commits to, so
+    // it is read before the terms are rebuilt (U1, D102).
+    const course = String(body.course ?? "").trim() || undefined;
+    if (course && !isDuolingoCourseId(course)) throw new GiftApiError("INVALID_COURSE", "Choose which course counts.", 400);
+    if (course && goalType !== GOAL_TYPE_DUOLINGO_COURSE_XP) throw new GiftApiError("TERMS_MISMATCH", "The signed terms do not match the gift");
+    if (!course && goalType === GOAL_TYPE_DUOLINGO_COURSE_XP) throw new GiftApiError("INVALID_COURSE", "Choose which course counts.", 400);
     const a = body.authorization ?? {};
     if (!HEX32.test(String(a.nonce ?? "")) || !HEX32.test(String(a.r ?? "")) || !HEX32.test(String(a.s ?? "")) || (a.v !== 27 && a.v !== 28)) {
       throw new GiftApiError("INVALID_AUTHORIZATION", "The signed authorization is malformed");
@@ -105,13 +116,13 @@ export async function POST(request: Request) {
     if (String(a.nonce).toLowerCase() !== fundingNonce(params).toLowerCase()) {
       throw new GiftApiError("TERMS_MISMATCH", "The signed terms do not match the gift");
     }
+    // The salt is the account and the course (D102): rebuilt here from what this request says they are, and the
+    // creation is refused when the two differ, so the signature cannot be for one account and the gift for another.
+    if (giftSalt({ account: duolingoUsername, course, seed: saltSeed as Hex }).toLowerCase() !== salt.toLowerCase()) {
+      throw new GiftApiError("TERMS_MISMATCH", "The signed terms do not match the gift");
+    }
 
-    // A gift counted on one course says so in its goal type, and the course is read back from the profile before the
-    // money moves: a course nobody is learning could never count a day (U1).
-    const course = String(body.course ?? "").trim() || undefined;
-    if (course && !isDuolingoCourseId(course)) throw new GiftApiError("INVALID_COURSE", "Choose which course counts.", 400);
-    if (course && goalType !== GOAL_TYPE_DUOLINGO_COURSE_XP) throw new GiftApiError("TERMS_MISMATCH", "The signed terms do not match the gift");
-    if (!course && goalType === GOAL_TYPE_DUOLINGO_COURSE_XP) throw new GiftApiError("INVALID_COURSE", "Choose which course counts.", 400);
+    // The course is read back from the profile before the money moves: a course nobody is learning counts no day.
     let courseTitle: string | undefined;
     if (duolingoUsername) {
       let profile: Awaited<ReturnType<typeof resolvePublicDuolingoProfile>>;

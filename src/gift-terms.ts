@@ -99,6 +99,32 @@ export type GiftParams = {
   salt: Hex;
 };
 
+/**
+ * The salt of a gift, which is what makes the funder's one signature commit to the account the gift will be read on
+ * and, for a daily gift, to the course a day is counted in.
+ *
+ * Before this, both lived only in Viky's own record: the terms signed carried a goal type, a target and a random
+ * salt, so between the signature and the first reading nothing but our database said which account was meant. The
+ * contract pins the identity at that first reading and refuses any other afterwards, which left exactly that window
+ * open. The salt closes it without touching the contract: it is already inside the hashed terms, so a salt derived
+ * from the account and the course makes the signature itself say them.
+ *
+ * It keeps the job it already had (D19: two identical gifts need distinct nonces) because the seed is random and
+ * carried with the request, so the server recomputes the same salt byte for byte, or refuses the creation.
+ */
+export const GIFT_SALT_TAG = keccak256(stringToHex("viky.gift.salt.v1"));
+
+export function giftSalt(input: { account?: string | null; course?: string | null; seed: Hex }): Hex {
+  return keccak256(
+    encodeAbiParameters(parseAbiParameters("bytes32, string, string, bytes32"), [
+      GIFT_SALT_TAG,
+      (input.account ?? "").trim().toLowerCase(),
+      (input.course ?? "").trim(),
+      input.seed,
+    ]),
+  );
+}
+
 /** `GiftEscrow.hashGiftParams`, byte for byte. */
 export function hashGiftParams(p: GiftParams): Hex {
   return keccak256(
