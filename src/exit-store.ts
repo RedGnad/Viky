@@ -204,6 +204,22 @@ export async function markExitStale(id: string): Promise<boolean> {
   return rows.length === 1;
 }
 
+/**
+ * Sets aside every set of terms whose deadline has passed, and says how many (the audit of 18 Sep, gap e).
+ *
+ * Those terms were already harmless: the contract refuses a deadline that has passed, the token's own authorization
+ * window closed with it, and `openExit` never offers one. What they were not is honest about themselves. One has sat
+ * in production since 16 Sep 2026 saying `signed`, which reads as a signature waiting to be used, and it is a
+ * signature nothing can use. The keeper retires them so the row says what is true.
+ */
+export async function retireExpiredExits(nowSeconds: number = Math.floor(Date.now() / 1_000)): Promise<number> {
+  const rows = await sql()`
+    UPDATE viky_exits SET state = 'stale'
+     WHERE state IN ('prepared', 'signed') AND deadline <= ${nowSeconds}
+     RETURNING id`;
+  return rows.length;
+}
+
 export async function markExitSent(id: string, txHash: Hex): Promise<boolean> {
   const rows = await sql()`
     UPDATE viky_exits SET tx_hash = ${txHash}, sent_at = now(), state = 'sent'
