@@ -614,6 +614,23 @@ export const MORNING = {
   },
 } as const;
 
+/**
+ * The judges page. It is the one page that names contracts, and the one place a stranger is invited to check us
+ * rather than believe us, so its words are here like every other word a person reads.
+ *
+ * The note at the head of the verification is the founder's own, written as dictated on 18 Sep 2026: the key that
+ * signs is ours, the owner can replace it, and here is how anybody checks that a reading had a proof behind it. It
+ * promises nothing about where that key is held, because nothing has changed about where it is held.
+ */
+export const JUDGES = {
+  ourKey: "The key that signs is ours. The owner can replace it.",
+  andSo: "So here is how anybody checks, without us, that a reading really had a proof behind it.",
+  fromNothing: "From nothing, on any machine with Node and pnpm. No key, no account, no permission from us:",
+  copy: "Copy",
+  copied: "Copied",
+  copyRefused: "This browser would not let the page copy it. Select the line and copy it by hand.",
+} as const;
+
 /** Me: the account, in the order the structure gives it. */
 export const ME = {
   title: "You",
