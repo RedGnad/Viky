@@ -32,9 +32,9 @@ export async function JudgesReliability() {
     <section className="space-y-[var(--space-sm)]">
       <h2 className={TITLE}>How reliable the readings are</h2>
       <p className={HELP}>
-        Since {day(since.firstPassAt)}, the day each pass started writing a record of itself, which is {elapsed}{" "}
-        {elapsed === 1 ? "day" : "days"} ago. Passes before that day left no trace, so they are not counted here, and
-        nothing has been filled in for them.
+        Since {day(since.firstPassAt)}, the day each pass started writing a record of itself, which is{" "}
+        {elapsed === 0 ? "today" : `${elapsed} ${elapsed === 1 ? "day" : "days"} ago`}. Passes before that day left no
+        trace, so they are not counted here, and nothing has been filled in for them.
       </p>
       <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[18rem_1fr]">
         {since.plans.map((plan) => (
@@ -44,15 +44,16 @@ export async function JudgesReliability() {
             </dt>
             <dd className={HELP}>
               {plan.runs} {plan.runs === 1 ? "run" : "runs"}, {plan.onTime} within a quarter of an hour of the scheduled
-              minute, over {elapsed} {elapsed === 1 ? "day" : "days"}. A run that never happened writes nothing, so a
-              missing run shows here as a run fewer, never as a late one.
+              minute{elapsed === 0 ? "" : `, over ${elapsed} ${elapsed === 1 ? "day" : "days"}`}. A run that never
+              happened writes nothing, so a missing run shows here as a run fewer, never as a late one.
             </dd>
           </div>
         ))}
         <dt className={MUTED}>Readings asked of the source</dt>
         <dd className={HELP}>
-          {readings.attempted} attempted, {readings.succeeded} answered and counted. Milestone readings run in their own
-          pass and are not in these two numbers.
+          {readings.attempted} asked, {readings.succeeded} answered and counted. A gift already counted today, finished,
+          cancelled or not yet connected is not asked at all, so it is in neither number, and milestone readings run in
+          their own pass and are in neither either.
         </dd>
         <dt className={MUTED}>Days held because a reading failed on our side</dt>
         <dd className={HELP}>
