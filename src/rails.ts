@@ -57,17 +57,91 @@ export type RailHandoff = Readonly<{
   byHand: true;
 }>;
 
-/** Adding money (D20, D32). One rail, so nothing is named and nothing is chosen. */
-export const WAY_IN: RailHandoff = {
+/**
+ * One way in of the two (D98). What a person needs before they choose one, in their own words, and what the screens
+ * compute from: the coin that arrives decides whether anything has to be swapped afterwards, and the floor and the
+ * fee decide what a card payment costs.
+ */
+export type WayIn = Readonly<{
+  name: string;
+  /** Their own page, opened beside ours. */
+  page: string;
+  /** What lands in the account: what a gift holds, or the chain's own coin, which must then be swapped. */
+  arrives: "gift" | "chain";
+  /**
+   * The two words that rail's own page asks the person to set. They are that service's names for a coin and a
+   * network, not ours: a data contract with a page we do not control (D32), quoted and never explained away.
+   */
+  delivers: Readonly<{ coin: string; network: string }>;
+  /** Their smallest purchase, in euros, as they publish it. */
+  smallestEur: number;
+  /** How long they say a payment takes, in their own words, when they say it. Absent rather than guessed. */
+  takes?: string;
+  /** What they keep, as they publish it. */
+  fee: PublishedFee;
+  conditions: readonly string[];
+  /** Where the sentences above were read, and when. Shown on screen, so nobody has to take our word for it. */
+  source: string;
+  read: string;
+  /** Countries where this rail serves nobody, whatever else is true. */
+  closedIn: readonly string[];
+}>;
+
+/**
+ * Adding money by buying what a gift already holds (D98). Their own asset list carries `MONAD_AUSD` at the address
+ * this app pays gifts in, enabled, beside the chain's coin and the euro one, with a purchase floor of 6 EUR and fees
+ * of 0.99 % to 3.9 % with a 2.49 EUR minimum, all read on 18 Sep 2026 at
+ * `https://api.ramp.network/api/host-api/assets`. Nothing is swapped after it: what arrives is what a gift holds.
+ *
+ * What is not known here is which countries may buy: their per-country answer needs a key we do not have, and the
+ * payout list is about paying out, which is a different question. So this rail says nothing about a country, and the
+ * screen orders what it can and hides nothing (R1).
+ */
+export const WAY_IN_GIFT_COIN: WayIn = {
+  name: "Ramp",
+  page: "https://app.ramp.network/?swapAsset=MONAD_AUSD&flow=onramp",
+  arrives: "gift",
+  delivers: { coin: "AUSD", network: "Monad" },
+  smallestEur: 6,
+  fee: { percent: 3.9, upTo: true, minimum: 2.49, currency: "EUR" },
+  conditions: ["Identity check the first time, once.", "A card or a bank account in your name."],
+  source: "Ramp's own asset list",
+  read: "18 Sep 2026",
+  closedIn: RAIL_CLOSED_IN,
+};
+
+/**
+ * Adding money by buying the chain's own coin, which is then swapped for what a gift holds. The rail Viky started
+ * with (D20, D32), kept because it serves places the other may not.
+ */
+export const WAY_IN_CHAIN_COIN: WayIn = {
   name: "Mercuryo",
   page: "https://exchange.mercuryo.io",
-  smallest: "25 EUR",
-  fee: "about 3.8%",
+  arrives: "chain",
+  delivers: { coin: "MON", network: "Monad" },
+  smallestEur: 25,
+  takes: "most payments take 30 to 60 minutes, and sometimes several hours",
+  fee: { percent: 3.8, upTo: false, minimum: 0, currency: "EUR" },
   conditions: ["Identity check the first time, once.", "A card in your name."],
+  source: "Mercuryo's own limits and currencies",
+  read: "14 Sep 2026",
   // Buying the coin is shut in the United Kingdom as well as selling it: their own currencies endpoint lists `gb`
   // under both `restricted_countries_onramp` and `restricted_countries_offramp` for MON on MONAD, read on 15 Sep
   // 2026 at https://api.mercuryo.io/v1.6/lib/currencies (D72), and again on 16 Sep for D77.
   closedIn: [...RAIL_CLOSED_IN, "United Kingdom"],
+};
+
+/** Both ways in, in the order the screen shows them before a country says otherwise: the one with nothing to swap. */
+export const WAYS_IN: readonly WayIn[] = [WAY_IN_GIFT_COIN, WAY_IN_CHAIN_COIN];
+
+/** The rail money was added through before there were two, kept for what still reads a single one. */
+export const WAY_IN: RailHandoff = {
+  name: WAY_IN_CHAIN_COIN.name,
+  page: WAY_IN_CHAIN_COIN.page,
+  smallest: `${WAY_IN_CHAIN_COIN.smallestEur} EUR`,
+  fee: "about 3.8%",
+  conditions: WAY_IN_CHAIN_COIN.conditions,
+  closedIn: WAY_IN_CHAIN_COIN.closedIn,
   byHand: true,
 };
 
@@ -115,8 +189,11 @@ export type WayOut = Readonly<{
 }>;
 
 /** "Ramp keeps 0.99 % with a minimum of 1.99 EUR", built from the published figures and never retyped. */
-export function feeSentence(way: WayOut): string {
+export function feeSentence(way: { name: string; fee: PublishedFee }): string {
   const share = `${way.fee.upTo ? "up to " : ""}${way.fee.percent} %`;
+  // A service that publishes no floor for its fee gets no sentence about one: "a minimum of 0.00" would be a figure
+  // nobody read (the card rail in, whose published figure is a share alone).
+  if (way.fee.minimum <= 0) return `${way.name} keeps ${share}`;
   return `${way.name} keeps ${share} with a minimum of ${way.fee.minimum.toFixed(2)} ${way.fee.currency}`;
 }
 

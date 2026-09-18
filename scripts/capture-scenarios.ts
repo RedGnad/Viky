@@ -142,7 +142,17 @@ const COURSES = [
   { id: "DUOLINGO_ES_EN", title: "Spanish", xp: 1200 },
   { id: "DUOLINGO_IT_EN", title: "Italian", xp: 40 },
 ];
+const RAILS_IN = {
+  country: "fr",
+  ask: false,
+  fromConnection: "fr",
+  fromDevice: "fr",
+  waysOut: { Ramp: "serves", Mercuryo: "serves" },
+  waysIn: { Ramp: "unknown", Mercuryo: "serves" },
+};
+
 async function nameCheck(s: Session): Promise<void> {
+  await s.api("GET", /\/api\/rails\/where/, () => ({ status: 200, body: RAILS_IN }), "GET /api/rails/where");
   await s.api(
     "GET",
     /\/api\/duolingo\/profile\?/,
@@ -294,9 +304,9 @@ export const SCENARIOS: Scenario[] = [
       await s.text("Check this over");
       await s.shot("funder", "check, paying by card", `${HOME}: Offer a gift, ${TO_THE_CHECK}`);
 
-      await s.click("Pay 25 EUR by card");
+      await s.click("Pay 25 EUR with Ramp");
       await s.text("Waiting for your 25 EUR payment");
-      await s.shot("funder", "waiting for the payment", `${HOME}: Offer a gift, ${TO_THE_CHECK}, Pay 25 EUR by card (the card service opens in a new tab, closed here)`);
+      await s.shot("funder", "waiting for the payment", `${HOME}: Offer a gift, ${TO_THE_CHECK}, Pay 25 EUR with Ramp (the service's page opens in a new tab, closed here)`);
 
       await s.page.clock.runFor(31 * 60_000);
       await s.text("Your session closed while you were paying");

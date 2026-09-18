@@ -2893,11 +2893,16 @@ behind an account cannot be photographed any other way.
 - **What it does not change.** The gift's own minimum stays the contract's 1 AUSD; the rail's floor is about what a
   card purchase can be, not about what a gift can be. A gift funded from money already in the account touches no rail
   at all.
-- **The one consequence worth naming.** An account funded only through Ramp holds no MON. That is enough for
-  everything Viky relays (making a gift, taking what is earned, the euro way out, sending to another Viky account),
-  and not enough for the one thing the person sends themselves: the chain's own coin to the card rail on the way out,
-  which needs gas in that same coin. Nobody is stuck with money they cannot reach, because the euro way out is
-  relayed, but somebody in a card-rail country who funded through Ramp would meet it.
+- **The one consequence worth naming, corrected the same day by reading the code rather than reasoning about it.**
+  An account funded only through Ramp holds no MON. Everything Viky relays needs none: making a gift, taking what is
+  earned, the euro way out, sending to another Viky account. The sentence first written here said the card way out
+  would be the exception, and that is **wrong**: `ExitRouter` pays the person in the coin their terms name, and for
+  that rail the coin is the chain's own (`t.tokenOut == NATIVE`, the payout is a call carrying value to the person,
+  `contracts/ExitRouter.sol`). So the person holds it before they send it, and the fee of that send comes out of the
+  same coin, which the screen already says. The one thing that truly needs the chain's coin in hand beforehand is a
+  contract call the person makes themselves, and today there is exactly one: the swap after the card rail's way in,
+  which is the rail that provides the coin. The two never collide, and no path leaves somebody unable to move their
+  money.
 - **Not verified.** That Ramp's widget lets a real person in each of its countries buy `MONAD_AUSD` to an address
   they paste: the asset list says it sells it, and an endpoint that lists is not a service that pays (the lesson of
   D79). The first real purchase is what will say so, and until then no screen promises it.

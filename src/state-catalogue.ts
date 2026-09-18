@@ -75,10 +75,9 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
           "show on the gift, to whoever opens its link.",
           "The link you will get opens the gift for whoever opens it first. Send it only to",
           "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
-          "Paying for it",
+          "Paying with",
           "Arrives in your account",
           "Stays yours",
-          "says most payments take 30 to 60 minutes, and sometimes several hours.",
           "Use the payment that arrived",
           "Not now",
         ],
@@ -89,9 +88,14 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
         says: ["One account, and then you can pay", "The money is held in your name until they earn it, so it needs somewhere of yours to be held."],
       },
       {
+        name: "The two ways in",
+        when: "the account is short: one card per way in, ordered by the country, each with its floor, its fee and its source (D98)",
+        says: ["Paying with", "takes nothing under", "What arrives is what the gift holds, so nothing is changed afterwards and nothing is left over.", "What arrives is changed into what the gift holds"],
+      },
+      {
         name: "Waiting for the payment",
         when: "the card service's page has been opened and nothing has arrived",
-        says: ["Pick: Buy.", "Receive: MON.", "Network: Monad.", "Send to: the code below.", "Whose it is: your own.", "You never have to understand them.", "Before you pay, check what you pasted starts with", "You can leave this page: the gift is kept, and Viky picks it up when you come back.", "Set up a different gift instead"],
+        says: ["Pick: Buy.", "Send to: the code below.", "Whose it is: your own.", "You never have to understand them.", "Before you pay, check what you pasted starts with", "You can leave this page: the gift is kept, and Viky picks it up when you come back.", "Set up a different gift instead"],
         gap: "the card service's page cannot be prefilled, so every one of these is a thing the person must do by hand. A partner rail would delete this whole state.",
       },
       {
@@ -135,6 +139,24 @@ export const FUNDER_JOURNEY: readonly CatalogueScreen[] = [
       { name: "Two groups on Gifts, never one list", when: "the account is on both sides of at least one gift", says: ["Given", "Received"] },
       { name: "One card for a gift, everywhere", when: "a gift is listed on Home or on Gifts", says: ["For you", "For whoever opens the link", "Not opened yet.", "Taken back before it was opened.", "Open"] },
       { name: "Could not be loaded", when: "the list itself failed", says: ["Your gifts could not be loaded."] },
+    ],
+  },
+  {
+    screen: "The two ways in and the two ways out, in the rails' own words",
+    file: "src/rails.ts",
+    states: [
+      {
+        name: "What each rail keeps, takes and delivers",
+        when: "the check offers a way in, or the way out offers a way out: every figure on those cards is that service's own",
+        says: [
+          "most payments take 30 to 60 minutes, and sometimes several hours",
+          "To your bank account, in euros.",
+          "To your card.",
+          "Identity check before your first payout, once.",
+          "Ramp's own asset list",
+          "Mercuryo's own list of currencies and help centre",
+        ],
+      },
     ],
   },
   {

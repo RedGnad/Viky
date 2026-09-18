@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { GET as whereGet } from "../app/api/rails/where/route";
-import { cardRailRestricted, euroRailCountries, reachOfWayIn, reachOfWaysOut } from "../src/rail-availability";
-import { countryCode, countryInWords, guessCountry, orderWaysOut, regionOfLocale } from "../src/rail-country";
-import { WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT } from "../src/rails";
+import { cardRailRestricted, euroRailCountries, reachOfWaysIn, reachOfWaysOut } from "../src/rail-availability";
+import { countryCode, countryInWords, guessCountry, orderRails, orderWaysOut, regionOfLocale } from "../src/rail-country";
+import { WAY_OUT_CARD, WAY_OUT_EURO, WAYS_IN, WAYS_OUT } from "../src/rails";
 
 /**
  * Routing the rails by country (R1): detect to **order**, never to hide.
@@ -46,13 +46,19 @@ test("two signals that agree ask nothing, two that differ ask once, and the answ
   assert.deepEqual(guessCountry({}), { country: null, ask: false, fromConnection: null, fromDevice: null });
 });
 
-test("the ways out are ordered and never removed, and a rail nobody could read keeps its place", () => {
+test("only a rail that says it does not serve moves, and none is ever removed", () => {
   const serves = orderWaysOut(WAYS_OUT, { [WAY_OUT_CARD.name]: "serves", [WAY_OUT_EURO.name]: "does-not" });
   assert.deepEqual(serves.map((way) => way.name), [WAY_OUT_CARD.name, WAY_OUT_EURO.name]);
   assert.equal(serves.length, WAYS_OUT.length, "both are still there");
   const unread = orderWaysOut(WAYS_OUT, { [WAY_OUT_EURO.name]: "unknown", [WAY_OUT_CARD.name]: "does-not" });
-  assert.deepEqual(unread.map((way) => way.name), [WAY_OUT_EURO.name, WAY_OUT_CARD.name], "unknown beats a refusal, and a refusal is still shown");
+  assert.deepEqual(unread.map((way) => way.name), [WAY_OUT_EURO.name, WAY_OUT_CARD.name], "a refusal goes last, and is still shown");
   assert.deepEqual(orderWaysOut(WAYS_OUT, {}).map((way) => way.name), WAYS_OUT.map((way) => way.name), "no answer, the register's order");
+  // A silence is not a refusal: the rail that publishes no per-country answer keeps the place the register gave it,
+  // rather than falling behind one that answered, for ever and everywhere (D98).
+  const bothFine = orderRails(WAYS_IN, { [WAYS_IN[1].name]: "serves", [WAYS_IN[0].name]: "unknown" });
+  assert.deepEqual(bothFine.map((way) => way.name), WAYS_IN.map((way) => way.name));
+  const oneRefuses = orderRails(WAYS_IN, { [WAYS_IN[0].name]: "unknown", [WAYS_IN[1].name]: "does-not" });
+  assert.deepEqual(oneRefuses.map((way) => way.name), WAYS_IN.map((way) => way.name), "it was already first, and the other is still there");
 });
 
 test("what each rail serves is read from that rail, and a read that fails never says no", async () => {
@@ -81,8 +87,10 @@ test("what each rail serves is read from that rail, and a read that fails never 
     assert.equal(inSenegal[WAY_OUT_CARD.name], "serves");
     const inBritain = await reachOfWaysOut("gb");
     assert.equal(inBritain[WAY_OUT_CARD.name], "does-not");
-    assert.equal(await reachOfWayIn("gb"), "does-not", "adding money is shut there too, in the same answer");
-    assert.equal(await reachOfWayIn("fr"), "serves");
+    // The rail that sells the chain's coin says where it will not sell it; the other publishes no per-country answer
+    // without a key, so it says nothing anywhere and orders nothing (D98).
+    assert.deepEqual(await reachOfWaysIn("gb"), { Ramp: "unknown", Mercuryo: "does-not" });
+    assert.deepEqual(await reachOfWaysIn("fr"), { Ramp: "unknown", Mercuryo: "serves" });
     assert.deepEqual(await reachOfWaysOut(null), { [WAY_OUT_EURO.name]: "unknown", [WAY_OUT_CARD.name]: "unknown" });
   } finally {
     globalThis.fetch = realFetch;
@@ -105,7 +113,7 @@ test("the route reads the country of the connection, takes the device's language
     assert.equal(agreed.country, "fr");
     assert.equal(agreed.ask, false);
     assert.deepEqual(agreed.waysOut, { [WAY_OUT_EURO.name]: "serves", [WAY_OUT_CARD.name]: "serves" });
-    assert.equal(agreed.wayIn, "serves");
+    assert.deepEqual(agreed.waysIn, { Ramp: "unknown", Mercuryo: "serves" });
 
     const split = (await (await whereGet(ask({ "x-vercel-ip-country": "DE" }, "?locale=fr-SN"))).json()) as Record<string, unknown>;
     assert.equal(split.ask, true, "a connection in one country and a device set to another asks once");
@@ -144,7 +152,7 @@ test("a rail that cannot be reached says nothing, and what it said before is not
     const unreadable = await reachOfWaysOut("fr");
     assert.equal(unreadable[WAY_OUT_EURO.name], "unknown");
     assert.equal(unreadable[WAY_OUT_CARD.name], "unknown");
-    assert.equal(await reachOfWayIn("fr"), "unknown");
+    assert.deepEqual(await reachOfWaysIn("fr"), { Ramp: "unknown", Mercuryo: "unknown" });
     // An answer is held for ten minutes, a failure for thirty seconds: one bad minute at a service must not leave
     // every screen guessing for ten.
     const source = readFileSync("src/rail-availability.ts", "utf8");

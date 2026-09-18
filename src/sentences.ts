@@ -188,6 +188,14 @@ export const FUND = {
     linkRisk: (recipient: string) => `The link you will get opens the gift for whoever opens it first. Send it only to ${recipient}.`,
     fourteenDays: "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
     paying: "Paying for it",
+    /** One card per way in (D98): each says what it costs, what it delivers, and where its figures were read. */
+    payingWith: (name: string) => `Paying with ${name}`,
+    payWith: (name: string) => `Pay with ${name}`,
+    payWithFor: (name: string, euros: number) => `Pay ${euros} EUR with ${name}`,
+    byCardUnknown: "by card",
+    smallest: (name: string, euros: number) => `${name} takes nothing under ${euros} EUR.`,
+    nothingToSwap: "What arrives is what the gift holds, so nothing is changed afterwards and nothing is left over.",
+    swapAfter: "What arrives is changed into what the gift holds, in one step you confirm, and a little stays behind for it.",
     youPay: "You pay",
     byCard: (euros: number) => `${euros} EUR by card`,
     alreadyHeld: "Already in your account",
@@ -195,7 +203,8 @@ export const FUND = {
     aboutDollars: (dollars: number) => `about $${dollars}`,
     staysYours: "Stays yours",
     fee: (name: string, fee: string) => `${name} keeps ${fee} of what you pay, and checks who you are the first time, once.`,
-    delay: (name: string) => `${name} says most payments take 30 to 60 minutes, and sometimes several hours.`,
+    /** What that rail says about how long it takes, in its own words. A rail that says nothing gets no sentence. */
+    delay: (name: string, takes: string) => `${name} says ${takes}.`,
     arrivedWorth: (dollars: string) => `A card payment is in your account: about ${dollars}.`,
     arrivedLater: "A card payment is in your account. Its value in dollars will show once the price answers.",
     arrivedUse: (amount: string, recipient: string) =>
@@ -216,15 +225,19 @@ export const FUND = {
     title: (euros: number | undefined) => (euros ? `Waiting for your ${euros} EUR payment` : "Waiting for your payment"),
     inAccountNow: (held: string) => `In your account now: ${held}`,
     setThese: (name: string) => `On ${name}'s page, set these yourself:`,
-    settings: (euros: number | undefined) => [
+    settings: (euros: number | undefined, delivers: { coin: string; network: string }) => [
       "Pick: Buy.",
       euros ? `Pay: ${euros} EUR.` : "Pay: in EUR.",
-      "Receive: MON.",
-      "Network: Monad.",
+      `Receive: ${delivers.coin}.`,
+      `Network: ${delivers.network}.`,
       "Send to: the code below.",
       "Whose it is: your own.",
     ],
-    theirWords: (name: string) => `MON and Monad are the two words ${name} uses for the money it delivers to Viky. You never have to understand them.`,
+    theirWords: (name: string, delivers: { coin: string; network: string }) =>
+      `${delivers.coin} and ${delivers.network} are the two words ${name} uses for the money it delivers to Viky. You never have to understand them.`,
+    /** What the wait ends with, which differs by rail (D98). */
+    thenNothing: "When it lands, the gift is made straight away: there is nothing else to confirm.",
+    thenChanged: "When it lands, you confirm one step that turns it into what the gift holds, and a little stays behind for it.",
     codeLabel: (name: string) => `The code to give ${name}`,
     copy: "Copy the code",
     copied: "Copied",

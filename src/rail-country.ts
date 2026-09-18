@@ -71,10 +71,20 @@ export function guessCountry(input: { fromConnection?: string | null; fromDevice
 export type RailReach = "serves" | "does-not" | "unknown";
 
 /**
- * The ways out in the order to show them: the ones their own service says it serves, then the rest, each group in the
- * order the register lists them. Nothing is removed, and a rail that could not be read keeps its place.
+ * Rails in the order to show them, in or out. One rule, and only one: a rail whose own service says it does not serve
+ * this country goes last. Everything else keeps the order the register gives it, which is the order somebody chose on
+ * purpose, and nothing is ever removed.
+ *
+ * Why "serves" does not jump the queue: one of the two ways in publishes no per-country answer at all (D98), so
+ * ranking an answer above a silence would push it behind for ever, everywhere, on a difference that says nothing
+ * about the person. A silence is not a refusal.
  */
+export function orderRails<T extends { name: string }>(rails: readonly T[], reach: Readonly<Record<string, RailReach>>): readonly T[] {
+  const rank = (rail: T) => (reach[rail.name] === "does-not" ? 1 : 0);
+  return [...rails].sort((left, right) => rank(left) - rank(right));
+}
+
+/** The same rule, named for the way out, which is where it started (R1). */
 export function orderWaysOut(ways: readonly WayOut[], reach: Readonly<Record<string, RailReach>>): readonly WayOut[] {
-  const rank = (way: WayOut) => (reach[way.name] === "serves" ? 0 : reach[way.name] === "unknown" ? 1 : 2);
-  return [...ways].sort((left, right) => rank(left) - rank(right));
+  return orderRails(ways, reach);
 }

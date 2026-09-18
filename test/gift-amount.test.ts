@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { eurosToBuy, roughlyInDollars, SMALLEST_CARD_PAYMENT_EUR, SUGGESTED_GIFT_DOLLARS } from "../src/gift-amount.js";
+import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN } from "../src/rails.js";
+import { arrivesInDollars, eurosToBuy, eurosToBuyOn, roughlyInDollars, SMALLEST_CARD_PAYMENT_EUR, SUGGESTED_GIFT_DOLLARS } from "../src/gift-amount.js";
 import { feeSentence, RAIL_CLOSED_IN, WAY_IN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT } from "../src/rails.js";
 
 /**
@@ -94,4 +95,36 @@ test("the ways out cover each other's gaps, and each says where it pays", () => 
 test("the two ways out do not take the same coin", () => {
   assert.notEqual(WAY_OUT_EURO.coin.toLowerCase(), WAY_OUT_CARD.coin.toLowerCase());
   assert.equal(WAY_OUT_CARD.coin, "0x0000000000000000000000000000000000000000", "the card rail sells the chain's own coin");
+});
+
+/**
+ * The second way in (D98): a rail that sells what a gift already holds. Nothing is swapped after it, so no reserve is
+ * left behind and no second price applies; what a person pays, less that rail's own fee, becomes dollars at the day's
+ * euro rate. Every figure below is theirs, read on 18 Sep 2026 at `https://api.ramp.network/api/host-api/assets`:
+ * a 6 EUR floor, 0.99 % to 3.9 %, and a 2.49 EUR minimum fee.
+ */
+test("the rail that sells what a gift holds costs its fee and its floor, and nothing else", () => {
+  const rate = 1.1537; // dollars per euro, the ECB's of 16 Sep 2026, as the rates route answers it
+  // A one dollar gift: the fee decides, not the amount, so the floor is what is paid.
+  assert.equal(eurosToBuyOn(1_000_000n, WAY_IN_GIFT_COIN, rate), 6);
+  // Ten dollars: 8.67 EUR of money plus their 2.49 minimum, rounded up to the whole euro.
+  assert.equal(eurosToBuyOn(10_000_000n, WAY_IN_GIFT_COIN, rate), 12);
+  // A hundred: their 3.9 % share is larger than the minimum by then, so the share is what applies.
+  assert.equal(eurosToBuyOn(100_000_000n, WAY_IN_GIFT_COIN, rate), 91);
+  assert.equal(eurosToBuyOn(0n, WAY_IN_GIFT_COIN, rate), 0, "nothing short, nothing to buy");
+  // No rate, no figure: nothing is guessed, and the screen says what it can instead.
+  assert.equal(eurosToBuyOn(10_000_000n, WAY_IN_GIFT_COIN, undefined), undefined);
+
+  // What lands: the fee out, the rest at the day's rate.
+  assert.equal(arrivesInDollars(6, WAY_IN_GIFT_COIN, rate), 4.05);
+  assert.equal(arrivesInDollars(12, WAY_IN_GIFT_COIN, rate), 10.97);
+  assert.equal(arrivesInDollars(2, WAY_IN_GIFT_COIN, rate), 0, "under their minimum fee nothing arrives at all");
+
+  // The other rail is untouched: its own floor, its own measured figures, and no rate needed.
+  assert.equal(eurosToBuyOn(1_000_000n, WAY_IN_CHAIN_COIN, rate), 25);
+  assert.equal(arrivesInDollars(25, WAY_IN_CHAIN_COIN, undefined), 28.51);
+  assert.equal(WAY_IN_CHAIN_COIN.smallestEur, SMALLEST_CARD_PAYMENT_EUR);
+
+  // What a gift costs to fund, the two rails side by side, at the same gift: the reason the second one exists.
+  assert.ok(eurosToBuyOn(1_000_000n, WAY_IN_GIFT_COIN, rate)! < eurosToBuyOn(1_000_000n, WAY_IN_CHAIN_COIN, rate)!);
 });

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { NO_STORE } from "@/src/gift-api";
-import { reachOfWayIn, reachOfWaysOut } from "@/src/rail-availability";
+import { reachOfWaysIn, reachOfWaysOut } from "@/src/rail-availability";
 import { countryCode, guessCountry, regionOfLocale } from "@/src/rail-country";
 
 export const runtime = "nodejs";
@@ -23,6 +23,6 @@ export async function GET(request: Request) {
   const fromConnection = countryCode(request.headers.get("x-vercel-ip-country"));
   const fromDevice = regionOfLocale(params.get("locale")) ?? countryCode(params.get("region"));
   const guess = guessCountry({ fromConnection, fromDevice, answered: params.get("answered") });
-  const [waysOut, wayIn] = await Promise.all([reachOfWaysOut(guess.country), reachOfWayIn(guess.country)]);
-  return NextResponse.json({ ...guess, waysOut, wayIn }, { headers: NO_STORE });
+  const [waysOut, waysIn] = await Promise.all([reachOfWaysOut(guess.country), reachOfWaysIn(guess.country)]);
+  return NextResponse.json({ ...guess, waysOut, waysIn }, { headers: NO_STORE });
 }

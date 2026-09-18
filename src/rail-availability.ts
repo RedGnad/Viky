@@ -1,5 +1,5 @@
 import { countryCode, type RailReach } from "./rail-country";
-import { WAY_IN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "./rails";
+import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "./rails";
 
 /**
  * Whether a rail serves a country, asked of that rail at the moment it matters (R1). Server only.
@@ -97,12 +97,19 @@ export async function reachOfWaysOut(country: string | null): Promise<Readonly<R
 }
 
 /**
- * The way in, asked the same way: the one rail that adds money publishes what it will not sell, and the payment step
- * says so rather than sending somebody to a page that will refuse them. Nothing is hidden here either.
+ * The ways in, asked the same way (D98), with one difference worth naming:
+ *
+ * - The rail that sells the chain's coin publishes what it will not sell, per coin and per country, in the same
+ *   answer as its payouts (`restricted_countries_onramp`, `["gb"]` for MON on MONAD on 18 Sep 2026).
+ * - The rail that sells what a gift holds publishes **no** per-country answer anybody can read without a key: its
+ *   quote endpoint asks for one (`hostApiKey must be a string`, measured the same day) and its payout list is about
+ *   paying out, which is a different question. So it answers "unknown" everywhere, which orders nothing and says
+ *   nothing. Guessing from the payout list would be inventing a fact about somebody's money.
  */
-export async function reachOfWayIn(country: string | null): Promise<RailReach> {
+export async function reachOfWaysIn(country: string | null): Promise<Readonly<Record<string, RailReach>>> {
   const asked = countryCode(country);
-  if (!asked) return "unknown";
+  const reach: Record<string, RailReach> = { [WAY_IN_GIFT_COIN.name]: "unknown", [WAY_IN_CHAIN_COIN.name]: "unknown" };
+  if (!asked) return reach;
   const body = await readJson(MERCURYO_CURRENCIES);
   const currencies = (body as { data?: { config?: { crypto_currencies?: unknown } } } | null)?.data?.config?.crypto_currencies;
   const monad = Array.isArray(currencies)
@@ -111,11 +118,10 @@ export async function reachOfWayIn(country: string | null): Promise<RailReach> {
         | undefined)
     : undefined;
   const list = monad?.restricted_countries_onramp;
-  if (!Array.isArray(list)) return "unknown";
-  return list.map((one) => countryCode(String(one))).includes(asked) ? "does-not" : "serves";
+  if (Array.isArray(list)) {
+    reach[WAY_IN_CHAIN_COIN.name] = list.map((one) => countryCode(String(one))).includes(asked) ? "does-not" : "serves";
+  }
+  return reach;
 }
-
-/** The name of the rail money is added through, so a screen can say it without importing the register twice. */
-export const WAY_IN_NAME = WAY_IN.name;
 
 export type { WayOut };
