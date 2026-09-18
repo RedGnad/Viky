@@ -86,7 +86,10 @@ export type Condition = Readonly<{
   source: string;
   /** The condition in words, as the radio on "What will they do?" reads it. */
   name: string;
-  /** One line of help under that radio. */
+  /**
+   * The one line under that radio: what the source reads **and** what a reading is worth, in one sentence. The two used
+   * to be two lines, the register's and U2's, and a funder read the same thing twice (founder, 18 Sep 2026).
+   */
   help: string;
   link: ConditionLink;
   /**
@@ -160,7 +163,7 @@ export const DUOLINGO_DAILY: Condition = {
   live: true,
   source: "Duolingo",
   name: "A Duolingo lesson each day",
-  help: "Read every morning from their public Duolingo profile. Nothing to install, no password.",
+  help: "Read each morning from their public Duolingo profile, with nothing to install: it proves the account did the lesson, not who held the phone.",
   link: {
     kind: "username",
     label: "Their Duolingo name, if you know it",
@@ -238,7 +241,7 @@ export const CHESS_RATING: Condition = {
   live: false,
   source: "Chess.com",
   name: "Reach a chess rating on Chess.com",
-  help: "Their public Chess.com rating, read every day. Nothing to install, no password.",
+  help: "Their public Chess.com rating, read every day: Chess.com polices cheating itself, and Viky never pays an account it has closed.",
   link: {
     kind: "username",
     label: "Their Chess.com name",
@@ -278,7 +281,7 @@ export const COURSERA_CERTIFICATE: Condition = {
   live: false,
   source: "Coursera",
   name: "Get a Coursera certificate",
-  help: "The public page of the certificate, which they share when they have it.",
+  help: "The public page of the certificate, shared when they have it: Coursera checks identity once, not each piece of work.",
   link: { kind: "link", label: "The link to your certificate", help: "In Coursera, open the certificate and choose Share, then paste the link here." },
   reading: "coursera-certificate",
   words: {

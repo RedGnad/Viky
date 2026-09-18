@@ -50,7 +50,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   // The design gallery, which production never switches on, can ask for the longest sentence this image ever draws.
   const preview =
     asked.has("demo") && galleryOpen()
-      ? { title: LINK_PREVIEW.named("Maman", "$25.00"), description: LINK_PREVIEW.asYouGo }
+      ? { title: LINK_PREVIEW.named("Mum", "$25.00"), description: LINK_PREVIEW.asYouGo }
       : await giftPreview(id, key(asked.get("t")));
   const [display, text, gift] = await Promise.all([face("Fredoka-SemiBold.ttf"), face("DMSans-Bold.ttf"), giftDrawing()]);
   const look = COLOURS.light;
