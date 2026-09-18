@@ -94,11 +94,12 @@ export default function JudgesPage() {
         </dl>
       </section>
 
+      {/* First, because it is the one thing on this page a stranger can do instead of believing us. */}
+      <JudgesVerify />
+
       <JudgesConditions />
 
       <JudgesReliability />
-
-      <JudgesVerify />
 
       <JudgesContracts />
 

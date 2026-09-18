@@ -112,6 +112,33 @@ account, the phase, the day or the profile. The on-chain verifiers under `contra
 ported from Lock-in with their real-proof tests and stay fail-closed (`LIVE_SCHEMA_CONFIRMED = false`)
 until a proof pair captured this cycle passes their grammar.
 
+## Check a credited day yourself
+
+Anybody can check that a day Viky credited really had a proof behind it. It needs no key, no account and no
+permission from us:
+
+```bash
+git clone https://github.com/RedGnad/Viky.git
+cd Viky
+pnpm install
+pnpm verify:day
+```
+
+It takes the one example published with its account holder's agreement (`/api/judges/example` on viky.cash),
+recomputes the claim's identifier from the signed claim, recovers the attestor that signed it, recomputes the
+fingerprint, asks the gift contract whether that fingerprint is recorded against replay, and reads the transaction
+back to see it credit that day. Every answer is printed beside what it was compared against.
+
+The two people a gift is between can do the same with any day of their own: the gift's page hands over that day's
+proof, then `pnpm verify:day --file day.json --gift <number> --day <day>`. A milestone gift settles on a reading, so
+it takes `--reading <number>` instead.
+
+**What it proves**: the source's own servers answered that, and the contract settled that day against that one claim,
+which can never be replayed. **What it does not prove**: that the account belongs to the person the gift is for, or
+that a human rather than a script did the work. The account is tied to the person once, separately, by a code in its
+display name or by the funder naming it. The key that signs is ours and the owner can replace it, which is why this
+check exists: a signed reading with no claim behind it cannot be re-verified by anybody.
+
 ## Test
 
 ```bash

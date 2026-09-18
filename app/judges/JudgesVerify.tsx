@@ -1,11 +1,12 @@
 import { operatorAccounts } from "@/src/dev-access";
 import { exampleForJudges } from "@/src/proof-journal";
+import { JUDGES as J } from "@/src/sentences";
+import { CopyLine } from "../kit/CopyLine";
 import { TITLE } from "../components/ui";
 import { dateOfDay } from "@/src/day-record";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
-const CODE = "block [overflow-wrap:anywhere] rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-sm)] text-[length:var(--type-help)]";
 
 /**
  * Verify it yourself (U2, point 2): one credited day anybody can re-verify, in one command, with nothing from us taken
@@ -22,6 +23,10 @@ export async function JudgesVerify() {
   return (
     <section className="space-y-[var(--space-sm)]">
       <h2 className={TITLE}>Verify a credited day yourself</h2>
+      {/* The founder's note, written as dictated (18 Sep 2026). It says what is true today and promises nothing about
+          where the key is held: an enclave was costed on 18 Sep and set aside, and no sentence here implies one. */}
+      <p className="font-medium">{J.ourKey}</p>
+      <p className={HELP}>{J.andSo}</p>
       <p className={HELP}>
         Every settled day of every gift is published: what happened, the transaction that settled it, and the
         fingerprint of the claim it was settled against, at <code>/api/gift/&lt;number&gt;/journal</code>. That fingerprint
@@ -36,7 +41,10 @@ export async function JudgesVerify() {
             agreement: gift {example.giftId}, the day of {dateOfDay(example.day)}. Take it and check it, from a clone
             of this repository, with no key and no account:
           </p>
-          <code className={CODE}>pnpm verify:day</code>
+          <CopyLine
+            label={J.fromNothing}
+            command={"git clone https://github.com/RedGnad/Viky.git\ncd Viky\npnpm install\npnpm verify:day"}
+          />
           <p className={MUTED}>
             It reads {`/api/judges/example`} from this site, recomputes the claim&apos;s identifier from the signed
             claim, recovers the attestor that signed it, recomputes the fingerprint{" "}
@@ -59,7 +67,7 @@ export async function JudgesVerify() {
         The two people a gift is between can do the same with their own day: the gift&apos;s page offers &quot;Check this
         day yourself&quot;, which hands over the proof of that day, and then:
       </p>
-      <code className={CODE}>pnpm verify:day --file day.json --gift &lt;number&gt; --day &lt;day&gt;</code>
+      <CopyLine command="pnpm verify:day --file day.json --gift <number> --day <day>" />
       <p className={HELP}>
         A milestone gift settles on a reading rather than on a day, so its journal lists readings, its page offers
         &quot;Check this reading yourself&quot;, and the same command takes{" "}
