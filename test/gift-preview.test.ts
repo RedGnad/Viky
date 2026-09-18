@@ -4,6 +4,7 @@ import test, { after, before } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { giftPreview, previewOf } from "../src/gift-preview";
 import { configureGiftStore, ensureGiftSchema, newClaimToken, saveGift } from "../src/gift-store";
+import { configureMilestoneStore, ensureMilestoneSchema, saveMilestoneGift } from "../src/milestone-store";
 import type { SqlExecutor } from "../src/proof-session-store";
 
 /**
@@ -14,6 +15,8 @@ import type { SqlExecutor } from "../src/proof-session-store";
 let db: PGlite;
 const NAMED_KEY = newClaimToken();
 const UNNAMED_KEY = newClaimToken();
+const MILESTONE_KEY = newClaimToken();
+const LOST_KEY = newClaimToken();
 
 before(async () => {
   db = new PGlite();
@@ -22,7 +25,9 @@ before(async () => {
     return (await db.query<Record<string, unknown>>(text, values)).rows;
   };
   configureGiftStore(executor);
+  configureMilestoneStore(executor);
   await ensureGiftSchema();
+  await ensureMilestoneSchema();
   const common = {
     funder: "0x000000000000000000000000000000000000A11C",
     contactHash: `0x${"51".repeat(32)}` as const,
@@ -34,10 +39,17 @@ before(async () => {
   };
   await saveGift({ ...common, giftId: "10", claimToken: NAMED_KEY, createdTx: `0x${"10".repeat(32)}`, recipientName: "Léa", funderName: "Maman" });
   await saveGift({ ...common, giftId: "11", claimToken: UNNAMED_KEY, createdTx: `0x${"11".repeat(32)}` });
+  // A milestone gift, numbered as its contract numbers them, with the same goal type 1 that means a Duolingo lesson
+  // on the daily contract: the gift the founder created on 18 Sep 2026, and the one that read the wrong condition.
+  await saveGift({ ...common, giftId: "1000000", claimToken: MILESTONE_KEY, createdTx: `0x${"12".repeat(32)}`, funderName: "Red", recipientName: "Sevy" });
+  await saveMilestoneGift({ giftId: "1000000", conditionId: "chess-rating", mode: "rapid", standingAtOffer: 383, standingReadAt: new Date("2026-09-18T20:01:36Z") });
+  // A milestone gift whose record was never written: its number is all the preview knows about it.
+  await saveGift({ ...common, giftId: "1000001", claimToken: LOST_KEY, createdTx: `0x${"13".repeat(32)}`, funderName: "Red" });
 });
 
 after(async () => {
   configureGiftStore(undefined);
+  configureMilestoneStore(undefined);
   await db.close();
 });
 
@@ -60,6 +72,23 @@ test("without the key, or with a wrong one, a gift with names still says someone
   // The pure rule, the same way round.
   assert.equal(previewOf({ amount: 7_000_000n, funderName: "Maman", goalType: 1 }, false).title, "Someone put $7.00 in your name");
   assert.equal(previewOf({ amount: 7_000_000n, funderName: "Maman", goalType: 1 }, true).title, "Maman put $7.00 in your name");
+});
+
+test("a milestone gift's line is its own condition's, not the one its goal type means on the daily contract", async () => {
+  const preview = await giftPreview("1000000", MILESTONE_KEY);
+  assert.equal(preview.title, "Red put $25.00 in your name");
+  assert.equal(preview.description, "A chess rating on Chess.com: the gift is yours when you reach it.");
+  assert.doesNotMatch(preview.description, /Duolingo/);
+});
+
+test("a milestone gift whose condition cannot be read says what is true of every milestone, and never a daily line", async () => {
+  const preview = await giftPreview("1000001", LOST_KEY);
+  assert.equal(preview.description, "It becomes yours when you reach it.");
+  // The pure rule, both ways round: a number alone never sends a milestone to the daily register.
+  const record = { amount: 25_000_000n, funderName: "Red", goalType: 1 };
+  assert.equal(previewOf(record, true, { milestone: true }).description, "It becomes yours when you reach it.");
+  assert.equal(previewOf(record, true, { milestone: true, conditionId: "chess-rating" }).description, "A chess rating on Chess.com: the gift is yours when you reach it.");
+  assert.equal(previewOf(record, true).description, "A Duolingo lesson each day: each day you do one, that day's share becomes yours.");
 });
 
 test("a gift nobody has says no more than the link itself, and the page asks for the preview with the link's key", async () => {

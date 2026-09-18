@@ -2,6 +2,7 @@ import webPush from "web-push";
 import { conditionOfGoal } from "./conditions";
 import { formatAusd, readGift } from "./gift-reader";
 import { loadGift } from "./gift-store";
+import { isMilestoneGiftId } from "./milestone-protocol";
 import type { GiftFacts, PushRefusal, PushSent, TellingDeps } from "./morning-send";
 import { forgetEndpoint, subscriptionsForGift, claimTelling } from "./push-store";
 import { escrowOf } from "./relayer";
@@ -28,7 +29,9 @@ export async function liveFacts(giftId: string): Promise<GiftFacts | null> {
   const record = await loadGift(giftId);
   if (!record) return null;
   const names = { recipientName: record.recipientName, funderName: record.funderName };
-  const words = { yesterday: conditionOfGoal(record.goalType)?.words.yesterday };
+  // The daily register is asked by the goal type, which only the daily contract numbers: a milestone gift's own
+  // number means something else there, and no milestone sentence carries a word for yesterday anyway.
+  const words = { yesterday: isMilestoneGiftId(giftId) ? undefined : conditionOfGoal(record.goalType)?.words.yesterday };
   try {
     const gift = await readGift(escrowOf(record), giftId);
     return { funder: record.funder, names, words, perDayDisplay: formatAusd(gift.perDay), amountDisplay: formatAusd(gift.amount) };
