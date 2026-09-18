@@ -25,7 +25,12 @@ export type ConditionProof = Readonly<{
   data: string;
   /** Question 2: how the account is tied to the person the gift is for. */
   account: string;
-  /** Question 3: who performed the activity. The honest answer is the same everywhere, and it is not flattering. */
+  /**
+   * Whether the source itself describes watching the act, rather than only owning the account. It was false of every
+   * condition until the Duolingo English Test, and the sentence below has to follow it either way (U3).
+   */
+  supervised: boolean;
+  /** Question 3: who performed the activity. Where nothing is watched, the honest answer is "Unknown". */
   whoActed: string;
   /** Question 4: what the source does about cheating, and what it publishes that we can read. */
   sourcePolicing: string;
@@ -34,6 +39,7 @@ export type ConditionProof = Readonly<{
 export const CONDITION_PROOFS: readonly ConditionProof[] = [
   {
     conditionId: "duolingo-daily",
+    supervised: false,
     inShort: "Read each morning from Duolingo. It proves the account did the lesson, not who held the phone.",
     data: "Duolingo's own servers, read once a morning through an attested fetch. The reading is signed by Reclaim's attestor and Viky checks that signature, the address that signed it and the request it was about, before a day can count. Nobody types a number, and the person never touches the proof. When the gift is made on one course, the reading is anchored on that course's id, so experience won in another course is not in it.",
     account: "Proved once, before anything counts: either the funder names the Duolingo account when they offer the gift, or the person puts a short code in their Duolingo display name and Viky reads it there.",
@@ -42,6 +48,7 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
   },
   {
     conditionId: "chess-rating",
+    supervised: false,
     inShort: "Read from Chess.com, which polices cheating itself. Viky never pays an account it has closed.",
     data: "Chess.com's public API, read every day through an attested fetch and checked the same way as Duolingo. The rating read is the one Chess.com publishes for that cadence, with its own reliability figure beside it.",
     account: "The funder names the Chess.com account, and the person proves it is theirs with a short code when they open the gift.",
@@ -49,7 +56,17 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     sourcePolicing: "Chess.com polices engine use, outside help, account sharing and arranged results itself, publishes the sanction in the same API Viky reads (`status: closed:fair_play_violations`), and Viky refuses a closed account at every reading, so a gift is never paid on an account its own source has closed.",
   },
   {
+    conditionId: "duolingo-english-test",
+    supervised: true,
+    inShort: "A test sat under watch, with an identity document and examiners. The result has a page they share.",
+    data: "The page of the certificate its taker chose to make public, read through an attested fetch that takes three fields and no more: the score, the day of the test, and the name printed on it. The same answer also carries a date of birth and a photograph; Viky matches neither, receives neither and stores neither. The link is read again at every reading, so a certificate taken private again or past its two years stops paying, and says which.",
+    account: "The funder types the name the person will sit the test under, and it is hashed into the terms they sign. A certificate in another name pays nothing. Two people with the same name cannot be told apart by this, because the page has no field its holder can edit: that gap is written down rather than dressed up.",
+    whoActed: "Known, and this is the only condition where it is: Duolingo records the session, checks a valid identity document, and has qualified examiners review it before a score is released.",
+    sourcePolicing: "Duolingo may invalidate a result after it has been certified and notify everyone who received it, and it says so in its own terms. A certificate can also be taken private again by its holder, and expires two years after the test. All three are visible in the reading Viky already makes.",
+  },
+  {
     conditionId: "coursera-certificate",
+    supervised: false,
     inShort: "Read from the certificate's public page. Coursera checks identity once, not each piece of work.",
     data: "The public page of the certificate, read through an attested fetch when the person shares its link.",
     account: "The certificate page names its holder, and the funder names who the gift is for. A certificate shared by somebody else would be read exactly the same.",
