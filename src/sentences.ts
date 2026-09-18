@@ -333,7 +333,8 @@ export const GIFT_PAGE = {
   openBy: (date: string, funder: string | null) => `Open it by ${date}: after 14 days unopened, it goes back to ${funder ?? "them"}.`,
 
   createToOpen: "Create your account to open it. Nothing to install.",
-  signInToSee: "Sign in to see your gift.",
+  /** An opened gift, read by somebody with no account: it may be theirs, and it may not, so it says "if". */
+  signInToSee: "Sign in if this gift is yours.",
   openMyGift: "Open my gift",
   opening: "Opening",
   missingKey: "This link is missing its key. Ask for the link again.",

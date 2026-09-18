@@ -149,6 +149,8 @@ export type RecipientWords = Readonly<{
   /** Connected. */
   countingFrom: (firstDay: string) => string;
   reads: string;
+  /** The same sentence to anybody who is not the person the gift is for: the funder, and a reader of neither side. */
+  readsTheirs: string;
   /** A day that is neither counted nor lost yet, to each side. */
   catchUpYours: (deadline: string) => string;
   catchUpTheirs: (deadline: string) => string;
@@ -224,6 +226,7 @@ export const DUOLINGO_DAILY: Condition = {
     notMine: "That is not my Duolingo name",
     countingFrom: (firstDay) => `Done. From tomorrow, ${firstDay}, every day with your lesson is yours, counted by itself.`,
     reads: "Viky reads your Duolingo every day at that time and counts the day before.",
+    readsTheirs: "Viky reads their Duolingo every day at that time and counts the day before.",
     catchUpYours: (deadline) => `Yesterday is not counted yet, and not lost either. Do a lesson before ${deadline} your time and it still counts.`,
     catchUpTheirs: (deadline) => `Yesterday is not counted yet, and not lost either: a lesson before ${deadline} your time still earns that day.`,
     alreadyRead: "Viky already read your Duolingo today. Come back tomorrow.",

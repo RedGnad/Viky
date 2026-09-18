@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { gesturesFor, notTheirs, voiceOf, type Gestures, type Voice } from "../src/gift-voice.js";
 import { whoInWords, amountsInWords } from "../app/kit/GiftCard.js";
 import { GIFT_PAGE, GIFT_CARD } from "../src/sentences.js";
+import { CONDITIONS } from "../src/conditions.js";
 import type { GiftSummary } from "../src/client/gift.js";
 
 /**
@@ -74,6 +75,14 @@ test("nothing a reader is shown speaks to them in the second person", () => {
   assert.doesNotMatch(GIFT_CARD.theirsGoneBack("$8.00", "$20.00", "$4.00"), you);
   assert.doesNotMatch(GIFT_PAGE.dayWords.returnedReading, you);
   assert.doesNotMatch(GIFT_PAGE.readingWhose("Maman", "Ama"), you);
+  // The sentence beside the next reading: the register carries both persons, and a reader gets the third one.
+  for (const condition of CONDITIONS) {
+    if (!condition.recipient) continue;
+    assert.doesNotMatch(condition.recipient.readsTheirs, you, `${condition.id} tells a reader Viky reads their own account`);
+    assert.match(condition.recipient.reads, you, `${condition.id} no longer speaks to the person it is for`);
+  }
+  // With no account the page cannot know whose gift it is, so it asks rather than assumes.
+  assert.match(GIFT_PAGE.signInToSee, /^Sign in if/);
   // The one sentence that does address them says the one thing that is true of them.
   assert.match(GIFT_PAGE.notYours, /not yours/i);
 });
@@ -129,4 +138,5 @@ test("the page decides who may do what in one place, and not in ten conditions o
   assert.match(page, /titleReading\(funder, recipient, gift\.amountDisplay\)/);
   assert.match(page, /summaryOf\(gift, voice\)/);
   assert.match(page, /voice=\{voice\}/, "the row of days still speaks in one fixed voice");
+  assert.match(page, /voice === "recipient" \? words\?\.reads : words\?\.readsTheirs/, "the reading sentence is back in the second person for everybody");
 });

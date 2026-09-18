@@ -493,7 +493,7 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
           <p className="font-medium">{gift.todayDayIndex === 0 ? W.counting(range ?? "") : W.dayOf(gift.todayDayIndex, gift.durationDays, range ?? "")}</p>
           {nextReading ? (
             <p className={HELP}>
-              {W.nextReading(nextReading)} {words?.reads ?? ""}
+              {W.nextReading(nextReading)} {(voice === "recipient" ? words?.reads : words?.readsTheirs) ?? ""}
             </p>
           ) : null}
         </div>
