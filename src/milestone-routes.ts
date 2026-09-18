@@ -65,6 +65,9 @@ export async function milestoneAccount(request: Request, giftId: string, body: {
   const record = recipientRecord(await loadGift(giftId), auth.account);
   const milestone = milestoneById((await loadMilestoneGift(giftId))?.conditionId ?? "") ?? CHESS_MILESTONE;
   if (!record.boundAt) {
+    // A code exists for one case only (D27): the recipient named the account themselves, so something has to prove it
+    // is theirs. When the funder named it, there is nothing to prove here and nothing to put in a profile.
+    if (record.usernameSource !== "recipient") throw new GiftApiError("NO_CODE_NEEDED", "This gift already knows the account it reads.", 409);
     const code = newChessCode(() => crypto.getRandomValues(new Uint8Array(1))[0]);
     const expiresAt = new Date(Date.now() + MILESTONE_CODE_TTL_SECONDS * 1_000);
     if (!(await setMilestoneCode(giftId, code, expiresAt))) throw new GiftApiError("ALREADY_BOUND", "This gift is already reading.", 409);

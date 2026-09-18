@@ -2974,3 +2974,21 @@ behind an account cannot be photographed any other way.
   order is floored to two decimals, so the sentence is "Less than $0.01 stays in your account." on the dollar rail and
   "Less than 0.01 of what Mercuryo buys stays in your account." on the other. `dustInWords` had no other caller and is
   gone.
+
+## D104, 18 Sep 2026: a code proves an account only when its own recipient named it
+
+- Statement: D27 said it on 11 Sep, for Duolingo: the funder enters the username if they know it, otherwise the
+  recipient enters it and proves control with a code in their display name. The daily path followed that rule. The
+  milestone path did not: it minted a code as soon as a gift was unbound, refused `CODE_EXPIRED` then
+  `CODE_NOT_IN_NAME` whoever had named the account, and asked a recipient to put six letters in the name field of a
+  profile the funder had already named in what they signed for.
+- What that cost, on the day it mattered: the rehearsal gift 1000000, created on mainnet with `sevyb` named by the
+  funder, could not start. The recipient was asked for a code, put it in their Chess.com name, pressed, and the
+  reading still had to find it there.
+- The rule now, the same one on both paths: when the funder named the account, the first attested reading binds that
+  player directly, with no code and without reading the name at all, so a profile that carries no name works. A code
+  exists only where the recipient named their own account, and the screen offers one only there; the account route
+  refuses to mint one otherwise (`NO_CODE_NEEDED`).
+- What still proves what: the funder's signature commits to the account (D102), the contract pins the player at that
+  first reading and refuses any other afterwards, and the recipient who names their own account still proves it with
+  the code. Nothing was loosened: what was removed was a step that proved nothing in the case it was asked for.

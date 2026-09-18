@@ -48,6 +48,7 @@ export function milestoneStatusOf(input: {
       bound: record.boundAt !== null,
       code: viewer.isRecipient ? record.bindingCode : null,
       codeExpiresAt: viewer.isRecipient ? (record.bindingCodeExpiresAt?.toISOString() ?? null) : null,
+      namedByFunder: record.usernameSource !== "recipient",
     },
     amount: state.amount.toString(),
     amountDisplay: formatAusd(state.amount),

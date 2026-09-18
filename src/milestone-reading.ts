@@ -170,16 +170,22 @@ export async function runMilestoneReading(
   const target = Number(state.target);
 
   if (purpose === "start") {
-    if (!record.bindingCode || !record.bindingCodeExpiresAt || record.bindingCodeExpiresAt.getTime() < now * 1_000) return refused(giftId, "CODE_EXPIRED");
+    // D27, the rule both sources share: a code proves control only when the recipient named the account themselves.
+    // When the funder named it, that name is what they signed for, and the first attested reading binds the player
+    // straight away: nobody is asked to put anything in their own profile, and a profile with no name works.
+    const provesItsOwn = record.usernameSource === "recipient";
+    if (provesItsOwn && (!record.bindingCode || !record.bindingCodeExpiresAt || record.bindingCodeExpiresAt.getTime() < now * 1_000)) {
+      return refused(giftId, "CODE_EXPIRED");
+    }
     let reading: AttestedChessReading;
     try {
-      reading = await deps.attest({ username, mode, withName: true });
+      reading = await deps.attest({ username, mode, withName: provesItsOwn });
     } catch (error) {
       if (error instanceof ChessReadError && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
       if (error instanceof ChessReadError) return refused(giftId, error.code);
       throw error;
     }
-    if (!nameHasChessCode(reading.name, record.bindingCode)) return refused(giftId, "CODE_NOT_IN_NAME", reading.rating);
+    if (provesItsOwn && !nameHasChessCode(reading.name, record.bindingCode ?? "")) return refused(giftId, "CODE_NOT_IN_NAME", reading.rating);
     return prove(record, state, contract, reading, "start", deps);
   }
 

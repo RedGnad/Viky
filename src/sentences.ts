@@ -520,6 +520,9 @@ export const MILESTONE_ACTIONS = {
   connectTitle: (source: string) => `Connect ${source}`,
   givenName: (source: string, username: string) => `Your ${source} name, as it was given: ${username}.`,
   whyCode: (source: string) => `To prove it is yours, you put a short code in your ${source} name for a minute. Nothing to install, no password.`,
+  /** The funder named the account, so there is nothing to prove and nothing to touch in a profile (D27). */
+  nothingToDo: (source: string) => `Nothing to install, no password, and nothing to change on ${source}: the gift already knows the account it reads.`,
+  startReading: (source: string) => `Start reading my ${source}`,
   connectNow: (days: number) => `Connect now: only what you reach after connecting counts. You then have ${days} ${days === 1 ? "day" : "days"}.`,
   firstReading: (target: number) => `If you have already reached ${target} when you connect, this gift cannot count it, so connect before you play.`,
   getCode: "Get my code",

@@ -201,7 +201,7 @@ test("before connecting, the recipient is told that only what comes after counts
   assert.equal(MILESTONE_ACTIONS.connectNow(30), "Connect now: only what you reach after connecting counts. You then have 30 days.");
   assert.equal(MILESTONE_ACTIONS.connectNow(1), "Connect now: only what you reach after connecting counts. You then have 1 day.");
   const page = readFileSync("app/components/MilestoneGiftPage.tsx", "utf8");
-  assert.equal(page.match(/A\.connectNow\(status\.durationDays\)/g)?.length, 2, "the card asking for the code, and the card showing it");
+  assert.equal(page.match(/A\.connectNow\(status\.durationDays\)/g)?.length, 3, "the card that reads straight away, the card asking for the code, and the card showing it");
   // The funder's check keeps the fourteen days: the longest they can wait before it all comes back.
   assert.equal(
     MILESTONE_FUND.check.fourteenDays,
