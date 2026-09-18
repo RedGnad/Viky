@@ -8,7 +8,7 @@ import {
 } from "../ausd-authorization";
 import { AUSD, movesOnASignature, type Coin } from "../coins";
 import { NO_CONTACT_HASH } from "../contact-hash";
-import { fundingNonce, withdrawIntentTypedData, type GiftParams } from "../gift-terms";
+import { fundingNonce, giftSalt, withdrawIntentTypedData, type GiftParams } from "../gift-terms";
 import { ApiError, getJson, postJson } from "./api";
 import { isMilestoneGiftId, milestoneWithdrawTypedData } from "../milestone-protocol";
 import type { MilestoneStatus } from "../milestone-view";
@@ -59,6 +59,8 @@ export function checkSourceName(
 /** The body of a creation request, signed once and sent as many times as it takes (D87). */
 export type GiftRequest = Readonly<{
   duolingoUsername?: string;
+  /** The random half of the salt. The rest of it is the account and the course, so the server recomputes it (D102). */
+  saltSeed: Hex;
   /** The one course a day is counted on, when the funder chose one (U1). */
   course?: string;
   recipientName?: string;
@@ -79,6 +81,9 @@ export type GiftRequest = Readonly<{
 export async function prepareGift(input: CreateGiftInput): Promise<GiftRequest> {
   const escrow = escrowAddressFromEnv();
   const funder = getAddress(input.account.address);
+  // The salt is what carries the account and the course into what the funder signs (D102). Its random half is sent
+  // with the request so the server rebuilds exactly this salt, or refuses to make the gift.
+  const saltSeed = randomSalt();
   const params: GiftParams = {
     funder,
     refundTo: input.refundTo ? getAddress(input.refundTo) : funder,
@@ -88,7 +93,7 @@ export async function prepareGift(input: CreateGiftInput): Promise<GiftRequest> 
     dailyTarget: input.dailyTarget,
     durationDays: input.durationDays,
     amount: input.amount,
-    salt: randomSalt(),
+    salt: giftSalt({ account: input.duolingoUsername, course: input.course, seed: saltSeed }),
   };
   const message = receiveAuthorizationMessage({ funder, escrow, amount: input.amount, nonce: fundingNonce(params) });
   const signature = await input.account.signTypedData(receiveAuthorizationTypedData(message));
@@ -96,6 +101,7 @@ export async function prepareGift(input: CreateGiftInput): Promise<GiftRequest> 
   return {
     duolingoUsername: input.duolingoUsername,
     course: input.course,
+    saltSeed,
     recipientName: input.recipientName,
     funderName: input.funderName,
     goalType: params.goalType,

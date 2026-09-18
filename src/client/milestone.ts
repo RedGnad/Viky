@@ -7,6 +7,7 @@ import { milestoneFundingNonce, SHAPE_CLIMB, ZERO_SUBJECT, type MilestoneParams 
 import { startingCeiling } from "../milestone-terms";
 import { getJson, postJson } from "./api";
 import { randomSalt, type CreatedGift } from "./gift";
+import { giftSalt } from "../gift-terms";
 
 /** Browser-side steps of a milestone gift (C2). Every step that moves money is signed by the person's own account. */
 
@@ -40,6 +41,8 @@ export type MilestoneGiftRequest = Readonly<{
   amount: string;
   refundTo: string;
   salt: Hex;
+  /** The random half of the salt; the rest is the account, so the server rebuilds it or refuses (D102). */
+  saltSeed: Hex;
   recipientName?: string;
   funderName?: string;
   authorization: { validAfter: string; validBefore: string; nonce: Hex; v: number; r: Hex; s: Hex };
@@ -65,6 +68,7 @@ export async function prepareMilestoneGift(input: {
 }): Promise<MilestoneGiftRequest> {
   const contract = milestoneAddressFromEnv();
   const funder = getAddress(input.account.address);
+  const saltSeed = randomSalt();
   const params: MilestoneParams = {
     funder,
     refundTo: funder,
@@ -76,7 +80,8 @@ export async function prepareMilestoneGift(input: {
     subject: ZERO_SUBJECT,
     durationDays: input.durationDays,
     amount: input.amount,
-    salt: randomSalt(),
+    // The salt carries the account into what the funder signs (D102); the cadence is already in the goal type.
+    salt: giftSalt({ account: input.username, seed: saltSeed }),
   };
   const message = receiveAuthorizationMessage({ funder, escrow: contract, amount: input.amount, nonce: milestoneFundingNonce(params) });
   const signature = await input.account.signTypedData(receiveAuthorizationTypedData(message));
@@ -92,6 +97,7 @@ export async function prepareMilestoneGift(input: {
     amount: input.amount.toString(),
     refundTo: funder,
     salt: params.salt,
+    saltSeed,
     recipientName: input.recipientName,
     funderName: input.funderName,
     authorization: {

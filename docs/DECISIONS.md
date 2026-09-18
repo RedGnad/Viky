@@ -2906,3 +2906,25 @@ behind an account cannot be photographed any other way.
 - **Not verified.** That Ramp's widget lets a real person in each of its countries buy `MONAD_AUSD` to an address
   they paste: the asset list says it sells it, and an endpoint that lists is not a service that pays (the lesson of
   D79). The first real purchase is what will say so, and until then no screen promises it.
+
+## D102, 18 Sep 2026: the salt is the account and the course, so one signature says them
+
+- Statement: a funder signs one thing, the EIP-3009 authorization whose nonce is the hash of the gift's terms. Those
+  terms carried a goal type, a target, an amount, a length and a **random** salt. Which account the gift would be read
+  on, and since U1 which course a day is counted in, lived only in Viky's own record. The contract pins an identity at
+  the first reading and refuses any other afterwards (`IdentityBound`, then `IdentityMismatch`), so the window where
+  our record alone decided ran from the signature to that first reading. The audit of 18 Sep listed it as gap b.
+- The fix needs no new contract and no new deployment, because the salt is already inside the hashed terms:
+  `salt = keccak256(tag, account, course, seed)`, where the account is the name as the source spells it, lower case and
+  trimmed, the course is the course id or an empty string, and the seed is the 32 random bytes that used to be the
+  whole salt. The seed travels with the request, so the create route rebuilds the salt byte for byte and refuses the
+  creation when it differs (`TERMS_MISMATCH`), before anything is relayed.
+- It keeps what the salt was for (D19): two gifts with identical terms still get distinct nonces, through the seed.
+- The same is done for a milestone gift, whose account is the Chess.com name. Its cadence needs nothing: the cadence
+  **is** the goal type, which the funder already signs.
+- A certificate gift needed nothing either: the person it is for is already hashed into `subject`, which the terms
+  carry.
+- What it does not do. It commits the funder's signature to an account and a course; it does not prove that account is
+  the recipient's. That is what the code in the profile name proves, at the first reading, and that has not changed.
+  And a gift whose funder names no account commits to an empty account, which is the honest answer: there was nothing
+  to commit to.
