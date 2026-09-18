@@ -66,6 +66,12 @@ function screenKey(address: string): string {
   return `${url.origin}${path}${url.search}`;
 }
 
+/**
+ * Whether every amount that counts to its value has arrived (`ArrivalAmount` in app/kit/Motion.tsx). A string, not a
+ * function: a function sent into the page is compiled on the way in and arrives calling a helper the page lacks.
+ */
+const COUNT_SETTLED = `Array.prototype.slice.call(document.querySelectorAll("[data-count-settled]")).every(function (node) { return node.getAttribute("data-count-settled") === "true"; })`;
+
 /** A file name for a screen, taken from its address. */
 function slugOf(address: string): string {
   const url = new URL(address);
@@ -115,7 +121,10 @@ async function settle(page: Page): Promise<void> {
       await page.waitForLoadState("load");
     }
   }
-  // Movement driven by script rather than by CSS is not listed by getAnimations.
+  // Movement driven by script rather than by CSS is not listed by getAnimations. An amount that changed counts to its
+  // value frame by frame and says when it has arrived, so the wait is on the count rather than on a guessed delay: a
+  // picture taken mid-count shows a figure that was true for 200ms and is false of the account.
+  await page.waitForFunction(COUNT_SETTLED, undefined, { timeout: 8_000 }).catch(() => undefined);
   await page.waitForTimeout(800);
 }
 

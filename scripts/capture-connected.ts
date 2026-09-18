@@ -85,6 +85,13 @@ const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").
 const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}`;
 
 /**
+ * Whether every amount that counts to its value has arrived (`ArrivalAmount` in app/kit/Motion.tsx). Passed as a
+ * string on purpose: a function sent into the page is compiled on the way in and arrives calling a helper the page
+ * does not have.
+ */
+const COUNT_SETTLED = `Array.prototype.slice.call(document.querySelectorAll("[data-count-settled]")).every(function (node) { return node.getAttribute("data-count-settled") === "true"; })`;
+
+/**
  * The session a scenario runs in: one page, one virtual authenticator, one account, at one size and appearance.
  * Everything a scenario needs to put a screen into a state and photograph it goes through here, so the manifest
  * can say exactly what was done.
@@ -205,6 +212,12 @@ export class Session {
       const ending = document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations !== Infinity);
       await Promise.race([Promise.all(ending.map((a) => a.finished.catch(() => undefined))), new Promise((done) => setTimeout(done, 4_000))]);
     }).catch(() => undefined);
+    // An amount that changed counts to its value once, driven frame by frame rather than by the stylesheet, so
+    // `getAnimations` never sees it: a picture taken in the meantime shows a figure that was true for 200ms and is
+    // false of the account. The count says when it has arrived, and the run waits for it.
+    await this.page
+      .waitForFunction(COUNT_SETTLED, undefined, { timeout: 8_000 })
+      .catch(() => undefined);
     await this.page.waitForTimeout(700);
   }
 
