@@ -3015,3 +3015,22 @@ behind an account cannot be photographed any other way.
 - Alongside it, and not in the repository: branch deployments are off (D105), 248 deployments older than 18 Sep were
   removed one by one by id (never touching anything queued or building, the founder's rule), and the retention policy
   is the founder's to set in the dashboard, which is the only place it lives.
+
+## D107, 19 Sep 2026: a pilot ceiling of a thousand dollars a gift, held off chain
+
+- Statement: no gift may be made for more than $1,000 during the pilot (mitigation b). **The contracts keep their own
+  constant of 100,000 AUSD and neither one is redeployed.** The ceiling lives in the product, above them: one line in
+  `src/money.ts` and one in `src/milestone-protocol.ts`, which is what makes it a decision we can raise or drop in a
+  minute rather than a migration of money to a new contract.
+- Where it bites, on every path a gift can be made through. `dollarsToUnits` is the single place every screen turns a
+  typed amount into units, so the field refuses more than a thousand before anything is signed, in the same sentence
+  the step shows. The three create routes refuse it again where it counts: the milestone one, the certificate one, and
+  the daily one.
+- **The daily route had no ceiling at all.** It checked a floor of one dollar and nothing above, so the only bound on
+  a daily gift was the contract's hundred thousand. Adding the pilot's sentence to the amount step without that check
+  would have printed something false on the most ordinary gift there is, which is why it was added in the same pass.
+- The words: "During the pilot, a gift is at most $1,000." It is one constant, said under the amount field and used as
+  the refusal, so the two can never drift apart. The routes answer "The gift must be between $1.00 and $1,000.00".
+- What this does not do: it does not protect anybody from a contract that would still accept a hundred thousand. A
+  funder who signed terms by hand, outside our screens, would be bounded by the contract and not by us. That is the
+  price of holding the ceiling off chain, and it is the right price while the number is still being chosen.

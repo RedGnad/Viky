@@ -59,9 +59,9 @@ export async function POST(request: Request) {
     try {
       amount = BigInt(String(body.amount ?? ""));
     } catch {
-      throw new GiftApiError("INVALID_AMOUNT", "The gift must be between $1.00 and $100,000.00");
+      throw new GiftApiError("INVALID_AMOUNT", "The gift must be between $1.00 and $1,000.00");
     }
-    if (amount < MILESTONE_MIN_AMOUNT || amount > MILESTONE_MAX_AMOUNT) throw new GiftApiError("INVALID_AMOUNT", "The gift must be between $1.00 and $100,000.00");
+    if (amount < MILESTONE_MIN_AMOUNT || amount > MILESTONE_MAX_AMOUNT) throw new GiftApiError("INVALID_AMOUNT", "The gift must be between $1.00 and $1,000.00");
     const refundToRaw = body.refundTo ? String(body.refundTo) : auth.account;
     if (!isAddress(refundToRaw)) throw new GiftApiError("INVALID_REFUND", "The return destination is invalid");
     const salt = String(body.salt ?? "");
