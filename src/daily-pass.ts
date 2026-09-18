@@ -106,6 +106,8 @@ type RunTally = {
   readingsSucceeded: number;
   holds: PassHold[];
   failures: Record<string, number>;
+  /** Every refusal a reading met, by its code, ours or not: the journal said nothing of the others (the audit's gap a). */
+  refusals: Record<string, number>;
 };
 
 /**
@@ -127,6 +129,17 @@ function countFailure(run: RunTally, code: string): void {
   run.failures[code] = (run.failures[code] ?? 0) + 1;
 }
 
+/**
+ * Every refusal a reading met, by its own code, whether or not it was ours to fix.
+ *
+ * The journal used to count only ours, so a morning of three readings the contract refused with `NothingToCredit`
+ * wrote "3 asked, 0 credited, 0 errors" and left no trace of why: a silent morning that was nothing of the sort (the
+ * audit of 18 Sep, gap a). The codes are the contract's and the sources' own; they are counted, never translated.
+ */
+function countRefusal(run: RunTally, code: string): void {
+  run.refusals[code] = (run.refusals[code] ?? 0) + 1;
+}
+
 async function writeJournal(deps: DailyPassDeps, plan: PassPlan, startedAt: number, endedAt: number, run: RunTally): Promise<void> {
   if (!deps.journal) return;
   try {
@@ -138,6 +151,7 @@ async function writeJournal(deps: DailyPassDeps, plan: PassPlan, startedAt: numb
       readingsSucceeded: run.readingsSucceeded,
       holds: run.holds,
       failures: run.failures,
+      refusals: run.refusals,
     });
   } catch (error) {
     // The journal records the pass, it is never a condition of it: a pass that did its work keeps it, as the day
@@ -156,7 +170,7 @@ export async function dailyPass(
 ): Promise<{ relayer: string; balanceWei: string; lines: DailyPassLine[] }> {
   const clock = () => (deps.nowSeconds ? deps.nowSeconds() : Math.floor(Date.now() / 1_000));
   const startedAt = clock();
-  const run: RunTally = { readingsAttempted: 0, readingsSucceeded: 0, holds: [], failures: {} };
+  const run: RunTally = { readingsAttempted: 0, readingsSucceeded: 0, holds: [], failures: {}, refusals: {} };
   try {
     return await runPass(plan, deps, run, clock);
   } catch (error) {
@@ -201,10 +215,13 @@ async function runPass(
       const outcome = await deps.count(gift.giftId);
       if (outcome.kind === "already") run.readingsAttempted -= 1;
       if (outcome.kind === "counted" || outcome.kind === "bound") run.readingsSucceeded += 1;
-      if (outcome.kind === "refused" && OURS_TO_FIX.has(outcome.code)) {
-        unread.add(gift.giftId);
-        run.holds.push({ giftId: gift.giftId, day: heldDay(clock()) });
-        countFailure(run, outcome.code);
+      if (outcome.kind === "refused") {
+        countRefusal(run, outcome.code);
+        if (OURS_TO_FIX.has(outcome.code)) {
+          unread.add(gift.giftId);
+          run.holds.push({ giftId: gift.giftId, day: heldDay(clock()) });
+          countFailure(run, outcome.code);
+        }
       }
       lines.push(describe(outcome));
     }

@@ -1,4 +1,4 @@
-import { daysSince, heldDays, passesSince, readingTotals } from "@/src/pass-log";
+import { daysSince, heldDays, passesSince, readingTotals, refusalsByCode } from "@/src/pass-log";
 import { TITLE } from "../components/ui";
 
 const HELP = "text-[length:var(--type-help)]";
@@ -7,7 +7,9 @@ const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
 const day = (at: Date) => at.toISOString().slice(0, 10);
 
 /**
- * The reliability figures, every one of them from a query against the journal each pass writes (U2, point 3).
+ * The reliability figures, every one of them from a query against the journal each pass writes (U2, point 3), with
+ * the refusals each reading met beside them (the audit of 18 Sep, gap a: a refusal that was not ours left no trace,
+ * so a morning of three refused readings read as a silent one).
  *
  * Nothing on this page is estimated and nothing was filled in afterwards: before the journal existed, no pass left a
  * trace, so the figures start the day it was switched on and the page says which day that was. A pass that never ran
@@ -15,7 +17,7 @@ const day = (at: Date) => at.toISOString().slice(0, 10);
  * percentage that would quietly turn a missed run into a good one.
  */
 export async function JudgesReliability() {
-  const [since, readings, held] = await Promise.all([passesSince(), readingTotals(), heldDays()]);
+  const [since, readings, held, refusals] = await Promise.all([passesSince(), readingTotals(), heldDays(), refusalsByCode()]);
   if (!since.firstPassAt) {
     return (
       <section className="space-y-[var(--space-sm)]">
@@ -55,6 +57,16 @@ export async function JudgesReliability() {
           work not done yet answers perfectly well and credits nothing, so the second number is smaller than the first
           on any ordinary morning. A gift already counted today, finished, cancelled or not yet connected is not asked
           at all, and milestone readings run in their own pass: neither is in either number.
+        </dd>
+        <dt className={MUTED}>Refusals the readings met</dt>
+        <dd className={HELP}>
+          {refusals.length === 0
+            ? "None recorded yet."
+            : refusals.map((refusal) => `${refusal.code} ${refusal.times}`).join(", ")}
+          . These are the codes the contract and the sources answered with, counted as they came and not translated:
+          &quot;NothingToCredit&quot; is the contract saying the day it was offered was already settled, and a code from a
+          source is that source&apos;s own. A morning where nothing was credited is either a quiet morning or a morning
+          of refusals, and this line is what tells the two apart.
         </dd>
         <dt className={MUTED}>Days held because a reading failed on our side</dt>
         <dd className={HELP}>

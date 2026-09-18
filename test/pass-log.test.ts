@@ -4,7 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { COUNTING_PASS, dailyPass, SETTLING_PASS, type DailyPassDeps } from "../src/daily-pass";
 import { configureGiftStore, ensureGiftSchema, recordSettledDays } from "../src/gift-store";
 import { COUNTING_PASS_UTC, SETTLING_PASS_UTC } from "../src/pass-schedule";
-import { configurePassLog, ensurePassSchema, heldDays, ON_TIME_TOLERANCE_SECONDS, passesSince, readingTotals, recordPass } from "../src/pass-log";
+import { configurePassLog, ensurePassSchema, heldDays, ON_TIME_TOLERANCE_SECONDS, passesSince, readingTotals, recordPass, refusalsByCode } from "../src/pass-log";
 import type { SqlExecutor } from "../src/proof-session-store";
 
 let db: PGlite;
@@ -97,8 +97,41 @@ test("a counting pass writes one row, with what it read and what it held", async
   assert.equal(rows[0].errors, 1, "the refusal about the person's own account is not ours and is not an error");
   assert.deepEqual(rows[0].holds, [{ giftId: "2", day: HELD_DAY }]);
   assert.deepEqual(rows[0].failures, { FETCH_FAILED: 1 });
+  // Both refusals are counted by their own code, ours or not: the journal used to keep only ours, so a morning of
+  // refusals read as a silent one (the audit of 18 Sep, gap a).
+  assert.deepEqual(rows[0].refusals, { FETCH_FAILED: 1, PROFILE_NOT_FOUND: 1 });
 
   assert.deepEqual(await readingTotals(), { attempted: 3, succeeded: 1 });
+  assert.deepEqual(await refusalsByCode(), [
+    { code: "FETCH_FAILED", times: 1 },
+    { code: "PROFILE_NOT_FOUND", times: 1 },
+  ]);
+});
+
+test("a morning of refusals is told apart from a quiet one, by code (the audit's gap a)", async () => {
+  // Three gifts, three refusals the contract gives for a good reason: the day offered was already settled. Before
+  // this, the row read "3 asked, 0 credited, 0 errors, nothing held", which is exactly what a quiet morning writes.
+  await dailyPass(COUNTING_PASS, {
+    ...threeGifts(),
+    count: async (giftId: string) => ({ kind: "refused", giftId, code: "NothingToCredit", message: "nothing to credit" }) as const,
+  });
+
+  const rows = await passRows();
+  assert.equal(rows[0].readings_attempted, 3);
+  assert.equal(rows[0].readings_succeeded, 0);
+  assert.equal(rows[0].errors, 0, "none of them was ours, so none is an error");
+  assert.equal(rows[0].held_ours, 0, "and none is held: the gift can settle as any other day");
+  assert.deepEqual(rows[0].refusals, { NothingToCredit: 3 }, "and the reason is written down, in the contract's own word");
+  assert.deepEqual(await refusalsByCode(), [{ code: "NothingToCredit", times: 3 }]);
+});
+
+test("a run that met no refusal writes none, and the page has nothing to show", async () => {
+  await dailyPass(COUNTING_PASS, {
+    ...threeGifts(),
+    count: async (giftId: string) => ({ kind: "counted", giftId, xp: 10, creditedDays: 1, hash: "0xc" }) as const,
+  });
+  assert.deepEqual((await passRows())[0].refusals, {});
+  assert.deepEqual(await refusalsByCode(), []);
 });
 
 test("a gift the pass never asks the source about is not counted as a reading", async () => {
@@ -198,7 +231,7 @@ test("a journal that cannot be written does not break the pass", async () => {
 test("passesSince says from when it speaks, and how many runs started on their own minute", async () => {
   const at = (day: number, hour: number, minute: number, second = 0) => new Date(Date.UTC(2026, 8, day, hour, minute, second));
   const ran = async (plan: "counting" | "settling", startedAt: Date) =>
-    recordPass({ plan, startedAt, endedAt: new Date(startedAt.getTime() + 60_000), readingsAttempted: 1, readingsSucceeded: 1, holds: [], failures: {} });
+    recordPass({ plan, startedAt, endedAt: new Date(startedAt.getTime() + 60_000), readingsAttempted: 1, readingsSucceeded: 1, holds: [], failures: {}, refusals: {} });
 
   const first = at(17, COUNTING_PASS_UTC.hour, COUNTING_PASS_UTC.minute, 4);
   await ran("counting", first);

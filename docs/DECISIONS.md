@@ -2928,3 +2928,22 @@ behind an account cannot be photographed any other way.
   the recipient's. That is what the code in the profile name proves, at the first reading, and that has not changed.
   And a gift whose funder names no account commits to an empty account, which is the honest answer: there was nothing
   to commit to.
+
+## D103, 18 Sep 2026: every refusal a reading met is counted, by its own code
+
+- Statement: the keeper counted a reading as attempted, as succeeded when a day was credited, and as a failure only
+  when the refusal was one of ours to fix. Everything else vanished. The counting pass of 18 Sep 00:40 UTC wrote
+  "3 attempted, 0 succeeded, 0 errors, 0 held", which is exactly what a morning with nothing to do writes, and it was
+  in fact three readings the contract refused with `NothingToCredit`. The audit of the money paths listed it as gap a,
+  and the figures it makes wrong are the ones the judges page shows.
+- The rule now: every refusal is counted by the code the contract or the source gave it, ours or not
+  (`countRefusal`), kept per run in `viky_passes.refusals`, and summed by `refusalsByCode`. What was already there is
+  unchanged: a refusal that is ours still holds the gift, still counts as an error, and still appears in `failures`.
+- The judges page shows them as they came, with no translation: `NothingToCredit 3, PROFILE_NOT_FOUND 1`. A code from
+  the contract is the contract's word and a code from a source is that source's. The line that matters beside them is
+  the honest one: a morning where nothing was credited is either a quiet morning or a morning of refusals, and this is
+  what tells the two apart.
+- What it does not cover: milestone readings, which run in their own pass and are in neither number, exactly as the
+  page already says of the two counters beside it.
+- Rows written before the column existed carry an empty object, which is what they knew. Nothing was back-filled and
+  nothing was estimated, as with every figure on that page.

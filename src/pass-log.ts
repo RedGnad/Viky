@@ -13,7 +13,8 @@ import type { SqlExecutor } from "./proof-session-store";
  * back-filled: the journal knows only the runs it recorded, and `passesSince` says from when.
  *
  * Later columns are added under the create, as `ALTER TABLE viky_passes ADD COLUMN IF NOT EXISTS`, the way the other
- * stores grow (src/gift-store.ts, src/milestone-store.ts). There is no later column yet.
+ * stores grow (src/gift-store.ts, src/milestone-store.ts). `refusals` is the first of them: rows written before it
+ * existed carry an empty object, which is what they knew.
  */
 
 export const PASS_SCHEMA = `
@@ -29,6 +30,7 @@ CREATE TABLE IF NOT EXISTS viky_passes (
   holds jsonb NOT NULL DEFAULT '[]'::jsonb,
   failures jsonb NOT NULL DEFAULT '{}'::jsonb
 );
+ALTER TABLE viky_passes ADD COLUMN IF NOT EXISTS refusals jsonb NOT NULL DEFAULT '{}'::jsonb;
 CREATE INDEX IF NOT EXISTS viky_passes_plan ON viky_passes (plan, started_at DESC);
 `;
 
@@ -73,6 +75,8 @@ export type PassRow = Readonly<{
   holds: readonly PassHold[];
   /** The refusal codes that were ours, by code, plus the run's own failure when it threw part way. */
   failures: Readonly<Record<string, number>>;
+  /** Every refusal a reading met, by code, ours or not. A row written before this column existed has none. */
+  refusals: Readonly<Record<string, number>>;
 }>;
 
 /** What a run hands the journal. The two counts are derived by `recordPass`, never given. */
@@ -81,9 +85,9 @@ export type NewPass = Omit<PassRow, "id" | "heldOurs" | "errors">;
 export async function recordPass(pass: NewPass): Promise<void> {
   const errors = Object.values(pass.failures).reduce((total, count) => total + count, 0);
   await sql()`
-    INSERT INTO viky_passes (plan, started_at, ended_at, readings_attempted, readings_succeeded, held_ours, errors, holds, failures)
+    INSERT INTO viky_passes (plan, started_at, ended_at, readings_attempted, readings_succeeded, held_ours, errors, holds, failures, refusals)
     VALUES (${pass.plan}, ${pass.startedAt.toISOString()}, ${pass.endedAt.toISOString()}, ${pass.readingsAttempted}, ${pass.readingsSucceeded},
-            ${pass.holds.length}, ${errors}, ${JSON.stringify(pass.holds)}, ${JSON.stringify(pass.failures)})`;
+            ${pass.holds.length}, ${errors}, ${JSON.stringify(pass.holds)}, ${JSON.stringify(pass.failures)}, ${JSON.stringify(pass.refusals)})`;
 }
 
 /**
@@ -135,6 +139,26 @@ export async function readingTotals(): Promise<ReadingTotals> {
     SELECT coalesce(sum(readings_attempted), 0)::int AS attempted, coalesce(sum(readings_succeeded), 0)::int AS succeeded
       FROM viky_passes`;
   return { attempted: Number(rows[0]?.attempted ?? 0), succeeded: Number(rows[0]?.succeeded ?? 0) };
+}
+
+/** A refusal a reading met, by the code the contract or the source gave it, and how many times. */
+export type RefusalCount = Readonly<{ code: string; times: number }>;
+
+/**
+ * Every refusal the recorded passes met, by code, most frequent first.
+ *
+ * It answers the question the other figures leave open: a morning where nothing was credited was either a quiet
+ * morning or a morning of refusals, and until this column existed the journal could not tell them apart (the audit of
+ * 18 Sep, gap a). The codes are the contract's and the sources' own words, counted and never translated.
+ */
+export async function refusalsByCode(): Promise<readonly RefusalCount[]> {
+  const rows = await sql()`
+    SELECT code, sum(times)::int AS times
+      FROM viky_passes, jsonb_each_text(refusals) AS refusal(code, times_text),
+           LATERAL (SELECT times_text::int AS times) counted
+     GROUP BY code
+     ORDER BY times DESC, code`;
+  return rows.map((row) => ({ code: String(row.code), times: Number(row.times) }));
 }
 
 /**
