@@ -124,7 +124,7 @@ export const FUND = {
     title: "Who is it for?",
     recipientLabel: "Their first name",
     funderLabel: "Your name, as they know you",
-    funderHelp: "Like Maman, or Tom: the gift says who it is from.",
+    funderHelp: "Like Mum, or Tom: the gift says who it is from.",
     seen: "Both names show on the gift, to them and to whoever opens its link.",
     neverWrites: "Viky never writes to them. You send them the link yourself, once the gift is ready.",
     refusals: {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { scanSource } from "../src/consumer-words";
 
@@ -26,5 +27,26 @@ describe("consumer words guard", () => {
 
   it("does not match inside longer words", () => {
     assert.deepEqual(flagged("a.ts", 'const m = "The blockchain regas addressed seedling tokenised text";'), []);
+  });
+});
+
+/**
+ * The product is written in English, and a French word slipped into it twice: "Like Maman, or Tom" under the funder's
+ * name, and the same name drawn on the default link preview (founder, 18 Sep 2026).
+ *
+ * This is a smoke test, not a language check: it cannot prove a file is English, it catches the words most likely to
+ * come back from a conversation held in French. The list is short on purpose, and every word in it is one no English
+ * sentence of this product would ever carry.
+ */
+describe("the words a person reads are English", () => {
+  const FRENCH = ["maman", "papa", "bonjour", "merci", "cadeau", "argent", "compte", "aujourd'hui", "pseudo", "connexion", "montant"];
+  const READ_BY_PEOPLE = ["src/sentences.ts", "src/conditions.ts", "src/milestone-conditions.ts", "src/condition-proof.ts", "app/kit/example-gift.ts"];
+  it("catches a French word in what the product says", () => {
+    for (const file of READ_BY_PEOPLE) {
+      const text = readFileSync(file, "utf8").toLowerCase();
+      for (const word of FRENCH) {
+        assert.ok(!new RegExp(`\\b${word}\\b`).test(text), `${file} carries the French word "${word}"`);
+      }
+    }
   });
 });
