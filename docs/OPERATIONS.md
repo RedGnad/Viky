@@ -201,6 +201,14 @@ gift's goal. Registering another goal, or replacing the evidence signer, now nee
 is no second key left that can. The address was compared character by character with `MilestoneGift.owner()` read from
 the chain before the transfer was sent, and all three owners were read back after it.
 
+The same day, the earlier gift contract `0xE04CD59bB93765333200a9da01df83149D4C4d67`, which still runs the gifts made
+before the day-counting corrections of D30 and holds 8.571432 AUSD of the first one, was handed over too: tx
+`0xe6f5b531d9c6dd981b72f2be7dc7e2e2d0adca071e59fd78e532dae804043840`, block 105,773,867, 38,324 gas. Its owner was
+still the deployment key, which could have registered a goal, replaced the evidence signer or paused it. Read back
+after: all four contracts (both gift contracts, `MilestoneGift`, `ExitRouter`) answer
+`owner() = 0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64`, and that contract still holds the same 8.571432 AUSD, because
+handing ownership over moves no money.
+
 `GiftEscrow` uses OpenZeppelin's `Ownable` as it comes, so its owner can also renounce, which `ExitRouter` forbids.
 Renouncing would leave the goals, the evidence signer and the two pauses frozen as they are; money would keep moving,
 since no owner function touches it.
