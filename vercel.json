@@ -12,5 +12,12 @@
       "path": "/api/cron/settle",
       "schedule": "0 7 * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "*": false,
+      "**": false
+    }
+  }
 }
