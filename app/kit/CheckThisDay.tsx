@@ -1,5 +1,6 @@
 "use client";
 import { CARD, HELP } from "../components/ui";
+import { dateOfDay } from "@/src/day-record";
 
 /**
  * "Check this day yourself", for the two people a gift is between (U2).
@@ -9,6 +10,7 @@ import { CARD, HELP } from "../components/ui";
  * chain, with no key and no account. The sentence under it says what a pass proves and what it does not, because a
  * proof that is read as more than it is would be worse than none.
  */
+
 export function CheckThisDay({ giftId, days }: Readonly<{ giftId: string; days: readonly { day: number; outcome: "earned" | "returned" }[] }>) {
   const earned = days.filter((day) => day.outcome === "earned");
   if (earned.length === 0) return null;
@@ -23,7 +25,7 @@ export function CheckThisDay({ giftId, days }: Readonly<{ giftId: string; days: 
         {earned.map((day) => (
           <li key={day.day}>
             <a className="underline" href={`/api/gift/${giftId}/proof?day=${day.day}`} download={`viky-day-${day.day}.json`}>
-              Day {day.day}
+              {dateOfDay(day.day)}
             </a>
           </li>
         ))}

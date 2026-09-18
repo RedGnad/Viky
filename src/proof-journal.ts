@@ -107,7 +107,7 @@ export async function milestoneJournal(giftId: string): Promise<JournalReading[]
 }
 
 /** A proof as it is handed over: the claim's fingerprint, and the proof exactly as the attestor signed it. */
-export type KeptProof = Readonly<{ giftId: string; day?: number; readingId?: number; fingerprint: string | null; proof: unknown }>;
+export type KeptProof = Readonly<{ giftId: string; day?: number; readingId?: number; fingerprint: string | null; escrow: string | null; proof: unknown }>;
 
 function parsed(value: unknown): unknown {
   return typeof value === "string" ? JSON.parse(value) : value;
@@ -116,8 +116,9 @@ function parsed(value: unknown): unknown {
 /** The proof that earned one day of a gift, or null when that day went back, was settled before proofs were kept, or does not exist. */
 export async function proofOfDay(giftId: string, day: number): Promise<KeptProof | null> {
   const rows = await sql()`
-    SELECT s.proofs, s.attestation #>> '{message,nullifier}' AS fingerprint
+    SELECT s.proofs, s.attestation #>> '{message,nullifier}' AS fingerprint, g.escrow
       FROM viky_days d
+      JOIN viky_gifts g ON g.gift_id = d.gift_id
       JOIN viky_proof_sessions s ON s.session_id = COALESCE(
                         d.proof_session_id,
                         (SELECT r.session_id FROM viky_relayed r
@@ -126,20 +127,35 @@ export async function proofOfDay(giftId: string, day: number): Promise<KeptProof
      WHERE d.gift_id = ${giftId} AND d.day = ${day} AND d.outcome = 'earned'`;
   const row = rows[0];
   if (!row || row.proofs === null || row.proofs === undefined) return null;
-  return { giftId, day, fingerprint: row.fingerprint === null || row.fingerprint === undefined ? null : String(row.fingerprint), proof: parsed(row.proofs) };
+  return {
+    giftId,
+    day,
+    fingerprint: row.fingerprint === null || row.fingerprint === undefined ? null : String(row.fingerprint),
+    escrow: row.escrow === null || row.escrow === undefined ? null : String(row.escrow),
+    proof: parsed(row.proofs),
+  };
 }
 
 /** The proof behind one milestone reading. */
 export async function proofOfReading(giftId: string, readingId: number): Promise<KeptProof | null> {
   const rows = await sql()`
-    SELECT proofs, nullifier FROM viky_milestone_readings WHERE gift_id = ${giftId} AND id = ${readingId}`;
+    SELECT r.proofs, r.nullifier, g.escrow
+      FROM viky_milestone_readings r
+      JOIN viky_gifts g ON g.gift_id = r.gift_id
+     WHERE r.gift_id = ${giftId} AND r.id = ${readingId}`;
   const row = rows[0];
   if (!row || row.proofs === null || row.proofs === undefined) return null;
-  return { giftId, readingId, fingerprint: row.nullifier === null || row.nullifier === undefined ? null : String(row.nullifier), proof: parsed(row.proofs) };
+  return {
+    giftId,
+    readingId,
+    fingerprint: row.nullifier === null || row.nullifier === undefined ? null : String(row.nullifier),
+    escrow: row.escrow === null || row.escrow === undefined ? null : String(row.escrow),
+    proof: parsed(row.proofs),
+  };
 }
 
 /** The example a judge may replay: a day, its gift, and the account it belongs to. */
-export type JudgesExample = Readonly<{ giftId: string; day: number; txHash: string; fingerprint: string; recipient: string }>;
+export type JudgesExample = Readonly<{ giftId: string; day: number; txHash: string; fingerprint: string; recipient: string; escrow: string | null }>;
 
 /**
  * The newest credited day that still has its proof, among the gifts of the accounts given: Viky's own, whose holder
@@ -150,7 +166,7 @@ export async function exampleForJudges(accounts: readonly string[]): Promise<Jud
   if (accounts.length === 0) return null;
   const lowered = accounts.map((account) => account.toLowerCase());
   const rows = await sql()`
-    SELECT d.gift_id, d.day, d.tx_hash, g.recipient, s.attestation #>> '{message,nullifier}' AS fingerprint
+    SELECT d.gift_id, d.day, d.tx_hash, g.recipient, g.escrow, s.attestation #>> '{message,nullifier}' AS fingerprint
       FROM viky_days d
       JOIN viky_gifts g ON g.gift_id = d.gift_id
       JOIN viky_proof_sessions s ON s.session_id = COALESCE(
@@ -171,5 +187,7 @@ export async function exampleForJudges(accounts: readonly string[]): Promise<Jud
     txHash: String(row.tx_hash),
     fingerprint: String(row.fingerprint),
     recipient: String(row.recipient),
+    // The contract that holds this gift travels with the example, so a judge needs nothing configured to ask it.
+    escrow: row.escrow === null || row.escrow === undefined ? null : String(row.escrow),
   };
 }

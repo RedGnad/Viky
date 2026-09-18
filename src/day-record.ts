@@ -17,6 +17,14 @@ export type SettledDay = Readonly<{ day: number; outcome: DayOutcome }>;
 
 const abi = giftEscrowAbi as unknown as Abi;
 
+/**
+ * The date a day number is, written as a date. The contract counts a day as whole days since 1970 in UTC, which is a
+ * number nobody should be shown: everywhere a settled day is named to a person, it is named by its date.
+ */
+export function dateOfDay(day: number): string {
+  return new Date(day * 86_400_000).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+}
+
 /** Every day a receipt settled for one gift, in day order. A receipt that settled nothing gives nothing. */
 export function settledDaysFromLogs(giftId: string, logs: readonly Log[]): SettledDay[] {
   const days: SettledDay[] = [];

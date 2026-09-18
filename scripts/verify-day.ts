@@ -6,6 +6,7 @@ import { giftEscrowAbi } from "../src/gift-escrow-abi";
 import { milestoneGiftAbi } from "../src/milestone-gift-abi";
 import { isMilestoneGiftId } from "../src/milestone-protocol";
 import { PINNED_RECLAIM_WITNESS } from "../src/reclaim-proof-set";
+import { dateOfDay } from "../src/day-record";
 
 /**
  * Re-verify one credited day of a gift, or one reading of a milestone gift, from outside Viky, in one command.
@@ -48,7 +49,8 @@ const milestone = (giftId: string) => isMilestoneGiftId(giftId);
 const abiFor = (giftId: string) => (milestone(giftId) ? (milestoneGiftAbi as unknown as Abi) : (giftEscrowAbi as unknown as Abi));
 const contractFor = (giftId: string) =>
   (milestone(giftId) ? process.env.NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS : process.env.NEXT_PUBLIC_GIFT_ESCROW_ADDRESS)?.trim();
-const what = (subject: Subject) => (subject.readingId === undefined ? `day ${subject.day}` : `reading ${subject.readingId}`);
+const what = (subject: Subject) =>
+  subject.readingId === undefined ? `the day of ${dateOfDay(Number(subject.day))} (day ${subject.day})` : `reading ${subject.readingId}`;
 
 async function fromSite(site: string): Promise<Subject> {
   const answer = await fetch(new URL("/api/judges/example", site));
@@ -71,14 +73,14 @@ function fromFile(file: string): Subject {
   if (!giftId) throw new Error("--file needs --gift as well");
   if (asked === undefined && !Number.isInteger(day)) throw new Error("--file needs --day, or --reading for a milestone gift");
   if (asked !== undefined && !Number.isInteger(readingId)) throw new Error("--reading takes the number the gift's page printed");
-  const content = JSON.parse(readFileSync(file, "utf8")) as { proof?: unknown; fingerprint?: string; giftId?: string; day?: number };
+  const content = JSON.parse(readFileSync(file, "utf8")) as { proof?: unknown; fingerprint?: string; escrow?: string; giftId?: string; day?: number };
   // The route hands back { giftId, day or readingId, fingerprint, proof }; a bare proof file works too.
   const raw = content.proof ?? content;
   return {
     giftId,
     ...(asked === undefined ? { day } : { readingId }),
     fingerprint: argument("fingerprint") ?? content.fingerprint,
-    escrow: argument("contract"),
+    escrow: argument("contract") ?? content.escrow,
     proof: (Array.isArray(raw) ? raw[0] : raw) as Proof,
   };
 }
@@ -119,7 +121,9 @@ async function main() {
     detail: published === undefined ? `${fingerprint}, with nothing published to compare it to` : sameFingerprint ? `${fingerprint}` : `${fingerprint}, but ${published} was published`,
   });
 
-  const contract = subject.escrow?.trim() || contractFor(subject.giftId);
+  // The contract to ask, in the order that needs the least: what the command names, what the proof carries, what
+  // the environment of a Viky checkout already has.
+  const contract = argument("contract")?.trim() || subject.escrow?.trim() || contractFor(subject.giftId);
   if (!contract) throw new Error("no contract to ask: pass --contract, or set the contract address in the environment");
   const abi = abiFor(subject.giftId);
   const chain = createPublicClient({ transport: http(RPC) });
