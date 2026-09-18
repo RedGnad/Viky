@@ -60,10 +60,8 @@ export async function JudgesReliability() {
         </dd>
         <dt className={MUTED}>Refusals the readings met</dt>
         <dd className={HELP}>
-          {refusals.length === 0
-            ? "None recorded yet."
-            : refusals.map((refusal) => `${refusal.code} ${refusal.times}`).join(", ")}
-          . These are the codes the contract and the sources answered with, counted as they came and not translated:
+          {refusals.length === 0 ? "None recorded yet." : `${refusals.map((refusal) => `${refusal.code} ${refusal.times}`).join(", ")}.`} These are
+          the codes the contract and the sources answered with, counted as they came and not translated:
           &quot;NothingToCredit&quot; is the contract saying the day it was offered was already settled, and a code from a
           source is that source&apos;s own. A morning where nothing was credited is either a quiet morning or a morning
           of refusals, and this line is what tells the two apart.
