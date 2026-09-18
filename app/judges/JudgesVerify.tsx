@@ -60,6 +60,12 @@ export async function JudgesVerify() {
       </p>
       <code className={CODE}>pnpm verify:day --file day.json --gift &lt;number&gt; --day &lt;day&gt;</code>
       <p className={HELP}>
+        A milestone gift settles on a reading rather than on a day, so its journal lists readings, its page offers
+        &quot;Check this reading yourself&quot;, and the same command takes{" "}
+        <code>--reading &lt;number&gt;</code> instead of <code>--day</code>. It asks the milestone contract the same
+        question: is this claim&apos;s fingerprint the one it recorded?
+      </p>
+      <p className={HELP}>
         What a pass proves: Duolingo&apos;s own servers answered that, and the contract credited that day against that one
         answer, which can never be replayed. What it does not prove: that the account belongs to the person the gift is
         for, or that a human rather than a script did the lesson. The account is tied to the person once, separately, by
