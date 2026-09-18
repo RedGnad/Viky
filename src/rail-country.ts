@@ -75,7 +75,7 @@ export type RailReach = "serves" | "does-not" | "unknown";
  * this country goes last. Everything else keeps the order the register gives it, which is the order somebody chose on
  * purpose, and nothing is ever removed.
  *
- * Why "serves" does not jump the queue: one of the two ways in publishes no per-country answer at all (D98), so
+ * Why "serves" does not jump the queue: one of the two ways in publishes no per-country answer at all (D101), so
  * ranking an answer above a silence would push it behind for ever, everywhere, on a difference that says nothing
  * about the person. A silence is not a refusal.
  */

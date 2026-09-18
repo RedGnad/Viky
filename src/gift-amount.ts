@@ -46,7 +46,7 @@ export function roughlyInDollars(euros: number): number {
 }
 
 /**
- * The same question for a rail that sells what a gift already holds (D98): no coin to swap, so no reserve is left
+ * The same question for a rail that sells what a gift already holds (D101): no coin to swap, so no reserve is left
  * behind and nothing is lost to a second price. What the person pays, less what that rail keeps, becomes dollars at
  * the day's euro rate. Their fee is the larger of their share and their minimum, exactly as the way out's is.
  */
@@ -82,7 +82,7 @@ export function eurosToBuy(shortfallUnits: bigint): number {
 }
 
 /**
- * How many whole euros to pay on the way in the funder chose (D98).
+ * How many whole euros to pay on the way in the funder chose (D101).
  *
  * The rail that sells the chain's coin keeps the model above: its coin moves daily, and the tenth added for the rate
  * is what stops a payment falling short. The rail that sells what a gift holds needs no such margin, because what it

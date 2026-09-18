@@ -239,7 +239,7 @@ export function FundGift() {
   const [hadAccount, setHadAccount] = useState(false);
   /** What each rail that adds money says about this person's country, read live (R1). Never hides one. */
   const [railIn, setRailIn] = useState<{ country: string | null; waysIn: Readonly<Record<string, RailReach>> }>({ country: null, waysIn: {} });
-  /** The way in the funder pressed, so the wait tells them what to set on the page they actually opened (D98). */
+  /** The way in the funder pressed, so the wait tells them what to set on the page they actually opened (D101). */
   const [wayIn, setWayIn] = useState<WayIn>(WAYS_IN[0]);
   if (address && !hadAccount) setHadAccount(true);
   // The reader's clock, read once a minute: the settling hour is said in it.
@@ -1159,7 +1159,7 @@ export function FundGift() {
     const short = !enough && !arrived && address !== undefined;
     const held = balance ?? 0n;
     // The two ways in, in the order the country puts them (R1), each with its own floor, its own fee and what it
-    // delivers. Nothing is hidden: a rail that says nothing about this country keeps its place (D98).
+    // delivers. Nothing is hidden: a rail that says nothing about this country keeps its place (D101).
     const waysIn = orderRails(WAYS_IN, railIn.waysIn);
     const payingOn = (way: WayIn) => {
       const euros = eurosToBuyOn(units - held, way, money.rates?.usdPerEur);
@@ -1416,7 +1416,7 @@ export function FundGift() {
             ))}
           </ul>
           <p className={HELP}>{W.waiting.theirWords(wayIn.name, wayIn.delivers)}</p>
-          {/* What the wait ends with: money a gift can hold at once, or a step the person confirms (D98). */}
+          {/* What the wait ends with: money a gift can hold at once, or a step the person confirms (D101). */}
           <p className={HELP}>{wayIn.arrives === "gift" ? W.waiting.thenNothing : W.waiting.thenChanged}</p>
           <p className="font-medium">{W.waiting.codeLabel(wayIn.name)}</p>
           <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--background)] p-[var(--space-md)] text-[length:var(--type-help)] tabular-nums">{address}</p>

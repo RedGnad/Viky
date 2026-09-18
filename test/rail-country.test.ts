@@ -54,7 +54,7 @@ test("only a rail that says it does not serve moves, and none is ever removed", 
   assert.deepEqual(unread.map((way) => way.name), [WAY_OUT_EURO.name, WAY_OUT_CARD.name], "a refusal goes last, and is still shown");
   assert.deepEqual(orderWaysOut(WAYS_OUT, {}).map((way) => way.name), WAYS_OUT.map((way) => way.name), "no answer, the register's order");
   // A silence is not a refusal: the rail that publishes no per-country answer keeps the place the register gave it,
-  // rather than falling behind one that answered, for ever and everywhere (D98).
+  // rather than falling behind one that answered, for ever and everywhere (D101).
   const bothFine = orderRails(WAYS_IN, { [WAYS_IN[1].name]: "serves", [WAYS_IN[0].name]: "unknown" });
   assert.deepEqual(bothFine.map((way) => way.name), WAYS_IN.map((way) => way.name));
   const oneRefuses = orderRails(WAYS_IN, { [WAYS_IN[0].name]: "unknown", [WAYS_IN[1].name]: "does-not" });
@@ -88,7 +88,7 @@ test("what each rail serves is read from that rail, and a read that fails never 
     const inBritain = await reachOfWaysOut("gb");
     assert.equal(inBritain[WAY_OUT_CARD.name], "does-not");
     // The rail that sells the chain's coin says where it will not sell it; the other publishes no per-country answer
-    // without a key, so it says nothing anywhere and orders nothing (D98).
+    // without a key, so it says nothing anywhere and orders nothing (D101).
     assert.deepEqual(await reachOfWaysIn("gb"), { Ramp: "unknown", Mercuryo: "does-not" });
     assert.deepEqual(await reachOfWaysIn("fr"), { Ramp: "unknown", Mercuryo: "serves" });
     assert.deepEqual(await reachOfWaysOut(null), { [WAY_OUT_EURO.name]: "unknown", [WAY_OUT_CARD.name]: "unknown" });
