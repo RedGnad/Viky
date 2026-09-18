@@ -8,12 +8,16 @@ import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
  *
  * It is built around today so its days read as a gift in progress, and it goes through the same card, the same strip
  * and the same words as a real one: an example that drifted from the product would be worse than none.
+ *
+ * It is read in the third voice (D99): the page it sits on is a stranger's first sight of Viky, and it belongs to
+ * nobody, so the card says "theirs" and "gone back" rather than addressing the reader as the person it is for. The
+ * relecture of 18 Sep found it saying "$4.00 of $14.00 yours" to somebody being invited to offer a gift.
  */
 export function exampleGift(nowMs: number): GiftSummary {
   const today = Math.floor(nowMs / 86_400_000);
   return {
     giftId: "example",
-    role: "recipient",
+    role: "reader",
     goalType: GOAL_TYPE_DUOLINGO_XP,
     goalUsername: null,
     usernameSource: "recipient",

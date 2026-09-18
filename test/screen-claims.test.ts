@@ -7,6 +7,7 @@ import { catchUpDay, deadlineInWords } from "../src/catch-up";
 import { ARRIVAL_FLOOR, CONVERSION_RESERVE, fundingStageShown, nextFundingStep, paymentArrived } from "../src/funding-step";
 import { AmountError, dollarsToUnits, MIN_GIFT_UNITS } from "../src/money";
 import { exampleGift } from "../app/kit/example-gift.js";
+import { amountsInWords, whoInWords } from "../app/kit/GiftCard.js";
 import { CASH_OUT, GIFT_CARD } from "../src/sentences";
 
 /**
@@ -282,6 +283,11 @@ test("the example gift says it is an example, and reads as a gift under way", ()
   assert.equal(example.creditedDays + example.missedDays, 3);
   assert.equal(example.durationDays, 7);
   assert.ok(example.opened && example.counting && !example.finished && !example.cancelled);
+  // It belongs to nobody, so it is read in the third voice: a stranger invited to offer a gift is not the person a
+  // gift is for, and the card said "yours" to them until the relecture of 18 Sep (D99).
+  assert.equal(example.role, "reader");
+  assert.equal(amountsInWords(example, true), "$4.00 of $14.00 theirs, $2.00 gone back");
+  assert.equal(whoInWords(example), "From Mum");
 });
 
 /**
