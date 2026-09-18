@@ -55,6 +55,32 @@ export default function LegalPage() {
           network under rules both people can read on the <Link className="underline" href="/judges">judges page</Link>.
           Buying with a card is done by Mercuryo under Mercuryo&apos;s own terms.
         </p>
+        <p>
+          Viky is software, not a service that keeps your money. Everybody signs in with their own
+          passkey, on their own device, and each gift sits in the published program under the terms the
+          person who offered it signed. Nobody here signs for you.
+        </p>
+        <p>
+          The people who run Viky can do four things, and the program allows them nothing else: stop new
+          gifts being offered, stop the daily readings, change the key that signs what a reading found,
+          and add a goal a gift can be made on. Each of those is public, and the judges page reads them
+          from the program itself.
+        </p>
+        <p>
+          They can never move money, keep it, or send it somewhere else. What is not earned goes back to
+          the person who offered the gift, to the account they named when they offered it, and anyone at
+          all can ask for that: the program will send it nowhere else. What is earned leaves only when
+          the person the gift is for asks for it, signed by them. So the worst a pause can do is hold a
+          day open. It cannot take a day away, and it cannot send a penny anywhere.
+        </p>
+        <p>
+          Where money can leave depends on the service that pays it, and the way out names each one as it
+          publishes itself. Today the bank route pays in euros and does not serve Senegal or Ivory Coast;
+          the card route pays onto a Visa or Mastercard card, makes no payout in France, the rest of the
+          European Economic Area or the United States, and cannot sell at all in the United Kingdom.
+          Those are their own published lists, read on 16 September 2026, and neither of them is ours to
+          change.
+        </p>
       </section>
     </Shell>
   );

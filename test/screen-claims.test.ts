@@ -302,3 +302,39 @@ test("once what was earned has been taken, the way out carries the accent", () =
   // And the gesture that had the accent is gone by then: taking is offered only while something is left to take.
   assert.match(page, /const takeOffered = may\.takeTheMoney && earned > 0n;/);
 });
+
+/**
+ * What the legal notice says about the people who run Viky (mitigation C). Every sentence of it is a claim about the
+ * program's own access control, so each one is read back from `contracts/GiftEscrow.sol` here: a paragraph that drifts
+ * from the contract would be a promise nobody keeps, on the page where a promise counts most.
+ */
+test("the legal notice says exactly what the program lets the operator do, and no more", () => {
+  const legal = readFileSync("app/legal/page.tsx", "utf8");
+  const contract = readFileSync("contracts/GiftEscrow.sol", "utf8");
+
+  // The four things, and the fact that there is no fifth: every function the owner alone may call.
+  const ownerOnly = [...contract.matchAll(/function (\w+)\([^)]*\)[^{]*onlyOwner/g)].map((m) => m[1]).sort();
+  assert.deepEqual(ownerOnly, ["registerGoal", "setCheckInPaused", "setCreationPaused", "setEvidenceSigner"]);
+  assert.match(legal, /stop new\s+gifts being offered, stop the daily readings, change the key that signs what a reading found,\s+and add a goal a gift can be made on/);
+
+  // Moving money is not among them: the two ways out of the program check who is asking, not who owns it.
+  assert.match(contract, /function withdrawEarned\(uint256 giftId, address to, uint256 amount\) external nonReentrant \{[\s\S]*?if \(msg\.sender != g\.recipient\) revert NotRecipient\(\);/);
+  assert.match(contract, /function refundUnearned\(uint256 giftId\) external nonReentrant \{/, "the refund is anybody's to call");
+  assert.doesNotMatch(
+    contract.slice(contract.indexOf("function refundUnearned"), contract.indexOf("function cancel")),
+    /onlyOwner|msg\.sender/,
+    "the refund now asks who is calling, and the legal notice says it does not",
+  );
+  assert.match(contract, /_push\(g\.refundTo, amount\);/, "the refund pays the destination the funder signed, and nothing else");
+  assert.match(legal, /anyone at\s+all can ask for that: the program will send it nowhere else/);
+  assert.match(legal, /What is earned leaves only when\s+the person the gift is for asks for it, signed by them/);
+
+  // The countries are the rails' own words, not a claim of our own.
+  const rails = readFileSync("src/rails.ts", "utf8");
+  for (const said of ["It does not serve Senegal or Ivory Coast.", "No card payout in France, the rest of the EEA, or the United States.", "Selling is shut in the United Kingdom."]) {
+    assert.ok(rails.includes(said), `the way out no longer publishes "${said}"`);
+  }
+  assert.match(legal, /does not serve Senegal or Ivory Coast/);
+  assert.match(legal, /makes no payout in France, the rest of the\s+European Economic Area or the United States/);
+  assert.match(legal, /cannot sell at all in the United Kingdom/);
+});
