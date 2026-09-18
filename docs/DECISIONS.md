@@ -2752,3 +2752,32 @@ behind an account cannot be photographed any other way.
   kept only if the ground the browser painted is the ground that state asks for and the control's own name says that
   state. Signed-in screens are not in the set, because a passkey cannot be replayed by a script; they share the same
   header.
+
+## D98, 18 Sep 2026: two sessions, one of which survives a page load
+
+- Statement: Viky has two sessions and they are not the same thing. The **server session** is a twelve hour cookie
+  that says which account this browser is; it holds no key and can sign nothing. The **signing session** is the key
+  the passkey derived, held in memory only, closing after ten idle minutes (thirty on a money screen) and dying with
+  the page. Until today the app announced an account only when both were open, so every page load signed the person
+  out of a product they were still signed in to.
+- Source: the founder, in production, 18 Sep 2026: he signed in with his passkey and was signed out again at once,
+  and had to sign in on every load. Measured here the same day on the live site with a test account: after a reload
+  and in a second tab, `/api/account/session` answered 200 with the account both times. The cookie was never the
+  problem. The page simply never asked.
+- **What changes.** The page asks the server who it is at load, with no passkey and no prompt. Every money path
+  opens the signing session at the moment it signs, through one function, rather than reaching for a key a load has
+  lost. A funder who reloads, changes tab, or comes back from the card page keeps their account and their draft, and
+  meets one passkey prompt at the signature instead of losing the path.
+- **What this asks of Mera: nothing new, and that is the finding.** The key comes from the passkey's PRF output,
+  which WebAuthn produces only inside a ceremony answering a user gesture. There is no silent re-derivation, and
+  storing the key anywhere would be the one thing a passkey product must not do. So the signing session cannot
+  survive a load, and should not. What was wrong was treating it as the whole session.
+- **What it changes for session scope**, which is what the Mera UX bounty looks at: the scope is now written down as
+  two reaches. *Reading* is the cookie: who you are, your gifts, your page, twelve hours, no prompt. *Signing* is the
+  key: one prompt, at the first signature of that page's life, then ten or thirty idle minutes. A passkey product
+  does not need a ceremony to know who you are, only to act, and saying so halves the prompts of an ordinary visit.
+- **No sentence promises what is not there.** "Signed in on this device until 11:19 PM." is said only while the
+  signing session is open, because that time is the signing window. A browser that is signed in and cannot sign yet
+  reads "Signed in on this device." and, under it, that the passkey is asked again the moment money moves.
+- The mismatch case is kept explicit: if the key that opens derives another account than the cookie names, the
+  browser is signed in again as that account. A screen showing one account while the key signs another never happens.

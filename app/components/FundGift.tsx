@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import * as mera from "@/src/account/mera";
 import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
@@ -203,7 +202,7 @@ function readable(error: unknown): string {
 }
 
 export function FundGift() {
-  const { address, signIn, status: accountStatus } = useAccount();
+  const { address, signIn, ensureSigner, status: accountStatus } = useAccount();
   // Money moves on this screen, so the session stays open thirty minutes rather than ten (decision 2, 17 Sep 2026).
   useMoneySession();
   const browser = useSyncExternalStore(never, inBrowser, onServer);
@@ -404,8 +403,9 @@ export function FundGift() {
   }, [step, address, pending]);
 
   const give = useCallback(async () => {
-    const account = mera.currentAccount();
-    if (!account) throw new Error(W.failures.signInFirst);
+    // Opens the passkey here if the page was reloaded or came back from the card page: the signature is the first
+    // moment one is needed, and the account is the one the server's cookie already names.
+    const account = await ensureSigner();
     if (!condition || amount.units === null || length.days === null) throw new Error(W.failures.other);
     // Signed once for these terms and sent again as it is on every retry, so the server finds the same creation and
     // never pays for the gift twice (D87). A milestone's target and starting reading are part of its terms.
@@ -484,7 +484,7 @@ export function FundGift() {
     setDraft(EMPTY_DRAFT);
     replace("done");
     window.scrollTo(0, 0);
-  }, [condition, milestone, cadence, climb.target, draft.standing, draft.standingReadAt, draft.course, amount.units, length.days, daily.target, draft.username, recipient, funder]);
+  }, [ensureSigner, condition, milestone, cadence, climb.target, draft.standing, draft.standingReadAt, draft.course, amount.units, length.days, daily.target, draft.username, recipient, funder]);
 
   // While paying: watch the account, turn what arrived into what a gift holds, then make the gift.
   useEffect(() => {
@@ -515,8 +515,10 @@ export function FundGift() {
         if (next.do === "convert") {
           working.current = true;
           setPhase("converting");
-          const account = mera.currentAccount();
-          if (!account) {
+          let account;
+          try {
+            account = await ensureSigner();
+          } catch {
             working.current = false;
             return;
           }
@@ -547,7 +549,7 @@ export function FundGift() {
       live = false;
       clearInterval(timer);
     };
-  }, [step, address, amount.units, phase, refresh, give]);
+  }, [step, address, amount.units, phase, refresh, give, ensureSigner]);
 
   const copy = (what: "code" | "link", text: string) => {
     void navigator.clipboard

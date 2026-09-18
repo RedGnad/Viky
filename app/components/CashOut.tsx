@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getAddress, isAddress, type Hex } from "viem";
-import * as mera from "@/src/account/mera";
 import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
@@ -85,7 +84,7 @@ function refusalText(error: unknown, way: WayOut | null): string {
 }
 
 export function CashOut() {
-  const { address, signOut } = useAccount();
+  const { address, ensureSigner, signOut } = useAccount();
   useMoneySession();
   const money = useDisplayCurrency(address);
   const [holdings, setHoldings] = useState<Record<string, bigint> | null>(null);
@@ -222,9 +221,12 @@ export function CashOut() {
 
   const getReady = async () => {
     if (!quote || !chosen) return;
-    const account = mera.currentAccount();
-    // A closed session used to leave this function silently, the button doing nothing at all (D80).
-    if (!account) {
+    // A closed session used to leave this function silently, the button doing nothing at all (D80). Now the passkey
+    // is opened here, which is the moment a signature is needed; only a refusal closes the session.
+    let account;
+    try {
+      account = await ensureSigner();
+    } catch {
       closeSession();
       return;
     }
@@ -274,9 +276,12 @@ export function CashOut() {
   const send = async () => {
     if (!chosen) return;
     const ready = readyOf(chosen);
-    const account = mera.currentAccount();
-    if (!ready || !account) {
-      if (!account) closeSession();
+    if (!ready) return;
+    let account;
+    try {
+      account = await ensureSigner();
+    } catch {
+      closeSession();
       return;
     }
     const to = getAddress(deposit.trim()) as Hex;
@@ -339,9 +344,12 @@ export function CashOut() {
     return null;
   };
   const sendOwn = async () => {
-    const account = mera.currentAccount();
-    if (!account || ownSending.units === undefined) {
-      if (!account) closeSession();
+    if (ownSending.units === undefined) return;
+    let account;
+    try {
+      account = await ensureSigner();
+    } catch {
+      closeSession();
       return;
     }
     const leaving = ownSending.units;

@@ -26,7 +26,7 @@ const deviceLanguage = () => navigator.language;
 const noLanguage = () => undefined;
 
 export function Me() {
-  const { address, signOut, useAnotherAccount } = useAccount();
+  const { address, reach, signOut, useAnotherAccount } = useAccount();
   const language = useSyncExternalStore(never, deviceLanguage, noLanguage);
   const [chosen, setChosen] = useState<{ address: string; currency: DisplayCurrency | null } | undefined>(undefined);
   const [saved, setSaved] = useState(false);
@@ -94,7 +94,8 @@ export function Me() {
       </section>
 
       <section className={CARD}>
-        <p className="font-medium">{until ? W.signedInUntil(until) : W.signedOut}</p>
+        <p className="font-medium">{reach === "signing" && until ? W.signedInUntil(until) : reach === "signed-out" ? W.signedOut : W.signedIn}</p>
+        {reach === "reading" ? <p className={HELP}>{W.passkeyWhenMoneyMoves}</p> : null}
         <div className="flex flex-wrap gap-[var(--tap-gap)]">
           <button type="button" onClick={signOut} className={INLINE_BUTTON}>
             {W.signOut}

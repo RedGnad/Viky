@@ -1,9 +1,9 @@
 "use client";
-import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
-import type { Address } from "viem";
-import { signInToServer, signOutOfServer } from "../client/server-session";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import type { Address, LocalAccount } from "viem";
+import { currentServerSession, signInToServer, signOutOfServer } from "../client/server-session";
 import { type AccountError, accountError, toAccountError } from "./errors";
-import { announcedAccount } from "./session-gate";
+import { announcedAccount, sessionReach, type SessionReach } from "./session-gate";
 import * as mera from "./mera";
 
 // A passkey prompt that never comes back (in-app browsers, a dismissed system sheet the page never
@@ -32,8 +32,19 @@ export type AccountStatus = "idle" | "busy";
 export type AccountContextValue = {
   address: Address | undefined;
   hasCredential: boolean;
+  /**
+   * What this browser may do right now: nothing, read as this account (the server's cookie), or also sign (the
+   * passkey's key is open). A screen that only reads never asks for a passkey to draw itself.
+   */
+  reach: SessionReach;
   status: AccountStatus;
   error: AccountError | undefined;
+  /**
+   * The account that can sign, opening the passkey once if the key is not in memory. Every money path calls this
+   * rather than reaching for the key, so coming back from a reload or another tab asks for a passkey at the moment
+   * a signature is needed and not before.
+   */
+  ensureSigner: () => Promise<LocalAccount>;
   createAccount: (displayName: string) => Promise<void>;
   signIn: () => Promise<void>;
   signOut: () => void;
@@ -60,7 +71,20 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<AccountError | undefined>(undefined);
   const [serverSessionFor, setServerSessionFor] = useState<Address | undefined>(undefined);
 
+  // The cookie already names this browser's account for twelve hours, so the page asks the server who it is at load
+  // rather than treating a reload as a sign-out. No passkey, no prompt, nothing signed.
+  useEffect(() => {
+    let live = true;
+    void currentServerSession().then((session) => {
+      if (live && session) setServerSessionFor(session.account as Address);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const address = announcedAccount(signedInAddress, serverSessionFor);
+  const reach = sessionReach(signedInAddress, serverSessionFor);
 
   const run = useCallback(async (action: () => Promise<Address>) => {
     setStatus("busy");
@@ -83,10 +107,40 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  /**
+   * Opens the signing session when it is not open, and refuses to sign as anybody but the account the server named:
+   * a person who used another passkey on this device is signed in again as that account rather than shown one
+   * account while the key signs another.
+   */
+  const ensureSigner = useCallback(async () => {
+    const open = mera.currentAccount();
+    if (open) return open;
+    setStatus("busy");
+    setError(undefined);
+    try {
+      await withTimeout(mera.signIn(), CEREMONY_TIMEOUT_MS);
+      const account = mera.currentAccount();
+      if (!account) throw accountError("TIMED_OUT");
+      if (serverSessionFor && account.address !== serverSessionFor) {
+        await withTimeout(signInToServer(account), SERVER_TIMEOUT_MS);
+      }
+      setServerSessionFor(account.address);
+      return account;
+    } catch (caught) {
+      const failure = toAccountError(caught);
+      setError(failure);
+      throw failure;
+    } finally {
+      setStatus("idle");
+    }
+  }, [serverSessionFor]);
+
   const value = useMemo<AccountContextValue>(
     () => ({
       address,
       hasCredential,
+      reach,
+      ensureSigner,
       status,
       error,
       createAccount: (displayName) => run(() => mera.createAccount(displayName)),
@@ -104,7 +158,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       },
       clearError: () => setError(undefined),
     }),
-    [address, hasCredential, status, error, run],
+    [address, hasCredential, reach, ensureSigner, status, error, run],
   );
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
@@ -126,6 +180,8 @@ export function ExampleAccountProvider({ children }: { children: ReactNode }) {
     () => ({
       address: "0x000000000000000000000000000000000000dEaD",
       hasCredential: true,
+      reach: "signing",
+      ensureSigner: () => Promise.reject(accountError("NOT_IN_BROWSER")),
       status: "idle",
       error: undefined,
       createAccount: async () => undefined,

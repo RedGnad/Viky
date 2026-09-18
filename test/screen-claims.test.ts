@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { announcedAccount, sessionRemaining } from "../src/account/session-gate";
+import { announcedAccount, sessionReach, sessionRemaining } from "../src/account/session-gate";
 import { formatAusdExact, theirsSoFar } from "../src/gift-reader";
 import { catchUpDay, deadlineInWords } from "../src/catch-up";
 import { ARRIVAL_FLOOR, CONVERSION_RESERVE, fundingStageShown, nextFundingStep, paymentArrived } from "../src/funding-step";
@@ -18,14 +18,22 @@ import { CASH_OUT, GIFT_CARD } from "../src/sentences";
 const A = "0x350aF869ABa6ff26AB33517ECd3E38ACaF107761" as const;
 const B = "0x91C964e745ffd6265c75df33cA9137D81c3c454d" as const;
 
-test('"You are signed in" waits for the server, not just for the passkey', () => {
-  // The defect this pins: the account was announced as soon as the passkey opened, so the gift list asked
-  // the server with no session, was refused, and kept "Account authentication is required" on screen.
+test('"You are signed in" follows the server, and never announces a disagreement', () => {
+  // The first defect this pins: the account was announced as soon as the passkey opened, so the gift list asked
+  // the server with no session, was refused, and kept "Account authentication is required" on screen. The server
+  // is still the one that decides.
   assert.equal(announcedAccount(A, undefined), undefined, "the passkey alone must not announce an account");
-  assert.equal(announcedAccount(undefined, A), undefined, "a server session alone must not either");
   assert.equal(announcedAccount(A, A), A, "both agreeing is what lets the app act");
   assert.equal(announcedAccount(A, B), undefined, "two different accounts must never be treated as one");
   assert.equal(announcedAccount(undefined, undefined), undefined);
+  // The second defect, found in production on 18 Sep 2026: a page load lost the account although the twelve hour
+  // cookie was there and the server answered every request with it. The passkey's key dies with the page; the
+  // session does not, so the server naming an account is enough to be signed in, and signing asks for the passkey.
+  assert.equal(announcedAccount(undefined, A), A, "the cookie alone is a session, and a reload keeps it");
+  assert.equal(sessionReach(undefined, undefined), "signed-out");
+  assert.equal(sessionReach(undefined, A), "reading", "after a load: known, and nothing can be signed yet");
+  assert.equal(sessionReach(A, A), "signing");
+  assert.equal(sessionReach(A, B), "signed-out", "a disagreement is nobody, not a half-open session");
 });
 
 test('"Theirs so far" counts what was earned, not what is left to take', () => {

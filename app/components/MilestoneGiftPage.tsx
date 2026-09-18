@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
-import * as mera from "@/src/account/mera";
 import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
 import { ApiError } from "@/src/client/api";
@@ -62,7 +61,7 @@ function outcomeMessage(outcome: MilestoneOutcome, status: MilestoneStatus): str
 }
 
 export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{ status: MilestoneStatus; linkKey?: string | null; reload?: () => Promise<void> }>) {
-  const { address, status: accountStatus } = useAccount();
+  const { address, ensureSigner, status: accountStatus } = useAccount();
   useMoneySession();
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   const [busy, setBusy] = useState<Busy>("idle");
@@ -157,8 +156,8 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
   const check = () => run("checking", async () => outcomeMessage(await checkMilestone(status.giftId), status));
   const take = () =>
     run("taking", async () => {
-      const signer = mera.currentAccount();
-      if (!signer) throw new ApiError({ status: 401, code: "SIGN_IN_REQUIRED", message: G.signInToSee });
+      // The passkey is opened here, at the one moment a signature is needed, rather than assumed to be open.
+      const signer = await ensureSigner();
       await withdrawEarned({ account: signer, giftId: status.giftId, escrow: status.escrow, amount: BigInt(status.earned), nonce: BigInt(status.withdrawNonce) });
       setReviewing(false);
       setTaken({ amount: status.earnedDisplay, atMs: Date.now() });
