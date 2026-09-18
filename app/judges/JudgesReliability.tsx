@@ -51,9 +51,10 @@ export async function JudgesReliability() {
         ))}
         <dt className={MUTED}>Readings asked of the source</dt>
         <dd className={HELP}>
-          {readings.attempted} asked, {readings.succeeded} answered and counted. A gift already counted today, finished,
-          cancelled or not yet connected is not asked at all, so it is in neither number, and milestone readings run in
-          their own pass and are in neither either.
+          {readings.attempted} asked, {readings.succeeded} of which credited a day. A reading that finds the day&apos;s
+          work not done yet answers perfectly well and credits nothing, so the second number is smaller than the first
+          on any ordinary morning. A gift already counted today, finished, cancelled or not yet connected is not asked
+          at all, and milestone readings run in their own pass: neither is in either number.
         </dd>
         <dt className={MUTED}>Days held because a reading failed on our side</dt>
         <dd className={HELP}>
