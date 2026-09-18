@@ -11,6 +11,7 @@ import {
   markExitSent,
   markExitStale,
   newExitId,
+  retireExpiredExits,
   openExit,
   saveExit,
   type ExitRecord,
@@ -177,4 +178,39 @@ test("a table made when terms still had a destination takes the new inserts", as
   const t = terms();
   await saveExit(t);
   assert.equal((await openExit(ACCOUNT))?.id, t.id);
+});
+
+/**
+ * Terms whose deadline has passed were already harmless: the contract refuses them, the token's own window closed
+ * with them, and `openExit` never offers one. What they were not is honest about themselves. One has sat in
+ * production since 16 Sep 2026 saying `signed`, which reads as a signature waiting to be used (the audit of 18 Sep,
+ * gap e).
+ */
+test("terms past their deadline are retired, and what could still land is left alone", async () => {
+  const now = Math.floor(Date.now() / 1_000);
+  const past = { deadline: BigInt(now - 60) };
+  const future = { deadline: BigInt(now + 900) };
+
+  const expiredSigned = terms(past);
+  await saveExit(expiredSigned);
+  await attachSignature(expiredSigned.id, `0x${"ab".repeat(65)}`);
+  const expiredPrepared = terms(past);
+  await saveExit(expiredPrepared);
+  const liveSigned = terms(future);
+  await saveExit(liveSigned);
+  await attachSignature(liveSigned.id, `0x${"cd".repeat(65)}`);
+  const alreadySent = terms(past);
+  await saveExit(alreadySent);
+  await attachSignature(alreadySent.id, `0x${"ef".repeat(65)}`);
+  await markExitSent(alreadySent.id, `0x${"aa".repeat(32)}`);
+
+  assert.equal(await retireExpiredExits(now), 2, "the signed one and the prepared one, both past their deadline");
+  assert.equal((await loadExit(expiredSigned.id, ACCOUNT))?.state, "stale");
+  assert.equal((await loadExit(expiredPrepared.id, ACCOUNT))?.state, "stale");
+  assert.equal((await loadExit(liveSigned.id, ACCOUNT))?.state, "signed", "what can still land is untouched");
+  assert.equal((await loadExit(alreadySent.id, ACCOUNT))?.state, "sent", "and what landed stays landed");
+
+  // Nothing is left to retire the second time, and the one still alive is still the one a person would be offered.
+  assert.equal(await retireExpiredExits(now), 0);
+  assert.equal((await openExit(ACCOUNT))?.id, liveSigned.id);
 });

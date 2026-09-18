@@ -1,4 +1,5 @@
 import type { Hex } from "viem";
+import { retireExpiredExits } from "./exit-store";
 import { runPublicCheckIn, type PublicCheckInOutcome } from "./duolingo-public-checkin";
 import { completePendingCreations, type CreationLine } from "./gift-creation";
 import { liveCreationDeps } from "./gift-creation-live";
@@ -23,7 +24,7 @@ import { escrowOf, relayerClients, relayerPreflight, RelayerError } from "./rela
  * had expired. The second pass settles at the moment D13 allows, without making counting less forgiving.
  */
 
-export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain" | "finalise" | "refund" | "read" | "expire"; result: string; hash?: string };
+export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain" | "finalise" | "refund" | "read" | "expire" | "retire"; result: string; hash?: string };
 
 /**
  * Refusals that say something broke on our side rather than something the person did. A reading refused for
@@ -81,11 +82,14 @@ export type DailyPassDeps = {
   milestones?: (settle: boolean) => Promise<DailyPassLine[]>;
   /** Writes this run to the pass journal (src/pass-log.ts), one row per run; absent in the tests of the other steps. */
   journal?: (pass: NewPass) => Promise<void>;
+  /** Retires the exit terms whose deadline has passed, so no row says `signed` of a signature nothing can use. */
+  retireExits?: () => Promise<number>;
 };
 
 function liveDeps(): DailyPassDeps {
   const clients = relayerClients();
   return {
+    retireExits: () => retireExpiredExits(),
     boundGifts: loadBoundGifts,
     allGifts: loadAllGifts,
     read: (escrow, giftId) => readGift(escrow, giftId, clients.publicClient),
@@ -254,6 +258,12 @@ async function runPass(
     if (plan.refund) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
   }
   if (deps.milestones) lines.push(...(await deps.milestones(plan.refund)));
+  // Terms nobody can use any more say so, on the pass that settles. Nothing here moves money: the contract already
+  // refuses a deadline that has passed, and this is the row catching up with that fact (the audit's gap e).
+  if (plan.refund && deps.retireExits) {
+    const retired = await deps.retireExits();
+    if (retired > 0) lines.push({ giftId: "exits", step: "retire", result: `${retired} set(s) of terms past their deadline` });
+  }
   return { relayer: address, balanceWei: balance.toString(), lines };
 }
 

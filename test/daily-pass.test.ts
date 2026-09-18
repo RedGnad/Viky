@@ -96,6 +96,26 @@ test("a gift nobody opened, or nobody connected, goes back whole after fourteen 
   assert.equal(unstartedAndOverdue({ ...unopened, cancelled: true }, day14), false);
 });
 
+test("the settling pass retires the exit terms whose deadline has passed, and the counting one does not", async () => {
+  // Nothing here moves money: the contract already refuses a deadline that has passed. It is the row catching up
+  // with that fact, so no set of terms says `signed` of a signature nothing can use (the audit of 18 Sep, gap e).
+  let retired = 0;
+  const deps: DailyPassDeps = { ...spy([]).deps, retireExits: async () => { retired += 1; return 2; } };
+
+  const counting = await dailyPass(COUNTING_PASS, deps);
+  assert.equal(retired, 0, "the counting pass settles nothing and retires nothing");
+  assert.equal(counting.lines.some((line) => line.step === "retire"), false);
+
+  const settling = await dailyPass(SETTLING_PASS, deps);
+  assert.equal(retired, 1);
+  const line = settling.lines.find((entry) => entry.step === "retire");
+  assert.equal(line?.result, "2 set(s) of terms past their deadline");
+
+  // A pass that found none says nothing at all rather than "0 retired".
+  const none = await dailyPass(SETTLING_PASS, { ...spy([]).deps, retireExits: async () => 0 });
+  assert.equal(none.lines.some((entry) => entry.step === "retire"), false);
+});
+
 test("the fourteen days are the contract's own, and the two pass hours are the platform's schedule", () => {
   const contract = readFileSync("contracts/GiftEscrow.sol", "utf8");
   assert.match(contract, /UNCLAIMED_REFUND_DELAY = 14 days;/);
