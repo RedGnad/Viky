@@ -211,7 +211,9 @@ test("on the second step the account's code comes first with a copy button, then
   const paste = cashOut.indexOf("W.pasteTheCode(");
   assert.ok(give > 0 && copy > give, "the code is offered where the service asks for it, and copied whole");
   assert.ok(paste > copy, "and only then the field for the code they give back");
-  assert.match(cashOut, /disabled=\{busy \|\| deposit\.trim\(\) === "" \|\| problemWithCode !== null\}/);
+  // Since S4 the same condition is named once, as `sendable`, because the accent follows it too.
+  assert.match(cashOut, /const sendable = deposit\.trim\(\) !== "" && problemWithCode === null;/);
+  assert.match(cashOut, /disabled=\{!sendable \|\| busy\}/);
   assert.match(CASH_OUT.codeRefusals.own("Ramp"), /your own code/);
 });
 

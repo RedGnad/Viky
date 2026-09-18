@@ -115,7 +115,7 @@ after the Ramp states.
     part of the total and not beside it]
   - Ramp card: `To your bank account, in euros. Ramp keeps 0.99 % with a minimum of 1.99 EUR, and pays within
     2 business days.` [spec] [open 1]
-  - Mercuryo card: `To your card, where Ramp does not serve.` [spec]
+  - Mercuryo card: `To your card.` [S4: the spec's `where Ramp does not serve` is gone, no rail names the other]
   - Under each card, one line naming the source and its date, from `src/rails.ts`: `Read from Ramp's own pages,
     16 Sep 2026.` [proposed]
   - Below both, as a secondary link, not a button: `Send to another Viky account of mine` [spec] (W13).
