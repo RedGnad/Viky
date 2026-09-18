@@ -101,6 +101,22 @@ test("a counting pass writes one row, with what it read and what it held", async
   assert.deepEqual(await readingTotals(), { attempted: 3, succeeded: 1 });
 });
 
+test("a gift the pass never asks the source about is not counted as a reading", async () => {
+  // Three bound gifts, none of which is asked anything: one was already counted this morning, one is over, one has
+  // nobody connected to it. Nothing was read, so the page must not say the source was asked three times.
+  await dailyPass(COUNTING_PASS, {
+    ...threeGifts(),
+    count: async (giftId: string) =>
+      ({ kind: "already", giftId, reason: giftId === "1" ? "counted_today" : giftId === "2" ? "finished" : "not_bound" }) as const,
+  });
+
+  const rows = await passRows();
+  assert.equal(rows[0].readings_attempted, 0, "no reading was taken, whatever the pass looked at");
+  assert.equal(rows[0].readings_succeeded, 0);
+  assert.equal(rows[0].errors, 0, "a gift with nothing to read is not a failure");
+  assert.deepEqual(await readingTotals(), { attempted: 0, succeeded: 0 });
+});
+
 test("a held day is open until it is settled, then caught up, or lost when it went back", async () => {
   await dailyPass(COUNTING_PASS, threeGifts());
   assert.deepEqual(await heldDays(), { caughtUp: 0, lost: 0, open: 1 }, "nothing settled that day yet");

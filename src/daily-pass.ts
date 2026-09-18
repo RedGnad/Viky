@@ -194,8 +194,12 @@ async function runPass(
   // would fail, and one failure here stops the pass for every daily gift after it.
   if (plan.count) {
     for (const gift of (await deps.boundGifts()).filter((entry) => !isMilestoneGiftId(entry.giftId))) {
+      // Counted before the call so a pass that falls over still records the reading it was taking. A gift already
+      // counted today, finished, cancelled or not yet connected is never asked of the source at all, so it is taken
+      // back out: it is not a reading, and counting it as one would make the source look silent when nobody spoke.
       run.readingsAttempted += 1;
       const outcome = await deps.count(gift.giftId);
+      if (outcome.kind === "already") run.readingsAttempted -= 1;
       if (outcome.kind === "counted" || outcome.kind === "bound") run.readingsSucceeded += 1;
       if (outcome.kind === "refused" && OURS_TO_FIX.has(outcome.code)) {
         unread.add(gift.giftId);

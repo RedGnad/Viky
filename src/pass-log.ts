@@ -162,10 +162,10 @@ export async function heldDays(): Promise<HeldDays> {
 }
 
 /**
- * How many days the journal has been keeping records, counted from its first row. It lives here rather than in the
- * page so the clock is read outside a render, and rounds up, because a journal switched on this morning has still been
- * speaking for a day as far as a reader is concerned.
+ * How many whole days the journal has been keeping records, counted from its first row. It lives here rather than in
+ * the page so the clock is read outside a render, and it counts whole days only: a journal switched on this morning
+ * has been speaking for no days yet, and saying "one day" of it would make one run look like a day of runs.
  */
 export function daysSince(first: Date, now: number = Date.now()): number {
-  return Math.max(1, Math.round((now - first.getTime()) / 86_400_000));
+  return Math.max(0, Math.floor((now - first.getTime()) / 86_400_000));
 }
