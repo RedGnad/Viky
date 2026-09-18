@@ -283,3 +283,16 @@ test("the example gift says it is an example, and reads as a gift under way", ()
   assert.equal(example.durationDays, 7);
   assert.ok(example.opened && example.counting && !example.finished && !example.cancelled);
 });
+
+/**
+ * The accent marks the one action a screen is waiting for (the review list of the product structure, item 5). After
+ * the money has been taken, the gesture that carried it is done: what the screen is now waiting for is the way out,
+ * and the relecture of 18 Sep found it offered in the plain shape.
+ */
+test("once what was earned has been taken, the way out carries the accent", () => {
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
+  const block = page.slice(page.indexOf("const takenBlock"), page.indexOf("const countingBlock"));
+  assert.match(block, /href="\/cash-out" className=\{PRIMARY_BUTTON\}/, "the next step is offered in the plain shape again");
+  // And the gesture that had the accent is gone by then: taking is offered only while something is left to take.
+  assert.match(page, /const takeOffered = may\.takeTheMoney && earned > 0n;/);
+});

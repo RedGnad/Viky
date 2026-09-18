@@ -470,7 +470,9 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
     <section className={CARD} role="status">
       <p className="font-medium">{W.taken(taken.amount, whenInWords(taken.atMs), gift.giftId, taken.take)}</p>
       <p className={HELP}>{W.stillInGift(gift.earnedDisplay, gift.finished ? 0 : Math.max(0, gift.daysLeft))}</p>
-      <Link href="/cash-out" className={SECONDARY_BUTTON}>
+      {/* The money has just moved into the account, so the one thing this screen is now waiting for is the way out,
+          and it carries the accent (relecture of 18 Sep, item 5). The gesture that had it, taking, is done and gone. */}
+      <Link href="/cash-out" className={PRIMARY_BUTTON}>
         {W.sendToBank}
       </Link>
     </section>
