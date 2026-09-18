@@ -353,3 +353,26 @@ test("the Chess.com code is letters only and found whatever surrounds it", () =>
   assert.ok(!nameHasChessCode(null, "KXQPRT"));
   assert.ok(!nameHasChessCode("anything", ""), "an empty code is never found");
 });
+
+/**
+ * A button that answers nothing is a button somebody presses once and abandons. The rehearsal of 18 Sep pressed
+ * "I added it", the route answered 200, and the sentence it answered with was rendered at the far end of the page,
+ * below everything: from where the person stood, nothing happened.
+ */
+test("every gesture on a gift's page answers beside its own button, and nothing answers nowhere", () => {
+  const page = readFileSync("app/components/MilestoneGiftPage.tsx", "utf8");
+  // One answer, carrying the gesture it belongs to, rendered under that gesture and announced when it appears.
+  assert.match(page, /const \[answer, setAnswer\] = useState<\{ at: Busy; text: string; failed: boolean \} \| null>\(null\);/);
+  assert.match(page, /const answerTo = \(at: Busy\) =>/);
+  assert.match(page, /<p role="status" className=\{BODY\}>/);
+  for (const gesture of ["opening", "code", "starting", "checking", "taking"]) {
+    assert.ok(page.includes(`answerTo("${gesture}")`), `${gesture} answers where it was pressed`);
+  }
+  // Nothing is rendered at the end of the page any more: that is where the answer used to land, out of sight.
+  assert.doesNotMatch(page, /\{notice \?/);
+  // A failure always says something, whatever it was.
+  assert.match(page, /setAnswer\(\{ at: kind, text: screenMessage\(error\), failed: true \}\)/);
+  // And an outcome of a shape nobody foresaw still says something rather than nothing.
+  assert.match(page, /default:\n      return A\.failed;/);
+  assert.match(page, /outcome\.message\.trim\(\)\.length > 0 \? outcome\.message : A\.failed/);
+});

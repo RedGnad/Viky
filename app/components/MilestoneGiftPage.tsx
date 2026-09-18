@@ -46,6 +46,13 @@ function screenMessage(error: unknown): string {
   return A.failed;
 }
 
+/**
+ * What a reading says, in one sentence, whatever it answered.
+ *
+ * Every branch ends in a sentence and so does the absence of a branch: an answer of a shape nobody foresaw, or one
+ * carrying no words of its own, still says something. A button that answers nothing is a button a person presses once
+ * and then abandons, which is exactly what happened to the rehearsal of 18 Sep.
+ */
 function outcomeMessage(outcome: MilestoneOutcome, status: MilestoneStatus): string {
   switch (outcome.kind) {
     case "started":
@@ -57,7 +64,9 @@ function outcomeMessage(outcome: MilestoneOutcome, status: MilestoneStatus): str
     case "already":
       return A.outcome.already[outcome.reason as keyof typeof A.outcome.already] ?? A.failed;
     case "refused":
-      return outcome.message;
+      return outcome.message.trim().length > 0 ? outcome.message : A.failed;
+    default:
+      return A.failed;
   }
 }
 
@@ -66,8 +75,12 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
   useMoneySession();
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   const [busy, setBusy] = useState<Busy>("idle");
-  const [notice, setNotice] = useState<string | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
+  /**
+   * What the last gesture answered, and which gesture it was, so the answer appears under the button that was pressed
+   * rather than at the far end of the page. The rehearsal of 18 Sep pressed "I added it", the route answered 200, and
+   * the sentence landed below everything else, out of sight: from where the person stood, nothing happened.
+   */
+  const [answer, setAnswer] = useState<{ at: Busy; text: string; failed: boolean } | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [taken, setTaken] = useState<{ amount: string; atMs: number } | null>(null);
 
@@ -131,18 +144,31 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
 
   const run = async (kind: Busy, action: () => Promise<string | null>) => {
     setBusy(kind);
-    setProblem(null);
-    setNotice(null);
+    setAnswer(null);
     try {
       const message = await action();
-      if (message) setNotice(message);
+      // An action that answers with words says them here. One that answers by changing the screen (opening the gift,
+      // giving a code) says nothing here, because the screen itself is the answer.
+      if (message) setAnswer({ at: kind, text: message, failed: false });
       await reload?.();
     } catch (error) {
-      setProblem(screenMessage(error));
+      setAnswer({ at: kind, text: screenMessage(error), failed: true });
     } finally {
       setBusy("idle");
     }
   };
+
+  /** The answer to one gesture, under that gesture, announced as it appears. */
+  const answerTo = (at: Busy) =>
+    answer && answer.at === at ? (
+      answer.failed ? (
+        <FieldRefusal id={`gift-${at}-refused`}>{answer.text}</FieldRefusal>
+      ) : (
+        <p role="status" className={BODY}>
+          {answer.text}
+        </p>
+      )
+    ) : null;
   const open = () =>
     run("opening", async () => {
       if (!linkKey) throw new ApiError({ status: 400, code: "CLAIM_LINK_INVALID", message: G.missingKey });
@@ -185,9 +211,12 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
         )}
         <p className={status.reached || status.finished ? "font-medium" : HELP}>{outcome}</p>
         {!certificate && status.phase === "climbing" && mine && !status.accountClosed ? (
-          <button type="button" onClick={() => void check()} disabled={working} className={SECONDARY_BUTTON}>
-            {busy === "checking" ? A.checking : A.checkNow}
-          </button>
+          <>
+            <button type="button" onClick={() => void check()} disabled={working} className={SECONDARY_BUTTON}>
+              {busy === "checking" ? A.checking : A.checkNow}
+            </button>
+            {answerTo("checking")}
+          </>
         ) : null}
         <MorningMessage giftId={status.giftId} yours={mine || readerIsFunder} />
       </section>
@@ -205,9 +234,12 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
       ) : null}
 
       {address && !status.opened && !status.cancelled && linkKey ? (
-        <button type="button" onClick={() => void open()} disabled={working} className={PRIMARY_BUTTON}>
-          {busy === "opening" ? G.opening : G.openMyGift}
-        </button>
+        <>
+          <button type="button" onClick={() => void open()} disabled={working} className={PRIMARY_BUTTON}>
+            {busy === "opening" ? G.opening : G.openMyGift}
+          </button>
+          {answerTo("opening")}
+        </>
       ) : null}
 
       {/* The funder named the account, so the first reading binds it and nothing is asked of the person's own profile
@@ -222,6 +254,7 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
           <button type="button" onClick={() => void start()} disabled={working} className={PRIMARY_BUTTON}>
             {busy === "starting" ? A.addedBusy : A.startReading(source)}
           </button>
+          {answerTo("starting")}
         </section>
       ) : null}
 
@@ -235,6 +268,7 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
           <button type="button" onClick={() => void code()} disabled={working} className={PRIMARY_BUTTON}>
             {busy === "code" ? A.gettingCode : account.code ? A.newCode : A.getCode}
           </button>
+          {answerTo("code")}
         </section>
       ) : null}
 
@@ -248,6 +282,7 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
           <button type="button" onClick={() => void start()} disabled={working} className={PRIMARY_BUTTON}>
             {busy === "starting" ? A.addedBusy : A.added}
           </button>
+          {answerTo("starting")}
           <p className={HELP}>{A.removeAfter}</p>
         </section>
       ) : null}
@@ -281,6 +316,7 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
           <button type="button" onClick={() => void take()} disabled={working} className={PRIMARY_BUTTON}>
             {busy === "taking" ? A.taking : A.takeConfirm(status.earnedDisplay)}
           </button>
+          {answerTo("taking")}
           <button type="button" onClick={() => setReviewing(false)} disabled={working} className={SECONDARY_BUTTON}>
             {A.notNow}
           </button>
@@ -297,8 +333,8 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
 
       {mine || readerIsFunder ? <CheckThisReading giftId={status.giftId} /> : null}
 
-      {notice ? <p className={`${CARD} ${BODY}`}>{notice}</p> : null}
-      {problem ? <FieldRefusal id="gift-refused">{problem}</FieldRefusal> : null}
+      {/* Every gesture answers beside its own button, above. Nothing is left to say at the end of the page, which is
+          where an answer used to land, out of sight of the person who had just pressed. */}
       {readerIsFunder ? <p className={HELP}>{G.made(dateInWords(status.createdAtChain * 1_000), status.giftId)}</p> : null}
     </Shell>
   );
