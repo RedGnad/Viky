@@ -2851,3 +2851,53 @@ behind an account cannot be photographed any other way.
 - The recipient's link is read plainly first and proved second, so a link that cannot pay is answered before anything
   touches the contract. The alias is never stored: it is a key to a page carrying a date of birth and a photograph,
   and nothing ever needs to read it again, because one reading settles the whole gift.
+
+## D101, 18 Sep 2026: two ways in, and what each one does to the money
+
+- Statement: the card rail sells the chain's own coin, so every euro that has ever entered Viky arrived as MON and was
+  turned into AUSD by a swap the funder signs and pays gas for. Ramp sells `MONAD_AUSD` itself, the very coin a gift
+  holds, from 6 EUR. So there are two ways in, they coexist, and they are shown exactly as the two ways out are
+  (D96): ordered by the country the two signals agree on, never hidden, each with what it keeps, its source and the
+  date that source was read. The founder decided this on 18 Sep 2026; this entry is the money path, written before
+  any of it is coded.
+- **What each rail delivers, and what that changes.**
+
+  | | the card rail (Mercuryo) | the euro rail (Ramp) |
+  |---|---|---|
+  | what arrives | MON, the chain's own coin | AUSD, the coin a gift holds |
+  | smallest purchase | 25 EUR (their floor, D59) | 6 EUR (`minPurchaseAmountEur`, read 18 Sep 2026) |
+  | what it keeps | about 3.8 % | 0.99 % to 3.9 %, minimum 2.49 EUR, read the same day |
+  | a swap after it | yes: MON to AUSD through the exchange, quoted at `/api/fund/quote` | **none** |
+  | who pays for that swap | the funder, from their own account, in MON | nobody |
+  | MON left behind | 11 MON, which Monad requires an account to hold to call a contract at all (D53, D56) | none, and none is needed |
+
+- **The path, step by step, and it is the same path after the money lands.** The funder writes the terms, the device
+  keeps them (D74), and nothing is signed yet. They pay by card at whichever rail they chose. Then:
+  - Ramp: AUSD arrives. `nextFundingStep` sees `held >= wanted` and goes straight to making the gift. One passkey
+    signature over the EIP-3009 authorization whose nonce is the hash of the terms, our relayer submits it, the
+    escrow pulls the AUSD. No quote, no second signature, no price to move between the two.
+  - Mercuryo: MON arrives. `nextFundingStep` sees an arrival worth converting, the funder signs and sends the swap
+    themselves, keeping the 11 MON reserve, and then the same single signature makes the gift.
+  Nothing downstream changes: the same terms, the same nonce, the same contract, the same creation row written before
+  the money moves (D87).
+- **What it changes for a gift set up before the money arrives.** Nothing in what was signed, because nothing is
+  signed until the money is there: the terms live on the device and carry no rail. Three things do change, and they
+  are the work this decision opens:
+  1. The smallest gift a card payment can fund follows the rail chosen: about 6 EUR of AUSD through Ramp against
+     25 EUR through Mercuryo. The amount step's floor and the words on the check ("You pay 25 EUR by card") must come
+     from the rail, not from a constant.
+  2. The waiting screen tells the person what to set at the service they actually opened, and today it names one.
+     What arrives differs too: AUSD ends the wait at once, MON ends it at the swap.
+  3. A gift paid for at one rail and picked up later at the other is the ordinary case, not a special one: the screen
+     watches both balances, so whichever arrives, the gift is made from what is there.
+- **What it does not change.** The gift's own minimum stays the contract's 1 AUSD; the rail's floor is about what a
+  card purchase can be, not about what a gift can be. A gift funded from money already in the account touches no rail
+  at all.
+- **The one consequence worth naming.** An account funded only through Ramp holds no MON. That is enough for
+  everything Viky relays (making a gift, taking what is earned, the euro way out, sending to another Viky account),
+  and not enough for the one thing the person sends themselves: the chain's own coin to the card rail on the way out,
+  which needs gas in that same coin. Nobody is stuck with money they cannot reach, because the euro way out is
+  relayed, but somebody in a card-rail country who funded through Ramp would meet it.
+- **Not verified.** That Ramp's widget lets a real person in each of its countries buy `MONAD_AUSD` to an address
+  they paste: the asset list says it sells it, and an endpoint that lists is not a service that pays (the lesson of
+  D79). The first real purchase is what will say so, and until then no screen promises it.
