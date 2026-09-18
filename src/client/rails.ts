@@ -13,7 +13,7 @@ export type RailsWhere = Readonly<{
   fromConnection: string | null;
   fromDevice: string | null;
   waysOut: Readonly<Record<string, RailReach>>;
-  wayIn: RailReach;
+  waysIn: Readonly<Record<string, RailReach>>;
 }>;
 
 export function whereTheRailsServe(answered?: string | null): Promise<RailsWhere> {

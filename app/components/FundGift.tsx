@@ -19,7 +19,7 @@ import { checkTarget, inPlainWords, MilestoneTermsError, smallestTarget } from "
 import { whenInWords } from "@/src/display-currency";
 import { twoDecimalsDown } from "@/src/exit-steps";
 import { CONVERSION_RESERVE, nextFundingStep, paymentArrived } from "@/src/funding-step";
-import { eurosToBuy, roughlyInDollars, SUGGESTED_GIFT_DOLLARS } from "@/src/gift-amount";
+import { arrivesInDollars, eurosToBuyOn, SUGGESTED_GIFT_DOLLARS } from "@/src/gift-amount";
 import { giftNameProblem, tidyGiftName, type GiftNameProblem } from "@/src/gift-names";
 import { rememberGiftLink } from "@/src/gift-link-memory";
 import { formatAusd } from "@/src/gift-reader";
@@ -27,8 +27,8 @@ import { AmountError, dollarsToUnits } from "@/src/money";
 import { settlingTimeInWords } from "@/src/pass-schedule";
 import { forgetPendingGift, loadPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
 import { whereTheRailsServe } from "@/src/client/rails";
-import { countryInWords, type RailReach } from "@/src/rail-country";
-import { WAY_IN } from "@/src/rails";
+import { countryInWords, orderRails, type RailReach } from "@/src/rail-country";
+import { feeSentence, WAYS_IN, type WayIn } from "@/src/rails";
 import { CASH_OUT, FUND as W, MILESTONE_FUND as M } from "@/src/sentences";
 import { ChoiceList } from "../kit/ChoiceList";
 import { FieldRefusal } from "../kit/FieldRefusal";
@@ -237,8 +237,10 @@ export function FundGift() {
   // Whether an account was signed in on this page before it went: then the session closed while paying (F8), rather
   // than a page opened again with nobody signed in (F9). Stored the way React stores what an earlier render saw.
   const [hadAccount, setHadAccount] = useState(false);
-  /** What the rail that adds money says about this person's country, read live (R1). Never hides the way in. */
-  const [railIn, setRailIn] = useState<{ country: string | null; wayIn: RailReach }>({ country: null, wayIn: "unknown" });
+  /** What each rail that adds money says about this person's country, read live (R1). Never hides one. */
+  const [railIn, setRailIn] = useState<{ country: string | null; waysIn: Readonly<Record<string, RailReach>> }>({ country: null, waysIn: {} });
+  /** The way in the funder pressed, so the wait tells them what to set on the page they actually opened (D98). */
+  const [wayIn, setWayIn] = useState<WayIn>(WAYS_IN[0]);
   if (address && !hadAccount) setHadAccount(true);
   // The reader's clock, read once a minute: the settling hour is said in it.
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
@@ -318,7 +320,7 @@ export function FundGift() {
     let live = true;
     whereTheRailsServe()
       .then((answer) => {
-        if (live) setRailIn({ country: answer.country, wayIn: answer.wayIn });
+        if (live) setRailIn({ country: answer.country, waysIn: answer.waysIn });
       })
       .catch(() => {});
     return () => {
@@ -595,7 +597,7 @@ export function FundGift() {
       });
   };
 
-  const keepOnDevice = (dollars = draft.dollars) => {
+  const keepOnDevice = (dollars = draft.dollars, way: WayIn = wayIn) => {
     if (!address) return;
     setKeptOnDevice(
       savePendingGift({
@@ -608,12 +610,13 @@ export function FundGift() {
         days: draft.days,
         target: draft.target,
         ...(draft.course ? { course: draft.course, courseTitle: draft.courseTitle } : {}),
+        wayIn: way.name,
         ...(milestone && draft.standing !== null ? { cadence: draft.cadence, standing: draft.standing, standingReadAt: draft.standingReadAt } : {}),
       }),
     );
   };
 
-  const commit = async (enough: boolean, arrived: boolean) => {
+  const commit = async (enough: boolean, arrived: boolean, way: WayIn = wayIn) => {
     setProblem(null);
     if (!address) {
       go("account");
@@ -625,10 +628,11 @@ export function FundGift() {
       return;
     }
     // Written down before anything else, so a payment that outlasts the session does not lose the gift (D74).
-    keepOnDevice();
+    setWayIn(way);
+    keepOnDevice(undefined, way);
     setPhase("waiting");
     // The card service's page opens inside the tap, or the browser blocks it.
-    if (!arrived) window.open(WAY_IN.page, "_blank", "noopener,noreferrer");
+    if (!arrived) window.open(way.page, "_blank", "noopener,noreferrer");
     go("paying");
   };
 
@@ -1154,9 +1158,15 @@ export function FundGift() {
     const arrived = !enough && pending !== null && paymentArrived(pending);
     const short = !enough && !arrived && address !== undefined;
     const held = balance ?? 0n;
-    const euros = eurosToBuy(units - held);
-    const arrives = roughlyInDollars(euros);
-    const stays = Math.floor(Number(held) / 1_000_000 + arrives - Number(units) / 1_000_000);
+    // The two ways in, in the order the country puts them (R1), each with its own floor, its own fee and what it
+    // delivers. Nothing is hidden: a rail that says nothing about this country keeps its place (D98).
+    const waysIn = orderRails(WAYS_IN, railIn.waysIn);
+    const payingOn = (way: WayIn) => {
+      const euros = eurosToBuyOn(units - held, way, money.rates?.usdPerEur);
+      const arrives = euros === undefined ? undefined : arrivesInDollars(euros, way, money.rates?.usdPerEur);
+      const stays = arrives === undefined ? undefined : Math.floor(Number(held) / 1_000_000 + arrives - Number(units) / 1_000_000);
+      return { euros, arrives, stays };
+    };
     const about = money.about(units);
     // Every term the funder chose has a way back to its question; the first day is not a choice, so it has none.
     const days = length.days;
@@ -1245,25 +1255,40 @@ export function FundGift() {
           <p className={BODY}>{milestone ? M.check.fourteenDays : W.check.fourteenDays}</p>
         </section>
 
-        {short ? (
-          <section className={CARD}>
-            <h2 className={TITLE}>{W.check.paying}</h2>
-            <dl className="flex flex-col gap-[var(--space-sm)]">
-              <Line label={W.check.youPay} value={W.check.byCard(euros)} />
-              {held > 0n ? <Line label={W.check.alreadyHeld} value={formatAusd(held)} /> : null}
-              <Line label={W.check.arrives} value={W.check.aboutDollars(Math.floor(arrives))} />
-              <Line label={W.check.rows.goes} value={gift} />
-              {stays > 0 ? <Line label={W.check.staysYours} value={W.check.aboutDollars(stays)} /> : null}
-            </dl>
-            <p className={HELP}>{W.check.fee(WAY_IN.name, WAY_IN.fee)}</p>
-            <p className={HELP}>{W.check.delay(WAY_IN.name)}</p>
-            {/* The same logic as the way out (R1): the rail is asked live whether it sells where this person is, and
-                what it answers is said here rather than met as a refusal on its own page. Nothing is hidden. */}
-            {railIn.country && railIn.wayIn === "does-not" ? (
-              <p className={HELP}>{CASH_OUT.noPayInThere(WAY_IN.name, countryInWords(railIn.country) ?? railIn.country.toUpperCase())}</p>
-            ) : null}
-          </section>
-        ) : null}
+        {short
+          ? waysIn.map((way: WayIn, index: number) => {
+              const { euros, arrives, stays } = payingOn(way);
+              return (
+                <section key={way.name} className={CARD}>
+                  <h2 className={TITLE}>{W.check.payingWith(way.name)}</h2>
+                  <dl className="flex flex-col gap-[var(--space-sm)]">
+                    <Line label={W.check.youPay} value={euros === undefined ? W.check.byCardUnknown : W.check.byCard(euros)} />
+                    {held > 0n ? <Line label={W.check.alreadyHeld} value={formatAusd(held)} /> : null}
+                    {arrives !== undefined ? <Line label={W.check.arrives} value={W.check.aboutDollars(Math.floor(arrives))} /> : null}
+                    <Line label={W.check.rows.goes} value={gift} />
+                    {stays !== undefined && stays > 0 ? <Line label={W.check.staysYours} value={W.check.aboutDollars(stays)} /> : null}
+                  </dl>
+                  <p className={HELP}>{feeSentence(way)}.</p>
+                  <p className={HELP}>{way.arrives === "gift" ? W.check.nothingToSwap : W.check.swapAfter}</p>
+                  <p className={HELP}>{W.check.smallest(way.name, way.smallestEur)}</p>
+                  <p className={HELP}>{CASH_OUT.sourceLine(way.source, way.read)}</p>
+                  {/* The same rule as the way out (R1): what that service says about this country today, read live,
+                      and nothing said at all about one that could not be read. */}
+                  {railIn.country && railIn.waysIn[way.name] === "does-not" ? (
+                    <p className={HELP}>{CASH_OUT.noPayInThere(way.name, countryInWords(railIn.country) ?? railIn.country.toUpperCase())}</p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => void commit(false, false, way)}
+                    disabled={Boolean(address) && balance === null}
+                    className={index === 0 ? PRIMARY_BUTTON : SECONDARY_BUTTON}
+                  >
+                    {euros === undefined ? W.check.payWith(way.name) : W.check.payWithFor(way.name, euros)}
+                  </button>
+                </section>
+              );
+            })
+          : null}
         {arrived ? (
           <section className={CARD}>
             <h2 className={TITLE}>{W.check.paying}</h2>
@@ -1274,9 +1299,12 @@ export function FundGift() {
         {enough ? <p className={HELP}>{W.check.fromAccount(formatAusd(held))}</p> : null}
 
         <div className="flex flex-col gap-[var(--tap-gap)]">
-          <button type="button" onClick={() => void commit(enough, arrived)} disabled={Boolean(address) && balance === null} className={PRIMARY_BUTTON}>
-            {!address ? W.continue : enough ? W.check.putIt(gift, recipient) : arrived ? W.check.useArrived : W.check.pay(euros)}
-          </button>
+          {/* Money already there, or a payment that landed, is one action; paying is on the card of the way in. */}
+          {!address || enough || arrived ? (
+            <button type="button" onClick={() => void commit(enough, arrived)} disabled={Boolean(address) && balance === null} className={PRIMARY_BUTTON}>
+              {!address ? W.continue : enough ? W.check.putIt(gift, recipient) : W.check.useArrived}
+            </button>
+          ) : null}
           <Link href="/" className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
             {W.notNow}
           </Link>
@@ -1304,7 +1332,7 @@ export function FundGift() {
       );
     }
     if (phase === "short" && arrivedFigure) {
-      const more = eurosToBuy(units - held);
+      const more = eurosToBuyOn(units - held, wayIn, money.rates?.usdPerEur) ?? wayIn.smallestEur;
       const makeIt = twoDecimalsDown(held, 6);
       return (
         <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
@@ -1312,7 +1340,7 @@ export function FundGift() {
           <button
             type="button"
             onClick={() => {
-              window.open(WAY_IN.page, "_blank", "noopener,noreferrer");
+              window.open(wayIn.page, "_blank", "noopener,noreferrer");
               setPhase("waiting");
             }}
             className={PRIMARY_BUTTON}
@@ -1370,7 +1398,7 @@ export function FundGift() {
         </Shell>
       );
     }
-    const toBuy = balance === null ? undefined : eurosToBuy(units - held);
+    const toBuy = balance === null ? undefined : eurosToBuyOn(units - held, wayIn, money.rates?.usdPerEur);
     const start = address.slice(0, 4);
     const end = address.slice(-4);
     return (
@@ -1381,14 +1409,16 @@ export function FundGift() {
         </section>
         {problem ? <FieldRefusal id="waiting-refused">{problem}</FieldRefusal> : null}
         <section className={CARD}>
-          <p className="font-medium">{W.waiting.setThese(WAY_IN.name)}</p>
+          <p className="font-medium">{W.waiting.setThese(wayIn.name)}</p>
           <ul className={`flex flex-col gap-[var(--space-xs)] ${BODY}`}>
-            {W.waiting.settings(toBuy).map((line) => (
+            {W.waiting.settings(toBuy, wayIn.delivers).map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>
-          <p className={HELP}>{W.waiting.theirWords(WAY_IN.name)}</p>
-          <p className="font-medium">{W.waiting.codeLabel(WAY_IN.name)}</p>
+          <p className={HELP}>{W.waiting.theirWords(wayIn.name, wayIn.delivers)}</p>
+          {/* What the wait ends with: money a gift can hold at once, or a step the person confirms (D98). */}
+          <p className={HELP}>{wayIn.arrives === "gift" ? W.waiting.thenNothing : W.waiting.thenChanged}</p>
+          <p className="font-medium">{W.waiting.codeLabel(wayIn.name)}</p>
           <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--background)] p-[var(--space-md)] text-[length:var(--type-help)] tabular-nums">{address}</p>
           <button type="button" onClick={() => copy("code", address)} className={SECONDARY_BUTTON}>
             {copied === "code" ? W.waiting.copied : W.waiting.copy}
@@ -1397,10 +1427,11 @@ export function FundGift() {
           <p className={HELP}>{W.waiting.startsEnds(start, end)}</p>
         </section>
         <p className={BODY}>
-          {W.check.delay(WAY_IN.name)} {keptOnDevice ? W.waiting.leave : W.waiting.stay}
+          {wayIn.takes ? `${W.check.delay(wayIn.name, wayIn.takes)} ` : ""}
+          {keptOnDevice ? W.waiting.leave : W.waiting.stay}
         </p>
-        <a href={WAY_IN.page} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON}>
-          {W.waiting.openAgain(WAY_IN.name)}
+        <a href={wayIn.page} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON}>
+          {W.waiting.openAgain(wayIn.name)}
         </a>
         <div className="flex flex-col gap-[var(--space-xs)]">
           <button type="button" onClick={differentGift} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>

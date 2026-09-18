@@ -465,6 +465,7 @@ async function runIn(
     } catch (error) {
       const where = session.rows.length > before ? `after "${session.lastShot}"` : "before its first capture";
       const message = error instanceof Error ? error.message.split("\n")[0] : String(error);
+      if (process.env.CAPTURE_WHY === "1") console.error(error);
       await session.miss(scenario.name, where, message);
     }
   }

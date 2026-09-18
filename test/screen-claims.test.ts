@@ -139,7 +139,8 @@ test("a payment that outlasts the session is used where it sits, and the waiting
   const fund = readFileSync("app/components/FundGift.tsx", "utf8");
   assert.doesNotMatch(fund, /address!/, "a closed session leaves no account to read");
   // The terms are written down before the rail opens, and forgotten once the gift is made.
-  assert.ok(fund.indexOf("savePendingGift(") > 0 && fund.indexOf("savePendingGift(") < fund.indexOf("window.open(WAY_IN.page"));
+  // Since D98 the rail is the one the funder pressed, so the page opened is that rail's own.
+  assert.ok(fund.indexOf("savePendingGift(") > 0 && fund.indexOf("savePendingGift(") < fund.indexOf('window.open(way.page'));
   const give = fund.slice(fund.indexOf("const give = useCallback"), fund.indexOf("// While the payment page is open"));
   assert.match(give, /forgetPendingGift\(\)/);
 });

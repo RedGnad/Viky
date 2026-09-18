@@ -1,3 +1,5 @@
+import type { WayIn } from "./rails";
+
 /**
  * What a gift should be worth, and what a funder must pay for it.
  *
@@ -12,7 +14,7 @@
  * cost, so it weighs four times as heavily on the smallest payment as on the largest.
  */
 
-/** The smallest card payment the way in accepts (D20). Nothing smaller can start a gift at all. */
+/** The smallest card payment the rail that sells the chain's coin accepts (D20). */
 export const SMALLEST_CARD_PAYMENT_EUR = 25;
 /**
  * What the funder's screen offers before they choose: the round dollar amount one smallest card payment covers, so
@@ -44,6 +46,27 @@ export function roughlyInDollars(euros: number): number {
 }
 
 /**
+ * The same question for a rail that sells what a gift already holds (D98): no coin to swap, so no reserve is left
+ * behind and nothing is lost to a second price. What the person pays, less what that rail keeps, becomes dollars at
+ * the day's euro rate. Their fee is the larger of their share and their minimum, exactly as the way out's is.
+ */
+export function giftCoinDollars(euros: number, way: WayIn, usdPerEur: number): number {
+  const fee = Math.max((euros * way.fee.percent) / 100, way.fee.minimum);
+  const left = euros - fee;
+  if (left <= 0 || !(usdPerEur > 0)) return 0;
+  return Math.round(left * usdPerEur * 100) / 100;
+}
+
+/**
+ * What a card payment is worth inside Viky on either rail. The rate matters only to the one that sells what a gift
+ * holds; the other's figures are the measurement of 14 Sep 2026 and need none.
+ */
+export function arrivesInDollars(euros: number, way: WayIn, usdPerEur: number | undefined): number | undefined {
+  if (way.arrives === "chain") return roughlyInDollars(euros);
+  return usdPerEur === undefined ? undefined : giftCoinDollars(euros, way, usdPerEur);
+}
+
+/**
  * How many whole euros a funder must pay on the card rail to cover what their account is short of (D72).
  *
  * The defect it answers: the screen suggested $50, the funder bought the rail's smallest 25 EUR, received about
@@ -56,4 +79,25 @@ export function eurosToBuy(shortfallUnits: bigint): number {
   const dollars = Number(shortfallUnits) / 1_000_000;
   const coins = dollars / DOLLARS_PER_COIN + UNSPENDABLE_COINS;
   return Math.max(SMALLEST_CARD_PAYMENT_EUR, Math.ceil((coins / COIN_PER_EURO) * RATE_MARGIN));
+}
+
+/**
+ * How many whole euros to pay on the way in the funder chose (D98).
+ *
+ * The rail that sells the chain's coin keeps the model above: its coin moves daily, and the tenth added for the rate
+ * is what stops a payment falling short. The rail that sells what a gift holds needs no such margin, because what it
+ * sells does not move against the dollar: the euros are the dollars at the day's rate, plus that rail's own fee,
+ * which is the larger of their share and their minimum, rounded up to the whole euro and never under their floor.
+ * Whatever a payment leaves over stays in the person's own account for the next gift.
+ */
+export function eurosToBuyOn(shortfallUnits: bigint, way: WayIn, usdPerEur: number | undefined): number | undefined {
+  if (shortfallUnits <= 0n) return 0;
+  if (way.arrives === "chain") return Math.max(way.smallestEur, eurosToBuy(shortfallUnits));
+  if (!(usdPerEur !== undefined && usdPerEur > 0)) return undefined;
+  const dollars = Number(shortfallUnits) / 1_000_000;
+  const euros = dollars / usdPerEur;
+  // Their fee both ways round: the share is taken out of what is paid, so the amount grows by 1/(1 - share).
+  const withShare = way.fee.percent > 0 ? euros / (1 - way.fee.percent / 100) : euros;
+  const withMinimum = euros + way.fee.minimum;
+  return Math.max(way.smallestEur, Math.ceil(Math.max(withShare, withMinimum)));
 }
