@@ -43,8 +43,8 @@ export async function JudgesEarlyGifts() {
             </dd>
             <dt className={MUTED}>Days not settled yet</dt>
             <dd className={HELP}>
-              {gift.waitingDays}. {gift.finished ? "The gift is finished on the contract." : "The gift is still running on the contract."} Still to go back:{" "}
-              {gift.refundableDisplay}.
+              {gift.waitingDays}. {gift.finished ? "The gift is finished on the contract." : "The gift is still running on the contract."} Marked to go back
+              and not sent yet: {gift.refundableDisplay}, which is what the contract has taken out of the gift for missed days and not yet paid to the funder.
             </dd>
             <dt className={MUTED}>Where it is held</dt>
             <dd className="[overflow-wrap:anywhere] text-[length:var(--type-help)]">
