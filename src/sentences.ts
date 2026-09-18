@@ -577,7 +577,10 @@ export const LINK_PREVIEW = {
   someone: (amount: string) => `Someone put ${amount} in your name`,
   unknown: "A gift on Viky",
   asYouGo: "It becomes yours as you go.",
+  /** A gift that pays at a target, when the condition behind it could not be read: true of every milestone. */
+  whenYouReachIt: "It becomes yours when you reach it.",
   fromCondition: (name: string) => `${name}. It becomes yours as you go.`,
+  fromMilestone: (name: string) => `${name}. It becomes yours when you reach it.`,
 } as const;
 
 /**

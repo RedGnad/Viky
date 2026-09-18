@@ -273,6 +273,7 @@ export const CHESS_RATING: Condition = {
     connect: "Opened. Connect Chess.com to start.",
     doIt: "Play; nothing else. Viky reads your Chess.com rating every day.",
     eachDay: "the first reading at the rating",
+    preview: "A chess rating on Chess.com: the gift is yours when you reach it.",
   },
 };
 
@@ -320,6 +321,7 @@ export const COURSERA_CERTIFICATE: Condition = {
     connect: "Opened. Share the Coursera certificate's link when you have it.",
     doIt: "Finish the course. When the certificate is yours, share its link here.",
     eachDay: "the day the certificate is shared",
+    preview: "A Coursera certificate: the gift is yours the day you share it.",
   },
 };
 
