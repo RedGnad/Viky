@@ -28,14 +28,24 @@ import {
  * script reads the Safe back and refuses to call it good on anything but its own answers.
  */
 
-const THRESHOLD = 2;
+/**
+ * How many of the owners have to sign. Two, unless the run says otherwise: one signature is a key, not a Safe, and
+ * the shape this was built for is two of three, so a key lost leaves the other two able to act (the founder's
+ * redesign of 19 Sep 2026, which takes his personal hardware wallet out of the project entirely).
+ */
+function thresholdFromEnv(): number {
+  const raw = process.env.SAFE_THRESHOLD?.trim();
+  const threshold = raw ? Number(raw) : 2;
+  if (!Number.isSafeInteger(threshold) || threshold < 2) throw new Error(`A Safe of ${threshold} signature is a key with extra steps; SAFE_THRESHOLD is two or more`);
+  return threshold;
+}
 
-function ownersFromEnv(): readonly Address[] {
+function ownersFromEnv(threshold: number): readonly Address[] {
   const raw = process.env.SAFE_OWNERS?.trim();
-  if (!raw) throw new Error('SAFE_OWNERS is required, as SAFE_OWNERS="0xfirst,0xsecond"');
+  if (!raw) throw new Error('SAFE_OWNERS is required, as SAFE_OWNERS="0xfirst,0xsecond,0xthird"');
   const owners = raw.split(",").map((value) => getAddress(value.trim()));
-  if (owners.length !== THRESHOLD) throw new Error(`This Safe is ${THRESHOLD} of ${THRESHOLD}, so it takes exactly ${THRESHOLD} owners, and ${owners.length} were given`);
-  return checkOwners(owners, THRESHOLD);
+  if (owners.length < threshold) throw new Error(`A Safe of ${threshold} signatures needs at least ${threshold} owners, and ${owners.length} were given`);
+  return checkOwners(owners, threshold);
 }
 
 async function main() {
@@ -53,8 +63,9 @@ async function main() {
     if (!code || code === "0x") throw new Error(`Refusing to run: no code at the ${name}, ${address}, on this chain`);
   }
 
-  const owners = ownersFromEnv();
-  const initializer = safeSetupData(owners, THRESHOLD);
+  const threshold = thresholdFromEnv();
+  const owners = ownersFromEnv(threshold);
+  const initializer = safeSetupData(owners, threshold);
   const saltNonce = process.env.SAFE_SALT_NONCE?.trim() ? BigInt(process.env.SAFE_SALT_NONCE.trim()) : BigInt(Date.now());
   const proxyCreationCode = (await publicClient.readContract({ address: SAFE_PROXY_FACTORY, abi: safeProxyFactoryAbi, functionName: "proxyCreationCode" })) as Hex;
   const safe = predictSafeAddress({ proxyCreationCode, initializer, saltNonce });
@@ -70,7 +81,7 @@ async function main() {
         chainId: MONAD_CHAIN_ID,
         safeWillBe: safe,
         owners,
-        threshold: THRESHOLD,
+        threshold,
         version: SAFE_VERSION,
         saltNonce: saltNonce.toString(),
         call: { from, to: SAFE_PROXY_FACTORY, value: "0", gas: gas.toString(), data },
@@ -97,10 +108,10 @@ async function main() {
   const code = await publicClient.getCode({ address: safe });
   if (!code || code === "0x") throw new Error(`The transaction succeeded but ${safe} holds no code`);
   const read = (functionName: "VERSION" | "getOwners" | "getThreshold" | "nonce") => publicClient.readContract({ address: safe, abi: safeAbi, functionName });
-  const [version, onChainOwners, threshold, nonce] = await Promise.all([read("VERSION"), read("getOwners"), read("getThreshold"), read("nonce")]);
-  console.log(JSON.stringify({ step: "created", safe, txHash: hash, block: receipt.blockNumber.toString(), version, owners: onChainOwners, threshold: Number(threshold), nonce: Number(nonce) }, null, 2));
+  const [version, onChainOwners, onChainThreshold, nonce] = await Promise.all([read("VERSION"), read("getOwners"), read("getThreshold"), read("nonce")]);
+  console.log(JSON.stringify({ step: "created", safe, txHash: hash, block: receipt.blockNumber.toString(), version, owners: onChainOwners, threshold: Number(onChainThreshold), nonce: Number(nonce) }, null, 2));
   if (String(version) !== SAFE_VERSION) throw new Error(`The Safe says version ${version}, not ${SAFE_VERSION}`);
-  if (Number(threshold) !== THRESHOLD) throw new Error(`The Safe asks for ${threshold} signatures, not ${THRESHOLD}`);
+  if (Number(onChainThreshold) !== threshold) throw new Error(`The Safe asks for ${onChainThreshold} signatures, not ${threshold}`);
   const got = (onChainOwners as readonly Address[]).map((owner) => getAddress(owner)).sort();
   if (got.join(",") !== [...owners].sort().join(",")) throw new Error(`The Safe holds ${got.join(", ")}, not the owners that were asked for`);
   console.log(`The Safe is ${safe}. Hand the four contracts over with SAFE_ADDRESS=${safe} pnpm safe:handover.`);
