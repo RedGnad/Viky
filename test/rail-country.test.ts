@@ -133,7 +133,9 @@ test("the screen orders and asks, and never hides a way out (R1)", () => {
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
   // Both ways are always mapped; only their order changes, and only once an answer exists.
   assert.match(screen, /const ordered = where && !where\.ask \? orderWaysOut\(WAYS_OUT, where\.waysOut\) : WAYS_OUT;/);
-  assert.match(screen, /\{ordered\.map\(\(way, index\) => \(/);
+  // Without an index since 19 Sep 2026: nothing on a card depends on its rank any more, because the accent stopped
+  // marking whichever one the country put first.
+  assert.match(screen, /\{ordered\.map\(\(way\) => \{/);
   assert.doesNotMatch(screen, /WAYS_OUT\.filter|ordered\.filter/, "nothing filters a way out off the screen");
   // The one question, with the two signals as its two answers.
   assert.match(screen, /\{W\.whereIsYours\}/);

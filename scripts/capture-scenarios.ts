@@ -643,7 +643,10 @@ export const SCENARIOS: Scenario[] = [
       const waiting = gift({ youAreTheFunder: true, opened: false, startDay: 0, endDay: 0 });
       await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card({ role: "funder", opened: false, counting: false, creditedDays: 0, missedDays: 0, days: [] })] } }), "GET /api/gifts/mine");
       await s.api("GET", GIFT_READ, () => ({ status: 200, body: waiting }), "GET /api/gift/[id]");
-      await s.api("POST", `/api/gift/${GIFT_ID}/link`, () => ({ status: 200, body: { claimUrl: `https://viky.cash/g/${GIFT_ID}?t=${CLAIM_TOKEN}` } }), "POST /api/gift/[id]/link");
+      // The origin of the walk, never a host written here: the route builds the link from the host it answers on, and
+      // a stub naming another one puts a link in the picture that this run could not have produced. Read beside the
+      // screen that creates a gift, the two looked like two different origins in one journey, and only the stub was.
+      await s.api("POST", `/api/gift/${GIFT_ID}/link`, () => ({ status: 200, body: { claimUrl: `${s.base}/g/${GIFT_ID}?t=${CLAIM_TOKEN}` } }), "POST /api/gift/[id]/link");
       await s.signIn();
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
@@ -1012,7 +1015,8 @@ function withdrawal(): Scenario[] {
         await s.shot("withdrawal", "step 3, the code pasted", "On the ready screen: paste the code Ramp gives", { scrollTo: "Step 3 of 3: Send it" });
 
         await s.click("Send $9.99 to Ramp");
-        await s.text("Send $9.99 to Ramp. This cannot be undone.");
+        // The review says the amount as its figure now, and the sentence carries the rest (the founder, 19 Sep 2026).
+        await s.text("To Ramp. This cannot be undone.");
         await s.shot("withdrawal", "the review before sending", "After pasting: Send $9.99 to Ramp", { scrollTo: "This cannot be undone." });
 
         await s.click(exact("Send"));

@@ -838,6 +838,11 @@ export const HELP = {
 export const CASH_OUT = {
   title: "Take your money out",
   yourMoney: "Your money",
+  /**
+   * The balance while a gesture is being confirmed. It is where you are, not what you are deciding, so it is said in
+   * the meta voice and the amount being sent takes the display size (the founder, 19 Sep 2026).
+   */
+  yourMoneyNow: (held: string) => `Your money: ${held}`,
   rateNote: (about: string) => about,
   readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,
   readyLabel: (name: string) => `Ready to send to ${name}`,
@@ -894,6 +899,14 @@ export const CASH_OUT = {
    * construction (`readyFor` floors to two decimals), so it is said as the money it is on a dollar rail and as a
    * fraction of what the service buys on the other: never as a number with nothing to hold on to (D104).
    */
+  /**
+   * What each way out would leave of everything the account holds, which is what the two cards are compared by since
+   * the accent stopped sitting on whichever the country put first (the founder, 19 Sep 2026). An estimate, and said
+   * as an estimate: the rate's own day above it, "about" on the figure, and the swap's own price is not in it, so
+   * nothing here is stated as what will arrive.
+   */
+  netIfAll: (all: string, rateDate: string) => `If you sent all ${all}, at the rate of ${rateDate}`,
+  netFigure: (net: string, currency: string) => `about ${net} ${currency}`,
   staysDollars: "Less than $0.01 stays in your account.",
   staysQuantity: (name: string) => `Less than 0.01 of what ${name} buys stays in your account.`,
   step2: (name: string) => `Step 2 of 3: Place your order with ${name}`,
@@ -918,7 +931,13 @@ export const CASH_OUT = {
     shape: (name: string) => `That is not a code ${name} gives. It starts with 0x and is 42 characters long.`,
     own: (name: string) => `That is your own code. Paste the one ${name} shows you to send to.`,
   },
-  confirm: (amount: string, name: string) => `Send ${amount} to ${name}. This cannot be undone.`,
+  /**
+   * The review before sending: the star of the screen is what the gesture moves, so the amount is the figure, at
+   * display size, and this sentence carries what is left to know (the founder, 19 Sep 2026). D104's rule stands, the
+   * money still leads what a person decides on; it leads as a figure now rather than inside the sentence, and it is
+   * said once on the screen rather than twice.
+   */
+  confirmTo: (name: string) => `To ${name}. This cannot be undone.`,
   confirmCard: "Sending costs a small amount of what you hold, said afterwards with its figure.",
   codeYouPasted: "The code you pasted:",
   sendButton: "Send",

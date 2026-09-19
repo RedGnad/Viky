@@ -73,6 +73,28 @@ export function feeApplied(worth: number, fee: PublishedFee): { fee: number; net
   return { fee: rounded, net: Math.max(0, Math.round((worth - rounded) * 100) / 100) };
 }
 
+/**
+ * What a payout service would leave of everything the account holds, in the currency it pays in, so the two ways out
+ * can be compared by what reaches the person rather than by which card the country put first (the founder, 19 Sep
+ * 2026, after the accent was found sitting on the order).
+ *
+ * It is an estimate and the screen says so in the two ways the house says it: "about", and the rate's own day. It
+ * converts at the published rate and applies the published fee, and it knows nothing of the price the swap will get,
+ * which is asked only once an amount is chosen. Nothing at all is answered when no rate was read, because a figure
+ * with no rate behind it would be a number nobody read.
+ */
+export function netOfEverything(
+  units: bigint,
+  fee: PublishedFee,
+  rates: { date: string; eurPerUsd: number } | undefined,
+): { net: number; currency: string; rateDate: string } | undefined {
+  if (!rates || units <= 0n) return undefined;
+  // Every payout service we carry publishes its fee in euros, and the conversion Viky reads is euros for dollars.
+  if (fee.currency !== "EUR") return undefined;
+  const euros = (Number(units) / 1_000_000) * rates.eurPerUsd;
+  return { net: feeApplied(euros, fee).net, currency: fee.currency, rateDate: rates.date };
+}
+
 /** "$9.995586", as the quote route writes its floor, cut to the number the person will be able to order. */
 export function floorToOrder(shown: string): string {
   const cleaned = shown.replace(/[^0-9.]/g, "");
