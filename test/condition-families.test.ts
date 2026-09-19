@@ -84,3 +84,11 @@ test("the screen takes the families from the register and writes none of its own
   // One radio group whichever shape is drawn, so the selection stays single across sections.
   assert.equal(screen.match(/name="condition"/g)?.length, 2, "both branches name the same group");
 });
+
+test("a condition that turned live is offered once, never beside its own preview", () => {
+  const sheet = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
+  // The preview door exists for what is wired and not live yet. Once a condition turns live it comes from
+  // liveConditions(), so whoever draws the list must drop it from whatever the door still names: on 19 Sep 2026 the
+  // assistant drew "Reach a chess rating on Chess.com" twice, two radios with the same words and the same help.
+  assert.match(sheet, /preview\.map\([\s\S]{0,120}!c!?\.live/);
+});

@@ -26,6 +26,8 @@
   --divider: #E0DCEB;
   /* What a sheet lays over the screen behind it: the ink, thinned, so the card is still read through it. */
   --scrim: rgba(30, 22, 51, 0.55);
+  /* The fill of a button that is not the one action: quiet, and identified by its outline (K, rule 10). */
+  --tonal: #E8E3F4;
 
   /* The characters' own colours, never text and never a background (brief, section 5). */
   --character-1: #FF7F8E;
@@ -44,26 +46,36 @@
   --space-xxl: 32px;
   --space-xxxl: 48px;
 
-  /* Four levels and no more: money, title, body, help. */
-  --type-money: 32px;
-  --type-money-leading: 40px;
-  --type-title: 22px;
-  --type-title-leading: 28px;
+  /* Four levels and no more, all on one scale: a major third, 1.25, from 16 (K, rule 6). */
+  --type-money: 31px;
+  --type-money-leading: 38px;
+  --type-title: 20px;
+  --type-title-leading: 26px;
   --type-body: 16px;
   --type-body-leading: 24px;
-  --type-help: 14px;
-  --type-help-leading: 20px;
+  --type-help: 13px;
+  --type-help-leading: 18px;
+
+  /* The third voice: the small lines that say where you are and when something happened (K, Ramp section 2). */
+  --type-meta: 13px;
+  --type-meta-leading: 18px;
+  --type-meta-tracking: 1px;
 
   /* The one display title a destination opens with, and the mark at the top of every screen, both in Fredoka. */
-  --type-display: 48px;
-  --type-display-leading: 52px;
-  --type-mark: 28px;
-  --type-mark-leading: 32px;
+  --type-display: 49px;
+  --type-display-leading: 54px;
+  --type-display-tracking: -1px;
+  --type-mark: 25px;
+  --type-mark-leading: 30px;
 
-  /* The round end of Material's shape scale, because the world is round. */
-  --radius-control: 16px;
+  /* Letter spacing by role: tight on display, nothing on the body, open on a label (K, rule 5). */
+  --tracking-body: 0;
+  --tracking-label: 0.5px;
+
+  /* One rhyme, the capsule: a button and a character are capsules, and every four-cornered thing shares one radius. */
+  --radius-control: 28px;
   --radius-card: 28px;
-  --radius-sheet: 48px;
+  --radius-sheet: 28px;
 
   /* The one number every source agrees on, and the gap that satisfies Apple's bezelled case too. */
   --tap-target: 48px;
@@ -112,8 +124,9 @@
 /* The display title grows where the screen is wide. */
 @media (min-width: 840px) {
   :root {
-    --type-display: 88px;
-    --type-display-leading: 92px;
+    --type-display: 76px;
+    --type-display-leading: 80px;
+    --type-display-tracking: -2px;
   }
 }
 
@@ -133,6 +146,7 @@
     --control-border: #F3F0FA;
     --divider: #352C52;
     --scrim: rgba(8, 6, 15, 0.7);
+    --tonal: #332A5E;
     --card-border: #352C52;
     --character-1: #FF8C98;
     --character-2: #6DBDFB;
@@ -158,6 +172,7 @@
   --control-border: #F3F0FA;
   --divider: #352C52;
   --scrim: rgba(8, 6, 15, 0.7);
+  --tonal: #332A5E;
   --card-border: #352C52;
   --character-1: #FF8C98;
   --character-2: #6DBDFB;
@@ -176,6 +191,8 @@ body {
   font-family: var(--font-text);
   font-size: var(--type-body);
   line-height: var(--type-body-leading);
+  /* Prose is left alone: the roles that space their letters say so themselves (K, rule 5). */
+  letter-spacing: var(--tracking-body);
   /*
    * The device insets, which exist only because the viewport is declared with viewport-fit=cover in
    * app/layout.tsx. Always with a fallback, because what they resolve to without cover is documented

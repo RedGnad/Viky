@@ -67,6 +67,8 @@ export type Row = {
   size: string;
   appearance: string;
   file: string;
+  /** The same screen blurred, for the squint test (K, rule 11). */
+  squint: string;
   full?: string;
   path: string;
   how: string;
@@ -232,7 +234,7 @@ export class Session {
     // `getAnimations` never sees it: a picture taken in the meantime shows a figure that was true for 200ms and is
     // false of the account. The count says when it has arrived, and the run waits for it.
     await this.page
-      .waitForFunction(COUNT_SETTLED, undefined, { timeout: 8_000 })
+      .waitForFunction(COUNT_SETTLED, undefined, { timeout: 15_000 })
       .catch(() => undefined);
     await this.page.waitForTimeout(700);
   }
@@ -274,14 +276,37 @@ export class Session {
       night: window.matchMedia("(prefers-color-scheme: dark)").matches,
     }));
     const name = `${slug(journey)}--${slug(state)}--${this.size.name}--${this.appearance.name}`;
+    // Last of all, and out loud: a figure still on its way to its value is a picture that says an account holds
+    // something it does not, and a missing capture is worth more than a lying one. Under four browsers at once on
+    // 19 Sep this fired where a single run never did, and the picture kept $0.11 of an account holding $2.00.
+    if (!(await this.page.evaluate(COUNT_SETTLED))) {
+      await this.page.waitForFunction(COUNT_SETTLED, undefined, { timeout: 15_000 }).catch(() => {
+        throw new Error(`${name}: an amount was still counting`);
+      });
+      await this.page.waitForTimeout(400);
+    }
     const partial = resolve(this.folder, `.${name}.partial.png`);
     await this.page.screenshot({ path: partial });
+    // And still settled after it: a count that started while the shutter was open would leave the same lying figure.
+    if (!(await this.page.evaluate(COUNT_SETTLED))) throw new Error(`${name}: an amount started counting as it was taken`);
     const image = pngSize(readFileSync(partial));
     if (`${image.width}x${image.height}` !== this.size.name) throw new Error(`${name} came out ${image.width}x${image.height}`);
     const seenAppearance = seen.night ? "night" : "day";
     if (seenAppearance !== this.appearance.name) throw new Error(`${name} was seen in ${seenAppearance}`);
     const file = `${name}.png`;
     renameSync(partial, resolve(this.folder, file));
+
+    /**
+     * The squint test, taken rather than imagined (K, rule 11, 19 Sep 2026): the same screen blurred, so a reader can
+     * see whether one thing dominates and whether the action survives. Six pixels at 390 is about the blur a squint
+     * gives; the picture is taken through the page's own filter and then taken off, so nothing else is touched.
+     */
+    const blurred = `${name}--squint.png`;
+    await this.page.evaluate(`document.documentElement.style.filter = "blur(6px)"`);
+    await this.page.waitForTimeout(120);
+    await this.page.screenshot({ path: resolve(this.folder, blurred) });
+    await this.page.evaluate(`document.documentElement.style.filter = ""`);
+    await this.page.waitForTimeout(120);
 
     let full: string | undefined;
     if (seen.tall) {
@@ -312,6 +337,7 @@ export class Session {
       size: this.size.name,
       appearance: this.appearance.name,
       file,
+      squint: blurred,
       full,
       path,
       how,
@@ -548,7 +574,8 @@ function manifest(base: string, taken: string, commit: string, chromiumVersion: 
       const file = (size: string, appearance: string) => {
         const row = mine.find((candidate) => candidate.size === size && candidate.appearance === appearance);
         if (!row) return "not captured";
-        return row.full ? `\`${row.file}\`, \`${row.full}\`` : `\`${row.file}\``;
+        const shots = [row.file, row.squint, ...(row.full ? [row.full] : [])];
+        return shots.map((shot) => `\`${shot}\``).join(", ");
       };
       lines.push(
         `### ${state}`,

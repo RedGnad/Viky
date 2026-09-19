@@ -27,7 +27,9 @@ export const screenOf = (row: Words): string => {
   // A task that walks steps keeps one address, and the person still meets several screens: the screen says which one
   // it is ("Step 2 of 5", GOV.UK's caption), so the caption is what separates them. Steps 2 and 3 of the way out
   // stand on one screen, and the first caption on the screen is the one that names it.
-  const step = /Step (\d+) of (\d+)/.exec(row.text.replace(/\n/g, " "));
+  // Read whatever case the screen draws it in: the caption carries the meta voice, which is capitals (K, Ramp
+  // section 2), and `innerText` gives back what the transform made of it.
+  const step = /step (\d+) of (\d+)/i.exec(row.text.replace(/\n/g, " "));
   return step ? `${route} step ${step[1]}/${step[2]}` : route;
 };
 

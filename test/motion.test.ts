@@ -137,7 +137,17 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
  */
 test("the amount says when it has arrived, and every capture run waits for it", () => {
   const motion = readFileSync("app/kit/Motion.tsx", "utf8");
-  assert.match(motion, /data-count-settled=\{shown === to \? "true" : "false"\}/, "nothing says when the count is over");
+  assert.match(motion, /data-count-settled=\{settled \? "true" : "false"\}/, "nothing says when the count is over");
+  // Three things make that answer true, and the run of 19 Sep proved that the first two alone are not enough: the
+  // figure equalled its value before the count began, the attribute said "arrived", and the picture was taken in the
+  // middle of the count ($1.15 of an account holding $2.00).
+  assert.match(motion, /const settled = plan\.decided && \(plan\.amountAt === null \|\| from === to \|\| counted === count\)/);
+  assert.match(motion, /const UNDECIDED: Plan = \{ \.\.\.NOTHING, decided: false \}/, "an arrival that has not read the device yet must say so");
+  assert.match(motion, /useState<Plan>\(UNDECIDED\)/, "the arrival starts undecided, not settled");
+  assert.match(motion, /setCounted\(count\)/, "the count that finished is what says it is over, by name");
+  // Every path out of deciding answers, including the one where nothing plays: a silent return would leave whoever
+  // waits for the count waiting until their timeout, on every screen that holds an amount.
+  assert.equal(motion.match(/decided: true/g)?.length, 3, "each decision says so: none, nothing to play, a plan");
   for (const script of ["scripts/capture-connected.ts", "scripts/review-capture.ts", "scripts/capture-looks.ts"]) {
     assert.match(readFileSync(script, "utf8"), /data-count-settled/, `${script} photographs a screen mid-count`);
   }

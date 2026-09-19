@@ -41,12 +41,32 @@ export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 }
  * Line heights follow Material's guidance: about 1.2x for display and title, about 1.5x for body and label.
  * Body at 1.5 also means the layout already holds what WCAG 1.4.12 asks it to survive.
  */
+/**
+ * One scale, a major third (1.25) on a base of 16: 13, 16, 20, 25, 31, then 39 and 49 in compact and 61 and 76 in
+ * expanded (K, rule 6, 19 Sep 2026). Before this, the steps between our four sizes were 1.14, 1.37, 1.45 and 1.5:
+ * four different jumps, which is why the hierarchy read as four unrelated decisions rather than one voice.
+ *
+ * Leading keeps what rule 4 fixed: 1.5 on the body, about 1.3 on a title, about 1.2 on a figure.
+ */
 export const TYPE = {
-  money: { size: 32, lineHeight: 40, weight: 600 },
-  title: { size: 22, lineHeight: 28, weight: 600 },
+  money: { size: 31, lineHeight: 38, weight: 600 },
+  title: { size: 20, lineHeight: 26, weight: 600 },
   body: { size: 16, lineHeight: 24, weight: 400 },
-  help: { size: 14, lineHeight: 20, weight: 400 },
+  help: { size: 13, lineHeight: 18, weight: 400 },
 } as const;
+
+/**
+ * The third voice (K, Ramp section 2): the small lines that say where you are and when something happened, in the
+ * text face, at the smallest step, in capitals, letter-spaced so capitals stay readable. No new family: Ramp gets
+ * its three voices from three roles, not three fonts.
+ */
+export const META_TYPE = { size: 13, lineHeight: 18, weight: 500, tracking: 1, transform: "uppercase" } as const;
+
+/**
+ * Letter spacing, by role (K, rule 5; Material 3 sets one per role, display tight and label open). Measured in
+ * pixels because that is how the rule was written and how a capture can check it.
+ */
+export const TRACKING = { display: { compact: -1, expanded: -2 }, body: 0, label: 0.5, meta: 1 } as const;
 
 /**
  * 48, which is the only number every source agrees on: web.dev and Material both say 48, Apple's Buttons
@@ -66,7 +86,12 @@ export const TAP_GAP = 12;
  * and 48 are all published steps (large, extra large, extra extra large), so the world can be blobby without
  * a single invented radius.
  */
-export const RADIUS = { control: 16, card: 28, sheet: 48, full: 9999 } as const;
+/**
+ * One rhyme, the capsule (K, rule 14): a button and a character are capsules, and everything with four corners takes
+ * the same single radius instead of the three it had (16, 28, 48). Material's extra large step, 28, is the one kept,
+ * because it is the card's own and the one the look was drawn on.
+ */
+export const RADIUS = { control: 28, card: 28, sheet: 28, full: 9999 } as const;
 
 /**
  * The widest a line of prose may be. Material says 40 to 60 characters, web.dev 45 to 75 with "the
@@ -153,6 +178,13 @@ export const COLOURS: Record<Appearance, Record<string, string>> = {
     controlBorder: "#1E1633",
     /** A card's edge and a rule: 1.23:1, a hairline that groups and never identifies a control. */
     divider: "#E0DCEB",
+    /**
+     * The fill of a button that is not the one action (K, rule 10: no ghost buttons; Material 3's filled tonal).
+     * Measured 19 Sep 2026: 1.15:1 against the ground and 1.26:1 against a surface, so it reads as filled on both,
+     * with the ink at 13.73:1 and the muted ink at 5.68:1 on it. What identifies it as a control is still its outline
+     * (WCAG 1.4.11), which is why a fill this quiet is allowed to be quiet.
+     */
+    tonal: "#E8E3F4",
   },
   dark: {
     background: "#151026",
@@ -173,6 +205,8 @@ export const COLOURS: Record<Appearance, Record<string, string>> = {
     /** Light at night: 16.45:1. */
     controlBorder: "#F3F0FA",
     divider: "#352C52",
+    /** The same rule after dark: 1.44:1 on the ground, 1.29:1 on a surface, ink 11.42:1, muted ink 5.87:1. */
+    tonal: "#332A5E",
   },
 };
 
@@ -225,8 +259,9 @@ export const RELIEF: Record<Appearance, string> = { light: "#1E1633", dark: "#08
  * to hold the promise without running past three lines on a phone.
  */
 export const DISPLAY_TYPE = {
-  display: { compact: { size: 48, lineHeight: 52 }, expanded: { size: 88, lineHeight: 92 } },
-  mark: { size: 28, lineHeight: 32 },
+  // On the scale of rule 6: 49 is its compact display step and 76 its expanded one, where 48 and 88 were off it.
+  display: { compact: { size: 49, lineHeight: 54 }, expanded: { size: 76, lineHeight: 80 } },
+  mark: { size: 25, lineHeight: 30 },
   titleWeight: 600,
 } as const;
 

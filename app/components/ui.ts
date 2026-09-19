@@ -29,13 +29,31 @@ const RELIEF = "control-relief";
  * a faded accent is a fourth colour at night (a brown on the indigo ground), so a button that cannot be pressed yet is
  * a surface with muted words and no relief, and it takes the accent the moment it can.
  */
-export const PRIMARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} bg-[var(--accent)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] font-medium text-[var(--on-accent)] disabled:border-[var(--card-border)] disabled:bg-[var(--surface)] disabled:text-[var(--muted)] disabled:[box-shadow:none]`;
+export const PRIMARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} bg-[var(--accent)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] font-medium tracking-[var(--tracking-label)] text-[var(--on-accent)] disabled:border-[var(--card-border)] disabled:bg-[var(--surface)] disabled:text-[var(--muted)] disabled:[box-shadow:none]`;
 
-/** Everything else a person may do from here. */
-export const SECONDARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] disabled:opacity-50`;
+/**
+ * Everything else a person may do from here: filled with a quiet tone rather than left hollow (K, rule 10, 19 Sep
+ * 2026: an outline alone is neither seen nor pressed; Material 3's filled tonal is the published shape for medium
+ * emphasis). The ink outline stays, because that is what identifies a control (WCAG 1.4.11), and the accent stays on
+ * the one action a screen is asking for.
+ */
+export const SECONDARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] tracking-[var(--tracking-label)] disabled:border-[var(--card-border)] disabled:bg-[var(--surface)] disabled:text-[var(--muted)] disabled:[box-shadow:none]`;
+
+/**
+ * What a control that cannot be pressed looks like, and it is the same answer for all three: it gives its fill back
+ * and stands off the ground, which is the only difference a person can see once every button is filled. Under the
+ * first version of the tonal button, "Check now" (live) and "Tell me each morning" (dead) were the same capsule at a
+ * different opacity, and at a squint they were one pair of identical pills.
+ */
 
 /** A secondary action that sits beside others rather than filling the width. */
-export const INLINE_BUTTON = `${TAP} ${FOCUS} rounded-full ${OUTLINE} ${RELIEF} px-[var(--space-lg)] py-[var(--space-sm)] text-[length:var(--type-help)] disabled:opacity-50`;
+export const INLINE_BUTTON = `${TAP} ${FOCUS} rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-lg)] py-[var(--space-sm)] text-[length:var(--type-help)] tracking-[var(--tracking-label)] disabled:border-[var(--card-border)] disabled:bg-[var(--surface)] disabled:text-[var(--muted)] disabled:[box-shadow:none]`;
+
+/**
+ * The third voice (K, Ramp section 2): the small lines that say where you are and when something happened. The text
+ * face at the smallest step, in capitals, spaced so capitals stay readable. No new family, and never a sentence.
+ */
+export const META = "text-[length:var(--type-meta)] leading-[var(--type-meta-leading)] tracking-[var(--type-meta-tracking)] font-medium uppercase text-[var(--muted)]";
 
 /**
  * A box that groups: a surface with a hairline edge and no relief, because a card groups words and is not a control
@@ -62,7 +80,7 @@ export const HELP = "text-[length:var(--type-help)] leading-[var(--type-help-lea
  * or a button (structure of 17 Sep, section 12, item 7).
  */
 export const DISPLAY =
-  "text-[length:var(--type-display)] leading-[var(--type-display-leading)] font-[family-name:var(--font-title)] [font-weight:var(--font-title-weight)]";
+  "text-[length:var(--type-display)] leading-[var(--type-display-leading)] tracking-[var(--type-display-tracking)] font-[family-name:var(--font-title)] [font-weight:var(--font-title-weight)]";
 
 /** The mark at the top of every screen, the same face at a size that is not a title. */
 export const MARK =
