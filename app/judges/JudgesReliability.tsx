@@ -6,6 +6,20 @@ const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
 
 const day = (at: Date) => at.toISOString().slice(0, 10);
 
+/** A delay in the words a person uses, from seconds, without ever rounding a late run down to nothing. */
+function delay(seconds: number): string {
+  if (seconds < 60) return `${seconds} ${seconds === 1 ? "second" : "seconds"}`;
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+}
+
+/** How late the runs of one plan actually began, which is the figure a pass mark would hide. */
+function after(plan: { runs: number; soonestSeconds: number; latestSeconds: number }): string {
+  if (plan.runs === 0) return "";
+  if (plan.runs === 1 || plan.soonestSeconds === plan.latestSeconds) return `It began ${delay(plan.latestSeconds)} after its minute.`;
+  return `They began between ${delay(plan.soonestSeconds)} and ${delay(plan.latestSeconds)} after that minute.`;
+}
+
 /**
  * The reliability figures, every one of them from a query against the journal each pass writes (U2, point 3), with
  * the refusals each reading met beside them (the audit of 18 Sep, gap a: a refusal that was not ours left no trace,
@@ -38,6 +52,12 @@ export async function JudgesReliability() {
         {elapsed === 0 ? "today" : `${elapsed} ${elapsed === 1 ? "day" : "days"} ago`}. Passes before that day left no
         trace, so they are not counted here, and nothing has been filled in for them.
       </p>
+      <p className={MUTED}>
+        The hour, and not the minute, is what a run is held to here, because it is what the platform undertakes: on
+        this plan Vercel &quot;may invoke these cron jobs at any point within the specified hour to help distribute load
+        across all accounts&quot; (their documentation, read 19 September 2026). How long after its minute each pass
+        actually began is said below, so the promise being kept never hides the delay.
+      </p>
       <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[18rem_1fr]">
         {since.plans.map((plan) => (
           <div key={plan.plan} className="contents">
@@ -45,9 +65,9 @@ export async function JudgesReliability() {
               {plan.plan === "counting" ? "Readings pass, just after midnight" : "Settling pass, after the catch-up window"}
             </dt>
             <dd className={HELP}>
-              {plan.runs} {plan.runs === 1 ? "run" : "runs"}, {plan.onTime} within a quarter of an hour of the scheduled
-              minute{elapsed === 0 ? "" : `, over ${elapsed} ${elapsed === 1 ? "day" : "days"}`}. A run that never
-              happened writes nothing, so a missing run shows here as a run fewer, never as a late one.
+              {plan.runs} {plan.runs === 1 ? "run" : "runs"}, {plan.onTime} inside the hour the schedule names
+              {elapsed === 0 ? "" : `, over ${elapsed} ${elapsed === 1 ? "day" : "days"}`}. {after(plan)} A run that
+              never happened writes nothing, so a missing run shows here as a run fewer, never as a late one.
             </dd>
           </div>
         ))}
