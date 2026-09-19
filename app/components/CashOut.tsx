@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { getAddress, isAddress, type Hex } from "viem";
 import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
@@ -10,16 +10,16 @@ import { quoteWayOut, takeTheWayOut, type WayOutQuote } from "@/src/client/exit"
 import { sendOwnMoney } from "@/src/client/gift";
 import { readCoinBalance, sendMon } from "@/src/client/onchain";
 import { AUSD, coinAt, COINS, exactly, isNative, USDC, type Coin } from "@/src/coins";
-import { whenInWords } from "@/src/display-currency";
+import { rateDateInWords, whenInWords } from "@/src/display-currency";
 import { exitAmount, type ExitAmount } from "@/src/exit-amount";
-import { dollarsToChange, feeApplied, floorToOrder, readyFor, twoDecimalsDown, type Ready } from "@/src/exit-steps";
+import { dollarsToChange, feeApplied, floorToOrder, netOfEverything, readyFor, twoDecimalsDown, type Ready } from "@/src/exit-steps";
 import { formatAusd } from "@/src/gift-reader";
 import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords, orderWaysOut } from "@/src/rail-country";
 import { feeSentence, WAYS_OUT, type WayOut } from "@/src/rails";
 import { CASH_OUT as W } from "@/src/sentences";
 import { AccountPanel } from "./AccountPanel";
-import {BODY, CARD, FIELD, HELP, INLINE_BUTTON, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE} from "./ui";
+import { AMOUNT_IN_TITLE, BODY, CARD, FIELD, HELP, INLINE_BUTTON, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
 
 /**
  * The way out, rebuilt from docs/design/flows.md (states W1 to W13) on 17 Sep 2026.
@@ -169,6 +169,9 @@ export function CashOut() {
   /** What a person reads (dollars) and what the service asks for (the exact quantity), for one way out (D104). */
   const amountOf = (way: WayOut, ready: Ready): ExitAmount =>
     exitAmount({ number: ready.number, native: isNative(coinOf(way)), worth: worthUnits });
+
+  /** What each way out would leave of everything the account holds, at the rate read today (src/exit-steps.ts). */
+  const netOf = (way: WayOut) => netOfEverything(ausd, way.fee, money.rates);
 
   const changing = dollarsToChange(dollars, ausd, W.refusals);
   const maxToChange = twoDecimalsDown(ausd, AUSD.decimals);
@@ -477,11 +480,23 @@ export function CashOut() {
             </div>
           </section>
         ) : null}
-        {/* One accent surface per screen: the accent is on the first way offered, the others carry the same action in the
-            plain shape. Which one comes first is the order's business (R1), never a hidden or a missing card. */}
-        {ordered.map((way, index) => (
+        {/* No way out carries the accent. The order is by country (D96, R1), so the accent on the first card marked the
+            order and read as a recommendation of it: a person would take the emphasised card for the better one, and
+            the screen has no opinion about which is better. Both cards carry the same neutral button. */}
+        {ordered.map((way) => {
+          const net = netOf(way);
+          return (
           <section key={way.name} className={CARD}>
             <h2 className={TITLE}>{way.name}</h2>
+            {/* What reaches the person, which is what the two cards are compared by. An estimate of the published
+                fee on the published rate, so it is marked "about" and carries the rate's own day, and it says
+                nothing at all when no rate answered rather than naming a figure nobody read. */}
+            {net ? (
+              <>
+                <p className={HELP}>{W.netIfAll(formatAusd(ausd), rateDateInWords(net.rateDate))}</p>
+                <p className={MONEY}>{W.netFigure(net.net.toFixed(2), net.currency)}</p>
+              </>
+            ) : null}
             <p className={BODY}>{way.where}</p>
             <p className={BODY}>
               {feeSentence(way)}, and pays {way.pays}.
@@ -495,12 +510,13 @@ export function CashOut() {
             {/* What that service itself says about this country today, read live. A rail that could not be read says
                 nothing rather than something false, and the card stays where it is either way. */}
             {countryNow && where?.waysOut[way.name] === "does-not" ? <p className={HELP}>{W.noPayoutThere(way.name, countryInWords(countryNow) ?? countryNow.toUpperCase())}</p> : null}
-            <button type="button" onClick={() => start(way)} disabled={holdings === null || ausd === 0n} className={index === 0 ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
+            <button type="button" onClick={() => start(way)} disabled={holdings === null || ausd === 0n} className={SECONDARY_BUTTON}>
               {way.coin === USDC.address ? W.chooseBank : W.chooseCard}
             </button>
             {holdings !== null && ausd === 0n ? <p className={HELP}>{W.nothingToSend}</p> : null}
           </section>
-        ))}
+          );
+        })}
         <button type="button" onClick={() => { setProblem(null); setOwnAmount(ownMax); setStage("own"); }} disabled={holdings === null || dollarsHeld === 0n} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
           {W.anotherAccount}
         </button>
@@ -611,6 +627,13 @@ export function CashOut() {
     );
   }
 
+  /**
+   * The balance, while a gesture waits to be confirmed: one line in the meta voice, in place of the card that sets it
+   * at the size of an amount. On the review of 19 Sep the whole balance, $20.99, was the largest figure on a screen
+   * that sends $9.99, and a squint read it as the subject.
+   */
+  const balanceInMeta = <p className={META}>{W.yourMoneyNow(formatAusd(dollarsHeld))}</p>;
+
   if ((stage === "ready" || stage === "confirm" || stage === "sending" || stage === "sent") && chosen) {
     const ready = readyOf(chosen);
     const coin = coinOf(chosen);
@@ -627,7 +650,7 @@ export function CashOut() {
     const sendable = deposit.trim() !== "" && problemWithCode === null;
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
-        {moneyCard}
+        {stage === "confirm" || stage === "sending" ? balanceInMeta : moneyCard}
         {stage === "sent" && sent ? (
           <section className={CARD}>
             <p className={BODY}>{W.sent(sent.amount, sent.name, sent.when, sent.reference)}</p>
@@ -640,8 +663,14 @@ export function CashOut() {
           </section>
         ) : ready ? (
           <section className={CARD}>
-            <p className={BODY}>{W.ready(amount!.lead)}</p>
-            <p className={HELP}>{isNative(coin) ? W.staysQuantity(chosen.name) : W.staysDollars}</p>
+            {/* What is ready, and what the two decimals leave behind: read while the person is placing the order. Once
+                they are confirming, the amount is the figure below and these two lines would say it a second time. */}
+            {stage === "ready" ? (
+              <>
+                <p className={BODY}>{W.ready(amount!.lead)}</p>
+                <p className={HELP}>{isNative(coin) ? W.staysQuantity(chosen.name) : W.staysDollars}</p>
+              </>
+            ) : null}
             {/* What the screen is waiting for: a code that could be sent to. Until then, sending is not the live action. */}
 
             {stage === "ready" ? (
@@ -693,7 +722,13 @@ export function CashOut() {
             ) : null}
             {stage === "confirm" || stage === "sending" ? (
               <>
-                <p className={BODY}>{W.confirm(amount!.lead, chosen.name)}</p>
+                {/* The star of a review is what the gesture moves (the founder, 19 Sep 2026): the amount at display
+                    size, the rest in one sentence under it, and the account's own balance in the meta voice above,
+                    because it is where you are and not what you are deciding. */}
+                <p className={`money-display ${AMOUNT_IN_TITLE}`} style={{ "--amount-chars": amount!.lead.length } as CSSProperties}>
+                  {amount!.lead}
+                </p>
+                <p className={BODY}>{W.confirmTo(chosen.name)}</p>
                 {exactLine}
                 {isNative(coin) ? <p className={HELP}>{W.confirmCard}</p> : null}
                 <p className={HELP}>{W.codeYouPasted}</p>

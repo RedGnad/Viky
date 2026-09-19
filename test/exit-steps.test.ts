@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { AUSD, MON, USDC } from "../src/coins";
-import { dollarsToChange, feeApplied, floorToOrder, readyFor, twoDecimalsDown, unitsOfTwoDecimals } from "../src/exit-steps";
+import { dollarsToChange, feeApplied, floorToOrder, netOfEverything, readyFor, twoDecimalsDown, unitsOfTwoDecimals } from "../src/exit-steps";
 import { CONVERSION_RESERVE } from "../src/funding-step";
 import { WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT } from "../src/rails";
 import { CASH_OUT } from "../src/sentences";
@@ -79,6 +79,20 @@ test("the fee on the review is the one that applies, and the net is what reaches
   assert.deepEqual(feeApplied(1, WAY_OUT_EURO.fee), { fee: 1.99, net: 0 });
 });
 
+test("each way out says what would reach the person, and says nothing without a rate", () => {
+  const rates = { date: "2026-09-18", eurPerUsd: 0.86 };
+  // $20.99 is 18.05 EUR at that rate; Ramp keeps 0.99 % of it, which is 0.18, under its 1.99 minimum.
+  const ramp = netOfEverything(20_990_000n, WAY_OUT_EURO.fee, rates);
+  assert.deepEqual(ramp, { net: 16.06, currency: "EUR", rateDate: "2026-09-18" });
+  // The two ways out can now be compared by what reaches the person, which is the whole point of the figure.
+  const card = netOfEverything(20_990_000n, WAY_OUT_CARD.fee, rates);
+  assert.ok(card && card.net < ramp!.net, "the card rail keeps more of it, and the cards say so");
+  // Without a rate, nothing at all: a figure with no rate behind it is a number nobody read.
+  assert.equal(netOfEverything(20_990_000n, WAY_OUT_EURO.fee, undefined), undefined);
+  // And nothing on an empty account, where there is nothing to send and no comparison to make.
+  assert.equal(netOfEverything(0n, WAY_OUT_EURO.fee, rates), undefined);
+});
+
 test("the floor the quote shows is cut to the number that can be ordered", () => {
   assert.equal(floorToOrder("$9.995586"), "9.99");
   assert.equal(floorToOrder("$10"), "10.00");
@@ -92,8 +106,12 @@ test("the floor the quote shows is cut to the number that can be ordered", () =>
  */
 test("the way out shows one accent surface at a time, on the action it is waiting for (S4)", () => {
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
-  // The base: the first way offered carries the accent, the others the same action in the plain shape.
-  assert.match(screen, /className=\{index === 0 \? PRIMARY_BUTTON : SECONDARY_BUTTON\}/);
+  // The base: no way out carries the accent at all (the founder, 19 Sep 2026). The order is by country (D96), so an
+  // accent on the first card marked the order and was read as a recommendation of it. What is compared instead is the
+  // net each one would leave, which is the figure on the card.
+  assert.doesNotMatch(screen, /className=\{index === 0 \? PRIMARY_BUTTON/, "the accent is back on whichever card came first");
+  assert.match(screen, /onClick=\{\(\) => start\(way\)\}[^>]*className=\{SECONDARY_BUTTON\}/, "both ways out carry the same neutral button");
+  assert.match(screen, /const net = netOf\(way\);/, "the cards no longer say what each would leave");
   // Steps 2 and 3 share a screen: placing the order leads until a code can be sent to, and then sending does.
   assert.match(screen, /const sendable = deposit\.trim\(\) !== "" && problemWithCode === null;/);
   assert.match(screen, /className=\{sendable \? SECONDARY_BUTTON : PRIMARY_BUTTON\}/, "the order button steps back");

@@ -375,9 +375,12 @@ export class Session {
     if (!(await signedIn.isVisible().catch(() => false))) {
       await openTheDoor(this.page);
       // Signing in leaves the You page as it is; creating an account lands on Home. Either says the account is there.
+      // On Home it is the money's own heading, which is drawn for an account and for nobody else: it was the "Offer a
+      // gift" link until D110 replaced the assistant with a card, and a scenario that made an account then waited its
+      // forty seconds out on a screen that was perfectly fine.
       await Promise.race([
         signedIn.waitFor({ state: "visible", timeout: 40_000 }),
-        this.page.getByRole("link", { name: "Offer a gift" }).first().waitFor({ state: "visible", timeout: 40_000 }),
+        this.page.getByText("In your account").first().waitFor({ state: "visible", timeout: 40_000 }),
       ]);
     }
     await this.page.getByRole("link", { name: "Home", exact: true }).first().click();
@@ -516,7 +519,10 @@ async function runIn(
     await session.budgetSignIn();
     await session.goto("/me");
     await openTheDoor(page);
-    await page.getByRole("link", { name: "Offer a gift" }).first().waitFor({ state: "visible", timeout: 40_000 });
+    // What proves the account exists, read on the page the door was opened from. It used to be Home's "Offer a gift"
+    // link, which D110 replaced with a card filled in place: a single scenario then waited forty seconds for a link
+    // that is not there any more, and every one of them missed.
+    await page.getByText("Signed in on this device.").first().waitFor({ state: "visible", timeout: 40_000 });
   }
 
   console.log(`\n${size.name} ${appearance.name}`);

@@ -42,8 +42,11 @@ test("with no price, no dollar figure is invented", () => {
 test("every sentence of the way out prints the amount it is given, and adds no symbol of its own", () => {
   const bank = exitAmount({ number: "9.99", native: false }).lead;
   const card = exitAmount({ number: "138.43", native: true, worth: 3_240_000n }).lead;
-  assert.equal(CASH_OUT.confirm(bank, "Ramp"), "Send $9.99 to Ramp. This cannot be undone.");
-  assert.equal(CASH_OUT.confirm(card, "Mercuryo"), "Send about $3.24 to Mercuryo. This cannot be undone.");
+  // The review before sending is the one screen where the amount is not inside the sentence: it is the figure above
+  // it, at display size, because the star of a review is what the gesture moves (the founder, 19 Sep 2026). D104 is
+  // untouched by that: the figure is still `exitAmount().lead`, dollars first and the quantity never read as money.
+  assert.equal(CASH_OUT.confirmTo("Ramp"), "To Ramp. This cannot be undone.");
+  assert.doesNotMatch(CASH_OUT.confirmTo("Mercuryo"), /\d/, "the sentence beside the figure names no amount of its own");
   assert.equal(
     CASH_OUT.sent(card, "Mercuryo", "18 Sep 2026 at 9:15 AM", "7599b203"),
     "Sent about $3.24 to Mercuryo on 18 Sep 2026 at 9:15 AM. Reference: 7599b203.",
@@ -56,7 +59,7 @@ test("every sentence of the way out prints the amount it is given, and adds no s
   assert.equal(CASH_OUT.closedWhere(bank, "Ramp"), "You were at step 2 of 3: $9.99 is ready to send to Ramp.");
   assert.equal(CASH_OUT.readyLine("Ramp", bank), "$9.99 of it is ready to send to Ramp.");
   // Doubling a symbol is what a sentence adding its own would do to an amount that already carries one.
-  for (const said of [CASH_OUT.confirm(bank, "Ramp"), CASH_OUT.sent(bank, "Ramp", "now", "r"), CASH_OUT.ready(bank)]) {
+  for (const said of [CASH_OUT.sending(bank, "Ramp"), CASH_OUT.sent(bank, "Ramp", "now", "r"), CASH_OUT.ready(bank)]) {
     assert.doesNotMatch(said, /\$\$/);
   }
 });
