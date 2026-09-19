@@ -653,6 +653,15 @@ export const SCENARIOS: Scenario[] = [
       await s.click("Get the link again");
       await s.text(/no longer opens this gift/, 30_000);
       await s.shot("donor", "a new link, and the old one dead", "On the funder's own gift page: Get the link again");
+
+      // And the other way out of a gift nobody opened: taking it back, which the contract always allowed and no
+      // screen offered until 19 Sep 2026. The reading before it is what is photographed; nothing is sent.
+      await s.click("Take this gift back");
+      await s.text(/This cannot be undone/, 30_000);
+      // Photographed where the person is looking after the press, not from the top of the page: the card carries an
+      // irreversible decision and opens at the foot of a long page, so what matters is that the whole of it, escape
+      // included, is on the screen once it has opened (ui review, 19 Sep 2026).
+      await s.shot("donor", "taking the gift back, before confirming", "On the funder's own gift page: Take this gift back", { scrollTo: /This cannot be undone/ });
     },
   },
 

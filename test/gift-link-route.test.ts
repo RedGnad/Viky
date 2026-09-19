@@ -1,12 +1,13 @@
-// A link again, asked of the route (gift 1000001, 19 Sep 2026). The two things it must never do are refuse the
-// funder and answer anybody else, and both are decided before the chain is read, which is why they run here with a
-// database and no network.
+// The funder's two gestures on a gift nobody has opened: a link again, and taking it back (gift 1000001,
+// 19 Sep 2026). What both routes must never do is refuse the funder or answer anybody else, and that is decided
+// before the chain is read, which is why these run with a database and no network.
 
 import assert from "node:assert/strict";
 import test, { after, before } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { privateKeyToAccount } from "viem/accounts";
 import { ACCOUNT_AUTH_COOKIE_NAME, createAccountAuthChallenge, issueAccountAuthSession } from "../src/account-auth-server";
+import { POST as cancelPost } from "../app/api/gift/[id]/cancel/route";
 import { POST as linkPost } from "../app/api/gift/[id]/link/route";
 import { configureGiftStore, ensureGiftSchema, loadGiftForClaim, newClaimToken, saveGift } from "../src/gift-store";
 import type { SqlExecutor } from "../src/proof-session-store";
@@ -29,9 +30,9 @@ async function cookieFor(account: typeof FUNDER): Promise<string> {
   return `${ACCOUNT_AUTH_COOKIE_NAME}=${session.token}`;
 }
 
-function post(id: string, cookie?: string, from = "10.0.0.1"): { request: Request; context: { params: Promise<{ id: string }> } } {
+function post(id: string, cookie?: string, from = "10.0.0.1", what = "link"): { request: Request; context: { params: Promise<{ id: string }> } } {
   return {
-    request: new Request(`${ORIGIN}/api/gift/${id}/link`, {
+    request: new Request(`${ORIGIN}/api/gift/${id}/${what}`, {
       method: "POST",
       headers: { origin: ORIGIN, host: "viky.test", "content-type": "application/json", "x-forwarded-for": from, ...(cookie ? { cookie } : {}) },
       body: "{}",
@@ -95,4 +96,30 @@ test("a gift number that is not one is refused before anything is read", async (
   const { request, context } = post("../../etc", await cookieFor(FUNDER), "10.0.0.4");
   const response = await linkPost(request, context);
   assert.equal(response.status, 400);
+});
+
+test("nobody signed in takes nothing back", async () => {
+  const { request, context } = post("7", undefined, "10.0.1.1", "cancel");
+  assert.equal((await cancelPost(request, context)).status, 401);
+});
+
+test("another account cannot take back a gift it did not make", async () => {
+  const { request, context } = post("7", await cookieFor(STRANGER), "10.0.1.2", "cancel");
+  const response = await cancelPost(request, context);
+  assert.equal(response.status, 403);
+  const body = (await response.json()) as { code?: string; error?: string };
+  assert.equal(body.code, "NOT_FUNDER");
+  assert.doesNotMatch(String(body.error), /\$|25/, "nothing about the gift itself");
+});
+
+test("a gift that does not exist cannot be taken back, and its funder learns nothing else", async () => {
+  const { request, context } = post("404405", await cookieFor(FUNDER), "10.0.1.3", "cancel");
+  const response = await cancelPost(request, context);
+  assert.equal(response.status, 404);
+  assert.equal(((await response.json()) as { code?: string }).code, "UNKNOWN_GIFT");
+});
+
+test("a gift number that is not one is refused before the relayer is ever asked", async () => {
+  const { request, context } = post("0x1", await cookieFor(FUNDER), "10.0.1.4", "cancel");
+  assert.equal((await cancelPost(request, context)).status, 400);
 });

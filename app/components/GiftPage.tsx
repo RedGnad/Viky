@@ -21,6 +21,7 @@ import { Arrival } from "../kit/Motion";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { GiftCard } from "../kit/GiftCard";
 import { LinkAgain } from "../kit/LinkAgain";
+import { TakeItBack } from "../kit/TakeItBack";
 import { MorningMessage } from "../kit/MorningMessage";
 import { gesturesFor, notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
 import { Notice } from "../kit/Notice";
@@ -454,6 +455,12 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
    */
   const linkAgain = may.copyTheLink && !gift.opened ? <LinkAgain giftId={gift.giftId} recipientName={gift.names?.recipientName ?? null} /> : null;
 
+  /**
+   * Taking it back, the funder's own way out of a gift nobody opened. Offered under the link, because the two belong
+   * to the same moment: the link has not reached anybody, or it has and nothing came of it.
+   */
+  const takeItBack = readerIsFunder && !gift.opened && !gift.cancelled ? <TakeItBack giftId={gift.giftId} amountDisplay={gift.amountDisplay} recipientName={gift.names?.recipientName ?? null} onTakenBack={reload} /> : null;
+
   const takenBlock = taken ? (
     <section className={CARD} role="status">
       <p className="font-medium">{W.taken(taken.amount, whenInWords(taken.atMs), gift.giftId, taken.take)}</p>
@@ -531,6 +538,7 @@ function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; l
       {takenBlock}
       {takeBlock}
       {linkAgain}
+      {takeItBack}
       {notice ? (
         <Notice role="status">
           <span>{notice}</span>

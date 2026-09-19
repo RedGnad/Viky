@@ -3039,3 +3039,25 @@ behind an account cannot be photographed any other way.
 - What this does not do: it does not protect anybody from a contract that would still accept a hundred thousand. A
   funder who signed terms by hand, outside our screens, would be bounded by the contract and not by us. That is the
   price of holding the ceiling off chain, and it is the right price while the number is still being chosen.
+
+## D108, 19 Sep 2026: the funder takes a gift back themselves, and the relayer pays for the gesture
+
+- Statement: a gift nobody has opened can be taken back from its own page, by the account that made it. The whole
+  amount comes back at once, the link stops working, and the fourteen day wait is no longer the only way out
+  (gift 1000001, where the funder had neither the link nor a way to close it).
+- **Why this one call is not relayed like everything else.** `cancel(giftId)` checks `msg.sender == g.funder` on both
+  contracts, and neither has a signed intent for it. Every other move in the product is a signature the relayer
+  carries, so a person's account holds nothing of the chain's own coin, by design. This gesture cannot be carried, so
+  the account has to send it, and it cannot.
+- What we chose: `POST /api/gift/[id]/cancel` reads the gift, refuses everything the contract would refuse, then the
+  relayer sends that account exactly what its own transaction will cost, and hands back the call for the browser to
+  send with its own key. Monad charges the limit that is declared, so what is sent is the declared limit at today's
+  price and a third again, under a hard ceiling of 0.05 MON per ask. The dust stays in the account afterwards.
+- What it costs us: about a hundredth of a MON per gift taken back, from the relayer, for a gesture only a funder of a
+  gift nobody opened can ask for. Rate limited like a relay, and refused the moment the gift is opened, cancelled or
+  settled.
+- The alternative we did not take: redeploying both contracts with a signed cancellation. It would keep the relayer's
+  coin where it is, and cost a migration of live gifts to new contracts, which is a far larger risk than a hundredth
+  of a MON.
+- Irreversible, so it is built like every irreversible gesture here: the amount before, in the same words the
+  contract will pay, and the amount with its date after.

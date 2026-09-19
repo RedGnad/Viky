@@ -393,6 +393,26 @@ export const GIFT_PAGE = {
   gettingLink: "Making a new link",
   linkAgainDone: "Here is the new link. The one you had before no longer opens this gift.",
   linkAgainFailed: "The link could not be made just now. Nothing was changed: the link you had still works.",
+
+  /**
+   * Taking a gift back before anybody opened it. The contract has always allowed it and no screen offered it, so a
+   * funder who never sent the link waited fourteen days (gift 1000001, 19 Sep 2026). Irreversible, so the amount is
+   * said before and after, with the date after, and the link's death is said in the same breath.
+   */
+  takeBack: "Take this gift back",
+  /**
+   * Whose gift it is, on the card itself: on a phone the decision sits at the foot of a long page, and the name at
+   * the top of it is three screens away (ui review, 19 Sep 2026).
+   */
+  takeBackFor: (recipient: string | null) => (recipient ? `Take back the gift for ${recipient}` : "Take this gift back"),
+  /** Straight away, because the contract sends it inside the same call, and the screen waits for that call to settle. */
+  takeBackReview: (amount: string) => `${amount} comes back to your account straight away. This cannot be undone.`,
+  takeBackAndLink: "Its link stops working, and nobody can open it after this.",
+  takeBackConfirm: (amount: string) => `Take back ${amount}`,
+  takingBack: "Taking it back",
+  takenBack: (amount: string, when: string) => `${amount} came back to your account on ${when}.`,
+  takenBackLink: "The link no longer opens it, and nothing is left in the gift.",
+  takeBackFailed: "That did not go through, and nothing was changed. The gift is where it was.",
   shareLink: "Share",
   shareLinkText: (recipient: string | null) => (recipient ? `${recipient}, this is for you.` : "This is for you."),
   copyRefused: "Your browser would not let us copy it. Press and hold the code, then choose Copy.",
