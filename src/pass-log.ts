@@ -91,33 +91,58 @@ export async function recordPass(pass: NewPass): Promise<void> {
 }
 
 /**
- * How far after its scheduled minute a run may start and still count as kept. Our choice, not the platform's: a cron
- * fires within a minute or so of its schedule and can be delayed further under load, so a quarter of an hour is wide
- * enough to forgive that delay and far too narrow for a missed slot to pass as a kept one.
+ * How far after its scheduled minute a run may start and still count as kept. **The platform's own rule, not ours.**
+ *
+ * It was a quarter of an hour, chosen on the belief that "a cron fires within a minute or so of its schedule". That
+ * belief was wrong for the plan this runs on, and the page built on it accused us of something we had not done: on
+ * 19 Sep 2026 the journal showed the settling pass as 0 runs of 2 on time, while both had run exactly as the platform
+ * promises. Vercel's own documentation, read the same day: "Vercel may invoke these cron jobs at any point within the
+ * specified hour to help distribute load across all accounts. For example, an expression like `0 8 * * *` could
+ * trigger an invocation anytime between `08:00:00` and `08:59:59`." (For paid teams it is the minute; this is not one.)
+ *
+ * So what is measured here is the promise itself: the run began inside the clock hour its schedule names. That is not
+ * the same as sixty minutes around the minute, and the difference matters: for `30 0 * * *` a run at 01:14 is 44
+ * minutes from the minute and outside the hour that was promised, so it is late, while a run at 00:05 is early and
+ * kept. What the delay actually was is reported beside it rather than hidden behind a pass mark, because a judge
+ * reading a reliability figure deserves the number, and because the day we move to a plan that promises the minute,
+ * the same figures will show it without a word changing.
  */
-export const ON_TIME_TOLERANCE_SECONDS = 15 * 60;
 
 /** The scheduled moment of a pass as a second of the UTC day, from the schedule itself (src/pass-schedule.ts). */
 function secondOfDay(time: PassTime): number {
   return time.hour * 3_600 + time.minute * 60;
 }
 
-export type PassPlanCounts = Readonly<{ plan: PassPlanName; runs: number; onTime: number }>;
+export type PassPlanCounts = Readonly<{
+  plan: PassPlanName;
+  runs: number;
+  /** Runs that began inside the hour their schedule names, which is what the platform undertakes to do. */
+  onTime: number;
+  /** How long after its scheduled minute the earliest and the latest run began, in seconds. */
+  soonestSeconds: number;
+  latestSeconds: number;
+}>;
 
 /** A plan with no recorded run is absent from `plans`: the journal counts runs, it does not invent them. */
 export type PassesSince = Readonly<{ firstPassAt: Date | null; plans: readonly PassPlanCounts[] }>;
 
 export async function passesSince(): Promise<PassesSince> {
-  // The gap is circular over the day, so a counting pass scheduled at 00:30 that started at 23:58 is 32 minutes
-  // from its slot, not 1,408.
+  // Two different questions, and they are not the same arithmetic. Whether the promise was kept: did the run begin
+  // inside the clock hour its schedule names. How late it was: how far its start sits from the scheduled minute,
+  // counted the short way round the day, so a counting pass scheduled at 00:30 that started at 23:58 is 32 minutes
+  // from its slot and not 1,408.
   const rows = await sql()`
     SELECT plan,
            count(*)::int AS runs,
-           count(*) FILTER (WHERE least(gap, 86400 - gap) <= ${ON_TIME_TOLERANCE_SECONDS}::int)::int AS on_time,
+           count(*) FILTER (WHERE started_hour = scheduled_hour)::int AS on_time,
+           min(least(gap, 86400 - gap))::int AS soonest,
+           max(least(gap, 86400 - gap))::int AS latest,
            min(min(started_at)) OVER () AS first_pass_at
       FROM (
         SELECT plan,
                started_at,
+               EXTRACT(HOUR FROM (started_at AT TIME ZONE 'UTC'))::int AS started_hour,
+               CASE plan WHEN 'counting' THEN ${COUNTING_PASS_UTC.hour}::int WHEN 'settling' THEN ${SETTLING_PASS_UTC.hour}::int END AS scheduled_hour,
                abs(EXTRACT(EPOCH FROM (started_at AT TIME ZONE 'UTC')::time)
                    - CASE plan WHEN 'counting' THEN ${secondOfDay(COUNTING_PASS_UTC)}::int WHEN 'settling' THEN ${secondOfDay(SETTLING_PASS_UTC)}::int END) AS gap
           FROM viky_passes
@@ -127,7 +152,13 @@ export async function passesSince(): Promise<PassesSince> {
   const first = rows[0]?.first_pass_at;
   return {
     firstPassAt: first === null || first === undefined ? null : first instanceof Date ? first : new Date(String(first)),
-    plans: rows.map((row) => ({ plan: String(row.plan) as PassPlanName, runs: Number(row.runs), onTime: Number(row.on_time) })),
+    plans: rows.map((row) => ({
+      plan: String(row.plan) as PassPlanName,
+      runs: Number(row.runs),
+      onTime: Number(row.on_time),
+      soonestSeconds: Number(row.soonest ?? 0),
+      latestSeconds: Number(row.latest ?? 0),
+    })),
   };
 }
 

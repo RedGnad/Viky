@@ -4,7 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { COUNTING_PASS, dailyPass, SETTLING_PASS, type DailyPassDeps } from "../src/daily-pass";
 import { configureGiftStore, ensureGiftSchema, recordSettledDays } from "../src/gift-store";
 import { COUNTING_PASS_UTC, SETTLING_PASS_UTC } from "../src/pass-schedule";
-import { configurePassLog, ensurePassSchema, heldDays, ON_TIME_TOLERANCE_SECONDS, passesSince, readingTotals, recordPass, refusalsByCode } from "../src/pass-log";
+import { configurePassLog, ensurePassSchema, heldDays, passesSince, readingTotals, recordPass, refusalsByCode } from "../src/pass-log";
 import type { SqlExecutor } from "../src/proof-session-store";
 
 let db: PGlite;
@@ -228,25 +228,32 @@ test("a journal that cannot be written does not break the pass", async () => {
   assert.match(told.join(" "), /pass not journalled: the journal is unreachable/);
 });
 
-test("passesSince says from when it speaks, and how many runs started on their own minute", async () => {
+test("passesSince says from when it speaks, how many runs kept the platform's promise, and how late they were", async () => {
   const at = (day: number, hour: number, minute: number, second = 0) => new Date(Date.UTC(2026, 8, day, hour, minute, second));
   const ran = async (plan: "counting" | "settling", startedAt: Date) =>
     recordPass({ plan, startedAt, endedAt: new Date(startedAt.getTime() + 60_000), readingsAttempted: 1, readingsSucceeded: 1, holds: [], failures: {}, refusals: {} });
 
   const first = at(17, COUNTING_PASS_UTC.hour, COUNTING_PASS_UTC.minute, 4);
   await ran("counting", first);
-  // Exactly the tolerance we chose, and a minute past it.
-  await ran("counting", new Date(at(18, COUNTING_PASS_UTC.hour, COUNTING_PASS_UTC.minute).getTime() + ON_TIME_TOLERANCE_SECONDS * 1_000));
-  await ran("counting", new Date(at(19, COUNTING_PASS_UTC.hour, COUNTING_PASS_UTC.minute).getTime() + (ON_TIME_TOLERANCE_SECONDS + 60) * 1_000));
+  // What the production journal showed on 19 Sep 2026: ten minutes after the minute, inside the promised hour.
+  await ran("counting", at(18, 0, 40));
+  // Five minutes before its own minute, and still inside the hour the schedule names: kept, not early to its cost.
+  await ran("counting", at(19, 0, 25));
+  // An hour and five minutes later: outside the named hour, so late, however close to the minute it looks.
+  await ran("counting", at(20, 1, 35));
   // The evening before, which is far from the counting minute even though it is close to midnight.
-  await ran("counting", at(19, 23, 58));
+  await ran("counting", at(21, 23, 58));
   await ran("settling", at(18, SETTLING_PASS_UTC.hour, SETTLING_PASS_UTC.minute, 30));
 
   const since = await passesSince();
   assert.equal(since.firstPassAt?.toISOString(), first.toISOString());
   assert.deepEqual(since.plans, [
-    { plan: "counting", runs: 4, onTime: 2 },
-    { plan: "settling", runs: 1, onTime: 1 },
+    // Five runs, three of them inside the hour 00:00 to 00:59. The delays are counted from the minute, the short way
+    // round the day: four seconds at the soonest, and sixty-five minutes for the 01:35 run, which is the latest of
+    // them and the one the hour rule calls late. The 23:58 run is thirty-two minutes from the minute and late too,
+    // which is exactly why the two questions are asked separately.
+    { plan: "counting", runs: 5, onTime: 3, soonestSeconds: 4, latestSeconds: 65 * 60 },
+    { plan: "settling", runs: 1, onTime: 1, soonestSeconds: 30, latestSeconds: 30 },
   ]);
 });
 
