@@ -43,6 +43,7 @@
     "test:browser": "playwright test",
     "review:capture-connected": "tsx scripts/capture-connected.ts",
     "measure:words": "tsx scripts/measure-words.ts",
+    "measure:contrast": "tsx scripts/measure-contrast.ts",
     "capture:refund": "tsx scripts/capture-refund.ts",
     "design:shots": "tsx scripts/design-screenshots.ts",
     "review:capture": "tsx scripts/review-capture.ts",

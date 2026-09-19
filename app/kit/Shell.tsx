@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { DISPLAY, HELP, TITLE } from "../components/ui";
+import { DISPLAY, META, TITLE } from "../components/ui";
 import { Appearance } from "./Appearance";
 import { BackLink } from "./BackLink";
 import { Mark } from "./Mark";
@@ -34,7 +34,7 @@ type Props =
       backLabel?: string;
       /** The back link goes to `back` itself rather than one step back through the browser's history. */
       backFollows?: boolean;
-      /** "Step 2 of 5", above the step's title, in the help size (GOV.UK's caption). */
+      /** "Step 2 of 5", above the step's title (GOV.UK's caption), in the meta voice: it says where you are. */
       caption?: string;
       step?: ReactNode;
       children: ReactNode;
@@ -68,7 +68,7 @@ export function Shell(props: Props) {
             </div>
             {props.kind === "task" && props.back ? <BackLink href={props.back} label={props.backLabel} follow={props.backFollows} /> : null}
             {props.kind === "document" && props.back ? <BackLink href={props.back} label={props.backLabel} /> : null}
-            {props.kind === "task" && props.caption ? <p className={HELP}>{props.caption}</p> : null}
+            {props.kind === "task" && props.caption ? <p className={META}>{props.caption}</p> : null}
             {props.kind === "task" && props.step ? <h1 className={TITLE}>{props.step}</h1> : null}
             {/* Room between the mark and a destination's title, which grows with the title: the two faces touched at 1 440. */}
             {props.kind === "destination" && props.title ? (

@@ -148,10 +148,24 @@ export function Success({ gesture = 0, children }: Readonly<{ gesture?: number; 
   );
 }
 
-/** What an arrival plays: the days that changed and when each starts, and when the amount counts. */
-type Plan = Readonly<{ round: number; days: ReadonlyMap<string, Readonly<{ moment: "earned" | "returned"; delay: number }>>; amountAt: number | null }>;
+/**
+ * What an arrival plays: the days that changed and when each starts, and when the amount counts.
+ *
+ * `decided` is whether the arrival has read what this device last saw, which it can only do once the page runs. Until
+ * then nothing knows yet whether the amount is about to count, and an amount that answers "settled" during that
+ * window is answering before the question was asked.
+ */
+type Plan = Readonly<{
+  round: number;
+  days: ReadonlyMap<string, Readonly<{ moment: "earned" | "returned"; delay: number }>>;
+  amountAt: number | null;
+  decided: boolean;
+}>;
 
-const NOTHING: Plan = { round: 0, days: new Map(), amountAt: null };
+/** Outside any arrival there is nothing to wait for, so the question is settled from the first paint. */
+const NOTHING: Plan = { round: 0, days: new Map(), amountAt: null, decided: true };
+/** Inside one, before the first frame: what plays is not known yet. */
+const UNDECIDED: Plan = { ...NOTHING, decided: false };
 const ArrivalContext = createContext<Plan>(NOTHING);
 
 /** The laboratory's "Replay arrival" sends this, and every arrival on the screen plays again from its example's last visit. */
@@ -198,7 +212,7 @@ const ARRIVAL_TIMINGS = {
  * device, per gift, as the number of settled days it saw; a device that keeps nothing uses the gift's `lastSeen`.
  */
 export function Arrival({ storageKey, gifts, amount = false, children }: Readonly<{ storageKey: string; gifts: readonly ArrivalGift[]; amount?: boolean; children: ReactNode }>) {
-  const [plan, setPlan] = useState<Plan>(NOTHING);
+  const [plan, setPlan] = useState<Plan>(UNDECIDED);
   const giftsKey = JSON.stringify(gifts);
 
   useEffect(() => {
@@ -220,12 +234,16 @@ export function Arrival({ storageKey, gifts, amount = false, children }: Readonl
         writeLastSeen(key, settled);
       }
       // Nothing changed at all: nothing to replay. An amount that changed on its own still counts, last and alone.
-      if (reduced() || (earned.length + returned.length === 0 && !amount)) return;
+      // Said out loud rather than by staying silent, because whoever waits for the count waits on this answer.
+      if (reduced() || (earned.length + returned.length === 0 && !amount)) {
+        setPlan({ round, days: new Map(), amountAt: null, decided: true });
+        return;
+      }
       const schedule: ArrivalSchedule = arrivalSchedule(earned.length, returned.length, amount, ARRIVAL_TIMINGS);
       const days = new Map<string, { moment: "earned" | "returned"; delay: number }>();
       earned.forEach((id, index) => days.set(id, { moment: "earned", delay: schedule.earnedAt[index] }));
       returned.forEach((id, index) => days.set(id, { moment: "returned", delay: schedule.returnedAt[index] }));
-      setPlan({ round, days, amountAt: schedule.amountAt });
+      setPlan({ round, days, amountAt: schedule.amountAt, decided: true });
     };
     // The last visit lives on the device, which the server cannot read, so the arrival is decided once the page runs.
     const frame = requestAnimationFrame(() => play(false));
@@ -267,21 +285,41 @@ export function ArrivalAmount({ from, to, symbol, decimals = 2, after = "" }: Re
   const plan = useContext(ArrivalContext);
   const format = (value: number) => `${symbol}${value.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${after}`;
   const [shown, setShown] = useState(to);
+  /**
+   * Whether the figure on the screen is the account's own, which is what a capture run waits for.
+   *
+   * It cannot be read from the figure itself. Before the first frame the count has not started, so the figure IS the
+   * value and comparing them answers "arrived" about a count that is about to begin: the captures of 18 and 19 Sep
+   * were taken in exactly that window and kept $0.38, $1.15 and $1.83 of an account holding $2.00. So it is the count
+   * that says when it is over, and until the arrival has decided, nothing says it is.
+   */
+  const [counted, setCounted] = useState<string | null>(null);
+  // Which count finished, rather than whether one did: when a new one starts, this no longer names it, and nothing
+  // has to remember to say so.
+  const count = `${plan.round}:${from}:${to}`;
   useEffect(() => {
     if (plan.amountAt === null || from === to) return;
     let frame = 0;
     const started = performance.now() + plan.amountAt;
     const step = (now: number) => {
       const t = Math.min(1, Math.max(0, now - started) / MOTION.count.durationMs);
-      setShown(from + (to - from) * bezierProgress(MOTION.count.easing, t));
-      if (t < 1) frame = requestAnimationFrame(step);
+      if (t < 1) {
+        setShown(from + (to - from) * bezierProgress(MOTION.count.easing, t));
+        frame = requestAnimationFrame(step);
+        return;
+      }
+      // The last frame lands on the value itself rather than on what the easing computes of it, so nothing is left a
+      // hundredth short of the money it names.
+      setShown(to);
+      setCounted(count);
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [plan.round, plan.amountAt, from, to]);
+  }, [plan.round, plan.amountAt, from, to, count]);
+  const settled = plan.decided && (plan.amountAt === null || from === to || counted === count);
   return (
     <>
-      <span aria-hidden data-count-settled={shown === to ? "true" : "false"} className="motion-reduce:hidden">
+      <span aria-hidden data-count-settled={settled ? "true" : "false"} className="motion-reduce:hidden">
         {format(decimals === 0 ? Math.round(shown) : Math.round(shown * 100) / 100)}
       </span>
       <span aria-hidden className="hidden motion-reduce:inline">

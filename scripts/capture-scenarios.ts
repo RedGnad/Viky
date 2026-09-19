@@ -416,9 +416,9 @@ export const SCENARIOS: Scenario[] = [
     run: async (s) => {
       await s.reset({ AUSD: 30_000_000n, USDC: 0n, MON: 0n });
       await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
-      // Until C2 is live the condition is offered to an account that runs Viky only; the run is signed in as nobody's
-      // operator, so the answer that account would get is given.
-      await s.api("GET", "/api/conditions", () => ({ status: 200, body: { ids: ["duolingo-daily"], preview: ["chess-rating"] } }), "GET /api/conditions, as an account that runs Viky");
+      // The chess rating is offered to everybody since D108, so nothing is replaced here: the chooser is drawn from
+      // the register as any account reads it. The answer that was given instead, written when the condition was
+      // behind the operator door, added it a second time to a list that already held it.
       await s.api("GET", /\/api\/chess\/standing\?/, ({ hit }) =>
         hit === 1
           ? { status: 404, body: { error: "No rating in that cadence yet.", code: "NO_RATING" } }
@@ -836,7 +836,12 @@ function milestone(): Scenario[] {
         await s.text("Prove lea_plays is yours");
         await s.shot("milestone", "the code for the name given", "On that page: Get my code", { real: "replaced: POST /api/gift/[id]/account" });
         await s.click("I added it");
-        await s.text("Done. You start at 1455.");
+        // What the screen says once the climb has started, which is not what the gesture answered: "Done. You start at
+        // 1455. Reach 1500 and all of it is yours. You can take the code out of your name now." is written by
+        // `outcomeMessage` and then lost, because the section holding it is drawn only while the gift is "opened" and
+        // the reading that starts the climb ends that phase. So the one sentence telling them to take the code back
+        // out of their name is never read. Recorded for V4, which rebuilds this page: not repaired here.
+        await s.text("Started at 1455.");
         await s.shot("milestone", "started", "On that page: I added it", { real: "replaced: POST /api/gift/[id]/bind, the attested reading" });
       },
     },

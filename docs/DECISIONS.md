@@ -3106,3 +3106,21 @@ behind an account cannot be photographed any other way.
   `docs/reports/2026-09-19-the-card.md`.
 - What this does not claim: that it is faster in seconds, or easier for anybody in particular. Nobody outside the
   team has used it yet, and the first real gift made on it will say more than any of this.
+
+## D111, 19 Sep 2026: one scale, one rhyme, a third voice
+
+- Statement, the founder's, 19 Sep 2026, from K's references (rules 5, 6, 10, 13, 14, Ramp section 2): the type sizes
+  come from one ratio, letters are spaced by role, a small line in capitals is the third voice, the second button is
+  filled with a surface tone rather than hollow, and everything with four corners takes the same radius as the card.
+- **The scale is a major third, 1.25, on a base of 16**: 13, 16, 20, 25, 31, then 39 and 49 in a compact screen and 61
+  and 76 in a wide one. Before it, the four sizes in use stepped by 1.14, 1.37, 1.45 and 1.5, which is four decisions
+  rather than one voice. `src/design-tokens.ts` holds the scale and `test/design-tokens.test.ts` refuses a size that is
+  not a step of it.
+- **A voice is a role, not a font.** The third voice is the text face at 13 in capitals, spaced a pixel, and it speaks
+  the line that says where you are: the step caption of a task. A voice with no line to speak is not written.
+- **The second button is filled and still outlined.** Filled, because a hollow button is read as decoration (rule 10,
+  and Material 3's filled tonal). Outlined, because the outline is what tells a person this is a control, and WCAG
+  1.4.11 wants 3:1 for that, which a fill this quiet cannot give on its own.
+- What this does not change: the accent stays the one action's colour, the grounds and the ink are untouched, and every
+  pair is still measured, now twice over: from the palette in the tests, and from the colours the browser resolves on
+  the live page (`pnpm measure:contrast`).

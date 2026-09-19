@@ -13,6 +13,8 @@ import {
   CONTROL_COLOURS,
   DESTINATION_MAX,
   DISPLAY_TYPE,
+  META_TYPE,
+  TRACKING,
   GROUNDS,
   NAV,
   PAGE_MARGIN,
@@ -195,7 +197,7 @@ test("three colours per appearance and no fourth background: no joy, no sticker,
   for (const appearance of ["light", "dark"] as Appearance[]) {
     assert.deepEqual(
       Object.keys(COLOURS[appearance]).sort(),
-      ["accent", "accentText", "background", "controlBorder", "divider", "muted", "onAccent", "surface", "text"],
+      ["accent", "accentText", "background", "controlBorder", "divider", "muted", "onAccent", "surface", "text", "tonal"],
     );
   }
   assert.doesNotMatch(css, /--joy|--sticker-|--day-/, "a retired background token is still in the stylesheet");
@@ -206,6 +208,43 @@ test("three colours per appearance and no fourth background: no joy, no sticker,
   for (const file of globSync("app/**/*.{ts,tsx}")) {
     const source = readFileSync(file, "utf8");
     assert.doesNotMatch(source, /var\(--joy\)|var\(--sticker-|var\(--day-/, `${file} paints a retired background`);
+  }
+});
+
+/**
+ * The fill of a button that is not the one action (K, rule 10, 19 Sep 2026). It is not a fourth background: nothing
+ * but a control is ever painted with it, and what identifies the control is still its outline (WCAG 1.4.11). What it
+ * has to be is visible as a fill on both the grounds a button sits on, and readable.
+ */
+test("the quiet button is filled, seen on both grounds, and its words clear 4.5:1", () => {
+  for (const appearance of ["light", "dark"] as Appearance[]) {
+    const palette = COLOURS[appearance];
+    for (const ground of GROUNDS) {
+      const seen = contrastRatio(palette.tonal, palette[ground]);
+      assert.ok(seen >= 1.1, `${appearance} tonal is ${seen.toFixed(2)}:1 on the ${ground}, which is not a fill anybody sees`);
+      assert.ok(seen <= 2, `${appearance} tonal is ${seen.toFixed(2)}:1 on the ${ground}: that is a second surface, not a quiet fill`);
+    }
+    for (const role of ["text", "muted"] as const) {
+      const ratio = contrastRatio(palette[role], palette.tonal);
+      assert.ok(ratio >= TEXT_CONTRAST_MINIMUM, `${appearance} ${role} on the quiet button is ${ratio.toFixed(2)}:1`);
+    }
+  }
+  const ui = readFileSync("app/components/ui.ts", "utf8");
+  assert.match(ui, /SECONDARY_BUTTON = `[^`]*bg-\[var\(--tonal\)\]/, "the quiet button is hollow again");
+  assert.match(ui, /INLINE_BUTTON = `[^`]*bg-\[var\(--tonal\)\]/);
+  assert.match(ui, /PRIMARY_BUTTON = `[^`]*bg-\[var\(--accent\)\]/, "the one action stopped carrying the accent");
+  // The outline every button carries comes from one constant, so it cannot be dropped from one of them alone.
+  assert.match(ui, /const OUTLINE = "border-\[length:var\(--control-border-width\)\] border-\[var\(--control-border\)\]"/);
+  for (const name of ["SECONDARY_BUTTON", "INLINE_BUTTON", "PRIMARY_BUTTON"]) {
+    const from = ui.indexOf(`${name} = \``);
+    const button = ui.slice(from, ui.indexOf("`;", from));
+    assert.match(button, /\$\{OUTLINE\}/, `${name} lost the outline WCAG 1.4.11 asks for`);
+    // Once every button is filled, a fill at half strength is still a fill: a control that cannot be pressed gives
+    // it back entirely and stands off the ground, the same answer for all three. The blurred captures of 19 Sep
+    // showed the first version, where a live button and a dead one were one pair of identical pills.
+    assert.match(button, /disabled:bg-\[var\(--surface\)\]/, `${name} keeps its fill when it cannot be pressed`);
+    assert.match(button, /disabled:\[box-shadow:none\]/, `${name} keeps its relief when it cannot be pressed`);
+    assert.doesNotMatch(button, /disabled:opacity/, `${name} fades instead of giving its fill back`);
   }
 });
 
@@ -327,15 +366,45 @@ test("the viewport is declared the way web.dev asks, and lets people zoom", () =
   assert.doesNotMatch(layout, /maximumScale/, "never cap zoom");
 });
 
-test("four levels of text and no more, each one from a published scale", () => {
+/** A major third from 16, rounded as K writes it: the only sizes the product is allowed to use (rule 6). */
+const SCALE = [13, 16, 20, 25, 31, 39, 49, 61, 76];
+
+test("four levels of text and no more, every one of them a step of the same scale", () => {
   assert.equal(Object.keys(TYPE).length, 4);
-  assert.equal(TYPE.money.size, 32);
-  assert.equal(TYPE.body.size, 16);
+  for (const [role, level] of Object.entries(TYPE)) {
+    assert.ok(SCALE.includes(level.size), `${role} is ${level.size}, which is not a step of the scale`);
+  }
+  assert.equal(TYPE.body.size, 16, "the base of the scale is the body");
   // Above Apple's 11 floor and above the 12 the removed Lighthouse audit worried about.
-  assert.ok(TYPE.help.size >= 14);
+  assert.ok(TYPE.help.size >= 13);
   // Material's guidance: about 1.5x for body, about 1.2x for the large sizes.
   assert.ok(TYPE.body.lineHeight / TYPE.body.size >= 1.5);
   assert.ok(TYPE.money.lineHeight / TYPE.money.size <= 1.3);
+  // The display and the mark are on the same scale, and the third voice is its smallest step.
+  for (const size of [DISPLAY_TYPE.display.compact.size, DISPLAY_TYPE.display.expanded.size, DISPLAY_TYPE.mark.size, META_TYPE.size]) {
+    assert.ok(SCALE.includes(size), `${size} is not a step of the scale`);
+  }
+  // Letter spacing by role: tight where it is big, nothing on the body, open on a label and on the small capitals.
+  assert.ok(TRACKING.display.expanded < TRACKING.display.compact && TRACKING.display.compact < 0);
+  assert.equal(TRACKING.body, 0);
+  assert.ok(TRACKING.label > 0 && TRACKING.meta > 0);
+  assert.equal(META_TYPE.transform, "uppercase", "the third voice is what carries capitals, and nothing else does");
+  // A voice nobody speaks in is a token, not a voice. The line it is for is the one that says where you are, on
+  // every step of every task ("Step 2 of 5"), which is the shell's caption.
+  const meta = readFileSync("app/components/ui.ts", "utf8").match(/export const META = "([^"]+)"/);
+  assert.ok(meta, "the meta voice has no class");
+  assert.match(meta[1], /uppercase/);
+  assert.match(readFileSync("app/kit/Shell.tsx", "utf8"), /props\.caption \? <p className=\{META\}>/, "no line in the product speaks it");
+});
+
+test("one rhyme: a capsule, and a single radius for everything with corners", () => {
+  assert.equal(RADIUS.control, RADIUS.card, "a field and a card no longer round differently");
+  assert.equal(RADIUS.sheet, RADIUS.card, "a sheet is a card of the same family");
+  assert.equal(RADIUS.full, 9999, "a button and a character stay capsules");
+  const css = readFileSync("app/globals.css", "utf8");
+  for (const name of ["control", "card", "sheet"]) {
+    assert.match(css, new RegExp(`--radius-${name}: ${RADIUS.card}px;`), `--radius-${name} left the one radius`);
+  }
 });
 
 test("the tap target satisfies every source, including the strictest accessibility level", () => {
