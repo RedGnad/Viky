@@ -217,8 +217,20 @@ export function Character({
   size = "large",
   variant = 0,
   tone = "range",
+  standing = true,
   className,
-}: Readonly<{ state: CharacterState; size?: "large" | "small"; variant?: number; tone?: CharacterTone; className?: string }>) {
+}: Readonly<{
+  state: CharacterState;
+  size?: "large" | "small";
+  variant?: number;
+  tone?: CharacterTone;
+  /**
+   * Whether the character stands on its shadow. The row of a gift's page draws them without one (the mockup of
+   * 19 Sep 2026): seven shadows in a row read as seven underlines rather than as seven days.
+   */
+  standing?: boolean;
+  className?: string;
+}>) {
   const large = size === "large";
   const drawn: CharacterTone = state === "gift" ? tone : "range";
   // A face at every size, since the rendered mockups of 19 Sep 2026 (D113): it is what holds the screen together,
@@ -235,7 +247,7 @@ export function Character({
       className={className}
       style={{ overflow: "visible" }}
     >
-      {large && drawn === "range" ? (
+      {large && standing && drawn === "range" ? (
         <rect
           data-part="shadow"
           x={leaving ? 12 : 14}

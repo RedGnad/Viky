@@ -200,8 +200,16 @@ test("before connecting, the recipient is told that only what comes after counts
   // the recipient can be on before the first reading, and the number of days is the gift's own.
   assert.equal(MILESTONE_ACTIONS.connectNow(30), "Connect now: only what you reach after connecting counts. You then have 30 days.");
   assert.equal(MILESTONE_ACTIONS.connectNow(1), "Connect now: only what you reach after connecting counts. You then have 1 day.");
-  const page = readFileSync("app/components/MilestoneGiftPage.tsx", "utf8");
-  assert.equal(page.match(/A\.connectNow\(status\.durationDays\)/g)?.length, 3, "the card that reads straight away, the card asking for the code, and the card showing it");
+  // Said on every way in to connecting, and the three ways in are one component now: the funder named the account,
+  // a code is asked for, a code is waiting to be put in the name.
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
+  assert.match(page, /connectNow: A\.connectNow\(milestone\.durationDays\)/);
+  const connect = readFileSync("app/kit/ConnectTheSource.tsx", "utf8");
+  assert.equal(
+    connect.match(/<p className="font-medium">\{words\.connectNow\}<\/p>/g)?.length,
+    3,
+    "the way in that reads straight away, the one asking for the code, and the one showing it",
+  );
   // The funder's check keeps the fourteen days: the longest they can wait before it all comes back.
   assert.equal(
     MILESTONE_FUND.check.fourteenDays,

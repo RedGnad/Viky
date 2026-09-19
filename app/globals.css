@@ -24,7 +24,7 @@
   --on-accent: #1E1633;
   --accent-text: #1E1633;
   --control-border: #1E1633;
-  --divider: #E0DCEB;
+  --divider: #C5C2CF;
   /* What a sheet lays over the screen behind it: the ink, thinned, so the card is still read through it. */
   --scrim: rgba(30, 22, 51, 0.32);
 
@@ -480,5 +480,203 @@ dialog.sheet[open] {
 
   .control-relief:is(:active, :hover):not(:disabled) {
     transform: none;
+  }
+}
+
+/*
+ * The card of a gift, drawn from the founder's mockup of 19 Sep 2026 (`gift.html` and its `shared.css`). Written as
+ * classes rather than as utilities on the elements because every value here is the mockup's own, and a reader has to
+ * be able to put the two side by side: `test/design-tokens.test.ts` holds them equal to `src/design-tokens.ts`.
+ *
+ * The order inside the card is the order a person reads it: who it came from, who it is for, what they do, the
+ * drawing, the state, the next moment, the money, the one action, and the two folds.
+ */
+.gift-card {
+  border-radius: var(--radius-card);
+  border: 1px solid var(--card-edge);
+  padding: 22px 20px 20px;
+}
+
+/* The card's own label, with a line of its own above the name. */
+.gift-eyebrow {
+  line-height: 16px;
+}
+
+.gift-who {
+  margin: 6px 0 2px;
+  overflow-wrap: anywhere;
+}
+
+.gift-what {
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--on-surface-body);
+}
+
+.gift-shape {
+  margin: 14px 0 18px;
+}
+
+/*
+ * The row of days, from the mockup of 19 Sep 2026 (`gift.html`): one size whatever the count, never wrapped, never
+ * shrunk, scrolling sideways with no bar of its own and a fade at its right edge that says there is more. It bleeds
+ * into the card's right padding so a day can sit half seen under the fade rather than stopping short of it.
+ */
+.day-row {
+  position: relative;
+  margin: 6px -20px 0 0;
+}
+
+.day-row-days {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  /* A scroller clips what leaves it upwards as well, and a day that jumps leaves it: the room is made here. */
+  padding: 8px 36px 8px 0;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.day-row-days::-webkit-scrollbar {
+  display: none;
+}
+
+/* One size everywhere, large enough to keep a face: 48 on a gift's page, 42 on a card in a list. */
+.day-row-day {
+  flex: none;
+  width: 48px;
+}
+
+.day-row-fade {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 56px;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(255, 246, 226, 0), var(--paper) 78%);
+}
+
+.day-row-where {
+  margin: -8px 0 14px;
+}
+
+.gift-state {
+  font-family: var(--font-title);
+  font-weight: var(--font-title-weight);
+  font-size: 24px;
+  line-height: 29px;
+  letter-spacing: -0.4px;
+  margin: 2px 0 4px;
+}
+
+/* What the source did to the account, at the weight of the state, because it is the state now. */
+.gift-state-closed {
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.gift-next {
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--on-surface-body);
+  margin-bottom: 16px;
+}
+
+/* The money that counts now on the left, and what has gone back to the funder on the right, quieter. */
+.gift-figures {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gift-back {
+  font-family: var(--font-title);
+  font-weight: var(--font-title-weight);
+  font-size: 23px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.gift-meta {
+  line-height: 16px;
+  margin-top: 5px;
+}
+
+/* The label above what came back sits over its figure, so the two columns read as two columns. */
+.gift-figures > div:last-child .gift-meta {
+  margin: 0 0 3px;
+}
+
+.gift-action {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tap-gap);
+}
+
+.gift-fold {
+  margin-top: 16px;
+  border-top: 1px solid var(--surface-rule);
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--on-surface-body);
+}
+
+/*
+ * The mockup's row is its text and 14 pixels above it. Ours is as tall as a thumb, which is the one place the tap
+ * target wins over the drawing: a fold is pressed, and 48 is the number every source agrees on.
+ */
+.gift-fold-name {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--tap-target);
+}
+
+/* No marker of the browser's own, on either fold: the chevron is the mark. */
+.gift-fold-name::-webkit-details-marker,
+.gift-beside summary::-webkit-details-marker {
+  display: none;
+}
+.gift-fold-name,
+.gift-beside summary {
+  list-style: none;
+}
+
+.gift-fold-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding-bottom: var(--space-sm);
+}
+
+/* What stands outside the card, under it, in the ground's own voice. */
+.gift-beside {
+  margin-top: 26px;
+  font-size: 13px;
+  line-height: var(--type-help-leading);
+  color: var(--muted);
+}
+
+
+
+/* The fold's own mark, which turns when it opens. */
+.gift-chevron {
+  color: var(--on-surface-faint);
+  transition: transform var(--press-duration) var(--press-easing);
+}
+.gift-fold[open] .gift-chevron {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gift-chevron {
+    transition: none;
   }
 }

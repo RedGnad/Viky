@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { CARD, HELP } from "../components/ui";
+import { HELP } from "../components/ui";
 
 /**
  * "Check this reading yourself", the milestone half of what a gift's page offers its two people (U2).
@@ -38,8 +38,8 @@ export function CheckThisReading({ giftId }: Readonly<{ giftId: string }>) {
   const kept = readings.filter((reading) => reading.proofKept);
   if (kept.length === 0) return null;
   return (
-    <details className={CARD}>
-      <summary className="cursor-pointer font-medium">Check this reading yourself</summary>
+    <details>
+      <summary className="cursor-pointer underline underline-offset-[3px]">Check this reading yourself</summary>
       <p className={HELP}>
         Take a reading this gift rests on, and check it yourself: that the source itself answered it, that nobody
         rewrote it, and that the contract accepted that one answer, which can never be used twice.

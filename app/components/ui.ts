@@ -49,17 +49,17 @@ export const PRIMARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} bg
  * emphasis). The ink outline stays, because that is what identifies a control (WCAG 1.4.11), and the accent stays on
  * the one action a screen is asking for.
  */
-export const SECONDARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] tracking-[var(--tracking-label)] disabled:border-[var(--card-border)] disabled:bg-[var(--surface)] disabled:text-[var(--muted)] disabled:[box-shadow:none]`;
+export const SECONDARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] tracking-[var(--tracking-label)] disabled:bg-[var(--action-off)] disabled:text-[var(--action-off-ink)] disabled:[box-shadow:0_var(--action-relief-depth)_0_var(--action-off-deep)]`;
 
 /**
- * What a control that cannot be pressed looks like, and it is the same answer for all three: it gives its fill back
- * and stands off the ground, which is the only difference a person can see once every button is filled. Under the
- * first version of the tonal button, "Check now" (live) and "Tell me each morning" (dead) were the same capsule at a
- * different opacity, and at a squint they were one pair of identical pills.
+ * What a control that cannot be pressed looks like, and it is the same answer for all three (the rendered mockups of
+ * 19 Sep 2026, and the founder on 19 Sep): it keeps its filled shape and its relief, and it loses its colour. That
+ * replaces the rule of the morning, where a shut control gave its fill back: the image won, and a fill at half
+ * strength, which was the version before either, made a live button and a dead one one pair of pills at a squint.
  */
 
 /** A secondary action that sits beside others rather than filling the width. */
-export const INLINE_BUTTON = `${TAP} ${FOCUS} rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-lg)] py-[var(--space-sm)] text-[length:var(--type-help)] tracking-[var(--tracking-label)] disabled:border-[var(--card-border)] disabled:bg-[var(--surface)] disabled:text-[var(--muted)] disabled:[box-shadow:none]`;
+export const INLINE_BUTTON = `${TAP} ${FOCUS} rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-lg)] py-[var(--space-sm)] text-[length:var(--type-help)] tracking-[var(--tracking-label)] disabled:bg-[var(--action-off)] disabled:text-[var(--action-off-ink)] disabled:[box-shadow:0_var(--action-relief-depth)_0_var(--action-off-deep)]`;
 
 /**
  * The third voice (K, Ramp section 2): the small lines that say where you are and when something happened. The text

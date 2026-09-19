@@ -1,5 +1,5 @@
 "use client";
-import { CARD, HELP } from "../components/ui";
+import { HELP } from "../components/ui";
 import { dateOfDay } from "@/src/day-record";
 
 /**
@@ -15,8 +15,8 @@ export function CheckThisDay({ giftId, days }: Readonly<{ giftId: string; days: 
   const earned = days.filter((day) => day.outcome === "earned");
   if (earned.length === 0) return null;
   return (
-    <details className={CARD}>
-      <summary className="cursor-pointer font-medium">Check this day yourself</summary>
+    <details>
+      <summary className="cursor-pointer underline underline-offset-[3px]">Check this day yourself</summary>
       <p className={HELP}>
         Take the reading behind a day that counted, and check it yourself: that the source answered it, that nobody
         rewrote it, and that this gift was settled against that one answer, which can never be used twice.

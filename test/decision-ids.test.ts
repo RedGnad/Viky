@@ -44,7 +44,7 @@ test("the collision that happened is written where a reader meets it, and neithe
 test("what the code quotes as D104 bis is the entry about proving an account", () => {
   // The three lines that meant the second entry, changed with it: a reference left saying D104 would now point at
   // the way out naming an amount, which is a different decision about a different screen.
-  for (const file of ["app/components/MilestoneGiftPage.tsx", "src/sentences.ts", "docs/SCREEN-CLAIMS.md"]) {
+  for (const file of ["app/kit/ConnectTheSource.tsx", "src/sentences.ts", "docs/SCREEN-CLAIMS.md"]) {
     // A comment wraps, so the line break and its asterisk come out before the number.
     const source = readFileSync(file, "utf8").replace(/\n\s*\*?\s*/g, " ");
     assert.match(source, /D27, D104 bis/, `${file} names the entry it means`);

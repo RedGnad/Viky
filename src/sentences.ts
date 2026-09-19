@@ -481,9 +481,9 @@ export const GIFT_PAGE = {
   becomesYours: (perDay: string, eachDay: string, when: string) => `It becomes yours as you go: ${perDay} for ${eachDay}, ${when}.`,
   becomesTheirs: (perDay: string, eachDay: string, when: string) => `It becomes theirs as they go: ${perDay} for ${eachDay}, ${when}.`,
   forDaysFromConnecting: (count: number) => `for ${days(count)} from the day after it is connected`,
-  goesBackToThem: (perDay: string, funder: string | null) =>
-    sentence(`${perDay} goes back to ${funder ?? "them"} for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.`),
-  comesBackToYou: (perDay: string) => sentence(`${perDay} comes back to you for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.`),
+  goesBackToThem: (funder: string | null) =>
+    sentence(`The same goes back to ${funder ?? "them"} for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.`),
+  comesBackToYou: sentence("The same comes back to you for each day without it that is not caught up the next day. Nobody else ever profits from a missed day."),
   openBy: (date: string, funder: string | null) => `Open it by ${date}: after 14 days unopened, it goes back to ${funder ?? "them"}.`,
 
   createToOpen: "Create your account to open it. Nothing to install.",
@@ -573,7 +573,7 @@ export const GIFT_PAGE = {
   } as Record<string, string>,
 
   take: (amount: string) => `Take ${amount}`,
-  takeReview: (amount: string) => `Take ${amount} into your account. It stays yours: from your account you can send it to your bank. Nothing to pay.`,
+  takeReview: "It goes into your account, and it stays yours: from there you can send it to your bank. Nothing to pay.",
   notNow: "Not now",
   taking: "Taking it",
   taken: (amount: string, when: string, giftId: string, take: number) => `${amount} is in your account, ${when}. Reference: gift ${giftId}, take ${take}.`,
@@ -608,6 +608,104 @@ export const GIFT_PAGE = {
 } as const;
 
 /**
+ * The living card: what a gift's page leads with at each moment of its life (document J, 19 Sep 2026).
+ *
+ * Four things and no more, in this order: the state in one sentence, the figure that counts now with a label saying
+ * what it is, the next moment with its date, and one action or none. What was agreed and how it is checked are
+ * folded under their own names, because by the time they matter they have already been read.
+ *
+ * The rule that shapes every sentence here: **the headline never carries a figure the label and the figure below it
+ * carry.** That is the whole defect this replaces, where a milestone page said its target three times, its amount
+ * three times and its date three times on one screen.
+ *
+ * Three voices, and they are not the same question at the same moment: "is it for me?" against "did they see it?",
+ * "did I get it?" against "did they get it?". A reader who is neither reads the third person throughout (D99).
+ */
+export const GIFT_LIVE = {
+  /** Nobody has opened the link yet. */
+  unopened: {
+    yours: (funder: string | null) => (funder ? `${funder} put this in your name.` : "This is in your name."),
+    theirs: (recipient: string | null) => (recipient ? `${recipient} has not opened it yet.` : "Nobody has opened it yet."),
+    reading: (funder: string | null, recipient: string | null) =>
+      `${funder ?? "Somebody"} put this in ${recipient ?? "somebody"}'s name.`,
+    label: { yours: "In your name", theirs: "In their name" },
+  },
+  /** Opened, and the source it counts is not connected yet: the one moment the whole agreement is read. */
+  notConnected: {
+    yours: (source: string) => `Connect ${source} and it starts.`,
+    theirs: (recipient: string | null, source: string) =>
+      `${recipient ?? "They"} opened it, and ${source} is not connected yet.`,
+    label: { yours: "In your name", theirs: "In their name" },
+  },
+  /**
+   * A habit being counted, day by day. The question is "did yesterday count?", which is the question the morning
+   * message answers on the phone, in these same words: one wording for one fact, wherever it is read. The money it
+   * carries there is the figure here, so it is not in the sentence.
+   */
+  counting: {
+    counted: "Yesterday counted.",
+    wentBack: (funder: string | null) => `Yesterday went back to ${funder ?? "them"}. Today still counts.`,
+    wentBackToYou: "Yesterday came back to you. Today still counts.",
+    /** A gift settled before Viky kept a record of each day: the totals are true, the last day is not known. */
+    running: "It is counting.",
+    nothingYet: "Nothing has been counted yet.",
+    label: { yours: "Yours so far", theirs: "Theirs so far" },
+  },
+  /** A rating climbing towards its target: how far is left, and where they stand today. */
+  climbing: {
+    toGo: (left: number) => `${left} to go.`,
+    reachedAlready: "Reached. The next reading settles it.",
+    notReadYet: { yours: "Your first reading starts the climb.", theirs: "Their first reading starts the climb." },
+    label: { yours: "Where you are", theirs: "Where they are" },
+  },
+  /** Something granted once, waiting for the proof that it was. */
+  awaitingProof: {
+    yours: "Share the page that proves it, and the gift is yours.",
+    theirs: (recipient: string | null) => `${recipient ?? "They"} have not shared the proof yet.`,
+    label: { yours: "In your name", theirs: "In their name" },
+  },
+  /** The first reading stood above what a climb may start from, so nothing can be earned. */
+  startTooHigh: {
+    yours: (reading: number) => `You were already at ${reading} when it started, so there is nothing to climb.`,
+    theirs: (recipient: string | null, reading: number) =>
+      `${recipient ?? "They"} were already at ${reading} when it started, so there is nothing to climb.`,
+    label: (funder: string | null) => `Goes back to ${funder ?? "them"}`,
+  },
+  /** Reached, or finished with something earned. */
+  won: {
+    yours: "It is yours.",
+    theirs: (recipient: string | null) => `${recipient ?? "They"} got it.`,
+    label: { yours: "Yours", theirs: "Theirs" },
+  },
+  /** The deadline passed, or the days ran out, with nothing earned. */
+  over: {
+    yours: "The time is up.",
+    theirs: "The time is up.",
+    label: { yours: (funder: string | null) => `Back to ${funder ?? "them"}`, theirs: "Back to you" },
+  },
+  /** Taken back before anybody opened it, or returned in full. */
+  cameBack: {
+    yours: "It went back.",
+    theirs: "It came back to you.",
+    label: { yours: "Went back", theirs: "Came back" },
+    on: (date: string) => `On ${date}.`,
+  },
+  /** What came back to the funder, said beside the money that is theirs, in the meta voice (the mockup's right column). */
+  cameBackTo: (funder: string | null) => (funder ? `Came back to ${funder}` : "Came back"),
+  cameBackToYou: "Came back to you",
+  /**
+   * Where the row of days stands, under it, in the meta voice (the mockup of 19 Sep 2026). The row keeps one size
+   * whatever the count and scrolls rather than shrinking, so this line says which day is in view and that there is
+   * more of it to the right.
+   */
+  dayOfDays: (day: number, total: number) => `Day ${day} of ${total}`,
+  scrollForTheRest: "Scroll for the rest",
+  /** The two folds, each under its own name, and each already read by the time it is folded. */
+  agreed: "What was agreed",
+  checked: "How this is checked",
+} as const;
+
+/**
  * A milestone gift's page, built against the register and shown for real once a milestone condition is live (C2).
  * The target and the readings are the gift's own data; the source's name is the register's.
  */
@@ -622,8 +720,8 @@ export const MILESTONE_PAGE = {
   lastRead: (moment: string) => `Last read ${moment} your time.`,
   notReadYetYours: (source: string) => `Not read yet: the first reading is taken when you connect ${source}, and it is where you start.`,
   notReadYetTheirs: (source: string) => `Not read yet: the first reading is taken when they connect ${source}, and it is where they start.`,
-  atDeadlineYours: (by: string, amount: string, funder: string | null) => `If you reach it ${by}, the ${amount} is yours. If not, it goes back to ${funder ?? "them"}.`,
-  atDeadlineTheirs: (by: string, amount: string) => `If they reach it ${by}, the ${amount} is theirs. If not, it comes back to you.`,
+  atDeadlineYours: (by: string, funder: string | null) => `Reach it ${by} and it is yours. If not, it goes back to ${funder ?? "them"}.`,
+  atDeadlineTheirs: (by: string) => `If they reach it ${by} it is theirs. If not, it comes back to you.`,
   reachedYours: (date: string, amount: string) => `Reached on ${date}: the ${amount} is yours.`,
   reachedTheirs: (date: string, amount: string) => `Reached on ${date}: the ${amount} is theirs.`,
   /** "by 17 Oct 2026", or "in time" for a gift that was never started. */
@@ -706,7 +804,7 @@ export const MILESTONE_ACTIONS = {
   nothingToDo: (source: string) => `Nothing to install, no password, and nothing to change on ${source}: the gift already knows the account it reads.`,
   startReading: (source: string) => `Start reading my ${source}`,
   connectNow: (days: number) => `Connect now: only what you reach after connecting counts. You then have ${days} ${days === 1 ? "day" : "days"}.`,
-  firstReading: (target: number) => `If you have already reached ${target} when you connect, this gift cannot count it, so connect before you play.`,
+  firstReading: "If you have already reached it when you connect, this gift cannot count it, so connect before you play.",
   getCode: "Get my code",
   gettingCode: "One moment",
   proveTitle: (username: string) => `Prove ${username} is yours`,

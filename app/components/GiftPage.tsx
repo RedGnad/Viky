@@ -6,44 +6,62 @@ import { useAccount } from "@/src/account/provider";
 import { catchUpDay } from "@/src/catch-up";
 import { ApiError } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
-import { bindGoalAccount, claimGift, countNow, loadGiftStatus, nameGoalAccount, withdrawEarned, type GiftStatus, type GiftSummary, type PublicOutcome } from "@/src/client/gift";
-import { conditionOfGoal } from "@/src/conditions";
+import {
+  bindGoalAccount,
+  claimGift,
+  countNow,
+  loadGiftStatus,
+  nameGoalAccount,
+  withdrawEarned,
+  type GiftStatus,
+  type PublicOutcome,
+} from "@/src/client/gift";
+import { checkMilestone, requestMilestoneCode, startMilestone, type MilestoneOutcome } from "@/src/client/milestone";
+import { conditionById, conditionOfGoal } from "@/src/conditions";
 import { stripFromRecord } from "@/src/day-states";
 import { whenInWords } from "@/src/display-currency";
+import { giftOfMilestone, giftOfSummary, funderMayTakeItBack, readAs } from "@/src/gift-moment";
+import { liveOf } from "@/src/gift-live";
+import { notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
+import { milestoneById } from "@/src/milestone-conditions";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { contractDayInWords, contractRangeInWords, dateInWords, momentInWords, nextPassMs } from "@/src/moments";
-import { COUNTING_PASS_UTC } from "@/src/pass-schedule";
-import { GIFT_PAGE as W } from "@/src/sentences";
-import { charactersOf } from "../kit/DayStrip";
+import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
+import { GIFT_CARD as CARD_WORDS, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
+import { CertificateProof } from "../kit/CertificateProof";
 import { CheckThisDay } from "../kit/CheckThisDay";
+import { CheckThisReading } from "../kit/CheckThisReading";
+import { ConnectTheSource, type ConnectWords } from "../kit/ConnectTheSource";
 import { DayRow } from "../kit/DayRow";
-import { Arrival } from "../kit/Motion";
+import { charactersOf } from "../kit/DayStrip";
 import { FieldRefusal } from "../kit/FieldRefusal";
-import { GiftCard } from "../kit/GiftCard";
+import { GiftLive } from "../kit/GiftLive";
 import { LinkAgain } from "../kit/LinkAgain";
-import { TakeItBack } from "../kit/TakeItBack";
+import { MilestoneMeter } from "../kit/MilestoneMeter";
 import { MorningMessage } from "../kit/MorningMessage";
-import { gesturesFor, notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
-import { Notice } from "../kit/Notice";
+import { Arrival } from "../kit/Motion";
 import { Shell } from "../kit/Shell";
+import { TakeItBack } from "../kit/TakeItBack";
 import { AccountPanel } from "./AccountPanel";
-import { MilestoneGiftPage } from "./MilestoneGiftPage";
-import { BODY, CARD, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./ui";
+import { BODY, CARD, HELP, PRIMARY_BUTTON } from "./ui";
 
 /**
- * A gift's page, flows R1 to R12 on the product structure (S3): the person it is for opens it, connects what they do,
- * and watches each day become theirs; the funder reads the same page in their own words (R11). Everything a day says
- * is dated in the reader's clock (item 12), every amount is in the text face (item 7), the head of the page is the same
- * gift card as on Home and Gifts (item 9), and what depends on the source comes from the register (item 10).
+ * A gift's page: the card of Home, alive (the vision of 19 Sep 2026, section 5; document J).
  *
- * The page decides who is reading from the route: the recipient signed in, the funder signed in, or somebody holding
- * the link, who is addressed as the person it is for. It keeps no state of its own that the route could contradict:
- * every action ends by reading the gift again.
+ * One page for the three shapes of gift and for the three readers. It leads with the moment the gift is in, and a
+ * moment carries four things: the state in one sentence, the figure that counts now, the next moment with its date,
+ * and one action or none. What was agreed and how it is checked are folded under their own names.
+ *
+ * What replaced what: two pages of 566 and 352 lines, each holding its own version of the same gestures, each
+ * writing the agreement and the state at the same weight in the same prose. All twenty-three of their states said
+ * at least one figure twice, and that is what this shape closes.
+ *
+ * Nothing under the screen changed: the same routes, the same readings, the same refusals, the same passkey opened
+ * at the one moment a signature is needed.
  */
 
-type Busy = "idle" | "opening" | "naming" | "binding" | "counting" | "taking";
-type Where = "open" | "name" | "bind" | "count" | "take";
-type Taken = Readonly<{ amount: string; atMs: number; take: number }>;
+type Busy = "idle" | "opening" | "naming" | "starting" | "counting" | "taking";
+type Where = "open" | "name" | "start" | "count" | "take";
 
 const never = () => () => {};
 function everyMinute(changed: () => void): () => void {
@@ -58,12 +76,15 @@ const onServer = () => false;
 /** Our own typed sentences verbatim; anything else as one plain line, so no library's words reach a person. */
 function screenMessage(error: unknown): string {
   if (error instanceof ApiError) return error.detail ? `${error.message} (${error.detail})` : error.message;
-  return "That did not go through, and nothing was changed. Try again.";
+  return A.failed;
 }
 
 export function GiftPage({ giftId, linkKey }: Readonly<{ giftId: string; linkKey: string | null }>) {
   const [status, setStatus] = useState<GiftStatus | MilestoneStatus | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Written as a promise rather than an await, so the state settles in a callback: a page that sets state in the body
+  // of its own effect renders twice for every read.
   const reload = useCallback(
     () =>
       loadGiftStatus(giftId, linkKey).then(
@@ -75,6 +96,7 @@ export function GiftPage({ giftId, linkKey }: Readonly<{ giftId: string; linkKey
       ),
     [giftId, linkKey],
   );
+
   useEffect(() => {
     void reload();
   }, [reload]);
@@ -93,474 +115,454 @@ export function GiftPage({ giftId, linkKey }: Readonly<{ giftId: string; linkKey
       </Shell>
     );
   }
-  if (status.kind === "milestone") return <MilestoneGiftPage status={status} linkKey={linkKey} reload={reload} />;
-  return <DailyGiftPage gift={status} linkKey={linkKey} reload={reload} />;
+  return <LiveGift status={status} linkKey={linkKey} reload={reload} />;
 }
 
-/** The card's own description of this gift, from the page's reading of it, so the head of the page is the same card. */
-export function summaryOf(gift: GiftStatus, voice: Voice): GiftSummary {
-  return {
-    giftId: gift.giftId,
-    role: voice,
-    goalType: gift.goalType,
-    goalUsername: gift.goalAccount.source === "funder" ? gift.goalAccount.username : null,
-    usernameSource: gift.goalAccount.source,
-    recipientName: gift.names?.recipientName ?? null,
-    funderName: gift.names?.funderName ?? null,
-    catchUpSeconds: gift.catchUpSeconds,
-    days: gift.days,
-    fundedAt: gift.createdAtChain,
-    startDay: gift.startDay,
-    endDay: gift.endDay,
-    amountDisplay: gift.amountDisplay,
-    perDayDisplay: gift.perDayDisplay,
-    durationDays: gift.durationDays,
-    creditedDays: gift.creditedDays,
-    missedDays: gift.missedDays,
-    opened: gift.opened,
-    counting: gift.connected,
-    finished: gift.finished,
-    cancelled: gift.cancelled,
-    earnedDisplay: gift.earnedDisplay,
-    theirsDisplay: gift.alreadyTheirsDisplay,
-    returnedDisplay: gift.returnedDisplay,
-  };
-}
-
-function DailyGiftPage({ gift, linkKey, reload }: Readonly<{ gift: GiftStatus; linkKey: string | null; reload: () => Promise<void> }>) {
+function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void> }>) {
   const { address, ensureSigner, status: accountStatus } = useAccount();
-  // Money moves on this page, so the session stays open thirty minutes rather than ten (decision 2, 17 Sep 2026).
   useMoneySession();
   const money = useDisplayCurrency(address);
   const browser = useSyncExternalStore(never, inBrowser, onServer);
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   const [busy, setBusy] = useState<Busy>("idle");
-  const [notice, setNotice] = useState<string | null>(null);
-  const [problem, setProblem] = useState<{ where: Where; message: string } | null>(null);
-  const [typed, setTyped] = useState("");
-  const [renaming, setRenaming] = useState(false);
-  const [notMineOpen, setNotMineOpen] = useState(false);
-  const [notYetOpen, setNotYetOpen] = useState(false);
+  const [answer, setAnswer] = useState<{ at: Where; text: string; failed: boolean } | null>(null);
   const [reviewing, setReviewing] = useState(false);
-  const [taken, setTaken] = useState<Taken | null>(null);
-  const [copied, setCopied] = useState<"yes" | "refused" | null>(null);
-  // Whether somebody was signed in on this page before the session went: then it closed while they were away (R12).
+  const [taken, setTaken] = useState<{ amount: string; atMs: number; take: number } | null>(null);
+  // Whether an account was signed in on this page before it went: then the session closed while they were here,
+  // rather than a page opened again with nobody signed in (D74, D80).
   const [hadAccount, setHadAccount] = useState(false);
   if (address && !hadAccount) setHadAccount(true);
 
-  const condition = conditionOfGoal(gift.goalType);
-  const words = condition?.recipient;
-  const readerIsFunder = gift.youAreTheFunder;
-  const mine = gift.youAreTheRecipient;
-  // Who is reading, and what that person may do, both decided in one place (src/gift-voice.ts, D99). A reader is
-  // neither of the gift's two people: a judge following a link, most often, and they are offered no gesture at all.
-  const voice = voiceOf(gift);
-  const reading = voice === "reader";
+  const milestone = status.kind === "milestone" ? status : null;
+  const daily = status.kind === "milestone" ? null : status;
+  const giftId = status.giftId;
+  const names = status.names ?? null;
+  const funderName = names?.funderName ?? null;
+
+  const voice: Voice = voiceOf({
+    youAreTheFunder: status.youAreTheFunder,
+    youAreTheRecipient: status.youAreTheRecipient,
+    opened: status.opened,
+  });
+  const mine = voice === "recipient";
+  const readerIsFunder = voice === "funder";
   const outsider = notTheirs(voice, Boolean(address));
-  const may = gesturesFor(voice, gift);
-  const account = gift.goalAccount;
-  const funder = gift.names?.funderName ?? null;
-  const recipient = gift.names?.recipientName ?? (account.source === "funder" ? account.username : null);
+
+  const gift = milestone ? giftOfMilestone(milestone) : giftOfSummary(daily!);
+  const read = readAs(gift, voice);
+  const moment = read.moment;
+
+  const condition = milestone ? conditionById(milestone.conditionId) : conditionOfGoal(daily?.goalType ?? 0);
+  const words = condition?.recipient;
+  const source = condition?.source ?? "";
+  const recipientName = names?.recipientName ?? (milestone ? milestone.goalAccount.username : (daily?.goalAccount.source === "funder" ? daily.goalAccount.username : null));
+
+  const account = milestone
+    ? {
+        username: milestone.goalAccount.username,
+        code: milestone.goalAccount.code,
+        namedByFunder: milestone.goalAccount.namedByFunder,
+        codeExpired: milestone.goalAccount.codeExpiresAt !== null && nowMs !== 0 && new Date(milestone.goalAccount.codeExpiresAt).getTime() <= nowMs,
+        codeExpiresAt: milestone.goalAccount.codeExpiresAt,
+      }
+    : {
+        username: daily?.goalAccount.username ?? null,
+        code: daily?.goalAccount.code ?? null,
+        namedByFunder: daily?.goalAccount.source === "funder",
+        codeExpired: (daily?.goalAccount.codeExpiresAt ?? null) !== null && nowMs !== 0 && new Date(daily!.goalAccount.codeExpiresAt!).getTime() <= nowMs,
+        codeExpiresAt: daily?.goalAccount.codeExpiresAt ?? null,
+      };
+
   const working = busy !== "idle" || accountStatus === "busy";
-  const catchUp = nowMs === 0 ? undefined : catchUpDay(gift, gift.catchUpSeconds, nowMs);
-  const range = gift.startDay === 0 ? null : contractRangeInWords(gift.startDay, gift.endDay);
-  const exact = BigInt(gift.perDay) * BigInt(gift.durationDays) === BigInt(gift.amount);
-  const perDay = `${exact ? "" : "about "}${gift.perDayDisplay}`;
-  const codeExpired = account.codeExpiresAt !== null && nowMs !== 0 && new Date(account.codeExpiresAt).getTime() <= nowMs;
-  const earned = BigInt(gift.earned);
-  const about = money.about(BigInt(gift.amount));
+  const earned = BigInt(milestone ? milestone.earned : (daily?.earned ?? "0"));
+  const amountDisplay = milestone ? milestone.amountDisplay : (daily?.amountDisplay ?? "");
+  const earnedDisplay = milestone ? milestone.earnedDisplay : (daily?.earnedDisplay ?? "");
+  const returnedDisplay = milestone ? milestone.returnedDisplay : (daily?.returnedDisplay ?? "");
+  const theirsDisplay = milestone
+    ? milestone.reached
+      ? milestone.amountDisplay
+      : milestone.earnedDisplay
+    : (daily?.alreadyTheirsDisplay ?? daily?.earnedDisplay ?? "");
+
+  /** The last day Viky judged, from the record it keeps of each day. Nothing for a gift settled before that record. */
+  const lastJudged = daily && daily.days.length > 0 ? [...daily.days].sort((a, b) => b.day - a.day)[0].outcome : null;
+  const nextReading = nowMs === 0 || gift.finished || gift.cancelled ? null : W.nextReading(momentInWords(nextPassMs(COUNTING_PASS_UTC, nowMs), nowMs));
+  const openBy =
+    moment === "unopened" && !readerIsFunder && daily
+      ? W.openBy(dateInWords((daily.createdAtChain + 14 * 86_400) * 1000), funderName)
+      : null;
+  const cameBackOn = milestone?.reachedAtMs ? dateInWords(milestone.reachedAtMs) : daily?.lastReturnAtMs ? dateInWords(daily.lastReturnAtMs) : null;
+
+  const live = liveOf({
+    moment,
+    voice,
+    funderName,
+    recipientName,
+    source,
+    amountDisplay,
+    theirsDisplay,
+    returnedDisplay,
+    todayReading: milestone?.todayReading ?? null,
+    target: milestone?.target ?? null,
+    started: milestone ? milestone.connected : Boolean(daily && daily.creditedDays + daily.missedDays > 0),
+    lastJudged,
+    openByInWords: openBy,
+    nextReadingInWords: moment === "counting" || moment === "climbing" ? nextReading : null,
+    cameBackOnInWords: cameBackOn,
+  });
 
   const run = async (kind: Busy, where: Where, action: () => Promise<string | null>) => {
     setBusy(kind);
-    setProblem(null);
-    setNotice(null);
+    setAnswer(null);
     try {
       const message = await action();
-      if (message) setNotice(message);
+      if (message) setAnswer({ at: where, text: message, failed: false });
       await reload();
     } catch (error) {
-      setProblem({ where, message: screenMessage(error) });
+      setAnswer({ at: where, text: screenMessage(error), failed: true });
     } finally {
       setBusy("idle");
     }
   };
 
-  const outcome = (result: PublicOutcome): string => {
+  /** What a daily reading answered, in the words of the register and of the page, or a refusal thrown to be shown. */
+  const dailyOutcome = (result: PublicOutcome): string => {
     switch (result.kind) {
       case "bound":
-        return [words?.countingFrom(contractDayInWords(Math.floor(nowMs / 86_400_000) + 1)) ?? "", account.source === "recipient" ? W.codeOut : ""].filter(Boolean).join(" ");
+        return [words?.countingFrom(contractDayInWords(Math.floor(nowMs / 86_400_000) + 1)) ?? "", account.namedByFunder ? "" : W.codeOut]
+          .filter(Boolean)
+          .join(" ");
       case "counted":
         return W.readCounted(result.creditedDays);
       case "already":
         return result.reason === "counted_today" ? (words?.alreadyRead ?? W.readCounted(0)) : (W.nothingToDo[result.reason] ?? W.readCounted(0));
       case "refused":
-        throw new ApiError({ status: 409, code: result.code, message: result.code === "CODE_NOT_IN_NAME" ? `${result.message} ${W.notSeenYet}` : result.message });
+        throw new ApiError({
+          status: 409,
+          code: result.code,
+          message: result.code === "CODE_NOT_IN_NAME" ? `${result.message} ${W.notSeenYet}` : result.message,
+        });
+    }
+  };
+
+  /** What a milestone reading answered. Every branch ends in a sentence, including the shape nobody foresaw. */
+  const milestoneOutcome = (outcome: MilestoneOutcome): string => {
+    switch (outcome.kind) {
+      case "started":
+        return outcome.aboveAccepted
+          ? A.outcome.startedAbove(outcome.rating, milestone?.target ?? 0)
+          : A.outcome.started(outcome.rating, milestone?.target ?? 0);
+      case "reached":
+        return A.outcome.reached(outcome.rating);
+      case "notYet":
+        return A.outcome.notYet(outcome.rating, outcome.target);
+      case "already":
+        return A.outcome.already[outcome.reason as keyof typeof A.outcome.already] ?? A.failed;
+      case "refused":
+        throw new ApiError({ status: 409, code: "REFUSED", message: outcome.message.trim().length > 0 ? outcome.message : A.failed });
+      default:
+        return A.failed;
     }
   };
 
   const open = () =>
     run("opening", "open", async () => {
       if (!linkKey) throw new ApiError({ status: 400, code: "NO_KEY", message: W.missingKey });
-      await claimGift(gift.giftId, linkKey);
+      await claimGift(giftId, linkKey);
       return null;
     });
-  const name = (username: string) =>
+  const name = (username: string) => run("naming", "name", async () => {
+    await nameGoalAccount(giftId, username);
+    return null;
+  });
+  const askCode = () =>
     run("naming", "name", async () => {
-      await nameGoalAccount(gift.giftId, username);
-      setRenaming(false);
-      setTyped("");
+      if (milestone) {
+        await requestMilestoneCode(giftId);
+        return null;
+      }
+      if (account.username) await nameGoalAccount(giftId, account.username);
       return null;
     });
-  const bind = () => run("binding", "bind", async () => outcome(await bindGoalAccount(gift.giftId)));
-  const count = () => run("counting", "count", async () => outcome(await countNow(gift.giftId)));
+  const start = () =>
+    run("starting", "start", async () => (milestone ? milestoneOutcome(await startMilestone(giftId)) : dailyOutcome(await bindGoalAccount(giftId))));
+  const countToday = () =>
+    run("counting", "count", async () => (milestone ? milestoneOutcome(await checkMilestone(giftId)) : dailyOutcome(await countNow(giftId))));
   const take = () =>
     run("taking", "take", async () => {
       // The passkey is opened here, at the one moment a signature is needed, rather than assumed to be open.
       const signer = await ensureSigner();
-      const amount = gift.earnedDisplay;
-      const takeNumber = Number(gift.withdrawNonce) + 1;
-      await withdrawEarned({ account: signer, giftId: gift.giftId, escrow: gift.escrow, amount: earned, nonce: BigInt(gift.withdrawNonce) });
+      const takeNumber = Number(milestone ? milestone.withdrawNonce : (daily?.withdrawNonce ?? "0")) + 1;
+      await withdrawEarned({
+        account: signer,
+        giftId,
+        escrow: milestone ? milestone.escrow : (daily?.escrow as `0x${string}`),
+        amount: earned,
+        nonce: BigInt(milestone ? milestone.withdrawNonce : (daily?.withdrawNonce ?? "0")),
+      });
       setReviewing(false);
-      setTaken({ amount, atMs: Date.now(), take: takeNumber });
+      setTaken({ amount: earnedDisplay, atMs: Date.now(), take: takeNumber });
       return null;
     });
 
-  const refusalAt = (where: Where) => (problem?.where === where ? <FieldRefusal id={`gift-${where}-refused`}>{problem.message}</FieldRefusal> : null);
+  const answerAt = (where: Where): ReactNode =>
+    answer && answer.at === where ? (
+      answer.failed ? (
+        <FieldRefusal id={`gift-${where}-refused`}>{answer.text}</FieldRefusal>
+      ) : (
+        <p role="status" className={BODY}>
+          {answer.text}
+        </p>
+      )
+    ) : null;
 
-  const title = reading
-    ? W.titleReading(funder, recipient, gift.amountDisplay)
-    : readerIsFunder
-      ? W.titleTheirs(recipient, gift.amountDisplay)
-      : W.titleYours(funder, gift.amountDisplay);
-  const when = range ?? W.forDaysFromConnecting(gift.durationDays);
-  const summary = summaryOf(gift, voice);
-  // Somebody whose session just closed still has gifts; only a reader who never had an account here is sent to the door.
-  const back = address || hadAccount ? { back: "/gifts", backLabel: W.backToGifts } : { back: "/", backLabel: W.aboutViky, backFollows: true };
-
-  const prose = (
-    <section className="flex flex-col gap-[var(--space-sm)]">
-      {about ? <p className={HELP}>{about}</p> : null}
-      {gift.cancelled ? (
-        <p className={BODY}>{W.wentBackBeforeStart}</p>
-      ) : gift.finished ? null : (
-        <>
-          <p className={BODY}>
-            {readerIsFunder || reading
-              ? W.becomesTheirs(perDay, words?.eachDayTheirs ?? condition?.words.eachDay ?? "", when)
-              : W.becomesYours(perDay, words?.eachDayYours ?? condition?.words.eachDay ?? "", when)}
-          </p>
-          <p className={HELP}>{readerIsFunder ? W.comesBackToYou(perDay) : W.goesBackToThem(perDay, funder)}</p>
-          {!gift.opened && !readerIsFunder ? <p className={HELP}>{W.openBy(dateInWords((gift.createdAtChain + 14 * 86_400) * 1_000), funder)}</p> : null}
-        </>
-      )}
-    </section>
-  );
-
-  // The session closed while somebody was reading: a door to reopen, not a failure (R12, as W11).
+  // The session closed while they were here: nothing is lost and the door is the whole page (D74, D80).
   if (!address && hadAccount) {
     return (
-      <Shell kind="task" {...back} step={W.closedTitle}>
-        <GiftCard gift={summary} still />
+      <Shell kind="task" back="/" backLabel={W.aboutViky} backFollows step={W.closedTitle}>
         <p className={BODY}>{W.closedBody}</p>
         <AccountPanel returning signInOnly />
       </Shell>
     );
   }
 
-  const actions: ReactNode[] = [];
+  const connectWords: ConnectWords | null = milestone
+    ? {
+        named: account.username ? A.givenName(source, account.username) : null,
+        stillNeeds: A.connectTitle(source),
+        notMine: undefined,
+        proveTitle: account.username ? A.proveTitle(account.username) : A.connectTitle(source),
+        proveSteps: milestoneById(milestone.conditionId)?.words.codeSteps ?? "",
+        connectNow: A.connectNow(milestone.durationDays),
+        firstReading: A.firstReading,
+        start: A.startReading(source),
+        added: A.added,
+        getCode: A.getCode,
+        newCode: A.newCode,
+      }
+    : words
+      ? {
+          named: account.username ? words.namedBy(account.username, funderName ?? "the person who sent it") : null,
+          stillNeeds: words.stillNeeds,
+          nameField: {
+            label: words.usernameLabel,
+            help: words.usernameHelp,
+            typeToContinue: words.typeToContinue,
+            noPassword: words.noPassword,
+            notYet: words.notYet,
+          },
+          notMine: words.notMine,
+          proveTitle: account.username ? words.proveTitle(account.username) : words.stillNeeds,
+          proveSteps: words.proveSteps,
+          slowToShow: words.slowToShow,
+          start: W.startCounting,
+          added: W.iAddedIt,
+          getCode: W.newCode,
+          newCode: W.newCode,
+        }
+      : null;
 
-  if (!gift.cancelled && !address) {
-    actions.push(
-      <section key="account" className="flex flex-col gap-[var(--space-md)]">
-        <p className="font-medium">{gift.opened ? W.signInToSee : W.createToOpen}</p>
-        {/* An opened gift is somebody's already: whoever reads it here without an account is coming back to one, so
-            signing in is all there is to offer, and the panel's sentence about a gift and a payment is not theirs. */}
-        {gift.opened ? <AccountPanel returning signInOnly /> : <AccountPanel />}
-      </section>,
-    );
-  }
-
-  // Signed in as somebody who is neither of the two: say so plainly, and name the two people it is between. A reader
-  // with no account here is not told this, because they may be the person it is for, coming back to sign in.
-  if (outsider) {
-    actions.push(
-      <section key="outsider" className={CARD}>
-        <p className="font-medium">{W.notYours}</p>
-        <p className={BODY}>{W.readingWhose(funder, recipient)}</p>
-      </section>,
-    );
-  }
-
-  if (may.openTheGift && address) {
-    actions.push(
-      <section key="open" className="flex flex-col gap-[var(--space-sm)]">
-        <button type="button" onClick={open} disabled={working || !linkKey} className={PRIMARY_BUTTON}>
-          {busy === "opening" ? W.opening : W.openMyGift}
-        </button>
-        {!linkKey ? <FieldRefusal id="gift-no-key">{W.missingKey}</FieldRefusal> : refusalAt("open")}
-      </section>,
-    );
-  }
-
-  // R5: the funder named the account.
-  if (may.connectTheAccount && !account.bound && account.source === "funder" && account.username && words) {
-    actions.push(
-      <section key="named" className={CARD}>
-        <p className={BODY}>{words.namedBy(account.username, funder ?? "the person who sent it")}</p>
-        <button type="button" onClick={bind} disabled={working} className={PRIMARY_BUTTON}>
-          {busy === "binding" ? W.reading : W.startCounting}
-        </button>
-        {refusalAt("bind")}
-        <button type="button" onClick={() => setNotMineOpen((isOpen) => !isOpen)} aria-expanded={notMineOpen} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
-          {words.notMine}
-        </button>
-        {notMineOpen ? <p className={HELP}>{W.namedWrong(funder)}</p> : null}
-      </section>,
-    );
-  }
-
-  // R3: connect the account, when nobody named it, or to change a name that is not theirs.
-  const naming = may.connectTheAccount && !account.bound && account.source !== "funder" && (!account.code || renaming);
-  if (naming && words) {
-    actions.push(
-      <section key="name" className={CARD}>
-        <p className="font-medium">{words.stillNeeds}</p>
-        <form
-          className="flex flex-col gap-[var(--space-md)]"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (typed.trim()) void name(typed.trim());
-          }}
-        >
-          <div className="flex flex-col gap-[var(--space-xs)]">
-            <label htmlFor="source-username" className="font-medium">
-              {words.usernameLabel}
-            </label>
-            <p id="source-username-help" className={HELP}>
-              {words.usernameHelp}
-            </p>
-            <input
-              id="source-username"
-              value={typed}
-              onChange={(event) => setTyped(event.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-              aria-describedby="source-username-help"
-              aria-invalid={problem?.where === "name" ? true : undefined}
-              disabled={working}
-              className={FIELD}
-            />
-            {problem?.where === "name" ? refusalAt("name") : typed.trim() === "" ? <p className={HELP}>{words.typeToContinue}</p> : null}
-          </div>
-          <button type="submit" disabled={working || typed.trim() === ""} className={PRIMARY_BUTTON}>
-            {busy === "naming" ? W.checking : W.continue}
-          </button>
-        </form>
-        <p className={HELP}>{words.noPassword}</p>
-        {renaming ? (
-          <button type="button" onClick={() => setRenaming(false)} className={SECONDARY_BUTTON}>
-            {W.keepMyName}
-          </button>
-        ) : (
+  /** The one action of this moment, and nothing of the same weight beside it (document J). */
+  const action = ((): ReactNode => {
+    if (!address && !gift.cancelled) {
+      return (
+        <div className="flex flex-col gap-[var(--space-md)]">
+          <p className="font-medium">{status.opened ? W.signInToSee : W.createToOpen}</p>
+          {status.opened ? <AccountPanel returning signInOnly /> : <AccountPanel />}
+        </div>
+      );
+    }
+    if (outsider) {
+      return (
+        <div className="flex flex-col gap-[var(--space-sm)]">
+          <p className="font-medium">{W.notYours}</p>
+          <p className={HELP}>{W.readingWhose(funderName, recipientName)}</p>
+        </div>
+      );
+    }
+    switch (read.action) {
+      case "open":
+        return (
           <>
-            <button type="button" onClick={() => setNotYetOpen((isOpen) => !isOpen)} aria-expanded={notYetOpen} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
-              {words.notYet}
+            <button type="button" onClick={open} disabled={working || !linkKey} className={PRIMARY_BUTTON}>
+              {busy === "opening" ? W.opening : W.openMyGift}
             </button>
-            {notYetOpen ? <p className={HELP}>{W.notYetBody(funder)}</p> : null}
+            {linkKey ? answerAt("open") : <FieldRefusal id="gift-no-key">{W.missingKey}</FieldRefusal>}
           </>
-        )}
-      </section>,
-    );
-  }
-
-  // R4: prove the account is theirs, with a code in its display name.
-  if (may.connectTheAccount && !account.bound && account.source === "recipient" && account.code && account.username && !renaming && words) {
-    const username = account.username;
-    const code = account.code;
-    actions.push(
-      <section key="prove" className={CARD}>
-        <p className="font-medium">{words.proveTitle(username)}</p>
-        {codeExpired ? (
-          <>
-            <p className={BODY}>{W.expired}</p>
-            <button type="button" onClick={() => void name(username)} disabled={working} className={PRIMARY_BUTTON}>
-              {busy === "naming" ? W.checking : W.newCode}
+        );
+      case "connect":
+        return connectWords ? (
+          <ConnectTheSource
+            words={connectWords}
+            account={account}
+            funderName={funderName}
+            busy={busy === "naming" ? "naming" : busy === "starting" ? "starting" : null}
+            working={working}
+            refusal={
+              answer?.failed && (answer.at === "name" || answer.at === "start") ? { where: answer.at, text: answer.text } : null
+            }
+            validUntil={account.codeExpiresAt && nowMs !== 0 ? momentInWords(new Date(account.codeExpiresAt).getTime(), nowMs) : null}
+            onName={milestone ? undefined : name}
+            onAskCode={askCode}
+            onStart={start}
+          />
+        ) : null;
+      case "shareProof":
+        return milestone ? (
+          <CertificateProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onProved={reload} />
+        ) : null;
+      case "take":
+        return reviewing ? (
+          <div className="flex flex-col gap-[var(--space-md)]">
+            <p className={BODY}>{W.takeReview}</p>
+            {money.about(earned) ? <p className={HELP}>{money.about(earned)}</p> : null}
+            <button type="button" onClick={take} disabled={working} className={PRIMARY_BUTTON}>
+              {busy === "taking" ? W.taking : W.take(earnedDisplay)}
             </button>
-            {refusalAt("name")}
-          </>
-        ) : (
-          <>
-            <p className={BODY}>{words.proveSteps}</p>
-            <p className="text-center text-[length:var(--type-money)] font-semibold tracking-widest tabular-nums">{code}</p>
+            {answerAt("take")}
             <button
               type="button"
-              onClick={() =>
-                void navigator.clipboard
-                  .writeText(code)
-                  .then(() => setCopied("yes"))
-                  .catch(() => setCopied("refused"))
-              }
-              className={SECONDARY_BUTTON}
+              onClick={() => setReviewing(false)}
+              disabled={working}
+              className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}
             >
-              {copied === "yes" ? W.copied : W.copyCode}
+              {W.notNow}
             </button>
-            {copied === "refused" ? <FieldRefusal id="code-copy-refused">{W.copyRefused}</FieldRefusal> : null}
-            {account.codeExpiresAt && nowMs !== 0 ? <p className={HELP}>{W.validUntil(momentInWords(new Date(account.codeExpiresAt).getTime(), nowMs))}</p> : null}
-            <button type="button" onClick={bind} disabled={working} className={PRIMARY_BUTTON}>
-              {busy === "binding" ? W.reading : W.iAddedIt}
-            </button>
-            {refusalAt("bind")}
-            <p className={HELP}>{words.slowToShow}</p>
-            <p className={HELP}>{W.removeAfter}</p>
-          </>
-        )}
-        <button type="button" onClick={() => setRenaming(true)} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
-          {words.notMine}
-        </button>
-      </section>,
-    );
-  }
+          </div>
+        ) : (
+          <button type="button" onClick={() => setReviewing(true)} disabled={working} className={PRIMARY_BUTTON}>
+            {W.take(earnedDisplay)}
+          </button>
+        );
+      case "linkAgain":
+        return <LinkAgain giftId={giftId} recipientName={recipientName} />;
+      case "askAgain":
+      default:
+        return null;
+    }
+  })();
 
-  // R6 to R11: connected, counting, finished, and the funder's reading of it.
-  // A reader sees where the gift stands, because that is the whole of what a link is for; the gestures below are all
-  // gated on being one of the two people, so nothing here offers them anything to do (D99).
-  const counting = !gift.cancelled && gift.connected && (mine || readerIsFunder || reading);
-  const nextReading = nowMs === 0 ? null : momentInWords(nextPassMs(COUNTING_PASS_UTC, nowMs), nowMs);
-  const fromRecord = nowMs === 0 ? true : stripFromRecord(gift, gift.catchUpSeconds, nowMs, gift.days);
-  const takeOffered = may.takeTheMoney && earned > 0n;
-
-  const takeBlock = takeOffered ? (
-    reviewing ? (
-      <section className={CARD}>
-        <p className={BODY}>{W.takeReview(gift.earnedDisplay)}</p>
-        {money.about(earned) ? <p className={HELP}>{money.about(earned)}</p> : null}
-        <button type="button" onClick={take} disabled={working} className={PRIMARY_BUTTON}>
-          {busy === "taking" ? W.taking : W.take(gift.earnedDisplay)}
-        </button>
-        {refusalAt("take")}
-        <button type="button" onClick={() => setReviewing(false)} disabled={working} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
-          {W.notNow}
-        </button>
-      </section>
-    ) : (
-      <button type="button" onClick={() => setReviewing(true)} disabled={working} className={PRIMARY_BUTTON}>
-        {W.take(gift.earnedDisplay)}
-      </button>
-    )
+  const shape = milestone ? (
+    <MilestoneMeter status={milestone} size="large" />
+  ) : browser && daily ? (
+    <DayRow id={giftId} gift={daily} catchUpSeconds={daily.catchUpSeconds} records={daily.days} voice={voice} />
   ) : null;
 
-  /**
-   * The link again, to the funder, while nobody has opened the gift: from this device when it kept it, and otherwise
-   * a new one, because only the key's fingerprint is kept and the old link can never be read back (gift 1000001).
-   */
-  const linkAgain = may.copyTheLink && !gift.opened ? <LinkAgain giftId={gift.giftId} recipientName={gift.names?.recipientName ?? null} /> : null;
-
-  /**
-   * Taking it back, the funder's own way out of a gift nobody opened. Offered under the link, because the two belong
-   * to the same moment: the link has not reached anybody, or it has and nothing came of it.
-   */
-  const takeItBack = readerIsFunder && !gift.opened && !gift.cancelled ? <TakeItBack giftId={gift.giftId} amountDisplay={gift.amountDisplay} recipientName={gift.names?.recipientName ?? null} onTakenBack={reload} /> : null;
-
-  const takenBlock = taken ? (
-    <section className={CARD} role="status">
-      <p className="font-medium">{W.taken(taken.amount, whenInWords(taken.atMs), gift.giftId, taken.take)}</p>
-      <p className={HELP}>{W.stillInGift(gift.earnedDisplay, gift.finished ? 0 : Math.max(0, gift.daysLeft))}</p>
-      {/* The money has just moved into the account, so the one thing this screen is now waiting for is the way out,
-          and it carries the accent (relecture of 18 Sep, item 5). The gesture that had it, taking, is done and gone. */}
-      <Link href="/cash-out" className={PRIMARY_BUTTON}>
-        {W.sendToBank}
-      </Link>
-    </section>
-  ) : null;
-
-  const countingBlock = counting ? (
-    <section className="flex flex-col gap-[var(--space-md)]">
-      {gift.finished ? (
-        <div className="flex flex-col gap-[var(--space-xs)]">
-          <p className="font-medium">{W.finished(range ?? "")}</p>
+  /** What was agreed: the amount, what it counts, how long, and what happens to what is not earned. Read once. */
+  const agreed = (
+    <>
+      {milestone ? (
+        <>
+          <p className={BODY}>{M.target(milestone.target, source)}</p>
           <p className={BODY}>
-            {readerIsFunder || reading
-              ? W.daysTheirs(gift.creditedDays, gift.durationDays, gift.alreadyTheirsDisplay)
-              : W.daysYours(gift.creditedDays, gift.durationDays, gift.alreadyTheirsDisplay)}
+            {readerIsFunder
+              ? M.atDeadlineTheirs(milestoneBy(milestone))
+              : M.atDeadlineYours(milestoneBy(milestone), funderName)}
           </p>
-          <p className={BODY}>{readerIsFunder ? W.cameBack(gift.missedDays, gift.returnedDisplay) : W.wentBackTo(gift.missedDays, funder, gift.returnedDisplay)}</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-[var(--space-xs)]">
-          <p className="font-medium">{gift.todayDayIndex === 0 ? W.counting(range ?? "") : W.dayOf(gift.todayDayIndex, gift.durationDays, range ?? "")}</p>
-          {nextReading ? (
-            <p className={HELP}>
-              {W.nextReading(nextReading)} {(voice === "recipient" ? words?.reads : words?.readsTheirs) ?? ""}
-            </p>
-          ) : null}
-        </div>
-      )}
-      {browser ? <DayRow id={gift.giftId} gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} voice={voice} /> : null}
-      {!fromRecord ? <p className={HELP}>{W.fromCountsNote}</p> : null}
-      {/* The proof of a day goes only to the two people the gift is between (U2), so it is offered only to them. */}
-      {may.seeTheProof ? <CheckThisDay giftId={gift.giftId} days={gift.days} /> : null}
-      <MorningMessage giftId={gift.giftId} yours={may.beTold} />
-      <dl className="flex flex-col divide-y divide-[var(--divider)] border-y border-[var(--divider)]">
-        <Total label={readerIsFunder || reading ? W.theirsSoFar : W.yoursSoFar} value={W.amountDays(gift.alreadyTheirsDisplay, gift.creditedDays)} />
-        {voice === "recipient" ? <Total label={W.alreadyTaken} value={gift.takenDisplay} /> : null}
-        <Total
-          label={readerIsFunder ? W.cameBackToYou : W.backToFunder(funder)}
-          value={W.amountDays(gift.returnedDisplay, gift.missedDays)}
-          note={readerIsFunder && gift.lastReturnAtMs && nowMs !== 0 ? W.inYourAccount(momentInWords(gift.lastReturnAtMs, nowMs)) : undefined}
-        />
-      </dl>
-      {catchUp && !gift.finished && words ? (
-        <p className="font-medium">
-          {readerIsFunder || reading ? words.catchUpTheirs(momentInWords(catchUp.deadlineMs, nowMs)) : words.catchUpYours(momentInWords(catchUp.deadlineMs, nowMs))}
-        </p>
+          {milestone.startReading !== null ? <p className={HELP}>{M.startedAt(milestone.startReading)}</p> : null}
+        </>
+      ) : daily ? (
+        <>
+          <p className={BODY}>
+            {readerIsFunder || voice === "reader"
+              ? W.becomesTheirs(daily.perDayDisplay, words?.eachDayTheirs ?? condition?.words.eachDay ?? "", agreedWhen(daily))
+              : W.becomesYours(daily.perDayDisplay, words?.eachDayYours ?? condition?.words.eachDay ?? "", agreedWhen(daily))}
+          </p>
+          <p className={BODY}>{readerIsFunder ? W.comesBackToYou : W.goesBackToThem(funderName)}</p>
+        </>
       ) : null}
-      {readerIsFunder && !gift.finished ? <p className={HELP}>{W.beingEarned}</p> : null}
-      {may.countNow && !gift.finished && gift.todayDayIndex > 0 ? (
-        <div className="flex flex-col gap-[var(--space-sm)]">
-          <button type="button" onClick={count} disabled={working} className={SECONDARY_BUTTON}>
+      {readerIsFunder ? <p className={HELP}>{W.made(dateInWords(status.createdAtChain * 1000), giftId)}</p> : null}
+    </>
+  );
+
+  /** How this is checked: what the source is, when it is read, and the proof anybody may take away. */
+  const checked = (
+    <>
+      {nextReading && !gift.finished ? (
+        <p className={HELP}>{voice === "recipient" ? (words?.reads ?? "") : (words?.readsTheirs ?? "")}</p>
+      ) : null}
+      {milestone ? (
+        <p className={HELP}>{readerIsFunder ? M.ruleTheirs(milestone.target, milestoneBy(milestone), settlingTimeInWords(nowMs)) : M.ruleYours(milestone.target, milestoneBy(milestone), settlingTimeInWords(nowMs))}</p>
+      ) : null}
+      {daily && !stripFromRecordSafe(daily, nowMs) ? <p className={HELP}>{W.fromCountsNote}</p> : null}
+      {/* Asking for a reading now, and being told each morning: neither is the moment's action, so neither is
+          offered beside it. They live here, with the rest of how a gift is checked. */}
+      {(mine || readerIsFunder) && !gift.finished && gift.connected && !gift.sourceClosed ? (
+        <>
+          <button type="button" onClick={countToday} disabled={working} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
             {busy === "counting" ? W.reading : W.countNow}
           </button>
-          {refusalAt("count")}
-        </div>
+          {answerAt("count")}
+        </>
       ) : null}
-    </section>
-  ) : null;
+      <MorningMessage giftId={giftId} yours={mine || readerIsFunder} />
+    </>
+  );
 
-  // What changed on this gift since this device last opened it, replayed once on arrival (brief, section 6).
-  const arriving = nowMs === 0 ? [] : charactersOf(gift, gift.catchUpSeconds, nowMs, gift.days);
+  /** The reading behind a day, to take away and check: outside the card, in the ground's own voice (the mockup). */
+  const proof =
+    mine || readerIsFunder ? (
+      <>
+        {daily ? <CheckThisDay giftId={giftId} days={daily.days} /> : null}
+        {milestone ? <CheckThisReading giftId={giftId} /> : null}
+      </>
+    ) : null;
+
+  const arriving = nowMs === 0 || !daily ? [] : charactersOf(daily, daily.catchUpSeconds, nowMs, daily.days);
+
   return (
     <Arrival
       storageKey="viky.seen.days"
-      gifts={[{ id: gift.giftId, days: arriving, lastSeen: arriving.filter((day) => day === "earned" || day === "returned").length }]}
+      gifts={[{ id: giftId, days: arriving, lastSeen: arriving.filter((day) => day === "earned" || day === "returned").length }]}
     >
-    <Shell kind="task" {...back} step={title}>
-      <GiftCard gift={summary} still />
-      {takenBlock}
-      {takeBlock}
-      {linkAgain}
-      {takeItBack}
-      {notice ? (
-        <Notice role="status">
-          <span>{notice}</span>
-        </Notice>
-      ) : null}
-      {prose}
-      {actions}
-      {countingBlock}
-      {readerIsFunder ? <p className={HELP}>{W.made(dateInWords(gift.createdAtChain * 1_000), gift.giftId)}</p> : null}
-    </Shell>
+      <Shell kind="task" {...(address || hadAccount ? { back: "/gifts", backLabel: W.backToGifts } : { back: "/", backLabel: W.aboutViky, backFollows: true })}>
+        <GiftLive
+          from={CARD_WORDS.fromFunderOrYours(readerIsFunder ? null : funderName)}
+          who={mine ? CARD_WORDS.forYou : CARD_WORDS.forName(recipientName ?? account.username ?? "")}
+          what={condition?.name ?? ""}
+          shape={shape}
+          live={live}
+          /* The source closed the account: said where the state is said, because it is the state now. */
+          closed={milestone?.accountClosed && !gift.finished ? (milestoneById(milestone.conditionId)?.words.accountClosed ?? null) : null}
+          action={action}
+          agreed={{ open: read.agreementOpen, children: agreed }}
+          checked={checked}
+          beside={proof}
+        />
+
+        {/* Ending a gift nobody opened: the funder's second gesture, under the first, never beside it. */}
+        {funderMayTakeItBack(gift, voice) ? (
+          <TakeItBack giftId={giftId} amountDisplay={amountDisplay} recipientName={recipientName} onTakenBack={reload} />
+        ) : null}
+
+        {taken ? (
+          <section className={CARD} role="status">
+            <p className="font-medium">{W.taken(taken.amount, whenInWords(taken.atMs), giftId, taken.take)}</p>
+            {/* The money has just moved into the account, so the way out is what this screen is waiting for now. */}
+            <Link href="/cash-out" className={PRIMARY_BUTTON}>
+              {W.sendToBank}
+            </Link>
+          </section>
+        ) : null}
+      </Shell>
     </Arrival>
   );
 }
 
-function Total({ label, value, note }: Readonly<{ label: string; value: string; note?: string }>) {
-  return (
-    <div className="flex flex-col gap-[var(--space-xs)] py-[var(--space-sm)]">
-      <div className="flex items-baseline justify-between gap-[var(--space-md)]">
-        <dt className={HELP}>{label}</dt>
-        <dd className={`${BODY} text-right tabular-nums`}>{value}</dd>
-      </div>
-      {note ? <dd className={HELP}>{note}</dd> : null}
-    </div>
-  );
+/** "by 17 Oct 2026" once the first reading has started the clock, "within 30 days of connecting" before it (D46). */
+function milestoneBy(status: MilestoneStatus): string {
+  return status.deadlineMs === null ? M.withinDays(status.durationDays) : M.byDate(dateInWords(status.deadlineMs));
 }
+
+/** The dates a daily gift runs between, or how long it runs once it is connected. */
+function agreedWhen(gift: Readonly<{ startDay: number; endDay: number; durationDays: number }>): string {
+  return gift.startDay === 0 ? W.forDaysFromConnecting(gift.durationDays) : contractRangeInWords(gift.startDay, gift.endDay);
+}
+
+/** Whether the day row is drawn from the record of each day rather than from the totals alone. */
+function stripFromRecordSafe(gift: GiftStatus, nowMs: number): boolean {
+  return nowMs === 0 ? true : stripFromRecord(gift, gift.catchUpSeconds, nowMs, gift.days);
+}
+
+/** Kept for the catch-up sentence the day row leans on, so a day that can still be caught is never silent. */
+export { catchUpDay };
