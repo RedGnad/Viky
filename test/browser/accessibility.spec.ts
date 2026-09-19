@@ -45,7 +45,13 @@ const CONTRAST = `
       const bg = behind(el);
       const l1 = luminance(fg), l2 = luminance(bg);
       const ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-      if (ratio < 4.5) failures.push(text.slice(0, 40) + " :: " + ratio.toFixed(2) + ":1 (" + style.color + " on rgb(" + bg + "))");
+      // WCAG's own floor, and its own definition of large: 18.66px carrying weight, or 24px at any weight. A card's
+      // name and its amount are drawn at 28 and 42 in the title face, and 3:1 is what the criterion asks of them.
+      const size = parseFloat(style.fontSize);
+      const bold = Number(style.fontWeight) >= 700 || style.fontWeight === "bold";
+      const large = size >= 24 || (size >= 18.66 && bold);
+      const floor = large ? 3 : 4.5;
+      if (ratio < floor) failures.push(text.slice(0, 40) + " :: " + ratio.toFixed(2) + ":1 (" + style.color + " on rgb(" + bg + "), " + size + "px)");
     }
     return failures;
   })()
@@ -53,11 +59,11 @@ const CONTRAST = `
 
 test.describe("what the design pass promised", () => {
   for (const path of PAGES) {
-    test(`${path}: every piece of text clears 4.5:1`, async ({ page }) => {
+    test(`${path}: every piece of text clears its floor, 4.5:1 or 3:1 when it is large`, async ({ page }) => {
       await page.goto(path);
       await expect(page.locator("main")).toBeVisible();
       const failures = (await page.evaluate(CONTRAST)) as string[];
-      expect(failures, `${path} has text below 4.5:1`).toEqual([]);
+      expect(failures, `${path} has text under the floor WCAG sets for its size`).toEqual([]);
     });
 
     test(`${path}: every tap target is at least 48 by 48`, async ({ page }) => {

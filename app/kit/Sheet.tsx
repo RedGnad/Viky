@@ -20,6 +20,7 @@ export function Sheet({
   onClose,
   children,
   footer,
+  tall = false,
 }: Readonly<{
   open: boolean;
   title: string;
@@ -29,6 +30,8 @@ export function Sheet({
   children: ReactNode;
   /** The action that ends the sheet, kept at the bottom where the thumb is. */
   footer?: ReactNode;
+  /** A sheet with more to say stops a little higher, at the cap pay.html draws, and still never fills the screen. */
+  tall?: boolean;
 }>) {
   const dialog = useRef<HTMLDialogElement>(null);
   const labelId = useId();
@@ -46,7 +49,7 @@ export function Sheet({
   return (
     <dialog
       ref={dialog}
-      className="sheet"
+      className={tall ? "sheet sheet-tall" : "sheet"}
       aria-labelledby={labelId}
       // Escape, the close button and the backdrop all end in the same place: the dialog's own close event.
       onClose={onClose}

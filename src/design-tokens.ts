@@ -158,8 +158,11 @@ export type Appearance = "light" | "dark";
  */
 export const COLOURS: Record<Appearance, Record<string, string>> = {
   light: {
-    /** The ground: a cool neutral with almost no chroma, calm enough to read an amount on. */
-    background: "#F6F4FB",
+    /**
+     * The ground, as the rendered mockup home-light.html draws it: a lavender the cream card stands on at 1.31:1,
+     * where the near-white it replaced left the card at 1.09:1 and invisible without a hairline of ink.
+     */
+    background: "#DDD6EB",
     /** The surface a card, a field, the bar and the rail sit on. */
     surface: "#FFFFFF",
     /** Indigo ink: 15.81:1 on the ground, 17.24:1 on a surface. */

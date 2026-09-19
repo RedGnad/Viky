@@ -207,7 +207,7 @@ test("before connecting, the recipient is told that only what comes after counts
     MILESTONE_FUND.check.fourteenDays,
     "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
   );
-  assert.match(readFileSync("app/components/PayGift.tsx", "utf8"), /milestone \? M\.check\.fourteenDays : W\.check\.fourteenDays/);
+  assert.match(readFileSync("app/kit/offer/PaySheet.tsx", "utf8"), /milestone \? MILESTONE_FUND\.check\.fourteenDays : FUND\.check\.fourteenDays/);
 });
 
 test("the delays mirrored here are the contract's own", () => {

@@ -175,14 +175,21 @@ test("the characters have three colours, none grey, none the sun, and a face tha
 });
 
 /** The ground is neutral, which is what the cream of the poster look was not: its chroma is a tenth of that one's. */
-test("the ground is neutral by day and by night", () => {
-  assert.ok(oklch(COLOURS.light.background).chroma <= 0.02);
+/**
+ * The ground was neutral in both appearances until the rendered mockups of 19 Sep 2026 drew a lavender one for day
+ * and kept the indigo for night, with the same cream card on both. What has to hold now is not neutrality: it is
+ * that the card is never the value of the ground it sits on, which is what a card being an object means.
+ */
+test("the card stands off the ground it is on, by day and by night", () => {
   assert.ok(oklch(COLOURS.dark.background).chroma <= 0.05);
-  // The cream #FFF3D9 the founder rejected measures 0.036, and the indigo #1C1035 beside it 0.070.
-  assert.ok(oklch("#FFF3D9").chroma > 0.03);
+  const paper = "#FFF6E2";
+  assert.ok(contrastRatio(paper, COLOURS.light.background) >= 1.3, "the cream on the day ground");
+  assert.ok(contrastRatio(paper, COLOURS.dark.background) > 15, "and on the night one");
+  // The surface the fields, the bar and the rail sit on is not a card: it stays near its ground, and the white one
+  // of day sits at 1.41:1 on the lavender, which is a shade and not an object.
   for (const appearance of ["light", "dark"] as Appearance[]) {
     const { background, surface } = COLOURS[appearance];
-    assert.ok(Math.abs(oklch(surface).chroma - oklch(background).chroma) <= 0.02, `${appearance} surface is a colour of its own`);
+    assert.ok(contrastRatio(surface, background) <= 1.5, `${appearance} surface reads as a card rather than as a shade`);
   }
 });
 
@@ -255,12 +262,10 @@ test("the quiet button is filled, seen on both grounds, and its words clear 4.5:
   const primary = ui.slice(ui.indexOf("PRIMARY_BUTTON = `"), ui.indexOf("`;", ui.indexOf("PRIMARY_BUTTON = `")));
   assert.match(primary, /disabled:bg-\[var\(--action-off\)\]/);
   assert.match(primary, /disabled:\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--action-off-deep\)\]/);
-  // One shut action per palette, each readable on its own fill: the cream of the mockups by night, and by day the
-  // quiet fill the rest of the product already uses, because a beige pill on the day ground belongs to neither.
-  assert.ok(contrastRatio("#6F6133", "#EFE3C4") >= TEXT_CONTRAST_MINIMUM, "the words of the shut action are readable on the cream");
-  assert.ok(contrastRatio("#5B5470", "#E8E3F4") >= TEXT_CONTRAST_MINIMUM, "and on the day fill");
+  // One shut action, on the cream of the card in both appearances, and its words readable on it: the image's own
+  // #9A8B62 measures 2.64:1 there.
+  assert.ok(contrastRatio("#6F6133", "#EFE3C4") >= TEXT_CONTRAST_MINIMUM, "the words of the shut action are readable on it");
   assert.match(css, /--action-off-ink: #6F6133;/);
-  assert.match(css, /--action-off-ink: #5B5470;/);
   assert.match(primary, /\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--sun-deep\)\]/, "and the sun's own shadow is under it when it can be pressed");
 });
 

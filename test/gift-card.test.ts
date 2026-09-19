@@ -164,9 +164,11 @@ test("a card is the light object on the ground, as the rendered mockups draw it"
   assert.ok(contrastRatio("#FFF6E2", COLOURS.dark.background) > 15, "the card and the ground are never the same value");
   assert.match(css, /--card-shadow: 0 20px 44px rgba\(0, 0, 0, 0\.5\);/);
   assert.match(css, /--card-edge: transparent;/);
-  // Day is not drawn yet, so it keeps the palette it had, where the white card needed a hairline to be seen at all.
-  assert.ok(contrastRatio(COLOURS.light.surface, COLOURS.light.background) < 1.3);
-  assert.match(css, /--card-edge: var\(--control-border\);/);
+  // Day is drawn too since home-light.html: the same cream, on a lavender ground, with its own softer shadow and a
+  // warm hairline. The near-white card it replaced stood at 1.09:1 on its ground and needed a hairline of ink.
+  assert.ok(contrastRatio("#FFF6E2", COLOURS.light.background) >= 1.3);
+  assert.match(css, /--card-edge: #F0E3C2;/);
+  assert.match(css, /--card-shadow: 0 16px 40px rgba\(30, 22, 51, 0\.2\);/);
   // Everything inside a card reads on paper, so nothing inside one had to be rewritten for the ink to change.
   assert.match(ui, /export const CARD =\n?\s*"on-paper/);
   for (const said of ["--text: var(--on-surface)", "--muted: var(--on-surface-muted)", "--control-border: var(--on-surface)"]) {
@@ -217,15 +219,22 @@ test("what the card writes is what the gift is made from, and it comes back the 
   assert.equal(draftToTerms(lesson, "0xABC").account, "0xABC");
 });
 
-test("nothing on the card asks for an account, and the paying screen asks for one before it signs anything", () => {
+test("nothing on the card asks for an account, and the sheet that pays makes it at the press", () => {
   for (const source of [card, ...sheets]) {
     assert.doesNotMatch(source, /ensureSigner|signIn\(|createAccount|AccountPanel/, "the card asks nobody to sign in");
   }
-  assert.match(card, /router\.push\("\/fund"\)/, "the one action of a filled card is to pay for it");
+  assert.match(card, /setPaying\(true\)/, "the one action of a filled card opens the sheet that pays for it");
+  // And that sheet says what pressing it will do before it does it (the mockup pay.html). The panel that makes an
+  // account by hand is its fallback, for a device the passkey could not serve, and it appears in place.
+  const paySheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
+  assert.match(paySheet, /await ensureSigner\(\)/);
+  assert.match(paySheet, /W\.passkeyMakesTheAccount/);
+  assert.match(paySheet, /\{problem && !address \? <AccountPanel \/> : null\}/);
   // On the paying screen the passkey is opened at the signature and nowhere earlier.
   const give = pay.slice(pay.indexOf("const give = useCallback"), pay.indexOf("const record: Made"));
   assert.ok(give.indexOf("await ensureSigner()") < give.indexOf("await prepareGift({"), "the passkey opens before the terms are signed");
-  assert.match(pay, /<AccountPanel \/>/, "and an account is made on the paying screen");
+  // The paying screen no longer makes an account at all: it is made in the sheet, at the press (the mockup pay.html).
+  assert.doesNotMatch(pay, /W\.account\.title/, "the screen that used to ask for an account first is gone");
 });
 
 test("a case opens in a sheet, and a sheet is a dialog rather than a page", () => {

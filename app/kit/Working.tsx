@@ -1,4 +1,4 @@
-import { BODY, HELP } from "../components/ui";
+import { BODY, HELP, SAY } from "../components/ui";
 
 /**
  * Something is happening and it takes a few seconds: the only loop in the product (the founder's instruction of
@@ -14,7 +14,18 @@ import { BODY, HELP } from "../components/ui";
  * how long and what happens if the page goes. A device asking for reduced motion keeps the two sentences and stops the
  * ring, which is what that setting asks for.
  */
-export function Working({ says, and }: Readonly<{ says: string; and?: string }>) {
+export function Working({ says, and, large = false }: Readonly<{ says: string; and?: string; large?: boolean }>) {
+  // While a gift is being made the whole screen is this (the mockup paying.html): the ring above, what is being
+  // done in the title face under it, and how long it takes under that. Everywhere else it is a line.
+  if (large) {
+    return (
+      <div className="flex flex-col items-center gap-[var(--space-lg)] py-[var(--space-xxl)] text-center" role="status" aria-live="polite">
+        <span className="working-ring working-ring-large" aria-hidden="true" />
+        <p className={`${SAY} max-w-[280px]`}>{says}</p>
+        {and ? <p className={`${HELP} max-w-[300px]`}>{and}</p> : null}
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-[var(--space-sm)]" role="status" aria-live="polite">
       <div className="flex items-center gap-[var(--space-md)]">

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
@@ -16,8 +16,8 @@ import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { cadenceOf, certificateById, milestoneById } from "@/src/milestone-conditions";
 import { whenInWords } from "@/src/display-currency";
 import { twoDecimalsDown } from "@/src/exit-steps";
-import { CONVERSION_RESERVE, nextFundingStep, paymentArrived } from "@/src/funding-step";
-import { arrivesInDollars, eurosToBuyOn } from "@/src/gift-amount";
+import { nextFundingStep } from "@/src/funding-step";
+import { eurosToBuyOn } from "@/src/gift-amount";
 import { draftToTerms, isComplete, type GiftDraft } from "@/src/gift-draft";
 import { cardDraft, clearedCardDraft, emptyCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
 import { tidyGiftName } from "@/src/gift-names";
@@ -26,15 +26,13 @@ import { formatAusd } from "@/src/gift-reader";
 import { dollarsToUnits } from "@/src/money";
 import { settlingTimeInWords } from "@/src/pass-schedule";
 import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
-import { whereTheRailsServe } from "@/src/client/rails";
-import { countryInWords, orderRails, type RailReach } from "@/src/rail-country";
-import { feeSentence, WAYS_IN, type WayIn } from "@/src/rails";
-import { CASH_OUT, FUND as W, MILESTONE_FUND as M, OFFER as O } from "@/src/sentences";
+import { WAYS_IN, type WayIn } from "@/src/rails";
+import { FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { Shell } from "../kit/Shell";
 import { Working } from "../kit/Working";
 import { AccountPanel } from "./AccountPanel";
-import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
+import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
 
 /**
  * Paying for the gift that was filled in on the card (the product vision of 19 Sep 2026, section 5, surface Pay).
@@ -91,25 +89,25 @@ const never = () => () => {};
 const inBrowser = () => true;
 const onServer = () => false;
 const canShare = () => typeof navigator !== "undefined" && typeof navigator.share === "function";
-function everyMinute(changed: () => void): () => void {
-  const timer = setInterval(changed, 60_000);
-  return () => clearInterval(timer);
-}
-const thisMinute = () => Math.floor(Date.now() / 60_000) * 60_000;
-const noClock = () => 0;
-
 /** A route's own typed sentence when it gave one; one plain line otherwise, never a library's words. */
 function readable(error: unknown): string {
   if (error instanceof ApiError) return error.message;
   return W.failures.other;
 }
 
-function Line({ label, value }: Readonly<{ label: string; value: ReactNode }>) {
+/**
+ * The gift, small, under the wait (the mockup paying.html): the same paper, the same label, the same name, and one
+ * line of what it is. It is there so the thing being made never leaves the screen while it is being made.
+ */
+function MiniGift({ recipient, what, line }: Readonly<{ recipient: string; what: string; line: string }>) {
   return (
-    <div className="flex items-baseline justify-between gap-[var(--space-md)]">
-      <dt className={HELP}>{label}</dt>
-      <dd className={`${BODY} text-right tabular-nums`}>{value}</dd>
-    </div>
+    <section className="on-paper w-full rounded-[var(--radius-control)] p-[var(--space-lg)]">
+      <p className={CARD_LABEL}>{OFFER.yourGift}</p>
+      <p className={CARD_TITLE}>{OFFER.forName(recipient)}</p>
+      <p className={`${HELP} text-[var(--on-surface-body)]`} title={what}>
+        {line}
+      </p>
+    </section>
   );
 }
 
@@ -129,8 +127,6 @@ export function PayGift() {
   const [made, setMade] = useState<Made | null>(() => (typeof window === "undefined" ? null : readSession<Made>(MADE_KEY)));
   const [kept, setKept] = useState<PendingGift | undefined>(() => (typeof window === "undefined" ? undefined : peekPendingGift()));
   const [balance, setBalance] = useState<bigint | null>(null);
-  const [pending, setPending] = useState<bigint | null>(null);
-  const [arrivedWorth, setArrivedWorth] = useState<string | null | "unknown">(null);
   const [phase, setPhase] = useState<Phase>("waiting");
   const [arrivedFigure, setArrivedFigure] = useState<string | undefined>(undefined);
   const [problem, setProblem] = useState<string | null>(null);
@@ -140,13 +136,10 @@ export function PayGift() {
   const [keptOnDevice, setKeptOnDevice] = useState(true);
   const working = useRef(false);
   const [hadAccount, setHadAccount] = useState(false);
-  /** What each rail that adds money says about this person's country, read live (R1). Never hides one. */
-  const [railIn, setRailIn] = useState<{ country: string | null; waysIn: Readonly<Record<string, RailReach>> }>({ country: null, waysIn: {} });
   /** The way in the funder pressed, so the wait tells them what to set on the page they actually opened (D101). */
-  /** Nothing chosen until a way in is pressed; before that it is whichever way the kept payment names (D101). */
-  const [chosenWay, setChosenWay] = useState<WayIn | null>(null);
+  /** The way in the kept payment names, which is the one the sheet on the card opened (D101). */
+  const chosenWay: WayIn | null = null;
   if (address && !hadAccount) setHadAccount(true);
-  const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
 
   const wayIn: WayIn = chosenWay ?? WAYS_IN.find((entry) => entry.name === kept?.wayIn) ?? WAYS_IN[0];
   const money = useDisplayCurrency(address);
@@ -158,8 +151,6 @@ export function PayGift() {
   const units = ready ? dollarsToUnits(draft.dollars) : null;
   const days = Number(draft.days);
   const target = Number(draft.target);
-  const perDay = units !== null && days > 0 ? units / BigInt(days) : null;
-  const exact = perDay !== null && units !== null && perDay * BigInt(days) === units;
   const recipient = tidyGiftName(draft.recipientName);
   const funder = tidyGiftName(draft.funderName);
   const subject = draft.subject.trim();
@@ -176,7 +167,6 @@ export function PayGift() {
     if (!address) return null;
     const [held, arriving] = await Promise.all([readAusdBalance(address), readMonBalance(address)]);
     setBalance(held);
-    setPending(arriving);
     return { held, arriving };
   }, [address]);
 
@@ -187,18 +177,6 @@ export function PayGift() {
       .catch(() => undefined);
   }, [refresh]);
 
-  useEffect(() => {
-    let live = true;
-    whereTheRailsServe(typeof navigator === "undefined" ? undefined : navigator.language)
-      .then((answer) => {
-        if (live) setRailIn({ country: answer.country, waysIn: answer.waysIn });
-      })
-      .catch(() => undefined);
-    return () => {
-      live = false;
-    };
-  }, []);
-
   // Where the screen belongs: a gift already made, a payment already running, or nothing to pay for at all.
   useEffect(() => {
     if (!browser) return;
@@ -208,22 +186,6 @@ export function PayGift() {
     // A payment was started for this gift before the page went: the wait is where this person was (D74).
     if (step === "pay" && address && ready && kept?.wayIn && phase === "waiting" && made === null) replace("paying");
   }, [browser, step, made, address, ready, kept, phase]);
-
-  // On the pay screen, a card payment sitting in the account is valued before it is used (audit C, 9.1).
-  useEffect(() => {
-    if (step !== "pay" || !address || pending === null || !paymentArrived(pending)) return;
-    let live = true;
-    postJson<{ output: string }>("/api/fund/quote", { amount: (pending - CONVERSION_RESERVE).toString() })
-      .then((quote) => {
-        if (live) setArrivedWorth(formatAusd(BigInt(quote.output)));
-      })
-      .catch(() => {
-        if (live) setArrivedWorth("unknown");
-      });
-    return () => {
-      live = false;
-    };
-  }, [step, address, pending]);
 
   const give = useCallback(async () => {
     // Opens the passkey here if the page was reloaded or came back from the card page: the signature is the first
@@ -410,25 +372,6 @@ export function PayGift() {
     setKeptOnDevice(savePendingGift({ ...draftToTerms(next, address), wayIn: way.name }));
   };
 
-  const commit = async (enough: boolean, arrived: boolean, way: WayIn = wayIn) => {
-    setProblem(null);
-    if (!address) {
-      go("account");
-      return;
-    }
-    if (enough) {
-      setPhase("giving");
-      go("paying");
-      return;
-    }
-    setChosenWay(way);
-    keepOnDevice(draft, way);
-    setPhase("waiting");
-    // The card service's page opens inside the tap, or the browser blocks it.
-    if (!arrived) window.open(way.page, "_blank", "noopener,noreferrer");
-    go("paying");
-  };
-
   const differentGift = () => {
     forgetPendingGift();
     clearedCardDraft();
@@ -546,30 +489,17 @@ export function PayGift() {
 
   const gift = formatAusd(units);
 
-  // One account, and then you can pay.
-  if (step === "account") {
-    return (
-      <Shell kind="task" back="/" backLabel={O.backToCard} step={W.account.title}>
-        <p className={BODY}>{milestone ? M.account.yourGift(gift, recipient) : W.account.yourGift(gift, recipient, days)}</p>
-        <p className={HELP}>{W.account.why}</p>
-        <AccountPanel />
-      </Shell>
-    );
-  }
-
   // ---------------------------------------------------------------------------------------------------------------
   // Paying: the wait, the payment arriving, the gift being made.
   if (step === "paying" && address) {
     const held = balance ?? 0n;
     if (phase === "converting" || phase === "giving") {
       return (
-        <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
-          <Working
-            says={`${phase === "converting" ? W.arrived.gettingReady : W.arrived.putting(arrivedFigure, gift, recipient)} ${W.arrived.takesSeconds}`}
-            and={phase === "giving" ? W.arrived.pageMayClose : undefined}
-          />
-          {/* The gift stays in sight while it is being made (audit C, 10.3). */}
-          <p className={HELP}>{milestone ? M.account.yourGift(gift, recipient) : W.account.yourGift(gift, recipient, days)}</p>
+        <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows>
+          {/* The whole screen while a gift is being made (the mockup paying.html): the ring, what is being done,
+              how long it takes, and the gift itself small underneath, so it never leaves the screen. */}
+          <Working says={phase === "converting" ? W.arrived.gettingReady : P.putting(gift, recipient)} and={P.takesSeconds} large />
+          <MiniGift recipient={recipient} what={condition.name} line={P.mini(condition.name, gift, days)} />
         </Shell>
       );
     }
@@ -687,137 +617,14 @@ export function PayGift() {
   }
 
   // ---------------------------------------------------------------------------------------------------------------
-  // What it costs, and the ways in. The gift itself is read back from the card rather than asked again.
-  const enough = balance !== null && units !== null && balance >= units;
-  const arrived = !enough && pending !== null && paymentArrived(pending);
-  const short = !enough && !arrived && address !== undefined;
-  const held = balance ?? 0n;
-  const waysIn = orderRails(WAYS_IN, railIn.waysIn);
-  const payingOn = (way: WayIn) => {
-    const euros = eurosToBuyOn(units - held, way, money.rates?.usdPerEur);
-    const arrives = euros === undefined ? undefined : arrivesInDollars(euros, way, money.rates?.usdPerEur);
-    const stays = arrives === undefined ? undefined : Math.floor(Number(held) / 1_000_000 + arrives - Number(units) / 1_000_000);
-    return { euros, arrives, stays };
-  };
-  const about = money.about(units);
-
+  // Paying starts on the card, in the sheet that opens over it (the mockup pay.html). Somebody who lands here with
+  // nothing running is sent back to it rather than shown a second way to pay for the same gift.
   return (
-    <Shell kind="task" back="/" backLabel={O.backToCard} step={O.pay(gift)}>
-      {/* The card, read back: what it is, for whom, on what, for how long. Changing any of it happens on the card
-          itself, so there are no "change" links here and no screen of rows to read twice (vision, section 6). */}
-      <dl className="flex flex-col divide-y divide-[var(--divider)] border-y border-[var(--divider)]">
-        <Line label={W.check.rows.for} value={recipient} />
-        <Line label={W.check.rows.from} value={funder} />
-        <Line label={W.check.rows.what} value={condition.name} />
-        {subject ? <Line label={milestone?.condition.link.kind === "username" ? M.check.rows.name : certificate ? certificate.words.nameLabel : (condition.link.kind === "username" ? condition.link.row : "")} value={subject} /> : null}
-        {milestone && cadence ? <Line label={M.check.rows.cadence} value={cadence.label} /> : null}
-        {/* The course a certificate is for, where the condition asks for one: it is half of what the funder signs,
-            so it is read back before paying and not only on the sheet where it was typed (C3). */}
-        {certificate?.course && draft.course ? <Line label={certificate.course.row} value={draft.course} /> : null}
-        {milestone || certificate ? <Line label={M.check.rows.reach} value={certificate ? certificate.target.inWords(target) : String(target)} /> : null}
-        {!milestone && !certificate && condition.target ? <Line label={W.check.rows.dayCounts} value={condition.target.inWords(target)} /> : null}
-        <Line label={W.check.rows.goes} value={about ? `${gift} (${about})` : gift} />
-        <Line
-          label={milestone || certificate ? M.check.rows.long : W.check.rows.dayEarned}
-          value={
-            milestone
-              ? milestone.words.durationInWords(days)
-              : certificate
-                ? certificate.words.durationInWords(days)
-                : perDay !== null
-                  ? W.check.dayEarned(formatAusd(perDay), exact, days)
-                  : ""
-          }
-        />
-      </dl>
-
-      <section className="flex flex-col gap-[var(--space-sm)]">
-        {milestone ? (
-          <>
-            <p className={BODY}>{M.check.howItWorks(condition.source, target, settlingTimeInWords(nowMs))}</p>
-            <p className={BODY}>{M.check.whyCeiling(target)}</p>
-          </>
-        ) : certificate ? (
-          <>
-            {/* What the certificate has to show, and what happens if none arrives: both said before anything is paid. */}
-            <p className={BODY}>{certificate.words.mustShow(subject, target)}</p>
-            <p className={BODY}>{certificate.words.ifNot}</p>
-          </>
-        ) : (
-          <p className={BODY}>{W.check.missed(settlingTimeInWords(nowMs))}</p>
-        )}
-        {/* A condition nobody is offered yet says so here too, and not only in the sheet where it was chosen: this is
-            the screen where money moves, and it was the one screen that presented it like any live condition (ui
-            review, 19 Sep 2026). */}
-        {condition.live ? null : <p className="font-medium">{M.operatorOnly}</p>}
-        {/* The one sentence that changes what a person does next stays in the body: a link opens for whoever opens
-            it first. What only some readers need goes behind a disclosure (GOV.UK Details). */}
-        <p className="font-medium">{W.check.linkRisk(recipient)}</p>
-        <details>
-          <summary className="cursor-pointer font-medium">{W.check.elseTitle}</summary>
-          <p className={BODY}>{W.check.namesSeen(recipient, funder)}</p>
-          <p className={BODY}>{milestone ? M.check.fourteenDays : W.check.fourteenDays}</p>
-        </details>
-      </section>
-
-      {short
-        ? waysIn.map((way: WayIn, index: number) => {
-            const { euros, arrives, stays } = payingOn(way);
-            return (
-              <section key={way.name} className={CARD}>
-                <h2 className={TITLE}>{W.check.payingWith(way.name)}</h2>
-                <dl className="flex flex-col gap-[var(--space-sm)]">
-                  <Line label={W.check.youPay} value={euros === undefined ? W.check.byCardUnknown : W.check.byCard(euros)} />
-                  {held > 0n ? <Line label={W.check.alreadyHeld} value={formatAusd(held)} /> : null}
-                  {arrives !== undefined ? <Line label={W.check.arrives} value={W.check.aboutDollars(Math.floor(arrives))} /> : null}
-                  <Line label={W.check.rows.goes} value={gift} />
-                  {stays !== undefined && stays > 0 ? <Line label={W.check.staysYours} value={W.check.aboutDollars(stays)} /> : null}
-                </dl>
-                <p className={HELP}>{feeSentence(way)}.</p>
-                <details>
-                  <summary className={`${HELP} cursor-pointer`}>{W.check.feeTitle(way.name)}</summary>
-                  <p className={HELP}>{way.arrives === "gift" ? W.check.nothingToSwap : W.check.swapAfter}</p>
-                  <p className={HELP}>{W.check.smallest(way.name, way.smallestEur)}</p>
-                  <p className={HELP}>{CASH_OUT.sourceLine(way.source, way.read)}</p>
-                </details>
-                {/* The same rule as the way out (R1): what that service says about this country today, read live,
-                    and nothing said at all about one that could not be read. */}
-                {railIn.country && railIn.waysIn[way.name] === "does-not" ? (
-                  <p className={HELP}>{CASH_OUT.noPayInThere(way.name, countryInWords(railIn.country) ?? railIn.country.toUpperCase())}</p>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => void commit(false, false, way)}
-                  disabled={Boolean(address) && balance === null}
-                  className={index === 0 ? PRIMARY_BUTTON : SECONDARY_BUTTON}
-                >
-                  {euros === undefined ? W.check.payWith(way.name) : W.check.payWithFor(way.name, euros)}
-                </button>
-              </section>
-            );
-          })
-        : null}
-      {arrived ? (
-        <section className={CARD}>
-          <h2 className={TITLE}>{W.check.paying}</h2>
-          <p className={BODY}>{arrivedWorth && arrivedWorth !== "unknown" ? W.check.arrivedWorth(arrivedWorth) : W.check.arrivedLater}</p>
-          <p className={HELP}>{W.check.arrivedUse(gift, recipient)}</p>
-        </section>
-      ) : null}
-      {enough ? <p className={HELP}>{W.check.fromAccount(formatAusd(held))}</p> : null}
-
-      <div className="flex flex-col gap-[var(--tap-gap)]">
-        {/* Money already there, or a payment that landed, is one action; paying is on the card of the way in. */}
-        {!address || enough || arrived ? (
-          <button type="button" onClick={() => void commit(enough, arrived)} disabled={Boolean(address) && balance === null} className={PRIMARY_BUTTON}>
-            {!address ? W.continue : enough ? W.check.putIt(gift, recipient) : W.check.useArrived}
-          </button>
-        ) : null}
-        <Link href="/" className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
-          {W.notNow}
-        </Link>
-      </div>
-      {problem ? <FieldRefusal id="check-refused">{problem}</FieldRefusal> : null}
+    <Shell kind="task" back="/" step={O.nothingToPay.title}>
+      <p className={BODY}>{O.nothingToPay.body}</p>
+      <Link href="/" className={PRIMARY_BUTTON}>
+        {O.nothingToPay.action}
+      </Link>
     </Shell>
   );
 }

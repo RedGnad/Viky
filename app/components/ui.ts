@@ -98,6 +98,12 @@ export const HELP = "text-[length:var(--type-help)] leading-[var(--type-help-lea
  */
 export const DISPLAY = `${TITLE_FACE} text-[length:var(--type-display)] leading-[var(--type-display-leading)] tracking-[var(--type-display-tracking)]`;
 
+/**
+ * What the screen is doing, while it is doing it: the title face at the size the mockup paying.html draws it,
+ * centred over the ring. It is not a destination's title, so it is not the display.
+ */
+export const SAY = `${TITLE_FACE} text-[length:var(--type-say)] leading-[var(--type-say-leading)] tracking-[var(--type-card-who-tracking)]`;
+
 /** The mark at the top of every screen, the same face at a size that is not a title. */
 export const MARK = `${TITLE_FACE} text-[length:var(--type-mark)] leading-[var(--type-mark-leading)]`;
 
