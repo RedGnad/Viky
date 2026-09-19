@@ -58,6 +58,9 @@ const SIGN_IN_BUDGET = 12;
 /** What the account holds, in base units, as the intercepted balance reads will report it. */
 export type Holdings = { AUSD: bigint; USDC: bigint; MON: bigint };
 
+/** What a screen said, kept beside its picture so a pass that shortens screens can be measured rather than argued. */
+export type Words = { journey: string; state: string; size: string; appearance: string; selects: number; path: string; text: string };
+
 export type Row = {
   journey: string;
   state: string;
@@ -89,6 +92,18 @@ const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}`;
  * string on purpose: a function sent into the page is compiled on the way in and arrives calling a helper the page
  * does not have.
  */
+/**
+ * What a person reads on a screen, for the measurement of the simplest-journey pass: the words of `main`, which leave
+ * out what anybody types (an input's value is not in `innerText`), and the sentences they make. A string, not a
+ * function, for the same reason as the count above.
+ */
+const READ_TEXT = `(() => {
+  var main = document.querySelector("main") || document.body;
+  // Lines are kept: a title and a sentence are two things a person reads, and only the second one ends in a full stop.
+  var text = (main.innerText || "").replace(/[ \\t]+/g, " ").replace(/\\n{2,}/g, "\\n").trim();
+  return { text: text, selects: document.querySelectorAll("select").length, path: location.pathname };
+})()`;
+
 const COUNT_SETTLED = `Array.prototype.slice.call(document.querySelectorAll("[data-count-settled]")).every(function (node) { return node.getAttribute("data-count-settled") === "true"; })`;
 
 /**
@@ -98,6 +113,7 @@ const COUNT_SETTLED = `Array.prototype.slice.call(document.querySelectorAll("[da
  */
 export class Session {
   readonly rows: Row[] = [];
+  readonly words: Words[] = [];
   readonly misses: Miss[] = [];
   /**
    * Sign-ins since the local server last started. Its sign-in routes allow 30 requests per 10 minutes and each
@@ -283,6 +299,11 @@ export class Session {
       const fullImage = pngSize(readFileSync(resolve(this.folder, full)));
       if (fullImage.width !== this.size.use.viewport.width) throw new Error(`${full} is ${fullImage.width} wide`);
     }
+
+    // What the screen says, counted rather than judged (the simplest-journey pass): the words a person reads and the
+    // sentences they are made of, kept beside the image so a later run can be compared with this one.
+    const read = (await this.page.evaluate(READ_TEXT)) as { text: string; selects: number; path: string };
+    this.words.push({ journey, state, size: this.size.name, appearance: this.appearance.name, selects: read.selects, path: read.path, text: read.text });
 
     const how = options.real ?? (this.replaced.size === 0 ? "real: nothing replaced" : `replaced: ${[...this.replaced].join(", ")}`);
     this.rows.push({
@@ -620,6 +641,8 @@ async function main(): Promise<void> {
     }
     const where = given ?? "http://localhost:3101 to :3104, one local production server per size and appearance";
     writeFileSync(resolve(folder, "captures.md"), manifest(where, taken, commit, browser.version(), sessions));
+    // The words of every state, for the measurement a shortening pass is judged by (scripts/measure-words.ts).
+    writeFileSync(resolve(folder, "words.json"), `${JSON.stringify(sessions.flatMap((session) => session.words), null, 1)}\n`);
     const shots = sessions.reduce((sum, session) => sum + session.rows.length, 0);
     const missed = sessions.reduce((sum, session) => sum + session.misses.length, 0);
     console.log(`\n${shots} captures, ${missed} missed. Folder: ${folder}`);
