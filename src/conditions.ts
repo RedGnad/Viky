@@ -112,8 +112,13 @@ export type Condition = Readonly<{
   /** The condition in words, as the radio on "What will they do?" reads it. */
   name: string;
   /**
-   * The one line under that radio: what the source reads **and** what a reading is worth, in one sentence. The two used
-   * to be two lines, the register's and U2's, and a funder read the same thing twice (founder, 18 Sep 2026).
+   * The one line under that radio, and the only other thing the chooser says about a condition: how it is verified and
+   * by whom, in one sentence (design audit of 16 Sep 2026, section 3). The two used to be two lines, the register's and
+   * U2's, and a funder read the same thing twice (founder, 18 Sep 2026).
+   *
+   * It is a verification sentence, not a description: it says what is read and what that reading is worth, including
+   * what it is not worth. The Duolingo line is the model, and the audit's table is where the others came from, kept
+   * here only where the table said more than the register already did.
    */
   help: string;
   link: ConditionLink;
@@ -317,7 +322,7 @@ export const DUOLINGO_ENGLISH_TEST: Condition = {
   source: "Duolingo English Test",
   family: "language",
   name: "Reach a score on the Duolingo English Test",
-  help: "A test taken under watch, with an identity document and examiners. The result has a page they choose to share.",
+  help: "A test taken on camera with an identity document, marked by examiners, on a page they choose to share.",
   link: {
     kind: "link",
     label: "The link to your certificate",
