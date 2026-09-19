@@ -73,7 +73,11 @@ test.describe("the appearance control", () => {
     expect(doorBox!.width).toBeGreaterThan(box!.width);
     expect(box!.x).toBeLessThan(doorBox!.x);
 
-    // The action the screen is asking for is still the first thing under the promise.
-    await expect(page.getByRole("link", { name: /^Offer a gift$/ })).toBeVisible();
+    // What the screen is asking for is still the first thing in the body, and since the card of 19 Sep 2026 that is
+    // the gift itself rather than a way to one (D110).
+    const card = page.locator("main section").first();
+    await expect(card.getByText(/Nothing is asked of you until you pay/)).toBeVisible();
+    const cardBox = await card.boundingBox();
+    expect(cardBox!.y).toBeLessThan(400);
   });
 });

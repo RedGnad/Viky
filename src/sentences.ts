@@ -23,6 +23,68 @@ export const NAV = {
   back: "Back",
 } as const;
 
+/**
+ * The card a gift is filled in on, and its four sheets (the product vision of 19 Sep 2026, sections 4 and 6).
+ *
+ * The card is the first thing on Home, with an account or without one. It says what the gift will be in one sentence
+ * of four cases, and a case opens in a sheet rather than on a page. The words here are the card's own; everything
+ * about a source still comes from the register, and the questions inside the sheets are the ones the journey already
+ * asked, in `FUND` and in the register, so nothing a funder reads was invented for the new shape.
+ */
+export const OFFER = {
+  /** What the card is, for a reader who is read to: the card itself says it by being one. */
+  title: "Offer a gift",
+  /** Said once above the card, to somebody who has never seen one. */
+  invitation: "Fill this in. Nothing is asked of you until you pay.",
+  slots: {
+    for: { label: "For", empty: "who it is for" },
+    will: { label: "will", empty: "what they will do" },
+    amount: { label: "worth", empty: "how much" },
+    howLong: { label: "for", empty: "how long" },
+  },
+  /** The For case, once both names are given: the gift says who it is for and who it is from. */
+  forNames: (recipient: string, funder: string) => `${recipient}, from ${funder}`,
+  /** What a case says when it has been filled: the value, and the way back into its sheet. */
+  change: (slot: string) => `Change ${slot}`,
+  days: (count: number) => `${count} ${count === 1 ? "day" : "days"}`,
+  /** The one action of the card, and it appears only when the four cases are filled. */
+  pay: (amount: string) => `Pay ${amount}`,
+  /** Under the card while something is still missing, so the button's absence is not a mystery. */
+  stillNeeded: "Fill the four, and the gift is ready to pay for.",
+  done: "Done",
+  sheets: {
+    who: "Who is it for?",
+    will: "What will they do?",
+    amount: "How much?",
+    howLong: "For how long?",
+  },
+  amountSheet: {
+    /** The keypad is the first thing, as it is in the money applications our references measured. */
+    backspace: "Delete the last figure",
+  },
+  howLongSheet: {
+    /** The three lengths offered before anybody types: the shortest the route accepts, what it suggests, the longest. */
+    quick: (days: number) => `${days} days`,
+    label: "Or type a number of days",
+  },
+  /** Said while the page works out where it is: never blank, never a spinner with nothing beside it. */
+  oneMoment: "One moment",
+  /** The way back to the card from the paying screen, where the four cases are changed. */
+  backToCard: "Back to the card",
+  /** Somebody who reached the paying screen with nothing filled in: the card is where a gift is made. */
+  nothingToPay: {
+    title: "Nothing to pay for yet",
+    body: "The gift is filled in on the card, on the first page: who it is for, what they will do, how much, and for how long.",
+    action: "Back to the card",
+  },
+  /** The shape the card draws as soon as the condition is known, empty, and what it is for. */
+  shape: {
+    days: "A day at a time, each one theirs when they do it",
+    climb: "A climb to the number they reach",
+    stamp: "One thing, obtained or not",
+  },
+} as const;
+
 /** Home: the money, the one action, the way out, and what is moving. */
 export const HOME = {
   promise: "The money is already in their name",

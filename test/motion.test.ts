@@ -108,8 +108,15 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
   // One exception, and it is named: while a gift is being made the chain is asked for up to thirty seconds, and a
   // still screen reads as an action nobody registered (the founder's instruction of 19 Sep 2026, Nielsen 1993 and
   // NN/g 2014). Everything outside the working ring still answers a gesture and still plays once.
-  const outsideTheRing = css.replace(/\.working-ring \{[\s\S]*?\n\}/, "").replace(/@keyframes working-turn \{[\s\S]*?\n\}/, "");
-  assert.doesNotMatch(outsideTheRing, /@keyframes|animation-name|infinite/, "the stylesheet plays no animation of its own beyond the one loop");
+  const outsideTheRing = css
+    .replace(/\.working-ring \{[\s\S]*?\n\}/, "")
+    .replace(/@keyframes working-turn \{[\s\S]*?\n\}/, "")
+    // The second exception, and it answers a gesture: a sheet rises once because a case of the card was pressed
+    // (the product vision of 19 Sep 2026, section 4). It plays one time and stops.
+    .replace(/dialog\.sheet\[open\] \{[\s\S]*?\n\}/, "")
+    .replace(/@keyframes sheet-rise \{[\s\S]*?\n\}/, "");
+  assert.doesNotMatch(outsideTheRing, /@keyframes|animation-name|infinite/, "the stylesheet plays no animation of its own beyond the one loop and the sheet");
+  assert.match(css, /dialog\.sheet\[open\] \{\s*\n\s*animation: sheet-rise \d+ms/, "the sheet rises once, on the press that opened it");
   assert.match(css, /animation: working-turn \d+ms linear infinite/, "the one loop is the working ring, and it is the only one");
   assert.equal(css.match(/infinite/g)?.length, 1, "exactly one loop in the whole stylesheet");
   assert.ok(css.includes(`--press-duration: ${MOTION.press.durationMs}ms`), "the press lasts what the token says");

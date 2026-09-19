@@ -74,7 +74,7 @@ test("a family with nothing offered does not appear at all", () => {
 });
 
 test("the screen takes the families from the register and writes none of its own", () => {
-  const screen = readFileSync("app/components/FundGift.tsx", "utf8");
+  const screen = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
   assert.match(screen, /chooserSections\(offered\)/);
   assert.match(screen, /legend=\{section\.title\}/, "the heading is the register's title");
   // A title written as a literal is what this catches; "Move" inside a word like priceMoved is not one.

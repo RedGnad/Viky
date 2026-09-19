@@ -37,7 +37,7 @@ test("every condition names a reading that exists, and a milestone has no goal t
 
 test("no destination, card, or step of offering a gift names a source in its own words: the register does", () => {
   // The kit is what the structure builds; offering a gift (S2) and a gift's page (S3) were rebuilt on it.
-  for (const file of [...globSync("app/kit/**/*.tsx"), "app/components/FundGift.tsx", "app/components/GiftPage.tsx", "app/components/MilestoneGiftPage.tsx", "src/sentences.ts", "src/pending-gift.ts"]) {
+  for (const file of [...globSync("app/kit/**/*.tsx"), "app/components/PayGift.tsx", "app/components/GiftPage.tsx", "app/components/MilestoneGiftPage.tsx", "src/sentences.ts", "src/pending-gift.ts"]) {
     const source = readFileSync(file, "utf8");
     assert.doesNotMatch(source, /Duolingo|Chess\.com|Coursera|Strava/, `${file} names a source itself`);
   }
@@ -65,6 +65,6 @@ test("what a funder is offered comes from the register: the question, its check,
       assert.ok((condition.target?.suggested ?? 0) >= (condition.target?.min ?? 1));
     }
   }
-  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
-  assert.match(fund, /liveConditions\(\)/, "the list of what they will do is the live register");
+  const sheet = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
+  assert.match(sheet, /liveConditions\(\)/, "the list of what they will do is the live register");
 });
