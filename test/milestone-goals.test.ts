@@ -29,6 +29,7 @@ const PINNED: Readonly<Record<number, string>> = {
   7: "0x8188eca2f6e4d66aebcf562dd719762acfc0648f8f46e922b529dd56a5f5f565",
   8: "0x8e6313da9dfe60c26972ecd2d17f6665b69e7b18d3ee50bb44ab9b7b0fb5b576",
   9: "0x77bafaec0915f482b7065034b60237003234c67ee837bbd8163f03ca0dfdce32",
+  10: "0xcd1e3323e174f3cfd7359500d0e2e0befdb34f9998a874e5cf2e2f1d1aa2a75d",
 };
 
 test("every goal has its own number and its own provider id", () => {

@@ -52,14 +52,12 @@ function deps(over: Partial<CertificateReadingDeps> = {}, sent: MilestoneProofMe
     loadGift: async () => RECORD,
     readState: async () => state(),
     attest: async () => ({
-      alias: "abcd1234efgh5678",
       score: 135,
       testDay: TEST_DAY,
-      name: NAME,
       subject: SUBJECT,
       observedAt: TEST_DAY + 3 * DAY,
       nullifier: `0x${"d2".repeat(32)}` as Hex,
-      proofs: [],
+      providerId: detProviderId(),
     }),
     prove: async ({ message }) => {
       sent.push(message);

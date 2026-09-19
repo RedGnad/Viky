@@ -1,5 +1,6 @@
 import type { Hex } from "viem";
 import { CHESS_MODES, chessGoalType, chessProviderId } from "./chess-com";
+import { COURSERA_GOAL_TYPE, courseraProviderId } from "./coursera-certificate";
 import { detProviderId } from "./duolingo-english-test";
 import { LICHESS_CADENCES, lichessGoalType, lichessProviderId } from "./lichess";
 import { SHAPE_CLIMB, SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
@@ -45,6 +46,8 @@ export const MILESTONE_GOALS: readonly MilestoneGoal[] = [
     source: "Lichess",
     detail: cadence,
   })),
+  // A course certificate: granted once, with nothing to score, so what a proof carries is that it exists (C3).
+  { goalType: COURSERA_GOAL_TYPE, providerId: courseraProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Coursera", detail: "a course certificate" },
 ];
 
 export function milestoneGoal(goalType: number): MilestoneGoal | undefined {
