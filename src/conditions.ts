@@ -370,14 +370,15 @@ export const DUOLINGO_ENGLISH_TEST: Condition = {
   id: "duolingo-english-test",
   kind: "milestone",
   goalType: null,
-  live: false,
-  state: "asked-the-source",
-  beforeItOpens:
-    "The screens, the reading and every refusal are built. Duolingo's terms forbid gathering their content by a program, so that question goes to them in writing before anybody is offered this.",
+  // Open since 19 Sep 2026: goal 5 is registered on the milestone contract, which was the only thing between this and
+  // a gift being creatable on it (D109). What is not settled has not gone away, and it is on the judges page: the
+  // reading is automated, which is the act Duolingo's terms ask about, and that written question is unanswered.
+  live: true,
+  state: "open",
   source: "Duolingo English Test",
   family: "language",
   name: "Reach a score on the Duolingo English Test",
-  help: "A test taken on camera with an identity document, marked by examiners, on a page they choose to share.",
+  help: "Sat on camera with an identity document, marked by examiners: the score is read from the page they share, and nobody can award it to themselves.",
   link: {
     kind: "link",
     label: "The link to your certificate",

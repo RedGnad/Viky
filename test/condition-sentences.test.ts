@@ -29,11 +29,16 @@ test("it says something the name does not, and no two conditions say the same th
 });
 
 test("the supervised result says what makes it supervised: camera, document, examiners", () => {
-  // The audit's own sentence, taken because the register's said less: it said "under watch" where the source
-  // describes a recorded session, and dropped the marking.
+  // The audit's own three, taken because the register's line said less: it said "under watch" where the source
+  // describes a recorded session, and dropped the marking. The sentence itself changed on 19 Sep 2026, when the
+  // condition opened and the rule for a line a funder chooses from applied to it: what is read, and what it is
+  // worth, in one sentence. The three the audit fixed are what is pinned here, never the wording around them.
   const det = conditionById("duolingo-english-test");
   assert.ok(det);
-  assert.equal(det.help, "A test taken on camera with an identity document, marked by examiners, on a page they choose to share.");
+  assert.match(det.help, /camera/, "the session is recorded");
+  assert.match(det.help, /identity document/, "and checked against a document");
+  assert.match(det.help, /examiners/, "and marked by people");
+  assert.match(det.help, /:/, "and it says what the reading is worth, as every choosable line does");
 });
 
 test("the three the audit did not improve keep what the register already said, and it said more", () => {
