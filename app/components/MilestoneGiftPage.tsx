@@ -16,6 +16,7 @@ import { CheckThisReading } from "../kit/CheckThisReading";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { GiftCard } from "../kit/GiftCard";
 import { LinkAgain } from "../kit/LinkAgain";
+import { TakeItBack } from "../kit/TakeItBack";
 import { CertificateProof } from "../kit/CertificateProof";
 import { MorningMessage } from "../kit/MorningMessage";
 import { Shell } from "../kit/Shell";
@@ -247,6 +248,10 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
       {/* The link again, to the funder, while nobody has opened it: the daily page had this and a milestone had
           nothing at all, which is how the link of gift 1000001 was lost for good (19 Sep 2026). */}
       {readerIsFunder && !status.opened && !status.cancelled ? <LinkAgain giftId={status.giftId} recipientName={status.names?.recipientName ?? null} /> : null}
+
+      {/* And the funder's own way out of it, while it is still nobody else's (the contract's `cancel`, which no screen
+          offered until 19 Sep 2026). */}
+      {readerIsFunder && !status.opened && !status.cancelled ? <TakeItBack giftId={status.giftId} amountDisplay={status.amountDisplay} recipientName={status.names?.recipientName ?? null} onTakenBack={reload} /> : null}
 
       {/* The funder named the account, so the first reading binds it and nothing is asked of the person's own profile
           (D27). A code exists only where the recipient names their own account. */}
