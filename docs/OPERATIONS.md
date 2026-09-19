@@ -286,27 +286,36 @@ sent to anybody. Each one prints an address, and the address is the only thing t
 Two of them are encrypted files, kept in two different places, so one disk lost is not the Safe lost:
 
 ```
-cast wallet new ~/viky-keys viky-owner-a
-cast wallet new /Volumes/<the other place> viky-owner-b
+cast wallet new ~/viky-keys viky-owner-a --touch-id
+cast wallet new /Volumes/<the other place> viky-owner-b --touch-id
 ```
 
 `cast wallet new <folder> <name>` writes an encrypted keystore and asks for a password without echoing it, which is
 the default of the installed version (`cast wallet new --help`, read 19 Sep 2026: "Triggers a hidden password prompt
 for the JSON keystore. Deprecated: prompting for a hidden password is now the default"). The password is the
-founder's, typed each time, written nowhere. Read an address back at any time, without the password moving anywhere:
+founder's, typed each time, written nowhere.
+
+`--touch-id` enrols the keystore for the fingerprint reader, which is the comfortable way to use it every day. Read
+the flag's own words before relying on it: "Enroll the keystore for Touch ID-assisted authentication on macOS. The
+macOS login password and explicit keystore passwords remain available." So the password does not go away and is not
+replaced: it stays as the way in when the reader is not there, on another machine or after a restore, which is
+exactly why it still has to be a password worth having. Read an address back at any time, with nothing else moving:
 
 ```
 cast wallet address --keystore ~/viky-keys/viky-owner-a
 ```
 
-The third is on paper, and exists nowhere else:
+The third is on paper, as twelve words rather than as a key:
 
 ```
-cast wallet new
+cast wallet new-mnemonic
 ```
 
-That one prints a private key and its address in the terminal. Write both on paper, then **close that terminal**: the
-key stays in its scrollback until the window is gone, and it is the one copy there is.
+Twelve words by default (`--words`, default 12, read 19 Sep 2026), with the address they give printed under them. A
+raw key is sixty-four hexadecimal characters copied by hand, and one character wrong makes it worthless for ever;
+twelve words from a fixed list are read back, checked and corrected by anybody, and they give the key again when it
+is needed. Write the words on paper, then **close that terminal**: they stay in its scrollback until the window is
+gone, and that paper is the one copy there is.
 
 **2. The founder gives the three addresses. Nothing else.** Then, from a clean tree on main:
 
@@ -327,9 +336,27 @@ contracts already inside.
 
 ```
 SAFE_ADDRESS=0x… ACTION=raw TO=0x…<the Safe> DATA=0xaffed0e0 pnpm safe:action
-SIGN=1 SIGNER_PRIVATE_KEY=0x… …                     (once per key, two of the three)
+```
+
+That prints `signThis`, one hash. **No key is ever typed or decrypted to sign it**: each owner signs that hash where
+their key already lives, with `cast`, two of the three being enough.
+
+```
+cast wallet sign --no-hash <the hash> --keystore ~/viky-keys/viky-owner-a   (the fingerprint asks, or the password)
+cast wallet sign --no-hash <the hash> --mnemonic "<the twelve words>"       (the one on paper)
+cast wallet sign --no-hash <the hash> --ledger                              (a hardware wallet, if one is an owner)
+```
+
+`--no-hash` signs the digest as it is rather than hashing it again, which is what a Safe transaction hash needs.
+Measured on 19 Sep 2026: what comes back is 65 bytes ending in `1c`, and the recovery of the signer from it agrees,
+which is the form `pnpm safe:action` checks and the contract accepts. Then the two signatures go back in, and anybody
+can carry the transaction:
+
+```
 SIGNATURES="0xfirst,0xsecond" SEND=1 EXECUTOR_PRIVATE_KEY=0x… …
 ```
+
+The executor's key pays the gas and signs nothing about the gift: the relayer's own key does it.
 
 **4. The four `transferOwnership`, signed by the hardware wallet, one last time.** This is the one step that cannot
 use `pnpm safe:handover`'s own sending: it asks for `OWNER_PRIVATE_KEY`, and a hardware wallet never gives its key up.
