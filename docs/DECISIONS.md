@@ -3210,3 +3210,25 @@ behind an account cannot be photographed any other way.
   do is stand off its ground, which is measured at 1.31:1 by day and 17.2:1 by night.
 - What this does not change: no route, no contract, no reading, no word of the register. The money path is the one
   that has run since D33, D42, D74 and D87.
+
+## D115, 19 Sep 2026: the keys that own the product are the product's own, and there are three
+
+- Statement, the founder's: no personal address owns anything of Viky. The four contracts go to a Safe of **two of
+  three**, and the three keys are made for the project by the founder, never by a developer and never by the advisor.
+  His hardware wallet signs the four handovers and is then out of it for good.
+- **Why three and not two.** Two of two is one loss away from a product nobody can act on: a goal that cannot be
+  registered, an evidence signer that cannot be replaced, a pause that cannot be lifted. Two of three survives one key
+  lost, and still refuses one key stolen.
+- **Why the keys are his to make.** A key a developer generates is a key a developer has held. The procedure in
+  docs/OPERATIONS.md is commands he runs himself: two encrypted keystores in two different places, each with a
+  password only he types, and one key on paper that exists nowhere else. What leaves his machine is three addresses.
+- **What the shape costs.** Every owner action is now two signatures and a Safe transaction rather than one signature:
+  registering a goal, replacing the evidence signer, pausing creation or readings, allowing an exchange on the router.
+  That cost is the point, and the scripts carry it: `pnpm safe:action` builds and signs in three passes, each of which
+  can happen on a different machine.
+- **The one step no script of ours can send.** `pnpm safe:handover` asks for `OWNER_PRIVATE_KEY` to send, and a
+  hardware wallet never hands its key over. So the script prints the four calls and `cast send --ledger` carries them,
+  once, with the device confirming each. OPERATIONS carries the exact command, and the script now prints it too rather
+  than offering a road the owner cannot take.
+- What this does not change: the contracts, which are not redeployed and whose `Ownable` is one step with no
+  acceptance; and the relayer and evidence signer keys, which are operational and were never owners.

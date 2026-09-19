@@ -17,7 +17,13 @@ import { ownableAbi, safeAbi, transferOwnershipData, SAFE_VERSION } from "../src
  * wallet. `VERIFY=1` reads the four owners back afterwards and fails unless every one of them is the Safe.
  */
 
-const THRESHOLD = 2;
+/** How many signatures the Safe must ask for. Two, unless the run says otherwise; the shape today is two of three. */
+function thresholdWanted(): number {
+  const raw = process.env.SAFE_THRESHOLD?.trim();
+  const threshold = raw ? Number(raw) : 2;
+  if (!Number.isSafeInteger(threshold) || threshold < 2) throw new Error("SAFE_THRESHOLD is two or more");
+  return threshold;
+}
 /** Above the Foundry gas report for `transferOwnership` (28,983), before the Monad margin. */
 const TRANSFER_CEILING = 40_000n;
 
@@ -48,14 +54,17 @@ async function main() {
     throw new Error(`Refusing to run: ${safe} holds code but does not answer as a Safe (${error instanceof Error ? error.message : error})`);
   });
   if (String(version) !== SAFE_VERSION) throw new Error(`Refusing to run: ${safe} says version ${version}, not ${SAFE_VERSION}`);
-  if (Number(threshold) !== THRESHOLD) throw new Error(`Refusing to run: ${safe} asks for ${threshold} signatures, not ${THRESHOLD}`);
+  const wanted = thresholdWanted();
+  if (Number(threshold) !== wanted) throw new Error(`Refusing to run: ${safe} asks for ${threshold} signatures, not ${wanted}`);
 
   const expected = String(process.env.CONFIRM_OWNERS?.trim() ?? "")
     .split(",")
     .filter((value) => value.trim().length > 0)
     .map((value) => getAddress(value.trim()))
     .sort();
-  if (expected.length !== THRESHOLD) throw new Error('Refusing to run: name the owners you expect, as CONFIRM_OWNERS="0xfirst,0xsecond"');
+  // Every owner, not as many as the threshold: a Safe of two signatures can be held by three keys, and naming two of
+  // them would pass a Safe that has a third owner nobody meant to give this to.
+  if (expected.length < wanted) throw new Error('Refusing to run: name every owner you expect, as CONFIRM_OWNERS="0xfirst,0xsecond,0xthird"');
   const held = (safeOwners as readonly Address[]).map((owner) => getAddress(owner)).sort();
   if (held.join(",") !== expected.join(",")) throw new Error(`Refusing to run: ${safe} is held by ${held.join(", ")}, and you named ${expected.join(", ")}`);
 
@@ -63,7 +72,7 @@ async function main() {
   const state = await Promise.all(
     four.map(async (contract) => ({ ...contract, owner: getAddress(String(await publicClient.readContract({ address: contract.address, abi: ownableAbi, functionName: "owner" }))) })),
   );
-  console.log(JSON.stringify({ chainId: MONAD_CHAIN_ID, safe, safeOwners: held, threshold: THRESHOLD, contracts: state }, null, 2));
+  console.log(JSON.stringify({ chainId: MONAD_CHAIN_ID, safe, safeOwners: held, threshold: wanted, contracts: state }, null, 2));
 
   if (process.env.VERIFY === "1") {
     const notYet = state.filter((contract) => contract.owner !== safe);
@@ -96,6 +105,10 @@ async function main() {
 
   if (process.env.SEND !== "1") {
     console.log(`Sign these ${calls.length} from ${from}, then run VERIFY=1 SAFE_ADDRESS=${safe} CONFIRM_OWNERS="${expected.join(",")}" pnpm safe:handover.`);
+    // The owner is a hardware wallet in the shape this was built for, and a hardware wallet never hands over its key,
+    // so SEND=1 below is not a road it can take. The calls above are what it signs, one at a time, and
+    // docs/OPERATIONS.md carries the exact command.
+    console.log(`From a hardware wallet, send each one with: cast send <to> "transferOwnership(address)" ${safe} --ledger --rpc-url ${monadRpcUrl()} --from ${from}`);
     return;
   }
   const key = process.env.OWNER_PRIVATE_KEY?.trim();

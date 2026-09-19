@@ -263,72 +263,119 @@ the branch being merged. Until it is, the app refuses every attested read with `
 rather than telling somebody to try again: nothing is fetched, nothing is recorded against the gift, and the pass
 holds it instead of settling.
 
-## The Safe of two keys, and how an owner action is signed
+## The Safe of three project keys, and how an owner action is signed
 
-One key owns all four contracts today, so one key lost is the goals, the evidence signer and both pauses lost with it.
-A Safe of two keys, two of two, puts that behind two signatures. **Not done yet: as of 19 Sep 2026 the Safe does not
-exist and the owner of the four contracts is still `0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64`.** What follows is the
-procedure, and the table under it is filled the day it runs.
+One key owns all four contracts today, and it is the founder's own hardware wallet. Two things are wrong with that,
+and the second is the one that decided this shape: a single key lost is the goals, the evidence signer and both pauses
+lost with it, and a personal wallet has no business being the thing a product depends on. **So no personal address
+owns anything: three keys are made for the project, and the Safe asks for two of them.** A key lost leaves the other
+two able to act; a key stolen is not enough to act at all.
+
+**Not done yet: as of 19 Sep 2026 the Safe of three does not exist and the owner of the four contracts is still
+`0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64`.** What follows is the procedure, and the table under it is filled the
+day it runs.
 
 Safe 1.4.1, the same version, factory and singleton as the Safe that already runs on Monad for Lock-In
 (`0xf1be884698B9Ba4438f529699eC92320427b4dA1`, created 15 Jul 2026). Read on Monad mainnet on 19 Sep 2026, each with
 code at its address: proxy factory `0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67`, L2 singleton
 `0x29fcB43b46531BcA003ddC8FCB67FFE91900C762`, fallback handler `0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99`.
 
-None of the three commands below holds a key or touches the database. They print what is to be signed, and they send
-only when the person running them puts a key in their own shell. `.env.local` carries the four addresses they need.
+**1. The founder makes the three keys. Nobody else ever runs these commands**, and no key, password or file is ever
+sent to anybody. Each one prints an address, and the address is the only thing that leaves the machine.
 
-**1. Make the Safe.** Run it once to see the address, then again with that same salt to send it.
+Two of them are encrypted files, kept in two different places, so one disk lost is not the Safe lost:
 
 ```
-SAFE_OWNERS="0xfirst,0xsecond" pnpm safe:create
+cast wallet new ~/viky-keys viky-owner-a
+cast wallet new /Volumes/<the other place> viky-owner-b
+```
+
+`cast wallet new <folder> <name>` writes an encrypted keystore and asks for a password without echoing it, which is
+the default of the installed version (`cast wallet new --help`, read 19 Sep 2026: "Triggers a hidden password prompt
+for the JSON keystore. Deprecated: prompting for a hidden password is now the default"). The password is the
+founder's, typed each time, written nowhere. Read an address back at any time, without the password moving anywhere:
+
+```
+cast wallet address --keystore ~/viky-keys/viky-owner-a
+```
+
+The third is on paper, and exists nowhere else:
+
+```
+cast wallet new
+```
+
+That one prints a private key and its address in the terminal. Write both on paper, then **close that terminal**: the
+key stays in its scrollback until the window is gone, and it is the one copy there is.
+
+**2. The founder gives the three addresses. Nothing else.** Then, from a clean tree on main:
+
+```
+SAFE_OWNERS="0xa,0xb,0xc" SAFE_THRESHOLD=2 pnpm safe:create
 SEND=1 SAFE_SALT_NONCE=<the salt it printed> SAFE_SENDER_PRIVATE_KEY=0x… pnpm safe:create
 ```
 
-The address is worked out before anything is sent, from the factory's own proxy code; `test/safe.test.ts` rebuilds
-Lock-In's Safe address from that Safe's real creation transaction, so the arithmetic is checked against a Safe that
-exists. After sending, the script reads the new Safe back and refuses to call it good unless it answers version 1.4.1,
-a threshold of two, and exactly the owners that were asked for.
+The address is worked out before anything is sent, and `test/safe.test.ts` rebuilds Lock-In's Safe address from that
+Safe's real creation transaction, so the arithmetic is checked against a Safe that exists. Whoever sends the creation
+has no power over the Safe afterwards: only its owners do, so the relayer's own key can pay for it. After sending, the
+script reads the new Safe back and refuses to call it good unless it answers version 1.4.1, a threshold of two, and
+exactly the three owners that were asked for.
 
-**2. Hand the four contracts over.** One call each, no second step, no way back.
-
-```
-SAFE_ADDRESS=0x… CONFIRM_OWNERS="0xfirst,0xsecond" pnpm safe:handover
-SEND=1 OWNER_PRIVATE_KEY=0x… SAFE_ADDRESS=0x… CONFIRM_OWNERS="0xfirst,0xsecond" pnpm safe:handover
-VERIFY=1 SAFE_ADDRESS=0x… CONFIRM_OWNERS="0xfirst,0xsecond" pnpm safe:handover
-```
-
-`CONFIRM_OWNERS` is the guard that matters: it is what catches a Safe that exists, works, and belongs to somebody
-else. The script also refuses an address with no code, an address that holds code but does not answer as a Safe, a
-threshold that is not two, and four contracts that do not all answer to the same owner.
-
-**3. Sign an owner action.** Three passes, and each can happen on a different machine.
+**3. Before anything is handed over, prove the Safe can act.** Both signatures on a transaction that does nothing:
+the Safe calling itself to read its own nonce. If a signature does not verify, that is learned here and not with the
+contracts already inside.
 
 ```
-SAFE_ADDRESS=0x… ACTION=creation-paused PAUSED=true TARGET=escrow pnpm safe:action
-SIGN=1 SIGNER_PRIVATE_KEY=0x… SAFE_ADDRESS=0x… ACTION=… pnpm safe:action        (once per key)
-SIGNATURES="0xfirst,0xsecond" SEND=1 EXECUTOR_PRIVATE_KEY=0x… SAFE_ADDRESS=0x… ACTION=… pnpm safe:action
+SAFE_ADDRESS=0x… ACTION=raw TO=0x…<the Safe> DATA=0xaffed0e0 pnpm safe:action
+SIGN=1 SIGNER_PRIVATE_KEY=0x… …                     (once per key, two of the three)
+SIGNATURES="0xfirst,0xsecond" SEND=1 EXECUTOR_PRIVATE_KEY=0x… …
 ```
 
-`ACTION` is `creation-paused`, `checkin-paused` (the daily contract), `proof-paused` (the milestone contract),
-`evidence-signer` with `VALUE=0x…`, or `raw` with `TO` and `DATA`. `TARGET` is `escrow`, `earlier-escrow`, `milestone`
-or `router`. Registering a goal goes through `raw`: `WALLET=1 pnpm prepare:milestone-goals` prints the `to` and the
-`data` of each call, and those two go straight into `TO` and `DATA`, so the goal list stays in one place.
+**4. The four `transferOwnership`, signed by the hardware wallet, one last time.** This is the one step that cannot
+use `pnpm safe:handover`'s own sending: it asks for `OWNER_PRIVATE_KEY`, and a hardware wallet never gives its key up.
+So the script prints the calls and `cast` sends them, with the device confirming each one.
 
-The hash the first pass prints is the Safe's own: asked of the Safe contract with `getTransactionHash`, it answers the
-same bytes (checked on 19 Sep 2026 against Lock-In's Safe, `0x9228cb45…` for pausing creation at nonce 4). The last
-pass recovers both signers from the signatures themselves and refuses a signature from anybody who is not an owner,
-then runs the call against the chain's state before spending gas, so a wrong nonce or a signature over another
-transaction fails for nothing.
+```
+SAFE_ADDRESS=0x… CONFIRM_OWNERS="0xa,0xb,0xc" pnpm safe:handover
+```
 
-What changes the day this runs: `pnpm register:goal` and `pnpm register:milestone-goals` with a key in the environment
-stop working, because no single key is the owner any more. Preparing the call and signing it twice replaces them, and
-rotating the evidence signer in an incident takes both keys and both people.
+Check the address the device will be asked about is the owner, before signing anything:
+
+```
+cast wallet address --ledger
+```
+
+Then, once per contract, four times, with the Safe's address as the argument:
+
+```
+cast send 0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233 "transferOwnership(address)" 0x…<the Safe> \
+  --ledger --rpc-url https://rpc.monad.xyz --from 0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64
+```
+
+and the same for `0xE04CD59bB93765333200a9da01df83149D4C4d67`, `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e` and
+`0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223`. The Ethereum app on the device needs **Blind signing** switched on: a
+contract call is not a plain transfer. The last forty characters of what the device shows are the Safe's address, and
+that is the check to make before pressing accept. If the account is not on the device's first derivation path, add
+`--mnemonic-derivation-path "m/44'/60'/<n>'/0/0"` and read it back with `cast wallet address --ledger` first.
+
+**5. Read the four owners back from the chain, not from the receipts.**
+
+```
+VERIFY=1 SAFE_ADDRESS=0x… CONFIRM_OWNERS="0xa,0xb,0xc" pnpm safe:handover
+```
+
+It fails unless all four answer the Safe.
+
+**After that, no operator action goes through the founder's personal key.** Registering a goal, replacing the evidence
+signer, pausing creation or readings, allowing an exchange on the router: each one is a Safe transaction signed by two
+of the three project keys and carried by anybody, as in step 3, with `ACTION=raw TO=… DATA=…` for whatever the call is.
+`pnpm prepare:milestone-goals` prints the `to` and the `data` of a goal registration, which go straight into that.
+The hardware wallet keeps its MON and its own life, and has nothing left to sign for Viky.
 
 | what | value |
 |---|---|
 | the Safe | not created yet |
-| owners | two keys of the founder, the second created by him |
+| owners | three keys made for the project, by the founder, two of which sign |
 | `GiftEscrow` `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233` | not handed over yet |
 | earlier `GiftEscrow` `0xE04CD59bB93765333200a9da01df83149D4C4d67` | not handed over yet |
 | `MilestoneGift` `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e` | not handed over yet |
