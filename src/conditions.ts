@@ -12,8 +12,12 @@ import { GOAL_TYPE_DUOLINGO_XP } from "./gift-terms";
  * Only a condition that is wired from end to end, screen to contract to keeper, is `live`, and only live
  * conditions are ever offered (the integrity rule of CLAUDE.md: nothing is "available" without the code behind
  * it). The two milestones are written here with their words because their readings and terms already exist
- * (src/attested-sources.ts, src/milestone-terms.ts); they turn live on their own lines, C2 and C3, once their
- * contract is deployed and a real gift has run on it.
+ * (src/attested-sources.ts, src/milestone-terms.ts).
+ *
+ * What `live` means, since 19 Sep 2026 (D109): a gift can be made on it today. While we build, a condition wired from
+ * end to end is offered as soon as that is true, rather than after a real gift has finished running on it; the
+ * stricter door is kept for the version that is submitted. Chess.com went live under that rule, with two real gifts
+ * already running on it; the Duolingo English Test follows the day its goal is registered on the contract.
  */
 
 export type ConditionKind = "daily" | "milestone";
@@ -310,16 +314,17 @@ export const DUOLINGO_DAILY: Condition = {
 
 /**
  * C2, the milestone on Chess.com. Its cadences, its target question and its refusals are the milestone half of the
- * register (src/milestone-conditions.ts). Live once MilestoneGift is deployed and a real gift has run on it.
+ * register (src/milestone-conditions.ts).
+ *
+ * Open since 19 Sep 2026 (D108): two real gifts run on it, 1,000,000 and 1,000,002, both connected and read by the
+ * keeper on the chain, so a gift can be made on it by anybody rather than only through the operator door.
  */
 export const CHESS_RATING: Condition = {
   id: "chess-rating",
   kind: "milestone",
   goalType: null,
-  live: false,
-  state: "being-tested",
-  beforeItOpens:
-    "One real gift is running on it, offered to an account that runs Viky and to nobody else. It opens to everybody once that gift has either paid or come back.",
+  live: true,
+  state: "open",
   source: "Chess.com",
   family: "play",
   name: "Reach a chess rating on Chess.com",

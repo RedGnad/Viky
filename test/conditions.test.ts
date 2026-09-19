@@ -4,21 +4,24 @@ import { globSync, readFileSync } from "node:fs";
 import { attestedSourceIds } from "../src/attested-sources";
 import { CONDITIONS, conditionById, conditionOfGoal, DUOLINGO_DAILY, liveConditions } from "../src/conditions";
 import { GOAL_TYPE_DUOLINGO_XP } from "../src/gift-terms";
+import { milestoneById } from "../src/milestone-conditions";
 
 /**
  * The register is the spine (structure of 17 Sep 2026, C1): screens read it, and only what works from end to
  * end is offered. These tests keep both true.
  */
 
-test("only a condition wired from end to end is live, and today that is the Duolingo lesson", () => {
+test("only a condition a gift can be made on today is live, and that is the lesson and the chess rating", () => {
+  // D109, 19 Sep 2026: while we build, a condition wired from end to end is offered as soon as a gift can be created
+  // on it. Chess.com joined the list with two real gifts already running on it, 1,000,000 and 1,000,002.
   assert.deepEqual(
     liveConditions().map((condition) => condition.id),
-    ["duolingo-daily"],
-    "a second live condition needs its own line: contract deployed, a real gift run, a line on the judges page",
+    ["duolingo-daily", "chess-rating"],
+    "a live condition needs the whole line behind it: contract deployed, its goal registered, a reading that runs",
   );
   assert.equal(DUOLINGO_DAILY.goalType, GOAL_TYPE_DUOLINGO_XP);
   assert.equal(conditionOfGoal(GOAL_TYPE_DUOLINGO_XP)?.id, "duolingo-daily");
-  assert.equal(conditionById("chess-rating")?.live, false);
+  assert.equal(conditionById("duolingo-english-test")?.live, false, "its goal is not on the contract yet");
 });
 
 test("every condition names a reading that exists, and a milestone has no goal type on the daily contract", () => {
@@ -43,7 +46,10 @@ test("no destination, card, or step of offering a gift names a source in its own
 test("what a funder is offered comes from the register: the question, its check, and what counts as a day", () => {
   const live = liveConditions();
   for (const condition of live) {
-    assert.ok(condition.goalType !== null, `${condition.id} is live, so a gift can be made on it`);
+    // A gift has to be makeable on anything live, which means a goal on the daily contract for a habit, and the
+    // milestone half of the register for a target: a live condition with neither could be chosen and never created.
+    if (condition.kind === "daily") assert.ok(condition.goalType !== null, `${condition.id} is live, so a gift can be made on it`);
+    else assert.ok(milestoneById(condition.id), `${condition.id} is a live milestone, so its cadences and target are written`);
     assert.ok(condition.words.eachDay.length > 0);
     if (condition.link.kind === "username") {
       assert.ok(condition.link.row.length > 0 && condition.link.noneGiven.length > 0);

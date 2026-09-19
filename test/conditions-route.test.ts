@@ -6,12 +6,15 @@ import { ACCOUNT_AUTH_COOKIE_NAME, createAccountAuthChallenge, issueAccountAuthS
 import { CHESS_MILESTONE, DET_MILESTONE } from "../src/milestone-conditions";
 
 /**
- * Which conditions a person may offer. The Chess.com rehearsal hangs on this route: a condition that is wired and not
- * live yet is offered to an account that runs Viky and to nobody else, so the first real gift on it can be made.
+ * Which conditions a person may offer. A condition that is wired and not live yet is offered to an account that runs
+ * Viky and to nobody else, so the first real gift on it can be made at all.
  *
  * Measured in production on 18 Sep 2026: the route answered the founder correctly and his account is simply not on
  * the operator list, which is a line of configuration and not a defect. This pins what the route does with a session,
  * so the two can never be confused again.
+ *
+ * Chess.com went through that door and out of it: two real gifts ran on it and it is live since 19 Sep 2026 (D109),
+ * which leaves the Duolingo English Test alone behind it until its goal is registered on the contract.
  */
 
 const ORIGIN = "https://viky.test";
@@ -43,17 +46,18 @@ test("an account that runs Viky is offered the condition that is wired and not l
   const answer = await answerFor(await cookieFor(OPERATOR));
   assert.deepEqual(
     answer.preview,
-    [CHESS_MILESTONE.condition.id, DET_MILESTONE.condition.id],
-    "the Chess.com rehearsal, and the supervised result whose first gift has to be made by somebody",
+    [DET_MILESTONE.condition.id],
+    "the supervised result, whose goal is not on the contract yet, so its first gift has to be made by somebody here",
   );
   assert.ok(answer.ids.includes("duolingo-daily"), "and the live ones are there for everybody");
+  assert.ok(answer.ids.includes(CHESS_MILESTONE.condition.id), "Chess.com left this door on 19 Sep 2026 (D109)");
 });
 
 test("everybody else is offered the live conditions and nothing else", async () => {
   for (const cookie of [await cookieFor(SOMEBODY), undefined]) {
     const answer = await answerFor(cookie);
     assert.deepEqual(answer.preview, [], "a signed-in stranger and a stranger get the same answer here");
-    assert.ok(!answer.ids.includes(CHESS_MILESTONE.condition.id));
+    assert.ok(answer.ids.includes(CHESS_MILESTONE.condition.id), "a live milestone is offered like any live condition");
     assert.ok(!answer.ids.includes(DET_MILESTONE.condition.id), "a condition that is not live is in nobody else's list");
   }
 });

@@ -62,15 +62,28 @@ test("making a milestone gift needs an account", async () => {
 });
 
 test("a condition that is not live is offered to nobody but an account that runs Viky", async () => {
-  const funder = await createPost(post(TERMS, await cookieFor(FUNDER)));
-  assert.equal(funder.status, 400);
-  assert.equal(((await funder.json()) as { code: string }).code, "GOAL_NOT_OFFERED");
+  // Anything this route does not serve is refused by name before it reads anything, whoever asks: it serves climbs,
+  // and the supervised result is a certificate with a route and a door of its own (test/det-route.test.ts).
+  // What has no test left here is the operator half of this route's own door, because the only climb it knows is live
+  // since 19 Sep 2026 (D109). It comes back the day Lichess is added, which is a climb and will start not live.
+  const closed = { ...TERMS, conditionId: "duolingo-english-test" };
+  for (const who of [FUNDER, OPERATOR]) {
+    const answer = await createPost(post(closed, await cookieFor(who)));
+    assert.equal(answer.status, 400);
+    assert.equal(((await answer.json()) as { code: string }).code, "GOAL_NOT_OFFERED");
+  }
+
+  // And Chess.com, live since 19 Sep 2026 (D109), is past that door for everybody: the same terms a funder signs are
+  // now refused on the terms themselves rather than on who is asking.
+  const onLive = await createPost(post(TERMS, await cookieFor(FUNDER)));
+  assert.equal(((await onLive.json()) as { code: string }).code, "TERMS_MISMATCH");
 
   const listed = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`, { headers: { cookie: await cookieFor(FUNDER) } }))).json()) as { ids: string[]; preview: string[] };
   assert.deepEqual(listed.preview, [], "a funder sees only what is live");
-  const operator = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`, { headers: { cookie: await cookieFor(OPERATOR) } }))).json()) as { ids: string[]; preview: string[] };
-  // Two conditions are wired and not live: the Chess.com climb and the supervised result (U3).
-  assert.deepEqual(operator.preview, ["chess-rating", "duolingo-english-test"]);
+  assert.ok(listed.ids.includes("chess-rating"));
+  const operatorSees = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`, { headers: { cookie: await cookieFor(OPERATOR) } }))).json()) as { ids: string[]; preview: string[] };
+  // One condition is wired and not live: the supervised result (U3), whose goal is not registered on the contract.
+  assert.deepEqual(operatorSees.preview, ["duolingo-english-test"]);
   const anonymous = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`))).json()) as { preview: string[] };
   assert.deepEqual(anonymous.preview, []);
 });
