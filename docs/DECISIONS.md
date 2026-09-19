@@ -3061,3 +3061,24 @@ behind an account cannot be photographed any other way.
   of a MON.
 - Irreversible, so it is built like every irreversible gesture here: the amount before, in the same words the
   contract will pay, and the amount with its date after.
+
+## D109, 19 Sep 2026: while we build, a condition is offered as soon as a gift can be made on it
+
+- Statement, the founder's, 19 Sep 2026: during development a condition that is wired from end to end is offered the
+  moment a gift can be created on it. The strict door, which waited for a real gift to have run before anything was
+  offered, is kept for the version that is submitted. So `live` now means "a gift can be made on it today", and the
+  public page says so in the same word, Open.
+- **Chess.com is the first under the new rule.** Two real gifts run on it, 1,000,000 and 1,000,002, both created on
+  mainnet by the founder's account, both connected and read by the keeper: identity pinned at
+  `0xa9f5280a…4095`, both started from a rating of 383, last read on 19 Sep 2026 at 01:55 UTC, neither settled nor
+  cancelled. Read from the milestone contract itself, not from a record of ours.
+- What changes in the code: one line of the register, `live: true` on `CHESS_RATING`, which is what `/api/conditions`
+  answers everybody, what "What will they do?" lists, and what the public page prints as its state. The operator door
+  (`VIKY_OPERATOR_ACCOUNTS`) keeps its purpose for whatever is still wired and not live, which today is the Duolingo
+  English Test alone.
+- **What follows without asking again**: the Duolingo English Test and Lichess take the same step the day goals 5 to 9
+  are registered on the milestone contract, because that registration is the only thing between them and a gift being
+  creatable. Nothing else about them changes, and what is not settled is still said where it matters: the English test
+  stays a condition whose source has a question to answer about reading its pages.
+- What this does not loosen: no screen claims a gift has settled that has not, the judges page still carries what each
+  condition proves and does not prove, and a condition with no reading behind it is not written here at all.

@@ -352,17 +352,20 @@ rotating the evidence signer in an incident takes both keys and both people.
    with its push service ("Registration failed - permission denied") even with the notification permission granted,
    in Chrome and in Chromium, headless or not. Firefox's service is the standard one, so the path is the same.
 
-## What the Chess.com rehearsal is waiting for
+## The door for a condition that is not live yet
 
 `/api/conditions` offers a condition that is wired and not live yet to an account on `VIKY_OPERATOR_ACCOUNTS`, and to
 nobody else. That is how the first real gift on a new condition gets made.
 
-Measured on 18 Sep 2026: the list in production holds two accounts, `0x350aF8…` and `0x91C964…`, and the founder's
-own account `0xb12e0C72209Bd4BECFDaFA96a8F3e7eBc93b8376` is not one of them. So the route answers him correctly and
-still shows no Chess.com: it is a line of configuration, not a defect, and the session fix of the same day does not
-change it.
+Chess.com went through it and out of it: two real gifts were made that way, 1,000,000 and 1,000,002, and it is live
+for everybody since 19 Sep 2026 (D109). Today the door holds one condition, the Duolingo English Test, and it opens
+the day goal 5 is registered on the milestone contract.
 
-To open the rehearsal, add that account to the list and redeploy production, then read it back:
+Measured on 18 Sep 2026: the list in production holds two accounts, `0x350aF8…` and `0x91C964…`, and the founder's
+own account `0xb12e0C72209Bd4BECFDaFA96a8F3e7eBc93b8376` is not one of them, which is a line of configuration and not
+a defect.
+
+To add an account to it, put the whole list back with the new one in it and redeploy production, then read it back:
 
 ```
 npx vercel@latest env rm VIKY_OPERATOR_ACCOUNTS production --yes
@@ -381,8 +384,8 @@ as the owner, after the handover of `GiftEscrow`.
 | goal | source | shape | state |
 |---|---|---|---|
 | 1 to 4 | Chess.com, rapid, blitz, bullet, daily | climb | registered at deployment, 17 Sep 2026 |
-| 5 | Duolingo English Test, the overall score | having it or not | to register, and the screens for it are built (U3) |
-| 6 to 9 | Lichess, bullet, blitz, rapid, classical | climb | to register, and nothing is offered on them yet |
+| 5 | Duolingo English Test, the overall score | having it or not | to register; the screens are built (U3), and the condition goes live the day it is registered (D109) |
+| 6 to 9 | Lichess, bullet, blitz, rapid, classical | climb | to register; nothing is offered on them yet, and the same rule applies the day they are |
 
 **The session, in order.** The owner is a wallet the founder holds, so the session is signed from that wallet and no
 key is ever read from a file. Each step is read back before the next.

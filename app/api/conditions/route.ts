@@ -11,8 +11,11 @@ export const dynamic = "force-dynamic";
 /**
  * Which conditions this viewer may offer. Everybody gets the live ones, which is all "What will they do?" lists. An
  * account that runs Viky (VIKY_OPERATOR_ACCOUNTS) also gets the conditions that are wired from end to end but not live
- * yet, because a condition turns live only after a real gift has run on it, and that first gift has to be made by
- * someone. The screen marks those as offered to nobody else.
+ * yet, so the first gift on one of them can be made at all. The screen marks those as offered to nobody else.
+ *
+ * Since D109 (19 Sep 2026) a condition turns live as soon as a gift can be made on it, rather than after a real gift
+ * has finished running, so this door holds whatever is still missing a piece: today the Duolingo English Test, whose
+ * goal is not registered on the milestone contract yet.
  */
 const WIRED_NOT_LIVE = [CHESS_MILESTONE.condition, DET_MILESTONE.condition];
 
