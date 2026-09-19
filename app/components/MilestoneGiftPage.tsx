@@ -15,6 +15,7 @@ import { GIFT_PAGE as G, MILESTONE_ACTIONS as A, MILESTONE_PAGE as W, NAV } from
 import { CheckThisReading } from "../kit/CheckThisReading";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { GiftCard } from "../kit/GiftCard";
+import { LinkAgain } from "../kit/LinkAgain";
 import { CertificateProof } from "../kit/CertificateProof";
 import { MorningMessage } from "../kit/MorningMessage";
 import { Shell } from "../kit/Shell";
@@ -26,8 +27,9 @@ import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui"
  * deadline, when it is checked, and what happens at the deadline, in the reader's own words. The source's name comes
  * from the register, the numbers from the contract (src/milestone-status.ts).
  *
- * Opening, connecting and taking are the milestone contract's own steps (C2). The recipient opens the link, puts a code
- * in the name of the account the funder named (that first reading is where they start), and then only plays: Viky
+ * Opening, connecting and taking are the milestone contract's own steps (C2). The recipient opens the link and starts
+ * the first reading, which is where they start; a code is asked only where they named the account themselves (D27,
+ * D104), because an account the funder named needs nothing proved about it. After that they only play: Viky
  * reads the rating every day, and the first reading at the target makes all of it theirs. Taking it has a review
  * before and a confirmation after (rule E of the specification). No gesture is offered that the route cannot answer.
  */
@@ -241,6 +243,10 @@ export function MilestoneGiftPage({ status, linkKey = null, reload }: Readonly<{
           {answerTo("opening")}
         </>
       ) : null}
+
+      {/* The link again, to the funder, while nobody has opened it: the daily page had this and a milestone had
+          nothing at all, which is how the link of gift 1000001 was lost for good (19 Sep 2026). */}
+      {readerIsFunder && !status.opened && !status.cancelled ? <LinkAgain giftId={status.giftId} recipientName={status.names?.recipientName ?? null} /> : null}
 
       {/* The funder named the account, so the first reading binds it and nothing is asked of the person's own profile
           (D27). A code exists only where the recipient names their own account. */}

@@ -105,7 +105,13 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
 
   // The press and the hover are the two movements the stylesheet plays, because they answer a finger and a pointer.
   const css = readFileSync("app/globals.css", "utf8");
-  assert.doesNotMatch(css, /@keyframes|animation-name|infinite/, "the stylesheet plays no animation of its own");
+  // One exception, and it is named: while a gift is being made the chain is asked for up to thirty seconds, and a
+  // still screen reads as an action nobody registered (the founder's instruction of 19 Sep 2026, Nielsen 1993 and
+  // NN/g 2014). Everything outside the working ring still answers a gesture and still plays once.
+  const outsideTheRing = css.replace(/\.working-ring \{[\s\S]*?\n\}/, "").replace(/@keyframes working-turn \{[\s\S]*?\n\}/, "");
+  assert.doesNotMatch(outsideTheRing, /@keyframes|animation-name|infinite/, "the stylesheet plays no animation of its own beyond the one loop");
+  assert.match(css, /animation: working-turn \d+ms linear infinite/, "the one loop is the working ring, and it is the only one");
+  assert.equal(css.match(/infinite/g)?.length, 1, "exactly one loop in the whole stylesheet");
   assert.ok(css.includes(`--press-duration: ${MOTION.press.durationMs}ms`), "the press lasts what the token says");
   assert.ok(css.includes(`--press-easing: ${MOTION.press.easing}`), "the press is the token's curve");
   assert.ok(css.includes(`--hover-duration: ${MOTION.hover.durationMs}ms`), "the hover lasts what the token says");

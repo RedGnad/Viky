@@ -635,6 +635,26 @@ export const SCENARIOS: Scenario[] = [
       await s.shot("donor", "a gift being earned", `${HOME}: the gift under "What's moving"`);
     },
   },
+  {
+    /** The lost link of gift 1000001 (19 Sep 2026): this device kept nothing, so the only way back is a new link. */
+    name: "donor: nobody opened it yet, and the link again",
+    run: async (s) => {
+      await s.reset();
+      const waiting = gift({ youAreTheFunder: true, opened: false, startDay: 0, endDay: 0 });
+      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card({ role: "funder", opened: false, counting: false, creditedDays: 0, missedDays: 0, days: [] })] } }), "GET /api/gifts/mine");
+      await s.api("GET", GIFT_READ, () => ({ status: 200, body: waiting }), "GET /api/gift/[id]");
+      await s.api("POST", `/api/gift/${GIFT_ID}/link`, () => ({ status: 200, body: { claimUrl: `https://viky.cash/g/${GIFT_ID}?t=${CLAIM_TOKEN}` } }), "POST /api/gift/[id]/link");
+      await s.signIn();
+      await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
+      await s.settle();
+      await s.text("Get the link again", 30_000);
+      await s.shot("donor", "nobody opened it, the link can be had again", `${HOME}: a gift nobody has opened yet`);
+
+      await s.click("Get the link again");
+      await s.text(/no longer opens this gift/, 30_000);
+      await s.shot("donor", "a new link, and the old one dead", "On the funder's own gift page: Get the link again");
+    },
+  },
 
   // ---------------------------------------------------------------------------------------------------------
   // A milestone gift's page, on simulated data: no route answers a milestone gift until C2 is live.

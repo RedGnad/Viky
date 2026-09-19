@@ -22,6 +22,7 @@ import {
   markClaimed,
   newClaimToken,
   recordRelayed,
+  rotateClaimToken,
   relayedForSession,
   saveGift,
   setRecipientUsername,
@@ -248,4 +249,42 @@ test("settled days are recorded once per day and read back by gift, in day order
   assert.equal(await lastRefundAt("77"), null);
   await recordRelayed({ giftId: "77", kind: "refund", txHash: `0x${"e1".repeat(32)}` });
   assert.ok((await lastRefundAt("77")) instanceof Date);
+});
+
+/**
+ * The link of a gift nobody has opened, given back to its funder (gift 1000001, 19 Sep 2026). Only the key's
+ * fingerprint is kept, so what the funder gets is a new key and the old link stops working. Three refusals matter:
+ * another account, a gift already opened, and a gift that does not exist.
+ */
+test("a funder gets a new link for a gift nobody opened, and the old one dies with it", async () => {
+  const token = newClaimToken();
+  await saveGift({
+    giftId: "500",
+    funder: FUNDER,
+    contactHash: CONTACT,
+    claimToken: token,
+    goalType: 1,
+    dailyTarget: 10,
+    durationDays: 7,
+    amount: 7_000_000n,
+    createdTx: `0x${"5a".repeat(32)}`,
+    escrow: "0x00000000000000000000000000000000000000e1",
+  });
+  assert.equal((await loadGiftForClaim("500", token))?.giftId, "500");
+
+  const again = await rotateClaimToken("500", FUNDER);
+  assert.ok(again && again !== token, "a new key, not the old one");
+  assert.equal((await loadGiftForClaim("500", again))?.giftId, "500", "the new link opens it");
+  assert.equal(await loadGiftForClaim("500", token), null, "and the old link no longer does");
+  // Asking again gives another key and kills the one before it, so a link is never live in two places at once.
+  const third = await rotateClaimToken("500", FUNDER);
+  assert.ok(third && third !== again);
+  assert.equal(await loadGiftForClaim("500", again), null);
+
+  assert.equal(await rotateClaimToken("500", RECIPIENT), null, "only the account that made the gift");
+  assert.equal(await rotateClaimToken("nothing-like-this", FUNDER), null, "and only a gift that exists");
+  assert.equal((await loadGiftForClaim("500", third))?.giftId, "500", "a refused ask changes no key");
+
+  assert.equal(await markClaimed("500", RECIPIENT, `0x${"5b".repeat(32)}`), true);
+  assert.equal(await rotateClaimToken("500", FUNDER), null, "an opened gift keeps the key its recipient holds");
 });
