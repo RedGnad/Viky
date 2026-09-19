@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useAccount } from "@/src/account/provider";
 import { loadPendingGift } from "@/src/pending-gift";
-import { HOME as W, ME } from "@/src/sentences";
+import { CATALOGUE, HOME as W, ME } from "@/src/sentences";
 import { BODY, DISPLAY, HELP, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON, TITLE } from "../components/ui";
 import { Character } from "./Character";
 import { exampleGift } from "./example-gift";
@@ -24,7 +24,8 @@ import { holdsAnything, useHoldings } from "./money";
  *
  * Without an account it is the gift character, the promise, one action, an example of a gift card and how it works; the
  * way into an account is the one door in the header (SignInDoor, brief section 7). The two documents the law asks to be
- * reachable from the door are text links, which is not a footer and lives nowhere else.
+ * reachable from the door are text links, which is not a footer and lives nowhere else; the public catalogue is beside
+ * them, because a reader deciding whether to offer anything asks what Viky can check before anything else.
  */
 export function Home() {
   const { address } = useAccount();
@@ -62,6 +63,10 @@ export function Home() {
           </ol>
         </Reveal>
         <p className={`${HELP} flex flex-wrap gap-x-[var(--space-lg)]`}>
+          {/* What the chooser does not offer, and why, since the chooser itself only ever shows what is proved. */}
+          <Link href="/what-viky-can-check" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
+            {CATALOGUE.title}
+          </Link>
           <Link href="/privacy" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
             {ME.privacy}
           </Link>

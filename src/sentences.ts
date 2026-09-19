@@ -676,6 +676,23 @@ export const JUDGES = {
   copyRefused: "This browser would not let the page copy it. Select the line and copy it by hand.",
 } as const;
 
+/**
+ * The public catalogue, "What Viky can check" (design audit of 16 Sep 2026, section 5).
+ *
+ * The chooser offers only what is proved, which leaves the question it raises unanswered anywhere: so what can Viky
+ * check, and what is it working on? This page answers it without promising anything, because every line of it is the
+ * register's own and each condition carries its state in words.
+ */
+export const CATALOGUE = {
+  title: "What Viky can check",
+  intro:
+    "A gift pays on what a source says in public about what somebody did. Here is everything Viky reads, everything it is trying, and what nobody can read at all. When you offer a gift, only what is open is shown to you.",
+  states: "What each state means",
+  frontier: "What has no public page",
+  frontierIntro: "People ask for these. No source lets anybody check them, and the wall is not on our side.",
+  limits: "What each of these proves, and what it does not, is written out on the same page as our own limits:",
+} as const;
+
 /** Me: the account, in the order the structure gives it. */
 export const ME = {
   title: "You",

@@ -23,6 +23,7 @@ const SURFACES = [
   "app/gifts/**/*.tsx",
   "app/me/**/*.tsx",
   "app/help/**/*.tsx",
+  "app/what-viky-can-check/**/*.tsx",
   "app/cash-out/**/*.tsx",
   "src/sentences.ts",
   "src/conditions.ts",

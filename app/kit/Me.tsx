@@ -5,7 +5,7 @@ import * as mera from "@/src/account/mera";
 import { useAccount } from "@/src/account/provider";
 import { getJson, putJson } from "@/src/client/api";
 import { DISPLAY_CURRENCIES, proposedDisplayCurrency, type DisplayCurrency } from "@/src/display-currency";
-import { ME as W } from "@/src/sentences";
+import { CATALOGUE, ME as W } from "@/src/sentences";
 import { CARD, HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../components/ui";
 import { ChoiceList } from "./ChoiceList";
 import { Install } from "./Install";
@@ -14,8 +14,8 @@ import { Shell } from "./Shell";
 
 /**
  * Me, in the order the structure gives it (section 4): the display currency, the session in one sentence and sign out,
- * installing Viky, then, folded, the account's code for a payout service, then Help, Privacy, Legal notice, For judges
- * as text links. The countdown is gone: the session is one sentence.
+ * installing Viky, then, folded, the account's code for a payout service, then Help, What Viky can check, Privacy,
+ * Legal notice, For judges as text links. The countdown is gone: the session is one sentence.
  *
  * Two sentences, one session each (D98). "Signed in on this device." is what a page load leaves: the account is here
  * for twelve hours and the key that signs is not, so nothing is promised about signing. "Signed in on this device
@@ -131,13 +131,19 @@ export function Me() {
   );
 }
 
-/** The four text links, and only here (structure, section 3: no footer anywhere). */
+/**
+ * The text links, and only here (structure, section 3: no footer anywhere). The catalogue joined them on 19 Sep 2026:
+ * Home carries it for a reader without an account, and a person who has one has nowhere else to look.
+ */
 function Links({ signedIn }: { signedIn: boolean }) {
   const link = "inline-flex min-h-[var(--tap-target)] items-center underline";
   return (
     <nav aria-label="More" className="flex flex-col">
       <Link href="/help" className={link}>
         {W.help}
+      </Link>
+      <Link href="/what-viky-can-check" className={link}>
+        {CATALOGUE.title}
       </Link>
       <Link href="/privacy" className={link}>
         {W.privacy}

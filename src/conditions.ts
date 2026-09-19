@@ -42,6 +42,45 @@ export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>
 export const SECTIONS_FROM = 6;
 
 /**
+ * Where a condition stands in the open (design audit of 16 Sep 2026, section 5).
+ *
+ * The chooser offers only what is proved, and that rule does not move. What was missing was a public answer to the
+ * question the rule raises, "so what can Viky check?", and the page at /what-viky-can-check is it: every condition
+ * the register holds, offered or not, each with its state in words.
+ *
+ * Four states and no fifth. A condition that fits none of them is not written on that page at all, because inventing
+ * a state to fit a thing is how a catalogue starts promising what nobody built. `open` is the same fact as `live`, so
+ * a condition cannot be open on the page and absent from the chooser, or the other way round.
+ */
+export type ConditionState = "open" | "being-tested" | "asked-the-source" | "no-public-page";
+
+export const STATES: readonly Readonly<{ id: ConditionState; title: string; meaning: string }>[] = [
+  { id: "open", title: "Open", meaning: "Anybody can offer this today." },
+  {
+    id: "being-tested",
+    title: "Being tested",
+    meaning: "It works from end to end and one real gift is running on it. Nobody else is offered it yet.",
+  },
+  {
+    id: "asked-the-source",
+    title: "Waiting for the source's answer",
+    meaning: "Built or planned, and closed until the source has answered in writing whether a program may read their pages.",
+  },
+  {
+    id: "no-public-page",
+    title: "No public page exists",
+    meaning: "There is no page about one person that anybody can open, so nobody can check it: not Viky, not you.",
+  },
+];
+
+/** The words of a state, for the page that prints them. */
+export function stateWords(id: ConditionState): Readonly<{ id: ConditionState; title: string; meaning: string }> {
+  const found = STATES.find((state) => state.id === id);
+  if (!found) throw new Error(`no such state: ${id}`);
+  return found;
+}
+
+/**
  * How a funder's typed name is checked before any money moves: its shape here, its existence by a public read on
  * Viky's own route (decision 10 of the drawn flows), and the refusal for each, said under the field.
  */
@@ -105,6 +144,10 @@ export type Condition = Readonly<{
   goalType: number | null;
   /** Wired from end to end. Only these are offered on "What will they do?". */
   live: boolean;
+  /** Where it stands in the open, said in words on "What Viky can check". Open means the same thing as `live`. */
+  state: ConditionState;
+  /** What has to happen before it is offered to anybody, in one line. A condition that is open has nothing to say here. */
+  beforeItOpens?: string;
   /** The source's own name, the one word a screen may print about it. */
   source: string;
   /** Which family the chooser files it under. */
@@ -193,6 +236,7 @@ export const DUOLINGO_DAILY: Condition = {
   kind: "daily",
   goalType: GOAL_TYPE_DUOLINGO_XP,
   live: true,
+  state: "open",
   source: "Duolingo",
   family: "language",
   name: "A Duolingo lesson each day",
@@ -273,6 +317,9 @@ export const CHESS_RATING: Condition = {
   kind: "milestone",
   goalType: null,
   live: false,
+  state: "being-tested",
+  beforeItOpens:
+    "One real gift is running on it, offered to an account that runs Viky and to nobody else. It opens to everybody once that gift has either paid or come back.",
   source: "Chess.com",
   family: "play",
   name: "Reach a chess rating on Chess.com",
@@ -319,6 +366,9 @@ export const DUOLINGO_ENGLISH_TEST: Condition = {
   kind: "milestone",
   goalType: null,
   live: false,
+  state: "asked-the-source",
+  beforeItOpens:
+    "The screens, the reading and every refusal are built. Duolingo's terms forbid gathering their content by a program, so that question goes to them in writing before anybody is offered this.",
   source: "Duolingo English Test",
   family: "language",
   name: "Reach a score on the Duolingo English Test",
@@ -344,6 +394,9 @@ export const COURSERA_CERTIFICATE: Condition = {
   kind: "milestone",
   goalType: null,
   live: false,
+  state: "asked-the-source",
+  beforeItOpens:
+    "Their terms ask for written consent before a program reads their pages, and nothing reads a Coursera certificate yet. Both come before this opens.",
   source: "Coursera",
   family: "course",
   name: "Get a Coursera certificate",
@@ -360,6 +413,40 @@ export const COURSERA_CERTIFICATE: Condition = {
 };
 
 export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE];
+
+/**
+ * What people ask for and no source lets anybody check, with the reading each line rests on (design audit, section 5).
+ *
+ * These are not conditions: nothing is wired and nothing is planned, and the wall is at the source rather than in our
+ * code. They are here so the public page can say so in the same words as the rest, rather than leave a whole kind of
+ * gift looking like an oversight. Each `why` is what was read on the sources' own pages, on the day it names.
+ *
+ * "No public page exists" is about a page anybody can open, which is the only kind of reading Viky does today. It is
+ * not a claim that nothing could ever be proved: a person signing in to their own account and proving what they see
+ * there is a different reading, and it is not built.
+ */
+export type Frontier = Readonly<{ id: string; name: string; state: ConditionState; why: string }>;
+
+export const FRONTIERS: readonly Frontier[] = [
+  {
+    id: "supervised-exams",
+    name: "A Cambridge, IELTS or TOEFL result",
+    state: "no-public-page",
+    why: "The result goes to institutions. Checking one means an account an organisation applies for, opened with numbers the candidate hands over, and nothing about one person that anybody else can open. Read on 19 Sep 2026 on Cambridge English's, IELTS's and ETS's own pages.",
+  },
+  {
+    id: "state-diplomas",
+    name: "A state diploma",
+    state: "no-public-page",
+    why: "In France the holder draws an attestation from the state's own service, and a check needs the control key printed on it. Nothing anybody can open, and what a program could read would be that attestation rather than the diploma. Read on 19 Sep 2026 on diplome.gouv.fr.",
+  },
+  {
+    id: "school-marks",
+    name: "School marks",
+    state: "no-public-page",
+    why: "They live in a school's own portal, which opens for the family and for nobody else. No source publishes a page about a pupil.",
+  },
+];
 
 /** What "What will they do?" lists: only what works from end to end today. */
 export function liveConditions(): readonly Condition[] {
@@ -388,9 +475,18 @@ export type ConditionSection = Readonly<{ family: ConditionFamily; title: string
  */
 export function chooserSections(offered: readonly Condition[]): readonly ConditionSection[] | null {
   if (offered.length < SECTIONS_FROM) return null;
+  return sectioned(offered);
+}
+
+/** Everything the register holds, by family, for the public page: what is offered and what is not, in one list. */
+export function catalogueSections(): readonly ConditionSection[] {
+  return sectioned(CONDITIONS);
+}
+
+function sectioned(conditions: readonly Condition[]): readonly ConditionSection[] {
   return FAMILIES.map(({ id, title }) => ({
     family: id,
     title,
-    conditions: offered.filter((condition) => condition.family === id).sort((a, b) => a.name.localeCompare(b.name, "en")),
+    conditions: conditions.filter((condition) => condition.family === id).sort((a, b) => a.name.localeCompare(b.name, "en")),
   })).filter((section) => section.conditions.length > 0);
 }
