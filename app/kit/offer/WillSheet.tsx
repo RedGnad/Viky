@@ -9,7 +9,7 @@ import { checkSourceName } from "@/src/client/gift";
 import { ApiError } from "@/src/client/api";
 import { smallestTarget } from "@/src/milestone-terms";
 import { FUND, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
-import { HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../../components/ui";
+import { HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { Field } from "../Field";
 import { Sheet } from "../Sheet";
@@ -174,11 +174,9 @@ export function WillSheet({
         onClose();
       }}
       footer={
-        choosing || !condition ? undefined : (
-          <button type="button" className={SECONDARY_BUTTON} disabled={!ready} onClick={onClose}>
-            {W.done}
-          </button>
-        )
+        <button type="button" className={PRIMARY_BUTTON} disabled={choosing ? !condition : !ready} onClick={onClose}>
+          {W.done}
+        </button>
       }
     >
       {choosing || !condition ? (

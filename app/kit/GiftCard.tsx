@@ -5,7 +5,7 @@ import type { GiftSummary } from "@/src/client/gift";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { dateInWords } from "@/src/moments";
 import { GIFT_CARD as W, MILESTONE_PAGE as M } from "@/src/sentences";
-import { BODY, CARD, CARD_TITLE, HELP } from "../components/ui";
+import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP } from "../components/ui";
 import { DayStrip } from "./DayStrip";
 import { MilestoneMeter } from "./MilestoneMeter";
 
@@ -31,6 +31,7 @@ export function GiftCard({ gift, milestone: given, still = false, example = fals
           </span>
         ) : null
       }
+      label={W.fromFunderOrYours(gift.role === "funder" ? null : gift.funderName)}
       title={whoInWords(gift)}
       under={condition?.name ?? ""}
       chevron={!still && !example}
@@ -76,16 +77,19 @@ export function GiftCard({ gift, milestone: given, still = false, example = fals
  * the card being filled in is not.
  */
 export function CardFace({
+  label,
   badge,
   title,
   under,
   chevron = false,
   shape,
   bottom,
-}: Readonly<{ badge?: ReactNode; title: ReactNode; under: ReactNode; chevron?: boolean; shape: ReactNode; bottom: ReactNode }>) {
+}: Readonly<{ label?: ReactNode; badge?: ReactNode; title: ReactNode; under: ReactNode; chevron?: boolean; shape: ReactNode; bottom: ReactNode }>) {
   return (
     <>
       {badge}
+      {/* Whose gift it is, in the third voice, at the head of the card (the rendered mockups of 19 Sep 2026). */}
+      {label ? <span className={`block ${CARD_LABEL}`}>{label}</span> : null}
       <span className="flex items-start justify-between gap-[var(--space-md)]">
         <span className="flex min-w-0 flex-col gap-[var(--space-xs)]">
           <span className={`${CARD_TITLE} break-words`}>{title}</span>

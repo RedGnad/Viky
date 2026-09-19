@@ -6,6 +6,9 @@ import { HELP } from "../components/ui";
  * option from a list", the question as the legend; Material: "Radio buttons should be vertically listed", five
  * options or fewer). Native inputs, so the keyboard and the screen reader get them for free; each row is a full
  * tap target.
+ *
+ * Since the rendered mockups of 19 Sep 2026 each option is its own box on the paper, and the chosen one takes the
+ * ink edge and a warmer fill: on a card, a row of bare radios read as a form rather than as a choice.
  */
 export type Choice<T extends string> = Readonly<{
   value: T;
@@ -34,10 +37,15 @@ export function ChoiceList<T extends string>({
   legendHidden?: boolean;
 }>) {
   return (
-    <fieldset className="flex flex-col gap-[var(--space-xs)]" disabled={disabled}>
+    <fieldset className="flex flex-col gap-[var(--space-sm)]" disabled={disabled}>
       <legend className={legendHidden ? "sr-only" : "mb-[var(--space-sm)] font-medium"}>{legend}</legend>
       {options.map((option) => (
-        <label key={option.value} className="flex min-h-[var(--tap-target)] cursor-pointer items-start gap-[var(--space-md)] py-[var(--space-xs)]">
+        <label
+          key={option.value}
+          className={`flex min-h-[var(--tap-target)] cursor-pointer items-start gap-[var(--space-md)] rounded-[var(--radius-control)] border-[length:var(--card-border-width)] p-[var(--space-md)] ${
+            value === option.value ? "border-[var(--control-border)] bg-[var(--chosen)]" : "border-[var(--divider)] bg-[var(--surface)]"
+          }`}
+        >
           <input
             type="radio"
             name={name}

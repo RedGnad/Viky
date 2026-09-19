@@ -41,14 +41,18 @@ test.describe("the screens a person meets", () => {
     // The card is the body of the page, and it reads as a gift: a title, and the word missing from each case where
     // that word will be (the drawn card of 19 Sep 2026, section 2).
     const card = page.locator("main section").first();
-    await expect(card.getByText("A gift", { exact: true })).toBeVisible();
-    for (const missing of ["Who is it for?", "how much", "for how long"]) {
+    await expect(card.getByText("Your gift", { exact: true })).toBeVisible();
+    await expect(card.getByRole("button", { name: /Who is it for/i })).toBeVisible();
+    for (const missing of ["what they will do", "for how long"]) {
       await expect(card.getByText(missing, { exact: true })).toHaveCount(1);
     }
-    await expect(page.getByText(/Nothing is asked of you until you pay/i)).toBeVisible();
-    // Nothing to press until the card says something: the action appears with the fourth case.
+    await expect(card.getByText("$0.00", { exact: true })).toBeVisible();
+    // The promise above the card, and the line under it, in the words the mockups of 19 Sep 2026 write them.
+    await expect(page.getByRole("heading", { name: /Money that arrives as they earn it/i })).toBeVisible();
+    await expect(page.getByText(/what they miss comes back to you/i)).toBeVisible();
+    // Nothing to pay for until the card says something: the action is there, shut, saying what it waits for.
     await expect(page.getByRole("button", { name: /^Pay /i })).toHaveCount(0);
-    await expect(page.getByText(/Fill the four/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Fill the four to pay/i })).toBeDisabled();
     // The one door, in the header rather than in the body, named for both of the things it does (brief, section 7).
     await expect(page.getByRole("button", { name: /^Sign in or create account$/i })).toBeVisible();
     // No passkey prompt on the home page at all, and nothing claiming a session that does not exist.

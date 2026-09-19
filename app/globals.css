@@ -26,6 +26,51 @@
   --divider: #E0DCEB;
   /* What a sheet lays over the screen behind it: the ink, thinned, so the card is still read through it. */
   --scrim: rgba(30, 22, 51, 0.32);
+
+  /*
+   * The card, and what reads on it (the rendered mockups of 19 Sep 2026). A card is the light object on the ground,
+   * never the same value as it. Day is not drawn yet, so it keeps the palette it had: a white card, the ink on it,
+   * and the hairline that was measured to be needed because white on this ground is 1.09:1.
+   */
+  --paper: #FFFFFF;
+  --paper-raised: #FFFFFF;
+  /* What the chosen option of a list is filled with, on the paper it sits on. */
+  --chosen: #F6F4FB;
+  --on-surface: #1E1633;
+  --on-surface-body: #1E1633;
+  --on-surface-muted: #5B5470;
+  --on-surface-faint: #5B5470;
+  --surface-rule: #E0DCEB;
+  --card-edge: var(--control-border);
+  --card-shadow: none;
+  /* Under the one action, three pixels of it, which is the sun with its light taken out. */
+  --sun-deep: #E8A400;
+  --action-relief-depth: 3px;
+  /*
+   * The one action, shut. The mockups draw it filled and relieved rather than hollow, which is the opposite of what
+   * the tokens of that morning said, and the founder settled it on the image (D113). Its words are darker than the
+   * image's #9A8B62, which measures 2.64:1 on this fill where a word needs 4.5:1.
+   */
+  --action-off: #E8E3F4;
+  --action-off-deep: #CFC7E6;
+  --action-off-ink: #5B5470;
+
+  /*
+   * The card's own three sizes, taken from the rendered mockups of 19 Sep 2026 rather than from the scale: the name
+   * it carries, the amount that is the one star of the screen, and the small capitals of a label. They are the
+   * image's numbers, and the image is the specification for this screen.
+   */
+  --type-card-who: 28px;
+  --type-card-who-leading: 31px;
+  --type-card-who-tracking: -0.5px;
+  --type-card-amount: 42px;
+  --type-card-amount-tracking: -1.2px;
+  --type-card-label: 11px;
+  --type-card-label-tracking: 1.3px;
+  --type-action: 17px;
+  --type-hero: 36px;
+  --type-hero-leading: 38px;
+  --type-hero-tracking: -0.9px;
   /* The fill of a button that is not the one action: quiet, and identified by its outline (K, rule 10). */
   --tonal: #E8E3F4;
 
@@ -146,7 +191,25 @@
     --accent-text: #F3F0FA;
     --control-border: #F3F0FA;
     --divider: #352C52;
-    --scrim: rgba(8, 6, 15, 0.45);
+    --scrim: rgba(8, 6, 15, 0.5);
+    /* The card is cream on the ink ground, with a shadow and no edge: the mockups of 19 Sep 2026. */
+    --paper: #FFF6E2;
+    --paper-raised: #FFFBF0;
+    --chosen: #FFF3D6;
+    --on-surface: #151026;
+    --on-surface-body: #4A4130;
+    /* The mockup says #907F52, which measures 3.66:1 on this cream: under the 4.5:1 a small line needs. */
+    --on-surface-muted: #7C6C3F;
+    /* And #B5A67C for a case nobody has answered, which is 2.24:1: this is the same colour at the 3:1 large text asks. */
+    --on-surface-faint: #96844F;
+    --surface-rule: #EADFC2;
+    --card-edge: transparent;
+    --card-shadow: 0 20px 44px rgba(0, 0, 0, 0.5);
+    --sun-deep: #E8A400;
+    /* The shut action on cream, as the mockups draw it, in words dark enough to read on it. */
+    --action-off: #EFE3C4;
+    --action-off-deep: #DCCFA8;
+    --action-off-ink: #6F6133;
     --tonal: #332A5E;
     --card-border: #352C52;
     --character-1: #FF8C98;
@@ -171,8 +234,25 @@
   --on-accent: #151026;
   --accent-text: #F3F0FA;
   --control-border: #F3F0FA;
-  --divider: #352C52;
-  --scrim: rgba(8, 6, 15, 0.45);
+    --divider: #352C52;
+  --scrim: rgba(8, 6, 15, 0.5);
+  /* The card is cream on the ink ground, with a shadow and no edge: the mockups of 19 Sep 2026. */
+  --paper: #FFF6E2;
+  --paper-raised: #FFFBF0;
+  --chosen: #FFF3D6;
+  --on-surface: #151026;
+  --on-surface-body: #4A4130;
+  /* The mockup says #907F52, which measures 3.66:1 on this cream: under the 4.5:1 a small line needs. */
+  --on-surface-muted: #7C6C3F;
+  /* And #B5A67C for a case nobody has answered, which is 2.24:1: this is the same colour at the 3:1 large text asks. */
+  --on-surface-faint: #96844F;
+  --surface-rule: #EADFC2;
+  --card-edge: transparent;
+  --card-shadow: 0 20px 44px rgba(0, 0, 0, 0.5);
+  --sun-deep: #E8A400;
+  --action-off: #EFE3C4;
+  --action-off-deep: #DCCFA8;
+  --action-off-ink: #6F6133;
   --tonal: #332A5E;
   --card-border: #352C52;
   --character-1: #FF8C98;
@@ -279,6 +359,70 @@ video {
   }
 }
 
+
+/*
+ * A card is the light object on the ground (the rendered mockups of 19 Sep 2026). Everything inside one reads on
+ * paper rather than on the ground, so the card re-points the variables its contents already use: the ink, the quiet
+ * voice, the rule between rows, the outline of a control. Nothing inside a card had to be rewritten for this.
+ */
+.on-paper {
+  background: var(--paper);
+  color: var(--on-surface);
+  box-shadow: var(--card-shadow);
+  --text: var(--on-surface);
+  --muted: var(--on-surface-muted);
+  --divider: var(--surface-rule);
+  --card-border: var(--surface-rule);
+  --control-border: var(--on-surface);
+  --accent-text: var(--on-surface);
+  --surface: var(--paper-raised);
+  --tonal: var(--paper-raised);
+  --control-relief-colour: var(--on-surface);
+}
+
+/*
+ * The ground carries two halos, very diffuse, the sun at the top right and the violet at the bottom left, and no
+ * texture and no grain (the mockups, point 7). They are painted behind everything, they catch no press, and day is
+ * left alone until it is drawn.
+ */
+:root:not([data-theme="light"]) body::before,
+:root:not([data-theme="light"]) body::after,
+:root[data-theme="dark"] body::before,
+:root[data-theme="dark"] body::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+:root:not([data-theme="light"]) body::before,
+:root[data-theme="dark"] body::before {
+  width: 460px;
+  height: 460px;
+  top: -230px;
+  right: -160px;
+  background: var(--accent);
+}
+
+:root:not([data-theme="light"]) body::after,
+:root[data-theme="dark"] body::after {
+  width: 420px;
+  height: 420px;
+  bottom: -200px;
+  left: -170px;
+  background: var(--character-3);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) body::before,
+  :root:not([data-theme="dark"]) body::after {
+    content: none;
+  }
+}
+
 /*
  * A sheet, where a case of the card is filled in (the product vision of 19 Sep 2026, section 4). It sits on the
  * bottom edge on a phone and centred on a wide screen, takes the surface colour and the card's own radius at the
@@ -289,13 +433,13 @@ video {
 dialog.sheet {
   margin: auto auto 0;
   width: min(100%, 560px);
-  max-height: min(88dvh, 760px);
+  /* Capped at what the mockups cap it at, so a sheet never fills the screen and the card is always behind it. */
+  max-height: 74dvh;
   padding: 0;
   border: none;
   border-radius: var(--radius-card) var(--radius-card) 0 0;
-  background: var(--surface);
-  color: var(--text);
   overflow: hidden;
+  box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.5);
 }
 
 dialog.sheet::backdrop {

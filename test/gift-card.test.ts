@@ -17,7 +17,7 @@ import {
 import { CHESS_MILESTONE, DET_MILESTONE } from "../src/milestone-conditions";
 import { MAX_GIFT_UNITS } from "../src/money";
 import { contrastRatio } from "../src/contrast";
-import { COLOURS, TRACKING } from "../src/design-tokens";
+import { COLOURS } from "../src/design-tokens";
 import { OFFER } from "../src/sentences";
 
 /**
@@ -109,70 +109,86 @@ test("there is one card, and the one being filled in is drawn by it", () => {
   assert.match(card, /<CardFace/);
   assert.doesNotMatch(card, /<dl|<dt|<dd/, "a card is not a list of definitions");
   // And it draws the product's own pieces rather than shapes of its own.
-  for (const piece of ["Character", "DayStrip", "MilestoneMeter"]) {
+  for (const piece of ["DayStrip", "MilestoneMeter"]) {
     assert.match(card, new RegExp(`<${piece}`), `the card draws the gift's own ${piece}`);
   }
   assert.equal(globSync("app/kit/offer/ShapePreview.tsx").length, 0, "the shape invented beside the product's own is gone");
 });
 
-test("the card shows what the table says at each step of its filling", () => {
-  // Empty: a gift with no name on it, and the question in the line under it.
-  assert.equal(OFFER.emptyTitle, "A gift");
-  assert.equal(OFFER.invites.for, "Who is it for?");
-  assert.match(card, /line\("for", null, BODY\)/, "the empty card asks who it is for, where the condition will be");
-  assert.match(card, /\{W\.emptyTitle\}/);
-  // Named: the gift's own title, from the gift card's words, and the next question under it.
-  assert.match(card, /line\("for", GIFT_CARD\.forName\(recipient\), ""\)/);
-  assert.match(card, /line\("will", condition \? condition\.name : null, BODY\)/);
+test("the card shows what the rendered mockups show, in their order", () => {
+  // The label, the name with the question in its place, what they will do, the days, the amount, the length.
+  assert.equal(OFFER.yourGift, "Your gift");
+  assert.equal(OFFER.fromFunder("Mum"), "A gift from Mum");
+  assert.equal(OFFER.forName("Léa"), "For Léa");
+  assert.equal(OFFER.forNobody, "For");
+  assert.equal(OFFER.who, "who?");
+  assert.match(card, /\{funder \? W\.fromFunder\(funder\) : W\.yourGift\}/);
+  assert.match(card, /underline decoration-dotted/, "the question is where the name will be, not a link at the right");
+  assert.match(card, /line\("will", condition \? condition\.name : null/);
+  assert.match(card, /\{W\.daysAppear\}/, "and the days say they are waiting for the condition");
   // The shape appears with the condition, and it has the length of the gift once there is one.
-  assert.match(card, /shape === undefined \?/);
   assert.match(card, /durationDays: filled\.howLong \? days : durationBounds\(draft\.conditionId\)\.suggested/);
-  // The bottom: the amount at display size, the length in the third voice, and the action only when it can be pressed.
-  assert.match(card, /money-display font-semibold tabular-nums/);
-  assert.match(card, /line\("howLong", filled\.howLong \? W\.forHowLong\(days\) : null, META\)/);
-  assert.match(card, /\{W\.stillNeeded\}/);
-  assert.equal(OFFER.stillNeeded, "Fill the four, and it is ready");
+  // The star of the screen, and the length under it in the third voice.
+  assert.match(card, /\{formatAusd\(units \?\? 0n\)\}/, "an amount nobody has given is $0.00 in the faint ink");
+  assert.match(card, /\{amountLine\}/);
+  assert.match(card, /line\("howLong", filled\.howLong \? W\.forHowLong\(days\) : null, CARD_LABEL/);
+  // One button, always drawn, shut until the four are filled and saying what it waits for.
+  assert.equal(OFFER.stillNeeded, "Fill the four to pay");
+  assert.match(card, /disabled=\{!ready \|\| units === undefined\}/);
 });
 
 test("an empty case says the word that is missing, in its place, and the whole line opens it", () => {
   assert.deepEqual(Object.keys(OFFER.invites).sort(), [...CARD_CASES].sort());
   for (const invite of Object.values(OFFER.invites)) assert.ok(invite.length > 0 && !invite.endsWith(":"), invite);
   assert.match(card, /onClick=\{\(\) => setOpen\(slot\)\}/, "a line of the card opens its own case");
-  assert.match(card, /said === null \? "text-\[var\(--muted\)\]" : ""/, "and a missing word is said in the quiet voice");
-  assert.doesNotMatch(card, /underline/, "an underlined link is not how a case says it is empty");
+  assert.match(card, /said === null \? faint : ""/, "and a missing word is said in the faint ink of the paper");
+  // The one underline on the card is the dotted one under "who?", which is the question in the name's own place.
+  assert.equal(card.match(/underline/g)?.length, 2, "no underlined link stands in for an empty case");
+  assert.match(card, /decoration-dotted/);
 });
 
-test("the accent is on Pay and nowhere else, on the card or in its sheets", () => {
-  assert.equal(card.match(/className=\{PRIMARY_BUTTON\}/g)?.length, 1, "one action wears the accent");
-  // A sheet ends a question; ending a question is not what the screen is asking for, so it takes the quiet fill.
-  for (const source of sheets) assert.doesNotMatch(source, /PRIMARY_BUTTON/, "a sheet's own button wears the accent");
-  assert.match(card, /\{W\.pay\(formatAusd\(units\)\)\}/);
+test("one accent per surface: the card's Pay, and a sheet's own Done", () => {
+  assert.equal(card.match(/PRIMARY_BUTTON\b/g)?.length, 2, "the one action, imported once and drawn once");
+  // While a sheet is open it is the surface a person is on, and the card's action is behind the veil, so the sheet's
+  // Done wears the sun (the rendered mockups). Nothing else inside a sheet does.
+  for (const source of sheets) {
+    assert.equal(source.match(/className=\{PRIMARY_BUTTON\}/g)?.length, 1, "a sheet has one action in the sun");
+  }
+  assert.match(card, /W\.pay\(formatAusd\(units\)\) : W\.stillNeeded/, "the same button, saying what it waits for");
   assert.doesNotMatch(card, /var\(--accent\)/, "nothing else on the card paints itself with the sun");
 });
 
-test("a card is seen as a card on the ground, which its surface alone does not do", () => {
-  // The measurement that forced the ink edge (the drawn card, section 4): under 1.3:1, a card is a rectangle of
-  // almost the same colour as the page, which is what the captures of 19 Sep showed.
-  for (const appearance of ["light", "dark"] as const) {
-    const palette = COLOURS[appearance];
-    assert.ok(contrastRatio(palette.surface, palette.background) < 1.3, `${appearance} surface already stands off the ground`);
-    assert.ok(contrastRatio(palette.controlBorder, palette.background) >= 3, `${appearance} ink edge is not seen on the ground`);
+test("a card is the light object on the ground, as the rendered mockups draw it", () => {
+  // Night is drawn: cream paper on the ink ground, 17:1 apart, with a shadow under it and no edge at all.
+  assert.match(css, /--paper: #FFF6E2;/);
+  assert.ok(contrastRatio("#FFF6E2", COLOURS.dark.background) > 15, "the card and the ground are never the same value");
+  assert.match(css, /--card-shadow: 0 20px 44px rgba\(0, 0, 0, 0\.5\);/);
+  assert.match(css, /--card-edge: transparent;/);
+  // Day is not drawn yet, so it keeps the palette it had, where the white card needed a hairline to be seen at all.
+  assert.ok(contrastRatio(COLOURS.light.surface, COLOURS.light.background) < 1.3);
+  assert.match(css, /--card-edge: var\(--control-border\);/);
+  // Everything inside a card reads on paper, so nothing inside one had to be rewritten for the ink to change.
+  assert.match(ui, /export const CARD =\n?\s*"on-paper/);
+  for (const said of ["--text: var(--on-surface)", "--muted: var(--on-surface-muted)", "--control-border: var(--on-surface)"]) {
+    assert.ok(css.includes(said), `the paper re-points ${said}`);
   }
-  assert.match(ui, /export const CARD =\n?\s*"[^"]*border-\[var\(--control-border\)\]/, "the card's edge is the ink");
-  assert.match(ui, /export const CARD =\n?\s*"[^"]*border-\[length:var\(--card-border-width\)\]/, "and it is still a hairline, not a control's outline");
 });
 
-test("the card's title is the title face at the mark's size, and the face is still named in two places only", () => {
-  assert.equal(TRACKING.cardTitle, -0.5);
-  assert.match(css, /--tracking-card-title: -0\.5px;/);
-  assert.match(ui, /export const CARD_TITLE = `\$\{MARK\} tracking-\[var\(--tracking-card-title\)\]`/);
-  assert.equal((ui.match(/var\(--font-title\)/g) ?? []).length, 2, "the card title composes the mark instead of naming the face");
-  assert.match(face, /\$\{CARD_TITLE\} break-words/, "and the one card uses it");
+test("the card's three voices are the image's own sizes", () => {
+  // The mockups' numbers, not the scale's: 28 for the name it carries, 42 for the amount, 11 for a label.
+  assert.match(css, /--type-card-who: 28px;/);
+  assert.match(css, /--type-card-amount: 42px;/);
+  assert.match(css, /--type-card-label: 11px;/);
+  assert.match(ui, /export const CARD_TITLE = `\$\{TITLE_FACE\} text-\[length:var\(--type-card-who\)\]/);
+  assert.match(ui, /export const CARD_AMOUNT = `\$\{TITLE_FACE\} text-\[length:var\(--type-card-amount\)\]/);
+  assert.match(ui, /export const CARD_LABEL =\n?\s*"text-\[length:var\(--type-card-label\)\]/);
+  assert.match(face, /\$\{CARD_TITLE\} break-words/, "and the one card wears them");
 });
 
 test("a sheet rises from the bottom, darkens once, and leaves the card readable behind it", () => {
   assert.match(css, /dialog\.sheet \{[\s\S]*?margin: auto auto 0;/, "it sits on the bottom edge at every width");
-  assert.match(css, /max-height: min\(88dvh/, "and stops under the top of the screen");
+  assert.match(css, /max-height: 74dvh;/, "and stops under the top of the screen, where the mockups cap it");
+  assert.match(sheetFile, /h-\[5px\] w-\[44px\]/, "with the handle the mockups draw");
   const scrim = css.match(/--scrim: rgba\([^)]*,\s*([0-9.]+)\)/g) ?? [];
   assert.ok(scrim.length >= 2);
   for (const said of scrim) {
@@ -227,8 +243,10 @@ test("a case opens in a sheet, and a sheet is a dialog rather than a page", () =
 test("the page without an account is one line, the card, and one line", () => {
   const home = readFileSync("app/kit/Home.tsx", "utf8");
   const signedOut = home.slice(home.indexOf("if (!address)"), home.indexOf("const moving ="));
-  assert.match(signedOut, /<h1 className=\{TITLE\}>\{W\.promise\}<\/h1>\s*<OfferCard \/>/, "the promise is above the card, in one line");
-  assert.match(signedOut, /<OfferCard \/>\s*<p className=\{PROSE\}>\{W\.promiseUnder\}<\/p>/, "and one sentence under it");
+  // The hero of the mockups: the gift character beside the promise, one line under it, then the card, in that order.
+  assert.match(signedOut, /<Character state="gift" tone="sun"/);
+  assert.match(signedOut, /<h1 className=\{HERO\}>\{W\.promise\}<\/h1>/);
+  assert.ok(signedOut.indexOf("{W.promiseUnder}") < signedOut.indexOf("<OfferCard />"), "the line under the promise comes before the card");
   assert.doesNotMatch(signedOut, /promiseBody|howItWorks|exampleGift/, "no third paragraph, and no example of a gift beside a real one");
   assert.match(signedOut, /min-h-\[68dvh\][\s\S]*justify-center/, "on a wide screen the card sits in the height rather than at the top of an empty page");
 });

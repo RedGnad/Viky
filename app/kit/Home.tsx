@@ -2,8 +2,9 @@
 import Link from "next/link";
 import { useAccount } from "@/src/account/provider";
 import { CATALOGUE, HOME as W, ME } from "@/src/sentences";
-import { BODY, HELP, PROSE, SECONDARY_BUTTON, TITLE } from "../components/ui";
-import { Arrival, Reveal, type ArrivalGift } from "./Motion";
+import { BODY, HELP, HERO, PROSE, SECONDARY_BUTTON, TITLE } from "../components/ui";
+import { Character } from "./Character";
+import { Arrival, Gaze, Reveal, type ArrivalGift } from "./Motion";
 import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
 import { GiftCard } from "./GiftCard";
@@ -34,12 +35,17 @@ export function Home() {
   if (!address) {
     return (
       <Shell kind="destination" active="home" action={<SignInDoor />}>
-        {/* One short line above the object and one under it, and no third (the drawn card of 19 Sep 2026, section 6).
-            On a wide screen the card sits in the middle of the height rather than at the top of an empty page. */}
+        {/* The hero of the mockups: the gift character beside the promise, one line under it, then the card, and
+            nothing else. On a wide screen the block sits in the height rather than at the top of an empty page. */}
         <div className="flex flex-col gap-[var(--space-lg)] [@media(min-width:840px)]:min-h-[68dvh] [@media(min-width:840px)]:justify-center">
-          <h1 className={TITLE}>{W.promise}</h1>
-          <OfferCard />
+          <div className="flex items-end gap-[var(--space-md)]">
+            <Gaze>
+              <Character state="gift" tone="sun" className="h-auto w-[88px] shrink-0" />
+            </Gaze>
+            <h1 className={HERO}>{W.promise}</h1>
+          </div>
           <p className={PROSE}>{W.promiseUnder}</p>
+          <OfferCard />
         </div>
         <p className={`${HELP} flex flex-wrap gap-x-[var(--space-lg)]`}>
           <Link href="/what-viky-can-check" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">

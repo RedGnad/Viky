@@ -3,7 +3,7 @@ import { useState } from "react";
 import { tidyGiftName } from "@/src/gift-names";
 import type { GiftDraft } from "@/src/gift-draft";
 import { FUND, OFFER as W } from "@/src/sentences";
-import { HELP, SECONDARY_BUTTON } from "../../components/ui";
+import { HELP, PRIMARY_BUTTON } from "../../components/ui";
 import { Field } from "../Field";
 import { Sheet } from "../Sheet";
 
@@ -34,7 +34,7 @@ export function WhoSheet({
   const done = (
     <button
       type="button"
-      className={SECONDARY_BUTTON}
+      className={PRIMARY_BUTTON}
       disabled={!ready}
       onClick={() => {
         setTouched({ recipient: true, funder: true });

@@ -19,6 +19,13 @@
  */
 
 const TAP = "min-h-[var(--tap-target)] inline-flex items-center justify-center gap-[var(--space-sm)]";
+/**
+ * The title face, named once. Five lines wear it and no others: the display title, the mark, the promise at the head
+ * of the page without an account, and the two lines of a card, its name and its amount (the rendered mockups of
+ * 19 Sep 2026). Composing it rather than repeating it is also what keeps a size from being overridden by the size
+ * inside another class.
+ */
+const TITLE_FACE = "font-[family-name:var(--font-title)] [font-weight:var(--font-title-weight)]";
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]";
 /** The outline that identifies a control, and the relief under a button, which a press collapses (globals.css). */
 const OUTLINE = "border-[length:var(--control-border-width)] border-[var(--control-border)]";
@@ -28,8 +35,13 @@ const RELIEF = "control-relief";
  * The action a screen is asking for. One per screen, at most, so it means something. Shut, it gives the accent back:
  * a faded accent is a fourth colour at night (a brown on the indigo ground), so a button that cannot be pressed yet is
  * a surface with muted words and no relief, and it takes the accent the moment it can.
+ *
+ * Since the rendered mockups of 19 Sep 2026 it is the sun, full width, with three pixels of the sun's own shadow
+ * under it, and a press puts it down onto them. Full width was what the brief advised against, and the founder
+ * amended the brief on the image (D113). It keeps its ink outline, which the mockup does not draw: the sun on the
+ * cream of a card measures 1.47:1, and WCAG 1.4.11 asks 3:1 of whatever identifies a control.
  */
-export const PRIMARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} bg-[var(--accent)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] font-medium tracking-[var(--tracking-label)] text-[var(--on-accent)] disabled:border-[var(--card-border)] disabled:bg-[var(--surface)] disabled:text-[var(--muted)] disabled:[box-shadow:none]`;
+export const PRIMARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} bg-[var(--accent)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-action)] font-bold tracking-[var(--tracking-label)] text-[var(--on-accent)] [box-shadow:0_var(--action-relief-depth)_0_var(--sun-deep)] active:translate-y-[var(--action-relief-depth)] active:[box-shadow:none] disabled:bg-[var(--action-off)] disabled:text-[var(--action-off-ink)] disabled:[box-shadow:0_var(--action-relief-depth)_0_var(--action-off-deep)]`;
 
 /**
  * Everything else a person may do from here: filled with a quiet tone rather than left hollow (K, rule 10, 19 Sep
@@ -60,12 +72,13 @@ export const META = "text-[length:var(--type-meta)] leading-[var(--type-meta-lea
  * (the product structure of 17 Sep 2026, section 7). Every card in the product is this one; the four coloured
  * stickers it replaces were four backgrounds where the three sources allow one.
  *
- * Its edge is the ink since 19 Sep 2026 (the drawn card, section 4). Measured: the card's surface stands at 1.09:1
- * on the ground by day and 1.12:1 by night, under the 1.3:1 the card was asked to reach, so the surface alone does
- * not read as a card and the edge has to. It stays a hairline, and it takes no relief: a card is not a control.
+ * Since the rendered mockups of 19 Sep 2026 it is the light object on the ground: cream by night, with a shadow
+ * under it and no edge at all, because 17:1 against the ground needs no help. Day is not drawn yet, so it keeps the
+ * white card and the ink hairline that was measured to be needed there (white on that ground is 1.09:1). `on-paper`
+ * is what re-points the ink, the quiet voice and the rule for everything inside it.
  */
 export const CARD =
-  "space-y-[var(--space-md)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--control-border)] bg-[var(--surface)] p-[var(--space-lg)]";
+  "on-paper space-y-[var(--space-md)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--card-edge)] p-[var(--space-lg)]";
 
 /**
  * A line the person types into. Its border identifies it, so it carries the control colour, and it sits on a
@@ -83,18 +96,29 @@ export const HELP = "text-[length:var(--type-help)] leading-[var(--type-help-lea
  * The single title a destination opens with, in Fredoka: once per destination, never in a task, never on an amount
  * or a button (structure of 17 Sep, section 12, item 7).
  */
-export const DISPLAY =
-  "text-[length:var(--type-display)] leading-[var(--type-display-leading)] tracking-[var(--type-display-tracking)] font-[family-name:var(--font-title)] [font-weight:var(--font-title-weight)]";
+export const DISPLAY = `${TITLE_FACE} text-[length:var(--type-display)] leading-[var(--type-display-leading)] tracking-[var(--type-display-tracking)]`;
 
 /** The mark at the top of every screen, the same face at a size that is not a title. */
-export const MARK =
-  "text-[length:var(--type-mark)] leading-[var(--type-mark-leading)] font-[family-name:var(--font-title)] [font-weight:var(--font-title-weight)]";
+export const MARK = `${TITLE_FACE} text-[length:var(--type-mark)] leading-[var(--type-mark-leading)]`;
 
 /**
- * The card's own title, "For Léa" (the drawn card of 19 Sep 2026, section 3): the title face at the mark's size, a
- * little tighter. It composes MARK rather than naming the face again, so the face is still set in exactly two places.
+ * The promise at the head of the page without an account, in the title face at the size the rendered mockups of
+ * 19 Sep 2026 draw it: smaller than the display, and it sits beside the gift character rather than over the card.
  */
-export const CARD_TITLE = `${MARK} tracking-[var(--tracking-card-title)]`;
+export const HERO = `${TITLE_FACE} text-[length:var(--type-hero)] leading-[var(--type-hero-leading)] tracking-[var(--type-hero-tracking)]`;
+
+/**
+ * The three voices of a card, from the rendered mockups of 19 Sep 2026: the name it carries, the amount that is the
+ * one star of the screen, and the small capitals of a label. The first two are the title face, which is why they
+ * compose MARK rather than naming the face again: the face is still set in exactly two places in this file.
+ */
+export const CARD_TITLE = `${TITLE_FACE} text-[length:var(--type-card-who)] leading-[var(--type-card-who-leading)] tracking-[var(--type-card-who-tracking)]`;
+
+export const CARD_AMOUNT = `${TITLE_FACE} text-[length:var(--type-card-amount)] leading-[1] tracking-[var(--type-card-amount-tracking)] tabular-nums`;
+
+/** A label on a card: the third voice, at the size the image draws it. */
+export const CARD_LABEL =
+  "text-[length:var(--type-card-label)] leading-[var(--type-help-leading)] tracking-[var(--type-card-label-tracking)] font-bold uppercase text-[var(--muted)]";
 
 /**
  * An amount inside a title. Amounts are set in the text face wherever they appear, so a title that states one hands

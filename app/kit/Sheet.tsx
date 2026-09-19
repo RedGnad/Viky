@@ -55,9 +55,9 @@ export function Sheet({
         if (event.target === dialog.current) dialog.current?.close();
       }}
     >
-      <div className="flex max-h-[inherit] flex-col" style={pulled > 0 ? { transform: `translateY(${pulled}px)` } : undefined}>
+      <div className="on-paper flex max-h-[inherit] flex-col" style={pulled > 0 ? { transform: `translateY(${pulled}px)` } : undefined}>
         <header
-          className="flex touch-none items-start justify-between gap-[var(--space-md)] px-[var(--space-lg)] pt-[var(--space-lg)]"
+          className="flex touch-none flex-col gap-[var(--space-sm)] px-[var(--space-lg)] pt-[var(--space-sm)]"
           onPointerDown={(event) => {
             from.current = event.clientY;
             event.currentTarget.setPointerCapture(event.pointerId);
@@ -77,6 +77,9 @@ export function Sheet({
             setPulled(0);
           }}
         >
+          {/* The handle of the rendered mockups: what says this can be pulled down, and what a thumb pulls. */}
+          <span aria-hidden className="mx-auto h-[5px] w-[44px] rounded-full bg-[var(--surface-rule)]" />
+          <div className="flex items-start justify-between gap-[var(--space-md)]">
           <div className="space-y-[var(--space-xs)]">
             <h2 id={labelId} className={TITLE}>
               {title}
@@ -91,8 +94,14 @@ export function Sheet({
           >
             <span aria-hidden="true">&times;</span>
           </button>
+          </div>
         </header>
-        <div className="flex-1 space-y-[var(--space-md)] overflow-y-auto px-[var(--space-lg)] py-[var(--space-md)]">{children}</div>
+        {/*
+          `flex-auto` and not `flex-1`: a basis of zero collapses this to nothing, and the sheet then stands at the
+          height of its head and its action with the questions scrolled away inside. `min-h-0` is what lets it shrink
+          when the sheet meets its cap, so a long list scrolls in itself instead of pushing the action out of frame.
+        */}
+        <div className="min-h-0 flex-auto space-y-[var(--space-md)] overflow-y-auto px-[var(--space-lg)] py-[var(--space-md)]">{children}</div>
         {footer ? (
           <div className="flex flex-col gap-[var(--tap-gap)] border-t border-[var(--divider)] px-[var(--space-lg)] pt-[var(--space-md)] pb-[calc(var(--space-lg)+env(safe-area-inset-bottom,0px))]">
             {footer}

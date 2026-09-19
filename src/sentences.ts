@@ -34,8 +34,15 @@ export const NAV = {
 export const OFFER = {
   /** What the card is, for a reader who is read to: the card itself says it by being one. */
   title: "Offer a gift",
-  /** The title of a card nobody has named yet, in the quiet voice: it is a gift, and it has no name on it. */
-  emptyTitle: "A gift",
+  /** The label at the head of the card, in the third voice: whose gift this is, or that it is yours to fill in. */
+  yourGift: "Your gift",
+  fromFunder: (funder: string) => `A gift from ${funder}`,
+  /** The name the card carries, and what it says while nobody has given one: "For  who?", the question in its place. */
+  forName: (recipient: string) => `For ${recipient}`,
+  forNobody: "For",
+  who: "who?",
+  /** Where the days will be, before there is anything to draw. */
+  daysAppear: "The days appear once you choose what they will do.",
   /**
    * What a case that has not been answered says, in its own place on the card (the drawn card, section 2). Not a
    * label and a blank, and never an underlined link: the word that is missing, where it will be.
@@ -58,8 +65,8 @@ export const OFFER = {
   forHowLong: (days: number) => `for ${days} ${days === 1 ? "day" : "days"}`,
   /** The one action of the card, and it appears only when the four cases are filled. */
   pay: (amount: string) => `Pay ${amount}`,
-  /** The bottom of a card that is not finished: what is left to do, and nothing that cannot be pressed. */
-  stillNeeded: "Fill the four, and it is ready",
+  /** The action, shut, while the four are not filled: the same button, saying what it is waiting for. */
+  stillNeeded: "Fill the four to pay",
   done: "Done",
   sheets: {
     who: "Who is it for?",
@@ -90,14 +97,15 @@ export const OFFER = {
 
 /** Home: the money, the one action, the way out, and what is moving. */
 export const HOME = {
-  promise: "The money is already in their name",
+  /** The promise, as the rendered mockups of 19 Sep 2026 write it: three short lines in the title face. */
+  promise: "Money that arrives as they earn it.",
   promiseBody:
     "Put money behind someone's goal. It becomes theirs as they make verified progress, and whatever they do not earn comes back to you. Nobody profits from anyone failing.",
   /**
    * The one sentence under the card, and there is no third (the drawn card, section 6). The promise above it is the
    * title; this is what it costs a visitor to try, and what happens to what nobody earns.
    */
-  promiseUnder: "Nothing is asked of you until you pay, and whatever they do not earn comes back to you.",
+  promiseUnder: "Put it in their name. It becomes theirs day by day, and what they miss comes back to you.",
   offer: "Offer a gift",
   finish: "Finish the gift you set up",
   howItWorks: "How it works",
@@ -168,6 +176,11 @@ export const GIFT_CARD = {
   forWhoever: "For whoever opens the link",
   forName: (name: string) => `For ${name}`,
   fromName: (name: string) => `From ${name}`,
+  /**
+   * The label at the head of a card, in the third voice: whose gift it is, for a reader who did not make it, and
+   * "Your gift" for the one who did (the rendered mockups of 19 Sep 2026).
+   */
+  fromFunderOrYours: (funder: string | null) => (funder ? `A gift from ${funder}` : "Your gift"),
   /** Read by neither of the gift's two people: both sides named, and nothing addressed to the reader. */
   fromFor: (funder: string | null, recipient: string | null) => {
     if (funder && recipient) return `From ${funder}, for ${recipient}`;

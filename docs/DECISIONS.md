@@ -3126,7 +3126,7 @@ behind an account cannot be photographed any other way.
   the live page (`pnpm measure:contrast`).
 
 
-## D111, 19 Sep 2026: the card a gift is filled in on is the gift's own card, empty
+## D112, 19 Sep 2026: the card a gift is filled in on is the gift's own card, empty
 
 - What was wrong, and it was the vision's fault rather than the code's: the vision of that morning described a
   sequence, four cases each opening in a sheet, and never described what the card looks like. The first build took
@@ -3153,3 +3153,33 @@ behind an account cannot be photographed any other way.
   in the height instead of at the top of an empty page.
 - What this changes for every other card in the product: the ink edge and the title face, because there is one card
   and it is the same everywhere. Nothing else moved: no route, no contract, no word of the register.
+
+## D113, 19 Sep 2026: the rendered mockups are the specification, and two amendments to the brief
+
+- Statement, the founder's: the visual direction is settled and **images decide it now, not prose**. The four
+  rendered screens of `design-mockups-2026-09-19` (home, the empty card, a sheet, a gift's page) replace every
+  written specification for those screens, including the document written the same morning. A detail that is not in
+  the image is not in the instruction: it is free, and it is asked about.
+- **The two amendments to the art direction brief, validated on the images.** A character keeps its face at the
+  small size, where the brief kept faces for the large one: a row of faceless shapes reads as a chart, and the faces
+  are what hold a screen together. And the one action fills the width of its card, which the brief advised against.
+- **What the images fix, and what was copied from `shared.css` rather than interpreted**: the card is cream
+  `#FFF6E2` at radius 28 with a shadow under it, on the ink ground, and never the same value as it; the ground
+  carries two very diffuse halos, the sun at the top right and the violet at the bottom left, with no texture and no
+  grain; one star per screen, the amount, in the title face at 42, tabular; the action is the full sun with three
+  pixels of its own shadow under it; the sheets rise from the bottom with a handle, stop at 74 % of the height and
+  scroll inside themselves, over a single veil the card is still read through; a case nobody has answered says the
+  word that is missing in its own place on the card, never a link at the right.
+- **Three places where the image was not copied exactly, each measured and each said here.**
+  - The image's quiet ink on the cream, `#907F52`, measures 3.66:1 where a small line needs 4.5:1, and its faint
+    ink `#B5A67C` measures 2.24:1. They are `#7C6C3F` (4.79:1) and, for the two large lines only, `#96844F`
+    (3.42:1, above the 3:1 large text asks).
+  - The words of the shut action, `#9A8B62` on `#EFE3C4`, measure 2.64:1. They are `#6F6133` (4.79:1).
+  - The sun button on the cream measures 1.47:1, so it keeps the ink outline the image does not draw: WCAG 1.4.11
+    asks 3:1 of whatever identifies a control, and the outline is what identifies this one.
+- **What this overrules, and it is one morning old**: the tokens of the same day said a control that cannot be
+  pressed gives its fill back entirely. The image draws the shut action filled and relieved, saying what it waits
+  for, and that is what a person on a card is waiting to press. The rule still holds for every other button.
+- **Day is not drawn yet.** It keeps the palette it had, and what does not work in it is written in the delivery
+  rather than invented here: the white card stands at 1.09:1 on its ground and needs its hairline, there are no
+  halos, and a case nobody has answered has no faint ink of its own.
