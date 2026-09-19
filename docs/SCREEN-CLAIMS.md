@@ -63,6 +63,20 @@ destinations in a bar below 840 pixels and a rail from 840, tasks opening over t
 | one public example a judge can replay | the example is only ever one of Viky's own gifts, published with the account holder's agreement, and the page says so when there is none | `exampleForJudges` takes the operator's accounts as an argument, so no other gift can be returned | `test/proof-journal.test.ts` |
 | each contract's owner, pauses, one call and one refusal | they are read from the chain while the page is served, and what cannot be read is said rather than left blank | `src/judges-chain.ts` reads `owner()`, the pause flags, and a view for a gift number nobody created, which the contract refuses in its own words | **none yet**: it is a live read, and a reader checks it against `cast` |
 
+## What Viky can check, the public catalogue
+
+`app/what-viky-can-check/page.tsx`, fed by `src/conditions.ts` and reachable from Home, from You and from the judges
+page. The chooser offers only what is proved; this page answers the question that rule leaves open, and every line of
+it is the register's own, so the page cannot say one thing while the product does another.
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "Open. Anybody can offer this today." beside a condition | the chooser offers exactly the conditions this page calls open, and no others | `state` and `live` are the same fact in `src/conditions.ts`, and `liveConditions()` is what `/api/conditions` and the chooser read | `test/condition-states.test.ts` (both directions, so neither half can drift) |
+| "Being tested. One real gift is running on it, offered to an account that runs Viky and to nobody else." on Chess.com | a real gift exists and runs on that condition, and nobody outside the operator list is offered it | gift 1,000,000 on `MilestoneGift`, funded 18 Sep 2026 at 20:02 UTC, connected at 23:11 with a deadline of 25 Sep, read from the contract itself; `VIKY_OPERATOR_ACCOUNTS` is what opens a wired condition in `/api/conditions` | **none yet**: it is a fact about one gift, re-read with `cast call <milestone contract> "nextGiftId()(uint256)"` and `getGift`, and the line has to change when that gift settles |
+| "Waiting for the source's answer" on the Duolingo English Test and on Coursera | neither is offered to anybody, and what holds each one is that source's own terms | `live: false` keeps both out of `liveConditions()`; the two lines name the clauses read on 18 Sep 2026 and recorded in `docs/reports/2026-09-18-supervised-results.md` | `test/condition-states.test.ts` (each says what has to happen first, and names the terms) |
+| "No public page exists" on exam results, state diplomas and school marks | nobody can check them, us included, and each line says what was read to know that | `FRONTIERS` in `src/conditions.ts`: Cambridge English's, IELTS's and ETS's own pages and diplome.gouv.fr, all read on 19 Sep 2026 | `test/condition-states.test.ts` (each carries a reason and the day it was read) |
+| on the judges page, "Chess.com, being tested" under a condition's name | a judge and a funder are told the same state in the same words | `stateWords(condition.state)` in `app/judges/JudgesConditions.tsx`, the register's own words | `test/condition-states.test.ts` |
+
 ## Offering a gift
 
 `app/components/FundGift.tsx`, its words in `src/sentences.ts` (`FUND`) and in the register `src/conditions.ts`; under
@@ -302,6 +316,9 @@ question when you hold both. Worth an hour before the first real recipients, not
    test. Worth doing once before the freeze.
 3. The clipboard, whose failure path is the one a person meets when the browser refuses the copy. Both
    branches say something now, which is what was missing; proving it needs a browser that refuses.
+4. "Being tested" on the public catalogue names one gift whose deadline is 25 Sep 2026. Nothing moves that
+   line by itself: when that gift pays or comes back, somebody changes the state, and no test can know it
+   has happened.
 Closed on 18 Sep 2026: **the session now survives a page load.** The page asks the server who it is at load, so a
 reload, another tab and the way back from the card page all keep the account, and the passkey is asked at the first
 signature instead of at every load. Me says "Signed in on this device." while nothing can be signed yet, and keeps the

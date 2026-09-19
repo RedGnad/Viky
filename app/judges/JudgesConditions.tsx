@@ -1,4 +1,7 @@
+import Link from "next/link";
 import { conditionsWithProof } from "@/src/condition-proof";
+import { stateWords } from "@/src/conditions";
+import { CATALOGUE } from "@/src/sentences";
 import { TITLE } from "../components/ui";
 
 const HELP = "text-[length:var(--type-help)]";
@@ -20,14 +23,21 @@ export function JudgesConditions() {
       <p className={HELP}>
         Four questions, asked of every condition, answered in the register the product itself reads. Where something is
         not known, the answer says so: none of these proves who did the activity, and that is written here rather than
-        left to be discovered.
+        left to be discovered. Where each condition stands, and what no source lets anybody check at all, is the public
+        page{" "}
+        <Link href="/what-viky-can-check" className="underline">
+          {CATALOGUE.title}
+        </Link>
+        .
       </p>
       {rows.map(({ condition, proof }) => (
         <div key={condition.id} className="space-y-[var(--space-xs)] border-t border-[var(--divider)] pt-[var(--space-md)]">
           <h3 className="font-medium">
             {condition.name}{" "}
+            {/* The state is the register's own, in the words the public page prints: "not open yet, so no gift runs on
+                it" stopped being true the day the first real Chess.com gift was funded, on 18 Sep 2026. */}
             <span className={MUTED}>
-              {condition.source}, {condition.live ? "open to anyone today" : "not open yet, so no gift runs on it"}
+              {condition.source}, {stateWords(condition.state).title.toLowerCase()}
             </span>
           </h3>
           <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[14rem_1fr]">
