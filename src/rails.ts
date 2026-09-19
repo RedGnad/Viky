@@ -256,7 +256,10 @@ export const WAY_OUT_CARD: WayOut = {
     "The card must be in your own name.",
     "No card payout in France, the rest of the EEA, or the United States.",
     "Selling is shut in the United Kingdom.",
-    "Once you place the order, Mercuryo gives you six hours to send it.",
+    // The six hours the order gives are said at step 2, where they start running, and not here as well: a sentence
+    // read on two screens is read twice and helps once (the simplest-journey pass, 19 Sep 2026). The fact and its
+    // source are unchanged, and the comment below still carries them.
+
   ],
   // Selling restrictions for MON on MONAD: https://api.mercuryo.io/v1.6/lib/currencies, where
   // `restricted_countries_offramp` is exactly ["gb"], read 16 Sep 2026. The absence of card payouts in France,

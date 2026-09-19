@@ -58,6 +58,8 @@ function read(folder: string): Words[] {
 
 export type Measure = Readonly<{
   screens: number;
+  /** Words on the screens of the three tasks and the home page: the journey, without the documents written for judges. */
+  journeyWords: number;
   words: { total: number; median: number; most: Array<{ state: string; words: number }> };
   repeated: Array<{ sentence: string; screens: string[] }>;
   perTask: Array<{ task: string; screens: number; states: number }>;
@@ -82,8 +84,10 @@ export function measure(rows: Words[]): Measure {
     .map(([sentence, seen]) => ({ sentence, screens: [...seen].sort() }))
     .sort((a, b) => b.screens.length - a.screens.length || a.sentence.localeCompare(b.sentence));
 
+  const onTheJourney = new Set<string>([...TASKS.flatMap((task) => task.journeys), "home"]);
   return {
     screens: screens.length,
+    journeyWords: rows.filter((row) => onTheJourney.has(row.journey)).reduce((sum, row) => sum + wordsOf(row.text), 0),
     words: {
       total: counts.reduce((sum, count) => sum + count, 0),
       median,
@@ -103,6 +107,7 @@ function report(now: Measure, before?: Measure): string {
   const lines = [
     `- Screens measured: ${now.screens}${change(now.screens, before?.screens)}`,
     `- Words a person reads, all screens: ${now.words.total}${change(now.words.total, before?.words.total)}`,
+    `- Words on the journey itself, without the documents: ${now.journeyWords}${change(now.journeyWords, before?.journeyWords)}`,
     `- Words on the middle screen: ${now.words.median}${change(now.words.median, before?.words.median)}`,
     `- Sentences on two screens or more: ${now.repeated.length}${change(now.repeated.length, before?.repeated.length)}`,
     "",

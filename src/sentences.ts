@@ -193,6 +193,9 @@ export const FUND = {
     namesSeen: (recipient: string, funder: string) => `${recipient} and ${funder} show on the gift, to whoever opens its link.`,
     linkRisk: (recipient: string) => `The link you will get opens the gift for whoever opens it first. Send it only to ${recipient}.`,
     fourteenDays: "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
+    /** The two disclosures of the check (GOV.UK Details): what only some readers need, out of everybody's way. */
+    elseTitle: "What else this means",
+    feeTitle: (name: string) => `How ${name} charges`,
     paying: "Paying for it",
     /** One card per way in (D101): each says what it costs, what it delivers, and where its figures were read. */
     payingWith: (name: string) => `Paying with ${name}`,
@@ -716,7 +719,7 @@ export const HELP = {
     },
     {
       q: "How does a gift work?",
-      a: "Money is put in someone's name, tied to what they do, for a number of days. Each day they do it, that day's share becomes theirs. A day they miss can still be caught up the next day; if it is not, it comes back to whoever paid, by itself, the morning after. Nobody else ever profits from a missed day.",
+      a: "Money is put in someone's name, tied to what they do, for a number of days. Each day they do it, that day's share becomes theirs. A day they miss can still be caught up the next day; if it is not, it comes back to whoever paid, by itself, the morning after.",
     },
     {
       q: "My session closed. Did anything move?",

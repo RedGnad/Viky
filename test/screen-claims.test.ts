@@ -338,3 +338,23 @@ test("the legal notice says exactly what the program lets the operator do, and n
   assert.match(legal, /makes no payout in France, the rest of the\s+European Economic Area or the United States/);
   assert.match(legal, /cannot sell at all in the United Kingdom/);
 });
+
+/**
+ * The simplest-journey pass, 19 Sep 2026: what only some readers need went behind a disclosure, and what changes
+ * what a person does next stayed in front of everybody (GOV.UK Details: "make a page easier to scan when it contains
+ * information that only some users will need", never for what the majority must read).
+ */
+test("on the check, the link warning is in the body and the rest is one press away", () => {
+  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
+  const check = fund.slice(fund.indexOf("W.check.linkRisk"), fund.indexOf("W.check.payingWith"));
+  // The sentence that changes what a person does next is read without pressing anything.
+  assert.match(check, /^W\.check\.linkRisk\(recipient\)\}<\/p>\s*<details>/);
+  // The two that only some readers need are inside it, and still there.
+  const inside = check.slice(check.indexOf("<details>"), check.indexOf("</details>"));
+  assert.match(inside, /W\.check\.namesSeen/);
+  assert.match(inside, /fourteenDays/);
+  // Each way in keeps its figures and its fee in the open, and the explanation behind its own disclosure.
+  const ways = fund.slice(fund.indexOf("W.check.payingWith"));
+  assert.match(ways, /<p className=\{HELP\}>\{feeSentence\(way\)\}\.<\/p>\s*<details>/);
+  for (const said of ["nothingToSwap", "smallest", "sourceLine"]) assert.match(ways, new RegExp(`<details>[\\s\\S]*?${said}[\\s\\S]*?</details>`));
+});
