@@ -1,8 +1,10 @@
 import "../src/load-env";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { classifyFetchFailure, localAttestedFetch } from "../src/attested-read";
 import { attestedSource } from "../src/attested-sources";
 import { fetchPublicProfile, PublicProfileError, reclaimLocalProfileDeps } from "../src/duolingo-public";
+import { fingerprintOfContents, READING_FILES } from "../src/reading-fingerprint";
 
 /**
  * The attested-fetch worker (D27): a small HTTP service that runs Reclaim's zkFetch where Node can load it
@@ -21,13 +23,28 @@ const port = Number(process.argv[2] ?? process.env.PORT ?? 3210);
 const secret = process.env.ZKFETCH_WORKER_SECRET?.trim();
 if (!secret) throw new Error("ZKFETCH_WORKER_SECRET is required");
 
+/**
+ * The number of the two files this image runs (src/reading-fingerprint.ts). It is read from the files themselves,
+ * the ones tsx loads, so it is the truth about this image and not about the commit it was meant to be built from.
+ * The app compares it with its own before it asks for anything, and refuses to read rather than believe an older
+ * worker (incident of 18 Sep 2026: this service ran a day-old image and every reading died as PROOF_MISMATCH).
+ */
+const reading = (() => {
+  try {
+    return { fingerprint: fingerprintOfContents(READING_FILES.map((name) => readFileSync(name, "utf8"))), files: READING_FILES };
+  } catch (error) {
+    console.error(JSON.stringify({ worker: "zkfetch", at: new Date().toISOString(), readingFingerprint: "unreadable", message: error instanceof Error ? error.message : String(error) }));
+    return null;
+  }
+})();
+
 const server = createServer(async (request, response) => {
   const started = Date.now();
   const reply = (status: number, body: unknown) => {
     response.writeHead(status, { "content-type": "application/json", "cache-control": "no-store" });
     response.end(JSON.stringify(body));
   };
-  if (request.method === "GET" && request.url === "/health") return reply(200, { ok: true, worker: "zkfetch", at: new Date().toISOString() });
+  if (request.method === "GET" && request.url === "/health") return reply(200, { ok: true, worker: "zkfetch", at: new Date().toISOString(), reading });
   if (request.method !== "POST" || request.url !== "/read") return reply(404, { error: "Not found" });
   if (request.headers.authorization !== `Bearer ${secret}`) return reply(401, { error: "Not allowed" });
   let raw = "";
@@ -72,4 +89,4 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(port, () => console.log(JSON.stringify({ worker: "zkfetch", port, at: new Date().toISOString() })));
+server.listen(port, () => console.log(JSON.stringify({ worker: "zkfetch", port, at: new Date().toISOString(), reading })));

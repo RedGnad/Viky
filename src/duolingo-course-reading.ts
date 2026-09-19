@@ -36,6 +36,8 @@ export type CourseReadErrorCode =
   | "FETCH_FAILED"
   | "PROOF_INVALID"
   | "PROOF_MISMATCH"
+  /** The reading service runs older sources than this build, so nothing it fetches can be read here. */
+  | "WORKER_OUT_OF_DATE"
   | "NOT_CONFIGURED";
 
 export class CourseReadError extends Error {
