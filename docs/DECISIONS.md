@@ -3241,6 +3241,14 @@ behind an account cannot be photographed any other way.
   a hardware wallet. Measured on 19 Sep 2026: 65 bytes, `v` of 28, and the signer recovers from it, which is the form
   the contract accepts and the form `pnpm safe:action` checks. So the three passes never decrypt anything into a
   shell, and the script now prints those three commands rather than only the raw key route.
+- **Done on 20 Sep 2026**, and the table in docs/OPERATIONS.md carries every transaction. The Safe is
+  `0xE08D926c148A5065F4Df2892702785a183de86F9`; the four contracts answer it, read back from the chain; the hardware
+  wallet spent about 0.0147 MON and has nothing left to sign for Viky.
+- **What it cost to get there, because the next key replacement should not repeat it.** Three keys were thrown away
+  and a first Safe abandoned before the real one: a paper phrase pasted whole into a conversation, and two encrypted
+  files sharing one password, one of which was pasted as well. It cost nothing because none of them owned anything
+  yet. The rule that comes out of it is short: a key is proved by its address, and a file, a phrase or a password
+  that reaches a conversation is spent.
 - What this does not change: the contracts, which are not redeployed and whose `Ownable` is one step with no
   acceptance; and the relayer and evidence signer keys, which are operational and were never owners.
 

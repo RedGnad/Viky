@@ -271,9 +271,17 @@ lost with it, and a personal wallet has no business being the thing a product de
 owns anything: three keys are made for the project, and the Safe asks for two of them.** A key lost leaves the other
 two able to act; a key stolen is not enough to act at all.
 
-**Not done yet: as of 19 Sep 2026 the Safe of three does not exist and the owner of the four contracts is still
-`0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64`.** What follows is the procedure, and the table under it is filled the
-day it runs.
+**Done on 20 Sep 2026.** The four contracts answer the Safe, read back from the chain rather than from the receipts,
+and the founder's hardware wallet has nothing left to sign for Viky. The table at the end of this section carries the
+addresses and the four transactions. What follows is the procedure as it was run, kept because it is the one to
+follow again the day a key has to be replaced.
+
+**One thing it cost, and it is worth reading before the next time.** Three keys were made, three were thrown away,
+and a second Safe had to be built. The first paper phrase was pasted whole into a conversation; the two encrypted
+files shared one password and one of them was pasted too. None of it cost money, because none of them owned anything
+yet, and that is the only reason it was cheap: **a key is proved by its address alone, and a file, a phrase or a
+password that reaches a conversation is spent.** The Safe that was abandoned, `0xfc73A319D25Da982201E7E250e5E6348a62FD8D8`,
+is left where it is, owning nothing.
 
 Safe 1.4.1, the same version, factory and singleton as the Safe that already runs on Monad for Lock-In
 (`0xf1be884698B9Ba4438f529699eC92320427b4dA1`, created 15 Jul 2026). Read on Monad mainnet on 19 Sep 2026, each with
@@ -401,12 +409,18 @@ The hardware wallet keeps its MON and its own life, and has nothing left to sign
 
 | what | value |
 |---|---|
-| the Safe | not created yet |
-| owners | three keys made for the project, by the founder, two of which sign |
-| `GiftEscrow` `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233` | not handed over yet |
-| earlier `GiftEscrow` `0xE04CD59bB93765333200a9da01df83149D4C4d67` | not handed over yet |
-| `MilestoneGift` `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e` | not handed over yet |
-| `ExitRouter` `0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223` | not handed over yet |
+| the Safe | `0xE08D926c148A5065F4Df2892702785a183de86F9`, Safe 1.4.1, two signatures of three |
+| created | tx `0xb736505639c90b8e1775b2f3419aa1790d1a2cbda99a83f8905ded11ba4c9139`, block 106,297,928, paid by the relayer |
+| owner, an encrypted file on the founder's machine | `0x19d48126D78df48ac011f4145FA2226365e5b794` |
+| owner, a phrase on paper | `0x2307E9DE7b47cdc10E604794123D2Ac1b002bA4e` |
+| owner, a second phrase on paper | `0xED4c39120Ef1d67780B9Bd63d648bd3Df6ab67B3` |
+| proved before anything was handed over | the Safe calling itself, signed by two owners, tx `0xc15ef6c95894e426e20c2a1838345150f5bdf22eb4eb55828e3e06597f3fbeb3`, block 106,299,392 |
+| `GiftEscrow` `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233` | tx `0x1aa2887ef13988fd86efffe992651e6b9b2294161e2bbdc75c5e1466051f47d3`, block 106,300,697, 35,684 gas |
+| earlier `GiftEscrow` `0xE04CD59bB93765333200a9da01df83149D4C4d67` | tx `0x534555010acde11dd8791ad58d3ea02d485967ecf9f3045e7fb70e89bcfb6635`, block 106,300,728, 35,651 gas |
+| `MilestoneGift` `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e` | tx `0x960a5ad8edd9f5f0909bbc1f5bc85da86d081339364699248876375981fa072b`, block 106,300,749, 35,717 gas |
+| `ExitRouter` `0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223` | tx `0xcd2b1ac3ef8c334596d49d7154fb8288efb14ad268bf272a86c79367bfe67b78`, block 106,300,766, 35,067 gas |
+| read back | all four answer the Safe (`VERIFY=1 pnpm safe:handover`, and `owner()` on each, 20 Sep 2026) |
+| what it cost the hardware wallet | about 0.0147 MON for the four, of the 90.5 it holds; the Safe itself holds nothing and needs nothing |
 
 ## Before deploying the build of N1: the subscriptions table and the push keys
 
