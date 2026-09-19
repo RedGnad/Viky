@@ -13,11 +13,12 @@ import type { CSSProperties, ReactNode } from "react";
  *   LOOKS). They never speak and carry no text: a day's state is said in words beside it, which is why the picture is
  *   hidden from a screen reader.
  *
- * The state is the shape, the colour and the face, so a small character with no face still says it by shape and
- * colour: asleep and to come, a low rounded rectangle; today, an upright triangle; still catchable, the same triangle
- * leaning and yawning; earned, a full circle smiling wide; gone back, a faded circle leaving to the left. Two sizes:
- * large, with a face, for a gift's page and the moments; small, with no face and no shadow, for the strip on a card
- * (the same app: "using the fewest details needed to get the point across"). Faces vary a little from one character to
+ * The state is the shape, the colour and the face: asleep and to come, a low rounded rectangle; today, an upright
+ * triangle; still catchable, the same triangle leaning and yawning; earned, a full circle smiling wide; gone back, a
+ * faded circle leaving to the left. Two sizes: large, with its shadow, for a gift's page and the moments; small, for
+ * the strip on a card. Both keep the face, which the brief had reserved for the large one and the founder amended on
+ * the rendered mockups of 19 Sep 2026 (D113): a row of faceless shapes reads as a chart, and the faces are what hold
+ * a screen together. Faces vary a little from one character to
  * the next through `variant`, so a row never shows the same face twice in a row (Headspace: "do not repeat the same
  * face multiple times").
  *
@@ -202,11 +203,13 @@ function drawing(
  * on a tile of the accent, the box takes the colour that reads on the accent, its face is the accent showing through,
  * and the band keeps a secondary colour.
  */
-export type CharacterTone = "range" | "hero";
+export type CharacterTone = "range" | "hero" | "sun";
 
 const TONES: Record<CharacterTone, Readonly<{ box: string; ribbon: string; face: string }>> = {
   range: { box: ONE, ribbon: TWO, face: FACE },
   hero: { box: "var(--on-accent)", ribbon: TWO, face: "var(--accent)" },
+  /* The gift as the rendered mockups of 19 Sep 2026 draw it at the head of the page: a sun box with a pink ribbon. */
+  sun: { box: "var(--accent)", ribbon: ONE, face: FACE },
 };
 
 export function Character({
@@ -218,7 +221,9 @@ export function Character({
 }: Readonly<{ state: CharacterState; size?: "large" | "small"; variant?: number; tone?: CharacterTone; className?: string }>) {
   const large = size === "large";
   const drawn: CharacterTone = state === "gift" ? tone : "range";
-  const parts = drawing(state, large, variant, TONES[drawn]);
+  // A face at every size, since the rendered mockups of 19 Sep 2026 (D113): it is what holds the screen together,
+  // and a row of small shapes without faces read as a chart rather than as days.
+  const parts = drawing(state, true, variant, TONES[drawn]);
   const leaving = state === "returned";
   return (
     <svg

@@ -239,13 +239,29 @@ test("the quiet button is filled, seen on both grounds, and its words clear 4.5:
     const from = ui.indexOf(`${name} = \``);
     const button = ui.slice(from, ui.indexOf("`;", from));
     assert.match(button, /\$\{OUTLINE\}/, `${name} lost the outline WCAG 1.4.11 asks for`);
-    // Once every button is filled, a fill at half strength is still a fill: a control that cannot be pressed gives
-    // it back entirely and stands off the ground, the same answer for all three. The blurred captures of 19 Sep
-    // showed the first version, where a live button and a dead one were one pair of identical pills.
+    assert.doesNotMatch(button, /disabled:opacity/, `${name} fades instead of saying it cannot be pressed`);
+    if (name === "PRIMARY_BUTTON") continue;
+    // A quiet button that cannot be pressed gives its fill back and stands off the ground: at half strength it was
+    // the same pill as a live one at a squint (the blurred captures of 19 Sep).
     assert.match(button, /disabled:bg-\[var\(--surface\)\]/, `${name} keeps its fill when it cannot be pressed`);
     assert.match(button, /disabled:\[box-shadow:none\]/, `${name} keeps its relief when it cannot be pressed`);
-    assert.doesNotMatch(button, /disabled:opacity/, `${name} fades instead of giving its fill back`);
   }
+
+  /*
+   * The one action is the exception, and it is the rendered mockups of 19 Sep 2026 that made it one (D113): shut, it
+   * is still a filled, relieved button saying what it is waiting for, because on a card it is the shape a person is
+   * waiting to press. What it may not be is unreadable: the image's own words on that fill measure 2.64:1.
+   */
+  const primary = ui.slice(ui.indexOf("PRIMARY_BUTTON = `"), ui.indexOf("`;", ui.indexOf("PRIMARY_BUTTON = `")));
+  assert.match(primary, /disabled:bg-\[var\(--action-off\)\]/);
+  assert.match(primary, /disabled:\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--action-off-deep\)\]/);
+  // One shut action per palette, each readable on its own fill: the cream of the mockups by night, and by day the
+  // quiet fill the rest of the product already uses, because a beige pill on the day ground belongs to neither.
+  assert.ok(contrastRatio("#6F6133", "#EFE3C4") >= TEXT_CONTRAST_MINIMUM, "the words of the shut action are readable on the cream");
+  assert.ok(contrastRatio("#5B5470", "#E8E3F4") >= TEXT_CONTRAST_MINIMUM, "and on the day fill");
+  assert.match(css, /--action-off-ink: #6F6133;/);
+  assert.match(css, /--action-off-ink: #5B5470;/);
+  assert.match(primary, /\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--sun-deep\)\]/, "and the sun's own shadow is under it when it can be pressed");
 });
 
 test("the art direction changed the colours and nothing else", () => {
@@ -446,10 +462,15 @@ test("the faces are loaded by next/font and defined on the whole document", () =
  * Fredoka sets exactly one display title per destination and the mark, and nothing else: no section title, no
  * amount, no button, nothing inside a task (structure of 17 Sep, section 12, item 7).
  */
-test("the title face is the display title and the mark, and nothing else", () => {
+test("the title face is named once, and worn by the lines the mockups give it", () => {
   const ui = readFileSync("app/components/ui.ts", "utf8");
   const titleFace = (ui.match(/var\(--font-title\)/g) ?? []).length;
-  assert.equal(titleFace, 2, "DISPLAY and MARK, and no other class, name the title face");
+  assert.equal(titleFace, 1, "the face is named once, in TITLE_FACE, and composed from there");
+  // Five lines wear it since the rendered mockups of 19 Sep 2026: the display, the mark, the promise, and a card's
+  // own name and amount. Composing keeps a size from being overridden by the size inside another class.
+  for (const name of ["DISPLAY", "MARK", "HERO", "CARD_TITLE", "CARD_AMOUNT"]) {
+    assert.match(ui, new RegExp(`export const ${name} = \`\\$\\{TITLE_FACE\\}`), `${name} wears the title face`);
+  }
   assert.doesNotMatch(ui.slice(ui.indexOf("export const TITLE"), ui.indexOf("export const BODY")), /font-title/);
   for (const file of globSync("app/**/*.tsx")) {
     assert.doesNotMatch(readFileSync(file, "utf8"), /var\(--font-title\)|font-\[family-name:var\(--font-title\)\]/, `${file} sets the title face itself`);

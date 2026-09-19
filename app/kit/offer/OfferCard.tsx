@@ -6,12 +6,10 @@ import { formatAusd } from "@/src/gift-reader";
 import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type CardCase, type GiftDraft } from "@/src/gift-draft";
 import { conditionById } from "@/src/conditions";
 import { cardDraft, emptyCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
-import { GIFT_CARD, OFFER as W } from "@/src/sentences";
-import { BODY, CARD, HELP, META, PRIMARY_BUTTON } from "../../components/ui";
-import { Character } from "../Character";
+import { OFFER as W } from "@/src/sentences";
+import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, PRIMARY_BUTTON } from "../../components/ui";
 import { CardFace } from "../GiftCard";
 import { DayStrip } from "../DayStrip";
-import { Gaze } from "../Motion";
 import { MilestoneMeter } from "../MilestoneMeter";
 import { AmountSheet } from "./AmountSheet";
 import { HowLongSheet } from "./HowLongSheet";
@@ -19,16 +17,13 @@ import { WhoSheet } from "./WhoSheet";
 import { WillSheet } from "./WillSheet";
 
 /**
- * The card a gift is filled in on, at the top of Home (the product vision of 19 Sep 2026, and the drawn card of the
- * same day, sections 1 and 2).
+ * The card a gift is filled in on, at the top of Home (the product vision of 19 Sep 2026, and the rendered mockups
+ * of the same day, which are the specification for this screen).
  *
- * There is one card in this product. This is the gift's own card, empty: the same face, the same title, the same row
- * of day characters or the same climbing meter, drawn by `CardFace` in app/kit/GiftCard.tsx. It is not a form that
- * resembles a gift, which is what the first version was and what a settings screen looks like.
- *
- * It fills in place. A case nobody has answered says the word that is missing where that word will be, in the quiet
- * voice, and the whole line opens its sheet: "For" followed by nothing means nothing, "Who is it for?" means
- * something. Nothing is asked of a visitor until Pay, which is the one thing on this screen wearing the accent.
+ * It is the gift's own card, empty: the paper, the label, the name, what they will do, the row of days, the amount
+ * that is the one star of the screen, and one action in the sun. A case nobody has answered says the word that is
+ * missing in its own place, in the faint ink of the paper, and pressing that line opens its sheet: "For  who?",
+ * "what they will do", "$0.00", "for how long". Nothing is asked of a visitor until Pay.
  */
 const GIFT_ID = "offer";
 
@@ -49,15 +44,34 @@ export function OfferCard() {
   const shape = shapeOf(draft.conditionId);
   const ready = isComplete(draft);
   const recipient = draft.recipientName.trim();
+  const funder = draft.funderName.trim();
   const days = Number(draft.days);
 
-  /** A line of the card: what is there, or the word that is missing in its place, and it opens its sheet either way. */
-  const line = (slot: CardCase, said: string | null, voice: string) => (
+  const faintLarge = "text-[var(--on-surface-faint)]";
+  const faintSmall = "text-[var(--muted)]";
+
+  /**
+   * The amount, which is the one star of the screen. Nobody has given one: it is $0.00 in the faint ink, the way the
+   * mockups draw it, and what it opens is said to whoever is read to rather than written on the card.
+   */
+  const amountLine = (
+    <button
+      type="button"
+      onClick={() => setOpen("amount")}
+      aria-label={`${units === undefined ? W.invites.amount : formatAusd(units)}. ${W.change(W.slots.amount.label)}`}
+      className={`${CARD_AMOUNT} ${units === undefined ? "text-[var(--on-surface-faint)]" : ""} inline-flex min-h-[var(--tap-target)] max-w-full items-center text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]`}
+    >
+      {formatAusd(units ?? 0n)}
+    </button>
+  );
+
+  /** A line of the card, and the whole line opens its case. Empty, it is the word that is missing, in the faint ink. */
+  const line = (slot: CardCase, said: string | null, voice: string, faint: string) => (
     <button
       type="button"
       onClick={() => setOpen(slot)}
-      aria-label={said === null ? W.invites[slot] : `${said}. ${W.change(W.slots[slot].label)}`}
-      className={`${voice} ${said === null ? "text-[var(--muted)]" : ""} inline-flex min-h-[var(--tap-target)] max-w-full items-center break-words text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]`}
+      aria-label={`${said ?? W.invites[slot]}. ${W.change(W.slots[slot].label)}`}
+      className={`${voice} ${said === null ? faint : ""} inline-flex min-h-[var(--tap-target)] max-w-full items-center break-words text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]`}
     >
       {said ?? W.invites[slot]}
     </button>
@@ -65,74 +79,75 @@ export function OfferCard() {
 
   return (
     <>
-      <section className={`${CARD} flex flex-col`} aria-labelledby="offer-card">
+      <section className={`${CARD} flex flex-col gap-0 space-y-0`} aria-labelledby="offer-card">
         <h2 id="offer-card" className="sr-only">
           {W.title}
         </h2>
         <CardFace
-          /*
-           * The title is the gift's own, "For Léa", and "A gift" while nobody is named: the quiet voice, because a
-           * gift for nobody is not a claim. The line under it is whatever is missing next, in its own words, and it
-           * opens the case it names (the drawn card, section 2).
-           */
+          label={funder ? W.fromFunder(funder) : W.yourGift}
+          /* The name. Empty, it is "For  who?", and the question is in the place the name will take. */
           title={
             filled.for ? (
-              line("for", GIFT_CARD.forName(recipient), "")
+              line("for", W.forName(recipient), CARD_TITLE, faintLarge)
             ) : (
-              <span className="text-[var(--muted)]">{W.emptyTitle}</span>
+              <button
+                type="button"
+                onClick={() => setOpen("for")}
+                aria-label={`${W.invites.for} ${W.change(W.slots.for.label)}`}
+                className={`${CARD_TITLE} ${faintLarge} inline-flex min-h-[var(--tap-target)] items-center gap-[var(--space-sm)] text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]`}
+              >
+                {W.forNobody}
+                <span className="underline decoration-dotted underline-offset-[6px]">{W.who}</span>
+              </button>
             )
           }
-          under={filled.for ? line("will", condition ? condition.name : null, BODY) : line("for", null, BODY)}
+          under={line("will", condition ? condition.name : null, "text-[length:var(--type-body)]", faintSmall)}
+          /* The shape of the gift, drawn by the product's own pieces, and said in words while there is none. */
           shape={
-            /*
-             * The shape, drawn by the product's own pieces. The gift character while there is nothing to draw yet,
-             * then the row of days or the climbing meter, empty. Before a length is chosen the row is drawn at the
-             * length this condition suggests: it is a picture, hidden from a reader, and the card says in words,
-             * right under it, that nobody has chosen one yet.
-             */
-            shape === undefined ? (
-              <Gaze>
-                <Character state="gift" className="h-auto w-[88px] self-start" />
-              </Gaze>
-            ) : shape === "days" ? (
-              <DayStrip
-                id={GIFT_ID}
-                gift={{
-                  startDay: 0,
-                  endDay: 0,
-                  durationDays: filled.howLong ? days : durationBounds(draft.conditionId).suggested,
-                  creditedDays: 0,
-                  missedDays: 0,
-                }}
-                catchUpSeconds={0}
-              />
-            ) : (
-              <MilestoneMeter
-                status={{
-                  startReading: null,
-                  target: Number(draft.target) || 0,
-                  todayReading: null,
-                  reached: false,
-                  cancelled: false,
-                  finished: false,
-                  opened: false,
-                }}
-              />
-            )
+            <div className="py-[var(--space-sm)]">
+              {shape === undefined ? (
+                <p className={`text-[length:var(--type-help)] ${faintSmall}`}>{W.daysAppear}</p>
+              ) : shape === "days" ? (
+                <DayStrip
+                  id={GIFT_ID}
+                  gift={{
+                    startDay: 0,
+                    endDay: 0,
+                    durationDays: filled.howLong ? days : durationBounds(draft.conditionId).suggested,
+                    creditedDays: 0,
+                    missedDays: 0,
+                  }}
+                  catchUpSeconds={0}
+                />
+              ) : (
+                <MilestoneMeter
+                  status={{
+                    startReading: null,
+                    target: Number(draft.target) || 0,
+                    todayReading: null,
+                    reached: false,
+                    cancelled: false,
+                    finished: false,
+                    opened: false,
+                  }}
+                />
+              )}
+            </div>
           }
           bottom={
             <>
-              <span className="money-display-box block">
-                {line("amount", units === undefined ? null : formatAusd(units), units === undefined ? BODY : "money-display font-semibold tabular-nums")}
-              </span>
-              {line("howLong", filled.howLong ? W.forHowLong(days) : null, META)}
-              {ready && units !== undefined ? (
-                <button type="button" className={PRIMARY_BUTTON} onClick={() => router.push("/fund")}>
-                  {W.pay(formatAusd(units))}
-                </button>
-              ) : (
-                <p className={HELP}>{W.stillNeeded}</p>
-              )}
+              {/* The one star of the screen, and under it how long it runs. */}
+              <span className="money-display-box block">{amountLine}</span>
+              <span className="block">{line("howLong", filled.howLong ? W.forHowLong(days) : null, CARD_LABEL, faintSmall)}</span>
+              {/* One action, in the sun, full width. Until the four are filled it is the same button, shut. */}
+              <button
+                type="button"
+                className={`${PRIMARY_BUTTON} mt-[var(--space-md)]`}
+                disabled={!ready || units === undefined}
+                onClick={() => router.push("/fund")}
+              >
+                {ready && units !== undefined ? W.pay(formatAusd(units)) : W.stillNeeded}
+              </button>
             </>
           }
         />

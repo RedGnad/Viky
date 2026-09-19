@@ -53,13 +53,17 @@ test("at most three secondary colours in any one character, and only from the lo
   assert.equal(new Set(strip.match(/var\(--character-[123]\)/g)).size, 3);
 });
 
-test("a large character has a face and a shadow; a small one is only its shape and colour", () => {
+test("both sizes carry a face, and only the large one casts a shadow", () => {
+  // The brief kept the face for the large size and the founder amended it on the rendered mockups of 19 Sep 2026
+  // (D113): a row of faceless shapes reads as a chart, and the faces are what hold a screen together. A small one
+  // still has no floor under it, because a strip of them is a row and not a scene.
   for (const state of STATES) {
     const large = draw(state, "large");
     const small = draw(state, "small");
     assert.match(large, /data-part="face"/);
     assert.match(large, /data-part="shadow"/);
-    assert.doesNotMatch(small, /data-part="face"|data-part="shadow"|--character-face/);
+    assert.match(small, /data-part="face"/);
+    assert.doesNotMatch(small, /data-part="shadow"/);
     assert.match(large, /var\(--character-face\)/);
   }
 });
@@ -82,6 +86,11 @@ test("the face turns as one piece under a pointer, inside the face the motion op
 
 test("on the app's icon the gift is drawn in the hero colour, and nowhere else does a character take the accent", () => {
   const hero = renderToStaticMarkup(createElement(Character, { state: "gift", tone: "hero" }));
+  // A third tone since the rendered mockups of 19 Sep 2026: the gift at the head of Home is a sun box with a pink
+  // ribbon. The icon keeps the tone it was drawn in, which is why this is a tone of its own and not a change.
+  const sun = renderToStaticMarkup(createElement(Character, { state: "gift", tone: "sun" }));
+  assert.match(sun, /var\(--accent\)/);
+  assert.doesNotMatch(sun, /var\(--on-accent\)/);
   assert.match(hero, /var\(--on-accent\)/);
   assert.match(hero, /var\(--accent\)/);
   assert.doesNotMatch(hero, /data-part="shadow"/, "a tile has no floor to cast a shadow on");
