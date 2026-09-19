@@ -25,8 +25,9 @@ const HEX32 = /^0x[0-9a-fA-F]{64}$/;
  * nothing. There is nothing to read before the money moves, because the page a certificate has exists only once the
  * test has been sat: that is the difference between this shape and a climb (D47).
  *
- * The condition is not live, so only an account that runs Viky may make one, which is how the first real gift on it
- * gets made. Everyone else is refused here and never sees it offered.
+ * The door for a condition that is wired and not live is kept and unchanged: only an account that runs Viky may make
+ * a gift on one. The supervised result went through it and out the other side on 19 Sep 2026, when its goal was
+ * registered on the milestone contract and it opened to everybody (D109); the door stands for whatever comes next.
  */
 export async function POST(request: Request) {
   let account = "";

@@ -42,15 +42,14 @@ async function answerFor(cookie?: string): Promise<{ ids: string[]; preview: str
   return (await (await conditions(ask(cookie))).json()) as { ids: string[]; preview: string[] };
 }
 
-test("an account that runs Viky is offered the condition that is wired and not live yet", async () => {
+test("the door for what is wired and not live yet stands, and is empty while nothing is behind it", async () => {
   const answer = await answerFor(await cookieFor(OPERATOR));
-  assert.deepEqual(
-    answer.preview,
-    [DET_MILESTONE.condition.id],
-    "the supervised result, whose goal is not on the contract yet, so its first gift has to be made by somebody here",
-  );
+  // Chess.com left this door on 19 Sep 2026 and the English test the same day, when goal 5 was registered (D109).
+  // Nothing is behind it today: Coursera has no goal on the contract, so no gift could be made on it here either.
+  assert.deepEqual(answer.preview, [], "nothing is wired, creatable and closed at the same time today");
   assert.ok(answer.ids.includes("duolingo-daily"), "and the live ones are there for everybody");
-  assert.ok(answer.ids.includes(CHESS_MILESTONE.condition.id), "Chess.com left this door on 19 Sep 2026 (D109)");
+  assert.ok(answer.ids.includes(CHESS_MILESTONE.condition.id));
+  assert.ok(answer.ids.includes(DET_MILESTONE.condition.id), "the supervised result is live since its goal was registered");
 });
 
 test("everybody else is offered the live conditions and nothing else", async () => {
@@ -58,7 +57,8 @@ test("everybody else is offered the live conditions and nothing else", async () 
     const answer = await answerFor(cookie);
     assert.deepEqual(answer.preview, [], "a signed-in stranger and a stranger get the same answer here");
     assert.ok(answer.ids.includes(CHESS_MILESTONE.condition.id), "a live milestone is offered like any live condition");
-    assert.ok(!answer.ids.includes(DET_MILESTONE.condition.id), "a condition that is not live is in nobody else's list");
+    assert.ok(answer.ids.includes(DET_MILESTONE.condition.id), "and so is the one that opened on 19 Sep 2026");
+    assert.ok(!answer.ids.includes("coursera-certificate"), "a condition that is not live is in nobody's list");
   }
 });
 
