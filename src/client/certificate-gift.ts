@@ -1,7 +1,6 @@
 import { getAddress, type Hex, type LocalAccount } from "viem";
 import { receiveAuthorizationMessage, receiveAuthorizationTypedData, toContractAuthorization } from "../ausd-authorization";
 import { NO_CONTACT_HASH } from "../contact-hash";
-import { certificateSubject } from "../duolingo-english-test";
 import type { CertificateCondition } from "../milestone-conditions";
 import { milestoneFundingNonce, SHAPE_HAVE_OR_NOT, type MilestoneParams } from "../milestone-protocol";
 import { getJson, postJson } from "./api";
@@ -19,6 +18,8 @@ export type CertificateGiftRequest = Readonly<{
   conditionId: string;
   /** The name the funder typed, which the certificate must carry. Hashed into the terms; sent so the server rebuilds it. */
   personName: string;
+  /** The course, where the condition asks for one: hashed into the terms with the name, and sent for the same reason. */
+  course?: string;
   target: number;
   durationDays: number;
   amount: string;
@@ -39,6 +40,8 @@ export async function prepareCertificateGift(input: {
   amount: bigint;
   recipientName?: string;
   funderName?: string;
+  /** The course a certificate gift is for, where the condition asks for one (C3). */
+  course?: string;
 }): Promise<CertificateGiftRequest> {
   const contract = milestoneAddressFromEnv();
   const funder = getAddress(input.account.address);
@@ -51,7 +54,7 @@ export async function prepareCertificateGift(input: {
     target: BigInt(input.target),
     // Nothing to start from: the ceiling is zero and the contract refuses anything else for this shape.
     maximumStart: 0n,
-    subject: certificateSubject(input.certificate.condition.source, input.personName),
+    subject: input.certificate.subject({ name: input.personName, course: input.course }),
     durationDays: input.durationDays,
     amount: input.amount,
     salt: randomSalt(),
@@ -62,6 +65,7 @@ export async function prepareCertificateGift(input: {
   return {
     conditionId: input.certificate.condition.id,
     personName: input.personName,
+    course: input.course,
     target: input.target,
     durationDays: input.durationDays,
     amount: input.amount.toString(),

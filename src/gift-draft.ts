@@ -2,7 +2,6 @@ import { conditionById, type Condition } from "./conditions";
 import type { PendingGiftTerms } from "./pending-gift";
 import { AmountError, dollarsToUnits } from "./money";
 import { certificateById, milestoneById } from "./milestone-conditions";
-import { isValidDetScore, normaliseCertificateName } from "./duolingo-english-test";
 import { checkTarget, MilestoneTermsError } from "./milestone-terms";
 
 /**
@@ -115,10 +114,12 @@ export function conditionAnswered(draft: GiftDraft): boolean {
   const target = targetNumber(draft);
   const certificate = certificateById(draft.conditionId);
   if (certificate) {
-    // The name the certificate will carry, judged exactly as the reading will judge it: two words at least, once
-    // normalised (U3). The score is the source's own scale, not a number of ours.
-    if (normaliseCertificateName(draft.subject).split(" ").filter(Boolean).length < 2) return false;
-    return target !== undefined && isValidDetScore(target);
+    // Judged exactly as the route will judge it, by the condition's own rules: the test prints a legal name and asks
+    // for two words, a course certificate can carry one. The score is the source's own scale, never a number of ours,
+    // and where there is nothing to score the funder names the course instead (C3).
+    if (!certificate.validName(draft.subject)) return false;
+    if (certificate.course) return Boolean(draft.course) && certificate.validTarget(target ?? Number.NaN);
+    return target !== undefined && certificate.validTarget(target);
   }
   const milestone = milestoneById(draft.conditionId);
   if (milestone) {

@@ -710,6 +710,9 @@ export function PayGift() {
         <Line label={W.check.rows.what} value={condition.name} />
         {subject ? <Line label={milestone?.condition.link.kind === "username" ? M.check.rows.name : certificate ? certificate.words.nameLabel : (condition.link.kind === "username" ? condition.link.row : "")} value={subject} /> : null}
         {milestone && cadence ? <Line label={M.check.rows.cadence} value={cadence.label} /> : null}
+        {/* The course a certificate is for, where the condition asks for one: it is half of what the funder signs,
+            so it is read back before paying and not only on the sheet where it was typed (C3). */}
+        {certificate?.course && draft.course ? <Line label={certificate.course.row} value={draft.course} /> : null}
         {milestone || certificate ? <Line label={M.check.rows.reach} value={certificate ? certificate.target.inWords(target) : String(target)} /> : null}
         {!milestone && !certificate && condition.target ? <Line label={W.check.rows.dayCounts} value={condition.target.inWords(target)} /> : null}
         <Line label={W.check.rows.goes} value={about ? `${gift} (${about})` : gift} />
@@ -742,6 +745,10 @@ export function PayGift() {
         ) : (
           <p className={BODY}>{W.check.missed(settlingTimeInWords(nowMs))}</p>
         )}
+        {/* A condition nobody is offered yet says so here too, and not only in the sheet where it was chosen: this is
+            the screen where money moves, and it was the one screen that presented it like any live condition (ui
+            review, 19 Sep 2026). */}
+        {condition.live ? null : <p className="font-medium">{M.operatorOnly}</p>}
         {/* The one sentence that changes what a person does next stays in the body: a link opens for whoever opens
             it first. What only some readers need goes behind a disclosure (GOV.UK Details). */}
         <p className="font-medium">{W.check.linkRisk(recipient)}</p>

@@ -3,7 +3,6 @@ import { getAddress, isAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { NO_CONTACT_HASH } from "@/src/contact-hash";
 import { isOperator } from "@/src/dev-access";
-import { certificateSubject, isValidDetScore, normaliseCertificateName } from "@/src/duolingo-english-test";
 import { GiftApiError, NO_STORE } from "@/src/gift-api";
 import { giftNameProblem, tidyGiftName } from "@/src/gift-names";
 import { makeMilestoneGift } from "@/src/milestone-creation";
@@ -46,11 +45,18 @@ export async function POST(request: Request) {
     }
 
     const personName = tidyGiftName(String(body.personName ?? ""));
-    if (giftNameProblem(personName) || normaliseCertificateName(personName).split(" ").length < 2) {
+    // Each condition says what name its own certificate can carry: the test prints a legal name and asks for two
+    // words, a course certificate can carry one, and a real one does (C3).
+    if (giftNameProblem(personName) || !certificate.validName(personName)) {
       throw new GiftApiError("INVALID_NAME", certificate.words.refusals.nameShape);
     }
     const target = Number(body.target);
-    if (!isValidDetScore(target)) throw new GiftApiError("INVALID_TARGET", certificate.words.refusals.targetShape);
+    if (!certificate.validTarget(target)) throw new GiftApiError("INVALID_TARGET", certificate.words.refusals.targetShape);
+    // A course certificate binds the course into what the funder signs, because "a certificate" alone would be paid
+    // by any of them. A condition that asks for no course must carry none, or the subject would be another gift's.
+    const course = certificate.course ? certificate.course.slugOf(String(body.course ?? "")) : undefined;
+    if (certificate.course && !course) throw new GiftApiError("INVALID_COURSE", certificate.course.help);
+    if (!certificate.course && body.course) throw new GiftApiError("INVALID_COURSE", "That gift takes no course");
     const durationDays = Number(body.durationDays);
     const { min, max } = certificate.duration;
     if (!Number.isSafeInteger(durationDays) || durationDays < min || durationDays > max) {
@@ -80,7 +86,7 @@ export async function POST(request: Request) {
       shape: SHAPE_HAVE_OR_NOT,
       target: BigInt(target),
       maximumStart: 0n,
-      subject: certificateSubject(certificate.condition.source, personName),
+      subject: certificate.subject({ name: personName, course }),
       durationDays,
       amount,
       salt: salt as Hex,
