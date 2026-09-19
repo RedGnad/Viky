@@ -106,7 +106,14 @@ async function main() {
     .map((value) => value.trim())
     .filter((value) => value.length > 0) as Hex[];
   if (given.length === 0) {
-    console.log(`Sign this hash with each of the two keys: SIGN=1 SIGNER_PRIVATE_KEY=0x… (same ACTION, and NONCE=${nonce} if the Safe moves meanwhile).`);
+    // The comfortable way, and the one that keeps every key where it already lives: cast signs the hash from a
+    // keystore (with the fingerprint or its password), from a paper mnemonic, or from a hardware wallet. Nothing is
+    // decrypted into a shell. SIGN=1 below stays for a raw key, which is the rarer case.
+    console.log(`Sign this hash with ${threshold} of the owners, each where their key lives:`);
+    console.log(`  cast wallet sign --no-hash ${hash} --keystore <the keystore file>`);
+    console.log(`  cast wallet sign --no-hash ${hash} --mnemonic "<the twelve words>"`);
+    console.log(`  cast wallet sign --no-hash ${hash} --ledger`);
+    console.log(`Then: SIGNATURES="0xfirst,0xsecond" SEND=1 … (same ACTION, and NONCE=${nonce} if the Safe moves meanwhile).`);
     return;
   }
   // Who signed is recovered from the signatures, never taken on trust: a stranger's signature fails here and not on chain.

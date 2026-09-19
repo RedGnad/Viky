@@ -3230,6 +3230,17 @@ behind an account cannot be photographed any other way.
   hardware wallet never hands its key over. So the script prints the four calls and `cast send --ledger` carries them,
   once, with the device confirming each. OPERATIONS carries the exact command, and the script now prints it too rather
   than offering a road the owner cannot take.
+- **Two corrections from the founder the same day, both measured before they were written.** The paper key is twelve
+  words and not a raw key: sixty-four hexadecimal characters copied by hand are ruined for ever by one wrong
+  character, while a mnemonic is read back and corrected by anybody (`cast wallet new-mnemonic`, twelve words by
+  default). And the two encrypted keys are enrolled for the fingerprint reader with `--touch-id`, which is comfort
+  and not a replacement: the flag's own words are "The macOS login password and explicit keystore passwords remain
+  available", so the password stays the way in on another machine and still has to be worth having.
+- **What those two changes forced, and it is the better half of them: no raw key is needed to sign either.**
+  `cast wallet sign --no-hash <hash>` signs a Safe transaction hash straight from a keystore, from a mnemonic or from
+  a hardware wallet. Measured on 19 Sep 2026: 65 bytes, `v` of 28, and the signer recovers from it, which is the form
+  the contract accepts and the form `pnpm safe:action` checks. So the three passes never decrypt anything into a
+  shell, and the script now prints those three commands rather than only the raw key route.
 - What this does not change: the contracts, which are not redeployed and whose `Ownable` is one step with no
   acceptance; and the relayer and evidence signer keys, which are operational and were never owners.
 
