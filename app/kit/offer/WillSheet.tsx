@@ -262,7 +262,11 @@ export function WillSheet({
             </>
           ) : null}
 
-          {/* A certificate: the name it will carry, and the score it must show. Nothing is read until they share it. */}
+          {/*
+            A certificate: the name it will carry, and then the one thing that tells this gift from another of the
+            same kind. For a test that is the score. For a course certificate there is nothing to score, so it is the
+            course, named by pasting its ordinary link: the certificate page carries the same word (C3).
+          */}
           {certificate ? (
             <>
               <Field
@@ -271,18 +275,36 @@ export function WillSheet({
                 help={certificate.words.nameHelp}
                 value={draft.subject}
                 onChange={(value) => onChange({ ...draft, subject: value })}
-                refusal={draft.subject.trim().length === 0 ? undefined : conditionAnswered({ ...draft, target: String(certificate.target.suggested) }) ? undefined : certificate.words.refusals.nameShape}
+                refusal={draft.subject.trim().length === 0 || certificate.validName(draft.subject) ? undefined : certificate.words.refusals.nameShape}
                 autoComplete="off"
               />
-              <Field
-                id="certificate-target"
-                label={certificate.target.label}
-                help={certificate.target.help}
-                value={draft.target}
-                onChange={(value) => onChange({ ...draft, target: value })}
-                refusal={draft.target.trim().length === 0 || ready ? undefined : certificate.words.refusals.targetShape}
-                inputMode="numeric"
-              />
+              {certificate.course ? (
+                <Field
+                  id="certificate-course"
+                  label={certificate.course.label}
+                  help={certificate.course.help}
+                  value={draft.courseTitle ?? ""}
+                  onChange={(value) => {
+                    const slug = certificate.course?.slugOf(value);
+                    // The course the terms are signed with is the word the page carries, never what was pasted around it.
+                    onChange({ ...draft, courseTitle: value, course: slug, target: String(certificate.target.suggested) });
+                  }}
+                  refusal={(draft.courseTitle ?? "").trim().length === 0 || draft.course ? undefined : certificate.course.help}
+                  autoComplete="off"
+                />
+              ) : (
+                <Field
+                  id="certificate-target"
+                  label={certificate.target.label}
+                  help={certificate.target.help}
+                  value={draft.target}
+                  onChange={(value) => onChange({ ...draft, target: value })}
+                  refusal={draft.target.trim().length === 0 || ready ? undefined : certificate.words.refusals.targetShape}
+                  inputMode="numeric"
+                />
+              )}
+              {/* Said back in full under the box, because a phone cuts the pasted link before the course's own word. */}
+              {certificate.course && draft.course ? <p className={HELP}>{certificate.course.named(draft.course)}</p> : null}
             </>
           ) : null}
 

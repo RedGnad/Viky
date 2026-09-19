@@ -468,6 +468,55 @@ export const SCENARIOS: Scenario[] = [
       await s.forgetKept();
     },
   },
+  {
+    /**
+     * A course certificate (C3): the one condition that asks for a course instead of a score. It is offered to
+     * nobody today, because goal 10 is not on the contract, so the chooser is staged here through the door that
+     * exists for what is wired and not live. Everything else on the screen is the register's own.
+     */
+    name: "funder coursera: the name and the course, then the check",
+    run: async (s) => {
+      await s.reset({ AUSD: 30_000_000n, USDC: 0n, MON: 0n });
+      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
+      await s.api(
+        "GET",
+        "/api/conditions",
+        () => ({ status: 200, body: { ids: ["duolingo-daily", "chess-rating", "duolingo-english-test"], preview: ["coursera-certificate"] } }),
+        "GET /api/conditions, with the course certificate behind the operator door",
+      );
+      await s.signIn();
+      // The gift is a card of four cases on Home, and each one opens its own sheet (D110).
+      await s.click("who it is for");
+      await s.page.getByLabel("Their first name").fill("Léa");
+      await s.page.getByLabel("Your name, as they know you").fill("Maman");
+      await s.click(exact("Done"));
+      await s.click("what they will do");
+      await s.text("Get a Coursera certificate");
+      await s.shot("funder coursera", "the four conditions offered", `${HOME}: the gift card, who it is for filled, then what they will do`);
+
+      // The option is below the fold of the sheet, so it is reached the way a thumb reaches it.
+      await s.page.getByText("Get a Coursera certificate", { exact: true }).scrollIntoViewIfNeeded();
+      await s.page.getByText("Get a Coursera certificate", { exact: true }).click();
+      await s.text("Their name, as Coursera prints it on a certificate");
+      await s.page.getByLabel("Their name, as Coursera prints it on a certificate").fill("Léa Martin");
+      await s.page.getByLabel("The course, by its link").fill("https://www.coursera.org/learn/introduction-git-github");
+      await s.page.getByLabel("The course, by its link").blur();
+      await s.shot("funder coursera", "the name and the course", "On the will sheet: Get a Coursera certificate, the name, then the course link pasted");
+      await s.click(exact("Done"));
+
+      // The other two cases, so the card can be paid for and the check screen reads the course back.
+      await s.click("how much");
+      for (const figure of ["2", "5"]) await s.page.getByRole("button", { name: exact(figure) }).click();
+      await s.click(exact("Done"));
+      await s.click("how long");
+      await s.page.getByRole("button", { name: "120 days" }).click();
+      await s.click(exact("Done"));
+      await s.click(/^Pay \$25\.00$/);
+      await s.text("Which course", 30_000);
+      await s.shot("funder coursera", "the check, with the course read back", "On the card, once the four are filled: Pay $25.00");
+      await s.forgetKept();
+    },
+  },
 
   // ---------------------------------------------------------------------------------------------------------
   // Recipient, from the link to counting.

@@ -1,6 +1,18 @@
+import type { Hex } from "viem";
 import { CHESS_MODES, chessGoalType, isValidChessUsername, ratingHasSettled, type ChessMode } from "./chess-com";
-import { CHESS_RATING, conditionById, DUOLINGO_ENGLISH_TEST, type Condition } from "./conditions";
-import { detAliasOf, DET_DURATION_DAYS, DET_MAX_SCORE, DET_MIN_SCORE, DET_SCORE_STEP } from "./duolingo-english-test";
+import { CHESS_RATING, conditionById, COURSERA_CERTIFICATE as COURSERA_CONDITION, DUOLINGO_ENGLISH_TEST, type Condition } from "./conditions";
+import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
+import {
+  certificateSubject,
+  detAliasOf,
+  isValidDetScore,
+  normaliseCertificateName,
+  DET_DURATION_DAYS,
+  DET_MAX_SCORE,
+  DET_MIN_SCORE,
+  DET_SCORE_STEP,
+  DET_SOURCE,
+} from "./duolingo-english-test";
 import { DET_GOAL_TYPE } from "./milestone-goals";
 import { CERTIFICATE as CERTIFICATE_SHAPE, CHESS_RATING as CHESS_RATING_SHAPE, type MilestoneShape } from "./milestone-terms";
 
@@ -157,6 +169,37 @@ export type CertificateCondition = Readonly<{
   readPath: string;
   /** True of something that could be a link to this source's certificate. */
   validLink: (value: string) => boolean;
+  /**
+   * Whether the name the funder typed is one this source's certificate could carry. The test prints a legal name and
+   * asks for two words; a course certificate can carry one, and a real one does (measured 19 Sep 2026), so each
+   * condition says what it takes rather than the screens assuming the stricter of the two.
+   */
+  validName: (value: string) => boolean;
+  /** Whether the number the funder set is one this condition takes. */
+  validTarget: (value: number) => boolean;
+  /**
+   * The person and the thing, hashed as the funder signs them into the terms. A score certificate binds the name; a
+   * course certificate binds the name and the course, because "a certificate" alone would be paid by any of them.
+   */
+  subject: (input: Readonly<{ name: string; course?: string }>) => Hex;
+  /**
+   * What the funder names instead of a score, where there is nothing to score (C3). The certificate page carries the
+   * same word as an ordinary course link, so the funder pastes the link and nothing is resolved between the two.
+   */
+  course?: Readonly<{
+    label: string;
+    help: string;
+    /** The course inside whatever was pasted, or nothing. */
+    slugOf: (pasted: string) => string | undefined;
+    /** The line of the check screen. */
+    row: string;
+    /**
+     * What the field says back once a course is recognised. A phone cuts a pasted link after its first thirty
+     * characters, head first, so the part that names the course is exactly the part it hides (ui review, 19 Sep
+     * 2026). This is the word that goes into the terms, said in full, under the box.
+     */
+    named: (course: string) => string;
+  }>;
   target: Readonly<{
     label: string;
     help: string;
@@ -215,6 +258,10 @@ export const DET_MILESTONE: CertificateCondition = {
   goalType: DET_GOAL_TYPE,
   readPath: "/api/det/certificate",
   validLink: (value) => detAliasOf(value) !== undefined,
+  // The certificate prints the name its taker sat under, which their identity document carries: two words at least.
+  validName: (value) => normaliseCertificateName(value).split(" ").filter(Boolean).length >= 2,
+  validTarget: isValidDetScore,
+  subject: ({ name }) => certificateSubject(DET_SOURCE, name),
   target: {
     label: "The score they reach",
     help: "The test is scored from 10 to 160, in fives. Most universities ask for something between 100 and 125.",
@@ -260,7 +307,77 @@ export const DET_MILESTONE: CertificateCondition = {
   },
 };
 
-const CERTIFICATES: readonly CertificateCondition[] = [DET_MILESTONE];
+/**
+ * A course certificate (C3). The same shape as the test, asking one different thing: there is nothing to score, so
+ * what the funder names beside the person is the course itself, by pasting its ordinary link. The certificate page
+ * carries the same word for it, measured on two live certificates four years apart, so nothing is resolved between
+ * what the funder types and what a proof reads.
+ *
+ * The target on the contract is one, and a proof carries one: the certificate exists or it does not. What tells two
+ * courses apart is the subject, which binds the person and the course together.
+ */
+export const COURSERA_MILESTONE: CertificateCondition = {
+  condition: COURSERA_CONDITION,
+  shape: CERTIFICATE_SHAPE,
+  goalType: COURSERA_GOAL_TYPE,
+  readPath: "/api/coursera/certificate",
+  validLink: (value) => courseraCodeOf(value) !== undefined,
+  // A real certificate carries an empty last name (measured 19 Sep 2026), so one word is a name here.
+  validName: (value) => normaliseCertificateName(value).split(" ").filter(Boolean).length >= 1,
+  validTarget: (value) => value === COURSERA_HAS_IT,
+  subject: ({ name, course }) => courseraSubject(name, String(course ?? "")),
+  course: {
+    label: "The course, by its link",
+    help: "Open the course on Coursera and paste the whole link from your browser, like https://www.coursera.org/learn/introduction-git-github. The short form works too.",
+    slugOf: courseraSlugOf,
+    row: "Which course",
+    named: (course) => `This gift will be for ${course}. That is the word Coursera puts on the certificate.`,
+  },
+  target: {
+    label: "What the certificate has to be",
+    help: "A Coursera certificate is granted or it is not, so there is nothing to choose here.",
+    min: COURSERA_HAS_IT,
+    max: COURSERA_HAS_IT,
+    step: 1,
+    suggested: COURSERA_HAS_IT,
+    inWords: () => "the certificate of that course",
+  },
+  duration: COURSERA_DURATION_DAYS,
+  words: {
+    detailQuestion: "Their name, and the course",
+    nameLabel: "Their name, as Coursera prints it on a certificate",
+    nameHelp: "The name on their Coursera account. If it does not match, the gift cannot pay.",
+    linkLabel: "The link to your certificate",
+    linkHelp: 'In Coursera, open the certificate and choose Share, then paste the link here. It looks like coursera.org/verify/ followed by a code.',
+    whatIsRead:
+      "Viky reads four things from that page: the name on it, the course, the certificate's own code and the day it was granted. It keeps those with the gift and nothing else.",
+    check: "Check my certificate",
+    checking: "Reading your certificate",
+    goal: () => "Get that certificate",
+    mustShow: (name) => `The certificate has to be in the name ${name}, for that course, and granted inside these days. Nothing else is read from it.`,
+    durationLabel: "How long do they have?",
+    durationHelp: "The certificate must be granted inside that time, and the day on the page is what counts.",
+    durationShape: (min, max) => `Between ${min} and ${max} days.`,
+    durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
+    whenReached: "When they get it, all of this becomes theirs",
+    ifNot: "If they do not get it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    refusals: {
+      targetShape: "A Coursera certificate is granted or it is not, so there is nothing to set here.",
+      nameShape: "Type their name as Coursera prints it on a certificate.",
+      linkShape: "That is not a certificate link. It looks like coursera.org/verify/ followed by a code.",
+      notPublic: "That certificate could not be read. Open its link yourself and check it still opens without signing in.",
+      expired: "That certificate could not be read any more.",
+      notFound: "No certificate answers to that link. Check that you copied the whole link.",
+      unavailable: "The certificate could not be read right now. Try again in a moment.",
+      anotherName: "That certificate is in another name, or for another course, so this gift cannot pay for it.",
+      below: () => "That certificate is not the one this gift is for.",
+      beforeTheGift: "That certificate was granted before this gift was made, so it is not what the gift is for.",
+      afterTheDeadline: "That certificate was granted after this gift's last day.",
+    },
+  },
+};
+
+const CERTIFICATES: readonly CertificateCondition[] = [DET_MILESTONE, COURSERA_MILESTONE];
 
 /** The certificate detail of a condition, or nothing when the condition is not one. */
 export function certificateOf(condition: Condition | undefined): CertificateCondition | undefined {
