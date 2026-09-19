@@ -73,7 +73,8 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
         {busy ? "One moment" : "Create my account"}
       </button>
       <p className={HELP}>
-        {cannot ?? "Your face or your fingerprint, and nothing to remember. No password, no code by text."}
+        {/* One sentence, not two saying the same thing: what it is, rather than what it is not (NN/g, concise). */}
+        {cannot ?? "Your face or your fingerprint, and nothing to remember."}
       </p>
 
       {naming ? (

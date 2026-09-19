@@ -1271,9 +1271,15 @@ export function FundGift() {
           ) : (
             <p className={BODY}>{W.check.missed(settlingTimeInWords(nowMs))}</p>
           )}
-          <p className={BODY}>{W.check.namesSeen(recipient, funder)}</p>
+          {/* The one sentence that changes what a person does next stays in the body: a link opens for whoever opens
+              it first. What only some readers need, the two names on the gift and what happens if nobody opens it,
+              goes behind a disclosure rather than in front of everybody (GOV.UK Details). */}
           <p className="font-medium">{W.check.linkRisk(recipient)}</p>
-          <p className={BODY}>{milestone ? M.check.fourteenDays : W.check.fourteenDays}</p>
+          <details>
+            <summary className="cursor-pointer font-medium">{W.check.elseTitle}</summary>
+            <p className={BODY}>{W.check.namesSeen(recipient, funder)}</p>
+            <p className={BODY}>{milestone ? M.check.fourteenDays : W.check.fourteenDays}</p>
+          </details>
         </section>
 
         {short
@@ -1290,9 +1296,12 @@ export function FundGift() {
                     {stays !== undefined && stays > 0 ? <Line label={W.check.staysYours} value={W.check.aboutDollars(stays)} /> : null}
                   </dl>
                   <p className={HELP}>{feeSentence(way)}.</p>
-                  <p className={HELP}>{way.arrives === "gift" ? W.check.nothingToSwap : W.check.swapAfter}</p>
-                  <p className={HELP}>{W.check.smallest(way.name, way.smallestEur)}</p>
-                  <p className={HELP}>{CASH_OUT.sourceLine(way.source, way.read)}</p>
+                  <details>
+                    <summary className={`${HELP} cursor-pointer`}>{W.check.feeTitle(way.name)}</summary>
+                    <p className={HELP}>{way.arrives === "gift" ? W.check.nothingToSwap : W.check.swapAfter}</p>
+                    <p className={HELP}>{W.check.smallest(way.name, way.smallestEur)}</p>
+                    <p className={HELP}>{CASH_OUT.sourceLine(way.source, way.read)}</p>
+                  </details>
                   {/* The same rule as the way out (R1): what that service says about this country today, read live,
                       and nothing said at all about one that could not be read. */}
                   {railIn.country && railIn.waysIn[way.name] === "does-not" ? (
