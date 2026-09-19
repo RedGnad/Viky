@@ -337,9 +337,14 @@ test("a closed account is what both pages read, and neither side is offered a ge
 
   // One sentence for both sides: it says what Chess.com did, and accuses nobody.
   assert.equal(CHESS_MILESTONE.words.accountClosed, "Chess.com has closed this account, so this gift can no longer be earned.");
-  const page = readFileSync("app/components/MilestoneGiftPage.tsx", "utf8");
-  assert.match(page, /status\.accountClosed && !status\.finished \? <p className="font-medium">\{milestone\?\.words\.accountClosed\}<\/p> : null/);
-  assert.equal(page.match(/&& !status\.accountClosed/g)?.length, 5, "no reading, no code, no proof, no check, and no wait for a connection");
+  // One place decides that a closed account is offered nothing, rather than five conditions on one screen: the
+  // moment itself answers with no action, for either person, and the page says what the source did.
+  const moment = readFileSync("src/gift-moment.ts", "utf8");
+  assert.match(moment, /sourceClosed: status\.accountClosed/);
+  assert.match(moment, /if \(gift\.sourceClosed && !gift\.finished\) return \{ moment, action: null, agreementOpen \};/);
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
+  assert.match(page, /milestone\?\.accountClosed && !gift\.finished \? \(milestoneById\(milestone\.conditionId\)\?\.words\.accountClosed \?\? null\) : null/);
+  assert.match(page, /&& !gift\.sourceClosed/, "the quiet reading gesture is a gesture too");
 });
 
 test("the Chess.com code is letters only and found whatever surrounds it", () => {
@@ -360,19 +365,25 @@ test("the Chess.com code is letters only and found whatever surrounds it", () =>
  * below everything: from where the person stood, nothing happened.
  */
 test("every gesture on a gift's page answers beside its own button, and nothing answers nowhere", () => {
-  const page = readFileSync("app/components/MilestoneGiftPage.tsx", "utf8");
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
   // One answer, carrying the gesture it belongs to, rendered under that gesture and announced when it appears.
-  assert.match(page, /const \[answer, setAnswer\] = useState<\{ at: Busy; text: string; failed: boolean \} \| null>\(null\);/);
-  assert.match(page, /const answerTo = \(at: Busy\) =>/);
+  assert.match(page, /const \[answer, setAnswer\] = useState<\{ at: Where; text: string; failed: boolean \} \| null>\(null\);/);
+  assert.match(page, /const answerAt = \(where: Where\): ReactNode =>/);
   assert.match(page, /<p role="status" className=\{BODY\}>/);
-  for (const gesture of ["opening", "code", "starting", "checking", "taking"]) {
-    assert.ok(page.includes(`answerTo("${gesture}")`), `${gesture} answers where it was pressed`);
+  for (const gesture of ["open", "count", "take"]) {
+    assert.ok(page.includes(`answerAt("${gesture}")`), `${gesture} answers where it was pressed`);
   }
+  // Naming the account and taking the first reading answer inside the component that asks for them, under the
+  // button that was pressed, which is why it takes the refusal by the name of the gesture.
+  assert.match(page, /refusal=\{\n?\s*answer\?\.failed && \(answer\.at === "name" \|\| answer\.at === "start"\)/);
+  const connect = readFileSync("app/kit/ConnectTheSource.tsx", "utf8");
+  assert.equal(connect.match(/refusalAt\("start"\)/g)?.length, 2, "starting answers on both ways in that offer it");
+  assert.equal(connect.match(/refusalAt\("name"\)/g)?.length, 2, "naming answers where a code is asked for and in the field itself");
   // Nothing is rendered at the end of the page any more: that is where the answer used to land, out of sight.
   assert.doesNotMatch(page, /\{notice \?/);
   // A failure always says something, whatever it was.
-  assert.match(page, /setAnswer\(\{ at: kind, text: screenMessage\(error\), failed: true \}\)/);
+  assert.match(page, /setAnswer\(\{ at: where, text: screenMessage\(error\), failed: true \}\)/);
   // And an outcome of a shape nobody foresaw still says something rather than nothing.
-  assert.match(page, /default:\n      return A\.failed;/);
+  assert.match(page, /default:\n        return A\.failed;/);
   assert.match(page, /outcome\.message\.trim\(\)\.length > 0 \? outcome\.message : A\.failed/);
 });

@@ -44,7 +44,6 @@ test("every money path opens the passkey at the signature, and none assumes it i
   for (const screen of [
     "app/components/PayGift.tsx",
     "app/components/GiftPage.tsx",
-    "app/components/MilestoneGiftPage.tsx",
     "app/components/CashOut.tsx",
   ]) {
     const source = readFileSync(screen, "utf8");

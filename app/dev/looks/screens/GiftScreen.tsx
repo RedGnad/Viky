@@ -36,7 +36,7 @@ export function GiftScreen() {
         </button>
         <section className="flex flex-col gap-[var(--space-sm)]">
           {range === null ? null : <p className={BODY}>{W.becomesYours(gift.perDayDisplay, words?.eachDayYours ?? "", range)}</p>}
-          <p className={HELP}>{W.goesBackToThem(gift.perDayDisplay, gift.funderName)}</p>
+          <p className={HELP}>{W.goesBackToThem(gift.funderName)}</p>
         </section>
         <section className="flex flex-col gap-[var(--space-md)]">
           <div className="flex flex-col gap-[var(--space-xs)]">

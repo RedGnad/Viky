@@ -564,7 +564,7 @@ export const SCENARIOS: Scenario[] = [
       await s.shot("recipient", "code to add", "After opening it: type the Duolingo username, Continue");
 
       await s.click("I added it");
-      await s.text(/^Counting: /, 30_000);
+      await s.text("Nothing has been counted yet.", 30_000);
       await s.shot("recipient", "counting started", "On the code screen: I added it");
     },
   },
@@ -652,7 +652,7 @@ export const SCENARIOS: Scenario[] = [
       await s.signIn();
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
-      await s.text("This gift is finished.", 30_000);
+      await s.text("It is yours.", 30_000);
       await s.shot("recipient", "finished", `${HOME}: a finished gift under "What's moving"`);
     },
   },
@@ -680,7 +680,7 @@ export const SCENARIOS: Scenario[] = [
       await s.signIn();
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
-      await s.text(/You put \$7\.00 in Léa's name\./, 30_000);
+      await s.text(/^For Léa$/, 30_000);
       await s.shot("donor", "a gift being earned", `${HOME}: the gift under "What's moving"`);
     },
   },
@@ -765,7 +765,7 @@ export const SCENARIOS: Scenario[] = [
       // started surviving a page load.
       await s.page.context().clearCookies();
       await s.goto("/");
-      await s.text("The money is already in their name");
+      await s.text("Money that arrives as they earn it.");
       await s.shot("home", "signed out", "The door with no session: the promise, the two ways in, how it works, and the two documents the law asks for");
       await s.goto("/me");
       // Making an account happens at the one door in the header (brief, section 7), not in the body of this page.
@@ -828,7 +828,7 @@ function milestone(): Scenario[] {
     await s.signIn();
     await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
     await s.settle();
-    await s.text(/Reach 1500 on Chess\.com/, 30_000);
+    await s.text(/Reach a chess rating on Chess\.com/, 30_000);
   };
   return [
     {
@@ -893,7 +893,7 @@ function milestone(): Scenario[] {
         // `outcomeMessage` and then lost, because the section holding it is drawn only while the gift is "opened" and
         // the reading that starts the climb ends that phase. So the one sentence telling them to take the code back
         // out of their name is never read. Recorded for V4, which rebuilds this page: not repaired here.
-        await s.text("Started at 1455.");
+        await s.text("45 to go.");
         await s.shot("milestone", "started", "On that page: I added it", { real: "replaced: POST /api/gift/[id]/bind, the attested reading" });
       },
     },

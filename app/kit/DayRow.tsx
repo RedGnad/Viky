@@ -1,19 +1,26 @@
 "use client";
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { giftDays, stripOf } from "@/src/day-states";
 import { contractDayInWords } from "@/src/moments";
 import { Character } from "./Character";
 import { characterOf } from "./DayStrip";
 import { ArrivalDay, Gaze } from "./Motion";
-import { GIFT_PAGE as W } from "@/src/sentences";
+import { GIFT_LIVE as L, GIFT_PAGE as W } from "@/src/sentences";
+import { CARD_LABEL } from "../components/ui";
 
 /**
- * Every day of a gift, each at its date and each with its state in words under it (item 12 of the product structure):
- * earned, back to them (or back to you, for the funder), catch up, not judged yet, today, to come. The shape of each
- * cell says the same thing again, in ink and surface only, so neither colour nor shape carries a state alone.
+ * Every day of a gift, in one row that never breaks and never shrinks (the founder's mockup of 19 Sep 2026).
  *
- * A settled day is earned or returned as the keeper recorded it (D86); a day settled before the record falls back to
- * the counts (`stripOf`), and the page says so under the row when that happens.
+ * It was a grid of four or seven columns, each cell carrying a date and its state in words: three lines per day, and
+ * a gift of thirty days filled the screen with them. Then it was a row that shared the width, which made thirty days
+ * thirty smudges. The decision: the characters keep one size, large enough to stay themselves, and the row scrolls
+ * sideways instead. Under it, one line says where in the gift you are looking.
+ *
+ * What a screen reader gets is unchanged: each day carries its date and its state in words as its accessible name,
+ * and the drawing is hidden from it. Colour never carries a state alone either, because the shapes differ too: a
+ * circle, a triangle, a resting capsule (WCAG 1.4.1).
+ *
+ * It opens on today rather than on the first day, because today is what a person came to see.
  */
 
 type Shape = Readonly<{ startDay: number; endDay: number; durationDays: number; creditedDays: number; missedDays: number }>;
@@ -40,35 +47,55 @@ export function DayRow({
   voice: "funder" | "recipient" | "reader";
 }>) {
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
-  if (nowMs === 0 || gift.startDay === 0) return null;
-  const numbers = giftDays(gift, catchUpSeconds, nowMs).days.map((day) => day.dayNumber);
-  const states = stripOf(gift, catchUpSeconds, nowMs, records);
+  const drawn = nowMs !== 0 && gift.startDay !== 0;
+  const numbers = drawn ? giftDays(gift, catchUpSeconds, nowMs).days.map((day) => day.dayNumber) : [];
+  const states = drawn ? stripOf(gift, catchUpSeconds, nowMs, records) : [];
+  const row = useRef<HTMLOListElement>(null);
+  const today = useRef<HTMLLIElement>(null);
+  // Whether there is more of the row than the card can show, which is the only honest way to say "scroll for the
+  // rest": seven days fit on a wide screen and not on a narrow one, and the number of days does not tell.
+  const [more, setMore] = useState(false);
+  // Measured when the row appears and whenever its length changes: a gift connects while the page is open, and the
+  // row that was not there a second ago is the one to look at.
+  useEffect(() => {
+    const scroller = row.current;
+    const day = today.current;
+    if (!scroller) return;
+    setMore(scroller.scrollWidth > scroller.clientWidth + 1);
+    if (!day) return;
+    // Straight to today, without the smooth travel: the page has just arrived, so there is no gesture to answer.
+    scroller.scrollLeft = Math.max(0, day.offsetLeft - scroller.clientWidth / 2 + day.clientWidth / 2);
+  }, [states.length]);
+  if (!drawn) return null;
   const returned = voice === "funder" ? W.dayWords.returnedTheirs : voice === "recipient" ? W.dayWords.returnedYours : W.dayWords.returnedReading;
   const words = (state: (typeof states)[number]) => (state === "returned" ? returned : W.dayWords[state]);
+  // Which day it opens on: today, if the gift has one. A gift that has not started yet opens on its first day, and
+  // one that has finished on its last, because that is the day the person came to see.
+  const now = states.findIndex((state) => state === "today" || state === "catchable" || state === "aboutToReturn");
+  const at = now >= 0 ? now : states.every((state) => state === "toCome") ? 0 : states.length - 1;
   return (
-    <div className="@container">
-      <ol className="grid grid-cols-4 gap-x-[var(--space-sm)] gap-y-[var(--space-lg)] @[420px]:grid-cols-7" aria-label={W.daysLabel}>
-        {states.map((state, index) => {
-          const date = contractDayInWords(numbers[index]);
-          return (
-            <li key={numbers[index]} aria-label={`${date}, ${words(state)}`} className="flex min-w-0 flex-col items-center gap-[var(--space-xs)]">
-              <span aria-hidden className="flex w-full justify-center pt-[var(--space-sm)]">
-                <ArrivalDay gift={id} index={index}>
-                  <Gaze>
-                    <Character state={characterOf(state)} variant={index} className="h-auto w-full max-w-[72px]" />
-                  </Gaze>
-                </ArrivalDay>
-              </span>
-              <span aria-hidden className="text-[length:var(--type-help)] leading-[var(--type-help-leading)] font-medium tabular-nums">
-                {date.split(" ")[0]}
-              </span>
-              <span aria-hidden className="text-center text-[length:var(--type-help)] leading-[var(--type-help-leading)] text-[var(--muted)]">
-                {words(state)}
-              </span>
-            </li>
-          );
-        })}
+    <div className="day-row">
+      <ol ref={row} className="day-row-days" aria-label={W.daysLabel}>
+        {states.map((state, index) => (
+          <li
+            key={numbers[index]}
+            ref={index === at ? today : null}
+            aria-label={`${contractDayInWords(numbers[index])}, ${words(state)}`}
+            className="day-row-day"
+          >
+            <ArrivalDay gift={id} index={index}>
+              <Gaze>
+                <Character state={characterOf(state)} variant={index} standing={false} className="h-auto w-full" />
+              </Gaze>
+            </ArrivalDay>
+          </li>
+        ))}
       </ol>
+      <div aria-hidden className="day-row-fade" />
+      <p className={`${CARD_LABEL} day-row-where`}>
+        {L.dayOfDays(at + 1, states.length)}
+        {more ? ` · ${L.scrollForTheRest}` : ""}
+      </p>
     </div>
   );
 }

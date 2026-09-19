@@ -3232,3 +3232,26 @@ behind an account cannot be photographed any other way.
   than offering a road the owner cannot take.
 - What this does not change: the contracts, which are not redeployed and whose `Ownable` is one step with no
   acceptance; and the relayer and evidence signer keys, which are operational and were never owners.
+
+## D116, 19 Sep 2026: a gift's page is the card, alive, and it leads with the moment it is in
+
+- Statement, the founder's, 19 Sep 2026: the page of a gift is the same card as everywhere else, living. What it
+  shows when is document J's table of moments; what it looks like is the rendered mockup `gift.html`. The content
+  brief and the image each decide half, and neither overrules the other on the other's half.
+- **The defect it closes, measured.** The page tried to be two things at once: the agreement, which is fixed and read
+  once, and the state, which changes and is read every day. Both were written at the same weight, in the same prose,
+  at every visit. On 19 Sep, all twenty-three states of the page said at least one figure twice; the milestone before
+  its deadline said its target three times, its amount three times and its date three times.
+- **Four things, in one order, and one of them dominates**: the state in one sentence, the figure that counts now
+  with a label saying what it is, the next moment with its date, and one action or none. The agreement and how it is
+  checked are folded under their own names, open only at the one moment a person is discovering the gift.
+- **Nine moments, three shapes, three readers, one place that decides.** `src/gift-moment.ts` says which moment a
+  gift is in and what this reader may do there; `src/gift-live.ts` composes the three sentences. The page draws what
+  they answer and decides nothing itself, which is what the two pages before it did in ten places each.
+- **The row of days keeps one size and scrolls.** 48 pixels on a gift's page, 42 on a card in a list, never wrapped
+  and never shrunk, with a fade at its right edge and a line under it saying which day is in view. Thirty days
+  shrunk to fit were thirty smudges.
+- What this does not touch: no contract, no route, no reading, no register. The same gestures reach the same routes,
+  with the same refusals, and the passkey is still opened at the one moment a signature is needed.
+- What it removes: `app/components/MilestoneGiftPage.tsx`, and the gesture table of D99, which said what a voice may
+  do without knowing what the moment allows. A voice and a moment decide it together now.

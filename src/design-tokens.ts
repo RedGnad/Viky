@@ -180,8 +180,8 @@ export const COLOURS: Record<Appearance, Record<string, string>> = {
     accentText: "#1E1633",
     /** A control's edge is the ink itself: 15.81:1. */
     controlBorder: "#1E1633",
-    /** A card's edge and a rule: 1.23:1, a hairline that groups and never identifies a control. */
-    divider: "#E0DCEB",
+    /** A rule: 1.24:1 on the ground, a hairline that groups and never identifies a control. */
+    divider: "#C5C2CF",
     /**
      * The fill of a button that is not the one action (K, rule 10: no ghost buttons; Material 3's filled tonal).
      * Measured 19 Sep 2026: 1.15:1 against the ground and 1.26:1 against a surface, so it reads as filled on both,

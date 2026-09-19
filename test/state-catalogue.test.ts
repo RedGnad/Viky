@@ -60,9 +60,13 @@ test("the states nobody has built are visible as such", () => {
   assert.ok(gaps.length >= 5, "a catalogue with no gaps is not being honest about a product this unfinished");
 });
 
-test("a gift page sentence that opens on an estimated figure still starts with a capital", async () => {
+test("the second half of the agreement points at the amount rather than printing it again", async () => {
   const { GIFT_PAGE } = await import("../src/sentences.js");
-  assert.match(GIFT_PAGE.goesBackToThem("about $2.85", null), /^About \$2\.85 goes back to them/);
-  assert.match(GIFT_PAGE.comesBackToYou("about $2.85"), /^About \$2\.85 comes back to you/);
-  assert.match(GIFT_PAGE.goesBackToThem("$1.00", "Maman"), /^\$1\.00 goes back to Maman/);
+  // The amount of a day is written once, by the sentence that says what a day earns. The one about a day missed
+  // says "the same", because the whole point of it is that the two are the same amount, and because a figure said
+  // twice on one screen is what document J measures (19 Sep 2026).
+  assert.equal(GIFT_PAGE.goesBackToThem("Maman"), "The same goes back to Maman for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.");
+  assert.match(GIFT_PAGE.goesBackToThem(null), /^The same goes back to them/);
+  assert.match(GIFT_PAGE.comesBackToYou, /^The same comes back to you/);
+  for (const said of [GIFT_PAGE.goesBackToThem("Maman"), GIFT_PAGE.comesBackToYou]) assert.doesNotMatch(said, /\$/);
 });

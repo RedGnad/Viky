@@ -247,11 +247,15 @@ test("the quiet button is filled, seen on both grounds, and its words clear 4.5:
     const button = ui.slice(from, ui.indexOf("`;", from));
     assert.match(button, /\$\{OUTLINE\}/, `${name} lost the outline WCAG 1.4.11 asks for`);
     assert.doesNotMatch(button, /disabled:opacity/, `${name} fades instead of saying it cannot be pressed`);
-    if (name === "PRIMARY_BUTTON") continue;
-    // A quiet button that cannot be pressed gives its fill back and stands off the ground: at half strength it was
-    // the same pill as a live one at a squint (the blurred captures of 19 Sep).
-    assert.match(button, /disabled:bg-\[var\(--surface\)\]/, `${name} keeps its fill when it cannot be pressed`);
-    assert.match(button, /disabled:\[box-shadow:none\]/, `${name} keeps its relief when it cannot be pressed`);
+    // Shut, every one of them keeps its filled shape and its relief and loses its colour (the mockups, and the
+    // founder on 19 Sep). A fill at half strength made a live button and a dead one one pair of pills at a squint.
+    assert.match(button, /disabled:bg-\[var\(--action-off\)\]/, `${name} loses its shape rather than its colour`);
+    assert.match(button, /disabled:text-\[var\(--action-off-ink\)\]/, `${name} keeps words nobody measured`);
+    assert.match(
+      button,
+      /disabled:\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--action-off-deep\)\]/,
+      `${name} gives up its relief when it cannot be pressed`,
+    );
   }
 
   /*

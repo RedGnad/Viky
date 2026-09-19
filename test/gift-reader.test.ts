@@ -1,7 +1,8 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { gesturesFor, notTheirs, voiceOf, type Gestures, type Voice } from "../src/gift-voice.js";
+import { notTheirs, voiceOf, type Voice } from "../src/gift-voice.js";
+import { readAs } from "../src/gift-moment.js";
 import { whoInWords, amountsInWords } from "../app/kit/GiftCard.js";
 import { GIFT_PAGE, GIFT_CARD } from "../src/sentences.js";
 import { CONDITIONS } from "../src/conditions.js";
@@ -35,25 +36,23 @@ test("only a reader signed in as somebody else is told the gift is not theirs", 
 });
 
 test("a reader is offered no gesture at all, and the two people keep theirs", () => {
-  const nothing = gesturesFor("reader", OPENED);
-  for (const [gesture, offered] of Object.entries(nothing)) assert.equal(offered, false, `a reader is offered ${gesture}`);
+  // D99's table, now answered by the moment a gift is in (document J): one place says what this reader may do here,
+  // and a link gives the right to read where a gift stands and nothing else.
+  const counting = { opened: true, cancelled: false, finished: false, connected: true, earnedAnything: true, shape: "days", startTooHigh: false, sourceClosed: false, moneyToTake: false } as const;
+  const unopened = { ...counting, opened: false, connected: false, earnedAnything: false } as const;
+  const won = { ...counting, finished: true, moneyToTake: true } as const;
 
-  const recipient = gesturesFor("recipient", OPENED);
-  assert.equal(recipient.countNow, true);
-  assert.equal(recipient.takeTheMoney, true);
-  assert.equal(recipient.connectTheAccount, true);
-  assert.equal(recipient.copyTheLink, false, "the link lives on the device that made the gift");
+  for (const gift of [unopened, counting, won]) assert.equal(readAs(gift, "reader").action, null, "a reader is offered something");
 
-  const funder = gesturesFor("funder", OPENED);
-  assert.equal(funder.copyTheLink, true);
-  assert.equal(funder.seeTheProof, true, "the proof of a day goes to both of them");
-  assert.equal(funder.takeTheMoney, false, "what was earned leaves only to the person it is for");
-  assert.equal(funder.countNow, false);
+  assert.equal(readAs(unopened, "recipient").action, "open");
+  assert.equal(readAs(won, "recipient").action, "take");
+  assert.equal(readAs(unopened, "funder").action, "linkAgain", "the link lives with the account that made the gift");
+  assert.equal(readAs(won, "funder").action, null, "what was earned leaves only to the person it is for");
+  assert.equal(readAs(counting, "funder").action, null);
 
   // A gift taken back before it was opened has nothing left to do, whoever is reading.
   for (const voice of ["funder", "recipient", "reader"] as Voice[]) {
-    const cancelled = gesturesFor(voice, { opened: false, cancelled: true });
-    for (const [gesture, offered] of Object.entries(cancelled)) assert.equal(offered, false, `${voice} is offered ${gesture} on a gift taken back`);
+    assert.equal(readAs({ ...unopened, cancelled: true }, voice).action, null, `${voice} is offered something on a gift taken back`);
   }
 });
 
@@ -129,14 +128,16 @@ test("the card at the head of the page names both sides when neither of them is 
 
 test("the page decides who may do what in one place, and not in ten conditions of its own", () => {
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  assert.match(page, /const voice = voiceOf\(gift\)/);
-  assert.match(page, /const may = gesturesFor\(voice, gift\)/);
-  for (const gesture of ["openTheGift", "connectTheAccount", "countNow", "takeTheMoney", "seeTheProof", "beTold", "copyTheLink"] as Array<keyof Gestures>) {
-    assert.match(page, new RegExp(`may\\.${gesture}\\b`), `${gesture} is no longer read from the one place that decides it`);
-  }
-  // The title, the card and the state all follow the voice, so a reader cannot be handed the recipient's words again.
-  assert.match(page, /titleReading\(funder, recipient, gift\.amountDisplay\)/);
-  assert.match(page, /summaryOf\(gift, voice\)/);
+  // Who is reading is asked once, and what that reader may do at this moment is answered once, away from the screen:
+  // `voiceOf` (D99) and `readAs` (document J). The page draws the answer and never re-decides it.
+  assert.match(page, /const voice: Voice = voiceOf\(\{/);
+  assert.match(page, /const read = readAs\(gift, voice\);/);
+  assert.match(page, /switch \(read\.action\) \{/, "the one action of the moment is drawn from that answer");
+  assert.match(page, /funderMayTakeItBack\(gift, voice\)/, "and the funder's second gesture is decided there too");
+  // What a reader who is neither of the two people is told, and the row of days, still follow the voice.
+  assert.match(page, /const outsider = notTheirs\(voice, Boolean\(address\)\);/);
   assert.match(page, /voice=\{voice\}/, "the row of days still speaks in one fixed voice");
-  assert.match(page, /voice === "recipient" \? words\?\.reads : words\?\.readsTheirs/, "the reading sentence is back in the second person for everybody");
+  assert.match(page, /voice === "recipient" \? \(words\?\.reads \?\? ""\) : \(words\?\.readsTheirs \?\? ""\)/, "the reading sentence is back in the second person for everybody");
+  // And the words of every moment are one module's, not the screen's: `liveOf` composes them for this reader.
+  assert.match(page, /const live = liveOf\(\{/);
 });

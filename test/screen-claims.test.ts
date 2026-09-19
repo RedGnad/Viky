@@ -298,10 +298,11 @@ test("the example gift says it is an example, and reads as a gift under way", ()
  */
 test("once what was earned has been taken, the way out carries the accent", () => {
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  const block = page.slice(page.indexOf("const takenBlock"), page.indexOf("const countingBlock"));
+  const block = page.slice(page.indexOf("{taken ? ("), page.indexOf("</Arrival>"));
   assert.match(block, /href="\/cash-out" className=\{PRIMARY_BUTTON\}/, "the next step is offered in the plain shape again");
-  // And the gesture that had the accent is gone by then: taking is offered only while something is left to take.
-  assert.match(page, /const takeOffered = may\.takeTheMoney && earned > 0n;/);
+  // And the gesture that had the accent is gone by then: taking is the moment's action only while it is that moment,
+  // and a gift whose money has been taken is no longer at it (src/gift-moment.ts).
+  assert.match(readFileSync("src/gift-moment.ts", "utf8"), /case "won":\n      return \{ moment, action: "take", agreementOpen \};/);
 });
 
 /**

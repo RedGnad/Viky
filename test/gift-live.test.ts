@@ -1,0 +1,147 @@
+import { strict as assert } from "node:assert";
+import test from "node:test";
+import { liveOf, type LiveInput } from "../src/gift-live.js";
+import type { Moment } from "../src/gift-moment.js";
+import type { Voice } from "../src/gift-voice.js";
+
+/**
+ * The measure of document J, section 4, held as a test rather than counted after the fact: on one screen, no figure
+ * is said twice. The page of 19 Sep failed it in all twenty-three of its states, saying a target three times, an
+ * amount three times and a date three times on one of them.
+ */
+
+const MOMENTS: Moment[] = [
+  "unopened",
+  "openedNotConnected",
+  "counting",
+  "climbing",
+  "awaitingProof",
+  "startTooHigh",
+  "won",
+  "over",
+  "cameBack",
+];
+const VOICES: Voice[] = ["recipient", "funder", "reader"];
+
+const input = (over: Partial<LiveInput> = {}): LiveInput => ({
+  moment: "counting",
+  voice: "recipient",
+  funderName: "Maman",
+  recipientName: "Léa",
+  source: "Duolingo",
+  amountDisplay: "$7.00",
+  theirsDisplay: "$2.00",
+  returnedDisplay: "$1.00",
+  todayReading: 1460,
+  target: 1500,
+  started: true,
+  lastJudged: "earned",
+  openByInWords: "Open it by 3 Oct 2026: after 14 days unopened, it goes back to Maman.",
+  nextReadingInWords: "Next reading: tomorrow at 9:00 AM your time.",
+  cameBackOnInWords: "20 Sep 2026",
+  ...over,
+});
+
+/** Every number a reader would read as a fact: money, a rating, a date. */
+const figuresIn = (text: string) => text.match(/\$[0-9][0-9,]*\.[0-9]{2}|\b\d{1,2} [A-Z][a-z]{2} \d{4}\b|\b\d{3,5}\b/g) ?? [];
+
+test("no figure is said twice, at any moment, in any voice", () => {
+  for (const moment of MOMENTS) {
+    for (const voice of VOICES) {
+      const live = liveOf(input({ moment, voice }));
+      const said = [live.headline, live.figure?.label ?? "", live.figure?.value ?? "", live.back?.label ?? "", live.back?.value ?? "", live.next ?? ""].join(" ");
+      const seen = new Map<string, number>();
+      for (const figure of figuresIn(said)) seen.set(figure, (seen.get(figure) ?? 0) + 1);
+      for (const [figure, times] of seen) {
+        assert.equal(times, 1, `${moment} as ${voice} says ${figure} ${times} times: "${said.trim()}"`);
+      }
+    }
+  }
+});
+
+test("every moment leads with a sentence, in every voice", () => {
+  for (const moment of MOMENTS) {
+    for (const voice of VOICES) {
+      const { headline } = liveOf(input({ moment, voice }));
+      assert.ok(headline.trim().length > 0, `${moment} as ${voice} has no state sentence`);
+      assert.match(headline, /[.!?]$/, `${moment} as ${voice} does not end its sentence: "${headline}"`);
+    }
+  }
+});
+
+test("the figure says what it is, and the two people never read the other one's label", () => {
+  const theirs = liveOf(input({ moment: "won", voice: "recipient" }));
+  assert.deepEqual(theirs.figure, { label: "Yours", value: "$2.00" });
+  assert.equal(theirs.headline, "It is yours.");
+  const funder = liveOf(input({ moment: "won", voice: "funder" }));
+  assert.deepEqual(funder.figure, { label: "Theirs", value: "$2.00" });
+  assert.equal(funder.headline, "Léa got it.");
+  // A reader who is neither reads the third person too, and never "yours".
+  const reader = liveOf(input({ moment: "won", voice: "reader" }));
+  assert.equal(reader.figure?.label, "Theirs");
+  assert.doesNotMatch(reader.headline, /\byour\b/i);
+});
+
+test("a climb leads with what is left, and where they stand is the figure", () => {
+  const live = liveOf(input({ moment: "climbing", todayReading: 1460, target: 1500 }));
+  assert.equal(live.headline, "40 to go.");
+  assert.deepEqual(live.figure, { label: "Where you are", value: "1460" });
+  // The target itself is not on the screen: it was read once, in the agreement, and it is folded there.
+  assert.doesNotMatch(`${live.headline} ${live.figure?.value}`, /1500/);
+  // A climb already at its target waits for the reading that settles it, and says so rather than "0 to go".
+  assert.equal(liveOf(input({ moment: "climbing", todayReading: 1500 })).headline, "Reached. The next reading settles it.");
+  assert.equal(liveOf(input({ moment: "climbing", todayReading: null })).headline, "Your first reading starts the climb.");
+  assert.equal(liveOf(input({ moment: "climbing", todayReading: null })).figure, null);
+});
+
+test("a day counted is said in the morning message's own words, without its money", () => {
+  assert.equal(liveOf(input({ lastJudged: "earned" })).headline, "Yesterday counted.");
+  assert.equal(liveOf(input({ lastJudged: "returned" })).headline, "Yesterday went back to Maman. Today still counts.");
+  assert.equal(liveOf(input({ lastJudged: "returned", voice: "funder" })).headline, "Yesterday came back to you. Today still counts.");
+  assert.equal(liveOf(input({ started: false })).headline, "Nothing has been counted yet.");
+  // A gift settled before Viky kept a record of each day: the totals are true, the last day is not known.
+  assert.equal(liveOf(input({ lastJudged: null })).headline, "It is counting.");
+  for (const said of ["earned", "returned", null] as const) {
+    assert.doesNotMatch(liveOf(input({ lastJudged: said })).headline, /\$/, "the money is the figure, not the sentence");
+  }
+});
+
+test("what came back is said beside what is theirs, never as a zero, and never where it is the whole story", () => {
+  // The mockup's right column: what has gone back to the funder so far, in the meta voice.
+  assert.deepEqual(liveOf(input({ moment: "counting" })).back, { label: "Came back to Maman", value: "$1.00" });
+  assert.deepEqual(liveOf(input({ moment: "counting", voice: "funder" })).back, { label: "Came back to you", value: "$1.00" });
+  // Nothing has gone back: the column is not drawn rather than drawn as nothing.
+  assert.equal(liveOf(input({ moment: "counting", returnedDisplay: "$0.00" })).back, null);
+  // And on the two moments that are themselves about what came back, the figure is the headline's own.
+  assert.equal(liveOf(input({ moment: "over" })).back, null);
+  assert.equal(liveOf(input({ moment: "cameBack" })).back, null);
+});
+
+test("the next moment is only said where there is one, and it is the reader's own clock", () => {
+  assert.equal(liveOf(input({ moment: "counting" })).next, "Next reading: tomorrow at 9:00 AM your time.");
+  assert.match(liveOf(input({ moment: "unopened" })).next ?? "", /^Open it by /);
+  for (const moment of ["openedNotConnected", "awaitingProof", "startTooHigh", "won", "over"] as const) {
+    assert.equal(liveOf(input({ moment })).next, null, `${moment} points at a next moment it does not have`);
+  }
+  assert.equal(liveOf(input({ moment: "cameBack" })).next, "On 20 Sep 2026.");
+});
+
+test("a gift nobody opened says whose name it is in, and the funder reads whether it was seen", () => {
+  assert.equal(liveOf(input({ moment: "unopened" })).headline, "Maman put this in your name.");
+  assert.equal(liveOf(input({ moment: "unopened", voice: "funder" })).headline, "Léa has not opened it yet.");
+  assert.equal(liveOf(input({ moment: "unopened", voice: "reader" })).headline, "Maman put this in Léa's name.");
+  // The amount is the figure at that moment, and the sentence leaves it to the figure.
+  assert.equal(liveOf(input({ moment: "unopened" })).figure?.value, "$7.00");
+  assert.doesNotMatch(liveOf(input({ moment: "unopened" })).headline, /\$/);
+});
+
+test("names that were never given leave sentences that still read", () => {
+  const nameless = input({ funderName: null, recipientName: null });
+  for (const moment of MOMENTS) {
+    for (const voice of VOICES) {
+      const live = liveOf({ ...nameless, moment, voice });
+      assert.doesNotMatch(live.headline, /null|undefined/, `${moment} as ${voice}`);
+      assert.doesNotMatch(live.figure?.label ?? "", /null|undefined/, `${moment} as ${voice}`);
+    }
+  }
+});
