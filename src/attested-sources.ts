@@ -151,11 +151,14 @@ export const COURSERA_CERTIFICATE: AttestedSource = {
   accepts: (account) => /^[A-Z0-9]{8,20}$/.test(account),
   url: (account) => `https://www.coursera.org/account/accomplishments/verify/${encodeURIComponent(account.toUpperCase())}`,
   matches: [
-    { type: "regex", value: '"firstName":"(?<firstName>[^"]*)"' },
-    { type: "regex", value: '"lastName":"(?<lastName>[^"]*)"' },
-    { type: "regex", value: '"courseId":"(?<courseId>[^"]+)"' },
-    { type: "regex", value: '"certificateCode":"(?<certificateCode>[A-Z0-9]+)"' },
-    // Milliseconds, not seconds: 1594224731127 on every page read. Pinned to thirteen digits so a pattern
+    // Anchored on the objects the page puts them in, read on a live certificate on 19 Sep 2026. The names sit in a
+    // `SignatureTrackProfile`, the course in a `Course_Course`, the certificate in an `AccomplishmentsVCMembership`.
+    // Unanchored, `"slug"` alone matches three places on that page and `"name"` matches dozens, so a pattern without
+    // its object could hand another course's word to the contract.
+    { type: "regex", value: '"AccomplishmentsSignatureTrackProfile","firstName":"(?<firstName>[^"]*)","lastName":"(?<lastName>[^"]*)"' },
+    { type: "regex", value: '"Course_Course","id":"(?<courseId>[^"]+)","slug":"(?<slug>[a-z0-9-]+)","name":"(?<courseName>[^"]+)"' },
+    { type: "regex", value: '"AccomplishmentsVCMembership","certificateCode":"(?<certificateCode>[A-Z0-9]+)"' },
+    // Milliseconds, not seconds: 1728878220063 on the certificate measured. Pinned to thirteen digits so a pattern
     // that also matched seconds cannot quietly hand a thousand-fold wrong date to the contract.
     { type: "regex", value: '"grantedAt":(?<grantedAt>\\d{13})' },
   ],

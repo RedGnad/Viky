@@ -1,4 +1,6 @@
 import type { Hex } from "viem";
+import { COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraProviderId } from "./coursera-certificate";
+import { attestCourseraCertificate, CourseraReadError } from "./coursera-reading";
 import { attestDetCertificate, DetReadError, type AttestedDetReading } from "./det-reading";
 import { detProviderId } from "./duolingo-english-test";
 import { loadGift, type GiftRecord } from "./gift-store";
@@ -41,10 +43,26 @@ export type CertificateRefusal =
 /** How long an attestation is good for, as the contract's window expects. */
 const ATTESTATION_SECONDS = 10 * 60;
 
+/**
+ * What any certificate reading gives this path, whichever source it came from (C3). The score is the number the
+ * contract compares with the target: a test has one, and a course certificate has nothing to score, so it carries
+ * the one that says it exists.
+ */
+export type ReadCertificate = Readonly<{
+  subject: Hex;
+  score: number;
+  /** The day the source itself says the thing was granted, in seconds. */
+  testDay: number;
+  observedAt: number;
+  nullifier: Hex;
+  /** What every attestation for this goal must carry, so one source can never settle another's gift. */
+  providerId: Hex;
+}>;
+
 export type CertificateReadingDeps = {
   loadGift: (giftId: string) => Promise<GiftRecord | null>;
   readState: (contract: Hex, giftId: string) => Promise<MilestoneState>;
-  attest: (alias: string) => Promise<AttestedDetReading>;
+  attest: (goalType: number, link: string) => Promise<ReadCertificate>;
   prove: (input: { contract: Hex; message: MilestoneProofMessage }) => Promise<{ hash: string }>;
   record: (reading: Parameters<typeof recordReading>[0]) => Promise<void>;
   now: () => number;
@@ -54,11 +72,26 @@ export function liveCertificateReadingDeps(): CertificateReadingDeps {
   return {
     loadGift,
     readState: (contract, giftId) => readMilestoneGift(contract, giftId),
-    attest: (alias) => attestDetCertificate(alias),
+    attest: attestByGoal,
     prove: relayProve,
     record: recordReading,
     now: () => Math.floor(Date.now() / 1_000),
   };
+}
+
+/**
+ * The reading a goal is settled by. The goal type is the contract's own, signed by the funder, so a Coursera proof
+ * can never be offered to a gift made on the test, nor the other way round: each carries its own provider id and the
+ * contract checks it again.
+ */
+async function attestByGoal(goalType: number, link: string): Promise<ReadCertificate> {
+  if (goalType === COURSERA_GOAL_TYPE) {
+    const reading = await attestCourseraCertificate(link);
+    // Nothing to score: the certificate exists, and the course is inside the subject the funder signed.
+    return { subject: reading.subject, score: COURSERA_HAS_IT, testDay: reading.grantedDay, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: courseraProviderId() };
+  }
+  const reading: AttestedDetReading = await attestDetCertificate(link);
+  return { subject: reading.subject, score: reading.score, testDay: reading.testDay, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: detProviderId() };
 }
 
 /** The UTC day of a moment in seconds, which is how the contract compares a granting day with a window (D49). */
@@ -93,11 +126,13 @@ export async function proveCertificate(
   if (phase === "reached" || phase === "returned") return { kind: "already", giftId, reason: "finished" };
   const words = certificate?.words.refusals;
 
-  let reading: AttestedDetReading;
+  let reading: ReadCertificate;
   try {
-    reading = await deps.attest(input.link);
+    reading = await deps.attest(state.goalType, input.link);
   } catch (error) {
-    if (!(error instanceof DetReadError)) return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? "That could not be read right now");
+    if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError)) {
+      return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? "That could not be read right now");
+    }
     switch (error.code) {
       case "INVALID_LINK":
         return refuse(giftId, "INVALID_LINK", words?.linkShape ?? error.message);
@@ -132,7 +167,7 @@ export async function proveCertificate(
     giftId: BigInt(giftId),
     recipient: state.recipient as Hex,
     identityHash: reading.subject,
-    providerId: detProviderId(),
+    providerId: reading.providerId,
     metricValue: BigInt(reading.score),
     // The day the page itself says the test was taken, which is what this shape is judged by (D47).
     eventAt: BigInt(reading.testDay),

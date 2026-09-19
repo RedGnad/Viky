@@ -401,7 +401,7 @@ export const COURSERA_CERTIFICATE: Condition = {
   live: false,
   state: "asked-the-source",
   beforeItOpens:
-    "Their terms ask for written consent before a program reads their pages, and nothing reads a Coursera certificate yet. Both come before this opens.",
+    "The reading is built and was tested on a real certificate on 19 September 2026. Their terms ask for written consent before a program reads their pages, and sending that request is the founder's decision: nobody is offered this until it is answered.",
   source: "Coursera",
   family: "course",
   name: "Get a Coursera certificate",

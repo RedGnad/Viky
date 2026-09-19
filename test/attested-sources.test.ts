@@ -86,14 +86,23 @@ test("the patterns match what those pages actually answer", () => {
 });
 
 test("a Coursera certificate page answers with everything the proof needs", () => {
-  // Captured on 13 Sep 2026 from a real page; the same shape held on six certificates from 2014 to 2023.
-  const page = '{"firstName":"Anish","lastName":"Sachdeva","courseId":"A4W_GyDjEeW5Rwo0txKkgQ","certificateCode":"3S3AANA8JQTN","grantedAt":1594224731127}';
+  // The page's own shape, read on 19 Sep 2026 on two live certificates four years apart (one granted in 2020, one in
+  // 2024): the same four objects, each matching exactly once, in 432 KB of HTML. The fixture this replaced was a
+  // five field summary of those values rather than the page, so a pattern could match it and miss the real thing.
+  const page = [
+    '{"__typename":"AccomplishmentsSignatureTrackProfile","firstName":"Ada","lastName":"Lovelace","middleName":null}',
+    '{"__typename":"Course_Course","id":"A4W_GyDjEeW5Rwo0txKkgQ","slug":"matlab","name":"Introduction to Programming with MATLAB"}',
+    '{"__typename":"XdpV1","name":"Another course entirely","id":"COURSE~other","slug":"another-course"}',
+    '{"__typename":"AccomplishmentsVCMembership","certificateCode":"3S3AANA8JQTN","grantedAt":1594224731127}',
+  ].join(",");
   for (const m of COURSERA_CERTIFICATE.matches) assert.match(page, new RegExp(m.value), m.value);
-  const granted = new RegExp(COURSERA_CERTIFICATE.matches[4].value).exec(page);
+  // The course read is the certificate's own, though the page carries another course with the same field names.
+  assert.equal(new RegExp(COURSERA_CERTIFICATE.matches[1].value).exec(page)?.groups?.slug, "matlab");
+  const granted = new RegExp(COURSERA_CERTIFICATE.matches[3].value).exec(page);
   assert.equal(granted?.groups?.grantedAt, "1594224731127", "the day it was granted, in milliseconds");
   // Seconds would be a date in 1970 once divided again, so the pattern must not accept them at all.
   const inSeconds = '{"grantedAt":1594224731}';
-  assert.equal(new RegExp(COURSERA_CERTIFICATE.matches[4].value).test(inSeconds), false, "seconds are not milliseconds");
+  assert.equal(new RegExp(COURSERA_CERTIFICATE.matches[3].value).test(inSeconds), false, "seconds are not milliseconds");
 
   assert.ok(COURSERA_CERTIFICATE.accepts("3S3AANA8JQTN"));
   assert.ok(COURSERA_CERTIFICATE.accepts("MQQRRYLUXB"));
