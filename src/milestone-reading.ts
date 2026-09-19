@@ -45,7 +45,7 @@ export type MilestoneOutcome =
  * Refusals that say something broke on our side rather than anything about the person's account. The pass holds a
  * gift whose reading failed for one of these, so nothing is settled against a reading that never happened (D57).
  */
-export const MILESTONE_OURS_TO_FIX: ReadonlySet<string> = new Set(["FETCH_FAILED", "PROOF_INVALID", "PROOF_MISMATCH", "NOT_CONFIGURED"]);
+export const MILESTONE_OURS_TO_FIX: ReadonlySet<string> = new Set(["FETCH_FAILED", "PROOF_INVALID", "PROOF_MISMATCH", "WORKER_OUT_OF_DATE", "NOT_CONFIGURED"]);
 
 /** What a person reads for each refusal of the reading itself. The contract's refusals have their own table (gift-api). */
 const MESSAGES: Readonly<Record<string, string>> = {
@@ -60,6 +60,9 @@ const MESSAGES: Readonly<Record<string, string>> = {
   FETCH_FAILED: "Chess.com could not be read just now. Nothing was changed. Try again in a minute.",
   PROOF_INVALID: "The reading could not be verified. Nothing was changed. Try again in a minute.",
   PROOF_MISMATCH: "The reading could not be verified. Nothing was changed. Try again in a minute.",
+  // Never "try again": trying again changes nothing until the reading service is redeployed, and the sentence says
+  // we know because the refusal is logged and counted where we read it (incident of 18 Sep 2026).
+  WORKER_OUT_OF_DATE: "Our reading service needs an update. Nothing was changed, and we have been told.",
   NOT_CONFIGURED: "Reading is not switched on yet.",
 };
 
@@ -97,8 +100,13 @@ export function liveMilestoneReadingDeps(): MilestoneReadingDeps {
  */
 export const RECENT_READING_SECONDS = 30 * 60;
 
+/** What one refusal says, so a test can hold a sentence to what it promises without going through a whole reading. */
+export function refusalMessage(code: string): string {
+  return MESSAGES[code] ?? "This could not be recorded.";
+}
+
 function refused(giftId: string, code: string, rating?: number, message?: string): MilestoneOutcome {
-  return { kind: "refused", giftId, code, message: message ?? MESSAGES[code] ?? "This could not be recorded.", rating };
+  return { kind: "refused", giftId, code, message: message ?? refusalMessage(code), rating };
 }
 
 /**

@@ -237,6 +237,32 @@ handing ownership over moves no money.
 Renouncing would leave the goals, the evidence signer and the two pauses frozen as they are; money would keep moving,
 since no owner function touches it.
 
+## The reading service is a second deployment, and it is not automatic
+
+`src/attested-sources.ts` and `src/chess-com.ts` run in two places: on Vercel, where the proof is judged, and in the
+attested-fetch worker on Railway, where the page is actually fetched. The worker has no repository attached, so
+**nothing redeploys it when main moves**.
+
+On 18 Sep 2026 at 00:37 Paris, `d76bb8a` added `chessStatusPattern()` to those shared sources. The worker was still
+running its image of 17 Sep 16:38 UTC. It fetched the page it knew, the app judged the proof against a pattern the
+worker had never asked for, and the first real Chess.com reading died as `PROOF_MISMATCH` under a screen that said
+"try again in a minute". A minute would have changed nothing.
+
+**The rule: a commit that touches either of those two files is not merged until the worker runs it.** The test
+`test/reading-fingerprint.test.ts` fails the moment either file changes, which is the reminder; the number it prints
+goes into `READING_FINGERPRINT`, and then, from the branch, with a clean tree:
+
+```
+railway link -p viky -s zkfetch-worker -e production
+railway up --ci
+curl -s https://zkfetch-worker-production.up.railway.app/health
+```
+
+`/health` answers the number of the two files as that image runs them. It must be the same as `READING_FINGERPRINT` in
+the branch being merged. Until it is, the app refuses every attested read with `WORKER_OUT_OF_DATE` and says so,
+rather than telling somebody to try again: nothing is fetched, nothing is recorded against the gift, and the pass
+holds it instead of settling.
+
 ## The Safe of two keys, and how an owner action is signed
 
 One key owns all four contracts today, so one key lost is the goals, the evidence signer and both pauses lost with it.

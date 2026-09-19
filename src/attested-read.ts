@@ -1,6 +1,7 @@
 import { keccak256, stringToHex, type Hex } from "viem";
 import { attestedSource, type AttestedSource, type ResponseMatch } from "./attested-sources";
 import { allowedAttestors, attestorAccepted, type ZkFetchProof } from "./duolingo-public";
+import { READING_FINGERPRINT } from "./reading-fingerprint";
 
 /**
  * One attested read of one page from the list in src/attested-sources.ts, for any source. Server only.
@@ -26,6 +27,8 @@ export type AttestedReadErrorCode =
   | "FETCH_FAILED"
   | "PROOF_INVALID"
   | "PROOF_MISMATCH"
+  /** The reading service runs other sources than this build does, so nothing it fetches can be read here. */
+  | "WORKER_OUT_OF_DATE"
   | "NOT_CONFIGURED";
 
 export class AttestedReadError extends Error {
@@ -154,6 +157,37 @@ function headersFor(source: AttestedSource): Record<string, string> {
   return { accept: "application/json", "user-agent": source.userAgent ?? "Mozilla/5.0 (Viky)" };
 }
 
+/** How long an agreement is taken as still true. A disagreement is never held: it is asked again at the next read. */
+const AGREEMENT_HOLDS_MS = 60_000;
+const agreedAt = new Map<string, number>();
+
+/**
+ * Asks the worker what it runs before asking it for anything (incident of 18 Sep 2026). The worker publishes the
+ * number of the two files an attested read is made of, and this build carries its own: different numbers mean the
+ * proof coming back would be judged against patterns the worker never fetched, which is what happened that night and
+ * what was shown as "try again in a minute". Nothing is fetched and nobody is told to retry.
+ */
+async function workerIsCurrent(base: string): Promise<void> {
+  const agreed = agreedAt.get(base) ?? 0;
+  if (Date.now() - agreed < AGREEMENT_HOLDS_MS) return;
+  let theirs: string | undefined;
+  try {
+    const response = await fetch(`${base}/health`, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
+    const body = (await response.json().catch(() => ({}))) as { reading?: { fingerprint?: string } };
+    theirs = body.reading?.fingerprint;
+  } catch (error) {
+    // A worker that does not answer at all is a worker that is down, which is its own refusal and not this one.
+    throw new AttestedReadError("FETCH_FAILED", "The attested fetch worker did not answer", undefined, { cause: error });
+  }
+  if (theirs === READING_FINGERPRINT) {
+    agreedAt.set(base, Date.now());
+    return;
+  }
+  // Said out loud, because the sentence a person reads promises that we know: the logs are where we are told.
+  console.error(JSON.stringify({ at: new Date().toISOString(), worker: base, readingFingerprint: { ours: READING_FINGERPRINT, theirs: theirs ?? null }, error: "WORKER_OUT_OF_DATE" }));
+  throw new AttestedReadError("WORKER_OUT_OF_DATE", "The attested fetch worker runs other sources than this build");
+}
+
 /**
  * Through the attested-fetch worker when ZKFETCH_WORKER_URL is set (Vercel functions cannot load zk-fetch, D27). The
  * worker is told a source and an account, never a URL, and only the proof comes back; everything is checked here.
@@ -162,6 +196,7 @@ async function workerZkFetch(source: AttestedSource, account: string): Promise<Z
   const base = process.env.ZKFETCH_WORKER_URL!.trim().replace(/\/$/, "");
   const secret = process.env.ZKFETCH_WORKER_SECRET?.trim();
   if (!secret) throw new AttestedReadError("NOT_CONFIGURED", "The attested fetch worker is not configured");
+  await workerIsCurrent(base);
   let response: Response;
   try {
     response = await fetch(`${base}/read`, {
