@@ -243,6 +243,14 @@ export function claimGift(giftId: string, token: string): Promise<{ giftId: stri
   return postJson(`/api/gift/claim`, { giftId, token });
 }
 
+/**
+ * A link again for a gift nobody has opened, asked for by the account that made it. The key is replaced, so the link
+ * that was lost stops working: the screen says that before the button is pressed.
+ */
+export function giftLinkAgain(giftId: string): Promise<{ claimUrl: string }> {
+  return postJson(`/api/gift/${giftId}/link`, {});
+}
+
 export type CheckInOutcome = {
   phase: "baseline" | "check-in";
   dayIndex: number;

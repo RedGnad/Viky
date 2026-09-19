@@ -261,6 +261,13 @@ export const FUND = {
     gettingReady: "Getting it ready, a few seconds.",
     putting: (arrived: string | undefined, amount: string, recipient: string) =>
       `${arrived ? `${arrived} arrived. ` : ""}Putting ${amount} in ${their(recipient)} name.`,
+    /**
+     * Under the loop, while the gift is being made. It says the time and what a closed page costs, and both are true:
+     * the route waits for the chain to settle before it answers, and a gift that was made is in the list with its own
+     * page, where the link can be had again. Never "do not close this page": that would be a threat we cannot keep.
+     */
+    takesSeconds: "This takes a few seconds.",
+    pageMayClose: "If this page closes, look under your gifts: what was made is there, with its link. What was not can be picked up again.",
     short: (arrived: string, amount: string, euros: number, held: string) =>
       `${arrived} arrived, less than the ${amount} for this gift. Pay ${euros} EUR more, or make the gift ${held}.`,
     payMore: (euros: number) => `Pay ${euros} EUR more`,
@@ -296,6 +303,8 @@ export const FUND = {
     shareText: (recipient: string) => `${recipient}, this is for you.`,
     copyRefused: "Your browser would not let us copy it. Press and hold the link above, then choose Copy.",
     onlyThem: (recipient: string) => `Whoever opens this link takes the gift, so send it only to ${recipient}.`,
+    /** Because the link is lost the moment this tab closes, and only the gift's page can make another (gift 1000001). */
+    findItAgain: "Lose this link and the gift's page makes you a new one, as long as nobody has opened it.",
     nextTitle: "What happens next",
     theyConnectAny: "connects what they will do",
     next: (recipient: string, theyConnect: string, eachDay: string, perDay: string, time: string) => [
@@ -369,6 +378,20 @@ export const GIFT_PAGE = {
   /** Only on the device that made the gift, which is the only one holding the link (it carries the key). */
   copyLinkAgain: "Copy the link again",
   linkOnlyHere: "Only this device kept it: the link carries the key that opens the gift.",
+  /**
+   * From any device, for the account that made the gift. Only the key's fingerprint was kept, so the lost link cannot
+   * be handed back: a new one is made and the old one stops opening the gift. Said before the gesture, never after.
+   */
+  linkAgainTitle: "The link",
+  /** A link just made is copied for the first time, so nothing about it is "again" (ui review, 19 Sep 2026). */
+  copyLink: "Copy the link",
+  linkAgainWhy: "Lost the link, or sent it from another device? Get a new one. The link you had stops working the moment you do.",
+  getLinkAgain: "Get the link again",
+  gettingLink: "Making a new link",
+  linkAgainDone: "Here is the new link. The one you had before no longer opens this gift.",
+  linkAgainFailed: "The link could not be made just now. Nothing was changed: the link you had still works.",
+  shareLink: "Share",
+  shareLinkText: (recipient: string | null) => (recipient ? `${recipient}, this is for you.` : "This is for you."),
   copyRefused: "Your browser would not let us copy it. Press and hold the code, then choose Copy.",
   validUntil: (moment: string) => `Valid until ${moment} your time. After that, ask for a new one here.`,
   expired: "This code has expired.",
@@ -504,8 +527,15 @@ export const MILESTONE_FUND = {
   made: {
     terms: (amount: string, goal: string, days: number, source: string) =>
       `${amount} when they reach ${goal}, within ${days} ${days === 1 ? "day" : "days"} of connecting ${source}. All of it, at once, or all of it back to you.`,
-    next: (recipient: string, source: string, target: number, days: number, time: string) => [
-      `${recipient} opens the link and puts a short code in their ${source} name, once. That first reading is where they start.`,
+    /**
+     * What the recipient is asked for depends on who named the account (D27, D104): one the funder named binds on its
+     * first reading and asks nothing of the profile, and only an account they name themselves carries a code. This
+     * screen promised a code either way until 19 Sep 2026, which was false for every gift made with a name.
+     */
+    next: (recipient: string, source: string, target: number, days: number, time: string, namedByFunder: boolean) => [
+      namedByFunder
+        ? `${recipient} opens the link and starts the first reading of that ${source} account. That reading is where they start.`
+        : `${recipient} opens the link, names their ${source} account and puts a short code in its name, once. That first reading is where they start.`,
       `Viky reads their rating every day at about ${time} your time. The first reading at ${target} or more puts all of it in ${recipient}'s name.`,
       `If they do not reach it within ${days} ${days === 1 ? "day" : "days"} of connecting, all of it comes back to your account. If nobody opens the link within 14 days, it all comes back too.`,
     ],

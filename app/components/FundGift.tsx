@@ -33,6 +33,7 @@ import { CASH_OUT, FUND as W, MILESTONE_FUND as M } from "@/src/sentences";
 import { ChoiceList } from "../kit/ChoiceList";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { Shell } from "../kit/Shell";
+import { Working } from "../kit/Working";
 import { AccountPanel } from "./AccountPanel";
 import { BODY, CARD, FIELD, HELP, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
 
@@ -114,6 +115,12 @@ type Made = Readonly<{
   /** A milestone's goal in words and its target, for the confirmation (C2). */
   goal?: string;
   target?: number;
+  /**
+   * Whether the funder named the account themselves. Since D27 that decides what the recipient is asked for: an
+   * account the funder named binds on its first reading, and only an account they name themselves needs a code. The
+   * confirmation promised a code either way until 19 Sep 2026.
+   */
+  namedByFunder?: boolean;
 }>;
 
 type Phase = "waiting" | "converting" | "giving" | "short" | "failed";
@@ -505,7 +512,7 @@ export function FundGift() {
       conditionId: condition.id,
       amount: amount.units.toString(),
       days: length.days,
-      ...(milestone && cadence && climb.target !== null ? { goal: milestone.words.goal(climb.target, cadence.label), target: climb.target } : {}),
+      ...(milestone && cadence && climb.target !== null ? { goal: milestone.words.goal(climb.target, cadence.label), target: climb.target, namedByFunder: draft.username.trim().length > 0 } : {}),
       ...(certificate && certificateTarget ? { goal: certificate.words.goal(Number(draft.target)), target: Number(draft.target) } : {}),
     };
     writeSession(MADE_KEY, record);
@@ -692,12 +699,13 @@ export function FundGift() {
             </button>
           ) : null}
           <p className={HELP}>{W.made.onlyThem(made.recipientName)}</p>
+          <p className={HELP}>{W.made.findItAgain}</p>
         </section>
         <section className="flex flex-col gap-[var(--space-md)]">
           <h2 className={TITLE}>{W.made.nextTitle}</h2>
           <ol className={`flex list-decimal flex-col gap-[var(--space-sm)] pl-[var(--space-lg)] ${BODY}`}>
             {(madeMilestone
-              ? M.made.next(made.recipientName, madeCondition?.source ?? "", made.target ?? 0, made.days, settlingTimeInWords(made.atMs))
+              ? M.made.next(made.recipientName, madeCondition?.source ?? "", made.target ?? 0, made.days, settlingTimeInWords(made.atMs), made.namedByFunder === true)
               : W.made.next(made.recipientName, madeCondition?.words.theyConnect ?? W.made.theyConnectAny, madeCondition?.words.eachDay ?? "", formatAusd(day), settlingTimeInWords(made.atMs))
             ).map((line) => (
               <li key={line}>{line}</li>
@@ -1336,9 +1344,13 @@ export function FundGift() {
     if (phase === "converting" || phase === "giving") {
       return (
         <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
-          <p className={BODY} aria-live="polite">
-            {phase === "converting" ? W.arrived.gettingReady : W.arrived.putting(arrivedFigure, gift, recipient)}
-          </p>
+          {/* Up to thirty seconds pass here while the chain settles, and the screen used to hold still through all of
+              it (the founder's reading of 19 Sep 2026, Nielsen 1993 and NN/g 2014). It moves from the first second,
+              and it says how long and what a closed page costs. */}
+          <Working
+            says={`${phase === "converting" ? W.arrived.gettingReady : W.arrived.putting(arrivedFigure, gift, recipient)} ${W.arrived.takesSeconds}`}
+            and={phase === "giving" ? W.arrived.pageMayClose : undefined}
+          />
           {/* The gift stays in sight while it is being made (audit C, 10.3). */}
           <p className={HELP}>{milestone ? M.account.yourGift(gift, recipient) : W.account.yourGift(gift, recipient, length.days ?? 0)}</p>
         </Shell>

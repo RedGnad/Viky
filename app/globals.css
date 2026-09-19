@@ -235,6 +235,29 @@ video {
 }
 
 /*
+ * The one thing in this product that loops, and the only one (the founder's instruction of 19 Sep 2026, which
+ * outranks the art direction's "nothing loops" here for one reason: while the chain is asked for a gift, up to
+ * thirty seconds pass with nothing to show). Nielsen 1993 gives ten seconds as the limit of attention, and NN/g
+ * 2014: "Without any visual change from the system, most users will assume the action was not registered." A
+ * device asking for reduced motion stops it at one turn, by the query below, and the sentence beside it stays.
+ */
+.working-ring {
+  width: var(--space-lg);
+  height: var(--space-lg);
+  flex: none;
+  border-radius: 999px;
+  border: 2px solid var(--card-border);
+  border-top-color: var(--accent);
+  animation: working-turn 900ms linear infinite;
+}
+
+@keyframes working-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/*
  * Apple's own techniques for Reduce Motion: replace transitions with fades, drop bounce, avoid animating
  * depth. Apple's guidelines never mention CSS, so the mapping onto this query is our inference; the
  * substance is theirs. The press still gives way under the finger; nothing travels.

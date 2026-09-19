@@ -283,6 +283,21 @@ export async function loadGiftForClaim(giftId: string, claimToken: string): Prom
   return rows[0] ? toRecord(rows[0]) : null;
 }
 
+/**
+ * A new key for a gift nobody has opened, so its funder can hand out a link again (the lost link of gift 1000001,
+ * 19 Sep 2026). Only the hash of a key is ever kept, so the old one cannot be given back: it is replaced, and the
+ * link that carried it stops opening the gift from that moment. The row is only touched for the account that paid
+ * for the gift and only while `recipient` is empty, so a key never moves under somebody who already has it.
+ */
+export async function rotateClaimToken(giftId: string, funder: string): Promise<string | null> {
+  const token = newClaimToken();
+  const rows = await sql()`
+    UPDATE viky_gifts SET claim_token_hash = ${claimTokenHash(token)}
+     WHERE gift_id = ${giftId} AND funder = ${funder.toLowerCase()} AND recipient IS NULL
+     RETURNING gift_id`;
+  return rows.length === 1 ? token : null;
+}
+
 /** Records the claim once; a second claimant finds the row already taken. */
 export async function markClaimed(giftId: string, recipient: string, claimedTx: Hex): Promise<boolean> {
   const rows = await sql()`
