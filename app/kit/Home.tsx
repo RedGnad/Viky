@@ -34,11 +34,13 @@ export function Home() {
   if (!address) {
     return (
       <Shell kind="destination" active="home" action={<SignInDoor />}>
-        {/* The page's own heading. The card is what a person sees first and the promise is what the page is about, so
-            the title is said to whoever is read to rather than drawn over the object it describes. */}
-        <h1 className="sr-only">{W.promise}</h1>
-        <OfferCard />
-        <p className={PROSE}>{W.promiseBody}</p>
+        {/* One short line above the object and one under it, and no third (the drawn card of 19 Sep 2026, section 6).
+            On a wide screen the card sits in the middle of the height rather than at the top of an empty page. */}
+        <div className="flex flex-col gap-[var(--space-lg)] [@media(min-width:840px)]:min-h-[68dvh] [@media(min-width:840px)]:justify-center">
+          <h1 className={TITLE}>{W.promise}</h1>
+          <OfferCard />
+          <p className={PROSE}>{W.promiseUnder}</p>
+        </div>
         <p className={`${HELP} flex flex-wrap gap-x-[var(--space-lg)]`}>
           <Link href="/what-viky-can-check" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
             {CATALOGUE.title}

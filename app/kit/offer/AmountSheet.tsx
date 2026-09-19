@@ -2,7 +2,7 @@
 import { AmountError, dollarsToUnits, PILOT_CAP_SENTENCE } from "@/src/money";
 import type { GiftDraft } from "@/src/gift-draft";
 import { FUND, OFFER as W } from "@/src/sentences";
-import { HELP, MONEY, PRIMARY_BUTTON } from "../../components/ui";
+import { HELP, MONEY, SECONDARY_BUTTON } from "../../components/ui";
 import { FieldRefusal } from "../FieldRefusal";
 import { Sheet } from "../Sheet";
 
@@ -51,7 +51,7 @@ export function AmountSheet({
       help={PILOT_CAP_SENTENCE}
       onClose={onClose}
       footer={
-        <button type="button" className={PRIMARY_BUTTON} disabled={!ready} onClick={onClose}>
+        <button type="button" className={SECONDARY_BUTTON} disabled={!ready} onClick={onClose}>
           {W.done}
         </button>
       }

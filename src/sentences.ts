@@ -34,23 +34,32 @@ export const NAV = {
 export const OFFER = {
   /** What the card is, for a reader who is read to: the card itself says it by being one. */
   title: "Offer a gift",
-  /** Said once above the card, to somebody who has never seen one. */
-  invitation: "Fill this in. Nothing is asked of you until you pay.",
-  slots: {
-    for: { label: "For", empty: "who it is for" },
-    will: { label: "will", empty: "what they will do" },
-    amount: { label: "worth", empty: "how much" },
-    howLong: { label: "for", empty: "how long" },
+  /** The title of a card nobody has named yet, in the quiet voice: it is a gift, and it has no name on it. */
+  emptyTitle: "A gift",
+  /**
+   * What a case that has not been answered says, in its own place on the card (the drawn card, section 2). Not a
+   * label and a blank, and never an underlined link: the word that is missing, where it will be.
+   */
+  invites: {
+    for: "Who is it for?",
+    will: "what they will do",
+    amount: "how much",
+    howLong: "for how long",
   },
-  /** The For case, once both names are given: the gift says who it is for and who it is from. */
-  forNames: (recipient: string, funder: string) => `${recipient}, from ${funder}`,
-  /** What a case says when it has been filled: the value, and the way back into its sheet. */
+  /** What each case is called when a reader is told they can change it. */
+  slots: {
+    for: { label: "who it is for" },
+    will: { label: "what they will do" },
+    amount: { label: "how much" },
+    howLong: { label: "how long" },
+  },
   change: (slot: string) => `Change ${slot}`,
-  days: (count: number) => `${count} ${count === 1 ? "day" : "days"}`,
+  /** Under the amount, in the third voice: how long the gift runs, once somebody has said. */
+  forHowLong: (days: number) => `for ${days} ${days === 1 ? "day" : "days"}`,
   /** The one action of the card, and it appears only when the four cases are filled. */
   pay: (amount: string) => `Pay ${amount}`,
-  /** Under the card while something is still missing, so the button's absence is not a mystery. */
-  stillNeeded: "Fill the four, and the gift is ready to pay for.",
+  /** The bottom of a card that is not finished: what is left to do, and nothing that cannot be pressed. */
+  stillNeeded: "Fill the four, and it is ready",
   done: "Done",
   sheets: {
     who: "Who is it for?",
@@ -77,12 +86,6 @@ export const OFFER = {
     body: "The gift is filled in on the card, on the first page: who it is for, what they will do, how much, and for how long.",
     action: "Back to the card",
   },
-  /** The shape the card draws as soon as the condition is known, empty, and what it is for. */
-  shape: {
-    days: "A day at a time, each one theirs when they do it",
-    climb: "A climb to the number they reach",
-    stamp: "One thing, obtained or not",
-  },
 } as const;
 
 /** Home: the money, the one action, the way out, and what is moving. */
@@ -90,6 +93,11 @@ export const HOME = {
   promise: "The money is already in their name",
   promiseBody:
     "Put money behind someone's goal. It becomes theirs as they make verified progress, and whatever they do not earn comes back to you. Nobody profits from anyone failing.",
+  /**
+   * The one sentence under the card, and there is no third (the drawn card, section 6). The promise above it is the
+   * title; this is what it costs a visitor to try, and what happens to what nobody earns.
+   */
+  promiseUnder: "Nothing is asked of you until you pay, and whatever they do not earn comes back to you.",
   offer: "Offer a gift",
   finish: "Finish the gift you set up",
   howItWorks: "How it works",

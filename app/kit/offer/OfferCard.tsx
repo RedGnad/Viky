@@ -3,28 +3,35 @@ import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "@/src/account/provider";
 import { formatAusd } from "@/src/gift-reader";
-import { CARD_CASES, draftUnits, filledCases, isComplete, shapeOf, type CardCase, type GiftDraft } from "@/src/gift-draft";
+import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type CardCase, type GiftDraft } from "@/src/gift-draft";
 import { conditionById } from "@/src/conditions";
 import { cardDraft, emptyCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
-import { OFFER as W } from "@/src/sentences";
-import { CARD, HELP, PRIMARY_BUTTON } from "../../components/ui";
+import { GIFT_CARD, OFFER as W } from "@/src/sentences";
+import { BODY, CARD, HELP, META, PRIMARY_BUTTON } from "../../components/ui";
+import { Character } from "../Character";
+import { CardFace } from "../GiftCard";
+import { DayStrip } from "../DayStrip";
+import { Gaze } from "../Motion";
+import { MilestoneMeter } from "../MilestoneMeter";
 import { AmountSheet } from "./AmountSheet";
 import { HowLongSheet } from "./HowLongSheet";
-import { ShapePreview } from "./ShapePreview";
 import { WhoSheet } from "./WhoSheet";
 import { WillSheet } from "./WillSheet";
 
 /**
- * The card a gift is filled in on, at the top of Home (the product vision of 19 Sep 2026, sections 1, 4 and 6).
+ * The card a gift is filled in on, at the top of Home (the product vision of 19 Sep 2026, and the drawn card of the
+ * same day, sections 1 and 2).
  *
- * It is the product itself rather than a way into it: four cases, For, will, worth and for how long, each opening in
- * a sheet, each changing the card under the eyes of whoever is filling it. Nothing is asked of a visitor until they
- * press Pay: the account and the money arrive there and not before (Apple's own onboarding guidance, and App Store
- * rule 5.1.1 (v)), and what is written here is kept on the device meanwhile, which is D74's draft doing the work it
- * was already doing for a card payment.
+ * There is one card in this product. This is the gift's own card, empty: the same face, the same title, the same row
+ * of day characters or the same climbing meter, drawn by `CardFace` in app/kit/GiftCard.tsx. It is not a form that
+ * resembles a gift, which is what the first version was and what a settings screen looks like.
  *
- * What it replaced: the eight step assistant of `/fund`, five of whose screens came before the gift existed at all.
+ * It fills in place. A case nobody has answered says the word that is missing where that word will be, in the quiet
+ * voice, and the whole line opens its sheet: "For" followed by nothing means nothing, "Who is it for?" means
+ * something. Nothing is asked of a visitor until Pay, which is the one thing on this screen wearing the accent.
  */
+const GIFT_ID = "offer";
+
 export function OfferCard() {
   const { address } = useAccount();
   const router = useRouter();
@@ -41,46 +48,94 @@ export function OfferCard() {
   const condition = conditionById(draft.conditionId);
   const shape = shapeOf(draft.conditionId);
   const ready = isComplete(draft);
+  const recipient = draft.recipientName.trim();
+  const days = Number(draft.days);
 
-  const value: Readonly<Record<CardCase, string | undefined>> = {
-    for: filled.for ? W.forNames(draft.recipientName.trim(), draft.funderName.trim()) : undefined,
-    will: condition ? condition.name : undefined,
-    amount: units !== undefined ? formatAusd(units) : undefined,
-    howLong: filled.howLong ? W.days(Number(draft.days)) : undefined,
-  };
+  /** A line of the card: what is there, or the word that is missing in its place, and it opens its sheet either way. */
+  const line = (slot: CardCase, said: string | null, voice: string) => (
+    <button
+      type="button"
+      onClick={() => setOpen(slot)}
+      aria-label={said === null ? W.invites[slot] : `${said}. ${W.change(W.slots[slot].label)}`}
+      className={`${voice} ${said === null ? "text-[var(--muted)]" : ""} inline-flex min-h-[var(--tap-target)] max-w-full items-center break-words text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]`}
+    >
+      {said ?? W.invites[slot]}
+    </button>
+  );
 
   return (
     <>
-      <section className={CARD} aria-labelledby="offer-card">
+      <section className={`${CARD} flex flex-col`} aria-labelledby="offer-card">
         <h2 id="offer-card" className="sr-only">
           {W.title}
         </h2>
-        <p className={HELP}>{W.invitation}</p>
-        <dl className="flex flex-col">
-          {CARD_CASES.map((slot) => (
-            <div key={slot} className="border-b border-[var(--divider)] last:border-b-0">
-              <button
-                type="button"
-                onClick={() => setOpen(slot)}
-                className="flex min-h-[var(--tap-target)] w-full items-baseline justify-between gap-[var(--space-md)] py-[var(--space-sm)] text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
-              >
-                <dt className={`${HELP} flex-none`}>{W.slots[slot].label}</dt>
-                <dd className={value[slot] ? "text-right font-medium" : `${HELP} text-right underline underline-offset-[3px]`}>
-                  {value[slot] ?? W.slots[slot].empty}
-                </dd>
-              </button>
-            </div>
-          ))}
-        </dl>
-        {/* The shape appears the moment the condition is chosen, empty: it is what the gift's own page will fill. */}
-        {shape ? <ShapePreview shape={shape} days={Number(draft.days) || undefined} /> : null}
-        {ready && units !== undefined ? (
-          <button type="button" className={PRIMARY_BUTTON} onClick={() => router.push("/fund")}>
-            {W.pay(formatAusd(units))}
-          </button>
-        ) : (
-          <p className={HELP}>{W.stillNeeded}</p>
-        )}
+        <CardFace
+          /*
+           * The title is the gift's own, "For Léa", and "A gift" while nobody is named: the quiet voice, because a
+           * gift for nobody is not a claim. The line under it is whatever is missing next, in its own words, and it
+           * opens the case it names (the drawn card, section 2).
+           */
+          title={
+            filled.for ? (
+              line("for", GIFT_CARD.forName(recipient), "")
+            ) : (
+              <span className="text-[var(--muted)]">{W.emptyTitle}</span>
+            )
+          }
+          under={filled.for ? line("will", condition ? condition.name : null, BODY) : line("for", null, BODY)}
+          shape={
+            /*
+             * The shape, drawn by the product's own pieces. The gift character while there is nothing to draw yet,
+             * then the row of days or the climbing meter, empty. Before a length is chosen the row is drawn at the
+             * length this condition suggests: it is a picture, hidden from a reader, and the card says in words,
+             * right under it, that nobody has chosen one yet.
+             */
+            shape === undefined ? (
+              <Gaze>
+                <Character state="gift" className="h-auto w-[88px] self-start" />
+              </Gaze>
+            ) : shape === "days" ? (
+              <DayStrip
+                id={GIFT_ID}
+                gift={{
+                  startDay: 0,
+                  endDay: 0,
+                  durationDays: filled.howLong ? days : durationBounds(draft.conditionId).suggested,
+                  creditedDays: 0,
+                  missedDays: 0,
+                }}
+                catchUpSeconds={0}
+              />
+            ) : (
+              <MilestoneMeter
+                status={{
+                  startReading: null,
+                  target: Number(draft.target) || 0,
+                  todayReading: null,
+                  reached: false,
+                  cancelled: false,
+                  finished: false,
+                  opened: false,
+                }}
+              />
+            )
+          }
+          bottom={
+            <>
+              <span className="money-display-box block">
+                {line("amount", units === undefined ? null : formatAusd(units), units === undefined ? BODY : "money-display font-semibold tabular-nums")}
+              </span>
+              {line("howLong", filled.howLong ? W.forHowLong(days) : null, META)}
+              {ready && units !== undefined ? (
+                <button type="button" className={PRIMARY_BUTTON} onClick={() => router.push("/fund")}>
+                  {W.pay(formatAusd(units))}
+                </button>
+              ) : (
+                <p className={HELP}>{W.stillNeeded}</p>
+              )}
+            </>
+          }
+        />
       </section>
 
       {/* The four sheets are drawn once and opened by name. A modal dialog is closed by the browser, which is what

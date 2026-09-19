@@ -2,7 +2,7 @@
 import { certificateById, milestoneById } from "@/src/milestone-conditions";
 import { durationBounds, type GiftDraft } from "@/src/gift-draft";
 import { FUND, OFFER as W } from "@/src/sentences";
-import { HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
+import { HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../../components/ui";
 import { Field } from "../Field";
 import { Sheet } from "../Sheet";
 
@@ -41,7 +41,7 @@ export function HowLongSheet({
       help={bounded?.words.durationHelp ?? FUND.amount.daysHelp}
       onClose={onClose}
       footer={
-        <button type="button" className={PRIMARY_BUTTON} disabled={!ready} onClick={onClose}>
+        <button type="button" className={SECONDARY_BUTTON} disabled={!ready} onClick={onClose}>
           {W.done}
         </button>
       }

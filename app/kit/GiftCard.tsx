@@ -1,10 +1,11 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { conditionById, conditionOfGoal } from "@/src/conditions";
 import type { GiftSummary } from "@/src/client/gift";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { dateInWords } from "@/src/moments";
 import { GIFT_CARD as W, MILESTONE_PAGE as M } from "@/src/sentences";
-import { BODY, CARD, HELP } from "../components/ui";
+import { BODY, CARD, CARD_TITLE, HELP } from "../components/ui";
 import { DayStrip } from "./DayStrip";
 import { MilestoneMeter } from "./MilestoneMeter";
 
@@ -21,38 +22,38 @@ export function GiftCard({ gift, milestone: given, still = false, example = fals
   const condition = milestone ? conditionById(milestone.conditionId) : conditionOfGoal(gift.goalType);
   const started = gift.opened && (gift.counting || gift.finished || gift.creditedDays + gift.missedDays > 0);
   const body = (
-    <>
-      {/* The one example in the product, on the page without an account, and it says so (rule of integrity). */}
-      {example ? (
-        <span className="inline-flex self-start rounded-full border-[length:var(--card-border-width)] border-[var(--control-border)] px-[var(--space-sm)] text-[length:var(--type-help)] leading-[var(--type-help-leading)] font-medium">
-          {W.example}
-        </span>
-      ) : null}
-      <span className="flex items-start justify-between gap-[var(--space-md)]">
-        <span className="flex min-w-0 flex-col">
-          <span className="text-[length:var(--type-title)] leading-[var(--type-title-leading)] font-semibold break-words">{whoInWords(gift)}</span>
-          <span className={BODY}>{condition?.name ?? ""}</span>
-        </span>
-        {still || example ? null : (
-          <svg aria-hidden focusable="false" width="24" height="24" viewBox="0 0 24 24" className="mt-[2px] shrink-0">
-            <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      </span>
-      {/*
+    <CardFace
+      badge={
+        /* The one example in the product, on the page without an account, and it says so (rule of integrity). */
+        example ? (
+          <span className="inline-flex self-start rounded-full border-[length:var(--card-border-width)] border-[var(--control-border)] px-[var(--space-sm)] text-[length:var(--type-help)] leading-[var(--type-help-leading)] font-medium">
+            {W.example}
+          </span>
+        ) : null
+      }
+      title={whoInWords(gift)}
+      under={condition?.name ?? ""}
+      chevron={!still && !example}
+      /*
         A daily gift's card draws its days, except at the head of its own page, where the row of days below says it once.
         A milestone has no days, so its character and its meter stay, and grow to the large size on its own page.
-      */}
-      {milestone ? (
-        <MilestoneMeter status={milestone} size={still ? "large" : "small"} />
-      ) : still ? null : (
-        <DayStrip id={gift.giftId} gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} />
-      )}
-      <span className={`block ${BODY}`}>{milestone ? milestoneStateInWords(milestone) : stateInWords(gift, condition?.words.connect)}</span>
-      <span className={`block ${HELP} tabular-nums`}>
-        {milestone ? W.milestoneAmount(milestone.amountDisplay, milestoneBy(milestone)) : amountsInWords(gift, started)}
-      </span>
-    </>
+      */
+      shape={
+        milestone ? (
+          <MilestoneMeter status={milestone} size={still ? "large" : "small"} />
+        ) : still ? null : (
+          <DayStrip id={gift.giftId} gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} />
+        )
+      }
+      bottom={
+        <>
+          <span className={`block ${BODY}`}>{milestone ? milestoneStateInWords(milestone) : stateInWords(gift, condition?.words.connect)}</span>
+          <span className={`block ${HELP} tabular-nums`}>
+            {milestone ? W.milestoneAmount(milestone.amountDisplay, milestoneBy(milestone)) : amountsInWords(gift, started)}
+          </span>
+        </>
+      }
+    />
   );
   if (still || example) return <section className={`${CARD} flex flex-col`}>{body}</section>;
   return (
@@ -62,6 +63,43 @@ export function GiftCard({ gift, milestone: given, still = false, example = fals
     >
       {body}
     </Link>
+  );
+}
+
+/**
+ * How a card is drawn, and there is only one of them (the drawn card of 19 Sep 2026, section 1): the title, the line
+ * under it, the image of progress, and the bottom. A real gift fills it from its own figures; the card a gift is
+ * filled in on fills it from the draft, empty first, so what a person builds is the object they will watch
+ * afterwards rather than a form that resembles it.
+ *
+ * It draws no card of its own: whoever calls it puts it inside one, because a gift on Home is a link to its page and
+ * the card being filled in is not.
+ */
+export function CardFace({
+  badge,
+  title,
+  under,
+  chevron = false,
+  shape,
+  bottom,
+}: Readonly<{ badge?: ReactNode; title: ReactNode; under: ReactNode; chevron?: boolean; shape: ReactNode; bottom: ReactNode }>) {
+  return (
+    <>
+      {badge}
+      <span className="flex items-start justify-between gap-[var(--space-md)]">
+        <span className="flex min-w-0 flex-col gap-[var(--space-xs)]">
+          <span className={`${CARD_TITLE} break-words`}>{title}</span>
+          <span className={BODY}>{under}</span>
+        </span>
+        {chevron ? (
+          <svg aria-hidden focusable="false" width="24" height="24" viewBox="0 0 24 24" className="mt-[2px] shrink-0">
+            <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : null}
+      </span>
+      {shape}
+      {bottom}
+    </>
   );
 }
 

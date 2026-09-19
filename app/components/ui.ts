@@ -59,9 +59,13 @@ export const META = "text-[length:var(--type-meta)] leading-[var(--type-meta-lea
  * A box that groups: a surface with a hairline edge and no relief, because a card groups words and is not a control
  * (the product structure of 17 Sep 2026, section 7). Every card in the product is this one; the four coloured
  * stickers it replaces were four backgrounds where the three sources allow one.
+ *
+ * Its edge is the ink since 19 Sep 2026 (the drawn card, section 4). Measured: the card's surface stands at 1.09:1
+ * on the ground by day and 1.12:1 by night, under the 1.3:1 the card was asked to reach, so the surface alone does
+ * not read as a card and the edge has to. It stays a hairline, and it takes no relief: a card is not a control.
  */
 export const CARD =
-  "space-y-[var(--space-md)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-lg)]";
+  "space-y-[var(--space-md)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--control-border)] bg-[var(--surface)] p-[var(--space-lg)]";
 
 /**
  * A line the person types into. Its border identifies it, so it carries the control colour, and it sits on a
@@ -85,6 +89,12 @@ export const DISPLAY =
 /** The mark at the top of every screen, the same face at a size that is not a title. */
 export const MARK =
   "text-[length:var(--type-mark)] leading-[var(--type-mark-leading)] font-[family-name:var(--font-title)] [font-weight:var(--font-title-weight)]";
+
+/**
+ * The card's own title, "For Léa" (the drawn card of 19 Sep 2026, section 3): the title face at the mark's size, a
+ * little tighter. It composes MARK rather than naming the face again, so the face is still set in exactly two places.
+ */
+export const CARD_TITLE = `${MARK} tracking-[var(--tracking-card-title)]`;
 
 /**
  * An amount inside a title. Amounts are set in the text face wherever they appear, so a title that states one hands

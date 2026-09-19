@@ -64,9 +64,10 @@ export const META_TYPE = { size: 13, lineHeight: 18, weight: 500, tracking: 1, t
 
 /**
  * Letter spacing, by role (K, rule 5; Material 3 sets one per role, display tight and label open). Measured in
- * pixels because that is how the rule was written and how a capture can check it.
+ * pixels because that is how the rule was written and how a capture can check it. The card's title is the title face
+ * at the mark's size, a little tighter (the drawn card of 19 Sep 2026, section 3).
  */
-export const TRACKING = { display: { compact: -1, expanded: -2 }, body: 0, label: 0.5, meta: 1 } as const;
+export const TRACKING = { display: { compact: -1, expanded: -2 }, body: 0, label: 0.5, meta: 1, cardTitle: -0.5 } as const;
 
 /**
  * 48, which is the only number every source agrees on: web.dev and Material both say 48, Apple's Buttons

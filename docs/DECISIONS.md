@@ -3124,3 +3124,32 @@ behind an account cannot be photographed any other way.
 - What this does not change: the accent stays the one action's colour, the grounds and the ink are untouched, and every
   pair is still measured, now twice over: from the palette in the tests, and from the colours the browser resolves on
   the live page (`pnpm measure:contrast`).
+
+
+## D111, 19 Sep 2026: the card a gift is filled in on is the gift's own card, empty
+
+- What was wrong, and it was the vision's fault rather than the code's: the vision of that morning described a
+  sequence, four cases each opening in a sheet, and never described what the card looks like. The first build took
+  it literally and drew a list of definitions, a label on the left and an underlined value on the right. That is a
+  settings screen. The founder's words on the captures: the art direction had been lost.
+- **There is one card.** `app/kit/GiftCard.tsx` already drew a real gift, with its title, the row of day characters
+  or the climbing meter, and its amounts. The card being filled in is that card, empty: both are drawn by one
+  function, `CardFace`, and the one being filled in draws the product's own `Character`, `DayStrip` and
+  `MilestoneMeter` rather than shapes invented beside them. The shape invented for the first version is deleted.
+- **What it shows while it fills** (the drawn card, section 2): "A gift" in the quiet voice with "Who is it for?"
+  under it, then "For Léa" at the card's title size with the condition under it, then the shape, empty, then the
+  amount at display size, then the length in the third voice, and at last the one action. A case nobody has answered
+  says the word that is missing where that word will be, and the whole line opens its sheet: an underlined link is
+  not how a card says something is missing.
+- **The accent is the sun, and it is for two things**: the action a screen is asking for, and the moment something
+  succeeds. It is on Pay and on nothing else on this screen, so the sheets' own buttons took the quiet fill.
+- **A card has to be seen as a card.** Measured: the surface stands at 1.09:1 on the ground by day and 1.12:1 by
+  night, under the 1.3:1 asked for, so the card's edge is the ink now. It is still a hairline and still carries no
+  relief, because a card is not a control.
+- **The sheets** rise from the bottom at every width, darken the page once and lightly (0.32 by day, 0.45 by night,
+  where it was 0.55 and 0.7), and are dismissed by a pull downwards as well as by Escape, the backdrop and Done. The
+  point of a sheet rather than a page is watching the card change while you fill it in.
+- **The page without an account** is one line above the card, the card, and one line under it. At 1440 the card sits
+  in the height instead of at the top of an empty page.
+- What this changes for every other card in the product: the ink edge and the title face, because there is one card
+  and it is the same everywhere. Nothing else moved: no route, no contract, no word of the register.
