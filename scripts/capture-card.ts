@@ -8,9 +8,11 @@ import { mkdirSync, writeFileSync } from "node:fs";
  * the card the way a person does, pressing each case and answering it, and photographs what the screen shows at
  * every step. It is also how the "after" of the measure in docs/reports/2026-09-19-the-card.md was taken.
  *
- * Usage: `pnpm review:capture-card` against a built site served on http://localhost:3210, with nothing signed in.
+ * Usage: `pnpm review:capture-card` against a built site served on http://localhost:3210, with nothing signed
+ * in; `VIKY_CARD_URL=https://viky.cash pnpm review:capture-card` to walk the real site instead.
  */
 
+const SITE = process.env.VIKY_CARD_URL ?? "http://localhost:3210";
 const OUT = `review-captures/card-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}Z`;
 const SIZES = [
   { name: "390x844", use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 } },
@@ -37,7 +39,7 @@ async function main() {
         await page.screenshot({ path: `${OUT}/${file}` });
         rows.push(`| ${file} | ${size.name} | ${appearance.name} | ${state} |`);
       };
-      await page.goto("http://localhost:3210/", { waitUntil: "networkidle" });
+      await page.goto(SITE, { waitUntil: "networkidle" });
       const card = page.locator("section").first();
       const slot = (index: number) => card.getByRole("button").nth(index);
       const sheet = page.locator("dialog.sheet[open]");
