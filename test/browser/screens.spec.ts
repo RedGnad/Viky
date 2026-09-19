@@ -38,9 +38,12 @@ test.describe("the screens a person meets", () => {
    */
   test("a first visit meets the gift itself, not a way to one and not an account", async ({ page }) => {
     await page.goto("/");
-    // The card, with its four cases, is the body of the page.
-    for (const slot of ["For", "will", "worth", "for"]) {
-      await expect(page.locator("main").getByText(slot, { exact: true })).toHaveCount(1);
+    // The card is the body of the page, and it reads as a gift: a title, and the word missing from each case where
+    // that word will be (the drawn card of 19 Sep 2026, section 2).
+    const card = page.locator("main section").first();
+    await expect(card.getByText("A gift", { exact: true })).toBeVisible();
+    for (const missing of ["Who is it for?", "how much", "for how long"]) {
+      await expect(card.getByText(missing, { exact: true })).toHaveCount(1);
     }
     await expect(page.getByText(/Nothing is asked of you until you pay/i)).toBeVisible();
     // Nothing to press until the card says something: the action appears with the fourth case.
@@ -67,7 +70,7 @@ test.describe("the screens a person meets", () => {
     await sheet.getByRole("button", { name: /^Done$/ }).click();
     await expect(page.locator("dialog.sheet[open]")).toHaveCount(0);
     // And the card says what was answered, so the object changed under the person's eyes.
-    await expect(card.getByText("Léa, from Mum")).toBeVisible();
+    await expect(card.getByText("For Léa", { exact: true })).toBeVisible();
   });
 
   /**

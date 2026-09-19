@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { globSync, readFileSync } from "node:fs";
 import test from "node:test";
 import {
   CARD_CASES,
@@ -16,20 +16,26 @@ import {
 } from "../src/gift-draft";
 import { CHESS_MILESTONE, DET_MILESTONE } from "../src/milestone-conditions";
 import { MAX_GIFT_UNITS } from "../src/money";
+import { contrastRatio } from "../src/contrast";
+import { COLOURS, TRACKING } from "../src/design-tokens";
 import { OFFER } from "../src/sentences";
 
 /**
- * The card a gift is filled in on (the product vision of 19 Sep 2026, sections 4 and 6).
+ * The card a gift is filled in on (the product vision of 19 Sep 2026, and the drawn card of the same day).
  *
- * What these tests defend is the join between an object and the routes under it: a card is complete exactly when a
- * gift can be made from it, the terms it writes are the terms those routes already take, and nothing on it asks a
- * visitor for an account. The screens themselves are read as text, the way the other screen tests do, because what
- * matters here is which file asks what: the four questions are on the card, and the money is not.
+ * Two things are defended here. The rules: a card is complete exactly when a gift can be made from it, the terms it
+ * writes are the terms the create routes already take, and nothing on it asks a visitor for an account. And the
+ * drawing: there is one card in the product, this is that card empty, and what it shows at each step of its filling
+ * is the table of section 2 rather than a list of labels and blanks, which is what the first version was.
  */
 
 const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
+const face = readFileSync("app/kit/GiftCard.tsx", "utf8");
+const sheetFile = readFileSync("app/kit/Sheet.tsx", "utf8");
 const sheets = ["WhoSheet", "WillSheet", "AmountSheet", "HowLongSheet"].map((name) => readFileSync(`app/kit/offer/${name}.tsx`, "utf8"));
 const pay = readFileSync("app/components/PayGift.tsx", "utf8");
+const ui = readFileSync("app/components/ui.ts", "utf8");
+const css = readFileSync("app/globals.css", "utf8");
 
 const lesson: GiftDraft = {
   recipientName: "Léa",
@@ -88,15 +94,93 @@ test("a climb needs its cadence and the reading the funder chose from; a certifi
   assert.equal(filledCases({ ...certificate, target: "123" }).will, false, "the score is the source's own scale");
 });
 
-test("the shape comes from the register, never from the screen", () => {
+test("the shape a condition gives the card comes from the register, never from the screen", () => {
   assert.equal(shapeOf("duolingo-daily"), "days");
   assert.equal(shapeOf("chess-rating"), "climb");
   assert.equal(shapeOf("duolingo-english-test"), "stamp");
   assert.equal(shapeOf("nothing-like-this"), undefined);
-  const preview = readFileSync("app/kit/offer/ShapePreview.tsx", "utf8");
   assert.match(card, /shapeOf\(draft\.conditionId\)/);
-  assert.match(card, /<ShapePreview shape=\{shape\}/);
-  assert.match(preview, /shape === "days"/);
+});
+
+test("there is one card, and the one being filled in is drawn by it", () => {
+  // The defect of 19 Sep: a second card was built beside the gift's own, and the new one was a list of definitions.
+  assert.match(face, /export function CardFace\(/, "the drawing of a card is one function");
+  assert.match(card, /import \{ CardFace \} from "\.\.\/GiftCard"/);
+  assert.match(card, /<CardFace/);
+  assert.doesNotMatch(card, /<dl|<dt|<dd/, "a card is not a list of definitions");
+  // And it draws the product's own pieces rather than shapes of its own.
+  for (const piece of ["Character", "DayStrip", "MilestoneMeter"]) {
+    assert.match(card, new RegExp(`<${piece}`), `the card draws the gift's own ${piece}`);
+  }
+  assert.equal(globSync("app/kit/offer/ShapePreview.tsx").length, 0, "the shape invented beside the product's own is gone");
+});
+
+test("the card shows what the table says at each step of its filling", () => {
+  // Empty: a gift with no name on it, and the question in the line under it.
+  assert.equal(OFFER.emptyTitle, "A gift");
+  assert.equal(OFFER.invites.for, "Who is it for?");
+  assert.match(card, /line\("for", null, BODY\)/, "the empty card asks who it is for, where the condition will be");
+  assert.match(card, /\{W\.emptyTitle\}/);
+  // Named: the gift's own title, from the gift card's words, and the next question under it.
+  assert.match(card, /line\("for", GIFT_CARD\.forName\(recipient\), ""\)/);
+  assert.match(card, /line\("will", condition \? condition\.name : null, BODY\)/);
+  // The shape appears with the condition, and it has the length of the gift once there is one.
+  assert.match(card, /shape === undefined \?/);
+  assert.match(card, /durationDays: filled\.howLong \? days : durationBounds\(draft\.conditionId\)\.suggested/);
+  // The bottom: the amount at display size, the length in the third voice, and the action only when it can be pressed.
+  assert.match(card, /money-display font-semibold tabular-nums/);
+  assert.match(card, /line\("howLong", filled\.howLong \? W\.forHowLong\(days\) : null, META\)/);
+  assert.match(card, /\{W\.stillNeeded\}/);
+  assert.equal(OFFER.stillNeeded, "Fill the four, and it is ready");
+});
+
+test("an empty case says the word that is missing, in its place, and the whole line opens it", () => {
+  assert.deepEqual(Object.keys(OFFER.invites).sort(), [...CARD_CASES].sort());
+  for (const invite of Object.values(OFFER.invites)) assert.ok(invite.length > 0 && !invite.endsWith(":"), invite);
+  assert.match(card, /onClick=\{\(\) => setOpen\(slot\)\}/, "a line of the card opens its own case");
+  assert.match(card, /said === null \? "text-\[var\(--muted\)\]" : ""/, "and a missing word is said in the quiet voice");
+  assert.doesNotMatch(card, /underline/, "an underlined link is not how a case says it is empty");
+});
+
+test("the accent is on Pay and nowhere else, on the card or in its sheets", () => {
+  assert.equal(card.match(/className=\{PRIMARY_BUTTON\}/g)?.length, 1, "one action wears the accent");
+  // A sheet ends a question; ending a question is not what the screen is asking for, so it takes the quiet fill.
+  for (const source of sheets) assert.doesNotMatch(source, /PRIMARY_BUTTON/, "a sheet's own button wears the accent");
+  assert.match(card, /\{W\.pay\(formatAusd\(units\)\)\}/);
+  assert.doesNotMatch(card, /var\(--accent\)/, "nothing else on the card paints itself with the sun");
+});
+
+test("a card is seen as a card on the ground, which its surface alone does not do", () => {
+  // The measurement that forced the ink edge (the drawn card, section 4): under 1.3:1, a card is a rectangle of
+  // almost the same colour as the page, which is what the captures of 19 Sep showed.
+  for (const appearance of ["light", "dark"] as const) {
+    const palette = COLOURS[appearance];
+    assert.ok(contrastRatio(palette.surface, palette.background) < 1.3, `${appearance} surface already stands off the ground`);
+    assert.ok(contrastRatio(palette.controlBorder, palette.background) >= 3, `${appearance} ink edge is not seen on the ground`);
+  }
+  assert.match(ui, /export const CARD =\n?\s*"[^"]*border-\[var\(--control-border\)\]/, "the card's edge is the ink");
+  assert.match(ui, /export const CARD =\n?\s*"[^"]*border-\[length:var\(--card-border-width\)\]/, "and it is still a hairline, not a control's outline");
+});
+
+test("the card's title is the title face at the mark's size, and the face is still named in two places only", () => {
+  assert.equal(TRACKING.cardTitle, -0.5);
+  assert.match(css, /--tracking-card-title: -0\.5px;/);
+  assert.match(ui, /export const CARD_TITLE = `\$\{MARK\} tracking-\[var\(--tracking-card-title\)\]`/);
+  assert.equal((ui.match(/var\(--font-title\)/g) ?? []).length, 2, "the card title composes the mark instead of naming the face");
+  assert.match(face, /\$\{CARD_TITLE\} break-words/, "and the one card uses it");
+});
+
+test("a sheet rises from the bottom, darkens once, and leaves the card readable behind it", () => {
+  assert.match(css, /dialog\.sheet \{[\s\S]*?margin: auto auto 0;/, "it sits on the bottom edge at every width");
+  assert.match(css, /max-height: min\(88dvh/, "and stops under the top of the screen");
+  const scrim = css.match(/--scrim: rgba\([^)]*,\s*([0-9.]+)\)/g) ?? [];
+  assert.ok(scrim.length >= 2);
+  for (const said of scrim) {
+    const strength = Number(said.match(/([0-9.]+)\)$/)?.[1]);
+    assert.ok(strength <= 0.5, `the page behind is darkened at ${strength}, which is a page nobody can read`);
+  }
+  assert.match(sheetFile, /onPointerDown/, "a sheet is dismissed by pulling it down, the gesture a sheet has");
+  assert.match(sheetFile, /if \(pulled > 80\) dialog\.current\?\.close\(\)/);
 });
 
 test("what the card writes is what the gift is made from, and it comes back the same", () => {
@@ -129,10 +213,9 @@ test("nothing on the card asks for an account, and the paying screen asks for on
 });
 
 test("a case opens in a sheet, and a sheet is a dialog rather than a page", () => {
-  const sheet = readFileSync("app/kit/Sheet.tsx", "utf8");
-  assert.match(sheet, /showModal\(\)/, "the browser keeps the focus inside it and Escape closes it");
-  assert.match(sheet, /onCancel=\{onClose\}/);
-  assert.match(sheet, /event\.target === dialog\.current/, "and pressing the backdrop leaves it");
+  assert.match(sheetFile, /showModal\(\)/, "the browser keeps the focus inside it and Escape closes it");
+  assert.match(sheetFile, /onCancel=\{onClose\}/);
+  assert.match(sheetFile, /event\.target === dialog\.current/, "and pressing the backdrop leaves it");
   for (const source of sheets) {
     assert.match(source, /<Sheet\n?\s+open=\{open\}/, "each case is drawn in a sheet");
     assert.doesNotMatch(source, /next\/link|router\./, "a case never becomes a page");
@@ -141,9 +224,11 @@ test("a case opens in a sheet, and a sheet is a dialog rather than a page", () =
   assert.equal(card.match(/open=\{open === "/g)?.length, 4);
 });
 
-test("the card says what is still missing rather than showing an action that cannot be pressed", () => {
-  assert.match(card, /\{W\.pay\(formatAusd\(units\)\)\}/);
-  assert.match(card, /\{W\.stillNeeded\}/);
-  assert.equal(OFFER.pay("$30.00"), "Pay $30.00");
-  assert.match(OFFER.invitation, /Nothing is asked of you until you pay/);
+test("the page without an account is one line, the card, and one line", () => {
+  const home = readFileSync("app/kit/Home.tsx", "utf8");
+  const signedOut = home.slice(home.indexOf("if (!address)"), home.indexOf("const moving ="));
+  assert.match(signedOut, /<h1 className=\{TITLE\}>\{W\.promise\}<\/h1>\s*<OfferCard \/>/, "the promise is above the card, in one line");
+  assert.match(signedOut, /<OfferCard \/>\s*<p className=\{PROSE\}>\{W\.promiseUnder\}<\/p>/, "and one sentence under it");
+  assert.doesNotMatch(signedOut, /promiseBody|howItWorks|exampleGift/, "no third paragraph, and no example of a gift beside a real one");
+  assert.match(signedOut, /min-h-\[68dvh\][\s\S]*justify-center/, "on a wide screen the card sits in the height rather than at the top of an empty page");
 });

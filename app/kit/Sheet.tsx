@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { HELP, TITLE } from "../components/ui";
 
 /**
@@ -32,6 +32,9 @@ export function Sheet({
 }>) {
   const dialog = useRef<HTMLDialogElement>(null);
   const labelId = useId();
+  /** Where a drag on the head began, and how far it has come: a sheet is dismissed by pulling it down. */
+  const from = useRef<number | null>(null);
+  const [pulled, setPulled] = useState(0);
 
   useEffect(() => {
     const element = dialog.current;
@@ -52,8 +55,28 @@ export function Sheet({
         if (event.target === dialog.current) dialog.current?.close();
       }}
     >
-      <div className="flex max-h-[inherit] flex-col">
-        <header className="flex items-start justify-between gap-[var(--space-md)] px-[var(--space-lg)] pt-[var(--space-lg)]">
+      <div className="flex max-h-[inherit] flex-col" style={pulled > 0 ? { transform: `translateY(${pulled}px)` } : undefined}>
+        <header
+          className="flex touch-none items-start justify-between gap-[var(--space-md)] px-[var(--space-lg)] pt-[var(--space-lg)]"
+          onPointerDown={(event) => {
+            from.current = event.clientY;
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            if (from.current === null) return;
+            setPulled(Math.max(0, event.clientY - from.current));
+          }}
+          onPointerUp={() => {
+            // Far enough to mean it, and the browser closes the sheet; short of that it settles back.
+            if (pulled > 80) dialog.current?.close();
+            from.current = null;
+            setPulled(0);
+          }}
+          onPointerCancel={() => {
+            from.current = null;
+            setPulled(0);
+          }}
+        >
           <div className="space-y-[var(--space-xs)]">
             <h2 id={labelId} className={TITLE}>
               {title}

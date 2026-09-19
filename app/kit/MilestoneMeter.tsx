@@ -10,14 +10,18 @@ import { Gaze } from "./Motion";
  * A picture of the sentence beside it, so it is hidden from a screen reader. Nothing is drawn as reached until the
  * keeper has read it reached.
  */
-export function milestoneCharacter(status: MilestoneStatus): CharacterState {
+/** Everything either of these two reads: a gift not yet made can say all of it truthfully. */
+export type MeterStatus = Pick<MilestoneStatus, "startReading" | "target" | "todayReading" | "reached" | "cancelled" | "finished" | "opened"> &
+  Partial<Pick<MilestoneStatus, "phase">>;
+
+export function milestoneCharacter(status: MeterStatus): CharacterState {
   if (status.reached) return "earned";
   if (status.cancelled || status.finished) return "returned";
   if (!status.opened) return "toCome";
   return "today";
 }
 
-export function MilestoneMeter({ status, startLabel, targetLabel, size = "small" }: Readonly<{ status: MilestoneStatus; startLabel?: string; targetLabel?: string; size?: "small" | "large" }>) {
+export function MilestoneMeter({ status, startLabel, targetLabel, size = "small" }: Readonly<{ status: MeterStatus; startLabel?: string; targetLabel?: string; size?: "small" | "large" }>) {
   const progress = milestoneProgress(status);
   const character = (
     <Character state={milestoneCharacter(status)} size={size} className={size === "large" ? "h-auto w-[72px] shrink-0" : "h-auto w-[24px] shrink-0"} />

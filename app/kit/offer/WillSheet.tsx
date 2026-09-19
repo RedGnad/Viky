@@ -9,7 +9,7 @@ import { checkSourceName } from "@/src/client/gift";
 import { ApiError } from "@/src/client/api";
 import { smallestTarget } from "@/src/milestone-terms";
 import { FUND, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
-import { HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
+import { HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { Field } from "../Field";
 import { Sheet } from "../Sheet";
@@ -175,7 +175,7 @@ export function WillSheet({
       }}
       footer={
         choosing || !condition ? undefined : (
-          <button type="button" className={PRIMARY_BUTTON} disabled={!ready} onClick={onClose}>
+          <button type="button" className={SECONDARY_BUTTON} disabled={!ready} onClick={onClose}>
             {W.done}
           </button>
         )
@@ -245,7 +245,7 @@ export function WillSheet({
               />
               {reading.cadenceRefusal ? <p className="font-semibold">{reading.cadenceRefusal}</p> : null}
               {draft.standing === undefined ? (
-                <button type="button" className={PRIMARY_BUTTON} disabled={reading.busy} onClick={() => void readRating()}>
+                <button type="button" className={SECONDARY_BUTTON} disabled={reading.busy} onClick={() => void readRating()}>
                   {reading.busy ? M.detail.reading : M.detail.read}
                 </button>
               ) : (

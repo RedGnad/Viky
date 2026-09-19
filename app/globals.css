@@ -25,7 +25,7 @@
   --control-border: #1E1633;
   --divider: #E0DCEB;
   /* What a sheet lays over the screen behind it: the ink, thinned, so the card is still read through it. */
-  --scrim: rgba(30, 22, 51, 0.55);
+  --scrim: rgba(30, 22, 51, 0.32);
   /* The fill of a button that is not the one action: quiet, and identified by its outline (K, rule 10). */
   --tonal: #E8E3F4;
 
@@ -71,6 +71,7 @@
   /* Letter spacing by role: tight on display, nothing on the body, open on a label (K, rule 5). */
   --tracking-body: 0;
   --tracking-label: 0.5px;
+  --tracking-card-title: -0.5px;
 
   /* One rhyme, the capsule: a button and a character are capsules, and every four-cornered thing shares one radius. */
   --radius-control: 28px;
@@ -145,7 +146,7 @@
     --accent-text: #F3F0FA;
     --control-border: #F3F0FA;
     --divider: #352C52;
-    --scrim: rgba(8, 6, 15, 0.7);
+    --scrim: rgba(8, 6, 15, 0.45);
     --tonal: #332A5E;
     --card-border: #352C52;
     --character-1: #FF8C98;
@@ -171,7 +172,7 @@
   --accent-text: #F3F0FA;
   --control-border: #F3F0FA;
   --divider: #352C52;
-  --scrim: rgba(8, 6, 15, 0.7);
+  --scrim: rgba(8, 6, 15, 0.45);
   --tonal: #332A5E;
   --card-border: #352C52;
   --character-1: #FF8C98;

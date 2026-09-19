@@ -706,7 +706,8 @@ export function PayGift() {
       {/* The card, read back: what it is, for whom, on what, for how long. Changing any of it happens on the card
           itself, so there are no "change" links here and no screen of rows to read twice (vision, section 6). */}
       <dl className="flex flex-col divide-y divide-[var(--divider)] border-y border-[var(--divider)]">
-        <Line label={W.check.rows.for} value={O.forNames(recipient, funder)} />
+        <Line label={W.check.rows.for} value={recipient} />
+        <Line label={W.check.rows.from} value={funder} />
         <Line label={W.check.rows.what} value={condition.name} />
         {subject ? <Line label={milestone?.condition.link.kind === "username" ? M.check.rows.name : certificate ? certificate.words.nameLabel : (condition.link.kind === "username" ? condition.link.row : "")} value={subject} /> : null}
         {milestone && cadence ? <Line label={M.check.rows.cadence} value={cadence.label} /> : null}
