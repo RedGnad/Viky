@@ -1,6 +1,5 @@
 "use client";
 import { useState, useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
 import { useAccount } from "@/src/account/provider";
 import { formatAusd } from "@/src/gift-reader";
 import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type CardCase, type GiftDraft } from "@/src/gift-draft";
@@ -13,6 +12,7 @@ import { DayStrip } from "../DayStrip";
 import { MilestoneMeter } from "../MilestoneMeter";
 import { AmountSheet } from "./AmountSheet";
 import { HowLongSheet } from "./HowLongSheet";
+import { PaySheet } from "./PaySheet";
 import { WhoSheet } from "./WhoSheet";
 import { WillSheet } from "./WillSheet";
 
@@ -29,7 +29,6 @@ const GIFT_ID = "offer";
 
 export function OfferCard() {
   const { address } = useAccount();
-  const router = useRouter();
   /**
    * The card itself, read from the device rather than copied into this screen (src/card-draft.ts). The server draws
    * an empty card and the browser draws what was kept, and React is told how to go from one to the other.
@@ -37,6 +36,8 @@ export function OfferCard() {
   const draft = useSyncExternalStore(subscribeToCardDraft, cardDraft, emptyCardDraft);
   const change = (next: GiftDraft) => writeCardDraft(next, address);
   const [open, setOpen] = useState<CardCase | null>(null);
+  /** Paying is the fifth sheet: it opens over the card, and the card stays behind it (the mockup pay.html). */
+  const [paying, setPaying] = useState(false);
 
   const filled = filledCases(draft);
   const units = draftUnits(draft);
@@ -144,7 +145,7 @@ export function OfferCard() {
                 type="button"
                 className={`${PRIMARY_BUTTON} mt-[var(--space-md)]`}
                 disabled={!ready || units === undefined}
-                onClick={() => router.push("/fund")}
+                onClick={() => setPaying(true)}
               >
                 {ready && units !== undefined ? W.pay(formatAusd(units)) : W.stillNeeded}
               </button>
@@ -159,6 +160,7 @@ export function OfferCard() {
       <WillSheet open={open === "will"} draft={draft} onChange={change} onClose={() => setOpen(null)} />
       <AmountSheet open={open === "amount"} draft={draft} onChange={change} onClose={() => setOpen(null)} />
       <HowLongSheet open={open === "howLong"} draft={draft} onChange={change} onClose={() => setOpen(null)} />
+      <PaySheet open={paying} draft={draft} onClose={() => setPaying(false)} />
     </>
   );
 }

@@ -3183,3 +3183,30 @@ behind an account cannot be photographed any other way.
 - **Day is not drawn yet.** It keeps the palette it had, and what does not work in it is written in the delivery
   rather than invented here: the white card stands at 1.09:1 on its ground and needs its hairline, there are no
   halos, and a case nobody has answered has no faint ink of its own.
+
+
+## D114, 19 Sep 2026: paying is a sheet over the card, and the wait is the whole screen
+
+- The rendered mockups pay.html and paying.html decide these two surfaces, and they replace what was left of the
+  eight step assistant: the check screen with its rows and its two cards of figures, and the account step before it.
+- **The sheet says three lines and no fourth**: what goes in their name, what the card service charges, and that
+  Viky takes nothing. Then what this person actually pays, in their own money, at a rate with a day on it. Then the
+  sentence that says the account is made by their face or their fingerprint at the press, and nothing was asked of
+  them until then. One action in the sun, full width.
+- **What the old screen promised is still promised**, where the money is about to move: the link warning stays in
+  front of everybody, and what only some readers need went behind the mockup's second, quiet button, "What happens
+  to my money": what this condition pays for, the two names on the gift, the fourteen days, the service's own fee
+  and the day it was read.
+- **The second way in is not hidden** (D101), it is under the action: "Pay with Mercuryo instead". The image draws
+  one action and one price, and two cards of figures in front of a person choosing neither is what it replaced.
+- **The wait is the whole screen** (paying.html): the ring at 54 pixels, what is being done in the title face under
+  it, how long it takes and what closing the page costs, and the gift itself, small, so the thing being made never
+  leaves the screen.
+- **The account panel is the fallback, in place**: a device that cannot make a passkey, or somebody who waved the
+  sheet away, gets the panel inside the sheet rather than a screen of its own.
+- **Day is drawn now** (home-light.html): the ground is the lavender `#DDD6EB`, the card is the same cream as night
+  with a softer shadow and a warm hairline, the halos are there, a case nobody has answered is the same faint ink,
+  and the shut action keeps its filled shape. The neutral-ground rule of the tokens is retired: what a card has to
+  do is stand off its ground, which is measured at 1.31:1 by day and 17.2:1 by night.
+- What this does not change: no route, no contract, no reading, no word of the register. The money path is the one
+  that has run since D33, D42, D74 and D87.

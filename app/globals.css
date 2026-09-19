@@ -14,8 +14,9 @@
  */
 
 :root {
-  /* Day: a cool neutral ground, a white surface, indigo ink, one sun. Every pair is measured in the tokens file. */
-  --background: #F6F4FB;
+  /* Day, as the rendered mockup home-light.html draws it: a lavender ground, the same cream card as night, and the
+     ink on it. Every pair is measured in the tokens file. */
+  --background: #DDD6EB;
   --surface: #FFFFFF;
   --text: #1E1633;
   --muted: #5B5470;
@@ -29,20 +30,21 @@
 
   /*
    * The card, and what reads on it (the rendered mockups of 19 Sep 2026). A card is the light object on the ground,
-   * never the same value as it. Day is not drawn yet, so it keeps the palette it had: a white card, the ink on it,
-   * and the hairline that was measured to be needed because white on this ground is 1.09:1.
+   * never the same value as it: the same cream paper in both appearances, on the ink ground by night and on the
+   * lavender one by day. Measured on the day ground: the cream stands at 1.31:1, where the white it replaced stood
+   * at 1.09:1 and needed a hairline of ink to be seen at all.
    */
-  --paper: #FFFFFF;
-  --paper-raised: #FFFFFF;
+  --paper: #FFF6E2;
+  --paper-raised: #FFFBF0;
   /* What the chosen option of a list is filled with, on the paper it sits on. */
-  --chosen: #F6F4FB;
-  --on-surface: #1E1633;
-  --on-surface-body: #1E1633;
-  --on-surface-muted: #5B5470;
-  --on-surface-faint: #5B5470;
-  --surface-rule: #E0DCEB;
-  --card-edge: var(--control-border);
-  --card-shadow: none;
+  --chosen: #FFF3D6;
+  --on-surface: #151026;
+  --on-surface-body: #4A4130;
+  --on-surface-muted: #7C6C3F;
+  --on-surface-faint: #96844F;
+  --surface-rule: #EADFC2;
+  --card-edge: #F0E3C2;
+  --card-shadow: 0 16px 40px rgba(30, 22, 51, 0.2);
   /* Under the one action, three pixels of it, which is the sun with its light taken out. */
   --sun-deep: #E8A400;
   --action-relief-depth: 3px;
@@ -51,9 +53,9 @@
    * the tokens of that morning said, and the founder settled it on the image (D113). Its words are darker than the
    * image's #9A8B62, which measures 2.64:1 on this fill where a word needs 4.5:1.
    */
-  --action-off: #E8E3F4;
-  --action-off-deep: #CFC7E6;
-  --action-off-ink: #5B5470;
+  --action-off: #EFE3C4;
+  --action-off-deep: #DCCFA8;
+  --action-off-ink: #6F6133;
 
   /*
    * The card's own three sizes, taken from the rendered mockups of 19 Sep 2026 rather than from the scale: the name
@@ -68,6 +70,8 @@
   --type-card-label: 11px;
   --type-card-label-tracking: 1.3px;
   --type-action: 17px;
+  --type-say: 26px;
+  --type-say-leading: 30px;
   --type-hero: 36px;
   --type-hero-leading: 38px;
   --type-hero-tracking: -0.9px;
@@ -192,24 +196,9 @@
     --control-border: #F3F0FA;
     --divider: #352C52;
     --scrim: rgba(8, 6, 15, 0.5);
-    /* The card is cream on the ink ground, with a shadow and no edge: the mockups of 19 Sep 2026. */
-    --paper: #FFF6E2;
-    --paper-raised: #FFFBF0;
-    --chosen: #FFF3D6;
-    --on-surface: #151026;
-    --on-surface-body: #4A4130;
-    /* The mockup says #907F52, which measures 3.66:1 on this cream: under the 4.5:1 a small line needs. */
-    --on-surface-muted: #7C6C3F;
-    /* And #B5A67C for a case nobody has answered, which is 2.24:1: this is the same colour at the 3:1 large text asks. */
-    --on-surface-faint: #96844F;
-    --surface-rule: #EADFC2;
+    /* The same cream card as day, with a deeper shadow and no edge: on the ink ground it needs neither. */
     --card-edge: transparent;
     --card-shadow: 0 20px 44px rgba(0, 0, 0, 0.5);
-    --sun-deep: #E8A400;
-    /* The shut action on cream, as the mockups draw it, in words dark enough to read on it. */
-    --action-off: #EFE3C4;
-    --action-off-deep: #DCCFA8;
-    --action-off-ink: #6F6133;
     --tonal: #332A5E;
     --card-border: #352C52;
     --character-1: #FF8C98;
@@ -234,25 +223,11 @@
   --on-accent: #151026;
   --accent-text: #F3F0FA;
   --control-border: #F3F0FA;
-    --divider: #352C52;
+  --divider: #352C52;
   --scrim: rgba(8, 6, 15, 0.5);
-  /* The card is cream on the ink ground, with a shadow and no edge: the mockups of 19 Sep 2026. */
-  --paper: #FFF6E2;
-  --paper-raised: #FFFBF0;
-  --chosen: #FFF3D6;
-  --on-surface: #151026;
-  --on-surface-body: #4A4130;
-  /* The mockup says #907F52, which measures 3.66:1 on this cream: under the 4.5:1 a small line needs. */
-  --on-surface-muted: #7C6C3F;
-  /* And #B5A67C for a case nobody has answered, which is 2.24:1: this is the same colour at the 3:1 large text asks. */
-  --on-surface-faint: #96844F;
-  --surface-rule: #EADFC2;
+  /* The same cream card, with a deeper shadow and no edge: on the ink ground it needs neither. */
   --card-edge: transparent;
   --card-shadow: 0 20px 44px rgba(0, 0, 0, 0.5);
-  --sun-deep: #E8A400;
-  --action-off: #EFE3C4;
-  --action-off-deep: #DCCFA8;
-  --action-off-ink: #6F6133;
   --tonal: #332A5E;
   --card-border: #352C52;
   --character-1: #FF8C98;
@@ -353,6 +328,15 @@ video {
   animation: working-turn 900ms linear infinite;
 }
 
+/* The same ring at the size the mockup paying.html draws it, above what it is doing rather than beside it. */
+.working-ring-large {
+  width: 54px;
+  height: 54px;
+  border-width: 5px;
+  border-color: color-mix(in srgb, var(--text) 18%, transparent);
+  border-top-color: var(--accent);
+}
+
 @keyframes working-turn {
   to {
     transform: rotate(360deg);
@@ -382,13 +366,11 @@ video {
 
 /*
  * The ground carries two halos, very diffuse, the sun at the top right and the violet at the bottom left, and no
- * texture and no grain (the mockups, point 7). They are painted behind everything, they catch no press, and day is
- * left alone until it is drawn.
+ * texture and no grain (the mockups, point 7). They are painted behind everything and they catch no press. Day has
+ * them too since home-light.html, a little further out and with the violet a little stronger.
  */
-:root:not([data-theme="light"]) body::before,
-:root:not([data-theme="light"]) body::after,
-:root[data-theme="dark"] body::before,
-:root[data-theme="dark"] body::after {
+body::before,
+body::after {
   content: "";
   position: fixed;
   z-index: -1;
@@ -398,8 +380,7 @@ video {
   pointer-events: none;
 }
 
-:root:not([data-theme="light"]) body::before,
-:root[data-theme="dark"] body::before {
+body::before {
   width: 460px;
   height: 460px;
   top: -230px;
@@ -407,8 +388,7 @@ video {
   background: var(--accent);
 }
 
-:root:not([data-theme="light"]) body::after,
-:root[data-theme="dark"] body::after {
+body::after {
   width: 420px;
   height: 420px;
   bottom: -200px;
@@ -416,11 +396,29 @@ video {
   background: var(--character-3);
 }
 
+/* Day carries them too, a little further out and the violet a little stronger (home-light.html). */
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) body::before,
-  :root:not([data-theme="dark"]) body::after {
-    content: none;
+  :root:not([data-theme="dark"]) body::before {
+    top: -280px;
+    right: -210px;
   }
+
+  :root:not([data-theme="dark"]) body::after {
+    bottom: -200px;
+    left: -190px;
+    opacity: 0.22;
+  }
+}
+
+:root[data-theme="light"] body::before {
+  top: -280px;
+  right: -210px;
+}
+
+:root[data-theme="light"] body::after {
+  bottom: -200px;
+  left: -190px;
+  opacity: 0.22;
 }
 
 /*
@@ -440,6 +438,10 @@ dialog.sheet {
   border-radius: var(--radius-card) var(--radius-card) 0 0;
   overflow: hidden;
   box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.5);
+}
+
+dialog.sheet-tall {
+  max-height: 82dvh;
 }
 
 dialog.sheet::backdrop {

@@ -95,6 +95,46 @@ export const OFFER = {
   },
 } as const;
 
+/**
+ * Paying for the gift on the card, and the wait while it is made (the rendered mockups pay.html and paying.html of
+ * 19 Sep 2026, which are the specification for these two surfaces).
+ *
+ * Three lines and no more: what goes in their name, what the card service keeps, and what Viky keeps, which is
+ * nothing. Then what this person actually pays, in their own money and at a dated rate, and the sentence that says
+ * when the account is made, which is at the press and not before.
+ */
+export const PAY = {
+  title: (recipient: string) => `Pay for ${their(recipient)} gift`,
+  rows: {
+    gift: (recipient: string) => `The gift, in ${their(recipient)} name`,
+    service: (name: string) => `What ${name} charges`,
+    viky: "Viky takes",
+    fromAccount: "From your account",
+  },
+  nothing: "nothing",
+  about: "about",
+  aboutDollars: (dollars: number) => `about $${dollars.toFixed(2)}`,
+  youPay: "You pay about",
+  euros: (euros: number) => `${euros} EUR`,
+  atTheRate: (day: string) => `at the rate of ${day}`,
+  /** Said before the action, because it is what pressing it does: nothing was asked of this person until now. */
+  passkeyMakesTheAccount: "Your face or your fingerprint creates your account when you press pay. Nothing was asked of you until now.",
+  signedIn: "Your face or your fingerprint is asked once, to sign what you are paying for.",
+  pay: "Pay",
+  payEuros: (euros: number) => `Pay ${euros} EUR`,
+  payFromAccount: (amount: string) => `Put ${amount} in their name`,
+  paying: "One moment",
+  another: (name: string) => `Pay with ${name} instead`,
+  /** The quiet second button of the mockup: everything only some readers need, one press away. */
+  whatHappens: "What happens to my money",
+  notMade: "That did not go through, and nothing was taken. Try again.",
+  /** The wait, while the gift is being made: what is happening, how long, and what closing the page costs. */
+  putting: (amount: string, recipient: string) => `Putting ${amount} in ${their(recipient)} name.`,
+  takesSeconds: "It takes a few seconds. You can close this page: the gift will be in your gifts, with its link.",
+  /** The card, small, under the wait: what is being made, in one line. */
+  mini: (condition: string, amount: string, days: number) => `${condition} · ${amount} for ${days} ${days === 1 ? "day" : "days"}`,
+} as const;
+
 /** Home: the money, the one action, the way out, and what is moving. */
 export const HOME = {
   /** The promise, as the rendered mockups of 19 Sep 2026 write it: three short lines in the title face. */

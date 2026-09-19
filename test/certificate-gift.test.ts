@@ -166,10 +166,10 @@ test("the funder's review says what the certificate must show, and what happens 
   assert.match(said, /120 or more/);
   assert.match(said, /test date inside these days/);
   assert.match(DET_MILESTONE.words.ifNot, /comes back to you/);
-  // Said where the money is about to move, which since 19 Sep 2026 is the paying screen rather than a review step.
-  const screen = readFileSync("app/components/PayGift.tsx", "utf8");
-  assert.match(screen, /certificate\.words\.mustShow\(subject, target\)/);
-  assert.match(screen, /certificate\.words\.ifNot/);
+  // Said where the money is about to move, which since the mockups of 19 Sep 2026 is the sheet that pays.
+  const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
+  assert.match(sheet, /certificate\.words\.mustShow\(draft\.subject\.trim\(\), target\)/);
+  assert.match(sheet, /certificate\.words\.ifNot/);
 });
 
 test("a gift on this result ends well inside the two years, on the screen as in the register", () => {

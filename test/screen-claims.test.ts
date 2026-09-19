@@ -139,9 +139,10 @@ test("a payment that outlasts the session is used where it sits, and the waiting
   }
   const pay = readFileSync("app/components/PayGift.tsx", "utf8");
   assert.doesNotMatch(pay, /address!/, "a closed session leaves no account to read");
-  // The terms are written down before the rail opens, and forgotten once the gift is made.
-  // Since D101 the rail is the one the funder pressed, so the page opened is that rail's own.
-  assert.ok(pay.indexOf("savePendingGift(") > 0 && pay.indexOf("savePendingGift(") < pay.indexOf('window.open(way.page'));
+  // The terms are written down before the service's page opens, which since the mockups of 19 Sep 2026 both happen
+  // inside the sheet that pays, in that order and in the same press.
+  const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
+  assert.ok(sheet.indexOf("savePendingGift(") > 0 && sheet.indexOf("savePendingGift(") < sheet.indexOf("window.open(way.page"));
   const give = pay.slice(pay.indexOf("const give = useCallback"), pay.indexOf("// While paying: watch the account"));
   assert.match(give, /forgetPendingGift\(\)/);
 });
@@ -344,17 +345,20 @@ test("the legal notice says exactly what the program lets the operator do, and n
  * what a person does next stayed in front of everybody (GOV.UK Details: "make a page easier to scan when it contains
  * information that only some users will need", never for what the majority must read).
  */
-test("on the paying screen, the link warning is in the body and the rest is one press away", () => {
-  const fund = readFileSync("app/components/PayGift.tsx", "utf8");
-  const check = fund.slice(fund.indexOf("W.check.linkRisk"), fund.indexOf("W.check.payingWith"));
+test("on the sheet that pays, the link warning is in the body and the rest is one press away", () => {
+  const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   // The sentence that changes what a person does next is read without pressing anything.
-  assert.match(check, /^W\.check\.linkRisk\(recipient\)\}<\/p>\s*<details>/);
-  // The two that only some readers need are inside it, and still there.
-  const inside = check.slice(check.indexOf("<details>"), check.indexOf("</details>"));
-  assert.match(inside, /W\.check\.namesSeen/);
+  assert.match(sheet, /\{FUND\.check\.linkRisk\(recipient\)\}<\/p>\s*<details>/);
+  // What only some readers need is inside the disclosure the mockup draws as a second, quiet button, and all of it
+  // is still there: what this condition promises, the two names, the fourteen days, the fee and where it was read.
+  const inside = sheet.slice(sheet.indexOf("<details>"), sheet.indexOf("</details>"));
+  assert.match(inside, /FUND\.check\.namesSeen/);
   assert.match(inside, /fourteenDays/);
-  // Each way in keeps its figures and its fee in the open, and the explanation behind its own disclosure.
-  const ways = fund.slice(fund.indexOf("W.check.payingWith"));
-  assert.match(ways, /<p className=\{HELP\}>\{feeSentence\(way\)\}\.<\/p>\s*<details>/);
-  for (const said of ["nothingToSwap", "smallest", "sourceLine"]) assert.match(ways, new RegExp(`<details>[\\s\\S]*?${said}[\\s\\S]*?</details>`));
+  assert.match(inside, /feeSentence\(way\)/);
+  assert.match(inside, /CASH_OUT\.sourceLine/);
+  assert.match(inside, /mustShow|howItWorks|check\.missed/);
+  // And what the sheet says in the open is what the mockup says in the open: three lines, the total, the passkey.
+  for (const said of ["W.rows.gift(recipient)", "W.rows.viky", "W.youPay", "W.passkeyMakesTheAccount"]) {
+    assert.ok(sheet.includes(said), `the sheet says ${said}`);
+  }
 });

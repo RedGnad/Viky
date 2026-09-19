@@ -71,7 +71,7 @@ async function main() {
 
       await page.getByRole("button", { name: /^Pay / }).click();
       await page.waitForTimeout(1500);
-      await shot("08-pay");
+      await shot("08-pay-sheet");
       await context.close();
     }
   }
