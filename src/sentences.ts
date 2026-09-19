@@ -531,7 +531,7 @@ export const MILESTONE_FUND = {
     terms: (amount: string, goal: string, days: number, source: string) =>
       `${amount} when they reach ${goal}, within ${days} ${days === 1 ? "day" : "days"} of connecting ${source}. All of it, at once, or all of it back to you.`,
     /**
-     * What the recipient is asked for depends on who named the account (D27, D104): one the funder named binds on its
+     * What the recipient is asked for depends on who named the account (D27, D104 bis): one the funder named binds on its
      * first reading and asks nothing of the profile, and only an account they name themselves carries a code. This
      * screen promised a code either way until 19 Sep 2026, which was false for every gift made with a name.
      */

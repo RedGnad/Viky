@@ -29,7 +29,7 @@ import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui"
  *
  * Opening, connecting and taking are the milestone contract's own steps (C2). The recipient opens the link and starts
  * the first reading, which is where they start; a code is asked only where they named the account themselves (D27,
- * D104), because an account the funder named needs nothing proved about it. After that they only play: Viky
+ * D104 bis), because an account the funder named needs nothing proved about it. After that they only play: Viky
  * reads the rating every day, and the first reading at the target makes all of it theirs. Taking it has a review
  * before and a confirmation after (rule E of the specification). No gesture is offered that the route cannot answer.
  */

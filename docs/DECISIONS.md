@@ -8,6 +8,11 @@ working: that is only said after the fiat chain has run once end to end on mainn
 Format: `D<n>` id, date, tier of the source (`[O]` official page or direct measurement, `[P]` third
 party platform or API, `[U]` not verified).
 
+One number carries two entries. On 18 Sep 2026 two decisions were both written as D104, the way out naming an
+amount and the code that proves an account. The second is now **D104 bis**, and nothing else is renumbered: an
+id here is quoted in the code and in the other documents, so moving one would make every line that names it
+point at another decision.
+
 ## D1, 9 Sep 2026, the Lock-in source is a private GitHub repository, not a sibling folder
 
 - Statement: `../Lock-in` does not exist on this machine. The source of the ported code is
@@ -2975,7 +2980,7 @@ behind an account cannot be photographed any other way.
   "Less than 0.01 of what Mercuryo buys stays in your account." on the other. `dustInWords` had no other caller and is
   gone.
 
-## D104, 18 Sep 2026: a code proves an account only when its own recipient named it
+## D104 bis, 18 Sep 2026: a code proves an account only when its own recipient named it
 
 - Statement: D27 said it on 11 Sep, for Duolingo: the funder enters the username if they know it, otherwise the
   recipient enters it and proves control with a code in their display name. The daily path followed that rule. The
