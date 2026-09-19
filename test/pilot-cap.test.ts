@@ -52,6 +52,7 @@ test("the contracts keep their own hundred thousand, and nothing here pretends t
 test("the funder reads the rule where the amount is chosen, in the words the refusal uses", () => {
   assert.equal(PILOT_CAP_SENTENCE, "During the pilot, a gift is at most $1,000.");
   assert.equal(FUND.amount.pilotCap, PILOT_CAP_SENTENCE, "the step and the field say one thing, not two");
-  const screen = readFileSync("app/components/FundGift.tsx", "utf8");
-  assert.match(screen, /W\.amount\.pilotCap/, "the amount step says it");
+  // Said on the sheet where the amount is typed, under its own title, before a figure can be refused.
+  const sheet = readFileSync("app/kit/offer/AmountSheet.tsx", "utf8");
+  assert.match(sheet, /help=\{PILOT_CAP_SENTENCE\}/, "the sheet that takes the amount says it");
 });

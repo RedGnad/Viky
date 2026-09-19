@@ -137,12 +137,12 @@ test("a payment that outlasts the session is used where it sits, and the waiting
     const converts = nextFundingStep({ held: 0n, arriving, wanted: 25_000_000n }).do === "convert";
     assert.equal(converts, paymentArrived(arriving), `${arriving}`);
   }
-  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
-  assert.doesNotMatch(fund, /address!/, "a closed session leaves no account to read");
+  const pay = readFileSync("app/components/PayGift.tsx", "utf8");
+  assert.doesNotMatch(pay, /address!/, "a closed session leaves no account to read");
   // The terms are written down before the rail opens, and forgotten once the gift is made.
   // Since D101 the rail is the one the funder pressed, so the page opened is that rail's own.
-  assert.ok(fund.indexOf("savePendingGift(") > 0 && fund.indexOf("savePendingGift(") < fund.indexOf('window.open(way.page'));
-  const give = fund.slice(fund.indexOf("const give = useCallback"), fund.indexOf("// While the payment page is open"));
+  assert.ok(pay.indexOf("savePendingGift(") > 0 && pay.indexOf("savePendingGift(") < pay.indexOf('window.open(way.page'));
+  const give = pay.slice(pay.indexOf("const give = useCallback"), pay.indexOf("// While paying: watch the account"));
   assert.match(give, /forgetPendingGift\(\)/);
 });
 
@@ -231,7 +231,7 @@ test("money screens keep the session open thirty minutes, everything else ten (d
   const mera = readFileSync("src/account/mera.ts", "utf8");
   assert.match(mera, /DEFAULT_IDLE_MINUTES = 10;/);
   assert.match(mera, /MONEY_SCREEN_IDLE_MINUTES = 30;/);
-  for (const screen of ["app/components/CashOut.tsx", "app/components/FundGift.tsx", "app/components/GiftPage.tsx"]) {
+  for (const screen of ["app/components/CashOut.tsx", "app/components/PayGift.tsx", "app/components/GiftPage.tsx"]) {
     assert.match(readFileSync(screen, "utf8"), /useMoneySession\(\);/, `${screen} is a money screen`);
   }
 });
@@ -344,8 +344,8 @@ test("the legal notice says exactly what the program lets the operator do, and n
  * what a person does next stayed in front of everybody (GOV.UK Details: "make a page easier to scan when it contains
  * information that only some users will need", never for what the majority must read).
  */
-test("on the check, the link warning is in the body and the rest is one press away", () => {
-  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
+test("on the paying screen, the link warning is in the body and the rest is one press away", () => {
+  const fund = readFileSync("app/components/PayGift.tsx", "utf8");
   const check = fund.slice(fund.indexOf("W.check.linkRisk"), fund.indexOf("W.check.payingWith"));
   // The sentence that changes what a person does next is read without pressing anything.
   assert.match(check, /^W\.check\.linkRisk\(recipient\)\}<\/p>\s*<details>/);

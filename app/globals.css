@@ -24,6 +24,8 @@
   --accent-text: #1E1633;
   --control-border: #1E1633;
   --divider: #E0DCEB;
+  /* What a sheet lays over the screen behind it: the ink, thinned, so the card is still read through it. */
+  --scrim: rgba(30, 22, 51, 0.55);
 
   /* The characters' own colours, never text and never a background (brief, section 5). */
   --character-1: #FF7F8E;
@@ -130,6 +132,7 @@
     --accent-text: #F3F0FA;
     --control-border: #F3F0FA;
     --divider: #352C52;
+    --scrim: rgba(8, 6, 15, 0.7);
     --card-border: #352C52;
     --character-1: #FF8C98;
     --character-2: #6DBDFB;
@@ -154,6 +157,7 @@
   --accent-text: #F3F0FA;
   --control-border: #F3F0FA;
   --divider: #352C52;
+  --scrim: rgba(8, 6, 15, 0.7);
   --card-border: #352C52;
   --character-1: #FF8C98;
   --character-2: #6DBDFB;
@@ -254,6 +258,40 @@ video {
 @keyframes working-turn {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/*
+ * A sheet, where a case of the card is filled in (the product vision of 19 Sep 2026, section 4). It sits on the
+ * bottom edge on a phone and centred on a wide screen, takes the surface colour and the card's own radius at the
+ * top, and never covers the whole height: what is behind it stays visible, which is the point of a sheet rather
+ * than a page. The rise answers the press that opened it and plays once; a device asking for reduced motion gets
+ * none of it, through the query at the end of this file.
+ */
+dialog.sheet {
+  margin: auto auto 0;
+  width: min(100%, 560px);
+  max-height: min(88dvh, 760px);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background: var(--surface);
+  color: var(--text);
+  overflow: hidden;
+}
+
+dialog.sheet::backdrop {
+  background: var(--scrim);
+}
+
+dialog.sheet[open] {
+  animation: sheet-rise 300ms cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+
+@keyframes sheet-rise {
+  from {
+    transform: translateY(24px);
+    opacity: 0.4;
   }
 }
 

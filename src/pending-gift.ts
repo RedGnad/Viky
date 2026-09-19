@@ -21,6 +21,11 @@ export const PENDING_GIFT_STORAGE_KEY = "viky.pendingGift";
 export const PENDING_GIFT_MAX_AGE_MS = 72 * 60 * 60 * 1000;
 
 export type PendingGiftTerms = Readonly<{
+  /**
+   * Whose gift it is. Empty means nobody's yet: since the vision of 19 Sep 2026 the card on Home is filled in before
+   * anything is asked of a visitor, so a gift can be written down here with no account behind it. It takes the
+   * account's name when that person signs in to pay, and a gift held for an account is still never handed to another.
+   */
   account: string;
   recipientName: string;
   funderName: string;
@@ -48,7 +53,7 @@ export function pendingGiftToStore(terms: PendingGiftTerms, nowMs: number): stri
 
 /** The gift to pick up again for this account now, or nothing: another account's, an old one, or anything unreadable. */
 export function pendingGiftFor(raw: string | null, account: string | undefined, nowMs: number): PendingGift | undefined {
-  if (!raw || !account) return undefined;
+  if (!raw) return undefined;
   let value: unknown;
   try {
     value = JSON.parse(raw);
@@ -76,10 +81,12 @@ export function pendingGiftFor(raw: string | null, account: string | undefined, 
     ...(text("standingReadAt") !== undefined ? { standingReadAt: text("standingReadAt") } : {}),
     savedAtMs: typeof record.savedAtMs === "number" ? record.savedAtMs : undefined,
   };
-  if (!gift.account || gift.username === undefined || !gift.dollars || !gift.days || !gift.target || gift.savedAtMs === undefined) {
+  if (gift.account === undefined || gift.username === undefined || !gift.dollars || !gift.days || !gift.target || gift.savedAtMs === undefined) {
     return undefined;
   }
-  if (gift.account !== account.toLowerCase()) return undefined;
+  // A gift nobody has claimed yet is picked up by whoever signs in on this device; one already held for an account
+  // is never handed to another, which is the rule D74 was written for.
+  if (gift.account !== "" && gift.account !== account?.toLowerCase()) return undefined;
   // Saved in the future is not a gift anybody set up; saved too long ago is not one they are still waiting on.
   if (gift.savedAtMs > nowMs + 60_000 || nowMs - gift.savedAtMs > PENDING_GIFT_MAX_AGE_MS) return undefined;
   // Terms the gift itself would refuse are not picked up either.
@@ -109,7 +116,60 @@ export function pendingGiftExists(raw: string | null, nowMs: number): boolean {
   }
   const record = value as Record<string, unknown> | null;
   const account = record && typeof record.account === "string" ? record.account : undefined;
-  return account !== undefined && pendingGiftFor(raw, account, nowMs) !== undefined;
+  return account !== undefined && pendingGiftFor(raw, account || undefined, nowMs) !== undefined;
+}
+
+/**
+ * The card as it is being filled in, whatever state it is in (the vision of 19 Sep 2026, section 6).
+ *
+ * The readers above answer one question, "is there a gift here that could be paid for now", and they refuse anything
+ * incomplete, which is right: nothing half written should be picked up as a gift waiting for money. The card asks a
+ * different question, "what was this person writing", and a card with two cases filled is exactly that. Same place on
+ * the device, same age limit, no completeness.
+ */
+export function saveCardDraft(terms: PendingGiftTerms): boolean {
+  return savePendingGift(terms);
+}
+
+export function loadCardDraft(nowMs: number = Date.now()): PendingGiftTerms | undefined {
+  let raw: string | null = null;
+  try {
+    raw = window.localStorage.getItem(PENDING_GIFT_STORAGE_KEY);
+  } catch {
+    return undefined;
+  }
+  return cardDraftFrom(raw, nowMs);
+}
+
+/** Pure, so the rule about what survives a reload is a test rather than a thing the browser knows. */
+export function cardDraftFrom(raw: string | null, nowMs: number): PendingGiftTerms | undefined {
+  if (!raw) return undefined;
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+  const text = (key: string) => (typeof record[key] === "string" ? (record[key] as string) : undefined);
+  const savedAtMs = typeof record.savedAtMs === "number" ? record.savedAtMs : undefined;
+  if (savedAtMs === undefined || savedAtMs > nowMs + 60_000 || nowMs - savedAtMs > PENDING_GIFT_MAX_AGE_MS) return undefined;
+  return {
+    account: text("account") ?? "",
+    recipientName: text("recipientName") ?? "",
+    funderName: text("funderName") ?? "",
+    conditionId: text("conditionId") ?? "",
+    username: text("username") ?? "",
+    dollars: text("dollars") ?? "",
+    days: text("days") ?? "",
+    target: text("target") ?? "",
+    ...(text("course") !== undefined ? { course: text("course") } : {}),
+    ...(text("courseTitle") !== undefined ? { courseTitle: text("courseTitle") } : {}),
+    ...(text("cadence") !== undefined ? { cadence: text("cadence") } : {}),
+    ...(typeof record.standing === "number" ? { standing: record.standing } : {}),
+    ...(text("standingReadAt") !== undefined ? { standingReadAt: text("standingReadAt") } : {}),
+  };
 }
 
 /** Writes the terms down, and says whether the device kept them: private browsing can refuse. */

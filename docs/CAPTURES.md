@@ -149,6 +149,13 @@ A signed-in session lives in memory, so a direct navigation signs a page out. Wh
 
 ### funder
 
+**Since 19 Sep 2026 these states are of a journey that no longer exists.** The gift is filled in on the card on Home
+(D110), so the scenarios below, which press "Offer a gift" and then Continue through five questions, drive screens
+that were deleted with `FundGift.tsx`. They are kept here as the "before" of the measure in
+`docs/reports/2026-09-19-the-card.md` until `scripts/capture-scenarios.ts` is rewritten on the card. What replaces
+them for the card itself is `pnpm review:capture-card`, which fills the four cases and photographs each sheet at
+both sizes in both appearances.
+
 #### account step
 
 - Path: Not signed in, on the home page: Offer a gift, type a Duolingo name, Continue, Continue, Continue

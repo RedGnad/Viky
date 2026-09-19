@@ -49,8 +49,8 @@ test("the device says a gift is waiting without naming whose it is", () => {
  * the drawn flows (F8), the screen after a closed session offers signing in and nothing else.
  */
 test("on the screen after a closed session, signing in is the only thing offered", () => {
-  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
-  assert.match(fund, /<AccountPanel returning signInOnly \/>/);
+  const pay = readFileSync("app/components/PayGift.tsx", "utf8");
+  assert.match(pay, /<AccountPanel returning signInOnly \/>/);
   const panel = readFileSync("app/components/AccountPanel.tsx", "utf8");
   assert.match(panel, /className=\{returning \? PRIMARY_BUTTON : SECONDARY_BUTTON\}/, "sign in leads when somebody comes back");
   assert.match(panel, /className=\{returning \? SECONDARY_BUTTON : PRIMARY_BUTTON\}/, "and making an account follows it");
@@ -58,21 +58,25 @@ test("on the screen after a closed session, signing in is the only thing offered
 
 /** What is kept is what the gift is made from, and nothing else: D72 asks for no contact, so none is kept or sent. */
 test("the terms kept are exactly the terms the gift is made from", () => {
-  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
-  const kept = fund.slice(fund.indexOf("savePendingGift({"), fund.indexOf("}),", fund.indexOf("savePendingGift({")));
-  for (const field of ["recipientName: recipient", "funderName: funder", "conditionId: condition?.id", "username: draft.username.trim()", "dollars", "days: draft.days", "target: draft.target", "course: draft.course"]) {
-    assert.ok(kept.includes(field), `the device keeps ${field}`);
+  // Since the card of 19 Sep 2026 the terms are written by one function, `draftToTerms`, which the card, the paying
+  // screen and the tests all read: the device cannot keep something the gift is not made from.
+  const terms = readFileSync("src/gift-draft.ts", "utf8");
+  const written = terms.slice(terms.indexOf("export function draftToTerms"), terms.indexOf("export function draftFromTerms"));
+  for (const field of ["recipientName: draft.recipientName", "funderName: draft.funderName", "conditionId: draft.conditionId", "username: draft.subject", "dollars: draft.dollars", "days: draft.days", "target: draft.target", "course: draft.course"]) {
+    assert.ok(written.includes(field), `the device keeps ${field}`);
   }
-  const call = fund.slice(fund.indexOf("await prepareGift({"), fund.indexOf("const record: Made"));
+  const pay = readFileSync("app/components/PayGift.tsx", "utf8");
+  assert.match(pay, /savePendingGift\(\{ \.\.\.draftToTerms\(next, address\), wayIn: way\.name \}\)/, "and the way in that was pressed");
+  const call = pay.slice(pay.indexOf("await prepareGift({"), pay.indexOf("const record: Made"));
   assert.match(call, /duolingoUsername: terms\.username \|\| undefined/);
   assert.match(call, /recipientName: recipient/);
   assert.match(call, /funderName: funder/);
   // Since U1 the goal type is part of the terms signed, because a gift counted on one course is its own goal.
   assert.match(call, /goalType: terms\.goalType/);
   assert.match(call, /course: terms\.course \|\| undefined/);
-  assert.match(call, /dailyTarget: daily\.target/);
-  assert.match(call, /durationDays: length\.days/);
-  assert.match(call, /amount: amount\.units/);
+  assert.match(call, /dailyTarget: target/);
+  assert.match(call, /durationDays: days/);
+  assert.match(call, /amount: units/);
   assert.doesNotMatch(call, /contact/i, "no contact is asked for, kept or sent (D72)");
 });
 

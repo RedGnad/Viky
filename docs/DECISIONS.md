@@ -3082,3 +3082,27 @@ behind an account cannot be photographed any other way.
   stays a condition whose source has a question to answer about reading its pages.
 - What this does not loosen: no screen claims a gift has settled that has not, the judges page still carries what each
   condition proves and does not prove, and a condition with no reading behind it is not written here at all.
+
+## D110, 19 Sep 2026: the gift is an object on the first page, not a journey to it
+
+- Statement, the founder's, after the product vision of 19 Sep 2026: Viky opens on a gift to fill in. The first
+  screen is the product itself, a real card, and the account and the money are asked for only when Pay is pressed.
+  The eight step assistant is gone, and nothing of it survives in a second version: one screen, one live version.
+- **What the card is.** Four cases, For, will, worth and for how long, each opening in a sheet at the bottom of the
+  screen rather than on a page, each changing the card as it is answered, and the shape of the gift drawn empty as
+  soon as the condition is chosen. Four cases filled, one button: Pay. There is no review screen, because the object
+  was built in front of the person.
+- **What it does not touch.** No contract, no route, no reading, no register. The create routes receive exactly the
+  same terms, in the same shapes, signed the same way, with the same attempt key (D87) and the same refusals. The
+  screen above them was the whole change.
+- **Where the gift lives.** On the device, in the draft of D74, which now also holds a card nobody has signed in for:
+  `account` is empty until somebody pays, and a gift already held for an account is still never handed to another.
+  One store (`src/card-draft.ts`) is read by the card and by the paying screen, so there is one gift in one place.
+- **What is left of the old screen.** Its money half, unchanged: the ways in, the watching of the account, the swap,
+  the one signature, the link. It is `app/components/PayGift.tsx` at the same address, and the vision's Pay sheet
+  (V3) replaces it next. Keeping it working was the condition for deleting the assistant in the same change.
+- **Measured, before and after**: screens a funder passes before the gift exists, five then one (the card), with the
+  paying screen after it; addresses in the journey, eight then four. The report is
+  `docs/reports/2026-09-19-the-card.md`.
+- What this does not claim: that it is faster in seconds, or easier for anybody in particular. Nobody outside the
+  team has used it yet, and the first real gift made on it will say more than any of this.

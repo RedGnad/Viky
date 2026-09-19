@@ -46,6 +46,7 @@
     "capture:refund": "tsx scripts/capture-refund.ts",
     "design:shots": "tsx scripts/design-screenshots.ts",
     "review:capture": "tsx scripts/review-capture.ts",
+    "review:capture-card": "tsx scripts/capture-card.ts",
     "looks:capture": "tsx scripts/capture-looks.ts",
     "capture:appearance": "tsx scripts/capture-appearance.ts",
     "make:icon": "tsx scripts/make-icon.ts",

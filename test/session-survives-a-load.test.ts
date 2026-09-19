@@ -42,7 +42,7 @@ test("the page asks the server who it is at load, without a passkey", () => {
 
 test("every money path opens the passkey at the signature, and none assumes it is already open", () => {
   for (const screen of [
-    "app/components/FundGift.tsx",
+    "app/components/PayGift.tsx",
     "app/components/GiftPage.tsx",
     "app/components/MilestoneGiftPage.tsx",
     "app/components/CashOut.tsx",

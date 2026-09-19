@@ -31,34 +31,55 @@ test.describe("the screens a person meets", () => {
   }
 
   /**
-   * Rewritten on 15 Sep because the decision changed, not because the test was wrong. It used to assert that
-   * a first visit meets the passkey button on the home page. It now asserts the opposite, which is what GOV.UK
-   * and Apple both ask for: say what this is, offer the thing itself, and let the account wait until it is
-   * needed. If the account ever climbs back to the top of the home page, this fails.
+   * Rewritten twice for the same decision, each time because the product went further with it. On 15 Sep the home
+   * page stopped meeting a first visit with a passkey; on 19 Sep it stopped offering a way to a gift and started
+   * being one (the product vision, D110). What is asserted is the same thing from closer in: the first screen is the
+   * object itself, and the account waits until money does.
    */
-  test("a first visit is told what this is and offered the gift, not an account", async ({ page }) => {
+  test("a first visit meets the gift itself, not a way to one and not an account", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /already in their name/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /^Offer a gift$/i })).toBeVisible();
+    // The card, with its four cases, is the body of the page.
+    for (const slot of ["For", "will", "worth", "for"]) {
+      await expect(page.locator("main").getByText(slot, { exact: true })).toHaveCount(1);
+    }
+    await expect(page.getByText(/Nothing is asked of you until you pay/i)).toBeVisible();
+    // Nothing to press until the card says something: the action appears with the fourth case.
+    await expect(page.getByRole("button", { name: /^Pay /i })).toHaveCount(0);
+    await expect(page.getByText(/Fill the four/i)).toBeVisible();
     // The one door, in the header rather than in the body, named for both of the things it does (brief, section 7).
     await expect(page.getByRole("button", { name: /^Sign in or create account$/i })).toBeVisible();
-    // The body asks for one thing and one only: the gift.
-    await expect(page.locator("main").getByRole("link", { name: /^Offer a gift$/i })).toHaveCount(1);
     // No passkey prompt on the home page at all, and nothing claiming a session that does not exist.
     await expect(page.getByRole("button", { name: /Create my account/i })).toHaveCount(0);
     await expect(page.getByText("You are signed in.")).toHaveCount(0);
   });
 
+  test("a case of the card opens in a sheet over it, and closing the sheet leaves the page usable", async ({ page }) => {
+    await page.goto("/");
+    const card = page.locator("main section").first();
+    await card.getByRole("button").first().click();
+    const sheet = page.locator("dialog.sheet[open]");
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByRole("heading", { name: /Who is it for/i })).toBeVisible();
+    // The card is still there behind it: a sheet is not a page.
+    await expect(card).toBeVisible();
+    await sheet.getByLabel(/Their first name/i).fill("Léa");
+    await sheet.getByLabel(/Your name/i).fill("Mum");
+    await sheet.getByRole("button", { name: /^Done$/ }).click();
+    await expect(page.locator("dialog.sheet[open]")).toHaveCount(0);
+    // And the card says what was answered, so the object changed under the person's eyes.
+    await expect(card.getByText("Léa, from Mum")).toBeVisible();
+  });
+
   /**
-   * Also rewritten, and it is the same decision from the other end: composing a gift needs nobody's identity,
-   * so the funder journey starts with the gift and the passkey arrives just before money does. The guard that
-   * matters now is that no amount is ever asked for on the first screen, and no account is either.
+   * The other end of the same decision: the gift is composed on the card, so the paying screen has nothing to ask
+   * about it. Reached with nothing filled in, it says so and sends the person back to the card rather than asking
+   * the four questions a second time.
    */
-  test("the funder journey starts with the gift, not with an account", async ({ page }) => {
+  test("the paying screen asks nothing about the gift, and says so when there is none", async ({ page }) => {
     await page.goto("/fund");
-    await expect(page.getByRole("heading", { name: /Who is it for/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Nothing to pay for yet/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Back to the card/i }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: /Create my account/i })).toHaveCount(0);
-    // One question per screen: the amount belongs to the next one.
     await expect(page.getByText(/How much, in dollars/i)).toHaveCount(0);
   });
 

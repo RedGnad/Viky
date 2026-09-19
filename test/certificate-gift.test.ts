@@ -168,14 +168,17 @@ test("the funder's review says what the certificate must show, and what happens 
   assert.match(said, /120 or more/);
   assert.match(said, /test date inside these days/);
   assert.match(DET_MILESTONE.words.ifNot, /comes back to you/);
-  const screen = readFileSync("app/components/FundGift.tsx", "utf8");
-  assert.match(screen, /certificate\.words\.mustShow\(personName, Number\(draft\.target\)\)/);
+  // Said where the money is about to move, which since 19 Sep 2026 is the paying screen rather than a review step.
+  const screen = readFileSync("app/components/PayGift.tsx", "utf8");
+  assert.match(screen, /certificate\.words\.mustShow\(subject, target\)/);
   assert.match(screen, /certificate\.words\.ifNot/);
 });
 
 test("a gift on this result ends well inside the two years, on the screen as in the register", () => {
   assert.equal(DET_MILESTONE.duration.max, 180);
   assert.match(DET_MILESTONE.words.durationShape(14, 180), /Between 14 and 180 days/);
-  const screen = readFileSync("app/components/FundGift.tsx", "utf8");
-  assert.match(screen, /const length = daysOf\(draft\.days, bounded\)/, "the same bound holds both milestone shapes");
+  // The card offers the condition's own bounds and refuses anything outside them, for both milestone shapes.
+  const sheet = readFileSync("app/kit/offer/HowLongSheet.tsx", "utf8");
+  assert.match(sheet, /durationBounds\(draft\.conditionId\)/);
+  assert.match(sheet, /bounded\?\.words\.durationShape\(bounds\.min, bounds\.max\)/);
 });

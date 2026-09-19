@@ -1,16 +1,14 @@
 "use client";
 import Link from "next/link";
 import { useAccount } from "@/src/account/provider";
-import { loadPendingGift } from "@/src/pending-gift";
 import { CATALOGUE, HOME as W, ME } from "@/src/sentences";
-import { BODY, DISPLAY, HELP, PRIMARY_BUTTON, PROSE, SECONDARY_BUTTON, TITLE } from "../components/ui";
-import { Character } from "./Character";
-import { exampleGift } from "./example-gift";
-import { Arrival, Gaze, Reveal, type ArrivalGift } from "./Motion";
+import { BODY, HELP, PROSE, SECONDARY_BUTTON, TITLE } from "../components/ui";
+import { Arrival, Reveal, type ArrivalGift } from "./Motion";
 import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
 import { GiftCard } from "./GiftCard";
 import { MoneyHero } from "./MoneyHero";
+import { OfferCard } from "./offer/OfferCard";
 import { Shell } from "./Shell";
 import { useMyGifts } from "./my-gifts";
 import { useMinute } from "./clock";
@@ -18,14 +16,14 @@ import { charactersOf } from "./DayStrip";
 import { holdsAnything, useHoldings } from "./money";
 
 /**
- * Home, in this order and nothing else (structure of 17 Sep 2026, section 4): the money, "Offer a gift", "Take it
- * out" as soon as the account holds anything, and what is moving, up to three gift cards then the way to all of
- * them. Home has no display title: the money is its title.
+ * Home: a gift to fill in, and nothing in front of it (the product vision of 19 Sep 2026, sections 1 and 5).
  *
- * Without an account it is the gift character, the promise, one action, an example of a gift card and how it works; the
- * way into an account is the one door in the header (SignInDoor, brief section 7). The two documents the law asks to be
- * reachable from the door are text links, which is not a footer and lives nowhere else; the public catalogue is beside
- * them, because a reader deciding whether to offer anything asks what Viky can check before anything else.
+ * The card is the first thing on the page, with an account or without one, and it is a real card: what is filled in
+ * here is the gift that gets paid for. Under it, for an account, the money and what is moving; without one, the
+ * promise in a line and the one door in the header, which is where the account is asked for and nowhere earlier.
+ *
+ * What went: the button that opened an eight step assistant, and the example card that showed a gift nobody had
+ * made. A page that offers a real object has no use for a picture of one (vision, section 9).
  */
 export function Home() {
   const { address } = useAccount();
@@ -36,34 +34,12 @@ export function Home() {
   if (!address) {
     return (
       <Shell kind="destination" active="home" action={<SignInDoor />}>
-        <section className="flex flex-col gap-[var(--space-lg)]">
-          <Gaze>
-            <Character state="gift" className="h-auto w-[104px] [@media(min-width:840px)]:w-[136px]" />
-          </Gaze>
-          <h1 className={DISPLAY}>{W.promise}</h1>
-          <p className={PROSE}>{W.promiseBody}</p>
-          {/* One action in the body, and the door in the header: the two gestures of section 7, and no third. */}
-          <div className="flex w-full max-w-[420px] flex-col pt-[var(--space-sm)]">
-            <Link href="/fund" className={PRIMARY_BUTTON}>
-              {W.offer}
-            </Link>
-          </div>
-        </section>
-        <Reveal>
-          <GiftCard gift={exampleGift(nowMs)} example />
-        </Reveal>
-        <Reveal className="flex flex-col gap-[var(--space-md)]">
-          <h2 className={TITLE}>{W.howItWorks}</h2>
-          <ol className="flex list-decimal flex-col gap-[var(--space-sm)] pl-[var(--space-lg)]">
-            {W.steps.map((step) => (
-              <li key={step} className={BODY}>
-                {step}
-              </li>
-            ))}
-          </ol>
-        </Reveal>
+        {/* The page's own heading. The card is what a person sees first and the promise is what the page is about, so
+            the title is said to whoever is read to rather than drawn over the object it describes. */}
+        <h1 className="sr-only">{W.promise}</h1>
+        <OfferCard />
+        <p className={PROSE}>{W.promiseBody}</p>
         <p className={`${HELP} flex flex-wrap gap-x-[var(--space-lg)]`}>
-          {/* What the chooser does not offer, and why, since the chooser itself only ever shows what is proved. */}
           <Link href="/what-viky-can-check" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
             {CATALOGUE.title}
           </Link>
@@ -86,33 +62,31 @@ export function Home() {
   });
   return (
     <Arrival storageKey="viky.seen.days" gifts={arriving} amount>
-    <Shell kind="destination" active="home">
-      <MoneyHero address={address} holdings={holdings} />
-      <Link href="/fund" className={PRIMARY_BUTTON}>
-        {loadPendingGift(address) ? W.finish : W.offer}
-      </Link>
-      {holdings !== null && holdsAnything(holdings) ? (
-        <Link href="/cash-out" className={SECONDARY_BUTTON}>
-          {W.takeItOut}
-        </Link>
-      ) : null}
-      <section className="flex flex-col gap-[var(--space-md)]">
-        <h2 className={TITLE}>{W.moving}</h2>
-        {problem ? <p className={BODY}>{problem}</p> : null}
-        {!problem && gifts === null ? <p className={HELP}>{W.loading}</p> : null}
-        {gifts !== null && gifts.length === 0 ? <EmptyState>{W.empty}</EmptyState> : null}
-        {moving.map((gift) => (
-          <Reveal key={gift.giftId}>
-            <GiftCard gift={gift} />
-          </Reveal>
-        ))}
-        {gifts !== null && gifts.length > 0 ? (
-          <Link href="/gifts" className={`${BODY} inline-flex min-h-[var(--tap-target)] items-center self-start text-[var(--accent-text)] underline`}>
-            {W.seeAll}
+      <Shell kind="destination" active="home">
+        <OfferCard />
+        <MoneyHero address={address} holdings={holdings} />
+        {holdings !== null && holdsAnything(holdings) ? (
+          <Link href="/cash-out" className={SECONDARY_BUTTON}>
+            {W.takeItOut}
           </Link>
         ) : null}
-      </section>
-    </Shell>
+        <section className="flex flex-col gap-[var(--space-md)]">
+          <h2 className={TITLE}>{W.moving}</h2>
+          {problem ? <p className={BODY}>{problem}</p> : null}
+          {!problem && gifts === null ? <p className={HELP}>{W.loading}</p> : null}
+          {gifts !== null && gifts.length === 0 ? <EmptyState>{W.empty}</EmptyState> : null}
+          {moving.map((gift) => (
+            <Reveal key={gift.giftId}>
+              <GiftCard gift={gift} />
+            </Reveal>
+          ))}
+          {gifts !== null && gifts.length > 0 ? (
+            <Link href="/gifts" className={`${BODY} inline-flex min-h-[var(--tap-target)] items-center self-start text-[var(--accent-text)] underline`}>
+              {W.seeAll}
+            </Link>
+          ) : null}
+        </section>
+      </Shell>
     </Arrival>
   );
 }

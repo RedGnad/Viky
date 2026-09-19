@@ -34,8 +34,8 @@ test("a condition a funder can choose today says, in one line, what is read and 
     assert.ok(condition.help.length <= 160, `${condition.id}'s line is too long to read under an option`);
     assert.match(condition.help, /:/, `${condition.id} must say what is read and what it proves, in one sentence`);
   }
-  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
-  assert.doesNotMatch(fund, /note: proofOfCondition/, "nothing repeats the register's line beside it");
+  const sheet = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
+  assert.doesNotMatch(sheet, /note: proofOfCondition/, "nothing repeats the register's line beside it");
 });
 
 test("no answer claims more than the code does, and supervision is claimed only where the source describes it", () => {

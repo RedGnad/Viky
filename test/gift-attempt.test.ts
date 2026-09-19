@@ -40,8 +40,8 @@ test("a refusal of the terms, or a gift already made, ends the kept request; a w
 });
 
 test("the funder's page keeps the signed request before sending it, and forgets it once the gift is made", () => {
-  const fund = readFileSync("app/components/FundGift.tsx", "utf8");
-  const give = fund.slice(fund.indexOf("const give = useCallback"), fund.indexOf("const record: Made"));
+  const pay = readFileSync("app/components/PayGift.tsx", "utf8");
+  const give = pay.slice(pay.indexOf("const give = useCallback"), pay.indexOf("const record: Made"));
   assert.ok(give.indexOf("attemptFor(readSession(GIFT_ATTEMPT_KEY), terms)") < give.indexOf("await prepareGift({"), "the kept request is looked for before signing");
   assert.ok(give.indexOf("writeSession(GIFT_ATTEMPT_KEY, { terms, request })") < give.indexOf("await submitGift(request)"), "kept before it is sent");
   assert.match(give, /writeSession\(GIFT_ATTEMPT_KEY, null\);\s*$/, "forgotten once made");
