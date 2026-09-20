@@ -3595,3 +3595,24 @@ behind an account cannot be photographed any other way.
   card's width with an account, is read on the connected captures, which sign in with a passkey the runner lacks.
 - This replaces the composition of D127 (one centred column with the promise under the card at 25) and its relief;
   D127's order stands below 1024. The scale rule of D126 stands: 39, 76 and 20 are its steps.
+
+## D129, 20 Sep 2026: one column, the text above the card, from the phone to the desk
+
+- Statement, the founder's, the same evening as D128 and correcting it: the order is the character, the title, the
+  sentence, the card, identical at every width. **The text is always above the card.** D128's two columns had put
+  the text under the card on a phone, and that was a regression on the page of that morning, not a choice.
+- **Kept from D128, and only this:** the two blurred halos are gone and the ground is a flat; the card has no offset
+  relief and no blurred shadow, and keeps its 2 px edge; the title says "Money that cheers them on."; the title is
+  76 from 1024 and 39 below; with an account the column is the card's width plus its margins (488) instead of 680,
+  so the card and every block under it share one edge.
+- **The constraint, over the spacing:** at 1440x900 the whole page stands without scrolling, the title and the card
+  included. Where it did not fit, the vertical spaces between the blocks were tightened, never the order and never
+  the title. What was tightened, measured on the build: the gaps between the blocks are 12 under 1024 and 8 from it;
+  the character is 88 on a phone and 72 from 1024. What made it fit at all is the wide column: the title at 76 takes
+  898 px on **one line** there, where a 620 column held it on two and cost 78 px more than the screen had.
+- **Measured at the four widths** (`review-captures/measure-home.ts`, on the build): the order is the same at 390,
+  430, 1024 and 1440, everything on one left edge (16, 16, 24, 124), and at 1440x900 the page is exactly 900 tall,
+  the card ending at 796 and the last line at 868.
+- Acceptance in `test/browser/home-order.spec.ts`, day and night, at the four widths: the order, one left edge, the
+  title's step, no blur anywhere, nothing cut across, and at 1440x900 no scrolling with the card entire.
+- Replaces the composition of D128 (two columns from 1024) and, with it, the last of D127's.

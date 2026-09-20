@@ -71,12 +71,12 @@ test.describe("the appearance control", () => {
     expect(doorBox!.width).toBeGreaterThan(box!.width);
     expect(box!.x).toBeLessThan(doorBox!.x);
 
-    // What the screen is asking for is still the first thing in the body, and since the card of 19 Sep 2026 that is
-    // the gift itself rather than a way to one (D110), and since D127 nothing stands above it but the character: its
-    // top measures under 200 at every width.
+    // What the screen is asking for is still the card itself (D110), and what stands above it is what D129 puts there
+    // and nothing else: the character, the title and the sentence. Measured on the build, its top is at 344 on a
+    // phone; a fourth block above it would push it past this line.
     const card = page.locator("main section").first();
     await expect(card.getByText("A gift from you", { exact: true })).toBeVisible();
     const cardBox = await card.boundingBox();
-    expect(cardBox!.y).toBeLessThan(200);
+    expect(cardBox!.y).toBeLessThan(400);
   });
 });
