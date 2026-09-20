@@ -749,6 +749,10 @@ export const MILESTONE_PAGE = {
  */
 export const MILESTONE_FUND = {
   detail: {
+    /** While the source is being asked, and then how many it answered with: the list may run past the sheet. */
+    searching: "Asking",
+    /** The route hands back twelve at most, so at twelve the list may go on: say so rather than count. */
+    found: (count: number) => (count >= 12 ? "The first twelve. Choose one below, or add a word to narrow it." : `${count} found. Choose one below.`),
     smallest: (smallest: number) => `${smallest} or more, so the gift is worth earning.`,
     readAgain: "The name or the rating changed. Read their rating again.",
     readAt: (time: string) => `Read at ${time}.`,

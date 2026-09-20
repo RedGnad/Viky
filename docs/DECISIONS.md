@@ -3405,3 +3405,23 @@ behind an account cannot be photographed any other way.
   name on one source means nothing on another.
 - Nothing else moved: the tokens, the sun for paying and for reaching, the three voices, the character, the
   families of the catalogue, and no chain word on any screen.
+## D122, 20 Sep 2026: a certification is found by Credly's own search, and no list of ours decides
+
+- Statement, the founder's, 20 Sep 2026: the three certifications written into the repository were a stopgap.
+  Credly exposes its own search, found in their application bundle and unauthenticated:
+  `GET credly.com/api/v1/global_search/badge_template?q=<words>`, fifty results in under a second, each with the
+  badge class's id, the issuer's id, the name and the issuer's name.
+- **Verified the same day, not taken on trust**: 200 in 0.73 s; the ids it gives for Cisco's Introduction to
+  Cybersecurity are exactly the pair read by hand from a live badge that morning (`10b1a2de…` / `74381078…`); it
+  sends no CORS header, so the browser cannot ask it and Viky's own route does (`/api/credly/search`, rate limited,
+  no sign-in because the card is filled before any account exists, nothing stored).
+- **What the funder's step becomes**: a search field, not three radios. They type "comptia", read the answers each
+  with who awards it, choose one, and the pair of ids is pinned into the terms exactly as before. Four different
+  issuers award an "Introduction to Cybersecurity" in the first six answers, which is why the issuer stands beside
+  every line and why the words are never what the terms carry.
+- **What the terms carry**: the pair `issuerId/classId`, checked by shape before anything is signed (`credlyPairOf`).
+  The reading compares it by the subject, so a badge for another certification is simply another subject and says
+  so in the same sentence as another name; the refusal "a certification Viky does not read" is gone with the list.
+- **What this does not change**: the two proofs of a badge, the hashed email that nothing matches, the day judged
+  from the assertion, goal 11 and its provider id. The demo constraint that put AI Fundamentals first in a list has
+  nothing left to order; the search shows what the funder types.

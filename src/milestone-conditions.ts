@@ -10,15 +10,7 @@ import {
   type Condition,
 } from "./conditions";
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
-import {
-  CREDLY_CERTIFICATIONS,
-  CREDLY_DURATION_DAYS,
-  CREDLY_GOAL_TYPE,
-  CREDLY_HAS_IT,
-  credlyBadgeIdOf,
-  credlyCertification,
-  credlySubject,
-} from "./credly-badge";
+import { CREDLY_DURATION_DAYS, CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyBadgeIdOf, credlyPairOf, credlySubject } from "./credly-badge";
 import {
   certificateSubject,
   detAliasOf,
@@ -274,11 +266,17 @@ export type CertificateCondition = Readonly<{
     /** The course inside whatever was pasted, or nothing. Where there is a list, what a choice from it answers. */
     slugOf: (pasted: string) => string | undefined;
     /**
-     * The things this source offers, where they are a list rather than anything a person can name. A course exists
-     * on Coursera by the million and is named by pasting its link; a certification is read by the pair of ids its
-     * issuer publishes, so only the ones whose ids we have read can be offered at all (20 Sep 2026).
+     * Where the source's own catalogue is searched, when the thing is found by its words rather than pasted as a
+     * link: the funder types, reads each answer with who awards it, and chooses. What the terms then carry is the
+     * answer's own id, never the words (Credly, 20 Sep 2026).
      */
-    choices?: readonly Readonly<{ id: string; title: string; help: string }>[];
+    search?: Readonly<{
+      /** Viky's route that asks the source's search, with `?q=`. */
+      path: string;
+      placeholder: string;
+      /** What the field says under itself when the words gave nothing. */
+      nothing: string;
+    }>;
     /** The line of the check screen. */
     row: string;
     /**
@@ -482,11 +480,15 @@ export const CREDLY_MILESTONE: CertificateCondition = {
   subject: ({ name, course }) => credlySubject(name, String(course ?? "")),
   course: {
     label: "Which certification?",
-    help: "Only these can be read today: each one is checked against the record its issuer publishes, never against its name.",
-    slugOf: (pasted) => credlyCertification(pasted)?.id,
-    choices: CREDLY_CERTIFICATIONS.map((entry) => ({ id: entry.id, title: `${entry.title}, ${entry.issuer}`, help: entry.help })),
+    help: "Type a word or two of its name, like comptia, and choose it with the name of who awards it: the same name is awarded by several.",
+    slugOf: (pasted) => credlyPairOf(pasted),
+    search: {
+      path: "/api/credly/search",
+      placeholder: "Search a certification",
+      nothing: "Credly knows no certification by those words. Try another word of its name.",
+    },
     row: "Which certification",
-    named: (course) => `This gift will be for ${credlyCertification(course)?.title ?? course}.`,
+    named: (course) => `This gift will be for ${course}.`,
   },
   target: {
     label: "What the badge has to be",

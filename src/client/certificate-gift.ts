@@ -109,3 +109,15 @@ export function proveCertificateGift(giftId: string, link: string): Promise<Cert
 export function loadOffered(): Promise<{ ids: string[]; preview: string[] }> {
   return getJson("/api/conditions");
 }
+
+/** One line of a source's own search, as the sheet lists it: what to press, and what the terms then carry. */
+export type CertificationFound = Readonly<{ pair: string; title: string; issuer: string; path: string }>;
+
+/**
+ * The certifications a source knows by some words, through Viky's own route (the register names it): the funder
+ * types, reads each answer with who awards it, and chooses. Nothing is kept from the answer but the one chosen.
+ */
+export async function searchCertifications(path: string, words: string): Promise<readonly CertificationFound[]> {
+  const answer = await getJson<{ results: readonly CertificationFound[] }>(`${path}?q=${encodeURIComponent(words.trim())}`);
+  return answer.results;
+}
