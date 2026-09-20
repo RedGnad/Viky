@@ -134,7 +134,10 @@ export function OfferCard() {
             <>
               {/* The one star of the screen, typed where it stands. */}
               <span className="block">
-                <span className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center`}>
+                {/* One box and one ring around the "$" and the figure together: the ring is the box's, drawn when the
+                    figure inside has the focus, so the field never reads as a box inside a box (the founder,
+                    20 Sep 2026, on the amount after the name was fixed). */}
+                <span className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent-text)]`}>
                   {W.dollar}
                   <input
                     value={draft.dollars}
@@ -144,7 +147,7 @@ export function OfferCard() {
                     maxLength={9}
                     size={Math.max(4, draft.dollars.length + 1)}
                     autoComplete="off"
-                    className="min-h-[var(--tap-target)] min-w-[var(--tap-target)] bg-transparent tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
+                    className="min-h-[var(--tap-target)] min-w-[var(--tap-target)] bg-transparent tabular-nums outline-none"
                   />
                 </span>
               </span>
