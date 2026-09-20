@@ -81,10 +81,11 @@ export function CardFace({
   badge,
   title,
   under,
+  detail,
   chevron = false,
   shape,
   bottom,
-}: Readonly<{ label?: ReactNode; badge?: ReactNode; title: ReactNode; under: ReactNode; chevron?: boolean; shape: ReactNode; bottom: ReactNode }>) {
+}: Readonly<{ label?: ReactNode; badge?: ReactNode; title: ReactNode; under: ReactNode; detail?: ReactNode; chevron?: boolean; shape: ReactNode; bottom: ReactNode }>) {
   return (
     <>
       {badge}
@@ -101,6 +102,8 @@ export function CardFace({
           </svg>
         ) : null}
       </span>
+      {/* The line that opens the condition's own questions, when the register gives that condition a detail (D136). */}
+      {detail}
       {shape}
       {bottom}
     </>

@@ -41,6 +41,8 @@ export const OFFER = {
   fromYou: "A gift from you",
   /** The figure the amount is typed beside, so the field holds the number and nothing else. */
   dollar: "$",
+  /** The line under the condition on the card, which opens that condition's own questions (D136). */
+  detailNeeded: "Not filled in yet",
   /** The three lengths the register gives the chosen condition, and there is no fourth on the card (D130). */
   someDays: (days: number) => `${days} ${days === 1 ? "day" : "days"}`,
   /** Under the action, for a gift counted by days: what one day of it is worth, and where the rest goes. */
@@ -296,7 +298,13 @@ export const FUND = {
 
   what: { title: "What will they do?" },
 
-  detail: { checking: "Checking the name" },
+  detail: {
+    checking: "Checking the name",
+    /** Before a name is given there is no profile to read, so there is no list of courses to choose from (D136). */
+    courseAfterName: "Give the name above and the courses appear here. Without a name, any course on their profile counts.",
+    /** One line of the list: the course as the source names it, and the experience won in it. */
+    courseWithXp: (title: string, xp: number) => `${title}, ${xp.toLocaleString("en-GB")} XP won`,
+  },
 
   amount: {
     title: "How much, and for how long?",

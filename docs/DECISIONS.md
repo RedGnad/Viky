@@ -3739,3 +3739,37 @@ behind an account cannot be photographed any other way.
 - **The chips were never wrong.** The founder read "90 days" where he expected 365: the three lengths are the chosen
   condition's own (a daily lesson is 7/30/90, a rating to climb 1/30/365, a certification 30/120/365, the Duolingo
   test 14/90/180). He confirmed he was reading a daily lesson on a page the service worker had kept. Nothing changed.
+
+## D136, 21 Sep 2026: one gesture, one result, on all six conditions
+
+- **The defect, measured on the screen by the founder.** On the page without an account, with a daily condition
+  chosen, pressing "What they will do" reopened the catalogue, and the condition's own step was unreachable: the
+  funder could not name the account, choose the course, or set the bar for a day. On a certificate the same gesture
+  opened its questions, because choosing a condition lands on them. Two conditions, two behaviours, one gesture. All
+  of the content existed already in `src/conditions.ts`; nothing had to be written.
+- **The card carries a detail line** under the condition, for every condition the register gives a `detailTitle` or
+  a certificate's `detailQuestion`, and pressing it opens that condition's own step (`WillSheet` takes `at`). The
+  condition line still opens the catalogue. `src/card-detail.ts` says what the line reads, from the register's own
+  words and never a summary of ours.
+- **Nothing given is still something said.** On a daily condition an empty name is a real answer (D27), so the line
+  reads the register's own sentence, "They name their own when they open it", beside the bar for a day. On a climb
+  or a certificate, which must be answered, it reads "Not filled in yet".
+- **The courses are the profile's own.** Once a name is checked, the list is what the source answered, the course it
+  says is current first, each line carrying the experience won in it; the choice at the top is "Any course on that
+  profile" and it is what is selected, because nothing should be chosen for the funder and the whole profile is the
+  answer that cannot be wrong. Without a name there is no list, and the step says the courses appear once a name is
+  given, and that without one any course counts. The gift stays creatable either way.
+- **Two sizes, again**: the lone character of a climb on the card is 60, like the days beside it, and the small
+  milestone character is 44 where it was 24.
+- **What it costs, and the founder must arbitrate it.** The card carries one line more and taller day characters,
+  both asked for, so it measures 648 where it measured 506. At 1440x900 the page is 1006 and the card's last 18
+  pixels fall below the fold, which breaks the constraint of D129. Three ways out, none of them taken here: accept
+  the scroll on a 900-tall window, shorten the detail line (its title is the register's own sentence and wraps to
+  two lines, which is 40 of the 104 the line takes), or take something else off the card. Measured, not guessed:
+  the small characters were cropped to what they draw (their box carried fifteen pixels of nothing above each one)
+  and the day row's air was halved, which gave back 8 and 8.
+- Acceptance in `test/browser/detail-step.spec.ts`, on the four viewports: on each of the six conditions the detail
+  line opens that condition's step and never the catalogue; with the name "Luis" the step lists the five courses the
+  profile carries with their experience, French first, and the whole profile selected; with no name the line is
+  visible, says it is optional, and the step says the courses come after. The profile read is stubbed with what
+  production answered for that name on 20 Sep 2026, so the check measures our screen and not the source's uptime.

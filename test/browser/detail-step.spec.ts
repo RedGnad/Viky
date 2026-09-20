@@ -1,0 +1,79 @@
+import { expect, test, type Page } from "@playwright/test";
+
+/**
+ * The detail line on the card, and what it opens (D136). The defect it answers: pressing "What they will do" always
+ * reopened the catalogue, so on a daily condition the funder could never name the account, choose the course or set
+ * the bar for a day, while the same gesture on a certificate opened its questions. One gesture, one result, on all six.
+ *
+ * The profile read is stubbed with what production answered for "Luis" on 20 Sep 2026 (French 77530, Japanese 4199,
+ * Spanish 13022, German 2348, Swedish 1012, current French), so this measures our screen and not the source's uptime.
+ */
+const LUIS = {
+  username: "Luis",
+  currentCourseId: "DUOLINGO_FR_EN",
+  courses: [
+    { id: "DUOLINGO_JA_EN", title: "Japanese", xp: 4199 },
+    { id: "DUOLINGO_FR_EN", title: "French", xp: 77530 },
+    { id: "DUOLINGO_ES_EN", title: "Spanish", xp: 13022 },
+    { id: "DUOLINGO_DE_EN", title: "German", xp: 2348 },
+    { id: "DUOLINGO_SV_EN", title: "Swedish", xp: 1012 },
+  ],
+};
+
+const card = (page: Page) => page.locator("main section").first();
+const sheet = (page: Page) => page.locator("dialog.sheet[open]");
+
+async function choose(page: Page, name: RegExp) {
+  // The first control on the card is the condition line; the second is the detail line this defect is about.
+  await card(page).getByRole("button").first().click();
+  await sheet(page).getByRole("radio", { name }).click();
+  // Choosing lands on that condition's own questions, whose way back to the catalogue is the Change button.
+  await expect(sheet(page).getByRole("button", { name: /^Change/i })).toBeVisible();
+}
+
+test.describe("the line that opens a condition's own questions", () => {
+  test("every condition has one, and it opens that condition's step, never the catalogue", async ({ page }) => {
+    const names = [/Duolingo lesson each day/i, /score on the Duolingo English Test/i, /puzzle record/i, /chess rating/i, /Coursera certificate/i, /certification on Credly/i];
+    for (const name of names) {
+      await page.goto("/");
+      await choose(page, name);
+      // The sheet is on that condition's questions already; close it and come back through the card's detail line.
+      await sheet(page).getByRole("button", { name: "Close" }).click();
+      await expect(page.locator("dialog.sheet[open]")).toHaveCount(0);
+      const detail = card(page).getByRole("button").nth(1);
+      await expect(detail).toBeVisible();
+      await detail.click();
+      await expect(sheet(page)).toBeVisible();
+      // Its own questions, not the catalogue: no condition to pick, and the way back to the catalogue is a button.
+      await expect(sheet(page).getByRole("radio", { name: /Duolingo lesson each day/i })).toHaveCount(0);
+      await expect(sheet(page).getByRole("button", { name: /^Change/i })).toBeVisible();
+      await sheet(page).getByRole("button", { name: "Close" }).click();
+    }
+  });
+
+  test("with a name, the courses are the profile's own, the current one first, and the whole profile is the default", async ({ page }) => {
+    await page.route("**/api/duolingo/profile**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(LUIS) }));
+    await page.goto("/");
+    await card(page).getByRole("button").nth(1).click();
+    const step = sheet(page);
+    await step.getByLabel(/name, if you know it/i).fill("Luis");
+    await step.getByLabel(/name, if you know it/i).blur();
+    await expect(step.getByRole("radio", { name: /Any course on that profile/i })).toBeChecked();
+    const courses = step.getByRole("radio");
+    await expect(courses).toHaveCount(6);
+    await expect(courses.nth(1)).toHaveAccessibleName(/French, 77,530 XP won/);
+    for (const language of [/Japanese, 4,199/, /Spanish, 13,022/, /German, 2,348/, /Swedish, 1,012/]) {
+      await expect(step.getByRole("radio", { name: language })).toBeVisible();
+    }
+  });
+
+  test("without a name the line is visible, says it is optional, and the step says the courses come after", async ({ page }) => {
+    await page.goto("/");
+    const detail = card(page).getByRole("button").nth(1);
+    await expect(detail).toContainText(/They name their own when they open it/i);
+    await expect(detail).toContainText(/10 XP a day/i);
+    await detail.click();
+    await expect(sheet(page).getByText(/the courses appear here/i)).toBeVisible();
+    await expect(sheet(page).getByRole("button", { name: /^Done$/ })).toBeEnabled();
+  });
+});

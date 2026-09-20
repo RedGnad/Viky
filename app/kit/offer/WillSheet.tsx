@@ -26,12 +26,16 @@ import { Sheet } from "../Sheet";
  * Every word about a source comes from the register, and so does every refusal: this file knows that a name can be
  * refused, never what to say about it.
  */
+/** What the list calls the whole profile: an id no course can have, so it never collides with a real one. */
+const WHOLE_PROFILE = "whole-profile";
+
 export function WillSheet({
   open,
+  at = "list",
   draft,
   onChange,
   onClose,
-}: Readonly<{ open: boolean; draft: GiftDraft; onChange: (draft: GiftDraft) => void; onClose: () => void }>) {
+}: Readonly<{ open: boolean; at?: "list" | "questions"; draft: GiftDraft; onChange: (draft: GiftDraft) => void; onClose: () => void }>) {
   const { address } = useAccount();
   const [preview, setPreview] = useState<readonly string[]>([]);
   /**
@@ -41,6 +45,18 @@ export function WillSheet({
    * starts at the catalogue again rather than at whatever was last pressed.
    */
   const [askedFor, setAskedFor] = useState<"list" | "questions" | null>(null);
+  /**
+   * The card says which face to open on (D136): the catalogue from the condition line, this condition's own questions
+   * from the detail line under it. Before that, the questions could only be reached by pressing the chosen condition
+   * again inside the catalogue, which nobody found. Read while rendering rather than written from an effect, which is
+   * what React asks for a value derived from props: an effect writing state here renders the sheet twice on every
+   * opening, and the first of the two shows the wrong face.
+   */
+  const [openedAt, setOpenedAt] = useState<{ open: boolean; at: "list" | "questions" }>({ open, at });
+  if (openedAt.open !== open || openedAt.at !== at) {
+    setOpenedAt({ open, at });
+    if (open) setAskedFor(at);
+  }
   const choosing = askedFor === null || askedFor === "list";
   const [nameCheck, setNameCheck] = useState<{ busy: boolean; refusal?: string; checked?: string }>({ busy: false });
   const [courses, setCourses] = useState<{ forName: string; list: readonly { id: string; title: string; xp: number }[] } | null>(null);
@@ -137,13 +153,12 @@ export function WillSheet({
     setNameCheck({ busy: true });
     try {
       const found = await checkSourceName(nameLink.check.path, draft.subject.trim());
-      const list = found.courses ?? [];
-      const chosen = list.find((course) => course.id === found.currentCourseId) ?? list[0];
-      onChange({
-        ...draft,
-        subject: found.username,
-        ...(condition?.course && chosen ? { course: chosen.id, courseTitle: chosen.title } : { course: undefined, courseTitle: undefined }),
-      });
+      const read = found.courses ?? [];
+      // The course the source says is current comes first, and nothing is chosen for the funder: the default is the
+      // whole profile, which is a real answer and the one that cannot be wrong (D136).
+      const current = read.find((course) => course.id === found.currentCourseId);
+      const list = current ? [current, ...read.filter((course) => course.id !== current.id)] : read;
+      onChange({ ...draft, subject: found.username, course: undefined, courseTitle: undefined });
       setCourses(list.length > 0 ? { forName: found.username.toLowerCase(), list } : null);
       setNameCheck({ busy: false, checked: found.username });
     } catch (error) {
@@ -415,17 +430,30 @@ export function WillSheet({
                   {nameCheck.busy ? <p className={HELP}>{FUND.detail.checking}</p> : null}
                 </>
               ) : null}
-              {condition.course && courses && courses.list.length > 0 ? (
-                <ChoiceList
-                  name="course"
-                  legend={condition.course.label}
-                  value={draft.course ?? null}
-                  onChange={(value) => {
-                    const picked = courses.list.find((course) => course.id === value);
-                    onChange({ ...draft, course: value, courseTitle: picked?.title ?? "" });
-                  }}
-                  options={courses.list.map((course) => ({ value: course.id, label: course.title }))}
-                />
+              {condition.course ? (
+                courses && courses.list.length > 0 ? (
+                  <ChoiceList
+                    name="course"
+                    legend={condition.course.label}
+                    value={draft.course ?? WHOLE_PROFILE}
+                    onChange={(value) => {
+                      const picked = courses.list.find((course) => course.id === value);
+                      onChange(
+                        value === WHOLE_PROFILE || !picked
+                          ? { ...draft, course: undefined, courseTitle: undefined }
+                          : { ...draft, course: picked.id, courseTitle: picked.title },
+                      );
+                    }}
+                    /* The whole profile first, because it is the default and the one that cannot be wrong, then the
+                       courses the profile really carries, each with the experience won in it (D136). */
+                    options={[
+                      { value: WHOLE_PROFILE, label: condition.course.wholeProfile },
+                      ...courses.list.map((course) => ({ value: course.id, label: FUND.detail.courseWithXp(course.title, course.xp) })),
+                    ]}
+                  />
+                ) : (
+                  <p className={HELP}>{FUND.detail.courseAfterName}</p>
+                )
               ) : null}
               {condition.target ? (
                 <Field

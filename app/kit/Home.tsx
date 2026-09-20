@@ -52,7 +52,7 @@ export function Home() {
                    2026, asking for it bigger while keeping A's two lines). */
                 /* No margin under it on a phone: a float's margin box is what the text avoids, and eight pixels of
                    it pushed the second line aside too, which is what broke the title into four ragged lines. */
-                className="float-right ml-[var(--space-sm)] h-auto w-[86px] [@media(min-width:1024px)]:float-none [@media(min-width:1024px)]:mx-auto [@media(min-width:1024px)]:mb-[var(--space-md)] [@media(min-width:1024px)]:block [@media(min-width:1024px)]:w-[96px]"
+                className="float-right ml-[var(--space-sm)] h-auto w-[86px] [@media(min-width:1024px)]:float-none [@media(min-width:1024px)]:mx-auto [@media(min-width:1024px)]:mb-[var(--space-md)] [@media(min-width:1024px)]:block [@media(min-width:1024px)]:w-[80px]"
               />
             </Gaze>
             <h1 className={HERO}>{W.promise}</h1>
