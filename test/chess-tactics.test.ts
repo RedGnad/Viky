@@ -6,6 +6,7 @@ import { attestedSource, CHESS_PLAYER, CHESS_TACTICS_RATING, chessClimbSource, C
 import { CHESS_TACTICS, chessClimbOfGoal, chessClimbPattern, chessGoalType, chessProviderId, chessTacticsPattern, climbOfStats, tacticsOfStats } from "../src/chess-com";
 import { attestChessRating, ChessReadError, readChessStanding, type PlainFetch } from "../src/chess-reading";
 import type { ZkFetchProof } from "../src/duolingo-public";
+import { CHESS_TACTICS_RECORD } from "../src/conditions";
 import { CHESS_MILESTONE, CHESS_TACTICS_MILESTONE, milestoneOfClimb } from "../src/milestone-conditions";
 import { milestoneGoal } from "../src/milestone-goals";
 import { SHAPE_CLIMB } from "../src/milestone-protocol";
@@ -128,4 +129,29 @@ test("nothing holds a record back for settling, and the funder is asked no caden
   assert.equal(milestoneOfClimb("nothing"), undefined);
   assert.notEqual(CHESS_TACTICS_MILESTONE.words.refusals.noRating(""), CHESS_MILESTONE.words.refusals.noRating(""));
   assert.match(CHESS_TACTICS_MILESTONE.words.refusals.noRating(""), /never solved a puzzle/);
+});
+
+/**
+ * One source now holds two climbs, and a screen that called both of them "their rating" would leave a funder unable
+ * to tell which of the two numbers was being read (ui review, 20 Sep 2026). The words for the button and the target
+ * belong to the condition, and this holds them apart.
+ */
+test("neither climb on one source borrows the other's words", () => {
+  const record = CHESS_TACTICS_MILESTONE.words;
+  const rating = CHESS_MILESTONE.words;
+  assert.equal(record.read, "Read their record");
+  assert.equal(rating.read, "Read their rating");
+  for (const pair of [
+    [record.read, rating.read],
+    [record.reading, rating.reading],
+    [record.targetLabel, rating.targetLabel],
+    [record.today(2096, "Puzzles"), rating.today(1904, "Rapid")],
+  ]) {
+    assert.notEqual(pair[0], pair[1]);
+  }
+  // The target is the number they have still to reach, so it is never labelled as something already held.
+  assert.doesNotMatch(record.targetLabel, /beat|record they hold|today/i);
+  assert.match(CHESS_TACTICS_RECORD.detailTitle ?? "", /record they reach/);
+  // And no word a funder reads about either climb says "rating" of the other's number.
+  assert.doesNotMatch(record.read + record.reading + record.targetLabel, /rating/i);
 });

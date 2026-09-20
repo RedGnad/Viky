@@ -70,6 +70,9 @@ export type MilestoneCondition = Readonly<{
     todayRow: (standing: number, cadence: string) => string;
     /** The best that account ever held in that cadence, under today's reading. Information, never a refusal. */
     best: (best: number) => string;
+    /** The button that reads where they stand, before it is pressed and while it works. Two climbs on one source
+        read two different numbers, so neither may be called "their rating" by a screen (ui review, 20 Sep 2026). */
+    read: string;
     reading: string;
     refusals: Readonly<{
       nameShape: string;
@@ -124,6 +127,7 @@ export const CHESS_MILESTONE: MilestoneCondition = {
     today: (standing, cadence) => `Today they are at ${standing} in ${cadence.toLowerCase()}.`,
     todayRow: (standing, cadence) => `${standing} in ${cadence.toLowerCase()}`,
     best: (best) => `Their best ever: ${best}.`,
+    read: "Read their rating",
     reading: "Reading their rating",
     refusals: {
       nameShape: "A Chess.com name has three to twenty-five letters, figures, hyphens or underscores, like hikaru.",
@@ -170,10 +174,11 @@ export const CHESS_TACTICS_MILESTONE: MilestoneCondition = {
   duration: { min: 1, max: 365, suggested: 30 },
   words: {
     cadenceQuestion: "Which rating?",
-    targetLabel: "The record they beat",
+    targetLabel: "The record they reach",
     today: (standing) => `Their record today is ${standing}.`,
     todayRow: (standing) => `${standing} in puzzles`,
     best: (best) => `Their best ever: ${best}.`,
+    read: "Read their record",
     reading: "Reading their record",
     refusals: {
       nameShape: "A Chess.com name has three to twenty-five letters, figures, hyphens or underscores, like hikaru.",
@@ -477,7 +482,7 @@ export const CREDLY_MILESTONE: CertificateCondition = {
   subject: ({ name, course }) => credlySubject(name, String(course ?? "")),
   course: {
     label: "Which certification?",
-    help: "Only these can be read today: each one is known by the pair of ids Credly publishes for it, not by its name.",
+    help: "Only these can be read today: each one is checked against the record its issuer publishes, never against its name.",
     slugOf: (pasted) => credlyCertification(pasted)?.id,
     choices: CREDLY_CERTIFICATIONS.map((entry) => ({ id: entry.id, title: `${entry.title}, ${entry.issuer}`, help: entry.help })),
     row: "Which certification",

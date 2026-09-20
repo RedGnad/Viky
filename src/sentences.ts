@@ -737,8 +737,6 @@ export const MILESTONE_PAGE = {
  */
 export const MILESTONE_FUND = {
   detail: {
-    read: "Read their rating",
-    reading: "Reading their rating",
     smallest: (smallest: number) => `${smallest} or more, so the gift is worth earning.`,
     readAgain: "The name or the rating changed. Read their rating again.",
     readAt: (time: string) => `Read at ${time}.`,

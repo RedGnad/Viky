@@ -397,7 +397,7 @@ export const CHESS_TACTICS_RECORD: Condition = {
       },
     },
   },
-  detailTitle: "Their Chess.com, and the record to beat",
+  detailTitle: "Their Chess.com, and the record they reach",
   reading: "chess-profile",
   words: {
     earnedDay: "When they beat it, all of this becomes theirs",
@@ -482,7 +482,7 @@ export const CREDLY_BADGE: Condition = {
   source: "Credly",
   family: "course",
   name: "Get a certification on Credly",
-  help: "The badge its issuer published, read by the pair of ids Credly gives it: the issuer awards it, and nobody can award one to themselves.",
+  help: "The badge its issuer published, read from Credly's own record of it: the issuer awards the badge, and nobody can award one to themselves.",
   link: { kind: "link", label: "The link to your badge", help: "In Credly, open the badge and choose Share, then paste the link here." },
   reading: "credly-assertion",
   words: {
