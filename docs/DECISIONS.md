@@ -3356,3 +3356,20 @@ behind an account cannot be photographed any other way.
   score on the Duolingo English Test" to "Reach a score on the English Test", which is what holds that row to one
   line at 390 (327 pixels of title against 298 of room; at 430 it fits as it is). The name is left whole, because
   nothing else in the chooser names that source and "the English Test" could be any of them.
+
+## D120, 20 Sep 2026: a request is part of what is fetched, so it lives where the fingerprint can see it
+
+- Found by taking the one reading the tests cannot take: a real proof, from the real attestor, of each of the two
+  conditions opened that day. The puzzle record answered (erik, 2096, two proofs). **Credly failed**, and the
+  condition was live in production at the time.
+- **Why.** Every attested reading was made with `accept: application/json`, written once beside the verification.
+  Credly's badge page varies on `Accept` and answers 500 to JSON (measured the same day), so the half of the reading
+  that carries the holder's name could never be taken. Nothing in the tests could catch it: they build their own
+  proofs, and a built proof never asks a server anything.
+- **What changed.** A source says what it accepts, and the headers moved into `src/attested-sources.ts`, which the
+  reading fingerprint covers. They used to sit in `src/attested-read.ts`, outside the number, so a change of headers
+  would have been invisible to the app and the worker alike, which is exactly what the number exists to prevent.
+- **Proved after**: both readings taken through the real attestor, two proofs each, the badge read as Elio Vantar,
+  `ai-fundamentals-with-ibm-skillsbuild`, issued 30 Aug 2024.
+- **The lesson worth keeping**: a condition is not proved by its tests. It is proved by one real reading, and that
+  reading costs a minute. Take it before calling a condition live, not after.

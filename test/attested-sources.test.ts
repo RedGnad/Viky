@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   attestedSource,
@@ -7,9 +8,12 @@ import {
   CHESS_PROFILE,
   CHESS_RATINGS,
   COURSERA_CERTIFICATE,
-  DUOLINGO_PROFILE,
+  CREDLY_ASSERTION,
+  CREDLY_BADGE_PAGE,
+  headersFor,
 } from "../src/attested-sources";
-import { chessStatusPattern } from "../src/chess-com";
+import { DUOLINGO_PROFILE } from "../src/attested-sources";
+import { CHESS_USER_AGENT, chessStatusPattern } from "../src/chess-com";
 
 test("only the listed sources exist, and an unknown name is refused", () => {
   assert.deepEqual([...attestedSourceIds()].sort(), [
@@ -114,4 +118,27 @@ test("a Coursera certificate page answers with everything the proof needs", () =
     COURSERA_CERTIFICATE.url("3s3aana8jqtn"),
     "https://www.coursera.org/account/accomplishments/verify/3S3AANA8JQTN",
   );
+});
+
+/**
+ * What a request is made of is part of what is fetched, so it lives with the sources and is covered by the reading
+ * fingerprint. It used to sit beside the verification, outside the number: a change of headers would have been
+ * invisible to both the app and the worker, and one of them was wrong for a week of nothing.
+ *
+ * Measured on 20 Sep 2026: Credly's badge page varies on `Accept` and answers 500 to `application/json`, which is
+ * what every source had always been read with. The attested reading of a badge could not be taken at all, and the
+ * condition was live. A real proof of both halves was taken through the attestor once this was set.
+ */
+test("a source that answers only to its own Accept says so, and the reading asks for exactly that", () => {
+  assert.equal(CREDLY_BADGE_PAGE.accept, "text/html");
+  assert.deepEqual(headersFor(CREDLY_BADGE_PAGE), { accept: "text/html", "user-agent": CHESS_USER_AGENT });
+  // Every other source answers with JSON and says nothing, so nothing changes for any of them.
+  for (const source of [COURSERA_CERTIFICATE, CREDLY_ASSERTION, CHESS_PROFILE, DUOLINGO_PROFILE]) {
+    assert.equal(source.accept, undefined, source.id);
+    assert.equal(headersFor(source).accept, "application/json", source.id);
+  }
+  assert.equal(headersFor(DUOLINGO_PROFILE)["user-agent"], "Mozilla/5.0 (Viky)", "a source that asks for no agent gets ours");
+  // And it stays in the file the fingerprint covers, which is the whole reason it moved.
+  assert.match(readFileSync("src/attested-sources.ts", "utf8"), /export function headersFor/);
+  assert.doesNotMatch(readFileSync("src/attested-read.ts", "utf8"), /function headersFor/);
 });
