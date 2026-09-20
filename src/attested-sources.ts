@@ -37,6 +37,12 @@ export type AttestedSource = Readonly<{
   matches: readonly ResponseMatch[];
   /** The user agent the page is read with, when the site asks for one of its own. */
   userAgent?: string;
+  /**
+   * What the reading asks for, when the page is not the JSON every other source answers with. Credly's badge page
+   * varies on `Accept` and answers 500 to `application/json` (measured 20 Sep 2026), so a reading that did not say
+   * this could never be taken at all.
+   */
+  accept?: string;
 }>;
 
 /** Duolingo's public profile: the identity, the display name, and the experience total (D27). */
@@ -227,6 +233,7 @@ export const CREDLY_BADGE_PAGE: AttestedSource = {
   accepts: isValidCredlyBadgeId,
   url: credlyPublicUrl,
   userAgent: CHESS_USER_AGENT,
+  accept: "text/html",
   matches: [
     { type: "regex", value: '<meta property="og:title" content="(?<ogTitle>[^"]+)"' },
     { type: "regex", value: '<meta property="og:url" content="(?<ogUrl>https://www\\.credly\\.com/badges/[0-9a-f-]{36})"' },
@@ -258,6 +265,17 @@ export const DET_CERTIFICATE: AttestedSource = {
 };
 
 const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE];
+
+/**
+ * The headers a source is read with, which is part of what is fetched and therefore lives with the sources: it is
+ * covered by the reading fingerprint, where it used to sit beside the verification and be invisible to it.
+ *
+ * Chess.com answers a request without a user agent with a challenge page, and Credly's badge page varies on
+ * `Accept` and answers 500 to `application/json` (measured 20 Sep 2026), so both are the source's to say.
+ */
+export function headersFor(source: AttestedSource): Record<string, string> {
+  return { accept: source.accept ?? "application/json", "user-agent": source.userAgent ?? "Mozilla/5.0 (Viky)" };
+}
 
 /** The source with that name, or nothing. An unknown name is refused rather than guessed at. */
 export function attestedSource(id: string): AttestedSource | undefined {

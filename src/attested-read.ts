@@ -1,5 +1,5 @@
 import { keccak256, stringToHex, type Hex } from "viem";
-import { attestedSource, type AttestedSource, type ResponseMatch } from "./attested-sources";
+import { attestedSource, headersFor, type AttestedSource, type ResponseMatch } from "./attested-sources";
 import { allowedAttestors, attestorAccepted, type ZkFetchProof } from "./duolingo-public";
 import { READING_FINGERPRINT } from "./reading-fingerprint";
 
@@ -150,11 +150,6 @@ export async function attestedRead(sourceId: string, account: string, deps: Atte
   if (!valid) throw new AttestedReadError("PROOF_INVALID", "The proof did not verify");
   if (!attestorAccepted(proof, deps.attestors ?? allowedAttestors())) throw new AttestedReadError("PROOF_INVALID", "The proof was not signed by a pinned attestor");
   return readingOfProof(source, account, proof);
-}
-
-/** The headers a source is read with. Chess.com answers a request without a user agent with a challenge page. */
-function headersFor(source: AttestedSource): Record<string, string> {
-  return { accept: "application/json", "user-agent": source.userAgent ?? "Mozilla/5.0 (Viky)" };
 }
 
 /** How long an agreement is taken as still true. A disagreement is never held: it is asked again at the next read. */
