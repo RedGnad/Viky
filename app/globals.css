@@ -47,7 +47,7 @@
   --on-surface-faint: #96844F;
   --surface-rule: #EADFC2;
   --card-edge: #F0E3C2;
-  --card-shadow: 0 16px 40px rgba(30, 22, 51, 0.2);
+  --card-shadow: none;
   /* Under the one action, three pixels of it, which is the sun with its light taken out. */
   --sun-deep: #E8A400;
   --action-relief-depth: 3px;
@@ -80,20 +80,19 @@
   --type-say: 25px;
   --type-say-leading: 30px;
   /*
-   * The promise under the card on the page without an account (D127): the title voice, 25, two steps under the
-   * card's own figure, because the card is the star of Home and the promise is its second level. The 76 hero that
-   * stood above the card for one evening pushed 114 px of the card under the fold at 1440x788 and is gone.
+   * The promise on the page without an account (D128): 39 in the one column under 1024, 76 from 1024 where it stands
+   * in the left column beside the card, with the lead sentence under it at 20 there and at the body's 16 below.
    */
-  --type-promise: 25px;
-  --type-promise-leading: 30px;
-  --type-promise-tracking: -0.5px;
+  --type-hero: 39px;
+  --type-hero-leading: 42px;
+  --type-hero-tracking: -1px;
+  --type-lead: 16px;
+  --type-lead-leading: 24px;
   /*
-   * The card as an object placed on the page (D127, the niche: an object sits by a full offset, never a blur). A
-   * 2 px edge in the ink by day and in the controls' night edge at night, and a hard 10 px offset in the ink by day
-   * and in the characters' lavender at night, where the ink would vanish into the ground.
+   * The gift card's edge (D127, D128): 2 px, the ink by day and the controls' night edge at night. It carries no
+   * shadow at all: cream on the ink ground measures 17:1 and needs none, and the niche allows no blur anywhere.
    */
   --card-placed-edge: #1E1633;
-  --card-placed-relief: #1E1633;
   /* The fill of a button that is not the one action: quiet, and identified by its outline (K, rule 10). */
   --tonal: #E8E3F4;
 
@@ -213,6 +212,17 @@
   }
 }
 
+/* From 1024 the page without an account is two columns, and the promise takes the size the advisor measured. */
+@media (min-width: 1024px) {
+  :root {
+    --type-hero: 76px;
+    --type-hero-leading: 1.02;
+    --type-hero-tracking: -2px;
+    --type-lead: 20px;
+    --type-lead-leading: 28px;
+  }
+}
+
 /*
  * Night because the device says so, and only while nobody has asked for day. The appearance control writes
  * `data-theme` on the document (src/theme.ts, D97); with nothing written, this is what paints the screen.
@@ -229,11 +239,10 @@
     --control-border: #F3F0FA;
     --divider: #352C52;
     --scrim: rgba(8, 6, 15, 0.5);
-    /* The same cream card as day, with a deeper shadow and no edge: on the ink ground it needs neither. */
+    /* The same cream card as day, with no edge and no shadow: on the ink ground it needs neither (D128). */
     --card-edge: transparent;
-    --card-shadow: 0 20px 44px rgba(0, 0, 0, 0.5);
+    --card-shadow: none;
     --card-placed-edge: #F3F0FA;
-    --card-placed-relief: #BBA3FA;
     --tonal: #332A5E;
     --card-border: #352C52;
     --character-1: #FF8C98;
@@ -264,9 +273,8 @@
   --scrim: rgba(8, 6, 15, 0.5);
   /* The same cream card, with a deeper shadow and no edge: on the ink ground it needs neither. */
   --card-edge: transparent;
-  --card-shadow: 0 20px 44px rgba(0, 0, 0, 0.5);
+  --card-shadow: none;
   --card-placed-edge: #F3F0FA;
-  --card-placed-relief: #BBA3FA;
   --tonal: #332A5E;
   --card-border: #352C52;
   --character-1: #FF8C98;
@@ -452,64 +460,7 @@ video {
  */
 .gift-card-placed {
   border: 2px solid var(--card-placed-edge);
-  box-shadow: 10px 10px 0 var(--card-placed-relief);
-}
-
-/*
- * The ground carries two halos, very diffuse, the sun at the top right and the violet at the bottom left, and no
- * texture and no grain (the mockups, point 7). They are painted behind everything and they catch no press. Day has
- * them too since home-light.html, a little further out and with the violet a little stronger.
- */
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  z-index: -1;
-  border-radius: 50%;
-  filter: blur(90px);
-  opacity: 0.2;
-  pointer-events: none;
-}
-
-body::before {
-  width: 460px;
-  height: 460px;
-  top: -230px;
-  right: -160px;
-  background: var(--accent);
-}
-
-body::after {
-  width: 420px;
-  height: 420px;
-  bottom: -200px;
-  left: -170px;
-  background: var(--character-3);
-}
-
-/* Day carries them too, a little further out and the violet a little stronger (home-light.html). */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) body::before {
-    top: -280px;
-    right: -210px;
-  }
-
-  :root:not([data-theme="dark"]) body::after {
-    bottom: -200px;
-    left: -190px;
-    opacity: 0.22;
-  }
-}
-
-:root[data-theme="light"] body::before {
-  top: -280px;
-  right: -210px;
-}
-
-:root[data-theme="light"] body::after {
-  bottom: -200px;
-  left: -190px;
-  opacity: 0.22;
+  box-shadow: none;
 }
 
 /*
@@ -588,7 +539,8 @@ dialog.sheet {
   border: none;
   border-radius: var(--radius-card) var(--radius-card) 0 0;
   overflow: hidden;
-  box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.5);
+  /* No shadow: the scrim behind it is what sets it apart, and the niche allows no blur anywhere (D128). */
+  box-shadow: none;
 }
 
 dialog.sheet-tall {

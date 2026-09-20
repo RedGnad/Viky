@@ -196,13 +196,13 @@ test("a card is the light object on the ground, as the rendered mockups draw it"
   // Night is drawn: cream paper on the ink ground, 17:1 apart, with a shadow under it and no edge at all.
   assert.match(css, /--paper: #FFF6E2;/);
   assert.ok(contrastRatio("#FFF6E2", COLOURS.dark.background) > 15, "the card and the ground are never the same value");
-  assert.match(css, /--card-shadow: 0 20px 44px rgba\(0, 0, 0, 0\.5\);/);
+  assert.match(css, /--card-shadow: none;/, "no shadow at all on the ink ground (D128)");
   assert.match(css, /--card-edge: transparent;/);
   // Day is drawn too since home-light.html: the same cream, on a lavender ground, with its own softer shadow and a
   // warm hairline. The near-white card it replaced stood at 1.09:1 on its ground and needed a hairline of ink.
   assert.ok(contrastRatio("#FFF6E2", COLOURS.light.background) >= 1.3);
   assert.match(css, /--card-edge: #F0E3C2;/);
-  assert.match(css, /--card-shadow: 0 16px 40px rgba\(30, 22, 51, 0\.2\);/);
+  assert.doesNotMatch(css, /--card-shadow: 0 /, "and no blurred shadow by day either (D128)");
   // Everything inside a card reads on paper, so nothing inside one had to be rewritten for the ink to change.
   assert.match(ui, /export const CARD =\n?\s*"on-paper/);
   for (const said of ["--text: var(--on-surface)", "--muted: var(--on-surface-muted)", "--control-border: var(--on-surface)"]) {
@@ -284,21 +284,21 @@ test("a case opens in a sheet, and a sheet is a dialog rather than a page", () =
   assert.equal(card.match(/ open=\{(choosing|paying)\}/g)?.length, 2);
 });
 
-test("the page without an account is the character, the card, and the promise under it", () => {
+test("the page without an account is the character, the card and the promise on a phone, and two columns from 1024", () => {
   const home = readFileSync("app/kit/Home.tsx", "utf8");
   const signedOut = home.slice(home.indexOf("if (!address)"), home.indexOf("const moving ="));
-  // The card first, the promise under it (D127, the vision of 19 Sep, section 5): the card is the star of Home, at
-  // every width; the character keeps its place above it; the promise is the title voice, then its one sentence.
+  // D128: one DOM, two compositions. The left block (character, promise, sentence) is `contents` under 1024 and the
+  // orders put the card between the character and the promise; from 1024 it is a flex column beside the card.
   assert.match(signedOut, /<Character state="gift" tone="sun"/);
-  assert.match(signedOut, /<h1 className=\{PROMISE\}>\{W\.promise\}<\/h1>/);
-  const character = signedOut.indexOf("<Character state=");
-  const offer = signedOut.indexOf("<OfferCard />");
-  const promise = signedOut.indexOf("<h1 className={PROMISE}>");
-  const under = signedOut.indexOf("{W.promiseUnder}");
-  assert.ok(character < offer && offer < promise && promise < under, "the character, the card, the promise, its sentence, in that order");
+  assert.match(signedOut, /<h1 className=\{HERO\}>\{W\.promise\}<\/h1>/);
+  assert.match(signedOut, /<p className=\{`\$\{LEAD\} max-w-\[460px\]`\}>\{W\.promiseUnder\}<\/p>/, "the sentence in the quiet voice, at most 460 wide");
+  assert.match(signedOut, /className="contents \[@media\(min-width:1024px\)\]:flex/, "the left block is transparent to the column under 1024");
+  assert.match(signedOut, /className="order-2 [^"]*\[@media\(min-width:1024px\)\]:order-none/, "the promise after the card on a phone");
+  assert.match(signedOut, /className="order-1 w-full \[@media\(min-width:1024px\)\]:order-none/, "the card between the character and the promise on a phone, on the right from 1024");
+  assert.match(signedOut, /\[@media\(min-width:1024px\)\]:min-h-\[560px\] \[@media\(min-width:1024px\)\]:flex-row \[@media\(min-width:1024px\)\]:items-center \[@media\(min-width:1024px\)\]:gap-\[80px\]/);
+  assert.match(signedOut, /\[@media\(min-width:1024px\)\]:max-w-\[620px\]/, "the left column at most 620");
+  assert.doesNotMatch(signedOut, /<h1 className=\{`\$\{HERO\}[^`]*max-w/, "and the title free to take the column, which is what holds it on two lines at 76");
+  assert.match(signedOut, /<Shell kind="destination" active="home" action=\{<SignInDoor \/>\} bare wide>/, "the wide column, and no rail's room");
+  assert.match(home, /<Shell kind="destination" active="home" width="card">/, "with an account, the column is the card's width");
   assert.doesNotMatch(signedOut, /promiseBody|howItWorks|exampleGift/, "no third paragraph, and no example of a gift beside a real one");
-  // From 1024 the card and the promise are centred in the window and in the height; below, the left edge, as on a phone.
-  assert.match(signedOut, /\[@media\(min-width:1024px\)\]:min-h-\[calc\(100dvh-152px\)\][^"]*\[@media\(min-width:1024px\)\]:items-center[^"]*\[@media\(min-width:1024px\)\]:justify-center/);
-  assert.match(signedOut, /<Shell kind="destination" active="home" action=\{<SignInDoor \/>\} bare>/, "no rail's room on the page without an account");
-  assert.match(signedOut, /max-w-\[460px\]/, "the promise at most 460 wide");
 });

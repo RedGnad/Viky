@@ -765,7 +765,7 @@ export const SCENARIOS: Scenario[] = [
       // started surviving a page load.
       await s.page.context().clearCookies();
       await s.goto("/");
-      await s.text("Money that arrives as they earn it.");
+      await s.text("Money that cheers them on.");
       await s.shot("home", "signed out", "The door with no session: the promise, the two ways in, how it works, and the two documents the law asks for");
       await s.goto("/me");
       // Making an account happens at the one door in the header (brief, section 7), not in the body of this page.
