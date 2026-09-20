@@ -6,6 +6,8 @@ import {Claims} from "@reclaimprotocol/solidity-sdk/contracts/lib/Claims.sol";
 import {VikyStravaClaimParser, VikyStravaReclaimVerifier} from "../contracts/verifiers/VikyStravaReclaimVerifier.sol";
 import {VikyProofTypes} from "../contracts/verifiers/VikyProofTypes.sol";
 
+// CLOSED, D123 of 20 Sep 2026: the verifier under test is not wired and not to be wired (Strava's API Agreement,
+// section 4.4, deletion on termination that a public chain cannot honour). The tests stay so the record stays green.
 interface VmStravaVerifier {
     function addr(uint256 privateKey) external returns (address);
     function sign(uint256 privateKey, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s);

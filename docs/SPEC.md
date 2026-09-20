@@ -69,7 +69,7 @@ permission.
 | GitHub contributions per day | Reclaim provider to build with the Reclaim agent (public data) | unbounded | launch candidate 2, fits the first funders' circle |
 | on-chain conditions (balance held N days, repayment) | native | unbounded | launch, zero cost |
 | university graduation | Reclaim full-stack (universities preconfigured, Reclaim's own UI) | unbounded | phase 2, it is the literal "$500 when you graduate" |
-| Strava distance | Reclaim zkTLS, provider and `LockInStravaReclaimVerifier` exist in Lock-In with real-proof tests; the user proves their own session, so the Strava API athlete cap does not apply | unbounded via zkTLS | launch candidate; fallback if zkTLS disappoints: Strava Developer Program review (99 athletes) once screens exist |
+| Strava distance | closed, D123 of 20 Sep 2026: Strava's API Agreement (section 4.4) requires deleting all Strava data on termination and certifying it in writing, which what Viky writes on a public chain cannot honour; the verifier and its two tests stay in the repository, unwired | none | not offered |
 | screen time | Apple DeviceActivity has no network; lead: a third-party web dashboard (RescueTime) via zkTLS | unknown | not offered |
 
 **Accrual mechanic for Duolingo (fits Lock-In's baseline/final delta model)**: the recipient proves
