@@ -121,9 +121,9 @@ export function WillSheet({
       standing: undefined,
       standingReadAt: undefined,
       target: suggested !== undefined ? String(suggested) : "",
-      // A length already typed is kept when this condition allows it, and dropped when it does not. Nothing is
-      // filled in on the person's behalf: the fourth case stays theirs to answer.
-      days: draft.days.length > 0 && Number(draft.days) >= bounds.min && Number(draft.days) <= bounds.max ? draft.days : "",
+      // The length the register suggests for this condition, pressed: the chips come from the same bounds, and the
+      // one marked is the one the code marks (the founder, 20 Sep 2026). A person changes it on the card in one press.
+      days: String(bounds.suggested),
     });
     setNameCheck({ busy: false });
     setCourses(null);

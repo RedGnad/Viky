@@ -250,10 +250,17 @@ export const CHARACTER_SHADOW_OPACITY: Record<Appearance, number> = { light: 0.1
 
 /**
  * The relief under a button, which is what a press collapses (brief, section 6). By day it is the ink, the pressed
+ * key of the look. At night it was a shade under the ground, 1.09:1, meant to read as depth after the cream slab
+ * the founder saw on the capture of 17 Sep, which was the ink after dark and read as a thick white edge (brief,
+ * section 8). Measured on production on 20 Sep 2026, that shade could not be seen at all, and a relief nobody sees
+ * is no relief: the hover that grows it and the press that collapse it read as nothing, which the founder saw as
+ * the night door having no effect. So it is the night's own muted lavender now, the colour of a quiet line on the
+ * ground: seen, and not a white edge. On the paper, cream at night too, the stylesheet keeps the ink (`.on-paper`).
+ * By day it is the ink, the pressed
  * key of the look. At night it is a shade under the ground, 1.09:1, read as depth: the cream slab the founder saw on
  * the capture of 17 Sep was the ink after dark, and it read as a thick white edge (brief, section 8).
  */
-export const RELIEF: Record<Appearance, string> = { light: "#1E1633", dark: "#08060F" };
+export const RELIEF: Record<Appearance, string> = { light: "#1E1633", dark: "#B3ABC9" };
 
 /**
  * The type of the look. Fredoka, round and geometric, a relative of the characters, sets exactly one display title per

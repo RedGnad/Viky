@@ -186,7 +186,9 @@ test("one accent per surface: the card's Pay, and a sheet's own Done", () => {
   for (const source of sheets) {
     assert.equal(source.match(/className=\{PRIMARY_BUTTON\}/g)?.length, 1, "a sheet has one action in the sun");
   }
-  assert.match(card, /W\.pay\(formatAusd\(units\)\) : W\.stillNeeded/, "the same button, saying what it waits for");
+  // The same button, shut, says what it waits for rather than its price: the condition's own questions first, then a
+  // length the route takes, then an amount that can be read.
+  assert.match(card, /!filled\.will \? W\.finishWill : !filled\.howLong \? W\.chooseLength : units === undefined \? W\.stillNeeded : W\.pay\(formatAusd\(units\)\)/);
   assert.doesNotMatch(card, /var\(--accent\)/, "nothing else on the card paints itself with the sun");
 });
 

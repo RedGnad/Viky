@@ -2,7 +2,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { useAccount } from "@/src/account/provider";
 import { formatAusd } from "@/src/gift-reader";
-import { draftUnits, durationBounds, isComplete, shapeOf, type GiftDraft } from "@/src/gift-draft";
+import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type GiftDraft } from "@/src/gift-draft";
 import { conditionById } from "@/src/conditions";
 import { cardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
 import { AmountError, dollarsToUnits, PILOT_CAP_SENTENCE } from "@/src/money";
@@ -51,6 +51,7 @@ export function OfferCard() {
   const condition = conditionById(draft.conditionId);
   const shape = shapeOf(draft.conditionId);
   const bounds = durationBounds(draft.conditionId);
+  const filled = filledCases(draft);
   const ready = isComplete(draft) && units !== undefined;
   const recipient = draft.recipientName.trim();
   const funder = draft.funderName.trim();
@@ -197,9 +198,10 @@ export function OfferCard() {
                 )}
               </span>
 
-              {/* One action, in the sun, full width, saying what it will take from the first second. */}
+              {/* One action, in the sun, full width, saying what it will take from the first second; shut, it says what it
+                  is waiting for rather than its price (ui review, 20 Sep 2026: a muted "Pay $30.00" with no reason). */}
               <button type="button" className={`${PRIMARY_BUTTON} mt-[var(--space-lg)]`} disabled={!ready} onClick={() => setPaying(true)}>
-                {units !== undefined ? W.pay(formatAusd(units)) : W.stillNeeded}
+                {!filled.will ? W.finishWill : !filled.howLong ? W.chooseLength : units === undefined ? W.stillNeeded : W.pay(formatAusd(units))}
               </button>
               <span className={`block ${HELP} text-center`}>{shape === "days" && units !== undefined && days > 0 ? W.eachDay(formatAusd(units / BigInt(days))) : PILOT_CAP_SENTENCE}</span>
             </>
