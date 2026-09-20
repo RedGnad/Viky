@@ -3446,3 +3446,62 @@ behind an account cannot be photographed any other way.
   refused for a reason that is not technical, and deleting them would make that reason harder to find.
 - What this closes: D15 (Strava as a launch candidate) and the "Strava only through its official API" line of the
   entry of 17 Sep. The spec's table says the same in one row.
+
+## D124, 20 Sep 2026: the way out is one decision, and the way that leaves the most leads it
+
+- Statement, the founder's, reading viky.cash/cash-out against out.html on 20 Sep 2026: the screen's work is one
+  decision, and each card is a title, a figure, a line and a button. "Ramp" and "Mercuryo" are not titles: our
+  public does not know what they are. The titles are "Your bank" and "Your card"; the company is named in the line,
+  on the steps that open its page, and behind a fold. The way that leaves the most goes first, carries the accent,
+  and a line under its figure says the gap in the person's words ("€2.01 more than to your card."). This replaces
+  the arbitration of 19 Sep that no card carried the accent: that arbitration answered an accent that marked the
+  country's order, which read as a recommendation of nothing. An accent that marks the larger figure recommends
+  what the figure recommends. A card with no figure (no rate read) carries none.
+- **The order.** The country keeps its one say (D96): a way whose own service says it does not serve there goes
+  last. Among the rest, the net figure decides, descending. Nothing is removed. `orderByWhatReaches` in
+  `src/exit-steps.ts`.
+- **Off the card.** The source line ("Read from Ramp's own payout-methods list and asset page, 16 Sep 2026") is
+  for a judge, and noise for somebody who wants their money: it is behind "Where these figures come from" under the
+  cards, with each service's fee sentence and the rate's source. The conditions (identity check, the name on the
+  account or the card) are said at step 2, where that service's page opens. "Selling is shut in the United Kingdom"
+  is off the card: it is about selling, the screen reads that restriction live from the endpoint and says it under
+  the card for whoever is there, and everybody else was reading it for nothing.
+- **The defect.** The head of the screen said "$10.14" and both cards "If you sent all $10.13". The head added the
+  six-decimal balances of the two dollar coins and cut the sum; the cards used what a gift holds alone. The account
+  held 10.13 of that and 0.0096 of the other, left by a payout, which tipped the sum. Neither figure was false and
+  neither was the money that can move. Now each coin is cut to the cent before they are added (`dollarsToTheCent`),
+  the cards compute on what can be changed cut the same way, and Home's figure uses the same cut, so the two screens
+  agree. When the other coin holds a cent or more the head is larger than the cards and the line "$X of it is ready
+  to send to Ramp" says why.
+- **The head.** Dollars lead, the conversion is the caption, as out.html draws it: the cards under it say what
+  arrives in the person's currency, so the dollars are what they have and the euros are what they get.
+- Closes the arbitration of 19 Sep on the accent (`docs/reports/2026-09-19-the-way-out.md`).
+
+## D125, 20 Sep 2026: a way in is offered by what the gift needs against its published floor
+
+- Statement, the founder's, 20 Sep 2026: the choice of the way in is a choice of cost, not a minimum on the gift.
+  A way whose published floor is above what this gift needs is not offered for this gift. Between the ways left,
+  the one that leaves the most (the one that asks the fewest euros for the same gift) goes first and stands in
+  front of the action. The gift's own minimum does not move: the gift costs nothing, the way costs.
+- **The floors are theirs, re-read 20 Sep 2026.** Ramp: `minPurchaseAmountEur: 6`, fees 0.99 % to 3.9 % with a
+  2.49 EUR minimum, `MONAD_AUSD` enabled, at `https://api.ramp.network/api/host-api/assets`. Mercuryo:
+  `fiat_payment_methods.EUR.limits.min` is `"25"` for card, Google Pay and Apple Pay, at
+  `https://api.mercuryo.io/v1.6/lib/currencies`, the same figure as on 10 and 14 Sep (D20). **The founder's brief
+  said Mercuryo had no minimum and no floor**, from their `public/convert` endpoint, which prices a 1 EUR purchase
+  (fee 0.04 EUR) and a 6 EUR one (fee 0.23 EUR) without complaint. That is D79 again on the other rail: an
+  endpoint that quotes is not a service that pays. The published limit is the figure a screen may act on, so at
+  6 EUR only Ramp is offered, and the 41 % it keeps there is what the person pays for a gift that small. The rule
+  is exactly the one asked for; only the premise about one figure was wrong, and the source says so.
+- **Not the country.** `rails/where` orders and never hides, because a guess about a country is wrong often enough
+  to put money out of reach (D96). The amount is a published figure; the country is a guess. We hide on the first,
+  never on the second: the country still sends a way that says it does not serve there to the back, and no further.
+- **Under every floor.** A one dollar gift needs 4 EUR at Ramp and 2 EUR at Mercuryo, under both floors. The
+  gift's minimum does not move: the way with the lowest floor is offered at its floor, and the sheet says "The card
+  service takes nothing under 6 EUR, so that is what you pay. What is left over stays in your account for your next
+  gift." It does: the coin lands in the person's own account and the gift takes its part.
+- **No company on the sheet's lines or buttons.** "What Ramp charges" is "What the card service charges"; "Pay with
+  Mercuryo instead" is "Pay by card another way". The service is named where it is met, on the page that opens and
+  on the wait that says what to set there, and behind the fold that says where its figures were read.
+- **The rate line.** "at the rate of 18 Sep 2026" on a Sunday looked stale. The figure was right: the European
+  Central Bank sets one each working day and none at the weekend. The line now names the source and says so.
+- `waysInFor` and `eurosNeededOn` in `src/gift-amount.ts`; `test/pay-sheet.test.ts`.

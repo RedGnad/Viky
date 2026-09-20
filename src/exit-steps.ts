@@ -1,5 +1,6 @@
 import { CONVERSION_RESERVE } from "./funding-step";
 import { AUSD, isNative, type Coin } from "./coins";
+import type { RailReach } from "./rail-country";
 import type { PublishedFee, WayOut } from "./rails";
 
 /**
@@ -25,6 +26,21 @@ export function twoDecimalsDown(units: bigint, decimals: number): string {
 export function unitsOfTwoDecimals(text: string, decimals: number): bigint {
   const [whole, fraction = ""] = text.split(".");
   return BigInt(whole) * 10n ** BigInt(decimals) + BigInt(fraction.padEnd(2, "0")) * 10n ** BigInt(decimals - 2);
+}
+
+/** A balance in units, cut to the cent: what a two-decimal screen can say of it, and what an order can move. */
+export function toTheCent(units: bigint, decimals: number): bigint {
+  return unitsOfTwoDecimals(twoDecimalsDown(units, decimals), decimals);
+}
+
+/**
+ * The dollars an account holds, each coin cut to the cent before they are added. The two dollar coins are added
+ * for one figure, and adding their six decimals first let dust under a cent tip the sum: an account holding
+ * 10.13 of what a gift holds and 0.0096 left from a payout read "$10.14" above two cards computed on $10.13 (the
+ * founder, 20 Sep 2026, D124). Cut first, added after, the figure is the money that can actually move.
+ */
+export function dollarsToTheCent(ausd: bigint, usdc: bigint, decimals = AUSD.decimals): bigint {
+  return toTheCent(ausd, decimals) + toTheCent(usdc, decimals);
 }
 
 export type Ready = Readonly<{
@@ -93,6 +109,22 @@ export function netOfEverything(
   if (fee.currency !== "EUR") return undefined;
   const euros = (Number(units) / 1_000_000) * rates.eurPerUsd;
   return { net: feeApplied(euros, fee).net, currency: fee.currency, rateDate: rates.date };
+}
+
+/**
+ * The ways out in the order the screen shows them (D124): a way whose own service says it does not serve this
+ * country goes last (R1, and that is the only thing a country may do), and among the rest the one that leaves the
+ * most reaches the top. A way with no figure, because no rate was read, keeps its place after those with one.
+ * Nothing is removed: the screen shows every way, in this order.
+ */
+export function orderByWhatReaches<T extends { name: string }>(
+  ways: readonly T[],
+  reach: Readonly<Record<string, RailReach>>,
+  netOf: (way: T) => number | undefined,
+): readonly T[] {
+  const rank = (way: T) => (reach[way.name] === "does-not" ? 1 : 0);
+  const net = (way: T) => netOf(way) ?? -1;
+  return [...ways].sort((left, right) => rank(left) - rank(right) || net(right) - net(left));
 }
 
 /** "$9.995586", as the quote route writes its floor, cut to the number the person will be able to order. */

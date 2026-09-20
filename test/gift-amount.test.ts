@@ -1,7 +1,8 @@
 import { strict as assert } from "node:assert";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN } from "../src/rails.js";
-import { arrivesInDollars, eurosToBuy, eurosToBuyOn, roughlyInDollars, SMALLEST_CARD_PAYMENT_EUR, SUGGESTED_GIFT_DOLLARS } from "../src/gift-amount.js";
+import { arrivesInDollars, eurosNeededOn, eurosToBuy, eurosToBuyOn, roughlyInDollars, SMALLEST_CARD_PAYMENT_EUR, SUGGESTED_GIFT_DOLLARS } from "../src/gift-amount.js";
 import { feeSentence, RAIL_CLOSED_IN, WAY_IN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT } from "../src/rails.js";
 
 /**
@@ -57,9 +58,11 @@ test("the countries the rails will not serve are the ones their own page lists",
     assert.ok(!RAIL_CLOSED_IN.includes(country), `${country} must not be listed as closed`);
   }
   // The coin is shut in the United Kingdom both ways: their currencies endpoint lists gb for buying it and for
-  // selling it (D72). This once said buying was open there.
+  // selling it (D72). This once said buying was open there. Selling is no longer a sentence on the card that
+  // decides (D124): it is read live from that endpoint and said under the card for whoever is there.
   assert.ok(WAY_IN.closedIn.includes("United Kingdom"));
-  assert.ok(WAY_OUT_CARD.conditions.some((c) => /United Kingdom/i.test(c)));
+  assert.ok(!WAY_OUT_CARD.conditions.some((c) => /United Kingdom/i.test(c)));
+  assert.match(readFileSync("src/rail-availability.ts", "utf8"), /restricted_countries_offramp/);
 });
 
 /**
@@ -69,12 +72,14 @@ test("the countries the rails will not serve are the ones their own page lists",
  */
 test("the ways out cover each other's gaps, and each says where it pays", () => {
   assert.equal(WAYS_OUT.length, 2);
-  assert.ok(WAY_OUT_EURO.conditions.some((c) => /Senegal|Ivory Coast/i.test(c)), "the euro rail says who it cannot serve");
+  // The one line on the card that decides says where this way is shut (D124); the title says where the money goes.
+  assert.match(WAY_OUT_EURO.line, /Senegal|Ivory Coast/i, "the euro rail says who it cannot serve");
+  assert.deepEqual(WAYS_OUT.map((out) => out.title), ["Your bank", "Your card"]);
   // Since S4 no rail names the other one on screen: each says where it pays, and the order the screen puts them in
   // is what says which one fits (R1).
   assert.equal(WAY_OUT_CARD.where, "To your card.");
   for (const out of WAYS_OUT) for (const other of WAYS_OUT) if (other !== out) assert.doesNotMatch(out.where, new RegExp(other.name, "i"), `${out.name} names ${other.name}`);
-  assert.ok(WAY_OUT_CARD.conditions.some((c) => /France|EEA/i.test(c)), "and where it pays nothing");
+  assert.match(WAY_OUT_CARD.line, /France|Europe/i, "and where it pays nothing");
   // Each stands on a source with a date, so nobody has to take our word for a sentence about their money.
   for (const out of WAYS_OUT) {
     assert.ok(out.source.length > 0 && /20\d\d/.test(out.read), `${out.name} must say what was read and when`);
@@ -120,8 +125,15 @@ test("the rail that sells what a gift holds costs its fee and its floor, and not
   assert.equal(arrivesInDollars(12, WAY_IN_GIFT_COIN, rate), 10.97);
   assert.equal(arrivesInDollars(2, WAY_IN_GIFT_COIN, rate), 0, "under their minimum fee nothing arrives at all");
 
+  // What it needs before its floor, which is what decides whether it is offered at all (D125).
+  assert.equal(eurosNeededOn(1_000_000n, WAY_IN_GIFT_COIN, rate), 4);
+  assert.equal(eurosNeededOn(10_000_000n, WAY_IN_GIFT_COIN, rate), 12);
+  assert.equal(eurosNeededOn(0n, WAY_IN_GIFT_COIN, rate), 0);
+  assert.equal(eurosNeededOn(10_000_000n, WAY_IN_GIFT_COIN, undefined), undefined);
+
   // The other rail is untouched: its own floor, its own measured figures, and no rate needed.
   assert.equal(eurosToBuyOn(1_000_000n, WAY_IN_CHAIN_COIN, rate), 25);
+  assert.ok(eurosNeededOn(1_000_000n, WAY_IN_CHAIN_COIN, rate)! < 25, "under its floor, which the floor then raises");
   assert.equal(arrivesInDollars(25, WAY_IN_CHAIN_COIN, undefined), 28.51);
   assert.equal(WAY_IN_CHAIN_COIN.smallestEur, SMALLEST_CARD_PAYMENT_EUR);
 

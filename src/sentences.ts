@@ -121,7 +121,9 @@ export const PAY = {
   title: (recipient: string) => `Pay for ${their(recipient)} gift`,
   rows: {
     gift: (recipient: string) => `The gift, in ${their(recipient)} name`,
-    service: (name: string) => `What ${name} charges`,
+    /** The company is not named on the line (the founder, 20 Sep 2026): the person is paying by card, and that is all
+        they need to know here. It is named where it is met, on the page that opens, and behind the fold below. */
+    service: "What the card service charges",
     viky: "Viky takes",
     fromAccount: "From your account",
   },
@@ -130,7 +132,13 @@ export const PAY = {
   aboutDollars: (dollars: number) => `about $${dollars.toFixed(2)}`,
   youPay: "You pay about",
   euros: (euros: number) => `${euros} EUR`,
-  atTheRate: (day: string) => `at the rate of ${day}`,
+  /**
+   * The rate's source, named, and why its day can be a Friday on a Sunday: the European Central Bank sets one each
+   * working day and none at the weekend (the founder, 20 Sep 2026: a line that looked stale becomes a proof of care).
+   */
+  atTheRate: (day: string) => `At the European Central Bank's rate of ${day}. It sets one each working day.`,
+  /** When the gift needs less than the smallest payment the card service takes (D125). */
+  floor: (euros: number) => `The card service takes nothing under ${euros} EUR, so that is what you pay. What is left over stays in your account for your next gift.`,
   /** Said before the action, because it is what pressing it does: nothing was asked of this person until now. */
   passkeyMakesTheAccount: "Your face or your fingerprint creates your account when you press pay. Nothing was asked of you until now.",
   signedIn: "Your face or your fingerprint is asked once, to sign what you are paying for.",
@@ -138,7 +146,7 @@ export const PAY = {
   payEuros: (euros: number) => `Pay ${euros} EUR`,
   payFromAccount: (amount: string) => `Put ${amount} in their name`,
   paying: "One moment",
-  another: (name: string) => `Pay with ${name} instead`,
+  another: "Pay by card another way",
   /** The quiet second button of the mockup: everything only some readers need, one press away. */
   whatHappens: "What happens to my money",
   notMade: "That did not go through, and nothing was taken. Try again.",
@@ -1012,6 +1020,20 @@ export const HELP = {
 export const CASH_OUT = {
   title: "Take your money out",
   yourMoney: "Your money",
+  /** The balance at the head of the way out, and what it is for (out.html, 19 Sep 2026). */
+  keepOrTakeOut: "Yours to keep, or to take out",
+  aboutLine: (figure: string, day: string) => `About ${figure}, at the rate of ${day}.`,
+  whereTo: "Where do you want it?",
+  /** The label over the figure each way leads with: what would reach the person, said as the estimate it is. */
+  youWouldGet: "You would get about",
+  /**
+   * The gap between the two ways, on the one that leaves the most, in the person's words (the founder, 20 Sep 2026:
+   * near a quarter of their money separated the two cards and nothing said so).
+   */
+  moreThan: (gap: string, otherTitle: string) => `${gap} more than to ${otherTitle.toLowerCase()}.`,
+  /** The fold under the cards where each service's published figures and their sources are kept for whoever asks. */
+  whereFrom: "Where these figures come from",
+  rateLine: (source: string, day: string) => `The rate: ${source}, ${day}.`,
   /**
    * The balance while a gesture is being confirmed. It is where you are, not what you are deciding, so it is said in
    * the meta voice and the amount being sent takes the display size (the founder, 19 Sep 2026).
@@ -1073,14 +1095,6 @@ export const CASH_OUT = {
    * construction (`readyFor` floors to two decimals), so it is said as the money it is on a dollar rail and as a
    * fraction of what the service buys on the other: never as a number with nothing to hold on to (D104).
    */
-  /**
-   * What each way out would leave of everything the account holds, which is what the two cards are compared by since
-   * the accent stopped sitting on whichever the country put first (the founder, 19 Sep 2026). An estimate, and said
-   * as an estimate: the rate's own day above it, "about" on the figure, and the swap's own price is not in it, so
-   * nothing here is stated as what will arrive.
-   */
-  netIfAll: (all: string, rateDate: string) => `If you sent all ${all}, at the rate of ${rateDate}`,
-  netFigure: (net: string, currency: string) => `about ${net} ${currency}`,
   staysDollars: "Less than $0.01 stays in your account.",
   staysQuantity: (name: string) => `Less than 0.01 of what ${name} buys stays in your account.`,
   step2: (name: string) => `Step 2 of 3: Place your order with ${name}`,

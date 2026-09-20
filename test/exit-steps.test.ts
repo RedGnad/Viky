@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { AUSD, MON, USDC } from "../src/coins";
-import { dollarsToChange, feeApplied, floorToOrder, netOfEverything, readyFor, twoDecimalsDown, unitsOfTwoDecimals } from "../src/exit-steps";
+import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, netOfEverything, orderByWhatReaches, readyFor, toTheCent, twoDecimalsDown, unitsOfTwoDecimals } from "../src/exit-steps";
 import { CONVERSION_RESERVE } from "../src/funding-step";
 import { WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT } from "../src/rails";
 import { CASH_OUT } from "../src/sentences";
@@ -101,17 +101,66 @@ test("the floor the quote shows is cut to the number that can be ordered", () =>
 });
 
 /**
- * Look 2 (D88) gives a screen one accent surface, and it marks the one action the screen is waiting for. The way out
- * is where that was broken: two rails, two accent buttons, and steps 2 and 3 on one screen each carrying one.
+ * One number for the money on the screen (D124). The two dollar coins are added for the figure at the head, and adding
+ * their six decimals first let dust under a cent tip it: 10.13 of what a gift holds and 0.0096 left from a payout read
+ * "$10.14" over two cards computed on $10.13 (the founder, 20 Sep 2026). Each coin is cut to the cent first.
+ */
+test("the dollars an account holds are each coin cut to the cent, then added", () => {
+  assert.equal(toTheCent(10_139_586n, 6), 10_130_000n);
+  assert.equal(toTheCent(9_586n, 6), 0n, "dust under a cent is nothing a screen can say");
+  assert.equal(dollarsToTheCent(10_130_412n, 9_586n), 10_130_000n, "the founder's screen: 10.13, once");
+  assert.equal(dollarsToTheCent(10_130_412n, 500_000n), 10_630_000n, "half a dollar of the other coin counts");
+  assert.equal(dollarsToTheCent(0n, 0n), 0n);
+});
+
+/**
+ * The order of the ways out (D124, replacing the arbitration of 19 Sep): the country may send a way to the back and
+ * that is all it may do (R1); among the rest, the way that leaves the most goes first; a way with no figure keeps its
+ * place after those with one; nothing is removed.
+ */
+test("the ways out are ordered by what reaches the person, after the country has had its one say", () => {
+  const net = (way: { name: string }) => ({ Ramp: 16.06, Mercuryo: 14.05 })[way.name];
+  const ways = WAYS_OUT.map((way) => ({ name: way.name }));
+  assert.deepEqual(orderByWhatReaches(ways, {}, net).map((way) => way.name), ["Ramp", "Mercuryo"]);
+  assert.deepEqual(orderByWhatReaches([...ways].reverse(), {}, net).map((way) => way.name), ["Ramp", "Mercuryo"], "the register's order does not decide");
+  assert.deepEqual(orderByWhatReaches(ways, { Ramp: "does-not" }, net).map((way) => way.name), ["Mercuryo", "Ramp"], "the country sends a way back");
+  assert.deepEqual(orderByWhatReaches(ways, { Ramp: "unknown", Mercuryo: "serves" }, net).map((way) => way.name), ["Ramp", "Mercuryo"], "a silence is not a refusal");
+  assert.deepEqual(orderByWhatReaches(ways, {}, () => undefined).map((way) => way.name), ["Ramp", "Mercuryo"], "no figure, the register's order");
+  assert.equal(orderByWhatReaches(ways, { Ramp: "does-not", Mercuryo: "does-not" }, net).length, 2, "nothing is removed");
+});
+
+/**
+ * Look 2 (D88) gives a screen one accent surface, and it marks the one action the screen is waiting for. On the way
+ * out it marks the first card, which is where the order puts the way that leaves the most (D124), and on the screen
+ * holding steps 2 and 3 it sits on placing the order until a code can be sent to, then on sending.
  */
 test("the way out shows one accent surface at a time, on the action it is waiting for (S4)", () => {
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
-  // The base: no way out carries the accent at all (the founder, 19 Sep 2026). The order is by country (D96), so an
-  // accent on the first card marked the order and was read as a recommendation of it. What is compared instead is the
-  // net each one would leave, which is the figure on the card.
-  assert.doesNotMatch(screen, /className=\{index === 0 \? PRIMARY_BUTTON/, "the accent is back on whichever card came first");
-  assert.match(screen, /onClick=\{\(\) => start\(way\)\}[^>]*className=\{SECONDARY_BUTTON\}/, "both ways out carry the same neutral button");
-  assert.match(screen, /const net = netOf\(way\);/, "the cards no longer say what each would leave");
+  // The base: the first card carries the accent when it has a figure, and only then; the second never does.
+  assert.match(screen, /const leads = index === 0 && net !== undefined;/);
+  assert.match(screen, /onClick=\{\(\) => start\(way\)\}[^>]*className=\{leads \? PRIMARY_BUTTON : SECONDARY_BUTTON\}/);
+  // The gap is said on that card, and only when both figures exist and this one is the larger.
+  assert.match(screen, /const gap = leads && other && otherNet && net\.net > otherNet\.net \? net\.net - otherNet\.net : undefined;/);
+  assert.match(screen, /W\.moreThan\(figureIn\(gap, net!\.currency\), other\.title\)/);
+  assert.equal(CASH_OUT.moreThan("€2.01", "Your card"), "€2.01 more than to your card.");
+  // The figures come from one number: what can be changed, cut to the cent, and the head of the screen adds the other
+  // coin cut the same way. Nothing on a card is computed on the six-decimal balance any more.
+  assert.match(screen, /const changeable = toTheCent\(ausd, AUSD\.decimals\);/);
+  assert.match(screen, /const dollarsHeld = dollarsToTheCent\(ausd, held\(USDC\)\);/);
+  assert.match(screen, /netOfEverything\(changeable, way\.fee, money\.rates\)/);
+  assert.doesNotMatch(screen, /netOfEverything\(ausd,/);
+  // The card in the person's words: its title, its one line, and no source on it; the sources are behind the fold.
+  assert.match(screen, /<h3 className=\{CARD_TITLE\}>\{way\.title\}<\/h3>/);
+  assert.match(screen, /<p className=\{BODY\}>\{way\.line\}<\/p>/);
+  const cards = screen.slice(screen.indexOf("{ordered.map((way, index) => {"), screen.indexOf("<details className={HELP}>"));
+  assert.doesNotMatch(cards, /sourceLine|feeSentence|way\.conditions|way\.name\}<\/h/, "the card that decides carries no source, no fee sentence, no list");
+  for (const way of WAYS_OUT) {
+    assert.doesNotMatch(way.title, /Ramp|Mercuryo/, "the title is where the money goes, not who carries it");
+    assert.doesNotMatch(way.conditions.join(" "), /United Kingdom|Selling/, "what is off the subject of this withdrawal is off the card");
+  }
+  // What stops a person at the service is said at step 2, where its page opens.
+  const step2 = screen.slice(screen.indexOf("W.step2(chosen.name)"), screen.indexOf("W.step3"));
+  assert.match(step2, /chosen\.conditions\.map/);
   // Steps 2 and 3 share a screen: placing the order leads until a code can be sent to, and then sending does.
   assert.match(screen, /const sendable = deposit\.trim\(\) !== "" && problemWithCode === null;/);
   assert.match(screen, /className=\{sendable \? SECONDARY_BUTTON : PRIMARY_BUTTON\}/, "the order button steps back");

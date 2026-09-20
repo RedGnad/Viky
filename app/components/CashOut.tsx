@@ -12,14 +12,14 @@ import { readCoinBalance, sendMon } from "@/src/client/onchain";
 import { AUSD, coinAt, COINS, exactly, isNative, USDC, type Coin } from "@/src/coins";
 import { rateDateInWords, whenInWords } from "@/src/display-currency";
 import { exitAmount, type ExitAmount } from "@/src/exit-amount";
-import { dollarsToChange, feeApplied, floorToOrder, netOfEverything, readyFor, twoDecimalsDown, type Ready } from "@/src/exit-steps";
+import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, netOfEverything, orderByWhatReaches, readyFor, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
 import { formatAusd } from "@/src/gift-reader";
 import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
-import { countryInWords, orderWaysOut } from "@/src/rail-country";
-import { feeSentence, WAYS_OUT, type WayOut } from "@/src/rails";
+import { countryInWords } from "@/src/rail-country";
+import { feeSentence, RATE_SOURCE, WAYS_OUT, type WayOut } from "@/src/rails";
 import { CASH_OUT as W } from "@/src/sentences";
 import { AccountPanel } from "./AccountPanel";
-import { AMOUNT_IN_TITLE, BODY, CARD, FIELD, HELP, INLINE_BUTTON, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
+import { AMOUNT_IN_TITLE, BODY, CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, FIELD, HELP, INLINE_BUTTON, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
 
 /**
  * The way out, rebuilt from docs/design/flows.md (states W1 to W13) on 17 Sep 2026.
@@ -32,6 +32,11 @@ import { AMOUNT_IN_TITLE, BODY, CARD, FIELD, HELP, INLINE_BUTTON, META, MONEY, P
  *
  * Nothing under this screen moves money in a new way: the quote, the prepare, the relay and the send are the
  * routes that carried the first real conversion of 16 Sep (D82).
+ *
+ * The screen that decides is out.html of 19 Sep 2026, as the founder read it against production on 20 Sep (D124):
+ * the balance, the question, and one card per way with its title in the person's words, the figure that would reach
+ * them, one line, one button. The way that leaves the most goes first and carries the accent, and a line under its
+ * figure says by how much. The published figures and their sources are behind a fold under the cards.
  */
 
 type Stage = "base" | "amount" | "review" | "getting" | "ready" | "confirm" | "sending" | "sent" | "own" | "ownConfirm" | "ownSending" | "ownSent";
@@ -40,6 +45,11 @@ type Stage = "base" | "amount" | "review" | "getting" | "ready" | "confirm" | "s
 type Where = "amount" | "review" | "code" | "send" | "own";
 
 type Sent = Readonly<{ amount: string; exact?: string; name: string; when: string; reference: string; cost?: string }>;
+
+/** A figure in the currency a payout service pays in, the euro with its sign and anything else with its code. */
+function figureIn(amount: number, currency: string): string {
+  return currency === "EUR" ? `€${amount.toFixed(2)}` : `${amount.toFixed(2)} ${currency}`;
+}
 
 /** A session that closed while they were away is not a failure to report, it is a door to reopen (D74, D80). */
 function sessionClosed(error: unknown): boolean {
@@ -129,7 +139,6 @@ export function CashOut() {
   }, [answeredCountry]);
 
   const countryNow = answeredCountry ?? where?.country ?? null;
-  const ordered = where && !where.ask ? orderWaysOut(WAYS_OUT, where.waysOut) : WAYS_OUT;
 
   const coinOf = (way: WayOut): Coin => coinAt(way.coin) ?? USDC;
 
@@ -160,7 +169,10 @@ export function CashOut() {
 
   const held = (coin: Coin): bigint => holdings?.[coin.symbol] ?? 0n;
   const ausd = held(AUSD);
-  const dollarsHeld = ausd + held(USDC);
+  // Each coin cut to the cent before they are added, so the figure at the head and the figures on the cards are one
+  // number (D124): dust under a cent left by a payout used to tip the sum and print $10.14 over cards on $10.13.
+  const changeable = toTheCent(ausd, AUSD.decimals);
+  const dollarsHeld = dollarsToTheCent(ausd, held(USDC));
   const readyOf = (way: WayOut): Ready | undefined => (holdings ? readyFor(way, coinOf(way), held(coinOf(way))) : undefined);
   const firstReady = WAYS_OUT.find((way) => readyOf(way) !== undefined);
 
@@ -170,8 +182,11 @@ export function CashOut() {
   const amountOf = (way: WayOut, ready: Ready): ExitAmount =>
     exitAmount({ number: ready.number, native: isNative(coinOf(way)), worth: worthUnits });
 
-  /** What each way out would leave of everything the account holds, at the rate read today (src/exit-steps.ts). */
-  const netOf = (way: WayOut) => netOfEverything(ausd, way.fee, money.rates);
+  /** What each way out would leave of everything that can be changed, at the rate read today (src/exit-steps.ts). */
+  const netOf = (way: WayOut) => netOfEverything(changeable, way.fee, money.rates);
+  // Every way, in the order the screen shows them: the country may send one to the back (R1), then what reaches
+  // the person decides, and nothing is ever removed.
+  const ordered = orderByWhatReaches(WAYS_OUT, where && !where.ask ? where.waysOut : {}, (way) => netOf(way)?.net);
 
   const changing = dollarsToChange(dollars, ausd, W.refusals);
   const maxToChange = twoDecimalsDown(ausd, AUSD.decimals);
@@ -463,9 +478,29 @@ export function CashOut() {
   );
 
   if (stage === "base") {
+    const figure = holdings === null ? undefined : money.figure(dollarsHeld);
+    const cardBranch = holdings !== null && dollarsHeld === 0n && firstReady !== undefined;
+    const nets = ordered.map((way) => netOf(way));
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
-        {moneyCard}
+        {/* The balance, on the page ground and not in a box, as Home sets it: the dollars lead on the way out because
+            the cards under them say what arrives in the person's currency, and the conversion is the caption. When
+            the dollar coins are empty and something is ready for the card service, that card leads instead. */}
+        {cardBranch ? (
+          moneyCard
+        ) : (
+          <section className="money-display-box flex flex-col gap-[var(--space-xs)]">
+            <p className={HELP}>{W.keepOrTakeOut}</p>
+            <p className={`money-display ${AMOUNT_IN_TITLE} tracking-[-0.02em]`} style={{ "--amount-chars": holdings === null ? 1 : formatAusd(dollarsHeld).length } as CSSProperties}>
+              {holdings === null ? "…" : formatAusd(dollarsHeld)}
+            </p>
+            {figure?.rateDate ? <p className={HELP}>{W.aboutLine(figure.text, figure.rateDate)}</p> : null}
+            {holdings !== null && !figure?.rateDate && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
+            {firstReady && dollarsHeld > 0n && !isNative(coinOf(firstReady)) ? (
+              <p className={HELP}>{W.readyLine(firstReady.name, amountOf(firstReady, readyOf(firstReady)!).lead)}</p>
+            ) : null}
+          </section>
+        )}
         {/* Two signals disagree about where this person is (a trip, a shared connection, a private network), so the
             screen asks once. Until it is answered nothing is ordered, and nothing is hidden either (R1). */}
         {where?.ask && !answeredCountry ? (
@@ -480,43 +515,50 @@ export function CashOut() {
             </div>
           </section>
         ) : null}
-        {/* No way out carries the accent. The order is by country (D96, R1), so the accent on the first card marked the
-            order and read as a recommendation of it: a person would take the emphasised card for the better one, and
-            the screen has no opinion about which is better. Both cards carry the same neutral button. */}
-        {ordered.map((way) => {
-          const net = netOf(way);
+        <h2 className={TITLE}>{W.whereTo}</h2>
+        {ordered.map((way, index) => {
+          const net = nets[index];
+          const other = ordered.find((one) => one !== way);
+          const otherNet = other ? netOf(other) : undefined;
+          // The accent marks the first card, which is where the order put the way that leaves the most (D124); no
+          // figure, no opinion. The line under its figure says by how much, when both figures exist and this one is
+          // the larger: the country may have put a way that leaves more at the back, and then nothing is claimed.
+          const leads = index === 0 && net !== undefined;
+          const gap = leads && other && otherNet && net.net > otherNet.net ? net.net - otherNet.net : undefined;
           return (
-          <section key={way.name} className={CARD}>
-            <h2 className={TITLE}>{way.name}</h2>
-            {/* What reaches the person, which is what the two cards are compared by. An estimate of the published
-                fee on the published rate, so it is marked "about" and carries the rate's own day, and it says
-                nothing at all when no rate answered rather than naming a figure nobody read. */}
-            {net ? (
-              <>
-                <p className={HELP}>{W.netIfAll(formatAusd(ausd), rateDateInWords(net.rateDate))}</p>
-                <p className={MONEY}>{W.netFigure(net.net.toFixed(2), net.currency)}</p>
-              </>
-            ) : null}
-            <p className={BODY}>{way.where}</p>
-            <p className={BODY}>
-              {feeSentence(way)}, and pays {way.pays}.
-            </p>
-            <ul className={`list-disc pl-[var(--space-lg)] ${HELP}`}>
-              {way.conditions.map((condition) => (
-                <li key={condition}>{condition}</li>
-              ))}
-            </ul>
-            <p className={HELP}>{W.sourceLine(way.source, way.read)}</p>
-            {/* What that service itself says about this country today, read live. A rail that could not be read says
-                nothing rather than something false, and the card stays where it is either way. */}
-            {countryNow && where?.waysOut[way.name] === "does-not" ? <p className={HELP}>{W.noPayoutThere(way.name, countryInWords(countryNow) ?? countryNow.toUpperCase())}</p> : null}
-            <button type="button" onClick={() => start(way)} disabled={holdings === null || ausd === 0n} className={SECONDARY_BUTTON}>
-              {way.coin === USDC.address ? W.chooseBank : W.chooseCard}
-            </button>
-            {holdings !== null && ausd === 0n ? <p className={HELP}>{W.nothingToSend}</p> : null}
-          </section>
+            <section key={way.name} className={CARD}>
+              <h3 className={CARD_TITLE}>{way.title}</h3>
+              {/* What reaches the person, which is what the two cards are compared by: the published fee on the published
+                  rate, so it is marked "about", and it says nothing at all when no rate answered. */}
+              {net ? (
+                <div>
+                  <p className={CARD_LABEL}>{W.youWouldGet}</p>
+                  <p className={CARD_AMOUNT}>{figureIn(net.net, net.currency)}</p>
+                </div>
+              ) : null}
+              {gap !== undefined && other ? <p className={HELP}>{W.moreThan(figureIn(gap, net!.currency), other.title)}</p> : null}
+              <p className={BODY}>{way.line}</p>
+              {/* What that service itself says about this country today, read live. A rail that could not be read says
+                  nothing rather than something false, and the card stays where it is either way. */}
+              {countryNow && where?.waysOut[way.name] === "does-not" ? <p className={HELP}>{W.noPayoutThere(way.name, countryInWords(countryNow) ?? countryNow.toUpperCase())}</p> : null}
+              <button type="button" onClick={() => start(way)} disabled={holdings === null || changeable === 0n} className={leads ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
+                {way.coin === USDC.address ? W.chooseBank : W.chooseCard}
+              </button>
+              {holdings !== null && changeable === 0n ? <p className={HELP}>{W.nothingToSend}</p> : null}
+            </section>
           );
         })}
+        {/* The published figures and where each was read, for whoever asks: one press away, off the cards that decide. */}
+        <details className={HELP}>
+          {/* A block, not a flex row: the disclosure marker is what says this opens, and a flex summary loses it. */}
+          <summary className="min-h-[var(--tap-target)] cursor-pointer py-[var(--space-sm)] font-medium">{W.whereFrom}</summary>
+          {WAYS_OUT.map((way) => (
+            <p key={way.name}>
+              {feeSentence(way)}, and pays {way.pays}. {W.sourceLine(way.source, way.read)}
+            </p>
+          ))}
+          {money.rates ? <p>{W.rateLine(RATE_SOURCE.name, rateDateInWords(money.rates.date))}</p> : null}
+        </details>
         <button type="button" onClick={() => { setProblem(null); setOwnAmount(ownMax); setStage("own"); }} disabled={holdings === null || dollarsHeld === 0n} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
           {W.anotherAccount}
         </button>
@@ -690,6 +732,13 @@ export function CashOut() {
                 </button>
                 {copied === "refused" ? <p className={HELP}>{W.copyRefused}</p> : null}
                 <p className={HELP}>{W.itIsYours(chosen.name)}</p>
+                {/* What stops a person at the service itself, said here where its page opens and not on the card that
+                    decides (D124): the identity check, and the name the account or the card must carry. */}
+                {chosen.conditions.map((condition) => (
+                  <p key={condition} className={HELP}>
+                    {condition}
+                  </p>
+                ))}
                 {isNative(coin) ? <p className={HELP}>{W.sixHours(chosen.name)}</p> : null}
               </>
             ) : null}
