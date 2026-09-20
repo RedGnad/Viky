@@ -143,10 +143,6 @@ export async function proveCertificate(
     switch (error.code) {
       case "INVALID_LINK":
         return refuse(giftId, "INVALID_LINK", words?.linkShape ?? error.message);
-      // A badge that exists and is for a certification Viky does not read is not this gift's, which is the same
-      // answer as a badge in another name: nothing was wrong with the reading, and it is not what the gift is for.
-      case "NOT_LISTED":
-        return refuse(giftId, "ANOTHER_NAME", words?.anotherName ?? error.message);
       case "NO_BADGE":
         return refuse(giftId, "NO_CERTIFICATE", words?.notFound ?? error.message);
       case "CERTIFICATE_PRIVATE":

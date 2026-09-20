@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       {
         badgeId: badge.badgeId,
         name: badge.name,
-        certification: badge.certificationId,
+        certification: badge.pair,
         certificationTitle: badge.certificationTitle,
         issuer: badge.issuer,
         issuedDay: badge.issuedDay,
@@ -54,9 +54,8 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     if (error instanceof CredlyReadError) {
-      // A badge nobody has, a certification Viky does not read, and a record that lost a field are three different
-      // things, and the screen says three different sentences for them, so the code travels and the words come from
-      // the register.
+      // A badge nobody has and a record that lost a field are different things, and the screen says different
+      // sentences for them, so the code travels and the words come from the register.
       const status = error.code === "FETCH_FAILED" || error.code === "PROOF_INVALID" ? 502 : 404;
       return NextResponse.json({ code: error.code, error: error.message }, { status, headers: NO_STORE });
     }

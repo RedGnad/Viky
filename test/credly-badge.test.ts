@@ -4,16 +4,15 @@ import { keccak256, stringToHex } from "viem";
 import type { AttestedReadDeps } from "../src/attested-read";
 import { attestedSource, CREDLY_ASSERTION, CREDLY_BADGE_PAGE } from "../src/attested-sources";
 import {
-  CREDLY_CERTIFICATIONS,
   CREDLY_GOAL_TYPE,
   CREDLY_HAS_IT,
   credlyBadgeIdOf,
-  credlyCertification,
-  credlyCertificationOfBadgeUrl,
   credlyHolderOfTitle,
   credlyIssuedDaySeconds,
+  credlyPairOfBadgeUrl,
   credlyProviderId,
   credlySubject,
+  credlyTitleParts,
   isValidCredlyBadgeId,
 } from "../src/credly-badge";
 import { attestCredlyBadge, CredlyReadError, readCredlyBadge, type PlainFetch } from "../src/credly-reading";
@@ -102,24 +101,22 @@ test("a badge is named by its link, its public link or its id alone, and by noth
 });
 
 test("the certification is the pair of ids the issuer publishes, never the words on the page", () => {
-  const first = CREDLY_CERTIFICATIONS[0];
-  assert.equal(first.id, "ai-fundamentals-with-ibm-skillsbuild", "the one the demo is made on");
-  assert.equal(credlyCertificationOfBadgeUrl(RECORD.badge), first);
-  // The same issuer, another badge class: another certification, which is what stops one course paying another's gift.
-  assert.equal(credlyCertificationOfBadgeUrl(RECORD.badge.replace("911500fa-32e7-4986-99de-94fb73040a20", "10b1a2de-f36b-4730-b1ca-8505e19f4390"))?.id, "introduction-to-cybersecurity");
-  // A class nobody registered here, and an issuer nobody registered here: neither is read at all.
-  assert.equal(credlyCertificationOfBadgeUrl(RECORD.badge.replace("911500fa-32e7-4986-99de-94fb73040a20", "00000000-0000-4000-8000-000000000000")), undefined);
-  assert.equal(credlyCertificationOfBadgeUrl(RECORD.badge.replace("74381078-44ac-4581-8471-36bd1ce495b7", "00000000-0000-4000-8000-000000000000")), undefined);
-  assert.equal(credlyCertificationOfBadgeUrl("nonsense"), undefined);
-  // Each one is its own gift: the subject binds the person and the certification together.
-  assert.notEqual(credlySubject("Ada Lovelace", "python-essentials-1"), credlySubject("Ada Lovelace", "introduction-to-cybersecurity"));
-  assert.notEqual(credlySubject("Ada Lovelace", "python-essentials-1"), credlySubject("Grace Hopper", "python-essentials-1"));
-  assert.equal(CREDLY_MILESTONE.subject({ name: "Ada Lovelace", course: "python-essentials-1" }), credlySubject("Ada Lovelace", "python-essentials-1"));
-  // And the funder chooses from that list rather than naming anything: `slugOf` answers only for one of them.
-  assert.equal(CREDLY_MILESTONE.course?.slugOf("python-essentials-1"), "python-essentials-1");
-  assert.equal(CREDLY_MILESTONE.course?.slugOf("some-other-course"), undefined);
-  assert.equal(CREDLY_MILESTONE.course?.choices?.length, CREDLY_CERTIFICATIONS.length);
-  assert.ok(CREDLY_CERTIFICATIONS.every((one) => credlyCertification(one.id) === one));
+  const CISCO_AI = "74381078-44ac-4581-8471-36bd1ce495b7/911500fa-32e7-4986-99de-94fb73040a20";
+  assert.equal(credlyPairOfBadgeUrl(RECORD.badge), CISCO_AI, "read by hand from a live badge on 20 Sep 2026");
+  // The same issuer, another badge class: another certification, and so another gift.
+  const CISCO_CYBER = credlyPairOfBadgeUrl(RECORD.badge.replace("911500fa-32e7-4986-99de-94fb73040a20", "10b1a2de-f36b-4730-b1ca-8505e19f4390"));
+  assert.equal(CISCO_CYBER, "74381078-44ac-4581-8471-36bd1ce495b7/10b1a2de-f36b-4730-b1ca-8505e19f4390");
+  assert.equal(credlyPairOfBadgeUrl("nonsense"), undefined);
+  // Each pair is its own gift: the subject binds the person and the certification together, never a title.
+  assert.notEqual(credlySubject("Ada Lovelace", CISCO_AI), credlySubject("Ada Lovelace", CISCO_CYBER!));
+  assert.notEqual(credlySubject("Ada Lovelace", CISCO_AI), credlySubject("Grace Hopper", CISCO_AI));
+  assert.equal(CREDLY_MILESTONE.subject({ name: "Ada Lovelace", course: CISCO_AI }), credlySubject("Ada Lovelace", CISCO_AI));
+  // What the funder's terms carry is checked by shape: words are not a certification, and there is no list to be on.
+  assert.equal(CREDLY_MILESTONE.course?.slugOf(CISCO_AI), CISCO_AI);
+  assert.equal(CREDLY_MILESTONE.course?.slugOf("ai-fundamentals-with-ibm-skillsbuild"), undefined);
+  assert.ok(CREDLY_MILESTONE.course?.search, "the funder finds one with Credly's own search");
+  // The page's title is read back for a screen, in its three parts, and never judged by.
+  assert.deepEqual(credlyTitleParts(TITLE.ogTitle), { title: "AI Fundamentals with IBM SkillsBuild", issuer: "Cisco", holder: "Elio Vantar" });
 });
 
 test("the holder is the last thing the one title says, and a day is the day the record gives", () => {
@@ -139,11 +136,11 @@ test("the holder is the last thing the one title says, and a day is the day the 
 test("a plain reading is the two records together, and an unknown badge is refused by the one that knows", async () => {
   const badge = await readCredlyBadge(BADGE, plainly);
   assert.equal(badge.name, "Elio Vantar");
-  assert.equal(badge.certificationId, "ai-fundamentals-with-ibm-skillsbuild");
+  assert.equal(badge.pair, "74381078-44ac-4581-8471-36bd1ce495b7/911500fa-32e7-4986-99de-94fb73040a20");
   assert.equal(badge.certificationTitle, "AI Fundamentals with IBM SkillsBuild");
   assert.equal(badge.issuer, "Cisco");
   assert.equal(badge.issuedDay, 1_724_976_000);
-  assert.equal(badge.subject, credlySubject("Elio Vantar", "ai-fundamentals-with-ibm-skillsbuild"));
+  assert.equal(badge.subject, credlySubject("Elio Vantar", badge.pair));
 
   // The record answers 404 for an id nobody has, while its page answers 200 with nothing in it: the record decides.
   await assert.rejects(readCredlyBadge("00000000-0000-4000-8000-000000000000", plainly), (error: unknown) => error instanceof CredlyReadError && error.code === "NO_BADGE");
@@ -153,10 +150,12 @@ test("a plain reading is the two records together, and an unknown badge is refus
   const otherPage: PlainFetch = async (url) => (url.includes("/badge_assertions/") ? new Response(ASSERTION, { status: 200 }) : new Response(PAGE.replace(BADGE, "1b2c3d4e-5f60-4b7c-9d8e-0f1a2b3c4d5e"), { status: 200 }));
   await assert.rejects(readCredlyBadge(BADGE, otherPage), (error: unknown) => error instanceof CredlyReadError && error.code === "PROOF_MISMATCH");
 
-  // A real badge for a certification nobody registered is refused as such, never read as this gift's.
+  // A badge for another certification is read as what it is, and its subject is another gift's: no list decides.
   const otherClass: PlainFetch = async (url) =>
     url.includes("/badge_assertions/") ? new Response(ASSERTION.replace("911500fa-32e7-4986-99de-94fb73040a20", "aaaaaaaa-0000-4000-8000-000000000000"), { status: 200 }) : new Response(PAGE, { status: 200 });
-  await assert.rejects(readCredlyBadge(BADGE, otherClass), (error: unknown) => error instanceof CredlyReadError && error.code === "NOT_LISTED");
+  const other = await readCredlyBadge(BADGE, otherClass);
+  assert.equal(other.pair, "74381078-44ac-4581-8471-36bd1ce495b7/aaaaaaaa-0000-4000-8000-000000000000");
+  assert.notEqual(other.subject, badge.subject);
 
   // A page that lost its title is a shape that changed under us, and it is ours to fix rather than the person's.
   const noTitle: PlainFetch = async (url) => (url.includes("/badge_assertions/") ? new Response(ASSERTION, { status: 200 }) : new Response(NO_SUCH_PAGE, { status: 200 }));
@@ -166,7 +165,7 @@ test("a plain reading is the two records together, and an unknown badge is refus
 test("an attested reading is two proofs of the same badge, taken together", async () => {
   const reading = await attestCredlyBadge(BADGE, honest());
   assert.equal(reading.name, "Elio Vantar");
-  assert.equal(reading.certificationId, "ai-fundamentals-with-ibm-skillsbuild");
+  assert.equal(reading.pair, "74381078-44ac-4581-8471-36bd1ce495b7/911500fa-32e7-4986-99de-94fb73040a20");
   assert.equal(reading.issuedDay, 1_724_976_000);
   assert.equal(reading.proofs.length, 2, "the record, then the page");
   assert.equal(reading.observedAt, 1_789_653_330, "the later of the two halves");

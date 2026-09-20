@@ -3,13 +3,13 @@ import { attestedRead, AttestedReadError, reclaimAttestedReadDeps, type Attested
 import { CREDLY_ASSERTION, CREDLY_BADGE_PAGE } from "./attested-sources";
 import {
   credlyAssertionUrl,
-  credlyCertificationOfBadgeUrl,
-  credlyHolderOfTitle,
   credlyIssuedDaySeconds,
+  credlyPairOfBadgeUrl,
   credlyPublicUrl,
   credlySubject,
+  credlyTitleParts,
   isValidCredlyBadgeId,
-  type CredlyCertification,
+  type CredlyPair,
 } from "./credly-badge";
 import type { ZkFetchProof } from "./duolingo-public";
 
@@ -22,7 +22,8 @@ import type { ZkFetchProof } from "./duolingo-public";
  * in `src/attested-sources.ts`, so a screen can never say one thing and a proof another.
  *
  * What decides the certification is the pair of ids in the assertion, never a word: a title can be edited, reused or
- * translated, and the issuer's id and the badge class's id cannot.
+ * translated, and the issuer's id and the badge class's id cannot. The pair is compared with the one the funder
+ * signed by the subject, so a badge for another certification is simply another subject, and says so.
  */
 
 export type CredlyReadErrorCode =
@@ -30,8 +31,6 @@ export type CredlyReadErrorCode =
   | "INVALID_LINK"
   /** No badge answers to that id: the assertion answers 404 (measured 20 Sep 2026 on an id nobody has). */
   | "NO_BADGE"
-  /** The badge is real and is for a certification Viky does not read. */
-  | "NOT_LISTED"
   /** The pages answered and did not carry what a badge needs. */
   | "PROOF_INVALID"
   /** One of the two halves is about another badge. */
@@ -57,9 +56,9 @@ export type CredlyBadge = Readonly<{
   badgeId: string;
   /** The name the public page prints, kept only long enough to say whose badge it is. */
   name: string;
-  /** The certification, in the word the funder's terms carry. */
-  certificationId: string;
-  /** Its title and its issuer, in Credly's own words, for a screen to show. */
+  /** The certification, as the funder's terms carry it: the issuer's id and the badge class's id. */
+  pair: CredlyPair;
+  /** Its title and its issuer as the page prints them, for a screen to show and never to judge by. */
   certificationTitle: string;
   issuer: string;
   /** The day it was issued, seconds at midnight UTC: the day the contract judges. */
@@ -91,23 +90,23 @@ function valuesOf(source: { matches: readonly { value: string }[] }, page: strin
 function badgeOf(badgeId: string, assertion: Record<string, string>, page: Record<string, string>): CredlyBadge {
   if (!assertion.badge || !assertion.assertion) throw new CredlyReadError("NO_BADGE", "No badge answers to that link");
   if (!assertion.assertion.toLowerCase().endsWith(badgeId)) throw new CredlyReadError("PROOF_MISMATCH", "That record is about another badge");
-  const certification: CredlyCertification | undefined = credlyCertificationOfBadgeUrl(assertion.badge);
-  if (!certification) throw new CredlyReadError("NOT_LISTED", "That badge is for a certification Viky does not read");
+  const pair = credlyPairOfBadgeUrl(assertion.badge);
+  if (!pair) throw new CredlyReadError("PROOF_INVALID", "That record did not say which certification it is");
   const issuedDay = credlyIssuedDaySeconds(assertion.issuedOn ?? "");
   if (issuedDay === undefined) throw new CredlyReadError("PROOF_INVALID", "That record did not carry the day it was issued");
   // The page is the only place the holder's name is published, and its own address says which badge it is about.
   if (!page.ogTitle) throw new CredlyReadError("PROOF_INVALID", "That badge's page did not carry what a reading needs");
   if (!(page.ogUrl ?? "").toLowerCase().endsWith(badgeId)) throw new CredlyReadError("PROOF_MISMATCH", "That page is about another badge");
-  const name = credlyHolderOfTitle(page.ogTitle);
-  if (!name) throw new CredlyReadError("PROOF_INVALID", "That badge's page did not say whose it is");
+  const parts = credlyTitleParts(page.ogTitle);
+  if (!parts) throw new CredlyReadError("PROOF_INVALID", "That badge's page did not say whose it is");
   return {
     badgeId,
-    name,
-    certificationId: certification.id,
-    certificationTitle: certification.title,
-    issuer: certification.issuer,
+    name: parts.holder,
+    pair,
+    certificationTitle: parts.title,
+    issuer: parts.issuer,
     issuedDay,
-    subject: credlySubject(name, certification.id),
+    subject: credlySubject(parts.holder, pair),
   };
 }
 

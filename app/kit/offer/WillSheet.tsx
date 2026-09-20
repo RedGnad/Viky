@@ -6,6 +6,7 @@ import { conditionAnswered, durationBounds, type GiftDraft } from "@/src/gift-dr
 import { certificateById, cadenceOf, milestoneById } from "@/src/milestone-conditions";
 import { loadOfferedConditions, readStanding } from "@/src/client/milestone";
 import { checkSourceName } from "@/src/client/gift";
+import { searchCertifications, type CertificationFound } from "@/src/client/certificate-gift";
 import { ApiError } from "@/src/client/api";
 import { smallestTarget } from "@/src/milestone-terms";
 import { FUND, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
@@ -44,6 +45,8 @@ export function WillSheet({
   const [nameCheck, setNameCheck] = useState<{ busy: boolean; refusal?: string; checked?: string }>({ busy: false });
   const [courses, setCourses] = useState<{ forName: string; list: readonly { id: string; title: string; xp: number }[] } | null>(null);
   const [reading, setReading] = useState<{ busy: boolean; nameRefusal?: string; cadenceRefusal?: string }>({ busy: false });
+  /** The words typed to find a certification, and what the source knows by them (Credly, 20 Sep 2026). */
+  const [search, setSearch] = useState<{ words: string; found: readonly CertificationFound[]; busy: boolean; nothing: boolean }>({ words: "", found: [], busy: false, nothing: false });
 
   // What this account may offer: the live conditions for everybody, plus whatever is wired and not live yet for an
   // account that runs Viky. Nothing else is ever listed here.
@@ -61,6 +64,28 @@ export function WillSheet({
       live = false;
     };
   }, [address, open]);
+
+  const searchPath = certificateById(draft.conditionId)?.course?.search?.path;
+  useEffect(() => {
+    if (!open || !searchPath) return;
+    const words = search.words.trim();
+    if (words.length < 2) return;
+    let live = true;
+    const timer = setTimeout(() => {
+      setSearch((was) => ({ ...was, busy: true }));
+      searchCertifications(searchPath, words)
+        .then((found) => {
+          if (live) setSearch((was) => ({ ...was, found, busy: false, nothing: found.length === 0 }));
+        })
+        .catch(() => {
+          if (live) setSearch((was) => ({ ...was, found: [], busy: false, nothing: true }));
+        });
+    }, 350);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [open, searchPath, search.words]);
 
   const offered: readonly Condition[] = [...liveConditions(), ...preview.map((id) => conditionById(id)).filter((c): c is Condition => Boolean(c) && !c!.live)];
   const sections = chooserSections(offered);
@@ -294,18 +319,47 @@ export function WillSheet({
                 refusal={draft.subject.trim().length === 0 || certificate.validName(draft.subject) ? undefined : certificate.words.refusals.nameShape}
                 autoComplete="off"
               />
-              {certificate.course?.choices ? (
-                /* A source whose things are a list: a certification is known by the ids its issuer publishes, so
-                   only the ones we can read are offered at all, and there is nothing to paste. */
-                <ChoiceList
-                  name="certification"
-                  legend={certificate.course.label}
-                  value={draft.course ?? null}
-                  onChange={(value) =>
-                    onChange({ ...draft, course: value, courseTitle: certificate.course?.choices?.find((one) => one.id === value)?.title ?? value, target: String(certificate.target.suggested) })
-                  }
-                  options={certificate.course.choices.map((one) => ({ value: one.id, label: one.title, help: one.help }))}
-                />
+              {certificate.course?.search ? (
+                /* A source whose things are found rather than pasted: the funder types a word or two, reads each
+                   answer with who awards it, and chooses. What the terms carry is the answer's own pair of ids. */
+                <>
+                  <Field
+                    id="certificate-search"
+                    label={certificate.course.label}
+                    help={certificate.course.help}
+                    value={search.words}
+                    onChange={(value) => setSearch((was) => ({ ...was, words: value, nothing: false }))}
+                    refusal={search.nothing && !search.busy ? certificate.course.search.nothing : undefined}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  {/* Under the field, where the eye is: what was chosen, in its own words; or, before choosing, how many
+                      answers there are, because on a phone the list runs past the sheet's edge and a person could take
+                      the first two for all of them (ui review, 20 Sep 2026). */}
+                  {search.busy ? (
+                    <p className={HELP}>{M.detail.searching}</p>
+                  ) : draft.course && draft.courseTitle ? (
+                    <p className="font-medium">{certificate.course.named(draft.courseTitle)}</p>
+                  ) : search.found.length > 0 ? (
+                    <p className={HELP}>{M.detail.found(search.found.length)}</p>
+                  ) : null}
+                  {search.found.length > 0 ? (
+                    <ChoiceList
+                      name="certification"
+                      legend={certificate.course.label}
+                      legendHidden
+                      shape="lines"
+                      value={draft.course ?? null}
+                      onChange={(value) => {
+                        const one = search.found.find((found) => found.pair === value);
+                        onChange({ ...draft, course: value, courseTitle: one ? `${one.title}, ${one.issuer}` : value, target: String(certificate.target.suggested) });
+                      }}
+                      /* The issuer on every line, not only under the chosen one: it is what tells four certifications of the
+                         same name apart, and a person has to read it before choosing, not after. */
+                      options={search.found.map((one) => ({ value: one.pair, label: `${one.title}, ${one.issuer}` }))}
+                    />
+                  ) : null}
+                </>
               ) : certificate.course ? (
                 <Field
                   id="certificate-course"
@@ -333,7 +387,7 @@ export function WillSheet({
               )}
               {/* Said back in full under the box, because a phone cuts the pasted link before the course's own word.
                   A list says its own words on each line, so it needs nothing repeated under it. */}
-              {certificate.course && !certificate.course.choices && draft.course ? <p className={HELP}>{certificate.course.named(draft.course)}</p> : null}
+              {certificate.course && !certificate.course.search && draft.course ? <p className={HELP}>{certificate.course.named(draft.course)}</p> : null}
             </>
           ) : null}
 
