@@ -111,8 +111,8 @@ export const SAY = `${TITLE_FACE} text-[length:var(--type-say)] leading-[var(--t
 export const MARK = `${TITLE_FACE} text-[length:var(--type-mark)] leading-[var(--type-mark-leading)]`;
 
 /**
- * The promise at the head of the page without an account, in the title face at the size the rendered mockups of
- * 19 Sep 2026 draw it: smaller than the display, and it sits beside the gift character rather than over the card.
+ * The promise at the head of the page without an account, in the title face at the hero step of the scale (D126):
+ * 39 on a phone, 49 from 600, 76 from 840, where it is the display size and the first level over the body is 4.75.
  */
 export const HERO = `${TITLE_FACE} text-[length:var(--type-hero)] leading-[var(--type-hero-leading)] tracking-[var(--type-hero-tracking)]`;
 

@@ -6,6 +6,7 @@ import { APPEARANCE } from "../src/sentences.js";
 import {
   APP_COLUMN_MAX,
   CARD,
+  CARD_TYPE,
   CHARACTERS,
   CHARACTER_SHADOW_OPACITY,
   COLOURS,
@@ -13,8 +14,10 @@ import {
   CONTROL_COLOURS,
   DESTINATION_MAX,
   DISPLAY_TYPE,
+  HERO_TYPE,
   META_TYPE,
   TRACKING,
+  TYPE_SCALE,
   GROUNDS,
   NAV,
   PAGE_MARGIN,
@@ -397,8 +400,44 @@ test("the viewport is declared the way web.dev asks, and lets people zoom", () =
   assert.doesNotMatch(layout, /maximumScale/, "never cap zoom");
 });
 
-/** A major third from 16, rounded as K writes it: the only sizes the product is allowed to use (rule 6). */
-const SCALE = [13, 16, 20, 25, 31, 39, 49, 61, 76];
+/** A major third from 16, rounded as K writes it: the only sizes the product is allowed to use (rule 6, D126). */
+const SCALE: readonly number[] = TYPE_SCALE;
+
+/**
+ * The first principle of the design pass of 20 Sep 2026 (D126): every text size on every screen is a step of the
+ * scale, with nothing between two steps, and at the head of a page the first level over the body measures at least
+ * 4. Production had six sizes from six images (36, 28, 42, 17, 11, 26) and a hero over body of 2.3 where the
+ * references at 1440 hold 4.0 to 5.3. Read from the stylesheet itself, at the root and inside every breakpoint, so
+ * a size typed from an image can never come back quietly.
+ */
+test("every text size in the stylesheet is a step of the scale, and the hero is at least four bodies", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  const sizes = [...css.matchAll(/--type-([a-z-]+): (\d+(?:\.\d+)?)px;/g)]
+    .filter(([, name]) => !/leading|tracking/.test(name))
+    .map(([, name, px]) => ({ name, px: Number(px) }));
+  assert.ok(sizes.length >= 14, `${sizes.length} sizes read`);
+  for (const { name, px } of sizes) assert.ok(SCALE.includes(px), `--type-${name} is ${px}, which is not a step of the scale`);
+  // The hero's three steps, one per width, as the tokens name them.
+  const root = css.slice(0, css.indexOf("@media (min-width: 600px)"));
+  const at600 = css.slice(css.indexOf("@media (min-width: 600px)"), css.indexOf("@media (min-width: 840px)"));
+  const at840 = css.slice(css.indexOf("@media (min-width: 840px)"), css.indexOf("@media (prefers-color-scheme: dark)"));
+  assert.match(root, new RegExp(`--type-hero: ${HERO_TYPE.compact.size}px;`));
+  assert.match(at600, new RegExp(`--type-hero: ${HERO_TYPE.medium.size}px;`));
+  assert.match(at840, new RegExp(`--type-hero: ${HERO_TYPE.expanded.size}px;`));
+  for (const step of [HERO_TYPE.compact, HERO_TYPE.medium, HERO_TYPE.expanded]) assert.ok(SCALE.includes(step.size), `${step.size}`);
+  assert.ok(HERO_TYPE.expanded.size / TYPE.body.size >= HERO_TYPE.atLeastOverBody, "the hierarchy at the head of the page, on a wide screen");
+  assert.equal(HERO_TYPE.expanded.size, DISPLAY_TYPE.display.expanded.size, "on a wide screen the hero is the display size");
+  // The card's three voices, on the scale and matched in the stylesheet.
+  for (const [voice, level] of Object.entries(CARD_TYPE)) {
+    assert.ok(SCALE.includes(level.size), `${voice} is ${level.size}`);
+    assert.match(root, new RegExp(`--type-card-${voice}: ${level.size}px;`));
+  }
+  assert.ok(CARD_TYPE.amount.size > CARD_TYPE.who.size && CARD_TYPE.who.size > CARD_TYPE.label.size, "the amount stays the star of the card");
+  // One left edge per screen: the card starts where the title and the paragraph start, not in the middle of them.
+  assert.match(css, /\.gift-card-width \{[^}]*margin-inline: 0;/, "the card is on the column's left edge");
+  const home = readFileSync("app/kit/Home.tsx", "utf8");
+  assert.doesNotMatch(home, /flex items-end gap-\[var\(--space-md\)\]"\>\s*<Gaze>/, "the character no longer sits beside the title and pushes it off the edge");
+});
 
 test("four levels of text and no more, every one of them a step of the same scale", () => {
   assert.equal(Object.keys(TYPE).length, 4);

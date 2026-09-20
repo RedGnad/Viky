@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useAccount } from "@/src/account/provider";
 import { CATALOGUE, HOME as W, ME } from "@/src/sentences";
-import { BODY, HELP, HERO, PROSE, SECONDARY_BUTTON, TITLE } from "../components/ui";
+import { BODY, HELP, HERO, SECONDARY_BUTTON, TITLE } from "../components/ui";
 import { Character } from "./Character";
 import { Arrival, Gaze, Reveal, type ArrivalGift } from "./Motion";
 import { SignInDoor } from "./SignInDoor";
@@ -35,16 +35,19 @@ export function Home() {
   if (!address) {
     return (
       <Shell kind="destination" active="home" action={<SignInDoor />}>
-        {/* The hero of the mockups: the gift character beside the promise, one line under it, then the card, and
-            nothing else. On a wide screen the block sits in the height rather than at the top of an empty page. */}
-        <div className="flex flex-col gap-[var(--space-lg)] [@media(min-width:840px)]:min-h-[68dvh] [@media(min-width:840px)]:justify-center">
-          <div className="flex items-end gap-[var(--space-md)]">
-            <Gaze>
-              <Character state="gift" tone="sun" className="h-auto w-[88px] shrink-0" />
-            </Gaze>
-            <h1 className={HERO}>{W.promise}</h1>
-          </div>
-          <p className={PROSE}>{W.promiseUnder}</p>
+        {/* The head of the page: the gift character, the promise at the hero size, one line under it, then the card,
+            and nothing else, all starting on the one left edge of the column (D126). The character used to sit beside
+            the title and pushed it 100 pixels right of the paragraph under it: three left edges on one screen. On a
+            wide screen the block sits in the height rather than at the top of an empty page. */}
+        <div className="flex flex-col items-start gap-[var(--space-lg)] [@media(min-width:840px)]:min-h-[68dvh] [@media(min-width:840px)]:justify-center">
+          <Gaze>
+            <Character state="gift" tone="sun" className="h-auto w-[88px] shrink-0" />
+          </Gaze>
+          <h1 className={`${HERO} [text-wrap:balance]`}>{W.promise}</h1>
+          {/* As wide as the card under it and no wider: at the column's full width the paragraph ran 79 characters
+              and left "you." alone on its second line (measured 20 Sep 2026); at the card's width it is two even
+              lines, and the paragraph and the card share one width as well as one edge. */}
+          <p className={`${BODY} max-w-[var(--gift-card-width)]`}>{W.promiseUnder}</p>
           <OfferCard />
         </div>
         <p className={`${HELP} flex flex-wrap gap-x-[var(--space-lg)]`}>
