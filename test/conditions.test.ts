@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { globSync, readFileSync } from "node:fs";
 import { attestedSourceIds } from "../src/attested-sources";
-import { CONDITIONS, conditionById, conditionOfGoal, DUOLINGO_DAILY, liveConditions } from "../src/conditions";
+import { CONDITIONS, conditionOfGoal, DUOLINGO_DAILY, liveConditions } from "../src/conditions";
 import { GOAL_TYPE_DUOLINGO_XP } from "../src/gift-terms";
 import { certificateById, milestoneById } from "../src/milestone-conditions";
 
@@ -18,12 +18,13 @@ test("only a condition a gift can be made on today is live, and that is the less
   // provider id it expects and the having-it-or-not shape.
   assert.deepEqual(
     liveConditions().map((condition) => condition.id),
-    ["duolingo-daily", "chess-rating", "duolingo-english-test"],
+    ["duolingo-daily", "chess-rating", "duolingo-english-test", "coursera-certificate"],
     "a live condition needs the whole line behind it: contract deployed, its goal registered, a reading that runs",
   );
   assert.equal(DUOLINGO_DAILY.goalType, GOAL_TYPE_DUOLINGO_XP);
   assert.equal(conditionOfGoal(GOAL_TYPE_DUOLINGO_XP)?.id, "duolingo-daily");
-  assert.equal(conditionById("coursera-certificate")?.live, false, "its goal is not on the contract, and its source has a question to answer");
+  // Nothing is written in this register that a gift cannot be made on, so nothing here is not live any more (D109).
+  assert.equal(CONDITIONS.every((condition) => condition.live), true, "the register holds only what a gift can be made on today");
 });
 
 test("every condition names a reading that exists, and a milestone has no goal type on the daily contract", () => {

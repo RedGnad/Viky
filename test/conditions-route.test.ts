@@ -58,7 +58,9 @@ test("everybody else is offered the live conditions and nothing else", async () 
     assert.deepEqual(answer.preview, [], "a signed-in stranger and a stranger get the same answer here");
     assert.ok(answer.ids.includes(CHESS_MILESTONE.condition.id), "a live milestone is offered like any live condition");
     assert.ok(answer.ids.includes(DET_MILESTONE.condition.id), "and so is the one that opened on 19 Sep 2026");
-    assert.ok(!answer.ids.includes("coursera-certificate"), "a condition that is not live is in nobody's list");
+    // The course certificate opened on 20 Sep with goal 10 registered, so the register holds nothing closed today.
+    // What stands is the shape of the answer: `preview` is empty for everybody who does not run Viky, whatever it holds.
+    assert.ok(answer.ids.includes("coursera-certificate"), "and the one that opened on 20 Sep 2026");
   }
 });
 
