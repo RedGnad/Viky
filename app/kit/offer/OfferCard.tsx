@@ -7,7 +7,7 @@ import { conditionById } from "@/src/conditions";
 import { cardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
 import { AmountError, dollarsToUnits, PILOT_CAP_SENTENCE } from "@/src/money";
 import { OFFER as W } from "@/src/sentences";
-import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, HELP, PRIMARY_BUTTON } from "../../components/ui";
+import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { CardFace } from "../GiftCard";
 import { DayStrip } from "../DayStrip";
 import { MilestoneMeter } from "../MilestoneMeter";
@@ -91,7 +91,7 @@ export function OfferCard() {
                 size={Math.max(5, recipient.length + 1)}
                 autoComplete="off"
                 autoFocus={recipient.length === 0}
-                className="on-paper-field on-paper-field-hugging min-h-[var(--tap-target)] min-w-[var(--tap-target)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
+                className="on-paper-field min-h-[var(--tap-target)] min-w-[var(--tap-target)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
               />
             </span>
           }
@@ -100,7 +100,7 @@ export function OfferCard() {
             <button
               type="button"
               onClick={() => setChoosing(true)}
-              className="flex w-full items-center justify-between gap-[var(--space-md)] rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--surface-rule)] bg-[var(--paper-raised)] px-[var(--space-md)] py-[var(--space-sm)] text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
+              className={`${INLINE_BUTTON} w-full justify-between text-left`}
             >
               <span className="flex min-w-0 flex-col">
                 <span className={CARD_LABEL}>{W.invites.will}</span>
@@ -134,7 +134,7 @@ export function OfferCard() {
             <>
               {/* The one star of the screen, typed where it stands. */}
               <span className="block">
-                <span className={`${CARD_AMOUNT} on-paper-field on-paper-field-hugging inline-flex min-h-[var(--tap-target)] items-center`}>
+                <span className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center`}>
                   {W.dollar}
                   <input
                     value={draft.dollars}
@@ -161,10 +161,9 @@ export function OfferCard() {
                       setTypingDays(false);
                       change({ ...draft, days: String(count) });
                     }}
-                    aria-pressed={!typingDays && days === count}
-                    className={`inline-flex min-h-[var(--tap-target)] items-center rounded-full border-[length:var(--control-border-width)] px-[var(--space-md)] text-[length:var(--type-help)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)] ${
-                      !typingDays && days === count ? "border-[var(--control-border)] bg-[var(--chosen)] font-bold" : "border-[var(--surface-rule)] bg-[var(--paper-raised)]"
-                    }`}
+                    /* Pressed by its value alone, so a "90" typed in the field and the "90 days" chip never disagree. */
+                    aria-pressed={days === count}
+                    className={`${CHIP} ${days === count ? "bg-[var(--chosen)] font-bold" : ""}`}
                   >
                     {W.someDays(count)}
                   </button>
@@ -188,7 +187,7 @@ export function OfferCard() {
                   <button
                     type="button"
                     onClick={() => setTypingDays(true)}
-                    className="inline-flex min-h-[var(--tap-target)] items-center rounded-full border-[length:var(--control-border-width)] border-[var(--surface-rule)] bg-[var(--paper-raised)] px-[var(--space-md)] text-[length:var(--type-help)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
+                    className={CHIP}
                   >
                     {W.otherLength}
                   </button>

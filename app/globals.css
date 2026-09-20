@@ -316,6 +316,42 @@ video {
     box-shadow: 0 calc(var(--control-relief-depth) + var(--hover-lift)) 0 var(--control-relief-colour);
     transition-duration: var(--hover-duration);
   }
+
+  /* The one action answers a pointer the same way, on its own relief: the sun with its light taken out. */
+  .action-relief:hover:not(:active):not(:disabled) {
+    transform: translateY(calc(-1 * var(--hover-lift)));
+    box-shadow: 0 calc(var(--action-relief-depth) + var(--hover-lift)) 0 var(--sun-deep);
+    transition:
+      transform var(--hover-duration) var(--press-easing),
+      box-shadow var(--hover-duration) var(--press-easing);
+  }
+}
+
+/*
+ * The appearance control shows the appearance the screen is in, sun or moon, and pressing it takes the other one.
+ * Which icon shows is decided by the same rule that paints the screen, so the server needs to know nothing and
+ * nothing flashes: the moon where the night block applies, the sun everywhere else.
+ */
+.appearance-moon {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .appearance-sun {
+    display: none;
+  }
+
+  :root:not([data-theme="light"]) .appearance-moon {
+    display: inline;
+  }
+}
+
+:root[data-theme="dark"] .appearance-sun {
+  display: none;
+}
+
+:root[data-theme="dark"] .appearance-moon {
+  display: inline;
 }
 
 /*
@@ -456,6 +492,8 @@ body::after {
   .gift-card-width {
     width: var(--gift-card-width);
     max-width: 100%;
+    /* In the middle of its column, as the founder read it on 20 Sep 2026: a card is not a paragraph. */
+    margin-inline: auto;
   }
 }
 
@@ -469,13 +507,6 @@ body::after {
   background: var(--paper-field);
   box-shadow: inset 0 -2px 0 var(--paper-field-edge);
   padding: 1px 7px;
-}
-
-/* The same field where it hugs the words of its own line, as the image draws "For who?": it takes its padding back
-   from the margin so the word before it keeps its place. Only where the line is words; between chips it would
-   cover them (ui review, 20 Sep 2026: "Day[45]etween"). */
-.on-paper-field-hugging {
-  margin: 0 -7px;
 }
 
 /* The same field, drawn as the words it sits in until it is touched: a line that is already answered is not a box. */
@@ -553,9 +584,11 @@ dialog.sheet-tall {
   --fade-above: 22px;
 }
 
+/* 36 and not the image's 22 below: the image's rows are 37 pixels of 13-pixel text, these are 48 of 17, and a fade
+   shorter than a row's words leaves a glyph cut clean against the action (ui review, 20 Sep 2026, twice). */
 .sheet-body[data-more="below"],
 .sheet-body[data-more="both"] {
-  --fade-below: 22px;
+  --fade-below: 36px;
 }
 
 dialog.sheet::backdrop {

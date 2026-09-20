@@ -170,8 +170,10 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   // The funder's own name is the one field the image did not draw: it is asked where they pay, at a size a phone
   // reads without zooming and a thumb can hit, and it never blocks.
   assert.match(readFileSync("app/kit/offer/PaySheet.tsx", "utf8"), /value=\{draft\.funderName\}/);
-  // Every field on the card is a control at the size every control keeps.
-  assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length >= 5, true, "the name, the amount, the days, the chips");
+  // Every field on the card is a control at the size every control keeps, and the chips are the product's own button.
+  assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length, 4, "the name, the amount twice, the days");
+  assert.match(card, /className=\{`\$\{CHIP\} /, "a chip is the inline button at the size of a choice");
+  assert.match(card, /className=\{`\$\{INLINE_BUTTON\} w-full/, "and the condition line is one too, so every control lifts the same way");
   // The two that are left, and both are a choice rather than a field.
   assert.match(card, /<WillSheet open=\{choosing\}/);
   assert.match(card, /<PaySheet open=\{paying\}/);
