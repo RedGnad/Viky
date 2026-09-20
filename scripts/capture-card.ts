@@ -60,6 +60,11 @@ async function main() {
       await sheet.getByRole("radio", { name: /Duolingo lesson each day/ }).click();
       await page.waitForTimeout(200);
       await shot("04-sheet-will-questions");
+      // The list as somebody returning to it sees it: one line each, and the sentence under the one already chosen.
+      await sheet.getByRole("button", { name: /change/i }).click();
+      await shot("04b-sheet-will-list-chosen");
+      await sheet.getByRole("radio", { name: /Duolingo lesson each day/ }).click();
+      await page.waitForTimeout(200);
       await sheet.getByRole("button", { name: "Done" }).click();
 
       await slot(2).click();

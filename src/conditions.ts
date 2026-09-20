@@ -29,17 +29,22 @@ export type ConditionKind = "daily" | "milestone";
  * moved.
  *
  * The titles are everyday verbs and name no source, because a heading that said Duolingo would turn the catalogue
- * into a shelf of brands rather than of efforts. The order is ours and it is deliberate: learning and sitting an exam
- * come first, because that is the door our segment walks through. Inside a family the order is alphabetical, the
- * GOV.UK rule, so that an editor's choice is never read as advice.
+ * into a shelf of brands rather than of efforts. Inside a family the order is alphabetical, the GOV.UK rule, so that
+ * an editor's choice is never read as advice.
+ *
+ * Four of them, in the order chooser.html draws them on 20 Sep 2026. "Get certified" is the one added that day, and
+ * it is a distinction rather than a shelf: a certification is awarded by somebody who is not the person, and it is
+ * not a course taken, since a CompTIA is sat as an examination with no course at all. Filing Credly beside Coursera
+ * erased exactly the thing that made it worth building. "Move" left with it: nothing was ever filed there, and a
+ * family draws nothing until something is.
  */
-export type ConditionFamily = "language" | "course" | "play" | "move";
+export type ConditionFamily = "language" | "play" | "course" | "certification";
 
 export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>[] = [
   { id: "language", title: "Learn a language" },
-  { id: "course", title: "Finish a course" },
   { id: "play", title: "Play" },
-  { id: "move", title: "Move" },
+  { id: "course", title: "Finish a course" },
+  { id: "certification", title: "Get certified" },
 ];
 
 /** From this many conditions on offer, the chooser stops being one list and becomes one section per family. */
@@ -467,9 +472,13 @@ export const COURSERA_CERTIFICATE: Condition = {
 };
 
 /**
- * A certification on Credly, the badge half of the "course" family (20 Sep 2026). The difference from a course
- * certificate is who says it was earned: the issuer publishes the badge under its own id, and the person cannot
- * issue one to themselves. What they can do is choose to make it public, which is what a gift reads.
+ * A certification on Credly, and a family of its own (the founder's line of 20 Sep 2026). A certification is not a
+ * course taken: a CompTIA is sat as an examination with no course at all, and what is awarded is awarded by
+ * somebody who is not the person. Filing it beside Coursera erased the distinction that made it worth building.
+ *
+ * The difference from a course certificate is who says it was earned: the issuer publishes the badge under its own
+ * id, and the person cannot issue one to themselves. What they can do is choose to make it public, which is what a
+ * gift reads.
  *
  * Open on 20 Sep 2026 with goal 11 registered on the milestone contract. No gift has run on it yet.
  */
@@ -480,7 +489,7 @@ export const CREDLY_BADGE: Condition = {
   live: true,
   state: "open",
   source: "Credly",
-  family: "course",
+  family: "certification",
   name: "Get a certification on Credly",
   help: "The badge its issuer published, read from Credly's own record of it: the issuer awards the badge, and nobody can award one to themselves.",
   link: { kind: "link", label: "The link to your badge", help: "In Credly, open the badge and choose Share, then paste the link here." },

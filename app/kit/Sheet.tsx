@@ -80,21 +80,15 @@ export function Sheet({
   }, [open]);
 
   /*
-    A sheet that changes what it says starts at the top of it. The one place this happens is choosing a condition: the
-    list becomes that condition's questions, and somebody who scrolled down to press the last choice would otherwise
-    arrive in the middle of the answer. The exception is a sheet that reopens on a list where something is already
-    chosen, which is what pressing "change" gives: then it starts on the answer that is already there.
+    A sheet opens at the top of what it says, and starts there again whenever it changes what it says: choosing a
+    condition turns the list into that condition's questions, and somebody who scrolled to press the last choice
+    would otherwise arrive in the middle of the answer.
+
+    It opened on the answer already given for one day, which is what put the chooser at 196 pixels of 720 on the
+    production of 20 Sep 2026: in the middle of the list, with a sentence cut in two against the top edge.
   */
   useEffect(() => {
-    const body = scroller.current;
-    if (!body) return;
-    const chosen = body.querySelector<HTMLElement>("input:checked");
-    if (!chosen) {
-      body.scrollTo({ top: 0 });
-      return;
-    }
-    const room = chosen.getBoundingClientRect().top - body.getBoundingClientRect().top;
-    body.scrollTo({ top: Math.max(0, body.scrollTop + room - parseFloat(getComputedStyle(body).paddingTop)) });
+    scroller.current?.scrollTo({ top: 0 });
   }, [open, title]);
 
   return (

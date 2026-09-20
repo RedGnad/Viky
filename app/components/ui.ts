@@ -122,6 +122,13 @@ export const CARD_TITLE = `${TITLE_FACE} text-[length:var(--type-card-who)] lead
 
 export const CARD_AMOUNT = `${TITLE_FACE} text-[length:var(--type-card-amount)] leading-[1] tracking-[var(--type-card-amount-tracking)] tabular-nums`;
 
+/**
+ * A line of the catalogue: one condition, in the title face, at the size chooser.html draws it on 20 Sep 2026. It
+ * is the one thing that makes "one line per condition" true rather than aspirational, and it carries the house
+ * weight rather than the image's 500, because the face and its weight are one token.
+ */
+export const CHOICE = `${TITLE_FACE} text-[length:var(--type-choice)] leading-[var(--type-choice-leading)]`;
+
 /** A label on a card: the third voice, at the size the image draws it. */
 export const CARD_LABEL =
   "text-[length:var(--type-card-label)] leading-[var(--type-help-leading)] tracking-[var(--type-card-label-tracking)] font-bold uppercase text-[var(--muted)]";

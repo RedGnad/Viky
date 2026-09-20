@@ -69,6 +69,10 @@
   --type-card-amount-tracking: -1.2px;
   --type-card-label: 11px;
   --type-card-label-tracking: 1.3px;
+  /* A line of the catalogue, from chooser.html of 20 Sep 2026: the title face at 17, which is what holds a
+     condition's name on one line where the text face at 16 wrapped three of the six. */
+  --type-choice: 17px;
+  --type-choice-leading: 21px;
   --type-action: 17px;
   --type-say: 26px;
   --type-say-leading: 30px;
@@ -431,6 +435,10 @@ body::after {
 dialog.sheet {
   margin: auto auto 0;
   width: min(100%, 560px);
+  /* A dialog carries a browser's own `max-width: calc(100% - 6px - 2em)`, which is 38 pixels on a phone: the sheet
+     was inset from both edges where the image draws it flush, and its list was 38 pixels narrower than the screen,
+     which is what wrapped titles the image holds on one line (measured 20 Sep 2026). */
+  max-width: min(100%, 560px);
   /* Capped at what the mockups cap it at, so a sheet never fills the screen and the card is always behind it. */
   max-height: 74dvh;
   padding: 0;
@@ -465,12 +473,12 @@ dialog.sheet-tall {
 
 .sheet-body[data-more="above"],
 .sheet-body[data-more="both"] {
-  --fade-above: 24px;
+  --fade-above: 22px;
 }
 
 .sheet-body[data-more="below"],
 .sheet-body[data-more="both"] {
-  --fade-below: 44px;
+  --fade-below: 22px;
 }
 
 dialog.sheet::backdrop {
