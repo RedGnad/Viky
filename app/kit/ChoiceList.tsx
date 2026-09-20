@@ -73,6 +73,14 @@ export function ChoiceList<T extends string>({
               value={option.value}
               checked={chosen}
               onChange={() => onChange(option.value)}
+              // A radio that is already checked fires no change when it is pressed again, and pressing the one that is
+              // chosen is how a person gets back into its own questions: so a click on it, or Enter, says so too.
+              onClick={() => {
+                if (chosen) onChange(option.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") onChange(option.value);
+              }}
               // Drawn rather than left to the browser, whose unchecked radio is a grey disc at night: a ring of ink on the
               // surface, filled with ink and a ring of surface once chosen, in both appearances (structure, section 7).
               className={`${lines && !chosen ? "" : "mt-[3px]"} h-[22px] w-[22px] shrink-0 cursor-pointer appearance-none rounded-full border-2 border-[var(--control-border)] bg-[var(--surface)] checked:bg-[var(--text)] checked:[box-shadow:inset_0_0_0_4px_var(--surface)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)] disabled:cursor-default disabled:opacity-50`}

@@ -19,7 +19,7 @@ import { twoDecimalsDown } from "@/src/exit-steps";
 import { nextFundingStep } from "@/src/funding-step";
 import { eurosToBuyOn } from "@/src/gift-amount";
 import { draftToTerms, isComplete, type GiftDraft } from "@/src/gift-draft";
-import { cardDraft, clearedCardDraft, emptyCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
+import { cardDraft, clearedCardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
 import { tidyGiftName } from "@/src/gift-names";
 import { rememberGiftLink } from "@/src/gift-link-memory";
 import { formatAusd } from "@/src/gift-reader";
@@ -123,7 +123,7 @@ export function PayGift() {
   const step: Step = ALL_STEPS.includes(asked as Step) ? (asked as Step) : "pay";
 
   // The gift is read from the same store the card writes (src/card-draft.ts): one gift, in one place, on the device.
-  const draft = useSyncExternalStore(subscribeToCardDraft, cardDraft, emptyCardDraft);
+  const draft = useSyncExternalStore(subscribeToCardDraft, cardDraft, startingCardDraft);
   const [made, setMade] = useState<Made | null>(() => (typeof window === "undefined" ? null : readSession<Made>(MADE_KEY)));
   const [kept, setKept] = useState<PendingGift | undefined>(() => (typeof window === "undefined" ? undefined : peekPendingGift()));
   const [balance, setBalance] = useState<bigint | null>(null);

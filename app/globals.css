@@ -38,6 +38,9 @@
   --paper-raised: #FFFBF0;
   /* What the chosen option of a list is filled with, on the paper it sits on. */
   --chosen: #FFF3D6;
+  /* A field edited on the paper: the paper pressed in, from desktop.html of 20 Sep 2026. */
+  --paper-field: #F6EACB;
+  --paper-field-edge: #E3D2A9;
   --on-surface: #151026;
   --on-surface-body: #4A4130;
   --on-surface-muted: #7C6C3F;
@@ -144,6 +147,19 @@
   /* The bar of three destinations below 840, the rail from 840 (src/design-tokens.ts, NAV). */
   --nav-bar-height: 64px;
   --nav-rail-width: 88px;
+  /*
+   * How far the page column is pushed in from the left, which the rail takes on a destination. The shell reads it
+   * and so does every sheet, because a sheet is over the page and must stand on the page's own axis: measured on
+   * production at 1440 on 20 Sep 2026, the page was centred 57 pixels away from the sheet over it.
+   */
+  --page-offset: 0px;
+
+  /*
+   * The card a gift is filled in on, and every card of a gift: 440 wide and never wider (the founder, 20 Sep 2026,
+   * on desktop.html). A gift card that stretches to its column stops being a card, and it is the object the whole
+   * product is about. Below the step it takes the column it is given, which on a phone is the width less the margins.
+   */
+  --gift-card-width: 440px;
 
   /* The two families every screen reads: Fredoka for the display title and the mark, DM Sans for everything else. */
   --font-text: var(--font-dm-sans);
@@ -175,9 +191,10 @@
   }
 }
 
-/* The display title grows where the screen is wide. */
+/* The display title grows where the screen is wide, and the rail takes its room beside the column. */
 @media (min-width: 840px) {
   :root {
+    --page-offset: var(--nav-rail-width);
     --type-display: 76px;
     --type-display-leading: 80px;
     --type-display-tracking: -2px;
@@ -426,6 +443,62 @@ body::after {
 }
 
 /*
+ * The card of a gift, wherever it stands: it never grows past its own width (the founder, 20 Sep 2026, on
+ * desktop.html). Below the step it takes the column it is given, which on a phone is the width less the margins.
+ * What this fixes, measured on production at 1440: the card was about 880 wide, the row of days let a dozen marks
+ * in with room to spare, and the object stopped reading as a card at all.
+ */
+.gift-card-width {
+  width: 100%;
+}
+
+@media (min-width: 480px) {
+  .gift-card-width {
+    width: var(--gift-card-width);
+    max-width: 100%;
+  }
+}
+
+/*
+ * A field edited where it stands, on the paper: the name in the line that carries it, the amount in its own place
+ * (the founder, 20 Sep 2026: a sheet is not opened to type a first name). It is the paper, pressed in, so it reads
+ * as a place to write rather than as a control on a card.
+ */
+.on-paper-field {
+  border-radius: 10px;
+  background: var(--paper-field);
+  box-shadow: inset 0 -2px 0 var(--paper-field-edge);
+  padding: 1px 7px;
+}
+
+/* The same field where it hugs the words of its own line, as the image draws "For who?": it takes its padding back
+   from the margin so the word before it keeps its place. Only where the line is words; between chips it would
+   cover them (ui review, 20 Sep 2026: "Day[45]etween"). */
+.on-paper-field-hugging {
+  margin: 0 -7px;
+}
+
+/* The same field, drawn as the words it sits in until it is touched: a line that is already answered is not a box. */
+.on-paper-field-quiet {
+  border-radius: 10px;
+  padding: 1px 7px;
+  margin: 0 -7px;
+  background: transparent;
+}
+
+.on-paper-field-quiet:hover,
+.on-paper-field-quiet:focus {
+  background: var(--paper-field);
+  box-shadow: inset 0 -2px 0 var(--paper-field-edge);
+}
+
+.on-paper-field-quiet::placeholder,
+.on-paper-field::placeholder {
+  color: var(--on-surface-faint);
+  opacity: 1;
+}
+
+/*
  * A sheet, where a case of the card is filled in (the product vision of 19 Sep 2026, section 4). It sits on the
  * bottom edge on a phone and centred on a wide screen, takes the surface colour and the card's own radius at the
  * top, and never covers the whole height: what is behind it stays visible, which is the point of a sheet rather
@@ -433,6 +506,10 @@ body::after {
  * none of it, through the query at the end of this file.
  */
 dialog.sheet {
+  /* The page's axis, not the window's: a destination's column is pushed in by the rail, and a sheet over it has to
+     stand on the same line. Measured on production at 1440 on 20 Sep 2026: 57 pixels apart, and visibly so. */
+  left: var(--page-offset);
+  right: 0;
   margin: auto auto 0;
   width: min(100%, 560px);
   /* A dialog carries a browser's own `max-width: calc(100% - 6px - 2em)`, which is 38 pixels on a phone: the sheet
@@ -583,6 +660,11 @@ dialog.sheet[open] {
 .day-row-day {
   flex: none;
   width: 48px;
+}
+
+/* The row of days on a card, and the fade that says it carries on: the row is one mark a day and it scrolls. */
+.day-row-frame {
+  position: relative;
 }
 
 .day-row-fade {

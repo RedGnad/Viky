@@ -19,6 +19,7 @@ import { feeSentence, WAYS_IN, type WayIn } from "@/src/rails";
 import { CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
+import { Field } from "../Field";
 import { FieldRefusal } from "../FieldRefusal";
 import { Sheet } from "../Sheet";
 
@@ -44,8 +45,9 @@ const noClock = () => 0;
 export function PaySheet({
   open,
   draft,
+  onChange,
   onClose,
-}: Readonly<{ open: boolean; draft: GiftDraft; onClose: () => void }>) {
+}: Readonly<{ open: boolean; draft: GiftDraft; onChange: (draft: GiftDraft) => void; onClose: () => void }>) {
   const { address, ensureSigner, status } = useAccount();
   const router = useRouter();
   const money = useDisplayCurrency(address);
@@ -168,6 +170,17 @@ export function PaySheet({
         </div>
         {money.rates && !enough ? <p className={`${CARD_LABEL} max-w-[40%] text-right`}>{W.atTheRate(rateDateInWords(money.rates.date))}</p> : null}
       </div>
+
+      {/* Who this is from, said here because this is where a person becomes somebody to the recipient. It is the one
+          thing on the card the image did not draw, and at the card's label size it would be under a thumb and under
+          the 16 pixels a phone zooms in on. Optional: a gift from nobody is one this product has always made. */}
+      <Field
+        id="funder-name"
+        label={FUND.who.funderLabel}
+        value={draft.funderName}
+        onChange={(value) => onChange({ ...draft, funderName: value })}
+        autoComplete="off"
+      />
 
       <p className={HELP}>{address ? W.signedIn : W.passkeyMakesTheAccount}</p>
 

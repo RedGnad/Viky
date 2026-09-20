@@ -37,6 +37,18 @@ export const OFFER = {
   /** The label at the head of the card, in the third voice: whose gift this is, or that it is yours to fill in. */
   yourGift: "Your gift",
   fromFunder: (funder: string) => `A gift from ${funder}`,
+  /** The same label while nobody has written a name, as desktop.html writes it. */
+  fromYou: "A gift from you",
+  /** The figure the amount is typed beside, so the field holds the number and nothing else. */
+  dollar: "$",
+  /** The lengths the register offers on the card, and the one that opens a field in their place. */
+  someDays: (days: number) => `${days} ${days === 1 ? "day" : "days"}`,
+  otherLength: "Other",
+  daysLabel: "Days",
+  /** Beside the typed length: what it counts, and what the route will take. */
+  daysUnit: (min: number, max: number) => `days, ${min} to ${max}`,
+  /** Under the action, for a gift counted by days: what one day of it is worth, and where the rest goes. */
+  eachDay: (perDay: string) => `${perDay} a day. What they miss comes back to you.`,
   /** The name the card carries, and what it says while nobody has given one: "For  who?", the question in its place. */
   forName: (recipient: string) => `For ${recipient}`,
   forNobody: "For",
@@ -55,7 +67,7 @@ export const OFFER = {
   },
   /** What each case is called when a reader is told they can change it. */
   slots: {
-    for: { label: "who it is for" },
+    for: { label: "Their first name" },
     will: { label: "what they will do" },
     amount: { label: "how much" },
     howLong: { label: "how long" },

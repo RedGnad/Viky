@@ -1,4 +1,4 @@
-import { draftFromTerms, draftToTerms, EMPTY_DRAFT, type GiftDraft } from "./gift-draft";
+import { draftFromTerms, draftToTerms, STARTING_DRAFT, type GiftDraft } from "./gift-draft";
 import { cardDraftFrom, PENDING_GIFT_STORAGE_KEY, saveCardDraft } from "./pending-gift";
 
 /**
@@ -15,7 +15,7 @@ import { cardDraftFrom, PENDING_GIFT_STORAGE_KEY, saveCardDraft } from "./pendin
 
 const listeners = new Set<() => void>();
 let lastRaw: string | null | undefined;
-let last: GiftDraft = EMPTY_DRAFT;
+let last: GiftDraft = STARTING_DRAFT;
 
 function raw(): string | null {
   try {
@@ -44,14 +44,18 @@ export function cardDraft(): GiftDraft {
   if (now !== lastRaw) {
     lastRaw = now;
     const terms = cardDraftFrom(now, Date.now());
-    last = terms ? draftFromTerms(terms) : EMPTY_DRAFT;
+    last = terms ? draftFromTerms(terms) : STARTING_DRAFT;
   }
   return last;
 }
 
-/** What the server draws: an empty card, because a server knows nobody's device. */
-export function emptyCardDraft(): GiftDraft {
-  return EMPTY_DRAFT;
+/**
+ * What the server draws, and what a device with nothing kept on it shows: the starting card, a plausible gift with
+ * the first name left empty (the founder, 20 Sep 2026). A server knows nobody's device, so this is also the
+ * snapshot React renders on the server and hydrates against.
+ */
+export function startingCardDraft(): GiftDraft {
+  return STARTING_DRAFT;
 }
 
 /** Writes the card to the device and tells every screen reading it. */

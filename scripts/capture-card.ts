@@ -41,41 +41,35 @@ async function main() {
       };
       await page.goto(SITE, { waitUntil: "networkidle" });
       const card = page.locator("section").first();
-      const slot = (index: number) => card.getByRole("button").nth(index);
       const sheet = page.locator("dialog.sheet[open]");
-      await shot("01-card-empty");
+      await shot("01-card-as-it-opens");
 
-      await slot(0).click();
-      await shot("02-sheet-for");
-      await sheet.getByLabel("Their first name").fill("Léa");
-      await sheet.getByLabel("Your name, as they know you").fill("Mum");
-      await sheet.getByRole("button", { name: "Done" }).click();
+      // The name, the amount and the length are typed on the card itself (the founder, 20 Sep 2026).
+      await card.getByLabel("Their first name").fill("Léa");
+      await shot("02-card-named");
 
-      await slot(1).click();
+      await card.getByRole("button").filter({ hasText: /what they will do/i }).click();
       await shot("03-sheet-will-list");
       // The list is longer than the sheet on a phone, and the state the fade is for is the one further down it.
       await sheet.locator(".sheet-body").evaluate((body) => body.scrollTo({ top: body.scrollHeight }));
       await shot("03b-sheet-will-list-scrolled");
       await sheet.locator(".sheet-body").evaluate((body) => body.scrollTo({ top: 0 }));
+      // Pressing the one already chosen opens its own questions and keeps what it has been told.
       await sheet.getByRole("radio", { name: /Duolingo lesson each day/ }).click();
       await page.waitForTimeout(200);
       await shot("04-sheet-will-questions");
       // The list as somebody returning to it sees it: one line each, and the sentence under the one already chosen.
       await sheet.getByRole("button", { name: /change/i }).click();
       await shot("04b-sheet-will-list-chosen");
-      await sheet.getByRole("radio", { name: /Duolingo lesson each day/ }).click();
-      await page.waitForTimeout(200);
       await sheet.getByRole("button", { name: "Done" }).click();
 
-      await slot(2).click();
-      for (const key of ["3", "0"]) await sheet.getByRole("button", { name: key, exact: true }).click();
-      await shot("05-sheet-amount");
-      await sheet.getByRole("button", { name: "Done" }).click();
-
-      await slot(3).click();
-      await shot("06-sheet-how-long");
-      await sheet.getByRole("button", { name: "30 days" }).click();
-      await sheet.getByRole("button", { name: "Done" }).click();
+      await card.getByLabel("How much").fill("45");
+      await card.getByRole("button", { name: "90 days", exact: true }).click();
+      await shot("05-card-amount-and-length");
+      await card.getByRole("button", { name: "Other" }).click();
+      await card.getByLabel("Days", { exact: true }).fill("45");
+      await shot("06-card-other-length");
+      await card.getByRole("button", { name: "30 days", exact: true }).click();
       await shot("07-card-filled");
 
       await page.getByRole("button", { name: /^Pay / }).click();

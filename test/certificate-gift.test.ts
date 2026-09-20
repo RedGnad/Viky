@@ -176,7 +176,7 @@ test("a gift on this result ends well inside the two years, on the screen as in 
   assert.equal(DET_MILESTONE.duration.max, 180);
   assert.match(DET_MILESTONE.words.durationShape(14, 180), /Between 14 and 180 days/);
   // The card offers the condition's own bounds and refuses anything outside them, for both milestone shapes.
-  const sheet = readFileSync("app/kit/offer/HowLongSheet.tsx", "utf8");
-  assert.match(sheet, /durationBounds\(draft\.conditionId\)/);
-  assert.match(sheet, /bounded\?\.words\.durationShape\(bounds\.min, bounds\.max\)/);
+  const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
+  assert.match(card, /durationBounds\(draft\.conditionId\)/);
+  assert.match(card, /W\.daysUnit\(bounds\.min, bounds\.max\)/);
 });
