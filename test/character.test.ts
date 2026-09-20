@@ -22,7 +22,10 @@ test("every state is drawn from circles, rounded rectangles and rounded triangle
     for (const size of ["large", "small"] as const) {
       const svg = draw(state, size);
       const elements = [...svg.matchAll(/<([a-zA-Z]+)[\s>/]/g)].map((match) => match[1]);
-      assert.deepEqual([...new Set(elements)].filter((name) => !["svg", "g", "circle", "rect", "path"].includes(name)), [], `${state} ${size}`);
+      // The head of the page is the one character drawn from a blend of its own two colours, so it carries the three
+      // elements a gradient needs and nothing else does (D132).
+      const allowed = state === "diamond" ? ["svg", "g", "circle", "rect", "path", "defs", "linearGradient", "stop"] : ["svg", "g", "circle", "rect", "path"];
+      assert.deepEqual([...new Set(elements)].filter((name) => !allowed.includes(name)), [], `${state} ${size}`);
       // No ovals: an eye is a circle, never an ellipse.
       assert.doesNotMatch(svg, /<ellipse/);
       // A rectangle is always rounded.
@@ -36,7 +39,9 @@ test("every state is drawn from circles, rounded rectangles and rounded triangle
 test("flat, with no outline and no text, and hidden from a screen reader because the words beside it say the state", () => {
   for (const state of STATES) {
     const svg = draw(state);
-    assert.doesNotMatch(svg, /stroke/);
+    // One outline in the whole product, on the head of the page, because the founder asked for it there (D132).
+    if (state === "diamond") assert.match(svg, /stroke="var\(--control-border\)"|stroke:var\(--control-border\)/);
+    else assert.doesNotMatch(svg, /stroke/);
     assert.doesNotMatch(svg, /<text|<tspan|<title|<foreignObject/);
     assert.match(svg, /^<svg aria-hidden="true"/);
   }

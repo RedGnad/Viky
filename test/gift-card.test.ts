@@ -130,10 +130,13 @@ test("there is one card, and the one being filled in is drawn by it", () => {
   assert.match(card, /import \{ CardFace \} from "\.\.\/GiftCard"/);
   assert.match(card, /<CardFace/);
   assert.doesNotMatch(card, /<dl|<dt|<dd/, "a card is not a list of definitions");
-  // And it draws the product's own pieces rather than shapes of its own.
-  for (const piece of ["DayStrip", "MilestoneMeter"]) {
+  // And it draws the product's own pieces rather than shapes of its own: the day strip for a gift counted by days,
+  // and the milestone's own character for a climb. Its meter stays on a gift that has been read (D132): on a card
+  // being filled in there is no reading, so the bar was always empty and said nothing.
+  for (const piece of ["DayStrip", "Character"]) {
     assert.match(card, new RegExp(`<${piece}`), `the card draws the gift's own ${piece}`);
   }
+  assert.doesNotMatch(card, /<MilestoneMeter/, "an empty bar is not a picture of anything");
   assert.equal(globSync("app/kit/offer/ShapePreview.tsx").length, 0, "the shape invented beside the product's own is gone");
 });
 

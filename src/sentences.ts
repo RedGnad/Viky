@@ -163,7 +163,7 @@ export const HOME = {
    * The one sentence under the card, and there is no third (the drawn card, section 6). The promise above it is the
    * title; this is what it costs a visitor to try, and what happens to what nobody earns.
    */
-  promiseUnder: "Put it in their name. It becomes theirs day by day, and what they miss comes back to you.",
+  promiseUnder: "Back someone's goal with real money. They earn it as they do it, and you get back the rest.",
   offer: "Offer a gift",
   finish: "Finish the gift you set up",
   howItWorks: "How it works",

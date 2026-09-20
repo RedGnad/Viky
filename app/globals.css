@@ -102,6 +102,9 @@
   --character-3: #B79BFF;
   --character-face: #1E1633;
   --character-shadow: #1E1633;
+  /* The juice (D132): one highlight of white and one shade of ink inside every character, and no gradient anywhere. */
+  --character-gloss: rgba(255, 255, 255, 0.45);
+  --character-shade: rgba(30, 22, 51, 0.12);
   --character-shadow-opacity: 0.12;
 
   /* Material's 8dp scale, the steps we use. */

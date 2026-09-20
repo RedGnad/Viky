@@ -245,6 +245,13 @@ export const CHARACTERS: Record<Appearance, Record<string, string>> = {
   dark: { one: "#FF8C98", two: "#6DBDFB", three: "#BBA3FA", face: "#151026", shadow: "#08060F" },
 };
 
+/**
+ * The juice inside a character (D132, the founder on a sheet of glossy jelly shapes, 20 Sep 2026): the fills stay
+ * flat, and each one gains a highlight of two white circles at its upper left and a shade lying at its foot. Kept
+ * low on purpose: enough to read as an object under a light, never enough to become a gradient.
+ */
+export const CHARACTER_JUICE = { gloss: "rgba(255, 255, 255, 0.45)", shade: "rgba(30, 22, 51, 0.12)" } as const;
+
 /** How much of the shadow's colour shows under a character: a tint of the ink by day, a deeper one at night. */
 export const CHARACTER_SHADOW_OPACITY: Record<Appearance, number> = { light: 0.12, dark: 0.45 };
 
