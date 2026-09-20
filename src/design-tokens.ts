@@ -289,7 +289,8 @@ export const TYPE_SCALE = [13, 16, 20, 25, 31, 39, 49, 61, 76] as const;
  * Both sizes are steps of the scale.
  */
 export const HERO_TYPE = {
-  compact: { size: 39, lineHeight: 42, tracking: -1 },
+  // 49 on a phone since D131, where 39 left the promise smaller than the amount on the card under it.
+  compact: { size: 49, lineHeight: 54, tracking: -1 },
   wide: { size: 76, lineHeight: 1.02, tracking: -2 },
   from: 1024,
 } as const;

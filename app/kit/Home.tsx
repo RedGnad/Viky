@@ -35,19 +35,28 @@ export function Home() {
   if (!address) {
     return (
       <Shell kind="destination" active="home" action={<SignInDoor />} bare wide>
-        {/* Home without an account (D129): one column at every width, and the same order from the phone to the desk,
-            the character, the title, the sentence, the card. The text is never under the card. The two columns of
-            D128 lasted an evening; what they had put under the card on a phone was a regression on the page of the
-            morning. What a wide screen gets instead is the title at its full size on one line, and air on the right. */}
-        <div className="flex w-full flex-col items-start gap-[var(--space-md)] [@media(min-width:1024px)]:gap-[var(--space-sm)]">
-          <Gaze>
-            <Character state="gift" tone="sun" className="h-auto w-[88px] shrink-0 [@media(min-width:1024px)]:w-[72px]" />
-          </Gaze>
-          <h1 className={HERO}>{W.promise}</h1>
-          <p className={`${LEAD} max-w-[460px] [@media(min-width:1024px)]:max-w-none`}>{W.promiseUnder}</p>
+        {/* Home without an account (D129, D131): one column, and the same order everywhere, the character, the title,
+            the sentence, the card. On a phone the character is a diamond floated into the hollow the title's own
+            ragged edge leaves at its top right, which is what lets the block start a hundred pixels higher; from 1024
+            it stands above the title and the whole composition is centred in the window, the card included. */}
+        <div className="flex w-full flex-col items-start gap-[var(--space-md)] [@media(min-width:1024px)]:items-center [@media(min-width:1024px)]:gap-[var(--space-sm)]">
+          {/* A plain block, never a flex one: text only flows around a float inside a block. */}
+          <div className="w-full [@media(min-width:1024px)]:text-center">
+            <Gaze>
+              <Character
+                state="diamond"
+                tone="sun"
+                standing={false}
+                className="float-right mb-[var(--space-sm)] ml-[var(--space-md)] h-auto w-[88px] [@media(min-width:1024px)]:float-none [@media(min-width:1024px)]:mx-auto [@media(min-width:1024px)]:mb-[var(--space-md)] [@media(min-width:1024px)]:block [@media(min-width:1024px)]:w-[72px]"
+              />
+            </Gaze>
+            <h1 className={HERO}>{W.promise}</h1>
+            {/* One line from 1024, where two would have pushed the card's last line past the fold (measured 914 for 900). */}
+            <p className={`${LEAD} mt-[6px] max-w-[460px] [@media(min-width:1024px)]:max-w-none`}>{W.promiseUnder}</p>
+          </div>
           <OfferCard />
         </div>
-        <p className={`${HELP} flex flex-wrap gap-x-[var(--space-lg)]`}>
+        <p className={`${HELP} flex w-full flex-wrap gap-x-[var(--space-lg)] [@media(min-width:1024px)]:justify-center`}>
           <Link href="/what-viky-can-check" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
             {CATALOGUE.title}
           </Link>

@@ -83,8 +83,8 @@
    * The promise on the page without an account (D128): 39 in the one column under 1024, 76 from 1024 where it stands
    * in the left column beside the card, with the lead sentence under it at 20 there and at the body's 16 below.
    */
-  --type-hero: 39px;
-  --type-hero-leading: 42px;
+  --type-hero: 49px;
+  --type-hero-leading: 54px;
   --type-hero-tracking: -1px;
   --type-lead: 16px;
   --type-lead-leading: 24px;

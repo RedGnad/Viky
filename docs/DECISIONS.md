@@ -3638,3 +3638,27 @@ behind an account cannot be photographed any other way.
   wanted back it is one chip away.
 - `test/browser/screens.spec.ts` counts the chips at three and asserts no "Other"; `test/gift-card.test.ts` holds the
   three to `bounds.min`, `bounds.suggested` and `bounds.max`.
+
+## D131, 20 Sep 2026: the diamond in the hollow, a bigger promise, and a composition centred on the desk
+
+- **The desk was not centred, and the founder was right.** Read in his own browser at 1438 x 788: the column was
+  `fit-content`, 946 wide and centred (246 each side), the title centred in it, and the card 440 hugging the column's
+  left edge, 270 on its left and 728 on its right. A centred title over a left-hugging card is not a centred page.
+  From 1024 every block now sits on the window's axis, the card included: the character, the title, the sentence and
+  the card are centred, the text with them, and the footer's links too. Measured at 1440: all four centres at 720.
+- **The diamond.** The founder asked for a diamond in place of the gift box at the head of the page. It is a fourth
+  shape where the brief had three, and it obeys the same rule as the triangle: its corners are rounded, generously,
+  so nothing the product draws is pointed. It wears the gift's own tone, the sun with the ink face, and it stands
+  without a shadow, because a shape floating in a line of text stands on nothing.
+- **In the hollow, on a phone.** It is floated to the right of the title's first lines, in the hollow the title's own
+  ragged edge leaves, which is what the founder drew. The text flows around it, so the block starts at the top of the
+  page instead of a hundred pixels down: the title's top went from 188 to 88, and the card's from 344 to 316.
+- **The promise is bigger on a phone**: 49 instead of 39, the next step of the scale (D126), which puts it above the
+  amount on the card under it rather than level with it. It takes three lines at 390 and two from 768.
+- **The constraint of D129 still holds**: at 1440x900 the page is exactly 900 tall and does not scroll. It is what
+  decided the sentence's width from 1024: at 460 it took two lines and the page measured 914, so it runs on one line
+  there. On the founder's own window, 788 tall, the page scrolls: 900 was the height he set, and this is said rather
+  than hidden.
+- Acceptance in `test/browser/home-order.spec.ts`, day and night, at 390, 430, 1024 and 1440: the order, the text
+  never under the card, the block centred on the window's axis from 1024 and the diamond in the hollow below it, the
+  title at its step, no blur, nothing cut across, and no scrolling at 1440x900.

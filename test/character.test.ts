@@ -6,12 +6,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Character, type CharacterState } from "../app/kit/Character.js";
 
 /**
- * The rules of the characters (art direction brief, section 5), read off what the component actually draws: three
- * shapes, round eyes, no outline, no text, three secondary colours at most, a face only at the large size, and a face
- * that changes with the state.
+ * The rules of the characters (art direction brief, section 5), read off what the component actually draws: round
+ * eyes, no outline, no text, three secondary colours at most, and a face that changes with the state. The shapes were
+ * three until the founder asked for a fourth on 20 Sep 2026, the diamond at the head of the page (D131); it obeys the
+ * same rule as the triangle, its corners are rounded, so nothing the product draws is pointed.
  */
 
-const STATES: CharacterState[] = ["toCome", "today", "catchable", "earned", "returned", "gift"];
+const STATES: CharacterState[] = ["toCome", "today", "catchable", "earned", "returned", "gift", "diamond"];
 
 const draw = (state: CharacterState, size: "large" | "small" = "large", variant = 0) =>
   renderToStaticMarkup(createElement(Character, { state, size, variant }));

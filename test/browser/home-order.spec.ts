@@ -33,7 +33,7 @@ async function blurs(page: Page): Promise<string[]> {
 
 for (const scheme of ["dark", "light"] as const) {
   for (const size of SIZES) {
-    test(`at ${size.width} the order is the character, the title, the sentence, the card (${scheme})`, async ({ page }) => {
+    test(`at ${size.width} the order is the character, the title, the sentence, the card, and the block is centred (${scheme})`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.setViewportSize(size);
       await page.goto("/");
@@ -50,22 +50,31 @@ for (const scheme of ["dark", "light"] as const) {
         };
         const heading = document.querySelector("h1")!;
         return {
-          character: box(heading.parentElement!.querySelector("svg")),
+          character: box(document.querySelector("svg[data-character='diamond']")),
           titleBox: box(heading),
           sentence: box(heading.nextElementSibling),
           card: box(document.querySelector("section.gift-card-placed")),
         };
       });
 
-      // The text is never under the card, at any width.
-      expect(character.y).toBeLessThan(titleBox.y);
+      // The text is never under the card, at any width, and the title never under the sentence.
       expect(titleBox.y).toBeLessThan(sentence.y);
       expect(sentence.y + sentence.height).toBeLessThanOrEqual(card.y);
-      // One column, one left edge, and nothing cut across.
-      for (const box of [character, titleBox, sentence, card]) expect(Math.abs(box.x - card.x)).toBeLessThan(1);
+      expect(character.y).toBeLessThanOrEqual(titleBox.y);
+      if (size.width >= 1024) {
+        // Centred in the window, the card included (D131): every block on the same axis.
+        const middle = size.width / 2;
+        for (const box of [character, titleBox, sentence, card]) expect(Math.abs(box.x + box.width / 2 - middle)).toBeLessThan(2);
+      } else {
+        // The diamond sits in the hollow the title leaves at its top right, and the text starts on the card's edge.
+        expect(character.x).toBeGreaterThan(titleBox.x + titleBox.width / 2);
+        expect(Math.abs(character.x + character.width - (card.x + card.width))).toBeLessThan(1);
+        expect(Math.abs(titleBox.x - card.x)).toBeLessThan(1);
+        expect(Math.abs(sentence.x - card.x)).toBeLessThan(1);
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(size.width);
-      // The title at its step: 76 from 1024, 39 below.
-      expect(await title.evaluate((el) => getComputedStyle(el).fontSize)).toBe(size.width >= 1024 ? "76px" : "39px");
+      // The title at its step: 76 from 1024, 49 below (D131).
+      expect(await title.evaluate((el) => getComputedStyle(el).fontSize)).toBe(size.width >= 1024 ? "76px" : "49px");
       // No blur, on the ground or under anything.
       expect(await blurs(page)).toEqual([]);
     });

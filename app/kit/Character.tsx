@@ -26,7 +26,7 @@ import type { CSSProperties, ReactNode } from "react";
  * `data-part` so the motion (app/kit/Motion.tsx) can move a body, a face or a bow without knowing how they are drawn.
  */
 
-export type CharacterState = "toCome" | "today" | "catchable" | "earned" | "returned" | "gift";
+export type CharacterState = "toCome" | "today" | "catchable" | "earned" | "returned" | "gift" | "diamond";
 
 const ONE = "var(--character-1)";
 const TWO = "var(--character-2)";
@@ -60,6 +60,21 @@ const TRIANGLE = roundedTriangle(
     [32, 8],
     [56, FLOOR],
     [8, FLOOR],
+  ],
+  9,
+);
+
+/**
+ * The diamond, asked for by the founder on 20 Sep 2026 for the head of the page without an account (D131). It is a
+ * fourth shape, and it obeys the same rule as the triangle: its corners are rounded, generously, so that nothing on
+ * the page is pointed. It carries the gift's own tone, the sun box with the ink face.
+ */
+const DIAMOND = roundedTriangle(
+  [
+    [32, 9],
+    [55, 32],
+    [32, 55],
+    [9, 32],
   ],
   9,
 );
@@ -149,6 +164,17 @@ function drawing(
           </>
         ) : null,
       };
+    case "diamond":
+      return {
+        body: <path d={DIAMOND} style={bodyFill(tone.box)} />,
+        face: face ? (
+          <>
+            <Eye x={26} y={30} fill={tone.face} />
+            <Eye x={38} y={30} fill={tone.face} />
+            <path data-part="mouth" d={smile(32, 37, 5)} style={{ fill: tone.face, ...FROM_MIDDLE }} />
+          </>
+        ) : null,
+      };
     case "gift":
       return {
         // A box under a lid, so the face sits on the box and never across a ribbon.
@@ -232,7 +258,7 @@ export function Character({
   className?: string;
 }>) {
   const large = size === "large";
-  const drawn: CharacterTone = state === "gift" ? tone : "range";
+  const drawn: CharacterTone = state === "gift" || state === "diamond" ? tone : "range";
   // A face at every size, since the rendered mockups of 19 Sep 2026 (D113): it is what holds the screen together,
   // and a row of small shapes without faces read as a chart rather than as days.
   const parts = drawing(state, true, variant, TONES[drawn]);
