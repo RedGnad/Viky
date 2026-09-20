@@ -156,7 +156,7 @@ export const PAY = {
 /** Home: the money, the one action, the way out, and what is moving. */
 export const HOME = {
   /** The promise, as the rendered mockups of 19 Sep 2026 write it: three short lines in the title face. */
-  promise: "Money that cheers them on.",
+  promise: "Send money that motivates.",
   promiseBody:
     "Put money behind someone's goal. It becomes theirs as they make verified progress, and whatever they do not earn comes back to you. Nobody profits from anyone failing.",
   /**

@@ -49,7 +49,7 @@ test.describe("the screens a person meets", () => {
     // The action says what it will take from the first second: the passkey is the door, not the button.
     await expect(page.getByRole("button", { name: /^Pay \$30\.00$/ })).toBeEnabled();
     // The promise and the line under it, in the founder's words of 20 Sep 2026 (D128).
-    await expect(page.getByRole("heading", { name: /Money that cheers them on/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Send money that motivates/i })).toBeVisible();
     await expect(page.getByText(/what they miss comes back to you/i).first()).toBeVisible();
     // The one door, in the header rather than in the body, named for both of the things it does (brief, section 7).
     await expect(page.getByRole("button", { name: /^Sign in or create account$/i })).toBeVisible();

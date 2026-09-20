@@ -3722,3 +3722,20 @@ behind an account cannot be photographed any other way.
 - **The sentence under the title, shorter**, chosen by the founder from three: "Back their goal. They earn it day by
   day, and the rest comes back to you." Fifteen words where there were seventeen, two lines on a phone where there
   were three, and the difference still at the end of the sentence.
+
+## D135, 21 Sep 2026: the title asks for the gesture, and the icon is the head character
+
+- **The title is an instruction now**: "Send money that motivates." The founder wanted the page to ask for the
+  gesture. Measured in the real face before choosing, and the choice was his between four: this one is 955 px at 76,
+  the same width as the old title, so the desk keeps its single line; on a phone it takes three lines at 390 and two
+  at 430. "Send money that cheers them on." was 1138 and cost a line everywhere; "Send money that cheers" loses the
+  idiom, because in British English "cheers" alone means thanks. The honesty rule stands: nothing here claims a
+  durable change of behaviour, only that money motivates while it runs.
+- **The icon is the diamond**, on the ink tile, which is what the product looks like at night. The link preview
+  keeps the gift box, because what it previews is a gift. `pnpm make:icon` writes both, and the standalone drawing
+  now carries the head character's own variables, which live in the stylesheet and not in the palette.
+- **The night edge is lighter again**, at the founder's second asking: `#3B3266`, 1.62:1 on the ink, where the
+  first try was 1.25.
+- **The chips were never wrong.** The founder read "90 days" where he expected 365: the three lengths are the chosen
+  condition's own (a daily lesson is 7/30/90, a rating to climb 1/30/365, a certification 30/120/365, the Duolingo
+  test 14/90/180). He confirmed he was reading a daily lesson on a page the service worker had kept. Nothing changed.

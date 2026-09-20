@@ -23,6 +23,13 @@ export function characterSvg(
     "--character-shadow-opacity": String(CHARACTER_SHADOW_OPACITY[appearance]),
     "--accent": COLOURS[appearance].accent,
     "--on-accent": COLOURS[appearance].onAccent,
+    // The juice and the head character's own two colours, which live in the stylesheet and not in the palette: a
+    // drawing written into a file has no stylesheet to read them from (D135).
+    "--character-gloss": "rgba(255, 255, 255, 0.45)",
+    "--character-shade": "rgba(30, 22, 51, 0.12)",
+    "--character-hero-edge": appearance === "dark" ? "#3B3266" : "#FFE7A8",
+    "--character-hero-from": appearance === "dark" ? COLOURS.dark.accent : CHARACTERS.light.one,
+    "--character-hero-to": appearance === "dark" ? CHARACTERS.dark.one : CHARACTERS.light.three,
   };
   return renderToStaticMarkup(createElement(Character, { state, tone, size: "large" })).replace(
     /var\((--[a-z0-9-]+)\)/g,
