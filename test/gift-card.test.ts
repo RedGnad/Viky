@@ -284,13 +284,21 @@ test("a case opens in a sheet, and a sheet is a dialog rather than a page", () =
   assert.equal(card.match(/ open=\{(choosing|paying)\}/g)?.length, 2);
 });
 
-test("the page without an account is one line, the card, and one line", () => {
+test("the page without an account is the character, the card, and the promise under it", () => {
   const home = readFileSync("app/kit/Home.tsx", "utf8");
   const signedOut = home.slice(home.indexOf("if (!address)"), home.indexOf("const moving ="));
-  // The hero of the mockups: the gift character beside the promise, one line under it, then the card, in that order.
+  // The card first, the promise under it (D127, the vision of 19 Sep, section 5): the card is the star of Home, at
+  // every width; the character keeps its place above it; the promise is the title voice, then its one sentence.
   assert.match(signedOut, /<Character state="gift" tone="sun"/);
-  assert.match(signedOut, /<h1 className=\{HERO\}>\{W\.promise\}<\/h1>/);
-  assert.ok(signedOut.indexOf("{W.promiseUnder}") < signedOut.indexOf("<OfferCard />"), "the line under the promise comes before the card");
+  assert.match(signedOut, /<h1 className=\{PROMISE\}>\{W\.promise\}<\/h1>/);
+  const character = signedOut.indexOf("<Character state=");
+  const offer = signedOut.indexOf("<OfferCard />");
+  const promise = signedOut.indexOf("<h1 className={PROMISE}>");
+  const under = signedOut.indexOf("{W.promiseUnder}");
+  assert.ok(character < offer && offer < promise && promise < under, "the character, the card, the promise, its sentence, in that order");
   assert.doesNotMatch(signedOut, /promiseBody|howItWorks|exampleGift/, "no third paragraph, and no example of a gift beside a real one");
-  assert.match(signedOut, /min-h-\[68dvh\][\s\S]*justify-center/, "on a wide screen the card sits in the height rather than at the top of an empty page");
+  // From 1024 the card and the promise are centred in the window and in the height; below, the left edge, as on a phone.
+  assert.match(signedOut, /\[@media\(min-width:1024px\)\]:min-h-\[calc\(100dvh-152px\)\][^"]*\[@media\(min-width:1024px\)\]:items-center[^"]*\[@media\(min-width:1024px\)\]:justify-center/);
+  assert.match(signedOut, /<Shell kind="destination" active="home" action=\{<SignInDoor \/>\} bare>/, "no rail's room on the page without an account");
+  assert.match(signedOut, /max-w-\[460px\]/, "the promise at most 460 wide");
 });

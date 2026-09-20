@@ -111,10 +111,10 @@ export const SAY = `${TITLE_FACE} text-[length:var(--type-say)] leading-[var(--t
 export const MARK = `${TITLE_FACE} text-[length:var(--type-mark)] leading-[var(--type-mark-leading)]`;
 
 /**
- * The promise at the head of the page without an account, in the title face at the hero step of the scale (D126):
- * 39 on a phone, 49 from 600, 76 from 840, where it is the display size and the first level over the body is 4.75.
+ * The promise under the card on the page without an account (D127): the title voice, 25, in the title face. It is
+ * the second level of Home, and it sounds like one; the card above it is the star.
  */
-export const HERO = `${TITLE_FACE} text-[length:var(--type-hero)] leading-[var(--type-hero-leading)] tracking-[var(--type-hero-tracking)]`;
+export const PROMISE = `${TITLE_FACE} text-[length:var(--type-promise)] leading-[var(--type-promise-leading)] tracking-[var(--type-promise-tracking)] [text-wrap:balance]`;
 
 /**
  * The three voices of a card, from the rendered mockups of 19 Sep 2026: the name it carries, the amount that is the

@@ -72,12 +72,11 @@ test.describe("the appearance control", () => {
     expect(box!.x).toBeLessThan(doorBox!.x);
 
     // What the screen is asking for is still the first thing in the body, and since the card of 19 Sep 2026 that is
-    // the gift itself rather than a way to one (D110). Under the character, the hero at its step and its paragraph
-    // (D126) its top measures 432 on a wide screen and 356 on a phone: inside the first screen, and nothing above it
-    // but the promise.
+    // the gift itself rather than a way to one (D110), and since D127 nothing stands above it but the character: its
+    // top measures under 200 at every width.
     const card = page.locator("main section").first();
     await expect(card.getByText("A gift from you", { exact: true })).toBeVisible();
     const cardBox = await card.boundingBox();
-    expect(cardBox!.y).toBeLessThan(480);
+    expect(cardBox!.y).toBeLessThan(200);
   });
 });

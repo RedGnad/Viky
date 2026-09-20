@@ -284,15 +284,23 @@ export const DISPLAY_TYPE = {
 export const TYPE_SCALE = [13, 16, 20, 25, 31, 39, 49, 61, 76] as const;
 
 /**
- * The promise at the head of the page without an account (D126). At the head of a page the first level over the
- * body measures at least 4: 76 over 16 is 4.75, inside the band the references hold at 1440 (Ramp 4.0, Revolut 4.9,
- * Wise 5.3, measured by the advisor on 20 Sep 2026). A phone cannot hold 76, so it takes the compact display step.
+ * The promise under the card on the page without an account (D127): the title voice, two steps under the card's own
+ * figure. The 76 hero of D126 lasted one evening: its references were landing pages, whose job is to send a visitor
+ * to a product elsewhere, and Home is the product. The vision of 19 Sep, section 5, had said it: the card at the top,
+ * and under it one line of promise.
  */
-export const HERO_TYPE = {
-  compact: { size: 39, lineHeight: 42 },
-  medium: { size: 49, lineHeight: 54 },
-  expanded: { size: 76, lineHeight: 80 },
-  atLeastOverBody: 4,
+export const PROMISE_TYPE = { size: 25, lineHeight: 30, tracking: -0.5 } as const;
+
+/**
+ * The gift card as an object placed on the page (D127, the niche the founder named on 20 Sep 2026, "Neo Brutalism
+ * Juice"): a 2 px edge and a hard offset of 10 px, no blur, in the ink by day and, at night, the controls' edge and
+ * the characters' lavender, because the ink would vanish into the ground.
+ */
+export const CARD_PLACED = {
+  edgeWidth: 2,
+  offset: 10,
+  edge: { light: "#1E1633", dark: "#F3F0FA" },
+  relief: { light: "#1E1633", dark: "#BBA3FA" },
 } as const;
 
 /** The card's three voices, each one step from the image of 19 Sep 2026 and on the scale (D126). */

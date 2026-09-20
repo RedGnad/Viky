@@ -26,6 +26,12 @@ type Props =
       title?: string;
       /** One small action in the header, opposite the mark: the door, on the page without an account (brief, section 7). */
       action?: ReactNode;
+      /**
+       * The page without an account: no bar, no rail, and no room kept for the rail either, so the column is centred
+       * in the window itself (D127). Without this the column sat 88 px right of centre on a wide screen for a rail
+       * that draws nothing.
+       */
+      bare?: boolean;
       children: ReactNode;
     }>
   | Readonly<{
@@ -50,7 +56,7 @@ export function Shell(props: Props) {
         : "max-w-[var(--destination-max)]";
   // Room for the bar below it and beside the rail on a destination; a task and a document have neither.
   const room =
-    props.kind === "destination"
+    props.kind === "destination" && !props.bare
       ? "pb-[calc(var(--nav-bar-height)+var(--space-xl))] [@media(min-width:840px)]:pb-[var(--space-xl)] pl-[var(--page-offset)]"
       : "";
 
@@ -78,7 +84,7 @@ export function Shell(props: Props) {
           {props.children}
         </main>
       </div>
-      {props.kind === "destination" ? <Nav active={props.active} /> : null}
+      {props.kind === "destination" && !props.bare ? <Nav active={props.active} /> : null}
     </>
   );
 }
