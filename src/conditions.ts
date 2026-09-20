@@ -399,14 +399,15 @@ export const COURSERA_CERTIFICATE: Condition = {
   id: "coursera-certificate",
   kind: "milestone",
   goalType: null,
-  live: false,
-  state: "asked-the-source",
-  beforeItOpens:
-    "The reading is built and was tested on a real certificate on 19 September 2026. Their terms ask for written consent before a program reads their pages, and sending that request is the founder's decision: nobody is offered this until it is answered.",
+  // Open on 20 Sep 2026, with goal 10 registered on the milestone contract, so a gift can be made on it (D109). What
+  // their terms ask about an automated reading is on the judges page, where what a reading is worth is written, and
+  // it is the same sentence the English test carries: the fact, and no word about who decides it here.
+  live: true,
+  state: "open",
   source: "Coursera",
   family: "course",
   name: "Get a Coursera certificate",
-  help: "The public page of the certificate, shared when they have it: Coursera checks identity once, not each piece of work.",
+  help: "The certificate's public page, shared when they have it: the course and the day are read from it, and Coursera checks identity once, not each piece of work.",
   link: { kind: "link", label: "The link to your certificate", help: "In Coursera, open the certificate and choose Share, then paste the link here." },
   reading: "coursera-certificate",
   words: {

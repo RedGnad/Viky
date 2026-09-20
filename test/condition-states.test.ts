@@ -51,9 +51,10 @@ test("a condition that is not open says what has to happen first, and an open on
   }
   // The two waiting on a source name what that source's own terms require, because that is the whole reason they wait.
   const waiting = CONDITIONS.filter((condition) => condition.state === "asked-the-source");
-  // The English test left this list on 19 Sep 2026, when its goal was registered and it opened (D109). Its source's
-  // question did not go away with it: it is on the judges page, where what a reading is worth is written.
-  assert.deepEqual(waiting.map((condition) => condition.id), ["coursera-certificate"]);
+  // Both left this list as their goals were registered: the English test on 19 Sep 2026, the course certificate on
+  // 20 Sep (D109). What each source's terms ask did not go away with them: it is on the judges page, where what a
+  // reading is worth is written, and it is said as a fact rather than as a decision of ours.
+  assert.deepEqual(waiting.map((condition) => condition.id), []);
   for (const condition of waiting) assert.match(String(condition.beforeItOpens), /terms/, `${condition.id} names the clause`);
 });
 
