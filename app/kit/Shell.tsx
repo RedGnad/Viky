@@ -51,7 +51,7 @@ export function Shell(props: Props) {
   // Room for the bar below it and beside the rail on a destination; a task and a document have neither.
   const room =
     props.kind === "destination"
-      ? "pb-[calc(var(--nav-bar-height)+var(--space-xl))] [@media(min-width:840px)]:pb-[var(--space-xl)] [@media(min-width:840px)]:pl-[var(--nav-rail-width)]"
+      ? "pb-[calc(var(--nav-bar-height)+var(--space-xl))] [@media(min-width:840px)]:pb-[var(--space-xl)] pl-[var(--page-offset)]"
       : "";
 
   return (

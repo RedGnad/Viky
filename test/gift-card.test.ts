@@ -12,12 +12,14 @@ import {
   isComplete,
   nextCase,
   shapeOf,
+  STARTING_DRAFT,
   type GiftDraft,
 } from "../src/gift-draft";
 import { CHESS_MILESTONE, DET_MILESTONE } from "../src/milestone-conditions";
 import { MAX_GIFT_UNITS } from "../src/money";
 import { contrastRatio } from "../src/contrast";
 import { COLOURS } from "../src/design-tokens";
+import { conditionById } from "../src/conditions";
 import { OFFER } from "../src/sentences";
 
 /**
@@ -32,7 +34,8 @@ import { OFFER } from "../src/sentences";
 const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
 const face = readFileSync("app/kit/GiftCard.tsx", "utf8");
 const sheetFile = readFileSync("app/kit/Sheet.tsx", "utf8");
-const sheets = ["WhoSheet", "WillSheet", "AmountSheet", "HowLongSheet"].map((name) => readFileSync(`app/kit/offer/${name}.tsx`, "utf8"));
+// One sheet is left on the card: the catalogue and then the condition's own questions (the founder, 20 Sep 2026).
+const sheets = ["WillSheet"].map((name) => readFileSync(`app/kit/offer/${name}.tsx`, "utf8"));
 const pay = readFileSync("app/components/PayGift.tsx", "utf8");
 const ui = readFileSync("app/components/ui.ts", "utf8");
 const css = readFileSync("app/globals.css", "utf8");
@@ -54,9 +57,28 @@ test("four cases, and each one is filled by its own answer", () => {
   assert.deepEqual(filledCases(lesson), { for: true, will: true, amount: true, howLong: true });
   assert.equal(isComplete(lesson), true);
   assert.equal(nextCase(lesson), undefined);
-  // One name is not two: the gift says who it is for and who it is from.
-  assert.equal(filledCases({ ...lesson, funderName: "" }).for, false);
-  assert.equal(nextCase({ ...lesson, funderName: "" }), "for");
+  // The funder's own name is not asked for on the card and never blocks: the card says "a gift from you" until
+  // they write one, and a gift from nobody is one this product has always made (the founder, 20 Sep 2026).
+  assert.equal(filledCases({ ...lesson, funderName: "" }).for, true);
+  assert.equal(isComplete({ ...lesson, funderName: "" }), true);
+});
+
+/**
+ * The card a visitor meets is a plausible gift, not four holes: the one thing left empty is the first name, and the
+ * action can be pressed from the first second, because nothing is taken until the passkey (the founder, 20 Sep 2026).
+ */
+test("the card opens filled, and the only empty thing on it is the name", () => {
+  assert.equal(STARTING_DRAFT.recipientName, "", "the one thing Viky cannot guess");
+  assert.equal(STARTING_DRAFT.funderName, "");
+  assert.equal(STARTING_DRAFT.dollars, "30");
+  assert.equal(STARTING_DRAFT.days, String(DAILY_DURATION.suggested));
+  assert.ok(STARTING_DRAFT.conditionId.length > 0 && conditionById(STARTING_DRAFT.conditionId)?.live, "a condition a gift can really be made on");
+  assert.deepEqual(filledCases(STARTING_DRAFT), { for: false, will: true, amount: true, howLong: true });
+  assert.equal(isComplete(STARTING_DRAFT), true, "the action says what it will take from the first screen");
+  // And the screens read that card rather than an empty one, on the server as in the browser.
+  assert.match(readFileSync("src/card-draft.ts", "utf8"), /return STARTING_DRAFT;/);
+  assert.match(card, /startingCardDraft\)/);
+  assert.match(card, /autoFocus=\{recipient\.length === 0\}/, "the empty field carries the cursor");
 });
 
 test("a case is filled only by an answer the routes would accept", () => {
@@ -116,35 +138,43 @@ test("there is one card, and the one being filled in is drawn by it", () => {
 });
 
 test("the card shows what the rendered mockups show, in their order", () => {
-  // The label, the name with the question in its place, what they will do, the days, the amount, the length.
-  assert.equal(OFFER.yourGift, "Your gift");
+  // The label with the funder in it, the name in its own line, what they will do, the days, the amount, the length.
+  assert.equal(OFFER.fromYou, "A gift from you");
   assert.equal(OFFER.fromFunder("Mum"), "A gift from Mum");
-  assert.equal(OFFER.forName("Léa"), "For Léa");
   assert.equal(OFFER.forNobody, "For");
   assert.equal(OFFER.who, "who?");
-  assert.match(card, /\{funder \? W\.fromFunder\(funder\) : W\.yourGift\}/);
-  assert.match(card, /underline decoration-dotted/, "the question is where the name will be, not a link at the right");
-  assert.match(card, /line\("will", condition \? condition\.name : null/);
-  assert.match(card, /\{W\.daysAppear\}/, "and the days say they are waiting for the condition");
-  // The shape appears with the condition, and it has the length of the gift once there is one.
-  assert.match(card, /durationDays: filled\.howLong \? days : durationBounds\(draft\.conditionId\)\.suggested/);
-  // The star of the screen, and the length under it in the third voice.
-  assert.match(card, /\{formatAusd\(units \?\? 0n\)\}/, "an amount nobody has given is $0.00 in the faint ink");
-  assert.match(card, /\{amountLine\}/);
-  assert.match(card, /line\("howLong", filled\.howLong \? W\.forHowLong\(days\) : null, CARD_LABEL/);
-  // One button, always drawn, shut until the four are filled and saying what it waits for.
-  assert.equal(OFFER.stillNeeded, "Fill the four to pay");
-  assert.match(card, /disabled=\{!ready \|\| units === undefined\}/);
+  assert.match(card, /\{funder \? W\.fromFunder\(funder\) : W\.fromYou\}/);
+  assert.match(card, /placeholder=\{W\.who\}/);
+  assert.match(card, /\{condition \? condition\.name : W\.invites\.will\}/);
+  // The shape has the length of the gift, and one mark a day, with a fade saying the row carries on (desktop.html).
+  assert.match(card, /durationDays: Number\.isInteger\(days\) && days > 0 \? days : bounds\.suggested/);
+  assert.match(card, /day-row-fade/);
+  // The star of the screen, typed where it stands, and the length on chips under it.
+  assert.match(card, /\{W\.dollar\}/);
+  assert.match(card, /quick\.map\(\(count\) =>/);
+  assert.match(card, /\{W\.otherLength\}/, "and one chip that opens a field in the same place");
+  assert.match(card, /disabled=\{!ready\}/);
 });
 
-test("an empty case says the word that is missing, in its place, and the whole line opens it", () => {
-  assert.deepEqual(Object.keys(OFFER.invites).sort(), [...CARD_CASES].sort());
-  for (const invite of Object.values(OFFER.invites)) assert.ok(invite.length > 0 && !invite.endsWith(":"), invite);
-  assert.match(card, /onClick=\{\(\) => setOpen\(slot\)\}/, "a line of the card opens its own case");
-  assert.match(card, /said === null \? faint : ""/, "and a missing word is said in the faint ink of the paper");
-  // The one underline on the card is the dotted one under "who?", which is the question in the name's own place.
-  assert.equal(card.match(/underline/g)?.length, 2, "no underlined link stands in for an empty case");
-  assert.match(card, /decoration-dotted/);
+/**
+ * A field is edited where it stands (the founder, 20 Sep 2026): opening a page to type a first name or an amount is
+ * a journey wearing a card's clothes, and worse still on a keyboard. What keeps a sheet is what is a real choice.
+ */
+test("the name, the amount and the length are typed on the card, and nothing opens a sheet for them", () => {
+  for (const gone of ["WhoSheet", "AmountSheet", "HowLongSheet"]) {
+    assert.equal(globSync(`app/kit/offer/${gone}.tsx`).length, 0, `${gone} is gone`);
+  }
+  for (const field of ["recipientName", "dollars", "days"]) {
+    assert.match(card, new RegExp(`value=\\{draft\\.${field}\\}`), `${field} is typed on the card`);
+  }
+  // The funder's own name is the one field the image did not draw: it is asked where they pay, at a size a phone
+  // reads without zooming and a thumb can hit, and it never blocks.
+  assert.match(readFileSync("app/kit/offer/PaySheet.tsx", "utf8"), /value=\{draft\.funderName\}/);
+  // Every field on the card is a control at the size every control keeps.
+  assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length >= 5, true, "the name, the amount, the days, the chips");
+  // The two that are left, and both are a choice rather than a field.
+  assert.match(card, /<WillSheet open=\{choosing\}/);
+  assert.match(card, /<PaySheet open=\{paying\}/);
 });
 
 test("one accent per surface: the card's Pay, and a sheet's own Done", () => {
@@ -245,8 +275,8 @@ test("a case opens in a sheet, and a sheet is a dialog rather than a page", () =
     assert.match(source, /<Sheet\n?\s+open=\{open\}/, "each case is drawn in a sheet");
     assert.doesNotMatch(source, /next\/link|router\./, "a case never becomes a page");
   }
-  // The four are drawn once and opened by name: an open dialog taken out of the page keeps its layer over it.
-  assert.equal(card.match(/open=\{open === "/g)?.length, 4);
+  // Both are drawn once and opened by name: an open dialog taken out of the page keeps its layer over it.
+  assert.equal(card.match(/ open=\{(choosing|paying)\}/g)?.length, 2);
 });
 
 test("the page without an account is one line, the card, and one line", () => {

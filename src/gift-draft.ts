@@ -57,11 +57,28 @@ export const EMPTY_DRAFT: GiftDraft = {
   days: "",
 };
 
+
 /**
  * How long a daily gift runs. The create route refuses anything outside it (`app/api/gift/create/route.ts`), and a
  * test holds these three numbers against that route, so the card cannot offer what the route would refuse.
  */
 export const DAILY_DURATION = { min: 7, max: 90, suggested: 30 } as const;
+
+/**
+ * The card as a visitor first meets it (the founder, 20 Sep 2026): a plausible gift rather than four holes. A
+ * Duolingo lesson, thirty dollars, thirty days, at the bar the register itself suggests for a day.
+ *
+ * The one thing left empty is the first name, because it is the one thing Viky cannot guess, and it is the field
+ * that carries the cursor. Nothing here is a claim: the money is only taken at the passkey, and every number below
+ * is one the funder can change on the card before pressing anything.
+ */
+export const STARTING_DRAFT: GiftDraft = {
+  ...EMPTY_DRAFT,
+  conditionId: "duolingo-daily",
+  target: String(conditionById("duolingo-daily")?.target?.suggested ?? 10),
+  dollars: "30",
+  days: String(DAILY_DURATION.suggested),
+};
 
 export function conditionOfDraft(draft: GiftDraft): Condition | undefined {
   return draft.conditionId ? conditionById(draft.conditionId) : undefined;
@@ -160,16 +177,24 @@ export function durationGiven(draft: GiftDraft): boolean {
 /** Which of the four cases are filled, as the card reads them to draw itself. */
 export function filledCases(draft: GiftDraft): Readonly<Record<CardCase, boolean>> {
   return {
-    for: nameGiven(draft.recipientName) && nameGiven(draft.funderName),
+    // The name of the person it is for. The funder's own name is not asked for on the card and never blocks: the
+    // card says "a gift from you" until they write one, and the register has always allowed a gift from nobody.
+    for: nameGiven(draft.recipientName),
     will: conditionAnswered(draft),
     amount: amountGiven(draft),
     howLong: durationGiven(draft),
   };
 }
 
+/**
+ * Whether the card can be paid for. The name is not part of it (the founder, 20 Sep 2026): the action says what it
+ * will take from the first screen, and a gift whose recipient is named by nobody is a gift for whoever opens the
+ * link, which this product has always made. What must be true is what the money rests on: the condition answered,
+ * an amount that can be read, and a length the route will accept.
+ */
 export function isComplete(draft: GiftDraft): boolean {
   const filled = filledCases(draft);
-  return CARD_CASES.every((slot) => filled[slot]);
+  return filled.will && filled.amount && filled.howLong;
 }
 
 /** The case the card points at next: the first one still empty, and nothing once they are all filled. */

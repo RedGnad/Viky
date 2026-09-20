@@ -3373,3 +3373,35 @@ behind an account cannot be photographed any other way.
   `ai-fundamentals-with-ibm-skillsbuild`, issued 30 Aug 2024.
 - **The lesson worth keeping**: a condition is not proved by its tests. It is proved by one real reading, and that
   reading costs a minute. Take it before calling a condition live, not after.
+
+## D121, 20 Sep 2026: the card keeps its shape, and it is the form
+
+- Statement, the founder's, 20 Sep 2026, with `desktop.html` as the image that decides the card's shape. Measured on
+  production at 1440 first: the card took its whole column, about 880 pixels wide; the pay sheet stood 57 pixels
+  off the page's axis; and a person opened a sheet to type a first name.
+- **The card never widens.** 440 pixels at every width above 480, and the column less its margins below. A gift
+  card that stretches to its column stops being a card, and it is the object the whole product is about. The row of
+  days keeps one mark a day, thirty for thirty, and scrolls behind a fade at its right edge; on the wide card the
+  fade had nothing to hide and looked gone.
+- **The layout does not change.** The founder saw the desktop page with the promise above the card and kept it; the
+  image's two columns were not built.
+- **A sheet stands on the page's own axis.** How far the column is pushed in by the rail is one number,
+  `--page-offset`, read by the shell and by every sheet: measured after, page and sheet share the same axis at 390,
+  430, 1024 and 1440 (195, 215, 556, 764).
+- **A field is edited where it stands.** The first name is typed in the line that carries it, the amount in its own
+  place, the length on chips (the register's shortest, suggested and longest) with one more chip that opens a field
+  in the same place. What keeps a sheet is what is a real choice: the condition, with its families and a sentence
+  under the one being considered, and then that condition's own questions. Two sheets where there were five. Each
+  field on the card is 48 pixels tall, the size every control keeps; a field the size of the card's label would be
+  under a thumb and under the 16 pixels a phone zooms in on, so the funder's own name, which the image does not
+  draw at all, is asked where they pay, at a size a phone reads, and it never blocks.
+- **The card opens filled.** A visitor arrives on a plausible gift, not four holes: the daily lesson the register
+  starts on, thirty dollars, thirty days. The one empty field is the first name, because it is the one thing Viky
+  cannot guess, and it carries the cursor. The action says what it will take from the first second; the passkey is
+  still the only door, and a gift whose recipient nobody named is a gift for whoever opens the link, which this
+  product has always made.
+- **Pressing the condition again keeps its answers.** The card's line opens the catalogue; choosing the one already
+  chosen opens its own questions without dropping what it was told, and choosing another drops all of it, because a
+  name on one source means nothing on another.
+- Nothing else moved: the tokens, the sun for paying and for reaching, the three voices, the character, the
+  families of the catalogue, and no chain word on any screen.

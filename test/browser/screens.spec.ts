@@ -36,23 +36,21 @@ test.describe("the screens a person meets", () => {
    * being one (the product vision, D110). What is asserted is the same thing from closer in: the first screen is the
    * object itself, and the account waits until money does.
    */
-  test("a first visit meets the gift itself, not a way to one and not an account", async ({ page }) => {
+  test("a first visit meets a gift already filled in, with one thing left to say", async ({ page }) => {
     await page.goto("/");
-    // The card is the body of the page, and it reads as a gift: a title, and the word missing from each case where
-    // that word will be (the drawn card of 19 Sep 2026, section 2).
+    // The card is the body of the page, and it is a plausible gift rather than four holes (the founder, 20 Sep 2026).
     const card = page.locator("main section").first();
-    await expect(card.getByText("Your gift", { exact: true })).toBeVisible();
-    await expect(card.getByRole("button", { name: /Who is it for/i })).toBeVisible();
-    for (const missing of ["what they will do", "for how long"]) {
-      await expect(card.getByText(missing, { exact: true })).toHaveCount(1);
-    }
-    await expect(card.getByText("$0.00", { exact: true })).toBeVisible();
+    await expect(card.getByText("A gift from you", { exact: true })).toBeVisible();
+    await expect(card.getByLabel(/Their first name/i)).toHaveValue("");
+    await expect(card.getByLabel(/How much/i)).toHaveValue("30");
+    await expect(card.getByRole("button", { name: "30 days", exact: true })).toHaveAttribute("aria-pressed", "true");
+    // The one empty field is the one Viky cannot guess, and it is where the cursor is.
+    await expect(card.getByLabel(/Their first name/i)).toBeFocused();
+    // The action says what it will take from the first second: the passkey is the door, not the button.
+    await expect(page.getByRole("button", { name: /^Pay \$30\.00$/ })).toBeEnabled();
     // The promise above the card, and the line under it, in the words the mockups of 19 Sep 2026 write them.
     await expect(page.getByRole("heading", { name: /Money that arrives as they earn it/i })).toBeVisible();
-    await expect(page.getByText(/what they miss comes back to you/i)).toBeVisible();
-    // Nothing to pay for until the card says something: the action is there, shut, saying what it waits for.
-    await expect(page.getByRole("button", { name: /^Pay /i })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /Fill the four to pay/i })).toBeDisabled();
+    await expect(page.getByText(/what they miss comes back to you/i).first()).toBeVisible();
     // The one door, in the header rather than in the body, named for both of the things it does (brief, section 7).
     await expect(page.getByRole("button", { name: /^Sign in or create account$/i })).toBeVisible();
     // No passkey prompt on the home page at all, and nothing claiming a session that does not exist.
@@ -60,33 +58,43 @@ test.describe("the screens a person meets", () => {
     await expect(page.getByText("You are signed in.")).toHaveCount(0);
   });
 
-  test("a case of the card opens in a sheet over it, and closing the sheet leaves the page usable", async ({ page }) => {
+  test("the name, the amount and the length are typed on the card itself, with no sheet in the way", async ({ page }) => {
     await page.goto("/");
     const card = page.locator("main section").first();
-    await card.getByRole("button").first().click();
-    const sheet = page.locator("dialog.sheet[open]");
-    await expect(sheet).toBeVisible();
-    await expect(sheet.getByRole("heading", { name: /Who is it for/i })).toBeVisible();
-    // The card is still there behind it: a sheet is not a page.
-    await expect(card).toBeVisible();
-    await sheet.getByLabel(/Their first name/i).fill("Léa");
-    await sheet.getByLabel(/Your name/i).fill("Mum");
-    await sheet.getByRole("button", { name: /^Done$/ }).click();
+    await card.getByLabel(/Their first name/i).fill("Léa");
+    await card.getByLabel(/How much/i).fill("45");
+    await card.getByRole("button", { name: "90 days", exact: true }).click();
+    // Nothing opened: the card is the form, and what was typed is on it.
     await expect(page.locator("dialog.sheet[open]")).toHaveCount(0);
-    // And the card says what was answered, so the object changed under the person's eyes.
-    await expect(card.getByText("For Léa", { exact: true })).toBeVisible();
+    await expect(card.getByLabel(/Their first name/i)).toHaveValue("Léa");
+    await expect(page.getByRole("button", { name: /^Pay \$45\.00$/ })).toBeEnabled();
+    // A length that is not on a chip is typed in its place, and the three presets stay, so a person can come back.
+    await card.getByRole("button", { name: /^Other$/ }).click();
+    await card.getByLabel(/^Days$/i).fill("45");
+    await expect(card.getByRole("button", { name: "90 days", exact: true })).toHaveAttribute("aria-pressed", "false");
+    await card.getByRole("button", { name: "7 days", exact: true }).click();
+    await expect(card.getByRole("button", { name: "7 days", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(card.getByLabel(/^Days$/i)).toHaveCount(0);
   });
 
-  /**
-   * A sheet stops at 74 % of the height (D113), so on a phone the list of conditions carries on past its edge. What
-   * was measured on 20 Sep 2026 is that it said nothing about it: the fourth choice was cut clean against the edge
-   * of the action and read as the last one. This holds the two halves of the answer at every width, and asks
-   * nothing about which width scrolls: where the questions fit, nothing is drawn.
-   */
+  test("what they will do is a real choice, so it keeps its sheet", async ({ page }) => {
+    await page.goto("/");
+    const card = page.locator("main section").first();
+    await card.getByRole("button").filter({ hasText: /what they will do/i }).click();
+    const sheet = page.locator("dialog.sheet[open]");
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByRole("heading", { name: /What will they do/i })).toBeVisible();
+    // The card is still there behind it: a sheet is not a page.
+    await expect(card).toBeVisible();
+    await sheet.getByRole("button", { name: /^Done$/ }).click();
+    await expect(page.locator("dialog.sheet[open]")).toHaveCount(0);
+  });
+
+
   test("a sheet says when its questions carry on past its edge, and its action never leaves the frame", async ({ page }) => {
     await page.goto("/");
     const card = page.locator("main section").first();
-    await card.getByRole("button").nth(1).click();
+    await card.getByRole("button").filter({ hasText: /what they will do/i }).click();
     const sheet = page.locator("dialog.sheet[open]");
     const body = sheet.locator(".sheet-body");
     const done = sheet.getByRole("button", { name: /^Done$/ });
@@ -119,7 +127,7 @@ test.describe("the screens a person meets", () => {
    */
   test("the catalogue is read by its titles, and says what it proves about the one being chosen", async ({ page }) => {
     await page.goto("/");
-    await page.locator("main section").first().getByRole("button").nth(1).click();
+    await page.locator("main section").first().getByRole("button").filter({ hasText: /what they will do/i }).click();
     const sheet = page.locator("dialog.sheet[open]");
     const body = sheet.locator(".sheet-body");
     // A sheet opens at the top of what it says, never in the middle of it.
@@ -130,16 +138,17 @@ test.describe("the screens a person meets", () => {
     expect(box.width).toBeGreaterThanOrEqual(Math.min(width, 560) - 1);
     if (width <= 560) expect(box.x).toBeLessThanOrEqual(1);
 
-    // Nothing explains itself until it is chosen: every row is its title, and the register's own sentences are absent.
+    // One row explains itself and no other: the one the card already carries (the card opens filled).
     const conditions = sheet.getByRole("radio");
     await expect(conditions).not.toHaveCount(0);
     const explained = async () => body.evaluate((element) => [...element.querySelectorAll("label span span + span")].length);
-    expect(await explained()).toBe(0);
-
-    // Choosing one shows that condition's own questions; coming back shows the list with that one alone explained.
-    await conditions.first().click();
-    await sheet.getByRole("button", { name: /change/i }).click();
+    expect(await explained()).toBe(1);
     await expect(sheet.getByRole("radio").first()).toBeChecked();
+
+    // Choosing another shows that one's own questions; coming back shows the list with that one alone explained.
+    await conditions.nth(1).click();
+    await sheet.getByRole("button", { name: /change/i }).click();
+    await expect(sheet.getByRole("radio").nth(1)).toBeChecked();
     expect(await explained()).toBe(1);
     expect(await body.evaluate((element) => element.scrollTop)).toBe(0);
   });

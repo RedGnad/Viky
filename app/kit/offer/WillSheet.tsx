@@ -34,12 +34,13 @@ export function WillSheet({
   const { address } = useAccount();
   const [preview, setPreview] = useState<readonly string[]>([]);
   /**
-   * Which face the sheet shows. Nothing asked: the list while no condition is chosen, its questions once one is.
-   * Pressing "Change will" asks for the list, and closing the sheet forgets that, so the next opening follows the
-   * card again rather than whatever was last pressed.
+   * Which face the sheet shows, and it opens on the catalogue every time (the founder, 20 Sep 2026): the card's
+   * line is "what they will do", and the first question inside it is which one. Choosing opens that condition's own
+   * questions, which is the second of the two sheets the card keeps. Closing forgets the face, so the next opening
+   * starts at the catalogue again rather than at whatever was last pressed.
    */
   const [askedFor, setAskedFor] = useState<"list" | "questions" | null>(null);
-  const choosing = askedFor === null ? draft.conditionId.length === 0 : askedFor === "list";
+  const choosing = askedFor === null || askedFor === "list";
   const [nameCheck, setNameCheck] = useState<{ busy: boolean; refusal?: string; checked?: string }>({ busy: false });
   const [courses, setCourses] = useState<{ forName: string; list: readonly { id: string; title: string; xp: number }[] } | null>(null);
   const [reading, setReading] = useState<{ busy: boolean; nameRefusal?: string; cadenceRefusal?: string }>({ busy: false });
@@ -71,6 +72,13 @@ export function WillSheet({
   const ready = conditionAnswered(draft);
 
   const choose = (id: string) => {
+    // The one already chosen is not a new choice: pressing it again is a way into its own questions, and nothing
+    // it has been told is thrown away. Choosing another one drops all of it, because a name on one source means
+    // nothing on another.
+    if (id === draft.conditionId) {
+      setAskedFor("questions");
+      return;
+    }
     const picked = conditionById(id);
     const bounds = durationBounds(id);
     const suggested = certificateById(id)?.target.suggested ?? picked?.target?.suggested;

@@ -76,7 +76,7 @@ test.describe("the appearance control", () => {
     // What the screen is asking for is still the first thing in the body, and since the card of 19 Sep 2026 that is
     // the gift itself rather than a way to one (D110).
     const card = page.locator("main section").first();
-    await expect(card.getByText("Your gift", { exact: true })).toBeVisible();
+    await expect(card.getByText("A gift from you", { exact: true })).toBeVisible();
     const cardBox = await card.boundingBox();
     expect(cardBox!.y).toBeLessThan(400);
   });
