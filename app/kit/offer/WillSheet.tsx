@@ -191,6 +191,7 @@ export function WillSheet({
             <ChoiceList
               key={section.family}
               name="condition"
+              shape="lines"
               legend={section.title}
               value={draft.conditionId || null}
               onChange={choose}
@@ -204,6 +205,7 @@ export function WillSheet({
         ) : (
           <ChoiceList
             name="condition"
+            shape="lines"
             legend={W.sheets.will}
             legendHidden
             value={draft.conditionId || null}

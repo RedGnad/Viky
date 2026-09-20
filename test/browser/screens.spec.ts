@@ -113,6 +113,38 @@ test.describe("the screens a person meets", () => {
   });
 
   /**
+   * The catalogue, as chooser.html draws it on 20 Sep 2026: one line per condition, the verification sentence only
+   * under the one that is chosen, and the list opening at its top. What it replaces was measured on production the
+   * same day: a list of 720 pixels in a window of 524, opening at 196, two conditions of six whole.
+   */
+  test("the catalogue is read by its titles, and says what it proves about the one being chosen", async ({ page }) => {
+    await page.goto("/");
+    await page.locator("main section").first().getByRole("button").nth(1).click();
+    const sheet = page.locator("dialog.sheet[open]");
+    const body = sheet.locator(".sheet-body");
+    // A sheet opens at the top of what it says, never in the middle of it.
+    expect(await body.evaluate((element) => element.scrollTop)).toBe(0);
+    // The sheet takes the screen's own width up to its cap: a dialog's own max-width inset it by 38 pixels on a
+    // phone, and on a phone it is flush with both edges, as the image draws it.
+    const [box, width] = [(await sheet.boundingBox())!, page.viewportSize()!.width];
+    expect(box.width).toBeGreaterThanOrEqual(Math.min(width, 560) - 1);
+    if (width <= 560) expect(box.x).toBeLessThanOrEqual(1);
+
+    // Nothing explains itself until it is chosen: every row is its title, and the register's own sentences are absent.
+    const conditions = sheet.getByRole("radio");
+    await expect(conditions).not.toHaveCount(0);
+    const explained = async () => body.evaluate((element) => [...element.querySelectorAll("label span span + span")].length);
+    expect(await explained()).toBe(0);
+
+    // Choosing one shows that condition's own questions; coming back shows the list with that one alone explained.
+    await conditions.first().click();
+    await sheet.getByRole("button", { name: /change/i }).click();
+    await expect(sheet.getByRole("radio").first()).toBeChecked();
+    expect(await explained()).toBe(1);
+    expect(await body.evaluate((element) => element.scrollTop)).toBe(0);
+  });
+
+  /**
    * The other end of the same decision: the gift is composed on the card, so the paying screen has nothing to ask
    * about it. Reached with nothing filled in, it says so and sends the person back to the card rather than asking
    * the four questions a second time.

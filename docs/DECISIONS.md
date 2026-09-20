@@ -3326,3 +3326,33 @@ behind an account cannot be photographed any other way.
 - What this touches: `src/attested-sources.ts`, so the reading fingerprint changes again and the worker is
   redeployed before this merges. No contract, no migration: goal 11 was registered on 19 Sep with the provider id
   this build sends. The chooser now has six conditions, so it draws one section per family.
+
+## D119, 20 Sep 2026: a catalogue is read by its titles, and a certification is a family
+
+- Statement, the founder's, 20 Sep 2026, with `chooser.html` as the image that decides: one line per condition, the
+  verification sentence only under the one that is chosen, the list opening at its top, a fade of 22 pixels at each
+  edge only when it really scrolls, and four families.
+- **What was measured on production the same day.** The scrolling part of "What will they do?" was 524 pixels and its
+  contents 720, and it opened at 196, in the middle of the list, cutting a sentence in two against the top edge. In a
+  window 732 tall, two conditions of six were whole and both edges were cut. Every row carried three lines of
+  explanation, so the list grew by about 80 pixels for each condition added: the shape could not hold what the
+  register already had, let alone what comes next.
+- **Two defects underneath it, both found by measuring rather than by reading the code.**
+  - A `<dialog>` carries the browser's own `max-width: calc(100% - 6px - 2em)`, 38 pixels on a phone. The sheet was
+    inset from both edges where the image draws it flush, and its list was 38 pixels narrower than the screen, which
+    is what wrapped titles the image holds on one line.
+  - The sheet opened on the answer already given, which was written the same night to help somebody returning to
+    change a choice. On a list of six it opened in the middle instead. A sheet opens at the top of what it says.
+- **The catalogue's own shape**, beside the one the other lists keep: one line per option in the title face at 17,
+  which is what makes one line true rather than aspirational, no box and no sentence until an option is chosen, and
+  then that one alone takes the ink edge, the warm fill and its line. Measured after: the list is 436 pixels where it
+  was 720, all six conditions are whole at 390x844, five of six in the founder's 732, and the sixth is behind a fade
+  that says so.
+- **Four families, and the fourth is a distinction rather than a shelf.** A certification is awarded by somebody who
+  is not the person, and it is not a course taken: a CompTIA is sat as an examination with no course at all. Credly
+  filed under "Finish a course" erased exactly what made it worth building. Learn a language, Play, Finish a course,
+  Get certified, in that order; "Move" left with nothing filed under it, and comes back the day something is.
+- **One thing the image asks that is not done here**, and it is the founder's to settle: the image shortens "Reach a
+  score on the Duolingo English Test" to "Reach a score on the English Test", which is what holds that row to one
+  line at 390 (327 pixels of title against 298 of room; at 430 it fits as it is). The name is left whole, because
+  nothing else in the chooser names that source and "the English Test" could be any of them.
