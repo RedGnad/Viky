@@ -35,25 +35,17 @@ export function Home() {
   if (!address) {
     return (
       <Shell kind="destination" active="home" action={<SignInDoor />} bare wide>
-        {/* Home without an account (D128, the founder on the advisor's preview of 20 Sep 2026): under 1024 one column,
-            the character, the card, then the promise, as on a phone; from 1024 two columns, the character over the
-            promise and its sentence on the left, the card on the right, the row centred in its height. The left block
-            is `contents` under 1024 so the card can stand between the character and the promise there, and a flex
-            column from 1024; the orders put the card second on a phone and second in the row on a wide screen. */}
-        <div className="flex flex-col items-start gap-[var(--space-lg)] [@media(min-width:1024px)]:min-h-[560px] [@media(min-width:1024px)]:flex-row [@media(min-width:1024px)]:items-center [@media(min-width:1024px)]:gap-[80px]">
-          <div className="contents [@media(min-width:1024px)]:flex [@media(min-width:1024px)]:max-w-[620px] [@media(min-width:1024px)]:flex-1 [@media(min-width:1024px)]:flex-col [@media(min-width:1024px)]:items-start [@media(min-width:1024px)]:gap-[18px]">
-            <Gaze>
-              <Character state="gift" tone="sun" className="h-auto w-[88px] shrink-0" />
-            </Gaze>
-            <div className="order-2 mt-[var(--space-sm)] flex flex-col gap-[6px] [@media(min-width:1024px)]:order-none [@media(min-width:1024px)]:mt-0 [@media(min-width:1024px)]:gap-[20px]">
-              <h1 className={HERO}>{W.promise}</h1>
-              {/* The sentence at most 460 wide; the title takes the column (620 from 1024), which is what holds it on two lines. */}
-              <p className={`${LEAD} max-w-[460px]`}>{W.promiseUnder}</p>
-            </div>
-          </div>
-          <div className="order-1 w-full [@media(min-width:1024px)]:order-none [@media(min-width:1024px)]:w-auto [@media(min-width:1024px)]:flex-none">
-            <OfferCard />
-          </div>
+        {/* Home without an account (D129): one column at every width, and the same order from the phone to the desk,
+            the character, the title, the sentence, the card. The text is never under the card. The two columns of
+            D128 lasted an evening; what they had put under the card on a phone was a regression on the page of the
+            morning. What a wide screen gets instead is the title at its full size on one line, and air on the right. */}
+        <div className="flex w-full flex-col items-start gap-[var(--space-md)] [@media(min-width:1024px)]:gap-[var(--space-sm)]">
+          <Gaze>
+            <Character state="gift" tone="sun" className="h-auto w-[88px] shrink-0 [@media(min-width:1024px)]:w-[72px]" />
+          </Gaze>
+          <h1 className={HERO}>{W.promise}</h1>
+          <p className={`${LEAD} max-w-[460px] [@media(min-width:1024px)]:max-w-none`}>{W.promiseUnder}</p>
+          <OfferCard />
         </div>
         <p className={`${HELP} flex flex-wrap gap-x-[var(--space-lg)]`}>
           <Link href="/what-viky-can-check" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">

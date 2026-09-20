@@ -284,20 +284,21 @@ test("a case opens in a sheet, and a sheet is a dialog rather than a page", () =
   assert.equal(card.match(/ open=\{(choosing|paying)\}/g)?.length, 2);
 });
 
-test("the page without an account is the character, the card and the promise on a phone, and two columns from 1024", () => {
+test("the page without an account is the character, the title, the sentence and the card, in that order everywhere", () => {
   const home = readFileSync("app/kit/Home.tsx", "utf8");
   const signedOut = home.slice(home.indexOf("if (!address)"), home.indexOf("const moving ="));
-  // D128: one DOM, two compositions. The left block (character, promise, sentence) is `contents` under 1024 and the
-  // orders put the card between the character and the promise; from 1024 it is a flex column beside the card.
+  // D129: one column at every width, and the text is never under the card. The two columns of D128 lasted an evening,
+  // and what they had put under the card on a phone was a regression on the page of that morning.
   assert.match(signedOut, /<Character state="gift" tone="sun"/);
   assert.match(signedOut, /<h1 className=\{HERO\}>\{W\.promise\}<\/h1>/);
-  assert.match(signedOut, /<p className=\{`\$\{LEAD\} max-w-\[460px\]`\}>\{W\.promiseUnder\}<\/p>/, "the sentence in the quiet voice, at most 460 wide");
-  assert.match(signedOut, /className="contents \[@media\(min-width:1024px\)\]:flex/, "the left block is transparent to the column under 1024");
-  assert.match(signedOut, /className="order-2 [^"]*\[@media\(min-width:1024px\)\]:order-none/, "the promise after the card on a phone");
-  assert.match(signedOut, /className="order-1 w-full \[@media\(min-width:1024px\)\]:order-none/, "the card between the character and the promise on a phone, on the right from 1024");
-  assert.match(signedOut, /\[@media\(min-width:1024px\)\]:min-h-\[560px\] \[@media\(min-width:1024px\)\]:flex-row \[@media\(min-width:1024px\)\]:items-center \[@media\(min-width:1024px\)\]:gap-\[80px\]/);
-  assert.match(signedOut, /\[@media\(min-width:1024px\)\]:max-w-\[620px\]/, "the left column at most 620");
-  assert.doesNotMatch(signedOut, /<h1 className=\{`\$\{HERO\}[^`]*max-w/, "and the title free to take the column, which is what holds it on two lines at 76");
+  assert.match(signedOut, /<p className=\{`\$\{LEAD\} max-w-\[460px\][^`]*`\}>\{W\.promiseUnder\}<\/p>/, "the sentence in the quiet voice");
+  const order = ["<Character state=", "<h1 className={HERO}>", "{W.promiseUnder}", "<OfferCard />"].map((mark) => signedOut.indexOf(mark));
+  assert.deepEqual(order, [...order].sort((left, right) => left - right), "the character, the title, the sentence, the card");
+  assert.ok(order.every((at) => at > 0));
+  // One column: nothing turns the block into a row and nothing reorders it at any width.
+  assert.doesNotMatch(signedOut, /flex-row|order-1|order-2|contents /, "no second column and no reordering");
+  assert.match(signedOut, /<div className="flex w-full flex-col items-start/, "one column, on one left edge");
+  assert.doesNotMatch(signedOut, /<h1 className=\{`\$\{HERO\}[^`]*max-w/, "the title is free to take the column, which is what holds it on one line at 76");
   assert.match(signedOut, /<Shell kind="destination" active="home" action=\{<SignInDoor \/>\} bare wide>/, "the wide column, and no rail's room");
   assert.match(home, /<Shell kind="destination" active="home" width="card">/, "with an account, the column is the card's width");
   assert.doesNotMatch(signedOut, /promiseBody|howItWorks|exampleGift/, "no third paragraph, and no example of a gift beside a real one");
