@@ -1,6 +1,8 @@
 import type { Hex } from "viem";
 import { CHESS_MODES, chessGoalType, chessProviderId } from "./chess-com";
+import { CHESS_TACTICS_GOAL_TYPE, chessTacticsProviderId } from "./chess-tactics";
 import { COURSERA_GOAL_TYPE, courseraProviderId } from "./coursera-certificate";
+import { CREDLY_GOAL_TYPE, credlyProviderId } from "./credly-badge";
 import { detProviderId } from "./duolingo-english-test";
 import { LICHESS_CADENCES, lichessGoalType, lichessProviderId } from "./lichess";
 import { SHAPE_CLIMB, SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
@@ -48,6 +50,10 @@ export const MILESTONE_GOALS: readonly MilestoneGoal[] = [
   })),
   // A course certificate: granted once, with nothing to score, so what a proof carries is that it exists (C3).
   { goalType: COURSERA_GOAL_TYPE, providerId: courseraProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Coursera", detail: "a course certificate" },
+  // A certification badge: granted once by an issuer that is not the person, so it is had or not (20 Sep 2026).
+  { goalType: CREDLY_GOAL_TYPE, providerId: credlyProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Credly", detail: "a certification badge" },
+  // The puzzle rating: it moves, so it is a climb like the cadences, on the same page and without an RD.
+  { goalType: CHESS_TACTICS_GOAL_TYPE, providerId: chessTacticsProviderId(), shape: SHAPE_CLIMB, source: "Chess.com", detail: "tactics" },
 ];
 
 export function milestoneGoal(goalType: number): MilestoneGoal | undefined {
