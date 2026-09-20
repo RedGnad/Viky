@@ -78,6 +78,41 @@ test.describe("the screens a person meets", () => {
   });
 
   /**
+   * A sheet stops at 74 % of the height (D113), so on a phone the list of conditions carries on past its edge. What
+   * was measured on 20 Sep 2026 is that it said nothing about it: the fourth choice was cut clean against the edge
+   * of the action and read as the last one. This holds the two halves of the answer at every width, and asks
+   * nothing about which width scrolls: where the questions fit, nothing is drawn.
+   */
+  test("a sheet says when its questions carry on past its edge, and its action never leaves the frame", async ({ page }) => {
+    await page.goto("/");
+    const card = page.locator("main section").first();
+    await card.getByRole("button").nth(1).click();
+    const sheet = page.locator("dialog.sheet[open]");
+    const body = sheet.locator(".sheet-body");
+    const done = sheet.getByRole("button", { name: /^Done$/ });
+    const height = page.viewportSize()!.height;
+    const actionIsWhole = async () => {
+      const box = (await done.boundingBox())!;
+      expect(box.y + box.height).toBeLessThanOrEqual(height);
+    };
+    await actionIsWhole();
+
+    const carriesOn = await body.evaluate((element) => element.scrollHeight > element.clientHeight + 2);
+    if (!carriesOn) {
+      await expect(body).toHaveAttribute("data-more", "none");
+      return;
+    }
+    await expect(body).toHaveAttribute("data-more", "below");
+    await body.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
+    // At the end of the list there is nothing below any more, and the last choice is whole rather than cut.
+    await expect(body).toHaveAttribute("data-more", "above");
+    await actionIsWhole();
+    const last = sheet.getByRole("radio").last();
+    const [choice, frame] = [(await last.boundingBox())!, (await body.boundingBox())!];
+    expect(choice.y + choice.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
+  });
+
+  /**
    * The other end of the same decision: the gift is composed on the card, so the paying screen has nothing to ask
    * about it. Reached with nothing filled in, it says so and sends the person back to the card rather than asking
    * the four questions a second time.
