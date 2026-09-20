@@ -466,7 +466,35 @@ export const COURSERA_CERTIFICATE: Condition = {
   },
 };
 
-export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE];
+/**
+ * A certification on Credly, the badge half of the "course" family (20 Sep 2026). The difference from a course
+ * certificate is who says it was earned: the issuer publishes the badge under its own id, and the person cannot
+ * issue one to themselves. What they can do is choose to make it public, which is what a gift reads.
+ *
+ * Open on 20 Sep 2026 with goal 11 registered on the milestone contract. No gift has run on it yet.
+ */
+export const CREDLY_BADGE: Condition = {
+  id: "credly-badge",
+  kind: "milestone",
+  goalType: null,
+  live: true,
+  state: "open",
+  source: "Credly",
+  family: "course",
+  name: "Get a certification on Credly",
+  help: "The badge its issuer published, read by the pair of ids Credly gives it: the issuer awards it, and nobody can award one to themselves.",
+  link: { kind: "link", label: "The link to your badge", help: "In Credly, open the badge and choose Share, then paste the link here." },
+  reading: "credly-assertion",
+  words: {
+    earnedDay: "When they get it, this becomes theirs",
+    connect: "Opened. Share the Credly badge's link when you have it.",
+    doIt: "Finish the course. When the badge is yours, share its link here.",
+    eachDay: "the day the badge is shared",
+    preview: "A certification on Credly: the gift is yours the day you share the badge.",
+  },
+};
+
+export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, CREDLY_BADGE];
 
 /**
  * What people ask for and no source lets anybody check, with the reading each line rests on (design audit, section 5).

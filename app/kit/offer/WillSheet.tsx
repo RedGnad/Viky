@@ -284,7 +284,19 @@ export function WillSheet({
                 refusal={draft.subject.trim().length === 0 || certificate.validName(draft.subject) ? undefined : certificate.words.refusals.nameShape}
                 autoComplete="off"
               />
-              {certificate.course ? (
+              {certificate.course?.choices ? (
+                /* A source whose things are a list: a certification is known by the ids its issuer publishes, so
+                   only the ones we can read are offered at all, and there is nothing to paste. */
+                <ChoiceList
+                  name="certification"
+                  legend={certificate.course.label}
+                  value={draft.course ?? null}
+                  onChange={(value) =>
+                    onChange({ ...draft, course: value, courseTitle: certificate.course?.choices?.find((one) => one.id === value)?.title ?? value, target: String(certificate.target.suggested) })
+                  }
+                  options={certificate.course.choices.map((one) => ({ value: one.id, label: one.title, help: one.help }))}
+                />
+              ) : certificate.course ? (
                 <Field
                   id="certificate-course"
                   label={certificate.course.label}
@@ -309,8 +321,9 @@ export function WillSheet({
                   inputMode="numeric"
                 />
               )}
-              {/* Said back in full under the box, because a phone cuts the pasted link before the course's own word. */}
-              {certificate.course && draft.course ? <p className={HELP}>{certificate.course.named(draft.course)}</p> : null}
+              {/* Said back in full under the box, because a phone cuts the pasted link before the course's own word.
+                  A list says its own words on each line, so it needs nothing repeated under it. */}
+              {certificate.course && !certificate.course.choices && draft.course ? <p className={HELP}>{certificate.course.named(draft.course)}</p> : null}
             </>
           ) : null}
 

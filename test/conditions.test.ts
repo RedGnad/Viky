@@ -18,7 +18,7 @@ test("only a condition a gift can be made on today is live, and every one in the
   // provider id it expects and the having-it-or-not shape. The puzzle record joined on 20 Sep 2026 with goal 12.
   assert.deepEqual(
     liveConditions().map((condition) => condition.id),
-    ["duolingo-daily", "chess-rating", "chess-tactics", "duolingo-english-test", "coursera-certificate"],
+    ["duolingo-daily", "chess-rating", "chess-tactics", "duolingo-english-test", "coursera-certificate", "credly-badge"],
     "a live condition needs the whole line behind it: contract deployed, its goal registered, a reading that runs",
   );
   assert.equal(DUOLINGO_DAILY.goalType, GOAL_TYPE_DUOLINGO_XP);

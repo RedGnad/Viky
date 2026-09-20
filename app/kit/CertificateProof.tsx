@@ -61,6 +61,9 @@ export function CertificateProof({
         CERTIFICATE_EXPIRED: words.refusals.expired,
         NO_CERTIFICATE: words.refusals.notFound,
         INVALID_LINK: words.refusals.linkShape,
+        // Credly's own two: no badge answers to that link, and a real badge for something else entirely.
+        NO_BADGE: words.refusals.notFound,
+        NOT_LISTED: words.refusals.anotherName,
       };
       setState({ at: "refused", message: said[code] ?? words.refusals.unavailable });
       return;

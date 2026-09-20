@@ -299,6 +299,19 @@ each. A reviewer checks the contract against the sentences, never against the te
 | The two shapes cannot borrow each other's terms | `testTheTwoShapesCannotBorrowEachOthersTerms` |
 | The page really carries what the proof needs | `test/attested-sources.test.ts`, from six real certificates |
 
+### A certification on Credly
+
+Offering one: the same will sheet and `CREDLY_MILESTONE` in `src/milestone-conditions.ts`; proving one:
+`app/kit/CertificateProof.tsx`, `app/api/credly/badge/route.ts` and `src/credly-reading.ts`.
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "Get a certification on Credly", with "The badge its issuer published, read by the pair of ids Credly gives it: the issuer awards it, and nobody can award one to themselves." | what is read is the badge the issuer published, and which certification it is comes from ids rather than words | the reading is two proofs of the same badge id: the Open Badges assertion at `credly.com/api/v1/obi/v2/badge_assertions/<id>`, whose `badge` URL carries the issuer's id and the badge class's id, and the badge's public page, read again at every reading. `credlyCertificationOfBadgeUrl` accepts only a pair in `CREDLY_CERTIFICATIONS`, each read from Credly's own `badge_classes` endpoint on 20 Sep 2026 | `test/credly-badge.test.ts`, `test/conditions.test.ts` |
+| "Which certification?" with three named lines, and no box to paste one into | a funder can only ask for a certification Viky can actually read | the list is the register's own, and the create route validates what was chosen through `slugOf`, which answers only for a listed id; the chooser draws a list where a condition has one and a box where it does not | `test/credly-badge.test.ts` |
+| "That badge is in another name, or for another certification, so this gift cannot pay for it." | the badge really is not the one the funder's terms name | the subject hashes the name the page prints together with the certification's own id, and the contract checks it again; a real badge for an unlisted certification is refused as `NOT_LISTED` before any of that, with the same sentence, because it is not what the gift is for | `test/credly-badge.test.ts` |
+| "No badge answers to that link. Check that you copied the whole link." | that badge id really has no badge | the assertion answers 404 for an id nobody has, while its public page answers 200 with no `og` tag at all (both measured 20 Sep 2026), so the assertion is what decides; a 404 on the page alone is Credly failing and says so instead | `test/credly-badge.test.ts` |
+| "Viky reads three things about that badge: which certification it is, the day it was issued, and the name on its public page. It keeps those with the gift and nothing else. The badge's record also carries your email, hashed; nothing here reads it, receives it or keeps it." | exactly three things leave the attestor, and the hashed email is not one of them | the two sources carry five patterns between them and not one matches `recipient`, `identity` or the hash; a test reads the patterns themselves rather than trusting the sentence | `test/credly-badge.test.ts` |
+
 ## The legal notice, on what the people who run Viky can do
 
 `app/legal/page.tsx`, section "What Viky is not". Every sentence there is a claim about the program's own access

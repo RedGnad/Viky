@@ -10,6 +10,7 @@ import {
   type ChessClimb,
   type ChessMode,
 } from "./chess-com";
+import { credlyAssertionUrl, credlyPublicUrl, isValidCredlyBadgeId } from "./credly-badge";
 import { detDataUrl, isValidDetAlias } from "./duolingo-english-test";
 import { duolingoCourseXpPattern, duolingoProfileUrl, isDuolingoCourseId } from "./duolingo-public-terms";
 
@@ -195,6 +196,44 @@ export const COURSERA_CERTIFICATE: AttestedSource = {
 };
 
 /**
+ * A certification on Credly, the assertion half: the Open Badges record of one badge. It says the day and which
+ * certification it is, and it is read as JSON.
+ *
+ * Three patterns and no fourth. The same answer carries the holder as a hashed email, and nothing here matches it,
+ * so nothing carries it out of the attestor. The `badge` URL is taken whole, because the issuer's id and the badge
+ * class's id together are what this condition is judged by, and half of that pair would let another course of the
+ * same issuer settle the gift. Measured on three live badges on 20 Sep 2026.
+ */
+export const CREDLY_ASSERTION: AttestedSource = {
+  id: "credly-assertion",
+  service: "Credly",
+  accepts: isValidCredlyBadgeId,
+  url: credlyAssertionUrl,
+  matches: [
+    { type: "regex", value: '"badge":"(?<badge>https://www\\.credly\\.com/api/v1/obi/v2/issuers/[0-9a-f-]{36}/badge_classes/[0-9a-f-]{36})"' },
+    { type: "regex", value: '"id":"(?<assertion>https://www\\.credly\\.com/api/v1/obi/v2/badge_assertions/[0-9a-f-]{36})"' },
+    { type: "regex", value: '"issuedOn":"(?<issuedOn>\\d{4}-\\d{2}-\\d{2})T\\d{2}:\\d{2}:\\d{2}' },
+  ],
+};
+
+/**
+ * The same badge's public page, the only place Credly publishes the holder's name: one `og:title` of a fixed shape,
+ * "<title> was issued by <issuer> to <holder>.". Its `og:url` is read with it, so a page about another badge cannot
+ * pass for this one. The page varies on `Accept` and answers 500 when asked for JSON, so it is read as HTML.
+ */
+export const CREDLY_BADGE_PAGE: AttestedSource = {
+  id: "credly-badge-page",
+  service: "Credly",
+  accepts: isValidCredlyBadgeId,
+  url: credlyPublicUrl,
+  userAgent: CHESS_USER_AGENT,
+  matches: [
+    { type: "regex", value: '<meta property="og:title" content="(?<ogTitle>[^"]+)"' },
+    { type: "regex", value: '<meta property="og:url" content="(?<ogUrl>https://www\\.credly\\.com/badges/[0-9a-f-]{36})"' },
+  ],
+};
+
+/**
  * A Duolingo English Test result, read from the answer behind the page its taker chose to make public (U3).
  *
  * Three patterns and no more, on purpose. The answer also carries the taker's date of birth and a link to their
@@ -218,7 +257,7 @@ export const DET_CERTIFICATE: AttestedSource = {
   ],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, DET_CERTIFICATE];
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE];
 
 /** The source with that name, or nothing. An unknown name is refused rather than guessed at. */
 export function attestedSource(id: string): AttestedSource | undefined {

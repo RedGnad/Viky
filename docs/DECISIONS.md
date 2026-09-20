@@ -3300,3 +3300,29 @@ behind an account cannot be photographed any other way.
 - What this touches: `src/chess-com.ts` and `src/attested-sources.ts`, so the reading fingerprint changes and the
   worker is redeployed before this merges (docs/OPERATIONS.md). No contract, no migration: goal 12 was registered on
   19 Sep with the provider id this build sends.
+
+## D118, 20 Sep 2026: a certification is known by two ids, so it is chosen from a list and never named
+
+- Statement, the founder's, 20 Sep 2026: Credly becomes a condition, on goal 11, with the certification read from
+  the Open Badges assertion and the holder's name from the public page.
+- **A badge is two public records, so a reading is two proofs.** The assertion at
+  `credly.com/api/v1/obi/v2/badge_assertions/<id>` carries the day and a `badge` URL pinning the issuer's id and the
+  badge class's id; the public page carries one `og:title` of a fixed shape, "<title> was issued by <issuer> to
+  <holder>.", and it is the only place the holder's name is published. Both halves must be about the badge that was
+  asked for, and they are taken within five minutes of each other, as a Chess.com reading is.
+- **The certification is the pair of ids, never the title.** A title can be edited, translated or reused between
+  issuers; the ids cannot. So the funder chooses from a short list in the repository, three certifications whose ids
+  were read from Credly's own `badge_classes` endpoint on 20 Sep 2026, with Credly's own words for each: AI
+  Fundamentals with IBM SkillsBuild, Introduction to Cybersecurity and Python Essentials 1, all issued by Cisco.
+  A real badge for a certification that is not on that list is refused as such, and told it is not what the gift is
+  for rather than that something broke.
+- **Nothing takes the hashed email.** The assertion carries the holder's email as a hash. No pattern matches it, so
+  the attestor never hands it over, and the sentence a person reads says so.
+- **What says a badge exists is the assertion.** Measured on an id nobody has: the assertion answers 404 while the
+  public page answers 200 with no `og` tag at all. A 404 on the page alone is Credly failing and never a fact about
+  somebody's badge.
+- **Not measured:** what either end answers for a badge its holder has made private again, because no private badge
+  was to hand. A reading that stops carrying what it needs refuses and says the page could not be read.
+- What this touches: `src/attested-sources.ts`, so the reading fingerprint changes again and the worker is
+  redeployed before this merges. No contract, no migration: goal 11 was registered on 19 Sep with the provider id
+  this build sends. The chooser now has six conditions, so it draws one section per family.
