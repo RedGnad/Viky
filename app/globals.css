@@ -229,7 +229,9 @@
     --character-shadow: #08060F;
     --character-shadow-opacity: 0.45;
     /* A shade under the ground, read as depth: the ink after dark read as a thick white edge. */
-    --control-relief-colour: #08060F;
+    /* Under a key on the night ground, the night's muted lavender: #08060F on #151026 could not be seen at all
+       (measured on production, 20 Sep 2026), and the full pale of the outline read as a white edge on 17 Sep. */
+    --control-relief-colour: #B3ABC9;
     color-scheme: dark;
   }
 }
@@ -258,7 +260,7 @@
   --character-shadow: #08060F;
   --character-shadow-opacity: 0.45;
   /* A shade under the ground, read as depth: the ink after dark read as a thick white edge. */
-  --control-relief-colour: #08060F;
+  --control-relief-colour: #B3ABC9;
   color-scheme: dark;
 }
 
@@ -413,6 +415,12 @@ video {
   --text: var(--on-surface);
   --muted: var(--on-surface-muted);
   --divider: var(--surface-rule);
+  /* A key on the paper keeps an ink relief in both appearances: the paper is cream at night too. The composed
+     shadow is said again here on purpose: a custom property is resolved where it is declared, so `--control-relief`
+     composed on the root had already taken the night's lavender, and only the hover, which names the colour itself,
+     turned ink on the paper (ui review, 20 Sep 2026). */
+  --control-relief-colour: var(--on-surface);
+  --control-relief: 0 var(--control-relief-depth) 0 var(--control-relief-colour);
   --card-border: var(--surface-rule);
   --control-border: var(--on-surface);
   --accent-text: var(--on-surface);

@@ -77,6 +77,22 @@ test.describe("the screens a person meets", () => {
     await expect(card.getByLabel(/^Days$/i)).toHaveCount(0);
   });
 
+  test("the chips are the chosen condition's own three, and the one the register suggests is pressed", async ({ page }) => {
+    await page.goto("/");
+    const card = page.locator("main section").first();
+    await card.getByRole("button").filter({ hasText: /what they will do/i }).click();
+    const sheet = page.locator("dialog.sheet[open]");
+    await sheet.getByRole("radio", { name: /certification on Credly/i }).click();
+    await sheet.getByRole("button", { name: "Close" }).click();
+    await expect(page.locator("dialog.sheet[open]")).toHaveCount(0);
+    // Coursera's and Credly's window is 30 to 365, suggested 120 (src/credly-badge.ts): the 7 days a lesson offers
+    // would be refused by the route, and must not be on the card.
+    await expect(card.getByRole("button", { name: "120 days", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(card.getByRole("button", { name: "30 days", exact: true })).toHaveAttribute("aria-pressed", "false");
+    await expect(card.getByRole("button", { name: "365 days", exact: true })).toBeVisible();
+    await expect(card.getByRole("button", { name: "7 days", exact: true })).toHaveCount(0);
+  });
+
   test("what they will do is a real choice, so it keeps its sheet", async ({ page }) => {
     await page.goto("/");
     const card = page.locator("main section").first();

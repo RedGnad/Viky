@@ -77,8 +77,10 @@ export const OFFER = {
   forHowLong: (days: number) => `for ${days} ${days === 1 ? "day" : "days"}`,
   /** The one action of the card, and it appears only when the four cases are filled. */
   pay: (amount: string) => `Pay ${amount}`,
-  /** The action, shut, while the four are not filled: the same button, saying what it is waiting for. */
-  stillNeeded: "Fill the four to pay",
+  /** The action, shut, saying what it is waiting for: the condition's own questions, or a length the route takes. */
+  stillNeeded: "Fill the card to pay",
+  finishWill: "Finish what they will do to pay",
+  chooseLength: "Choose how long to pay",
   done: "Done",
   sheets: {
     who: "Who is it for?",

@@ -194,10 +194,14 @@ test("the card stands off the ground it is on, by day and by night", () => {
 });
 
 /** The relief after dark is a shadow under the ground, never the ink: that is what read as a thick white edge. */
-test("the relief is the ink by day and a shadow at night", () => {
+test("the relief is the ink by day, and at night a line that can be seen and is not a white edge", () => {
   assert.equal(RELIEF.light, COLOURS.light.text);
-  assert.notEqual(RELIEF.dark, COLOURS.dark.text);
-  assert.ok(relativeLuminance(RELIEF.dark) < relativeLuminance(COLOURS.dark.background));
+  // A shade under the ground, 1.09:1, measured invisible on production on 20 Sep 2026: the night door had "no
+  // effect". The full pale of the outline read as a white edge on 17 Sep. Between the two: the night's muted
+  // lavender, which is a line the ground shows and the outline outshines.
+  assert.equal(RELIEF.dark, COLOURS.dark.muted, "the night relief is a colour the night already has");
+  assert.ok(contrastRatio(RELIEF.dark, COLOURS.dark.background) >= 3, "a relief nobody can see is no relief");
+  assert.ok(contrastRatio(RELIEF.dark, COLOURS.dark.background) < contrastRatio(COLOURS.dark.controlBorder, COLOURS.dark.background), "and it stays under the outline");
 });
 
 test("three colours per appearance and no fourth background: no joy, no sticker, no day surface, no look layered over another", () => {

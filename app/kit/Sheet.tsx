@@ -142,7 +142,7 @@ export function Sheet({
             type="button"
             onClick={() => dialog.current?.close()}
             aria-label="Close"
-            className="-mr-[var(--space-sm)] -mt-[var(--space-sm)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center justify-center rounded-full text-[length:var(--type-title)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
+            className="-mr-[var(--space-sm)] -mt-[var(--space-sm)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center justify-center rounded-full text-[length:var(--type-title)] transition-colors duration-[var(--hover-duration)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)] motion-reduce:transition-none [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--paper-field)]"
           >
             <span aria-hidden="true">&times;</span>
           </button>
