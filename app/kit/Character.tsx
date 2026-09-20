@@ -89,6 +89,13 @@ const DIAMOND_BOX = "0 0 64 40";
  */
 const DIAMOND_BLEND = "viky-diamond-blend";
 
+/**
+ * The box a small character is drawn in (D136). Every body stands between y 8 and y 55 of the square, so a strip of
+ * them carried fifteen pixels of nothing above each one and six below. Cropped to what is drawn, the same row is
+ * shorter and each character is larger inside its own width, which is what the founder asked for twice.
+ */
+const SMALL_BOX = "0 6 64 52";
+
 /** A mouth smiling wide: the lower half of a circle, which keeps it inside the circle family. */
 const smile = (cx: number, cy: number, r: number) => `M${cx - r} ${cy} H${cx + r} A${r} ${r} 0 0 1 ${cx - r} ${cy} Z`;
 
@@ -322,7 +329,7 @@ export function Character({
     <svg
       aria-hidden
       focusable="false"
-      viewBox={state === "diamond" ? DIAMOND_BOX : "0 0 64 64"}
+      viewBox={state === "diamond" ? DIAMOND_BOX : large ? "0 0 64 64" : SMALL_BOX}
       data-character={state}
       data-size={size}
       className={className}

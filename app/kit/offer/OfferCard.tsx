@@ -3,6 +3,7 @@ import { useState, useSyncExternalStore } from "react";
 import { useAccount } from "@/src/account/provider";
 import { formatAusd } from "@/src/gift-reader";
 import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type GiftDraft } from "@/src/gift-draft";
+import { cardDetail } from "@/src/card-detail";
 import { conditionById } from "@/src/conditions";
 import { cardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
 import { AmountError, dollarsToUnits, PILOT_CAP_SENTENCE } from "@/src/money";
@@ -42,6 +43,9 @@ export function OfferCard() {
   const change = (next: GiftDraft) => writeCardDraft(next, address);
   /** The one sheet left on this card, and its two faces: the catalogue, then the condition's own questions. */
   const [choosing, setChoosing] = useState(false);
+  /** Which face the sheet opens on: the catalogue from the condition line, that condition's questions from the
+      detail line under it (D136). */
+  const [sheetAt, setSheetAt] = useState<"list" | "questions">("list");
   /** Paying is a sheet over the card, and the card stays behind it (D114, the mockup pay.html). */
   const [paying, setPaying] = useState(false);
   /** The length, while somebody is typing one that is not on a chip. */
@@ -50,6 +54,7 @@ export function OfferCard() {
   const condition = conditionById(draft.conditionId);
   const shape = shapeOf(draft.conditionId);
   const bounds = durationBounds(draft.conditionId);
+  const detail = cardDetail(draft);
   const filled = filledCases(draft);
   const ready = isComplete(draft) && units !== undefined;
   const recipient = draft.recipientName.trim();
@@ -98,7 +103,10 @@ export function OfferCard() {
           under={
             <button
               type="button"
-              onClick={() => setChoosing(true)}
+              onClick={() => {
+                setSheetAt("list");
+                setChoosing(true);
+              }}
               /* Eight pixels more than a caption gets under a title: this one is a control, and at four it sat on
                  the name's own box (the founder, 21 Sep 2026). */
               className={`${INLINE_BUTTON} mt-[var(--space-sm)] w-full justify-between text-left`}
@@ -112,9 +120,32 @@ export function OfferCard() {
               </svg>
             </button>
           }
+          /* Under the condition, the line that opens its own questions: the name read, the course, the bar for a day
+             (D136). It is drawn for every condition the register gives a detail to, and when nothing has been given
+             it says so rather than disappearing, because on a daily condition an empty name is a real answer. */
+          detail={
+            detail ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSheetAt("questions");
+                  setChoosing(true);
+                }}
+                className={`${INLINE_BUTTON} mt-[var(--space-sm)] w-full justify-between text-left`}
+              >
+                <span className="flex min-w-0 flex-col">
+                  <span className={CARD_LABEL}>{detail.title}</span>
+                  <span className="break-words">{detail.said}</span>
+                </span>
+                <svg aria-hidden focusable="false" width="20" height="20" viewBox="0 0 24 24" className="shrink-0 text-[var(--on-surface-muted)]">
+                  <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            ) : null
+          }
           /* The shape of the gift, drawn by the product's own pieces: one mark a day, and the row scrolls. */
           shape={
-            <div className="py-[var(--space-sm)]">
+            <div className="py-[var(--space-xs)]">
               {shape === "climb" || shape === "stamp" ? (
                 /* One character and nothing else (D132). The meter's bar belongs to a gift that has been read: on a
                    card being filled in there is no reading, so the bar was always empty and said nothing at all,
@@ -122,7 +153,7 @@ export function OfferCard() {
                 /* One character and no row: it stands in the middle of the card rather than at its left margin,
                    where a single shape read as a row that had lost the rest of itself (the founder, 21 Sep 2026). */
                 <span className="flex justify-center">
-                  <Character state="toCome" className="h-auto w-[52px]" standing={false} />
+                  <Character state="toCome" className="h-auto w-[60px]" standing={false} />
                 </span>
               ) : (
                 <div className="day-row-frame">
@@ -190,7 +221,7 @@ export function OfferCard() {
 
       {/* The one sheet the card opens, drawn once: a modal dialog is closed by the browser, which is what gives the
           page back, so taking an open one out of the page would leave its layer over everything. */}
-      <WillSheet open={choosing} draft={draft} onChange={change} onClose={() => setChoosing(false)} />
+      <WillSheet at={sheetAt} open={choosing} draft={draft} onChange={change} onClose={() => setChoosing(false)} />
       <PaySheet open={paying} draft={draft} onChange={change} onClose={() => setPaying(false)} />
     </>
   );
