@@ -296,14 +296,19 @@ test("the page without an account is the character, the title, the sentence and 
   const signedOut = home.slice(home.indexOf("if (!address)"), home.indexOf("const moving ="));
   // D129: one column at every width, and the text is never under the card. The two columns of D128 lasted an evening,
   // and what they had put under the card on a phone was a regression on the page of that morning.
-  assert.match(signedOut, /<Character state="gift" tone="sun"/);
+  // The diamond of D131, floated into the hollow the title leaves at its top right on a phone, above it from 1024.
+  assert.match(signedOut, /<Character\s+state="diamond"\s+tone="sun"/);
+  assert.match(signedOut, /className="float-right [^"]*\[@media\(min-width:1024px\)\]:float-none/);
   assert.match(signedOut, /<h1 className=\{HERO\}>\{W\.promise\}<\/h1>/);
-  assert.match(signedOut, /<p className=\{`\$\{LEAD\} max-w-\[460px\][^`]*`\}>\{W\.promiseUnder\}<\/p>/, "the sentence in the quiet voice");
-  const order = ["<Character state=", "<h1 className={HERO}>", "{W.promiseUnder}", "<OfferCard />"].map((mark) => signedOut.indexOf(mark));
+  assert.match(signedOut, /<p className=\{`\$\{LEAD\}[^`]*max-w-\[460px\][^`]*`\}>\{W\.promiseUnder\}<\/p>/, "the sentence in the quiet voice");
+  const order = ["<Character", "<h1 className={HERO}>", "{W.promiseUnder}", "<OfferCard />"].map((mark) => signedOut.indexOf(mark));
   assert.deepEqual(order, [...order].sort((left, right) => left - right), "the character, the title, the sentence, the card");
   assert.ok(order.every((at) => at > 0));
   // One column: nothing turns the block into a row and nothing reorders it at any width.
-  assert.doesNotMatch(signedOut, /flex-row|order-1|order-2|contents /, "no second column and no reordering");
+  assert.doesNotMatch(signedOut, /flex-row|order-1|order-2/, "no second column and no reordering");
+  // From 1024 the whole composition is centred in the window, the card included (D131).
+  assert.match(signedOut, /\[@media\(min-width:1024px\)\]:items-center/);
+  assert.match(signedOut, /\[@media\(min-width:1024px\)\]:text-center/);
   assert.match(signedOut, /<div className="flex w-full flex-col items-start/, "one column, on one left edge");
   assert.doesNotMatch(signedOut, /<h1 className=\{`\$\{HERO\}[^`]*max-w/, "the title is free to take the column, which is what holds it on one line at 76");
   assert.match(signedOut, /<Shell kind="destination" active="home" action=\{<SignInDoor \/>\} bare wide>/, "the wide column, and no rail's room");
