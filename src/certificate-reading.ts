@@ -1,6 +1,8 @@
 import type { Hex } from "viem";
 import { COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraProviderId } from "./coursera-certificate";
 import { attestCourseraCertificate, CourseraReadError } from "./coursera-reading";
+import { CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyProviderId } from "./credly-badge";
+import { attestCredlyBadge, CredlyReadError } from "./credly-reading";
 import { attestDetCertificate, DetReadError, type AttestedDetReading } from "./det-reading";
 import { detProviderId } from "./duolingo-english-test";
 import { loadGift, type GiftRecord } from "./gift-store";
@@ -85,6 +87,11 @@ export function liveCertificateReadingDeps(): CertificateReadingDeps {
  * contract checks it again.
  */
 async function attestByGoal(goalType: number, link: string): Promise<ReadCertificate> {
+  if (goalType === CREDLY_GOAL_TYPE) {
+    const reading = await attestCredlyBadge(link);
+    // Nothing to score: the badge exists, and the certification is inside the subject the funder signed.
+    return { subject: reading.subject, score: CREDLY_HAS_IT, testDay: reading.issuedDay, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: credlyProviderId() };
+  }
   if (goalType === COURSERA_GOAL_TYPE) {
     const reading = await attestCourseraCertificate(link);
     // Nothing to score: the certificate exists, and the course is inside the subject the funder signed.
@@ -130,12 +137,18 @@ export async function proveCertificate(
   try {
     reading = await deps.attest(state.goalType, input.link);
   } catch (error) {
-    if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError)) {
+    if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError)) {
       return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? "That could not be read right now");
     }
     switch (error.code) {
       case "INVALID_LINK":
         return refuse(giftId, "INVALID_LINK", words?.linkShape ?? error.message);
+      // A badge that exists and is for a certification Viky does not read is not this gift's, which is the same
+      // answer as a badge in another name: nothing was wrong with the reading, and it is not what the gift is for.
+      case "NOT_LISTED":
+        return refuse(giftId, "ANOTHER_NAME", words?.anotherName ?? error.message);
+      case "NO_BADGE":
+        return refuse(giftId, "NO_CERTIFICATE", words?.notFound ?? error.message);
       case "CERTIFICATE_PRIVATE":
         return refuse(giftId, "CERTIFICATE_PRIVATE", words?.notPublic ?? error.message);
       case "CERTIFICATE_EXPIRED":

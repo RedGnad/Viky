@@ -21,6 +21,8 @@ test("only the listed sources exist, and an unknown name is refused", () => {
     "chess-ratings-rapid",
     "chess-tactics",
     "coursera-certificate",
+    "credly-assertion",
+    "credly-badge-page",
     "det-certificate",
     "duolingo-profile",
   ]);

@@ -83,6 +83,15 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     whoActed: "Unknown: Coursera describes no supervision of each assignment.",
     sourcePolicing: "Coursera verifies identity once per account, with an official document and a selfie, and says some programmes require it while others only check a name. Nothing published says a certificate was earned under supervision.",
   },
+  {
+    conditionId: "credly-badge",
+    supervised: false,
+    inShort: "The badge its issuer published: nobody can award themselves one, and the ids say which it is.",
+    data: "Two public records of the same badge, read through an attested fetch and read again at every reading: the Open Badges assertion, which says the day and carries the issuer's id and the badge class's id, and the badge's public page, which is the only place the holder's name is published. Three things come out of them and nothing else. The assertion also carries the holder's email address, hashed; nothing here matches it, receives it or keeps it.",
+    account: "The funder names the person and chooses the certification, and both are hashed into the terms they sign, so a badge for another certification or in another name pays nothing. The certification is decided by the pair of ids Credly publishes rather than by a title, which can be edited or reused. Two people of the same name who earn the same certification inside the same days cannot be told apart by this, because the page has no field its holder can edit: that gap is written down rather than dressed up.",
+    whoActed: "Unknown: nothing describes how the work behind the badge was supervised, and it varies by issuer. What is different from a certificate a site prints for its own course is that the issuer is a third party who awards the badge, so nobody can award one to themselves.",
+    sourcePolicing: "Credly hosts what issuers award and does not mark the work: a badge can be revoked by its issuer, and a holder can make it private again, and both stop the reading, because the two records are read again every time. Nothing published says a badge was earned under supervision.",
+  },
 ];
 
 export function proofOfCondition(conditionId: string): ConditionProof | undefined {

@@ -4,11 +4,21 @@ import {
   CHESS_RATING,
   CHESS_TACTICS_RECORD,
   conditionById,
+  CREDLY_BADGE,
   COURSERA_CERTIFICATE as COURSERA_CONDITION,
   DUOLINGO_ENGLISH_TEST,
   type Condition,
 } from "./conditions";
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
+import {
+  CREDLY_CERTIFICATIONS,
+  CREDLY_DURATION_DAYS,
+  CREDLY_GOAL_TYPE,
+  CREDLY_HAS_IT,
+  credlyBadgeIdOf,
+  credlyCertification,
+  credlySubject,
+} from "./credly-badge";
 import {
   certificateSubject,
   detAliasOf,
@@ -256,8 +266,14 @@ export type CertificateCondition = Readonly<{
   course?: Readonly<{
     label: string;
     help: string;
-    /** The course inside whatever was pasted, or nothing. */
+    /** The course inside whatever was pasted, or nothing. Where there is a list, what a choice from it answers. */
     slugOf: (pasted: string) => string | undefined;
+    /**
+     * The things this source offers, where they are a list rather than anything a person can name. A course exists
+     * on Coursera by the million and is named by pasting its link; a certification is read by the pair of ids its
+     * issuer publishes, so only the ones whose ids we have read can be offered at all (20 Sep 2026).
+     */
+    choices?: readonly Readonly<{ id: string; title: string; help: string }>[];
     /** The line of the check screen. */
     row: string;
     /**
@@ -444,7 +460,74 @@ export const COURSERA_MILESTONE: CertificateCondition = {
   },
 };
 
-const CERTIFICATES: readonly CertificateCondition[] = [DET_MILESTONE, COURSERA_MILESTONE];
+/**
+ * A certification on Credly (20 Sep 2026). The same shape as a course certificate, with one difference in what the
+ * funder names: a certification is read by the pair of ids its issuer publishes, so it is chosen from the short list
+ * whose ids we have read, rather than named by pasting a link.
+ */
+export const CREDLY_MILESTONE: CertificateCondition = {
+  condition: CREDLY_BADGE,
+  shape: CERTIFICATE_SHAPE,
+  goalType: CREDLY_GOAL_TYPE,
+  readPath: "/api/credly/badge",
+  validLink: (value) => credlyBadgeIdOf(value) !== undefined,
+  // The page prints whatever name the person holds their Credly account under, and one word is a name there.
+  validName: (value) => normaliseCertificateName(value).split(" ").filter(Boolean).length >= 1,
+  validTarget: (value) => value === CREDLY_HAS_IT,
+  subject: ({ name, course }) => credlySubject(name, String(course ?? "")),
+  course: {
+    label: "Which certification?",
+    help: "Only these can be read today: each one is known by the pair of ids Credly publishes for it, not by its name.",
+    slugOf: (pasted) => credlyCertification(pasted)?.id,
+    choices: CREDLY_CERTIFICATIONS.map((entry) => ({ id: entry.id, title: `${entry.title}, ${entry.issuer}`, help: entry.help })),
+    row: "Which certification",
+    named: (course) => `This gift will be for ${credlyCertification(course)?.title ?? course}.`,
+  },
+  target: {
+    label: "What the badge has to be",
+    help: "A certification is issued or it is not, so there is nothing to choose here.",
+    min: CREDLY_HAS_IT,
+    max: CREDLY_HAS_IT,
+    step: 1,
+    suggested: CREDLY_HAS_IT,
+    inWords: () => "that certification",
+  },
+  duration: CREDLY_DURATION_DAYS,
+  words: {
+    detailQuestion: "Their name, and the certification",
+    nameLabel: "Their name, as Credly prints it on a badge",
+    nameHelp: "The name on their Credly account. If it does not match, the gift cannot pay.",
+    linkLabel: "The link to your badge",
+    linkHelp: "In Credly, open the badge and choose Share, then paste the link here. It looks like credly.com/badges/ followed by a code.",
+    whatIsRead:
+      "Viky reads three things about that badge: which certification it is, the day it was issued, and the name on its public page. It keeps those with the gift and nothing else. The badge's record also carries your email, hashed; nothing here reads it, receives it or keeps it.",
+    check: "Check my badge",
+    checking: "Reading your badge",
+    goal: () => "Get that certification",
+    mustShow: (name) => `The badge has to be in the name ${name}, for that certification, and issued inside these days. Nothing else is read from it.`,
+    durationLabel: "How long do they have?",
+    durationHelp: "The certification must be issued inside that time, and the day on the badge is what counts.",
+    durationShape: (min, max) => `Between ${min} and ${max} days.`,
+    durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
+    whenReached: "When they get it, all of this becomes theirs",
+    ifNot: "If they do not get it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    refusals: {
+      targetShape: "A certification is issued or it is not, so there is nothing to set here.",
+      nameShape: "Type their name as Credly prints it on a badge.",
+      linkShape: "That is not a badge link. It looks like credly.com/badges/ followed by a code.",
+      notPublic: "That badge could not be read. Open its link yourself and check it still opens without signing in.",
+      expired: "That badge could not be read any more.",
+      notFound: "No badge answers to that link. Check that you copied the whole link.",
+      unavailable: "The badge could not be read right now. Try again in a moment.",
+      anotherName: "That badge is in another name, or for another certification, so this gift cannot pay for it.",
+      below: () => "That badge is not the one this gift is for.",
+      beforeTheGift: "That certification was issued before this gift was made, so it is not what the gift is for.",
+      afterTheDeadline: "That certification was issued after this gift's last day.",
+    },
+  },
+};
+
+const CERTIFICATES: readonly CertificateCondition[] = [DET_MILESTONE, COURSERA_MILESTONE, CREDLY_MILESTONE];
 
 /** The certificate detail of a condition, or nothing when the condition is not one. */
 export function certificateOf(condition: Condition | undefined): CertificateCondition | undefined {
