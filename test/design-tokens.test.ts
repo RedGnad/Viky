@@ -15,8 +15,9 @@ import {
   CONTROL_COLOURS,
   DESTINATION_MAX,
   DISPLAY_TYPE,
+  HERO_TYPE,
+  LEAD_TYPE,
   META_TYPE,
-  PROMISE_TYPE,
   TRACKING,
   TYPE_SCALE,
   GROUNDS,
@@ -408,24 +409,24 @@ const SCALE: readonly number[] = TYPE_SCALE;
  * The first principle of the design pass of 20 Sep 2026 (D126): every text size on every screen is a step of the
  * scale, with nothing between two steps. Production had six sizes from six images (36, 28, 42, 17, 11, 26). Read
  * from the stylesheet itself, at the root and inside every breakpoint, so a size typed from an image can never come
- * back quietly. The hero of that evening is gone (D127): Home is the product, its star is the card, and the promise
- * under it is the title voice, two steps under the card's own figure.
+ * back quietly. The promise (D128) is 39 in the one column and 76 beside the card from 1024, both steps.
  */
-test("every text size in the stylesheet is a step of the scale, and nothing on Home outranks the card's figure", () => {
+test("every text size in the stylesheet is a step of the scale, and the promise takes its two steps", () => {
   const css = readFileSync("app/globals.css", "utf8");
   const sizes = [...css.matchAll(/--type-([a-z-]+): (\d+(?:\.\d+)?)px;/g)]
     .filter(([, name]) => !/leading|tracking/.test(name))
     .map(([, name, px]) => ({ name, px: Number(px) }));
   assert.ok(sizes.length >= 14, `${sizes.length} sizes read`);
   for (const { name, px } of sizes) assert.ok(SCALE.includes(px), `--type-${name} is ${px}, which is not a step of the scale`);
-  assert.doesNotMatch(css, /--type-hero/, "the 76 hero above the card is gone (D127)");
   const root = css.slice(0, css.indexOf("@media (min-width: 600px)"));
-  // The promise under the card: the title voice, two steps under the card's figure, and never above it.
-  assert.ok(SCALE.includes(PROMISE_TYPE.size));
-  assert.match(root, new RegExp(`--type-promise: ${PROMISE_TYPE.size}px;`));
-  assert.match(root, new RegExp(`--type-promise-leading: ${PROMISE_TYPE.lineHeight}px;`));
-  assert.ok(PROMISE_TYPE.size < CARD_TYPE.amount.size, "the card's figure is the largest size on Home");
-  assert.equal(SCALE.indexOf(CARD_TYPE.amount.size) - SCALE.indexOf(PROMISE_TYPE.size), 2);
+  const from1024 = css.slice(css.indexOf("@media (min-width: 1024px)"), css.indexOf("@media (prefers-color-scheme: dark)"));
+  assert.equal(HERO_TYPE.from, 1024);
+  assert.match(root, new RegExp(`--type-hero: ${HERO_TYPE.compact.size}px;`));
+  assert.match(root, new RegExp(`--type-lead: ${LEAD_TYPE.compact.size}px;`));
+  assert.match(from1024, new RegExp(`--type-hero: ${HERO_TYPE.wide.size}px;`));
+  assert.match(from1024, new RegExp(`--type-hero-leading: ${HERO_TYPE.wide.lineHeight};`), "the advisor's 1.02, unitless");
+  assert.match(from1024, new RegExp(`--type-lead: ${LEAD_TYPE.wide.size}px;`));
+  for (const size of [HERO_TYPE.compact.size, HERO_TYPE.wide.size, LEAD_TYPE.compact.size, LEAD_TYPE.wide.size]) assert.ok(SCALE.includes(size), `${size}`);
   // The card's three voices, on the scale and matched in the stylesheet.
   for (const [voice, level] of Object.entries(CARD_TYPE)) {
     assert.ok(SCALE.includes(level.size), `${voice} is ${level.size}`);
@@ -437,23 +438,23 @@ test("every text size in the stylesheet is a step of the scale, and nothing on H
 });
 
 /**
- * The card as an object placed on the page (D127): its rank is its edge and its hard relief, in the words of the
- * niche the founder named ("an object sits by a full offset, never a blur"). The colours are the ones the acceptance
- * test reads on the screen: the ink by day, the characters' lavender at night.
+ * The niche the founder named on 20 Sep 2026, "Neo Brutalism Juice", as a constraint that measures (D128): no blur
+ * anywhere, neither a filter nor a shadow. The ground is a flat; the gift card stands by its colour (17:1 on the
+ * ink) and its 2 px edge and wears no shadow at all; no other card wears one either.
  */
-test("the gift card is placed: a 2 px edge and a hard 10 px relief, no blur, in the day's ink and the night's lavender", () => {
+test("no blur anywhere: no halo on the ground, no shadow under a card, and the gift card keeps its 2 px edge", () => {
   const css = readFileSync("app/globals.css", "utf8");
-  assert.match(css, /\.gift-card-placed \{\s*border: 2px solid var\(--card-placed-edge\);\s*box-shadow: 10px 10px 0 var\(--card-placed-relief\);\s*\}/);
-  assert.equal(CARD_PLACED.offset, 10);
+  assert.doesNotMatch(css, /blur\(/, "a filter with a blur is back");
+  assert.doesNotMatch(css, /body::before|body::after/, "the two halos are gone with their pseudo-elements");
+  assert.equal((css.match(/--card-shadow: none;/g) ?? []).length, 3, "day, the device's night and the chosen night");
+  assert.doesNotMatch(css, /--card-shadow: 0 /, "no blurred shadow token remains");
+  assert.match(css, /\.gift-card-placed \{\s*border: 2px solid var\(--card-placed-edge\);\s*box-shadow: none;\s*\}/);
   assert.equal(CARD_PLACED.edgeWidth, 2);
   const root = css.slice(0, css.indexOf("@media (prefers-color-scheme: dark)"));
-  assert.match(root, new RegExp(`--card-placed-relief: ${CARD_PLACED.relief.light};`));
   assert.match(root, new RegExp(`--card-placed-edge: ${CARD_PLACED.edge.light};`));
   const night = css.slice(css.indexOf("@media (prefers-color-scheme: dark)"));
-  assert.equal((night.match(new RegExp(`--card-placed-relief: ${CARD_PLACED.relief.dark};`, "g")) ?? []).length, 2, "both night blocks, the device's and the chosen one");
-  assert.equal((night.match(new RegExp(`--card-placed-edge: ${CARD_PLACED.edge.dark};`, "g")) ?? []).length, 2);
-  assert.equal(CARD_PLACED.relief.dark, "#BBA3FA", "the night relief is the characters' lavender, rgb(187, 163, 250)");
-  assert.equal(CARD_PLACED.edge.dark, COLOURS.dark.controlBorder ?? "#F3F0FA", "the night edge is the controls' edge");
+  assert.equal((night.match(new RegExp(`--card-placed-edge: ${CARD_PLACED.edge.dark};`, "g")) ?? []).length, 2, "both night blocks");
+  assert.equal(CARD_PLACED.edge.dark, COLOURS.dark.controlBorder, "the night edge is the controls' edge");
   assert.match(readFileSync("app/kit/offer/OfferCard.tsx", "utf8"), /gift-card-width gift-card-placed/, "and the one card is the one placed");
 });
 
@@ -540,7 +541,7 @@ test("the title face is named once, and worn by the lines the mockups give it", 
   assert.equal(titleFace, 1, "the face is named once, in TITLE_FACE, and composed from there");
   // Five lines wear it since the rendered mockups of 19 Sep 2026: the display, the mark, the promise, and a card's
   // own name and amount. Composing keeps a size from being overridden by the size inside another class.
-  for (const name of ["DISPLAY", "MARK", "PROMISE", "CARD_TITLE", "CARD_AMOUNT"]) {
+  for (const name of ["DISPLAY", "MARK", "HERO", "CARD_TITLE", "CARD_AMOUNT"]) {
     assert.match(ui, new RegExp(`export const ${name} = \`\\$\\{TITLE_FACE\\}`), `${name} wears the title face`);
   }
   assert.doesNotMatch(ui.slice(ui.indexOf("export const TITLE"), ui.indexOf("export const BODY")), /font-title/);

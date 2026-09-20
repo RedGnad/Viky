@@ -3566,3 +3566,32 @@ behind an account cannot be photographed any other way.
   by day; (5) no text larger than the card's figure; (6) at 390 the same order and nothing cut across. A merge
   waits on all six.
 - Supersedes the hero and the "one left edge above 1024" parts of D126. The scale rule of D126 stands.
+
+## D128, 20 Sep 2026: a flat ground, no shadow, a new promise, two columns from 1024, and the column at the card's width
+
+- Statement, the founder's, on the advisor's preview built in the real page with the real components ("A"), the
+  same evening as D127 and changing it on purpose, one thing at a time so that a line can be refused alone:
+  1. **The halos go.** `body::before` and `body::after` carried `filter: blur(90px)`. The ground is a flat of ink,
+     the niche's rule: no gradient on a ground, no blur.
+  2. **The card loses its offset relief**, and no blurred shadow replaces it. It keeps its 2 px edge. Cream on the
+     ink ground measures 17:1: it stands by its colour and needs no shadow. The founder saw it and validated it.
+     Applied to every card: `--card-shadow` is `none` by day and by night, because the niche allows no blur
+     anywhere and the acceptance test reads the whole page.
+  3. **The promise changes**: "Money that cheers them on." The sentence under it does not change.
+  4. **Two columns from 1024 on the page without an account**, the values read on the preview: the page column
+     1240 max, centred; the row flex, items centred, gap 80, min-height 560; on the left flex 1, max 620, text on
+     the left, the character above the title, the title 76 / 1.02 / -2, the sentence 20 / 28 at most 460 wide, 20
+     under the title; on the right the card at 440. Below 1024: one column, exactly the page of D127 at 390, the
+     title at 39. One DOM serves both: the left block is `display: contents` under 1024, so the card can stand
+     between the character and the promise there, and a flex column from 1024.
+  5. **The page with an account**: the `<main>` was 680 wide with the card at 440 on its left, so the card fell at
+     668 where the usable centre is 764 and every block under it was 240 wider than it. The column is now the
+     card's width plus its margins (`width="card"` on the shell: 440 + 2 x 24), so everything shares two edges and
+     centres itself, with nothing to centre by hand.
+- **The acceptance tests**, in `test/browser/home-flat.spec.ts` for what needs no account: (1) no element with a
+  blurred filter or a blurred shadow, `body::before` and the card included; (2) at 1440x900 without an account the
+  title is 76 px, on the left, two lines, and the whole card is visible on the right; (4) at 390 one column, the
+  title at 39, nothing cut across; (5) the title reads "Money that cheers them on." Test (3), the column at the
+  card's width with an account, is read on the connected captures, which sign in with a passkey the runner lacks.
+- This replaces the composition of D127 (one centred column with the promise under the card at 25) and its relief;
+  D127's order stands below 1024. The scale rule of D126 stands: 39, 76 and 20 are its steps.

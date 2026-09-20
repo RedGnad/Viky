@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useAccount } from "@/src/account/provider";
 import { CATALOGUE, HOME as W, ME } from "@/src/sentences";
-import { BODY, HELP, PROMISE, SECONDARY_BUTTON, TITLE } from "../components/ui";
+import { BODY, HELP, HERO, LEAD, SECONDARY_BUTTON, TITLE } from "../components/ui";
 import { Character } from "./Character";
 import { Arrival, Gaze, Reveal, type ArrivalGift } from "./Motion";
 import { SignInDoor } from "./SignInDoor";
@@ -34,21 +34,25 @@ export function Home() {
 
   if (!address) {
     return (
-      <Shell kind="destination" active="home" action={<SignInDoor />} bare>
-        {/* Home without an account (D127, the vision of 19 Sep, section 5): the card to fill at the top, and under it
-            one line of promise. The card is the star and carries its rank by its edge and its relief; the promise is
-            the second level, in the title voice. One column: on the left edge below 1024, as on a phone; from 1024
-            centred in the window, the card and the promise together centred in the height. What fills a wide screen
-            is air around one object, not a second column. The character keeps its place above the card. */}
-        <div className="flex flex-col items-start gap-[var(--space-lg)] [@media(min-width:1024px)]:min-h-[calc(100dvh-152px)] [@media(min-width:1024px)]:items-center [@media(min-width:1024px)]:justify-center">
-          <Gaze>
-            <Character state="gift" tone="sun" className="h-auto w-[88px] shrink-0" />
-          </Gaze>
-          <OfferCard />
-          {/* 24 px under the card (the column's 16 and this 8), the title, then the sentence 6 px under it. */}
-          <div className="mt-[var(--space-sm)] flex max-w-[460px] flex-col gap-[6px] [@media(min-width:1024px)]:items-center [@media(min-width:1024px)]:text-center">
-            <h1 className={PROMISE}>{W.promise}</h1>
-            <p className={`${BODY} text-[var(--muted)]`}>{W.promiseUnder}</p>
+      <Shell kind="destination" active="home" action={<SignInDoor />} bare wide>
+        {/* Home without an account (D128, the founder on the advisor's preview of 20 Sep 2026): under 1024 one column,
+            the character, the card, then the promise, as on a phone; from 1024 two columns, the character over the
+            promise and its sentence on the left, the card on the right, the row centred in its height. The left block
+            is `contents` under 1024 so the card can stand between the character and the promise there, and a flex
+            column from 1024; the orders put the card second on a phone and second in the row on a wide screen. */}
+        <div className="flex flex-col items-start gap-[var(--space-lg)] [@media(min-width:1024px)]:min-h-[560px] [@media(min-width:1024px)]:flex-row [@media(min-width:1024px)]:items-center [@media(min-width:1024px)]:gap-[80px]">
+          <div className="contents [@media(min-width:1024px)]:flex [@media(min-width:1024px)]:max-w-[620px] [@media(min-width:1024px)]:flex-1 [@media(min-width:1024px)]:flex-col [@media(min-width:1024px)]:items-start [@media(min-width:1024px)]:gap-[18px]">
+            <Gaze>
+              <Character state="gift" tone="sun" className="h-auto w-[88px] shrink-0" />
+            </Gaze>
+            <div className="order-2 mt-[var(--space-sm)] flex flex-col gap-[6px] [@media(min-width:1024px)]:order-none [@media(min-width:1024px)]:mt-0 [@media(min-width:1024px)]:gap-[20px]">
+              <h1 className={HERO}>{W.promise}</h1>
+              {/* The sentence at most 460 wide; the title takes the column (620 from 1024), which is what holds it on two lines. */}
+              <p className={`${LEAD} max-w-[460px]`}>{W.promiseUnder}</p>
+            </div>
+          </div>
+          <div className="order-1 w-full [@media(min-width:1024px)]:order-none [@media(min-width:1024px)]:w-auto [@media(min-width:1024px)]:flex-none">
+            <OfferCard />
           </div>
         </div>
         <p className={`${HELP} flex flex-wrap gap-x-[var(--space-lg)]`}>
@@ -74,7 +78,9 @@ export function Home() {
   });
   return (
     <Arrival storageKey="viky.seen.days" gifts={arriving} amount>
-      <Shell kind="destination" active="home">
+      {/* With an account the column is exactly the card's width plus its margins (D128): the money, the button and
+          every gift under the card then share its two edges, and the column centres itself in the room beside the rail. */}
+      <Shell kind="destination" active="home" width="card">
         <OfferCard />
         <MoneyHero address={address} holdings={holdings} />
         {holdings !== null && holdsAnything(holdings) ? (

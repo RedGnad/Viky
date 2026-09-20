@@ -284,24 +284,22 @@ export const DISPLAY_TYPE = {
 export const TYPE_SCALE = [13, 16, 20, 25, 31, 39, 49, 61, 76] as const;
 
 /**
- * The promise under the card on the page without an account (D127): the title voice, two steps under the card's own
- * figure. The 76 hero of D126 lasted one evening: its references were landing pages, whose job is to send a visitor
- * to a product elsewhere, and Home is the product. The vision of 19 Sep, section 5, had said it: the card at the top,
- * and under it one line of promise.
+ * The promise on the page without an account (D128, the founder on the advisor's preview of 20 Sep 2026): 39 in the
+ * one column under 1024, and from 1024, in the left column beside the card, 76 with a lead sentence of 20 under it.
+ * Both sizes are steps of the scale.
  */
-export const PROMISE_TYPE = { size: 25, lineHeight: 30, tracking: -0.5 } as const;
+export const HERO_TYPE = {
+  compact: { size: 39, lineHeight: 42, tracking: -1 },
+  wide: { size: 76, lineHeight: 1.02, tracking: -2 },
+  from: 1024,
+} as const;
+export const LEAD_TYPE = { compact: { size: 16, lineHeight: 24 }, wide: { size: 20, lineHeight: 28 } } as const;
 
 /**
- * The gift card as an object placed on the page (D127, the niche the founder named on 20 Sep 2026, "Neo Brutalism
- * Juice"): a 2 px edge and a hard offset of 10 px, no blur, in the ink by day and, at night, the controls' edge and
- * the characters' lavender, because the ink would vanish into the ground.
+ * The gift card's edge (D127, D128): 2 px, the ink by day, the controls' night edge at night. No relief and no
+ * shadow: cream on the ink ground measures 17:1, and the niche the founder named allows no blur anywhere.
  */
-export const CARD_PLACED = {
-  edgeWidth: 2,
-  offset: 10,
-  edge: { light: "#1E1633", dark: "#F3F0FA" },
-  relief: { light: "#1E1633", dark: "#BBA3FA" },
-} as const;
+export const CARD_PLACED = { edgeWidth: 2, edge: { light: "#1E1633", dark: "#F3F0FA" } } as const;
 
 /** The card's three voices, each one step from the image of 19 Sep 2026 and on the scale (D126). */
 export const CARD_TYPE = { who: { size: 25, lineHeight: 30 }, amount: { size: 39 }, label: { size: 13 } } as const;

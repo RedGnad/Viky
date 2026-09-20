@@ -32,6 +32,10 @@ type Props =
        * that draws nothing.
        */
       bare?: boolean;
+      /** The page without an account from 1024: two columns, so the column is the wide one (D128). */
+      wide?: boolean;
+      /** Home with an account: the column is the card's width plus its margins, so everything shares its edges (D128). */
+      width?: "card";
       children: ReactNode;
     }>
   | Readonly<{
@@ -53,7 +57,11 @@ export function Shell(props: Props) {
       ? "max-w-[var(--app-column-max)]"
       : props.kind === "document"
         ? "max-w-[var(--prose-max)]"
-        : "max-w-[var(--destination-max)]";
+        : props.width === "card"
+          ? "max-w-[calc(var(--gift-card-width)+2*var(--page-margin))]"
+          : props.wide
+            ? "max-w-[1240px]"
+            : "max-w-[var(--destination-max)]";
   // Room for the bar below it and beside the rail on a destination; a task and a document have neither.
   const room =
     props.kind === "destination" && !props.bare
