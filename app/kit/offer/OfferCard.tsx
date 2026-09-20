@@ -45,7 +45,6 @@ export function OfferCard() {
   /** Paying is a sheet over the card, and the card stays behind it (D114, the mockup pay.html). */
   const [paying, setPaying] = useState(false);
   /** The length, while somebody is typing one that is not on a chip. */
-  const [typingDays, setTypingDays] = useState(false);
 
   const units = draftUnits(draft);
   const condition = conditionById(draft.conditionId);
@@ -57,7 +56,6 @@ export function OfferCard() {
   const funder = draft.funderName.trim();
   const days = Number(draft.days);
   const quick = [bounds.min, bounds.suggested, bounds.max];
-  const onAChip = quick.includes(days);
 
   /** What the amount says back when it cannot be read as money: the same rule the route refuses by. */
   let amountRefusal: string | undefined;
@@ -154,48 +152,22 @@ export function OfferCard() {
               </span>
               {amountRefusal ? <span className={`block ${HELP} text-[var(--on-surface)]`}>{amountRefusal}</span> : null}
 
-              {/* How long, on the card: the three the register offers, and one more that opens a field in its place.
-                  The three stay where they are while the field is open, so a person can always come back to one. */}
+              {/* How long, on the card: the three lengths the register gives this condition, and no fourth (D130).
+                  The chip that opened a field for any other number is gone: the founder asked for it on both sizes,
+                  and a length outside the three is a length the register was never asked about. */}
               <span className="mt-[var(--space-sm)] flex flex-wrap items-center gap-[var(--tap-gap)]">
                 {quick.map((count) => (
                   <button
                     key={count}
                     type="button"
-                    onClick={() => {
-                      setTypingDays(false);
-                      change({ ...draft, days: String(count) });
-                    }}
-                    /* Pressed by its value alone, so a "90" typed in the field and the "90 days" chip never disagree. */
+                    onClick={() => change({ ...draft, days: String(count) })}
+                    /* Pressed by its value alone, so what is kept from an older visit and the chip never disagree. */
                     aria-pressed={days === count}
                     className={`${CHIP} ${days === count ? "bg-[var(--chosen)] font-bold" : ""}`}
                   >
                     {W.someDays(count)}
                   </button>
                 ))}
-                {typingDays || !onAChip ? (
-                  <label className={`${HELP} flex items-center gap-[var(--space-sm)]`}>
-                    <input
-                      value={draft.days}
-                      onChange={(event) => change({ ...draft, days: event.target.value.replace(/[^0-9]/g, "") })}
-                      aria-label={W.daysLabel}
-                      inputMode="numeric"
-                      maxLength={3}
-                      size={4}
-                      autoFocus={typingDays}
-                      autoComplete="off"
-                      className="on-paper-field min-h-[var(--tap-target)] min-w-[var(--tap-target)] text-[length:var(--type-body)] tabular-nums text-[var(--on-surface)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
-                    />
-                    <span>{W.daysUnit(bounds.min, bounds.max)}</span>
-                  </label>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setTypingDays(true)}
-                    className={CHIP}
-                  >
-                    {W.otherLength}
-                  </button>
-                )}
               </span>
 
               {/* One action, in the sun, full width, saying what it will take from the first second; shut, it says what it

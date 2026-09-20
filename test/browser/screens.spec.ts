@@ -58,7 +58,7 @@ test.describe("the screens a person meets", () => {
     await expect(page.getByText("You are signed in.")).toHaveCount(0);
   });
 
-  test("the name, the amount and the length are typed on the card itself, with no sheet in the way", async ({ page }) => {
+  test("the name and the amount are typed on the card itself, the length is chosen on it, and no sheet opens", async ({ page }) => {
     await page.goto("/");
     const card = page.locator("main section").first();
     await card.getByLabel(/Their first name/i).fill("Léa");
@@ -68,12 +68,11 @@ test.describe("the screens a person meets", () => {
     await expect(page.locator("dialog.sheet[open]")).toHaveCount(0);
     await expect(card.getByLabel(/Their first name/i)).toHaveValue("Léa");
     await expect(page.getByRole("button", { name: /^Pay \$45\.00$/ })).toBeEnabled();
-    // A length that is not on a chip is typed in its place, and the three presets stay, so a person can come back.
-    await card.getByRole("button", { name: /^Other$/ }).click();
-    await card.getByLabel(/^Days$/i).fill("45");
-    await expect(card.getByRole("button", { name: "90 days", exact: true })).toHaveAttribute("aria-pressed", "false");
+    // The length is chosen, never typed (D130): three chips, one pressed at a time, and no field to open.
+    await expect(card.getByRole("button", { name: "90 days", exact: true })).toHaveAttribute("aria-pressed", "true");
     await card.getByRole("button", { name: "7 days", exact: true }).click();
     await expect(card.getByRole("button", { name: "7 days", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(card.getByRole("button", { name: "90 days", exact: true })).toHaveAttribute("aria-pressed", "false");
     await expect(card.getByLabel(/^Days$/i)).toHaveCount(0);
   });
 
@@ -91,6 +90,9 @@ test.describe("the screens a person meets", () => {
     await expect(card.getByRole("button", { name: "30 days", exact: true })).toHaveAttribute("aria-pressed", "false");
     await expect(card.getByRole("button", { name: "365 days", exact: true })).toBeVisible();
     await expect(card.getByRole("button", { name: "7 days", exact: true })).toHaveCount(0);
+    // Three chips and no fourth (D130): the one that opened a field for any other number is gone.
+    await expect(card.getByRole("button", { name: "Other", exact: true })).toHaveCount(0);
+    await expect(card.locator("button[aria-pressed]")).toHaveCount(3);
   });
 
   test("what they will do is a real choice, so it keeps its sheet", async ({ page }) => {

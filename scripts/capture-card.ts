@@ -66,9 +66,8 @@ async function main() {
       await card.getByLabel("How much").fill("45");
       await card.getByRole("button", { name: "90 days", exact: true }).click();
       await shot("05-card-amount-and-length");
-      await card.getByRole("button", { name: "Other" }).click();
-      await card.getByLabel("Days", { exact: true }).fill("45");
-      await shot("06-card-other-length");
+      await card.getByRole("button", { name: "7 days", exact: true }).click();
+      await shot("06-card-shortest-length");
       await card.getByRole("button", { name: "30 days", exact: true }).click();
       await shot("07-card-filled");
 
