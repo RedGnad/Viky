@@ -276,6 +276,28 @@ export const DISPLAY_TYPE = {
   titleWeight: 600,
 } as const;
 
+/**
+ * The scale itself, written once so a test can hold every size in the stylesheet to it (D126, 20 Sep 2026): a text
+ * size on any screen is one of these, and nothing between two of them. The rule is Nielsen's fourth heuristic
+ * (consistency and standards) applied to type, and it is what Material and Apple both publish as a type scale.
+ */
+export const TYPE_SCALE = [13, 16, 20, 25, 31, 39, 49, 61, 76] as const;
+
+/**
+ * The promise at the head of the page without an account (D126). At the head of a page the first level over the
+ * body measures at least 4: 76 over 16 is 4.75, inside the band the references hold at 1440 (Ramp 4.0, Revolut 4.9,
+ * Wise 5.3, measured by the advisor on 20 Sep 2026). A phone cannot hold 76, so it takes the compact display step.
+ */
+export const HERO_TYPE = {
+  compact: { size: 39, lineHeight: 42 },
+  medium: { size: 49, lineHeight: 54 },
+  expanded: { size: 76, lineHeight: 80 },
+  atLeastOverBody: 4,
+} as const;
+
+/** The card's three voices, each one step from the image of 19 Sep 2026 and on the scale (D126). */
+export const CARD_TYPE = { who: { size: 25, lineHeight: 30 }, amount: { size: 39 }, label: { size: 13 } } as const;
+
 /** The controls: a 2 pixel ink outline and a 4 pixel relief underneath, the pressed key of the look. */
 export const CONTROL = { borderWidth: 2, reliefDepth: 4 } as const;
 

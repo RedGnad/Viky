@@ -3505,3 +3505,27 @@ behind an account cannot be photographed any other way.
 - **The rate line.** "at the rate of 18 Sep 2026" on a Sunday looked stale. The figure was right: the European
   Central Bank sets one each working day and none at the weekend. The line now names the source and says so.
 - `waysInFor` and `eurosNeededOn` in `src/gift-amount.ts`; `test/pay-sheet.test.ts`.
+
+## D126, 20 Sep 2026: one type scale, no size between two steps, and one left edge per screen
+
+- Statement, the founder's first principle of the design pass of 20 Sep 2026, measured by the advisor and settled
+  by the founder on two images: the visual hierarchy read as weak. Our scale was declared (a major third on 16: 13,
+  16, 20, 25, 31, 39, 49, 61, 76) and the page without an account did not use it: the hero was 36, on no step, and
+  the head of the page measured 2.3 hero over body where Wise (105 px), Revolut (88) and Ramp (64) measure 5.3, 4.9
+  and 4.0 at 1440, in the same browser. And there was no grid: the hero started at 548 px, the paragraph at 448, the
+  card at 544, because the character beside the title pushed it right and the card sat in the middle of the column.
+- **The rule, everywhere.** Every text size on every screen is a step of the scale, and nothing between two steps.
+  At the head of a page the first level over the body is at least 4. One left edge per screen, and everything that
+  is not the card aligns to it. The founder chose to apply it to everything at once rather than screen by screen.
+- **What moved.** The hero: 39 on a phone, 49 from 600, 76 from 840 (the founder chose 76 over 61 on the image:
+  4.75 over the body, between Ramp and Revolut; 61 would have measured 3.8). The card's three voices, drawn at 28,
+  42 and 11 by the mockups of 19 Sep, are 25, 39 and 13; the amount over the name keeps the image's one and a half.
+  A catalogue line and the action's words go from 17 to the body step, 16; the wait's sentence from 26 to 25.
+  The character sits above the title, and the card on the column's left edge, where the title and the paragraph
+  start. `HERO_TYPE`, `CARD_TYPE` and `TYPE_SCALE` in `src/design-tokens.ts`; the stylesheet is read by
+  `test/design-tokens.test.ts`, root and breakpoints, so a size typed from an image cannot come back.
+- **What was not taken.** The advisor's desktop.html also drew two columns at 1440 (the text left, the card right,
+  centred in the height) and a small-caps hint under the paragraph. The founder kept the stacked column he had
+  chosen that morning ("the card fixed, not the layout"), with the one left edge; the hint was part of the other
+  layout and is not on the page.
+- "Peu punchy" is a different question, the promise's wording, and it is not mixed into this decision.

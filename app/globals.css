@@ -61,27 +61,33 @@
   --action-off-ink: #6F6133;
 
   /*
-   * The card's own three sizes, taken from the rendered mockups of 19 Sep 2026 rather than from the scale: the name
-   * it carries, the amount that is the one star of the screen, and the small capitals of a label. They are the
-   * image's numbers, and the image is the specification for this screen.
+   * Every text size in this file is a step of the one scale, 13 16 20 25 31 39 49 61 76, and nothing between two
+   * steps (D126, the founder's first principle of 20 Sep 2026: the hierarchy read as weak because 36, 28, 42, 17, 11
+   * and 26 were six sizes from six images, and none from the scale). The card's three voices moved one step each
+   * from the rendered mockups of 19 Sep: the name it carries 28 to 25, the amount 42 to 39, a label 11 to 13.
    */
-  --type-card-who: 28px;
-  --type-card-who-leading: 31px;
+  --type-card-who: 25px;
+  --type-card-who-leading: 30px;
   --type-card-who-tracking: -0.5px;
-  --type-card-amount: 42px;
-  --type-card-amount-tracking: -1.2px;
-  --type-card-label: 11px;
+  --type-card-amount: 39px;
+  --type-card-amount-tracking: -1px;
+  --type-card-label: 13px;
   --type-card-label-tracking: 1.3px;
-  /* A line of the catalogue, from chooser.html of 20 Sep 2026: the title face at 17, which is what holds a
-     condition's name on one line where the text face at 16 wrapped three of the six. */
-  --type-choice: 17px;
+  /* A line of the catalogue in the title face, and the one action's words: the body step. */
+  --type-choice: 16px;
   --type-choice-leading: 21px;
-  --type-action: 17px;
-  --type-say: 26px;
+  --type-action: 16px;
+  --type-say: 25px;
   --type-say-leading: 30px;
-  --type-hero: 36px;
-  --type-hero-leading: 38px;
-  --type-hero-tracking: -0.9px;
+  /*
+   * The promise at the head of the page without an account. On a phone it is the compact display step, 39; from
+   * 600 it is 49, and from 840 it is the expanded step, 76, where the hero over the body measures 4.75, inside the
+   * band the references hold at 1440 (Ramp 4.0, Revolut 4.9, Wise 5.3, measured by the advisor on 20 Sep 2026;
+   * production was 2.3). Leading and tracking follow the display token step for step.
+   */
+  --type-hero: 39px;
+  --type-hero-leading: 42px;
+  --type-hero-tracking: -1px;
   /* The fill of a button that is not the one action: quiet, and identified by its outline (K, rule 10). */
   --tonal: #E8E3F4;
 
@@ -188,16 +194,21 @@
 @media (min-width: 600px) {
   :root {
     --page-margin: 24px;
+    --type-hero: 49px;
+    --type-hero-leading: 54px;
   }
 }
 
-/* The display title grows where the screen is wide, and the rail takes its room beside the column. */
+/* The display title and the hero grow where the screen is wide, and the rail takes its room beside the column. */
 @media (min-width: 840px) {
   :root {
     --page-offset: var(--nav-rail-width);
     --type-display: 76px;
     --type-display-leading: 80px;
     --type-display-tracking: -2px;
+    --type-hero: 76px;
+    --type-hero-leading: 80px;
+    --type-hero-tracking: -2px;
   }
 }
 
@@ -500,8 +511,9 @@ body::after {
   .gift-card-width {
     width: var(--gift-card-width);
     max-width: 100%;
-    /* In the middle of its column, as the founder read it on 20 Sep 2026: a card is not a paragraph. */
-    margin-inline: auto;
+    /* On the column's left edge, the one edge everything on a screen shares (D126). It sat in the middle of its
+       column for a day, and with the title and the paragraph on the edge that made three left edges on one screen. */
+    margin-inline: 0;
   }
 }
 

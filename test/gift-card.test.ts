@@ -210,11 +210,12 @@ test("a card is the light object on the ground, as the rendered mockups draw it"
   }
 });
 
-test("the card's three voices are the image's own sizes", () => {
-  // The mockups' numbers, not the scale's: 28 for the name it carries, 42 for the amount, 11 for a label.
-  assert.match(css, /--type-card-who: 28px;/);
-  assert.match(css, /--type-card-amount: 42px;/);
-  assert.match(css, /--type-card-label: 11px;/);
+test("the card's three voices are steps of the scale", () => {
+  // One step each from the image of 19 Sep 2026, onto the scale (D126): 25 for the name it carries, 39 for the
+  // amount, 13 for a label. The amount stays the star: 39 over 25 is the same one and a half the image drew.
+  assert.match(css, /--type-card-who: 25px;/);
+  assert.match(css, /--type-card-amount: 39px;/);
+  assert.match(css, /--type-card-label: 13px;/);
   assert.match(ui, /export const CARD_TITLE = `\$\{TITLE_FACE\} text-\[length:var\(--type-card-who\)\]/);
   assert.match(ui, /export const CARD_AMOUNT = `\$\{TITLE_FACE\} text-\[length:var\(--type-card-amount\)\]/);
   assert.match(ui, /export const CARD_LABEL =\n?\s*"text-\[length:var\(--type-card-label\)\]/);

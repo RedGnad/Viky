@@ -61,8 +61,9 @@ decimals. The judges page is the only place where contract addresses appear.
   its typeface and one sentence saying why. The funder picks one. Implement only that one.
 - **A reference given as a link is opened in a browser.** Reading the page source does not render its
   JavaScript, and most design references are JavaScript.
-- **No screen is finished without a report from the `ui-reviewer` agent.** It is read-only and it opens
-  the real site from the home page, at 390x844 and 1440x900.
+- **The funder is the reviewer.** No `ui-reviewer` agent, ever (the funder, 20 Sep 2026). A screen is delivered
+  as pictures at 390x844 and 1440x900, day and night, taken by the capture scripts from the built app, and the
+  funder judges on the image.
 
 ## Delivering
 
