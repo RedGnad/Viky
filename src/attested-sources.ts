@@ -1,4 +1,15 @@
-import { CHESS_USER_AGENT, chessProfileUrl, chessRatingPattern, chessStatsUrl, chessStatusPattern, isValidChessUsername, type ChessMode } from "./chess-com";
+import {
+  CHESS_TACTICS,
+  CHESS_USER_AGENT,
+  chessProfileUrl,
+  chessRatingPattern,
+  chessStatsUrl,
+  chessStatusPattern,
+  chessTacticsPattern,
+  isValidChessUsername,
+  type ChessClimb,
+  type ChessMode,
+} from "./chess-com";
 import { detDataUrl, isValidDetAlias } from "./duolingo-english-test";
 import { duolingoCourseXpPattern, duolingoProfileUrl, isDuolingoCourseId } from "./duolingo-public-terms";
 
@@ -135,6 +146,25 @@ export const CHESS_RATINGS: Readonly<Record<ChessMode, AttestedSource>> = {
 };
 
 /**
+ * The same page read for the puzzle record, which is not a cadence: one block, one number, and no RD beside it
+ * (measured 20 Sep 2026, src/chess-com.ts). It is a source of its own for the same reason each cadence is: the
+ * pattern names the block it reads, so nothing else on that page can settle a gift made on this one.
+ */
+export const CHESS_TACTICS_RATING: AttestedSource = {
+  id: "chess-tactics",
+  service: "Chess.com",
+  accepts: isValidChessUsername,
+  url: chessStatsUrl,
+  userAgent: CHESS_USER_AGENT,
+  matches: [{ type: "regex", value: chessTacticsPattern() }],
+};
+
+/** The source one climb is read from, whichever kind it is. */
+export function chessClimbSource(climb: ChessClimb): AttestedSource {
+  return climb === CHESS_TACTICS ? CHESS_TACTICS_RATING : CHESS_RATINGS[climb];
+}
+
+/**
  * A Coursera certificate, read from its public verification page. No account is needed and the page carries,
  * in one answer, who it was granted to, which course, the code itself, and the day it was granted.
  *
@@ -188,7 +218,7 @@ export const DET_CERTIFICATE: AttestedSource = {
   ],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), COURSERA_CERTIFICATE, DET_CERTIFICATE];
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, DET_CERTIFICATE];
 
 /** The source with that name, or nothing. An unknown name is refused rather than guessed at. */
 export function attestedSource(id: string): AttestedSource | undefined {

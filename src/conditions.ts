@@ -362,6 +362,53 @@ export const CHESS_RATING: Condition = {
 };
 
 /**
+ * The puzzle record, beside the rating and not folded into it (the founder's line of 20 Sep 2026). Chess.com
+ * publishes the best puzzle rating an account ever reached on the same page as the cadences, and that number never
+ * goes down, so the gift is "beat your own record" rather than "hold a rating": nothing a person does after
+ * reaching it can take it away, and nothing but solving puzzles can move it.
+ *
+ * Open on 20 Sep 2026 with goal 12 registered on the milestone contract. No gift has run on it yet.
+ */
+export const CHESS_TACTICS_RECORD: Condition = {
+  id: "chess-tactics",
+  kind: "milestone",
+  goalType: null,
+  live: true,
+  state: "open",
+  source: "Chess.com",
+  family: "play",
+  name: "Beat their puzzle record on Chess.com",
+  help: "The best puzzle rating that account ever reached, on the same public page as their rating: it only goes up, and Viky never pays an account Chess.com has closed.",
+  link: {
+    kind: "username",
+    label: "Their Chess.com name",
+    help: "The name on their Chess.com profile, like hikaru. It is needed to read the record they hold today.",
+    why: "Only that Chess.com account can earn this gift, and they prove it is theirs with a short code when they open it.",
+    example: "hikaru",
+    row: "Their Chess.com name",
+    noneGiven: "Not given",
+    check: {
+      valid: (value) => /^[A-Za-z0-9_-]{3,25}$/.test(value),
+      path: "/api/chess/standing",
+      refusals: {
+        shape: "A Chess.com name has three to twenty-five letters, figures, hyphens or underscores, like hikaru.",
+        notFound: "No Chess.com player goes by that name. Check the spelling.",
+        unavailable: "Chess.com is not answering. Try again in a moment.",
+      },
+    },
+  },
+  detailTitle: "Their Chess.com, and the record to beat",
+  reading: "chess-profile",
+  words: {
+    earnedDay: "When they beat it, all of this becomes theirs",
+    connect: "Opened. Connect Chess.com to start.",
+    doIt: "Solve puzzles; nothing else. Viky reads your best puzzle rating every day.",
+    eachDay: "the first reading at the new record",
+    preview: "A puzzle record on Chess.com: the gift is yours when you beat it.",
+  },
+};
+
+/**
  * U3, the one supervised result of the four read on 18 Sep 2026: the test is recorded, the identity checked against a
  * document, and the session reviewed by examiners. `live` stays false until a real gift has run on it and the founder
  * has settled the question of Duolingo's terms on automated reading.
@@ -419,7 +466,7 @@ export const COURSERA_CERTIFICATE: Condition = {
   },
 };
 
-export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE];
+export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE];
 
 /**
  * What people ask for and no source lets anybody check, with the reading each line rests on (design audit, section 5).

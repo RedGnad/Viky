@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAddress, isAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
-import { isChessMode } from "@/src/chess-com";
+import { isChessClimb } from "@/src/chess-com";
 import { ChessReadError, readChessStanding } from "@/src/chess-reading";
 import { NO_CONTACT_HASH } from "@/src/contact-hash";
 import { isOperator } from "@/src/dev-access";
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     const milestone = milestoneById(String(body.conditionId ?? ""));
     if (!milestone || !(milestone.condition.live || isOperator(auth.account))) throw new GiftApiError("GOAL_NOT_OFFERED", "This goal is not offered yet.");
     const cadence = cadenceOf(milestone, String(body.cadence ?? ""));
-    if (!cadence || !isChessMode(cadence.id)) throw new GiftApiError("INVALID_MODE", milestone.words.refusals.noCadence);
+    if (!cadence || !isChessClimb(cadence.id)) throw new GiftApiError("INVALID_MODE", milestone.words.refusals.noCadence);
     const username = String(body.username ?? "").trim();
     if (!milestone.validName(username)) throw new GiftApiError("INVALID_USERNAME", milestone.words.refusals.nameShape);
 

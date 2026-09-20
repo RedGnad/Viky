@@ -26,22 +26,41 @@ export function isChessMode(value: unknown): value is ChessMode {
 }
 
 /**
- * The goal types of the milestone contract, one per cadence. A goal type fixes the provider id its proofs must carry,
- * and the provider id is signed into every proof, so a gift for a rapid rating can never be settled by a blitz one
- * (D48). Registered by `scripts/deploy-milestone-gift.ts`; numbers above four are left for other sources.
+ * The puzzle rating, which is on the same page and is not a cadence: no game is played against anybody, and the
+ * number is a person's own record. Measured on 20 Sep 2026 on sevyb, hikaru, magnuscarlsen and erik: the block is
+ * `"tactics":{"highest":{"rating":2096,"date":1760495253},"lowest":{"rating":1795,"date":...}}`, carrying no `last`
+ * and no RD at all. `highest` is the best that account ever reached and never goes down, so the climb it holds is
+ * "beat your own record": erik 2096 against a lowest of 1795, hikaru 2730 held since 2014, magnuscarlsen the 400 an
+ * account starts at. A person who never solved a puzzle is refused rather than read as nothing.
  */
-const GOAL_TYPES: Readonly<Record<ChessMode, number>> = { rapid: 1, blitz: 2, bullet: 3, daily: 4 };
+export const CHESS_TACTICS = "tactics";
 
-export function chessGoalType(mode: ChessMode): number {
-  return GOAL_TYPES[mode];
+/** What a gift can be made on at Chess.com: the four cadences, and the puzzle rating beside them. */
+export type ChessClimb = ChessMode | typeof CHESS_TACTICS;
+export const CHESS_CLIMBS: readonly ChessClimb[] = [...CHESS_MODES, CHESS_TACTICS];
+
+export function isChessClimb(value: unknown): value is ChessClimb {
+  return typeof value === "string" && (CHESS_CLIMBS as readonly string[]).includes(value);
 }
 
-export function chessModeOfGoal(goalType: number): ChessMode | undefined {
-  return CHESS_MODES.find((mode) => GOAL_TYPES[mode] === goalType);
+/**
+ * The goal types of the milestone contract, one per climb. A goal type fixes the provider id its proofs must carry,
+ * and the provider id is signed into every proof, so a gift for a rapid rating can never be settled by a blitz one
+ * (D48). Registered by `scripts/register-milestone-goals.ts`. The four cadences took the first four numbers; the
+ * puzzle rating came later and took the next free one, after the other sources.
+ */
+const GOAL_TYPES: Readonly<Record<ChessClimb, number>> = { rapid: 1, blitz: 2, bullet: 3, daily: 4, tactics: 12 };
+
+export function chessGoalType(climb: ChessClimb): number {
+  return GOAL_TYPES[climb];
 }
 
-export function chessProviderId(mode: ChessMode): Hex {
-  return keccak256(stringToHex(`viky:provider:chess-com-${mode}-zkfetch:v1`));
+export function chessClimbOfGoal(goalType: number): ChessClimb | undefined {
+  return CHESS_CLIMBS.find((climb) => GOAL_TYPES[climb] === goalType);
+}
+
+export function chessProviderId(climb: ChessClimb): Hex {
+  return keccak256(stringToHex(`viky:provider:chess-com-${climb}-zkfetch:v1`));
 }
 
 /** The label of the identity pseudonym (the HMAC input), independent of the cadence: one person, one identity. */
@@ -69,6 +88,20 @@ export function chessStatsUrl(username: string): string {
  */
 export function chessRatingPattern(mode: ChessMode): string {
   return `"chess_${mode}":\\{"last":\\{"rating":(?<rating>\\d+),"date":(?<date>\\d+),"rd":(?<rd>\\d+)`;
+}
+
+/**
+ * The same page read for the puzzle rating: the record and the day it was set, anchored on the two keys that carry
+ * them. There is no RD to read, and `lowest` is deliberately not in the pattern: a gift is about the record, and a
+ * reading that could match either of the two would let the lowest settle a gift made on the highest.
+ */
+export function chessTacticsPattern(): string {
+  return '"tactics":\\{"highest":\\{"rating":(?<rating>\\d+),"date":(?<date>\\d+)\\}';
+}
+
+/** What one climb is read with, whichever kind it is. */
+export function chessClimbPattern(climb: ChessClimb): string {
+  return climb === CHESS_TACTICS ? chessTacticsPattern() : chessRatingPattern(climb);
 }
 
 /**
@@ -103,6 +136,15 @@ export const CHESS_SETTLED_RD_BELOW = 60;
 /** Whether a rating has settled enough for a climb to measure anything. An unknown RD has not. */
 export function ratingHasSettled(rd: number | null): boolean {
   return rd !== null && rd < CHESS_SETTLED_RD_BELOW;
+}
+
+/**
+ * The puzzle record has no RD to settle: the page publishes none, and the number it publishes is the best ever
+ * reached rather than a live rating one game can move. So this climb is read whatever comes beside it, and the
+ * guard that holds a provisional cadence back has nothing to hold back here.
+ */
+export function recordHasSettled(): boolean {
+  return true;
 }
 
 /**
@@ -142,8 +184,31 @@ export function playerOfProfile(body: unknown): { username: string; playerId: st
   return { username, playerId: String(playerId), status, name: typeof record.name === "string" ? record.name : null };
 }
 
+/** What one climb's reading carries: the number, when the source says it was set, and what else the page gives. */
+export type ChessClimbReading = Readonly<{ rating: number; ratedAt: number; rd: number | null; best: number | null }>;
+
+/**
+ * The puzzle record from an answer of `/pub/player/{name}/stats`, or null when the account has no tactics block or
+ * an unreadable one. `best` is null on purpose: the number being read is already the best ever, and printing it
+ * twice under itself would say nothing.
+ */
+export function tacticsOfStats(body: unknown): ChessClimbReading | null {
+  if (!body || typeof body !== "object") return null;
+  const block = (body as Record<string, unknown>).tactics;
+  const highest = block && typeof block === "object" ? (block as Record<string, unknown>).highest : undefined;
+  if (!highest || typeof highest !== "object") return null;
+  const { rating, date } = highest as Record<string, unknown>;
+  if (typeof rating !== "number" || !Number.isSafeInteger(rating) || rating <= 0) return null;
+  return { rating, ratedAt: typeof date === "number" && Number.isSafeInteger(date) ? date : 0, rd: null, best: null };
+}
+
+/** One climb's reading, whichever kind it is. */
+export function climbOfStats(body: unknown, climb: ChessClimb): ChessClimbReading | null {
+  return climb === CHESS_TACTICS ? tacticsOfStats(body) : ratingOfStats(body, climb);
+}
+
 /** One cadence's rating from an answer of `/pub/player/{name}/stats`, or null when that cadence was never played. */
-export function ratingOfStats(body: unknown, mode: ChessMode): { rating: number; ratedAt: number; rd: number | null; best: number | null } | null {
+export function ratingOfStats(body: unknown, mode: ChessMode): ChessClimbReading | null {
   if (!body || typeof body !== "object") return null;
   const block = (body as Record<string, unknown>)[`chess_${mode}`];
   const last = block && typeof block === "object" ? (block as Record<string, unknown>).last : undefined;

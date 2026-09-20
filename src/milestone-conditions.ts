@@ -1,6 +1,13 @@
 import type { Hex } from "viem";
-import { CHESS_MODES, chessGoalType, isValidChessUsername, ratingHasSettled, type ChessMode } from "./chess-com";
-import { CHESS_RATING, conditionById, COURSERA_CERTIFICATE as COURSERA_CONDITION, DUOLINGO_ENGLISH_TEST, type Condition } from "./conditions";
+import { CHESS_MODES, CHESS_TACTICS, chessGoalType, isValidChessUsername, ratingHasSettled, recordHasSettled, type ChessClimb } from "./chess-com";
+import {
+  CHESS_RATING,
+  CHESS_TACTICS_RECORD,
+  conditionById,
+  COURSERA_CERTIFICATE as COURSERA_CONDITION,
+  DUOLINGO_ENGLISH_TEST,
+  type Condition,
+} from "./conditions";
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
 import {
   certificateSubject,
@@ -24,7 +31,7 @@ import { CERTIFICATE as CERTIFICATE_SHAPE, CHESS_RATING as CHESS_RATING_SHAPE, t
  */
 
 export type MilestoneCadence = Readonly<{
-  id: ChessMode;
+  id: ChessClimb;
   /** The goal type on the milestone contract. */
   goalType: number;
   label: string;
@@ -131,7 +138,58 @@ export const CHESS_MILESTONE: MilestoneCondition = {
   },
 };
 
-const MILESTONES: readonly MilestoneCondition[] = [CHESS_MILESTONE];
+/**
+ * The puzzle record, a climb with nothing to choose inside it: the page publishes one puzzle rating and no cadence,
+ * so the funder is asked the name, the record to beat, and how long, and nothing else. The chooser draws no question
+ * where a milestone has one climb.
+ */
+const TACTICS_CLIMB: readonly MilestoneCadence[] = [
+  { id: CHESS_TACTICS, goalType: chessGoalType(CHESS_TACTICS), label: "Puzzles", help: "The best puzzle rating that account ever reached." },
+];
+
+export const CHESS_TACTICS_MILESTONE: MilestoneCondition = {
+  condition: CHESS_TACTICS_RECORD,
+  // The cadences' own shape, and the fifty points are theirs: nothing has been measured about how fast a puzzle
+  // record moves. It is the conservative side of the two, because a record is only beaten once and never given back,
+  // where a rating can be reached on a good afternoon and lost on the next.
+  shape: CHESS_RATING_SHAPE,
+  cadences: TACTICS_CLIMB,
+  standingPath: "/api/chess/standing",
+  validName: isValidChessUsername,
+  settled: recordHasSettled,
+  duration: { min: 1, max: 365, suggested: 30 },
+  words: {
+    cadenceQuestion: "Which rating?",
+    targetLabel: "The record they beat",
+    today: (standing) => `Their record today is ${standing}.`,
+    todayRow: (standing) => `${standing} in puzzles`,
+    best: (best) => `Their best ever: ${best}.`,
+    reading: "Reading their record",
+    refusals: {
+      nameShape: "A Chess.com name has three to twenty-five letters, figures, hyphens or underscores, like hikaru.",
+      notFound: "No Chess.com player goes by that name. Check the spelling.",
+      // Chess.com publishes no puzzle rating at all for an account that never solved one, so there is nothing to
+      // climb from and the gift cannot be made. It is not refused as a zero, which would be a number nobody set.
+      noRating: () => "They have never solved a puzzle on Chess.com, so there is no record to beat yet. Ask them to solve a few first.",
+      unavailable: "Chess.com is not answering. Try again in a moment.",
+      targetShape: "Write the record as a number, like 1500.",
+      noCadence: "Choose which rating.",
+      settling: "This record could not be read.",
+      closed: "Chess.com has closed this account, so nothing on it can be earned.",
+    },
+    goal: (target) => `${target} in puzzles`,
+    durationLabel: "Days they have to beat it",
+    durationHelp: "Counted from the day they connect Chess.com, so opening the link late costs them nothing.",
+    durationShape: (min, max) => `Between ${min} and ${max} days.`,
+    durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from the day they connect Chess.com`,
+    whenReached: "When they beat it, all of this becomes theirs",
+    ifNot: "If they do not beat it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    codeSteps: "On Chess.com, open Settings, then Profile. In Details, add this code to your first name, and save:",
+    accountClosed: "Chess.com has closed this account, so this gift can no longer be earned.",
+  },
+};
+
+const MILESTONES: readonly MilestoneCondition[] = [CHESS_MILESTONE, CHESS_TACTICS_MILESTONE];
 
 /** The milestone detail of a condition, or nothing for a daily one. */
 export function milestoneOf(condition: Condition | undefined): MilestoneCondition | undefined {
@@ -145,6 +203,15 @@ export function milestoneById(conditionId: string): MilestoneCondition | undefin
 
 export function cadenceOf(milestone: MilestoneCondition, id: string): MilestoneCadence | undefined {
   return milestone.cadences.find((cadence) => cadence.id === id);
+}
+
+/**
+ * The milestone one climb belongs to. A rating and a puzzle record are read from the same source and the same route,
+ * and they are refused in different words and judged by different guards, so what answers about a climb is the
+ * condition that owns it rather than the first Chess.com one in the register.
+ */
+export function milestoneOfClimb(climb: string): MilestoneCondition | undefined {
+  return MILESTONES.find((entry) => entry.cadences.some((cadence) => cadence.id === climb));
 }
 
 /** The cadence a milestone gift's goal type on the contract stands for. */

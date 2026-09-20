@@ -74,6 +74,9 @@ export function WillSheet({
     const picked = conditionById(id);
     const bounds = durationBounds(id);
     const suggested = certificateById(id)?.target.suggested ?? picked?.target?.suggested;
+    // A climb with one thing to climb is not a question. The puzzle record is one number on one page, so it is
+    // answered here and the sheet asks the name, the target and the length, which is everything that is left.
+    const only = milestoneById(id)?.cadences;
     onChange({
       ...draft,
       conditionId: id,
@@ -81,7 +84,7 @@ export function WillSheet({
       subject: "",
       course: undefined,
       courseTitle: undefined,
-      cadence: undefined,
+      cadence: only?.length === 1 ? only[0].id : undefined,
       standing: undefined,
       standingReadAt: undefined,
       target: suggested !== undefined ? String(suggested) : "",
@@ -129,10 +132,13 @@ export function WillSheet({
     if (!milestone) return;
     const name = draft.subject.trim();
     if (!milestone.validName(name)) return setReading({ busy: false, nameRefusal: milestone.words.refusals.nameShape });
-    if (!draft.cadence) return setReading({ busy: false, cadenceRefusal: milestone.words.refusals.noCadence });
+    // A climb with one thing to climb answers itself, here as well as where a condition is chosen: a draft written
+    // before this condition had its own entry carries no cadence, and there is only one it could mean.
+    const climb = draft.cadence ?? (milestone.cadences.length === 1 ? milestone.cadences[0].id : undefined);
+    if (!climb) return setReading({ busy: false, cadenceRefusal: milestone.words.refusals.noCadence });
     setReading({ busy: true });
     try {
-      const found = await readStanding(milestone.standingPath, name, draft.cadence);
+      const found = await readStanding(milestone.standingPath, name, climb);
       if (!found.settled && milestone.condition.live) {
         onChange({ ...draft, standing: undefined, standingReadAt: undefined });
         return setReading({ busy: false, cadenceRefusal: milestone.words.refusals.settling });
@@ -231,16 +237,18 @@ export function WillSheet({
                 autoComplete="off"
                 spellCheck={false}
               />
-              <ChoiceList
-                name="cadence"
-                legend={milestone.words.cadenceQuestion}
-                value={draft.cadence ?? null}
-                onChange={(value) => {
-                  setReading({ busy: false });
-                  onChange({ ...draft, cadence: value, standing: undefined, standingReadAt: undefined });
-                }}
-                options={milestone.cadences.map((option) => ({ value: option.id, label: option.label, help: option.help }))}
-              />
+              {milestone.cadences.length > 1 ? (
+                <ChoiceList
+                  name="cadence"
+                  legend={milestone.words.cadenceQuestion}
+                  value={draft.cadence ?? null}
+                  onChange={(value) => {
+                    setReading({ busy: false });
+                    onChange({ ...draft, cadence: value, standing: undefined, standingReadAt: undefined });
+                  }}
+                  options={milestone.cadences.map((option) => ({ value: option.id, label: option.label, help: option.help }))}
+                />
+              ) : null}
               {reading.cadenceRefusal ? <p className="font-semibold">{reading.cadenceRefusal}</p> : null}
               {draft.standing === undefined ? (
                 <button type="button" className={SECONDARY_BUTTON} disabled={reading.busy} onClick={() => void readRating()}>

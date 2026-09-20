@@ -1,15 +1,16 @@
 import type { Hex } from "viem";
 import { attestedRead, AttestedReadError, reclaimAttestedReadDeps, type AttestedReadDeps, type AttestedReading } from "./attested-read";
-import { CHESS_PLAYER, CHESS_PROFILE, CHESS_RATINGS } from "./attested-sources";
+import { CHESS_PLAYER, CHESS_PROFILE, chessClimbSource } from "./attested-sources";
 import {
   accountIsClosed,
+  CHESS_TACTICS,
   CHESS_USER_AGENT,
   chessProfileUrl,
   chessStatsUrl,
+  climbOfStats,
   isValidChessUsername,
   playerOfProfile,
-  ratingOfStats,
-  type ChessMode,
+  type ChessClimb,
   type ChessStanding,
 } from "./chess-com";
 import type { ZkFetchProof } from "./duolingo-public";
@@ -68,8 +69,8 @@ async function readJson(url: string, fetchImpl: PlainFetch): Promise<{ status: n
   return { status: response.status, body };
 }
 
-/** Where a player stands today in one cadence, read plainly. Every failure is typed. */
-export async function readChessStanding(username: string, mode: ChessMode, fetchImpl: PlainFetch = fetch): Promise<ChessStanding> {
+/** Where a player stands today in one climb, read plainly. Every failure is typed. */
+export async function readChessStanding(username: string, climb: ChessClimb, fetchImpl: PlainFetch = fetch): Promise<ChessStanding> {
   if (!isValidChessUsername(username)) throw new ChessReadError("INVALID_USERNAME", "That is not a Chess.com name");
   const profile = await readJson(chessProfileUrl(username), fetchImpl);
   if (profile.status === 404) throw new ChessReadError("PROFILE_NOT_FOUND", "No Chess.com player goes by that name");
@@ -80,7 +81,7 @@ export async function readChessStanding(username: string, mode: ChessMode, fetch
   // A ratings page that does not answer 200 is Chess.com failing, even as a 404: the profile just said the player exists.
   const stats = await readJson(chessStatsUrl(username), fetchImpl);
   if (stats.status !== 200 || !stats.body || typeof stats.body !== "object") throw new ChessReadError("FETCH_FAILED", `Chess.com answered ${stats.status}`);
-  const rating = ratingOfStats(stats.body, mode);
+  const rating = climbOfStats(stats.body, climb);
   return {
     username: player.username,
     playerId: player.playerId,
@@ -101,12 +102,12 @@ export type AttestedChessReading = Readonly<{
   status: string;
   /** Present only on a reading taken with the name, the first one. */
   name: string | null;
-  mode: ChessMode;
+  mode: ChessClimb;
   rating: number;
   /** When the rated game behind this rating ended, as the page says it. Recorded, never judged by the contract. */
   ratedAt: number;
-  /** The rating's Glicko RD, as the page gives it: how far one game can move it. */
-  rd: number;
+  /** The rating's Glicko RD, as the page gives it: how far one game can move it. Null where the page gives none. */
+  rd: number | null;
   /** The attestor's time of the ratings read: what the contract judges. */
   observedAt: number;
   /** From the ratings proof: one reading, one use. */
@@ -146,11 +147,11 @@ function chessError(error: unknown, ratingPattern: string, namePattern: string, 
 }
 
 export async function attestChessRating(
-  input: { username: string; mode: ChessMode; withName: boolean },
+  input: { username: string; mode: ChessClimb; withName: boolean },
   deps: AttestedReadDeps = reclaimAttestedReadDeps(),
 ): Promise<AttestedChessReading> {
   const profileSource = input.withName ? CHESS_PROFILE : CHESS_PLAYER;
-  const ratingSource = CHESS_RATINGS[input.mode];
+  const ratingSource = chessClimbSource(input.mode);
   const ratingPattern = ratingSource.matches[0].value;
   const namePattern = CHESS_PROFILE.matches[2].value;
   let profile: AttestedReading;
@@ -175,8 +176,12 @@ export async function attestChessRating(
   if (username.toLowerCase() !== input.username.toLowerCase()) throw new ChessReadError("PROOF_MISMATCH", "The profile reading is about another name");
   const rating = Number(ratings.values.rating ?? "");
   const ratedAt = Number(ratings.values.date ?? "0");
-  const rd = Number(ratings.values.rd ?? "");
-  if (!Number.isSafeInteger(rating) || rating <= 0 || !Number.isSafeInteger(ratedAt) || !Number.isSafeInteger(rd) || rd < 0) {
+  // The puzzle record's page carries no RD, and its pattern reads none: null is the whole answer there, and a number
+  // is still required of every cadence, whose pattern would not have matched without one. Read without the fallback
+  // on purpose: `Number("")` is zero, so a cadence reading that arrived without its RD used to pass for a rating
+  // that had settled perfectly, which is the one thing the RD is read for. Missing, it is NaN and refused.
+  const rd = input.mode === CHESS_TACTICS ? null : Number(ratings.values.rd);
+  if (!Number.isSafeInteger(rating) || rating <= 0 || !Number.isSafeInteger(ratedAt) || (rd !== null && (!Number.isSafeInteger(rd) || rd < 0))) {
     throw new ChessReadError("PROOF_INVALID", "The ratings reading is incomplete");
   }
   if (Math.abs(ratings.observedAt - profile.observedAt) > HALVES_APART_SECONDS) throw new ChessReadError("PROOF_MISMATCH", "The two halves of the reading were taken too far apart");

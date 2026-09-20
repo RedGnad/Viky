@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { recoverTypedDataAddress, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { CHESS_MODES, chessGoalType, chessModeOfGoal, chessProviderId } from "../src/chess-com";
+import { CHESS_CLIMBS, CHESS_MODES, chessGoalType, chessClimbOfGoal, chessProviderId } from "../src/chess-com";
 import { NO_CONTACT_HASH } from "../src/contact-hash";
 import { CLAIM_TYPEHASH, WITHDRAW_TYPEHASH } from "../src/gift-terms";
 import { signMilestoneClaim, signMilestoneProof } from "../src/milestone-attestation";
@@ -69,8 +69,8 @@ test("each cadence has its own goal type and provider id, pinned against the con
       ["daily", 4, "0xb55b5e37e9fa879c5bc5adbffa5ca98372cc00d8fe21279e827cf9c94d3706e3"],
     ],
   );
-  for (const mode of CHESS_MODES) assert.equal(chessModeOfGoal(chessGoalType(mode)), mode);
-  assert.equal(chessModeOfGoal(5), undefined, "numbers above four are left for other sources");
+  for (const climb of CHESS_CLIMBS) assert.equal(chessClimbOfGoal(chessGoalType(climb)), climb);
+  assert.equal(chessClimbOfGoal(5), undefined, "the number after the four cadences belongs to another source");
 });
 
 test("a milestone gift number can never be a daily one", () => {

@@ -3274,3 +3274,29 @@ behind an account cannot be photographed any other way.
   with the same refusals, and the passkey is still opened at the one moment a signature is needed.
 - What it removes: `app/components/MilestoneGiftPage.tsx`, and the gesture table of D99, which said what a voice may
   do without knowing what the moment allows. A voice and a moment decide it together now.
+
+## D117, 20 Sep 2026: the puzzle record is a condition of its own, and its policing is weaker than the rating's
+
+- Statement, the founder's, 20 Sep 2026: Chess.com's puzzle rating becomes a condition, on goal 12, registered in the
+  same signing session as the two others.
+- **What the source gives, measured the same day on sevyb, hikaru, magnuscarlsen and erik.** The stats page carries
+  `"tactics":{"highest":{"rating":2096,"date":...},"lowest":{"rating":1795,"date":...}}`, and nothing else: no `last`,
+  no RD, and no current rating at all. `highest` is the best that account ever reached and never goes down.
+- **So the gift is "beat your own record", not "hold a rating".** Nothing the person does after beating it can take
+  the gift away, which is the opposite of a cadence where a rating reached on a good afternoon can be lost the next
+  day. The pattern is anchored on `highest`, because `lowest` sits in the same block and a looser reading would let
+  the worst rating an account ever held settle a gift made on its best.
+- **No cadence to choose, so the sheet asks no question.** A milestone with one climb answers it when the condition
+  is chosen; the chooser draws the question only from two.
+- **No RD, so the settling guard does not apply.** `recordHasSettled` says so in the register rather than letting
+  `ratingHasSettled(null)` refuse every reading. The same standing route serves both, and it now asks which condition
+  owns the climb before it judges anything.
+- **Said on the judges page: this is the weaker of the two Chess.com conditions.** Chess.com's Fair Play policy and
+  its help centre article on Fair Play were read on 20 Sep 2026 and neither mentions puzzles; what they forbid is
+  written about play. The closed-account status is still read on every reading, which is what Chess.com does publish.
+- **A defect found while building it.** A cadence reading that arrived without its RD was read as RD zero, which is a
+  rating that has settled perfectly. `Number("")` is zero. It is now read without a fallback, so a missing RD is
+  refused as an incomplete proof.
+- What this touches: `src/chess-com.ts` and `src/attested-sources.ts`, so the reading fingerprint changes and the
+  worker is redeployed before this merges (docs/OPERATIONS.md). No contract, no migration: goal 12 was registered on
+  19 Sep with the provider id this build sends.

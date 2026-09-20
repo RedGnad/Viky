@@ -1,5 +1,5 @@
 import { getAddress, type Hex } from "viem";
-import { CHESS_IDENTITY_LABEL, chessModeOfGoal, chessProviderId, type ChessMode } from "./chess-com";
+import { CHESS_IDENTITY_LABEL, chessClimbOfGoal, chessProviderId, type ChessClimb } from "./chess-com";
 import { attestChessRating, ChessReadError, nameHasChessCode, readChessStanding, type AttestedChessReading } from "./chess-reading";
 import { identityPseudonym } from "./gift-attestation";
 import { loadGift, markBound, type GiftRecord } from "./gift-store";
@@ -69,8 +69,8 @@ const MESSAGES: Readonly<Record<string, string>> = {
 export type MilestoneReadingDeps = {
   loadGift: (giftId: string) => Promise<GiftRecord | null>;
   readState: (contract: Hex, giftId: string) => Promise<MilestoneState>;
-  plain: (username: string, mode: ChessMode) => Promise<ChessStanding>;
-  attest: (input: { username: string; mode: ChessMode; withName: boolean }) => Promise<AttestedChessReading>;
+  plain: (username: string, mode: ChessClimb) => Promise<ChessStanding>;
+  attest: (input: { username: string; mode: ChessClimb; withName: boolean }) => Promise<AttestedChessReading>;
   identity: (playerId: string) => Hex;
   prove: (input: { contract: Hex; message: MilestoneProofMessage }) => Promise<ProvedReading>;
   markBound: (giftId: string, playerId: string) => Promise<boolean>;
@@ -172,7 +172,7 @@ export async function runMilestoneReading(
     if (phase === "overdue") return { kind: "already", giftId, reason: "deadline_passed" };
     if (phase !== "climbing") return { kind: "already", giftId, reason: "not_bound" };
   }
-  const mode = chessModeOfGoal(state.goalType);
+  const mode = chessClimbOfGoal(state.goalType);
   if (!mode) return refused(giftId, "NOT_CONFIGURED");
   const username = record.goalUsername;
   const target = Number(state.target);
