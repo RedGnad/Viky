@@ -3687,3 +3687,21 @@ behind an account cannot be photographed any other way.
   seventeen pixels tall, which is what the founder could not read. And a climb on a card being filled in draws its
   character alone: its meter's bar belongs to a gift that has been read, and before any reading it was an empty
   rounded line that said nothing, which is the strange horizontal bar he saw.
+
+## D133, 21 Sep 2026: the head character takes its place, and the card gets its air
+
+- **The head character's edge, in the founder's own two colours**: the ink at night, a light yellow (`#FFE7A8`) by
+  day. He asked for it knowing what it costs: that yellow on the lavender ground is under the 3:1 a border needs
+  when it identifies a control. This one identifies nothing and decides nothing, it is the drawing at the head of
+  the page, and the trade was his to take. `--character-hero-edge`, read by `test/design-tokens.test.ts`.
+- **Its size and its place, chosen on an image** of four placements shot on the real page, night and day
+  (`review-captures/hero/four-placements.png`): in the hollow of the title's first line, at the column's right
+  edge, and bigger, 86 wide by 54 tall. 86 is not a taste, it is the largest the hollow takes: at 54 tall the
+  shape is exactly one line of the title, and a pixel more bites into the second line and breaks the title into
+  three. Measured after: two lines from 390 up, three at 375 and below.
+- **More air against the screen's edge**: the page margin on a phone goes from 16 to 20. The founder read the page
+  as cramped on a real handset, where a browser window on a desk is always kinder. It costs the title its second
+  line at 375 and below, which is said rather than hidden.
+- **The card.** The condition line sits eight pixels lower: it is a control, and at the four pixels a caption gets
+  it sat on the name's own box. And a gift with a goal to climb draws its one character in the middle of the card
+  rather than at its left margin, where a single shape read as a row that had lost the rest of itself.

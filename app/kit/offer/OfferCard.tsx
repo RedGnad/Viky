@@ -99,7 +99,9 @@ export function OfferCard() {
             <button
               type="button"
               onClick={() => setChoosing(true)}
-              className={`${INLINE_BUTTON} w-full justify-between text-left`}
+              /* Eight pixels more than a caption gets under a title: this one is a control, and at four it sat on
+                 the name's own box (the founder, 21 Sep 2026). */
+              className={`${INLINE_BUTTON} mt-[var(--space-sm)] w-full justify-between text-left`}
             >
               <span className="flex min-w-0 flex-col">
                 <span className={CARD_LABEL}>{W.invites.will}</span>
@@ -117,7 +119,11 @@ export function OfferCard() {
                 /* One character and nothing else (D132). The meter's bar belongs to a gift that has been read: on a
                    card being filled in there is no reading, so the bar was always empty and said nothing at all,
                    which is what the founder saw as a strange horizontal line. */
-                <Character state="toCome" className="h-auto w-[52px]" standing={false} />
+                /* One character and no row: it stands in the middle of the card rather than at its left margin,
+                   where a single shape read as a row that had lost the rest of itself (the founder, 21 Sep 2026). */
+                <span className="flex justify-center">
+                  <Character state="toCome" className="h-auto w-[52px]" standing={false} />
+                </span>
               ) : (
                 <div className="day-row-frame">
                   <DayStrip

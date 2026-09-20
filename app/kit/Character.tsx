@@ -213,10 +213,10 @@ function drawing(
             </linearGradient>
           </defs>
         ),
-        /* The one outline in the product, asked for by the founder: the card's own edge, the ink by day and the pale
-           of the night, because black on the ink ground is no edge at all. The shade that lay at its foot is gone
-           with it: on a shape this wide it read as a beard rather than as a shadow. */
-        body: <path d={DIAMOND} style={{ fill: `url(#${DIAMOND_BLEND})`, stroke: "var(--control-border)", strokeWidth: 2.2, strokeLinejoin: "round" }} />,
+        /* The one outline in the product, asked for by the founder, in the two colours he chose on the image: the
+           ink at night, a light yellow by day. The shade that lay at its foot is gone: on a shape this wide it read
+           as a beard rather than as a shadow. */
+        body: <path d={DIAMOND} style={{ fill: `url(#${DIAMOND_BLEND})`, stroke: "var(--character-hero-edge)", strokeWidth: 2.2, strokeLinejoin: "round" }} />,
         gloss: <Gloss cx={23} cy={13} r={4.4} dot={{ cx: 31, cy: 10, r: 2.2 }} />,
         face: face ? (
           <>

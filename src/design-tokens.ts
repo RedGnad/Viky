@@ -19,7 +19,7 @@ export const BREAKPOINTS = { compact: 0, medium: 600, expanded: 840, large: 1200
  * The page margin. Material publishes 16 on compact and 24 from medium upward; Apple deleted its own margin
  * tables on 9 Sep 2026 and now refers to a download, so this cites Material alone.
  */
-export const PAGE_MARGIN = { compact: 16, medium: 24 } as const;
+export const PAGE_MARGIN = { compact: 20, medium: 24 } as const;
 
 /**
  * Material's 8dp spacing scale, the steps we actually use. `space100 = 8`. The 4 is Material's 0.5x nested

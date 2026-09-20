@@ -104,6 +104,13 @@
   --character-shadow: #1E1633;
   /* The juice (D132): one highlight of white and one shade of ink inside every character, and no gradient anywhere. */
   --character-gloss: rgba(255, 255, 255, 0.45);
+  /*
+   * The head of the page is the one character with an edge (D132), and the founder chose its two colours himself on
+   * 21 Sep 2026: the ink at night, a light yellow by day. The yellow is the sun's own tint, and it is under the 3:1
+   * that a border identifying a control needs; this one identifies nothing and decides nothing, it is the drawing at
+   * the head of the page, and the founder took that trade knowingly.
+   */
+  --character-hero-edge: #FFE7A8;
   --character-shade: rgba(30, 22, 51, 0.12);
   --character-shadow-opacity: 0.12;
 
@@ -153,7 +160,9 @@
   --tap-gap: 12px;
 
   /* Material publishes 16 on a phone and 24 from 600px; Apple no longer publishes any. */
-  --page-margin: 16px;
+  /* 20 on a phone since 21 Sep 2026: at 16 the founder read the page as cramped against the screen's edge on a
+     real handset, where a browser window on a desk is always kinder than the thing in a hand. */
+  --page-margin: 20px;
   --app-column-max: 480px;
   --prose-max: 66ch;
   --destination-max: 680px;
@@ -246,6 +255,7 @@
     --card-edge: transparent;
     --card-shadow: none;
     --card-placed-edge: #F3F0FA;
+    --character-hero-edge: #151026;
     --tonal: #332A5E;
     --card-border: #352C52;
     --character-1: #FF8C98;
@@ -278,6 +288,7 @@
   --card-edge: transparent;
   --card-shadow: none;
   --card-placed-edge: #F3F0FA;
+  --character-hero-edge: #151026;
   --tonal: #332A5E;
   --card-border: #352C52;
   --character-1: #FF8C98;

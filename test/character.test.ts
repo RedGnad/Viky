@@ -40,7 +40,7 @@ test("flat, with no outline and no text, and hidden from a screen reader because
   for (const state of STATES) {
     const svg = draw(state);
     // One outline in the whole product, on the head of the page, because the founder asked for it there (D132).
-    if (state === "diamond") assert.match(svg, /stroke="var\(--control-border\)"|stroke:var\(--control-border\)/);
+    if (state === "diamond") assert.match(svg, /stroke="var\(--character-hero-edge\)"|stroke:var\(--character-hero-edge\)/);
     else assert.doesNotMatch(svg, /stroke/);
     assert.doesNotMatch(svg, /<text|<tspan|<title|<foreignObject/);
     assert.match(svg, /^<svg aria-hidden="true"/);

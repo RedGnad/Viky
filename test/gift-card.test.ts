@@ -137,6 +137,10 @@ test("there is one card, and the one being filled in is drawn by it", () => {
     assert.match(card, new RegExp(`<${piece}`), `the card draws the gift's own ${piece}`);
   }
   assert.doesNotMatch(card, /<MilestoneMeter/, "an empty bar is not a picture of anything");
+  // And that one character stands in the middle of the card, not at its left margin (D133).
+  assert.match(card, /<span className="flex justify-center">\s*<Character state="toCome"/);
+  // The condition line is a control, so it gets more room under the name than a caption would (D133).
+  assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/);
   assert.equal(globSync("app/kit/offer/ShapePreview.tsx").length, 0, "the shape invented beside the product's own is gone");
 });
 
@@ -183,7 +187,7 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   // Every field on the card is a control at the size every control keeps, and the chips are the product's own button.
   assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length, 3, "the name and the amount twice; the days are chips now (D130)");
   assert.match(card, /className=\{`\$\{CHIP\} /, "a chip is the inline button at the size of a choice");
-  assert.match(card, /className=\{`\$\{INLINE_BUTTON\} w-full/, "and the condition line is one too, so every control lifts the same way");
+  assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/, "and the condition line is one too, so every control lifts the same way");
   // The two that are left, and both are a choice rather than a field.
   assert.match(card, /<WillSheet open=\{choosing\}/);
   assert.match(card, /<PaySheet open=\{paying\}/);
