@@ -3662,3 +3662,28 @@ behind an account cannot be photographed any other way.
 - Acceptance in `test/browser/home-order.spec.ts`, day and night, at 390, 430, 1024 and 1440: the order, the text
   never under the card, the block centred on the window's axis from 1024 and the diamond in the hollow below it, the
   title at its step, no blur, nothing cut across, and no scrolling at 1440x900.
+
+## D132, 21 Sep 2026: the title holds two lines, the sentence says what it is, and the characters get their juice
+
+- **The title on a phone.** The founder's screen showed four ragged lines. Two causes, both measured: `text-wrap:
+  balance` fights a float, and a float's **margin box** is what the text avoids, so the eight pixels under the
+  diamond pushed the second line aside as well. The balancing is gone, the diamond has no margin under it on a
+  phone, and it is 80 wide by 50 tall, under the title's 54 of line, so only the first line is narrowed. Measured
+  on the build: two lines from 375 up ("Money that" is 254 px at 49 and the first line leaves 270), three at 360,
+  and the page went from 920 to 866 at 390.
+- **The sentence under it**, chosen by the founder from three: "Back someone's goal with real money. They earn it as
+  they do it, and you get back the rest." It names who does what, and it ends on what makes Viky different, where
+  the old one opened with an instruction and ran to nineteen words.
+- **The diamond, drawn wider than it is tall**, in a box of its own (64 by 40), as asked.
+- **The juice** (the founder, on a sheet of glossy jelly shapes): every character keeps its flat fill and gains one
+  highlight of two white circles at its upper left and one soft shade lying at its foot, both as their own variables
+  (`--character-gloss`, `--character-shade`). No gradient, no outline, no new colour in the range.
+- **The head of the page is the one exception, and the founder settled it on an image** of six drawings, night and
+  day: it is a blend of its own tone's two colours, the sun into the pink, with the highlight on it, **no shade at
+  its foot** (on a shape that wide it read as a beard) and **an edge of 2.2**. The edge is the card's own
+  (`--control-border`): the ink by day and the pale by night, because black on the ink ground is no edge at all.
+  It is the only blend and the only outline in the product, and `test/character.test.ts` says so by name.
+- **The card's own pictures.** The day characters are 52 where they were 42: at 42 a sleeping day is a capsule
+  seventeen pixels tall, which is what the founder could not read. And a climb on a card being filled in draws its
+  character alone: its meter's bar belongs to a gift that has been read, and before any reading it was an empty
+  rounded line that said nothing, which is the strange horizontal bar he saw.

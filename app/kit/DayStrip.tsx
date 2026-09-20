@@ -37,13 +37,13 @@ export function DayStrip({
   records = [],
 }: Readonly<{ id: string; gift: Shape; catchUpSeconds: number; records?: readonly { day: number; outcome: "earned" | "returned" }[] }>) {
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
-  // One size everywhere, and it keeps its face (the founder, 19 Sep 2026, amending the brief): 42 on a card in a
-  // list, 48 on a gift's own page. The strip scrolls rather than shrinking, exactly as the row does, because a row
-  // of thirty smudges says nothing at all.
+  // One size everywhere, and it keeps its face (the founder, 19 Sep 2026, amending the brief). 52 on a card since
+  // D132, where 42 left the sleeping days unreadable: a low capsule at 42 is seventeen pixels tall. The strip scrolls
+  // rather than shrinking, exactly as the row does, because a row of thirty smudges says nothing at all.
   return (
     <span aria-hidden className="day-row-days flex w-full items-end">
       {stripOf(gift, catchUpSeconds, nowMs, records).map((day, index) => (
-        <span key={index} data-day={day} className="flex w-[42px] flex-none items-end">
+        <span key={index} data-day={day} className="flex w-[52px] flex-none items-end">
           <ArrivalDay gift={id} index={index}>
             <Character state={characterOf(day)} standing={false} className="h-auto w-full" />
           </ArrivalDay>

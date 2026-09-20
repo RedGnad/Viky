@@ -9,8 +9,8 @@ import { AmountError, dollarsToUnits, PILOT_CAP_SENTENCE } from "@/src/money";
 import { OFFER as W } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { CardFace } from "../GiftCard";
+import { Character } from "../Character";
 import { DayStrip } from "../DayStrip";
-import { MilestoneMeter } from "../MilestoneMeter";
 import { PaySheet } from "./PaySheet";
 import { WillSheet } from "./WillSheet";
 
@@ -114,9 +114,10 @@ export function OfferCard() {
           shape={
             <div className="py-[var(--space-sm)]">
               {shape === "climb" || shape === "stamp" ? (
-                <MilestoneMeter
-                  status={{ startReading: null, target: Number(draft.target) || 0, todayReading: null, reached: false, cancelled: false, finished: false, opened: false }}
-                />
+                /* One character and nothing else (D132). The meter's bar belongs to a gift that has been read: on a
+                   card being filled in there is no reading, so the bar was always empty and said nothing at all,
+                   which is what the founder saw as a strange horizontal line. */
+                <Character state="toCome" className="h-auto w-[52px]" standing={false} />
               ) : (
                 <div className="day-row-frame">
                   <DayStrip

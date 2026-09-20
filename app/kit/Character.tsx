@@ -71,13 +71,23 @@ const TRIANGLE = roundedTriangle(
  */
 const DIAMOND = roundedTriangle(
   [
-    [32, 9],
-    [55, 32],
-    [32, 55],
-    [9, 32],
+    [32, 4],
+    [61, 20],
+    [32, 36],
+    [3, 20],
   ],
-  9,
+  8,
 );
+
+/** The diamond is wider than it is tall (the founder, 20 Sep 2026), so it is drawn in a box of its own. */
+const DIAMOND_BOX = "0 0 64 40";
+
+/**
+ * The one blend in the product (D132, the founder choosing it on a sheet of six drawings): the head of the page is
+ * the only character that is not a flat fill, and it goes from its tone's own two colours, the sun into the pink.
+ * Everything else the product draws stays flat, which is the rule the niche gave on 20 Sep 2026.
+ */
+const DIAMOND_BLEND = "viky-diamond-blend";
 
 /** A mouth smiling wide: the lower half of a circle, which keeps it inside the circle family. */
 const smile = (cx: number, cy: number, r: number) => `M${cx - r} ${cy} H${cx + r} A${r} ${r} 0 0 1 ${cx - r} ${cy} Z`;
@@ -94,6 +104,25 @@ function ClosedEye({ x, y }: Readonly<{ x: number; y: number }>) {
   return <rect x={x - 3.4} y={y - 1.2} width={6.8} height={2.4} rx={1.2} style={{ fill: FACE }} />;
 }
 
+/**
+ * The juice (the founder, 20 Sep 2026, on a sheet of glossy jelly shapes): the fills stay flat, and each character
+ * gains one highlight of two circles at its upper left and one soft shade lying at its foot. No gradient, no outline,
+ * no new colour in the range: two tints of white and of the ink, kept as their own variables.
+ */
+function Gloss({ cx, cy, r, dot }: Readonly<{ cx: number; cy: number; r: number; dot?: Readonly<{ cx: number; cy: number; r: number }> }>) {
+  return (
+    <g data-part="gloss" style={{ fill: "var(--character-gloss)" }}>
+      <circle cx={cx} cy={cy} r={r} />
+      {dot ? <circle cx={dot.cx} cy={dot.cy} r={dot.r} /> : null}
+    </g>
+  );
+}
+
+/** The shade a body rests in: a pill, never an oval, because an eye is the only round thing that may be an outline. */
+function Shade({ cx, cy, rx, ry }: Readonly<{ cx: number; cy: number; rx: number; ry: number }>) {
+  return <rect data-part="shade" x={cx - rx} y={cy - ry} width={rx * 2} height={ry * 2} rx={ry} style={{ fill: "var(--character-shade)" }} />;
+}
+
 const bodyFill = (fill: string): CSSProperties => ({ fill });
 
 /** Parts that move are scaled and moved from their own box, from the floor for a body and from the middle for a face. */
@@ -105,12 +134,14 @@ function drawing(
   face: boolean,
   variant: number,
   tone: Readonly<{ box: string; ribbon: string; face: string }>,
-): { body: ReactNode; face: ReactNode; lean?: string; bow?: ReactNode } {
+): { body: ReactNode; face: ReactNode; lean?: string; bow?: ReactNode; gloss?: ReactNode; shade?: ReactNode; defs?: ReactNode } {
   const gaze = gazeOf(variant);
   switch (state) {
     case "toCome":
       return {
         body: <rect x={8} y={29} width={48} height={FLOOR - 29} rx={13} style={bodyFill(THREE)} />,
+        gloss: <Gloss cx={19} cy={35} r={4.2} dot={{ cx: 27, cy: 32.5, r: 2.1 }} />,
+        shade: <Shade cx={32} cy={51} rx={16} ry={2.4} />,
         face: face ? (
           <>
             <ClosedEye x={24} y={41} />
@@ -122,6 +153,8 @@ function drawing(
     case "today":
       return {
         body: <path d={TRIANGLE} style={bodyFill(TWO)} />,
+        gloss: <Gloss cx={25} cy={27} r={3.4} dot={{ cx: 30, cy: 22, r: 1.7 }} />,
+        shade: <Shade cx={32} cy={51} rx={15} ry={2.4} />,
         face: face ? (
           <>
             <Eye x={26 + gaze} y={37} r={3.1} />
@@ -133,6 +166,8 @@ function drawing(
     case "catchable":
       return {
         body: <path d={TRIANGLE} style={bodyFill(TWO)} />,
+        gloss: <Gloss cx={25} cy={27} r={3.4} dot={{ cx: 30, cy: 22, r: 1.7 }} />,
+        shade: <Shade cx={32} cy={51} rx={15} ry={2.4} />,
         lean: "rotate(-9 32 55)",
         face: face ? (
           <>
@@ -145,6 +180,8 @@ function drawing(
     case "earned":
       return {
         body: <circle cx={32} cy={FLOOR - 22} r={22} style={bodyFill(ONE)} />,
+        gloss: <Gloss cx={18} cy={24} r={4.4} dot={{ cx: 25, cy: 18, r: 2.2 }} />,
+        shade: <Shade cx={32} cy={49} rx={14} ry={2.6} />,
         face: face ? (
           <>
             <Eye x={24 + gaze} y={29} />
@@ -156,6 +193,8 @@ function drawing(
     case "returned":
       return {
         body: <circle cx={32} cy={FLOOR - 19} r={19} style={bodyFill(THREE)} />,
+        gloss: <Gloss cx={26} cy={26} r={3.6} dot={{ cx: 32, cy: 21, r: 1.8 }} />,
+        shade: <Shade cx={32} cy={51} rx={12} ry={2.4} />,
         // In profile, facing left: one eye and a small mouth at the leading edge.
         face: face ? (
           <>
@@ -166,12 +205,24 @@ function drawing(
       };
     case "diamond":
       return {
-        body: <path d={DIAMOND} style={bodyFill(tone.box)} />,
+        defs: (
+          <defs>
+            <linearGradient id={DIAMOND_BLEND} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor={tone.box} />
+              <stop offset="1" stopColor={tone.ribbon} />
+            </linearGradient>
+          </defs>
+        ),
+        /* The one outline in the product, asked for by the founder: the card's own edge, the ink by day and the pale
+           of the night, because black on the ink ground is no edge at all. The shade that lay at its foot is gone
+           with it: on a shape this wide it read as a beard rather than as a shadow. */
+        body: <path d={DIAMOND} style={{ fill: `url(#${DIAMOND_BLEND})`, stroke: "var(--control-border)", strokeWidth: 2.2, strokeLinejoin: "round" }} />,
+        gloss: <Gloss cx={23} cy={13} r={4.4} dot={{ cx: 31, cy: 10, r: 2.2 }} />,
         face: face ? (
           <>
-            <Eye x={26} y={30} fill={tone.face} />
-            <Eye x={38} y={30} fill={tone.face} />
-            <path data-part="mouth" d={smile(32, 37, 5)} style={{ fill: tone.face, ...FROM_MIDDLE }} />
+            <Eye x={26} y={18} fill={tone.face} />
+            <Eye x={38} y={18} fill={tone.face} />
+            <path data-part="mouth" d={smile(32, 24, 4.5)} style={{ fill: tone.face, ...FROM_MIDDLE }} />
           </>
         ) : null,
       };
@@ -184,6 +235,8 @@ function drawing(
             <rect x={10} y={24} width={44} height={10} rx={5} style={bodyFill(tone.ribbon)} />
           </>
         ),
+        gloss: <Gloss cx={17} cy={28} r={3} dot={{ cx: 23, cy: 26, r: 1.6 }} />,
+        shade: <Shade cx={32} cy={51} rx={13} ry={2.4} />,
         // A bow tied on the lid: two loops leaning out from a knot, drawn over the lid.
         bow: (
           <g data-part="bow" style={FROM_FLOOR}>
@@ -267,12 +320,13 @@ export function Character({
     <svg
       aria-hidden
       focusable="false"
-      viewBox="0 0 64 64"
+      viewBox={state === "diamond" ? DIAMOND_BOX : "0 0 64 64"}
       data-character={state}
       data-size={size}
       className={className}
       style={{ overflow: "visible" }}
     >
+      {parts.defs}
       {large && standing && drawn === "range" ? (
         <rect
           data-part="shadow"
@@ -287,6 +341,9 @@ export function Character({
       <g data-part="figure" style={{ ...FROM_FLOOR, ...(leaving ? { transform: "translateX(-6px)", opacity: 0.6 } : null) }}>
         <g transform={parts.lean}>
           <g data-part="body">{parts.body}</g>
+          {/* The shade lies in the body, the highlight sits on it, and the face stays on top of both (D132). */}
+          {parts.shade}
+          {parts.gloss}
           {parts.bow}
           {parts.face ? (
             <g data-part="face" style={FROM_MIDDLE}>

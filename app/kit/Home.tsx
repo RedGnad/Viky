@@ -47,7 +47,11 @@ export function Home() {
                 state="diamond"
                 tone="sun"
                 standing={false}
-                className="float-right mb-[var(--space-sm)] ml-[var(--space-md)] h-auto w-[88px] [@media(min-width:1024px)]:float-none [@media(min-width:1024px)]:mx-auto [@media(min-width:1024px)]:mb-[var(--space-md)] [@media(min-width:1024px)]:block [@media(min-width:1024px)]:w-[72px]"
+                /* 80 wide is 50 tall in its own box, under the title's 54 of line: the diamond sits in the first
+                   line's hollow and the second line runs the full width, which is what keeps the title at two lines. */
+                /* No margin under it on a phone: a float's margin box is what the text avoids, and eight pixels of
+                   it pushed the second line aside too, which is what broke the title into four ragged lines. */
+                className="float-right ml-[var(--space-sm)] h-auto w-[80px] [@media(min-width:1024px)]:float-none [@media(min-width:1024px)]:mx-auto [@media(min-width:1024px)]:mb-[var(--space-md)] [@media(min-width:1024px)]:block [@media(min-width:1024px)]:w-[96px]"
               />
             </Gaze>
             <h1 className={HERO}>{W.promise}</h1>
