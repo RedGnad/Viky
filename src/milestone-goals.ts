@@ -1,6 +1,5 @@
 import type { Hex } from "viem";
-import { CHESS_MODES, chessGoalType, chessProviderId } from "./chess-com";
-import { CHESS_TACTICS_GOAL_TYPE, chessTacticsProviderId } from "./chess-tactics";
+import { CHESS_MODES, CHESS_TACTICS, chessGoalType, chessProviderId } from "./chess-com";
 import { COURSERA_GOAL_TYPE, courseraProviderId } from "./coursera-certificate";
 import { CREDLY_GOAL_TYPE, credlyProviderId } from "./credly-badge";
 import { detProviderId } from "./duolingo-english-test";
@@ -53,7 +52,7 @@ export const MILESTONE_GOALS: readonly MilestoneGoal[] = [
   // A certification badge: granted once by an issuer that is not the person, so it is had or not (20 Sep 2026).
   { goalType: CREDLY_GOAL_TYPE, providerId: credlyProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Credly", detail: "a certification badge" },
   // The puzzle rating: it moves, so it is a climb like the cadences, on the same page and without an RD.
-  { goalType: CHESS_TACTICS_GOAL_TYPE, providerId: chessTacticsProviderId(), shape: SHAPE_CLIMB, source: "Chess.com", detail: "tactics" },
+  { goalType: chessGoalType(CHESS_TACTICS), providerId: chessProviderId(CHESS_TACTICS), shape: SHAPE_CLIMB, source: "Chess.com", detail: "the puzzle record" },
 ];
 
 export function milestoneGoal(goalType: number): MilestoneGoal | undefined {

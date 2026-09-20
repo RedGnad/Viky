@@ -56,6 +56,16 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     sourcePolicing: "Chess.com polices engine use, outside help, account sharing and arranged results itself, publishes the sanction in the same API Viky reads (`status: closed:fair_play_violations`), and Viky refuses a closed account at every reading, so a gift is never paid on an account its own source has closed.",
   },
   {
+    conditionId: "chess-tactics",
+    supervised: false,
+    inShort: "Read from Chess.com, which says nothing about policing puzzles. It only goes up, and never comes back down.",
+    data: "Chess.com's public API, the same page as the rating, read through an attested fetch and checked the same way. What is read is `tactics.highest`, the best puzzle rating that account ever reached: it never goes down, so nothing the person does after beating their record can take the gift away from them.",
+    account: "The funder names the Chess.com account, and the person proves it is theirs with a short code when they open the gift.",
+    whoActed: "Unknown, and less watched here than in a game: a puzzle is solved alone against a clock, with no opponent and no game anybody can examine afterwards. The reading proves what that account reached, never who was at the keyboard.",
+    sourcePolicing:
+      "Chess.com closes an account for a Fair Play violation and publishes it in the same API Viky reads (`status: closed:fair_play_violations`), and Viky refuses a closed account at every reading. What it does not publish is anything about puzzles: read on 20 Sep 2026, neither its Fair Play policy nor its help centre article on Fair Play mentions the puzzle rating, and what they forbid is written about play. So nothing tells us this number is policed the way a rating is, and this condition is the weaker of the two on that question.",
+  },
+  {
     conditionId: "duolingo-english-test",
     supervised: true,
     inShort: "A test sat under watch, with an identity document and examiners. The result has a page they share.",

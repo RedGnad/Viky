@@ -9,7 +9,7 @@ import { runMilestoneReading } from "./milestone-reading";
 import { relayMilestoneClaim, relayMilestoneWithdraw } from "./milestone-relay";
 import { loadMilestoneStatus } from "./milestone-status";
 import { followRename, loadMilestoneGift, setMilestoneCode } from "./milestone-store";
-import { chessModeOfGoal } from "./chess-com";
+import { chessClimbOfGoal } from "./chess-com";
 import { readMilestoneGift } from "./milestone-reader";
 import { escrowOf } from "./relayer";
 
@@ -76,7 +76,7 @@ export async function milestoneAccount(request: Request, giftId: string, body: {
   const username = String(body.username ?? "").trim();
   if (!milestone.validName(username)) throw new GiftApiError("INVALID_USERNAME", milestone.words.refusals.nameShape, 400);
   const state = await readMilestoneGift(escrowOf(record), giftId);
-  const mode = chessModeOfGoal(state.goalType);
+  const mode = chessClimbOfGoal(state.goalType);
   if (!mode || !cadenceOfGoal(milestone, state.goalType)) throw new GiftApiError("NOT_CONFIGURED", "Viky is not ready for this yet. Nothing was changed.", 503);
   try {
     const reading = await attestChessRating({ username, mode, withName: false });

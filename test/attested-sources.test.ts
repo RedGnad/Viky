@@ -19,6 +19,7 @@ test("only the listed sources exist, and an unknown name is refused", () => {
     "chess-ratings-bullet",
     "chess-ratings-daily",
     "chess-ratings-rapid",
+    "chess-tactics",
     "coursera-certificate",
     "det-certificate",
     "duolingo-profile",

@@ -11,14 +11,14 @@ import { certificateById, milestoneById } from "../src/milestone-conditions";
  * end is offered. These tests keep both true.
  */
 
-test("only a condition a gift can be made on today is live, and that is the lesson and the chess rating", () => {
+test("only a condition a gift can be made on today is live, and every one in the register is", () => {
   // D109, 19 Sep 2026: while we build, a condition wired from end to end is offered as soon as a gift can be created
   // on it. Chess.com joined with two real gifts already running on it, 1,000,000 and 1,000,002; the English test
   // joined the day goal 5 was registered on the milestone contract, read back from the chain on 19 Sep 2026 with the
-  // provider id it expects and the having-it-or-not shape.
+  // provider id it expects and the having-it-or-not shape. The puzzle record joined on 20 Sep 2026 with goal 12.
   assert.deepEqual(
     liveConditions().map((condition) => condition.id),
-    ["duolingo-daily", "chess-rating", "duolingo-english-test", "coursera-certificate"],
+    ["duolingo-daily", "chess-rating", "chess-tactics", "duolingo-english-test", "coursera-certificate"],
     "a live condition needs the whole line behind it: contract deployed, its goal registered, a reading that runs",
   );
   assert.equal(DUOLINGO_DAILY.goalType, GOAL_TYPE_DUOLINGO_XP);

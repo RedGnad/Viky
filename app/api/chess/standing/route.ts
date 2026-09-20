@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { isChessMode } from "@/src/chess-com";
+import { isChessClimb } from "@/src/chess-com";
 import { ChessReadError, readChessStanding } from "@/src/chess-reading";
-import { CHESS_MILESTONE } from "@/src/milestone-conditions";
+import { milestoneOfClimb } from "@/src/milestone-conditions";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
@@ -25,12 +25,16 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const username = params.get("username")?.trim() ?? "";
     const mode = params.get("mode") ?? "";
-    if (!isChessMode(mode)) throw new GiftApiError("INVALID_MODE", "Choose which rating.", 400);
+    if (!isChessClimb(mode)) throw new GiftApiError("INVALID_MODE", "Choose which rating.", 400);
+    // The rating and the puzzle record are read from the same page and judged by different guards: what says whether
+    // this reading has settled is the condition that owns this climb, never the first Chess.com one in the register.
+    const milestone = milestoneOfClimb(mode);
+    if (!milestone) throw new GiftApiError("INVALID_MODE", "Choose which rating.", 400);
     try {
       const standing = await readChessStanding(username, mode);
       if (standing.rating === null) throw new GiftApiError("NO_RATING", "No rating in that cadence yet.", 404);
       return NextResponse.json(
-        { username: standing.username, mode, rating: standing.rating, rd: standing.rd, best: standing.best, settled: CHESS_MILESTONE.settled(standing.rd), readAt: new Date().toISOString() },
+        { username: standing.username, mode, rating: standing.rating, rd: standing.rd, best: standing.best, settled: milestone.settled(standing.rd), readAt: new Date().toISOString() },
         { headers: NO_STORE },
       );
     } catch (error) {
@@ -38,7 +42,7 @@ export async function GET(request: Request) {
       if (error.code === "INVALID_USERNAME") throw new GiftApiError("INVALID_USERNAME", "That does not look like a Chess.com name.", 400);
       if (error.code === "PROFILE_NOT_FOUND") throw new GiftApiError("NO_SUCH_PROFILE", "No Chess.com player goes by that name.", 404);
       // Chess.com publishes the closing of an account on the same profile page, and a closed one can earn nothing (U1).
-      if (error.code === "ACCOUNT_CLOSED") throw new GiftApiError("ACCOUNT_CLOSED", CHESS_MILESTONE.words.refusals.closed, 409);
+      if (error.code === "ACCOUNT_CLOSED") throw new GiftApiError("ACCOUNT_CLOSED", milestone.words.refusals.closed, 409);
       throw new GiftApiError("SOURCE_UNAVAILABLE", "Chess.com is not answering. Try again in a moment.", 503);
     }
   } catch (error) {
