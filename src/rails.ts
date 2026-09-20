@@ -102,17 +102,25 @@ export const WAY_IN_GIFT_COIN: WayIn = {
   page: "https://app.ramp.network/?swapAsset=MONAD_AUSD&flow=onramp",
   arrives: "gift",
   delivers: { coin: "AUSD", network: "Monad" },
+  // `minPurchaseAmountEur: 6`, `minFeePercent: 0.99`, `maxFeePercent: 3.9`, `minFeeAmountEur: 2.49`, the same figures
+  // on 18 Sep and on 20 Sep 2026 at the endpoint above, with `MONAD_AUSD` enabled and not hidden.
   smallestEur: 6,
   fee: { percent: 3.9, upTo: true, minimum: 2.49, currency: "EUR" },
   conditions: ["Identity check the first time, once.", "A card or a bank account in your name."],
   source: "Ramp's own asset list",
-  read: "18 Sep 2026",
+  read: "20 Sep 2026",
   closedIn: RAIL_CLOSED_IN,
 };
 
 /**
  * Adding money by buying the chain's own coin, which is then swapped for what a gift holds. The rail Viky started
  * with (D20, D32), kept because it serves places the other may not.
+ *
+ * Its floor is published, not inferred: `fiat_payment_methods.EUR.limits.min` is "25" at
+ * `https://api.mercuryo.io/v1.6/lib/currencies` for card, Google Pay and Apple Pay, read 10 Sep, 14 Sep and again
+ * 20 Sep 2026. Their `public/convert` endpoint prices a 1 EUR purchase quite happily (fee 0.04 EUR, 20 Sep), and
+ * that is the same lesson as D79 on the other rail: an endpoint that quotes is not a service that pays. The
+ * published limit is the figure a screen may act on (D125).
  */
 export const WAY_IN_CHAIN_COIN: WayIn = {
   name: "Mercuryo",
@@ -124,7 +132,7 @@ export const WAY_IN_CHAIN_COIN: WayIn = {
   fee: { percent: 3.8, upTo: false, minimum: 0, currency: "EUR" },
   conditions: ["Identity check the first time, once.", "A card in your name."],
   source: "Mercuryo's own limits and currencies",
-  read: "14 Sep 2026",
+  read: "20 Sep 2026",
   // Buying the coin is shut in the United Kingdom as well as selling it: their own currencies endpoint lists `gb`
   // under both `restricted_countries_onramp` and `restricted_countries_offramp` for MON on MONAD, read on 15 Sep
   // 2026 at https://api.mercuryo.io/v1.6/lib/currencies (D72), and again on 16 Sep for D77.
@@ -167,6 +175,11 @@ export type PublishedFee = Readonly<{
  */
 export type WayOut = Readonly<{
   name: string;
+  /**
+   * What the card is called in the person's words: where the money goes, never who carries it (D124). The company is
+   * named where it is met, on the steps that open its page, and behind the fold that says where the figures come from.
+   */
+  title: string;
   /** Their own sell page, opened beside ours. */
   page: string;
   /** What this service buys, and therefore the coin the router must hand back (D77). Never printed. */
@@ -175,6 +188,11 @@ export type WayOut = Readonly<{
   coin: Hex;
   /** Where it pays, in one sentence, in the words a person would use. */
   where: string;
+  /**
+   * The one line under the figure on the card that decides (out.html, 19 Sep 2026): how it arrives, how soon, and
+   * where this way is shut. Everything else about this way is said on the step where it is met.
+   */
+  line: string;
   /** What they keep, as they publish it, and the sentence built from it for the card. */
   fee: PublishedFee;
   /** How soon they pay, in their own words. */
@@ -213,17 +231,16 @@ export function feeSentence(way: { name: string; fee: PublishedFee }): string {
  */
 export const WAY_OUT_EURO: WayOut = {
   name: "Ramp",
+  title: "Your bank",
   page: "https://app.ramp.network/?swapAsset=MONAD_USDC&flow=offramp",
   sells: "USDC on Monad",
   coin: USDC_ADDRESS,
   where: "To your bank account, in euros.",
+  line: "A transfer in euros through Ramp, within 2 business days. Not in Senegal or Ivory Coast.",
   fee: { percent: 0.99, upTo: false, minimum: 1.99, currency: "EUR" },
   pays: "within 2 business days",
-  conditions: [
-    "Identity check before your first payout, once.",
-    "The account must be in your own name.",
-    "It does not serve Senegal or Ivory Coast.",
-  ],
+  // What stops a person at the service itself, said on the step that opens its page and not on the card that decides.
+  conditions: ["Identity check before your first payout, once.", "The account must be in your own name."],
   // Payout methods and their countries: https://api.ramp.network/api/host-api/v3/payout-methods (SEPA in 35
   // countries including fr, card in 119 not including us; neither lists sn or ci). Their currencies endpoint
   // returns nothing sellable for sn and ci. The MiCA sentence and the asset table are from their own article
@@ -245,22 +262,20 @@ export const WAY_OUT_EURO: WayOut = {
  */
 export const WAY_OUT_CARD: WayOut = {
   name: "Mercuryo",
+  title: "Your card",
   page: "https://exchange.mercuryo.io/?type=sell&currency=MON&network=MONAD",
   sells: "MON on Monad",
   coin: NATIVE_OUT,
   where: "To your card.",
+  line: "Onto a Visa or Mastercard through Mercuryo. Not in France, the rest of Europe, or the United States.",
   fee: { percent: 3.95, upTo: true, minimum: 4, currency: "EUR" },
   pays: "onto a Visa or Mastercard card",
-  conditions: [
-    "Identity check before your first payout, once.",
-    "The card must be in your own name.",
-    "No card payout in France, the rest of the EEA, or the United States.",
-    "Selling is shut in the United Kingdom.",
-    // The six hours the order gives are said at step 2, where they start running, and not here as well: a sentence
-    // read on two screens is read twice and helps once (the simplest-journey pass, 19 Sep 2026). The fact and its
-    // source are unchanged, and the comment below still carries them.
-
-  ],
+  // What stops a person at the service itself, said on the step that opens its page. The United Kingdom, where
+  // selling is shut, is not a sentence here any more: the screen reads that restriction live from the endpoint
+  // below and says it under the card for whoever is there, and a sentence about selling on a card about a
+  // withdrawal was noise for everybody else (the founder, 20 Sep 2026). The six hours the order gives are said at
+  // step 2, where they start running.
+  conditions: ["Identity check before your first payout, once.", "The card must be in your own name."],
   // Selling restrictions for MON on MONAD: https://api.mercuryo.io/v1.6/lib/currencies, where
   // `restricted_countries_offramp` is exactly ["gb"], read 16 Sep 2026. The absence of card payouts in France,
   // the EEA and the United States is their help centre article of 15 Sep 2026 (D72). Fee and the six hour

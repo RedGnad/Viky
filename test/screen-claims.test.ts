@@ -333,9 +333,10 @@ test("the legal notice says exactly what the program lets the operator do, and n
 
   // The countries are the rails' own words, not a claim of our own.
   const rails = readFileSync("src/rails.ts", "utf8");
-  for (const said of ["It does not serve Senegal or Ivory Coast.", "No card payout in France, the rest of the EEA, or the United States.", "Selling is shut in the United Kingdom."]) {
+  for (const said of ["Not in Senegal or Ivory Coast.", "Not in France, the rest of Europe, or the United States."]) {
     assert.ok(rails.includes(said), `the way out no longer publishes "${said}"`);
   }
+  assert.match(rails, /`restricted_countries_offramp` is exactly \["gb"\]/, "the United Kingdom is read live from the endpoint named here (D124)");
   assert.match(legal, /does not serve Senegal or Ivory Coast/);
   assert.match(legal, /makes no payout in France, the rest of the\s+European Economic Area or the United States/);
   assert.match(legal, /cannot sell at all in the United Kingdom/);

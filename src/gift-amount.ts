@@ -1,3 +1,4 @@
+import type { RailReach } from "./rail-country";
 import type { WayIn } from "./rails";
 
 /**
@@ -76,28 +77,82 @@ export function arrivesInDollars(euros: number, way: WayIn, usdPerEur: number | 
  */
 export function eurosToBuy(shortfallUnits: bigint): number {
   if (shortfallUnits <= 0n) return 0;
+  return Math.max(SMALLEST_CARD_PAYMENT_EUR, eurosToCover(shortfallUnits));
+}
+
+/** The same figure before that rail's floor: what the gift needs of it, which decides whether it is offered (D125). */
+export function eurosToCover(shortfallUnits: bigint): number {
+  if (shortfallUnits <= 0n) return 0;
   const dollars = Number(shortfallUnits) / 1_000_000;
   const coins = dollars / DOLLARS_PER_COIN + UNSPENDABLE_COINS;
-  return Math.max(SMALLEST_CARD_PAYMENT_EUR, Math.ceil((coins / COIN_PER_EURO) * RATE_MARGIN));
+  return Math.ceil((coins / COIN_PER_EURO) * RATE_MARGIN);
 }
 
 /**
- * How many whole euros to pay on the way in the funder chose (D101).
+ * How many whole euros a way in needs for this shortfall, before its floor: what the person is asking of it (D125).
  *
  * The rail that sells the chain's coin keeps the model above: its coin moves daily, and the tenth added for the rate
  * is what stops a payment falling short. The rail that sells what a gift holds needs no such margin, because what it
  * sells does not move against the dollar: the euros are the dollars at the day's rate, plus that rail's own fee,
- * which is the larger of their share and their minimum, rounded up to the whole euro and never under their floor.
- * Whatever a payment leaves over stays in the person's own account for the next gift.
+ * which is the larger of their share and their minimum, rounded up to the whole euro.
  */
-export function eurosToBuyOn(shortfallUnits: bigint, way: WayIn, usdPerEur: number | undefined): number | undefined {
+export function eurosNeededOn(shortfallUnits: bigint, way: WayIn, usdPerEur: number | undefined): number | undefined {
   if (shortfallUnits <= 0n) return 0;
-  if (way.arrives === "chain") return Math.max(way.smallestEur, eurosToBuy(shortfallUnits));
+  if (way.arrives === "chain") return eurosToCover(shortfallUnits);
   if (!(usdPerEur !== undefined && usdPerEur > 0)) return undefined;
   const dollars = Number(shortfallUnits) / 1_000_000;
   const euros = dollars / usdPerEur;
   // Their fee both ways round: the share is taken out of what is paid, so the amount grows by 1/(1 - share).
   const withShare = way.fee.percent > 0 ? euros / (1 - way.fee.percent / 100) : euros;
   const withMinimum = euros + way.fee.minimum;
-  return Math.max(way.smallestEur, Math.ceil(Math.max(withShare, withMinimum)));
+  return Math.ceil(Math.max(withShare, withMinimum));
+}
+
+/**
+ * How many whole euros to pay on the way in the funder chose (D101): what it needs, and never under their floor.
+ * Whatever a payment leaves over stays in the person's own account for the next gift.
+ */
+export function eurosToBuyOn(shortfallUnits: bigint, way: WayIn, usdPerEur: number | undefined): number | undefined {
+  const needed = eurosNeededOn(shortfallUnits, way, usdPerEur);
+  if (needed === undefined) return undefined;
+  return needed === 0 ? 0 : Math.max(way.smallestEur, needed);
+}
+
+/** One way in as the sheet may offer it: what it costs for this gift, and whether that is only its floor. */
+export type WayInOffer = Readonly<{
+  way: WayIn;
+  /** The whole euros to pay on it, or nothing when no rate was read and this rail's figure needs one. */
+  euros: number | undefined;
+  /** True when the gift needs less than this rail's floor and the floor is what is paid, the rest staying yours. */
+  atFloor: boolean;
+}>;
+
+/**
+ * Which ways in a gift may be paid on, and in what order (D125).
+ *
+ * A way whose published floor is above what this gift needs is not offered for this gift: that is not a guess about
+ * the person, it is that service's own figure, and at 6 EUR the rail with a 2.49 EUR minimum fee would keep 41 % of
+ * the payment. Between the ways left, the one that asks the fewest euros for the same gift leaves the most in the
+ * account, and it goes first. A country never hides a way (D96): it may only send one that says it does not serve
+ * there to the back. And when no way's floor is met at all, the gift's own minimum does not move: the way with the
+ * lowest floor is offered at its floor, and what the payment leaves over stays in the person's account.
+ */
+export function waysInFor(
+  shortfallUnits: bigint,
+  ways: readonly WayIn[],
+  usdPerEur: number | undefined,
+  reach: Readonly<Record<string, RailReach>>,
+): readonly WayInOffer[] {
+  const rank = (way: WayIn) => (reach[way.name] === "does-not" ? 1 : 0);
+  const priced = ways.map((way) => ({ way, needed: eurosNeededOn(shortfallUnits, way, usdPerEur) }));
+  let offers: WayInOffer[] = priced
+    .filter(({ way, needed }) => needed === undefined || needed === 0 || needed >= way.smallestEur)
+    .map(({ way, needed }) => ({ way, euros: needed, atFloor: false }));
+  if (offers.length === 0) {
+    const lowest = [...ways].sort((left, right) => left.smallestEur - right.smallestEur)[0];
+    if (!lowest) return [];
+    offers = [{ way: lowest, euros: lowest.smallestEur, atFloor: true }];
+  }
+  const cost = (offer: WayInOffer) => offer.euros ?? Number.POSITIVE_INFINITY;
+  return offers.sort((left, right) => rank(left.way) - rank(right.way) || cost(left) - cost(right));
 }

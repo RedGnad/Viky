@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import type { Hex } from "viem";
 import { readCoinBalance } from "@/src/client/onchain";
 import { AUSD, coinAt, COINS, isNative, USDC } from "@/src/coins";
-import { readyFor, type Ready } from "@/src/exit-steps";
+import { dollarsToTheCent, readyFor, type Ready } from "@/src/exit-steps";
 import { WAYS_OUT, type WayOut } from "@/src/rails";
 
 /**
@@ -29,9 +29,9 @@ export function useHoldings(address: string | undefined): Holdings | null {
   return address ? holdings : null;
 }
 
-/** The dollars an account holds, of both dollar coins added. */
+/** The dollars an account holds, of both dollar coins, each cut to the cent before they are added (D124). */
 export function dollarsHeld(holdings: Holdings): bigint {
-  return (holdings[AUSD.symbol] ?? 0n) + (holdings[USDC.symbol] ?? 0n);
+  return dollarsToTheCent(holdings[AUSD.symbol] ?? 0n, holdings[USDC.symbol] ?? 0n);
 }
 
 /** What is ready to send to a payout service, if anything, with the service it is ready for. */
