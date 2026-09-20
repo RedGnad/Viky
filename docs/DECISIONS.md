@@ -3616,3 +3616,25 @@ behind an account cannot be photographed any other way.
 - Acceptance in `test/browser/home-order.spec.ts`, day and night, at the four widths: the order, one left edge, the
   title's step, no blur anywhere, nothing cut across, and at 1440x900 no scrolling with the card entire.
 - Replaces the composition of D128 (two columns from 1024) and, with it, the last of D127's.
+
+## D130, 20 Sep 2026: the column is centred at every width, and a card offers three lengths and no fourth
+
+- **The column.** The founder, on the production of that evening: the card and the text are not centred. Measured
+  across widths on viky.cash: at 360 to 430 the card filled the column and sat centred (16 each side), but from 480
+  the card stopped growing at its 440 and stayed on the left, with the air all on its right, 24 px at 480 and 559 at
+  1023. The column of the page without an account is now `.home-column`: below 1024 exactly the card's width plus its
+  margins, so the card, the text and the footer share two edges and the block sits in the middle of the window; from
+  1024 `fit-content`, which is the title at 76 on one line, centred the same way. The order of D129 does not move.
+- **The chips.** The founder saw "7 days, 30 days, 90 days" on one screen and "1 day, 30 days, 365 days" on another,
+  and asked why the two disagreed. They do not: the chips are the chosen condition's own bounds, and the two screens
+  held two different conditions. A daily condition is 7 to 90, suggested 30 (`DAILY_DURATION`); a climb, which is
+  what a chess rating is, is 1 to 365, suggested 30 (`src/milestone-conditions.ts`), and that is where the "1 day"
+  comes from: the register lets somebody back a single day of climbing. Whether a one-day gift should be offered at
+  all is a question for the register, not for the card, and it is asked of the founder rather than decided here.
+- **"Other" is removed**, on every size, as the founder asked. With it goes the field it opened and the two sentences
+  it carried (`otherLength`, `daysLabel`, `daysUnit` of the offer). **What that costs, said plainly:** a funder can
+  now choose only the three lengths the register gives that condition. A gift of 45 days cannot be made from the
+  card any more. Nothing else refuses it: the route still accepts any length inside the bounds, so the day it is
+  wanted back it is one chip away.
+- `test/browser/screens.spec.ts` counts the chips at three and asserts no "Other"; `test/gift-card.test.ts` holds the
+  three to `bounds.min`, `bounds.suggested` and `bounds.max`.

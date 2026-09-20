@@ -458,6 +458,23 @@ video {
  * not by a font size. The blur it wore (0 20px 44px at night) was the one shadow in the product with a blur, while
  * every key inside it sat on a hard offset; now it speaks the same language as its keys.
  */
+/*
+ * The column of the page without an account (D130). Below 1024 it is exactly the card's width plus its margins, so
+ * the card, the text and the footer share two edges and the whole block sits in the middle of the window: between
+ * 480 and 1023 the card stopped growing at 440 and stayed on the left, with up to 559 px of air on its right (the
+ * founder, 20 Sep 2026, measured on the production of that evening). From 1024 the column takes the width of its
+ * widest line, which is the title at 76 on one line, and centres that instead.
+ */
+.home-column {
+  max-width: calc(var(--gift-card-width) + 2 * var(--page-margin));
+}
+
+@media (min-width: 1024px) {
+  .home-column {
+    max-width: fit-content;
+  }
+}
+
 .gift-card-placed {
   border: 2px solid var(--card-placed-edge);
   box-shadow: none;

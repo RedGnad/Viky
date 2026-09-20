@@ -178,5 +178,6 @@ test("a gift on this result ends well inside the two years, on the screen as in 
   // The card offers the condition's own bounds and refuses anything outside them, for both milestone shapes.
   const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
   assert.match(card, /durationBounds\(draft\.conditionId\)/);
-  assert.match(card, /W\.daysUnit\(bounds\.min, bounds\.max\)/);
+  // Since D130 the card offers those bounds as its three chips and nothing else, so nothing outside them can be asked.
+  assert.match(card, /const quick = \[bounds\.min, bounds\.suggested, bounds\.max\];/);
 });

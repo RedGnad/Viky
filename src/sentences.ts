@@ -41,12 +41,8 @@ export const OFFER = {
   fromYou: "A gift from you",
   /** The figure the amount is typed beside, so the field holds the number and nothing else. */
   dollar: "$",
-  /** The lengths the register offers on the card, and the one that opens a field in their place. */
+  /** The three lengths the register gives the chosen condition, and there is no fourth on the card (D130). */
   someDays: (days: number) => `${days} ${days === 1 ? "day" : "days"}`,
-  otherLength: "Other",
-  daysLabel: "Days",
-  /** Beside the typed length: what it counts, and what the route will take. */
-  daysUnit: (min: number, max: number) => `days, ${min} to ${max}`,
   /** Under the action, for a gift counted by days: what one day of it is worth, and where the rest goes. */
   eachDay: (perDay: string) => `${perDay} a day. What they miss comes back to you.`,
   /** The name the card carries, and what it says while nobody has given one: "For  who?", the question in its place. */

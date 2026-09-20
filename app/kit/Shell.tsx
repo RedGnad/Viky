@@ -32,7 +32,7 @@ type Props =
        * that draws nothing.
        */
       bare?: boolean;
-      /** The page without an account from 1024: two columns, so the column is the wide one (D128). */
+      /** The page without an account: the column of `.home-column`, the card's width below 1024 and the title's from it (D130). */
       wide?: boolean;
       /** Home with an account: the column is the card's width plus its margins, so everything shares its edges (D128). */
       width?: "card";
@@ -60,7 +60,7 @@ export function Shell(props: Props) {
         : props.width === "card"
           ? "max-w-[calc(var(--gift-card-width)+2*var(--page-margin))]"
           : props.wide
-            ? "max-w-[1240px]"
+            ? "home-column"
             : "max-w-[var(--destination-max)]";
   // Room for the bar below it and beside the rail on a destination; a task and a document have neither.
   const room =
