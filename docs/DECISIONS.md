@@ -3425,3 +3425,24 @@ behind an account cannot be photographed any other way.
 - **What this does not change**: the two proofs of a badge, the hashed email that nothing matches, the day judged
   from the assertion, goal 11 and its provider id. The demo constraint that put AI Fundamentals first in a list has
   nothing left to order; the search shows what the funder types.
+
+## D123, 20 Sep 2026: Strava is closed, and the bounded trial is not launched
+
+- Statement, the founder's, 20 Sep 2026: Strava is closed. The bounded trial planned for it is not launched, and the
+  half day it would have taken is kept.
+- **The reason, for the record**, from Strava's API Agreement at strava.com/legal/api, read the same day, section
+  4.4: "Upon termination of this Agreement, you must promptly cease using and permanently delete all the Strava API
+  Materials, any links or access to the Strava Platform in your Developer Application, and all Strava Data provided
+  hereunder and so certify in writing to Strava." What Viky settles on the chain derives from that data, and a
+  public chain cannot delete anything: the day a gift was earned is written where nobody can unwrite it. The web
+  page is their official interface, so access was never the problem. The problem is that we would sign an
+  undertaking we know we cannot keep.
+- **Why the three open sources are different.** With Duolingo, Coursera and Credly nobody signs anything: Viky
+  reads a public page, in a grey area it has taken on knowingly and says so on the judges page. Strava's agreement
+  is the opposite: a signature, and a clause that a chain makes false the day it is signed.
+- **What stays in the repository.** `contracts/verifiers/VikyStravaReclaimVerifier.sol` and its two tests,
+  `test/VikyStravaReclaimVerifier.t.sol` and `test/VikyStravaRealProof.t.sol`, remain, unused and unwired, each
+  carrying this entry's number at its head. They are a working record of a reading that was proved and then
+  refused for a reason that is not technical, and deleting them would make that reason harder to find.
+- What this closes: D15 (Strava as a launch candidate) and the "Strava only through its official API" line of the
+  entry of 17 Sep. The spec's table says the same in one row.

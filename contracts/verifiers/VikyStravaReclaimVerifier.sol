@@ -5,6 +5,10 @@ import {Reclaim} from "@reclaimprotocol/solidity-sdk/contracts/Reclaim.sol";
 import {Claims} from "@reclaimprotocol/solidity-sdk/contracts/lib/Claims.sol";
 import {VikyProofTypes} from "./VikyProofTypes.sol";
 
+/// @dev CLOSED, D123 of 20 Sep 2026: not wired, not to be wired. Strava's API Agreement, section 4.4, requires on
+///      termination the permanent deletion of all Strava data and a written certification of it; what Viky settles
+///      on a public chain derives from that data and cannot be deleted. Kept as the record of a reading that was
+///      proved and then refused for a reason that is not technical.
 /// @notice Strict, stateless parser for the two canonical Viky Strava 6.0.0 request schemas.
 /// @dev Kept separate so both this parser and its witness-verifying caller fit EIP-170 independently.
 /// @dev 6.0.0 merges the former core/GPS/trainer requests into ONE combined activity claim. The 4-claim
