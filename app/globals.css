@@ -444,6 +444,35 @@ dialog.sheet-tall {
   max-height: 82dvh;
 }
 
+/*
+ * The part of a sheet that scrolls, and the sign that it does. A sheet is capped, so a long list ends part way
+ * through an item against the edge of the action, and an item cut clean reads as the last one. It fades out instead
+ * at whichever edge still hides something, which the sheet works out and writes on `data-more`. Both lengths are
+ * zero until then, so a sheet whose questions fit is drawn exactly as before.
+ */
+.sheet-body {
+  --fade-above: 0px;
+  --fade-below: 0px;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--fade-above),
+    #000 calc(100% - var(--fade-below)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-above), #000 calc(100% - var(--fade-below)), transparent 100%);
+}
+
+.sheet-body[data-more="above"],
+.sheet-body[data-more="both"] {
+  --fade-above: 24px;
+}
+
+.sheet-body[data-more="below"],
+.sheet-body[data-more="both"] {
+  --fade-below: 44px;
+}
+
 dialog.sheet::backdrop {
   background: var(--scrim);
 }

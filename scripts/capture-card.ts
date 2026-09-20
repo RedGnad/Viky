@@ -53,6 +53,10 @@ async function main() {
 
       await slot(1).click();
       await shot("03-sheet-will-list");
+      // The list is longer than the sheet on a phone, and the state the fade is for is the one further down it.
+      await sheet.locator(".sheet-body").evaluate((body) => body.scrollTo({ top: body.scrollHeight }));
+      await shot("03b-sheet-will-list-scrolled");
+      await sheet.locator(".sheet-body").evaluate((body) => body.scrollTo({ top: 0 }));
       await sheet.getByRole("radio", { name: /Duolingo lesson each day/ }).click();
       await page.waitForTimeout(200);
       await shot("04-sheet-will-questions");
@@ -75,9 +79,12 @@ async function main() {
       await context.close();
     }
   }
+  // The two facts a reviewer needs are the two this script is given: which site was walked, and when. Written from
+  // the values themselves, because a fixed sentence here said localhost and 19 September whatever was really read.
+  const day = new Date().toISOString().slice(0, 10);
   writeFileSync(
     `${OUT}/captures.md`,
-    ["# The card on Home, 19 Sep 2026", "", "Taken from the built site at http://localhost:3210, nothing signed in.", "", "| file | size | appearance | state |", "|---|---|---|---|", ...rows, ""].join("\n"),
+    [`# The card on Home, ${day}`, "", `Taken from ${SITE}, nothing signed in.`, "", "| file | size | appearance | state |", "|---|---|---|---|", ...rows, ""].join("\n"),
   );
   await browser.close();
   console.log(`captures for review: ${process.cwd()}/${OUT}`);

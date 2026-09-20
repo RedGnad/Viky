@@ -38,6 +38,11 @@ export function Sheet({
   /** Where a drag on the head began, and how far it has come: a sheet is dismissed by pulling it down. */
   const from = useRef<number | null>(null);
   const [pulled, setPulled] = useState(0);
+  /** The part that scrolls, and the block inside it, so both its window and its contents can be measured. */
+  const scroller = useRef<HTMLDivElement>(null);
+  const inside = useRef<HTMLDivElement>(null);
+  /** Which edge still has something behind it, which is what the fade is drawn from. */
+  const [more, setMore] = useState<"none" | "above" | "below" | "both">("none");
 
   useEffect(() => {
     const element = dialog.current;
@@ -45,6 +50,52 @@ export function Sheet({
     if (open && !element.open) element.showModal();
     if (!open && element.open) element.close();
   }, [open]);
+
+  /*
+    A sheet stops at 74 % of the height (D113) and its questions scroll inside it. What was missing was the sign that
+    they do: measured on a phone on 20 Sep 2026, the list of conditions showed three choices and three quarters of a
+    fourth, cut against the edge of the action, with nothing saying a fifth existed. So the scrolling part is read on
+    every scroll and on every change of size, its own or its contents', and it fades at whichever edge still hides
+    something. When everything fits, which is most sheets most of the time, nothing is drawn.
+  */
+  useEffect(() => {
+    const body = scroller.current;
+    const block = inside.current;
+    if (!body || !block) return;
+    const read = () => {
+      // A couple of pixels of slack: a scroll position is fractional, and an edge is either reached or it is not.
+      const above = body.scrollTop > 2;
+      const below = body.scrollTop + body.clientHeight < body.scrollHeight - 2;
+      setMore(above && below ? "both" : above ? "above" : below ? "below" : "none");
+    };
+    read();
+    body.addEventListener("scroll", read, { passive: true });
+    const watch = new ResizeObserver(read);
+    watch.observe(body);
+    watch.observe(block);
+    return () => {
+      body.removeEventListener("scroll", read);
+      watch.disconnect();
+    };
+  }, [open]);
+
+  /*
+    A sheet that changes what it says starts at the top of it. The one place this happens is choosing a condition: the
+    list becomes that condition's questions, and somebody who scrolled down to press the last choice would otherwise
+    arrive in the middle of the answer. The exception is a sheet that reopens on a list where something is already
+    chosen, which is what pressing "change" gives: then it starts on the answer that is already there.
+  */
+  useEffect(() => {
+    const body = scroller.current;
+    if (!body) return;
+    const chosen = body.querySelector<HTMLElement>("input:checked");
+    if (!chosen) {
+      body.scrollTo({ top: 0 });
+      return;
+    }
+    const room = chosen.getBoundingClientRect().top - body.getBoundingClientRect().top;
+    body.scrollTo({ top: Math.max(0, body.scrollTop + room - parseFloat(getComputedStyle(body).paddingTop)) });
+  }, [open, title]);
 
   return (
     <dialog
@@ -104,7 +155,11 @@ export function Sheet({
           height of its head and its action with the questions scrolled away inside. `min-h-0` is what lets it shrink
           when the sheet meets its cap, so a long list scrolls in itself instead of pushing the action out of frame.
         */}
-        <div className="min-h-0 flex-auto space-y-[var(--space-md)] overflow-y-auto px-[var(--space-lg)] py-[var(--space-md)]">{children}</div>
+        <div ref={scroller} data-more={more} className="sheet-body min-h-0 flex-auto overflow-y-auto px-[var(--space-lg)] py-[var(--space-md)]">
+          <div ref={inside} className="space-y-[var(--space-md)]">
+            {children}
+          </div>
+        </div>
         {footer ? (
           <div className="flex flex-col gap-[var(--tap-gap)] border-t border-[var(--divider)] px-[var(--space-lg)] pt-[var(--space-md)] pb-[calc(var(--space-lg)+env(safe-area-inset-bottom,0px))]">
             {footer}
