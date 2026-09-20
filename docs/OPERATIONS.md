@@ -237,6 +237,23 @@ handing ownership over moves no money.
 Renouncing would leave the goals, the evidence signer and the two pauses frozen as they are; money would keep moving,
 since no owner function touches it.
 
+## The first owner actions through the Safe: goals 10, 11 and 12
+
+Done on 20 Sep 2026, in one signing session, by two of the three project keys (the encrypted file and one paper
+phrase), carried by the relayer. No personal key of the founder's touched any of it. Each goal was read back from
+the contract with its provider id and its shape before the next was sent.
+
+| goal | source | shape | provider id | transaction |
+|---|---|---|---|---|
+| 10 | Coursera, a course certificate | 1, having it or not | `0xcd1e3323e174f3cfd7359500d0e2e0befdb34f9998a874e5cf2e2f1d1aa2a75d` | `0x61bce6c1bb92557a87f3a2b3056b9dae1f2b830a2786bfd780ce87314ecbc6e7`, block 106,321,654 |
+| 11 | Credly, a certification badge | 1, having it or not | `0xb51fb65622628e49e636bc88791f4d118dcc3ef91063975223e529556628ad62` | `0x27ca75bfbfcad66ee9b03286f5829622f92eeaa1d159d06b1871c98c5c698f6c`, block 106,321,662 |
+| 12 | Chess.com, the puzzle rating | 0, a climb | `0x5d3b3df90a426ae46f38985fb35c2c55511d811a8f6a091278f3b6964c5c36fe` | `0x5d2923dbe4ae4646d14b93377956be674d0bd2c1bd11f12a9454b084d8681ba6`, block 106,321,671 |
+
+How a session of several goals is signed at once, since the Safe's nonce moves by one per transaction: build each
+call with `NONCE=1`, `NONCE=2`, `NONCE=3` (from the Safe's nonce at the time) so the three hashes exist before anybody
+signs, have each key sign the three hashes in one sitting, then send them in nonce order, each one only after the
+one before it has landed. Six signatures, one sitting, no batching contract and no delegate call.
+
 ## The reading service is a second deployment, and it is not automatic
 
 `src/attested-sources.ts` and `src/chess-com.ts` run in two places: on Vercel, where the proof is judged, and in the
