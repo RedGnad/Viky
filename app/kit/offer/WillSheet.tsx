@@ -252,7 +252,7 @@ export function WillSheet({
               {reading.cadenceRefusal ? <p className="font-semibold">{reading.cadenceRefusal}</p> : null}
               {draft.standing === undefined ? (
                 <button type="button" className={SECONDARY_BUTTON} disabled={reading.busy} onClick={() => void readRating()}>
-                  {reading.busy ? M.detail.reading : M.detail.read}
+                  {reading.busy ? milestone.words.reading : milestone.words.read}
                 </button>
               ) : (
                 <Field
