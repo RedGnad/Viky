@@ -71,7 +71,7 @@ export function OfferCard() {
 
   return (
     <>
-      <section className={`gift-card-width ${CARD} flex flex-col gap-0 space-y-0`} aria-labelledby="offer-card">
+      <section className={`gift-card-width gift-card-placed ${CARD} flex flex-col gap-0 space-y-0`} aria-labelledby="offer-card">
         <h2 id="offer-card" className="sr-only">
           {W.title}
         </h2>

@@ -3529,3 +3529,40 @@ behind an account cannot be photographed any other way.
   chosen that morning ("the card fixed, not the layout"), with the one left edge; the hint was part of the other
   layout and is not on the page.
 - "Peu punchy" is a different question, the promise's wording, and it is not mixed into this decision.
+
+## D127, 20 Sep 2026: Home is the product, the card is its star, and the promise sits under it
+
+- Statement, the founder's, written as a specification the same evening D126 shipped, and inverting its hero on
+  purpose: the recommendation of a 76 px hero had measured Home against Wise, Revolut and Ramp, which are landing
+  pages whose job is to send a visitor to a product elsewhere. Home is the product. The vision of 19 Sep, section 5,
+  had said it from the start: the card to fill at the top, and under it one line of promise. Rule 4 adds one star
+  per screen; with the hero there were two, and the card lost: 114 px of it under the fold at 1440x788, measured on
+  production. The mockup that decides is `desktop.html` (second version) and `promise.html` shows the promise at its
+  size; the two-column version is deleted, not archived.
+- **The order, at every width.** The card first, the promise under it. The 76 px title above the card is gone, with
+  its tokens (`--type-hero`) and its class. The character keeps its place above the card.
+- **The card is an object placed on the page, not a panel floating over it.** It carries the rank by its edge and
+  its relief, not by a font size (the niche, "Neo Brutalism Juice": an object sits by a full offset, never a blur).
+  A 2 px edge (`--card-placed-edge`: the ink by day, the controls' night edge `#F3F0FA` at night) and a hard
+  `10px 10px 0` relief (`--card-placed-relief`: the ink `#1E1633` by day; at night the characters' lavender
+  `#BBA3FA`, where the ink would vanish into the ground, the same inversion `--control-relief-colour` already does).
+  What leaves the card: the blur `0 20px 44px rgba(0,0,0,.5)` and the transparent edge that went with it. Nothing
+  else in the card changes: radius 28, the amount the largest size on the screen, the chips from the condition.
+  Scope: the gift card (`.gift-card-placed` on `OfferCard`). The other cards of the product still wear
+  `--card-shadow`; the niche says no blur anywhere, and that is the next question to the founder, not a decision
+  taken here.
+- **The promise, under the card.** The title at 25 (Fredoka 600, leading 30, tracking -0.5, `var(--text)`), the
+  sentence at 16/24 in `var(--muted)`, at most 460 wide, 24 px between the card's bottom and the title, 6 between
+  the title and the sentence. The words do not change: "Money that arrives as they earn it." and the sentence under
+  it; `promise.html` holds candidates the founder will choose from separately.
+- **The composition.** One column, centred, at every width, and no second column. From 1024: centred in the
+  window, the card and the promise together centred in the height, text centred. Below 1024: as online at 390,
+  everything on the left edge, the card the full width less the margins. What fills a wide screen is air around
+  one object. The shell learns `bare` for the page without an account: no bar, no rail, and no 88 px kept for a
+  rail that draws nothing, which is what had the card 52 px right of centre.
+- **The acceptance test**, in `test/browser/home-card-first.spec.ts`, readable on a capture: (1) at 1440x900 the
+  whole card, button included, and the promise are visible without scrolling; (2) the card's centre within 10 px of
+  the window's; (3) `boxShadow` is a 10 px offset with no blur; (4) `rgb(187, 163, 250)` at night, `rgb(30, 22, 51)`
+  by day; (5) no text larger than the card's figure; (6) at 390 the same order and nothing cut across. A merge
+  waits on all six.
+- Supersedes the hero and the "one left edge above 1024" parts of D126. The scale rule of D126 stands.
