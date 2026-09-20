@@ -289,7 +289,9 @@ test("the art direction changed the colours and nothing else", () => {
   // 15 Sep, recorded in D65.
   assert.equal(TAP_TARGET, 48);
   assert.equal(TAP_GAP, 12);
-  assert.equal(PAGE_MARGIN.compact, 16);
+  // 20 on a phone since D133, which is a decision somebody took: the founder read the page as cramped against a
+  // real handset's edge, where Material's 16 is a floor and not a ceiling. This line is where that gets noticed.
+  assert.equal(PAGE_MARGIN.compact, 20);
   assert.equal(PAGE_MARGIN.medium, 24);
   assert.equal(APP_COLUMN_MAX, 480);
   assert.equal(PROSE_MAX_CH, 66);
@@ -455,6 +457,10 @@ test("no blur anywhere: no halo on the ground, no shadow under a card, and the g
   const night = css.slice(css.indexOf("@media (prefers-color-scheme: dark)"));
   assert.equal((night.match(new RegExp(`--card-placed-edge: ${CARD_PLACED.edge.dark};`, "g")) ?? []).length, 2, "both night blocks");
   assert.equal(CARD_PLACED.edge.dark, COLOURS.dark.controlBorder, "the night edge is the controls' edge");
+  // The head of the page is the one character with an edge, and the founder chose its two colours (D133): the ink
+  // at night, a light yellow by day, knowing that the yellow is under the ratio a control's border must hold.
+  assert.match(css, /--character-hero-edge: #FFE7A8;/);
+  assert.equal((css.match(/--character-hero-edge: #151026;/g) ?? []).length, 2, "both night blocks");
   assert.match(readFileSync("app/kit/offer/OfferCard.tsx", "utf8"), /gift-card-width gift-card-placed/, "and the one card is the one placed");
 });
 
