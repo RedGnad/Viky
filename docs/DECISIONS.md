@@ -3705,3 +3705,20 @@ behind an account cannot be photographed any other way.
 - **The card.** The condition line sits eight pixels lower: it is a control, and at the four pixels a caption gets
   it sat on the name's own box. And a gift with a goal to climb draws its one character in the middle of the card
   rather than at its left margin, where a single shape read as a row that had lost the rest of itself.
+
+## D134, 21 Sep 2026: a blend per appearance, an edge that is not black, bigger days, and a shorter sentence
+
+- **The night edge is not black.** The founder asked for a dark blue or violet, a shade above the ground and no
+  more: `#2A2247`, which measures 1.25:1 on the ink. Black had made the shape look bitten out of the page rather
+  than outlined.
+- **The blend is not the same by day as by night**, because the founder could not see the head character on the
+  lavender. Measured on that ground: the sun is 1.12:1, our pink 1.72, our violet 1.63, our blue 1.58. So the day
+  takes pink into violet, chosen on an image of the three (`review-captures/hero/day-blends.png`), and the night
+  keeps the sun into the pink, which reads on the ink. Two variables, `--character-hero-from` and `-to`, and the
+  head character is the one character that names no colour of the range.
+- **The days are bigger, twice asked for**: 60 on a card, where 42 left a sleeping day seventeen pixels tall and 52
+  was still small. And the sleeping shape itself is taller in its own box, because a day that sleeps is still a day:
+  at a quarter of its box it read as a line rather than as a character.
+- **The sentence under the title, shorter**, chosen by the founder from three: "Back their goal. They earn it day by
+  day, and the rest comes back to you." Fifteen words where there were seventeen, two lines on a phone where there
+  were three, and the difference still at the end of the sentence.

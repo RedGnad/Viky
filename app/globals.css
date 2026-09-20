@@ -111,6 +111,13 @@
    * the head of the page, and the founder took that trade knowingly.
    */
   --character-hero-edge: #FFE7A8;
+  /*
+   * The blend the head character is filled with, and it is not the same by day as by night (D134). On the lavender
+   * the sun measures 1.12:1 and goes quiet, which is what the founder saw; our pink and our violet measure 1.72 and
+   * 1.63 on it, so the day takes those two. The night keeps the sun into the pink, which reads on the ink.
+   */
+  --character-hero-from: #FF7F8E;
+  --character-hero-to: #B79BFF;
   --character-shade: rgba(30, 22, 51, 0.12);
   --character-shadow-opacity: 0.12;
 
@@ -255,7 +262,11 @@
     --card-edge: transparent;
     --card-shadow: none;
     --card-placed-edge: #F3F0FA;
-    --character-hero-edge: #151026;
+    --character-hero-edge: #2A2247;
+  --character-hero-from: #FFC531;
+  --character-hero-to: #FF8C98;
+    --character-hero-from: #FFC531;
+    --character-hero-to: #FF8C98;
     --tonal: #332A5E;
     --card-border: #352C52;
     --character-1: #FF8C98;
@@ -288,7 +299,7 @@
   --card-edge: transparent;
   --card-shadow: none;
   --card-placed-edge: #F3F0FA;
-  --character-hero-edge: #151026;
+  --character-hero-edge: #2A2247;
   --tonal: #332A5E;
   --card-border: #352C52;
   --character-1: #FF8C98;

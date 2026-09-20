@@ -83,9 +83,9 @@ const DIAMOND = roundedTriangle(
 const DIAMOND_BOX = "0 0 64 40";
 
 /**
- * The one blend in the product (D132, the founder choosing it on a sheet of six drawings): the head of the page is
- * the only character that is not a flat fill, and it goes from its tone's own two colours, the sun into the pink.
- * Everything else the product draws stays flat, which is the rule the niche gave on 20 Sep 2026.
+ * The one blend in the product (D132, D134): the head of the page is the only character that is not a flat fill, and
+ * its two colours are not the same by day as by night, because the sun goes quiet on the lavender ground and reads
+ * on the ink. Everything else the product draws stays flat, which is the rule the niche gave on 20 Sep 2026.
  */
 const DIAMOND_BLEND = "viky-diamond-blend";
 
@@ -139,14 +139,16 @@ function drawing(
   switch (state) {
     case "toCome":
       return {
-        body: <rect x={8} y={29} width={48} height={FLOOR - 29} rx={13} style={bodyFill(THREE)} />,
-        gloss: <Gloss cx={19} cy={35} r={4.2} dot={{ cx: 27, cy: 32.5, r: 2.1 }} />,
+        // Taller than it was, because a day that sleeps is still a day (D134): at a quarter of its box it read as a
+        // line rather than as a character, which is what the founder could not see in the card's row.
+        body: <rect x={8} y={25} width={48} height={FLOOR - 25} rx={15} style={bodyFill(THREE)} />,
+        gloss: <Gloss cx={19} cy={33} r={4.4} dot={{ cx: 27, cy: 30, r: 2.2 }} />,
         shade: <Shade cx={32} cy={51} rx={16} ry={2.4} />,
         face: face ? (
           <>
-            <ClosedEye x={24} y={41} />
-            <ClosedEye x={40} y={41} />
-            <circle cx={32 + gaze} cy={48} r={1.7} style={{ fill: FACE }} />
+            <ClosedEye x={24} y={39} />
+            <ClosedEye x={40} y={39} />
+            <circle cx={32 + gaze} cy={47} r={1.9} style={{ fill: FACE }} />
           </>
         ) : null,
       };
@@ -208,8 +210,8 @@ function drawing(
         defs: (
           <defs>
             <linearGradient id={DIAMOND_BLEND} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor={tone.box} />
-              <stop offset="1" stopColor={tone.ribbon} />
+              <stop offset="0" stopColor="var(--character-hero-from)" />
+              <stop offset="1" stopColor="var(--character-hero-to)" />
             </linearGradient>
           </defs>
         ),
