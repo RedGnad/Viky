@@ -27,9 +27,9 @@ const SIZES = [
 
 /** Each state, the device it is proved against, and the ground it must paint. */
 const STATES = [
-  { name: "as-your-device", stored: null, device: "dark", ground: COLOURS.dark.background, label: APPEARANCE.system },
-  { name: "day", stored: "light", device: "dark", ground: COLOURS.light.background, label: APPEARANCE.light },
-  { name: "night", stored: "dark", device: "light", ground: COLOURS.dark.background, label: APPEARANCE.dark },
+  { name: "as-your-device", stored: null, device: "dark", ground: COLOURS.dark.background, label: APPEARANCE.toggle },
+  { name: "day", stored: "light", device: "dark", ground: COLOURS.light.background, label: APPEARANCE.toggle },
+  { name: "night", stored: "dark", device: "light", ground: COLOURS.dark.background, label: APPEARANCE.toggle },
 ] as const;
 
 /** Six screens, every one of them reachable with no account: a destination, two tasks and three documents. */

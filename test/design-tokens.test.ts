@@ -288,27 +288,29 @@ test("the art direction changed the colours and nothing else", () => {
   assert.equal(SPACE.lg, 16);
 });
 
-test("the appearance follows the device until somebody chooses, and there are three states, not two", () => {
+test("the appearance follows the device until somebody chooses, and one press takes the other", () => {
   // Apple: "Avoid offering an app-specific appearance setting", because two settings that disagree read as a bug.
   // The control is back all the same (D97, 18 Sep 2026), and the way the two stop disagreeing is that the device is
   // the default and stays it until a person presses: "as your device" is a state, not the absence of one.
   assert.match(css, /@media \(prefers-color-scheme: dark\)\s*\{\s*:root:not\(\[data-theme="light"\]\) \{/, "a chosen day does not survive a dark device");
   assert.match(css, /:root\[data-theme="dark"\] \{/, "night cannot be asked for on a device set to light");
 
+  // Two appearances and no third to press through (the founder, 20 Sep 2026): the control shows the one the screen is
+  // in, decided by the same rule that paints the screen, and one press takes the other.
   const control = readFileSync("app/kit/Appearance.tsx", "utf8");
-  assert.match(control, /system: "light", light: "dark", dark: "system"/, "one press no longer walks the three states in order");
+  assert.match(control, /appearanceNow\(\) === "dark" \? "light" : "dark"/, "one press no longer takes the other appearance");
+  assert.doesNotMatch(control, /"system"/, "a third state is back on the control");
+  assert.match(control, /className="appearance-sun"/);
+  assert.match(control, /className="appearance-moon"/);
+  assert.match(css, /:root\[data-theme="dark"\] \.appearance-moon \{\s*display: inline;/, "the moon is not drawn by the rule that paints the night");
   assert.doesNotMatch(control, /--accent(?!-text)/, "the appearance control wears the accent, which belongs to the action and the destination");
   assert.match(control, /h-\[var\(--tap-target\)\] w-\[var\(--tap-target\)\]/, "the target is no longer the measured one");
-  assert.match(control, /aria-label=\{W\[choice\]\}/, "an icon alone says neither where the product is nor what a press does");
-  for (const state of ["system", "light", "dark"] as const) {
-    // Every name says the state it is in and what the next press does, which is what a screen reader has to work with.
-    assert.match(APPEARANCE[state], /^Appearance: .+\. Press .+\.$/, `the name of ${state} says less than the state and the press`);
-  }
+  assert.match(control, /aria-label=\{W\.toggle\}/, "an icon alone says neither what this is nor what a press does");
+  assert.match(APPEARANCE.toggle, /Press/, "the name says what a press does");
 
   // The choice lives in the person's own browser, and nowhere else: no account carries it, nothing is sent.
   const theme = readFileSync("src/theme.ts", "utf8");
   assert.match(theme, /localStorage\.setItem\(THEME_STORAGE_KEY/);
-  assert.match(theme, /delete document\.documentElement\.dataset\.theme/, "nothing hands the appearance back to the device");
   assert.match(readFileSync("app/layout.tsx", "utf8"), /THEME_BOOT_SCRIPT/, "a chosen appearance would flash the other one on every load");
 
   // In the header of every screen, not on some of them: the shell draws it beside the mark before it asks what kind

@@ -107,6 +107,10 @@ export function Sheet({
         <header
           className="flex touch-none flex-col gap-[var(--space-sm)] px-[var(--space-lg)] pt-[var(--space-sm)]"
           onPointerDown={(event) => {
+            // A press on the close button is a press on the close button. Capturing the pointer for the drag
+            // retargets its click to this header, and the button never hears it (the founder, 20 Sep 2026: "the
+            // cross does nothing").
+            if ((event.target as Element).closest("button")) return;
             from.current = event.clientY;
             event.currentTarget.setPointerCapture(event.pointerId);
           }}

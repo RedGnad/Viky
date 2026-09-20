@@ -191,9 +191,8 @@ export const HOME = {
  * what a press will do, because an icon alone says neither, and a reader that speaks the screen aloud has only this.
  */
 export const APPEARANCE = {
-  system: "Appearance: as your device. Press for day.",
-  light: "Appearance: day. Press for night.",
-  dark: "Appearance: night. Press to follow your device again.",
+  /** One control, one press: the other of day and night. What it shows is the one the screen is in. */
+  toggle: "Day or night. Press for the other.",
 } as const;
 
 export const DOOR = {
