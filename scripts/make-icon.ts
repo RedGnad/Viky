@@ -5,8 +5,9 @@ import { characterSvg } from "../app/kit/character-svg";
 import { COLOURS } from "../src/design-tokens";
 
 /**
- * The app's icon and the gift's drawing, written once into files (the art direction brief of 17 Sep 2026, section 7 bis): the gift character in
- * the hero colour, on a square tile the phone rounds itself. It is the third place a person meets Viky, after the link
+ * The app's icon and the gift's drawing, written once into files (the art direction brief of 17 Sep 2026, section 7
+ * bis). The icon is the head character, the diamond, on the ink tile a phone rounds itself (D135); the gift's own
+ * drawing stays the gift, because what it is used for is the picture under a gift's link. It is the third place a person meets Viky, after the link
  * preview and the morning message, and the first they see every day on their home screen.
  *
  * Run it whenever the look or the character changes: `pnpm make:icon`. It writes the sizes the manifest and the phones
@@ -41,16 +42,19 @@ const SIZES = [
 ];
 
 async function main() {
-  const svg = characterSvg("gift", { tone: "hero" });
-  writeFileSync(resolve("app/kit/gift-hero.svg"), `${svg}\n`);
+  // The link preview keeps the gift, because what it previews is a gift. The icon is the head of the page, which is
+  // the diamond since D131, and a phone's home screen shows what the product looks like at night (D135).
+  const gift = characterSvg("gift", { tone: "hero" });
+  writeFileSync(resolve("app/kit/gift-hero.svg"), `${gift}\n`);
   console.log("app/kit/gift-hero.svg");
+  const svg = characterSvg("diamond", { tone: "sun", appearance: "dark" });
   const browser = await chromium.launch();
   try {
     for (const { file, size } of SIZES) {
       const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
       await page.setContent(
-        `<!doctype html><body style="margin:0;width:${size}px;height:${size}px;background:${COLOURS.light.accent};display:flex;align-items:center;justify-content:center">` +
-          `<div style="width:${Math.round(size * 0.66)}px">${svg}</div></body>`,
+        `<!doctype html><body style="margin:0;width:${size}px;height:${size}px;background:${COLOURS.dark.background};display:flex;align-items:center;justify-content:center">` +
+          `<div style="width:${Math.round(size * 0.74)}px">${svg}</div></body>`,
       );
       const picture = await page.screenshot({ clip: { x: 0, y: 0, width: size, height: size } });
       await page.close();

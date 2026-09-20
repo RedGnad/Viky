@@ -93,7 +93,7 @@ test("the face turns as one piece under a pointer, inside the face the motion op
   for (const state of STATES) assert.match(draw(state), /<g data-part="face"[^>]*><g data-part="gaze">/);
 });
 
-test("on the app's icon the gift is drawn in the hero colour, and nowhere else does a character take the accent", () => {
+test("the hero tone belongs to the gift on the link preview, and nowhere else does a character take the accent", () => {
   const hero = renderToStaticMarkup(createElement(Character, { state: "gift", tone: "hero" }));
   // A third tone since the rendered mockups of 19 Sep 2026: the gift at the head of Home is a sun box with a pink
   // ribbon. The icon keeps the tone it was drawn in, which is why this is a tone of its own and not a change.
@@ -103,6 +103,11 @@ test("on the app's icon the gift is drawn in the hero colour, and nowhere else d
   assert.match(hero, /var\(--on-accent\)/);
   assert.match(hero, /var\(--accent\)/);
   assert.doesNotMatch(hero, /data-part="shadow"/, "a tile has no floor to cast a shadow on");
+  // Since D135 the icon is the head character on the ink tile, and the link preview keeps the gift.
+  const script = readFileSync("scripts/make-icon.ts", "utf8");
+  assert.match(script, /characterSvg\("diamond", \{ tone: "sun", appearance: "dark" \}\)/);
+  assert.match(script, /background:\$\{COLOURS\.dark\.background\}/);
+  assert.match(script, /characterSvg\("gift", \{ tone: "hero" \}\)/, "the link preview is still the gift");
   for (const state of STATES) assert.doesNotMatch(draw(state), /var\(--accent\)|var\(--on-accent\)/);
   // The tone is for the gift only: a day asked for it keeps its range.
   assert.equal(renderToStaticMarkup(createElement(Character, { state: "earned", tone: "hero" })).includes("--accent"), false);

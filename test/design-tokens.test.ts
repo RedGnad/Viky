@@ -460,8 +460,8 @@ test("no blur anywhere: no halo on the ground, no shadow under a card, and the g
   // The head of the page is the one character with an edge, and the founder chose its two colours (D133): the ink
   // at night, a light yellow by day, knowing that the yellow is under the ratio a control's border must hold.
   assert.match(css, /--character-hero-edge: #FFE7A8;/);
-  // At night it is a dark violet a shade above the ground (1.25:1), not black: the founder, 21 Sep 2026.
-  assert.equal((css.match(/--character-hero-edge: #2A2247;/g) ?? []).length, 2, "both night blocks");
+  // At night it is a violet above the ground, not black, and lighter than the first try: 1.62:1 (the founder, twice).
+  assert.equal((css.match(/--character-hero-edge: #3B3266;/g) ?? []).length, 2, "both night blocks");
   assert.match(readFileSync("app/kit/offer/OfferCard.tsx", "utf8"), /gift-card-width gift-card-placed/, "and the one card is the one placed");
 });
 

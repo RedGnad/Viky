@@ -39,7 +39,7 @@ for (const scheme of ["dark", "light"] as const) {
       await page.goto("/");
       await page.evaluate(() => document.fonts.ready);
 
-      const title = page.getByRole("heading", { name: "Money that cheers them on." });
+      const title = page.getByRole("heading", { name: "Send money that motivates." });
       await expect(title).toBeVisible();
       // The four boxes in one read, from the page itself: the character's wrapper carries no box of its own, so it is
       // the character's drawing that is measured, exactly as review-captures/measure-home.ts measures it.
