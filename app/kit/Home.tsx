@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useMemo } from "react";
 import { useAccount } from "@/src/account/provider";
 import { CATALOGUE, HOME as W, ME } from "@/src/sentences";
 import { BODY, HELP, HERO, LEAD, SECONDARY_BUTTON, TITLE } from "../components/ui";
@@ -16,7 +17,9 @@ import { Shell } from "./Shell";
 import { useMyGifts } from "./my-gifts";
 import { useMinute } from "./clock";
 import { charactersOf } from "./DayStrip";
-import { holdsAnything, useHoldings, useSawMoney } from "./money";
+import { holdsAnything, useHoldings, useSawMoney, type Holdings } from "./money";
+import type { HeldAmounts } from "@/src/reader-holdings";
+import type { GiftSummary } from "@/src/client/gift";
 
 /**
  * Home: a gift to fill in, and nothing in front of it (the product vision of 19 Sep 2026, sections 1 and 5).
@@ -28,7 +31,15 @@ import { holdsAnything, useHoldings, useSawMoney } from "./money";
  * What went: the button that opened an eight step assistant, and the example card that showed a gift nobody had
  * made. A page that offers a real object has no use for a picture of one (vision, section 9).
  */
-export function Home() {
+export function Home({ initialHoldings, initialGifts }: Readonly<{ initialHoldings?: HeldAmounts | null; initialGifts?: GiftSummary[] | null }> = {}) {
+  /**
+   * What the server read for this account while it drew the page (D160). Amounts cross as strings, because a
+   * balance has more digits than a browser number holds, and become amounts here.
+   */
+  const fromTheServer = useMemo(
+    () => (initialHoldings ? (Object.fromEntries(Object.entries(initialHoldings).map(([coin, held]) => [coin, BigInt(held)])) as Holdings) : null),
+    [initialHoldings],
+  );
   /**
    * Whose page this is, and only a session answers that (D149, correcting D147). For half a day this page asked the
    * device whether it held a passkey instead, to draw the right Home before the session cookie came back over the
@@ -37,8 +48,8 @@ export function Home() {
    * waits for the answer to the question it is actually asking.
    */
   const { address } = useAccount();
-  const holdings = useHoldings(address);
-  const { gifts, problem } = useMyGifts(address);
+  const holdings = useHoldings(address, fromTheServer);
+  const { gifts, problem } = useMyGifts(address, initialGifts);
   const nowMs = useMinute();
   /** Whether the room the way out takes is held while the balance is read (app/kit/money.ts). */
   const sawMoney = useSawMoney(holdings);

@@ -8,6 +8,7 @@ import { milestoneById, cadenceOfGoal, CHESS_MILESTONE } from "./milestone-condi
 import { runMilestoneReading } from "./milestone-reading";
 import { relayMilestoneClaim, relayMilestoneWithdraw } from "./milestone-relay";
 import { loadMilestoneStatus } from "./milestone-status";
+import type { MilestoneStatus } from "./milestone-view";
 import { followRename, loadMilestoneGift, setMilestoneCode } from "./milestone-store";
 import { chessClimbOfGoal } from "./chess-com";
 import { readMilestoneGift } from "./milestone-reader";
@@ -30,18 +31,28 @@ function viewerOf(request: Request): string | null {
   }
 }
 
-/** The state of a milestone gift for its page, for whoever is reading. The names and the code follow a daily gift's rules. */
-export async function milestoneStatusResponse(request: Request, record: GiftRecord): Promise<NextResponse> {
-  const viewer = viewerOf(request);
+export type RecordedRelay = Readonly<{ kind: string; txHash: string; blockNumber: string | null }>;
+
+/**
+ * The state of a milestone gift for its page, for whoever is reading. The names and the code follow a daily gift's
+ * rules. Separate from the response around it so the page can read it while it renders (D160).
+ */
+export async function milestoneStatusFor(
+  record: GiftRecord,
+  reader: Readonly<{ account: string | null; linkKey: string | null }>,
+): Promise<MilestoneStatus & { recorded: readonly RecordedRelay[] }> {
+  const viewer = reader.account?.toLowerCase() ?? null;
   const [state, relayed] = await Promise.all([readMilestoneGift(escrowOf(record), record.giftId), loadRelayed(record.giftId)]);
   const isRecipient = viewer !== null && state.recipient !== null && viewer === state.recipient.toLowerCase();
   const isFunder = viewer !== null && viewer === state.funder.toLowerCase();
-  const holdsTheLink = holdsGiftLink(record, new URL(request.url).searchParams.get("t"));
+  const holdsTheLink = holdsGiftLink(record, reader.linkKey);
   const { status } = await loadMilestoneStatus(record, { isRecipient, isFunder, holdsTheLink });
-  return NextResponse.json(
-    { ...status, recorded: relayed.map((entry) => ({ kind: entry.kind, txHash: entry.txHash, blockNumber: entry.blockNumber?.toString() ?? null })) },
-    { headers: NO_STORE },
-  );
+  return { ...status, recorded: relayed.map((entry) => ({ kind: entry.kind, txHash: entry.txHash, blockNumber: entry.blockNumber?.toString() ?? null })) };
+}
+
+export async function milestoneStatusResponse(request: Request, record: GiftRecord): Promise<NextResponse> {
+  const status = await milestoneStatusFor(record, { account: viewerOf(request), linkKey: new URL(request.url).searchParams.get("t") });
+  return NextResponse.json(status, { headers: NO_STORE });
 }
 
 export async function milestoneClaim(input: { record: GiftRecord; recipient: string }): Promise<NextResponse> {

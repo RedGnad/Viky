@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
 import { catchUpDay } from "@/src/catch-up";
@@ -24,6 +24,7 @@ import { giftOfMilestone, giftOfSummary, funderMayTakeItBack, readAs } from "@/s
 import { liveOf } from "@/src/gift-live";
 import { notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
 import { milestoneById } from "@/src/milestone-conditions";
+import type { AnyGiftStatus } from "@/src/gift-status";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { contractDayInWords, contractRangeInWords, dateInWords, momentInWords, nextPassMs } from "@/src/moments";
 import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
@@ -80,9 +81,17 @@ function screenMessage(error: unknown): string {
   return A.failed;
 }
 
-export function GiftPage({ giftId, linkKey }: Readonly<{ giftId: string; linkKey: string | null }>) {
-  const [status, setStatus] = useState<GiftStatus | MilestoneStatus | null>(null);
+/**
+ * The gift's screen. The gift itself comes from the server, read while the page rendered (D160): before that, this
+ * screen was built twice, once as "One moment" and once as the gift, and a phone showed the entrance animation of
+ * one tree and then the entrance animation of another. What the browser still does is ask again after something
+ * happens on the screen, which is a refresh of the same tree and not a second screen.
+ */
+export function GiftPage({ giftId, linkKey, initialStatus }: Readonly<{ giftId: string; linkKey: string | null; initialStatus?: AnyGiftStatus | null }>) {
+  const [status, setStatus] = useState<GiftStatus | MilestoneStatus | null>(initialStatus ?? null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  /** Whether the gift on screen is the one the server just read, which needs no second reading to be true. */
+  const asTheServerRead = useRef(Boolean(initialStatus));
 
   // Written as a promise rather than an await, so the state settles in a callback: a page that sets state in the body
   // of its own effect renders twice for every read.
@@ -99,6 +108,10 @@ export function GiftPage({ giftId, linkKey }: Readonly<{ giftId: string; linkKey
   );
 
   useEffect(() => {
+    if (asTheServerRead.current) {
+      asTheServerRead.current = false;
+      return;
+    }
     void reload();
   }, [reload]);
 

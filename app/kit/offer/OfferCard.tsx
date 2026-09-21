@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { useAccount } from "@/src/account/provider";
+import { useMoneyStart } from "@/src/client/money-start";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { formatAusd } from "@/src/gift-reader";
 import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type GiftDraft } from "@/src/gift-draft";
@@ -8,7 +9,6 @@ import { conditionById } from "@/src/conditions";
 import { cardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
 import { figureWithMark, typedFromUnits, unitsFromTyped } from "@/src/amount-in-currency";
 import { figureIn } from "@/src/currencies";
-import { MONEY_SETTLING } from "@/src/money-boot";
 import { startingFigure } from "@/src/starting-amount";
 import { dollarsHeld, type Holdings } from "../money";
 import { AmountError } from "@/src/money";
@@ -46,9 +46,12 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
   const { address } = useAccount();
   /**
    * The card itself, read from the device rather than copied into this screen (src/card-draft.ts). The server draws
-   * the starting card and the browser draws what was kept, and React is told how to go from one to the other.
+   * the card the cookie describes (D160) and this browser hydrates against that one, so a card kept from an earlier
+   * visit is printed once rather than replacing a starting card a moment after the page appears.
    */
-  const kept = useSyncExternalStore(subscribeToCardDraft, cardDraft, startingCardDraft);
+  const start = useMoneyStart();
+  const asTheServerDrew = useCallback(() => start.card ?? startingCardDraft(), [start.card]);
+  const kept = useSyncExternalStore(subscribeToCardDraft, cardDraft, asTheServerDrew);
   const money = useDisplayCurrency(address);
   /**
    * What the card starts on when nothing was kept on this device (D157): the account's own money when it holds any,
@@ -126,15 +129,6 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
     }
   };
   const quick = [bounds.min, bounds.suggested, bounds.max];
-  /**
-   * The figures have settled once the rate has answered (D155): the card kept here was read at the first render,
-   * and the currency is final the moment the rate is known or known to be missing. Until then a device that said
-   * its figures would change keeps them out of sight (src/money-boot.ts).
-   */
-  const balanceKnown = holdings !== null;
-  useEffect(() => {
-    if (money.ratesAsked && balanceKnown) document.documentElement.removeAttribute(MONEY_SETTLING);
-  }, [money.ratesAsked, balanceKnown]);
   /**
    * What the character at the head of the page is told (D148, the motion roadmap's step 2). With a pointer it is the
    * hover, and the face comes back when the pointer leaves. A finger has no hover, so the expression plays once when
@@ -244,7 +238,7 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                   this account reads in (D140, D141): one row that never wraps, and nothing at all below 480, where
                   a sentence carrying its rate's own day cannot fit beside a 39 pixel figure. */}
               <span className="flex items-baseline gap-x-[var(--space-sm)]">
-                <span data-money className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent-text)]`}>
+                <span className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent-text)]`}>
                   {/* The key that says what this card is read in, and that there is a list behind it (D152): the
                       mark in the house's own line, an edge, a relief and a chevron, like everything else that is
                       pressed here. A visitor has no page to set a currency on, so the card carries it (D144). */}
@@ -291,13 +285,13 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
               {/* One action, in the sun, full width, saying what it will take from the first second; shut, it says what it
                   is waiting for rather than its price (ui review, 20 Sep 2026: a muted "Pay $30.00" with no reason). */}
               <button type="button" className={`${PRIMARY_BUTTON} mt-[var(--space-lg)]`} disabled={!ready} onClick={() => setPaying(true)}>
-                <span data-money>{!filled.will ? W.finishWill : !filled.howLong ? W.chooseLength : units === undefined ? W.stillNeeded : W.pay(asked(units))}</span>
+                <span>{!filled.will ? W.finishWill : !filled.howLong ? W.chooseLength : units === undefined ? W.stillNeeded : W.pay(asked(units))}</span>
               </button>
               {/* What one day of it is worth, and nothing when there is no such figure. The pilot's ceiling is not a
                   standing notice any more (D138): it is what the amount says back to somebody who types past it,
                   under the amount itself, where a refusal belongs. */}
               {shape === "days" && units !== undefined && days > 0 ? (
-                <span data-money className={`block ${HELP} text-center`}>{W.eachDay(inTheirCurrency(units / BigInt(days)))}</span>
+                <span className={`block ${HELP} text-center`}>{W.eachDay(inTheirCurrency(units / BigInt(days)))}</span>
               ) : null}
             </>
           }

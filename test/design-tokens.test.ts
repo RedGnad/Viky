@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { globSync, readFileSync } from "node:fs";
+import { existsSync, globSync, readFileSync } from "node:fs";
 import { contrastRatio, NON_TEXT_CONTRAST_MINIMUM, parseHex, relativeLuminance, TEXT_CONTRAST_MINIMUM } from "../src/contrast.js";
 import { APPEARANCE } from "../src/sentences.js";
 import {
@@ -588,21 +588,30 @@ test("the worker never keeps a page, a payload or an answer about somebody", () 
 });
 
 /**
- * A card never shows a figure that is about to change (D155): a device that kept a card, chose a currency or sits
- * where the dollar is not the currency says so before the first paint, and the figures wait until they are true.
+ * A card prints the right figure the first time, because the server knew it (D160). What came before hid the
+ * figures behind a curtain until the browser had corrected them, which is how a card came to be shown with a hole
+ * in it. Nothing is hidden now, so nothing may reintroduce the curtain either.
  */
-test("a device whose figures are about to change keeps them out of sight until they are true", () => {
-  const boot = readFileSync("src/money-boot.ts", "utf8");
-  assert.match(boot, /export const MONEY_BOOT_SCRIPT = `try\{/, "the script is a string, run before the paint, and cannot throw");
-  assert.match(boot, /PENDING_GIFT_STORAGE_KEY/, "a kept card");
-  assert.match(boot, /viky\.displayCurrency/, "a chosen currency");
-  assert.match(boot, /NON_DOLLAR_REGIONS/, "a region whose currency is not the dollar");
-  assert.match(readFileSync("app/layout.tsx", "utf8"), /THEME_BOOT_SCRIPT \+ MONEY_BOOT_SCRIPT/, "run with the appearance's, before anything is painted");
-  assert.match(readFileSync("app/globals.css", "utf8"), /html\[data-money-settling\] \[data-money\] \{\n\s*visibility: hidden;/, "the figures wait, and the boxes stay");
+test("the money on a screen is decided by the server, and no figure is hidden while it settles", () => {
+  const layout = readFileSync("app/layout.tsx", "utf8");
+  assert.match(layout, /const money = await moneyForTheReader\(signedIn\)/, "the layout reads the currency and the rate while it renders");
+  assert.match(layout, /cardFromCookie\(\(await cookies\(\)\)\.get\(CARD_COOKIE\)/, "and the card this device kept, from its cookie");
+  assert.match(layout, /<MoneyStartProvider start=\{\{ currency: money\.currency, decided: money\.decided, rates: money\.rates, card: keptCard \}\}>/, "and hands all three to the screens");
+  const reader = readFileSync("src/reader-money.ts", "utf8");
+  assert.match(reader, /if \(input\.account\) return \{ currency: input\.account, decided: true \}/, "the account's own choice wins");
+  assert.match(reader, /if \(isDisplayCurrency\(input\.kept\)\) return \{ currency: input\.kept, decided: true \}/, "then the cookie this device wrote");
+  assert.match(reader, /decided: regionOf\(input\.language\) !== undefined/, "then the language, and it says when it only assumed");
+  const hook = readFileSync("src/client/display-currency.ts", "utf8");
+  assert.match(hook, /useState<Rates \| undefined>\(start\.rates \?\? undefined\)/, "a screen starts from the rate the server had");
+  assert.match(reader, /ratesUsable\(rates, Date\.now\(\)\) \? rates : null/, "and the server is what decides a rate is too old to use");
+  assert.match(hook, /useState\(start\.rates !== null\)/, "and does not say a rate is missing before anything was asked");
+  assert.match(hook, /const asked = forTheTab \?\? chosen \?\? \(start\.decided \|\| !language \? start\.currency : proposedDisplayCurrency\(language\)\)/, "and reads in what the server decided unless it only assumed");
+  assert.match(hook, /document\.cookie = `\$\{CURRENCY_COOKIE\}=\$\{currency\}/, "a press writes the cookie the server reads");
   const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
-  assert.equal((card.match(/data-money\b/g) ?? []).length, 3, "the amount, the action and the day's worth");
-  assert.match(card, /if \(money\.ratesAsked && balanceKnown\) document\.documentElement\.removeAttribute\(MONEY_SETTLING\)/, "and they are shown once the rate has answered and the balance is known (D157)");
-  assert.match(readFileSync("app/layout.tsx", "utf8"), /\{\.\.\.\(signedIn \? \{ "data-money-settling": "" \} : \{\}\)\}/, "a signed-in screen says so from the server");
+  assert.match(card, /useSyncExternalStore\(subscribeToCardDraft, cardDraft, asTheServerDrew\)/, "the card hydrates against the one the server drew");
+  assert.equal(card.includes("data-money"), false, "no figure is hidden while it settles");
+  assert.equal(existsSync("src/money-boot.ts"), false, "the script that hid them is gone");
+  assert.equal(readFileSync("app/globals.css", "utf8").includes("data-money-settling"), false, "and so is the rule it drove");
 });
 
 /**
@@ -612,8 +621,12 @@ test("a device whose figures are about to change keeps them out of sight until t
  */
 test("the server says who is signed in before the browser has to ask", () => {
   const layout = readFileSync("app/layout.tsx", "utf8");
-  assert.match(layout, /const signedIn = await whoIsSignedIn\(\);/, "read while the layout renders, on every screen");
-  assert.match(layout, /readAccountAuthSessionFrom\(store\.get\(ACCOUNT_AUTH_COOKIE_NAME\)\?\.value \?\? null, normalizedOrigin\(/, "the same check the routes make: the cookie, and the origin it was served on");
+  assert.match(layout, /const signedIn = await signedInAccount\(\);/, "read while the layout renders, on every screen");
+  assert.match(
+    readFileSync("src/who-is-reading.ts", "utf8"),
+    /readAccountAuthSessionFrom\(store\.get\(ACCOUNT_AUTH_COOKIE_NAME\)\?\.value \?\? null, normalizedOrigin\(/,
+    "the same check the routes make: the cookie, and the origin it was served on",
+  );
   assert.match(layout, /<AccountProvider initialAccount=\{signedIn\}>/, "and the provider starts from it");
   const provider = readFileSync("src/account/provider.tsx", "utf8");
   assert.match(provider, /useState<Address \| undefined>\(initialAccount\)/, "the first render, on the server and in the browser, already knows");

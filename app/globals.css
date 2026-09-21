@@ -742,6 +742,15 @@ dialog.sheet[open] {
   animation-delay: var(--page-enter-last-turn);
 }
 
+/*
+ * The first screen a document draws (D160). It has nothing to have come from, so it does not enter: it arrives,
+ * whole, in one fade. The turns are what made a cold load look half built, the words standing over an empty space
+ * where the card goes for as long as its turn took; the founder read that as the page loading a second time.
+ */
+.page-arrives {
+  animation: page-fade var(--page-enter-duration) var(--page-enter-easing) backwards;
+}
+
 @keyframes page-enter {
   from {
     transform: translateY(var(--page-enter-rise));
@@ -753,14 +762,6 @@ dialog.sheet[open] {
   from {
     opacity: 0;
   }
-}
-
-/*
- * A figure that is about to change is not shown (D155, src/money-boot.ts): the device says so before the first
- * paint, and the card says when its figures have settled. The boxes stay, so nothing moves; only the figures wait.
- */
-html[data-money-settling] [data-money] {
-  visibility: hidden;
 }
 
 /*

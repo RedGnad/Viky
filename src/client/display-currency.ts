@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { aboutInDisplayCurrency, figureInDisplayCurrency, isDisplayCurrency, proposedDisplayCurrency, SHOWN_IN_DOLLARS, type DisplayCurrency, type DisplayFigure } from "../display-currency";
+import { aboutInDisplayCurrency, CURRENCY_COOKIE, figureInDisplayCurrency, isDisplayCurrency, proposedDisplayCurrency, SHOWN_IN_DOLLARS, type DisplayCurrency, type DisplayFigure } from "../display-currency";
 import { CURRENCIES_WHEN_SILENT } from "../currencies";
 import { ratesUsable, type Rates } from "../rates";
 import { getJson, putJson } from "./api";
+import { useMoneyStart } from "./money-start";
 
 /**
  * The display currency of the account on this device, and the one line every money screen needs from it.
@@ -40,6 +41,9 @@ const noneOnTheServer = () => null;
 function keepInTheTab(currency: DisplayCurrency): void {
   try {
     window.sessionStorage.setItem(KEPT, currency);
+    // And in a cookie, which is the one thing the server can read while it draws the page (D160).
+    const secure = window.location.protocol === "https:" ? "; secure" : "";
+    document.cookie = `${CURRENCY_COOKIE}=${currency}; path=/; max-age=${365 * 24 * 60 * 60}; samesite=lax${secure}`;
   } catch {
     // Nothing kept, and nothing lost: what is read now is what the screens will use until the tab is closed.
   }
@@ -77,11 +81,17 @@ const deviceLanguage = () => navigator.language;
 const noLanguage = () => undefined;
 
 export function useDisplayCurrency(address: string | undefined): DisplayMoney {
+  /**
+   * What the server already knew (D160): the currency this reader reads in and the rate it had. The screens start
+   * from those rather than from the dollar and no rate, which is what made every figure change a moment after the
+   * page appeared. The browser still asks below, and confirms what is already on screen.
+   */
+  const start = useMoneyStart();
   const language = useSyncExternalStore(never, deviceLanguage, noLanguage);
-  const [rates, setRates] = useState<Rates | undefined>(undefined);
+  const [rates, setRates] = useState<Rates | undefined>(start.rates ?? undefined);
   const [offered, setOffered] = useState<readonly string[]>(CURRENCIES_WHEN_SILENT);
   /** Whether the source has answered at all. Not yet is not the same thing as no, and no screen may say it is. */
-  const [ratesAsked, setRatesAsked] = useState(false);
+  const [ratesAsked, setRatesAsked] = useState(start.rates !== null);
   // The choice, and whose it is, so an account signing out never keeps another account's currency.
   const [chosenFor, setChosenFor] = useState<{ address: string; currency: DisplayCurrency | null } | undefined>(undefined);
   /**
@@ -126,7 +136,13 @@ export function useDisplayCurrency(address: string | undefined): DisplayMoney {
   }, [address]);
 
   const chosen = address && chosenFor?.address === address ? chosenFor.currency : null;
-  const asked = forTheTab ?? chosen ?? proposedDisplayCurrency(language);
+  /**
+   * What this person reads in. The tab's own press wins, then the account's choice, then what the server decided
+   * from the cookie and the language it was asked in, which is the same decision the device would make and is
+   * already on the screen. `language` is nothing until the browser runs, so the server's answer is what holds the
+   * first render together.
+   */
+  const asked = forTheTab ?? chosen ?? (start.decided || !language ? start.currency : proposedDisplayCurrency(language));
   /**
    * What the screens read in, and it is the dollar until a rate makes another currency true (D151).
    *

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { giftPreview } from "@/src/gift-preview";
+import { giftStatusFor, type AnyGiftStatus } from "@/src/gift-status";
+import { signedInAccount } from "@/src/who-is-reading";
 import { GiftPage } from "../../components/GiftPage";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ t?: string }> };
@@ -45,10 +47,26 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   };
 }
 
+/**
+ * The gift as the server reads it while the page renders, or nothing when it cannot be read (D160).
+ *
+ * Nothing is not a failure: the screen then asks for it from the browser exactly as it did before, and says what
+ * went wrong in its own words. What this removes is the ordinary case, where the screen used to be built twice,
+ * once empty and once with the gift.
+ */
+async function giftOnTheServer(id: string, linkKey: string | null): Promise<AnyGiftStatus | null> {
+  try {
+    return await giftStatusFor(id, { account: (await signedInAccount()) ?? null, linkKey });
+  } catch {
+    return null;
+  }
+}
+
 /** The page a recipient lands on from the link. No install, no crypto words, one screen. */
 export default async function Page(props: Props) {
   const { id } = await props.params;
   const { t } = await props.searchParams;
   if (!/^\d{1,78}$/.test(id)) notFound();
-  return <GiftPage giftId={id} linkKey={keyOf(t)} />;
+  const linkKey = keyOf(t);
+  return <GiftPage giftId={id} linkKey={linkKey} initialStatus={await giftOnTheServer(id, linkKey)} />;
 }

@@ -5,6 +5,10 @@ import { expect, test, type Page } from "@playwright/test";
  * 8 pixels in 250 ms on Material's standard curve. The mark and the appearance control stand still, because they are
  * in the same place on every screen. Under reduced motion the page still arrives, by fading alone.
  *
+ * The entrance belongs to a page CHANGE (D160). The first screen a document draws has nothing to have come from, and
+ * the turns only made it look half built: it arrives whole, in one fade. So every test of the entrance here presses
+ * its way to a second screen first.
+ *
  * Every movement is written down as it starts rather than caught in the act: reading `document.getAnimations()` after
  * a page change is a race against a quarter of a second, and it is the race that fails, not the product.
  */
@@ -50,11 +54,32 @@ test.describe("the arrival on a screen", () => {
     await writeEachOneDown(page);
   });
 
+  test("the first screen a document draws arrives whole, in one fade, with no turns to leave holes in it", async ({ page }) => {
+    await page.goto("/me");
+    const arriving = await whatEntered(page);
+    expect(arriving.length).toBe(1);
+    expect(arriving[0].name).toBe("page-fade");
+    expect(arriving[0].ms).toBe(250);
+    expect(await page.locator("main").first().getAttribute("class")).toContain("page-arrives");
+    // And it stays arrived: nothing plays a second time once the screen has settled and the browser has caught up.
+    await expect.poll(() => stillPlaying(page), { timeout: 4000 }).toBe(0);
+    await page.waitForTimeout(500);
+    expect((await played(page)).length).toBe(1);
+  });
+
   test("what the page carries enters, rising, once, and the mark does not move", async ({ page }) => {
     // An app screen rather than a page of the footer: what matters is the way through the product itself (the
     // founder, 21 Sep 2026). Measured the same on the landing, the gifts, a gift and the way out.
-    await page.goto("/me");
-    const entering = await whatEntered(page);
+    await page.goto("/");
+    await expect.poll(() => stillPlaying(page), { timeout: 4000 }).toBe(0);
+    await forgetThem(page);
+    await page.getByRole("link", { name: /What Viky can check/i }).first().click();
+    await expect(page).toHaveURL(/what-viky-can-check/);
+    await whatEntered(page);
+    // Every block, not only the first few: the turns run for 350 ms, so what entered is read once they are done.
+    await expect.poll(() => stillPlaying(page), { timeout: 4000 }).toBe(0);
+    const entering = await played(page);
+    expect(entering.length).toBeGreaterThan(1);
     for (const one of entering) {
       expect(one.name).toBe("page-enter");
       expect(one.ms).toBe(250);
@@ -65,10 +90,10 @@ test.describe("the arrival on a screen", () => {
       expect(one.rise).toBeLessThanOrEqual(8);
       expect(one.inTheMark).toBe(false);
     }
-    // It plays once and leaves nothing behind it: the page is where it belongs a quarter of a second later.
-    await expect.poll(() => stillPlaying(page), { timeout: 4000 }).toBe(0);
-    const mark = page.locator("main.page-enters > header .page-mark a").first();
+    // It plays once and leaves nothing behind it: the page is where it belongs, and nothing enters a second time.
+    const mark = page.locator("main.page-enters .page-mark a").first();
     expect(await mark.evaluate((element) => getComputedStyle(element).transform)).toBe("none");
+    await page.waitForTimeout(500);
     expect((await played(page)).length).toBe(entering.length);
   });
 
@@ -88,9 +113,12 @@ test.describe("the arrival on a screen", () => {
     expect((await whatEntered(page)).every((one) => one.name === "page-enter")).toBe(true);
   });
 
-  /** A block drawn once its data has landed enters where it lands, which is what a gift's page does with its card. */
+  /** A block drawn once its data has landed enters where it lands, on a screen reached from another screen. */
   test("a block that arrives after the page has arrived enters too", async ({ page }) => {
     await page.goto("/");
+    await expect.poll(() => stillPlaying(page), { timeout: 4000 }).toBe(0);
+    await page.getByRole("link", { name: /What Viky can check/i }).first().click();
+    await expect(page).toHaveURL(/what-viky-can-check/);
     await expect.poll(() => stillPlaying(page), { timeout: 4000 }).toBe(0);
     const arriving = await page.evaluate(
       () =>
@@ -108,7 +136,11 @@ test.describe("the arrival on a screen", () => {
     test.use({ reducedMotion: "reduce" });
 
     test("the page still arrives, by fading, and nothing travels", async ({ page }) => {
-      await page.goto("/me");
+      await page.goto("/");
+      await expect.poll(() => stillPlaying(page), { timeout: 4000 }).toBe(0);
+      await forgetThem(page);
+      await page.getByRole("link", { name: /What Viky can check/i }).first().click();
+      await expect(page).toHaveURL(/what-viky-can-check/);
       const entering = await whatEntered(page);
       for (const one of entering) {
         expect(one.name).toBe("page-fade");

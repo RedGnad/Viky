@@ -1,15 +1,17 @@
 import { SerwistProvider } from "@serwist/turbopack/react";
 import type { Metadata, Viewport } from "next";
-import { cookies, headers } from "next/headers";
-import type { Address } from "viem";
-import { ACCOUNT_AUTH_COOKIE_NAME, normalizedOrigin, readAccountAuthSessionFrom } from "@/src/account-auth-server";
+import { cookies } from "next/headers";
+import { signedInAccount } from "@/src/who-is-reading";
 import { APPEARANCE_COOKIE } from "@/src/theme";
 import { loadPreferences } from "@/src/preferences-store";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { dmSans, fredoka } from "./fonts";
 import { AccountProvider } from "@/src/account/provider";
-import { MONEY_BOOT_SCRIPT } from "@/src/money-boot";
+import { MoneyStartProvider } from "@/src/client/money-start";
+import { CARD_COOKIE, cardFromCookie } from "@/src/card-cookie";
+import { draftFromTerms } from "@/src/gift-draft";
+import { moneyForTheReader } from "@/src/reader-money";
 import { THEME_BOOT_SCRIPT } from "@/src/theme";
 import { Pressed } from "./kit/Pressed";
 import { Register } from "./serwist/Register";
@@ -96,7 +98,7 @@ export async function generateViewport(): Promise<Viewport> {
 async function chosenAppearance(): Promise<"light" | "dark" | null> {
   const onTheDevice = (await cookies()).get(APPEARANCE_COOKIE)?.value;
   if (onTheDevice === "light" || onTheDevice === "dark") return onTheDevice;
-  const account = await whoIsSignedIn();
+  const account = await signedInAccount();
   if (!account) return null;
   try {
     return (await loadPreferences(account)).appearance;
@@ -106,41 +108,33 @@ async function chosenAppearance(): Promise<"light" | "dark" | null> {
   }
 }
 
-async function whoIsSignedIn(): Promise<Address | undefined> {
-  try {
-    const [store, sent] = await Promise.all([cookies(), headers()]);
-    const host = sent.get("x-forwarded-host") ?? sent.get("host");
-    if (!host) return undefined;
-    const proto = sent.get("x-forwarded-proto") ?? (/^(localhost|127\.0\.0\.1)(:|$)/.test(host) ? "http" : "https");
-    return readAccountAuthSessionFrom(store.get(ACCOUNT_AUTH_COOKIE_NAME)?.value ?? null, normalizedOrigin(`${proto}://${host}`)).account;
-  } catch {
-    return undefined;
-  }
+/** The card this device kept, as its cookie describes it, ready for the screens to draw (D160). */
+async function cardThisDeviceKept() {
+  const terms = cardFromCookie((await cookies()).get(CARD_COOKIE)?.value, Date.now());
+  return terms ? draftFromTerms(terms) : null;
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const signedIn = await whoIsSignedIn();
+  const signedIn = await signedInAccount();
   /**
    * Day or night as this account chose it, written on the document itself (D159). The device answers first, before
    * anything is painted, and this is what carries the choice to a device that has never been told: a new phone, a
    * browser that forgot, the installed app beside the browser it was chosen in.
    */
   const chosen = await chosenAppearance();
+  /**
+   * The money this reader's screens start from (D160): the currency the account chose or this device wrote down,
+   * the rate the server keeps, and the card the device kept. Read here, once, so every screen under it prints the
+   * right figure in the first byte instead of printing the dollar and correcting it.
+   */
+  const money = await moneyForTheReader(signedIn);
+  const keptCard = await cardThisDeviceKept();
   return (
     // The look's font variables sit on the document itself, because app/globals.css reads them from :root.
-    // Signed in, the card's figures wait for the account's money and the rate (D157): the server knows the person,
-    // so the server says the figures are about to change, as the boot script does for a device that kept a card.
-    <html
-      lang="en"
-      dir="ltr"
-      className={`${fredoka.variable} ${dmSans.variable}`}
-      {...(chosen ? { "data-theme": chosen } : {})}
-      {...(signedIn ? { "data-money-settling": "" } : {})}
-    >
+    <html lang="en" dir="ltr" className={`${fredoka.variable} ${dmSans.variable}`} {...(chosen ? { "data-theme": chosen } : {})}>
       <body className="antialiased">
-        {/* Before anything is painted, so a chosen appearance never flashes the other one first (D97), and so a card
-            whose figures are about to change shows none until they have (D155). */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT + MONEY_BOOT_SCRIPT }} />
+        {/* Before anything is painted, so a chosen appearance never flashes the other one first (D97). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         {/* The worker is registered by `Register`, not by the provider, so a browser that refuses one is refused
             quietly rather than throwing on every screen (D150).
             `reloadOnOnline` is off (D153): the library reloads the whole page on every `online` event, which a phone
@@ -150,7 +144,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <Register />
           {/* A press a finger can see, on every control, once (D154). */}
           <Pressed />
-          <AccountProvider initialAccount={signedIn}>{children}</AccountProvider>
+          <AccountProvider initialAccount={signedIn}>
+            <MoneyStartProvider start={{ currency: money.currency, decided: money.decided, rates: money.rates, card: keptCard }}>{children}</MoneyStartProvider>
+          </AccountProvider>
         </SerwistProvider>
       </body>
     </html>
