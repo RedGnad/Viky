@@ -84,9 +84,18 @@ test("the page lists every condition the register holds, offered or not, by fami
     FAMILIES.filter(({ id }) => CONDITIONS.some((condition) => condition.family === id)).map(({ title }) => title),
     "the families are the register's, in its order",
   );
+  const language = sections.find((section) => section.family === "language");
+  assert.ok(language, "the language family is on the page");
+  assert.ok(
+    language.conditions.findIndex((condition) => condition.id === "duolingo-daily") <
+      language.conditions.findIndex((condition) => condition.id === "duolingo-english-test"),
+    "the daily lesson comes before the test",
+  );
   for (const section of sections) {
     const names = section.conditions.map((condition) => condition.name);
-    assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, "en")), `${section.family} is alphabetical inside`);
+    // In the register's own order inside a family, not the alphabet's (D139): the first line of a family is the one
+    // to offer first, and the founder put the daily lesson before the test because it asks less of the recipient.
+    assert.deepEqual(names, CONDITIONS.filter((condition) => condition.family === section.family).map((condition) => condition.name), `${section.family} follows the register`);
   }
 });
 

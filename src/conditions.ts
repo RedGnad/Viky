@@ -578,6 +578,8 @@ function sectioned(conditions: readonly Condition[]): readonly ConditionSection[
   return FAMILIES.map(({ id, title }) => ({
     family: id,
     title,
-    conditions: conditions.filter((condition) => condition.family === id).sort((a, b) => a.name.localeCompare(b.name, "en")),
+    // In the register's own order, never the alphabet's (D139): inside a family the first line is the one to offer
+    // first, and the founder put the daily lesson before the test because it asks less of whoever receives it.
+    conditions: conditions.filter((condition) => condition.family === id),
   })).filter((section) => section.conditions.length > 0);
 }

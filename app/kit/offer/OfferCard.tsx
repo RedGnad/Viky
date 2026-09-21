@@ -1,6 +1,7 @@
 "use client";
 import { useState, useSyncExternalStore } from "react";
 import { useAccount } from "@/src/account/provider";
+import { useDisplayCurrency } from "@/src/client/display-currency";
 import { formatAusd } from "@/src/gift-reader";
 import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type GiftDraft } from "@/src/gift-draft";
 import { conditionById } from "@/src/conditions";
@@ -53,6 +54,10 @@ export function OfferCard() {
   const condition = conditionById(draft.conditionId);
   const shape = shapeOf(draft.conditionId);
   const bounds = durationBounds(draft.conditionId);
+  // What the figure is worth in the currency this account reads in (decision 1 of 17 Sep 2026). The gift itself is
+  // signed in dollars, which is what the card takes; the conversion is said under it, with its rate's own day, and
+  // nothing at all is said when the account reads in dollars or when no rate answered (D139).
+  const money = useDisplayCurrency(address);
   const filled = filledCases(draft);
   const ready = isComplete(draft) && units !== undefined;
   const recipient = draft.recipientName.trim();
@@ -168,6 +173,9 @@ export function OfferCard() {
                 </span>
               </span>
               {amountRefusal ? <span className={`block ${HELP} text-[var(--on-surface)]`}>{amountRefusal}</span> : null}
+              {!amountRefusal && units !== undefined && money.about(units) ? (
+                <span className={`block ${HELP}`}>{`${money.about(units)![0].toUpperCase()}${money.about(units)!.slice(1)}.`}</span>
+              ) : null}
 
               {/* How long, on the card: the three lengths the register gives this condition, and no fourth (D130).
                   The chip that opened a field for any other number is gone: the founder asked for it on both sizes,
