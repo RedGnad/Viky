@@ -7,12 +7,13 @@ import { formatAusd } from "@/src/gift-reader";
 import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type GiftDraft } from "@/src/gift-draft";
 import { conditionById } from "@/src/conditions";
 import { cardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
-import { currencyMarks, readableFigure, typedFromUnits, unitsFromTyped } from "@/src/amount-in-currency";
+import { figureWithMark, readableFigure, typedFromUnits, unitsFromTyped } from "@/src/amount-in-currency";
 import { AmountError } from "@/src/money";
 import { OFFER as W } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { CardFace } from "../GiftCard";
 import { Character } from "../Character";
+import { MoneyMark } from "../MoneyMark";
 import { DayStrip } from "../DayStrip";
 import { PaySheet } from "./PaySheet";
 import { WillSheet } from "./WillSheet";
@@ -64,7 +65,6 @@ export function OfferCard() {
   const ready = isComplete(draft) && units !== undefined;
   const recipient = draft.recipientName.trim();
   const days = Number(draft.days);
-  const marks = currencyMarks(money.currency);
   /**
    * What the person typed, in their own currency, and the dollars it makes, which is what the draft carries and what
    * is signed (D143). The typed text is held here rather than derived on every render: turning euros into dollars and
@@ -74,7 +74,7 @@ export function OfferCard() {
   const typed = typedAmount ?? typedFromUnits(draftUnits(draft) ?? 0n, money.currency, money.rates);
   /** A figure the person reads: their own currency, with its own marks, and the dollar when that is what they read. */
   const inTheirCurrency = (amount: bigint) =>
-    `${marks.before}${readableFigure(typedFromUnits(amount, money.currency, money.rates), money.currency)}${marks.after}`;
+    figureWithMark(readableFigure(typedFromUnits(amount, money.currency, money.rates), money.currency), money.currency);
   /** The three the product reads in, in the register's order: pressing the mark takes the next one. */
   const readInTheNext = () => {
     const next = DISPLAY_CURRENCIES[(DISPLAY_CURRENCIES.indexOf(money.currency) + 1) % DISPLAY_CURRENCIES.length];
@@ -169,14 +169,11 @@ export function OfferCard() {
                   <Character state="toCome" className="h-auto w-[60px]" standing={false} />
                 </span>
               ) : (
-                <div className="day-row-frame">
-                  <DayStrip
-                    id={GIFT_ID}
-                    gift={{ startDay: 0, endDay: 0, durationDays: Number.isInteger(days) && days > 0 ? days : bounds.suggested, creditedDays: 0, missedDays: 0 }}
-                    catchUpSeconds={0}
-                  />
-                  <span aria-hidden className="day-row-fade" />
-                </div>
+                <DayStrip
+                  id={GIFT_ID}
+                  gift={{ startDay: 0, endDay: 0, durationDays: Number.isInteger(days) && days > 0 ? days : bounds.suggested, creditedDays: 0, missedDays: 0 }}
+                  catchUpSeconds={0}
+                />
               )}
             </div>
           }
@@ -190,14 +187,13 @@ export function OfferCard() {
                   a sentence carrying its rate's own day cannot fit beside a 39 pixel figure. */}
               <span className="flex items-baseline gap-x-[var(--space-sm)]">
                 <span className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent-text)]`}>
-                  {/* The currency's own mark, in the text face because the title face draws a money sign nobody
-                      recognises (the founder, 21 Sep 2026), and it is the control that changes what everything on
-                      this card is read in (D144): a visitor has no page to set that on. */}
-                  {marks.before ? (
-                    <button type="button" onClick={readInTheNext} aria-label={W.currencyLabel(money.currency)} className="-mx-[var(--space-xs)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center justify-center font-[family-name:var(--font-text)]">
-                      {marks.before}
-                    </button>
-                  ) : null}
+                  {/* The currency's own mark, drawn in the house's own line because neither face carries one that
+                      belongs beside this figure (app/kit/MoneyMark.tsx), and it is the control that changes what
+                      everything on this card is read in (D144): a visitor has no page to set that on. It stands in
+                      front of the figure in every currency, so pressing it never moves the field (D145). */}
+                  <button type="button" onClick={readInTheNext} aria-label={W.currencyLabel(money.currency)} className="-mx-[var(--space-xs)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center justify-center">
+                    <MoneyMark currency={money.currency} />
+                  </button>
                   <input
                     value={typed}
                     onChange={(event) => typeAmount(event.target.value)}
@@ -206,13 +202,9 @@ export function OfferCard() {
                     maxLength={9}
                     size={Math.max(4, typed.length + 1)}
                     autoComplete="off"
-                    className="min-h-[var(--tap-target)] min-w-[var(--tap-target)] bg-transparent tabular-nums outline-none"
+                    /* A step of air after the mark, so three letters never run into the figure they stand beside. */
+                    className="min-h-[var(--tap-target)] min-w-[var(--tap-target)] bg-transparent pl-[var(--space-xs)] tabular-nums outline-none"
                   />
-                  {marks.after ? (
-                    <button type="button" onClick={readInTheNext} aria-label={W.currencyLabel(money.currency)} className="-mx-[var(--space-xs)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center justify-center font-[family-name:var(--font-text)]">
-                      {marks.after}
-                    </button>
-                  ) : null}
                 </span>
 
               </span>

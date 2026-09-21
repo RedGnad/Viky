@@ -1,5 +1,5 @@
 "use client";
-import { useSyncExternalStore } from "react";
+import { useCallback, useRef, useSyncExternalStore, type CSSProperties, type RefObject } from "react";
 import { stripOf, type StripDay } from "@/src/day-states";
 import { Character, type CharacterState } from "./Character";
 import { ArrivalDay } from "./Motion";
@@ -30,6 +30,73 @@ function everyMinute(changed: () => void): () => void {
 const thisMinute = () => Math.floor(Date.now() / 60_000) * 60_000;
 const noClock = () => 0;
 
+/**
+ * How much of a row is hidden at each end, in pixels, as one string: React reads a snapshot on every render, and two
+ * numbers in a fresh object would be a new snapshot every time.
+ */
+export type HiddenEdges = string;
+
+/** The longest a fade may be, which is about the width of one day: past that it says nothing more. */
+const FADE_MAX = 56;
+
+const stillHidden = (row: HTMLElement | null): HiddenEdges => {
+  if (!row) return "0,0";
+  const left = Math.min(FADE_MAX, Math.max(0, Math.round(row.scrollLeft)));
+  const right = Math.min(FADE_MAX, Math.max(0, Math.round(row.scrollWidth - row.clientWidth - row.scrollLeft)));
+  return `${left},${right}`;
+};
+
+/**
+ * The fade at each end, as long as what that end actually hides, up to one day's width. A row hiding seven pixels
+ * fades by seven: a fade the width of a whole character over seven hidden pixels dims a day that is entirely there.
+ */
+export function fadeOf(hidden: HiddenEdges): CSSProperties {
+  const [left, right] = hidden.split(",");
+  return { "--fade-left": `${left}px`, "--fade-right": `${right}px` } as CSSProperties;
+}
+
+/** Whether either end still hides a day, which is what says "scroll for the rest" and nothing else. */
+export const rowCarriesOn = (hidden: HiddenEdges) => hidden !== "0,0";
+
+/** Which ends hide something, for a capture and a test to read: "none", "left", "right" or "both". */
+export function endsHidden(hidden: HiddenEdges): "none" | "left" | "right" | "both" {
+  const [left, right] = hidden.split(",").map(Number);
+  return left && right ? "both" : left ? "left" : right ? "right" : "none";
+}
+
+/**
+ * Which edges of a scrolling row still hide something, measured on the row itself.
+ *
+ * The row of days fades out at an edge that carries on, and only there: the fade is the one sign that says "there is
+ * more this way", so an edge that hides nothing is drawn flat. Until 21 Sep 2026 the right edge faded whatever it
+ * held, which dimmed the last day of a gift nobody could scroll, and the left edge never faded at all, which cut the
+ * days clean off on a gift's own page, where the row opens on today with the first days behind it (the founder).
+ *
+ * It is read as an external store rather than kept in state: the row is measured when the browser says it changed,
+ * never inside a render. `ResizeObserver` reports once as soon as it observes, which is what gives the first reading,
+ * and `length` re-subscribes when days arrive, because a row that grows never changes its own box.
+ */
+export function useHiddenEdges(row: RefObject<HTMLElement | null>, length: number): HiddenEdges {
+  const watch = useCallback(
+    (changed: () => void) => {
+      const element = row.current;
+      if (!element || typeof ResizeObserver === "undefined") return () => undefined;
+      element.addEventListener("scroll", changed, { passive: true });
+      const observer = new ResizeObserver(changed);
+      observer.observe(element);
+      return () => {
+        element.removeEventListener("scroll", changed);
+        observer.disconnect();
+      };
+    },
+    // The row is measured again from scratch when its length changes: `length` is read by the subscription itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [row, length],
+  );
+  // Read where React reads it, from the row itself: the row is the store, and `watch` says when to look again.
+  return useSyncExternalStore(watch, () => stillHidden(row.current), () => "0,0");
+}
+
 export function DayStrip({
   id,
   gift,
@@ -37,12 +104,15 @@ export function DayStrip({
   records = [],
 }: Readonly<{ id: string; gift: Shape; catchUpSeconds: number; records?: readonly { day: number; outcome: "earned" | "returned" }[] }>) {
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
+  const row = useRef<HTMLSpanElement>(null);
+  const days = stripOf(gift, catchUpSeconds, nowMs, records);
+  const hidden = useHiddenEdges(row, days.length);
   // One size everywhere, and it keeps its face (the founder, 19 Sep 2026, amending the brief). 60 on a card since
   // D134, twice asked for: 42 left a sleeping day seventeen pixels tall, 52 was still small. The strip scrolls
   // rather than shrinking, exactly as the row does, because a row of thirty smudges says nothing at all.
   return (
-    <span aria-hidden className="day-row-days flex w-full items-end">
-      {stripOf(gift, catchUpSeconds, nowMs, records).map((day, index) => (
+    <span ref={row} aria-hidden data-more={endsHidden(hidden)} style={fadeOf(hidden)} className="day-row-days flex w-full items-end">
+      {days.map((day, index) => (
         <span key={index} data-day={day} className="flex w-[60px] flex-none items-end">
           <ArrivalDay gift={id} index={index}>
             <Character state={characterOf(day)} standing={false} className="h-auto w-full" />

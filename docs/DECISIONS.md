@@ -3930,3 +3930,27 @@ behind an account cannot be photographed any other way.
   it matters: the sheet that pays shows what is paid, and the gift's own page shows what is held.
 - The mark is a control, so it is 48 by 48 like every other, pulled back by its own padding so the sign still sits
   against the figure.
+
+## D145, 21 Sep 2026: the money marks are drawn by hand, and a row fades where it hides something
+
+Three defects the founder found on the card, each of them a thing the screen was saying that was not true.
+
+- **The mark is drawn, because neither face could carry it.** D144 put the dollar and the euro in the text face,
+  and beside a figure in the title face they are visibly another hand, which is what the founder saw. Both symbols
+  are now drawn: the conventional skeleton, an S through a bar and a C through two bars, in one even stroke with
+  round ends, which is the line the characters are already drawn in. They are built to the measured figure rather
+  than to taste: Fredoka 600 at the card's 39 pixels is 29 tall with a 6.5 stem
+  (`review-captures/measure-fredoka.ts`), so the stroke is 6, the euro stands 29 on the line, and the dollar's bar
+  is the one thing that passes below it. Everything is in `em`, so the mark is the same mark at any size.
+- **The mark stands in front of the figure in every currency.** The CFA franc's name used to follow it, the way it
+  is written in prose, so pressing the mark moved the field itself from one side of the box to the other. The
+  franc's letters now lead, at 0.58 of the figure, which is what every money app does with a code rather than a
+  symbol and what keeps three letters from reading as part of the number. All three marks sit in the same 48 pixel
+  control, so the field stands in the same place whichever currency is read: measured at 85 pixels in all three.
+- **A row of days fades at the end that still hides a day, and only there.** The right end faded whatever it held,
+  which dimmed the last day of a gift nobody could scroll, and the left end never faded at all, which cut the days
+  clean off on a gift's own page, where the row opens on today with the first days behind it. Each fade is now as
+  long as what its end actually hides, up to a day's width: a row hiding seven pixels fades by seven. It is a mask
+  on the row rather than a patch of paper painted over the last day, because the same row sits on the card, in the
+  gift list and on a gift's page, and a patch has to know what colour is behind it. The cards of the gift list had
+  no fade at all before this.

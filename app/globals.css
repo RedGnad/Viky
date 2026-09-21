@@ -718,6 +718,18 @@ dialog.sheet[open] {
   padding: 8px 36px 8px 0;
   scrollbar-width: none;
   overscroll-behavior-x: contain;
+  /*
+   * The sign that the row carries on, at whichever edge still hides a day and nowhere else (the founder, 21 Sep
+   * 2026): the row fades out there, exactly as a sheet's body fades at the edge that still hides a line. Both
+   * lengths are zero until the row says otherwise, so a row whose days all fit is drawn flat at both ends, and each
+   * one is as long as what its end actually hides, up to a day's width (app/kit/DayStrip.tsx). It is a mask rather
+   * than a patch of the paper painted over the last day, because the same row sits on the card and on a gift's page,
+   * and a patch has to know what colour is behind it.
+   */
+  --fade-left: 0px;
+  --fade-right: 0px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-left), #000 calc(100% - var(--fade-right)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-left), #000 calc(100% - var(--fade-right)), transparent 100%);
 }
 
 .day-row-days::-webkit-scrollbar {
@@ -728,21 +740,6 @@ dialog.sheet[open] {
 .day-row-day {
   flex: none;
   width: 48px;
-}
-
-/* The row of days on a card, and the fade that says it carries on: the row is one mark a day and it scrolls. */
-.day-row-frame {
-  position: relative;
-}
-
-.day-row-fade {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 56px;
-  height: 100%;
-  pointer-events: none;
-  background: linear-gradient(to right, rgba(255, 246, 226, 0), var(--paper) 78%);
 }
 
 .day-row-where {
