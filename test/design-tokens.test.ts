@@ -279,7 +279,9 @@ test("the quiet button is filled, seen on both grounds, and its words clear 4.5:
   // #9A8B62 measures 2.64:1 there.
   assert.ok(contrastRatio("#6F6133", "#EFE3C4") >= TEXT_CONTRAST_MINIMUM, "the words of the shut action are readable on it");
   assert.match(css, /--action-off-ink: #6F6133;/);
-  assert.match(primary, /\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--sun-deep\)\]/, "and the sun's own shadow is under it when it can be pressed");
+  // The ink under it, not a darker yellow: the same slab every control stands on, and the only one that reads as a
+  // thickness against a sun fill (D142).
+  assert.match(primary, /\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--control-relief-colour\)\]/, "the ink is under it when it can be pressed");
 });
 
 test("the art direction changed the colours and nothing else", () => {
