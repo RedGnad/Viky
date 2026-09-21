@@ -439,6 +439,15 @@ The hardware wallet keeps its MON and its own life, and has nothing left to sign
 | read back | all four answer the Safe (`VERIFY=1 pnpm safe:handover`, and `owner()` on each, 20 Sep 2026) |
 | what it cost the hardware wallet | about 0.0147 MON for the four, of the 90.5 it holds; the Safe itself holds nothing and needs nothing |
 
+## The appearance column, run on production 21 Sep 2026
+
+`appearance` on `viky_accounts` (D159), the column the account keeps day or night in beside the display currency.
+Run with the operator command of "The test database" below, and read back: the table now answers
+`account, display_currency, updated_at, appearance`, and the five rows already there kept their currency. It had to
+be run the moment the build went out, not later: the build reads the column on every account page, so until it
+existed that read threw, and the display currency it also reads came back as nothing. Additive, and nothing else in
+the running build touches it.
+
 ## Before deploying the build of N1: the subscriptions table and the push keys
 
 1. `viky_push` (one row per browser and gift) and `viky_told` (one row per gift and subject, so a day is told about
