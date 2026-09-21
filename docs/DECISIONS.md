@@ -4296,3 +4296,8 @@ qu'on reload ça peut changer de mode et revenir au mode par défaut."
   in, which is the one place a device's own storage does not carry. The device answers first because it answers
   before anything is painted; the account answers for a device that has never been told.
 - Nothing is stored until somebody presses: a person whose device decides has chosen that.
+- **The column was added to production the moment the build went out**, because the build reads it: `appearance` on
+  `viky_accounts`, read back beside the five currency choices already kept, which are untouched. Until it existed,
+  the read threw and took the display currency with it. The device path is measured on viky.cash; what an account
+  carries from one device to the next is proven against the test database in the gate, and is true of production
+  from the first press made there.
