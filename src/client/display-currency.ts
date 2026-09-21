@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { aboutInDisplayCurrency, figureInDisplayCurrency, proposedDisplayCurrency, SHOWN_IN_DOLLARS, type DisplayCurrency, type DisplayFigure } from "../display-currency";
+import { aboutInDisplayCurrency, figureInDisplayCurrency, isDisplayCurrency, proposedDisplayCurrency, SHOWN_IN_DOLLARS, type DisplayCurrency, type DisplayFigure } from "../display-currency";
 import { ratesUsable, type Rates } from "../rates";
-import { getJson } from "./api";
+import { getJson, putJson } from "./api";
 
 /**
  * The display currency of the account on this device, and the one line every money screen needs from it.
@@ -13,8 +13,42 @@ import { getJson } from "./api";
  * returns nothing and `unavailable` carries the one line to print instead (decision 1, 17 Sep 2026).
  */
 
+/** What a screen may do with the currency, and where the choice is kept (D144). */
+const KEPT = "viky.displayCurrency";
+
+/**
+ * What this tab was last asked to read in. It is a store outside React, read the way React asks a browser value to
+ * be read: the server knows nothing of it, so the server's answer is nothing and the first paint matches the HTML,
+ * and every money screen open at once follows a press on any one of them.
+ */
+const listeners = new Set<() => void>();
+function watchTheTab(changed: () => void): () => void {
+  listeners.add(changed);
+  return () => listeners.delete(changed);
+}
+function inTheTab(): DisplayCurrency | null {
+  try {
+    const kept = window.sessionStorage.getItem(KEPT);
+    return isDisplayCurrency(kept) ? kept : null;
+  } catch {
+    // A browser that refuses its own storage reads in what the device proposes, which is the honest default.
+    return null;
+  }
+}
+const noneOnTheServer = () => null;
+function keepInTheTab(currency: DisplayCurrency): void {
+  try {
+    window.sessionStorage.setItem(KEPT, currency);
+  } catch {
+    // Nothing kept, and nothing lost: what is read now is what the screens will use until the tab is closed.
+  }
+  for (const changed of [...listeners]) changed();
+}
+
 export type DisplayMoney = Readonly<{
   currency: DisplayCurrency;
+  /** Read it in another currency. Kept for the tab, and written to the account when there is one signed in. */
+  readIn: (currency: DisplayCurrency) => void;
   rates: Rates | undefined;
   /** "about 9.53 EUR (rate of 16 Sep)", or nothing when the dollar stands alone. */
   about: (units: bigint) => string | undefined;
@@ -40,6 +74,12 @@ export function useDisplayCurrency(address: string | undefined): DisplayMoney {
   const [rates, setRates] = useState<Rates | undefined>(undefined);
   // The choice, and whose it is, so an account signing out never keeps another account's currency.
   const [chosenFor, setChosenFor] = useState<{ address: string; currency: DisplayCurrency | null } | undefined>(undefined);
+  /**
+   * What this tab was asked to read in (D144). The card carries the choice now, because somebody without an account
+   * has no page to set it on and a dollar sign on the first screen is what makes a funder in the euro area close
+   * the tab. An account still keeps its own, which is what follows a person from one device to the next.
+   */
+  const forTheTab = useSyncExternalStore(watchTheTab, inTheTab, noneOnTheServer);
 
   useEffect(() => {
     let live = true;
@@ -71,10 +111,17 @@ export function useDisplayCurrency(address: string | undefined): DisplayMoney {
   }, [address]);
 
   const chosen = address && chosenFor?.address === address ? chosenFor.currency : null;
-  const currency = chosen ?? proposedDisplayCurrency(language);
+  const currency = forTheTab ?? chosen ?? proposedDisplayCurrency(language);
   return {
     currency,
     rates,
+    readIn: (next) => {
+      keepInTheTab(next);
+      if (address) {
+        setChosenFor({ address, currency: next });
+        void putJson<{ displayCurrency: DisplayCurrency }>("/api/account/preferences", { displayCurrency: next }).catch(() => undefined);
+      }
+    },
     about: (units) => aboutInDisplayCurrency(units, currency, rates),
     figure: (units) => figureInDisplayCurrency(units, currency, rates),
     unavailable: currency !== "USD" && !rates ? SHOWN_IN_DOLLARS : undefined,

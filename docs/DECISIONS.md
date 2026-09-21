@@ -3915,3 +3915,18 @@ behind an account cannot be photographed any other way.
 - **The language stays English for the pilot** (the founder, same evening). The norm is the device's language,
   which Duolingo, Wise and Revolut all follow, and our 630 sentences with their tests are a day of work to
   translate and re-read: the five first users are chosen by the founder, and the hackathon is judged in English.
+
+## D144, 21 Sep 2026: the money sign is the control, and the contract is nobody's business
+
+- **The sign is drawn in the text face.** Fredoka's dollar and euro are the face's own idea of a money sign, and the
+  founder reads them as unreassuring on the one figure of the screen. The mark keeps its size and takes DM Sans,
+  which draws them the way every bank does. The figure stays in the title face.
+- **The sign is how a person changes what they read in.** Pressing it takes the next of the three, dollars, euros,
+  CFA francs, and everything on the card follows: the field, the action, the line under it. A visitor without an
+  account had no page to set that on, and the account page's choice stays what follows a person across devices: a
+  press writes it there too when somebody is signed in, and into the tab's own memory when nobody is.
+- **"$30.00 in their name" is gone.** It was the contract speaking: a person who is not in crypto has no use for
+  the figure the escrow holds, and nothing obliges us to print it. What is true is still true, and it is said where
+  it matters: the sheet that pays shows what is paid, and the gift's own page shows what is held.
+- The mark is a control, so it is 48 by 48 like every other, pulled back by its own padding so the sign still sits
+  against the figure.

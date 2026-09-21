@@ -41,8 +41,8 @@ export const OFFER = {
   fromYou: "A gift from you",
   /** The figure the amount is typed beside, so the field holds the number and nothing else. */
   dollar: "$",
-  /** Beside a figure typed in another currency: the dollars the contract will hold, which is what is signed (D143). */
-  inTheirName: (dollars: string) => `${dollars} in their name`,
+  /** The mark before the figure, which is also how a person changes what they read in (D144). */
+  currencyLabel: (currency: string) => `Money read in ${currency}. Press for another.`,
   /** The line under the condition on the card, which opens that condition's own questions (D136). */
   detailNeeded: "Not filled in yet",
   /** The three lengths the register gives the chosen condition, and there is no fourth on the card (D130). */
