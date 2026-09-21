@@ -66,7 +66,7 @@ test.describe("the appearance control", () => {
     expect(box?.height).toBeGreaterThanOrEqual(48);
 
     // The door sits beside it on this screen, and it is the wider of the two: the appearance never competes with it.
-    const door = page.getByRole("button", { name: /^Sign in or create account$/ });
+    const door = page.getByRole("button", { name: /^Sign in$/ });
     const doorBox = await door.boundingBox();
     expect(doorBox!.width).toBeGreaterThan(box!.width);
     expect(box!.x).toBeLessThan(doorBox!.x);

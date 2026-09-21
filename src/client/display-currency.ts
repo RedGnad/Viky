@@ -111,7 +111,16 @@ export function useDisplayCurrency(address: string | undefined): DisplayMoney {
   }, [address]);
 
   const chosen = address && chosenFor?.address === address ? chosenFor.currency : null;
-  const currency = forTheTab ?? chosen ?? proposedDisplayCurrency(language);
+  const asked = forTheTab ?? chosen ?? proposedDisplayCurrency(language);
+  /**
+   * What the screens read in, and it is the dollar until a rate makes another currency true (D151).
+   *
+   * The rate is asked for over the network and arrives a moment after the currency is known, and in that moment a
+   * card printed the franc's mark in front of a dollar figure: "CFA 51.56" for a gift of 29,512 francs. Every
+   * figure falls back to the dollar when there is no rate, so the mark has to fall back with them. One answer, and
+   * the mark and the figures change together when it lands.
+   */
+  const currency = asked === "USD" || rates ? asked : "USD";
   return {
     currency,
     rates,
@@ -124,6 +133,6 @@ export function useDisplayCurrency(address: string | undefined): DisplayMoney {
     },
     about: (units) => aboutInDisplayCurrency(units, currency, rates),
     figure: (units) => figureInDisplayCurrency(units, currency, rates),
-    unavailable: currency !== "USD" && !rates ? SHOWN_IN_DOLLARS : undefined,
+    unavailable: asked !== "USD" && !rates ? SHOWN_IN_DOLLARS : undefined,
   };
 }

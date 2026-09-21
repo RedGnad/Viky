@@ -206,7 +206,12 @@ export const APPEARANCE = {
 } as const;
 
 export const DOOR = {
-  open: "Sign in or create account",
+  /**
+   * Two words, because the header has room for two (the founder, 21 Sep 2026: "c'est trop long"). It used to name
+   * both of the things it does, which is what the sheet it opens does instead: the sheet says how an account is
+   * made here, in one line, and its own action is "Create your account".
+   */
+  open: "Sign in",
   how: "Your face or your fingerprint, and nothing to remember.",
   create: "Create your account",
   again: "Try again",
