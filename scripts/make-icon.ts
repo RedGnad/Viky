@@ -6,8 +6,8 @@ import { COLOURS } from "../src/design-tokens";
 
 /**
  * The app's icon and the gift's drawing, written once into files (the art direction brief of 17 Sep 2026, section 7
- * bis). The icon is the head character, the diamond, on the ink tile a phone rounds itself (D135), filling almost
- * all of it (D138: at three quarters the tile was mostly empty); the gift's own drawing stays the gift, because what
+ * bis). The icon is the head character, the diamond, on the ink tile a phone rounds itself (D135), filling the whole
+ * width of it (D141, after 0.74 and 0.92 both read as a small drawing in a large square); the gift's own drawing stays the gift, because what
  * it is used for is the picture under a gift's link. It is the third place a person meets Viky, after the link
  * preview and the morning message, and the first they see every day on their home screen.
  *
@@ -33,6 +33,14 @@ function icoAround(png: Buffer, size: number): Buffer {
   return Buffer.concat([header, entry, png]);
 }
 
+/**
+ * How much of the tile the drawing takes (D141). All of it, except on the icon a phone is allowed to crop: a
+ * maskable icon may be cut to a circle, and the meaning has to sit inside that circle: a shape this wide at 0.8 of
+ * the square would have its two points on the circle's edge, so that one is drawn at 0.7 and every other at 1.
+ */
+const FILLS: Readonly<Record<string, number>> = { "public/icons/android-chrome-192x192.png": 0.7 };
+const FULL = 1;
+
 const SIZES = [
   { file: "public/icons/icon-512x512.png", size: 512 },
   { file: "public/icons/android-chrome-192x192.png", size: 192 },
@@ -55,7 +63,7 @@ async function main() {
       const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
       await page.setContent(
         `<!doctype html><body style="margin:0;width:${size}px;height:${size}px;background:${COLOURS.dark.background};display:flex;align-items:center;justify-content:center">` +
-          `<div style="width:${Math.round(size * 0.92)}px">${svg}</div></body>`,
+          `<div style="width:${Math.round(size * (FILLS[file] ?? FULL))}px">${svg}</div></body>`,
       );
       const picture = await page.screenshot({ clip: { x: 0, y: 0, width: size, height: size } });
       await page.close();

@@ -158,14 +158,12 @@ export function OfferCard() {
           bottom={
             <>
               {/* The one star of the screen, typed where it stands. */}
-              <span className="block">
-                {/* One box and one ring around the "$" and the figure together: the ring is the box's, drawn when the
-                    figure inside has the focus, so the field never reads as a box inside a box (the founder,
-                    20 Sep 2026, on the amount after the name was fixed). */}
-                <span className="flex flex-wrap items-baseline gap-x-[var(--space-sm)] gap-y-[var(--space-xs)]">
-              {/* The figure, and beside it what it is worth in the currency this account reads in (D140): under it
-                    the line made the card taller, which is what the founder would not have. Nothing at all when the
-                    account reads in dollars, or when no rate answered. */}
+              {/* One box and one ring around the "$" and the figure together: the ring is the box's, drawn when the
+                  figure inside has the focus, so the field never reads as a box inside a box (the founder, 20 Sep
+                  2026, on the amount after the name was fixed). Beside it, what the figure is worth in the currency
+                  this account reads in (D140, D141): one row that never wraps, and nothing at all below 480, where
+                  a sentence carrying its rate's own day cannot fit beside a 39 pixel figure. */}
+              <span className="flex items-baseline gap-x-[var(--space-sm)]">
                 <span className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent-text)]`}>
                   {W.dollar}
                   <input
@@ -179,8 +177,13 @@ export function OfferCard() {
                     className="min-h-[var(--tap-target)] min-w-[var(--tap-target)] bg-transparent tabular-nums outline-none"
                   />
                 </span>
-              </span>
-                {!amountRefusal && units !== undefined && worth ? <span className={`${HELP} shrink`}>{worth}</span> : null}
+                {/* Beside the figure, or not at all (the founder, 21 Sep 2026). A converted figure carries its rate's
+                    own day, which makes the sentence 230 pixels wide: beside a 39 pixel figure it fits from 480 and
+                    would wrap under it below, so below 480 it is not drawn at all. Where the money moves, the sheet
+                    says the same thing in full. */}
+                {!amountRefusal && units !== undefined && worth ? (
+                  <span className={`${HELP} hidden whitespace-nowrap [@media(min-width:480px)]:inline`}>{worth}</span>
+                ) : null}
               </span>
               {amountRefusal ? <span className={`block ${HELP} text-[var(--on-surface)]`}>{amountRefusal}</span> : null}
 
