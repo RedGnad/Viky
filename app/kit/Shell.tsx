@@ -74,9 +74,11 @@ export function Shell(props: Props) {
           is zero there (D137). At 88 it pushed every sheet that many pixels right of the window's middle, which is
           what the founder measured on the catalogue. */}
       <div className={room} style={props.kind === "destination" && props.bare ? ({ "--page-offset": "0px" } as CSSProperties) : undefined}>
-        <main className={`mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-lg)]`}>
+        {/* Everything this page carries enters when the page does, 250 ms, once (D146); the mark and the appearance
+            control stand still, because they are in the same place on every screen. */}
+        <main className={`page-enters mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-lg)]`}>
           <header className="flex flex-col items-start gap-[var(--space-sm)]">
-            <div className="flex w-full items-center justify-between gap-[var(--space-md)]">
+            <div className="page-mark flex w-full items-center justify-between gap-[var(--space-md)]">
               <Mark />
               <div className="flex items-center gap-[var(--space-sm)]">
                 <Appearance />
