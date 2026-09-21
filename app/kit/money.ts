@@ -12,8 +12,8 @@ import { WAYS_OUT, type WayOut } from "@/src/rails";
  */
 export type Holdings = Readonly<Record<string, bigint>>;
 
-export function useHoldings(address: string | undefined): Holdings | null {
-  const [holdings, setHoldings] = useState<Holdings | null>(null);
+export function useHoldings(address: string | undefined, start?: Holdings | null): Holdings | null {
+  const [holdings, setHoldings] = useState<Holdings | null>(start ?? null);
   useEffect(() => {
     if (!address) return;
     let live = true;

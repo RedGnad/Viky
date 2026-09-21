@@ -1,5 +1,6 @@
+import { CARD_COOKIE, CARD_COOKIE_MAX_AGE_SECONDS, cardCookieFrom } from "./card-cookie";
 import { draftFromTerms, draftToTerms, STARTING_DRAFT, type GiftDraft } from "./gift-draft";
-import { cardDraftFrom, PENDING_GIFT_STORAGE_KEY, saveCardDraft } from "./pending-gift";
+import { cardDraftFrom, PENDING_GIFT_STORAGE_KEY, saveCardDraft, type PendingGiftTerms } from "./pending-gift";
 
 /**
  * The card being filled in, as a store the screens read rather than a copy each of them keeps.
@@ -50,23 +51,41 @@ export function cardDraft(): GiftDraft {
 }
 
 /**
- * What the server draws, and what a device with nothing kept on it shows: the starting card, a plausible gift with
- * the first name left empty (the founder, 20 Sep 2026). A server knows nobody's device, so this is also the
- * snapshot React renders on the server and hydrates against.
+ * What a device with nothing kept on it shows: the starting card, a plausible gift with the first name left empty
+ * (the founder, 20 Sep 2026). The server draws this one too when the request carries no card cookie; when it does,
+ * the card it describes is what the server draws and what this browser hydrates against (D160).
  */
 export function startingCardDraft(): GiftDraft {
   return STARTING_DRAFT;
 }
 
+/**
+ * The card's figures, in a cookie, because a server reads cookies and not another machine's storage (D160). Written
+ * beside the device's own copy, never instead of it: the device stays the truth, this is what the server is told.
+ */
+function tellTheServer(terms: PendingGiftTerms | null): void {
+  try {
+    const secure = window.location.protocol === "https:" ? "; secure" : "";
+    document.cookie = terms
+      ? `${CARD_COOKIE}=${cardCookieFrom(terms, Date.now())}; path=/; max-age=${CARD_COOKIE_MAX_AGE_SECONDS}; samesite=lax${secure}`
+      : `${CARD_COOKIE}=; path=/; max-age=0; samesite=lax${secure}`;
+  } catch {
+    // A browser that refuses cookies draws the starting card first and its own a moment later, as it did before.
+  }
+}
+
 /** Writes the card to the device and tells every screen reading it. */
 export function writeCardDraft(draft: GiftDraft, account: string | undefined): void {
-  saveCardDraft(draftToTerms(draft, account));
+  const terms = draftToTerms(draft, account);
+  saveCardDraft(terms);
+  tellTheServer(terms);
   lastRaw = undefined;
   for (const changed of [...listeners]) changed();
 }
 
 /** Forgotten, once the gift is made or the person asks for a different one. */
 export function clearedCardDraft(): void {
+  tellTheServer(null);
   lastRaw = undefined;
   for (const changed of [...listeners]) changed();
 }

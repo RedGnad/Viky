@@ -38,11 +38,10 @@ const EURO_AREA: ReadonlySet<string> = new Set([
 const CFA_FRANC_AREA: ReadonlySet<string> = new Set(["BJ", "BF", "CI", "GW", "ML", "NE", "SN", "TG"]);
 
 /**
- * Every region whose device proposes something other than the dollar, for the script that runs before the first
- * paint (src/money-boot.ts): a device in one of these is about to change every figure on the card, so the card
- * shows none until it has.
+ * Where a device writes the currency it reads in, so the server can read it too and print the right figure in the
+ * first byte (D160). A cookie rather than storage, because a cookie is the one thing a browser sends by itself.
  */
-export const NON_DOLLAR_REGIONS: readonly string[] = [...EURO_AREA, ...CFA_FRANC_AREA];
+export const CURRENCY_COOKIE = "viky.currency";
 
 /** The region of a language tag, upper case, or nothing: "fr-FR" gives FR, "fr" gives nothing. */
 export function regionOf(languageTag: string | undefined): string | undefined {

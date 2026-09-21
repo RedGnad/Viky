@@ -11,11 +11,12 @@ import { HeadCharacter } from "./HeadCharacter";
 import { Arrival, Reveal, type ArrivalGift } from "./Motion";
 import { Shell } from "./Shell";
 import { useMyGifts } from "./my-gifts";
+import type { GiftSummary } from "@/src/client/gift";
 
 /** Gifts: everything given and received, in two groups, each card opening its gift (structure, section 4). */
-export function Gifts() {
+export function Gifts({ initialGifts }: Readonly<{ initialGifts?: GiftSummary[] | null }> = {}) {
   const { address } = useAccount();
-  const { gifts, problem } = useMyGifts(address);
+  const { gifts, problem } = useMyGifts(address, initialGifts);
   const nowMs = useMinute();
 
   if (!address) {

@@ -4,8 +4,8 @@ import { loadMyGifts, type GiftSummary } from "@/src/client/gift";
 import { HOME } from "@/src/sentences";
 
 /** The account's gifts, read once for a screen, with the two states a list can be in besides full. */
-export function useMyGifts(address: string | undefined): { gifts: GiftSummary[] | null; problem: string | null } {
-  const [gifts, setGifts] = useState<GiftSummary[] | null>(null);
+export function useMyGifts(address: string | undefined, start?: GiftSummary[] | null): { gifts: GiftSummary[] | null; problem: string | null } {
+  const [gifts, setGifts] = useState<GiftSummary[] | null>(start ?? null);
   const [problem, setProblem] = useState<string | null>(null);
   useEffect(() => {
     if (!address) return;

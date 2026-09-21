@@ -4301,3 +4301,58 @@ qu'on reload ça peut changer de mode et revenir au mode par défaut."
   the read threw and took the display currency with it. The device path is measured on viky.cash; what an account
   carries from one device to the next is proven against the test database in the gate, and is true of production
   from the first press made there.
+
+## D160, 21 Sep 2026: a screen is drawn once, by the server, with what it is about
+
+The founder, three times in two days, and right each time: "quoi qu'on fasse on a toujours un double chargement des
+pages. Il y a toujours un premier chargement instantané, avec le mode par défaut sans devise affichée ou alors $, sur
+la page gift elle est juste vide, sur la home on a juste '...' au lieu du montant, la landing avec la card vide. Puis
+une fraction de seconde après la page se recharge avec les bonnes data." Then the measurement that broke it open:
+"c'est visuellement une page qui s'affiche vide pendant un quart de seconde puis recharge visuellement (on voit bien
+les micro animations d'apparition) et cette fois avec les infos perso du user. Donc si tu arrive pas a trouver c'est
+que le probleme est STRUCTUREL."
+
+- **It was never a second load, and every fix aimed at one was aimed at nothing.** Measured on viky.cash, one
+  document is fetched and one only (`review-captures/first-frames.ts`, `documents fetched: 200 /`). The worker, the
+  reload on reconnect, the two theme colours: all real defects, none of them this one.
+- **What the animations were saying.** Counting every entrance from before the page's own scripts run
+  (`review-captures/replays.ts`) on the gift's screen, on a phone on a 4G line:
+
+  ```
+   538ms  page-enter  a "Back to my gifts"     the waiting screen
+   539ms  page-enter  p "One moment"
+  1337ms  page-enter  div "About Viky"         the real one, 800 ms later
+  1337ms  page-enter  section "Your gift For sevyb..."
+  ```
+
+  Two trees, two entrances. The screen was not filled in: it was thrown away and built again. That is what the eye
+  reads as a second load, and it is why nothing about caching ever moved it.
+- **The cause, written in our own code.** `src/client/display-currency.ts` said it plainly: "the server snapshot is
+  nothing, so the first paint proposes dollars everywhere and the browser corrects it without a mismatch." Every
+  money screen was rendered for nobody on purpose, to avoid a hydration mismatch, and corrected in the browser. The
+  gift's page rendered "One moment" and fetched the gift it had already read on the server for the link's preview.
+  Home rendered three dots and read the balance over the network after the page had been parsed and hydrated.
+- **So the server is told the three things the browser knows**, and draws the screen once:
+  the **currency** (the account's choice, then the cookie this device writes when the key is pressed, then the
+  language the page was asked in) with the **rate** it keeps for an hour; the **card this device kept**, from a
+  cookie carrying its figures and none of its people; and for somebody signed in, their **money** and their
+  **gifts**, read while the page renders. `src/gift-status.ts` and `src/my-gifts.ts` came out of their routes so a
+  page and a request read the same thing the same way.
+- **The curtain of D155 is gone**, and with it the script that ran before the paint. It hid every figure until the
+  browser had settled them, which is exactly the card with a hole in it the founder was looking at: a card whose
+  amount, action and footnote were blank for 605 ms on a phone. Nothing is hidden now because nothing is wrong.
+- **A first screen arrives, a page change enters.** The other half was our own step 1: `backwards` fill holds each
+  block invisible until its turn comes, so a cold load showed the words standing over the empty space where the card
+  goes. A screen reached from another screen has something to have come from and still enters block by block; the
+  first screen a document draws has not, and arrives whole, in one fade. Asked once when the screen is built, never
+  on every render: read on every render it flips under the screen and everything enters a second time, which is the
+  defect wearing a different hat (measured, `review-captures/on-navigation.ts`).
+- **What it costs.** A signed-in Home now waits for a chain read before its first byte. That is the trade: a page
+  that arrives later and complete, rather than at once and wrong. If the gifts list ever makes that wait long, the
+  answer is to stream that section rather than to go back to filling it in from the browser.
+- **Names never travel.** The card's cookie carries the amount, the length, the condition and the course. Not the
+  two first names, not the account, not the goal's username: a name has no business in a header sent with every
+  request for a font. The names stay on the device, so a kept card still asks "For who?" for a moment on a device
+  that has one. That is named here rather than hidden.
+- **Not done.** The way out still leads with the dollar. `/cash-out` reads its own money in the browser: it is a
+  task reached by a press, not a screen somebody lands on.

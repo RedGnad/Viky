@@ -1,6 +1,8 @@
+"use client";
 import type { CSSProperties, ReactNode } from "react";
 import { DISPLAY, META, TITLE } from "../components/ui";
 import { Appearance } from "./Appearance";
+import { useHasDrawnBefore } from "./arrival";
 import { BackLink } from "./BackLink";
 import { Mark } from "./Mark";
 import { Nav, type Destination } from "./Nav";
@@ -72,6 +74,8 @@ export function Shell(props: Props) {
           : props.wide
             ? "home-column"
             : "max-w-[var(--destination-max)]";
+  /** A screen reached from another screen enters; the first one a document draws arrives whole (D160). */
+  const entering = useHasDrawnBefore();
   // Room for the bar below it and beside the rail on a destination; a task and a document have neither.
   const room =
     props.kind === "destination" && !props.bare
@@ -85,8 +89,12 @@ export function Shell(props: Props) {
           what the founder measured on the catalogue. */}
       <div className={room} style={props.kind === "destination" && props.bare ? ({ "--page-offset": "0px" } as CSSProperties) : undefined}>
         {/* Everything this page carries enters when the page does, 250 ms, once (D146); the mark and the appearance
-            control stand still, because they are in the same place on every screen. */}
-        <main className={`page-enters mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-lg)]`}>
+            control stand still, because they are in the same place on every screen. The first screen a document
+            draws arrives instead, whole and at once (D160): there is nothing for it to have come from, and the turns
+            only made it look half built. */}
+        <main
+          className={`${entering ? "page-enters" : "page-arrives"} mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-lg)]`}
+        >
           <header className="flex flex-col items-start gap-[var(--space-sm)]">
             <div className="page-mark flex w-full items-center justify-between gap-[var(--space-md)]">
               <Mark />

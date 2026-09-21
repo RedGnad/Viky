@@ -152,15 +152,23 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
   for (const [name, ms] of Object.entries({ reveal: MOTION.reveal.durationMs, stagger: MOTION.reveal.staggerMs, mostStaggered: MOTION.reveal.mostStaggeredMs, lastTurn: MOTION.reveal.lastTurnMs })) {
     assert.ok(MATERIAL_MS.includes(ms), `${name} is ${ms} ms, which Material does not publish`);
   }
-  assert.match(readFileSync("app/kit/Shell.tsx", "utf8"), /className=\{`page-enters /, "every screen is drawn by the one shell, and that is where the arrival is asked for");
+  const shell = readFileSync("app/kit/Shell.tsx", "utf8");
+  assert.match(shell, /const entering = useHasDrawnBefore\(\);/, "every screen is drawn by the one shell, and that is where the arrival is asked for");
+  assert.match(shell, /className=\{`\$\{entering \? "page-enters" : "page-arrives"\} /, "a page change enters block by block, a first screen arrives whole (D160)");
   assert.match(readFileSync("app/template.tsx", "utf8"), /export default function Template/, "and a template is what builds it again on every navigation");
+  // Asked once, when the screen is built: read on every render it flips under the screen and everything enters twice.
+  assert.match(readFileSync("app/kit/arrival.ts", "utf8"), /const \[before\] = useState\(\(\) => drawnBefore\);/);
+  assert.match(css, /\.page-arrives \{\n\s*animation: page-fade var\(--page-enter-duration\)/, "and that first screen is one fade, with no turns to leave holes in it");
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
   assert.match(reduced, /\.control-relief:is\(:active, :hover\)/, "under reduced motion a press gives way but nothing travels");
   // A screen still arrives, by fading alone: the rise is dropped and the duration is kept (the founder, 21 Sep 2026).
   assert.match(reduced, /animation-name: page-fade !important/, "under reduced motion a screen fades in and nothing rises");
   assert.match(reduced, /animation-duration: var\(--page-enter-duration\) !important/, "and the fade keeps its own time");
-  assert.doesNotMatch(css.slice(0, css.indexOf("@media (prefers-reduced-motion: reduce)")), /animation(-name)?: page-fade/, "nothing plays the fade alone outside that query");
+  // Outside that query the fade alone belongs to exactly one thing, the first screen a document draws (D160).
+  const outside = css.slice(0, css.indexOf("@media (prefers-reduced-motion: reduce)"));
+  assert.equal((outside.match(/animation(-name)?: page-fade/g) ?? []).length, 1, "nothing else plays the fade alone");
+  assert.match(outside.slice(outside.lastIndexOf("{", outside.indexOf("animation: page-fade")) - 40), /\.page-arrives/, "and that one is the first screen");
 });
 
 /**
