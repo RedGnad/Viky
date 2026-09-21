@@ -3,7 +3,7 @@ import test, { after, before, beforeEach } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { configureSendStore, ensureSendsSchema, loadSends, recordSend, sendReference } from "../src/send-store";
-import { configurePreferencesStore, ensurePreferencesSchema, loadPreferences, saveDisplayCurrency } from "../src/preferences-store";
+import { configurePreferencesStore, ensurePreferencesSchema, loadPreferences, saveAppearance, saveDisplayCurrency } from "../src/preferences-store";
 
 let db: PGlite;
 
@@ -60,9 +60,20 @@ test("the same transaction reported twice is one row", async () => {
 });
 
 test("an account has no display currency until it chooses one, and the last choice wins", async () => {
-  assert.deepEqual(await loadPreferences(ACCOUNT), { displayCurrency: null });
+  assert.deepEqual(await loadPreferences(ACCOUNT), { displayCurrency: null, appearance: null });
   await saveDisplayCurrency(ACCOUNT, "EUR");
-  assert.deepEqual(await loadPreferences(ACCOUNT), { displayCurrency: "EUR" });
+  assert.deepEqual(await loadPreferences(ACCOUNT), { displayCurrency: "EUR", appearance: null });
   await saveDisplayCurrency(ACCOUNT.toLowerCase(), "XOF");
-  assert.deepEqual(await loadPreferences(ACCOUNT), { displayCurrency: "XOF" }, "one row per account, whatever the case of its letters");
+  assert.deepEqual(await loadPreferences(ACCOUNT), { displayCurrency: "XOF", appearance: null }, "one row per account, whatever the case of its letters");
+});
+
+test("an account is shown by day or by night once it has said, and the two choices keep their own row (D159)", async () => {
+  assert.equal((await loadPreferences(ACCOUNT)).appearance, null, "until somebody presses, the device decides");
+  await saveDisplayCurrency(ACCOUNT, "XOF");
+  await saveAppearance(ACCOUNT, "dark");
+  assert.deepEqual(await loadPreferences(ACCOUNT), { displayCurrency: "XOF", appearance: "dark" }, "and choosing one never forgets the other");
+  await saveAppearance(ACCOUNT.toLowerCase(), "light");
+  assert.equal((await loadPreferences(ACCOUNT)).appearance, "light", "one row per account, whatever the case of its letters");
+  await saveDisplayCurrency(ACCOUNT, "EUR");
+  assert.deepEqual(await loadPreferences(ACCOUNT), { displayCurrency: "EUR", appearance: "light" });
 });

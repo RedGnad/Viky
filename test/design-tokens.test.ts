@@ -620,6 +620,30 @@ test("the server says who is signed in before the browser has to ask", () => {
   assert.match(provider, /currentServerSession\(\)\.then/, "and the browser still asks, so a cookie that has gone is noticed");
 });
 
+/**
+ * Day or night is remembered, and the browser's own bar says the same thing as the page (D159). The device answers
+ * before the first paint; the account carries the choice to the next device and back to a browser that forgot.
+ */
+test("a chosen appearance is kept, and the browser's bar follows it rather than the phone", () => {
+  const theme = readFileSync("src/theme.ts", "utf8");
+  assert.match(theme, /export function paintTheBrowsersBar/, "a press paints the bar at once");
+  assert.match(theme, /GROUNDS: Record<"light" \| "dark", string> = \{ light: "#DDD6EB", dark: "#151026" \}/, "the grounds the screens stand on");
+  assert.match(theme, /if \(choice !== "system"\) paintTheBrowsersBar\(choice\);/);
+  assert.match(theme, /export const APPEARANCE_COOKIE/, "and the choice reaches the server, which renders the page");
+  const grounds = readFileSync("app/globals.css", "utf8");
+  for (const colour of ["#DDD6EB", "#151026"]) assert.ok(grounds.includes(`--background: ${colour}`), `${colour} is a ground of the look`);
+  const layout = readFileSync("app/layout.tsx", "utf8");
+  // One colour, decided where the choice is known: two, one per appearance, followed the device rather than the
+  // person, and came back at every hydration because that is when the metas are rendered again.
+  assert.match(layout, /themeColor: chosen\n\s*\? GROUNDS\[chosen\]/, "one colour once somebody has chosen");
+  assert.match(layout, /GROUNDS = \{ light: "#DDD6EB", dark: "#151026" \} as const/, "and it is the ground the screen stands on");
+  assert.match(layout, /media: "\(prefers-color-scheme: light\)", color: GROUNDS\.light/, "until then the device decides, and the bar decides with it");
+  assert.match(layout, /const chosen = await chosenAppearance\(\);/, "the device's cookie first, then the account");
+  assert.match(layout, /\{\.\.\.\(chosen \? \{ "data-theme": chosen \} : \{\}\)\}/, "and written on the document before anything is painted");
+  assert.match(readFileSync("app/kit/Appearance.tsx", "utf8"), /putJson<\{ appearance: string \}>\("\/api\/account\/preferences", \{ appearance: next \}\)/, "a press tells the account");
+  assert.match(readFileSync("src/preferences-store.ts", "utf8"), /ALTER TABLE viky_accounts ADD COLUMN IF NOT EXISTS appearance text;/, "the column is created where the others are");
+});
+
 test("a journey stays narrow enough that prose can never run too long", () => {
   // 480 pixels at a 16 pixel body is about 53 characters, inside every published range.
   assert.ok(APP_COLUMN_MAX / TYPE.body.size < PROSE_MAX_CH);
