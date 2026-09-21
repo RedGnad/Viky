@@ -36,6 +36,7 @@ import { DayRow } from "../kit/DayRow";
 import { charactersOf } from "../kit/DayStrip";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { GiftLive } from "../kit/GiftLive";
+import { HeadCharacter } from "../kit/HeadCharacter";
 import { LinkAgain } from "../kit/LinkAgain";
 import { MilestoneMeter } from "../kit/MilestoneMeter";
 import { MorningMessage } from "../kit/MorningMessage";
@@ -515,7 +516,11 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
       storageKey="viky.seen.days"
       gifts={[{ id: giftId, days: arriving, lastSeen: arriving.filter((day) => day === "earned" || day === "returned").length }]}
     >
-      <Shell kind="task" {...(address || hadAccount ? { back: "/gifts", backLabel: W.backToGifts } : { back: "/", backLabel: W.aboutViky, backFollows: true })}>
+      <Shell
+        kind="task"
+        character={<HeadCharacter />}
+        {...(address || hadAccount ? { back: "/gifts", backLabel: W.backToGifts } : { back: "/", backLabel: W.aboutViky, backFollows: true })}
+      >
         <GiftLive
           from={CARD_WORDS.fromFunderOrYours(readerIsFunder ? null : funderName)}
           who={mine ? CARD_WORDS.forYou : CARD_WORDS.forName(recipientName ?? account.username ?? "")}

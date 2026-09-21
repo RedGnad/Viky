@@ -96,14 +96,19 @@ const DIAMOND_BLEND = "viky-diamond-blend";
  */
 const SMALL_BOX = "0 6 64 52";
 
+/** Parts that move are scaled and moved from their own box, from the floor for a body and from the middle for a face. */
+const FROM_FLOOR: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 100%" };
+const FROM_MIDDLE: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 50%" };
+
 /** A mouth smiling wide: the lower half of a circle, which keeps it inside the circle family. */
 const smile = (cx: number, cy: number, r: number) => `M${cx - r} ${cy} H${cx + r} A${r} ${r} 0 0 1 ${cx - r} ${cy} Z`;
 
 /** Eyes that look a little one way or the other, so no two neighbours share a face. */
 const gazeOf = (variant: number) => [0, 1, -1][((variant % 3) + 3) % 3];
 
+/** An eye, named so an expression can narrow it from its own middle without knowing how it is drawn. */
 function Eye({ x, y, r = 2.8, fill = FACE }: Readonly<{ x: number; y: number; r?: number; fill?: string }>) {
-  return <circle cx={x} cy={y} r={r} style={{ fill }} />;
+  return <circle data-part="eye" cx={x} cy={y} r={r} style={{ fill, ...FROM_MIDDLE }} />;
 }
 
 /** A closed eye: a short pill, a rounded rectangle lying down. */
@@ -131,10 +136,6 @@ function Shade({ cx, cy, rx, ry }: Readonly<{ cx: number; cy: number; rx: number
 }
 
 const bodyFill = (fill: string): CSSProperties => ({ fill });
-
-/** Parts that move are scaled and moved from their own box, from the floor for a body and from the middle for a face. */
-const FROM_FLOOR: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 100%" };
-const FROM_MIDDLE: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 50%" };
 
 function drawing(
   state: CharacterState,

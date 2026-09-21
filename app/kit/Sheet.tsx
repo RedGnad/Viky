@@ -17,6 +17,7 @@ export function Sheet({
   open,
   title,
   help,
+  beside,
   onClose,
   children,
   footer,
@@ -26,6 +27,8 @@ export function Sheet({
   title: string;
   /** One line under the title, when the sheet needs to say what it is for. */
   help?: string;
+  /** What stands beside the title, before the way out of the sheet: the character, where a sheet has one (D148). */
+  beside?: ReactNode;
   onClose: () => void;
   children: ReactNode;
   /** The action that ends the sheet, kept at the bottom where the thumb is. */
@@ -138,6 +141,7 @@ export function Sheet({
             </h2>
             {help ? <p className={HELP}>{help}</p> : null}
           </div>
+          {beside ? <div className="ml-auto flex items-center">{beside}</div> : null}
           <button
             type="button"
             onClick={() => dialog.current?.close()}

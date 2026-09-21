@@ -16,6 +16,14 @@ export default defineConfig({
   use: {
     baseURL: process.env.VIKY_BROWSER_TEST_URL ?? "http://127.0.0.1:3000",
     trace: "retain-on-failure",
+    /**
+     * No service worker in a test (D150). A request a service worker makes does not go through `page.route`, so a
+     * test that answers a source itself was answered by the real one instead, whenever the worker happened to take
+     * the page over during that test: the course list showed a real Duolingo profile with eighteen courses where
+     * six were stubbed, in about one full run out of two, on whichever width lost the race. What the worker itself
+     * does is not what these tests measure; they measure the screens.
+     */
+    serviceWorkers: "block",
   },
   /**
    * The three widths the design pass is judged at. 375 is the narrow phone everybody still carries, 430 the

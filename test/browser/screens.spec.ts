@@ -181,6 +181,9 @@ test.describe("the screens a person meets", () => {
     await page.goto("/");
     await openTheCatalogue(page);
     const sheet = page.locator("dialog.sheet[open]");
+    // A sheet rises 24 pixels when it opens: measured while it is still on its way, its action is up to 24 pixels
+    // below where it will stand, which is a measurement of the movement rather than of the screen.
+    await sheet.evaluate((element) => Promise.all(element.getAnimations().map((one) => one.finished.catch(() => undefined))));
     const body = sheet.locator(".sheet-body");
     const done = sheet.getByRole("button", { name: /^Done$/ });
     const height = page.viewportSize()!.height;

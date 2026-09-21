@@ -11,6 +11,8 @@ import { figureWithMark, readableFigure, typedFromUnits, unitsFromTyped } from "
 import { AmountError } from "@/src/money";
 import { OFFER as W } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
+import { feel } from "../mood";
+import { useHasPointer } from "../Motion";
 import { CardFace } from "../GiftCard";
 import { Character } from "../Character";
 import { MoneyMark } from "../MoneyMark";
@@ -44,11 +46,12 @@ export function OfferCard() {
    */
   const draft = useSyncExternalStore(subscribeToCardDraft, cardDraft, startingCardDraft);
   const change = (next: GiftDraft) => writeCardDraft(next, address);
-  /** The one sheet left on this card, and its two faces: the catalogue, then the condition's own questions. */
-  const [choosing, setChoosing] = useState(false);
-  /** Which face the sheet opens on: the catalogue from the condition line, that condition's questions from the
-      detail line under it (D136). */
-  const [sheetAt, setSheetAt] = useState<"list" | "questions">("list");
+  /**
+   * The one sheet left on this card: shut, or open on one of its two faces, the catalogue or the chosen condition's
+   * own questions (D136). One value and not two (D150): whether it is open and which face it opens on have to reach
+   * the sheet in the same render, and as two states they did not always.
+   */
+  const [choosing, setChoosing] = useState<"list" | "questions" | null>(null);
   /** Paying is a sheet over the card, and the card stays behind it (D114, the mockup pay.html). */
   const [paying, setPaying] = useState(false);
   /** The length, while somebody is typing one that is not on a chip. */
@@ -91,6 +94,19 @@ export function OfferCard() {
     }
   };
   const quick = [bounds.min, bounds.suggested, bounds.max];
+  /**
+   * What the character at the head of the page is told (D148, the motion roadmap's step 2). With a pointer it is the
+   * hover, and the face comes back when the pointer leaves. A finger has no hover, so the expression plays once when
+   * the choice is made and comes back by itself: what the person is doing is never carried by it, only answered.
+   */
+  const hasPointer = useHasPointer();
+  const asksAbout = (feeling: "curious" | "happy") => ({
+    onPointerEnter: hasPointer ? (event: { currentTarget: Element }) => feel(feeling, event.currentTarget) : undefined,
+    onPointerLeave: hasPointer ? () => feel("rest") : undefined,
+  });
+  const chosen = (feeling: "curious" | "happy", element: Element) => {
+    if (!hasPointer) feel(feeling, element, true);
+  };
 
   /** What the amount says back when it cannot be read as money: the same rule the route refuses by. */
   let amountRefusal: string | undefined;
@@ -139,9 +155,10 @@ export function OfferCard() {
                  that condition's own questions, whose first control is the way back to the catalogue (D137). It says
                  the label and the condition's name and nothing else (D138): what that condition has been told lives
                  in the step the line opens, which is where somebody goes to change it. */
-              onClick={() => {
-                setSheetAt(condition ? "questions" : "list");
-                setChoosing(true);
+              {...asksAbout("curious")}
+              onClick={(event) => {
+                chosen("curious", event.currentTarget);
+                setChoosing(condition ? "questions" : "list");
               }}
               /* Eight pixels more than a caption gets under a title: this one is a control, and at four it sat on
                  the name's own box (the founder, 21 Sep 2026). */
@@ -219,7 +236,11 @@ export function OfferCard() {
                   <button
                     key={count}
                     type="button"
-                    onClick={() => change({ ...draft, days: String(count) })}
+                    {...asksAbout("happy")}
+                    onClick={(event) => {
+                      chosen("happy", event.currentTarget);
+                      change({ ...draft, days: String(count) });
+                    }}
                     /* Pressed by its value alone, so what is kept from an older visit and the chip never disagree. */
                     aria-pressed={days === count}
                     className={`${CHIP} ${days === count ? "bg-[var(--chosen)] font-bold" : ""}`}
@@ -247,7 +268,7 @@ export function OfferCard() {
 
       {/* The one sheet the card opens, drawn once: a modal dialog is closed by the browser, which is what gives the
           page back, so taking an open one out of the page would leave its layer over everything. */}
-      <WillSheet at={sheetAt} open={choosing} draft={draft} onChange={change} onClose={() => setChoosing(false)} />
+      <WillSheet openAt={choosing} draft={draft} onChange={change} onClose={() => setChoosing(null)} />
       <PaySheet open={paying} draft={draft} onChange={change} onClose={() => setPaying(false)} />
     </>
   );

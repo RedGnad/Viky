@@ -4,7 +4,7 @@ import { useAccount } from "@/src/account/provider";
 import { CATALOGUE, HOME as W, ME } from "@/src/sentences";
 import { BODY, HELP, HERO, LEAD, SECONDARY_BUTTON, TITLE } from "../components/ui";
 import { Character } from "./Character";
-import { Arrival, Gaze, Reveal, type ArrivalGift } from "./Motion";
+import { Arrival, Expression, Gaze, Reveal, type ArrivalGift } from "./Motion";
 import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
 import { GiftCard } from "./GiftCard";
@@ -54,19 +54,23 @@ export function Home() {
         <div className="arrives-in-turn flex w-full flex-col items-start gap-[var(--space-md)] [@media(min-width:1024px)]:items-center [@media(min-width:1024px)]:gap-[var(--space-sm)]">
           {/* A plain block, never a flex one: text only flows around a float inside a block. */}
           <div className="w-full [@media(min-width:1024px)]:text-center">
-            <Gaze>
-              <Character
-                state="diamond"
-                tone="sun"
-                standing={false}
-                /* 86 wide is 54 tall in its own box, exactly the title's line, which is the largest the hollow takes
-                   before the shape bites into the second line and the title breaks into three (the founder, 21 Sep
-                   2026, asking for it bigger while keeping A's two lines). */
-                /* No margin under it on a phone: a float's margin box is what the text avoids, and eight pixels of
-                   it pushed the second line aside too, which is what broke the title into four ragged lines. */
-                className="float-right ml-[var(--space-sm)] h-auto w-[86px] [@media(min-width:1024px)]:float-none [@media(min-width:1024px)]:mx-auto [@media(min-width:1024px)]:mb-[var(--space-sm)] [@media(min-width:1024px)]:block [@media(min-width:1024px)]:w-[80px]"
-              />
-            </Gaze>
+            {/* The head of the page is the character that answers the card under it (D148): it looks at the line that
+                asks what they will do, and it smiles at a length. `Gaze` keeps the pointer's own look on top. */}
+            <Expression>
+              <Gaze>
+                <Character
+                  state="diamond"
+                  tone="sun"
+                  standing={false}
+                  /* 86 wide is 54 tall in its own box, exactly the title's line, which is the largest the hollow takes
+                     before the shape bites into the second line and the title breaks into three (the founder, 21 Sep
+                     2026, asking for it bigger while keeping A's two lines). */
+                  /* No margin under it on a phone: a float's margin box is what the text avoids, and eight pixels of
+                     it pushed the second line aside too, which is what broke the title into four ragged lines. */
+                  className="float-right ml-[var(--space-sm)] h-auto w-[86px] [@media(min-width:1024px)]:float-none [@media(min-width:1024px)]:mx-auto [@media(min-width:1024px)]:mb-[var(--space-sm)] [@media(min-width:1024px)]:block [@media(min-width:1024px)]:w-[80px]"
+                />
+              </Gaze>
+            </Expression>
             <h1 className={HERO}>{W.promise}</h1>
             {/* One line from 1024, where two would have pushed the card's last line past the fold (measured 914 for 900). */}
             <p className={`${LEAD} mt-[var(--space-xs)] max-w-[460px] [@media(min-width:1024px)]:max-w-none`}>{W.promiseUnder}</p>

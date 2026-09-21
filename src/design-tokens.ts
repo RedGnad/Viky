@@ -393,8 +393,12 @@ export const MOTION = {
    * `mostStaggeredMs`, so a page of any length has arrived inside the half second NN/g calls the ceiling.
    */
   reveal: { durationMs: 250, easing: EASING.standard, rise: 8, staggerMs: 50, mostStaggeredMs: 200 },
-  /** A pointer over a button lifts it; over a character, its face turns towards the pointer. Material's short4. */
-  hover: { durationMs: 200, easing: EASING.standard, lift: 2, gaze: 2.5 },
+  /**
+   * A pointer over a button lifts it; over a character, its face turns towards the pointer. Material's short4.
+   * A screen with no pointer has no hover: an expression plays once when something is chosen, and `heldMs` is how
+   * long it stays before it comes back, so the whole round trip is 700 ms, Material's extra-long1.
+   */
+  hover: { durationMs: 200, easing: EASING.standard, lift: 2, gaze: 2.5, heldMs: 300 },
   /** WCAG 2.2.2 Pause, Stop, Hide: nothing that starts by itself may last past five seconds without a way to stop it. */
   ceilingMs: 5000,
 } as const;

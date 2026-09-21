@@ -163,6 +163,37 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
 });
 
 /**
+ * The character is where it can answer, and the two expressions are built from the parts it already has (D148, the
+ * motion roadmap's step 2). Nothing new is drawn, nothing plays on a clock, and a screen with no pointer plays the
+ * expression once on the choice, in and held and back, for 700 ms, which is Material's extra-long1.
+ */
+test("the character stands on the four screens, and answers with the parts it already has", () => {
+  const drawing = readFileSync("app/kit/Character.tsx", "utf8");
+  for (const part of ["gaze", "eye", "mouth"]) {
+    assert.match(drawing, new RegExp(`data-part="${part}"`), `the ${part} is named, so an expression can move it`);
+  }
+  const head = readFileSync("app/kit/HeadCharacter.tsx", "utf8");
+  assert.match(head, /<Expression>[\s\S]*<Gaze>[\s\S]*state="diamond"/, "the same character as the page without an account, and it feels");
+  for (const [screen, file] of Object.entries({
+    "a gift's page": "app/components/GiftPage.tsx",
+    "the way out": "app/cash-out/page.tsx",
+    "the sheet that pays": "app/kit/offer/PaySheet.tsx",
+  })) {
+    assert.match(readFileSync(file, "utf8"), /<HeadCharacter \/>/, `${screen} carries the character`);
+  }
+  // The card's two controls say what they are being asked about, and nothing else on the card does.
+  const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
+  assert.match(card, /\{\.\.\.asksAbout\("curious"\)\}/);
+  assert.match(card, /\{\.\.\.asksAbout\("happy"\)\}/);
+  assert.equal((card.match(/asksAbout\(/g) ?? []).length, 2, "two controls ask, and nothing else on the card does");
+  const motion = readFileSync("app/kit/Motion.tsx", "utf8");
+  assert.match(motion, /export function Expression\(/);
+  assert.match(motion, /mood\.once/, "a device with no pointer is given the round trip rather than a hover");
+  assert.equal(MOTION.hover.durationMs * 2 + MOTION.hover.heldMs, 700, "in, held, and back is Material's extra-long1");
+  assert.ok(MOTION.hover.heldMs === 300, "the beat it is held for is Material's medium2");
+});
+
+/**
  * An amount that changed counts to its value once (brief, section 6), driven frame by frame rather than by the
  * stylesheet, so `document.getAnimations()` never sees it. Every run that photographs a screen has to wait for the
  * count, or it keeps a figure that was true for 200ms: the captures of 18 Sep showed $0.11, $0.24 and $0.78 for an

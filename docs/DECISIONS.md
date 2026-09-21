@@ -4039,3 +4039,52 @@ suis sign out."
   page was being thrown away and rebuilt whole (D147, the clock's language).
 - Everything else of D147 stands: the blocks arrive in turn, the money block keeps one shape, the way out keeps its
   room, and the contract's figure is not printed on Home.
+
+## D148, 21 Sep 2026: the character is there, and it answers
+
+Step 2 of the founder's motion roadmap, and the only part of it the tokens had not already decided: what a character
+does when somebody is doing something. "Ce n'est pas un ornement : c'est lui qui réagira."
+
+- **It stands on four screens now**, where it stood on one: the page without an account, a gift's own page, the
+  sheet that pays and the way out, in the same corner of the head each time. It is the same drawing at 72 wide in a
+  head beside a way back, and the page without an account keeps its own 86 floated into the title's hollow.
+- **Two expressions, built from the parts it already has**, with nothing new drawn. On the line that says what they
+  will do, the gaze turns towards that line and the mouth opens a little: curious. On a length, the eyes narrow into
+  a smile and the mouth widens a touch: happy. Where the line is, is where it looks: the direction is measured from
+  the character's own box to the control's, which is the arithmetic the pointer's gaze already does.
+- **A pointer hovers, a finger cannot.** With a pointer it is the hover, 200 ms there and 200 ms back when the
+  pointer leaves (`MOTION.hover`). With a finger there is no hover at all, so the expression plays once when the
+  choice is made and comes back by itself: one movement of 700 ms, in, held for 300, and back, which is Material's
+  extra-long1 made of its own steps. Nothing plays on a clock and nothing repeats.
+- **How the two ends meet.** The character is at the head of the page and the controls it answers are inside the
+  card below it, so they are never in the same component: the controls write what they are being asked about to a
+  store (`app/kit/mood.ts`) and the character reads it, the same shape `src/card-draft.ts` already uses.
+- **What it keeps.** Each movement writes the face it reached into the drawing and lets go, so the next expression
+  starts from the face that is there and the pointer's own gaze keeps writing to the same place. Under reduced
+  motion the face stays at rest, pressed or hovered.
+- Measured on the built app: at rest every part is the identity; curious moves the gaze 2.5 pixels down towards the
+  line and takes the mouth to 1.6; happy takes the eyes to 0.34 and the mouth to 1.18 by 1.08; the pointer leaving
+  puts all three back. On a phone, a length pressed plays it once and is back inside a second.
+
+## D150, 21 Sep 2026: the test that failed one run in two, and the two faults behind it
+
+One browser test had been failing in about half of the full runs since 20 Sep, on whichever width lost the race, and
+had been called a flake twice in three pull requests. It was two faults, and neither was in the test.
+
+- **A service worker answers requests a test meant to answer itself.** The course list showed a real Duolingo
+  profile with eighteen courses where six were stubbed: the stub is a `page.route`, and a request made by the
+  service worker never goes through it. Whether it happened depended on whether the worker took the page over
+  during that test. Workers are blocked in the browser tests now (`playwright.config.ts`): what a worker does is
+  not what these tests measure.
+- **Blocking it uncovered a fault of our own**: with a registration refused, the library reads `registration.waiting`
+  on a registration that never came, and every screen throws a TypeError at load. A private window, a policy, a
+  blocked worker: the app threw on every page and nothing said so. The worker is registered by `app/serwist/Register.tsx`
+  now, where the refusal is caught, rather than by the provider, which does not watch what comes back.
+- **And one fault the hunt found on the way.** The card told the sheet two things, whether to open and which of its
+  two faces to open on, and a sheet can only be right if they arrive in the same render. A click that lands while
+  the page is still being hydrated is replayed by React, and the two changes were then applied one after the other:
+  the sheet opened on the face of the last time and kept it. It is one value now, `openAt`, shut or a face, so the
+  two cannot be split. The sheet also decides its face when it is built already open, which it could not before.
+- **A measurement taken while something is moving is a measurement of the movement.** The sheet rises 24 pixels when
+  it opens, and the test that checks its action is whole was reading it on the way up. It waits for the sheet to
+  have arrived now, as the arrival tests do. Two full runs, 264 passed, none failed.

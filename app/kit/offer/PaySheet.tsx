@@ -21,6 +21,7 @@ import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON }
 import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
 import { FieldRefusal } from "../FieldRefusal";
+import { HeadCharacter } from "../HeadCharacter";
 import { Sheet } from "../Sheet";
 
 /**
@@ -146,6 +147,7 @@ export function PaySheet({
     <Sheet
       open={open}
       title={W.title(recipient)}
+      beside={<HeadCharacter />}
       onClose={onClose}
       tall
       footer={
