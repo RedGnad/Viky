@@ -2,6 +2,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { useAccount } from "@/src/account/provider";
 import { useDisplayCurrency } from "@/src/client/display-currency";
+import { DISPLAY_CURRENCIES } from "@/src/display-currency";
 import { formatAusd } from "@/src/gift-reader";
 import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type GiftDraft } from "@/src/gift-draft";
 import { conditionById } from "@/src/conditions";
@@ -74,6 +75,12 @@ export function OfferCard() {
   /** A figure the person reads: their own currency, with its own marks, and the dollar when that is what they read. */
   const inTheirCurrency = (amount: bigint) =>
     `${marks.before}${readableFigure(typedFromUnits(amount, money.currency, money.rates), money.currency)}${marks.after}`;
+  /** The three the product reads in, in the register's order: pressing the mark takes the next one. */
+  const readInTheNext = () => {
+    const next = DISPLAY_CURRENCIES[(DISPLAY_CURRENCIES.indexOf(money.currency) + 1) % DISPLAY_CURRENCIES.length];
+    setTypedAmount(null);
+    money.readIn(next);
+  };
   const typeAmount = (value: string) => {
     setTypedAmount(value);
     try {
@@ -183,7 +190,14 @@ export function OfferCard() {
                   a sentence carrying its rate's own day cannot fit beside a 39 pixel figure. */}
               <span className="flex items-baseline gap-x-[var(--space-sm)]">
                 <span className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent-text)]`}>
-                  {marks.before}
+                  {/* The currency's own mark, in the text face because the title face draws a money sign nobody
+                      recognises (the founder, 21 Sep 2026), and it is the control that changes what everything on
+                      this card is read in (D144): a visitor has no page to set that on. */}
+                  {marks.before ? (
+                    <button type="button" onClick={readInTheNext} aria-label={W.currencyLabel(money.currency)} className="-mx-[var(--space-xs)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center justify-center font-[family-name:var(--font-text)]">
+                      {marks.before}
+                    </button>
+                  ) : null}
                   <input
                     value={typed}
                     onChange={(event) => typeAmount(event.target.value)}
@@ -194,13 +208,13 @@ export function OfferCard() {
                     autoComplete="off"
                     className="min-h-[var(--tap-target)] min-w-[var(--tap-target)] bg-transparent tabular-nums outline-none"
                   />
-                  {marks.after}
+                  {marks.after ? (
+                    <button type="button" onClick={readInTheNext} aria-label={W.currencyLabel(money.currency)} className="-mx-[var(--space-xs)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center justify-center font-[family-name:var(--font-text)]">
+                      {marks.after}
+                    </button>
+                  ) : null}
                 </span>
-                {/* Beside the figure, the dollars the contract will hold, because that is what is signed and what is
-                    released day by day (D143). Nothing at all when the two are the same figure. */}
-                {!amountRefusal && units !== undefined && money.currency !== "USD" ? (
-                  <span className={`${HELP} whitespace-nowrap`}>{W.inTheirName(formatAusd(units))}</span>
-                ) : null}
+
               </span>
               {amountRefusal ? <span className={`block ${HELP} text-[var(--on-surface)]`}>{amountRefusal}</span> : null}
 

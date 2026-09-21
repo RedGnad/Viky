@@ -52,9 +52,11 @@ export function WillSheet({
    * what React asks for a value derived from props: an effect writing state here renders the sheet twice on every
    * opening, and the first of the two shows the wrong face.
    */
-  const [openedAt, setOpenedAt] = useState<{ open: boolean; at: "list" | "questions" }>({ open, at });
-  if (openedAt.open !== open || openedAt.at !== at) {
-    setOpenedAt({ open, at });
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    // Only the opening decides which face to show. Reading `at` again while the sheet is open moved somebody from
+    // the catalogue to the questions under their hand, the moment the card's own draft arrived from the device.
     if (open) setAskedFor(at);
   }
   const choosing = askedFor === null || askedFor === "list";

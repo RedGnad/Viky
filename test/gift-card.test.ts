@@ -193,7 +193,9 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   // reads without zooming and a thumb can hit, and it never blocks.
   assert.match(readFileSync("app/kit/offer/PaySheet.tsx", "utf8"), /value=\{draft\.funderName\}/);
   // Every field on the card is a control at the size every control keeps, and the chips are the product's own button.
-  assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length, 3, "the name and the amount twice; the days are chips now (D130)");
+  // The name, the amount's box and its field, and the mark that changes the currency (D144): every one of them a
+  // control at the size every control keeps.
+  assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length, 5, "the name, the amount twice, and the currency mark twice");
   // One line, not two (D137): it opens the catalogue while nothing is chosen and that condition's questions after.
   assert.equal((card.match(/\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/g) ?? []).length, 1, "one control for what they will do");
   assert.match(card, /setSheetAt\(condition \? "questions" : "list"\)/);
