@@ -62,6 +62,9 @@ export function OfferCard() {
   const ready = isComplete(draft) && units !== undefined;
   const recipient = draft.recipientName.trim();
   const days = Number(draft.days);
+  const said = units === undefined ? undefined : money.about(units);
+  /** "About 26.18 EUR (rate of 18 Sep 2026)" said as a caption: no full stop, because it sits beside a figure. */
+  const worth = said ? `${said[0].toUpperCase()}${said.slice(1)}` : undefined;
   const quick = [bounds.min, bounds.suggested, bounds.max];
 
   /** What the amount says back when it cannot be read as money: the same rule the route refuses by. */
@@ -85,7 +88,9 @@ export function OfferCard() {
              what they already know and what the page above says; the same line matters on a gift's own page, where
              the reader is somebody else, and it stays there. Material's card anatomy makes the overline optional,
              and NN/g's rule for a label is that it carries something the rest of the card does not. */
-          /* The name, typed in the line that carries it. It is the only empty thing on the card, and it has the cursor. */
+          /* The name, typed in the line that carries it: the only empty thing on the card. It does not take the cursor
+             by itself (D140), because on a phone that raises the keyboard the moment the page opens and hides half
+             of what the person came to read. */
           title={
             <span className={CARD_TITLE}>
               {W.forNobody}{" "}
@@ -97,7 +102,6 @@ export function OfferCard() {
                 maxLength={40}
                 size={Math.max(5, recipient.length + 1)}
                 autoComplete="off"
-                autoFocus={recipient.length === 0}
                 className="on-paper-field min-h-[var(--tap-target)] min-w-[var(--tap-target)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)]"
               />
             </span>
@@ -158,6 +162,10 @@ export function OfferCard() {
                 {/* One box and one ring around the "$" and the figure together: the ring is the box's, drawn when the
                     figure inside has the focus, so the field never reads as a box inside a box (the founder,
                     20 Sep 2026, on the amount after the name was fixed). */}
+                <span className="flex flex-wrap items-baseline gap-x-[var(--space-sm)] gap-y-[var(--space-xs)]">
+              {/* The figure, and beside it what it is worth in the currency this account reads in (D140): under it
+                    the line made the card taller, which is what the founder would not have. Nothing at all when the
+                    account reads in dollars, or when no rate answered. */}
                 <span className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent-text)]`}>
                   {W.dollar}
                   <input
@@ -172,10 +180,10 @@ export function OfferCard() {
                   />
                 </span>
               </span>
+                {!amountRefusal && units !== undefined && worth ? <span className={`${HELP} shrink`}>{worth}</span> : null}
+              </span>
               {amountRefusal ? <span className={`block ${HELP} text-[var(--on-surface)]`}>{amountRefusal}</span> : null}
-              {!amountRefusal && units !== undefined && money.about(units) ? (
-                <span className={`block ${HELP}`}>{`${money.about(units)![0].toUpperCase()}${money.about(units)!.slice(1)}.`}</span>
-              ) : null}
+
 
               {/* How long, on the card: the three lengths the register gives this condition, and no fourth (D130).
                   The chip that opened a field for any other number is gone: the founder asked for it on both sizes,

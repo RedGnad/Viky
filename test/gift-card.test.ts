@@ -78,7 +78,8 @@ test("the card opens filled, and the only empty thing on it is the name", () => 
   // And the screens read that card rather than an empty one, on the server as in the browser.
   assert.match(readFileSync("src/card-draft.ts", "utf8"), /return STARTING_DRAFT;/);
   assert.match(card, /startingCardDraft\)/);
-  assert.match(card, /autoFocus=\{recipient\.length === 0\}/, "the empty field carries the cursor");
+  // The card does not take the cursor by itself (D140): on a phone it raised the keyboard as the page opened.
+  assert.doesNotMatch(card, /autoFocus/, "nothing on the card takes the cursor by itself");
 });
 
 test("a case is filled only by an answer the routes would accept", () => {

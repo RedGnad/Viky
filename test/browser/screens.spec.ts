@@ -55,8 +55,9 @@ test.describe("the screens a person meets", () => {
     await expect(card.getByLabel(/Their first name/i)).toHaveValue("");
     await expect(card.getByLabel(/How much/i)).toHaveValue("30");
     await expect(card.getByRole("button", { name: "30 days", exact: true })).toHaveAttribute("aria-pressed", "true");
-    // The one empty field is the one Viky cannot guess, and it is where the cursor is.
-    await expect(card.getByLabel(/Their first name/i)).toBeFocused();
+    // The one empty field is the one Viky cannot guess.
+    // And nothing takes the cursor on arrival (D140): on a phone that raised the keyboard over half the page.
+    await expect(card.getByLabel(/Their first name/i)).not.toBeFocused();
     // The action says what it will take from the first second: the passkey is the door, not the button.
     await expect(page.getByRole("button", { name: /^Send \$30\.00$/ })).toBeEnabled();
     // The promise and the line under it, in the founder's words of 20 Sep 2026 (D128).
