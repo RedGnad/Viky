@@ -314,8 +314,8 @@ test("a case opens in a sheet, and a sheet is a dialog rather than a page", () =
 
 test("the page without an account is the character, the title, the sentence and the card, in that order everywhere", () => {
   const home = readFileSync("app/kit/Home.tsx", "utf8");
-  // The page without an account is the one drawn when the device knows of none at all (D147).
-  const signedOut = home.slice(home.indexOf("if (!address && !hasCredential)"), home.indexOf("const moving ="));
+  // The page without an account is the one drawn whenever no session names one (D149).
+  const signedOut = home.slice(home.indexOf("if (!address)"), home.indexOf("const moving ="));
   // D129: one column at every width, and the text is never under the card. The two columns of D128 lasted an evening,
   // and what they had put under the card on a phone was a regression on the page of that morning.
   // The diamond of D131, floated into the hollow the title leaves at its top right on a phone, above it from 1024.
