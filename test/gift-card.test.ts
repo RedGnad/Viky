@@ -156,14 +156,14 @@ test("the card shows what the rendered mockups show, in their order", () => {
   assert.doesNotMatch(card, /\{funder \? W\.fromFunder\(funder\) : W\.fromYou\}/, "the card being filled in carries no such line (D138)");
   assert.match(card, /placeholder=\{W\.who\}/);
   assert.match(card, /\{condition \? condition\.name : W\.invites\.will\}/);
-  // The shape has the length of the gift, and one mark a day, with a fade saying the row carries on (desktop.html).
+  // The shape has the length of the gift, and one mark a day; the row says for itself which edge still hides one.
   assert.match(card, /durationDays: Number\.isInteger\(days\) && days > 0 \? days : bounds\.suggested/);
-  assert.match(card, /day-row-fade/);
+  assert.doesNotMatch(card, /day-row-fade|day-row-frame/, "the fade is the row's own now, at the edge that hides a day (D145)");
   // The star of the screen, typed where it stands, and the length on chips under it.
-  // The figure is typed in the currency the person reads in (D143): the mark before it is that currency's own.
-  assert.match(card, /\{marks\.before\}/);
-  assert.match(card, /\{marks\.after\}/);
-  assert.match(card, /currencyMarks\(money\.currency\)/);
+  // The figure is typed in the currency the person reads in (D143), and its mark is drawn in the house's own line
+  // and stands in front of the figure whatever the currency (D145), so pressing it never moves the field.
+  assert.match(card, /<MoneyMark currency=\{money\.currency\} \/>/);
+  assert.match(card, /figureWithMark\(readableFigure\(/);
   assert.match(card, /quick\.map\(\(count\) =>/);
   // The three the register gives this condition, and no fourth (D130): the chip that opened a field is gone, and so
   // is the field, so the only lengths a card offers are the three the register was asked about.
@@ -195,7 +195,7 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   // Every field on the card is a control at the size every control keeps, and the chips are the product's own button.
   // The name, the amount's box and its field, and the mark that changes the currency (D144): every one of them a
   // control at the size every control keeps.
-  assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length, 5, "the name, the amount twice, and the currency mark twice");
+  assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length, 4, "the name, the amount twice, and the one currency mark");
   // One line, not two (D137): it opens the catalogue while nothing is chosen and that condition's questions after.
   assert.equal((card.match(/\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/g) ?? []).length, 1, "one control for what they will do");
   assert.match(card, /setSheetAt\(condition \? "questions" : "list"\)/);

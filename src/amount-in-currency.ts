@@ -50,17 +50,29 @@ export function readableFigure(typed: string, currency: DisplayCurrency): string
   return Number.isFinite(whole) ? whole.toLocaleString("en-GB") : typed;
 }
 
-/** The symbol a field is typed beside, and what follows the figure where a currency has no symbol of its own. */
-export function currencyMarks(currency: DisplayCurrency): Readonly<{ before: string; after: string }> {
-  if (currency === "XOF") return { before: "", after: " CFA" };
-  return { before: currency === "EUR" ? "€" : "$", after: "" };
+/**
+ * The mark a figure is read with, and it stands in front of the figure in every currency (the founder, 21 Sep 2026).
+ *
+ * The CFA franc's name used to follow its figure, which is how it is written in prose, and on the card that put the
+ * mark on the other side of the field: pressing it to change what everything is read in moved the box the amount is
+ * typed in. A control keeps its place. The franc keeps a space after its letters, where a symbol needs none.
+ */
+export function currencyMark(currency: DisplayCurrency): Readonly<{ sign: string; gap: string }> {
+  if (currency === "XOF") return { sign: "CFA", gap: " " };
+  return { sign: currency === "EUR" ? "€" : "$", gap: "" };
+}
+
+/** A figure as it is read, its mark in front: "$30.00", "€26.18", "CFA 17,172". */
+export function figureWithMark(figure: string, currency: DisplayCurrency): string {
+  const { sign, gap } = currencyMark(currency);
+  return `${sign}${gap}${figure}`;
 }
 
 /** The bound the contract holds, said in the currency the person is typing in, with the dollar it really is. */
 function smallestSaid(currency: DisplayCurrency, rates: Rates): string {
-  return `The smallest gift is $1.00, about ${typedFromUnits(MIN_GIFT_UNITS, currency, rates)}${currencyMarks(currency).after || ` ${currency}`}.`;
+  return `The smallest gift is $1.00, about ${figureWithMark(readableFigure(typedFromUnits(MIN_GIFT_UNITS, currency, rates), currency), currency)}.`;
 }
 
 function mostSaid(currency: DisplayCurrency, rates: Rates): string {
-  return `During the pilot, a gift is at most $1,000, about ${typedFromUnits(MAX_GIFT_UNITS, currency, rates)}${currencyMarks(currency).after || ` ${currency}`}.`;
+  return `During the pilot, a gift is at most $1,000, about ${figureWithMark(readableFigure(typedFromUnits(MAX_GIFT_UNITS, currency, rates), currency), currency)}.`;
 }

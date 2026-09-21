@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { currencyMarks, readableFigure, typedFromUnits, unitsFromTyped } from "../src/amount-in-currency";
+import { currencyMark, figureWithMark, readableFigure, typedFromUnits, unitsFromTyped } from "../src/amount-in-currency";
 import { AmountError, MAX_GIFT_UNITS, MIN_GIFT_UNITS } from "../src/money";
 import type { Rates } from "../src/rates";
 
@@ -37,9 +37,12 @@ test("a dollar reader keeps the dollar path, rate or no rate", () => {
 
 test("the contract's own bounds are said in the currency being typed in, with the dollar they really are", () => {
   const small = () => unitsFromTyped("0.50", "EUR", RATES);
-  assert.throws(small, (error: unknown) => error instanceof AmountError && /\$1\.00, about 0\.87 EUR/.test(error.message));
+  assert.throws(small, (error: unknown) => error instanceof AmountError && /\$1\.00, about €0\.87/.test(error.message));
   const big = () => unitsFromTyped("900", "EUR", RATES);
-  assert.throws(big, (error: unknown) => error instanceof AmountError && /\$1,000, about 866\.78 EUR/.test(error.message));
+  assert.throws(big, (error: unknown) => error instanceof AmountError && /\$1,000, about €866\.78/.test(error.message));
+  // The franc is grouped in the same sentence, because five figures in a row are read by nobody.
+  const franc = () => unitsFromTyped("900000", "XOF", RATES);
+  assert.throws(franc, (error: unknown) => error instanceof AmountError && /about CFA 568,568/.test(error.message));
   // And the bounds themselves are the contract's, untouched by any of this.
   assert.equal(MIN_GIFT_UNITS, 1_000_000n);
   assert.equal(MAX_GIFT_UNITS, 1_000_000_000n);
@@ -51,8 +54,12 @@ test("a franc figure is grouped where it is read, and a field still holds plain 
   assert.equal(readableFigure("26.18", "EUR"), "26.18");
 });
 
-test("what a field is typed beside", () => {
-  assert.deepEqual(currencyMarks("EUR"), { before: "€", after: "" });
-  assert.deepEqual(currencyMarks("USD"), { before: "$", after: "" });
-  assert.deepEqual(currencyMarks("XOF"), { before: "", after: " CFA" });
+test("the mark stands in front of the figure in every currency, so pressing it never moves the field (D145)", () => {
+  assert.deepEqual(currencyMark("EUR"), { sign: "€", gap: "" });
+  assert.deepEqual(currencyMark("USD"), { sign: "$", gap: "" });
+  // The franc's name follows its figure in prose; on the card it leads, like the two symbols, with a space of its own.
+  assert.deepEqual(currencyMark("XOF"), { sign: "CFA", gap: " " });
+  assert.equal(figureWithMark("30.00", "USD"), "$30.00");
+  assert.equal(figureWithMark("26.18", "EUR"), "€26.18");
+  assert.equal(figureWithMark("17,172", "XOF"), "CFA 17,172");
 });

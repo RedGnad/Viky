@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { giftDays, stripOf } from "@/src/day-states";
 import { contractDayInWords } from "@/src/moments";
 import { Character } from "./Character";
-import { characterOf } from "./DayStrip";
+import { characterOf, endsHidden, fadeOf, rowCarriesOn, useHiddenEdges } from "./DayStrip";
 import { ArrivalDay, Gaze } from "./Motion";
 import { GIFT_LIVE as L, GIFT_PAGE as W } from "@/src/sentences";
 import { CARD_LABEL } from "../components/ui";
@@ -52,17 +52,16 @@ export function DayRow({
   const states = drawn ? stripOf(gift, catchUpSeconds, nowMs, records) : [];
   const row = useRef<HTMLOListElement>(null);
   const today = useRef<HTMLLIElement>(null);
-  // Whether there is more of the row than the card can show, which is the only honest way to say "scroll for the
+  // Which side still hides a day, which is both the fade at that edge and the only honest way to say "scroll for the
   // rest": seven days fit on a wide screen and not on a narrow one, and the number of days does not tell.
-  const [more, setMore] = useState(false);
-  // Measured when the row appears and whenever its length changes: a gift connects while the page is open, and the
-  // row that was not there a second ago is the one to look at.
+  const hidden = useHiddenEdges(row, states.length);
+  const more = rowCarriesOn(hidden);
+  // Moved to today when the row appears and whenever its length changes: a gift connects while the page is open, and
+  // the row that was not there a second ago is the one to look at.
   useEffect(() => {
     const scroller = row.current;
     const day = today.current;
-    if (!scroller) return;
-    setMore(scroller.scrollWidth > scroller.clientWidth + 1);
-    if (!day) return;
+    if (!scroller || !day) return;
     // Straight to today, without the smooth travel: the page has just arrived, so there is no gesture to answer.
     scroller.scrollLeft = Math.max(0, day.offsetLeft - scroller.clientWidth / 2 + day.clientWidth / 2);
   }, [states.length]);
@@ -75,7 +74,7 @@ export function DayRow({
   const at = now >= 0 ? now : states.every((state) => state === "toCome") ? 0 : states.length - 1;
   return (
     <div className="day-row">
-      <ol ref={row} className="day-row-days" aria-label={W.daysLabel}>
+      <ol ref={row} data-more={endsHidden(hidden)} style={fadeOf(hidden)} className="day-row-days" aria-label={W.daysLabel}>
         {states.map((state, index) => (
           <li
             key={numbers[index]}
@@ -91,7 +90,6 @@ export function DayRow({
           </li>
         ))}
       </ol>
-      <div aria-hidden className="day-row-fade" />
       <p className={`${CARD_LABEL} day-row-where`}>
         {L.dayOfDays(at + 1, states.length)}
         {more ? ` · ${L.scrollForTheRest}` : ""}
