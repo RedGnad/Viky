@@ -114,7 +114,7 @@ async function captureScreen(browser: Browser, base: string, folder: string, scr
   checks.push(`${seen.accents} accent surface`);
   if (screen.id === "welcome") {
     if (seen.accents !== 1) throw new Error(`${where}: the body has ${seen.accents} actions`);
-    if (seen.door !== "Sign in or create account") throw new Error(`${where}: the header's door reads "${seen.door}"`);
+    if (seen.door !== "Sign in") throw new Error(`${where}: the header's door reads "${seen.door}"`);
     checks.push("one action in the body, the door in the header");
   }
   if (screen.id === "home") {

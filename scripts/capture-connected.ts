@@ -41,7 +41,7 @@ const APPEARANCES = [
  * so a browser with nothing stored goes through both. Creating an account lands on Home, signed in.
  */
 async function openTheDoor(page: Page): Promise<void> {
-  await page.getByRole("button", { name: /^Sign in or create account$/ }).first().click();
+  await page.getByRole("button", { name: /^Sign in$/ }).first().click();
   const create = page.getByRole("button", { name: /^Create (your|my) account$/ }).first();
   if (await create.waitFor({ state: "visible", timeout: 20_000 }).then(() => true).catch(() => false)) await create.click();
 }

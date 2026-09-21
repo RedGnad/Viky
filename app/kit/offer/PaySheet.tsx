@@ -200,7 +200,10 @@ export function PaySheet({
         <summary className="cursor-pointer font-medium">{W.whatHappens}</summary>
         {milestone ? (
           <>
-            <p className={BODY}>{MILESTONE_FUND.check.howItWorks(condition?.source ?? "", target, settlingTimeInWords(nowMs))}</p>
+            {/* The hour is the reader's own, and the server has no idea which clock that is (D151): it is printed
+                once the browser has said, never before, or the page the server sent and the page the browser draws
+                say two different hours and React throws the whole thing away and builds it again. */}
+            {nowMs === 0 ? null : <p className={BODY}>{MILESTONE_FUND.check.howItWorks(condition?.source ?? "", target, settlingTimeInWords(nowMs))}</p>}
             <p className={BODY}>{MILESTONE_FUND.check.whyCeiling(target)}</p>
           </>
         ) : certificate ? (
@@ -209,7 +212,7 @@ export function PaySheet({
             <p className={BODY}>{certificate.words.ifNot}</p>
           </>
         ) : (
-          <p className={BODY}>{FUND.check.missed(settlingTimeInWords(nowMs))}</p>
+          nowMs === 0 ? null : <p className={BODY}>{FUND.check.missed(settlingTimeInWords(nowMs))}</p>
         )}
         <p className={BODY}>{FUND.check.namesSeen(recipient, funder)}</p>
         <p className={BODY}>{milestone ? MILESTONE_FUND.check.fourteenDays : FUND.check.fourteenDays}</p>

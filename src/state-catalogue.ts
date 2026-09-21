@@ -380,7 +380,7 @@ export const ACCOUNT_SCREEN: readonly CatalogueScreen[] = [
     file: "src/sentences.ts",
     states: [
       { name: "The third destination", when: "reached from the bar or the rail, signed in", says: ["You", "Money shown in", "Signed in on this device", "Sign out", "Need your code for a payout service?", "Help", "Privacy", "Legal notice", "For judges"] },
-      { name: "Without an account", when: "reached from the bar or the rail with nobody signed in", says: ["You", "Not signed in on this device.", "Sign in or create account"] },
+      { name: "Without an account", when: "reached from the bar or the rail with nobody signed in", says: ["You", "Not signed in on this device.", "Sign in"] },
       { name: "Help", when: "somebody is stuck", says: ["Five questions, answered in the words the screens use."] },
     ],
   },
@@ -395,7 +395,7 @@ export const DOOR_SCREEN: readonly CatalogueScreen[] = [
     screen: "The door, in the header",
     file: "src/sentences.ts",
     states: [
-      { name: "Closed", when: "on the page without an account and on You, with nobody signed in", says: ["Sign in or create account"] },
+      { name: "Closed", when: "on the page without an account and on You, with nobody signed in", says: ["Sign in"] },
       {
         name: "Open",
         when: "the passkey did not open, because this device holds none for Viky or the sheet was waved away",

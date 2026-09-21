@@ -24,6 +24,14 @@ export default defineConfig({
      * does is not what these tests measure; they measure the screens.
      */
     serviceWorkers: "block",
+    /**
+     * A clock that is not the server's (D151). Production renders its pages in UTC and reads them in Paris, Dakar
+     * or Abidjan, and a sentence that says the reader's own hour is then two different sentences: React throws away
+     * the page it was sent and builds it again, which is the blink the founder saw on the landing twice. A test
+     * server on this machine shares the machine's zone, so the fault was invisible here until it was in production.
+     * These tests read in New York, which is nobody's server.
+     */
+    timezoneId: "America/New_York",
   },
   /**
    * The three widths the design pass is judged at. 375 is the narrow phone everybody still carries, 430 the

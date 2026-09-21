@@ -4088,3 +4088,27 @@ had been called a flake twice in three pull requests. It was two faults, and nei
 - **A measurement taken while something is moving is a measurement of the movement.** The sheet rises 24 pixels when
   it opens, and the test that checks its action is whole was reading it on the way up. It waits for the sheet to
   have arrived now, as the arrival tests do. Two full runs, 264 passed, none failed.
+
+## D151, 21 Sep 2026: the blink was a clock, and a mark that ran ahead of its figure
+
+The founder, on the landing: "d'abord elle affiche la carte a 30$, ensuite seulement elle se recharge en clignotant
+et je vois le montant dernierement choisi dans la currency choisie mais du coup il y a des racing conditions".
+
+- **The page was still being thrown away and built again**, and D147 had only found half of it. The sheet that pays
+  says when a missed day comes back, "about 09:00 your time", in the reader's own clock. A server has no idea which
+  clock that is: the page is rendered in UTC at build time and read in Paris, so the two texts differ and React
+  discards the whole page. Fixing the language of the clock (D147) left the zone, and the zone is invisible on this
+  machine, where the test server and the browser share it. The hour is printed once the browser has said what it
+  is, never before, which is what a gift's page already did with the same sentence.
+- **The tests read in a zone that is not the server's** (`timezoneId: "America/New_York"` in `playwright.config.ts`).
+  With the fault put back, the landing fails on all four widths; with it fixed, all four pass. A fault that only
+  production can see is a fault nobody sees.
+- **The mark ran ahead of its figure.** The currency is known as soon as the page runs, the rate arrives over the
+  network a moment later, and every figure falls back to the dollar until it does: for that moment the card printed
+  "CFA 51.56" for a gift of 29,512 francs. The mark falls back with the figures now: the screens read in the dollar
+  until a rate makes another currency true, so both change in the same instant.
+- **What is left, and it is not a blink.** A device that kept a card shows the starting card first and that card a
+  tenth of a second later, in one change: the page is static, so the server cannot know what this device kept.
+  Removing that last change means a page rendered per request, which is a bigger trade than the change costs.
+- **The door says "Sign in"** (the founder: "c'est trop long"). It named both of the things it does; the sheet it
+  opens says that in its own line and its action is still "Create your account".
