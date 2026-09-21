@@ -601,7 +601,8 @@ test("a device whose figures are about to change keeps them out of sight until t
   assert.match(readFileSync("app/globals.css", "utf8"), /html\[data-money-settling\] \[data-money\] \{\n\s*visibility: hidden;/, "the figures wait, and the boxes stay");
   const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
   assert.equal((card.match(/data-money\b/g) ?? []).length, 3, "the amount, the action and the day's worth");
-  assert.match(card, /if \(money\.ratesAsked\) document\.documentElement\.removeAttribute\(MONEY_SETTLING\)/, "and they are shown once the rate has answered, either way");
+  assert.match(card, /if \(money\.ratesAsked && balanceKnown\) document\.documentElement\.removeAttribute\(MONEY_SETTLING\)/, "and they are shown once the rate has answered and the balance is known (D157)");
+  assert.match(readFileSync("app/layout.tsx", "utf8"), /\{\.\.\.\(signedIn \? \{ "data-money-settling": "" \} : \{\}\)\}/, "a signed-in screen says so from the server");
 });
 
 /**

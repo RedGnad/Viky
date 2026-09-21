@@ -87,7 +87,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const signedIn = await whoIsSignedIn();
   return (
     // The look's font variables sit on the document itself, because app/globals.css reads them from :root.
-    <html lang="en" dir="ltr" className={`${fredoka.variable} ${dmSans.variable}`}>
+    // Signed in, the card's figures wait for the account's money and the rate (D157): the server knows the person,
+    // so the server says the figures are about to change, as the boot script does for a device that kept a card.
+    <html lang="en" dir="ltr" className={`${fredoka.variable} ${dmSans.variable}`} {...(signedIn ? { "data-money-settling": "" } : {})}>
       <body className="antialiased">
         {/* Before anything is painted, so a chosen appearance never flashes the other one first (D97), and so a card
             whose figures are about to change shows none until they have (D155). */}
