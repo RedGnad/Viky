@@ -53,7 +53,9 @@ test.describe("the screens a person meets", () => {
     // No line saying whose gift it is on the card being filled in (D138): it said what the funder already knew.
     await expect(card.getByText("A gift from you", { exact: true })).toHaveCount(0);
     await expect(card.getByLabel(/Their first name/i)).toHaveValue("");
-    await expect(card.getByLabel(/How much/i)).toHaveValue("30");
+    // Two decimals, because the field now holds the figure in the currency the person reads in (D143), and that
+    // figure is written the way that currency writes money.
+    await expect(card.getByLabel(/How much/i)).toHaveValue("30.00");
     await expect(card.getByRole("button", { name: "30 days", exact: true })).toHaveAttribute("aria-pressed", "true");
     // The one empty field is the one Viky cannot guess.
     // And nothing takes the cursor on arrival (D140): on a phone that raised the keyboard over half the page.

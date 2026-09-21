@@ -3891,3 +3891,27 @@ behind an account cannot be photographed any other way.
   a maskable icon may be cut to a circle whose diameter is 80 per cent of it, and the two points of a diamond are
   its farthest pixels, so 0.78 is as large as a shape this wide can be drawn there without losing them.
 - **"What's missed comes back to you."** Shorter, and it keeps what matters: whose money it is on the way back.
+
+## D143, 21 Sep 2026: a gift is typed in the currency the person reads in
+
+- **The question, the founder's**: why must a card show dollars, when a funder in the euro area meets a dollar sign
+  on the first screen and reads "this app is not for me"? And what do the apps of the kind do?
+- **What they do.** Wise, Revolut, Remitly and every remittance app take the amount in the currency of whoever is
+  paying and show the other side as an estimate with its rate. Nobody makes a payer type in a currency they do not
+  hold. The founder chose that model, on an image of three.
+- **What cannot move.** The chain holds dollars: the escrow, the terms that are signed, and what is released day by
+  day are a dollar figure. No screen may pretend otherwise, and the card says that figure beside the one that was
+  typed, "$30.00 in their name", because that is what the contract will hold.
+- **What the card does now.** The field takes euros or CFA francs and carries the currency's own mark; what is
+  typed becomes dollars at the day's rate from the European Central Bank, cut to the cent and never rounded up, so
+  what is signed is never more than what was asked for. The action and the note speak the same currency: "Send
+  €26.18", "€0.87 a day". A franc is whole and grouped where it is read. An account that reads in dollars sees
+  exactly what it saw before, and so does every test that runs in English.
+- **The bounds stay the contract's** and are said in both: "The smallest gift is $1.00, about 0.87 EUR", "During
+  the pilot, a gift is at most $1,000, about 866.78 EUR".
+- **What is not done, and is the next thing to ask for**: the cards of the gift list and a gift's own page still
+  print dollars, and the starting figure is a round thirty dollars, which reads as €26.18 to a French phone rather
+  than a round thirty euros. Both are a sweep of their own.
+- **The language stays English for the pilot** (the founder, same evening). The norm is the device's language,
+  which Duolingo, Wise and Revolut all follow, and our 630 sentences with their tests are a day of work to
+  translate and re-read: the five first users are chosen by the founder, and the hackathon is judged in English.

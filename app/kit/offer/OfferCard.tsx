@@ -6,7 +6,8 @@ import { formatAusd } from "@/src/gift-reader";
 import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type GiftDraft } from "@/src/gift-draft";
 import { conditionById } from "@/src/conditions";
 import { cardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
-import { AmountError, dollarsToUnits } from "@/src/money";
+import { currencyMarks, readableFigure, typedFromUnits, unitsFromTyped } from "@/src/amount-in-currency";
+import { AmountError } from "@/src/money";
 import { OFFER as W } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { CardFace } from "../GiftCard";
@@ -62,16 +63,33 @@ export function OfferCard() {
   const ready = isComplete(draft) && units !== undefined;
   const recipient = draft.recipientName.trim();
   const days = Number(draft.days);
-  const said = units === undefined ? undefined : money.about(units);
-  /** "About 26.18 EUR (rate of 18 Sep 2026)" said as a caption: no full stop, because it sits beside a figure. */
-  const worth = said ? `${said[0].toUpperCase()}${said.slice(1)}` : undefined;
+  const marks = currencyMarks(money.currency);
+  /**
+   * What the person typed, in their own currency, and the dollars it makes, which is what the draft carries and what
+   * is signed (D143). The typed text is held here rather than derived on every render: turning euros into dollars and
+   * back would rewrite "30" as "29.99" under the cursor.
+   */
+  const [typedAmount, setTypedAmount] = useState<string | null>(null);
+  const typed = typedAmount ?? typedFromUnits(draftUnits(draft) ?? 0n, money.currency, money.rates);
+  /** A figure the person reads: their own currency, with its own marks, and the dollar when that is what they read. */
+  const inTheirCurrency = (amount: bigint) =>
+    `${marks.before}${readableFigure(typedFromUnits(amount, money.currency, money.rates), money.currency)}${marks.after}`;
+  const typeAmount = (value: string) => {
+    setTypedAmount(value);
+    try {
+      change({ ...draft, dollars: formatAusd(unitsFromTyped(value, money.currency, money.rates)).slice(1) });
+    } catch {
+      // What cannot be read yet is kept as typed and said back under the field by the refusal below.
+      change({ ...draft, dollars: value });
+    }
+  };
   const quick = [bounds.min, bounds.suggested, bounds.max];
 
   /** What the amount says back when it cannot be read as money: the same rule the route refuses by. */
   let amountRefusal: string | undefined;
-  if (draft.dollars.trim().length > 0) {
+  if (typed.trim().length > 0) {
     try {
-      dollarsToUnits(draft.dollars);
+      unitsFromTyped(typed, money.currency, money.rates);
     } catch (error) {
       amountRefusal = error instanceof AmountError ? error.message : undefined;
     }
@@ -165,24 +183,23 @@ export function OfferCard() {
                   a sentence carrying its rate's own day cannot fit beside a 39 pixel figure. */}
               <span className="flex items-baseline gap-x-[var(--space-sm)]">
                 <span className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent-text)]`}>
-                  {W.dollar}
+                  {marks.before}
                   <input
-                    value={draft.dollars}
-                    onChange={(event) => change({ ...draft, dollars: event.target.value })}
+                    value={typed}
+                    onChange={(event) => typeAmount(event.target.value)}
                     aria-label={W.slots.amount.label}
                     inputMode="decimal"
                     maxLength={9}
-                    size={Math.max(4, draft.dollars.length + 1)}
+                    size={Math.max(4, typed.length + 1)}
                     autoComplete="off"
                     className="min-h-[var(--tap-target)] min-w-[var(--tap-target)] bg-transparent tabular-nums outline-none"
                   />
+                  {marks.after}
                 </span>
-                {/* Beside the figure, or not at all (the founder, 21 Sep 2026). A converted figure carries its rate's
-                    own day, which makes the sentence 230 pixels wide: beside a 39 pixel figure it fits from 480 and
-                    would wrap under it below, so below 480 it is not drawn at all. Where the money moves, the sheet
-                    says the same thing in full. */}
-                {!amountRefusal && units !== undefined && worth ? (
-                  <span className={`${HELP} hidden whitespace-nowrap [@media(min-width:480px)]:inline`}>{worth}</span>
+                {/* Beside the figure, the dollars the contract will hold, because that is what is signed and what is
+                    released day by day (D143). Nothing at all when the two are the same figure. */}
+                {!amountRefusal && units !== undefined && money.currency !== "USD" ? (
+                  <span className={`${HELP} whitespace-nowrap`}>{W.inTheirName(formatAusd(units))}</span>
                 ) : null}
               </span>
               {amountRefusal ? <span className={`block ${HELP} text-[var(--on-surface)]`}>{amountRefusal}</span> : null}
@@ -209,13 +226,13 @@ export function OfferCard() {
               {/* One action, in the sun, full width, saying what it will take from the first second; shut, it says what it
                   is waiting for rather than its price (ui review, 20 Sep 2026: a muted "Pay $30.00" with no reason). */}
               <button type="button" className={`${PRIMARY_BUTTON} mt-[var(--space-lg)]`} disabled={!ready} onClick={() => setPaying(true)}>
-                {!filled.will ? W.finishWill : !filled.howLong ? W.chooseLength : units === undefined ? W.stillNeeded : W.pay(formatAusd(units))}
+                {!filled.will ? W.finishWill : !filled.howLong ? W.chooseLength : units === undefined ? W.stillNeeded : W.pay(inTheirCurrency(units))}
               </button>
               {/* What one day of it is worth, and nothing when there is no such figure. The pilot's ceiling is not a
                   standing notice any more (D138): it is what the amount says back to somebody who types past it,
                   under the amount itself, where a refusal belongs. */}
               {shape === "days" && units !== undefined && days > 0 ? (
-                <span className={`block ${HELP} text-center`}>{W.eachDay(formatAusd(units / BigInt(days)))}</span>
+                <span className={`block ${HELP} text-center`}>{W.eachDay(inTheirCurrency(units / BigInt(days)))}</span>
               ) : null}
             </>
           }
