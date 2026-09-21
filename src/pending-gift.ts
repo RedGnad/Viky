@@ -44,6 +44,9 @@ export type PendingGiftTerms = Readonly<{
   cadence?: string;
   standing?: number;
   standingReadAt?: string;
+  /** The amount as the person typed it and the currency they typed it in, or nothing while it is the card's own (D158). */
+  typedAmount?: string;
+  typedIn?: string;
 }>;
 export type PendingGift = PendingGiftTerms & Readonly<{ savedAtMs: number }>;
 
@@ -169,6 +172,7 @@ export function cardDraftFrom(raw: string | null, nowMs: number): PendingGiftTer
     ...(text("cadence") !== undefined ? { cadence: text("cadence") } : {}),
     ...(typeof record.standing === "number" ? { standing: record.standing } : {}),
     ...(text("standingReadAt") !== undefined ? { standingReadAt: text("standingReadAt") } : {}),
+    ...(text("typedAmount") !== undefined ? { typedAmount: text("typedAmount"), typedIn: text("typedIn") ?? "USD" } : {}),
   };
 }
 

@@ -55,7 +55,7 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
    * else thirty dollars said round in the reader's currency. It is written into the draft the card works from, so
    * what is shown is what is sent, and it reaches the device the first time anything on the card is changed.
    */
-  const untouched = kept === startingCardDraft();
+  const untouched = kept.typedAmount === undefined;
   const starting = untouched ? startingFigure(money.currency, money.rates, holdings ? dollarsHeld(holdings) : undefined) : undefined;
   const draft = starting ? { ...kept, dollars: starting.dollars } : kept;
   const change = (next: GiftDraft) => writeCardDraft(next, address);
@@ -83,7 +83,9 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
    * back would rewrite "30" as "29.99" under the cursor.
    */
   const [typedAmount, setTypedAmount] = useState<string | null>(null);
-  const typed = typedAmount ?? starting?.typed ?? typedFromUnits(draftUnits(draft) ?? 0n, money.currency, money.rates);
+  /** What was typed here, or on an earlier visit in the same currency, or the figure the dollars make (D158). */
+  const keptTyped = kept.typedIn === money.currency ? kept.typedAmount : undefined;
+  const typed = typedAmount ?? starting?.typed ?? keptTyped ?? typedFromUnits(draftUnits(draft) ?? 0n, money.currency, money.rates);
   /**
    * A figure the person reads, in their own currency, with its mark and its own grouping: what the action says and
    * what a day of the gift is worth. The field beside it keeps what was typed instead, exactly as it was typed, so
@@ -115,11 +117,12 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
   };
   const typeAmount = (value: string) => {
     setTypedAmount(value);
+    // Typed, so it is this person's amount from now on and no longer the one the card came with (D158).
     try {
-      change({ ...draft, dollars: formatAusd(unitsFromTyped(value, money.currency, money.rates)).slice(1) });
+      change({ ...draft, dollars: formatAusd(unitsFromTyped(value, money.currency, money.rates)).slice(1), typedAmount: value, typedIn: money.currency });
     } catch {
       // What cannot be read yet is kept as typed and said back under the field by the refusal below.
-      change({ ...draft, dollars: value });
+      change({ ...draft, dollars: value, typedAmount: value, typedIn: money.currency });
     }
   };
   const quick = [bounds.min, bounds.suggested, bounds.max];

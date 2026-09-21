@@ -42,3 +42,30 @@ test("signed in with money in the account, the card starts on that money, within
   assert.equal(startingFigure("USD", RATES, 500_000n).fromTheAccount, false, "under the smallest gift, the round default");
   assert.equal(startingFigure("USD", RATES, 2_000_000_000n).fromTheAccount, false, "over the pilot's ceiling, the round default");
 });
+
+test("what was typed comes back exactly, in the currency it was typed in (D158)", async () => {
+  const { STARTING_DRAFT, draftFromTerms, draftToTerms } = await import("../src/gift-draft");
+  const { cardDraftFrom, pendingGiftToStore } = await import("../src/pending-gift");
+  // 45 euros are held as the dollars they make, cut to the cent, which are 44.99 euros back: the person typed 45.
+  const typed = draftToTerms({ ...STARTING_DRAFT, dollars: "51.91", typedAmount: "45", typedIn: "EUR" }, undefined);
+  const kept = draftFromTerms(cardDraftFrom(pendingGiftToStore(typed, Date.now()), Date.now())!);
+  assert.equal(kept.typedAmount, "45");
+  assert.equal(kept.typedIn, "EUR");
+  assert.equal(kept.dollars, "51.91", "and what is sent is still the dollars");
+});
+
+test("a card kept on the device follows the default until somebody has typed an amount (D158)", async () => {
+  const { STARTING_DRAFT, draftFromTerms, draftToTerms } = await import("../src/gift-draft");
+  const { cardDraftFrom, pendingGiftToStore } = await import("../src/pending-gift");
+  // Pressing a length or choosing a condition writes the card down; its amount is still the one it came with.
+  const pressed = draftToTerms({ ...STARTING_DRAFT, days: "90" }, undefined);
+  assert.equal(pressed.typedAmount, undefined);
+  const keptAfterPressing = cardDraftFrom(pendingGiftToStore(pressed, Date.now()), Date.now());
+  assert.equal(draftFromTerms(keptAfterPressing!).typedAmount, undefined, "so the card still starts where the reader is");
+  // Typing one is a decision, and it survives the reload.
+  const typed = draftToTerms({ ...STARTING_DRAFT, dollars: "45", typedAmount: "45", typedIn: "USD" }, undefined);
+  assert.equal(typed.typedAmount, "45");
+  const keptAfterTyping = cardDraftFrom(pendingGiftToStore(typed, Date.now()), Date.now());
+  assert.equal(draftFromTerms(keptAfterTyping!).typedAmount, "45");
+  assert.equal(draftFromTerms(keptAfterTyping!).dollars, "45");
+});
