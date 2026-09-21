@@ -4141,3 +4141,22 @@ redrawing the screen twice, and the gesture stops working at all past five entri
   from "$" to "F CFA", a fixed box would cut them, so the key sizes to its sign and the field sits after it.
 - **The account page uses the same key and the same sheet**, so there is one way to change what money is read in,
   and its list of three names is gone with `DISPLAY_CURRENCIES`.
+
+## D153, 21 Sep 2026: a page does not restart itself under somebody
+
+The founder, on his phone: "la landing clignotte encore quand je la lance. Ca ne le fait plus sur desktop mais sur
+mobile oui. La landing a l'air de se charger 2 fois de suite." It was loading twice, and this time literally.
+
+- **The worker's provider reloads the whole page on every `online` event.** `SerwistProvider` takes
+  `reloadOnOnline` and it defaults to true; the handler is `location.reload()`. A desktop on a steady connection
+  never fires that event. A phone fires it when it finishes connecting, when it wakes, when it changes network,
+  which is exactly when somebody launches an installed app. Measured: dispatching one `online` event took the page
+  from two navigations to four; with the option off, it stays at two.
+- **It is off, and nothing else in the app may ask for a reload.** A page that restarts itself throws away whatever
+  was being typed and shows the arrival twice, and the person who did nothing is the one who pays for it. A test
+  holds both halves: the option in `app/layout.tsx`, and no `location.reload()` anywhere in `app/`.
+- **What this was not.** The two earlier causes were real and both are still fixed: the page thrown away over a
+  clock written in two languages (D147), and again over its zone (D151). This one only ever showed on a phone,
+  which is why two rounds of measuring on a desktop found nothing.
+- An installed app keeps the build it was launched with until its worker updates, so the first launch after this
+  can still carry the old one. The second launch is the one to judge.
