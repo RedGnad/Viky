@@ -160,7 +160,10 @@ test("the card shows what the rendered mockups show, in their order", () => {
   assert.match(card, /durationDays: Number\.isInteger\(days\) && days > 0 \? days : bounds\.suggested/);
   assert.match(card, /day-row-fade/);
   // The star of the screen, typed where it stands, and the length on chips under it.
-  assert.match(card, /\{W\.dollar\}/);
+  // The figure is typed in the currency the person reads in (D143): the mark before it is that currency's own.
+  assert.match(card, /\{marks\.before\}/);
+  assert.match(card, /\{marks\.after\}/);
+  assert.match(card, /currencyMarks\(money\.currency\)/);
   assert.match(card, /quick\.map\(\(count\) =>/);
   // The three the register gives this condition, and no fourth (D130): the chip that opened a field is gone, and so
   // is the field, so the only lengths a card offers are the three the register was asked about.
@@ -178,9 +181,11 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   for (const gone of ["WhoSheet", "AmountSheet", "HowLongSheet"]) {
     assert.equal(globSync(`app/kit/offer/${gone}.tsx`).length, 0, `${gone} is gone`);
   }
-  for (const field of ["recipientName", "dollars"]) {
-    assert.match(card, new RegExp(`value=\\{draft\\.${field}\\}`), `${field} is typed on the card`);
-  }
+  assert.match(card, /value=\{draft\.recipientName\}/, "the name is typed on the card");
+  // The amount too, though what the field holds is the person's own currency and what the draft carries is the
+  // dollars the contract will hold (D143).
+  assert.match(card, /value=\{typed\}/);
+  assert.match(card, /unitsFromTyped\(value, money\.currency, money\.rates\)/);
   // The length is chosen rather than typed since D130: three chips, the register's own, and no field beside them.
   assert.doesNotMatch(card, /value=\{draft\.days\}/);
   assert.match(card, /change\(\{ \.\.\.draft, days: String\(count\) \}\)/, "a chip writes the length on the draft");
@@ -209,7 +214,7 @@ test("one accent per surface: the card's Pay, and a sheet's own Done", () => {
   }
   // The same button, shut, says what it waits for rather than its price: the condition's own questions first, then a
   // length the route takes, then an amount that can be read.
-  assert.match(card, /!filled\.will \? W\.finishWill : !filled\.howLong \? W\.chooseLength : units === undefined \? W\.stillNeeded : W\.pay\(formatAusd\(units\)\)/);
+  assert.match(card, /!filled\.will \? W\.finishWill : !filled\.howLong \? W\.chooseLength : units === undefined \? W\.stillNeeded : W\.pay\(inTheirCurrency\(units\)\)/);
   assert.doesNotMatch(card, /var\(--accent\)/, "nothing else on the card paints itself with the sun");
 });
 
