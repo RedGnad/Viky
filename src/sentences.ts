@@ -968,11 +968,27 @@ export const CATALOGUE = {
   limits: "What each of these proves, and what it does not, is written out on the same page as our own limits:",
 } as const;
 
+/**
+ * What is read in, and how it is changed (D152). The sheet is the only place that names a currency in words: on a
+ * screen the sign does it, and several currencies share a sign, which is why a name and a code stand beside it here.
+ */
+export const MONEY = {
+  /** The key's own name for whoever cannot see it: what it does, and what is being read now. */
+  readInAnother: (currency: string) => `Read in another currency, ${currency} now`,
+  title: "Read money in",
+  /** The two families of the list: what this device suggests, then everything else by name. */
+  whereYouAre: "Where you are",
+  everything: "All currencies",
+  /** Said once, at the foot of the sheet, rather than on every line: one rate, one day, one sentence. */
+  atTheRate: (date: string) => `About, at the European Central Bank's rate of ${date}.`,
+  /** Said instead when no rate could be read: the list is still true, the figures beside it would not be. */
+  noRate: "The exchange rate could not be read today, so these are shown in dollars.",
+} as const;
+
 /** Me: the account, in the order the structure gives it. */
 export const ME = {
   title: "You",
   currency: "Money shown in",
-  currencies: { USD: "US dollars", EUR: "Euros", XOF: "CFA francs" },
   proposed: "what your phone suggests",
   currencySaved: "Saved.",
   /** Said while the signing session is open: what it names is how long money can move without asking again. */

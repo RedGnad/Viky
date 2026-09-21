@@ -4112,3 +4112,32 @@ et je vois le montant dernierement choisi dans la currency choisie mais du coup 
   Removing that last change means a page rendered per request, which is a bigger trade than the change costs.
 - **The door says "Sign in"** (the founder: "c'est trop long"). It named both of the things it does; the sheet it
   opens says that in its own line and its action is still "Create your account".
+
+## D152, 21 Sep 2026: the currencies are a list that is asked for, and the sign is a key
+
+The founder: "LE CHANGEMENT DE DEVISE : UNE LISTE, PAS UN CYCLE." Pressing the sign took the next of three, so
+nobody could know what existed or how many, going from the dollar to the franc meant passing through the euro and
+redrawing the screen twice, and the gesture stops working at all past five entries.
+
+- **The list is derived, never typed**, which is D39's rule applied to what a screen reads in. A currency is offered
+  when somebody can be paid in it, the union of the euro rail's payout methods and the card rail's fiat list, and
+  when we can convert into it honestly, the European Central Bank's daily file plus the two CFA francs, fixed to the
+  euro by treaty. Measured through our own route on 21 Sep 2026: 71 payable, 32 with a rate, **31 offered**. The
+  yuan has a rate and no rail, and a test holds that it never appears. When a source says nothing, the three the
+  product was built on are offered, because they are proven; never a longer list written by hand.
+- **What a currency is called, its sign and its decimals are asked of `Intl`**, not kept here either: "Indian
+  Rupee", "₹", two decimals; "Swiss Franc", "CHF", standing away from its figure; the yen and the franc counting in
+  whole units. Even the space between a sign and its figure is read off what `Intl` formats rather than decided.
+- **The sign is a key.** It carries the two pixel edge and the four pixel relief every control here wears, a chevron
+  at the small voice's size against it, and the 48 by 48 the product keeps, which clears the 44 the founder asked
+  for. Its name says what it does and what is being read: "Read in another currency, Euro now". Under a pointer it
+  lifts two pixels, a press crushes its relief: `MOTION.hover` and `MOTION.press`, which the class already plays.
+- **It opens a sheet and changes nothing by itself.** Each line carries the sign, the name, the code, and on the
+  right the amount on the screen converted into that currency, because that is what makes the choice useful rather
+  than administrative: €26.18 beside ₹2,876.32 beside FCFA 17,172. What the device suggests comes first under
+  "Where you are", the rest by name under "All currencies", the one being read is filled, and the rate's day is said
+  once at the foot. While the rate is still coming, the sheet says nothing about it: not yet is not no.
+- **What this supersedes.** D145 fixed the mark in a 48 pixel box so the field never moved: with thirty-one signs,
+  from "$" to "F CFA", a fixed box would cut them, so the key sizes to its sign and the field sits after it.
+- **The account page uses the same key and the same sheet**, so there is one way to change what money is read in,
+  and its list of three names is gone with `DISPLAY_CURRENCIES`.

@@ -36,7 +36,8 @@ test("a file without a dated dollar line is refused, never guessed at", () => {
   assert.throws(() => parseEcbRates("<Cube time='2026-09-16'></Cube>", 0), /no dated USD line/);
   assert.throws(() => parseEcbRates("<Cube currency='USD' rate='1.1537'/>", 0), /no dated USD line/);
   assert.throws(() => parseEcbRates("<Cube time='2026-09-16'><Cube currency='USD' rate='abc'/></Cube>", 0), /no dated USD line/, "a rate that is not a number is no line at all");
-  assert.throws(() => parseEcbRates("<Cube time='2026-09-16'><Cube currency='USD' rate='0'/></Cube>", 0), /not a number/, "and zero is not a rate");
+  // A rate of zero is not a rate, so the file has no dollar line at all, which is the same refusal (D152).
+  assert.throws(() => parseEcbRates("<Cube time='2026-09-16'><Cube currency='USD' rate='0'/></Cube>", 0), /no dated USD line/, "and zero is not a rate");
 });
 
 test("a read is usable for three days and not a moment longer", () => {

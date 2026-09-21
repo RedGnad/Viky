@@ -21,6 +21,11 @@ export type Rates = Readonly<{
   eurPerUsd: number;
   /** Derived: CFA francs per dollar, through the fixed parity. */
   xofPerUsd: number;
+  /**
+   * Every line of the file, as the file writes it: how many of that currency one euro buys, plus the euro itself at
+   * one and the two CFA francs at their fixed parity (D152). The file carried thirty-two currencies on 21 Sep 2026.
+   */
+  eurPer: Readonly<Record<string, number>>;
   /** When the source answered, as an epoch millisecond. */
   readAtMs: number;
 }>;
@@ -31,12 +36,19 @@ export type Rates = Readonly<{
  */
 export function parseEcbRates(xml: string, readAtMs: number): Rates {
   const date = /<Cube[^>]*\stime=['"](\d{4}-\d{2}-\d{2})['"]/.exec(xml)?.[1];
-  const usd = /<Cube[^>]*\scurrency=['"]USD['"][^>]*\srate=['"]([0-9.]+)['"]/.exec(xml)?.[1];
-  if (!date || !usd) throw new Error("the rate file has no dated USD line");
-  const usdPerEur = Number(usd);
-  if (!Number.isFinite(usdPerEur) || usdPerEur <= 0) throw new Error("the USD rate is not a number");
+  const eurPer: Record<string, number> = {};
+  for (const line of xml.matchAll(/currency=['"]([A-Z]{3})['"][^>]*rate=['"]([0-9.]+)['"]/g)) {
+    const rate = Number(line[2]);
+    if (Number.isFinite(rate) && rate > 0) eurPer[line[1]] = rate;
+  }
+  const usdPerEur = eurPer.USD;
+  if (!date || usdPerEur === undefined) throw new Error("the rate file has no dated USD line");
   const eurPerUsd = 1 / usdPerEur;
-  return { date, usdPerEur, eurPerUsd, xofPerUsd: eurPerUsd * RATE_SOURCE.cfaFrancsPerEuro, readAtMs };
+  // The euro is its own unit, and the two CFA francs are fixed to it by treaty rather than published daily.
+  eurPer.EUR = 1;
+  eurPer.XOF = RATE_SOURCE.cfaFrancsPerEuro;
+  eurPer.XAF = RATE_SOURCE.cfaFrancsPerEuro;
+  return { date, usdPerEur, eurPerUsd, xofPerUsd: eurPerUsd * RATE_SOURCE.cfaFrancsPerEuro, eurPer, readAtMs };
 }
 
 /** Whether a read is still allowed to be shown: within the days the source note allows. */

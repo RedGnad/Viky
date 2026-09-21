@@ -9,7 +9,14 @@ import type { Rates } from "../src/rates";
  * this decides is what a person types and what they read back, which is what every app of the kind does, and what
  * keeps a funder in France from meeting a dollar sign on the first screen and closing it.
  */
-const RATES: Rates = { date: "2026-09-18", usdPerEur: 1.1537, eurPerUsd: 1 / 1.1537, xofPerUsd: (1 / 1.1537) * 655.957, readAtMs: Date.parse("2026-09-18T16:00:00Z") };
+const RATES: Rates = {
+  date: "2026-09-18",
+  usdPerEur: 1.1537,
+  eurPerUsd: 1 / 1.1537,
+  xofPerUsd: (1 / 1.1537) * 655.957,
+  eurPer: { USD: 1.1537, EUR: 1, XOF: 655.957, XAF: 655.957, INR: 101.7, JPY: 173.4 },
+  readAtMs: Date.parse("2026-09-18T16:00:00Z"),
+};
 
 test("a euro figure becomes the dollars the contract will hold, cut to the cent and never rounded up", () => {
   assert.equal(unitsFromTyped("30", "EUR", RATES), 34_610_000n);
@@ -42,7 +49,7 @@ test("the contract's own bounds are said in the currency being typed in, with th
   assert.throws(big, (error: unknown) => error instanceof AmountError && /\$1,000, about €866\.78/.test(error.message));
   // The franc is grouped in the same sentence, because five figures in a row are read by nobody.
   const franc = () => unitsFromTyped("900000", "XOF", RATES);
-  assert.throws(franc, (error: unknown) => error instanceof AmountError && /about CFA 568,568/.test(error.message));
+  assert.throws(franc, (error: unknown) => error instanceof AmountError && /about F\u202fCFA\u00a0568,568/.test(error.message));
   // And the bounds themselves are the contract's, untouched by any of this.
   assert.equal(MIN_GIFT_UNITS, 1_000_000n);
   assert.equal(MAX_GIFT_UNITS, 1_000_000_000n);
@@ -54,12 +61,14 @@ test("a franc figure is grouped where it is read, and a field still holds plain 
   assert.equal(readableFigure("26.18", "EUR"), "26.18");
 });
 
-test("the mark stands in front of the figure in every currency, so pressing it never moves the field (D145)", () => {
+test("the mark stands in front of the figure in every currency, and both are the source's own (D145, D152)", () => {
+  // Read off what Intl formats rather than written here: the euro sits against its figure, the franc and the Swiss
+  // franc stand away from theirs, and a currency nobody had thought of is written the way it is written.
   assert.deepEqual(currencyMark("EUR"), { sign: "€", gap: "" });
   assert.deepEqual(currencyMark("USD"), { sign: "$", gap: "" });
-  // The franc's name follows its figure in prose; on the card it leads, like the two symbols, with a space of its own.
-  assert.deepEqual(currencyMark("XOF"), { sign: "CFA", gap: " " });
+  assert.deepEqual(currencyMark("XOF"), { sign: "F\u202fCFA", gap: "\u00a0" });
+  assert.deepEqual(currencyMark("CHF"), { sign: "CHF", gap: "\u00a0" });
   assert.equal(figureWithMark("30.00", "USD"), "$30.00");
   assert.equal(figureWithMark("26.18", "EUR"), "€26.18");
-  assert.equal(figureWithMark("17,172", "XOF"), "CFA 17,172");
+  assert.equal(figureWithMark("17,172", "XOF"), "F\u202fCFA\u00a017,172");
 });

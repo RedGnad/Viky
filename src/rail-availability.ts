@@ -35,6 +35,8 @@ const FAILURE_HELD_FOR_MS = 30 * 1_000;
 type Held<T> = { at: number; value: T };
 let rampCountries: Held<readonly string[] | null> | undefined;
 let cardRestricted: Held<readonly string[] | null> | undefined;
+let rampCurrencies: Held<readonly string[] | null> | undefined;
+let cardCurrencies: Held<readonly string[] | null> | undefined;
 
 /** Held only while it is both recent and not from the future: a clock that moved must not freeze an old answer. */
 function stillGood(held: Held<unknown> | undefined, now: number): boolean {
@@ -65,6 +67,36 @@ export async function euroRailCountries(now = Date.now()): Promise<readonly stri
     : null;
   const value = countries && countries.length > 0 ? Array.from(new Set(countries)) : null;
   rampCountries = { at: now, value };
+  return value;
+}
+
+/**
+ * Every currency the two rails can put money into somebody's hands in, asked of them rather than written here
+ * (D152, the rule of D39 applied to what a screen reads in). The euro rail publishes it per payout method, the card
+ * rail as one list. Either one silent is `null`, and the caller decides what to do with half an answer.
+ */
+export async function euroRailCurrencies(now = Date.now()): Promise<readonly string[] | null> {
+  if (stillGood(rampCurrencies, now)) return rampCurrencies!.value;
+  const body = await readJson(RAMP_PAYOUT_METHODS);
+  const methods = Array.isArray(body) ? body : null;
+  const codes = methods
+    ? methods.flatMap((method) => {
+        const list = (method as { currencies?: unknown }).currencies;
+        return Array.isArray(list) ? list.map((one) => String(one).toUpperCase()).filter((one) => /^[A-Z]{3}$/.test(one)) : [];
+      })
+    : null;
+  const value = codes && codes.length > 0 ? Array.from(new Set(codes)) : null;
+  rampCurrencies = { at: now, value };
+  return value;
+}
+
+export async function cardRailCurrencies(now = Date.now()): Promise<readonly string[] | null> {
+  if (stillGood(cardCurrencies, now)) return cardCurrencies!.value;
+  const body = await readJson(MERCURYO_CURRENCIES);
+  const fiat = (body as { data?: { fiat?: unknown } } | null)?.data?.fiat;
+  const codes = Array.isArray(fiat) ? fiat.map((one) => String(one).toUpperCase()).filter((one) => /^[A-Z]{3}$/.test(one)) : null;
+  const value = codes && codes.length > 0 ? Array.from(new Set(codes)) : null;
+  cardCurrencies = { at: now, value };
   return value;
 }
 
