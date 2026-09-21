@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import * as mera from "@/src/account/mera";
@@ -31,6 +32,7 @@ const noLanguage = () => undefined;
 
 export function Me() {
   const { address, reach, signOut, useAnotherAccount } = useAccount();
+  const router = useRouter();
   const language = useSyncExternalStore(never, deviceLanguage, noLanguage);
   const [chosen, setChosen] = useState<{ address: string; currency: DisplayCurrency | null } | undefined>(undefined);
   const [saved, setSaved] = useState(false);
@@ -101,7 +103,16 @@ export function Me() {
         <p className="font-medium">{reach === "signing" && until ? W.signedInUntil(until) : reach === "signed-out" ? W.signedOut : W.signedIn}</p>
         {reach === "reading" ? <p className={HELP}>{W.passkeyWhenMoneyMoves}</p> : null}
         <div className="flex flex-wrap gap-[var(--tap-gap)]">
-          <button type="button" onClick={signOut} className={INLINE_BUTTON}>
+          {/* Signing out on the page that needs an account left a screen with nothing on it (D139): it lands on the
+              page anybody can read, which is the one with the card. */}
+          <button
+            type="button"
+            onClick={() => {
+              signOut();
+              router.push("/");
+            }}
+            className={INLINE_BUTTON}
+          >
             {W.signOut}
           </button>
           <button type="button" onClick={useAnotherAccount} className={INLINE_BUTTON}>

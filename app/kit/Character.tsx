@@ -216,9 +216,12 @@ function drawing(
       return {
         defs: (
           <defs>
+            {/* The two colours are set as CSS rather than as presentation attributes (D139): `stop-color="var(...)"`
+                is a variable inside an attribute, which Chromium resolves and other engines leave alone, and the
+                founder's phone drew one blend in both appearances because of it. In the style it is CSS everywhere. */}
             <linearGradient id={DIAMOND_BLEND} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="var(--character-hero-from)" />
-              <stop offset="1" stopColor="var(--character-hero-to)" />
+              <stop offset="0" style={{ stopColor: "var(--character-hero-from)" }} />
+              <stop offset="1" style={{ stopColor: "var(--character-hero-to)" }} />
             </linearGradient>
           </defs>
         ),

@@ -8,6 +8,7 @@ import { Arrival, Gaze, Reveal, type ArrivalGift } from "./Motion";
 import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
 import { GiftCard } from "./GiftCard";
+import { Install } from "./Install";
 import { MoneyHero } from "./MoneyHero";
 import { OfferCard } from "./offer/OfferCard";
 import { Shell } from "./Shell";
@@ -71,6 +72,8 @@ export function Home() {
           <Link href="/legal" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
             {ME.legal}
           </Link>
+          {/* Installing it needs no account, so the way to do it is on the page that needs none (D139). */}
+          <Install quiet />
         </p>
       </Shell>
     );
@@ -86,14 +89,17 @@ export function Home() {
     <Arrival storageKey="viky.seen.days" gifts={arriving} amount>
       {/* With an account the column is exactly the card's width plus its margins (D128): the money, the button and
           every gift under the card then share its two edges, and the column centres itself in the room beside the rail. */}
+      {/* With an account the money leads (D139). Every account app people already use puts the balance at the top,
+          Wise, Revolut and Monzo among them, and it is what somebody opens Viky to read; the card is the one action
+          under it. Without an account there is no money to read, and the card leads, which is D129's order. */}
       <Shell kind="destination" active="home" width="card">
-        <OfferCard />
         <MoneyHero address={address} holdings={holdings} />
         {holdings !== null && holdsAnything(holdings) ? (
           <Link href="/cash-out" className={SECONDARY_BUTTON}>
             {W.takeItOut}
           </Link>
         ) : null}
+        <OfferCard />
         <section className="flex flex-col gap-[var(--space-md)]">
           <h2 className={TITLE}>{W.moving}</h2>
           {problem ? <p className={BODY}>{problem}</p> : null}

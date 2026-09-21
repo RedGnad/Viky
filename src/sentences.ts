@@ -74,7 +74,8 @@ export const OFFER = {
   /** Under the amount, in the third voice: how long the gift runs, once somebody has said. */
   forHowLong: (days: number) => `for ${days} ${days === 1 ? "day" : "days"}`,
   /** The one action of the card, and it appears only when the four cases are filled. */
-  pay: (amount: string) => `Pay ${amount}`,
+  /** The card's own action: it sends the money, and the sheet it opens is where it is paid (the founder, 21 Sep). */
+  pay: (amount: string) => `Send ${amount}`,
   /** The action, shut, saying what it is waiting for: the condition's own questions, or a length the route takes. */
   stillNeeded: "Fill the card to pay",
   finishWill: "Finish what they will do to pay",

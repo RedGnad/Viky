@@ -3814,3 +3814,26 @@ behind an account cannot be photographed any other way.
   thing. The display mode is watched rather than read once, and `appinstalled` is listened to.
 - **The icon fills its tile**: the drawing takes 92 per cent of the square where it took 74, which left it mostly
   empty.
+
+## D139, 21 Sep 2026: the money leads, the card sends, and the blend is CSS
+
+- **The blend is set in CSS, not in an attribute.** `stop-color="var(--x)"` is a variable inside a presentation
+  attribute: Chromium resolves it and other engines leave it alone, which is why the founder's phone drew one blend
+  in both appearances while the desk drew two. Measured on viky.cash before the change, Chromium gave the right
+  two; the founder's did not. It is `style={{ stopColor: … }}` now, which is CSS everywhere.
+- **The card's action says Send**, not Pay: the card sends the money, and the sheet it opens is where it is paid.
+- **The install offer lives where it needs no account.** It was on Me, behind a sign-in, so somebody who had
+  uninstalled could not get it back. It is a quiet line in the footer of the page anybody can read, and the button
+  on Me is unchanged.
+- **Signing out lands on the landing page.** It stayed on the page that needs an account, which then had nothing
+  on it.
+- **With an account, the money leads.** Every account app people already use puts the balance at the top, Wise,
+  Revolut and Monzo among them, and NN/g's rule is that the most-sought information comes first: what somebody
+  opens Viky to read is what they hold. The card is the one action under it. Without an account there is nothing to
+  read and the card leads, which is D129's order, unchanged.
+- **The amount is read in the account's own currency.** The gift is signed in dollars, which is what the card takes
+  and what the chain holds, so the figure does not change; under it the card says what it is worth in the currency
+  this account reads in, with the rate's own day, and nothing at all when that currency is the dollar or when no
+  rate answered (decision 1 of 17 Sep 2026).
+- **The catalogue follows the register, not the alphabet.** Inside a family the first line is the one to offer
+  first, and the founder put the daily lesson before the test because it asks less of whoever receives it.

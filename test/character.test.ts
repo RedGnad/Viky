@@ -53,7 +53,7 @@ test("at most three secondary colours in any one character, and only from the lo
     const colours = new Set(svg.match(/var\(--character-[123]\)/g) ?? []);
     // The head of the page is filled from its own two variables, one pair by day and another by night (D134), so it
     // is the one character that names no colour of the range.
-    if (state === "diamond") assert.match(svg, /var\(--character-hero-from\)[\s\S]*var\(--character-hero-to\)/);
+    if (state === "diamond") assert.match(svg, /style="stop-color:var\(--character-hero-from\)"[\s\S]*style="stop-color:var\(--character-hero-to\)"/);
     else assert.ok(colours.size >= 1 && colours.size <= 3, `${state} uses ${colours.size} secondary colours`);
     assert.doesNotMatch(svg, /#[0-9a-fA-F]{3,6}\b|rgb\(|gray|grey/, `${state} paints a colour outside the range`);
   }

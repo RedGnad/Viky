@@ -39,7 +39,7 @@ const watchDisplayMode = (changed: () => void) => {
 const never = () => () => {};
 const serverFalse = () => false;
 
-export function Install() {
+export function Install({ quiet = false }: Readonly<{ quiet?: boolean }> = {}) {
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showHow, setShowHow] = useState(false);
   const onIOS = useSyncExternalStore(never, isIOS, serverFalse);
@@ -56,6 +56,19 @@ export function Install() {
 
   // This window is the installed one: there is nothing to offer, and nothing to say about the phone.
   if (standalone) return null;
+  // On the page without an account it is a line among the others, because somebody who has not signed in has more
+  // to do than install anything; on Me it is the button it has always been (D139).
+  if (quiet) {
+    return (
+      <button
+        type="button"
+        onClick={() => (prompt ? void prompt.prompt() : setShowHow((value) => !value))}
+        className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline"
+      >
+        {W.install}
+      </button>
+    );
+  }
   return (
     <div className="flex flex-col gap-[var(--space-sm)]">
       <button type="button" onClick={() => (prompt ? void prompt.prompt() : setShowHow((value) => !value))} className={SECONDARY_BUTTON}>

@@ -58,7 +58,7 @@ test.describe("the screens a person meets", () => {
     // The one empty field is the one Viky cannot guess, and it is where the cursor is.
     await expect(card.getByLabel(/Their first name/i)).toBeFocused();
     // The action says what it will take from the first second: the passkey is the door, not the button.
-    await expect(page.getByRole("button", { name: /^Pay \$30\.00$/ })).toBeEnabled();
+    await expect(page.getByRole("button", { name: /^Send \$30\.00$/ })).toBeEnabled();
     // The promise and the line under it, in the founder's words of 20 Sep 2026 (D128).
     await expect(page.getByRole("heading", { name: /Send money that motivates/i })).toBeVisible();
     await expect(page.getByText(/what they miss comes back to you/i).first()).toBeVisible();
@@ -78,7 +78,7 @@ test.describe("the screens a person meets", () => {
     // Nothing opened: the card is the form, and what was typed is on it.
     await expect(page.locator("dialog.sheet[open]")).toHaveCount(0);
     await expect(card.getByLabel(/Their first name/i)).toHaveValue("Léa");
-    await expect(page.getByRole("button", { name: /^Pay \$45\.00$/ })).toBeEnabled();
+    await expect(page.getByRole("button", { name: /^Send \$45\.00$/ })).toBeEnabled();
     // The length is chosen, never typed (D130): three chips, one pressed at a time, and no field to open.
     await expect(card.getByRole("button", { name: "90 days", exact: true })).toHaveAttribute("aria-pressed", "true");
     await card.getByRole("button", { name: "7 days", exact: true }).click();

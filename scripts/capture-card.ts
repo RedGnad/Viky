@@ -74,7 +74,7 @@ async function main() {
       await card.getByRole("button", { name: "30 days", exact: true }).click();
       await shot("07-card-filled");
 
-      await page.getByRole("button", { name: /^Pay / }).click();
+      await page.getByRole("button", { name: /^Send \$/ }).click();
       await page.waitForTimeout(1500);
       await shot("08-pay-sheet");
       await context.close();
