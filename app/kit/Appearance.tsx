@@ -1,5 +1,7 @@
 "use client";
 import { APPEARANCE as W } from "@/src/sentences";
+import { useAccount } from "@/src/account/provider";
+import { putJson } from "@/src/client/api";
 import { applyThemeChoice } from "@/src/theme";
 
 /**
@@ -26,10 +28,21 @@ function appearanceNow(): "light" | "dark" {
 }
 
 export function Appearance() {
+  const { address } = useAccount();
+  /**
+   * The press changes the screen, tells the device, and tells the account when there is one (D159): a choice made
+   * on a phone is the choice on the laptop, and it comes back to a browser that forgot. The screen never waits for
+   * the server, and a server that refuses changes nothing of what was just pressed.
+   */
+  const press = () => {
+    const next = appearanceNow() === "dark" ? "light" : "dark";
+    applyThemeChoice(next);
+    if (address) void putJson<{ appearance: string }>("/api/account/preferences", { appearance: next }).catch(() => undefined);
+  };
   // Nothing is read at render: which icon shows is the stylesheet's decision, from the same rule that paints the
   // screen, so the server draws the same control as the browser and nothing flashes. The press reads the screen.
   return (
-    <button type="button" aria-label={W.toggle} title={W.toggle} onClick={() => applyThemeChoice(appearanceNow() === "dark" ? "light" : "dark")} className={BUTTON}>
+    <button type="button" aria-label={W.toggle} title={W.toggle} onClick={press} className={BUTTON}>
       <svg aria-hidden focusable="false" className="appearance-sun" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <circle cx="12" cy="12" r="4.5" />
         <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6" />

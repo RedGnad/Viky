@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
 import type { Address } from "viem";
 import { ACCOUNT_AUTH_COOKIE_NAME, normalizedOrigin, readAccountAuthSessionFrom } from "@/src/account-auth-server";
+import { APPEARANCE_COOKIE } from "@/src/theme";
+import { loadPreferences } from "@/src/preferences-store";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { dmSans, fredoka } from "./fonts";
@@ -54,16 +56,29 @@ export const metadata: Metadata = {
  * at all, and without it the insets in globals.css would be padding nothing. It also means the page now
  * renders behind rounded corners and notches, which is why those insets exist.
  */
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  themeColor: [
-    // The look's grounds, so the browser's own bar matches the page it sits on.
-    { media: "(prefers-color-scheme: light)", color: "#F6F4FB" },
-    { media: "(prefers-color-scheme: dark)", color: "#151026" },
-  ],
-};
+/**
+ * The colour the browser paints its own bar with (D159). One colour, not one per appearance: the two the page used
+ * to declare followed the device rather than the choice, so somebody reading by day on a phone set to night had a
+ * black bar over a lavender page, and a reload brought it back because the metas are rendered again at hydration.
+ * It is decided here, where the choice is known, and it is the ground the screen actually stands on.
+ */
+const GROUNDS = { light: "#DDD6EB", dark: "#151026" } as const;
+
+export async function generateViewport(): Promise<Viewport> {
+  const chosen = await chosenAppearance();
+  return {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+    themeColor: chosen
+      ? GROUNDS[chosen]
+      : [
+          // Nobody has chosen, so the device decides, and the bar decides with it.
+          { media: "(prefers-color-scheme: light)", color: GROUNDS.light },
+          { media: "(prefers-color-scheme: dark)", color: GROUNDS.dark },
+        ],
+  };
+}
 
 /**
  * Who this page is for, read where the server has it: the session cookie and the host it was served on (D156). A
@@ -71,6 +86,26 @@ export const viewport: Viewport = {
  * request here makes every screen render on request rather than at build time, and that is the point: a screen for
  * a person cannot be drawn before the person is known.
  */
+/**
+ * Day or night as it was chosen, for this device or for this account, or nothing while the device still decides.
+ *
+ * The device's own cookie answers first: it is the last press on the phone in your hand, it costs no database, and
+ * it is there for somebody with no account at all. The account answers for a device that has never been told, which
+ * is a new phone, a browser that forgot, or the installed app beside the browser the choice was made in.
+ */
+async function chosenAppearance(): Promise<"light" | "dark" | null> {
+  const onTheDevice = (await cookies()).get(APPEARANCE_COOKIE)?.value;
+  if (onTheDevice === "light" || onTheDevice === "dark") return onTheDevice;
+  const account = await whoIsSignedIn();
+  if (!account) return null;
+  try {
+    return (await loadPreferences(account)).appearance;
+  } catch {
+    // A database that cannot be reached is a device that decides for itself, which is what it did before.
+    return null;
+  }
+}
+
 async function whoIsSignedIn(): Promise<Address | undefined> {
   try {
     const [store, sent] = await Promise.all([cookies(), headers()]);
@@ -85,11 +120,23 @@ async function whoIsSignedIn(): Promise<Address | undefined> {
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const signedIn = await whoIsSignedIn();
+  /**
+   * Day or night as this account chose it, written on the document itself (D159). The device answers first, before
+   * anything is painted, and this is what carries the choice to a device that has never been told: a new phone, a
+   * browser that forgot, the installed app beside the browser it was chosen in.
+   */
+  const chosen = await chosenAppearance();
   return (
     // The look's font variables sit on the document itself, because app/globals.css reads them from :root.
     // Signed in, the card's figures wait for the account's money and the rate (D157): the server knows the person,
     // so the server says the figures are about to change, as the boot script does for a device that kept a card.
-    <html lang="en" dir="ltr" className={`${fredoka.variable} ${dmSans.variable}`} {...(signedIn ? { "data-money-settling": "" } : {})}>
+    <html
+      lang="en"
+      dir="ltr"
+      className={`${fredoka.variable} ${dmSans.variable}`}
+      {...(chosen ? { "data-theme": chosen } : {})}
+      {...(signedIn ? { "data-money-settling": "" } : {})}
+    >
       <body className="antialiased">
         {/* Before anything is painted, so a chosen appearance never flashes the other one first (D97), and so a card
             whose figures are about to change shows none until they have (D155). */}

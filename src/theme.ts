@@ -25,11 +25,44 @@ export function readThemeChoice(): ThemeChoice {
   }
 }
 
+/**
+ * The colour the browser paints its own bar with, which is the ground the screen stands on: the day's lavender or
+ * the night's ink (D159). The page declares one for each appearance the device may be in, and those two follow the
+ * device, never the choice, so somebody reading Viky by day on a phone set to night had a black bar over a lavender
+ * page and read it as the app being in the other mode. A chosen appearance writes both, so whichever one the
+ * browser picks says the same thing.
+ */
+const GROUNDS: Record<"light" | "dark", string> = { light: "#DDD6EB", dark: "#151026" };
+
+export function paintTheBrowsersBar(appearance: "light" | "dark"): void {
+  if (typeof document === "undefined") return;
+  for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.setAttribute("content", GROUNDS[appearance]);
+}
+
+/**
+ * Where the server reads the choice: the one thing a browser sends by itself. The page is rendered for the person
+ * who asked for it, so the appearance is on the document and the bar's colour is in the head before the first byte
+ * reaches the phone, and nothing has to be corrected afterwards. A year, because a choice about how a screen looks
+ * does not expire in a week; `Lax` because it is read when the page is asked for and never sent anywhere else.
+ */
+export const APPEARANCE_COOKIE = "viky.appearance";
+
+function tellTheServer(choice: ThemeChoice): void {
+  try {
+    const value = choice === "system" ? `${APPEARANCE_COOKIE}=; Path=/; Max-Age=0` : `${APPEARANCE_COOKIE}=${choice}; Path=/; Max-Age=31536000`;
+    document.cookie = `${value}; SameSite=Lax${window.location.protocol === "https:" ? "; Secure" : ""}`;
+  } catch {
+    // A browser that refuses cookies still has the choice in its own storage, applied before the first paint.
+  }
+}
+
 /** Applies the choice to the document and remembers it. Removing the attribute hands it back to the phone. */
 export function applyThemeChoice(choice: ThemeChoice): void {
   if (typeof document === "undefined") return;
   if (choice === "system") delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = choice;
+  if (choice !== "system") paintTheBrowsersBar(choice);
+  tellTheServer(choice);
   try {
     if (choice === "system") window.localStorage.removeItem(THEME_STORAGE_KEY);
     else window.localStorage.setItem(THEME_STORAGE_KEY, choice);
@@ -66,4 +99,4 @@ export function themeChoiceOnServer(): ThemeChoice {
  * dark screen flash first. It has to be inline and synchronous for that, which is why it is a string: React
  * would run it after the first paint, which is exactly too late.
  */
-export const THEME_BOOT_SCRIPT = `try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(t==="light"||t==="dark"){document.documentElement.dataset.theme=t}}catch(e){}`;
+export const THEME_BOOT_SCRIPT = `try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});var a=document.documentElement.dataset.theme;if(t==="light"||t==="dark"){a=t;document.documentElement.dataset.theme=t}if(a==="light"||a==="dark"){var c=a==="dark"?"#151026":"#DDD6EB";var m=document.querySelectorAll('meta[name="theme-color"]');for(var i=0;i<m.length;i++){m[i].setAttribute("content",c)}}}catch(e){}`;

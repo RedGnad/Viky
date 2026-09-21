@@ -4274,3 +4274,25 @@ reach him: what D157 measured was a device with nothing kept, and his had a card
   still what they read in, and sends the dollars underneath, unchanged.
 - Measured on a device that pressed a length and never typed an amount: 30.00 euros signed out, 8.84 euros signed
   in holding $10.13, and 45 after typing 45.
+
+## D159, 21 Sep 2026: day or night is remembered, and the browser's own bar says what the page says
+
+The founder: "ce serait bien que l'app se souvienne aussi du mode sombre ou clair, car là si on est dans un mode et
+qu'on reload ça peut changer de mode et revenir au mode par défaut."
+
+- **The page itself never lost the choice**: measured on production, a press then a reload, on a device set either
+  way, kept it every time. What changed on a reload was **the browser's own bar**. The page declared two colours,
+  one per appearance the device may be in, and a bar follows the device, never the choice: somebody reading by day
+  on a phone set to night had a black bar over a lavender page, which from a chair is the app in the other mode.
+  A press did repaint it, and the next hydration rendered the two metas again and took it back.
+- **One colour, decided where the choice is known.** The layout renders a single theme colour from the appearance
+  that was chosen, and the two device-driven ones only while nobody has chosen. It is the ground the screen stands
+  on, the day's lavender or the night's ink; the day's used to be a near-white that was not even a ground of the look.
+- **The choice reaches the server, so the page arrives already right.** A cookie carries it, which is the one thing
+  a browser sends by itself: the appearance is on the document and the colour is in the head before the first byte
+  reaches the phone. Nothing is corrected after the fact, and there is no flash to mask.
+- **And the account remembers it**, beside the display currency: a choice made on a phone is the choice on the
+  laptop, it comes back to a browser that forgot, and it reaches the installed app beside the browser it was made
+  in, which is the one place a device's own storage does not carry. The device answers first because it answers
+  before anything is painted; the account answers for a device that has never been told.
+- Nothing is stored until somebody presses: a person whose device decides has chosen that.
