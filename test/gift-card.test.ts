@@ -146,11 +146,13 @@ test("there is one card, and the one being filled in is drawn by it", () => {
 
 test("the card shows what the rendered mockups show, in their order", () => {
   // The label with the funder in it, the name in its own line, what they will do, the days, the amount, the length.
+  // The line that says whose gift it is belongs to a gift's own page, where the reader is somebody else. On the card
+  // a funder is filling in it said what they already knew, so it is gone from there (D138) and the words stay.
   assert.equal(OFFER.fromYou, "A gift from you");
   assert.equal(OFFER.fromFunder("Mum"), "A gift from Mum");
   assert.equal(OFFER.forNobody, "For");
   assert.equal(OFFER.who, "who?");
-  assert.match(card, /\{funder \? W\.fromFunder\(funder\) : W\.fromYou\}/);
+  assert.doesNotMatch(card, /\{funder \? W\.fromFunder\(funder\) : W\.fromYou\}/, "the card being filled in carries no such line (D138)");
   assert.match(card, /placeholder=\{W\.who\}/);
   assert.match(card, /\{condition \? condition\.name : W\.invites\.will\}/);
   // The shape has the length of the gift, and one mark a day, with a fade saying the row carries on (desktop.html).
@@ -189,7 +191,7 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   // One line, not two (D137): it opens the catalogue while nothing is chosen and that condition's questions after.
   assert.equal((card.match(/\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/g) ?? []).length, 1, "one control for what they will do");
   assert.match(card, /setSheetAt\(condition \? "questions" : "list"\)/);
-  assert.match(card, /\{detail \? <span className=\{`\$\{HELP\} break-words`\}>\{detail\.said\}<\/span> : null\}/, "and what it has been told is read on it");
+  assert.doesNotMatch(card, /cardDetail|detail\.said/, "the line says the label and the name, and the rest lives in the step it opens (D138)");
   assert.match(card, /className=\{`\$\{CHIP\} /, "a chip is the inline button at the size of a choice");
   assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/, "and the condition line is one too, so every control lifts the same way");
   // The two that are left, and both are a choice rather than a field.

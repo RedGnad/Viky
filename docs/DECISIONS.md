@@ -3791,3 +3791,26 @@ behind an account cannot be photographed any other way.
   strip on a card and the row on a gift's page both gain from it, at the same width.
 - **The night edge, a third time lighter**: `#4C4189`, 2.14:1 on the ink, after 1.25 and 1.62.
 - **The sentence loses its "and"**: "Back their goal. They earn it day by day. The rest comes back to you."
+
+## D138, 21 Sep 2026: a quiet card, an honest install, and an icon that fills its tile
+
+- **The card says less.** Three lines came off it, all for the same reason: each said something the funder already
+  knew or almost never needs.
+  - "A gift from you" (and "A gift from V" once a name was typed). Material's card anatomy makes the overline
+    optional and NN/g's rule for a label is that it carries what the rest does not; on the card a funder is filling
+    in, above a page that says "Send money that motivates", it carried nothing. It stays where the reader is
+    somebody else: on a gift's own page and on the cards of the list.
+  - "During the pilot, a gift is at most $1,000." It is a rule almost nobody meets, and it spent a line of every
+    card. It is now what the amount says back to somebody who types past it, under the figure, where a refusal
+    belongs. The words and the bound are unchanged.
+  - What the chosen condition had been told, which D136 had put on the line and D137 under it. The line is the
+    label and the condition's name; what it has been told lives in the step the line opens, one press away.
+  The card measures 483 where the two lines of D136 made it 648.
+- **The install offer never claims the phone.** It said "Viky is on this phone", and it kept saying it after the
+  founder uninstalled, leaving no way back in. A page cannot know that: `display-mode: standalone` says only that
+  this window was opened from the icon, and a browser stops firing the install prompt while it believes the app is
+  there, which on Android outlives removing the icon. So: nothing when this window is the installed one, the
+  browser's own prompt when it gives us one, and otherwise a sentence saying where the browser keeps the same
+  thing. The display mode is watched rather than read once, and `appinstalled` is listened to.
+- **The icon fills its tile**: the drawing takes 92 per cent of the square where it took 74, which left it mostly
+  empty.

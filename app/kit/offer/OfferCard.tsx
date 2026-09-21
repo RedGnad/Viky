@@ -3,10 +3,9 @@ import { useState, useSyncExternalStore } from "react";
 import { useAccount } from "@/src/account/provider";
 import { formatAusd } from "@/src/gift-reader";
 import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type GiftDraft } from "@/src/gift-draft";
-import { cardDetail } from "@/src/card-detail";
 import { conditionById } from "@/src/conditions";
 import { cardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
-import { AmountError, dollarsToUnits, PILOT_CAP_SENTENCE } from "@/src/money";
+import { AmountError, dollarsToUnits } from "@/src/money";
 import { OFFER as W } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { CardFace } from "../GiftCard";
@@ -54,11 +53,9 @@ export function OfferCard() {
   const condition = conditionById(draft.conditionId);
   const shape = shapeOf(draft.conditionId);
   const bounds = durationBounds(draft.conditionId);
-  const detail = cardDetail(draft);
   const filled = filledCases(draft);
   const ready = isComplete(draft) && units !== undefined;
   const recipient = draft.recipientName.trim();
-  const funder = draft.funderName.trim();
   const days = Number(draft.days);
   const quick = [bounds.min, bounds.suggested, bounds.max];
 
@@ -79,9 +76,10 @@ export function OfferCard() {
           {W.title}
         </h2>
         <CardFace
-          /* Whose gift it is, as the image writes it. The funder's own name is asked for where they pay, because a
-             field at the eyebrow's size is under the 16 pixels a phone zooms in on and under any thumb's target. */
-          label={funder ? W.fromFunder(funder) : W.fromYou}
+          /* No line saying whose gift it is (D138). On the card a funder is filling in, "A gift from you" tells them
+             what they already know and what the page above says; the same line matters on a gift's own page, where
+             the reader is somebody else, and it stays there. Material's card anatomy makes the overline optional,
+             and NN/g's rule for a label is that it carries something the rest of the card does not. */
           /* The name, typed in the line that carries it. It is the only empty thing on the card, and it has the cursor. */
           title={
             <span className={CARD_TITLE}>
@@ -104,8 +102,9 @@ export function OfferCard() {
             <button
               type="button"
               /* One line, and it opens where the funder is: the catalogue while nothing is chosen, and from then on
-                 that condition's own questions, whose first control is the way back to the catalogue (D137). The
-                 detail line this replaces was a second button on a card the founder wants quiet. */
+                 that condition's own questions, whose first control is the way back to the catalogue (D137). It says
+                 the label and the condition's name and nothing else (D138): what that condition has been told lives
+                 in the step the line opens, which is where somebody goes to change it. */
               onClick={() => {
                 setSheetAt(condition ? "questions" : "list");
                 setChoosing(true);
@@ -117,9 +116,6 @@ export function OfferCard() {
               <span className="flex min-w-0 flex-col">
                 <span className={CARD_LABEL}>{W.invites.will}</span>
                 <span className="break-words">{condition ? condition.name : W.invites.will}</span>
-                {/* What that condition has been told, in the register's own words: the account, the course, the bar.
-                    It is read here rather than pressed, because the line it sits in is what opens it (D137). */}
-                {detail ? <span className={`${HELP} break-words`}>{detail.said}</span> : null}
               </span>
               <svg aria-hidden focusable="false" width="20" height="20" viewBox="0 0 24 24" className="shrink-0 text-[var(--on-surface-muted)]">
                 <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
@@ -196,7 +192,12 @@ export function OfferCard() {
               <button type="button" className={`${PRIMARY_BUTTON} mt-[var(--space-lg)]`} disabled={!ready} onClick={() => setPaying(true)}>
                 {!filled.will ? W.finishWill : !filled.howLong ? W.chooseLength : units === undefined ? W.stillNeeded : W.pay(formatAusd(units))}
               </button>
-              <span className={`block ${HELP} text-center`}>{shape === "days" && units !== undefined && days > 0 ? W.eachDay(formatAusd(units / BigInt(days))) : PILOT_CAP_SENTENCE}</span>
+              {/* What one day of it is worth, and nothing when there is no such figure. The pilot's ceiling is not a
+                  standing notice any more (D138): it is what the amount says back to somebody who types past it,
+                  under the amount itself, where a refusal belongs. */}
+              {shape === "days" && units !== undefined && days > 0 ? (
+                <span className={`block ${HELP} text-center`}>{W.eachDay(formatAusd(units / BigInt(days)))}</span>
+              ) : null}
             </>
           }
         />

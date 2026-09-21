@@ -6,8 +6,9 @@ import { COLOURS } from "../src/design-tokens";
 
 /**
  * The app's icon and the gift's drawing, written once into files (the art direction brief of 17 Sep 2026, section 7
- * bis). The icon is the head character, the diamond, on the ink tile a phone rounds itself (D135); the gift's own
- * drawing stays the gift, because what it is used for is the picture under a gift's link. It is the third place a person meets Viky, after the link
+ * bis). The icon is the head character, the diamond, on the ink tile a phone rounds itself (D135), filling almost
+ * all of it (D138: at three quarters the tile was mostly empty); the gift's own drawing stays the gift, because what
+ * it is used for is the picture under a gift's link. It is the third place a person meets Viky, after the link
  * preview and the morning message, and the first they see every day on their home screen.
  *
  * Run it whenever the look or the character changes: `pnpm make:icon`. It writes the sizes the manifest and the phones
@@ -54,7 +55,7 @@ async function main() {
       const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
       await page.setContent(
         `<!doctype html><body style="margin:0;width:${size}px;height:${size}px;background:${COLOURS.dark.background};display:flex;align-items:center;justify-content:center">` +
-          `<div style="width:${Math.round(size * 0.74)}px">${svg}</div></body>`,
+          `<div style="width:${Math.round(size * 0.92)}px">${svg}</div></body>`,
       );
       const picture = await page.screenshot({ clip: { x: 0, y: 0, width: size, height: size } });
       await page.close();

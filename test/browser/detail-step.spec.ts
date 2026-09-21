@@ -71,12 +71,14 @@ test.describe("the line that opens a condition's own questions", () => {
     }
   });
 
-  test("without a name the line is visible, says it is optional, and the step says the courses come after", async ({ page }) => {
+  test("without a name the step says the name is optional and the courses come after, and the gift can still be paid", async ({ page }) => {
     await page.goto("/");
     const line = card(page).getByRole("button").first();
-    await expect(line).toContainText(/They name their own when they open it/i);
-    await expect(line).toContainText(/10 XP a day/i);
+    // The line stays simple (D138): the label and the condition's name. What it has been told is in the step.
+    await expect(line).toContainText(/A Duolingo lesson each day/i);
+    await expect(line).not.toContainText(/XP a day/i);
     await line.click();
+    await expect(sheet(page).getByLabel(/name, if you know it/i)).toBeVisible();
     await expect(sheet(page).getByText(/the courses appear here/i)).toBeVisible();
     await expect(sheet(page).getByRole("button", { name: /^Done$/ })).toBeEnabled();
   });
