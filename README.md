@@ -10,6 +10,8 @@ Status: skeleton. Nothing here is claimed as working until the first gift has ru
 mainnet with real amounts. See `docs/SPEC.md` for the product and technical specification and
 `docs/DECISIONS.md` for every fact that was checked at its source and every design decision.
 
+live app : viky.cash
+
 ## Stack
 
 - PWA: Next.js 16 with Serwist (offline fallback, web push), Turbopack build.
