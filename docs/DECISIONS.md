@@ -3761,15 +3761,33 @@ behind an account cannot be photographed any other way.
   given, and that without one any course counts. The gift stays creatable either way.
 - **Two sizes, again**: the lone character of a climb on the card is 60, like the days beside it, and the small
   milestone character is 44 where it was 24.
-- **What it costs, and the founder must arbitrate it.** The card carries one line more and taller day characters,
-  both asked for, so it measures 648 where it measured 506. At 1440x900 the page is 1006 and the card's last 18
-  pixels fall below the fold, which breaks the constraint of D129. Three ways out, none of them taken here: accept
-  the scroll on a 900-tall window, shorten the detail line (its title is the register's own sentence and wraps to
-  two lines, which is 40 of the 104 the line takes), or take something else off the card. Measured, not guessed:
-  the small characters were cropped to what they draw (their box carried fifteen pixels of nothing above each one)
-  and the day row's air was halved, which gave back 8 and 8.
+- **What it cost, and how D137 gave it back.** The detail line made the card 648 where it was 506, and at 1440x900
+  the page measured 1006. The founder chose the third way out the same night: the line went behind the one control
+  it belongs to, and the characters are drawn in the box they fill. The card is 549 and the page is 900 again.
 - Acceptance in `test/browser/detail-step.spec.ts`, on the four viewports: on each of the six conditions the detail
   line opens that condition's step and never the catalogue; with the name "Luis" the step lists the five courses the
   profile carries with their experience, French first, and the whole profile selected; with no name the line is
   visible, says it is optional, and the step says the courses come after. The profile read is stubbed with what
   production answered for that name on 20 Sep 2026, so the check measures our screen and not the source's uptime.
+
+## D137, 21 Sep 2026: one line on the card, a sheet on the window's axis, and names that fit it
+
+- **One line, not two.** The detail line of D136 was a second control on a card the founder wants quiet. What it
+  opened now opens from the line that was already there: "What they will do" leads to the catalogue while nothing
+  is chosen, and from then on to that condition's own questions, whose first control is the way back to the
+  catalogue. What the condition has been told is read on that line, under its name, in the register's words. The
+  card is 549 again where the two lines made it 648, and the page stands in 900 at 1440 (D129).
+- **The sheets sit on the window's axis.** They were placed by `--page-offset`, which is the navigation rail's
+  width, and the page without an account draws no rail: every sheet opened there sat 88 pixels right of centre,
+  which is what the founder measured on the catalogue. The bare shell now sets that offset to zero, so the sheet's
+  two margins are equal (measured: 440 and 440 at 1440).
+- **Names that fit one line.** The card's control holds about thirty characters of the body face on a phone, and
+  two conditions ran past it, which is why the cards were not the same height. They are shorter and all of one
+  voice, a thing rather than an order: "A Duolingo English Test score", "A puzzle record on Chess.com", "A chess
+  rating on Chess.com", "A Coursera certificate", "A certification on Credly". `test/conditions.test.ts` holds
+  every name to thirty.
+- **Every floorless character is drawn in the box it fills.** A character standing on nothing has no shadow to
+  leave room for, and the fifteen empty pixels above each one made every shape look small whatever its width. The
+  strip on a card and the row on a gift's page both gain from it, at the same width.
+- **The night edge, a third time lighter**: `#4C4189`, 2.14:1 on the ink, after 1.25 and 1.62.
+- **The sentence loses its "and"**: "Back their goal. They earn it day by day. The rest comes back to you."

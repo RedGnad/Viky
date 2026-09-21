@@ -103,8 +103,11 @@ export function OfferCard() {
           under={
             <button
               type="button"
+              /* One line, and it opens where the funder is: the catalogue while nothing is chosen, and from then on
+                 that condition's own questions, whose first control is the way back to the catalogue (D137). The
+                 detail line this replaces was a second button on a card the founder wants quiet. */
               onClick={() => {
-                setSheetAt("list");
+                setSheetAt(condition ? "questions" : "list");
                 setChoosing(true);
               }}
               /* Eight pixels more than a caption gets under a title: this one is a control, and at four it sat on
@@ -114,34 +117,14 @@ export function OfferCard() {
               <span className="flex min-w-0 flex-col">
                 <span className={CARD_LABEL}>{W.invites.will}</span>
                 <span className="break-words">{condition ? condition.name : W.invites.will}</span>
+                {/* What that condition has been told, in the register's own words: the account, the course, the bar.
+                    It is read here rather than pressed, because the line it sits in is what opens it (D137). */}
+                {detail ? <span className={`${HELP} break-words`}>{detail.said}</span> : null}
               </span>
               <svg aria-hidden focusable="false" width="20" height="20" viewBox="0 0 24 24" className="shrink-0 text-[var(--on-surface-muted)]">
                 <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-          }
-          /* Under the condition, the line that opens its own questions: the name read, the course, the bar for a day
-             (D136). It is drawn for every condition the register gives a detail to, and when nothing has been given
-             it says so rather than disappearing, because on a daily condition an empty name is a real answer. */
-          detail={
-            detail ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setSheetAt("questions");
-                  setChoosing(true);
-                }}
-                className={`${INLINE_BUTTON} mt-[var(--space-sm)] w-full justify-between text-left`}
-              >
-                <span className="flex min-w-0 flex-col">
-                  <span className={CARD_LABEL}>{detail.title}</span>
-                  <span className="break-words">{detail.said}</span>
-                </span>
-                <svg aria-hidden focusable="false" width="20" height="20" viewBox="0 0 24 24" className="shrink-0 text-[var(--on-surface-muted)]">
-                  <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            ) : null
           }
           /* The shape of the gift, drawn by the product's own pieces: one mark a day, and the row scrolls. */
           shape={

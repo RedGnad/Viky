@@ -40,6 +40,9 @@ test("every condition names a reading that exists, and a milestone has no goal t
 
 test("no destination, card, or step of offering a gift names a source in its own words: the register does", () => {
   // The kit is what the structure builds; offering a gift (S2) and a gift's page (S3) were rebuilt on it.
+  // Short enough to sit on one line of the card's own control, which is what keeps every card the same height
+  // (the founder, 21 Sep 2026): measured at 30 characters, which is what 250 pixels of the body face holds.
+  for (const condition of CONDITIONS) assert.ok(condition.name.length <= 30, `${condition.id} is ${condition.name.length} characters`);
   for (const file of [...globSync("app/kit/**/*.tsx"), "app/components/PayGift.tsx", "app/components/GiftPage.tsx", "src/sentences.ts", "src/pending-gift.ts"]) {
     const source = readFileSync(file, "utf8");
     assert.doesNotMatch(source, /Duolingo|Chess\.com|Coursera|Strava/, `${file} names a source itself`);

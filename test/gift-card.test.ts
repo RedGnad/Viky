@@ -186,8 +186,10 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   assert.match(readFileSync("app/kit/offer/PaySheet.tsx", "utf8"), /value=\{draft\.funderName\}/);
   // Every field on the card is a control at the size every control keeps, and the chips are the product's own button.
   assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length, 3, "the name and the amount twice; the days are chips now (D130)");
-  // The line that opens the condition's own questions, and the one that opens the catalogue: two controls, one shape.
-  assert.equal((card.match(/\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/g) ?? []).length, 2, "the condition line and the detail line (D136)");
+  // One line, not two (D137): it opens the catalogue while nothing is chosen and that condition's questions after.
+  assert.equal((card.match(/\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/g) ?? []).length, 1, "one control for what they will do");
+  assert.match(card, /setSheetAt\(condition \? "questions" : "list"\)/);
+  assert.match(card, /\{detail \? <span className=\{`\$\{HELP\} break-words`\}>\{detail\.said\}<\/span> : null\}/, "and what it has been told is read on it");
   assert.match(card, /className=\{`\$\{CHIP\} /, "a chip is the inline button at the size of a choice");
   assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/, "and the condition line is one too, so every control lifts the same way");
   // The two that are left, and both are a choice rather than a field.

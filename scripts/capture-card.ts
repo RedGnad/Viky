@@ -48,11 +48,14 @@ async function main() {
       await card.getByLabel("Their first name").fill("Léa");
       await shot("02-card-named");
 
-      await card.getByRole("button").filter({ hasText: /what they will do/i }).click();
-      await shot("03-sheet-will-list");
+      // The card's one line opens that condition's own questions (D137); the catalogue is behind Change.
+      await card.getByRole("button").first().click();
+      await shot("03-sheet-will-questions");
+      await sheet.getByRole("button", { name: /change/i }).click();
+      await shot("03b-sheet-will-list");
       // The list is longer than the sheet on a phone, and the state the fade is for is the one further down it.
       await sheet.locator(".sheet-body").evaluate((body) => body.scrollTo({ top: body.scrollHeight }));
-      await shot("03b-sheet-will-list-scrolled");
+      await shot("03c-sheet-will-list-scrolled");
       await sheet.locator(".sheet-body").evaluate((body) => body.scrollTo({ top: 0 }));
       // Pressing the one already chosen opens its own questions and keeps what it has been told.
       await sheet.getByRole("radio", { name: /Duolingo lesson each day/ }).click();

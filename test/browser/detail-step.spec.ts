@@ -1,9 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * The detail line on the card, and what it opens (D136). The defect it answers: pressing "What they will do" always
+ * The one line on the card, and what it opens (D136, D137). The defect it answers: pressing "What they will do" always
  * reopened the catalogue, so on a daily condition the funder could never name the account, choose the course or set
- * the bar for a day, while the same gesture on a certificate opened its questions. One gesture, one result, on all six.
+ * the bar for a day. It now opens the catalogue while nothing is chosen and that condition's own questions from then
+ * on, with the way back to the catalogue as the step's first control. One line, because the card stays quiet.
  *
  * The profile read is stubbed with what production answered for "Luis" on 20 Sep 2026 (French 77530, Japanese 4199,
  * Spanish 13022, German 2348, Swedish 1012, current French), so this measures our screen and not the source's uptime.
@@ -24,8 +25,11 @@ const card = (page: Page) => page.locator("main section").first();
 const sheet = (page: Page) => page.locator("dialog.sheet[open]");
 
 async function choose(page: Page, name: RegExp) {
-  // The first control on the card is the condition line; the second is the detail line this defect is about.
+  // The first control on the card is the line this defect is about: what they will do, and what it has been told.
+  // It opens that condition's questions once one is chosen, so the catalogue is asked for by its own control.
   await card(page).getByRole("button").first().click();
+  const change = sheet(page).getByRole("button", { name: /^Change/i });
+  if (await change.isVisible().catch(() => false)) await change.click();
   await sheet(page).getByRole("radio", { name }).click();
   // Choosing lands on that condition's own questions, whose way back to the catalogue is the Change button.
   await expect(sheet(page).getByRole("button", { name: /^Change/i })).toBeVisible();
@@ -33,16 +37,16 @@ async function choose(page: Page, name: RegExp) {
 
 test.describe("the line that opens a condition's own questions", () => {
   test("every condition has one, and it opens that condition's step, never the catalogue", async ({ page }) => {
-    const names = [/Duolingo lesson each day/i, /score on the Duolingo English Test/i, /puzzle record/i, /chess rating/i, /Coursera certificate/i, /certification on Credly/i];
+    const names = [/Duolingo lesson each day/i, /Duolingo English Test score/i, /puzzle record/i, /chess rating/i, /Coursera certificate/i, /certification on Credly/i];
     for (const name of names) {
       await page.goto("/");
       await choose(page, name);
-      // The sheet is on that condition's questions already; close it and come back through the card's detail line.
+      // The sheet is on that condition's questions already; close it and come back through the card's one line.
       await sheet(page).getByRole("button", { name: "Close" }).click();
       await expect(page.locator("dialog.sheet[open]")).toHaveCount(0);
-      const detail = card(page).getByRole("button").nth(1);
-      await expect(detail).toBeVisible();
-      await detail.click();
+      const line = card(page).getByRole("button").first();
+      await expect(line).toBeVisible();
+      await line.click();
       await expect(sheet(page)).toBeVisible();
       // Its own questions, not the catalogue: no condition to pick, and the way back to the catalogue is a button.
       await expect(sheet(page).getByRole("radio", { name: /Duolingo lesson each day/i })).toHaveCount(0);
@@ -54,7 +58,7 @@ test.describe("the line that opens a condition's own questions", () => {
   test("with a name, the courses are the profile's own, the current one first, and the whole profile is the default", async ({ page }) => {
     await page.route("**/api/duolingo/profile**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(LUIS) }));
     await page.goto("/");
-    await card(page).getByRole("button").nth(1).click();
+    await card(page).getByRole("button").first().click();
     const step = sheet(page);
     await step.getByLabel(/name, if you know it/i).fill("Luis");
     await step.getByLabel(/name, if you know it/i).blur();
@@ -69,10 +73,10 @@ test.describe("the line that opens a condition's own questions", () => {
 
   test("without a name the line is visible, says it is optional, and the step says the courses come after", async ({ page }) => {
     await page.goto("/");
-    const detail = card(page).getByRole("button").nth(1);
-    await expect(detail).toContainText(/They name their own when they open it/i);
-    await expect(detail).toContainText(/10 XP a day/i);
-    await detail.click();
+    const line = card(page).getByRole("button").first();
+    await expect(line).toContainText(/They name their own when they open it/i);
+    await expect(line).toContainText(/10 XP a day/i);
+    await line.click();
     await expect(sheet(page).getByText(/the courses appear here/i)).toBeVisible();
     await expect(sheet(page).getByRole("button", { name: /^Done$/ })).toBeEnabled();
   });
