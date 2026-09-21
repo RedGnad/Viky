@@ -511,6 +511,51 @@ test("the tap target satisfies every source, including the strictest accessibili
   assert.ok(NAV.barHeight >= TAP_TARGET, "a destination in the bar is a full target with its label");
 });
 
+/**
+ * The night a person chooses and the night a device reports must say exactly the same thing (D140). They are two
+ * blocks in the stylesheet, `@media (prefers-color-scheme: dark) :root:not([data-theme="light"])` and
+ * `:root[data-theme="dark"]`, and a variable added to one and forgotten in the other is invisible to anyone whose
+ * device already agrees with their choice. That is what happened to the head character's blend: its edge followed
+ * the appearance control and its two colours did not, so the founder saw one blend whichever night he was in, three
+ * times, while every measurement of mine passed because it emulated the device and never the control.
+ */
+test("the night a person chooses says everything the night a device reports says", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  const insideOf = (start: string) => {
+    const at = css.indexOf(start);
+    assert.ok(at > 0, `${start} is in the stylesheet`);
+    const open = css.indexOf("{", at) + 1;
+    let depth = 1;
+    let index = open;
+    while (depth > 0 && index < css.length) {
+      if (css[index] === "{") depth += 1;
+      if (css[index] === "}") depth -= 1;
+      index += 1;
+    }
+    return css.slice(open, index - 1);
+  };
+  const variables = (text: string) => new Map([...text.matchAll(/(--[a-z0-9-]+):\s*([^;]+);/g)].map((one) => [one[1], one[2].trim()]));
+  const device = variables(insideOf("@media (prefers-color-scheme: dark)"));
+  const chosen = variables(insideOf(':root[data-theme="dark"] {'));
+  assert.ok(device.size > 20, `${device.size} variables read from the device's night`);
+  for (const [name, value] of device) {
+    assert.equal(chosen.get(name), value, `${name} is ${value} when the device says night, and ${chosen.get(name) ?? "nothing"} when a person chooses it`);
+  }
+});
+
+/**
+ * What a phone paints while the app opens (D140): the splash screen is the manifest's `background_color` with the
+ * icon on it, and it was white while the app itself is ink. The founder saw a white flash and an old drawing: the
+ * colour is the product's own ground now, and the icon is whatever `pnpm make:icon` last wrote. The drawing in an
+ * installed app is baked into it and only changes when the phone installs it again, which no code here can do.
+ */
+test("the app a phone installs is painted in the product's own ground", () => {
+  const manifest = JSON.parse(readFileSync("public/manifest.json", "utf8")) as Record<string, string> & { icons: { src: string }[] };
+  assert.equal(manifest.background_color, COLOURS.dark.background);
+  assert.equal(manifest.theme_color, COLOURS.dark.background);
+  for (const icon of manifest.icons) assert.ok(globSync(`public${icon.src}`).length === 1, `${icon.src} is written`);
+});
+
 test("a journey stays narrow enough that prose can never run too long", () => {
   // 480 pixels at a 16 pixel body is about 53 characters, inside every published range.
   assert.ok(APP_COLUMN_MAX / TYPE.body.size < PROSE_MAX_CH);

@@ -3837,3 +3837,23 @@ behind an account cannot be photographed any other way.
   rate answered (decision 1 of 17 Sep 2026).
 - **The catalogue follows the register, not the alphabet.** Inside a family the first line is the one to offer
   first, and the founder put the daily lesson before the test because it asks less of whoever receives it.
+
+## D140, 21 Sep 2026: the night a person chooses, the currency beside the figure, and no keyboard on arrival
+
+- **The blend never followed the appearance control, and that is why three fixes changed nothing.** There are two
+  nights in the stylesheet: the one a device reports, `@media (prefers-color-scheme: dark) :root:not([data-theme=
+  "light"])`, and the one a person chooses, `:root[data-theme="dark"]`. The head character's edge was written into
+  both; its two colours were written into the first alone. So pressing the control turned the whole page and left
+  the diamond in the day's blend, which is exactly what the founder kept seeing, and every measurement of mine
+  passed because it emulated the device and never pressed the control. The colours are in both blocks now, the
+  duplicate pair in the first is gone, and **a test compares the two blocks variable by variable**, so a value put
+  in one and forgotten in the other fails from here on. Verified by pressing the control: device light, pressed,
+  gives the night blend and the ink ground; device dark, pressed, gives the day blend and the lavender.
+- **The currency sits beside the figure, never under it.** The line made the card taller, and the card is the thing
+  the founder keeps quiet. Nothing at all when the account reads in dollars or when no rate answered.
+- **Nothing takes the cursor on arrival.** The card's one empty field had it, which raised the keyboard the moment
+  a phone opened the page and hid half of what there was to read.
+- **The app a phone installs is painted in the product's own ground**: the manifest's background and theme colours
+  were white while the app is ink, so the splash flashed white and then the page. What an installed app draws is
+  baked into it when the phone installs it, so the icon a person already has changes when they install it again;
+  no code here can reach into that.
