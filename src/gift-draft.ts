@@ -44,6 +44,19 @@ export type GiftDraft = Readonly<{
   /** What a day has to reach, or the number to climb to, or the score the certificate must show. */
   target: string;
   dollars: string;
+  /**
+   * The amount as the person typed it, and what they were reading in when they did (D158). Two things at once:
+   *
+   * - **whether the amount is theirs at all.** A card starts on a round figure in the reader's currency, or on the
+   *   account's own money, and follows both until somebody types an amount. Pressing a length or choosing a
+   *   condition writes the card to the device without making its amount a decision, and before this such a card
+   *   was kept as "thirty dollars" and read back as 26.18 euros for ever, whatever the account held.
+   * - **what to show them back.** The chain holds dollars, cut to the cent and never rounded up, so 45 euros are
+   *   held as $51.91 which are 44.99 euros: a person who typed 45 and came back to 44.99 would be right to call it
+   *   a bug. What they typed comes back exactly, while what is sent stays the dollars below.
+   */
+  typedAmount?: string;
+  typedIn?: string;
   days: string;
 }>;
 
@@ -216,6 +229,7 @@ export function draftToTerms(draft: GiftDraft, account: string | undefined): Pen
     conditionId: draft.conditionId,
     username: draft.subject,
     dollars: draft.dollars,
+    ...(draft.typedAmount !== undefined ? { typedAmount: draft.typedAmount, typedIn: draft.typedIn ?? "USD" } : {}),
     days: draft.days,
     target: draft.target,
     ...(draft.course ? { course: draft.course, courseTitle: draft.courseTitle ?? "" } : {}),
@@ -237,6 +251,7 @@ export function draftFromTerms(terms: PendingGiftTerms): GiftDraft {
     ...(terms.standingReadAt ? { standingReadAt: terms.standingReadAt } : {}),
     target: terms.target,
     dollars: terms.dollars,
+    ...(terms.typedAmount !== undefined ? { typedAmount: terms.typedAmount, typedIn: terms.typedIn ?? "USD" } : {}),
     days: terms.days,
   };
 }

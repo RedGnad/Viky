@@ -4254,3 +4254,23 @@ the account, that money. "C'est juste une histoire de confort user design."
 - **No thirty is shown before the account's money is known.** Signed in, the server marks the screen as settling
   (D155's attribute, from the server this time, since the server knows the person), and the card's figures wait
   for the balance and the rate. A device with nothing kept and nothing to convert still sees its round figure at once.
+
+## D158, 21 Sep 2026: a card is the card's until somebody types an amount, and then it is theirs exactly
+
+The founder, on his own phone after D157: "la pas connecté j'ai 26.18 euros affiché, et connecté pareil alors que
+j'ai 9 euros dans mon account. Donc je crois pas que tu aies changé vraiment ?" It had changed, and it could not
+reach him: what D157 measured was a device with nothing kept, and his had a card.
+
+- **What it was.** A card is written to the device the first time anything on it changes: a length pressed, a
+  condition chosen, a name typed. What was written carried the amount the card came with, "30" dollars, and from
+  then on the card read that back, 26.18 euros in France, whatever the account held. D157's rule only applied to a
+  device that had never touched the card, which after a day of use is nobody.
+- **The card now knows whether the amount is its own or the person's.** Nothing typed, and the card follows what
+  D157 decided: a round figure in the reader's currency, or the account's own money when it holds any. An amount
+  typed, and that amount stands, until it is typed again or the gift is made.
+- **What was typed comes back exactly.** The chain holds dollars, cut to the cent and never rounded up, so 45 euros
+  are held as $51.91, which are 44.99 euros back: somebody who typed 45 and came back to 44.99 would be right to
+  call it a bug. The card keeps the figure as typed and the currency it was typed in, shows it back when that is
+  still what they read in, and sends the dollars underneath, unchanged.
+- Measured on a device that pressed a length and never typed an amount: 30.00 euros signed out, 8.84 euros signed
+  in holding $10.13, and 45 after typing 45.
