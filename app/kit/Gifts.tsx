@@ -7,6 +7,7 @@ import { EmptyState } from "./EmptyState";
 import { useMinute } from "./clock";
 import { charactersOf } from "./DayStrip";
 import { GiftCard } from "./GiftCard";
+import { HeadCharacter } from "./HeadCharacter";
 import { Arrival, Reveal, type ArrivalGift } from "./Motion";
 import { Shell } from "./Shell";
 import { useMyGifts } from "./my-gifts";
@@ -19,7 +20,7 @@ export function Gifts() {
 
   if (!address) {
     return (
-      <Shell kind="destination" active="gifts" title={W.title}>
+      <Shell kind="destination" active="gifts" title={W.title} character={<HeadCharacter />}>
         <p className={BODY}>{W.signInFirst}</p>
         <AccountPanel />
       </Shell>
@@ -34,16 +35,16 @@ export function Gifts() {
   });
   return (
     <Arrival storageKey="viky.seen.days" gifts={arriving}>
-    <Shell kind="destination" active="gifts" title={W.title}>
+    <Shell kind="destination" active="gifts" title={W.title} character={<HeadCharacter />}>
       {problem ? <p className={BODY}>{problem}</p> : null}
       {!problem && gifts === null ? <p className={HELP}>{HOME.loading}</p> : null}
       {gifts !== null ? (
         <>
-          <section className="flex flex-col gap-[var(--space-md)]">
+          <section className="arrives-in-turn flex flex-col gap-[var(--space-md)]">
             <h2 className={TITLE}>{W.given}</h2>
             {given.length === 0 ? <EmptyState>{W.emptyGiven}</EmptyState> : given.map((gift) => <Reveal key={gift.giftId}><GiftCard gift={gift} /></Reveal>)}
           </section>
-          <section className="flex flex-col gap-[var(--space-md)]">
+          <section className="arrives-in-turn flex flex-col gap-[var(--space-md)]">
             <h2 className={TITLE}>{W.received}</h2>
             {received.length === 0 ? <EmptyState>{W.emptyReceived}</EmptyState> : received.map((gift) => <Reveal key={gift.giftId}><GiftCard gift={gift} /></Reveal>)}
           </section>

@@ -144,11 +144,12 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
   // The blocks of a screen arrive one after another, and the whole arrival still ends inside NN/g's half second.
   assert.ok(css.includes(`--page-enter-stagger: ${MOTION.reveal.staggerMs}ms`), "each block waits what the token says");
   assert.ok(css.includes(`--page-enter-most-staggered: ${MOTION.reveal.mostStaggeredMs}ms`), "and none waits longer than the token's ceiling");
+  assert.ok(css.includes(`--page-enter-last-turn: ${MOTION.reveal.lastTurnMs}ms`), "a list's turns run deeper, to the token's own last one");
   assert.ok(MOTION.reveal.durationMs + MOTION.reveal.mostStaggeredMs <= 500, "a page of any length has arrived in half a second");
   // Material publishes sixteen durations and no others (md.sys.motion.duration.short1 to extra-long4); a value
   // outside that list is refused in review, which is the rule the motion roadmap of 21 Sep 2026 sets.
   const MATERIAL_MS = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 700, 800, 900, 1000];
-  for (const [name, ms] of Object.entries({ reveal: MOTION.reveal.durationMs, stagger: MOTION.reveal.staggerMs, mostStaggered: MOTION.reveal.mostStaggeredMs })) {
+  for (const [name, ms] of Object.entries({ reveal: MOTION.reveal.durationMs, stagger: MOTION.reveal.staggerMs, mostStaggered: MOTION.reveal.mostStaggeredMs, lastTurn: MOTION.reveal.lastTurnMs })) {
     assert.ok(MATERIAL_MS.includes(ms), `${name} is ${ms} ms, which Material does not publish`);
   }
   assert.match(readFileSync("app/kit/Shell.tsx", "utf8"), /className=\{`page-enters /, "every screen is drawn by the one shell, and that is where the arrival is asked for");

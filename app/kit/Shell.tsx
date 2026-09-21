@@ -36,6 +36,11 @@ type Props =
       wide?: boolean;
       /** Home with an account: the column is the card's width plus its margins, so everything shares its edges (D128). */
       width?: "card";
+      /**
+       * The character at the head of this screen, opposite its title (D154). Every screen of the app carries it now,
+       * not only the ones a gift is made on: it is the one thing here that answers a gesture.
+       */
+      character?: ReactNode;
       children: ReactNode;
     }>
   | Readonly<{
@@ -101,9 +106,13 @@ export function Shell(props: Props) {
             {props.kind === "document" && props.back ? <BackLink href={props.back} label={props.backLabel} /> : null}
             {props.kind === "task" && props.caption ? <p className={META}>{props.caption}</p> : null}
             {props.kind === "task" && props.step ? <h1 className={TITLE}>{props.step}</h1> : null}
-            {/* Room between the mark and a destination's title, which grows with the title: the two faces touched at 1 440. */}
-            {props.kind === "destination" && props.title ? (
-              <h1 className={`${DISPLAY} mt-[var(--space-sm)] [@media(min-width:840px)]:mt-[var(--space-xl)]`}>{props.title}</h1>
+            {/* Room between the mark and a destination's title, which grows with the title: the two faces touched at 1 440.
+                The character stands at the end of that row, where a task carries it beside the way back (D154). */}
+            {props.kind === "destination" && (props.title || props.character) ? (
+              <div className="flex w-full items-end justify-between gap-[var(--space-md)] mt-[var(--space-sm)] [@media(min-width:840px)]:mt-[var(--space-xl)]">
+                {props.title ? <h1 className={DISPLAY}>{props.title}</h1> : <span />}
+                {props.character}
+              </div>
             ) : null}
           </header>
           {props.children}

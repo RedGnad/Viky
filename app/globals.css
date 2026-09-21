@@ -223,6 +223,7 @@
   --page-enter-rise: 8px;
   --page-enter-stagger: 50ms;
   --page-enter-most-staggered: 200ms;
+  --page-enter-last-turn: 350ms;
 
   color-scheme: light;
 }
@@ -368,9 +369,16 @@ video {
     box-shadow var(--press-duration) var(--press-easing);
 }
 
-.control-relief:active:not(:disabled) {
+.control-relief:active:not(:disabled),
+/* A finger's press, held for its own 120 ms so a tap is seen at all (D154, app/kit/Pressed.tsx). */
+.control-relief[data-pressed]:not(:disabled) {
   transform: translateY(var(--control-relief-depth));
   box-shadow: 0 0 0 0 transparent;
+}
+
+.action-relief[data-pressed]:not(:disabled) {
+  transform: translateY(var(--action-relief-depth));
+  box-shadow: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -709,8 +717,29 @@ dialog.sheet[open] {
   animation-delay: calc(2 * var(--page-enter-stagger));
 }
 
-.page-enters .arrives-in-turn > :nth-child(n + 4) {
-  animation-delay: var(--page-enter-most-staggered);
+.page-enters .arrives-in-turn > :nth-child(4) {
+  animation-delay: calc(3 * var(--page-enter-stagger));
+}
+
+.page-enters .arrives-in-turn > :nth-child(5) {
+  animation-delay: calc(4 * var(--page-enter-stagger));
+}
+
+.page-enters .arrives-in-turn > :nth-child(6) {
+  animation-delay: calc(5 * var(--page-enter-stagger));
+}
+
+.page-enters .arrives-in-turn > :nth-child(7) {
+  animation-delay: calc(6 * var(--page-enter-stagger));
+}
+
+/*
+ * A list is where a cascade is worth having, so the turns run deeper inside a box than between the blocks of a page
+ * (D154): seven of them, 50 ms apart, and everything after the seventh arrives with it. The last card of a long
+ * list is therefore on screen 350 ms after the first began, which is the tail of one movement rather than a queue.
+ */
+.page-enters .arrives-in-turn > :nth-child(n + 8) {
+  animation-delay: var(--page-enter-last-turn);
 }
 
 @keyframes page-enter {
@@ -724,6 +753,14 @@ dialog.sheet[open] {
   from {
     opacity: 0;
   }
+}
+
+/*
+ * A figure that is about to change is not shown (D155, src/money-boot.ts): the device says so before the first
+ * paint, and the card says when its figures have settled. The boxes stay, so nothing moves; only the figures wait.
+ */
+html[data-money-settling] [data-money] {
+  visibility: hidden;
 }
 
 /*
@@ -745,7 +782,9 @@ dialog.sheet[open] {
     transition: none;
   }
 
-  .control-relief:is(:active, :hover):not(:disabled) {
+  .control-relief:is(:active, :hover):not(:disabled),
+  .control-relief[data-pressed]:not(:disabled),
+  .action-relief[data-pressed]:not(:disabled) {
     transform: none;
   }
 
