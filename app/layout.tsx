@@ -4,7 +4,9 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { dmSans, fredoka } from "./fonts";
 import { AccountProvider } from "@/src/account/provider";
+import { MONEY_BOOT_SCRIPT } from "@/src/money-boot";
 import { THEME_BOOT_SCRIPT } from "@/src/theme";
+import { Pressed } from "./kit/Pressed";
 import { Register } from "./serwist/Register";
 
 const APP_NAME = "Viky";
@@ -65,8 +67,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     // The look's font variables sit on the document itself, because app/globals.css reads them from :root.
     <html lang="en" dir="ltr" className={`${fredoka.variable} ${dmSans.variable}`}>
       <body className="antialiased">
-        {/* Before anything is painted, so a chosen appearance never flashes the other one first (D97). */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        {/* Before anything is painted, so a chosen appearance never flashes the other one first (D97), and so a card
+            whose figures are about to change shows none until they have (D155). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT + MONEY_BOOT_SCRIPT }} />
         {/* The worker is registered by `Register`, not by the provider, so a browser that refuses one is refused
             quietly rather than throwing on every screen (D150).
             `reloadOnOnline` is off (D153): the library reloads the whole page on every `online` event, which a phone
@@ -74,6 +77,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             founder kept seeing on his phone and never on a desktop. A page does not restart itself under somebody. */}
         <SerwistProvider swUrl="/serwist/sw.js" register={false} reloadOnOnline={false}>
           <Register />
+          {/* A press a finger can see, on every control, once (D154). */}
+          <Pressed />
           <AccountProvider>{children}</AccountProvider>
         </SerwistProvider>
       </body>

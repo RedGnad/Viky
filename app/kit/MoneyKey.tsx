@@ -24,8 +24,10 @@ export function MoneyKey({ currency, onOpen, className = "" }: Readonly<{ curren
       aria-haspopup="dialog"
       aria-label={W.readInAnother(currencyOf(currency).name)}
       /* The size every control in this product keeps, 48 by 48, which clears the 44 the founder asked for and the
-         44 of WCAG 2.5.5 at AAA. A sign wider than that makes the key wider; none makes it smaller. */
-      className={`money-key inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center gap-[2px] rounded-full border-[length:var(--control-border-width)] border-[var(--control-border)] control-relief bg-[var(--tonal)] px-[var(--space-sm)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)] ${className}`}
+         44 of WCAG 2.5.5 at AAA. A sign wider than that makes the key wider; none makes it smaller. The edge and the
+         chevron say it is pressed; the relief every other control stands on is left off here (the founder, 21 Sep
+         2026), because the key sits inside a field's own box, and a slab inside a box read as two boxes. */
+      className={`money-key inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center gap-[2px] rounded-full border-[length:var(--control-border-width)] border-[var(--control-border)] bg-[var(--tonal)] px-[var(--space-sm)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)] ${className}`}
     >
       <MoneyMark currency={currency} />
       <Chevron />

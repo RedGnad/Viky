@@ -76,7 +76,9 @@ export function SignInDoor() {
         onClick={() => void tryPasskey()}
         className={INLINE_BUTTON}
       >
-        {busy ? W.busy : W.open}
+        {/* One width whatever it says (the founder, 21 Sep 2026): "Sign in" and "One moment" are the same button,
+            and a header control that grows while it works moves the mark beside it. */}
+        <span className="inline-block min-w-[10ch] text-center">{busy ? W.busy : W.open}</span>
       </button>
       {open ? (
         <div

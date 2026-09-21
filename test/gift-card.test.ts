@@ -336,6 +336,6 @@ test("the page without an account is the character, the title, the sentence and 
   assert.match(signedOut, /<div className="arrives-in-turn flex w-full flex-col items-start/, "one column, on one left edge, and its pieces arrive in turn (D147)");
   assert.doesNotMatch(signedOut, /<h1 className=\{`\$\{HERO\}[^`]*max-w/, "the title is free to take the column, which is what holds it on one line at 76");
   assert.match(signedOut, /<Shell kind="destination" active="home" action=\{<SignInDoor \/>\} bare wide>/, "the wide column, and no rail's room");
-  assert.match(home, /<Shell kind="destination" active="home" width="card">/, "with an account, the column is the card's width");
+  assert.match(home, /<Shell kind="destination" active="home" width="card" character=\{<HeadCharacter \/>\}>/, "with an account, the column is the card's width, and the character is at its head (D154)");
   assert.doesNotMatch(signedOut, /promiseBody|howItWorks|exampleGift/, "no third paragraph, and no example of a gift beside a real one");
 });

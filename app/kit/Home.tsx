@@ -8,6 +8,7 @@ import { Arrival, Expression, Gaze, Reveal, type ArrivalGift } from "./Motion";
 import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
 import { GiftCard } from "./GiftCard";
+import { HeadCharacter } from "./HeadCharacter";
 import { Install } from "./Install";
 import { MoneyHero } from "./MoneyHero";
 import { OfferCard } from "./offer/OfferCard";
@@ -107,7 +108,7 @@ export function Home() {
       {/* With an account the money leads (D139). Every account app people already use puts the balance at the top,
           Wise, Revolut and Monzo among them, and it is what somebody opens Viky to read; the card is the one action
           under it. Without an account there is no money to read, and the card leads, which is D129's order. */}
-      <Shell kind="destination" active="home" width="card">
+      <Shell kind="destination" active="home" width="card" character={<HeadCharacter />}>
         <MoneyHero address={address} holdings={holdings} />
         {/* The way out keeps its place while the balance is being read (D147), so the card under it does not jump
             down when the answer lands. The room is held only on a device that saw money here last time: a first
@@ -124,7 +125,8 @@ export function Home() {
           </Link>
         ) : null}
         <OfferCard />
-        <section className="flex flex-col gap-[var(--space-md)]">
+        {/* The gifts land one after another rather than all at once (D154). */}
+        <section className="arrives-in-turn flex flex-col gap-[var(--space-md)]">
           <h2 className={TITLE}>{W.moving}</h2>
           {problem ? <p className={BODY}>{problem}</p> : null}
           {!problem && gifts === null ? <p className={HELP}>{W.loading}</p> : null}

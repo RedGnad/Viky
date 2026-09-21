@@ -4160,3 +4160,52 @@ mobile oui. La landing a l'air de se charger 2 fois de suite." It was loading tw
   which is why two rounds of measuring on a desktop found nothing.
 - An installed app keeps the build it was launched with until its worker updates, so the first launch after this
   can still carry the old one. The second launch is the one to judge.
+
+## D154, 21 Sep 2026: the character on every screen, the lists in turn, a press a finger can see
+
+- **The character stands on the three screens of the app** as well, Home with an account, the gifts and the account
+  page, at the end of the title's row. It was on the landing, a gift's page, the sheet that pays and the way out
+  (D148), which is not where a signed-in person spends their day.
+- **The cards of a list arrive one after another**, 50 ms apart, seven turns deep and then together, inside the box
+  that holds them (`arrives-in-turn`): a list is where a cascade says something, and a page of cards that faded in as
+  one rectangle was the "assez artificiel" the founder named.
+- **A press a finger can see.** The relief collapsed on `:active`, which a mouse holds and a finger does not: a tap
+  is over in milliseconds and Chrome waits before applying `:active` at all, so on a phone the movement only showed
+  when the button was held, which is also the one way to make a press miss. On a device without a pointer the press
+  is now held for its own 120 ms and given back (`app/kit/Pressed.tsx`), the same movement, on the gesture that was
+  made. Measured: a short tap goes down four pixels over 120 ms and comes back, and the chip is chosen.
+- **The door keeps one width**, "Sign in" and "One moment" in the same box of ten characters, so the mark beside it
+  never moves while the passkey is open. Measured 125 pixels in both states.
+- **The currency key loses its relief** (the founder): it sits inside the field's own box, and a slab inside a box
+  read as two boxes. The edge and the chevron still say it is pressed.
+
+## D155, 21 Sep 2026: the worker keeps nothing about a person, and no figure is shown before it is true
+
+The founder, after three fixes to the landing's blink: "toujours ce fichu clignotement... ça fait ça sur chaque page,
+la landing apparaît une fraction de seconde puis enfin la page voulue se charge... l'erreur où 30$ est affiché par
+défaut puis la landing recharge avec le montant personnalisé existe encore... Pourquoi on arrive pas à gérer l'app
+dans son ensemble ?" He was right on every count, and the reason it survived three fixes is written here.
+
+- **What it was.** The service worker's default kept every page, every payload the router fetches and every answer
+  under `/api/`, network first with a fallback to the cache, for a day. Across the eight deploys of that day, on a
+  phone on a slow network, that meant: a page served from the previous build whose files were gone, so the page
+  loaded twice; "nobody is signed in" served from the cache to somebody who was, so the landing showed before every
+  screen; a balance from the morning. None of it can be seen from a fresh browser on a fast network with one build,
+  which is where every measurement had been taken. Reproduced by installing the worker on one build, serving the
+  next, and opening a page by its address on a throttled phone: the document came through the worker, the session
+  answer came through the worker, and the page loaded twice.
+- **What the worker keeps now** is what cannot be wrong: a build's own files, named by their content, kept a day so a
+  screen open across a deploy can still load the piece it asks for next; the fonts and the drawings; and the offline
+  page, the one thing precached, named for its build. A page, a payload and an answer about somebody come from the
+  network and from nowhere else. A previous worker's caches are deleted the moment this one activates. The offline
+  fallback was also never precached before, so it had never worked.
+- **No figure is shown before it is true.** The page is static and drawn once, thirty dollars in dollars. A device
+  that kept a card, chose a currency, or sits where the dollar is not the currency says so before the first paint
+  (`src/money-boot.ts`, the same trick as the appearance), and the card keeps its figures out of sight until the
+  rate has answered. Measured on a throttled phone with a card kept in francs: "30.00" hidden at 46 ms, "51.56"
+  hidden at 79 ms, the person's own 29,512 the first figure ever shown, at 409 ms. A device with nothing kept and
+  nothing to convert sees the thirty dollars at once, because for it they are true.
+- **What "gérer l'app dans son ensemble" means from here.** Every fix before this was measured on a fresh browser
+  against a single build. The founder's phone carries yesterday's worker, yesterday's cache and the previous deploy,
+  and that is the condition to measure in. `review-captures/stale-worker.ts` does it: install on one build, deploy
+  the next, open a page on a slow network. It is the check to run before calling any load-time behaviour fixed.

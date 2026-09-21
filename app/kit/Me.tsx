@@ -10,6 +10,7 @@ import { PRODUCT_LOCALE } from "@/src/moments";
 import { CATALOGUE, ME as W } from "@/src/sentences";
 import { CARD, HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../components/ui";
 import { CurrencySheet } from "./CurrencySheet";
+import { HeadCharacter } from "./HeadCharacter";
 import { Install } from "./Install";
 import { MoneyKey } from "./MoneyKey";
 import { SignInDoor } from "./SignInDoor";
@@ -65,7 +66,7 @@ export function Me() {
   }
 
   return (
-    <Shell kind="destination" active="me" title={W.title}>
+    <Shell kind="destination" active="me" title={W.title} character={<HeadCharacter />}>
       <section className={CARD}>
         {/* The same key and the same list as the card (D152): one way to change what money is read in, and the
             list is what the rails and the rate file answer today, not three names written here. */}

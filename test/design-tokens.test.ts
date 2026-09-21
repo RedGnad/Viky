@@ -572,6 +572,38 @@ test("nothing reloads the page because the network came back", () => {
   }
 });
 
+/**
+ * The worker keeps what cannot be wrong and nothing else (D155). A page, a payload the router fetches and an answer
+ * under `/api/` come from the network and from nowhere else: the library's default kept all three for a day, and
+ * across a day of deploys a phone was shown the previous build's page, "nobody is signed in" from the cache, and
+ * the landing before every screen. The one thing precached is the offline page, named for this build.
+ */
+test("the worker never keeps a page, a payload or an answer about somebody", () => {
+  const worker = readFileSync("app/sw.ts", "utf8");
+  assert.doesNotMatch(worker, /defaultCache|NetworkFirst/, "nothing is kept network first, which is kept stale");
+  assert.match(worker, /matcher: \/\.\*\/i,\n\s*handler: new NetworkOnly\(\)/, "everything not named below is the network only");
+  assert.match(worker, /matcher: \/\\\/_next\\\/static\\\/\/i,\n\s*handler: new CacheFirst/, "a build's own files, named by their content, are kept");
+  assert.match(worker, /precacheEntries: \[\{ url: OFFLINE, revision: buildOf\(self\.__SW_MANIFEST \?\? \[\]\) \}\]/, "the offline page alone is precached, for this build");
+  assert.doesNotMatch(worker, /precacheEntries: self\.__SW_MANIFEST/, "the build's files are not precached, so the previous build's survive a deploy for a screen still open on it");
+});
+
+/**
+ * A card never shows a figure that is about to change (D155): a device that kept a card, chose a currency or sits
+ * where the dollar is not the currency says so before the first paint, and the figures wait until they are true.
+ */
+test("a device whose figures are about to change keeps them out of sight until they are true", () => {
+  const boot = readFileSync("src/money-boot.ts", "utf8");
+  assert.match(boot, /export const MONEY_BOOT_SCRIPT = `try\{/, "the script is a string, run before the paint, and cannot throw");
+  assert.match(boot, /PENDING_GIFT_STORAGE_KEY/, "a kept card");
+  assert.match(boot, /viky\.displayCurrency/, "a chosen currency");
+  assert.match(boot, /NON_DOLLAR_REGIONS/, "a region whose currency is not the dollar");
+  assert.match(readFileSync("app/layout.tsx", "utf8"), /THEME_BOOT_SCRIPT \+ MONEY_BOOT_SCRIPT/, "run with the appearance's, before anything is painted");
+  assert.match(readFileSync("app/globals.css", "utf8"), /html\[data-money-settling\] \[data-money\] \{\n\s*visibility: hidden;/, "the figures wait, and the boxes stay");
+  const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
+  assert.equal((card.match(/data-money\b/g) ?? []).length, 3, "the amount, the action and the day's worth");
+  assert.match(card, /if \(money\.ratesAsked\) document\.documentElement\.removeAttribute\(MONEY_SETTLING\)/, "and they are shown once the rate has answered, either way");
+});
+
 test("a journey stays narrow enough that prose can never run too long", () => {
   // 480 pixels at a 16 pixel body is about 53 characters, inside every published range.
   assert.ok(APP_COLUMN_MAX / TYPE.body.size < PROSE_MAX_CH);

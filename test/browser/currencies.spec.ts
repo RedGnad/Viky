@@ -64,9 +64,10 @@ test.describe("what money is read in", () => {
     expect(Math.round(box.height * 100) / 100).toBeGreaterThanOrEqual(48);
     await expect(key(page)).toHaveAttribute("aria-label", /^Read in another currency, .+ now$/);
     await expect(key(page)).toHaveAttribute("aria-haspopup", "dialog");
-    // It wears what everything pressable here wears: the two pixel edge and the four pixel relief.
+    // It wears the two pixel edge everything pressable here wears, and no relief: it sits inside the field's own
+    // box, and a slab inside a box read as two boxes (the founder, 21 Sep 2026, D154).
     const worn = await key(page).evaluate((element) => ({ edge: getComputedStyle(element).borderTopWidth, relief: getComputedStyle(element).boxShadow }));
     expect(worn.edge).toBe("2px");
-    expect(worn.relief).toMatch(/0px 4px 0px 0px/);
+    expect(worn.relief).toBe("none");
   });
 });
