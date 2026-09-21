@@ -386,8 +386,13 @@ export const MOTION = {
   arrival: { budgetMs: 2000, staggerMs: 120 },
   /** A gift made or money taken, answering the press that did it: the gift character arrives once, its bow a beat after. */
   gift: { spatial: SPRING.expressiveFastSpatial, effects: SPRING.effects, fromScale: 0.55, bowDelayMs: 120 },
-  /** Something scrolled into view for the first time: it appears, rising a few pixels. Material's medium1. */
-  reveal: { durationMs: 250, easing: EASING.standard, rise: 8 },
+  /**
+   * Something appearing for the first time, whether a screen has opened or a block has scrolled into view: it
+   * appears, rising a few pixels. Material's medium1. A screen that carries several blocks brings them one after
+   * another, 50 ms apart, which is Material's shortest published step, and none waits longer than
+   * `mostStaggeredMs`, so a page of any length has arrived inside the half second NN/g calls the ceiling.
+   */
+  reveal: { durationMs: 250, easing: EASING.standard, rise: 8, staggerMs: 50, mostStaggeredMs: 200 },
   /** A pointer over a button lifts it; over a character, its face turns towards the pointer. Material's short4. */
   hover: { durationMs: 200, easing: EASING.standard, lift: 2, gaze: 2.5 },
   /** WCAG 2.2.2 Pause, Stop, Hide: nothing that starts by itself may last past five seconds without a way to stop it. */

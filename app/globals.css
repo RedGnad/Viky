@@ -221,6 +221,8 @@
   --page-enter-duration: 250ms;
   --page-enter-easing: cubic-bezier(0.2, 0, 0, 1);
   --page-enter-rise: 8px;
+  --page-enter-stagger: 50ms;
+  --page-enter-most-staggered: 200ms;
 
   color-scheme: light;
 }
@@ -660,7 +662,55 @@ dialog.sheet[open] {
  */
 .page-enters > *:not(header, dialog),
 .page-enters > header > *:not(.page-mark) {
-  animation: page-enter var(--page-enter-duration) var(--page-enter-easing);
+  animation: page-enter var(--page-enter-duration) var(--page-enter-easing) backwards;
+}
+
+/*
+ * One after another rather than all at once (the founder, 21 Sep 2026: the arrival was "un peu trop basique, toutes
+ * les cartes qui s'affichent en meme temps"). Each block waits 50 ms longer than the one above it, which is
+ * Material's shortest published step, and none waits more than 200, so a page of any length has arrived inside 450
+ * ms, under the half second NN/g calls the ceiling for a screen. A block still waiting its turn is not drawn at
+ * all, which is what `backwards` is for: without it, it would be there, then gone, then there again.
+ */
+.page-enters > :nth-child(3) {
+  animation-delay: var(--page-enter-stagger);
+}
+
+.page-enters > :nth-child(4) {
+  animation-delay: calc(2 * var(--page-enter-stagger));
+}
+
+.page-enters > :nth-child(5) {
+  animation-delay: calc(3 * var(--page-enter-stagger));
+}
+
+.page-enters > :nth-child(n + 6) {
+  animation-delay: var(--page-enter-most-staggered);
+}
+
+/*
+ * A page that groups its blocks inside one wrapper says so with this, and the wrapper's own children take the turns
+ * instead of the wrapper: on the page without an account the words and the card are one box, and a box that fades in
+ * whole is the flat arrival the founder rejected. The wrapper itself no longer enters, or the two would stack.
+ */
+.page-enters .arrives-in-turn {
+  animation: none;
+}
+
+.page-enters .arrives-in-turn > * {
+  animation: page-enter var(--page-enter-duration) var(--page-enter-easing) backwards;
+}
+
+.page-enters .arrives-in-turn > :nth-child(2) {
+  animation-delay: var(--page-enter-stagger);
+}
+
+.page-enters .arrives-in-turn > :nth-child(3) {
+  animation-delay: calc(2 * var(--page-enter-stagger));
+}
+
+.page-enters .arrives-in-turn > :nth-child(n + 4) {
+  animation-delay: var(--page-enter-most-staggered);
 }
 
 @keyframes page-enter {
@@ -705,9 +755,16 @@ dialog.sheet[open] {
    * 250 ms, which is why it says so again against the rule above that cuts every animation to nothing.
    */
   .page-enters > *:not(header, dialog),
-  .page-enters > header > *:not(.page-mark) {
+  .page-enters > header > *:not(.page-mark),
+  .page-enters .arrives-in-turn > * {
     animation-name: page-fade !important;
     animation-duration: var(--page-enter-duration) !important;
+    /* And all at once: a page that arrives in order is still a page in motion, and this device asked for less. */
+    animation-delay: 0ms !important;
+  }
+
+  .page-enters .arrives-in-turn {
+    animation-name: none !important;
   }
 }
 

@@ -15,7 +15,7 @@ import { Shell } from "./Shell";
 import { useMyGifts } from "./my-gifts";
 import { useMinute } from "./clock";
 import { charactersOf } from "./DayStrip";
-import { holdsAnything, useHoldings } from "./money";
+import { holdsAnything, useHoldings, useSawMoney } from "./money";
 
 /**
  * Home: a gift to fill in, and nothing in front of it (the product vision of 19 Sep 2026, sections 1 and 5).
@@ -28,19 +28,30 @@ import { holdsAnything, useHoldings } from "./money";
  * made. A page that offers a real object has no use for a picture of one (vision, section 9).
  */
 export function Home() {
-  const { address } = useAccount();
+  /**
+   * Whose page this is, and the browser answers before the server does (D147). `address` is only known once the
+   * session cookie has been read back over the network, so for the first tenth of a second every returning person
+   * met the promise page, which then blinked into their own money. A device that holds a passkey for this app knows
+   * it the moment the page runs, from its own storage, so that is what decides which Home is drawn; the figures
+   * still wait for the answers they need.
+   */
+  const { address, hasCredential } = useAccount();
   const holdings = useHoldings(address);
   const { gifts, problem } = useMyGifts(address);
   const nowMs = useMinute();
+  /** Whether the room the way out takes is held while the balance is read (app/kit/money.ts). */
+  const sawMoney = useSawMoney(holdings);
 
-  if (!address) {
+  if (!address && !hasCredential) {
     return (
       <Shell kind="destination" active="home" action={<SignInDoor />} bare wide>
         {/* Home without an account (D129, D131): one column, and the same order everywhere, the character, the title,
             the sentence, the card. On a phone the character is a diamond floated into the hollow the title's own
             ragged edge leaves at its top right, which is what lets the block start a hundred pixels higher; from 1024
             it stands above the title and the whole composition is centred in the window, the card included. */}
-        <div className="flex w-full flex-col items-start gap-[var(--space-md)] [@media(min-width:1024px)]:items-center [@media(min-width:1024px)]:gap-[var(--space-sm)]">
+        {/* The words and the card are one box here, so the box hands its turn to them: they arrive one after the
+            other like the blocks of every other screen, rather than as one flat rectangle (D147). */}
+        <div className="arrives-in-turn flex w-full flex-col items-start gap-[var(--space-md)] [@media(min-width:1024px)]:items-center [@media(min-width:1024px)]:gap-[var(--space-sm)]">
           {/* A plain block, never a flex one: text only flows around a float inside a block. */}
           <div className="w-full [@media(min-width:1024px)]:text-center">
             <Gaze>
@@ -94,7 +105,16 @@ export function Home() {
           under it. Without an account there is no money to read, and the card leads, which is D129's order. */}
       <Shell kind="destination" active="home" width="card">
         <MoneyHero address={address} holdings={holdings} />
-        {holdings !== null && holdsAnything(holdings) ? (
+        {/* The way out keeps its place while the balance is being read (D147), so the card under it does not jump
+            down when the answer lands. The room is held only on a device that saw money here last time: a first
+            visit holds nothing, and an account with nothing to take never keeps a hole where a button is not. */}
+        {holdings === null ? (
+          sawMoney ? (
+            <span aria-hidden className={`${SECONDARY_BUTTON} invisible`}>
+              {W.takeItOut}
+            </span>
+          ) : null
+        ) : holdsAnything(holdings) ? (
           <Link href="/cash-out" className={SECONDARY_BUTTON}>
             {W.takeItOut}
           </Link>

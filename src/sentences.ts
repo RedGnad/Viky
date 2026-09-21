@@ -179,7 +179,6 @@ export const HOME = {
   ],
   inAccount: "In your account",
   /** Under the amount at display size: what is approximate, when the rate was read, and the dollars themselves. */
-  aboutRate: (date: string, dollars: string) => `About, at the rate of ${date}: ${dollars}`,
   keep: "Yours to keep, to put behind another goal, or to take out.",
   takeItOut: "Take it out",
   readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,

@@ -118,7 +118,8 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
     // The third exception, and it answers the second of the four triggers, the arrival on a screen (D146): a page
     // change is a gesture, and what the page carries enters once, in 250 ms. Under reduced motion it is the fade
     // alone, which is the one place the stylesheet names an animation instead of playing one.
-    .replace(/\.page-enters > \*:not\(header, dialog\),\n\s*\.page-enters > header > \*:not\(\.page-mark\) \{[\s\S]*?\n\s*\}/g, "")
+    .replace(/\.page-enters > \*:not\(header, dialog\),\n\s*\.page-enters > header > \*:not\(\.page-mark\)(,\n\s*\.page-enters \.arrives-in-turn > \*)? \{[\s\S]*?\n\s*\}/g, "")
+    .replace(/\.page-enters \.arrives-in-turn[^{]*\{[\s\S]*?\n\s*\}/g, "")
     .replace(/@keyframes page-enter \{[\s\S]*?\n\}/, "")
     .replace(/@keyframes page-fade \{[\s\S]*?\n\}/, "");
   assert.doesNotMatch(outsideTheRing, /@keyframes|animation-name|infinite/, "the stylesheet plays no animation of its own beyond the one loop, the sheet and the arrival");
@@ -135,7 +136,21 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
   assert.ok(css.includes(`--page-enter-easing: ${MOTION.reveal.easing}`), "on the token's curve");
   assert.ok(css.includes(`--page-enter-rise: ${MOTION.reveal.rise}px`), "rising what the token says");
   assert.match(css, /\.page-enters > \*:not\(header, dialog\)/, "what a page carries enters; the sheets and the mark do not");
-  assert.match(css, /animation: page-enter var\(--page-enter-duration\) var\(--page-enter-easing\);/, "once, with no fill left behind it");
+  assert.match(
+    css,
+    /animation: page-enter var\(--page-enter-duration\) var\(--page-enter-easing\) backwards;/,
+    "once, unseen until its turn comes, and nothing left behind it after",
+  );
+  // The blocks of a screen arrive one after another, and the whole arrival still ends inside NN/g's half second.
+  assert.ok(css.includes(`--page-enter-stagger: ${MOTION.reveal.staggerMs}ms`), "each block waits what the token says");
+  assert.ok(css.includes(`--page-enter-most-staggered: ${MOTION.reveal.mostStaggeredMs}ms`), "and none waits longer than the token's ceiling");
+  assert.ok(MOTION.reveal.durationMs + MOTION.reveal.mostStaggeredMs <= 500, "a page of any length has arrived in half a second");
+  // Material publishes sixteen durations and no others (md.sys.motion.duration.short1 to extra-long4); a value
+  // outside that list is refused in review, which is the rule the motion roadmap of 21 Sep 2026 sets.
+  const MATERIAL_MS = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 700, 800, 900, 1000];
+  for (const [name, ms] of Object.entries({ reveal: MOTION.reveal.durationMs, stagger: MOTION.reveal.staggerMs, mostStaggered: MOTION.reveal.mostStaggeredMs })) {
+    assert.ok(MATERIAL_MS.includes(ms), `${name} is ${ms} ms, which Material does not publish`);
+  }
   assert.match(readFileSync("app/kit/Shell.tsx", "utf8"), /className=\{`page-enters /, "every screen is drawn by the one shell, and that is where the arrival is asked for");
   assert.match(readFileSync("app/template.tsx", "utf8"), /export default function Template/, "and a template is what builds it again on every navigation");
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);

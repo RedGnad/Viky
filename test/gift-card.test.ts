@@ -314,7 +314,8 @@ test("a case opens in a sheet, and a sheet is a dialog rather than a page", () =
 
 test("the page without an account is the character, the title, the sentence and the card, in that order everywhere", () => {
   const home = readFileSync("app/kit/Home.tsx", "utf8");
-  const signedOut = home.slice(home.indexOf("if (!address)"), home.indexOf("const moving ="));
+  // The page without an account is the one drawn when the device knows of none at all (D147).
+  const signedOut = home.slice(home.indexOf("if (!address && !hasCredential)"), home.indexOf("const moving ="));
   // D129: one column at every width, and the text is never under the card. The two columns of D128 lasted an evening,
   // and what they had put under the card on a phone was a regression on the page of that morning.
   // The diamond of D131, floated into the hollow the title leaves at its top right on a phone, above it from 1024.
@@ -330,7 +331,7 @@ test("the page without an account is the character, the title, the sentence and 
   // From 1024 the whole composition is centred in the window, the card included (D131).
   assert.match(signedOut, /\[@media\(min-width:1024px\)\]:items-center/);
   assert.match(signedOut, /\[@media\(min-width:1024px\)\]:text-center/);
-  assert.match(signedOut, /<div className="flex w-full flex-col items-start/, "one column, on one left edge");
+  assert.match(signedOut, /<div className="arrives-in-turn flex w-full flex-col items-start/, "one column, on one left edge, and its pieces arrive in turn (D147)");
   assert.doesNotMatch(signedOut, /<h1 className=\{`\$\{HERO\}[^`]*max-w/, "the title is free to take the column, which is what holds it on one line at 76");
   assert.match(signedOut, /<Shell kind="destination" active="home" action=\{<SignInDoor \/>\} bare wide>/, "the wide column, and no rail's room");
   assert.match(home, /<Shell kind="destination" active="home" width="card">/, "with an account, the column is the card's width");

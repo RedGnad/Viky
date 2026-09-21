@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { Hex } from "viem";
 import { readCoinBalance } from "@/src/client/onchain";
 import { AUSD, coinAt, COINS, isNative, USDC } from "@/src/coins";
@@ -47,4 +47,36 @@ export function firstReady(holdings: Holdings): { way: WayOut; ready: Ready; nat
 /** Whether the way out has anything to offer at all. */
 export function holdsAnything(holdings: Holdings): boolean {
   return dollarsHeld(holdings) > 0n || firstReady(holdings) !== undefined;
+}
+
+/**
+ * Whether this device saw money on this account last time it looked, and it remembers what it sees now (D147).
+ *
+ * It decides one thing only: whether Home holds the room the way out will take while the balance is still being
+ * read, so the card under it does not jump when the answer lands. A device that has never seen money here holds
+ * nothing, and an account with nothing to take never keeps a hole where a button is not. It is kept for the device
+ * rather than per account, because the page has to know before it knows whose it is.
+ */
+const SAW_MONEY = "viky.seen.holds";
+const neverChanges = () => () => {};
+const sawMoneyHere = () => {
+  try {
+    return window.localStorage.getItem(SAW_MONEY) === "1";
+  } catch {
+    return false;
+  }
+};
+const nothingRemembered = () => false;
+
+export function useSawMoney(holdings: Holdings | null): boolean {
+  const saw = useSyncExternalStore(neverChanges, sawMoneyHere, nothingRemembered);
+  useEffect(() => {
+    if (holdings === null) return;
+    try {
+      window.localStorage.setItem(SAW_MONEY, holdsAnything(holdings) ? "1" : "0");
+    } catch {
+      // A device that keeps nothing holds no room, which is the same as a first visit.
+    }
+  }, [holdings]);
+  return saw;
 }
