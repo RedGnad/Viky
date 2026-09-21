@@ -3857,3 +3857,23 @@ behind an account cannot be photographed any other way.
   were white while the app is ink, so the splash flashed white and then the page. What an installed app draws is
   baked into it when the phone installs it, so the icon a person already has changes when they install it again;
   no code here can reach into that.
+
+## D141, 21 Sep 2026: beside or not at all, and a drawing that fills its tile
+
+- **The conversion is one row with the figure, and that row never wraps.** Put under the figure it made the card
+  taller; put beside it in a wrapping row it fell under the figure again on a phone, which is what the founder saw.
+  A converted figure carries its rate's own day (decision 1 of 17 Sep), which makes the sentence about 230 pixels
+  wide: beside a 39 pixel figure it fits from 480 and cannot below, so below 480 it is not drawn at all. Measured
+  after: at 390 and 430 nothing and the card at 483; at 480 and 1440 beside the figure and the card still 483.
+- **The icon fills its tile.** The drawing takes the whole width of the square now, after 0.74 and 0.92 both read
+  as a small drawing in a large tile. The one exception is the icon a phone is allowed to crop: a maskable icon may
+  be cut to a circle, and a shape this wide at 0.8 would have its two points on that circle's edge, so it is drawn
+  at 0.7 there and at 1 everywhere else.
+- **What a phone already installed does not change by itself.** The splash the founder photographed is the WebAPK's
+  own, baked when the phone installed it: the old gift on white. The manifest now says ink (D140), and Chrome
+  refreshes a WebAPK on its own schedule; installing it again is the only immediate way. This is written here
+  because it will be asked again.
+- **Why there is no install offer inside the installed app**: there is nothing to install there, and a page cannot
+  honestly say more (D138). In a browser tab it is in the footer of the landing page and on Me: measured on
+  production, the landing page's controls end with "Install Viky on this phone". The way to tell which one you are
+  in is the address bar.
