@@ -5,6 +5,7 @@ import "./globals.css";
 import { dmSans, fredoka } from "./fonts";
 import { AccountProvider } from "@/src/account/provider";
 import { THEME_BOOT_SCRIPT } from "@/src/theme";
+import { Register } from "./serwist/Register";
 
 const APP_NAME = "Viky";
 const APP_DEFAULT_TITLE = "Viky";
@@ -66,7 +67,10 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <body className="antialiased">
         {/* Before anything is painted, so a chosen appearance never flashes the other one first (D97). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
-        <SerwistProvider swUrl="/serwist/sw.js">
+        {/* The worker is registered by `Register`, not by the provider, so a browser that refuses one is refused
+            quietly rather than throwing on every screen (D150). */}
+        <SerwistProvider swUrl="/serwist/sw.js" register={false}>
+          <Register />
           <AccountProvider>{children}</AccountProvider>
         </SerwistProvider>
       </body>

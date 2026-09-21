@@ -30,12 +30,24 @@ import { Sheet } from "../Sheet";
 const WHOLE_PROFILE = "whole-profile";
 
 export function WillSheet({
-  open,
-  at = "list",
+  openAt,
   draft,
   onChange,
   onClose,
-}: Readonly<{ open: boolean; at?: "list" | "questions"; draft: GiftDraft; onChange: (draft: GiftDraft) => void; onClose: () => void }>) {
+}: Readonly<{
+  /**
+   * Shut, or open on one of its two faces: one value, because the two used to be two (D150). Whether the sheet is
+   * open and which face it opens on have to reach this component in the same render, and as two props they did not
+   * always: a click that lands while the page is still being hydrated is replayed by React, and the two changes
+   * were then applied one after the other. The sheet opened on the face of the last time and kept it, so the
+   * catalogue's nineteen conditions stood where that condition's own questions belong.
+   */
+  openAt: "list" | "questions" | null;
+  draft: GiftDraft;
+  onChange: (draft: GiftDraft) => void;
+  onClose: () => void;
+}>) {
+  const open = openAt !== null;
   const { address } = useAccount();
   const [preview, setPreview] = useState<readonly string[]>([]);
   /**
@@ -44,7 +56,7 @@ export function WillSheet({
    * questions, which is the second of the two sheets the card keeps. Closing forgets the face, so the next opening
    * starts at the catalogue again rather than at whatever was last pressed.
    */
-  const [askedFor, setAskedFor] = useState<"list" | "questions" | null>(null);
+  const [askedFor, setAskedFor] = useState<"list" | "questions" | null>(openAt);
   /**
    * The card says which face to open on (D136): the catalogue from the condition line, this condition's own questions
    * from the detail line under it. Before that, the questions could only be reached by pressing the chosen condition
@@ -55,9 +67,10 @@ export function WillSheet({
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
     setWasOpen(open);
-    // Only the opening decides which face to show. Reading `at` again while the sheet is open moved somebody from
-    // the catalogue to the questions under their hand, the moment the card's own draft arrived from the device.
-    if (open) setAskedFor(at);
+    // Only the opening decides which face to show. Reading it again while the sheet is open moved somebody from the
+    // catalogue to the questions under their hand, the moment the card's own draft arrived from the device. A sheet
+    // that is built already open is decided by the same value, above, rather than left on the catalogue.
+    if (open) setAskedFor(openAt);
   }
   const choosing = askedFor === null || askedFor === "list";
   const [nameCheck, setNameCheck] = useState<{ busy: boolean; refusal?: string; checked?: string }>({ busy: false });

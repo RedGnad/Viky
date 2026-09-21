@@ -4,6 +4,7 @@ import { DayRow } from "@/app/kit/DayRow";
 import { charactersOf } from "@/app/kit/DayStrip";
 import { GiftCard } from "@/app/kit/GiftCard";
 import { Arrival, ArrivalAmount } from "@/app/kit/Motion";
+import { HeadCharacter } from "@/app/kit/HeadCharacter";
 import { Shell } from "@/app/kit/Shell";
 import { BODY, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/app/components/ui";
 import { catchUpDay } from "@/src/catch-up";
@@ -29,7 +30,7 @@ export function GiftScreen() {
   const days = charactersOf(gift, gift.catchUpSeconds, nowMs, gift.days);
   return (
     <Arrival storageKey="viky.lab.gift" amount gifts={[{ id: gift.giftId, days, lastSeen: LAST_VISIT.settledDays }]}>
-      <Shell kind="task" back={labHref("home")} backLabel={W.backToGifts} step={W.titleYours(gift.funderName, gift.amountDisplay)}>
+      <Shell kind="task" back={labHref("home")} backLabel={W.backToGifts} step={W.titleYours(gift.funderName, gift.amountDisplay)} character={<HeadCharacter />}>
         <GiftCard gift={gift} still />
         <button type="button" className={PRIMARY_BUTTON}>
           {W.take(gift.earnedDisplay)}

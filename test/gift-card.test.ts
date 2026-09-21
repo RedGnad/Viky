@@ -198,12 +198,12 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length, 4, "the name, the amount twice, and the one currency mark");
   // One line, not two (D137): it opens the catalogue while nothing is chosen and that condition's questions after.
   assert.equal((card.match(/\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/g) ?? []).length, 1, "one control for what they will do");
-  assert.match(card, /setSheetAt\(condition \? "questions" : "list"\)/);
+  assert.match(card, /setChoosing\(condition \? "questions" : "list"\)/, "one value carries both whether it opens and on which face (D150)");
   assert.doesNotMatch(card, /cardDetail|detail\.said/, "the line says the label and the name, and the rest lives in the step it opens (D138)");
   assert.match(card, /className=\{`\$\{CHIP\} /, "a chip is the inline button at the size of a choice");
   assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/, "and the condition line is one too, so every control lifts the same way");
   // The two that are left, and both are a choice rather than a field.
-  assert.match(card, /<WillSheet at=\{sheetAt\} open=\{choosing\}/, "and the sheet opens on the face the card asks for (D136)");
+  assert.match(card, /<WillSheet openAt=\{choosing\}/, "and the sheet opens on the face the card asks for (D136), in one prop (D150)");
   assert.match(card, /<PaySheet open=\{paying\}/);
 });
 
@@ -309,7 +309,7 @@ test("a case opens in a sheet, and a sheet is a dialog rather than a page", () =
     assert.doesNotMatch(source, /next\/link|router\./, "a case never becomes a page");
   }
   // Both are drawn once and opened by name: an open dialog taken out of the page keeps its layer over it.
-  assert.equal(card.match(/ open=\{(choosing|paying)\}/g)?.length, 2);
+  assert.equal((card.match(/ openAt=\{choosing\}/g) ?? []).length + (card.match(/ open=\{paying\}/g) ?? []).length, 2);
 });
 
 test("the page without an account is the character, the title, the sentence and the card, in that order everywhere", () => {

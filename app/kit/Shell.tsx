@@ -44,6 +44,11 @@ type Props =
       backLabel?: string;
       /** The back link goes to `back` itself rather than one step back through the browser's history. */
       backFollows?: boolean;
+      /**
+       * The character at the head of this screen, opposite the way back (D148). A task that does not ask for one
+       * keeps the head it had: the row is only drawn when there is somebody to put in it.
+       */
+      character?: ReactNode;
       /** "Step 2 of 5", above the step's title (GOV.UK's caption), in the meta voice: it says where you are. */
       caption?: string;
       step?: ReactNode;
@@ -85,7 +90,14 @@ export function Shell(props: Props) {
                 {props.kind === "destination" && props.action ? props.action : null}
               </div>
             </div>
-            {props.kind === "task" && props.back ? <BackLink href={props.back} label={props.backLabel} follow={props.backFollows} /> : null}
+            {props.kind === "task" && props.character ? (
+              <div className="flex w-full items-center justify-between gap-[var(--space-md)]">
+                {props.back ? <BackLink href={props.back} label={props.backLabel} follow={props.backFollows} /> : <span />}
+                {props.character}
+              </div>
+            ) : props.kind === "task" && props.back ? (
+              <BackLink href={props.back} label={props.backLabel} follow={props.backFollows} />
+            ) : null}
             {props.kind === "document" && props.back ? <BackLink href={props.back} label={props.backLabel} /> : null}
             {props.kind === "task" && props.caption ? <p className={META}>{props.caption}</p> : null}
             {props.kind === "task" && props.step ? <h1 className={TITLE}>{props.step}</h1> : null}

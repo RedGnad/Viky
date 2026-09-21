@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useRef, useState, useSyncExternal
 import type { CharacterState } from "./Character";
 import { EASING, MOTION } from "@/src/design-tokens";
 import { arrivalSchedule, bezierProgress, springEasing, springSettleMs, type ArrivalSchedule } from "@/src/motion";
+import { atRest, currentMood, subscribeToMood, type Mood } from "./mood";
 
 /**
  * Every movement answers a gesture of the person (art direction brief, section 6, the founder's rule of 17 Sep).
@@ -21,6 +22,24 @@ const REDUCE = "(prefers-reduced-motion: reduce)";
 const POINTER = "(hover: hover) and (pointer: fine)";
 
 const reduced = () => typeof window === "undefined" || window.matchMedia(REDUCE).matches;
+
+function subscribeToPointer(changed: () => void): () => void {
+  const query = window.matchMedia(POINTER);
+  query.addEventListener("change", changed);
+  return () => query.removeEventListener("change", changed);
+}
+
+/**
+ * Whether this device has a pointer that can hover over a thing without pressing it. A phone has not, which is why
+ * nothing a person needs is ever carried by a hover (WCAG 1.4.13) and why an expression plays once on a choice there.
+ */
+export function useHasPointer(): boolean {
+  return useSyncExternalStore(
+    subscribeToPointer,
+    () => window.matchMedia(POINTER).matches,
+    () => false,
+  );
+}
 
 function subscribeToReduce(changed: () => void): () => void {
   const query = window.matchMedia(REDUCE);
@@ -361,6 +380,90 @@ export function Reveal({ className, children }: Readonly<{ className?: string; c
     <div ref={root} data-reveal className={className}>
       {children}
     </div>
+  );
+}
+
+/**
+ * The two expressions the founder asked for on 21 Sep 2026 (the motion roadmap, step 2), built from the parts a
+ * character already has, the gaze, the eyes and the mouth, with nothing new drawn:
+ *
+ * - **curious**, on the line that says what they will do: the gaze turns towards that line and the mouth opens a
+ *   little. Where the line is, is where it looks: the direction is measured from the character's own box to the
+ *   control's, which is the same arithmetic `Gaze` does with a pointer.
+ * - **happy**, on a length being considered: the eyes narrow into a smile and the mouth widens a touch.
+ *
+ * With a pointer it is the hover, 200 ms in and 200 ms back, `MOTION.hover`. With a finger there is no hover at all,
+ * so the expression plays once when the choice is made and comes back by itself: one animation of 700 ms with the
+ * face held in the middle of it, never a clock and never a loop. Reduced motion is given the rest face and nothing
+ * else, which is what `reduced()` decides here as everywhere.
+ */
+type Faces = Readonly<{ gaze?: string; eye?: string; mouth?: string }>;
+
+const AT_REST: Faces = { gaze: "translate(0px, 0px)", eye: "scaleY(1)", mouth: "scale(1, 1)" };
+
+function facesOf(mood: Mood, towards: Readonly<{ dx: number; dy: number }>): Faces {
+  if (mood.feeling === "curious") {
+    const { gaze } = MOTION.hover;
+    return { ...AT_REST, gaze: `translate(${(towards.dx * gaze).toFixed(2)}px, ${(towards.dy * gaze).toFixed(2)}px)`, mouth: "scale(1, 1.6)" };
+  }
+  if (mood.feeling === "happy") return { ...AT_REST, eye: "scaleY(0.34)", mouth: "scale(1.18, 1.08)" };
+  return AT_REST;
+}
+
+const partsNamed = (root: Element, name: string) => [...root.querySelectorAll<SVGElement>(`[data-part="${name}"]`)];
+
+/** Writes what an animation has reached into the drawing and lets it go, so nothing is held by the animation itself. */
+function keep(animation: Animation): void {
+  try {
+    animation.commitStyles();
+  } catch {
+    // An element that is no longer drawn cannot be written to, and has nothing left to keep.
+  }
+  animation.cancel();
+}
+
+/** The character at the head of a screen, wearing what the card below it is being asked about (app/kit/mood.ts). */
+export function Expression({ children }: Readonly<{ children: ReactNode }>) {
+  const root = useRef<HTMLSpanElement>(null);
+  const mood = useSyncExternalStore(subscribeToMood, currentMood, atRest);
+  useEffect(() => {
+    const element = root.current;
+    if (!element || reduced()) return;
+    const drawing = element.querySelector("svg");
+    if (!drawing) return;
+    const box = drawing.getBoundingClientRect();
+    const dx = (mood.at?.x ?? box.left + box.width / 2) - (box.left + box.width / 2);
+    const dy = (mood.at?.y ?? box.top + box.height / 2) - (box.top + box.height / 2);
+    const distance = Math.hypot(dx, dy) || 1;
+    const faces = facesOf(mood, { dx: dx / distance, dy: dy / distance });
+    const { durationMs, easing, heldMs } = MOTION.hover;
+    const running: Animation[] = [];
+    const roundMs = durationMs * 2 + heldMs;
+    for (const [name, to] of Object.entries(faces) as Array<[keyof Faces, string]>) {
+      const rest = AT_REST[name] ?? "none";
+      for (const part of partsNamed(element, name)) {
+        // One movement out and back when nothing will ever leave it: a finger has no pointer to withdraw.
+        const keyframes = mood.once
+          ? [{ transform: rest }, { transform: to, offset: durationMs / roundMs }, { transform: to, offset: (durationMs + heldMs) / roundMs }, { transform: rest }]
+          : [{ transform: to }];
+        const played = part.animate(keyframes, { duration: mood.once ? roundMs : durationMs, easing, fill: "forwards" });
+        // What it ends on is written into the drawing itself, so the next expression starts from the face that is
+        // there rather than from the face it was drawn with, and the pointer's own gaze keeps the same channel.
+        void played.finished
+          .then(() => {
+            keep(played);
+          })
+          .catch(() => undefined);
+        running.push(played);
+      }
+    }
+    // A mood that changes mid-movement keeps the face it had reached, so nothing ever jumps back to start again.
+    return () => running.forEach(keep);
+  }, [mood]);
+  return (
+    <span ref={root} data-mood={mood.feeling} className="contents">
+      {children}
+    </span>
   );
 }
 
