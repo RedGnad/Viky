@@ -90,7 +90,7 @@ const DIAMOND_BOX = "0 0 64 40";
 const DIAMOND_BLEND = "viky-diamond-blend";
 
 /**
- * The box a small character is drawn in (D136). Every body stands between y 8 and y 55 of the square, so a strip of
+ * The box a character with no floor is drawn in (D136, D137). Every body stands between y 8 and y 55 of the square, so a strip of
  * them carried fifteen pixels of nothing above each one and six below. Cropped to what is drawn, the same row is
  * shorter and each character is larger inside its own width, which is what the founder asked for twice.
  */
@@ -329,7 +329,10 @@ export function Character({
     <svg
       aria-hidden
       focusable="false"
-      viewBox={state === "diamond" ? DIAMOND_BOX : large ? "0 0 64 64" : SMALL_BOX}
+      /* A character with no floor under it is drawn in the box it fills, not in the square that held its shadow
+         (D137): that is the strip on a card and the row on a gift's page, where the empty fifteen pixels above each
+         one made every shape look small. */
+      viewBox={state === "diamond" ? DIAMOND_BOX : standing ? "0 0 64 64" : SMALL_BOX}
       data-character={state}
       data-size={size}
       className={className}

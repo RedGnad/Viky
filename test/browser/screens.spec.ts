@@ -1,9 +1,19 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { FORBIDDEN_WORDS } from "../../src/consumer-words";
 
 /** Every screen a person can reach without signing in. The judges page is excluded by design: it is the
  *  one place allowed to show a contract. */
 const CONSUMER_PAGES = ["/", "/fund", "/privacy", "/legal"];
+
+/**
+ * The card's one line opens where the funder is (D137): the catalogue while nothing is chosen, and that condition's
+ * own questions from then on. A check that wants the catalogue asks for it by its own control.
+ */
+async function openTheCatalogue(page: Page) {
+  await page.locator("main section").first().getByRole("button").first().click();
+  const change = page.locator("dialog.sheet[open]").getByRole("button", { name: /^Change/i });
+  if (await change.isVisible().catch(() => false)) await change.click();
+}
 
 test.describe("the screens a person meets", () => {
   for (const path of CONSUMER_PAGES) {
@@ -79,7 +89,7 @@ test.describe("the screens a person meets", () => {
   test("the chips are the chosen condition's own three, and the one the register suggests is pressed", async ({ page }) => {
     await page.goto("/");
     const card = page.locator("main section").first();
-    await card.getByRole("button").filter({ hasText: /what they will do/i }).click();
+    await openTheCatalogue(page);
     const sheet = page.locator("dialog.sheet[open]");
     await sheet.getByRole("radio", { name: /certification on Credly/i }).click();
     await sheet.getByRole("button", { name: "Close" }).click();
@@ -98,7 +108,7 @@ test.describe("the screens a person meets", () => {
   test("what they will do is a real choice, so it keeps its sheet", async ({ page }) => {
     await page.goto("/");
     const card = page.locator("main section").first();
-    await card.getByRole("button").filter({ hasText: /what they will do/i }).click();
+    await openTheCatalogue(page);
     const sheet = page.locator("dialog.sheet[open]");
     await expect(sheet).toBeVisible();
     await expect(sheet.getByRole("heading", { name: /What will they do/i })).toBeVisible();
@@ -111,8 +121,7 @@ test.describe("the screens a person meets", () => {
 
   test("a sheet says when its questions carry on past its edge, and its action never leaves the frame", async ({ page }) => {
     await page.goto("/");
-    const card = page.locator("main section").first();
-    await card.getByRole("button").filter({ hasText: /what they will do/i }).click();
+    await openTheCatalogue(page);
     const sheet = page.locator("dialog.sheet[open]");
     const body = sheet.locator(".sheet-body");
     const done = sheet.getByRole("button", { name: /^Done$/ });
@@ -145,7 +154,7 @@ test.describe("the screens a person meets", () => {
    */
   test("the catalogue is read by its titles, and says what it proves about the one being chosen", async ({ page }) => {
     await page.goto("/");
-    await page.locator("main section").first().getByRole("button").filter({ hasText: /what they will do/i }).click();
+    await openTheCatalogue(page);
     const sheet = page.locator("dialog.sheet[open]");
     const body = sheet.locator(".sheet-body");
     // A sheet opens at the top of what it says, never in the middle of it.
@@ -161,12 +170,15 @@ test.describe("the screens a person meets", () => {
     await expect(conditions).not.toHaveCount(0);
     const explained = async () => body.evaluate((element) => [...element.querySelectorAll("label span span + span")].length);
     expect(await explained()).toBe(1);
-    await expect(sheet.getByRole("radio").first()).toBeChecked();
+    // The one the card carries, by its own name: the catalogue is ordered by title inside a family, so "first" is
+    // whatever the register's words sort to, and that is not what this check is about.
+    await expect(sheet.getByRole("radio", { name: /A Duolingo lesson each day/i })).toBeChecked();
 
     // Choosing another shows that one's own questions; coming back shows the list with that one alone explained.
-    await conditions.nth(1).click();
+    const other = sheet.getByRole("radio", { name: /A Duolingo English Test score/i });
+    await other.click();
     await sheet.getByRole("button", { name: /change/i }).click();
-    await expect(sheet.getByRole("radio").nth(1)).toBeChecked();
+    await expect(sheet.getByRole("radio", { name: /A Duolingo English Test score/i })).toBeChecked();
     expect(await explained()).toBe(1);
     expect(await body.evaluate((element) => element.scrollTop)).toBe(0);
   });

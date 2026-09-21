@@ -52,12 +52,12 @@ export function Home() {
                    2026, asking for it bigger while keeping A's two lines). */
                 /* No margin under it on a phone: a float's margin box is what the text avoids, and eight pixels of
                    it pushed the second line aside too, which is what broke the title into four ragged lines. */
-                className="float-right ml-[var(--space-sm)] h-auto w-[86px] [@media(min-width:1024px)]:float-none [@media(min-width:1024px)]:mx-auto [@media(min-width:1024px)]:mb-[var(--space-md)] [@media(min-width:1024px)]:block [@media(min-width:1024px)]:w-[80px]"
+                className="float-right ml-[var(--space-sm)] h-auto w-[86px] [@media(min-width:1024px)]:float-none [@media(min-width:1024px)]:mx-auto [@media(min-width:1024px)]:mb-[var(--space-sm)] [@media(min-width:1024px)]:block [@media(min-width:1024px)]:w-[80px]"
               />
             </Gaze>
             <h1 className={HERO}>{W.promise}</h1>
             {/* One line from 1024, where two would have pushed the card's last line past the fold (measured 914 for 900). */}
-            <p className={`${LEAD} mt-[6px] max-w-[460px] [@media(min-width:1024px)]:max-w-none`}>{W.promiseUnder}</p>
+            <p className={`${LEAD} mt-[var(--space-xs)] max-w-[460px] [@media(min-width:1024px)]:max-w-none`}>{W.promiseUnder}</p>
           </div>
           <OfferCard />
         </div>

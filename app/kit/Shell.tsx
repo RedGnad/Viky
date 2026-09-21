@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { DISPLAY, META, TITLE } from "../components/ui";
 import { Appearance } from "./Appearance";
 import { BackLink } from "./BackLink";
@@ -70,7 +70,10 @@ export function Shell(props: Props) {
 
   return (
     <>
-      <div className={room}>
+      {/* The page without an account draws no rail, so it keeps no room for one: the offset the sheets are placed by
+          is zero there (D137). At 88 it pushed every sheet that many pixels right of the window's middle, which is
+          what the founder measured on the catalogue. */}
+      <div className={room} style={props.kind === "destination" && props.bare ? ({ "--page-offset": "0px" } as CSSProperties) : undefined}>
         <main className={`mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-lg)]`}>
           <header className="flex flex-col items-start gap-[var(--space-sm)]">
             <div className="flex w-full items-center justify-between gap-[var(--space-md)]">
