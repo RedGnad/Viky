@@ -62,14 +62,20 @@ const AccountContext = createContext<AccountContextValue | undefined>(undefined)
 const noAddress = () => undefined;
 const noCredential = () => false;
 
-export function AccountProvider({ children }: { children: ReactNode }) {
+export function AccountProvider({ initialAccount, children }: { initialAccount?: Address; children: ReactNode }) {
   // The account module is the source of truth; React mirrors it. The server snapshot is always
   // "signed out", so the first paint matches on both sides.
   const signedInAddress = useSyncExternalStore(mera.subscribe, mera.currentAddress, noAddress);
   const hasCredential = useSyncExternalStore(mera.subscribe, mera.hasStoredCredential, noCredential);
   const [status, setStatus] = useState<AccountStatus>("idle");
   const [error, setError] = useState<AccountError | undefined>(undefined);
-  const [serverSessionFor, setServerSessionFor] = useState<Address | undefined>(undefined);
+  /**
+   * Who the server says is signed in, and the server says it first (D156): the root layout reads the session cookie
+   * while it renders, so a signed-in person's screen is drawn as theirs from its first byte. Before this the page
+   * came as the page for nobody and became theirs once the browser had asked, which on a phone was a landing that
+   * showed for half a second and then loaded again as Home. The browser still asks below, and its answer wins.
+   */
+  const [serverSessionFor, setServerSessionFor] = useState<Address | undefined>(initialAccount);
 
   // The cookie already names this browser's account for twelve hours, so the page asks the server who it is at load
   // rather than treating a reload as a sign-out. No passkey, no prompt, nothing signed.

@@ -1,5 +1,8 @@
 import { SerwistProvider } from "@serwist/turbopack/react";
 import type { Metadata, Viewport } from "next";
+import { cookies, headers } from "next/headers";
+import type { Address } from "viem";
+import { ACCOUNT_AUTH_COOKIE_NAME, normalizedOrigin, readAccountAuthSessionFrom } from "@/src/account-auth-server";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { dmSans, fredoka } from "./fonts";
@@ -62,7 +65,26 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+/**
+ * Who this page is for, read where the server has it: the session cookie and the host it was served on (D156). A
+ * cookie that is missing, expired, or from another origin means nobody, which is what it meant before. Reading the
+ * request here makes every screen render on request rather than at build time, and that is the point: a screen for
+ * a person cannot be drawn before the person is known.
+ */
+async function whoIsSignedIn(): Promise<Address | undefined> {
+  try {
+    const [store, sent] = await Promise.all([cookies(), headers()]);
+    const host = sent.get("x-forwarded-host") ?? sent.get("host");
+    if (!host) return undefined;
+    const proto = sent.get("x-forwarded-proto") ?? (/^(localhost|127\.0\.0\.1)(:|$)/.test(host) ? "http" : "https");
+    return readAccountAuthSessionFrom(store.get(ACCOUNT_AUTH_COOKIE_NAME)?.value ?? null, normalizedOrigin(`${proto}://${host}`)).account;
+  } catch {
+    return undefined;
+  }
+}
+
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  const signedIn = await whoIsSignedIn();
   return (
     // The look's font variables sit on the document itself, because app/globals.css reads them from :root.
     <html lang="en" dir="ltr" className={`${fredoka.variable} ${dmSans.variable}`}>
@@ -79,7 +101,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           <Register />
           {/* A press a finger can see, on every control, once (D154). */}
           <Pressed />
-          <AccountProvider>{children}</AccountProvider>
+          <AccountProvider initialAccount={signedIn}>{children}</AccountProvider>
         </SerwistProvider>
       </body>
     </html>

@@ -4209,3 +4209,23 @@ dans son ensemble ?" He was right on every count, and the reason it survived thr
   against a single build. The founder's phone carries yesterday's worker, yesterday's cache and the previous deploy,
   and that is the condition to measure in. `review-captures/stale-worker.ts` does it: install on one build, deploy
   the next, open a page on a slow network. It is the check to run before calling any load-time behaviour fixed.
+
+## D156, 21 Sep 2026: a screen for a person is drawn as theirs from its first byte
+
+The founder, after D155: "NON, on a TOUJOURS un double load de la landing... c'est quand on reload la page." He was
+signed in, on his phone, reloading.
+
+- **What it was.** Every screen was built once, at deploy time, for nobody: the landing, the gifts page's "sign in"
+  panel, the account page's door. Who was signed in was learned in the browser, by asking the server after the
+  page had run. On a desktop that is a tenth of a second and reads as nothing; on a phone it is half a second in
+  which the landing stands, whole, and is then replaced by Home. That is a page loading twice, seen from a chair,
+  and D149 had written it down as the price of a static page rather than fixing it.
+- **The server knows, so the server says.** The root layout reads the session cookie while it renders, checks it
+  exactly as the routes do, the cookie and the origin it was served on, and seeds the account provider with the
+  account. A signed-in person's screen is theirs from its first byte, on every screen, on a reload or on a link.
+  The browser still asks the server afterwards, and its answer wins, so a cookie that has gone is noticed.
+- **What it costs.** Reading the request makes every screen render on request rather than at build time. That is
+  the point rather than a cost: a screen for a person cannot be drawn before the person is known. The worker no
+  longer keeps pages (D155), so nothing served stale sits between the server and the screen.
+- Measured on a phone profile with an account, reloading Home: the money block is in the first frame, and no
+  landing is drawn at any point.

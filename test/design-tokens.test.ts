@@ -604,6 +604,21 @@ test("a device whose figures are about to change keeps them out of sight until t
   assert.match(card, /if \(money\.ratesAsked\) document\.documentElement\.removeAttribute\(MONEY_SETTLING\)/, "and they are shown once the rate has answered, either way");
 });
 
+/**
+ * A screen for a person is drawn as theirs from its first byte (D156). The root layout reads the session cookie
+ * while it renders and seeds the account provider with it, so a signed-in person reloading any screen on a phone
+ * never meets the page for nobody first. The browser still asks the server afterwards, and its answer wins.
+ */
+test("the server says who is signed in before the browser has to ask", () => {
+  const layout = readFileSync("app/layout.tsx", "utf8");
+  assert.match(layout, /const signedIn = await whoIsSignedIn\(\);/, "read while the layout renders, on every screen");
+  assert.match(layout, /readAccountAuthSessionFrom\(store\.get\(ACCOUNT_AUTH_COOKIE_NAME\)\?\.value \?\? null, normalizedOrigin\(/, "the same check the routes make: the cookie, and the origin it was served on");
+  assert.match(layout, /<AccountProvider initialAccount=\{signedIn\}>/, "and the provider starts from it");
+  const provider = readFileSync("src/account/provider.tsx", "utf8");
+  assert.match(provider, /useState<Address \| undefined>\(initialAccount\)/, "the first render, on the server and in the browser, already knows");
+  assert.match(provider, /currentServerSession\(\)\.then/, "and the browser still asks, so a cookie that has gone is noticed");
+});
+
 test("a journey stays narrow enough that prose can never run too long", () => {
   // 480 pixels at a 16 pixel body is about 53 characters, inside every published range.
   assert.ok(APP_COLUMN_MAX / TYPE.body.size < PROSE_MAX_CH);

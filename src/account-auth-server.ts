@@ -73,7 +73,7 @@ function environmentSecret(environment: AccountAuthEnvironment): string {
   return value;
 }
 
-function normalizedOrigin(value: string): string {
+export function normalizedOrigin(value: string): string {
   try {
     const parsed = new URL(value);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error();
@@ -323,10 +323,24 @@ export function readAccountAuthSession(
   environment: AccountAuthEnvironment = process.env,
   nowMs = Date.now(),
 ): AccountAuthSession {
-  const token = cookieValue(request, ACCOUNT_AUTH_COOKIE_NAME);
+  return readAccountAuthSessionFrom(cookieValue(request, ACCOUNT_AUTH_COOKIE_NAME), accountAuthOriginFromRequest(request), environment, nowMs);
+}
+
+/**
+ * The same session, read from the cookie's value and the origin it was served on rather than from a `Request`: a
+ * page rendered on the server has the cookie store and the headers, and no request of its own (D156). It is what
+ * lets a screen be drawn for the person who is signed in from its first byte, rather than as the page for nobody
+ * and then, once the browser has asked, as theirs.
+ */
+export function readAccountAuthSessionFrom(
+  token: string | null,
+  origin: string,
+  environment: AccountAuthEnvironment = process.env,
+  nowMs = Date.now(),
+): AccountAuthSession {
   if (!token) throw new AccountAuthError("Account authentication is required", 401);
   const session = parseSessionPayload(token, environment, nowMs);
-  if (session.origin !== accountAuthOriginFromRequest(request)) {
+  if (session.origin !== origin) {
     throw new AccountAuthError("Account session origin changed", 401);
   }
   return session;
