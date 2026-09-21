@@ -3954,3 +3954,35 @@ Three defects the founder found on the card, each of them a thing the screen was
   on the row rather than a patch of paper painted over the last day, because the same row sits on the card, in the
   gift list and on a gift's page, and a patch has to know what colour is behind it. The cards of the gift list had
   no fade at all before this.
+
+## D146, 21 Sep 2026: a screen arrives, which is the first step of the motion roadmap
+
+The founder's roadmap of 21 Sep 2026 orders the movement the product already has numbers for, one step per change.
+Step one is the arrival on a screen, which is the second of the four triggers the tokens name.
+
+- **What happens.** On every page change, what the page carries enters: it rises 8 pixels and comes up from nothing
+  in 250 ms on Material's standard curve, once. That is `MOTION.reveal` exactly, read from the token file by
+  `test/motion.test.ts`, and it is the movement the sheets already make in their own way.
+- **What does not.** The mark and the appearance control beside it stand still. They are in the same place on every
+  screen, so a page change is not something that happens to them, and a thing that jumps while everything else
+  arrives reads as a fault. Nothing else on the page is exempt.
+- **A block that arrives after its data enters too**, because it is a new block on a page that has already arrived:
+  a gift's page waits for its card, and the card enters where it lands rather than appearing. This falls out of the
+  rule rather than being asked for separately.
+- **Reduced motion keeps the arrival and drops the rise**: the fade alone, at the same 250 ms. Apple's own technique
+  is to replace a movement with a fade rather than to take it away, and a fade moves nothing. It is the one place in
+  the stylesheet that names an animation for that query, and it has to say its duration again, because the rule
+  above it cuts every animation on the page to nothing.
+- **How it plays at all.** `app/template.tsx`, which is Next's own way: a template is given a key of its own, so
+  "DOM elements inside the template are fully recreated" on navigation, and a CSS animation plays when an element is
+  built. It wraps nothing: a `<div>` there would hold the bar of destinations, which is fixed to the window, and for
+  those 250 ms the bar would travel with the page.
+- **Where it was measured.** The founder asked for the way through the product itself rather than the pages of the
+  footer: the landing, me, the gifts, a gift and the way out each enter on arrival, and a page change pressed inside
+  the app enters too, measured on the built app as every block's `animationstart`.
+- **One side effect, written down.** A screen that is still arriving is measured through a transform, in floating
+  point, so a control exactly 48 pixels tall reads 47.999999999999996 and failed the rule it passes. The tap target
+  check now rounds to a hundredth of a pixel before it compares. The rule is 48 CSS pixels, and that figure is 48.
+- **What is not done, on purpose.** The cards in a gift list already answer the scroll (`Reveal`), and whether a
+  card already in view should enter when its data lands is step 5's question, not this one. Nothing else in the
+  roadmap is touched: no character reaction, no arrival replay, no confetti.

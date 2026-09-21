@@ -87,9 +87,17 @@ test.describe("what the design pass promised", () => {
           if (box.width === 0 && box.height === 0) continue;
           const inSentence = style.display.startsWith("inline") && element.closest("p, li") !== null;
           if (inSentence) continue;
-          if (box.height < 48 || box.width < 48) {
+          /**
+           * Rounded to the hundredth of a pixel before it is compared. A screen arrives by rising 8 pixels
+           * (D146), and while it is on its way its box is measured through a transform, in floating point: a
+           * control that is exactly 48 tall reads 47.999999999999996 and fails a rule it passes. The rule is
+           * 48 CSS pixels, and that figure is 48.
+           */
+          const height = Math.round(box.height * 100) / 100;
+          const width = Math.round(box.width * 100) / 100;
+          if (height < 48 || width < 48) {
             const label = (element.textContent || element.getAttribute("placeholder") || "field").trim().slice(0, 40);
-            failures.push(`${label} :: ${Math.round(box.width)}x${Math.round(box.height)}`);
+            failures.push(`${label} :: ${Math.round(width)}x${Math.round(height)}`);
           }
         }
         return failures;

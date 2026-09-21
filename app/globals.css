@@ -212,11 +212,15 @@
   --card-border-width: 1px;
   --card-border: #E0DCEB;
 
-  /* The movement a stylesheet plays, from MOTION in src/design-tokens.ts: a press, and a pointer's hover. */
+  /* The movement a stylesheet plays, from MOTION in src/design-tokens.ts: a press, a pointer's hover, and the
+     arrival on a screen, which is MOTION.reveal. */
   --press-duration: 120ms;
   --press-easing: cubic-bezier(0.2, 0, 0, 1);
   --hover-duration: 200ms;
   --hover-lift: 2px;
+  --page-enter-duration: 250ms;
+  --page-enter-easing: cubic-bezier(0.2, 0, 0, 1);
+  --page-enter-rise: 8px;
 
   color-scheme: light;
 }
@@ -642,6 +646,37 @@ dialog.sheet[open] {
 }
 
 /*
+ * The arrival on a screen (brief section 6, the second of the four triggers; the motion roadmap of 21 Sep 2026,
+ * step 1). A page change answers a gesture: somebody pressed something to get here, and what they came for enters
+ * rather than being there already. It rises 8 pixels and comes up from nothing in 250 ms on Material's standard
+ * curve, once, which is MOTION.reveal, and it is the movement the sheets already make in their own way.
+ *
+ * What does not move is the mark and the appearance control beside it: they stand in the same place on every screen,
+ * so a page change is not something that happens to them. A block that arrives after its data enters the moment it
+ * is drawn, because it is a new block on a page that has already arrived: that is the card a gift's page waits for.
+ *
+ * `app/template.tsx` is what makes this play on every navigation: a template is given a key of its own, so its
+ * elements are built again rather than reused, and a new element plays the animation the stylesheet gives it.
+ */
+.page-enters > *:not(header, dialog),
+.page-enters > header > *:not(.page-mark) {
+  animation: page-enter var(--page-enter-duration) var(--page-enter-easing);
+}
+
+@keyframes page-enter {
+  from {
+    transform: translateY(var(--page-enter-rise));
+    opacity: 0;
+  }
+}
+
+@keyframes page-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/*
  * Apple's own techniques for Reduce Motion: replace transitions with fades, drop bounce, avoid animating
  * depth. Apple's guidelines never mention CSS, so the mapping onto this query is our inference; the
  * substance is theirs. The press still gives way under the finger; nothing travels.
@@ -662,6 +697,17 @@ dialog.sheet[open] {
 
   .control-relief:is(:active, :hover):not(:disabled) {
     transform: none;
+  }
+
+  /*
+   * A screen still arrives under reduced motion, and it arrives by fading: Apple's own technique is to replace a
+   * movement with a fade rather than to take it away. Nothing travels, so the rise is dropped; the fade keeps its
+   * 250 ms, which is why it says so again against the rule above that cuts every animation to nothing.
+   */
+  .page-enters > *:not(header, dialog),
+  .page-enters > header > *:not(.page-mark) {
+    animation-name: page-fade !important;
+    animation-duration: var(--page-enter-duration) !important;
   }
 }
 

@@ -114,8 +114,14 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
     // The second exception, and it answers a gesture: a sheet rises once because a case of the card was pressed
     // (the product vision of 19 Sep 2026, section 4). It plays one time and stops.
     .replace(/dialog\.sheet\[open\] \{[\s\S]*?\n\}/, "")
-    .replace(/@keyframes sheet-rise \{[\s\S]*?\n\}/, "");
-  assert.doesNotMatch(outsideTheRing, /@keyframes|animation-name|infinite/, "the stylesheet plays no animation of its own beyond the one loop and the sheet");
+    .replace(/@keyframes sheet-rise \{[\s\S]*?\n\}/, "")
+    // The third exception, and it answers the second of the four triggers, the arrival on a screen (D146): a page
+    // change is a gesture, and what the page carries enters once, in 250 ms. Under reduced motion it is the fade
+    // alone, which is the one place the stylesheet names an animation instead of playing one.
+    .replace(/\.page-enters > \*:not\(header, dialog\),\n\s*\.page-enters > header > \*:not\(\.page-mark\) \{[\s\S]*?\n\s*\}/g, "")
+    .replace(/@keyframes page-enter \{[\s\S]*?\n\}/, "")
+    .replace(/@keyframes page-fade \{[\s\S]*?\n\}/, "");
+  assert.doesNotMatch(outsideTheRing, /@keyframes|animation-name|infinite/, "the stylesheet plays no animation of its own beyond the one loop, the sheet and the arrival");
   assert.match(css, /dialog\.sheet\[open\] \{\s*\n\s*animation: sheet-rise \d+ms/, "the sheet rises once, on the press that opened it");
   assert.match(css, /animation: working-turn \d+ms linear infinite/, "the one loop is the working ring, and it is the only one");
   assert.equal(css.match(/infinite/g)?.length, 1, "exactly one loop in the whole stylesheet");
@@ -124,9 +130,21 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
   assert.ok(css.includes(`--hover-duration: ${MOTION.hover.durationMs}ms`), "the hover lasts what the token says");
   assert.ok(css.includes(`--hover-lift: ${MOTION.hover.lift}px`), "a pointer lifts a button by what the token says");
   assert.match(css, /@media \(hover: hover\) and \(pointer: fine\)/, "a button lifts under a pointer only");
+  // The arrival on a screen is MOTION.reveal itself, to the millisecond, the curve and the rise.
+  assert.ok(css.includes(`--page-enter-duration: ${MOTION.reveal.durationMs}ms`), "a screen arrives in what the token says");
+  assert.ok(css.includes(`--page-enter-easing: ${MOTION.reveal.easing}`), "on the token's curve");
+  assert.ok(css.includes(`--page-enter-rise: ${MOTION.reveal.rise}px`), "rising what the token says");
+  assert.match(css, /\.page-enters > \*:not\(header, dialog\)/, "what a page carries enters; the sheets and the mark do not");
+  assert.match(css, /animation: page-enter var\(--page-enter-duration\) var\(--page-enter-easing\);/, "once, with no fill left behind it");
+  assert.match(readFileSync("app/kit/Shell.tsx", "utf8"), /className=\{`page-enters /, "every screen is drawn by the one shell, and that is where the arrival is asked for");
+  assert.match(readFileSync("app/template.tsx", "utf8"), /export default function Template/, "and a template is what builds it again on every navigation");
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
   assert.match(reduced, /\.control-relief:is\(:active, :hover\)/, "under reduced motion a press gives way but nothing travels");
+  // A screen still arrives, by fading alone: the rise is dropped and the duration is kept (the founder, 21 Sep 2026).
+  assert.match(reduced, /animation-name: page-fade !important/, "under reduced motion a screen fades in and nothing rises");
+  assert.match(reduced, /animation-duration: var\(--page-enter-duration\) !important/, "and the fade keeps its own time");
+  assert.doesNotMatch(css.slice(0, css.indexOf("@media (prefers-reduced-motion: reduce)")), /animation(-name)?: page-fade/, "nothing plays the fade alone outside that query");
 });
 
 /**
