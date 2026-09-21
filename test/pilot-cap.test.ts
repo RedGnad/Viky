@@ -52,7 +52,11 @@ test("the contracts keep their own hundred thousand, and nothing here pretends t
 test("the funder reads the rule where the amount is chosen, in the words the refusal uses", () => {
   assert.equal(PILOT_CAP_SENTENCE, "During the pilot, a gift is at most $1,000.");
   assert.equal(FUND.amount.pilotCap, PILOT_CAP_SENTENCE, "the step and the field say one thing, not two");
-  // Said where the amount is typed, which is the card itself since 20 Sep 2026, before a figure can be refused.
+  // Said where the amount is typed, when it is typed past the ceiling: the card reads the refusal the money module
+  // throws and prints it under the figure (D138). It was a standing notice under the action until then, which spent
+  // a line of every card on a rule almost nobody meets.
   const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
-  assert.match(card, /PILOT_CAP_SENTENCE/, "the card that takes the amount says it");
+  assert.match(card, /amountRefusal = error instanceof AmountError \? error\.message : undefined/);
+  assert.match(card, /\{amountRefusal \? <span className=\{`block \$\{HELP\} text-\[var\(--on-surface\)\]`\}>\{amountRefusal\}<\/span> : null\}/);
+  assert.doesNotMatch(card, /PILOT_CAP_SENTENCE/, "and never as a line that is always there");
 });

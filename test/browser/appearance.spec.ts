@@ -75,7 +75,8 @@ test.describe("the appearance control", () => {
     // and nothing else: the character, the title and the sentence. Measured on the build, its top is at 344 on a
     // phone; a fourth block above it would push it past this line.
     const card = page.locator("main section").first();
-    await expect(card.getByText("A gift from you", { exact: true })).toBeVisible();
+    // The card is the first thing in the body, known by the one field only it has (D138 took its overline off).
+    await expect(card.getByLabel(/Their first name/i)).toBeVisible();
     const cardBox = await card.boundingBox();
     expect(cardBox!.y).toBeLessThan(400);
   });

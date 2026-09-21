@@ -50,7 +50,8 @@ test.describe("the screens a person meets", () => {
     await page.goto("/");
     // The card is the body of the page, and it is a plausible gift rather than four holes (the founder, 20 Sep 2026).
     const card = page.locator("main section").first();
-    await expect(card.getByText("A gift from you", { exact: true })).toBeVisible();
+    // No line saying whose gift it is on the card being filled in (D138): it said what the funder already knew.
+    await expect(card.getByText("A gift from you", { exact: true })).toHaveCount(0);
     await expect(card.getByLabel(/Their first name/i)).toHaveValue("");
     await expect(card.getByLabel(/How much/i)).toHaveValue("30");
     await expect(card.getByRole("button", { name: "30 days", exact: true })).toHaveAttribute("aria-pressed", "true");

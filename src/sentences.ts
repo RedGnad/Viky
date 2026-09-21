@@ -982,7 +982,8 @@ export const ME = {
   anotherAccount: "Use another account",
   install: "Install Viky on this phone",
   installHow: "On iPhone: tap Share, then Add to Home Screen.",
-  installed: "Viky is on this phone.",
+  /** When the browser offers us no prompt of its own, which is where it keeps the same thing (D138). */
+  installByHand: "If nothing opens, use your browser's menu: Add to Home screen, or Install.",
   codeQuestion: "Need your code for a payout service?",
   codeUse: "Give it where a payout service asks where the money is sent from, or to another Viky account of yours that sends money here.",
   copyCode: "Copy your code",
