@@ -3877,3 +3877,17 @@ behind an account cannot be photographed any other way.
   honestly say more (D138). In a browser tab it is in the footer of the landing page and on Me: measured on
   production, the landing page's controls end with "Install Viky on this phone". The way to tell which one you are
   in is the address bar.
+
+## D142, 21 Sep 2026: the ink under the one action, and the launcher's own icon
+
+- **The action stands on ink.** The rendered mockups drew three pixels of a darker yellow under the sun button, and
+  against a sun fill the founder read that as no thickness at all. It is the relief colour now, four pixels of it,
+  which is the ink by day and the night's muted lavender after dark: the same slab every other control in the
+  product stands on, and the press that flattens it is unchanged. `--sun-deep` stays for the day row's hover and
+  nothing else.
+- **The launcher gets its own icon, at 512.** Android prefers the largest maskable icon, and the only one we gave it
+  was 192, upscaled into a 512 slot, which is what made it look small and soft on the founder's home screen. There
+  is a 512 maskable now beside the 512 that nothing crops. The drawing in a maskable one is at 0.78 of the square:
+  a maskable icon may be cut to a circle whose diameter is 80 per cent of it, and the two points of a diamond are
+  its farthest pixels, so 0.78 is as large as a shape this wide can be drawn there without losing them.
+- **"What's missed comes back to you."** Shorter, and it keeps what matters: whose money it is on the way back.

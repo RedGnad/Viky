@@ -49,8 +49,14 @@
   --card-edge: #F0E3C2;
   --card-shadow: none;
   /* Under the one action, three pixels of it, which is the sun with its light taken out. */
+  /* Kept for the hover of the day row and nothing else since D142: the action's own relief is the ink now. */
   --sun-deep: #E8A400;
-  --action-relief-depth: 3px;
+  /*
+   * The one action stands on the same slab as every other control (D142): four pixels of the relief colour, which
+   * is the ink by day and the night's muted lavender after dark. Three pixels of a darker yellow was the mockup's
+   * own drawing, and against a sun fill it read as no thickness at all.
+   */
+  --action-relief-depth: var(--control-relief-depth);
   /*
    * The one action, shut. The mockups draw it filled and relieved rather than hollow, which is the opposite of what
    * the tokens of that morning said, and the founder settled it on the image (D113). Its words are darker than the
@@ -371,7 +377,7 @@ video {
   /* The one action answers a pointer the same way, on its own relief: the sun with its light taken out. */
   .action-relief:hover:not(:active):not(:disabled) {
     transform: translateY(calc(-1 * var(--hover-lift)));
-    box-shadow: 0 calc(var(--action-relief-depth) + var(--hover-lift)) 0 var(--sun-deep);
+    box-shadow: 0 calc(var(--action-relief-depth) + var(--hover-lift)) 0 var(--control-relief-colour);
     transition:
       transform var(--hover-duration) var(--press-easing),
       box-shadow var(--hover-duration) var(--press-easing);

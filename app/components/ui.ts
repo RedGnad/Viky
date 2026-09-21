@@ -36,12 +36,13 @@ const RELIEF = "control-relief";
  * a faded accent is a fourth colour at night (a brown on the indigo ground), so a button that cannot be pressed yet is
  * a surface with muted words and no relief, and it takes the accent the moment it can.
  *
- * Since the rendered mockups of 19 Sep 2026 it is the sun, full width, with three pixels of the sun's own shadow
- * under it, and a press puts it down onto them. Full width was what the brief advised against, and the founder
+ * Since the rendered mockups of 19 Sep 2026 it is the sun, full width, and a press puts it down onto its relief.
+ * That relief is the ink, four pixels of it, the same slab every other control stands on (D142): the mockup drew
+ * three pixels of a darker yellow, and on a sun fill the founder read it as no thickness at all. Full width was what the brief advised against, and the founder
  * amended the brief on the image (D113). It keeps its ink outline, which the mockup does not draw: the sun on the
  * cream of a card measures 1.47:1, and WCAG 1.4.11 asks 3:1 of whatever identifies a control.
  */
-export const PRIMARY_BUTTON = `${TAP} ${FOCUS} action-relief w-full rounded-full ${OUTLINE} bg-[var(--accent)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-action)] font-bold tracking-[var(--tracking-label)] text-[var(--on-accent)] [box-shadow:0_var(--action-relief-depth)_0_var(--sun-deep)] active:translate-y-[var(--action-relief-depth)] active:[box-shadow:none] disabled:bg-[var(--action-off)] disabled:text-[var(--action-off-ink)] disabled:[box-shadow:0_var(--action-relief-depth)_0_var(--action-off-deep)]`;
+export const PRIMARY_BUTTON = `${TAP} ${FOCUS} action-relief w-full rounded-full ${OUTLINE} bg-[var(--accent)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-action)] font-bold tracking-[var(--tracking-label)] text-[var(--on-accent)] [box-shadow:0_var(--action-relief-depth)_0_var(--control-relief-colour)] active:translate-y-[var(--action-relief-depth)] active:[box-shadow:none] disabled:bg-[var(--action-off)] disabled:text-[var(--action-off-ink)] disabled:[box-shadow:0_var(--action-relief-depth)_0_var(--action-off-deep)]`;
 
 /**
  * Everything else a person may do from here: filled with a quiet tone rather than left hollow (K, rule 10, 19 Sep

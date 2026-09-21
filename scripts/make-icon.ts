@@ -35,10 +35,11 @@ function icoAround(png: Buffer, size: number): Buffer {
 
 /**
  * How much of the tile the drawing takes (D141). All of it, except on the icon a phone is allowed to crop: a
- * maskable icon may be cut to a circle, and the meaning has to sit inside that circle: a shape this wide at 0.8 of
- * the square would have its two points on the circle's edge, so that one is drawn at 0.7 and every other at 1.
+ * maskable icon may be cut to a circle whose diameter is 80 per cent of the square, and the two points of a diamond
+ * are its farthest pixels: at 0.78 of the square they sit just inside that circle, which is as large as a shape this
+ * wide can be drawn there. Everything else is drawn at 1, because nothing crops it.
  */
-const FILLS: Readonly<Record<string, number>> = { "public/icons/android-chrome-192x192.png": 0.7 };
+const FILLS: Readonly<Record<string, number>> = { "public/icons/android-chrome-192x192.png": 0.78, "public/icons/icon-512-maskable.png": 0.78 };
 const FULL = 1;
 
 const SIZES = [
@@ -48,6 +49,9 @@ const SIZES = [
   { file: "app/icon.png", size: 512 },
   { file: "app/apple-icon.png", size: 180 },
   { file: "public/icons/icon-64x64.png", size: 64 },
+  // The one a launcher crops, at the size it wants: Android prefers the largest maskable icon, and upscaling the
+  // 192 for a 512 slot is what made the icon on the founder's home screen look small and soft (D142).
+  { file: "public/icons/icon-512-maskable.png", size: 512 },
 ];
 
 async function main() {

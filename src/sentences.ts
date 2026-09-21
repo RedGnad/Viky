@@ -46,7 +46,7 @@ export const OFFER = {
   /** The three lengths the register gives the chosen condition, and there is no fourth on the card (D130). */
   someDays: (days: number) => `${days} ${days === 1 ? "day" : "days"}`,
   /** Under the action, for a gift counted by days: what one day of it is worth, and where the rest goes. */
-  eachDay: (perDay: string) => `${perDay} a day. What they miss comes back to you.`,
+  eachDay: (perDay: string) => `${perDay} a day. What's missed comes back to you.`,
   /** The name the card carries, and what it says while nobody has given one: "For  who?", the question in its place. */
   forName: (recipient: string) => `For ${recipient}`,
   forNobody: "For",
