@@ -1,15 +1,17 @@
 "use client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import * as mera from "@/src/account/mera";
 import { useAccount } from "@/src/account/provider";
-import { getJson, putJson } from "@/src/client/api";
-import { DISPLAY_CURRENCIES, proposedDisplayCurrency, type DisplayCurrency } from "@/src/display-currency";
+import { useDisplayCurrency } from "@/src/client/display-currency";
+import { currencyOf } from "@/src/currencies";
+import { PRODUCT_LOCALE } from "@/src/moments";
 import { CATALOGUE, ME as W } from "@/src/sentences";
 import { CARD, HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../components/ui";
-import { ChoiceList } from "./ChoiceList";
+import { CurrencySheet } from "./CurrencySheet";
 import { Install } from "./Install";
+import { MoneyKey } from "./MoneyKey";
 import { SignInDoor } from "./SignInDoor";
 import { Shell } from "./Shell";
 
@@ -26,55 +28,31 @@ import { Shell } from "./Shell";
  * The appearance control is back, in the header of every screen rather than here (D97). Without an account, this page
  * carries the same one door as the page without an account, and nothing else to do.
  */
-const never = () => () => {};
-const deviceLanguage = () => navigator.language;
-const noLanguage = () => undefined;
-
 export function Me() {
   const { address, reach, signOut, useAnotherAccount } = useAccount();
   const router = useRouter();
-  const language = useSyncExternalStore(never, deviceLanguage, noLanguage);
-  const [chosen, setChosen] = useState<{ address: string; currency: DisplayCurrency | null } | undefined>(undefined);
+  /** What every screen reads in, and the list it may be changed from, both from one place (D152). */
+  const money = useDisplayCurrency(address);
+  const [reading, setReading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [until, setUntil] = useState<string | null>(null);
   const [copied, setCopied] = useState<"no" | "yes" | "refused">("no");
-
-  useEffect(() => {
-    if (!address) return;
-    let live = true;
-    getJson<{ displayCurrency: DisplayCurrency | null }>("/api/account/preferences")
-      .then((answer) => {
-        if (live) setChosen({ address, currency: answer.displayCurrency });
-      })
-      .catch(() => {
-        if (live) setChosen({ address, currency: null });
-      });
-    return () => {
-      live = false;
-    };
-  }, [address]);
 
   // The moment the session closes by itself, read again every half minute: a signature elsewhere pushes it back.
   useEffect(() => {
     const tick = () => {
       const at = mera.sessionExpiresAtMs();
-      setUntil(at === undefined ? null : new Date(at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }));
+      setUntil(at === undefined ? null : new Date(at).toLocaleTimeString(PRODUCT_LOCALE, { hour: "numeric", minute: "2-digit" }));
     };
     tick();
     const timer = setInterval(tick, 30_000);
     return () => clearInterval(timer);
   }, [address]);
 
-  const proposed = proposedDisplayCurrency(language);
-  const currency = (address && chosen?.address === address ? chosen.currency : null) ?? proposed;
-
-  const chooseCurrency = (value: DisplayCurrency) => {
-    if (!address) return;
-    setChosen({ address, currency: value });
-    setSaved(false);
-    putJson<{ displayCurrency: DisplayCurrency }>("/api/account/preferences", { displayCurrency: value })
-      .then(() => setSaved(true))
-      .catch(() => setSaved(false));
+  const chooseCurrency = (value: string) => {
+    money.readIn(value);
+    setReading(false);
+    setSaved(true);
   };
 
   if (!address) {
@@ -89,14 +67,27 @@ export function Me() {
   return (
     <Shell kind="destination" active="me" title={W.title}>
       <section className={CARD}>
-        <ChoiceList<DisplayCurrency>
-          name="display-currency"
-          legend={W.currency}
-          value={currency}
-          onChange={chooseCurrency}
-          options={DISPLAY_CURRENCIES.map((value) => ({ value, label: W.currencies[value], help: value === proposed ? W.proposed : undefined }))}
-        />
+        {/* The same key and the same list as the card (D152): one way to change what money is read in, and the
+            list is what the rails and the rate file answer today, not three names written here. */}
+        <div className="flex flex-wrap items-center justify-between gap-[var(--space-md)]">
+          <span className="font-medium">{W.currency}</span>
+          <span className="flex items-center gap-[var(--space-sm)]">
+            <span>{currencyOf(money.currency).name}</span>
+            <MoneyKey currency={money.currency} onOpen={() => setReading(true)} />
+          </span>
+        </div>
         {saved ? <p className={HELP} role="status">{W.currencySaved}</p> : null}
+        <CurrencySheet
+          open={reading}
+          currency={money.currency}
+          offered={money.offered}
+          units={0n}
+          rates={money.rates}
+          ratesAsked={money.ratesAsked}
+          language={money.language}
+          onChoose={chooseCurrency}
+          onClose={() => setReading(false)}
+        />
       </section>
 
       <section className={CARD}>

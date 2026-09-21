@@ -162,8 +162,8 @@ test("the card shows what the rendered mockups show, in their order", () => {
   // The star of the screen, typed where it stands, and the length on chips under it.
   // The figure is typed in the currency the person reads in (D143), and its mark is drawn in the house's own line
   // and stands in front of the figure whatever the currency (D145), so pressing it never moves the field.
-  assert.match(card, /<MoneyMark currency=\{money\.currency\} \/>/);
-  assert.match(card, /figureWithMark\(readableFigure\(/);
+  assert.match(card, /<MoneyKey currency=\{money\.currency\} onOpen=\{\(\) => setReading\(true\)\}/, "the key says there is a list behind it (D152)");
+  assert.match(card, /figureWithMark\(figureIn\(/, "what a label says is grouped as that currency groups it (D152)");
   assert.match(card, /quick\.map\(\(count\) =>/);
   // The three the register gives this condition, and no fourth (D130): the chip that opened a field is gone, and so
   // is the field, so the only lengths a card offers are the three the register was asked about.
@@ -195,7 +195,9 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   // Every field on the card is a control at the size every control keeps, and the chips are the product's own button.
   // The name, the amount's box and its field, and the mark that changes the currency (D144): every one of them a
   // control at the size every control keeps.
-  assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length, 4, "the name, the amount twice, and the one currency mark");
+  // The name, the amount's box and its field; the key that opens the currencies carries its own 44 (D152).
+  assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length, 3, "the name and the amount twice");
+  assert.match(readFileSync("app/kit/MoneyKey.tsx", "utf8"), /min-h-\[var\(--tap-target\)\] min-w-\[var\(--tap-target\)\]/, "and the key is a thumb's size whatever its sign");
   // One line, not two (D137): it opens the catalogue while nothing is chosen and that condition's questions after.
   assert.equal((card.match(/\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/g) ?? []).length, 1, "one control for what they will do");
   assert.match(card, /setChoosing\(condition \? "questions" : "list"\)/, "one value carries both whether it opens and on which face (D150)");

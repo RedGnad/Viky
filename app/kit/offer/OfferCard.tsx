@@ -2,12 +2,12 @@
 import { useState, useSyncExternalStore } from "react";
 import { useAccount } from "@/src/account/provider";
 import { useDisplayCurrency } from "@/src/client/display-currency";
-import { DISPLAY_CURRENCIES } from "@/src/display-currency";
 import { formatAusd } from "@/src/gift-reader";
 import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type GiftDraft } from "@/src/gift-draft";
 import { conditionById } from "@/src/conditions";
 import { cardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
-import { figureWithMark, readableFigure, typedFromUnits, unitsFromTyped } from "@/src/amount-in-currency";
+import { figureWithMark, typedFromUnits, unitsFromTyped } from "@/src/amount-in-currency";
+import { figureIn } from "@/src/currencies";
 import { AmountError } from "@/src/money";
 import { OFFER as W } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
@@ -15,7 +15,8 @@ import { feel } from "../mood";
 import { useHasPointer } from "../Motion";
 import { CardFace } from "../GiftCard";
 import { Character } from "../Character";
-import { MoneyMark } from "../MoneyMark";
+import { CurrencySheet } from "../CurrencySheet";
+import { MoneyKey } from "../MoneyKey";
 import { DayStrip } from "../DayStrip";
 import { PaySheet } from "./PaySheet";
 import { WillSheet } from "./WillSheet";
@@ -75,14 +76,21 @@ export function OfferCard() {
    */
   const [typedAmount, setTypedAmount] = useState<string | null>(null);
   const typed = typedAmount ?? typedFromUnits(draftUnits(draft) ?? 0n, money.currency, money.rates);
-  /** A figure the person reads: their own currency, with its own marks, and the dollar when that is what they read. */
-  const inTheirCurrency = (amount: bigint) =>
-    figureWithMark(readableFigure(typedFromUnits(amount, money.currency, money.rates), money.currency), money.currency);
-  /** The three the product reads in, in the register's order: pressing the mark takes the next one. */
-  const readInTheNext = () => {
-    const next = DISPLAY_CURRENCIES[(DISPLAY_CURRENCIES.indexOf(money.currency) + 1) % DISPLAY_CURRENCIES.length];
+  /**
+   * A figure the person reads, in their own currency, with its mark and its own grouping: what the action says and
+   * what a day of the gift is worth. The field beside it keeps what was typed instead, exactly as it was typed, so
+   * nothing moves under the cursor.
+   */
+  const inTheirCurrency = (amount: bigint) => figureWithMark(figureIn(Number(typedFromUnits(amount, money.currency, money.rates)), money.currency), money.currency);
+  /**
+   * Which currency the card is read in. The key opens the list and changes nothing by itself (D152): with thirty-one
+   * currencies offered, a press that moved to the next one would be a press nobody could aim.
+   */
+  const [reading, setReading] = useState(false);
+  const readIn = (next: string) => {
     setTypedAmount(null);
     money.readIn(next);
+    setReading(false);
   };
   const typeAmount = (value: string) => {
     setTypedAmount(value);
@@ -204,13 +212,10 @@ export function OfferCard() {
                   a sentence carrying its rate's own day cannot fit beside a 39 pixel figure. */}
               <span className="flex items-baseline gap-x-[var(--space-sm)]">
                 <span className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent-text)]`}>
-                  {/* The currency's own mark, drawn in the house's own line because neither face carries one that
-                      belongs beside this figure (app/kit/MoneyMark.tsx), and it is the control that changes what
-                      everything on this card is read in (D144): a visitor has no page to set that on. It stands in
-                      front of the figure in every currency, so pressing it never moves the field (D145). */}
-                  <button type="button" onClick={readInTheNext} aria-label={W.currencyLabel(money.currency)} className="-mx-[var(--space-xs)] inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center justify-center">
-                    <MoneyMark currency={money.currency} />
-                  </button>
+                  {/* The key that says what this card is read in, and that there is a list behind it (D152): the
+                      mark in the house's own line, an edge, a relief and a chevron, like everything else that is
+                      pressed here. A visitor has no page to set a currency on, so the card carries it (D144). */}
+                  <MoneyKey currency={money.currency} onOpen={() => setReading(true)} className="-ml-[var(--space-xs)] mr-[var(--space-xs)]" />
                   <input
                     value={typed}
                     onChange={(event) => typeAmount(event.target.value)}
@@ -269,6 +274,18 @@ export function OfferCard() {
       {/* The one sheet the card opens, drawn once: a modal dialog is closed by the browser, which is what gives the
           page back, so taking an open one out of the page would leave its layer over everything. */}
       <WillSheet openAt={choosing} draft={draft} onChange={change} onClose={() => setChoosing(null)} />
+      {/* The list of currencies, drawn once like the card's other sheets, and opened by the key above. */}
+      <CurrencySheet
+        open={reading}
+        currency={money.currency}
+        offered={money.offered}
+        units={units ?? 0n}
+        rates={money.rates}
+        ratesAsked={money.ratesAsked}
+        language={money.language}
+        onChoose={readIn}
+        onClose={() => setReading(false)}
+      />
       <PaySheet open={paying} draft={draft} onChange={change} onClose={() => setPaying(false)} />
     </>
   );

@@ -1,4 +1,5 @@
 import type { DisplayCurrency } from "./display-currency";
+import { currencyOf, markOf, perDollar } from "./currencies";
 import { AmountError, dollarsToUnits, MAX_GIFT_UNITS, MIN_GIFT_UNITS } from "./money";
 import type { Rates } from "./rates";
 
@@ -18,13 +19,14 @@ import type { Rates } from "./rates";
 
 /** What a person may type: their own currency's figure, with at most the decimals that currency has. */
 export function unitsFromTyped(typed: string, currency: DisplayCurrency, rates: Rates | undefined): bigint {
-  if (currency === "USD" || !rates) return dollarsToUnits(typed);
-  const decimals = currency === "EUR" ? 2 : 0;
-  const shape = decimals === 0 ? /^(\d{1,9})$/ : /^(\d{1,9})(?:[.,](\d{1,2}))?$/;
+  const rate = perDollar(currency, rates);
+  if (currency === "USD" || !rates || rate === undefined) return dollarsToUnits(typed);
+  const { decimals } = currencyOf(currency);
+  const shape = decimals === 0 ? /^(\d{1,9})$/ : new RegExp(`^(\\d{1,9})(?:[.,](\\d{1,${decimals}}))?$`);
   const match = shape.exec(typed.trim());
-  if (!match) throw new AmountError(decimals === 0 ? "Whole francs, like 20000." : "Two decimals at most, like 30.00.");
+  if (!match) throw new AmountError(decimals === 0 ? `Whole ${currency}, like 20000.` : `${decimals} decimals at most, like 30.00.`);
   const amount = Number(`${match[1]}.${match[2] ?? "0"}`);
-  const dollars = currency === "EUR" ? amount * rates.usdPerEur : amount / rates.xofPerUsd;
+  const dollars = amount / rate;
   // Cut to the cent the chain counts in, never rounded up: what is signed is never more than what was asked for.
   const units = BigInt(Math.floor(dollars * 100)) * 10_000n;
   if (units < MIN_GIFT_UNITS) throw new AmountError(smallestSaid(currency, rates));
@@ -34,18 +36,22 @@ export function unitsFromTyped(typed: string, currency: DisplayCurrency, rates: 
 
 /** The same figure the other way, for a field that opens on what was chosen rather than empty. */
 export function typedFromUnits(units: bigint, currency: DisplayCurrency, rates: Rates | undefined): string {
-  if (currency === "USD" || !rates) {
+  const rate = perDollar(currency, rates);
+  if (currency === "USD" || !rates || rate === undefined) {
     const cents = units / 10_000n;
     return `${cents / 100n}.${(cents % 100n).toString().padStart(2, "0")}`;
   }
-  const dollars = Number(units) / 1_000_000;
-  if (currency === "EUR") return (Math.round(dollars * rates.eurPerUsd * 100) / 100).toFixed(2);
-  return String(Math.round(dollars * rates.xofPerUsd));
+  const { decimals } = currencyOf(currency);
+  const amount = (Number(units) / 1_000_000) * rate;
+  return decimals === 0 ? String(Math.round(amount)) : amount.toFixed(decimals);
 }
 
-/** A figure as a person reads it: the franc is grouped, because five figures in a row are read by nobody. */
+/**
+ * A figure as a person reads it: grouped where a currency counts in whole units, because five figures in a row are
+ * read by nobody. A currency with decimals keeps exactly what was typed, so nothing moves under the cursor.
+ */
 export function readableFigure(typed: string, currency: DisplayCurrency): string {
-  if (currency !== "XOF") return typed;
+  if (currencyOf(currency).decimals !== 0) return typed;
   const whole = Number(typed);
   return Number.isFinite(whole) ? whole.toLocaleString("en-GB") : typed;
 }
@@ -58,8 +64,7 @@ export function readableFigure(typed: string, currency: DisplayCurrency): string
  * typed in. A control keeps its place. The franc keeps a space after its letters, where a symbol needs none.
  */
 export function currencyMark(currency: DisplayCurrency): Readonly<{ sign: string; gap: string }> {
-  if (currency === "XOF") return { sign: "CFA", gap: " " };
-  return { sign: currency === "EUR" ? "€" : "$", gap: "" };
+  return markOf(currency);
 }
 
 /** A figure as it is read, its mark in front: "$30.00", "€26.18", "CFA 17,172". */

@@ -127,6 +127,12 @@ export const LEAD = "text-[length:var(--type-lead)] leading-[var(--type-lead-lea
  */
 export const CARD_TITLE = `${TITLE_FACE} text-[length:var(--type-card-who)] leading-[var(--type-card-who-leading)] tracking-[var(--type-card-who-tracking)]`;
 
+/**
+ * A currency's sign where it stands in a list (D152): the title face, because a sign is a drawing more than a word,
+ * and a fixed width so thirty-one names begin on one line however wide the sign before them is.
+ */
+export const MONEY_SIGN = `${TITLE_FACE} w-[3.4em] shrink-0 text-[length:var(--type-body)]`;
+
 export const CARD_AMOUNT = `${TITLE_FACE} text-[length:var(--type-card-amount)] leading-[1] tracking-[var(--type-card-amount-tracking)] tabular-nums`;
 
 /**

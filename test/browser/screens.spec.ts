@@ -90,38 +90,6 @@ test.describe("the screens a person meets", () => {
     await expect(card.getByLabel(/^Days$/i)).toHaveCount(0);
   });
 
-  /**
-   * The mark is the control that changes what the card is read in (D144), and it stands in front of the figure in
-   * every currency (D145): the franc's name used to follow it, which moved the field itself every time the mark was
-   * pressed. What the mark draws is the house's own line for the two symbols and the franc's letters for the franc.
-   */
-  test("the currency mark keeps its place and its size, whichever currency the card is read in", async ({ page }) => {
-    await page.goto("/");
-    const card = page.locator("main section").first();
-    const mark = card.locator("button[aria-label^='Money read in']");
-    const field = card.getByLabel(/How much/i);
-    const where = async () => Math.round((await field.boundingBox())?.x ?? 0);
-    const box = async () => {
-      const seen = await mark.boundingBox();
-      return { width: Math.round(seen?.width ?? 0), height: Math.round(seen?.height ?? 0) };
-    };
-    // The dollar and the euro are drawn, the franc is its letters: three marks, one box, one place for the field.
-    await expect(mark.locator("svg")).toHaveCount(1);
-    const first = { at: await where(), box: await box() };
-    expect(first.box).toEqual({ width: 48, height: 48 });
-    await mark.click();
-    await expect(mark.locator("svg")).toHaveCount(1);
-    expect(await where()).toBe(first.at);
-    expect(await box()).toEqual(first.box);
-    await mark.click();
-    await expect(mark).toHaveText("CFA");
-    expect(await where()).toBe(first.at);
-    expect(await box()).toEqual(first.box);
-    // And back to where it started, with the dollar drawn again.
-    await mark.click();
-    await expect(mark.locator("svg")).toHaveCount(1);
-  });
-
   /** The row of days fades at the end that still hides one, as long as what it hides, and nowhere else (D145). */
   test("the row of days fades at the end that hides a day, and at neither end when they all fit", async ({ page }) => {
     await page.goto("/");

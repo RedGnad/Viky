@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { aboutInDisplayCurrency, figureInDisplayCurrency, isDisplayCurrency, proposedDisplayCurrency, SHOWN_IN_DOLLARS, type DisplayCurrency, type DisplayFigure } from "../display-currency";
+import { CURRENCIES_WHEN_SILENT } from "../currencies";
 import { ratesUsable, type Rates } from "../rates";
 import { getJson, putJson } from "./api";
 
@@ -47,6 +48,12 @@ function keepInTheTab(currency: DisplayCurrency): void {
 
 export type DisplayMoney = Readonly<{
   currency: DisplayCurrency;
+  /** Every currency a person may read in today, asked of the rails and the rate file (D152), never written down. */
+  offered: readonly string[];
+  /** Whether the rate source has answered yet: a screen says "could not be read" only once it has. */
+  ratesAsked: boolean;
+  /** The device's own language tag, which is what proposes a currency and orders the list. */
+  language: string | undefined;
   /** Read it in another currency. Kept for the tab, and written to the account when there is one signed in. */
   readIn: (currency: DisplayCurrency) => void;
   rates: Rates | undefined;
@@ -58,7 +65,7 @@ export type DisplayMoney = Readonly<{
   unavailable: string | undefined;
 }>;
 
-type RatesAnswer = { rates: Rates | null };
+type RatesAnswer = { rates: Rates | null; currencies?: readonly string[] };
 type PreferencesAnswer = { displayCurrency: DisplayCurrency | null };
 
 /**
@@ -72,6 +79,9 @@ const noLanguage = () => undefined;
 export function useDisplayCurrency(address: string | undefined): DisplayMoney {
   const language = useSyncExternalStore(never, deviceLanguage, noLanguage);
   const [rates, setRates] = useState<Rates | undefined>(undefined);
+  const [offered, setOffered] = useState<readonly string[]>(CURRENCIES_WHEN_SILENT);
+  /** Whether the source has answered at all. Not yet is not the same thing as no, and no screen may say it is. */
+  const [ratesAsked, setRatesAsked] = useState(false);
   // The choice, and whose it is, so an account signing out never keeps another account's currency.
   const [chosenFor, setChosenFor] = useState<{ address: string; currency: DisplayCurrency | null } | undefined>(undefined);
   /**
@@ -85,10 +95,15 @@ export function useDisplayCurrency(address: string | undefined): DisplayMoney {
     let live = true;
     getJson<RatesAnswer>("/api/rates")
       .then((answer) => {
-        if (live) setRates(answer.rates && ratesUsable(answer.rates, Date.now()) ? answer.rates : undefined);
+        if (!live) return;
+        setRates(answer.rates && ratesUsable(answer.rates, Date.now()) ? answer.rates : undefined);
+        if (answer.currencies && answer.currencies.length > 0) setOffered(answer.currencies);
+        setRatesAsked(true);
       })
       .catch(() => {
-        if (live) setRates(undefined);
+        if (!live) return;
+        setRates(undefined);
+        setRatesAsked(true);
       });
     return () => {
       live = false;
@@ -123,6 +138,9 @@ export function useDisplayCurrency(address: string | undefined): DisplayMoney {
   const currency = asked === "USD" || rates ? asked : "USD";
   return {
     currency,
+    offered,
+    ratesAsked,
+    language,
     rates,
     readIn: (next) => {
       keepInTheTab(next);

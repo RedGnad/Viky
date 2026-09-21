@@ -1,5 +1,6 @@
 import type { Rates } from "./rates";
 import { PRODUCT_LOCALE } from "./moments";
+import { currencyOf, figureIn, isCurrencyCode, perDollar } from "./currencies";
 
 /**
  * One display currency per account, and how a dollar figure is said in it.
@@ -13,9 +14,12 @@ import { PRODUCT_LOCALE } from "./moments";
  * region proposes anything; without one the dollar shows, which is the honest default rather than a guess.
  */
 
-export type DisplayCurrency = "USD" | "EUR" | "XOF";
-
-export const DISPLAY_CURRENCIES: readonly DisplayCurrency[] = ["USD", "EUR", "XOF"];
+/**
+ * Any currency the two rails pay in and the rate file can convert into (D152, `src/currencies.ts`). It was three,
+ * written here; it is thirty-one today and whatever they answer tomorrow, so what is written here is the shape of a
+ * code and nothing about which ones exist.
+ */
+export type DisplayCurrency = string;
 
 /**
  * The euro area, twenty-one countries since Bulgaria joined on 1 January 2026, read on the ECB's own page
@@ -51,7 +55,7 @@ export function proposedDisplayCurrency(languageTag: string | undefined): Displa
 }
 
 export function isDisplayCurrency(value: unknown): value is DisplayCurrency {
-  return typeof value === "string" && (DISPLAY_CURRENCIES as readonly string[]).includes(value);
+  return isCurrencyCode(value);
 }
 
 /** Six decimals of a dollar coin, which is what both stablecoins carry. */
@@ -85,15 +89,10 @@ export function whenInWords(atMs: number): string {
  * because the sentences around it are English.
  */
 export function aboutInDisplayCurrency(units: bigint, currency: DisplayCurrency, rates: Rates | undefined): string | undefined {
-  if (currency === "USD" || !rates) return undefined;
-  const dollars = Number(units) / DOLLAR_UNITS;
-  const when = rateDateInWords(rates.date);
-  if (currency === "EUR") {
-    const euros = dollars * rates.eurPerUsd;
-    return `about ${euros.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR (rate of ${when})`;
-  }
-  const francs = Math.round(dollars * rates.xofPerUsd);
-  return `about ${francs.toLocaleString("en-GB")} CFA francs (rate of ${when})`;
+  const rate = perDollar(currency, rates);
+  if (currency === "USD" || !rates || rate === undefined) return undefined;
+  const amount = (Number(units) / DOLLAR_UNITS) * rate;
+  return `about ${figureIn(amount, currency)} ${currency} (rate of ${rateDateInWords(rates.date)})`;
 }
 
 /** The one line a screen prints when it wanted to convert and could not. */
@@ -120,16 +119,17 @@ export type DisplayFigure = Readonly<{
 
 export function figureInDisplayCurrency(units: bigint, currency: DisplayCurrency, rates: Rates | undefined): DisplayFigure {
   const dollars = Number(units) / DOLLAR_UNITS;
-  const plain = (value: number, symbol: string, decimals: number, after = "", rateDate?: string): DisplayFigure => ({
-    text: `${symbol}${value.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${after}`,
+  const rate = perDollar(currency, rates);
+  // Whatever cannot be converted is the dollar itself, which is what the chain holds and what is always true.
+  const code = currency === "USD" || rate === undefined || !rates ? "USD" : currency;
+  const money = currencyOf(code);
+  const value = code === "USD" ? dollars : dollars * (rate ?? 1);
+  return {
+    text: `${money.sign}${figureIn(value, code)}`,
     value,
-    symbol,
-    decimals,
-    after,
-    rateDate,
-  });
-  if (currency === "USD" || !rates) return plain(dollars, "$", 2);
-  const when = rateDateInWords(rates.date);
-  if (currency === "EUR") return plain(dollars * rates.eurPerUsd, "€", 2, "", when);
-  return plain(Math.round(dollars * rates.xofPerUsd), "", 0, " CFA", when);
+    symbol: money.sign,
+    decimals: money.decimals,
+    after: "",
+    rateDate: code === "USD" ? undefined : rateDateInWords(rates!.date),
+  };
 }
