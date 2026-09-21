@@ -29,20 +29,20 @@ import { holdsAnything, useHoldings, useSawMoney } from "./money";
  */
 export function Home() {
   /**
-   * Whose page this is, and the browser answers before the server does (D147). `address` is only known once the
-   * session cookie has been read back over the network, so for the first tenth of a second every returning person
-   * met the promise page, which then blinked into their own money. A device that holds a passkey for this app knows
-   * it the moment the page runs, from its own storage, so that is what decides which Home is drawn; the figures
-   * still wait for the answers they need.
+   * Whose page this is, and only a session answers that (D149, correcting D147). For half a day this page asked the
+   * device whether it held a passkey instead, to draw the right Home before the session cookie came back over the
+   * network. A passkey on the device is not a session: somebody who signed out still has one, and they were shown
+   * the signed-in page with three dots where their money would be, no promise, no character and no way in. The page
+   * waits for the answer to the question it is actually asking.
    */
-  const { address, hasCredential } = useAccount();
+  const { address } = useAccount();
   const holdings = useHoldings(address);
   const { gifts, problem } = useMyGifts(address);
   const nowMs = useMinute();
   /** Whether the room the way out takes is held while the balance is read (app/kit/money.ts). */
   const sawMoney = useSawMoney(holdings);
 
-  if (!address && !hasCredential) {
+  if (!address) {
     return (
       <Shell kind="destination" active="home" action={<SignInDoor />} bare wide>
         {/* Home without an account (D129, D131): one column, and the same order everywhere, the character, the title,

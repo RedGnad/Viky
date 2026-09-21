@@ -4020,3 +4020,22 @@ Four faults, and the last one was not about animation at all.
 - Measured on the built app at 390 wide, with the balance answering 350 ms late and the gift list 550 ms late: the
   card sat still at 286 through the whole arrival for an account with money, and at 210 for an empty one. Before,
   it stood at 322, then 189, then 308.
+
+## D149, 21 Sep 2026: a passkey on the device is not a session
+
+D147 made Home draw its signed-in face as soon as the browser said it held a passkey for this app, so that a person
+coming back would not meet the promise page while the session cookie travelled. It was wrong, and the founder met it
+on his own phone within the hour: signed out, with a passkey still stored from an earlier account, he was given the
+signed-in page. Three dots where his money would be, the line about keeping it, no promise, no character, no way in,
+and nothing to load because there was no session. "Comme si ça me connectait arbitrairement à rien, alors que je
+suis sign out."
+
+- **The page waits for the answer to the question it is asking.** Whose page this is, is a session, and only the
+  session answers it. A passkey on the device says that somebody signed in here once, which is not the same thing:
+  signing out leaves it exactly where it was, on purpose, because it is how the next sign-in finds the account.
+- **What it cost to get the flash instead.** A returning person meets the promise page until the session comes back,
+  which is about a tenth of a second on a fast network and longer on a train. That is the price, and it is paid
+  rather than guessed at. The blink the founder reported before this had a different cause and is still fixed: the
+  page was being thrown away and rebuilt whole (D147, the clock's language).
+- Everything else of D147 stands: the blocks arrive in turn, the money block keeps one shape, the way out keeps its
+  room, and the contract's figure is not printed on Home.
