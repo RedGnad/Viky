@@ -124,7 +124,8 @@ export function Home() {
             {W.takeItOut}
           </Link>
         ) : null}
-        <OfferCard />
+        {/* The card starts on the account's own money when it holds any (D157). */}
+        <OfferCard holdings={holdings} />
         {/* The gifts land one after another rather than all at once (D154). */}
         <section className="arrives-in-turn flex flex-col gap-[var(--space-md)]">
           <h2 className={TITLE}>{W.moving}</h2>

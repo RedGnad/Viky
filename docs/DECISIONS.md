@@ -4229,3 +4229,28 @@ signed in, on his phone, reloading.
   longer keeps pages (D155), so nothing served stale sits between the server and the screen.
 - Measured on a phone profile with an account, reloading Home: the money block is in the first frame, and no
   landing is drawn at any point.
+
+## D157, 21 Sep 2026: the card starts on a round figure in the reader's currency, or on the account's own money
+
+The founder: thirty dollars, yes, but thirty euros in euros and fifteen thousand francs in francs, on the card as it
+comes pre-filled and for somebody signed in with nothing in the account; and for somebody signed in with money in
+the account, that money. "C'est juste une histoire de confort user design."
+
+- **What it was.** Thirty dollars were written on the card for everybody, and a phone in Dakar read them as 17,172
+  francs, a phone in Paris as 26.18 euros: a figure nobody would ever type, on the first screen.
+- **Round is a ladder, not a table.** The rung nearest to what thirty dollars is worth, on the ladder every price
+  list climbs, 1, 1.5, 2, 3, 5 and the next 1, in the value's own decade: 26.18 euros lands on 30, 17,172 francs
+  on 15,000, 2,876 rupees on 3,000, 22.48 pounds on 20. A currency nobody had thought of gets a round figure too,
+  and nothing is written per currency.
+- **The account's own money leads when there is any** within the gift's bounds: $10.13 in the account is $10.13 on
+  the card, 8.78 euros for a reader in euros. Nothing in the account, or under the smallest gift, or over the
+  pilot's ceiling, and the round figure stands.
+- **What is shown is what is sent.** The starting figure is written into the draft the card works from, as the
+  dollars it makes, cut to the cent, so pressing Send without touching the amount sends exactly that; it reaches
+  the device the first time anything on the card is changed, and a card somebody already kept is never touched.
+  The action repeats the figure as it was asked for: a whole currency does not sit on the cent, so 15,000 francs
+  are held as $26.17, which are 14,995 francs, and "Send F CFA 15,000" says what the person asked while the sheet
+  that pays says the dollars themselves.
+- **No thirty is shown before the account's money is known.** Signed in, the server marks the screen as settling
+  (D155's attribute, from the server this time, since the server knows the person), and the card's figures wait
+  for the balance and the rate. A device with nothing kept and nothing to convert still sees its round figure at once.

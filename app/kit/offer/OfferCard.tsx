@@ -9,6 +9,8 @@ import { cardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } fr
 import { figureWithMark, typedFromUnits, unitsFromTyped } from "@/src/amount-in-currency";
 import { figureIn } from "@/src/currencies";
 import { MONEY_SETTLING } from "@/src/money-boot";
+import { startingFigure } from "@/src/starting-amount";
+import { dollarsHeld, type Holdings } from "../money";
 import { AmountError } from "@/src/money";
 import { OFFER as W } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
@@ -40,13 +42,22 @@ import { WillSheet } from "./WillSheet";
  */
 const GIFT_ID = "offer";
 
-export function OfferCard() {
+export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }> = {}) {
   const { address } = useAccount();
   /**
    * The card itself, read from the device rather than copied into this screen (src/card-draft.ts). The server draws
    * the starting card and the browser draws what was kept, and React is told how to go from one to the other.
    */
-  const draft = useSyncExternalStore(subscribeToCardDraft, cardDraft, startingCardDraft);
+  const kept = useSyncExternalStore(subscribeToCardDraft, cardDraft, startingCardDraft);
+  const money = useDisplayCurrency(address);
+  /**
+   * What the card starts on when nothing was kept on this device (D157): the account's own money when it holds any,
+   * else thirty dollars said round in the reader's currency. It is written into the draft the card works from, so
+   * what is shown is what is sent, and it reaches the device the first time anything on the card is changed.
+   */
+  const untouched = kept === startingCardDraft();
+  const starting = untouched ? startingFigure(money.currency, money.rates, holdings ? dollarsHeld(holdings) : undefined) : undefined;
+  const draft = starting ? { ...kept, dollars: starting.dollars } : kept;
   const change = (next: GiftDraft) => writeCardDraft(next, address);
   /**
    * The one sheet left on this card: shut, or open on one of its two faces, the catalogue or the chosen condition's
@@ -62,10 +73,6 @@ export function OfferCard() {
   const condition = conditionById(draft.conditionId);
   const shape = shapeOf(draft.conditionId);
   const bounds = durationBounds(draft.conditionId);
-  // What the figure is worth in the currency this account reads in (decision 1 of 17 Sep 2026). The gift itself is
-  // signed in dollars, which is what the card takes; the conversion is said under it, with its rate's own day, and
-  // nothing at all is said when the account reads in dollars or when no rate answered (D139).
-  const money = useDisplayCurrency(address);
   const filled = filledCases(draft);
   const ready = isComplete(draft) && units !== undefined;
   const recipient = draft.recipientName.trim();
@@ -76,13 +83,26 @@ export function OfferCard() {
    * back would rewrite "30" as "29.99" under the cursor.
    */
   const [typedAmount, setTypedAmount] = useState<string | null>(null);
-  const typed = typedAmount ?? typedFromUnits(draftUnits(draft) ?? 0n, money.currency, money.rates);
+  const typed = typedAmount ?? starting?.typed ?? typedFromUnits(draftUnits(draft) ?? 0n, money.currency, money.rates);
   /**
    * A figure the person reads, in their own currency, with its mark and its own grouping: what the action says and
    * what a day of the gift is worth. The field beside it keeps what was typed instead, exactly as it was typed, so
    * nothing moves under the cursor.
    */
   const inTheirCurrency = (amount: bigint) => figureWithMark(figureIn(Number(typedFromUnits(amount, money.currency, money.rates)), money.currency), money.currency);
+  /**
+   * What the action says: the figure as it was typed, whenever the dollars are exactly the dollars that figure makes.
+   * A whole currency does not sit on the cent, so 15,000 francs are held as $26.17, which are 14,995 francs: what
+   * the person asked for is what the action repeats, and the sheet that pays says the dollars themselves.
+   */
+  const asked = (amount: bigint) => {
+    try {
+      if (unitsFromTyped(typed, money.currency, money.rates) === amount) return figureWithMark(figureIn(Number(typed.replace(",", ".")), money.currency), money.currency);
+    } catch {
+      // What cannot be read as money is not the amount, and the conversion below says what is.
+    }
+    return inTheirCurrency(amount);
+  };
   /**
    * Which currency the card is read in. The key opens the list and changes nothing by itself (D152): with thirty-one
    * currencies offered, a press that moved to the next one would be a press nobody could aim.
@@ -108,9 +128,10 @@ export function OfferCard() {
    * and the currency is final the moment the rate is known or known to be missing. Until then a device that said
    * its figures would change keeps them out of sight (src/money-boot.ts).
    */
+  const balanceKnown = holdings !== null;
   useEffect(() => {
-    if (money.ratesAsked) document.documentElement.removeAttribute(MONEY_SETTLING);
-  }, [money.ratesAsked]);
+    if (money.ratesAsked && balanceKnown) document.documentElement.removeAttribute(MONEY_SETTLING);
+  }, [money.ratesAsked, balanceKnown]);
   /**
    * What the character at the head of the page is told (D148, the motion roadmap's step 2). With a pointer it is the
    * hover, and the face comes back when the pointer leaves. A finger has no hover, so the expression plays once when
@@ -267,7 +288,7 @@ export function OfferCard() {
               {/* One action, in the sun, full width, saying what it will take from the first second; shut, it says what it
                   is waiting for rather than its price (ui review, 20 Sep 2026: a muted "Pay $30.00" with no reason). */}
               <button type="button" className={`${PRIMARY_BUTTON} mt-[var(--space-lg)]`} disabled={!ready} onClick={() => setPaying(true)}>
-                <span data-money>{!filled.will ? W.finishWill : !filled.howLong ? W.chooseLength : units === undefined ? W.stillNeeded : W.pay(inTheirCurrency(units))}</span>
+                <span data-money>{!filled.will ? W.finishWill : !filled.howLong ? W.chooseLength : units === undefined ? W.stillNeeded : W.pay(asked(units))}</span>
               </button>
               {/* What one day of it is worth, and nothing when there is no such figure. The pilot's ceiling is not a
                   standing notice any more (D138): it is what the amount says back to somebody who types past it,

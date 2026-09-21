@@ -218,7 +218,8 @@ test("one accent per surface: the card's Pay, and a sheet's own Done", () => {
   }
   // The same button, shut, says what it waits for rather than its price: the condition's own questions first, then a
   // length the route takes, then an amount that can be read.
-  assert.match(card, /!filled\.will \? W\.finishWill : !filled\.howLong \? W\.chooseLength : units === undefined \? W\.stillNeeded : W\.pay\(inTheirCurrency\(units\)\)/);
+  // The action repeats the figure as it was asked for (D157): a whole currency does not sit on the cent.
+  assert.match(card, /!filled\.will \? W\.finishWill : !filled\.howLong \? W\.chooseLength : units === undefined \? W\.stillNeeded : W\.pay\(asked\(units\)\)/);
   assert.doesNotMatch(card, /var\(--accent\)/, "nothing else on the card paints itself with the sun");
 });
 
