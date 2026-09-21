@@ -6,6 +6,16 @@ import type { PassTime } from "./pass-schedule";
  * safe. Months are written by hand, as `rateDateInWords` writes them, so one screen never mixes "Sep" and "Sept".
  */
 
+/**
+ * The one language the product speaks, for every clock it prints (D147).
+ *
+ * A time written in the reader's own language is a different string on the server and in the browser, and React
+ * throws away a page whose text does not match the one it was sent: the landing was rebuilt on every visit for a
+ * French phone, because "8:00 AM" came from the server and "8:00" from the device, which is the blink the founder
+ * saw. The product is in English for the pilot, so its clocks are too, and they say the same thing everywhere.
+ */
+export const PRODUCT_LOCALE = "en-GB";
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAY_MS = 86_400_000;
@@ -15,8 +25,8 @@ function localDayNumber(atMs: number): number {
   return Math.floor(Date.UTC(at.getFullYear(), at.getMonth(), at.getDate()) / DAY_MS);
 }
 
-/** "today, 17 Sep, at 9:00 AM", "tomorrow, 18 Sep, at 2:30 AM", or "Fri 19 Sep at 8:00 AM", in the reader's clock. */
-export function momentInWords(atMs: number, nowMs: number, locale?: string): string {
+/** "today, 17 Sep, at 09:00", "tomorrow, 18 Sep, at 02:30", or "Fri 19 Sep at 08:00", in the reader's own clock. */
+export function momentInWords(atMs: number, nowMs: number, locale: string = PRODUCT_LOCALE): string {
   const at = new Date(atMs);
   const time = at.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
   const date = `${at.getDate()} ${MONTHS[at.getMonth()]}`;

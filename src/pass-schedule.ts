@@ -4,6 +4,8 @@
  * when a missed day comes back cannot drift from when it does. Browser safe.
  */
 
+import { PRODUCT_LOCALE } from "./moments";
+
 export type PassTime = Readonly<{ hour: number; minute: number }>;
 
 /** Reads and credits the day before (src/daily-pass.ts, COUNTING_PASS). */
@@ -17,9 +19,13 @@ export function cronOf(time: PassTime): string {
   return `${time.minute} ${time.hour} * * *`;
 }
 
-/** The settling pass in the reader's own clock, "9:00 AM" in English and "09:00" in French, in Paris in summer: said with "about", because a cron starts late. */
+/**
+ * The settling pass in the reader's own clock, "09:00" in Paris in summer: said with "about", because a cron starts
+ * late. The clock is the reader's, the language is the product's (`PRODUCT_LOCALE`): this sentence is drawn by the
+ * server and then by the browser, and a time in two languages is what made React throw the whole page away (D147).
+ */
 export function settlingTimeInWords(nowMs: number): string {
   const at = new Date(nowMs);
   at.setUTCHours(SETTLING_PASS_UTC.hour, SETTLING_PASS_UTC.minute, 0, 0);
-  return at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return at.toLocaleTimeString(PRODUCT_LOCALE, { hour: "numeric", minute: "2-digit" });
 }

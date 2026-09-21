@@ -3986,3 +3986,37 @@ Step one is the arrival on a screen, which is the second of the four triggers th
 - **What is not done, on purpose.** The cards in a gift list already answer the scroll (`Reveal`), and whether a
   card already in view should enter when its data lands is step 5's question, not this one. Nothing else in the
   roadmap is touched: no character reaction, no arrival replay, no confetti.
+
+## D147, 21 Sep 2026: Home arrives once, in order, and then stops moving
+
+The founder on the arrival built the day before: "les animations des pages sont un peu trop basique, toutes les
+cartes qui s'affichent en meme temps", the money and the way out "clippent en s'affichant", the rate line
+"bouleverse l'UI pour rien alors qu'on veut pas afficher ces choses au user", and the landing "fait clignoter l'UI".
+Four faults, and the last one was not about animation at all.
+
+- **The landing was rebuilt on every visit, and that is the blink.** React refused the page the server sent and
+  built it again from nothing: "Hydration failed because the server rendered text didn't match the client" (React
+  error #418), on one sentence inside the paying sheet. `settlingTimeInWords` wrote the hour in the language of
+  whoever rendered it: "8:00 AM" from a server in English, "8:00" from a French phone. The product speaks one
+  language for the pilot, so its clocks do too: `PRODUCT_LOCALE` in `src/moments.ts`, used by every clock a screen
+  prints. Measured before and after on the built app: the landing's blocks entered twice, 85 ms apart; they enter
+  once now. The cost was never only the blink, it was the whole page thrown away and rebuilt on every visit.
+- **The blocks arrive one after another**, 50 ms apart, which is Material's shortest published step, and none waits
+  more than 200, so a page of any length has arrived inside 450 ms. A page that groups its blocks in one box says
+  so with `arrives-in-turn`, and its children take the turns instead of the box: on the landing the words arrive,
+  then the card, where before the two faded in as one flat rectangle.
+- **The money block keeps one shape whether it knows the figure or not**: the heading, the amount and the line
+  under it, with a quiet placeholder at the size a figure takes while the balance is read. It was two lines and
+  then four, so the page moved twice before it had said anything.
+- **The way out keeps its place.** The room the button takes is held while the balance is read, on a device that
+  saw money here last time (`useSawMoney`), so the card under it does not jump when the answer lands. A first visit
+  holds nothing, and an account with nothing to take never keeps a hole where a button is not.
+- **"About, at the rate of 18 Sep 2026: $10.13" is gone.** It is the contract speaking, which D144 already took off
+  the card, and it arrived a beat after the figure and pushed the whole page down for it. What is really held is
+  said where money leaves: the way out leads with the dollar and says the euro as an estimate.
+- **A device that holds a passkey for this app draws its own Home from the first render**, rather than the promise
+  page for as long as the session cookie takes to come back over the network. The browser knows before the server
+  answers; the figures still wait for the answers they need.
+- Measured on the built app at 390 wide, with the balance answering 350 ms late and the gift list 550 ms late: the
+  card sat still at 286 through the whole arrival for an account with money, and at 210 for an empty one. Before,
+  it stood at 322, then 189, then 308.
