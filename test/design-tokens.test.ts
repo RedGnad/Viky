@@ -558,6 +558,20 @@ test("the app a phone installs is painted in the product's own ground", () => {
   for (const icon of manifest.icons) assert.ok(globSync(`public${icon.src}`).length === 1, `${icon.src} is written`);
 });
 
+/**
+ * A page never restarts itself under somebody (D153). The worker's provider reloads the whole page on every `online`
+ * event, and a phone fires that when it finishes connecting, wakes, or changes network: the founder saw the landing
+ * load twice on his phone and never on a desktop. Off, and nothing else in the app may ask for a reload either.
+ */
+test("nothing reloads the page because the network came back", () => {
+  const layout = readFileSync("app/layout.tsx", "utf8");
+  assert.match(layout, /reloadOnOnline=\{false\}/, "the library's own reload is off");
+  for (const file of globSync("app/**/*.{ts,tsx}")) {
+    const source = readFileSync(file, "utf8");
+    if (/location\.reload\(\)/.test(source)) assert.fail(`${file} reloads the page, and nothing may`);
+  }
+});
+
 test("a journey stays narrow enough that prose can never run too long", () => {
   // 480 pixels at a 16 pixel body is about 53 characters, inside every published range.
   assert.ok(APP_COLUMN_MAX / TYPE.body.size < PROSE_MAX_CH);

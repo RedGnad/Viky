@@ -68,8 +68,11 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         {/* Before anything is painted, so a chosen appearance never flashes the other one first (D97). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         {/* The worker is registered by `Register`, not by the provider, so a browser that refuses one is refused
-            quietly rather than throwing on every screen (D150). */}
-        <SerwistProvider swUrl="/serwist/sw.js" register={false}>
+            quietly rather than throwing on every screen (D150).
+            `reloadOnOnline` is off (D153): the library reloads the whole page on every `online` event, which a phone
+            fires when it finishes connecting, wakes, or changes network. That is the second load of the landing the
+            founder kept seeing on his phone and never on a desktop. A page does not restart itself under somebody. */}
+        <SerwistProvider swUrl="/serwist/sw.js" register={false} reloadOnOnline={false}>
           <Register />
           <AccountProvider>{children}</AccountProvider>
         </SerwistProvider>
