@@ -75,6 +75,15 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     sourcePolicing: "Duolingo may invalidate a result after it has been certified and notify everyone who received it, and it says so in its own terms. A certificate can also be taken private again by its holder, and expires two years after the test. All three are visible in the reading Viky already makes.",
   },
   {
+    conditionId: "toefl-mybest-shown",
+    supervised: false,
+    inShort: "Shown by them: the score on their own ETS account, proved in a verification tab. Who sat the test is not read.",
+    data: "The page ETS shows to the account holder once they have signed in, read in a Reclaim verification the person opens from their gift's page: one request to ETS's own servers, attested by a witness in a TEE, and two fields, the total score and the booking it belongs to. No name, no test date, no photograph. ETS's own terms on that reading were not read for this line, and that question stands.",
+    account: "The link is the account the person signs in to, in their own browser, and the gift's own recipient, which the contract checks. No name is typed by the funder and none is read from the page: the subject the funder signs is the same for every gift on this condition, and that is written down rather than dressed up.",
+    whoActed: "Unknown to Viky: the proof says which ETS account was signed in to, not who sat the test. ETS's own pages on identity checks and proctoring were not read for this line, so nothing is claimed about them here.",
+    sourcePolicing: "Not read: what ETS does about a score it cancels, and whether a cancelled score leaves the account page, are ETS's rules and were not read for this line. The only thing Viky reads is what the page shows on the day it is shown.",
+  },
+  {
     conditionId: "coursera-certificate",
     supervised: false,
     inShort: "Read from the certificate's public page. Coursera checks identity once, not each piece of work.",

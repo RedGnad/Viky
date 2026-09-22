@@ -310,6 +310,30 @@ path relayed five check-ins and never met `NullifierAlreadyUsed`. So today's uni
 puts in the context in TEE mode, not on anything of ours: true of production, and to be kept in mind by anybody who
 runs a reading without TEE.
 
+## Goal 13, the TOEFL score shown, to be signed by the owner (D164)
+
+The first condition of the second nature needs one goal on `MilestoneGift` (`0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e`),
+number 13, shape "having it or not", provider id `viky:provider:toefl-mybest-shown:v1` =
+`0xa07cae8e7502221e9a33445deb8f4f5e12d9ccdfd35b5e53d9eb38f32d75db7d`. `pnpm check:milestone-goals` reads it as
+`missing` on 22 Sep 2026; `pnpm prepare:milestone-goals` writes the one call, to be signed from the owner's wallet:
+
+| | |
+|---|---|
+| to | `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e` |
+| data | `0x5ba19152000000000000000000000000000000000000000000000000000000000000000da07cae8e7502221e9a33445deb8f4f5e12d9ccdfd35b5e53d9eb38f32d75db7d0000000000000000000000000000000000000000000000000000000000000001` |
+| gas | 102,125 (above the Foundry report for `registerGoal`, before the Monad margin) |
+| what it is | `registerGoal(13, 0xa07cae8e…db7d, 1)`: the "show" sense. The "reach" sense, once a provider of ours reads the test's date, takes its own number; `registerGoal` never overwrites |
+
+Until it is registered, a gift on this condition cannot be made by anybody: the create route refuses with the
+contract's own `UnknownGoal`, and the condition stays out of the register (D109) and off the public page except on
+the frontier's line, "Being built". After it is registered, read back with `pnpm check:milestone-goals`.
+
+### Whether the Reclaim application is configured, at execution
+
+The two variables are sensitive on Vercel and cannot be read back by `vercel env pull` (they come back empty).
+`GET /api/conditions`, signed in as an operator, answers `shown.configured: true` when both are set where the route
+runs, and `false` otherwise. A boolean, never a length or a prefix.
+
 ## The reading service is a second deployment, and it is not automatic
 
 `src/attested-sources.ts` and `src/chess-com.ts` run in two places: on Vercel, where the proof is judged, and in the

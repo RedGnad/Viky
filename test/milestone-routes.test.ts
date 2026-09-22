@@ -82,9 +82,9 @@ test("a condition that is not live is offered to nobody but an account that runs
   assert.deepEqual(listed.preview, [], "a funder sees only what is live");
   assert.ok(listed.ids.includes("chess-rating"));
   const operatorSees = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`, { headers: { cookie: await cookieFor(OPERATOR) } }))).json()) as { ids: string[]; preview: string[] };
-  // Nothing is wired and not live today: the supervised result opened on 19 Sep 2026 with goal 5 registered (D109),
-  // and Coursera has a reading but no goal on the contract, so no gift can be made on it by anybody, door or no door.
-  assert.deepEqual(operatorSees.preview, []);
+  // One thing is wired and not live today (D164): the TOEFL score shown, creatable by an operator so the first real
+  // proof can be shown at all, and offered to nobody else, door or no door.
+  assert.deepEqual(operatorSees.preview, ["toefl-mybest-shown"]);
   const anonymous = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`))).json()) as { preview: string[] };
   assert.deepEqual(anonymous.preview, []);
 });

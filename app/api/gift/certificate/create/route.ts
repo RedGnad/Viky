@@ -44,11 +44,14 @@ export async function POST(request: Request) {
       throw new GiftApiError("UNKNOWN_CONDITION", "That is not something a gift can be made for", 404);
     }
 
-    const personName = tidyGiftName(String(body.personName ?? ""));
-    // Each condition says what name its own certificate can carry: the test prints a legal name and asks for two
-    // words, a course certificate can carry one, and a real one does (C3).
-    if (giftNameProblem(personName) || !certificate.validName(personName)) {
-      throw new GiftApiError("INVALID_NAME", certificate.words.refusals.nameShape);
+    // A shown condition binds the account, not a name: nothing is asked and the subject is the condition's own (D164).
+    const personName = certificate.asksName === false ? "" : tidyGiftName(String(body.personName ?? ""));
+    if (certificate.asksName !== false) {
+      // Each condition says what name its own certificate can carry: the test prints a legal name and asks for two
+      // words, a course certificate can carry one, and a real one does (C3).
+      if (giftNameProblem(personName) || !certificate.validName(personName)) {
+        throw new GiftApiError("INVALID_NAME", certificate.words.refusals.nameShape);
+      }
     }
     const target = Number(body.target);
     if (!certificate.validTarget(target)) throw new GiftApiError("INVALID_TARGET", certificate.words.refusals.targetShape);

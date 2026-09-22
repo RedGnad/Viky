@@ -40,7 +40,9 @@ export function CertificateProof({
   const [link, setLink] = useState("");
   const [state, setState] = useState<State>({ at: "asking" });
 
-  if (!yours || !certificate) return null;
+  // A shown condition has no link to paste and no route to read it: its page draws ShowProof instead (D164).
+  if (!yours || !certificate || !certificate.readPath) return null;
+  const readPath = certificate.readPath;
   const words = certificate.words;
   const busy = state.at === "reading" || state.at === "proving";
 
@@ -53,7 +55,7 @@ export function CertificateProof({
     // Read plainly first, so a link that is not public, expired or in another name is answered without touching money.
     setState({ at: "reading" });
     try {
-      await readCertificate(certificate.readPath, typed);
+      await readCertificate(readPath, typed);
     } catch (error) {
       const code = error instanceof ApiError ? error.code : "";
       const said: Record<string, string> = {

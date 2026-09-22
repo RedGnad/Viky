@@ -156,7 +156,8 @@ test("the recipient's screen says where the link is found, and what is not kept"
   assert.match(words.whatIsRead, /date of birth and your photograph are on the same page and are never asked for/);
   const screen = readFileSync("app/kit/CertificateProof.tsx", "utf8");
   assert.match(screen, /words\.whatIsRead/, "and the screen says it before the link is pasted");
-  assert.match(screen, /readCertificate\(certificate\.readPath, typed\)/, "a plain read answers first, before any money");
+  assert.match(screen, /readCertificate\(readPath, typed\)/, "a plain read answers first, before any money");
+  assert.match(screen, /if \(!yours \|\| !certificate \|\| !certificate\.readPath\) return null;/, "and a shown condition, which has no read path, draws none of this (D164)");
   for (const refusal of ["notPublic", "expired", "notFound", "linkShape"]) assert.match(screen, new RegExp(`refusals\\.${refusal}`), refusal);
 });
 

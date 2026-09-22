@@ -4447,3 +4447,29 @@ frontier say which of them are on their way.
   account, with the two words SHOWN BY THEM on it." on the exams, "Not being built." on state diplomas and school
   marks. A guard holds that exactly the exams are being built; adding a second is a decision, not a default.
 - Nothing else on the page moves: the conditions, their natures and their states are as D162 left them.
+
+## D164, 23 Sep 2026: the TOEFL score shown, built up to the ETS sign-in
+
+The founder, 22 Sep 2026: the two variables are in place on Vercel, sensitive, and a sensitive value is never read
+back by `vercel env pull`; verify at execution, by a boolean; start PR 2 up to the ETS sign-in screen.
+
+- **The condition.** `toefl-mybest-shown`, nature shown, family language, "A TOEFL score, shown": a score they
+  hold, shown from their own ETS account; when it was earned is not read. Not live, and not in the register: D109
+  holds that the register contains only what a gift can be made on today, and its goal, 13, is not registered yet.
+  It lives in `BUILDING` beside the register, resolvable by id, offered on the chooser to an account that runs Viky
+  and to nobody else, so the first real proof can be shown at all. The public page says it on the frontier's line.
+- **The shape.** The certificate shape with no name asked (`asksName: false`): the funder sets the score to show,
+  0 to 120, and the days; the subject is the condition's own, `hash("viky:subject:toefl-mybest-shown:v1")`, for
+  every gift on it; the person is asked nothing to paste, only "Show it". The "show" sense, goal 13, provider id
+  `viky:provider:toefl-mybest-shown:v1`; the call to sign is in OPERATIONS.
+- **The proof.** The Reclaim provider "TOEFL MyBest Score", pinned (`67ec1b13…`, 1.0.0, one request,
+  `0x881b7539…`), one proof, `scoreValue` on the test's own scale as the metric, `bookingId` as the account's key,
+  no date claimed. Verified by `src/shown-verification.ts` like any shown milestone and relayed to the contract.
+- **Our own provider, for the date and the name.** Written down as a definition to register on the dashboard
+  (`docs/reclaim/toefl-mybest-shown-provider.md`): the same request, two more fields attempted, `testDate` and the
+  name. A provider is built against a real account, so the fields are marked "to confirm" until one has been
+  captured; nothing in the code reads them yet. The day `testDate` comes out, the condition becomes "reach", under
+  its own goal number.
+- **What is not verified, and waits for a person.** No session has been opened on production: the ETS sign-in is
+  the person's own gesture, with the account the gift is for. Until then the flow is exercised without a network
+  (749 rules) and the condition stays "Being built".

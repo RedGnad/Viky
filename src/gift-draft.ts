@@ -147,7 +147,7 @@ export function conditionAnswered(draft: GiftDraft): boolean {
     // Judged exactly as the route will judge it, by the condition's own rules: the test prints a legal name and asks
     // for two words, a course certificate can carry one. The score is the source's own scale, never a number of ours,
     // and where there is nothing to score the funder names the course instead (C3).
-    if (!certificate.validName(draft.subject)) return false;
+    if (certificate.asksName !== false && !certificate.validName(draft.subject)) return false;
     if (certificate.course) return Boolean(draft.course) && certificate.validTarget(target ?? Number.NaN);
     return target !== undefined && certificate.validTarget(target);
   }
