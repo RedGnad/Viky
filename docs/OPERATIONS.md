@@ -336,6 +336,26 @@ the branch being merged. Until it is, the app refuses every attested read with `
 rather than telling somebody to try again: nothing is fetched, nothing is recorded against the gift, and the pass
 holds it instead of settling.
 
+## The proof verifier switch, off
+
+Every attested read verifies the attestor's signature before anything else. Today that check is js-sdk
+`verifyProof`, which fetches the list of attestors from api.reclaimprotocol.org at verification time and refuses any
+other signer, before Viky's own pin (`RECLAIM_ATTESTOR_ADDRESSES`, `DEFAULT_ATTESTORS`) is even consulted. Measured on
+22 Sep 2026 with a proof from an attestor of our own: refused with "Identifier mismatch" whatever the pin said. So no
+variable of Viky can make the app accept another attestor on that path.
+
+`src/proof-verification.ts` holds the other path, behind `PROOF_VERIFIER`:
+
+| `PROOF_VERIFIER` | what checks the signature | network |
+|---|---|---|
+| unset, or `reclaim` | js-sdk `verifyProof`, as before this switch existed | Reclaim's attestor list, at every verification |
+| `local` | the identifier recomputed, the signers recovered, every one of them pinned, the witnesses equal to the signers; and, when `RECLAIM_ATTESTOR_IMAGE_DIGESTS` is set, each witness's enclave attestation verified offline and its image digest pinned | none |
+
+It is off. Turning it on is the founder's decision, taken only once an attestor of ours has run beside Reclaim's for
+a week. When it is turned on in production, `RECLAIM_ATTESTOR_IMAGE_DIGESTS` is set with it: without a pinned digest,
+`local` accepts an attestor that runs outside a TEE, which is a local test setting and nothing else. A refused proof
+says why in the logs (`proofVerifier: "local"`, `refused`), where the screen only says "The proof did not verify".
+
 ## The Safe of three project keys, and how an owner action is signed
 
 One key owns all four contracts today, and it is the founder's own hardware wallet. Two things are wrong with that,
