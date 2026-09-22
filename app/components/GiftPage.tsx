@@ -6,6 +6,7 @@ import { useAccount } from "@/src/account/provider";
 import { catchUpDay } from "@/src/catch-up";
 import { ApiError } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
+import { useReaderZone } from "@/src/client/reader-zone";
 import {
   bindGoalAccount,
   claimGift,
@@ -137,6 +138,8 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
   useMoneySession();
   const money = useDisplayCurrency(address);
   const browser = useSyncExternalStore(never, inBrowser, onServer);
+  /** The clock this reader keeps, so a date says their day and not the server's (D160). */
+  const zone = useReaderZone();
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   const [busy, setBusy] = useState<Busy>("idle");
   const [answer, setAnswer] = useState<{ at: Where; text: string; failed: boolean } | null>(null);
@@ -203,9 +206,9 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
   const nextReading = nowMs === 0 || gift.finished || gift.cancelled ? null : W.nextReading(momentInWords(nextPassMs(COUNTING_PASS_UTC, nowMs), nowMs));
   const openBy =
     moment === "unopened" && !readerIsFunder && daily
-      ? W.openBy(dateInWords((daily.createdAtChain + 14 * 86_400) * 1000), funderName)
+      ? W.openBy(dateInWords((daily.createdAtChain + 14 * 86_400) * 1000, zone), funderName)
       : null;
-  const cameBackOn = milestone?.reachedAtMs ? dateInWords(milestone.reachedAtMs) : daily?.lastReturnAtMs ? dateInWords(daily.lastReturnAtMs) : null;
+  const cameBackOn = milestone?.reachedAtMs ? dateInWords(milestone.reachedAtMs, zone) : daily?.lastReturnAtMs ? dateInWords(daily.lastReturnAtMs, zone) : null;
 
   const live = liveOf({
     moment,
@@ -470,8 +473,8 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
           <p className={BODY}>{M.target(milestone.target, source)}</p>
           <p className={BODY}>
             {readerIsFunder
-              ? M.atDeadlineTheirs(milestoneBy(milestone))
-              : M.atDeadlineYours(milestoneBy(milestone), funderName)}
+              ? M.atDeadlineTheirs(milestoneBy(milestone, zone))
+              : M.atDeadlineYours(milestoneBy(milestone, zone), funderName)}
           </p>
           {milestone.startReading !== null ? <p className={HELP}>{M.startedAt(milestone.startReading)}</p> : null}
         </>
@@ -485,7 +488,7 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
           <p className={BODY}>{readerIsFunder ? W.comesBackToYou : W.goesBackToThem(funderName)}</p>
         </>
       ) : null}
-      {readerIsFunder ? <p className={HELP}>{W.made(dateInWords(status.createdAtChain * 1000), giftId)}</p> : null}
+      {readerIsFunder ? <p className={HELP}>{W.made(dateInWords(status.createdAtChain * 1000, zone), giftId)}</p> : null}
     </>
   );
 
@@ -496,7 +499,7 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
         <p className={HELP}>{voice === "recipient" ? (words?.reads ?? "") : (words?.readsTheirs ?? "")}</p>
       ) : null}
       {milestone ? (
-        <p className={HELP}>{readerIsFunder ? M.ruleTheirs(milestone.target, milestoneBy(milestone), settlingTimeInWords(nowMs)) : M.ruleYours(milestone.target, milestoneBy(milestone), settlingTimeInWords(nowMs))}</p>
+        <p className={HELP}>{readerIsFunder ? M.ruleTheirs(milestone.target, milestoneBy(milestone, zone), settlingTimeInWords(nowMs, zone)) : M.ruleYours(milestone.target, milestoneBy(milestone, zone), settlingTimeInWords(nowMs, zone))}</p>
       ) : null}
       {daily && !stripFromRecordSafe(daily, nowMs) ? <p className={HELP}>{W.fromCountsNote}</p> : null}
       {/* Asking for a reading now, and being told each morning: neither is the moment's action, so neither is
@@ -568,8 +571,8 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
 }
 
 /** "by 17 Oct 2026" once the first reading has started the clock, "within 30 days of connecting" before it (D46). */
-function milestoneBy(status: MilestoneStatus): string {
-  return status.deadlineMs === null ? M.withinDays(status.durationDays) : M.byDate(dateInWords(status.deadlineMs));
+function milestoneBy(status: MilestoneStatus, zone: string): string {
+  return status.deadlineMs === null ? M.withinDays(status.durationDays) : M.byDate(dateInWords(status.deadlineMs, zone));
 }
 
 /** The dates a daily gift runs between, or how long it runs once it is connected. */

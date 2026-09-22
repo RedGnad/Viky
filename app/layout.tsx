@@ -1,7 +1,8 @@
 import { SerwistProvider } from "@serwist/turbopack/react";
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { signedInAccount } from "@/src/who-is-reading";
+import { signedInAccount, zoneOfTheReader } from "@/src/who-is-reading";
+import { ReaderZoneProvider } from "@/src/client/reader-zone";
 import { APPEARANCE_COOKIE } from "@/src/theme";
 import { loadPreferences } from "@/src/preferences-store";
 import type { ReactNode } from "react";
@@ -129,6 +130,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
    */
   const money = await moneyForTheReader(signedIn);
   const keptCard = await cardThisDeviceKept();
+  const zone = await zoneOfTheReader();
   return (
     // The look's font variables sit on the document itself, because app/globals.css reads them from :root.
     <html lang="en" dir="ltr" className={`${fredoka.variable} ${dmSans.variable}`} {...(chosen ? { "data-theme": chosen } : {})}>
@@ -145,7 +147,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           {/* A press a finger can see, on every control, once (D154). */}
           <Pressed />
           <AccountProvider initialAccount={signedIn}>
-            <MoneyStartProvider start={{ currency: money.currency, decided: money.decided, rates: money.rates, card: keptCard }}>{children}</MoneyStartProvider>
+            <MoneyStartProvider start={{ currency: money.currency, decided: money.decided, rates: money.rates, card: keptCard }}>
+              <ReaderZoneProvider zone={zone}>{children}</ReaderZoneProvider>
+            </MoneyStartProvider>
           </AccountProvider>
         </SerwistProvider>
       </body>

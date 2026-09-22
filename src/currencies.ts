@@ -22,6 +22,13 @@ import type { Rates } from "./rates";
 /** What is offered when a source says nothing: the three the product was built on, and no more. */
 export const CURRENCIES_WHEN_SILENT: readonly string[] = ["USD", "EUR", "XOF"];
 
+/**
+ * Currencies Viky does not offer, whatever the rails and the rate file say. The funder's decision of 22 Sep 2026,
+ * which is the only kind of entry this list takes: a rail's silence is read from the rail, and a rate's absence
+ * from the file, but a currency the product chooses not to propose can only be written down.
+ */
+export const NOT_OFFERED: ReadonlySet<string> = new Set(["ILS"]);
+
 /** The shape of a currency a screen draws: the code, its sign, its name, and what it counts in. */
 export type Currency = Readonly<{ code: string; sign: string; name: string; decimals: number }>;
 
@@ -88,7 +95,7 @@ export function perDollar(code: string, rates: Rates | undefined): number | unde
  */
 export function offeredCurrencies(payable: readonly string[] | null, rates: Rates | undefined): readonly string[] {
   if (!payable || payable.length === 0 || !rates) return CURRENCIES_WHEN_SILENT;
-  const offered = payable.filter((code) => isCurrencyCode(code) && perDollar(code, rates) !== undefined);
+  const offered = payable.filter((code) => isCurrencyCode(code) && !NOT_OFFERED.has(code) && perDollar(code, rates) !== undefined);
   // The dollar is what the chain holds, so it is offered whatever a rail says about paying it out.
   if (!offered.includes("USD")) offered.push("USD");
   if (offered.length < CURRENCIES_WHEN_SILENT.length) return CURRENCIES_WHEN_SILENT;

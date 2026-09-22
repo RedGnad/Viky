@@ -4356,3 +4356,20 @@ que le probleme est STRUCTUREL."
   that has one. That is named here rather than hidden.
 - **Not done.** The way out still leads with the dollar. `/cash-out` reads its own money in the browser: it is a
   task reached by a press, not a screen somebody lands on.
+- **Measured on production after the merge, and one more found.** The landing: one fade, one state at 507 ms, the
+  euro in the first byte. The gift's screen: "One moment" gone, but the fade played twice on the same page, and the
+  console said why: React error 418, the server's text and the browser's did not match. A date. The server wrote
+  "26 Sep 2026" in UTC and a phone in New York wrote the 25th; the settling hour, "2:00 your time", the same. Nothing
+  zone-dependent had ever been drawn by the server before today, so nothing had ever disagreed. **The zone travels
+  now as the currency does**, in a cookie (`viky.zone`), and `dateInWords` and `settlingTimeInWords` take it. Until
+  the cookie exists the server says UTC and the browser starts from UTC with it, then corrects the dates once and
+  writes the cookie; every visit after is right in the first byte. Verified in a development build, where React
+  names the text: no complaint on the gift's screen from New York, none on Home from Auckland.
+
+## D161, 22 Sep 2026: the shekel is not offered
+
+The funder: "enlève la devise israélienne, on ne la propose pas dans notre app." The list of currencies is not
+written down (D152): it is what the rails pay and the rate file converts, and the shekel was in both, so it was
+offered. A currency the product chooses not to propose can only be written down, so `NOT_OFFERED` in
+`src/currencies.ts` is the one list of its kind, with the reason each entry is there. It is out of the sheet, and a
+cookie or an account row that still names it is ignored: such a device reads in what its language proposes.

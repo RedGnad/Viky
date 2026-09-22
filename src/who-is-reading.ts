@@ -1,6 +1,7 @@
 import { cookies, headers } from "next/headers";
 import type { Address } from "viem";
 import { ACCOUNT_AUTH_COOKIE_NAME, normalizedOrigin, readAccountAuthSessionFrom } from "./account-auth-server";
+import { isZone, ZONE_COOKIE } from "./moments";
 
 /**
  * The account this browser is signed in as, read from the session cookie while a page renders (D156, D160).
@@ -21,5 +22,20 @@ export async function signedInAccount(): Promise<Address | undefined> {
     return readAccountAuthSessionFrom(store.get(ACCOUNT_AUTH_COOKIE_NAME)?.value ?? null, normalizedOrigin(`${proto}://${host}`)).account;
   } catch {
     return undefined;
+  }
+}
+
+/**
+ * The clock this reader keeps, from the cookie their browser wrote, or UTC (D160). UTC rather than this machine's
+ * own zone on purpose: the browser starts from the same answer, so the first render of a device that has never been
+ * here says exactly what the server said, and corrects itself once rather than throwing the page away.
+ */
+export async function zoneOfTheReader(): Promise<string> {
+  try {
+    const kept = (await cookies()).get(ZONE_COOKIE)?.value;
+    const named = kept ? decodeURIComponent(kept) : undefined;
+    return isZone(named) ? named : "UTC";
+  } catch {
+    return "UTC";
   }
 }
