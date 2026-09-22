@@ -67,6 +67,11 @@ test("what nobody can check is listed with what was read, and it is not pretende
     assert.ok(frontier.why.length > 60, `${frontier.id} says why, not just that`);
   }
   assert.deepEqual(FRONTIERS.map((frontier) => frontier.id), ["supervised-exams", "state-diplomas", "school-marks"]);
+  // Each line says whether the other reading is being built for it (D163): the exams, and only they, today.
+  for (const frontier of FRONTIERS) assert.ok(frontier.building === null || /\.$/.test(frontier.building), `${frontier.id} says it in a sentence`);
+  assert.deepEqual(FRONTIERS.filter((frontier) => frontier.building).map((frontier) => frontier.id), ["supervised-exams"]);
+  assert.match(String(FRONTIERS[0].building), /SHOWN BY THEM/, "and it names the two words the condition will carry");
+  assert.match(stateWords("no-public-page").meaning, /^No public page shows it\. The person can show it from their own account, and Viky is building that\.$/);
   // Each line rests on a page read on a day, and the two read from a source's own site say which day.
   assert.match(String(FRONTIERS.find((frontier) => frontier.id === "supervised-exams")?.why), /19 Sep 2026/);
   assert.match(String(FRONTIERS.find((frontier) => frontier.id === "state-diplomas")?.why), /diplome\.gouv\.fr/);
