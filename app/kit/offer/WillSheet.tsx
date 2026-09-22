@@ -12,6 +12,7 @@ import { smallestTarget } from "@/src/milestone-terms";
 import { FUND, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
 import { HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
+import { Nature } from "../Nature";
 import { Field } from "../Field";
 import { Sheet } from "../Sheet";
 
@@ -261,6 +262,7 @@ export function WillSheet({
               options={section.conditions.map((option) => ({
                 value: option.id,
                 label: option.name,
+                tag: <Nature nature={option.nature} />,
                 help: option.live ? option.help : `${option.help} ${M.operatorOnly}`,
               }))}
             />
@@ -276,7 +278,8 @@ export function WillSheet({
             options={offered.map((option) => ({
               value: option.id,
               label: option.name,
-              help: option.live ? option.help : `${option.help} ${M.operatorOnly}`,
+              tag: <Nature nature={option.nature} />,
+                help: option.live ? option.help : `${option.help} ${M.operatorOnly}`,
             }))}
           />
         )

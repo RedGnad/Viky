@@ -2,6 +2,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useReaderZone } from "@/src/client/reader-zone";
+import { Nature } from "./Nature";
 import { conditionById, conditionOfGoal } from "@/src/conditions";
 import type { GiftSummary } from "@/src/client/gift";
 import type { MilestoneStatus } from "@/src/milestone-view";
@@ -38,6 +39,7 @@ export function GiftCard({ gift, milestone: given, still = false, example = fals
       label={W.fromFunderOrYours(gift.role === "funder" ? null : gift.funderName)}
       title={whoInWords(gift)}
       under={condition?.name ?? ""}
+      nature={condition ? <Nature nature={condition.nature} /> : null}
       chevron={!still && !example}
       /*
         A daily gift's card draws its days, except at the head of its own page, where the row of days below says it once.
@@ -85,11 +87,12 @@ export function CardFace({
   badge,
   title,
   under,
+  nature,
   detail,
   chevron = false,
   shape,
   bottom,
-}: Readonly<{ label?: ReactNode; badge?: ReactNode; title: ReactNode; under: ReactNode; detail?: ReactNode; chevron?: boolean; shape: ReactNode; bottom: ReactNode }>) {
+}: Readonly<{ label?: ReactNode; badge?: ReactNode; title: ReactNode; under: ReactNode; nature?: ReactNode; detail?: ReactNode; chevron?: boolean; shape: ReactNode; bottom: ReactNode }>) {
   return (
     <>
       {badge}
@@ -99,6 +102,7 @@ export function CardFace({
         <span className="flex min-w-0 flex-col gap-[var(--space-xs)]">
           <span className={`${CARD_TITLE} break-words`}>{title}</span>
           <span className={BODY}>{under}</span>
+          {nature}
         </span>
         {chevron ? (
           <svg aria-hidden focusable="false" width="24" height="24" viewBox="0 0 24 24" className="mt-[2px] shrink-0">

@@ -145,10 +145,19 @@ export type ConditionCourse = Readonly<{
   wholeProfile: string;
 }>;
 
+/**
+ * The two natures of a condition (D162): read for the person by Viky, from a page anybody can open, without a
+ * gesture; or shown by the person, from their own account, one gesture at a time. It is printed as two words on the
+ * chooser, on the card and on the catalogue, and nowhere else.
+ */
+export type ConditionNature = "read" | "shown";
+
 export type Condition = Readonly<{
   /** Stable, and what a gift's terms could name one day; never printed. */
   id: string;
   kind: ConditionKind;
+  /** Read for them, or shown by them. Every condition of the pilot is read: a shown one is a different promise. */
+  nature: ConditionNature;
   /** The contract's goal type for a daily condition; a milestone lives on its own contract and has none. */
   goalType: number | null;
   /** Wired from end to end. Only these are offered on "What will they do?". */
@@ -243,6 +252,7 @@ export type RecipientWords = Readonly<{
 export const DUOLINGO_DAILY: Condition = {
   id: "duolingo-daily",
   kind: "daily",
+  nature: "read",
   goalType: GOAL_TYPE_DUOLINGO_XP,
   live: true,
   state: "open",
@@ -327,6 +337,7 @@ export const DUOLINGO_DAILY: Condition = {
 export const CHESS_RATING: Condition = {
   id: "chess-rating",
   kind: "milestone",
+  nature: "read",
   goalType: null,
   live: true,
   state: "open",
@@ -377,6 +388,7 @@ export const CHESS_RATING: Condition = {
 export const CHESS_TACTICS_RECORD: Condition = {
   id: "chess-tactics",
   kind: "milestone",
+  nature: "read",
   goalType: null,
   live: true,
   state: "open",
@@ -421,6 +433,7 @@ export const CHESS_TACTICS_RECORD: Condition = {
 export const DUOLINGO_ENGLISH_TEST: Condition = {
   id: "duolingo-english-test",
   kind: "milestone",
+  nature: "read",
   goalType: null,
   // Open since 19 Sep 2026: goal 5 is registered on the milestone contract, which was the only thing between this and
   // a gift being creatable on it (D109). What is not settled has not gone away, and it is on the judges page: the
@@ -450,6 +463,7 @@ export const DUOLINGO_ENGLISH_TEST: Condition = {
 export const COURSERA_CERTIFICATE: Condition = {
   id: "coursera-certificate",
   kind: "milestone",
+  nature: "read",
   goalType: null,
   // Open on 20 Sep 2026, with goal 10 registered on the milestone contract, so a gift can be made on it (D109). What
   // their terms ask about an automated reading is on the judges page, where what a reading is worth is written, and
@@ -485,6 +499,7 @@ export const COURSERA_CERTIFICATE: Condition = {
 export const CREDLY_BADGE: Condition = {
   id: "credly-badge",
   kind: "milestone",
+  nature: "read",
   goalType: null,
   live: true,
   state: "open",

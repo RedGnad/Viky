@@ -197,7 +197,8 @@ test.describe("the screens a person meets", () => {
     // One row explains itself and no other: the one the card already carries (the card opens filled).
     const conditions = sheet.getByRole("radio");
     await expect(conditions).not.toHaveCount(0);
-    const explained = async () => body.evaluate((element) => [...element.querySelectorAll("label span span + span")].length);
+    // A row explains itself when its column holds more than its name: the nature and the help (D162), or the help alone.
+    const explained = async () => body.evaluate((element) => [...element.querySelectorAll("label")].filter((label) => label.querySelectorAll(":scope > span > span").length > 1).length);
     expect(await explained()).toBe(1);
     // The one the card carries, by its own name: the catalogue is ordered by title inside a family, so "first" is
     // whatever the register's words sort to, and that is not what this check is about.

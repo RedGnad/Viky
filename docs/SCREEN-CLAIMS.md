@@ -76,6 +76,7 @@ it is the register's own, so the page cannot say one thing while the product doe
 | "Waiting for the source's answer" on the Duolingo English Test and on Coursera | neither is offered to anybody, and what holds each one is that source's own terms | `live: false` keeps both out of `liveConditions()`; the two lines name the clauses read on 18 Sep 2026 and recorded in `docs/reports/2026-09-18-supervised-results.md` | `test/condition-states.test.ts` (each says what has to happen first, and names the terms) |
 | "No public page exists" on exam results, state diplomas and school marks | nobody can check them, us included, and each line says what was read to know that | `FRONTIERS` in `src/conditions.ts`: Cambridge English's, IELTS's and ETS's own pages and diplome.gouv.fr, all read on 19 Sep 2026 | `test/condition-states.test.ts` (each carries a reason and the day it was read) |
 | on the judges page, "Chess.com, being tested" under a condition's name | a judge and a funder are told the same state in the same words | `stateWords(condition.state)` in `app/judges/JudgesConditions.tsx`, the register's own words | `test/condition-states.test.ts` |
+| "READ FOR YOU" under a condition's name here, on the chooser's line, and on a gift's card under the condition (on Home, on Gifts, and at the head of the gift's own page); "SHOWN BY THEM" on a condition the person proves from their own account | the two words are the condition's nature in the register and nothing a screen decides; every condition of the pilot is read for the person; a shown condition exists only with its own decision (D162) | `nature` on each entry of `src/conditions.ts`, printed by `app/kit/Nature.tsx` in the meta voice, in exactly three places | `test/condition-states.test.ts` (every condition has a nature, none of the pilot is shown), `test/design-tokens.test.ts` (the voice, the two words, the three places and nowhere else), `test/browser/nature.spec.ts` (the words on the sheet and the catalogue, none on the landing outside the sheet, none on the account screen) |
 
 ## Offering a gift: the card on Home, and the screen that pays for it
 
@@ -168,6 +169,19 @@ mockup `gift.html` decides what that looks like. `MilestoneGiftPage.tsx` is gone
 | the morning message: "Yesterday counted. $3.57 is yours." to the person it is for, "Léa did yesterday's lesson. $3.57 is theirs." to the funder, "Yesterday went back to Maman. Today still counts." and "Yesterday came back to you: $3.57." | what the contract settled for that day, and a day's share of the gift | `settledDaysFromLogs` from the settling receipt, then `perDay` read back from the contract; the sentence is chosen by side, and the name only when the gift carries one | `test/morning-message.test.ts`, `test/morning-send.test.ts` |
 | "You reached it. $60.00 is yours." and "The time is up. $60.00 came back to you." | the milestone the contract judged reached, or expired, and the whole amount | the milestone pass's own outcome (`reached`, a sent `expire`), the amount from the gift's record | `test/morning-send.test.ts` |
 | "Tell me each morning", then "Viky tells you each morning." and "Stop telling me"; on an iPhone in Safari, "Add Viky to your Home Screen first." | Viky can only notify an installed web app on iOS, and only after a press (webkit.org, 16 Feb 2023) | `morningStep`; the permission is requested in the button's own callback and nowhere else | `test/morning-message.test.ts` |
+
+### A condition the person shows (D162)
+
+`app/kit/ShowProof.tsx` on a gift's page, and the head of that page in `app/components/GiftPage.tsx`. No condition
+of the pilot is shown yet, so today these sentences are printed for nobody; they are listed so the day one is
+(PR 2) the words already answer to the code.
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "Show it", one button, to the person the gift is for | pressing it opens a Reclaim verification on the source's own sign-in, and what comes back is checked on the server with the TEE attestation required, then relayed to the milestone contract | `runShownProof` in `src/client/gift.ts`, `/api/proof/session` and `/api/proof/verify`, `src/shown-verification.ts` | `test/shown-verification.test.ts` (one success, sixteen typed refusals), `test/proof-route.test.ts` |
+| "Shown on 25 Sep 2026." at the head of a shown gift, to the funder and to the person alike, instead of a meter or a row of days; "Nothing shown yet." before | the day is the attestor's own time of the proof that reached the target, read from the gift's history, and nothing is drawn as shown until the contract has taken it | `reachedAtMs` of the milestone status, `dateInWords(…, zone)` in the reader's clock | `test/milestone-status.test.ts`, `test/reader-money.test.ts` (the clock) |
+| "Shown: 97. It is yours." once the proof is taken | the number is the one the attestation carried and the contract compared with the target | `metricValue` of the verify route's answer, the same value signed in the `Proof` attestation | `test/shown-verification.test.ts` |
+| the character at the head of the page smiles once when the proof is taken | the same expression as a day earned, from the button, once, and back to rest by itself; nothing on a clock | `feel("happy", button, true)` in `app/kit/ShowProof.tsx`, `app/kit/mood.ts` | `test/motion.test.ts` (nothing plays on a clock, nothing repeats) |
 
 ## The way out
 
