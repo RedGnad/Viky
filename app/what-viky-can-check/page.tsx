@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { catalogueSections, FRONTIERS, STATES, stateWords } from "@/src/conditions";
+import { catalogueSections, FRONTIER_PROGRESS, FRONTIERS, STATES, stateWords } from "@/src/conditions";
 import { CATALOGUE as W, ME } from "@/src/sentences";
 import { HELP, DISPLAY, TITLE } from "../components/ui";
 import { Nature } from "../kit/Nature";
@@ -54,6 +54,8 @@ export default function Page() {
             <p className={HELP}>
               <span className="font-medium text-[var(--text)]">{stateWords(frontier.state).title}.</span> {frontier.why}
             </p>
+            {/* Which of these Viky is building the other reading for, said on the line itself (D163). */}
+            <p className={HELP}>{frontier.building ? FRONTIER_PROGRESS.building(frontier.building) : FRONTIER_PROGRESS.notBuilding}</p>
           </div>
         ))}
       </section>

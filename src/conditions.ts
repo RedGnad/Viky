@@ -78,7 +78,7 @@ export const STATES: readonly Readonly<{ id: ConditionState; title: string; mean
   {
     id: "no-public-page",
     title: "No public page exists",
-    meaning: "There is no page about one person that anybody can open, so nobody can check it: not Viky, not you.",
+    meaning: "No public page shows it. The person can show it from their own account, and Viky is building that.",
   },
 ];
 
@@ -527,11 +527,27 @@ export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, C
  * code. They are here so the public page can say so in the same words as the rest, rather than leave a whole kind of
  * gift looking like an oversight. Each `why` is what was read on the sources' own pages, on the day it names.
  *
- * "No public page exists" is about a page anybody can open, which is the only kind of reading Viky does today. It is
- * not a claim that nothing could ever be proved: a person signing in to their own account and proving what they see
- * there is a different reading, and it is not built.
+ * "No public page exists" is about a page anybody can open, which is the reading Viky does without a gesture. It is
+ * not a claim that nothing could ever be proved: a person signing in to their own account and showing what they see
+ * there is the other reading (D162), and each line says whether Viky is building it for that one.
  */
-export type Frontier = Readonly<{ id: string; name: string; state: ConditionState; why: string }>;
+export type Frontier = Readonly<{
+  id: string;
+  name: string;
+  state: ConditionState;
+  why: string;
+  /**
+   * Whether Viky is building the other reading for it, the one the person shows from their own account (D162), said
+   * on the line so a reader knows which of these is on its way and which is not (the founder, 22 Sep 2026).
+   */
+  building: string | null;
+}>;
+
+/** The two sentences a frontier line ends on. */
+export const FRONTIER_PROGRESS = {
+  building: (what: string) => `Being built: ${what}`,
+  notBuilding: "Not being built.",
+} as const;
 
 export const FRONTIERS: readonly Frontier[] = [
   {
@@ -539,18 +555,21 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "A Cambridge, IELTS or TOEFL result",
     state: "no-public-page",
     why: "The result goes to institutions. Checking one means an account an organisation applies for, opened with numbers the candidate hands over, and nothing about one person that anybody else can open. Read on 19 Sep 2026 on Cambridge English's, IELTS's and ETS's own pages.",
+    building: "a TOEFL score the person shows from their own ETS account, with the two words SHOWN BY THEM on it.",
   },
   {
     id: "state-diplomas",
     name: "A state diploma",
     state: "no-public-page",
     why: "In France the holder draws an attestation from the state's own service, and a check needs the control key printed on it. Nothing anybody can open, and what a program could read would be that attestation rather than the diploma. Read on 19 Sep 2026 on diplome.gouv.fr.",
+    building: null,
   },
   {
     id: "school-marks",
     name: "School marks",
     state: "no-public-page",
     why: "They live in a school's own portal, which opens for the family and for nobody else. No source publishes a page about a pupil.",
+    building: null,
   },
 ];
 

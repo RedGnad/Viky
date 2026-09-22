@@ -4434,3 +4434,16 @@ settles a milestone (form 1) exactly as a reading does; the contract does not ch
 - **Not done here, by order.** The TOEFL condition and our own provider (PR 2);
   the measured gesture on real devices (PR 4, the founder's or a tester's phones, never a number from here); the
   public page's sentence (PR 5).
+
+## D163, 22 Sep 2026: the public page says what is being built, line by line
+
+The founder, point 5 of the shown-proof plan: "so nobody can check it: not Viky, not you" becomes "No public page
+shows it. The person can show it from their own account, and Viky is building that." And the three lines of the
+frontier say which of them are on their way.
+
+- The state "No public page exists" keeps its title and changes its sentence to the founder's. It was true and it
+  is still true: it said what a public page cannot do; it now also says what the other reading (D162) can.
+- Each frontier line ends on one of two sentences: "Being built: a TOEFL score the person shows from their own ETS
+  account, with the two words SHOWN BY THEM on it." on the exams, "Not being built." on state diplomas and school
+  marks. A guard holds that exactly the exams are being built; adding a second is a decision, not a default.
+- Nothing else on the page moves: the conditions, their natures and their states are as D162 left them.
