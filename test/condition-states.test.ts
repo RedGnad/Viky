@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { catalogueSections, CONDITIONS, FAMILIES, FRONTIERS, liveConditions, STATES, stateWords } from "../src/conditions";
+import { BUILDING, catalogueSections, conditionById, CONDITIONS, FAMILIES, FRONTIERS, liveConditions, STATES, stateWords } from "../src/conditions";
 import { CATALOGUE } from "../src/sentences";
 
 /**
@@ -136,5 +136,12 @@ test("it is reachable without an account and from the judges page, and it says t
  */
 test("every condition says its nature, and every one of the pilot is read for the person", () => {
   for (const condition of CONDITIONS) assert.ok(condition.nature === "read" || condition.nature === "shown", `${condition.id} has no nature`);
-  assert.deepEqual(CONDITIONS.filter((condition) => condition.nature === "shown").map((condition) => condition.id), [], "a shown condition is added with its own decision, not by default");
+  assert.deepEqual(CONDITIONS.filter((condition) => condition.nature === "shown").map((condition) => condition.id), [], "no shown condition is in the register until a real proof has run end to end (D109, D164)");
+  // The one being built lives beside the register, resolvable by id and offered to an operator alone (D164).
+  assert.deepEqual(BUILDING.map((condition) => condition.id), ["toefl-mybest-shown"]);
+  const shown = conditionById("toefl-mybest-shown");
+  assert.equal(shown?.nature, "shown");
+  assert.equal(shown?.live, false, "not open until a real proof has run end to end, then the founder's word");
+  assert.equal(shown?.state, "no-public-page", "its state is the one whose sentence is exactly its own");
+  assert.ok(!CONDITIONS.includes(shown as never), "and it is not on the public page as a condition: the frontier's line says it is being built");
 });

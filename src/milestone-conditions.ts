@@ -8,6 +8,7 @@ import {
   COURSERA_CERTIFICATE as COURSERA_CONDITION,
   DUOLINGO_ENGLISH_TEST,
   type Condition,
+  TOEFL_MYBEST_SHOWN,
 } from "./conditions";
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
 import { CREDLY_DURATION_DAYS, CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyBadgeIdOf, credlyPairOf, credlySubject } from "./credly-badge";
@@ -23,6 +24,7 @@ import {
   DET_SOURCE,
 } from "./duolingo-english-test";
 import { DET_GOAL_TYPE } from "./milestone-goals";
+import { isValidToeflScore, TOEFL_DURATION_DAYS, TOEFL_GOAL_TYPE, TOEFL_MAX_SCORE, TOEFL_MIN_SCORE, TOEFL_SHOWN_SUBJECT } from "./toefl-shown";
 import { CERTIFICATE as CERTIFICATE_SHAPE, CHESS_RATING as CHESS_RATING_SHAPE, type MilestoneShape } from "./milestone-terms";
 
 /**
@@ -239,8 +241,13 @@ export type CertificateCondition = Readonly<{
   shape: MilestoneShape;
   /** The goal type on the milestone contract; its shape is fixed there when the goal is registered. */
   goalType: number;
-  /** Viky's route that reads a pasted certificate, plainly, before any money moves. */
-  readPath: string;
+  /** Viky's route that reads a pasted certificate, plainly, before any money moves. A shown condition has none. */
+  readPath?: string;
+  /**
+   * Whether the funder types the person's name into the terms. A certificate binds a printed name; a proof shown
+   * from an account binds the account and carries no name, so its subject is constant and nothing is asked (D164).
+   */
+  asksName?: boolean;
   /** True of something that could be a link to this source's certificate. */
   validLink: (value: string) => boolean;
   /**
@@ -534,9 +541,67 @@ export const CREDLY_MILESTONE: CertificateCondition = {
   },
 };
 
-const CERTIFICATES: readonly CertificateCondition[] = [DET_MILESTONE, COURSERA_MILESTONE, CREDLY_MILESTONE];
 
 /** The certificate detail of a condition, or nothing when the condition is not one. */
+/**
+ * A TOEFL score shown from the person's own ETS account (D164): the certificate shape, asking the funder a score
+ * and a length and no name, and asking the person nothing to paste. What the funder signs is the one subject every
+ * gift on this condition carries, the score to show, and a date.
+ */
+export const TOEFL_SHOWN_MILESTONE: CertificateCondition = {
+  condition: TOEFL_MYBEST_SHOWN,
+  shape: CERTIFICATE_SHAPE,
+  goalType: TOEFL_GOAL_TYPE,
+  asksName: false,
+  validLink: () => false,
+  validName: () => true,
+  validTarget: isValidToeflScore,
+  subject: () => TOEFL_SHOWN_SUBJECT,
+  target: {
+    label: "The score they show",
+    help: "The TOEFL iBT total is scored from 0 to 120. Universities most often ask for something between 80 and 100.",
+    min: TOEFL_MIN_SCORE,
+    max: TOEFL_MAX_SCORE,
+    step: 1,
+    suggested: 90,
+    inWords: (value) => `${value} on the TOEFL`,
+  },
+  duration: TOEFL_DURATION_DAYS,
+  words: {
+    detailQuestion: "The score to show",
+    nameLabel: "",
+    nameHelp: "",
+    linkLabel: "",
+    linkHelp: "",
+    whatIsRead: "Viky keeps the score the proof carries and the booking it belongs to, and nothing else. Your ETS password never reaches Viky.",
+    check: "",
+    checking: "",
+    goal: (target) => `Show a TOEFL score of at least ${target}`,
+    mustShow: (_name, target) => `A score of ${target} or more, shown from the person's own ETS account. When it was earned is not read.`,
+    durationLabel: "How long do they have?",
+    durationHelp: "The score has to be shown inside that time, and the day it is shown is what counts.",
+    durationShape: (min, max) => `Between ${min} and ${max} days.`,
+    durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
+    whenReached: "When they show that score, all of this becomes theirs",
+    ifNot: "If they do not show it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    refusals: {
+      targetShape: `A score between ${TOEFL_MIN_SCORE} and ${TOEFL_MAX_SCORE}.`,
+      nameShape: "",
+      linkShape: "",
+      notPublic: "",
+      expired: "",
+      notFound: "",
+      unavailable: "The proof could not be checked right now. Try again in a moment.",
+      anotherName: "",
+      below: (target, score) => `That score is ${score}. This gift is for ${target}.`,
+      beforeTheGift: "",
+      afterTheDeadline: "That was shown after this gift's last day.",
+    },
+  },
+};
+
+const CERTIFICATES: readonly CertificateCondition[] = [DET_MILESTONE, COURSERA_MILESTONE, CREDLY_MILESTONE, TOEFL_SHOWN_MILESTONE];
+
 export function certificateOf(condition: Condition | undefined): CertificateCondition | undefined {
   if (!condition || condition.kind !== "milestone") return undefined;
   return CERTIFICATES.find((entry) => entry.condition.id === condition.id);

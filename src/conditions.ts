@@ -518,7 +518,43 @@ export const CREDLY_BADGE: Condition = {
   },
 };
 
+/**
+ * The first condition of the second nature (D162, D164): a score the person shows from their own ETS account. Not
+ * open, and on the page under the state whose sentence is exactly its own: no public page shows it, the person can
+ * show it, and Viky is building that. It opens the day a real proof has run end to end, and on the founder's word.
+ */
+export const TOEFL_MYBEST_SHOWN: Condition = {
+  id: "toefl-mybest-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  live: false,
+  state: "no-public-page",
+  beforeItOpens: "A score shown from a real ETS account, end to end, then the founder's word.",
+  source: "ETS",
+  family: "language",
+  name: "A TOEFL score, shown",
+  help: "A score they hold, shown from their own ETS account; when it was earned is not read. It proves the account that signed in, not who sat the test.",
+  link: { kind: "link", label: "Show it from your ETS account", help: "Press Show it on your gift's page and sign in to ETS in the tab that opens. Nothing to paste." },
+  reading: "toefl-mybest-shown",
+  words: {
+    earnedDay: "When they show that score, all of this becomes theirs",
+    connect: "Opened. Show the score from your ETS account when you are ready.",
+    doIt: "Press Show it and sign in to ETS in the tab that opens. The score on your account is what counts.",
+    eachDay: "the day it is shown",
+    preview: "A TOEFL score, shown from your own ETS account: the gift is yours when you show it.",
+  },
+};
+
 export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, CREDLY_BADGE];
+
+/**
+ * What is wired and not in the register yet (D109, D164): a gift can be made on it by an account that runs Viky, so
+ * the first real proof can be shown at all, and nobody else meets it anywhere. The public page says it is being
+ * built on the frontier's own line; the day its goal is registered and a real proof has run, it moves into the
+ * register above, live, and this list is empty again.
+ */
+export const BUILDING: readonly Condition[] = [TOEFL_MYBEST_SHOWN];
 
 /**
  * What people ask for and no source lets anybody check, with the reading each line rests on (design audit, section 5).
@@ -584,7 +620,7 @@ export function conditionOfGoal(goalType: number): Condition | undefined {
 }
 
 export function conditionById(id: string): Condition | undefined {
-  return CONDITIONS.find((condition) => condition.id === id);
+  return CONDITIONS.find((condition) => condition.id === id) ?? BUILDING.find((condition) => condition.id === id);
 }
 
 /** One section of the chooser: a family, its title, and the conditions offered inside it, alphabetically. */

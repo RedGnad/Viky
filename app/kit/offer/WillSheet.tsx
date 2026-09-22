@@ -341,7 +341,7 @@ export function WillSheet({
             same kind. For a test that is the score. For a course certificate there is nothing to score, so it is the
             course, named by pasting its ordinary link: the certificate page carries the same word (C3).
           */}
-          {certificate ? (
+          {certificate && certificate.asksName !== false ? (
             <>
               <Field
                 id="person-name"

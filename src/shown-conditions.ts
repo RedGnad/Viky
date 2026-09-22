@@ -1,6 +1,7 @@
 import { DUOLINGO_OWNERSHIP_REQUEST_HASH, DUOLINGO_PROVIDER_ID, DUOLINGO_PROVIDER_VERSION, DUOLINGO_XP_REQUEST_HASH } from "./duolingo-proof-policy";
 import { DUOLINGO_SESSION_PROVIDER_ID } from "./gift-terms";
 import { refuseShown, type ShownCondition } from "./shown-proof";
+import { TOEFL_RECLAIM_PROVIDER, TOEFL_SHOWN_SUBJECT, toeflScoreOf, toeflShownProviderId } from "./toefl-shown";
 
 /**
  * The conditions a person proves by showing their own account, in one register (D162).
@@ -43,7 +44,30 @@ export const DUOLINGO_SHOWN: ShownEntry = {
   },
 };
 
-export const SHOWN_CONDITIONS: readonly ShownEntry[] = [DUOLINGO_SHOWN];
+/**
+ * A TOEFL score shown from the person's own ETS account (D164): one proof, one field that counts. The booking id the
+ * provider also extracts is kept as the key of the account, never printed.
+ */
+export const TOEFL_SHOWN: ShownEntry = {
+  kind: "milestone",
+  subject: TOEFL_SHOWN_SUBJECT,
+  condition: {
+    conditionId: "toefl-mybest-shown",
+    providerId: TOEFL_RECLAIM_PROVIDER.id,
+    providerVersion: TOEFL_RECLAIM_PROVIDER.version,
+    requestHashes: [TOEFL_RECLAIM_PROVIDER.requestHash],
+    proofCount: 1,
+    phases: ["reach"],
+    attestationProviderId: toeflShownProviderId(),
+    read: (fields) => {
+      const score = toeflScoreOf(fields.scoreValue);
+      if (score === undefined) refuseShown("INVALID_SCORE", "The page showed no score on the test's own scale");
+      return { metricValue: BigInt(score), eventAt: null, accountKey: fields.bookingId ?? null };
+    },
+  },
+};
+
+export const SHOWN_CONDITIONS: readonly ShownEntry[] = [DUOLINGO_SHOWN, TOEFL_SHOWN];
 
 export function shownConditionById(conditionId: string): ShownEntry | undefined {
   return SHOWN_CONDITIONS.find((entry) => entry.condition.conditionId === conditionId);

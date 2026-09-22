@@ -170,6 +170,18 @@ mockup `gift.html` decides what that looks like. `MilestoneGiftPage.tsx` is gone
 | "You reached it. $60.00 is yours." and "The time is up. $60.00 came back to you." | the milestone the contract judged reached, or expired, and the whole amount | the milestone pass's own outcome (`reached`, a sent `expire`), the amount from the gift's record | `test/morning-send.test.ts` |
 | "Tell me each morning", then "Viky tells you each morning." and "Stop telling me"; on an iPhone in Safari, "Add Viky to your Home Screen first." | Viky can only notify an installed web app on iOS, and only after a press (webkit.org, 16 Feb 2023) | `morningStep`; the permission is requested in the button's own callback and nowhere else | `test/morning-message.test.ts` |
 
+### The TOEFL score shown, offered to an operator alone (D164)
+
+`src/conditions.ts` (`BUILDING`), `src/milestone-conditions.ts` (`TOEFL_SHOWN_MILESTONE`), `src/shown-conditions.ts`
+(`TOEFL_SHOWN`). Not in the register, not on the public page as a condition, offered on the chooser to an account
+that runs Viky and to nobody else, until goal 13 is registered and a real proof has run.
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "A TOEFL score, shown", SHOWN BY THEM, on the chooser of an operator, with "offered to nobody else" | nobody but an operator is offered it, and a gift on it cannot be made until its goal is registered | `BUILDING` beside `CONDITIONS`, `WIRED_NOT_LIVE` in `/api/conditions`, the contract's own `UnknownGoal` | `test/conditions-route.test.ts`, `test/milestone-routes.test.ts`, `test/condition-states.test.ts` |
+| "The score to show", 0 to 120, and "How long do they have?", and no name asked | what the funder signs is the condition's one subject, the score and a date; no name is typed because the proof carries none | `asksName: false` on the shape; the will sheet asks no name, `conditionAnswered` needs none, the create route takes none and signs the constant subject | `test/certificate-gift.test.ts`, `test/shown-conditions.test.ts` |
+| "A score of 90 or more, shown from the person's own ETS account. When it was earned is not read." on the review | the possession sense: the day it is shown is the event, and nothing claims when the score was earned | `mustShow` of the shape, `eventAt: null` in the shown register, `observedAt` as the event in `src/shown-verification.ts` | `test/shown-conditions.test.ts`, `test/shown-verification.test.ts` |
+
 ### A condition the person shows (D162)
 
 `app/kit/ShowProof.tsx` on a gift's page, and the head of that page in `app/components/GiftPage.tsx`. No condition
