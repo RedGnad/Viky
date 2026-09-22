@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
 import { ACCOUNT_AUTH_COOKIE_NAME, createAccountAuthChallenge, issueAccountAuthSession } from "../src/account-auth-server";
-import { POST as sessionPost } from "../app/api/duolingo/session/route";
-import { POST as verifyPost } from "../app/api/duolingo/verify/route";
+import { POST as sessionPost } from "../app/api/proof/session/route";
+import { POST as verifyPost } from "../app/api/proof/verify/route";
 
 const ORIGIN = "https://viky.test";
 const ENV = { SESSION_SIGNING_SECRET: "test-account-session-secret-that-is-longer-than-32-bytes" };
@@ -38,18 +38,18 @@ function post(path: string, body: unknown, headers: Record<string, string> = {})
 }
 
 test("POST /session without an account session is refused", async () => {
-  const response = await sessionPost(post("/api/duolingo/session", { giftId: "1", phase: "baseline", username: "ama" }));
+  const response = await sessionPost(post("/api/proof/session", { giftId: "1", phase: "baseline", username: "ama" }));
   assert.equal(response.status, 401);
 });
 
 test("POST /verify without an account session is refused", async () => {
-  const response = await verifyPost(post("/api/duolingo/verify", { sessionId: "session_12345678" }));
+  const response = await verifyPost(post("/api/proof/verify", { sessionId: "session_12345678" }));
   assert.equal(response.status, 401);
 });
 
 test("a cookie issued for another origin is refused", async () => {
   const cookie = await cookieFor(A);
-  const request = new Request("https://other.test/api/duolingo/session", {
+  const request = new Request("https://other.test/api/proof/session", {
     method: "POST",
     headers: { origin: "https://other.test", host: "other.test", "content-type": "application/json", cookie },
     body: JSON.stringify({ giftId: "1", phase: "baseline", username: "ama" }),
@@ -60,15 +60,15 @@ test("a cookie issued for another origin is refused", async () => {
 
 test("an authenticated caller with a malformed gift or day is refused before any lookup", async () => {
   const cookie = await cookieFor(A);
-  const badGift = await sessionPost(post("/api/duolingo/session", { giftId: "not-a-gift", phase: "baseline", username: "ama" }, { cookie }));
+  const badGift = await sessionPost(post("/api/proof/session", { giftId: "not-a-gift", phase: "baseline", username: "ama" }, { cookie }));
   assert.equal(badGift.status, 400);
   assert.match(((await badGift.json()) as { error: string }).error, /Unknown gift/);
 
-  const badDay = await sessionPost(post("/api/duolingo/session", { giftId: "1", phase: "check-in", dayIndex: 400, username: "ama" }, { cookie }));
+  const badDay = await sessionPost(post("/api/proof/session", { giftId: "1", phase: "check-in", dayIndex: 400, username: "ama" }, { cookie }));
   assert.equal(badDay.status, 400);
   assert.match(((await badDay.json()) as { error: string }).error, /valid day/);
 
-  const noName = await sessionPost(post("/api/duolingo/session", { giftId: "1", phase: "baseline", username: "" }, { cookie }));
+  const noName = await sessionPost(post("/api/proof/session", { giftId: "1", phase: "baseline", username: "" }, { cookie }));
   assert.equal(noName.status, 400);
   assert.match(((await noName.json()) as { error: string }).error, /Duolingo username/);
 });
@@ -76,14 +76,14 @@ test("an authenticated caller with a malformed gift or day is refused before any
 test("verify fails closed with a typed code when the gift contract is not configured", async () => {
   delete process.env.GIFT_ESCROW_ADDRESS;
   const cookie = await cookieFor(A);
-  const response = await verifyPost(post("/api/duolingo/verify", { sessionId: "session_12345678" }, { cookie }));
+  const response = await verifyPost(post("/api/proof/verify", { sessionId: "session_12345678" }, { cookie }));
   assert.equal(response.status, 503);
   assert.equal(((await response.json()) as { code: string }).code, "NOT_CONFIGURED");
 });
 
 test("a cross-site request is refused by the API guard", async () => {
   const cookie = await cookieFor(A);
-  const response = await sessionPost(post("/api/duolingo/session", { giftId: "1" }, { cookie, origin: "https://attacker.test" }));
+  const response = await sessionPost(post("/api/proof/session", { giftId: "1" }, { cookie, origin: "https://attacker.test" }));
   assert.equal(response.status, 400);
   assert.match(((await response.json()) as { error: string }).error, /Cross-origin/);
 });

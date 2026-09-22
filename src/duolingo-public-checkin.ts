@@ -119,6 +119,7 @@ export async function runPublicCheckIn(input: { giftId: string; purpose: PublicC
   const sessionId = `public:${giftId}:${purpose}:${utcDayOf(now)}:${read.nullifier.slice(2, 18)}`;
   await saveProofSession({
     sessionId,
+    conditionId: "duolingo-daily",
     account: recipient.toLowerCase(),
     giftId,
     goalType: record.goalType,

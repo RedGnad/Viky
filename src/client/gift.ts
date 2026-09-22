@@ -251,40 +251,48 @@ export function giftLinkAgain(giftId: string): Promise<{ claimUrl: string }> {
   return postJson(`/api/gift/${giftId}/link`, {});
 }
 
-export type CheckInOutcome = {
-  phase: "baseline" | "check-in";
-  dayIndex: number;
-  metricValue: number;
-  relayed: { hash: string; creditedDays: number } | null;
-  refusal: { code: string; message: string } | null;
-};
+/** What a shown proof ended as: a day of a daily gift, or a milestone reached (D162). */
+export type ShownProofOutcome =
+  | {
+      kind: "daily";
+      phase: "baseline" | "check-in";
+      dayIndex: number;
+      metricValue: number;
+      relayed: { hash: string; creditedDays: number } | null;
+      refusal: { code: string; message: string } | null;
+    }
+  | { kind: "reached"; giftId: string; metricValue: string; observedAt: number; hash: string };
 
 /**
- * Opens a Reclaim session for this gift, hands the person to the verification tab, then polls the verify
- * route until Reclaim has returned a proof and the server has recorded it (or refused it, with a reason).
+ * Opens a Reclaim session for this gift's condition, hands the person to the verification tab, then polls the
+ * verify route until Reclaim has returned a proof and the server has recorded it (or refused it, with a reason).
+ * The source is the condition's, not this function's: a daily gift names the account it binds, a milestone names
+ * nothing and takes its one proof.
  */
-export async function runCheckIn(input: {
+export async function runShownProof(input: {
   giftId: string;
-  phase: "baseline" | "check-in";
-  dayIndex: number;
-  username: string;
+  conditionId: string;
+  phase: "baseline" | "check-in" | "reach";
+  dayIndex?: number;
+  username?: string;
   openUrl: (url: string) => void;
   onWaiting?: (attempt: number) => void;
   signal?: AbortSignal;
-}): Promise<CheckInOutcome> {
-  const session = await postJson<{ sessionId: string; requestUrl: string }>("/api/duolingo/session", {
+}): Promise<ShownProofOutcome> {
+  const session = await postJson<{ sessionId: string; requestUrl: string }>("/api/proof/session", {
     giftId: input.giftId,
+    conditionId: input.conditionId,
     phase: input.phase,
-    dayIndex: input.dayIndex,
-    username: input.username,
+    dayIndex: input.dayIndex ?? 0,
+    ...(input.username ? { username: input.username } : {}),
   });
   input.openUrl(session.requestUrl);
   for (let attempt = 1; attempt <= 120; attempt += 1) {
-    if (input.signal?.aborted) throw new ApiError({ status: 499, code: "CANCELLED", message: "Check-in cancelled." });
+    if (input.signal?.aborted) throw new ApiError({ status: 499, code: "CANCELLED", message: "Cancelled." });
     await new Promise((resolve) => setTimeout(resolve, 4_000));
     input.onWaiting?.(attempt);
     try {
-      return await postJson<CheckInOutcome>("/api/duolingo/verify", { sessionId: session.sessionId });
+      return await postJson<ShownProofOutcome>("/api/proof/verify", { sessionId: session.sessionId });
     } catch (error) {
       if (error instanceof ApiError && error.code === "NO_PROOF_YET") continue;
       throw error;

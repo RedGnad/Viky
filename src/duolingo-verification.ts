@@ -141,6 +141,10 @@ export async function verifyDuolingoSession(deps: VerificationDeps, input: { ses
   const now = deps.now();
   assertFresh(timestamps, now);
 
+  // A session opened for a milestone is not a daily session, and a daily session without the profile the baseline
+  // bound is not one either (D162): both are refused here rather than read as something they are not.
+  if (session.phase === "reach") throw new VerificationError("WRONG_PHASE", "This session is not a daily check-in");
+  if (!session.duolingoProfileId) throw new VerificationError("UNKNOWN_SESSION", "This session names no Duolingo profile");
   let evidence: DuolingoEvidence;
   try {
     evidence = validateDuolingoEvidence({

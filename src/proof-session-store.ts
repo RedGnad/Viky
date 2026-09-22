@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS viky_proof_sessions (
   goal_type smallint NOT NULL DEFAULT 1,
   phase text NOT NULL,
   day_index integer NOT NULL DEFAULT 0,
-  duolingo_username text NOT NULL,
-  duolingo_profile_id text NOT NULL,
+  duolingo_username text,
+  duolingo_profile_id text,
   created_at timestamptz NOT NULL DEFAULT now(),
   consumed_at timestamptz,
   evidence jsonb,
@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS viky_proof_sessions (
 );
 CREATE INDEX IF NOT EXISTS viky_proof_sessions_gift_account
   ON viky_proof_sessions (gift_id, account, consumed_at DESC);
+ALTER TABLE viky_proof_sessions ADD COLUMN IF NOT EXISTS condition_id text NOT NULL DEFAULT 'duolingo-daily';
+ALTER TABLE viky_proof_sessions ALTER COLUMN duolingo_username DROP NOT NULL;
+ALTER TABLE viky_proof_sessions ALTER COLUMN duolingo_profile_id DROP NOT NULL;
 `;
 
 /** A tagged-template SQL executor: Neon's `neon(url)` in production, a PGlite adapter in tests. */
@@ -51,17 +54,24 @@ function sql(): SqlExecutor {
   return neon(url) as unknown as SqlExecutor;
 }
 
-export type ProofSessionPhase = "baseline" | "check-in";
+/**
+ * The phase a session is opened for: a daily gift binds the account once (baseline) and then proves one day at a
+ * time (check-in); a milestone shown from an account takes one proof that reaches it (reach) (D162).
+ */
+export type ProofSessionPhase = "baseline" | "check-in" | "reach";
 
 export type ProofSession = Readonly<{
   sessionId: string;
   account: string;
   giftId: string;
   goalType: number;
+  /** Which condition the proof is shown for (src/shown-conditions.ts). Rows from before it existed are the daily lesson. */
+  conditionId: string;
   phase: ProofSessionPhase;
   dayIndex: number;
-  duolingoUsername: string;
-  duolingoProfileId: string;
+  /** The Duolingo account a daily gift binds: the one condition whose proof is checked against a named profile. */
+  duolingoUsername?: string;
+  duolingoProfileId?: string;
 }>;
 
 export type StoredAttestation = Readonly<{
@@ -81,16 +91,16 @@ export async function ensureProofSessionSchema(): Promise<void> {
 export async function saveProofSession(session: ProofSession): Promise<void> {
   await sql()`
     INSERT INTO viky_proof_sessions
-      (session_id, account, gift_id, goal_type, phase, day_index, duolingo_username, duolingo_profile_id)
-    VALUES (${session.sessionId}, ${session.account.toLowerCase()}, ${session.giftId}, ${session.goalType},
-            ${session.phase}, ${session.dayIndex}, ${session.duolingoUsername}, ${session.duolingoProfileId})
+      (session_id, account, gift_id, goal_type, condition_id, phase, day_index, duolingo_username, duolingo_profile_id)
+    VALUES (${session.sessionId}, ${session.account.toLowerCase()}, ${session.giftId}, ${session.goalType}, ${session.conditionId},
+            ${session.phase}, ${session.dayIndex}, ${session.duolingoUsername ?? null}, ${session.duolingoProfileId ?? null})
     ON CONFLICT (session_id) DO NOTHING`;
 }
 
 /** The live session, or null if it does not exist, is already consumed, or has aged out. */
 export async function loadProofSession(sessionId: string): Promise<ProofSession | null> {
   const rows = await sql()`
-    SELECT session_id, account, gift_id, goal_type, phase, day_index, duolingo_username, duolingo_profile_id
+    SELECT session_id, account, gift_id, goal_type, condition_id, phase, day_index, duolingo_username, duolingo_profile_id
       FROM viky_proof_sessions
       WHERE session_id = ${sessionId}
         AND consumed_at IS NULL
@@ -102,10 +112,11 @@ export async function loadProofSession(sessionId: string): Promise<ProofSession 
     account: String(row.account),
     giftId: String(row.gift_id),
     goalType: Number(row.goal_type),
-    phase: row.phase === "check-in" ? "check-in" : "baseline",
+    conditionId: String(row.condition_id ?? "duolingo-daily"),
+    phase: row.phase === "check-in" ? "check-in" : row.phase === "reach" ? "reach" : "baseline",
     dayIndex: Number(row.day_index),
-    duolingoUsername: String(row.duolingo_username),
-    duolingoProfileId: String(row.duolingo_profile_id),
+    ...(row.duolingo_username ? { duolingoUsername: String(row.duolingo_username) } : {}),
+    ...(row.duolingo_profile_id ? { duolingoProfileId: String(row.duolingo_profile_id) } : {}),
   };
 }
 

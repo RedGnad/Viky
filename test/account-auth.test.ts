@@ -161,7 +161,7 @@ test("session HMAC rejects tampering and cookie auth rejects the wrong account",
     environment: ENVIRONMENT,
   }), 401);
 
-  const request = new Request(`${ORIGIN}/api/duolingo/session`, {
+  const request = new Request(`${ORIGIN}/api/proof/session`, {
     headers: { cookie: `${ACCOUNT_AUTH_COOKIE_NAME}=${session.token}` },
   });
   assert.equal(requireAccountAuthSession(request, ACCOUNT.address, ENVIRONMENT, NOW + 2_000).account, ACCOUNT.address);
@@ -170,11 +170,11 @@ test("session HMAC rejects tampering and cookie auth rejects the wrong account",
 
 test("the cookie alone names the account, so a route never takes it from the body", async () => {
   const session = await signedSession();
-  const request = new Request(`${ORIGIN}/api/duolingo/session`, {
+  const request = new Request(`${ORIGIN}/api/proof/session`, {
     headers: { cookie: `${ACCOUNT_AUTH_COOKIE_NAME}=${session.token}` },
   });
   assert.equal(readAccountAuthSession(request, ENVIRONMENT, NOW + 2_000).account, ACCOUNT.address);
-  const foreign = new Request("https://other.test/api/duolingo/session", {
+  const foreign = new Request("https://other.test/api/proof/session", {
     headers: { cookie: `${ACCOUNT_AUTH_COOKIE_NAME}=${session.token}` },
   });
   expectAuthStatus(() => readAccountAuthSession(foreign, ENVIRONMENT, NOW + 2_000), 401);

@@ -85,7 +85,7 @@ The functions run in Vercel's Paris region (`vercel.json`), next to the Frankfur
 | `POST /api/gift/<id>/bind` | recipient | first attested read of the public profile: proves the code, binds the identity, opens the window |
 | `POST /api/gift/<id>/count` | recipient | a count now instead of waiting for the daily pass; same read, same proof |
 | `GET /api/cron/daily` | Vercel cron (00:30 UTC) | the daily pass: count every bound gift, drain, finalise |
-| `POST /api/duolingo/session`, `POST /api/duolingo/verify` | recipient (private sources only) | opens a Reclaim session for a baseline or a day, verifies it (TEE required), attests and relays the check-in |
+| `POST /api/proof/session`, `POST /api/proof/verify` | recipient (a proof shown from their own account) | opens a Reclaim session for a baseline, a day, or a milestone's one proof, verifies it (TEE required), attests and relays it |
 | `POST /api/gift/check-in` | recipient | relays a recorded check-in again if the first submission failed |
 | `POST /api/gift/withdraw` | recipient | relays a signed withdraw intent |
 | `GET /api/gift/<id>` | anyone | the gift's numbers for its screens |
@@ -107,7 +107,7 @@ runs the mainnet fork test of the real AUSD funding path. `pnpm deploy:gift-escr
 
 ## Verification path
 
-Every Reclaim proof is verified server side (`app/api/duolingo/verify`) with the TEE attestation
+Every Reclaim proof is verified server side (`app/api/proof/verify`) with the TEE attestation
 required and the AI fallback refused, then attested to the gift contract by the evidence signer
 (EIP-712 `CheckIn`). Session rows are held server side in Neon; the browser never chooses the
 account, the phase, the day or the profile. The on-chain verifiers under `contracts/verifiers` are
