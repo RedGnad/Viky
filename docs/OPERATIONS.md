@@ -254,6 +254,39 @@ call with `NONCE=1`, `NONCE=2`, `NONCE=3` (from the Safe's nonce at the time) so
 signs, have each key sign the three hashes in one sitting, then send them in nonce order, each one only after the
 one before it has landed. Six signatures, one sitting, no batching contract and no delegate call.
 
+## The Reclaim account, read on the dashboard on 22 Sep 2026, and what production actually holds
+
+What the founder read, signed in to `dev.reclaimprotocol.org`: the **Hacker** tier, no payment method on file,
+**0 / 25 proofs** on the cycle from 1 Sep to 1 Oct. The zkFetch reads production makes every day do not appear
+anywhere on it, not even under the application named "Public Data zkFetch" (0 sessions, 0 proofs, no log over 30
+days). Three applications exist: Public Data zkFetch (`0x5c8E14…`), Viky, and Lock in.
+
+What the machines hold, read the same day:
+
+| where | variable | value |
+|---|---|---|
+| Railway, the reading service | `RECLAIM_ZKFETCH_APP_ID` | `0x5c8E149B…bA9359`, the "Public Data zkFetch" application, so every attested read is made under it whatever the dashboard shows |
+| Vercel, Production | `RECLAIM_APP_ID`, `RECLAIM_APP_SECRET` | present and **empty** (`vercel env pull --environment=production`, 22 Sep 2026) |
+| Vercel, Production | `RECLAIM_ZKFETCH_APP_ID`, `RECLAIM_ZKFETCH_APP_SECRET` | present and **empty**; harmless, the app reads through the worker (`ZKFETCH_WORKER_URL`) |
+| Vercel, Production | `RECLAIM_VERIFICATION_MODE` | `app` |
+
+So the connected flow (a proof the person shows from their own account, D162) is not configured in production at
+all: neither the Viky application nor the Lock in one is in place, and `/api/proof/session` answers "The Reclaim
+application is not configured". Before the first shown proof runs there, the founder puts the **Viky** application's
+id and secret into `RECLAIM_APP_ID` and `RECLAIM_APP_SECRET` for Production on Vercel (the secret is shown once, on
+the dashboard, and goes nowhere else), which is also what makes the consent screen read "Viky" and not "Lock In"
+(D25). Nobody else handles that secret.
+
+Why the dashboard shows nothing for the reads is not known. It was not explained by anything read that day, and it
+is written here as seen rather than guessed at.
+
+### Before the build of D162 serves anybody: the session table
+
+`viky_proof_sessions` gains `condition_id` (which condition a proof is shown for, `duolingo-daily` for every row
+from before) and lets `duolingo_username` and `duolingo_profile_id` be absent, because a milestone shown from an
+account binds no named profile. Additive, and the running build does not touch the two constraints it relaxes:
+`pnpm db:migrate` with the operator command of "The test database", then the columns read back.
+
 ## The reading service is a second deployment, and it is not automatic
 
 `src/attested-sources.ts` and `src/chess-com.ts` run in two places: on Vercel, where the proof is judged, and in the

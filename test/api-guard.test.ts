@@ -5,7 +5,7 @@ import { assertSameOrigin, readJsonBody } from "../src/api-guard";
 const ORIGIN = "https://viky.test";
 
 function request(init: { headers?: Record<string, string>; body?: string; method?: string } = {}) {
-  return new Request(`${ORIGIN}/api/duolingo/session`, {
+  return new Request(`${ORIGIN}/api/proof/session`, {
     method: init.method ?? "POST",
     headers: init.headers,
     body: init.body,

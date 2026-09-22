@@ -34,6 +34,7 @@ function session(overrides: Partial<ProofSession> = {}): ProofSession {
     account: ACCOUNT,
     giftId: "42",
     goalType: 1,
+    conditionId: "duolingo-daily",
     phase: "baseline",
     dayIndex: 0,
     duolingoUsername: "ama",

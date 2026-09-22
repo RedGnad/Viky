@@ -4373,3 +4373,52 @@ written down (D152): it is what the rails pay and the rate file converts, and th
 offered. A currency the product chooses not to propose can only be written down, so `NOT_OFFERED` in
 `src/currencies.ts` is the one list of its kind, with the reason each entry is there. It is out of the sheet, and a
 cookie or an account row that still names it is ignored: such a device reads in what its language proposes.
+
+## D162, 22 Sep 2026: a proof the person shows, from their own account, is the second nature of a condition
+
+The founder, with the product report of 22 Sep 2026 (`Master/data/viky-reclaim-rapport-produit-2026-09-22.md`)
+in hand: the connected flow ported from Lock-In is dormant, not absent; take it out of "duolingo"; a shown proof
+settles a milestone (form 1) exactly as a reading does; the contract does not change.
+
+- **What was read first.** The Reclaim directory, by its public API (`/api/providers/explore/paginated`,
+  `pageKey` and `pageSize`, about 608 pages of 50): "TOEFL MyBest Score", `67ec1b13-b206-4fac-a78c-fbd5a2af55b3`,
+  version 1.0.0, active, used by two applications, not verified by Reclaim. Its configuration, fetched the way the
+  SDK fetches it (`api.reclaimprotocol.org/api/providers/<id>/configs`): behind the ETS sign-in
+  (`v2.ereg.ets.org/ereg/public/jump?_p=TEL`), one request, `GET /ereg/pbs/getPbs?testId=…&source=…`, two fields,
+  `$.scores.TOTAL.scoreValue` and `$.scores.LISTENING.bookingId`, WITNESS, no geography. No name, no test date,
+  no account id. Our own application accepts it (a session was initialised on it with our keys, never launched).
+- **The TEE attestation is a property of the session, not of the provider**: the nonce binds the application and
+  the session, `acceptTeeAttestation` is the SDK's default, and `verifyProof` checks every proof carries one. So
+  the rule the verify route has always had, TEE required and the AI fallback refused, applies unchanged.
+- **Two decisions the contract forced, both the founder's.** (1) *The subject.* Form 1 checks
+  `identityHash == subject`, the subject the funder signed at creation; today `hash(source, name)`, checked
+  against the name printed on a certificate. The proof carries no name. The subject is therefore **constant per
+  condition**, `hash("viky:subject:toefl-mybest-shown:v1")`: the funder signs "a score shown from the person's
+  own ETS account", the screen says it in those words, and what binds the person is the account they signed in to
+  and the recipient the contract already checks. Level 2, the account, which is the definition of a shown
+  condition: the link is the account and the recipient's own account, not a name. (2) *The date.* Form 1 dates the
+  event by the day the page itself gives, and refuses one before the gift. The proof has no date. Not
+  `eventAt = observedAt` unsaid: until a provider of ours extracts `testDate` (PR 2 builds it on a real ETS account,
+  the endpoint carries a `testId` and the MyBest page shows the dates), the condition is a **possession**, "Show a
+  TOEFL score of at least X", whose sentence says "a score they hold, shown from their own ETS account; when it
+  was earned is not read", and the day it is shown is the event. The day `testDate` comes out, the condition becomes
+  "reach", with `EarnedBeforeTheGift`, under its own goal number: `registerGoal` never overwrites, and the two
+  senses are never mixed under one goal. Goal **13**, `viky:provider:toefl-mybest-shown:v1` =
+  `0xa07cae8e7502221e9a33445deb8f4f5e12d9ccdfd35b5e53d9eb38f32d75db7d`, is the "show" one.
+- **The flow, with the source taken out of it.** `src/shown-proof.ts` is the policy every shown proof is read by:
+  the context sealed `<giftId>:<phase>` (`baseline`, a day, or `reach`) with the account and the session id, the
+  provider and version pinned, every request pinned by its hash, the fields read by the condition's own `read`.
+  `src/shown-conditions.ts` is the register of what can be shown, two kinds: a daily one keeps the policy it always
+  had (the ownership marker, the profile the baseline bound, the XP since the previous proof are things only
+  Duolingo knows); a milestone one takes one proof, turned by `src/shown-verification.ts` into the same `Proof`
+  attestation a certificate reading produces and relayed to the milestone contract, which checks it again. The
+  routes are `/api/proof/session` and `/api/proof/verify`, keyed by the condition; the Duolingo ones are gone, their
+  tests moved unchanged. `viky_proof_sessions` carries `condition_id`. Nothing on a screen calls it yet: that is
+  PR 3.
+- **What is not verified.** No proof has been shown end to end: the routes are exercised without a network, the
+  core with every dependency injected (17 refusals and one success), and production holds no Reclaim application
+  id at all (OPERATIONS, "The Reclaim account"). The first real session waits for the Viky application's keys in
+  production and for a real ETS account, which is PR 2.
+- **Not done here, by order.** The badges and "Show it" (PR 3); the TOEFL condition and our own provider (PR 2);
+  the measured gesture on real devices (PR 4, the founder's or a tester's phones, never a number from here); the
+  public page's sentence (PR 5).

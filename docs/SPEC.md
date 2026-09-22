@@ -243,7 +243,7 @@ artefacts. Consumer UI shows none of this.
 
 ## 15. Workspace and reuse
 Write only in `Viky`. Read `Lock-in` for: `contracts/verifiers/*`, `contracts/LockInDuolingoEscrow.sol`
-(structure, guards, errors), `app/api/duolingo/session/route.ts` and `verify/route.ts` (Reclaim
+(structure, guards, errors), `app/api/proof/session/route.ts` and `verify/route.ts` (Reclaim
 session creation, TEE-only verification, server-held session rows), `src/reclaim-channel.ts`,
 `src/monad-gas.ts`, `scripts/capture-duolingo-proof.ts`. Port file by file, never fork. Skeleton:
 the Foundation's Next.js PWA template (`main`; the `no-privy` branch the docs mention does not exist, strip Privy by hand), with Mera as the account layer, Serwist
