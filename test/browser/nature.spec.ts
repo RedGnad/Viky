@@ -19,7 +19,9 @@ test.describe("the nature of a condition", () => {
     const change = sheet.getByRole("button", { name: /^Change/i });
     if (await change.isVisible().catch(() => false)) await change.click();
     await expect(sheet.getByText(WORDS).first()).toBeVisible();
-    const said = await sheet.getByText(WORDS).allTextContents();
+    // On every line of the list, chosen or not: six conditions, six times the same two words today.
+    const said = await sheet.getByText(WORDS).filter({ visible: true }).allTextContents();
+    expect(said.length).toBe(await sheet.getByRole("radio").count());
     expect(said.every((words) => words === "READ FOR YOU")).toBe(true);
     // The meta voice: 13 px, capitals, a pixel of tracking, the muted ink, and no fill behind it.
     const tag = sheet.getByText(WORDS).first();

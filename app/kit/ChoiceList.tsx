@@ -26,7 +26,10 @@ export type Choice<T extends string> = Readonly<{
   help?: string;
   /** A second line, quieter than the help: what choosing this option actually proves (src/condition-proof.ts). */
   note?: string;
-  /** One line in the meta voice before the help, when the option has a nature to say (app/kit/Nature.tsx). */
+  /**
+   * One line in the meta voice before the help, when the option has a nature to say (app/kit/Nature.tsx). Said on
+   * every line, chosen or not: the nature is what a funder compares the options by, where the help is read once.
+   */
   tag?: ReactNode;
 }>;
 
@@ -90,7 +93,7 @@ export function ChoiceList<T extends string>({
             />
             <span className="flex flex-col">
               <span className={lines ? CHOICE : undefined}>{option.label}</span>
-              {option.tag && (chosen || !lines) ? option.tag : null}
+              {option.tag ? option.tag : null}
               {option.help && (chosen || !lines) ? <span className={HELP}>{option.help}</span> : null}
               {option.note && (chosen || !lines) ? <span className={HELP}>{option.note}</span> : null}
             </span>
