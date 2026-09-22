@@ -1,5 +1,6 @@
 import { keccak256, stringToHex, type Hex } from "viem";
 import { duolingoProfileUrl, isValidDuolingoUsername } from "./duolingo-public-terms";
+import { localProofVerified, proofVerifierMode } from "./proof-verification";
 
 /**
  * Attested read of a Duolingo public profile (D27). zkFetch (Reclaim) performs the HTTPS request and
@@ -202,13 +203,24 @@ async function workerZkFetch(url: string): Promise<ZkFetchProof> {
   return body.proof;
 }
 
-/** The dependencies used by the routes and the daily pass: the worker when configured, else the local client. */
+/** The verifier behind the switch: the signature against Viky's own pinned attestors, nothing over the network. */
+export function verifyProfileWithPin(proof: ZkFetchProof): Promise<boolean> {
+  return localProofVerified(proof, allowedAttestors());
+}
+
+/**
+ * The dependencies used by the routes and the daily pass: the worker when configured, else the local client. The
+ * verifier is Reclaim's unless PROOF_VERIFIER says `local` (src/proof-verification.ts).
+ */
 export async function reclaimPublicProfileDeps(): Promise<PublicProfileDeps> {
   if (process.env.ZKFETCH_WORKER_URL?.trim()) {
     const { verifyProof } = await import("@reclaimprotocol/js-sdk");
+    const local = proofVerifierMode() === "local";
     return {
       zkFetch: (url) => workerZkFetch(url),
-      verify: async (proof) => (await verifyProof(proof as never, { dangerouslyDisableContentValidation: true } as never)).isVerified === true,
+      verify: local
+        ? verifyProfileWithPin
+        : async (proof) => (await verifyProof(proof as never, { dangerouslyDisableContentValidation: true } as never)).isVerified === true,
     };
   }
   return reclaimLocalProfileDeps();
@@ -233,6 +245,7 @@ export async function reclaimLocalProfileDeps(): Promise<PublicProfileDeps> {
     import(/* turbopackIgnore: true */ "@reclaimprotocol/js-sdk") as Promise<typeof import("@reclaimprotocol/js-sdk")>,
   ]);
   const client = new ReclaimClient(appId, appSecret);
+  const local = proofVerifierMode() === "local";
   return {
     zkFetch: async (url, matches) =>
       (await client.zkFetch(
@@ -240,9 +253,11 @@ export async function reclaimLocalProfileDeps(): Promise<PublicProfileDeps> {
         { method: "GET", headers: { accept: "application/json", "user-agent": "Mozilla/5.0 (Viky)" }, useTee: true } as never,
         { responseMatches: matches.map((m) => ({ ...m })) } as never,
       )) as unknown as ZkFetchProof,
-    verify: async (proof) => {
-      const result = await verifyProof(proof as never, { dangerouslyDisableContentValidation: true } as never);
-      return result.isVerified === true;
-    },
+    verify: local
+      ? verifyProfileWithPin
+      : async (proof) => {
+          const result = await verifyProof(proof as never, { dangerouslyDisableContentValidation: true } as never);
+          return result.isVerified === true;
+        },
   };
 }

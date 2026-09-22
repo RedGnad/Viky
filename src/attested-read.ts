@@ -1,6 +1,7 @@
 import { keccak256, stringToHex, type Hex } from "viem";
 import { attestedSource, headersFor, type AttestedSource, type ResponseMatch } from "./attested-sources";
 import { allowedAttestors, attestorAccepted, type ZkFetchProof } from "./duolingo-public";
+import { localProofVerified, proofVerifierMode } from "./proof-verification";
 import { READING_FINGERPRINT } from "./reading-fingerprint";
 
 /**
@@ -224,25 +225,39 @@ async function localZkFetch(source: AttestedSource, account: string): Promise<Zk
   )) as unknown as ZkFetchProof;
 }
 
-/** The dependencies the routes and the passes use: the worker when configured, the local client otherwise. */
+// Content validation is ours (`readingOfProof`), so the SDK's provider-hash validation is off; it still checks the
+// attestor's signature, and the attestor's address is pinned in `attestedRead`.
+const options = { dangerouslyDisableContentValidation: true } as never;
+
+/**
+ * The verifier that runs today on Vercel, unchanged: js-sdk imported the way src/duolingo-public.ts imports it on
+ * this path. It is a named function so that a test can check the default dependencies hand out this one.
+ */
+export async function verifyWithReclaimBundled(proof: ZkFetchProof): Promise<boolean> {
+  return (await (await import("@reclaimprotocol/js-sdk")).verifyProof(proof as never, options)).isVerified === true;
+}
+
+/** The verifier that runs today where Node loads the fetch itself (the worker, the scripts), unchanged. */
+export async function verifyWithReclaimAtRuntime(proof: ZkFetchProof): Promise<boolean> {
+  const { verifyProof } = (await import(/* turbopackIgnore: true */ "@reclaimprotocol/js-sdk")) as typeof import("@reclaimprotocol/js-sdk");
+  return (await verifyProof(proof as never, options)).isVerified === true;
+}
+
+/** The verifier behind the switch: the signature against Viky's own pinned attestors, nothing over the network. */
+export function verifyWithPin(proof: ZkFetchProof): Promise<boolean> {
+  return localProofVerified(proof, allowedAttestors());
+}
+
+/**
+ * The dependencies the routes and the passes use: the worker when configured, the local client otherwise. The
+ * verifier is Reclaim's unless PROOF_VERIFIER says `local` (src/proof-verification.ts).
+ */
 export function reclaimAttestedReadDeps(): AttestedReadDeps {
-  // Content validation is ours (`readingOfProof`), so the SDK's provider-hash validation is off; it still checks the
-  // attestor's signature, and the attestor's address is pinned in `attestedRead`.
-  const options = { dangerouslyDisableContentValidation: true } as never;
+  const local = proofVerifierMode() === "local";
   if (process.env.ZKFETCH_WORKER_URL?.trim()) {
-    // Imported the way src/duolingo-public.ts imports it on this path, which is the one that runs on Vercel.
-    return {
-      zkFetch: workerZkFetch,
-      verify: async (proof) => (await (await import("@reclaimprotocol/js-sdk")).verifyProof(proof as never, options)).isVerified === true,
-    };
+    return { zkFetch: workerZkFetch, verify: local ? verifyWithPin : verifyWithReclaimBundled };
   }
-  return {
-    zkFetch: localZkFetch,
-    verify: async (proof) => {
-      const { verifyProof } = (await import(/* turbopackIgnore: true */ "@reclaimprotocol/js-sdk")) as typeof import("@reclaimprotocol/js-sdk");
-      return (await verifyProof(proof as never, options)).isVerified === true;
-    },
-  };
+  return { zkFetch: localZkFetch, verify: local ? verifyWithPin : verifyWithReclaimAtRuntime };
 }
 
 /** The fetch half alone, for the worker process: it returns the proof and leaves every check to whoever asked. */
