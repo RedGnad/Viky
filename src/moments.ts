@@ -59,8 +59,35 @@ export function contractRangeInWords(firstDay: number, lastDay: number): string 
   return `${first.getUTCDate()} to ${contractDayInWords(lastDay, true)}`;
 }
 
-/** A calendar date for a moment in the reader's clock: "1 Oct 2026". */
-export function dateInWords(atMs: number): string {
+/**
+ * Where the reader keeps their clock, as a cookie carries it (D160). A date is a different day on either side of
+ * midnight somewhere, so a page drawn by the server and a page hydrated in a browser print different words unless
+ * both are told the same zone. React throws away a page whose text does not match the one it was sent, which is the
+ * gift's screen being built twice: the server said 26 Sep, the phone said 25.
+ */
+export const ZONE_COOKIE = "viky.zone";
+
+/** Whether a name is a zone this machine knows. Anything else is nobody's zone and is ignored. */
+export function isZone(value: unknown): value is string {
+  if (typeof value !== "string" || value.length === 0 || value.length > 64) return false;
+  try {
+    new Intl.DateTimeFormat("en-GB", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A calendar date for a moment, in the zone given, or in this machine's own when none is: "1 Oct 2026".
+ *
+ * Every screen the server draws passes the zone, so the server and the browser say the same day. Nothing else does,
+ * and for them this is what it always was.
+ */
+export function dateInWords(atMs: number, zone?: string): string {
   const at = new Date(atMs);
-  return `${at.getDate()} ${MONTHS[at.getMonth()]} ${at.getFullYear()}`;
+  if (!zone) return `${at.getDate()} ${MONTHS[at.getMonth()]} ${at.getFullYear()}`;
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: zone, day: "numeric", month: "numeric", year: "numeric" }).formatToParts(at);
+  const partOf = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${Number(partOf("day"))} ${MONTHS[Number(partOf("month")) - 1]} ${partOf("year")}`;
 }

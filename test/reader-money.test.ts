@@ -2,6 +2,8 @@ import { strict as assert } from "node:assert";
 import test from "node:test";
 import { cardCookieFrom, cardFromCookie } from "../src/card-cookie.js";
 import { currencyFor, firstLanguageTag } from "../src/reader-money.js";
+import { NOT_OFFERED, offeredCurrencies } from "../src/currencies.js";
+import { isDisplayCurrency } from "../src/display-currency.js";
 import { PENDING_GIFT_MAX_AGE_MS, type PendingGiftTerms } from "../src/pending-gift.js";
 
 /**
@@ -66,4 +68,16 @@ test("a card's cookie stops describing a card once the card itself would be gone
   assert.equal(cardFromCookie("not json", 1_000_000), undefined);
   assert.equal(cardFromCookie("%E0%A4%A", 1_000_000), undefined, "a cookie that is not even text");
   assert.equal(cardFromCookie(undefined, 1_000_000), undefined);
+});
+
+/** A currency the product does not offer is not in the list, and is not a choice a cookie can keep (22 Sep 2026). */
+test("the shekel is not offered, and not read in", () => {
+  assert.equal(NOT_OFFERED.has("ILS"), true);
+  const rates = { date: "2026-09-21", readAtMs: Date.now(), usdPerEur: 1.17, eurPerUsd: 0.855, xofPerUsd: 561, eurPer: { USD: 1.17, GBP: 0.86, ILS: 4.3, JPY: 172 } };
+  const offered = offeredCurrencies(["USD", "GBP", "ILS", "JPY"], rates);
+  assert.equal(offered.includes("ILS"), false, "not in the list a person picks from");
+  assert.equal(offered.includes("GBP"), true, "and the rest of the list is untouched");
+  assert.equal(isDisplayCurrency("ILS"), false, "and a cookie or an account that says so is ignored");
+  assert.equal(isDisplayCurrency("GBP"), true);
+  assert.deepEqual(currencyFor({ account: null, kept: "ILS", language: "fr-FR" }), { currency: "EUR", decided: true }, "a device that kept it reads in what its language proposes");
 });

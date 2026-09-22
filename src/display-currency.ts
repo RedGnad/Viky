@@ -1,6 +1,6 @@
 import type { Rates } from "./rates";
 import { PRODUCT_LOCALE } from "./moments";
-import { currencyOf, figureIn, isCurrencyCode, perDollar } from "./currencies";
+import { currencyOf, figureIn, isCurrencyCode, NOT_OFFERED, perDollar } from "./currencies";
 
 /**
  * One display currency per account, and how a dollar figure is said in it.
@@ -60,8 +60,9 @@ export function proposedDisplayCurrency(languageTag: string | undefined): Displa
   return "USD";
 }
 
+/** A currency somebody may read in: one the runtime knows, and not one the product does not offer (src/currencies.ts). */
 export function isDisplayCurrency(value: unknown): value is DisplayCurrency {
-  return isCurrencyCode(value);
+  return isCurrencyCode(value) && !NOT_OFFERED.has(value);
 }
 
 /** Six decimals of a dollar coin, which is what both stablecoins carry. */

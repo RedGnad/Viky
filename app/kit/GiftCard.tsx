@@ -1,5 +1,7 @@
+"use client";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useReaderZone } from "@/src/client/reader-zone";
 import { conditionById, conditionOfGoal } from "@/src/conditions";
 import type { GiftSummary } from "@/src/client/gift";
 import type { MilestoneStatus } from "@/src/milestone-view";
@@ -19,6 +21,8 @@ import { MilestoneMeter } from "./MilestoneMeter";
 export function GiftCard({ gift, milestone: given, still = false, example = false }: Readonly<{ gift: GiftSummary; milestone?: MilestoneStatus; still?: boolean; example?: boolean }>) {
   // On Home and Gifts a milestone gift arrives inside its summary (C2); at the head of its page, beside it.
   const milestone = given ?? gift.milestone;
+  /** The clock this reader keeps, so a card drawn by the server says their day and not the server's (D160). */
+  const zone = useReaderZone();
   const condition = milestone ? conditionById(milestone.conditionId) : conditionOfGoal(gift.goalType);
   const started = gift.opened && (gift.counting || gift.finished || gift.creditedDays + gift.missedDays > 0);
   const body = (
@@ -50,7 +54,7 @@ export function GiftCard({ gift, milestone: given, still = false, example = fals
         <>
           <span className={`block ${BODY}`}>{milestone ? milestoneStateInWords(milestone) : stateInWords(gift, condition?.words.connect)}</span>
           <span className={`block ${HELP} tabular-nums`}>
-            {milestone ? W.milestoneAmount(milestone.amountDisplay, milestoneBy(milestone)) : amountsInWords(gift, started)}
+            {milestone ? W.milestoneAmount(milestone.amountDisplay, milestoneBy(milestone, zone)) : amountsInWords(gift, started)}
           </span>
         </>
       }
@@ -136,9 +140,13 @@ export function stateInWords(gift: GiftSummary, connect: string | undefined): st
   return W.counting(gift.creditedDays, gift.durationDays, gift.missedDays);
 }
 
-/** "by 17 Oct 2026" once the first reading has started the clock, "within 30 days of connecting" before it (D46). */
-export function milestoneBy(status: Pick<MilestoneStatus, "deadlineMs" | "durationDays">): string {
-  return status.deadlineMs === null ? M.withinDays(status.durationDays) : M.byDate(dateInWords(status.deadlineMs));
+/**
+ * "by 17 Oct 2026" once the first reading has started the clock, "within 30 days of connecting" before it (D46).
+ * The zone is the reader's, from the cookie their browser wrote (D160): a date has a different day on either side
+ * of midnight somewhere, and a card the server drew must say the same day as the card the browser draws.
+ */
+export function milestoneBy(status: Pick<MilestoneStatus, "deadlineMs" | "durationDays">, zone: string): string {
+  return status.deadlineMs === null ? M.withinDays(status.durationDays) : M.byDate(dateInWords(status.deadlineMs, zone));
 }
 
 function milestoneStateInWords(status: MilestoneStatus): string {

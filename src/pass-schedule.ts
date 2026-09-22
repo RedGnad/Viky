@@ -24,8 +24,9 @@ export function cronOf(time: PassTime): string {
  * late. The clock is the reader's, the language is the product's (`PRODUCT_LOCALE`): this sentence is drawn by the
  * server and then by the browser, and a time in two languages is what made React throw the whole page away (D147).
  */
-export function settlingTimeInWords(nowMs: number): string {
+export function settlingTimeInWords(nowMs: number, zone?: string): string {
   const at = new Date(nowMs);
   at.setUTCHours(SETTLING_PASS_UTC.hour, SETTLING_PASS_UTC.minute, 0, 0);
-  return at.toLocaleTimeString(PRODUCT_LOCALE, { hour: "numeric", minute: "2-digit" });
+  // In the zone given when a screen the server draws asks (D160), so the server and the browser say the same hour.
+  return at.toLocaleTimeString(PRODUCT_LOCALE, { hour: "numeric", minute: "2-digit", ...(zone ? { timeZone: zone } : {}) });
 }
