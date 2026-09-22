@@ -4421,7 +4421,8 @@ settles a milestone (form 1) exactly as a reading does; the contract does not ch
   production and for a real ETS account, which is PR 2.
 - **The two natures, on the screens (PR 3, the founder's direction 1 corrected).** READ FOR YOU or SHOWN BY THEM,
   in the meta voice the product already has (`META`: DM Sans, 13 px, capitals, a pixel of tracking, the muted ink,
-  no fill), before the line of help; on the chooser's line, on the card under the condition (on Home, on Gifts, and
+  no fill), before the line of help; on every line of the chooser, chosen or not (the founder, 22 Sep 2026: the six
+  conditions), on the card under the condition (on Home, on Gifts, and
   at the head of a gift's own page, which is another component of the same card), on the catalogue, and nowhere
   else, which a guard holds by listing the files. `--on-paper-soft` was asked for and does not exist:
   on the paper `--muted` is already the paper's own soft ink (`app/globals.css`, `.on-paper`), 4.79:1 on it and

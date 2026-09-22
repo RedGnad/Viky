@@ -740,7 +740,7 @@ test("the nature of a condition is two words in the meta voice, in three places 
     "the chooser, the card (on Home and Gifts, and at the head of a gift's page), the catalogue, and nowhere else",
   );
   assert.match(readFileSync("app/kit/GiftLive.tsx", "utf8"), /<p className="gift-what">\{what\}<\/p>\n\s*\{nature\}/, "under the condition at the head of a gift's page");
-  assert.match(readFileSync("app/kit/ChoiceList.tsx", "utf8"), /\{option\.tag && \(chosen \|\| !lines\) \? option\.tag : null\}\n\s*\{option\.help/, "before the line of help on the chooser");
+  assert.match(readFileSync("app/kit/ChoiceList.tsx", "utf8"), /\{option\.tag \? option\.tag : null\}\n\s*\{option\.help/, "on every line of the chooser, before the line of help");
   assert.match(readFileSync("app/kit/GiftCard.tsx", "utf8"), /<span className=\{BODY\}>\{under\}<\/span>\n\s*\{nature\}/, "under the condition on the card");
   assert.match(readFileSync("app/what-viky-can-check/page.tsx", "utf8"), /<Nature nature=\{condition\.nature\} \/>\n\s*<p className=\{HELP\}>\{condition\.help\}/, "before the help on the catalogue");
 });
