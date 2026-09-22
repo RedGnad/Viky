@@ -4419,6 +4419,17 @@ settles a milestone (form 1) exactly as a reading does; the contract does not ch
   core with every dependency injected (17 refusals and one success), and production holds no Reclaim application
   id at all (OPERATIONS, "The Reclaim account"). The first real session waits for the Viky application's keys in
   production and for a real ETS account, which is PR 2.
-- **Not done here, by order.** The badges and "Show it" (PR 3); the TOEFL condition and our own provider (PR 2);
+- **The two natures, on the screens (PR 3, the founder's direction 1 corrected).** READ FOR YOU or SHOWN BY THEM,
+  in the meta voice the product already has (`META`: DM Sans, 13 px, capitals, a pixel of tracking, the muted ink,
+  no fill), before the line of help; on the chooser's line, on the card under the condition (on Home, on Gifts, and
+  at the head of a gift's own page, which is another component of the same card), on the catalogue, and nowhere
+  else, which a guard holds by listing the files. `--on-paper-soft` was asked for and does not exist:
+  on the paper `--muted` is already the paper's own soft ink (`app/globals.css`, `.on-paper`), 4.79:1 on it and
+  5.05:1 on the ground, so one token does both and no new one was written. A shown condition's page: for the
+  person, one button, "Show it", which opens the verification and, once the proof is taken, makes the character
+  smile as a day earned does; for the funder as for the person, "Shown on <day>." at the head instead of a meter or
+  a row of days, "Nothing shown yet." before. No condition of the pilot is shown yet, so those two render for
+  nobody until PR 2; the words are listed in SCREEN-CLAIMS all the same.
+- **Not done here, by order.** The TOEFL condition and our own provider (PR 2);
   the measured gesture on real devices (PR 4, the founder's or a tester's phones, never a number from here); the
   public page's sentence (PR 5).

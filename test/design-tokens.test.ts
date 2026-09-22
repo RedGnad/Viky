@@ -724,3 +724,23 @@ test("the title face is never in a task: no task screen sets a title in it (stru
   const pay = readFileSync("app/components/PayGift.tsx", "utf8");
   assert.match(pay, /from "\.\.\/kit\/Shell"/, "paying for a gift draws the shell");
 });
+
+/**
+ * The nature of a condition is said in the meta voice, in two words exactly, in three places and nowhere else (D162,
+ * the founder's direction 1 corrected on 22 Sep 2026): the chooser's line, the card under the condition, the catalogue.
+ */
+test("the nature of a condition is two words in the meta voice, in three places and nowhere else", () => {
+  const nature = readFileSync("app/kit/Nature.tsx", "utf8");
+  assert.match(nature, /className=\{`block \$\{META\}`\}/, "the meta voice: 13 px, capitals, a pixel of tracking, the muted ink, no fill");
+  assert.match(readFileSync("src/sentences.ts", "utf8"), /CONDITION_NATURE = \{ read: "READ FOR YOU", shown: "SHOWN BY THEM" \} as const/, "two words exactly");
+  const where = globSync("app/**/*.tsx").filter((file) => readFileSync(file, "utf8").includes("<Nature ")).sort();
+  assert.deepEqual(
+    where,
+    ["app/components/GiftPage.tsx", "app/kit/GiftCard.tsx", "app/kit/offer/WillSheet.tsx", "app/what-viky-can-check/page.tsx"],
+    "the chooser, the card (on Home and Gifts, and at the head of a gift's page), the catalogue, and nowhere else",
+  );
+  assert.match(readFileSync("app/kit/GiftLive.tsx", "utf8"), /<p className="gift-what">\{what\}<\/p>\n\s*\{nature\}/, "under the condition at the head of a gift's page");
+  assert.match(readFileSync("app/kit/ChoiceList.tsx", "utf8"), /\{option\.tag && \(chosen \|\| !lines\) \? option\.tag : null\}\n\s*\{option\.help/, "before the line of help on the chooser");
+  assert.match(readFileSync("app/kit/GiftCard.tsx", "utf8"), /<span className=\{BODY\}>\{under\}<\/span>\n\s*\{nature\}/, "under the condition on the card");
+  assert.match(readFileSync("app/what-viky-can-check/page.tsx", "utf8"), /<Nature nature=\{condition\.nature\} \/>\n\s*<p className=\{HELP\}>\{condition\.help\}/, "before the help on the catalogue");
+});

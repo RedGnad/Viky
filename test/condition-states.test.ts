@@ -124,3 +124,12 @@ test("it is reachable without an account and from the judges page, and it says t
   // The judges page says where each condition stands in the same words as the public page, not in its own.
   assert.match(readFileSync("app/judges/JudgesConditions.tsx", "utf8"), /stateWords\(condition\.state\)\.title/);
 });
+
+/**
+ * The two natures of a condition (D162): read for the person, or shown by the person. Every condition says which,
+ * and every one of the pilot is read: a shown one is a different promise and comes with its own decision.
+ */
+test("every condition says its nature, and every one of the pilot is read for the person", () => {
+  for (const condition of CONDITIONS) assert.ok(condition.nature === "read" || condition.nature === "shown", `${condition.id} has no nature`);
+  assert.deepEqual(CONDITIONS.filter((condition) => condition.nature === "shown").map((condition) => condition.id), [], "a shown condition is added with its own decision, not by default");
+});

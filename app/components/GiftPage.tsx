@@ -31,6 +31,8 @@ import { contractDayInWords, contractRangeInWords, dateInWords, momentInWords, n
 import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
 import { GIFT_CARD as CARD_WORDS, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
 import { CertificateProof } from "../kit/CertificateProof";
+import { Nature } from "../kit/Nature";
+import { ShowProof } from "../kit/ShowProof";
 import { CheckThisDay } from "../kit/CheckThisDay";
 import { CheckThisReading } from "../kit/CheckThisReading";
 import { ConnectTheSource, type ConnectWords } from "../kit/ConnectTheSource";
@@ -425,9 +427,13 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
           />
         ) : null;
       case "shareProof":
-        return milestone ? (
+        if (!milestone) return null;
+        // A shown condition takes its one proof from the person's own account; a certificate takes a pasted link (D162).
+        return conditionById(milestone.conditionId)?.nature === "shown" ? (
+          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onShown={reload} />
+        ) : (
           <CertificateProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onProved={reload} />
-        ) : null;
+        );
       case "take":
         return reviewing ? (
           <div className="flex flex-col gap-[var(--space-md)]">
@@ -459,8 +465,14 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
     }
   })();
 
+  // A shown condition draws no meter and no days (D162): what stands there is the day the proof was shown, or that
+  // nothing has been yet, read the same by the funder and the person it is for.
   const shape = milestone ? (
-    <MilestoneMeter status={milestone} size="large" />
+    conditionById(milestone.conditionId)?.nature === "shown" ? (
+      <p className={BODY}>{milestone.reachedAtMs ? M.lastShown(dateInWords(milestone.reachedAtMs, zone)) : M.nothingShownYet}</p>
+    ) : (
+      <MilestoneMeter status={milestone} size="large" />
+    )
   ) : browser && daily ? (
     <DayRow id={giftId} gift={daily} catchUpSeconds={daily.catchUpSeconds} records={daily.days} voice={voice} />
   ) : null;
@@ -541,6 +553,7 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
           from={CARD_WORDS.fromFunderOrYours(readerIsFunder ? null : funderName)}
           who={mine ? CARD_WORDS.forYou : CARD_WORDS.forName(recipientName ?? account.username ?? "")}
           what={condition?.name ?? ""}
+          nature={condition ? <Nature nature={condition.nature} /> : null}
           shape={shape}
           live={live}
           /* The source closed the account: said where the state is said, because it is the state now. */

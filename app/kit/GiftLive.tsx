@@ -27,6 +27,7 @@ export function GiftLive({
   from,
   who,
   what,
+  nature,
   shape,
   live,
   closed,
@@ -41,6 +42,8 @@ export function GiftLive({
   who: string;
   /** What they do, from the register, never written by a screen. */
   what: string;
+  /** The condition's nature, said under it in the meta voice (app/kit/Nature.tsx, D162), as the card on Home says it. */
+  nature?: ReactNode;
   /** The gift's own drawing, alive: the row of days, the climb, or the stamp. */
   shape: ReactNode;
   live: Live;
@@ -61,6 +64,7 @@ export function GiftLive({
         <p className={`${CARD_LABEL} gift-eyebrow`}>{from}</p>
         <h2 className={`${CARD_TITLE} gift-who`}>{who}</h2>
         <p className="gift-what">{what}</p>
+        {nature}
 
         {shape ? <div className="gift-shape">{shape}</div> : null}
 

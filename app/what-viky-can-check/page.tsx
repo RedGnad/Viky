@@ -3,6 +3,7 @@ import Link from "next/link";
 import { catalogueSections, FRONTIERS, STATES, stateWords } from "@/src/conditions";
 import { CATALOGUE as W, ME } from "@/src/sentences";
 import { HELP, DISPLAY, TITLE } from "../components/ui";
+import { Nature } from "../kit/Nature";
 import { Shell } from "../kit/Shell";
 
 export const metadata: Metadata = { title: W.title };
@@ -32,6 +33,7 @@ export default function Page() {
             return (
               <div key={condition.id} className="space-y-[var(--space-xs)] border-t border-[var(--divider)] pt-[var(--space-md)]">
                 <h3 className="font-medium">{condition.name}</h3>
+                <Nature nature={condition.nature} />
                 <p className={HELP}>{condition.help}</p>
                 {/* The state is a sentence, never a badge: a coloured pill would rank these four, and they are not a scale. */}
                 <p className={HELP}>

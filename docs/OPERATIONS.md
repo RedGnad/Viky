@@ -287,6 +287,29 @@ from before) and lets `duolingo_username` and `duolingo_profile_id` be absent, b
 account binds no named profile. Additive, and the running build does not touch the two constraints it relaxes:
 `pnpm db:migrate` with the operator command of "The test database", then the columns read back.
 
+## The nullifier of an attested read, and why an unchanged page does not repeat it (22 Sep 2026)
+
+A second developer measured, on a local attestor, five claims on an unchanged page carrying the same identifier,
+and asked whether a second reading of an unchanged rating would look like a replay to our contracts.
+
+How it is built, in both paths, from the claim's identifier alone: `src/attested-read.ts:105`
+(`keccak256("viky:zkfetch:" + identifier)`) for every milestone and certificate reading, and the same formula in
+`claimFingerprint`, `src/duolingo-public.ts:9`, for the daily check-in. Neither adds the day nor `observedAt`. The
+identifier is the SDK's `keccak256(provider + parameters + canonical context)` and carries no timestamp.
+
+Measured the same day, with our own attested fetch (`scripts/read-twice.ts`, the function the reading service
+runs) and the production zkFetch application, in TEE mode as production reads (`useTee: true`,
+`src/attested-read.ts:222`): two reads of the unchanged Chess.com player page, seven seconds apart, same extracted
+fields, **two different identifiers**. The signed context carries `tee_session_id`, fresh on every read
+(`3458f620…` then `3b06171c…`), and the identifier hashes the context. A local attestor without TEE has no such
+field, which is why that measurement repeats and this one does not.
+
+What production did: over the last two weeks the milestone path relayed exactly two attested proofs, the two
+`start` readings, and took fifteen plain readings without a proof in between (`viky_milestone_readings`); the daily
+path relayed five check-ins and never met `NullifierAlreadyUsed`. So today's uniqueness rests on a field Reclaim
+puts in the context in TEE mode, not on anything of ours: true of production, and to be kept in mind by anybody who
+runs a reading without TEE.
+
 ## The reading service is a second deployment, and it is not automatic
 
 `src/attested-sources.ts` and `src/chess-com.ts` run in two places: on Vercel, where the proof is judged, and in the

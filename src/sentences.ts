@@ -754,6 +754,9 @@ export const MILESTONE_PAGE = {
   notReadYetTheirs: (source: string) => `Not read yet: the first reading is taken when they connect ${source}, and it is where they start.`,
   atDeadlineYours: (by: string, funder: string | null) => `Reach it ${by} and it is yours. If not, it goes back to ${funder ?? "them"}.`,
   atDeadlineTheirs: (by: string) => `If they reach it ${by} it is theirs. If not, it comes back to you.`,
+  /** A gift whose proof the person shows (D162): what the funder reads instead of a row of days or a meter. */
+  lastShown: (date: string) => `Shown on ${date}.`,
+  nothingShownYet: "Nothing shown yet.",
   reachedYours: (date: string, amount: string) => `Reached on ${date}: the ${amount} is yours.`,
   reachedTheirs: (date: string, amount: string) => `Reached on ${date}: the ${amount} is theirs.`,
   /** "by 17 Oct 2026", or "in time" for a gift that was never started. */
@@ -958,6 +961,30 @@ export const JUDGES = {
  * check, and what is it working on? This page answers it without promising anything, because every line of it is the
  * register's own and each condition carries its state in words.
  */
+/** The nature of a condition, in two words exactly (the founder, 22 Sep 2026): the meta voice, capitals, nowhere but three places. */
+export const CONDITION_NATURE = { read: "READ FOR YOU", shown: "SHOWN BY THEM" } as const;
+
+/**
+ * A proof the person shows from their own account (D162): one button, and what happens around it. The source's
+ * name comes from the register, never from here.
+ */
+export const SHOW_PROOF = {
+  title: (source: string) => `Show it from your ${source} account`,
+  whatHappens: (source: string) =>
+    `A verification tab opens. You sign in to ${source} there, in your own browser, and what that page shows is proved without Viky ever seeing your password. Viky keeps the score it proves and nothing else.`,
+  button: "Show it",
+  opening: "Opening the verification",
+  waiting: "Waiting for the proof",
+  shown: (score: string) => `Shown: ${score}. It is yours.`,
+  refusals: {
+    notConfigured: "Showing a proof is not open yet. Nothing was changed.",
+    belowTarget: "What you showed is under what this gift is for.",
+    tooOld: "That proof took too long. Show it again.",
+    cancelled: "Stopped before the proof came back. Nothing was changed.",
+    unavailable: "The proof could not be checked right now. Try again in a moment.",
+  },
+} as const;
+
 export const CATALOGUE = {
   title: "What Viky can check",
   intro:
