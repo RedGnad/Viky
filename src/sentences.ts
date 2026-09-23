@@ -1065,6 +1065,30 @@ export const ME = {
   judges: "For judges",
 } as const;
 
+/**
+ * The funder's private space on You (D202): their people's nicknames and their own notes, sealed in this browser with
+ * a key the passkey gives under its own salt. Every sentence here is true of `app/kit/PrivateSpace.tsx`: the server
+ * keeps only the sealed envelope, and the first name on a gift stays in clear on the gift.
+ */
+export const PRIVATE = {
+  title: "Private to you",
+  what: "Nicknames for the people you back, and your own notes. Sealed on this device with your passkey before they are kept, so Viky cannot read them. The same passkey opens them on your other devices.",
+  firstNameStays: "The first name you wrote on a gift stays on the gift, where they read it.",
+  open: "Open",
+  opening: "Opening",
+  nobodyYet: "Nobody yet. The people you back appear here once you offer a gift.",
+  nickname: (firstName: string) => `Your name for ${firstName}`,
+  notes: "Your notes",
+  keep: "Keep",
+  keeping: "Keeping",
+  kept: "Kept.",
+  close: "Close",
+  notThisPasskey: "This passkey does not open it. Sign in with the passkey you kept it with.",
+  notASpace: "What is kept could not be read. Nothing was changed.",
+  changedElsewhere: "It was changed on another device. Open it again to see the latest.",
+  failed: "It could not be reached. Try again in a moment.",
+} as const;
+
 /** The help page: five questions, each answered with a sentence the product already keeps true. */
 export const HELP = {
   title: "Help",

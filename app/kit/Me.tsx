@@ -13,6 +13,7 @@ import { CurrencySheet } from "./CurrencySheet";
 import { HeadCharacter } from "./HeadCharacter";
 import { Install } from "./Install";
 import { MoneyKey } from "./MoneyKey";
+import { PrivateSpace } from "./PrivateSpace";
 import { SignInDoor } from "./SignInDoor";
 import { Shell } from "./Shell";
 
@@ -112,6 +113,8 @@ export function Me() {
           </button>
         </div>
       </section>
+
+      <PrivateSpace address={address} />
 
       <Install />
 

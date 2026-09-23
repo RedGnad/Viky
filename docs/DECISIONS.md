@@ -5590,3 +5590,46 @@ then open Fitbit and Strava.
   mode until Strava raises the athlete limit, so only the founder's own Strava account can connect; Google's client
   is published in production, so the seven-day lapse of testing mode does not apply, and past a hundred users
   Google's verification does. Both are on the judges' page.
+
+## D202, 23 Sep 2026: the funder's private space, one passkey and a second key (Mera "One Passkey, Many Keys")
+
+The founder's instruction, in the autonomous queue of 23 Sep 2026: his people and their nicknames, and his own notes,
+encrypted with a key derived from the passkey under its own salt, stored encrypted on the server, readable on any
+device with the same passkey, never readable by us; the key persists nowhere and nothing sensitive goes on disk; the
+recipient's first name stays in clear on the gift; the PR carries a multi-device test.
+
+**Built.**
+
+- **The key.** `mera.passkeyOutputFor(salt)`: one passkey prompt, restricted to the passkey this device signed in with,
+  for the salt `sha256("viky:private:v1")`, which is unrelated to the account's (`sha256("mera.prf.salt.v1")`). The
+  output goes through HKDF-SHA-256 into an AES-256-GCM key that cannot be exported, and the PRF bytes are zeroed at
+  once (`src/private-space-crypto.ts`). The account is the additional data of every seal, so a copied envelope does
+  not open under another account.
+- **What the server holds.** One envelope per account, `{version, nonce, ciphertext}`, with a revision
+  (`viky_private_spaces`, `src/private-space-store.ts`, `/api/account/private`). It accepts an envelope by its shape
+  and size alone and writes only over the revision the device read; a device that lost the race is told "It was
+  changed on another device" and opens again. The server never sees a key, a nickname or a note.
+- **The screen.** A card on You, "Private to you": "Open" asks the passkey once and lists the first names of the gifts
+  this account funded, each with a field for the funder's own name for them, and one field of notes; "Keep" seals and
+  sends; "Close" forgets the key. The first name written on a gift stays on the gift, and the card says so.
+- **The key's life.** In the card's memory only, never in storage: gone on "Close", on leaving You, on another account,
+  and after the ten idle minutes of a signing session. Nothing about it is written anywhere.
+
+**Defaults applied, to confirm.** The card lives on You, under the session card. The people are the first names of the
+gifts funded, once each, plus anybody the space still names whose gift is gone. The notes are one text. Nicknames are
+40 characters at most, notes 2,000, people 60.
+
+**Measured.** Chrome's virtual authenticator does not carry a passkey's PRF secret across an export: a credential
+exported from one profile and imported into another answers no PRF at all (23 Sep 2026, `WebAuthn.getCredentials`
+then `addCredential`, `prf.results` undefined). So the two-device test stands the PRF in with a script in each
+profile that answers HMAC(seed, passkey id, salt), the same output for the same passkey and salt on both, as a synced
+passkey does; the sign-in, the route, the database and the sealing in the page are the real ones. The test
+(`test/browser/private-space.spec.ts`, in the local pass): the first device creates the account, names Léa "Lili" and
+writes a note, keeps; the request that leaves it carries a nonce and a ciphertext and none of the words; a second
+profile holding nothing but the passkey signs in as the same account and reads "Lili" and the note; a third profile
+with the first device's session but another key is told "This passkey does not open it" and is offered nothing to
+keep. `test/private-space.test.ts` seals and opens on Node's Web Crypto, refuses another output, another account and
+a tampered envelope, and drives the store on PGlite and the route with a signed session.
+
+**Waits for the founder.** `pnpm db:migrate` on production for `viky_private_spaces` (run after the merge, as for the
+other tables), and his eye on the card.
