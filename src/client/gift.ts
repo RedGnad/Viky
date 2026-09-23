@@ -261,7 +261,15 @@ export type ShownProofOutcome =
       relayed: { hash: string; creditedDays: number } | null;
       refusal: { code: string; message: string } | null;
     }
-  | { kind: "reached"; giftId: string; metricValue: string; observedAt: number; hash: string };
+  | {
+      kind: "reached";
+      giftId: string;
+      metricValue: string;
+      /** What was shown, in the words the person reads back: "14.00 / 20", "Passed", or the number itself (D174). */
+      shown: string;
+      observedAt: number;
+      hash: string;
+    };
 
 /**
  * Opens a Reclaim session for this gift's condition, hands the person to the verification tab, then polls the

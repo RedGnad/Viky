@@ -37,7 +37,7 @@ export function ShowProof({ giftId, conditionId, yours, onShown }: Readonly<{ gi
         onWaiting: (attempt) => setState({ at: "waiting", attempt }),
       });
       if (outcome.kind === "reached") {
-        setState({ at: "done", score: outcome.metricValue });
+        setState({ at: "done", score: outcome.shown });
         feel("happy", button.current, true);
         await onShown();
         return;

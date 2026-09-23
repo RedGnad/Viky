@@ -1,5 +1,22 @@
 import type { Hex } from "viem";
-import { UNIVERSITY_DURATION_DAYS, UNIVERSITY_ENROLLED, UNIVERSITY_GOAL_TYPE, universitySubject, isPortalId } from "./university-shown";
+import {
+  gradeTargetProblem,
+  gradeUnits,
+  isGradeShape,
+  isPortalId,
+  NO_RESULTS_PAGE,
+  type ResultsExtract,
+  UNIVERSITY_DURATION_DAYS,
+  UNIVERSITY_ENROLLED,
+  UNIVERSITY_GOAL_TYPE,
+  UNIVERSITY_GRADE_GOAL_TYPE,
+  UNIVERSITY_PASSED,
+  UNIVERSITY_RESULTS_DURATION_DAYS,
+  UNIVERSITY_YEAR_GOAL_TYPE,
+  universityGradeSubject,
+  universitySubject,
+  universityYearSubject,
+} from "./university-shown";
 import { CHESS_MODES, CHESS_TACTICS, chessGoalType, isValidChessUsername, ratingHasSettled, recordHasSettled, type ChessClimb } from "./chess-com";
 import {
   CHESS_RATING,
@@ -11,6 +28,8 @@ import {
   type Condition,
   TOEFL_MYBEST_SHOWN,
   UNIVERSITY_ENROLLMENT_SHOWN,
+  UNIVERSITY_GRADE_SHOWN,
+  UNIVERSITY_YEAR_PASSED_SHOWN,
 } from "./conditions";
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
 import { CREDLY_DURATION_DAYS, CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyBadgeIdOf, credlyPairOf, credlySubject } from "./credly-badge";
@@ -265,6 +284,18 @@ export type CertificateCondition = Readonly<{
    * course certificate binds the name and the course, because "a certificate" alone would be paid by any of them.
    */
   subject: (input: Readonly<{ name: string; course?: string }>) => Hex;
+  /**
+   * The contract's integer for a target typed on the source's own scale, where the two differ: a grade is typed as
+   * 14.5 and signed as 1450, in hundredths (D174). Absent where the target is the integer itself. The browser and
+   * the create route both sign through it, so the terms rebuilt are the terms signed.
+   */
+  targetUnits?: (target: number) => number;
+  /**
+   * A condition made on a student portal Viky has proved (D165, D174): the portal is what the funder chose in
+   * `course`, and the condition says why a row cannot take a gift on it with this target, by code, before any money
+   * moves: no results page proved, a scale of letters, a target off the scale.
+   */
+  portal?: Readonly<{ refuses: (portal: Readonly<{ results: ResultsExtract | null }>, target: number) => Readonly<{ code: string; message: string }> | undefined }>;
   /**
    * What the funder names instead of a score, where there is nothing to score (C3). The certificate page carries the
    * same word as an ordinary course link, so the funder pastes the link and nothing is resolved between the two.
@@ -602,6 +633,20 @@ export const TOEFL_SHOWN_MILESTONE: CertificateCondition = {
   },
 };
 
+/** "Which university?", as the three conditions on the rail ask it: the same search over the proved portals (D165). */
+const UNIVERSITY_COURSE: NonNullable<CertificateCondition["course"]> = {
+  label: "Which university?",
+  help: "Type a word of its name. Only a portal Viky has already proved with a student can be chosen: that is what makes the proof worth anything.",
+  slugOf: (picked) => (isPortalId(picked.trim()) ? picked.trim() : undefined),
+  search: {
+    path: "/api/portals/search",
+    placeholder: "Search a university",
+    nothing: "Viky has proved no student portal by those words yet. The list grows one university at a time, with a student present.",
+  },
+  row: "Which university",
+  named: (course) => `This gift will be for ${course}.`,
+};
+
 /**
  * Staying enrolled, shown from the person's own student portal (D165). The certificate shape with no name asked:
  * what the funder chooses is the portal, from the ones Viky has proved, and it is bound into the subject they sign.
@@ -617,18 +662,9 @@ export const UNIVERSITY_SHOWN_MILESTONE: CertificateCondition = {
   validName: () => true,
   validTarget: (value) => value === UNIVERSITY_ENROLLED,
   subject: ({ course }) => universitySubject(String(course ?? "")),
-  course: {
-    label: "Which university?",
-    help: "Type a word of its name. Only a portal Viky has already proved with a student can be chosen: that is what makes the proof worth anything.",
-    slugOf: (picked) => (isPortalId(picked.trim()) ? picked.trim() : undefined),
-    search: {
-      path: "/api/portals/search",
-      placeholder: "Search a university",
-      nothing: "Viky has proved no student portal by those words yet. The list grows one university at a time, with a student present.",
-    },
-    row: "Which university",
-    named: (course) => `This gift will be for staying enrolled at ${course}.`,
-  },
+  // Any proved portal takes a gift on enrolment: that is what proving it means.
+  portal: { refuses: () => undefined },
+  course: { ...UNIVERSITY_COURSE, named: (course) => `This gift will be for staying enrolled at ${course}.` },
   target: {
     label: "What has to be shown",
     help: "Enrolled or not: there is nothing to choose here.",
@@ -672,7 +708,130 @@ export const UNIVERSITY_SHOWN_MILESTONE: CertificateCondition = {
   },
 };
 
-const CERTIFICATES: readonly CertificateCondition[] = [DET_MILESTONE, COURSERA_MILESTONE, CREDLY_MILESTONE, TOEFL_SHOWN_MILESTONE, UNIVERSITY_SHOWN_MILESTONE];
+/**
+ * Passing the year at their university, shown from the results page of the same portal (D174). Enrolment's shape
+ * again, with one more thing the row must hold: the results page, proved from a student's session like the first.
+ * There is nothing to score: passed is one, and the page that says so is what the person shows.
+ */
+export const UNIVERSITY_YEAR_MILESTONE: CertificateCondition = {
+  condition: UNIVERSITY_YEAR_PASSED_SHOWN,
+  shape: CERTIFICATE_SHAPE,
+  goalType: UNIVERSITY_YEAR_GOAL_TYPE,
+  asksName: false,
+  readPath: "",
+  validLink: () => false,
+  validName: () => true,
+  validTarget: (value) => value === UNIVERSITY_PASSED,
+  subject: ({ course }) => universityYearSubject(String(course ?? "")),
+  portal: { refuses: (portal) => (portal.results ? undefined : NO_RESULTS_PAGE) },
+  course: { ...UNIVERSITY_COURSE, named: (course) => `This gift will be for passing the year at ${course}.` },
+  target: {
+    label: "What has to be shown",
+    help: "Passed or not: there is nothing to choose here.",
+    min: UNIVERSITY_PASSED,
+    max: UNIVERSITY_PASSED,
+    step: 1,
+    suggested: UNIVERSITY_PASSED,
+    inWords: () => "the year passed at that university",
+  },
+  duration: UNIVERSITY_RESULTS_DURATION_DAYS,
+  words: {
+    detailQuestion: "Which university, and how long",
+    nameLabel: "",
+    nameHelp: "",
+    linkLabel: "",
+    linkHelp: "",
+    whatIsRead: "Viky keeps that the results page said passed, and the day it was shown, and nothing else. Your portal password never reaches Viky, and no grade is read.",
+    check: "",
+    checking: "",
+    goal: () => "Show that you passed the year",
+    mustShow: () => "The results page of their own student portal that says they passed the year, or the semester, shown from their own account. A page of another year does not count where the portal dates it.",
+    durationLabel: "How long do they have?",
+    durationHelp: "It has to be shown inside that time, and the day it is shown is what counts.",
+    durationShape: (min, max) => `Between ${min} and ${max} days.`,
+    durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
+    whenReached: "When they show they passed, all of this becomes theirs",
+    ifNot: "If they do not show it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    refusals: {
+      targetShape: "",
+      nameShape: "",
+      linkShape: "",
+      notPublic: "",
+      expired: "",
+      notFound: "",
+      unavailable: "The proof could not be checked right now. Try again in a moment.",
+      anotherName: "That was shown from another university's portal than the one this gift is for.",
+      below: () => "The results page shown does not say passed.",
+      beforeTheGift: "",
+      afterTheDeadline: "That was shown after this gift's last day.",
+    },
+  },
+};
+
+/**
+ * Reaching a grade at their university, shown from the same results page (D174): the TOEFL's shape on the portal's
+ * rail. The funder types the grade on the university's own scale, with decimals (14.5, or 3.5 for a GPA), and signs it
+ * in hundredths; the scale is the row's, so a grade off it, or a scale of letters, is refused when the gift is made
+ * and never when the person shows. Twelve is suggested because the corridor's universities grade out of twenty; on
+ * another scale the create route says what the scale is.
+ */
+export const UNIVERSITY_GRADE_MILESTONE: CertificateCondition = {
+  condition: UNIVERSITY_GRADE_SHOWN,
+  shape: CERTIFICATE_SHAPE,
+  goalType: UNIVERSITY_GRADE_GOAL_TYPE,
+  asksName: false,
+  readPath: "",
+  validLink: () => false,
+  validName: () => true,
+  validTarget: isGradeShape,
+  targetUnits: gradeUnits,
+  subject: ({ course }) => universityGradeSubject(String(course ?? "")),
+  portal: { refuses: (portal, target) => (portal.results ? gradeTargetProblem(portal.results.grade.scale, target) : NO_RESULTS_PAGE) },
+  course: { ...UNIVERSITY_COURSE, named: (course) => `This gift will be for a grade at ${course}.` },
+  target: {
+    label: "The grade they reach",
+    help: "On the university's own scale, with a dot for decimals: 14.5 out of 20, or 3.5 for a GPA out of 4. A grade off that scale is refused when the gift is made.",
+    min: 0.01,
+    max: 1_000,
+    step: 0.01,
+    suggested: 12,
+    inWords: (value) => `${value.toFixed(2)} on the university's own scale`,
+  },
+  duration: UNIVERSITY_RESULTS_DURATION_DAYS,
+  words: {
+    detailQuestion: "Which university, and the grade to reach",
+    nameLabel: "",
+    nameHelp: "",
+    linkLabel: "",
+    linkHelp: "",
+    whatIsRead: "Viky keeps the grade the results page carries, on the university's own scale, and the day it was shown, and nothing else. Your portal password never reaches Viky.",
+    check: "",
+    checking: "",
+    goal: (target) => `Reach ${target.toFixed(2)} at their university`,
+    mustShow: (_name, target) => `A grade of ${target.toFixed(2)} or more on the university's own scale, shown from their own results page. A page of another year does not count where the portal dates it.`,
+    durationLabel: "How long do they have?",
+    durationHelp: "The grade has to be shown inside that time, and the day it is shown is what counts.",
+    durationShape: (min, max) => `Between ${min} and ${max} days.`,
+    durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
+    whenReached: "When they show that grade, all of this becomes theirs",
+    ifNot: "If they do not show it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    refusals: {
+      targetShape: "Write the grade as a number on the university's scale, with a dot for decimals, like 14.5.",
+      nameShape: "",
+      linkShape: "",
+      notPublic: "",
+      expired: "",
+      notFound: "",
+      unavailable: "The proof could not be checked right now. Try again in a moment.",
+      anotherName: "That was shown from another university's portal than the one this gift is for.",
+      below: (target, score) => `That grade is ${(score / 100).toFixed(2)}. This gift is for ${(target / 100).toFixed(2)}.`,
+      beforeTheGift: "",
+      afterTheDeadline: "That was shown after this gift's last day.",
+    },
+  },
+};
+
+const CERTIFICATES: readonly CertificateCondition[] = [DET_MILESTONE, COURSERA_MILESTONE, CREDLY_MILESTONE, TOEFL_SHOWN_MILESTONE, UNIVERSITY_SHOWN_MILESTONE, UNIVERSITY_YEAR_MILESTONE, UNIVERSITY_GRADE_MILESTONE];
 
 export function certificateOf(condition: Condition | undefined): CertificateCondition | undefined {
   if (!condition || condition.kind !== "milestone") return undefined;

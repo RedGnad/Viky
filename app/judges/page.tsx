@@ -158,7 +158,10 @@ export default function JudgesPage() {
             Reclaim, whose attestor proves the page, treats those terms as its own question and does not answer it
             for us. The risk is the same kind as Duolingo&apos;s above, spread one portal at a time, and each portal is
             named in the gift the funder signs, so a portal that changes its page stops proving until it is proved
-            again with a student present.
+            again with a student present. The year passed and a grade reached (D174) are shown the same way from the
+            same portal&apos;s results page, a second page proved with a student and pinned on the same row, under the
+            same unread terms; the grade is read on the scale the row declares and compared in hundredths, and a page of
+            another year pays nothing where the portal dates its page.
           </li>
           <li>
             <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:

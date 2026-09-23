@@ -52,6 +52,11 @@ export type ShownReading = Readonly<{
   eventAt: number | null;
   /** What identifies the account the proof was shown from, when the provider extracts something that does. */
   accountKey: string | null;
+  /**
+   * What was shown, in the words the person reads back ("14.00 / 20", "Passed"): the number alone when the
+   * condition's own scale is the number, as a TOEFL score is (D174).
+   */
+  inWords?: string;
 }>;
 
 export class ShownProofError extends Error {

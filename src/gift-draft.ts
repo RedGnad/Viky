@@ -131,7 +131,11 @@ function nameGiven(value: string): boolean {
 
 function targetNumber(draft: GiftDraft): number | undefined {
   const value = Number(draft.target);
-  return Number.isInteger(value) && value > 0 ? value : undefined;
+  if (!Number.isFinite(value) || value <= 0) return undefined;
+  // A grade is typed on its own scale, with decimals, and the condition says so by a step under one (D174); every
+  // other target is a whole number, as it always was.
+  const step = certificateById(draft.conditionId)?.target.step ?? 1;
+  return step < 1 || Number.isInteger(value) ? value : undefined;
 }
 
 /**

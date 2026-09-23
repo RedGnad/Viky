@@ -39,7 +39,16 @@ export type ShownVerificationDeps = VerificationDeps & {
 
 export type ShownOutcome =
   | Readonly<{ kind: "daily"; sessionId: string; giftId: string; phase: "baseline" | "check-in"; dayIndex: number; metricValue: number; observedAt: number; earnedSincePrevious: number | null }>
-  | Readonly<{ kind: "reached"; sessionId: string; giftId: string; metricValue: string; observedAt: number; hash: Hex }>;
+  | Readonly<{
+      kind: "reached";
+      sessionId: string;
+      giftId: string;
+      metricValue: string;
+      /** What was shown, in the words the person reads back: "14.00 / 20", "Passed", or the number itself (D174). */
+      shown: string;
+      observedAt: number;
+      hash: Hex;
+    }>;
 
 function assertFresh(timestamps: readonly number[], now: number): void {
   for (const at of timestamps) {
@@ -80,7 +89,8 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
     requestHashes: entry.condition.requestHashes,
     read: entry.condition.read,
   };
-  if (!provider.providerId) throw new VerificationError("NO_PORTAL", "This gift names no portal a proof could come from");
+  // A gift naming no portal, or a portal proved for enrolment and not for its results page (D174): each by its name.
+  if (!provider.providerId) throw new VerificationError(provider.missing?.code ?? "NO_PORTAL", provider.missing?.message ?? "This gift names no portal a proof could come from");
   const subject = (entry.subjectOf && record ? entry.subjectOf(record) : null) ?? entry.subject;
   if (!subject) throw new VerificationError("NOT_CONFIGURED", "This condition has no subject to sign", 503);
 
@@ -161,5 +171,13 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
   });
   const recorded = await deps.consumeShownSession({ sessionId: session.sessionId, evidence, attestation: { message: serialise(message), signature: "0x" }, proofs });
   if (!recorded) throw new VerificationError("ALREADY_RECORDED", "This proof has already been recorded", 409);
-  return { kind: "reached", sessionId: session.sessionId, giftId: session.giftId, metricValue: evidence.reading.metricValue.toString(), observedAt: evidence.observedAt, hash: proved.hash };
+  return {
+    kind: "reached",
+    sessionId: session.sessionId,
+    giftId: session.giftId,
+    metricValue: evidence.reading.metricValue.toString(),
+    shown: evidence.reading.inWords ?? evidence.reading.metricValue.toString(),
+    observedAt: evidence.observedAt,
+    hash: proved.hash,
+  };
 }
