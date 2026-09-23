@@ -602,13 +602,6 @@ export const TOEFL_MYBEST_SHOWN: Condition = {
   },
 };
 
-export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, CREDLY_BADGE, TOEFL_MYBEST_SHOWN];
-
-/**
- * What is built with a piece really missing (D184): a provider not registered, a portal not proved. Nobody can make a
- * gift on these, operator or not; the public page prints them under their family with "Being built" and the missing
- * piece in one line. The day the piece exists, the line moves into the register above, open, and this list shrinks.
- */
 /**
  * Staying enrolled at a university, shown from the person's own student portal (D165). The portal is chosen by the
  * funder from the portals Viky has proved (src/portal-store.ts) and bound into what they sign; the person shows the
@@ -620,22 +613,31 @@ export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
   kind: "milestone",
   nature: "shown",
   goalType: null,
-  live: false,
-  beforeItOpens: "A portal in the table of portals: its provider registered from the portal's sign-in and enrolment pages, then one row.",
+  // Open since the first portal row exists (D200): the American University of Rome, from the Reclaim directory (D199).
+  live: true,
+  state: "open",
   source: UNIVERSITY_SOURCE,
   family: "study",
-  name: "Stay enrolled at their university",
-  help: "They sign in to their own student portal and show the page that says they are enrolled; nothing about their marks is read. It proves the account that signed in, not who sits in class.",
+  name: "Enrolled at university, shown",
+  help: "Shown by them from their own student portal: the page that says they are enrolled, no marks read. It proves the account, not who sits in class.",
   link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
   reading: "university-enrollment-shown",
   words: {
     earnedDay: "When they show they are enrolled, all of this becomes theirs",
-    connect: "Opened. Show your enrolment from your university's portal when you are ready.",
+    connect: `Opened. Nothing shown yet from ${UNIVERSITY_SOURCE}.`,
     doIt: "Press Show it and sign in to your student portal in the tab that opens. The page that says you are enrolled is what counts.",
     eachDay: "the day it is shown",
     preview: "Enrolled at your university, shown from your own student portal: the gift is yours when you show it.",
   },
 };
+
+export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, CREDLY_BADGE, TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN];
+
+/**
+ * What is built with a piece really missing (D184): a provider not registered, a portal not proved. Nobody can make a
+ * gift on these, operator or not; the public page prints them under their family with "Being built" and the missing
+ * piece in one line. The day the piece exists, the line moves into the register above, open, and this list shrinks.
+ */
 
 /**
  * Passing the year at their university, shown from the results page of the person's own student portal (D174): the
@@ -983,7 +985,6 @@ export const BUILDING: readonly Condition[] = [
   BAC_CAMEROON_SHOWN,
   BAC_FRANCE_SHOWN,
   UDEMY_COURSE_SHOWN,
-  UNIVERSITY_ENROLLMENT_SHOWN,
   UNIVERSITY_YEAR_PASSED_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
   ECOLEDIRECTE_GRADE_SHOWN,
