@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Shell } from "../kit/Shell";
 import Link from "next/link";
+import { privacyWords } from "@/src/condition-privacy";
+import { BUILDING, CONDITIONS } from "@/src/conditions";
 import { DISPLAY, TITLE } from "../components/ui";
 
 export const metadata: Metadata = {
@@ -59,12 +61,30 @@ export default function PrivacyPage() {
         </ul>
       </section>
 
+      {/* One line per condition, read from the same register the product reads (src/condition-privacy.ts): what is
+          read, who sees it, what is kept, and what reaches the public program. A number that is the person's own is
+          seen once by them and kept nowhere; a number a source publishes is kept as read. */}
+      <section className="space-y-[var(--space-sm)] text-[length:var(--type-help)]">
+        <h2 className={TITLE}>Condition by condition</h2>
+        <p>
+          For each condition Viky offers or is building: what is read, who sees it, what is kept, and what is written
+          into the public program.
+        </p>
+        <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)]">
+          {[...CONDITIONS, ...BUILDING].map((condition) => (
+            <li key={condition.id}>
+              <strong>{condition.name}.</strong> {privacyWords(condition)}
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <section className="space-y-[var(--space-sm)] text-[length:var(--type-help)]">
         <h2 className={TITLE}>Who processes it</h2>
         <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)]">
           <li><strong>Vercel</strong> hosts the application (Paris region) and keeps standard request logs.</li>
           <li><strong>Neon</strong> hosts the database (Frankfurt, Germany).</li>
-          <li><strong>Reclaim Protocol</strong> runs the verification of your Duolingo progress; its attestation service sees your Duolingo session in the way its protocol describes, and Viky receives only the proof.</li>
+          <li><strong>Reclaim Protocol</strong> runs the verification of your Duolingo progress and of what you show from your own accounts; its attestation service sees that session in the way its protocol describes, and Viky receives only the proof.</li>
           <li><strong>Duolingo</strong> answers a public profile lookup for the username you enter.</li>
           <li><strong>Mercuryo</strong> handles card purchases, with its own account and identity checks.</li>
           <li><strong>Kuru</strong> provides the exchange used to convert between currencies; it sees your account identifier and the amount.</li>

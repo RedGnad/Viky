@@ -197,6 +197,17 @@ export default function JudgesPage() {
             such authorisation exists. It reopens only with one.
           </li>
           <li>
+            <strong>What the number read is worth to anybody else.</strong> For a result the person shows from their
+            own account (an exam, the Study rail, School, a course), the number is seen once, on their own screen, and
+            by nobody else (D185): under the target nothing is relayed and they are told with the number; at or over
+            it the attestation the contract receives carries the target as its value, which is the verdict. The
+            readings table keeps no number and no proof for these lines, and the session row keeps the verdict alone.
+            The cost, written here: nobody, us included, can re-verify such a proof from our rows afterwards; what
+            remains is the contract&apos;s record of the signed attestation. A number a source publishes (a rating, the
+            XP a day is counted on, a score on a certificate page the person shares) is kept as read and written into
+            the program, as before; the privacy page says which rule each condition is under.
+          </li>
+          <li>
             <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:
             Coursera verifies identity once per account, and says some programmes require it while others only check a
             name. That condition is not open yet, and this is what it will prove when it is.

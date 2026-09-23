@@ -5100,3 +5100,38 @@ une pièce manque vraiment. Jamais « tested » ni « used by N » sans preuve."
 - **Not done here.** The privacy rule of the same morning (the number read shown to the two parties only, never
   stored beyond the verdict, the chain carrying the verdict alone) is its own PR; the portal rows for the corridor
   (UCAD, FHB) wait for their providers on the dashboard, their definitions being written from the public pages.
+
+## D185, 23 Sep 2026: a number that is the person's own is seen once by them, kept nowhere, and the chain carries the verdict
+
+The founder, 23 Sep 2026, for every condition of the Study rail and the exams, the same rule as for Fitbit and Strava:
+"le chiffre lu (score, note, moyenne) est montré au financeur et au receveur seulement, jamais à un tiers par le
+lien, jamais stocké au-delà du verdict ; sur la chaîne, seulement le verdict (atteint, ou pas). La page de vie privée
+le dit, condition par condition."
+
+- **Which conditions.** Every condition a person shows from their own account (`nature: "shown"`): the TOEFL score,
+  the five exam results, the three Study lines, the EcoleDirecte average, the Udemy course. The register of the rule
+  is `src/condition-privacy.ts`, one line per condition, `kept: "verdict"` for these and `"number"` or `"fact"` for
+  what a source publishes about the person (a rating, the XP a day is counted on, a certificate page they share),
+  which is kept as read, as before. A test pins that every condition has a line and that every shown one is under the
+  verdict rule.
+- **What the chain receives.** At or over the target, the attestation carries the target as its value: the verdict,
+  in the contract's own comparison (`metricValue >= target`), and never the number. Under the target, nothing is
+  signed, relayed or written: the verification refuses `NOT_THERE_YET` (409) with the number, to the person who
+  showed it. So a proof under the target is not on the chain either.
+- **What the rows keep.** For these conditions the readings row keeps no number, no account key and no proofs; the
+  session row keeps `{ verdict: "reached" }` and no proofs. The judges' count of real proofs still counts the row
+  (attested, reached). The number reaches one screen: the verify response of the person who showed it, once.
+- **Who is shown the number.** "Montré au financeur et au receveur": the number is kept nowhere, so it can be shown
+  only at the moment it is proved, and only the recipient is on that screen. The funder is told that it was reached
+  and knows the target they chose; they do not see the number. If the founder wants the funder to see the number,
+  it has to be stored, and that is a different rule: said on the privacy page and here, so it can be overruled.
+- **The cost, written.** Nobody, us included, can re-verify such a proof from our rows afterwards; what remains is
+  the contract's record of the signed attestation. The judges' page says so.
+- **A defect found by the test.** The session row is JSON and the evidence carried a bigint: the store's
+  `JSON.stringify` would have thrown after the proof was relayed and the reading recorded, leaving the session
+  unconsumed and the person with an error for a proof the chain had accepted. The evidence is now stored with the
+  number as a string (or the verdict alone), and the test stringifies what it is given, as the store does.
+- **What crossed the frontier, said in the PR.** `app/kit/ShowProof.tsx`: one line removed, so the server's
+  sentence for `NOT_THERE_YET` (with the number) reaches the screen instead of a fixed one; `app/privacy/page.tsx`
+  (the section, and Reclaim named for every proof); `app/judges/page.tsx` (the cost); `app/api/proof/verify/route.ts`
+  (the target); `src/sentences.ts` (the words). Nothing else outside the catalogue's files.

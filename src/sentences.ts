@@ -971,9 +971,13 @@ export const SHOW_PROOF = {
   opening: "Opening the verification",
   waiting: "Waiting for the proof",
   shown: (score: string) => `Shown: ${score}. It is yours.`,
+  /**
+   * Under the target (D185): said with the number, to the person who showed it and to nobody else, since the number
+   * is kept nowhere; nothing was relayed, and the gift stays theirs to earn until its deadline.
+   */
+  notThereYet: (score: string) => `Shown: ${score}. It is under what this gift is for, so nothing was recorded and nothing is lost: show it again once it is there.`,
   refusals: {
     notConfigured: "Showing a proof is not open yet. Nothing was changed.",
-    belowTarget: "What you showed is under what this gift is for.",
     tooOld: "That proof took too long. Show it again.",
     cancelled: "Stopped before the proof came back. Nothing was changed.",
     unavailable: "The proof could not be checked right now. Try again in a moment.",

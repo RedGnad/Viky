@@ -80,7 +80,10 @@ export async function POST(request: Request) {
         milestoneOf: async (giftId) => {
           if (!isMilestoneGiftId(giftId)) return null;
           const state = await readMilestoneGift(giftEscrow, giftId);
-          return state.recipient ? { contract: giftEscrow, recipient: state.recipient, opened: true, settled: state.settled || state.cancelled } : { contract: giftEscrow, recipient: "0x0000000000000000000000000000000000000000", opened: false, settled: false };
+          // The target too (D185): for a result whose number is the person's own, the verdict is what is attested.
+          return state.recipient
+            ? { contract: giftEscrow, recipient: state.recipient, opened: true, settled: state.settled || state.cancelled, target: state.target }
+            : { contract: giftEscrow, recipient: "0x0000000000000000000000000000000000000000", opened: false, settled: false, target: state.target };
         },
         appId,
         escrowAddress: giftEscrow,

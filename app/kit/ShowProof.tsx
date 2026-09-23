@@ -47,7 +47,6 @@ export function ShowProof({ giftId, conditionId, yours, onShown }: Readonly<{ gi
       const code = error instanceof ApiError ? error.code : "";
       const said: Record<string, string> = {
         NOT_CONFIGURED: W.refusals.notConfigured,
-        NOT_THERE_YET: W.refusals.belowTarget,
         PROOF_TOO_OLD: W.refusals.tooOld,
         TIMED_OUT: W.refusals.tooOld,
         CANCELLED: W.refusals.cancelled,
