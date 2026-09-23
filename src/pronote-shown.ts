@@ -11,11 +11,15 @@ import { keccak256, stringToHex, type Hex } from "viem";
  * PRONOTE is served per establishment, `https://<the space>.index-education.net/pronote/`, with a page for parents
  * (`parent.html`), preferred, and one for pupils (`eleve.html`). So the gift carries its space as a university gift
  * carries its portal: the funder pastes the address, the space's own word is the subject they sign, and the person
- * signs in on that space in their own browser. The grades come back from `appelfonction` in clear JSON when the space
- * does not switch on its own AES encryption or compression (`CrA`, `CoA` in the page's start parameters; the public
- * demonstration space has neither, read 23 Sep 2026): `dataSec.data.moyGenerale.V`, "14,50" (pronotepy's
- * `overall_average`, the same day). A space that encrypts gives a proof with nothing readable in it, and the reading
- * fails by its name, `NO_GRADE`, nothing lost.
+ * signs in on that space in their own browser.
+ *
+ * What stands in the way (D205, correcting D203): PRONOTE's answers are AES-encrypted and compressed by default. A
+ * space skips either only when its page's start parameters say `sCrA` or `sCoA` (Pawnote, the current client,
+ * `skip_encryption: session_data.sCrA ?? false`); the public demonstration space and two real spaces read on 23 Sep
+ * 2026 (`e972000a`, `e212074o`) say neither, and load the same client script, byte for byte. So `dataSec` is
+ * ciphertext under a key derived at sign-in, a proof of the answer carries no readable average, and a provider
+ * registered from the demonstration space or from any family's space would read nothing. D203's sentence that the
+ * answer is clear JSON unless a school switches encryption on came from an older client (pronotepy) and was wrong.
  */
 
 export const PRONOTE_SOURCE = "PRONOTE";
@@ -53,4 +57,4 @@ export function pronoteLoginUrl(space: string): string {
 export type PronoteProvider = Readonly<{ id: string; version: string; requestHash: string }>;
 export const PRONOTE_PROVIDER: PronoteProvider | null = null;
 
-export const PRONOTE_NOT_REGISTERED = "This condition's provider is not registered yet: it is built from a real family's PRONOTE space first, and nothing can be shown until then.";
+export const PRONOTE_NOT_REGISTERED = "This condition cannot be shown yet: PRONOTE encrypts what its pages send, so nothing can be read from it until another way is found.";

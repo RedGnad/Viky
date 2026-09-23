@@ -968,8 +968,10 @@ alone (the calls of D194, carried by the relayer):
 | data | `0x5ba191520000000000000000000000000000000000000000000000000000000000000018168e16e58443ee012319e416a53f7bf5ecbcf660707e35917bad5a5abf7835f80000000000000000000000000000000000000000000000000000000000000001` |
 | what it is | `registerGoal(24, 0x168e16e5…35f8, 1)` |
 
-The line opens when its provider is registered from a real family's PRONOTE space
-(docs/reclaim/pronote-grade-shown-provider.md) and pinned in `PRONOTE_PROVIDER`, and this goal is signed.
+Prepared for the next Safe session (nonce 8, `signThis` `0x8820691e801d4367b7fcf357333f06be195576b88c2e1824624971a59e654a94`,
+read from the chain on 23 Sep 2026, the goal alone in the batch; rebuilt by `pnpm safe:session` if the nonce moves).
+Signing it opens nothing: PRONOTE encrypts its answers by default, so no provider can read an average yet
+(docs/reclaim/pronote-grade-shown-provider.md, corrected).
 
 ## The Safe session of every remaining goal, in one transaction (D194)
 

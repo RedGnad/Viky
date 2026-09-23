@@ -991,7 +991,7 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
   nature: "shown",
   goalType: null,
   live: false,
-  beforeItOpens: "Its provider, registered on the Reclaim dashboard from a real family's PRONOTE space, and goal 24 signed by the owner.",
+  beforeItOpens: "PRONOTE encrypts every answer by default, so a proof can read no average; a way to read one is needed before a provider, then goal 24.",
   source: PRONOTE_SOURCE,
   family: "school",
   name: "An average on PRONOTE, shown",

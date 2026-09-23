@@ -5695,3 +5695,21 @@ sent to the chain by any of the thirty.
 
 **Default applied, to confirm:** the exception to the smallest amount, everything the person has may always go, which
 the founder's instruction did not name; without it a gift of fifty cents could never be taken out.
+
+## D205, 23 Sep 2026: PRONOTE encrypts its answers by default; D203 corrected, the line blocked
+
+The founder asked whether PRONOTE's public demonstration space carries the same `appelfonction` request as a school's,
+so that a provider registered from it would serve any `*.index-education.net` space.
+
+- **The demonstration space is a faithful model.** Its parents' page and two real schools' (`e972000a`, `e212074o`),
+  read on 23 Sep 2026, load the same client script, byte for byte, and start the same way; the demonstration adds only
+  `"d":true`.
+- **But no space sends the average in clear.** The current client library (Pawnote) reads the page's `sCrA` and `sCoA`
+  as flags to skip encryption and compression, both false when absent, and decrypts every answer with a key derived at
+  sign-in. None of the three pages carries either flag. A witness would attest ciphertext, and no pattern can read an
+  average in it. D203 said the opposite, from an older client (pronotepy); that sentence was wrong and is corrected in
+  the code, the definition and OPERATIONS.
+- **So the line stays being built, with its real reason.** Registering a provider from the demonstration space or a
+  parent's would read nothing. Goal 24 is prepared for the next Safe session all the same, as the founder asked, and
+  opens nothing by itself. What would unblock it is a readable answer: a provider that can decrypt with the session's
+  key inside the verification, or another PRONOTE surface that serves the average in clear. Neither is known today.

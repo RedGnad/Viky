@@ -25,7 +25,8 @@ test("the line: shown by them, under School, goal 24, being built, and under the
   assert.equal(PRONOTE_GOAL_TYPE, 24);
   assert.equal(pronoteProviderId(), keccak256(stringToHex("viky:provider:pronote-grade-shown:v1")));
   assert.ok(MILESTONE_GOALS.some((goal) => goal.goalType === 24 && goal.providerId === pronoteProviderId()));
-  assert.match(String(PRONOTE_MILESTONE.notOpen), /not registered yet/, "nobody can make a gift on it until the provider is pinned");
+  assert.match(String(PRONOTE_MILESTONE.notOpen), /encrypts/, "nobody can make a gift on it, and the reason is the real one (PRONOTE encrypts its answers)");
+  assert.match(String(PRONOTE_GRADE_SHOWN.beforeItOpens), /encrypts every answer by default/);
 });
 
 test("the space is taken from its address, and bound into what the funder signs", () => {

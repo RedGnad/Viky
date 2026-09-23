@@ -14,17 +14,21 @@ the code reads `average` and nothing else (`readSchoolAverage` in `src/school-sh
   founder prefers, or on the pupils' page. Nothing reaches Viky.
 - A parents' account can answer for several pupils: the average read is the one of the pupil the session has open.
 
-## Where the average comes from, and the one technical limit
+## Where the average comes from, and why no proof can read it today (corrected, D205)
 
-- The application talks to its space by `POST https://<space>.index-education.net/pronote/appelfonction/<a>/<h>/<n>`,
-  `n` being the request's number encrypted with the session's key, so the URL is matched as a pattern. The grades
-  are the function `DernieresNotes` (page 198), answered with `dataSec.data.moyGenerale.V`, the overall average as
-  the family reads it, "14,50" (pronotepy, `Period.overall_average`, read 23 Sep 2026).
-- The answer is clear JSON unless the establishment switches on PRONOTE's own AES encryption or compression of the
-  exchanged data: `CrA` and `CoA` in the start parameters of the space's page (pronotepy's `_Communication.initialise`,
-  `self.attributes.get("CrA", False)`). The demonstration space's page starts with `{"h":…,"d":true,"a":2}`, neither
-  set. A space that sets one of them sends `dataSec` as hexadecimal ciphertext: a proof of it carries no average, and
-  the reading is refused `NO_GRADE`, nothing lost. How many spaces do so is not known.
+- The application talks to its space by `POST https://<space>.index-education.net/pronote/appelfonction/<a>/<h>/<n>`;
+  the grades are the function `DernieresNotes`, whose data carries `moyGenerale.V`, "14,50" (pronotepy,
+  `Period.overall_average`).
+- **The answer is encrypted and compressed by default.** Its `donneesSec` is AES ciphertext of deflated JSON, under a
+  key derived at sign-in. A space skips encryption or compression only when its page's start parameters carry `sCrA`
+  or `sCoA` (Pawnote, the current client library, `src/session/index.ts`: `skip_encryption: session_data.sCrA ??
+  false`, `skip_compression: session_data.sCoA ?? false`; it decrypts with `aes.decrypt` then `inflateRaw`).
+- Read on 23 Sep 2026: the demonstration space's parents' page starts `{"h":…,"d":true,"a":2}`; two real spaces,
+  `e972000a` and `e212074o`, start `{"h":…,"a":2}`. None skips anything, and all three load the same client script
+  (`parent_ext.js`, the same hash in its path). So the demonstration space is a faithful model of a real one, and in
+  both the average never crosses the wire in clear: a witness attests ciphertext, and no pattern can read it.
+- D203 said the answer is clear JSON unless a school switches encryption on. That came from pronotepy, whose
+  `CrA`/`CoA` reading predates the current protocol, and it was wrong.
 
 ## What is extracted
 
@@ -52,8 +56,8 @@ the code reads `average` and nothing else (`readSchoolAverage` in `src/school-sh
 }
 ```
 
-Once published: the provider id, its version and the hash of its request go into `PRONOTE_PROVIDER`
-(`src/pronote-shown.ts`), and goal 24 is signed (OPERATIONS).
+Not to register as it stands: it would attest ciphertext. Kept as the shape a provider would take the day a readable
+answer exists.
 
 ## When the page does not carry it
 
