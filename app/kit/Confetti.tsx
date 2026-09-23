@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react";
 import { MOTION, SPRING } from "@/src/design-tokens";
 import { springEasing } from "@/src/motion";
+import { feel } from "./mood";
 
 /**
  * The one confetti of the app (decision B of the founder, 23 Sep 2026): on "Atteint", for the person the gift is for
@@ -79,6 +80,8 @@ export function Confetti({ giftId, play }: Readonly<{ giftId: string; play: bool
         }),
       );
     }
+    // The character at the head of the screen jumps once with it: the moment is the gift reached, never a clock.
+    feel("jump", drawing, true);
     const cleared = Promise.all(animations.map((animation) => animation.finished.catch(() => undefined))).then(() => box.replaceChildren());
     return () => {
       animations.forEach((animation) => animation.cancel());

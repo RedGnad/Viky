@@ -4987,3 +4987,36 @@ The sheet:
   climb's character moved from 61 to 190 px and its ink from 0.09 to 0.59 of the slope in 700 ms. What the eye may
   catch: the server draws the final state, and for about 160 ms before the browser starts the arrival it is visible;
   the card is still entering then (D171), which is what hides it.
+
+## D181, 23 Sep 2026: the character reacts (motion, step 2 of the life of the product)
+
+The founder, 23 Sep 2026: "regarde le curseur au survol (2,5 px, 200 ms, pointeur seulement), s'ouvre quand un jour
+gagné atterrit, baisse le regard 300 ms quand un jour revient, saute une fois à « atteint ». Chaque état attaché à une
+ligne du journal, jamais à une horloge ; jamais de gronderie."
+
+- **The gaze** was there (step 2 of 21 Sep): the character at the head of a screen looks at a pointer hovering it,
+  2.5 px in 200 ms, and a finger moves nothing.
+- **Three reactions**, on the mood channel the two hover expressions already use (`app/kit/mood.ts`): `open` when a
+  day earned lands, `down` when a day gone back has slid to its place, `jump` once when the gift is reached. Each is
+  cued by the event itself: a day's cue is an animation that moves nothing and ends exactly where the day lands (or
+  stops sliding), so it belongs to that day's line of the record and is cancelled with it; the jump is thrown with the
+  one confetti, from the same first sight of the gift reached. Nothing uses a clock.
+- **Never scolding.** A day gone back changes the gaze and nothing else: the eyes look down, the mouth and the eyes
+  keep their shape.
+- **A collision found by measuring.** The look down was first cued on the start of the slide, which is the very frame
+  the last day earned lands, and the second reaction erased the first; it is cued on the end of the slide now.
+
+The sheet:
+
+- **Trigger.** A pointer over the character; a day earned landing and a day gone back arriving in the arrival of D180;
+  the first sight of the gift reached on this device.
+- **Rule.** Gaze: the pupils move 2.5 px towards the pointer. Open: the eyes 1.18 times, the mouth opened, held and
+  back, once. Down: the gaze 2.5 px down, in and back inside 300 ms. Jump: the character gathers, rises, falls and
+  lands exactly as a day earned does.
+- **Material token.** `MOTION.hover` (200 ms standard, held 300, gaze 2.5), `MOTION.returned` (300 ms) for the look
+  down, `MOTION.earned` for the jump. No new token.
+- **Loop.** None; each answers one event, once.
+- **Reduced motion.** The rest face and nothing else; measured, the mood never leaves "rest".
+- **Test.** `test/character-reacts.test.ts`. Measured on the board: a returning arrival with a day earned and a day
+  gone back reads rest, open at 567 ms, down at 867 ms; a first visit to a reached gift reads rest, then jump at
+  133 ms; under reduced motion, rest throughout.

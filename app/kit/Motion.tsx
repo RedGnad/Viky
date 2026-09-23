@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useRef, useState, useSyncExternal
 import type { CharacterState } from "./Character";
 import { EASING, MOTION } from "@/src/design-tokens";
 import { arrivalSchedule, bezierProgress, springEasing, springSettleMs, type ArrivalSchedule } from "@/src/motion";
-import { atRest, currentMood, subscribeToMood, type Mood } from "./mood";
+import { atRest, currentMood, feel, subscribeToMood, type Mood } from "./mood";
 
 /**
  * Every movement answers a gesture of the person (art direction brief, section 6, the founder's rule of 17 Sep).
@@ -286,6 +286,14 @@ export function ArrivalDay({ gift, index, children }: Readonly<{ gift: string; i
     const element = root.current;
     if (!element || !step) return;
     const running = step.moment === "earned" ? playEarned(element, step.delay) : playReturned(element, step.delay);
+    // The character at the head of the screen answers each day as it happens on screen: the moment is the day's own
+    // animation reaching its landing, or, for a day going back, the end of its slide (its start is the very frame the
+    // last day earned lands, and the second answer would erase the first), measured by an animation that moves
+    // nothing, never by a clock. Cancelled with the day, it answers nothing.
+    const { gatherMs, riseMs, fallMs } = MOTION.earned;
+    const cue = element.animate([], { duration: step.moment === "earned" ? gatherMs + riseMs + fallMs : MOTION.returned.durationMs, delay: step.delay });
+    void cue.finished.then(() => feel(step.moment === "earned" ? "open" : "down", element, true)).catch(() => undefined);
+    running.push(cue);
     return () => running.forEach((animation) => animation.cancel());
   }, [plan.round, step]);
   return (
@@ -407,6 +415,10 @@ function facesOf(mood: Mood, towards: Readonly<{ dx: number; dy: number }>): Fac
     return { ...AT_REST, gaze: `translate(${(towards.dx * gaze).toFixed(2)}px, ${(towards.dy * gaze).toFixed(2)}px)`, mouth: "scale(1, 1.6)" };
   }
   if (mood.feeling === "happy") return { ...AT_REST, eye: "scaleY(0.34)", mouth: "scale(1.18, 1.08)" };
+  // A day earned has landed: the face opens, the eyes a little wider and the mouth open, as the day's own face does.
+  if (mood.feeling === "open") return { ...AT_REST, eye: "scale(1.18)", mouth: "scale(1.2, 1.7)" };
+  // A day went back: the eyes look down, and nothing else changes. Never a frown: nobody is being scolded.
+  if (mood.feeling === "down") return { ...AT_REST, gaze: `translate(0px, ${MOTION.hover.gaze}px)` };
   return AT_REST;
 }
 
@@ -435,8 +447,17 @@ export function Expression({ children }: Readonly<{ children: ReactNode }>) {
     const dx = (mood.at?.x ?? box.left + box.width / 2) - (box.left + box.width / 2);
     const dy = (mood.at?.y ?? box.top + box.height / 2) - (box.top + box.height / 2);
     const distance = Math.hypot(dx, dy) || 1;
+    // Reached: one jump, the same one a day earned makes, and nothing to hold afterwards.
+    if (mood.feeling === "jump") {
+      const jumping = playEarned(element, 0);
+      return () => jumping.forEach((animation) => animation.cancel());
+    }
     const faces = facesOf(mood, { dx: dx / distance, dy: dy / distance });
-    const { durationMs, easing, heldMs } = MOTION.hover;
+    // A look down lasts what a day going back lasts, 300 ms in all (MOTION.returned); the rest are the hover's own.
+    const down = mood.feeling === "down";
+    const durationMs = down ? MOTION.returned.durationMs / 3 : MOTION.hover.durationMs;
+    const heldMs = down ? MOTION.returned.durationMs / 3 : MOTION.hover.heldMs;
+    const easing = MOTION.hover.easing;
     const running: Animation[] = [];
     const roundMs = durationMs * 2 + heldMs;
     for (const [name, to] of Object.entries(faces) as Array<[keyof Faces, string]>) {
