@@ -1066,6 +1066,19 @@ export const ME = {
 } as const;
 
 /**
+ * The ceilings on what the relayer pays for (D204). Every sentence here is a refusal, said once, true of the counts in
+ * `viky_relay_counts` and of the smallest amount `relayCeilings()` names.
+ */
+export const RELAY_CEILING = {
+  hour: (who: "account" | "connection", minutes: number) =>
+    `That is as many actions as Viky sends for one ${who} in an hour. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`,
+  day: (who: "account" | "connection") => `That is as many actions as Viky sends for one ${who} in a day. Try again tomorrow.`,
+  tooSmallToSend: (least: string) => `Viky sends ${least} or more at a time. Below that, send everything you have at once.`,
+  tooSmallToTakeOut: (least: string) => `Viky takes out ${least} or more at a time. Below that, take out everything that is yours at once.`,
+  topUpTooSoon: "Viky readied this account for a cancel less than a minute ago. Try again in a moment.",
+} as const;
+
+/**
  * The funder's private space on You (D202): their people's nicknames and their own notes, sealed in this browser with
  * a key the passkey gives under its own salt. Every sentence here is true of `app/kit/PrivateSpace.tsx`: the server
  * keeps only the sealed envelope, and the first name on a gift stays in clear on the gift.

@@ -11,7 +11,7 @@ export class GiftApiError extends Error {
   constructor(
     readonly code: string,
     message: string,
-    readonly status: 400 | 403 | 404 | 409 | 503 = 400,
+    readonly status: 400 | 403 | 404 | 409 | 429 | 503 = 400,
   ) {
     super(message);
     this.name = "GiftApiError";

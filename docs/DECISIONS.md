@@ -5654,3 +5654,44 @@ D179 for PRONOTE.
   Until both, the line says so on the public page and nobody can make a gift on it.
 - **Default applied, to confirm.** The parents' page as the sign-in, the pupils' page accepted in the provider; the
   space taken from an `index-education.net` address only (a school hosting PRONOTE elsewhere is not served).
+## D204, 23 Sep 2026: ceilings on what the relayer pays for
+
+The founder's instruction, from finding 2 of the money path review of 23 Sep 2026 (#160): per account and per
+connection, a most of relayed actions per hour and per day (20 and 100, adjustable); a smallest amount for a relayed
+send and a relayed withdrawal (one dollar); the cancel route's readying limited to one top-up a minute; beyond, a named
+refusal and an honest sentence; the daily pass and the keeper's claims outside these; and the MON left after a refused
+burst measured in the PR.
+
+**Built.**
+
+- **The counts** live in the database, one row per scope and window bucket (`viky_relay_counts`,
+  `src/relay-ceiling-store.ts`): every server counts the same actions, and the increment is one statement, so two
+  requests at once each see their own count. A refused action is taken back out, so only what the relayer was asked to
+  pay for is counted. Buckets are UTC hours and days; rows two days old are swept by the first action of an hour.
+- **The door** (`src/relay-admission.ts`): `admitRelay` counts an action against four ceilings, the account's hour and
+  day and the connection's hour and day, and refuses by name, `RELAY_CEILING`, 429, with the wait in minutes or
+  "tomorrow"; `admitTopUp` holds a readying top-up to one a minute for the account and for the connection,
+  `TOP_UP_TOO_SOON`; `assertNotTooSmall` refuses a send or a withdrawal under the smallest amount, `TOO_SMALL_TO_RELAY`,
+  409, unless it is everything the person has: small money is never locked, and dust is never relayed. The numbers are
+  `RELAY_PER_HOUR`, `RELAY_PER_DAY`, `RELAY_MINIMUM_CENTS` and `TOP_UPS_PER_MINUTE` when set.
+- **Where it stands:** the send, the withdrawal of a daily and of a milestone gift, the way out, the cancel and its
+  top-up, the claim, the check-in, the proof shown (where a refusal is reported beside the attested proof, which
+  stands, and nothing is relayed), and the creation. Always after the request has been checked and before the relayer
+  is asked for anything, so a refusal costs nothing. `test/relay-ceiling.test.ts` reads each route and checks the
+  order. The daily pass and the keeper call the relayer directly and never go through the door.
+- The in-memory limiter of a warm instance (20 per ten minutes per connection and account) stays in front, as before.
+
+**Measured: a refused burst costs nothing.** A local production build with `RELAY_PER_HOUR=5`, a fresh account made
+with a virtual passkey holding nothing, thirty relayed sends of $1.00 in a row, 1.9 seconds:
+
+| answer | how many |
+|---|---|
+| 409 `NOT_ENOUGH` (admitted, refused by the account's own balance before any send) | 5 |
+| 429 `RELAY_CEILING` "That is as many actions as Viky sends for one account in an hour. Try again in 24 minutes." | 15 |
+| 429 "Too many attempts. Try again shortly." (the warm instance's own limiter, at its twenty-first request) | 10 |
+
+The relayer `0x150d…CFE4` held 53.3275262432 MON before and 53.3275262432 MON after: a difference of 0. Nothing was
+sent to the chain by any of the thirty.
+
+**Default applied, to confirm:** the exception to the smallest amount, everything the person has may always go, which
+the founder's instruction did not name; without it a gift of fifty cents could never be taken out.

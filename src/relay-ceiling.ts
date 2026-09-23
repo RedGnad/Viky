@@ -1,0 +1,85 @@
+import { RELAY_CEILING as W } from "./sentences";
+
+/**
+ * The ceilings on what the relayer pays for (D204, from finding 2 of the money path review of 23 Sep 2026).
+ *
+ * Every relayed action costs the relayer MON, and nothing bounded how often one account or one connection could make
+ * it pay: below its reserve, nobody can be paid and no day is counted. So: per account and per connection, a number
+ * of relayed actions per hour and per day; a smallest amount a relayed send or withdrawal may carry, unless it is
+ * everything the person has, so that small money is never locked; and one readying top-up per minute on the cancel
+ * route. The daily pass and the keeper's claims never go through these: they are the operator's own, not a request.
+ *
+ * The numbers are the founder's defaults and read from the environment when it names others.
+ */
+export type RelayCeilings = Readonly<{ perHour: number; perDay: number; minimumUnits: bigint; topUpsPerMinute: number }>;
+
+export const DEFAULT_RELAY_CEILINGS: RelayCeilings = { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1 };
+
+const wholeNumber = (value: string | undefined, fallback: number): number => {
+  const parsed = Number(value?.trim());
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+/** `RELAY_PER_HOUR`, `RELAY_PER_DAY`, `RELAY_MINIMUM_CENTS` (100 is one dollar), `TOP_UPS_PER_MINUTE`. */
+export function relayCeilings(env: Readonly<Record<string, string | undefined>> = process.env): RelayCeilings {
+  return {
+    perHour: wholeNumber(env.RELAY_PER_HOUR, DEFAULT_RELAY_CEILINGS.perHour),
+    perDay: wholeNumber(env.RELAY_PER_DAY, DEFAULT_RELAY_CEILINGS.perDay),
+    minimumUnits: BigInt(wholeNumber(env.RELAY_MINIMUM_CENTS, Number(DEFAULT_RELAY_CEILINGS.minimumUnits / 10_000n))) * 10_000n,
+    topUpsPerMinute: wholeNumber(env.TOP_UPS_PER_MINUTE, DEFAULT_RELAY_CEILINGS.topUpsPerMinute),
+  };
+}
+
+export type RelayWindow = "minute" | "hour" | "day";
+
+const LENGTH_MS: Record<RelayWindow, number> = { minute: 60_000, hour: 3_600_000, day: 86_400_000 };
+
+/** The start of the window the moment falls in, in UTC: every server counts in the same buckets. */
+export function bucketOf(window: RelayWindow, nowMs: number): Date {
+  return new Date(Math.floor(nowMs / LENGTH_MS[window]) * LENGTH_MS[window]);
+}
+
+export function windowEndsMs(window: RelayWindow, nowMs: number): number {
+  return bucketOf(window, nowMs).getTime() + LENGTH_MS[window];
+}
+
+export const minutesUntil = (window: RelayWindow, nowMs: number): number => Math.max(1, Math.ceil((windowEndsMs(window, nowMs) - nowMs) / 60_000));
+
+export type RelayScope = Readonly<{ scope: string; window: RelayWindow; limit: number; who: "account" | "connection" }>;
+
+/** The four counts a relayed action is held against: the account and the connection, each by the hour and by the day. */
+export function relayScopes(account: string, ip: string, ceilings: RelayCeilings): readonly RelayScope[] {
+  const who = account.toLowerCase();
+  return [
+    { scope: `relay:hour:account:${who}`, window: "hour", limit: ceilings.perHour, who: "account" },
+    { scope: `relay:day:account:${who}`, window: "day", limit: ceilings.perDay, who: "account" },
+    { scope: `relay:hour:ip:${ip}`, window: "hour", limit: ceilings.perHour, who: "connection" },
+    { scope: `relay:day:ip:${ip}`, window: "day", limit: ceilings.perDay, who: "connection" },
+  ];
+}
+
+/** The two counts a readying top-up is held against: one a minute for the account, one a minute for the connection. */
+export function topUpScopes(account: string, ip: string, ceilings: RelayCeilings): readonly RelayScope[] {
+  return [
+    { scope: `topup:minute:account:${account.toLowerCase()}`, window: "minute", limit: ceilings.topUpsPerMinute, who: "account" },
+    { scope: `topup:minute:ip:${ip}`, window: "minute", limit: ceilings.topUpsPerMinute, who: "connection" },
+  ];
+}
+
+export type Counted = RelayScope & Readonly<{ count: number }>;
+
+/** The first count over its ceiling, once this action has been counted, or nothing when all are within theirs. */
+export function overTheCeiling(counted: readonly Counted[]): Counted | undefined {
+  return counted.find((one) => one.count > one.limit);
+}
+
+export function ceilingSentence(over: Counted, nowMs: number): string {
+  if (over.window === "day") return W.day(over.who);
+  if (over.window === "minute") return W.topUpTooSoon;
+  return W.hour(over.who, minutesUntil("hour", nowMs));
+}
+
+/** Below the smallest amount, unless it is everything there is: small money is never locked, and dust is never relayed. */
+export function tooSmallToRelay(amount: bigint, whole: bigint, minimumUnits: bigint): boolean {
+  return amount < minimumUnits && amount !== whole;
+}

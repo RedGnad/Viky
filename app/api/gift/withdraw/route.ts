@@ -6,6 +6,7 @@ import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { readGift } from "@/src/gift-reader";
 import { relayWithdraw } from "@/src/gift-relay";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { admitRelay, assertNotTooSmall } from "@/src/relay-admission";
 import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
 import { loadGift } from "@/src/gift-store";
 import { isOperator } from "@/src/dev-access";
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
     }
 
     assertGiftContractConfigured();
+    await admitRelay(request, auth.account);
     // A milestone gift is taken from its own contract, under its own signing domain (C2).
     if (isMilestoneGiftId(giftId)) {
       return await milestoneWithdraw({ account: auth.account, giftId, to, amount, nonce, deadline, signature }).catch((error: unknown) =>
@@ -71,6 +73,7 @@ export async function POST(request: Request) {
       throw new GiftApiError("NOT_YOURS", "Only the person the gift is for can take it", 403);
     }
     if (amount <= 0n || amount > gift.earnedBalance) throw new GiftApiError("NOT_ENOUGH_EARNED", "That is more than what is yours so far", 409);
+    assertNotTooSmall("takeOut", amount, gift.earnedBalance);
 
     const result = await relayWithdraw({ giftId, escrow, to: getAddress(to), amount, nonce, deadline, signature });
     return NextResponse.json({ giftId, sent: true, amount: amount.toString(), hash: result.hash }, { headers: NO_STORE });

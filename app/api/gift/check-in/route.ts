@@ -5,6 +5,7 @@ import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { relayCheckIn } from "@/src/gift-relay";
 import { loadAttestation } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { admitRelay } from "@/src/relay-admission";
 import { loadGift } from "@/src/gift-store";
 import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
 
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
     }
     const gift = await loadGift(String(stored.message.giftId));
     if (!gift) throw new GiftApiError("UNKNOWN_SESSION", "Unknown check-in", 404);
+    await admitRelay(request, auth.account);
     const relayed = await relayCheckIn(sessionId, escrowOf(gift));
     return NextResponse.json({ recorded: true, creditedDays: relayed.creditedDays, alreadyRecorded: relayed.alreadyRelayed }, { headers: NO_STORE });
   } catch (error) {

@@ -54,6 +54,9 @@ Create `.env.local` (never committed) with:
 | `IDENTITY_HMAC_KEY` | base64 key of the pseudonymous identity bound to a gift |
 | `EVIDENCE_SIGNER_PRIVATE_KEY` | key of the evidence signer whose EIP-712 attestations the gift contract accepts |
 | `GIFT_ESCROW_ADDRESS` | the deployed gift contract; verification fails closed without it |
+| `RELAY_PER_HOUR`, `RELAY_PER_DAY` | the most relayed actions Viky pays for, per account and per connection, in an hour and in a day (20 and 100 unless set, D204) |
+| `RELAY_MINIMUM_CENTS` | the smallest relayed send or withdrawal, in cents (100 unless set); everything the person has may always go |
+| `TOP_UPS_PER_MINUTE` | how many times a minute the cancel route may ready an account with MON (1 unless set) |
 | `MONAD_RPC_URL` | RPC used by Foundry scripts and the relayer |
 | `VIKY_PRIVATE_FIXTURES` | directory of real captured proofs for the real-proof tests (default `private-fixtures`) |
 | `ACCOUNT_ADDRESS`, `DUOLINGO_USERNAME` | inputs of `scripts/capture-duolingo-proof.ts` |
