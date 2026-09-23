@@ -5823,3 +5823,17 @@ and the order. Nothing else moved.
 
 What my report of the morning said about it, "not done", was wrong: it had been done since 21 Sep, less these two
 points.
+
+## D210, 24 Sep 2026: the lead under the promise, bounded at 34em from 1024 (default applied, to confirm)
+
+The founder's default of 23 Sep 2026, taken on 24 Sep without priority: the line under the promise on the page without
+an account, from 1024 pixels, bounded to two centred lines at 34em rather than `max-w-none`.
+
+**Measured before changing it.** The sentence of today ("Back their goal. They earn it day by day. The rest comes back
+to you.") holds on one line at every width from 1024: 903 px wide before, 680 px wide at 34em, centred both times, and
+the card ends at 746 px either way (its action at 698) at 1440 by 900, 1280 by 800 and 1024 by 768. Home signed out,
+whole page, before and after, at 1440 and 390, day and night: identical pixel for pixel.
+
+So the bound changes nothing a person sees today. It holds a longer sentence to two centred lines instead of the
+column's width, which is what the default asked for. The earlier comment's reason for one line (a second line pushed
+the card past the fold, 914 for 900) was measured on a longer sentence and no longer applies.

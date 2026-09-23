@@ -84,8 +84,9 @@ export function Home({ initialHoldings, initialGifts }: Readonly<{ initialHoldin
               </Gaze>
             </Expression>
             <h1 className={HERO}>{W.promise}</h1>
-            {/* One line from 1024, where two would have pushed the card's last line past the fold (measured 914 for 900). */}
-            <p className={`${LEAD} mt-[var(--space-xs)] max-w-[460px] [@media(min-width:1024px)]:max-w-none`}>{W.promiseUnder}</p>
+            {/* Centred and bounded at 34em from 1024 (D210, the founder's default): the sentence of today holds on one
+                line of 680 px, and a longer one breaks into two centred lines rather than running the column's width. */}
+            <p className={`${LEAD} mt-[var(--space-xs)] max-w-[460px] [@media(min-width:1024px)]:mx-auto [@media(min-width:1024px)]:max-w-[34em]`}>{W.promiseUnder}</p>
           </div>
           <OfferCard />
         </div>
