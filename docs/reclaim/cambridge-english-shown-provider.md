@@ -52,6 +52,15 @@ Once published: the provider id (36 characters), its version and the hash of its
 `EXAM_PROVIDERS["cambridge-english-shown"]` in `src/exam-shown.ts`, in one commit, and the line can be made on by an
 operator, then shown end to end by a candidate.
 
+
+## When the page does not carry it
+
+A page that carries no field the pattern names, or a word the pattern refuses, fails by its name before anything is
+signed (`INVALID_SCORE`): the person is told what was not found and that nothing is lost, the gift staying theirs to earn
+until its deadline; the journal of the gift carries the event as a reading refused by that name, with no number and
+no proof; the founder reads the session's fields with `pnpm verify:day` and corrects the pattern in one commit.
+Nothing is ever guessed from a selector: every pattern below sits on a label the page prints for the person.
+
 ## The terms, as read on 23 Sep 2026
 
 The portal's footer links "Terms of Use" to Cambridge's candidate privacy notice. Cambridge's Website Terms of Use

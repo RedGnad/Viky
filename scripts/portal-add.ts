@@ -19,6 +19,8 @@ import { need, resultsFromEnv, resultsNamed } from "./portal-env";
  * removes it.
  *
  * Against production, the operator command of "The test database" applies (`VIKY_ALLOW_PRODUCTION_DATABASE=1`).
+ * `UNVERIFIED=1` marks a row defined from the portal's public pages, before any student's session (D193): the chooser
+ * prints "(unverified)" beside the university until the row is written again without it.
  * `DRY_RUN=1` prints the row and writes nothing.
  */
 async function main() {
@@ -33,6 +35,8 @@ async function main() {
     loginUrl: need("LOGIN_URL"),
     extract: { field: need("EXTRACT_FIELD"), matches: need("EXTRACT_MATCHES"), keeps: need("EXTRACT_KEEPS") },
     provenBy: need("PROVEN_BY"),
+    // Defined from the portal's public pages and not from a student's session (D193): the chooser says so.
+    unverified: process.env.UNVERIFIED === "1",
     ...(resultsNamed() ? { results: resultsFromEnv() } : {}),
   };
   console.log(JSON.stringify({ step: process.env.DRY_RUN === "1" ? "would write" : "writing", row }, null, 2));

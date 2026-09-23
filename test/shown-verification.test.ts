@@ -310,3 +310,27 @@ test("a number a source publishes is kept as read, and the session row is writte
   assert.equal(kept.evidence.reading.accountKey, "555");
   assert.equal(kept.proofs.length, 1);
 });
+
+/** A page that does not carry what the pattern names (D193): refused by its name, told with nothing lost, journaled. */
+const MISSING: ShownEntry = {
+  ...SHOWN,
+  condition: { ...SHOWN.condition, conditionId: "test-missing", read: () => { throw new ShownProofError("NO_GRADE", "The results page shown carries no grade on the university's scale."); } },
+};
+(SHOWN_CONDITIONS as ShownEntry[]).push(MISSING);
+
+test("a page without the field is refused by its name, the person is told nothing is lost, and the journal carries the event", async () => {
+  const d = deps({ loadSession: async () => session({ conditionId: "test-missing" }) });
+  await assert.rejects(
+    () => verifyShownSession(d, { sessionId: SESSION_ID, account: ACCOUNT }),
+    (error: unknown) => error instanceof VerificationError && error.code === "NO_GRADE" && error.message.startsWith("The results page shown carries no grade") && error.message.endsWith("and only then does the money go back."),
+  );
+  assert.equal(d.proved.length, 0, "nothing signed");
+  assert.equal(d.recorded.length, 1, "one event in the journal");
+  const row = d.recorded[0] as { outcome: string; attested: boolean; rating: number | null; nullifier: unknown; txHash: unknown; proofs?: unknown };
+  assert.equal(row.outcome, "refused:NO_GRADE");
+  assert.equal(row.attested, false);
+  assert.equal(row.rating, null);
+  assert.equal(row.nullifier, null);
+  assert.equal(row.txHash, null);
+  assert.equal(row.proofs, undefined, "no proof, no number: the event by its name alone");
+});

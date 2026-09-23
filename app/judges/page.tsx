@@ -182,7 +182,10 @@ export default async function JudgesPage() {
             again with a student present. The year passed and a grade reached (D174) are shown the same way from the
             same portal&apos;s results page, a second page proved with a student and pinned on the same row, under the
             same unread terms; the grade is read on the scale the row declares and compared in hundredths, and a page of
-            another year pays nothing where the portal dates its page.
+            another year pays nothing where the portal dates its page. A row can be defined from a portal&apos;s public
+            pages before any student has sat with us (D193): it says &quot;unverified&quot; beside the university on the
+            chooser, its patterns sit on labels the page prints, and a page that does not carry them fails by its name,
+            the person told nothing is lost and the miss written in the gift&apos;s journal for the founder to correct.
           </li>
           <li>
             <strong>Exam results services&apos; terms.</strong> Five examination results are shown by the person from

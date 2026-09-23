@@ -148,7 +148,13 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
       policy: { account: session.account, giftId: session.giftId, phase: "reach", expectedSessionId: session.sessionId },
     });
   } catch (error) {
-    if (error instanceof ShownProofError) throw new VerificationError(error.code, error.message);
+    if (error instanceof ShownProofError) {
+      // A page that does not carry what the pattern names (D193): a named event in the gift's journal, with no
+      // number and no proof, so the miss can be read by the founder and corrected in one commit; and the person is
+      // told what was not found and that nothing is lost.
+      await deps.record({ giftId: session.giftId, purpose: "reach", attested: false, username: "", playerId: null, rating: null, ratedAt: null, observedAt: now, nullifier: null, outcome: `refused:${error.code}`, txHash: null });
+      throw new VerificationError(error.code, `${error.message} ${SHOW_PROOF.nothingLost}`);
+    }
     throw error;
   }
 

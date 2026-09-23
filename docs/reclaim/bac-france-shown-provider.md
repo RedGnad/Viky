@@ -12,14 +12,19 @@ the one the candidate shows.
 - Sign-in: identifier and password (twelve to thirty characters, the page says), or FranceConnect. Typed in the
   verification tab, in the candidate's own browser; nothing reaches Viky. A FranceConnect sign-in goes through the
   state's identity provider inside the same tab; whether the verification follows it is to confirm on a real session.
-- The page after sign-in: the candidate's results, with the decision (passed) and the mention (the founder's brief;
-  to confirm).
+- The page after sign-in, from Cyclades's own help ("Foire aux questions", candidat.examens-concours.gouv.fr/cyccandidat/aide,
+  read 23 Sep 2026): "connectez-vous à votre compte Cyclades, allez dans « Mes inscriptions », sélectionnez votre
+  inscription, puis cliquez sur « Mes notes »" for the grade report; the results themselves are published on the
+  public site (resultats.examens-concours.gouv.fr) by name, and inside the space under the same inscription. The
+  words the space prints for a decision, as every guide of the service repeats them and the public site prints them:
+  "Admis", "Refusé", "Admis au second groupe" (the oral), and the mention beside "Admis". The rubric names are the
+  stable labels; the request behind "Mes notes" is what the provider pins, unverified until a candidate's session.
 
 ## What is extracted
 
 | field, as the row names it | what it is | to confirm |
 |---|---|---|
-| `decision` | passed or not, matched by `^admis` whatever the case (`readBacPassed`) | the request the results page makes and the exact word it prints ("Admis", "Admis au second groupe", or another) |
+| `decision` | passed or not, matched by `^admis` whatever the case (`readBacPassed`): "Admis" and "Admis avec mention" pass, "Refusé" and "Admis au second groupe" (the oral still to sit) do not, since the pattern is anchored on the word alone and the second-group line is read before the oral | the request behind "Mes notes" and the exact casing; unverified |
 | `mention` | the mention | not read tonight |
 
 ## The definition to register (to confirm on a real candidate's session)
@@ -31,7 +36,7 @@ the one the candidate shows.
   "verificationType": "WITNESS",
   "requestData": [
     {
-      "url": "to confirm: the request the results page makes once signed in",
+      "url": "unverified: the request « Mes notes » makes under « Mes inscriptions », once signed in",
       "method": "GET",
       "responseMatches": [{ "type": "contains", "value": "to confirm: the decision as the answer prints it, {{decision}}" }],
       "responseRedactions": [{ "jsonPath": "to confirm", "regex": "to confirm" }]
@@ -41,6 +46,15 @@ the one the candidate shows.
 ```
 
 Once published: the provider id, its version and the hash of its one request go into `EXAM_PROVIDERS["bac-france-shown"]`.
+
+
+## When the page does not carry it
+
+A page that carries no field the pattern names, or a word the pattern refuses, fails by its name before anything is
+signed (`NOT_PASSED`): the person is told what was not found and that nothing is lost, the gift staying theirs to earn
+until its deadline; the journal of the gift carries the event as a reading refused by that name, with no number and
+no proof; the founder reads the session's fields with `pnpm verify:day` and corrects the pattern in one commit.
+Nothing is ever guessed from a selector: every pattern below sits on a label the page prints for the person.
 
 ## The terms, as read on 23 Sep 2026
 
