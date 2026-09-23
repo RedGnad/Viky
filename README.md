@@ -43,7 +43,7 @@ Create `.env.local` (never committed) with:
 | `NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY` | VAPID public key |
 | `SESSION_SIGNING_SECRET` | HMAC key (32+ characters) for the account challenge and the 12 h session cookie |
 | `DATABASE_URL` | Neon Postgres connection string for the verification session rows |
-| `RECLAIM_APP_ID`, `RECLAIM_APP_SECRET` | Reclaim application credentials; the secret also verifies the TEE attestation |
+| `RECLAIM_APP_ID`, `RECLAIM_APP_SECRET` | Reclaim application credentials; the secret also verifies the TEE attestation of a proof shown from a Reclaim session (not of a zkFetch reading) |
 | `RECLAIM_ZKFETCH_APP_ID`, `RECLAIM_ZKFETCH_APP_SECRET` | Reclaim "Public Data (zkFetch)" application, used by the public mode's attested reads of the Duolingo profile (D27); zkFetch must be switched on for it in the dev tool |
 | `CRON_SECRET` | bearer token Vercel sends to `/api/cron/daily`; the daily pass runs only with it |
 | `ZKFETCH_WORKER_URL`, `ZKFETCH_WORKER_SECRET` | the attested-fetch worker (`pnpm zkfetch:worker`), needed on Vercel because its functions start Node with `--no-experimental-require-module`, which zk-fetch's CommonJS build cannot load; the worker only fetches, Vercel verifies the attestor signature |
@@ -107,10 +107,28 @@ runs the mainnet fork test of the real AUSD funding path. `pnpm deploy:gift-escr
 
 ## Verification path
 
-Every Reclaim proof is verified server side (`app/api/proof/verify`) with the TEE attestation
-required and the AI fallback refused, then attested to the gift contract by the evidence signer
-(EIP-712 `CheckIn`). Session rows are held server side in Neon; the browser never chooses the
-account, the phase, the day or the profile. The on-chain verifiers under `contracts/verifiers` are
+Two kinds of proof reach the evidence signer, and they are not checked the same way. What is true in production
+today (`PROOF_VERIFIER` unset):
+
+- **A proof the person shows from their own account** (a Reclaim session: `app/api/proof/session`,
+  `app/api/proof/verify`) is verified server side with js-sdk `verifyProof` and the application secret: the
+  attestor's signature, and the attestation of the TEE it ran in, both required; a proof without a TEE attestation
+  (the AI fallback) is refused before anything else is read.
+- **A reading Viky makes itself** (zkFetch: the daily Duolingo lesson, the Chess.com ratings, the certificates, and a
+  connected source's reading with the person's key) is fetched through Reclaim's TEE client, and verified server side
+  by the attestor's signature only: js-sdk `verifyProof` checks it against the attestor list it fetches from Reclaim at
+  that moment, then Viky's own pin (`RECLAIM_ATTESTOR_ADDRESSES`). The proof carries no attestation of the attestor's TEE, so
+  the TEE itself is not verified on this path.
+
+**Behind the switch** (`PROOF_VERIFIER=local`, not set in production): a reading is verified offline, by Viky alone,
+the way `pnpm verify:day` does it by hand: the claim's identifier recomputed, the signers recovered, every signer one
+of Viky's pinned attestors, and the witnesses exactly those signers; with `RECLAIM_ATTESTOR_IMAGE_DIGESTS` set, every
+witness must also carry the attestation of the TEE holding its key, verified offline and pinned by image digest
+(`src/proof-verification.ts`, OPERATIONS "The proof verifier switch, off").
+
+Either way, what is accepted is then attested to the contract by the evidence signer (EIP-712 `CheckIn`, or the
+milestone contract's `Proof`). Session rows are held server side in Neon; the browser never chooses the account, the
+phase, the day or the profile. The on-chain verifiers under `contracts/verifiers` are
 ported from Lock-in with their real-proof tests and stay fail-closed (`LIVE_SCHEMA_CONFIRMED = false`)
 until a proof pair captured this cycle passes their grammar.
 
