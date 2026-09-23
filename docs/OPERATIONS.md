@@ -966,8 +966,13 @@ The sitting, three passes as for `pnpm safe:action`, each possible on another ma
 SAFE_ADDRESS=0xE08D926c148A5065F4Df2892702785a183de86F9 pnpm safe:session
 cast wallet sign --no-hash 0x8b90a99b778fe7b46119e2eaa5443d2300879f614fe22d83edf754d5fa222d99 --keystore <file>
 cast wallet sign --no-hash 0x8b90a99b778fe7b46119e2eaa5443d2300879f614fe22d83edf754d5fa222d99 --mnemonic "<words>"
-SAFE_ADDRESS=… SIGNATURES="0xfirst,0xsecond" SEND=1 EXECUTOR_PRIVATE_KEY=… pnpm safe:session
+SAFE_ADDRESS=… SIGNATURES="0xfirst,0xsecond" EXECUTOR_PRIVATE_KEY=<the relayer's key> SEND=1 pnpm safe:session
 ```
+
+The signed transaction is carried by the relayer's key, as every Safe transaction since 20 Sep 2026: it pays the gas
+and signs nothing of the Safe's. Never by a wallet of the founder's (the hardware wallet signs nothing for Viky any
+more) and never by one of the Safe's owners, whose keys sign hashes and hold no MON; the script refuses an owner as the
+carrier. `EXECUTOR=<the relayer's address>` without the key rehearses the whole transaction without sending it.
 
 **Sent on 23 Sep 2026**, signatures given by the founder, executed by the relayer `0x150d…CFE4`, which only paid the
 gas:

@@ -15,7 +15,11 @@ import { execTransactionData, MULTI_SEND_CALL_ONLY, MULTI_SEND_CALL_ONLY_CODE_HA
  * signature per key. The same three passes as `pnpm safe:action`, each possible on another machine:
  *   1. build:   pnpm safe:session                                prints the batch and the one hash to sign
  *   2. sign:    cast wallet sign --no-hash <hash> …              once per key, where the key lives
- *   3. execute: SIGNATURES="0x…,0x…" SEND=1 … pnpm safe:session   recovers both, rehearses, sends
+ *   3. execute: SIGNATURES="0x…,0x…" SEND=1 EXECUTOR_PRIVATE_KEY=<the relayer's key> pnpm safe:session
+ *
+ * The signed transaction is always carried by the relayer's key, which pays the gas and signs nothing of the Safe's:
+ * never by a wallet of the founder's (the hardware wallet has signed nothing for Viky since 20 Sep 2026), and never by
+ * an owner of the Safe, whose keys sign hashes and hold no MON.
  *
  * What it refuses, before anything is signed: a Safe that is not the one read (version, owners, threshold), a
  * MultiSendCallOnly whose code is not the canonical code, a guard on the Safe, and a goal already registered to
@@ -96,7 +100,7 @@ async function main() {
     console.log(`Sign this one hash with ${threshold} of the owners, each where their key lives:`);
     console.log(`  cast wallet sign --no-hash ${hash} --keystore <the keystore file>`);
     console.log(`  cast wallet sign --no-hash ${hash} --mnemonic "<the twelve words>"`);
-    console.log(`Then: SIGNATURES="0xfirst,0xsecond" SEND=1 EXECUTOR_PRIVATE_KEY=… pnpm safe:session (and NONCE=${nonce} if the Safe moves meanwhile).`);
+    console.log(`Then, carried by the relayer: SIGNATURES="0xfirst,0xsecond" EXECUTOR_PRIVATE_KEY=<the relayer's key> SEND=1 pnpm safe:session (and NONCE=${nonce} if the Safe moves meanwhile).`);
     return;
   }
   const parts = await Promise.all(given.map(async (signature) => ({ owner: getAddress(await recoverAddress({ hash, signature })), signature })));
@@ -104,7 +108,11 @@ async function main() {
   if (strangers.length > 0) throw new Error(`Refusing to run: ${strangers.map((part) => part.owner).join(", ")} signed this but is not an owner of ${safe}`);
   if (parts.length < threshold) throw new Error(`This Safe needs ${threshold} signatures and ${parts.length} were given`);
   const data = execTransactionData(tx, packSafeSignatures(parts));
-  const executor = process.env.EXECUTOR?.trim() ? getAddress(process.env.EXECUTOR.trim()) : parts[0].owner;
+  // The carrier is the relayer: its address from its key when the key is in this shell, or named for a dry rehearsal.
+  const carrierKey = process.env.EXECUTOR_PRIVATE_KEY?.trim();
+  const executor = carrierKey ? privateKeyToAccount((carrierKey.startsWith("0x") ? carrierKey : `0x${carrierKey}`) as Hex).address : process.env.EXECUTOR?.trim() ? getAddress(process.env.EXECUTOR.trim()) : undefined;
+  if (!executor) throw new Error("Name the carrier: EXECUTOR=<the relayer's address> to rehearse, or EXECUTOR_PRIVATE_KEY=<the relayer's key> to send");
+  if (owners.includes(executor)) throw new Error(`Refusing to run: ${executor} is an owner of the Safe; the relayer carries the transaction, never a signer`);
   // Rehearsed against the chain's own state: a wrong nonce, a signature over another batch, or one call that would
   // revert fails here, where it costs nothing.
   const gas = addMonadGasBuffer(await publicClient.estimateGas({ account: executor, to: safe, data }));
