@@ -5633,3 +5633,24 @@ a tampered envelope, and drives the store on PGlite and the route with a signed 
 
 **Waits for the founder.** `pnpm db:migrate` on production for `viky_private_spaces` (run after the merge, as for the
 other tables), and his eye on the card.
+
+## D203, 23 Sep 2026: PRONOTE is built, its publisher's terms and the risk written
+
+The founder, 23 Sep 2026: PRONOTE is added, as Duolingo is: Index Education's terms forbid any retrieval device
+without written authorisation; the risk is assumed and written on the judges' page (the person shows their own marks
+at their own request, GDPR rights of access and portability, articles 15 and 20; no mark kept, only the verdict).
+Built as EcoleDirecte, from the parents' account by preference; the spaces are hosted per establishment
+(index-education.net), so the line carries the space's address as a portal line does. This replaces the refusal of
+D179 for PRONOTE.
+
+- **The line.** `pronote-grade-shown`, "An average on PRONOTE, shown", family School, goal 24 on `MilestoneGift`,
+  shape having it or not, the target out of 20 in hundredths as EcoleDirecte's. The funder pastes the space's address;
+  its word (`0123456a` in `0123456a.index-education.net`) is bound into the subject they sign, so another
+  establishment's space pays nothing; the person signs in on that space's `parent.html`.
+- **One technical limit, said.** PRONOTE answers in clear JSON unless the establishment switches on its own AES
+  encryption or compression (`CrA`, `CoA`); a space that does gives a proof with no average in it, refused `NO_GRADE`,
+  nothing lost. How many do is not known; the public demonstration space does neither.
+- **Being built.** The provider is ours and is registered from a real family's space; goal 24 is one Safe transaction.
+  Until both, the line says so on the public page and nobody can make a gift on it.
+- **Default applied, to confirm.** The parents' page as the sign-in, the pupils' page accepted in the provider; the
+  space taken from an `index-education.net` address only (a school hosting PRONOTE elsewhere is not served).

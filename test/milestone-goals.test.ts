@@ -43,6 +43,8 @@ const PINNED: Readonly<Record<number, string>> = {
   21: "0xa7afea17b0c985d7e53416eacc72d8b95347b97b97875df6f44025badcb59cca",
   22: "0xf0da5b726f28cf4bc8bef5c1a8d7976a7d5a208e258b3ee9897e7ddd534e5fdd",
   23: "0x1ec1d1c1bce9830ac7610d6c9f0ff214b5f350dd51b111b14cbadc2dda89c4ed",
+  // PRONOTE, an average shown (D203).
+  24: "0x168e16e58443ee012319e416a53f7bf5ecbcf660707e35917bad5a5abf7835f8",
 };
 
 test("every goal has its own number and its own provider id", () => {

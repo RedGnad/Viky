@@ -73,13 +73,6 @@ pupil, or the family, signs in themselves, in their own browser, to the informat
 a TEE attests the one response; Viky keeps the average it carries with the gift. The school, as the data controller,
 is not asked: that is written on the judges' page, and it is the founder's call before the line opens.
 
-## PRONOTE, read the same day and not built
+## PRONOTE
 
-Index Education, "Mentions légales et Conditions Générales d'Utilisation" (index-education.com/fr/mentions-legales.php),
-"Utilisation de nos sites": users commit not to "Utiliser des dispositifs, programmes ou autres méthodes pour accéder,
-acquérir ou surveiller tout ou partie de nos sites" and not to "Utiliser tout dispositif manuel ou automatique
-permettant toute récupération de données sans notre autorisation expresse écrite". The PRONOTE spaces are served from
-index-education.net, Index Education's own hosting (the demonstration space, read the same day, signs the pupil in with
-an identifier the school gives and a password, and its "Mentions légales" button opens inside the application). A
-verification tab is a device retrieving data, and no written authorisation exists: PRONOTE is not built, and reopens
-only with Index Education's written authorisation, or terms that allow it.
+Built beside this line since the founder's decision of 23 Sep 2026, its risk assumed: docs/reclaim/pronote-grade-shown-provider.md.

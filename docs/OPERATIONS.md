@@ -956,6 +956,21 @@ proofs per condition (`src/proof-counts.ts`: attested milestone readings that st
 relayed for a daily one). "Being built" is printed only where a piece is really missing, and the line says which.
 Nothing is ever printed as "tested" or "used by N": the state "Being tested" is gone.
 
+## Goal 24 on the milestone contract: PRONOTE, an average shown (D203)
+
+Provider id `viky:provider:pronote-grade-shown:v1` = `0x168e16e58443ee012319e416a53f7bf5ecbcf660707e35917bad5a5abf7835f8`,
+shape 1, having it or not. One Safe transaction, built by `pnpm safe:session`, which finds it missing and batches it
+alone (the calls of D194, carried by the relayer):
+
+| | |
+|---|---|
+| to | `MilestoneGift` `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e` |
+| data | `0x5ba191520000000000000000000000000000000000000000000000000000000000000018168e16e58443ee012319e416a53f7bf5ecbcf660707e35917bad5a5abf7835f80000000000000000000000000000000000000000000000000000000000000001` |
+| what it is | `registerGoal(24, 0x168e16e5…35f8, 1)` |
+
+The line opens when its provider is registered from a real family's PRONOTE space
+(docs/reclaim/pronote-grade-shown-provider.md) and pinned in `PRONOTE_PROVIDER`, and this goal is signed.
+
 ## The Safe session of every remaining goal, in one transaction (D194)
 
 The eleven goals not yet on the chain go in **one Safe transaction**: one hash, one signature per key, two in all,
