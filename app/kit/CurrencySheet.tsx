@@ -63,12 +63,20 @@ export function CurrencySheet({
           aria-pressed={chosen}
           className={`flex w-full items-center gap-[var(--space-md)] rounded-[var(--radius-control)] px-[var(--space-md)] py-[var(--space-sm)] text-left min-h-[var(--tap-target)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)] ${chosen ? "bg-[var(--chosen)]" : ""}`}
         >
+          {/* The mark of the choice, drawn as the condition picker draws its radio (D209, the spec of D152): a ring of
+              ink on the surface, filled with ink and a ring of surface on the currency being read. */}
+          <span
+            aria-hidden
+            data-choice={chosen ? "chosen" : "open"}
+            className={`h-[22px] w-[22px] shrink-0 rounded-full border-2 border-[var(--control-border)] ${chosen ? "bg-[var(--text)] [box-shadow:inset_0_0_0_4px_var(--surface)]" : "bg-[var(--surface)]"}`}
+          />
           <span aria-hidden className={MONEY_SIGN}>
             {money.sign}
           </span>
+          {/* Left to right as the spec reads: the sign, the code, the name, and the amount on the right. */}
           <span className="flex min-w-0 flex-col">
-            <span className="truncate">{money.name}</span>
             <span className={CARD_LABEL}>{code}</span>
+            <span className="truncate">{money.name}</span>
           </span>
           <span className="ml-auto shrink-0 tabular-nums">{worth(code)}</span>
         </button>

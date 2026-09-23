@@ -5798,3 +5798,28 @@ the gifts' part first.
 
 **Not verified.** No gift with an earned balance for a test account exists on mainnet, so the gathering step has not
 run end to end with money; the withdrawal it calls is the one the gift's page has used since D51.
+
+## D209, 24 Sep 2026: the currency sheet against its spec, and what was missing
+
+The founder, 24 Sep 2026, third of three: the currency selector, per the spec of 21 Sep. Read item by item against the
+code before building anything, because D152 had built it the same day:
+
+| the spec | the code | measured |
+|---|---|---|
+| the list derived: Ramp's payout methods and Mercuryo's fiat, against the ECB file plus the two CFA francs | `src/currencies.ts`, `/api/rates` | 30 offered on viky.cash on 24 Sep 2026 (31 on 21 Sep), no yuan |
+| a source silent: the three of the day, nothing false | `offeredCurrencies` | `test/currencies.test.ts` |
+| the sign a key: edge, relief, chevron, 44 px or more, a name saying the action and the currency | `MoneyKey` | `test/browser/currencies.spec.ts` |
+| pressing it opens a sheet and changes nothing | `CurrencySheet` | the same |
+| every line the current amount converted, "about" and the rate's day once at the foot | the same | the same |
+| "Where you are" first, the rest by name under "All currencies", the fade of the picker | the same | the same |
+| **the one being read carries the filled mark of the choice** | a warmer fill only | **missing** |
+| **left to right: the sign, the code, the name, the amount** | sign, name, code | **in another order** |
+
+**Changed.** Each line now opens with the mark the condition picker draws for its radio, a ring of ink, filled with ink
+and a ring of surface on the currency being read (`data-choice`), and reads the sign, the code in the label voice, the
+name, and the amount on the right. The line stays a button with `aria-pressed`: a radio group would choose on an arrow
+key, and choosing closes the sheet. `test/browser/currencies.spec.ts` asserts one filled mark, on the pressed line,
+and the order. Nothing else moved.
+
+What my report of the morning said about it, "not done", was wrong: it had been done since 21 Sep, less these two
+points.
