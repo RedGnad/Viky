@@ -5372,3 +5372,20 @@ page de connexion publique et la page de résultats la plus probable, marqué «
   tells the funder what is not yet proved); the word "unverified" itself on a consumer screen.
 - **What is not done.** No provider is registered: the dashboard needs the founder's session. No row is written: the
   providers' ids do not exist yet.
+
+## D194, 23 Sep 2026: the eleven goals in one Safe transaction, through Safe's canonical MultiSendCallOnly
+
+The founder, 23 Sep 2026: eleven calls are twenty-two signatures by hand; build one batched transaction through
+MultiSendCallOnly 1.4.1 at its canonical address, verified in safe-deployments and read on the chain, one hash, two
+signatures, and write why this delegate call is accepted when 20 Sep avoided one for three calls.
+
+- **Built.** `safeMultiSendCallOnly` in `src/safe.ts`, the one place a delegate call is built, to a constant address;
+  `pnpm safe:session` reads what is missing from both contracts, checks the library's code hash and the Safe's guard,
+  prints one hash, and later recovers the two signatures and rehearses before sending.
+- **Read on 23 Sep 2026.** The canonical address `0x9641d764…02e2` for chain 143 in safe-deployments; its code on
+  Monad hashing to the published `codeHash`; the Safe at nonce 7, threshold 2, no guard; the hash
+  `0x8b90a99b…2d99` equal to the Safe's own `getTransactionHash`; the eleven calls rehearsed from the Safe's address
+  without a revert (672,256 gas).
+- **Why accepted.** Written in OPERATIONS: Safe's own library, checked byte for byte each time, the call-only variant,
+  no storage and no owner in it, atomic, rehearsed; against eleven sittings of the same keys. No technical reason
+  forbade it. The eleven single hashes remain the fallback, by `pnpm safe:action`.

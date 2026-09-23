@@ -149,8 +149,12 @@ export type SafeTransaction = Readonly<{
   to: Address;
   value: bigint;
   data: Hex;
-  /** 0 is a call. A delegate call (1) is never built here: it would run somebody else's code as the Safe. */
-  operation: 0;
+  /**
+   * 0 is a call. A delegate call (1) runs somebody else's code as the Safe, so it is built in one place only,
+   * `safeMultiSendCallOnly`, and only to Safe's own canonical MultiSendCallOnly 1.4.1, whose code refuses any delegate
+   * call inside the batch (D194).
+   */
+  operation: 0 | 1;
   safeTxGas: bigint;
   baseGas: bigint;
   gasPrice: bigint;
@@ -164,6 +168,45 @@ const ZERO = "0x0000000000000000000000000000000000000000" as const;
 /** A plain call from the Safe, with every refund field at zero and the Safe's own next nonce. */
 export function safeCall(to: Address, data: Hex, nonce: bigint, value = 0n): SafeTransaction {
   return { to: getAddress(to), value, data, operation: 0, safeTxGas: 0n, baseGas: 0n, gasPrice: 0n, gasToken: ZERO, refundReceiver: ZERO, nonce };
+}
+
+/**
+ * Safe's MultiSendCallOnly 1.4.1 at its canonical address (safe-global/safe-deployments,
+ * `src/assets/v1.4.1/multi_send_call_only.json`, where chain 143 is listed as `canonical`, read 23 Sep 2026). Its code
+ * on Monad was read the same day: 410 bytes whose keccak256 is the `codeHash` the repository publishes. The session
+ * script reads it again before it builds anything, and refuses when the code differs.
+ */
+export const MULTI_SEND_CALL_ONLY = getAddress("0x9641d764fc13c8B624c04430C7356C1C7C8102e2");
+export const MULTI_SEND_CALL_ONLY_CODE_HASH = "0xecd5bd14a08c5d2122379900b2f272bdf107a7e92423c10dd5fe3254386c9939" as const;
+
+const multiSendAbi = [{ type: "function", name: "multiSend", stateMutability: "payable", inputs: [{ name: "transactions", type: "bytes" }], outputs: [] }] as const;
+
+/** One call of a batch: always a plain call, never a value, never a delegate call. */
+export type BatchCall = Readonly<{ to: Address; data: Hex }>;
+
+/**
+ * The bytes MultiSend reads: for each call, the operation (one byte, 0), the target (20 bytes), the value (32 bytes,
+ * 0), the length of the data (32 bytes) and the data, packed end to end, then handed to `multiSend(bytes)`.
+ */
+export function multiSendData(calls: readonly BatchCall[]): Hex {
+  if (calls.length === 0) throw new Error("A batch of no call is not a transaction");
+  const packed = concatHex(
+    calls.map((call) => {
+      const bytes = (call.data.length - 2) / 2;
+      if (!/^0x([0-9a-fA-F]{2})*$/.test(call.data)) throw new Error(`The data for ${call.to} is not bytes`);
+      return concatHex(["0x00", getAddress(call.to), numberToHex(0n, { size: 32 }), numberToHex(bytes, { size: 32 }), call.data]);
+    }),
+  );
+  return encodeFunctionData({ abi: multiSendAbi, functionName: "multiSend", args: [packed] });
+}
+
+/**
+ * The whole session as one Safe transaction: a delegate call to MultiSendCallOnly, which makes each call from the Safe
+ * in order and reverts all of them if one reverts. The only delegate call this code builds, and it has no target
+ * parameter to get wrong.
+ */
+export function safeMultiSendCallOnly(calls: readonly BatchCall[], nonce: bigint): SafeTransaction {
+  return { to: MULTI_SEND_CALL_ONLY, value: 0n, data: multiSendData(calls), operation: 1, safeTxGas: 0n, baseGas: 0n, gasPrice: 0n, gasToken: ZERO, refundReceiver: ZERO, nonce };
 }
 
 /** What each owner signs: Safe's own typed data, which its contract hashes the same way (`getTransactionHash`). */

@@ -945,11 +945,56 @@ proofs per condition (`src/proof-counts.ts`: attested milestone readings that st
 relayed for a daily one). "Being built" is printed only where a piece is really missing, and the line says which.
 Nothing is ever printed as "tested" or "used by N": the state "Being tested" is gone.
 
-## The Safe session of every remaining goal, in one sitting
+## The Safe session of every remaining goal, in one transaction (D194)
 
-Every goal not yet on the chain, in nonce order, each sent once the previous is final; the calls are in their own
-sections below and above, and this is the order of the sitting. Read `pnpm check:milestone-goals` and `goalProviders(6)`
-back afterwards.
+The eleven goals not yet on the chain go in **one Safe transaction**: one hash, one signature per key, two in all,
+instead of eleven transactions and twenty-two signatures. It is a delegate call from the Safe to Safe's canonical
+MultiSendCallOnly 1.4.1, which makes the eleven `registerGoal` calls from the Safe, in order, and reverts all of them if
+one reverts. Built, read and rehearsed on 23 Sep 2026, Safe nonce 7:
+
+| | |
+|---|---|
+| the library | `0x9641d764fc13c8B624c04430C7356C1C7C8102e2`, MultiSendCallOnly 1.4.1: the canonical address in safe-global/safe-deployments (`src/assets/v1.4.1/multi_send_call_only.json`, chain 143 listed as `canonical`); its code on Monad, 410 bytes, hashes to the repository's `codeHash` `0xecd5bd14a08c5d2122379900b2f272bdf107a7e92423c10dd5fe3254386c9939` |
+| the calls | goals 15 to 23 on `MilestoneGift` (`registerGoal(goal, providerId, 1)`), then 6 and 4 on `GiftEscrow` (`registerGoal(goal, providerId)`), the provider ids of the sections above |
+| signThis | `0x8b90a99b778fe7b46119e2eaa5443d2300879f614fe22d83edf754d5fa222d99`, equal to the Safe's own `getTransactionHash` read on Monad |
+| rehearsal | the library's code run at the Safe's address (`eth_call` with a state override), so every inner call comes from the Safe: no revert, 672,256 gas for the calls alone |
+| the Safe's guard slot | empty, read the same day |
+
+The sitting, three passes as for `pnpm safe:action`, each possible on another machine:
+
+```
+SAFE_ADDRESS=0xE08D926c148A5065F4Df2892702785a183de86F9 pnpm safe:session
+cast wallet sign --no-hash 0x8b90a99b778fe7b46119e2eaa5443d2300879f614fe22d83edf754d5fa222d99 --keystore <file>
+cast wallet sign --no-hash 0x8b90a99b778fe7b46119e2eaa5443d2300879f614fe22d83edf754d5fa222d99 --mnemonic "<words>"
+SAFE_ADDRESS=… SIGNATURES="0xfirst,0xsecond" SEND=1 EXECUTOR_PRIVATE_KEY=… pnpm safe:session
+```
+
+The first pass prints the calls and the hash again from the chain as it is then: if the Safe's nonce has moved, or a
+goal was registered elsewhere, the hash changes and the one above is not the one to sign. The script refuses a
+library whose code is not the canonical code, a guard on the Safe, and a goal registered to something else; the last
+pass recovers both signers from their signatures and rehearses the whole transaction against the chain before it is
+sent. Read back afterwards: `CHECK_ONLY=1 pnpm register:milestone-goals`, and `goalProviders(6)`, `goalProviders(4)` on
+`GiftEscrow`.
+
+**Why a delegate call is accepted here, when the session of 20 Sep 2026 avoided one for three calls.** A delegate call
+runs another contract's code with the Safe's own storage and authority: whoever controls that code controls the Safe
+for the length of the call. On 20 Sep the cost of avoiding it was six signatures for three calls, which is little, so
+the Safe ran no code but its own. Today the cost is twenty-two signatures in eleven sittings of the same two keys, each
+one a chance to sign the wrong hash, against one. What makes the risk small enough to take:
+
+- the code is Safe's own library, at the address its deployments repository publishes for this chain, and the code
+  there is checked byte for byte (its hash) before anything is built, by the script, every time;
+- MultiSendCallOnly is the variant that refuses a delegate call inside the batch: each of the eleven is a plain call
+  from the Safe, and the library itself holds no storage and no owner, so there is nothing in it anybody can change;
+- the library's address is a constant in `src/safe.ts`, and `safeMultiSendCallOnly` is the one function in the code
+  that builds a delegate call, with no target to pass; `test/safe-session.test.ts` pins the target, the operation,
+  the eleven calls and the hash;
+- the batch is atomic, so a failure leaves the Safe exactly where it was, and it was rehearsed from the Safe's address
+  before being written here.
+
+What is not accepted: a delegate call to anything else, a batch holding anything but these registrations, or one built
+by a tool that does not check the library's code. The eleven hashes one by one remain the fallback: `pnpm safe:action`
+with `ACTION=raw`, `NONCE=7` to `17`, in the order of the table below, each sent once the previous is final.
 
 | nonce | contract | goal | line |
 |---|---|---|---|
