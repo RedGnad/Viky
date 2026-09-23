@@ -4,10 +4,11 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { getAddress, isAddress, type Hex } from "viem";
 import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
-import { ApiError, postJson } from "@/src/client/api";
+import { ApiError, getJson, postJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { quoteWayOut, takeTheWayOut, type WayOutQuote } from "@/src/client/exit";
-import { sendOwnMoney } from "@/src/client/gift";
+import { sendOwnMoney, withdrawEarned } from "@/src/client/gift";
+import { totalEarned, type EarnedInGift } from "@/src/earned-shape";
 import { readCoinBalance, sendMon } from "@/src/client/onchain";
 import { AUSD, coinAt, COINS, exactly, isNative, USDC, type Coin } from "@/src/coins";
 import { rateDateInWords, whenInWords } from "@/src/display-currency";
@@ -39,10 +40,10 @@ import { AMOUNT_IN_TITLE, BODY, CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, FIELD
  * figure says by how much. The published figures and their sources are behind a fold under the cards.
  */
 
-type Stage = "base" | "amount" | "review" | "getting" | "ready" | "confirm" | "sending" | "sent" | "own" | "ownConfirm" | "ownSending" | "ownSent";
+type Stage = "base" | "gathering" | "amount" | "review" | "getting" | "ready" | "confirm" | "sending" | "sent" | "own" | "ownConfirm" | "ownSending" | "ownSent";
 
 /** Where a refusal is shown: under the element that caused it, never in a box at the bottom of the page. */
-type Where = "amount" | "review" | "code" | "send" | "own";
+type Where = "gather" | "amount" | "review" | "code" | "send" | "own";
 
 type Sent = Readonly<{ amount: string; exact?: string; name: string; when: string; reference: string; cost?: string }>;
 
@@ -99,6 +100,8 @@ export function CashOut() {
   useMoneySession();
   const money = useDisplayCurrency(address);
   const [holdings, setHoldings] = useState<Record<string, bigint> | null>(null);
+  /** What the gifts made out to this account hold for it, which the way out takes first (D208). */
+  const [inGifts, setInGifts] = useState<readonly EarnedInGift[]>([]);
   const [stage, setStage] = useState<Stage>("base");
   const [chosen, setChosen] = useState<WayOut | null>(null);
   const [dollars, setDollars] = useState("");
@@ -142,11 +145,16 @@ export function CashOut() {
 
   const coinOf = (way: WayOut): Coin => coinAt(way.coin) ?? USDC;
 
-  const refresh = useCallback(async () => {
-    if (!address) return;
-    const read = await Promise.all(COINS.map((coin) => readCoinBalance(coin, address)));
+  const refresh = useCallback(async (): Promise<Record<string, bigint> | undefined> => {
+    if (!address) return undefined;
+    const [read, gifts] = await Promise.all([
+      Promise.all(COINS.map((coin) => readCoinBalance(coin, address))),
+      // A read that fails is a way out without the gifts' part, which is what it was before (D208).
+      getJson<{ gifts: EarnedInGift[] }>("/api/gifts/earned").then((answer) => answer.gifts, () => [] as EarnedInGift[]),
+    ]);
     const next = Object.fromEntries(COINS.map((coin, index) => [coin.symbol, read[index]]));
     setHoldings(next);
+    setInGifts(gifts);
     // An account is back, so a session that had closed is closed no longer.
     setClosed(false);
     // The exact resume: a way out already holding something ready opens on its second step, from the balances
@@ -159,6 +167,7 @@ export function CashOut() {
         setStage("ready");
       }
     }
+    return next;
   }, [address]);
 
   useEffect(() => {
@@ -169,10 +178,12 @@ export function CashOut() {
 
   const held = (coin: Coin): bigint => holdings?.[coin.symbol] ?? 0n;
   const ausd = held(AUSD);
+  /** What the gifts hold for this account (D208): taken into it first, so it counts in every figure it will change. */
+  const giftsHold = totalEarned(inGifts);
   // Each coin cut to the cent before they are added, so the figure at the head and the figures on the cards are one
   // number (D124): dust under a cent left by a payout used to tip the sum and print $10.14 over cards on $10.13.
-  const changeable = toTheCent(ausd, AUSD.decimals);
-  const dollarsHeld = dollarsToTheCent(ausd, held(USDC));
+  const changeable = toTheCent(ausd + giftsHold, AUSD.decimals);
+  const dollarsHeld = dollarsToTheCent(ausd + giftsHold, held(USDC));
   const readyOf = (way: WayOut): Ready | undefined => (holdings ? readyFor(way, coinOf(way), held(coinOf(way))) : undefined);
   const firstReady = WAYS_OUT.find((way) => readyOf(way) !== undefined);
 
@@ -225,12 +236,41 @@ export function CashOut() {
     signOut();
   };
 
-  const start = (way: WayOut) => {
+  /**
+   * The gifts' part first (D208): one signature per gift, each relayed into this account, then the balances read
+   * again, so everything after this step is the way out as it always was, on money the account holds. A refusal
+   * leaves the rest where it was: whatever came out is in the account, whatever did not is still in its gift.
+   */
+  const gather = async (): Promise<Record<string, bigint> | undefined> => {
+    if (inGifts.length === 0) return holdings ?? undefined;
+    setBusy(true);
+    setProblem(null);
+    setStage("gathering");
+    try {
+      const account = await ensureSigner();
+      for (const gift of inGifts) {
+        await withdrawEarned({ account, giftId: gift.giftId, escrow: gift.escrow, amount: BigInt(gift.earned), nonce: BigInt(gift.nonce) });
+      }
+      return await refresh();
+    } catch (error) {
+      if (sessionClosed(error)) closeSession();
+      else setProblem({ where: "gather", text: W.gatherFailed, code: error instanceof ApiError ? error.code : undefined });
+      await refresh().catch(() => undefined);
+      setStage("base");
+      return undefined;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const start = async (way: WayOut) => {
+    const now = await gather();
+    if (!now) return;
     setChosen(way);
     setQuote(null);
     setProblem(null);
     setRefreshed(false);
-    setDollars(maxToChange);
+    setDollars(twoDecimalsDown(now[AUSD.symbol] ?? 0n, AUSD.decimals));
     setStage("amount");
   };
 
@@ -477,6 +517,17 @@ export function CashOut() {
     </section>
   );
 
+  if (stage === "gathering") {
+    return (
+      <div className="flex flex-col gap-[var(--space-xl)]">
+        {moneyCard}
+        <p role="status" className={BODY}>
+          {W.gathering}
+        </p>
+      </div>
+    );
+  }
+
   if (stage === "base") {
     const figure = holdings === null ? undefined : money.figure(dollarsHeld);
     const cardBranch = holdings !== null && dollarsHeld === 0n && firstReady !== undefined;
@@ -499,6 +550,9 @@ export function CashOut() {
             {firstReady && dollarsHeld > 0n && !isNative(coinOf(firstReady)) ? (
               <p className={HELP}>{W.readyLine(firstReady.name, amountOf(firstReady, readyOf(firstReady)!).lead)}</p>
             ) : null}
+            {/* The gifts' part is in the figure above, and it is taken into the account first (D208). */}
+            {giftsHold > 0n ? <p className={HELP}>{W.inYourGifts(formatAusd(giftsHold))}</p> : null}
+            {alert("gather")}
           </section>
         )}
         {/* Two signals disagree about where this person is (a trip, a shared connection, a private network), so the

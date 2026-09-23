@@ -5765,3 +5765,36 @@ space. Checked on the demonstration space, signed in by the founder's session, 2
   code kept for the day a readable answer exists. Goal 24 stays in the list of goals and waits.
 - **Why the family sees the marks**: their browser decrypts them with a key made at sign-in; a zkTLS proof attests the
   bytes on the wire, before that.
+## D208, 24 Sep 2026: money a daily gift already paid is taken out from Home while the gift runs
+
+The founder's default of 23 Sep 2026, confirmed 24 Sep with its route chosen: a daily gift's earned share stays
+withdrawable while the gift runs, from "Take it out"; the gift's page says so quietly, with no competing action; a
+milestone offers nothing before "Atteint".
+
+**Why a route had to be chosen.** What a daily gift earns stays in its contract until the person it is for signs a
+withdrawal, and that withdrawal existed only on the gift's page, as the action of "Atteint" (D172). Home's balance and
+the way out read only the account's own coins. So the default's sentence, "$3.00 already in your balance", would have
+been false while the gift runs. The founder chose: the gift's page keeps no gesture, and the way out learns to take
+the gifts' part first.
+
+**Built.**
+
+- `/api/gifts/earned`: for the signed-in account, each gift it is the contract's recipient of that holds something for
+  it now, with its contract, the amount and the withdrawal nonce the contract expects next (`src/earned-in-gifts.ts`).
+  Read from the contracts, never from a record.
+- The way out (`CashOut.tsx`) reads that with the balances and counts it in the figure at its head and in every way's
+  figure, and says so: "$3.00 of it is still in your gifts. It comes out first, with one signature per gift." Choosing
+  a way first signs one withdrawal per gift for its whole part, relayed into the account ("Taking what your gifts hold
+  into your account."), reads the balances again, then goes on as it always did. A refusal stops there: whatever came
+  out is in the account, whatever did not is still in its gift, and the screen says nothing was lost.
+- Home offers "Take it out" when only the gifts hold money (`holdsAnything(holdings, gifts)`, each gift's summary now
+  carrying `takeable`), because the gift's page sends its recipient there.
+- The gift's page, a daily gift that counts, to its recipient, while the contract holds some of what they earned: "It
+  is yours already. Take it out from Home whenever you like." under the figure, with no amount, since the figure says
+  it, and with no button. A milestone gains nothing: before "Atteint" it has earned nothing, and at "Atteint" its page
+  keeps its own action.
+- Each withdrawal is a relayed action, so it counts against the ceilings of D204; being the whole of a gift's part, it
+  is never refused as too small.
+
+**Not verified.** No gift with an earned balance for a test account exists on mainnet, so the gathering step has not
+run end to end with money; the withdrawal it calls is the one the gift's page has used since D51.

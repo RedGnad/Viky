@@ -40,5 +40,6 @@ export function exampleGift(nowMs: number): GiftSummary {
     earnedDisplay: "$4.00",
     theirsDisplay: "$4.00",
     returnedDisplay: "$2.00",
+    takeable: "0",
   };
 }

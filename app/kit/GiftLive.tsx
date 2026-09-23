@@ -91,6 +91,7 @@ export function GiftLive({
           </div>
         ) : null}
 
+        {live.quiet ? <p className={`${CARD_LABEL} gift-meta`}>{live.quiet}</p> : null}
         {action ? <div className="gift-action">{action}</div> : null}
 
         <details className="gift-fold" open={agreed.open}>

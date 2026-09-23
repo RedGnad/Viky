@@ -198,3 +198,15 @@ test("names that were never given leave sentences that still read", () => {
     }
   }
 });
+
+test("while a daily gift counts, its recipient reads where money already theirs goes, and nobody else does (D208)", () => {
+  const line = "It is yours already. Take it out from Home whenever you like.";
+  assert.equal(liveOf(input({ moment: "counting", voice: "recipient", takeableFromHome: true })).quiet, line);
+  for (const voice of ["funder", "reader"] as const) assert.equal(liveOf(input({ moment: "counting", voice, takeableFromHome: true })).quiet ?? null, null, voice);
+  assert.equal(liveOf(input({ moment: "counting", voice: "recipient", takeableFromHome: false })).quiet ?? null, null, "nothing held, nothing said");
+  // The figure already says how much: the line carries no amount.
+  assert.deepEqual(figuresIn(line), []);
+  for (const moment of MOMENTS.filter((one) => one !== "counting")) {
+    assert.equal(liveOf(input({ moment, voice: "recipient", takeableFromHome: true })).quiet ?? null, null, moment);
+  }
+});
