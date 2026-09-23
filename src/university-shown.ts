@@ -1,5 +1,8 @@
 import { keccak256, stringToHex, type Hex } from "viem";
 
+/** What the chooser prints beside a university whose portal row is unverified (D193), and what the sentence under the choice looks for (D195). */
+export const UNVERIFIED_MARK = " (unverified)";
+
 /**
  * What a person shows from their own student portal (D165, D174): the second nature's university rail, and the
  * corridor's own case, a family abroad paying the year.

@@ -967,6 +967,13 @@ export const CONDITION_NATURE = { read: "READ FOR YOU", shown: "SHOWN BY THEM", 
  * A proof the person shows from their own account (D162): one button, and what happens around it. The source's
  * name comes from the register, never from here.
  */
+/**
+ * A university whose portal row is marked unverified (D193), said to the funder where the university is chosen, before
+ * they pay (D195, a default applied to confirm): the gift is made, and the sentence is true of the contract, which
+ * returns everything at the deadline when nothing was proved.
+ */
+export const UNVERIFIED_PORTAL = "Nobody has shown a proof from this university yet. If it cannot be read, your money comes back to you at the deadline.";
+
 export const SHOW_PROOF = {
   title: (source: string) => `Show it from your ${source} account`,
   whatHappens: (source: string) =>

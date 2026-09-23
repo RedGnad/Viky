@@ -171,3 +171,16 @@ test("a row defined from the portal's public pages is marked unverified, says so
   assert.equal(confirmed?.unverified, false, "proving it from a student's session writes the row without the mark");
   assert.equal(portalFound(confirmed!).title, "Université Cheikh Anta Diop");
 });
+
+test("an unverified university does not refuse the gift: the funder reads, before paying, that nobody has shown a proof from it yet (D195)", async () => {
+  const { universityNamed, UNIVERSITY_SHOWN_MILESTONE } = await import("../src/milestone-conditions");
+  const { scanSource } = await import("../src/consumer-words");
+  await savePortal({ ...UCAD, unverified: true });
+  const found = portalFound((await loadPortal("ucad-sn"))!);
+  const title = `${found.title}, ${found.issuer}`;
+  const said = universityNamed("staying enrolled at ", title);
+  assert.equal(said, "This gift will be for staying enrolled at Université Cheikh Anta Diop (unverified), Senegal. Nobody has shown a proof from this university yet. If it cannot be read, your money comes back to you at the deadline.");
+  assert.deepEqual(scanSource("sentence", said), [], "through the consumer words check");
+  assert.equal(universityNamed("", "Université Cheikh Anta Diop, Senegal"), "This gift will be for Université Cheikh Anta Diop, Senegal.", "a verified row says nothing more");
+  assert.equal(UNIVERSITY_SHOWN_MILESTONE.portal?.refuses((await loadPortal("ucad-sn"))!, UNIVERSITY_SHOWN_MILESTONE.target.suggested), undefined, "made on an unverified portal: the mark refuses nothing");
+});
