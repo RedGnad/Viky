@@ -173,6 +173,27 @@ export async function signIn(): Promise<Address> {
   }
 }
 
+/**
+ * The passkey evaluated under another salt than the account's, for a key that is not the account's (the private
+ * space, D202). One face or fingerprint prompt, restricted to the passkey this device signed in with, so the answer is
+ * that account's and never another passkey's. Nothing is kept: the caller owns the bytes and zeroes them.
+ */
+export async function passkeyOutputFor(prfSalt: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer>> {
+  requirePasskeyCapableBrowser();
+  const known = storedCredential();
+  if (!known) throw accountError("PASSKEY_CANCELLED");
+  try {
+    const result = await getPasskeyPrfOutput({ rpId: relyingPartyId(), credential: known, prfSalt });
+    if (result.credentialId !== known.credentialId) {
+      result.prfOutput.fill(0);
+      throw accountError("PASSKEY_CANCELLED");
+    }
+    return result.prfOutput;
+  } catch (error) {
+    throw toAccountError(error);
+  }
+}
+
 /** Zeroes the key. Called on sign-out and after ten idle minutes. */
 export function signOut(): void {
   if (idleTimer) {

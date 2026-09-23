@@ -16,7 +16,9 @@ live app : viky.cash
 
 - PWA: Next.js 16 with Serwist (offline fallback, web push), Turbopack build.
 - Accounts: Mera passkeys only. A passkey's PRF output derives an ordinary Monad account
-  (BIP-44 `m/44'/60'/0'/0/0`). No seed phrase, no extension, no custody backend.
+  (BIP-44 `m/44'/60'/0'/0/0`). No seed phrase, no extension, no custody backend. The same passkey, under its own
+  salt (`viky:private:v1`), gives the key of the funder's private space (nicknames and notes), sealed in the browser
+  and kept on the server as an envelope it cannot open (D202).
 - Asset: AUSD on Monad mainnet.
 - Contracts: Foundry 1.8 with `network = "monad"`.
 - Tests: `node:test` through `tsx` for TypeScript, `forge test --network monad` for Solidity.
@@ -79,6 +81,7 @@ The functions run in Vercel's Paris region (`vercel.json`), next to the Frankfur
 | route | who | what |
 |---|---|---|
 | `POST /api/account/challenge`, `POST /api/account/session` | browser | the passkey account signs a challenge silently and gets a twelve-hour cookie |
+| `GET`, `PUT /api/account/private` | the signed-in account | its private space as a sealed envelope, kept over the revision it read; the server cannot open it |
 | `POST /api/gift/create` | funder | creates and funds a gift with the funder's single EIP-3009 signature, returns the claim link |
 | `POST /api/gift/claim` | recipient | binds the signed-in account to the gift of a claim link |
 | `POST /api/gift/<id>/account` | recipient | names their Duolingo; returns the code to put in the display name for a minute (D27) |

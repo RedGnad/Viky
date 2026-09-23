@@ -6,19 +6,28 @@ import { expect, test } from "@playwright/test";
  * reduced motion nothing moves at all.
  */
 const running = (page: import("@playwright/test").Page) =>
-  page.evaluate("document.getAnimations().filter((a) => a.playState === 'running' && a.effect && a.effect.getTiming().duration === 250 && !a.animationName).length");
+  page.evaluate<number>("document.getAnimations().filter((a) => a.playState === 'running' && a.effect && a.effect.getTiming().duration === 250 && !a.animationName).length");
 
 test("a block below the fold rises once when it is scrolled into view, and not a second time", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/privacy");
   await page.waitForTimeout(800);
   expect(await running(page)).toBe(0);
-  await page.mouse.wheel(0, 1200);
-  await expect.poll(() => running(page), { timeout: 2000 }).toBeGreaterThan(0);
+  // Scrolled a screen at a time until a block that was below the fold comes into view: how far that is depends on
+  // what the page says above it, which is not what this measures.
+  let scrolled = 0;
+  let rising = 0;
+  while (scrolled < 6000 && rising === 0) {
+    await page.mouse.wheel(0, 600);
+    scrolled += 600;
+    await page.waitForTimeout(120);
+    rising = await running(page);
+  }
+  expect(rising, "a block below the fold rises when it comes into view").toBeGreaterThan(0);
   await page.waitForTimeout(600);
-  await page.mouse.wheel(0, -1200);
+  await page.mouse.wheel(0, -scrolled);
   await page.waitForTimeout(100);
-  await page.mouse.wheel(0, 1200);
+  await page.mouse.wheel(0, scrolled);
   await page.waitForTimeout(100);
   expect(await running(page), "once, never on a second pass").toBe(0);
 });
