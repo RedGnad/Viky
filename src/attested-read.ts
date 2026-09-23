@@ -1,6 +1,5 @@
 import { keccak256, stringToHex, type Hex } from "viem";
 import { attestedSource, headersFor, type AttestedSource, type ResponseMatch } from "./attested-sources";
-import { connectedSource, type ConnectedSource } from "./fitbit-source";
 import { allowedAttestors, attestorAccepted, type ZkFetchProof } from "./duolingo-public";
 import { localProofVerified, proofVerifierMode } from "./proof-verification";
 import { READING_FINGERPRINT } from "./reading-fingerprint";
@@ -91,7 +90,7 @@ export function readingOfProof(source: AttestedSource, account: string, proof: Z
   const url = String(parameters.url ?? "");
   const method = String(parameters.method ?? "GET").toUpperCase();
   // A page asked by POST signs its method and its body with it (D197): both must be the ones the source describes.
-  const asked = source as Partial<ConnectedSource>;
+  const asked = source;
   const expectedMethod = asked.method ?? "GET";
   if (url !== source.url(account) || method !== expectedMethod) throw new AttestedReadError("PROOF_MISMATCH", "The proof is not about this page");
   if (asked.body && String(parameters.body ?? "") !== asked.body(account)) throw new AttestedReadError("PROOF_MISMATCH", "The proof asked the page something else");
@@ -138,11 +137,11 @@ export function classifyFetchFailure(message: string, source: AttestedSource): A
 }
 
 export async function attestedRead(sourceId: string, account: string, deps: AttestedReadDeps, bearer?: string): Promise<AttestedReading> {
-  const source = attestedSource(sourceId) ?? connectedSource(sourceId);
+  const source = attestedSource(sourceId);
   if (!source) throw new AttestedReadError("NOT_CONFIGURED", `No attested source is named ${sourceId}`);
   if (!source.accepts(account)) throw new AttestedReadError("INVALID_ACCOUNT", "That is not a name this source could have");
   // A connected source opens with the person's key and with nothing else; a public one takes none (D188).
-  const auth = (source as Partial<ConnectedSource>).auth;
+  const auth = source.auth;
   if (auth === "bearer" && !bearer) throw new AttestedReadError("NOT_CONFIGURED", "This source is read with the person's key, and none was given");
   if (auth !== "bearer" && bearer) throw new AttestedReadError("NOT_CONFIGURED", "This source takes no key");
   let proof: ZkFetchProof;
@@ -234,9 +233,9 @@ async function localZkFetch(source: AttestedSource, account: string, bearer?: st
   return (await client.zkFetch(
     source.url(account),
     {
-      method: (source as Partial<ConnectedSource>).method ?? "GET",
-      headers: (source as Partial<ConnectedSource>).body ? { ...headersFor(source), "content-type": "application/json" } : headersFor(source),
-      ...((source as Partial<ConnectedSource>).body ? { body: (source as Partial<ConnectedSource>).body!(account) } : {}),
+      method: source.method ?? "GET",
+      headers: source.body ? { ...headersFor(source), "content-type": "application/json" } : headersFor(source),
+      ...(source.body ? { body: source.body!(account) } : {}),
       useTee: true,
     } as never,
     { responseMatches: source.matches.map((match) => ({ ...match })), ...(bearer ? { headers: { Authorization: `Bearer ${bearer}` } } : {}) } as never,

@@ -11,8 +11,7 @@ import { verdictMetric } from "../src/connected-checkin";
 import { activeMinutesOf, exchangeFitbitCode, fitbitAuthorizeUrl, fitbitConfigured, fitbitDateOfUtcDay, fitbitDayMet, FitbitError, isFitbitDate, isFitbitUserId, pkceChallenge, pkceVerifier, refreshFitbitTokens, revokeFitbitToken } from "../src/fitbit";
 import { GiftApiError } from "../src/gift-api";
 import { FITBIT_CONNECTED_PROVIDER_ID, GOAL_TYPE_FITBIT_ACTIVITY } from "../src/gift-terms";
-import { attestedSource } from "../src/attested-sources";
-import { connectedSource, GOOGLE_HEALTH_ACTIVE_MINUTES } from "../src/fitbit-source";
+import { attestedSource, GOOGLE_HEALTH_ACTIVE_MINUTES } from "../src/attested-sources";
 import { CONDITION_NATURE } from "../src/sentences";
 
 /**
@@ -51,9 +50,7 @@ test("the line: connected by them, the family Move, goal 6 on the daily contract
 });
 
 test("the source is the daily roll-up of active minutes, asked by POST for the civil day, wearables only, captured whole", () => {
-  // Known to the app and not yet to the reading service: the shared list is the founder's step (OPERATIONS, step 3).
-  assert.equal(attestedSource("google-health-active-minutes"), undefined, "not in the shared list until the reading service runs it");
-  assert.equal(connectedSource("google-health-active-minutes"), GOOGLE_HEALTH_ACTIVE_MINUTES);
+  assert.equal(attestedSource("google-health-active-minutes"), GOOGLE_HEALTH_ACTIVE_MINUTES, "in the shared list the reading service runs");
   assert.equal(GOOGLE_HEALTH_ACTIVE_MINUTES.auth, "bearer");
   assert.equal(GOOGLE_HEALTH_ACTIVE_MINUTES.method, "POST");
   assert.ok(GOOGLE_HEALTH_ACTIVE_MINUTES.accepts("2026-09-22") && !GOOGLE_HEALTH_ACTIVE_MINUTES.accepts("ama") && !GOOGLE_HEALTH_ACTIVE_MINUTES.accepts("2026-9-2"));
@@ -197,4 +194,9 @@ test("a proof of a page asked by POST is read only when its method and its body 
   assert.throws(() => readingOfProof(GOOGLE_HEALTH_ACTIVE_MINUTES, day, proofOf({ ...right, method: "GET" })), mismatch, "the method is part of what is signed");
   assert.throws(() => readingOfProof(GOOGLE_HEALTH_ACTIVE_MINUTES, day, proofOf({ ...right, body: GOOGLE_HEALTH_ACTIVE_MINUTES.body!("2026-09-21") })), mismatch, "another day's body is another question");
   assert.throws(() => readingOfProof(GOOGLE_HEALTH_ACTIVE_MINUTES, day, proofOf({ ...right, body: right.body.replace("google-wearables", "all-sources") })), mismatch, "minutes logged by hand are not asked for");
+});
+
+test("the body the reading service signs is the body the app builds, day after day", async () => {
+  const { dailyRollUpBody } = await import("../src/fitbit");
+  for (const day of ["2026-09-22", "2026-09-30", "2026-12-31", "2028-02-28", "2028-02-29"]) assert.equal(GOOGLE_HEALTH_ACTIVE_MINUTES.body!(day), dailyRollUpBody(day), day);
 });

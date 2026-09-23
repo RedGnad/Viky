@@ -1,12 +1,11 @@
 import { getAddress, type Hex } from "viem";
 import { attestedRead, AttestedReadError, reclaimAttestedReadDeps, type AttestedReadDeps } from "./attested-read";
-import { attestedSource } from "./attested-sources";
+import { attestedSource, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES } from "./attested-sources";
 import { conditionOfGoal } from "./conditions";
 import { openSecret, sealSecret, vaultConfigured } from "./connect-vault";
 import { eraseConnection, loadConnection, saveRefreshedTokens, type Connection } from "./connection-store";
 import type { PublicCheckInOutcome, PublicCheckInPurpose } from "./duolingo-public-checkin";
 import { activeMinutesOf, fitbitConfigured, fitbitDateOfUtcDay, fitbitDayMet, FITBIT_PROVIDER_LABEL, FitbitError, refreshFitbitTokens } from "./fitbit";
-import { GOOGLE_HEALTH_ACTIVE_MINUTES } from "./fitbit-source";
 import { contractRefusal } from "./gift-api";
 import { ATTESTATION_TTL_SECONDS, FITBIT_CONNECTED_PROVIDER_ID, identityPseudonym, serialiseMessage, signCheckIn, STRAVA_CONNECTED_PROVIDER_ID, type CheckInMessage } from "./gift-attestation";
 import { checkInDayIndex, readGift, utcDayOf, type GiftState } from "./gift-reader";
@@ -15,7 +14,6 @@ import { loadGift, loadRelayed, markBound, type GiftRecord } from "./gift-store"
 import { consumeAndSaveVerification, saveProofSession } from "./proof-session-store";
 import { escrowOf, RelayerError } from "./relayer";
 import { distanceOfDay, refreshStravaTokens, stravaConfigured, stravaDayMet, STRAVA_PROVIDER_LABEL, StravaError } from "./strava";
-import { STRAVA_DAY_ACTIVITIES } from "./strava-source";
 
 /**
  * The morning reading of a connected source (D188, and Strava beside Fitbit in D191): the third nature, beside the

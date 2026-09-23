@@ -67,7 +67,7 @@ const server = createServer(async (request, response) => {
     if (!source.accepts(account)) return reply(400, { error: "INVALID_ACCOUNT" });
     // The person's key, for a source that opens with one (D188): handed to zkFetch as a secret, never logged.
     const bearer = typeof body.bearer === "string" && body.bearer.length > 0 && body.bearer.length <= 8_192 ? body.bearer : undefined;
-    if (((source as Partial<{ auth: "bearer" }>).auth === "bearer") !== (bearer !== undefined)) return reply(400, { error: (source as Partial<{ auth: "bearer" }>).auth === "bearer" ? "KEY_REQUIRED" : "NO_KEY_TAKEN" });
+    if ((source.auth === "bearer") !== (bearer !== undefined)) return reply(400, { error: source.auth === "bearer" ? "KEY_REQUIRED" : "NO_KEY_TAKEN" });
     try {
       const proof = await localAttestedFetch(source, account, bearer);
       console.log(JSON.stringify({ at: new Date().toISOString(), source: source.id, account, ms: Date.now() - started, ok: true }));
