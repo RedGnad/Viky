@@ -59,7 +59,8 @@
     "prepare:milestone-goals": "WALLET=1 tsx scripts/register-milestone-goals.ts",
     "safe:create": "tsx scripts/safe-create.ts",
     "safe:handover": "tsx scripts/safe-handover.ts",
-    "safe:action": "tsx scripts/safe-action.ts"
+    "safe:action": "tsx scripts/safe-action.ts",
+    "safe:session": "tsx scripts/safe-session.ts"
   },
   "dependencies": {
     "@category-labs/mera": "0.2.0",
