@@ -61,8 +61,7 @@ function checkedName(value: unknown, which: "their first name" | "your name"): s
  * accepted, the gift could never pay, so it is refused with the number, rather than made and returned in a month.
  *
  * The gift is made in the order D87 set for every gift: its creation recorded before the money moves, then relayed,
- * then recorded. Only a live condition is offered, and only a live condition is made, with one exception: an operator account may make
- * a gift on a condition that is wired but not yet live, which is how its first real gift is made before it is offered.
+ * then recorded. Only a live condition is offered, and only a live condition is made, by anybody (D184).
  */
 export async function POST(request: Request) {
   let account: string | undefined;
@@ -74,7 +73,8 @@ export async function POST(request: Request) {
     const body = await readJsonBody<CreateBody>(request, 8 * 1_024);
 
     const milestone = milestoneById(String(body.conditionId ?? ""));
-    if (!milestone || !(milestone.condition.live || isOperator(auth.account))) throw new GiftApiError("GOAL_NOT_OFFERED", "This goal is not offered yet.");
+    // No operator door (the founder's rule of 23 Sep 2026, D184): a climb is live for everybody or made by nobody.
+    if (!milestone || !milestone.condition.live) throw new GiftApiError("GOAL_NOT_OFFERED", "This goal is not offered yet.");
     const cadence = cadenceOf(milestone, String(body.cadence ?? ""));
     if (!cadence || !isChessClimb(cadence.id)) throw new GiftApiError("INVALID_MODE", milestone.words.refusals.noCadence);
     const username = String(body.username ?? "").trim();
@@ -155,9 +155,7 @@ export async function POST(request: Request) {
       }
       if (now.rating === null) throw new GiftApiError("NO_RATING", `${milestone.words.refusals.noRating(cadence.label)} Nothing was taken.`, 400);
       // A rating that has not settled moves far more than ten points a game, so the climb signed would measure nothing (D90).
-      // An account that runs Viky may still make one while the condition is not live, for the rehearsal gift only.
-      const rehearsal = !milestone.condition.live && isOperator(auth.account);
-      if (!milestone.settled(now.rd) && !rehearsal) throw new GiftApiError("RATING_SETTLING", `${milestone.words.refusals.settling} Nothing was taken.`, 409);
+      if (!milestone.settled(now.rd)) throw new GiftApiError("RATING_SETTLING", `${milestone.words.refusals.settling} Nothing was taken.`, 409);
       if (now.rating > maximumStart) {
         throw new GiftApiError(
           "STANDING_MOVED",

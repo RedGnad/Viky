@@ -5068,3 +5068,35 @@ The sheet:
 - **Test.** `test/browser/reveal.spec.ts`: a block rises when scrolled to, not on a second pass, and nothing rises under
   reduced motion, at four sizes. Filmed on the catalogue at 390: the two sections that entered are invisible at 0 ms,
   nearly in at 80 ms on the standard curve, in place at 250 ms.
+
+## D184, 23 Sep 2026: a condition built is open; no door; the truth line by line; the count of real proofs
+
+The founder, 23 Sep 2026, replacing D109 and everything written this night about "Being built" and the operator door:
+"une condition construite est OUVERTE à tout le monde dès que son chemin de code est complet (registre, objectif sur
+la chaîne, fournisseur défini, flux construit jusqu'au bout). Plus de porte opérateur pour ce qui est construit. La
+page publique dit la vérité par ligne : « Open. Nobody has shown one yet. » tant qu'aucune preuve réelle n'est passée,
+puis « Open. » ; la page des juges porte le compte de preuves réelles par condition. « Being built » seulement quand
+une pièce manque vraiment. Jamais « tested » ni « used by N » sans preuve."
+
+- **Open now.** The TOEFL score shown: the register, goal 13 on the chain, the directory's provider pinned, the flow
+  built to the end. `live: true`, in `CONDITIONS`, under "Pass an exam", "Open. Nobody has shown one yet." on the
+  public page. The exams' frontier line says the TOEFL is open and names Cambridge English and IELTS as being built.
+- **No door.** `/api/conditions` previews nothing to anybody; the three create routes refuse a condition that is not
+  live to everybody, the operator included, and the rehearsal exception on a rating still settling is gone.
+  `VIKY_OPERATOR_ACCOUNTS` keeps the dev pages and the boolean answers, nothing else.
+- **The truth line by line.** `src/proof-counts.ts` counts real proofs per condition from the rows (attested
+  milestone readings that started or reached a gift; check-ins relayed for a daily line) when a page is served. The
+  catalogue prints, beside "Open", "Nobody has shown one yet." (or "read on it", or "connected one", by the line's
+  nature) while the count is zero, and nothing while it cannot be read; the judges' page prints the number. The state
+  "Being tested" is gone: three states, no fourth.
+- **"Being built" names the missing piece.** Each line beside the register says in one line what really lacks: a
+  provider registered on the Reclaim dashboard from its definition and a goal signed (the exams, Udemy,
+  EcoleDirecte); a portal row, or a row's results page (the university rail). The registration on the dashboard
+  needs a dashboard session, which no key of the project holds: it is the founder's step, and OPERATIONS says so.
+- **The Safe session of every remaining goal**, in one sitting and one order, is in OPERATIONS: nonces 7 to 16, goals
+  15 to 23 on the milestone contract and 6 on the daily one.
+- **What crossed the frontier, said in the PR.** The three create routes and `/api/conditions` (the door), the
+  catalogue page and `JudgesConditions` (the counts), `src/sentences.ts` (the words).
+- **Not done here.** The privacy rule of the same morning (the number read shown to the two parties only, never
+  stored beyond the verdict, the chain carrying the verdict alone) is its own PR; the portal rows for the corridor
+  (UCAD, FHB) wait for their providers on the dashboard, their definitions being written from the public pages.

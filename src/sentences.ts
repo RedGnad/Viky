@@ -987,6 +987,10 @@ export const CATALOGUE = {
   states: "What each state means",
   /** The word of a line being built, on the public page: the frontier's own, and not a fifth state (D169). */
   beingBuilt: "Being built",
+  /** The truth beside "Open", line by line (D184): nothing has passed on it yet, said by the line's own nature. */
+  nobodyYet: { read: "Nobody has been read on it yet.", shown: "Nobody has shown one yet.", connected: "Nobody has connected one yet." },
+  /** The count of real proofs a line has, for the judges' page: never "tested", never "used by", a number or nothing. */
+  realProofs: (count: number | null) => (count === null ? "real proofs not read" : count === 1 ? "1 real proof" : `${count} real proofs`),
   frontier: "What has no public page",
   frontierIntro: "People ask for these. No source lets anybody check them, and the wall is not on our side.",
   limits: "What each of these proves, and what it does not, is written out on the same page as our own limits:",

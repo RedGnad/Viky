@@ -16,10 +16,10 @@ import { CATALOGUE } from "../src/sentences";
 
 const page = readFileSync("app/what-viky-can-check/page.tsx", "utf8");
 
-test("the states are the four the founder named, in words, and there is no fifth", () => {
+test("the states are the three the founder kept, in words, and there is no fourth", () => {
   assert.deepEqual(
     STATES.map((state) => state.title),
-    ["Open", "Being tested", "Waiting for the source's answer", "No public page exists"],
+    ["Open", "Waiting for the source's answer", "No public page exists"],
   );
   for (const state of STATES) {
     assert.match(state.meaning, /\.$/, `${state.id} says what it means in a sentence`);
@@ -74,6 +74,7 @@ test("what nobody can check is listed with what was read, and it is not pretende
   assert.match(stateWords("no-public-page").meaning, /^No public page shows it\. The person can show it from their own account, and Viky is building that\.$/);
   // Each line rests on a page read on a day, and the two read from a source's own site say which day.
   assert.match(String(FRONTIERS.find((frontier) => frontier.id === "supervised-exams")?.why), /19 Sep 2026/);
+  assert.match(String(FRONTIERS.find((frontier) => frontier.id === "supervised-exams")?.building), /the TOEFL score is open/, "the line says the TOEFL is open, not being built");
   assert.match(String(FRONTIERS.find((frontier) => frontier.id === "state-diplomas")?.why), /diplome\.gouv\.fr/);
 });
 
@@ -98,7 +99,7 @@ test("the page lists every condition the register holds, offered or not, by fami
   );
   assert.deepEqual(sections.find((section) => section.family === "school")?.building.map((condition) => condition.id), ["ecoledirecte-grade-shown"], "the family School, for its one line being built (D179)");
   assert.deepEqual(sections.find((section) => section.family === "course")?.building.map((condition) => condition.id), ["udemy-course-shown"], "beside the Coursera certificate (D178)");
-  assert.deepEqual(sections.find((section) => section.family === "exam")?.conditions, [], "a family with only lines being built is on the page for them");
+  assert.deepEqual(sections.find((section) => section.family === "exam")?.conditions.map((condition) => condition.id), ["toefl-mybest-shown"], "the TOEFL score is open in its family, the others being built beside it");
   assert.deepEqual(sections.find((section) => section.family === "study")?.building.map((condition) => condition.family), ["study", "study"]);
   const language = sections.find((section) => section.family === "language");
   assert.ok(language, "the language family is on the page");
@@ -147,11 +148,11 @@ test("it is reachable without an account and from the judges page, and it says t
  */
 test("every condition says its nature, and every one of the pilot is read for the person", () => {
   for (const condition of CONDITIONS) assert.ok(condition.nature === "read" || condition.nature === "shown", `${condition.id} has no nature`);
-  assert.deepEqual(CONDITIONS.filter((condition) => condition.nature === "shown").map((condition) => condition.id), [], "no shown condition is in the register until a real proof has run end to end (D109, D164)");
+  assert.deepEqual(CONDITIONS.filter((condition) => condition.nature === "shown").map((condition) => condition.id), ["toefl-mybest-shown"], "the TOEFL score is open since its path was complete (D184)");
   // What is being built lives beside the register, resolvable by id and offered to an operator alone (D164, D165, D174, D176).
   assert.deepEqual(
     BUILDING.map((condition) => condition.id),
-    ["toefl-mybest-shown", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown"],
+    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown"],
   );
   for (const id of BUILDING.map((condition) => condition.id)) {
     const shown = conditionById(id);
@@ -161,12 +162,12 @@ test("every condition says its nature, and every one of the pilot is read for th
     assert.equal(shown?.state, undefined, `${id} carries no state while it is being built`);
     assert.throws(() => stateOf(shown as never), /carries no state/);
     assert.ok(shown?.beforeItOpens, `${id} says what has to happen first`);
-    assert.ok(!CONDITIONS.includes(shown as never), `${id} is not on the public page as a condition: it is said to be being built`);
+    assert.ok(!CONDITIONS.includes(shown as never), `${id} is not in the register: a piece is missing`);
   }
   for (const condition of CONDITIONS) assert.equal(stateOf(condition).id, condition.state, `${condition.id} is in the register and carries a state`);
   // A frontier line that says "Being built" either names the line it is about, so the catalogue never prints it
   // twice, or names none because its lines print under their own family (the three bac lines, D176).
-  assert.deepEqual(FRONTIERS.filter((frontier) => frontier.conditionId).map((frontier) => frontier.conditionId), ["toefl-mybest-shown", "university-enrollment-shown"]);
+  assert.deepEqual(FRONTIERS.filter((frontier) => frontier.conditionId).map((frontier) => frontier.conditionId), ["university-enrollment-shown"]);
   for (const frontier of FRONTIERS) {
     if (frontier.conditionId) assert.ok(frontier.building, `${frontier.id} names a line and says nothing is being built`);
     if (!frontier.building) assert.equal(frontier.conditionId, undefined, `${frontier.id} names a line and says nothing is being built`);

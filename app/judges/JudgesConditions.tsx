@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { conditionsWithProof } from "@/src/condition-proof";
 import { stateOf } from "@/src/conditions";
+import { realProofCounts } from "@/src/proof-counts";
 import { CATALOGUE } from "@/src/sentences";
 import { TITLE } from "../components/ui";
 
@@ -15,8 +16,10 @@ const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
  * The fourth question is where the conditions differ most, and the table exists to make that visible rather than to
  * claim that all four are equally hard to cheat.
  */
-export function JudgesConditions() {
+export async function JudgesConditions() {
   const rows = conditionsWithProof();
+  // The count of real proofs per condition (D184): a number read from the rows when the page is served, or nothing.
+  const counts = await realProofCounts();
   return (
     <section className="space-y-[var(--space-md)]">
       <h2 className={TITLE}>What each condition proves</h2>
@@ -37,7 +40,7 @@ export function JudgesConditions() {
             {/* The state is the register's own, in the words the public page prints: "not open yet, so no gift runs on
                 it" stopped being true the day the first real Chess.com gift was funded, on 18 Sep 2026. */}
             <span className={MUTED}>
-              {condition.source}, {stateOf(condition).title.toLowerCase()}
+              {condition.source}, {stateOf(condition).title.toLowerCase()}, {CATALOGUE.realProofs(counts ? (counts.get(condition.id) ?? 0) : null)}
             </span>
           </h3>
           <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[14rem_1fr]">

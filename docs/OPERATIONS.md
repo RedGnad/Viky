@@ -755,29 +755,46 @@ the running build touches it.
    with its push service ("Registration failed - permission denied") even with the notification permission granted,
    in Chrome and in Chromium, headless or not. Firefox's service is the standard one, so the path is the same.
 
-## The door for a condition that is not live yet
+## There is no door any more: a condition built is open (the founder's rule of 23 Sep 2026)
 
-`/api/conditions` offers a condition that is wired and not live yet to an account on `VIKY_OPERATOR_ACCOUNTS`, and to
-nobody else. That is how the first real gift on a new condition gets made.
+Until 23 Sep 2026, `/api/conditions` offered a condition that was wired and not live to an account on
+`VIKY_OPERATOR_ACCOUNTS`, and to nobody else, so the first real gift on a new condition could be made behind a door
+(D109). Chess.com went through it and out of it. The founder's rule of 23 Sep 2026 replaces D109 and the door: a
+condition built is open to everybody as soon as its path is complete, the register, the goal on the chain, the
+provider defined, the flow built to the end; a condition with a piece really missing is offered to nobody, operator or
+not. `preview` in the answer of `/api/conditions` is empty for everybody and stays in the answer only so a screen
+built against it keeps its shape. `VIKY_OPERATOR_ACCOUNTS` still opens the dev pages (`VIKY_DEV_PAGES`) and the
+operator's boolean answers (`shown.configured`), and nothing else.
 
-Chess.com went through it and out of it: two real gifts were made that way, 1,000,000 and 1,000,002, and it is live
-for everybody since 19 Sep 2026 (D109). Today the door holds one condition, the Duolingo English Test, and it opens
-the day goal 5 is registered on the milestone contract.
+The public page tells the truth line by line: "Open. Nobody has shown one yet." (or "read on it", or "connected one",
+by the line's nature) until a real proof has passed, then "Open." alone; the judges' page prints the count of real
+proofs per condition (`src/proof-counts.ts`: attested milestone readings that started or reached a gift, check-ins
+relayed for a daily one). "Being built" is printed only where a piece is really missing, and the line says which.
+Nothing is ever printed as "tested" or "used by N": the state "Being tested" is gone.
 
-Measured on 18 Sep 2026: the list in production holds two accounts, `0x350aF8…` and `0x91C964…`, and the founder's
-own account `0xb12e0C72209Bd4BECFDaFA96a8F3e7eBc93b8376` is not one of them, which is a line of configuration and not
-a defect.
+## The Safe session of every remaining goal, in one sitting
 
-To add an account to it, put the whole list back with the new one in it and redeploy production, then read it back:
+Every goal not yet on the chain, in nonce order, each sent once the previous is final; the calls are in their own
+sections below and above, and this is the order of the sitting. Read `pnpm check:milestone-goals` and `goalProviders(6)`
+back afterwards.
 
-```
-npx vercel@latest env rm VIKY_OPERATOR_ACCOUNTS production --yes
-npx vercel@latest env add VIKY_OPERATOR_ACCOUNTS production --value "0x350aF8…,0x91C964…,0xb12e0C72209Bd4BECFDaFA96a8F3e7eBc93b8376" --yes
-```
+| nonce | contract | goal | line |
+|---|---|---|---|
+| 7 | `MilestoneGift` | 15 | the year passed at a university, shown (D174) |
+| 8 | `MilestoneGift` | 16 | a grade reached at a university, shown (D174) |
+| 9 | `MilestoneGift` | 17 | a Cambridge English result, shown (D176) |
+| 10 | `MilestoneGift` | 18 | an IELTS band, shown (D176) |
+| 11 | `MilestoneGift` | 19 | the baccalauréat passed, Morocco (D176) |
+| 12 | `MilestoneGift` | 20 | the baccalauréat passed, Cameroon (D176) |
+| 13 | `MilestoneGift` | 21 | the baccalauréat passed, France (D176) |
+| 14 | `MilestoneGift` | 22 | a Udemy course finished, shown (D178) |
+| 15 | `MilestoneGift` | 23 | an average at school, shown from EcoleDirecte (D179) |
+| 16 | `GiftEscrow` | 6 | Fitbit, connected by the person (its PR, open beside this one) |
 
-Two things to know before running it. Removing a variable removes it for every environment it names, so pull the
-current value first and put the whole list back in one go. And this list is the same one that opens the dev pages
-(`VIKY_DEV_PAGES`), one of which moves the relayer's MON: adding an account gives it those pages too.
+A goal signed opens nothing by itself: a line opens when its path is complete, which for the lines above still waits
+for a provider registered on the Reclaim dashboard from its definition in `docs/reclaim/`, the founder's own step
+there (a dashboard session is needed, which no key of the project holds).
+
 ## The goals of the milestone contract, and the session that registers them
 
 A goal on `MilestoneGift` is three things: a number, the provider id every proof for it must carry, and the shape it

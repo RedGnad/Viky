@@ -19,10 +19,11 @@ test.describe("the nature of a condition", () => {
     const change = sheet.getByRole("button", { name: /^Change/i });
     if (await change.isVisible().catch(() => false)) await change.click();
     await expect(sheet.getByText(WORDS).first()).toBeVisible();
-    // On every line of the list, chosen or not: six conditions, six times the same two words today.
+    // On every line of the list, chosen or not: one of the natures' words on each, since the TOEFL score is open (D184).
     const said = await sheet.getByText(WORDS).filter({ visible: true }).allTextContents();
     expect(said.length).toBe(await sheet.getByRole("radio").count());
-    expect(said.every((words) => words === "READ FOR YOU")).toBe(true);
+    expect(said.every((words) => WORDS.test(words))).toBe(true);
+    expect(said).toContain("SHOWN BY THEM");
     // The meta voice: 13 px, capitals, a pixel of tracking, the muted ink, and no fill behind it.
     const tag = sheet.getByText(WORDS).first();
     const style = await tag.evaluate((element) => {

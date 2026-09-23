@@ -79,12 +79,12 @@ export async function POST(request: Request) {
     const dailyTarget = Number(body.dailyTarget);
     const durationDays = Number(body.durationDays);
     if (!Number.isInteger(goalType) || goalType < 1 || goalType > 255) throw new GiftApiError("GOAL_NOT_OFFERED", "Choose a goal from the menu");
-    // The condition that goal stands for, in the register or behind the door (D109): a gift is made on nothing else, a
-    // condition that is not live is made only by an account that runs Viky, and the account name is checked by that
-    // condition's own rule. Before 23 Sep 2026 any goal type from 1 to 255 was accepted here.
+    // The condition that goal stands for, in the register: a gift is made on nothing else, a condition that is not live
+    // is made by nobody (the founder's rule of 23 Sep 2026, D184), and the account name is checked by that condition's
+    // own rule. Before 23 Sep 2026 any goal type from 1 to 255 was accepted here.
     const condition = conditionOfGoal(goalType);
     if (!condition || condition.kind !== "daily") throw new GiftApiError("GOAL_NOT_OFFERED", "Choose a goal from the menu");
-    if (!condition.live && !isOperator(auth.account)) throw new GiftApiError("GOAL_NOT_OFFERED", "Choose a goal from the menu", 404);
+    if (!condition.live) throw new GiftApiError("GOAL_NOT_OFFERED", "Choose a goal from the menu", 404);
     const nameCheck = condition.link.kind === "username" ? condition.link.check : undefined;
     if (duolingoUsername && !(nameCheck ? nameCheck.valid(duolingoUsername) : isValidDuolingoUsername(duolingoUsername))) {
       throw new GiftApiError("INVALID_USERNAME", nameCheck?.refusals.shape ?? "That does not look like a Duolingo username.", 400);

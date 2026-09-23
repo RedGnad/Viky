@@ -87,8 +87,10 @@ test("the TOEFL moves beside them: one family, Pass an exam, after the languages
   assert.deepEqual(FAMILIES.map((family) => family.id).slice(0, 2), ["language", "exam"]);
   // The frontier line about the exams says which lines are on their way, and names the one it prints for (D169).
   const exams = FRONTIERS.find((frontier) => frontier.id === "supervised-exams");
-  assert.match(String(exams?.building), /TOEFL score, a Cambridge English result and an IELTS band/);
-  assert.equal(exams?.conditionId, "toefl-mybest-shown");
+  assert.match(String(exams?.building), /a Cambridge English result and an IELTS band/);
+  assert.equal(exams?.conditionId, undefined, "the TOEFL score is open and prints in the register; the two others under their family");
+  assert.equal(TOEFL_MYBEST_SHOWN.live, true);
+  assert.equal(TOEFL_MYBEST_SHOWN.state, "open");
   const diplomas = FRONTIERS.find((frontier) => frontier.id === "state-diplomas");
   assert.match(String(diplomas?.building), /baccalauréat passed.*Morocco, Cameroon and France/);
   assert.equal(diplomas?.conditionId, undefined, "the three bac lines print under their family, once");

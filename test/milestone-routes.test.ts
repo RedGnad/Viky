@@ -82,22 +82,8 @@ test("a condition that is not live is offered to nobody but an account that runs
   assert.deepEqual(listed.preview, [], "a funder sees only what is live");
   assert.ok(listed.ids.includes("chess-rating"));
   const operatorSees = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`, { headers: { cookie: await cookieFor(OPERATOR) } }))).json()) as { ids: string[]; preview: string[] };
-  // Eleven things are wired and not live today (D164, D165, D174, D176, D178, D179): the TOEFL score shown, the five
-  // examination results, a Udemy course finished, the three lines of the university rail and an average at school, creatable by an operator so the first real proof can be
-  // shown at all, and offered to nobody else, door or no door.
-  assert.deepEqual(operatorSees.preview, [
-    "toefl-mybest-shown",
-    "cambridge-english-shown",
-    "ielts-shown",
-    "bac-morocco-shown",
-    "bac-cameroon-shown",
-    "bac-france-shown",
-    "udemy-course-shown",
-    "university-enrollment-shown",
-    "university-year-passed-shown",
-    "university-grade-shown",
-    "ecoledirecte-grade-shown",
-  ]);
+  // No door (the founder's rule of 23 Sep 2026, D184): an operator previews nothing, like everybody.
+  assert.deepEqual(operatorSees.preview, []);
   const anonymous = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`))).json()) as { preview: string[] };
   assert.deepEqual(anonymous.preview, []);
 });
@@ -211,7 +197,7 @@ test("a rating still settling is refused before anything is relayed, to everybod
     assert.equal(response.status, 409);
     assert.equal(body.code, "RATING_SETTLING");
     assert.match(body.error, /This rating is still settling: they need a few more games first\. Nothing was taken\./);
-    // Live, the operator is refused too: the exception is for the rehearsal, before anybody is offered it.
+    // The operator is refused like everybody: there is no rehearsal door any more (D184).
     response = await createPost(post(await signed(OPERATOR), await cookieFor(OPERATOR)));
     assert.equal(((await response.json()) as { code: string }).code, "RATING_SETTLING");
 
@@ -227,11 +213,11 @@ test("a rating still settling is refused before anything is relayed, to everybod
     response = await createPost(post(await signed(FUNDER), await cookieFor(FUNDER)));
     assert.equal(((await response.json()) as { code: string }).code, "NO_RATING");
 
-    // Not live: the operator's rehearsal gift may start from a rating still settling, and nobody else's.
+    // Not live: made by nobody, the operator included (D184).
     (CHESS_RATING as { live: boolean }).live = false;
     globalThis.fetch = chessPages({ rating: 1904, date: 1764957051, rd: 350 });
     response = await createPost(post(await signed(OPERATOR), await cookieFor(OPERATOR)));
-    assert.equal(((await response.json()) as { code: string }).code, "NOT_CONFIGURED", "past the rating check, for the rehearsal only");
+    assert.equal(((await response.json()) as { code: string }).code, "GOAL_NOT_OFFERED", "no rehearsal door");
   } finally {
     globalThis.fetch = realFetch;
     (CHESS_RATING as { live: boolean }).live = wasLive;

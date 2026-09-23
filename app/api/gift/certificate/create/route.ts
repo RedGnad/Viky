@@ -25,9 +25,8 @@ const HEX32 = /^0x[0-9a-fA-F]{64}$/;
  * nothing. There is nothing to read before the money moves, because the page a certificate has exists only once the
  * test has been sat: that is the difference between this shape and a climb (D47).
  *
- * The door for a condition that is wired and not live is kept and unchanged: only an account that runs Viky may make
- * a gift on one. The supervised result went through it and out the other side on 19 Sep 2026, when its goal was
- * registered on the milestone contract and it opened to everybody (D109); the door stands for whatever comes next.
+ * There is no operator door (the founder's rule of 23 Sep 2026, D184): a condition built is open to everybody, and a
+ * condition with a piece missing is made by nobody.
  */
 export async function POST(request: Request) {
   let account = "";
@@ -40,10 +39,8 @@ export async function POST(request: Request) {
 
     const certificate = certificateById(String(body.conditionId ?? ""));
     if (!certificate) throw new GiftApiError("UNKNOWN_CONDITION", "That is not something a gift can be made for");
-    // A condition that is wired and not live is offered to an account that runs Viky, and to nobody else.
-    if (!certificate.condition.live && !isOperator(auth.account)) {
-      throw new GiftApiError("UNKNOWN_CONDITION", "That is not something a gift can be made for", 404);
-    }
+    // A condition with a piece missing is made by nobody, operator or not (the founder's rule of 23 Sep 2026, D184).
+    if (!certificate.condition.live) throw new GiftApiError("UNKNOWN_CONDITION", "That is not something a gift can be made for", 404);
     // A line whose provider is not registered yet takes no gift from anybody (D176): the money would wait until the
     // last day for a proof nothing could produce.
     if (certificate.notOpen) throw new GiftApiError("NOT_CONFIGURED", `${certificate.notOpen} Nothing was taken.`, 503);
