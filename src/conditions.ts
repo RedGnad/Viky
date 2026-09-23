@@ -2,7 +2,7 @@ import { isValidDuolingoUsername } from "./duolingo-public-terms";
 import { UNIVERSITY_SOURCE } from "./university-shown";
 import { UDEMY_SOURCE } from "./udemy-shown";
 import { ECOLEDIRECTE_SOURCE } from "./school-shown";
-import { GOAL_TYPE_DUOLINGO_COURSE_XP, GOAL_TYPE_DUOLINGO_XP, GOAL_TYPE_FITBIT_ACTIVITY } from "./gift-terms";
+import { GOAL_TYPE_DUOLINGO_COURSE_XP, GOAL_TYPE_DUOLINGO_XP, GOAL_TYPE_FITBIT_ACTIVITY, GOAL_TYPE_STRAVA_DISTANCE } from "./gift-terms";
 
 /**
  * The register of conditions: the spine of the product (structure of 17 Sep 2026, section 10, C1).
@@ -919,6 +919,61 @@ export const FITBIT_DAILY: Condition = {
   },
 };
 
+/**
+ * Strava, connected by the person (D191): the second source of the third nature, on the model of Fitbit. They
+ * authorise Viky once on Strava's own page; each morning the keeper reads yesterday's activities with their key as a
+ * secret, adds the distances, judges the day against the kilometres the funder set, and keeps the verdict alone.
+ * Goal 4 of the daily contract, registered in the same Safe session as goal 6.
+ */
+export const STRAVA_DAILY: Condition = {
+  id: "strava-daily",
+  kind: "daily",
+  nature: "connected",
+  goalType: GOAL_TYPE_STRAVA_DISTANCE,
+  live: false,
+  beforeItOpens: "The Strava application's two variables set by the founder, the reading service redeployed with the Strava source, and goal 4 signed.",
+  source: "Strava",
+  family: "move",
+  name: "Kilometres each day, on Strava",
+  help: "Connected once by them: each morning Viky asks Strava whether yesterday's activities reached the kilometres and keeps only that yes or no. It proves the account moved, not who carried it.",
+  link: {
+    kind: "connect",
+    label: "Connect your Strava",
+    help: "You authorise Viky once, on Strava's own page. Nothing to type here, nothing to paste.",
+    consent: {
+      title: "Connect your Strava",
+      sees: "Each morning Viky asks Strava one thing about yesterday: did your activities add up to the kilometres. The person who sent this gift is told yes or no for the day, and nothing else.",
+      never: "They never see where you went, when, how fast, or any number: not your routes, not your times, not your distance. Viky reads them, judges the day, and keeps none of them.",
+      erase: "You can disconnect and erase from this page at any time. Viky then gives Strava's key back and keeps nothing of yours; the gift goes on, with each day counted as not done until you connect again.",
+      connect: "Connect Strava",
+      connecting: "Opening Strava",
+      connected: "Strava is connected. From tomorrow, every day with your kilometres is yours, counted each morning.",
+      start: "Start counting",
+      disconnect: "Disconnect and erase",
+      erased: "Disconnected. Strava's key is given back and nothing of yours is kept. Connect again whenever you like.",
+      todayYours: "Only you can see today's number, and Viky keeps it nowhere.",
+    },
+  },
+  detailTitle: "Their Strava, and the kilometres a day",
+  target: {
+    label: "Kilometres they cover for a day to count",
+    inWords: (value) => `${value} km a day`,
+    suggested: 3,
+    min: 1,
+    tooLow: "At least 1 kilometre.",
+  },
+  reading: "strava-day-activities",
+  words: {
+    earnedDay: "Each day they reach it, this becomes theirs",
+    connect: "Opened. Connect Strava to start counting.",
+    doIt: "Move; nothing else. Each morning Viky asks Strava whether yesterday's activities reached your kilometres.",
+    eachDay: "each day with the kilometres",
+    theyConnect: "connects their Strava",
+    yesterday: "yesterday's kilometres",
+    preview: "Kilometres each day, on Strava: each day you reach them, that day's share becomes yours.",
+  },
+};
+
 export const BUILDING: readonly Condition[] = [
   CAMBRIDGE_ENGLISH_SHOWN,
   IELTS_SHOWN,
@@ -931,6 +986,7 @@ export const BUILDING: readonly Condition[] = [
   UNIVERSITY_GRADE_SHOWN,
   ECOLEDIRECTE_GRADE_SHOWN,
   FITBIT_DAILY,
+  STRAVA_DAILY,
 ];
 
 /**

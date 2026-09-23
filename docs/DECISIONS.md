@@ -5280,3 +5280,36 @@ is true behind `PROOF_VERIFIER=local`, which production does not set.
   attestation verified and pinned by image digest when `RECLAIM_ATTESTOR_IMAGE_DIGESTS` is set.
 
 No code changes: the documents were wrong, not the checks.
+
+## D191, 23 Sep 2026: Strava, connected by the person, the second source of the third nature
+
+The founder, 23 Sep 2026, with Fitbit (D188): two sources of the mode "connected by them", built whole up to the
+screen. This is the second, on the model of the first, under the same eight rules.
+
+- **The line.** `strava-daily`, "Kilometres each day, on Strava", a daily condition on goal 4 of the daily contract
+  (`GOAL_TYPE_STRAVA_DISTANCE`, written with the contract and never registered; provider id
+  `viky:provider:strava-connected:v1`), in `BUILDING`, family "Move", offered to nobody, "Being built" on the public
+  page with the missing pieces named. The target is the funder's, in kilometres a day, three suggested.
+- **What differs from Fitbit, and only that.** Strava takes no PKCE: the exchange carries the application's secret,
+  and the signed state's verifier is empty. Strava sends back what the person allowed beside the code, and a
+  connection without `activity:read` is refused (`SCOPE_MISSING`) rather than kept. The page is the list of the
+  day's activities, captured whole by the attested fetch since a day is a sum and a pattern captures one value; the
+  app adds the `distance` fields (metres) of the activities whose start falls in the UTC day and drops the list. The
+  key lives six hours; the revoke goes to `/oauth/revoke`, the endpoint Strava recommends since 1 Jun 2026.
+- **One reading for every connected source.** `src/connected-checkin.ts` became one reading with one line per
+  source (`ConnectedLine`: the page, the judge, the refresh, the provider id); Fitbit's behaviour is unchanged and
+  its tests say so. The consent, the vault, the signed state, the store and the connect screen are shared as they
+  were built to be; the routes are Strava's own under `/api/connect/strava`.
+- **The source waits with Fitbit's.** `src/strava-source.ts` is outside the fingerprinted file for the reason of
+  D188, rule 5; the branch `catalogue/fitbit-source` is to move both at once, one redeploy by the founder for the two.
+- **Defaults applied, to confirm (the founder away).** Three kilometres suggested; the day being the UTC calendar
+  day; the whole list captured (the alternative, one pattern per activity, cannot sum an unknown number of them);
+  the line opening on the pieces alone. Strava's single-player mode means only the founder's own account can connect
+  until Strava raises the limit: written on the judges' page and in OPERATIONS as the founder's step with Strava.
+- **What is verified, and what waits.** The authorisation URL, the scope check, the exchange, refresh and revoke
+  against a fake Strava, the day's bounds and sum, the verdict, the source's pattern on a sample list, the state's
+  round trip, the register and the privacy line. Not verified: no application exists, so no real connection, no
+  real reading, no goal signed, and the service not redeployed.
+- **What crossed the frontier, said in the PR.** `app/judges/page.tsx` (Strava's clauses), the four routes under
+  `app/api/connect/strava`, `src/gift-terms.ts` (the provider id). Nothing in `app/kit`: the connect screen knew no
+  source by name.

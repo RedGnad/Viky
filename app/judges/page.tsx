@@ -242,6 +242,20 @@ export default async function JudgesPage() {
             known, and the application is registered by the founder with that written here.
           </li>
           <li>
+            <strong>Strava&apos;s API Agreement, and the same risk.</strong> Kilometres each day on Strava is connected by
+            the person once, on Strava&apos;s own page (D191), read each morning the way Fitbit is: yesterday&apos;s
+            activities through the attested fetch with their key as a secret, the distances added, the verdict signed,
+            the list dropped. Strava&apos;s API Agreement (read 23 Sep 2026) asks that Strava Data serve the person who
+            authorised it and nobody else, that it be neither aggregated across people nor shown to others, and that it
+            be deleted when they ask: the consent screen, the verdict-only reading and the erase button that gives the
+            key back first are those three. Two things it also says are written here rather than settled: a new
+            application is in single-player mode, so until Strava raises the athlete limit only the founder&apos;s own
+            account can connect; and Strava&apos;s brand guidelines ask for &quot;Powered by Strava&quot; where Strava data
+            is shown, and Viky shows none, only a yes or a no, which is the founder&apos;s call to settle with Strava.
+            The risk is Fitbit&apos;s: the funder&apos;s daily yes or no is one bit about the person given to a third party
+            under the consent they gave.
+          </li>
+          <li>
             <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:
             Coursera verifies identity once per account, and says some programmes require it while others only check a
             name. That condition is not open yet, and this is what it will prove when it is.

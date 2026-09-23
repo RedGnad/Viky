@@ -531,6 +531,76 @@ register with `live: true`, and the line is open to everybody; the first real co
 the public page like every other proof. Default applied, to confirm: the founder may still want a week of one real
 person before that PR, which the earlier text of this section asked for.
 
+## Strava, connected by the person: what the founder sets, and what redeploys (D191)
+
+The second source of the third nature, on the model of Fitbit above: the person authorises Viky once on Strava's own
+page (OAuth 2.0, the authorization code; Strava takes the application's secret on the exchange and no PKCE), and each
+morning the keeper reads yesterday's activities through the attested fetch with their key as a secret, adds the
+distances, judges the day against the kilometres the funder set, and keeps the verdict alone. Nothing runs until three
+things exist.
+
+**1. The application on strava.com/settings/api**, registered by the founder: "Authorization Callback Domain"
+`viky.cash` (and `viky-two.vercel.app` while that host serves the app; Strava takes one domain per application, so a
+second application is needed for the second host). The route builds the redirect from `NEXT_PUBLIC_APP_URL`, so the
+callback registered must be that host's: `https://viky.cash/api/connect/strava/callback`. A new application is in
+single-player mode (Strava's API Agreement, read 23 Sep 2026): only the account that owns the application can
+authorise it until Strava raises the athlete limit on request, which is the founder's step with Strava.
+
+**2. Two variables on Vercel, production, sensitive**, beside `CONNECT_TOKEN_KEY`, which Fitbit's section sets once
+for every connected source.
+
+| variable | what it is | where it comes from |
+|---|---|---|
+| `STRAVA_CLIENT_ID` | the application's client id, a number | strava.com/settings/api, the application's page |
+| `STRAVA_CLIENT_SECRET` | its client secret | the same page |
+
+`GET /api/connect/strava/status?giftId=…`, signed in as the gift's recipient, answers `configured: true` when the
+two are set where the route runs beside `CONNECT_TOKEN_KEY`, and `false` otherwise: a boolean, never a value.
+
+**3. The reading service redeployed, by the founder, from the second branch.** The Strava source is in
+`src/strava-source.ts`, beside Fitbit's, a file the reading fingerprint does not cover; the branch
+`catalogue/fitbit-source` moves both into the shared list at once, and the sequence of Fitbit's step 3 above is the
+whole of it: one redeploy for the two sources, then the merge. Until then the morning reading refuses
+`NOT_CONFIGURED` before asking the service anything.
+
+**4. Goal 4 on the daily contract**, `GiftEscrow` (`0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233`). Provider id
+`viky:provider:strava-connected:v1` = `0x891688d7bb10712c938397c2502da41b764a18322340c895613ac00b0fcab790`. To go
+through the Safe in the same session, after goal 6:
+
+| | |
+|---|---|
+| to | `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233` |
+| data | `0x68fa3be20000000000000000000000000000000000000000000000000000000000000004891688d7bb10712c938397c2502da41b764a18322340c895613ac00b0fcab790` |
+| gas | 75,000 (as for goal 6) |
+| what it is | `registerGoal(4, 0x891688d7…b790)`: Strava, connected, the day's verdict |
+| Safe nonce | 17, after goal 6 |
+
+`goalProviders(4)` read back equal to the id above is the check. Goal type 4 has been `GOAL_TYPE_STRAVA_DISTANCE` in
+`src/gift-terms.ts` since the daily contract was written, and has never been registered.
+
+**What a morning does, and what it keeps.** As for Fitbit, with one difference: Strava's page is the list of the
+day's activities (`GET /api/v3/athlete/activities?after&before&per_page=30`, the day being the calendar day in UTC),
+and the day's distance is the sum of their `distance` fields in metres, judged against the kilometres times a
+thousand. The list is captured whole by the attested fetch, since a day is a sum and a pattern captures one value;
+it is read once here and dropped, with its routes, its times and its names. The rest is Fitbit's: the verdict
+signed as the contract's baseline plus the target, no proof stored, the session row keeping the day and the verdict.
+Strava's access key lives six hours; the refresh key is used on the morning it has run out and both are sealed again.
+
+**Disconnect and erase.** From the gift's page, by the recipient: the key is revoked at Strava
+(`POST https://www.strava.com/oauth/revoke`, the endpoint Strava recommends since 1 Jun 2026, the application's Basic
+credentials, `token` in the body), then the row is deleted whether or not Strava answered. What remains is on the
+chain (the days' verdicts and the pseudonym of the athlete id, a hash) and in the journal.
+
+**Strava's API Agreement, read 23 Sep 2026.** Strava Data serves the person who authorised it and nobody else, is
+neither aggregated across people nor shown to others, and is deleted when they ask; applications start in
+single-player mode; the brand guidelines ask for "Powered by Strava" where Strava data is shown, and Viky shows none.
+The judges' page says so.
+
+**When the line opens.** "Being built" while a piece is missing (D184): the two variables, the service running the
+Strava source (step 3), goal 4 signed, and Strava's athlete limit raised for anybody but the founder to connect. The
+day they exist, a PR moves `STRAVA_DAILY` from `BUILDING` into the register with `live: true`. Defaults applied, to
+confirm: three kilometres suggested; the day being the UTC calendar day; the list captured whole.
+
 ## A university's portal, in thirty minutes, with a student present (D165)
 
 A row of `viky_portals` is what makes a university choosable, and a row is written only after a proof has come back
@@ -876,7 +946,8 @@ back afterwards.
 | 13 | `MilestoneGift` | 21 | the baccalauréat passed, France (D176) |
 | 14 | `MilestoneGift` | 22 | a Udemy course finished, shown (D178) |
 | 15 | `MilestoneGift` | 23 | an average at school, shown from EcoleDirecte (D179) |
-| 16 | `GiftEscrow` | 6 | Fitbit, connected by the person (its PR, open beside this one) |
+| 16 | `GiftEscrow` | 6 | Fitbit, connected by the person (D188) |
+| 17 | `GiftEscrow` | 4 | Strava, connected by the person (D191) |
 
 A goal signed opens nothing by itself: a line opens when its path is complete, which for the lines above still waits
 for a provider registered on the Reclaim dashboard from its definition in `docs/reclaim/`, the founder's own step
@@ -909,6 +980,7 @@ The daily contract has its own goals, under `GiftEscrow`'s two-argument `registe
 | 5 | Duolingo, one course's experience | registered 18 Sep 2026 (the section "Before the course reading of U1") |
 | 2 | GitHub, the contributions GitHub counts (D166) | registered 23 Sep 2026 through the Safe (the section "Goal 2 on the daily contract" below), without effect: the condition was withdrawn (D170) and nothing reads the goal |
 | 6 | Fitbit, connected by the person, the day's verdict (D188) | to register in the night's Safe session, nonce 16 (the section "Fitbit, connected by the person" above) |
+| 4 | Strava, connected by the person, the day's verdict (D191) | to register in the same Safe session, nonce 17 (the section "Strava, connected by the person" above) |
 
 **The session, in order.** The owner is a wallet the founder holds, so the session is signed from that wallet and no
 key is ever read from a file. Each step is read back before the next.

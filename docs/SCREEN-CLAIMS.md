@@ -271,6 +271,19 @@ reading service with the source (`src/fitbit-source.ts` until then).
 | "Only you can see today's number, and Viky keeps it nowhere." | the sentence is written for the person's own reading of the day; that reading is not built yet, and the sentence is printed nowhere until it is | `consent.todayYours`, unused by `ConnectTheAccount` | none: a sentence held for the next PR |
 | on the judges page, "Fitbit's terms", the four clauses and the one risk | only what was read is claimed | `app/judges/page.tsx` | none: a sentence read against the page by hand |
 
+### Strava, connected by the person, being built, offered to nobody (D191)
+
+`src/conditions.ts` (`STRAVA_DAILY`, family "Move", nature `connected`, the consent words on its link), `src/strava.ts`,
+`src/strava-source.ts`, `src/connect-strava.ts`, `src/connected-checkin.ts` (one reading, one line per source),
+`app/api/connect/strava/*`. The screen is the one Fitbit uses (`app/kit/ConnectTheAccount.tsx`, which knows no source by
+name); on the public page under "Move" with "Being built." and the missing pieces named, offered to nobody.
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "Connect your Strava", then "Each morning Viky asks Strava one thing about yesterday: did your activities add up to the kilometres. The person who sent this gift is told yes or no for the day, and nothing else." and "They never see where you went, when, how fast, or any number: not your routes, not your times, not your distance." | the reading adds the distances of the day's activities and signs the verdict alone; the list is dropped, no proof stored | `STRAVA_LINE.judge` and `verdictMetric` in `src/connected-checkin.ts`, `proofs: null` on the session row | `test/strava.test.ts` (a day is its UTC bounds, its activities' distances added) |
+| back from Strava without the activities allowed: the gift's page with `?connect=scope_missing`, "That did not go through, and nothing was changed. Try again." | Strava sent back a scope without `activity:read`, so no day could be read: nothing saved | `stravaScopeAllows` in `finishStravaConnection` | `test/strava.test.ts` (the way out and back) |
+| "Disconnect and erase", then "Disconnected. Strava's key is given back and nothing of yours is kept. Connect again whenever you like." | the key is revoked at Strava's recommended endpoint first, the row deleted whether or not Strava answered | `disconnectStrava`, `revokeStravaToken` (`POST /oauth/revoke`, Basic credentials, `token`) | `test/strava.test.ts` (the revoke against a fake Strava) |
+
 ### Staying enrolled at their university, being built, offered to nobody (D165)
 
 `src/conditions.ts` (`BUILDING`, the `university-enrolment` line of `FRONTIERS`), `src/milestone-conditions.ts`
