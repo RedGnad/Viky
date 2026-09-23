@@ -631,7 +631,121 @@ export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
   },
 };
 
-export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, CREDLY_BADGE, TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN];
+/**
+ * Fitbit, connected by the person (D188): the first condition of the third nature. Since the legacy Fitbit Web API
+ * closes in September 2026, it is read through the Google Health API, which reads Fitbit trackers and Pixel Watches
+ * (D197): the person authorises Viky once on Google's own page, and each morning the keeper asks for yesterday's
+ * active minutes through the attested fetch with their key as a secret, judges them against the target, and keeps the
+ * verdict alone. The funder learns a yes
+ * or a no for the day; the numbers are read, judged and dropped.
+ */
+export const FITBIT_DAILY: Condition = {
+  id: "fitbit-daily",
+  kind: "daily",
+  nature: "connected",
+  goalType: GOAL_TYPE_FITBIT_ACTIVITY,
+  // Open since the reading service ran its source and the five variables were set (D201).
+  live: true,
+  state: "open",
+  source: "Fitbit",
+  family: "move",
+  name: "Active minutes a day, Fitbit",
+  help: "Connected once through Google: each morning, did yesterday's Fitbit reach the minutes? Viky keeps only yes or no. It proves the tracker moved, not the wearer.",
+  link: {
+    kind: "connect",
+    label: "Connect your Fitbit",
+    help: "You authorise Viky once, on Google's own page, with the Google account your Fitbit uses. Nothing to type here, nothing to paste.",
+    consent: {
+      title: "Connect your Fitbit",
+      sees: "Each morning Viky asks Google Health one thing about yesterday: did your Fitbit's active minutes reach the target. The person who sent this gift is told yes or no for the day, and nothing else.",
+      never: "They never see where you went, when, for how long, or any number: not your steps, not your heart rate, not your minutes. Viky reads them, judges the day, and keeps none of them.",
+      erase: "You can disconnect and erase from this page at any time. Viky then gives Google's key back and keeps nothing of yours; the gift goes on, with each day counted as not done until you connect again.",
+      connect: "Connect Fitbit",
+      connecting: "Opening Fitbit",
+      connected: "Fitbit is connected. From tomorrow, every day with your minutes is yours, counted each morning.",
+      start: "Start counting",
+      disconnect: "Disconnect and erase",
+      erased: "Disconnected. Google's key is given back and nothing of yours is kept. Connect again whenever you like.",
+      todayYours: "Only you can see today's number, and Viky keeps it nowhere.",
+    },
+  },
+  detailTitle: "Their Fitbit, and the minutes a day",
+  target: {
+    label: "Active minutes they reach for a day to count",
+    inWords: (value) => `${value} active minutes a day`,
+    suggested: 30,
+    min: 1,
+    tooLow: "At least 1 minute.",
+  },
+  reading: "google-health-active-minutes",
+  words: {
+    earnedDay: "Each day they reach it, this becomes theirs",
+    connect: "Opened. Connect Fitbit to start counting.",
+    doIt: "Move; nothing else. Each morning Viky asks Google Health whether yesterday reached your minutes.",
+    eachDay: "each day with the minutes",
+    theyConnect: "connects their Fitbit",
+    yesterday: "yesterday's minutes",
+    preview: "Active minutes a day, on Fitbit: each day you reach them, that day's share becomes yours.",
+  },
+};
+
+/**
+ * Strava, connected by the person (D191): the second source of the third nature, on the model of Fitbit. They
+ * authorise Viky once on Strava's own page; each morning the keeper reads yesterday's activities with their key as a
+ * secret, adds the distances, judges the day against the kilometres the funder set, and keeps the verdict alone.
+ * Goal 4 of the daily contract, registered in the same Safe session as goal 6.
+ */
+export const STRAVA_DAILY: Condition = {
+  id: "strava-daily",
+  kind: "daily",
+  nature: "connected",
+  goalType: GOAL_TYPE_STRAVA_DISTANCE,
+  // Open since the reading service ran its source and the five variables were set (D201).
+  live: true,
+  state: "open",
+  source: "Strava",
+  family: "move",
+  name: "Kilometres each day, on Strava",
+  help: "Connected once: each morning, did yesterday's Strava activities reach the distance? Viky keeps only yes or no. It proves the account moved, not who moved.",
+  link: {
+    kind: "connect",
+    label: "Connect your Strava",
+    help: "You authorise Viky once, on Strava's own page. Nothing to type here, nothing to paste.",
+    consent: {
+      title: "Connect your Strava",
+      sees: "Each morning Viky asks Strava one thing about yesterday: did your activities add up to the kilometres. The person who sent this gift is told yes or no for the day, and nothing else.",
+      never: "They never see where you went, when, how fast, or any number: not your routes, not your times, not your distance. Viky reads them, judges the day, and keeps none of them.",
+      erase: "You can disconnect and erase from this page at any time. Viky then gives Strava's key back and keeps nothing of yours; the gift goes on, with each day counted as not done until you connect again.",
+      connect: "Connect Strava",
+      connecting: "Opening Strava",
+      connected: "Strava is connected. From tomorrow, every day with your kilometres is yours, counted each morning.",
+      start: "Start counting",
+      disconnect: "Disconnect and erase",
+      erased: "Disconnected. Strava's key is given back and nothing of yours is kept. Connect again whenever you like.",
+      todayYours: "Only you can see today's number, and Viky keeps it nowhere.",
+    },
+  },
+  detailTitle: "Their Strava, and the kilometres a day",
+  target: {
+    label: "Kilometres they cover for a day to count",
+    inWords: (value) => `${value} km a day`,
+    suggested: 3,
+    min: 1,
+    tooLow: "At least 1 kilometre.",
+  },
+  reading: "strava-day-activities",
+  words: {
+    earnedDay: "Each day they reach it, this becomes theirs",
+    connect: "Opened. Connect Strava to start counting.",
+    doIt: "Move; nothing else. Each morning Viky asks Strava whether yesterday's activities reached your kilometres.",
+    eachDay: "each day with the kilometres",
+    theyConnect: "connects their Strava",
+    yesterday: "yesterday's kilometres",
+    preview: "Kilometres each day, on Strava: each day you reach them, that day's share becomes yours.",
+  },
+};
+
+export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, CREDLY_BADGE, TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, FITBIT_DAILY, STRAVA_DAILY];
 
 /**
  * What is built with a piece really missing (D184): a provider not registered, a portal not proved. Nobody can make a
@@ -866,117 +980,7 @@ export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
   },
 };
 
-/**
- * Fitbit, connected by the person (D188): the first condition of the third nature. Since the legacy Fitbit Web API
- * closes in September 2026, it is read through the Google Health API, which reads Fitbit trackers and Pixel Watches
- * (D197): the person authorises Viky once on Google's own page, and each morning the keeper asks for yesterday's
- * active minutes through the attested fetch with their key as a secret, judges them against the target, and keeps the
- * verdict alone. The funder learns a yes
- * or a no for the day; the numbers are read, judged and dropped.
- */
-export const FITBIT_DAILY: Condition = {
-  id: "fitbit-daily",
-  kind: "daily",
-  nature: "connected",
-  goalType: GOAL_TYPE_FITBIT_ACTIVITY,
-  live: false,
-  beforeItOpens: "The Google Health client's two variables and the sealing key set by the founder, and the reading service redeployed with the Google Health source.",
-  source: "Fitbit",
-  family: "move",
-  name: "Active minutes each day, on Fitbit",
-  help: "Connected once by them, through their Google account: each morning Viky asks whether yesterday's Fitbit or Pixel Watch reached the minutes and keeps only that yes or no. It proves the tracker moved, not who wore it.",
-  link: {
-    kind: "connect",
-    label: "Connect your Fitbit",
-    help: "You authorise Viky once, on Google's own page, with the Google account your Fitbit uses. Nothing to type here, nothing to paste.",
-    consent: {
-      title: "Connect your Fitbit",
-      sees: "Each morning Viky asks Google Health one thing about yesterday: did your Fitbit's active minutes reach the target. The person who sent this gift is told yes or no for the day, and nothing else.",
-      never: "They never see where you went, when, for how long, or any number: not your steps, not your heart rate, not your minutes. Viky reads them, judges the day, and keeps none of them.",
-      erase: "You can disconnect and erase from this page at any time. Viky then gives Google's key back and keeps nothing of yours; the gift goes on, with each day counted as not done until you connect again.",
-      connect: "Connect Fitbit",
-      connecting: "Opening Fitbit",
-      connected: "Fitbit is connected. From tomorrow, every day with your minutes is yours, counted each morning.",
-      start: "Start counting",
-      disconnect: "Disconnect and erase",
-      erased: "Disconnected. Google's key is given back and nothing of yours is kept. Connect again whenever you like.",
-      todayYours: "Only you can see today's number, and Viky keeps it nowhere.",
-    },
-  },
-  detailTitle: "Their Fitbit, and the minutes a day",
-  target: {
-    label: "Active minutes they reach for a day to count",
-    inWords: (value) => `${value} active minutes a day`,
-    suggested: 30,
-    min: 1,
-    tooLow: "At least 1 minute.",
-  },
-  reading: "google-health-active-minutes",
-  words: {
-    earnedDay: "Each day they reach it, this becomes theirs",
-    connect: "Opened. Connect Fitbit to start counting.",
-    doIt: "Move; nothing else. Each morning Viky asks Google Health whether yesterday reached your minutes.",
-    eachDay: "each day with the minutes",
-    theyConnect: "connects their Fitbit",
-    yesterday: "yesterday's minutes",
-    preview: "Active minutes each day, on Fitbit: each day you reach them, that day's share becomes yours.",
-  },
-};
 
-/**
- * Strava, connected by the person (D191): the second source of the third nature, on the model of Fitbit. They
- * authorise Viky once on Strava's own page; each morning the keeper reads yesterday's activities with their key as a
- * secret, adds the distances, judges the day against the kilometres the funder set, and keeps the verdict alone.
- * Goal 4 of the daily contract, registered in the same Safe session as goal 6.
- */
-export const STRAVA_DAILY: Condition = {
-  id: "strava-daily",
-  kind: "daily",
-  nature: "connected",
-  goalType: GOAL_TYPE_STRAVA_DISTANCE,
-  live: false,
-  beforeItOpens: "The Strava application's two variables set by the founder, the reading service redeployed with the Strava source, and goal 4 signed.",
-  source: "Strava",
-  family: "move",
-  name: "Kilometres each day, on Strava",
-  help: "Connected once by them: each morning Viky asks Strava whether yesterday's activities reached the kilometres and keeps only that yes or no. It proves the account moved, not who carried it.",
-  link: {
-    kind: "connect",
-    label: "Connect your Strava",
-    help: "You authorise Viky once, on Strava's own page. Nothing to type here, nothing to paste.",
-    consent: {
-      title: "Connect your Strava",
-      sees: "Each morning Viky asks Strava one thing about yesterday: did your activities add up to the kilometres. The person who sent this gift is told yes or no for the day, and nothing else.",
-      never: "They never see where you went, when, how fast, or any number: not your routes, not your times, not your distance. Viky reads them, judges the day, and keeps none of them.",
-      erase: "You can disconnect and erase from this page at any time. Viky then gives Strava's key back and keeps nothing of yours; the gift goes on, with each day counted as not done until you connect again.",
-      connect: "Connect Strava",
-      connecting: "Opening Strava",
-      connected: "Strava is connected. From tomorrow, every day with your kilometres is yours, counted each morning.",
-      start: "Start counting",
-      disconnect: "Disconnect and erase",
-      erased: "Disconnected. Strava's key is given back and nothing of yours is kept. Connect again whenever you like.",
-      todayYours: "Only you can see today's number, and Viky keeps it nowhere.",
-    },
-  },
-  detailTitle: "Their Strava, and the kilometres a day",
-  target: {
-    label: "Kilometres they cover for a day to count",
-    inWords: (value) => `${value} km a day`,
-    suggested: 3,
-    min: 1,
-    tooLow: "At least 1 kilometre.",
-  },
-  reading: "strava-day-activities",
-  words: {
-    earnedDay: "Each day they reach it, this becomes theirs",
-    connect: "Opened. Connect Strava to start counting.",
-    doIt: "Move; nothing else. Each morning Viky asks Strava whether yesterday's activities reached your kilometres.",
-    eachDay: "each day with the kilometres",
-    theyConnect: "connects their Strava",
-    yesterday: "yesterday's kilometres",
-    preview: "Kilometres each day, on Strava: each day you reach them, that day's share becomes yours.",
-  },
-};
 
 export const BUILDING: readonly Condition[] = [
   CAMBRIDGE_ENGLISH_SHOWN,
@@ -988,8 +992,6 @@ export const BUILDING: readonly Condition[] = [
   UNIVERSITY_YEAR_PASSED_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
   ECOLEDIRECTE_GRADE_SHOWN,
-  FITBIT_DAILY,
-  STRAVA_DAILY,
 ];
 
 /**

@@ -27,9 +27,9 @@ test("the line: connected, in Move, on goal 4, being built with the three missin
   assert.equal(STRAVA_DAILY.nature, "connected");
   assert.equal(STRAVA_DAILY.family, "move");
   assert.equal(STRAVA_DAILY.goalType, GOAL_TYPE_STRAVA_DISTANCE);
-  assert.equal(STRAVA_DAILY.live, false);
-  assert.ok(BUILDING.includes(STRAVA_DAILY));
-  assert.ok(STRAVA_DAILY.beforeItOpens?.includes("goal 4 signed"));
+  assert.equal(STRAVA_DAILY.live, true, "open since the reading service runs its source and the variables are set");
+  assert.ok(!BUILDING.includes(STRAVA_DAILY));
+  assert.equal(STRAVA_DAILY.beforeItOpens, undefined);
   assert.equal(conditionOfGoal(GOAL_TYPE_STRAVA_DISTANCE), STRAVA_DAILY);
   assert.equal(conditionById("strava-daily"), STRAVA_DAILY);
   assert.ok(proofOfCondition("strava-daily"));

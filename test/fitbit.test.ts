@@ -29,10 +29,10 @@ test("the line: connected by them, the family Move, goal 6 on the daily contract
   assert.equal(FITBIT_DAILY.kind, "daily");
   assert.equal(FITBIT_DAILY.nature, "connected");
   assert.equal(FITBIT_DAILY.family, "move");
-  assert.equal(FITBIT_DAILY.live, false);
+  assert.equal(FITBIT_DAILY.live, true, "open since the reading service runs its source and the variables are set");
   assert.equal(FITBIT_DAILY.goalType, 6);
   assert.equal(conditionOfGoal(6), FITBIT_DAILY, "a gift on goal 6 is this line, behind the door");
-  assert.ok(BUILDING.includes(FITBIT_DAILY));
+  assert.ok(!BUILDING.includes(FITBIT_DAILY));
   assert.equal(FAMILIES.at(-1)?.title, "Move");
   assert.equal(CONDITION_NATURE.connected, "CONNECTED BY THEM");
   assert.equal(FITBIT_DAILY.link.kind, "connect");

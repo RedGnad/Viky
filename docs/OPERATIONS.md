@@ -459,7 +459,7 @@ their key as a secret, judges it, and keeps the verdict alone. Nothing runs unti
 **1. The OAuth client in Google Cloud Console**, created by the founder (type "Web application"):
 
 - the Google Health API enabled on the project (APIs and services, Library);
-- the consent screen: user type "External", publishing status "Testing", the scope
+- the consent screen: user type "External", publishing status "In production" (set so by the founder on 23 Sep 2026), the scope
   `https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly` and no other, and the test users'
   Google accounts listed, since only they can connect while the client is in testing;
 - **Authorized redirect URIs**, exactly, the callback path and not the site's root:
@@ -473,7 +473,7 @@ https://viky.cash/api/connect/fitbit/callback
   `redirect_uri_mismatch`, before anything reaches Viky. The path keeps the word fitbit: it is the line's, and the
   connect screen asks `/api/connect/<the source>`.
 
-What testing mode means (Google's setup guide, read 23 Sep 2026): a hundred users at most, and refresh keys that
+What testing mode would have meant, and no longer applies since the client is published (Google's setup guide, read 23 Sep 2026): a hundred users at most, and refresh keys that
 expire after seven days, so a person's connection lapses each week (`KEY_REFUSED`, the row erased, the screen asks
 them to connect again) until the client is published; publishing it and going past a hundred users needs Google's
 app verification and its third party security review (CASA). The founder's step with Google, written on the judges'
