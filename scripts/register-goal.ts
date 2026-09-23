@@ -1,10 +1,10 @@
 import "../src/load-env";
-import { createPublicClient, createWalletClient, encodeFunctionData, getAddress, http, type Abi, type Hex } from "viem";
+import { createPublicClient, createWalletClient, encodeFunctionData, getAddress, type Abi, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { DUOLINGO_GOAL_PROVIDER_ID, GOAL_TYPE_DUOLINGO_XP } from "../src/gift-attestation";
 import { giftEscrowAbi } from "../src/gift-escrow-abi";
 import { addMonadGasBuffer } from "../src/monad-gas";
-import { monadChain, monadRpcUrl, waitForFinality } from "../src/monad/chain";
+import { monadChain, monadTransport, waitForFinality } from "../src/monad/chain";
 
 /**
  * Registers (or re-registers) the Duolingo goal's provider id on the escrow (owner only). Idempotent:
@@ -16,8 +16,8 @@ async function main() {
   const escrow = process.env.GIFT_ESCROW_ADDRESS?.trim();
   if (!key || !escrow) throw new Error("DEPLOYER_PRIVATE_KEY and GIFT_ESCROW_ADDRESS are required");
   const account = privateKeyToAccount((key.startsWith("0x") ? key : `0x${key}`) as Hex);
-  const publicClient = createPublicClient({ chain: monadChain, transport: http(monadRpcUrl()) });
-  const walletClient = createWalletClient({ account, chain: monadChain, transport: http(monadRpcUrl()) });
+  const publicClient = createPublicClient({ chain: monadChain, transport: monadTransport() });
+  const walletClient = createWalletClient({ account, chain: monadChain, transport: monadTransport() });
   const abi = giftEscrowAbi as unknown as Abi;
   const address = getAddress(escrow);
   const current = (await publicClient.readContract({ address, abi, functionName: "goalProviders", args: [GOAL_TYPE_DUOLINGO_XP] })) as Hex;

@@ -1,8 +1,8 @@
 import "../src/load-env";
-import { createPublicClient, createWalletClient, getAddress, http, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, getAddress, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { addMonadGasBuffer } from "../src/monad-gas";
-import { MONAD_CHAIN_ID, monadChain, monadRpcUrl, waitForFinality } from "../src/monad/chain";
+import { MONAD_CHAIN_ID, monadChain, monadRpcUrl, monadTransport, waitForFinality } from "../src/monad/chain";
 import { ownableAbi, safeAbi, transferOwnershipData, SAFE_VERSION } from "../src/safe";
 
 /**
@@ -42,7 +42,7 @@ function contracts(): readonly Contract[] {
 }
 
 async function main() {
-  const publicClient = createPublicClient({ chain: monadChain, transport: http(monadRpcUrl()) });
+  const publicClient = createPublicClient({ chain: monadChain, transport: monadTransport() });
   const chainId = await publicClient.getChainId();
   if (chainId !== MONAD_CHAIN_ID) throw new Error(`Refusing to run: chain id ${chainId} is not Monad mainnet (${MONAD_CHAIN_ID})`);
 
@@ -115,7 +115,7 @@ async function main() {
   if (!key) throw new Error("SEND=1 needs OWNER_PRIVATE_KEY in your own shell, and it must be the current owner; nothing in this repository holds that key");
   const account = privateKeyToAccount((key.startsWith("0x") ? key : `0x${key}`) as Hex);
   if (getAddress(account.address) !== from) throw new Error(`Refusing to send: this key is ${account.address}, and the owner is ${from}`);
-  const walletClient = createWalletClient({ account, chain: monadChain, transport: http(monadRpcUrl()) });
+  const walletClient = createWalletClient({ account, chain: monadChain, transport: monadTransport() });
 
   for (const contract of toSend) {
     const data = transferOwnershipData(safe);

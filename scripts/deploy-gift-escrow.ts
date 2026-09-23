@@ -8,7 +8,6 @@ import {
   encodeFunctionData,
   formatEther,
   getAddress,
-  http,
   isAddress,
   keccak256,
   parseEther,
@@ -18,7 +17,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { DUOLINGO_GOAL_PROVIDER_ID, GOAL_TYPE_DUOLINGO_XP } from "../src/gift-attestation";
 import { addMonadGasBuffer } from "../src/monad-gas";
-import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadRpcUrl, waitForFinality } from "../src/monad/chain";
+import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadTransport, waitForFinality } from "../src/monad/chain";
 
 /**
  * Deploys GiftEscrow to Monad mainnet, registers the Duolingo goal and unpauses. Every transaction waits for
@@ -52,7 +51,7 @@ async function main() {
   const abi: Abi = artifact.abi;
 
   const account = privateKeyToAccount((deployerKey.startsWith("0x") ? deployerKey : `0x${deployerKey}`) as Hex);
-  const transport = http(monadRpcUrl());
+  const transport = monadTransport();
   const publicClient = createPublicClient({ chain: monadChain, transport });
   const walletClient = createWalletClient({ account, chain: monadChain, transport });
 

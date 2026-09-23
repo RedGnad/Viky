@@ -1,8 +1,8 @@
 import "../src/load-env";
-import { createPublicClient, getAddress, http, isAddress, type Hex } from "viem";
+import { createPublicClient, getAddress, isAddress, type Hex } from "viem";
 import { DUOLINGO_GOAL_PROVIDER_ID, GIFT_DOMAIN, GOAL_TYPE_DUOLINGO_XP } from "../src/gift-attestation";
 import { giftEscrowAbi } from "../src/gift-escrow-abi";
-import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadRpcUrl } from "../src/monad/chain";
+import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadTransport } from "../src/monad/chain";
 
 /**
  * Reads the deployed GiftEscrow and checks it is the contract the app expects: the AUSD token, the evidence
@@ -20,7 +20,7 @@ async function main() {
   const escrow = getAddress(escrowRaw);
   const expectedSigner = getAddress(signerRaw);
 
-  const client = createPublicClient({ chain: monadChain, transport: http(monadRpcUrl()) });
+  const client = createPublicClient({ chain: monadChain, transport: monadTransport() });
   const chainId = await client.getChainId();
   const read = <T>(functionName: string, args: readonly unknown[] = []) =>
     client.readContract({ address: escrow, abi: giftEscrowAbi, functionName: functionName as never, args: args as never }) as Promise<T>;

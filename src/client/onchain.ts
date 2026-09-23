@@ -3,7 +3,6 @@ import {
   createWalletClient,
   encodeFunctionData,
   erc20Abi,
-  http,
   type Hash,
   type Hex,
   type LocalAccount,
@@ -12,7 +11,7 @@ import {
 } from "viem";
 import { isNative, type Coin } from "../coins";
 import { addMonadGasBuffer } from "../monad-gas";
-import { AUSD_ADDRESS, monadChain, monadRpcUrl, waitForFinality } from "../monad/chain";
+import { AUSD_ADDRESS, monadChain, monadTransport, waitForFinality } from "../monad/chain";
 
 /**
  * The passkey account sending its own transactions from the browser (the funder's swap and funding,
@@ -23,12 +22,12 @@ import { AUSD_ADDRESS, monadChain, monadRpcUrl, waitForFinality } from "../monad
 let cachedPublic: PublicClient | undefined;
 
 export function browserPublicClient(): PublicClient {
-  if (!cachedPublic) cachedPublic = createPublicClient({ chain: monadChain, transport: http(monadRpcUrl()) });
+  if (!cachedPublic) cachedPublic = createPublicClient({ chain: monadChain, transport: monadTransport() });
   return cachedPublic;
 }
 
 export function browserWalletClient(account: LocalAccount): WalletClient {
-  return createWalletClient({ account, chain: monadChain, transport: http(monadRpcUrl()) });
+  return createWalletClient({ account, chain: monadChain, transport: monadTransport() });
 }
 
 export async function readMonBalance(address: Hex): Promise<bigint> {

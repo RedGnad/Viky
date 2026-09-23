@@ -1,5 +1,5 @@
-import { createPublicClient, http, parseAbi, type Hex } from "viem";
-import { monadRpcUrl } from "./monad/chain";
+import { createPublicClient, parseAbi, type Hex } from "viem";
+import { monadTransport } from "./monad/chain";
 
 /**
  * Who owns the contracts, asked of the chain as the judges page is served (D187, item 10 of the money path review
@@ -31,7 +31,7 @@ const SAFE_ABI = parseAbi(["function getThreshold() view returns (uint256)", "fu
 
 /** The reader the page uses: the server's own endpoint, never printed. */
 export function chainOwnerReader(): OwnerReader {
-  const chain = createPublicClient({ transport: http(monadRpcUrl()) });
+  const chain = createPublicClient({ transport: monadTransport() });
   return {
     owner: async (address) => String(await chain.readContract({ address, abi: OWNABLE_ABI, functionName: "owner" })),
     safe: async (address) => {

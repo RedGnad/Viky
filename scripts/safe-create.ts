@@ -1,8 +1,8 @@
 import "../src/load-env";
-import { createPublicClient, createWalletClient, getAddress, http, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, getAddress, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { addMonadGasBuffer } from "../src/monad-gas";
-import { MONAD_CHAIN_ID, monadChain, monadRpcUrl, waitForFinality } from "../src/monad/chain";
+import { MONAD_CHAIN_ID, monadChain, monadTransport, waitForFinality } from "../src/monad/chain";
 import {
   checkOwners,
   predictSafeAddress,
@@ -49,7 +49,7 @@ function ownersFromEnv(threshold: number): readonly Address[] {
 }
 
 async function main() {
-  const publicClient = createPublicClient({ chain: monadChain, transport: http(monadRpcUrl()) });
+  const publicClient = createPublicClient({ chain: monadChain, transport: monadTransport() });
   const chainId = await publicClient.getChainId();
   if (chainId !== MONAD_CHAIN_ID) throw new Error(`Refusing to run: chain id ${chainId} is not Monad mainnet (${MONAD_CHAIN_ID})`);
 
@@ -99,7 +99,7 @@ async function main() {
   const key = process.env.SAFE_SENDER_PRIVATE_KEY?.trim();
   if (!key) throw new Error("SEND=1 needs SAFE_SENDER_PRIVATE_KEY in your own shell; nothing in this repository holds a key");
   const account = privateKeyToAccount((key.startsWith("0x") ? key : `0x${key}`) as Hex);
-  const walletClient = createWalletClient({ account, chain: monadChain, transport: http(monadRpcUrl()) });
+  const walletClient = createWalletClient({ account, chain: monadChain, transport: monadTransport() });
   const hash = await walletClient.sendTransaction({ to: SAFE_PROXY_FACTORY, data, gas });
   const receipt = await waitForFinality(publicClient, hash);
   if (receipt.status !== "success") throw new Error(`The creation reverted in ${hash}`);
