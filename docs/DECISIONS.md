@@ -5533,3 +5533,23 @@ machine's speed.
 - **Tests.** `test/browser/arrival.spec.ts`: a load and a reload play nothing, the next screen enters with the turns. `test/browser/first-image-signed-in.spec.ts` (D196): on a load and a reload
   of the landing, Gifts and You, signed in, `<main>` is drawn once, for the account, with no entrance at all.
   `test/first-image.test.ts` and `test/motion.test.ts` pin the scripts, the stylesheet and the shell.
+
+## D199, 23 Sep 2026: seven directory university providers read; one proves enrolment and is pinned
+
+The founder, 23 Sep 2026: seven public university providers of the Reclaim directory, used by other applications;
+read each (fields, version, request), keep those whose fields prove enrolment, pin them like the TOEFL, write their
+portal rows and open them; the ones that prove only a name stay closed, and say why.
+
+- **Kept, one.** The American University of Rome, `8a769077…` ("Student Status", used by three applications): the
+  student's own course schedule and the term it is for. Pinned in `src/directory-portals.ts` (id, version 1.0.0,
+  request hash), row `aur-it`, field `Current_semester` against a term of 2026-2027, marked unverified.
+- **Closed, six**, in docs/reclaim/directory-universities.md: HUJI (the fields would do, but one student's own name and
+  number are written into its patterns, so it matches nobody else), Sharjah (an account and a department, no term),
+  Innopolis (the verified one builds its request in a script, nothing to pin; the others a name), IGNOU and Dhaka (a
+  name), Lagos (an AI-witnessed proof, refused everywhere).
+- **Not done, and why.** The row is written by `pnpm portal:directory`, one command; it needs the production
+  `DATABASE_URL`, which Vercel returns empty (sensitive), so it waits for the founder's shell. The enrolment line is not
+  opened in this PR: opened before the row exists, it would offer a chooser with no university in it. The PR that
+  opens it follows the row, and changes one line of the register.
+- **Default applied, to confirm.** The term's pattern accepts both "Fall 2026" and "2026 Fall", and this academic
+  year's two years; it is rewritten each year with the row.
