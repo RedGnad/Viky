@@ -4873,3 +4873,25 @@ The first family: "Pass an exam", beside the TOEFL.
 - **What is verified, and what waits for a candidate.** The scale, the bands, the decision, the subjects, the goals,
   the register, the door, and the refusal before any fetch, each a unit test. No provider registered, no proof shown,
   no goal signed.
+## D177, 23 Sep 2026: what the old gift page left behind is gone (V4-4)
+
+The last step of V4: "les anciennes pages supprimées à la fin". The two old pages themselves went in #76; what they
+left behind went now, each piece checked to be read by nothing in the product, the tests or the scripts:
+
+- **The laboratory's gift screen** (`app/dev/looks/screens/GiftScreen.tsx`) was a hand-built copy of the old page,
+  so the looks boards showed a page that no longer shipped. It draws the production page now, from the board's
+  example of a daily gift that runs.
+- **The board of moments moved** from `/dev/looks/gift` to `/dev/looks/gift-moments` (D172 names the old path): at the
+  old path it had taken the place of the laboratory's gift screen, and `pnpm looks:capture` would have photographed the
+  list of moments and failed its measurement of the arrival there.
+- **The still card and the large meter.** `GiftCard`'s `still` variant drew the head of the old page; only the
+  laboratory's copy used it. `MilestoneMeter` keeps its one size, on a card in a list.
+- **Thirty-five sentences** of `GIFT_PAGE`, `MILESTONE_PAGE` and `MILESTONE_ACTIONS` that no screen says any more:
+  the old page's totals ("Already taken", "6 of 7 days were yours", "Back to Maman: $1.00, 1 day"), its milestone
+  lines ("Last read…", "Not read yet…", "Nothing shown yet.", "Reached on … is yours"), and the old take review.
+- **Five rows of SCREEN-CLAIMS** quoted those sentences as promises of the screen: each was a claim nobody kept any
+  more, and each is gone or rewritten to what the page says now.
+- **The words-only states board** (`/dev/states`, `src/state-catalogue.ts`) described the old gift page state by
+  state, and passed only because those sentences lingered unread. Its gift page is the nine moments of the table now,
+  quoting what the page says; two real gaps V4 leaves are written there (taking out while a daily gift runs, and the
+  date a milestone gift was taken back), and one it listed as a gap is built ("Get the link again").

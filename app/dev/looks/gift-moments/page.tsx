@@ -19,7 +19,7 @@ export default async function Page() {
             <p key={moment} className="text-sm">
               {moment}:{" "}
               {READERS.map((reader) => (
-                <Link key={reader} href={`/dev/looks/gift/${exampleId(shape, moment, reader)}`} className="mr-3 underline">
+                <Link key={reader} href={`/dev/looks/gift-moments/${exampleId(shape, moment, reader)}`} className="mr-3 underline">
                   {reader}
                 </Link>
               ))}

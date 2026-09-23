@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { allExamples, type ExampleMoment } from "../app/dev/looks/gift/examples";
+import { allExamples, type ExampleMoment } from "../app/dev/looks/gift-moments/examples";
 import { giftOfMilestone, giftOfSummary, momentOf, type Moment } from "../src/gift-moment";
 import { voiceOf } from "../src/gift-voice";
 

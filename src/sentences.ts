@@ -497,8 +497,6 @@ export const GIFT_PAGE = {
   loading: "One moment",
   notFound: "This gift could not be found.",
 
-  titleYours: (funder: string | null, amount: string) => (funder ? `${funder} put ${amount} in your name.` : `${amount} is in your name.`),
-  titleTheirs: (recipient: string | null, amount: string) => (recipient ? `You put ${amount} in ${their(recipient)} name.` : `You put ${amount} in their name.`),
   /**
    * A gift read by somebody who is neither of its two people: a judge opening a link, most often, and anybody else the
    * link reached. Everything they read is in the third person, because "in your name" would be a lie to them.
@@ -524,7 +522,6 @@ export const GIFT_PAGE = {
   openMyGift: "Open my gift",
   opening: "Opening",
   missingKey: "This link is missing its key. Ask for the link again.",
-  openedByOther: "This gift was already opened by the person it is for.",
   readingWhose: (funder: string | null, recipient: string | null) =>
     `It is between ${funder ?? "the person who offered it"} and ${recipient ?? "the person it is for"}.`,
 
@@ -583,16 +580,10 @@ export const GIFT_PAGE = {
   notSeenYet: "Wait a minute and press again, or get a new code.",
   codeOut: "You can take the code out of your name now.",
 
-  counting: (range: string) => `Counting: ${range}.`,
-  dayOf: (day: number, total: number, range: string) => `Day ${day} of ${total}, ${range}.`,
   nextReading: (moment: string) => `Next reading: ${moment} your time.`,
   yoursSoFar: "Yours so far",
   theirsSoFar: "Theirs so far",
-  alreadyTaken: "Already taken",
-  backToFunder: (funder: string | null) => (funder ? `Back to ${funder}` : "Back to them"),
   cameBackToYou: "Came back to you",
-  amountDays: (amount: string, count: number) => `${amount}, ${days(count)}`,
-  inYourAccount: (moment: string) => `It is in your account, last sent back ${moment} your time.`,
   countNow: "Count now",
   readCounted: (count: number) => (count === 0 ? "Read. Nothing new to count yet." : count === 1 ? "One more day is yours." : `${count} more days are yours.`),
   nothingToDo: {
@@ -609,16 +600,10 @@ export const GIFT_PAGE = {
   notNow: "Not now",
   taking: "Taking it",
   taken: (amount: string, when: string, giftId: string, take: number) => `${amount} is in your account, ${when}. Reference: gift ${giftId}, take ${take}.`,
-  stillInGift: (earned: string, left: number) => `Still in the gift: ${earned} earned and not taken. ${left === 0 ? "No day to come." : `${days(left)} to come.`}`,
   sendToBank: "Send it to my bank",
 
   finished: (range: string) => `This gift is finished. ${range}.`,
-  daysYours: (count: number, total: number, amount: string) => `${count} of ${total} days were yours: ${amount}.`,
-  daysTheirs: (count: number, total: number, amount: string) => `${count} of ${total} days were theirs: ${amount}.`,
-  wentBackTo: (count: number, funder: string | null, amount: string) => `${days(count)} went back to ${funder ?? "them"}: ${amount}.`,
   cameBack: (count: number, amount: string) => `${days(count)} came back to you: ${amount}.`,
-  wentBackBeforeStart: "This gift went back before it started counting.",
-  beingEarned: "There is nothing for you to do: what they earn is theirs, and what they miss comes back to you by itself.",
   made: (date: string, giftId: string) => `Made ${date}. Reference: gift ${giftId}.`,
 
   closedTitle: "Your session closed while you were away",
@@ -780,20 +765,8 @@ export const MILESTONE_PAGE = {
   ruleYours: (target: number, by: string, time: string) => `It is yours when you reach ${target}, ${by}. Checked every day at about ${time} your time.`,
   ruleTheirs: (target: number, by: string, time: string) => `It is theirs when they reach ${target}, ${by}. Checked every day at about ${time} your time.`,
   startedAt: (reading: number) => `Started at ${reading}.`,
-  lastRead: (moment: string) => `Last read ${moment} your time.`,
-  notReadYetYours: (source: string) => `Not read yet: the first reading is taken when you connect ${source}, and it is where you start.`,
-  notReadYetTheirs: (source: string) => `Not read yet: the first reading is taken when they connect ${source}, and it is where they start.`,
   atDeadlineYours: (by: string, funder: string | null) => `Reach it ${by} and it is yours. If not, it goes back to ${funder ?? "them"}.`,
   atDeadlineTheirs: (by: string) => `If they reach it ${by} it is theirs. If not, it comes back to you.`,
-  /** A gift whose proof the person shows (D162): what the funder reads instead of a row of days or a meter. */
-  lastShown: (date: string) => `Shown on ${date}.`,
-  nothingShownYet: "Nothing shown yet.",
-  reachedYours: (date: string, amount: string) => `Reached on ${date}: the ${amount} is yours.`,
-  reachedTheirs: (date: string, amount: string) => `Reached on ${date}: the ${amount} is theirs.`,
-  /** "by 17 Oct 2026", or "in time" for a gift that was never started. */
-  inTime: "in time",
-  missedYours: (by: string, amount: string, funder: string | null) => `Not reached ${by}: the ${amount} went back to ${funder ?? "them"}.`,
-  missedTheirs: (by: string, amount: string) => `Not reached ${by}: the ${amount} came back to you.`,
 } as const;
 
 /**
@@ -863,11 +836,9 @@ export const MILESTONE_FUND = {
  * take it. The page itself, and what it says of where the gift stands, is `MILESTONE_PAGE` (S3).
  */
 export const MILESTONE_ACTIONS = {
-  checkNow: "Check now",
   checking: "Reading your rating",
   connectTitle: (source: string) => `Connect ${source}`,
   givenName: (source: string, username: string) => `Your ${source} name, as it was given: ${username}.`,
-  whyCode: (source: string) => `To prove it is yours, you put a short code in your ${source} name for a minute. Nothing to install, no password.`,
   /** The funder named the account, so there is nothing to prove and nothing to touch in a profile (D27). */
   nothingToDo: (source: string) => `Nothing to install, no password, and nothing to change on ${source}: the gift already knows the account it reads.`,
   startReading: (source: string) => `Start reading my ${source}`,
@@ -875,24 +846,16 @@ export const MILESTONE_ACTIONS = {
   connectNow: "Connect now: only what you reach after connecting counts.",
   firstReading: "If you have already reached it when you connect, this gift cannot count it, so connect before you play.",
   getCode: "Get my code",
-  gettingCode: "One moment",
   proveTitle: (username: string) => `Prove ${username} is yours`,
   added: "I added it",
-  addedBusy: "Reading your profile",
   removeAfter: "You can take the code out right after. It works for an hour.",
   newCode: "Get a new code",
-  theirsNotConnected: "Opened, not connected yet. If they do not connect within 14 days, it all comes back to you.",
   startTooHighMine: (start: number, target: number, funder: string | null) =>
     `You had already reached ${target} when you connected: you were at ${start}, so this gift cannot count it. Ask ${funder ?? "the person who sent it"} for a new one. It goes back to them at the end.`,
   startTooHighTheirs: (start: number, target: number, recipient: string | null) =>
     `${recipient ?? "They"} had already reached ${target} when they connected, at ${start}, so this gift cannot count it. It comes back to you at the end.`,
-  overdue: "Time is up. It is being closed, and all of it goes back.",
   opened: "It is yours to earn.",
   take: (amount: string) => `Take ${amount}`,
-  takeReviewTitle: (amount: string) => `Take ${amount} into your account`,
-  takeRows: { goes: "Goes to", account: "Your Viky account", stays: "Stays in the gift" },
-  nothingLeft: "$0.00",
-  takeConfirm: (amount: string) => `Take ${amount}`,
   notNow: "Not now",
   taking: "Taking it",
   taken: (amount: string, when: string, giftId: string) => `${amount} is in your account, ${when}. Reference: gift ${giftId}.`,
