@@ -183,6 +183,15 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     sourcePolicing: "Fitbit polices nothing about who moves. Its Platform Terms of Service (effective 6 Jun 2023, read 23 Sep 2026) frame what Viky does with User Data: distributed to no external source without the User's informed consent (1(f)), never made public (1(f)), removed on the User's request (1(i)), reached through the API and nothing else (1(g)); the consent screen, the verdict-only reading and the erase button are those four, and the judges' page says so.",
   },
   {
+    conditionId: "strava-daily",
+    supervised: false,
+    inShort: "Connected by them: Strava is asked each morning whether yesterday's activities added up to the kilometres. A yes or a no, and no number.",
+    data: "Strava's own API, the list of the day's activities, read each morning through an attested fetch with the person's own key handed to the fetch as a secret the attestor never sees: the reading is signed by Reclaim's attestor and Viky adds the distances, judges the day and drops the list, its routes and its times with it. What reaches the contract is the verdict, never a number of the person's.",
+    account: "The person connects their own Strava account once, on Strava's own page, in their own browser, after the consent screen says in Viky's words what the funder will be told and what they will never see; Strava sends back what they allowed, and without the activities nothing is kept. The pseudonym of that account's athlete id is bound on the chain by the first reading, so another account cannot count for this gift, and the contract checks the recipient.",
+    whoActed: "Unknown: the list says what the account recorded, never who carried the phone or the watch, and an activity can be entered by hand. Strava describes no check of who moves.",
+    sourcePolicing: "Strava polices nothing about who moves; it flags some activities as suspect on its own site and that flag is not read here. Its API Agreement (read 23 Sep 2026) frames what Viky does with Strava Data: used to serve the person who authorised it and nobody else, neither aggregated across people nor shown to others, deleted when they ask. The verdict-only reading, the consent screen and the erase button that gives the key back first are those three; the funder's daily yes or no is the one bit that leaves.",
+  },
+  {
     conditionId: "coursera-certificate",
     supervised: false,
     inShort: "Read from the certificate's public page. Coursera checks identity once, not each piece of work.",

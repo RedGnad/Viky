@@ -80,6 +80,8 @@ export const GOAL_TYPE_FITBIT_ACTIVITY = 6;
 
 /** What every check-in for a Fitbit gift carries, and what the owner registers for goal 6. */
 export const FITBIT_CONNECTED_PROVIDER_ID: Hex = keccak256(stringToHex("viky:provider:fitbit-connected:v1"));
+/** Strava, connected by the person (D191): goal 4 of the daily contract, registered from the same Safe session. */
+export const STRAVA_CONNECTED_PROVIDER_ID: Hex = keccak256(stringToHex("viky:provider:strava-connected:v1"));
 
 /**
  * The registry's providerId for Duolingo. Since D27 it is the public mode (an attested read of the

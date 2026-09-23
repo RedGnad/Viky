@@ -95,9 +95,9 @@ test("the page lists every condition the register holds, offered or not, by fami
   // passed and the grade (D174) under Study.
   assert.deepEqual(
     sections.flatMap((section) => section.building).map((condition) => condition.id),
-    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown", "fitbit-daily"],
+    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown", "fitbit-daily", "strava-daily"],
   );
-  assert.deepEqual(sections.find((section) => section.family === "move")?.building.map((condition) => condition.id), ["fitbit-daily"], "the family Move, for its one line being built (D188)");
+  assert.deepEqual(sections.find((section) => section.family === "move")?.building.map((condition) => condition.id), ["fitbit-daily", "strava-daily"], "the family Move, for its two lines being built (D188, and Strava beside it)");
   assert.deepEqual(sections.find((section) => section.family === "school")?.building.map((condition) => condition.id), ["ecoledirecte-grade-shown"], "the family School, for its one line being built (D179)");
   assert.deepEqual(sections.find((section) => section.family === "course")?.building.map((condition) => condition.id), ["udemy-course-shown"], "beside the Coursera certificate (D178)");
   assert.deepEqual(sections.find((section) => section.family === "exam")?.conditions.map((condition) => condition.id), ["toefl-mybest-shown"], "the TOEFL score is open in its family, the others being built beside it");
@@ -153,7 +153,7 @@ test("every condition says its nature, and every one of the pilot is read for th
   // What is being built lives beside the register, resolvable by id and offered to an operator alone (D164, D165, D174, D176).
   assert.deepEqual(
     BUILDING.map((condition) => condition.id),
-    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown", "fitbit-daily"],
+    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown", "fitbit-daily", "strava-daily"],
   );
   for (const id of BUILDING.map((condition) => condition.id)) {
     const shown = conditionById(id);

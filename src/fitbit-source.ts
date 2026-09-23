@@ -1,4 +1,5 @@
 import type { AttestedSource } from "./attested-sources";
+import { STRAVA_DAY_ACTIVITIES } from "./strava-source";
 
 /**
  * Fitbit's daily activity summary for one day, read with the person's own key (D188): "Get Daily Activity Summary",
@@ -32,7 +33,7 @@ export const FITBIT_DAILY_SUMMARY: ConnectedSource = {
   ],
 };
 
-const CONNECTED: readonly ConnectedSource[] = [FITBIT_DAILY_SUMMARY];
+const CONNECTED: readonly ConnectedSource[] = [FITBIT_DAILY_SUMMARY, STRAVA_DAY_ACTIVITIES];
 
 /** The connected sources the app knows, by id; the shared list of `src/attested-sources.ts` is asked first. */
 export function connectedSource(id: string): ConnectedSource | undefined {
