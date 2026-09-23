@@ -66,7 +66,7 @@ permission.
 | goal | verification | scale | status |
 |---|---|---|---|
 | Duolingo XP per day | Reclaim zkTLS, our private provider (`cdf8cb3b-2976-4413-ab2d-693ae5028380@1.0.8`, two claims: self-only ownership + total XP), TEE attestation required, AI fallback refused | unbounded (the user proves their own session; no platform API key) | launch, port from Lock-In; `LIVE_SCHEMA_CONFIRMED` to be resolved (KT3) |
-| GitHub contributions per day | Reclaim provider to build with the Reclaim agent (public data) | unbounded | launch candidate 2, fits the first funders' circle |
+| GitHub contributions per day | Viky's own read of GitHub's GraphQL API with a project token, signed by the evidence signer; the attested read waits for the reading service to carry a secret header (D166, 23 Sep 2026) | unbounded within GitHub's rate limits (5,000 an hour) | built behind the operator door; goal 2 to register, token to set, one real gift to run |
 | on-chain conditions (balance held N days, repayment) | native | unbounded | launch, zero cost |
 | university graduation | Reclaim full-stack (universities preconfigured, Reclaim's own UI) | unbounded | phase 2, it is the literal "$500 when you graduate" |
 | Strava distance | closed, D123 of 20 Sep 2026: Strava's API Agreement (section 4.4) requires deleting all Strava data on termination and certifying it in writing, which what Viky writes on a public chain cannot honour; the verifier and its two tests stay in the repository, unwired | none | not offered |

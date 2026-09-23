@@ -1,6 +1,7 @@
 import { isValidDuolingoUsername } from "./duolingo-public-terms";
 import { UNIVERSITY_SOURCE } from "./university-shown";
-import { GOAL_TYPE_DUOLINGO_XP } from "./gift-terms";
+import { GOAL_TYPE_DUOLINGO_COURSE_XP, GOAL_TYPE_DUOLINGO_XP, GOAL_TYPE_GITHUB_CONTRIBUTIONS } from "./gift-terms";
+import { GITHUB_SOURCE, isValidGithubLogin } from "./github-contributions";
 
 /**
  * The register of conditions: the spine of the product (structure of 17 Sep 2026, section 10, C1).
@@ -39,7 +40,7 @@ export type ConditionKind = "daily" | "milestone";
  * erased exactly the thing that made it worth building. "Move" left with it: nothing was ever filed there, and a
  * family draws nothing until something is.
  */
-export type ConditionFamily = "language" | "play" | "course" | "certification" | "study";
+export type ConditionFamily = "language" | "play" | "course" | "certification" | "study" | "code";
 
 export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>[] = [
   { id: "language", title: "Learn a language" },
@@ -49,6 +50,9 @@ export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>
   // Staying enrolled (D165): the corridor's own case, a family abroad paying the year. Nothing offered in it until a
   // portal has been proved, so the page and the chooser draw it only for an account that runs Viky.
   { id: "study", title: "Stay enrolled" },
+  // Writing code (D166): a contribution GitHub counts, each day. Offered to an account that runs Viky until goal 2
+  // is registered on the daily contract and a real gift has run on it.
+  { id: "code", title: "Keep coding" },
 ];
 
 /** From this many conditions on offer, the chooser stops being one list and becomes one section per family. */
@@ -587,7 +591,94 @@ export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
   },
 };
 
-export const BUILDING: readonly Condition[] = [TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN];
+/**
+ * A GitHub contribution each day (D166): the calendar GitHub itself keeps on the person's profile, read by Viky from
+ * GitHub's API each morning. A daily condition like the Duolingo lesson, on the same contract, under goal 2, and
+ * built the same way: the funder may name the account, the person proves it is theirs with a code in the profile's
+ * name or bio, and the keeper reads the total since the day the account was connected.
+ *
+ * Not live: goal 2 is not registered on the daily contract, the API token is not in place, and no real gift has run.
+ * Offered on the chooser to an account that runs Viky, so the first real gift can be made at all.
+ *
+ * The reading is Viky's own, on Viky's word: the reading service takes no secret header yet, and GitHub's calendar
+ * is only read with one. The help sentence says so, rather than let "read for you" suggest an attestor stands behind
+ * it as one does behind the Duolingo lesson.
+ */
+export const GITHUB_DAILY: Condition = {
+  id: "github-daily",
+  kind: "daily",
+  nature: "read",
+  goalType: GOAL_TYPE_GITHUB_CONTRIBUTIONS,
+  live: false,
+  // The four states are the founder's, and none of them says "wired, and not run on a real account yet": this is the
+  // closest one, and it is printed for no condition that is not in the register. A fifth state is his to name.
+  state: "being-tested",
+  beforeItOpens: "Goal 2 registered on the daily contract, the GitHub reading switched on where Viky runs, and one real gift run on it end to end.",
+  source: GITHUB_SOURCE,
+  family: "code",
+  name: "A GitHub contribution each day",
+  help: "Read each morning from what GitHub counts on their public profile, by Viky itself: a commit, an issue, a pull request or a review, on the day GitHub counts it. It proves the account did it, not who typed.",
+  link: {
+    kind: "username",
+    label: "Their GitHub name, if you know it",
+    help: "The name at the end of their GitHub link, like octocat. Leave it empty and they name their own.",
+    why: "Naming it is the surest thing you can do: only that GitHub can then earn this gift, whoever opens the link.",
+    example: "octocat",
+    row: "Their GitHub name",
+    noneGiven: "They name their own when they open it",
+    check: {
+      valid: isValidGithubLogin,
+      path: "/api/github/profile",
+      refusals: {
+        shape: "A GitHub name has letters, figures and single hyphens, like octocat or ama-codes.",
+        notFound: "No GitHub account goes by that name. Check the spelling, or leave it empty.",
+        unavailable: "GitHub is not answering. Try again in a moment, or leave it empty.",
+      },
+    },
+  },
+  detailTitle: "Their GitHub, and what counts as a day",
+  target: {
+    label: "Contributions GitHub counts, for a day to count",
+    inWords: (value) => `${value} contribution${value === 1 ? "" : "s"} a day`,
+    suggested: 1,
+    min: 1,
+    tooLow: "At least 1 contribution.",
+  },
+  reading: "github-calendar",
+  words: {
+    earnedDay: "Each day they reach it, this becomes theirs",
+    connect: "Opened. Connect GitHub to start counting.",
+    doIt: "Commit, open an issue or a pull request, or review one; nothing else. Each morning Viky reads what GitHub counts and counts the day before.",
+    eachDay: "each day with a contribution",
+    theyConnect: "connects their GitHub",
+    yesterday: "yesterday's contribution",
+    preview: "A GitHub contribution each day: each day you make one, that day's share becomes yours.",
+  },
+  recipient: {
+    eachDayYours: "each day with your contribution",
+    eachDayTheirs: "each day with their contribution",
+    stillNeeds: "The gift is in your name. It still needs your GitHub to start counting.",
+    connectTitle: "Connect your GitHub",
+    usernameLabel: "Your GitHub name",
+    usernameHelp: "The name at the end of your GitHub link, like octocat.",
+    typeToContinue: "Type your GitHub name to continue.",
+    noPassword: "No password, no sign-in: what GitHub counts on your profile is read from GitHub. Next, a short code proves the account is yours.",
+    notYet: "I do not have GitHub yet",
+    proveTitle: (username) => `Prove ${username} is yours`,
+    proveSteps: "On GitHub, open Settings, then Public profile, and add this code to your name or your bio:",
+    slowToShow: "GitHub shows a new name at once. If Viky cannot see the code yet, check it was saved and press again.",
+    namedBy: (username, funder) => `Your GitHub: ${username}. Named by ${funder}. Nothing to sign in to, nothing to install: what GitHub counts on your profile is read from GitHub.`,
+    notMine: "That is not my GitHub name",
+    countingFrom: (firstDay) => `Done. From tomorrow, ${firstDay}, every day with your contribution is yours, counted by itself.`,
+    reads: "Viky reads your GitHub every day at that time and counts the day before.",
+    readsTheirs: "Viky reads their GitHub every day at that time and counts the day before.",
+    catchUpYours: (deadline) => `Yesterday is not counted yet, and not lost either. Make a contribution before ${deadline} your time and it still counts.`,
+    catchUpTheirs: (deadline) => `Yesterday is not counted yet, and not lost either: a contribution before ${deadline} your time still earns that day.`,
+    alreadyRead: "Viky already read your GitHub today. Come back tomorrow.",
+  },
+};
+
+export const BUILDING: readonly Condition[] = [TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, GITHUB_DAILY];
 
 /**
  * What people ask for and no source lets anybody check, with the reading each line rests on (design audit, section 5).
@@ -654,9 +745,13 @@ export function liveConditions(): readonly Condition[] {
   return CONDITIONS.filter((condition) => condition.live);
 }
 
-/** The condition of a gift already made, from the goal type its contract holds. */
+/**
+ * The condition of a gift already made, from the goal type its contract holds; a gift made through the door too. A
+ * gift counted on one course (goal 5, U1) is the daily lesson's condition read on one course, not another condition.
+ */
 export function conditionOfGoal(goalType: number): Condition | undefined {
-  return CONDITIONS.find((condition) => condition.goalType === goalType);
+  if (goalType === GOAL_TYPE_DUOLINGO_COURSE_XP) return DUOLINGO_DAILY;
+  return CONDITIONS.find((condition) => condition.goalType === goalType) ?? BUILDING.find((condition) => condition.goalType === goalType);
 }
 
 export function conditionById(id: string): Condition | undefined {

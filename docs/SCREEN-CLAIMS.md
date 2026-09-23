@@ -199,6 +199,22 @@ and a real proof has run from a real portal. The table of portals is empty on 23
 | "Being built: staying enrolled, shown by the person from their own student portal, with the two words SHOWN BY THEM on it." on the public page, under "Being enrolled at a university" | it is being built and offered to nobody: the chooser of an operator alone, no line in the register | the `university-enrolment` line of `FRONTIERS`, `BUILDING` | `test/condition-states.test.ts`, `test/browser/nature.spec.ts` (two "Being built") |
 | on the judges page, "University portals' terms", not read portal by portal, each portal named in the gift | only what was read is claimed: Reclaim's own position on the terms, and the portal in the gift the funder signs | `app/judges/page.tsx`; `portal` on the gift's row, `universitySubject` in the terms | none: a sentence read against the code by hand |
 
+### A GitHub contribution each day, offered to an operator alone (D166)
+
+`src/conditions.ts` (`GITHUB_DAILY`, in `BUILDING`), `src/github-contributions.ts` (the reading), `src/github-checkin.ts`
+(the two readings of a gift), `app/api/github/profile/route.ts` (the funder's name check), `app/api/gift/create/route.ts`
+(the gate). A daily condition on the daily contract under goal 2, not live: offered on the chooser to an account that
+runs Viky and to nobody else, until goal 2 is registered, the token is in place and a real gift has run.
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "A GitHub contribution each day", READ FOR YOU, under "Keep coding" on the chooser of an operator, and "Read each morning from what GitHub counts on their public profile, by Viky itself: a commit, an issue, a pull request or a review, on the day GitHub counts it. It proves the account did it, not who typed." | nobody but an operator is offered it; what is read is GitHub's own calendar, by GitHub's own rule, and no attestor stands behind the reading | `BUILDING`, `WIRED_NOT_LIVE`, the create route's gate (`conditionOfGoal` and `isOperator`); `readGithub` asks the GraphQL API's `contributionsCollection` and nothing else, and the check-in is signed by the evidence signer on that read | `test/conditions-route.test.ts`, `test/milestone-routes.test.ts`, `test/condition-states.test.ts`, `test/github-contributions.test.ts` (one question, the API and never the site) |
+| "Their GitHub name, if you know it", "like octocat", and "No GitHub account goes by that name" or "GitHub is not answering" on the check | the name is checked by GitHub's own rule for a login and then read from GitHub before any money moves | `isValidGithubLogin`; `/api/github/profile` and the create route both call `readGithub` about today; `NO_SUCH_PROFILE` before any relay | `test/github-contributions.test.ts` (the login's shape, every typed failure) |
+| "Contributions GitHub counts, for a day to count", "1 contribution a day" on the check | the day's bar is the number of contributions, at least one, and the contract credits days from the total since the account was connected | `target` of `GITHUB_DAILY`; `metricValue` is the calendar's total since `spanOf`'s first moment, which can only grow | `test/github-checkin.test.ts` (the span, the baseline, the next morning) |
+| "Connect your GitHub", "add this code to your name or your bio", "Prove octocat is yours", then "Done. From tomorrow, …" | the account is bound on the first reading, by GitHub's numeric id, and only once the code is in the profile's name or bio when the person named the account themselves | `profileHasCode` on `name` and `bio`, `identityPseudonym("github", databaseId)`, `markBound` after the relay | `test/github-checkin.test.ts` (funder-named, recipient-named, the code missing) |
+| "Not enough yet for a full day. One more contribution and it counts." and "GitHub counts fewer contributions than last time: something was removed. Nothing was changed." | the contract's refusals are said about a contribution, not about a lesson | `CONTRACT_WORDS` in `src/github-checkin.ts` over the shared table | `test/github-checkin.test.ts` |
+| "Counting is not switched on yet." | the token is not where this runs, and an operator can read that as `github.configured: false` on `/api/conditions` | `githubConfigured()`, a boolean of the environment | `test/github-contributions.test.ts` |
+
 ### A condition the person shows (D162)
 
 `app/kit/ShowProof.tsx` on a gift's page, and the head of that page in `app/components/GiftPage.tsx`. No condition
