@@ -336,7 +336,6 @@ export const SHOWN_CONDITIONS: readonly ShownEntry[] = [
   UNIVERSITY_YEAR_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
   ECOLEDIRECTE_SHOWN,
-  PRONOTE_SHOWN,
 ];
 
 export function shownConditionById(conditionId: string): ShownEntry | undefined {

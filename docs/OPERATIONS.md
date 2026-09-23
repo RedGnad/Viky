@@ -970,8 +970,8 @@ alone (the calls of D194, carried by the relayer):
 
 Prepared for the next Safe session (nonce 8, `signThis` `0x8820691e801d4367b7fcf357333f06be195576b88c2e1824624971a59e654a94`,
 read from the chain on 23 Sep 2026, the goal alone in the batch; rebuilt by `pnpm safe:session` if the nonce moves).
-Signing it opens nothing: PRONOTE encrypts its answers by default, so no provider can read an average yet
-(docs/reclaim/pronote-grade-shown-provider.md, corrected).
+Signing it opens nothing: PRONOTE is parked, its answers and its bulletins being encrypted
+(docs/reclaim/pronote-grade-shown-provider.md).
 
 ## The Safe session of every remaining goal, in one transaction (D194)
 

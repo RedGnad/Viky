@@ -5749,3 +5749,19 @@ symbol; every character whose parts move is written into the page; the preload a
 
 **Not done.** One reload in eight still paints before the end of the document on the slowed profile. What remains of
 Home's document is the page itself and the payload React hydrates from; a smaller payload is a task of its own.
+
+## D207, 24 Sep 2026: PRONOTE is parked; its bulletin PDF is encrypted too
+
+The founder's last lead before parking PRONOTE: the bulletins and grade reports downloaded as PDF from the parents'
+space. Checked on the demonstration space, signed in by the founder's session, 24 Sep 2026.
+
+- **The file comes in the open**: a plain `GET` on `/pronote/UrlUnique/<name>.pdf`, outside `appelfonction`,
+  `application/pdf`.
+- **But it is encrypted**: the PDF standard's own security handler (`/Filter/Standard /R 3 /V 2`, RC4 128 bits). Its
+  page stream is ciphertext; the average on screen (14,94) is nowhere in the bytes, raw or inflated. A witness would
+  attest ciphertext, as for the answers of D205.
+- **So PRONOTE is parked**, as the founder said: off the register's lists (the public page, the chooser, the proof
+  sessions, the privacy and proof answers), its reason on the public page's school line and on the judges' page, the
+  code kept for the day a readable answer exists. Goal 24 stays in the list of goals and waits.
+- **Why the family sees the marks**: their browser decrypts them with a key made at sign-in; a zkTLS proof attests the
+  bytes on the wire, before that.

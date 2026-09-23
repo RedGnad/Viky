@@ -172,14 +172,6 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     account: "The link is the EcoleDirecte account the person signs in to, in their own browser, and the gift's own recipient, which the contract checks. A family account shows the pupils the family answers for, so a family with several pupils shows the one the gift is for: the subject the funder signs is the same for every gift on this condition, and that is written down rather than dressed up.",
     whoActed: "Unknown. Signing in to the account is one person's act, and nothing says who did the work the average rewards.",
     sourcePolicing: "The school records the grades and answers for them; EcoleDirecte's publisher, Aplim, hosts them. Aplim's terms (read 23 Sep 2026) say the holder of a password reaches only the information about themselves or those they answer for, and name no program; PRONOTE, the other portal read, is not built, its publisher's terms forbidding any device retrieving data from its sites without its written authorisation, and the judges' page says so.",
-  },  {
-    conditionId: "pronote-grade-shown",
-    supervised: false,
-    inShort: "Shown by them: the overall average in the family's own PRONOTE space, out of 20. Who did the work is not read.",
-    data: "The grades of the family's own PRONOTE space, shown by them in a Reclaim verification: one request to the establishment's space on Index Education's own servers, attested by a witness in a TEE, and one field, the overall average out of 20. A space that encrypts its answers gives nothing readable, and the reading fails by its name. What is kept is whether the target was reached, never the average.",
-    account: "The link is the space the funder named by its address, bound into what they signed, and the PRONOTE account the person signs in to, preferably the parents' one; a family account can answer for several pupils, and which pupil's average is shown is the one the session opens. The gift's own recipient is checked by the contract.",
-    whoActed: "Unknown. Signing in to the account is one person's act, and nothing says who did the work the average rewards.",
-    sourcePolicing: "The school records the grades and answers for them; Index Education hosts the space. Its terms forbid any device retrieving data from its sites without its written authorisation, which Viky does not have: the risk is assumed by the founder and written on the judges' page, the person showing their own marks at their own request (GDPR articles 15 and 20), no mark kept.",
   },
 
   {

@@ -546,10 +546,10 @@ would have shown a funder that their gift had earned nothing the moment the reci
 amount typed, which took a dollar more than written for any figure like 20.999 and read 1e3 as a thousand
 dollars; and the session countdown. Each test was checked by breaking the rule and watching it fail.
 
-### PRONOTE, an average shown, being built, offered to nobody (D203)
+### PRONOTE, parked, offered to nobody (D203, then parked)
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
-| "An average on PRONOTE, shown", SHOWN BY THEM, under "School" with "Being built." and its missing pieces | the provider is not registered and goal 24 not signed, so nobody can make a gift on it | `PRONOTE_GRADE_SHOWN` in `BUILDING`, `PRONOTE_MILESTONE.notOpen` | `test/pronote-shown.test.ts` |
+| Under "What has no public page", School marks: "…not PRONOTE, whose pages and bulletins are encrypted, so nothing in them can be proved." | PRONOTE's answers are AES-encrypted and its bulletin PDF uses the PDF standard's encryption, both read on the demonstration space; the line is on no list | the `school-marks` frontier; `PRONOTE_GRADE_SHOWN` out of `BUILDING`, `PRONOTE_SHOWN` and `PRONOTE_MILESTONE` out of their lists | `test/pronote-shown.test.ts`, `test/school-shown.test.ts` |
 | "This gift will be for the PRONOTE space 0123456a. That is the word before index-education.net in its link." | the space is taken from the pasted link and bound into the subject the funder signs | `pronoteSpaceOf`, `pronoteSubject` | `test/pronote-shown.test.ts` |
 | on the judges' page, PRONOTE's terms, the risk assumed, GDPR articles 15 and 20 | only what was read is quoted, and the founder's decision is said as a decision | `app/judges/page.tsx` | none: a sentence read against the page by hand |

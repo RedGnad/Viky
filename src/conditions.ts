@@ -982,7 +982,8 @@ export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
 };
 
 /**
- * A school average shown from the family's own PRONOTE space (D203): EcoleDirecte's line, with the space chosen by
+ * Parked (D207): PRONOTE encrypts its answers and its bulletins, so this line is off the register's lists and offered
+ * to nobody, kept in the code for the day a readable answer exists. It was:  A school average shown from the family's own PRONOTE space (D203): EcoleDirecte's line, with the space chosen by
  * the funder as a portal is, and the publisher's terms against it written on the judges' page with the risk assumed.
  */
 export const PRONOTE_GRADE_SHOWN: Condition = {
@@ -1019,7 +1020,6 @@ export const BUILDING: readonly Condition[] = [
   UNIVERSITY_YEAR_PASSED_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
   ECOLEDIRECTE_GRADE_SHOWN,
-  PRONOTE_GRADE_SHOWN,
 ];
 
 /**
@@ -1086,8 +1086,8 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "School marks",
     state: "no-public-page",
     why: "They live in a school's own portal, which opens for the family and for nobody else. No source publishes a page about a pupil.",
-    // Both portals read are on their way (D179, and PRONOTE since the founder's decision, D203).
-    building: "an average shown by the pupil or the family from their own EcoleDirecte account or PRONOTE space, with the two words SHOWN BY THEM on it.",
+    // One portal is on its way (D179); PRONOTE is parked, its answers and its bulletins being encrypted (D207).
+    building: "an average shown by the pupil or the family from their own EcoleDirecte account, with the two words SHOWN BY THEM on it; not PRONOTE, whose pages and bulletins are encrypted, so nothing in them can be proved.",
   },
 ];
 

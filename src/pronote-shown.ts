@@ -57,4 +57,4 @@ export function pronoteLoginUrl(space: string): string {
 export type PronoteProvider = Readonly<{ id: string; version: string; requestHash: string }>;
 export const PRONOTE_PROVIDER: PronoteProvider | null = null;
 
-export const PRONOTE_NOT_REGISTERED = "This condition cannot be shown yet: PRONOTE encrypts what its pages send, so nothing can be read from it until another way is found.";
+export const PRONOTE_NOT_REGISTERED = "PRONOTE is not offered: it encrypts what its pages and its bulletins send, so nothing in them can be proved.";
