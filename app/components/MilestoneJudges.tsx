@@ -38,7 +38,8 @@ export function MilestoneJudges() {
             , deployed in <Explorer tx={E.deployTx} />
           </>
         ) : null}
-        . Owned by the founder&apos;s key, not by the key that deployed it. Gift numbers start at 1,000,000, so no number can mean a daily gift
+        . Owned by the same Safe as the other three contracts, two signatures of three, read from the chain at the head of this page
+        and in the contracts section, and never by the key that deployed it. Gift numbers start at 1,000,000, so no number can mean a daily gift
         and a milestone gift at once.
       </p>
       <p className={HELP}>
