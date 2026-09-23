@@ -26,6 +26,7 @@ import {
   COURSERA_CERTIFICATE as COURSERA_CONDITION,
   DUOLINGO_ENGLISH_TEST,
   type Condition,
+  ECOLEDIRECTE_GRADE_SHOWN,
   UDEMY_COURSE_SHOWN,
   BAC_CAMEROON_SHOWN,
   BAC_FRANCE_SHOWN,
@@ -70,6 +71,7 @@ import {
 } from "./exam-shown";
 import { CERTIFICATE as CERTIFICATE_SHAPE, CHESS_RATING as CHESS_RATING_SHAPE, type MilestoneShape } from "./milestone-terms";
 import { UDEMY_DURATION_DAYS, UDEMY_FINISHED, UDEMY_GOAL_TYPE, UDEMY_NOT_REGISTERED, UDEMY_PROVIDER, udemySlugOf, udemySubject } from "./udemy-shown";
+import { ECOLEDIRECTE_GOAL_TYPE, ECOLEDIRECTE_NOT_REGISTERED, ECOLEDIRECTE_PROVIDER, ECOLEDIRECTE_SUBJECT, isValidSchoolTarget, SCHOOL_DURATION_DAYS, schoolGradeInWords } from "./school-shown";
 
 /**
  * The milestone half of the register of conditions (src/conditions.ts). A milestone asks the funder more than a daily
@@ -1083,6 +1085,54 @@ export const UDEMY_MILESTONE: CertificateCondition = {
   },
 };
 
+/**
+ * An average at school, shown from the pupil's or the family's own EcoleDirecte account (D179): the university grade's
+ * shape on the one scale of French schools, out of 20 in hundredths, with no portal to choose and no name asked.
+ */
+export const ECOLEDIRECTE_MILESTONE: CertificateCondition = {
+  condition: ECOLEDIRECTE_GRADE_SHOWN,
+  shape: CERTIFICATE_SHAPE,
+  goalType: ECOLEDIRECTE_GOAL_TYPE,
+  asksName: false,
+  readPath: "",
+  validLink: () => false,
+  validName: () => true,
+  validTarget: isValidSchoolTarget,
+  targetUnits: gradeUnits,
+  subject: () => ECOLEDIRECTE_SUBJECT,
+  ...(ECOLEDIRECTE_PROVIDER ? {} : { notOpen: ECOLEDIRECTE_NOT_REGISTERED }),
+  target: {
+    label: "The average to reach",
+    help: "Out of 20, with a dot for decimals: 12.5, or 14. The overall average on the grades page is what counts.",
+    min: 0.01,
+    max: 20,
+    step: 0.01,
+    suggested: 12,
+    inWords: (value) => schoolGradeInWords(value),
+  },
+  duration: SCHOOL_DURATION_DAYS,
+  words: {
+    detailQuestion: "The average to reach",
+    nameLabel: "",
+    nameHelp: "",
+    linkLabel: "",
+    linkHelp: "",
+    whatIsRead: "Viky keeps the overall average the grades page shows, and the day it was shown, and nothing else: no grade, no remark, no name. Your EcoleDirecte password never reaches Viky.",
+    check: "",
+    checking: "",
+    goal: (target) => `Reach an average of ${schoolGradeInWords(target)} at school`,
+    mustShow: (_name, target) => `An overall average of ${schoolGradeInWords(target)} or more on the grades page of the person's own EcoleDirecte account, shown from their own browser. Which term it is for is not read.`,
+    ...EXAM_DURATION_WORDS,
+    durationHelp: "The average has to be shown inside that time, and the day it is shown is what counts.",
+    whenReached: "When they show that average, all of this becomes theirs",
+    refusals: {
+      ...EXAM_REFUSALS,
+      targetShape: "Write the average out of 20, with a dot for decimals, like 12.5.",
+      below: (target, score) => `That average is ${(score / 100).toFixed(2)} / 20. This gift is for ${(target / 100).toFixed(2)} / 20.`,
+    },
+  },
+};
+
 /** The five examination results of D176, in the register's order, for the door and the tests. */
 export const EXAM_MILESTONES: readonly CertificateCondition[] = [CAMBRIDGE_MILESTONE, IELTS_MILESTONE, BAC_MOROCCO_MILESTONE, BAC_CAMEROON_MILESTONE, BAC_FRANCE_MILESTONE];
 
@@ -1096,6 +1146,7 @@ const CERTIFICATES: readonly CertificateCondition[] = [
   UNIVERSITY_SHOWN_MILESTONE,
   UNIVERSITY_YEAR_MILESTONE,
   UNIVERSITY_GRADE_MILESTONE,
+  ECOLEDIRECTE_MILESTONE,
 ];
 
 export function certificateOf(condition: Condition | undefined): CertificateCondition | undefined {

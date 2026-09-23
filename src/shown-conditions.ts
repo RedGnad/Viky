@@ -7,6 +7,7 @@ import { loadPortal, type Portal } from "./portal-store";
 import { TOEFL_RECLAIM_PROVIDER, TOEFL_SHOWN_SUBJECT, toeflScoreOf, toeflShownProviderId } from "./toefl-shown";
 import { EXAM_NOT_REGISTERED, EXAM_PROVIDERS, examProviderId, examSubject, readBacPassed, readCambridge, readIelts, type ExamId } from "./exam-shown";
 import { readUdemyCourse, UDEMY_LOGIN_URL, UDEMY_NOT_REGISTERED, UDEMY_PROVIDER, udemyProviderId, udemySubject } from "./udemy-shown";
+import { ECOLEDIRECTE_NOT_REGISTERED, ECOLEDIRECTE_PROVIDER, ECOLEDIRECTE_SUBJECT, ecoleDirecteProviderId, readSchoolAverage } from "./school-shown";
 import {
   enrolledBy,
   gradeShownBy,
@@ -277,6 +278,23 @@ export const UDEMY_SHOWN: ShownEntry = {
   },
 };
 
+/** An average at school, shown from the person's own EcoleDirecte account (D179): the TOEFL's shape with a provider of ours to come. */
+export const ECOLEDIRECTE_SHOWN: ShownEntry = {
+  kind: "milestone",
+  subject: ECOLEDIRECTE_SUBJECT,
+  ...(ECOLEDIRECTE_PROVIDER ? {} : { notRegistered: ECOLEDIRECTE_NOT_REGISTERED }),
+  condition: {
+    conditionId: "ecoledirecte-grade-shown",
+    providerId: ECOLEDIRECTE_PROVIDER?.id ?? "",
+    providerVersion: ECOLEDIRECTE_PROVIDER?.version ?? "",
+    requestHashes: ECOLEDIRECTE_PROVIDER ? [ECOLEDIRECTE_PROVIDER.requestHash] : [],
+    proofCount: 1,
+    phases: ["reach"],
+    attestationProviderId: ecoleDirecteProviderId(),
+    read: (fields) => readingOf(readSchoolAverage(fields)),
+  },
+};
+
 export const SHOWN_CONDITIONS: readonly ShownEntry[] = [
   DUOLINGO_SHOWN,
   TOEFL_SHOWN,
@@ -289,6 +307,7 @@ export const SHOWN_CONDITIONS: readonly ShownEntry[] = [
   UNIVERSITY_SHOWN,
   UNIVERSITY_YEAR_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
+  ECOLEDIRECTE_SHOWN,
 ];
 
 export function shownConditionById(conditionId: string): ShownEntry | undefined {

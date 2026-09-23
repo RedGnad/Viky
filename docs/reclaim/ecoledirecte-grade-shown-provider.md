@@ -1,0 +1,69 @@
+# Our EcoleDirecte provider: the overall average on the pupil's own account, shown (D179)
+
+No provider of the Reclaim directory reads EcoleDirecte (the directory searched by its API on 23 Sep 2026: nothing).
+So this one is ours, registered on the Reclaim dashboard from a real pupil's or family's session: nothing below has
+been captured yet, every field is **to confirm**, and the code reads `average` and nothing else (`readSchoolAverage`
+in `src/school-shown.ts`).
+
+## The page, and who signs in
+
+- Sign-in: `https://www.ecoledirecte.com/login`, "Identifiant" and "Mot de passe" (read 23 Sep 2026; the site said
+  "Ce site est actuellement fermé" that night, which its own words attribute to hours the school sets). The pupil's
+  own account, or the family's, typed in the verification tab, in their own browser; nothing reaches Viky. A family
+  account answers for several pupils: the one the gift is for is the one shown, to confirm from a real session.
+- The page after sign-in: the grades ("Notes"), with the overall average of the period. The application talks to
+  `api.ecoledirecte.com` (the "Mot de passe oublié" link points there); the request the grades page makes and the
+  field that carries the overall average are what the provider pins.
+
+## What is extracted
+
+| field, as the row names it | what it is | to confirm |
+|---|---|---|
+| `average` | the overall average out of 20, "14,50" as EcoleDirecte prints it, carried in hundredths | the request and the JSON path; which period's average it is (the current term, or the year) |
+| `period` | the term the average is for | not read tonight; the day it is shown is the event, and the funder's window bounds it |
+
+## The definition to register (to confirm on a real account)
+
+```json
+{
+  "name": "EcoleDirecte, the overall average (Viky)",
+  "loginUrl": "https://www.ecoledirecte.com/login",
+  "verificationType": "WITNESS",
+  "requestData": [
+    {
+      "url": "to confirm: the request the grades page makes to api.ecoledirecte.com once signed in",
+      "method": "to confirm (EcoleDirecte's API answers POST requests)",
+      "responseMatches": [{ "type": "contains", "value": "to confirm: the overall average as the answer prints it, {{average}}" }],
+      "responseRedactions": [{ "jsonPath": "to confirm", "regex": "to confirm" }]
+    }
+  ]
+}
+```
+
+Once published: the provider id, its version and the hash of its one request go into `ECOLEDIRECTE_PROVIDER`
+(`src/school-shown.ts`).
+
+## The terms, as read on 23 Sep 2026
+
+Aplim, the publisher and host, "Dispositions générales applicables EcoleDirecte" (aplim.fr/Mobile) and the privacy
+policy of "Mon EcoleDirecte" (aplim.fr/privacy): "EcoleDirecte ne collecte aucune donnée personnelle directement sur le
+site Internet et l'application mobile", the school is "seul responsable de la tenue et de la saisie des informations
+présentes", "Le détenteur d'un mot de passe ne peut accéder qu'aux seules informations le concernant lui ou les
+personnes dont il est responsable juridiquement", and Aplim "s'engage dans tous les cas à ne pas utiliser, louer,
+vendre, céder ou mettre à disposition d'un tiers à fin d'autres usages le contenu du présent site Internet et de
+l'application mobile". No clause names automated access, robots, scraping or a program. The "Mentions légales" button
+of the sign-in page opens inside the application and could not be read from outside a session. What Viky does: the
+pupil, or the family, signs in themselves, in their own browser, to the information about themselves, and a witness in
+a TEE attests the one response; Viky keeps the average it carries with the gift. The school, as the data controller,
+is not asked: that is written on the judges' page, and it is the founder's call before the line opens.
+
+## PRONOTE, read the same day and not built
+
+Index Education, "Mentions légales et Conditions Générales d'Utilisation" (index-education.com/fr/mentions-legales.php),
+"Utilisation de nos sites": users commit not to "Utiliser des dispositifs, programmes ou autres méthodes pour accéder,
+acquérir ou surveiller tout ou partie de nos sites" and not to "Utiliser tout dispositif manuel ou automatique
+permettant toute récupération de données sans notre autorisation expresse écrite". The PRONOTE spaces are served from
+index-education.net, Index Education's own hosting (the demonstration space, read the same day, signs the pupil in with
+an identifier the school gives and a password, and its "Mentions légales" button opens inside the application). A
+verification tab is a device retrieving data, and no written authorisation exists: PRONOTE is not built, and reopens
+only with Index Education's written authorisation, or terms that allow it.

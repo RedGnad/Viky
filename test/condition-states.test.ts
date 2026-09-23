@@ -69,7 +69,7 @@ test("what nobody can check is listed with what was read, and it is not pretende
   assert.deepEqual(FRONTIERS.map((frontier) => frontier.id), ["supervised-exams", "university-enrolment", "state-diplomas", "school-marks"]);
   // Each line says whether the other reading is being built for it (D163): the exams and enrolment (D165), and only they, today.
   for (const frontier of FRONTIERS) assert.ok(frontier.building === null || /\.$/.test(frontier.building), `${frontier.id} says it in a sentence`);
-  assert.deepEqual(FRONTIERS.filter((frontier) => frontier.building).map((frontier) => frontier.id), ["supervised-exams", "university-enrolment", "state-diplomas"]);
+  assert.deepEqual(FRONTIERS.filter((frontier) => frontier.building).map((frontier) => frontier.id), ["supervised-exams", "university-enrolment", "state-diplomas", "school-marks"]);
   for (const frontier of FRONTIERS.filter((frontier) => frontier.building)) assert.match(String(frontier.building), /SHOWN BY THEM/, `${frontier.id} names the two words the condition will carry`);
   assert.match(stateWords("no-public-page").meaning, /^No public page shows it\. The person can show it from their own account, and Viky is building that\.$/);
   // Each line rests on a page read on a day, and the two read from a source's own site say which day.
@@ -94,8 +94,9 @@ test("the page lists every condition the register holds, offered or not, by fami
   // passed and the grade (D174) under Study.
   assert.deepEqual(
     sections.flatMap((section) => section.building).map((condition) => condition.id),
-    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-year-passed-shown", "university-grade-shown"],
+    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown"],
   );
+  assert.deepEqual(sections.find((section) => section.family === "school")?.building.map((condition) => condition.id), ["ecoledirecte-grade-shown"], "the family School, for its one line being built (D179)");
   assert.deepEqual(sections.find((section) => section.family === "course")?.building.map((condition) => condition.id), ["udemy-course-shown"], "beside the Coursera certificate (D178)");
   assert.deepEqual(sections.find((section) => section.family === "exam")?.conditions, [], "a family with only lines being built is on the page for them");
   assert.deepEqual(sections.find((section) => section.family === "study")?.building.map((condition) => condition.family), ["study", "study"]);
@@ -150,7 +151,7 @@ test("every condition says its nature, and every one of the pilot is read for th
   // What is being built lives beside the register, resolvable by id and offered to an operator alone (D164, D165, D174, D176).
   assert.deepEqual(
     BUILDING.map((condition) => condition.id),
-    ["toefl-mybest-shown", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown"],
+    ["toefl-mybest-shown", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown"],
   );
   for (const id of BUILDING.map((condition) => condition.id)) {
     const shown = conditionById(id);
@@ -171,5 +172,5 @@ test("every condition says its nature, and every one of the pilot is read for th
     if (!frontier.building) assert.equal(frontier.conditionId, undefined, `${frontier.id} names a line and says nothing is being built`);
   }
   const printed = new Set(catalogueSections().flatMap((section) => section.building).map((condition) => condition.id));
-  for (const id of ["bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown"]) assert.ok(printed.has(id), `${id} prints under its family, since no frontier line names it`);
+  for (const id of ["bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "ecoledirecte-grade-shown"]) assert.ok(printed.has(id), `${id} prints under its family, since no frontier line names it`);
 });

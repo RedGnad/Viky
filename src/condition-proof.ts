@@ -165,6 +165,15 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     sourcePolicing: "Each university polices its own exams and publishes the grade on its own portal: the page carries what the jury recorded. What a portal's terms say about a program reading its pages is not read portal by portal (the judges' page says so), and a portal that changes its results page stops proving until its row is proved again.",
   },
   {
+    conditionId: "ecoledirecte-grade-shown",
+    supervised: false,
+    inShort: "Shown by them: the overall average on their own EcoleDirecte account, out of 20. Who did the work is not read.",
+    data: "The grades page of the pupil's own EcoleDirecte account, or the family's, shown by them in a Reclaim verification: one request to EcoleDirecte's own servers, attested by a witness in a TEE, and one field, the overall average out of 20, carried in hundredths. No grade, no remark, no name; the password never reaches Viky. The provider is ours, registered from a real pupil's session, and nothing is read until it exists.",
+    account: "The link is the EcoleDirecte account the person signs in to, in their own browser, and the gift's own recipient, which the contract checks. A family account shows the pupils the family answers for, so a family with several pupils shows the one the gift is for: the subject the funder signs is the same for every gift on this condition, and that is written down rather than dressed up.",
+    whoActed: "Unknown. Signing in to the account is one person's act, and nothing says who did the work the average rewards.",
+    sourcePolicing: "The school records the grades and answers for them; EcoleDirecte's publisher, Aplim, hosts them. Aplim's terms (read 23 Sep 2026) say the holder of a password reaches only the information about themselves or those they answer for, and name no program; PRONOTE, the other portal read, is not built, its publisher's terms forbidding any device retrieving data from its sites without its written authorisation, and the judges' page says so.",
+  },
+  {
     conditionId: "coursera-certificate",
     supervised: false,
     inShort: "Read from the certificate's public page. Coursera checks identity once, not each piece of work.",

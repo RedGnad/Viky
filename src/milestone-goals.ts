@@ -9,6 +9,7 @@ import { UNIVERSITY_GOAL_TYPE, UNIVERSITY_GRADE_GOAL_TYPE, UNIVERSITY_YEAR_GOAL_
 import { TOEFL_GOAL_TYPE, toeflShownProviderId } from "./toefl-shown";
 import { EXAM_GOAL_TYPES, EXAM_IDS, examProviderId } from "./exam-shown";
 import { UDEMY_GOAL_TYPE, udemyProviderId } from "./udemy-shown";
+import { ECOLEDIRECTE_GOAL_TYPE, ecoleDirecteProviderId } from "./school-shown";
 
 /**
  * Every goal the milestone contract knows, in one list (U3, 18 Sep 2026).
@@ -74,6 +75,8 @@ export const MILESTONE_GOALS: readonly MilestoneGoal[] = [
   ...EXAM_IDS.map((id) => ({ goalType: EXAM_GOAL_TYPES[id], providerId: examProviderId(id), shape: SHAPE_HAVE_OR_NOT, source: "an examining body's own results page", detail: `${id.replace(/-shown$/, "").replace(/-/g, " ")}, shown` })),
   // A Udemy course finished, shown from the person's own account (D178): had or not, the course in the subject.
   { goalType: UDEMY_GOAL_TYPE, providerId: udemyProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Udemy", detail: "a course finished, shown" },
+  // An average at school, shown from the pupil's own EcoleDirecte account (D179): had or not, compared in hundredths.
+  { goalType: ECOLEDIRECTE_GOAL_TYPE, providerId: ecoleDirecteProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "EcoleDirecte", detail: "an average at school, shown" },
 ];
 
 export function milestoneGoal(goalType: number): MilestoneGoal | undefined {

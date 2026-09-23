@@ -4925,3 +4925,32 @@ The founder's plan, the family "Finish a course": Udemy, a course finished, show
 - **What is verified, and what waits.** The links and slugs, the subjects, the reading (`OTHER_COURSE`,
   `NOT_FINISHED`, "Finished"), the goal, the register, the door, the refusal before any fetch, the column against a
   real Postgres. No provider registered, no proof shown, no goal signed.
+
+## D179, 23 Sep 2026: an average at school shown from EcoleDirecte, the family "School"; PRONOTE is not offered
+
+The founder's plan, the family "School", new if the terms allow it: PRONOTE and EcoleDirecte, a grade or an average
+from the pupil's or the family's account, the terms first, had or not with a target.
+
+- **The terms, read before any line.** Aplim, EcoleDirecte's publisher and host ("Dispositions générales applicables
+  EcoleDirecte", the privacy policy of "Mon EcoleDirecte", read 23 Sep 2026): the holder of a password reaches only
+  the information about themselves or those they answer for; the school alone answers for the information; Aplim
+  makes the site's content available to no third party; no clause names a program. Index Education, PRONOTE's
+  publisher ("Mentions légales et Conditions Générales d'Utilisation", the same day): users commit not to "Utiliser
+  tout dispositif manuel ou automatique permettant toute récupération de données sans notre autorisation expresse
+  écrite" on its sites, and the spaces are served from its own hosting (index-education.net). The first allows a
+  person reading their own page in their own browser; the second forbids any device retrieving data without written
+  authorisation, which a verification tab is.
+- **Decision.** EcoleDirecte is built up to the provider: `ecoledirecte-grade-shown`, "Reach an average at school,
+  shown", family "School", `BUILDING`, offered to an operator alone, the target typed out of 20 with decimals and
+  signed in hundredths as the university grade is (D174), the scale fixed rather than declared on a row, the subject
+  constant per condition, goal 23 in the night's Safe session, the provider ours and empty until registered from a
+  real pupil's session (`docs/reclaim/ecoledirecte-grade-shown-provider.md`). PRONOTE is not offered and not built:
+  no condition, no goal; the frontier's line on school marks now says which of the two is being built and why the
+  other is not, in the publisher's own words. It reopens only with Index Education's written authorisation, or terms
+  that allow it. Whether the school, as the data controller, should be asked before the EcoleDirecte line opens is
+  written on the judges' page and left to the founder.
+- **What crossed the frontier, said in the PR.** `/api/conditions` (the door), the judges' page (one bullet). The
+  create route needs nothing new: `notOpen` and `targetUnits` are the university grade's.
+- **What is verified, and what waits.** The scale and the units, the reading (`NO_GRADE`, "14.50 / 20"), the goal,
+  the register, the door, the refusal before any fetch, the frontier's words. No provider registered, no proof
+  shown, no goal signed.

@@ -406,10 +406,11 @@ portal's row (`results.grade.scale`) and never on the chain: a page is read on i
 
 ## The night's goals, 17 to 21: the examination results shown, one Safe session at the end (D176)
 
-Six goals on `MilestoneGift` (`0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e`): one per examination result shown from
-the person's own account (D176), shape "having it or not", the subject constant per condition as the TOEFL's is, and
-one for a Udemy course finished, shown (D178), whose subject is the course. None is signed tonight: the founder asked
-for one Safe session at the end of the night, and this table is that session. `pnpm check:milestone-goals` reads 17 to 22 as `missing` on
+Seven goals on `MilestoneGift` (`0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e`): one per examination result shown from
+the person's own account (D176), shape "having it or not", the subject constant per condition as the TOEFL's is, one
+for a Udemy course finished, shown (D178), whose subject is the course, and one for an average at school shown from
+EcoleDirecte (D179), compared in hundredths. None is signed tonight: the founder asked
+for one Safe session at the end of the night, and this table is that session. `pnpm check:milestone-goals` reads 17 to 23 as `missing` on
 23 Sep 2026. The calldata is `registerGoal(goal, providerId, 1)`, the gas is that of goals 13 and 14 (102,125), and the
 nonces follow goals 15 and 16 (7 and 8), each after the one before is final:
 
@@ -421,6 +422,7 @@ nonces follow goals 15 and 16 (7 and 8), each after the one before is final:
 | 20 | the baccalauréat passed, Cameroon | `viky:provider:bac-cameroon-shown:v1` = `0xfbe2ded9e4a8f17b37264a214589a09e1d75873fc65a9d56f5fd5683773901f3` | `0x5ba191520000000000000000000000000000000000000000000000000000000000000014fbe2ded9e4a8f17b37264a214589a09e1d75873fc65a9d56f5fd5683773901f30000000000000000000000000000000000000000000000000000000000000001` | 12 |
 | 21 | the baccalauréat passed, France | `viky:provider:bac-france-shown:v1` = `0xa7afea17b0c985d7e53416eacc72d8b95347b97b97875df6f44025badcb59cca` | `0x5ba191520000000000000000000000000000000000000000000000000000000000000015a7afea17b0c985d7e53416eacc72d8b95347b97b97875df6f44025badcb59cca0000000000000000000000000000000000000000000000000000000000000001` | 13 |
 | 22 | a Udemy course finished, shown (D178) | `viky:provider:udemy-course-shown:v1` = `0xf0da5b726f28cf4bc8bef5c1a8d7976a7d5a208e258b3ee9897e7ddd534e5fdd` | `0x5ba191520000000000000000000000000000000000000000000000000000000000000016f0da5b726f28cf4bc8bef5c1a8d7976a7d5a208e258b3ee9897e7ddd534e5fdd0000000000000000000000000000000000000000000000000000000000000001` | 14 |
+| 23 | an average at school, shown from EcoleDirecte (D179) | `viky:provider:ecoledirecte-grade-shown:v1` = `0x1ec1d1c1bce9830ac7610d6c9f0ff214b5f350dd51b111b14cbadc2dda89c4ed` | `0x5ba1915200000000000000000000000000000000000000000000000000000000000000171ec1d1c1bce9830ac7610d6c9f0ff214b5f350dd51b111b14cbadc2dda89c4ed0000000000000000000000000000000000000000000000000000000000000001` | 15 |
 
 The session is the one of goals 14, 15 and 16: `ACTION=raw TO=0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e DATA=<data>
 NONCE=<nonce> pnpm safe:action` prints `signThis`, two owners sign it, `SIGNATURES=… SEND=1
@@ -793,6 +795,7 @@ as the owner, after the handover of `GiftEscrow`.
 | 16 | a university's student portal, a grade reached and shown, in hundredths (D174) | having it or not | to register in the same session, nonce 8; "Being built" likewise |
 | 17 to 21 | the examination results shown from the person's own account: Cambridge English, IELTS, the baccalauréat in Morocco, Cameroon and France (D176) | having it or not | to register in one Safe session at the end of the night, nonces 9 to 13 (the section "The night's goals" above); each line waits for a provider of ours registered from a real candidate's session |
 | 22 | a Udemy course finished, shown from the person's own account (D178) | having it or not | the same session, nonce 14; waits for a provider of ours registered from a real Udemy account |
+| 23 | an average at school, shown from the pupil's own EcoleDirecte account, in hundredths (D179) | having it or not | the same session, nonce 15; waits for a provider of ours registered from a real EcoleDirecte account |
 
 The daily contract has its own goals, under `GiftEscrow`'s two-argument `registerGoal(goalType, providerId)`:
 

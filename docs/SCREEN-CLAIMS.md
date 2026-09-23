@@ -227,6 +227,20 @@ provider of ours is registered from a real account and pinned.
 | "Show it" on a Udemy gift: "Showing a proof is not open yet. Nothing was changed." | no provider is registered, so the refusal is by name before any fetch | `UDEMY_PROVIDER` null, `notRegistered`, `missing: NOT_CONFIGURED` | `test/udemy-shown.test.ts` |
 | on the judges page, "Udemy's terms": scraping, robots and automated means forbidden, credentials never shared, the certificate page not read | only what was read is claimed, and why nothing is read for the person | `app/judges/page.tsx`; `docs/reclaim/udemy-course-shown-provider.md` | none: a sentence read against the page by hand |
 
+### An average at school, shown from the pupil's own EcoleDirecte account, offered to an operator alone (D179)
+
+`src/conditions.ts` (`BUILDING`, family "School"), `src/school-shown.ts`, `src/milestone-conditions.ts`
+(`ECOLEDIRECTE_MILESTONE`), `src/shown-conditions.ts` (`ECOLEDIRECTE_SHOWN`), `docs/reclaim/ecoledirecte-grade-shown-provider.md`.
+Not in the register, on the public page under "School" with "Being built.", offered on the chooser to an account that
+runs Viky and to nobody else, creatable by nobody until a provider of ours is registered from a real account.
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "Reach an average at school, shown", SHOWN BY THEM, under "School" on the chooser of an operator, and "Being built." on the public page; on the school marks' frontier line, "Being built: an average shown by the pupil or the family from their own EcoleDirecte account … not PRONOTE, whose publisher forbids any device retrieving data from its sites without its written authorisation." | nobody but an operator is offered it, no gift can be made until its provider exists, and the line about PRONOTE is its publisher's own clause | `BUILDING`, `WIRED_NOT_LIVE`, `notOpen` (`NOT_CONFIGURED`, 503), the `school-marks` line of `FRONTIERS` | `test/school-shown.test.ts`, `test/condition-states.test.ts`, `test/condition-families.test.ts`, `test/browser/nature.spec.ts` (four "Being built: ", no "Not being built.") |
+| "The average to reach", "Out of 20, with a dot for decimals: 12.5, or 14.", "Reach an average of 12.50 / 20 at school" on the check screen, and "That average is 11.75 / 20. This gift is for 12.50 / 20." | the scale is the one of French schools, fixed, out of 20 in hundredths; the target is typed with decimals and signed in hundredths on both sides | `SCHOOL_SCALE`, `isValidSchoolTarget`, `gradeUnits` as `targetUnits`, `schoolGradeInWords`; `target.step` 0.01 so the draft takes 12.5 | `test/school-shown.test.ts` |
+| "Show it" on such a gift: "Showing a proof is not open yet. Nothing was changed."; once a provider exists, "Shown: 14.50 / 20. It is yours." | no provider is registered, so the refusal is by name before any fetch; the words are the reading's own | `ECOLEDIRECTE_PROVIDER` null, `notRegistered`; `readSchoolAverage` on `average` (`NO_GRADE`), `inWords` | `test/school-shown.test.ts` |
+| on the judges page, "School portals' terms": EcoleDirecte's clauses, PRONOTE's clause and why it is not built | only what was read is claimed | `app/judges/page.tsx`; the provider's definition | none: sentences read against the pages by hand |
+
 ### Staying enrolled at their university, offered to an operator alone (D165)
 
 `src/conditions.ts` (`BUILDING`, the `university-enrolment` line of `FRONTIERS`), `src/milestone-conditions.ts`

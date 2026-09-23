@@ -187,6 +187,16 @@ export default function JudgesPage() {
             written here rather than decided: the founder&apos;s call before the line opens.
           </li>
           <li>
+            <strong>School portals&apos; terms.</strong> An average at school is shown by the pupil, or the family,
+            from their own EcoleDirecte account (D179). Aplim, its publisher and host, says (read 23 Sep 2026) that
+            the holder of a password reaches only the information about themselves or those they answer for, that the
+            school alone answers for the information, and that Aplim makes the site&apos;s content available to no third
+            party; no clause names a program, and the school is not asked. PRONOTE is not built: Index Education&apos;s
+            terms for its sites forbid &quot;tout dispositif manuel ou automatique permettant toute récupération de
+            données sans notre autorisation expresse écrite&quot;, the spaces are served from its own hosting, and no
+            such authorisation exists. It reopens only with one.
+          </li>
+          <li>
             <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:
             Coursera verifies identity once per account, and says some programmes require it while others only check a
             name. That condition is not open yet, and this is what it will prove when it is.
