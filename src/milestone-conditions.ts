@@ -1,9 +1,11 @@
+import { UNVERIFIED_PORTAL } from "./sentences";
 import type { Hex } from "viem";
 import {
   gradeTargetProblem,
   gradeUnits,
   isGradeShape,
   isPortalId,
+  UNVERIFIED_MARK,
   NO_RESULTS_PAGE,
   type ResultsExtract,
   UNIVERSITY_DURATION_DAYS,
@@ -674,8 +676,18 @@ const UNIVERSITY_COURSE: NonNullable<CertificateCondition["course"]> = {
     nothing: "Viky has proved no student portal by those words yet. The list grows one university at a time, with a student present.",
   },
   row: "Which university",
-  named: (course) => `This gift will be for ${course}.`,
+  named: (course) => universityNamed("", course),
 };
+
+/**
+ * The sentence under the chosen university, before the funder pays. A portal defined from its public pages carries
+ * the unverified mark in its title (D193), and then the funder is also told, honestly, that nobody has shown a proof
+ * from it yet and what happens if it cannot be read (D195). Creation is not refused.
+ */
+export function universityNamed(what: string, course: string): string {
+  const named = `This gift will be for ${what}${course}.`;
+  return course.includes(UNVERIFIED_MARK) ? `${named} ${UNVERIFIED_PORTAL}` : named;
+}
 
 /**
  * Staying enrolled, shown from the person's own student portal (D165). The certificate shape with no name asked:
@@ -694,7 +706,7 @@ export const UNIVERSITY_SHOWN_MILESTONE: CertificateCondition = {
   subject: ({ course }) => universitySubject(String(course ?? "")),
   // Any proved portal takes a gift on enrolment: that is what proving it means.
   portal: { refuses: () => undefined },
-  course: { ...UNIVERSITY_COURSE, named: (course) => `This gift will be for staying enrolled at ${course}.` },
+  course: { ...UNIVERSITY_COURSE, named: (course) => universityNamed("staying enrolled at ", course) },
   target: {
     label: "What has to be shown",
     help: "Enrolled or not: there is nothing to choose here.",
@@ -754,7 +766,7 @@ export const UNIVERSITY_YEAR_MILESTONE: CertificateCondition = {
   validTarget: (value) => value === UNIVERSITY_PASSED,
   subject: ({ course }) => universityYearSubject(String(course ?? "")),
   portal: { refuses: (portal) => (portal.results ? undefined : NO_RESULTS_PAGE) },
-  course: { ...UNIVERSITY_COURSE, named: (course) => `This gift will be for passing the year at ${course}.` },
+  course: { ...UNIVERSITY_COURSE, named: (course) => universityNamed("passing the year at ", course) },
   target: {
     label: "What has to be shown",
     help: "Passed or not: there is nothing to choose here.",
@@ -817,7 +829,7 @@ export const UNIVERSITY_GRADE_MILESTONE: CertificateCondition = {
   targetUnits: gradeUnits,
   subject: ({ course }) => universityGradeSubject(String(course ?? "")),
   portal: { refuses: (portal, target) => (portal.results ? gradeTargetProblem(portal.results.grade.scale, target) : NO_RESULTS_PAGE) },
-  course: { ...UNIVERSITY_COURSE, named: (course) => `This gift will be for a grade at ${course}.` },
+  course: { ...UNIVERSITY_COURSE, named: (course) => universityNamed("a grade at ", course) },
   target: {
     label: "The grade they reach",
     help: "On the university's own scale, with a dot for decimals: 14.5 out of 20, or 3.5 for a GPA out of 4. A grade off that scale is refused when the gift is made.",

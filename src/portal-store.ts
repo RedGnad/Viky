@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { databaseUrl } from "./database-guard";
 import type { SqlExecutor } from "./proof-session-store";
-import { countryInWords, isPortalId, resultsProblem, type PortalExtract, type ResultsExtract } from "./university-shown";
+import { countryInWords, isPortalId, resultsProblem, UNVERIFIED_MARK, type PortalExtract, type ResultsExtract } from "./university-shown";
 
 /**
  * The student portals Viky has proved, one row each (D165). Not the 11,882 shells of the Reclaim directory: a row is
@@ -220,7 +220,7 @@ export async function searchPortals(words: string): Promise<readonly Portal[]> {
  */
 export function portalFound(portal: Portal): Readonly<{ pair: string; title: string; issuer: string; path: string }> {
   // A row defined from public pages says so on the line the funder presses (D193), until a student's session confirms it.
-  return { pair: portal.portalId, title: portal.unverified ? `${portal.university} (unverified)` : portal.university, issuer: countryInWords(portal.country), path: "" };
+  return { pair: portal.portalId, title: portal.unverified ? `${portal.university}${UNVERIFIED_MARK}` : portal.university, issuer: countryInWords(portal.country), path: "" };
 }
 
 export async function countPortals(): Promise<number> {

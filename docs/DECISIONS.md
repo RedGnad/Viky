@@ -5389,3 +5389,12 @@ signatures, and write why this delegate call is accepted when 20 Sep avoided one
 - **Why accepted.** Written in OPERATIONS: Safe's own library, checked byte for byte each time, the call-only variant,
   no storage and no owner in it, atomic, rehearsed; against eleven sittings of the same keys. No technical reason
   forbade it. The eleven single hashes remain the fallback, by `pnpm safe:action`.
+
+## D195, 23 Sep 2026: an unverified portal does not refuse the gift; the funder reads why before paying
+
+A default applied by the founder on the remark of the fourth developer: a portal row marked unverified (D193) does
+not refuse creation. Where the university is chosen, before paying, the funder reads the sentence under it, the
+founder's own words: "Nobody has shown a proof from this university yet. If it cannot be read, your money comes back
+to you at the deadline." It passes the consumer words check (the register file is scanned, and the test scans the
+sentence as printed). It is true of the contract: a gift never proved returns whole to the funder at the deadline.
+The sentence goes when the row is written again from a student's session, since the mark goes with it.
