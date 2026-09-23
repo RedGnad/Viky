@@ -176,7 +176,7 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
   {
     conditionId: "fitbit-daily",
     supervised: false,
-    inShort: "Connected by them: Google Health is asked each morning whether yesterday's Fitbit or Pixel Watch reached the minutes. A yes or a no, and no number.",
+    inShort: "Connected by them: each morning, whether yesterday's Fitbit reached the minutes. A yes or a no, and no number.",
     data: "The Google Health API's own daily roll-up of active minutes (`dailyRollUp` on `active-minutes`, the successor of the Fitbit Web API), read each morning through an attested fetch with the person's own key handed to the fetch as a secret the attestor never sees: the reading is signed by Reclaim's attestor, and Viky checks that signature and the request it was about, its body included. Only minutes recorded by Google's and Fitbit's own wearables are asked for, not minutes logged by hand; what is read is the moderate and vigorous minutes of the day; what is signed for the contract is the verdict alone, so the chain and the journal hold a yes or a no and never a number of the person's. The roll-up is judged and dropped: no proof of it is stored.",
     account: "The person connects their own Google account once, on Google's own page, in their own browser, after the consent screen says in Viky's words what the funder will be told and what they will never see. The pseudonym of that account's Google Health user id is bound at the first reading, and a key Google stops honouring ends the reading until the person connects again; disconnect and erase is theirs at any time, and gives the key back to Google first.",
     whoActed: "Unknown: the roll-up says what the account's tracker recorded, never who wore it. Google describes no check of who moves.",
@@ -185,7 +185,7 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
   {
     conditionId: "strava-daily",
     supervised: false,
-    inShort: "Connected by them: Strava is asked each morning whether yesterday's activities added up to the kilometres. A yes or a no, and no number.",
+    inShort: "Connected by them: each morning, whether yesterday's Strava activities reached the kilometres. A yes or a no, no number.",
     data: "Strava's own API, the list of the day's activities, read each morning through an attested fetch with the person's own key handed to the fetch as a secret the attestor never sees: the reading is signed by Reclaim's attestor and Viky adds the distances, judges the day and drops the list, its routes and its times with it. What reaches the contract is the verdict, never a number of the person's.",
     account: "The person connects their own Strava account once, on Strava's own page, in their own browser, after the consent screen says in Viky's words what the funder will be told and what they will never see; Strava sends back what they allowed, and without the activities nothing is kept. The pseudonym of that account's athlete id is bound on the chain by the first reading, so another account cannot count for this gift, and the contract checks the recipient.",
     whoActed: "Unknown: the list says what the account recorded, never who carried the phone or the watch, and an activity can be entered by hand. Strava describes no check of who moves.",

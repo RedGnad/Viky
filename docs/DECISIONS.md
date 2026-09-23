@@ -5568,3 +5568,25 @@ of Rome (unverified)", Italy.
   "A TOEFL score, shown" is; the line under it is shortened to the chooser's hundred and sixty; the card's sentence
   reads "Opened. Nothing shown yet from their university." from the register's source word.
 - **Not opened.** The year passed and a grade reached: the row holds no results page (`NO_RESULTS_PAGE`, by name).
+
+## D201, 23 Sep 2026: Fitbit and Strava open, the reading service running their sources
+
+The founder, 23 Sep 2026: redeploy the reading service from PR #166, merge it only when `/health` answers its number,
+then open Fitbit and Strava.
+
+- **The redeploy.** From `catalogue/fitbit-source`, rebased on main (the two fingerprinted files unchanged on main,
+  the number unchanged), a clean tree, the full local pass run on that commit, then `railway link -p viky -s
+  zkfetch-worker -e production` and `railway up --ci`. `/health` answered
+  `0x1dbac43b34f0e5162fa3d22d87346e3e7821d8e81ad3c4c6fc038f61cdc36008` at 20:29 UTC; #166 merged after that, and
+  production served its commit.
+- **Opened.** `FITBIT_DAILY` and `STRAVA_DAILY` join the register, `live: true`, `state: "open"`: the five variables
+  set on Vercel (`CONNECT_TOKEN_KEY` generated in the pipe, never shown; `GOOGLE_HEALTH_*` by the founder;
+  `STRAVA_CLIENT_ID` 265669 and its secret, checked against Strava's token endpoint with a fake code before being
+  set), `viky_connections` migrated, goals 6 and 4 registered, the service running both sources, Strava's callback
+  domain set to viky.cash. The rule of D184.
+- **Words the chooser holds.** Fitbit's name is "Active minutes a day, Fitbit" (thirty characters at most); both lines
+  under the option are shortened to the chooser's hundred and sixty, and their proof lines to a hundred and twenty.
+- **What is still true, and said.** No real connection has run on either. Strava's application is in single-player
+  mode until Strava raises the athlete limit, so only the founder's own Strava account can connect; Google's client
+  is published in production, so the seven-day lapse of testing mode does not apply, and past a hundred users
+  Google's verification does. Both are on the judges' page.

@@ -242,10 +242,9 @@ export default async function JudgesPage() {
             the person asked for, reach a third party only to provide it and with their consent, be preceded by a disclosure
             immediately before the consent, and be deleted on request: the consent screen in Viky&apos;s words, the yes or
             no the funder learns, and the erase button that gives the key back first. The risk: the funder&apos;s daily yes
-            or no is itself one bit about the person given to a third party, under the consent they gave. And the client is
-            in Google&apos;s testing mode until Google verifies it: a hundred people at most, and a connection that lapses
-            after seven days, so a person reconnects each week until then; more than a hundred needs Google&apos;s third
-            party security review (CASA).
+            or no is itself one bit about the person given to a third party, under the consent they gave. The client is
+            published in production, so a connection does not lapse each week; past a hundred people, Google&apos;s app
+            verification and its third party security review (CASA) apply.
           </li>
           <li>
             <strong>Strava&apos;s API Agreement, and the same risk.</strong> Kilometres each day on Strava is connected by
