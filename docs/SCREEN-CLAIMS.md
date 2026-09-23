@@ -215,6 +215,20 @@ runs Viky and to nobody else, until goal 2 is registered, the token is in place 
 | "Not enough yet for a full day. One more contribution and it counts." and "GitHub counts fewer contributions than last time: something was removed. Nothing was changed." | the contract's refusals are said about a contribution, not about a lesson | `CONTRACT_WORDS` in `src/github-checkin.ts` over the shared table | `test/github-checkin.test.ts` |
 | "Counting is not switched on yet." | the token is not where this runs, and an operator can read that as `github.configured: false` on `/api/conditions` | `githubConfigured()`, a boolean of the environment | `test/github-contributions.test.ts` |
 
+### A chess rating on Lichess, behind the door, not yet makeable (D168)
+
+`src/conditions.ts` (`LICHESS_RATING`, in `BUILDING`), `src/milestone-conditions.ts` (`LICHESS_MILESTONE`, `unread`),
+`src/lichess.ts` (the plain reading), `app/api/lichess/standing/route.ts`, `app/api/gift/milestone/create/route.ts`.
+Goals 6 to 9 are registered; the keeper's attested reading is not built, so the create route refuses a Lichess gift
+by name and the line is offered to an operator alone.
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "A chess rating on Lichess", READ FOR YOU, under "Play" on the chooser of an operator, with "offered to nobody else" | nobody but an operator sees it, and nobody at all can make a gift on it yet | `BUILDING`, `WIRED_NOT_LIVE`; `LICHESS_MILESTONE.unread` makes the create route answer `NOT_CONFIGURED` with "Viky cannot read Lichess for a gift yet, so no gift can be made on it. Nothing was taken." before anything is relayed | `test/conditions-route.test.ts`, `test/milestone-routes.test.ts`, `test/lichess.test.ts` |
+| "Which rating?": Bullet, Blitz, Rapid, Classical, each with Lichess's own length of game | the four cadences are Lichess's, on goals 6 to 9, each carrying the provider id the chain holds | `LICHESS_CADENCE_LINES`, `lichessGoalType`, `lichessProviderId`, pinned in `test/milestone-goals.test.ts` | `test/lichess.test.ts` |
+| "Today they are at 1718 in blitz." on the funder's step, or "Lichess still marks this rating provisional: they need a few more games first.", "They have no classical rating yet.", "No Lichess player goes by that name.", "Lichess has closed this account, or marked it for a violation of its terms, so nothing on it can be earned." | the number is Lichess's own for that cadence, settled is Lichess's own verdict (the question mark, deviation above 110), and a closed or marked account is refused before any money moves | `/api/lichess/standing` reads `lichess.org/api/user/<name>` plainly (`readLichessStanding`); `standingOfUser` reads `perfs.<cadence>`, `prov`, `disabled`, `tosViolation`; `LICHESS_PROVISIONAL_RD` from Lichess's FAQ | `test/lichess.test.ts` (the captured answer, provisional, never played, closed, every typed failure) |
+| no "Their best ever" line on Lichess | Lichess publishes no best ever, and the route answers `best: null` | the standing route | `test/lichess.test.ts` |
+
 ### A condition the person shows (D162)
 
 `app/kit/ShowProof.tsx` on a gift's page, and the head of that page in `app/components/GiftPage.tsx`. No condition

@@ -138,7 +138,7 @@ test("every condition says its nature, and every one of the pilot is read for th
   for (const condition of CONDITIONS) assert.ok(condition.nature === "read" || condition.nature === "shown", `${condition.id} has no nature`);
   assert.deepEqual(CONDITIONS.filter((condition) => condition.nature === "shown").map((condition) => condition.id), [], "no shown condition is in the register until a real proof has run end to end (D109, D164)");
   // What is being built lives beside the register, resolvable by id and offered to an operator alone (D164, D166).
-  assert.deepEqual(BUILDING.map((condition) => condition.id), ["toefl-mybest-shown", "university-enrollment-shown", "github-daily"]);
+  assert.deepEqual(BUILDING.map((condition) => condition.id), ["toefl-mybest-shown", "university-enrollment-shown", "github-daily", "lichess-rating"]);
   for (const condition of BUILDING) {
     const found = conditionById(condition.id);
     assert.equal(found, condition, `${condition.id} resolves by id`);
@@ -154,4 +154,8 @@ test("every condition says its nature, and every one of the pilot is read for th
   assert.equal(github?.nature, "read");
   assert.equal(github?.kind, "daily");
   assert.equal(github?.goalType, 2);
+  // The Lichess line is a milestone whose keeper's reading is not built: the create route refuses it by name (D168).
+  const lichess = BUILDING.find((condition) => condition.id === "lichess-rating");
+  assert.equal(lichess?.kind, "milestone");
+  assert.equal(lichess?.nature, "read");
 });

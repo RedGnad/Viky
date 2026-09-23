@@ -4,7 +4,7 @@ import { GITHUB_DAILY, liveConditions } from "@/src/conditions";
 import { isOperator } from "@/src/dev-access";
 import { NO_STORE } from "@/src/gift-api";
 import { githubConfigured } from "@/src/github-contributions";
-import { CHESS_MILESTONE, DET_MILESTONE, TOEFL_SHOWN_MILESTONE, UNIVERSITY_SHOWN_MILESTONE } from "@/src/milestone-conditions";
+import { CHESS_MILESTONE, DET_MILESTONE, LICHESS_MILESTONE, TOEFL_SHOWN_MILESTONE, UNIVERSITY_SHOWN_MILESTONE } from "@/src/milestone-conditions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  * has finished running, so this door holds whatever is still missing a piece: today the Duolingo English Test, whose
  * goal is not registered on the milestone contract yet.
  */
-const WIRED_NOT_LIVE = [CHESS_MILESTONE.condition, DET_MILESTONE.condition, TOEFL_SHOWN_MILESTONE.condition, UNIVERSITY_SHOWN_MILESTONE.condition, GITHUB_DAILY];
+const WIRED_NOT_LIVE = [CHESS_MILESTONE.condition, DET_MILESTONE.condition, TOEFL_SHOWN_MILESTONE.condition, UNIVERSITY_SHOWN_MILESTONE.condition, GITHUB_DAILY, LICHESS_MILESTONE.condition];
 
 export async function GET(request: Request) {
   let operator = false;

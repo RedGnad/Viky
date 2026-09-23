@@ -71,7 +71,7 @@ test("the goal is number 2 on the daily contract, its provider id pinned by name
   assert.equal(GOAL_TYPE_GITHUB_CONTRIBUTIONS, 2);
   assert.equal(GITHUB_DAILY.live, false, "not live until goal 2 is registered, the token is in place and a real gift has run");
   assert.equal(GITHUB_DAILY.reading, GITHUB_CALENDAR.id, "a reading on Viky's own word, listed as such");
-  assert.deepEqual(plainReadingIds(), ["github-calendar"], "and it is the only one");
+  assert.deepEqual(plainReadingIds(), ["github-calendar", "lichess-user"], "the two readings made on Viky's own word, and no other");
   assert.equal(GITHUB_CALENDAR.url, GITHUB_GRAPHQL_URL);
   assert.match(GITHUB_DAILY.help, /by Viky itself/, "the help sentence says no attestor stands behind the reading");
   assert.ok(GITHUB_DAILY.name.length <= 30);

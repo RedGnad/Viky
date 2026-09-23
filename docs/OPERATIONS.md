@@ -690,7 +690,7 @@ as the owner, after the handover of `GiftEscrow`.
 |---|---|---|---|
 | 1 to 4 | Chess.com, rapid, blitz, bullet, daily | climb | registered at deployment, 17 Sep 2026 |
 | 5 | Duolingo English Test, the overall score | having it or not | to register; the screens are built (U3), and the condition goes live the day it is registered (D109) |
-| 6 to 9 | Lichess, bullet, blitz, rapid, classical | climb | to register; nothing is offered on them yet, and the same rule applies the day they are |
+| 6 to 9 | Lichess, bullet, blitz, rapid, classical | climb | registered, read back `registered` by `pnpm check:milestone-goals` on 23 Sep 2026; the line is behind the door and refuses creation until the keeper's reading is built (D168) |
 | 10 to 13 | Coursera, Credly, Chess.com puzzles, ETS | see their rows | registered through the Safe, 20 and 23 Sep 2026 (the two sections above) |
 | 14 | a university's student portal, enrolled and shown (D165) | having it or not | to register; the call is under "Goal 14" above, and the condition stays "Being built" until a portal has been proved with a student present |
 

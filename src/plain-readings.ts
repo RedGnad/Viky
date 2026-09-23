@@ -1,4 +1,5 @@
 import { GITHUB_GRAPHQL_URL } from "./github-contributions";
+import { lichessUserUrl } from "./lichess";
 
 /**
  * The readings Viky makes on its own word (D166): no attestor and no proof, the evidence signer signing what Viky
@@ -23,7 +24,19 @@ export const GITHUB_CALENDAR: PlainReading = {
   why: "GitHub's contribution calendar answers only to a token, by POST, which the reading service cannot carry yet.",
 };
 
-const ALL: readonly PlainReading[] = [GITHUB_CALENDAR];
+/**
+ * A Lichess account, the one answer its API gives about a user (D168): read plainly for the funder's step today. The
+ * keeper's attested reading of it is not built: its sources would go into the fingerprinted list and need the
+ * reading service redeployed first, and until then no gift can be made on Lichess at all.
+ */
+export const LICHESS_USER: PlainReading = {
+  id: "lichess-user",
+  service: "Lichess",
+  url: lichessUserUrl("<name>"),
+  why: "Read plainly before any money moves; the attested reading waits for the reading service to carry its sources.",
+};
+
+const ALL: readonly PlainReading[] = [GITHUB_CALENDAR, LICHESS_USER];
 
 export function plainReadingIds(): readonly string[] {
   return ALL.map((reading) => reading.id);

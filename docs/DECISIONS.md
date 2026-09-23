@@ -4570,3 +4570,26 @@ its terms allow it; if not, say so and skip.
   freeCodeCamp publishes terms that allow a program to read a certificate, or answers in writing that Viky may.
 - **What it is not.** No claim that a freeCodeCamp certificate cannot be verified by a person: the page exists for
   that. The claim is that Viky may not read it for them.
+
+## D168, 23 Sep 2026: the Lichess line, in the register and behind the door, with its reading still to build
+
+The founder, 23 Sep 2026: the Lichess register entry and the chooser line, goals 6 to 9 being on the chain.
+
+- **What is in.** `lichess-rating`, the twin of the Chess.com rating: a milestone in the family "Play", the four
+  cadences by Lichess's own definitions on goals 6 to 9 (read back `registered` on 23 Sep 2026), the funder's step
+  reading where the player stands from the one answer Lichess's API gives about a user, with Lichess's own verdict on
+  whether the rating has settled (the question mark, a Glicko-2 deviation above 110, from their FAQ) and Lichess's
+  own marks on a closed or violating account (`disabled`, `tosViolation`), refused before any money moves. In
+  `BUILDING`, offered to an operator alone. The shape and its margins are Chess.com's, measured there and not on
+  Lichess; a first real gift is one of the things that will say whether they hold.
+- **What is not, and why the create route refuses.** The keeper's attested reading of Lichess is not built. Its
+  sources belong in the attested source list, which is fingerprinted with the reading service (OPERATIONS: a change
+  to that list is not merged until the service runs it), so it is a PR of its own, merged the day the service is
+  redeployed with it. Until then `LICHESS_MILESTONE.unread` makes the create route answer `NOT_CONFIGURED` by name:
+  the line can be seen behind the door and nothing can be made on it, because nothing could ever read it. The
+  reading the funder's step makes today is listed in `src/plain-readings.ts`.
+- **The terms.** Lichess's terms of service (read 23 Sep 2026) offer the API as one of its services, for personal
+  and commercial applications, under caps and limits at Lichess's discretion; its API documentation asks for one
+  request at a time (read 18 Sep 2026, `src/lichess.ts`). Nothing forbids a program reading a public profile.
+- **The state.** As for the GitHub line (D166): none of the four states says "wired and not run"; `being-tested`
+  is carried and printed nowhere for it. The founder's to name.
