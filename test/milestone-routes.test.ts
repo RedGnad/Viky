@@ -82,8 +82,8 @@ test("a condition that is not live is offered to nobody but an account that runs
   assert.deepEqual(listed.preview, [], "a funder sees only what is live");
   assert.ok(listed.ids.includes("chess-rating"));
   const operatorSees = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`, { headers: { cookie: await cookieFor(OPERATOR) } }))).json()) as { ids: string[]; preview: string[] };
-  // Ten things are wired and not live today (D164, D165, D174, D176, D178): the TOEFL score shown, the five examination
-  // results, a Udemy course finished, and the three lines of the university rail, creatable by an operator so the first real proof can be
+  // Eleven things are wired and not live today (D164, D165, D174, D176, D178, D179): the TOEFL score shown, the five
+  // examination results, a Udemy course finished, the three lines of the university rail and an average at school, creatable by an operator so the first real proof can be
   // shown at all, and offered to nobody else, door or no door.
   assert.deepEqual(operatorSees.preview, [
     "toefl-mybest-shown",
@@ -96,6 +96,7 @@ test("a condition that is not live is offered to nobody but an account that runs
     "university-enrollment-shown",
     "university-year-passed-shown",
     "university-grade-shown",
+    "ecoledirecte-grade-shown",
   ]);
   const anonymous = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`))).json()) as { preview: string[] };
   assert.deepEqual(anonymous.preview, []);

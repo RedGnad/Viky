@@ -1,6 +1,7 @@
 import { isValidDuolingoUsername } from "./duolingo-public-terms";
 import { UNIVERSITY_SOURCE } from "./university-shown";
 import { UDEMY_SOURCE } from "./udemy-shown";
+import { ECOLEDIRECTE_SOURCE } from "./school-shown";
 import { GOAL_TYPE_DUOLINGO_COURSE_XP, GOAL_TYPE_DUOLINGO_XP } from "./gift-terms";
 
 /**
@@ -40,7 +41,7 @@ export type ConditionKind = "daily" | "milestone";
  * erased exactly the thing that made it worth building. "Move" left with it: nothing was ever filed there, and a
  * family draws nothing until something is.
  */
-export type ConditionFamily = "language" | "exam" | "play" | "course" | "certification" | "study";
+export type ConditionFamily = "language" | "exam" | "play" | "course" | "certification" | "study" | "school";
 
 export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>[] = [
   { id: "language", title: "Learn a language" },
@@ -56,6 +57,9 @@ export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>
   // been proved, so the page and the chooser draw it only for an account that runs Viky. The id stays `study`
   // whatever the title says: a gift's terms could name it one day.
   { id: "study", title: "Study" },
+  // School (D179): an average shown by the pupil or the family from their own EcoleDirecte account. Nothing offered
+  // in it until a provider of ours exists, so the page and the chooser draw it only for an account that runs Viky.
+  { id: "school", title: "School" },
 ];
 
 /** From this many conditions on offer, the chooser stops being one list and becomes one section per family. */
@@ -797,6 +801,32 @@ export const UDEMY_COURSE_SHOWN: Condition = {
   },
 };
 
+/**
+ * A school average shown from the pupil's or the family's own EcoleDirecte account (D179): the family "School", with a
+ * target out of 20 as the university grade has. PRONOTE is not built, its publisher's terms forbidding it (D179).
+ */
+export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
+  id: "ecoledirecte-grade-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  live: false,
+  beforeItOpens: "A provider registered from a real EcoleDirecte account, the goal signed, one proof end to end, then the founder's word.",
+  source: ECOLEDIRECTE_SOURCE,
+  family: "school",
+  name: "Reach an average at school, shown",
+  help: "Their own EcoleDirecte account, or the family's, shown by them: the overall average out of 20 on the grades page. It proves the account, not who did the work.",
+  link: { kind: "link", label: "Show it from your EcoleDirecte account", help: "Press Show it on your gift's page and sign in to EcoleDirecte in the tab that opens. Nothing to paste." },
+  reading: "ecoledirecte-grade-shown",
+  words: {
+    earnedDay: "When they show that average, all of this becomes theirs",
+    connect: "Opened. Show your average from your EcoleDirecte account when the grades are in.",
+    doIt: "Press Show it and sign in to EcoleDirecte in the tab that opens. The overall average on your grades page is what counts.",
+    eachDay: "the day it is shown",
+    preview: "An average at school, shown from your own EcoleDirecte account: the gift is yours when you show it.",
+  },
+};
+
 export const BUILDING: readonly Condition[] = [
   TOEFL_MYBEST_SHOWN,
   CAMBRIDGE_ENGLISH_SHOWN,
@@ -808,6 +838,7 @@ export const BUILDING: readonly Condition[] = [
   UNIVERSITY_ENROLLMENT_SHOWN,
   UNIVERSITY_YEAR_PASSED_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
+  ECOLEDIRECTE_GRADE_SHOWN,
 ];
 
 /**
@@ -875,7 +906,9 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "School marks",
     state: "no-public-page",
     why: "They live in a school's own portal, which opens for the family and for nobody else. No source publishes a page about a pupil.",
-    building: null,
+    // One of the two portals read is on its way (D179); the other, PRONOTE, is not, and the sentence says why in the
+    // publisher's own terms.
+    building: "an average shown by the pupil or the family from their own EcoleDirecte account, with the two words SHOWN BY THEM on it; not PRONOTE, whose publisher forbids any device retrieving data from its sites without its written authorisation.",
   },
 ];
 

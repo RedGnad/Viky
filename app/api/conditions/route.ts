@@ -3,7 +3,7 @@ import { readAccountAuthSession } from "@/src/account-auth-server";
 import { liveConditions } from "@/src/conditions";
 import { isOperator } from "@/src/dev-access";
 import { NO_STORE } from "@/src/gift-api";
-import { CHESS_MILESTONE, DET_MILESTONE, EXAM_MILESTONES, TOEFL_SHOWN_MILESTONE, UDEMY_MILESTONE, UNIVERSITY_GRADE_MILESTONE, UNIVERSITY_SHOWN_MILESTONE, UNIVERSITY_YEAR_MILESTONE } from "@/src/milestone-conditions";
+import { CHESS_MILESTONE, DET_MILESTONE, ECOLEDIRECTE_MILESTONE, EXAM_MILESTONES, TOEFL_SHOWN_MILESTONE, UDEMY_MILESTONE, UNIVERSITY_GRADE_MILESTONE, UNIVERSITY_SHOWN_MILESTONE, UNIVERSITY_YEAR_MILESTONE } from "@/src/milestone-conditions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +26,7 @@ const WIRED_NOT_LIVE = [
   UNIVERSITY_SHOWN_MILESTONE.condition,
   UNIVERSITY_YEAR_MILESTONE.condition,
   UNIVERSITY_GRADE_MILESTONE.condition,
+  ECOLEDIRECTE_MILESTONE.condition,
 ];
 
 export async function GET(request: Request) {
