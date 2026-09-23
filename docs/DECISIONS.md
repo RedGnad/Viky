@@ -5046,3 +5046,25 @@ The sheet:
 - **Reduced motion.** The rest face and nothing else.
 - **Test.** `test/browser/character-everywhere.spec.ts`: ten screens a person reaches, each drawing exactly one visible
   character inside the mood channel, at four sizes.
+
+## D183, 23 Sep 2026: the reveal on scroll, on every screen (motion, step 4 of the life of the product)
+
+The founder, 23 Sep 2026: "L'apparition en défilant (reveal, 250 ms, 8 px), en dernier."
+
+- **Where it was.** `Reveal` played on the lists of cards of Home and Gifts only. A long screen, a gift's page on a
+  phone, the catalogue, the judges page, the documents, showed its lower blocks already there when scrolled to.
+- **One place decides it now.** The shell watches the blocks of its `main`, and the turns of a box that arrives in
+  turn: a block below the fold when the screen opened rises the first time it is scrolled into view, once; a block in
+  view as the screen opened never moves again, since the entrance brought it; a block holding its own `Reveal` is left
+  to it, so nothing moves twice.
+
+The sheet:
+
+- **Trigger.** A block scrolled into view for the first time, which was not in view when the screen opened.
+- **Rule.** It comes up from nothing and rises 8 px, once. Nothing behind it moves, no parallax.
+- **Material token.** `MOTION.reveal`: medium1 (250 ms), standard easing, a rise of 8 px. No new token.
+- **Loop.** None; a second pass over the same block moves nothing (tested).
+- **Reduced motion.** Every block is where it is; nothing is caught rising (measured).
+- **Test.** `test/browser/reveal.spec.ts`: a block rises when scrolled to, not on a second pass, and nothing rises under
+  reduced motion, at four sizes. Filmed on the catalogue at 390: the two sections that entered are invisible at 0 ms,
+  nearly in at 80 ms on the standard curve, in place at 250 ms.
