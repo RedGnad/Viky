@@ -178,6 +178,15 @@ export default function JudgesPage() {
             founder&apos;s call before each line opens, and nothing is shown until then.
           </li>
           <li>
+            <strong>Udemy&apos;s terms.</strong> A Udemy course finished is shown by the person from their own account
+            (D178), and nothing is read for them: Udemy&apos;s Terms of Use (section 7, read 23 Sep 2026) forbid scraping,
+            robots and &quot;other automated means of any kind to access the Services&quot;, and section 1 forbids sharing
+            login credentials. So the certificate page Udemy publishes is not read by Viky either. The person opens their
+            own account in their own browser, a witness in a TEE attests the one response, and Viky keeps that the course
+            is finished. Whether a verification tab the person opens is &quot;automated means&quot; in Udemy&apos;s sense is
+            written here rather than decided: the founder&apos;s call before the line opens.
+          </li>
+          <li>
             <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:
             Coursera verifies identity once per account, and says some programmes require it while others only check a
             name. That condition is not open yet, and this is what it will prove when it is.

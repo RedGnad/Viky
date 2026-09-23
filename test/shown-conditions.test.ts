@@ -18,7 +18,7 @@ test("the TOEFL condition is pinned to the provider read on 22 Sep 2026, one req
   assert.deepEqual(TOEFL_SHOWN.condition.phases, ["reach"]);
   assert.equal(TOEFL_RECLAIM_PROVIDER.loginUrl, "https://v2.ereg.ets.org/ereg/public/jump?_p=TEL");
   assert.equal(shownConditionById("toefl-mybest-shown"), TOEFL_SHOWN);
-  assert.equal(SHOWN_CONDITIONS.length, 10, "the daily lesson, the TOEFL score, the five examination results (D176), enrolment (D165), the year passed and a grade (D174), and nothing added by default");
+  assert.equal(SHOWN_CONDITIONS.length, 11, "the daily lesson, the TOEFL score, a Udemy course (D178), the five examination results (D176), enrolment (D165), the year passed and a grade (D174), and nothing added by default");
 });
 
 test("the subject is constant per condition and the provider id is the registered goal's", () => {

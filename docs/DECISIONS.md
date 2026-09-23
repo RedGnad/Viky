@@ -4895,3 +4895,33 @@ left behind went now, each piece checked to be read by nothing in the product, t
   state, and passed only because those sentences lingered unread. Its gift page is the nine moments of the table now,
   quoting what the page says; two real gaps V4 leaves are written there (taking out while a daily gift runs, and the
   date a milestone gift was taken back), and one it listed as a gap is built ("Get the link again").
+
+## D178, 23 Sep 2026: a Udemy course finished, shown from the person's own account, beside the Coursera certificate
+
+The founder's plan, the family "Finish a course": Udemy, a course finished, shown from the account, the terms first.
+
+- **The terms.** Udemy's Terms of Use (last updated 31 Jul 2026, read 23 Sep 2026), section 7: no scraping, no robot,
+  no "other automated means of any kind to access the Services", no access "by any means (automated or otherwise)
+  other than through our currently available search functionalities"; section 1: no sharing of login credentials. So
+  Viky reads nothing from Udemy by a program: not the person's pages, and not the certificate page Udemy publishes
+  for a finished course, which a reader of Viky's would reach by automated means. The line is of the second nature
+  only: the person shows their own account in their own browser, shares no credential, and a witness in a TEE attests
+  the one response. Whether that tab is "automated means" in Udemy's sense is written on the judges' page and left
+  to the founder before the line opens; nothing was refused tonight, nothing opens.
+- **The line.** `udemy-course-shown`, "A Udemy course finished, shown", family "Finish a course", `BUILDING`, offered
+  to an operator alone, "Being built" on the public page under its family. The funder names the course by its link, as
+  for Coursera; the course's slug is the subject they sign, `hash("viky:subject:udemy-course-shown:v1:<slug>")`, no
+  name in it, and a proof of another course is refused `OTHER_COURSE` by name, and would fail the contract's own
+  check besides. Finished is one; a course not finished is `NOT_FINISHED`. Goal 22, in the night's Safe session.
+- **The record remembers the course.** `viky_milestone_gifts.course`, written by the create route for a shown course
+  gift, read by the shown register for the subject and for the provider's reading. A university gift keeps its
+  `portal`; the two columns are the two things a shown gift can be about.
+- **No provider exists.** The directory's six Udemy providers read other things; ours is defined in
+  `docs/reclaim/udemy-course-shown-provider.md` (the "My learning" page, the sign-in in the person's own browser, the
+  course's slug and its completion, all to confirm), and `UDEMY_PROVIDER` is empty until it is registered from a real
+  account. Until then the line refuses `NOT_CONFIGURED` by name at creation and at verification.
+- **What crossed the frontier, said in the PR.** The create route (the course recorded), `/api/conditions` (the door),
+  the judges' page (one bullet), `src/gift-store.ts` and `src/milestone-creation.ts` (the fact carried to the record).
+- **What is verified, and what waits.** The links and slugs, the subjects, the reading (`OTHER_COURSE`,
+  `NOT_FINISHED`, "Finished"), the goal, the register, the door, the refusal before any fetch, the column against a
+  real Postgres. No provider registered, no proof shown, no goal signed.

@@ -129,6 +129,15 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     sourcePolicing: "The Ministry polices its own examination and publishes the decision on its own service. Cyclades's legal notice was opened on 23 Sep 2026; what it says of automated access is in the provider's definition, and the judges' page says where the question stands.",
   },
   {
+    conditionId: "udemy-course-shown",
+    supervised: false,
+    inShort: "Shown by them: the course finished on their own Udemy account. Who watched the lessons is not read.",
+    data: "The person's own \"My learning\" page on Udemy, shown by them in a Reclaim verification: one request to Udemy's own servers, attested by a witness in a TEE, and two fields, the course's slug and whether it is finished. Udemy's terms forbid a program reading its pages, so nothing is read for the person; the certificate page Udemy publishes is not read either. The provider is ours, registered from a real account, and nothing is read until it exists.",
+    account: "The funder names the course by its link, and its slug is hashed into the terms they sign, so a course shown that is not that one pays nothing. The link is the Udemy account the person signs in to, in their own browser, and the gift's own recipient, which the contract checks; no name is typed by the funder and none is read from the page.",
+    whoActed: "Unknown: Udemy describes no supervision of who watches a course, and a course is marked finished when its lectures are marked complete, which the account holder does.",
+    sourcePolicing: "Udemy polices nothing about who finishes a course: a lecture is marked complete by the account, and the certificate of completion says so. Its terms (section 7, read 23 Sep 2026) forbid scraping, robots and any automated means of access, and (section 1) sharing login credentials, which is why this line is shown by the person and read by nobody else; the judges' page says so.",
+  },
+  {
     conditionId: "university-enrollment-shown",
     supervised: false,
     inShort: "Shown from their own student portal, the page that says enrolled. Proves the account, not who sits in class.",
