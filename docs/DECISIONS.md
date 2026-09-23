@@ -4548,8 +4548,8 @@ read first.
   every attested reading in production (the incident of 18 Sep 2026), which nothing tonight touches. The day the
   service takes a secret header, the reading moves there under the same goal.
 - **The state.** The four states are the founder's, and none of them says "wired and not run on a real account yet".
-  The condition carries `being-tested`, the closest, and it is printed for no condition outside the register. Whether
-  a fifth state is named is the founder's decision, flagged in the PR.
+  Decided the same day (D169): no fifth state; a line being built carries no state at all, and the public page says
+  "Being built" of it.
 - **What waits.** Goal 2 to register through the Safe (the call is in OPERATIONS), `GITHUB_API_TOKEN` on Vercel
   (sensitive, read at execution as `github.configured`), and one real gift run end to end. Until then the condition
   refuses `NOT_CONFIGURED` and stays behind the door.
@@ -4591,8 +4591,8 @@ The founder, 23 Sep 2026: the Lichess register entry and the chooser line, goals
 - **The terms.** Lichess's terms of service (read 23 Sep 2026) offer the API as one of its services, for personal
   and commercial applications, under caps and limits at Lichess's discretion; its API documentation asks for one
   request at a time (read 18 Sep 2026, `src/lichess.ts`). Nothing forbids a program reading a public profile.
-- **The state.** As for the GitHub line (D166): none of the four states says "wired and not run"; `being-tested`
-  is carried and printed nowhere for it. The founder's to name.
+- **The state.** As for the GitHub line (D166), settled by D169: no state while a line is being built, and "Being
+  built" on the public page.
 
 ## D170, 23 Sep 2026: GitHub and Lichess are withdrawn; the goals stay on the chain without effect
 
@@ -4615,3 +4615,22 @@ worker pour eux ; les objectifs restent sur la chaîne sans effet."
   check before. `conditionOfGoal(5)` keeps answering the lesson.
 - **What is not decided by this.** Decision D169 holds: "Being built" for everything that has not run on a real
   account, and no fifth state.
+
+## D169, 23 Sep 2026: no fifth state; a line being built says "Being built", and "Being tested" only once a real gift runs
+
+The founder, 23 Sep 2026: "pas de cinquième état. Une condition construite mais jamais courue sur un vrai compte reste
+« Being built », comme le TOEFL, jusqu'à la première preuve réelle ; « Being tested » ne s'imprime que quand un vrai
+cadeau tourne dessus."
+
+- **The four states stay the four**, and they belong to the register: a condition in `CONDITIONS` always carries
+  one, and `stateOf` is what the two pages ask. A condition beside the register (`BUILDING`) carries none.
+- **"Being built" is the frontier's word, not a state.** A line being built that has a public page is printed under
+  its family, with its nature and its help, then "Being built." and what has to happen first (`beforeItOpens`). The
+  two shown from an account (TOEFL, enrolment) are said to be being built by the frontier lines about the page nobody
+  can open, and each frontier names the line it is about (`conditionId`), so nothing is printed twice. Today the two
+  are the only lines being built, so the catalogue prints nothing this way; the rule is written for the next one. The
+  table "What each state means" keeps its four rows.
+- **"Being tested" is printed the day a real gift runs** on a line, and not before: the register's `state` is set
+  then, by hand, with the gift's number in the decision that opens it.
+- **Where the judges' page stands.** It lists the register's conditions with their state, as before; a line being
+  built is not on it until it is in the register.

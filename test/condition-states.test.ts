@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { BUILDING, catalogueSections, conditionById, CONDITIONS, FAMILIES, FRONTIERS, liveConditions, STATES, stateWords } from "../src/conditions";
+import { BUILDING, catalogueSections, conditionById, CONDITIONS, FAMILIES, FRONTIERS, liveConditions, STATES, stateOf, stateWords } from "../src/conditions";
 import { CATALOGUE } from "../src/sentences";
 
 /**
@@ -86,9 +86,12 @@ test("the page lists every condition the register holds, offered or not, by fami
   );
   assert.deepEqual(
     sections.map((section) => section.title),
-    FAMILIES.filter(({ id }) => CONDITIONS.some((condition) => condition.family === id)).map(({ title }) => title),
-    "the families are the register's, in its order",
+    FAMILIES.filter(({ id }) => CONDITIONS.some((condition) => condition.family === id) || sections.some((section) => section.family === id && section.building.length > 0)).map(({ title }) => title),
+    "the families are the register's, in its order, and a family with only a line being built would be on the page too",
   );
+  // A line being built with a public page prints under its family, once (D169). Today both lines being built are said
+  // by the frontier's lines, so nothing is printed this way; the mechanism is what the rule is.
+  assert.deepEqual(sections.flatMap((section) => section.building), []);
   const language = sections.find((section) => section.family === "language");
   assert.ok(language, "the language family is on the page");
   assert.ok(
@@ -127,7 +130,7 @@ test("it is reachable without an account and from the judges page, and it says t
   assert.match(readFileSync("app/judges/JudgesConditions.tsx", "utf8"), /href="\/what-viky-can-check"/);
   assert.match(CATALOGUE.intro, /only what is open is shown to you/);
   // The judges page says where each condition stands in the same words as the public page, not in its own.
-  assert.match(readFileSync("app/judges/JudgesConditions.tsx", "utf8"), /stateWords\(condition\.state\)\.title/);
+  assert.match(readFileSync("app/judges/JudgesConditions.tsx", "utf8"), /stateOf\(condition\)\.title/);
 });
 
 /**
@@ -143,8 +146,14 @@ test("every condition says its nature, and every one of the pilot is read for th
     const shown = conditionById(id);
     assert.equal(shown?.nature, "shown", `${id} is shown by them`);
     assert.equal(shown?.live, false, `${id} is not open until a real proof has run end to end, then the founder's word`);
-    assert.equal(shown?.state, "no-public-page", `${id}'s state is the one whose sentence is exactly its own`);
+    // No fifth state (D169): a line being built carries none, and the page says "Being built" of it.
+    assert.equal(shown?.state, undefined, `${id} carries no state while it is being built`);
+    assert.throws(() => stateOf(shown as never), /carries no state/);
     assert.ok(shown?.beforeItOpens, `${id} says what has to happen first`);
     assert.ok(!CONDITIONS.includes(shown as never), `${id} is not on the public page as a condition: the frontier's line says it is being built`);
   }
+  for (const condition of CONDITIONS) assert.equal(stateOf(condition).id, condition.state, `${condition.id} is in the register and carries a state`);
+  // Each frontier line that says "Being built" names the line it is about, so the catalogue never prints it twice.
+  assert.deepEqual(FRONTIERS.filter((frontier) => frontier.conditionId).map((frontier) => frontier.conditionId), ["toefl-mybest-shown", "university-enrollment-shown"]);
+  for (const frontier of FRONTIERS) assert.equal(Boolean(frontier.conditionId), Boolean(frontier.building), `${frontier.id} names a line exactly when it says one is being built`);
 });
