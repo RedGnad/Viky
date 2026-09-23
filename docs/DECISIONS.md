@@ -5398,3 +5398,43 @@ founder's own words: "Nobody has shown a proof from this university yet. If it c
 to you at the deadline." It passes the consumer words check (the register file is scanned, and the test scans the
 sentence as printed). It is true of the contract: a gift never proved returns whole to the funder at the deadline.
 The sentence goes when the row is written again from a student's session, since the mark goes with it.
+
+## D196, 23 Sep 2026: a signed-in screen is drawn once, and proven by a test; the entrance starts at 60 %
+
+The founder: the landing, Home and You still load twice with his account, not a gift's page. His method: reproduce,
+name the trigger, a regression test as the only proof, no blind fix.
+
+**Reproduced, measured.** Cold loads of the three pages, marks at hydration and at every replacement of `<main>`, every
+animation that starts, frames every compositor frame:
+
+| where | account | replaced after the first image | an entrance played twice |
+|---|---|---|---|
+| viky.cash, Chromium | a new test account, no gift | never | never |
+| local production build, Chromium | the founder's four gifts, euros and day copied onto a test account (test branch) | never | never |
+| the same, service worker on, cold, reload, then the bar | the same | only on a page change | never |
+| the same, WebKit 26 (Playwright 1.58, the one macOS 14 still runs) | the same | never | never |
+
+**The trigger, named by a control.** With the server's read of the session switched off (`signedInAccount` answering
+nobody), the symptom is exactly the founder's: the server draws the page for nobody, the browser then learns the session
+from `/api/account/session` and replaces `<main>` with the account's, and every block enters a second time. A gift's
+page does not change, because anybody may read it. So the double load is a first image drawn for nobody on a device
+that is signed in. On every configuration this machine can drive, the server draws the account from the cookie in the
+first byte, which is already what the founder asks for (D156, D160); what makes his phone's first image differ is not
+known. The trace below is how it becomes known.
+
+**What changed.**
+- `<main data-drawn-for="account|nobody">`: whom a screen was drawn for is on the page itself.
+- `test/browser/first-image-signed-in.spec.ts`: an account made with a virtual passkey; the landing, Home, Gifts and
+  You loaded cold; the page the server sends must be the account's, `<main>` never replaced after the first image, no
+  block entering twice. With the server's read switched off it fails twice over: on the page sent, and, with that
+  check removed, on `<main>` replaced by the account's. It is in the local pass.
+- `?trace=1` on any page (kept for the tab, closed with `?trace=0` or ×): the phone prints when the page came alive,
+  whom it was drawn for, "SAME PAGE drawn again" when `<main>` is replaced without a page change, and any block that
+  enters twice. Nothing is sent anywhere.
+- The entrance starts at 60 % and rises 8 px (`MOTION.reveal.fromOpacity`, `--page-enter-from`): from 0, the first
+  image after a press was 5 % visible on the catalogue. Reduced motion fades from 60 % too. **Default applied, to
+  confirm by eye.**
+
+**What waits for the founder.** Open viky.cash/?trace=1 on the phone, then the landing, Home and You, and send a
+screenshot of the trace: a "drawn for nobody" line on a signed-in phone, or a "SAME PAGE drawn again", names the cause
+on his device.

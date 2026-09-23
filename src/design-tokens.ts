@@ -401,7 +401,12 @@ export const MOTION = {
    * `mostStaggeredMs`, three turns, so four blocks have arrived inside the half second NN/g calls the ceiling. A
    * list's turns stop at the same ceiling, `lastTurnMs`: the fourth card and every one after it arrive together.
    */
-  reveal: { durationMs: 250, easing: EASING.standard, rise: 8, staggerMs: 80, mostStaggeredMs: 240, lastTurnMs: 240 },
+  /**
+   * `fromOpacity`: a block of a screen that enters starts at 60 % and not from nothing (D196, the founder's default
+   * to confirm, 23 Sep 2026): from 0, the first image after a press was almost empty, 5 % visible on the catalogue,
+   * and on a phone the entrance read as a blink. The rise alone carries the movement.
+   */
+  reveal: { durationMs: 250, easing: EASING.standard, rise: 8, staggerMs: 80, mostStaggeredMs: 240, lastTurnMs: 240, fromOpacity: 0.6 },
   /**
    * A pointer over a button lifts it; over a character, its face turns towards the pointer. Material's short4.
    * A screen with no pointer has no hover: an expression plays once when something is chosen, and `heldMs` is how

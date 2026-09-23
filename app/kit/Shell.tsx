@@ -1,5 +1,6 @@
 "use client";
 import { useRef, type CSSProperties, type ReactNode } from "react";
+import { useAccount } from "@/src/account/provider";
 import { DISPLAY, META, TITLE } from "../components/ui";
 import { Appearance } from "./Appearance";
 import { BackLink } from "./BackLink";
@@ -72,6 +73,9 @@ export function Shell(props: Props) {
    */
   const main = useRef<HTMLElement>(null);
   useRevealOnScroll(main);
+  // Whom this screen was drawn for, readable on the page itself: the server's answer is in the first byte, so a screen
+  // drawn for nobody and then replaced by the account's is visible to a test and to the trace (D196).
+  const { address } = useAccount();
   const character = props.character !== undefined ? props.character : props.kind === "destination" && props.bare ? null : <HeadCharacter />;
   const width =
     props.kind === "task"
@@ -99,7 +103,7 @@ export function Shell(props: Props) {
             mark and the appearance control stand still, because they are in the same place on every screen. The
             first screen a document draws enters the same way: since D160 the server draws it whole, so the turns
             leave no hole, and one fade alone read as no entrance at all (the founder's review of D160). */}
-        <main ref={main} className={`page-enters mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-lg)]`}>
+        <main ref={main} data-drawn-for={address ? "account" : "nobody"} className={`page-enters mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-lg)]`}>
           <header className="flex flex-col items-start gap-[var(--space-sm)]">
             <div className="page-mark flex w-full items-center justify-between gap-[var(--space-md)]">
               <Mark />

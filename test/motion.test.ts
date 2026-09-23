@@ -135,6 +135,8 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
   assert.ok(css.includes(`--page-enter-duration: ${MOTION.reveal.durationMs}ms`), "a screen arrives in what the token says");
   assert.ok(css.includes(`--page-enter-easing: ${MOTION.reveal.easing}`), "on the token's curve");
   assert.ok(css.includes(`--page-enter-rise: ${MOTION.reveal.rise}px`), "rising what the token says");
+  assert.ok(css.includes(`--page-enter-from: ${MOTION.reveal.fromOpacity};`), "from the opacity the token says, never from nothing (D196)");
+  assert.match(css, /@keyframes page-enter \{\n\s*from \{\n\s*transform: translateY\(var\(--page-enter-rise\)\);\n\s*opacity: var\(--page-enter-from\);/, "the entrance starts at 60 %");
   assert.match(css, /\.page-enters > \*:not\(header, dialog\)/, "what a page carries enters; the sheets and the mark do not");
   assert.match(
     css,
