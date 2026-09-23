@@ -43,6 +43,14 @@ export type AttestedSource = Readonly<{
    * this could never be taken at all.
    */
   accept?: string;
+  /**
+   * A source the person connected (D188): the page opens only with their key, which the caller hands to the fetch as a
+   * secret the attestor never sees, never in the URL and never in the proof. Absent on every public page.
+   */
+  auth?: "bearer";
+  /** A page asked by POST (D197): the method and the body are part of what the attestor signs, and both are checked. */
+  method?: "POST";
+  body?: (account: string) => string;
 }>;
 
 /** Duolingo's public profile: the identity, the display name, and the experience total (D27). */
@@ -264,7 +272,50 @@ export const DET_CERTIFICATE: AttestedSource = {
   ],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE];
+/**
+ * The day's active minutes on the person's Google Health account, which reads their Fitbit or Pixel Watch (D197):
+ * `POST https://health.googleapis.com/v4/users/me/dataTypes/active-minutes/dataPoints:dailyRollUp`, scope
+ * `googlehealth.activity_and_fitness.readonly`. The account a caller names is the day, `yyyy-MM-dd`; the body asks that
+ * civil day and the next, one window, Google's and Fitbit's own wearables only. The whole roll-up must match, since its
+ * levels come in no promised order; the app adds the moderate and vigorous minutes and drops the rest. The body is
+ * built here, not imported: what is fetched must live in the fingerprinted files.
+ */
+export const GOOGLE_HEALTH_ACTIVE_MINUTES: AttestedSource = {
+  id: "google-health-active-minutes",
+  service: "Google Health",
+  auth: "bearer",
+  method: "POST",
+  accepts: (day) => /^\d{4}-\d{2}-\d{2}$/.test(day),
+  url: () => "https://health.googleapis.com/v4/users/me/dataTypes/active-minutes/dataPoints:dailyRollUp",
+  body: (day) => {
+    const start = new Date(`${day}T00:00:00Z`);
+    const end = new Date(start.getTime() + 86_400_000);
+    const date = (at: Date) => ({ year: at.getUTCFullYear(), month: at.getUTCMonth() + 1, day: at.getUTCDate() });
+    return JSON.stringify({ range: { start: { date: date(start) }, end: { date: date(end) } }, windowSizeDays: 1, dataSourceFamily: "users/me/dataSourceFamilies/google-wearables" });
+  },
+  matches: [{ type: "regex", value: "(?<rollup>\\{[\\s\\S]*\\})" }],
+};
+
+/**
+ * Strava's activities of one day, read with the person's own key (D191): "List Athlete Activities", scope
+ * `activity:read`. The account a caller names is the day, `yyyy-MM-dd`. The whole list must match, since a day is the
+ * sum of its activities: the app reads the distances out of it and drops it, with the routes and the times.
+ */
+export const STRAVA_DAY_ACTIVITIES: AttestedSource = {
+  id: "strava-day-activities",
+  service: "Strava",
+  auth: "bearer",
+  accept: "application/json",
+  accepts: (day) => /^\d{4}-\d{2}-\d{2}$/.test(day),
+  // The day's UTC bounds, computed here rather than imported, for the same reason as the body above.
+  url: (day) => {
+    const start = Math.floor(Date.parse(`${day}T00:00:00Z`) / 1_000);
+    return `https://www.strava.com/api/v3/athlete/activities?after=${start - 1}&before=${start + 86_400}&per_page=30`;
+  },
+  matches: [{ type: "regex", value: "(?<activities>\\[[\\s\\S]*\\])" }],
+};
+
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
 
 /**
  * The headers a source is read with, which is part of what is fetched and therefore lives with the sources: it is

@@ -492,12 +492,12 @@ own guarded channel and holds none of it; what it needs on Railway is step 3, a 
 `GET /api/connect/fitbit/status?giftId=…`, signed in as the gift's recipient, answers `configured: true` when the
 three are set where the route runs, and `false` otherwise: a boolean, never a value.
 
-**3. The reading service redeployed, by the founder, from the second branch.** The Google Health source is in
-`src/fitbit-source.ts`, a file the reading fingerprint does not cover, known to the app and not to the service: moving
-it into `src/attested-sources.ts` changes `READING_FINGERPRINT`, and until the service runs that commit every attested
-read of the app refuses (`WORKER_OUT_OF_DATE`), the Chess.com ratings and the certificate readings included. So that
-move is its own branch, `catalogue/fitbit-source` (the PR is open and stays unmerged), and the founder does the two
-things back to back, since the app on main and the service must carry the same number:
+**3. The reading service redeployed, by the founder, from the second branch.** The branch `catalogue/fitbit-source`
+(PR #166, rebuilt on D197) moves the Google Health source and the Strava source into `src/attested-sources.ts`, the
+shared list the service runs, with the method and the body a POST page needs; that changes `READING_FINGERPRINT`, and
+until the service runs that commit every attested read of the app refuses (`WORKER_OUT_OF_DATE`), the Chess.com
+ratings and the certificate readings included. So the founder does the two things back to back, since the app on main
+and the service must carry the same number:
 
 ```
 git fetch origin && git checkout catalogue/fitbit-source

@@ -3,18 +3,16 @@ process.env.IDENTITY_HMAC_KEY = Buffer.alloc(32, 7).toString("base64");
 import assert from "node:assert/strict";
 import test from "node:test";
 import { keccak256, stringToHex } from "viem";
-import { attestedSource } from "../src/attested-sources";
+import { attestedSource, STRAVA_DAY_ACTIVITIES } from "../src/attested-sources";
 import { privacyOf } from "../src/condition-privacy";
 import { proofOfCondition } from "../src/condition-proof";
 import { BUILDING, conditionById, conditionOfGoal, STRAVA_DAILY } from "../src/conditions";
 import { finishStravaConnection, startStravaConnection, stravaRedirectUri } from "../src/connect-strava";
 import { openConnectState } from "../src/connect-state";
 import { connectedLineOf } from "../src/connected-checkin";
-import { connectedSource } from "../src/fitbit-source";
 import { GiftApiError } from "../src/gift-api";
 import { GOAL_TYPE_STRAVA_DISTANCE, STRAVA_CONNECTED_PROVIDER_ID } from "../src/gift-terms";
 import { distanceOfDay, exchangeStravaCode, isStravaAthleteId, refreshStravaTokens, revokeStravaToken, stravaAuthorizeUrl, stravaConfigured, stravaDayBounds, stravaDayMet, StravaError, stravaScopeAllows } from "../src/strava";
-import { STRAVA_DAY_ACTIVITIES } from "../src/strava-source";
 
 /**
  * Strava, connected by the person (D191): the second source of the third nature, on the model of Fitbit (D188).
@@ -114,9 +112,8 @@ test("a day is its UTC bounds, its activities' distances added, and met from the
   assert.ok("missing" in connectedLineOf(GOAL_TYPE_STRAVA_DISTANCE)!.judge({}, "2026-09-22", 3));
 });
 
-test("the source is read with the person's key, on the day named, captures the whole list, and waits for the shared list", () => {
-  assert.equal(attestedSource("strava-day-activities"), undefined, "not in the shared list until the reading service runs it (the founder's redeploy)");
-  assert.equal(connectedSource("strava-day-activities"), STRAVA_DAY_ACTIVITIES);
+test("the source is read with the person's key, on the day named, captures the whole list, and is in the shared list", () => {
+  assert.equal(attestedSource("strava-day-activities"), STRAVA_DAY_ACTIVITIES, "in the shared list the reading service runs");
   assert.equal(STRAVA_DAY_ACTIVITIES.auth, "bearer");
   assert.ok(STRAVA_DAY_ACTIVITIES.accepts("2026-09-22") && !STRAVA_DAY_ACTIVITIES.accepts("8675309"));
   assert.equal(STRAVA_DAY_ACTIVITIES.url("2026-09-22"), "https://www.strava.com/api/v3/athlete/activities?after=1790035199&before=1790121600&per_page=30");
