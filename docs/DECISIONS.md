@@ -4553,3 +4553,20 @@ read first.
 - **What waits.** Goal 2 to register through the Safe (the call is in OPERATIONS), `GITHUB_API_TOKEN` on Vercel
   (sensitive, read at execution as `github.configured`), and one real gift run end to end. Until then the condition
   refuses `NOT_CONFIGURED` and stays behind the door.
+
+## D167, 23 Sep 2026: a freeCodeCamp certificate is not offered, because its terms forbid a program reading the site
+
+The founder, 23 Sep 2026: a freeCodeCamp certificate condition, if its page or API carries the name and the date and
+its terms allow it; if not, say so and skip.
+
+- **What was read.** freeCodeCamp's Terms of Service (freecodecamp.org/news/terms-of-service, read 23 Sep 2026)
+  forbid automating access to the website or monitoring it with anything that is not a web browser, and make one
+  exception, crawling to index it for a public search engine. Viky's reading is neither a browser nor a search
+  engine. The same day, the two API paths a certificate page could be read from (`/api/certificate/showCert/…` and
+  `/api/users/get-public-profile`) answered "path not found", and the certification page itself is a script
+  application whose sentence is not in the page as served.
+- **Decision.** Not offered, and not built: no condition, no frontier line, nothing in the register. The written
+  answer is the source's own terms, so it is not "waiting for the source's answer" either. It reopens only if
+  freeCodeCamp publishes terms that allow a program to read a certificate, or answers in writing that Viky may.
+- **What it is not.** No claim that a freeCodeCamp certificate cannot be verified by a person: the page exists for
+  that. The claim is that Viky may not read it for them.
