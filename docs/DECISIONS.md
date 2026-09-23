@@ -5837,3 +5837,24 @@ whole page, before and after, at 1440 and 390, day and night: identical pixel fo
 So the bound changes nothing a person sees today. It holds a longer sentence to two centred lines instead of the
 column's width, which is what the default asked for. The earlier comment's reason for one line (a second line pushed
 the card past the fold, 914 for 900) was measured on a longer sentence and no longer applies.
+
+## D211, 24 Sep 2026: the gift card's sizes are named tokens, and not one pixel moves
+
+The founder's last item of 24 Sep, without priority: the gift page and every class with sizes written in it back to
+the tokens, the scale being 13, 16, 20, 25 and 31, without changing a single render.
+
+**What was found.** In the product's own components, one size is written as a number (the trace, 11 px, a tool and
+not a screen). In the stylesheet, the fifteen sizes written as numbers are all in the gift card's block, drawn from the
+mockup of 19 Sep: 15, 24, 14 and 23 pixels and line heights of 16, 21, 22 and 29, none of them on the scale. The comment
+over that block said `test/design-tokens.test.ts` held them equal to `src/design-tokens.ts`; neither the test nor the
+values existed. The two constraints could not both hold, so the founder chose: no pixel moves.
+
+**Changed.** `GIFT_CARD_TYPE` in `src/design-tokens.ts` names every size of the card; `:root` carries each as a
+variable (`--type-gift-what`, `--type-gift-state-leading` and so on); every class of the card reads its variable; the
+one size that was on the scale (the aside, 13) now reads `--type-help`. The test the comment promised exists: each
+variable equals its token, and the card's block writes no size as a number. The rule that every `--type-*` size is a
+step of the scale exempts the card's own, by name, with the reason. The comment says what is true.
+
+**Measured.** The gift pages of a daily gift, of a climb and of two stamps (the founder's four gifts, copied onto a test
+account on the test branch) and Home, whole page, at 390 and 1440, day and night, before and after: 20 of 20 identical
+pixel for pixel.
