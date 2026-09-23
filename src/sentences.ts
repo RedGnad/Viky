@@ -980,6 +980,11 @@ export const SHOW_PROOF = {
    * is kept nowhere; nothing was relayed, and the gift stays theirs to earn until its deadline.
    */
   notThereYet: (score: string) => `Shown: ${score}. It is under what this gift is for, so nothing was recorded and nothing is lost: show it again once it is there.`,
+  /**
+   * A page that does not carry what the pattern names (D193): said by the refusal's own name, then this. True of the
+   * contract: nothing was signed, and the money goes back to the funder at the deadline and not before.
+   */
+  nothingLost: "Nothing was counted and nothing is lost: this gift stays yours to earn until its deadline, and only then does the money go back.",
   refusals: {
     notConfigured: "Showing a proof is not open yet. Nothing was changed.",
     tooOld: "That proof took too long. Show it again.",

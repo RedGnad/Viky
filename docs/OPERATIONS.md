@@ -650,6 +650,22 @@ nobody signed in to, and the table is empty until the first one. Most of the thi
    register, in a PR of its own. The year passed and the grade open the same way, each on its own goal (15, 16) and
    its own first gift. A second university needs steps 1 to 3 and no PR at all.
 
+## The corridor's two portals, defined from their public pages, unverified (D193)
+
+UCAD (Dakar) and UFHB (Abidjan) are defined from what each university and ministry publishes, without a student:
+`docs/reclaim/ucad-sn-portal.md` and `docs/reclaim/ufhb-ci-portal.md` say every page read, every label a pattern sits
+on, and the `pnpm portal:add` command with `UNVERIFIED=1`. The founder's steps, in order, once per portal: register the
+provider (or the two, for UCAD) on the Reclaim dashboard from the JSON in the file, put its id, version and request
+hash in the command, run it against production. The row opens the Study lines on that university (D184) with
+"(unverified)" beside its name on the chooser. The first real session shows whether the patterns hold: a miss fails by
+its name (`NOT_ENROLLED`, `NOT_PASSED`, `NO_GRADE`, `WRONG_TERM`), the person is told nothing is lost, the gift's
+journal carries `refused:<the name>`, and `pnpm verify:day` on the session's proof prints the fields the page really
+carried. Corrected, the row is written again without `UNVERIFIED`, and the mark goes.
+
+UFHB's student space (`ufhb.mysonec.com`) did not answer from outside Côte d'Ivoire and gives no secure address, so
+its row carries enrolment alone (the ministry's registration platform) until the results page is reached from a
+student's session.
+
 ## Goal 2 on the daily contract, a GitHub contribution each day, registered and without effect (D166, D170)
 
 Registered on 23 Sep 2026 and withdrawn the same day (D170): no condition names goal 2, no reading carries its

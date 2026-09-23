@@ -160,3 +160,14 @@ test("the shown register reads the year and the grade off the portal's results p
   assert.equal(await UNIVERSITY_GRADE_SHOWN.providerOf?.(record("nobody-knows")), null);
   assert.equal(await UNIVERSITY_GRADE_SHOWN.providerOf?.(record(null)), null);
 });
+
+test("a row defined from the portal's public pages is marked unverified, says so on the chooser, and loses the mark once written again from a session (D193)", async () => {
+  await savePortal({ ...UCAD, unverified: true });
+  const marked = await loadPortal("ucad-sn");
+  assert.equal(marked?.unverified, true);
+  assert.equal(portalFound(marked!).title, "Université Cheikh Anta Diop (unverified)", "the funder reads it on the line they press");
+  await savePortal(UCAD);
+  const confirmed = await loadPortal("ucad-sn");
+  assert.equal(confirmed?.unverified, false, "proving it from a student's session writes the row without the mark");
+  assert.equal(portalFound(confirmed!).title, "Université Cheikh Anta Diop");
+});

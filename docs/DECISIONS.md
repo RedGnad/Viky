@@ -5335,3 +5335,40 @@ is set, a server-only variable, so the server can have its own unrestricted key 
 **What waits for the founder.** No variable, key or provider setting was touched. Until a server key is set in
 `MONAD_RPC_URL`, every server call asks the restricted key, is refused, and is answered by the public endpoint: one
 extra round trip per call, and the public endpoint's limits (100 blocks per `eth_getLogs`).
+
+## D193, 23 Sep 2026: providers defined from public pages, patterns on stable labels, a miss by its name; the corridor's two portals, unverified
+
+The founder, 23 Sep 2026: "Méthode pour les fournisseurs qu'on ne peut pas essayer sur un compte : tout ce qui est
+public sert [...] définis l'extraction sur des libellés stables [...] jamais sur des sélecteurs fragiles. Une
+extraction manquée doit échouer proprement [...] un événement nommé arrive dans le journal [...] Écris pour chaque
+fournisseur, dans docs/reclaim/, d'où vient chaque motif." And, for the corridor: "définis le fournisseur depuis la
+page de connexion publique et la page de résultats la plus probable, marqué « unverified » dans la ligne."
+
+- **Where each pattern comes from, provider by provider** (docs/reclaim, read 23 Sep 2026). Cyclades: its own FAQ
+  names the rubric ("Mes inscriptions", then "Mes notes") and the words ("Admis", "Refusé", "Admis au second groupe").
+  Epim-Exam: the candidate space's own bundle names the sign-in ("Matricule", "Mot de passe"), the results routes and
+  the labels ("Décision", "Admis", "Refusés", "Relevés de notes"). Bac Maroc: the Ministry's results page prints one of
+  "Admis avec mention", "Admis", "Rattrapage", "Non admis". EcoleDirecte: the application's API as its users documented
+  it (`notes.awp`, `periodes[].ensembleMatieres.moyenneGenerale`, "14,50"), and the definition now carries that request
+  and a regex on the field's own name. Udemy: the "My learning" request as its users wrote it down
+  (`api-2.0/users/me/subscribed-courses/`, `completion_ratio`, `published_title`), and a regex that takes the ratio and
+  the slug from the same course object. Cambridge and IELTS already sat on the Statement of Results' own labels.
+  Every one of them stays unverified until a real session, and says so.
+- **A miss, by its name.** A page that does not carry what the pattern names is refused before anything is signed, as
+  before, and now also: the gift's journal gets one row `refused:<the name>`, not attested, with no number, no
+  fingerprint and no proof, so the founder reads the miss and corrects the pattern; and the person reads the refusal
+  followed by "Nothing was counted and nothing is lost: this gift stays yours to earn until its deadline, and only then
+  does the money go back.", true of the contract.
+- **The corridor.** UCAD: the Student Center's sign-in (`studentcenter.ucad.sn/login`, the form's own fields) for
+  enrolment, and the university's grades platform (`pubnotes.ucad.sn/resultats`, named by its information portal) as
+  the most probable results page. UFHB: the ministry's registration platform (`inscription.mesrs-ci.net`, its form's
+  own fields) for enrolment; the student space the university names (`ufhb.mysonec.com`) answered nobody from outside
+  and has no secure address, so the row carries enrolment alone. A portal row takes `unverified`, written by
+  `UNVERIFIED=1`, and the chooser prints "(unverified)" beside the university; the mark goes when the row is written
+  again from a student's session.
+- **Defaults applied, to confirm (the founder away).** The words the patterns accept beyond what a source printed
+  ("Validé" for a semester at UCAD, "Payé" for a paid registration at UFHB); EcoleDirecte reading the last period that
+  carries an average; a row opening its lines while unverified (the rule of D184 opens a built line, and the mark
+  tells the funder what is not yet proved); the word "unverified" itself on a consumer screen.
+- **What is not done.** No provider is registered: the dashboard needs the founder's session. No row is written: the
+  providers' ids do not exist yet.

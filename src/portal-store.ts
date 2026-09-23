@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS viky_portals (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS results jsonb;
+ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS unverified boolean NOT NULL DEFAULT false;
 `;
 
 let executor: SqlExecutor | undefined;
@@ -72,13 +73,18 @@ export type Portal = Readonly<{
   results: ResultsExtract | null;
   provenAt: Date;
   provenBy: string;
+  /**
+   * Defined from the portal's public pages and not yet from a student's session (D193): the extraction may miss, the
+   * chooser says "unverified" beside the university, and the first real session confirms or corrects it.
+   */
+  unverified: boolean;
 }>;
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const HASH = /^0x[0-9a-fA-F]{64}$/;
 
 /** What a row must be to be written at all: the guard on the operator's own command. */
-export function portalProblem(input: Omit<Portal, "provenAt" | "results"> & { results?: ResultsExtract | null }): string | undefined {
+export function portalProblem(input: Omit<Portal, "provenAt" | "results" | "unverified"> & { results?: ResultsExtract | null; unverified?: boolean }): string | undefined {
   if (!isPortalId(input.portalId)) return "the portal id is lower case letters, digits and dashes, 64 at most";
   if (!input.name.trim() || !input.university.trim()) return "a name and a university";
   if (!/^[A-Z]{2}$/.test(input.country)) return "a country of two capital letters";
@@ -105,18 +111,19 @@ export function portalProblem(input: Omit<Portal, "provenAt" | "results"> & { re
  * Writes a proved portal, or proves it again. The results extraction is kept when the command does not name one:
  * proving enrolment a second time must not undo the results page proved the first time.
  */
-export async function savePortal(input: Omit<Portal, "provenAt" | "results"> & { provenAt?: Date; results?: ResultsExtract | null }): Promise<void> {
+export async function savePortal(input: Omit<Portal, "provenAt" | "results" | "unverified"> & { provenAt?: Date; results?: ResultsExtract | null; unverified?: boolean }): Promise<void> {
   const problem = portalProblem(input);
   if (problem) throw new Error(`A portal row needs ${problem}`);
   const results = input.results ? JSON.stringify(normaliseResults(input.results)) : null;
   await sql()`
-    INSERT INTO viky_portals (portal_id, name, university, country, provider_id, provider_version, request_hash, login_url, extract, results, proven_at, proven_by)
+    INSERT INTO viky_portals (portal_id, name, university, country, provider_id, provider_version, request_hash, login_url, extract, results, proven_at, proven_by, unverified)
     VALUES (${input.portalId}, ${input.name.trim()}, ${input.university.trim()}, ${input.country}, ${input.providerId}, ${input.providerVersion}, ${input.requestHash.toLowerCase()},
-            ${input.loginUrl}, ${JSON.stringify(input.extract)}::jsonb, ${results}::jsonb, ${(input.provenAt ?? new Date()).toISOString()}, ${input.provenBy.toLowerCase()})
+            ${input.loginUrl}, ${JSON.stringify(input.extract)}::jsonb, ${results}::jsonb, ${(input.provenAt ?? new Date()).toISOString()}, ${input.provenBy.toLowerCase()}, ${input.unverified === true})
     ON CONFLICT (portal_id) DO UPDATE SET
       name = EXCLUDED.name, university = EXCLUDED.university, country = EXCLUDED.country, provider_id = EXCLUDED.provider_id,
       provider_version = EXCLUDED.provider_version, request_hash = EXCLUDED.request_hash, login_url = EXCLUDED.login_url,
-      extract = EXCLUDED.extract, results = COALESCE(EXCLUDED.results, viky_portals.results), proven_at = EXCLUDED.proven_at, proven_by = EXCLUDED.proven_by`;
+      extract = EXCLUDED.extract, results = COALESCE(EXCLUDED.results, viky_portals.results), proven_at = EXCLUDED.proven_at, proven_by = EXCLUDED.proven_by,
+      unverified = EXCLUDED.unverified`;
 }
 
 /** Writes the results page of a portal already proved for enrolment (D174). False when no such portal exists. */
@@ -154,6 +161,7 @@ function toPortal(row: Record<string, unknown>): Portal {
     results: toResults(row.results),
     provenAt: new Date(String(row.proven_at)),
     provenBy: String(row.proven_by),
+    unverified: row.unverified === true,
   };
 }
 
@@ -211,7 +219,8 @@ export async function searchPortals(words: string): Promise<readonly Portal[]> {
  * is not sent: the funder chooses a university, and the person signs in from their own gift page.
  */
 export function portalFound(portal: Portal): Readonly<{ pair: string; title: string; issuer: string; path: string }> {
-  return { pair: portal.portalId, title: portal.university, issuer: countryInWords(portal.country), path: "" };
+  // A row defined from public pages says so on the line the funder presses (D193), until a student's session confirms it.
+  return { pair: portal.portalId, title: portal.unverified ? `${portal.university} (unverified)` : portal.university, issuer: countryInWords(portal.country), path: "" };
 }
 
 export async function countPortals(): Promise<number> {
