@@ -1,6 +1,7 @@
 import type { Hex } from "viem";
 import { CHESS_MODES, CHESS_TACTICS, chessGoalType, chessProviderId } from "./chess-com";
 import { COURSERA_GOAL_TYPE, courseraProviderId } from "./coursera-certificate";
+import { EDX_GOAL_TYPE, edxProviderId } from "./edx-certificate";
 import { CREDLY_GOAL_TYPE, credlyProviderId } from "./credly-badge";
 import { detProviderId } from "./duolingo-english-test";
 import { LICHESS_CADENCES, lichessGoalType, lichessProviderId } from "./lichess";
@@ -55,6 +56,8 @@ export const MILESTONE_GOALS: readonly MilestoneGoal[] = [
   })),
   // A course certificate: granted once, with nothing to score, so what a proof carries is that it exists (C3).
   { goalType: COURSERA_GOAL_TYPE, providerId: courseraProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Coursera", detail: "a course certificate" },
+  // edX (D212): a verified certificate, read from the public page edX publishes for it.
+  { goalType: EDX_GOAL_TYPE, providerId: edxProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "edX", detail: "a verified course certificate" },
   // A certification badge: granted once by an issuer that is not the person, so it is had or not (20 Sep 2026).
   { goalType: CREDLY_GOAL_TYPE, providerId: credlyProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Credly", detail: "a certification badge" },
   // Staying enrolled, shown from the person's own student portal: one goal for every portal, the portal pinned in

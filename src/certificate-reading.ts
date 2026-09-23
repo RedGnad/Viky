@@ -1,6 +1,8 @@
 import type { Hex } from "viem";
 import { COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraProviderId } from "./coursera-certificate";
 import { attestCourseraCertificate, CourseraReadError } from "./coursera-reading";
+import { EDX_GOAL_TYPE, EDX_HAS_IT, edxProviderId } from "./edx-certificate";
+import { attestEdxCertificate, EdxReadError } from "./edx-reading";
 import { CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyProviderId } from "./credly-badge";
 import { attestCredlyBadge, CredlyReadError } from "./credly-reading";
 import { attestDetCertificate, DetReadError, type AttestedDetReading } from "./det-reading";
@@ -92,6 +94,11 @@ async function attestByGoal(goalType: number, link: string): Promise<ReadCertifi
     // Nothing to score: the badge exists, and the certification is inside the subject the funder signed.
     return { subject: reading.subject, score: CREDLY_HAS_IT, testDay: reading.issuedDay, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: credlyProviderId() };
   }
+  if (goalType === EDX_GOAL_TYPE) {
+    const reading = await attestEdxCertificate(link);
+    // Nothing to score: a verified certificate exists, and the course is inside the subject the funder signed.
+    return { subject: reading.subject, score: EDX_HAS_IT, testDay: reading.issuedDay, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: edxProviderId() };
+  }
   if (goalType === COURSERA_GOAL_TYPE) {
     const reading = await attestCourseraCertificate(link);
     // Nothing to score: the certificate exists, and the course is inside the subject the funder signed.
@@ -137,7 +144,7 @@ export async function proveCertificate(
   try {
     reading = await deps.attest(state.goalType, input.link);
   } catch (error) {
-    if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError)) {
+    if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError) && !(error instanceof EdxReadError)) {
       return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? "That could not be read right now");
     }
     switch (error.code) {
@@ -151,6 +158,9 @@ export async function proveCertificate(
         return refuse(giftId, "CERTIFICATE_EXPIRED", words?.expired ?? error.message);
       case "NO_CERTIFICATE":
         return refuse(giftId, "NO_CERTIFICATE", words?.notFound ?? error.message);
+      case "NOT_VERIFIED":
+        // An edX certificate of a track edX does not verify (D212): real, and not what the gift is for.
+        return refuse(giftId, "BELOW_THE_TARGET", words?.below(1, 0) ?? error.message);
       default:
         return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? error.message);
     }

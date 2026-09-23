@@ -315,7 +315,29 @@ export const STRAVA_DAY_ACTIVITIES: AttestedSource = {
   matches: [{ type: "regex", value: "(?<activities>\\[[\\s\\S]*\\])" }],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
+/**
+ * An edX certificate's public page (D212): server-rendered HTML, measured on a live certificate on 24 Sep 2026. Six
+ * patterns, each on the class or the words the page gives the value: the organisation and the course number in the
+ * title, the track in the rendering's class, the holder, the course's printed name, the day of issue, and the
+ * certificate's own id in its own link, so a redirect to another certificate is caught.
+ */
+export const EDX_CERTIFICATE: AttestedSource = {
+  id: "edx-certificate",
+  service: "edX",
+  accept: "text/html",
+  accepts: (account) => /^[0-9a-f]{32}$/.test(account),
+  url: (account) => `https://courses.edx.org/certificates/${account}`,
+  matches: [
+    { type: "regex", value: "<title>(?<org>[A-Za-z0-9._-]+) (?<courseNumber>[A-Za-z0-9._-]+) Certificate \\| edX</title>" },
+    { type: "regex", value: '<div class="wrapper-accomplishment-title (?<track>[a-z-]+)">' },
+    { type: "regex", value: '<strong class="accomplishment-recipient">(?<name>[^<]+)</strong>' },
+    { type: "regex", value: '<span class="accomplishment-course-name">(?<courseName>[^<]+)</span>' },
+    { type: "regex", value: "Issued (?<issued>[A-Z][a-z]+ \\d{1,2}, \\d{4})</span>" },
+    { type: "regex", value: '<a href="https://courses\\.edx\\.org/certificates/(?<certificateId>[0-9a-f]{32})">' },
+  ],
+};
+
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
 
 /**
  * The headers a source is read with, which is part of what is fetched and therefore lives with the sources: it is

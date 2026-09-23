@@ -973,6 +973,15 @@ read from the chain on 23 Sep 2026, the goal alone in the batch; rebuilt by `pnp
 Signing it opens nothing: PRONOTE is parked, its answers and its bulletins being encrypted
 (docs/reclaim/pronote-grade-shown-provider.md).
 
+## Goal 25 on the milestone contract: an edX verified certificate (D212)
+
+Provider id `viky:provider:edx-certificate-zkfetch:v1` = `0x1b7dcd631d332fd55c35e820ce05cc6817023b8eda487a830d1370222d6fa08f`,
+shape 1. `registerGoal(25, 0x1b7dcd63…a08f, 1)`, data
+`0x5ba1915200000000000000000000000000000000000000000000000000000000000000191b7dcd631d332fd55c35e820ce05cc6817023b8eda487a830d1370222d6fa08f0000000000000000000000000000000000000000000000000000000000000001`.
+`pnpm safe:session` finds it missing and batches it with goal 24 in the next session, carried by the relayer. The source
+`edx-certificate` is in the shared list, so this PR moves the reading fingerprint: the service is redeployed from the
+branch before the merge (the rule of "The reading service is a second deployment").
+
 ## The Safe session of every remaining goal, in one transaction (D194)
 
 The eleven goals not yet on the chain go in **one Safe transaction**: one hash, one signature per key, two in all,

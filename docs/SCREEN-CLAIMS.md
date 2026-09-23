@@ -555,3 +555,10 @@ dollars; and the session countdown. Each test was checked by breaking the rule a
 | Under "What has no public page", School marks: "…not PRONOTE, whose pages and bulletins are encrypted, so nothing in them can be proved." | PRONOTE's answers are AES-encrypted and its bulletin PDF uses the PDF standard's encryption, both read on the demonstration space; the line is on no list | the `school-marks` frontier; `PRONOTE_GRADE_SHOWN` out of `BUILDING`, `PRONOTE_SHOWN` and `PRONOTE_MILESTONE` out of their lists | `test/pronote-shown.test.ts`, `test/school-shown.test.ts` |
 | "This gift will be for the PRONOTE space 0123456a. That is the word before index-education.net in its link." | the space is taken from the pasted link and bound into the subject the funder signs | `pronoteSpaceOf`, `pronoteSubject` | `test/pronote-shown.test.ts` |
 | on the judges' page, PRONOTE's terms, the risk assumed, GDPR articles 15 and 20 | only what was read is quoted, and the founder's decision is said as a decision | `app/judges/page.tsx` | none: a sentence read against the page by hand |
+
+### An edX certificate, being built (D212)
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "An edX certificate", READ FOR YOU, under "Finish a course" with "Being built." | goal 25 not signed yet, the source waiting for the service's redeploy | `EDX_CERTIFICATE` in `BUILDING` | `test/edx-certificate.test.ts` |
+| "That certificate is not a verified one, so it is not what this gift is for." | the page's track is not `verified` or `professional` | `isVerifiedTrack` in `edxCertificateOf` | `test/edx-certificate.test.ts` |
