@@ -5020,3 +5020,29 @@ The sheet:
 - **Test.** `test/character-reacts.test.ts`. Measured on the board: a returning arrival with a day earned and a day
   gone back reads rest, open at 567 ms, down at 867 ms; a first visit to a reached gift reads rest, then jump at
   133 ms; under reduced motion, rest throughout.
+
+## D182, 23 Sep 2026: the character on every screen (motion, step 3 of the life of the product)
+
+The founder, 23 Sep 2026: "le personnage sur toutes les pages, pas seulement Home, avec ses deux expressions au
+survol (ligne de la condition : curieux ; puces de durée : content), comme décidé le 21 Sep."
+
+- **Where it was missing.** Home, Gifts, You signed in, a gift's page, the way out and the made screen drew it; You
+  signed out, the paying screens and their waits, a gift's page while it loads or after the session closed, and every
+  document (What Viky can check, the judges page, help, privacy, the legal notice, offline) did not.
+- **One place decides it now.** The shell gives a screen that names no character the head character, with its gaze,
+  its two hover expressions and the reactions of D181; a document carries it beside its way back, as a task does. The
+  page without an account keeps its own, larger, beside its title, and the made screen its gift.
+- **The two expressions** answer the card's condition line (curious) and its duration chips (happy) as decided on
+  21 Sep; those controls exist on the card of Home and of the page without an account, and both characters there hear
+  them. Every other character hears the same moods, so any screen that later carries those controls is answered.
+
+The sheet:
+
+- **Trigger.** A pointer over the character (gaze); the card's condition line (curious) and its duration chips
+  (happy), by hover with a pointer and by the choice with a finger; the reactions of D181.
+- **Rule.** Unchanged from D148 and D181; what changes is where it stands: every screen.
+- **Material token.** `MOTION.hover`, as before. No new token.
+- **Loop.** None.
+- **Reduced motion.** The rest face and nothing else.
+- **Test.** `test/browser/character-everywhere.spec.ts`: ten screens a person reaches, each drawing exactly one visible
+  character inside the mood channel, at four sizes.

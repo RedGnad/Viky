@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { DISPLAY, META, TITLE } from "../components/ui";
 import { Appearance } from "./Appearance";
 import { BackLink } from "./BackLink";
+import { HeadCharacter } from "./HeadCharacter";
 import { Mark } from "./Mark";
 import { Nav, type Destination } from "./Nav";
 
@@ -60,9 +61,15 @@ type Props =
       step?: ReactNode;
       children: ReactNode;
     }>
-  | Readonly<{ kind: "document"; back?: string; backLabel?: string; children: ReactNode }>;
+  | Readonly<{ kind: "document"; back?: string; backLabel?: string; character?: ReactNode; children: ReactNode }>;
 
 export function Shell(props: Props) {
+  /**
+   * The character stands on every screen, not only on Home (the life of the product, step 3, 23 Sep 2026): a screen
+   * that names none is given the head character, which carries the gaze, the two hover expressions and the reactions
+   * of D181. The page without an account is the one exception: it draws its own, larger, beside its title.
+   */
+  const character = props.character !== undefined ? props.character : props.kind === "destination" && props.bare ? null : <HeadCharacter />;
   const width =
     props.kind === "task"
       ? "max-w-[var(--app-column-max)]"
@@ -98,23 +105,30 @@ export function Shell(props: Props) {
                 {props.kind === "destination" && props.action ? props.action : null}
               </div>
             </div>
-            {props.kind === "task" && props.character ? (
+            {props.kind === "task" && character ? (
               <div className="flex w-full items-center justify-between gap-[var(--space-md)]">
                 {props.back ? <BackLink href={props.back} label={props.backLabel} follow={props.backFollows} /> : <span />}
-                {props.character}
+                {character}
               </div>
             ) : props.kind === "task" && props.back ? (
               <BackLink href={props.back} label={props.backLabel} follow={props.backFollows} />
             ) : null}
-            {props.kind === "document" && props.back ? <BackLink href={props.back} label={props.backLabel} /> : null}
+            {props.kind === "document" && character ? (
+              <div className="flex w-full items-center justify-between gap-[var(--space-md)]">
+                {props.back ? <BackLink href={props.back} label={props.backLabel} /> : <span />}
+                {character}
+              </div>
+            ) : props.kind === "document" && props.back ? (
+              <BackLink href={props.back} label={props.backLabel} />
+            ) : null}
             {props.kind === "task" && props.caption ? <p className={META}>{props.caption}</p> : null}
             {props.kind === "task" && props.step ? <h1 className={TITLE}>{props.step}</h1> : null}
             {/* Room between the mark and a destination's title, which grows with the title: the two faces touched at 1 440.
                 The character stands at the end of that row, where a task carries it beside the way back (D154). */}
-            {props.kind === "destination" && (props.title || props.character) ? (
+            {props.kind === "destination" && (props.title || character) ? (
               <div className="flex w-full items-end justify-between gap-[var(--space-md)] mt-[var(--space-sm)] [@media(min-width:840px)]:mt-[var(--space-xl)]">
                 {props.title ? <h1 className={DISPLAY}>{props.title}</h1> : <span />}
-                {props.character}
+                {character}
               </div>
             ) : null}
           </header>
