@@ -249,6 +249,8 @@ the contract with its provider id and its shape before the next was sent.
 | 11 | Credly, a certification badge | 1, having it or not | `0xb51fb65622628e49e636bc88791f4d118dcc3ef91063975223e529556628ad62` | `0x27ca75bfbfcad66ee9b03286f5829622f92eeaa1d159d06b1871c98c5c698f6c`, block 106,321,662 |
 | 12 | Chess.com, the puzzle rating | 0, a climb | `0x5d3b3df90a426ae46f38985fb35c2c55511d811a8f6a091278f3b6964c5c36fe` | `0x5d2923dbe4ae4646d14b93377956be674d0bd2c1bd11f12a9454b084d8681ba6`, block 106,321,671 |
 | 13 | ETS, a TOEFL score shown (D164) | 1, having it or not | `0xa07cae8e7502221e9a33445deb8f4f5e12d9ccdfd35b5e53d9eb38f32d75db7d` | `0x4ff8000117a57faaef15773d06059934241ea926ddc7a8acc6259ba8563d21c4`, block 107,176,764, 192,885 gas, Safe nonce 4, signed 23 Sep 2026 by two of the three keys and carried by the relayer |
+| 14 | a university's student portal, enrolled and shown (D165) | 1, having it or not | `0xa95adf80ba13395dcc23c8048874f1ddfba5321a9eb5e1f90711c6a81c3d64df` | `0x9a46587c863f8b4ea6c806cab097d4a654da9995c7e3f5e08a5a51ab3ec636c7`, block 107,214,268, 192,897 gas, Safe nonce 5, signed 23 Sep 2026 by two of the three keys and carried by the relayer |
+| 2, on the daily contract `GiftEscrow` | GitHub, the contributions GitHub counts (D166) | no shape: `registerGoal(goalType, providerId)` | `0xda1048bc067600c20909ee6e262729bc5087ae37f5478c3beb4d6f21d9922050` | `0x4982aeceb7da84ecc67018db9ae3f433236da0345b536df1b64b05af7008f77c`, block 107,214,315, 161,559 gas, Safe nonce 6, the same session, sent after 14 was final; `goalProviders(2)` read back equal |
 
 How a session of several goals is signed at once, since the Safe's nonce moves by one per transaction: build each
 call with `NONCE=1`, `NONCE=2`, `NONCE=3` (from the Safe's nonce at the time) so the three hashes exist before anybody
@@ -349,7 +351,12 @@ One goal for the whole family of student portals, number 14, shape "having it or
 | data | `0x5ba19152000000000000000000000000000000000000000000000000000000000000000ea95adf80ba13395dcc23c8048874f1ddfba5321a9eb5e1f90711c6a81c3d64df0000000000000000000000000000000000000000000000000000000000000001` |
 | gas | 102,125 (above the Foundry report for `registerGoal`, before the Monad margin) |
 | what it is | `registerGoal(14, 0xa95adf80…64df, 1)`: enrolled, shown, one goal for every portal |
-| Safe nonce | 5 after goal 13, unless something else goes through the Safe first: `pnpm safe:action` prints the current one |
+| Safe nonce | 5, as it was |
+
+Registered on 23 Sep 2026 in one session with goal 2 below: hash `0x0bb49c1d…3f35` signed by two of the three keys,
+carried by the relayer, tx `0x9a46587c…36c7`, block 107,214,268, 192,897 gas. `pnpm check:milestone-goals` reads 14 as
+`registered` with the provider id above. The condition still stays behind the door until a portal has been proved
+with a student present and one gift has run end to end: that is the founder's word, not the contract's.
 
 The session, when the founder sits down: `ACTION=raw TO=<to> DATA=<data> NONCE=<the Safe's nonce> pnpm safe:action`
 prints `signThis`; two owners sign that hash with `cast wallet sign --no-hash` where their keys live; the same command
@@ -406,9 +413,14 @@ evidence signer `0x85702Eaa…`). Provider id `viky:provider:github-contribution
 | data | `0x68fa3be20000000000000000000000000000000000000000000000000000000000000002da1048bc067600c20909ee6e262729bc5087ae37f5478c3beb4d6f21d9922050` |
 | gas | 75,000 (goal 5 took 65,238 on the same function, before the Monad margin) |
 | what it is | `registerGoal(2, 0xda1048bc…2050)` |
-| Safe nonce | the Safe's at the time: 5 after goal 13, 6 if goal 14 goes first; `pnpm safe:action` prints it |
+| Safe nonce | 6, after goal 14 |
 
-The session is the one of goal 14 above, with this `TO` and this `DATA`. Read back afterwards with the script that read
+Registered on 23 Sep 2026, in the session of goal 14 and after it was final: hash `0xb1c6f1c0…4886` signed by two of
+the three keys, carried by the relayer, tx `0x4982aece…f77c`, block 107,214,315, 161,559 gas, and `goalProviders(2)`
+read back equal to the provider id above. The condition stays behind the door until `GITHUB_API_TOKEN` is set and a
+real gift has run.
+
+The session was the one of goal 14 above, with this `TO` and this `DATA`. Read back afterwards with the script that read
 it empty: `npx tsx review-captures/read-daily-goals.ts` prints `goal2` (that file is local and not committed; any
 `goalProviders(2)` read does the same).
 
@@ -692,7 +704,7 @@ as the owner, after the handover of `GiftEscrow`.
 | 5 | Duolingo English Test, the overall score | having it or not | to register; the screens are built (U3), and the condition goes live the day it is registered (D109) |
 | 6 to 9 | Lichess, bullet, blitz, rapid, classical | climb | registered, read back `registered` by `pnpm check:milestone-goals` on 23 Sep 2026; the line is behind the door and refuses creation until the keeper's reading is built (D168) |
 | 10 to 13 | Coursera, Credly, Chess.com puzzles, ETS | see their rows | registered through the Safe, 20 and 23 Sep 2026 (the two sections above) |
-| 14 | a university's student portal, enrolled and shown (D165) | having it or not | to register; the call is under "Goal 14" above, and the condition stays "Being built" until a portal has been proved with a student present |
+| 14 | a university's student portal, enrolled and shown (D165) | having it or not | registered 23 Sep 2026 through the Safe (the row above); the condition stays "Being built" until a portal has been proved with a student present |
 
 The daily contract has its own goals, under `GiftEscrow`'s two-argument `registerGoal(goalType, providerId)`:
 
@@ -700,7 +712,7 @@ The daily contract has its own goals, under `GiftEscrow`'s two-argument `registe
 |---|---|---|
 | 1 | Duolingo, the experience total | registered at deployment |
 | 5 | Duolingo, one course's experience | registered 18 Sep 2026 (the section "Before the course reading of U1") |
-| 2 | GitHub, the contributions GitHub counts (D166) | to register; the call is under "Goal 2 on the daily contract" below |
+| 2 | GitHub, the contributions GitHub counts (D166) | registered 23 Sep 2026 through the Safe (the section "Goal 2 on the daily contract" below); the condition stays behind the door until its token is set |
 
 **The session, in order.** The owner is a wallet the founder holds, so the session is signed from that wallet and no
 key is ever read from a file. Each step is read back before the next.
