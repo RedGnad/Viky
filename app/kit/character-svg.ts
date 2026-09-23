@@ -31,7 +31,7 @@ export function characterSvg(
     "--character-hero-from": appearance === "dark" ? COLOURS.dark.accent : CHARACTERS.light.one,
     "--character-hero-to": appearance === "dark" ? CHARACTERS.dark.one : CHARACTERS.light.three,
   };
-  return renderToStaticMarkup(createElement(Character, { state, tone, size: "large" })).replace(
+  return renderToStaticMarkup(createElement(Character, { state, tone, size: "large", drawn: "inline" })).replace(
     /var\((--[a-z0-9-]+)\)/g,
     (_, name: string) => values[name] ?? "transparent",
   );

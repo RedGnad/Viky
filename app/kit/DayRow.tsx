@@ -95,7 +95,8 @@ export function DayRow({
           >
             <ArrivalDay gift={id} index={index}>
               <Gaze>
-                <Character state={characterOf(state)} variant={index} standing={false} className="h-auto w-full" />
+                {/* Written into the page (D206): every day follows the pointer, and an earned one jumps in the arrival. */}
+                <Character state={characterOf(state)} variant={index} standing={false} drawn="inline" className="h-auto w-full" />
               </Gaze>
             </ArrivalDay>
           </li>

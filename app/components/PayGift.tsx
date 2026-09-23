@@ -417,7 +417,7 @@ export function PayGift() {
         character={
           justMade ? (
             <Success>
-              <Character state="gift" className="h-auto w-[72px] shrink-0" />
+              <Character state="gift" drawn="inline" className="h-auto w-[72px] shrink-0" />
             </Success>
           ) : (
             <Character state="gift" className="h-auto w-[72px] shrink-0" />

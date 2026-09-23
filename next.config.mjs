@@ -41,6 +41,13 @@ const nextConfig = {
       "./node_modules/.pnpm/@reclaimprotocol+zk-fetch*/node_modules/@reclaimprotocol/zk-fetch/lib/linux/**",
     ],
   },
+  /**
+   * The drawings of the named characters (D206) are addressed with their own content's version, so a phone keeps them
+   * for a year and asks again only when a drawing changes: a reload then paints every character from its own memory.
+   */
+  async headers() {
+    return [{ source: "/characters.svg", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] }];
+  },
   // The repository is the workspace root; a lockfile higher up the tree must not be picked up.
   turbopack: {
     root: fileURLToPath(new URL(".", import.meta.url)),

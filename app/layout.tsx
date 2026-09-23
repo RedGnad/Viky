@@ -21,6 +21,8 @@ import { moneyForTheReader } from "@/src/reader-money";
 import { THEME_BOOT_SCRIPT } from "@/src/theme";
 import { Pressed } from "./kit/Pressed";
 import { Register } from "./serwist/Register";
+import { preload } from "react-dom";
+import { CHARACTERS_FILE } from "./kit/character-file";
 
 const APP_NAME = "Viky";
 const APP_DEFAULT_TITLE = "Viky";
@@ -121,6 +123,9 @@ async function cardThisDeviceKept() {
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  // The drawings of the named characters, asked for in the head, beside the stylesheet (D206): a character is never
+  // painted empty waiting for its file.
+  preload(CHARACTERS_FILE, { as: "image", type: "image/svg+xml", fetchPriority: "high" });
   const signedIn = await signedInAccount();
   /**
    * Day or night as this account chose it, written on the document itself (D159). The device answers first, before
