@@ -221,6 +221,7 @@
   --page-enter-duration: 250ms;
   --page-enter-easing: cubic-bezier(0.2, 0, 0, 1);
   --page-enter-rise: 8px;
+  --page-enter-from: 0.6;
   --page-enter-stagger: 80ms;
   --page-enter-most-staggered: 240ms;
   --page-enter-last-turn: 240ms;
@@ -658,7 +659,7 @@ dialog.sheet[open] {
 /*
  * The arrival on a screen (brief section 6, the second of the four triggers; the motion roadmap of 21 Sep 2026,
  * step 1). A page change answers a gesture: somebody pressed something to get here, and what they came for enters
- * rather than being there already. It rises 8 pixels and comes up from nothing in 250 ms on Material's standard
+ * rather than being there already. It rises 8 pixels and comes up from 60 % in 250 ms on Material's standard
  * curve, once, which is MOTION.reveal, and it is the movement the sheets already make in their own way.
  *
  * What does not move is the mark and the appearance control beside it: they stand in the same place on every screen,
@@ -732,16 +733,17 @@ dialog.sheet[open] {
   animation-delay: var(--page-enter-last-turn);
 }
 
+/* From 60 % rather than from nothing (D196): a screen that goes almost blank after a press reads as a blink. */
 @keyframes page-enter {
   from {
     transform: translateY(var(--page-enter-rise));
-    opacity: 0;
+    opacity: var(--page-enter-from);
   }
 }
 
 @keyframes page-fade {
   from {
-    opacity: 0;
+    opacity: var(--page-enter-from);
   }
 }
 

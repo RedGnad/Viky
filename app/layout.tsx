@@ -1,4 +1,5 @@
 import { SerwistProvider } from "@serwist/turbopack/react";
+import { Trace } from "./kit/Trace";
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { signedInAccount, zoneOfTheReader } from "@/src/who-is-reading";
@@ -152,6 +153,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             founder kept seeing on his phone and never on a desktop. A page does not restart itself under somebody. */}
         <SerwistProvider swUrl="/serwist/sw.js" register={false} reloadOnOnline={false}>
           <Register />
+          <Trace />
           {/* A press a finger can see, on every control, once (D154). */}
           <Pressed />
           <AccountProvider initialAccount={signedIn}>

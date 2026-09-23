@@ -1189,6 +1189,8 @@ offered a gift: each stopped on the check, with "Not now".
 | `0x4F04D62013F938b9B1be5873AE9472180CA798A6` | 18 Sep 2026 | reproducing the session defect in production: it is the run that showed the server never lost the cookie |
 | `0xAA248d38AE02bf651b6F306A6AF295157CB9dAe5` | 18 Sep 2026 | checking the session fix: signed in, full load, reload, second tab, back to the funder flow |
 | `0xD186521D0a8B6f959c2Fa7327e8640788816cD5c` | 18 Sep 2026 | checking that the supervised result is offered to nobody but an operator |
+| not read back | 23 Sep 2026, about 08:40 UTC | checking the signed-in page changes after the RPC fallback (D192): Home, Gifts, You |
+| `0x3209e0492873b0b599DB1f9d8b7b226628b42154` | 23 Sep 2026, about 14:40 UTC | cold signed-in loads of Home, Gifts and You, looking for the double load (D196) |
 
 The row `0xb12e0c72209bd4becfdafa96a8f3e7ebc93b8376`, euros, 02:56 UTC the same day, was not written by a check and
 is not listed here.
