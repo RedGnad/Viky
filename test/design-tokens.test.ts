@@ -4,6 +4,7 @@ import { existsSync, globSync, readFileSync } from "node:fs";
 import { contrastRatio, NON_TEXT_CONTRAST_MINIMUM, parseHex, relativeLuminance, TEXT_CONTRAST_MINIMUM } from "../src/contrast.js";
 import { APPEARANCE } from "../src/sentences.js";
 import {
+  GIFT_CARD_TYPE,
   APP_COLUMN_MAX,
   CARD,
   CARD_PLACED,
@@ -419,7 +420,9 @@ const SCALE: readonly number[] = TYPE_SCALE;
 test("every text size in the stylesheet is a step of the scale, and the promise takes its two steps", () => {
   const css = readFileSync("app/globals.css", "utf8");
   const sizes = [...css.matchAll(/--type-([a-z-]+): (\d+(?:\.\d+)?)px;/g)]
-    .filter(([, name]) => !/leading|tracking/.test(name))
+    // The gift card's own sizes are off the scale by the founder's choice of 24 Sep 2026 (D211): no pixel of the card
+    // moves. They are held equal to GIFT_CARD_TYPE by their own test instead.
+    .filter(([, name]) => !/leading|tracking/.test(name) && !name.startsWith("gift-"))
     .map(([, name, px]) => ({ name, px: Number(px) }));
   assert.ok(sizes.length >= 14, `${sizes.length} sizes read`);
   for (const { name, px } of sizes) assert.ok(SCALE.includes(px), `--type-${name} is ${px}, which is not a step of the scale`);
@@ -744,4 +747,26 @@ test("the nature of a condition is two words in the meta voice, in three places 
   assert.match(readFileSync("app/kit/ChoiceList.tsx", "utf8"), /\{option\.tag \? option\.tag : null\}\n\s*\{option\.help/, "on every line of the chooser, before the line of help");
   assert.match(readFileSync("app/kit/GiftCard.tsx", "utf8"), /<span className=\{BODY\}>\{under\}<\/span>\n\s*\{nature\}/, "under the condition on the card");
   assert.match(readFileSync("app/what-viky-can-check/page.tsx", "utf8"), /<Nature nature=\{condition\.nature\} \/>\n\s*<p className=\{HELP\}>\{condition\.help\}/, "before the help on the catalogue");
+});
+
+test("the gift card's sizes are named tokens, carried by the stylesheet, and no class of the card writes a size of its own (D211)", () => {
+  const variable = (name: string) => cssVariable(name);
+  const px = (value: number) => `${value}px`;
+  assert.equal(variable("type-gift-eyebrow-leading"), px(GIFT_CARD_TYPE.eyebrow.lineHeight));
+  assert.equal(variable("type-gift-what"), px(GIFT_CARD_TYPE.what.size));
+  assert.equal(variable("type-gift-what-leading"), px(GIFT_CARD_TYPE.what.lineHeight));
+  assert.equal(variable("type-gift-state"), px(GIFT_CARD_TYPE.state.size));
+  assert.equal(variable("type-gift-state-leading"), px(GIFT_CARD_TYPE.state.lineHeight));
+  assert.equal(variable("type-gift-state-closed"), px(GIFT_CARD_TYPE.stateClosed.size));
+  assert.equal(variable("type-gift-state-closed-leading"), px(GIFT_CARD_TYPE.stateClosed.lineHeight));
+  assert.equal(variable("type-gift-next"), px(GIFT_CARD_TYPE.next.size));
+  assert.equal(variable("type-gift-next-leading"), px(GIFT_CARD_TYPE.next.lineHeight));
+  assert.equal(variable("type-gift-back"), px(GIFT_CARD_TYPE.back.size));
+  assert.equal(variable("type-gift-meta-leading"), px(GIFT_CARD_TYPE.meta.lineHeight));
+  assert.equal(variable("type-gift-fold"), px(GIFT_CARD_TYPE.fold.size));
+  assert.equal(variable("type-gift-fold-leading"), px(GIFT_CARD_TYPE.fold.lineHeight));
+  assert.equal(variable("type-gift-flag-number-leading"), px(GIFT_CARD_TYPE.flagNumber.lineHeight));
+  // Every class of the card reads a variable: no font size or line height is written as a number in the card's block.
+  const block = css.slice(css.indexOf("/*\n * The card of a gift, drawn from the founder's mockup"), css.indexOf(".climb-flag-number {") + 200);
+  assert.doesNotMatch(block, /font-size:\s*\d+px|line-height:\s*\d+px/, "a size written in the card's block");
 });

@@ -56,6 +56,24 @@ export const TYPE = {
 } as const;
 
 /**
+ * The card of a gift's page, as the founder's mockup of 19 Sep 2026 sets it (`gift.html`, D211). Its sizes are the
+ * mockup's own and sit off the product's scale (13, 16, 20, 25, 31), on purpose: the founder chose, on 24 Sep 2026,
+ * that moving the card to its tokens changes no pixel. So they are named here, carried by the stylesheet as variables,
+ * and `test/design-tokens.test.ts` holds the two equal. A size of the card that is on the scale uses the scale's token.
+ */
+export const GIFT_CARD_TYPE = {
+  eyebrow: { lineHeight: 16 },
+  what: { size: 15, lineHeight: 22 },
+  state: { size: 24, lineHeight: 29 },
+  stateClosed: { size: 15, lineHeight: 22 },
+  next: { size: 14, lineHeight: 21 },
+  back: { size: 23 },
+  meta: { lineHeight: 16 },
+  fold: { size: 15, lineHeight: 22 },
+  flagNumber: { lineHeight: 16 },
+} as const;
+
+/**
  * The third voice (K, Ramp section 2): the small lines that say where you are and when something happened, in the
  * text face, at the smallest step, in capitals, letter-spaced so capitals stay readable. No new family: Ramp gets
  * its three voices from three roles, not three fonts.

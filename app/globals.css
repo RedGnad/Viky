@@ -145,6 +145,21 @@
   --type-body-leading: 24px;
   --type-help: 13px;
   --type-help-leading: 18px;
+  /* The card of a gift's page, the mockup's own sizes, off the scale on purpose (GIFT_CARD_TYPE, src/design-tokens.ts). */
+  --type-gift-eyebrow-leading: 16px;
+  --type-gift-what: 15px;
+  --type-gift-what-leading: 22px;
+  --type-gift-state: 24px;
+  --type-gift-state-leading: 29px;
+  --type-gift-state-closed: 15px;
+  --type-gift-state-closed-leading: 22px;
+  --type-gift-next: 14px;
+  --type-gift-next-leading: 21px;
+  --type-gift-back: 23px;
+  --type-gift-meta-leading: 16px;
+  --type-gift-fold: 15px;
+  --type-gift-fold-leading: 22px;
+  --type-gift-flag-number-leading: 16px;
 
   /* The third voice: the small lines that say where you are and when something happened (K, Ramp section 2). */
   --type-meta: 13px;
@@ -797,14 +812,15 @@ dialog.sheet[open] {
 /*
  * The card of a gift, drawn from the founder's mockup of 19 Sep 2026 (`gift.html` and its `shared.css`). Written as
  * classes rather than as utilities on the elements because every value here is the mockup's own, and a reader has to
- * be able to put the two side by side: `test/design-tokens.test.ts` holds them equal to `src/design-tokens.ts`.
+ * be able to put the two side by side. Its type sizes are variables named in `:root` from `GIFT_CARD_TYPE`
+ * (`src/design-tokens.ts`), and `test/design-tokens.test.ts` holds the two equal (D211).
  *
  * The order inside the card is the order a person reads it: who it came from, who it is for, what they do, the
  * drawing, the state, the next moment, the money, the one action, and the two folds.
  */
 /* The card's own label, with a line of its own above the name. */
 .gift-eyebrow {
-  line-height: 16px;
+  line-height: var(--type-gift-eyebrow-leading);
 }
 
 .gift-who {
@@ -813,8 +829,8 @@ dialog.sheet[open] {
 }
 
 .gift-what {
-  font-size: 15px;
-  line-height: 22px;
+  font-size: var(--type-gift-what);
+  line-height: var(--type-gift-what-leading);
   color: var(--on-surface-body);
 }
 
@@ -872,8 +888,8 @@ dialog.sheet[open] {
 .gift-state {
   font-family: var(--font-title);
   font-weight: var(--font-title-weight);
-  font-size: 24px;
-  line-height: 29px;
+  font-size: var(--type-gift-state);
+  line-height: var(--type-gift-state-leading);
   letter-spacing: -0.4px;
   margin: 2px 0 4px;
 }
@@ -886,15 +902,15 @@ dialog.sheet[open] {
 
 /* What the source did to the account, at the weight of the state, because it is the state now. */
 .gift-state-closed {
-  font-size: 15px;
-  line-height: 22px;
+  font-size: var(--type-gift-state-closed);
+  line-height: var(--type-gift-state-closed-leading);
   font-weight: 500;
   margin-bottom: 4px;
 }
 
 .gift-next {
-  font-size: 14px;
-  line-height: 21px;
+  font-size: var(--type-gift-next);
+  line-height: var(--type-gift-next-leading);
   color: var(--on-surface-body);
   margin-bottom: 16px;
 }
@@ -910,13 +926,13 @@ dialog.sheet[open] {
 .gift-back {
   font-family: var(--font-title);
   font-weight: var(--font-title-weight);
-  font-size: 23px;
+  font-size: var(--type-gift-back);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .gift-meta {
-  line-height: 16px;
+  line-height: var(--type-gift-meta-leading);
   margin-top: 5px;
 }
 
@@ -935,8 +951,8 @@ dialog.sheet[open] {
 .gift-fold {
   margin-top: 16px;
   border-top: 1px solid var(--surface-rule);
-  font-size: 15px;
-  line-height: 22px;
+  font-size: var(--type-gift-fold);
+  line-height: var(--type-gift-fold-leading);
   color: var(--on-surface-body);
 }
 
@@ -973,7 +989,7 @@ dialog.sheet[open] {
 /* What stands outside the card, under it, in the ground's own voice. */
 .gift-beside {
   margin-top: 26px;
-  font-size: 13px;
+  font-size: var(--type-help);
   line-height: var(--type-help-leading);
   color: var(--muted);
 }
@@ -1022,7 +1038,7 @@ dialog.sheet[open] {
 
 .climb-flag-number {
   font-size: var(--type-card-label);
-  line-height: 16px;
+  line-height: var(--type-gift-flag-number-leading);
   font-weight: 700;
   letter-spacing: var(--type-card-label-tracking);
   color: var(--on-surface-muted);
