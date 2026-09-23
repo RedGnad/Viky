@@ -1029,3 +1029,26 @@ The owner can do exactly three things, and none of them touches money in flight:
 **The owner cannot** take money out of an exit, redirect one, change a floor, or touch a signature. Those are
 fixed by what the person signed: the nonce of their authorization is the hash of the terms, so nothing about
 them can be changed by anybody, owner included, without the token refusing the signature.
+
+## The last refund of a closed gift, and gift 1's 2.857148 AUSD (D186)
+
+The settling pass skipped every gift already finalised or taken back (`src/daily-pass.ts`), so a refund made owed by
+the finalisation itself was never sent. Gift 1, on the earlier contract `0xE04CD59bB93765333200a9da01df83149D4C4d67`,
+read on 23 Sep 2026: finalised, `refundable` 17.142858, `refundedToFunder` 14.28571, 2.857148 AUSD owed to its funder
+`0x350aF869ABa6ff26AB33517ECd3E38ACaF107761`, and the contract holding exactly 2.857148 AUSD.
+
+The pass now sends what a closed gift still owes (`stillOwedToFunder`), on the settling pass only. The one owed today
+was sent by hand the same day, through the relayer, with `refundUnearned(1)`: anybody may call it, and the money can
+only go to the gift's `refundTo`.
+
+| | before | after |
+|---|---|---|
+| block | 107,259,958 | 107,260,043 |
+| gift 1 `refundedToFunder` | 14.28571 | 17.142858 |
+| owed to the funder | 2.857148 | 0 |
+| AUSD held by `0xE04CD59…4C4d67` | 2.857148 | 0 |
+| relayer MON | 13.4332984 | 13.4146579 |
+
+Transaction `0xf6303ef4ff27d7c06bc15bbeb0e139f4f7ec4bd874d448382ce3411236aaf9c1`, block 107,260,037, 182,750 gas,
+status success, recorded in `viky_relayed`. Gifts 2 and 3, on `GiftEscrow`, owe nothing to their funder on the same
+reading; the 1.571432 AUSD that contract holds is not owed to a funder.
