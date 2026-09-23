@@ -7,9 +7,11 @@ import { GiftApiError, NO_STORE } from "@/src/gift-api";
 import { giftNameProblem, tidyGiftName } from "@/src/gift-names";
 import { makeMilestoneGift } from "@/src/milestone-creation";
 import { certificateById } from "@/src/milestone-conditions";
+import { loadPortal } from "@/src/portal-store";
 import { milestoneErrorResponse } from "@/src/milestone-api";
 import { MILESTONE_MAX_AMOUNT, MILESTONE_MIN_AMOUNT, milestoneFundingNonce, SHAPE_HAVE_OR_NOT, type MilestoneParams } from "@/src/milestone-protocol";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { UNIVERSITY_GOAL_TYPE } from "@/src/university-shown";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,6 +62,11 @@ export async function POST(request: Request) {
     const course = certificate.course ? certificate.course.slugOf(String(body.course ?? "")) : undefined;
     if (certificate.course && !course) throw new GiftApiError("INVALID_COURSE", certificate.course.help);
     if (!certificate.course && body.course) throw new GiftApiError("INVALID_COURSE", "That gift takes no course");
+    // A university gift is made on a portal Viky has proved with a student, and on no other (D165): a gift on a portal
+    // nobody can show would hold the money until its last day for nothing.
+    if (certificate.goalType === UNIVERSITY_GOAL_TYPE && course && !(await loadPortal(course))) {
+      throw new GiftApiError("NO_SUCH_PORTAL", "Viky has proved no student portal by that name. Choose one from the list. Nothing was taken.", 409);
+    }
     const durationDays = Number(body.durationDays);
     const { min, max } = certificate.duration;
     if (!Number.isSafeInteger(durationDays) || durationDays < min || durationDays > max) {
@@ -114,7 +121,8 @@ export async function POST(request: Request) {
       goalUsername: "",
       recipientName: body.recipientName ? tidyGiftName(String(body.recipientName)) : undefined,
       funderName: body.funderName ? tidyGiftName(String(body.funderName)) : undefined,
-      facts: { conditionId: certificate.condition.id, mode: "certificate", standingAtOffer: 0, standingReadAt: new Date().toISOString() },
+      // A university gift remembers its portal (D165): the session that shows the proof reads the provider from it.
+      facts: { conditionId: certificate.condition.id, mode: "certificate", standingAtOffer: 0, standingReadAt: new Date().toISOString(), ...(certificate.goalType === UNIVERSITY_GOAL_TYPE && course ? { portal: course } : {}) },
     });
 
     const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin;

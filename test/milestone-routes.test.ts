@@ -82,9 +82,9 @@ test("a condition that is not live is offered to nobody but an account that runs
   assert.deepEqual(listed.preview, [], "a funder sees only what is live");
   assert.ok(listed.ids.includes("chess-rating"));
   const operatorSees = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`, { headers: { cookie: await cookieFor(OPERATOR) } }))).json()) as { ids: string[]; preview: string[] };
-  // One thing is wired and not live today (D164): the TOEFL score shown, creatable by an operator so the first real
-  // proof can be shown at all, and offered to nobody else, door or no door.
-  assert.deepEqual(operatorSees.preview, ["toefl-mybest-shown"]);
+  // Two things are wired and not live today (D164, D165): the TOEFL score shown and enrolment shown, creatable by an
+  // operator so the first real proof can be shown at all, and offered to nobody else, door or no door.
+  assert.deepEqual(operatorSees.preview, ["toefl-mybest-shown", "university-enrollment-shown"]);
   const anonymous = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`))).json()) as { preview: string[] };
   assert.deepEqual(anonymous.preview, []);
 });

@@ -1,4 +1,5 @@
 import type { Hex } from "viem";
+import { UNIVERSITY_DURATION_DAYS, UNIVERSITY_ENROLLED, UNIVERSITY_GOAL_TYPE, universitySubject, isPortalId } from "./university-shown";
 import { CHESS_MODES, CHESS_TACTICS, chessGoalType, isValidChessUsername, ratingHasSettled, recordHasSettled, type ChessClimb } from "./chess-com";
 import {
   CHESS_RATING,
@@ -9,6 +10,7 @@ import {
   DUOLINGO_ENGLISH_TEST,
   type Condition,
   TOEFL_MYBEST_SHOWN,
+  UNIVERSITY_ENROLLMENT_SHOWN,
 } from "./conditions";
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
 import { CREDLY_DURATION_DAYS, CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyBadgeIdOf, credlyPairOf, credlySubject } from "./credly-badge";
@@ -600,7 +602,77 @@ export const TOEFL_SHOWN_MILESTONE: CertificateCondition = {
   },
 };
 
-const CERTIFICATES: readonly CertificateCondition[] = [DET_MILESTONE, COURSERA_MILESTONE, CREDLY_MILESTONE, TOEFL_SHOWN_MILESTONE];
+/**
+ * Staying enrolled, shown from the person's own student portal (D165). The certificate shape with no name asked:
+ * what the funder chooses is the portal, from the ones Viky has proved, and it is bound into the subject they sign.
+ * There is nothing to score: enrolled is one, and the page that says so is what the person shows.
+ */
+export const UNIVERSITY_SHOWN_MILESTONE: CertificateCondition = {
+  condition: UNIVERSITY_ENROLLMENT_SHOWN,
+  shape: CERTIFICATE_SHAPE,
+  goalType: UNIVERSITY_GOAL_TYPE,
+  asksName: false,
+  readPath: "",
+  validLink: () => false,
+  validName: () => true,
+  validTarget: (value) => value === UNIVERSITY_ENROLLED,
+  subject: ({ course }) => universitySubject(String(course ?? "")),
+  course: {
+    label: "Which university?",
+    help: "Type a word of its name. Only a portal Viky has already proved with a student can be chosen: that is what makes the proof worth anything.",
+    slugOf: (picked) => (isPortalId(picked.trim()) ? picked.trim() : undefined),
+    search: {
+      path: "/api/portals/search",
+      placeholder: "Search a university",
+      nothing: "Viky has proved no student portal by those words yet. The list grows one university at a time, with a student present.",
+    },
+    row: "Which university",
+    named: (course) => `This gift will be for staying enrolled at ${course}.`,
+  },
+  target: {
+    label: "What has to be shown",
+    help: "Enrolled or not: there is nothing to choose here.",
+    min: UNIVERSITY_ENROLLED,
+    max: UNIVERSITY_ENROLLED,
+    step: 1,
+    suggested: UNIVERSITY_ENROLLED,
+    inWords: () => "enrolled at that university",
+  },
+  duration: UNIVERSITY_DURATION_DAYS,
+  words: {
+    detailQuestion: "Which university, and how long",
+    nameLabel: "",
+    nameHelp: "",
+    linkLabel: "",
+    linkHelp: "",
+    whatIsRead: "Viky keeps that the portal said enrolled, and the day it was shown, and nothing else. Your portal password never reaches Viky, and nothing about your marks is read.",
+    check: "",
+    checking: "",
+    goal: () => "Show that you are enrolled",
+    mustShow: () => "The page of their own student portal that says they are enrolled, shown from their own account. When they enrolled is not read.",
+    durationLabel: "How long do they have?",
+    durationHelp: "It has to be shown inside that time, and the day it is shown is what counts.",
+    durationShape: (min, max) => `Between ${min} and ${max} days.`,
+    durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
+    whenReached: "When they show they are enrolled, all of this becomes theirs",
+    ifNot: "If they do not show it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    refusals: {
+      targetShape: "",
+      nameShape: "",
+      linkShape: "",
+      notPublic: "",
+      expired: "",
+      notFound: "",
+      unavailable: "The proof could not be checked right now. Try again in a moment.",
+      anotherName: "That was shown from another university's portal than the one this gift is for.",
+      below: () => "The page shown does not say enrolled.",
+      beforeTheGift: "",
+      afterTheDeadline: "That was shown after this gift's last day.",
+    },
+  },
+};
+
+const CERTIFICATES: readonly CertificateCondition[] = [DET_MILESTONE, COURSERA_MILESTONE, CREDLY_MILESTONE, TOEFL_SHOWN_MILESTONE, UNIVERSITY_SHOWN_MILESTONE];
 
 export function certificateOf(condition: Condition | undefined): CertificateCondition | undefined {
   if (!condition || condition.kind !== "milestone") return undefined;

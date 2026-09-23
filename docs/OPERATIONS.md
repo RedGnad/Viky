@@ -336,6 +336,62 @@ The two variables are sensitive on Vercel and cannot be read back by `vercel env
 `GET /api/conditions`, signed in as an operator, answers `shown.configured: true` when both are set where the route
 runs, and `false` otherwise. A boolean, never a length or a prefix.
 
+## Goal 14, staying enrolled at a university, shown, to be signed by the owner (D165)
+
+One goal for the whole family of student portals, number 14, shape "having it or not", provider id
+`viky:provider:university-enrollment-shown:v1` = `0xa95adf80ba13395dcc23c8048874f1ddfba5321a9eb5e1f90711c6a81c3d64df`.
+`pnpm check:milestone-goals` reads it as `missing` on 23 Sep 2026. Prepared the same day with
+`pnpm prepare:milestone-goals`, to go through the Safe exactly as goal 13 did (the table of owner actions above):
+
+| | |
+|---|---|
+| to | `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e` |
+| data | `0x5ba19152000000000000000000000000000000000000000000000000000000000000000ea95adf80ba13395dcc23c8048874f1ddfba5321a9eb5e1f90711c6a81c3d64df0000000000000000000000000000000000000000000000000000000000000001` |
+| gas | 102,125 (above the Foundry report for `registerGoal`, before the Monad margin) |
+| what it is | `registerGoal(14, 0xa95adf80…64df, 1)`: enrolled, shown, one goal for every portal |
+| Safe nonce | 5 after goal 13, unless something else goes through the Safe first: `pnpm safe:action` prints the current one |
+
+The session, when the founder sits down: `ACTION=raw TO=<to> DATA=<data> NONCE=<the Safe's nonce> pnpm safe:action`
+prints `signThis`; two owners sign that hash with `cast wallet sign --no-hash` where their keys live; the same command
+with `SIGNATURES="0xfirst,0xsecond" SEND=1 EXECUTOR_PRIVATE_KEY=<the relayer's key>` sends it; then
+`pnpm check:milestone-goals` must read 14 as `registered`, and the row goes into the table of owner actions.
+
+**Why one goal for the family and not one per portal.** The portal is bound into the subject the funder signs,
+`hash("viky:subject:university-enrollment-shown:v1:<portal id>")`, so a proof shown from another portal fails the
+contract's own `identityHash == subject` check, exactly as a certificate in another name does; and the proof's
+provider (the Reclaim id, its version, its one request by hash) is pinned by the portal's row at verification, never
+by the goal. A goal per portal would add nothing the subject does not already give, and would cost an owner
+signature through the Safe every time a university is added. The subject costs nothing and is signed by the funder,
+who is the one choosing the university. Said in the PR before building, as asked.
+
+## A university's portal, in thirty minutes, with a student present (D165)
+
+A row of `viky_portals` is what makes a university choosable, and a row is written only after a proof has come back
+from that portal with a student of it sitting there, signed in to their own account. Nothing is guessed from a page
+nobody signed in to, and the table is empty until the first one. Most of the thirty minutes is the recording.
+
+1. **Register the provider on the Reclaim dashboard, from the student's own session.** An HTTP provider whose login
+   URL is the portal's sign-in address; the student signs in in the recording tab, and the page that says they are
+   enrolled is the one to select. Extract the least that means enrolled: a status field (`Inscrit`, `Enrolled`) or
+   the current academic year, and nothing else, no mark and no personal number. Name the field as the row will name
+   it (`status`, or `academicYear`). Publish, then note three things: the provider id (36 characters), its version
+   (`1.0.0`), and the hash of its one request, read from the provider's configs as it was for TOEFL
+   (`docs/reclaim/toefl-mybest-shown-provider.md` says where).
+2. **Write the row.** `pnpm portal:add` with the whole row in the environment of the command (the script's header
+   lists every name: the id, the name and the university, the country in two letters, the provider by id and
+   version, the request hash, the sign-in address, the field, its pattern and, in words, what is kept); `DRY_RUN=1`
+   first, which prints the row and writes nothing. Against production, the operator command of "The test database"
+   applies. It reads the row back and prints how many portals the table now holds.
+3. **Prove one gift end to end.** As an operator (the door above), make a gift on "Stay enrolled at their university"
+   and choose that portal; open the gift page as the student, "Show it", the student signs in in the verification
+   tab, and the proof comes back or a typed refusal does (`NOT_ENROLLED` when the field does not match the pattern,
+   `ANOTHER_NAME` when the proof came from another portal than the gift's, `NO_PORTAL` when the gift names none).
+   `pnpm verify:day` then names the portal on the claim's line: `portal: ucad-sn, Université Cheikh Anta Diop (SN),
+   provider …, proved …`.
+4. **When the condition opens.** It stays "Being built" until goal 14 is registered and one proof has run end to end
+   on a real portal with real money, on the founder's word, the same rule as TOEFL (D164). Then `live: true` and the
+   register, in a PR of its own. A second university needs steps 1 to 3 and no PR at all.
+
 ## The reading service is a second deployment, and it is not automatic
 
 `src/attested-sources.ts` and `src/chess-com.ts` run in two places: on Vercel, where the proof is judged, and in the
@@ -602,6 +658,8 @@ as the owner, after the handover of `GiftEscrow`.
 | 1 to 4 | Chess.com, rapid, blitz, bullet, daily | climb | registered at deployment, 17 Sep 2026 |
 | 5 | Duolingo English Test, the overall score | having it or not | to register; the screens are built (U3), and the condition goes live the day it is registered (D109) |
 | 6 to 9 | Lichess, bullet, blitz, rapid, classical | climb | to register; nothing is offered on them yet, and the same rule applies the day they are |
+| 10 to 13 | Coursera, Credly, Chess.com puzzles, ETS | see their rows | registered through the Safe, 20 and 23 Sep 2026 (the two sections above) |
+| 14 | a university's student portal, enrolled and shown (D165) | having it or not | to register; the call is under "Goal 14" above, and the condition stays "Being built" until a portal has been proved with a student present |
 
 **The session, in order.** The owner is a wallet the founder holds, so the session is signed from that wallet and no
 key is ever read from a file. Each step is read back before the next.

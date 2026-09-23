@@ -66,11 +66,11 @@ test("what nobody can check is listed with what was read, and it is not pretende
     assert.match(frontier.why, /\.$/);
     assert.ok(frontier.why.length > 60, `${frontier.id} says why, not just that`);
   }
-  assert.deepEqual(FRONTIERS.map((frontier) => frontier.id), ["supervised-exams", "state-diplomas", "school-marks"]);
-  // Each line says whether the other reading is being built for it (D163): the exams, and only they, today.
+  assert.deepEqual(FRONTIERS.map((frontier) => frontier.id), ["supervised-exams", "university-enrolment", "state-diplomas", "school-marks"]);
+  // Each line says whether the other reading is being built for it (D163): the exams and enrolment (D165), and only they, today.
   for (const frontier of FRONTIERS) assert.ok(frontier.building === null || /\.$/.test(frontier.building), `${frontier.id} says it in a sentence`);
-  assert.deepEqual(FRONTIERS.filter((frontier) => frontier.building).map((frontier) => frontier.id), ["supervised-exams"]);
-  assert.match(String(FRONTIERS[0].building), /SHOWN BY THEM/, "and it names the two words the condition will carry");
+  assert.deepEqual(FRONTIERS.filter((frontier) => frontier.building).map((frontier) => frontier.id), ["supervised-exams", "university-enrolment"]);
+  for (const frontier of FRONTIERS.filter((frontier) => frontier.building)) assert.match(String(frontier.building), /SHOWN BY THEM/, `${frontier.id} names the two words the condition will carry`);
   assert.match(stateWords("no-public-page").meaning, /^No public page shows it\. The person can show it from their own account, and Viky is building that\.$/);
   // Each line rests on a page read on a day, and the two read from a source's own site say which day.
   assert.match(String(FRONTIERS.find((frontier) => frontier.id === "supervised-exams")?.why), /19 Sep 2026/);
@@ -138,10 +138,13 @@ test("every condition says its nature, and every one of the pilot is read for th
   for (const condition of CONDITIONS) assert.ok(condition.nature === "read" || condition.nature === "shown", `${condition.id} has no nature`);
   assert.deepEqual(CONDITIONS.filter((condition) => condition.nature === "shown").map((condition) => condition.id), [], "no shown condition is in the register until a real proof has run end to end (D109, D164)");
   // The one being built lives beside the register, resolvable by id and offered to an operator alone (D164).
-  assert.deepEqual(BUILDING.map((condition) => condition.id), ["toefl-mybest-shown"]);
-  const shown = conditionById("toefl-mybest-shown");
-  assert.equal(shown?.nature, "shown");
-  assert.equal(shown?.live, false, "not open until a real proof has run end to end, then the founder's word");
-  assert.equal(shown?.state, "no-public-page", "its state is the one whose sentence is exactly its own");
-  assert.ok(!CONDITIONS.includes(shown as never), "and it is not on the public page as a condition: the frontier's line says it is being built");
+  assert.deepEqual(BUILDING.map((condition) => condition.id), ["toefl-mybest-shown", "university-enrollment-shown"]);
+  for (const id of BUILDING.map((condition) => condition.id)) {
+    const shown = conditionById(id);
+    assert.equal(shown?.nature, "shown", `${id} is shown by them`);
+    assert.equal(shown?.live, false, `${id} is not open until a real proof has run end to end, then the founder's word`);
+    assert.equal(shown?.state, "no-public-page", `${id}'s state is the one whose sentence is exactly its own`);
+    assert.ok(shown?.beforeItOpens, `${id} says what has to happen first`);
+    assert.ok(!CONDITIONS.includes(shown as never), `${id} is not on the public page as a condition: the frontier's line says it is being built`);
+  }
 });

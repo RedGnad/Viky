@@ -84,6 +84,15 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     sourcePolicing: "Not read: what ETS does about a score it cancels, and whether a cancelled score leaves the account page, are ETS's rules and were not read for this line. The only thing Viky reads is what the page shows on the day it is shown.",
   },
   {
+    conditionId: "university-enrollment-shown",
+    supervised: false,
+    inShort: "Shown from their own student portal, the page that says enrolled. Proves the account, not who sits in class.",
+    data: "The page of the person's own student portal, shown by them: they sign in there, in a verification tab, and an attestor in a TEE proves what the page carried, one field, the status or the academic year the portal names, matched against the pattern the portal's own row holds. Viky keeps that it said enrolled and the day, and nothing else; the password never reaches Viky. Each portal is proved first from a real student account before any gift can name it.",
+    account: "The funder chooses the portal, from the ones Viky has proved, and it is hashed into the terms they sign; a page shown from another portal pays nothing. Who holds the portal's account is not proved: a shared student account is a shared student account.",
+    whoActed: "Unknown. Signing in to a portal is one person's act, and nothing says who sat in class.",
+    sourcePolicing: "Each university polices its own enrolment: a portal says enrolled because the registrar recorded it. What a portal's terms say about a program reading its pages is not read portal by portal (the judges' page says so), and a portal that changes its page stops proving until its row is proved again.",
+  },
+  {
     conditionId: "coursera-certificate",
     supervised: false,
     inShort: "Read from the certificate's public page. Coursera checks identity once, not each piece of work.",

@@ -10,6 +10,7 @@ import { signCheckIn } from "@/src/gift-attestation";
 import { relayCheckIn } from "@/src/gift-relay";
 import { loadGift } from "@/src/gift-store";
 import { readMilestoneGift } from "@/src/milestone-reader";
+import { loadMilestoneGift } from "@/src/milestone-store";
 import { relayProve } from "@/src/milestone-relay";
 import { recordReading } from "@/src/milestone-store";
 import { isMilestoneGiftId } from "@/src/milestone-protocol";
@@ -52,6 +53,8 @@ export async function POST(request: Request) {
     // UNKNOWN_SESSION before anything is signed, so the configured contract stands in.
     const giftEscrow: Hex = session ? escrowOf(await loadGift(session.giftId)) : (configured as Hex);
     const entry = session ? shownConditionById(session.conditionId) : undefined;
+    const record = session && entry?.providerOf ? await loadMilestoneGift(session.giftId) : null;
+    const provider = entry?.providerOf && record ? await entry.providerOf(record) : null;
 
     const result = await verifyShownSession(
       {
@@ -63,8 +66,8 @@ export async function POST(request: Request) {
         verifyProofs: async (proofs: Proof[]) => {
           if (!appSecret) throw new VerificationError("NOT_CONFIGURED", "The Reclaim application is not configured", 503);
           const verified = await verifyProof(proofs, {
-            providerId: entry?.condition.providerId,
-            providerVersion: entry?.condition.providerVersion,
+            providerId: provider?.providerId ?? entry?.condition.providerId,
+            providerVersion: provider?.providerVersion ?? entry?.condition.providerVersion,
             allowedTags: [],
             teeAttestation: { appSecret },
           } as never);
@@ -73,6 +76,7 @@ export async function POST(request: Request) {
         signCheckIn: (message) => signCheckIn(message, giftEscrow),
         prove: relayProve,
         record: recordReading,
+        milestoneRecordOf: loadMilestoneGift,
         milestoneOf: async (giftId) => {
           if (!isMilestoneGiftId(giftId)) return null;
           const state = await readMilestoneGift(giftEscrow, giftId);

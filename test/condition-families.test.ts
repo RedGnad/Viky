@@ -20,7 +20,7 @@ test("the families are the chooser's, in its order, in everyday verbs and naming
   // person and is not a course taken, so it is a family and not a shelf beside Coursera.
   assert.deepEqual(
     FAMILIES.map((family) => family.title),
-    ["Learn a language", "Play", "Finish a course", "Get certified"],
+    ["Learn a language", "Play", "Finish a course", "Get certified", "Stay enrolled"],
   );
   const sources = CONDITIONS.map((condition) => condition.source);
   for (const { title } of FAMILIES) {

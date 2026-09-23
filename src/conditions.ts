@@ -1,4 +1,5 @@
 import { isValidDuolingoUsername } from "./duolingo-public-terms";
+import { UNIVERSITY_SOURCE } from "./university-shown";
 import { GOAL_TYPE_DUOLINGO_XP } from "./gift-terms";
 
 /**
@@ -38,13 +39,16 @@ export type ConditionKind = "daily" | "milestone";
  * erased exactly the thing that made it worth building. "Move" left with it: nothing was ever filed there, and a
  * family draws nothing until something is.
  */
-export type ConditionFamily = "language" | "play" | "course" | "certification";
+export type ConditionFamily = "language" | "play" | "course" | "certification" | "study";
 
 export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>[] = [
   { id: "language", title: "Learn a language" },
   { id: "play", title: "Play" },
   { id: "course", title: "Finish a course" },
   { id: "certification", title: "Get certified" },
+  // Staying enrolled (D165): the corridor's own case, a family abroad paying the year. Nothing offered in it until a
+  // portal has been proved, so the page and the chooser draw it only for an account that runs Viky.
+  { id: "study", title: "Stay enrolled" },
 ];
 
 /** From this many conditions on offer, the chooser stops being one list and becomes one section per family. */
@@ -554,7 +558,36 @@ export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, C
  * built on the frontier's own line; the day its goal is registered and a real proof has run, it moves into the
  * register above, live, and this list is empty again.
  */
-export const BUILDING: readonly Condition[] = [TOEFL_MYBEST_SHOWN];
+/**
+ * Staying enrolled at a university, shown from the person's own student portal (D165). The portal is chosen by the
+ * funder from the portals Viky has proved (src/portal-store.ts) and bound into what they sign; the person shows the
+ * page that says they are enrolled. It opens the day a real portal has been proved end to end, and on the founder's
+ * word.
+ */
+export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
+  id: "university-enrollment-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  live: false,
+  state: "no-public-page",
+  beforeItOpens: "A student portal proved from a real student account, end to end, then the founder's word.",
+  source: UNIVERSITY_SOURCE,
+  family: "study",
+  name: "Stay enrolled at their university",
+  help: "They sign in to their own student portal and show the page that says they are enrolled; nothing about their marks is read. It proves the account that signed in, not who sits in class.",
+  link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
+  reading: "university-enrollment-shown",
+  words: {
+    earnedDay: "When they show they are enrolled, all of this becomes theirs",
+    connect: "Opened. Show your enrolment from your university's portal when you are ready.",
+    doIt: "Press Show it and sign in to your student portal in the tab that opens. The page that says you are enrolled is what counts.",
+    eachDay: "the day it is shown",
+    preview: "Enrolled at your university, shown from your own student portal: the gift is yours when you show it.",
+  },
+};
+
+export const BUILDING: readonly Condition[] = [TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN];
 
 /**
  * What people ask for and no source lets anybody check, with the reading each line rests on (design audit, section 5).
@@ -592,6 +625,13 @@ export const FRONTIERS: readonly Frontier[] = [
     state: "no-public-page",
     why: "The result goes to institutions. Checking one means an account an organisation applies for, opened with numbers the candidate hands over, and nothing about one person that anybody else can open. Read on 19 Sep 2026 on Cambridge English's, IELTS's and ETS's own pages.",
     building: "a TOEFL score the person shows from their own ETS account, with the two words SHOWN BY THEM on it.",
+  },
+  {
+    id: "university-enrolment",
+    name: "Being enrolled at a university",
+    state: "no-public-page",
+    why: "Enrolment lives in the university's own student portal, which opens for the student and for nobody else. Nothing Viky could read without the student signing in says who is enrolled.",
+    building: "staying enrolled, shown by the person from their own student portal, with the two words SHOWN BY THEM on it.",
   },
   {
     id: "state-diplomas",

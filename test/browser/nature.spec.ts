@@ -41,10 +41,10 @@ test.describe("the nature of a condition", () => {
     const conditions = page.locator("main section h3");
     const tags = page.getByText(WORDS);
     // Every condition, and only the conditions: the frontier's lines are not conditions and carry no nature.
-    const frontier = 3;
+    const frontier = 4;
     expect(await tags.count()).toBe((await conditions.count()) - frontier);
-    // And each frontier line says whether the other reading is being built for it: one is, two are not (D163).
-    await expect(page.getByText(/^Being built: /)).toHaveCount(1);
+    // And each frontier line says whether the other reading is being built for it: two are, two are not (D163, D165).
+    await expect(page.getByText(/^Being built: /)).toHaveCount(2);
     await expect(page.getByText("Not being built.")).toHaveCount(2);
   });
 

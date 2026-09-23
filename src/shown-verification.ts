@@ -7,7 +7,8 @@ import type { ProvedReading } from "./milestone-relay";
 import type { ProofSession, StoredAttestation } from "./proof-session-store";
 import { assertReclaimSessionProvenance, assertSdkProofSet, ReclaimProofRejectedError } from "./reclaim-proof-set";
 import type { ReclaimTrustedData } from "./reclaim-types";
-import { shownConditionById, type ShownEntry } from "./shown-conditions";
+import { shownConditionById, type ShownEntry, type ShownProvider } from "./shown-conditions";
+import type { MilestoneRecord } from "./milestone-store";
 import { ShownProofError, validateShownEvidence, type ShownEvidence } from "./shown-proof";
 import { ATTESTATION_TTL_SECONDS } from "./gift-terms";
 
@@ -32,6 +33,8 @@ export type ShownVerificationDeps = VerificationDeps & {
   milestoneOf(giftId: string): Promise<{ contract: Hex; recipient: Hex; opened: boolean; settled: boolean } | null>;
   /** Records the milestone proof against the session so a replay is refused; the daily path has its own. */
   consumeShownSession(input: { sessionId: string; evidence: ShownEvidence; attestation: StoredAttestation; proofs: unknown }): Promise<boolean>;
+  /** The milestone gift's own record (its condition, its portal), or nothing when it has none. */
+  milestoneRecordOf(giftId: string): Promise<MilestoneRecord | null>;
 };
 
 export type ShownOutcome =
@@ -68,7 +71,18 @@ export async function verifyShownSession(deps: ShownVerificationDeps, input: { s
 async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEntry, session: ProofSession): Promise<ShownOutcome> {
   if (!deps.appId) throw new VerificationError("NOT_CONFIGURED", "The Reclaim application is not configured", 503);
   if (session.phase !== "reach") throw new VerificationError("WRONG_PHASE", "A milestone takes one proof that reaches it");
-  if (!entry.subject) throw new VerificationError("NOT_CONFIGURED", "This condition has no subject to sign", 503);
+  // What this gift's proof must come from, and what the funder signed it against: the condition's own, or the gift's
+  // (a university gift reads both off the portal it was made on, D165).
+  const record = await deps.milestoneRecordOf(session.giftId);
+  const provider: ShownProvider = (entry.providerOf && record ? await entry.providerOf(record) : null) ?? {
+    providerId: entry.condition.providerId,
+    providerVersion: entry.condition.providerVersion,
+    requestHashes: entry.condition.requestHashes,
+    read: entry.condition.read,
+  };
+  if (!provider.providerId) throw new VerificationError("NO_PORTAL", "This gift names no portal a proof could come from");
+  const subject = (entry.subjectOf && record ? entry.subjectOf(record) : null) ?? entry.subject;
+  if (!subject) throw new VerificationError("NOT_CONFIGURED", "This condition has no subject to sign", 503);
 
   const status: ReclaimStatus = await deps.fetchStatus(session.sessionId);
   const rawProofs = status.session?.proofs;
@@ -81,7 +95,7 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
     // shape: a proof with no teeAttestation object is the AI fallback, and it stops here.
     assertReclaimSessionProvenance({
       session: status.session,
-      expected: { sessionId: session.sessionId, appId: deps.appId, providerId: entry.condition.providerId, providerVersion: entry.condition.providerVersion },
+      expected: { sessionId: session.sessionId, appId: deps.appId, providerId: provider.providerId, providerVersion: provider.providerVersion },
     });
     proofs = assertSdkProofSet(candidates, { expectedCount: entry.condition.proofCount, maxSignedJsonBytes: SHOWN_MAX_SIGNED_JSON_BYTES });
   } catch (error) {
@@ -99,7 +113,7 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
   let evidence: ShownEvidence;
   try {
     evidence = validateShownEvidence({
-      condition: entry.condition,
+      condition: { ...entry.condition, providerId: provider.providerId, providerVersion: provider.providerVersion, requestHashes: provider.requestHashes, read: provider.read },
       data: verified.data as ReclaimTrustedData[],
       timestamps,
       policy: { account: session.account, giftId: session.giftId, phase: "reach", expectedSessionId: session.sessionId },
@@ -118,8 +132,8 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
   const message: MilestoneProofMessage = {
     giftId: BigInt(session.giftId),
     recipient: gift.recipient,
-    // The subject the funder signed: constant per condition, because the proof carries no name (D162).
-    identityHash: entry.subject,
+    // The subject the funder signed: constant per condition, or the gift's portal (D162, D165); never a name.
+    identityHash: subject,
     providerId: entry.condition.attestationProviderId,
     metricValue: evidence.reading.metricValue,
     // A possession, like a certificate whose page gives no date: the day it was shown is the event the contract

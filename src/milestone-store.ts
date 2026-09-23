@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS viky_milestone_gifts (
   standing_read_at timestamptz NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE viky_milestone_gifts ADD COLUMN IF NOT EXISTS portal text;
 CREATE TABLE IF NOT EXISTS viky_milestone_readings (
   id serial PRIMARY KEY,
   gift_id text NOT NULL,
@@ -71,12 +72,14 @@ export type MilestoneRecord = Readonly<{
   mode: string;
   standingAtOffer: number;
   standingReadAt: Date;
+  /** The student portal a university gift was made on (D165), by its id in src/portal-store.ts; nothing for the rest. */
+  portal: string | null;
 }>;
 
-export async function saveMilestoneGift(input: { giftId: string; conditionId: string; mode: string; standingAtOffer: number; standingReadAt: Date }): Promise<void> {
+export async function saveMilestoneGift(input: { giftId: string; conditionId: string; mode: string; standingAtOffer: number; standingReadAt: Date; portal?: string | null }): Promise<void> {
   await sql()`
-    INSERT INTO viky_milestone_gifts (gift_id, condition_id, mode, standing_at_offer, standing_read_at)
-    VALUES (${input.giftId}, ${input.conditionId}, ${input.mode}, ${input.standingAtOffer}, ${input.standingReadAt.toISOString()})
+    INSERT INTO viky_milestone_gifts (gift_id, condition_id, mode, standing_at_offer, standing_read_at, portal)
+    VALUES (${input.giftId}, ${input.conditionId}, ${input.mode}, ${input.standingAtOffer}, ${input.standingReadAt.toISOString()}, ${input.portal ?? null})
     ON CONFLICT (gift_id) DO NOTHING`;
 }
 
@@ -87,6 +90,7 @@ function toRecord(row: Record<string, unknown>): MilestoneRecord {
     mode: String(row.mode),
     standingAtOffer: Number(row.standing_at_offer),
     standingReadAt: row.standing_read_at instanceof Date ? row.standing_read_at : new Date(String(row.standing_read_at)),
+    portal: row.portal === null || row.portal === undefined ? null : String(row.portal),
   };
 }
 
