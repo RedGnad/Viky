@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import type { CharacterState } from "./Character";
 import { EASING, MOTION } from "@/src/design-tokens";
 import { arrivalSchedule, bezierProgress, springEasing, springSettleMs, type ArrivalSchedule } from "@/src/motion";
@@ -355,6 +355,41 @@ export function ArrivalAmount({ from, to, symbol, decimals = 2, after = "" }: Re
       <span className="sr-only">{format(to)}</span>
     </>
   );
+}
+
+/**
+ * Every block of a screen that was below the fold when the screen opened appears the first time it is scrolled into
+ * view, rising 8 px in 250 ms, once (the life of the product, step 4, 23 Sep 2026): the blocks of `main` and the turns
+ * of a box that arrives in turn. What is in view when the screen opens does not move, since the entrance already
+ * brought it; a block holding its own `Reveal` (a list of cards) is left to it, so nothing moves twice. Nothing behind
+ * it moves, no parallax, and a device that asks for reduced motion sees every block where it is.
+ */
+export function useRevealOnScroll(main: RefObject<HTMLElement | null>): void {
+  useEffect(() => {
+    const root = main.current;
+    if (!root || reduced() || typeof IntersectionObserver === "undefined") return;
+    const blocks = [...root.querySelectorAll<HTMLElement>(":scope > *:not(header, dialog), :scope .arrives-in-turn > *")].filter(
+      (block) => !block.classList.contains("arrives-in-turn") && !block.querySelector("[data-reveal]") && !block.closest("[data-reveal]"),
+    );
+    const seenOnce = new Set<Element>();
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        const block = entry.target as HTMLElement;
+        if (!seenOnce.has(block)) {
+          seenOnce.add(block);
+          // In view as the screen opens: the entrance brought it, and it never moves again.
+          if (entry.isIntersecting) observer.unobserve(block);
+          continue;
+        }
+        if (!entry.isIntersecting) continue;
+        observer.unobserve(block);
+        const { durationMs, easing, rise } = MOTION.reveal;
+        block.animate([{ opacity: 0, transform: `translateY(${rise}px)` }, { opacity: 1, transform: "translateY(0)" }], { duration: durationMs, easing });
+      }
+    });
+    blocks.forEach((block) => observer.observe(block));
+    return () => observer.disconnect();
+  }, [main]);
 }
 
 /**
