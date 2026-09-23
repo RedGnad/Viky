@@ -371,6 +371,39 @@ by the goal. A goal per portal would add nothing the subject does not already gi
 signature through the Safe every time a university is added. The subject costs nothing and is signed by the funder,
 who is the one choosing the university. Said in the PR before building, as asked.
 
+## Goals 15 and 16, the year passed and a grade reached at a university, shown, to be signed by the owner (D174)
+
+Two more goals on `MilestoneGift` (`0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e`), one each for the whole family of
+student portals as goal 14 is, shape "having it or not", the portal pinned in each gift's subject under the
+condition's own name. `pnpm check:milestone-goals` reads both as `missing` on 23 Sep 2026. Prepared the same day
+(the calldata is `registerGoal(goal, providerId, 1)`, the same as goals 13 and 14; the gas is theirs), to go through
+the Safe in **one session**, nonce order, the second after the first is final, exactly as goals 14 and 2 did:
+
+| | goal 15, the year passed | goal 16, a grade reached |
+|---|---|---|
+| provider id | `viky:provider:university-year-passed-shown:v1` = `0x6af90272bdbe3555ea1b6b91294da5d557c27b72a1cca333864412784dab1551` | `viky:provider:university-grade-shown:v1` = `0xf05dcc4db7fc72177e9c9c0ebcc05438600e18b4fb66496bc10a2bdd29291ff2` |
+| to | `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e` | the same |
+| data | `0x5ba19152000000000000000000000000000000000000000000000000000000000000000f6af90272bdbe3555ea1b6b91294da5d557c27b72a1cca333864412784dab15510000000000000000000000000000000000000000000000000000000000000001` | `0x5ba191520000000000000000000000000000000000000000000000000000000000000010f05dcc4db7fc72177e9c9c0ebcc05438600e18b4fb66496bc10a2bdd29291ff20000000000000000000000000000000000000000000000000000000000000001` |
+| gas | 102,125 (above the Foundry report for `registerGoal`, before the Monad margin) | the same |
+| what it is | `registerGoal(15, 0x6af90272…1551, 1)`: passed or not, one goal for every portal | `registerGoal(16, 0xf05dcc4d…1ff2, 1)`: the grade in hundredths against the target in hundredths, one goal for every portal |
+| Safe nonce | 7, as it stands after goal 2 | 8, once 15 is final |
+
+The session is the one of goal 14 above: `ACTION=raw TO=<to> DATA=<data> NONCE=7 pnpm safe:action` prints `signThis`
+for goal 15, two owners sign it, `SIGNATURES=… SEND=1 EXECUTOR_PRIVATE_KEY=<the relayer's key>` sends it; once it is
+final, the same with goal 16's `DATA` and `NONCE=8`; then `pnpm check:milestone-goals` must read 15 and 16 as
+`registered`, and the two rows go into the table of owner actions. Both conditions stay behind the door until a
+portal's results page has been proved with a student present and one gift has run end to end on each: that is the
+founder's word, not the contract's.
+
+**Why two goals and not one.** The year passed and a grade are two promises the funder signs: passed is had or not
+with a fixed target of one, a grade is compared with a target in hundredths. One goal would let a proof of the one
+settle a gift on the other with the same number; the subject already tells the two apart, and the goal's provider
+id is what the contract checks first, so each has its own.
+
+**What a grade is on the chain.** Hundredths, whatever the scale: 14.00 out of 20 is 1400, a GPA of 3.50 is 350, and
+the funder's target is signed the same way, so `NotThereYet` compares like with like. The scale itself lives on the
+portal's row (`results.grade.scale`) and never on the chain: a page is read on it, a target is refused off it.
+
 ## A university's portal, in thirty minutes, with a student present (D165)
 
 A row of `viky_portals` is what makes a university choosable, and a row is written only after a proof has come back
@@ -384,20 +417,41 @@ nobody signed in to, and the table is empty until the first one. Most of the thi
    it (`status`, or `academicYear`). Publish, then note three things: the provider id (36 characters), its version
    (`1.0.0`), and the hash of its one request, read from the provider's configs as it was for TOEFL
    (`docs/reclaim/toefl-mybest-shown-provider.md` says where).
+1 bis. **The results page's provider, from the same session (D174).** While the student is signed in, a second HTTP
+   provider on the same portal, whose page is the results page: the year's or the semester's decision and the average.
+   Extract three things and name them as the row will: the field that says passed (`decision`, matching
+   `^(Admis|Passed)`), the field that carries the grade (`average`, as the page prints it, "14,50" or "14.5"), and,
+   when the page names its year, the field that does (`academicYear`) with the pattern this year's page matches
+   (`2026-2027`); a page of another year then pays nothing, and that pattern is updated each year the way the row was
+   written. Without a year field, the day of the proof is what dates it. Note the scale the university grades on:
+   out of 20, a GPA out of 4, out of N in a step, or letters (declared as such; a gift on a letter grade is refused at
+   creation until a later PR). Publish, and note the provider id, its version and the hash of its one request, as in
+   step 1. A results page that is not out yet is a step to come back to: the row is written without it, and the two
+   conditions on it stay closed for that portal until it is.
 2. **Write the row.** `pnpm portal:add` with the whole row in the environment of the command (the script's header
    lists every name: the id, the name and the university, the country in two letters, the provider by id and
    version, the request hash, the sign-in address, the field, its pattern and, in words, what is kept); `DRY_RUN=1`
    first, which prints the row and writes nothing. Against production, the operator command of "The test database"
-   applies. It reads the row back and prints how many portals the table now holds.
+   applies. It reads the row back and prints how many portals the table now holds. The results page goes in the
+   same command with the `RESULTS_*` names (`scripts/portal-env.ts` lists them, the scale as `20`, `4`, `20/0.5` or
+   `letters:A,B,C`), or later with `pnpm portal:results` and the portal's id alone; proving enrolment again never
+   removes a results page already written.
 3. **Prove one gift end to end.** As an operator (the door above), make a gift on "Stay enrolled at their university"
    and choose that portal; open the gift page as the student, "Show it", the student signs in in the verification
    tab, and the proof comes back or a typed refusal does (`NOT_ENROLLED` when the field does not match the pattern,
    `ANOTHER_NAME` when the proof came from another portal than the gift's, `NO_PORTAL` when the gift names none).
    `pnpm verify:day` then names the portal on the claim's line: `portal: ucad-sn, Université Cheikh Anta Diop (SN),
-   provider …, proved …`.
+   page enrolment, provider …, proved …`. The same for the two conditions on the results page (D174), one gift each,
+   "Pass the year at their university" and "Reach a grade at their university" with a grade typed on the portal's
+   scale: the proof comes back with the words the person reads ("Passed", "14.50 / 20") or a typed refusal
+   (`NOT_PASSED` when the decision field does not match, `NO_GRADE` when the grade field carries nothing on the scale,
+   `WRONG_TERM` when the page is another year's, `NO_RESULTS_PAGE` when the portal's row holds no results page, which
+   the create route also refuses before any money moves, with `LETTER_SCALE` and `INVALID_TARGET` for a grade the
+   scale cannot take). `pnpm verify:day` says `page results` on those claims.
 4. **When the condition opens.** It stays "Being built" until goal 14 is registered and one proof has run end to end
    on a real portal with real money, on the founder's word, the same rule as TOEFL (D164). Then `live: true` and the
-   register, in a PR of its own. A second university needs steps 1 to 3 and no PR at all.
+   register, in a PR of its own. The year passed and the grade open the same way, each on its own goal (15, 16) and
+   its own first gift. A second university needs steps 1 to 3 and no PR at all.
 
 ## Goal 2 on the daily contract, a GitHub contribution each day, registered and without effect (D166, D170)
 
@@ -697,6 +751,8 @@ as the owner, after the handover of `GiftEscrow`.
 | 6 to 9 | Lichess, bullet, blitz, rapid, classical | climb | registered (read back on 23 Sep 2026), without effect: no condition reads them, Lichess was withdrawn as a twin of Chess.com (D170) |
 | 10 to 13 | Coursera, Credly, Chess.com puzzles, ETS | see their rows | registered through the Safe, 20 and 23 Sep 2026 (the two sections above) |
 | 14 | a university's student portal, enrolled and shown (D165) | having it or not | registered 23 Sep 2026 through the Safe (the row above); the condition stays "Being built" until a portal has been proved with a student present |
+| 15 | a university's student portal, the year passed and shown (D174) | having it or not | to register through the Safe, nonce 7 (the section "Goals 15 and 16" above); "Being built" until a results page has been proved with a student present |
+| 16 | a university's student portal, a grade reached and shown, in hundredths (D174) | having it or not | to register in the same session, nonce 8; "Being built" likewise |
 
 The daily contract has its own goals, under `GiftEscrow`'s two-argument `registerGoal(goalType, providerId)`:
 

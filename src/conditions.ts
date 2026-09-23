@@ -46,9 +46,11 @@ export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>
   { id: "play", title: "Play" },
   { id: "course", title: "Finish a course" },
   { id: "certification", title: "Get certified" },
-  // Staying enrolled (D165): the corridor's own case, a family abroad paying the year. Nothing offered in it until a
-  // portal has been proved, so the page and the chooser draw it only for an account that runs Viky.
-  { id: "study", title: "Stay enrolled" },
+  // Study (D165, D174): the corridor's own case, a family abroad paying the year. Staying enrolled, passing the year
+  // and reaching a grade, all shown from the person's own student portal. Nothing offered in it until a portal has
+  // been proved, so the page and the chooser draw it only for an account that runs Viky. The id stays `study`
+  // whatever the title says: a gift's terms could name it one day.
+  { id: "study", title: "Study" },
 ];
 
 /** From this many conditions on offer, the chooser stops being one list and becomes one section per family. */
@@ -589,7 +591,63 @@ export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
   },
 };
 
-export const BUILDING: readonly Condition[] = [TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN];
+/**
+ * Passing the year at their university, shown from the results page of the person's own student portal (D174): the
+ * second line on the rail. The same portal as enrolment, chosen by the funder from the ones Viky has proved, and its
+ * results page proved on the row too; the year, or the semester, as the page itself says it. It opens the day a real
+ * results page has been proved end to end, and on the founder's word.
+ */
+export const UNIVERSITY_YEAR_PASSED_SHOWN: Condition = {
+  id: "university-year-passed-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  live: false,
+  beforeItOpens: "A results page proved from a real student account, end to end, then the founder's word.",
+  source: UNIVERSITY_SOURCE,
+  family: "study",
+  name: "Pass the year at their university",
+  help: "The results page of their own student portal, shown by them, saying they passed the year or the semester: it proves the account, not who sat the exams.",
+  link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
+  reading: "university-year-passed-shown",
+  words: {
+    earnedDay: "When they show they passed, all of this becomes theirs",
+    connect: "Opened. Show your results from your university's portal when they are out.",
+    doIt: "Press Show it and sign in to your student portal in the tab that opens. The results page that says you passed is what counts.",
+    eachDay: "the day it is shown",
+    preview: "The year passed at your university, shown from your own student portal: the gift is yours when you show it.",
+  },
+};
+
+/**
+ * Reaching a grade at their university, shown from the same results page (D174): the third line on the rail, and
+ * the one with a target, as the TOEFL score has. The grade is read on the university's own scale, the one the
+ * portal's row declares; a scale of letters is declared and refused until a later decision says what a letter is
+ * worth.
+ */
+export const UNIVERSITY_GRADE_SHOWN: Condition = {
+  id: "university-grade-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  live: false,
+  beforeItOpens: "A results page proved from a real student account, end to end, then the founder's word.",
+  source: UNIVERSITY_SOURCE,
+  family: "study",
+  name: "Reach a grade at their university",
+  help: "The results page of their own student portal, shown by them, with the grade read on the university's own scale: it proves the account, not who sat the exams.",
+  link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
+  reading: "university-grade-shown",
+  words: {
+    earnedDay: "When they show that grade, all of this becomes theirs",
+    connect: "Opened. Show your results from your university's portal when they are out.",
+    doIt: "Press Show it and sign in to your student portal in the tab that opens. The grade on your results page is what counts.",
+    eachDay: "the day it is shown",
+    preview: "A grade at your university, shown from your own student portal: the gift is yours when you show it.",
+  },
+};
+
+export const BUILDING: readonly Condition[] = [TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, UNIVERSITY_YEAR_PASSED_SHOWN, UNIVERSITY_GRADE_SHOWN];
 
 /**
  * What people ask for and no source lets anybody check, with the reading each line rests on (design audit, section 5).
@@ -696,7 +754,8 @@ export type CatalogueSection = ConditionSection & Readonly<{ building: readonly 
 /**
  * What "What Viky can check" lists: every family with a line in the register or a line being built. A condition
  * being built is printed under its family with the word "Being built" and what has to happen first, unless a frontier
- * line already says it is being built (the two shown from an account nobody can read without the person).
+ * line already says it is being built (the TOEFL score and enrolment, shown from an account nobody can read without
+ * the person). The year passed and the grade (D174) have no frontier line, so they are the first printed this way.
  */
 export function catalogueSections(): readonly CatalogueSection[] {
   const onFrontier = new Set(FRONTIERS.map((frontier) => frontier.conditionId).filter((id): id is string => Boolean(id)));

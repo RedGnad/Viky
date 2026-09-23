@@ -191,3 +191,53 @@ test("a page that does not say enrolled, a gift naming no portal, and a proof fr
   await refuses("NO_PORTAL", () => verifyShownSession(portalDeps("nobody-knows"), { sessionId: SESSION_ID, account: ACCOUNT }));
   await refuses("PROOF_REJECTED", () => verifyShownSession(deps({ ...portalDeps("ucad-sn"), fetchStatus: async () => ({ session: { sessionId: SESSION_ID, appId: APP_ID, providerId: "provider-test", providerVersionString: "1.0.0", statusV2: "PROOF_SUBMITTED", proofs: [proof()] } as never }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
 });
+
+/**
+ * What was shown comes back in the words the reading carries (D174): "14.50 / 20" for a grade, "Passed" for the
+ * year, and the number itself where the number is the scale. And a gift on a portal proved for enrolment alone is
+ * refused by the name of what is missing, before any proof is fetched.
+ */
+const WORDED: ShownEntry = {
+  ...SHOWN,
+  condition: { ...SHOWN.condition, conditionId: "test-worded", read: () => ({ metricValue: 1450n, eventAt: null, accountKey: null, inWords: "14.50 / 20" }) },
+};
+const NO_RESULTS: ShownEntry = {
+  kind: "milestone",
+  subjectOf: () => keccak256(stringToHex("viky:subject:test-no-results:v1:ucad-sn")),
+  providerOf: async () => ({
+    providerId: "",
+    providerVersion: "",
+    requestHashes: [],
+    missing: { code: "NO_RESULTS_PAGE", message: "no results page" },
+    read: () => {
+      throw new ShownProofError("NO_RESULTS_PAGE", "no results page");
+    },
+  }),
+  condition: { ...SHOWN.condition, conditionId: "test-no-results" },
+};
+(SHOWN_CONDITIONS as ShownEntry[]).push(WORDED, NO_RESULTS);
+
+test("what was shown comes back in words when the reading carries them, and as the number otherwise", async () => {
+  const plain = await verifyShownSession(deps(), { sessionId: SESSION_ID, account: ACCOUNT });
+  assert.equal(plain.kind === "reached" && plain.shown, "97", "the number is the scale, so the number is the words");
+  const d = deps({ loadSession: async () => session({ conditionId: "test-worded" }) });
+  const worded = await verifyShownSession(d, { sessionId: SESSION_ID, account: ACCOUNT });
+  assert.equal(worded.kind === "reached" && worded.shown, "14.50 / 20");
+  assert.equal(worded.kind === "reached" && worded.metricValue, "1450", "and the contract compared the hundredths");
+  assert.equal(d.proved[0].metricValue, 1450n);
+});
+
+test("a portal proved for enrolment and not for its results page is refused by its own name, before any proof is fetched", async () => {
+  let fetched = false;
+  const d = deps({
+    loadSession: async () => session({ conditionId: "test-no-results", giftId: "1000009" }),
+    milestoneRecordOf: async () => ({ giftId: "1000009", conditionId: "test-no-results", mode: "certificate", standingAtOffer: 0, standingReadAt: new Date(0), portal: "ucad-sn" }),
+    fetchStatus: async () => {
+      fetched = true;
+      return { session: undefined } as never;
+    },
+  });
+  await refuses("NO_RESULTS_PAGE", () => verifyShownSession(d, { sessionId: SESSION_ID, account: ACCOUNT }));
+  assert.equal(fetched, false);
+  assert.equal(d.proved.length, 0);
+});

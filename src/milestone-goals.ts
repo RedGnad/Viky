@@ -5,7 +5,7 @@ import { CREDLY_GOAL_TYPE, credlyProviderId } from "./credly-badge";
 import { detProviderId } from "./duolingo-english-test";
 import { LICHESS_CADENCES, lichessGoalType, lichessProviderId } from "./lichess";
 import { SHAPE_CLIMB, SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
-import { UNIVERSITY_GOAL_TYPE, universityShownProviderId } from "./university-shown";
+import { UNIVERSITY_GOAL_TYPE, UNIVERSITY_GRADE_GOAL_TYPE, UNIVERSITY_YEAR_GOAL_TYPE, universityGradeProviderId, universityShownProviderId, universityYearProviderId } from "./university-shown";
 import { TOEFL_GOAL_TYPE, toeflShownProviderId } from "./toefl-shown";
 
 /**
@@ -61,6 +61,11 @@ export const MILESTONE_GOALS: readonly MilestoneGoal[] = [
   // A TOEFL score shown from the person's own ETS account (D164): had or not, the "show" sense; the "reach" sense,
   // once a provider of ours reads the test's date, takes its own number and never this one.
   { goalType: TOEFL_GOAL_TYPE, providerId: toeflShownProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "ETS", detail: "a TOEFL score, shown" },
+  // The year passed and a grade reached, shown from the results page of the same portal (D174): one goal each for
+  // every portal, the portal pinned in the gift's subject under each condition's own name. Had or not, the grade
+  // compared with the target in hundredths.
+  { goalType: UNIVERSITY_YEAR_GOAL_TYPE, providerId: universityYearProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "a university's student portal", detail: "the year passed, shown" },
+  { goalType: UNIVERSITY_GRADE_GOAL_TYPE, providerId: universityGradeProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "a university's student portal", detail: "a grade reached, shown" },
 ];
 
 export function milestoneGoal(goalType: number): MilestoneGoal | undefined {

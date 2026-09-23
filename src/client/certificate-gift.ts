@@ -51,7 +51,8 @@ export async function prepareCertificateGift(input: {
     recipientContactHash: NO_CONTACT_HASH,
     goalType: input.certificate.goalType,
     shape: SHAPE_HAVE_OR_NOT,
-    target: BigInt(input.target),
+    // A grade is typed on its scale and signed in hundredths; the route rebuilds the same integer (D174).
+    target: BigInt(input.certificate.targetUnits ? input.certificate.targetUnits(input.target) : input.target),
     // Nothing to start from: the ceiling is zero and the contract refuses anything else for this shape.
     maximumStart: 0n,
     subject: input.certificate.subject({ name: input.personName, course: input.course }),

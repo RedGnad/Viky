@@ -4745,3 +4745,44 @@ The motion sheets of this group:
   refreshed in place with the gift's new state; it is not a new page, so nothing enters again, and the characters
   wake (asleep to awake is a change of drawing, not a movement). Material token: none. Loop: none. Reduced motion:
   unchanged. Test: captures of both moments; `test/gift-examples.test.ts` for the moments themselves.
+
+## D174, 23 Sep 2026: passing the year and reaching a grade at a university, shown from the results page of the same portal
+
+The founder's plan for the second developer, accepted 23 Sep 2026: two conditions on the universities' rail, the family
+renamed "Study" (its id `study` unchanged), behind the operator door, "Being built" while no student has shown theirs.
+
+- **The two conditions.** `university-year-passed-shown`, "Pass the year at their university", had or not, shown from
+  the results page of the person's own student portal, the year or the semester as the page says it; goal 15.
+  `university-grade-shown`, "Reach a grade at their university", had or not with a target as the TOEFL score has
+  (D162), one gesture, the portal in the signed subject; goal 16. Both in `BUILDING` beside the register (D164), offered
+  to an operator alone, and printed on the public page under "Study" with "Being built." and what has to happen first:
+  the first lines the D169 mechanism prints, since no frontier line names them.
+- **The row gains a results extraction.** `viky_portals.results`: the results page's own provider and request, the field
+  that says passed and its pattern, the field that carries the grade and its scale, and, optionally, the field that
+  names the year with the pattern this year's page matches. A page of another year does not pay (`WRONG_TERM`);
+  without a year field, the day of the proof is what dates it, as for enrolment. Written by `pnpm portal:add` in the
+  same command or by `pnpm portal:results` afterwards, and kept when enrolment is proved again. A portal without it
+  takes no gift on either condition: the create route refuses `NO_RESULTS_PAGE` before any money moves, and the
+  verification refuses it by the same name before any proof is fetched, never as `NO_PORTAL`.
+- **Scales.** Numeric only tonight: out of 20, a GPA out of 4, out of N in a step (`20`, `4`, `20/0.5` on the command
+  line). A grade is carried to the contract in hundredths, 14.00 out of 20 as 1400, and the funder's target is signed
+  in the same hundredths by the browser and rebuilt by the route (`targetUnits`), so the contract's `NotThereYet`
+  compares like with like; the scale lives on the row and never on the chain. A scale of letters is declared on the
+  row so the portal is described as it is, and refused at creation with `LETTER_SCALE` until a later PR says what a
+  letter is worth; a target off the scale is refused `INVALID_TARGET` with the scale in words.
+- **The words the person reads back.** A reading now carries `inWords`, and the verify route's answer carries `shown`:
+  "14.50 / 20", "Passed", or the number itself where the number is the scale (a TOEFL score). `app/kit/ShowProof.tsx`
+  prints `shown` on its one line and never the raw metric. The founder's example wrote the grade with a comma,
+  « 14,00 / 20 »; the app's own money sentences use a dot ("$14.00"), so the dot is kept, and it is one word to change.
+- **What crossed the frontier, said in the PR.** The create route (`app/api/gift/certificate/create/route.ts`), the
+  browser's terms (`src/client/certificate-gift.ts`), the one line of `app/kit/ShowProof.tsx`, the outcome type in
+  `src/client/gift.ts`, and `targetNumber` in `src/gift-draft.ts`, which takes a decimal where the shape's step is
+  under one and a whole number everywhere else. Nothing else in `app/kit`, nothing in `globals.css`, no token.
+- **Refusals, typed.** `NOT_PASSED`, `NO_GRADE`, `WRONG_TERM`, `NO_RESULTS_PAGE`, `LETTER_SCALE`, `INVALID_TARGET`,
+  each a unit test.
+- **What is verified, and what waits for a student.** The scale, the units, the words, the reading by the row's rule,
+  the two shapes, the register, the door, the store's column against a real Postgres, and the verification with every
+  dependency injected. No provider has been registered on any results page, no row holds one, no proof has run.
+  Goals 15 and 16 are read `missing` on the chain on 23 Sep 2026; the two calls are in OPERATIONS for one Safe
+  session (nonces 7 and 8). The conditions stay "Being built" until a results page has been proved with a student
+  present and one gift has run end to end on each, on the founder's word (the rule of D164).

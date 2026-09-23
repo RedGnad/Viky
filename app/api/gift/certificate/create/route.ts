@@ -11,7 +11,6 @@ import { loadPortal } from "@/src/portal-store";
 import { milestoneErrorResponse } from "@/src/milestone-api";
 import { MILESTONE_MAX_AMOUNT, MILESTONE_MIN_AMOUNT, milestoneFundingNonce, SHAPE_HAVE_OR_NOT, type MilestoneParams } from "@/src/milestone-protocol";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { UNIVERSITY_GOAL_TYPE } from "@/src/university-shown";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,9 +62,13 @@ export async function POST(request: Request) {
     if (certificate.course && !course) throw new GiftApiError("INVALID_COURSE", certificate.course.help);
     if (!certificate.course && body.course) throw new GiftApiError("INVALID_COURSE", "That gift takes no course");
     // A university gift is made on a portal Viky has proved with a student, and on no other (D165): a gift on a portal
-    // nobody can show would hold the money until its last day for nothing.
-    if (certificate.goalType === UNIVERSITY_GOAL_TYPE && course && !(await loadPortal(course))) {
-      throw new GiftApiError("NO_SUCH_PORTAL", "Viky has proved no student portal by that name. Choose one from the list. Nothing was taken.", 409);
+    // nobody can show would hold the money until its last day for nothing. And the row must hold what the condition
+    // reads, its results page for the year or a grade, on a scale the target is on (D174): each refusal by its name.
+    if (certificate.portal && course) {
+      const portal = await loadPortal(course);
+      if (!portal) throw new GiftApiError("NO_SUCH_PORTAL", "Viky has proved no student portal by that name. Choose one from the list. Nothing was taken.", 409);
+      const refused = certificate.portal.refuses(portal, target);
+      if (refused) throw new GiftApiError(refused.code, `${refused.message} Nothing was taken.`, refused.code === "INVALID_TARGET" ? 400 : 409);
     }
     const durationDays = Number(body.durationDays);
     const { min, max } = certificate.duration;
@@ -94,7 +97,8 @@ export async function POST(request: Request) {
       recipientContactHash: NO_CONTACT_HASH,
       goalType: certificate.goalType,
       shape: SHAPE_HAVE_OR_NOT,
-      target: BigInt(target),
+      // A grade is typed on its scale and signed in hundredths, the same integer the browser signed (D174).
+      target: BigInt(certificate.targetUnits ? certificate.targetUnits(target) : target),
       maximumStart: 0n,
       subject: certificate.subject({ name: personName, course }),
       durationDays,
@@ -122,7 +126,7 @@ export async function POST(request: Request) {
       recipientName: body.recipientName ? tidyGiftName(String(body.recipientName)) : undefined,
       funderName: body.funderName ? tidyGiftName(String(body.funderName)) : undefined,
       // A university gift remembers its portal (D165): the session that shows the proof reads the provider from it.
-      facts: { conditionId: certificate.condition.id, mode: "certificate", standingAtOffer: 0, standingReadAt: new Date().toISOString(), ...(certificate.goalType === UNIVERSITY_GOAL_TYPE && course ? { portal: course } : {}) },
+      facts: { conditionId: certificate.condition.id, mode: "certificate", standingAtOffer: 0, standingReadAt: new Date().toISOString(), ...(certificate.portal && course ? { portal: course } : {}) },
     });
 
     const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin;

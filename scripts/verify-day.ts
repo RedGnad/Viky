@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { portalByRequestHash } from "../src/portal-store";
+import { pageOfRequest, portalByRequestHash } from "../src/portal-store";
 import { getIdentifierFromClaimInfo, recoverSignersOfSignedClaim, type Proof } from "@reclaimprotocol/js-sdk";
 import { createPublicClient, hexToBytes, http, parseEventLogs, type Abi, type Hex } from "viem";
 import { claimFingerprint } from "../src/duolingo-public";
@@ -96,7 +96,10 @@ async function main() {
   try {
     const context = JSON.parse(String(claim.context ?? "{}")) as { providerHash?: unknown };
     const portal = typeof context.providerHash === "string" ? await portalByRequestHash(context.providerHash) : null;
-    if (portal) console.log(`portal: ${portal.portalId}, ${portal.university} (${portal.country}), provider ${portal.providerId}@${portal.providerVersion}, proved ${portal.provenAt.toISOString().slice(0, 10)}`);
+    // Either of its two pages (D174): the enrolment's request or the results page's, said with the row it matched.
+    const page = portal && typeof context.providerHash === "string" ? pageOfRequest(portal, context.providerHash) : null;
+    const provider = page === "results" && portal?.results ? `${portal.results.providerId}@${portal.results.providerVersion}` : `${portal?.providerId}@${portal?.providerVersion}`;
+    if (portal) console.log(`portal: ${portal.portalId}, ${portal.university} (${portal.country}), page ${page ?? "unknown"}, provider ${provider}, proved ${portal.provenAt.toISOString().slice(0, 10)}`);
   } catch {
     // A context that is not JSON is refused below, where the claim is checked.
   }

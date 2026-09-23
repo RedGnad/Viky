@@ -89,9 +89,13 @@ test("the page lists every condition the register holds, offered or not, by fami
     FAMILIES.filter(({ id }) => CONDITIONS.some((condition) => condition.family === id) || sections.some((section) => section.family === id && section.building.length > 0)).map(({ title }) => title),
     "the families are the register's, in its order, and a family with only a line being built would be on the page too",
   );
-  // A line being built with a public page prints under its family, once (D169). Today both lines being built are said
-  // by the frontier's lines, so nothing is printed this way; the mechanism is what the rule is.
-  assert.deepEqual(sections.flatMap((section) => section.building), []);
+  // A line being built with a public page prints under its family, once (D169): the TOEFL score and enrolment are
+  // said by the frontier's lines, so the year passed and the grade (D174) are the ones printed this way, under Study.
+  assert.deepEqual(
+    sections.flatMap((section) => section.building).map((condition) => condition.id),
+    ["university-year-passed-shown", "university-grade-shown"],
+  );
+  assert.deepEqual(sections.find((section) => section.family === "study")?.building.map((condition) => condition.family), ["study", "study"]);
   const language = sections.find((section) => section.family === "language");
   assert.ok(language, "the language family is on the page");
   assert.ok(
@@ -140,8 +144,8 @@ test("it is reachable without an account and from the judges page, and it says t
 test("every condition says its nature, and every one of the pilot is read for the person", () => {
   for (const condition of CONDITIONS) assert.ok(condition.nature === "read" || condition.nature === "shown", `${condition.id} has no nature`);
   assert.deepEqual(CONDITIONS.filter((condition) => condition.nature === "shown").map((condition) => condition.id), [], "no shown condition is in the register until a real proof has run end to end (D109, D164)");
-  // The one being built lives beside the register, resolvable by id and offered to an operator alone (D164).
-  assert.deepEqual(BUILDING.map((condition) => condition.id), ["toefl-mybest-shown", "university-enrollment-shown"]);
+  // What is being built lives beside the register, resolvable by id and offered to an operator alone (D164, D165, D174).
+  assert.deepEqual(BUILDING.map((condition) => condition.id), ["toefl-mybest-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown"]);
   for (const id of BUILDING.map((condition) => condition.id)) {
     const shown = conditionById(id);
     assert.equal(shown?.nature, "shown", `${id} is shown by them`);
@@ -150,7 +154,7 @@ test("every condition says its nature, and every one of the pilot is read for th
     assert.equal(shown?.state, undefined, `${id} carries no state while it is being built`);
     assert.throws(() => stateOf(shown as never), /carries no state/);
     assert.ok(shown?.beforeItOpens, `${id} says what has to happen first`);
-    assert.ok(!CONDITIONS.includes(shown as never), `${id} is not on the public page as a condition: the frontier's line says it is being built`);
+    assert.ok(!CONDITIONS.includes(shown as never), `${id} is not on the public page as a condition: it is said to be being built`);
   }
   for (const condition of CONDITIONS) assert.equal(stateOf(condition).id, condition.state, `${condition.id} is in the register and carries a state`);
   // Each frontier line that says "Being built" names the line it is about, so the catalogue never prints it twice.
