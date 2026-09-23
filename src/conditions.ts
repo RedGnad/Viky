@@ -166,8 +166,12 @@ export type Condition = Readonly<{
   goalType: number | null;
   /** Wired from end to end. Only these are offered on "What will they do?". */
   live: boolean;
-  /** Where it stands in the open, said in words on "What Viky can check". Open means the same thing as `live`. */
-  state: ConditionState;
+  /**
+   * Where it stands in the open, said in words on "What Viky can check". Open means the same thing as `live`. A
+   * condition being built beside the register (`BUILDING`) carries none: the page says "Being built" of it, and
+   * "Being tested" is printed only once a real gift runs on it (the founder, 23 Sep 2026, D169). Four states, no fifth.
+   */
+  state?: ConditionState;
   /** What has to happen before it is offered to anybody, in one line. A condition that is open has nothing to say here. */
   beforeItOpens?: string;
   /** The source's own name, the one word a screen may print about it. */
@@ -533,7 +537,6 @@ export const TOEFL_MYBEST_SHOWN: Condition = {
   nature: "shown",
   goalType: null,
   live: false,
-  state: "no-public-page",
   beforeItOpens: "A score shown from a real ETS account, end to end, then the founder's word.",
   source: "ETS",
   family: "language",
@@ -570,7 +573,6 @@ export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
   nature: "shown",
   goalType: null,
   live: false,
-  state: "no-public-page",
   beforeItOpens: "A student portal proved from a real student account, end to end, then the founder's word.",
   source: UNIVERSITY_SOURCE,
   family: "study",
@@ -610,6 +612,8 @@ export type Frontier = Readonly<{
    * on the line so a reader knows which of these is on its way and which is not (the founder, 22 Sep 2026).
    */
   building: string | null;
+  /** The condition beside the register that `building` is about, so the catalogue does not print it a second time. */
+  conditionId?: string;
 }>;
 
 /** The two sentences a frontier line ends on. */
@@ -625,6 +629,7 @@ export const FRONTIERS: readonly Frontier[] = [
     state: "no-public-page",
     why: "The result goes to institutions. Checking one means an account an organisation applies for, opened with numbers the candidate hands over, and nothing about one person that anybody else can open. Read on 19 Sep 2026 on Cambridge English's, IELTS's and ETS's own pages.",
     building: "a TOEFL score the person shows from their own ETS account, with the two words SHOWN BY THEM on it.",
+    conditionId: "toefl-mybest-shown",
   },
   {
     id: "university-enrolment",
@@ -632,6 +637,7 @@ export const FRONTIERS: readonly Frontier[] = [
     state: "no-public-page",
     why: "Enrolment lives in the university's own student portal, which opens for the student and for nobody else. Nothing Viky could read without the student signing in says who is enrolled.",
     building: "staying enrolled, shown by the person from their own student portal, with the two words SHOWN BY THEM on it.",
+    conditionId: "university-enrollment-shown",
   },
   {
     id: "state-diplomas",
@@ -684,8 +690,28 @@ export function chooserSections(offered: readonly Condition[]): readonly Conditi
 }
 
 /** Everything the register holds, by family, for the public page: what is offered and what is not, in one list. */
-export function catalogueSections(): readonly ConditionSection[] {
-  return sectioned(CONDITIONS);
+/** One section of the public page: the register's lines, and beside them what is being built in that family (D169). */
+export type CatalogueSection = ConditionSection & Readonly<{ building: readonly Condition[] }>;
+
+/**
+ * What "What Viky can check" lists: every family with a line in the register or a line being built. A condition
+ * being built is printed under its family with the word "Being built" and what has to happen first, unless a frontier
+ * line already says it is being built (the two shown from an account nobody can read without the person).
+ */
+export function catalogueSections(): readonly CatalogueSection[] {
+  const onFrontier = new Set(FRONTIERS.map((frontier) => frontier.conditionId).filter((id): id is string => Boolean(id)));
+  return FAMILIES.map(({ id, title }) => ({
+    family: id,
+    title,
+    conditions: CONDITIONS.filter((condition) => condition.family === id),
+    building: BUILDING.filter((condition) => condition.family === id && !onFrontier.has(condition.id)),
+  })).filter((section) => section.conditions.length > 0 || section.building.length > 0);
+}
+
+/** The state of a condition in the register, which always carries one; a condition being built has none to ask for. */
+export function stateOf(condition: Condition): Readonly<{ id: ConditionState; title: string; meaning: string }> {
+  if (!condition.state) throw new Error(`${condition.id} is being built and carries no state`);
+  return stateWords(condition.state);
 }
 
 function sectioned(conditions: readonly Condition[]): readonly ConditionSection[] {

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { catalogueSections, FRONTIER_PROGRESS, FRONTIERS, STATES, stateWords } from "@/src/conditions";
+import { catalogueSections, FRONTIER_PROGRESS, FRONTIERS, STATES, stateOf, stateWords } from "@/src/conditions";
 import { CATALOGUE as W, ME } from "@/src/sentences";
 import { HELP, DISPLAY, TITLE } from "../components/ui";
 import { Nature } from "../kit/Nature";
@@ -29,7 +29,7 @@ export default function Page() {
         <section key={section.family} className="space-y-[var(--space-md)]">
           <h2 className={TITLE}>{section.title}</h2>
           {section.conditions.map((condition) => {
-            const state = stateWords(condition.state);
+            const state = stateOf(condition);
             return (
               <div key={condition.id} className="space-y-[var(--space-xs)] border-t border-[var(--divider)] pt-[var(--space-md)]">
                 <h3 className="font-medium">{condition.name}</h3>
@@ -42,6 +42,18 @@ export default function Page() {
               </div>
             );
           })}
+          {/* What is being built in this family, said in the frontier's own word and never as a fifth state (D169): a
+              line nobody can make a gift on yet, and what has to happen first. */}
+          {section.building.map((condition) => (
+            <div key={condition.id} className="space-y-[var(--space-xs)] border-t border-[var(--divider)] pt-[var(--space-md)]">
+              <h3 className="font-medium">{condition.name}</h3>
+              <Nature nature={condition.nature} />
+              <p className={HELP}>{condition.help}</p>
+              <p className={HELP}>
+                <span className="font-medium text-[var(--text)]">{W.beingBuilt}.</span> {condition.beforeItOpens}
+              </p>
+            </div>
+          ))}
         </section>
       ))}
 

@@ -990,6 +990,8 @@ export const CATALOGUE = {
   intro:
     "A gift pays on what a source says in public about what somebody did. Here is everything Viky reads, everything it is trying, and what nobody can read at all. When you offer a gift, only what is open is shown to you.",
   states: "What each state means",
+  /** The word of a line being built, on the public page: the frontier's own, and not a fifth state (D169). */
+  beingBuilt: "Being built",
   frontier: "What has no public page",
   frontierIntro: "People ask for these. No source lets anybody check them, and the wall is not on our side.",
   limits: "What each of these proves, and what it does not, is written out on the same page as our own limits:",
