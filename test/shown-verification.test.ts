@@ -8,6 +8,7 @@ import type { Proof } from "@reclaimprotocol/js-sdk";
 import { VerificationError } from "../src/duolingo-verification";
 import type { MilestoneProofMessage } from "../src/milestone-protocol";
 import type { ProofSession } from "../src/proof-session-store";
+import { PRIVACY, type ConditionPrivacy } from "../src/condition-privacy";
 import { SHOWN_CONDITIONS, type ShownEntry } from "../src/shown-conditions";
 import { ShownProofError } from "../src/shown-proof";
 import { verifyShownSession, type ShownVerificationDeps } from "../src/shown-verification";
@@ -79,7 +80,7 @@ function deps(overrides: Partial<ShownVerificationDeps> = {}): ShownVerification
     record: async (reading) => {
       recorded.push(reading);
     },
-    milestoneOf: async () => ({ contract: CONTRACT, recipient: ACCOUNT as Hex, opened: true, settled: false }),
+    milestoneOf: async () => ({ contract: CONTRACT, recipient: ACCOUNT as Hex, opened: true, settled: false, target: 90n }),
     milestoneRecordOf: async () => null,
     appId: APP_ID,
     escrowAddress: CONTRACT,
@@ -111,9 +112,9 @@ test("a proof shown for a milestone becomes the same attestation a certificate r
 });
 
 test("what the contract would refuse is refused before anything is signed, each with its reason", async () => {
-  await refuses("NOT_RECIPIENT", () => verifyShownSession(deps({ milestoneOf: async () => ({ contract: CONTRACT, recipient: "0x000000000000000000000000000000000000b0b0", opened: true, settled: false }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
-  await refuses("NOT_OPENED", () => verifyShownSession(deps({ milestoneOf: async () => ({ contract: CONTRACT, recipient: ACCOUNT as Hex, opened: false, settled: false }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
-  await refuses("ALREADY_SETTLED", () => verifyShownSession(deps({ milestoneOf: async () => ({ contract: CONTRACT, recipient: ACCOUNT as Hex, opened: true, settled: true }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
+  await refuses("NOT_RECIPIENT", () => verifyShownSession(deps({ milestoneOf: async () => ({ contract: CONTRACT, recipient: "0x000000000000000000000000000000000000b0b0", opened: true, settled: false, target: 90n }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
+  await refuses("NOT_OPENED", () => verifyShownSession(deps({ milestoneOf: async () => ({ contract: CONTRACT, recipient: ACCOUNT as Hex, opened: false, settled: false, target: 90n }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
+  await refuses("ALREADY_SETTLED", () => verifyShownSession(deps({ milestoneOf: async () => ({ contract: CONTRACT, recipient: ACCOUNT as Hex, opened: true, settled: true, target: 90n }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
   await refuses("UNKNOWN_GIFT", () => verifyShownSession(deps({ milestoneOf: async () => null }), { sessionId: SESSION_ID, account: ACCOUNT }));
 });
 
@@ -240,4 +241,72 @@ test("a portal proved for enrolment and not for its results page is refused by i
   await refuses("NO_RESULTS_PAGE", () => verifyShownSession(d, { sessionId: SESSION_ID, account: ACCOUNT }));
   assert.equal(fetched, false);
   assert.equal(d.proved.length, 0);
+});
+
+/**
+ * A number that is the person's own (D185, the founder's rule of 23 Sep 2026): the exams, the Study rail, School,
+ * a course. Seen once by the person who showed it, kept nowhere, the verdict alone attested and stored. Beside it,
+ * a number a source publishes is kept as read, and the session row is written in JSON, which has no bigint.
+ */
+const PRIVATE: ShownEntry = {
+  ...SHOWN,
+  condition: { ...SHOWN.condition, conditionId: "test-private", read: (fields) => ({ metricValue: BigInt(fields.scoreValue ?? "0"), eventAt: null, accountKey: fields.bookingId ?? null, inWords: `${fields.scoreValue} / 120` }) },
+};
+(SHOWN_CONDITIONS as ShownEntry[]).push(PRIVATE);
+(PRIVACY as Record<string, ConditionPrivacy>)["test-private"] = { kept: "verdict", read: "a test score" };
+
+function consuming() {
+  const consumed: unknown[] = [];
+  const consumeShownSession: ShownVerificationDeps["consumeShownSession"] = async (input) => {
+    // The route's store stringifies what it is given: so does this, and a bigint would throw here as it did there.
+    consumed.push(JSON.parse(JSON.stringify(input)));
+    return true;
+  };
+  return { consumed, consumeShownSession };
+}
+
+test("a number that is the person's own is seen once by them and kept nowhere: the verdict is attested, the rows keep no number", async () => {
+  const { consumed, consumeShownSession } = consuming();
+  const d = deps({ loadSession: async () => session({ conditionId: "test-private" }), consumeShownSession });
+  const outcome = await verifyShownSession(d, { sessionId: SESSION_ID, account: ACCOUNT });
+  assert.equal(outcome.kind === "reached" && outcome.shown, "97 / 120", "the person who showed it reads the number, once");
+  assert.equal(d.proved[0].metricValue, 90n, "the contract receives the target as the value: the verdict, never the number");
+  assert.equal(outcome.kind === "reached" && outcome.metricValue, "90");
+  const row = d.recorded[0] as { rating: number | null; playerId: string | null; proofs?: unknown; outcome: string; attested: boolean };
+  assert.equal(row.rating, null);
+  assert.equal(row.playerId, null);
+  assert.equal(row.proofs, undefined);
+  assert.equal(row.outcome, "reached");
+  assert.equal(row.attested, true, "and the judges' count still counts it");
+  const kept = consumed[0] as { evidence: Record<string, unknown> & { reading: unknown }; attestation: { message: { metricValue: string } }; proofs: unknown };
+  assert.deepEqual(kept.evidence.reading, { verdict: "reached" }, "nothing of the number, nor the account key, in the session row");
+  assert.deepEqual(Object.keys(kept.evidence).sort(), ["conditionId", "dayIndex", "nullifier", "observedAt", "phase", "reading", "sessionId"], "and no other field carries it");
+  assert.equal(kept.attestation.message.metricValue, "90", "the attestation kept is the verdict too");
+  assert.equal(kept.proofs, null);
+});
+
+test("under the target, nothing is relayed and nothing is recorded: the person is told, with the number", async () => {
+  const d = deps({ loadSession: async () => session({ conditionId: "test-private" }), milestoneOf: async () => ({ contract: CONTRACT, recipient: ACCOUNT as Hex, opened: true, settled: false, target: 100n }) });
+  await assert.rejects(
+    () => verifyShownSession(d, { sessionId: SESSION_ID, account: ACCOUNT }),
+    (error: unknown) => error instanceof VerificationError && error.code === "NOT_THERE_YET" && error.status === 409 && error.message.includes("Shown: 97 / 120") && error.message.includes("nothing is lost"),
+  );
+  assert.equal(d.proved.length, 0, "nothing signed");
+  assert.equal(d.recorded.length, 0, "nothing written");
+});
+
+test("a number a source publishes is kept as read, and the session row is written in JSON", async () => {
+  const { consumed, consumeShownSession } = consuming();
+  const d = deps({ consumeShownSession });
+  const outcome = await verifyShownSession(d, { sessionId: SESSION_ID, account: ACCOUNT });
+  assert.equal(outcome.kind === "reached" && outcome.metricValue, "97");
+  assert.equal(d.proved[0].metricValue, 97n);
+  const row = d.recorded[0] as { rating: number | null; playerId: string | null; proofs?: unknown };
+  assert.equal(row.rating, 97);
+  assert.equal(row.playerId, "555");
+  assert.ok(Array.isArray(row.proofs) && row.proofs.length === 1, "the proofs stay with the reading");
+  const kept = consumed[0] as { evidence: { reading: { metricValue: string; accountKey: string } }; proofs: unknown[] };
+  assert.equal(kept.evidence.reading.metricValue, "97", "a string: the row is JSON");
+  assert.equal(kept.evidence.reading.accountKey, "555");
+  assert.equal(kept.proofs.length, 1);
 });
