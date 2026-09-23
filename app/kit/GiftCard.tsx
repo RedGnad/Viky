@@ -19,7 +19,7 @@ import { MilestoneMeter } from "./MilestoneMeter";
  * and for what; under it the image of progress, the state in words, and one line of amounts. For what comes from the
  * register and never from the card (item 10). A daily gift draws its days, a milestone its meter.
  */
-export function GiftCard({ gift, milestone: given, still = false, example = false }: Readonly<{ gift: GiftSummary; milestone?: MilestoneStatus; still?: boolean; example?: boolean }>) {
+export function GiftCard({ gift, milestone: given, example = false }: Readonly<{ gift: GiftSummary; milestone?: MilestoneStatus; example?: boolean }>) {
   // On Home and Gifts a milestone gift arrives inside its summary (C2); at the head of its page, beside it.
   const milestone = given ?? gift.milestone;
   /** The clock this reader keeps, so a card drawn by the server says their day and not the server's (D160). */
@@ -40,15 +40,13 @@ export function GiftCard({ gift, milestone: given, still = false, example = fals
       title={whoInWords(gift)}
       under={condition?.name ?? ""}
       nature={condition ? <Nature nature={condition.nature} /> : null}
-      chevron={!still && !example}
-      /*
-        A daily gift's card draws its days, except at the head of its own page, where the row of days below says it once.
-        A milestone has no days, so its character and its meter stay, and grow to the large size on its own page.
-      */
+      chevron={!example}
+      /* A daily gift's card draws its days; a milestone has no days, so its character and its meter. On the gift's own
+         page the card is `GiftLive`, alive, and draws the climb or the stamp instead (V4). */
       shape={
         milestone ? (
-          <MilestoneMeter status={milestone} size={still ? "large" : "small"} />
-        ) : still ? null : (
+          <MilestoneMeter status={milestone} />
+        ) : (
           <DayStrip id={gift.giftId} gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} />
         )
       }
@@ -62,7 +60,7 @@ export function GiftCard({ gift, milestone: given, still = false, example = fals
       }
     />
   );
-  if (still || example) return <section className={`${CARD} flex flex-col`}>{body}</section>;
+  if (example) return <section className={`${CARD} flex flex-col`}>{body}</section>;
   return (
     <Link
       href={`/g/${gift.giftId}`}

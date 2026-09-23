@@ -1,6 +1,5 @@
 import { milestoneProgress, type MilestoneStatus } from "@/src/milestone-view";
 import { Character, type CharacterState } from "./Character";
-import { Gaze } from "./Motion";
 
 /**
  * What a milestone gift has done so far: its character, and one bar in ink on the surface, the start on the left, the
@@ -22,14 +21,15 @@ export function milestoneCharacter(status: MeterStatus): CharacterState {
   return "today";
 }
 
-export function MilestoneMeter({ status, startLabel, targetLabel, size = "small" }: Readonly<{ status: MeterStatus; startLabel?: string; targetLabel?: string; size?: "small" | "large" }>) {
+/**
+ * On a card in a list only, since V4: the gift's own page draws the climb or the stamp (app/kit/Climb.tsx,
+ * app/kit/Stamp.tsx), and the large meter it used to draw there is gone.
+ */
+export function MilestoneMeter({ status, startLabel, targetLabel }: Readonly<{ status: MeterStatus; startLabel?: string; targetLabel?: string }>) {
   const progress = milestoneProgress(status);
-  const character = (
-    <Character state={milestoneCharacter(status)} size={size} className={size === "large" ? "h-auto w-[72px] shrink-0" : "h-auto w-[44px] shrink-0"} />
-  );
   return (
     <span aria-hidden className="flex items-center gap-[var(--space-md)]">
-      {size === "large" ? <Gaze>{character}</Gaze> : character}
+      <Character state={milestoneCharacter(status)} size="small" className="h-auto w-[44px] shrink-0" />
       <span className="flex flex-1 flex-col gap-[var(--space-xs)]">
       <span className="relative block h-[10px] w-full overflow-hidden rounded-full border border-[var(--control-border)] bg-[var(--surface)]">
         <span className="absolute inset-y-0 left-0 rounded-full bg-[var(--text)]" style={{ width: `${Math.round(progress * 100)}%` }} />
