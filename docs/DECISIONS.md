@@ -4954,3 +4954,36 @@ from the pupil's or the family's account, the terms first, had or not with a tar
 - **What is verified, and what waits.** The scale and the units, the reading (`NO_GRADE`, "14.50 / 20"), the goal,
   the register, the door, the refusal before any fetch, the frontier's words. No provider registered, no proof
   shown, no goal signed.
+## D180, 23 Sep 2026: the arrival on a return (motion, step 1 of the life of the product)
+
+The founder, 23 Sep 2026: "à l'ouverture d'un cadeau, ce qui a changé depuis la dernière visite joue une fois : les
+jours gagnés atterrissent l'un après l'autre, puis les jours revenus glissent à gauche, puis le montant compte jusqu'à
+sa valeur. Rien ne joue si rien n'a changé. Sur la montée : la pente avance jusqu'au chiffre du jour."
+
+- **What was already there.** The days of a gift's page played through `Arrival` since the brief of 17 Sep; the
+  amount did not, and the climb moved only its character.
+- **A defect under it, found while wiring the amount.** `useLastSeen` froze the first render's answer in state. On a
+  screen the server draws, every screen since D160, the first render is the hydration, which is given the server's
+  answer, nothing, so the amount on Home counted from its own value to its own value and never moved. What was seen is
+  now kept per screen outside the component, read by the browser on the render after hydration, and forgotten when the
+  screen goes, so the next screen reads what this one wrote. Home's amount counts again.
+- **The gift page's money counts**, last in its arrival, from what this device last saw of it; a rating is a reading
+  and does not count. Nothing plays when nothing changed.
+- **The climb's ink advances** with its character, from the reading this device last saw to today's.
+
+The sheet:
+
+- **Trigger.** Opening a gift, or Home, when something changed since this device's last visit; nothing otherwise.
+- **Rule.** Every day earned lands, one after the other (80 ms gathering, 170 ms rising, 130 ms falling, then the face
+  opening on the landing spring), then every day gone back slides left (300 ms), then the amount counts to its value
+  (700 ms), all of it inside 2,000 ms, 120 ms apart at most. On a climb, the slope's ink and the character advance
+  together to today's reading (700 ms).
+- **Material token.** `MOTION.earned` (the expressive fast spatial spring for the landing), `MOTION.returned`
+  (medium2, standard), `MOTION.count` (extra-long1, standard), `MOTION.arrival` (budget 2,000 ms, stagger 120 ms).
+- **Loop.** None; once per change, the device writes what it saw as the screen is built.
+- **Reduced motion.** Nothing plays: the final state is drawn, and no animation runs at 300 ms (measured).
+- **Test.** `test/arrival-return.test.ts` (the store after hydration, the count, the ink), `test/motion.test.ts` (the
+  schedule under two seconds). Measured on the board: the amount counted $1.00, $1.11, $1.75, $1.94, $2.00; the
+  climb's character moved from 61 to 190 px and its ink from 0.09 to 0.59 of the slope in 700 ms. What the eye may
+  catch: the server draws the final state, and for about 160 ms before the browser starts the arrival it is visible;
+  the card is still entering then (D171), which is what hides it.

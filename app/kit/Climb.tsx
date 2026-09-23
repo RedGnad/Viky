@@ -35,6 +35,7 @@ export function Climb({ giftId, status }: Readonly<{ giftId: string; status: Met
   const drawing = useRef<HTMLSpanElement>(null);
   const reading = tooHigh ? null : status.reached ? status.target : status.todayReading;
 
+  const inked = useRef<SVGLineElement>(null);
   useEffect(() => {
     if (reading === null) return;
     const key = `viky.seen.climb.${giftId}`;
@@ -59,6 +60,11 @@ export function Climb({ giftId, status }: Readonly<{ giftId: string; status: Met
       duration: MOTION.count.durationMs,
       easing: MOTION.count.easing,
     });
+    // The ink climbs with it: the part climbed grows from where this device last saw it to today's reading.
+    inked.current?.animate([{ strokeDasharray: `${from} 1` }, { strokeDasharray: `${progress} 1` }], {
+      duration: MOTION.count.durationMs,
+      easing: MOTION.count.easing,
+    });
     // Once per reading seen, never again for the same one: the value is written before anything plays.
   }, [giftId, reading, progress, status]);
 
@@ -67,7 +73,18 @@ export function Climb({ giftId, status }: Readonly<{ giftId: string; status: Met
       <svg className="climb-slope" focusable="false">
         {/* Ahead: dashed, the whole slope, drawn first so the part climbed covers its own length. */}
         <line x1="0%" y1={`${pct(1 - FOOT)}`} x2="100%" y2={`${pct(1 - FOOT - RISE)}`} className="climb-ahead" />
-        <line x1="0%" y1={`${pct(1 - FOOT)}`} x2={`${pct(progress)}`} y2={`${pct(1 - FOOT - RISE * progress)}`} className="climb-done" />
+        {/* The part climbed is the whole slope drawn up to today's reading (a dash as long as the progress), so the
+            arrival can grow it rather than jump it. */}
+        <line
+          ref={inked}
+          x1="0%"
+          y1={`${pct(1 - FOOT)}`}
+          x2="100%"
+          y2={`${pct(1 - FOOT - RISE)}`}
+          pathLength={1}
+          strokeDasharray={`${progress} 1`}
+          className="climb-done"
+        />
       </svg>
       {/* The flag at the top, its pole standing where the slope ends, and the target on it: the one number the drawing
           carries, because a slope needs an end. Where they started is in what was agreed, and is not said twice. */}
