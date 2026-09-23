@@ -55,6 +55,7 @@
     "register:milestone-goals": "tsx scripts/register-milestone-goals.ts",
     "portal:add": "tsx scripts/portal-add.ts",
     "portal:results": "tsx scripts/portal-results.ts",
+    "portal:directory": "tsx scripts/portal-directory.ts",
     "check:milestone-goals": "CHECK_ONLY=1 DRY_RUN=1 tsx scripts/register-milestone-goals.ts",
     "prepare:milestone-goals": "WALLET=1 tsx scripts/register-milestone-goals.ts",
     "safe:create": "tsx scripts/safe-create.ts",
