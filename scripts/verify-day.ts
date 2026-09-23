@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { portalByRequestHash } from "../src/portal-store";
 import { getIdentifierFromClaimInfo, recoverSignersOfSignedClaim, type Proof } from "@reclaimprotocol/js-sdk";
 import { createPublicClient, hexToBytes, http, parseEventLogs, type Abi, type Hex } from "viem";
 import { claimFingerprint } from "../src/duolingo-public";
@@ -91,6 +92,14 @@ async function main() {
   const subject = file ? fromFile(file) : await fromSite(site);
   const answers: Answer[] = [];
   const claim = subject.proof.claimData as unknown as Parameters<typeof getIdentifierFromClaimInfo>[0] & { identifier: string };
+  // A proof shown from a student portal names its portal by the request it made (D165): the row it matches is said.
+  try {
+    const context = JSON.parse(String(claim.context ?? "{}")) as { providerHash?: unknown };
+    const portal = typeof context.providerHash === "string" ? await portalByRequestHash(context.providerHash) : null;
+    if (portal) console.log(`portal: ${portal.portalId}, ${portal.university} (${portal.country}), provider ${portal.providerId}@${portal.providerVersion}, proved ${portal.provenAt.toISOString().slice(0, 10)}`);
+  } catch {
+    // A context that is not JSON is refused below, where the claim is checked.
+  }
 
   const recomputed = getIdentifierFromClaimInfo(claim);
   const sameIdentifier = recomputed.toLowerCase() === String(claim.identifier).toLowerCase();

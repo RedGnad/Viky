@@ -9,6 +9,7 @@ import { VerificationError } from "../src/duolingo-verification";
 import type { MilestoneProofMessage } from "../src/milestone-protocol";
 import type { ProofSession } from "../src/proof-session-store";
 import { SHOWN_CONDITIONS, type ShownEntry } from "../src/shown-conditions";
+import { ShownProofError } from "../src/shown-proof";
 import { verifyShownSession, type ShownVerificationDeps } from "../src/shown-verification";
 import { sdkProof } from "./reclaim-proof-set.test";
 
@@ -79,6 +80,7 @@ function deps(overrides: Partial<ShownVerificationDeps> = {}): ShownVerification
       recorded.push(reading);
     },
     milestoneOf: async () => ({ contract: CONTRACT, recipient: ACCOUNT as Hex, opened: true, settled: false }),
+    milestoneRecordOf: async () => null,
     appId: APP_ID,
     escrowAddress: CONTRACT,
     now: () => NOW,
@@ -132,4 +134,60 @@ test("a daily session is routed to the daily path, which keeps its own rules", a
   // The daily path pins the Duolingo provider, so a status from any other provider is refused by its own provenance
   // gate: the first refusal of that path, which is how a test can tell the two paths apart.
   await refuses("PROOF_REJECTED", () => verifyShownSession(deps({ loadSession: async () => session({ conditionId: "duolingo-daily", phase: "baseline", duolingoProfileId: "123456", duolingoUsername: "ama" }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
+});
+
+/**
+ * A condition whose provider and subject are the gift's own (D165): a university gift reads both off the portal it
+ * was made on. Here the portal is a fake row, and what is checked is that the proof must come from that portal's
+ * provider, that the subject signed is the portal's, and that a gift naming no portal is refused.
+ */
+const PORTAL_REQUEST = `0x${"cd".repeat(32)}`;
+const OF_THE_PORTAL: ShownEntry = {
+  kind: "milestone",
+  subjectOf: (record) => (record.portal ? keccak256(stringToHex(`viky:subject:test-portal:${record.portal}`)) : null),
+  providerOf: async (record) =>
+    record.portal === "ucad-sn"
+      ? {
+          providerId: "provider-ucad",
+          providerVersion: "2.0.0",
+          requestHashes: [PORTAL_REQUEST],
+          read: (fields) => {
+            if (!/^(Inscrit|Enrolled)/i.test(fields.status ?? "")) throw new ShownProofError("NOT_ENROLLED", "not enrolled");
+            return { metricValue: 1n, eventAt: null, accountKey: null };
+          },
+        }
+      : null,
+  condition: { conditionId: "test-portal", providerId: "", providerVersion: "", requestHashes: [], proofCount: 1, phases: ["reach"], attestationProviderId: keccak256(stringToHex("viky:provider:test-portal:v1")), read: () => { throw new ShownProofError("NO_PORTAL", "no portal"); } },
+};
+(SHOWN_CONDITIONS as ShownEntry[]).push(OF_THE_PORTAL);
+
+function portalDeps(portal: string | null, status = "Inscrit") {
+  return deps({
+    loadSession: async () => session({ conditionId: "test-portal", giftId: "1000009" }),
+    milestoneRecordOf: async () => ({ giftId: "1000009", conditionId: "test-portal", mode: "certificate", standingAtOffer: 0, standingReadAt: new Date(0), portal }),
+    fetchStatus: async () => ({
+      session: { sessionId: SESSION_ID, appId: APP_ID, providerId: "provider-ucad", providerVersionString: "2.0.0", statusV2: "PROOF_SUBMITTED", proofs: [proof()] } as never,
+    }),
+    verifyProofs: async () => ({
+      isVerified: true,
+      isTeeAttestationVerified: true,
+      data: [{ context: { contextAddress: ACCOUNT, contextMessage: "1000009:reach", reclaimSessionId: SESSION_ID, providerHash: PORTAL_REQUEST }, extractedParameters: { status } }],
+    }),
+  });
+}
+
+test("a university gift's proof must come from the portal it was made on, and the subject signed is the portal's", async () => {
+  const d = portalDeps("ucad-sn");
+  const outcome = await verifyShownSession(d, { sessionId: SESSION_ID, account: ACCOUNT });
+  assert.equal(outcome.kind, "reached");
+  assert.equal(d.proved[0].identityHash, keccak256(stringToHex("viky:subject:test-portal:ucad-sn")));
+  assert.equal(d.proved[0].metricValue, 1n);
+  assert.equal(d.proved[0].providerId, OF_THE_PORTAL.condition.attestationProviderId, "one goal for every portal: the attestation carries the family's provider id");
+});
+
+test("a page that does not say enrolled, a gift naming no portal, and a proof from another provider are refused", async () => {
+  await refuses("NOT_ENROLLED", () => verifyShownSession(portalDeps("ucad-sn", "Radié"), { sessionId: SESSION_ID, account: ACCOUNT }));
+  await refuses("NO_PORTAL", () => verifyShownSession(portalDeps(null), { sessionId: SESSION_ID, account: ACCOUNT }));
+  await refuses("NO_PORTAL", () => verifyShownSession(portalDeps("nobody-knows"), { sessionId: SESSION_ID, account: ACCOUNT }));
+  await refuses("PROOF_REJECTED", () => verifyShownSession(deps({ ...portalDeps("ucad-sn"), fetchStatus: async () => ({ session: { sessionId: SESSION_ID, appId: APP_ID, providerId: "provider-test", providerVersionString: "1.0.0", statusV2: "PROOF_SUBMITTED", proofs: [proof()] } as never }) }), { sessionId: SESSION_ID, account: ACCOUNT }));
 });

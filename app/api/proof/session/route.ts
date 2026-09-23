@@ -8,7 +8,8 @@ import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
 import { loadLatestEvidence, pruneExpiredProofSessions, saveProofSession, type ProofSessionPhase } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { reclaimChannelInitOptions, reclaimChannelLaunchOptions, resolveReclaimChannel } from "@/src/reclaim-channel";
-import { shownConditionById } from "@/src/shown-conditions";
+import { loadMilestoneGift } from "@/src/milestone-store";
+import { shownConditionById, type ShownProvider } from "@/src/shown-conditions";
 import { shownContextMessage } from "@/src/shown-proof";
 
 export const runtime = "nodejs";
@@ -68,9 +69,17 @@ export async function POST(request: Request) {
     const appSecret = process.env.RECLAIM_APP_SECRET?.trim();
     if (!appId || !appSecret) throw new Error("The Reclaim application is not configured");
 
+    // The provider this gift's proof comes from: the condition's own, or read off the gift (a university gift's
+    // portal, D165).
+    const record = entry.providerOf ? await loadMilestoneGift(giftId) : null;
+    const provider: ShownProvider | null = entry.providerOf && record ? await entry.providerOf(record) : null;
+    const providerId = provider?.providerId ?? entry.condition.providerId;
+    const providerVersion = provider?.providerVersion ?? entry.condition.providerVersion;
+    if (!providerId) throw new Error("This gift names no portal a proof could come from");
+
     const channel = resolveReclaimChannel();
-    const proofRequest = await ReclaimProofRequest.init(appId, appSecret, entry.condition.providerId, {
-      providerVersion: entry.condition.providerVersion,
+    const proofRequest = await ReclaimProofRequest.init(appId, appSecret, providerId, {
+      providerVersion,
       // The portal can substitute AI-witnessed proofs while still reporting success. We refuse AI here, and the
       // verify route refuses anything without a verified TEE attestation anyway.
       acceptAiProviders: false,

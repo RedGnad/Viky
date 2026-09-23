@@ -152,6 +152,15 @@ export default function JudgesPage() {
             side, which holds the day open rather than taking it away from anybody.
           </li>
           <li>
+            <strong>University portals&apos; terms.</strong> A proof of enrolment is shown by the person from their own
+            student portal, in a verification tab where they sign in themselves (D165). What each portal&apos;s terms of
+            use say about a program reading its pages once a student has signed in is not read portal by portal:
+            Reclaim, whose attestor proves the page, treats those terms as its own question and does not answer it
+            for us. The risk is the same kind as Duolingo&apos;s above, spread one portal at a time, and each portal is
+            named in the gift the funder signs, so a portal that changes its page stops proving until it is proved
+            again with a student present.
+          </li>
+          <li>
             <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:
             Coursera verifies identity once per account, and says some programmes require it while others only check a
             name. That condition is not open yet, and this is what it will prove when it is.

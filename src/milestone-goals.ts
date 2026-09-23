@@ -5,6 +5,7 @@ import { CREDLY_GOAL_TYPE, credlyProviderId } from "./credly-badge";
 import { detProviderId } from "./duolingo-english-test";
 import { LICHESS_CADENCES, lichessGoalType, lichessProviderId } from "./lichess";
 import { SHAPE_CLIMB, SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
+import { UNIVERSITY_GOAL_TYPE, universityShownProviderId } from "./university-shown";
 import { TOEFL_GOAL_TYPE, toeflShownProviderId } from "./toefl-shown";
 
 /**
@@ -52,6 +53,9 @@ export const MILESTONE_GOALS: readonly MilestoneGoal[] = [
   { goalType: COURSERA_GOAL_TYPE, providerId: courseraProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Coursera", detail: "a course certificate" },
   // A certification badge: granted once by an issuer that is not the person, so it is had or not (20 Sep 2026).
   { goalType: CREDLY_GOAL_TYPE, providerId: credlyProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Credly", detail: "a certification badge" },
+  // Staying enrolled, shown from the person's own student portal: one goal for every portal, the portal pinned in
+  // the gift's subject (D165). Had or not, like a certificate.
+  { goalType: UNIVERSITY_GOAL_TYPE, providerId: universityShownProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "a university's student portal", detail: "enrolled, shown" },
   // The puzzle rating: it moves, so it is a climb like the cadences, on the same page and without an RD.
   { goalType: chessGoalType(CHESS_TACTICS), providerId: chessProviderId(CHESS_TACTICS), shape: SHAPE_CLIMB, source: "Chess.com", detail: "the puzzle record" },
   // A TOEFL score shown from the person's own ETS account (D164): had or not, the "show" sense; the "reach" sense,

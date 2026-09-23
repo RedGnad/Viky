@@ -4473,3 +4473,39 @@ back by `vercel env pull`; verify at execution, by a boolean; start PR 2 up to t
 - **What is not verified, and waits for a person.** No session has been opened on production: the ETS sign-in is
   the person's own gesture, with the account the gift is for. Until then the flow is exercised without a network
   (749 rules) and the condition stays "Being built".
+
+## D165, 23 Sep 2026: staying enrolled at a university, shown from the person's own student portal
+
+The founder, 23 Sep 2026: the universities, second nature, built entirely except what needs a real student account;
+one goal on the chain for the family with the portal pinned in the gift and required at verification; if a reason
+for a goal per portal appears, say it in the PR before building.
+
+- **The condition.** `university-enrollment-shown`, nature shown, in a new family "Stay enrolled": "Stay enrolled at
+  their university", the page of their own student portal that says they are enrolled, shown from their own
+  account; when they enrolled is not read. The corridor's own case, a family abroad paying the year. It lives in
+  `BUILDING` beside the register, offered on the chooser to an operator alone, and on the public page as the
+  frontier's line "Being enrolled at a university", "Being built: …", so the page says what is on its way without
+  pretending it is offered.
+- **The shape.** Having it or not: enrolled is one, and the target is fixed. Thirty to 365 days, 180 suggested: a
+  semester is not thirty days and a year is long. No name asked. What the funder chooses is the university, from the
+  portals Viky has proved, and the portal's id is the subject they sign:
+  `hash("viky:subject:university-enrollment-shown:v1:<portal id>")`.
+- **One goal for the family, number 14,** `viky:provider:university-enrollment-shown:v1`, shape 1. The portal is
+  bound into the subject the funder signs, so a proof shown from another portal fails the contract's own
+  `identityHash == subject` check; the proof's provider (Reclaim id, version, request hash) is pinned by the portal's
+  row at verification and required: a gift naming no portal is refused `NO_PORTAL` before any session opens. A goal
+  per portal would add nothing the subject does not give and would cost an owner signature through the Safe for
+  every university. Said in the PR before building, as asked. The call to sign is in OPERATIONS.
+- **The table of proved portals.** `viky_portals`, one row per portal proved with a student present: the name, the
+  university, the country, the Reclaim provider by id and version, its one request by hash, the sign-in address, and
+  the least extracted that means enrolled (one field, one pattern, and in words what is kept). Written by
+  `pnpm portal:add` from an operator's command, never by a screen; empty tonight. "Which university?" searches it and
+  nothing else, and says so when nothing answers: an empty answer means no portal was proved for those words, never
+  that a university does not exist. The chooser reads each answer as the university and its country in words.
+- **What is not read.** The portals' terms of use, portal by portal: Reclaim treats them as its own question, and
+  the judges page says so, with the risk spread one portal at a time and each portal named in the gift.
+- **What is verified, and what waits for a student.** The reading per portal is exercised without a network (the
+  portal's provider, another portal's subject, no portal, not enrolled, a broken pattern); no provider has been
+  registered on any portal, no row exists, no proof has run. The thirty minutes with a student are written in
+  OPERATIONS, and the condition stays "Being built" until goal 14 is registered and one proof has run end to end on a
+  real portal with real money, on the founder's word (the rule of D164).
