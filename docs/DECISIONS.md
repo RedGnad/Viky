@@ -5858,3 +5858,23 @@ step of the scale exempts the card's own, by name, with the reason. The comment 
 **Measured.** The gift pages of a daily gift, of a climb and of two stamps (the founder's four gifts, copied onto a test
 account on the test branch) and Home, whole page, at 390 and 1440, day and night, before and after: 20 of 20 identical
 pixel for pixel.
+
+## D212, 24 Sep 2026: an edX verified certificate, read for the person like Coursera's
+
+The founder, 24 Sep 2026: four public registers read without a session, on the model of Coursera and Credly; edX
+first, set aside on 18 Sep for identity (D100), back because the issuer attests.
+
+- **Measured on a live certificate**, `courses.edx.org/certificates/0a1b2c3d…e8f9`: server-rendered HTML, the title
+  `GTx ISYE6501x Certificate | edX`, the track in `wrapper-accomplishment-title verified`, the holder, the course's
+  name, "Issued August 6, 2018", the id again in its own link. Six patterns on those classes and words. A certificate
+  that does not exist answers 404 (`f0e1d2c3…`).
+- **The line.** `edx-certificate`, "An edX certificate", family "Finish a course", goal 25, having it or not: a
+  verified (or professional) certificate, in the name the funder types, for the course they name by its code
+  (`HarvardX CS50x`, or a link carrying `course-v1:`), issued inside the gift's window. An honour certificate is refused
+  by name. Being built until goal 25 is signed and the service runs the source.
+- **The terms**, read 24 Sep 2026: edX's 11.6 forbids robots and crawlers other than its own; written on the judges'
+  page, the risk as Duolingo's and Coursera's.
+- **Defaults applied, to confirm.** The course named by organisation and number, as the certificate's title prints
+  them; an edX catalogue link (`edx.org/learn/…`) is not accepted, since it carries no code; `professional` accepted
+  beside `verified`. Whether a run whose key reads `HarvardX+CS50+X` prints `CS50` or `CS50x` on its certificate is not
+  measured.

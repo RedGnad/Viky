@@ -263,6 +263,13 @@ export default async function JudgesPage() {
             under the consent they gave.
           </li>
           <li>
+            <strong>edX&apos;s terms.</strong> An edX verified certificate is read from the public page edX publishes for
+            it, once per shared link and again at each reading (D212). edX&apos;s terms (11.6, updated 3 Nov 2025) forbid
+            accessing its service through &quot;spiders, robots, crawlers, and data mining tools&quot; other than its
+            own. The risk is the one Duolingo&apos;s and Coursera&apos;s lines carry, written here rather than decided: a
+            person shares their own certificate, and Viky reads that one page.
+          </li>
+          <li>
             <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:
             Coursera verifies identity once per account, and says some programmes require it while others only check a
             name. That condition is not open yet, and this is what it will prove when it is.

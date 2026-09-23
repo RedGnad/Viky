@@ -26,6 +26,7 @@ import {
   conditionById,
   CREDLY_BADGE,
   COURSERA_CERTIFICATE as COURSERA_CONDITION,
+  EDX_CERTIFICATE as EDX_CONDITION,
   DUOLINGO_ENGLISH_TEST,
   type Condition,
   ECOLEDIRECTE_GRADE_SHOWN,
@@ -42,6 +43,7 @@ import {
   UNIVERSITY_YEAR_PASSED_SHOWN,
 } from "./conditions";
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
+import { EDX_DURATION_DAYS, EDX_GOAL_TYPE, EDX_HAS_IT, edxCertificateIdOf, edxCourseOf, edxSubject } from "./edx-certificate";
 import { CREDLY_DURATION_DAYS, CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyBadgeIdOf, credlyPairOf, credlySubject } from "./credly-badge";
 import {
   certificateSubject,
@@ -533,6 +535,41 @@ export const COURSERA_MILESTONE: CertificateCondition = {
       below: () => "That certificate is not the one this gift is for.",
       beforeTheGift: "That certificate was granted before this gift was made, so it is not what the gift is for.",
       afterTheDeadline: "That certificate was granted after this gift's last day.",
+    },
+  },
+};
+
+/** An edX verified certificate (D212): Coursera's shape, the course named by its key, the name the funder types. */
+export const EDX_MILESTONE: CertificateCondition = {
+  ...COURSERA_MILESTONE,
+  condition: EDX_CONDITION,
+  goalType: EDX_GOAL_TYPE,
+  readPath: "/api/edx/certificate",
+  validLink: (value) => edxCertificateIdOf(value) !== undefined,
+  validTarget: (value) => value === EDX_HAS_IT,
+  subject: ({ name, course }) => edxSubject(name, String(course ?? "")),
+  course: {
+    label: "The course, by its code",
+    help: "The code edX prints for the course, like HarvardX CS50x, or a course link carrying course-v1:, like https://courses.edx.org/courses/course-v1:HarvardX+CS50+X/.",
+    slugOf: edxCourseOf,
+    row: "Which course",
+    named: (course) => `This gift will be for ${course.replace("+", " ")}. That is the code edX puts on the certificate.`,
+  },
+  target: { ...COURSERA_MILESTONE.target, help: "An edX verified certificate is issued or it is not, so there is nothing to choose here.", min: EDX_HAS_IT, max: EDX_HAS_IT, suggested: EDX_HAS_IT },
+  duration: EDX_DURATION_DAYS,
+  words: {
+    ...COURSERA_MILESTONE.words,
+    nameLabel: "Their name, as edX prints it on a certificate",
+    nameHelp: "The name on their edX account. If it does not match, the gift cannot pay.",
+    linkHelp: "In edX, open the certificate and copy the whole link from your browser. It looks like courses.edx.org/certificates/ followed by an id.",
+    whatIsRead: "Viky reads five things from that page: the name on it, the course's code and name, that it is a verified certificate, and the day it was issued. It keeps those with the gift and nothing else.",
+    mustShow: (name) => `A verified edX certificate in the name ${name}, for that course, issued inside these days. Nothing else is read from it.`,
+    refusals: {
+      ...COURSERA_MILESTONE.words.refusals,
+      targetShape: "An edX certificate is issued or it is not, so there is nothing to set here.",
+      nameShape: "Type their name as edX prints it on a certificate.",
+      linkShape: "That is not an edX certificate link. It looks like courses.edx.org/certificates/ followed by an id.",
+      below: () => "That certificate is not a verified one, so it is not what this gift is for.",
     },
   },
 };
@@ -1178,6 +1215,7 @@ export const EXAM_MILESTONES: readonly CertificateCondition[] = [CAMBRIDGE_MILES
 const CERTIFICATES: readonly CertificateCondition[] = [
   DET_MILESTONE,
   COURSERA_MILESTONE,
+  EDX_MILESTONE,
   CREDLY_MILESTONE,
   TOEFL_SHOWN_MILESTONE,
   ...EXAM_MILESTONES,

@@ -200,7 +200,16 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     account: "The funder names the person and the course, and both are hashed into the terms they sign, so a certificate for another course or in another name pays nothing. Two people of the same name who finish the same course inside the same days cannot be told apart by this, because the page has no field its holder can edit: that gap is written down rather than dressed up.",
     whoActed: "Unknown: Coursera describes no supervision of each assignment.",
     sourcePolicing: "Coursera verifies identity once per account, with an official document and a selfie, and says some programmes require it while others only check a name. Nothing published says a certificate was earned under supervision.",
+  },  {
+    conditionId: "edx-certificate",
+    supervised: false,
+    inShort: "Read from the verified certificate's public page on edX. edX checks identity for that track, not each piece of work.",
+    data: "The public page edX publishes for the certificate, read through an attested fetch when the person shares its link, and again at every reading: the organisation and the course's number, its printed name, the track, the holder's name, the day of issue and the certificate's own id. Nothing else is matched. A certificate edX withdraws answers 404 and stops paying.",
+    account: "The funder names the person and the course, and both are hashed into the terms they sign, so a certificate for another course or in another name pays nothing. Two people of the same name who finish the same course inside the same window cannot be told apart (D49's gap), as on Coursera.",
+    whoActed: "Unknown: edX verifies the learner's identity for the verified track and describes no supervision of each assignment.",
+    sourcePolicing: "edX issues the certificate on a passing grade in the verified track, after an identity check, and publishes a page per certificate. Its terms (11.6, updated 3 Nov 2025) forbid accessing the service through robots or crawlers other than edX's own, which Viky's one reading per shared certificate is: written on the judges' page, the risk assumed as for Duolingo and Coursera.",
   },
+
   {
     conditionId: "credly-badge",
     supervised: false,

@@ -543,6 +543,33 @@ export const COURSERA_CERTIFICATE: Condition = {
 };
 
 /**
+ * An edX verified certificate (D212), read for the person like Coursera's: the link they share, the page edX
+ * publishes for it, the name and the course the funder signed. Being built until goal 25 is signed and the reading
+ * service runs its source.
+ */
+export const EDX_CERTIFICATE: Condition = {
+  id: "edx-certificate",
+  kind: "milestone",
+  nature: "read",
+  goalType: null,
+  live: false,
+  beforeItOpens: "Goal 25 signed by the owner, and the reading service redeployed with the edX source.",
+  source: "edX",
+  family: "course",
+  name: "An edX certificate",
+  help: "The verified certificate's public page on edX, shared when they have it: the course and the day are read from it, and edX checks identity for that track.",
+  link: { kind: "link", label: "The link to your certificate", help: "In edX, open the certificate and copy the whole link from your browser, courses.edx.org/certificates/ followed by its id, then paste it here." },
+  reading: "edx-certificate",
+  words: {
+    earnedDay: "When they get it, this becomes theirs",
+    connect: "Opened. Share the edX certificate's link when you have it.",
+    doIt: "Finish the course on the verified track. When the certificate is yours, share its link here.",
+    eachDay: "the day the certificate is shared",
+    preview: "An edX certificate: the gift is yours the day you share it.",
+  },
+};
+
+/**
  * A certification on Credly, and a family of its own (the founder's line of 20 Sep 2026). A certification is not a
  * course taken: a CompTIA is sat as an examination with no course at all, and what is awarded is awarded by
  * somebody who is not the person. Filing it beside Coursera erased the distinction that made it worth building.
@@ -1011,6 +1038,7 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
 
 
 export const BUILDING: readonly Condition[] = [
+  EDX_CERTIFICATE,
   CAMBRIDGE_ENGLISH_SHOWN,
   IELTS_SHOWN,
   BAC_MOROCCO_SHOWN,
