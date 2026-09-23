@@ -5438,3 +5438,35 @@ known. The trace below is how it becomes known.
 **What waits for the founder.** Open viky.cash/?trace=1 on the phone, then the landing, Home and You, and send a
 screenshot of the trace: a "drawn for nobody" line on a signed-in phone, or a "SAME PAGE drawn again", names the cause
 on his device.
+
+## D197, 23 Sep 2026: Fitbit is read through the Google Health API; the Fitbit Web API closes
+
+The founder, 23 Sep 2026: the Fitbit Web API closes on 30 Sep 2026 (the banner on dev.fitbit.com, registrations
+closed); retarget the line on the Google Health API, `https://health.googleapis.com`, v4, Google's OAuth 2.0,
+`users.dataTypes.dataPoints.dailyRollUp`; the variables `GOOGLE_HEALTH_CLIENT_ID` and `GOOGLE_HEALTH_CLIENT_SECRET` in
+place of the `FITBIT_*`; read Google's terms first. The banner read here the same day says "September 2026".
+
+- **Read first** (23 Sep 2026): the API's discovery document (revision 20260922) for the scope, the method, its
+  request and its answer; the setup guide (a web application client, testing mode of a hundred users and seven-day
+  refresh keys, CASA beyond); the Developer Terms (24 Mar 2026) and the Developer and User Data Policy (24 Mar 2026).
+  Nothing in them forbids a verdict shared with the funder under the person's consent; they ask for the disclosure
+  immediately before that consent, deletion on request, and use limited to the feature. Written in OPERATIONS and on
+  the judges' page.
+- **What changed.** Google's authorization page, PKCE and the client secret, `access_type=offline` and `prompt=consent`,
+  one scope (`googlehealth.activity_and_fitness.readonly`); the account is the API's `healthUserId`, asked of
+  `users/me/identity` with the new key; a connection without the scope is refused (`SCOPE_MISSING`); the revoke is
+  Google's. The reading is `POST …/users/me/dataTypes/active-minutes/dataPoints:dailyRollUp` with a body naming the
+  civil day and the next, one window: the attested read gains a method and a body for a connected source, both part
+  of what is signed and both checked. The minutes are `MODERATE` plus `VIGOROUS`, the counterpart of the legacy
+  "fairly" and "very"; the roll-up is captured whole, since its levels come in no promised order.
+- **What did not change.** The line's id, goal 6 (registered on 23 Sep), its provider id, the routes and the redirect
+  path `/api/connect/fitbit/callback`, the consent and the verdict rule, the vault, the connect screen. The source keeps
+  its name for the person: they wear a Fitbit, and connect the Google account it uses.
+- **Defaults applied, to confirm (the founder away).** `google-wearables` as the data source family, so minutes logged
+  by hand do not count; the civil day asked being yesterday's UTC date (the API reads it in the person's own civil
+  time, which for a person west of UTC is not over when the pass runs after midnight UTC); the moderate and vigorous
+  levels.
+- **Strava.** What the line needs is the application's Client ID (a number) and Client Secret; the access and refresh
+  tokens shown on Strava's settings page are the owner's own and are not used. Said in OPERATIONS.
+- **Still the founder's.** The two variables, the consent screen's test users, and the reading service redeployed with
+  the source (PR #166, to be rebuilt on this).

@@ -865,9 +865,11 @@ export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
 };
 
 /**
- * Fitbit, connected by the person (D188): the first condition of the third nature. They authorise Viky once on
- * Fitbit's own page, and each morning the keeper reads yesterday's activity summary through the attested fetch with
- * their key as a secret, judges the minutes against the target, and keeps the verdict alone. The funder learns a yes
+ * Fitbit, connected by the person (D188): the first condition of the third nature. Since the legacy Fitbit Web API
+ * closes in September 2026, it is read through the Google Health API, which reads Fitbit trackers and Pixel Watches
+ * (D197): the person authorises Viky once on Google's own page, and each morning the keeper asks for yesterday's
+ * active minutes through the attested fetch with their key as a secret, judges them against the target, and keeps the
+ * verdict alone. The funder learns a yes
  * or a no for the day; the numbers are read, judged and dropped.
  */
 export const FITBIT_DAILY: Condition = {
@@ -876,26 +878,26 @@ export const FITBIT_DAILY: Condition = {
   nature: "connected",
   goalType: GOAL_TYPE_FITBIT_ACTIVITY,
   live: false,
-  beforeItOpens: "The Fitbit application's two variables and the sealing key set by the founder, the reading service redeployed with the Fitbit source, and goal 6 signed.",
+  beforeItOpens: "The Google Health client's two variables and the sealing key set by the founder, and the reading service redeployed with the Google Health source.",
   source: "Fitbit",
   family: "move",
   name: "Active minutes each day, on Fitbit",
-  help: "Connected once by them: each morning Viky asks Fitbit whether yesterday reached the minutes and keeps only that yes or no. It proves the account moved, not who wore it.",
+  help: "Connected once by them, through their Google account: each morning Viky asks whether yesterday's Fitbit or Pixel Watch reached the minutes and keeps only that yes or no. It proves the tracker moved, not who wore it.",
   link: {
     kind: "connect",
     label: "Connect your Fitbit",
-    help: "You authorise Viky once, on Fitbit's own page. Nothing to type here, nothing to paste.",
+    help: "You authorise Viky once, on Google's own page, with the Google account your Fitbit uses. Nothing to type here, nothing to paste.",
     consent: {
       title: "Connect your Fitbit",
-      sees: "Each morning Viky asks Fitbit one thing about yesterday: did your active minutes reach the target. The person who sent this gift is told yes or no for the day, and nothing else.",
+      sees: "Each morning Viky asks Google Health one thing about yesterday: did your Fitbit's active minutes reach the target. The person who sent this gift is told yes or no for the day, and nothing else.",
       never: "They never see where you went, when, for how long, or any number: not your steps, not your heart rate, not your minutes. Viky reads them, judges the day, and keeps none of them.",
-      erase: "You can disconnect and erase from this page at any time. Viky then gives Fitbit's key back and keeps nothing of yours; the gift goes on, with each day counted as not done until you connect again.",
+      erase: "You can disconnect and erase from this page at any time. Viky then gives Google's key back and keeps nothing of yours; the gift goes on, with each day counted as not done until you connect again.",
       connect: "Connect Fitbit",
       connecting: "Opening Fitbit",
       connected: "Fitbit is connected. From tomorrow, every day with your minutes is yours, counted each morning.",
       start: "Start counting",
       disconnect: "Disconnect and erase",
-      erased: "Disconnected. Fitbit's key is given back and nothing of yours is kept. Connect again whenever you like.",
+      erased: "Disconnected. Google's key is given back and nothing of yours is kept. Connect again whenever you like.",
       todayYours: "Only you can see today's number, and Viky keeps it nowhere.",
     },
   },
@@ -907,11 +909,11 @@ export const FITBIT_DAILY: Condition = {
     min: 1,
     tooLow: "At least 1 minute.",
   },
-  reading: "fitbit-daily-summary",
+  reading: "google-health-active-minutes",
   words: {
     earnedDay: "Each day they reach it, this becomes theirs",
     connect: "Opened. Connect Fitbit to start counting.",
-    doIt: "Move; nothing else. Each morning Viky asks Fitbit whether yesterday reached your minutes.",
+    doIt: "Move; nothing else. Each morning Viky asks Google Health whether yesterday reached your minutes.",
     eachDay: "each day with the minutes",
     theyConnect: "connects their Fitbit",
     yesterday: "yesterday's minutes",
