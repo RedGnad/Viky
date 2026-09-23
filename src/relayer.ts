@@ -4,7 +4,6 @@ import {
   decodeErrorResult,
   formatEther,
   getAddress,
-  http,
   parseEther,
   type Abi,
   type Hash,
@@ -17,7 +16,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { giftEscrowAbi } from "./gift-escrow-abi";
 import { giftGasLimit, type GiftFunction } from "./gift-gas";
 import { addMonadGasBuffer } from "./monad-gas";
-import { MONAD_CHAIN_ID, monadChain, monadRpcUrl, waitForFinality } from "./monad/chain";
+import { MONAD_CHAIN_ID, monadChain, monadTransport, waitForFinality } from "./monad/chain";
 
 /**
  * The relayer pays the gas of every recipient action and of every funder action that is not the
@@ -57,7 +56,7 @@ export function relayerClients(): RelayerClients {
   const key = process.env.RELAYER_PRIVATE_KEY?.trim();
   if (!key) throw new RelayerError("NOT_CONFIGURED", "The relayer is not configured");
   const account = privateKeyToAccount((key.startsWith("0x") ? key : `0x${key}`) as Hex);
-  const transport = http(monadRpcUrl());
+  const transport = monadTransport();
   cached = {
     publicClient: createPublicClient({ chain: monadChain, transport }),
     walletClient: createWalletClient({ account, chain: monadChain, transport }),

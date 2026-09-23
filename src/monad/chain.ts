@@ -1,4 +1,4 @@
-import { createPublicClient, http, type Hash, type PublicClient, type TransactionReceipt } from "viem";
+import { createPublicClient, fallback, http, type Hash, type PublicClient, type TransactionReceipt, type Transport } from "viem";
 import { monad } from "viem/chains";
 
 export const MONAD_CHAIN_ID = 143;
@@ -22,12 +22,29 @@ export const FINALITY_TIMEOUT_MS = 30_000;
 
 export const monadChain = monad;
 
+/**
+ * The provider this code asks first. On the server, `MONAD_RPC_URL` when it is set, a server-only variable that never
+ * reaches the browser; otherwise the public one the browser reads too.
+ */
 export function monadRpcUrl(): string {
-  return process.env.NEXT_PUBLIC_MONAD_RPC_URL?.trim() || PUBLIC_RPC_URL;
+  const serverOnly = typeof window === "undefined" ? process.env.MONAD_RPC_URL?.trim() : undefined;
+  return serverOnly || process.env.NEXT_PUBLIC_MONAD_RPC_URL?.trim() || PUBLIC_RPC_URL;
+}
+
+/**
+ * Every read and every send goes through this: the configured provider first, then Monad's public endpoint when the
+ * provider refuses or fails. On 23 Sep 2026 at 09:21 the provider's key was restricted to the viky.cash origin; a
+ * server sends no origin, so every contract read of the server was refused, and every gift said it could not be loaded
+ * for an hour (D192). A refusal of the provider must never be a refusal of the product. A contract's own revert is not
+ * a provider failure: viem's fallback throws it at once rather than asking again elsewhere.
+ */
+export function monadTransport(rpcUrl = monadRpcUrl()): Transport {
+  if (rpcUrl === PUBLIC_RPC_URL) return http(rpcUrl);
+  return fallback([http(rpcUrl), http(PUBLIC_RPC_URL)]);
 }
 
 export function createMonadPublicClient(rpcUrl = monadRpcUrl()): PublicClient {
-  return createPublicClient({ chain: monadChain, transport: http(rpcUrl) });
+  return createPublicClient({ chain: monadChain, transport: monadTransport(rpcUrl) });
 }
 
 export class FinalityTimeout extends Error {

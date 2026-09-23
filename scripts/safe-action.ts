@@ -1,11 +1,11 @@
 import "../src/load-env";
-import { createPublicClient, createWalletClient, encodeFunctionData, getAddress, http, recoverAddress, type Abi, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, encodeFunctionData, getAddress, recoverAddress, type Abi, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { exitRouterAbi } from "../src/exit-router-abi";
 import { giftEscrowAbi } from "../src/gift-escrow-abi";
 import { milestoneGiftAbi } from "../src/milestone-gift-abi";
 import { addMonadGasBuffer } from "../src/monad-gas";
-import { MONAD_CHAIN_ID, monadChain, monadRpcUrl, waitForFinality } from "../src/monad/chain";
+import { MONAD_CHAIN_ID, monadChain, monadTransport, waitForFinality } from "../src/monad/chain";
 import { execTransactionData, packSafeSignatures, safeAbi, safeCall, safeTxHash, SAFE_VERSION, type SafeTransaction } from "../src/safe";
 
 /**
@@ -65,7 +65,7 @@ function actionCall(): { step: string; to: Address; data: Hex } {
 }
 
 async function main() {
-  const publicClient = createPublicClient({ chain: monadChain, transport: http(monadRpcUrl()) });
+  const publicClient = createPublicClient({ chain: monadChain, transport: monadTransport() });
   const chainId = await publicClient.getChainId();
   if (chainId !== MONAD_CHAIN_ID) throw new Error(`Refusing to run: chain id ${chainId} is not Monad mainnet (${MONAD_CHAIN_ID})`);
 
@@ -138,7 +138,7 @@ async function main() {
   const key = process.env.EXECUTOR_PRIVATE_KEY?.trim();
   if (!key) throw new Error("SEND=1 needs EXECUTOR_PRIVATE_KEY in your own shell");
   const account = privateKeyToAccount((key.startsWith("0x") ? key : `0x${key}`) as Hex);
-  const walletClient = createWalletClient({ account, chain: monadChain, transport: http(monadRpcUrl()) });
+  const walletClient = createWalletClient({ account, chain: monadChain, transport: monadTransport() });
   const sent = await walletClient.sendTransaction({ to: safe, data, gas });
   const receipt = await waitForFinality(publicClient, sent);
   if (receipt.status !== "success") throw new Error(`The Safe transaction reverted in ${sent}`);

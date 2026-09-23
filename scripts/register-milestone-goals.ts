@@ -1,11 +1,11 @@
 import "../src/load-env";
-import { createPublicClient, createWalletClient, encodeFunctionData, getAddress, http, type Abi, type Hex } from "viem";
+import { createPublicClient, createWalletClient, encodeFunctionData, getAddress, type Abi, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { milestoneGiftAbi } from "../src/milestone-gift-abi";
 import { MILESTONE_GOALS, planFor } from "../src/milestone-goals";
 import { SHAPE_CLIMB, SHAPE_HAVE_OR_NOT } from "../src/milestone-protocol";
 import { addMonadGasBuffer } from "../src/monad-gas";
-import { MONAD_CHAIN_ID, monadChain, monadRpcUrl, waitForFinality } from "../src/monad/chain";
+import { MONAD_CHAIN_ID, monadChain, monadTransport, waitForFinality } from "../src/monad/chain";
 
 /**
  * The session that registers every goal on `MilestoneGift`, run by its owner (U3, 18 Sep 2026).
@@ -54,7 +54,7 @@ async function readGoals(publicClient: ReturnType<typeof createPublicClient>, ad
 
 async function main() {
   const address = getAddress(String(process.env.MILESTONE_GIFT_ADDRESS?.trim()));
-  const publicClient = createPublicClient({ chain: monadChain, transport: http(monadRpcUrl()) });
+  const publicClient = createPublicClient({ chain: monadChain, transport: monadTransport() });
   const chainId = await publicClient.getChainId();
   if (chainId !== MONAD_CHAIN_ID) throw new Error(`Refusing to run: chain id ${chainId} is not Monad mainnet (${MONAD_CHAIN_ID})`);
 
@@ -113,7 +113,7 @@ async function main() {
   const account = privateKeyToAccount((key.startsWith("0x") ? key : `0x${key}`) as Hex);
   const owner = getAddress(String(await publicClient.readContract({ address, abi, functionName: "owner" })));
   if (getAddress(account.address) !== owner) throw new Error(`Refusing to run: this key is ${account.address}, and the owner is ${owner}`);
-  const walletClient = createWalletClient({ account, chain: monadChain, transport: http(monadRpcUrl()) });
+  const walletClient = createWalletClient({ account, chain: monadChain, transport: monadTransport() });
 
   for (const goal of missing) {
     const args = [goal.goalType, goal.providerId, goal.shape] as const;

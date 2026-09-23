@@ -1,7 +1,7 @@
-import { BaseError, ContractFunctionRevertedError, createPublicClient, http, type Abi, type Hex } from "viem";
+import { BaseError, ContractFunctionRevertedError, createPublicClient, type Abi, type Hex } from "viem";
 import { giftEscrowAbi } from "./gift-escrow-abi";
 import { milestoneGiftAbi } from "./milestone-gift-abi";
-import { monadRpcUrl, PUBLIC_RPC_URL } from "./monad/chain";
+import { monadTransport, PUBLIC_RPC_URL } from "./monad/chain";
 
 /**
  * What the chain itself says about Viky's contracts, read when the judges page is served (U2, S5).
@@ -32,7 +32,7 @@ export type ContractFacts = Readonly<{
 const UNKNOWN_GIFT = 999_999_999n;
 
 function client() {
-  return createPublicClient({ transport: http(monadRpcUrl()) });
+  return createPublicClient({ transport: monadTransport() });
 }
 
 /** The name of the error a contract returned, or null when it refused in some other way. */

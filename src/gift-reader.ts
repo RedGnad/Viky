@@ -1,6 +1,6 @@
-import { createPublicClient, http, type Abi, type Hex, type PublicClient } from "viem";
+import { createPublicClient, type Abi, type Hex, type PublicClient } from "viem";
 import { giftEscrowAbi } from "./gift-escrow-abi";
-import { monadChain, monadRpcUrl } from "./monad/chain";
+import { monadChain, monadTransport } from "./monad/chain";
 
 /** Read-only view of a gift as the contract holds it. Numbers stay raw here; screens format them. */
 export type GiftState = Readonly<{
@@ -39,7 +39,7 @@ const ZERO = "0x0000000000000000000000000000000000000000";
 let cachedClient: PublicClient | undefined;
 
 export function giftPublicClient(): PublicClient {
-  if (!cachedClient) cachedClient = createPublicClient({ chain: monadChain, transport: http(monadRpcUrl()) });
+  if (!cachedClient) cachedClient = createPublicClient({ chain: monadChain, transport: monadTransport() });
   return cachedClient;
 }
 

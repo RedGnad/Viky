@@ -5313,3 +5313,25 @@ screen. This is the second, on the model of the first, under the same eight rule
 - **What crossed the frontier, said in the PR.** `app/judges/page.tsx` (Strava's clauses), the four routes under
   `app/api/connect/strava`, `src/gift-terms.ts` (the provider id). Nothing in `app/kit`: the connect screen knew no
   source by name.
+## D192, 23 Sep 2026: a refusal of the RPC provider is never a refusal of the product
+
+**What happened.** From 09:21 on 23 Sep 2026, every contract read of the server failed: `/api/gifts/mine` and
+`/api/gift/[id]` answered 500, Home and Gifts said "Your gifts could not be loaded", and the pages that read a gift on
+the server (D160) found nothing and were built a second time by the browser. The provider answered every call with
+"Unspecified origin not on whitelist": its key had just been restricted to the viky.cash origin, after the security
+review of #160 found it public. A browser sends that origin; a server sends none. Measured on the same key:
+
+| call | answer |
+|---|---|
+| no origin (the server) | `-32600 Unspecified origin not on whitelist.` |
+| origin `https://viky.cash` | the block number |
+| `https://rpc.monad.xyz` | the block number |
+
+**What changed.** Every client, on the server, in the browser and in the operator scripts, goes through one transport
+(`monadTransport` in `src/monad/chain.ts`): the configured provider first, Monad's public endpoint when the provider
+refuses or fails. A contract's own revert is not retried elsewhere. The server now reads `MONAD_RPC_URL` first when it
+is set, a server-only variable, so the server can have its own unrestricted key without it ever reaching the browser.
+
+**What waits for the founder.** No variable, key or provider setting was touched. Until a server key is set in
+`MONAD_RPC_URL`, every server call asks the restricted key, is refused, and is answered by the public endpoint: one
+extra round trip per call, and the public endpoint's limits (100 blocks per `eth_getLogs`).

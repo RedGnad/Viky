@@ -1,10 +1,10 @@
 import "../../src/load-env";
-import { createPublicClient, formatEther, getAddress, http, isAddress, type Hex } from "viem";
+import { createPublicClient, formatEther, getAddress, isAddress, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { AUSD_DOMAIN } from "../../src/ausd-authorization";
 import { DUOLINGO_GOAL_PROVIDER_ID, GOAL_TYPE_DUOLINGO_XP } from "../../src/gift-terms";
 import { giftEscrowAbi } from "../../src/gift-escrow-abi";
-import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadRpcUrl } from "../../src/monad/chain";
+import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadTransport } from "../../src/monad/chain";
 import { proofSessionStorageReachable } from "../../src/proof-session-store";
 import { RELAYER_MIN_BALANCE } from "../../src/relayer";
 
@@ -17,7 +17,7 @@ type Check = [label: string, ok: boolean, detail: string];
 
 async function main() {
   const checks: Check[] = [];
-  const client = createPublicClient({ chain: monadChain, transport: http(monadRpcUrl()) });
+  const client = createPublicClient({ chain: monadChain, transport: monadTransport() });
 
   const chainId = await client.getChainId();
   checks.push(["chain id is Monad mainnet", chainId === MONAD_CHAIN_ID, String(chainId)]);

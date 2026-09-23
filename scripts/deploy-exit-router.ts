@@ -7,7 +7,6 @@ import {
   encodeFunctionData,
   formatEther,
   getAddress,
-  http,
   isAddress,
   keccak256,
   parseEther,
@@ -17,7 +16,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { kuruQuote, NATIVE_MON } from "../src/kuru";
 import { addMonadGasBuffer } from "../src/monad-gas";
-import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadRpcUrl, USDC_ADDRESS, waitForFinality } from "../src/monad/chain";
+import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadTransport, USDC_ADDRESS, waitForFinality } from "../src/monad/chain";
 
 /**
  * Deploys ExitRouter to Monad mainnet and opens it to exactly one exchange.
@@ -62,7 +61,7 @@ async function main() {
   const abi: Abi = artifact.abi;
 
   const account = privateKeyToAccount((deployerKey.startsWith("0x") ? deployerKey : `0x${deployerKey}`) as Hex);
-  const transport = http(monadRpcUrl());
+  const transport = monadTransport();
   const publicClient = createPublicClient({ chain: monadChain, transport });
   const walletClient = createWalletClient({ account, chain: monadChain, transport });
 

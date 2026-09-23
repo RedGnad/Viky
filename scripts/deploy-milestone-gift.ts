@@ -9,7 +9,6 @@ import {
   formatEther,
   getAddress,
   getContractAddress,
-  http,
   isAddress,
   keccak256,
   parseEther,
@@ -22,7 +21,7 @@ import { giftEscrowAbi } from "../src/gift-escrow-abi";
 import { MILESTONE_GAS_CEILING } from "../src/milestone-gas";
 import { MILESTONE_FIRST_ID, SHAPE_CLIMB } from "../src/milestone-protocol";
 import { addMonadGasBuffer } from "../src/monad-gas";
-import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadRpcUrl, waitForFinality } from "../src/monad/chain";
+import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadRpcUrl, monadTransport, waitForFinality } from "../src/monad/chain";
 
 /**
  * Deploys MilestoneGift to Monad mainnet for C2: the four Chess.com cadences registered as climbs, creation and
@@ -96,7 +95,7 @@ async function main() {
   if (builtHash !== sourceHash) throw new Error("Refusing to deploy: out/ was not built from contracts/MilestoneGift.sol as it is now. Run forge build");
   const abi = artifact.abi;
 
-  const transport = http(rpc);
+  const transport = monadTransport(rpc);
   const publicClient = createPublicClient({ chain: monadChain, transport });
   const walletClient = createWalletClient({ account, chain: monadChain, transport });
   const chainId = await publicClient.getChainId();
