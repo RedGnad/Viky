@@ -144,31 +144,33 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
   // The blocks of a screen arrive one after another, and the whole arrival still ends inside NN/g's half second.
   assert.ok(css.includes(`--page-enter-stagger: ${MOTION.reveal.staggerMs}ms`), "each block waits what the token says");
   assert.ok(css.includes(`--page-enter-most-staggered: ${MOTION.reveal.mostStaggeredMs}ms`), "and none waits longer than the token's ceiling");
-  assert.ok(css.includes(`--page-enter-last-turn: ${MOTION.reveal.lastTurnMs}ms`), "a list's turns run deeper, to the token's own last one");
+  assert.ok(css.includes(`--page-enter-last-turn: ${MOTION.reveal.lastTurnMs}ms`), "a list's turns stop at the token's own last one");
   assert.ok(MOTION.reveal.durationMs + MOTION.reveal.mostStaggeredMs <= 500, "a page of any length has arrived in half a second");
-  // Material publishes sixteen durations and no others (md.sys.motion.duration.short1 to extra-long4); a value
+  // The turns are the founder's (D171): 80 ms apart, which is not a step Material publishes (it sits between short1
+  // and short2, and short2 is the next one to try if 80 still reads as simultaneous), three of them and no more, so
+  // the ceiling is three turns and a list stops at the same ceiling.
+  assert.equal(MOTION.reveal.staggerMs, 80);
+  assert.equal(MOTION.reveal.mostStaggeredMs, 3 * MOTION.reveal.staggerMs);
+  assert.equal(MOTION.reveal.lastTurnMs, MOTION.reveal.mostStaggeredMs);
+  assert.match(css, /\.page-enters \.arrives-in-turn > :nth-child\(n \+ 5\) \{\n\s*animation-delay: var\(--page-enter-last-turn\)/, "the fourth card and every one after it arrive together");
+  // Material publishes sixteen durations and no others (md.sys.motion.duration.short1 to extra-long4); a duration
   // outside that list is refused in review, which is the rule the motion roadmap of 21 Sep 2026 sets.
   const MATERIAL_MS = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 700, 800, 900, 1000];
-  for (const [name, ms] of Object.entries({ reveal: MOTION.reveal.durationMs, stagger: MOTION.reveal.staggerMs, mostStaggered: MOTION.reveal.mostStaggeredMs, lastTurn: MOTION.reveal.lastTurnMs })) {
-    assert.ok(MATERIAL_MS.includes(ms), `${name} is ${ms} ms, which Material does not publish`);
-  }
+  assert.ok(MATERIAL_MS.includes(MOTION.reveal.durationMs), `the reveal is ${MOTION.reveal.durationMs} ms, which Material does not publish`);
   const shell = readFileSync("app/kit/Shell.tsx", "utf8");
-  assert.match(shell, /const entering = useHasDrawnBefore\(\);/, "every screen is drawn by the one shell, and that is where the arrival is asked for");
-  assert.match(shell, /className=\{`\$\{entering \? "page-enters" : "page-arrives"\} /, "a page change enters block by block, a first screen arrives whole (D160)");
+  assert.match(shell, /className=\{`page-enters mx-auto /, "every screen enters block by block, the first one a document draws too (D171)");
+  assert.doesNotMatch(shell, /page-arrives|useHasDrawnBefore/, "no screen arrives in one fade any more");
+  assert.doesNotMatch(css, /\.page-arrives/, "and the stylesheet has no such screen");
   assert.match(readFileSync("app/template.tsx", "utf8"), /export default function Template/, "and a template is what builds it again on every navigation");
-  // Asked once, when the screen is built: read on every render it flips under the screen and everything enters twice.
-  assert.match(readFileSync("app/kit/arrival.ts", "utf8"), /const \[before\] = useState\(\(\) => drawnBefore\);/);
-  assert.match(css, /\.page-arrives \{\n\s*animation: page-fade var\(--page-enter-duration\)/, "and that first screen is one fade, with no turns to leave holes in it");
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
   assert.match(reduced, /\.control-relief:is\(:active, :hover\)/, "under reduced motion a press gives way but nothing travels");
   // A screen still arrives, by fading alone: the rise is dropped and the duration is kept (the founder, 21 Sep 2026).
   assert.match(reduced, /animation-name: page-fade !important/, "under reduced motion a screen fades in and nothing rises");
   assert.match(reduced, /animation-duration: var\(--page-enter-duration\) !important/, "and the fade keeps its own time");
-  // Outside that query the fade alone belongs to exactly one thing, the first screen a document draws (D160).
+  // Outside that query nothing plays the fade alone (D171): every screen enters, and the fade is reduced motion's.
   const outside = css.slice(0, css.indexOf("@media (prefers-reduced-motion: reduce)"));
-  assert.equal((outside.match(/animation(-name)?: page-fade/g) ?? []).length, 1, "nothing else plays the fade alone");
-  assert.match(outside.slice(outside.lastIndexOf("{", outside.indexOf("animation: page-fade")) - 40), /\.page-arrives/, "and that one is the first screen");
+  assert.equal((outside.match(/animation(-name)?: page-fade/g) ?? []).length, 0, "the fade alone belongs to reduced motion");
 });
 
 /**

@@ -221,9 +221,9 @@
   --page-enter-duration: 250ms;
   --page-enter-easing: cubic-bezier(0.2, 0, 0, 1);
   --page-enter-rise: 8px;
-  --page-enter-stagger: 50ms;
-  --page-enter-most-staggered: 200ms;
-  --page-enter-last-turn: 350ms;
+  --page-enter-stagger: 80ms;
+  --page-enter-most-staggered: 240ms;
+  --page-enter-last-turn: 240ms;
 
   color-scheme: light;
 }
@@ -666,7 +666,9 @@ dialog.sheet[open] {
  * is drawn, because it is a new block on a page that has already arrived: that is the card a gift's page waits for.
  *
  * `app/template.tsx` is what makes this play on every navigation: a template is given a key of its own, so its
- * elements are built again rather than reused, and a new element plays the animation the stylesheet gives it.
+ * elements are built again rather than reused, and a new element plays the animation the stylesheet gives it. A
+ * reload plays the same entrance (D171): the server draws the whole screen since D160, so there is no hole for the
+ * turns to show, and the one fade of the first screen read as "no animation" to the founder.
  */
 .page-enters > *:not(header, dialog),
 .page-enters > header > *:not(.page-mark) {
@@ -675,9 +677,9 @@ dialog.sheet[open] {
 
 /*
  * One after another rather than all at once (the founder, 21 Sep 2026: the arrival was "un peu trop basique, toutes
- * les cartes qui s'affichent en meme temps"). Each block waits 50 ms longer than the one above it, which is
- * Material's shortest published step, and none waits more than 200, so a page of any length has arrived inside 450
- * ms, under the half second NN/g calls the ceiling for a screen. A block still waiting its turn is not drawn at
+ * les cartes qui s'affichent en meme temps"; and 23 Sep 2026, D171: at 50 ms apart they still read as one). Each
+ * block waits 80 ms longer than the one above it, and none waits more than 240, so four blocks have arrived inside
+ * 490 ms, under the half second NN/g calls the ceiling for a screen. A block still waiting its turn is not drawn at
  * all, which is what `backwards` is for: without it, it would be there, then gone, then there again.
  */
 .page-enters > :nth-child(3) {
@@ -721,34 +723,13 @@ dialog.sheet[open] {
   animation-delay: calc(3 * var(--page-enter-stagger));
 }
 
-.page-enters .arrives-in-turn > :nth-child(5) {
-  animation-delay: calc(4 * var(--page-enter-stagger));
-}
-
-.page-enters .arrives-in-turn > :nth-child(6) {
-  animation-delay: calc(5 * var(--page-enter-stagger));
-}
-
-.page-enters .arrives-in-turn > :nth-child(7) {
-  animation-delay: calc(6 * var(--page-enter-stagger));
-}
-
 /*
- * A list is where a cascade is worth having, so the turns run deeper inside a box than between the blocks of a page
- * (D154): seven of them, 50 ms apart, and everything after the seventh arrives with it. The last card of a long
- * list is therefore on screen 350 ms after the first began, which is the tail of one movement rather than a queue.
+ * A list takes the same turns as the page (D154 gave it seven at 50 ms; D171 gives it the page's three at 80 and
+ * the same ceiling): the fourth card and every one after it arrive together, 240 ms after the first began, so the
+ * last card of a long list is on screen inside the same half second as the rest of the page.
  */
-.page-enters .arrives-in-turn > :nth-child(n + 8) {
+.page-enters .arrives-in-turn > :nth-child(n + 5) {
   animation-delay: var(--page-enter-last-turn);
-}
-
-/*
- * The first screen a document draws (D160). It has nothing to have come from, so it does not enter: it arrives,
- * whole, in one fade. The turns are what made a cold load look half built, the words standing over an empty space
- * where the card goes for as long as its turn took; the founder read that as the page loading a second time.
- */
-.page-arrives {
-  animation: page-fade var(--page-enter-duration) var(--page-enter-easing) backwards;
 }
 
 @keyframes page-enter {

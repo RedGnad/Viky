@@ -389,11 +389,12 @@ export const MOTION = {
   /**
    * Something appearing for the first time, whether a screen has opened or a block has scrolled into view: it
    * appears, rising a few pixels. Material's medium1. A screen that carries several blocks brings them one after
-   * another, 50 ms apart, which is Material's shortest published step, and none waits longer than
-   * `mostStaggeredMs`, so a page of any length has arrived inside the half second NN/g calls the ceiling. Inside a
-   * list the turns run deeper, to `lastTurnMs`, because a list is where a cascade says something.
+   * another, 80 ms apart (the founder, 23 Sep 2026, D171: at 50 they read as simultaneous; 80 sits between Material's
+   * short1 and short2, and short2 is the next step if 80 still reads as one), and none waits longer than
+   * `mostStaggeredMs`, three turns, so four blocks have arrived inside the half second NN/g calls the ceiling. A
+   * list's turns stop at the same ceiling, `lastTurnMs`: the fourth card and every one after it arrive together.
    */
-  reveal: { durationMs: 250, easing: EASING.standard, rise: 8, staggerMs: 50, mostStaggeredMs: 200, lastTurnMs: 350 },
+  reveal: { durationMs: 250, easing: EASING.standard, rise: 8, staggerMs: 80, mostStaggeredMs: 240, lastTurnMs: 240 },
   /**
    * A pointer over a button lifts it; over a character, its face turns towards the pointer. Material's short4.
    * A screen with no pointer has no hover: an expression plays once when something is chosen, and `heldMs` is how
