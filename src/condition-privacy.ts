@@ -37,6 +37,7 @@ export const PRIVACY: Readonly<Record<string, ConditionPrivacy>> = {
   "bac-france-shown": { kept: "verdict", read: "your result on Cyclades, passed or not" },
   "udemy-course-shown": { kept: "verdict", read: "the course the gift names, finished or not" },
   "ecoledirecte-grade-shown": { kept: "verdict", read: "the overall average out of 20 on the grades page" },
+  "pronote-grade-shown": { kept: "verdict", read: "the overall average out of 20 in the family's PRONOTE space" },
   "fitbit-daily": { kept: "verdict", read: "yesterday's active minutes, judged against the target each morning" },
   "strava-daily": { kept: "verdict", read: "yesterday's activities, their distances added and judged against the target each morning" },
 };

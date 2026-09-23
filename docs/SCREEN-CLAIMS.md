@@ -545,3 +545,11 @@ Closed so far: "You are signed in", which is where the sign-in race lived; "Thei
 would have shown a funder that their gift had earned nothing the moment the recipient took the money; the
 amount typed, which took a dollar more than written for any figure like 20.999 and read 1e3 as a thousand
 dollars; and the session countdown. Each test was checked by breaking the rule and watching it fail.
+
+### PRONOTE, an average shown, being built, offered to nobody (D203)
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "An average on PRONOTE, shown", SHOWN BY THEM, under "School" with "Being built." and its missing pieces | the provider is not registered and goal 24 not signed, so nobody can make a gift on it | `PRONOTE_GRADE_SHOWN` in `BUILDING`, `PRONOTE_MILESTONE.notOpen` | `test/pronote-shown.test.ts` |
+| "This gift will be for the PRONOTE space 0123456a. That is the word before index-education.net in its link." | the space is taken from the pasted link and bound into the subject the funder signs | `pronoteSpaceOf`, `pronoteSubject` | `test/pronote-shown.test.ts` |
+| on the judges' page, PRONOTE's terms, the risk assumed, GDPR articles 15 and 20 | only what was read is quoted, and the founder's decision is said as a decision | `app/judges/page.tsx` | none: a sentence read against the page by hand |

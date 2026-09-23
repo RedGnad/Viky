@@ -16,7 +16,7 @@ import { ECOLEDIRECTE_SHOWN, shownConditionById } from "../src/shown-conditions"
 import { ShownProofError } from "../src/shown-proof";
 import { verifyShownSession, type ShownVerificationDeps } from "../src/shown-verification";
 
-/** An average at school shown from the pupil's own EcoleDirecte account (D179), and PRONOTE not offered. */
+/** An average at school shown from the pupil's own EcoleDirecte account (D179), and PRONOTE beside it since the founder's decision. */
 
 test("one goal, pinned by name, a constant subject, and the family School after Study", () => {
   assert.equal(ECOLEDIRECTE_GOAL_TYPE, 23);
@@ -38,9 +38,9 @@ test("one goal, pinned by name, a constant subject, and the family School after 
   assert.ok(proofOfCondition("ecoledirecte-grade-shown"));
   // The frontier's line on school marks says which portal is on its way and why the other is not, in its publisher's words.
   const marks = FRONTIERS.find((frontier) => frontier.id === "school-marks");
-  assert.match(String(marks?.building), /EcoleDirecte account.*SHOWN BY THEM.*not PRONOTE.*written authorisation\.$/);
+  assert.match(String(marks?.building), /EcoleDirecte account or PRONOTE space.*SHOWN BY THEM/);
   assert.equal(marks?.conditionId, undefined, "the line prints under School, once");
-  for (const id of ["pronote-grade-shown", "pronote-average-shown"]) assert.equal(conditionById(id), undefined, `${id}: not offered, not built`);
+  assert.equal(conditionById("pronote-grade-shown")?.live, false, "PRONOTE is built beside it, being built (the founder's decision, 23 Sep 2026)");
 });
 
 test("the average is out of 20 in hundredths, typed with decimals and signed the same on both sides", () => {

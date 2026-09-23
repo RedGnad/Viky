@@ -29,6 +29,7 @@ import {
   DUOLINGO_ENGLISH_TEST,
   type Condition,
   ECOLEDIRECTE_GRADE_SHOWN,
+  PRONOTE_GRADE_SHOWN,
   UDEMY_COURSE_SHOWN,
   BAC_CAMEROON_SHOWN,
   BAC_FRANCE_SHOWN,
@@ -74,6 +75,7 @@ import {
 import { CERTIFICATE as CERTIFICATE_SHAPE, CHESS_RATING as CHESS_RATING_SHAPE, type MilestoneShape } from "./milestone-terms";
 import { UDEMY_DURATION_DAYS, UDEMY_FINISHED, UDEMY_GOAL_TYPE, UDEMY_NOT_REGISTERED, UDEMY_PROVIDER, udemySlugOf, udemySubject } from "./udemy-shown";
 import { ECOLEDIRECTE_GOAL_TYPE, ECOLEDIRECTE_NOT_REGISTERED, ECOLEDIRECTE_PROVIDER, ECOLEDIRECTE_SUBJECT, isValidSchoolTarget, SCHOOL_DURATION_DAYS, schoolGradeInWords } from "./school-shown";
+import { PRONOTE_GOAL_TYPE, PRONOTE_NOT_REGISTERED, PRONOTE_PROVIDER, pronoteSpaceOf, pronoteSubject } from "./pronote-shown";
 
 /**
  * The milestone half of the register of conditions (src/conditions.ts). A milestone asks the funder more than a daily
@@ -1145,6 +1147,31 @@ export const ECOLEDIRECTE_MILESTONE: CertificateCondition = {
   },
 };
 
+/**
+ * An average at school, shown from the family's own PRONOTE space (D203): EcoleDirecte's shape, with the space chosen
+ * by its address as a course is by its link, and signed into the subject so another establishment's space pays nothing.
+ */
+export const PRONOTE_MILESTONE: CertificateCondition = {
+  ...ECOLEDIRECTE_MILESTONE,
+  condition: PRONOTE_GRADE_SHOWN,
+  goalType: PRONOTE_GOAL_TYPE,
+  subject: ({ course }) => pronoteSubject(String(course ?? "")),
+  ...(PRONOTE_PROVIDER ? { notOpen: undefined } : { notOpen: PRONOTE_NOT_REGISTERED }),
+  course: {
+    label: "The school's PRONOTE space, by its link",
+    help: "Open the school's PRONOTE page and paste the whole link from your browser, like https://0123456a.index-education.net/pronote/parent.html.",
+    slugOf: pronoteSpaceOf,
+    row: "Which PRONOTE space",
+    named: (space) => `This gift will be for the PRONOTE space ${space}. That is the word before index-education.net in its link.`,
+  },
+  words: {
+    ...ECOLEDIRECTE_MILESTONE.words,
+    whatIsRead: "Viky keeps whether the overall average reached the target, and the day it was shown, and nothing else: no grade, no remark, no name. Your PRONOTE password never reaches Viky.",
+    mustShow: (_name, target) => `An overall average of ${schoolGradeInWords(target)} or more in the family's own PRONOTE space, shown from their own browser. Which term it is for is not read.`,
+    refusals: { ...ECOLEDIRECTE_MILESTONE.words.refusals, anotherName: "That was shown from another school's PRONOTE space than the one this gift is for." },
+  },
+};
+
 /** The five examination results of D176, in the register's order, for the door and the tests. */
 export const EXAM_MILESTONES: readonly CertificateCondition[] = [CAMBRIDGE_MILESTONE, IELTS_MILESTONE, BAC_MOROCCO_MILESTONE, BAC_CAMEROON_MILESTONE, BAC_FRANCE_MILESTONE];
 
@@ -1159,6 +1186,7 @@ const CERTIFICATES: readonly CertificateCondition[] = [
   UNIVERSITY_YEAR_MILESTONE,
   UNIVERSITY_GRADE_MILESTONE,
   ECOLEDIRECTE_MILESTONE,
+  PRONOTE_MILESTONE,
 ];
 
 export function certificateOf(condition: Condition | undefined): CertificateCondition | undefined {

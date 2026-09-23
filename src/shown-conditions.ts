@@ -7,6 +7,7 @@ import { loadPortal, type Portal } from "./portal-store";
 import { TOEFL_RECLAIM_PROVIDER, TOEFL_SHOWN_SUBJECT, toeflScoreOf, toeflShownProviderId } from "./toefl-shown";
 import { EXAM_NOT_REGISTERED, EXAM_PROVIDERS, examProviderId, examSubject, readBacPassed, readCambridge, readIelts, type ExamId } from "./exam-shown";
 import { readUdemyCourse, UDEMY_LOGIN_URL, UDEMY_NOT_REGISTERED, UDEMY_PROVIDER, udemyProviderId, udemySubject } from "./udemy-shown";
+import { PRONOTE_NOT_REGISTERED, PRONOTE_PROVIDER, pronoteLoginUrl, pronoteProviderId, pronoteSubject } from "./pronote-shown";
 import { ECOLEDIRECTE_NOT_REGISTERED, ECOLEDIRECTE_PROVIDER, ECOLEDIRECTE_SUBJECT, ecoleDirecteProviderId, readSchoolAverage } from "./school-shown";
 import {
   enrolledBy,
@@ -295,6 +296,33 @@ export const ECOLEDIRECTE_SHOWN: ShownEntry = {
   },
 };
 
+/** An average at school, shown from the family's own PRONOTE space (D203): EcoleDirecte's reading, the space from the gift's record. */
+export const PRONOTE_SHOWN: ShownEntry = {
+  kind: "milestone",
+  subjectOf: (record) => (record.course ? pronoteSubject(record.course) : null),
+  providerOf: async (record) => {
+    if (!PRONOTE_PROVIDER || !record.course) return null;
+    return {
+      providerId: PRONOTE_PROVIDER.id,
+      providerVersion: PRONOTE_PROVIDER.version,
+      requestHashes: [PRONOTE_PROVIDER.requestHash],
+      loginUrl: pronoteLoginUrl(record.course),
+      read: (fields) => readingOf(readSchoolAverage(fields)),
+    };
+  },
+  ...(PRONOTE_PROVIDER ? {} : { notRegistered: PRONOTE_NOT_REGISTERED }),
+  condition: {
+    conditionId: "pronote-grade-shown",
+    providerId: "",
+    providerVersion: "",
+    requestHashes: [],
+    proofCount: 1,
+    phases: ["reach"],
+    attestationProviderId: pronoteProviderId(),
+    read: () => refuseShown("NO_SPACE", "A PRONOTE gift reads its space from its record, and this gift names none"),
+  },
+};
+
 export const SHOWN_CONDITIONS: readonly ShownEntry[] = [
   DUOLINGO_SHOWN,
   TOEFL_SHOWN,
@@ -308,6 +336,7 @@ export const SHOWN_CONDITIONS: readonly ShownEntry[] = [
   UNIVERSITY_YEAR_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
   ECOLEDIRECTE_SHOWN,
+  PRONOTE_SHOWN,
 ];
 
 export function shownConditionById(conditionId: string): ShownEntry | undefined {

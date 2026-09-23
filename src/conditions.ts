@@ -2,6 +2,7 @@ import { isValidDuolingoUsername } from "./duolingo-public-terms";
 import { UNIVERSITY_SOURCE } from "./university-shown";
 import { UDEMY_SOURCE } from "./udemy-shown";
 import { ECOLEDIRECTE_SOURCE } from "./school-shown";
+import { PRONOTE_SOURCE } from "./pronote-shown";
 import { GOAL_TYPE_DUOLINGO_COURSE_XP, GOAL_TYPE_DUOLINGO_XP, GOAL_TYPE_FITBIT_ACTIVITY, GOAL_TYPE_STRAVA_DISTANCE } from "./gift-terms";
 
 /**
@@ -956,7 +957,7 @@ export const UDEMY_COURSE_SHOWN: Condition = {
 
 /**
  * A school average shown from the pupil's or the family's own EcoleDirecte account (D179): the family "School", with a
- * target out of 20 as the university grade has. PRONOTE is not built, its publisher's terms forbidding it (D179).
+ * target out of 20 as the university grade has. PRONOTE is built beside it (D203), its publisher's terms and the risk written.
  */
 export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
   id: "ecoledirecte-grade-shown",
@@ -980,6 +981,32 @@ export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
   },
 };
 
+/**
+ * A school average shown from the family's own PRONOTE space (D203): EcoleDirecte's line, with the space chosen by
+ * the funder as a portal is, and the publisher's terms against it written on the judges' page with the risk assumed.
+ */
+export const PRONOTE_GRADE_SHOWN: Condition = {
+  id: "pronote-grade-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  live: false,
+  beforeItOpens: "Its provider, registered on the Reclaim dashboard from a real family's PRONOTE space, and goal 24 signed by the owner.",
+  source: PRONOTE_SOURCE,
+  family: "school",
+  name: "An average on PRONOTE, shown",
+  help: "The family's own PRONOTE space, shown by them: the overall average out of 20. It proves the account, not who did the work.",
+  link: { kind: "link", label: "Show it from your PRONOTE space", help: "Press Show it on your gift's page and sign in to the school's PRONOTE space in the tab that opens. Nothing to paste." },
+  reading: "pronote-grade-shown",
+  words: {
+    earnedDay: "When they show that average, all of this becomes theirs",
+    connect: "Opened. Show the average from your PRONOTE space when the grades are in.",
+    doIt: "Press Show it and sign in to the school's PRONOTE space in the tab that opens, as a parent if you can. The overall average is what counts.",
+    eachDay: "the day it is shown",
+    preview: "An average at school, shown from your own PRONOTE space: the gift is yours when you show it.",
+  },
+};
+
 
 
 export const BUILDING: readonly Condition[] = [
@@ -992,6 +1019,7 @@ export const BUILDING: readonly Condition[] = [
   UNIVERSITY_YEAR_PASSED_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
   ECOLEDIRECTE_GRADE_SHOWN,
+  PRONOTE_GRADE_SHOWN,
 ];
 
 /**
@@ -1058,9 +1086,8 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "School marks",
     state: "no-public-page",
     why: "They live in a school's own portal, which opens for the family and for nobody else. No source publishes a page about a pupil.",
-    // One of the two portals read is on its way (D179); the other, PRONOTE, is not, and the sentence says why in the
-    // publisher's own terms.
-    building: "an average shown by the pupil or the family from their own EcoleDirecte account, with the two words SHOWN BY THEM on it; not PRONOTE, whose publisher forbids any device retrieving data from its sites without its written authorisation.",
+    // Both portals read are on their way (D179, and PRONOTE since the founder's decision, D203).
+    building: "an average shown by the pupil or the family from their own EcoleDirecte account or PRONOTE space, with the two words SHOWN BY THEM on it.",
   },
 ];
 

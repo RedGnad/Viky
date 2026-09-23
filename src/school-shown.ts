@@ -6,9 +6,9 @@ import { gradeInWords, gradeOf, gradeUnits, isGradeOnScale, type GradeScale, typ
  * the second nature (D162), with a target as the university grade has (D174). Two services were read for it, and one
  * is built: EcoleDirecte, whose publisher's terms (Aplim, "Dispositions générales applicables EcoleDirecte", read
  * 23 Sep 2026) say the holder of a password reaches only the information about themselves or those they answer for,
- * and name no program; PRONOTE is not, because its publisher's terms forbid any device retrieving data from its sites
- * without its written authorisation (Index Education, "Mentions légales et Conditions Générales d'Utilisation", the
- * same day), and the spaces are on its sites.
+ * and name no program; PRONOTE was not at first, its publisher's terms forbidding any device retrieving data from its
+ * sites without its written authorisation, and is since the founder's decision of 23 Sep 2026, the risk assumed and
+ * written (src/pronote-shown.ts).
  *
  * French schools grade out of 20, in hundredths, and EcoleDirecte prints the average that way: the scale is fixed
  * here rather than declared on a row, and a grade is carried to the contract in hundredths as on the university rail.

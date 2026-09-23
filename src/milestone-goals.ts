@@ -10,6 +10,7 @@ import { TOEFL_GOAL_TYPE, toeflShownProviderId } from "./toefl-shown";
 import { EXAM_GOAL_TYPES, EXAM_IDS, examProviderId } from "./exam-shown";
 import { UDEMY_GOAL_TYPE, udemyProviderId } from "./udemy-shown";
 import { ECOLEDIRECTE_GOAL_TYPE, ecoleDirecteProviderId } from "./school-shown";
+import { PRONOTE_GOAL_TYPE, pronoteProviderId } from "./pronote-shown";
 
 /**
  * Every goal the milestone contract knows, in one list (U3, 18 Sep 2026).
@@ -77,6 +78,8 @@ export const MILESTONE_GOALS: readonly MilestoneGoal[] = [
   { goalType: UDEMY_GOAL_TYPE, providerId: udemyProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Udemy", detail: "a course finished, shown" },
   // An average at school, shown from the pupil's own EcoleDirecte account (D179): had or not, compared in hundredths.
   { goalType: ECOLEDIRECTE_GOAL_TYPE, providerId: ecoleDirecteProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "EcoleDirecte", detail: "an average at school, shown" },
+  // PRONOTE (D203): an average at school, shown from the family's own space, the space bound into the subject.
+  { goalType: PRONOTE_GOAL_TYPE, providerId: pronoteProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "PRONOTE", detail: "an average at school, shown" },
 ];
 
 export function milestoneGoal(goalType: number): MilestoneGoal | undefined {
