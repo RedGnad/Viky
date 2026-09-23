@@ -10,7 +10,7 @@
 | deployment | `0xf8d9e1fe7e45fac84aa113a50c8f7f4ff95a3c451764a3d83809bbb24b6dac5c` |
 | allowing the exchange, pinned | `0x534dc955359a9647be792d59cd7f4aa9138bcff4be1b1d32464784b201c3925a` |
 | handing ownership to the founder | `0x886bb648a458d44919a46a46ce3237504b2fe3a19b1cc54b7987407c6e85662e` |
-| owner | `0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64` |
+| owner | the Safe `0xE08D926c148A5065F4Df2892702785a183de86F9`, two signatures of three, since 20 Sep 2026 (tx `0xcd2b1ac3ef8c334596d49d7154fb8288efb14ad268bf272a86c79367bfe67b78`, the Safe's table below); the founder's key `0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64` held it from the hand-over above until then |
 
 It takes AUSD and hands back whichever coin the signed terms name, so one router serves both corridors. It is
 not upgradeable. `EXIT_ROUTER_ADDRESS` and `EXIT_EXCHANGE_ADDRESS` are what point the app at it.

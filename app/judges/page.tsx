@@ -3,7 +3,8 @@ import { Shell } from "../kit/Shell";
 import { JudgesAccount } from "../components/JudgesAccount";
 import { MilestoneJudges } from "../components/MilestoneJudges";
 import { DISPLAY, TITLE } from "../components/ui";
-import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadRpcUrl } from "@/src/monad/chain";
+import { readOwnership, ownershipWords } from "@/src/judges-owner";
+import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain";
 import { JudgesConditions } from "./JudgesConditions";
 import { JudgesContracts } from "./JudgesContracts";
 import { JudgesEarlyGifts } from "./JudgesEarlyGifts";
@@ -23,8 +24,11 @@ const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
 
 // The only page where contract addresses appear. Consumer screens never show them. They are set in the text face
 // like every other word: a monospace face would be the system's, and hex has no letter a text face confuses.
-export default function JudgesPage() {
+export default async function JudgesPage() {
   const escrow = process.env.NEXT_PUBLIC_GIFT_ESCROW_ADDRESS?.trim();
+  // Who owns the contracts, asked of the chain now (D187): the page said the founder's key for three days after the
+  // Safe had taken them. When the chain cannot be read, the sentence says so rather than repeating a name.
+  const ownership = await readOwnership().catch(() => null);
   // Gifts created before the D30 corrections keep running on the contract that holds them, and every
   // gift record names its own contract, so both are listed here for as long as the older one holds one.
   const earlierEscrow = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
@@ -45,8 +49,10 @@ export default function JudgesPage() {
         <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] text-[length:var(--type-help)] [@media(min-width:600px)]:grid-cols-[10rem_1fr]">
           <dt className="text-[var(--muted)]">Chain</dt>
           <dd>Monad mainnet, chain id {MONAD_CHAIN_ID}</dd>
+          {/* The public endpoint, the one every command on this page names. The server reads through its own, which
+              is never printed: the one printed here for three days carried a key (the money path review, item 1). */}
           <dt className="text-[var(--muted)]">RPC</dt>
-          <dd className="[overflow-wrap:anywhere]">{monadRpcUrl()}</dd>
+          <dd className="[overflow-wrap:anywhere]">{PUBLIC_RPC_URL}</dd>
           <dt className="text-[var(--muted)]">AUSD</dt>
           <dd className="[overflow-wrap:anywhere]">{AUSD_ADDRESS}</dd>
           <dt className="text-[var(--muted)]">Gift contract</dt>
@@ -64,20 +70,35 @@ export default function JudgesPage() {
           </dd>
           <dt className="text-[var(--muted)]">Who owns the contracts</dt>
           <dd className="[overflow-wrap:anywhere]">
-            One wallet owns all four (gifts, the earlier gift contract that still runs the first gifts, milestone gifts, the way
-            out): 0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64, the founder&apos;s, not the key that deployed them. The gift contract
-            was handed over on 18 Sep 2026 in{" "}
+            {ownership ? ownershipWords(ownership) : "The chain could not be read just now, so nothing is said here about who owns the contracts rather than something out of date."}{" "}
+            The four were handed to the Safe on 20 Sep 2026, in{" "}
+            <a className="underline" href="https://monadvision.com/tx/0x1aa2887ef13988fd86efffe992651e6b9b2294161e2bbdc75c5e1466051f47d3">
+              0x1aa2887e…47d3
+            </a>{" "}
+            (gifts),{" "}
+            <a className="underline" href="https://monadvision.com/tx/0x534555010acde11dd8791ad58d3ea02d485967ecf9f3045e7fb70e89bcfb6635">
+              0x53455501…6635
+            </a>{" "}
+            (the earlier gift contract),{" "}
+            <a className="underline" href="https://monadvision.com/tx/0x960a5ad8edd9f5f0909bbc1f5bc85da86d081339364699248876375981fa072b">
+              0x960a5ad8…072b
+            </a>{" "}
+            (milestone gifts) and{" "}
+            <a className="underline" href="https://monadvision.com/tx/0xcd2b1ac3ef8c334596d49d7154fb8288efb14ad268bf272a86c79367bfe67b78">
+              0xcd2b1ac3…7b78
+            </a>{" "}
+            (the way out), from the founder&apos;s key 0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64, which had held them since 18 Sep 2026
+            and never was the key that deployed them (the gift contract in{" "}
             <a className="underline" href="https://monadvision.com/tx/0xa01ae787c52409157ec83aa95cc2ca2a4dca4a2caaab3caef8ea8c5650dfa009">
               0xa01ae787…a009
-            </a>{" "}
-            and the earlier one the same day in{" "}
+            </a>
+            , the earlier one in{" "}
             <a className="underline" href="https://monadvision.com/tx/0xe6f5b531d9c6dd981b72f2be7dc7e2e2d0adca071e59fd78e532dae804043840">
               0xe6f5b531…3840
             </a>
-            , so registering a goal, replacing the evidence signer or pausing now needs that wallet&apos;s own signature on any of
-            them, and no second key can. Each owner is read again from the chain further down, with what that owner can and cannot
-            do. Handing ownership over moves no money: the earlier contract still holds the 8.571432 AUSD of its first gift, as it
-            did before.
+            ). Each owner is read again from the chain further down, with what that owner can and cannot do. Handing
+            ownership over moves no money: the earlier contract still holds the 8.571432 AUSD of its first gift, as it did
+            before.
           </dd>
           {earlierEscrow ? (
             <>

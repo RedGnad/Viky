@@ -5148,3 +5148,24 @@ The founder, 23 Sep 2026: "le passage ignore les cadeaux déjà clos, donc le de
 - **The money owed today** was sent the same day by hand, gift 1's 2.857148 AUSD, read before and after in
   OPERATIONS. It used the relayer's gas (18,640,500 gwei), which the founder's instruction of the night asked for
   ("déclenche ce remboursement").
+
+
+## D187, 23 Sep 2026: the judges page reads who owns the contracts from the chain, and prints the public endpoint only
+
+Two lines of the money path review of 23 Sep 2026 (`docs/reports/2026-09-23-money-path-security.md`, items 1 and 10),
+put in the catalogue developer's queue by the founder the same morning.
+
+- **The owner, read.** The page said one wallet, the founder's key, owned all four contracts, three days after the
+  Safe `0xE08D926c148A5065F4Df2892702785a183de86F9` (Safe 1.4.1, two signatures of three) had taken them on 20 Sep 2026
+  (D115, the table in OPERATIONS). Now each contract is asked `owner()` as the page is served; when all four answer one
+  address, that address is asked its version, threshold and keys, and the sentence is built from those answers
+  (`src/judges-owner.ts`). When the chain cannot be read, or the owners differ, the page says so, contract by
+  contract, and claims no single owner. The hand-over transactions stay on the page as history. Read on 23 Sep 2026:
+  all four answer the Safe; the Safe answers version 1.4.1, threshold 2, three owners.
+- **The endpoint, public.** The "RPC" line printed the server's variable, which carried a key; it prints
+  `https://rpc.monad.xyz`, the endpoint every `cast` command on the page already named. A test pins that no judges
+  surface prints or imports the browser's endpoint, that every `--rpc-url` names the public one, and that the owner
+  sentence is the one read from the chain. Regenerating the key and moving it to a server-only variable is the
+  founder's step (item 1 of the review), not done here.
+- **Also corrected:** the owner row of the router's table in OPERATIONS, and the milestone section's "owned by the
+  founder's key" (`app/components/MilestoneJudges.tsx`, said in the PR).
