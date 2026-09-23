@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { Live } from "@/src/gift-live";
 import { GIFT_LIVE as L } from "@/src/sentences";
-import { CARD_AMOUNT, CARD_LABEL, CARD_TITLE } from "../components/ui";
+import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE } from "../components/ui";
 
 /**
  * A gift's page, drawn from the founder's mockup of 19 Sep 2026 (`gift.html`): the card of cream paper on the ink
@@ -60,7 +60,8 @@ export function GiftLive({
 }>) {
   return (
     <>
-      <section className="on-paper gift-card">
+      {/* The card of Home, the same object and the same frame (V4): its edge, its width, its paper. */}
+      <section className={`gift-card-width gift-card-placed ${CARD} flex flex-col gap-0 space-y-0`}>
         <p className={`${CARD_LABEL} gift-eyebrow`}>{from}</p>
         <h2 className={`${CARD_TITLE} gift-who`}>{who}</h2>
         <p className="gift-what">{what}</p>

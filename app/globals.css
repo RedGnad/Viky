@@ -797,12 +797,6 @@ dialog.sheet[open] {
  * The order inside the card is the order a person reads it: who it came from, who it is for, what they do, the
  * drawing, the state, the next moment, the money, the one action, and the two folds.
  */
-.gift-card {
-  border-radius: var(--radius-card);
-  border: 1px solid var(--card-edge);
-  padding: 22px 20px 20px;
-}
-
 /* The card's own label, with a line of its own above the name. */
 .gift-eyebrow {
   line-height: 16px;
@@ -877,6 +871,12 @@ dialog.sheet[open] {
   line-height: 29px;
   letter-spacing: -0.4px;
   margin: 2px 0 4px;
+}
+
+/* With no dated line under the state, the money keeps the same air from it as the next moment would have had. */
+.gift-state + .gift-figures,
+.gift-state-closed + .gift-figures {
+  margin-top: 14px;
 }
 
 /* What the source did to the account, at the weight of the state, because it is the state now. */
@@ -974,6 +974,122 @@ dialog.sheet[open] {
 }
 
 
+
+/*
+ * The climb (V4): a slope, the part climbed in ink and the part ahead dashed, a flag with the target at the top, and
+ * the character on the slope at today's reading. The slope starts and ends under the middle of the character's box
+ * (56 px), so the drawing and the walker agree at every reading (app/kit/Climb.tsx).
+ */
+.climb {
+  position: relative;
+  display: block;
+  height: 128px;
+}
+
+.climb-slope {
+  position: absolute;
+  inset: 0 28px;
+  width: calc(100% - 56px);
+  height: 100%;
+  overflow: visible;
+}
+
+.climb-ahead {
+  stroke: var(--on-surface-faint);
+  stroke-width: 3;
+  stroke-dasharray: 2 8;
+  stroke-linecap: round;
+}
+
+.climb-done {
+  stroke: var(--on-surface);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+/* The pole's middle (2.5 px into its drawing) stands on the slope's end, 28 px in from the right. */
+.climb-flag {
+  position: absolute;
+  left: calc(100% - 30.5px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.climb-flag-number {
+  font-size: var(--type-card-label);
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: var(--type-card-label-tracking);
+  color: var(--on-surface-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.climb-flag-number {
+  margin-bottom: 2px;
+}
+
+.climb-flag-pole {
+  fill: var(--on-surface);
+}
+
+.climb-flag-cloth {
+  fill: var(--accent);
+}
+
+.climb-walker {
+  position: absolute;
+  width: 56px;
+  display: block;
+}
+
+/*
+ * The stamp (V4): where the proof of a gift that is had or not goes. Waiting, a dashed ring with nothing in it beside
+ * the gift's character; stamped, the same ring inked in the sun colour with its tick, turned a little as a stamp
+ * lands; void, faded, when the time ran out without it (app/kit/Stamp.tsx).
+ */
+.stamp-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.stamp-character {
+  display: block;
+  width: 56px;
+}
+
+.stamp-ring {
+  fill: none;
+  stroke: var(--on-surface);
+  stroke-width: 3;
+}
+
+.stamp-waiting .stamp-ring {
+  stroke: var(--on-surface-faint);
+  stroke-dasharray: 3 7;
+  stroke-linecap: round;
+}
+
+.stamp-stamped {
+  transform: rotate(-8deg);
+}
+
+.stamp-ink {
+  fill: var(--accent);
+}
+
+.stamp-tick {
+  fill: none;
+  stroke: var(--on-surface);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.stamp-void {
+  opacity: 0.35;
+}
 
 /* The fold's own mark, which turns when it opens. */
 .gift-chevron {

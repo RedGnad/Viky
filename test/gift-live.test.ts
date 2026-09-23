@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
-import { liveOf, type LiveInput } from "../src/gift-live.js";
+import { eyebrowOf, liveOf, titleOf, type LiveInput } from "../src/gift-live.js";
 import type { Moment } from "../src/gift-moment.js";
 import type { Voice } from "../src/gift-voice.js";
 
@@ -101,6 +101,13 @@ test("a day counted is said in the morning message's own words, without its mone
   assert.equal(liveOf(input({ started: false })).headline, "Nothing has been counted yet.");
   // A gift settled before Viky kept a record of each day: the totals are true, the last day is not known.
   assert.equal(liveOf(input({ lastJudged: null })).headline, "It is counting.");
+  // Yesterday went back to the funder: "to you" is true of the funder alone, never of a reader of the link.
+  assert.equal(liveOf(input({ lastJudged: "returned", voice: "funder" })).headline, "Yesterday came back to you. Today still counts.");
+  assert.equal(liveOf(input({ lastJudged: "returned", voice: "reader" })).headline, "Yesterday went back to Maman. Today still counts.");
+  assert.equal(liveOf(input({ lastJudged: "returned", voice: "recipient" })).headline, "Yesterday went back to Maman. Today still counts.");
+  // A proof shown from the person's own account is shown, never shared (D162).
+  assert.equal(liveOf(input({ moment: "awaitingProof", shown: true, source: "ETS" })).headline, "Show it from your own ETS account, and it is yours.");
+  assert.equal(liveOf(input({ moment: "awaitingProof", shown: true, voice: "funder" })).headline, "Léa has not shown it yet.");
   for (const said of ["earned", "returned", null] as const) {
     assert.doesNotMatch(liveOf(input({ lastJudged: said })).headline, /\$/, "the money is the figure, not the sentence");
   }
@@ -115,6 +122,19 @@ test("what came back is said beside what is theirs, never as a zero, and never w
   // And on the two moments that are themselves about what came back, the figure is the headline's own.
   assert.equal(liveOf(input({ moment: "over" })).back, null);
   assert.equal(liveOf(input({ moment: "cameBack" })).back, null);
+});
+
+test("the line above the name never says 'your' to somebody the gift is not theirs to read as theirs", () => {
+  assert.equal(eyebrowOf("funder", "Maman"), "Your gift");
+  assert.equal(eyebrowOf("recipient", "Maman"), "A gift from Maman");
+  assert.equal(eyebrowOf("reader", "Maman"), "A gift from Maman", "a reader holding the link is given the names");
+  assert.equal(eyebrowOf("reader", null), "A gift", "a reader given no names reads no possessive");
+  assert.equal(eyebrowOf("recipient", null), "Your gift", "a gift made before the names, to the person it is for");
+  assert.equal(titleOf("recipient", "Léa"), "For you");
+  assert.equal(titleOf("funder", "Léa"), "For Léa");
+  assert.equal(titleOf("funder", null), "For whoever opens the link");
+  assert.equal(titleOf("reader", null), "For somebody", "never a bare 'For'");
+  assert.equal(titleOf("reader", "  "), "For somebody");
 });
 
 test("the next moment is only said where there is one, and it is the reader's own clock", () => {

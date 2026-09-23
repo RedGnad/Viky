@@ -4659,3 +4659,54 @@ The sheet, as every motion PR carries one:
   cap at the fifth child, the shell entering on every screen, no screen arriving in one fade outside reduced motion.
 - **Judged by eye on viky.cash**, by the founder, with a reduced-motion capture and a film strip of the entrance at
   0, 80, 160, 240 and 490 ms attached to the PR.
+
+## D172, 23 Sep 2026: a gift's page is the card of Home, alive; first group, the moments of a gift that runs (V4-1)
+
+The founder, 23 Sep 2026, document J sections 2 and 3: the page carries four things in one order (the state, the
+figure, the next dated moment, one action or none), then two folds; nine moments, two roles and a third reader; V4 is
+"la carte de Home rendue vivante pour les trois formes (rangée de personnages, montée vers la cible, tampon)", one
+group of moments per PR, each with its motion sheet, the old pages deleted at the end.
+
+What this first group does, relu contre le tableau:
+
+- **The frame is the card of Home.** `GiftLive` draws in `CARD` with `gift-card-placed` and `gift-card-width`, the
+  classes of `OfferCard`: the same edge, width and paper. The page's own `.gift-card` (the mockup of 19 Sep) is gone.
+- **The three shapes, alive.** The row of days stays as it was. The climb replaces the bar (which D132 had taken off
+  Home as "une ligne horizontale étrange"): a slope, climbed in ink, dashed ahead, the flag with the target at its top,
+  the character standing at today's reading. Where they started is not drawn: it is in "What was agreed" and is not
+  said twice. The stamp is new: a dashed ring beside the character while the proof is awaited, inked in the sun colour
+  with its tick once taken, faded if the time ran out. Both drawings are one proposal each, judged on the image.
+- **The three moments of a gift that runs.** En cours, quotidien: the last day judged, in words ("Yesterday
+  counted."); no action. En cours, progression: how far is left as the state ("90 to go."), today's reading as the
+  figure; no action. En cours, obtenu ou pas: the one gesture as the state, "Share the page that proves it" on a
+  certificate and, new, "Show it from your own ETS account" on a proof shown by the person (D162); the action is that
+  gesture.
+- **A contradiction, settled by the founder's current table.** #76 made taking money already earned the action of
+  every moment money had been earned. The table says "aucune" while a gift runs and "sortir l'argent" at "Atteint".
+  The table wins: a recipient takes what was earned at the end, and not while it runs. Nothing is lost by it; the
+  contract keeps what was earned until it is taken.
+- **Four defects found on the images and fixed.** A reader of a daily gift was told "Yesterday came back to you",
+  true of the funder alone. A reader given no names read "Your gift" above the name, and "For" with nothing after it
+  on a certificate. Three sentences said "Léa have" and "Léa were".
+- **A reader without an account** on an opened gift is offered one quiet line, "Sign in if this gift is yours.",
+  which opens the sign-in; it was a sun button on every moment, which made every moment ask for something.
+- **The board.** Every moment for every reader, drawn by the production page from example data, at
+  `/dev/looks/gift` behind the design gallery's door (never open in production): production holds six gifts, all
+  connected, so most moments can only be seen there. `test/gift-examples.test.ts` holds each example to the moment
+  its name says.
+
+The motion sheets of this group:
+
+- **En cours, quotidien.** Trigger: the arrival on the screen. Rule: the days settled since this device last saw the
+  gift play in order, earned then gone back, then the amount counts (the existing `Arrival`, brief section 6), under
+  two seconds. Material token: earned `MOTION.earned` on the expressive spring, gone back medium2 (300 ms) standard,
+  the count extra-long1 (700 ms). Loop: none. Reduced motion: the final state, nothing moves. Test:
+  `test/motion.test.ts`, `test/browser/arrival.spec.ts`.
+- **En cours, progression.** Trigger: the arrival on the screen, when the keeper has read a new figure since this
+  device's last visit. Rule: the character walks up the slope from the reading this device kept to today's, once.
+  Material token: extra-long1 (700 ms) on the standard easing (`MOTION.count`). Loop: none; a first visit or an
+  unchanged reading does not move. Reduced motion: it stands where it is. Test: `test/gift-examples.test.ts` for the
+  moments, captures for the drawing; the walk itself is read on viky.cash.
+- **En cours, obtenu ou pas.** Trigger: none; the page waits for the person's gesture and answers nothing before it.
+  Rule: the stamp and its character stand still (the character's gaze answers a pointer, as everywhere). Material
+  token: none. Loop: none. Reduced motion: unchanged. Test: captures.
