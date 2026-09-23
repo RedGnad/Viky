@@ -5219,3 +5219,47 @@ Viky's word. The eight rules of the mode are the founder's; this is the first so
   token exchange, refresh and revoke against a fake Fitbit, the verdict metric, the source's patterns, the store
   against a real Postgres, the register and the door. Not verified: no application exists, so no real connection, no
   real reading, no goal signed, and the worker not redeployed until this merges.
+## D189, 23 Sep 2026: an arrival's first image is its start or its end, never its end then its start (the fix to #154)
+
+The founder, 23 Sep 2026: "le « la page se recharge une fraction de seconde après s'être chargée » est revenu, et c'est
+#154." And the rule: "la première image est soit l'état final (rien n'a changé, rien ne joue, montant compris), soit
+l'état de départ de l'arrivée (jours à poser non dessinés, montant à l'ancienne valeur), jamais l'état final suivi
+d'un redémarrage."
+
+**Read this before touching the arrival.** The chain, each step right about its own thing and wrong about the next:
+
+1. **D160** made the server draw every screen once, with what it is about, because the browser used to draw an empty
+   screen and then the real one: the founder's "double chargement". The server has drawn the final state since.
+2. **D171** made every screen, the first one too, enter block by block. The entrance hides a screen's first quarter
+   second, which is also what hid step 3 for a while.
+3. **#154** (D180) made the arrival replay what changed since the last visit, the days landing and the amount
+   counting. What was seen lived in the browser's storage, which the server cannot read: so the server drew the final
+   state, the browser read its storage after hydration, and the days and the amount started again from the start.
+   Measured then at 160 ms, and written in D180 as "masked by the entrance". It was not masked: it was the double load
+   again, by another road.
+4. **This fix.** What was seen lives in a cookie, `viky.seen` (`src/seen-cookie.ts`), which the root layout reads and
+   gives the screens (`app/kit/seen.tsx`). The server therefore knows what will play and draws its starting state:
+   a day that changed since the last visit is drawn not there (`arrival-pending`), the amount at its old value, a
+   climb's walker and ink not there. The browser's first render reads the same cookie, so hydration agrees, and the
+   arrival starts from what is on the screen. Nothing changed, or a first visit: nothing is pending, the first image is
+   the final state, and the amount does not count (measured, see below). Reduced motion never moves, so a rule in the
+   stylesheet shows it everything pending where it is: its first image is the final state.
+5. **One more of the same, found while measuring.** The row of a daily gift's days was drawn by the browser alone,
+   because it needs a clock and the server had none; it appeared 80 to 160 ms after the first image, and its days to
+   come were visible for one frame before they were hidden. The clock of a screen's first render is now the minute
+   the server drew it at (`renderMinute`, given by the layout to `useMinute`), so the row and the next reading are in
+   the first image and hydration agrees.
+
+Measured on the board of moments, frame by frame from the first one (`review-captures/first-image.ts`):
+
+| case | first image | then |
+|---|---|---|
+| a day earned and a day gone back since the last visit | $1.00, five of seven days | the two land, then $1.01 … $2.00 |
+| nothing changed | $2.00, seven days | nothing |
+| a first visit | $2.00, seven days | nothing |
+| a climb that moved | the walker not there | it appears at 1300 and walks to 1410 |
+| a climb that did not move | the walker at 1410 | nothing |
+
+No hydration error on any of them, nor on Home and the catalogue (`review-captures/hydration-check.ts`). What was
+seen before this fix lived in the browser's storage and is not read any more: the first visit after it is a first
+visit, and nothing replays.

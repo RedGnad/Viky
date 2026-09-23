@@ -1123,6 +1123,26 @@ dialog.sheet[open] {
   border-radius: 2px;
 }
 
+/*
+ * An arrival's starting state, drawn by the server (the fix to #154, D189): a day that changed since this device's last
+ * visit, and a climb's walker and ink that will advance, are not there yet in the first image, and the browser brings
+ * them in on their own turn. A device that asks for reduced motion is shown them where they are: nothing moves for it,
+ * so its first image is the final state.
+ */
+.arrival-pending svg,
+.arrival-pending.climb-walker,
+.arrival-pending.climb-done {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrival-pending svg,
+  .arrival-pending.climb-walker,
+  .arrival-pending.climb-done {
+    opacity: 1;
+  }
+}
+
 /* The fold's own mark, which turns when it opens. */
 .gift-chevron {
   color: var(--on-surface-faint);

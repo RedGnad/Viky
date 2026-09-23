@@ -1,9 +1,10 @@
 "use client";
-import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import type { CharacterState } from "./Character";
 import { EASING, MOTION } from "@/src/design-tokens";
 import { arrivalSchedule, bezierProgress, springEasing, springSettleMs, type ArrivalSchedule } from "@/src/motion";
 import { atRest, currentMood, feel, subscribeToMood, type Mood } from "./mood";
+import { forgetOnThisScreen, useSeen, useSeenMany, writeSeen } from "./seen";
 
 /**
  * Every movement answers a gesture of the person (art direction brief, section 6, the founder's rule of 17 Sep).
@@ -179,10 +180,15 @@ type Plan = Readonly<{
   days: ReadonlyMap<string, Readonly<{ moment: "earned" | "returned"; delay: number }>>;
   amountAt: number | null;
   decided: boolean;
+  /**
+   * The days that changed since this device's last visit, known from the first image on (the fix to #154): the server
+   * draws them not yet there, and the browser starts them from there. Never the final state followed by a restart.
+   */
+  pending: ReadonlySet<string>;
 }>;
 
 /** Outside any arrival there is nothing to wait for, so the question is settled from the first paint. */
-const NOTHING: Plan = { round: 0, days: new Map(), amountAt: null, decided: true };
+const NOTHING: Plan = { round: 0, days: new Map(), amountAt: null, decided: true, pending: new Set() };
 /** Inside one, before the first frame: what plays is not known yet. */
 const UNDECIDED: Plan = { ...NOTHING, decided: false };
 const ArrivalContext = createContext<Plan>(NOTHING);
@@ -199,23 +205,6 @@ export type ArrivalGift = Readonly<{
 
 const isSettled = (day: CharacterState) => day === "earned" || day === "returned";
 
-function readLastSeen(key: string): number | undefined {
-  try {
-    const value = window.localStorage.getItem(key);
-    return value === null || !Number.isFinite(Number(value)) ? undefined : Number(value);
-  } catch {
-    return undefined;
-  }
-}
-
-function writeLastSeen(key: string, value: number): void {
-  try {
-    window.localStorage.setItem(key, String(value));
-  } catch {
-    // A device that keeps nothing sees every arrival as a first one, which is harmless.
-  }
-}
-
 const ARRIVAL_TIMINGS = {
   earnedAirborneMs: MOTION.earned.gatherMs + MOTION.earned.riseMs + MOTION.earned.fallMs,
   earnedMs: MOTION.earned.gatherMs + MOTION.earned.riseMs + MOTION.earned.fallMs + springSettleMs(MOTION.earned.landing),
@@ -231,61 +220,89 @@ const ARRIVAL_TIMINGS = {
  * device, per gift, as the number of settled days it saw; a device that keeps nothing uses the gift's `lastSeen`.
  */
 export function Arrival({ storageKey, gifts, amount = false, children }: Readonly<{ storageKey: string; gifts: readonly ArrivalGift[]; amount?: boolean; children: ReactNode }>) {
-  const [plan, setPlan] = useState<Plan>(UNDECIDED);
   const giftsKey = JSON.stringify(gifts);
+  const seen = useSeenMany(gifts.map((gift) => `${storageKey}.${gift.id}`));
+  const seenKey = JSON.stringify(seen);
+  /**
+   * What changed since the last visit, decided while the screen is drawn rather than after it, from the cookie the
+   * server read (the fix to #154): the first image is then the arrival's starting state, the days to come not yet
+   * there. A first visit, or nothing changed: nothing is pending, and the first image is the final state.
+   */
+  const changed = useMemo(() => changesOf(JSON.parse(giftsKey) as ArrivalGift[], JSON.parse(seenKey) as (number | undefined)[]), [giftsKey, seenKey]);
+  const [plan, setPlan] = useState<Plan>({ ...UNDECIDED, pending: changed.pending });
 
   useEffect(() => {
     const list = JSON.parse(giftsKey) as ArrivalGift[];
+    const lastSeen = JSON.parse(seenKey) as (number | undefined)[];
     let round = 0;
     const play = (fromExample: boolean) => {
       round += 1;
-      const earned: string[] = [];
-      const returned: string[] = [];
-      for (const gift of list) {
-        const key = `${storageKey}.${gift.id}`;
-        const seen = fromExample ? gift.lastSeen : (readLastSeen(key) ?? gift.lastSeen);
-        let settled = 0;
-        gift.days.forEach((day, index) => {
-          if (!isSettled(day)) return;
-          if (settled >= seen) (day === "earned" ? earned : returned).push(`${gift.id}:${index}`);
-          settled += 1;
-        });
-        writeLastSeen(key, settled);
-      }
+      const { earned, returned, pending, settledNow } = changesOf(list, fromExample ? list.map((gift) => gift.lastSeen) : lastSeen);
+      if (!fromExample) list.forEach((gift, index) => writeSeen(`${storageKey}.${gift.id}`, settledNow[index]));
       // Nothing changed at all: nothing to replay. An amount that changed on its own still counts, last and alone.
       // Said out loud rather than by staying silent, because whoever waits for the count waits on this answer.
       if (reduced() || (earned.length + returned.length === 0 && !amount)) {
-        setPlan({ round, days: new Map(), amountAt: null, decided: true });
+        setPlan({ round, days: new Map(), amountAt: null, decided: true, pending: new Set() });
         return;
       }
       const schedule: ArrivalSchedule = arrivalSchedule(earned.length, returned.length, amount, ARRIVAL_TIMINGS);
       const days = new Map<string, { moment: "earned" | "returned"; delay: number }>();
       earned.forEach((id, index) => days.set(id, { moment: "earned", delay: schedule.earnedAt[index] }));
       returned.forEach((id, index) => days.set(id, { moment: "returned", delay: schedule.returnedAt[index] }));
-      setPlan({ round, days, amountAt: schedule.amountAt, decided: true });
+      setPlan({ round, days, amountAt: schedule.amountAt, decided: true, pending });
     };
-    // The last visit lives on the device, which the server cannot read, so the arrival is decided once the page runs.
     const frame = requestAnimationFrame(() => play(false));
     const replay = () => play(true);
     window.addEventListener(REPLAY_ARRIVAL, replay);
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener(REPLAY_ARRIVAL, replay);
+      list.forEach((gift) => forgetOnThisScreen(`${storageKey}.${gift.id}`));
     };
-  }, [storageKey, giftsKey, amount]);
+  }, [storageKey, giftsKey, seenKey, amount]);
 
-  return <ArrivalContext.Provider value={plan}>{children}</ArrivalContext.Provider>;
+  // Until the arrival has decided, what is pending is what changed, known from the gifts as soon as they are: a row the
+  // page draws a moment later still starts with its days to come not there, and never shows them first.
+  const value = useMemo(() => (plan.decided ? plan : { ...plan, pending: changed.pending }), [plan, changed]);
+  return <ArrivalContext.Provider value={value}>{children}</ArrivalContext.Provider>;
+}
+
+/** The days that changed since a visit that saw `seen` settled days of each gift (the gift's own count when unknown). */
+function changesOf(list: readonly ArrivalGift[], seen: readonly (number | undefined)[]) {
+  const earned: string[] = [];
+  const returned: string[] = [];
+  const settledNow: number[] = [];
+  list.forEach((gift, giftIndex) => {
+    const saw = seen[giftIndex] ?? gift.lastSeen;
+    let settled = 0;
+    gift.days.forEach((day, index) => {
+      if (!isSettled(day)) return;
+      if (settled >= saw) (day === "earned" ? earned : returned).push(`${gift.id}:${index}`);
+      settled += 1;
+    });
+    settledNow.push(settled);
+  });
+  return { earned, returned, settledNow, pending: new Set([...earned, ...returned]) as ReadonlySet<string> };
 }
 
 /** One day of a gift inside an arrival: it plays its moment if it changed since the last visit, and stands still otherwise. */
 export function ArrivalDay({ gift, index, children }: Readonly<{ gift: string; index: number; children: ReactNode }>) {
   const plan = useContext(ArrivalContext);
   const root = useRef<HTMLSpanElement>(null);
-  const step = plan.days.get(`${gift}:${index}`);
+  const id = `${gift}:${index}`;
+  const step = plan.days.get(id);
+  // A day that changed since the last visit is drawn not yet there, from the server's first image on (the fix to #154):
+  // `arrival-pending` hides it, and reduced motion shows it where it is (app/globals.css).
+  const pending = plan.pending.has(id);
   useEffect(() => {
     const element = root.current;
     if (!element || !step) return;
-    const running = step.moment === "earned" ? playEarned(element, step.delay) : playReturned(element, step.delay);
+    // Invisible until its own turn, then there: a one-step animation that holds the first frame until the delay, so
+    // the class can go in the same task without the day ever being seen before it moves.
+    const drawing = element.querySelector("svg");
+    const held = drawing ? [drawing.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1, delay: step.delay, fill: "backwards" })] : [];
+    element.classList.remove("arrival-pending");
+    const running = [...held, ...(step.moment === "earned" ? playEarned(element, step.delay) : playReturned(element, step.delay))];
     // The character at the head of the screen answers each day as it happens on screen: the moment is the day's own
     // animation reaching its landing, or, for a day going back, the end of its slide (its start is the very frame the
     // last day earned lands, and the second answer would erase the first), measured by an animation that moves
@@ -296,8 +313,12 @@ export function ArrivalDay({ gift, index, children }: Readonly<{ gift: string; i
     running.push(cue);
     return () => running.forEach((animation) => animation.cancel());
   }, [plan.round, step]);
+  // Decided with nothing to play (reduced motion, or a replay): whatever was pending is simply there.
+  useEffect(() => {
+    if (plan.decided && !step) root.current?.classList.remove("arrival-pending");
+  }, [plan.decided, step]);
   return (
-    <span ref={root} className="contents">
+    <span ref={root} className={pending ? "contents arrival-pending" : "contents"}>
       {children}
     </span>
   );
@@ -311,7 +332,8 @@ export function ArrivalDay({ gift, index, children }: Readonly<{ gift: string; i
 export function ArrivalAmount({ from, to, symbol, decimals = 2, after = "" }: Readonly<{ from: number; to: number; symbol: string; decimals?: number; after?: string }>) {
   const plan = useContext(ArrivalContext);
   const format = (value: number) => `${symbol}${value.toLocaleString("en-GB", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${after}`;
-  const [shown, setShown] = useState(to);
+  // The first image shows where the count starts, not where it ends (the fix to #154); reduced motion reads `to`.
+  const [shown, setShown] = useState(from);
   /**
    * Whether the figure on the screen is the account's own, which is what a capture run waits for.
    *
@@ -344,10 +366,12 @@ export function ArrivalAmount({ from, to, symbol, decimals = 2, after = "" }: Re
     return () => cancelAnimationFrame(frame);
   }, [plan.round, plan.amountAt, from, to, count]);
   const settled = plan.decided && (plan.amountAt === null || from === to || counted === count);
+  // Decided with nothing to count (reduced motion, or an arrival that does not count its amount): the value itself.
+  const value = plan.decided && (plan.amountAt === null || from === to) ? to : shown;
   return (
     <>
       <span aria-hidden data-count-settled={settled ? "true" : "false"} className="motion-reduce:hidden">
-        {format(decimals === 0 ? Math.round(shown) : Math.round(shown * 100) / 100)}
+        {format(decimals === 0 ? Math.round(value) : Math.round(value * 100) / 100)}
       </span>
       <span aria-hidden className="hidden motion-reduce:inline">
         {format(to)}
@@ -564,50 +588,16 @@ export function Gaze({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 /**
- * What this device last saw of a number, so an arrival can count from it to what it is now. It is read once, as an
- * external store, and remembered as soon as it is read, so a second visit finds nothing to replay. A device that keeps
- * nothing simply never counts.
+ * What this device last saw of a number, so an arrival can count from it to what it is now: from the cookie the server
+ * read, the same in the browser's first render, frozen while the screen stands and written for the next one (D189).
+ * A first visit has nothing seen and counts nothing.
  */
-function readSeen(key: string): number | undefined {
-  try {
-    const stored = window.localStorage.getItem(key);
-    return stored === null || !Number.isFinite(Number(stored)) ? undefined : Number(stored);
-  } catch {
-    return undefined;
-  }
-}
-
-const neverChanges = () => () => {};
-const nothingSeen = () => undefined;
-
-/**
- * What each number was when this screen was built, read once per screen and kept here rather than in the component's
- * first render. Until 23 Sep 2026 it was frozen in `useState` at the first render, and on a screen the server draws
- * (every screen since D160) the first render is the hydration, which is given the server's answer, nothing: the
- * amount on Home then counted from itself to itself and never moved. Read here, the browser's own answer arrives on
- * the render right after hydration, and it stays the same for as long as the screen stands; leaving the screen is what
- * makes the next one read the value this one wrote.
- */
-const seenOnThisScreen = new Map<string, number | undefined>();
-
-function seenSnapshot(key: string): number | undefined {
-  if (!seenOnThisScreen.has(key)) seenOnThisScreen.set(key, readSeen(key));
-  return seenOnThisScreen.get(key);
-}
-
 export function useLastSeen(key: string, value: number | undefined): number | undefined {
-  const seen = useSyncExternalStore(neverChanges, () => seenSnapshot(key), nothingSeen);
+  const seen = useSeen(key);
   useEffect(() => {
     if (value === undefined) return;
-    try {
-      window.localStorage.setItem(key, String(value));
-    } catch {
-      // A device that keeps nothing sees every arrival as a first one, which is harmless.
-    }
-    // Forgotten when the screen goes, silently: telling the store now would move the number mid-count.
-    return () => {
-      seenOnThisScreen.delete(key);
-    };
+    writeSeen(key, value);
+    return () => forgetOnThisScreen(key);
   }, [key, value]);
   return seen;
 }

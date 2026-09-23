@@ -9,12 +9,12 @@ import { MOTION } from "../src/design-tokens";
  * changed since this device's last visit, once, the days earned, then the days gone back, then the amount counting;
  * nothing if nothing changed; and on a climb, the slope advances to today's reading.
  */
-test("what this device last saw is read by the browser after a server-drawn screen, not frozen at the server's answer", () => {
-  const motion = readFileSync("app/kit/Motion.tsx", "utf8");
-  const hook = motion.slice(motion.indexOf("export function useLastSeen"));
-  assert.doesNotMatch(hook.slice(0, hook.indexOf("\n}\n")), /useState\(/, "a first render frozen in state is the hydration's, which knows nothing");
-  assert.match(motion, /const seenOnThisScreen = new Map/);
-  assert.match(hook, /seenOnThisScreen\.delete\(key\)/, "and forgotten when the screen goes, so the next one reads what this one wrote");
+test("what this device last saw comes from the cookie the server read, the same in the browser's first render (the fix to #154)", () => {
+  const seen = readFileSync("app/kit/seen.tsx", "utf8");
+  assert.match(seen, /useSyncExternalStore\(neverChanges, \(\) => snapshot\(key, initial\), \(\) => initial\[seenKey\(key\)\]\)/, "the server's answer and the hydration's are the cookie's");
+  assert.match(seen, /const onThisScreen = new Map/, "frozen for as long as the screen stands");
+  assert.match(seen, /export function forgetOnThisScreen/, "and forgotten when it goes");
+  assert.doesNotMatch(readFileSync("app/kit/Motion.tsx", "utf8"), /localStorage/, "nothing the server cannot read decides the first image");
 });
 
 test("the money on a gift's card counts, last in the arrival, and nothing that is not money counts", () => {
@@ -34,7 +34,8 @@ test("the money on a gift's card counts, last in the arrival, and nothing that i
 
 test("on a climb, the ink advances with the character to today's reading, once, and not under reduced motion", () => {
   const climb = readFileSync("app/kit/Climb.tsx", "utf8");
-  assert.match(climb, /inked\.current\?\.animate\(\[\{ strokeDasharray: `\$\{from\} 1` \}, \{ strokeDasharray: `\$\{progress\} 1` \}\]/);
+  assert.match(climb, /ink\.animate\(\[\{ strokeDasharray: `\$\{from\} 1` \}, \{ strokeDasharray: `\$\{progress\} 1` \}\], timing\)/);
   assert.match(climb, /duration: MOTION\.count\.durationMs/);
+  assert.match(climb, /className=\{walks \? "climb-walker arrival-pending" : "climb-walker"\}/, "drawn not yet there when it will walk");
   assert.match(climb, /prefers-reduced-motion: reduce/);
 });

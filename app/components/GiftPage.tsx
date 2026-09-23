@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useMinute } from "../kit/clock";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
 import { catchUpDay } from "@/src/catch-up";
@@ -72,15 +73,6 @@ import { BODY, CARD, HELP, PRIMARY_BUTTON } from "./ui";
 type Busy = "idle" | "opening" | "naming" | "starting" | "counting" | "taking";
 type Where = "open" | "name" | "start" | "count" | "take";
 
-const never = () => () => {};
-function everyMinute(changed: () => void): () => void {
-  const timer = setInterval(changed, 60_000);
-  return () => clearInterval(timer);
-}
-const thisMinute = () => Math.floor(Date.now() / 60_000) * 60_000;
-const noClock = () => 0;
-const inBrowser = () => true;
-const onServer = () => false;
 
 /** Our own typed sentences verbatim; anything else as one plain line, so no library's words reach a person. */
 function screenMessage(error: unknown): string {
@@ -143,10 +135,9 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
   const { address, ensureSigner, status: accountStatus } = useAccount();
   useMoneySession();
   const money = useDisplayCurrency(address);
-  const browser = useSyncExternalStore(never, inBrowser, onServer);
   /** The clock this reader keeps, so a date says their day and not the server's (D160). */
   const zone = useReaderZone();
-  const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
+  const nowMs = useMinute();
   const [busy, setBusy] = useState<Busy>("idle");
   const [answer, setAnswer] = useState<{ at: Where; text: string; failed: boolean } | null>(null);
   const [reviewing, setReviewing] = useState(false);
@@ -442,7 +433,7 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
           </>
         );
       case "connect":
-        // A condition of the third nature is connected, not named (D188): the source's own page, one gesture.
+        // A condition of the third nature is connected, not named (D189): the source's own page, one gesture.
         if (condition?.link.kind === "connect") return <ConnectTheAccount giftId={giftId} conditionId={condition.id} yours={mine} onChanged={reload} />;
         return connectWords ? (
           <ConnectTheSource
@@ -514,7 +505,7 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
     ) : (
       <Climb giftId={giftId} status={milestone} />
     )
-  ) : browser && daily ? (
+  ) : daily ? (
     <DayRow id={giftId} gift={daily} catchUpSeconds={daily.catchUpSeconds} records={daily.days} voice={voice} />
   ) : null;
 
