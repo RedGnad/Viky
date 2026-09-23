@@ -41,6 +41,13 @@ test.describe("what money is read in", () => {
     // Each one, by its own code, and the one being read is the one pressed.
     for (const code of codes.slice(0, 4)) await expect(sheet(page).getByText(code, { exact: true })).toBeVisible();
     await expect(sheet(page).locator('li button[aria-pressed="true"]')).toHaveCount(1);
+    // The filled mark of the choice, on that line and on no other (D209); left to right, the sign, the code, the name.
+    await expect(sheet(page).locator('[data-choice="chosen"]')).toHaveCount(1);
+    await expect(sheet(page).locator('li button[aria-pressed="true"] [data-choice="chosen"]')).toHaveCount(1);
+    await expect(sheet(page).locator('[data-choice="open"]')).toHaveCount(codes.length - 1);
+    const first = await sheet(page).locator("li button").first().evaluate((line) => [...line.querySelectorAll(":scope > span")].map((part) => (part.textContent ?? "").trim()));
+    expect(first[0]).toBe("");
+    expect(first[2]).toMatch(/^[A-Z]{3}/);
   });
 
   test("every line says what the amount on the screen is worth in that currency", async ({ page }) => {
