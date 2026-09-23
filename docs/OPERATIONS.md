@@ -444,30 +444,52 @@ the DECO's service in July only; outside that window nothing can be captured fro
 provider can be registered and no line was written. When July comes, the same steps as the three bac lines apply, with
 a candidate present.
 
-## Fitbit, connected by the person: what the founder sets, and what redeploys (D188)
+## Fitbit, connected by the person, through the Google Health API: what the founder sets, and what redeploys (D188, D197)
 
-The third nature of a condition: the person authorises Viky once on Fitbit's own page (OAuth 2.0, the authorization
-code with PKCE), and each morning the keeper reads yesterday's activity summary through the attested fetch with
-their key as a secret, judges it, and keeps the verdict alone. Nothing runs until three things exist.
+The legacy Fitbit Web API closes in September 2026 (its developer site's banner, read 23 Sep 2026; registrations are
+closed), so the line reads its successor, the Google Health API (`https://health.googleapis.com`, v4), which reads
+Fitbit trackers and Pixel Watches. The person authorises Viky once on Google's own page (OAuth 2.0 for a web server
+application, the authorization code with PKCE and the client secret, `access_type=offline`), and each morning the
+keeper asks `users.dataTypes.dataPoints.dailyRollUp` on `active-minutes` for yesterday through the attested fetch with
+their key as a secret, judges it, and keeps the verdict alone. Nothing runs until these exist.
 
-**1. The application on dev.fitbit.com**, registered by the founder: type "Server", OAuth 2.0 application type
-"Server", the callback URL `https://viky.cash/api/connect/fitbit/callback` (and `https://viky-two.vercel.app/api/connect/fitbit/callback`
-while that host serves the app), default access "Read Only". The route builds the redirect from `NEXT_PUBLIC_APP_URL`,
-so the callback registered must be that host's.
+**1. The OAuth client in Google Cloud Console**, created by the founder (type "Web application"):
 
-**2. Three variables on Vercel, production, sensitive.** The reading service receives the key per request over its
+- the Google Health API enabled on the project (APIs and services, Library);
+- the consent screen: user type "External", publishing status "Testing", the scope
+  `https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly` and no other, and the test users'
+  Google accounts listed, since only they can connect while the client is in testing;
+- **Authorized redirect URIs**, exactly, the callback path and not the site's root:
+
+```
+https://viky.cash/api/connect/fitbit/callback
+```
+
+  and, while that host still serves the app, `https://viky-two.vercel.app/api/connect/fitbit/callback`. The route
+  builds its redirect from `NEXT_PUBLIC_APP_URL`, so the URI Google compares is that host's; a mismatch is Google's
+  `redirect_uri_mismatch`, before anything reaches Viky. The path keeps the word fitbit: it is the line's, and the
+  connect screen asks `/api/connect/<the source>`.
+
+What testing mode means (Google's setup guide, read 23 Sep 2026): a hundred users at most, and refresh keys that
+expire after seven days, so a person's connection lapses each week (`KEY_REFUSED`, the row erased, the screen asks
+them to connect again) until the client is published; publishing it and going past a hundred users needs Google's
+app verification and its third party security review (CASA). The founder's step with Google, written on the judges'
+page.
+
+**2. Three variables on Vercel, production, sensitive** (the `FITBIT_*` names are gone with the legacy API and configure
+nothing). The reading service receives the key per request over its
 own guarded channel and holds none of it; what it needs on Railway is step 3, a redeploy, and no variable.
 
 | variable | what it is | where it comes from |
 |---|---|---|
-| `FITBIT_CLIENT_ID` | the application's OAuth 2.0 client id | dev.fitbit.com, the application's page |
-| `FITBIT_CLIENT_SECRET` | its client secret | the same page, shown once |
+| `GOOGLE_HEALTH_CLIENT_ID` | the OAuth client's id, `….apps.googleusercontent.com` | Google Cloud Console, APIs and services, Credentials, the client |
+| `GOOGLE_HEALTH_CLIENT_SECRET` | its client secret | the same page |
 | `CONNECT_TOKEN_KEY` | 32 bytes in base64, the key every connected source's keys are sealed under at rest | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` on the founder's machine, then `vercel env add CONNECT_TOKEN_KEY production --sensitive`; never written down elsewhere, and never changed once a connection exists, since a sealed key does not open under another |
 
 `GET /api/connect/fitbit/status?giftId=…`, signed in as the gift's recipient, answers `configured: true` when the
 three are set where the route runs, and `false` otherwise: a boolean, never a value.
 
-**3. The reading service redeployed, by the founder, from the second branch.** The Fitbit summary source is in
+**3. The reading service redeployed, by the founder, from the second branch.** The Google Health source is in
 `src/fitbit-source.ts`, a file the reading fingerprint does not cover, known to the app and not to the service: moving
 it into `src/attested-sources.ts` changes `READING_FINGERPRINT`, and until the service runs that commit every attested
 read of the app refuses (`WORKER_OUT_OF_DATE`), the Chess.com ratings and the certificate readings included. So that
@@ -489,47 +511,33 @@ logs the source and the day, never the key; that half is already on main and run
 redeployed. Until step 3 is done the morning reading refuses `NOT_CONFIGURED` before asking the service anything
 (`configured` in `src/connected-checkin.ts` asks the shared list for the source).
 
-**4. Goal 6 on the daily contract**, `GiftEscrow` (`0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233`), whose goals take two
-arguments and no shape. Provider id `viky:provider:fitbit-connected:v1` =
-`0x1945fcd86cc0f0a5a3ffcea6145dbbb882c4c0ac989624a4476da8885c16a701`. To go through the Safe in the night's session,
-after goal 23:
-
-| | |
-|---|---|
-| to | `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233` |
-| data | `0x68fa3be200000000000000000000000000000000000000000000000000000000000000061945fcd86cc0f0a5a3ffcea6145dbbb882c4c0ac989624a4476da8885c16a701` |
-| gas | 75,000 (goal 2 took 161,559 with the Safe's own overhead, goal 5 65,238 on the function alone, before the Monad margin) |
-| what it is | `registerGoal(6, 0x1945fcd8…a701)`: Fitbit, connected, the day's verdict |
-| Safe nonce | 16, after goal 23 |
-
-`goalProviders(6)` read back equal to the id above is the check, as for goal 2.
+**4. Goal 6 on the daily contract**, `GiftEscrow`, provider id `viky:provider:fitbit-connected:v1` =
+`0x1945fcd86cc0f0a5a3ffcea6145dbbb882c4c0ac989624a4476da8885c16a701`: registered on 23 Sep 2026 in the batched Safe
+session (below). The provider id stays: it names the line, not the API behind it.
 
 **What a morning does, and what it keeps.** The counting pass reads every bound daily gift; for a gift on goal 6 the
-dispatcher (`src/daily-count.ts`) opens the sealed keys, refreshes them through Fitbit when the access key has run
-out (the refresh key rotates with it and both are sealed again), asks the reading service for yesterday's summary
-with the key as a secret, and judges the fairly plus very active minutes against the gift's target. The attestation
-signed for the contract carries the contract's own baseline plus the target when the day was won, and the baseline
-alone when it was not, which the contract refuses as `InsufficientProgress`: a yes on the chain, or a refusal in the
-journal, and never a number. The proof is not stored; the session row keeps the day and the verdict. A key Fitbit no
-longer honours (`KEY_REFUSED`) erases the connection and the screen asks the person to connect again; a reading that
-failed on our side holds the day open as for every daily gift.
+dispatcher (`src/daily-count.ts`) opens the sealed keys, refreshes them through Google when the access key has run
+out (an hour), asks the reading service for yesterday's roll-up with the key as a secret, by `POST` with a body that
+names the civil day and the next, one window, and `google-wearables` (minutes logged by hand are not asked for), and
+adds the `MODERATE` and `VIGOROUS` minutes against the gift's target. The method and the body are part of what the
+attestor signs, and the app checks both. The attestation signed for the contract carries the contract's own
+baseline plus the target when the day was won, and the baseline alone when it was not: a yes on the chain, or a
+refusal in the journal, and never a number. The proof is not stored; the session row keeps the day and the verdict.
 
-**Disconnect and erase.** From the gift's page, by the recipient: the access key is revoked at Fitbit
-(`POST https://api.fitbit.com/oauth2/revoke`, the application's Basic credentials), then the row is deleted whether or
-not Fitbit answered. What remains is on the chain (the days' verdicts and the pseudonym of the account, a hash) and in
-the journal. The gift goes on; each day is counted as not done until the person connects again, which must be the
-same Fitbit account, since the pseudonym is bound.
+**Disconnect and erase.** From the gift's page, by the recipient: the key is revoked at Google
+(`POST https://oauth2.googleapis.com/revoke`, `token` in the body), then the row is deleted whether or not Google
+answered. The gift goes on; each day is counted as not done until the person connects again, with the same account,
+since the pseudonym of its `healthUserId` is bound.
 
-**Fitbit's terms, read 23 Sep 2026** (Platform Terms of Service, effective 6 Jun 2023): User Data displayed or
-distributed to no external source without the User's informed consent (1(f)), never made public (1(f)), removed on
-the User's request (1(i)), reached only through Fitbit's API (1(g)). The consent screen, the verdict-only reading, the
-erase button and the API-only path are those four; the judges' page says so.
-
-**When the line opens.** "Being built" while a piece is missing (D184): the three variables, the service running the
-Fitbit source (step 3), goal 6 signed. The day the three exist, a PR moves `FITBIT_DAILY` from `BUILDING` into the
-register with `live: true`, and the line is open to everybody; the first real connection and reading then count on
-the public page like every other proof. Default applied, to confirm: the founder may still want a week of one real
-person before that PR, which the earlier text of this section asked for.
+**Google's terms, read 23 Sep 2026.** The Google Health API Developer Terms (effective 24 Mar 2026) bind the Google APIs
+Terms of Service, the Google API Services User Data Policy, the OAuth 2.0 Policies and the Google Health API Developer
+and User Data Policy (last updated 24 Mar 2026). That policy asks: use limited to the feature the person asked for; a
+transfer to a third party only to provide it, with the person's consent; a disclosure that accompanies and immediately
+precedes the consent, which only an affirmative action gives; deletion honoured on request, with help that explains
+it; no human reading the data; no use for credit or lending, advertising or data brokers. The consent screen in
+Viky's words before the one button, the yes or no the funder learns, the erase button and the privacy page are those;
+the judges' page says so. The developer terms also ask that data be stored at the granularity it is collected: Viky
+stores none of it.
 
 ## Strava, connected by the person: what the founder sets, and what redeploys (D191)
 
@@ -551,7 +559,7 @@ for every connected source.
 
 | variable | what it is | where it comes from |
 |---|---|---|
-| `STRAVA_CLIENT_ID` | the application's client id, a number | strava.com/settings/api, the application's page |
+| `STRAVA_CLIENT_ID` | the application's Client ID, a number | strava.com/settings/api, the application's page; the "Your Access Token" and "Your Refresh Token" shown on the same page are the owner's own personal keys and are not used |
 | `STRAVA_CLIENT_SECRET` | its client secret | the same page |
 
 `GET /api/connect/strava/status?giftId=…`, signed in as the gift's recipient, answers `configured: true` when the

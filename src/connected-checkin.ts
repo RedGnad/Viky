@@ -6,7 +6,7 @@ import { openSecret, sealSecret, vaultConfigured } from "./connect-vault";
 import { eraseConnection, loadConnection, saveRefreshedTokens, type Connection } from "./connection-store";
 import type { PublicCheckInOutcome, PublicCheckInPurpose } from "./duolingo-public-checkin";
 import { activeMinutesOf, fitbitConfigured, fitbitDateOfUtcDay, fitbitDayMet, FITBIT_PROVIDER_LABEL, FitbitError, refreshFitbitTokens } from "./fitbit";
-import { FITBIT_DAILY_SUMMARY } from "./fitbit-source";
+import { GOOGLE_HEALTH_ACTIVE_MINUTES } from "./fitbit-source";
 import { contractRefusal } from "./gift-api";
 import { ATTESTATION_TTL_SECONDS, FITBIT_CONNECTED_PROVIDER_ID, identityPseudonym, serialiseMessage, signCheckIn, STRAVA_CONNECTED_PROVIDER_ID, type CheckInMessage } from "./gift-attestation";
 import { checkInDayIndex, readGift, utcDayOf, type GiftState } from "./gift-reader";
@@ -59,7 +59,7 @@ const FITBIT_LINE: ConnectedLine = {
   name: "Fitbit",
   providerLabel: FITBIT_PROVIDER_LABEL,
   providerId: FITBIT_CONNECTED_PROVIDER_ID,
-  sourceId: FITBIT_DAILY_SUMMARY.id,
+  sourceId: GOOGLE_HEALTH_ACTIVE_MINUTES.id,
   configured: () => fitbitConfigured(),
   refresh: async (tokens, nowSeconds) => {
     const fresh = await refreshFitbitTokens({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, expiresAt: tokens.expiresAt, userId: tokens.externalId, scope: tokens.scope }, nowSeconds);

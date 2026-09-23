@@ -90,7 +90,11 @@ export function readingOfProof(source: AttestedSource, account: string, proof: Z
   const parameters = parseJson(proof.claimData.parameters, "parameters");
   const url = String(parameters.url ?? "");
   const method = String(parameters.method ?? "GET").toUpperCase();
-  if (url !== source.url(account) || method !== "GET") throw new AttestedReadError("PROOF_MISMATCH", "The proof is not about this page");
+  // A page asked by POST signs its method and its body with it (D197): both must be the ones the source describes.
+  const asked = source as Partial<ConnectedSource>;
+  const expectedMethod = asked.method ?? "GET";
+  if (url !== source.url(account) || method !== expectedMethod) throw new AttestedReadError("PROOF_MISMATCH", "The proof is not about this page");
+  if (asked.body && String(parameters.body ?? "") !== asked.body(account)) throw new AttestedReadError("PROOF_MISMATCH", "The proof asked the page something else");
   if (!sameMatches(parameters.responseMatches, source.matches)) throw new AttestedReadError("PROOF_MISMATCH", "The proof was read with other patterns");
   const context = parseJson(proof.claimData.context, "context");
   const extracted = context.extractedParameters;
@@ -229,7 +233,12 @@ async function localZkFetch(source: AttestedSource, account: string, bearer?: st
   // out of the proof and out of the attestor's sight (D188, rule 5).
   return (await client.zkFetch(
     source.url(account),
-    { method: "GET", headers: headersFor(source), useTee: true } as never,
+    {
+      method: (source as Partial<ConnectedSource>).method ?? "GET",
+      headers: (source as Partial<ConnectedSource>).body ? { ...headersFor(source), "content-type": "application/json" } : headersFor(source),
+      ...((source as Partial<ConnectedSource>).body ? { body: (source as Partial<ConnectedSource>).body!(account) } : {}),
+      useTee: true,
+    } as never,
     { responseMatches: source.matches.map((match) => ({ ...match })), ...(bearer ? { headers: { Authorization: `Bearer ${bearer}` } } : {}) } as never,
   )) as unknown as ZkFetchProof;
 }
