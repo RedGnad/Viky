@@ -969,6 +969,20 @@ cast wallet sign --no-hash 0x8b90a99b778fe7b46119e2eaa5443d2300879f614fe22d83edf
 SAFE_ADDRESS=… SIGNATURES="0xfirst,0xsecond" SEND=1 EXECUTOR_PRIVATE_KEY=… pnpm safe:session
 ```
 
+**Sent on 23 Sep 2026**, signatures given by the founder, executed by the relayer `0x150d…CFE4`, which only paid the
+gas:
+
+| | |
+|---|---|
+| transaction | `0xe567f1783a67c98b458bd6e9533ce6ee5d457bd2fa816165cdb26cfef9e0acbc`, block 107,355,289, success, 854,232 gas |
+| the hash signed | `0x8b90a99b…2d99`, read again from the chain at nonce 7 just before, unchanged |
+| the Safe | nonce 7 to 8; its two events, `SafeMultiSigTransaction` and `ExecutionSuccess` |
+| read back after | goals 15 to 23 on `MilestoneGift` all `registered` (`CHECK_ONLY=1 pnpm register:milestone-goals`), each with the provider id of the calldata; `goalProviders(6)` = `0x1945fcd8…a701` and `goalProviders(4)` = `0x891688d7…b790` on `GiftEscrow` |
+| relayer | 13.3275 MON after, above its reserve of 12 |
+
+The relayer's key is not in `.env.ops.local` (the variable came back empty from Vercel); it was read from `.env.local`,
+whose key derives to the same relayer address.
+
 The first pass prints the calls and the hash again from the chain as it is then: if the Safe's nonce has moved, or a
 goal was registered elsewhere, the hash changes and the one above is not the one to sign. The script refuses a
 library whose code is not the canonical code, a guard on the Safe, and a goal registered to something else; the last
@@ -1027,11 +1041,11 @@ as the owner, after the handover of `GiftEscrow`.
 | 6 to 9 | Lichess, bullet, blitz, rapid, classical | climb | registered (read back on 23 Sep 2026), without effect: no condition reads them, Lichess was withdrawn as a twin of Chess.com (D170) |
 | 10 to 13 | Coursera, Credly, Chess.com puzzles, ETS | see their rows | registered through the Safe, 20 and 23 Sep 2026 (the two sections above) |
 | 14 | a university's student portal, enrolled and shown (D165) | having it or not | registered 23 Sep 2026 through the Safe (the row above); the condition stays "Being built" until a portal has been proved with a student present |
-| 15 | a university's student portal, the year passed and shown (D174) | having it or not | to register through the Safe, nonce 7 (the section "Goals 15 and 16" above); "Being built" until a results page has been proved with a student present |
-| 16 | a university's student portal, a grade reached and shown, in hundredths (D174) | having it or not | to register in the same session, nonce 8; "Being built" likewise |
-| 17 to 21 | the examination results shown from the person's own account: Cambridge English, IELTS, the baccalauréat in Morocco, Cameroon and France (D176) | having it or not | to register in one Safe session at the end of the night, nonces 9 to 13 (the section "The night's goals" above); each line waits for a provider of ours registered from a real candidate's session |
-| 22 | a Udemy course finished, shown from the person's own account (D178) | having it or not | the same session, nonce 14; waits for a provider of ours registered from a real Udemy account |
-| 23 | an average at school, shown from the pupil's own EcoleDirecte account, in hundredths (D179) | having it or not | the same session, nonce 15; waits for a provider of ours registered from a real EcoleDirecte account |
+| 15 | a university's student portal, the year passed and shown (D174) | having it or not | registered 23 Sep 2026 in the one Safe session (tx `0xe567f178…acbc`, the section "The Safe session of every remaining goal" above); "Being built" until a results page has been proved with a student present |
+| 16 | a university's student portal, a grade reached and shown, in hundredths (D174) | having it or not | registered 23 Sep 2026 in the one Safe session (tx `0xe567f178…acbc`, the section "The Safe session of every remaining goal" above); "Being built" likewise |
+| 17 to 21 | the examination results shown from the person's own account: Cambridge English, IELTS, the baccalauréat in Morocco, Cameroon and France (D176) | having it or not | registered 23 Sep 2026 in the one Safe session (tx `0xe567f178…acbc`, the section "The Safe session of every remaining goal" above); each line waits for a provider of ours registered from a real candidate's session |
+| 22 | a Udemy course finished, shown from the person's own account (D178) | having it or not | registered 23 Sep 2026 in the one Safe session (tx `0xe567f178…acbc`, the section "The Safe session of every remaining goal" above); waits for a provider of ours registered from a real Udemy account |
+| 23 | an average at school, shown from the pupil's own EcoleDirecte account, in hundredths (D179) | having it or not | registered 23 Sep 2026 in the one Safe session (tx `0xe567f178…acbc`, the section "The Safe session of every remaining goal" above); waits for a provider of ours registered from a real EcoleDirecte account |
 
 The daily contract has its own goals, under `GiftEscrow`'s two-argument `registerGoal(goalType, providerId)`:
 
@@ -1040,8 +1054,8 @@ The daily contract has its own goals, under `GiftEscrow`'s two-argument `registe
 | 1 | Duolingo, the experience total | registered at deployment |
 | 5 | Duolingo, one course's experience | registered 18 Sep 2026 (the section "Before the course reading of U1") |
 | 2 | GitHub, the contributions GitHub counts (D166) | registered 23 Sep 2026 through the Safe (the section "Goal 2 on the daily contract" below), without effect: the condition was withdrawn (D170) and nothing reads the goal |
-| 6 | Fitbit, connected by the person, the day's verdict (D188) | to register in the night's Safe session, nonce 16 (the section "Fitbit, connected by the person" above) |
-| 4 | Strava, connected by the person, the day's verdict (D191) | to register in the same Safe session, nonce 17 (the section "Strava, connected by the person" above) |
+| 6 | Fitbit, connected by the person, the day's verdict (D188) | registered 23 Sep 2026 in the one Safe session (tx `0xe567f178…acbc`, the section "The Safe session of every remaining goal" above) |
+| 4 | Strava, connected by the person, the day's verdict (D191) | registered 23 Sep 2026 in the one Safe session (tx `0xe567f178…acbc`, the section "The Safe session of every remaining goal" above) |
 
 **The session, in order.** The owner is a wallet the founder holds, so the session is signed from that wallet and no
 key is ever read from a file. Each step is read back before the next.
