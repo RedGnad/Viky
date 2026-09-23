@@ -137,25 +137,14 @@ test("it is reachable without an account and from the judges page, and it says t
 test("every condition says its nature, and every one of the pilot is read for the person", () => {
   for (const condition of CONDITIONS) assert.ok(condition.nature === "read" || condition.nature === "shown", `${condition.id} has no nature`);
   assert.deepEqual(CONDITIONS.filter((condition) => condition.nature === "shown").map((condition) => condition.id), [], "no shown condition is in the register until a real proof has run end to end (D109, D164)");
-  // What is being built lives beside the register, resolvable by id and offered to an operator alone (D164, D166).
-  assert.deepEqual(BUILDING.map((condition) => condition.id), ["toefl-mybest-shown", "university-enrollment-shown", "github-daily", "lichess-rating"]);
-  for (const condition of BUILDING) {
-    const found = conditionById(condition.id);
-    assert.equal(found, condition, `${condition.id} resolves by id`);
-    assert.equal(condition.live, false, `${condition.id} is not open until a real gift has run end to end, then the founder's word`);
-    assert.ok(condition.beforeItOpens, `${condition.id} says what has to happen first`);
-    assert.ok(!CONDITIONS.includes(condition), `${condition.id} is not on the public page as a condition`);
+  // The one being built lives beside the register, resolvable by id and offered to an operator alone (D164).
+  assert.deepEqual(BUILDING.map((condition) => condition.id), ["toefl-mybest-shown", "university-enrollment-shown"]);
+  for (const id of BUILDING.map((condition) => condition.id)) {
+    const shown = conditionById(id);
+    assert.equal(shown?.nature, "shown", `${id} is shown by them`);
+    assert.equal(shown?.live, false, `${id} is not open until a real proof has run end to end, then the founder's word`);
+    assert.equal(shown?.state, "no-public-page", `${id}'s state is the one whose sentence is exactly its own`);
+    assert.ok(shown?.beforeItOpens, `${id} says what has to happen first`);
+    assert.ok(!CONDITIONS.includes(shown as never), `${id} is not on the public page as a condition: the frontier's line says it is being built`);
   }
-  // The two shown by them carry the one state whose sentence is exactly their own: the frontier's line says they are being built.
-  for (const condition of BUILDING.filter((condition) => condition.nature === "shown")) assert.equal(condition.state, "no-public-page", condition.id);
-  assert.deepEqual(BUILDING.filter((condition) => condition.nature === "shown").map((condition) => condition.id), ["toefl-mybest-shown", "university-enrollment-shown"]);
-  // The one read for them is a daily condition on the daily contract, under its own goal, read on Viky's own word.
-  const github = BUILDING.find((condition) => condition.id === "github-daily");
-  assert.equal(github?.nature, "read");
-  assert.equal(github?.kind, "daily");
-  assert.equal(github?.goalType, 2);
-  // The Lichess line is a milestone whose keeper's reading is not built: the create route refuses it by name (D168).
-  const lichess = BUILDING.find((condition) => condition.id === "lichess-rating");
-  assert.equal(lichess?.kind, "milestone");
-  assert.equal(lichess?.nature, "read");
 });

@@ -5,7 +5,6 @@ import {
   CHESS_RATING,
   CHESS_TACTICS_RECORD,
   conditionById,
-  LICHESS_RATING,
   CREDLY_BADGE,
   COURSERA_CERTIFICATE as COURSERA_CONDITION,
   DUOLINGO_ENGLISH_TEST,
@@ -27,7 +26,6 @@ import {
   DET_SOURCE,
 } from "./duolingo-english-test";
 import { DET_GOAL_TYPE } from "./milestone-goals";
-import { isValidLichessUsername, LICHESS_CADENCES, lichessGoalType, lichessRatingHasSettled, type LichessCadence } from "./lichess";
 import { isValidToeflScore, TOEFL_DURATION_DAYS, TOEFL_GOAL_TYPE, TOEFL_MAX_SCORE, TOEFL_MIN_SCORE, TOEFL_SHOWN_SUBJECT } from "./toefl-shown";
 import { CERTIFICATE as CERTIFICATE_SHAPE, CHESS_RATING as CHESS_RATING_SHAPE, type MilestoneShape } from "./milestone-terms";
 
@@ -39,7 +37,7 @@ import { CERTIFICATE as CERTIFICATE_SHAPE, CHESS_RATING as CHESS_RATING_SHAPE, t
  */
 
 export type MilestoneCadence = Readonly<{
-  id: ChessClimb | LichessCadence;
+  id: ChessClimb;
   /** The goal type on the milestone contract. */
   goalType: number;
   label: string;
@@ -52,11 +50,6 @@ export type MilestoneCondition = Readonly<{
   cadences: readonly MilestoneCadence[];
   /** Viky's route that reads where a person stands today, plainly, before any money moves. */
   standingPath: string;
-  /**
-   * Why no gift can be made on it yet, when the keeper's reading is not built: the create route refuses with this
-   * sentence, so the line can be seen behind the door and nothing can be made on it (D168).
-   */
-  unread?: string;
   validName: (value: string) => boolean;
   /**
    * Whether a reading has settled enough for the climb the funder signs to measure anything, from what the source gives
@@ -207,64 +200,7 @@ export const CHESS_TACTICS_MILESTONE: MilestoneCondition = {
   },
 };
 
-/**
- * Lichess's four cadences, by Lichess's own definition of each (their FAQ, read 23 Sep 2026: a game's estimated length
- * is the clock plus forty times the increment). The goal types are 6 to 9, registered on the milestone contract.
- */
-const LICHESS_CADENCE_LINES: readonly MilestoneCadence[] = [
-  { id: "bullet", goalType: lichessGoalType("bullet"), label: "Bullet", help: "Games of under three minutes a player." },
-  { id: "blitz", goalType: lichessGoalType("blitz"), label: "Blitz", help: "Games of three to eight minutes a player." },
-  { id: "rapid", goalType: lichessGoalType("rapid"), label: "Rapid", help: "Games of eight to twenty-five minutes a player." },
-  { id: "classical", goalType: lichessGoalType("classical"), label: "Classical", help: "Games of twenty-five minutes a player and more." },
-];
-if (LICHESS_CADENCE_LINES.map((cadence) => cadence.id).join() !== LICHESS_CADENCES.join()) throw new Error("the Lichess cadences disagree");
-
-/**
- * The twin of Chess.com (D168). The shape is Chess.com's: both houses rate with Glicko-2, and the margins in
- * src/milestone-terms.ts were measured on Chess.com and not on Lichess, which is one of the things a first real
- * gift is for. Whether a rating has settled is Lichess's own verdict, the question mark (deviation above 110).
- */
-export const LICHESS_MILESTONE: MilestoneCondition = {
-  condition: LICHESS_RATING,
-  shape: CHESS_RATING_SHAPE,
-  cadences: LICHESS_CADENCE_LINES,
-  standingPath: "/api/lichess/standing",
-  unread: "Viky cannot read Lichess for a gift yet, so no gift can be made on it. Nothing was taken.",
-  validName: isValidLichessUsername,
-  settled: lichessRatingHasSettled,
-  duration: { min: 1, max: 365, suggested: 30 },
-  words: {
-    cadenceQuestion: "Which rating?",
-    targetLabel: "The rating they reach",
-    today: (standing, cadence) => `Today they are at ${standing} in ${cadence.toLowerCase()}.`,
-    todayRow: (standing, cadence) => `${standing} in ${cadence.toLowerCase()}`,
-    best: (best) => `Their best ever: ${best}.`,
-    read: "Read their rating",
-    reading: "Reading their rating",
-    refusals: {
-      nameShape: "A Lichess name has two to twenty letters, figures, hyphens or underscores, like thibault.",
-      notFound: "No Lichess player goes by that name. Check the spelling.",
-      noRating: (cadence) => `They have no ${cadence.toLowerCase()} rating yet. Choose another rating, or ask them to play a rated game first.`,
-      unavailable: "Lichess is not answering. Try again in a moment.",
-      targetShape: "Write the rating as a number, like 1500.",
-      noCadence: "Choose which rating.",
-      settling: "Lichess still marks this rating provisional: they need a few more games first.",
-      closed: "Lichess has closed this account, or marked it for a violation of its terms, so nothing on it can be earned.",
-    },
-    goal: (target, cadence) => `${target} in ${cadence.toLowerCase()}`,
-    durationLabel: "Days they have to reach it",
-    durationHelp: "Counted from the day they connect Lichess, so opening the link late costs them nothing.",
-    durationShape: (min, max) => `Between ${min} and ${max} days.`,
-    durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from the day they connect Lichess`,
-    whenReached: "When they reach it, all of this becomes theirs",
-    ifNot: "If they do not reach it in time, all of it comes back to you. Nothing is kept by anybody else.",
-    // Lichess: the profile page, then "Edit profile", where the biography is the person's own to write.
-    codeSteps: "On Lichess, open your profile, then Edit profile, and add this code to your biography, and save:",
-    accountClosed: "Lichess has closed this account, or marked it for a violation of its terms, so this gift can no longer be earned.",
-  },
-};
-
-const MILESTONES: readonly MilestoneCondition[] = [CHESS_MILESTONE, CHESS_TACTICS_MILESTONE, LICHESS_MILESTONE];
+const MILESTONES: readonly MilestoneCondition[] = [CHESS_MILESTONE, CHESS_TACTICS_MILESTONE];
 
 /** The milestone detail of a condition, or nothing for a daily one. */
 export function milestoneOf(condition: Condition | undefined): MilestoneCondition | undefined {

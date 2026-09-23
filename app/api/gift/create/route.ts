@@ -12,8 +12,7 @@ import { fundingNonce, type GiftParams } from "@/src/gift-attestation";
 import { giftSalt } from "@/src/gift-terms";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { makeGift } from "@/src/gift-creation";
-import { GOAL_TYPE_DUOLINGO_COURSE_XP, GOAL_TYPE_GITHUB_CONTRIBUTIONS } from "@/src/gift-terms";
-import { dayStartIso, GithubReadError, readGithub } from "@/src/github-contributions";
+import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { liveCreationDeps } from "@/src/gift-creation-live";
 import { MAX_GIFT_UNITS, MIN_GIFT_UNITS } from "@/src/money";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
@@ -68,8 +67,8 @@ export async function POST(request: Request) {
     const rate = checkRateLimit("relay", request, auth.account);
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
     const body = await readJsonBody<CreateBody>(request, 8 * 1_024);
-    // The account on the source, whatever the source: the field is named for the first one (a data contract with the
-    // sheet), and it is checked below by the rule of the condition the gift is made on.
+    // The account on the source: the field is named for the first source (a data contract with the sheet), and it is
+    // checked below by the rule of the condition the gift is made on.
     const duolingoUsername = String(body.duolingoUsername ?? "").trim() || undefined;
 
     const recipientName = checkedName(body.recipientName, "their first name");
@@ -80,9 +79,9 @@ export async function POST(request: Request) {
     const dailyTarget = Number(body.dailyTarget);
     const durationDays = Number(body.durationDays);
     if (!Number.isInteger(goalType) || goalType < 1 || goalType > 255) throw new GiftApiError("GOAL_NOT_OFFERED", "Choose a goal from the menu");
-    // The condition that goal stands for, in the register or behind the door (D109, D166): a gift is made on nothing
-    // else, a condition that is not live is made only by an account that runs Viky, and the account name is checked by
-    // that condition's own rule.
+    // The condition that goal stands for, in the register or behind the door (D109): a gift is made on nothing else, a
+    // condition that is not live is made only by an account that runs Viky, and the account name is checked by that
+    // condition's own rule. Before 23 Sep 2026 any goal type from 1 to 255 was accepted here.
     const condition = conditionOfGoal(goalType);
     if (!condition || condition.kind !== "daily") throw new GiftApiError("GOAL_NOT_OFFERED", "Choose a goal from the menu");
     if (!condition.live && !isOperator(auth.account)) throw new GiftApiError("GOAL_NOT_OFFERED", "Choose a goal from the menu", 404);
@@ -140,18 +139,7 @@ export async function POST(request: Request) {
 
     // The course is read back from the profile before the money moves: a course nobody is learning counts no day.
     let courseTitle: string | undefined;
-    if (duolingoUsername && goalType === GOAL_TYPE_GITHUB_CONTRIBUTIONS) {
-      // A GitHub account is read from GitHub before the money moves (D166): a name nobody has counts no day.
-      try {
-        const now = Date.now();
-        await readGithub(duolingoUsername, { from: dayStartIso(now), to: new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
-      } catch (error) {
-        if (error instanceof GithubReadError && error.code === "NO_SUCH_USER") {
-          throw new GiftApiError("NO_SUCH_PROFILE", "No GitHub account goes by that name. Nothing was taken.", 400);
-        }
-        throw new GiftApiError("SOURCE_UNAVAILABLE", "GitHub is not answering, so the gift was not made and nothing was taken. Try again in a moment.", 503);
-      }
-    } else if (duolingoUsername) {
+    if (duolingoUsername) {
       let profile: Awaited<ReturnType<typeof resolvePublicDuolingoProfile>>;
       try {
         profile = await resolvePublicDuolingoProfile(duolingoUsername);

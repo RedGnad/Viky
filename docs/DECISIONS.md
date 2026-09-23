@@ -4593,3 +4593,25 @@ The founder, 23 Sep 2026: the Lichess register entry and the chooser line, goals
   request at a time (read 18 Sep 2026, `src/lichess.ts`). Nothing forbids a program reading a public profile.
 - **The state.** As for the GitHub line (D166): none of the four states says "wired and not run"; `being-tested`
   is carried and printed nowhere for it. The founder's to name.
+
+## D170, 23 Sep 2026: GitHub and Lichess are withdrawn; the goals stay on the chain without effect
+
+The founder, 23 Sep 2026: "GitHub et Lichess ne sont pas voulus. Lichess est un doublon de Chess.com, un commit
+GitHub vide passe. Retire les deux du registre et de l'aperçu opérateur ; pas de jeton, pas de redéploiement du
+worker pour eux ; les objectifs restent sur la chaîne sans effet."
+
+- **Why.** A Lichess rating is the Chess.com rating again, on another house: one line already answers "reach a
+  chess rating". A GitHub contribution proves that the account did something GitHub counts, and an empty commit is
+  something GitHub counts, so the condition proves nothing about work. Neither is worth a token, a redeployment of
+  the reading service, or a line on the chooser.
+- **What goes.** The two conditions and their families' lines (D166, D168), the two readings and their routes, the
+  four answers, the judges' line on GitHub's terms, the list of readings made on Viky's own word (nothing is read
+  that way any more), and the plan to carry the GitHub reading through the reading service with a secret. D166 and
+  D168 stay as the record of what was built and why.
+- **What stays.** Goal 2 on the daily contract and goals 6 to 9 on the milestone contract, registered through the
+  Safe on 23 Sep 2026: a `registerGoal` is never undone, and a goal nothing names settles nothing. The daily create
+  route keeps the gate that came with the GitHub line: a goal type that stands for no condition is refused, and a
+  condition that is not live is made by an account that runs Viky and by nobody else, which the daily route did not
+  check before. `conditionOfGoal(5)` keeps answering the lesson.
+- **What is not decided by this.** Decision D169 holds: "Being built" for everything that has not run on a real
+  account, and no fifth state.

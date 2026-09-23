@@ -161,15 +161,6 @@ export default function JudgesPage() {
             again with a student present.
           </li>
           <li>
-            <strong>GitHub&apos;s terms.</strong> The contribution calendar is read from GitHub&apos;s API with a token of
-            the project&apos;s, one question about one account (D166). Read on 23 Sep 2026: the Terms of Service, section
-            H, allow the API within its rate limits; the Acceptable Use Policies, &quot;Information Usage
-            Restrictions&quot;, allow scraping the site to researchers and archivists only and require that personal
-            information gathered through the API be used for what the person authorised, which here is the gift they
-            connected their account to. So the profile page is never scraped. No attestor stands behind this reading
-            yet: it is signed by the evidence signer on Viky&apos;s own word, and the register says so.
-          </li>
-          <li>
             <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:
             Coursera verifies identity once per account, and says some programmes require it while others only check a
             name. That condition is not open yet, and this is what it will prove when it is.
