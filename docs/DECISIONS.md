@@ -5263,3 +5263,20 @@ Measured on the board of moments, frame by frame from the first one (`review-cap
 No hydration error on any of them, nor on Home and the catalogue (`review-captures/hydration-check.ts`). What was
 seen before this fix lived in the browser's storage and is not read any more: the first visit after it is a first
 visit, and nothing replays.
+
+## D190, 23 Sep 2026: what the proof checks really are, in production and behind the switch
+
+The founder's instruction: README and CLAUDE.md said every Reclaim proof is verified with its TEE attestation
+required. That holds for one of the two kinds of proof only. They now say what is true in production today and what
+is true behind `PROOF_VERIFIER=local`, which production does not set.
+
+- **A proof shown from a Reclaim session** (`/api/proof/verify`): js-sdk `verifyProof` with the application secret,
+  the TEE attestation required, the AI fallback refused. True in production.
+- **A reading Viky makes itself** (zkFetch through Reclaim's TEE client: Duolingo's daily lesson, Chess.com, the
+  certificates, a connected source's reading): verified by the attestor's signature against the list Reclaim serves at
+  that moment, then Viky's pin. The proof carries no enclave attestation (measured 11 Sep 2026), so the TEE is not
+  verified on this path in production.
+- **Behind the switch:** offline verification by Viky alone, every signer pinned, and each witness's enclave
+  attestation verified and pinned by image digest when `RECLAIM_ATTESTOR_IMAGE_DIGESTS` is set.
+
+No code changes: the documents were wrong, not the checks.

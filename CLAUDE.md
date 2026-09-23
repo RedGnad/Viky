@@ -76,8 +76,10 @@ A delivery is: the link, one screenshot per acceptance item, and what is not ver
 - Monad specifics: gas is charged on the declared limit (explicit limits, 7.5 % margin), keep the
   relayer above 10 MON (reserve), wait k = 3 blocks (about 1.2 s) before showing "done",
   `eth_getLogs` is capped at 100 blocks on the public RPC (index events with Envio instead).
-- Verification: every Reclaim proof is verified server side with the TEE attestation required and the AI
-  fallback refused, then attested to the contract by the evidence signer (EIP-712). Session rows are held
+- Verification: a proof the person shows (a Reclaim session) is verified server side with its TEE attestation
+  required and the AI fallback refused. A reading Viky makes itself (zkFetch) is verified by the attestor's signature
+  (Reclaim's list, then our pin); its enclave is verified only behind `PROOF_VERIFIER=local` with pinned image digests,
+  which production does not set. Either is then attested to the contract by the evidence signer (EIP-712). Session rows are held
   server side; the browser never chooses the wallet, the phase or the profile.
 - Every refusal is a typed error and is demonstrable (see SPEC section 10).
 - Commits: short one-line messages, no Co-Authored-By, no tool attribution.
