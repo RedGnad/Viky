@@ -392,6 +392,39 @@ nobody signed in to, and the table is empty until the first one. Most of the thi
    on a real portal with real money, on the founder's word, the same rule as TOEFL (D164). Then `live: true` and the
    register, in a PR of its own. A second university needs steps 1 to 3 and no PR at all.
 
+## Goal 2 on the daily contract, a GitHub contribution each day, to be signed by the owner (D166)
+
+The GitHub condition is a daily one, on `GiftEscrow` (`0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233`), whose goals take
+two arguments and no shape. Number 2 has been reserved for it in the code since the port (`GOAL_TYPE_GITHUB_CONTRIBUTIONS`)
+and read back empty from the chain on 23 Sep 2026 (`goalProviders(2) = 0x00…00`; the contract's owner is the Safe, its
+evidence signer `0x85702Eaa…`). Provider id `viky:provider:github-contributions:v1` =
+`0xda1048bc067600c20909ee6e262729bc5087ae37f5478c3beb4d6f21d9922050`. The call, to go through the Safe like the others:
+
+| | |
+|---|---|
+| to | `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233` |
+| data | `0x68fa3be20000000000000000000000000000000000000000000000000000000000000002da1048bc067600c20909ee6e262729bc5087ae37f5478c3beb4d6f21d9922050` |
+| gas | 75,000 (goal 5 took 65,238 on the same function, before the Monad margin) |
+| what it is | `registerGoal(2, 0xda1048bc…2050)` |
+| Safe nonce | the Safe's at the time: 5 after goal 13, 6 if goal 14 goes first; `pnpm safe:action` prints it |
+
+The session is the one of goal 14 above, with this `TO` and this `DATA`. Read back afterwards with the script that read
+it empty: `npx tsx review-captures/read-daily-goals.ts` prints `goal2` (that file is local and not committed; any
+`goalProviders(2)` read does the same).
+
+### The GitHub token, and how to know it is there
+
+The reading asks GitHub's GraphQL API, which answers only with a token (D166). `GITHUB_API_TOKEN` on Vercel, production,
+sensitive: a fine-grained personal access token from a GitHub account of the project's, with no repository access and
+no account permission at all (the calendar of a public profile needs none), expiring, and rotated by replacing the
+variable. Never the founder's own `gh` token. As for the Reclaim pair, a sensitive value is never read back by
+`vercel env pull`: `GET /api/conditions`, signed in as an operator, answers `github.configured: true` when it is set
+where the route runs, and `false` otherwise. A boolean, never a length nor a prefix. Until it is set, every reading
+refuses `NOT_CONFIGURED` ("Counting is not switched on yet") and the funder's name check answers 503.
+
+What the token is for and nothing else: one query per reading, about one login and one span, the account's numeric id,
+name and bio, and its contribution calendar. Five thousand points an hour, one per reading.
+
 ## The reading service is a second deployment, and it is not automatic
 
 `src/attested-sources.ts` and `src/chess-com.ts` run in two places: on Vercel, where the proof is judged, and in the
@@ -660,6 +693,14 @@ as the owner, after the handover of `GiftEscrow`.
 | 6 to 9 | Lichess, bullet, blitz, rapid, classical | climb | to register; nothing is offered on them yet, and the same rule applies the day they are |
 | 10 to 13 | Coursera, Credly, Chess.com puzzles, ETS | see their rows | registered through the Safe, 20 and 23 Sep 2026 (the two sections above) |
 | 14 | a university's student portal, enrolled and shown (D165) | having it or not | to register; the call is under "Goal 14" above, and the condition stays "Being built" until a portal has been proved with a student present |
+
+The daily contract has its own goals, under `GiftEscrow`'s two-argument `registerGoal(goalType, providerId)`:
+
+| goal | source | state |
+|---|---|---|
+| 1 | Duolingo, the experience total | registered at deployment |
+| 5 | Duolingo, one course's experience | registered 18 Sep 2026 (the section "Before the course reading of U1") |
+| 2 | GitHub, the contributions GitHub counts (D166) | to register; the call is under "Goal 2 on the daily contract" below |
 
 **The session, in order.** The owner is a wallet the founder holds, so the session is signed from that wallet and no
 key is ever read from a file. Each step is read back before the next.

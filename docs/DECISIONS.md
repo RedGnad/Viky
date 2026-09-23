@@ -4509,3 +4509,47 @@ for a goal per portal appears, say it in the PR before building.
   registered on any portal, no row exists, no proof has run. The thirty minutes with a student are written in
   OPERATIONS, and the condition stays "Being built" until goal 14 is registered and one proof has run end to end on a
   real portal with real money, on the founder's word (the rule of D164).
+
+## D166, 23 Sep 2026: a GitHub contribution each day, read by Viky from GitHub's API
+
+The founder, 23 Sep 2026: the GitHub daily condition, "a contribution each day", in a PR of its own, the API's terms
+read first.
+
+- **What was read, and what it allows.** GitHub's Terms of Service, section H ("API Terms"): the API may be used
+  within its rate limits, tokens may not be shared to exceed them, and data may not be taken for spamming or for
+  selling personal information. The Acceptable Use Policies, "Information Usage Restrictions": scraping the site is
+  allowed to researchers (non-personal information, open-access publications) and to archivists, and to nobody else;
+  personal information gathered through the API may be used only for what the person authorised, and must be secured.
+  The rate limits: sixty requests an hour for an unauthenticated address, five thousand for a token. So Viky reads
+  the API and never the profile page, with a token of the project's, one question about one account that a person
+  connected to a gift. All read on docs.github.com on 23 Sep 2026.
+- **What is counted, by whose rule.** The contribution calendar GitHub keeps on the profile: a commit on the default
+  branch or `gh-pages` of a repository that is not a fork, with an email the account owns; an issue, a pull request
+  or a discussion opened; a review. Private work only if the person chose to show it, as a number. A commit is dated
+  by the time zone in its own timestamp, an issue or a pull request opened on the web by the browser's ("Timezone-aware
+  contribution graphs", GitHub's blog). Measured the same day: the calendar's days do not move with the time zone the
+  page is asked in, nor with the offset the API is asked with. The condition therefore counts what GitHub counts, on
+  the day GitHub says, and the contract credits days from the total since the first moment of the day the account
+  was connected, exactly as it does from a Duolingo experience total: a total that can only grow, one contribution a
+  day by default, the catch-up window as for every daily gift.
+- **The condition.** `github-daily`, kind daily, nature read, on the daily contract under goal 2, the number the port
+  reserved for it (`GOAL_TYPE_GITHUB_CONTRIBUTIONS`) and the chain read back empty on 23 Sep 2026. A new family, "Keep
+  coding". The funder may name the account (checked by GitHub's own rule for a login, and read from GitHub before the
+  money moves), or the person names their own and proves it with the code in the profile's name or bio; the identity
+  bound is GitHub's numeric id, which survives a change of login. In `BUILDING`, offered to an operator alone,
+  `live: false`; the daily create route now refuses a goal that stands for no condition, and a condition that is not
+  live to anybody but an operator, which it did not before.
+- **Not attested, and said so.** The reading service reads a public page by GET with no secret; the calendar is only
+  read with a token, by POST. So this reading is Viky's own, signed by the evidence signer on Viky's word, with a
+  nullifier of Viky's making rather than an attestor's identifier. The register's help sentence says "by Viky
+  itself", the judges page says no attestor stands behind it, and the four answers say the same. The reading is
+  listed in `src/plain-readings.ts`, the list of what Viky reads on its own word, and not in the attested source
+  list: that list is fingerprinted with the reading service, and a change to it without redeploying the service stops
+  every attested reading in production (the incident of 18 Sep 2026), which nothing tonight touches. The day the
+  service takes a secret header, the reading moves there under the same goal.
+- **The state.** The four states are the founder's, and none of them says "wired and not run on a real account yet".
+  The condition carries `being-tested`, the closest, and it is printed for no condition outside the register. Whether
+  a fifth state is named is the founder's decision, flagged in the PR.
+- **What waits.** Goal 2 to register through the Safe (the call is in OPERATIONS), `GITHUB_API_TOKEN` on Vercel
+  (sensitive, read at execution as `github.configured`), and one real gift run end to end. Until then the condition
+  refuses `NOT_CONFIGURED` and stays behind the door.

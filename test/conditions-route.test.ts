@@ -46,7 +46,7 @@ test("the door for what is wired and not live yet stands, and is empty while not
   const answer = await answerFor(await cookieFor(OPERATOR));
   // Chess.com left this door on 19 Sep 2026 and the English test the same day, when goal 5 was registered (D109).
   // Nothing is behind it today: Coursera has no goal on the contract, so no gift could be made on it here either.
-  assert.deepEqual(answer.preview, ["toefl-mybest-shown", "university-enrollment-shown"], "what is wired, creatable by an operator and closed today: the TOEFL score shown (D164) and enrolment shown (D165)");
+  assert.deepEqual(answer.preview, ["toefl-mybest-shown", "university-enrollment-shown", "github-daily"], "what is wired, creatable by an operator and closed today: the TOEFL score shown (D164), enrolment shown (D165) and the GitHub contribution (D166)");
   assert.ok(answer.ids.includes("duolingo-daily"), "and the live ones are there for everybody");
   assert.ok(answer.ids.includes(CHESS_MILESTONE.condition.id));
   assert.ok(answer.ids.includes(DET_MILESTONE.condition.id), "the supervised result is live since its goal was registered");

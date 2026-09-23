@@ -84,6 +84,15 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     sourcePolicing: "Not read: what ETS does about a score it cancels, and whether a cancelled score leaves the account page, are ETS's rules and were not read for this line. The only thing Viky reads is what the page shows on the day it is shown.",
   },
   {
+    conditionId: "github-daily",
+    supervised: false,
+    inShort: "What GitHub counts on their public profile, read each morning by Viky itself. Proves the account, not who typed.",
+    data: "The contribution calendar GitHub keeps on the person's profile, asked of GitHub's own API with Viky's token, from the day the account was connected: the total, and each day's count. What counts is GitHub's rule (a commit on a default branch of a repository that is not a fork, an issue, a pull request, a review), on the day GitHub counts it. No attestor stands behind this reading yet: the evidence signer signs Viky's own read, and the reading service will take it over the day it can carry a secret.",
+    account: "The funder may name the account, and then only that account can earn the gift. When the person names their own, a short code shown on their gift page goes into the profile's name or bio, and the first reading finds it there. The identity bound is GitHub's numeric id of the account, which survives a change of name.",
+    whoActed: "Unknown. A commit is a commit, whoever typed it, and a bot with the account's key counts as the account.",
+    sourcePolicing: "GitHub decides what a contribution is and dates it by its own rule (a commit by the time zone in its timestamp, an issue or a pull request opened on the web by the browser's). The API is read within GitHub's Terms of Service (section H) and Acceptable Use Policies (information usage), read on 23 Sep 2026; the profile page is never scraped.",
+  },
+  {
     conditionId: "university-enrollment-shown",
     supervised: false,
     inShort: "Shown from their own student portal, the page that says enrolled. Proves the account, not who sits in class.",

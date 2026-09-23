@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { globSync, readFileSync } from "node:fs";
 import { attestedSourceIds } from "../src/attested-sources";
+import { plainReadingIds } from "../src/plain-readings";
 import { shownConditionById } from "../src/shown-conditions";
 import { CONDITIONS, conditionOfGoal, DUOLINGO_DAILY, liveConditions } from "../src/conditions";
 import { GOAL_TYPE_DUOLINGO_XP } from "../src/gift-terms";
@@ -33,7 +34,7 @@ test("every condition names a reading that exists, and a milestone has no goal t
   for (const condition of CONDITIONS) {
     // A read condition names an attested source; a shown one names its entry in the shown register (D162).
     if (condition.nature === "shown") assert.equal(shownConditionById(condition.reading)?.condition.conditionId, condition.id, `${condition.id} is shown and names no shown entry`);
-    else assert.ok(readings.includes(condition.reading), `${condition.id} reads ${condition.reading}, which no attested source defines`);
+    else assert.ok(readings.includes(condition.reading) || plainReadingIds().includes(condition.reading), `${condition.id} reads ${condition.reading}, which no source defines`);
     if (condition.kind === "milestone") assert.equal(condition.goalType, null, `${condition.id} is a milestone`);
     else assert.ok(typeof condition.goalType === "number", `${condition.id} needs the daily contract's goal type`);
     assert.ok(condition.name.length > 0 && condition.help.length > 0 && condition.source.length > 0);
