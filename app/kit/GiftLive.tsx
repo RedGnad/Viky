@@ -30,6 +30,7 @@ export function GiftLive({
   nature,
   shape,
   live,
+  figureNode,
   closed,
   action,
   agreed,
@@ -47,6 +48,8 @@ export function GiftLive({
   /** The gift's own drawing, alive: the row of days, the climb, or the stamp. */
   shape: ReactNode;
   live: Live;
+  /** The figure as it arrives: counting from what this device last saw of it, or the value itself. */
+  figureNode?: ReactNode;
   /** What the source itself did to the account, when it closed it: the state, said under the state. */
   closed?: string | null;
   /** The one action of this moment, or nothing. Never two of the same weight. */
@@ -76,7 +79,7 @@ export function GiftLive({
         {live.figure ? (
           <div className="gift-figures">
             <div>
-              <p className={CARD_AMOUNT}>{live.figure.value}</p>
+              <p className={CARD_AMOUNT}>{figureNode ?? live.figure.value}</p>
               <p className={`${CARD_LABEL} gift-meta`}>{live.figure.label}</p>
             </div>
             {live.back ? (

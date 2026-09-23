@@ -524,10 +524,23 @@ function readSeen(key: string): number | undefined {
 const neverChanges = () => () => {};
 const nothingSeen = () => undefined;
 
+/**
+ * What each number was when this screen was built, read once per screen and kept here rather than in the component's
+ * first render. Until 23 Sep 2026 it was frozen in `useState` at the first render, and on a screen the server draws
+ * (every screen since D160) the first render is the hydration, which is given the server's answer, nothing: the
+ * amount on Home then counted from itself to itself and never moved. Read here, the browser's own answer arrives on
+ * the render right after hydration, and it stays the same for as long as the screen stands; leaving the screen is what
+ * makes the next one read the value this one wrote.
+ */
+const seenOnThisScreen = new Map<string, number | undefined>();
+
+function seenSnapshot(key: string): number | undefined {
+  if (!seenOnThisScreen.has(key)) seenOnThisScreen.set(key, readSeen(key));
+  return seenOnThisScreen.get(key);
+}
+
 export function useLastSeen(key: string, value: number | undefined): number | undefined {
-  const stored = useSyncExternalStore(neverChanges, () => readSeen(key), nothingSeen);
-  // Frozen at the first render, because the effect below is about to write over it.
-  const [seen] = useState(stored);
+  const seen = useSyncExternalStore(neverChanges, () => seenSnapshot(key), nothingSeen);
   useEffect(() => {
     if (value === undefined) return;
     try {
@@ -535,6 +548,10 @@ export function useLastSeen(key: string, value: number | undefined): number | un
     } catch {
       // A device that keeps nothing sees every arrival as a first one, which is harmless.
     }
+    // Forgotten when the screen goes, silently: telling the store now would move the number mid-count.
+    return () => {
+      seenOnThisScreen.delete(key);
+    };
   }, [key, value]);
   return seen;
 }

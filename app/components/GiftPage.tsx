@@ -47,7 +47,7 @@ import { LinkAgain } from "../kit/LinkAgain";
 import { Climb } from "../kit/Climb";
 import { Stamp } from "../kit/Stamp";
 import { MorningMessage } from "../kit/MorningMessage";
-import { Arrival } from "../kit/Motion";
+import { Arrival, ArrivalAmount, useLastSeen } from "../kit/Motion";
 import { Shell } from "../kit/Shell";
 import { TakeItBack } from "../kit/TakeItBack";
 import { AccountPanel } from "./AccountPanel";
@@ -239,6 +239,14 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
     nextReadingInWords: moment === "counting" || moment === "climbing" ? nextReading : null,
     cameBackOnInWords: cameBackOn,
   });
+
+  // The money on the card counts from what this device last saw of it, last in the arrival and once (the brief,
+  // section 6). Only money counts: a rating is a reading, not an amount.
+  const figureMoney = moneyOf(live.figure?.value);
+  const seenMoney = useLastSeen(`viky.seen.gift.${giftId}.${live.figure?.label ?? ""}`, figureMoney?.value);
+  const figureNode = figureMoney ? (
+    <ArrivalAmount from={seenMoney ?? figureMoney.value} to={figureMoney.value} symbol={figureMoney.symbol} after={figureMoney.after} />
+  ) : undefined;
 
   const run = async (kind: Busy, where: Where, action: () => Promise<string | null>) => {
     setBusy(kind);
@@ -572,6 +580,7 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
   return (
     <Arrival
       storageKey="viky.seen.days"
+      amount
       gifts={[{ id: giftId, days: arriving, lastSeen: arriving.filter((day) => day === "earned" || day === "returned").length }]}
     >
       <Shell
@@ -588,6 +597,7 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
           nature={condition ? <Nature nature={condition.nature} /> : null}
           shape={shape}
           live={live}
+          figureNode={figureNode}
           /* The source closed the account: said where the state is said, because it is the state now. */
           closed={milestone?.accountClosed && !gift.finished ? (milestoneById(milestone.conditionId)?.words.accountClosed ?? null) : null}
           action={action}
@@ -613,6 +623,13 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
       </Shell>
     </Arrival>
   );
+}
+
+/** A money figure as the page prints it, "$2.00", taken apart so it can count; nothing for anything that is not money. */
+export function moneyOf(printed: string | undefined): { symbol: string; value: number; after: string } | null {
+  const found = printed ? /^([^\d\s]+)((?:\d{1,3}(?:,\d{3})*|\d+)\.\d{2})([^\d]*)$/.exec(printed.trim()) : null;
+  if (!found) return null;
+  return { symbol: found[1], value: Number(found[2].replace(/,/g, "")), after: found[3] };
 }
 
 /** "by 17 Oct 2026" once the first reading has started the clock, "within 30 days of connecting" before it (D46). */
