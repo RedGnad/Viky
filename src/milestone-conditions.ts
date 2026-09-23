@@ -1186,7 +1186,6 @@ const CERTIFICATES: readonly CertificateCondition[] = [
   UNIVERSITY_YEAR_MILESTONE,
   UNIVERSITY_GRADE_MILESTONE,
   ECOLEDIRECTE_MILESTONE,
-  PRONOTE_MILESTONE,
 ];
 
 export function certificateOf(condition: Condition | undefined): CertificateCondition | undefined {

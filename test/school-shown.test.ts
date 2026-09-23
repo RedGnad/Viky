@@ -38,9 +38,9 @@ test("one goal, pinned by name, a constant subject, and the family School after 
   assert.ok(proofOfCondition("ecoledirecte-grade-shown"));
   // The frontier's line on school marks says which portal is on its way and why the other is not, in its publisher's words.
   const marks = FRONTIERS.find((frontier) => frontier.id === "school-marks");
-  assert.match(String(marks?.building), /EcoleDirecte account or PRONOTE space.*SHOWN BY THEM/);
+  assert.match(String(marks?.building), /EcoleDirecte account.*SHOWN BY THEM.*not PRONOTE.*encrypted/);
   assert.equal(marks?.conditionId, undefined, "the line prints under School, once");
-  assert.equal(conditionById("pronote-grade-shown")?.live, false, "PRONOTE is built beside it, being built (the founder's decision, 23 Sep 2026)");
+  assert.equal(conditionById("pronote-grade-shown"), undefined, "PRONOTE is parked: its answers and bulletins are encrypted");
 });
 
 test("the average is out of 20 in hundredths, typed with decimals and signed the same on both sides", () => {

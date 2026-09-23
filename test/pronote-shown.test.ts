@@ -4,6 +4,7 @@ import { keccak256, stringToHex } from "viem";
 import { privacyOf } from "../src/condition-privacy";
 import { proofOfCondition } from "../src/condition-proof";
 import { BUILDING, conditionById, PRONOTE_GRADE_SHOWN } from "../src/conditions";
+import { CONDITIONS } from "../src/conditions";
 import { certificateById, PRONOTE_MILESTONE } from "../src/milestone-conditions";
 import { MILESTONE_GOALS } from "../src/milestone-goals";
 import { isPronoteSpace, PRONOTE_GOAL_TYPE, pronoteLoginUrl, pronoteProviderId, pronoteSpaceOf, pronoteSubject } from "../src/pronote-shown";
@@ -11,22 +12,19 @@ import { PRONOTE_SHOWN, shownConditionById } from "../src/shown-conditions";
 
 /** PRONOTE (D203): EcoleDirecte's line, with the establishment's space carried by the gift as a portal is. */
 
-test("the line: shown by them, under School, goal 24, being built, and under the verdict rule", () => {
-  assert.equal(PRONOTE_GRADE_SHOWN.family, "school");
-  assert.equal(PRONOTE_GRADE_SHOWN.nature, "shown");
+test("parked: off every list, offered to nobody, the reason said, goal 24 kept waiting", () => {
   assert.equal(PRONOTE_GRADE_SHOWN.live, false);
-  assert.ok(BUILDING.includes(PRONOTE_GRADE_SHOWN));
-  assert.ok(PRONOTE_GRADE_SHOWN.name.length <= 30);
-  assert.equal(conditionById("pronote-grade-shown"), PRONOTE_GRADE_SHOWN);
-  assert.equal(certificateById("pronote-grade-shown"), PRONOTE_MILESTONE);
-  assert.equal(shownConditionById("pronote-grade-shown"), PRONOTE_SHOWN);
-  assert.ok(proofOfCondition("pronote-grade-shown"));
-  assert.equal(privacyOf(PRONOTE_GRADE_SHOWN).kept, "verdict");
+  assert.ok(!BUILDING.includes(PRONOTE_GRADE_SHOWN) && !CONDITIONS.includes(PRONOTE_GRADE_SHOWN), "not on the public page");
+  assert.equal(conditionById("pronote-grade-shown"), undefined);
+  assert.equal(certificateById("pronote-grade-shown"), undefined, "no route can make a gift on it");
+  assert.equal(shownConditionById("pronote-grade-shown"), undefined, "no proof session can open on it");
+  assert.equal(proofOfCondition("pronote-grade-shown"), undefined);
+  assert.throws(() => privacyOf(PRONOTE_GRADE_SHOWN));
+  assert.match(String(PRONOTE_MILESTONE.notOpen), /encrypts what its pages and its bulletins send/);
   assert.equal(PRONOTE_GOAL_TYPE, 24);
   assert.equal(pronoteProviderId(), keccak256(stringToHex("viky:provider:pronote-grade-shown:v1")));
-  assert.ok(MILESTONE_GOALS.some((goal) => goal.goalType === 24 && goal.providerId === pronoteProviderId()));
-  assert.match(String(PRONOTE_MILESTONE.notOpen), /encrypts/, "nobody can make a gift on it, and the reason is the real one (PRONOTE encrypts its answers)");
-  assert.match(String(PRONOTE_GRADE_SHOWN.beforeItOpens), /encrypts every answer by default/);
+  assert.ok(MILESTONE_GOALS.some((goal) => goal.goalType === 24 && goal.providerId === pronoteProviderId()), "goal 24 waits, as the founder asked");
+  assert.equal(PRONOTE_SHOWN.condition.conditionId, "pronote-grade-shown", "the code is kept for the day a readable answer exists");
 });
 
 test("the space is taken from its address, and bound into what the funder signs", () => {

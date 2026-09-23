@@ -30,6 +30,20 @@ the code reads `average` and nothing else (`readSchoolAverage` in `src/school-sh
 - D203 said the answer is clear JSON unless a school switches encryption on. That came from pronotepy, whose
   `CrA`/`CoA` reading predates the current protocol, and it was wrong.
 
+## The bulletin's PDF, the last way tried, read on the demonstration space (D207)
+
+On 24 Sep 2026, signed in to the demonstration parents' page (the session the founder opened), "Notes", "Bulletin
+de l'élève", Trimestre 3, the PDF button then "Voir le PDF": the file comes by a plain `GET` outside the encrypted
+channel, `/pronote/UrlUnique/<name>.pdf?S=…&ID=…`, `application/pdf`, 36,181 bytes, `%PDF-1.4`. But the file is itself
+encrypted with the PDF standard's own security handler (object 1: `/Filter/Standard /R 3 /V 2`, RC4 with a 128-bit
+key): its one page stream (`/FlateDecode`, 14,444 bytes) is ciphertext, the overall average shown on screen (14,94)
+appears nowhere in the bytes, raw or inflated, and no text operator can be read. A witness would attest ciphertext
+here too. So PRONOTE is parked: no provider is to be registered, the line is off the register's lists, and goal 24
+waits, as the founder asked.
+
+The family sees the marks because their browser decrypts what it receives with a key made at sign-in; a zkTLS proof
+attests the bytes on the wire, before any decryption.
+
 ## What is extracted
 
 | field, as the provider names it | what it is | unverified |

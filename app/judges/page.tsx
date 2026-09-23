@@ -215,14 +215,12 @@ export default async function JudgesPage() {
             from their own EcoleDirecte account (D179). Aplim, its publisher and host, says (read 23 Sep 2026) that
             the holder of a password reaches only the information about themselves or those they answer for, that the
             school alone answers for the information, and that Aplim makes the site&apos;s content available to no third
-            party; no clause names a program, and the school is not asked. PRONOTE is built too, on the founder&apos;s decision
-            of 23 Sep 2026, with its risk assumed as Duolingo&apos;s is: Index Education&apos;s terms for its sites forbid
-            &quot;tout dispositif manuel ou automatique permettant toute récupération de données sans notre autorisation
-            expresse écrite&quot;, the spaces are served from its own hosting (index-education.net, one space per
-            establishment), and no such authorisation exists. What Viky relies on instead: the person, or the parent,
-            signs in to their own space in their own browser and shows their own marks at their own request, the rights
-            of access and portability the GDPR gives them (articles 15 and 20); a witness attests the one answer; no mark
-            is kept, only whether the target was reached (D185). If Index Education objects, the line closes.
+            party; no clause names a program, and the school is not asked. PRONOTE was built on the founder&apos;s decision of 23 Sep 2026, its publisher&apos;s
+            terms against it and the risk assumed, then parked the same night for a technical reason: every answer of a
+            PRONOTE space is AES-encrypted with a key made at sign-in, and the bulletin it hands out as a PDF is itself
+            encrypted with the PDF standard&apos;s own encryption (both read on the demonstration space). The family sees
+            the marks because their browser decrypts them; a witness attests the bytes on the wire, which are ciphertext,
+            so nothing in them could be proved. It is offered to nobody.
           </li>
           <li>
             <strong>What the number read is worth to anybody else.</strong> For a result the person shows from their
