@@ -195,15 +195,14 @@ test("since D91 the only start refused is one already at the target, and the wor
   assert.match(MILESTONE_ACTIONS.startTooHighTheirs(1520, 1500, "Léa"), /Léa had already reached 1500 when they connected/);
 });
 
-test("before connecting, the recipient is told that only what comes after counts, and how long they then have", () => {
-  // The push to connect straight away is what makes a start already at the target rare, so it is on both cards
-  // the recipient can be on before the first reading, and the number of days is the gift's own.
-  assert.equal(MILESTONE_ACTIONS.connectNow(30), "Connect now: only what you reach after connecting counts. You then have 30 days.");
-  assert.equal(MILESTONE_ACTIONS.connectNow(1), "Connect now: only what you reach after connecting counts. You then have 1 day.");
+test("before connecting, the recipient is told that only what comes after counts", () => {
+  // The push to connect straight away is what makes a start already at the target rare. How long they then have is
+  // in what was agreed, which is unfolded on this one moment since V4, so it is not said a second time here.
+  assert.equal(MILESTONE_ACTIONS.connectNow, "Connect now: only what you reach after connecting counts.");
   // Said on every way in to connecting, and the three ways in are one component now: the funder named the account,
   // a code is asked for, a code is waiting to be put in the name.
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  assert.match(page, /connectNow: A\.connectNow\(milestone\.durationDays\)/);
+  assert.match(page, /connectNow: A\.connectNow,/);
   const connect = readFileSync("app/kit/ConnectTheSource.tsx", "utf8");
   assert.equal(
     connect.match(/<p className="font-medium">\{words\.connectNow\}<\/p>/g)?.length,

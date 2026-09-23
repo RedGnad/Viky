@@ -4710,3 +4710,38 @@ The motion sheets of this group:
 - **En cours, obtenu ou pas.** Trigger: none; the page waits for the person's gesture and answers nothing before it.
   Rule: the stamp and its character stand still (the character's gaze answers a pointer, as everywhere). Material
   token: none. Loop: none. Reduced motion: unchanged. Test: captures.
+
+## D173, 23 Sep 2026: the opening of a gift, relu contre le tableau (V4-2)
+
+The second group of document J: "Jamais ouvert" and "Ouvert, pas relié", for the two roles and the third reader.
+
+- **Jamais ouvert.** The person it is for: the promise with the first name as the state ("Maman put this in your
+  name."), the money, and under it what makes it theirs ("Yours day by day", "Yours at 1500", "Yours with the proof"),
+  so "in your name" is said once; the next moment is the day it goes back unopened; the action is opening it, or
+  making the account, which is opening it. The funder: "Léa has not opened it yet.", then "If not by 2 Oct 2026, it
+  comes back to you."; the action is the link again, with taking it back under it, never beside it. The date was said
+  to the recipient of a daily gift only; it is true of both contracts (14 days after funding), so it is said on all
+  three shapes and to both sides.
+- **Ouvert, pas relié.** The one gesture as the state ("Connect Chess.com and it starts."), the agreement unfolded
+  (the only moment it is), and a next moment that was missing: an opened gift nothing has started goes back 14 days
+  after it was opened, on both contracts. Said to the person as "By 3 Oct 2026, or it goes back to Maman." and to the
+  funder as "If not by 3 Oct 2026, it comes back to you." The connect block stops saying how many days they then
+  have: the unfolded agreement says it.
+- **A certificate has no such moment.** Its clock starts when it is funded (`MilestoneGift` sets its deadline then),
+  so it goes from unopened to waiting for its proof. The board's examples were corrected to match.
+- **The drawings before it starts.** The row of a daily gift was not drawn at all until it started; it is drawn asleep
+  now, one character a day, as on Home, with no dates and no "Day 1 of 7". The stamp's character sleeps until the gift
+  is opened, like the climb's.
+- **Two corrections to the first group.** The target over the flag is right-aligned on the cloth, so a four-figure
+  target no longer reaches the card's edge at 390 (measured on production, 2500 on gift 1,000,002). A reader given no
+  names read "Yesterday went back to them."; it says "to the person who offered it" now.
+
+The motion sheets of this group:
+
+- **Jamais ouvert.** Trigger: the arrival on the screen. Rule: the page enters as every page does (D171); the
+  characters of the drawing are asleep and do not move; nothing else plays. Material token: the entrance's own
+  (medium1, 80 ms turns). Loop: none. Reduced motion: the fade of D171. Test: `test/browser/arrival.spec.ts`.
+- **Ouvert, pas relié.** Trigger: the press on "Open my gift" brings the person here. Rule: the same screen is
+  refreshed in place with the gift's new state; it is not a new page, so nothing enters again, and the characters
+  wake (asleep to awake is a change of drawing, not a movement). Material token: none. Loop: none. Reduced motion:
+  unchanged. Test: captures of both moments; `test/gift-examples.test.ts` for the moments themselves.

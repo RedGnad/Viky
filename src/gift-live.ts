@@ -30,10 +30,17 @@ export type LiveInput = Readonly<{
   started: boolean;
   /** Whether the proof is shown by the person from their own account (D162) rather than a page they share. */
   shown?: boolean;
+  /** Which of the three drawings the gift has, which says what its promise is: day by day, at a target, with a proof. */
+  shape?: "days" | "climb" | "stamp";
   /** What the last day Viky judged did, when a record of it exists. Nothing when the gift predates the record. */
   lastJudged: "earned" | "returned" | null;
-  /** Moments already in words, in the reader's own clock: the page knows the clock, this module does not. */
-  openByInWords: string | null;
+  /**
+   * Dates already in words, in the reader's own clock: the page knows the clock, this module does not. The day an
+   * unopened gift goes back (14 days after it was funded, on both contracts), and the day an opened gift that nothing
+   * has started goes back (14 days after it was opened).
+   */
+  openBy: string | null;
+  connectBy: string | null;
   nextReadingInWords: string | null;
   cameBackOnInWords: string | null;
 }>;
@@ -92,13 +99,22 @@ export function liveOf(input: LiveInput): Live {
   switch (moment) {
     case "unopened":
       return {
+        // The promise, with the first name: who put it in whose name. What makes it theirs is the label under the
+        // money, so "in your name" is said once (it was said twice until V4, headline and label).
         headline: yours
           ? L.unopened.yours(funderName)
           : voice === "funder"
             ? L.unopened.theirs(recipientName)
             : L.unopened.reading(funderName, recipientName),
-        figure: { label: yours ? L.unopened.label.yours : L.unopened.label.theirs, value: input.amountDisplay },
-        next: input.openByInWords,
+        figure: { label: promiseOf(input.shape ?? "days", yours, input.target), value: input.amountDisplay },
+        next:
+          input.openBy === null
+            ? null
+            : yours
+              ? W.openBy(input.openBy, funderName)
+              : voice === "funder"
+                ? L.unopened.openByTheirs(input.openBy)
+                : null,
         back,
       };
 
@@ -106,7 +122,15 @@ export function liveOf(input: LiveInput): Live {
       return {
         headline: yours ? L.notConnected.yours(source) : L.notConnected.theirs(recipientName, source),
         figure: { label: yours ? L.notConnected.label.yours : L.notConnected.label.theirs, value: input.amountDisplay },
-        next: null,
+        // Opened and never started, it goes back fourteen days after it was opened (both contracts): the next moment.
+        next:
+          input.connectBy === null
+            ? null
+            : yours
+              ? L.notConnected.connectBy(input.connectBy, funderName)
+              : voice === "funder"
+                ? L.notConnected.connectByTheirs(input.connectBy)
+                : null,
         back,
       };
 
@@ -194,6 +218,13 @@ export function liveOf(input: LiveInput): Live {
         back: null,
       };
   }
+}
+
+/** What makes it theirs, in the fewest words, under the money of a gift nobody has opened yet. */
+function promiseOf(shape: "days" | "climb" | "stamp", yours: boolean, target: number | null): string {
+  const promise = L.unopened.promise[yours ? "yours" : "theirs"];
+  if (shape === "climb" && target !== null) return promise.climb(target);
+  return shape === "stamp" ? promise.stamp : promise.days;
 }
 
 /**

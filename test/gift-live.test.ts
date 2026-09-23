@@ -36,7 +36,8 @@ const input = (over: Partial<LiveInput> = {}): LiveInput => ({
   target: 1500,
   started: true,
   lastJudged: "earned",
-  openByInWords: "Open it by 3 Oct 2026: after 14 days unopened, it goes back to Maman.",
+  openBy: "3 Oct 2026",
+  connectBy: "7 Oct 2026",
   nextReadingInWords: "Next reading: tomorrow at 9:00 AM your time.",
   cameBackOnInWords: "20 Sep 2026",
   ...over,
@@ -105,6 +106,7 @@ test("a day counted is said in the morning message's own words, without its mone
   assert.equal(liveOf(input({ lastJudged: "returned", voice: "funder" })).headline, "Yesterday came back to you. Today still counts.");
   assert.equal(liveOf(input({ lastJudged: "returned", voice: "reader" })).headline, "Yesterday went back to Maman. Today still counts.");
   assert.equal(liveOf(input({ lastJudged: "returned", voice: "recipient" })).headline, "Yesterday went back to Maman. Today still counts.");
+  assert.equal(liveOf(input({ lastJudged: "returned", voice: "reader", funderName: null })).headline, "Yesterday went back to the person who offered it. Today still counts.", "never 'them', which could be either of the two");
   // A proof shown from the person's own account is shown, never shared (D162).
   assert.equal(liveOf(input({ moment: "awaitingProof", shown: true, source: "ETS" })).headline, "Show it from your own ETS account, and it is yours.");
   assert.equal(liveOf(input({ moment: "awaitingProof", shown: true, voice: "funder" })).headline, "Léa has not shown it yet.");
@@ -139,8 +141,17 @@ test("the line above the name never says 'your' to somebody the gift is not thei
 
 test("the next moment is only said where there is one, and it is the reader's own clock", () => {
   assert.equal(liveOf(input({ moment: "counting" })).next, "Next reading: tomorrow at 9:00 AM your time.");
-  assert.match(liveOf(input({ moment: "unopened" })).next ?? "", /^Open it by /);
-  for (const moment of ["openedNotConnected", "awaitingProof", "startTooHigh", "won", "over"] as const) {
+  assert.equal(liveOf(input({ moment: "unopened" })).next, "Open it by 3 Oct 2026: after 14 days unopened, it goes back to Maman.");
+  // The headline already says who has not opened or connected what: the next line says the date and nothing again.
+  assert.equal(liveOf(input({ moment: "unopened", voice: "funder" })).next, "If not by 3 Oct 2026, it comes back to you.");
+  assert.equal(liveOf(input({ moment: "openedNotConnected" })).next, "By 7 Oct 2026, or it goes back to Maman.");
+  assert.equal(liveOf(input({ moment: "openedNotConnected", voice: "funder" })).next, "If not by 7 Oct 2026, it comes back to you.");
+  assert.equal(liveOf(input({ moment: "openedNotConnected", voice: "reader" })).next, null, "a reader is told no deadline that is not theirs to meet");
+  // The promise's rule under the money, so the headline's "in your name" is said once.
+  assert.equal(liveOf(input({ moment: "unopened" })).figure?.label, "Yours day by day");
+  assert.equal(liveOf(input({ moment: "unopened", shape: "climb", voice: "funder" })).figure?.label, "Theirs at 1500");
+  assert.equal(liveOf(input({ moment: "unopened", shape: "stamp" })).figure?.label, "Yours with the proof");
+  for (const moment of ["awaitingProof", "startTooHigh", "won", "over"] as const) {
     assert.equal(liveOf(input({ moment })).next, null, `${moment} points at a next moment it does not have`);
   }
   assert.equal(liveOf(input({ moment: "cameBack" })).next, "On 20 Sep 2026.");

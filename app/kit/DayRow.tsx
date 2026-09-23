@@ -48,6 +48,9 @@ export function DayRow({
 }>) {
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   const drawn = nowMs !== 0 && gift.startDay !== 0;
+  // Before it starts, the row is the gift's days asleep, as the card on Home draws them (V4): the days have no dates
+  // yet, so the row is a picture and says nothing of its own, and the sentence beside it is the state.
+  const asleep = nowMs !== 0 && gift.startDay === 0 && gift.durationDays > 0;
   const numbers = drawn ? giftDays(gift, catchUpSeconds, nowMs).days.map((day) => day.dayNumber) : [];
   const states = drawn ? stripOf(gift, catchUpSeconds, nowMs, records) : [];
   const row = useRef<HTMLOListElement>(null);
@@ -65,6 +68,19 @@ export function DayRow({
     // Straight to today, without the smooth travel: the page has just arrived, so there is no gesture to answer.
     scroller.scrollLeft = Math.max(0, day.offsetLeft - scroller.clientWidth / 2 + day.clientWidth / 2);
   }, [states.length]);
+  if (asleep) {
+    return (
+      <div className="day-row" aria-hidden>
+        <ol className="day-row-days">
+          {Array.from({ length: gift.durationDays }, (_, index) => (
+            <li key={index} className="day-row-day">
+              <Character state="toCome" variant={index} standing={false} className="h-auto w-full" />
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
+  }
   if (!drawn) return null;
   const returned = voice === "funder" ? W.dayWords.returnedTheirs : voice === "recipient" ? W.dayWords.returnedYours : W.dayWords.returnedReading;
   const words = (state: (typeof states)[number]) => (state === "returned" ? returned : W.dayWords[state]);

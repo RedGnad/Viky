@@ -29,7 +29,9 @@ const RECIPIENT = "Léa";
 export function momentsOf(shape: Shape): readonly ExampleMoment[] {
   if (shape === "days") return MOMENTS.filter((moment) => moment !== "startTooHigh");
   if (shape === "climb") return MOMENTS.filter((moment) => moment !== "runningBack");
-  return MOMENTS.filter((moment) => moment !== "runningBack" && moment !== "startTooHigh");
+  // A certificate's clock starts when it is funded (MilestoneGift sets its deadline then), so it is never opened and
+  // not started: it goes from unopened straight to waiting for its proof.
+  return MOMENTS.filter((moment) => moment !== "runningBack" && moment !== "startTooHigh" && moment !== "notConnected");
 }
 
 export function exampleId(shape: Shape, moment: ExampleMoment, reader: Reader): string {
@@ -131,7 +133,8 @@ function milestone(shape: Exclude<Shape, "days">, moment: ExampleMoment, reader:
   const now = Math.floor(nowMs / 1000);
   const climb = shape === "climb";
   const opened = moment !== "unopened" && moment !== "cameBack";
-  const connected = opened && moment !== "notConnected";
+  // A certificate is started from the moment it is funded; a climb from its first reading.
+  const connected = climb ? opened && moment !== "notConnected" : moment !== "cameBack";
   const reached = moment === "won";
   const finished = moment === "won" || moment === "over";
   const target = climb ? 1500 : shape === "shown" ? 90 : 1;
