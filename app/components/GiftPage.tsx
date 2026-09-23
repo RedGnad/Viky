@@ -209,10 +209,10 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
   /** The last day Viky judged, from the record it keeps of each day. Nothing for a gift settled before that record. */
   const lastJudged = daily && daily.days.length > 0 ? [...daily.days].sort((a, b) => b.day - a.day)[0].outcome : null;
   const nextReading = nowMs === 0 || gift.finished || gift.cancelled ? null : W.nextReading(momentInWords(nextPassMs(COUNTING_PASS_UTC, nowMs), nowMs));
-  const openBy =
-    moment === "unopened" && !readerIsFunder && daily
-      ? W.openBy(dateInWords((daily.createdAtChain + 14 * 86_400) * 1000, zone), funderName)
-      : null;
+  // Both contracts give an unopened gift back 14 days after it was funded, and an opened gift nothing started 14 days
+  // after it was opened (GiftEscrow's UNCLAIMED_REFUND_DELAY, MilestoneGift's DORMANT_REFUND_DELAY).
+  const openBy = moment === "unopened" ? dateInWords((status.createdAtChain + 14 * 86_400) * 1000, zone) : null;
+  const connectBy = moment === "openedNotConnected" && status.claimedAtChain > 0 ? dateInWords((status.claimedAtChain + 14 * 86_400) * 1000, zone) : null;
   const cameBackOn = milestone?.reachedAtMs ? dateInWords(milestone.reachedAtMs, zone) : daily?.lastReturnAtMs ? dateInWords(daily.lastReturnAtMs, zone) : null;
 
   const live = liveOf({
@@ -229,7 +229,9 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
     started: milestone ? milestone.connected : Boolean(daily && daily.creditedDays + daily.missedDays > 0),
     lastJudged,
     shown: condition?.nature === "shown",
-    openByInWords: openBy,
+    shape: milestone ? (milestone.shape === "certificate" ? "stamp" : "climb") : "days",
+    openBy,
+    connectBy,
     nextReadingInWords: moment === "counting" || moment === "climbing" ? nextReading : null,
     cameBackOnInWords: cameBackOn,
   });
@@ -356,7 +358,7 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
         notMine: undefined,
         proveTitle: account.username ? A.proveTitle(account.username) : A.connectTitle(source),
         proveSteps: milestoneById(milestone.conditionId)?.words.codeSteps ?? "",
-        connectNow: A.connectNow(milestone.durationDays),
+        connectNow: A.connectNow,
         firstReading: A.firstReading,
         start: A.startReading(source),
         added: A.added,
@@ -486,7 +488,7 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
   // it, so none of the three repeats a figure the state or the money carries.
   const shape = milestone ? (
     milestone.shape === "certificate" ? (
-      <Stamp state={milestone.reached ? "stamped" : milestone.finished || milestone.cancelled ? "void" : "waiting"} />
+      <Stamp state={milestone.reached ? "stamped" : milestone.finished || milestone.cancelled ? "void" : "waiting"} asleep={!milestone.opened} />
     ) : (
       <Climb giftId={giftId} status={milestone} />
     )

@@ -13,8 +13,9 @@ import { Character } from "./Character";
  */
 export type StampState = "waiting" | "stamped" | "void";
 
-export function Stamp({ state }: Readonly<{ state: StampState }>) {
-  const character = state === "stamped" ? "earned" : state === "void" ? "returned" : "today";
+export function Stamp({ state, asleep = false }: Readonly<{ state: StampState; asleep?: boolean }>) {
+  // Asleep until somebody opens the gift, as every character of a gift nobody has opened is (the brief, section 5).
+  const character = state === "stamped" ? "earned" : state === "void" ? "returned" : asleep ? "toCome" : "today";
   return (
     <span aria-hidden className="stamp-row">
       <span className="stamp-character">

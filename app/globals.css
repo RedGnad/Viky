@@ -1011,9 +1011,8 @@ dialog.sheet[open] {
 .climb-flag {
   position: absolute;
   left: calc(100% - 30.5px);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  width: 22px;
+  display: block;
 }
 
 .climb-flag-number {
@@ -1025,8 +1024,12 @@ dialog.sheet[open] {
   font-variant-numeric: tabular-nums;
 }
 
+/* The target sits over the flag, its right edge on the cloth's, so a four-figure target never reaches the card's edge. */
 .climb-flag-number {
-  margin-bottom: 2px;
+  position: absolute;
+  bottom: calc(100% + 2px);
+  right: 0;
+  white-space: nowrap;
 }
 
 .climb-flag-pole {

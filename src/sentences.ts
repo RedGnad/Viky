@@ -660,13 +660,22 @@ export const GIFT_LIVE = {
     theirs: (recipient: string | null) => (recipient ? `${recipient} has not opened it yet.` : "Nobody has opened it yet."),
     reading: (funder: string | null, recipient: string | null) =>
       `${funder ?? "Somebody"} put this in ${recipient ?? "somebody"}'s name.`,
-    label: { yours: "In your name", theirs: "In their name" },
+    /** Under the money, what makes it theirs: the promise's rule, so the headline's "in your name" is not said again. */
+    promise: {
+      yours: { days: "Yours day by day", climb: (target: number) => `Yours at ${target}`, stamp: "Yours with the proof" },
+      theirs: { days: "Theirs day by day", climb: (target: number) => `Theirs at ${target}`, stamp: "Theirs with the proof" },
+    },
+    /** To the funder: the day it comes back to them if nobody opens it (14 days after funding, both contracts). */
+    openByTheirs: (date: string) => `If not by ${date}, it comes back to you.`,
   },
   /** Opened, and the source it counts is not connected yet: the one moment the whole agreement is read. */
   notConnected: {
     yours: (source: string) => `Connect ${source} and it starts.`,
     theirs: (recipient: string | null, source: string) =>
       `${recipient ?? "They"} opened it, and ${source} is not connected yet.`,
+    /** Opened and nothing started: it goes back 14 days after it was opened (both contracts), said to each side. */
+    connectBy: (date: string, funder: string | null) => `By ${date}, or it goes back to ${funder ?? "the person who offered it"}.`,
+    connectByTheirs: (date: string) => `If not by ${date}, it comes back to you.`,
     label: { yours: "In your name", theirs: "In their name" },
   },
   /**
@@ -676,7 +685,7 @@ export const GIFT_LIVE = {
    */
   counting: {
     counted: "Yesterday counted.",
-    wentBack: (funder: string | null) => `Yesterday went back to ${funder ?? "them"}. Today still counts.`,
+    wentBack: (funder: string | null) => `Yesterday went back to ${funder ?? "the person who offered it"}. Today still counts.`,
     wentBackToYou: "Yesterday came back to you. Today still counts.",
     /** A gift settled before Viky kept a record of each day: the totals are true, the last day is not known. */
     running: "It is counting.",
@@ -847,7 +856,8 @@ export const MILESTONE_ACTIONS = {
   /** The funder named the account, so there is nothing to prove and nothing to touch in a profile (D27). */
   nothingToDo: (source: string) => `Nothing to install, no password, and nothing to change on ${source}: the gift already knows the account it reads.`,
   startReading: (source: string) => `Start reading my ${source}`,
-  connectNow: (days: number) => `Connect now: only what you reach after connecting counts. You then have ${days} ${days === 1 ? "day" : "days"}.`,
+  /** How long they then have is in what was agreed, unfolded on this one moment (V4): it is not said twice. */
+  connectNow: "Connect now: only what you reach after connecting counts.",
   firstReading: "If you have already reached it when you connect, this gift cannot count it, so connect before you play.",
   getCode: "Get my code",
   gettingCode: "One moment",
