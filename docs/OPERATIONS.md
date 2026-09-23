@@ -248,6 +248,7 @@ the contract with its provider id and its shape before the next was sent.
 | 10 | Coursera, a course certificate | 1, having it or not | `0xcd1e3323e174f3cfd7359500d0e2e0befdb34f9998a874e5cf2e2f1d1aa2a75d` | `0x61bce6c1bb92557a87f3a2b3056b9dae1f2b830a2786bfd780ce87314ecbc6e7`, block 106,321,654 |
 | 11 | Credly, a certification badge | 1, having it or not | `0xb51fb65622628e49e636bc88791f4d118dcc3ef91063975223e529556628ad62` | `0x27ca75bfbfcad66ee9b03286f5829622f92eeaa1d159d06b1871c98c5c698f6c`, block 106,321,662 |
 | 12 | Chess.com, the puzzle rating | 0, a climb | `0x5d3b3df90a426ae46f38985fb35c2c55511d811a8f6a091278f3b6964c5c36fe` | `0x5d2923dbe4ae4646d14b93377956be674d0bd2c1bd11f12a9454b084d8681ba6`, block 106,321,671 |
+| 13 | ETS, a TOEFL score shown (D164) | 1, having it or not | `0xa07cae8e7502221e9a33445deb8f4f5e12d9ccdfd35b5e53d9eb38f32d75db7d` | `0x4ff8000117a57faaef15773d06059934241ea926ddc7a8acc6259ba8563d21c4`, block 107,176,764, 192,885 gas, Safe nonce 4, signed 23 Sep 2026 by two of the three keys and carried by the relayer |
 
 How a session of several goals is signed at once, since the Safe's nonce moves by one per transaction: build each
 call with `NONCE=1`, `NONCE=2`, `NONCE=3` (from the Safe's nonce at the time) so the three hashes exist before anybody
@@ -314,8 +315,9 @@ runs a reading without TEE.
 
 The first condition of the second nature needs one goal on `MilestoneGift` (`0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e`),
 number 13, shape "having it or not", provider id `viky:provider:toefl-mybest-shown:v1` =
-`0xa07cae8e7502221e9a33445deb8f4f5e12d9ccdfd35b5e53d9eb38f32d75db7d`. `pnpm check:milestone-goals` reads it as
-`missing` on 22 Sep 2026; `pnpm prepare:milestone-goals` writes the one call, to be signed from the owner's wallet:
+`0xa07cae8e7502221e9a33445deb8f4f5e12d9ccdfd35b5e53d9eb38f32d75db7d`. `pnpm check:milestone-goals` read it as
+`missing` on 22 Sep 2026 and as `registered` on 23 Sep 2026, once the call below went through the Safe (the table
+of owner actions above, row 13). What was signed, and how it was prepared:
 
 | | |
 |---|---|
@@ -324,9 +326,9 @@ number 13, shape "having it or not", provider id `viky:provider:toefl-mybest-sho
 | gas | 102,125 (above the Foundry report for `registerGoal`, before the Monad margin) |
 | what it is | `registerGoal(13, 0xa07cae8e…db7d, 1)`: the "show" sense. The "reach" sense, once a provider of ours reads the test's date, takes its own number; `registerGoal` never overwrites |
 
-Until it is registered, a gift on this condition cannot be made by anybody: the create route refuses with the
-contract's own `UnknownGoal`, and the condition stays out of the register (D109) and off the public page except on
-the frontier's line, "Being built". After it is registered, read back with `pnpm check:milestone-goals`.
+Registered on 23 Sep 2026: the create route no longer meets `UnknownGoal` for goal 13. The condition still stays out
+of the register (D109) and off the public page except on the frontier's line, "Being built", until a proof has been
+shown end to end from a real ETS account; that is the founder's word, not the contract's.
 
 ### Whether the Reclaim application is configured, at execution
 
