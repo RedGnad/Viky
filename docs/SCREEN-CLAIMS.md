@@ -211,6 +211,22 @@ registered from a real candidate's session and pinned.
 | "Shown: 172 on the Cambridge English Scale, B2. It is yours.", "Shown: Band 6.5. It is yours.", "Shown: Passed. It is yours." once a proof is taken, the day a provider exists | the words are the reading's own, on the exam's own scale | `inWords` on each reading, `shown` on the verify route's answer (D174) | `test/exam-shown.test.ts` (the words off the register) |
 | on the judges page, "Exam results services' terms", clause by clause | only what was read is claimed: the clauses quoted, the services whose pages show none, and the question left to the founder | `app/judges/page.tsx`; `docs/reclaim/*-provider.md` | none: sentences read against the pages by hand |
 
+### A Udemy course finished, shown from the person's own account, offered to an operator alone (D178)
+
+`src/conditions.ts` (`BUILDING`, family "Finish a course", beside the Coursera certificate), `src/udemy-shown.ts`,
+`src/milestone-conditions.ts` (`UDEMY_MILESTONE`), `src/shown-conditions.ts` (`UDEMY_SHOWN`),
+`docs/reclaim/udemy-course-shown-provider.md`. Not in the register, on the public page under "Finish a course" with
+"Being built.", offered on the chooser to an account that runs Viky and to nobody else, and creatable by nobody until a
+provider of ours is registered from a real account and pinned.
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "A Udemy course finished, shown", SHOWN BY THEM, under "Finish a course" on the chooser of an operator, and "Being built." on the public page | nobody but an operator is offered it, and a gift on it cannot be made until its provider is registered and its goal signed | `BUILDING`, `WIRED_NOT_LIVE`, `notOpen` read by the create route (`NOT_CONFIGURED`, 503), the contract's own `UnknownGoal` for 22 | `test/udemy-shown.test.ts`, `test/conditions-route.test.ts`, `test/milestone-routes.test.ts`, `test/condition-states.test.ts` |
+| "The course, by its link", "Open the course on Udemy and paste the whole link from your browser, like https://www.udemy.com/course/the-complete-python-bootcamp/.", then "This gift will be for the-complete-python-bootcamp. That is the word Udemy puts in the course's link." | the course's slug is what the funder signs, hashed into the subject, and what the gift's record remembers; a proof of another course pays nothing | `udemySlugOf`, `udemySubject(slug)` as the subject, the `course` column of `viky_milestone_gifts` written by the create route, `subjectOf(record.course)` | `test/udemy-shown.test.ts` (links, slugs, subjects), `test/milestone-store.test.ts` (the column) |
+| "What has to be shown: that course, finished", nothing to choose, and on the review "The person's own Udemy account showing that course finished, shown from their own browser. When it was finished is not read." | finished is one, the target is fixed, and the day it is shown is the event | `validTarget` is exactly 1, `readUdemyCourse` (`OTHER_COURSE`, `NOT_FINISHED`), `eventAt: null` | `test/udemy-shown.test.ts` |
+| "Show it" on a Udemy gift: "Showing a proof is not open yet. Nothing was changed." | no provider is registered, so the refusal is by name before any fetch | `UDEMY_PROVIDER` null, `notRegistered`, `missing: NOT_CONFIGURED` | `test/udemy-shown.test.ts` |
+| on the judges page, "Udemy's terms": scraping, robots and automated means forbidden, credentials never shared, the certificate page not read | only what was read is claimed, and why nothing is read for the person | `app/judges/page.tsx`; `docs/reclaim/udemy-course-shown-provider.md` | none: a sentence read against the page by hand |
+
 ### Staying enrolled at their university, offered to an operator alone (D165)
 
 `src/conditions.ts` (`BUILDING`, the `university-enrolment` line of `FRONTIERS`), `src/milestone-conditions.ts`

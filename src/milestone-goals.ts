@@ -8,6 +8,7 @@ import { SHAPE_CLIMB, SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
 import { UNIVERSITY_GOAL_TYPE, UNIVERSITY_GRADE_GOAL_TYPE, UNIVERSITY_YEAR_GOAL_TYPE, universityGradeProviderId, universityShownProviderId, universityYearProviderId } from "./university-shown";
 import { TOEFL_GOAL_TYPE, toeflShownProviderId } from "./toefl-shown";
 import { EXAM_GOAL_TYPES, EXAM_IDS, examProviderId } from "./exam-shown";
+import { UDEMY_GOAL_TYPE, udemyProviderId } from "./udemy-shown";
 
 /**
  * Every goal the milestone contract knows, in one list (U3, 18 Sep 2026).
@@ -71,6 +72,8 @@ export const MILESTONE_GOALS: readonly MilestoneGoal[] = [
   // the target on the exam's own scale (the Cambridge English Scale as it is, an IELTS band in tenths), the
   // baccalauréat passed or not.
   ...EXAM_IDS.map((id) => ({ goalType: EXAM_GOAL_TYPES[id], providerId: examProviderId(id), shape: SHAPE_HAVE_OR_NOT, source: "an examining body's own results page", detail: `${id.replace(/-shown$/, "").replace(/-/g, " ")}, shown` })),
+  // A Udemy course finished, shown from the person's own account (D178): had or not, the course in the subject.
+  { goalType: UDEMY_GOAL_TYPE, providerId: udemyProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Udemy", detail: "a course finished, shown" },
 ];
 
 export function milestoneGoal(goalType: number): MilestoneGoal | undefined {

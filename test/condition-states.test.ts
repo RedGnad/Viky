@@ -94,8 +94,9 @@ test("the page lists every condition the register holds, offered or not, by fami
   // passed and the grade (D174) under Study.
   assert.deepEqual(
     sections.flatMap((section) => section.building).map((condition) => condition.id),
-    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "university-year-passed-shown", "university-grade-shown"],
+    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-year-passed-shown", "university-grade-shown"],
   );
+  assert.deepEqual(sections.find((section) => section.family === "course")?.building.map((condition) => condition.id), ["udemy-course-shown"], "beside the Coursera certificate (D178)");
   assert.deepEqual(sections.find((section) => section.family === "exam")?.conditions, [], "a family with only lines being built is on the page for them");
   assert.deepEqual(sections.find((section) => section.family === "study")?.building.map((condition) => condition.family), ["study", "study"]);
   const language = sections.find((section) => section.family === "language");
@@ -149,7 +150,7 @@ test("every condition says its nature, and every one of the pilot is read for th
   // What is being built lives beside the register, resolvable by id and offered to an operator alone (D164, D165, D174, D176).
   assert.deepEqual(
     BUILDING.map((condition) => condition.id),
-    ["toefl-mybest-shown", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown"],
+    ["toefl-mybest-shown", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown"],
   );
   for (const id of BUILDING.map((condition) => condition.id)) {
     const shown = conditionById(id);

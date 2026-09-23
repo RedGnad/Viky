@@ -353,7 +353,7 @@ export type CreationRow = Readonly<{
 }>;
 
 /** What a milestone gift's own record keeps (src/milestone-store.ts), carried by its creation until the gift is recorded. */
-export type MilestoneCreationFacts = Readonly<{ conditionId: string; mode: string; standingAtOffer: number; standingReadAt: string; portal?: string }>;
+export type MilestoneCreationFacts = Readonly<{ conditionId: string; mode: string; standingAtOffer: number; standingReadAt: string; portal?: string; course?: string }>;
 
 function toCreation(row: Record<string, unknown>): CreationRow {
   const text = (value: unknown) => (value === null || value === undefined ? null : String(value));

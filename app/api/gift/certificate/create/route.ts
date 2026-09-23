@@ -128,8 +128,16 @@ export async function POST(request: Request) {
       goalUsername: "",
       recipientName: body.recipientName ? tidyGiftName(String(body.recipientName)) : undefined,
       funderName: body.funderName ? tidyGiftName(String(body.funderName)) : undefined,
-      // A university gift remembers its portal (D165): the session that shows the proof reads the provider from it.
-      facts: { conditionId: certificate.condition.id, mode: "certificate", standingAtOffer: 0, standingReadAt: new Date().toISOString(), ...(certificate.portal && course ? { portal: course } : {}) },
+      // A university gift remembers its portal (D165), a shown course gift its course (D178): the session that shows
+      // the proof reads the provider, or the course to match, from it.
+      facts: {
+        conditionId: certificate.condition.id,
+        mode: "certificate",
+        standingAtOffer: 0,
+        standingReadAt: new Date().toISOString(),
+        ...(certificate.portal && course ? { portal: course } : {}),
+        ...(!certificate.portal && certificate.course && course ? { course } : {}),
+      },
     });
 
     const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin;
