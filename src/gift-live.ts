@@ -43,6 +43,10 @@ export type LiveInput = Readonly<{
   connectBy: string | null;
   nextReadingInWords: string | null;
   cameBackOnInWords: string | null;
+  /** The day it was reached, or the last day of a habit that finished with days earned, in the reader's clock. */
+  endedOnInWords?: string | null;
+  /** The day the money of a start too high goes back: the gift's own deadline. */
+  deadlineInWords?: string | null;
 }>;
 
 export type Live = Readonly<{
@@ -186,8 +190,9 @@ export function liveOf(input: LiveInput): Live {
             : yours
               ? L.startTooHigh.yours(input.todayReading)
               : L.startTooHigh.theirs(recipientName, input.todayReading),
-        figure: { label: L.startTooHigh.label(funderName), value: input.amountDisplay },
-        next: null,
+        // What happens to the money, to whom, and when: "back to you" is said to the funder and to nobody else.
+        figure: { label: voice === "funder" ? L.startTooHigh.labelToFunder : L.startTooHigh.label(funderName), value: input.amountDisplay },
+        next: input.deadlineInWords ? L.startTooHigh.on(input.deadlineInWords) : null,
         back,
       };
 
@@ -195,25 +200,28 @@ export function liveOf(input: LiveInput): Live {
       return {
         headline: yours ? L.won.yours : L.won.theirs(recipientName),
         figure: { label: yours ? L.won.label.yours : L.won.label.theirs, value: input.theirsDisplay },
-        next: null,
+        next: input.endedOnInWords ? (input.shape === "days" ? L.won.finishedOn(input.endedOnInWords) : L.won.reachedOn(input.endedOnInWords)) : null,
         back,
       };
 
     case "over":
       return {
-        headline: yours ? L.over.yours : L.over.theirs,
-        figure: {
-          label: yours ? L.over.label.yours(funderName) : L.over.label.theirs,
-          value: input.returnedDisplay,
-        },
-        next: null,
+        headline: voice === "funder" ? L.over.theirs(recipientName) : L.over.yours,
+        // Everything goes back when nothing was earned: the whole amount, whether or not it has been sent yet.
+        figure: { label: voice === "funder" ? L.over.label.theirs : L.over.label.yours(funderName), value: input.amountDisplay },
+        next:
+          !isNothing(input.returnedDisplay) && input.cameBackOnInWords
+            ? L.over.backOn(input.cameBackOnInWords)
+            : voice === "funder"
+              ? L.over.byItself.theirs
+              : L.over.byItself.yours,
         back,
       };
 
     case "cameBack":
       return {
-        headline: yours ? L.cameBack.yours : L.cameBack.theirs,
-        figure: { label: yours ? L.cameBack.label.yours : L.cameBack.label.theirs, value: input.returnedDisplay },
+        headline: voice === "funder" ? L.cameBack.theirs : L.cameBack.yours(funderName),
+        figure: { label: voice === "funder" ? L.cameBack.label.theirs : L.cameBack.label.yours, value: input.returnedDisplay },
         next: input.cameBackOnInWords === null ? null : L.cameBack.on(input.cameBackOnInWords),
         back: null,
       };

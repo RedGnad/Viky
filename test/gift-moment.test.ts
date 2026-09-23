@@ -129,7 +129,8 @@ test("a start too high says why, and the only way on is another gift", () => {
   const gift = giftOfMilestone(climb({ opened: true, connected: true, phase: "startTooHigh", startReading: 1520 }));
   assert.equal(momentOf(gift), "startTooHigh");
   assert.equal(readAs(gift, "recipient").action, "askAgain");
-  assert.equal(readAs(gift, "funder").action, null);
+  assert.equal(readAs(gift, "funder").action, "offerAgain", "the person asks, the funder makes it (V4-3)");
+  assert.equal(readAs(gift, "reader").action, null);
 });
 
 test("reached is the money, and taking it out is the action; the deadline passed asks nothing of anybody", () => {

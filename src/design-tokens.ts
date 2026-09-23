@@ -384,6 +384,13 @@ export const MOTION = {
   count: { durationMs: 700, easing: EASING.standard },
   /** The whole arrival, whatever changed: under two seconds, the days a little apart from each other. */
   arrival: { budgetMs: 2000, staggerMs: 120 },
+  /**
+   * The one confetti of the app (the founder, 23 Sep 2026, decision B): on "Atteint" alone, for the person it is for
+   * and for the funder, the first time this device sees the gift reached; never at payment. Twenty-four pieces in the
+   * characters' three shapes and the look's colours burst from the gift's drawing and fall, once, in Material's
+   * extra-long3 on the emphasized curves. With it the stamp of a gift had or not lands, on the expressive spring.
+   */
+  confetti: { durationMs: 900, pieces: 24, burst: EASING.emphasizedDecelerate, fall: EASING.emphasizedAccelerate, stampFrom: 1.5 },
   /** A gift made or money taken, answering the press that did it: the gift character arrives once, its bow a beat after. */
   gift: { spatial: SPRING.expressiveFastSpatial, effects: SPRING.effects, fromScale: 0.55, bowDelayMs: 120 },
   /**

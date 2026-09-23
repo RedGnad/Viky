@@ -48,6 +48,8 @@ export type MomentAction =
   | "askAgain"
   | "take"
   | "linkAgain"
+  /** A start too high, to the funder: the way on is another gift, made from Home. */
+  | "offerAgain"
   | "takeItBack"
   | null;
 
@@ -152,7 +154,8 @@ export function readAs(gift: Gift, voice: Voice, moment: Moment = momentOf(gift)
   if (voice === "funder") {
     // Two gestures exist while nobody has opened it, and they are not of the same weight: sending the link again is
     // the everyday one, taking the gift back ends it. The second is offered under the first, never beside it.
-    return { moment, action: moment === "unopened" ? "linkAgain" : null, agreementOpen };
+    // A start too high is the other: the way on is another gift, which only the funder can make (document J).
+    return { moment, action: moment === "unopened" ? "linkAgain" : moment === "startTooHigh" ? "offerAgain" : null, agreementOpen };
   }
   // While a gift runs, its page is looked at and nothing is asked (the founder's table of 23 Sep 2026, V4): taking
   // the money out is the action of the moment it is theirs, "Atteint", and of no other. Until then, #76 offered it at

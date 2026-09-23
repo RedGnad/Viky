@@ -76,7 +76,7 @@ test("the figure says what it is, and the two people never read the other one's 
   assert.equal(theirs.headline, "It is yours.");
   const funder = liveOf(input({ moment: "won", voice: "funder" }));
   assert.deepEqual(funder.figure, { label: "Theirs", value: "$2.00" });
-  assert.equal(funder.headline, "Léa got it.");
+  assert.equal(funder.headline, "Léa did it.", "the founder's words for the funder's moment (decision B)");
   // A reader who is neither reads the third person too, and never "yours".
   const reader = liveOf(input({ moment: "won", voice: "reader" }));
   assert.equal(reader.figure?.label, "Theirs");
@@ -151,10 +151,32 @@ test("the next moment is only said where there is one, and it is the reader's ow
   assert.equal(liveOf(input({ moment: "unopened" })).figure?.label, "Yours day by day");
   assert.equal(liveOf(input({ moment: "unopened", shape: "climb", voice: "funder" })).figure?.label, "Theirs at 1500");
   assert.equal(liveOf(input({ moment: "unopened", shape: "stamp" })).figure?.label, "Yours with the proof");
-  for (const moment of ["awaitingProof", "startTooHigh", "won", "over"] as const) {
+  for (const moment of ["awaitingProof", "startTooHigh", "won"] as const) {
     assert.equal(liveOf(input({ moment })).next, null, `${moment} points at a next moment it does not have`);
   }
   assert.equal(liveOf(input({ moment: "cameBack" })).next, "On 20 Sep 2026.");
+  // The endings (V4-3): the date the money moves, or that it moves by itself.
+  assert.equal(liveOf(input({ moment: "startTooHigh", deadlineInWords: "13 Oct 2026" })).next, "On 13 Oct 2026, when the time is up.");
+  assert.equal(liveOf(input({ moment: "won", endedOnInWords: "22 Sep 2026", shape: "climb" })).next, "Reached on 22 Sep 2026.");
+  assert.equal(liveOf(input({ moment: "won", endedOnInWords: "22 Sep 2026", shape: "days" })).next, "Finished on 22 Sep 2026.");
+  assert.equal(liveOf(input({ moment: "over" })).next, "Back on 20 Sep 2026.", "back already, and when");
+  assert.equal(liveOf(input({ moment: "over", returnedDisplay: "$0.00" })).next, "Nothing to do: it goes back by itself.");
+  assert.equal(liveOf(input({ moment: "over", returnedDisplay: "$0.00", voice: "funder" })).next, "Nothing to do: it comes back to you by itself.");
+});
+
+test("at the endings, 'back to you' is said to the funder and to nobody else, and each side reads its own question", () => {
+  // Départ trop haut: the reason, and what happens to the money.
+  assert.equal(liveOf(input({ moment: "startTooHigh", voice: "funder" })).figure?.label, "Comes back to you");
+  assert.equal(liveOf(input({ moment: "startTooHigh", voice: "reader" })).figure?.label, "Goes back to Maman");
+  // Échéance passée: "c'est fini ?" to the person, "je récupère quoi ?" to the funder.
+  assert.equal(liveOf(input({ moment: "over" })).headline, "The time is up.");
+  assert.equal(liveOf(input({ moment: "over", voice: "funder" })).headline, "Léa did not make it in time.");
+  assert.deepEqual(liveOf(input({ moment: "over", voice: "funder" })).figure, { label: "Back to you", value: "$7.00" });
+  assert.deepEqual(liveOf(input({ moment: "over", voice: "reader" })).figure, { label: "Back to Maman", value: "$7.00" });
+  // Repris: where the money went, to the person; that it is back, to the funder.
+  assert.equal(liveOf(input({ moment: "cameBack" })).headline, "Maman took it back before it was opened.");
+  assert.equal(liveOf(input({ moment: "cameBack", voice: "funder" })).headline, "It is in your account again.");
+  assert.equal(liveOf(input({ moment: "cameBack", voice: "funder" })).figure?.label, "Came back");
 });
 
 test("a gift nobody opened says whose name it is in, and the funder reads whether it was seen", () => {

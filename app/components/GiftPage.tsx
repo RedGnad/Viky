@@ -29,8 +29,10 @@ import type { AnyGiftStatus } from "@/src/gift-status";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { contractDayInWords, contractRangeInWords, dateInWords, momentInWords, nextPassMs } from "@/src/moments";
 import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
-import { GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
+import { GIFT_LIVE as L, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
+import { AskAgain } from "../kit/AskAgain";
 import { CertificateProof } from "../kit/CertificateProof";
+import { Confetti } from "../kit/Confetti";
 import { Nature } from "../kit/Nature";
 import { ShowProof } from "../kit/ShowProof";
 import { CheckThisDay } from "../kit/CheckThisDay";
@@ -232,6 +234,8 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
     shape: milestone ? (milestone.shape === "certificate" ? "stamp" : "climb") : "days",
     openBy,
     connectBy,
+    endedOnInWords: milestone?.reachedAtMs ? dateInWords(milestone.reachedAtMs, zone) : daily && daily.finished && daily.endDay > 0 ? contractDayInWords(daily.endDay) : null,
+    deadlineInWords: milestone?.deadlineMs ? dateInWords(milestone.deadlineMs, zone) : null,
     nextReadingInWords: moment === "counting" || moment === "climbing" ? nextReading : null,
     cameBackOnInWords: cameBackOn,
   });
@@ -479,6 +483,13 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
       case "linkAgain":
         return <LinkAgain giftId={giftId} recipientName={recipientName} />;
       case "askAgain":
+        return <AskAgain funderName={funderName} />;
+      case "offerAgain":
+        return (
+          <Link href="/" className={PRIMARY_BUTTON}>
+            {L.startTooHigh.offerAgain}
+          </Link>
+        );
       default:
         return null;
     }
@@ -568,6 +579,8 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
         character={<HeadCharacter />}
         {...(address || hadAccount ? { back: "/gifts", backLabel: W.backToGifts } : { back: "/", backLabel: W.aboutViky, backFollows: true })}
       >
+        {/* The one confetti of the app, on "Atteint", to the two people and to nobody else (decision B). */}
+        <Confetti giftId={giftId} play={moment === "won" && (mine || readerIsFunder)} />
         <GiftLive
           from={eyebrowOf(voice, funderName)}
           who={titleOf(voice, recipientName ?? account.username)}
