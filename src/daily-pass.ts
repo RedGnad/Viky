@@ -1,6 +1,7 @@
 import type { Hex } from "viem";
 import { retireExpiredExits } from "./exit-store";
-import { runPublicCheckIn, type PublicCheckInOutcome } from "./duolingo-public-checkin";
+import { readDailyGift } from "./daily-count";
+import type { PublicCheckInOutcome } from "./duolingo-public-checkin";
 import { completePendingCreations, type CreationLine } from "./gift-creation";
 import { liveCreationDeps } from "./gift-creation-live";
 import { readGift, utcDayOf, type GiftState } from "./gift-reader";
@@ -105,7 +106,7 @@ function liveDeps(): DailyPassDeps {
     boundGifts: loadBoundGifts,
     allGifts: loadAllGifts,
     read: (escrow, giftId) => readGift(escrow, giftId, clients.publicClient),
-    count: (giftId) => runPublicCheckIn({ giftId, purpose: "count" }),
+    count: (giftId) => readDailyGift({ giftId, purpose: "count" }),
     drain: relayDrain,
     finalise: relayFinalise,
     refund: relayRefund,
@@ -286,9 +287,9 @@ async function runPass(
 function describe(outcome: PublicCheckInOutcome): DailyPassLine {
   switch (outcome.kind) {
     case "counted":
-      return { giftId: outcome.giftId, step: "count", result: `counted, ${outcome.creditedDays} day(s) credited, ${outcome.xp} XP`, hash: outcome.hash };
+      return { giftId: outcome.giftId, step: "count", result: `counted, ${outcome.creditedDays} day(s) credited, ${outcome.xp} ${outcome.unit ?? "XP"}`, hash: outcome.hash };
     case "bound":
-      return { giftId: outcome.giftId, step: "count", result: `bound, ${outcome.xp} XP`, hash: outcome.hash };
+      return { giftId: outcome.giftId, step: "count", result: `bound, ${outcome.xp} ${outcome.unit ?? "XP"}`, hash: outcome.hash };
     case "already":
       return { giftId: outcome.giftId, step: "count", result: `skipped: ${outcome.reason}` };
     case "refused":

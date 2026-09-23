@@ -28,8 +28,7 @@ test("only the listed sources exist, and an unknown name is refused", () => {
     "credly-assertion",
     "credly-badge-page",
     "det-certificate",
-    "duolingo-profile",
-  ]);
+    "duolingo-profile"]);
   assert.equal(attestedSource("duolingo-profile"), DUOLINGO_PROFILE);
   assert.equal(attestedSource("anything-else"), undefined);
   assert.equal(attestedSource(""), undefined);

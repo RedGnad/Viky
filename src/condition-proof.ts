@@ -174,6 +174,15 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     sourcePolicing: "The school records the grades and answers for them; EcoleDirecte's publisher, Aplim, hosts them. Aplim's terms (read 23 Sep 2026) say the holder of a password reaches only the information about themselves or those they answer for, and name no program; PRONOTE, the other portal read, is not built, its publisher's terms forbidding any device retrieving data from its sites without its written authorisation, and the judges' page says so.",
   },
   {
+    conditionId: "fitbit-daily",
+    supervised: false,
+    inShort: "Connected by them: Fitbit is asked each morning whether yesterday reached the minutes. A yes or a no, and no number.",
+    data: "Fitbit's own Web API, the daily activity summary, read each morning through an attested fetch with the person's own key handed to the fetch as a secret the attestor never sees: the reading is signed by Reclaim's attestor and Viky checks that signature and the request it was about. What is read is the fairly and very active minutes of the day; what is signed for the contract is the verdict alone, the target when the day was won and nothing when it was not, so the chain and the journal hold a yes or a no and never a number of the person's. The summary is judged and dropped: no proof of it is kept.",
+    account: "The person connects their own Fitbit account once, on Fitbit's own page, in their own browser, after the consent screen says in Viky's words what the funder will be told and what they will never see. The pseudonym of that account is bound at the first reading, and a key that Fitbit stops honouring ends the reading until the person connects again; disconnect and erase is theirs at any time, and gives the key back to Fitbit first.",
+    whoActed: "Unknown: the summary says what the account's tracker recorded, never who wore it. Fitbit describes no check of who moves.",
+    sourcePolicing: "Fitbit polices nothing about who moves. Its Platform Terms of Service (effective 6 Jun 2023, read 23 Sep 2026) frame what Viky does with User Data: distributed to no external source without the User's informed consent (1(f)), never made public (1(f)), removed on the User's request (1(i)), reached through the API and nothing else (1(g)); the consent screen, the verdict-only reading and the erase button are those four, and the judges' page says so.",
+  },
+  {
     conditionId: "coursera-certificate",
     supervised: false,
     inShort: "Read from the certificate's public page. Coursera checks identity once, not each piece of work.",

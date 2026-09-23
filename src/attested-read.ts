@@ -1,5 +1,6 @@
 import { keccak256, stringToHex, type Hex } from "viem";
 import { attestedSource, headersFor, type AttestedSource, type ResponseMatch } from "./attested-sources";
+import { connectedSource, type ConnectedSource } from "./fitbit-source";
 import { allowedAttestors, attestorAccepted, type ZkFetchProof } from "./duolingo-public";
 import { localProofVerified, proofVerifierMode } from "./proof-verification";
 import { READING_FINGERPRINT } from "./reading-fingerprint";
@@ -45,7 +46,8 @@ export class AttestedReadError extends Error {
 }
 
 export type AttestedReadDeps = {
-  zkFetch: (source: AttestedSource, account: string) => Promise<ZkFetchProof>;
+  /** The fetch, with the person's key as a secret where the source takes one (D188): never logged, never in the proof. */
+  zkFetch: (source: AttestedSource, account: string, bearer?: string) => Promise<ZkFetchProof>;
   verify: (proof: ZkFetchProof) => Promise<boolean>;
   attestors?: readonly string[];
 };
@@ -131,13 +133,17 @@ export function classifyFetchFailure(message: string, source: AttestedSource): A
   return new AttestedReadError("FETCH_FAILED", "The page could not be read right now");
 }
 
-export async function attestedRead(sourceId: string, account: string, deps: AttestedReadDeps): Promise<AttestedReading> {
-  const source = attestedSource(sourceId);
+export async function attestedRead(sourceId: string, account: string, deps: AttestedReadDeps, bearer?: string): Promise<AttestedReading> {
+  const source = attestedSource(sourceId) ?? connectedSource(sourceId);
   if (!source) throw new AttestedReadError("NOT_CONFIGURED", `No attested source is named ${sourceId}`);
   if (!source.accepts(account)) throw new AttestedReadError("INVALID_ACCOUNT", "That is not a name this source could have");
+  // A connected source opens with the person's key and with nothing else; a public one takes none (D188).
+  const auth = (source as Partial<ConnectedSource>).auth;
+  if (auth === "bearer" && !bearer) throw new AttestedReadError("NOT_CONFIGURED", "This source is read with the person's key, and none was given");
+  if (auth !== "bearer" && bearer) throw new AttestedReadError("NOT_CONFIGURED", "This source takes no key");
   let proof: ZkFetchProof;
   try {
-    proof = await deps.zkFetch(source, account);
+    proof = await deps.zkFetch(source, account, bearer);
   } catch (error) {
     if (error instanceof AttestedReadError) throw error;
     throw classifyFetchFailure(error instanceof Error ? error.message : String(error), source);
@@ -188,7 +194,7 @@ async function workerIsCurrent(base: string): Promise<void> {
  * Through the attested-fetch worker when ZKFETCH_WORKER_URL is set (Vercel functions cannot load zk-fetch, D27). The
  * worker is told a source and an account, never a URL, and only the proof comes back; everything is checked here.
  */
-async function workerZkFetch(source: AttestedSource, account: string): Promise<ZkFetchProof> {
+async function workerZkFetch(source: AttestedSource, account: string, bearer?: string): Promise<ZkFetchProof> {
   const base = process.env.ZKFETCH_WORKER_URL!.trim().replace(/\/$/, "");
   const secret = process.env.ZKFETCH_WORKER_SECRET?.trim();
   if (!secret) throw new AttestedReadError("NOT_CONFIGURED", "The attested fetch worker is not configured");
@@ -198,7 +204,8 @@ async function workerZkFetch(source: AttestedSource, account: string): Promise<Z
     response = await fetch(`${base}/read`, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${secret}` },
-      body: JSON.stringify({ source: source.id, account }),
+      // The person's key rides in the body, over the channel the worker's own secret guards, and in no log (D188).
+      body: JSON.stringify({ source: source.id, account, ...(bearer ? { bearer } : {}) }),
       signal: AbortSignal.timeout(90_000),
     });
   } catch (error) {
@@ -211,17 +218,19 @@ async function workerZkFetch(source: AttestedSource, account: string): Promise<Z
   throw new AttestedReadError("FETCH_FAILED", `The attested fetch worker answered ${response.status}`);
 }
 
-async function localZkFetch(source: AttestedSource, account: string): Promise<ZkFetchProof> {
+async function localZkFetch(source: AttestedSource, account: string, bearer?: string): Promise<ZkFetchProof> {
   const appId = process.env.RECLAIM_ZKFETCH_APP_ID?.trim();
   const appSecret = process.env.RECLAIM_ZKFETCH_APP_SECRET?.trim();
   if (!appId || !appSecret) throw new AttestedReadError("NOT_CONFIGURED", "The attested fetch is not configured");
   // A real runtime import, as in src/duolingo-public.ts: zk-fetch is CommonJS requiring ESM-only packages.
   const { ReclaimClient } = (await import(/* turbopackIgnore: true */ "@reclaimprotocol/zk-fetch")) as typeof import("@reclaimprotocol/zk-fetch");
   const client = new ReclaimClient(appId, appSecret);
+  // The person's key, where the source takes one, goes in the secret half of the fetch: zkFetch keeps secret headers
+  // out of the proof and out of the attestor's sight (D188, rule 5).
   return (await client.zkFetch(
     source.url(account),
     { method: "GET", headers: headersFor(source), useTee: true } as never,
-    { responseMatches: source.matches.map((match) => ({ ...match })) } as never,
+    { responseMatches: source.matches.map((match) => ({ ...match })), ...(bearer ? { headers: { Authorization: `Bearer ${bearer}` } } : {}) } as never,
   )) as unknown as ZkFetchProof;
 }
 

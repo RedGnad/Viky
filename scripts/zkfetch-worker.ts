@@ -50,9 +50,10 @@ const server = createServer(async (request, response) => {
   let raw = "";
   for await (const chunk of request) {
     raw += chunk;
-    if (raw.length > 4_096) return reply(413, { error: "Too large" });
+    // A connected source's key rides in the body (D188), and a key can be long: room for it, and no more.
+    if (raw.length > 16_384) return reply(413, { error: "Too large" });
   }
-  let body: { username?: unknown; source?: unknown; account?: unknown };
+  let body: { username?: unknown; source?: unknown; account?: unknown; bearer?: unknown };
   try {
     body = JSON.parse(raw) as typeof body;
   } catch {
@@ -64,8 +65,11 @@ const server = createServer(async (request, response) => {
     const account = String(body.account ?? "");
     if (!source) return reply(400, { error: "UNKNOWN_SOURCE" });
     if (!source.accepts(account)) return reply(400, { error: "INVALID_ACCOUNT" });
+    // The person's key, for a source that opens with one (D188): handed to zkFetch as a secret, never logged.
+    const bearer = typeof body.bearer === "string" && body.bearer.length > 0 && body.bearer.length <= 8_192 ? body.bearer : undefined;
+    if (((source as Partial<{ auth: "bearer" }>).auth === "bearer") !== (bearer !== undefined)) return reply(400, { error: (source as Partial<{ auth: "bearer" }>).auth === "bearer" ? "KEY_REQUIRED" : "NO_KEY_TAKEN" });
     try {
-      const proof = await localAttestedFetch(source, account);
+      const proof = await localAttestedFetch(source, account, bearer);
       console.log(JSON.stringify({ at: new Date().toISOString(), source: source.id, account, ms: Date.now() - started, ok: true }));
       return reply(200, { proof });
     } catch (error) {

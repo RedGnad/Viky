@@ -5169,3 +5169,53 @@ put in the catalogue developer's queue by the founder the same morning.
   founder's step (item 1 of the review), not done here.
 - **Also corrected:** the owner row of the router's table in OPERATIONS, and the milestone section's "owned by the
   founder's key" (`app/components/MilestoneJudges.tsx`, said in the PR).
+
+## D188, 23 Sep 2026: Fitbit, connected by the person, the third nature of a condition and the family "Move"
+
+The founder, 23 Sep 2026: two conditions of a third proof mode, "connected by them", built whole up to the screen:
+the person authorises Viky once by OAuth, in place of a name, and each morning the reading service reads the source's
+API through zkFetch with the key as a secret; an attested reading, the attestor never seeing the key, nothing read on
+Viky's word. The eight rules of the mode are the founder's; this is the first source, Fitbit.
+
+- **The nature.** `connected`, "CONNECTED BY THEM" in the meta voice, beside read and shown, in the same three places.
+  The family "Move", id `move`. The line `fitbit-daily`, "Active minutes each day, on Fitbit", a daily condition on
+  goal 6 of the daily contract (`viky:provider:fitbit-connected:v1`), in `BUILDING`, offered to nobody (no operator door, D184), "Being built" on the
+  public page with the three missing pieces named on the line: the founder's variables, the reading service running
+  the source, goal 6 signed. The target is the funder's, in active minutes a day (Fitbit's fairly plus very
+  active minutes, what its own daily goal counts), thirty suggested; steps are the same summary and one more line away.
+- **Rule 1, consent.** The link of the line carries the consent in Viky's words, printed by the connect screen before
+  the gesture: what the funder is told (a yes or a no for the day), what they never see (the route, the times, the
+  numbers), how to disconnect and erase. Every sentence passes the consumer words check.
+- **Rule 2, nothing raw kept.** The morning reading judges the summary and drops it. What is signed for the contract
+  is the verdict, encoded as the contract counts: its own baseline plus the target when the day was won, the baseline
+  alone when it was not (which the contract refuses as `InsufficientProgress`, a no in the journal). No proof is
+  stored, the session row keeps the day and the verdict, and the chain holds a yes or a no. The person's own reading
+  of the day is written as a sentence and not built.
+- **Rule 3, disconnect and erase.** From the gift's page, by the recipient: the key revoked at Fitbit first, the row
+  deleted whole whether or not Fitbit answered; the gift goes on, each day counted as not done until they connect
+  again, with the same account, since its pseudonym is bound on the chain.
+- **Rule 4, keys at rest.** Sealed under `CONNECT_TOKEN_KEY` with AES-256-GCM (`src/connect-vault.ts`), opened for
+  one reading, never in a proof, never in a log. The application's credentials are `FITBIT_CLIENT_ID` and
+  `FITBIT_CLIENT_SECRET`, on Vercel, sensitive; nothing on Railway, the worker holding no key. OPERATIONS gives the
+  founder the three names, the callback URL to register, and nothing else to do.
+- **Rule 5, the reading.** The Fitbit summary source, with `auth: "bearer"`, lives in `src/fitbit-source.ts`, a file
+  the reading fingerprint does not cover, so that this merge changes no fingerprint and breaks no reading on main
+  (the founder's rule of the same morning: this developer touches neither Railway nor a variable). The attested read
+  and the worker carry the key in the secret half of zkFetch. Moving the source into the shared list, which moves the
+  fingerprint, is the branch `catalogue/fitbit-source`, and the founder redeploys the service from it and merges it
+  back to back (OPERATIONS, step 3); until then the morning reading refuses `NOT_CONFIGURED` before asking the service.
+- **Rule 6, the goal.** `registerGoal(6, 0x1945fcd8…a701)` on `GiftEscrow`, in the night's Safe session, nonce 16.
+- **Rule 7, the frontier.** The connect screen is `app/kit/ConnectTheAccount.tsx`, on the model of the screen that
+  asks the name, said in the PR; `app/components/GiftPage.tsx` gained one branch to draw it; the other developer did
+  not touch either meanwhile.
+- **Rule 8, the pages.** "Move" and "CONNECTED BY THEM" on the public page, "Being built"; the judges' page carries
+  Fitbit's four clauses and the one risk: the funder's daily yes or no is one bit about the person given to a third
+  party under the consent they gave.
+- **Defaults applied, to confirm (the founder away, 23 Sep 2026).** The suggested target of thirty active minutes a
+  day; the day judged being yesterday in UTC, whatever the person's own time zone on Fitbit; the split of the source
+  into a second branch with the redeploy sequence above; the line opening on the three pieces alone, without a week
+  of one real person first. Each is written where it applies and reverses in one commit.
+- **What is verified, and what waits.** The vault, the signed state, the PKCE round trip up to the exchange, the
+  token exchange, refresh and revoke against a fake Fitbit, the verdict metric, the source's patterns, the store
+  against a real Postgres, the register and the door. Not verified: no application exists, so no real connection, no
+  real reading, no goal signed, and the worker not redeployed until this merges.

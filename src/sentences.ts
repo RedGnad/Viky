@@ -495,6 +495,10 @@ export const GIFT_PAGE = {
   aboutViky: "About Viky",
   backToGifts: "Back to my gifts",
   loading: "One moment",
+  /** A connected condition (D188): the gesture running, the door shut, and a gesture that did not go through. */
+  working: "One moment",
+  connectNotOpen: "Connecting is not open yet. Nothing was changed.",
+  connectFailed: "That did not go through, and nothing was changed. Try again.",
   notFound: "This gift could not be found.",
 
   /**
@@ -957,7 +961,7 @@ export const JUDGES = {
  * register's own and each condition carries its state in words.
  */
 /** The nature of a condition, in two words exactly (the founder, 22 Sep 2026): the meta voice, capitals, nowhere but three places. */
-export const CONDITION_NATURE = { read: "READ FOR YOU", shown: "SHOWN BY THEM" } as const;
+export const CONDITION_NATURE = { read: "READ FOR YOU", shown: "SHOWN BY THEM", connected: "CONNECTED BY THEM" } as const;
 
 /**
  * A proof the person shows from their own account (D162): one button, and what happens around it. The source's

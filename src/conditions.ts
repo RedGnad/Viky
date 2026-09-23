@@ -2,7 +2,7 @@ import { isValidDuolingoUsername } from "./duolingo-public-terms";
 import { UNIVERSITY_SOURCE } from "./university-shown";
 import { UDEMY_SOURCE } from "./udemy-shown";
 import { ECOLEDIRECTE_SOURCE } from "./school-shown";
-import { GOAL_TYPE_DUOLINGO_COURSE_XP, GOAL_TYPE_DUOLINGO_XP } from "./gift-terms";
+import { GOAL_TYPE_DUOLINGO_COURSE_XP, GOAL_TYPE_DUOLINGO_XP, GOAL_TYPE_FITBIT_ACTIVITY } from "./gift-terms";
 
 /**
  * The register of conditions: the spine of the product (structure of 17 Sep 2026, section 10, C1).
@@ -41,7 +41,7 @@ export type ConditionKind = "daily" | "milestone";
  * erased exactly the thing that made it worth building. "Move" left with it: nothing was ever filed there, and a
  * family draws nothing until something is.
  */
-export type ConditionFamily = "language" | "exam" | "play" | "course" | "certification" | "study" | "school";
+export type ConditionFamily = "language" | "exam" | "play" | "course" | "certification" | "study" | "school" | "move";
 
 export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>[] = [
   { id: "language", title: "Learn a language" },
@@ -60,6 +60,9 @@ export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>
   // School (D179): an average shown by the pupil or the family from their own EcoleDirecte account. Nothing offered
   // in it until a provider of ours exists, so the page and the chooser draw it only for an account that runs Viky.
   { id: "school", title: "School" },
+  // Move (D188): a source the person connects once, read each morning with their key. Nothing offered in it until a
+  // real person has run on it, so the page and the chooser draw it only for an account that runs Viky.
+  { id: "move", title: "Move" },
 ];
 
 /** From this many conditions on offer, the chooser stops being one list and becomes one section per family. */
@@ -131,7 +134,39 @@ export type ConditionLink =
       check?: NameCheck;
     }>
   /** A public page of the source the recipient hands over. */
-  | Readonly<{ kind: "link"; label: string; help: string }>;
+  | Readonly<{ kind: "link"; label: string; help: string }>
+  /**
+   * An account the person connects once, on the source's own page, in their own browser (D188, the third nature):
+   * the one gesture, in place of a name, and the consent said in our words before it.
+   */
+  | Readonly<{ kind: "connect"; label: string; help: string; consent: ConnectConsent }>;
+
+/**
+ * What the person is told before connecting, in Viky's words and not the source's (D188, rule 1): what Viky will
+ * say to the funder, what the funder will never see, and how to disconnect and erase. Printed by the connect screen
+ * and nowhere else; every sentence passes the consumer words check.
+ */
+export type ConnectConsent = Readonly<{
+  /** "Connect your Fitbit". */
+  title: string;
+  /** What is read each morning, and what the funder is told: a yes or a no. */
+  sees: string;
+  /** What the funder will never see: the route, the times, the numbers. */
+  never: string;
+  /** How to disconnect and erase, from this page, at any time. */
+  erase: string;
+  /** The button that opens the source's own page. */
+  connect: string;
+  connecting: string;
+  /** Once connected: what is now true, and the gesture that starts the counting. */
+  connected: string;
+  start: string;
+  /** The way out, and what it says once done. */
+  disconnect: string;
+  erased: string;
+  /** The person's own reading of the day, if they ask for it: shown to them alone, kept nowhere. */
+  todayYours: string;
+}>;
 
 /** What a daily condition asks of a day, and how the funder sets it on "How much, and for how long". */
 export type DailyTarget = Readonly<{
@@ -164,13 +199,16 @@ export type ConditionCourse = Readonly<{
  * gesture; or shown by the person, from their own account, one gesture at a time. It is printed as two words on the
  * chooser, on the card and on the catalogue, and nowhere else.
  */
-export type ConditionNature = "read" | "shown";
+export type ConditionNature = "read" | "shown" | "connected";
 
 export type Condition = Readonly<{
   /** Stable, and what a gift's terms could name one day; never printed. */
   id: string;
   kind: ConditionKind;
-  /** Read for them, or shown by them. Every condition of the pilot is read: a shown one is a different promise. */
+  /**
+   * Read for them, shown by them, or connected by them (D188): a key the person hands Viky once, read each morning
+   * with the attestor never seeing it. Every condition of the pilot is read: the two others are different promises.
+   */
   nature: ConditionNature;
   /** The contract's goal type for a daily condition; a milestone lives on its own contract and has none. */
   goalType: number | null;
@@ -826,6 +864,61 @@ export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
   },
 };
 
+/**
+ * Fitbit, connected by the person (D188): the first condition of the third nature. They authorise Viky once on
+ * Fitbit's own page, and each morning the keeper reads yesterday's activity summary through the attested fetch with
+ * their key as a secret, judges the minutes against the target, and keeps the verdict alone. The funder learns a yes
+ * or a no for the day; the numbers are read, judged and dropped.
+ */
+export const FITBIT_DAILY: Condition = {
+  id: "fitbit-daily",
+  kind: "daily",
+  nature: "connected",
+  goalType: GOAL_TYPE_FITBIT_ACTIVITY,
+  live: false,
+  beforeItOpens: "The Fitbit application's two variables and the sealing key set by the founder, the reading service redeployed with the Fitbit source, and goal 6 signed.",
+  source: "Fitbit",
+  family: "move",
+  name: "Active minutes each day, on Fitbit",
+  help: "Connected once by them: each morning Viky asks Fitbit whether yesterday reached the minutes and keeps only that yes or no. It proves the account moved, not who wore it.",
+  link: {
+    kind: "connect",
+    label: "Connect your Fitbit",
+    help: "You authorise Viky once, on Fitbit's own page. Nothing to type here, nothing to paste.",
+    consent: {
+      title: "Connect your Fitbit",
+      sees: "Each morning Viky asks Fitbit one thing about yesterday: did your active minutes reach the target. The person who sent this gift is told yes or no for the day, and nothing else.",
+      never: "They never see where you went, when, for how long, or any number: not your steps, not your heart rate, not your minutes. Viky reads them, judges the day, and keeps none of them.",
+      erase: "You can disconnect and erase from this page at any time. Viky then gives Fitbit's key back and keeps nothing of yours; the gift goes on, with each day counted as not done until you connect again.",
+      connect: "Connect Fitbit",
+      connecting: "Opening Fitbit",
+      connected: "Fitbit is connected. From tomorrow, every day with your minutes is yours, counted each morning.",
+      start: "Start counting",
+      disconnect: "Disconnect and erase",
+      erased: "Disconnected. Fitbit's key is given back and nothing of yours is kept. Connect again whenever you like.",
+      todayYours: "Only you can see today's number, and Viky keeps it nowhere.",
+    },
+  },
+  detailTitle: "Their Fitbit, and the minutes a day",
+  target: {
+    label: "Active minutes they reach for a day to count",
+    inWords: (value) => `${value} active minutes a day`,
+    suggested: 30,
+    min: 1,
+    tooLow: "At least 1 minute.",
+  },
+  reading: "fitbit-daily-summary",
+  words: {
+    earnedDay: "Each day they reach it, this becomes theirs",
+    connect: "Opened. Connect Fitbit to start counting.",
+    doIt: "Move; nothing else. Each morning Viky asks Fitbit whether yesterday reached your minutes.",
+    eachDay: "each day with the minutes",
+    theyConnect: "connects their Fitbit",
+    yesterday: "yesterday's minutes",
+    preview: "Active minutes each day, on Fitbit: each day you reach them, that day's share becomes yours.",
+  },
+};
+
 export const BUILDING: readonly Condition[] = [
   CAMBRIDGE_ENGLISH_SHOWN,
   IELTS_SHOWN,
@@ -837,6 +930,7 @@ export const BUILDING: readonly Condition[] = [
   UNIVERSITY_YEAR_PASSED_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
   ECOLEDIRECTE_GRADE_SHOWN,
+  FITBIT_DAILY,
 ];
 
 /**

@@ -75,6 +75,11 @@ export const GOAL_TYPE_ONCHAIN = 3;
 export const GOAL_TYPE_STRAVA_DISTANCE = 4;
 /** One Duolingo course rather than the experience total (U1): registered on the escrow on 18 Sep 2026. */
 export const GOAL_TYPE_DUOLINGO_COURSE_XP = 5;
+/** Fitbit, connected by the person once and read each morning with their key (D188): the day's verdict, never a number of theirs. */
+export const GOAL_TYPE_FITBIT_ACTIVITY = 6;
+
+/** What every check-in for a Fitbit gift carries, and what the owner registers for goal 6. */
+export const FITBIT_CONNECTED_PROVIDER_ID: Hex = keccak256(stringToHex("viky:provider:fitbit-connected:v1"));
 
 /**
  * The registry's providerId for Duolingo. Since D27 it is the public mode (an attested read of the

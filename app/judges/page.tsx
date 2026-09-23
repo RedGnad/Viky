@@ -229,6 +229,19 @@ export default async function JudgesPage() {
             the program, as before; the privacy page says which rule each condition is under.
           </li>
           <li>
+            <strong>Fitbit&apos;s terms, and the one risk.</strong> Active minutes each day on Fitbit is connected by the
+            person once, on Fitbit&apos;s own page (D188): each morning the keeper reads yesterday&apos;s summary through
+            the attested fetch with their key as a secret the attestor never sees, judges the minutes against the
+            target, and signs the verdict alone; the summary is dropped and no proof of it is kept. Fitbit&apos;s Platform
+            Terms of Service (effective 6 Jun 2023, read 23 Sep 2026) ask four things of User Data, and each is a piece of
+            this line: displayed or distributed to no external source without the User&apos;s informed consent (1(f)), the
+            consent screen in Viky&apos;s words before the gesture; never made public (1(f)), the funder learns a yes or a
+            no; removed on the User&apos;s request (1(i)), the erase button that gives the key back first; reached through
+            Fitbit&apos;s API and nothing else (1(g)). The risk: the funder&apos;s daily yes or no is itself a distribution
+            of one bit about the person to a third party, under the consent they gave; whether Fitbit reads it so is not
+            known, and the application is registered by the founder with that written here.
+          </li>
+          <li>
             <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:
             Coursera verifies identity once per account, and says some programmes require it while others only check a
             name. That condition is not open yet, and this is what it will prove when it is.

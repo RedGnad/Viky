@@ -95,8 +95,9 @@ test("the page lists every condition the register holds, offered or not, by fami
   // passed and the grade (D174) under Study.
   assert.deepEqual(
     sections.flatMap((section) => section.building).map((condition) => condition.id),
-    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown"],
+    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown", "fitbit-daily"],
   );
+  assert.deepEqual(sections.find((section) => section.family === "move")?.building.map((condition) => condition.id), ["fitbit-daily"], "the family Move, for its one line being built (D188)");
   assert.deepEqual(sections.find((section) => section.family === "school")?.building.map((condition) => condition.id), ["ecoledirecte-grade-shown"], "the family School, for its one line being built (D179)");
   assert.deepEqual(sections.find((section) => section.family === "course")?.building.map((condition) => condition.id), ["udemy-course-shown"], "beside the Coursera certificate (D178)");
   assert.deepEqual(sections.find((section) => section.family === "exam")?.conditions.map((condition) => condition.id), ["toefl-mybest-shown"], "the TOEFL score is open in its family, the others being built beside it");
@@ -147,16 +148,16 @@ test("it is reachable without an account and from the judges page, and it says t
  * and every one of the pilot is read: a shown one is a different promise and comes with its own decision.
  */
 test("every condition says its nature, and every one of the pilot is read for the person", () => {
-  for (const condition of CONDITIONS) assert.ok(condition.nature === "read" || condition.nature === "shown", `${condition.id} has no nature`);
+  for (const condition of CONDITIONS) assert.ok(condition.nature === "read" || condition.nature === "shown" || condition.nature === "connected", `${condition.id} has no nature`);
   assert.deepEqual(CONDITIONS.filter((condition) => condition.nature === "shown").map((condition) => condition.id), ["toefl-mybest-shown"], "the TOEFL score is open since its path was complete (D184)");
   // What is being built lives beside the register, resolvable by id and offered to an operator alone (D164, D165, D174, D176).
   assert.deepEqual(
     BUILDING.map((condition) => condition.id),
-    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown"],
+    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown", "fitbit-daily"],
   );
   for (const id of BUILDING.map((condition) => condition.id)) {
     const shown = conditionById(id);
-    assert.equal(shown?.nature, "shown", `${id} is shown by them`);
+    assert.ok(shown?.nature === "shown" || shown?.nature === "connected", `${id} is shown by them, or connected by them (D188)`);
     assert.equal(shown?.live, false, `${id} is not open until a real proof has run end to end, then the founder's word`);
     // No fifth state (D169): a line being built carries none, and the page says "Being built" of it.
     assert.equal(shown?.state, undefined, `${id} carries no state while it is being built`);

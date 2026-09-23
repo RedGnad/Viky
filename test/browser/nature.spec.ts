@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
  * corrected): on the chooser's line, on the card under the condition, and on the catalogue page. The landing's own
  * card is not a gift card, so the words are not on it; the account screen has no condition, so none there either.
  */
-const WORDS = /^(READ FOR YOU|SHOWN BY THEM)$/;
+const WORDS = /^(READ FOR YOU|SHOWN BY THEM|CONNECTED BY THEM)$/;
 
 test.describe("the nature of a condition", () => {
   test("the chooser says it on the line of the condition, and the landing does not say it outside the sheet", async ({ page }) => {

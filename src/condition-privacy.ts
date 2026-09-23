@@ -37,6 +37,7 @@ export const PRIVACY: Readonly<Record<string, ConditionPrivacy>> = {
   "bac-france-shown": { kept: "verdict", read: "your result on Cyclades, passed or not" },
   "udemy-course-shown": { kept: "verdict", read: "the course the gift names, finished or not" },
   "ecoledirecte-grade-shown": { kept: "verdict", read: "the overall average out of 20 on the grades page" },
+  "fitbit-daily": { kept: "verdict", read: "yesterday's active minutes, judged against the target each morning" },
 };
 
 /** The rule a condition falls under; a condition with no line is a defect the register's test catches. */
@@ -52,7 +53,7 @@ export function verdictOnly(conditionId: string): boolean {
 }
 
 /** The privacy page's sentence for one condition: what is read, who sees it, what is kept, what reaches the public program. */
-export function privacyWords(condition: Pick<Condition, "id" | "source">): string {
+export function privacyWords(condition: Pick<Condition, "id" | "source" | "nature">): string {
   const line = privacyOf(condition);
   switch (line.kept) {
     case "number":
@@ -60,6 +61,6 @@ export function privacyWords(condition: Pick<Condition, "id" | "source">): strin
     case "fact":
       return `Read for you from a public page you share: ${line.read}. Kept in our database with the gift, and the public program receives that it was found, and the day.`;
     case "verdict":
-      return `Shown by you, from your own ${condition.source} account: ${line.read}. It is seen once, on your own screen, and by nobody else. Viky keeps neither the number nor the page's answer, only whether what the gift is for was reached, and the public program receives that alone. The person who funds the gift is told that it was reached and knows the target they chose; they do not see the number.`;
+      return `${condition.nature === "connected" ? "Read each morning from the" : "Shown by you, from your own"} ${condition.source} account${condition.nature === "connected" ? " you connected" : ""}: ${line.read}. It is seen once, on your own screen, and by nobody else. Viky keeps neither the number nor the page's answer, only whether what the gift is for was reached, and the public program receives that alone. The person who funds the gift is told that it was reached and knows the target they chose; they do not see the number.`;
   }
 }
