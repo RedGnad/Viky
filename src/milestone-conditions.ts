@@ -26,6 +26,11 @@ import {
   COURSERA_CERTIFICATE as COURSERA_CONDITION,
   DUOLINGO_ENGLISH_TEST,
   type Condition,
+  BAC_CAMEROON_SHOWN,
+  BAC_FRANCE_SHOWN,
+  BAC_MOROCCO_SHOWN,
+  CAMBRIDGE_ENGLISH_SHOWN,
+  IELTS_SHOWN,
   TOEFL_MYBEST_SHOWN,
   UNIVERSITY_ENROLLMENT_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
@@ -46,6 +51,22 @@ import {
 } from "./duolingo-english-test";
 import { DET_GOAL_TYPE } from "./milestone-goals";
 import { isValidToeflScore, TOEFL_DURATION_DAYS, TOEFL_GOAL_TYPE, TOEFL_MAX_SCORE, TOEFL_MIN_SCORE, TOEFL_SHOWN_SUBJECT } from "./toefl-shown";
+import {
+  BAC_DURATION_DAYS,
+  BAC_PASSED,
+  CAMBRIDGE_SCALE,
+  cambridgeInWords,
+  EXAM_DURATION_DAYS,
+  EXAM_GOAL_TYPES,
+  EXAM_NOT_REGISTERED,
+  EXAM_PROVIDERS,
+  examSubject,
+  IELTS_BAND,
+  ieltsUnits,
+  isValidCambridgeScore,
+  isValidIeltsBand,
+  type ExamId,
+} from "./exam-shown";
 import { CERTIFICATE as CERTIFICATE_SHAPE, CHESS_RATING as CHESS_RATING_SHAPE, type MilestoneShape } from "./milestone-terms";
 
 /**
@@ -264,6 +285,11 @@ export type CertificateCondition = Readonly<{
   goalType: number;
   /** Viky's route that reads a pasted certificate, plainly, before any money moves. A shown condition has none. */
   readPath?: string;
+  /**
+   * Why no gift can be made on it today, whoever asks (D176): a provider of ours not registered yet. The create route
+   * refuses `NOT_CONFIGURED` with these words; the day the provider is pinned, this is gone.
+   */
+  notOpen?: string;
   /**
    * Whether the funder types the person's name into the terms. A certificate binds a printed name; a proof shown
    * from an account binds the account and carries no name, so its subject is constant and nothing is asked (D164).
@@ -831,7 +857,188 @@ export const UNIVERSITY_GRADE_MILESTONE: CertificateCondition = {
   },
 };
 
-const CERTIFICATES: readonly CertificateCondition[] = [DET_MILESTONE, COURSERA_MILESTONE, CREDLY_MILESTONE, TOEFL_SHOWN_MILESTONE, UNIVERSITY_SHOWN_MILESTONE, UNIVERSITY_YEAR_MILESTONE, UNIVERSITY_GRADE_MILESTONE];
+/** What every examination result of D176 shares with the TOEFL's shape: no name asked, nothing to paste, the subject constant. */
+function examShape(id: ExamId, condition: Condition): Pick<CertificateCondition, "condition" | "shape" | "goalType" | "asksName" | "readPath" | "validLink" | "validName" | "subject" | "notOpen"> {
+  return {
+    condition,
+    shape: CERTIFICATE_SHAPE,
+    goalType: EXAM_GOAL_TYPES[id],
+    asksName: false,
+    readPath: "",
+    validLink: () => false,
+    validName: () => true,
+    subject: () => examSubject(id),
+    ...(EXAM_PROVIDERS[id] ? {} : { notOpen: EXAM_NOT_REGISTERED }),
+  };
+}
+
+const EXAM_REFUSALS = {
+  nameShape: "",
+  linkShape: "",
+  notPublic: "",
+  expired: "",
+  notFound: "",
+  unavailable: "The proof could not be checked right now. Try again in a moment.",
+  anotherName: "",
+  beforeTheGift: "",
+  afterTheDeadline: "That was shown after this gift's last day.",
+} as const;
+
+const EXAM_DURATION_WORDS = {
+  durationLabel: "How long do they have?",
+  durationHelp: "The result has to be shown inside that time, and the day it is shown is what counts.",
+  durationShape: (min: number, max: number) => `Between ${min} and ${max} days.`,
+  durationInWords: (days: number) => `${days} ${days === 1 ? "day" : "days"} from today`,
+  ifNot: "If they do not show it in time, all of it comes back to you. Nothing is kept by anybody else.",
+} as const;
+
+/**
+ * A Cambridge English result (D176): the funder types the overall score to show on the Cambridge English Scale, the
+ * one scale every Cambridge English exam reports on, and the words say which level it is. The proof carries the
+ * overall score of the Statement of Results; the contract compares it with the target as it is.
+ */
+export const CAMBRIDGE_MILESTONE: CertificateCondition = {
+  ...examShape("cambridge-english-shown", CAMBRIDGE_ENGLISH_SHOWN),
+  validTarget: isValidCambridgeScore,
+  target: {
+    label: "The score to show",
+    help: "On the Cambridge English Scale, from 80 to 230, the same for every Cambridge English exam: B1 starts at 140, B2 at 160, C1 at 180, C2 at 200.",
+    min: CAMBRIDGE_SCALE.min,
+    max: CAMBRIDGE_SCALE.max,
+    step: 1,
+    suggested: 160,
+    inWords: (value) => cambridgeInWords(value),
+  },
+  duration: EXAM_DURATION_DAYS,
+  words: {
+    detailQuestion: "The level to show",
+    nameLabel: "",
+    nameHelp: "",
+    linkLabel: "",
+    linkHelp: "",
+    whatIsRead: "Viky keeps the overall score and the level the Statement of Results shows, and nothing else. Your Cambridge English password never reaches Viky.",
+    check: "",
+    checking: "",
+    goal: (target) => `Show a Cambridge English result of at least ${cambridgeInWords(target)}`,
+    mustShow: (_name, target) => `A Statement of Results with an overall score of ${cambridgeInWords(target)} or more, shown from the person's own Cambridge English account. When it was earned is not read.`,
+    ...EXAM_DURATION_WORDS,
+    whenReached: "When they show that result, all of this becomes theirs",
+    refusals: {
+      ...EXAM_REFUSALS,
+      targetShape: `A score between ${CAMBRIDGE_SCALE.min} and ${CAMBRIDGE_SCALE.max} on the Cambridge English Scale, like 160 for B2.`,
+      below: (target, score) => `That result is ${score}. This gift is for ${target}.`,
+    },
+  },
+};
+
+/**
+ * An IELTS band (D176): the funder types the overall band, in halves with a dot, and signs it in tenths; the proof
+ * carries the overall band in the same tenths.
+ */
+export const IELTS_MILESTONE: CertificateCondition = {
+  ...examShape("ielts-shown", IELTS_SHOWN),
+  validTarget: isValidIeltsBand,
+  targetUnits: ieltsUnits,
+  target: {
+    label: "The overall band to show",
+    help: "IELTS bands run from 1.0 to 9.0 in halves, with a dot: 6.5 is what many universities ask for.",
+    min: IELTS_BAND.min,
+    max: IELTS_BAND.max,
+    step: IELTS_BAND.step,
+    suggested: 6.5,
+    inWords: (value) => `Band ${value.toFixed(1)}`,
+  },
+  duration: EXAM_DURATION_DAYS,
+  words: {
+    detailQuestion: "The band to show",
+    nameLabel: "",
+    nameHelp: "",
+    linkLabel: "",
+    linkHelp: "",
+    whatIsRead: "Viky keeps the overall band the result shows, and nothing else. Your British Council password never reaches Viky.",
+    check: "",
+    checking: "",
+    goal: (target) => `Show an IELTS band of at least ${target.toFixed(1)}`,
+    mustShow: (_name, target) => `An IELTS result with an overall band of ${target.toFixed(1)} or more, shown from the person's own British Council test taker account. When it was earned is not read.`,
+    ...EXAM_DURATION_WORDS,
+    whenReached: "When they show that band, all of this becomes theirs",
+    refusals: {
+      ...EXAM_REFUSALS,
+      targetShape: "A band between 1.0 and 9.0, in halves, with a dot: 6.5.",
+      below: (target, band) => `That band is ${(band / 10).toFixed(1)}. This gift is for ${(target / 10).toFixed(1)}.`,
+    },
+  },
+};
+
+/** The baccalauréat passed, in one of three countries (D176): passed or not, nothing to choose, the year's own session. */
+function bacMilestone(id: ExamId, condition: Condition, whatIsRead: string, mustShow: string): CertificateCondition {
+  return {
+    ...examShape(id, condition),
+    validTarget: (value) => value === BAC_PASSED,
+    target: {
+      label: "What has to be shown",
+      help: "Passed or not: there is nothing to choose here.",
+      min: BAC_PASSED,
+      max: BAC_PASSED,
+      step: 1,
+      suggested: BAC_PASSED,
+      inWords: () => "the baccalauréat passed",
+    },
+    duration: BAC_DURATION_DAYS,
+    words: {
+      detailQuestion: "How long do they have?",
+      nameLabel: "",
+      nameHelp: "",
+      linkLabel: "",
+      linkHelp: "",
+      whatIsRead,
+      check: "",
+      checking: "",
+      goal: () => "Show that you passed the baccalauréat",
+      mustShow: () => mustShow,
+      ...EXAM_DURATION_WORDS,
+      whenReached: "When they show they passed, all of this becomes theirs",
+      refusals: {
+        ...EXAM_REFUSALS,
+        targetShape: "",
+        below: () => "The results page shown does not say passed.",
+      },
+    },
+  };
+}
+
+export const BAC_MOROCCO_MILESTONE = bacMilestone(
+  "bac-morocco-shown",
+  BAC_MOROCCO_SHOWN,
+  "Viky keeps that the page said passed, and the day it was shown, and nothing else. Your CNE and CIN are typed in your own browser and never reach Viky.",
+  "The Ministry's Bac Digital page that says the candidate passed, opened with their own CNE and CIN. The session is the year's own.",
+);
+export const BAC_CAMEROON_MILESTONE = bacMilestone(
+  "bac-cameroon-shown",
+  BAC_CAMEROON_SHOWN,
+  "Viky keeps that the page said passed, and the day it was shown, and nothing else. Your Epim-Exam password never reaches Viky.",
+  "The page of the candidate's own Epim-Exam space that says they passed, shown from their own account. The session is the year's own.",
+);
+export const BAC_FRANCE_MILESTONE = bacMilestone(
+  "bac-france-shown",
+  BAC_FRANCE_SHOWN,
+  "Viky keeps that the page said passed, and the day it was shown, and nothing else. Your Cyclades password never reaches Viky.",
+  "The page of the candidate's own Cyclades space that says they passed, shown from their own account. The session is the year's own.",
+);
+
+/** The five examination results of D176, in the register's order, for the door and the tests. */
+export const EXAM_MILESTONES: readonly CertificateCondition[] = [CAMBRIDGE_MILESTONE, IELTS_MILESTONE, BAC_MOROCCO_MILESTONE, BAC_CAMEROON_MILESTONE, BAC_FRANCE_MILESTONE];
+
+const CERTIFICATES: readonly CertificateCondition[] = [
+  DET_MILESTONE,
+  COURSERA_MILESTONE,
+  CREDLY_MILESTONE,
+  TOEFL_SHOWN_MILESTONE,
+  ...EXAM_MILESTONES,
+  UNIVERSITY_SHOWN_MILESTONE,
+  UNIVERSITY_YEAR_MILESTONE,
+  UNIVERSITY_GRADE_MILESTONE,
+];
 
 export function certificateOf(condition: Condition | undefined): CertificateCondition | undefined {
   if (!condition || condition.kind !== "milestone") return undefined;

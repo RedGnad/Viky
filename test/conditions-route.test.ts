@@ -48,8 +48,8 @@ test("the door for what is wired and not live yet stands, and is empty while not
   // Nothing is behind it today: Coursera has no goal on the contract, so no gift could be made on it here either.
   assert.deepEqual(
     answer.preview,
-    ["toefl-mybest-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown"],
-    "what is wired, creatable by an operator and closed today: the TOEFL score shown (D164), enrolment shown (D165), the year passed and a grade shown (D174)",
+    ["toefl-mybest-shown", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown"],
+    "what is wired, creatable by an operator and closed today: the TOEFL score shown (D164), the five examination results (D176), enrolment shown (D165), the year passed and a grade shown (D174)",
   );
   assert.ok(answer.ids.includes("duolingo-daily"), "and the live ones are there for everybody");
   assert.ok(answer.ids.includes(CHESS_MILESTONE.condition.id));

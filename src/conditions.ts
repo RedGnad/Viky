@@ -39,10 +39,14 @@ export type ConditionKind = "daily" | "milestone";
  * erased exactly the thing that made it worth building. "Move" left with it: nothing was ever filed there, and a
  * family draws nothing until something is.
  */
-export type ConditionFamily = "language" | "play" | "course" | "certification" | "study";
+export type ConditionFamily = "language" | "exam" | "play" | "course" | "certification" | "study";
 
 export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>[] = [
   { id: "language", title: "Learn a language" },
+  // Pass an exam (D176): a result the person shows from their own account with the examining body, beside the TOEFL
+  // score (D164), which moves here from the languages. The Duolingo English Test stays where the audit filed it, with
+  // the lesson: it is read for the person from a page they share, and its filing is pinned by a test.
+  { id: "exam", title: "Pass an exam" },
   { id: "play", title: "Play" },
   { id: "course", title: "Finish a course" },
   { id: "certification", title: "Get certified" },
@@ -541,7 +545,7 @@ export const TOEFL_MYBEST_SHOWN: Condition = {
   live: false,
   beforeItOpens: "A score shown from a real ETS account, end to end, then the founder's word.",
   source: "ETS",
-  family: "language",
+  family: "exam",
   name: "A TOEFL score, shown",
   help: "A score they hold, shown from their own ETS account; when it was earned is not read. It proves the account that signed in, not who sat the test.",
   link: { kind: "link", label: "Show it from your ETS account", help: "Press Show it on your gift's page and sign in to ETS in the tab that opens. Nothing to paste." },
@@ -647,7 +651,135 @@ export const UNIVERSITY_GRADE_SHOWN: Condition = {
   },
 };
 
-export const BUILDING: readonly Condition[] = [TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, UNIVERSITY_YEAR_PASSED_SHOWN, UNIVERSITY_GRADE_SHOWN];
+/**
+ * The five examination results of D176, each shown from the person's own account with the examining body, each
+ * waiting for a provider of ours registered from a real candidate's session (src/exam-shown.ts). The words of each
+ * are the TOEFL's shape: a result they hold, shown; when it was earned is not read; the account, not who sat it.
+ */
+const EXAM_BEFORE_IT_OPENS = "A provider registered from a real candidate's account, the goal signed, one proof end to end, then the founder's word.";
+const EXAM_LINK: ConditionLink = { kind: "link", label: "Show it from your own account", help: "Press Show it on your gift's page and sign in in the tab that opens. Nothing to paste." };
+
+export const CAMBRIDGE_ENGLISH_SHOWN: Condition = {
+  id: "cambridge-english-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  live: false,
+  beforeItOpens: EXAM_BEFORE_IT_OPENS,
+  source: "Cambridge English",
+  family: "exam",
+  name: "A Cambridge English result, shown",
+  help: "Their Statement of Results, shown from their own Cambridge English account: the overall score on the Cambridge English Scale and its level. It proves the account, not who sat the exam.",
+  link: EXAM_LINK,
+  reading: "cambridge-english-shown",
+  words: {
+    earnedDay: "When they show that result, all of this becomes theirs",
+    connect: "Opened. Show the result from your Cambridge English account when it is out.",
+    doIt: "Press Show it and sign in to Cambridge English in the tab that opens. The overall score on your Statement of Results is what counts.",
+    eachDay: "the day it is shown",
+    preview: "A Cambridge English result, shown from your own account: the gift is yours when you show it.",
+  },
+};
+
+export const IELTS_SHOWN: Condition = {
+  id: "ielts-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  live: false,
+  beforeItOpens: EXAM_BEFORE_IT_OPENS,
+  source: "British Council",
+  family: "exam",
+  name: "An IELTS band, shown",
+  help: "Their result, shown from their own British Council test taker account: the overall band. It proves the account, not who sat the test.",
+  link: EXAM_LINK,
+  reading: "ielts-shown",
+  words: {
+    earnedDay: "When they show that band, all of this becomes theirs",
+    connect: "Opened. Show the band from your British Council account when the result is out.",
+    doIt: "Press Show it and sign in to the British Council in the tab that opens. The overall band on your result is what counts.",
+    eachDay: "the day it is shown",
+    preview: "An IELTS band, shown from your own British Council account: the gift is yours when you show it.",
+  },
+};
+
+export const BAC_MOROCCO_SHOWN: Condition = {
+  id: "bac-morocco-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  live: false,
+  beforeItOpens: EXAM_BEFORE_IT_OPENS,
+  source: "Bac Digital",
+  family: "exam",
+  name: "The baccalauréat passed, Morocco",
+  help: "The Ministry's own Bac Digital service, opened by the candidate with their CNE and CIN in their own browser, shown by them: passed or not. It proves the candidate's numbers, not who sat the exam.",
+  link: EXAM_LINK,
+  reading: "bac-morocco-shown",
+  words: {
+    earnedDay: "When they show they passed, all of this becomes theirs",
+    connect: "Opened. Show your result from Bac Digital when it is out.",
+    doIt: "Press Show it and type your CNE and CIN in the tab that opens. The page that says you passed is what counts.",
+    eachDay: "the day it is shown",
+    preview: "The baccalauréat passed, shown from the Ministry's own service: the gift is yours when you show it.",
+  },
+};
+
+export const BAC_CAMEROON_SHOWN: Condition = {
+  id: "bac-cameroon-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  live: false,
+  beforeItOpens: EXAM_BEFORE_IT_OPENS,
+  source: "Epim-Exam",
+  family: "exam",
+  name: "The baccalauréat passed, Cameroon",
+  help: "The candidate's own space on Epim-Exam, the Office du Baccalauréat's platform, shown by them: passed or not. It proves the account, not who sat the exam.",
+  link: EXAM_LINK,
+  reading: "bac-cameroon-shown",
+  words: {
+    earnedDay: "When they show they passed, all of this becomes theirs",
+    connect: "Opened. Show your result from your Epim-Exam space when it is out.",
+    doIt: "Press Show it and sign in to Epim-Exam in the tab that opens. The page that says you passed is what counts.",
+    eachDay: "the day it is shown",
+    preview: "The baccalauréat passed, shown from your own Epim-Exam space: the gift is yours when you show it.",
+  },
+};
+
+export const BAC_FRANCE_SHOWN: Condition = {
+  id: "bac-france-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  live: false,
+  beforeItOpens: EXAM_BEFORE_IT_OPENS,
+  source: "Cyclades",
+  family: "exam",
+  name: "The baccalauréat passed, France",
+  help: "The candidate's own Cyclades space, shown by them: passed or not, as the results page says it. It proves the account, not who sat the exam.",
+  link: EXAM_LINK,
+  reading: "bac-france-shown",
+  words: {
+    earnedDay: "When they show they passed, all of this becomes theirs",
+    connect: "Opened. Show your result from your Cyclades space when it is out.",
+    doIt: "Press Show it and sign in to Cyclades in the tab that opens. The page that says you passed is what counts.",
+    eachDay: "the day it is shown",
+    preview: "The baccalauréat passed, shown from your own Cyclades space: the gift is yours when you show it.",
+  },
+};
+
+export const BUILDING: readonly Condition[] = [
+  TOEFL_MYBEST_SHOWN,
+  CAMBRIDGE_ENGLISH_SHOWN,
+  IELTS_SHOWN,
+  BAC_MOROCCO_SHOWN,
+  BAC_CAMEROON_SHOWN,
+  BAC_FRANCE_SHOWN,
+  UNIVERSITY_ENROLLMENT_SHOWN,
+  UNIVERSITY_YEAR_PASSED_SHOWN,
+  UNIVERSITY_GRADE_SHOWN,
+];
 
 /**
  * What people ask for and no source lets anybody check, with the reading each line rests on (design audit, section 5).
@@ -670,7 +802,10 @@ export type Frontier = Readonly<{
    * on the line so a reader knows which of these is on its way and which is not (the founder, 22 Sep 2026).
    */
   building: string | null;
-  /** The condition beside the register that `building` is about, so the catalogue does not print it a second time. */
+  /**
+   * The condition beside the register that `building` is about, so the catalogue does not print it a second time. A
+   * line that says "being built" and names none is about lines printed under their own family (D176).
+   */
   conditionId?: string;
 }>;
 
@@ -686,7 +821,7 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "A Cambridge, IELTS or TOEFL result",
     state: "no-public-page",
     why: "The result goes to institutions. Checking one means an account an organisation applies for, opened with numbers the candidate hands over, and nothing about one person that anybody else can open. Read on 19 Sep 2026 on Cambridge English's, IELTS's and ETS's own pages.",
-    building: "a TOEFL score the person shows from their own ETS account, with the two words SHOWN BY THEM on it.",
+    building: "a TOEFL score, a Cambridge English result and an IELTS band the person shows from their own account, with the two words SHOWN BY THEM on it.",
     conditionId: "toefl-mybest-shown",
   },
   {
@@ -702,7 +837,9 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "A state diploma",
     state: "no-public-page",
     why: "In France the holder draws an attestation from the state's own service, and a check needs the control key printed on it. Nothing anybody can open, and what a program could read would be that attestation rather than the diploma. Read on 19 Sep 2026 on diplome.gouv.fr.",
-    building: null,
+    // The baccalauréat is a state diploma, and its three lines (D176) print under "Pass an exam" with the frontier's
+    // word: this line says they are on their way and names none, so nothing is printed twice.
+    building: "the baccalauréat passed, shown by the candidate from the examining body's own results page, in Morocco, Cameroon and France, with the two words SHOWN BY THEM on it.",
   },
   {
     id: "school-marks",

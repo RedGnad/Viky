@@ -164,6 +164,20 @@ export default function JudgesPage() {
             another year pays nothing where the portal dates its page.
           </li>
           <li>
+            <strong>Exam results services&apos; terms.</strong> Five examination results are shown by the person from
+            their own account with the examining body (D176), the way the TOEFL score is: Cambridge English&apos;s
+            Results Service for Candidates, the British Council&apos;s IELTS Test Taker Portal, and the baccalauréat
+            services of Morocco (Bac Digital), Cameroon (Epim-Exam) and France (Cyclades). Each provider is ours,
+            registered from a real candidate&apos;s session, and none exists yet; the definitions in docs/reclaim say
+            the page, the sign-in the candidate types in their own browser, and the fields. The terms read on 23 Sep
+            2026: Cambridge&apos;s website terms forbid scraping or storing the site&apos;s content on a server and
+            building a database from it; the British Council&apos;s forbid copying its content, misusing data on its
+            services and sharing a password, and name no automated access; Bac Digital and Epim-Exam show no terms on
+            their public pages, and Cyclades&apos;s legal notice opens only inside the application. Whether a candidate
+            showing their own result once falls under any of these is a question these lines do not answer: it is the
+            founder&apos;s call before each line opens, and nothing is shown until then.
+          </li>
+          <li>
             <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:
             Coursera verifies identity once per account, and says some programmes require it while others only check a
             name. That condition is not open yet, and this is what it will prove when it is.
