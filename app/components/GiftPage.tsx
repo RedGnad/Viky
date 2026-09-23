@@ -230,6 +230,7 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
     deadlineInWords: milestone?.deadlineMs ? dateInWords(milestone.deadlineMs, zone) : null,
     nextReadingInWords: moment === "counting" || moment === "climbing" ? nextReading : null,
     cameBackOnInWords: cameBackOn,
+    takeableFromHome: !milestone && earned > 0n,
   });
 
   // The money on the card counts from what this device last saw of it, last in the arrival and once (the brief,

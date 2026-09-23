@@ -225,6 +225,11 @@ export type GiftSummary = {
   earnedDisplay: string;
   theirsDisplay: string;
   returnedDisplay: string;
+  /**
+   * What the gift holds for its recipient right now, in the coin's units, and "0" to anybody else (D208): money
+   * already theirs, still in the contract, which Home's way out takes first.
+   */
+  takeable: string;
   /** Present on a milestone gift, whose card draws the climb rather than days (C2). */
   milestone?: MilestoneStatus;
 };

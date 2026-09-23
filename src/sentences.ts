@@ -679,6 +679,11 @@ export const GIFT_LIVE = {
     /** A gift settled before Viky kept a record of each day: the totals are true, the last day is not known. */
     running: "It is counting.",
     nothingYet: "Nothing has been counted yet.",
+    /**
+     * Under the figure, to the person it is for, while the gift still holds some of what they earned (D208): the
+     * figure says how much, so this says only where it goes. True because the way out on Home takes it first.
+     */
+    takeFromHome: "It is yours already. Take it out from Home whenever you like.",
     label: { yours: "Yours so far", theirs: "Theirs so far" },
   },
   /** A rating climbing towards its target: how far is left, and where they stand today. */
@@ -1155,6 +1160,13 @@ export const CASH_OUT = {
   rateNote: (about: string) => about,
   readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,
   readyLabel: (name: string) => `Ready to send to ${name}`,
+  /**
+   * What the gifts made out to this account still hold for it (D208). It is counted in the figure above and in every
+   * way's figure, and it is taken into the account first, the moment a way is chosen.
+   */
+  inYourGifts: (amount: string) => `${amount} of it is still in your gifts. It comes out first, with one signature per gift.`,
+  gathering: "Taking what your gifts hold into your account.",
+  gatherFailed: "What your gifts hold could not be taken out just now. Nothing was lost: it is still yours, in the gift.",
   worthAbout: (dollars: string) => `about $${dollars}`,
   worthLater: "Its value in dollars will show once the price answers.",
   sourceLine: (source: string, read: string) => `Read from ${source}, ${read}.`,

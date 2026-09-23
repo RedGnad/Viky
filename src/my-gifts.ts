@@ -48,6 +48,7 @@ export async function giftsOf(account: string): Promise<GiftSummary[]> {
           cancelled: status.cancelled,
           earnedDisplay: status.earnedDisplay,
           theirsDisplay: status.reached ? status.amountDisplay : "$0.00",
+          takeable: role === "recipient" ? state.earnedBalance.toString() : "0",
           returnedDisplay: status.returnedDisplay,
           milestone: status,
         };
@@ -81,6 +82,7 @@ export async function giftsOf(account: string): Promise<GiftSummary[]> {
         cancelled: gift.cancelled,
         earnedDisplay: formatAusd(gift.earnedBalance),
         theirsDisplay: formatAusd(theirsSoFar(gift)),
+        takeable: role === "recipient" ? gift.earnedBalance.toString() : "0",
         returnedDisplay: formatAusd(gift.refundedToFunder),
       };
     }),

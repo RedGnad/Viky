@@ -44,9 +44,17 @@ export function firstReady(holdings: Holdings): { way: WayOut; ready: Ready; nat
   return undefined;
 }
 
-/** Whether the way out has anything to offer at all. */
-export function holdsAnything(holdings: Holdings): boolean {
-  return dollarsHeld(holdings) > 0n || firstReady(holdings) !== undefined;
+/** What the gifts made out to this account still hold for it, in the coin's units (D208). */
+export function heldInGifts(gifts: ReadonlyArray<Readonly<{ takeable?: string }>> | null | undefined): bigint {
+  return (gifts ?? []).reduce((sum, gift) => sum + BigInt(gift.takeable ?? "0"), 0n);
+}
+
+/**
+ * Whether the way out has anything to offer at all: the account's own money, or what its gifts hold for it, which
+ * the way out takes first (D208). A gift's page tells its recipient to take that from Home, so Home must offer it.
+ */
+export function holdsAnything(holdings: Holdings, gifts?: ReadonlyArray<Readonly<{ takeable?: string }>> | null): boolean {
+  return dollarsHeld(holdings) > 0n || firstReady(holdings) !== undefined || heldInGifts(gifts) > 0n;
 }
 
 /**

@@ -60,6 +60,7 @@ const base: GiftSummary = {
   earnedDisplay: "$0.00",
   theirsDisplay: "$0.00",
   returnedDisplay: "$0.00",
+  takeable: "0",
 };
 
 /** Given to Ama: $28.00 over 14 days, on its third day, two earned and none gone back. */

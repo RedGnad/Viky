@@ -112,6 +112,7 @@ const summary = (role: GiftSummary["role"]): GiftSummary =>
     earnedDisplay: "$2.85",
     theirsDisplay: "$2.85",
     returnedDisplay: "$8.55",
+    takeable: "0",
   }) as GiftSummary;
 
 test("the card at the head of the page names both sides when neither of them is reading", () => {

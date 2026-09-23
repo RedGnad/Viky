@@ -130,7 +130,7 @@ export function Home({ initialHoldings, initialGifts }: Readonly<{ initialHoldin
               {W.takeItOut}
             </span>
           ) : null
-        ) : holdsAnything(holdings) ? (
+        ) : holdsAnything(holdings, gifts) ? (
           <Link href="/cash-out" className={SECONDARY_BUTTON}>
             {W.takeItOut}
           </Link>

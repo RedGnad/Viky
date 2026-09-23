@@ -47,6 +47,8 @@ export type LiveInput = Readonly<{
   endedOnInWords?: string | null;
   /** The day the money of a start too high goes back: the gift's own deadline. */
   deadlineInWords?: string | null;
+  /** The gift holds some of what the person it is for earned, which Home's way out takes first (D208). */
+  takeableFromHome?: boolean;
 }>;
 
 export type Live = Readonly<{
@@ -61,6 +63,8 @@ export type Live = Readonly<{
    * Nothing while nothing has gone back, because a zero there would be a fact about nothing.
    */
   back: Readonly<{ label: string; value: string }> | null;
+  /** One quiet line under the figures, with no gesture of its own: where money already theirs goes (D208). */
+  quiet?: string | null;
 }>;
 
 /**
@@ -154,6 +158,8 @@ export function liveOf(input: LiveInput): Live {
         figure: { label: yours ? W.yoursSoFar : W.theirsSoFar, value: input.theirsDisplay },
         next: input.nextReadingInWords,
         back,
+        // Only to the person it is for, and only while the contract holds some of it: the figure already says how much.
+        quiet: voice === "recipient" && input.takeableFromHome ? L.counting.takeFromHome : null,
       };
 
     case "climbing":
