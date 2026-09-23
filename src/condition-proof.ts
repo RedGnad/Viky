@@ -93,6 +93,15 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     sourcePolicing: "GitHub decides what a contribution is and dates it by its own rule (a commit by the time zone in its timestamp, an issue or a pull request opened on the web by the browser's). The API is read within GitHub's Terms of Service (section H) and Acceptable Use Policies (information usage), read on 23 Sep 2026; the profile page is never scraped.",
   },
   {
+    conditionId: "lichess-rating",
+    supervised: false,
+    inShort: "Their public Lichess rating, read every day. Proves the account, not who moved the pieces.",
+    data: "The one answer Lichess's API gives about a player: the rating of each cadence with its deviation and Lichess's own mark on whether it has settled, and the two marks Lichess itself puts on an account it has closed or found in violation of its terms. Today only the funder's step reads it, plainly; the keeper's attested reading is not built, and no gift can be made on this line until it is.",
+    account: "The funder names the account, and the person proves it is theirs with a short code in their Lichess biography on the first reading. A Lichess name never changes, so the identity is the name itself in lower case.",
+    whoActed: "Unknown. Lichess's own cheat detection closes or marks an account, and Viky never pays one it has marked; who sat at the board is not proved.",
+    sourcePolicing: "Lichess polices fair play itself and publishes the verdict on the account (`disabled`, `tosViolation`). Its API is open and rate limited, offered for personal and commercial applications under its terms of service (read 23 Sep 2026), and its own rule says when a rating is provisional.",
+  },
+  {
     conditionId: "university-enrollment-shown",
     supervised: false,
     inShort: "Shown from their own student portal, the page that says enrolled. Proves the account, not who sits in class.",

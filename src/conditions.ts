@@ -2,6 +2,7 @@ import { isValidDuolingoUsername } from "./duolingo-public-terms";
 import { UNIVERSITY_SOURCE } from "./university-shown";
 import { GOAL_TYPE_DUOLINGO_COURSE_XP, GOAL_TYPE_DUOLINGO_XP, GOAL_TYPE_GITHUB_CONTRIBUTIONS } from "./gift-terms";
 import { GITHUB_SOURCE, isValidGithubLogin } from "./github-contributions";
+import { isValidLichessUsername } from "./lichess";
 
 /**
  * The register of conditions: the spine of the product (structure of 17 Sep 2026, section 10, C1).
@@ -678,7 +679,56 @@ export const GITHUB_DAILY: Condition = {
   },
 };
 
-export const BUILDING: readonly Condition[] = [TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, GITHUB_DAILY];
+/**
+ * Lichess, the twin of Chess.com (D168): a rating in one of its four cadences, read from the one answer its API gives
+ * about a user, with Lichess's own verdict on whether the rating has settled and its own marks on a closed account.
+ * Goals 6 to 9 are registered on the milestone contract. The line is here and the funder's step reads where the
+ * person stands; the keeper's attested reading is not built yet, so a gift cannot be made on it and the create route
+ * says so. Offered on the chooser to an account that runs Viky, to nobody else, until then.
+ */
+export const LICHESS_RATING: Condition = {
+  id: "lichess-rating",
+  kind: "milestone",
+  nature: "read",
+  goalType: null,
+  live: false,
+  // The same caveat as the GitHub line: none of the four states says "wired, and not run on a real account yet".
+  state: "being-tested",
+  beforeItOpens: "The keeper's reading of Lichess built on the reading service, one real gift run on it end to end, then the founder's word.",
+  source: "Lichess",
+  family: "play",
+  name: "A chess rating on Lichess",
+  help: "Their public Lichess rating, read every day from the one answer Lichess gives about a player: Lichess marks a closed account and a settled rating itself, and Viky never pays an account it has closed.",
+  link: {
+    kind: "username",
+    label: "Their Lichess name",
+    help: "The name on their Lichess profile, like thibault. It is needed to read where they stand today.",
+    why: "Only that Lichess account can earn this gift, and they prove it is theirs with a short code when they open it.",
+    example: "thibault",
+    row: "Their Lichess name",
+    noneGiven: "Not given",
+    check: {
+      valid: isValidLichessUsername,
+      path: "/api/lichess/standing",
+      refusals: {
+        shape: "A Lichess name has two to twenty letters, figures, hyphens or underscores, like thibault.",
+        notFound: "No Lichess player goes by that name. Check the spelling.",
+        unavailable: "Lichess is not answering. Try again in a moment.",
+      },
+    },
+  },
+  detailTitle: "Their Lichess, and the rating they reach",
+  reading: "lichess-user",
+  words: {
+    earnedDay: "When they reach it, all of this becomes theirs",
+    connect: "Opened. Connect Lichess to start.",
+    doIt: "Play; nothing else. Viky reads your Lichess rating every day.",
+    eachDay: "the first reading at the rating",
+    preview: "A chess rating on Lichess: the gift is yours when you reach it.",
+  },
+};
+
+export const BUILDING: readonly Condition[] = [TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, GITHUB_DAILY, LICHESS_RATING];
 
 /**
  * What people ask for and no source lets anybody check, with the reading each line rests on (design audit, section 5).

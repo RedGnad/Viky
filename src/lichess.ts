@@ -51,3 +51,85 @@ export function lichessUserUrl(username: string): string {
 
 /** What Lichess asks of anything reading it: "Only make one request at a time" (their API docs, read 18 Sep 2026). */
 export const LICHESS_USER_AGENT = "Viky/1.0 (+https://viky.cash)";
+
+// --- the plain reading, for the funder's step (D168) --------------------------------------------------------------
+
+/**
+ * Lichess marks a rating provisional, with a question mark, while its Glicko-2 deviation is above 110 (their FAQ,
+ * "Why is there a question mark next to a rating?", read 23 Sep 2026), and the API says the same as `prov`. That is
+ * the source's own rule for a rating that has not settled, so it is the one the funder's step refuses on.
+ */
+export const LICHESS_PROVISIONAL_RD = 110;
+
+export function lichessRatingHasSettled(rd: number | null): boolean {
+  return rd !== null && rd <= LICHESS_PROVISIONAL_RD;
+}
+
+export type LichessReadErrorCode = "INVALID_USERNAME" | "PROFILE_NOT_FOUND" | "ACCOUNT_CLOSED" | "FETCH_FAILED";
+
+export class LichessReadError extends Error {
+  constructor(
+    readonly code: LichessReadErrorCode,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message, options);
+    this.name = "LichessReadError";
+  }
+}
+
+export type LichessStanding = Readonly<{
+  username: string;
+  /** Lichess's own id of the account, the username in lower case: a Lichess name never changes. */
+  playerId: string;
+  rating: number | null;
+  rd: number | null;
+  /** Lichess's own verdict on the rating, the question mark: `prov` in the API. */
+  provisional: boolean;
+  games: number;
+}>;
+
+/**
+ * Where an account stands in one cadence, from the one answer Lichess gives about a user. The two fields their own
+ * police publishes are read first: an account Lichess has closed (`disabled`) or marked for a violation of its terms
+ * (`tosViolation`) is refused before any rating is looked at, as a closed Chess.com account is (U1).
+ */
+export function standingOfUser(body: unknown, cadence: LichessCadence): LichessStanding {
+  const user = body as { id?: unknown; username?: unknown; disabled?: unknown; tosViolation?: unknown; perfs?: Record<string, unknown> } | null;
+  if (!user || typeof user !== "object" || typeof user.id !== "string" || typeof user.username !== "string" || !isValidLichessUsername(user.username)) {
+    throw new LichessReadError("FETCH_FAILED", "Lichess answered without the account");
+  }
+  if (user.disabled === true || user.tosViolation === true) throw new LichessReadError("ACCOUNT_CLOSED", "Lichess has closed this account");
+  const perf = (user.perfs ?? {})[cadence] as { games?: unknown; rating?: unknown; rd?: unknown; prov?: unknown } | undefined;
+  const games = typeof perf?.games === "number" && Number.isSafeInteger(perf.games) && perf.games >= 0 ? perf.games : 0;
+  // A cadence never played carries no rating: Lichess answers a perf block for it all the same, with no games.
+  const played = games > 0 && typeof perf?.rating === "number" && Number.isSafeInteger(perf.rating) && perf.rating > 0;
+  const rd = played && typeof perf?.rd === "number" && Number.isSafeInteger(perf.rd) && perf.rd >= 0 ? perf.rd : null;
+  return {
+    username: user.username,
+    playerId: user.id,
+    rating: played ? (perf!.rating as number) : null,
+    rd,
+    provisional: played ? perf?.prov === true || !lichessRatingHasSettled(rd) : true,
+    games,
+  };
+}
+
+export type PlainLichessFetch = (url: string, init: RequestInit) => Promise<Response>;
+
+/** Where a player stands today in one cadence, read plainly from Lichess's API. Every failure is typed. */
+export async function readLichessStanding(username: string, cadence: LichessCadence, fetchImpl: PlainLichessFetch = fetch): Promise<LichessStanding> {
+  if (!isValidLichessUsername(username)) throw new LichessReadError("INVALID_USERNAME", "That is not a Lichess name");
+  let response: Response;
+  try {
+    response = await fetchImpl(lichessUserUrl(username), { headers: { accept: "application/json", "user-agent": LICHESS_USER_AGENT }, cache: "no-store", signal: AbortSignal.timeout(10_000) });
+  } catch (error) {
+    throw new LichessReadError("FETCH_FAILED", "Lichess is not answering", { cause: error });
+  }
+  if (response.status === 404) throw new LichessReadError("PROFILE_NOT_FOUND", "No Lichess player goes by that name");
+  if (response.status !== 200) throw new LichessReadError("FETCH_FAILED", `Lichess answered ${response.status}`);
+  const body = (await response.json().catch(() => null)) as unknown;
+  const standing = standingOfUser(body, cadence);
+  if (standing.username.toLowerCase() !== username.trim().toLowerCase()) throw new LichessReadError("FETCH_FAILED", "Lichess answered about another name");
+  return standing;
+}
