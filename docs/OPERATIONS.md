@@ -644,7 +644,7 @@ nobody signed in to, and the table is empty until the first one. Most of the thi
    same command with the `RESULTS_*` names (`scripts/portal-env.ts` lists them, the scale as `20`, `4`, `20/0.5` or
    `letters:A,B,C`), or later with `pnpm portal:results` and the portal's id alone; proving enrolment again never
    removes a results page already written.
-3. **Prove one gift end to end.** As an operator (the door above), make a gift on "Stay enrolled at their university"
+3. **Prove one gift end to end.** As an operator (the door above), make a gift on "Enrolled at university, shown"
    and choose that portal; open the gift page as the student, "Show it", the student signs in in the verification
    tab, and the proof comes back or a typed refusal does (`NOT_ENROLLED` when the field does not match the pattern,
    `ANOTHER_NAME` when the proof came from another portal than the gift's, `NO_PORTAL` when the gift names none).
@@ -656,10 +656,10 @@ nobody signed in to, and the table is empty until the first one. Most of the thi
    `WRONG_TERM` when the page is another year's, `NO_RESULTS_PAGE` when the portal's row holds no results page, which
    the create route also refuses before any money moves, with `LETTER_SCALE` and `INVALID_TARGET` for a grade the
    scale cannot take). `pnpm verify:day` says `page results` on those claims.
-4. **When the condition opens.** It stays "Being built" until goal 14 is registered and one proof has run end to end
-   on a real portal with real money, on the founder's word, the same rule as TOEFL (D164). Then `live: true` and the
-   register, in a PR of its own. The year passed and the grade open the same way, each on its own goal (15, 16) and
-   its own first gift. A second university needs steps 1 to 3 and no PR at all.
+4. **When the condition opens.** Open since 23 Sep 2026 (D200), the day the first portal row existed, the American
+   University of Rome from the Reclaim directory (D199), under the founder's rule of D184: a line opens when its path
+   is complete. A row marked unverified says so on the chooser and before payment (D193, D195) until a student's
+   session confirms it.
 
 ## The corridor's two portals, defined from their public pages, unverified (D193)
 

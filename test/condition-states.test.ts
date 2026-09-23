@@ -149,11 +149,11 @@ test("it is reachable without an account and from the judges page, and it says t
  */
 test("every condition says its nature, and every one of the pilot is read for the person", () => {
   for (const condition of CONDITIONS) assert.ok(condition.nature === "read" || condition.nature === "shown" || condition.nature === "connected", `${condition.id} has no nature`);
-  assert.deepEqual(CONDITIONS.filter((condition) => condition.nature === "shown").map((condition) => condition.id), ["toefl-mybest-shown"], "the TOEFL score is open since its path was complete (D184)");
+  assert.deepEqual(CONDITIONS.filter((condition) => condition.nature === "shown").map((condition) => condition.id), ["toefl-mybest-shown", "university-enrollment-shown"], "the TOEFL score is open since its path was complete (D184)");
   // What is being built lives beside the register, resolvable by id and offered to an operator alone (D164, D165, D174, D176).
   assert.deepEqual(
     BUILDING.map((condition) => condition.id),
-    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown", "fitbit-daily", "strava-daily"],
+    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown", "fitbit-daily", "strava-daily"],
   );
   for (const id of BUILDING.map((condition) => condition.id)) {
     const shown = conditionById(id);

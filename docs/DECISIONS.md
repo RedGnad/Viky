@@ -5553,3 +5553,18 @@ portal rows and open them; the ones that prove only a name stay closed, and say 
   opens it follows the row, and changes one line of the register.
 - **Default applied, to confirm.** The term's pattern accepts both "Fall 2026" and "2026 Fall", and this academic
   year's two years; it is rewritten each year with the row.
+
+## D200, 23 Sep 2026: staying enrolled at university opens, on the American University of Rome
+
+The founder, 23 Sep 2026: open the enrolment line as soon as the other developer confirms the row. The other
+developer's session reported, from Viky-c2, the migration and `pnpm portal:directory` run against production: one row,
+`aur-it`, provider `8a769077…` 1.0.0, request hash `0xe7543349…f18c`, unverified, proven by `0x350aF869…107761`.
+Read back independently here through the public search: `/api/portals/search?q=Rome` answers "The American University
+of Rome (unverified)", Italy.
+
+- **Opened.** `UNIVERSITY_ENROLLMENT_SHOWN` joins the register, `live: true`, `state: "open"`: its path is complete
+  (goal 14 registered on 22 Sep, the portal's provider pinned in its row, the flow built), the rule of D184.
+- **Words the chooser holds.** The name is "Enrolled at university, shown", thirty characters at most on a card, as
+  "A TOEFL score, shown" is; the line under it is shortened to the chooser's hundred and sixty; the card's sentence
+  reads "Opened. Nothing shown yet from their university." from the register's source word.
+- **Not opened.** The year passed and a grade reached: the row holds no results page (`NO_RESULTS_PAGE`, by name).
