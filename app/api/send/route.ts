@@ -7,6 +7,7 @@ import { AUSD, coinAt, movesOnASignature } from "@/src/coins";
 import { monadChain, waitForFinality } from "@/src/monad/chain";
 import { addMonadGasBuffer } from "@/src/monad-gas";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { admitRelay, assertNotTooSmall } from "@/src/relay-admission";
 import { relayerClients, relayerPreflight, RelayerError } from "@/src/relayer";
 import { recordSend, sendReference } from "@/src/send-store";
 import { canonicalSignature } from "@/src/signature";
@@ -90,11 +91,14 @@ export async function POST(request: Request) {
     // The sender is the signed-in account and nobody else: a signature for someone else's money is not
     // ours to relay, whatever the token would make of it.
     const from = getAddress(auth.account);
+    // Counted against the account's and the connection's ceilings before the relayer is asked for anything (D204).
+    await admitRelay(request, auth.account);
     const clients = relayerClients();
     await relayerPreflight(clients);
 
     const held = (await clients.publicClient.readContract({ address: coin.address, abi: erc20Abi, functionName: "balanceOf", args: [from] })) as bigint;
     if (held < value) throw new GiftApiError("NOT_ENOUGH", "That is more than you have.", 409);
+    assertNotTooSmall("send", value, held);
 
     const args = [from, getAddress(to), value, validAfter, validBefore, nonce as Hex, signature] as const;
     try {

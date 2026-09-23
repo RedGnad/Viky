@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAddress, isAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "./account-auth-server";
+import { assertNotTooSmall } from "./relay-admission";
 import { attestChessRating, ChessReadError, newChessCode } from "./chess-reading";
 import { GiftApiError, NO_STORE } from "./gift-api";
 import { holdsGiftLink, loadGift, loadRelayed, markClaimed, type GiftRecord } from "./gift-store";
@@ -129,6 +130,7 @@ export async function milestoneWithdraw(input: {
   const state = await readMilestoneGift(contract, input.giftId);
   if (!state.recipient || state.recipient.toLowerCase() !== input.account.toLowerCase()) throw new GiftApiError("NOT_YOURS", "Only the person the gift is for can take it", 403);
   if (input.amount <= 0n || input.amount > state.earnedBalance) throw new GiftApiError("NOT_ENOUGH_EARNED", "That is more than what is yours so far", 409);
+  assertNotTooSmall("takeOut", input.amount, state.earnedBalance);
   const result = await relayMilestoneWithdraw({ ...input, contract, to: getAddress(input.to) });
   return NextResponse.json({ giftId: input.giftId, sent: true, amount: input.amount.toString(), hash: result.hash }, { headers: NO_STORE });
 }

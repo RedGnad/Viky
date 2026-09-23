@@ -5,7 +5,7 @@ import { isAddress } from "viem";
 import { accountAuthErrorStatus, accountAuthPublicMessage, readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { VerificationError, type ReclaimStatus, type SdkVerification } from "@/src/duolingo-verification";
-import { contractRefusal } from "@/src/gift-api";
+import { contractRefusal, GiftApiError } from "@/src/gift-api";
 import { signCheckIn } from "@/src/gift-attestation";
 import { relayCheckIn } from "@/src/gift-relay";
 import { loadGift } from "@/src/gift-store";
@@ -16,6 +16,7 @@ import { recordReading } from "@/src/milestone-store";
 import { isMilestoneGiftId } from "@/src/milestone-protocol";
 import { consumeAndSaveVerification, loadLatestEvidence, loadProofSession } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { admitRelay } from "@/src/relay-admission";
 import { escrowOf, RelayerError } from "@/src/relayer";
 import { shownConditionById } from "@/src/shown-conditions";
 import { verifyShownSession } from "@/src/shown-verification";
@@ -100,11 +101,15 @@ export async function POST(request: Request) {
     let refusal: { code: string; message: string } | null = null;
     if (process.env.RELAYER_PRIVATE_KEY?.trim()) {
       try {
+        await admitRelay(request, auth.account);
         const submitted = await relayCheckIn(result.sessionId, giftEscrow);
         relayed = { hash: submitted.hash, creditedDays: submitted.creditedDays };
       } catch (error) {
         if (error instanceof RelayerError && error.code === "REVERTED") {
           refusal = contractRefusal(error.contractError) ?? { code: "REFUSED", message: "This could not be recorded." };
+        } else if (error instanceof GiftApiError) {
+          // The ceiling (D204): the proof stands, attested; the day is not relayed now, and the person reads why.
+          refusal = { code: error.code, message: error.message };
         } else {
           throw error;
         }

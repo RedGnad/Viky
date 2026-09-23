@@ -7,6 +7,7 @@ import { attachSignature, loadExit, markExitSent, markExitStale } from "@/src/ex
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { RelayerError } from "@/src/relayer";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { admitRelay } from "@/src/relay-admission";
 import { canonicalSignature } from "@/src/signature";
 
 export const runtime = "nodejs";
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
     // not survive a human delay: the attempt of 16 Sep lost 0.3 %, seven times it (D81). These terms are set
     // aside so the next attempt can quote again, and the browser is told to ask for a new price rather than
     // shown a failure it can do nothing about.
+    await admitRelay(request, auth.account);
     let hash: Hex;
     try {
       ({ hash } = await relayExit({

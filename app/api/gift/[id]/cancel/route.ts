@@ -10,6 +10,7 @@ import { readMilestoneGift } from "@/src/milestone-reader";
 import { isMilestoneGiftId } from "@/src/milestone-protocol";
 import { monadChain, waitForFinality } from "@/src/monad/chain";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { admitRelay, admitTopUp } from "@/src/relay-admission";
 import { escrowOf, relayerClients, relayerPreflight } from "@/src/relayer";
 
 export const runtime = "nodejs";
@@ -63,6 +64,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     // Monad charges the limit that is declared, not what is used, so what this account needs is the whole limit at
     // today's price, and a third again so a rise between this answer and the send does not strand the gesture.
+    await admitRelay(request, auth.account);
     const clients = relayerClients();
     await relayerPreflight(clients);
     const fees = await clients.publicClient.estimateFeesPerGas();
@@ -76,6 +78,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         console.error(JSON.stringify({ at: new Date().toISOString(), giftId: id, error: "TOO_EXPENSIVE", needs: formatEther(value) }));
         throw new GiftApiError("TOO_EXPENSIVE", "This cannot be done right now. Nothing was changed.", 503);
       }
+      // One readying a minute, for the account and for the connection (D204): the top-up is MON of the relayer's.
+      await admitTopUp(request, auth.account);
       sent = await clients.walletClient.sendTransaction({ account: clients.walletClient.account!, chain: monadChain, to: funder, value, gas: 21_000n });
       await waitForFinality(clients.publicClient, sent);
     }
