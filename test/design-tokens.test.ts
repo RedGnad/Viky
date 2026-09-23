@@ -174,9 +174,10 @@ test("the characters have three colours, none grey, none the sun, and a face tha
     }
     assert.ok(CHARACTER_SHADOW_OPACITY[appearance] > 0 && CHARACTER_SHADOW_OPACITY[appearance] < 1);
   }
-  // Only the character draws with them: never a word, never a ground.
+  // Only the character draws with them: never a word, never a ground. And the one confetti (D175), whose pieces are
+  // the characters' own three shapes thrown for a gift reached, which is neither a word nor a ground either.
   const painters = globSync("app/**/*.{ts,tsx}").filter((file) => /var\(--character-/.test(readFileSync(file, "utf8")));
-  assert.deepEqual(painters.sort(), ["app/kit/Character.tsx"]);
+  assert.deepEqual(painters.sort(), ["app/kit/Character.tsx", "app/kit/Confetti.tsx"]);
 });
 
 /** The ground is neutral, which is what the cream of the poster look was not: its chroma is a tenth of that one's. */

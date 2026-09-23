@@ -516,7 +516,7 @@ export const GIFT_PAGE = {
   goesBackToThem: (funder: string | null) =>
     sentence(`The same goes back to ${funder ?? "them"} for each day without it that is not caught up the next day. Nobody else ever profits from a missed day.`),
   comesBackToYou: sentence("The same comes back to you for each day without it that is not caught up the next day. Nobody else ever profits from a missed day."),
-  openBy: (date: string, funder: string | null) => `Open it by ${date}: after 14 days unopened, it goes back to ${funder ?? "them"}.`,
+  openBy: (date: string, funder: string | null) => `Open it by ${date}: after 14 days unopened, it goes back to ${funder ?? "the person who offered it"}.`,
 
   createToOpen: "Create your account to open it. Nothing to install.",
   /** An opened gift, read by somebody with no account: it may be theirs, and it may not, so it says "if". */
@@ -708,30 +708,45 @@ export const GIFT_LIVE = {
     shownTheirs: (recipient: string | null) => `${recipient ? `${recipient} has` : "They have"} not shown it yet.`,
     label: { yours: "In your name", theirs: "In their name" },
   },
-  /** The first reading stood above what a climb may start from, so nothing can be earned. */
+  /** The first reading stood above what a climb may start from, so nothing can be earned: the reason, and the money. */
   startTooHigh: {
     yours: (reading: number) => `You were already at ${reading} when it started, so there is nothing to climb.`,
     theirs: (recipient: string | null, reading: number) =>
       `${recipient ? `${recipient} was` : "They were"} already at ${reading} when it started, so there is nothing to climb.`,
-    label: (funder: string | null) => `Goes back to ${funder ?? "them"}`,
+    label: (funder: string | null) => `Goes back to ${funder ?? "the person who offered it"}`,
+    labelToFunder: "Comes back to you",
+    /** When the money moves: at the gift's own deadline, by itself. */
+    on: (date: string) => `On ${date}, when the time is up.`,
+    /** The one action: the person asks for a new gift, the funder makes one. */
+    ask: (funder: string | null) => (funder ? `Ask ${funder} for a new one` : "Ask for a new one"),
+    askMessage: (funder: string | null) =>
+      `${funder ? `${funder}, could` : "Could"} you make me a new gift on Viky? I was already past the target when this one started.`,
+    asked: "Copied. Send it the way you usually talk.",
+    offerAgain: "Make a new gift",
   },
-  /** Reached, or finished with something earned. */
+  /** Reached, or finished with something earned: the money, theirs, at its largest. */
   won: {
     yours: "It is yours.",
-    theirs: (recipient: string | null) => `${recipient ?? "They"} got it.`,
+    /** "They did it", the founder's words for the funder's moment (decision B, 23 Sep 2026). */
+    theirs: (recipient: string | null) => `${recipient ?? "They"} did it.`,
     label: { yours: "Yours", theirs: "Theirs" },
+    reachedOn: (date: string) => `Reached on ${date}.`,
+    finishedOn: (date: string) => `Finished on ${date}.`,
   },
-  /** The deadline passed, or the days ran out, with nothing earned. */
+  /** The deadline passed, or the days ran out, with nothing earned: what goes back, and to whom. */
   over: {
     yours: "The time is up.",
-    theirs: "The time is up.",
-    label: { yours: (funder: string | null) => `Back to ${funder ?? "them"}`, theirs: "Back to you" },
+    /** The funder's question is "what do I get back?": the headline says why, the figure says what. */
+    theirs: (recipient: string | null) => `${recipient ?? "They"} did not make it in time.`,
+    label: { yours: (funder: string | null) => `Back to ${funder ?? "the person who offered it"}`, theirs: "Back to you" },
+    byItself: { yours: "Nothing to do: it goes back by itself.", theirs: "Nothing to do: it comes back to you by itself." },
+    backOn: (date: string) => `Back on ${date}.`,
   },
-  /** Taken back before anybody opened it, or returned in full. */
+  /** Taken back before anybody opened it: where the money went, and when. */
   cameBack: {
-    yours: "It went back.",
-    theirs: "It came back to you.",
-    label: { yours: "Went back", theirs: "Came back" },
+    yours: (funder: string | null) => `${funder ?? "The person who offered it"} took it back before it was opened.`,
+    theirs: "It is in your account again.",
+    label: { yours: "Taken back", theirs: "Came back" },
     on: (date: string) => `On ${date}.`,
   },
   /** What came back to the funder, said beside the money that is theirs, in the meta voice (the mockup's right column). */

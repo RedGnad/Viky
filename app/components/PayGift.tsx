@@ -28,7 +28,9 @@ import { settlingTimeInWords } from "@/src/pass-schedule";
 import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
 import { WAYS_IN, type WayIn } from "@/src/rails";
 import { FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
+import { Character } from "../kit/Character";
 import { FieldRefusal } from "../kit/FieldRefusal";
+import { Success } from "../kit/Motion";
 import { Shell } from "../kit/Shell";
 import { Working } from "../kit/Working";
 import { AccountPanel } from "./AccountPanel";
@@ -125,6 +127,11 @@ export function PayGift() {
   // The gift is read from the same store the card writes (src/card-draft.ts): one gift, in one place, on the device.
   const draft = useSyncExternalStore(subscribeToCardDraft, cardDraft, startingCardDraft);
   const [made, setMade] = useState<Made | null>(() => (typeof window === "undefined" ? null : readSession<Made>(MADE_KEY)));
+  /**
+   * Whether the gift was made by a press on this screen a moment ago, rather than read back from the session on a
+   * reload: the character's arrival answers the payment, and a reload is not one (V4, decision B).
+   */
+  const [justMade, setJustMade] = useState(false);
   const [kept, setKept] = useState<PendingGift | undefined>(() => (typeof window === "undefined" ? undefined : peekPendingGift()));
   const [balance, setBalance] = useState<bigint | null>(null);
   const [phase, setPhase] = useState<Phase>("waiting");
@@ -284,6 +291,7 @@ export function PayGift() {
     clearedCardDraft();
     setKept(undefined);
     setMade(record);
+    setJustMade(true);
     replace("done");
     window.scrollTo(0, 0);
   }, [ensureSigner, condition, milestone, certificate, cadence, draft.course, draft.standing, draft.standingReadAt, subject, target, days, units, recipient, funder]);
@@ -398,7 +406,24 @@ export function PayGift() {
     const day = madeUnits / BigInt(made.days);
     const about = money.about(madeUnits);
     return (
-      <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.made.title(formatAusd(madeUnits), made.recipientName)}>
+      <Shell
+        kind="task"
+        back="/gifts"
+        backLabel={W.backToGifts}
+        backFollows
+        step={W.made.title(formatAusd(madeUnits), made.recipientName)}
+        /* At payment, the gift's character arrives on the expressive spring, its bow a beat after, once, and no
+           confetti: the one confetti of the app is the gift reached (decision B, V4). */
+        character={
+          justMade ? (
+            <Success>
+              <Character state="gift" className="h-auto w-[72px] shrink-0" />
+            </Success>
+          ) : (
+            <Character state="gift" className="h-auto w-[72px] shrink-0" />
+          )
+        }
+      >
         <section className="flex flex-col gap-[var(--space-sm)]">
           {about ? <p className={HELP}>{about}</p> : null}
           <p className={BODY}>

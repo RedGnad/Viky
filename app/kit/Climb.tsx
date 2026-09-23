@@ -27,10 +27,13 @@ const RISE = 0.58;
 const BODY = 56;
 
 export function Climb({ giftId, status }: Readonly<{ giftId: string; status: MeterStatus }>) {
-  const progress = milestoneProgress(status);
+  // A start too high climbed nothing: the character stands at the foot of the slope, leaving, rather than on the flag
+  // where a first reading above the target would put it and where it would read as reached.
+  const tooHigh = status.phase === "startTooHigh";
+  const progress = tooHigh ? 0 : milestoneProgress(status);
   const walker = useRef<HTMLSpanElement>(null);
   const drawing = useRef<HTMLSpanElement>(null);
-  const reading = status.reached ? status.target : status.todayReading;
+  const reading = tooHigh ? null : status.reached ? status.target : status.todayReading;
 
   useEffect(() => {
     if (reading === null) return;
@@ -80,7 +83,7 @@ export function Climb({ giftId, status }: Readonly<{ giftId: string; status: Met
         className="climb-walker"
         style={{ left: `calc(${progress} * (100% - ${BODY}px))`, bottom: pct(FOOT + RISE * progress) }}
       >
-        <Character state={milestoneCharacter(status)} standing={false} className="h-auto w-full" />
+        <Character state={tooHigh ? "returned" : milestoneCharacter(status)} standing={false} className="h-auto w-full" />
       </span>
     </span>
   );

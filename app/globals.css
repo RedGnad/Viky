@@ -1094,6 +1094,35 @@ dialog.sheet[open] {
   opacity: 0.35;
 }
 
+/* The one confetti (app/kit/Confetti.tsx): a layer over the screen that takes no press, emptied once the pieces fall. */
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  display: block;
+}
+
+.confetti-circle {
+  border-radius: 50%;
+}
+
+.confetti-square {
+  border-radius: 3px;
+}
+
+.confetti-triangle {
+  clip-path: polygon(50% 6%, 96% 92%, 4% 92%);
+  border-radius: 2px;
+}
+
 /* The fold's own mark, which turns when it opens. */
 .gift-chevron {
   color: var(--on-surface-faint);

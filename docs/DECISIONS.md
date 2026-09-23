@@ -4786,3 +4786,49 @@ renamed "Study" (its id `study` unchanged), behind the operator door, "Being bui
   Goals 15 and 16 are read `missing` on the chain on 23 Sep 2026; the two calls are in OPERATIONS for one Safe
   session (nonces 7 and 8). The conditions stay "Being built" until a results page has been proved with a student
   present and one gift has run end to end on each, on the founder's word (the rule of D164).
+## D175, 23 Sep 2026: the endings of a gift, the one confetti, and the spring at payment (V4-3)
+
+The third group of document J: "Départ trop haut", "Atteint", "Échéance passée", "Repris ou remboursé", and decision
+B: "jamais au paiement, seulement « atteint » pour le receveur et « they did it » pour le financeur ; au paiement,
+l'arrivée du personnage sur le ressort, sans confetti."
+
+- **Départ trop haut.** The reason without jargon as the state, what happens to the money under it ("Goes back to
+  Maman", "Comes back to you" to the funder, which it used to read in the person's words), and the day it moves, the
+  gift's own deadline. The action was named ("askAgain") and drew nothing; it is now "Ask Maman for a new one" to the
+  person, which hands them the words through the phone's share sheet, or the clipboard, and says which (Viky sends no
+  message for anybody), and "Make a new gift" to the funder, which is Home. The climb drew the character on the flag,
+  since the first reading stood above the target, and that read as reached: it stands at the foot, leaving.
+- **Atteint.** The money at its largest, "It is yours." to the person, "Léa did it." to the funder (the founder's
+  words), the day it was reached, and taking it out, the action this moment alone carries (D172). The stamp is inked
+  and lands. The one confetti of the app plays here, to those two people, once per device and per gift.
+- **Échéance passée.** The two questions diverge: "The time is up." to the person, "Léa did not make it in time." to
+  the funder, whose question is what comes back; the figure is the whole amount, since nothing was earned, "Back to
+  Maman" or "Back to you" (a reader was told "Back to you" until now). Then the day it came back, or that nothing needs
+  doing because it goes back by itself.
+- **Repris.** "Maman took it back before it was opened." to the person holding the link, "It is in your account
+  again." to the funder, and the date when the page knows it.
+- **At payment**, on the made screen, the gift's character arrives on the expressive spring with its bow a beat
+  after, once, for the press that made the gift and not on a reload; no confetti.
+
+The motion sheets of this group:
+
+- **Départ trop haut.** Trigger: the arrival on the screen. Rule: the page enters (D171); the character stands at the
+  foot of the slope in its leaving drawing and does not move. Token: none of its own. Loop: none. Reduced motion:
+  unchanged. Test: captures.
+- **Atteint.** Trigger: the arrival on the screen, the first time this device sees the gift reached, for the person
+  and the funder. Rule: twenty-four pieces in the characters' three shapes and the look's four colours burst from the
+  gift's drawing and fall, once, in 900 ms, then are removed; a stamp lands from 1.5 times its size on the expressive
+  fast spring, overshooting once; a row plays its settled days and the amount counts (the existing arrival). Token:
+  Material extra-long3 (900 ms), emphasized decelerate for the burst and emphasized accelerate for the fall
+  (`MOTION.confetti`); the expressive fast spatial spring for the stamp. Loop: none; a second visit throws nothing.
+  Reduced motion: nothing is thrown, the stamp is inked where it stands. Test: `test/confetti.test.ts`; caught in
+  flight at 200 and 500 ms, and absent on a second visit (`review-captures/v4-confetti.ts`).
+- **Échéance passée.** Trigger: the arrival on the screen. Rule: the days gone back play if this device has not seen
+  them (the existing arrival); nothing else. Token: medium2 (300 ms) standard for a day gone back. Loop: none. Reduced
+  motion: the final state. Test: `test/motion.test.ts`.
+- **Repris.** Trigger: the arrival on the screen. Rule: nothing plays beyond the page's entrance. Token: none. Loop:
+  none. Reduced motion: unchanged. Test: captures.
+- **Au paiement.** Trigger: the press that made the gift, answered on the made screen. Rule: the gift's character
+  grows from 0.55 of its size on the expressive fast spatial spring and fades in on the effects spring, its bow opening
+  120 ms later (the existing `Success`), once. Token: `MOTION.gift`. Loop: none; a reload of the made screen draws it
+  still. Reduced motion: drawn still. Test: `test/confetti.test.ts`.
