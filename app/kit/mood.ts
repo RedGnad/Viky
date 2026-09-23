@@ -13,7 +13,12 @@
  * decides how long it holds it (`Expression` in app/kit/Motion.tsx).
  */
 
-export type Feeling = "rest" | "curious" | "happy";
+/**
+ * `curious` and `happy` answer a pointer or a choice (step 2). The other three answer the gift's own record (the life
+ * of the product, step 2, 23 Sep 2026): `open` when a day earned lands, `down` when a day goes back, for 300 ms and
+ * never a frown, and `jump`, once, the first time this device sees the gift reached. None is ever set by a clock.
+ */
+export type Feeling = "rest" | "curious" | "happy" | "open" | "down" | "jump";
 
 export type Mood = Readonly<{
   feeling: Feeling;
