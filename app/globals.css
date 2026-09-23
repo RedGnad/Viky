@@ -667,9 +667,12 @@ dialog.sheet[open] {
  * is drawn, because it is a new block on a page that has already arrived: that is the card a gift's page waits for.
  *
  * `app/template.tsx` is what makes this play on every navigation: a template is given a key of its own, so its
- * elements are built again rather than reused, and a new element plays the animation the stylesheet gives it. A
- * reload plays the same entrance (D171): the server draws the whole screen since D160, so there is no hole for the
- * turns to show, and the one fade of the first screen read as "no animation" to the founder.
+ * elements are built again rather than reused, and a new element plays the animation the stylesheet gives it.
+ *
+ * The first screen a document draws does not enter (D198, which withdraws that part of D171): on a reload the
+ * previous screen stays on the glass until the new one is painted, and a new one that starts dim and low is the same
+ * screen going out and coming back, which the founder saw as the page loading twice. `app/kit/Shell.tsx` gives the
+ * class to every screen but the document's first, so a reload's first image is the screen itself, whole and still.
  */
 .page-enters > *:not(header, dialog),
 .page-enters > header > *:not(.page-mark) {

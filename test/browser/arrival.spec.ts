@@ -5,9 +5,9 @@ import { expect, test, type Page } from "@playwright/test";
  * 8 pixels in 250 ms on Material's standard curve. The mark and the appearance control stand still, because they are
  * in the same place on every screen. Under reduced motion the page still arrives, by fading alone.
  *
- * Every screen enters the same way, the first one a document draws too (D171): the server draws it whole since D160,
- * so the turns leave no hole in it, and one fade alone read as no entrance at all to the founder. The turns are 80 ms
- * apart and stop at 240, so four blocks have arrived inside the half second.
+ * Every screen reached from another enters the same way; the first screen a document draws is drawn whole and still
+ * (D198): on a reload it replaces itself on the glass, and an entrance was that screen going out and coming back. The
+ * turns are 80 ms apart and stop at 240, so four blocks have arrived inside the half second (D171).
  *
  * Every movement is written down as it starts rather than caught in the act: reading `document.getAnimations()` after
  * a page change is a race against a quarter of a second, and it is the race that fails, not the product.
@@ -54,15 +54,25 @@ test.describe("the arrival on a screen", () => {
     await writeEachOneDown(page);
   });
 
-  test("the first screen a document draws enters block by block like any other, 80 ms apart and no later than 240", async ({ page }) => {
-    await page.goto("/me");
+  test("the first screen a document draws is whole and still, on a load and on a reload; the next one enters, 80 ms apart and no later than 240", async ({ page }) => {
+    // D198: on a reload the previous screen stays on the glass until the new one is painted, so a first screen that
+    // entered was the same screen going out and coming back. Nothing plays.
+    for (const how of ["load", "reload"] as const) {
+      if (how === "load") await page.goto("/me", { waitUntil: "load" });
+      else await page.reload({ waitUntil: "load" });
+      await page.waitForTimeout(600);
+      expect(await played(page), `${how}: nothing enters`).toEqual([]);
+      expect(await page.locator("main").first().getAttribute("class")).not.toContain("page-enters");
+    }
+    // Reached from that screen, the next one enters, and the turns are the stylesheet's own arithmetic (D171).
+    await page.locator("main header .page-mark a").first().click();
+    await expect(page).toHaveURL(/\/$/);
     const arriving = await whatEntered(page);
     await expect.poll(() => stillPlaying(page), { timeout: 4000 }).toBe(0);
     const entering = await played(page);
     expect(entering.length).toBeGreaterThan(1);
     for (const one of entering) expect(one.name).toBe("page-enter");
     expect(await page.locator("main").first().getAttribute("class")).toContain("page-enters");
-    // The turns are the stylesheet's own arithmetic: 0, 80, 160, 240 and nothing later (D171).
     const delays = await page.evaluate(() =>
       [...document.querySelectorAll("main.page-enters > *:not(header, dialog), main.page-enters > header > *:not(.page-mark)")].map((element) => Math.round(Number.parseFloat(getComputedStyle(element).animationDelay) * 1000)),
     );

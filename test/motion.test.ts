@@ -160,7 +160,8 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
   const MATERIAL_MS = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 700, 800, 900, 1000];
   assert.ok(MATERIAL_MS.includes(MOTION.reveal.durationMs), `the reveal is ${MOTION.reveal.durationMs} ms, which Material does not publish`);
   const shell = readFileSync("app/kit/Shell.tsx", "utf8");
-  assert.match(shell, /className=\{`page-enters mx-auto /, "every screen enters block by block, the first one a document draws too (D171)");
+  assert.match(shell, /className=\{`\$\{enters \? "page-enters " : ""\}mx-auto /, "every screen reached by a navigation enters block by block; the document's first is drawn whole and still (D198)");
+  assert.match(shell, /const \[enters\] = useState\(\(\) => aScreenWasDrawn\)/, "and whether one was drawn is a module variable the server never sets, so hydration agrees");
   assert.doesNotMatch(shell, /page-arrives|useHasDrawnBefore/, "no screen arrives in one fade any more");
   assert.doesNotMatch(css, /\.page-arrives/, "and the stylesheet has no such screen");
   assert.match(readFileSync("app/template.tsx", "utf8"), /export default function Template/, "and a template is what builds it again on every navigation");
