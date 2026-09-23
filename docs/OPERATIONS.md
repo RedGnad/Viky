@@ -404,6 +404,43 @@ id is what the contract checks first, so each has its own.
 the funder's target is signed the same way, so `NotThereYet` compares like with like. The scale itself lives on the
 portal's row (`results.grade.scale`) and never on the chain: a page is read on it, a target is refused off it.
 
+## The night's goals, 17 to 21: the examination results shown, one Safe session at the end (D176)
+
+Five more goals on `MilestoneGift` (`0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e`), one per examination result shown
+from the person's own account, shape "having it or not", the subject constant per condition as the TOEFL's is. None is
+signed tonight: the founder asked for one Safe session at the end of the night, and the goals of the families that
+follow (a course finished, D177) join this table. `pnpm check:milestone-goals` reads 17 to 21 as `missing` on
+23 Sep 2026. The calldata is `registerGoal(goal, providerId, 1)`, the gas is that of goals 13 and 14 (102,125), and the
+nonces follow goals 15 and 16 (7 and 8), each after the one before is final:
+
+| goal | line | provider id | data | Safe nonce |
+|---|---|---|---|---|
+| 17 | a Cambridge English result, shown | `viky:provider:cambridge-english-shown:v1` = `0xecfbafb73034a36285f283dce008adf4d74bffedcc340080300e237167e117c5` | `0x5ba191520000000000000000000000000000000000000000000000000000000000000011ecfbafb73034a36285f283dce008adf4d74bffedcc340080300e237167e117c50000000000000000000000000000000000000000000000000000000000000001` | 9 |
+| 18 | an IELTS band, shown | `viky:provider:ielts-shown:v1` = `0xc223d2ffcb46f2e2b235aa5a2629019ec53e5388200e9d2b2631e37f43327988` | `0x5ba191520000000000000000000000000000000000000000000000000000000000000012c223d2ffcb46f2e2b235aa5a2629019ec53e5388200e9d2b2631e37f433279880000000000000000000000000000000000000000000000000000000000000001` | 10 |
+| 19 | the baccalauréat passed, Morocco | `viky:provider:bac-morocco-shown:v1` = `0x0180f9bedf395e0a0b0174999ce1268c0c3c9705e2cc2110a9abfb9249d74d44` | `0x5ba1915200000000000000000000000000000000000000000000000000000000000000130180f9bedf395e0a0b0174999ce1268c0c3c9705e2cc2110a9abfb9249d74d440000000000000000000000000000000000000000000000000000000000000001` | 11 |
+| 20 | the baccalauréat passed, Cameroon | `viky:provider:bac-cameroon-shown:v1` = `0xfbe2ded9e4a8f17b37264a214589a09e1d75873fc65a9d56f5fd5683773901f3` | `0x5ba191520000000000000000000000000000000000000000000000000000000000000014fbe2ded9e4a8f17b37264a214589a09e1d75873fc65a9d56f5fd5683773901f30000000000000000000000000000000000000000000000000000000000000001` | 12 |
+| 21 | the baccalauréat passed, France | `viky:provider:bac-france-shown:v1` = `0xa7afea17b0c985d7e53416eacc72d8b95347b97b97875df6f44025badcb59cca` | `0x5ba191520000000000000000000000000000000000000000000000000000000000000015a7afea17b0c985d7e53416eacc72d8b95347b97b97875df6f44025badcb59cca0000000000000000000000000000000000000000000000000000000000000001` | 13 |
+
+The session is the one of goals 14, 15 and 16: `ACTION=raw TO=0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e DATA=<data>
+NONCE=<nonce> pnpm safe:action` prints `signThis`, two owners sign it, `SIGNATURES=… SEND=1
+EXECUTOR_PRIVATE_KEY=<the relayer's key>` sends it, the next once the previous is final; then `pnpm check:milestone-goals`
+must read every goal of the table as `registered`, and the rows go into the table of owner actions. A goal registered
+before its provider exists costs nothing and changes nothing: a `registerGoal` only adds, and a line with no provider
+still refuses every gift by name (`NOT_CONFIGURED`).
+
+**What each line waits for, in order.** (1) A real candidate's session on the Reclaim dashboard, to register the
+provider written in `docs/reclaim/<id>-provider.md` (the page, the sign-in the candidate types in their own browser,
+the fields to extract, all "to confirm" until captured); (2) its id, version and request hash pinned in
+`EXAM_PROVIDERS` (`src/exam-shown.ts`), one commit; (3) the goal above; (4) one gift made by an operator and one proof
+shown end to end by a candidate, with real money; (5) the founder's word, then `live: true` and the register. The
+terms read for each service are in its definition, and where a service's pages show none, that is said rather than
+guessed.
+
+**Côte d'Ivoire, the DECO: a window to come back to, nothing built.** The results of the baccalauréat are consulted on
+the DECO's service in July only; outside that window nothing can be captured from a candidate's session, so no
+provider can be registered and no line was written. When July comes, the same steps as the three bac lines apply, with
+a candidate present.
+
 ## A university's portal, in thirty minutes, with a student present (D165)
 
 A row of `viky_portals` is what makes a university choosable, and a row is written only after a proof has come back
@@ -753,6 +790,7 @@ as the owner, after the handover of `GiftEscrow`.
 | 14 | a university's student portal, enrolled and shown (D165) | having it or not | registered 23 Sep 2026 through the Safe (the row above); the condition stays "Being built" until a portal has been proved with a student present |
 | 15 | a university's student portal, the year passed and shown (D174) | having it or not | to register through the Safe, nonce 7 (the section "Goals 15 and 16" above); "Being built" until a results page has been proved with a student present |
 | 16 | a university's student portal, a grade reached and shown, in hundredths (D174) | having it or not | to register in the same session, nonce 8; "Being built" likewise |
+| 17 to 21 | the examination results shown from the person's own account: Cambridge English, IELTS, the baccalauréat in Morocco, Cameroon and France (D176) | having it or not | to register in one Safe session at the end of the night, nonces 9 to 13 (the section "The night's goals" above); each line waits for a provider of ours registered from a real candidate's session |
 
 The daily contract has its own goals, under `GiftEscrow`'s two-argument `registerGoal(goalType, providerId)`:
 

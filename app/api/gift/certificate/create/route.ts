@@ -44,6 +44,9 @@ export async function POST(request: Request) {
     if (!certificate.condition.live && !isOperator(auth.account)) {
       throw new GiftApiError("UNKNOWN_CONDITION", "That is not something a gift can be made for", 404);
     }
+    // A line whose provider is not registered yet takes no gift from anybody (D176): the money would wait until the
+    // last day for a proof nothing could produce.
+    if (certificate.notOpen) throw new GiftApiError("NOT_CONFIGURED", `${certificate.notOpen} Nothing was taken.`, 503);
 
     // A shown condition binds the account, not a name: nothing is asked and the subject is the condition's own (D164).
     const personName = certificate.asksName === false ? "" : tidyGiftName(String(body.personName ?? ""));

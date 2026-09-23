@@ -5,6 +5,7 @@ import type { Hex } from "viem";
 import type { MilestoneRecord } from "./milestone-store";
 import { loadPortal, type Portal } from "./portal-store";
 import { TOEFL_RECLAIM_PROVIDER, TOEFL_SHOWN_SUBJECT, toeflScoreOf, toeflShownProviderId } from "./toefl-shown";
+import { EXAM_NOT_REGISTERED, EXAM_PROVIDERS, examProviderId, examSubject, readBacPassed, readCambridge, readIelts, type ExamId } from "./exam-shown";
 import {
   enrolledBy,
   gradeShownBy,
@@ -67,6 +68,11 @@ export type ShownEntry = Readonly<{
   subject?: `0x${string}`;
   /** The subject for one gift, when it depends on the gift: the portal, for a university gift (D165). */
   subjectOf?: (record: MilestoneRecord) => Hex | null;
+  /**
+   * Why the condition's own provider is empty, when it is: a provider of ours not registered yet (D176). The
+   * verification refuses `NOT_CONFIGURED` with these words before any proof is fetched, and never "no portal".
+   */
+  notRegistered?: string;
 }>;
 
 /** The daily lesson, as the connected flow has always proved it. Its `read` is never called: the daily policy reads it. */
@@ -208,7 +214,48 @@ export const UNIVERSITY_GRADE_SHOWN: ShownEntry = {
   },
 };
 
-export const SHOWN_CONDITIONS: readonly ShownEntry[] = [DUOLINGO_SHOWN, TOEFL_SHOWN, UNIVERSITY_SHOWN, UNIVERSITY_YEAR_SHOWN, UNIVERSITY_GRADE_SHOWN];
+/**
+ * An examination result shown from the person's own account (D176): the TOEFL's shape with a provider of ours, pinned
+ * in src/exam-shown.ts the day it is registered from a real candidate's session, and empty until then. The reading is
+ * the line's own (a score on the Cambridge English Scale, an IELTS band in tenths, passed or not).
+ */
+function examEntry(id: ExamId, read: (fields: Readonly<Record<string, string>>) => ResultsVerdict): ShownEntry {
+  const provider = EXAM_PROVIDERS[id];
+  return {
+    kind: "milestone",
+    subject: examSubject(id),
+    ...(provider ? {} : { notRegistered: EXAM_NOT_REGISTERED }),
+    condition: {
+      conditionId: id,
+      providerId: provider?.id ?? "",
+      providerVersion: provider?.version ?? "",
+      requestHashes: provider ? [provider.requestHash] : [],
+      proofCount: 1,
+      phases: ["reach"],
+      attestationProviderId: examProviderId(id),
+      read: (fields) => readingOf(read(fields)),
+    },
+  };
+}
+
+export const CAMBRIDGE_SHOWN = examEntry("cambridge-english-shown", readCambridge);
+export const IELTS_SHOWN_ENTRY = examEntry("ielts-shown", readIelts);
+export const BAC_MOROCCO_ENTRY = examEntry("bac-morocco-shown", readBacPassed);
+export const BAC_CAMEROON_ENTRY = examEntry("bac-cameroon-shown", readBacPassed);
+export const BAC_FRANCE_ENTRY = examEntry("bac-france-shown", readBacPassed);
+
+export const SHOWN_CONDITIONS: readonly ShownEntry[] = [
+  DUOLINGO_SHOWN,
+  TOEFL_SHOWN,
+  CAMBRIDGE_SHOWN,
+  IELTS_SHOWN_ENTRY,
+  BAC_MOROCCO_ENTRY,
+  BAC_CAMEROON_ENTRY,
+  BAC_FRANCE_ENTRY,
+  UNIVERSITY_SHOWN,
+  UNIVERSITY_YEAR_SHOWN,
+  UNIVERSITY_GRADE_SHOWN,
+];
 
 export function shownConditionById(conditionId: string): ShownEntry | undefined {
   return SHOWN_CONDITIONS.find((entry) => entry.condition.conditionId === conditionId);

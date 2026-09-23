@@ -4832,3 +4832,44 @@ The motion sheets of this group:
   grows from 0.55 of its size on the expressive fast spatial spring and fades in on the effects spring, its bow opening
   120 ms later (the existing `Success`), once. Token: `MOTION.gift`. Loop: none; a reload of the made screen draws it
   still. Reduced motion: drawn still. Test: `test/confetti.test.ts`.
+
+## D176, 23 Sep 2026: five examination results shown from the person's own account, the family "Pass an exam"
+
+The founder's plan for the second developer, 23 Sep 2026: every condition "shown by them" of the list, each up to the
+sign-in screen like the TOEFL, the terms of use read before any line, one PR per family, one Safe session at the end.
+The first family: "Pass an exam", beside the TOEFL.
+
+- **The family.** `exam`, "Pass an exam", after the languages. The TOEFL score moves into it; the Duolingo English Test
+  stays with the lesson, where the audit filed it and a test pins it.
+- **The five lines**, all in `BUILDING` beside the register, offered to an operator alone, "Being built" on the public
+  page under their family (D169): a Cambridge English result (goal 17, the overall score on the Cambridge English Scale,
+  80 to 230, the funder typing the score of the level in mind: B1 from 140, B2 from 160, C1 from 180, C2 from 200, the
+  floors read on Cambridge English's results pages), an IELTS band (goal 18, typed in halves, carried in tenths, the
+  British Council's Test Taker Portal; IDP's page, which asks no account, is a second provider to come), and the
+  baccalauréat passed in Morocco (goal 19, Bac Digital, the candidate's CNE and CIN typed in their own browser; the
+  service sits behind Cloudflare, so it is shown by the candidate and never read by Viky), in Cameroon (goal 20,
+  Epim-Exam) and in France (goal 21, Cyclades). Each subject is constant per condition, as the TOEFL's is (D162): the
+  pages carry no name the funder could sign. The day a result is shown is the event.
+- **No provider exists for any of them.** The Reclaim directory, searched by its API the same day, reads none of these
+  pages. Each provider is ours, to register from a real candidate's session; its page, its sign-in (the identifiers
+  typed by the person in their own browser, never sent to Viky) and its fields are written in `docs/reclaim/<id>-provider.md`,
+  every field "to confirm". Until it is pinned in `EXAM_PROVIDERS` (`src/exam-shown.ts`), the line refuses every gift
+  `NOT_CONFIGURED` by name at creation (`notOpen`) and at verification (`notRegistered`), whoever asks, and never as
+  "no portal". The frontier lines say what is on its way: the exams' line names the TOEFL, Cambridge English and IELTS;
+  the state diplomas' line, which said "Not being built", now says the baccalauréat is, in the three countries.
+- **The terms, read before any line.** Cambridge's website terms forbid scraping or storing the site's content on a
+  server and building a database from it, and sharing a password; the British Council's forbid copying its content,
+  misusing data on its services and sharing a password, and name no automated access; Bac Digital and Epim-Exam show
+  no terms on their public pages; Cyclades's legal notice opens only inside the application and could not be read from
+  outside a session. None forbids a person opening their own result in their own browser; whether Viky keeping the one
+  score a candidate shows is the storing of a site's content Cambridge forbids is a question the line does not answer.
+  It is quoted in each definition and on the judges' page, and it is the founder's call before each line opens. Nothing
+  was refused tonight on the terms; nothing opens on them either.
+- **The goals** are in OPERATIONS for one Safe session at the end of the night, nonces 9 to 13, each read `missing` on
+  the chain on 23 Sep 2026. The DECO of Côte d'Ivoire is written there as a window to come back to in July, with
+  nothing built.
+- **What crossed the frontier, said in the PR.** The create route (`notOpen`), `/api/conditions` (the door), the
+  judges' page (one bullet). Nothing in `app/kit`, nothing in `globals.css`, no token.
+- **What is verified, and what waits for a candidate.** The scale, the bands, the decision, the subjects, the goals,
+  the register, the door, and the refusal before any fetch, each a unit test. No provider registered, no proof shown,
+  no goal signed.

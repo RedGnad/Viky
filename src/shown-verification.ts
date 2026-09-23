@@ -88,8 +88,11 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
     providerVersion: entry.condition.providerVersion,
     requestHashes: entry.condition.requestHashes,
     read: entry.condition.read,
+    // A provider of ours not registered yet (D176): the condition's own row is empty, and it says so.
+    ...(entry.notRegistered ? { missing: { code: "NOT_CONFIGURED", message: entry.notRegistered } } : {}),
   };
-  // A gift naming no portal, or a portal proved for enrolment and not for its results page (D174): each by its name.
+  // A gift naming no portal, a portal proved for enrolment and not for its results page (D174), or a provider not
+  // registered yet (D176): each by its name.
   if (!provider.providerId) throw new VerificationError(provider.missing?.code ?? "NO_PORTAL", provider.missing?.message ?? "This gift names no portal a proof could come from");
   const subject = (entry.subjectOf && record ? entry.subjectOf(record) : null) ?? entry.subject;
   if (!subject) throw new VerificationError("NOT_CONFIGURED", "This condition has no subject to sign", 503);
