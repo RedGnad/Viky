@@ -76,10 +76,7 @@ export async function POST(request: Request) {
     const milestone = milestoneById(String(body.conditionId ?? ""));
     if (!milestone || !(milestone.condition.live || isOperator(auth.account))) throw new GiftApiError("GOAL_NOT_OFFERED", "This goal is not offered yet.");
     const cadence = cadenceOf(milestone, String(body.cadence ?? ""));
-    if (!cadence) throw new GiftApiError("INVALID_MODE", milestone.words.refusals.noCadence);
-    // A line whose keeper's reading is not built (D168) is refused here by its own sentence: nothing is made that
-    // nothing could ever read.
-    if (milestone.unread || !isChessClimb(cadence.id)) throw new GiftApiError("NOT_CONFIGURED", milestone.unread ?? milestone.words.refusals.noCadence, 503);
+    if (!cadence || !isChessClimb(cadence.id)) throw new GiftApiError("INVALID_MODE", milestone.words.refusals.noCadence);
     const username = String(body.username ?? "").trim();
     if (!milestone.validName(username)) throw new GiftApiError("INVALID_USERNAME", milestone.words.refusals.nameShape);
 

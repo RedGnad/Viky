@@ -10,8 +10,6 @@ import { relayCheckIn } from "./gift-relay";
 import { loadGift, loadRelayed, markBound, type GiftRecord } from "./gift-store";
 import { consumeAndSaveVerification, saveProofSession } from "./proof-session-store";
 import { escrowOf, RelayerError } from "./relayer";
-import { GOAL_TYPE_GITHUB_CONTRIBUTIONS } from "./gift-terms";
-import { runGithubCheckIn } from "./github-checkin";
 
 /**
  * The public mode (D27): one attested read of the recipient's public Duolingo profile becomes one
@@ -56,8 +54,6 @@ export async function runPublicCheckIn(input: { giftId: string; purpose: PublicC
   const { giftId, purpose } = input;
   const record: GiftRecord | null = await loadGift(giftId);
   if (!record || !record.recipient) return { kind: "already", giftId, reason: "not_opened" };
-  // A GitHub gift is read from GitHub (D166), in the same two purposes and with the same outcomes.
-  if (record.goalType === GOAL_TYPE_GITHUB_CONTRIBUTIONS) return runGithubCheckIn(input);
   if (!record.goalUsername) return { kind: "already", giftId, reason: "no_account" };
   if (purpose === "bind" && record.boundAt) return { kind: "already", giftId, reason: "already_bound" };
   if (purpose === "count" && !record.boundAt) return { kind: "already", giftId, reason: "not_bound" };
