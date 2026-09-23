@@ -57,7 +57,19 @@ export const SETTLING_PASS: PassPlan = { name: "settling", count: false, refund:
  */
 export const UNCLAIMED_REFUND_DELAY_SECONDS = 14 * 86_400;
 
-type PassGift = Pick<GiftState, "cancelled" | "finalised" | "startDay" | "recipient" | "fundedAt" | "claimedAt">;
+type PassGift = Pick<GiftState, "cancelled" | "finalised" | "startDay" | "recipient" | "fundedAt" | "claimedAt"> &
+  Partial<Pick<GiftState, "refundable" | "refundedToFunder">>;
+
+/**
+ * What a gift already closed still owes its funder: what the contract made refundable and has not sent yet. The pass
+ * skipped every closed gift until 23 Sep 2026, so the last refund of a gift finalised after its settling pass was
+ * never sent: gift 1 held 2.857148 AUSD that way (D186).
+ */
+export function stillOwedToFunder(gift: PassGift): bigint {
+  const refundable = gift.refundable ?? 0n;
+  const refunded = gift.refundedToFunder ?? 0n;
+  return refundable > refunded ? refundable - refunded : 0n;
+}
 
 /** Whether a gift that never started has waited long enough for the contract to send all of it back. */
 export function unstartedAndOverdue(gift: PassGift, nowSeconds: number): boolean {
@@ -246,7 +258,11 @@ async function runPass(
       continue;
     }
     const gift = await deps.read(escrow, giftId);
-    if (gift.cancelled || gift.finalised) continue;
+    if (gift.cancelled || gift.finalised) {
+      // Closed, and nothing to drain or finalise; but what it still owes its funder is sent, by the settling pass.
+      if (plan.refund && stillOwedToFunder(gift) > 0n) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
+      continue;
+    }
     if (gift.startDay === 0) {
       // Nothing to drain or finalise before a first reading. A gift nobody opened, or nobody connected, is sent back
       // whole once the contract allows it, and only by the settling pass, which is the one that sends money back.

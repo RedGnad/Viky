@@ -6,7 +6,16 @@ import { COUNTING_PASS_UTC, cronOf, SETTLING_PASS_UTC, settlingTimeInWords } fro
 
 const ESCROW = "0x00000000000000000000000000000000000000e1" as const;
 const FUNDED = 1_789_000_000;
-const LIVE = { cancelled: false, finalised: false, startDay: 20_708, recipient: "0x000000000000000000000000000000000000b0b0" as `0x${string}` | null, fundedAt: FUNDED, claimedAt: FUNDED + 60 };
+const LIVE = {
+  cancelled: false,
+  finalised: false,
+  startDay: 20_708,
+  recipient: "0x000000000000000000000000000000000000b0b0" as `0x${string}` | null,
+  fundedAt: FUNDED,
+  claimedAt: FUNDED + 60,
+  refundable: 0n as bigint | undefined,
+  refundedToFunder: 0n as bigint | undefined,
+};
 
 function spy(gifts: ReadonlyArray<{ giftId: string; escrow: `0x${string}` | null }>, state: typeof LIVE = LIVE, nowSeconds?: number) {
   const calls: string[] = [];
@@ -53,6 +62,20 @@ test("the counting pass reads and credits, and settles nothing", async () => {
   assert.ok(!calls.includes("refund:1"));
 });
 
+test("a closed gift that still owes its funder is refunded by the settling pass, and only what it owes (D186)", async () => {
+  // Gift 1, read on 23 Sep 2026: finalised, 2.857148 AUSD refundable and never sent, because the pass skipped it.
+  const owing = { ...LIVE, finalised: true, refundable: 2_857_148n, refundedToFunder: 0n };
+  let run = spy([{ giftId: "1", escrow: ESCROW }], owing);
+  await dailyPass(SETTLING_PASS, run.deps);
+  assert.deepEqual(run.calls, ["refund:1"], "nothing to drain or finalise, only what is owed");
+  run = spy([{ giftId: "1", escrow: ESCROW }], owing);
+  await dailyPass(COUNTING_PASS, run.deps);
+  assert.ok(!run.calls.includes("refund:1"), "money goes back on the settling pass only");
+  run = spy([{ giftId: "1", escrow: ESCROW }], { ...owing, refundedToFunder: 2_857_148n });
+  await dailyPass(SETTLING_PASS, run.deps);
+  assert.deepEqual(run.calls, [], "paid back already: nothing is sent twice");
+});
+
 test("a gift that is over, taken back or not yet started is left alone", async () => {
   for (const state of [
     { ...LIVE, cancelled: true },
@@ -63,7 +86,7 @@ test("a gift that is over, taken back or not yet started is left alone", async (
   ]) {
     const { calls, deps } = spy([{ giftId: "1", escrow: ESCROW }], state, FUNDED + 13 * 86_400);
     await dailyPass(SETTLING_PASS, deps);
-    assert.deepEqual(calls, [], JSON.stringify(state));
+    assert.deepEqual(calls, [], JSON.stringify(state, (_key, value) => (typeof value === "bigint" ? value.toString() : value)));
   }
 });
 

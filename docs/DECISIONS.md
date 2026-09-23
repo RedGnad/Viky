@@ -5135,3 +5135,16 @@ le dit, condition par condition."
   sentence for `NOT_THERE_YET` (with the number) reaches the screen instead of a fixed one; `app/privacy/page.tsx`
   (the section, and Reclaim named for every proof); `app/judges/page.tsx` (the cost); `app/api/proof/verify/route.ts`
   (the target); `src/sentences.ts` (the words). Nothing else outside the catalogue's files.
+## D186, 23 Sep 2026: a closed gift's last refund is sent by the settling pass
+
+The founder, 23 Sep 2026: "le passage ignore les cadeaux déjà clos, donc le dernier remboursement n'est jamais envoyé ;
+2,857148 AUSD du cadeau 1 attendent dans le contrat."
+
+- **The defect.** The settling pass left every finalised or taken-back gift alone. Finalising makes the remaining
+  missed days refundable, and when the finalisation came after the pass's own refund, nothing ever sent them.
+- **The fix.** A closed gift is still read, and on the settling pass what it owes its funder
+  (`refundable - refundedToFunder`) is sent with `refundUnearned`; nothing is drained or finalised again, the counting
+  pass sends nothing, and a gift paid back already is left alone (`test/daily-pass.test.ts`).
+- **The money owed today** was sent the same day by hand, gift 1's 2.857148 AUSD, read before and after in
+  OPERATIONS. It used the relayer's gas (18,640,500 gwei), which the founder's instruction of the night asked for
+  ("déclenche ce remboursement").
