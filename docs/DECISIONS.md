@@ -4634,3 +4634,28 @@ cadeau tourne dessus."
   then, by hand, with the gift's number in the decision that opens it.
 - **Where the judges' page stands.** It lists the register's conditions with their state, as before; a line being
   built is not on it until it is in the register.
+
+## D171, 23 Sep 2026: the entrance of a page, 80 ms apart and the same on a reload (motion PR A)
+
+The founder's review of D160: "ça clippe, il n'y a pas les animations". And the instruction: "le décalage passe de
+50 à 80 ms (quatre blocs entrés sous 500 ms, plafond 240), et le rechargement joue la même entrée que la navigation,
+plus seulement le fondu. Si 80 se lit encore comme simultané, 100."
+
+The sheet, as every motion PR carries one:
+
+- **Trigger.** A page change, whether reached from another screen or by a reload: the template builds the screen
+  again on every navigation, and the first screen a document draws now enters the same way, since the server has
+  drawn it whole since D160 and the turns leave no hole in it. D160's one fade for the first screen is withdrawn.
+- **Rule.** Every block the page carries rises 8 px and comes up from nothing in 250 ms on the standard curve, each
+  block 80 ms after the one above it, three turns at most (0, 80, 160, 240), so four blocks have arrived in 490 ms and
+  a page of any length inside the half second. A list takes the same three turns: its fourth card and every one after
+  arrive together at 240 (D154 gave a list seven turns at 50; they ran to 350 and read as a queue).
+- **Material token.** The rise is medium1 (250 ms) on the standard easing, as before. The stagger of 80 ms is not a
+  step Material publishes: it sits between short1 (50) and short2 (100). It is the founder's number; short2 is the
+  next to try if 80 still reads as simultaneous, and the test names 80 rather than a Material list.
+- **Loop.** None: each block plays once, `backwards` keeps it unseen until its turn, and nothing repeats.
+- **Reduced motion.** Unchanged: every block fades in over 250 ms, no rise, no delay, all at once.
+- **Test.** `test/motion.test.ts`: the tokens (80, 240, 240), the stylesheet's variables equal to them, the list's
+  cap at the fifth child, the shell entering on every screen, no screen arriving in one fade outside reduced motion.
+- **Judged by eye on viky.cash**, by the founder, with a reduced-motion capture and a film strip of the entrance at
+  0, 80, 160, 240 and 490 ms attached to the PR.
