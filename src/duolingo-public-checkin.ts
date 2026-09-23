@@ -21,8 +21,9 @@ import { escrowOf, RelayerError } from "./relayer";
 export type PublicCheckInPurpose = "bind" | "count";
 
 export type PublicCheckInOutcome =
-  | Readonly<{ kind: "bound"; giftId: string; xp: number; hash: Hex }>
-  | Readonly<{ kind: "counted"; giftId: string; xp: number; creditedDays: number; hash: Hex }>
+  /** `unit` says what `xp` counts when it is not experience: a connected source counts verdicts (D188). */
+  | Readonly<{ kind: "bound"; giftId: string; xp: number; hash: Hex; unit?: string }>
+  | Readonly<{ kind: "counted"; giftId: string; xp: number; creditedDays: number; hash: Hex; unit?: string }>
   | Readonly<{ kind: "already"; giftId: string; reason: "counted_today" | "not_bound" | "not_opened" | "no_account" | "already_bound" | "finished" | "cancelled" }>
   | Readonly<{ kind: "refused"; giftId: string; code: string; message: string; xp?: number }>;
 

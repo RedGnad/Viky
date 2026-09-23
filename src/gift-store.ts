@@ -222,6 +222,19 @@ export async function setRecipientUsername(giftId: string, username: string, cod
 }
 
 /** Records the proved binding; the code is cleared so it can never be reused. */
+/**
+ * The account a person connected to a gift (D188), recorded as the account the gift counts: the source's own id,
+ * named by the recipient, with no code to prove, since the connection itself proved it.
+ */
+export async function markConnectedAccount(giftId: string, externalId: string): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE viky_gifts
+       SET goal_username = ${externalId}, username_source = 'recipient', binding_code = NULL, binding_code_expires_at = NULL
+     WHERE gift_id = ${giftId}
+     RETURNING gift_id`;
+  return rows.length === 1;
+}
+
 export async function markBound(giftId: string, profileId: string): Promise<boolean> {
   const rows = await sql()`
     UPDATE viky_gifts

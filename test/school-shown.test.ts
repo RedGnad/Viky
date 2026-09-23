@@ -28,7 +28,8 @@ test("one goal, pinned by name, a constant subject, and the family School after 
   assert.equal(ECOLEDIRECTE_MILESTONE.subject({ name: "" }), ECOLEDIRECTE_SUBJECT);
   assert.equal(ECOLEDIRECTE_SHOWN.subject, ECOLEDIRECTE_SUBJECT);
   assert.equal(ECOLEDIRECTE_SHOWN.condition.attestationProviderId, ecoleDirecteProviderId());
-  assert.deepEqual(FAMILIES.map((family) => family.id).slice(-2), ["study", "school"]);
+  const families = FAMILIES.map((family) => family.id);
+  assert.equal(families.indexOf("school"), families.indexOf("study") + 1, "School comes right after Study");
   const condition = conditionById("ecoledirecte-grade-shown");
   assert.equal(condition?.family, "school");
   assert.equal(condition?.nature, "shown");

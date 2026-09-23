@@ -19,7 +19,7 @@ test("every condition in the register has its privacy line, and no line names a 
 
 test("what a person shows from their own account is under the verdict rule; what a source publishes about them is kept as read", () => {
   for (const condition of EVERY) {
-    if (condition.nature === "shown") assert.equal(verdictOnly(condition.id), true, `${condition.id} is shown by them`);
+    if (condition.nature === "shown" || condition.nature === "connected") assert.equal(verdictOnly(condition.id), true, `${condition.id} is shown or connected by them`);
     else assert.equal(verdictOnly(condition.id), false, `${condition.id} is read for them`);
   }
   assert.equal(verdictOnly("nobody-knows"), false, "an unknown condition falls under no rule");
@@ -35,8 +35,14 @@ test("the lines are sentences the person may read: no forbidden word, and every 
 });
 
 test("the verdict line says the four things the rule says", () => {
-  const words = privacyWords({ id: "toefl-mybest-shown", source: "ETS" });
+  const words = privacyWords({ id: "toefl-mybest-shown", source: "ETS", nature: "shown" });
   for (const said of ["seen once, on your own screen, and by nobody else", "keeps neither the number nor the page's answer", "the public program receives that alone", "they do not see the number"]) {
     assert.ok(words.includes(said), said);
   }
+});
+
+test("a connected line says it is read each morning from the account the person connected, under the same verdict rule", () => {
+  const words = privacyWords({ id: "fitbit-daily", source: "Fitbit", nature: "connected" });
+  assert.ok(words.startsWith("Read each morning from the Fitbit account you connected: yesterday's active minutes"), words);
+  assert.ok(words.includes("keeps neither the number nor the page's answer"), words);
 });

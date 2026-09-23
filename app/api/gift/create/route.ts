@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getAddress, isAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { conditionOfGoal } from "@/src/conditions";
-import { isOperator } from "@/src/dev-access";
 import { readJsonBody } from "@/src/api-guard";
 import { isDuolingoCourseId, isValidDuolingoUsername } from "@/src/duolingo-public-terms";
 import { contactHash, NO_CONTACT_HASH } from "@/src/contact-hash";

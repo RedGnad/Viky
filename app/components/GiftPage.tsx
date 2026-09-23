@@ -37,6 +37,7 @@ import { Nature } from "../kit/Nature";
 import { ShowProof } from "../kit/ShowProof";
 import { CheckThisDay } from "../kit/CheckThisDay";
 import { CheckThisReading } from "../kit/CheckThisReading";
+import { ConnectTheAccount } from "../kit/ConnectTheAccount";
 import { ConnectTheSource, type ConnectWords } from "../kit/ConnectTheSource";
 import { DayRow } from "../kit/DayRow";
 import { charactersOf } from "../kit/DayStrip";
@@ -441,6 +442,8 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
           </>
         );
       case "connect":
+        // A condition of the third nature is connected, not named (D188): the source's own page, one gesture.
+        if (condition?.link.kind === "connect") return <ConnectTheAccount giftId={giftId} conditionId={condition.id} yours={mine} onChanged={reload} />;
         return connectWords ? (
           <ConnectTheSource
             words={connectWords}

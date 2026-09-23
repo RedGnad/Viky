@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { readAccountAuthSession } from "@/src/account-auth-server";
-import { runPublicCheckIn } from "@/src/duolingo-public-checkin";
+import { readDailyGift } from "@/src/daily-count";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { loadGift } from "@/src/gift-store";
 import { milestoneErrorResponse } from "@/src/milestone-api";
@@ -23,7 +23,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const auth = readAccountAuthSession(request);
     const gift = await loadGift(id);
     if (!gift || !gift.recipient || gift.recipient.toLowerCase() !== auth.account.toLowerCase()) throw new GiftApiError("NOT_RECIPIENT", "Open the gift first.", 403);
-    const outcome = await runPublicCheckIn({ giftId: id, purpose: "bind" });
+    // A public source is read by name, a connected one with the person's key: the dispatcher decides (D188).
+    const outcome = await readDailyGift({ giftId: id, purpose: "bind" });
     return NextResponse.json(outcome, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);

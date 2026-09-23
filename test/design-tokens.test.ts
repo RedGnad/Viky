@@ -733,7 +733,7 @@ test("the title face is never in a task: no task screen sets a title in it (stru
 test("the nature of a condition is two words in the meta voice, in three places and nowhere else", () => {
   const nature = readFileSync("app/kit/Nature.tsx", "utf8");
   assert.match(nature, /className=\{`block \$\{META\}`\}/, "the meta voice: 13 px, capitals, a pixel of tracking, the muted ink, no fill");
-  assert.match(readFileSync("src/sentences.ts", "utf8"), /CONDITION_NATURE = \{ read: "READ FOR YOU", shown: "SHOWN BY THEM" \} as const/, "two words exactly");
+  assert.match(readFileSync("src/sentences.ts", "utf8"), /CONDITION_NATURE = \{ read: "READ FOR YOU", shown: "SHOWN BY THEM", connected: "CONNECTED BY THEM" \} as const/, "three natures, two or three words each, and no fourth");
   const where = globSync("app/**/*.tsx").filter((file) => readFileSync(file, "utf8").includes("<Nature ")).sort();
   assert.deepEqual(
     where,
