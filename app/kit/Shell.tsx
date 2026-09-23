@@ -1,5 +1,5 @@
 "use client";
-import { useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useAccount } from "@/src/account/provider";
 import { DISPLAY, META, TITLE } from "../components/ui";
 import { Appearance } from "./Appearance";
@@ -65,7 +65,19 @@ type Props =
     }>
   | Readonly<{ kind: "document"; back?: string; backLabel?: string; character?: ReactNode; children: ReactNode }>;
 
+/**
+ * Whether this document has drawn a screen already (D198). The first screen of a document is drawn whole and still,
+ * because on a reload it replaces the same screen on the glass and an entrance would be that screen going out and
+ * coming back. Every screen after it is reached by a navigation, where the template builds it anew and it enters.
+ * A module variable rather than state: the server never sets it, so the server and the browser's first render agree.
+ */
+let aScreenWasDrawn = false;
+
 export function Shell(props: Props) {
+  const [enters] = useState(() => aScreenWasDrawn);
+  useEffect(() => {
+    aScreenWasDrawn = true;
+  }, []);
   /**
    * The character stands on every screen, not only on Home (the life of the product, step 3, 23 Sep 2026): a screen
    * that names none is given the head character, which carries the gaze, the two hover expressions and the reactions
@@ -99,11 +111,11 @@ export function Shell(props: Props) {
           is zero there (D137). At 88 it pushed every sheet that many pixels right of the window's middle, which is
           what the founder measured on the catalogue. */}
       <div className={room} style={props.kind === "destination" && props.bare ? ({ "--page-offset": "0px" } as CSSProperties) : undefined}>
-        {/* Everything this page carries enters when the page does, 250 ms, once, block by block (D146, D171); the
-            mark and the appearance control stand still, because they are in the same place on every screen. The
-            first screen a document draws enters the same way: since D160 the server draws it whole, so the turns
-            leave no hole, and one fade alone read as no entrance at all (the founder's review of D160). */}
-        <main ref={main} data-drawn-for={address ? "account" : "nobody"} className={`page-enters mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-lg)]`}>
+        {/* Everything this page carries enters when the page is reached from another, 250 ms, once, block by block
+            (D146, D171); the mark and the appearance control stand still, because they are in the same place on every
+            screen. The first screen a document draws is drawn whole and still (D198): on a reload it replaces itself
+            on the glass, and entering would be going out and coming back. */}
+        <main ref={main} data-drawn-for={address ? "account" : "nobody"} className={`${enters ? "page-enters " : ""}mx-auto flex w-full ${width} flex-col gap-[var(--space-xl)] px-[var(--page-margin)] py-[var(--space-lg)]`}>
           <header className="flex flex-col items-start gap-[var(--space-sm)]">
             <div className="page-mark flex w-full items-center justify-between gap-[var(--space-md)]">
               <Mark />

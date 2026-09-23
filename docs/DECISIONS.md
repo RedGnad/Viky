@@ -5470,3 +5470,66 @@ place of the `FITBIT_*`; read Google's terms first. The banner read here the sam
   tokens shown on Strava's settings page are the owner's own and are not used. Said in OPERATIONS.
 - **Still the founder's.** The two variables, the consent screen's test users, and the reading service redeployed with
   the source (PR #166, to be rebuilt on this).
+## D198, 23 Sep 2026: the first image of a document is the whole screen, still; the audit of a reload
+
+The founder: the blink is systematic on a reload on his phone, never on a navigation; the answer is in the code, and
+a bug named is a bug fixed professionally. So: the whole path of a reload, read in the code, each step judged on one
+question, can it change the image after the first one.
+
+**The path of a reload, in the code.**
+
+1. The request carries the cookies. The root layout reads the session, the appearance, the currency, the card, the
+   zone, what was seen and the render minute (`app/layout.tsx`), and the page reads the money and the gifts
+   (`app/page.tsx`). The document is drawn whole, for the account, in one render. Cannot change the image afterwards.
+2. The document is streamed and parsed. A browser paints what it has parsed when the rest has not arrived or the
+   parser yields. Measured on this machine with the CPU slowed six times on a Fast 3G profile: 40 to 100 ms between
+   `<main>` existing and its blocks existing (the log's `font-used` mark, which needs a block, came that long after
+   `main-first`), and with the service worker streaming the response, one reload in two painted a frame in that
+   window: the mark and the appearance control alone on the lavender ground. **Changes the image: a first image that is
+   the head of the screen, then the screen.**
+3. The stylesheet applies. Every block of `main.page-enters` starts its entrance: dim, 8 px low, the later blocks held
+   at that state by `backwards` until their turn (`app/globals.css`, `.page-enters`). On a navigation the previous
+   screen is gone and a new one enters, which reads as a change of screen. On a reload the browser keeps the previous
+   screen on the glass until the new one paints, and the new one is the same screen, dim and low: the same screen
+   goes out and comes back. D171 asked for exactly this ("le rechargement joue la même entrée que la navigation");
+   it is what the founder now names as the blink. **Changes the image: the screen, then the screen dim, then the
+   screen.**
+4. The theme script runs before paint (`THEME_BOOT_SCRIPT`): it applies the device's stored choice to `<html>` and
+   the bar's colour. React never patches an attribute at hydration, and the appearance control reads nothing at
+   render (D159), so nothing flips afterwards. Cannot change the image.
+5. The fonts. `next/font` serves both faces from the build with stable names, the service worker keeps `_next/static`
+   for a day and the browser keeps them as immutable: a reload has them. Cannot change the image on a reload.
+6. Hydration. Every value the browser knows and the server does not is read through `useSyncExternalStore` with a
+   server snapshot (the session, the zone, the language, the tab's currency, the seen cookie, the minute, the display
+   mode), so the first render agrees with the markup and no tree is thrown away. No hydration error on Home, Gifts,
+   You, the catalogue or a gift's page, in Chromium and in WebKit. `Install` on You alone answers `standalone` after
+   hydration and withdraws its block in the installed app: a block leaving, not a screen redrawn.
+7. After hydration. The session is asked again (`/api/account/session`) and confirms what the server drew; the gifts
+   are asked again and replace equal cards under equal keys; the preferences confirm the currency of an account that
+   chose one; the arrival plays only what the seen cookie says changed (D189); the reveal on scroll waits for a
+   scroll. A server that cannot read the session draws the screen for nobody and the browser then replaces `<main>`:
+   that is the double load of the morning (the RPC refusal, D192), and D196's test now refuses it. Cannot change the
+   image when the server reads the session.
+
+Two steps change the image, 2 and 3, and both are on a reload only, which is the founder's observation exactly. Step 3
+is systematic, on every device, at every speed; step 2 is one reload in two on a slowed phone, and never at this
+machine's speed.
+
+**What changed.**
+
+- **Step 3.** The first screen a document draws is drawn whole and still: `Shell` gives `page-enters` to every screen
+  but the document's first, by a module variable the server never sets, so the server and the browser's first render
+  agree. A navigation still enters, with the turns of D171. This withdraws the reload part of D171, on the founder's
+  instruction of today, which outranks it.
+- **Step 2, tried and withdrawn.** Hiding the body until the end of the document is parsed (a mark set by the first
+  script in the body and removed by the last, the body `visibility: hidden` meanwhile) was built and measured on the
+  same slowed profile: the reload then painted a blank lavender ground in place of the head, for the same 40 to 100
+  ms, and the whole screen after it. The browser paints the ground before the body is parsed whatever the body is,
+  so the frame does not go away, it changes content. Withdrawn, and `test/first-image.test.ts` refuses it coming back.
+  What the window really is: React streams the shell in chunks and the browser parses and may paint between two
+  chunks; the document of Home is 88 KB, of which 35 KB are the thirty-seven characters drawn inline as SVG and 15 KB
+  the payload React hydrates from. The remedy is a smaller document, one drawing of each character referenced by
+  the rest, which is a task of its own and not a blind change here.
+- **Tests.** `test/browser/arrival.spec.ts`: a load and a reload play nothing, the next screen enters with the turns. `test/browser/first-image-signed-in.spec.ts` (D196): on a load and a reload
+  of the landing, Gifts and You, signed in, `<main>` is drawn once, for the account, with no entrance at all.
+  `test/first-image.test.ts` and `test/motion.test.ts` pin the scripts, the stylesheet and the shell.

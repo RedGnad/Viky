@@ -7,7 +7,8 @@ import { expect, test, type Browser, type BrowserContext } from "@playwright/tes
  * For each of the three screens, loaded cold in a fresh browser holding only the session cookie:
  * - the page the server sends is already the account's (`<main data-drawn-for="account">`), not the page for nobody;
  * - after the first image, `<main>` is never replaced by another one;
- * - no block plays its entrance twice.
+ * - no block plays its entrance at all: the first screen of a document is drawn whole and still (D198), on a load and
+ *   on a reload alike.
  *
  * The account is made here with a virtual passkey against the server under test, which signs sessions only when it
  * has its session secret; a server without one cannot have anybody signed in, and the test says so rather than pass.
@@ -16,7 +17,7 @@ import { expect, test, type Browser, type BrowserContext } from "@playwright/tes
 const PAGES = ["/", "/gifts", "/me"] as const;
 
 const WATCH = () => {
-  const log: { mains: number; replaced: string[]; twice: string[] } = { mains: 0, replaced: [], twice: [] };
+  const log: { mains: number; replaced: string[]; twice: string[]; entered: number } = { mains: 0, replaced: [], twice: [], entered: 0 };
   (window as unknown as { firstImage: typeof log }).firstImage = log;
   let main: Element | null = null;
   new MutationObserver(() => {
@@ -34,6 +35,7 @@ const WATCH = () => {
       if ((event as AnimationEvent).animationName !== "page-enter") return;
       const times = (entered.get(target) ?? 0) + 1;
       entered.set(target, times);
+      log.entered += 1;
       if (times > 1) log.twice.push((target.textContent ?? "").trim().slice(0, 40));
     },
     true,
@@ -85,13 +87,16 @@ test.describe("a signed-in screen is drawn once", () => {
       const sent = await (await context.request.get(path)).text();
       expect(sent, `${path}: the server draws the account's screen`).toContain('data-drawn-for="account"');
 
-      await page.goto(path, { waitUntil: "load" });
-      await page.waitForTimeout(1_500);
-      const log = await page.evaluate(() => (window as unknown as { firstImage: { mains: number; replaced: string[]; twice: string[] } }).firstImage);
-      expect(log.replaced, `${path}: <main> was replaced after the first image`).toEqual([]);
-      expect(log.mains, `${path}: one <main>`).toBe(1);
-      expect(log.twice, `${path}: a block played its entrance twice`).toEqual([]);
-      await expect(page.locator("main")).toHaveAttribute("data-drawn-for", "account");
+      for (const how of ["load", "reload"] as const) {
+        if (how === "load") await page.goto(path, { waitUntil: "load" });
+        else await page.reload({ waitUntil: "load" });
+        await page.waitForTimeout(1_500);
+        const log = await page.evaluate(() => (window as unknown as { firstImage: { mains: number; replaced: string[]; twice: string[]; entered: number } }).firstImage);
+        expect(log.replaced, `${path} ${how}: <main> was replaced after the first image`).toEqual([]);
+        expect(log.mains, `${path} ${how}: one <main>`).toBe(1);
+        expect(log.entered, `${path} ${how}: a block played an entrance on a document load`).toBe(0);
+        await expect(page.locator("main")).toHaveAttribute("data-drawn-for", "account");
+      }
       await context.close();
     }
   });

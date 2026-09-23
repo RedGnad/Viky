@@ -36,3 +36,11 @@ test("the dated things are in the first image: the server's render minute is the
   assert.match(clock, /useSyncExternalStore\(everyMinute, thisMinute, \(\) => drawnAt\)/);
   assert.doesNotMatch(readFileSync("app/components/GiftPage.tsx", "utf8"), /browser && daily/, "the row of days is drawn by the server");
 });
+
+test("the first screen of a document does not enter; a screen built by a navigation does (D198)", () => {
+  const shell = readFileSync("app/kit/Shell.tsx", "utf8");
+  assert.match(shell, /let aScreenWasDrawn = false;/, "whether a screen was drawn is a module variable the server never sets");
+  assert.match(shell, /aScreenWasDrawn = true;/, "set once the first screen is on the glass");
+  assert.match(shell, /\$\{enters \? "page-enters " : ""\}/, "and the entrance goes to every screen but the document's first");
+  assert.doesNotMatch(readFileSync("app/layout.tsx", "utf8"), /data-parsing|visibility/, "nothing hides the body while it is parsed: measured, that painted a blank ground in place of the head");
+});
