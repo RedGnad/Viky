@@ -1,6 +1,6 @@
 import type { Voice } from "./gift-voice";
 import type { Moment } from "./gift-moment";
-import { GIFT_LIVE as L, GIFT_PAGE as W } from "./sentences";
+import { GIFT_CARD as W_CARD, GIFT_LIVE as L, GIFT_PAGE as W } from "./sentences";
 
 /**
  * What a gift's page leads with, at one moment, for one reader (document J, section 2).
@@ -28,6 +28,8 @@ export type LiveInput = Readonly<{
   target: number | null;
   /** Whether anything has been counted or read yet. */
   started: boolean;
+  /** Whether the proof is shown by the person from their own account (D162) rather than a page they share. */
+  shown?: boolean;
   /** What the last day Viky judged did, when a record of it exists. Nothing when the gift predates the record. */
   lastJudged: "earned" | "returned" | null;
   /** Moments already in words, in the reader's own clock: the page knows the clock, this module does not. */
@@ -49,6 +51,27 @@ export type Live = Readonly<{
    */
   back: Readonly<{ label: string; value: string }> | null;
 }>;
+
+/**
+ * The small line above the name, which names the other person of the two: "A gift from Maman" to the person it is
+ * for and to anybody reading their link, "Your gift" to the funder, and "A gift" to a reader nobody gave the names
+ * to. It said "Your gift" to that reader until V4, which is false of them.
+ */
+export function eyebrowOf(voice: Voice, funderName: string | null): string {
+  if (voice === "funder") return W_CARD.fromFunderOrYours(null);
+  if (funderName) return W_CARD.fromFunderOrYours(funderName);
+  return voice === "reader" ? L.aGift : W_CARD.fromFunderOrYours(null);
+}
+
+/**
+ * The card's title: "For you" to the person it is for, "For Léa" when a name is known, "For whoever opens the link" to
+ * a funder who named nobody, and "For somebody" to a reader given no name. It printed "For" and nothing until V4.
+ */
+export function titleOf(voice: Voice, name: string | null): string {
+  if (voice === "recipient") return W_CARD.forYou;
+  if (name && name.trim()) return W_CARD.forName(name);
+  return voice === "funder" ? W_CARD.forWhoever : L.forSomebody;
+}
 
 /** Whether this reader is the person the gift is for. A reader who is neither of the two reads the third person. */
 const isTheirs = (voice: Voice) => voice === "recipient";
@@ -96,9 +119,9 @@ export function liveOf(input: LiveInput): Live {
           : input.lastJudged === "earned"
             ? L.counting.counted
             : input.lastJudged === "returned"
-              ? yours
-                ? L.counting.wentBack(funderName)
-                : L.counting.wentBackToYou
+              ? voice === "funder"
+                ? L.counting.wentBackToYou
+                : L.counting.wentBack(funderName)
               : L.counting.running,
         figure: { label: yours ? W.yoursSoFar : W.theirsSoFar, value: input.theirsDisplay },
         next: input.nextReadingInWords,
@@ -118,7 +141,14 @@ export function liveOf(input: LiveInput): Live {
 
     case "awaitingProof":
       return {
-        headline: yours ? L.awaitingProof.yours : L.awaitingProof.theirs(recipientName),
+        // The one gesture, said as the headline: sharing a page, or showing it from their own account (D162).
+        headline: input.shown
+          ? yours
+            ? L.awaitingProof.shownYours(source)
+            : L.awaitingProof.shownTheirs(recipientName)
+          : yours
+            ? L.awaitingProof.yours
+            : L.awaitingProof.theirs(recipientName),
         figure: { label: yours ? L.awaitingProof.label.yours : L.awaitingProof.label.theirs, value: input.amountDisplay },
         next: null,
         back,

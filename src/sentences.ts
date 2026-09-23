@@ -693,14 +693,17 @@ export const GIFT_LIVE = {
   /** Something granted once, waiting for the proof that it was. */
   awaitingProof: {
     yours: "Share the page that proves it, and the gift is yours.",
-    theirs: (recipient: string | null) => `${recipient ?? "They"} have not shared the proof yet.`,
+    theirs: (recipient: string | null) => `${recipient ? `${recipient} has` : "They have"} not shared the proof yet.`,
+    /** A proof the person shows from their own account (D162): the gesture is "show", never "share a page". */
+    shownYours: (source: string) => `Show it from your own ${source} account, and it is yours.`,
+    shownTheirs: (recipient: string | null) => `${recipient ? `${recipient} has` : "They have"} not shown it yet.`,
     label: { yours: "In your name", theirs: "In their name" },
   },
   /** The first reading stood above what a climb may start from, so nothing can be earned. */
   startTooHigh: {
     yours: (reading: number) => `You were already at ${reading} when it started, so there is nothing to climb.`,
     theirs: (recipient: string | null, reading: number) =>
-      `${recipient ?? "They"} were already at ${reading} when it started, so there is nothing to climb.`,
+      `${recipient ? `${recipient} was` : "They were"} already at ${reading} when it started, so there is nothing to climb.`,
     label: (funder: string | null) => `Goes back to ${funder ?? "them"}`,
   },
   /** Reached, or finished with something earned. */
@@ -732,6 +735,10 @@ export const GIFT_LIVE = {
    */
   dayOfDays: (day: number, total: number) => `Day ${day} of ${total}`,
   scrollForTheRest: "Scroll for the rest",
+  /** The line above the name, to a reader nobody gave the names to: neither "your" nor anybody's. */
+  aGift: "A gift",
+  /** The card's title, to a reader given no name for the person it is for. */
+  forSomebody: "For somebody",
   /** The two folds, each under its own name, and each already read by the time it is folded. */
   agreed: "What was agreed",
   checked: "How this is checked",

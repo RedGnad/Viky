@@ -22,14 +22,14 @@ import { conditionById, conditionOfGoal } from "@/src/conditions";
 import { stripFromRecord } from "@/src/day-states";
 import { whenInWords } from "@/src/display-currency";
 import { giftOfMilestone, giftOfSummary, funderMayTakeItBack, readAs } from "@/src/gift-moment";
-import { liveOf } from "@/src/gift-live";
+import { eyebrowOf, liveOf, titleOf } from "@/src/gift-live";
 import { notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
 import { milestoneById } from "@/src/milestone-conditions";
 import type { AnyGiftStatus } from "@/src/gift-status";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { contractDayInWords, contractRangeInWords, dateInWords, momentInWords, nextPassMs } from "@/src/moments";
 import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
-import { GIFT_CARD as CARD_WORDS, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
+import { GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
 import { CertificateProof } from "../kit/CertificateProof";
 import { Nature } from "../kit/Nature";
 import { ShowProof } from "../kit/ShowProof";
@@ -42,7 +42,8 @@ import { FieldRefusal } from "../kit/FieldRefusal";
 import { GiftLive } from "../kit/GiftLive";
 import { HeadCharacter } from "../kit/HeadCharacter";
 import { LinkAgain } from "../kit/LinkAgain";
-import { MilestoneMeter } from "../kit/MilestoneMeter";
+import { Climb } from "../kit/Climb";
+import { Stamp } from "../kit/Stamp";
 import { MorningMessage } from "../kit/MorningMessage";
 import { Arrival } from "../kit/Motion";
 import { Shell } from "../kit/Shell";
@@ -146,6 +147,8 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
   const [busy, setBusy] = useState<Busy>("idle");
   const [answer, setAnswer] = useState<{ at: Where; text: string; failed: boolean } | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  /** A signed-out reader of an opened gift asked to sign in: the quiet line opens the door, it is not the moment's action. */
+  const [signingIn, setSigningIn] = useState(false);
   const [taken, setTaken] = useState<{ amount: string; atMs: number; take: number } | null>(null);
   // Whether an account was signed in on this page before it went: then the session closed while they were here,
   // rather than a page opened again with nobody signed in (D74, D80).
@@ -225,6 +228,7 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
     target: milestone?.target ?? null,
     started: milestone ? milestone.connected : Boolean(daily && daily.creditedDays + daily.missedDays > 0),
     lastJudged,
+    shown: condition?.nature === "shown",
     openByInWords: openBy,
     nextReadingInWords: moment === "counting" || moment === "climbing" ? nextReading : null,
     cameBackOnInWords: cameBackOn,
@@ -384,11 +388,24 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
   /** The one action of this moment, and nothing of the same weight beside it (document J). */
   const action = ((): ReactNode => {
     if (!address && !gift.cancelled) {
-      return (
-        <div className="flex flex-col gap-[var(--space-md)]">
-          <p className="font-medium">{status.opened ? W.signInToSee : W.createToOpen}</p>
-          {status.opened ? <AccountPanel returning signInOnly /> : <AccountPanel />}
-        </div>
+      // Before it is opened, the account is the way in: making it IS opening the gift, the moment's one action.
+      if (!status.opened) {
+        return (
+          <div className="flex flex-col gap-[var(--space-md)]">
+            <p className="font-medium">{W.createToOpen}</p>
+            <AccountPanel />
+          </div>
+        );
+      }
+      // After it, a reader without an account is somebody the page cannot know: a judge, or the person it is for coming
+      // back. Signing in is a door and not the moment's action, so it is one quiet line that opens the panel (V4: a
+      // page with no action is read in three seconds, and a sun button on every moment made every moment ask).
+      return signingIn ? (
+        <AccountPanel returning signInOnly />
+      ) : (
+        <button type="button" onClick={() => setSigningIn(true)} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+          {W.signInToSee}
+        </button>
       );
     }
     if (outsider) {
@@ -465,13 +482,13 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
     }
   })();
 
-  // A shown condition draws no meter and no days (D162): what stands there is the day the proof was shown, or that
-  // nothing has been yet, read the same by the funder and the person it is for.
+  // The gift's own drawing, alive (V4): the row of days, the climb, or the stamp. What it shows is said in words beside
+  // it, so none of the three repeats a figure the state or the money carries.
   const shape = milestone ? (
-    conditionById(milestone.conditionId)?.nature === "shown" ? (
-      <p className={BODY}>{milestone.reachedAtMs ? M.lastShown(dateInWords(milestone.reachedAtMs, zone)) : M.nothingShownYet}</p>
+    milestone.shape === "certificate" ? (
+      <Stamp state={milestone.reached ? "stamped" : milestone.finished || milestone.cancelled ? "void" : "waiting"} />
     ) : (
-      <MilestoneMeter status={milestone} size="large" />
+      <Climb giftId={giftId} status={milestone} />
     )
   ) : browser && daily ? (
     <DayRow id={giftId} gift={daily} catchUpSeconds={daily.catchUpSeconds} records={daily.days} voice={voice} />
@@ -550,8 +567,8 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
         {...(address || hadAccount ? { back: "/gifts", backLabel: W.backToGifts } : { back: "/", backLabel: W.aboutViky, backFollows: true })}
       >
         <GiftLive
-          from={CARD_WORDS.fromFunderOrYours(readerIsFunder ? null : funderName)}
-          who={mine ? CARD_WORDS.forYou : CARD_WORDS.forName(recipientName ?? account.username ?? "")}
+          from={eyebrowOf(voice, funderName)}
+          who={titleOf(voice, recipientName ?? account.username)}
           what={condition?.name ?? ""}
           nature={condition ? <Nature nature={condition.nature} /> : null}
           shape={shape}

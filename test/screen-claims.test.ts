@@ -302,7 +302,7 @@ test("once what was earned has been taken, the way out carries the accent", () =
   assert.match(block, /href="\/cash-out" className=\{PRIMARY_BUTTON\}/, "the next step is offered in the plain shape again");
   // And the gesture that had the accent is gone by then: taking is the moment's action only while it is that moment,
   // and a gift whose money has been taken is no longer at it (src/gift-moment.ts).
-  assert.match(readFileSync("src/gift-moment.ts", "utf8"), /case "won":\n      return \{ moment, action: "take", agreementOpen \};/);
+  assert.match(readFileSync("src/gift-moment.ts", "utf8"), /case "won":\n[^\n]*\n      return \{ moment, action: gift\.moneyToTake \? "take" : null, agreementOpen \};/);
 });
 
 /**

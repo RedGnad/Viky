@@ -154,10 +154,9 @@ export function readAs(gift: Gift, voice: Voice, moment: Moment = momentOf(gift)
     // the everyday one, taking the gift back ends it. The second is offered under the first, never beside it.
     return { moment, action: moment === "unopened" ? "linkAgain" : null, agreementOpen };
   }
-  // Money that is already theirs is the one thing a screen waits for, whatever else the gift is doing: a habit
-  // counted halfway has days that are theirs, and taking them is not a gesture to hide behind a fold. It takes the
-  // place of the moment's own action rather than standing beside it, because a screen asks for one thing.
-  if (gift.moneyToTake && moment !== "cameBack") return { moment, action: "take", agreementOpen };
+  // While a gift runs, its page is looked at and nothing is asked (the founder's table of 23 Sep 2026, V4): taking
+  // the money out is the action of the moment it is theirs, "Atteint", and of no other. Until then, #76 offered it at
+  // every moment money had been earned; the table overrules that.
   switch (moment) {
     case "unopened":
       return { moment, action: "open", agreementOpen };
@@ -168,7 +167,8 @@ export function readAs(gift: Gift, voice: Voice, moment: Moment = momentOf(gift)
     case "startTooHigh":
       return { moment, action: "askAgain", agreementOpen };
     case "won":
-      return { moment, action: "take", agreementOpen };
+      // Nothing to take once it is taken: the moment stays, and the page is read.
+      return { moment, action: gift.moneyToTake ? "take" : null, agreementOpen };
     default:
       // Counting, climbing, over, came back: a page that is looked at. Whatever a person may still do here is said
       // quietly, because nothing on this screen is waiting for them.

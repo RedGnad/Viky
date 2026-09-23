@@ -92,17 +92,18 @@ test("opened and not connected is the one moment where the whole agreement is re
   }
 });
 
-test("money already theirs is the one action, whatever the gift is doing", () => {
-  // A habit counted halfway has days that are theirs, and taking them is not a gesture to hide behind a fold. It
-  // takes the place of the moment's own action rather than standing beside it.
+test("a gift that runs asks for nothing, even with money earned: taking it out is the action of the end (V4)", () => {
+  // The founder's table of 23 Sep 2026: "En cours: aucune. C'est une page qu'on regarde." It overrules #76, which
+  // offered the money at every moment some had been earned.
   const halfway = giftOfSummary(daily({ opened: true, counting: true, creditedDays: 2, earnedDisplay: "$2.00" }));
   assert.equal(momentOf(halfway), "counting");
-  assert.equal(readAs(halfway, "recipient").action, "take");
-  assert.equal(readAs(halfway, "funder").action, null, "what was earned leaves only to the person it is for");
-  assert.equal(readAs(halfway, "reader").action, null);
-  // Once it is taken, the moment is what it was again: a page that is looked at.
-  const taken = giftOfSummary(daily({ opened: true, counting: true, creditedDays: 2, earnedDisplay: "$0.00" }));
-  assert.equal(readAs(taken, "recipient").action, null);
+  for (const voice of ["recipient", "funder", "reader"] as const) assert.equal(readAs(halfway, voice).action, null);
+  // At the end, taking it out is the one action, and only while there is something to take.
+  const won = giftOfSummary(daily({ opened: true, finished: true, creditedDays: 2, earnedDisplay: "$2.00" }));
+  assert.equal(readAs(won, "recipient").action, "take");
+  assert.equal(readAs(won, "funder").action, null, "what was earned leaves only to the person it is for");
+  const takenAlready = giftOfSummary(daily({ opened: true, finished: true, creditedDays: 2, earnedDisplay: "$0.00" }));
+  assert.equal(readAs(takenAlready, "recipient").action, null);
 });
 
 test("a habit being counted and a rating climbing are two moments, and neither asks for anything", () => {
