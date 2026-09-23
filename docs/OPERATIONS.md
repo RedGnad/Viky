@@ -129,7 +129,10 @@ production server, the capture run included, would quietly read the production d
 name Next never loads and git ignores. `src/load-env.ts` reads `.env.local` then `.env`, and a value already in
 the process environment wins, which is why the production values are exported into the shell first.
 
-`pnpm db:migrate` is idempotent and prints the six tables it made or found. Neither table is read before a send;
+`pnpm db:migrate` is idempotent and prints the tables it made or found, `viky_connections` included since D197 (no route
+creates that one, so a production without it refuses every connection until the migration runs). `DATABASE_URL` is
+sensitive on Vercel, so `vercel env pull` writes it empty: the command above needs the production URL put in the
+shell by the founder, from the Neon console, and nothing else reaches production from a laptop. Neither table is read before a send;
 a missing `viky_sends` is logged and the send still answers its reference, and a missing `viky_accounts` leaves
 every account on the currency its device proposes.
 
