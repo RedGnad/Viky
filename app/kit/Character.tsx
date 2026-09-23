@@ -1,4 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
+import { characterKey } from "./character-key";
+import { CHARACTERS_FILE } from "./character-file";
 
 /**
  * The days of a gift are its characters (the art direction brief of 17 Sep 2026, section 5): they make visible what
@@ -310,6 +312,7 @@ export function Character({
   variant = 0,
   tone = "range",
   standing = true,
+  drawn: how = "referenced",
   className,
 }: Readonly<{
   state: CharacterState;
@@ -321,10 +324,27 @@ export function Character({
    * 19 Sep 2026): seven shadows in a row read as seven underlines rather than as seven days.
    */
   standing?: boolean;
+  /**
+   * Whether the drawing is written into the page, or named from `public/characters.svg` (D206). Named by default: a
+   * character written into the page weighed a kilobyte, a row of thirty on Home was thirty kilobytes of a document a
+   * phone paints while it is still reading it, and the second cause of the flash on a reload (D198). Written into the
+   * page only where a part of it moves (`data-part`: a day that jumps or leaves in an arrival, the gift answering a
+   * gesture, a character following the pointer), because a named drawing's parts cannot be reached from the page.
+   * The diamond is always written: its blend reads the look's colours inside its own gradient.
+   */
+  drawn?: "inline" | "referenced";
   className?: string;
 }>) {
   const large = size === "large";
   const drawn: CharacterTone = state === "gift" || state === "diamond" ? tone : "range";
+  const viewBox = state === "diamond" ? DIAMOND_BOX : standing ? "0 0 64 64" : SMALL_BOX;
+  if (how === "referenced" && state !== "diamond") {
+    return (
+      <svg aria-hidden focusable="false" viewBox={viewBox} data-character={state} data-size={size} className={className} style={{ overflow: "visible" }}>
+        <use href={`${CHARACTERS_FILE}#${characterKey(state, large && standing && drawn === "range", variant, drawn)}`} />
+      </svg>
+    );
+  }
   // A face at every size, since the rendered mockups of 19 Sep 2026 (D113): it is what holds the screen together,
   // and a row of small shapes without faces read as a chart rather than as days.
   const parts = drawing(state, true, variant, TONES[drawn]);
@@ -336,7 +356,7 @@ export function Character({
       /* A character with no floor under it is drawn in the box it fills, not in the square that held its shadow
          (D137): that is the strip on a card and the row on a gift's page, where the empty fifteen pixels above each
          one made every shape look small. */
-      viewBox={state === "diamond" ? DIAMOND_BOX : standing ? "0 0 64 64" : SMALL_BOX}
+      viewBox={viewBox}
       data-character={state}
       data-size={size}
       className={className}

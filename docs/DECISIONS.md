@@ -5713,3 +5713,39 @@ so that a provider registered from it would serve any `*.index-education.net` sp
   parent's would read nothing. Goal 24 is prepared for the next Safe session all the same, as the founder asked, and
   opens nothing by itself. What would unblock it is a readable answer: a provider that can decrypt with the session's
   key inside the verification, or another PRONOTE surface that serves the average in clear. Neither is known today.
+
+## D206, 24 Sep 2026: the characters out of the page, the second cause of the flash on a reload (D198)
+
+The founder, 24 Sep 2026, first of three: the drawings of the characters out of the document, because D198 named the
+second cause of the flash on a phone's reload: the browser paints what it has parsed between two chunks of the
+document, and Home's document was 91 KB, a third of it thirty characters written in full.
+
+**Built.** `public/characters.svg` holds each drawing once, 32 `<symbol>` with no box of their own (37.5 KB), written
+by `pnpm make:characters` with its version in `app/kit/character-file.ts`; the screens name a drawing with
+`<use href="/characters.svg?v=…#today-1">` inside their own `<svg>`, which places it. The file is asked for in the head
+(`preload`, high priority) and kept a year (`Cache-Control: public, max-age=31536000, immutable`): its address changes
+with its content. `Character` names its drawing by default and writes it into the page only where a part moves,
+because a named drawing's parts cannot be reached from the page:
+
+- the row of a gift's page, whose days follow the pointer and jump in the arrival (`DayRow`, `drawn="inline"`);
+- on a card, a day earned or gone back, which jump or leave in the arrival (`DayStrip`);
+- the gift answering a payment (`PayGift`, inside `Success`);
+- the diamond, always, because its blend reads the look's colours inside its own gradient;
+- the pictures drawn on the server (`characterSvg`), which have no page to read a file from.
+
+**Measured.**
+
+| | before | after |
+|---|---|---|
+| Home's document, signed out | 91,433 bytes | 68,020 bytes |
+| whole pages at 390 and 1440, day and night (Home, You, Gifts, the catalogue, Help, Privacy, Legal, Fund) | | 32 of 32 identical pixel for pixel |
+| a named drawing against the same drawing written into the page, day and night | | identical pixel for pixel in Chromium and in WebKit 26 |
+| eight reloads of Home, the founder's four gifts copied onto a test account, service worker on, CPU slowed six times, Fast 3G: first images with a block or the bar missing | 8 of 8 | 1 of 8 |
+| characters painted empty on those first images | | 0 |
+
+`test/character-file.test.ts`: the file is what the drawings make today and the address names its version; every
+character that does not move names a drawing the file holds; named and written are the same drawing, symbol for
+symbol; every character whose parts move is written into the page; the preload and the cache header are there.
+
+**Not done.** One reload in eight still paints before the end of the document on the slowed profile. What remains of
+Home's document is the page itself and the payload React hydrates from; a smaller payload is a task of its own.

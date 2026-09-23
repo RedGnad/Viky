@@ -15,7 +15,7 @@ import { Character, type CharacterState } from "../app/kit/Character.js";
 const STATES: CharacterState[] = ["toCome", "today", "catchable", "earned", "returned", "gift", "diamond"];
 
 const draw = (state: CharacterState, size: "large" | "small" = "large", variant = 0) =>
-  renderToStaticMarkup(createElement(Character, { state, size, variant }));
+  renderToStaticMarkup(createElement(Character, { state, size, variant, drawn: "inline" }));
 
 test("every state is drawn from circles, rounded rectangles and rounded triangles, and nothing else", () => {
   for (const state of STATES) {
@@ -94,10 +94,10 @@ test("the face turns as one piece under a pointer, inside the face the motion op
 });
 
 test("the hero tone belongs to the gift on the link preview, and nowhere else does a character take the accent", () => {
-  const hero = renderToStaticMarkup(createElement(Character, { state: "gift", tone: "hero" }));
+  const hero = renderToStaticMarkup(createElement(Character, { state: "gift", tone: "hero", drawn: "inline" }));
   // A third tone since the rendered mockups of 19 Sep 2026: the gift at the head of Home is a sun box with a pink
   // ribbon. The icon keeps the tone it was drawn in, which is why this is a tone of its own and not a change.
-  const sun = renderToStaticMarkup(createElement(Character, { state: "gift", tone: "sun" }));
+  const sun = renderToStaticMarkup(createElement(Character, { state: "gift", tone: "sun", drawn: "inline" }));
   assert.match(sun, /var\(--accent\)/);
   assert.doesNotMatch(sun, /var\(--on-accent\)/);
   assert.match(hero, /var\(--on-accent\)/);
@@ -110,7 +110,7 @@ test("the hero tone belongs to the gift on the link preview, and nowhere else do
   assert.match(script, /characterSvg\("gift", \{ tone: "hero" \}\)/, "the link preview is still the gift");
   for (const state of STATES) assert.doesNotMatch(draw(state), /var\(--accent\)|var\(--on-accent\)/);
   // The tone is for the gift only: a day asked for it keeps its range.
-  assert.equal(renderToStaticMarkup(createElement(Character, { state: "earned", tone: "hero" })).includes("--accent"), false);
+  assert.equal(renderToStaticMarkup(createElement(Character, { state: "earned", tone: "hero", drawn: "inline" })).includes("--accent"), false);
 });
 
 /**

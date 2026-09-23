@@ -18,7 +18,7 @@ export function Made() {
     <Shell kind="task" back={labHref("home")} backLabel={W.backToGifts} backFollows step={W.made.title(TO_NOE.amount, TO_NOE.recipient)}>
       <Success>
         <Gaze>
-          <Character state="gift" className="h-auto w-[120px] self-center" />
+          <Character drawn="inline" state="gift" className="h-auto w-[120px] self-center" />
         </Gaze>
       </Success>
       <section className="flex flex-col gap-[var(--space-sm)]">

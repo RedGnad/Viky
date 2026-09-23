@@ -115,7 +115,8 @@ export function DayStrip({
       {days.map((day, index) => (
         <span key={index} data-day={day} className="flex w-[60px] flex-none items-end">
           <ArrivalDay gift={id} index={index}>
-            <Character state={characterOf(day)} standing={false} className="h-auto w-full" />
+            {/* A day earned jumps and a day gone back leaves, in the arrival: those two are written into the page (D206). */}
+            <Character state={characterOf(day)} standing={false} drawn={characterOf(day) === "earned" || characterOf(day) === "returned" ? "inline" : "referenced"} className="h-auto w-full" />
           </ArrivalDay>
         </span>
       ))}

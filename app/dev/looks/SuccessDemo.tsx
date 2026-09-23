@@ -16,7 +16,7 @@ export function SuccessDemo({ label }: Readonly<{ label: string }>) {
         {presses > 0 ? (
           <Success gesture={presses}>
             <Gaze>
-              <Character state="gift" className="h-auto w-[112px]" />
+              <Character drawn="inline" state="gift" className="h-auto w-[112px]" />
             </Gaze>
           </Success>
         ) : null}
