@@ -5,6 +5,7 @@ import { ensureProofSessionSchema } from "../src/proof-session-store";
 import { ensureMilestoneSchema } from "../src/milestone-store";
 import { ensurePassSchema } from "../src/pass-log";
 import { ensurePortalSchema } from "../src/portal-store";
+import { ensureConnectionSchema } from "../src/connection-store";
 import { ensurePreferencesSchema } from "../src/preferences-store";
 import { ensurePushSchema } from "../src/push-store";
 import { ensureSendsSchema } from "../src/send-store";
@@ -20,6 +21,8 @@ async function main() {
   await ensureSendsSchema();
   await ensurePreferencesSchema();
   await ensurePortalSchema();
+  // The connected sources' sealed keys (D188): no route creates this table, so the migration does.
+  await ensureConnectionSchema();
   await ensurePushSchema();
   await ensurePassSchema();
   // Gifts saved before the escrow column existed live on the contract configured when this migration
@@ -29,7 +32,7 @@ async function main() {
     if (!/^0x[0-9a-fA-F]{40}$/.test(backfill)) throw new Error("BACKFILL_ESCROW is not a contract identifier");
     console.log(`escrow recorded for ${await backfillEscrow(backfill as `0x${string}`)} earlier gift(s)`);
   }
-  console.log("schema ready: viky_proof_sessions, viky_gifts, viky_relayed, viky_days, viky_milestone_gifts, viky_milestone_readings, viky_exits, viky_sends, viky_accounts, viky_push, viky_told, viky_passes, viky_portals");
+  console.log("schema ready: viky_proof_sessions, viky_gifts, viky_relayed, viky_days, viky_milestone_gifts, viky_milestone_readings, viky_connections, viky_exits, viky_sends, viky_accounts, viky_push, viky_told, viky_passes, viky_portals");
 }
 
 main().catch((error) => {
