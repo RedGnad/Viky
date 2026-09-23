@@ -42,18 +42,14 @@ async function answerFor(cookie?: string): Promise<{ ids: string[]; preview: str
   return (await (await conditions(ask(cookie))).json()) as { ids: string[]; preview: string[] };
 }
 
-test("the door for what is wired and not live yet stands, and is empty while nothing is behind it", async () => {
+test("there is no door: an operator is offered the live conditions like everybody, and the preview is empty (D184)", async () => {
   const answer = await answerFor(await cookieFor(OPERATOR));
-  // Chess.com left this door on 19 Sep 2026 and the English test the same day, when goal 5 was registered (D109).
-  // Nothing is behind it today: Coursera has no goal on the contract, so no gift could be made on it here either.
-  assert.deepEqual(
-    answer.preview,
-    ["toefl-mybest-shown", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "university-enrollment-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown"],
-    "what is wired, creatable by an operator and closed today: the TOEFL score shown (D164), the five examination results (D176), a Udemy course finished (D178), enrolment shown (D165), the year passed and a grade shown (D174), an average at school (D179)",
-  );
+  // The founder's rule of 23 Sep 2026: a condition built is open to all, a condition with a piece missing to nobody.
+  assert.deepEqual(answer.preview, [], "nothing is previewed to anybody any more");
   assert.ok(answer.ids.includes("duolingo-daily"), "and the live ones are there for everybody");
   assert.ok(answer.ids.includes(CHESS_MILESTONE.condition.id));
   assert.ok(answer.ids.includes(DET_MILESTONE.condition.id), "the supervised result is live since its goal was registered");
+  assert.ok(answer.ids.includes("toefl-mybest-shown"), "the TOEFL score, open since its path was complete");
 });
 
 test("everybody else is offered the live conditions and nothing else", async () => {

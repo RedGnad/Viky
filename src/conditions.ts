@@ -17,10 +17,10 @@ import { GOAL_TYPE_DUOLINGO_COURSE_XP, GOAL_TYPE_DUOLINGO_XP } from "./gift-term
  * it). The two milestones are written here with their words because their readings and terms already exist
  * (src/attested-sources.ts, src/milestone-terms.ts).
  *
- * What `live` means, since 19 Sep 2026 (D109): a gift can be made on it today. While we build, a condition wired from
- * end to end is offered as soon as that is true, rather than after a real gift has finished running on it; the
- * stricter door is kept for the version that is submitted. Chess.com went live under that rule, with two real gifts
- * already running on it; the Duolingo English Test follows the day its goal is registered on the contract.
+ * What `live` means, since 23 Sep 2026 (the founder's rule, D184, which replaces D109): a condition built is open
+ * to everybody as soon as its path is complete, the register, the goal on the chain, the provider defined, the flow
+ * built to the end. No operator door for what is built. The public page tells the truth line by line: "Open. Nobody
+ * has shown one yet." until a real proof has passed, then "Open."; "Being built" only when a piece is really missing.
  */
 
 export type ConditionKind = "daily" | "milestone";
@@ -76,15 +76,14 @@ export const SECTIONS_FROM = 6;
  * a state to fit a thing is how a catalogue starts promising what nobody built. `open` is the same fact as `live`, so
  * a condition cannot be open on the page and absent from the chooser, or the other way round.
  */
-export type ConditionState = "open" | "being-tested" | "asked-the-source" | "no-public-page";
+export type ConditionState = "open" | "asked-the-source" | "no-public-page";
 
+/**
+ * Three states, since the founder's rule of 23 Sep 2026 (D184): "Being tested" is gone, because nothing is said
+ * tested or used without a real proof; the page prints the count of real proofs beside "Open" instead.
+ */
 export const STATES: readonly Readonly<{ id: ConditionState; title: string; meaning: string }>[] = [
   { id: "open", title: "Open", meaning: "Anybody can offer this today." },
-  {
-    id: "being-tested",
-    title: "Being tested",
-    meaning: "It works from end to end and one real gift is running on it. Nobody else is offered it yet.",
-  },
   {
     id: "asked-the-source",
     title: "Waiting for the source's answer",
@@ -183,7 +182,7 @@ export type Condition = Readonly<{
    * "Being tested" is printed only once a real gift runs on it (the founder, 23 Sep 2026, D169). Four states, no fifth.
    */
   state?: ConditionState;
-  /** What has to happen before it is offered to anybody, in one line. A condition that is open has nothing to say here. */
+  /** The piece really missing before it opens, in one line (D184). A condition that is open has nothing to say here. */
   beforeItOpens?: string;
   /** The source's own name, the one word a screen may print about it. */
   source: string;
@@ -538,21 +537,22 @@ export const CREDLY_BADGE: Condition = {
 };
 
 /**
- * The first condition of the second nature (D162, D164): a score the person shows from their own ETS account. Not
- * open, and on the page under the state whose sentence is exactly its own: no public page shows it, the person can
- * show it, and Viky is building that. It opens the day a real proof has run end to end, and on the founder's word.
+ * The first condition of the second nature (D162, D164): a score the person shows from their own ETS account. Open
+ * since 23 Sep 2026 under the founder's rule (D184): its path is complete, the register, goal 13 registered on the
+ * milestone contract, the directory's provider pinned, the flow built to the end. Nobody has shown one yet, and the
+ * public page says so until somebody has.
  */
 export const TOEFL_MYBEST_SHOWN: Condition = {
   id: "toefl-mybest-shown",
   kind: "milestone",
   nature: "shown",
   goalType: null,
-  live: false,
-  beforeItOpens: "A score shown from a real ETS account, end to end, then the founder's word.",
+  live: true,
+  state: "open",
   source: "ETS",
   family: "exam",
   name: "A TOEFL score, shown",
-  help: "A score they hold, shown from their own ETS account; when it was earned is not read. It proves the account that signed in, not who sat the test.",
+  help: "A score they hold, shown from their own ETS account: it proves the account that signed in, not who sat the test, and when it was earned is not read.",
   link: { kind: "link", label: "Show it from your ETS account", help: "Press Show it on your gift's page and sign in to ETS in the tab that opens. Nothing to paste." },
   reading: "toefl-mybest-shown",
   words: {
@@ -564,13 +564,12 @@ export const TOEFL_MYBEST_SHOWN: Condition = {
   },
 };
 
-export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, CREDLY_BADGE];
+export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, CREDLY_BADGE, TOEFL_MYBEST_SHOWN];
 
 /**
- * What is wired and not in the register yet (D109, D164): a gift can be made on it by an account that runs Viky, so
- * the first real proof can be shown at all, and nobody else meets it anywhere. The public page says it is being
- * built on the frontier's own line; the day its goal is registered and a real proof has run, it moves into the
- * register above, live, and this list is empty again.
+ * What is built with a piece really missing (D184): a provider not registered, a portal not proved. Nobody can make a
+ * gift on these, operator or not; the public page prints them under their family with "Being built" and the missing
+ * piece in one line. The day the piece exists, the line moves into the register above, open, and this list shrinks.
  */
 /**
  * Staying enrolled at a university, shown from the person's own student portal (D165). The portal is chosen by the
@@ -584,7 +583,7 @@ export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
   nature: "shown",
   goalType: null,
   live: false,
-  beforeItOpens: "A student portal proved from a real student account, end to end, then the founder's word.",
+  beforeItOpens: "A portal in the table of portals: its provider registered from the portal's sign-in and enrolment pages, then one row.",
   source: UNIVERSITY_SOURCE,
   family: "study",
   name: "Stay enrolled at their university",
@@ -612,7 +611,7 @@ export const UNIVERSITY_YEAR_PASSED_SHOWN: Condition = {
   nature: "shown",
   goalType: null,
   live: false,
-  beforeItOpens: "A results page proved from a real student account, end to end, then the founder's word.",
+  beforeItOpens: "A portal whose results page is on its row: its provider registered from the portal's results page, then the row's results extraction.",
   source: UNIVERSITY_SOURCE,
   family: "study",
   name: "Pass the year at their university",
@@ -640,7 +639,7 @@ export const UNIVERSITY_GRADE_SHOWN: Condition = {
   nature: "shown",
   goalType: null,
   live: false,
-  beforeItOpens: "A results page proved from a real student account, end to end, then the founder's word.",
+  beforeItOpens: "A portal whose results page is on its row: its provider registered from the portal's results page, then the row's results extraction.",
   source: UNIVERSITY_SOURCE,
   family: "study",
   name: "Reach a grade at their university",
@@ -661,7 +660,7 @@ export const UNIVERSITY_GRADE_SHOWN: Condition = {
  * waiting for a provider of ours registered from a real candidate's session (src/exam-shown.ts). The words of each
  * are the TOEFL's shape: a result they hold, shown; when it was earned is not read; the account, not who sat it.
  */
-const EXAM_BEFORE_IT_OPENS = "A provider registered from a real candidate's account, the goal signed, one proof end to end, then the founder's word.";
+const EXAM_BEFORE_IT_OPENS = "Its provider, registered on the Reclaim dashboard from the definition in docs/reclaim, and its goal signed by the owner.";
 const EXAM_LINK: ConditionLink = { kind: "link", label: "Show it from your own account", help: "Press Show it on your gift's page and sign in in the tab that opens. Nothing to paste." };
 
 export const CAMBRIDGE_ENGLISH_SHOWN: Condition = {
@@ -785,7 +784,7 @@ export const UDEMY_COURSE_SHOWN: Condition = {
   nature: "shown",
   goalType: null,
   live: false,
-  beforeItOpens: "A provider registered from a real Udemy account, the goal signed, one proof end to end, then the founder's word.",
+  beforeItOpens: "Its provider, registered on the Reclaim dashboard from the definition in docs/reclaim, and goal 22 signed by the owner.",
   source: UDEMY_SOURCE,
   family: "course",
   name: "A Udemy course finished, shown",
@@ -811,7 +810,7 @@ export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
   nature: "shown",
   goalType: null,
   live: false,
-  beforeItOpens: "A provider registered from a real EcoleDirecte account, the goal signed, one proof end to end, then the founder's word.",
+  beforeItOpens: "Its provider, registered on the Reclaim dashboard from the definition in docs/reclaim, and goal 23 signed by the owner.",
   source: ECOLEDIRECTE_SOURCE,
   family: "school",
   name: "Reach an average at school, shown",
@@ -828,7 +827,6 @@ export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
 };
 
 export const BUILDING: readonly Condition[] = [
-  TOEFL_MYBEST_SHOWN,
   CAMBRIDGE_ENGLISH_SHOWN,
   IELTS_SHOWN,
   BAC_MOROCCO_SHOWN,
@@ -881,8 +879,7 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "A Cambridge, IELTS or TOEFL result",
     state: "no-public-page",
     why: "The result goes to institutions. Checking one means an account an organisation applies for, opened with numbers the candidate hands over, and nothing about one person that anybody else can open. Read on 19 Sep 2026 on Cambridge English's, IELTS's and ETS's own pages.",
-    building: "a TOEFL score, a Cambridge English result and an IELTS band the person shows from their own account, with the two words SHOWN BY THEM on it.",
-    conditionId: "toefl-mybest-shown",
+    building: "a Cambridge English result and an IELTS band the person shows from their own account, with the two words SHOWN BY THEM on it; the TOEFL score is open, under Pass an exam.",
   },
   {
     id: "university-enrolment",
