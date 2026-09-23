@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef } from "react";
+import { useMinute } from "./clock";
 import { giftDays, stripOf } from "@/src/day-states";
 import { contractDayInWords } from "@/src/moments";
 import { Character } from "./Character";
@@ -25,12 +26,6 @@ import { CARD_LABEL } from "../components/ui";
 
 type Shape = Readonly<{ startDay: number; endDay: number; durationDays: number; creditedDays: number; missedDays: number }>;
 
-function everyMinute(changed: () => void): () => void {
-  const timer = setInterval(changed, 60_000);
-  return () => clearInterval(timer);
-}
-const thisMinute = () => Math.floor(Date.now() / 60_000) * 60_000;
-const noClock = () => 0;
 
 export function DayRow({
   id,
@@ -46,7 +41,7 @@ export function DayRow({
   /** Who is reading: a day that went back went back to them, to you, or, for a reader of neither side, just back. */
   voice: "funder" | "recipient" | "reader";
 }>) {
-  const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
+  const nowMs = useMinute();
   const drawn = nowMs !== 0 && gift.startDay !== 0;
   // Before it starts, the row is the gift's days asleep, as the card on Home draws them (V4): the days have no dates
   // yet, so the row is a picture and says nothing of its own, and the sentence beside it is the state.

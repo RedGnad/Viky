@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { MOTION } from "@/src/design-tokens";
+import { forgetOnThisScreen, useSeen, writeSeen } from "./seen";
 import { milestoneProgress } from "@/src/milestone-view";
 import { Character } from "./Character";
 import { milestoneCharacter, type MeterStatus } from "./MilestoneMeter";
@@ -36,37 +37,40 @@ export function Climb({ giftId, status }: Readonly<{ giftId: string; status: Met
   const reading = tooHigh ? null : status.reached ? status.target : status.todayReading;
 
   const inked = useRef<SVGLineElement>(null);
+  // Where this device last saw it, from the cookie the server read, so the first image already knows whether the walk
+  // will play (the fix to #154): when it will, the walker and its ink are drawn not yet there and come in at the start.
+  const saw = useSeen(`viky.seen.climb.${giftId}`);
+  const walks = reading !== null && saw !== undefined && saw !== reading;
   useEffect(() => {
     if (reading === null) return;
     const key = `viky.seen.climb.${giftId}`;
-    let before: number | null = null;
-    try {
-      const stored = window.localStorage.getItem(key);
-      before = stored === null || !Number.isFinite(Number(stored)) ? null : Number(stored);
-      window.localStorage.setItem(key, String(reading));
-    } catch {
-      // A device that keeps nothing sees every visit as a first one, and a first one does not move.
-    }
+    writeSeen(key, reading);
     const element = walker.current;
     const box = drawing.current;
-    if (before === null || before === reading || !element || !box) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const from = milestoneProgress({ ...status, todayReading: before, reached: false });
+    const ink = inked.current;
+    const show = () => {
+      element?.classList.remove("arrival-pending");
+      ink?.classList.remove("arrival-pending");
+    };
+    if (!walks || !element || !box || saw === undefined || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      show();
+      return () => forgetOnThisScreen(key);
+    }
+    const from = milestoneProgress({ ...status, todayReading: saw, reached: false });
     const width = box.clientWidth - BODY;
     const height = box.clientHeight;
     const dx = (from - progress) * width;
     const dy = (progress - from) * RISE * height;
-    element.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }], {
-      duration: MOTION.count.durationMs,
-      easing: MOTION.count.easing,
-    });
-    // The ink climbs with it: the part climbed grows from where this device last saw it to today's reading.
-    inked.current?.animate([{ strokeDasharray: `${from} 1` }, { strokeDasharray: `${progress} 1` }], {
-      duration: MOTION.count.durationMs,
-      easing: MOTION.count.easing,
-    });
-    // Once per reading seen, never again for the same one: the value is written before anything plays.
-  }, [giftId, reading, progress, status]);
+    const timing = { duration: MOTION.count.durationMs, easing: MOTION.count.easing, fill: "backwards" as const };
+    // Started from where it was seen in the same task the class goes, so the final position is never on screen first.
+    const running = [element.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }], timing)];
+    if (ink) running.push(ink.animate([{ strokeDasharray: `${from} 1` }, { strokeDasharray: `${progress} 1` }], timing));
+    show();
+    return () => {
+      running.forEach((animation) => animation.cancel());
+      forgetOnThisScreen(key);
+    };
+  }, [giftId, reading, progress, status, saw, walks]);
 
   return (
     <span ref={drawing} aria-hidden className="climb">
@@ -77,13 +81,13 @@ export function Climb({ giftId, status }: Readonly<{ giftId: string; status: Met
             arrival can grow it rather than jump it. */}
         <line
           ref={inked}
+          className={walks ? "climb-done arrival-pending" : "climb-done"}
           x1="0%"
           y1={`${pct(1 - FOOT)}`}
           x2="100%"
           y2={`${pct(1 - FOOT - RISE)}`}
           pathLength={1}
           strokeDasharray={`${progress} 1`}
-          className="climb-done"
         />
       </svg>
       {/* The flag at the top, its pole standing where the slope ends, and the target on it: the one number the drawing
@@ -97,7 +101,7 @@ export function Climb({ giftId, status }: Readonly<{ giftId: string; status: Met
       </span>
       <span
         ref={walker}
-        className="climb-walker"
+        className={walks ? "climb-walker arrival-pending" : "climb-walker"}
         style={{ left: `calc(${progress} * (100% - ${BODY}px))`, bottom: pct(FOOT + RISE * progress) }}
       >
         <Character state={tooHigh ? "returned" : milestoneCharacter(status)} standing={false} className="h-auto w-full" />

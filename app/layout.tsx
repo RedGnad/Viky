@@ -11,6 +11,10 @@ import { dmSans, fredoka } from "./fonts";
 import { AccountProvider } from "@/src/account/provider";
 import { MoneyStartProvider } from "@/src/client/money-start";
 import { CARD_COOKIE, cardFromCookie } from "@/src/card-cookie";
+import { SEEN_COOKIE, seenFromCookie } from "@/src/seen-cookie";
+import { SeenProvider } from "./kit/seen";
+import { ServerMinuteProvider } from "./kit/clock";
+import { renderMinute } from "@/src/render-minute";
 import { draftFromTerms } from "@/src/gift-draft";
 import { moneyForTheReader } from "@/src/reader-money";
 import { THEME_BOOT_SCRIPT } from "@/src/theme";
@@ -131,6 +135,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const money = await moneyForTheReader(signedIn);
   const keptCard = await cardThisDeviceKept();
   const zone = await zoneOfTheReader();
+  /** What this device last saw, so an arrival's first image is its starting state and never its end (the fix to #154). */
+  const seen = seenFromCookie((await cookies()).get(SEEN_COOKIE)?.value);
+  /** The minute this page is drawn at, so dated things are in the first image and hydration reads the same one. */
+  const minute = renderMinute();
   return (
     // The look's font variables sit on the document itself, because app/globals.css reads them from :root.
     <html lang="en" dir="ltr" className={`${fredoka.variable} ${dmSans.variable}`} {...(chosen ? { "data-theme": chosen } : {})}>
@@ -148,7 +156,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <Pressed />
           <AccountProvider initialAccount={signedIn}>
             <MoneyStartProvider start={{ currency: money.currency, decided: money.decided, rates: money.rates, card: keptCard }}>
-              <ReaderZoneProvider zone={zone}>{children}</ReaderZoneProvider>
+              <ReaderZoneProvider zone={zone}>
+                <SeenProvider initial={seen}>
+                  <ServerMinuteProvider minute={minute}>{children}</ServerMinuteProvider>
+                </SeenProvider>
+              </ReaderZoneProvider>
             </MoneyStartProvider>
           </AccountProvider>
         </SerwistProvider>
