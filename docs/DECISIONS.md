@@ -6313,3 +6313,20 @@ the card, the sheet and the door, by day (unchanged) and by night, sent to the f
 **Not verified.** The signed-in screens: the product's own connected capture was started for the night at 390 and
 cut at nine minutes by the machine's load, so only what it wrote before that is in hand; the screens read through
 the same tokens. The installed app's icon is what `pnpm make:icon` last wrote and only changes on a reinstall.
+
+## D228, 24 Sep 2026: the lavender night, darker
+
+The founder, 24 Sep 2026, on D227: not bad, but the dark mode is not dark enough, the ground at least.
+
+**What changed.** The same hue and the same ladder, at the old ground's darkness: the ground `#180943`, OKLCH
+lightness 0.21 where D227 stood at 0.29 and the near-grey of before at 0.18, chroma 0.10, 286 degrees. Every step
+above it keeps its ratio: the surface `#251B54` (1.18:1), the paper `#2B225C` (1.28:1), its raised tone `#37306B`,
+a chosen row, the rules, the dividers and the shut action `#3C3571`, a field `#362E6A` with its pressed edge
+`#281E58`, the tonal button `#312964` (1.41:1). The cream ink reads 16.85:1 on the ground and the pale lavender
+10.37:1; the sun 11.46:1 on the ground and 8.94:1 on the paper, its words the ground at 11.46:1; the diamond's night
+edge 5.24:1 on the ground. The characters' face is the ground, as before. The browser's bar, the boot script and the
+manifest paint the same ground. The day did not change.
+
+**Measured.** The lowest pair carrying words is the pale lavender on a chosen row, 6.20:1; the faint voice on the
+paper 5.71:1. Captures at 390 by 844 and 1440 by 900, by day and by night, of the landing's first image and standing
+state, the card, the sheet and the door, sent to the founder. The tests of D227 hold with the new values.
