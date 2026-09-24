@@ -12,6 +12,7 @@ import { TOEFL_GOAL_TYPE, toeflShownProviderId } from "./toefl-shown";
 import { EXAM_GOAL_TYPES, EXAM_IDS, examProviderId } from "./exam-shown";
 import { UDEMY_GOAL_TYPE, udemyProviderId } from "./udemy-shown";
 import { ECOLEDIRECTE_GOAL_TYPE, ecoleDirecteProviderId } from "./school-shown";
+import { CHSI_GOAL_TYPE, chsiProviderId } from "./chsi-shown";
 import { PRONOTE_GOAL_TYPE, pronoteProviderId } from "./pronote-shown";
 
 /**
@@ -61,6 +62,8 @@ export const MILESTONE_GOALS: readonly MilestoneGoal[] = [
   { goalType: EDX_GOAL_TYPE, providerId: edxProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "edX", detail: "a verified course certificate" },
   // Accredible (D213): a credential its issuer published, read from its public record.
   { goalType: ACCREDIBLE_GOAL_TYPE, providerId: accredibleProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Accredible", detail: "a credential an issuer published" },
+  // CHSI (D215): enrolment in China, shown from the person's own report.
+  { goalType: CHSI_GOAL_TYPE, providerId: chsiProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "CHSI", detail: "enrolment in China, shown" },
   // A certification badge: granted once by an issuer that is not the person, so it is had or not (20 Sep 2026).
   { goalType: CREDLY_GOAL_TYPE, providerId: credlyProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Credly", detail: "a certification badge" },
   // Staying enrolled, shown from the person's own student portal: one goal for every portal, the portal pinned in

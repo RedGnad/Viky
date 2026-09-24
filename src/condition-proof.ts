@@ -145,7 +145,16 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     account: "The funder chooses the portal, from the ones Viky has proved, and it is hashed into the terms they sign; a page shown from another portal pays nothing. Who holds the portal's account is not proved: a shared student account is a shared student account.",
     whoActed: "Unknown. Signing in to a portal is one person's act, and nothing says who sat in class.",
     sourcePolicing: "Each university polices its own enrolment: a portal says enrolled because the registrar recorded it. What a portal's terms say about a program reading its pages is not read portal by portal (the judges' page says so), and a portal that changes its page stops proving until its row is proved again.",
+  },  {
+    conditionId: "chsi-enrolment-shown",
+    supervised: false,
+    inShort: "Shown by them from their own CHSI report, the Ministry of Education's register: enrolled or not.",
+    data: "The person's own student-status verification report on CHSI (学信网), opened by them with its verification code in a Reclaim verification tab: one answer from CHSI's own servers, attested by a witness in a TEE, and one field, the student status. The report also carries a photograph, an identity number and a birthday; none of them is extracted, and the status itself is kept nowhere, only the verdict.",
+    account: "The link is the report the person opens, which they applied for themselves, and the gift's own recipient, which the contract checks. The report carries a name the funder does not sign, so which person holds it is not bound beyond that.",
+    whoActed: "Unknown: the report says the Ministry's register has the student enrolled, not who opened it.",
+    sourcePolicing: "The Ministry's register is kept from the universities' own enrolment; CHSI publishes the report for third parties to check, free, while it is valid. Its copyright statement forbids using its content and services for other purposes, commercial ones included, without its consent, which Viky does not have: written on the judges' page.",
   },
+
   {
     conditionId: "university-year-passed-shown",
     supervised: false,

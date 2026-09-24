@@ -30,6 +30,7 @@ export const PRIVACY: Readonly<Record<string, ConditionPrivacy>> = {
   "credly-badge": { kept: "fact", read: "the badge, its issuer and the day it was issued, on the badge's public record" },
   "toefl-mybest-shown": { kept: "verdict", read: "your MyBest total score" },
   "university-enrollment-shown": { kept: "verdict", read: "the page of your student portal that says you are enrolled" },
+  "chsi-enrolment-shown": { kept: "verdict", read: "the student status on your own CHSI report" },
   "university-year-passed-shown": { kept: "verdict", read: "the results page of your student portal, saying the year or the semester is passed, or not" },
   "university-grade-shown": { kept: "verdict", read: "the results page of your student portal, with the grade on the university's own scale" },
   "cambridge-english-shown": { kept: "verdict", read: "your Statement of Results, with the overall score on the Cambridge English Scale" },

@@ -278,6 +278,14 @@ export default async function JudgesPage() {
             is written here rather than hidden.
           </li>
           <li>
+            <strong>CHSI&apos;s terms.</strong> Enrolment in a Chinese university is shown by the person from their own
+            CHSI report (D215), in a verification tab, because the report&apos;s page can put an image captcha in front of
+            a server, and Viky does not answer captchas. CHSI&apos;s copyright statement forbids using its content and
+            services &quot;用于其他用途，包含但不限于商业行为&quot; without its consent, which Viky does not have. Its own pages
+            say the report is there for other organisations and people to check, free; whether that covers a gift is
+            the founder&apos;s call, written here.
+          </li>
+          <li>
             <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:
             Coursera verifies identity once per account, and says some programmes require it while others only check a
             name. That condition is not open yet, and this is what it will prove when it is.

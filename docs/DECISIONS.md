@@ -5937,3 +5937,20 @@ everywhere, and the glass or crystal the founder has in mind, are the character 
 founder, who judges on the image. One finding on the way: a transform on an SVG group is read in the drawing's own
 units, so the peek is 42 units, never a percentage or a pixel of the screen. Until D215 the hero character still hears
 the card's moods and follows the pointer, as the head of the landing did.
+
+## D215, 24 Sep 2026: enrolment in China, shown from the person's own CHSI report
+
+The founder's third register, 24 Sep 2026: CHSI (学信网), "captcha to study: shown if the captcha blocks the server".
+
+- **It does.** The report's page, `/xlcx/bg.do?vcode=<code>&srcid=bgcx`, answers an invalid code without a captcha,
+  but can put an image captcha (`/xlcx/yzm.do`) in front of a reader it does not take for a browser (a public parser
+  solves it with a real browser). Viky's server does not answer captchas. So the line is shown: the person opens their
+  own report in the verification tab and answers anything CHSI asks there.
+- **The line.** `chsi-enrolment-shown`, "Enrolled in China, shown", family Study, goal 27, one field (学籍状态, enrolled
+  when it starts with 在籍), the verdict rule (D185): the report's photograph, identity number and birthday are never
+  extracted. Being built: our provider is registered from a real report (none found in the open to test), and goal 27
+  is one Safe transaction.
+- **Terms**, read 24 Sep 2026: the copyright statement forbids other uses of CHSI's content and services, commercial
+  ones included, without its consent; on the judges' page, the founder's call.
+- **Default applied, to confirm.** The student-status report (学籍) rather than the degree report (学历): the founder's
+  line said "inscription et diplôme"; the diploma is a second line on the same page, one more field.

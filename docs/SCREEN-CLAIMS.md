@@ -569,3 +569,9 @@ dollars; and the session countdown. Each test was checked by breaking the rule a
 |---|---|---|---|
 | "A credential on Accredible", READ FOR YOU, under "Get certified" with "Being built." | goal 26 not signed yet | `ACCREDIBLE_CREDENTIAL` in `BUILDING` | `test/accredible-credential.test.ts` |
 | "That credential has expired or was revoked, so it cannot pay." | the record says `"expired":true` or a `revoked_at` | `accredibleCredentialOf` | `test/accredible-credential.test.ts` |
+
+### Enrolled in China, shown, being built (D215)
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "Enrolled in China, shown", SHOWN BY THEM, under "Study" with "Being built." | our provider not registered, goal 27 not signed | `CHSI_ENROLMENT_SHOWN` in `BUILDING`, `CHSI_MILESTONE.notOpen` | `test/chsi-shown.test.ts` |

@@ -989,6 +989,13 @@ Provider id `viky:provider:accredible-credential-zkfetch:v1` = `0xf16cfb8a8ef6a1
 `pnpm safe:session` batches it with the other missing goals, carried by the relayer. The source
 `accredible-credential` is in the shared list: the service is redeployed from the branch before the merge.
 
+## Goal 27 on the milestone contract: enrolment in China, shown from CHSI (D215)
+
+Provider id `viky:provider:chsi-enrolment-shown:v1` = `0xe6bb6add0b9555f1d7cc0b063d21b12d2777bb4eaaa94c93bb19251d860b13b4`, shape 1, data
+`0x5ba19152000000000000000000000000000000000000000000000000000000000000001be6bb6add0b9555f1d7cc0b063d21b12d2777bb4eaaa94c93bb19251d860b13b40000000000000000000000000000000000000000000000000000000000000001`.
+`pnpm safe:session` batches it with the other missing goals. The line opens when our provider is registered from a
+real CHSI report (docs/reclaim/chsi-enrolment-shown-provider.md) and pinned in `CHSI_PROVIDER`.
+
 ## The Safe session of every remaining goal, in one transaction (D194)
 
 The eleven goals not yet on the chain go in **one Safe transaction**: one hash, one signature per key, two in all,
