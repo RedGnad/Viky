@@ -198,9 +198,10 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   // The name, the amount's box and its field; the key that opens the currencies carries its own 44 (D152).
   assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length, 3, "the name and the amount twice");
   assert.match(readFileSync("app/kit/MoneyKey.tsx", "utf8"), /min-h-\[var\(--tap-target\)\] min-w-\[var\(--tap-target\)\]/, "and the key is a thumb's size whatever its sign");
-  // One line, not two (D137): it opens the catalogue while nothing is chosen and that condition's questions after.
+  // One line, not two (D137), and it opens the four families every time (D233): pressing it is to change.
   assert.equal((card.match(/\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/g) ?? []).length, 1, "one control for what they will do");
-  assert.match(card, /setChoosing\(condition \? "questions" : "list"\)/, "one value carries both whether it opens and on which face (D150)");
+  assert.match(card, /onClick=\{\(\) => setChoosing\("list"\)\}/, "the catalogue, whatever the card carries (D233); one value carries whether it opens and on which face (D150)");
+  assert.doesNotMatch(card, /setChoosing\(condition \? "questions"/, "never the chosen condition's questions from the line");
   assert.doesNotMatch(card, /cardDetail|detail\.said/, "the line says the label and the name, and the rest lives in the step it opens (D138)");
   assert.match(card, /className=\{`\$\{CHIP\} /, "a chip is the inline button at the size of a choice");
   assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/, "and the condition line is one too, so every control lifts the same way");

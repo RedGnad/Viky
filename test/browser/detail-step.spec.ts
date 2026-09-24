@@ -42,8 +42,8 @@ async function choose(page: Page, name: RegExp, family: RegExp) {
   await expect(sheet(page).getByRole("button", { name: /^Change/i })).toBeVisible();
 }
 
-test.describe("the line that opens a condition's own questions", () => {
-  test("every condition has one, and it opens that condition's step, never the catalogue", async ({ page }) => {
+test.describe("the line that opens what they will do", () => {
+  test("whatever the card carries, it opens the four families, and a condition's own step is reached by choosing it (D233)", async ({ page }) => {
     const names: [RegExp, RegExp][] = [
       [/Duolingo lesson each day/i, /^Learn/],
       [/Duolingo English Test score/i, /Exams & school/],
@@ -62,9 +62,10 @@ test.describe("the line that opens a condition's own questions", () => {
       await expect(line).toBeVisible();
       await line.click();
       await expect(sheet(page)).toBeVisible();
-      // Its own questions, not the catalogue: no condition to pick, and the way back to the catalogue is a button.
-      await expect(sheet(page).getByRole("radio", { name: /Duolingo lesson each day/i })).toHaveCount(0);
-      await expect(sheet(page).getByRole("button", { name: /^Change/i })).toBeVisible();
+      // The four families, whatever the card carries (D233): no line to pick yet, no way back, four tiles.
+      await expect(sheet(page).getByRole("radio")).toHaveCount(0);
+      await expect(sheet(page).getByRole("button", { name: /^Change/i })).toHaveCount(0);
+      await expect(sheet(page).locator("[data-family-art]")).toHaveCount(4);
       await sheet(page).getByRole("button", { name: "Close" }).click();
     }
   });
@@ -72,8 +73,11 @@ test.describe("the line that opens a condition's own questions", () => {
   test("with a name, the courses are the profile's own, the current one first, and the whole profile is the default", async ({ page }) => {
     await page.route("**/api/duolingo/profile**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(LUIS) }));
     await page.goto("/");
+    // The line opens the four families (D233); the step is reached by choosing the condition in its family.
     await card(page).getByRole("button").first().click();
     const step = sheet(page);
+    await step.getByRole("button", { name: /^Learn/ }).click();
+    await step.getByRole("radio", { name: /Duolingo lesson each day/i }).click();
     await step.getByLabel(/name, if you know it/i).fill("Luis");
     await step.getByLabel(/name, if you know it/i).blur();
     await expect(step.getByRole("radio", { name: /Any course on that profile/i })).toBeChecked();
@@ -92,6 +96,8 @@ test.describe("the line that opens a condition's own questions", () => {
     await expect(line).toContainText(/A Duolingo lesson each day/i);
     await expect(line).not.toContainText(/XP a day/i);
     await line.click();
+    await sheet(page).getByRole("button", { name: /^Learn/ }).click();
+    await sheet(page).getByRole("radio", { name: /Duolingo lesson each day/i }).click();
     await expect(sheet(page).getByLabel(/name, if you know it/i)).toBeVisible();
     await expect(sheet(page).getByText(/the courses appear here/i)).toBeVisible();
     await expect(sheet(page).getByRole("button", { name: /^Done$/ })).toBeEnabled();

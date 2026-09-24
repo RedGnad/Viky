@@ -6454,3 +6454,34 @@ walk from where this device last saw it, as before.
 **Measured.** `test/trail.test.ts` holds the fraction from nothing on six cases, the flat trail, the card in a list
 drawing it and the bar gone. Captures of a milestone gift's card and page at 390 by day are the connected tool's,
 when the machine allows it.
+
+## D233, 24 Sep 2026: the four families every time, a shown proof asks its own, a tile is a button
+
+The founder, 24 Sep 2026, on the card: pressing "What they will do" is to change what they will do, so it must lead
+to the four family tiles whatever the card carries, and "Change what they will do" must lead there too; two faces
+were empty or confusing, the TOEFL score's and the university enrolment's; the tiles are buttons and could look like
+ours; the outline on one tile looked random.
+
+**The line and the way back.** D137 had the card's line open the chosen condition's own questions, with the list a
+press away behind "Change"; D224 opened the list on that condition's family. Both are undone: the line opens the
+four families every time (`setChoosing("list")`, the sheet starting undecided on every opening), and "Change what
+they will do" from a condition's questions leads to the four as well. A condition's questions are reached by
+choosing it, which is the only moment they are wanted.
+
+**The two empty faces.** A proof the recipient shows themselves (the TOEFL score, enrolment at university) is a
+certificate whose source prints no name for the funder to match (`asksName: false`), and the whole face had been
+gated on that flag: nothing was drawn under the title. The gate now holds the name field only; the rest is asked as
+for any certificate: the score they show for the TOEFL (0 to 120, 90 suggested), the university found by name for
+the enrolment (its target is fixed, so no field for it), and under the fields the register's own line on what Viky
+keeps of the proof (`whatIsRead`). The titles come from the register ("Which university, and how long": the length
+is chosen on the card, as for every condition).
+
+**The tiles.** A tile is a button and looks like one now: the outline and the relief every key carries, the tonal
+fill of a key that is not the one action, the card's corners because it holds a picture. Nothing marks a tile: the
+outline the founder saw marked the family of the condition the card carried (`aria-current`), a state that meant
+nothing once every opening lands on the four, and it is gone.
+
+**Measured.** Captures at 390 by day and by night of the four tiles from the card's line, the TOEFL face, the way
+back from it, and the university face, sent to the founder. `test/gift-card.test.ts` holds the line's face,
+`test/family-tiles.test.ts` the sheet's two ways to the four and the tile's class, and the browser specs
+(`detail-step`, `nature`, `screens`) walk the four first.

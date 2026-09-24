@@ -12,12 +12,11 @@ test.describe("the nature of a condition", () => {
     await page.goto("/");
     // The chooser's sheet is in the document, closed, with its lines in it: only what is shown counts.
     await expect(page.getByText(WORDS).filter({ visible: true })).toHaveCount(0);
-    // The line that asks what they will do opens where the funder is (D137): the condition's own questions, with the
-    // list one press away behind "Change". The nature is said on the list, on every line of it.
+    // The line that asks what they will do opens the four families (D233); a family's list says the nature on every
+    // line of it.
     await page.getByRole("button", { name: /what they will do/i }).first().click();
     const sheet = page.locator("dialog.sheet[open]");
-    const change = sheet.getByRole("button", { name: /^Change/i });
-    if (await change.isVisible().catch(() => false)) await change.click();
+    await sheet.getByRole("button", { name: /^Learn/ }).click();
     await expect(sheet.getByText(WORDS).first()).toBeVisible();
     // On every line of the list, chosen or not: one of the natures' words on each. The list is one family at a time
     // since D224, the card's own family first; the TOEFL score, which is shown by them (D184), is among the exams.

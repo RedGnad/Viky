@@ -173,11 +173,11 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
           under={
             <button
               type="button"
-              /* One line, and it opens where the funder is: the catalogue while nothing is chosen, and from then on
-                 that condition's own questions, whose first control is the way back to the catalogue (D137). It says
-                 the label and the condition's name and nothing else (D138): what that condition has been told lives
-                 in the step the line opens, which is where somebody goes to change it. */
-              onClick={() => setChoosing(condition ? "questions" : "list")}
+              /* One line, and it opens the four families every time (D233, the founder: pressing it is to change what
+                 they will do, whatever is on the card), where D137 had it open the chosen condition's own questions.
+                 It says the label and the condition's name and nothing else (D138): what that condition has been told
+                 lives in the step choosing it opens, which is where somebody goes to change it. */
+              onClick={() => setChoosing("list")}
               /* Eight pixels more than a caption gets under a title: this one is a control, and at four it sat on
                  the name's own box (the founder, 21 Sep 2026). */
               className={`${INLINE_BUTTON} mt-[var(--space-sm)] w-full justify-between text-left`}
