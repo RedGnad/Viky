@@ -71,13 +71,15 @@ test.describe("the appearance control", () => {
     expect(doorBox!.width).toBeGreaterThan(box!.width);
     expect(box!.x).toBeLessThan(doorBox!.x);
 
-    // What the screen is asking for is still the card itself (D110), and what stands above it is what D129 puts there
-    // and nothing else: the character, the title and the sentence. Measured on the build, its top is at 344 on a
-    // phone; a fourth block above it would push it past this line.
+    // What the screen is asking for is still the card itself (D110). Since D214 the title, the sentence, the way to
+    // the card and the character stand above it, and its top shows in the first screen: below its middle, above its
+    // foot, so the page says there is more without hiding what it is for.
     const card = page.locator("main section").first();
-    // The card is the first thing in the body, known by the one field only it has (D138 took its overline off).
+    // The card is the first section of the body, known by the one field only it has (D138 took its overline off).
     await expect(card.getByLabel(/Their first name/i)).toBeVisible();
     const cardBox = await card.boundingBox();
-    expect(cardBox!.y).toBeLessThan(400);
+    const height = page.viewportSize()!.height;
+    expect(cardBox!.y).toBeGreaterThan(height * 0.4);
+    expect(cardBox!.y).toBeLessThan(height);
   });
 });

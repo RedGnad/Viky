@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * Home without an account, as the founder specified it on 20 Sep 2026 (D129): one column at every width, the same
- * order from the phone to the desk (the character, the title, the sentence, the card), no blur anywhere, and at
- * 1440x900 the whole page without scrolling.
+ * Home without an account, as the founder specified it on 20 Sep 2026 (D129) and redrew it on 24 Sep (D214): one column
+ * at every width, the same order from the phone to the desk (the title, the sentence, the way to the card, the
+ * character, the card), no blur anywhere, and at every size the card's top in the first screen.
  */
 const SIZES = [
   { width: 390, height: 844 },
@@ -33,7 +33,7 @@ async function blurs(page: Page): Promise<string[]> {
 
 for (const scheme of ["dark", "light"] as const) {
   for (const size of SIZES) {
-    test(`at ${size.width} the order is the character, the title, the sentence, the card, and the block is centred (${scheme})`, async ({ page }) => {
+    test(`at ${size.width} the order is the title, the sentence, the way, the character, the card, and the block is centred (${scheme})`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.setViewportSize(size);
       await page.goto("/");
@@ -43,34 +43,41 @@ for (const scheme of ["dark", "light"] as const) {
       await expect(title).toBeVisible();
       // The four boxes in one read, from the page itself: the character's wrapper carries no box of its own, so it is
       // the character's drawing that is measured, exactly as review-captures/measure-home.ts measures it.
-      const { character, titleBox, sentence, card } = await page.evaluate(() => {
+      const { character, titleBox, sentence, way, card } = await page.evaluate(() => {
         const box = (el: Element | null) => {
           const r = el!.getBoundingClientRect();
           return { x: r.x, y: r.y, width: r.width, height: r.height };
         };
         const heading = document.querySelector("h1")!;
         return {
-          character: box(document.querySelector("svg[data-character='diamond']")),
+          character: box(document.querySelector(".hero-character")),
           titleBox: box(heading),
           sentence: box(heading.nextElementSibling),
+          way: box(document.querySelector('a[href="#offer"]')),
           card: box(document.querySelector("section.gift-card-placed")),
         };
       });
 
-      // The text is never under the card, at any width, and the title never under the sentence.
+      // The order, top to bottom: the title, the sentence, the way to the card, the character, the card; the text is
+      // never under the card, and the character stands on the card's top edge (D214).
       expect(titleBox.y).toBeLessThan(sentence.y);
-      expect(sentence.y + sentence.height).toBeLessThanOrEqual(card.y);
-      expect(character.y).toBeLessThanOrEqual(titleBox.y);
+      expect(sentence.y + sentence.height).toBeLessThanOrEqual(way.y);
+      expect(way.y + way.height).toBeLessThanOrEqual(character.y);
+      expect(character.y + character.height).toBeLessThanOrEqual(card.y + 4);
+      // The card's top is in the first screen, below its middle: the page says there is more.
+      expect(card.y).toBeLessThan(size.height);
+      expect(card.y).toBeGreaterThan(size.height * 0.4);
+      // The character is centred on the card at every width.
+      expect(Math.abs(character.x + character.width / 2 - (card.x + card.width / 2))).toBeLessThan(2);
       if (size.width >= 1024) {
         // Centred in the window, the card included (D131): every block on the same axis.
         const middle = size.width / 2;
-        for (const box of [character, titleBox, sentence, card]) expect(Math.abs(box.x + box.width / 2 - middle)).toBeLessThan(2);
+        for (const box of [character, titleBox, sentence, way, card]) expect(Math.abs(box.x + box.width / 2 - middle)).toBeLessThan(2);
       } else {
-        // The diamond sits in the hollow the title leaves at its top right, and the text starts on the card's edge.
-        expect(character.x).toBeGreaterThan(titleBox.x + titleBox.width / 2);
-        expect(Math.abs(character.x + character.width - (card.x + card.width))).toBeLessThan(1);
+        // The text and the way start on the card's edge.
         expect(Math.abs(titleBox.x - card.x)).toBeLessThan(1);
         expect(Math.abs(sentence.x - card.x)).toBeLessThan(1);
+        expect(Math.abs(way.x - card.x)).toBeLessThan(1);
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(size.width);
       // The title at its step: 76 from 1024, 49 below (D131).
@@ -80,16 +87,16 @@ for (const scheme of ["dark", "light"] as const) {
     });
   }
 
-  test(`at 1440x900 the whole page stands without scrolling, the card entire (${scheme})`, async ({ page }) => {
+  test(`at 1440x900 the card's top is in the first screen, and nothing scrolls sideways (${scheme})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     await page.evaluate(() => document.fonts.ready);
-    // D129's constraint, given back by D137: the detail went behind the one line it belongs to and the characters
-    // are drawn in the box they fill, so the card is 549 again and the page stands in 900.
-    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(900);
+    // D129 asked for the whole page in 900; D214 puts the character between the sentence and the card, and the card's
+    // top in the first screen is what the page needs to say there is more (NN/g on the fold).
     const card = (await page.locator("section.gift-card-placed").boundingBox())!;
-    expect(card.y + card.height).toBeLessThanOrEqual(900);
+    expect(card.y).toBeLessThan(900);
+    expect(card.y).toBeGreaterThan(360);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
   });
 }

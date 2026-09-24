@@ -4,12 +4,12 @@ import { useMemo } from "react";
 import { useAccount } from "@/src/account/provider";
 import { CATALOGUE, HOME as W, ME } from "@/src/sentences";
 import { BODY, HELP, HERO, LEAD, SECONDARY_BUTTON, TITLE } from "../components/ui";
-import { Character } from "./Character";
-import { Arrival, Expression, Gaze, Reveal, type ArrivalGift } from "./Motion";
+import { Arrival, Reveal, type ArrivalGift } from "./Motion";
 import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
 import { GiftCard } from "./GiftCard";
 import { HeadCharacter } from "./HeadCharacter";
+import { HeroMoment } from "./HeroMoment";
 import { Install } from "./Install";
 import { MoneyHero } from "./MoneyHero";
 import { OfferCard } from "./offer/OfferCard";
@@ -31,7 +31,7 @@ import type { GiftSummary } from "@/src/client/gift";
  * What went: the button that opened an eight step assistant, and the example card that showed a gift nobody had
  * made. A page that offers a real object has no use for a picture of one (vision, section 9).
  */
-export function Home({ initialHoldings, initialGifts }: Readonly<{ initialHoldings?: HeldAmounts | null; initialGifts?: GiftSummary[] | null }> = {}) {
+export function Home({ initialHoldings, initialGifts, heroPlayed = false }: Readonly<{ initialHoldings?: HeldAmounts | null; initialGifts?: GiftSummary[] | null; heroPlayed?: boolean }> = {}) {
   /**
    * What the server read for this account while it drew the page (D160). Amounts cross as strings, because a
    * balance has more digits than a browser number holds, and become amounts here.
@@ -57,38 +57,26 @@ export function Home({ initialHoldings, initialGifts }: Readonly<{ initialHoldin
   if (!address) {
     return (
       <Shell kind="destination" active="home" action={<SignInDoor />} bare wide>
-        {/* Home without an account (D129, D131): one column, and the same order everywhere, the character, the title,
-            the sentence, the card. On a phone the character is a diamond floated into the hollow the title's own
-            ragged edge leaves at its top right, which is what lets the block start a hundred pixels higher; from 1024
-            it stands above the title and the whole composition is centred in the window, the card included. */}
-        {/* The words and the card are one box here, so the box hands its turn to them: they arrive one after the
-            other like the blocks of every other screen, rather than as one flat rectangle (D147). */}
+        {/* Home without an account, in the order of the founder's sketch of 24 Sep 2026 (D214): the promise, its
+            sentence, the way to the card, the hero moment, and the card, whose top shows at the foot of the first
+            screen so the page says there is more (NN/g on the fold). One column, centred from 1024. */}
         <div className="arrives-in-turn flex w-full flex-col items-start gap-[var(--space-md)] [@media(min-width:1024px)]:items-center [@media(min-width:1024px)]:gap-[var(--space-sm)]">
-          {/* A plain block, never a flex one: text only flows around a float inside a block. */}
           <div className="w-full [@media(min-width:1024px)]:text-center">
-            {/* The head of the page is the character that answers the card under it (D148): it looks at the line that
-                asks what they will do, and it smiles at a length. `Gaze` keeps the pointer's own look on top. */}
-            <Expression>
-              <Gaze>
-                <Character
-                  state="diamond"
-                  tone="sun"
-                  standing={false}
-                  /* 86 wide is 54 tall in its own box, exactly the title's line, which is the largest the hollow takes
-                     before the shape bites into the second line and the title breaks into three (the founder, 21 Sep
-                     2026, asking for it bigger while keeping A's two lines). */
-                  /* No margin under it on a phone: a float's margin box is what the text avoids, and eight pixels of
-                     it pushed the second line aside too, which is what broke the title into four ragged lines. */
-                  className="float-right ml-[var(--space-sm)] h-auto w-[86px] [@media(min-width:1024px)]:float-none [@media(min-width:1024px)]:mx-auto [@media(min-width:1024px)]:mb-[var(--space-sm)] [@media(min-width:1024px)]:block [@media(min-width:1024px)]:w-[80px]"
-                />
-              </Gaze>
-            </Expression>
             <h1 className={HERO}>{W.promise}</h1>
             {/* Centred and bounded at 34em from 1024 (D210, the founder's default): the sentence of today holds on one
                 line of 680 px, and a longer one breaks into two centred lines rather than running the column's width. */}
             <p className={`${LEAD} mt-[var(--space-xs)] max-w-[460px] [@media(min-width:1024px)]:mx-auto [@media(min-width:1024px)]:max-w-[34em]`}>{W.promiseUnder}</p>
           </div>
-          <OfferCard />
+          {/* The one action of the first screen: it goes to the card, which is the product. The tonal button, not the
+              accent, because the card's own action keeps the screen's one accent (structure, section 12). */}
+          <a href="#offer" className={`${SECONDARY_BUTTON} w-auto! px-[var(--space-xl)] text-center no-underline [@media(min-width:1024px)]:self-center`}>
+            {W.offer}
+          </a>
+          <HeroMoment played={heroPlayed} />
+          {/* Above the character, so the card's paper hides what of it is still behind. */}
+          <div id="offer" className="relative z-[1] w-full [@media(min-width:1024px)]:flex [@media(min-width:1024px)]:justify-center">
+            <OfferCard />
+          </div>
         </div>
         <p className={`${HELP} flex w-full flex-wrap gap-x-[var(--space-lg)] [@media(min-width:1024px)]:justify-center`}>
           <Link href="/what-viky-can-check" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
