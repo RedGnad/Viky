@@ -1,0 +1,372 @@
+import type { CSSProperties, ReactNode } from "react";
+import { DIAMOND } from "./Character";
+
+/**
+ * The figure: the diamond as a rig rather than as one drawing (D236, the founder's direction B of 25 Sep 2026, glass
+ * and jelly). A character becomes iconic through a system, not an image (Hartman, Building character, 2020: a cast
+ * built from one or two basic shapes per part, with named states for poses and mouths), so this file is the system: a body, one light, a
+ * face in named sets, limbs in named poses, and props as parts of the same material.
+ *
+ * One light, top left, and everything that shines obeys it: the body's gradient runs from the lit corner, the edge
+ * is a gradient of its own colour lit on the same side, the gloss sits where the surface faces halfway between the
+ * light and the eye, which for a lens-shaped body is toward the light from the middle, and a rim of light lies along
+ * the edges that face away from it, the light coming through the jelly. When the figure leans, the light is turned
+ * the other way in the drawing's own coordinates, so the reflections stay with the light rather than with the body:
+ * that is what makes them reflections. Nothing here is drawn by pose; it is computed from the pose.
+ *
+ * The colours are the character's own (`--character-*`), the ink, and white for what shines: no fourth colour, and
+ * never the sun (test/design-tokens.test.ts). Shapes are round or rounded, as the brief allows; nothing is pointed.
+ */
+
+/** Where the light comes from, as a direction in the drawing's plane (x to the right, y down): the top left. */
+export const LIGHT: Readonly<{ x: number; y: number }> = { x: -1, y: -1 };
+
+export type Eyes = "open" | "closed" | "half" | "shades";
+export type Mouth = "smile" | "grin" | "o" | "flat";
+export type ArmsPose = "rest" | "crossed" | "hold" | "wave" | "run" | "shoulder";
+export type LegsPose = "rest" | "run" | "apart";
+export type Prop = "suit" | "case";
+
+export type FigureProps = Readonly<{
+  eyes?: Eyes;
+  mouth?: Mouth;
+  arms?: ArmsPose;
+  legs?: LegsPose;
+  /** Degrees the whole figure leans from its feet, clockwise on the screen. */
+  lean?: number;
+  /** Where the eyes look, from -1 to 1 on each axis; the pupils move a little, never the eyes. */
+  gaze?: Readonly<{ x: number; y: number }>;
+  props?: readonly Prop[];
+  light?: Readonly<{ x: number; y: number }>;
+  /** A prefix for the gradient ids, so two figures on one page keep their own. */
+  id?: string;
+}>;
+
+/** The box the figure is drawn in: 64 wide, 53 tall down to the feet (Character's diamond with limbs). */
+export const FIGURE_BOX = { width: 64, height: 53 } as const;
+const CENTRE = { x: 32, y: 20 };
+/** The diamond's four corners, clockwise from the top, and the outward normal of the edge that starts at each. */
+const CORNERS: readonly (readonly [number, number])[] = [
+  [32, 4],
+  [61, 20],
+  [32, 36],
+  [3, 20],
+];
+const INK = "var(--character-face)";
+const GLOSS = "var(--character-gloss)";
+const LIMB = "var(--character-limb)";
+const FROM_MIDDLE: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 50%" };
+const FROM_FLOOR: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 100%" };
+const FROM_JOINT: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 0%" };
+
+const round = (value: number) => Math.round(value * 100) / 100;
+const unit = (v: Readonly<{ x: number; y: number }>) => {
+  const length = Math.hypot(v.x, v.y) || 1;
+  return { x: v.x / length, y: v.y / length };
+};
+/** The light as the drawing sees it once the figure leans: turned the other way, so it stays where the light is. */
+const turned = (v: Readonly<{ x: number; y: number }>, degrees: number) => {
+  const a = (-degrees * Math.PI) / 180;
+  return { x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) };
+};
+
+/** The edges of the diamond, each with its outward normal and its angle, for the light to fall on. */
+function edges() {
+  return CORNERS.map((from, index) => {
+    const to = CORNERS[(index + 1) % CORNERS.length];
+    const dx = to[0] - from[0];
+    const dy = to[1] - from[1];
+    const length = Math.hypot(dx, dy);
+    // Clockwise corners, so the outward normal is the direction turned to the right of travel.
+    const normal = { x: dy / length, y: -dx / length };
+    return { from, to, normal, angle: (Math.atan2(dy, dx) * 180) / Math.PI, length };
+  });
+}
+
+/**
+ * What the light does to the body: the gradient's two points, the gloss's place and slant, the rim's opacity per
+ * edge. All of it from one direction, so a pose never has to be lit by hand.
+ */
+export function lit(light = LIGHT, lean = 0) {
+  const l = turned(unit(light), lean);
+  const gradient = { x1: 0.5 + 0.5 * l.x, y1: 0.5 + 0.5 * l.y, x2: 0.5 - 0.5 * l.x, y2: 0.5 - 0.5 * l.y };
+  const gloss = { cx: CENTRE.x + l.x * 12.7, cy: CENTRE.y + l.y * 9.9 };
+  const dot = { cx: CENTRE.x + l.x * 2, cy: CENTRE.y + l.y * 14.1 };
+  const all = edges().map((edge) => ({ ...edge, facing: edge.normal.x * l.x + edge.normal.y * l.y }));
+  const litEdge = all.reduce((best, edge) => (edge.facing > best.facing ? edge : best), all[0]);
+  const sparkle = {
+    cx: (litEdge.from[0] + litEdge.to[0]) / 2 - litEdge.normal.x * 3,
+    cy: (litEdge.from[1] + litEdge.to[1]) / 2 - litEdge.normal.y * 3,
+  };
+  const rims = all
+    .filter((edge) => edge.facing < -0.1)
+    .map((edge) => {
+      const ux = (edge.to[0] - edge.from[0]) / edge.length;
+      const uy = (edge.to[1] - edge.from[1]) / edge.length;
+      // The straight part of the edge, inside the rounded corners, moved inward by the width of the outline.
+      const inset = 1.6;
+      const trim = 7;
+      return {
+        x1: round(edge.from[0] + ux * trim - edge.normal.x * inset),
+        y1: round(edge.from[1] + uy * trim - edge.normal.y * inset),
+        x2: round(edge.to[0] - ux * trim - edge.normal.x * inset),
+        y2: round(edge.to[1] - uy * trim - edge.normal.y * inset),
+        opacity: round(0.55 * Math.min(1, -edge.facing)),
+      };
+    });
+  return { light: l, gradient, gloss: { ...gloss, angle: round(litEdge.angle) }, dot, sparkle, rims };
+}
+
+/**
+ * Each pose of the arms: a path for each arm, its hand, and a turn from the joint; the left arm first. An arm that
+ * hangs is drawn under the body, so its joint is hidden; one that rises or crosses is drawn over it, or it would be.
+ */
+const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [number, number]; turn?: number; over?: boolean }>[]> = {
+  rest: [
+    { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2] },
+    { d: "M51 26 Q52 30.7 51 35.4", hand: [51, 37.2] },
+  ],
+  crossed: [
+    { d: "M13 25.5 C12 29 20 30.6 36.5 29.4", hand: [37.2, 29.3], over: true },
+    { d: "M51 25.5 C52 29 44 31.8 27.5 30.8", hand: [26.8, 30.7], over: true },
+  ],
+  hold: [
+    { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2] },
+    { d: "M51 26 Q52.4 31 52 36.2", hand: [52, 38] },
+  ],
+  wave: [
+    { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2], turn: 150, over: true },
+    { d: "M51 26 Q52 30.7 51 35.4", hand: [51, 37.2] },
+  ],
+  run: [
+    { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2], turn: 75 },
+    { d: "M51 26 Q52 30.7 51 35.4", hand: [51, 37.2], turn: -20 },
+  ],
+  shoulder: [
+    { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2] },
+    { d: "M51 26 C57 24.5 65 19.5 72 16.5", hand: [72.8, 16.1], over: true },
+  ],
+};
+const LEGS: Record<LegsPose, readonly Readonly<{ turn: number }>[]> = {
+  rest: [{ turn: 0 }, { turn: 0 }],
+  run: [{ turn: 35 }, { turn: -15 }],
+  apart: [{ turn: 10 }, { turn: -10 }],
+};
+const LEG_PATHS = [
+  { d: "M23.5 30 Q21.6 40.75 21.7 51.5", foot: "M21.7 51.5 H17.2" },
+  { d: "M40.5 30 Q42.4 40.75 42.3 51.5", foot: "M42.3 51.5 H46.8" },
+] as const;
+
+const line = { fill: "none", stroke: LIMB, strokeWidth: 1.8, strokeLinecap: "round" as const };
+
+function Arm({ pose, arm }: Readonly<{ pose: ArmsPose; arm: (typeof ARMS)[ArmsPose][number] }>) {
+  return (
+    <g data-part="arm" data-pose={pose} style={arm.turn ? { ...FROM_JOINT, transform: `rotate(${arm.turn}deg)` } : FROM_JOINT}>
+      <path d={arm.d} style={line} />
+      <circle cx={arm.hand[0]} cy={arm.hand[1]} r={1.9} style={{ fill: LIMB }} />
+    </g>
+  );
+}
+
+/** The limbs under the body: the legs, and the arms that hang. The arms that rise or cross come after the body. */
+function Limbs({ arms, legs }: Readonly<{ arms: ArmsPose; legs: LegsPose }>) {
+  return (
+    <g data-part="limbs">
+      {ARMS[arms].filter((arm) => !arm.over).map((arm, index) => (
+        <Arm key={index} pose={arms} arm={arm} />
+      ))}
+      {LEGS[legs].map((leg, index) => (
+        <g key={index} data-part="leg" data-pose={legs} style={leg.turn ? { ...FROM_JOINT, transform: `rotate(${leg.turn}deg)` } : FROM_JOINT}>
+          <path d={LEG_PATHS[index].d} style={line} />
+          <path d={LEG_PATHS[index].foot} style={line} />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/** The eyes, in their sets; a closed eye is the open one's pill, so one can open into the other (D226). */
+function EyesOf({ eyes, gaze, id }: Readonly<{ eyes: Eyes; gaze: Readonly<{ x: number; y: number }>; id: string }>) {
+  const at: readonly (readonly [number, number])[] = [
+    [26, 18],
+    [38, 18],
+  ];
+  if (eyes === "shades") return <Shades id={id} />;
+  return (
+    <g data-part="eyes" style={{ transform: `translate(${round(gaze.x * 1.6)}px, ${round(gaze.y * 1.2)}px)` }}>
+      {at.map(([x, y]) =>
+        eyes === "open" ? (
+          <circle key={x} data-part="eye" cx={x} cy={y} r={2.8} style={{ fill: INK, ...FROM_MIDDLE }} />
+        ) : eyes === "closed" ? (
+          <rect key={x} data-part="eye" x={x - 3.4} y={y - 1.2} width={6.8} height={2.4} rx={3.4} ry={1.2} style={{ fill: INK, ...FROM_MIDDLE }} />
+        ) : (
+          /* Half: the lower half of the open eye, a lid across it. */
+          <path key={x} data-part="eye" d={`M${x - 2.8} ${y} a2.8 2.8 0 0 0 5.6 0 Z`} style={{ fill: INK, ...FROM_MIDDLE }} />
+        ),
+      )}
+    </g>
+  );
+}
+
+/** The mouths: the smile is a real one, an upper lip that curves and a lower one that shines, not a half circle. */
+function MouthOf({ mouth }: Readonly<{ mouth: Mouth }>) {
+  const shine = { fill: "none", stroke: "rgba(255, 255, 255, 0.35)", strokeWidth: 0.8, strokeLinecap: "round" as const };
+  if (mouth === "smile") {
+    return (
+      <g data-part="mouth" style={FROM_MIDDLE}>
+        <path d="M27 23.4 C29 28.6 35.6 28.6 37.2 23.1 Q32 25.3 27 23.4 Z" style={{ fill: INK }} />
+        <path d="M29.4 25.9 Q32 27.3 34.6 25.8" style={shine} />
+      </g>
+    );
+  }
+  if (mouth === "grin") {
+    return (
+      <g data-part="mouth" style={FROM_MIDDLE}>
+        <path d="M26.5 23 C28.5 29.6 35.5 29.6 37.5 23 Q32 25.6 26.5 23 Z" style={{ fill: INK }} />
+        <path d="M28.4 26.8 Q32 28.6 35.6 26.7" style={shine} />
+      </g>
+    );
+  }
+  if (mouth === "o") {
+    return (
+      <g data-part="mouth" style={FROM_MIDDLE}>
+        <circle cx={32} cy={25.2} r={2.3} style={{ fill: INK }} />
+        <circle cx={31.3} cy={24.4} r={0.55} style={{ fill: "rgba(255, 255, 255, 0.5)" }} />
+      </g>
+    );
+  }
+  return <rect data-part="mouth" x={28} y={23.4} width={8} height={2} rx={1} style={{ fill: INK, ...FROM_MIDDLE }} />;
+}
+
+/** Sunglasses, in the figure's own material: lenses of the lilac deepening to the ink, a streak of light across each. */
+function Shades({ id }: Readonly<{ id: string }>) {
+  const lens = { fill: `url(#${id}-lens)`, stroke: "rgba(255, 255, 255, 0.45)", strokeWidth: 0.6 };
+  return (
+    <g data-part="eyes" data-prop="shades">
+      <defs>
+        <linearGradient id={`${id}-lens`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" style={{ stopColor: "var(--character-3)" }} />
+          <stop offset="1" style={{ stopColor: INK }} />
+        </linearGradient>
+      </defs>
+      {[26, 38].map((x) => (
+        <g key={x}>
+          <rect x={x - 5.2} y={14.1} width={10.4} height={7.8} rx={3.2} style={lens} />
+          <rect x={x - 4.4} y={14.8} width={3.2} height={7} rx={1.4} transform={`rotate(-30 ${x - 2.8} 18)`} style={{ fill: "rgba(255, 255, 255, 0.35)" }} />
+        </g>
+      ))}
+      <rect x={30.5} y={16.9} width={3} height={1.6} rx={0.8} style={{ fill: INK }} />
+      <path d="M20.8 17.6 L17 16.4 M43.2 17.6 L47 16.4" style={{ fill: "none", stroke: INK, strokeWidth: 1.4, strokeLinecap: "round" }} />
+    </g>
+  );
+}
+
+/** A suit on the lower half: lapels in the ink, a shirt of light, a tie in the character's coral, never the sun. */
+function Suit() {
+  return (
+    <g data-prop="suit">
+      <path d="M17 26.8 L26.5 29.2 L32 34.6 L37.5 29.2 L47 26.8 L39 32.14 Q32 36 25 32.14 Z" style={{ fill: INK }} />
+      <path d="M27.4 29 L32 34.4 L36.6 29 Q32 31 27.4 29 Z" style={{ fill: "rgba(255, 255, 255, 0.85)" }} />
+      <path d="M18.4 27.3 L26.4 29.4" style={{ fill: "none", stroke: "rgba(255, 255, 255, 0.45)", strokeWidth: 0.7, strokeLinecap: "round" }} />
+      <path d="M30.9 29.2 h2.2 l0.7 3.4 l-1.8 1.5 l-1.8 -1.5 z" style={{ fill: "var(--character-1)" }} />
+      <path d="M31.4 29.8 l0.4 2.2" style={{ fill: "none", stroke: "rgba(255, 255, 255, 0.6)", strokeWidth: 0.5, strokeLinecap: "round" }} />
+    </g>
+  );
+}
+
+/** An attaché case hanging from the right hand of the "hold" pose, in the sky colour, lit like the body. */
+function Case({ id }: Readonly<{ id: string }>) {
+  const [x, y, w, h] = [45, 39.5, 14, 10];
+  return (
+    <g data-prop="case">
+      <defs>
+        <linearGradient id={`${id}-case`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" style={{ stopColor: "var(--character-2)" }} />
+          <stop offset="1" style={{ stopColor: "var(--character-2)", stopOpacity: 0.75 }} />
+        </linearGradient>
+      </defs>
+      <path d={`M49 ${y} v-1.2 a3 3 0 0 1 3 -3 a3 3 0 0 1 3 3 v1.2`} style={{ fill: "none", stroke: LIMB, strokeWidth: 1.5, strokeLinecap: "round" }} />
+      <rect x={x} y={y} width={w} height={h} rx={2.2} style={{ fill: `url(#${id}-case)`, stroke: "rgba(255, 255, 255, 0.4)", strokeWidth: 0.7 }} />
+      <rect x={x} y={y + 3.6} width={w} height={2.4} style={{ fill: INK, fillOpacity: 0.35 }} />
+      <rect x={x + 1.4} y={y + 0.9} width={4.2} height={1.2} rx={0.6} style={{ fill: "rgba(255, 255, 255, 0.5)" }} />
+      <rect x={x + 3} y={y + 4.1} width={1.6} height={1.4} rx={0.4} style={{ fill: "var(--character-3)" }} />
+      <rect x={x + w - 4.6} y={y + 4.1} width={1.6} height={1.4} rx={0.4} style={{ fill: "var(--character-3)" }} />
+    </g>
+  );
+}
+
+/** The figure as a group, for a scene that composes several in one drawing. */
+export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", legs = "rest", lean = 0, gaze = { x: 0, y: 0 }, props = [], light = LIGHT, id = "figure" }: FigureProps) {
+  const shine = lit(light, lean);
+  return (
+    <g data-part="figure" style={lean ? { ...FROM_FLOOR, transform: `rotate(${lean}deg)` } : FROM_FLOOR}>
+      <defs>
+        <linearGradient id={`${id}-body`} x1={round(shine.gradient.x1)} y1={round(shine.gradient.y1)} x2={round(shine.gradient.x2)} y2={round(shine.gradient.y2)}>
+          <stop offset="0" style={{ stopColor: "var(--character-hero-from)" }} />
+          <stop offset="1" style={{ stopColor: "var(--character-hero-to)" }} />
+        </linearGradient>
+        <linearGradient id={`${id}-edge`} x1={round(shine.gradient.x1)} y1={round(shine.gradient.y1)} x2={round(shine.gradient.x2)} y2={round(shine.gradient.y2)}>
+          <stop offset="0" style={{ stopColor: "var(--character-hero-edge-light)" }} />
+          <stop offset="1" style={{ stopColor: "var(--character-hero-edge-deep)" }} />
+        </linearGradient>
+      </defs>
+      <Limbs arms={arms} legs={legs} />
+      <g data-part="body">
+        <path d={DIAMOND} style={{ fill: `url(#${id}-body)`, stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
+      </g>
+      {ARMS[arms].filter((arm) => arm.over).map((arm, index) => (
+        <Arm key={index} pose={arms} arm={arm} />
+      ))}
+      {/* The light through the jelly: a rim along the edges that face away from it, as strong as they face away. */}
+      <g data-part="rim">
+        {shine.rims.map((rim) => (
+          <line key={`${rim.x1}-${rim.y1}`} x1={rim.x1} y1={rim.y1} x2={rim.x2} y2={rim.y2} style={{ stroke: "#FFFFFF", strokeOpacity: rim.opacity, strokeWidth: 1.1, strokeLinecap: "round" }} />
+        ))}
+      </g>
+      {/* The gloss: where the surface faces halfway between the light and the eye, slanted along the lit edge. */}
+      <g data-part="gloss">
+        <ellipse cx={round(shine.gloss.cx)} cy={round(shine.gloss.cy)} rx={5.2} ry={3.2} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
+        <circle cx={round(shine.dot.cx)} cy={round(shine.dot.cy)} r={1.9} style={{ fill: GLOSS }} />
+        <circle cx={round(shine.sparkle.cx)} cy={round(shine.sparkle.cy)} r={0.9} style={{ fill: GLOSS }} />
+      </g>
+      {props.includes("suit") ? <Suit /> : null}
+      <g data-part="face">
+        <EyesOf eyes={eyes} gaze={gaze} id={id} />
+        <MouthOf mouth={mouth} />
+      </g>
+      {props.includes("case") ? <Case id={id} /> : null}
+    </g>
+  );
+}
+
+/** The figure in its own box. */
+export function Figure({ className, ...figure }: FigureProps & Readonly<{ className?: string }>) {
+  return (
+    <svg aria-hidden focusable="false" viewBox={`0 0 ${FIGURE_BOX.width} ${FIGURE_BOX.height}`} className={className} style={{ overflow: "visible" }}>
+      <FigureGroup {...figure} />
+    </svg>
+  );
+}
+
+export type SceneName = "home" | "gifts" | "me";
+
+/**
+ * The three destinations' scenes (the founder, 25 Sep 2026): Home, the figure in a suit with its case; Gifts, the
+ * figure with an arm on a second one's shoulder; Me, arms crossed behind sunglasses.
+ */
+export function Scene({ which, className, children }: Readonly<{ which: SceneName; className?: string; children?: ReactNode }>) {
+  if (which === "gifts") {
+    return (
+      <svg aria-hidden focusable="false" viewBox="0 0 118 53" className={className} style={{ overflow: "visible" }}>
+        {/* The second first, a little smaller and on the same floor, so the first's arm lies over its shoulder. */}
+        <g transform="translate(58 5.3) scale(0.9)">
+          <FigureGroup id="gifts-two" mouth="smile" gaze={{ x: -0.6, y: -0.3 }} />
+        </g>
+        <FigureGroup id="gifts-one" arms="shoulder" mouth="grin" gaze={{ x: 0.6, y: 0 }} />
+        {children}
+      </svg>
+    );
+  }
+  if (which === "home") return <Figure className={className} id="home" arms="hold" props={["suit", "case"]} />;
+  return <Figure className={className} id="me" eyes="shades" mouth="grin" arms="crossed" />;
+}

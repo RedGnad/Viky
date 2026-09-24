@@ -6529,3 +6529,44 @@ would all but vanish. The day keeps the ink until the founder chooses: the same 
 
 **Measured.** Captures at 360 by 780 and 390 by 844, by day and by night. `test/browser/home-order.spec.ts` holds
 two lines at 320, 360, 390 and 430 with the card at the fold; `test/hero-moment.test.ts` the feet and the night limbs.
+
+## D236, 25 Sep 2026: the figure as a rig, one light, and its model sheet
+
+The founder, 25 Sep 2026: the character stays an isolated image, which cannot become iconic; it needs to be thought
+through from several angles, with expressions, poses, colours; reflections that are reasoned and move with the
+position; limbs that take several poses; a smile more worked than a half circle while staying simple; an edge with a
+slight gradient coherent with the body's; and modes, one per destination, with a micro-interaction at the change of
+page. Done properly, on the references, unlike the four tiles' props. He chose direction B of the four proposed on
+an image: glass and jelly.
+
+**What the references say.** A character becomes iconic through a system, not an image: Duolingo builds its cast
+from one or two basic shapes per part with named states for poses and mouths and a rig that animates them (Hartman,
+Building character, 2020; their Rive pipeline). An animation studio keeps a model sheet of every character: a
+turnaround, an expression sheet, a pose sheet, a construction guide. A specular highlight sits where the surface
+faces halfway between the light and the eye, so with one fixed light it stays with the light when the body turns;
+translucent matter carries a rim of light on the edges away from the light.
+
+**The rig** (`app/kit/Figure.tsx`). A body, one light from the top left, and everything that shines computed from
+it: the body's gradient runs from the lit corner; the edge is a gradient of its own colour, lit on the same side
+(`--character-hero-edge-light` and `-deep`, by day and by night); the gloss sits toward the light from the middle,
+slanted along the lit edge, with a smaller dot and a sparkle; a rim of white lies along the edges that face away
+from the light, as strong as they face away. When the figure leans, the light is turned the other way in the
+drawing's frame, so the reflections stay with the light: that is what makes them reflections, and no pose is lit by
+hand. The face is sets: eyes open, closed (the pill an open eye grows from, D226), half, or sunglasses; mouths smile
+(an upper lip that curves, a lower one that shines), grin, o, flat; a gaze that moves the pupils a little. The arms
+have six poses (rest, crossed, hold, wave, run, shoulder), the legs three; an arm that rises or crosses is drawn
+over the body, one that hangs under it. The props are of the same material and palette: sunglasses whose lenses go
+from the lilac to the ink with a streak of light, a suit in the ink with a shirt of light and a tie in the coral, a
+case in the sky colour with its latches in the lilac, lit like the body. White for what shines, never the sun, no
+fourth colour (`test/design-tokens.test.ts` names the rig among the painters).
+
+**The scenes.** Home: the figure in its suit with its case; Gifts: the figure with an arm on a second one's
+shoulder, the second a little smaller on the same floor; Me: arms crossed behind sunglasses.
+
+**The model sheet** (`/dev/looks/character`, behind the laboratory's door as the looks are): a turnaround of leans
+with the light from the left and then from the right, the six expressions, the six poses, the three scenes, by day
+and by night, captured at 1440 and 390 and sent to the founder. First drawings: the props are small at the head's
+size and the poses stiff; the rig is what this decision ships, and each is polished on it from here.
+
+**Not yet.** The three destinations still draw the old head character; the scenes go on them, larger, with the
+micro-interaction at the change of page, in the next step.
