@@ -55,8 +55,9 @@ test("the first day opens its eyes when the card is ready: the state in the mark
 });
 
 test("a strip that changes length shows its days again in turn, as a screen arrives, and not on the first image", () => {
-  assert.match(strip, /const wasLength = useRef\(days\.length\);/);
-  assert.match(strip, /if \(wasLength\.current === days\.length\) return;/, "only on a change");
+  assert.match(strip, /const about = `\$\{days\.length\}:\$\{changedOn \?\? ""\}`;/, "the length, and what the strip is about");
+  assert.match(strip, /if \(wasAbout\.current === about\) return;/, "only on a change");
+  assert.match(card, /changedOn=\{draft\.conditionId\}/, "a new condition on the card is such a change (D230)");
   assert.match(strip, /const \{ durationMs, easing, rise, staggerMs, mostStaggeredMs, fromOpacity \} = MOTION\.reveal;/, "the page's own turns, to the token");
   assert.match(strip, /delay: Math\.min\(index \* staggerMs, mostStaggeredMs\), fill: "backwards"/, "the fourth and every day after arrive together");
   assert.match(strip, /\.slice\(0, ARRIVING\)/, "the days a card shows, not a year of them");

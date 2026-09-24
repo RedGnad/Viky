@@ -215,6 +215,8 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                     /* The first day opens its eyes when the card is whole, the name included: a gift with nobody's
                        name on it can be sent (the register allows it), but the day does not wake for it. */
                     wake={ready && filled.for}
+                    /* And the days answer a new condition as they answer a new length: they arrive again, in turn (D230). */
+                    changedOn={draft.conditionId}
                   />
                   {/* What one mark is worth: the figure follows the amount as a figure does, and nothing moves for it. */}
                   {units !== undefined && days > 0 ? (

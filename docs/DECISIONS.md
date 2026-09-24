@@ -6368,3 +6368,33 @@ least 1.25:1 and under 2:1. The lowest pair carrying words is the faint voice on
 
 **Measured.** Captures at 390 by 844 and 1440 by 900, by day (unchanged) and by night, of the landing's first image
 and standing state, the card, the sheet and the door, sent to the founder.
+
+## D230, 24 Sep 2026: the limbs come out in turn, the days answer a new condition, Home carries its title
+
+Three of the founder's five points of 24 Sep 2026, the ones that are movement and placement; the night paper and
+the trail have their own decisions.
+
+**The limbs.** The hero moment was near perfect except its end: the limbs appeared as one scaling at one instant.
+Now each limb lengthens out of the body along its own axis, from its joint (`scaleY` from 0, where it was a scale
+of both axes), one after another, 70 ms apart in the drawing's order (left arm, right arm, left leg, right leg), and
+they start 80 ms after the second landing, while the body is still settling, instead of at the very end. This is
+overlapping action, the principle that nothing of a body starts and stops at once (Thomas and Johnston), and it is
+what makes the end organic. Two tokens: `limbsAfterFloorMs` 80 and `limbStaggerMs` 70 (between Material's short1
+and short2, the page's own turns). The first image folds each limb along its own axis (`scaleY(0)`). The whole
+moment ends at 1,541 ms, under the arrival's budget.
+
+**The days on the card.** The founder recalled that the day characters were to answer the choices made on the
+card. They did, in two ways since D226, both invisible on his path: the days arrive in turn when the length changes
+(he had not pressed a chip), and the first day opens its eyes when the card is whole, the name included (his kept
+draft was whole already, so the eyes were open from the first image). A third answer now: a new condition makes the
+days arrive again, in turn, exactly as a new length does (`changedOn` on `DayStrip`, the card's condition id). The
+figure under the days still follows the amount without motion: a picture moving beside a field being filled is the
+distraction NN/g names.
+
+**Home's head.** Signed in, the character stood higher on Home than on Gifts and You: those two carry their
+display title in the head's row, which sets the row's height, and Home carried none, so its row was the character's
+own height. Home carries its title now, "Home", the word the bar already uses, and the three heads are at one place.
+
+**Measured.** Frames of the moment's end at 390, by day and by night, sent to the founder; `test/hero-moment.test.ts`
+holds the axis, the order, the start after the second landing and the turn; `test/card-days.test.ts` the third
+answer; `test/gift-card.test.ts` Home's title.

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { useAccount } from "@/src/account/provider";
-import { CATALOGUE, HOME as W, ME } from "@/src/sentences";
+import { CATALOGUE, HOME as W, ME, NAV } from "@/src/sentences";
 import { certificatePlatforms, namesInWords } from "@/src/universities";
 import { BODY, HELP, HERO, LEAD, NAMED, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "../components/ui";
 import { Arrival, Reveal, type ArrivalGift } from "./Motion";
@@ -130,7 +130,9 @@ export function Home({
       {/* With an account the money leads (D139). Every account app people already use puts the balance at the top,
           Wise, Revolut and Monzo among them, and it is what somebody opens Viky to read; the card is the one action
           under it. Without an account there is no money to read, and the card leads, which is D129's order. */}
-      <Shell kind="destination" active="home" width="card" character={<HeadCharacter />}>
+      {/* Its title, like Gifts and You: without one the head's row was the character's own height and the character
+          stood higher here than on the two other destinations (the founder, 24 Sep 2026, D230). */}
+      <Shell kind="destination" active="home" width="card" title={NAV.home} character={<HeadCharacter />}>
         <MoneyHero address={address} holdings={holdings} />
         {/* The way out keeps its place while the balance is being read (D147), so the card under it does not jump
             down when the answer lands. The room is held only on a device that saw money here last time: a first

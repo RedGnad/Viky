@@ -893,9 +893,10 @@ dialog.sheet[open] {
   transform: translateY(31px);
 }
 
+/* Folded along its own axis, from its joint: what each limb lengthens out of (D230). */
 [data-hero="peeking"] [data-part="arm"],
 [data-hero="peeking"] [data-part="leg"] {
-  transform: scale(0);
+  transform: scaleY(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
