@@ -6,6 +6,7 @@ import { useDisplayCurrency } from "@/src/client/display-currency";
 import { formatAusd } from "@/src/gift-reader";
 import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type GiftDraft } from "@/src/gift-draft";
 import { conditionById } from "@/src/conditions";
+import { certificateById, milestoneById } from "@/src/milestone-conditions";
 import { cardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
 import { figureWithMark, typedFromUnits, unitsFromTyped } from "@/src/amount-in-currency";
 import { figureIn } from "@/src/currencies";
@@ -13,7 +14,7 @@ import { startingFigure } from "@/src/starting-amount";
 import { dollarsHeld, type Holdings } from "../money";
 import { AmountError } from "@/src/money";
 import { OFFER as W } from "@/src/sentences";
-import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
+import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, CHOICE, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { CardFace } from "../GiftCard";
 import { Character } from "../Character";
 import { CurrencySheet } from "../CurrencySheet";
@@ -127,6 +128,8 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
     }
   };
   const quick = [bounds.min, bounds.suggested, bounds.max];
+  /** Under a certificate's or a climb's one character: the register's own line on when all of it becomes theirs. */
+  const reached = certificateById(draft.conditionId)?.words.whenReached ?? milestoneById(draft.conditionId)?.words.whenReached;
   /** What the amount says back when it cannot be read as money: the same rule the route refuses by. */
   let amountRefusal: string | undefined;
   if (typed.trim().length > 0) {
@@ -188,24 +191,38 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
               </svg>
             </button>
           }
-          /* The shape of the gift, drawn by the product's own pieces: one mark a day, and the row scrolls. */
+          /* The shape of the gift in the middle of the card (D226, the founder's direction A of 24 Sep 2026): the days,
+             drawn by the product's own pieces, one mark a day at 72, the row scrolling, and under it what one mark is
+             worth, in the title face; a certificate or a climb is one character at 96 and the register's own line on
+             when all of it becomes theirs. Its own air above and below: the card's three groups, who and what, the
+             days and the money, the action, are told apart by 24 pixels where 12 separate what is inside one. */
           shape={
-            <div className="py-[var(--space-xs)]">
+            <div className="my-[var(--space-md)] flex flex-col items-center gap-[var(--space-sm)]">
               {shape === "climb" || shape === "stamp" ? (
-                /* One character and nothing else (D132). The meter's bar belongs to a gift that has been read: on a
-                   card being filled in there is no reading, so the bar was always empty and said nothing at all,
-                   which is what the founder saw as a strange horizontal line. */
-                /* One character and no row: it stands in the middle of the card rather than at its left margin,
-                   where a single shape read as a row that had lost the rest of itself (the founder, 21 Sep 2026). */
-                <span className="flex justify-center">
-                  <Character state="toCome" className="h-auto w-[60px]" standing={false} />
-                </span>
+                /* One character and nothing else (D132): the meter's bar belongs to a gift that has been read. It stands
+                   in the middle of the card rather than at its left margin (the founder, 21 Sep 2026). */
+                <>
+                  <Character state="toCome" className="h-auto w-[96px]" standing={false} />
+                  {reached ? <span className={`${HELP} text-center`}>{reached}</span> : null}
+                </>
               ) : (
-                <DayStrip
-                  id={GIFT_ID}
-                  gift={{ startDay: 0, endDay: 0, durationDays: Number.isInteger(days) && days > 0 ? days : bounds.suggested, creditedDays: 0, missedDays: 0 }}
-                  catchUpSeconds={0}
-                />
+                <>
+                  <DayStrip
+                    id={GIFT_ID}
+                    gift={{ startDay: 0, endDay: 0, durationDays: Number.isInteger(days) && days > 0 ? days : bounds.suggested, creditedDays: 0, missedDays: 0 }}
+                    catchUpSeconds={0}
+                    width={72}
+                    /* The first day opens its eyes when the card is whole, the name included: a gift with nobody's
+                       name on it can be sent (the register allows it), but the day does not wake for it. */
+                    wake={ready && filled.for}
+                  />
+                  {/* What one mark is worth: the figure follows the amount as a figure does, and nothing moves for it. */}
+                  {units !== undefined && days > 0 ? (
+                    <span className="text-center">
+                      <span className={CHOICE}>{inTheirCurrency(units / BigInt(days))}</span> <span className={HELP}>{W.aDay}</span>
+                    </span>
+                  ) : null}
+                </>
               )}
             </div>
           }
@@ -217,7 +234,9 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                   2026, on the amount after the name was fixed). Beside it, what the figure is worth in the currency
                   this account reads in (D140, D141): one row that never wraps, and nothing at all below 480, where
                   a sentence carrying its rate's own day cannot fit beside a 39 pixel figure. */}
-              <span className="flex items-baseline gap-x-[var(--space-sm)]">
+              {/* The money on one line when it fits (D226): the amount, then the three lengths beside it, wrapping under it
+                  on a phone. */}
+              <span className="flex flex-wrap items-center gap-x-[var(--space-md)] gap-y-[var(--space-md)]">
                 <span className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent-text)]`}>
                   {/* The key that says what this card is read in, and that there is a list behind it (D152): the
                       mark in the house's own line, an edge, a relief and a chevron, like everything else that is
@@ -235,16 +254,11 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                     className="min-h-[var(--tap-target)] min-w-[var(--tap-target)] bg-transparent pl-[var(--space-xs)] tabular-nums outline-none"
                   />
                 </span>
-
-              </span>
-              {amountRefusal ? <span className={`block ${HELP} text-[var(--on-surface)]`}>{amountRefusal}</span> : null}
-
-
-              {/* How long, on the card: the three lengths the register gives this condition, and no fourth (D130).
-                  The chip that opened a field for any other number is gone: the founder asked for it on both sizes,
-                  and a length outside the three is a length the register was never asked about. */}
-              <span className="mt-[var(--space-sm)] flex flex-wrap items-center gap-[var(--tap-gap)]">
-                {quick.map((count) => (
+                {/* How long, on the card: the three lengths the register gives this condition, and no fourth (D130).
+                    The chip that opened a field for any other number is gone: the founder asked for it on both sizes,
+                    and a length outside the three is a length the register was never asked about. */}
+                <span className="flex flex-wrap items-center gap-[var(--tap-gap)]">
+                  {quick.map((count) => (
                   <button
                     key={count}
                     type="button"
@@ -253,22 +267,23 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                     aria-pressed={days === count}
                     className={`${CHIP} ${days === count ? "bg-[var(--chosen)] font-bold" : ""}`}
                   >
-                    {W.someDays(count)}
-                  </button>
-                ))}
+                      {W.someDays(count)}
+                    </button>
+                  ))}
+                </span>
               </span>
+              {amountRefusal ? <span className={`block ${HELP} text-[var(--on-surface)]`}>{amountRefusal}</span> : null}
 
               {/* One action, in the sun, full width, saying what it will take from the first second; shut, it says what it
-                  is waiting for rather than its price (ui review, 20 Sep 2026: a muted "Pay $30.00" with no reason). */}
-              <button type="button" className={`${PRIMARY_BUTTON} mt-[var(--space-lg)]`} disabled={!ready} onClick={() => setPaying(true)}>
+                  is waiting for rather than its price (ui review, 20 Sep 2026: a muted "Pay $30.00" with no reason).
+                  Its own group, 24 pixels under the money (D226). */}
+              <button type="button" className={`${PRIMARY_BUTTON} mt-[var(--space-xl)]`} disabled={!ready} onClick={() => setPaying(true)}>
                 <span>{!filled.will ? W.finishWill : !filled.howLong ? W.chooseLength : units === undefined ? W.stillNeeded : W.pay(asked(units))}</span>
               </button>
-              {/* What one day of it is worth, and nothing when there is no such figure. The pilot's ceiling is not a
-                  standing notice any more (D138): it is what the amount says back to somebody who types past it,
-                  under the amount itself, where a refusal belongs. */}
-              {shape === "days" && units !== undefined && days > 0 ? (
-                <span className={`block ${HELP} text-center`}>{W.eachDay(inTheirCurrency(units / BigInt(days)))}</span>
-              ) : null}
+              {/* The other half of the promise, under the action; what a day is worth is under the days now (D226). The
+                  pilot's ceiling is not a standing notice any more (D138): it is what the amount says back to somebody
+                  who types past it, under the amount itself, where a refusal belongs. */}
+              {shape === "days" ? <span className={`block ${HELP} text-center`}>{W.missedBack}</span> : null}
             </>
           }
         />

@@ -6238,3 +6238,45 @@ said: at the foot first, for the founder to see and decide where it goes.
 founder. `test/universities.test.ts` holds the two live lines, the twelve pages, the pick, the words and the absence
 of motion; `test/browser/universities.spec.ts` the sentence under the card with four names in the title face and no
 animation; `docs/SCREEN-CLAIMS.md` the sentence with what makes it true.
+
+## D226, 24 Sep 2026: the card in three groups, the days in the middle, larger, and two movements on a change
+
+The founder, 24 Sep 2026: the card is the core product and it reads as confused; everything stays on it, big and a
+little exaggerated within reason, but the sizes and the places are what fail; and the characters of a day should
+take more room on it and move, what does the literature say. He chose direction A of the four proposed.
+
+**What the literature says.** Duolingo (Hartman, Building character, 2020): the characters are "designed into the
+majority of our exercises", each with "a unique animation that would play anytime a learner answered an exercise
+correctly": a movement is the answer to an action, never idle. NN/g (Laubheimer, The Role of Animation and Motion in
+UX, 2020): motion is for feedback, a change of state and a signifier; peripheral vision detects every motion, so
+nothing animates beside what somebody is filling in. On anthropomorphic figures the research finds social presence
+and trust up, and Clippy stands for what interrupts. No reference gives a size.
+
+**What was confused, measured on the code.** One gap of 12 pixels between everything, so nothing grouped; a
+character of 60 pixels outside the type scale of 13, 16, 25 and 39, alone in a row with no meaning said; the biggest
+thing on the card the amount, when the question that decides everything is what they will do.
+
+**What changed.** Three groups told apart by 24 pixels, 12 inside each: who and what; the days and the money; the
+action. The days are the middle of the card, one mark a day at 72 (60 stays everywhere a gift is read), the row
+scrolling with its fade, and under it what one mark is worth, "$1.00 a day", the figure in the title face at the
+choice size, "a day" in the quiet voice: the row's meaning, said. A certificate or a climb is one character at 96
+and the register's own line under it, "When they get it, all of this becomes theirs". The amount and its three
+lengths sit in one row that wraps under it on a phone. The action stands 24 under the money, and under the action
+the other half of the promise, "What's missed comes back to you.", which the per-day figure no longer carries.
+
+**Two movements, on a change of state and never on the first image.** The days arrive in turn when the length
+changes: the first eight, on the page's own turns (`MOTION.reveal`, 80 ms apart, the fourth and after together at
+240), from the page's own 60 % and 8 pixels; not on the first image, not under reduced motion. The first day opens
+its eyes when the card is whole, the name included: a closed eye is a named part now, a pill whose corners are its
+half width, so stretched 2.8 times taller on the effects spring it is a circle of the open eye's size. The state is
+in the markup (`data-awake`, the stylesheet holds it), so a card drawn whole by the server has its eyes open from the
+first image, and the change plays from it, once; it closes again when the card stops being whole. The first day is
+drawn into the page for it; the others stay named from the sprite, regenerated (`pnpm make:characters`). The figure
+under the days follows the amount as a figure does, without motion: a figure changing under a finger is feedback, a
+picture moving beside a field is the distraction the literature names.
+
+**Measured.** At 390 by 844 and 1440 by 900, by day and by night: the card as loaded (eyes closed, the name empty),
+whole after a name (eyes open, round), and three frames after "90 days" (the marks arriving from 60 %), sent to the
+founder. `test/card-days.test.ts` holds the three groups and their order, the 72 on the card and the 60 elsewhere,
+the eye as a part and its state in the markup and the stylesheet, the two movements on the tokens, nothing on a
+clock; `test/gift-card.test.ts` the one character at 96; `test/character-file.test.ts` the sprite regenerated.

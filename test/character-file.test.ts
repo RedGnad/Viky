@@ -56,7 +56,7 @@ test("written into the page and named, the same character is the same drawing", 
 test("every character whose parts move is written into the page", () => {
   const row = readFileSync("app/kit/DayRow.tsx", "utf8");
   assert.match(row, /drawn=\{characterOf\(state\) === "earned" \|\| characterOf\(state\) === "returned" \? "inline" : "referenced"\}/, "the row of a gift's page writes only the days that move (D216)");
-  assert.match(readFileSync("app/kit/DayStrip.tsx", "utf8"), /drawn=\{characterOf\(day\) === "earned" \|\| characterOf\(day\) === "returned" \? "inline" : "referenced"\}/, "the days that jump or leave in an arrival");
+  assert.match(readFileSync("app/kit/DayStrip.tsx", "utf8"), /drawn=\{characterOf\(day\) === "earned" \|\| characterOf\(day\) === "returned" \|\| \(wake !== undefined && index === 0\) \? "inline" : "referenced"\}/, "the days that jump or leave in an arrival, and the first day of a card that opens its eyes (D226)");
   assert.match(readFileSync("app/components/PayGift.tsx", "utf8"), /<Success>\s*<Character state="gift" drawn="inline"/, "the gift answering a payment");
   assert.match(characterSvg("gift"), /data-part="figure"/, "the picture drawn on the server writes the drawing, since it has no page to read a file from");
   assert.match(readFileSync("app/layout.tsx", "utf8"), /preload\(CHARACTERS_FILE, \{ as: "image"/, "the file is asked for in the head");

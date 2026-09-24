@@ -48,7 +48,10 @@ export const OFFER = {
   /** The three lengths the register gives the chosen condition, and there is no fourth on the card (D130). */
   someDays: (days: number) => `${days} ${days === 1 ? "day" : "days"}`,
   /** Under the action, for a gift counted by days: what one day of it is worth, and where the rest goes. */
-  eachDay: (perDay: string) => `${perDay} a day. What's missed comes back to you.`,
+  /** Under the row of days, what one mark is worth (D226): the figure in the title face, then this. */
+  aDay: "a day",
+  /** Under the action, the other half of the promise, which the row's figure no longer carries (D226). */
+  missedBack: "What's missed comes back to you.",
   /** The name the card carries, and what it says while nobody has given one: "For  who?", the question in its place. */
   forName: (recipient: string) => `For ${recipient}`,
   forNobody: "For",
