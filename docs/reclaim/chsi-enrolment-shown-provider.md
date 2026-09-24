@@ -48,3 +48,10 @@ signed; the person is told nothing is lost; the journal carries the event.
 CHSI's copyright statement (/about/copyright.shtml): "未经本网站同意，使用者不得将中国高等教育学生信息网所提供的任何内容与服务用于
 其他用途，包含但不限于商业行为". Its pages on the report say third parties may check it free while it is valid. No clause
 names robots. On the judges' page, the founder's call.
+
+## No public provider to reuse, 24 Sep 2026
+
+The Reclaim directory, queried as docs/reclaim/directory-universities.md says, returns nothing for "chsi", "chsi.com",
+"学信", "学籍", "学历", "xuexin" or "教育部". The 63 providers returned for "China" and "Chinese" were read one by one:
+none has a request or sign-in on chsi.com.cn (they are universities' own portals, and "China Identity", a manual check
+on gov.cn). The same directory has nothing named WAEC, WASSCE, edX or Accredible. Ours is registered from a real report.
