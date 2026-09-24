@@ -5996,3 +5996,18 @@ e-PIN given by the person, family "Pass an exam", results since 1980.
   registered from a live result and goal 28 is signed. No change to the reading service, so no redeploy.
 - **Default applied, to confirm.** The subject is the same for every gift on the line, as the baccalauréat's: the
   result carries a name the funder does not sign.
+
+## D218, 24 Sep 2026: edX and Accredible open
+
+The founder, 24 Sep 2026: the Safe session of goals 24 to 28, then edX and Accredible opened in the same move.
+
+- **The session.** One Safe transaction at nonce 8 registers goals 24 to 28 on `MilestoneGift`, carried by the relayer
+  (hash to sign `0xf0ac66bf5d34cd1f8b0ff859c63b3c937434d3998e87223f008f1fe99638bbc6`, equal to the Safe's own
+  `getTransactionHash` read on Monad). Signed by the encrypted file (`0x19d4…b794`) and the second phrase on paper
+  (`0xED4c…67B3`), carried by the relayer: tx `0x291b3274fc7a2aa946a85d70fae3666c2d7f13b2561d4620f41a5cbb0f09e25b`,
+  block 107,477,350, success, 486,112 gas, Safe nonce 8 to 9. Read back: goals 24 to 28 each carry the provider id
+  and shape 1 the code expects.
+- **What opens.** edX (goal 25) and Accredible (goal 26): both sources already run on the reading service, each read
+  once for real (D212, D213). They move from the lines being built to the register, `live` and open.
+- **What does not.** PRONOTE (goal 24) stays parked (D207); CHSI (27) and WAEC (28) wait for our provider registered
+  from a real report and a real result. Their goals on the chain open nothing by themselves.

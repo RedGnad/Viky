@@ -1352,3 +1352,18 @@ only go to the gift's `refundTo`.
 Transaction `0xf6303ef4ff27d7c06bc15bbeb0e139f4f7ec4bd874d448382ce3411236aaf9c1`, block 107,260,037, 182,750 gas,
 status success, recorded in `viky_relayed`. Gifts 2 and 3, on `GiftEscrow`, owe nothing to their funder on the same
 reading; the 1.571432 AUSD that contract holds is not owed to a funder.
+
+## The Safe session of goals 24 to 28 (D218)
+
+**Sent on 24 Sep 2026**, signatures given by the founder (the encrypted file `0x19d4…b794` and the second phrase on
+paper `0xED4c…67B3`), carried by the relayer `0x150d…CFE4`, which only paid the gas:
+
+| | |
+|---|---|
+| transaction | `0x291b3274fc7a2aa946a85d70fae3666c2d7f13b2561d4620f41a5cbb0f09e25b`, block 107,477,350, success, 486,112 gas |
+| the hash signed | `0xf0ac66bf5d34cd1f8b0ff859c63b3c937434d3998e87223f008f1fe99638bbc6`, equal to the Safe's own `getTransactionHash` at nonce 8 |
+| the Safe | nonce 8 to 9 |
+| read back after | goals 24 to 28 on `MilestoneGift`, each with the provider id of `MILESTONE_GOALS` and shape 1 |
+| relayer | 53.27 MON after |
+
+`SAFE_ADDRESS` is not in `.env.local`; the command takes it from the Safe's table above.

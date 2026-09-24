@@ -552,8 +552,9 @@ export const EDX_CERTIFICATE: Condition = {
   kind: "milestone",
   nature: "read",
   goalType: null,
-  live: false,
-  beforeItOpens: "Goal 25 signed by the owner, and the reading service redeployed with the edX source.",
+  // Open since goal 25 was signed and the reading service ran the edX source (D218).
+  live: true,
+  state: "open",
   source: "edX",
   family: "course",
   name: "An edX certificate",
@@ -612,8 +613,9 @@ export const ACCREDIBLE_CREDENTIAL: Condition = {
   kind: "milestone",
   nature: "read",
   goalType: null,
-  live: false,
-  beforeItOpens: "Goal 26 signed by the owner, and the reading service redeployed with the Accredible source.",
+  // Open since goal 26 was signed and the reading service ran the Accredible source (D218).
+  live: true,
+  state: "open",
   source: "Accredible",
   family: "certification",
   name: "A credential on Accredible",
@@ -855,7 +857,7 @@ export const STRAVA_DAILY: Condition = {
   },
 };
 
-export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, CREDLY_BADGE, TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, FITBIT_DAILY, STRAVA_DAILY];
+export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, CREDLY_BADGE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, FITBIT_DAILY, STRAVA_DAILY];
 
 /**
  * What is built with a piece really missing (D184): a provider not registered, a portal not proved. Nobody can make a
@@ -1120,8 +1122,6 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
 
 
 export const BUILDING: readonly Condition[] = [
-  EDX_CERTIFICATE,
-  ACCREDIBLE_CREDENTIAL,
   CAMBRIDGE_ENGLISH_SHOWN,
   IELTS_SHOWN,
   BAC_MOROCCO_SHOWN,

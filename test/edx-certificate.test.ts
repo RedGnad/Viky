@@ -4,7 +4,7 @@ import test from "node:test";
 import { attestedSource, EDX_CERTIFICATE } from "../src/attested-sources";
 import { privacyOf } from "../src/condition-privacy";
 import { proofOfCondition } from "../src/condition-proof";
-import { BUILDING, conditionById, EDX_CERTIFICATE as EDX_LINE } from "../src/conditions";
+import { BUILDING, CONDITIONS, conditionById, EDX_CERTIFICATE as EDX_LINE } from "../src/conditions";
 import { edxCertificateIdOf, edxCourseKey, edxCourseOf, edxIssuedDaySeconds, edxProviderId, edxSubject, EDX_GOAL_TYPE, isVerifiedTrack } from "../src/edx-certificate";
 import { edxCertificateOf, EdxReadError, readEdxCertificate } from "../src/edx-reading";
 import { certificateById, EDX_MILESTONE } from "../src/milestone-conditions";
@@ -73,11 +73,12 @@ test("links, codes and days as a person types them", () => {
   assert.equal(edxIssuedDaySeconds("February 30, 2020"), undefined);
 });
 
-test("the line: read for them, Finish a course, goal 25, being built, the fact rule, in the shared list", () => {
+test("the line: read for them, Finish a course, goal 25, open, the fact rule, in the shared list", () => {
   assert.equal(EDX_LINE.family, "course");
   assert.equal(EDX_LINE.nature, "read");
-  assert.equal(EDX_LINE.live, false);
-  assert.ok(BUILDING.includes(EDX_LINE));
+  assert.equal(EDX_LINE.live, true);
+  assert.equal(EDX_LINE.state, "open");
+  assert.ok(CONDITIONS.includes(EDX_LINE) && !BUILDING.includes(EDX_LINE));
   assert.equal(conditionById("edx-certificate"), EDX_LINE);
   assert.equal(certificateById("edx-certificate"), EDX_MILESTONE);
   assert.ok(proofOfCondition("edx-certificate"));
