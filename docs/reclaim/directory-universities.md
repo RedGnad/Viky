@@ -1,5 +1,11 @@
 # Seven university providers of the Reclaim directory, read (D199)
 
+**Querying the directory** (read 24 Sep 2026): `GET https://devapi.reclaimprotocol.org/api/providers/explore/paginated`
+with `searchQuery=<words>`, `pageSize=<n>` and `pageKey=0` (a page number from 0), all three required; `search`,
+`query` and `name` are ignored and return the whole directory (24,869 active providers that day). The search matches
+the provider's name only, not its sign-in address, so a source is looked for by name and then by reading the
+configurations (`https://api.reclaimprotocol.org/api/providers/<id>/configs`) of the providers the name returns.
+
 The founder's list of 23 Sep 2026: seven public university providers used by other applications. Each was read on
 23 Sep 2026 by the directory's own API (`https://devapi.reclaimprotocol.org/api/providers/explore/paginated`, by name)
 and by the configuration the SDK fetches (`https://api.reclaimprotocol.org/api/providers/<id>/configs`): its fields
