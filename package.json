@@ -40,6 +40,7 @@
     "verify:day": "tsx scripts/verify-day.ts",
     "zkfetch:worker": "tsx scripts/zkfetch-worker.ts",
     "check:words": "tsx scripts/check-consumer-words.ts",
+    "check:universities": "tsx scripts/check-universities.ts",
     "test:browser": "playwright test",
     "review:capture-connected": "tsx scripts/capture-connected.ts",
     "measure:words": "tsx scripts/measure-words.ts",

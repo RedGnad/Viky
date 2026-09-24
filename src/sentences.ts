@@ -173,6 +173,17 @@ export const HOME = {
    * card's to say.
    */
   promiseUnder: "Back their goal. They earn it day by day.",
+  /**
+   * The line at the foot of the landing (D225): a certificate from a course by one of the schools named can be what a
+   * gift waits for, true because the two certificate lines are live and read the certificate's own page; the
+   * platforms are named by the register, never here. Text only, and the affiliation said plainly: the universities'
+   * trademark rules.
+   */
+  certificate: {
+    before: "A verified certificate from a course by",
+    after: "can be what their gift waits for.",
+    read: (platforms: string) => `Read from the certificate's own page on ${platforms}. Viky is not affiliated with these universities.`,
+  },
   offer: "Offer a gift",
   finish: "Finish the gift you set up",
   howItWorks: "How it works",

@@ -4,6 +4,7 @@ import { giftsOf } from "@/src/my-gifts";
 import { signedInAccount } from "@/src/who-is-reading";
 import { cookies } from "next/headers";
 import { HERO_COOKIE, heroPlayedFromCookie } from "@/src/hero-cookie";
+import { pickUniversities } from "@/src/universities";
 
 /**
  * The one destination a person opens Viky on, whatever they are here for (structure of 17 Sep 2026, section 4).
@@ -16,7 +17,8 @@ import { HERO_COOKIE, heroPlayedFromCookie } from "@/src/hero-cookie";
 export default async function Page() {
   const account = await signedInAccount();
   // Whether the hero moment has played in this session (D212): the first image is the right one from the server.
-  if (!account) return <Home heroPlayed={heroPlayedFromCookie((await cookies()).get(HERO_COOKIE)?.value)} />;
+  // And four schools for the foot of the page (D225), picked here so the first image and hydration name the same.
+  if (!account) return <Home heroPlayed={heroPlayedFromCookie((await cookies()).get(HERO_COOKIE)?.value)} universities={pickUniversities()} />;
   const [held, gifts] = await Promise.all([heldBy(account), giftsOf(account).catch(() => null)]);
   return <Home initialHoldings={held} initialGifts={gifts} />;
 }

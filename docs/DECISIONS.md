@@ -6202,3 +6202,39 @@ step as the founder asked for the character.
 way back above it, the Exams & school list, sent to the founder. `test/family-tiles.test.ts` holds the four pictures,
 the runner's pose, the hub's rule and the words; `test/condition-families.test.ts` that the titles are the
 register's; the browser specs walk the tiles to reach a line (`screens`, `detail-step`, `nature`).
+
+## D225, 24 Sep 2026: four schools named at the foot of the landing, by the server, and nothing moves
+
+The brief of 24 Sep 2026: one factual hero sentence with university names, at the bottom of the landing first, so the
+founder sees it and decides where it goes; the founder's go the same day, with two rules: only services that are
+available are named, and MIT joins when its own line (D222, MITx Online) lands. Direction A of the four proposed.
+
+**The sentence.** "A verified certificate from a course by Harvard, Sorbonne, EPFL or Imperial can be what their
+gift waits for.", the four names in the title face and the ink (`NAMED`, never the accent), and under it, in the
+quiet voice, "Read from the certificate's own page on edX or Coursera. Viky is not affiliated with these
+universities." Every word is true of the code: the edX and Coursera lines are live and read the certificate's own
+public page whatever the course, and the platforms are named as the register names them (`certificatePlatforms`,
+each line's `source`), because no screen names a source itself (`test/conditions.test.ts`). Should either line stop
+being live, `pickUniversities` names nobody and the page prints nothing there.
+
+**The names.** Twelve, each with its page on the platform Viky reads, checked on 24 Sep 2026 by
+`pnpm check:universities` (12 of 12): Harvard, Cambridge, Oxford, Stanford, Princeton, Imperial, Columbia, Berkeley,
+Sorbonne, EPFL and ETH Zürich on edX's school pages, Yale on Coursera's partner page (edX has no Yale page). Not
+MIT: `edx.org/school/mitx` answers 200 and sends the visitor to the generic partners page, which the script counts as
+gone; its courses are on MITx Online, whose line is being wired and is not live. The script fails when a page goes,
+so the name comes off before the sentence lies. Text only, no crest, no colour or typeface of theirs, no "partner"
+or "trusted": the universities' published trademark rules.
+
+**The pick, and why nothing fades.** The brief asked for names cycling in a fade. Our rule since D189 and D198 is
+that nothing on a page runs on a clock and nothing loops, and a fade every few seconds is both; the founder chose
+the direction without it. So four of the twelve are drawn at random by the server, once per request (`app/page.tsx`),
+in the order drawn, and the browser takes the page over with the same four (D160): every visit reads a different
+four, and on the page nothing moves. Under reduced motion nothing was moving anyway.
+
+**Where.** Under the card, before the three links and the way to install, centred, at the lead's width, as the brief
+said: at the foot first, for the founder to see and decide where it goes.
+
+**Measured.** Captures at 390 by 844 and 1440 by 900, by day and by night, each with its own four names, sent to the
+founder. `test/universities.test.ts` holds the two live lines, the twelve pages, the pick, the words and the absence
+of motion; `test/browser/universities.spec.ts` the sentence under the card with four names in the title face and no
+animation; `docs/SCREEN-CLAIMS.md` the sentence with what makes it true.
