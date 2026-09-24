@@ -62,11 +62,10 @@ export function WillSheet({
    */
   const [askedFor, setAskedFor] = useState<"list" | "questions" | null>(openAt);
   /**
-   * Which family's list the catalogue shows (D224): nothing decided means the family of the condition the card
-   * carries, so a funder who comes back to change lands among its neighbours with the way to the four above; "all"
-   * is the four tiles, asked for. Every opening starts undecided, as the face does.
+   * Which family's list the catalogue shows (D224), or the four tiles when none is chosen (D233: every opening, and
+   * every way back, lands on the four; the founder's decision, where D224 had opened on the chosen condition's family).
    */
-  const [family, setFamily] = useState<ConditionFamily | "all" | null>(null);
+  const [family, setFamily] = useState<ConditionFamily | null>(null);
   /**
    * The card says which face to open on (D136): the catalogue from the condition line, this condition's own questions
    * from the detail line under it. Before that, the questions could only be reached by pressing the chosen condition
@@ -139,8 +138,7 @@ export function WillSheet({
   const nameLink = condition?.link.kind === "username" ? condition.link : undefined;
   const cadence = milestone && draft.cadence ? cadenceOf(milestone, draft.cadence) : undefined;
   const ready = conditionAnswered(draft);
-  const shownFamily = family === "all" ? null : (family ?? condition?.family ?? null);
-  const shownSection = sections?.find((section) => section.family === shownFamily);
+  const shownSection = sections?.find((section) => section.family === family);
 
   const choose = (id: string) => {
     // The one already chosen is not a new choice: pressing it again is a way into its own questions, and nothing
@@ -269,7 +267,7 @@ export function WillSheet({
           shownSection ? (
             <>
               {/* Where this family sits: the way back to the four, above its list (D224). */}
-              <button type="button" className={INLINE_BUTTON} onClick={() => setFamily("all")}>
+              <button type="button" className={INLINE_BUTTON} onClick={() => setFamily(null)}>
                 {W.families}
               </button>
               <ChoiceList
@@ -288,24 +286,16 @@ export function WillSheet({
               />
             </>
           ) : (
-            /* The four families, two by two: a picture, a name, a count; the one holding the card's condition is marked. */
+            /* The four families, two by two: a picture, a name, a count. Each is a button and looks like one (D233):
+               the outline and the relief every key carries; nothing is marked, because pressing one is the choice. */
             <div className="grid grid-cols-2 gap-[var(--space-md)]">
-              {sections.map((section) => {
-                const holds = section.family === condition?.family;
-                return (
-                  <button
-                    key={section.family}
-                    type="button"
-                    onClick={() => setFamily(section.family)}
-                    aria-current={holds ? "true" : undefined}
-                    className={`${TILE} ${holds ? "border-[var(--control-border)] bg-[var(--chosen)]" : "border-transparent bg-[var(--paper-field)]"}`}
-                  >
-                    <FamilyArt family={section.family} />
-                    <span className={CHOICE}>{section.title}</span>
-                    <span className={HELP}>{W.choices(section.conditions.length)}</span>
-                  </button>
-                );
-              })}
+              {sections.map((section) => (
+                <button key={section.family} type="button" onClick={() => setFamily(section.family)} className={TILE}>
+                  <FamilyArt family={section.family} />
+                  <span className={CHOICE}>{section.title}</span>
+                  <span className={HELP}>{W.choices(section.conditions.length)}</span>
+                </button>
+              ))}
             </div>
           )
         ) : (
@@ -326,7 +316,15 @@ export function WillSheet({
         )
       ) : (
         <>
-          <button type="button" className={INLINE_BUTTON} onClick={() => setAskedFor("list")}>
+          {/* The way back from a condition's questions: to the four families (D233), never to a list. */}
+          <button
+            type="button"
+            className={INLINE_BUTTON}
+            onClick={() => {
+              setFamily(null);
+              setAskedFor("list");
+            }}
+          >
             {W.change(W.slots.will.label)}
           </button>
 
@@ -382,17 +380,21 @@ export function WillSheet({
             same kind. For a test that is the score. For a course certificate there is nothing to score, so it is the
             course, named by pasting its ordinary link: the certificate page carries the same word (C3).
           */}
-          {certificate && certificate.asksName !== false ? (
+          {certificate ? (
             <>
-              <Field
-                id="person-name"
-                label={certificate.words.nameLabel}
-                help={certificate.words.nameHelp}
-                value={draft.subject}
-                onChange={(value) => onChange({ ...draft, subject: value })}
-                refusal={draft.subject.trim().length === 0 || certificate.validName(draft.subject) ? undefined : certificate.words.refusals.nameShape}
-                autoComplete="off"
-              />
+              {/* The name, unless the source prints none for the funder to match (a proof shown by the recipient
+                  themselves, D233: this gate had shut the whole face on those, and the founder found it empty). */}
+              {certificate.asksName !== false ? (
+                <Field
+                  id="person-name"
+                  label={certificate.words.nameLabel}
+                  help={certificate.words.nameHelp}
+                  value={draft.subject}
+                  onChange={(value) => onChange({ ...draft, subject: value })}
+                  refusal={draft.subject.trim().length === 0 || certificate.validName(draft.subject) ? undefined : certificate.words.refusals.nameShape}
+                  autoComplete="off"
+                />
+              ) : null}
               {certificate.course?.search ? (
                 /* A source whose things are found rather than pasted: the funder types a word or two, reads each
                    answer with who awards it, and chooses. What the terms carry is the answer's own pair of ids. */
@@ -448,7 +450,7 @@ export function WillSheet({
                   refusal={(draft.courseTitle ?? "").trim().length === 0 || draft.course ? undefined : certificate.course.help}
                   autoComplete="off"
                 />
-              ) : (
+              ) : certificate.target.min !== certificate.target.max ? (
                 <Field
                   id="certificate-target"
                   label={certificate.target.label}
@@ -458,10 +460,13 @@ export function WillSheet({
                   refusal={draft.target.trim().length === 0 || ready ? undefined : certificate.words.refusals.targetShape}
                   inputMode="numeric"
                 />
-              )}
+              ) : null}
               {/* Said back in full under the box, because a phone cuts the pasted link before the course's own word.
                   A list says its own words on each line, so it needs nothing repeated under it. */}
               {certificate.course && !certificate.course.search && draft.course ? <p className={HELP}>{certificate.course.named(draft.course)}</p> : null}
+              {/* A proof the recipient shows themselves: what Viky keeps of it, in the register's words, so the face
+                  says what there is to say when there is little to fill in (D233). */}
+              {condition.nature === "shown" ? <p className={HELP}>{certificate.words.whatIsRead}</p> : null}
             </>
           ) : null}
 

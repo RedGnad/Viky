@@ -30,19 +30,21 @@ test("each family has its picture: the diamond in its situation, the props in th
   assert.ok(!reader.includes('data-part="arm"'), "the others keep the head alone");
 });
 
-test("the chooser opens on the four tiles from six conditions, or on the family of the condition the card carries", () => {
+test("the chooser opens on the four tiles from six conditions, every time, and the way back leads to them", () => {
   const sheet = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
   assert.ok(sheet.indexOf("<FamilyArt family={section.family} />") > 0, "a picture on every tile");
   assert.match(sheet, /grid grid-cols-2 gap-\[var\(--space-md\)\]/, "two by two");
-  assert.match(sheet, /const shownFamily = family === "all" \? null : \(family \?\? condition\?\.family \?\? null\);/, "the chosen condition's family, or the four");
-  assert.match(sheet, /setFamily\(null\);\n\s*\}\n\s*\}/, "every opening starts undecided");
-  assert.match(sheet, /<button type="button" className=\{INLINE_BUTTON\} onClick=\{\(\) => setFamily\("all"\)\}>\n\s*\{W\.families\}/, "the way back to the four above a family's list");
+  assert.match(sheet, /const shownSection = sections\?\.find\(\(section\) => section\.family === family\);/, "a family's list only once a tile was pressed");
+  assert.match(sheet, /setFamily\(null\);\n\s*\}\n\s*\}/, "every opening starts on the four (D233)");
+  assert.match(sheet, /<button type="button" className=\{INLINE_BUTTON\} onClick=\{\(\) => setFamily\(null\)\}>\n\s*\{W\.families\}/, "the way back to the four above a family's list");
+  assert.match(sheet, /setFamily\(null\);\n\s*setAskedFor\("list"\);/, "and from a condition's questions, the way back is to the four too (D233)");
   assert.match(sheet, /\{W\.choices\(section\.conditions\.length\)\}/, "what each tile holds, counted");
-  assert.match(sheet, /aria-current=\{holds \? "true" : undefined\}/, "the tile holding the card's condition is marked");
+  assert.doesNotMatch(sheet, /aria-current|holds \?/, "nothing marks a tile: pressing it is the choice");
+  assert.match(sheet, /onClick=\{\(\) => setFamily\(section\.family\)\} className=\{TILE\}>/, "a tile is the button it looks like");
   assert.ok(sheet.indexOf("sections ? (") < sheet.indexOf("<FamilyArt"), "only from six conditions: under that the flat list stays");
   assert.equal(OFFER.families, "All families");
   assert.equal(OFFER.choices(1), "1 choice");
   assert.equal(OFFER.choices(6), "6 choices");
   const ui = readFileSync("app/components/ui.ts", "utf8");
-  assert.match(ui, /export const TILE = `\$\{FOCUS\} flex min-h-\[var\(--tap-target\)\]/, "a tile is a tap target with the focus ring");
+  assert.match(ui, /export const TILE = `\$\{FOCUS\} \$\{OUTLINE\} \$\{RELIEF\} flex min-h-\[var\(--tap-target\)\][^`]*bg-\[var\(--tonal\)\]/, "a tile is a tap target with the focus ring, the outline, the relief and the tonal fill of a key (D233)");
 });

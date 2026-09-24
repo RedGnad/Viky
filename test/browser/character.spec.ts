@@ -32,6 +32,9 @@ test.describe("the character at the head of the page", () => {
 
   test("nothing hovered or pressed on the card moves its face (D216)", async ({ page }) => {
     await page.goto("/");
+    // The moment starts when the attribute goes, in the same task as its animations; only then can "nothing moving"
+    // mean it is over rather than not yet begun (a slow machine hydrates after "load"), as in hero.spec.ts.
+    await expect.poll(() => page.locator(".hero-stage").getAttribute("data-hero"), { timeout: 5000 }).toBeNull();
     await expect.poll(() => page.evaluate(() => document.getAnimations().filter((a) => a.playState === "running" && (a.effect as KeyframeEffect | null)?.target?.closest(".hero-stage")).length), { timeout: 4000 }).toBe(0);
     expect(await face(page)).toEqual(AT_REST);
     await page.getByRole("button", { name: /What they will do/i }).hover();

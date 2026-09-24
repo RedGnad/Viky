@@ -124,6 +124,7 @@ test.describe("the screens a person meets", () => {
     await page.goto("/");
     const card = page.locator("main section").first();
     await openTheCatalogue(page);
+    await openTheFamily(page, /^Learn/);
     const sheet = page.locator("dialog.sheet[open]");
     await sheet.getByRole("radio", { name: /certification on Credly/i }).click();
     await sheet.getByRole("button", { name: "Close" }).click();
@@ -156,6 +157,8 @@ test.describe("the screens a person meets", () => {
   test("a sheet says when its questions carry on past its edge, and its action never leaves the frame", async ({ page }) => {
     await page.goto("/");
     await openTheCatalogue(page);
+    // The longest list, so the sheet has something past its edge to say (D233: the tiles come first, and fit).
+    await openTheFamily(page, /Exams & school/);
     const sheet = page.locator("dialog.sheet[open]");
     // A sheet rises 24 pixels when it opens: measured while it is still on its way, its action is up to 24 pixels
     // below where it will stand, which is a measurement of the movement rather than of the screen.
@@ -192,6 +195,8 @@ test.describe("the screens a person meets", () => {
   test("the catalogue is read by its titles, and says what it proves about the one being chosen", async ({ page }) => {
     await page.goto("/");
     await openTheCatalogue(page);
+    // The four families first (D233), then the family the card's condition is in.
+    await openTheFamily(page, /^Learn/);
     const sheet = page.locator("dialog.sheet[open]");
     const body = sheet.locator(".sheet-body");
     // A sheet opens at the top of what it says, never in the middle of it.
@@ -223,15 +228,16 @@ test.describe("the screens a person meets", () => {
     await expect(sheet.getByRole("radio")).toHaveCount(0);
     const tiles = sheet.locator("[data-family-art]");
     await expect(tiles).toHaveCount(4);
-    await expect(sheet.getByRole("button", { name: /^Learn/ })).toHaveAttribute("aria-current", "true");
     await expect(sheet.getByRole("button", { name: /Exams & school/ })).toContainText(/\d+ choices/);
 
-    // Choosing another, in another family, shows that one's own questions; coming back shows that family's list with
-    // that one alone explained.
+    // Choosing another, in another family, shows that one's own questions; the way back leads to the four (D233), and
+    // that family's list shows the new one checked and alone explained.
     await openTheFamily(page, /Exams & school/);
     const other = sheet.getByRole("radio", { name: /A Duolingo English Test score/i });
     await other.click();
     await sheet.getByRole("button", { name: /change/i }).click();
+    await expect(sheet.locator("[data-family-art]")).toHaveCount(4);
+    await openTheFamily(page, /Exams & school/);
     await expect(sheet.getByRole("radio", { name: /A Duolingo English Test score/i })).toBeChecked();
     expect(await explained()).toBe(1);
     expect(await body.evaluate((element) => element.scrollTop)).toBe(0);
