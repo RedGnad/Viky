@@ -223,8 +223,8 @@ test("one accent per surface: the card's Pay, and a sheet's own Done", () => {
   assert.doesNotMatch(card, /var\(--accent\)/, "nothing else on the card paints itself with the sun");
 });
 
-test("a card is the object on the ground, as the rendered mockups draw it by day and D222 draws it by night", () => {
-  // Night: a paper of its own since D222, one step above the ink ground, no shadow and no edge at all. The cream it
+test("a card is the object on the ground, as the rendered mockups draw it by day and D223 draws it by night", () => {
+  // Night: a paper of its own since D223, one step above the ink ground, no shadow and no edge at all. The cream it
   // replaced stood at 17:1 on that ground, the brightest thing on a screen somebody had set to dark.
   assert.match(css, /--paper: #FFF6E2;/);
   assert.equal((css.match(/--paper: #2E2549;/g) ?? []).length, 2, "the night paper, in both night blocks");

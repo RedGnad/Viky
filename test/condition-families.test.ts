@@ -99,7 +99,8 @@ test("a family with nothing offered does not appear at all", () => {
 test("the screen takes the families from the register and writes none of its own", () => {
   const screen = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
   assert.match(screen, /chooserSections\(offered\)/);
-  assert.match(screen, /legend=\{section\.title\}/, "the heading is the register's title");
+  assert.match(screen, /legend=\{shownSection\.title\}/, "the heading of a family's list is the register's title");
+  assert.match(screen, /<span className=\{CHOICE\}>\{section\.title\}<\/span>/, "and so is the name on its tile (D224)");
   // A title written as a literal is what this catches; "Move" inside a word like priceMoved is not one.
   for (const { title } of FAMILIES) {
     assert.doesNotMatch(screen, new RegExp(`["'>]\\s*${title}\\s*["'<]`), `${title} is written into the screen`);

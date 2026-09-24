@@ -24,23 +24,37 @@ const LUIS = {
 const card = (page: Page) => page.locator("main section").first();
 const sheet = (page: Page) => page.locator("dialog.sheet[open]");
 
-async function choose(page: Page, name: RegExp) {
+async function choose(page: Page, name: RegExp, family: RegExp) {
   // The first control on the card is the line this defect is about: what they will do, and what it has been told.
   // It opens that condition's questions once one is chosen, so the catalogue is asked for by its own control.
   await card(page).getByRole("button").first().click();
   const change = sheet(page).getByRole("button", { name: /^Change/i });
   if (await change.isVisible().catch(() => false)) await change.click();
-  await sheet(page).getByRole("radio", { name }).click();
+  // The catalogue is one family's list at a time since D224: the line's family is reached from the four tiles.
+  const radio = sheet(page).getByRole("radio", { name });
+  if (!(await radio.isVisible().catch(() => false))) {
+    const all = sheet(page).getByRole("button", { name: /All families/i });
+    if (await all.isVisible().catch(() => false)) await all.click();
+    await sheet(page).getByRole("button", { name: family }).click();
+  }
+  await radio.click();
   // Choosing lands on that condition's own questions, whose way back to the catalogue is the Change button.
   await expect(sheet(page).getByRole("button", { name: /^Change/i })).toBeVisible();
 }
 
 test.describe("the line that opens a condition's own questions", () => {
   test("every condition has one, and it opens that condition's step, never the catalogue", async ({ page }) => {
-    const names = [/Duolingo lesson each day/i, /Duolingo English Test score/i, /puzzle record/i, /chess rating/i, /Coursera certificate/i, /certification on Credly/i];
-    for (const name of names) {
+    const names: [RegExp, RegExp][] = [
+      [/Duolingo lesson each day/i, /^Learn/],
+      [/Duolingo English Test score/i, /Exams & school/],
+      [/puzzle record/i, /^Play/],
+      [/chess rating/i, /^Play/],
+      [/Coursera certificate/i, /^Learn/],
+      [/certification on Credly/i, /^Learn/],
+    ];
+    for (const [name, family] of names) {
       await page.goto("/");
-      await choose(page, name);
+      await choose(page, name, family);
       // The sheet is on that condition's questions already; close it and come back through the card's one line.
       await sheet(page).getByRole("button", { name: "Close" }).click();
       await expect(page.locator("dialog.sheet[open]")).toHaveCount(0);

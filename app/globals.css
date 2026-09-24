@@ -30,7 +30,7 @@
 
   /*
    * The card, and what reads on it (the rendered mockups of 19 Sep 2026). A card is the object on the ground, never
-   * the same value as it: cream paper on the lavender by day, and since D222 a paper of its own after dark, one step
+   * the same value as it: cream paper on the lavender by day, and since D223 a paper of its own after dark, one step
    * above the ink ground, because the cream stood at 17:1 on it, the brightest thing on a screen somebody had set to
    * dark. Measured on the day ground: the cream stands at 1.31:1, where the white it replaced stood at 1.09:1 and
    * needed a hairline of ink to be seen at all.
@@ -302,7 +302,7 @@
     --card-edge: transparent;
     --card-shadow: none;
     --card-placed-edge: #F3F0FA;
-    /* The paper after dark (D222): one step above the ground, 1.30:1 on it, which is where the day's cream stands on
+    /* The paper after dark (D223): one step above the ground, 1.30:1 on it, which is where the day's cream stands on
        the lavender (1.31:1). What reads on it is the night's own ink and lavender; a field and a chosen row are a step
        lighter, as every surface is at night; the shut action wears the chosen row's fill and the lavender's words. */
     --paper: #2E2549;
@@ -355,7 +355,7 @@
   --card-edge: transparent;
   --card-shadow: none;
   --card-placed-edge: #F3F0FA;
-  /* The paper after dark (D222): one step above the ground, 1.30:1 on it, which is where the day's cream stands on
+  /* The paper after dark (D223): one step above the ground, 1.30:1 on it, which is where the day's cream stands on
      the lavender (1.31:1). What reads on it is the night's own ink and lavender; a field and a chosen row are a step
      lighter, as every surface is at night; the shut action wears the chosen row's fill and the lavender's words. */
   --paper: #2E2549;
@@ -547,7 +547,7 @@ video {
   --text: var(--on-surface);
   --muted: var(--on-surface-muted);
   --divider: var(--surface-rule);
-  /* A key on the paper stands on the paper's own relief: the ink by day, the night's lavender after dark (D222). The
+  /* A key on the paper stands on the paper's own relief: the ink by day, the night's lavender after dark (D223). The
      composed shadow is said again here on purpose: a custom property is resolved where it is declared, so
      `--control-relief` composed on the root had already taken the root's colour, and only the hover, which names the
      colour itself, followed the paper (ui review, 20 Sep 2026). */
