@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { chooserSections, CONDITIONS, FAMILIES, SECTIONS_FROM, type Condition, type ConditionFamily } from "../src/conditions";
+import { chooserSections, CONDITIONS, FAMILIES, familyOf, RETIRED_FAMILIES, SECTIONS_FROM, type Condition, type ConditionFamily } from "../src/conditions";
 
 /**
  * The chooser's families (design audit of 16 Sep 2026, section 3).
@@ -16,11 +16,10 @@ function made(id: string, name: string, family: ConditionFamily): Condition {
 }
 
 test("the families are the chooser's, in its order, in everyday verbs and naming no source", () => {
-  // The order and the fourth are chooser.html's, 20 Sep 2026. A certification is awarded by somebody who is not the
-  // person and is not a course taken, so it is a family and not a shelf beside Coursera.
+  // Four, in the founder's order of 24 Sep 2026 (D220).
   assert.deepEqual(
     FAMILIES.map((family) => family.title),
-    ["Learn a language", "Pass an exam", "Play", "Finish a course", "Get certified", "Study", "School", "Move"],
+    ["Learn", "Exams & school", "Play", "Move"],
   );
   const sources = CONDITIONS.map((condition) => condition.source);
   for (const { title } of FAMILIES) {
@@ -33,12 +32,32 @@ test("every condition in the register is filed under a family that exists", () =
   for (const condition of CONDITIONS) assert.ok(known.has(condition.family), `${condition.id} is filed under ${condition.family}`);
   // The audit's own filing, so a condition cannot drift into another family unnoticed.
   const filed = Object.fromEntries(CONDITIONS.map((condition) => [condition.id, condition.family]));
-  assert.equal(filed["duolingo-daily"], "language");
-  assert.equal(filed["duolingo-english-test"], "language");
-  assert.equal(filed["coursera-certificate"], "course");
-  assert.equal(filed["credly-badge"], "certification");
-  assert.equal(filed["chess-rating"], "play");
-  assert.equal(filed["chess-tactics"], "play");
+  // The founder's filing of 24 Sep 2026 (D220), line by line.
+  assert.deepEqual(filed, {
+    "duolingo-daily": "learn",
+    "coursera-certificate": "learn",
+    "edx-certificate": "learn",
+    "credly-badge": "learn",
+    "accredible-credential": "learn",
+    "duolingo-english-test": "exam",
+    "toefl-mybest-shown": "exam",
+    "university-enrollment-shown": "exam",
+    "chess-rating": "play",
+    "chess-tactics": "play",
+    "fitbit-daily": "move",
+    "strava-daily": "move",
+  });
+  // Inside a family, the register's order: the founder's list is that order.
+  assert.deepEqual(CONDITIONS.filter((condition) => condition.family === "learn").map((condition) => condition.id), ["duolingo-daily", "coursera-certificate", "edx-certificate", "credly-badge", "accredible-credential"]);
+  assert.deepEqual(CONDITIONS.filter((condition) => condition.family === "exam").map((condition) => condition.id), ["duolingo-english-test", "toefl-mybest-shown", "university-enrollment-shown"]);
+});
+
+test("a family id retired on 24 Sep 2026 still reads, to the family its lines went to", () => {
+  assert.deepEqual(RETIRED_FAMILIES, { language: "learn", course: "learn", certification: "learn", study: "exam", school: "exam" });
+  for (const [retired, now] of Object.entries(RETIRED_FAMILIES)) assert.equal(familyOf(retired), now);
+  for (const { id } of FAMILIES) assert.equal(familyOf(id), id);
+  assert.equal(familyOf("toString"), undefined, "nothing inherited reads as a family");
+  assert.equal(familyOf("cooking"), undefined);
 });
 
 test("under six conditions it stays one list", () => {
@@ -52,29 +71,29 @@ test("under six conditions it stays one list", () => {
 test("from six on it is one section per family, in the register's order and alphabetical inside", () => {
   const offered = [
     made("b", "Reach a chess rating on Chess.com", "play"),
-    made("a", "A Duolingo lesson each day", "language"),
-    made("c", "Get a Coursera certificate", "course"),
-    made("d", "Reach a score on the Duolingo English Test", "language"),
+    made("a", "A Duolingo lesson each day", "learn"),
+    made("c", "Get a Coursera certificate", "learn"),
+    made("d", "Reach a score on the Duolingo English Test", "exam"),
     made("e", "Reach a chess rating on Lichess", "play"),
-    made("f", "Get a certification on Credly", "certification"),
+    made("f", "Active minutes a day, Fitbit", "move"),
   ];
   const sections = chooserSections(offered);
   assert.ok(sections);
-  assert.deepEqual(sections.map((section) => section.title), ["Learn a language", "Play", "Finish a course", "Get certified"]);
+  assert.deepEqual(sections.map((section) => section.title), ["Learn", "Exams & school", "Play", "Move"]);
   assert.deepEqual(
     sections[0].conditions.map((condition) => condition.name),
-    ["A Duolingo lesson each day", "Reach a score on the Duolingo English Test"],
-    "alphabetical inside a family, so an editor's order is never read as advice",
+    ["A Duolingo lesson each day", "Get a Coursera certificate"],
+    "inside a family, the order they are offered in (D139)",
   );
-  assert.deepEqual(sections[1].conditions.map((condition) => condition.name), ["Reach a chess rating on Chess.com", "Reach a chess rating on Lichess"]);
+  assert.deepEqual(sections[2].conditions.map((condition) => condition.name), ["Reach a chess rating on Chess.com", "Reach a chess rating on Lichess"]);
 });
 
 test("a family with nothing offered does not appear at all", () => {
-  const offered = Array.from({ length: 6 }, (_, index) => made(`c${index}`, `Name ${index}`, index < 3 ? "language" : "play"));
+  const offered = Array.from({ length: 6 }, (_, index) => made(`c${index}`, `Name ${index}`, index < 3 ? "learn" : "play"));
   const sections = chooserSections(offered);
   assert.ok(sections);
-  assert.deepEqual(sections.map((section) => section.family), ["language", "play"]);
-  assert.ok(!sections.some((section) => section.title === "Get certified"), "an empty heading would advertise what the chooser refuses to offer");
+  assert.deepEqual(sections.map((section) => section.family), ["learn", "play"]);
+  assert.ok(!sections.some((section) => section.title === "Move"), "an empty heading would advertise what the chooser refuses to offer");
 });
 
 test("the screen takes the families from the register and writes none of its own", () => {

@@ -82,9 +82,9 @@ test("five lines, five goals, five subjects, each pinned by name and none sharin
   assert.equal(new Set(EXAM_IDS.map(examProviderId)).size, 5);
 });
 
-test("the TOEFL moves beside them: one family, Pass an exam, after the languages", () => {
+test("the TOEFL is beside them: one family, Exams & school, after Learn", () => {
   assert.equal(TOEFL_MYBEST_SHOWN.family, "exam");
-  assert.deepEqual(FAMILIES.map((family) => family.id).slice(0, 2), ["language", "exam"]);
+  assert.deepEqual(FAMILIES.map((family) => family.id).slice(0, 2), ["learn", "exam"]);
   // The frontier line about the exams says which lines are on their way, and names the one it prints for (D169).
   const exams = FRONTIERS.find((frontier) => frontier.id === "supervised-exams");
   assert.match(String(exams?.building), /a Cambridge English result and an IELTS band/);

@@ -18,7 +18,7 @@ test("the status reads enrolled from 在籍, and refuses anything else by name",
 
 test("the line: shown by them, Study, goal 27, being built, the verdict rule", () => {
   assert.equal(CHSI_ENROLMENT_SHOWN.nature, "shown");
-  assert.equal(CHSI_ENROLMENT_SHOWN.family, "study");
+  assert.equal(CHSI_ENROLMENT_SHOWN.family, "exam");
   assert.equal(CHSI_ENROLMENT_SHOWN.live, false);
   assert.ok(BUILDING.includes(CHSI_ENROLMENT_SHOWN));
   assert.ok(CHSI_ENROLMENT_SHOWN.name.length <= 30);

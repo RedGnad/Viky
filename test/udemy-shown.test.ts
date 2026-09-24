@@ -35,7 +35,7 @@ test("one goal, pinned by name, and the course is what the funder signs", () => 
   assert.equal(UDEMY_SHOWN.subjectOf?.(record(null)), null, "a gift naming no course has no subject to sign against");
   assert.equal(UDEMY_SHOWN.condition.attestationProviderId, udemyProviderId());
   const condition = conditionById("udemy-course-shown");
-  assert.equal(condition?.family, "course");
+  assert.equal(condition?.family, "learn");
   assert.equal(condition?.nature, "shown");
   assert.equal(condition?.live, false);
   assert.ok(BUILDING.includes(condition as never));

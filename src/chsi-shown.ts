@@ -4,7 +4,7 @@ import { refuseShown, type ShownReading } from "./shown-proof";
 /**
  * Enrolment in a Chinese university, shown from the Ministry of Education's own register, CHSI (学信网) (D215): the
  * person opens their own 教育部学籍在线验证报告 (the online verification report of their student status) with the
- * 在线验证码 they applied for, in the verification tab, and the page's 学籍状态 is what is read. Family "Study", goal 27.
+ * 在线验证码 they applied for, in the verification tab, and the page's 学籍状态 is what is read. Family "Exams & school", goal 27.
  *
  * Shown and not read for them, on the founder's instruction for a captcha: the report's page,
  * `https://www.chsi.com.cn/xlcx/bg.do?vcode=<code>&srcid=bgcx`, answers without a captcha for an invalid code

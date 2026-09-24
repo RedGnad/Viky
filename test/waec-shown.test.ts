@@ -50,7 +50,7 @@ test("a result of the gift's year reads its credits, and an earlier, withheld or
   assert.throws(() => readWaecResult({ grades: FIVE }, 2027), refusedWith("NO_RESULT"));
 });
 
-test("the line: shown by them, Pass an exam, goal 28, being built, the verdict rule", () => {
+test("the line: shown by them, Exams & school, goal 28, being built, the verdict rule", () => {
   assert.equal(WAEC_RESULT_SHOWN.nature, "shown");
   assert.equal(WAEC_RESULT_SHOWN.family, "exam");
   assert.equal(WAEC_RESULT_SHOWN.live, false);

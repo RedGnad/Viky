@@ -2,7 +2,7 @@ import { keccak256, stringToHex, type Hex } from "viem";
 import type { ResultsVerdict } from "./university-shown";
 
 /**
- * Examination results the person shows from their own account (D176): the family "Pass an exam", beside the TOEFL
+ * Examination results the person shows from their own account (D176): the family "Exams & school" (Pass an exam until D220), beside the TOEFL
  * score (D164). Five lines tonight, each a condition of the second nature (D162): a Cambridge English result, an
  * IELTS band, and the baccalauréat passed in Morocco, in Cameroon and in France.
  *

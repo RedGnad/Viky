@@ -56,8 +56,8 @@ test("links and names as a person types them", () => {
   assert.equal(accredibleCourseOf("no comma here"), undefined);
 });
 
-test("the line: read for them, Get certified, goal 26, open, the fact rule, in the shared list", () => {
-  assert.equal(LINE.family, "certification");
+test("the line: read for them, Learn, goal 26, open, the fact rule, in the shared list", () => {
+  assert.equal(LINE.family, "learn");
   assert.equal(LINE.nature, "read");
   assert.equal(LINE.live, true);
   assert.equal(LINE.state, "open");
