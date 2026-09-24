@@ -6398,3 +6398,31 @@ own height. Home carries its title now, "Home", the word the bar already uses, a
 **Measured.** Frames of the moment's end at 390, by day and by night, sent to the founder; `test/hero-moment.test.ts`
 holds the axis, the order, the start after the second landing and the turn; `test/card-days.test.ts` the third
 answer; `test/gift-card.test.ts` Home's title.
+
+## D231, 24 Sep 2026: a warm paper on the cool night
+
+The founder, 24 Sep 2026, on D229: better, but the night is violet everywhere and has lost the visual balance; he
+thought he preferred the card nearer yellow, but that one was too light; a dark yellow, or a colour near it, if it
+is relevant, otherwise leave it.
+
+**What is documented.** Material brands a dark surface by laying the primary colour over the dark surface colour at
+a low opacity (its own example: `#121212` under 8 % of the primary gives `#1F1B24`), and its Android library
+computes every elevation overlay the same way (`ElevationOverlayProvider`: an alpha of 4.5 ln(dp + 1) + 2 percent
+of the overlay colour). The day has the balance the founder names: a warm cream card on a cool lavender ground, and
+the paper's own inks are warm there (`--on-surface-muted` `#7C6C3F`) where the ground's are cool.
+
+**What the paper is.** The sun laid over the night ground at 12 %: `#312627`, a dark warm plum, 1.27:1 on the ground
+(the day's cream stands at 1.31:1), tone 16. Nothing near yellow at a night's tone stays yellow: a dark yellow is a
+brown, and this one keeps the ground's violet in it, which is what holds the two together. The same overlay, a step
+stronger, gives what sits on the paper: a raised surface and a field at 16 % (`#3A2D28`), a chosen row and the shut
+action at 20 % (`#443428`), the field's pressed edge at 8 % (`#281E27`), a rule at 30 % (`#5B4629`, 1.64:1 on the
+paper). The paper's voices are warm, as the day paper's are: the cream ink stays (13.59:1), a body voice at tone 90
+in the sun's hue (`#E8E2D4`, 11.31:1), the quiet voice at tone 80 (`#D0C5B1`, 8.56:1, and 6.96:1 on a chosen row),
+the faint one at tone 65 (`#A89D85`, 5.45:1). The relief under a key on the paper is the warm quiet voice. The
+ground, its surface, its inks, its rules and the tonal button off the paper stay the cool tint of D229: the balance
+is between the two, not inside one.
+
+**Measured.** The sun on the paper 9.24:1, the diamond's night edge 3.25:1, the characters' three colours 6.6:1 to
+7.2:1 on it. Captures at 390 by 844 and 1440 by 900, by day (unchanged) and by night, of the landing's first image
+and standing state, the card, the sheet and the door, sent to the founder. `test/gift-card.test.ts` holds the warm
+paper on the cool ground and eight contrasts on it; `test/design-tokens.test.ts` the step above the ground.
