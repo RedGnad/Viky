@@ -6426,3 +6426,31 @@ is between the two, not inside one.
 7.2:1 on it. Captures at 390 by 844 and 1440 by 900, by day (unchanged) and by night, of the landing's first image
 and standing state, the card, the sheet and the door, sent to the founder. `test/gift-card.test.ts` holds the warm
 paper on the cool ground and eight contrasts on it; `test/design-tokens.test.ts` the step above the ground.
+
+## D232, 24 Sep 2026: the trail everywhere, flat, and measured from nothing
+
+The founder, 24 Sep 2026: a gift's card in a list showed a bar and its page a trail; he likes the trail and wants
+it everywhere, but flat, because the slope took room for nothing. And a design decision: a bar or a trail of
+progress is never at zero unless leaving zero off would be a lie; a player who already has rating, or XP, is drawn
+a little way along. A person who sees themselves at zero is discouraged at once; it is arbitrary and it is so.
+
+**What is documented.** Nunes and Drèze, The Endowed Progress Effect: How Artificial Advancement Increases Effort
+(Journal of Consumer Research 32, 2006): a car wash card of ten stamps with two already given was completed by 34 %
+of people, the same eight-stamp effort with nothing given by 19 %; a goal presented as begun is pursued more than a
+goal presented as not yet begun.
+
+**How it stays true here.** Nothing is given that is not had. The trail is measured from nothing rather than from
+where they started: `milestoneProgress` is today's reading over the target, so 383 of 2,500 stands 15 % along the
+way, and 1,500 of 1,600 stands near the end, which is what the words beside it say ("Today: 383, target 2500"). A
+reading not yet made, or of nothing, stands at the start: drawing it anywhere else would be the lie the rule keeps
+out. Where they started is in what was agreed, in words, and is not in the picture. Reached is the end.
+
+**The trail.** One drawing, `Climb`, on the gift's own page as before and on its card in a list, where
+`MilestoneMeter`'s bar stood (the bar is gone; the file keeps what both read). Flat: the rise is nothing, the trail
+lies a fifth of the way up an 88 pixel box (it was 128), the character of 56 stands on it at today's reading, the
+flag with the target at its end, the part walked in ink and the part ahead dashed, and the one movement is the
+walk from where this device last saw it, as before.
+
+**Measured.** `test/trail.test.ts` holds the fraction from nothing on six cases, the flat trail, the card in a list
+drawing it and the bar gone. Captures of a milestone gift's card and page at 390 by day are the connected tool's,
+when the machine allows it.
