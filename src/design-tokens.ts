@@ -209,26 +209,32 @@ export const COLOURS: Record<Appearance, Record<string, string>> = {
     tonal: "#E8E3F4",
   },
   dark: {
-    background: "#151026",
-    surface: "#211A38",
-    /** The ink and the ground change places: 16.45:1 on the ground, 14.69:1 on a surface. */
-    text: "#F3F0FA",
-    /** 8.45:1 and 7.55:1. */
-    muted: "#B3ABC9",
+    /**
+     * The lavender night (D227, the founder on 24 Sep 2026: the night was generic beside the day). The day's own hue,
+     * fifteen degrees from the day ground on the OKLCH wheel, at a night's lightness: a violet, not a black. Where the
+     * old ground was near grey by rule, this one carries the product's colour after dark.
+     */
+    background: "#2A1F5E",
+    /** A shade above the ground, 1.17:1: the surface a field, the bar and the rail sit on. */
+    surface: "#332876",
+    /** The day's cream paper becomes the night's ink: 13.41:1 on the ground, 11.45:1 on a surface. */
+    text: "#FFF6E2",
+    /** A pale lavender: 8.26:1 and 7.05:1. */
+    muted: "#C9BDF0",
     /**
      * The same sun as the day, which is the point: the hero hue does not change between the modes, and an accent
      * this light needs no night value of its own. Measured on 17 Sep 2026 against the two candidates the founder
-     * compared on the product (#F7B51B, 10.21:1, and #FFD053, 12.70:1): this one reads 11.71:1 on the night ground
-     * and 10.46:1 on a night surface, so after dark the fill alone identifies the button.
+     * compared on the product (#F7B51B, 10.21:1, and #FFD053, 12.70:1): it read 11.71:1 on the old night ground, and
+     * 9.12:1 on the lavender night (D227), 7.79:1 on its surface, so after dark the fill alone identifies the button.
      */
     accent: "#FFC531",
-    onAccent: "#151026",
-    accentText: "#F3F0FA",
-    /** Light at night: 16.45:1. */
-    controlBorder: "#F3F0FA",
-    divider: "#352C52",
-    /** The same rule after dark: 1.44:1 on the ground, 1.29:1 on a surface, ink 11.42:1, muted ink 5.87:1. */
-    tonal: "#332A5E",
+    onAccent: "#2A1F5E",
+    accentText: "#FFF6E2",
+    /** The cream at night: 13.41:1. */
+    controlBorder: "#FFF6E2",
+    divider: "#4A3F93",
+    /** The same rule after dark: 1.40:1 on the ground, 1.20:1 on a surface, ink 9.57:1, muted ink 5.90:1. */
+    tonal: "#3F3388",
   },
 };
 
@@ -260,7 +266,7 @@ export const GROUNDS = ["background", "surface"] as const;
  */
 export const CHARACTERS: Record<Appearance, Record<string, string>> = {
   light: { one: "#FF7F8E", two: "#5AB4FF", three: "#B79BFF", face: "#1E1633", shadow: "#1E1633" },
-  dark: { one: "#FF8C98", two: "#6DBDFB", three: "#BBA3FA", face: "#151026", shadow: "#08060F" },
+  dark: { one: "#FF8C98", two: "#6DBDFB", three: "#BBA3FA", face: "#2A1F5E", shadow: "#08060F" },
 };
 
 /**
@@ -285,7 +291,7 @@ export const CHARACTER_SHADOW_OPACITY: Record<Appearance, number> = { light: 0.1
  * key of the look. At night it is a shade under the ground, 1.09:1, read as depth: the cream slab the founder saw on
  * the capture of 17 Sep was the ink after dark, and it read as a thick white edge (brief, section 8).
  */
-export const RELIEF: Record<Appearance, string> = { light: "#1E1633", dark: "#B3ABC9" };
+export const RELIEF: Record<Appearance, string> = { light: "#1E1633", dark: "#C9BDF0" };
 
 /**
  * The type of the look. Fredoka, round and geometric, a relative of the characters, sets exactly one display title per
@@ -325,7 +331,7 @@ export const LEAD_TYPE = { compact: { size: 16, lineHeight: 24 }, wide: { size: 
  * The gift card's edge (D127, D128): 2 px, the ink by day, the controls' night edge at night. No relief and no
  * shadow: cream on the ink ground measures 17:1, and the niche the founder named allows no blur anywhere.
  */
-export const CARD_PLACED = { edgeWidth: 2, edge: { light: "#1E1633", dark: "#F3F0FA" } } as const;
+export const CARD_PLACED = { edgeWidth: 2, edge: { light: "#1E1633", dark: "#FFF6E2" } } as const;
 
 /** The card's three voices, each one step from the image of 19 Sep 2026 and on the scale (D126). */
 export const CARD_TYPE = { who: { size: 25, lineHeight: 30 }, amount: { size: 39 }, label: { size: 13 } } as const;

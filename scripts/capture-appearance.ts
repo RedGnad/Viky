@@ -43,7 +43,7 @@ function pngSize(bytes: Buffer): { width: number; height: number } {
   return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
 }
 
-/** #151026 as the browser reports it, so what was asked for and what was painted can be compared. */
+/** A ground as the browser reports it, so what was asked for and what was painted can be compared. */
 function rgbOf(hex: string): string {
   const value = hex.replace("#", "");
   const [r, g, b] = [0, 2, 4].map((at) => parseInt(value.slice(at, at + 2), 16));

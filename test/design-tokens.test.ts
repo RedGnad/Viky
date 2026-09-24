@@ -141,7 +141,7 @@ test("the sun is the same colour by day and by night, and stands off both night 
     assert.ok(ratio >= NON_TEXT_CONTRAST_MINIMUM, `the night sun is ${ratio.toFixed(2)}:1 on the ${ground}`);
   }
   // Chosen by eye and then measured, as the brief asks: this is the figure the founder chose it on.
-  assert.equal(contrastRatio(COLOURS.dark.accent, COLOURS.dark.background).toFixed(2), "11.71");
+  assert.equal(contrastRatio(COLOURS.dark.accent, COLOURS.dark.background).toFixed(2), "9.12");
   assert.doesNotMatch(css, /#FF5A36|#FF7A5C|#C6FF4D/i, "a colour of a look we no longer wear is still in the stylesheet");
 });
 
@@ -187,11 +187,16 @@ test("the characters have three colours, none grey, none the sun, and a face tha
  * dark. What has to hold is not neutrality: it is that the card is never the value of the ground it sits on, which
  * is what a card being an object means, and that it stands off it by the same step in both appearances.
  */
-test("the card stands off the ground it is on, by day and by night", () => {
-  assert.ok(oklch(COLOURS.dark.background).chroma <= 0.05);
+test("the card stands off the ground it is on, by day and by night, and the night ground carries the day's hue", () => {
+  // The night was a near-grey by rule until D227: the founder found it generic beside the day. It is the day's own
+  // hue at a night's lightness now: within twenty degrees of the day ground on the wheel, and never near grey.
+  const [day, night] = [oklch(COLOURS.light.background), oklch(COLOURS.dark.background)];
+  assert.ok(night.chroma >= 0.08, "a colour, not a grey");
+  assert.ok(hueDistance(night.hue, day.hue) <= 20, `the night ground is ${hueDistance(night.hue, day.hue).toFixed(0)} degrees from the day's`);
+  assert.ok(night.lightness < 0.35, "and a night");
   assert.ok(contrastRatio("#FFF6E2", COLOURS.light.background) >= 1.3, "the cream on the day ground");
-  assert.ok(contrastRatio("#2E2549", COLOURS.dark.background) >= 1.3, "and the night paper on the night one, the same step");
-  assert.ok(contrastRatio("#2E2549", COLOURS.dark.background) < 2, "a step, not a glow: the cream stood at 17:1 there");
+  assert.ok(contrastRatio("#3A2E78", COLOURS.dark.background) >= 1.25, "and the night paper on the night one, near the same step");
+  assert.ok(contrastRatio("#3A2E78", COLOURS.dark.background) < 2, "a step, not a glow: the cream stood at 17:1 there");
   // The surface the fields, the bar and the rail sit on is not a card: it stays near its ground, and the white one
   // of day sits at 1.41:1 on the lavender, which is a shade and not an object.
   for (const appearance of ["light", "dark"] as Appearance[]) {
@@ -280,9 +285,9 @@ test("the quiet button is filled, seen on both grounds, and its words clear 4.5:
   // One shut action, on the cream of the card by day and on its night paper after dark (D223), and its words readable
   // on it in both: the image's own #9A8B62 measured 2.64:1 on the cream.
   assert.ok(contrastRatio("#6F6133", "#EFE3C4") >= TEXT_CONTRAST_MINIMUM, "the words of the shut action are readable on it by day");
-  assert.ok(contrastRatio("#B3ABC9", "#3B3160") >= TEXT_CONTRAST_MINIMUM, "and by night");
+  assert.ok(contrastRatio("#C9BDF0", "#4A3F93") >= TEXT_CONTRAST_MINIMUM, "and by night");
   assert.match(css, /--action-off-ink: #6F6133;/);
-  assert.equal((css.match(/--action-off-ink: #B3ABC9;/g) ?? []).length, 2, "the night's, in both night blocks");
+  assert.equal((css.match(/--action-off-ink: #C9BDF0;/g) ?? []).length, 2, "the night's, in both night blocks");
   // The ink under it, not a darker yellow: the same slab every control stands on, and the only one that reads as a
   // thickness against a sun fill (D142).
   assert.match(primary, /\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--control-relief-colour\)\]/, "the ink is under it when it can be pressed");
@@ -468,8 +473,9 @@ test("no blur anywhere: no halo on the ground, no shadow under a card, and the g
   // The head of the page is the one character with an edge, and the founder chose its two colours (D133): the ink
   // at night, a light yellow by day, knowing that the yellow is under the ratio a control's border must hold.
   assert.match(css, /--character-hero-edge: #FFE7A8;/);
-  // At night it is a violet above the ground, not black, and lighter at each asking: 1.25, then 1.62, now 2.14:1.
-  assert.equal((css.match(/--character-hero-edge: #4C4189;/g) ?? []).length, 2, "both night blocks");
+  // At night it is a violet above the ground, not black, and lighter at each asking: 1.25, then 1.62, then 2.14:1; on
+  // the lavender night (D227) a paler violet, 4.17:1 on the ground and 3.30:1 on the paper.
+  assert.equal((css.match(/--character-hero-edge: #8C7FD1;/g) ?? []).length, 2, "both night blocks");
   assert.match(readFileSync("app/kit/offer/OfferCard.tsx", "utf8"), /gift-card-width gift-card-placed/, "and the one card is the one placed");
 });
 
@@ -646,16 +652,16 @@ test("the server says who is signed in before the browser has to ask", () => {
 test("a chosen appearance is kept, and the browser's bar follows it rather than the phone", () => {
   const theme = readFileSync("src/theme.ts", "utf8");
   assert.match(theme, /export function paintTheBrowsersBar/, "a press paints the bar at once");
-  assert.match(theme, /GROUNDS: Record<"light" \| "dark", string> = \{ light: "#DDD6EB", dark: "#151026" \}/, "the grounds the screens stand on");
+  assert.match(theme, /GROUNDS: Record<"light" \| "dark", string> = \{ light: "#DDD6EB", dark: "#2A1F5E" \}/, "the grounds the screens stand on");
   assert.match(theme, /if \(choice !== "system"\) paintTheBrowsersBar\(choice\);/);
   assert.match(theme, /export const APPEARANCE_COOKIE/, "and the choice reaches the server, which renders the page");
   const grounds = readFileSync("app/globals.css", "utf8");
-  for (const colour of ["#DDD6EB", "#151026"]) assert.ok(grounds.includes(`--background: ${colour}`), `${colour} is a ground of the look`);
+  for (const colour of ["#DDD6EB", "#2A1F5E"]) assert.ok(grounds.includes(`--background: ${colour}`), `${colour} is a ground of the look`);
   const layout = readFileSync("app/layout.tsx", "utf8");
   // One colour, decided where the choice is known: two, one per appearance, followed the device rather than the
   // person, and came back at every hydration because that is when the metas are rendered again.
   assert.match(layout, /themeColor: chosen\n\s*\? GROUNDS\[chosen\]/, "one colour once somebody has chosen");
-  assert.match(layout, /GROUNDS = \{ light: "#DDD6EB", dark: "#151026" \} as const/, "and it is the ground the screen stands on");
+  assert.match(layout, /GROUNDS = \{ light: "#DDD6EB", dark: "#2A1F5E" \} as const/, "and it is the ground the screen stands on");
   assert.match(layout, /media: "\(prefers-color-scheme: light\)", color: GROUNDS\.light/, "until then the device decides, and the bar decides with it");
   assert.match(layout, /const chosen = await chosenAppearance\(\);/, "the device's cookie first, then the account");
   assert.match(layout, /\{\.\.\.\(chosen \? \{ "data-theme": chosen \} : \{\}\)\}/, "and written on the document before anything is painted");
