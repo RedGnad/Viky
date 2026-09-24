@@ -71,7 +71,8 @@ const TRIANGLE = roundedTriangle(
  * fourth shape, and it obeys the same rule as the triangle: its corners are rounded, generously, so that nothing on
  * the page is pointed. It carries the gift's own tone, the sun box with the ink face.
  */
-const DIAMOND = roundedTriangle(
+/** The diamond's outline, shared with the rig of the figure (app/kit/Figure.tsx, D236). */
+export const DIAMOND = roundedTriangle(
   [
     [32, 4],
     [61, 20],

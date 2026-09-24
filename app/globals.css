@@ -126,6 +126,9 @@
    * the head of the page, and the founder took that trade knowingly.
    */
   --character-hero-edge: #FFE7A8;
+  /* The rig's edge is a gradient of the same colour, lit where the light falls and deeper away from it (D236). */
+  --character-hero-edge-light: #FFF4D0;
+  --character-hero-edge-deep: #E8B860;
   /*
    * The blend the head character is filled with, and it is not the same by day as by night (D134). On the lavender
    * the sun measures 1.12:1 and goes quiet, which is what the founder saw; our pink and our violet measure 1.72 and
@@ -326,6 +329,8 @@
     --action-off-deep: #281E27;
     --action-off-ink: #D0C5B1;
     --character-hero-edge: #7A6EAF;
+    --character-hero-edge-light: #A398D8;
+    --character-hero-edge-deep: #564B8C;
     --character-hero-from: #FFC531;
     --character-hero-to: #FF8C98;
     --tonal: #2B2642;
@@ -382,6 +387,8 @@
   --action-off-deep: #281E27;
   --action-off-ink: #D0C5B1;
   --character-hero-edge: #7A6EAF;
+  --character-hero-edge-light: #A398D8;
+  --character-hero-edge-deep: #564B8C;
   --character-hero-from: #FFC531;
   --character-hero-to: #FF8C98;
   --tonal: #2B2642;
