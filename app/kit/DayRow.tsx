@@ -5,7 +5,7 @@ import { giftDays, stripOf } from "@/src/day-states";
 import { contractDayInWords } from "@/src/moments";
 import { Character } from "./Character";
 import { characterOf, endsHidden, fadeOf, rowCarriesOn, useHiddenEdges } from "./DayStrip";
-import { ArrivalDay, Gaze } from "./Motion";
+import { ArrivalDay } from "./Motion";
 import { GIFT_LIVE as L, GIFT_PAGE as W } from "@/src/sentences";
 import { CARD_LABEL } from "../components/ui";
 
@@ -94,10 +94,9 @@ export function DayRow({
             className="day-row-day"
           >
             <ArrivalDay gift={id} index={index}>
-              <Gaze>
-                {/* Written into the page (D206): every day follows the pointer, and an earned one jumps in the arrival. */}
-                <Character state={characterOf(state)} variant={index} standing={false} drawn="inline" className="h-auto w-full" />
-              </Gaze>
+              {/* A day earned jumps and a day gone back leaves, in the arrival: those two are written into the page (D206);
+                  the others name their drawing, since nothing follows the pointer any more (D216). */}
+              <Character state={characterOf(state)} variant={index} standing={false} drawn={characterOf(state) === "earned" || characterOf(state) === "returned" ? "inline" : "referenced"} className="h-auto w-full" />
             </ArrivalDay>
           </li>
         ))}

@@ -1,6 +1,6 @@
 "use client";
 import { Character } from "./Character";
-import { Expression, Gaze } from "./Motion";
+import { Expression } from "./Motion";
 
 /**
  * The character at the head of a screen (D148, the motion roadmap of 21 Sep 2026, step 2).
@@ -16,9 +16,7 @@ import { Expression, Gaze } from "./Motion";
 export function HeadCharacter() {
   return (
     <Expression>
-      <Gaze>
-        <Character state="diamond" tone="sun" standing={false} className="h-auto w-[72px] shrink-0" />
-      </Gaze>
+      <Character state="diamond" tone="sun" standing={false} className="h-auto w-[72px] shrink-0" />
     </Expression>
   );
 }

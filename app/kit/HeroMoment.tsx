@@ -4,7 +4,7 @@ import { MOTION } from "@/src/design-tokens";
 import { heroCookieText } from "@/src/hero-cookie";
 import { springEasing } from "@/src/motion";
 import { Character } from "./Character";
-import { Expression, Gaze, reduced } from "./Motion";
+import { Expression, reduced } from "./Motion";
 
 /**
  * The hero moment of the landing (D214, the founder's direction A of 24 Sep 2026): the character hides behind the
@@ -61,11 +61,9 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
   }, [played]);
   return (
     <div ref={root} className="hero-stage" data-hero={played ? undefined : "peeking"} aria-hidden>
-      {/* It still hears the card's moods and follows the pointer, as the head of the landing did (D148), until D214. */}
+      {/* It hears what the gift's record says, as the head of every screen does (D148); nothing else moves it (D216). */}
       <Expression>
-        <Gaze>
-          <Character state="diamond" tone="sun" standing={false} limbs className="hero-character" />
-        </Gaze>
+        <Character state="diamond" tone="sun" standing={false} limbs className="hero-character" />
       </Expression>
     </div>
   );

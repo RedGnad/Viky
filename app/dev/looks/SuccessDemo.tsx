@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Character } from "@/app/kit/Character";
-import { Gaze, Success } from "@/app/kit/Motion";
+import { Success } from "@/app/kit/Motion";
 import { PRIMARY_BUTTON } from "@/app/components/ui";
 
 /**
@@ -15,10 +15,8 @@ export function SuccessDemo({ label }: Readonly<{ label: string }>) {
       <div className="flex min-h-[132px] items-center justify-center">
         {presses > 0 ? (
           <Success gesture={presses}>
-            <Gaze>
-              <Character drawn="inline" state="gift" className="h-auto w-[112px]" />
-            </Gaze>
-          </Success>
+                          <Character drawn="inline" state="gift" className="h-auto w-[112px]" />
+                      </Success>
         ) : null}
       </div>
       <button type="button" data-success-demo onClick={() => setPresses((count) => count + 1)} className={PRIMARY_BUTTON}>

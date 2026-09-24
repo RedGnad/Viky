@@ -101,7 +101,6 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
   assert.doesNotMatch(source, /iterations/, "no moment repeats");
   assert.doesNotMatch(source, /setInterval|setTimeout/, "nothing waits for a clock to start");
   assert.match(source, /IntersectionObserver/, "a reveal answers the scroll");
-  assert.match(source, /pointermove/, "a gaze answers the pointer");
 
   // The press and the hover are the two movements the stylesheet plays, because they answer a finger and a pointer.
   const css = readFileSync("app/globals.css", "utf8");
@@ -187,7 +186,8 @@ test("the character stands on the four screens, and answers with the parts it al
     assert.match(drawing, new RegExp(`data-part="${part}"`), `the ${part} is named, so an expression can move it`);
   }
   const head = readFileSync("app/kit/HeadCharacter.tsx", "utf8");
-  assert.match(head, /<Expression>[\s\S]*<Gaze>[\s\S]*state="diamond"/, "the same character as the page without an account, and it feels");
+  assert.match(head, /<Expression>[\s\S]*state="diamond"/, "the same character as the page without an account, and it feels what the record says");
+  assert.doesNotMatch(head, /<Gaze/, "and it follows no pointer (D216)");
   for (const [screen, file] of Object.entries({
     "a gift's page": "app/components/GiftPage.tsx",
     "the way out": "app/cash-out/page.tsx",
@@ -195,11 +195,9 @@ test("the character stands on the four screens, and answers with the parts it al
   })) {
     assert.match(readFileSync(file, "utf8"), /<HeadCharacter \/>/, `${screen} carries the character`);
   }
-  // The card's two controls say what they are being asked about, and nothing else on the card does.
+  // The card asks the character nothing (D216): no control on it says what it is being asked about.
   const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
-  assert.match(card, /\{\.\.\.asksAbout\("curious"\)\}/);
-  assert.match(card, /\{\.\.\.asksAbout\("happy"\)\}/);
-  assert.equal((card.match(/asksAbout\(/g) ?? []).length, 2, "two controls ask, and nothing else on the card does");
+  assert.equal((card.match(/asksAbout\(|feel\(/g) ?? []).length, 0, "nothing on the card asks the character anything");
   const motion = readFileSync("app/kit/Motion.tsx", "utf8");
   assert.match(motion, /export function Expression\(/);
   assert.match(motion, /mood\.once/, "a device with no pointer is given the round trip rather than a hover");

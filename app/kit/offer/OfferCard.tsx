@@ -14,8 +14,6 @@ import { dollarsHeld, type Holdings } from "../money";
 import { AmountError } from "@/src/money";
 import { OFFER as W } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
-import { feel } from "../mood";
-import { useHasPointer } from "../Motion";
 import { CardFace } from "../GiftCard";
 import { Character } from "../Character";
 import { CurrencySheet } from "../CurrencySheet";
@@ -129,20 +127,6 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
     }
   };
   const quick = [bounds.min, bounds.suggested, bounds.max];
-  /**
-   * What the character at the head of the page is told (D148, the motion roadmap's step 2). With a pointer it is the
-   * hover, and the face comes back when the pointer leaves. A finger has no hover, so the expression plays once when
-   * the choice is made and comes back by itself: what the person is doing is never carried by it, only answered.
-   */
-  const hasPointer = useHasPointer();
-  const asksAbout = (feeling: "curious" | "happy") => ({
-    onPointerEnter: hasPointer ? (event: { currentTarget: Element }) => feel(feeling, event.currentTarget) : undefined,
-    onPointerLeave: hasPointer ? () => feel("rest") : undefined,
-  });
-  const chosen = (feeling: "curious" | "happy", element: Element) => {
-    if (!hasPointer) feel(feeling, element, true);
-  };
-
   /** What the amount says back when it cannot be read as money: the same rule the route refuses by. */
   let amountRefusal: string | undefined;
   if (typed.trim().length > 0) {
@@ -190,11 +174,7 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                  that condition's own questions, whose first control is the way back to the catalogue (D137). It says
                  the label and the condition's name and nothing else (D138): what that condition has been told lives
                  in the step the line opens, which is where somebody goes to change it. */
-              {...asksAbout("curious")}
-              onClick={(event) => {
-                chosen("curious", event.currentTarget);
-                setChoosing(condition ? "questions" : "list");
-              }}
+              onClick={() => setChoosing(condition ? "questions" : "list")}
               /* Eight pixels more than a caption gets under a title: this one is a control, and at four it sat on
                  the name's own box (the founder, 21 Sep 2026). */
               className={`${INLINE_BUTTON} mt-[var(--space-sm)] w-full justify-between text-left`}
@@ -268,11 +248,7 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                   <button
                     key={count}
                     type="button"
-                    {...asksAbout("happy")}
-                    onClick={(event) => {
-                      chosen("happy", event.currentTarget);
-                      change({ ...draft, days: String(count) });
-                    }}
+                    onClick={() => change({ ...draft, days: String(count) })}
                     /* Pressed by its value alone, so what is kept from an older visit and the chip never disagree. */
                     aria-pressed={days === count}
                     className={`${CHIP} ${days === count ? "bg-[var(--chosen)] font-bold" : ""}`}

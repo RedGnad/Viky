@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import { Character } from "@/app/kit/Character";
 import { useMinute } from "@/app/kit/clock";
 import { charactersOf } from "@/app/kit/DayStrip";
-import { Arrival, ArrivalAmount, ArrivalDay, Gaze, Reveal } from "@/app/kit/Motion";
+import { Arrival, ArrivalAmount, ArrivalDay, Reveal } from "@/app/kit/Motion";
 import { AMOUNT_IN_TITLE, CARD, HELP, SECONDARY_BUTTON, TITLE } from "@/app/components/ui";
 import { FUND, HOME } from "@/src/sentences";
 import { ACCOUNT, fromMaman, LAST_VISIT, TO_NOE } from "./example";
@@ -31,10 +31,8 @@ export function MotionScreen() {
           <div className="grid grid-cols-5 gap-[var(--space-sm)]">
             {days.map((state, index) => (
               <ArrivalDay key={index} gift={gift.giftId} index={index}>
-                <Gaze>
-                  <Character state={state} variant={index} className="h-auto w-full" />
-                </Gaze>
-              </ArrivalDay>
+                                  <Character state={state} variant={index} className="h-auto w-full" />
+                              </ArrivalDay>
             ))}
           </div>
           <div className="money-display-box">
@@ -53,10 +51,8 @@ export function MotionScreen() {
         <p className={HELP}>Scrolling: each card appears once as it comes into view</p>
         {["earned", "today", "toCome", "catchable"].map((state, index) => (
           <Reveal key={state} className={`${CARD} flex items-center gap-[var(--space-lg)]`}>
-            <Gaze>
-              <Character state={state as "earned"} variant={index} className="h-auto w-[72px]" />
-            </Gaze>
-            <p className={HELP}>A pointer hovering this character is looked at. A finger is not: a phone has no hover.</p>
+                          <Character state={state as "earned"} variant={index} className="h-auto w-[72px]" />
+                        <p className={HELP}>A pointer hovering this character is looked at. A finger is not: a phone has no hover.</p>
           </Reveal>
         ))}
       </main>
