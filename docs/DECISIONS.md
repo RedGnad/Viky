@@ -6330,3 +6330,41 @@ manifest paint the same ground. The day did not change.
 **Measured.** The lowest pair carrying words is the pale lavender on a chosen row, 6.20:1; the faint voice on the
 paper 5.71:1. Captures at 390 by 844 and 1440 by 900, by day and by night, of the landing's first image and standing
 state, the card, the sheet and the door, sent to the founder. The tests of D227 hold with the new values.
+
+## D229, 24 Sep 2026: the night on Material's tones, at the first ground
+
+The founder, 24 Sep 2026, on D227 and D228: he clearly preferred the very first ground, very dark; the colours felt
+chosen at random although colorimetry is documented; a dark mode is meant to be dark, or it is just another colour
+of site; the day is good because it plays with tones and lightness without being generic, and the night should be
+as interesting while staying dark.
+
+**What was random, said plainly.** The contrasts of D227 and D228 were measured; the lightness of the ground was
+not taken from any document: 0.29 and then 0.21 on the OKLCH scale were a judgement. Placed on the documented
+scale afterwards, Material's tone (CIELAB L*): the first night ground `#151026` sits at 6.1, which is exactly the
+tone Material's dark scheme gives its background and surface (`color_spec_2021.ts` in material-color-utilities:
+`isDark ? 6 : 98`); D227 sat at 17, the tone Material gives a raised container, not a ground; D228 at 7. Apple says
+the same in words: dimmer backgrounds, brighter foregrounds. The founder's eye was on the documented value.
+
+**What the night is now.** The first ground, `#151026`, kept as it was: tone 6, tinted with the product's hue (292
+on the OKLCH wheel, nine degrees from the day ground, chroma 0.044), which is how Material's neutral palette is
+built, a key colour at low chroma, never a grey. Everything above it is the same tint at the tones the same source
+gives a dark scheme, so the night has the play of tones the day has: a surface at tone 10 (`#1D1732`, the lowest
+container, for a field off the paper, the bar, the rail), the paper at tone 17 (`#2B2642`, container high, 1.29:1
+on the ground, where the day's cream stands at 1.31:1), what sits on the paper at 22 (`#36304D`: a raised surface,
+a field) and 26 (`#3F3957`: a chosen row, the shut action), the field's pressed edge at 12 (`#211B36`), a rule, a
+divider and a card's border at 30 (`#484360`, the outline variant), the tonal button at 17, the quiet voice at 80
+(`#C7C4DA`, on-surface-variant, 10.88:1 on the ground), a body voice at 90 (`#E3E1EF`), the faint one at 65
+(`#9E9AB6`), the diamond's night edge at 50 with twice the chroma (`#7A6EAF`, 4.12:1 on the ground, 3.21:1 on the
+paper). The ink stays the day's cream `#FFF6E2` (17.22:1 on the ground): the one warm note on a cool night, as the
+cream card is on the lavender by day; Material's own on-surface would be tone 90 of the tint, `#E3E1EF`, and it is
+the alternative if the founder wants the night cool throughout. The sun stays the sun: 11.71:1 on the ground, the
+figure it was chosen on in D84, 9.11:1 on the paper. The relief is the quiet voice; the characters keep their three
+colours (8.3:1 to 9.1:1 on the ground), their face is the ground, their limbs the cream. The browser's bar, the boot
+script and the installed app's manifest paint `#151026` again.
+
+**The rule, rewritten.** `test/design-tokens.test.ts`: the night ground is at Material's dark tone (CIELAB L* between
+5 and 8), a tint (chroma at least 0.04) within twenty degrees of the day's hue; the paper tone 17 stands off it by at
+least 1.25:1 and under 2:1. The lowest pair carrying words is the faint voice on the paper at 5.31:1.
+
+**Measured.** Captures at 390 by 844 and 1440 by 900, by day (unchanged) and by night, of the landing's first image
+and standing state, the card, the sheet and the door, sent to the founder.
