@@ -6280,3 +6280,36 @@ whole after a name (eyes open, round), and three frames after "90 days" (the mar
 founder. `test/card-days.test.ts` holds the three groups and their order, the 72 on the card and the 60 elsewhere,
 the eye as a part and its state in the markup and the stylesheet, the two movements on the tokens, nothing on a
 clock; `test/gift-card.test.ts` the one character at 96; `test/character-file.test.ts` the sprite regenerated.
+
+## D227, 24 Sep 2026: the lavender night
+
+The founder, 24 Sep 2026: the colours of the night are generic beside the day, which is good. Four directions were
+proposed, each measured, and he took the one recommended: the lavender night.
+
+**Why the night was generic.** Its ground, `#151026`, was a near-grey by rule: a test held its OKLCH chroma under
+0.05, a remnant of the neutral-ground era (D73, D114) that the day left behind when it took the lavender. A
+near-black with pale lavender words is what most products paint after dark (Linear's ground, sampled the same day,
+is `#0F1011`); the day, meanwhile, has an identity: lavender, cream, indigo, sun. Material wants dark surfaces that
+are not black and accents kept; Apple wants dimmer backgrounds and brighter foregrounds in the app's own colours.
+
+**What it is.** The day's own hue at a night's lightness: the ground `#2A1F5E` sits fifteen degrees from the day
+ground on the OKLCH wheel (286 against 301) at a lightness of 0.29, a violet and not a black; the day's cream paper
+`#FFF6E2` becomes the night's ink; the quiet voice is a pale lavender `#C9BDF0`. Every surface follows a step above
+the ground, as the day does: the surface `#332876` (1.17:1), the paper `#3A2E78` (1.26:1, where the day's cream
+stands at 1.31:1), its raised tone `#453A8C`, a field `#443888` with its pressed edge `#2B2160`, a chosen row and
+the rules `#4A3F93`, the tonal button `#3F3388` (1.40:1). The sun stays the sun (D84): 9.12:1 on the ground, 7.21:1
+on the paper, its words the ground itself at 9.12:1. The relief under a key is the pale lavender in both places. The
+characters keep their three colours (6.5:1 to 7.1:1 on the ground), their face is the ground as before, the limbs
+the cream, and the diamond's night edge is a paler violet `#8C7FD1` (4.17:1 on the ground, 3.30:1 on the paper),
+where `#4C4189` had vanished into a violet ground. The scrim behind a sheet keeps its half. The browser's bar, the
+boot script and the installed app's manifest paint the same ground.
+
+**Measured.** Every pair that carries words clears 4.5:1, the lowest being the faint voice on the paper at 4.60:1
+and the quiet voice on a chosen row at 4.96:1; every control edge clears 3:1. The rule in `test/design-tokens.test.ts`
+is turned over: the night ground must now carry a colour (chroma at least 0.08) within twenty degrees of the day's
+hue, at a lightness under 0.35. Captures at 390 by 844 and 1440 by 900 of the landing (first image and standing),
+the card, the sheet and the door, by day (unchanged) and by night, sent to the founder.
+
+**Not verified.** The signed-in screens: the product's own connected capture was started for the night at 390 and
+cut at nine minutes by the machine's load, so only what it wrote before that is in hand; the screens read through
+the same tokens. The installed app's icon is what `pnpm make:icon` last wrote and only changes on a reinstall.

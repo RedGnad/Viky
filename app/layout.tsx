@@ -72,7 +72,7 @@ export const metadata: Metadata = {
  * black bar over a lavender page, and a reload brought it back because the metas are rendered again at hydration.
  * It is decided here, where the choice is known, and it is the ground the screen actually stands on.
  */
-const GROUNDS = { light: "#DDD6EB", dark: "#151026" } as const;
+const GROUNDS = { light: "#DDD6EB", dark: "#2A1F5E" } as const;
 
 export async function generateViewport(): Promise<Viewport> {
   const chosen = await chosenAppearance();

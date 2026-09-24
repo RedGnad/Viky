@@ -288,104 +288,104 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: #151026;
-    --surface: #211A38;
-    --text: #F3F0FA;
-    --muted: #B3ABC9;
+    --background: #2A1F5E;
+    --surface: #332876;
+    --text: #FFF6E2;
+    --muted: #C9BDF0;
     --accent: #FFC531;
-    --on-accent: #151026;
-    --accent-text: #F3F0FA;
-    --control-border: #F3F0FA;
-    --divider: #352C52;
-    --scrim: rgba(8, 6, 15, 0.5);
+    --on-accent: #2A1F5E;
+    --accent-text: #FFF6E2;
+    --control-border: #FFF6E2;
+    --divider: #4A3F93;
+    --scrim: rgba(14, 10, 38, 0.5);
     /* No edge and no shadow on the card: on the ink ground it needs neither (D128), and the placed one has its own. */
     --card-edge: transparent;
     --card-shadow: none;
-    --card-placed-edge: #F3F0FA;
-    /* The paper after dark (D223): one step above the ground, 1.30:1 on it, which is where the day's cream stands on
-       the lavender (1.31:1). What reads on it is the night's own ink and lavender; a field and a chosen row are a step
+    --card-placed-edge: #FFF6E2;
+    /* The paper after dark (D223, D227): one step above the ground, 1.26:1 on it, which is where the day's cream stands
+       on the lavender (1.31:1). What reads on it is the night's own ink and lavender; a field and a chosen row are a step
        lighter, as every surface is at night; the shut action wears the chosen row's fill and the lavender's words. */
-    --paper: #2E2549;
-    --paper-raised: #332A5E;
-    --chosen: #3B3160;
-    --paper-field: #352B57;
-    --paper-field-edge: #1E1741;
-    --on-surface: #F3F0FA;
-    --on-surface-body: #D6CFE6;
-    --on-surface-muted: #B3ABC9;
-    --on-surface-faint: #8F87A8;
-    --surface-rule: #3B3160;
-    --paper-relief: #B3ABC9;
-    --action-off: #3B3160;
-    --action-off-deep: #1E1741;
-    --action-off-ink: #B3ABC9;
-    --character-hero-edge: #4C4189;
+    --paper: #3A2E78;
+    --paper-raised: #453A8C;
+    --chosen: #4A3F93;
+    --paper-field: #443888;
+    --paper-field-edge: #2B2160;
+    --on-surface: #FFF6E2;
+    --on-surface-body: #EBE3F5;
+    --on-surface-muted: #C9BDF0;
+    --on-surface-faint: #A99DD6;
+    --surface-rule: #4A3F93;
+    --paper-relief: #C9BDF0;
+    --action-off: #4A3F93;
+    --action-off-deep: #2B2160;
+    --action-off-ink: #C9BDF0;
+    --character-hero-edge: #8C7FD1;
     --character-hero-from: #FFC531;
     --character-hero-to: #FF8C98;
-    --tonal: #332A5E;
-    --card-border: #352C52;
+    --tonal: #3F3388;
+    --card-border: #4A3F93;
     --character-1: #FF8C98;
     --character-2: #6DBDFB;
     --character-3: #BBA3FA;
-    --character-face: #151026;
-    --character-limb: #F3F0FA;
+    --character-face: #2A1F5E;
+    --character-limb: #FFF6E2;
     --character-shadow: #08060F;
     --character-shadow-opacity: 0.45;
     /* A shade under the ground, read as depth: the ink after dark read as a thick white edge. */
     /* Under a key on the night ground, the night's muted lavender: #08060F on #151026 could not be seen at all
        (measured on production, 20 Sep 2026), and the full pale of the outline read as a white edge on 17 Sep. */
-    --control-relief-colour: #B3ABC9;
+    --control-relief-colour: #C9BDF0;
     color-scheme: dark;
   }
 }
 
 /* Night because the person asked for it, whatever their device says. The values are the ones above. */
 :root[data-theme="dark"] {
-  --background: #151026;
-  --surface: #211A38;
-  --text: #F3F0FA;
-  --muted: #B3ABC9;
+  --background: #2A1F5E;
+  --surface: #332876;
+  --text: #FFF6E2;
+  --muted: #C9BDF0;
   --accent: #FFC531;
-  --on-accent: #151026;
-  --accent-text: #F3F0FA;
-  --control-border: #F3F0FA;
-  --divider: #352C52;
-  --scrim: rgba(8, 6, 15, 0.5);
+  --on-accent: #2A1F5E;
+  --accent-text: #FFF6E2;
+  --control-border: #FFF6E2;
+  --divider: #4A3F93;
+  --scrim: rgba(14, 10, 38, 0.5);
   /* No edge and no shadow on the card: on the ink ground it needs neither (D128), and the placed one has its own. */
   --card-edge: transparent;
   --card-shadow: none;
-  --card-placed-edge: #F3F0FA;
-  /* The paper after dark (D223): one step above the ground, 1.30:1 on it, which is where the day's cream stands on
-     the lavender (1.31:1). What reads on it is the night's own ink and lavender; a field and a chosen row are a step
+  --card-placed-edge: #FFF6E2;
+  /* The paper after dark (D223, D227): one step above the ground, 1.26:1 on it, which is where the day's cream stands
+     on the lavender (1.31:1). What reads on it is the night's own ink and lavender; a field and a chosen row are a step
      lighter, as every surface is at night; the shut action wears the chosen row's fill and the lavender's words. */
-  --paper: #2E2549;
-  --paper-raised: #332A5E;
-  --chosen: #3B3160;
-  --paper-field: #352B57;
-  --paper-field-edge: #1E1741;
-  --on-surface: #F3F0FA;
-  --on-surface-body: #D6CFE6;
-  --on-surface-muted: #B3ABC9;
-  --on-surface-faint: #8F87A8;
-  --surface-rule: #3B3160;
-  --paper-relief: #B3ABC9;
-  --action-off: #3B3160;
-  --action-off-deep: #1E1741;
-  --action-off-ink: #B3ABC9;
-  --character-hero-edge: #4C4189;
+  --paper: #3A2E78;
+  --paper-raised: #453A8C;
+  --chosen: #4A3F93;
+  --paper-field: #443888;
+  --paper-field-edge: #2B2160;
+  --on-surface: #FFF6E2;
+  --on-surface-body: #EBE3F5;
+  --on-surface-muted: #C9BDF0;
+  --on-surface-faint: #A99DD6;
+  --surface-rule: #4A3F93;
+  --paper-relief: #C9BDF0;
+  --action-off: #4A3F93;
+  --action-off-deep: #2B2160;
+  --action-off-ink: #C9BDF0;
+  --character-hero-edge: #8C7FD1;
   --character-hero-from: #FFC531;
   --character-hero-to: #FF8C98;
-  --tonal: #332A5E;
-  --card-border: #352C52;
+  --tonal: #3F3388;
+  --card-border: #4A3F93;
   --character-1: #FF8C98;
   --character-2: #6DBDFB;
   --character-3: #BBA3FA;
-  --character-face: #151026;
-  --character-limb: #F3F0FA;
+  --character-face: #2A1F5E;
+  --character-limb: #FFF6E2;
   --character-shadow: #08060F;
   --character-shadow-opacity: 0.45;
   /* A shade under the ground, read as depth: the ink after dark read as a thick white edge. */
-  --control-relief-colour: #B3ABC9;
+  --control-relief-colour: #C9BDF0;
   color-scheme: dark;
 }
 
