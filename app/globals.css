@@ -145,6 +145,8 @@
   --type-body-leading: 24px;
   --type-help: 13px;
   --type-help-leading: 18px;
+  /* The character of the hero moment (D214): its box on a phone; from 1024 the same, standing over the card. */
+  --hero-character-size: 232px;
   /* The card of a gift's page, the mockup's own sizes, off the scale on purpose (GIFT_CARD_TYPE, src/design-tokens.ts). */
   --type-gift-eyebrow-leading: 16px;
   --type-gift-what: 15px;
@@ -806,6 +808,55 @@ dialog.sheet[open] {
 
   .page-enters .arrives-in-turn {
     animation-name: none !important;
+  }
+}
+
+/*
+ * The hero moment of the landing (D214): the stage the character stands on, and its starting state. The character is
+ * as wide as the card allows on a phone and holds its box; the stage is its height, so the card that follows starts
+ * where its feet are. While the moment has not played, the stylesheet puts the figure down by 66 % of its box, behind
+ * the card that follows, and folds the limbs into the body: that is the first image, and the animation starts from
+ * it. A device that asks for less movement is shown the character standing, whatever the attribute says.
+ */
+.hero-stage {
+  position: relative;
+  width: 100%;
+  height: var(--hero-character-size);
+  /* The card starts where the feet are: the column's gap is taken back, so nothing shows between the two. */
+  margin-bottom: calc(-1 * var(--space-md));
+}
+
+.hero-character {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: var(--hero-character-size);
+  height: var(--hero-character-size);
+  transform: translateX(-50%);
+}
+
+/* In the drawing's own units (its box is 64 by 64), which is how a transform on an SVG group is read: 66 % of 64. */
+[data-hero="peeking"] [data-part="figure"] {
+  transform: translateY(42px);
+}
+
+[data-hero="peeking"] [data-part="arm"],
+[data-hero="peeking"] [data-part="leg"] {
+  transform: scale(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-hero="peeking"] [data-part="figure"],
+  [data-hero="peeking"] [data-part="arm"],
+  [data-hero="peeking"] [data-part="leg"] {
+    transform: none;
+  }
+}
+
+/* The way to the card from the first screen travels smoothly, only where movement is welcome. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }
 

@@ -83,6 +83,42 @@ const DIAMOND = roundedTriangle(
 
 /** The diamond is wider than it is tall (the founder, 20 Sep 2026), so it is drawn in a box of its own. */
 const DIAMOND_BOX = "0 0 64 40";
+/** The same diamond with its arms and legs out: the box grows down to the feet (D214). */
+const DIAMOND_WITH_LIMBS_BOX = "0 0 64 64";
+
+/**
+ * The arms and the legs the founder asked for on 24 Sep 2026 (D214), on the character of the landing: pills of ink,
+ * a hand and a foot at the end of each, hung from the diamond's sides and stood under it. They fold: each limb is
+ * scaled from its joint, so at 0 it is inside the body and at 1 it is out, which is the one movement they make. They
+ * are drawn before the body so the joints stay under it, and they wear the face's ink so a limb is never a fourth
+ * colour. Round caps on a line are the rounded rectangle the rules allow; nothing here is pointed.
+ */
+const LIMB = 5;
+const FROM_JOINT: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 0%" };
+
+function Limbs() {
+  const ink = { stroke: FACE, strokeWidth: LIMB, strokeLinecap: "round" as const };
+  return (
+    <g data-part="limbs">
+      <g data-part="arm" style={FROM_JOINT}>
+        <line x1={10} y1={26} x2={6} y2={44} style={ink} />
+        <circle cx={6} cy={45} r={3.4} style={{ fill: FACE }} />
+      </g>
+      <g data-part="arm" style={FROM_JOINT}>
+        <line x1={54} y1={26} x2={58} y2={44} style={ink} />
+        <circle cx={58} cy={45} r={3.4} style={{ fill: FACE }} />
+      </g>
+      <g data-part="leg" style={FROM_JOINT}>
+        <line x1={26} y1={33} x2={25} y2={57} style={ink} />
+        <line x1={25.5} y1={59} x2={17} y2={59} style={ink} />
+      </g>
+      <g data-part="leg" style={FROM_JOINT}>
+        <line x1={38} y1={33} x2={39} y2={57} style={ink} />
+        <line x1={38.5} y1={59} x2={47} y2={59} style={ink} />
+      </g>
+    </g>
+  );
+}
 
 /**
  * The one blend in the product (D132, D134): the head of the page is the only character that is not a flat fill, and
@@ -313,6 +349,7 @@ export function Character({
   tone = "range",
   standing = true,
   drawn: how = "referenced",
+  limbs = false,
   className,
 }: Readonly<{
   state: CharacterState;
@@ -333,11 +370,14 @@ export function Character({
    * The diamond is always written: its blend reads the look's colours inside its own gradient.
    */
   drawn?: "inline" | "referenced";
+  /** The diamond with its arms and legs (D214): the character of the landing's hero moment, and no other yet. */
+  limbs?: boolean;
   className?: string;
 }>) {
   const large = size === "large";
   const drawn: CharacterTone = state === "gift" || state === "diamond" ? tone : "range";
-  const viewBox = state === "diamond" ? DIAMOND_BOX : standing ? "0 0 64 64" : SMALL_BOX;
+  const withLimbs = limbs && state === "diamond";
+  const viewBox = state === "diamond" ? (withLimbs ? DIAMOND_WITH_LIMBS_BOX : DIAMOND_BOX) : standing ? "0 0 64 64" : SMALL_BOX;
   if (how === "referenced" && state !== "diamond") {
     return (
       <svg aria-hidden focusable="false" viewBox={viewBox} data-character={state} data-size={size} className={className} style={{ overflow: "visible" }}>
@@ -376,6 +416,7 @@ export function Character({
       ) : null}
       <g data-part="figure" style={{ ...FROM_FLOOR, ...(leaving ? { transform: "translateX(-6px)", opacity: 0.6 } : null) }}>
         <g transform={parts.lean}>
+          {withLimbs ? <Limbs /> : null}
           <g data-part="body">{parts.body}</g>
           {/* The shade lies in the body, the highlight sits on it, and the face stays on top of both (D132). */}
           {parts.shade}

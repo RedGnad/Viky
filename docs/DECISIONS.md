@@ -5896,3 +5896,44 @@ The founder's second public register, 24 Sep 2026: Accredible (credential.net), 
   Being built until goal 26 is signed; the service redeployed from the branch before the merge.
 - **Terms**, read 24 Sep 2026: Accredible's terms (April 2026) bind issuers and name no automated access.
 - **Default applied, to confirm.** The title and website line in place of a search.
+
+## D214, 24 Sep 2026: the hero moment of the landing, and the character's arms and legs
+
+The founder, 24 Sep 2026, on his two sketches: the landing more open, the promise then the character then the card,
+and the character hidden behind the card that rises and stands; direction A of the four proposed, chosen; arms and
+legs that can fold; simple movements first, mathematical and vector, polished step by step afterwards; and the
+mascot's reactions to buttons judged hazardous and unreadable, to be removed (a PR of its own, D215).
+
+**The landing, in his sketch's order.** The promise, its sentence, one way to the card ("Offer a gift", tonal, so the
+card's own action keeps the screen's one accent), the hero moment, and the card, whose top shows at the foot of the
+first screen: 556 px of 844 on a phone, 494 of 900 at 1440. The diamond that floated into the title's hollow (D131) is
+gone from the landing; it stands in the moment instead. Everything else on the landing is as it was.
+
+**The character with limbs.** The diamond takes arms and legs on the landing only (`limbs` on `Character`): pills of
+the face's ink with a hand and a foot, hung from the sides and stood under the body, drawn behind it so the joints
+stay under it; round caps, nothing pointed, no fourth colour. Each folds from its joint (scaled to nothing) and
+unfolds. The box grows from 64 by 40 to 64 by 64. The head character of every other screen keeps its shape: the limbs
+everywhere, and the glass or crystal the founder has in mind, are the character sheet's work, later.
+
+**The motion sheet.**
+
+- **Trigger.** The landing drawn for the first time in the session: the first visit of the tab.
+- **Rule.** The first image is the starting state: the figure 42 units down in its 64 unit box (66 %), behind the
+  card's paper, only its eyes over the edge, its limbs folded; drawn so by the server (`data-hero="peeking"`) and the
+  stylesheet, and the animation starts from exactly there in the same task the attribute goes. It rises to its place,
+  the mouth opens at 70 % of the rise, the limbs unfold once the body has landed. Then nothing moves.
+- **Material token.** The rise and the unfolding on `MOTION.gift.spatial`, the expressive fast spatial spring (damping
+  0.6, stiffness 800, about half a second); the mouth on `MOTION.gift.effects`, the critically damped one.
+- **Loop.** None, and once per visit: a session cookie (`viky.hero`, no age) written when the moment is drawn, read by
+  the server, so every load after it in the session is drawn standing and still. A moment that replayed on every
+  reload was the same screen going out and coming back (D198).
+- **Reduced motion.** Standing from the first image, in the stylesheet and in the script; nothing plays.
+- **Test.** `test/browser/hero.spec.ts` (the server sends the starting state, the figure ends on its floor with its
+  limbs out, the card's top is in the first screen, the next load in the session is drawn standing and moves nothing,
+  the way to the card reaches it, reduced motion stands still) and `test/hero-moment.test.ts` (the limbs, the cookie,
+  the tokens, the order of the landing). `home-order`, `appearance`, `character` and `gift-card` follow the new order.
+
+**Measured.** Frames at 0, 150, 300, 450 and 900 ms and the reduced-motion image, at 390 and 1440, sent to the
+founder, who judges on the image. One finding on the way: a transform on an SVG group is read in the drawing's own
+units, so the peek is 42 units, never a percentage or a pixel of the screen. Until D215 the hero character still hears
+the card's moods and follows the pointer, as the head of the landing did.

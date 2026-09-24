@@ -36,8 +36,12 @@ test.describe("the character at the head of the page", () => {
     await expect(sheet.locator("svg[data-character='diamond']:visible")).toHaveCount(1);
   });
 
+  /** The hero moment of the landing (D214) plays first; the face is read once it stands still. */
+  const heroSettled = (page: Page) => expect.poll(() => page.evaluate(() => document.getAnimations().filter((a) => a.playState === "running" && (a.effect as KeyframeEffect | null)?.target?.closest(".hero-stage")).length), { timeout: 4000 }).toBe(0);
+
   test("with a pointer it looks at the line, smiles at a length, and comes back when the pointer leaves", async ({ page }) => {
     await page.goto("/");
+    await heroSettled(page);
     test.skip(!(await hasPointer(page)), "this device has no pointer, so it has no hover");
     expect(await face(page)).toEqual(AT_REST);
 
@@ -61,6 +65,7 @@ test.describe("the character at the head of the page", () => {
 
   test("with a finger the expression plays once on the choice and comes back by itself", async ({ page }) => {
     await page.goto("/");
+    await heroSettled(page);
     test.skip(await hasPointer(page), "this device has a pointer, so it hovers instead");
     expect(await face(page)).toEqual(AT_REST);
     await page.getByRole("button", { name: "7 days", exact: true }).tap();

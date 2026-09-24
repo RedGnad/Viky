@@ -22,7 +22,7 @@ import { forgetOnThisScreen, useSeen, useSeenMany, writeSeen } from "./seen";
 const REDUCE = "(prefers-reduced-motion: reduce)";
 const POINTER = "(hover: hover) and (pointer: fine)";
 
-const reduced = () => typeof window === "undefined" || window.matchMedia(REDUCE).matches;
+export const reduced = () => typeof window === "undefined" || window.matchMedia(REDUCE).matches;
 
 function subscribeToPointer(changed: () => void): () => void {
   const query = window.matchMedia(POINTER);
