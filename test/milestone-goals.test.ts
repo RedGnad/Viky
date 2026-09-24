@@ -49,6 +49,8 @@ const PINNED: Readonly<Record<number, string>> = {
   25: "0x1b7dcd631d332fd55c35e820ce05cc6817023b8eda487a830d1370222d6fa08f",
   // Accredible, a credential (D213).
   26: "0xf16cfb8a8ef6a10146f6b2dd98da114d61509c04646cd3ccf93cf4cb0caaa9d8",
+  // CHSI, enrolment in China, shown (D215).
+  27: "0xe6bb6add0b9555f1d7cc0b063d21b12d2777bb4eaaa94c93bb19251d860b13b4",
 };
 
 test("every goal has its own number and its own provider id", () => {

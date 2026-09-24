@@ -687,6 +687,34 @@ export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
 };
 
 /**
+ * Enrolment in a Chinese university, shown from the Ministry's own register, CHSI (D215): the person opens their own
+ * student-status verification report with the code they applied for, in the verification tab. Shown and not read for
+ * them, because the report's page can put an image captcha in front of a server. Being built until our provider is
+ * registered from a real report and goal 27 is signed.
+ */
+export const CHSI_ENROLMENT_SHOWN: Condition = {
+  id: "chsi-enrolment-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  live: false,
+  beforeItOpens: "Its provider, registered on the Reclaim dashboard from a real CHSI report, and goal 27 signed by the owner.",
+  source: "CHSI",
+  family: "study",
+  name: "Enrolled in China, shown",
+  help: "Their own student-status report on CHSI, the Ministry's register, opened by them with its code: enrolled or not. It proves the report's holder, not who sits in class.",
+  link: { kind: "link", label: "Show it from your CHSI report", help: "Press Show it on your gift's page, then type your report's verification code in the tab that opens. Nothing to paste here." },
+  reading: "chsi-enrolment-shown",
+  words: {
+    earnedDay: "When they show they are enrolled, all of this becomes theirs",
+    connect: "Opened. Show your student-status report from CHSI when you are ready.",
+    doIt: "Press Show it and type your report's verification code in the tab that opens. The student status is what counts.",
+    eachDay: "the day it is shown",
+    preview: "Enrolled in China, shown from your own CHSI report: the gift is yours when you show it.",
+  },
+};
+
+/**
  * Fitbit, connected by the person (D188): the first condition of the third nature. Since the legacy Fitbit Web API
  * closes in September 2026, it is read through the Google Health API, which reads Fitbit trackers and Pixel Watches
  * (D197): the person authorises Viky once on Google's own page, and each morning the keeper asks for yesterday's
@@ -1073,6 +1101,7 @@ export const BUILDING: readonly Condition[] = [
   BAC_CAMEROON_SHOWN,
   BAC_FRANCE_SHOWN,
   UDEMY_COURSE_SHOWN,
+  CHSI_ENROLMENT_SHOWN,
   UNIVERSITY_YEAR_PASSED_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
   ECOLEDIRECTE_GRADE_SHOWN,

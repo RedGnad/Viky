@@ -40,6 +40,7 @@ import {
   IELTS_SHOWN,
   TOEFL_MYBEST_SHOWN,
   UNIVERSITY_ENROLLMENT_SHOWN,
+  CHSI_ENROLMENT_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
   UNIVERSITY_YEAR_PASSED_SHOWN,
 } from "./conditions";
@@ -79,6 +80,7 @@ import {
 import { CERTIFICATE as CERTIFICATE_SHAPE, CHESS_RATING as CHESS_RATING_SHAPE, type MilestoneShape } from "./milestone-terms";
 import { UDEMY_DURATION_DAYS, UDEMY_FINISHED, UDEMY_GOAL_TYPE, UDEMY_NOT_REGISTERED, UDEMY_PROVIDER, udemySlugOf, udemySubject } from "./udemy-shown";
 import { ECOLEDIRECTE_GOAL_TYPE, ECOLEDIRECTE_NOT_REGISTERED, ECOLEDIRECTE_PROVIDER, ECOLEDIRECTE_SUBJECT, isValidSchoolTarget, SCHOOL_DURATION_DAYS, schoolGradeInWords } from "./school-shown";
+import { CHSI_ENROLLED, CHSI_GOAL_TYPE, CHSI_NOT_REGISTERED, CHSI_PROVIDER, CHSI_SUBJECT } from "./chsi-shown";
 import { PRONOTE_GOAL_TYPE, PRONOTE_NOT_REGISTERED, PRONOTE_PROVIDER, pronoteSpaceOf, pronoteSubject } from "./pronote-shown";
 
 /**
@@ -831,6 +833,27 @@ export const UNIVERSITY_SHOWN_MILESTONE: CertificateCondition = {
   },
 };
 
+/** Enrolment in China, shown from the person's own CHSI report (D215): enrolment's shape, no portal to choose, no name. */
+export const CHSI_MILESTONE: CertificateCondition = {
+  ...UNIVERSITY_SHOWN_MILESTONE,
+  condition: CHSI_ENROLMENT_SHOWN,
+  goalType: CHSI_GOAL_TYPE,
+  validTarget: (value) => value === CHSI_ENROLLED,
+  subject: () => CHSI_SUBJECT,
+  portal: undefined,
+  course: undefined,
+  ...(CHSI_PROVIDER ? {} : { notOpen: CHSI_NOT_REGISTERED }),
+  target: { ...UNIVERSITY_SHOWN_MILESTONE.target, min: CHSI_ENROLLED, max: CHSI_ENROLLED, suggested: CHSI_ENROLLED, inWords: () => "enrolled, as their CHSI report says" },
+  words: {
+    ...UNIVERSITY_SHOWN_MILESTONE.words,
+    detailQuestion: "How long",
+    whatIsRead: "Viky keeps that the report said enrolled, and the day it was shown, and nothing else: no photograph, no identity number, no school. The verification code never reaches Viky.",
+    goal: () => "Show that you are enrolled",
+    mustShow: () => "Their own student-status report on CHSI, the Ministry's register, saying enrolled, shown from their own browser.",
+    refusals: { ...UNIVERSITY_SHOWN_MILESTONE.words.refusals, anotherName: "", below: () => "The report shown does not say enrolled." },
+  },
+};
+
 /**
  * Passing the year at their university, shown from the results page of the same portal (D174). Enrolment's shape
  * again, with one more thing the row must hold: the results page, proved from a student's session like the first.
@@ -1264,6 +1287,7 @@ const CERTIFICATES: readonly CertificateCondition[] = [
   ...EXAM_MILESTONES,
   UDEMY_MILESTONE,
   UNIVERSITY_SHOWN_MILESTONE,
+  CHSI_MILESTONE,
   UNIVERSITY_YEAR_MILESTONE,
   UNIVERSITY_GRADE_MILESTONE,
   ECOLEDIRECTE_MILESTONE,
