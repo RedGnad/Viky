@@ -17,8 +17,11 @@ test.describe("the hero moment", () => {
     const first = await (await page.request.get("/")).text();
     expect(first).toContain('data-hero="peeking"');
     await page.goto("/", { waitUntil: "load" });
-    // It rises, then it stands: the figure's bottom ends on the stage's floor, and its limbs are out.
-    await expect.poll(() => moving(page), { timeout: 3000 }).toBe(0);
+    // The moment starts when the attribute goes, in the same task as its animations; only then can "nothing moving"
+    // mean it is over rather than not yet begun (a slow machine hydrates after "load").
+    await expect.poll(() => page.locator(".hero-stage").getAttribute("data-hero"), { timeout: 5000 }).toBeNull();
+    // It leaps, bounces and stands: the figure's transform is gone, and its limbs are out.
+    await expect.poll(() => moving(page), { timeout: 4000 }).toBe(0);
     expect(await figureTransform(page)).toBe("none");
     expect(await page.locator(".hero-stage").getAttribute("data-hero")).toBeNull();
     const limbs = await page.locator('.hero-character [data-part="leg"]').evaluateAll((all) => all.map((leg) => getComputedStyle(leg).transform));

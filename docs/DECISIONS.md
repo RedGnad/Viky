@@ -6011,3 +6011,35 @@ The founder, 24 Sep 2026: the Safe session of goals 24 to 28, then edX and Accre
   once for real (D212, D213). They move from the lines being built to the register, `live` and open.
 - **What does not.** PRONOTE (goal 24) stays parked (D207); CHSI (27) and WAEC (28) wait for our provider registered
   from a real report and a real result. Their goals on the chain open nothing by themselves.
+## D219, 24 Sep 2026: the hero moment choreographed, and the limbs redrawn on the founder's sketch
+
+The founder, 24 Sep 2026, on the first version (D214): the arms and legs too thick and not placed as on his sketch,
+to be worked with a very slight but visible curve, and readable by night; and between the start and the end, the
+character whirls as it comes out from behind the card, bounces on the floor, and only then takes its pose and
+unfolds its limbs. To be done properly, step by step, on animation and mobile design references, nothing by chance.
+
+**The limbs.** Lines of 3.2 units instead of 5, hung from the body's lower sides (the arms) and stood under it (the
+legs), each one slight bow outward (`Q` paths), a hand and a foot at the end. Their colour is a token of its own,
+`--character-limb`: the face's ink by day, the text's light by night (both night blocks), because the face's ink is the
+night ground's own colour and a limb in it could not be seen.
+
+**The choreography**, on the principles every animator works from (Thomas and Johnston, The Illusion of Life, 1981:
+squash and stretch, slow in and slow out, follow through, arcs) and on Material's curves and springs, every number a
+token (`MOTION.hero`):
+
+| from | to | what | curve |
+|---|---|---|---|
+| 0 | 400 ms | the leap out from behind the card, one whirl (a group turning from its middle), the body stretching (0.94 by 1.08), 5 units above the floor at the top | emphasized decelerate |
+| 400 | 500 | the fall, the whirl ending upright as it touches the floor | emphasized accelerate |
+| 500 | 550 | the squash on the floor (1.14 by 0.84); the mouth opens, on the effects spring | emphasized decelerate |
+| 550 | 800 | one bounce, 2.5 units up and down, a second lighter squash (1.06 by 0.93) | decelerate up, accelerate down |
+| 800 | 1,251 | the settle, on the expressive fast spatial spring (damping 0.6, stiffness 800) | the spring |
+| 1,131 | 1,582 | the limbs unfold from their joints, on the same spring, once the body is almost still | the spring |
+
+Under the arrival's budget of two seconds. The first image is the starting state as before (peeking, 42 units down,
+limbs folded), once per visit by the session cookie, standing from the first image under reduced motion.
+
+**Measured.** Frames at 0, 200, 400, 450, 500, 600, 700, 800, 1,000, 1,300 and 1,700 ms at 390, by day and by night,
+sent to the founder: the whirl at 200, the squash at 500, the bounce between 600 and 800, still at 1,000, the limbs
+from 1,300; by night the limbs read in the text's light. `test/hero-moment.test.ts` holds the order of the moments,
+the curves of each segment, the budget, the thin bowed limbs and their two colours.

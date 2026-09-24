@@ -107,6 +107,9 @@
   --character-2: #5AB4FF;
   --character-3: #B79BFF;
   --character-face: #1E1633;
+  /* The arms and legs of the character of the landing (D219): the ink by day, and by night the text's own light, since
+     the face's ink is the ground's colour there and a limb in it could not be seen at all. */
+  --character-limb: #1E1633;
   --character-shadow: #1E1633;
   /* The juice (D132): one highlight of white and one shade of ink inside every character, and no gradient anywhere. */
   --character-gloss: rgba(255, 255, 255, 0.45);
@@ -302,6 +305,7 @@
     --character-2: #6DBDFB;
     --character-3: #BBA3FA;
     --character-face: #151026;
+    --character-limb: #F3F0FA;
     --character-shadow: #08060F;
     --character-shadow-opacity: 0.45;
     /* A shade under the ground, read as depth: the ink after dark read as a thick white edge. */
@@ -337,6 +341,7 @@
   --character-2: #6DBDFB;
   --character-3: #BBA3FA;
   --character-face: #151026;
+  --character-limb: #F3F0FA;
   --character-shadow: #08060F;
   --character-shadow-opacity: 0.45;
   /* A shade under the ground, read as depth: the ink after dark read as a thick white edge. */
