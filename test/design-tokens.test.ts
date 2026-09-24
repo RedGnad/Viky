@@ -445,7 +445,8 @@ test("every text size in the stylesheet is a step of the scale, and the promise 
   const root = css.slice(0, css.indexOf("@media (min-width: 600px)"));
   const from1024 = css.slice(css.indexOf("@media (min-width: 1024px)"), css.indexOf("@media (prefers-color-scheme: dark)"));
   assert.equal(HERO_TYPE.from, 1024);
-  assert.match(root, new RegExp(`--type-hero: ${HERO_TYPE.compact.size}px;`));
+  // The promise's step on a phone, which gives way only where the screen cannot hold its longest line (D235).
+  assert.match(root, new RegExp(`--type-hero: min\\(${HERO_TYPE.compact.size}px, calc\\(\\(100vw - 2 \\* var\\(--page-margin\\)\\) \\* 0\\.15\\)\\);`));
   assert.match(root, new RegExp(`--type-lead: ${LEAD_TYPE.compact.size}px;`));
   assert.match(from1024, new RegExp(`--type-hero: ${HERO_TYPE.wide.size}px;`));
   assert.match(from1024, new RegExp(`--type-hero-leading: ${HERO_TYPE.wide.lineHeight};`), "the advisor's 1.02, unitless");
