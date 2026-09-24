@@ -32,7 +32,7 @@ export function readThemeChoice(): ThemeChoice {
  * page and read it as the app being in the other mode. A chosen appearance writes both, so whichever one the
  * browser picks says the same thing.
  */
-const GROUNDS: Record<"light" | "dark", string> = { light: "#DDD6EB", dark: "#180943" };
+const GROUNDS: Record<"light" | "dark", string> = { light: "#DDD6EB", dark: "#151026" };
 
 export function paintTheBrowsersBar(appearance: "light" | "dark"): void {
   if (typeof document === "undefined") return;
@@ -99,4 +99,4 @@ export function themeChoiceOnServer(): ThemeChoice {
  * dark screen flash first. It has to be inline and synchronous for that, which is why it is a string: React
  * would run it after the first paint, which is exactly too late.
  */
-export const THEME_BOOT_SCRIPT = `try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});var a=document.documentElement.dataset.theme;if(t==="light"||t==="dark"){a=t;document.documentElement.dataset.theme=t}if(a==="light"||a==="dark"){var c=a==="dark"?"#180943":"#DDD6EB";var m=document.querySelectorAll('meta[name="theme-color"]');for(var i=0;i<m.length;i++){m[i].setAttribute("content",c)}}}catch(e){}`;
+export const THEME_BOOT_SCRIPT = `try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});var a=document.documentElement.dataset.theme;if(t==="light"||t==="dark"){a=t;document.documentElement.dataset.theme=t}if(a==="light"||a==="dark"){var c=a==="dark"?"#151026":"#DDD6EB";var m=document.querySelectorAll('meta[name="theme-color"]');for(var i=0;i<m.length;i++){m[i].setAttribute("content",c)}}}catch(e){}`;

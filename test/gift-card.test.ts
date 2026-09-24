@@ -227,16 +227,16 @@ test("a card is the object on the ground, as the rendered mockups draw it by day
   // Night: a paper of its own since D223, one step above the ink ground, no shadow and no edge at all. The cream it
   // replaced stood at 17:1 on that ground, the brightest thing on a screen somebody had set to dark.
   assert.match(css, /--paper: #FFF6E2;/);
-  assert.equal((css.match(/--paper: #2B225C;/g) ?? []).length, 2, "the night paper, in both night blocks");
-  assert.ok(contrastRatio("#2B225C", COLOURS.dark.background) >= 1.25, "the card and the ground are never the same value");
+  assert.equal((css.match(/--paper: #2B2642;/g) ?? []).length, 2, "the night paper, in both night blocks");
+  assert.ok(contrastRatio("#2B2642", COLOURS.dark.background) >= 1.25, "the card and the ground are never the same value");
   for (const [ink, on, least, what] of [
-    ["#FFF6E2", "#2B225C", 4.5, "the ink on the night paper"],
-    ["#C9BDF0", "#2B225C", 4.5, "the quiet voice on it"],
-    ["#FFF6E2", "#362E6A", 4.5, "the ink in a field"],
-    ["#FFF6E2", "#3C3571", 4.5, "the ink on a chosen row"],
-    ["#FFC531", "#2B225C", 3, "the sun on it"],
+    ["#FFF6E2", "#2B2642", 4.5, "the ink on the night paper"],
+    ["#C7C4DA", "#2B2642", 4.5, "the quiet voice on it"],
+    ["#FFF6E2", "#36304D", 4.5, "the ink in a field"],
+    ["#FFF6E2", "#3F3957", 4.5, "the ink on a chosen row"],
+    ["#FFC531", "#2B2642", 3, "the sun on it"],
   ] as const) assert.ok(contrastRatio(ink, on) >= least, what);
-  for (const said of ["--paper-field: #362E6A;", "--chosen: #3C3571;", "--on-surface: #FFF6E2;", "--on-surface-muted: #C9BDF0;", "--paper-relief: #C9BDF0;"]) {
+  for (const said of ["--paper-field: #36304D;", "--chosen: #3F3957;", "--on-surface: #FFF6E2;", "--on-surface-muted: #C7C4DA;", "--paper-relief: #C7C4DA;"]) {
     assert.equal((css.match(new RegExp(said.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length, 2, `${said} in both night blocks`);
   }
   assert.match(css, /--control-relief-colour: var\(--paper-relief\);/, "a key on the paper stands on the paper's own relief");
