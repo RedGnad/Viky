@@ -331,10 +331,11 @@ test("the page without an account is the character, the title, the sentence and 
   assert.ok(order.every((at) => at > 0));
   // One column: nothing turns the block into a row and nothing reorders it at any width.
   assert.doesNotMatch(signedOut, /flex-row|order-1|order-2/, "no second column and no reordering");
-  // From 1024 the whole composition is centred in the window, the card included (D131).
-  assert.match(signedOut, /\[@media\(min-width:1024px\)\]:items-center/);
-  assert.match(signedOut, /\[@media\(min-width:1024px\)\]:text-center/);
-  assert.match(signedOut, /<div className="arrives-in-turn flex w-full flex-col items-start/, "one column, on one left edge, and its pieces arrive in turn (D147)");
+  // The whole composition is centred in the window at every width, the card included (D131 from 1024, D221 below).
+  assert.match(signedOut, /className="arrives-in-turn flex w-full flex-col items-center"/);
+  assert.match(signedOut, /className="mt-auto w-full text-center"/);
+  assert.doesNotMatch(signedOut, /items-start|\[@media\(min-width:1024px\)\]:text-center/, "nothing left-aligned on a phone");
+  assert.match(signedOut, /<div className="arrives-in-turn flex w-full flex-col items-center/, "one column, on one axis, and its pieces arrive in turn (D147)");
   assert.doesNotMatch(signedOut, /<h1 className=\{`\$\{HERO\}[^`]*max-w/, "the title is free to take the column, which is what holds it on one line at 76");
   assert.match(signedOut, /<Shell kind="destination" active="home" action=\{<SignInDoor \/>\} bare wide>/, "the wide column, and no rail's room");
   assert.match(home, /<Shell kind="destination" active="home" width="card" character=\{<HeadCharacter \/>\}>/, "with an account, the column is the card's width, and the character is at its head (D154)");

@@ -11,6 +11,8 @@ const SIZES = [
   { width: 1024, height: 800 },
   { width: 1440, height: 900 },
 ] as const;
+/** What of the card's top the first screen shows, `--hero-card-peek` (D221). */
+const CARD_PEEK = 104;
 
 /** Every blurred shadow and every blurred filter on the page, the two page pseudo-elements included. */
 async function blurs(page: Page): Promise<string[]> {
@@ -64,21 +66,14 @@ for (const scheme of ["dark", "light"] as const) {
       expect(sentence.y + sentence.height).toBeLessThanOrEqual(way.y);
       expect(way.y + way.height).toBeLessThanOrEqual(character.y);
       expect(character.y + character.height).toBeLessThanOrEqual(card.y + 4);
-      // The card's top is in the first screen, below its middle: the page says there is more.
+      // The card's top is cut by the fold: the first screen ends where the card's peek begins, at every size (D221).
       expect(card.y).toBeLessThan(size.height);
-      expect(card.y).toBeGreaterThan(size.height * 0.4);
+      expect(Math.abs(card.y - (size.height - CARD_PEEK))).toBeLessThan(2);
       // The character is centred on the card at every width.
       expect(Math.abs(character.x + character.width / 2 - (card.x + card.width / 2))).toBeLessThan(2);
-      if (size.width >= 1024) {
-        // Centred in the window, the card included (D131): every block on the same axis.
-        const middle = size.width / 2;
-        for (const box of [character, titleBox, sentence, way, card]) expect(Math.abs(box.x + box.width / 2 - middle)).toBeLessThan(2);
-      } else {
-        // The text and the way start on the card's edge.
-        expect(Math.abs(titleBox.x - card.x)).toBeLessThan(1);
-        expect(Math.abs(sentence.x - card.x)).toBeLessThan(1);
-        expect(Math.abs(way.x - card.x)).toBeLessThan(1);
-      }
+      // Centred in the window at every width (D221), the card included (D131): every block on the same axis.
+      const middle = size.width / 2;
+      for (const box of [character, titleBox, sentence, way, card]) expect(Math.abs(box.x + box.width / 2 - middle)).toBeLessThan(2);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(size.width);
       // The title at its step: 76 from 1024, 49 below (D131).
       expect(await title.evaluate((el) => getComputedStyle(el).fontSize)).toBe(size.width >= 1024 ? "76px" : "49px");
@@ -92,11 +87,10 @@ for (const scheme of ["dark", "light"] as const) {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
     await page.evaluate(() => document.fonts.ready);
-    // D129 asked for the whole page in 900; D214 puts the character between the sentence and the card, and the card's
-    // top in the first screen is what the page needs to say there is more (NN/g on the fold).
+    // D129 asked for the whole page in 900; D214 puts the character between the sentence and the card, and D221 cuts
+    // the card's top at the fold, which is what the page needs to say there is more (NN/g on the fold).
     const card = (await page.locator("section.gift-card-placed").boundingBox())!;
-    expect(card.y).toBeLessThan(900);
-    expect(card.y).toBeGreaterThan(360);
+    expect(Math.abs(card.y - (900 - CARD_PEEK))).toBeLessThan(2);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
   });
 }

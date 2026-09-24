@@ -148,8 +148,10 @@
   --type-body-leading: 24px;
   --type-help: 13px;
   --type-help-leading: 18px;
-  /* The character of the hero moment (D214): its box on a phone; from 1024 the same, standing over the card. */
-  --hero-character-size: 232px;
+  /* The character of the hero moment (D214): the width of its box, the sketch's measure on a phone (D221); 360 from 1024. */
+  --hero-character-size: 272px;
+  /* What of the card's top the first screen shows under the character (D221): its name row whole, the next one cut. */
+  --hero-card-peek: 104px;
   /* The card of a gift's page, the mockup's own sizes, off the scale on purpose (GIFT_CARD_TYPE, src/design-tokens.ts). */
   --type-gift-eyebrow-leading: 16px;
   --type-gift-what: 15px;
@@ -273,6 +275,7 @@
     --type-hero-tracking: -2px;
     --type-lead: 20px;
     --type-lead-leading: 28px;
+    --hero-character-size: 360px;
   }
 }
 
@@ -817,18 +820,27 @@ dialog.sheet[open] {
 }
 
 /*
- * The hero moment of the landing (D214): the stage the character stands on, and its starting state. The character is
- * as wide as the card allows on a phone and holds its box; the stage is its height, so the card that follows starts
- * where its feet are. While the moment has not played, the stylesheet puts the figure down by 66 % of its box, behind
- * the card that follows, and folds the limbs into the body: that is the first image, and the animation starts from
- * it. A device that asks for less movement is shown the character standing, whatever the attribute says.
+ * The hero moment of the landing (D214, then D221 for the first screen): the first screen, the stage the character
+ * stands on, and its starting state. The first screen is the title, the sentence, the way to the card and the
+ * character, as tall as the viewport less the header and what of the card it shows, so the card's top is cut by the
+ * fold on every phone and the page says there is more (NN/g: a cut element is the cue, a screen that looks complete
+ * is not scrolled); the room left over goes half above the title and half above the character. The character's box is
+ * 64 by 53 and the stage is its height, so the card that follows starts where its feet are. While the moment has not
+ * played, the stylesheet puts the figure down by 31 units of its box, behind the card that follows, and folds the
+ * limbs into the body: that is the first image, and the animation starts from it. A device that asks for less
+ * movement is shown the character standing, whatever the attribute says.
  */
+.hero-first-screen {
+  /* What is above the column: the page's top padding, the door's height and the column's gap (Shell). */
+  min-height: calc(100svh - var(--space-lg) - var(--tap-target) - var(--space-xl) - var(--hero-card-peek));
+}
+
 .hero-stage {
   position: relative;
   width: 100%;
-  height: var(--hero-character-size);
-  /* The card starts where the feet are: the column's gap is taken back, so nothing shows between the two. */
-  margin-bottom: calc(-1 * var(--space-md));
+  height: calc(var(--hero-character-size) * 53 / 64);
+  /* Its share of the room the first screen has left over, the same as the title's: auto margins share it equally. */
+  margin-top: auto;
 }
 
 .hero-character {
@@ -836,13 +848,13 @@ dialog.sheet[open] {
   bottom: 0;
   left: 50%;
   width: var(--hero-character-size);
-  height: var(--hero-character-size);
+  height: calc(var(--hero-character-size) * 53 / 64);
   transform: translateX(-50%);
 }
 
-/* In the drawing's own units (its box is 64 by 64), which is how a transform on an SVG group is read: 66 % of 64. */
+/* In the drawing's own units (its box is 64 by 53), which is how a transform on an SVG group is read (HERO_PEEK). */
 [data-hero="peeking"] [data-part="figure"] {
-  transform: translateY(42px);
+  transform: translateY(31px);
 }
 
 [data-hero="peeking"] [data-part="arm"],

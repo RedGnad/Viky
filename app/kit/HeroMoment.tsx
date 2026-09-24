@@ -24,9 +24,12 @@ import { Expression, reduced } from "./Motion";
  * limbs folded from that attribute, and the animations start from exactly there in the same task the attribute goes.
  * Nothing plays on a clock, nothing loops, and a device that asks for less movement is shown the character standing.
  */
-export const HERO_PEEK = 0.66;
-/** The side of the drawing's box, in its own units (`Character`, the diamond with limbs). */
-const CHARACTER_BOX = 64;
+/**
+ * How far down the figure sits behind the card at the start, in the drawing's own units (D221): its box is 53 tall,
+ * the head's top at 4 and the eyes at 18, so 31 down leaves the head's top to just under the eyes over the card's
+ * edge, which is what the founder's sketch shows.
+ */
+export const HERO_PEEK = 31;
 
 /** The moments of the choreography, in milliseconds from the start, computed once from the tokens. */
 export function heroTimeline(hero = MOTION.hero) {
@@ -62,14 +65,13 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
     }
     const hero = MOTION.hero;
     const time = heroTimeline(hero);
-    const peek = Math.round(HERO_PEEK * CHARACTER_BOX);
     const at = (ms: number) => ms / time.still;
     const body = (y: number, scale: Readonly<{ x: number; y: number }>) => `translateY(${y}px) scale(${scale.x}, ${scale.y})`;
     const running: Animation[] = [
       // The leap, the fall, the squash, the bounce and the settle: one animation of the body, from the floor up.
       figure.animate(
         [
-          { offset: 0, transform: body(peek, hero.plain), easing: EASING.emphasizedDecelerate },
+          { offset: 0, transform: body(HERO_PEEK, hero.plain), easing: EASING.emphasizedDecelerate },
           { offset: at(time.top), transform: body(-hero.leapAbove, hero.stretch), easing: EASING.emphasizedAccelerate },
           { offset: at(time.floor), transform: body(0, hero.squash), easing: EASING.emphasizedDecelerate },
           { offset: at(time.hopTop), transform: body(-hero.hopAbove, hero.lift), easing: EASING.emphasizedAccelerate },
