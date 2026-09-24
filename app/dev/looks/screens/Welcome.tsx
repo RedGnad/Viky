@@ -4,7 +4,7 @@ import { Character } from "@/app/kit/Character";
 import { useMinute } from "@/app/kit/clock";
 import { exampleGift } from "@/app/kit/example-gift";
 import { GiftCard } from "@/app/kit/GiftCard";
-import { Gaze, Reveal } from "@/app/kit/Motion";
+import { Reveal } from "@/app/kit/Motion";
 import { Shell } from "@/app/kit/Shell";
 import { BODY, DISPLAY, HELP, INLINE_BUTTON, PRIMARY_BUTTON, PROSE, TITLE } from "@/app/components/ui";
 import { DOOR, HOME, ME } from "@/src/sentences";
@@ -31,10 +31,8 @@ export function Welcome() {
       }
     >
       <section className="flex flex-col gap-[var(--space-lg)]">
-        <Gaze>
-          <Character state="gift" className="h-auto w-[104px] [@media(min-width:840px)]:w-[136px]" />
-        </Gaze>
-        <h1 className={DISPLAY}>{HOME.promise}</h1>
+                  <Character state="gift" className="h-auto w-[104px] [@media(min-width:840px)]:w-[136px]" />
+                <h1 className={DISPLAY}>{HOME.promise}</h1>
         <p className={PROSE}>{HOME.promiseBody}</p>
         <div className="flex w-full max-w-[420px] flex-col pt-[var(--space-sm)]">
           <Link href={labHref("amount")} className={PRIMARY_BUTTON}>

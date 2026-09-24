@@ -5,7 +5,6 @@ import { runShownProof } from "@/src/client/gift";
 import { conditionById } from "@/src/conditions";
 import { SHOW_PROOF as W } from "@/src/sentences";
 import { BODY, HELP, PRIMARY_BUTTON } from "../components/ui";
-import { feel } from "./mood";
 
 /**
  * The one gesture of a shown condition (D162): the person the gift is for presses "Show it", a verification tab
@@ -38,7 +37,6 @@ export function ShowProof({ giftId, conditionId, yours, onShown }: Readonly<{ gi
       });
       if (outcome.kind === "reached") {
         setState({ at: "done", score: outcome.shown });
-        feel("happy", button.current, true);
         await onShown();
         return;
       }

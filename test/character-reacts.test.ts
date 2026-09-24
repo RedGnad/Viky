@@ -4,15 +4,17 @@ import test from "node:test";
 import { MOTION } from "../src/design-tokens";
 
 /**
- * The character reacts (the life of the product, step 2, 23 Sep 2026): it looks at a pointer, opens when a day earned
- * lands, looks down for 300 ms when a day goes back, and jumps once at "atteint". Each reaction comes from the gift's
- * own record, never from a clock, and it never scolds.
+ * The character reacts (the life of the product, step 2, 23 Sep 2026): it opens when a day earned lands, looks down for
+ * 300 ms when a day goes back, and jumps once at "atteint". Each reaction comes from the gift's own record, never from
+ * a clock, and it never scolds. It answers no button and no pointer (D216).
  */
-test("it looks at a pointer, 2.5 px in 200 ms, and only a pointer", () => {
-  assert.equal(MOTION.hover.gaze, 2.5);
-  assert.equal(MOTION.hover.durationMs, 200);
+test("it answers no button and no pointer (D216): the two expressions and the gaze are gone", () => {
   const motion = readFileSync("app/kit/Motion.tsx", "utf8");
-  assert.match(motion, /if \(!element \|\| reduced\(\) \|\| !window\.matchMedia\(POINTER\)\.matches\) return;/);
+  assert.doesNotMatch(motion, /export function Gaze\(/, "nothing follows the pointer");
+  assert.doesNotMatch(motion, /"curious"|"happy"/, "no expression answers a control");
+  assert.doesNotMatch(readFileSync("app/kit/mood.ts", "utf8"), /"curious"|"happy"/);
+  for (const file of ["app/kit/offer/OfferCard.tsx", "app/kit/ShowProof.tsx"]) assert.ok(!readFileSync(file, "utf8").includes("feel("), `${file} asks the character nothing`);
+  for (const file of ["app/kit/HeadCharacter.tsx", "app/kit/HeroMoment.tsx", "app/kit/DayRow.tsx"]) assert.ok(!readFileSync(file, "utf8").includes("<Gaze"), `${file} has no gaze`);
 });
 
 test("it opens when a day earned lands and looks down when a day goes back, cued by the day's own animation", () => {

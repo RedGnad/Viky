@@ -451,29 +451,18 @@ export function Reveal({ className, children }: Readonly<{ className?: string; c
 }
 
 /**
- * The two expressions the founder asked for on 21 Sep 2026 (the motion roadmap, step 2), built from the parts a
- * character already has, the gaze, the eyes and the mouth, with nothing new drawn:
- *
- * - **curious**, on the line that says what they will do: the gaze turns towards that line and the mouth opens a
- *   little. Where the line is, is where it looks: the direction is measured from the character's own box to the
- *   control's, which is the same arithmetic `Gaze` does with a pointer.
- * - **happy**, on a length being considered: the eyes narrow into a smile and the mouth widens a touch.
- *
- * With a pointer it is the hover, 200 ms in and 200 ms back, `MOTION.hover`. With a finger there is no hover at all,
- * so the expression plays once when the choice is made and comes back by itself: one animation of 700 ms with the
- * face held in the middle of it, never a clock and never a loop. Reduced motion is given the rest face and nothing
- * else, which is what `reduced()` decides here as everywhere.
+ * What the character's face does when it feels something (the life of the product, step 2), built from the parts it
+ * already has, the gaze, the eyes and the mouth: `open` when a day earned lands, `down` when a day goes back, `jump`
+ * once at "atteint". Each plays once and comes back by itself: one animation with the face held in the middle of it,
+ * never a clock and never a loop. Reduced motion is given the rest face and nothing else, which is what `reduced()`
+ * decides here as everywhere. The two expressions that answered a pointer over a control or a choice made on the card
+ * (`curious`, `happy`) and the gaze that followed a pointer were removed on 24 Sep 2026 (D216).
  */
 type Faces = Readonly<{ gaze?: string; eye?: string; mouth?: string }>;
 
 const AT_REST: Faces = { gaze: "translate(0px, 0px)", eye: "scaleY(1)", mouth: "scale(1, 1)" };
 
-function facesOf(mood: Mood, towards: Readonly<{ dx: number; dy: number }>): Faces {
-  if (mood.feeling === "curious") {
-    const { gaze } = MOTION.hover;
-    return { ...AT_REST, gaze: `translate(${(towards.dx * gaze).toFixed(2)}px, ${(towards.dy * gaze).toFixed(2)}px)`, mouth: "scale(1, 1.6)" };
-  }
-  if (mood.feeling === "happy") return { ...AT_REST, eye: "scaleY(0.34)", mouth: "scale(1.18, 1.08)" };
+function facesOf(mood: Mood): Faces {
   // A day earned has landed: the face opens, the eyes a little wider and the mouth open, as the day's own face does.
   if (mood.feeling === "open") return { ...AT_REST, eye: "scale(1.18)", mouth: "scale(1.2, 1.7)" };
   // A day went back: the eyes look down, and nothing else changes. Never a frown: nobody is being scolded.
@@ -500,18 +489,12 @@ export function Expression({ children }: Readonly<{ children: ReactNode }>) {
   useEffect(() => {
     const element = root.current;
     if (!element || reduced()) return;
-    const drawing = element.querySelector("svg");
-    if (!drawing) return;
-    const box = drawing.getBoundingClientRect();
-    const dx = (mood.at?.x ?? box.left + box.width / 2) - (box.left + box.width / 2);
-    const dy = (mood.at?.y ?? box.top + box.height / 2) - (box.top + box.height / 2);
-    const distance = Math.hypot(dx, dy) || 1;
     // Reached: one jump, the same one a day earned makes, and nothing to hold afterwards.
     if (mood.feeling === "jump") {
       const jumping = playEarned(element, 0);
       return () => jumping.forEach((animation) => animation.cancel());
     }
-    const faces = facesOf(mood, { dx: dx / distance, dy: dy / distance });
+    const faces = facesOf(mood);
     // A look down lasts what a day going back lasts, 300 ms in all (MOTION.returned); the rest are the hover's own.
     const down = mood.feeling === "down";
     const durationMs = down ? MOTION.returned.durationMs / 3 : MOTION.hover.durationMs;
@@ -528,7 +511,7 @@ export function Expression({ children }: Readonly<{ children: ReactNode }>) {
           : [{ transform: to }];
         const played = part.animate(keyframes, { duration: mood.once ? roundMs : durationMs, easing, fill: "forwards" });
         // What it ends on is written into the drawing itself, so the next expression starts from the face that is
-        // there rather than from the face it was drawn with, and the pointer's own gaze keeps the same channel.
+        // there rather than from the face it was drawn with.
         void played.finished
           .then(() => {
             keep(played);
@@ -547,45 +530,6 @@ export function Expression({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-/**
- * A character's face turns towards a pointer hovering it, and comes back when the pointer leaves. A pointer only: a
- * finger has no hover, so nothing a person needs is ever carried by this (WCAG 1.4.13).
- */
-export function Gaze({ children }: Readonly<{ children: ReactNode }>) {
-  const root = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    const element = root.current;
-    if (!element || reduced() || !window.matchMedia(POINTER).matches) return;
-    const { durationMs, easing, gaze } = MOTION.hover;
-    const eyesOf = () => part(element, "gaze");
-    const look = (event: PointerEvent) => {
-      const eyes = eyesOf();
-      const svg = element.querySelector("svg");
-      if ((event.pointerType !== "mouse" && event.pointerType !== "pen") || !eyes || !svg) return;
-      const box = svg.getBoundingClientRect();
-      const dx = event.clientX - (box.left + box.width / 2);
-      const dy = event.clientY - (box.top + box.height / 2);
-      const distance = Math.hypot(dx, dy) || 1;
-      eyes.style.transition = `transform ${durationMs}ms ${easing}`;
-      eyes.style.transform = `translate(${((dx / distance) * gaze).toFixed(2)}px, ${((dy / distance) * gaze).toFixed(2)}px)`;
-    };
-    const rest = () => {
-      const eyes = eyesOf();
-      if (eyes) eyes.style.transform = "translate(0px, 0px)";
-    };
-    element.addEventListener("pointermove", look);
-    element.addEventListener("pointerleave", rest);
-    return () => {
-      element.removeEventListener("pointermove", look);
-      element.removeEventListener("pointerleave", rest);
-    };
-  }, []);
-  return (
-    <span ref={root} data-gaze className="contents">
-      {children}
-    </span>
-  );
-}
 
 /**
  * What this device last saw of a number, so an arrival can count from it to what it is now: from the cookie the server

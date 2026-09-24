@@ -14,11 +14,13 @@
  */
 
 /**
- * `curious` and `happy` answer a pointer or a choice (step 2). The other three answer the gift's own record (the life
- * of the product, step 2, 23 Sep 2026): `open` when a day earned lands, `down` when a day goes back, for 300 ms and
- * never a frown, and `jump`, once, the first time this device sees the gift reached. None is ever set by a clock.
+ * Three feelings, and each answers the gift's own record (the life of the product, step 2, 23 Sep 2026): `open` when
+ * a day earned lands, `down` when a day goes back, for 300 ms and never a frown, and `jump`, once, the first time this
+ * device sees the gift reached. None is ever set by a clock. `curious` and `happy`, which answered a pointer over a
+ * control or a choice made on the card, were removed on 24 Sep 2026 (D216): the founder judged them hazardous and
+ * unreadable, and a character that reacts to buttons says nothing about the money.
  */
-export type Feeling = "rest" | "curious" | "happy" | "open" | "down" | "jump";
+export type Feeling = "rest" | "open" | "down" | "jump";
 
 export type Mood = Readonly<{
   feeling: Feeling;

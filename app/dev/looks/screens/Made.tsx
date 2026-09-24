@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Character } from "@/app/kit/Character";
-import { Gaze, Reveal, Success } from "@/app/kit/Motion";
+import { Reveal, Success } from "@/app/kit/Motion";
 import { Shell } from "@/app/kit/Shell";
 import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "@/app/components/ui";
 import { DUOLINGO_DAILY } from "@/src/conditions";
@@ -17,10 +17,8 @@ export function Made() {
   return (
     <Shell kind="task" back={labHref("home")} backLabel={W.backToGifts} backFollows step={W.made.title(TO_NOE.amount, TO_NOE.recipient)}>
       <Success>
-        <Gaze>
-          <Character drawn="inline" state="gift" className="h-auto w-[120px] self-center" />
-        </Gaze>
-      </Success>
+                  <Character drawn="inline" state="gift" className="h-auto w-[120px] self-center" />
+              </Success>
       <section className="flex flex-col gap-[var(--space-sm)]">
         <p className={BODY}>{W.made.terms(TO_NOE.amount, TO_NOE.days, TO_NOE.perDay, true, condition.source)}</p>
         <p className={HELP}>{W.made.reference(TO_NOE.made, TO_NOE.giftId)}</p>

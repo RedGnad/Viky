@@ -5954,3 +5954,24 @@ The founder's third register, 24 Sep 2026: CHSI (学信网), "captcha to study: 
   ones included, without its consent; on the judges' page, the founder's call.
 - **Default applied, to confirm.** The student-status report (学籍) rather than the degree report (学历): the founder's
   line said "inscription et diplôme"; the diploma is a second line on the same page, one more field.
+## D216, 24 Sep 2026: the character answers no button and no pointer
+
+The founder, 24 Sep 2026: the mascot's animations when a button is pressed are "hyper hasardeux et pas lisible", to be
+removed; what he wants are few movements, well made, à la Duolingo or Phantom.
+
+**Removed.** The two expressions of D148 that answered the card's controls (`curious` on the line that says what they
+will do, `happy` on a length) with a pointer or a finger; the smile a proof shown gave; and the gaze that followed a
+pointer on every head character and on the row of a gift's page (`Gaze`). The card asks the character nothing, and
+`feel` is called from two places only: the arrival's cue and the confetti.
+
+**Kept.** The three reactions that tell the money, from the gift's own record and never from a clock: the face opens
+when a day earned lands, looks down for 300 ms when a day goes back, and jumps once at "atteint". The hero moment of
+the landing (D214) stands as it is.
+
+**One thing it freed.** The days of a gift's page were written into the page only so a pointer could move their eyes;
+now only the days that jump or leave in the arrival are written, and the others name their drawing (D206), which
+lightens a gift's page by about a kilobyte a day.
+
+`test/character-reacts.test.ts`, `test/motion.test.ts`, `test/character-file.test.ts` and `test/browser/character.spec.ts`
+say what is gone: no `Gaze`, no `curious`, no `happy`, nothing on the card asks the character anything, and a hover or a
+press on the card leaves the face at rest, with or without reduced motion.
