@@ -6109,3 +6109,23 @@ account plain).
 founder. `test/hero-moment.test.ts` holds the limbs' paths, the peek, the first screen's rule and the way's accent;
 `test/browser/home-order.spec.ts` the card's top at 104 from the viewport's foot at four sizes, and every block on
 one axis.
+
+## D222, 24 Sep 2026: an MIT course certificate, read from MITx Online
+
+The founder, 24 Sep 2026: MITx Online, edX's model, family Learn, the person gives the link and the reading service
+reads the public page, attested; terms read first; a goal for the next Safe session; the source in the fingerprinted
+list and the service redeployed.
+
+- **Why here and not on edX.** On 24 Sep 2026 edX lists no MITx school any more; MIT's courses are on
+  mitxonline.mit.edu. The landing's list of universities had MIT removed for that reason; this line brings it back,
+  from MIT's own platform.
+- **The page.** `/certificate/<uuid>/` for a course, `/certificate/program/<uuid>/` for a program, server-rendered,
+  read on two live program certificates; the course path is the same template in MIT's public source
+  (mitodl/mitxonline). Four patterns: the title, the name, "Issued: Nov. 4, 2024" in Django's month words, and the
+  certificate's own id. A revoked certificate answers 404. No course certificate was found in the open.
+- **The course is named by its title**, since the page prints no course code; a program's title works the same way.
+  Every MITx Online certificate is on the paid track, so there is no track to check.
+- **Terms**, read 24 Sep 2026: no scraping or bulk download, personal and noncommercial use of site content, and
+  MIT's name never to suggest a relationship. On the judges' page with the risk assumed as for edX; the line says "an
+  MIT course", never a place at MIT, as the founder asked.
+- **Goal 29**, one Safe transaction; the line opens when it is signed.

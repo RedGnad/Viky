@@ -27,6 +27,7 @@ import {
   CREDLY_BADGE,
   COURSERA_CERTIFICATE as COURSERA_CONDITION,
   EDX_CERTIFICATE as EDX_CONDITION,
+  MITX_ONLINE_CERTIFICATE_LINE,
   ACCREDIBLE_CREDENTIAL as ACCREDIBLE_CONDITION,
   DUOLINGO_ENGLISH_TEST,
   type Condition,
@@ -47,6 +48,7 @@ import {
 } from "./conditions";
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
 import { EDX_DURATION_DAYS, EDX_GOAL_TYPE, EDX_HAS_IT, edxCertificateIdOf, edxCourseOf, edxSubject } from "./edx-certificate";
+import { MITX_ONLINE_DURATION_DAYS, MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineCourseOf, mitxOnlineKeyOf, mitxOnlineSubject } from "./mitx-online-certificate";
 import { ACCREDIBLE_DURATION_DAYS, ACCREDIBLE_GOAL_TYPE, ACCREDIBLE_HAS_IT, accredibleCourseOf, accredibleIdOf, accredibleSubject } from "./accredible-credential";
 import { CREDLY_DURATION_DAYS, CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyBadgeIdOf, credlyPairOf, credlySubject } from "./credly-badge";
 import {
@@ -576,6 +578,42 @@ export const EDX_MILESTONE: CertificateCondition = {
       nameShape: "Type their name as edX prints it on a certificate.",
       linkShape: "That is not an edX certificate link. It looks like courses.edx.org/certificates/ followed by an id.",
       below: () => "That certificate is not a verified one, so it is not what this gift is for.",
+    },
+  },
+};
+
+/** An MIT course certificate from MITx Online (D222): edX's shape, the course named by its title since the page prints no code. */
+export const MITX_ONLINE_MILESTONE: CertificateCondition = {
+  ...EDX_MILESTONE,
+  condition: MITX_ONLINE_CERTIFICATE_LINE,
+  goalType: MITX_ONLINE_GOAL_TYPE,
+  readPath: "/api/mitx-online/certificate",
+  validLink: (value) => mitxOnlineKeyOf(value) !== undefined,
+  validTarget: (value) => value === MITX_ONLINE_HAS_IT,
+  subject: ({ name, course }) => mitxOnlineSubject(name, String(course ?? "")),
+  course: {
+    label: "The course, by its title",
+    help: "Its title as MITx Online prints it on the course page and the certificate, like Introduction to Mechanics. A program's title works the same way.",
+    slugOf: mitxOnlineCourseOf,
+    row: "Which course",
+    named: (course) => `This gift will be for the MIT course ${course}. That is the title MITx Online prints on the certificate.`,
+  },
+  target: { ...EDX_MILESTONE.target, help: "A MITx Online certificate is issued or it is not, so there is nothing to choose here.", min: MITX_ONLINE_HAS_IT, max: MITX_ONLINE_HAS_IT, suggested: MITX_ONLINE_HAS_IT },
+  duration: MITX_ONLINE_DURATION_DAYS,
+  words: {
+    ...EDX_MILESTONE.words,
+    nameLabel: "Their name, as MITx Online prints it on a certificate",
+    nameHelp: "The name on their MITx Online account. If it does not match, the gift cannot pay.",
+    linkHelp: "In MITx Online, open the certificate from your dashboard and copy the whole link from your browser. It looks like mitxonline.mit.edu/certificate/ followed by an id.",
+    whatIsRead: "Viky reads three things from that page: the name on it, the course's title, and the day it was issued. It keeps those with the gift and nothing else.",
+    mustShow: (name) => `A MITx Online certificate in the name ${name}, for that course, issued inside these days. Nothing else is read from it.`,
+    refusals: {
+      ...EDX_MILESTONE.words.refusals,
+      targetShape: "A MITx Online certificate is issued or it is not, so there is nothing to set here.",
+      nameShape: "Type their name as MITx Online prints it on a certificate.",
+      linkShape: "That is not a MITx Online certificate link. It looks like mitxonline.mit.edu/certificate/ followed by an id.",
+      notFound: "No certificate answers to that link, or it was revoked. Check that you copied the whole link.",
+      anotherName: "That certificate is in another name, or for another course, so this gift cannot pay for it.",
     },
   },
 };
@@ -1319,6 +1357,7 @@ const CERTIFICATES: readonly CertificateCondition[] = [
   DET_MILESTONE,
   COURSERA_MILESTONE,
   EDX_MILESTONE,
+  MITX_ONLINE_MILESTONE,
   CREDLY_MILESTONE,
   ACCREDIBLE_MILESTONE,
   TOEFL_SHOWN_MILESTONE,

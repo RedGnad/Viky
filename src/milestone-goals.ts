@@ -14,6 +14,7 @@ import { UDEMY_GOAL_TYPE, udemyProviderId } from "./udemy-shown";
 import { ECOLEDIRECTE_GOAL_TYPE, ecoleDirecteProviderId } from "./school-shown";
 import { CHSI_GOAL_TYPE, chsiProviderId } from "./chsi-shown";
 import { WAEC_GOAL_TYPE, waecProviderId } from "./waec-shown";
+import { MITX_ONLINE_GOAL_TYPE, mitxOnlineProviderId } from "./mitx-online-certificate";
 import { PRONOTE_GOAL_TYPE, pronoteProviderId } from "./pronote-shown";
 
 /**
@@ -67,6 +68,8 @@ export const MILESTONE_GOALS: readonly MilestoneGoal[] = [
   { goalType: CHSI_GOAL_TYPE, providerId: chsiProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "CHSI", detail: "enrolment in China, shown" },
   // WAEC (D217): WASSCE credits, shown from WAEC's own checker.
   { goalType: WAEC_GOAL_TYPE, providerId: waecProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "WAEC", detail: "WASSCE credits, shown" },
+  // MITx Online (D222): a certificate from MIT's own course platform.
+  { goalType: MITX_ONLINE_GOAL_TYPE, providerId: mitxOnlineProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "MITx Online", detail: "an MIT course certificate" },
   // A certification badge: granted once by an issuer that is not the person, so it is had or not (20 Sep 2026).
   { goalType: CREDLY_GOAL_TYPE, providerId: credlyProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Credly", detail: "a certification badge" },
   // Staying enrolled, shown from the person's own student portal: one goal for every portal, the portal pinned in

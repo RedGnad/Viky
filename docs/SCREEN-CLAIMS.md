@@ -584,3 +584,11 @@ dollars; and the session countdown. Each test was checked by breaking the rule a
 | "That result is from 2018, before this gift was made." | the examination's year is before the year the gift was made | `readWaecResult` | `test/waec-shown.test.ts` |
 | "WAEC withholds part of that result, so it cannot pay." | the withheld table is not empty | `readWaecResult` | `test/waec-shown.test.ts` |
 | "Your card's PIN is typed on WAEC's page and never reaches Viky." | the card is typed in the verification tab, and no route of Viky takes it | `WAEC_MILESTONE.words.whatIsRead`, no WAEC route | `test/waec-shown.test.ts` |
+
+### An MIT course certificate, being built (D222)
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "An MIT course certificate", READ FOR YOU, under "Learn" with "Being built." | goal 29 not signed yet, the source waiting for the service's redeploy | `MITX_ONLINE_CERTIFICATE_LINE` in `BUILDING` | `test/mitx-online-certificate.test.ts` |
+| "It proves a course taken, not a place at MIT." | the page read is a course or program certificate, and nothing about enrolment | `MITX_ONLINE_CERTIFICATE` reads the title, the name, the day and the id | `test/mitx-online-certificate.test.ts` |
+| "No certificate answers to that link, or it was revoked." | a revoked certificate's page answers 404 | MITx Online's `ActiveCertificatesManager` (mitodl/mitxonline, `courses/models.py`), `readMitxOnlineCertificate` | `test/mitx-online-certificate.test.ts` |

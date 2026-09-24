@@ -577,6 +577,32 @@ export const EDX_CERTIFICATE: Condition = {
 };
 
 /**
+ * A certificate from MITx Online, MIT's own course platform (D222), read for the person like an edX one: MIT's courses
+ * left edX for it. Being built until goal 29 is signed and the reading service runs the MITx Online source.
+ */
+export const MITX_ONLINE_CERTIFICATE_LINE: Condition = {
+  id: "mitx-online-certificate",
+  kind: "milestone",
+  nature: "read",
+  goalType: null,
+  live: false,
+  beforeItOpens: "Goal 29 signed by the owner, and the reading service redeployed with the MITx Online source.",
+  source: "MITx Online",
+  family: "learn",
+  name: "An MIT course certificate",
+  help: "The certificate's public page on MITx Online, MIT's own course platform, shared when they have it: the course and the day are read from it. It proves a course taken, not a place at MIT.",
+  link: { kind: "link", label: "The link to your certificate", help: "In MITx Online, open the certificate from your dashboard and copy the whole link from your browser, mitxonline.mit.edu/certificate/ followed by its id, then paste it here." },
+  reading: "mitx-online-certificate",
+  words: {
+    earnedDay: "When they get it, this becomes theirs",
+    connect: "Opened. Share the MITx Online certificate's link when you have it.",
+    doIt: "Finish the course on the certificate track. When the certificate is yours, share its link here.",
+    eachDay: "the day the certificate is shared",
+    preview: "An MIT course certificate, from MITx Online: the gift is yours the day you share it.",
+  },
+};
+
+/**
  * A certification on Credly, and a family of its own (the founder's line of 20 Sep 2026). A certification is not a
  * course taken: a CompTIA is sat as an examination with no course at all, and what is awarded is awarded by
  * somebody who is not the person. Filing it beside Coursera erased the distinction that made it worth building.
@@ -1128,6 +1154,7 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
 
 
 export const BUILDING: readonly Condition[] = [
+  MITX_ONLINE_CERTIFICATE_LINE,
   CAMBRIDGE_ENGLISH_SHOWN,
   IELTS_SHOWN,
   BAC_MOROCCO_SHOWN,
