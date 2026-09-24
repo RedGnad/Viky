@@ -9,8 +9,8 @@ import { DIAMOND } from "./Character";
  *
  * One light, top left, and everything that shines obeys it: the body's gradient runs from the lit corner, the edge
  * is a gradient of its own colour lit on the same side, the gloss sits where the surface faces halfway between the
- * light and the eye, which for a lens-shaped body is toward the light from the middle, and a rim of light lies along
- * the edges that face away from it, the light coming through the jelly. When the figure leans, the light is turned
+ * light and the eye, which for a lens-shaped body is toward the light from the middle. (A rim of light along the
+ * edges away from it was tried and taken off, D237: it read as a stray line.) When the figure leans, the light is turned
  * the other way in the drawing's own coordinates, so the reflections stay with the light rather than with the body:
  * that is what makes them reflections. Nothing here is drawn by pose; it is computed from the pose.
  *
@@ -84,7 +84,7 @@ function edges() {
 }
 
 /**
- * What the light does to the body: the gradient's two points, the gloss's place and slant, the rim's opacity per
+ * What the light does to the body: the gradient's two points, the gloss's place and slant, the sparkle on the lit
  * edge. All of it from one direction, so a pose never has to be lit by hand.
  */
 export function lit(light = LIGHT, lean = 0) {
@@ -98,23 +98,7 @@ export function lit(light = LIGHT, lean = 0) {
     cx: (litEdge.from[0] + litEdge.to[0]) / 2 - litEdge.normal.x * 3,
     cy: (litEdge.from[1] + litEdge.to[1]) / 2 - litEdge.normal.y * 3,
   };
-  const rims = all
-    .filter((edge) => edge.facing < -0.1)
-    .map((edge) => {
-      const ux = (edge.to[0] - edge.from[0]) / edge.length;
-      const uy = (edge.to[1] - edge.from[1]) / edge.length;
-      // The straight part of the edge, inside the rounded corners, moved inward by the width of the outline.
-      const inset = 1.6;
-      const trim = 7;
-      return {
-        x1: round(edge.from[0] + ux * trim - edge.normal.x * inset),
-        y1: round(edge.from[1] + uy * trim - edge.normal.y * inset),
-        x2: round(edge.to[0] - ux * trim - edge.normal.x * inset),
-        y2: round(edge.to[1] - uy * trim - edge.normal.y * inset),
-        opacity: round(0.55 * Math.min(1, -edge.facing)),
-      };
-    });
-  return { light: l, gradient, gloss: { ...gloss, angle: round(litEdge.angle) }, dot, sparkle, rims };
+  return { light: l, gradient, gloss: { ...gloss, angle: round(litEdge.angle) }, dot, sparkle };
 }
 
 /**
@@ -132,7 +116,7 @@ const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [numb
   ],
   hold: [
     { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2] },
-    { d: "M51 26 Q52.4 31 52 36.2", hand: [52, 38] },
+    { d: "M51 26 Q52.4 31 52 36", hand: [52, 37.8] },
   ],
   wave: [
     { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2], turn: 150, over: true },
@@ -159,21 +143,24 @@ const LEG_PATHS = [
 
 const line = { fill: "none", stroke: LIMB, strokeWidth: 1.8, strokeLinecap: "round" as const };
 
-function Arm({ pose, arm }: Readonly<{ pose: ArmsPose; arm: (typeof ARMS)[ArmsPose][number] }>) {
+function Arm({ pose, arm, hand = true }: Readonly<{ pose: ArmsPose; arm: (typeof ARMS)[ArmsPose][number]; hand?: boolean }>) {
   return (
     <g data-part="arm" data-pose={pose} style={arm.turn ? { ...FROM_JOINT, transform: `rotate(${arm.turn}deg)` } : FROM_JOINT}>
       <path d={arm.d} style={line} />
-      <circle cx={arm.hand[0]} cy={arm.hand[1]} r={1.9} style={{ fill: LIMB }} />
+      {hand ? <circle cx={arm.hand[0]} cy={arm.hand[1]} r={1.9} style={{ fill: LIMB }} /> : null}
     </g>
   );
 }
 
-/** The limbs under the body: the legs, and the arms that hang. The arms that rise or cross come after the body. */
-function Limbs({ arms, legs }: Readonly<{ arms: ArmsPose; legs: LegsPose }>) {
+/**
+ * The limbs under the body: the legs, and the arms that hang. The arms that rise or cross come after the body. An
+ * arm holding the case ends in its handle, with no hand drawn on it (the founder, 25 Sep 2026, D237).
+ */
+function Limbs({ arms, legs, holding }: Readonly<{ arms: ArmsPose; legs: LegsPose; holding: boolean }>) {
   return (
     <g data-part="limbs">
       {ARMS[arms].filter((arm) => !arm.over).map((arm, index) => (
-        <Arm key={index} pose={arms} arm={arm} />
+        <Arm key={index} pose={arms} arm={arm} hand={!(holding && arms === "hold" && index === 1)} />
       ))}
       {LEGS[legs].map((leg, index) => (
         <g key={index} data-part="leg" data-pose={legs} style={leg.turn ? { ...FROM_JOINT, transform: `rotate(${leg.turn}deg)` } : FROM_JOINT}>
@@ -194,16 +181,19 @@ function EyesOf({ eyes, gaze, id }: Readonly<{ eyes: Eyes; gaze: Readonly<{ x: n
   if (eyes === "shades") return <Shades id={id} />;
   return (
     <g data-part="eyes" style={{ transform: `translate(${round(gaze.x * 1.6)}px, ${round(gaze.y * 1.2)}px)` }}>
+      <g data-part="gaze">
       {at.map(([x, y]) =>
         eyes === "open" ? (
           <circle key={x} data-part="eye" cx={x} cy={y} r={2.8} style={{ fill: INK, ...FROM_MIDDLE }} />
         ) : eyes === "closed" ? (
           <rect key={x} data-part="eye" x={x - 3.4} y={y - 1.2} width={6.8} height={2.4} rx={3.4} ry={1.2} style={{ fill: INK, ...FROM_MIDDLE }} />
         ) : (
-          /* Half: the lower half of the open eye, a lid across it. */
-          <path key={x} data-part="eye" d={`M${x - 2.8} ${y} a2.8 2.8 0 0 0 5.6 0 Z`} style={{ fill: INK, ...FROM_MIDDLE }} />
+          /* Half: the lower part of the open eye under a lid that droops, a curve falling over it; a straight lid read as a
+             frown (the founder, 25 Sep 2026, D237). */
+          <path key={x} data-part="eye" d={`M${x - 2.8} ${y - 0.4} a2.8 2.8 0 0 0 5.6 0 a2.8 1.4 0 0 1 -5.6 0 Z`} style={{ fill: INK, ...FROM_MIDDLE }} />
         ),
       )}
+      </g>
     </g>
   );
 }
@@ -238,11 +228,10 @@ function MouthOf({ mouth }: Readonly<{ mouth: Mouth }>) {
   return <rect data-part="mouth" x={28} y={23.4} width={8} height={2} rx={1} style={{ fill: INK, ...FROM_MIDDLE }} />;
 }
 
-/** Sunglasses, in the figure's own material: lenses of the lilac deepening to the ink, a streak of light across each. */
+/** Sunglasses: two lenses of the lilac deepening to the ink, and a bridge; no temples, no streak (D237: confusing). */
 function Shades({ id }: Readonly<{ id: string }>) {
-  const lens = { fill: `url(#${id}-lens)`, stroke: "rgba(255, 255, 255, 0.45)", strokeWidth: 0.6 };
   return (
-    <g data-part="eyes" data-prop="shades">
+    <g data-part="eyes" data-prop="shades" style={FROM_MIDDLE}>
       <defs>
         <linearGradient id={`${id}-lens`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" style={{ stopColor: "var(--character-3)" }} />
@@ -250,13 +239,9 @@ function Shades({ id }: Readonly<{ id: string }>) {
         </linearGradient>
       </defs>
       {[26, 38].map((x) => (
-        <g key={x}>
-          <rect x={x - 5.2} y={14.1} width={10.4} height={7.8} rx={3.2} style={lens} />
-          <rect x={x - 4.4} y={14.8} width={3.2} height={7} rx={1.4} transform={`rotate(-30 ${x - 2.8} 18)`} style={{ fill: "rgba(255, 255, 255, 0.35)" }} />
-        </g>
+        <rect key={x} x={x - 5.2} y={14.1} width={10.4} height={7.8} rx={3.2} style={{ fill: `url(#${id}-lens)` }} />
       ))}
       <rect x={30.5} y={16.9} width={3} height={1.6} rx={0.8} style={{ fill: INK }} />
-      <path d="M20.8 17.6 L17 16.4 M43.2 17.6 L47 16.4" style={{ fill: "none", stroke: INK, strokeWidth: 1.4, strokeLinecap: "round" }} />
     </g>
   );
 }
@@ -264,7 +249,7 @@ function Shades({ id }: Readonly<{ id: string }>) {
 /** A suit on the lower half: lapels in the ink, a shirt of light, a tie in the character's coral, never the sun. */
 function Suit() {
   return (
-    <g data-prop="suit">
+    <g data-prop="suit" style={FROM_MIDDLE}>
       <path d="M17 26.8 L26.5 29.2 L32 34.6 L37.5 29.2 L47 26.8 L39 32.14 Q32 36 25 32.14 Z" style={{ fill: INK }} />
       <path d="M27.4 29 L32 34.4 L36.6 29 Q32 31 27.4 29 Z" style={{ fill: "rgba(255, 255, 255, 0.85)" }} />
       <path d="M18.4 27.3 L26.4 29.4" style={{ fill: "none", stroke: "rgba(255, 255, 255, 0.45)", strokeWidth: 0.7, strokeLinecap: "round" }} />
@@ -276,16 +261,17 @@ function Suit() {
 
 /** An attaché case hanging from the right hand of the "hold" pose, in the sky colour, lit like the body. */
 function Case({ id }: Readonly<{ id: string }>) {
-  const [x, y, w, h] = [45, 39.5, 14, 10];
+  const [x, y, w, h] = [45, 40, 14, 10];
   return (
-    <g data-prop="case">
+    <g data-prop="case" style={FROM_MIDDLE}>
       <defs>
         <linearGradient id={`${id}-case`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" style={{ stopColor: "var(--character-2)" }} />
           <stop offset="1" style={{ stopColor: "var(--character-2)", stopOpacity: 0.75 }} />
         </linearGradient>
       </defs>
-      <path d={`M49 ${y} v-1.2 a3 3 0 0 1 3 -3 a3 3 0 0 1 3 3 v1.2`} style={{ fill: "none", stroke: LIMB, strokeWidth: 1.5, strokeLinecap: "round" }} />
+      {/* The handle, in the limbs' ink, rising to where the arm ends: the arm grips it, and no hand is drawn on it. */}
+      <path d={`M49 ${y} v-1 a3 3 0 0 1 3 -3 a3 3 0 0 1 3 3 v1`} style={{ fill: "none", stroke: LIMB, strokeWidth: 1.8, strokeLinecap: "round" }} />
       <rect x={x} y={y} width={w} height={h} rx={2.2} style={{ fill: `url(#${id}-case)`, stroke: "rgba(255, 255, 255, 0.4)", strokeWidth: 0.7 }} />
       <rect x={x} y={y + 3.6} width={w} height={2.4} style={{ fill: INK, fillOpacity: 0.35 }} />
       <rect x={x + 1.4} y={y + 0.9} width={4.2} height={1.2} rx={0.6} style={{ fill: "rgba(255, 255, 255, 0.5)" }} />
@@ -310,19 +296,13 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
           <stop offset="1" style={{ stopColor: "var(--character-hero-edge-deep)" }} />
         </linearGradient>
       </defs>
-      <Limbs arms={arms} legs={legs} />
+      <Limbs arms={arms} legs={legs} holding={props.includes("case")} />
       <g data-part="body">
         <path d={DIAMOND} style={{ fill: `url(#${id}-body)`, stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
       </g>
       {ARMS[arms].filter((arm) => arm.over).map((arm, index) => (
         <Arm key={index} pose={arms} arm={arm} />
       ))}
-      {/* The light through the jelly: a rim along the edges that face away from it, as strong as they face away. */}
-      <g data-part="rim">
-        {shine.rims.map((rim) => (
-          <line key={`${rim.x1}-${rim.y1}`} x1={rim.x1} y1={rim.y1} x2={rim.x2} y2={rim.y2} style={{ stroke: "#FFFFFF", strokeOpacity: rim.opacity, strokeWidth: 1.1, strokeLinecap: "round" }} />
-        ))}
-      </g>
       {/* The gloss: where the surface faces halfway between the light and the eye, slanted along the lit edge. */}
       <g data-part="gloss">
         <ellipse cx={round(shine.gloss.cx)} cy={round(shine.gloss.cy)} rx={5.2} ry={3.2} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
