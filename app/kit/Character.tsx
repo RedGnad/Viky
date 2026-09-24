@@ -87,34 +87,37 @@ const DIAMOND_BOX = "0 0 64 40";
 const DIAMOND_WITH_LIMBS_BOX = "0 0 64 64";
 
 /**
- * The arms and the legs the founder asked for on 24 Sep 2026 (D214), on the character of the landing: pills of ink,
- * a hand and a foot at the end of each, hung from the diamond's sides and stood under it. They fold: each limb is
- * scaled from its joint, so at 0 it is inside the body and at 1 it is out, which is the one movement they make. They
- * are drawn before the body so the joints stay under it, and they wear the face's ink so a limb is never a fourth
- * colour. Round caps on a line are the rounded rectangle the rules allow; nothing here is pointed.
+ * The arms and the legs the founder asked for on 24 Sep 2026 (D214, redrawn on his sketch in D219), on the character of
+ * the landing: thin lines of ink with a hand and a foot, hung from the body's lower sides and stood under it, each
+ * bowed very slightly outward, which is the one curve a limb carries. They fold: each limb is scaled from its joint,
+ * so at 0 it is inside the body and at 1 it is out. They are drawn before the body so the joints stay under it. Their
+ * colour is `--character-limb`: the face's ink by day, the text's light by night, where the ink is the ground's own.
+ * Round caps on a line are the rounded rectangle the rules allow; nothing here is pointed.
  */
-const LIMB = 5;
+const LIMB = 3.2;
+const HAND = 2.4;
 const FROM_JOINT: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 0%" };
+const LIMB_INK = "var(--character-limb)";
 
 function Limbs() {
-  const ink = { stroke: FACE, strokeWidth: LIMB, strokeLinecap: "round" as const };
+  const ink = { fill: "none", stroke: LIMB_INK, strokeWidth: LIMB, strokeLinecap: "round" as const };
   return (
     <g data-part="limbs">
       <g data-part="arm" style={FROM_JOINT}>
-        <line x1={10} y1={26} x2={6} y2={44} style={ink} />
-        <circle cx={6} cy={45} r={3.4} style={{ fill: FACE }} />
+        <path d="M14 26.5 Q8.5 35 7 44" style={ink} />
+        <circle cx={7} cy={45.5} r={HAND} style={{ fill: LIMB_INK }} />
       </g>
       <g data-part="arm" style={FROM_JOINT}>
-        <line x1={54} y1={26} x2={58} y2={44} style={ink} />
-        <circle cx={58} cy={45} r={3.4} style={{ fill: FACE }} />
+        <path d="M50 26.5 Q55.5 35 57 44" style={ink} />
+        <circle cx={57} cy={45.5} r={HAND} style={{ fill: LIMB_INK }} />
       </g>
       <g data-part="leg" style={FROM_JOINT}>
-        <line x1={26} y1={33} x2={25} y2={57} style={ink} />
-        <line x1={25.5} y1={59} x2={17} y2={59} style={ink} />
+        <path d="M27 34 Q24.8 46 25 56" style={ink} />
+        <path d="M25 57.6 H17.5" style={ink} />
       </g>
       <g data-part="leg" style={FROM_JOINT}>
-        <line x1={38} y1={33} x2={39} y2={57} style={ink} />
-        <line x1={38.5} y1={59} x2={47} y2={59} style={ink} />
+        <path d="M37 34 Q39.2 46 39 56" style={ink} />
+        <path d="M39 57.6 H46.5" style={ink} />
       </g>
     </g>
   );
@@ -415,7 +418,8 @@ export function Character({
         />
       ) : null}
       <g data-part="figure" style={{ ...FROM_FLOOR, ...(leaving ? { transform: "translateX(-6px)", opacity: 0.6 } : null) }}>
-        <g transform={parts.lean}>
+        {/* With limbs, one more group turning from its own middle: the whirl of the hero moment (D219). */}
+        <g transform={parts.lean} {...(withLimbs ? { "data-part": "whirl", style: FROM_MIDDLE } : {})}>
           {withLimbs ? <Limbs /> : null}
           <g data-part="body">{parts.body}</g>
           {/* The shade lies in the body, the highlight sits on it, and the face stays on top of both (D132). */}

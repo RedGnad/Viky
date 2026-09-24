@@ -412,6 +412,30 @@ export const MOTION = {
   /** A gift made or money taken, answering the press that did it: the gift character arrives once, its bow a beat after. */
   gift: { spatial: SPRING.expressiveFastSpatial, effects: SPRING.effects, fromScale: 0.55, bowDelayMs: 120 },
   /**
+   * The hero moment of the landing (D219): the character leaps out from behind the card whirling, lands, bounces once,
+   * settles, and only then unfolds its limbs. Squash and stretch, slow in and slow out, follow through, an arc
+   * (Thomas and Johnston). The leap is Material's medium4, the fall short2, the squash short1, the bounce medium1; the
+   * settle and the limbs are the expressive fast spatial spring; the mouth the effects spring. Distances are units of
+   * the drawing's box (64), scales are of the body from its floor. Under two seconds in all.
+   */
+  hero: {
+    leapMs: 400,
+    fallMs: 100,
+    squashMs: 50,
+    hopMs: 250,
+    limbsBeforeStillMs: 120,
+    settle: SPRING.expressiveFastSpatial,
+    effects: SPRING.effects,
+    turns: 1,
+    leapAbove: 5,
+    hopAbove: 2.5,
+    plain: { x: 1, y: 1 },
+    stretch: { x: 0.94, y: 1.08 },
+    squash: { x: 1.14, y: 0.84 },
+    lift: { x: 0.98, y: 1.03 },
+    secondSquash: { x: 1.06, y: 0.93 },
+  },
+  /**
    * Something appearing for the first time, whether a screen has opened or a block has scrolled into view: it
    * appears, rising a few pixels. Material's medium1. A screen that carries several blocks brings them one after
    * another, 80 ms apart (the founder, 23 Sep 2026, D171: at 50 they read as simultaneous; 80 sits between Material's
