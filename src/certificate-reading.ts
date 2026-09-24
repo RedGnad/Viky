@@ -2,6 +2,8 @@ import type { Hex } from "viem";
 import { COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraProviderId } from "./coursera-certificate";
 import { attestCourseraCertificate, CourseraReadError } from "./coursera-reading";
 import { EDX_GOAL_TYPE, EDX_HAS_IT, edxProviderId } from "./edx-certificate";
+import { ACCREDIBLE_GOAL_TYPE, ACCREDIBLE_HAS_IT, accredibleProviderId } from "./accredible-credential";
+import { AccredibleReadError, attestAccredibleCredential } from "./accredible-reading";
 import { attestEdxCertificate, EdxReadError } from "./edx-reading";
 import { CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyProviderId } from "./credly-badge";
 import { attestCredlyBadge, CredlyReadError } from "./credly-reading";
@@ -66,7 +68,8 @@ export type ReadCertificate = Readonly<{
 export type CertificateReadingDeps = {
   loadGift: (giftId: string) => Promise<GiftRecord | null>;
   readState: (contract: Hex, giftId: string) => Promise<MilestoneState>;
-  attest: (goalType: number, link: string) => Promise<ReadCertificate>;
+  /** The subject the funder signed rides along for a source whose reading can match several (Accredible's domains). */
+  attest: (goalType: number, link: string, signedSubject?: Hex) => Promise<ReadCertificate>;
   prove: (input: { contract: Hex; message: MilestoneProofMessage }) => Promise<{ hash: string }>;
   record: (reading: Parameters<typeof recordReading>[0]) => Promise<void>;
   now: () => number;
@@ -88,7 +91,13 @@ export function liveCertificateReadingDeps(): CertificateReadingDeps {
  * can never be offered to a gift made on the test, nor the other way round: each carries its own provider id and the
  * contract checks it again.
  */
-async function attestByGoal(goalType: number, link: string): Promise<ReadCertificate> {
+async function attestByGoal(goalType: number, link: string, signedSubject?: Hex): Promise<ReadCertificate> {
+  if (goalType === ACCREDIBLE_GOAL_TYPE) {
+    const reading = await attestAccredibleCredential(link);
+    // The issuer's site can sit under several domains; the one the funder named is the subject they signed.
+    const subject = reading.subjects.find((candidate) => signedSubject && candidate.toLowerCase() === signedSubject.toLowerCase()) ?? reading.subjects[0];
+    return { subject, score: ACCREDIBLE_HAS_IT, testDay: reading.issuedDay, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: accredibleProviderId() };
+  }
   if (goalType === CREDLY_GOAL_TYPE) {
     const reading = await attestCredlyBadge(link);
     // Nothing to score: the badge exists, and the certification is inside the subject the funder signed.
@@ -142,9 +151,9 @@ export async function proveCertificate(
 
   let reading: ReadCertificate;
   try {
-    reading = await deps.attest(state.goalType, input.link);
+    reading = await deps.attest(state.goalType, input.link, state.subject as Hex);
   } catch (error) {
-    if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError) && !(error instanceof EdxReadError)) {
+    if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError) && !(error instanceof EdxReadError) && !(error instanceof AccredibleReadError)) {
       return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? "That could not be read right now");
     }
     switch (error.code) {

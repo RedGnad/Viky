@@ -603,6 +603,33 @@ export const CREDLY_BADGE: Condition = {
 };
 
 /**
+ * A credential its issuer published on Accredible (D213), read for the person like a Credly badge: the link they
+ * share, the record Accredible publishes for it, the name and the credential the funder named. Being built until goal
+ * 26 is signed and the reading service runs its source.
+ */
+export const ACCREDIBLE_CREDENTIAL: Condition = {
+  id: "accredible-credential",
+  kind: "milestone",
+  nature: "read",
+  goalType: null,
+  live: false,
+  beforeItOpens: "Goal 26 signed by the owner, and the reading service redeployed with the Accredible source.",
+  source: "Accredible",
+  family: "certification",
+  name: "A credential on Accredible",
+  help: "The credential its issuer published on Accredible, read from its public record: the title, the issuer and the day, and nobody can issue one to themselves.",
+  link: { kind: "link", label: "The link to your credential", help: "Open your credential on credential.net and copy the whole link from your browser, then paste it here." },
+  reading: "accredible-credential",
+  words: {
+    earnedDay: "When they get it, this becomes theirs",
+    connect: "Opened. Share the Accredible credential's link when you have it.",
+    doIt: "Earn the credential. When the issuer has published it, share its link here.",
+    eachDay: "the day the credential is shared",
+    preview: "A credential on Accredible: the gift is yours the day you share it.",
+  },
+};
+
+/**
  * The first condition of the second nature (D162, D164): a score the person shows from their own ETS account. Open
  * since 23 Sep 2026 under the founder's rule (D184): its path is complete, the register, goal 13 registered on the
  * milestone contract, the directory's provider pinned, the flow built to the end. Nobody has shown one yet, and the
@@ -1039,6 +1066,7 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
 
 export const BUILDING: readonly Condition[] = [
   EDX_CERTIFICATE,
+  ACCREDIBLE_CREDENTIAL,
   CAMBRIDGE_ENGLISH_SHOWN,
   IELTS_SHOWN,
   BAC_MOROCCO_SHOWN,

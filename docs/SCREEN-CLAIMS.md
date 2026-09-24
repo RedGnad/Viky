@@ -562,3 +562,10 @@ dollars; and the session countdown. Each test was checked by breaking the rule a
 |---|---|---|---|
 | "An edX certificate", READ FOR YOU, under "Finish a course" with "Being built." | goal 25 not signed yet, the source waiting for the service's redeploy | `EDX_CERTIFICATE` in `BUILDING` | `test/edx-certificate.test.ts` |
 | "That certificate is not a verified one, so it is not what this gift is for." | the page's track is not `verified` or `professional` | `isVerifiedTrack` in `edxCertificateOf` | `test/edx-certificate.test.ts` |
+
+### A credential on Accredible, being built (D213)
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "A credential on Accredible", READ FOR YOU, under "Get certified" with "Being built." | goal 26 not signed yet | `ACCREDIBLE_CREDENTIAL` in `BUILDING` | `test/accredible-credential.test.ts` |
+| "That credential has expired or was revoked, so it cannot pay." | the record says `"expired":true` or a `revoked_at` | `accredibleCredentialOf` | `test/accredible-credential.test.ts` |

@@ -27,6 +27,7 @@ import {
   CREDLY_BADGE,
   COURSERA_CERTIFICATE as COURSERA_CONDITION,
   EDX_CERTIFICATE as EDX_CONDITION,
+  ACCREDIBLE_CREDENTIAL as ACCREDIBLE_CONDITION,
   DUOLINGO_ENGLISH_TEST,
   type Condition,
   ECOLEDIRECTE_GRADE_SHOWN,
@@ -44,6 +45,7 @@ import {
 } from "./conditions";
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
 import { EDX_DURATION_DAYS, EDX_GOAL_TYPE, EDX_HAS_IT, edxCertificateIdOf, edxCourseOf, edxSubject } from "./edx-certificate";
+import { ACCREDIBLE_DURATION_DAYS, ACCREDIBLE_GOAL_TYPE, ACCREDIBLE_HAS_IT, accredibleCourseOf, accredibleIdOf, accredibleSubject } from "./accredible-credential";
 import { CREDLY_DURATION_DAYS, CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyBadgeIdOf, credlyPairOf, credlySubject } from "./credly-badge";
 import {
   certificateSubject,
@@ -645,6 +647,46 @@ export const CREDLY_MILESTONE: CertificateCondition = {
   },
 };
 
+/** A credential on Accredible (D213): Credly's shape, the credential named by its title and its issuer's website. */
+export const ACCREDIBLE_MILESTONE: CertificateCondition = {
+  ...CREDLY_MILESTONE,
+  condition: ACCREDIBLE_CONDITION,
+  goalType: ACCREDIBLE_GOAL_TYPE,
+  readPath: "/api/accredible/credential",
+  validLink: (value) => accredibleIdOf(value) !== undefined,
+  validTarget: (value) => value === ACCREDIBLE_HAS_IT,
+  subject: ({ name, course }) => accredibleSubject(name, String(course ?? "")),
+  course: {
+    label: "The credential, and who issues it",
+    help: "Its title as the issuer prints it, a comma, then the issuer's website, like: Rearchitecting the Financial System, cfte.education",
+    slugOf: accredibleCourseOf,
+    row: "Which credential",
+    named: (course) => `This gift will be for ${course.replace("|", ", from ")}.`,
+  },
+  target: { ...CREDLY_MILESTONE.target, help: "A credential is issued or it is not, so there is nothing to choose here.", min: ACCREDIBLE_HAS_IT, max: ACCREDIBLE_HAS_IT, suggested: ACCREDIBLE_HAS_IT, inWords: () => "that credential" },
+  duration: ACCREDIBLE_DURATION_DAYS,
+  words: {
+    ...CREDLY_MILESTONE.words,
+    detailQuestion: "Their name, and the credential",
+    nameLabel: "Their name, as Accredible prints it on the credential",
+    nameHelp: "The name the issuer put on their credential. If it does not match, the gift cannot pay.",
+    linkLabel: "The link to your credential",
+    linkHelp: "Open your credential on credential.net and copy the whole link from your browser. It looks like credential.net/ followed by a long code.",
+    whatIsRead: "Viky reads five things from the credential's public record: its title, its issuer's website, the day it was issued, whether it is still valid, and the name on it. It keeps those with the gift and nothing else.",
+    mustShow: (name) => `The credential has to be in the name ${name}, with that title from that issuer, still valid, and issued inside these days. Nothing else is read from it.`,
+    refusals: {
+      ...CREDLY_MILESTONE.words.refusals,
+      targetShape: "A credential is issued or it is not, so there is nothing to set here.",
+      nameShape: "Type their name as it is printed on the credential.",
+      linkShape: "That is not an Accredible credential link. It looks like credential.net/ followed by a long code.",
+      notPublic: "That credential is private. Its holder can make it public on credential.net.",
+      expired: "That credential has expired or was revoked, so it cannot pay.",
+      notFound: "No credential answers to that link. Check that you copied the whole link.",
+      anotherName: "That credential is in another name, or with another title or issuer, so this gift cannot pay for it.",
+    },
+  },
+};
+
 
 /** The certificate detail of a condition, or nothing when the condition is not one. */
 /**
@@ -1217,6 +1259,7 @@ const CERTIFICATES: readonly CertificateCondition[] = [
   COURSERA_MILESTONE,
   EDX_MILESTONE,
   CREDLY_MILESTONE,
+  ACCREDIBLE_MILESTONE,
   TOEFL_SHOWN_MILESTONE,
   ...EXAM_MILESTONES,
   UDEMY_MILESTONE,

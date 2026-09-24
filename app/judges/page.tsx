@@ -270,6 +270,14 @@ export default async function JudgesPage() {
             person shares their own certificate, and Viky reads that one page.
           </li>
           <li>
+            <strong>Accredible&apos;s record.</strong> A credential issued on Accredible is read from the public record its
+            page is drawn from (D213), once per shared link and again at each reading. Accredible&apos;s terms (April 2026)
+            are a contract with issuers and name no automated access; nothing about a reader is claimed. The funder names
+            the credential by its title and its issuer&apos;s website, because Accredible&apos;s course search is not open to a
+            reader: an issuer that names its credential like another&apos;s and lists another&apos;s website would pass, which
+            is written here rather than hidden.
+          </li>
+          <li>
             <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:
             Coursera verifies identity once per account, and says some programmes require it while others only check a
             name. That condition is not open yet, and this is what it will prove when it is.
