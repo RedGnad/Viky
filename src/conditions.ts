@@ -715,6 +715,33 @@ export const CHSI_ENROLMENT_SHOWN: Condition = {
 };
 
 /**
+ * A WASSCE result, shown from WAEC's own result checker (D217): the person types their card on WAEC's page in the
+ * verification tab, because WAEC's terms forbid giving its access codes to anyone else. Credits with English and
+ * Mathematics among them. Being built until our provider is registered from a real result and goal 28 is signed.
+ */
+export const WAEC_RESULT_SHOWN: Condition = {
+  id: "waec-result-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  live: false,
+  beforeItOpens: "Its provider, registered on the Reclaim dashboard from a real WAEC result, and goal 28 signed by the owner.",
+  source: "WAEC",
+  family: "exam",
+  name: "WASSCE credits, shown",
+  help: "Their own WASSCE result on WAEC's checker, opened by them with their result card: the credits, English and Mathematics among them. It proves the result, not who sat the exam.",
+  link: { kind: "link", label: "Show it from WAEC's result checker", help: "Press Show it on your gift's page, then type your examination number and your card on WAEC's page in the tab that opens. Nothing to paste here." },
+  reading: "waec-result-shown",
+  words: {
+    earnedDay: "When they show those credits, all of this becomes theirs",
+    connect: "Opened. Show your WASSCE result from WAEC's checker when it is out.",
+    doIt: "Press Show it and type your examination number and your result card on WAEC's page in the tab that opens. The credits are what count.",
+    eachDay: "the day it is shown",
+    preview: "WASSCE credits, shown from WAEC's own result checker: the gift is yours when you show them.",
+  },
+};
+
+/**
  * Fitbit, connected by the person (D188): the first condition of the third nature. Since the legacy Fitbit Web API
  * closes in September 2026, it is read through the Google Health API, which reads Fitbit trackers and Pixel Watches
  * (D197): the person authorises Viky once on Google's own page, and each morning the keeper asks for yesterday's
@@ -1102,6 +1129,7 @@ export const BUILDING: readonly Condition[] = [
   BAC_FRANCE_SHOWN,
   UDEMY_COURSE_SHOWN,
   CHSI_ENROLMENT_SHOWN,
+  WAEC_RESULT_SHOWN,
   UNIVERSITY_YEAR_PASSED_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
   ECOLEDIRECTE_GRADE_SHOWN,

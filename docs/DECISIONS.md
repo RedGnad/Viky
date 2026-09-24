@@ -5975,3 +5975,24 @@ lightens a gift's page by about a kilobyte a day.
 `test/character-reacts.test.ts`, `test/motion.test.ts`, `test/character-file.test.ts` and `test/browser/character.spec.ts`
 say what is gone: no `Gaze`, no `curious`, no `happy`, nothing on the card asks the character anything, and a hover or a
 press on the card leaves the face at rest, with or without reduced motion.
+
+## D217, 24 Sep 2026: WASSCE credits, shown from WAEC's own result checker
+
+The founder's fourth register, 24 Sep 2026: WAEC (waecdirect.org), the examination number, the year, the type and the
+e-PIN given by the person, family "Pass an exam", results since 1980.
+
+- **Shown, not read for them, because of WAEC's terms.** Read before any line: waecdirect.org carries WAEC's privacy
+  policy, no terms of use, no robots file. The fuller policy on waecnigeria.org tells the holder of an access code WAEC
+  allocates "you must not disclose it to any third party". The result card's PIN is one. Read for them, the person would
+  give it to Viky. So the person types it on WAEC's own page in the verification tab, and it never reaches Viky. The
+  read-for-them version was built and works (the checker has no captcha: a POST to `/Result/EncryptPayload` gives a token,
+  `/Result/Display?q=` gives the result), and it is kept on a local branch, not shipped: the founder's call.
+- **The line.** `waec-result-shown`, "WASSCE credits, shown", family Pass an exam, goal 28. The target is a count of
+  credits (A1 to C6, suggested 5), which counts only with English Language and Mathematics among them, as universities
+  across the region ask. Refused by name: a result of a year before the gift's (the checker opens every result since
+  1980), a withheld result, a page without a result. The verdict rule (D185): the count is kept, no subject, grade,
+  name or examination number.
+- **Tested** on a real 2018 result published in a public repository: 9 credits. Being built until our provider is
+  registered from a live result and goal 28 is signed. No change to the reading service, so no redeploy.
+- **Default applied, to confirm.** The subject is the same for every gift on the line, as the baccalauréat's: the
+  result carries a name the funder does not sign.
