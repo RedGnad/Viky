@@ -183,7 +183,7 @@ test("the characters have three colours, none grey, none the sun, and a face tha
 
 /**
  * The ground was neutral in both appearances until the rendered mockups of 19 Sep 2026 drew a lavender one for day
- * and kept the indigo for night, with the same cream card on both until D222 gave the card a paper of its own after
+ * and kept the indigo for night, with the same cream card on both until D223 gave the card a paper of its own after
  * dark. What has to hold is not neutrality: it is that the card is never the value of the ground it sits on, which
  * is what a card being an object means, and that it stands off it by the same step in both appearances.
  */
@@ -277,7 +277,7 @@ test("the quiet button is filled, seen on both grounds, and its words clear 4.5:
   const primary = ui.slice(ui.indexOf("PRIMARY_BUTTON = `"), ui.indexOf("`;", ui.indexOf("PRIMARY_BUTTON = `")));
   assert.match(primary, /disabled:bg-\[var\(--action-off\)\]/);
   assert.match(primary, /disabled:\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--action-off-deep\)\]/);
-  // One shut action, on the cream of the card by day and on its night paper after dark (D222), and its words readable
+  // One shut action, on the cream of the card by day and on its night paper after dark (D223), and its words readable
   // on it in both: the image's own #9A8B62 measured 2.64:1 on the cream.
   assert.ok(contrastRatio("#6F6133", "#EFE3C4") >= TEXT_CONTRAST_MINIMUM, "the words of the shut action are readable on it by day");
   assert.ok(contrastRatio("#B3ABC9", "#3B3160") >= TEXT_CONTRAST_MINIMUM, "and by night");

@@ -85,6 +85,13 @@ export const CARD =
   "on-paper space-y-[var(--space-md)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] border-[var(--card-edge)] p-[var(--space-lg)]";
 
 /**
+ * A family's tile in the chooser (D224): a picture, a name and a count, on the paper's field tone, taking the ink
+ * edge and the chosen fill when it holds the condition the card carries. A block with the card's own corners, not a
+ * pill: it is a place to go, not an action taken (the founder's direction A, 24 Sep 2026).
+ */
+export const TILE = `${FOCUS} flex min-h-[var(--tap-target)] cursor-pointer flex-col items-center gap-[var(--space-xs)] rounded-[var(--radius-card)] border-[length:var(--card-border-width)] p-[var(--space-md)] text-center`;
+
+/**
  * A line the person types into. Its border identifies it, so it carries the control colour, and it sits on a
  * surface rather than on the page ground so a paragraph of yellow never runs under a value being typed.
  */

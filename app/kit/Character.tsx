@@ -105,23 +105,34 @@ const HAND = 1.9;
 const FROM_JOINT: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 0%" };
 const LIMB_INK = "var(--character-limb)";
 
-function Limbs() {
+/**
+ * A pose is four turns from the joints, in degrees, left then right (D224). A positive turn swings a hanging limb to
+ * the left of the screen: so the runner's left arm swings out and up, its right arm a little out, its left leg back
+ * and its right leg forward, which is a stride seen from the front.
+ */
+export type LimbPose = "running";
+const POSES: Readonly<Record<LimbPose, Readonly<{ arms: readonly [number, number]; legs: readonly [number, number] }>>> = {
+  running: { arms: [75, -20], legs: [35, -15] },
+};
+
+function Limbs({ pose }: Readonly<{ pose?: LimbPose }>) {
   const ink = { fill: "none", stroke: LIMB_INK, strokeWidth: LIMB, strokeLinecap: "round" as const };
+  const turned = (limb: "arms" | "legs", side: 0 | 1): CSSProperties => (pose ? { ...FROM_JOINT, transform: `rotate(${POSES[pose][limb][side]}deg)` } : FROM_JOINT);
   return (
     <g data-part="limbs">
-      <g data-part="arm" style={FROM_JOINT}>
+      <g data-part="arm" style={turned("arms", 0)}>
         <path d="M13 26 Q12 30.7 13 35.4" style={ink} />
         <circle cx={13} cy={37.2} r={HAND} style={{ fill: LIMB_INK }} />
       </g>
-      <g data-part="arm" style={FROM_JOINT}>
+      <g data-part="arm" style={turned("arms", 1)}>
         <path d="M51 26 Q52 30.7 51 35.4" style={ink} />
         <circle cx={51} cy={37.2} r={HAND} style={{ fill: LIMB_INK }} />
       </g>
-      <g data-part="leg" style={FROM_JOINT}>
+      <g data-part="leg" style={turned("legs", 0)}>
         <path d="M23.5 30 Q21.6 40.75 21.7 51.5" style={ink} />
         <path d="M21.7 51.5 H15.2" style={ink} />
       </g>
-      <g data-part="leg" style={FROM_JOINT}>
+      <g data-part="leg" style={turned("legs", 1)}>
         <path d="M40.5 30 Q42.4 40.75 42.3 51.5" style={ink} />
         <path d="M42.3 51.5 H48.8" style={ink} />
       </g>
@@ -359,6 +370,7 @@ export function Character({
   standing = true,
   drawn: how = "referenced",
   limbs = false,
+  pose,
   className,
 }: Readonly<{
   state: CharacterState;
@@ -379,8 +391,10 @@ export function Character({
    * The diamond is always written: its blend reads the look's colours inside its own gradient.
    */
   drawn?: "inline" | "referenced";
-  /** The diamond with its arms and legs (D214): the character of the landing's hero moment, and no other yet. */
+  /** The diamond with its arms and legs (D214): the character of the landing's hero moment, and the runner of the chooser (D224). */
   limbs?: boolean;
+  /** How the limbs are held, when they are out: hanging, or in one of the poses `Limbs` knows. */
+  pose?: LimbPose;
   className?: string;
 }>) {
   const large = size === "large";
@@ -426,7 +440,7 @@ export function Character({
       <g data-part="figure" style={{ ...FROM_FLOOR, ...(leaving ? { transform: "translateX(-6px)", opacity: 0.6 } : null) }}>
         {/* With limbs, one more group turning from its own middle: the whirl of the hero moment (D219). */}
         <g transform={parts.lean} {...(withLimbs ? { "data-part": "whirl", style: FROM_MIDDLE } : {})}>
-          {withLimbs ? <Limbs /> : null}
+          {withLimbs ? <Limbs pose={pose} /> : null}
           <g data-part="body">{parts.body}</g>
           {/* The shade lies in the body, the highlight sits on it, and the face stays on top of both (D132). */}
           {parts.shade}

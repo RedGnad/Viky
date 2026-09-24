@@ -6129,3 +6129,76 @@ list and the service redeployed.
   MIT's name never to suggest a relationship. On the judges' page with the risk assumed as for edX; the line says "an
   MIT course", never a place at MIT, as the founder asked.
 - **Goal 29**, one Safe transaction; the line opens when it is signed.
+
+## D223, 24 Sep 2026: the paper has a night of its own
+
+The founder, 24 Sep 2026: the card kept its day colours at night by decision, and that reads as incoherent; should
+the card not have its dark mode too. Yes, and here is the measure and the literature, then what changed. Shipped in
+#207 while this entry was left unwritten by a guarded append that failed silently (main had taken D222 for the MIT
+certificate in between); the code cites D223 and this is D223.
+
+**Measured.** The cream paper `#FFF6E2` stood at 17.2:1 on the night ground `#151026`: the brightest thing on a
+screen somebody had set to dark, by a wide margin. By day the same cream stands at 1.31:1 on the lavender, a step
+above its ground, which is what a card being an object means (D114, D128).
+
+**What the references say.** Apple, Human Interface Guidelines, Dark Mode: "In Dark Mode, the system uses a dark
+color palette for all screens, views, menus, and controls"; on an image with a white background, "consider slightly
+darkening the image to prevent the background from glowing in the surrounding Dark Mode context"; and an app that
+does not follow the appearance somebody chose, "they may think your app is broken". Material, Dark theme: large
+surfaces take the dark surface colour with limited accents, and bright content on a dark ground raises eye strain.
+NN/g, Budiu 2020: dark mode is a choice of comfort, of low vision or of taste, and the person who makes it wants less
+light. The one argument for keeping the cream, a card as an object that keeps its colours like a pass in a wallet,
+has no written rule behind it that could be found, and the card here is a form somebody types into: a control
+surface, not content.
+
+**What changed.** The paper is a token with a night value in both night blocks, one step above the ground by the
+same measure as the day's: `#2E2549`, 1.30:1 on the night ground. What reads on it is the night's own ink and
+lavender (`--on-surface` `#F3F0FA` at 12.6:1, `--on-surface-muted` `#B3ABC9` at 6.5:1, a body voice `#D6CFE6` at
+9.4:1, a faint one `#8F87A8` at 4.2:1). A field and a chosen row are a step lighter, as every surface is at night
+(`#352B57` and `#3B3160`, the ink 11.4:1 and 10.4:1 on them), the field's pressed edge darker (`#1E1741`), the rule
+between rows `#3B3160`. The sun stands at 9.0:1 on the paper and its words at 11.7:1 on it. The shut action wears the
+chosen row's fill with the lavender's words (5.3:1). A key on the paper stands on the paper's own relief, a new token
+`--paper-relief`: the ink by day, the night's lavender after dark, as under every key off the paper; `.on-paper` no
+longer names the ink for it. Every surface on paper follows, since they all read through `.on-paper`: the card being
+filled in, a gift's card, the sheets, the door's panel, the account's cards. Nothing about the day changed.
+
+**Not verified.** The signed-in screens (the gifts, a gift's page, the way out, the account) were not captured for
+this decision: the machine was carrying two other suites. They read through the same rule and the same tokens.
+
+`test/design-tokens.test.ts` holds the step in both appearances (at least 1.3:1 and under 2:1 at night) and the shut
+action's words by night; `test/gift-card.test.ts` the night values in both blocks, the five contrasts on the night
+paper and the relief token.
+
+## D224, 24 Sep 2026: the chooser opens on four tiles, one per family
+
+The founder, 24 Sep 2026, on the sheet of what they will do since the four families (D220): a lot of text and lists;
+four big square buttons on the page instead, with a juicy illustration each, opening the family's list when pressed.
+He chose direction A of the four proposed: the diamond in each family's situation.
+
+**Why it holds.** The list offered twenty-four lines in four sections (Learn 6, Exams & school 14, Play 2, Move 2).
+Hick's law: the time to choose grows with the options, and what counts is the options per group; showing four, then
+one family, is the progressive disclosure NN/g describes for long menus. Duolingo's course picker is the same shape,
+tiles two by two with a picture, a name and a count. Two costs, known: coming back to change costs one press more,
+and Exams & school keeps fourteen lines behind its tile.
+
+**What it is.** From six offered conditions the sheet's first face is a grid two by two (`TILE`, `ui.ts`): a picture
+(`FamilyArt`), the family's title from the register in the choice voice, and what it holds counted ("5 choices").
+The tile holding the condition the card carries takes the ink edge and the chosen fill, and says so (`aria-current`).
+Pressing a tile shows that family's list, the same lines as before with the family's title as its heading, under a
+way back to the four ("All families"). Opening the sheet from the card's line with a condition chosen lands on that
+condition's family, its line checked, so somebody who comes back to change lands among its neighbours; "All
+families" is one press away. Every opening and every choice start undecided. Under six offered conditions the flat
+list stays, as D220 left it.
+
+**The pictures.** The diamond, in colour as everywhere, with a prop drawn in the paper's ink on its raised tone, in
+the shapes the rules allow (round joins and caps, nothing pointed): it reads a book held under its chin to Learn,
+wears a graduate's board with a tassel for Exams & school, stands by a rook to Play (Duolingo's own sign for chess),
+and runs to Move, its limbs out in a stride: the limbs took a `pose` (`Limbs`, four turns from the joints, a positive
+turn swinging a hanging limb to the left of the screen), and the runner leans eight degrees from its feet with three
+lines of ink behind it. The box is 112 by 104, the diamond 88 wide in it. A first drawing, to be polished step by
+step as the founder asked for the character.
+
+**Measured.** Captures at 390 by 844 and 1440 by 900, by day and by night: the four tiles, the Learn list with the
+way back above it, the Exams & school list, sent to the founder. `test/family-tiles.test.ts` holds the four pictures,
+the runner's pose, the hub's rule and the words; `test/condition-families.test.ts` that the titles are the
+register's; the browser specs walk the tiles to reach a line (`screens`, `detail-step`, `nature`).

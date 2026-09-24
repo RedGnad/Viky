@@ -19,11 +19,16 @@ test.describe("the nature of a condition", () => {
     const change = sheet.getByRole("button", { name: /^Change/i });
     if (await change.isVisible().catch(() => false)) await change.click();
     await expect(sheet.getByText(WORDS).first()).toBeVisible();
-    // On every line of the list, chosen or not: one of the natures' words on each, since the TOEFL score is open (D184).
+    // On every line of the list, chosen or not: one of the natures' words on each. The list is one family at a time
+    // since D224, the card's own family first; the TOEFL score, which is shown by them (D184), is among the exams.
     const said = await sheet.getByText(WORDS).filter({ visible: true }).allTextContents();
     expect(said.length).toBe(await sheet.getByRole("radio").count());
     expect(said.every((words) => WORDS.test(words))).toBe(true);
-    expect(said).toContain("SHOWN BY THEM");
+    await sheet.getByRole("button", { name: /All families/i }).click();
+    await sheet.getByRole("button", { name: /Exams & school/ }).click();
+    const exams = await sheet.getByText(WORDS).filter({ visible: true }).allTextContents();
+    expect(exams.length).toBe(await sheet.getByRole("radio").count());
+    expect(exams).toContain("SHOWN BY THEM");
     // The meta voice: 13 px, capitals, a pixel of tracking, the muted ink, and no fill behind it.
     const tag = sheet.getByText(WORDS).first();
     const style = await tag.evaluate((element) => {

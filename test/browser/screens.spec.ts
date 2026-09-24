@@ -15,6 +15,14 @@ async function openTheCatalogue(page: Page) {
   if (await change.isVisible().catch(() => false)) await change.click();
 }
 
+/** From six conditions the catalogue is four tiles, then one family's list (D224): go to the family that holds a line. */
+async function openTheFamily(page: Page, family: RegExp) {
+  const sheet = page.locator("dialog.sheet[open]");
+  const all = sheet.getByRole("button", { name: /All families/i });
+  if (await all.isVisible().catch(() => false)) await all.click();
+  await sheet.getByRole("button", { name: family }).click();
+}
+
 test.describe("the screens a person meets", () => {
   for (const path of CONSUMER_PAGES) {
     test(`${path} renders, reads one handed, and says no forbidden word`, async ({ page }) => {
@@ -209,8 +217,18 @@ test.describe("the screens a person meets", () => {
     // The one the card carries, by its own name: the catalogue is ordered by title inside a family, so "first" is
     // whatever the register's words sort to, and that is not what this check is about.
     await expect(sheet.getByRole("radio", { name: /A Duolingo lesson each day/i })).toBeChecked();
+    // Its family's list, with the way to the four above it (D224); the four are tiles, a picture and a count each.
+    await expect(sheet.getByRole("button", { name: /All families/i })).toBeVisible();
+    await sheet.getByRole("button", { name: /All families/i }).click();
+    await expect(sheet.getByRole("radio")).toHaveCount(0);
+    const tiles = sheet.locator("[data-family-art]");
+    await expect(tiles).toHaveCount(4);
+    await expect(sheet.getByRole("button", { name: /^Learn/ })).toHaveAttribute("aria-current", "true");
+    await expect(sheet.getByRole("button", { name: /Exams & school/ })).toContainText(/\d+ choices/);
 
-    // Choosing another shows that one's own questions; coming back shows the list with that one alone explained.
+    // Choosing another, in another family, shows that one's own questions; coming back shows that family's list with
+    // that one alone explained.
+    await openTheFamily(page, /Exams & school/);
     const other = sheet.getByRole("radio", { name: /A Duolingo English Test score/i });
     await other.click();
     await sheet.getByRole("button", { name: /change/i }).click();

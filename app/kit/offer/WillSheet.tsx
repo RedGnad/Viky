@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useAccount } from "@/src/account/provider";
-import { chooserSections, conditionById, liveConditions, type Condition } from "@/src/conditions";
+import { chooserSections, conditionById, liveConditions, type Condition, type ConditionFamily } from "@/src/conditions";
 import { conditionAnswered, durationBounds, type GiftDraft } from "@/src/gift-draft";
 import { certificateById, cadenceOf, milestoneById } from "@/src/milestone-conditions";
 import { loadOfferedConditions, readStanding } from "@/src/client/milestone";
@@ -10,8 +10,9 @@ import { searchCertifications, type CertificationFound } from "@/src/client/cert
 import { ApiError } from "@/src/client/api";
 import { smallestTarget } from "@/src/milestone-terms";
 import { FUND, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
-import { HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../components/ui";
+import { CHOICE, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON, TILE } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
+import { FamilyArt } from "../FamilyArt";
 import { Nature } from "../Nature";
 import { Field } from "../Field";
 import { Sheet } from "../Sheet";
@@ -19,10 +20,12 @@ import { Sheet } from "../Sheet";
 /**
  * The will case: what they will do, and everything that condition itself asks (the vision of 19 Sep 2026, section 6).
  *
- * One sheet, two faces. The first is the catalogue, a list up to five conditions and sectioned by family from six
- * (the design audit of 16 Sep, section 3), offering only what a gift can be made on today. The second is the
- * condition's own questions, which are few and of one kind: who is read, in what cadence, and what they reach. They
- * stay in the same sheet because they are one thought, and the old journey made three screens of them.
+ * One sheet, two faces. The first is the catalogue, a list up to five conditions and, from six, four tiles, one per
+ * family, each opening that family's list (D224: the founder, 24 Sep 2026, on a list of twenty-four lines; Hick's
+ * law counts the options per group, and showing four then one family is the progressive disclosure NN/g describes).
+ * It offers only what a gift can be made on today. The second is the condition's own questions, which are few and of
+ * one kind: who is read, in what cadence, and what they reach. They stay in the same sheet because they are one
+ * thought, and the old journey made three screens of them.
  *
  * Every word about a source comes from the register, and so does every refusal: this file knows that a name can be
  * refused, never what to say about it.
@@ -59,6 +62,12 @@ export function WillSheet({
    */
   const [askedFor, setAskedFor] = useState<"list" | "questions" | null>(openAt);
   /**
+   * Which family's list the catalogue shows (D224): nothing decided means the family of the condition the card
+   * carries, so a funder who comes back to change lands among its neighbours with the way to the four above; "all"
+   * is the four tiles, asked for. Every opening starts undecided, as the face does.
+   */
+  const [family, setFamily] = useState<ConditionFamily | "all" | null>(null);
+  /**
    * The card says which face to open on (D136): the catalogue from the condition line, this condition's own questions
    * from the detail line under it. Before that, the questions could only be reached by pressing the chosen condition
    * again inside the catalogue, which nobody found. Read while rendering rather than written from an effect, which is
@@ -71,7 +80,10 @@ export function WillSheet({
     // Only the opening decides which face to show. Reading it again while the sheet is open moved somebody from the
     // catalogue to the questions under their hand, the moment the card's own draft arrived from the device. A sheet
     // that is built already open is decided by the same value, above, rather than left on the catalogue.
-    if (open) setAskedFor(openAt);
+    if (open) {
+      setAskedFor(openAt);
+      setFamily(null);
+    }
   }
   const choosing = askedFor === null || askedFor === "list";
   const [nameCheck, setNameCheck] = useState<{ busy: boolean; refusal?: string; checked?: string }>({ busy: false });
@@ -127,6 +139,8 @@ export function WillSheet({
   const nameLink = condition?.link.kind === "username" ? condition.link : undefined;
   const cadence = milestone && draft.cadence ? cadenceOf(milestone, draft.cadence) : undefined;
   const ready = conditionAnswered(draft);
+  const shownFamily = family === "all" ? null : (family ?? condition?.family ?? null);
+  const shownSection = sections?.find((section) => section.family === shownFamily);
 
   const choose = (id: string) => {
     // The one already chosen is not a new choice: pressing it again is a way into its own questions, and nothing
@@ -160,6 +174,7 @@ export function WillSheet({
     setNameCheck({ busy: false });
     setCourses(null);
     setReading({ busy: false });
+    setFamily(null);
     setAskedFor("questions");
   };
 
@@ -251,22 +266,48 @@ export function WillSheet({
     >
       {choosing || !condition ? (
         sections ? (
-          sections.map((section) => (
-            <ChoiceList
-              key={section.family}
-              name="condition"
-              shape="lines"
-              legend={section.title}
-              value={draft.conditionId || null}
-              onChange={choose}
-              options={section.conditions.map((option) => ({
-                value: option.id,
-                label: option.name,
-                tag: <Nature nature={option.nature} />,
-                help: option.live ? option.help : `${option.help} ${M.operatorOnly}`,
-              }))}
-            />
-          ))
+          shownSection ? (
+            <>
+              {/* Where this family sits: the way back to the four, above its list (D224). */}
+              <button type="button" className={INLINE_BUTTON} onClick={() => setFamily("all")}>
+                {W.families}
+              </button>
+              <ChoiceList
+                key={shownSection.family}
+                name="condition"
+                shape="lines"
+                legend={shownSection.title}
+                value={draft.conditionId || null}
+                onChange={choose}
+                options={shownSection.conditions.map((option) => ({
+                  value: option.id,
+                  label: option.name,
+                  tag: <Nature nature={option.nature} />,
+                  help: option.live ? option.help : `${option.help} ${M.operatorOnly}`,
+                }))}
+              />
+            </>
+          ) : (
+            /* The four families, two by two: a picture, a name, a count; the one holding the card's condition is marked. */
+            <div className="grid grid-cols-2 gap-[var(--space-md)]">
+              {sections.map((section) => {
+                const holds = section.family === condition?.family;
+                return (
+                  <button
+                    key={section.family}
+                    type="button"
+                    onClick={() => setFamily(section.family)}
+                    aria-current={holds ? "true" : undefined}
+                    className={`${TILE} ${holds ? "border-[var(--control-border)] bg-[var(--chosen)]" : "border-transparent bg-[var(--paper-field)]"}`}
+                  >
+                    <FamilyArt family={section.family} />
+                    <span className={CHOICE}>{section.title}</span>
+                    <span className={HELP}>{W.choices(section.conditions.length)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )
         ) : (
           <ChoiceList
             name="condition"
