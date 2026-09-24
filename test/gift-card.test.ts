@@ -223,10 +223,23 @@ test("one accent per surface: the card's Pay, and a sheet's own Done", () => {
   assert.doesNotMatch(card, /var\(--accent\)/, "nothing else on the card paints itself with the sun");
 });
 
-test("a card is the light object on the ground, as the rendered mockups draw it", () => {
-  // Night is drawn: cream paper on the ink ground, 17:1 apart, with a shadow under it and no edge at all.
+test("a card is the object on the ground, as the rendered mockups draw it by day and D222 draws it by night", () => {
+  // Night: a paper of its own since D222, one step above the ink ground, no shadow and no edge at all. The cream it
+  // replaced stood at 17:1 on that ground, the brightest thing on a screen somebody had set to dark.
   assert.match(css, /--paper: #FFF6E2;/);
-  assert.ok(contrastRatio("#FFF6E2", COLOURS.dark.background) > 15, "the card and the ground are never the same value");
+  assert.equal((css.match(/--paper: #2E2549;/g) ?? []).length, 2, "the night paper, in both night blocks");
+  assert.ok(contrastRatio("#2E2549", COLOURS.dark.background) >= 1.3, "the card and the ground are never the same value");
+  for (const [ink, on, least, what] of [
+    ["#F3F0FA", "#2E2549", 4.5, "the ink on the night paper"],
+    ["#B3ABC9", "#2E2549", 4.5, "the quiet voice on it"],
+    ["#F3F0FA", "#352B57", 4.5, "the ink in a field"],
+    ["#F3F0FA", "#3B3160", 4.5, "the ink on a chosen row"],
+    ["#FFC531", "#2E2549", 3, "the sun on it"],
+  ] as const) assert.ok(contrastRatio(ink, on) >= least, what);
+  for (const said of ["--paper-field: #352B57;", "--chosen: #3B3160;", "--on-surface: #F3F0FA;", "--on-surface-muted: #B3ABC9;", "--paper-relief: #B3ABC9;"]) {
+    assert.equal((css.match(new RegExp(said.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length, 2, `${said} in both night blocks`);
+  }
+  assert.match(css, /--control-relief-colour: var\(--paper-relief\);/, "a key on the paper stands on the paper's own relief");
   assert.match(css, /--card-shadow: none;/, "no shadow at all on the ink ground (D128)");
   assert.match(css, /--card-edge: transparent;/);
   // Day is drawn too since home-light.html: the same cream, on a lavender ground, with its own softer shadow and a

@@ -181,17 +181,17 @@ test("the characters have three colours, none grey, none the sun, and a face tha
   assert.deepEqual(painters.sort(), ["app/kit/Character.tsx", "app/kit/Confetti.tsx"]);
 });
 
-/** The ground is neutral, which is what the cream of the poster look was not: its chroma is a tenth of that one's. */
 /**
  * The ground was neutral in both appearances until the rendered mockups of 19 Sep 2026 drew a lavender one for day
- * and kept the indigo for night, with the same cream card on both. What has to hold now is not neutrality: it is
- * that the card is never the value of the ground it sits on, which is what a card being an object means.
+ * and kept the indigo for night, with the same cream card on both until D222 gave the card a paper of its own after
+ * dark. What has to hold is not neutrality: it is that the card is never the value of the ground it sits on, which
+ * is what a card being an object means, and that it stands off it by the same step in both appearances.
  */
 test("the card stands off the ground it is on, by day and by night", () => {
   assert.ok(oklch(COLOURS.dark.background).chroma <= 0.05);
-  const paper = "#FFF6E2";
-  assert.ok(contrastRatio(paper, COLOURS.light.background) >= 1.3, "the cream on the day ground");
-  assert.ok(contrastRatio(paper, COLOURS.dark.background) > 15, "and on the night one");
+  assert.ok(contrastRatio("#FFF6E2", COLOURS.light.background) >= 1.3, "the cream on the day ground");
+  assert.ok(contrastRatio("#2E2549", COLOURS.dark.background) >= 1.3, "and the night paper on the night one, the same step");
+  assert.ok(contrastRatio("#2E2549", COLOURS.dark.background) < 2, "a step, not a glow: the cream stood at 17:1 there");
   // The surface the fields, the bar and the rail sit on is not a card: it stays near its ground, and the white one
   // of day sits at 1.41:1 on the lavender, which is a shade and not an object.
   for (const appearance of ["light", "dark"] as Appearance[]) {
@@ -277,10 +277,12 @@ test("the quiet button is filled, seen on both grounds, and its words clear 4.5:
   const primary = ui.slice(ui.indexOf("PRIMARY_BUTTON = `"), ui.indexOf("`;", ui.indexOf("PRIMARY_BUTTON = `")));
   assert.match(primary, /disabled:bg-\[var\(--action-off\)\]/);
   assert.match(primary, /disabled:\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--action-off-deep\)\]/);
-  // One shut action, on the cream of the card in both appearances, and its words readable on it: the image's own
-  // #9A8B62 measures 2.64:1 there.
-  assert.ok(contrastRatio("#6F6133", "#EFE3C4") >= TEXT_CONTRAST_MINIMUM, "the words of the shut action are readable on it");
+  // One shut action, on the cream of the card by day and on its night paper after dark (D222), and its words readable
+  // on it in both: the image's own #9A8B62 measured 2.64:1 on the cream.
+  assert.ok(contrastRatio("#6F6133", "#EFE3C4") >= TEXT_CONTRAST_MINIMUM, "the words of the shut action are readable on it by day");
+  assert.ok(contrastRatio("#B3ABC9", "#3B3160") >= TEXT_CONTRAST_MINIMUM, "and by night");
   assert.match(css, /--action-off-ink: #6F6133;/);
+  assert.equal((css.match(/--action-off-ink: #B3ABC9;/g) ?? []).length, 2, "the night's, in both night blocks");
   // The ink under it, not a darker yellow: the same slab every control stands on, and the only one that reads as a
   // thickness against a sun fill (D142).
   assert.match(primary, /\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--control-relief-colour\)\]/, "the ink is under it when it can be pressed");
