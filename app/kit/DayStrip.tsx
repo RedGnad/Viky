@@ -114,6 +114,7 @@ export function DayStrip({
   records = [],
   width = 60,
   wake,
+  changedOn,
 }: Readonly<{
   id: string;
   gift: Shape;
@@ -126,6 +127,8 @@ export function DayStrip({
    * change plays from it, once, on the spring that never overshoots.
    */
   wake?: boolean;
+  /** Something else the days answer when it changes, as they answer a change of length (D230): the card's condition. */
+  changedOn?: string;
 }>) {
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   const row = useRef<HTMLSpanElement>(null);
@@ -142,11 +145,13 @@ export function DayStrip({
     const running = [...eyes].map((eye) => eye.animate([{ transform: wake ? "scaleY(1)" : EYES_OPEN }, { transform: wake ? EYES_OPEN : "scaleY(1)" }], { duration: spring.durationMs, easing: spring.easing }));
     return () => running.forEach((animation) => animation.cancel());
   }, [wake]);
-  // A strip that changes length after the first image shows its days again, in turn, as a screen arrives (D226).
-  const wasLength = useRef(days.length);
+  // A strip that changes length, or what it is about, after the first image shows its days again, in turn, as a
+  // screen arrives (D226, D230).
+  const about = `${days.length}:${changedOn ?? ""}`;
+  const wasAbout = useRef(about);
   useEffect(() => {
-    if (wasLength.current === days.length) return;
-    wasLength.current = days.length;
+    if (wasAbout.current === about) return;
+    wasAbout.current = about;
     if (reduced()) return;
     const drawings = [...(row.current?.querySelectorAll<SVGElement>("[data-day] svg") ?? [])].slice(0, ARRIVING);
     const { durationMs, easing, rise, staggerMs, mostStaggeredMs, fromOpacity } = MOTION.reveal;
@@ -154,7 +159,7 @@ export function DayStrip({
       drawing.animate([{ opacity: fromOpacity, transform: `translateY(${rise}px)` }, { opacity: 1, transform: "none" }], { duration: durationMs, easing, delay: Math.min(index * staggerMs, mostStaggeredMs), fill: "backwards" }),
     );
     return () => running.forEach((animation) => animation.cancel());
-  }, [days.length]);
+  }, [about]);
   // One size everywhere, and it keeps its face (the founder, 19 Sep 2026, amending the brief). 60 on a card since
   // D134, twice asked for: 42 left a sleeping day seventeen pixels tall, 52 was still small; 72 on the card being
   // filled in since D226. The strip scrolls rather than shrinking, exactly as the row does, because a row of thirty

@@ -433,7 +433,13 @@ export const MOTION = {
     fallMs: 100,
     squashMs: 50,
     hopMs: 250,
-    limbsBeforeStillMs: 120,
+    /**
+     * The limbs start from the second landing on, while the body is still settling, and in turn (the founder,
+     * 24 Sep 2026, D230): overlapping action, the principle that nothing of a body starts and stops at once. 70 ms
+     * between limbs sits between Material's short1 and short2, like the page's own turns.
+     */
+    limbsAfterFloorMs: 80,
+    limbStaggerMs: 70,
     settle: SPRING.expressiveFastSpatial,
     effects: SPRING.effects,
     turns: 1,

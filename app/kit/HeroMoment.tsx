@@ -15,8 +15,9 @@ import { Expression, reduced } from "./Motion";
  *
  * The choreography follows the principles every animator works from (Thomas and Johnston, The Illusion of Life):
  * squash and stretch, the body stretching in the air and squashing on the floor; slow in and slow out, the leap
- * decelerating to its top and the fall accelerating to the floor; follow through, the small bounce after the landing
- * and the limbs unfolding after the body has stopped; and arcs, the whirl on the way up. Every number is a token
+ * decelerating to its top and the fall accelerating to the floor; follow through and overlapping action, the small
+ * bounce after the landing and the limbs lengthening out one after another while the body still settles (D230); and
+ * arcs, the whirl on the way up. Every number is a token
  * (`MOTION.hero`), every curve one of Material's, and the landing settles on the expressive spatial spring.
  *
  * The first image is the starting state, never the final state followed by a restart (the founder's rule of 23 Sep):
@@ -39,8 +40,10 @@ export function heroTimeline(hero = MOTION.hero) {
   const hopTop = floor + hero.squashMs + hero.hopMs / 2;
   const floorAgain = hopTop + hero.hopMs / 2;
   const still = floorAgain + settle.durationMs;
-  const limbsAt = still - hero.limbsBeforeStillMs;
-  return { top, floor, hopTop, floorAgain, still, settle, limbsAt, done: limbsAt + settle.durationMs };
+  // The limbs come out while the body is still settling, one after another: the last begins three turns after the first.
+  const limbsAt = floorAgain + hero.limbsAfterFloorMs;
+  const lastLimbAt = limbsAt + 3 * hero.limbStaggerMs;
+  return { top, floor, hopTop, floorAgain, still, settle, limbsAt, lastLimbAt, done: lastLimbAt + settle.durationMs };
 }
 
 export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
@@ -88,8 +91,10 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
       const open = springEasing(hero.effects);
       running.push(mouth.animate([{ transform: "scale(0.4)" }, { transform: "scale(1)" }], { duration: open.durationMs, easing: open.easing, delay: time.floor, fill: "backwards" }));
     }
-    // The limbs unfold once the body is almost still, on the same spring, so the pose is taken last.
-    for (const limb of limbs) running.push(limb.animate([{ transform: "scale(0)" }, { transform: "scale(1)" }], { duration: time.settle.durationMs, easing: time.settle.easing, delay: time.limbsAt, fill: "backwards" }));
+    // The limbs lengthen out of the body, each along its own axis from its joint, one after another while the body is
+    // still settling (D230): overlapping action, so the figure reads as one organism rather than as a body that stops
+    // and four parts that pop. The order is the drawing's: left arm, right arm, left leg, right leg.
+    limbs.forEach((limb, index) => running.push(limb.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], { duration: time.settle.durationMs, easing: time.settle.easing, delay: time.limbsAt + index * hero.limbStaggerMs, fill: "backwards" })));
     // The starting state came from the stylesheet; from here the animations hold it, in the same task.
     show();
     return () => running.forEach((animation) => animation.cancel());
