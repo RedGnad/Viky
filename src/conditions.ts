@@ -36,35 +36,41 @@ export type ConditionKind = "daily" | "milestone";
  * into a shelf of brands rather than of efforts. Inside a family the order is alphabetical, the GOV.UK rule, so that
  * an editor's choice is never read as advice.
  *
- * Four of them, in the order chooser.html draws them on 20 Sep 2026. "Get certified" is the one added that day, and
- * it is a distinction rather than a shelf: a certification is awarded by somebody who is not the person, and it is
- * not a course taken, since a CompTIA is sat as an examination with no course at all. Filing Credly beside Coursera
- * erased exactly the thing that made it worth building. "Move" left with it: nothing was ever filed there, and a
- * family draws nothing until something is.
+ * Four of them, the founder's decision of 24 Sep 2026 (D220), in this order: Learn, Exams & school, Play, Move. Learn
+ * holds what the person learns at their own pace and has read or shown for them: the daily lesson, the course
+ * certificates, the certifications an issuer awards. Exams & school holds what an examining body or a school
+ * decides: the English tests, enrolment, the year passed, a grade, the state diplomas. Inside a family the order is
+ * the register's (D139).
  */
-export type ConditionFamily = "language" | "exam" | "play" | "course" | "certification" | "study" | "school" | "move";
+export type ConditionFamily = "learn" | "exam" | "play" | "move";
 
 export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>[] = [
-  { id: "language", title: "Learn a language" },
-  // Pass an exam (D176): a result the person shows from their own account with the examining body, beside the TOEFL
-  // score (D164), which moves here from the languages. The Duolingo English Test stays where the audit filed it, with
-  // the lesson: it is read for the person from a page they share, and its filing is pinned by a test.
-  { id: "exam", title: "Pass an exam" },
+  { id: "learn", title: "Learn" },
+  // The id stays `exam`, the one the examination results had since D176: only the title widens.
+  { id: "exam", title: "Exams & school" },
   { id: "play", title: "Play" },
-  { id: "course", title: "Finish a course" },
-  { id: "certification", title: "Get certified" },
-  // Study (D165, D174): the corridor's own case, a family abroad paying the year. Staying enrolled, passing the year
-  // and reaching a grade, all shown from the person's own student portal. Nothing offered in it until a portal has
-  // been proved, so the page and the chooser draw it only for an account that runs Viky. The id stays `study`
-  // whatever the title says: a gift's terms could name it one day.
-  { id: "study", title: "Study" },
-  // School (D179): an average shown by the pupil or the family from their own EcoleDirecte account. Nothing offered
-  // in it until a provider of ours exists, so the page and the chooser draw it only for an account that runs Viky.
-  { id: "school", title: "School" },
-  // Move (D188): a source the person connects once, read each morning with their key. Nothing offered in it until a
-  // real person has run on it, so the page and the chooser draw it only for an account that runs Viky.
+  // Move (D188): a source the person connects once, read each morning with their key.
   { id: "move", title: "Move" },
 ];
+
+/**
+ * The families there were until 24 Sep 2026, and where each went (D220). A family id written before that day, in a
+ * gift's record or anywhere else, still reads through `familyOf`: nothing that names one is ever left without a family.
+ */
+export type RetiredFamily = "language" | "course" | "certification" | "study" | "school";
+export const RETIRED_FAMILIES: Readonly<Record<RetiredFamily, ConditionFamily>> = {
+  language: "learn",
+  course: "learn",
+  certification: "learn",
+  study: "exam",
+  school: "exam",
+};
+
+/** The family an id names today, whether it is one of the four or one retired on 24 Sep 2026; nothing for any other word. */
+export function familyOf(id: string): ConditionFamily | undefined {
+  if (FAMILIES.some((family) => family.id === id)) return id as ConditionFamily;
+  return Object.prototype.hasOwnProperty.call(RETIRED_FAMILIES, id) ? RETIRED_FAMILIES[id as RetiredFamily] : undefined;
+}
 
 /** From this many conditions on offer, the chooser stops being one list and becomes one section per family. */
 export const SECTIONS_FROM = 6;
@@ -314,7 +320,7 @@ export const DUOLINGO_DAILY: Condition = {
   live: true,
   state: "open",
   source: "Duolingo",
-  family: "language",
+  family: "learn",
   name: "A Duolingo lesson each day",
   help: "Read each morning from their public Duolingo profile, with nothing to install: it proves the account did the lesson, not who held the phone.",
   link: {
@@ -498,7 +504,7 @@ export const DUOLINGO_ENGLISH_TEST: Condition = {
   live: true,
   state: "open",
   source: "Duolingo English Test",
-  family: "language",
+  family: "exam",
   name: "A Duolingo English Test score",
   help: "Sat on camera with an identity document, marked by examiners: the score is read from the page they share, and nobody can award it to themselves.",
   link: {
@@ -528,7 +534,7 @@ export const COURSERA_CERTIFICATE: Condition = {
   live: true,
   state: "open",
   source: "Coursera",
-  family: "course",
+  family: "learn",
   name: "A Coursera certificate",
   help: "The certificate's public page, shared when they have it: the course and the day are read from it, and Coursera checks identity once, not each piece of work.",
   link: { kind: "link", label: "The link to your certificate", help: "In Coursera, open the certificate and choose Share, then paste the link here." },
@@ -556,7 +562,7 @@ export const EDX_CERTIFICATE: Condition = {
   live: true,
   state: "open",
   source: "edX",
-  family: "course",
+  family: "learn",
   name: "An edX certificate",
   help: "The verified certificate's public page on edX, shared when they have it: the course and the day are read from it, and edX checks identity for that track.",
   link: { kind: "link", label: "The link to your certificate", help: "In edX, open the certificate and copy the whole link from your browser, courses.edx.org/certificates/ followed by its id, then paste it here." },
@@ -589,7 +595,7 @@ export const CREDLY_BADGE: Condition = {
   live: true,
   state: "open",
   source: "Credly",
-  family: "certification",
+  family: "learn",
   name: "A certification on Credly",
   help: "The badge its issuer published, read from Credly's own record of it: the issuer awards the badge, and nobody can award one to themselves.",
   link: { kind: "link", label: "The link to your badge", help: "In Credly, open the badge and choose Share, then paste the link here." },
@@ -617,7 +623,7 @@ export const ACCREDIBLE_CREDENTIAL: Condition = {
   live: true,
   state: "open",
   source: "Accredible",
-  family: "certification",
+  family: "learn",
   name: "A credential on Accredible",
   help: "The credential its issuer published on Accredible, read from its public record: the title, the issuer and the day, and nobody can issue one to themselves.",
   link: { kind: "link", label: "The link to your credential", help: "Open your credential on credential.net and copy the whole link from your browser, then paste it here." },
@@ -674,7 +680,7 @@ export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
   live: true,
   state: "open",
   source: UNIVERSITY_SOURCE,
-  family: "study",
+  family: "exam",
   name: "Enrolled at university, shown",
   help: "Shown by them from their own student portal: the page that says they are enrolled, no marks read. It proves the account, not who sits in class.",
   link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
@@ -702,7 +708,7 @@ export const CHSI_ENROLMENT_SHOWN: Condition = {
   live: false,
   beforeItOpens: "Its provider, registered on the Reclaim dashboard from a real CHSI report, and goal 27 signed by the owner.",
   source: "CHSI",
-  family: "study",
+  family: "exam",
   name: "Enrolled in China, shown",
   help: "Their own student-status report on CHSI, the Ministry's register, opened by them with its code: enrolled or not. It proves the report's holder, not who sits in class.",
   link: { kind: "link", label: "Show it from your CHSI report", help: "Press Show it on your gift's page, then type your report's verification code in the tab that opens. Nothing to paste here." },
@@ -857,7 +863,7 @@ export const STRAVA_DAILY: Condition = {
   },
 };
 
-export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, CREDLY_BADGE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, FITBIT_DAILY, STRAVA_DAILY];
+export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, EDX_CERTIFICATE, CREDLY_BADGE, ACCREDIBLE_CREDENTIAL, TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, FITBIT_DAILY, STRAVA_DAILY];
 
 /**
  * What is built with a piece really missing (D184): a provider not registered, a portal not proved. Nobody can make a
@@ -879,7 +885,7 @@ export const UNIVERSITY_YEAR_PASSED_SHOWN: Condition = {
   live: false,
   beforeItOpens: "A portal whose results page is on its row: its provider registered from the portal's results page, then the row's results extraction.",
   source: UNIVERSITY_SOURCE,
-  family: "study",
+  family: "exam",
   name: "Pass the year at their university",
   help: "The results page of their own student portal, shown by them, saying they passed the year or the semester: it proves the account, not who sat the exams.",
   link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
@@ -907,7 +913,7 @@ export const UNIVERSITY_GRADE_SHOWN: Condition = {
   live: false,
   beforeItOpens: "A portal whose results page is on its row: its provider registered from the portal's results page, then the row's results extraction.",
   source: UNIVERSITY_SOURCE,
-  family: "study",
+  family: "exam",
   name: "Reach a grade at their university",
   help: "The results page of their own student portal, shown by them, with the grade read on the university's own scale: it proves the account, not who sat the exams.",
   link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
@@ -1052,7 +1058,7 @@ export const UDEMY_COURSE_SHOWN: Condition = {
   live: false,
   beforeItOpens: "Its provider, registered on the Reclaim dashboard from the definition in docs/reclaim, and goal 22 signed by the owner.",
   source: UDEMY_SOURCE,
-  family: "course",
+  family: "learn",
   name: "A Udemy course finished, shown",
   help: "Their own Udemy account, shown by them: the course the gift names, finished. It proves the account, not who watched the lessons.",
   link: { kind: "link", label: "Show it from your Udemy account", help: "Press Show it on your gift's page and sign in to Udemy in the tab that opens. Nothing to paste." },
@@ -1067,7 +1073,7 @@ export const UDEMY_COURSE_SHOWN: Condition = {
 };
 
 /**
- * A school average shown from the pupil's or the family's own EcoleDirecte account (D179): the family "School", with a
+ * A school average shown from the pupil's or the family's own EcoleDirecte account (D179): the family "Exams & school" (School until D220), with a
  * target out of 20 as the university grade has. PRONOTE is built beside it (D203), its publisher's terms and the risk written.
  */
 export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
@@ -1078,7 +1084,7 @@ export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
   live: false,
   beforeItOpens: "Its provider, registered on the Reclaim dashboard from the definition in docs/reclaim, and goal 23 signed by the owner.",
   source: ECOLEDIRECTE_SOURCE,
-  family: "school",
+  family: "exam",
   name: "Reach an average at school, shown",
   help: "Their own EcoleDirecte account, or the family's, shown by them: the overall average out of 20 on the grades page. It proves the account, not who did the work.",
   link: { kind: "link", label: "Show it from your EcoleDirecte account", help: "Press Show it on your gift's page and sign in to EcoleDirecte in the tab that opens. Nothing to paste." },
@@ -1105,7 +1111,7 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
   live: false,
   beforeItOpens: "PRONOTE encrypts every answer by default, so a proof can read no average; a way to read one is needed before a provider, then goal 24.",
   source: PRONOTE_SOURCE,
-  family: "school",
+  family: "exam",
   name: "An average on PRONOTE, shown",
   help: "The family's own PRONOTE space, shown by them: the overall average out of 20. It proves the account, not who did the work.",
   link: { kind: "link", label: "Show it from your PRONOTE space", help: "Press Show it on your gift's page and sign in to the school's PRONOTE space in the tab that opens. Nothing to paste." },
@@ -1127,12 +1133,12 @@ export const BUILDING: readonly Condition[] = [
   BAC_MOROCCO_SHOWN,
   BAC_CAMEROON_SHOWN,
   BAC_FRANCE_SHOWN,
-  UDEMY_COURSE_SHOWN,
-  CHSI_ENROLMENT_SHOWN,
   WAEC_RESULT_SHOWN,
+  ECOLEDIRECTE_GRADE_SHOWN,
+  CHSI_ENROLMENT_SHOWN,
   UNIVERSITY_YEAR_PASSED_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
-  ECOLEDIRECTE_GRADE_SHOWN,
+  UDEMY_COURSE_SHOWN,
 ];
 
 /**
@@ -1175,7 +1181,7 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "A Cambridge, IELTS or TOEFL result",
     state: "no-public-page",
     why: "The result goes to institutions. Checking one means an account an organisation applies for, opened with numbers the candidate hands over, and nothing about one person that anybody else can open. Read on 19 Sep 2026 on Cambridge English's, IELTS's and ETS's own pages.",
-    building: "a Cambridge English result and an IELTS band the person shows from their own account, with the two words SHOWN BY THEM on it; the TOEFL score is open, under Pass an exam.",
+    building: "a Cambridge English result and an IELTS band the person shows from their own account, with the two words SHOWN BY THEM on it; the TOEFL score is open, under Exams & school.",
   },
   {
     id: "university-enrolment",
@@ -1190,7 +1196,7 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "A state diploma",
     state: "no-public-page",
     why: "In France the holder draws an attestation from the state's own service, and a check needs the control key printed on it. Nothing anybody can open, and what a program could read would be that attestation rather than the diploma. Read on 19 Sep 2026 on diplome.gouv.fr.",
-    // The baccalauréat is a state diploma, and its three lines (D176) print under "Pass an exam" with the frontier's
+    // The baccalauréat is a state diploma, and its three lines (D176) print under "Exams & school" with the frontier's
     // word: this line says they are on their way and names none, so nothing is printed twice.
     building: "the baccalauréat passed, shown by the candidate from the examining body's own results page, in Morocco, Cameroon and France, with the two words SHOWN BY THEM on it.",
   },

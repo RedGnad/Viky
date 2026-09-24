@@ -91,24 +91,16 @@ test("the page lists every condition the register holds, offered or not, by fami
     "the families are the register's, in its order, and a family with only a line being built would be on the page too",
   );
   // A line being built with a public page prints under its family, once (D169): the TOEFL score and enrolment are
-  // said by the frontier's lines, so the five examination results (D176) print under Pass an exam, and the year
-  // passed and the grade (D174) under Study.
+  // said by the frontier's lines, so the examination results (D176), the year passed and the grade (D174) print under
+  // Exams & school (D220).
   assert.deepEqual(
     sections.flatMap((section) => section.building).map((condition) => condition.id),
-    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "udemy-course-shown", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown"],
+    ["udemy-course-shown", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "ecoledirecte-grade-shown", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown"],
   );
   assert.deepEqual(sections.find((section) => section.family === "move")?.conditions.map((condition) => condition.id), ["fitbit-daily", "strava-daily"], "the family Move, its two lines open (D188, D191)");
-  assert.deepEqual(sections.find((section) => section.family === "school")?.building.map((condition) => condition.id), ["ecoledirecte-grade-shown"], "the family School, for its one line being built (D179)");
-  assert.deepEqual(sections.find((section) => section.family === "course")?.building.map((condition) => condition.id), ["udemy-course-shown"], "beside the Coursera and edX certificates (D178, D218)");
-  assert.deepEqual(sections.find((section) => section.family === "exam")?.conditions.map((condition) => condition.id), ["toefl-mybest-shown"], "the TOEFL score is open in its family, the others being built beside it");
-  assert.deepEqual(sections.find((section) => section.family === "study")?.building.map((condition) => condition.family), ["study", "study", "study"]);
-  const language = sections.find((section) => section.family === "language");
-  assert.ok(language, "the language family is on the page");
-  assert.ok(
-    language.conditions.findIndex((condition) => condition.id === "duolingo-daily") <
-      language.conditions.findIndex((condition) => condition.id === "duolingo-english-test"),
-    "the daily lesson comes before the test",
-  );
+  assert.deepEqual(sections.find((section) => section.family === "learn")?.building.map((condition) => condition.id), ["udemy-course-shown"], "beside the Coursera and edX certificates (D178, D218)");
+  assert.deepEqual(sections.find((section) => section.family === "exam")?.conditions.map((condition) => condition.id), ["duolingo-english-test", "toefl-mybest-shown", "university-enrollment-shown"], "the tests and enrolment open in Exams & school, the rest being built beside them");
+  assert.deepEqual(sections.map((section) => section.family), ["learn", "exam", "play", "move"], "the four families, in the founder's order (D220)");
   for (const section of sections) {
     const names = section.conditions.map((condition) => condition.name);
     // In the register's own order inside a family, not the alphabet's (D139): the first line of a family is the one
@@ -153,7 +145,7 @@ test("every condition says its nature, and every one of the pilot is read for th
   // What is being built lives beside the register, resolvable by id and offered to an operator alone (D164, D165, D174, D176).
   assert.deepEqual(
     BUILDING.map((condition) => condition.id),
-    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "chsi-enrolment-shown", "waec-result-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown"],
+    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "ecoledirecte-grade-shown", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown", "udemy-course-shown"],
   );
   for (const id of BUILDING.map((condition) => condition.id)) {
     const shown = conditionById(id);

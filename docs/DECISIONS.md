@@ -6043,3 +6043,22 @@ limbs folded), once per visit by the session cookie, standing from the first ima
 sent to the founder: the whirl at 200, the squash at 500, the bounce between 600 and 800, still at 1,000, the limbs
 from 1,300; by night the limbs read in the text's light. `test/hero-moment.test.ts` holds the order of the moments,
 the curves of each segment, the budget, the thin bowed limbs and their two colours.
+
+## D220, 24 Sep 2026: four families, Learn, Exams & school, Play, Move
+
+The founder's decision, 24 Sep 2026: the families go from seven to four, in this order.
+
+- **Learn**: the Duolingo lesson each day, Coursera, edX, Credly, Accredible.
+- **Exams & school**: the Duolingo English Test, the TOEFL score, enrolment at university, and every line being built
+  there (Cambridge, IELTS, the three baccalauréats, WAEC, EcoleDirecte, the year passed, the grade).
+- **Play**: the Chess.com rating and puzzles. **Move**: Fitbit, Strava.
+- **Ids.** `exam`, `play` and `move` stay; `learn` is new. The five retired ids (`language`, `course`, `certification`,
+  `study`, `school`) still read through `familyOf`, to the family their lines went to. No gift record stores a family
+  today, so nothing already created changes.
+- **Order.** Inside a family, the register's order (D139), set to the founder's list: Coursera and edX before Credly
+  and Accredible, EcoleDirecte after WAEC and before the year passed and the grade.
+- **The screens.** The public page and the chooser draw their sections from the register, so they follow. The judges'
+  table of what each condition proves is grouped under the same four titles.
+- **Defaults applied, to confirm.** Three lines the list does not name: the Udemy course (being built) goes to Learn,
+  with the other courses; enrolment in China from CHSI (being built) and PRONOTE (parked) go to Exams & school, with
+  enrolment and EcoleDirecte.

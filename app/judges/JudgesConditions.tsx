@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { conditionsWithProof } from "@/src/condition-proof";
-import { stateOf } from "@/src/conditions";
+import { FAMILIES, stateOf } from "@/src/conditions";
 import { realProofCounts } from "@/src/proof-counts";
 import { CATALOGUE } from "@/src/sentences";
 import { TITLE } from "../components/ui";
@@ -18,6 +18,8 @@ const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
  */
 export async function JudgesConditions() {
   const rows = conditionsWithProof();
+  // By the register's four families, as the public page and the chooser draw them (D220).
+  const families = FAMILIES.map((family) => ({ ...family, rows: rows.filter(({ condition }) => condition.family === family.id) })).filter((family) => family.rows.length > 0);
   // The count of real proofs per condition (D184): a number read from the rows when the page is served, or nothing.
   const counts = await realProofCounts();
   return (
@@ -33,26 +35,31 @@ export async function JudgesConditions() {
         </Link>
         .
       </p>
-      {rows.map(({ condition, proof }) => (
-        <div key={condition.id} className="space-y-[var(--space-xs)] border-t border-[var(--divider)] pt-[var(--space-md)]">
-          <h3 className="font-medium">
-            {condition.name}{" "}
-            {/* The state is the register's own, in the words the public page prints: "not open yet, so no gift runs on
-                it" stopped being true the day the first real Chess.com gift was funded, on 18 Sep 2026. */}
-            <span className={MUTED}>
-              {condition.source}, {stateOf(condition).title.toLowerCase()}, {CATALOGUE.realProofs(counts ? (counts.get(condition.id) ?? 0) : null)}
-            </span>
-          </h3>
-          <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[14rem_1fr]">
-            <dt className={MUTED}>Does the data come from the source&apos;s own servers?</dt>
-            <dd className={HELP}>{proof.data}</dd>
-            <dt className={MUTED}>Is the account theirs?</dt>
-            <dd className={HELP}>{proof.account}</dd>
-            <dt className={MUTED}>Who acted on the account?</dt>
-            <dd className={HELP}>{proof.whoActed}</dd>
-            <dt className={MUTED}>What does the source do against cheating?</dt>
-            <dd className={HELP}>{proof.sourcePolicing}</dd>
-          </dl>
+      {families.map((family) => (
+        <div key={family.id} className="space-y-[var(--space-md)]">
+          <h3 className="font-semibold">{family.title}</h3>
+          {family.rows.map(({ condition, proof }) => (
+            <div key={condition.id} className="space-y-[var(--space-xs)] border-t border-[var(--divider)] pt-[var(--space-md)]">
+              <h4 className="font-medium">
+                {condition.name}{" "}
+                {/* The state is the register's own, in the words the public page prints: "not open yet, so no gift runs on
+                    it" stopped being true the day the first real Chess.com gift was funded, on 18 Sep 2026. */}
+                <span className={MUTED}>
+                  {condition.source}, {stateOf(condition).title.toLowerCase()}, {CATALOGUE.realProofs(counts ? (counts.get(condition.id) ?? 0) : null)}
+                </span>
+              </h4>
+              <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[14rem_1fr]">
+                <dt className={MUTED}>Does the data come from the source&apos;s own servers?</dt>
+                <dd className={HELP}>{proof.data}</dd>
+                <dt className={MUTED}>Is the account theirs?</dt>
+                <dd className={HELP}>{proof.account}</dd>
+                <dt className={MUTED}>Who acted on the account?</dt>
+                <dd className={HELP}>{proof.whoActed}</dd>
+                <dt className={MUTED}>What does the source do against cheating?</dt>
+                <dd className={HELP}>{proof.sourcePolicing}</dd>
+              </dl>
+            </div>
+          ))}
         </div>
       ))}
     </section>

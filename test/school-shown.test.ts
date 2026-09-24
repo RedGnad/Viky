@@ -28,10 +28,9 @@ test("one goal, pinned by name, a constant subject, and the family School after 
   assert.equal(ECOLEDIRECTE_MILESTONE.subject({ name: "" }), ECOLEDIRECTE_SUBJECT);
   assert.equal(ECOLEDIRECTE_SHOWN.subject, ECOLEDIRECTE_SUBJECT);
   assert.equal(ECOLEDIRECTE_SHOWN.condition.attestationProviderId, ecoleDirecteProviderId());
-  const families = FAMILIES.map((family) => family.id);
-  assert.equal(families.indexOf("school"), families.indexOf("study") + 1, "School comes right after Study");
+  assert.ok(FAMILIES.some((family) => family.id === "exam"));
   const condition = conditionById("ecoledirecte-grade-shown");
-  assert.equal(condition?.family, "school");
+  assert.equal(condition?.family, "exam", "under Exams & school (D220)");
   assert.equal(condition?.nature, "shown");
   assert.equal(condition?.live, false);
   assert.ok(BUILDING.includes(condition as never));
@@ -39,7 +38,7 @@ test("one goal, pinned by name, a constant subject, and the family School after 
   // The frontier's line on school marks says which portal is on its way and why the other is not, in its publisher's words.
   const marks = FRONTIERS.find((frontier) => frontier.id === "school-marks");
   assert.match(String(marks?.building), /EcoleDirecte account.*SHOWN BY THEM.*not PRONOTE.*encrypted/);
-  assert.equal(marks?.conditionId, undefined, "the line prints under School, once");
+  assert.equal(marks?.conditionId, undefined, "the line prints under Exams & school, once");
   assert.equal(conditionById("pronote-grade-shown"), undefined, "PRONOTE is parked: its answers and bulletins are encrypted");
 });
 
