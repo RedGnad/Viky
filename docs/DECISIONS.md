@@ -6062,3 +6062,50 @@ The founder's decision, 24 Sep 2026: the families go from seven to four, in this
 - **Defaults applied, to confirm.** Three lines the list does not name: the Udemy course (being built) goes to Learn,
   with the other courses; enrolment in China from CHSI (being built) and PRONOTE (parked) go to Exams & school, with
   enrolment and EcoleDirecte.
+
+## D221, 24 Sep 2026: the first screen of the landing on the fold's literature, and the limbs on the sketch's measures
+
+The founder, 24 Sep 2026, on D219: the limbs still wider and much longer than on his sketch, the arms further apart
+than on it; the card higher in the first screen than on the sketch, so that "Offer a gift" loses its point when most
+of the card shows, and what does the reference literature say rather than guessing; the hero text centred rather than
+on the left, the sentence without "The rest comes back to you.", and whether the design rules want Sign in or Offer a
+gift in the accent.
+
+**The limbs, measured on the sketch**, in the body's units (its width is 58; the sketch's diamond is 625 px wide, its
+lines 18): a line 1.8 wide (was 3.2), a hand of radius 1.9; the arms straight down at 19 from the middle (they hung at
+18 and bowed out to 25), 9 long past the body's edge, the hands 1.2 under the body's lowest point (they were 9.5 under
+it); the legs at 8.5 from the middle at the hip and 10 at the foot, 15.5 below the body (they were 21.6), the feet 6.5
+long and turned out; one bow of half a unit on each, and no other curve. The box is 53 tall instead of 64, the stage
+is that height, and the peek follows: the figure sits 31 units down, the head's top to under the eyes over the card's
+edge, as before.
+
+**The card at the fold: what the literature says.** Nielsen Norman Group, four articles. Schade, The Fold Manifesto
+(2015): what shows without any action is what makes people scroll; a design should not need an arrow; give a glimpse
+of what follows. Flaherty, The Illusion of Completeness (2016): a screen that looks complete is not scrolled; a large
+hero, a rule across the page or a wide blank at the fold cause it; an element cut by the edge, content peeking above
+the fold, break it. Fessenden, Scrolling and Attention (2018): 57 % of viewing time is above the fold and 74 % in the
+first two screens; keep the major calls to action above the fold. Schade, Anchors OK? (2017): a jump link is worth
+more as the screen shrinks, and nothing when its target is already near. None of them gives a height. What follows
+from them: the first screen holds the promise and the one action; the card is cut by the fold, recognisable and
+incomplete; the fold never falls on blank. So the first screen (title, sentence, way, character) is as tall as the
+viewport less the header and a peek of 104 px of card (`--hero-card-peek`): the name row whole, the next row cut. It
+was 288 px of card at 390 by 844 (the card's top at 66 %) and 406 at 1440 by 900 (55 %): most of the card, and the
+way to it pointed at what was already there. Now the card's top is at 740 of 844 and 796 of 900, the same peek at
+every phone height, on `100svh` (the small viewport) so the card does not move when the browser's bars go. The room
+left over is shared by auto margins, half above the title and half above the character: at 390 by 844 the title at
+195, the way from 343 to 395, the head at 540; at 1440 by 900 the title at 204, the head at 531. The character takes
+the sketch's width, 272 on a phone (the diamond 247 px wide, it was 210) and 360 from 1024, the title's own step.
+
+**The accent.** The rule (D84, `PRIMARY_BUTTON`): the accent is the primary button and the active destination, one
+per screen at most. The first screen's one action is the way to the card, so it carries the accent now, and the card's
+own action, a screen below, keeps its own. Sign in stays tonal: the door for somebody who already has an account is
+not what the screen asks for, which is how Duolingo's landing has it too (Get started filled, I already have an
+account plain).
+
+**The text.** Centred at every width (it was on the left below 1024, D131 centred it from there), and the sentence is
+"Back their goal. They earn it day by day.": what happens to what nobody earns is the card's to say.
+
+**Measured.** The first image and the standing state at 390 by 844 and 1440 by 900, by day and by night, sent to the
+founder. `test/hero-moment.test.ts` holds the limbs' paths, the peek, the first screen's rule and the way's accent;
+`test/browser/home-order.spec.ts` the card's top at 104 from the viewport's foot at four sizes, and every block on
+one axis.

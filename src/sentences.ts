@@ -165,10 +165,11 @@ export const HOME = {
   promiseBody:
     "Put money behind someone's goal. It becomes theirs as they make verified progress, and whatever they do not earn comes back to you. Nobody profits from anyone failing.",
   /**
-   * The one sentence under the card, and there is no third (the drawn card, section 6). The promise above it is the
-   * title; this is what it costs a visitor to try, and what happens to what nobody earns.
+   * The one sentence under the title, and there is no third (the drawn card, section 6): what it costs a visitor to
+   * try. The founder took its last sentence off on 24 Sep 2026 (D221); what happens to what nobody earns is the
+   * card's to say.
    */
-  promiseUnder: "Back their goal. They earn it day by day. The rest comes back to you.",
+  promiseUnder: "Back their goal. They earn it day by day.",
   offer: "Offer a gift",
   finish: "Finish the gift you set up",
   howItWorks: "How it works",

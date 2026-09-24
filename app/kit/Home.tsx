@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useAccount } from "@/src/account/provider";
 import { CATALOGUE, HOME as W, ME } from "@/src/sentences";
-import { BODY, HELP, HERO, LEAD, SECONDARY_BUTTON, TITLE } from "../components/ui";
+import { BODY, HELP, HERO, LEAD, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "../components/ui";
 import { Arrival, Reveal, type ArrivalGift } from "./Motion";
 import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
@@ -57,22 +57,26 @@ export function Home({ initialHoldings, initialGifts, heroPlayed = false }: Read
   if (!address) {
     return (
       <Shell kind="destination" active="home" action={<SignInDoor />} bare wide>
-        {/* Home without an account, in the order of the founder's sketch of 24 Sep 2026 (D214): the promise, its
-            sentence, the way to the card, the hero moment, and the card, whose top shows at the foot of the first
-            screen so the page says there is more (NN/g on the fold). One column, centred from 1024. */}
-        <div className="arrives-in-turn flex w-full flex-col items-start gap-[var(--space-md)] [@media(min-width:1024px)]:items-center [@media(min-width:1024px)]:gap-[var(--space-sm)]">
-          <div className="w-full [@media(min-width:1024px)]:text-center">
-            <h1 className={HERO}>{W.promise}</h1>
-            {/* Centred and bounded at 34em from 1024 (D210, the founder's default): the sentence of today holds on one
-                line of 680 px, and a longer one breaks into two centred lines rather than running the column's width. */}
-            <p className={`${LEAD} mt-[var(--space-xs)] max-w-[460px] [@media(min-width:1024px)]:mx-auto [@media(min-width:1024px)]:max-w-[34em]`}>{W.promiseUnder}</p>
+        {/* Home without an account, in the order of the founder's sketch of 24 Sep 2026 (D214, D221): the promise,
+            its sentence, the way to the card, the hero moment, then the card. The first four are the first screen, as
+            tall as the viewport less what of the card it shows, so the card's top is cut by the fold on every phone
+            and the page says there is more (NN/g on the fold). One column, centred at every width. */}
+        <div className="arrives-in-turn flex w-full flex-col items-center">
+          <div className="hero-first-screen flex w-full flex-col items-center gap-[var(--space-md)] [@media(min-width:1024px)]:gap-[var(--space-sm)]">
+            {/* Its share of the room the first screen has left over, the same as the character's (globals.css). */}
+            <div className="mt-auto w-full text-center">
+              <h1 className={HERO}>{W.promise}</h1>
+              {/* Bounded at 460 on a phone and at 34em from 1024 (D210, the founder's default): a longer sentence
+                  breaks into centred lines rather than running the column's width. */}
+              <p className={`${LEAD} mx-auto mt-[var(--space-xs)] max-w-[460px] [@media(min-width:1024px)]:max-w-[34em]`}>{W.promiseUnder}</p>
+            </div>
+            {/* The one action of the first screen, in the accent: it goes to the card, which is the product, and the
+                card's own action is a screen below, so each screen has its one accent (D221; ui.ts). */}
+            <a href="#offer" className={`${PRIMARY_BUTTON} w-auto! px-[var(--space-xl)] text-center no-underline`}>
+              {W.offer}
+            </a>
+            <HeroMoment played={heroPlayed} />
           </div>
-          {/* The one action of the first screen: it goes to the card, which is the product. The tonal button, not the
-              accent, because the card's own action keeps the screen's one accent (structure, section 12). */}
-          <a href="#offer" className={`${SECONDARY_BUTTON} w-auto! px-[var(--space-xl)] text-center no-underline [@media(min-width:1024px)]:self-center`}>
-            {W.offer}
-          </a>
-          <HeroMoment played={heroPlayed} />
           {/* Above the character, so the card's paper hides what of it is still behind. */}
           <div id="offer" className="relative z-[1] w-full [@media(min-width:1024px)]:flex [@media(min-width:1024px)]:justify-center">
             <OfferCard />

@@ -83,19 +83,25 @@ const DIAMOND = roundedTriangle(
 
 /** The diamond is wider than it is tall (the founder, 20 Sep 2026), so it is drawn in a box of its own. */
 const DIAMOND_BOX = "0 0 64 40";
-/** The same diamond with its arms and legs out: the box grows down to the feet (D214). */
-const DIAMOND_WITH_LIMBS_BOX = "0 0 64 64";
+/** The same diamond with its arms and legs out: the box grows down to the feet, 53 since the legs took the sketch's length (D221). */
+const DIAMOND_WITH_LIMBS_BOX = "0 0 64 53";
 
 /**
- * The arms and the legs the founder asked for on 24 Sep 2026 (D214, redrawn on his sketch in D219), on the character of
- * the landing: thin lines of ink with a hand and a foot, hung from the body's lower sides and stood under it, each
- * bowed very slightly outward, which is the one curve a limb carries. They fold: each limb is scaled from its joint,
- * so at 0 it is inside the body and at 1 it is out. They are drawn before the body so the joints stay under it. Their
- * colour is `--character-limb`: the face's ink by day, the text's light by night, where the ink is the ground's own.
- * Round caps on a line are the rounded rectangle the rules allow; nothing here is pointed.
+ * The arms and the legs the founder asked for on 24 Sep 2026 (D214, redrawn on his sketch in D219, then measured on
+ * it in D221), on the character of the landing: thin lines of ink with a hand and a foot. The arms hang straight down
+ * from the body's lower sides, close to it, and end where the body does; the legs stand under it a little apart,
+ * leaning out a touch, the feet turned out. Each carries one very slight bow, outward, and no other curve. They fold:
+ * each limb is scaled from its joint, so at 0 it is inside the body and at 1 it is out. They are drawn before the
+ * body so the joints stay under it. Their colour is `--character-limb`: the face's ink by day, the text's light by
+ * night, where the ink is the ground's own. Round caps on a line are the rounded rectangle the rules allow; nothing
+ * here is pointed.
+ *
+ * The measures are the sketch's, read in the body's units (its width is 58): a line 1.8 wide, a hand of radius 1.9,
+ * the arms 19 from the middle and 9 long past the body's edge, the legs 8.5 from the middle at the hip and 10 at the
+ * foot, 15.5 below the body's lowest point, the feet 6.5 long.
  */
-const LIMB = 3.2;
-const HAND = 2.4;
+const LIMB = 1.8;
+const HAND = 1.9;
 const FROM_JOINT: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 0%" };
 const LIMB_INK = "var(--character-limb)";
 
@@ -104,20 +110,20 @@ function Limbs() {
   return (
     <g data-part="limbs">
       <g data-part="arm" style={FROM_JOINT}>
-        <path d="M14 26.5 Q8.5 35 7 44" style={ink} />
-        <circle cx={7} cy={45.5} r={HAND} style={{ fill: LIMB_INK }} />
+        <path d="M13 26 Q12 30.7 13 35.4" style={ink} />
+        <circle cx={13} cy={37.2} r={HAND} style={{ fill: LIMB_INK }} />
       </g>
       <g data-part="arm" style={FROM_JOINT}>
-        <path d="M50 26.5 Q55.5 35 57 44" style={ink} />
-        <circle cx={57} cy={45.5} r={HAND} style={{ fill: LIMB_INK }} />
+        <path d="M51 26 Q52 30.7 51 35.4" style={ink} />
+        <circle cx={51} cy={37.2} r={HAND} style={{ fill: LIMB_INK }} />
       </g>
       <g data-part="leg" style={FROM_JOINT}>
-        <path d="M27 34 Q24.8 46 25 56" style={ink} />
-        <path d="M25 57.6 H17.5" style={ink} />
+        <path d="M23.5 30 Q21.6 40.75 21.7 51.5" style={ink} />
+        <path d="M21.7 51.5 H15.2" style={ink} />
       </g>
       <g data-part="leg" style={FROM_JOINT}>
-        <path d="M37 34 Q39.2 46 39 56" style={ink} />
-        <path d="M39 57.6 H46.5" style={ink} />
+        <path d="M40.5 30 Q42.4 40.75 42.3 51.5" style={ink} />
+        <path d="M42.3 51.5 H48.8" style={ink} />
       </g>
     </g>
   );

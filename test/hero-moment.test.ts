@@ -13,18 +13,24 @@ import { HERO_COOKIE, heroCookieText, heroPlayedFromCookie } from "../src/hero-c
  * image drawn by the server, and the movement on the tokens.
  */
 
-test("the diamond takes arms and legs only when asked: thin, bowed, hung from the body's sides, folding from the joint, in the limbs' own ink", () => {
+test("the diamond takes arms and legs only when asked: thin, bowed, on the sketch's measures, folding from the joint, in the limbs' own ink", () => {
   const plain = renderToStaticMarkup(createElement(Character, { state: "diamond", tone: "sun", standing: false }));
   assert.ok(!plain.includes('data-part="limbs"') && !plain.includes('data-part="whirl"'), "the head character everywhere else keeps its shape");
   assert.ok(plain.includes('viewBox="0 0 64 40"'));
   const limbed = renderToStaticMarkup(createElement(Character, { state: "diamond", tone: "sun", standing: false, limbs: true }));
   assert.equal((limbed.match(/data-part="arm"/g) ?? []).length, 2);
   assert.equal((limbed.match(/data-part="leg"/g) ?? []).length, 2);
-  assert.ok(limbed.includes('viewBox="0 0 64 64"'), "the box grows down to the feet");
+  assert.ok(limbed.includes('viewBox="0 0 64 53"'), "the box grows down to the feet, and no further");
   assert.ok(limbed.indexOf('data-part="limbs"') < limbed.indexOf('data-part="body"'), "the joints stay under the body");
   assert.match(limbed, /data-part="arm" style="transform-box:fill-box;transform-origin:50% 0%"/, "a limb folds from its joint");
   assert.equal((limbed.match(/<path d="M[\d.]+ [\d.]+ Q[\d.]+ [\d.]+ [\d.]+ [\d.]+"/g) ?? []).length, 4, "each limb is one slight bow");
-  assert.ok(limbed.includes("stroke-width:3.2") && !limbed.includes("stroke-width:5"), "thin, not thick");
+  assert.ok(limbed.includes("stroke-width:1.8") && !limbed.includes("stroke-width:3.2"), "thin: the sketch's 18 pixels on a body of 625");
+  // The sketch's measures (D221): the arms straight down from the body's lower sides, close to it, the hands where
+  // the body ends; the legs a little apart, leaning out, the feet turned out; one slight bow each.
+  assert.ok(limbed.includes('d="M13 26 Q12 30.7 13 35.4"') && limbed.includes('d="M51 26 Q52 30.7 51 35.4"'), "the arms, 19 from the middle");
+  assert.ok(limbed.includes('cx="13" cy="37.2" r="1.9"') && limbed.includes('cx="51" cy="37.2" r="1.9"'), "the hands, just under the body's lowest point");
+  assert.ok(limbed.includes('d="M23.5 30 Q21.6 40.75 21.7 51.5"') && limbed.includes('d="M40.5 30 Q42.4 40.75 42.3 51.5"'), "the legs, 15.5 below the body");
+  assert.ok(limbed.includes('d="M21.7 51.5 H15.2"') && limbed.includes('d="M42.3 51.5 H48.8"'), "the feet, 6.5 long, turned out");
   assert.ok(limbed.includes("stroke-linecap:round") && !limbed.includes("stroke-linecap:square"), "round caps: nothing pointed");
   assert.ok(limbed.includes("stroke:var(--character-limb)") && !limbed.includes("stroke:var(--character-face)"), "the limbs' own ink, readable by night");
   assert.match(limbed, /data-part="whirl" style="transform-box:fill-box;transform-origin:50% 50%"/, "and a group that turns from its middle");
@@ -49,10 +55,9 @@ test("the session remembers the moment: a cookie with no age, read by the server
 test("the first image is the starting state, the choreography is on the tokens in its order, and reduced motion stands still", () => {
   const hero = readFileSync("app/kit/HeroMoment.tsx", "utf8");
   const css = readFileSync("app/globals.css", "utf8");
-  assert.equal(HERO_PEEK, 0.66);
+  assert.equal(HERO_PEEK, 53 - 18 - 4, "the box is 53 tall, the head's top at 4: 18 units of head stay over the card's edge");
   assert.match(hero, /data-hero=\{played \? undefined : "peeking"\}/, "drawn peeking by the server when the moment has not played");
-  assert.match(css, /\[data-hero="peeking"\] \[data-part="figure"\] \{\n\s*transform: translateY\(42px\);/, "the stylesheet puts the figure down from the first image, in the drawing's units: 66 % of 64");
-  assert.equal(Math.round(HERO_PEEK * 64), 42);
+  assert.match(css, /\[data-hero="peeking"\] \[data-part="figure"\] \{\n\s*transform: translateY\(31px\);/, "the stylesheet puts the figure down from the first image, in the drawing's units");
   assert.match(css, /\[data-hero="peeking"\] \[data-part="arm"\],\n\[data-hero="peeking"\] \[data-part="leg"\] \{\n\s*transform: scale\(0\);/, "and folds the limbs");
   // The order the founder asked for: out from behind the card whirling, onto the floor, a bounce, still, then the limbs.
   const time = heroTimeline();
@@ -72,5 +77,21 @@ test("the first image is the starting state, the choreography is on the tokens i
   const home = readFileSync("app/kit/Home.tsx", "utf8");
   const order = ["<h1 className={HERO}>", "{W.promiseUnder}", 'href="#offer"', "<HeroMoment played={heroPlayed} />", '<div id="offer"', "<OfferCard />"].map((mark) => home.indexOf(mark));
   assert.ok(order.every((at) => at > 0) && order.every((at, i) => i === 0 || at > order[i - 1]), "the promise, its sentence, the way to the card, the moment, the card");
-  assert.match(home, /<a href="#offer" className=\{`\$\{SECONDARY_BUTTON\}/, "the way to the card is tonal: the card's own action keeps the accent");
+  assert.match(home, /<a href="#offer" className=\{`\$\{PRIMARY_BUTTON\}/, "the way to the card carries the accent: the first screen's one action, the card's own a screen below");
+});
+
+test("the first screen is as tall as the viewport less the header and the card's peek, and the room left over is shared (D221)", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  const home = readFileSync("app/kit/Home.tsx", "utf8");
+  assert.match(css, /--hero-card-peek: 104px;/, "the card's name row whole, the next one cut");
+  assert.match(css, /--hero-character-size: 272px;/, "the sketch's character on a phone");
+  assert.match(css.slice(css.indexOf("@media (min-width: 1024px)")), /--hero-character-size: 360px;/, "and larger from 1024");
+  assert.match(css, /\.hero-first-screen \{\n[^}]*min-height: calc\(100svh - var\(--space-lg\) - var\(--tap-target\) - var\(--space-xl\) - var\(--hero-card-peek\)\);/, "the first screen, on the small viewport so it does not move with the browser's bars");
+  assert.match(css, /\.hero-stage \{\n[^}]*height: calc\(var\(--hero-character-size\) \* 53 \/ 64\);\n[^}]*margin-top: auto;/, "the stage is the drawing's height and takes its share of the room");
+  assert.doesNotMatch(css, /\.hero-stage \{[^}]*margin-bottom/, "nothing taken back: the card follows the first screen directly");
+  const firstScreen = home.indexOf('className="hero-first-screen');
+  assert.ok(firstScreen > 0 && firstScreen < home.indexOf("<h1 className={HERO}>"), "the first screen holds the title");
+  assert.ok(home.indexOf("<HeroMoment played={heroPlayed} />") < home.indexOf('<div id="offer"'), "and the character, and the card comes after it");
+  assert.match(home, /<div className="mt-auto w-full text-center">\n\s*<h1 className=\{HERO\}>/, "the title's share of the room, centred at every width");
+  assert.match(home, /className=\{`\$\{LEAD\} mx-auto /, "the sentence centred at every width");
 });
