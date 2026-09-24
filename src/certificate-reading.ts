@@ -5,6 +5,8 @@ import { EDX_GOAL_TYPE, EDX_HAS_IT, edxProviderId } from "./edx-certificate";
 import { ACCREDIBLE_GOAL_TYPE, ACCREDIBLE_HAS_IT, accredibleProviderId } from "./accredible-credential";
 import { AccredibleReadError, attestAccredibleCredential } from "./accredible-reading";
 import { attestEdxCertificate, EdxReadError } from "./edx-reading";
+import { MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineProviderId } from "./mitx-online-certificate";
+import { attestMitxOnlineCertificate, MitxOnlineReadError } from "./mitx-online-reading";
 import { CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyProviderId } from "./credly-badge";
 import { attestCredlyBadge, CredlyReadError } from "./credly-reading";
 import { attestDetCertificate, DetReadError, type AttestedDetReading } from "./det-reading";
@@ -103,6 +105,11 @@ async function attestByGoal(goalType: number, link: string, signedSubject?: Hex)
     // Nothing to score: the badge exists, and the certification is inside the subject the funder signed.
     return { subject: reading.subject, score: CREDLY_HAS_IT, testDay: reading.issuedDay, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: credlyProviderId() };
   }
+  if (goalType === MITX_ONLINE_GOAL_TYPE) {
+    const reading = await attestMitxOnlineCertificate(link);
+    // Nothing to score: the certificate exists, and the course is inside the subject the funder signed.
+    return { subject: reading.subject, score: MITX_ONLINE_HAS_IT, testDay: reading.issuedDay, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: mitxOnlineProviderId() };
+  }
   if (goalType === EDX_GOAL_TYPE) {
     const reading = await attestEdxCertificate(link);
     // Nothing to score: a verified certificate exists, and the course is inside the subject the funder signed.
@@ -153,7 +160,7 @@ export async function proveCertificate(
   try {
     reading = await deps.attest(state.goalType, input.link, state.subject as Hex);
   } catch (error) {
-    if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError) && !(error instanceof EdxReadError) && !(error instanceof AccredibleReadError)) {
+    if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError) && !(error instanceof EdxReadError) && !(error instanceof AccredibleReadError) && !(error instanceof MitxOnlineReadError)) {
       return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? "That could not be read right now");
     }
     switch (error.code) {

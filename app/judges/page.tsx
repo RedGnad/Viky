@@ -286,6 +286,13 @@ export default async function JudgesPage() {
             the founder&apos;s call, written here.
           </li>
           <li>
+            <strong>MITx Online&apos;s terms.</strong> An MIT course certificate is read from the page MITx Online publishes
+            for it (D222), once each time the person shares its link. Its terms forbid scraping or downloading its content
+            in bulk, and allow &quot;personal, noncommercial use&quot; of the site&apos;s content; Viky reads one certificate its
+            holder shares, for a gift, which is written here with the risk assumed as for edX. The line proves a course
+            passed on MITx Online, never a place at MIT, and Viky is not affiliated with MIT.
+          </li>
+          <li>
             <strong>WAEC&apos;s terms.</strong> WASSCE credits are shown by the person from WAEC&apos;s own result checker
             (D217), and not read for them, because WAEC&apos;s privacy policy tells the holder of an access code it allocates
             &quot;you must not disclose it to any third party&quot;, and the result card&apos;s PIN is one. The card is typed on WAEC&apos;s page and

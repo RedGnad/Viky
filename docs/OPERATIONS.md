@@ -996,6 +996,14 @@ Provider id `viky:provider:chsi-enrolment-shown:v1` = `0xe6bb6add0b9555f1d7cc0b0
 `pnpm safe:session` batches it with the other missing goals. The line opens when our provider is registered from a
 real CHSI report (docs/reclaim/chsi-enrolment-shown-provider.md) and pinned in `CHSI_PROVIDER`.
 
+## Goal 29 on the milestone contract: an MIT course certificate from MITx Online (D222)
+
+Provider id `viky:provider:mitx-online-certificate-zkfetch:v1` = `0xf5fc73bf26b45520382592188d8fd1f5fcb1c82bb6a37a53f87388790b0931c1`, shape 1, data
+`0x5ba19152000000000000000000000000000000000000000000000000000000000000001df5fc73bf26b45520382592188d8fd1f5fcb1c82bb6a37a53f87388790b0931c10000000000000000000000000000000000000000000000000000000000000001`.
+`pnpm safe:session` batches it with any other missing goal, carried by the relayer. The source
+`mitx-online-certificate` is in the shared list: the service is redeployed from the branch before the merge, on the
+fingerprint `0x60b996af…26d6`.
+
 ## Goal 28 on the milestone contract: WASSCE credits, shown from WAEC (D217)
 
 Provider id `viky:provider:waec-result-shown:v1` = `0x43cef3dde01a0c9f2eac685a8643e99da2b676e001339e1c81ef9ea23fe6c0ee`, shape 1, data

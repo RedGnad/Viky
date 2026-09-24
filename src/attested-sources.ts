@@ -338,6 +338,26 @@ export const EDX_CERTIFICATE: AttestedSource = {
 };
 
 /**
+ * A certificate's public page on MITx Online (D222): server-rendered HTML, measured on two live program certificates
+ * on 24 Sep 2026, the course certificate served by the same template. Four patterns, each on the words or the class the
+ * page gives the value: the course or program in the title, the holder, the day of issue, and the certificate's own id
+ * in its own link, so a page about another certificate is caught.
+ */
+export const MITX_ONLINE_CERTIFICATE: AttestedSource = {
+  id: "mitx-online-certificate",
+  service: "MITx Online",
+  accept: "text/html",
+  accepts: (account) => /^(program\/)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(account),
+  url: (account) => `https://mitxonline.mit.edu/certificate/${account}/`,
+  matches: [
+    { type: "regex", value: "<title>MITx Online \\| Certificate for: (?<title>[^<]+)</title>" },
+    { type: "regex", value: '<span class="certify-name">(?<name>[^<]+)</span>' },
+    { type: "regex", value: "Issued: (?<issued>[A-Z][a-z]+\\.? \\d{1,2}, \\d{4})" },
+    { type: "regex", value: '<a href="https?://mitxonline\\.mit\\.edu/certificate/(?:program/)?(?<certificateId>[0-9a-f-]{36})/?" target="_blank">' },
+  ],
+};
+
+/**
  * A credential's public record on Accredible (D213), the JSON its page is drawn from, measured on a live credential on
  * 24 Sep 2026. Seven patterns, each anchored on its own key or object: the uuid and the title together, the day of
  * issue, expired, revoked, private, the recipient's name inside the recipient object (its masked email matched and
@@ -359,7 +379,7 @@ export const ACCREDIBLE_CREDENTIAL: AttestedSource = {
   ],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, MITX_ONLINE_CERTIFICATE, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
 
 /**
  * The headers a source is read with, which is part of what is fetched and therefore lives with the sources: it is
