@@ -6570,3 +6570,33 @@ size and the poses stiff; the rig is what this decision ships, and each is polis
 
 **Not yet.** The three destinations still draw the old head character; the scenes go on them, larger, with the
 micro-interaction at the change of page, in the next step.
+
+## D237, 25 Sep 2026: the scenes at the head of the three destinations, and the rig corrected on the sheet
+
+The founder, 25 Sep 2026, on the model sheet: the direction holds, except the line of light from below, badly done,
+and the sunglasses, which need neither temples nor reflections; then the sleepy face, which looked angry, and the
+hand that must not appear on the case's handle. And a question: can details be changed afterwards, or is it better
+to settle everything now? The rig exists for exactly that: a pose, a face or a prop is one named piece with its
+test, changed without redrawing anything else; so what shows is settled now and the rest as it comes.
+
+**The rig, corrected.** The rim of light along the edges away from the light is gone from the drawing and from the
+light's computation. The sunglasses are two lenses of the lilac deepening to the ink and a bridge: no temples, no
+streak. The half-closed eye is the lower part of the open one under a lid that droops in a curve; a straight lid
+read as a frown; the sleepy face of the sheet yawns (the o mouth) under it. The arm that holds the case ends in
+its handle, which rises in the limbs' ink to meet it, and no hand is drawn there. The eyes carry a `gaze` part, so
+the expressions the head already answers (a day earned, a day gone back, D148) move the rig's face too.
+
+**The scenes at the head.** On Home, Gifts and Me the head is the figure in that destination's scene (D236), 104
+wide where the plain diamond was 72, the Gifts scene 192 wide for its two figures; a gift's page, the sheet that
+pays and the way out keep the plain diamond. A change of page is a micro-interaction, once: when a screen was drawn
+before in this tab (the same memory the page's own entrance uses, D171 and D198), the figure hops in on the
+expressive spring from the page's own rise of 8 pixels and 60 %, then, a turn later, its props grow from their
+middle on the spring that never overshoots and its raised arms lengthen from their joints. A cold load shows the
+final state from the first image, and a device that asks for less movement shows it too; nothing runs on a clock.
+
+**Measured.** The sheet at 1440 and 390, by day and by night, and the connected Home at 390 by day, sent to the
+founder. `test/figure.test.ts` holds the corrections and the head's rules; the three destinations' files carry
+their scene and the three task screens the plain diamond.
+
+**Not captured.** Gifts and Me signed in, and the movement itself: the connected capture tool walks only Home's
+states today (its other scenarios are the old journey's).

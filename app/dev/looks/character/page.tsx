@@ -17,7 +17,7 @@ const EXPRESSIONS: readonly Readonly<{ name: string; eyes: Eyes; mouth: Mouth; g
   { name: "rest", eyes: "open", mouth: "smile" },
   { name: "joy", eyes: "open", mouth: "grin" },
   { name: "content", eyes: "closed", mouth: "smile" },
-  { name: "sleepy", eyes: "half", mouth: "flat" },
+  { name: "sleepy", eyes: "half", mouth: "o" },
   { name: "surprise", eyes: "open", mouth: "o", gaze: { x: 0.4, y: -0.6 } },
   { name: "cool", eyes: "shades", mouth: "grin" },
 ];

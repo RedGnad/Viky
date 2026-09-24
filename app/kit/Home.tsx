@@ -132,7 +132,7 @@ export function Home({
           under it. Without an account there is no money to read, and the card leads, which is D129's order. */}
       {/* Its title, like Gifts and You: without one the head's row was the character's own height and the character
           stood higher here than on the two other destinations (the founder, 24 Sep 2026, D230). */}
-      <Shell kind="destination" active="home" width="card" title={NAV.home} character={<HeadCharacter />}>
+      <Shell kind="destination" active="home" width="card" title={NAV.home} character={<HeadCharacter scene="home" />}>
         <MoneyHero address={address} holdings={holdings} />
         {/* The way out keeps its place while the balance is being read (D147), so the card under it does not jump
             down when the answer lands. The room is held only on a device that saw money here last time: a first

@@ -21,7 +21,7 @@ export function Gifts({ initialGifts }: Readonly<{ initialGifts?: GiftSummary[] 
 
   if (!address) {
     return (
-      <Shell kind="destination" active="gifts" title={W.title} character={<HeadCharacter />}>
+      <Shell kind="destination" active="gifts" title={W.title} character={<HeadCharacter scene="gifts" />}>
         <p className={BODY}>{W.signInFirst}</p>
         <AccountPanel />
       </Shell>
@@ -36,7 +36,7 @@ export function Gifts({ initialGifts }: Readonly<{ initialGifts?: GiftSummary[] 
   });
   return (
     <Arrival storageKey="viky.seen.days" gifts={arriving}>
-    <Shell kind="destination" active="gifts" title={W.title} character={<HeadCharacter />}>
+    <Shell kind="destination" active="gifts" title={W.title} character={<HeadCharacter scene="gifts" />}>
       {problem ? <p className={BODY}>{problem}</p> : null}
       {!problem && gifts === null ? <p className={HELP}>{HOME.loading}</p> : null}
       {gifts !== null ? (

@@ -67,7 +67,7 @@ export function Me() {
   }
 
   return (
-    <Shell kind="destination" active="me" title={W.title} character={<HeadCharacter />}>
+    <Shell kind="destination" active="me" title={W.title} character={<HeadCharacter scene="me" />}>
       <section className={CARD}>
         {/* The same key and the same list as the card (D152): one way to change what money is read in, and the
             list is what the rails and the rate file answer today, not three names written here. */}
