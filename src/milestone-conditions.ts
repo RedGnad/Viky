@@ -41,6 +41,7 @@ import {
   TOEFL_MYBEST_SHOWN,
   UNIVERSITY_ENROLLMENT_SHOWN,
   CHSI_ENROLMENT_SHOWN,
+  WAEC_RESULT_SHOWN,
   UNIVERSITY_GRADE_SHOWN,
   UNIVERSITY_YEAR_PASSED_SHOWN,
 } from "./conditions";
@@ -80,6 +81,7 @@ import {
 import { CERTIFICATE as CERTIFICATE_SHAPE, CHESS_RATING as CHESS_RATING_SHAPE, type MilestoneShape } from "./milestone-terms";
 import { UDEMY_DURATION_DAYS, UDEMY_FINISHED, UDEMY_GOAL_TYPE, UDEMY_NOT_REGISTERED, UDEMY_PROVIDER, udemySlugOf, udemySubject } from "./udemy-shown";
 import { ECOLEDIRECTE_GOAL_TYPE, ECOLEDIRECTE_NOT_REGISTERED, ECOLEDIRECTE_PROVIDER, ECOLEDIRECTE_SUBJECT, isValidSchoolTarget, SCHOOL_DURATION_DAYS, schoolGradeInWords } from "./school-shown";
+import { WAEC_CREDITS, WAEC_DURATION_DAYS, WAEC_GOAL_TYPE, WAEC_NOT_REGISTERED, WAEC_PROVIDER, WAEC_SUBJECT, waecCreditsInWords } from "./waec-shown";
 import { CHSI_ENROLLED, CHSI_GOAL_TYPE, CHSI_NOT_REGISTERED, CHSI_PROVIDER, CHSI_SUBJECT } from "./chsi-shown";
 import { PRONOTE_GOAL_TYPE, PRONOTE_NOT_REGISTERED, PRONOTE_PROVIDER, pronoteSpaceOf, pronoteSubject } from "./pronote-shown";
 
@@ -1249,6 +1251,42 @@ export const ECOLEDIRECTE_MILESTONE: CertificateCondition = {
   },
 };
 
+/** WASSCE credits, shown from WAEC's own checker (D217): EcoleDirecte's shape, a count of credits for a target. */
+export const WAEC_MILESTONE: CertificateCondition = {
+  ...ECOLEDIRECTE_MILESTONE,
+  condition: WAEC_RESULT_SHOWN,
+  goalType: WAEC_GOAL_TYPE,
+  validTarget: (value) => Number.isInteger(value) && value >= WAEC_CREDITS.min && value <= WAEC_CREDITS.max,
+  targetUnits: undefined,
+  subject: () => WAEC_SUBJECT,
+  // Set either way, so EcoleDirecte's own sentence never rides along in the spread.
+  notOpen: WAEC_PROVIDER ? undefined : WAEC_NOT_REGISTERED,
+  target: {
+    label: "The credits to reach",
+    help: "A credit is a grade from A1 to C6. The count holds only with English Language and Mathematics among them, as universities ask.",
+    min: WAEC_CREDITS.min,
+    max: WAEC_CREDITS.max,
+    step: 1,
+    suggested: WAEC_CREDITS.suggested,
+    inWords: (value) => waecCreditsInWords(value),
+  },
+  duration: WAEC_DURATION_DAYS,
+  words: {
+    ...ECOLEDIRECTE_MILESTONE.words,
+    detailQuestion: "The credits to reach",
+    whatIsRead: "Viky keeps how many credits the result shows, and the day it was shown, and nothing else: no subject, no grade, no name, no examination number. Your card's PIN is typed on WAEC's page and never reaches Viky.",
+    goal: (target) => `Pass the WASSCE with ${waecCreditsInWords(target)}`,
+    mustShow: (_name, target) => `A WASSCE result of the gift's year or later with ${waecCreditsInWords(target)}, shown from WAEC's own result checker in the person's own browser.`,
+    durationHelp: "The result has to be shown inside that time, and the day it is shown is what counts.",
+    whenReached: "When they show those credits, all of this becomes theirs",
+    refusals: {
+      ...ECOLEDIRECTE_MILESTONE.words.refusals,
+      targetShape: "A whole number of credits, from 1 to 9.",
+      below: (target, score) => `That result shows ${waecCreditsInWords(score)}. This gift is for ${target}.`,
+    },
+  },
+};
+
 /**
  * An average at school, shown from the family's own PRONOTE space (D203): EcoleDirecte's shape, with the space chosen
  * by its address as a course is by its link, and signed into the subject so another establishment's space pays nothing.
@@ -1288,6 +1326,7 @@ const CERTIFICATES: readonly CertificateCondition[] = [
   UDEMY_MILESTONE,
   UNIVERSITY_SHOWN_MILESTONE,
   CHSI_MILESTONE,
+  WAEC_MILESTONE,
   UNIVERSITY_YEAR_MILESTONE,
   UNIVERSITY_GRADE_MILESTONE,
   ECOLEDIRECTE_MILESTONE,

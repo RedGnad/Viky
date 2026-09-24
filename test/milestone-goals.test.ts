@@ -51,6 +51,7 @@ const PINNED: Readonly<Record<number, string>> = {
   26: "0xf16cfb8a8ef6a10146f6b2dd98da114d61509c04646cd3ccf93cf4cb0caaa9d8",
   // CHSI, enrolment in China, shown (D215).
   27: "0xe6bb6add0b9555f1d7cc0b063d21b12d2777bb4eaaa94c93bb19251d860b13b4",
+  28: "0x43cef3dde01a0c9f2eac685a8643e99da2b676e001339e1c81ef9ea23fe6c0ee",
 };
 
 test("every goal has its own number and its own provider id", () => {

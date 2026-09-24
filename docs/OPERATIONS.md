@@ -996,6 +996,13 @@ Provider id `viky:provider:chsi-enrolment-shown:v1` = `0xe6bb6add0b9555f1d7cc0b0
 `pnpm safe:session` batches it with the other missing goals. The line opens when our provider is registered from a
 real CHSI report (docs/reclaim/chsi-enrolment-shown-provider.md) and pinned in `CHSI_PROVIDER`.
 
+## Goal 28 on the milestone contract: WASSCE credits, shown from WAEC (D217)
+
+Provider id `viky:provider:waec-result-shown:v1` = `0x43cef3dde01a0c9f2eac685a8643e99da2b676e001339e1c81ef9ea23fe6c0ee`, shape 1, data
+`0x5ba19152000000000000000000000000000000000000000000000000000000000000001c43cef3dde01a0c9f2eac685a8643e99da2b676e001339e1c81ef9ea23fe6c0ee0000000000000000000000000000000000000000000000000000000000000001`.
+`pnpm safe:session` batches it with the other missing goals. The line opens when our provider is registered from a
+real WAEC result (docs/reclaim/waec-result-shown-provider.md) and pinned in `WAEC_PROVIDER`.
+
 ## The Safe session of every remaining goal, in one transaction (D194)
 
 The eleven goals not yet on the chain go in **one Safe transaction**: one hash, one signature per key, two in all,

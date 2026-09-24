@@ -575,3 +575,12 @@ dollars; and the session countdown. Each test was checked by breaking the rule a
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
 | "Enrolled in China, shown", SHOWN BY THEM, under "Study" with "Being built." | our provider not registered, goal 27 not signed | `CHSI_ENROLMENT_SHOWN` in `BUILDING`, `CHSI_MILESTONE.notOpen` | `test/chsi-shown.test.ts` |
+
+### WASSCE credits, shown, being built (D217)
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "WASSCE credits, shown", SHOWN BY THEM, under "Pass an exam" with "Being built." | our provider not registered, goal 28 not signed | `WAEC_RESULT_SHOWN` in `BUILDING`, `WAEC_MILESTONE.notOpen` | `test/waec-shown.test.ts` |
+| "That result is from 2018, before this gift was made." | the examination's year is before the year the gift was made | `readWaecResult` | `test/waec-shown.test.ts` |
+| "WAEC withholds part of that result, so it cannot pay." | the withheld table is not empty | `readWaecResult` | `test/waec-shown.test.ts` |
+| "Your card's PIN is typed on WAEC's page and never reaches Viky." | the card is typed in the verification tab, and no route of Viky takes it | `WAEC_MILESTONE.words.whatIsRead`, no WAEC route | `test/waec-shown.test.ts` |

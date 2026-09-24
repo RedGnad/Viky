@@ -95,7 +95,7 @@ test("the page lists every condition the register holds, offered or not, by fami
   // passed and the grade (D174) under Study.
   assert.deepEqual(
     sections.flatMap((section) => section.building).map((condition) => condition.id),
-    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "edx-certificate", "udemy-course-shown", "accredible-credential", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown"],
+    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "edx-certificate", "udemy-course-shown", "accredible-credential", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown"],
   );
   assert.deepEqual(sections.find((section) => section.family === "move")?.conditions.map((condition) => condition.id), ["fitbit-daily", "strava-daily"], "the family Move, its two lines open (D188, D191)");
   assert.deepEqual(sections.find((section) => section.family === "school")?.building.map((condition) => condition.id), ["ecoledirecte-grade-shown"], "the family School, for its one line being built (D179)");
@@ -153,7 +153,7 @@ test("every condition says its nature, and every one of the pilot is read for th
   // What is being built lives beside the register, resolvable by id and offered to an operator alone (D164, D165, D174, D176).
   assert.deepEqual(
     BUILDING.map((condition) => condition.id),
-    ["edx-certificate", "accredible-credential", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown"],
+    ["edx-certificate", "accredible-credential", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "udemy-course-shown", "chsi-enrolment-shown", "waec-result-shown", "university-year-passed-shown", "university-grade-shown", "ecoledirecte-grade-shown"],
   );
   for (const id of BUILDING.map((condition) => condition.id)) {
     const shown = conditionById(id);

@@ -156,6 +156,15 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
   },
 
   {
+    conditionId: "waec-result-shown",
+    supervised: false,
+    inShort: "Shown by them from WAEC's own result checker: how many credits, English and Mathematics among them.",
+    data: "The person's own WASSCE result on waecdirect.org, opened by them with their examination number and result card in a Reclaim verification tab: one answer from WAEC's own servers, attested by a witness in a TEE, and three fields, the examination, the grades and whether anything is withheld. The credits are counted in memory and only the count is kept; the name, the examination number and the centre are not extracted.",
+    account: "The result the person opens with their own card, and the gift's own recipient, which the contract checks. The result carries a name the funder does not sign, so which candidate it belongs to is not bound beyond that: whoever holds a card and an examination number can show that result.",
+    whoActed: "Unknown to Viky: the proof says which result was opened, not who sat the exam. WAEC's own pages on identity checks at the centre were not read for this line, so nothing is claimed about them here.",
+    sourcePolicing: "WAEC marks the examination, withholds results it investigates (the result page has a table for them, and a withheld result pays nothing here), publishes lists of cancelled results, and opens results on its own checker. Its privacy policy forbids giving its access codes to a third party, which is why the card is typed on WAEC's page and never reaches Viky.",
+  },
+  {
     conditionId: "university-year-passed-shown",
     supervised: false,
     inShort: "Shown from their own student portal, the results page that says passed. Proves the account, not who sat the exams.",

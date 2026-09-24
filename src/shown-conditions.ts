@@ -7,6 +7,7 @@ import { loadPortal, type Portal } from "./portal-store";
 import { TOEFL_RECLAIM_PROVIDER, TOEFL_SHOWN_SUBJECT, toeflScoreOf, toeflShownProviderId } from "./toefl-shown";
 import { EXAM_NOT_REGISTERED, EXAM_PROVIDERS, examProviderId, examSubject, readBacPassed, readCambridge, readIelts, type ExamId } from "./exam-shown";
 import { readUdemyCourse, UDEMY_LOGIN_URL, UDEMY_NOT_REGISTERED, UDEMY_PROVIDER, udemyProviderId, udemySubject } from "./udemy-shown";
+import { readWaecResult, WAEC_LOGIN_URL, WAEC_NOT_REGISTERED, WAEC_PROVIDER, WAEC_SUBJECT, waecProviderId } from "./waec-shown";
 import { CHSI_NOT_REGISTERED, CHSI_PROVIDER, CHSI_SUBJECT, chsiProviderId, readChsiStatus } from "./chsi-shown";
 import { PRONOTE_NOT_REGISTERED, PRONOTE_PROVIDER, pronoteLoginUrl, pronoteProviderId, pronoteSubject } from "./pronote-shown";
 import { ECOLEDIRECTE_NOT_REGISTERED, ECOLEDIRECTE_PROVIDER, ECOLEDIRECTE_SUBJECT, ecoleDirecteProviderId, readSchoolAverage } from "./school-shown";
@@ -341,6 +342,37 @@ export const CHSI_SHOWN: ShownEntry = {
   },
 };
 
+/**
+ * WASSCE credits, shown from WAEC's own checker (D217): the result's year is judged against the year the gift was
+ * made, read off its record, since the checker opens every result since 1980.
+ */
+export const WAEC_SHOWN: ShownEntry = {
+  kind: "milestone",
+  subject: WAEC_SUBJECT,
+  providerOf: async (record) => {
+    if (!WAEC_PROVIDER) return null;
+    const giftYear = record.standingReadAt.getUTCFullYear();
+    return {
+      providerId: WAEC_PROVIDER.id,
+      providerVersion: WAEC_PROVIDER.version,
+      requestHashes: [WAEC_PROVIDER.requestHash],
+      loginUrl: WAEC_LOGIN_URL,
+      read: (fields) => readWaecResult(fields, giftYear),
+    };
+  },
+  ...(WAEC_PROVIDER ? {} : { notRegistered: WAEC_NOT_REGISTERED }),
+  condition: {
+    conditionId: "waec-result-shown",
+    providerId: "",
+    providerVersion: "",
+    requestHashes: [],
+    proofCount: 1,
+    phases: ["reach"],
+    attestationProviderId: waecProviderId(),
+    read: () => refuseShown("NO_GIFT_YEAR", "A WAEC result is judged against the year its gift was made, and this reading has no gift"),
+  },
+};
+
 export const SHOWN_CONDITIONS: readonly ShownEntry[] = [
   DUOLINGO_SHOWN,
   TOEFL_SHOWN,
@@ -355,6 +387,7 @@ export const SHOWN_CONDITIONS: readonly ShownEntry[] = [
   UNIVERSITY_GRADE_SHOWN,
   ECOLEDIRECTE_SHOWN,
   CHSI_SHOWN,
+  WAEC_SHOWN,
 ];
 
 export function shownConditionById(conditionId: string): ShownEntry | undefined {
