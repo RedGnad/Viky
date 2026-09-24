@@ -62,16 +62,21 @@ test("the first image is the starting state, the choreography is on the tokens i
   // The order the founder asked for: out from behind the card whirling, onto the floor, a bounce, still, then the limbs.
   const time = heroTimeline();
   assert.ok(time.top < time.floor && time.floor < time.hopTop && time.hopTop < time.floorAgain && time.floorAgain < time.still, "leap, floor, bounce, floor, still");
-  assert.ok(time.limbsAt > time.floorAgain && time.limbsAt < time.still, "the limbs start once the body is on the floor for good, and before it is still (D230)");
-  assert.equal(time.limbsAt, time.floorAgain + MOTION.hero.limbsAfterFloorMs);
-  assert.equal(time.lastLimbAt, time.limbsAt + 3 * MOTION.hero.limbStaggerMs, "four limbs, three turns between them");
-  assert.ok(MOTION.hero.limbStaggerMs >= 50 && MOTION.hero.limbStaggerMs <= 100, "a turn a person can see, and no longer");
+  // During the jump, not after it (D234): the arms as the leap slows to its top, the legs in the fall, out as it lands.
+  assert.ok(time.armsAt < time.top && time.armsAt > time.top / 2, "the arms open in the last part of the leap");
+  assert.ok(time.legsAt >= time.top && time.legsAt < time.floor, "the legs unfold during the fall");
+  assert.ok(time.legsAt + MOTION.hero.limbPairStaggerMs + time.unfold.durationMs < time.floorAgain, "and are out before the bounce lands");
+  assert.ok(time.armsAt < time.legsAt, "arms first, then legs");
+  assert.ok(MOTION.hero.limbPairStaggerMs >= 30 && MOTION.hero.limbPairStaggerMs <= 80, "left then right, a turn a person can see");
+  assert.equal(time.done, Math.max(time.still, time.armsAt + MOTION.hero.limbPairStaggerMs + time.settle.durationMs, time.legsAt + MOTION.hero.limbPairStaggerMs + time.unfold.durationMs));
   assert.ok(time.done < MOTION.arrival.budgetMs, `the whole moment inside the arrival's budget: ${time.done} ms`);
   assert.match(hero, /whirl\.animate\(\[\{ transform: `rotate\(\$\{-360 \* hero\.turns\}deg\)` \}, \{ transform: "rotate\(0deg\)" \}\], \{ duration: time\.floor, easing: EASING\.emphasizedDecelerate/, "one whirl on the way out, upright as it lands");
   assert.match(hero, /transform: body\(0, hero\.squash\), easing: EASING\.emphasizedDecelerate/, "it squashes on the floor");
   assert.match(hero, /transform: body\(-hero\.leapAbove, hero\.stretch\), easing: EASING\.emphasizedAccelerate/, "and stretches at the top of the leap, falling faster and faster");
   assert.match(hero, /easing: time\.settle\.easing \}/, "the landing settles on the spring");
-  assert.match(hero, /transform: "scaleY\(0\)" \}, \{ transform: "scaleY\(1\)" \}\], \{ duration: time\.settle\.durationMs, easing: time\.settle\.easing, delay: time\.limbsAt \+ index \* hero\.limbStaggerMs, fill: "backwards"/, "each limb lengthens along its own axis, in its own turn");
+  assert.match(hero, /transform: "scaleY\(0\)" \}, \{ transform: "scaleY\(1\)" \}\], \{ duration: spring\.durationMs, easing: spring\.easing, delay: at, fill: "backwards" \}/, "each limb lengthens along its own axis");
+  assert.match(hero, /arms\.forEach\(\(arm, index\) => running\.push\(lengthen\(arm, time\.armsAt \+ index \* hero\.limbPairStaggerMs, time\.settle\)\)\)/, "the arms on the expressive spring");
+  assert.match(hero, /legs\.forEach\(\(leg, index\) => running\.push\(lengthen\(leg, time\.legsAt \+ index \* hero\.limbPairStaggerMs, time\.unfold\)\)\)/, "the legs on the spring that never overshoots");
   assert.match(hero, /delay: time\.floor, fill: "backwards"/, "the mouth opens with the landing");
   assert.match(hero, /if \(!figure \|\| reduced\(\)\) \{\n\s*show\(\);\n\s*return;/, "reduced motion: standing, nothing moves");
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n\s*\[data-hero="peeking"\] \[data-part="figure"\],[\s\S]*?transform: none;/, "and the first image is standing too");

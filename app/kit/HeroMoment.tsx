@@ -16,7 +16,8 @@ import { Expression, reduced } from "./Motion";
  * The choreography follows the principles every animator works from (Thomas and Johnston, The Illusion of Life):
  * squash and stretch, the body stretching in the air and squashing on the floor; slow in and slow out, the leap
  * decelerating to its top and the fall accelerating to the floor; follow through and overlapping action, the small
- * bounce after the landing and the limbs lengthening out one after another while the body still settles (D230); and
+ * bounce after the landing, and the limbs lengthening out during the jump, the arms at its top and the legs in the
+ * fall, so they are out as it lands (D230, D234); and
  * arcs, the whirl on the way up. Every number is a token
  * (`MOTION.hero`), every curve one of Material's, and the landing settles on the expressive spatial spring.
  *
@@ -40,10 +41,13 @@ export function heroTimeline(hero = MOTION.hero) {
   const hopTop = floor + hero.squashMs + hero.hopMs / 2;
   const floorAgain = hopTop + hero.hopMs / 2;
   const still = floorAgain + settle.durationMs;
-  // The limbs come out while the body is still settling, one after another: the last begins three turns after the first.
-  const limbsAt = floorAgain + hero.limbsAfterFloorMs;
-  const lastLimbAt = limbsAt + 3 * hero.limbStaggerMs;
-  return { top, floor, hopTop, floorAgain, still, settle, limbsAt, lastLimbAt, done: lastLimbAt + settle.durationMs };
+  // The arms open as the leap slows to its top; the legs unfold during the fall and are out as the body lands (D234).
+  const unfold = springEasing(hero.effects);
+  const armsAt = top - hero.armsBeforeTopMs;
+  const legsAt = floor - hero.legsBeforeFloorMs;
+  const armsDone = armsAt + hero.limbPairStaggerMs + settle.durationMs;
+  const legsDone = legsAt + hero.limbPairStaggerMs + unfold.durationMs;
+  return { top, floor, hopTop, floorAgain, still, settle, unfold, armsAt, legsAt, done: Math.max(still, armsDone, legsDone) };
 }
 
 export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
@@ -59,7 +63,8 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
     }
     const figure = stage.querySelector<SVGElement>('[data-part="figure"]');
     const whirl = stage.querySelector<SVGElement>('[data-part="whirl"]');
-    const limbs = [...stage.querySelectorAll<SVGElement>('[data-part="arm"], [data-part="leg"]')];
+    const arms = [...stage.querySelectorAll<SVGElement>('[data-part="arm"]')];
+    const legs = [...stage.querySelectorAll<SVGElement>('[data-part="leg"]')];
     const mouth = stage.querySelector<SVGElement>('[data-part="mouth"]');
     const show = () => stage.removeAttribute("data-hero");
     if (!figure || reduced()) {
@@ -91,10 +96,14 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
       const open = springEasing(hero.effects);
       running.push(mouth.animate([{ transform: "scale(0.4)" }, { transform: "scale(1)" }], { duration: open.durationMs, easing: open.easing, delay: time.floor, fill: "backwards" }));
     }
-    // The limbs lengthen out of the body, each along its own axis from its joint, one after another while the body is
-    // still settling (D230): overlapping action, so the figure reads as one organism rather than as a body that stops
-    // and four parts that pop. The order is the drawing's: left arm, right arm, left leg, right leg.
-    limbs.forEach((limb, index) => running.push(limb.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], { duration: time.settle.durationMs, easing: time.settle.easing, delay: time.limbsAt + index * hero.limbStaggerMs, fill: "backwards" })));
+    // Each limb lengthens out of the body along its own axis from its joint (D230), during the jump rather than after
+    // it (D234): overlapping action. The arms open as the leap slows to its top, on the expressive spring, and turn
+    // with the whirl; the legs unfold during the fall, on the spring that never overshoots, so the feet arrive with
+    // the landing and its squash compresses them. Left then right within each pair.
+    const lengthen = (limb: SVGElement, at: number, spring: typeof time.settle) =>
+      limb.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], { duration: spring.durationMs, easing: spring.easing, delay: at, fill: "backwards" });
+    arms.forEach((arm, index) => running.push(lengthen(arm, time.armsAt + index * hero.limbPairStaggerMs, time.settle)));
+    legs.forEach((leg, index) => running.push(lengthen(leg, time.legsAt + index * hero.limbPairStaggerMs, time.unfold)));
     // The starting state came from the stylesheet; from here the animations hold it, in the same task.
     show();
     return () => running.forEach((animation) => animation.cancel());

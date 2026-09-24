@@ -6485,3 +6485,23 @@ nothing once every opening lands on the four, and it is gone.
 back from it, and the university face, sent to the founder. `test/gift-card.test.ts` holds the line's face,
 `test/family-tiles.test.ts` the sheet's two ways to the four and the tile's class, and the browser specs
 (`detail-step`, `nature`, `screens`) walk the four first.
+
+## D234, 25 Sep 2026: the arms at the top of the leap, the legs in the fall
+
+The founder, 25 Sep 2026: the hero moment is good, but the limbs still wait for the bounce to end; they should come
+during the jump, or near its end without waiting for it: the arms first, then the legs at the landing, in a way
+that is pleasant and coherent.
+
+**The reasoning.** A jumper opens their arms as they slow to the top of a leap, for balance, and puts their legs
+out before they touch the ground, then absorbs the landing with them. So the arms start 100 ms before the top of the
+leap (at 300 ms), as the body decelerates, on the expressive spring (a slight overshoot, the throw of the arms), and
+they turn with the whirl, as a skater's do. The legs start at the top (400 ms) and unfold during the 100 ms fall,
+on the spring that never overshoots (234 ms), so the feet arrive as the body touches the floor and the squash of the
+landing compresses them with it. Within each pair, the left then the right, 40 ms apart. Each limb still lengthens
+along its own axis from its joint (D230).
+
+**Measured.** The moment now ends when the body is still, at 1,251 ms, where it ended at 1,541: nothing waits for the
+end any more. Frames between 240 and 740 ms, by day and by night, sent to the founder: the arms out at 346, the legs
+nearly out at 430, the feet on the floor in the squash at 511. Tokens `armsBeforeTopMs` 100, `legsBeforeFloorMs`
+100, `limbPairStaggerMs` 40; `test/hero-moment.test.ts` holds the order, the springs and the arms in the leap, the
+legs in the fall, out before the bounce lands.
