@@ -15,7 +15,14 @@ test("a sealed value opens with the key, and with nothing else", () => {
   const other = { CONNECT_TOKEN_KEY: Buffer.alloc(32, 8).toString("base64") } as unknown as NodeJS.ProcessEnv;
   assert.throws(() => openSecret(sealed, other), (error: unknown) => error instanceof VaultError && error.code === "CANNOT_OPEN");
   assert.throws(() => openSecret("v1.not.a.seal", env), (error: unknown) => error instanceof VaultError && error.code === "CANNOT_OPEN");
-  assert.throws(() => openSecret(sealed.replace(/.$/, "A"), env), (error: unknown) => error instanceof VaultError && error.code === "CANNOT_OPEN", "a changed byte is not the value");
+  // One byte of the ciphertext flipped, decoded and encoded again. Changing the last character instead left the bytes as
+  // they were one time in 16 (it carries 4 bits here), and the seal then rightly opened.
+  const [version, iv, tag, body] = sealed.split(".");
+  const flipped = Buffer.from(body, "base64url");
+  flipped[0] ^= 0x01;
+  const changed = [version, iv, tag, flipped.toString("base64url")].join(".");
+  assert.notEqual(changed, sealed);
+  assert.throws(() => openSecret(changed, env), (error: unknown) => error instanceof VaultError && error.code === "CANNOT_OPEN", "a changed byte is not the value");
 });
 
 test("without the key nothing seals, and the answer to 'is it configured' is a boolean", () => {
