@@ -1002,7 +1002,7 @@ Provider id `viky:provider:mitx-online-certificate-zkfetch:v1` = `0xf5fc73bf26b4
 `0x5ba19152000000000000000000000000000000000000000000000000000000000000001df5fc73bf26b45520382592188d8fd1f5fcb1c82bb6a37a53f87388790b0931c10000000000000000000000000000000000000000000000000000000000000001`.
 `pnpm safe:session` batches it with any other missing goal, carried by the relayer. The source
 `mitx-online-certificate` is in the shared list: the service is redeployed from the branch before the merge, on the
-fingerprint `0x60b996af…26d6`.
+fingerprint `0xe62a901d…fa33`.
 
 ## Goal 28 on the milestone contract: WASSCE credits, shown from WAEC (D217)
 
