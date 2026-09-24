@@ -1,8 +1,10 @@
 "use client";
-import { useCallback, useRef, useSyncExternalStore, type CSSProperties, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore, type CSSProperties, type RefObject } from "react";
 import { stripOf, type StripDay } from "@/src/day-states";
+import { MOTION, SPRING } from "@/src/design-tokens";
+import { springEasing } from "@/src/motion";
 import { Character, type CharacterState } from "./Character";
-import { ArrivalDay } from "./Motion";
+import { ArrivalDay, reduced } from "./Motion";
 
 /**
  * The days of a gift as one strip of small characters: the image of progress the card carries under its title
@@ -97,26 +99,79 @@ export function useHiddenEdges(row: RefObject<HTMLElement | null>, length: numbe
   return useSyncExternalStore(watch, () => stillHidden(row.current), () => "0,0");
 }
 
+/** The two widths a day is drawn at: 60 in a row that is read, 72 on the card being filled in (D226). */
+const WIDTHS = { 60: "w-[60px]", 72: "w-[72px]" } as const;
+
+/** How far a closed eye opens: a pill 2.4 tall scaled to the 6.2 of an open eye. */
+const EYES_OPEN = "scaleY(2.8)";
+/** How many days arrive in turn when the strip changes length: the ones a card shows, and the turns stop at the fourth (D171). */
+const ARRIVING = 8;
+
 export function DayStrip({
   id,
   gift,
   catchUpSeconds,
   records = [],
-}: Readonly<{ id: string; gift: Shape; catchUpSeconds: number; records?: readonly { day: number; outcome: "earned" | "returned" }[] }>) {
+  width = 60,
+  wake,
+}: Readonly<{
+  id: string;
+  gift: Shape;
+  catchUpSeconds: number;
+  records?: readonly { day: number; outcome: "earned" | "returned" }[];
+  width?: keyof typeof WIDTHS;
+  /**
+   * On a card being filled in (D226): given, the first day is drawn into the page and opens its eyes while it is
+   * true, which is when the card is ready to send. The state is in the markup, so the first image is right, and the
+   * change plays from it, once, on the spring that never overshoots.
+   */
+  wake?: boolean;
+}>) {
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   const row = useRef<HTMLSpanElement>(null);
   const days = stripOf(gift, catchUpSeconds, nowMs, records);
   const hidden = useHiddenEdges(row, days.length);
+  // The first day opens or closes its eyes when `wake` changes after the first image, never on it.
+  const wasAwake = useRef(wake);
+  useEffect(() => {
+    if (wake === undefined || wasAwake.current === wake) return;
+    wasAwake.current = wake;
+    const eyes = row.current?.querySelectorAll<SVGElement>('[data-day]:first-child [data-part="eye"]') ?? [];
+    if (reduced()) return;
+    const spring = springEasing(SPRING.effects);
+    const running = [...eyes].map((eye) => eye.animate([{ transform: wake ? "scaleY(1)" : EYES_OPEN }, { transform: wake ? EYES_OPEN : "scaleY(1)" }], { duration: spring.durationMs, easing: spring.easing }));
+    return () => running.forEach((animation) => animation.cancel());
+  }, [wake]);
+  // A strip that changes length after the first image shows its days again, in turn, as a screen arrives (D226).
+  const wasLength = useRef(days.length);
+  useEffect(() => {
+    if (wasLength.current === days.length) return;
+    wasLength.current = days.length;
+    if (reduced()) return;
+    const drawings = [...(row.current?.querySelectorAll<SVGElement>("[data-day] svg") ?? [])].slice(0, ARRIVING);
+    const { durationMs, easing, rise, staggerMs, mostStaggeredMs, fromOpacity } = MOTION.reveal;
+    const running = drawings.map((drawing, index) =>
+      drawing.animate([{ opacity: fromOpacity, transform: `translateY(${rise}px)` }, { opacity: 1, transform: "none" }], { duration: durationMs, easing, delay: Math.min(index * staggerMs, mostStaggeredMs), fill: "backwards" }),
+    );
+    return () => running.forEach((animation) => animation.cancel());
+  }, [days.length]);
   // One size everywhere, and it keeps its face (the founder, 19 Sep 2026, amending the brief). 60 on a card since
-  // D134, twice asked for: 42 left a sleeping day seventeen pixels tall, 52 was still small. The strip scrolls
-  // rather than shrinking, exactly as the row does, because a row of thirty smudges says nothing at all.
+  // D134, twice asked for: 42 left a sleeping day seventeen pixels tall, 52 was still small; 72 on the card being
+  // filled in since D226. The strip scrolls rather than shrinking, exactly as the row does, because a row of thirty
+  // smudges says nothing at all.
   return (
     <span ref={row} aria-hidden data-more={endsHidden(hidden)} style={fadeOf(hidden)} className="day-row-days flex w-full items-end">
       {days.map((day, index) => (
-        <span key={index} data-day={day} className="flex w-[60px] flex-none items-end">
+        <span key={index} data-day={day} data-awake={wake && index === 0 ? "" : undefined} className={`flex ${WIDTHS[width]} flex-none items-end`}>
           <ArrivalDay gift={id} index={index}>
-            {/* A day earned jumps and a day gone back leaves, in the arrival: those two are written into the page (D206). */}
-            <Character state={characterOf(day)} standing={false} drawn={characterOf(day) === "earned" || characterOf(day) === "returned" ? "inline" : "referenced"} className="h-auto w-full" />
+            {/* A day earned jumps and a day gone back leaves, in the arrival: those two are written into the page (D206),
+                and so is the first day of a card that can open its eyes. */}
+            <Character
+              state={characterOf(day)}
+              standing={false}
+              drawn={characterOf(day) === "earned" || characterOf(day) === "returned" || (wake !== undefined && index === 0) ? "inline" : "referenced"}
+              className="h-auto w-full"
+            />
           </ArrivalDay>
         </span>
       ))}

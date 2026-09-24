@@ -139,7 +139,7 @@ test("there is one card, and the one being filled in is drawn by it", () => {
   }
   assert.doesNotMatch(card, /<MilestoneMeter/, "an empty bar is not a picture of anything");
   // And that one character stands in the middle of the card, not at its left margin (D133).
-  assert.match(card, /<span className="flex justify-center">\s*<Character state="toCome"/);
+  assert.match(card, /<Character state="toCome" className="h-auto w-\[96px\]" standing=\{false\} \/>/, "one character, larger since D226");
   // The condition line is a control, so it gets more room under the name than a caption would (D133).
   assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/);
   assert.equal(globSync("app/kit/offer/ShapePreview.tsx").length, 0, "the shape invented beside the product's own is gone");

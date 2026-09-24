@@ -171,7 +171,9 @@ function Eye({ x, y, r = 2.8, fill = FACE }: Readonly<{ x: number; y: number; r?
 
 /** A closed eye: a short pill, a rounded rectangle lying down. */
 function ClosedEye({ x, y }: Readonly<{ x: number; y: number }>) {
-  return <rect x={x - 3.4} y={y - 1.2} width={6.8} height={2.4} rx={1.2} style={{ fill: FACE }} />;
+  // Named and turning from its middle like an open eye, so a day drawn into the page can open it (D226): its corners
+  // are the pill's full half width, so stretched 2.8 times taller it is a circle of the open eye's size, not a square.
+  return <rect data-part="eye" x={x - 3.4} y={y - 1.2} width={6.8} height={2.4} rx={3.4} ry={1.2} style={{ fill: FACE, ...FROM_MIDDLE }} />;
 }
 
 /**

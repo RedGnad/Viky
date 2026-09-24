@@ -979,6 +979,12 @@ dialog.sheet[open] {
   display: none;
 }
 
+/* The first day of a card being filled in has its eyes open while the card is ready (D226): the state is in the
+   markup, so the first image is right, and DayStrip plays the change from it. */
+.day-row-days [data-awake] [data-part="eye"] {
+  transform: scaleY(2.8);
+}
+
 /* One size everywhere, large enough to keep a face: 48 on a gift's page, 42 on a card in a list. */
 .day-row-day {
   flex: none;
