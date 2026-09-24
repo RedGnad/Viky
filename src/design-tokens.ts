@@ -210,31 +210,32 @@ export const COLOURS: Record<Appearance, Record<string, string>> = {
   },
   dark: {
     /**
-     * The lavender night (D227, the founder on 24 Sep 2026: the night was generic beside the day). The day's own hue,
-     * fifteen degrees from the day ground on the OKLCH wheel, at a night's lightness: a violet, not a black. Where the
-     * old ground was near grey by rule, this one carries the product's colour after dark.
+     * The lavender night (D227, the founder on 24 Sep 2026: the night was generic beside the day; D228 the same day:
+     * not dark enough). The day's own hue, fifteen degrees from the day ground on the OKLCH wheel, at the old
+     * ground's lightness (0.21): a deep violet, not a black. Where the old ground was near grey by rule, this one
+     * carries the product's colour after dark.
      */
-    background: "#2A1F5E",
-    /** A shade above the ground, 1.17:1: the surface a field, the bar and the rail sit on. */
-    surface: "#332876",
-    /** The day's cream paper becomes the night's ink: 13.41:1 on the ground, 11.45:1 on a surface. */
+    background: "#180943",
+    /** A shade above the ground, 1.18:1: the surface a field, the bar and the rail sit on. */
+    surface: "#251B54",
+    /** The day's cream paper becomes the night's ink: 16.85:1 on the ground, 14.33:1 on a surface. */
     text: "#FFF6E2",
-    /** A pale lavender: 8.26:1 and 7.05:1. */
+    /** A pale lavender: 10.37:1 and 8.82:1. */
     muted: "#C9BDF0",
     /**
      * The same sun as the day, which is the point: the hero hue does not change between the modes, and an accent
      * this light needs no night value of its own. Measured on 17 Sep 2026 against the two candidates the founder
      * compared on the product (#F7B51B, 10.21:1, and #FFD053, 12.70:1): it read 11.71:1 on the old night ground, and
-     * 9.12:1 on the lavender night (D227), 7.79:1 on its surface, so after dark the fill alone identifies the button.
+     * 11.46:1 on the lavender night (D228), 9.74:1 on its surface, so after dark the fill alone identifies the button.
      */
     accent: "#FFC531",
-    onAccent: "#2A1F5E",
+    onAccent: "#180943",
     accentText: "#FFF6E2",
-    /** The cream at night: 13.41:1. */
+    /** The cream at night: 16.85:1. */
     controlBorder: "#FFF6E2",
-    divider: "#4A3F93",
-    /** The same rule after dark: 1.40:1 on the ground, 1.20:1 on a surface, ink 9.57:1, muted ink 5.90:1. */
-    tonal: "#3F3388",
+    divider: "#3C3571",
+    /** The same rule after dark: 1.41:1 on the ground, 1.20:1 on a surface, ink 11.97:1, muted ink 7.37:1. */
+    tonal: "#312964",
   },
 };
 
@@ -266,7 +267,7 @@ export const GROUNDS = ["background", "surface"] as const;
  */
 export const CHARACTERS: Record<Appearance, Record<string, string>> = {
   light: { one: "#FF7F8E", two: "#5AB4FF", three: "#B79BFF", face: "#1E1633", shadow: "#1E1633" },
-  dark: { one: "#FF8C98", two: "#6DBDFB", three: "#BBA3FA", face: "#2A1F5E", shadow: "#08060F" },
+  dark: { one: "#FF8C98", two: "#6DBDFB", three: "#BBA3FA", face: "#180943", shadow: "#08060F" },
 };
 
 /**
