@@ -1,5 +1,5 @@
-import { milestoneProgress, type MilestoneStatus } from "@/src/milestone-view";
-import { Character, type CharacterState } from "./Character";
+import type { MilestoneStatus } from "@/src/milestone-view";
+import type { CharacterState } from "./Character";
 
 /**
  * What a milestone gift has done so far: its character, and one bar in ink on the surface, the start on the left, the
@@ -21,26 +21,7 @@ export function milestoneCharacter(status: MeterStatus): CharacterState {
   return "today";
 }
 
-/**
- * On a card in a list only, since V4: the gift's own page draws the climb or the stamp (app/kit/Climb.tsx,
- * app/kit/Stamp.tsx), and the large meter it used to draw there is gone.
+/*
+ * The bar this file drew on a card in a list is gone since D232: the card draws the trail (app/kit/Climb.tsx), as the
+ * gift's own page has since V4. What stays here is what both read: the status a meter needs and the character of it.
  */
-export function MilestoneMeter({ status, startLabel, targetLabel }: Readonly<{ status: MeterStatus; startLabel?: string; targetLabel?: string }>) {
-  const progress = milestoneProgress(status);
-  return (
-    <span aria-hidden className="flex items-center gap-[var(--space-md)]">
-      <Character state={milestoneCharacter(status)} size="small" className="h-auto w-[44px] shrink-0" />
-      <span className="flex flex-1 flex-col gap-[var(--space-xs)]">
-      <span className="relative block h-[10px] w-full overflow-hidden rounded-full border border-[var(--control-border)] bg-[var(--surface)]">
-        <span className="absolute inset-y-0 left-0 rounded-full bg-[var(--text)]" style={{ width: `${Math.round(progress * 100)}%` }} />
-      </span>
-      {startLabel || targetLabel ? (
-        <span className="flex justify-between text-[length:var(--type-help)] leading-[var(--type-help-leading)] text-[var(--muted)]">
-          <span>{startLabel}</span>
-          <span>{targetLabel}</span>
-        </span>
-      ) : null}
-      </span>
-    </span>
-  );
-}

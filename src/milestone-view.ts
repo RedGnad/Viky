@@ -69,11 +69,17 @@ export type MilestoneStatus = Readonly<{
   standingAtOffer: number | null;
 }>;
 
-/** Where today's reading sits between the start and the target, from 0 to 1, for the meter. */
-export function milestoneProgress(status: Pick<MilestoneStatus, "startReading" | "target" | "todayReading" | "reached">): number {
+/**
+ * Where today's reading sits on the way to the target, from 0 to 1, for the trail (D232): measured from nothing, not
+ * from where they started, so somebody who already has 383 of 2,500 is drawn a little way along rather than at the
+ * very start. Nunes and Drèze, The Endowed Progress Effect (Journal of Consumer Research, 2006): people shown a goal
+ * already begun persist more than people shown one not yet begun, and this picture is true, since what they have
+ * counts from nothing; where they started is in what was agreed, in words. Nothing read yet: at the start. Reached:
+ * at the end.
+ */
+export function milestoneProgress(status: Pick<MilestoneStatus, "target" | "todayReading" | "reached">): number {
   if (status.reached) return 1;
   if (status.todayReading === null) return 0;
-  const start = status.startReading ?? 0;
-  if (status.target <= start) return status.todayReading >= status.target ? 1 : 0;
-  return Math.min(1, Math.max(0, (status.todayReading - start) / (status.target - start)));
+  if (status.target <= 0) return status.todayReading >= status.target ? 1 : 0;
+  return Math.min(1, Math.max(0, status.todayReading / status.target));
 }

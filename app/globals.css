@@ -1118,10 +1118,11 @@ dialog.sheet[open] {
  * the character on the slope at today's reading. The slope starts and ends under the middle of the character's box
  * (56 px), so the drawing and the walker agree at every reading (app/kit/Climb.tsx).
  */
+/* Flat since D232: the character's 56 with the trail under its feet a fifth of the way up, and the flag beside it. */
 .climb {
   position: relative;
   display: block;
-  height: 128px;
+  height: 88px;
 }
 
 .climb-slope {

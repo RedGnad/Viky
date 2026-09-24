@@ -7,10 +7,11 @@ import { Character } from "./Character";
 import { milestoneCharacter, type MeterStatus } from "./MilestoneMeter";
 
 /**
- * A climb, drawn as one (V4, document J): a slope from where they started to the target, the part already climbed in
- * ink and the part still ahead dashed, a flag at the top with the target on it, and the gift's one character standing
- * on the slope at today's reading. It replaces the bar of the meter on a gift's page, which D132 had already taken off
- * the card on Home because an empty bar read as a strange horizontal line.
+ * A climb, drawn as a trail (V4, document J; flat since D232): the way from nothing to the target, the part already
+ * walked in ink and the part still ahead dashed, a flag at the end with the target on it, and the gift's one character
+ * standing on the trail at today's reading, measured from nothing (`milestoneProgress`). It replaced the bar of the
+ * meter on a gift's page, and since D232 it is on the card in a list as well, where the bar had stayed: the founder
+ * wanted the trail everywhere, and flat, because the slope took room for nothing.
  *
  * What it says is said in words beside it (the state, and today's figure), so the drawing is hidden from a screen
  * reader. Nothing is drawn higher than the keeper has read.
@@ -21,9 +22,9 @@ import { milestoneCharacter, type MeterStatus } from "./MilestoneMeter";
  * stands where it is. Nothing plays on a clock and nothing repeats.
  */
 
-/** The slope, in fractions of the drawing's height, from its foot to its top: what the character's feet follow. */
-const FOOT = 0.1;
-const RISE = 0.58;
+/** The trail, in fractions of the drawing's height: where it lies, and how much it rises, which is nothing since D232. */
+const FOOT = 0.2;
+const RISE = 0;
 /** The character's box, in pixels, and so the inset of the slope at both ends, which starts and ends under its middle. */
 const BODY = 56;
 
