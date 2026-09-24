@@ -6505,3 +6505,27 @@ end any more. Frames between 240 and 740 ms, by day and by night, sent to the fo
 nearly out at 430, the feet on the floor in the squash at 511. Tokens `armsBeforeTopMs` 100, `legsBeforeFloorMs`
 100, `limbPairStaggerMs` 40; `test/hero-moment.test.ts` holds the order, the springs and the arms in the leap, the
 legs in the fall, out before the bounce lands.
+
+## D235, 25 Sep 2026: the promise on two lines on every phone, shorter feet, the limbs in the edge's colour by night
+
+The founder, 25 Sep 2026, on his phone: the promise ran on three lines; is that right by the practice; the card and
+the character keep their places. The feet could be shorter. The limbs should be the colour of the diamond's edge in
+each appearance, rather than the text's.
+
+**The promise.** Measured: "that motivates." is 323 pixels at 49, so the promise holds two lines from a 363 pixel
+screen up and fell to three below it, "that" alone on the middle line: not a choice but an overflow, and a line of
+one short word in a headline is the break typography tells you to avoid. The size keeps its step, 49, and gives way
+only where the screen cannot hold that line (`min(49px, (100vw - 2 margins) x 0.15)`, 0.15 being 49 over 323 rounded
+down): 48 at 360, 42 at 320. The leading is its ratio, 1.1, and the lines are balanced (`text-wrap: balance`). The
+card and the character do not move: they are held at the foot of the first screen (D221); only the title block sits
+a little lower in the room it frees.
+
+**The feet.** 4.5 units long, where they were 6.5.
+
+**The limbs by night.** The edge's own colour, `#7A6EAF`, 4.12:1 on the ground. By day the edge is `#FFE7A8`, which
+stands at 1.16:1 on the lavender: the edge is seen because it lies on the pink body, the limbs lie on the ground and
+would all but vanish. The day keeps the ink until the founder chooses: the same hue deepened to read (`#9E7200`,
+3.06:1) is the measured alternative.
+
+**Measured.** Captures at 360 by 780 and 390 by 844, by day and by night. `test/browser/home-order.spec.ts` holds
+two lines at 320, 360, 390 and 430 with the card at the fold; `test/hero-moment.test.ts` the feet and the night limbs.

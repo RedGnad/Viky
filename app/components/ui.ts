@@ -122,7 +122,7 @@ export const MARK = `${TITLE_FACE} text-[length:var(--type-mark)] leading-[var(-
  * The promise on the page without an account (D128), in the title face: 39 in the one column under 1024, 76 in the
  * left column beside the card from 1024, always on two balanced lines.
  */
-export const HERO = `${TITLE_FACE} text-[length:var(--type-hero)] leading-[var(--type-hero-leading)] tracking-[var(--type-hero-tracking)]`;
+export const HERO = `${TITLE_FACE} text-[length:var(--type-hero)] leading-[var(--type-hero-leading)] tracking-[var(--type-hero-tracking)] [text-wrap:balance]`;
 
 /** The one sentence under the promise, in the quiet voice: the body under 1024, 20 over 28 beside the card. */
 export const LEAD = "text-[length:var(--type-lead)] leading-[var(--type-lead-leading)] text-[var(--muted)]";

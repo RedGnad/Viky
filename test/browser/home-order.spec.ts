@@ -77,6 +77,8 @@ for (const scheme of ["dark", "light"] as const) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(size.width);
       // The title at its step: 76 from 1024, 49 below (D131).
       expect(await title.evaluate((el) => getComputedStyle(el).fontSize)).toBe(size.width >= 1024 ? "76px" : "49px");
+      // Two lines on a phone, never a short word alone on a third (D235).
+      if (size.width < 1024) expect(await title.evaluate((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)))).toBe(2);
       // No blur, on the ground or under anything.
       expect(await blurs(page)).toEqual([]);
     });
@@ -92,5 +94,20 @@ for (const scheme of ["dark", "light"] as const) {
     const card = (await page.locator("section.gift-card-placed").boundingBox())!;
     expect(Math.abs(card.y - (900 - CARD_PEEK))).toBeLessThan(2);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
+  });
+}
+
+// The narrowest phones: the promise keeps two lines by taking a smaller size, and the card keeps its place (D235).
+for (const width of [320, 360]) {
+  test(`at ${width} the promise holds on two lines and the card's top stays at the fold`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 740 });
+    await page.goto("/");
+    await page.evaluate(() => document.fonts.ready);
+    const title = page.getByRole("heading", { name: "Send money that motivates." });
+    const lines = await title.evaluate((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)));
+    expect(lines).toBe(2);
+    const card = (await page.locator("section.gift-card-placed").boundingBox())!;
+    expect(Math.abs(card.y - (740 - CARD_PEEK))).toBeLessThan(2);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }
