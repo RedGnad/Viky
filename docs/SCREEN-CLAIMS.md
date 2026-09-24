@@ -556,18 +556,18 @@ dollars; and the session countdown. Each test was checked by breaking the rule a
 | "This gift will be for the PRONOTE space 0123456a. That is the word before index-education.net in its link." | the space is taken from the pasted link and bound into the subject the funder signs | `pronoteSpaceOf`, `pronoteSubject` | `test/pronote-shown.test.ts` |
 | on the judges' page, PRONOTE's terms, the risk assumed, GDPR articles 15 and 20 | only what was read is quoted, and the founder's decision is said as a decision | `app/judges/page.tsx` | none: a sentence read against the page by hand |
 
-### An edX certificate, being built (D212)
+### An edX certificate, open (D212, D218)
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
-| "An edX certificate", READ FOR YOU, under "Finish a course" with "Being built." | goal 25 not signed yet, the source waiting for the service's redeploy | `EDX_CERTIFICATE` in `BUILDING` | `test/edx-certificate.test.ts` |
+| "An edX certificate", READ FOR YOU, under "Finish a course", open | goal 25 registered on `MilestoneGift` to the edX provider id, and the reading service running the `edx-certificate` source | `EDX_CERTIFICATE` in `CONDITIONS`, `live: true` | `test/edx-certificate.test.ts` |
 | "That certificate is not a verified one, so it is not what this gift is for." | the page's track is not `verified` or `professional` | `isVerifiedTrack` in `edxCertificateOf` | `test/edx-certificate.test.ts` |
 
-### A credential on Accredible, being built (D213)
+### A credential on Accredible, open (D213, D218)
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
-| "A credential on Accredible", READ FOR YOU, under "Get certified" with "Being built." | goal 26 not signed yet | `ACCREDIBLE_CREDENTIAL` in `BUILDING` | `test/accredible-credential.test.ts` |
+| "A credential on Accredible", READ FOR YOU, under "Get certified", open | goal 26 registered on `MilestoneGift` to the Accredible provider id, and the reading service running the `accredible-credential` source | `ACCREDIBLE_CREDENTIAL` in `CONDITIONS`, `live: true` | `test/accredible-credential.test.ts` |
 | "That credential has expired or was revoked, so it cannot pay." | the record says `"expired":true` or a `revoked_at` | `accredibleCredentialOf` | `test/accredible-credential.test.ts` |
 
 ### Enrolled in China, shown, being built (D216)

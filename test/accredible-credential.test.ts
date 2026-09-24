@@ -5,7 +5,7 @@ import { accredibleCourseOf, accredibleIdOf, accredibleProviderId, accredibleSub
 import { accredibleCredentialOf, AccredibleReadError, readAccredibleCredential } from "../src/accredible-reading";
 import { privacyOf } from "../src/condition-privacy";
 import { proofOfCondition } from "../src/condition-proof";
-import { ACCREDIBLE_CREDENTIAL as LINE, BUILDING, conditionById } from "../src/conditions";
+import { ACCREDIBLE_CREDENTIAL as LINE, BUILDING, CONDITIONS, conditionById } from "../src/conditions";
 import { ACCREDIBLE_MILESTONE, certificateById } from "../src/milestone-conditions";
 import { MILESTONE_GOALS } from "../src/milestone-goals";
 
@@ -56,11 +56,12 @@ test("links and names as a person types them", () => {
   assert.equal(accredibleCourseOf("no comma here"), undefined);
 });
 
-test("the line: read for them, Get certified, goal 26, being built, the fact rule, in the shared list", () => {
+test("the line: read for them, Get certified, goal 26, open, the fact rule, in the shared list", () => {
   assert.equal(LINE.family, "certification");
   assert.equal(LINE.nature, "read");
-  assert.equal(LINE.live, false);
-  assert.ok(BUILDING.includes(LINE));
+  assert.equal(LINE.live, true);
+  assert.equal(LINE.state, "open");
+  assert.ok(CONDITIONS.includes(LINE) && !BUILDING.includes(LINE));
   assert.ok(LINE.name.length <= 30);
   assert.equal(conditionById("accredible-credential"), LINE);
   assert.equal(certificateById("accredible-credential"), ACCREDIBLE_MILESTONE);
