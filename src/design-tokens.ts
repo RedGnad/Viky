@@ -434,12 +434,14 @@ export const MOTION = {
     squashMs: 50,
     hopMs: 250,
     /**
-     * The limbs start from the second landing on, while the body is still settling, and in turn (the founder,
-     * 24 Sep 2026, D230): overlapping action, the principle that nothing of a body starts and stops at once. 70 ms
-     * between limbs sits between Material's short1 and short2, like the page's own turns.
+     * The limbs come out during the jump, not after it (the founder, 25 Sep 2026, D234): the arms open as the body
+     * slows to the top of the leap, the gesture of a jumper at the apex, on the expressive spring; the legs unfold
+     * during the fall, on the spring that never overshoots, so the feet arrive as the body touches the floor and the
+     * squash of the landing compresses them with it. Within a pair, the left then the right, 40 ms apart.
      */
-    limbsAfterFloorMs: 80,
-    limbStaggerMs: 70,
+    armsBeforeTopMs: 100,
+    legsBeforeFloorMs: 100,
+    limbPairStaggerMs: 40,
     settle: SPRING.expressiveFastSpatial,
     effects: SPRING.effects,
     turns: 1,
