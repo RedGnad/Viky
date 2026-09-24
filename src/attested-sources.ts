@@ -337,7 +337,29 @@ export const EDX_CERTIFICATE: AttestedSource = {
   ],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
+/**
+ * A credential's public record on Accredible (D213), the JSON its page is drawn from, measured on a live credential on
+ * 24 Sep 2026. Seven patterns, each anchored on its own key or object: the uuid and the title together, the day of
+ * issue, expired, revoked, private, the recipient's name inside the recipient object (its masked email matched and
+ * never captured), and the issuer's website inside the issuer object.
+ */
+export const ACCREDIBLE_CREDENTIAL: AttestedSource = {
+  id: "accredible-credential",
+  service: "Accredible",
+  accepts: (account) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(account),
+  url: (account) => `https://api.accredible.com/v1/credential-net/credentials/${account}`,
+  matches: [
+    { type: "regex", value: '"uuid":"(?<uuid>[0-9a-f-]{36})","name":"(?<title>[^"]*)"' },
+    { type: "regex", value: '"issued_on":"(?<issuedOn>\\d{4}-\\d{2}-\\d{2})"' },
+    { type: "regex", value: '"expired":(?<expired>true|false)' },
+    { type: "regex", value: '"revoked_at":(?<revokedAt>null|"[^"]*")' },
+    { type: "regex", value: '"private":(?<private>true|false)' },
+    { type: "regex", value: '"recipient":\\{"email":"[^"]*","name":"(?<name>[^"]*)"' },
+    { type: "regex", value: '"issuer":\\{"id":(?<issuerId>\\d+),"name":"[^"]*","url":"(?<issuerUrl>[^"]*)"' },
+  ],
+};
+
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
 
 /**
  * The headers a source is read with, which is part of what is fetched and therefore lives with the sources: it is

@@ -5878,3 +5878,21 @@ first, set aside on 18 Sep for identity (D100), back because the issuer attests.
   them; an edX catalogue link (`edx.org/learn/…`) is not accepted, since it carries no code; `professional` accepted
   beside `verified`. Whether a run whose key reads `HarvardX+CS50+X` prints `CS50` or `CS50x` on its certificate is not
   measured.
+
+## D213, 24 Sep 2026: a credential on Accredible, read for the person like a Credly badge
+
+The founder's second public register, 24 Sep 2026: Accredible (credential.net), family "Get certified", beside Credly.
+
+- **Measured on a live credential**, `credential.net/0a1b2c3d…3c4d`: the page is a JavaScript application whose data is
+  `GET https://api.accredible.com/v1/credential-net/credentials/<uuid>` (the path its own bundle builds), public JSON.
+  Seven patterns anchored on their keys or objects: uuid and title together, day of issue, expired, revoked, private,
+  the recipient's name (its masked email matched, never captured), the issuer's website. An unknown uuid answers 404.
+- **Naming the credential.** Accredible's course search (`/course_finder/search_courses`) is not open to a reader, so
+  the funder types the title as the issuer prints it and the issuer's website, one line; the title is compared word
+  for word, the website by its host and the domains it sits under. The reading proves the subject the funder signed
+  among those domains. The weakness is written on the judges' page: an issuer copying another's title and website would
+  pass.
+- **The line.** `accredible-credential`, goal 26, having it or not, refused by name when private, expired or revoked.
+  Being built until goal 26 is signed; the service redeployed from the branch before the merge.
+- **Terms**, read 24 Sep 2026: Accredible's terms (April 2026) bind issuers and name no automated access.
+- **Default applied, to confirm.** The title and website line in place of a search.

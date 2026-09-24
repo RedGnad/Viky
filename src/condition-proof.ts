@@ -218,7 +218,16 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     account: "The funder names the person and chooses the certification, and both are hashed into the terms they sign, so a badge for another certification or in another name pays nothing. The certification is decided by the pair of ids Credly publishes rather than by a title, which can be edited or reused. Two people of the same name who earn the same certification inside the same days cannot be told apart by this, because the page has no field its holder can edit: that gap is written down rather than dressed up.",
     whoActed: "Unknown: nothing describes how the work behind the badge was supervised, and it varies by issuer. What is different from a certificate a site prints for its own course is that the issuer is a third party who awards the badge, so nobody can award one to themselves.",
     sourcePolicing: "Credly hosts what issuers award and does not mark the work: a badge can be revoked by its issuer, and a holder can make it private again, and both stop the reading, because the two records are read again every time. Nothing published says a badge was earned under supervision.",
+  },  {
+    conditionId: "accredible-credential",
+    supervised: false,
+    inShort: "The credential its issuer published on Accredible: nobody can issue one to themselves, and the record says which it is.",
+    data: "The public record Accredible publishes for the credential (the JSON its page is drawn from), read through an attested fetch when the person shares its link, and again at every reading: the title, the issuer's website, the day of issue, whether it is private, expired or revoked, and the name on it. Its recipient's masked email is matched and never taken.",
+    account: "The funder names the person and the credential by its title and its issuer's website, and all three are hashed into the terms they sign, so a credential with another title, from another issuer or in another name pays nothing. Two people of the same name with the same credential in the same window cannot be told apart (D49's gap).",
+    whoActed: "Unknown: what stands behind a credential varies by issuer, and Accredible describes none of it. What differs from a certificate a site prints for its own course is that an issuer, a third party, awards it.",
+    sourcePolicing: "The issuer awards and can revoke the credential, and Accredible publishes whether it is revoked or expired, which the reading checks. Accredible's terms (April 2026) are a contract with issuers and name no automated access; nothing about a reader is claimed.",
   },
+
 ];
 
 export function proofOfCondition(conditionId: string): ConditionProof | undefined {

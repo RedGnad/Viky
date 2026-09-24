@@ -47,6 +47,8 @@ const PINNED: Readonly<Record<number, string>> = {
   24: "0x168e16e58443ee012319e416a53f7bf5ecbcf660707e35917bad5a5abf7835f8",
   // edX, a verified certificate (D212).
   25: "0x1b7dcd631d332fd55c35e820ce05cc6817023b8eda487a830d1370222d6fa08f",
+  // Accredible, a credential (D213).
+  26: "0xf16cfb8a8ef6a10146f6b2dd98da114d61509c04646cd3ccf93cf4cb0caaa9d8",
 };
 
 test("every goal has its own number and its own provider id", () => {

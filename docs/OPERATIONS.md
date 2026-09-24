@@ -982,6 +982,13 @@ shape 1. `registerGoal(25, 0x1b7dcd63…a08f, 1)`, data
 `edx-certificate` is in the shared list, so this PR moves the reading fingerprint: the service is redeployed from the
 branch before the merge (the rule of "The reading service is a second deployment").
 
+## Goal 26 on the milestone contract: a credential on Accredible (D213)
+
+Provider id `viky:provider:accredible-credential-zkfetch:v1` = `0xf16cfb8a8ef6a10146f6b2dd98da114d61509c04646cd3ccf93cf4cb0caaa9d8`, shape 1. `registerGoal(26, …, 1)`, data
+`0x5ba19152000000000000000000000000000000000000000000000000000000000000001af16cfb8a8ef6a10146f6b2dd98da114d61509c04646cd3ccf93cf4cb0caaa9d80000000000000000000000000000000000000000000000000000000000000001`.
+`pnpm safe:session` batches it with the other missing goals, carried by the relayer. The source
+`accredible-credential` is in the shared list: the service is redeployed from the branch before the merge.
+
 ## The Safe session of every remaining goal, in one transaction (D194)
 
 The eleven goals not yet on the chain go in **one Safe transaction**: one hash, one signature per key, two in all,
