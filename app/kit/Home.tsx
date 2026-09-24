@@ -3,7 +3,8 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useAccount } from "@/src/account/provider";
 import { CATALOGUE, HOME as W, ME } from "@/src/sentences";
-import { BODY, HELP, HERO, LEAD, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "../components/ui";
+import { certificatePlatforms, namesInWords } from "@/src/universities";
+import { BODY, HELP, HERO, LEAD, NAMED, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "../components/ui";
 import { Arrival, Reveal, type ArrivalGift } from "./Motion";
 import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
@@ -31,7 +32,12 @@ import type { GiftSummary } from "@/src/client/gift";
  * What went: the button that opened an eight step assistant, and the example card that showed a gift nobody had
  * made. A page that offers a real object has no use for a picture of one (vision, section 9).
  */
-export function Home({ initialHoldings, initialGifts, heroPlayed = false }: Readonly<{ initialHoldings?: HeldAmounts | null; initialGifts?: GiftSummary[] | null; heroPlayed?: boolean }> = {}) {
+export function Home({
+  initialHoldings,
+  initialGifts,
+  heroPlayed = false,
+  universities = [],
+}: Readonly<{ initialHoldings?: HeldAmounts | null; initialGifts?: GiftSummary[] | null; heroPlayed?: boolean; universities?: readonly string[] }> = {}) {
   /**
    * What the server read for this account while it drew the page (D160). Amounts cross as strings, because a
    * balance has more digits than a browser number holds, and become amounts here.
@@ -82,6 +88,18 @@ export function Home({ initialHoldings, initialGifts, heroPlayed = false }: Read
             <OfferCard />
           </div>
         </div>
+        {universities.length > 0 ? (
+          /* What a gift can wait for, at the foot of the page (D225): four of the schools whose courses the two
+             certificate lines read a certificate from, picked by the server for this visit, in the title face and
+             the ink; the platforms named by the register. Text only, and the affiliation said. Nothing moves: a name
+             fading into the next would be a loop on a clock (D189). */
+          <div className="w-full text-center">
+            <p className={`${LEAD} mx-auto max-w-[460px] [@media(min-width:1024px)]:max-w-[34em]`}>
+              {W.certificate.before} <span className={NAMED}>{namesInWords(universities)}</span> {W.certificate.after}
+            </p>
+            <p className={`${HELP} mx-auto mt-[var(--space-xs)] max-w-[460px] [@media(min-width:1024px)]:max-w-[34em]`}>{W.certificate.read(certificatePlatforms())}</p>
+          </div>
+        ) : null}
         <p className={`${HELP} flex w-full flex-wrap gap-x-[var(--space-lg)] [@media(min-width:1024px)]:justify-center`}>
           <Link href="/what-viky-can-check" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
             {CATALOGUE.title}

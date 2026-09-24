@@ -149,6 +149,12 @@ export const CARD_AMOUNT = `${TITLE_FACE} text-[length:var(--type-card-amount)] 
  */
 export const CHOICE = `${TITLE_FACE} text-[length:var(--type-choice)] leading-[var(--type-choice-leading)]`;
 
+/**
+ * A name inside a sentence set in the quiet voice: the title face in the ink, at the sentence's own size (D225, the
+ * schools at the foot of the landing). Never the accent, which is the one action's.
+ */
+export const NAMED = `${TITLE_FACE} text-[var(--text)]`;
+
 /** A label on a card: the third voice, at the size the image draws it. */
 export const CARD_LABEL =
   "text-[length:var(--type-card-label)] leading-[var(--type-help-leading)] tracking-[var(--type-card-label-tracking)] font-bold uppercase text-[var(--muted)]";
