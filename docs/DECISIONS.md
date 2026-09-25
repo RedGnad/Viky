@@ -6665,3 +6665,18 @@ back to the gift's history and the screen.
   does): with no country the first way stands. `WAY_IN_GIFT_COIN.closedIn` still carries the list read for the other
   rail (Hungary and Iceland are on it, and Ramp sells in both): it decides who a gift can be sent to, not which way
   pays, and it is left for its own task.
+
+## D240, 25 Sep 2026: the way to the card writes nothing in the address
+
+- The founder, 25 Sep 2026: the app often opens part way down the landing at launch, and a launch should start at
+  the top. Audited in the code rather than reproduced: the first screen's one action is `<a href="#offer">` (D221),
+  and a fragment link writes its fragment into the address. Every later load of `/#offer` starts at the card: an
+  installed app reopening on its last address, a reload, a tab the browser restores. Nothing of ours saves a
+  position; the browser keeps the address, and the address says "the card".
+- Now the press scrolls to the card itself (`scrollIntoView`, smooth where `scroll-behavior` allows it), puts the
+  keyboard's starting point on it as a fragment would, and writes nothing. A `#offer` a device still holds from
+  before is dropped on arrival with `window.history.replaceState`, the way Next 16 documents for changing the
+  address without a navigation, so the next launch starts at the top. A browser without script still follows the
+  fragment. `app/kit/WayToTheCard.ts`.
+- Left alone, on purpose: the browser's own memory of where a page was scrolled on a reload or on going back. That
+  is the browser's, every site has it, and taking it away would cost the gifts list its place on the way back.

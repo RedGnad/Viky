@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useAccount } from "@/src/account/provider";
 import { CATALOGUE, HOME as W, ME, NAV } from "@/src/sentences";
 import { certificatePlatforms, namesInWords } from "@/src/universities";
@@ -10,6 +10,7 @@ import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
 import { GiftCard } from "./GiftCard";
 import { HeadCharacter } from "./HeadCharacter";
+import { dropStaleCardFragment, goToTheCard } from "./WayToTheCard";
 import { HeroMoment } from "./HeroMoment";
 import { Install } from "./Install";
 import { MoneyHero } from "./MoneyHero";
@@ -60,6 +61,11 @@ export function Home({
   /** Whether the room the way out takes is held while the balance is read (app/kit/money.ts). */
   const sawMoney = useSawMoney(holdings);
 
+  // A "#offer" an earlier press left in the address is dropped on arrival, so the next launch starts at the top (D240).
+  useEffect(() => {
+    dropStaleCardFragment();
+  }, []);
+
   if (!address) {
     return (
       <Shell kind="destination" active="home" action={<SignInDoor />} bare wide>
@@ -78,13 +84,14 @@ export function Home({
             </div>
             {/* The one action of the first screen, in the accent: it goes to the card, which is the product, and the
                 card's own action is a screen below, so each screen has its one accent (D221; ui.ts). */}
-            <a href="#offer" className={`${PRIMARY_BUTTON} w-auto! px-[var(--space-xl)] text-center no-underline`}>
+            <a href="#offer" className={`${PRIMARY_BUTTON} w-auto! px-[var(--space-xl)] text-center no-underline`} onClick={goToTheCard}>
               {W.offer}
             </a>
             <HeroMoment played={heroPlayed} />
           </div>
-          {/* Above the character, so the card's paper hides what of it is still behind. */}
-          <div id="offer" className="relative z-[1] w-full [@media(min-width:1024px)]:flex [@media(min-width:1024px)]:justify-center">
+          {/* Above the character, so the card's paper hides what of it is still behind. Focusable by the way to it, so
+              the keyboard carries on from the card, and without a ring of its own: the card's controls have theirs. */}
+          <div id="offer" tabIndex={-1} className="relative z-[1] w-full outline-none [@media(min-width:1024px)]:flex [@media(min-width:1024px)]:justify-center">
             <OfferCard />
           </div>
         </div>

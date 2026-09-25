@@ -39,11 +39,14 @@ test.describe("the hero moment", () => {
     expect(await figureTransform(page)).toBe("none");
   });
 
-  test("the way to the card is the first screen's one action, and it reaches the card", async ({ page }) => {
+  test("the way to the card is the first screen's one action, it reaches the card, and it writes nothing in the address", async ({ page }) => {
     await page.goto("/", { waitUntil: "load" });
     const way = page.getByRole("link", { name: "Offer a gift" });
     await expect(way).toBeVisible();
     await way.click();
+    // No "#offer" left behind (D240): the next launch of an installed app on its last address starts at the top.
+    await page.waitForTimeout(100);
+    expect(page.url()).not.toContain("#");
     // The card's top comes to the head of the screen, within a header's height of it, unless the page is too short to
     // scroll that far, in which case the page has scrolled to its end and the card is whole on the screen.
     await expect
@@ -57,6 +60,13 @@ test.describe("the hero moment", () => {
         { timeout: 3000 },
       )
       .toBe(true);
+  });
+
+  test("an address that still ends in the old fragment is cleaned on arrival, so the next launch starts at the top", async ({ page }) => {
+    await page.goto("/#offer", { waitUntil: "load" });
+    await expect.poll(() => page.url(), { timeout: 5000 }).not.toContain("#");
+    // The card is still the page's body: nothing is removed, only the address is cleaned.
+    await expect(page.locator("#offer")).toBeVisible();
   });
 
   test.describe("with the device asking for less movement", () => {
