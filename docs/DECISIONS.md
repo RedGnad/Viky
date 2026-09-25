@@ -6963,3 +6963,10 @@ grades). The other developer links to it from the empty state of "Which universi
 - The founder, 25 Sep 2026, on D260: "moins fin les points". The grid goes from 1.2 to 1.6 apart and the dots from
   0.06 to 0.42 to 0.08 to 0.56 in radius, a third larger, half way to the coarse screen of D255; the colour and its
   45 % multiply stay.
+
+## D262, 25 Sep 2026: every figure of the rig wears the halftone
+
+- The founder, 25 Sep 2026: the effect was on the landing's figure only, not on the three destinations'. The figures
+  of the Home, Gifts and Me scenes take the same halftone as the landing's (D260, D261), in the same drawing units, so
+  it stays in proportion at their 104 and 192 pixels. Each keeps its own clip by its own id. The plain diamond of the
+  task screens and the family tiles is not the rig, and does not wear it.

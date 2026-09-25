@@ -140,3 +140,14 @@ test("the landing's figure wears a fine halftone in the body's own colour, drawn
   assert.ok(part.length < 20_000, `a few kilobytes: ${part.length}`);
   assert.ok(widths[0] < 0.25 && widths[7] > 1, "a little less fine since D261: from about 0.2 to 1.1 across");
 });
+
+test("the three destinations' figures wear the same halftone as the landing's (D262)", () => {
+  for (const which of ["home", "gifts", "me"] as const) {
+    const scene = renderToStaticMarkup(createElement(Scene, { which }));
+    const figures = (scene.match(/data-part="figure"/g) ?? []).length;
+    assert.equal((scene.match(/data-part="halftone"/g) ?? []).length, figures, `${which}: every figure`);
+  }
+  // Ids stay apart, so two figures on one page keep their own screen.
+  const gifts = renderToStaticMarkup(createElement(Scene, { which: "gifts" }));
+  assert.ok(gifts.includes('id="gifts-one-screen"') && gifts.includes('id="gifts-two-screen"'));
+});

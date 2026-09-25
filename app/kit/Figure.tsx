@@ -396,13 +396,14 @@ export function Scene({ which, className, children }: Readonly<{ which: SceneNam
       <svg aria-hidden focusable="false" viewBox="0 0 118 53" data-character="diamond" className={className} style={{ overflow: "visible" }}>
         {/* The second first, a little smaller and on the same floor, so the first's arm lies over its shoulder. */}
         <g transform="translate(58 5.3) scale(0.9)">
-          <FigureGroup id="gifts-two" mouth="smile" gaze={{ x: -0.6, y: -0.3 }} />
+          <FigureGroup id="gifts-two" mouth="smile" gaze={{ x: -0.6, y: -0.3 }} halftone />
         </g>
-        <FigureGroup id="gifts-one" arms="shoulder" mouth="grin" gaze={{ x: 0.6, y: 0 }} />
+        <FigureGroup id="gifts-one" arms="shoulder" mouth="grin" gaze={{ x: 0.6, y: 0 }} halftone />
         {children}
       </svg>
     );
   }
-  if (which === "home") return <Figure className={className} id="home" arms="hold" props={["suit", "case"]} />;
-  return <Figure className={className} id="me" eyes="shades" mouth="grin" arms="crossed" />;
+  // Every figure of the rig wears the landing's halftone (D262): one material, whatever the scene.
+  if (which === "home") return <Figure className={className} id="home" arms="hold" props={["suit", "case"]} halftone />;
+  return <Figure className={className} id="me" eyes="shades" mouth="grin" arms="crossed" halftone />;
 }
