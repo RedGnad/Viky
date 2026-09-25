@@ -22,7 +22,7 @@ test("the card is three groups: who and what, the days and the money, the action
   const at = marks.map((mark) => card.indexOf(mark));
   assert.ok(at.every((i) => i > 0) && at.every((i, n) => n === 0 || i > at[n - 1]), "who, what, the days and their worth, the money, the lengths, the action, the promise");
   assert.match(card, /shape=\{\n\s*<div className="my-\[var\(--space-md\)\] flex flex-col items-center gap-\[var\(--space-sm\)\]">/, "the days' own group, 24 pixels from the others");
-  assert.match(card, /<span className="flex flex-wrap items-center gap-x-\[var\(--space-md\)\] gap-y-\[var\(--space-md\)\]">\n\s*<span className=\{`\$\{CARD_AMOUNT\}/, "the amount and the lengths in one row that wraps");
+  assert.match(card, /<span className="flex flex-wrap items-center gap-x-\[var\(--space-md\)\] gap-y-\[var\(--space-md\)\]">\n(\s*\{\/\*[^*]*\*\/\}\n)?\s*<span\n?\s*className=\{`\$\{CARD_AMOUNT\}/, "the amount and the lengths in one row that wraps");
   assert.match(card, /className=\{`\$\{PRIMARY_BUTTON\} mt-\[var\(--space-xl\)\]`\}/, "the action in its own group");
   assert.doesNotMatch(card, /W\.eachDay|mt-\[var\(--space-lg\)\]`\} disabled/, "the old sentence and the old spacing are gone");
   assert.match(card, /<span className=\{CHOICE\}>\{inTheirCurrency\(units \/ BigInt\(days\)\)\}<\/span> <span className=\{HELP\}>\{W\.aDay\}<\/span>/, "what one mark is worth, the figure in the title face");

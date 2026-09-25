@@ -113,8 +113,7 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
       {/* It hears what the gift's record says, as the head of every screen does (D148); nothing else moves it (D216). */}
       <Expression>
         {/* The rig (D236), in its resting pose: the same light, gloss, edge and smile as the destinations' scenes (D241). */}
-        {/* The halftone screen is the founder's experiment of 25 Sep 2026 (D255): remove `halftone` to take it off. */}
-        <Figure id="hero" whirl halftone className="hero-character" />
+        <Figure id="hero" whirl className="hero-character" />
       </Expression>
     </div>
   );

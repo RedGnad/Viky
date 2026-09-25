@@ -104,8 +104,14 @@
    * shadow at all: cream on the ink ground measures 17:1 and needs none, and the niche allows no blur anywhere.
    */
   --card-placed-edge: #C5C2CF;
-  /* The strength of the halftone screen on the landing's figure (D255): the ink's dots, lighter by day. */
-  --character-halftone: 0.22;
+  /*
+   * A field on the paper, and what nests in it (D257): the concentric rule, the inner radius being the outer radius
+   * less the gap between them (Apple, Human Interface Guidelines and WWDC25 "Get to know the new design system":
+   * concentric shapes take the parent's radius minus the padding), so the two curves share a centre and the gap stays
+   * even round the corner.
+   */
+  --field-radius: 10px;
+  --field-inset: 3px;
   /* The fill of a button that is not the one action: quiet, and identified by its outline (K, rule 10). */
   --tonal: #E8E3F4;
 
@@ -309,7 +315,6 @@
     --card-edge: transparent;
     --card-shadow: none;
     --card-placed-edge: #484360;
-    --character-halftone: 0.35;
     /* The paper after dark (D223, D231): the sun laid over the ground at 12 %, which is how Material brands a dark
        surface (its primary at a low opacity over the dark surface colour), 1.27:1 on the ground, where the day's cream
        stands on the lavender at 1.31:1: a warm paper on a cool night, as by day. What reads on it is the cream and the
@@ -367,7 +372,6 @@
   --card-edge: transparent;
   --card-shadow: none;
   --card-placed-edge: #484360;
-  --character-halftone: 0.35;
   /* The paper after dark (D223, D231): the sun laid over the ground at 12 %, which is how Material brands a dark
        surface (its primary at a low opacity over the dark surface colour), 1.27:1 on the ground, where the day's cream
        stands on the lavender at 1.31:1: a warm paper on a cool night, as by day. What reads on it is the cream and the
@@ -635,7 +639,7 @@ video {
  * read as the relief under a key, which is what the founder saw: a field that looked like a button.
  */
 .on-paper-field {
-  border-radius: 10px;
+  border-radius: var(--field-radius);
   background: var(--paper-field);
   box-shadow: inset 0 0 0 1px var(--on-surface-faint);
   padding: 1px 7px;
@@ -643,7 +647,7 @@ video {
 
 /* The same field, drawn as the words it sits in until it is touched: a line that is already answered is not a box. */
 .on-paper-field-quiet {
-  border-radius: 10px;
+  border-radius: var(--field-radius);
   padding: 1px 7px;
   margin: 0 -7px;
   background: transparent;

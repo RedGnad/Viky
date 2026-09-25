@@ -123,20 +123,3 @@ test("the app's icon is the rig's head, in the stylesheet's own night colours (D
   assert.match(script, /':root\[data-theme="dark"\] \{'/, "the night values read from the stylesheet, never copied by hand");
   assert.doesNotMatch(script, /#3B3266/, "the night edge of D135 is not kept in the script");
 });
-
-test("the landing's figure wears a halftone screen whose dots grow away from the light, and only it does (D255)", () => {
-  const plain = renderToStaticMarkup(createElement(Figure, { id: "p" }));
-  assert.ok(!plain.includes('data-part="halftone"'), "off unless asked");
-  const screened = renderToStaticMarkup(createElement(Figure, { id: "s", halftone: true }));
-  assert.ok(screened.includes('data-part="halftone"') && screened.includes('clip-path="url(#s-screen)"'));
-  const dots = [...screened.matchAll(/<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"><\/circle>/g)].map((m) => ({ x: Number(m[1]), y: Number(m[2]), r: Number(m[3]) }));
-  assert.ok(dots.length > 200, `${dots.length} dots`);
-  const near = dots.filter((dot) => dot.x < 20 && dot.y < 14);
-  const far = dots.filter((dot) => dot.x > 44 && dot.y > 26);
-  const mean = (list: typeof dots) => list.reduce((sum, dot) => sum + dot.r, 0) / list.length;
-  assert.ok(mean(near) < mean(far), "small where the light falls, large on the far side");
-  assert.match(screened, /opacity:var\(--character-halftone\)/);
-  const css = readFileSync("app/globals.css", "utf8");
-  assert.equal((css.match(/--character-halftone: /g) ?? []).length, 3, "day and both night blocks");
-  assert.match(readFileSync("app/kit/HeroMoment.tsx", "utf8"), /<Figure id="hero" whirl halftone className="hero-character" \/>/);
-});

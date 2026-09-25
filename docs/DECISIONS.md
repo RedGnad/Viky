@@ -6898,3 +6898,21 @@ grades). The other developer links to it from the empty state of "Which universi
   both modes (3.1 and 3.4 by day, 4.6 and 5.5 at night). The other way was measured and not taken: a fill alone would
   have to reach 3:1 against the card, a field near tone 70 on a card of 97 by day and near 38 on 16 at night, a patch
   far heavier than the card's own voice. The field keeps its fill of D252.
+
+## D257, 25 Sep 2026: the currency key nests concentrically in its field, the euro's bars cross its arc at their middle, and the halftone is off
+
+- The founder, 25 Sep 2026: the currency key's rounding is foreign to the field's, and he asked for the reference
+  literature on nested rounding rather than a feeling; the euro's two bars sit too far right; and the halftone screen
+  of D255 is not liked.
+- **Nested rounding.** The rule is documented and it is one: an inner shape's radius is the outer radius less the gap
+  between them, so the two curves share a centre and the gap stays even round the corner (Apple, WWDC25 "Get to know
+  the new design system" and the Human Interface Guidelines: concentric shapes take the parent's radius minus the
+  padding; the same arithmetic in every front-end reference on nested radii). Measured on production: a capsule of
+  radius 24 inside a field of 10, touching it at the top and the bottom (1 pixel) and 3 from its left. Now the field
+  gives the key one inset on every side (`--field-inset`, 3 px) and the key takes `--field-radius` less it, 7 px. The
+  key keeps the 48 every target keeps (the accessibility suite refused 44), so the amount's field stands 54, from 50.
+  On Me, where the key stands alone, it stays the capsule every key is.
+- **The euro.** The sign's bars are centred on the bowl's left side, where they cross it. They were centred at x 9,
+  well inside the bowl, against an arc passing at 3.34 and 3.43; now each runs either side of its own crossing (5.5 for
+  the upper, 5 for the lower), the box widened to the left for their ends.
+- **The halftone** of D255 is taken off at the founder's word, the prop, its drawing and its colours with it.

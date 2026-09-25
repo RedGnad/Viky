@@ -808,3 +808,28 @@ test("a field on the card is identified by a hairline all around it at 3:1 at le
     }
   }
 });
+
+test("a key nested in a field is concentric with it, and alone it stays a capsule (D257)", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /--field-radius: 10px;/);
+  assert.match(css, /--field-inset: 3px;/);
+  assert.match(css, /\.on-paper-field \{\n\s*border-radius: var\(--field-radius\);/);
+  const key = readFileSync("app/kit/MoneyKey.tsx", "utf8");
+  // The concentric rule: the inner radius is the outer radius less the gap between them.
+  assert.match(key, /nested \? "rounded-\[calc\(var\(--field-radius\)-var\(--field-inset\)\)\]" : "rounded-full"/);
+  const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
+  assert.match(card, /style=\{\{ paddingBlock: "var\(--field-inset\)", paddingLeft: "var\(--field-inset\)" \}\}/, "one inset on every side the key touches");
+  assert.match(card, /<MoneyKey currency=\{money\.currency\} onOpen=\{\(\) => setReading\(true\)\} nested /);
+  assert.match(readFileSync("app/kit/Me.tsx", "utf8"), /<MoneyKey currency=\{money\.currency\} onOpen=\{\(\) => setReading\(true\)\} \/>/, "on its own, a capsule");
+});
+
+test("the euro's bars are centred where they cross its arc (D257)", () => {
+  const mark = readFileSync("app/kit/MoneyMark.tsx", "utf8");
+  const arc = { cx: 17.35 - 8.6 * Math.sqrt(1 - ((14.5 - 5.95) / 11.5) ** 2), cy: 14.5, rx: 8.6, ry: 11.5 };
+  const bars = [...mark.matchAll(/d="M(-?[\d.]+) ([\d.]+) H (-?[\d.]+)"/g)].map((m) => [m[0], Number(m[2]), Number(m[1]), Number(m[3])] as const);
+  assert.equal(bars.length, 2, "two bars");
+  for (const [, y, from, to] of bars) {
+    const crossing = arc.cx - arc.rx * Math.sqrt(1 - ((y - arc.cy) / arc.ry) ** 2);
+    assert.ok(Math.abs((from + to) / 2 - crossing) < 0.05, `the bar at ${y} is centred at ${(from + to) / 2}, the arc at ${crossing.toFixed(2)}`);
+  }
+});
