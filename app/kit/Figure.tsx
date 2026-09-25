@@ -295,7 +295,7 @@ function Case({ id }: Readonly<{ id: string }>) {
 /**
  * A fine halftone on the body (D260, the founder's choice 4 of four, after a first and coarser one was taken off at
  * D257): a staggered grid 1.2 apart, each dot's radius growing from 0.06 where the light falls to 0.42 on the far side,
- * in the body's own deeper colour (`--character-hero-to`) multiplied at 45 %, so it reads as the material of the body
+ * in the body's own deeper colour (`--character-halftone`, what a multiply of it gave, D263) at 45 %, so it reads as the material of the body
  * rather than a grey screen laid on it. The dots are drawn as round-capped zero-length strokes, one path per size, so a
  * thousand dots are eight elements and a few kilobytes, not a thousand circles.
  */
@@ -314,7 +314,11 @@ function Halftone({ id }: Readonly<{ id: string }>) {
     }
   }
   return (
-    <g data-part="halftone" clipPath={`url(#${id}-screen)`} style={{ opacity: 0.45, mixBlendMode: "multiply" }}>
+    // No blend mode and no group opacity (D263): on a phone, while the figure is animated, it is painted in a layer
+    // of its own, and a multiply there blends against a transparent backdrop, which showed the dots over nothing and
+    // the layer's rectangle. The colour a multiply gave is computed instead (`--character-halftone`, the body's deeper
+    // colour multiplied by itself), laid at 45 % by each dot's own opacity.
+    <g data-part="halftone" clipPath={`url(#${id}-screen)`}>
       <defs>
         <clipPath id={`${id}-screen`}>
           <path d={DIAMOND} />
@@ -322,7 +326,7 @@ function Halftone({ id }: Readonly<{ id: string }>) {
       </defs>
       {paths.map((dots, size) => {
         const radius = HALFTONE.from + ((size + 0.5) / HALFTONE.sizes) * (HALFTONE.to - HALFTONE.from);
-        return <path key={size} d={dots.join("")} style={{ fill: "none", stroke: "var(--character-hero-to)", strokeWidth: round(radius * 2), strokeLinecap: "round" }} />;
+        return <path key={size} d={dots.join("")} style={{ fill: "none", stroke: "var(--character-halftone)", strokeOpacity: 0.45, strokeWidth: round(radius * 2), strokeLinecap: "round" }} />;
       })}
     </g>
   );
