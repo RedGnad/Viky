@@ -629,14 +629,15 @@ video {
  * (the founder, 20 Sep 2026: a sheet is not opened to type a first name). It is the paper, pressed in, so it reads
  * as a place to write rather than as a control on a card.
  *
- * Its line underneath is what says "type here" (D252): Material's filled field draws it in on-surface-variant, which
- * is our muted ink, and WCAG 1.4.11 asks 3:1 of what identifies a field. The edge it had was 1.2:1 by day and night,
- * and darker than the paper at night, so the field read as a patch of card. Now 4.3:1 by day and 7.8:1 by night.
+ * What says "type here" is a hairline all around it (D256): Material's outlined text field, 1 dp in its outline role
+ * (tones 50 by day, 60 at night), which our faint ink sits beside (56 and 65); WCAG 1.4.11 asks 3:1 of what
+ * identifies a field, and it holds 3.1:1 on the field by day and 4.6:1 by night. A line under the field alone (D252)
+ * read as the relief under a key, which is what the founder saw: a field that looked like a button.
  */
 .on-paper-field {
   border-radius: 10px;
   background: var(--paper-field);
-  box-shadow: inset 0 -2px 0 var(--on-surface-muted);
+  box-shadow: inset 0 0 0 1px var(--on-surface-faint);
   padding: 1px 7px;
 }
 
@@ -651,7 +652,7 @@ video {
 .on-paper-field-quiet:hover,
 .on-paper-field-quiet:focus {
   background: var(--paper-field);
-  box-shadow: inset 0 -2px 0 var(--on-surface-muted);
+  box-shadow: inset 0 0 0 1px var(--on-surface-faint);
 }
 
 .on-paper-field-quiet::placeholder,
