@@ -67,6 +67,18 @@ export type MilestoneStatus = Readonly<{
   maximumStart: number;
   /** Where they stood when the funder chose, as the funder's screen read it. */
   standingAtOffer: number | null;
+  /**
+   * "Finish a marathon" (D273): the race the gift was made on, whether the bib can still be entered, the bib bound,
+   * and the line read once there is one (the name, the bib, the time), to whoever may see the names.
+   */
+  marathon: {
+    raceId: string;
+    raceName: string;
+    startsAt: string;
+    bibOpen: boolean;
+    bib: string | null;
+    result: { runner: string; bib: string; official: string; finishSeconds: number } | null;
+  } | null;
 }>;
 
 /**

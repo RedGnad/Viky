@@ -1009,6 +1009,20 @@ from the race's page (`/resultats-courses/<slug>-<ref>/<heat>`, the reference is
 town and country, and its `startDate` as the page's schema.org data prints it, which is when the bib field closes.
 The next: the Marathon de Paris, the day its site answers (a 500 on 26 Sep 2026).
 
+**The bib after the start.** `/api/marathon/bib` refuses a bib once the race has started, for everybody but an
+operator account (`VIKY_OPERATOR_ACCOUNTS`): that door is how a test gift is run on a race already run, and it is
+written on the judges' page. A bib is entered once; there is no route to change it.
+
+**Rehearsal, proof (b)**: `NAME="Mor Fall" BIB=347 RACE=dakar-2023 pnpm exec tsx scripts/marathon-rehearse.ts`
+reads the runner's page through the attested fetch exactly as production does (the service on Railway, the
+attestor's signature), then runs `proveCertificate` against a fake gift, a fake state and a fake relay that print
+what they would have received. Nothing moves. It needs the reading service's variables in `.env.local`.
+
+**Proof (c), a test payment**, after goal 30 is signed and the line moved from `BUILDING` to `CONDITIONS`: an
+operator account makes a gift on the Marathon de Dakar 2023 for "Mor Fall", opens it on a second operator account,
+enters bib 347 (the operator door above), presses "Read my result". The gift settles on the contract with metric
+77,395, and the line "FALL Mor, bib 347, 2:30:05" is what the page shows.
+
 ## Goal 29 on the milestone contract: an MIT course certificate from MITx Online (D222)
 
 Provider id `viky:provider:mitx-online-certificate-zkfetch:v1` = `0xf5fc73bf26b45520382592188d8fd1f5fcb1c82bb6a37a53f87388790b0931c1`, shape 1, data

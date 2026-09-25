@@ -657,7 +657,7 @@ at their place. The judges' page counts its uses as it does the top-ups'.
 | the code, its PIN, where to use it | what Bitrefill returned for the delivered order, opened for its owner | `GiftCardCodeLines`, `followPhoneTopUp` | `test/phone-order.test.ts` |
 | "Your gift cards", each with its code | the account's delivered gift card orders | `/api/giftcards/codes`, `giftCardsOf` | `test/phone-order.test.ts` |
 
-### Finish a marathon, being built (D273)
+### Finish a marathon, being built (D273, screens in #266)
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
@@ -667,3 +667,10 @@ at their place. The judges' page counts its uses as it does the top-ups'.
 | "The results page has no finish time for that bib." | the official time is 00:00:00, a runner who did not finish | `finishSecondsOf` | `test/marathon.test.ts` |
 | "That line is in another name than the one this gift is for" | the name on the page, with no case, accents or order, is not the one hashed in the terms | `marathonSubject`, `proveCertificate` | `test/marathon.test.ts` |
 | "0 for finishing whatever the time. Otherwise the hours to finish under" | the target is seconds under a day, one for any finish | `marathonTargetUnderHours`, `MARATHON_FINISH` | `test/marathon.test.ts` |
+| "Which race?", each race with "Dakar, Senegal. Starts 19 November 2023." | the list is the register, with each race's town, country and the day its bib field closes | `/api/marathon/races`, `MarathonChooser` | `test/marathon.test.ts` |
+| "Your bib number", "The number on your bib for the Marathon de Dakar 2023, before the start." | the bib route takes one bib, one to six figures, once, from the recipient, before the race's start | `/api/marathon/bib`, `isValidBib`, `bibStillOpen` | `test/marathon.test.ts` |
+| "The Marathon de Dakar 2023 has started and no bib was entered before it, so this gift cannot be read. What was put in it goes back at the deadline." | no bib bound and the start has passed: the route refuses `RACE_STARTED`, and the contract returns the amount at the deadline | `bibStillOpen`, `MarathonProof` | `test/marathon.test.ts` |
+| "Bib 347, Marathon de Dakar 2023." then "Run. After the finish, come back here to read your result." or "The race has been run. Read your line on the timing company's results page." | the bib bound to the gift, and whether the start has passed | `MilestoneStatus.marathon`, `marathonOf` | `test/marathon.test.ts` |
+| "Read my result" | one press reads the runner's page plainly, then attests it: the account read is the gift's race and its bound bib, never anything the browser sends | `/api/marathon/result`, `/api/marathon/prove`, `marathonAccountOfGift` | `test/marathon.test.ts` |
+| "Read on the timing company's page: FALL Mor, bib 347, 2:30:05." | the name, the bib and the official time as the reading kept them, shown to the two people and to a reader with the link | `marathonOf`, `proveCertificate` (`line`), `MarathonStanding` | `test/marathon.test.ts` |
+| "No bib number entered yet for the Marathon de Dakar 2023." | the funder's view before the person entered a bib | `MarathonStanding` | `test/marathon.test.ts` |

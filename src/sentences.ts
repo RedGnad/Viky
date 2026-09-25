@@ -1519,3 +1519,28 @@ export const GIFT_CARD_OUT = {
   back: "Back",
   failed: "That did not work. Nothing was taken.",
 } as const;
+
+/**
+ * "Finish a marathon" on the gift's page and in the sheet (D273): the race chosen, the bib before the start, the
+ * result read after the finish, and the one line the page shows, the name, the bib and the time.
+ */
+export const MARATHON_PROOF = {
+  whichRace: "Which race?",
+  readingRaces: "Reading the races",
+  racesUnreadable: "The races could not be read right now. Close this and try again in a moment.",
+  raceLine: (town: string, country: string, day: string) => `${town}, ${country}. Starts ${day}.`,
+  bibLabel: "Your bib number",
+  bibHelp: (race: string) => `The number on your bib for the ${race}, before the start. After the finish, Viky reads your line on the timing company's results page.`,
+  bibClosed: (race: string) => `The ${race} has started and no bib was entered before it, so this gift cannot be read. What was put in it goes back at the deadline.`,
+  bibShape: "A bib number is one to six figures.",
+  saveBib: "Keep my bib number",
+  saving: "Keeping it",
+  bibSet: (bib: string, race: string) => `Bib ${bib}, ${race}.`,
+  beforeTheRace: "Run. After the finish, come back here to read your result.",
+  afterTheRace: "The race has been run. Read your line on the timing company's results page.",
+  readMyResult: "Read my result",
+  reading: "Reading the results page",
+  noBibYet: (race: string) => `No bib number entered yet for the ${race}.`,
+  line: (runner: string, bib: string, time: string) => `Read on the timing company's page: ${runner}, bib ${bib}, ${time}.`,
+  failed: "That did not work. Nothing was changed.",
+} as const;

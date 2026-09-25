@@ -7151,5 +7151,18 @@ finish time. On the chain, the race and the bib; the name stays in the terms, ne
 - **Proof (a) of the founder's three, done on 25 Sep 2026 at 21:43 UTC**: the reading service, redeployed on the
   fingerprint `0x6b51fb26…7fad`, read the runner's page of bib 347 of the Marathon de Dakar 2023 through the attested
   fetch: "FALL Mor", "02:30:05", 9,005 seconds, metric 77,395, one proof, nullifier `0x5ff69924…80c0`.
-- **Being built** until goal 30 is signed. The screens (the race chosen in a sheet, the name at creation, the bib on
-  the gift's page, the line read) and proofs (b) and (c) come next.
+- **The screens (#266).** The race is chosen at creation in the sheet, the motif of "Which university?", from the
+  register (`/api/marathon/races`); the person's full name is a field at creation, checked as two words; the bib is
+  entered on the gift's page, once, the motif of the Duolingo account, and the field closes at the race's start
+  (`/api/marathon/bib`, refused `RACE_STARTED` after it, except from an operator account, which is written on the
+  judges' page); after the race, "Read my result" reads the line plainly then attests it, the account read being
+  built from the gift's race and its bound bib and from nothing the browser sends (`/api/marathon/result`,
+  `/api/marathon/prove`); the line read (name, bib, time) is kept with the reading and shown to the two people and to
+  a reader with the link, and to nobody else. Two files of the other developer take one branch each: `WillSheet.tsx`
+  (the race chooser) and `GiftPage.tsx` (the marathon's proof and standing).
+- **Proof (b) of the founder's three, done on 25 Sep 2026 at 22:03 UTC**: `scripts/marathon-rehearse.ts` ran the
+  real attested reading of bib 347 through `proveCertificate` against a fake gift and a fake relay: "FALL Mor",
+  "2:30:05", 9,005 seconds, outcome `reached`, metric 77,395, nullifier `0xa6566ab6…a4a3`, and the relay's message
+  printed with provider `0x59a02973…b55`. Nothing moved.
+- **Being built** until goal 30 is signed. Then the line moves to `CONDITIONS` and proof (c), a test payment that
+  goes, is the first gift.

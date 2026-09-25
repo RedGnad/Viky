@@ -7,7 +7,7 @@ import { AccredibleReadError, attestAccredibleCredential } from "./accredible-re
 import { attestEdxCertificate, EdxReadError } from "./edx-reading";
 import { MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineProviderId } from "./mitx-online-certificate";
 import { attestMitxOnlineCertificate, MitxOnlineReadError } from "./mitx-online-reading";
-import { MARATHON_GOAL_TYPE, marathonProviderId } from "./marathon";
+import { finishInWords, MARATHON_GOAL_TYPE, marathonProviderId } from "./marathon";
 import { attestMarathonResult, MarathonReadError } from "./marathon-reading";
 import { CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyProviderId } from "./credly-badge";
 import { attestCredlyBadge, CredlyReadError } from "./credly-reading";
@@ -33,7 +33,7 @@ import { escrowOf } from "./relayer";
  */
 
 export type CertificateOutcome =
-  | { kind: "reached"; giftId: string; score: number; testDay: number; hash: string }
+  | { kind: "reached"; giftId: string; score: number; testDay: number; hash: string; line?: { runner: string; bib: string; official: string; finishSeconds: number } }
   /** The link reads, and it cannot pay. Each reason is its own, in the register's words. */
   | { kind: "refused"; giftId: string; code: CertificateRefusal; message: string; score?: number }
   /** Nothing to do: not a certificate gift, not opened, already settled. */
@@ -67,6 +67,8 @@ export type ReadCertificate = Readonly<{
   nullifier: Hex;
   /** What every attestation for this goal must carry, so one source can never settle another's gift. */
   providerId: Hex;
+  /** The line as the page printed it, kept with the reading where the gift's page shows it (a marathon's name, bib and time). */
+  line?: Readonly<{ username: string; playerId: string; rating: number }>;
 }>;
 
 export type CertificateReadingDeps = {
@@ -95,7 +97,7 @@ export function liveCertificateReadingDeps(): CertificateReadingDeps {
  * can never be offered to a gift made on the test, nor the other way round: each carries its own provider id and the
  * contract checks it again.
  */
-async function attestByGoal(goalType: number, link: string, signedSubject?: Hex): Promise<ReadCertificate> {
+export async function attestByGoal(goalType: number, link: string, signedSubject?: Hex): Promise<ReadCertificate> {
   if (goalType === ACCREDIBLE_GOAL_TYPE) {
     const reading = await attestAccredibleCredential(link);
     // The issuer's site can sit under several domains; the one the funder named is the subject they signed.
@@ -111,7 +113,7 @@ async function attestByGoal(goalType: number, link: string, signedSubject?: Hex)
     const reading = await attestMarathonResult(link);
     // The day it is judged by is the day the result was read (D273): the race's own date is the register's, and the
     // bib entered before the start is what ties the reading to the race.
-    return { subject: reading.subject, score: reading.metric, testDay: reading.observedAt, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: marathonProviderId() };
+    return { subject: reading.subject, score: reading.metric, testDay: reading.observedAt, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: marathonProviderId(), line: { username: reading.runner, playerId: reading.bib, rating: reading.finishSeconds } };
   }
   if (goalType === MITX_ONLINE_GOAL_TYPE) {
     const reading = await attestMitxOnlineCertificate(link);
@@ -235,9 +237,9 @@ export async function proveCertificate(
       giftId,
       purpose: "reach",
       attested: true,
-      username: "",
-      playerId: null,
-      rating: reading.score,
+      username: reading.line?.username ?? "",
+      playerId: reading.line?.playerId ?? null,
+      rating: reading.line?.rating ?? reading.score,
       ratedAt: reading.testDay,
       rd: null,
       observedAt: reading.observedAt,
@@ -246,5 +248,5 @@ export async function proveCertificate(
       txHash: proved.hash as Hex,
     })
     .catch(() => undefined);
-  return { kind: "reached", giftId, score: reading.score, testDay: reading.testDay, hash: proved.hash };
+  return { kind: "reached", giftId, score: reading.score, testDay: reading.testDay, hash: proved.hash, ...(reading.line ? { line: { runner: reading.line.username, bib: reading.line.playerId, official: finishInWords(reading.line.rating), finishSeconds: reading.line.rating } } : {}) };
 }

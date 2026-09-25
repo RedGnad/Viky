@@ -17,6 +17,7 @@ import { Nature } from "../Nature";
 import { Field } from "../Field";
 import { Sheet } from "../Sheet";
 import { UniversityChooser } from "./UniversityChooser";
+import { MarathonChooser } from "./MarathonChooser";
 import { chosenUniversityTitle } from "@/src/university-choice";
 
 /**
@@ -398,7 +399,15 @@ export function WillSheet({
                   autoComplete="off"
                 />
               ) : null}
-              {certificate.course?.search?.listed ? (
+              {certificate.course?.search?.races ? (
+                /* The race, asked as a list from the register (D273): the marathon's own chooser. */
+                <MarathonChooser
+                  open={open}
+                  draft={draft}
+                  named={certificate.course.named}
+                  onChoose={(race) => onChange({ ...draft, course: race.raceId, courseTitle: race.name, target: String(certificate.target.suggested) })}
+                />
+              ) : certificate.course?.search?.listed ? (
                 /* The university, asked as a list grouped by country, or by country first when it is long (D247). */
                 <UniversityChooser
                   open={open}
