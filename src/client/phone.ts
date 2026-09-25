@@ -26,11 +26,19 @@ export function phoneKindOf(operator: Pick<PhoneOperator, "id" | "name">): Phone
 
 export type PhonePrice = Readonly<{ orderId: string; operatorName: string; localAmount: string; localCurrency: string; ausdUnits: bigint; to: Hex }>;
 
-export type PhoneStatus = Readonly<{ orderId: string; state: "on_its_way" | "delivered" | "refunded" | "refund_pending"; amount: string; operatorName: string }>;
+export type PhoneStatus = Readonly<{
+  orderId: string;
+  state: "on_its_way" | "delivered" | "refunded" | "refund_pending";
+  amount: string;
+  operatorName: string;
+  kind?: "phone" | "gift_card";
+  /** A delivered gift card's code, sent to its owner alone (D271). */
+  code?: Readonly<{ code?: string; link?: string; pin?: string; instructions?: string; expires?: string }>;
+}>;
 
-export async function phoneOffered(): Promise<{ offered: boolean; data: boolean }> {
-  const answer = await getJson<{ offered?: boolean; data?: boolean }>("/api/phone/offer");
-  return { offered: answer.offered === true, data: answer.data === true };
+export async function phoneOffered(): Promise<{ offered: boolean; data: boolean; giftCards: boolean }> {
+  const answer = await getJson<{ offered?: boolean; data?: boolean; giftCards?: boolean }>("/api/phone/offer");
+  return { offered: answer.offered === true, data: answer.data === true, giftCards: answer.giftCards === true };
 }
 
 export async function findPhoneOperators(phone: string): Promise<readonly PhoneOperator[]> {

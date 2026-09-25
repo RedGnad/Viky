@@ -1211,6 +1211,12 @@ export const USE_MONEY = {
     body: "Onto your Visa or Mastercard. Our partner Mercuryo asks for your ID and your card, once.",
     action: "Send to my card",
   },
+  giftcard: {
+    name: "A gift card",
+    nature: "A code, sent to this page",
+    body: "Shops, games and more, from Bitrefill. Some are for online shops abroad, and each card says where it works.",
+    action: "Choose a card",
+  },
   keepHere: "Or keep it here: it stays yours from one gift to the next.",
   nothingHere: "Nothing works for a number there yet. It stays yours here.",
 } as const;
@@ -1472,4 +1478,44 @@ export const ADD_UNIVERSITY = {
   never: "Your password, or any mark but the overall result you picked. That result is read only when a gift on it is shown, and Viky keeps whether it was reached, not the mark. This page sends nothing anywhere.",
   nextTitle: "What happens next",
   next: "Viky adds your university from what you sent, and until then it is not in the list. The first student of it who shows a page confirms that the check works.",
+} as const;
+
+/**
+ * A gift card, on the Bitrefill way (D271): a sheet to choose the card, an amount, done. The card's own line on where
+ * it works is Bitrefill's, never ours; the code is shown here and in the history under it, and nowhere else.
+ */
+export const GIFT_CARD_OUT = {
+  title: "A gift card",
+  chooseTitle: "Which card?",
+  chooseHelp: (country: string) => `The cards Bitrefill lists for ${country}, the ones for ${country} first. Some are for online shops abroad, and each says where it works.`,
+  choose: "Choose a card",
+  change: "Choose another card",
+  reading: "Reading the cards",
+  none: (country: string) => `Bitrefill lists no card for ${country} yet.`,
+  noCountry: "Say where your number is from first: the cards depend on the country.",
+  howMuch: (currency: string) => `How much, in ${currency}`,
+  range: (min: string, max: string, currency: string) => `Between ${min} and ${max} ${currency}.`,
+  aboutDollars: (dollars: string) => `About ${dollars} from your balance.`,
+  getPrice: "See the price",
+  pricing: "Asking the price",
+  priced: (local: string, name: string) => `${local} on a ${name} card.`,
+  costs: (dollars: string, left: string) => `It takes ${dollars}, and ${left} stays with you.`,
+  confirm: "Buy the card",
+  confirming: "Buying the card",
+  doneTitle: "Your card",
+  onItsWayTitle: "On its way",
+  onItsWay: "The code usually comes within a minute. It will be here and in your gift cards below, or your money comes back.",
+  refundedTitle: "It did not go through",
+  refunded: (dollars: string) => `Bitrefill did not deliver it, so your ${dollars} came back to you.`,
+  refundPending: (dollars: string) => `Bitrefill did not deliver it. Your ${dollars} is on its way back to you.`,
+  code: "Code",
+  pin: "PIN",
+  link: "Where to use it",
+  instructions: "How to use it",
+  expires: (date: string) => `Use it before ${date}.`,
+  history: "Your gift cards",
+  historyLine: (name: string, local: string, when: string) => `${name}, ${local}, ${when}`,
+  checkAgain: "Check again",
+  back: "Back",
+  failed: "That did not work. Nothing was taken.",
 } as const;

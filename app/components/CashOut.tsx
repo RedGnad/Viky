@@ -22,6 +22,7 @@ import { CASH_OUT as W, USE_MONEY as U } from "@/src/sentences";
 import { orderUses, usesFor } from "@/src/use-money";
 import { AccountPanel } from "./AccountPanel";
 import { PhoneTopUp } from "./PhoneTopUp";
+import { GiftCardOut } from "./GiftCardOut";
 import { phoneOffered } from "@/src/client/phone";
 import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, CHIP, FIELD, HELP, INLINE_BUTTON, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE, TITLE_IN_FACE } from "./ui";
 
@@ -43,7 +44,7 @@ import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, CHIP, FIELD, HELP,
  * figure says by how much. The published figures and their sources are behind a fold under the cards.
  */
 
-type Stage = "base" | "phone" | "gathering" | "amount" | "review" | "getting" | "ready" | "confirm" | "sending" | "sent" | "own" | "ownConfirm" | "ownSending" | "ownSent";
+type Stage = "base" | "phone" | "giftcard" | "gathering" | "amount" | "review" | "getting" | "ready" | "confirm" | "sending" | "sent" | "own" | "ownConfirm" | "ownSending" | "ownSent";
 
 /** Where a refusal is shown: under the element that caused it, never in a box at the bottom of the page. */
 type Where = "gather" | "amount" | "review" | "code" | "send" | "own";
@@ -134,6 +135,7 @@ export function CashOut() {
   // it does not, since the way is not open to everybody before a real top-up has reached a real number.
   const [phoneOn, setPhoneOn] = useState(false);
   const [phoneDataOn, setPhoneDataOn] = useState(false);
+  const [giftCardsOn, setGiftCardsOn] = useState(false);
   useEffect(() => {
     if (!address) return;
     let live = true;
@@ -141,6 +143,7 @@ export function CashOut() {
       if (!live) return;
       setPhoneOn(offer.offered);
       setPhoneDataOn(offer.data);
+      setGiftCardsOn(offer.giftCards);
     }, () => undefined);
     return () => {
       live = false;
@@ -292,6 +295,13 @@ export function CashOut() {
     setRefreshed(false);
     setDollars(twoDecimalsDown(now[AUSD.symbol] ?? 0n, AUSD.decimals));
     setStage("amount");
+  };
+
+  const startGiftCard = async () => {
+    const now = await gather();
+    if (!now) return;
+    setProblem(null);
+    setStage("giftcard");
   };
 
   const startPhone = async () => {
@@ -483,7 +493,7 @@ export function CashOut() {
   const asking = picking || Boolean(where?.ask && !answeredCountry);
   const countryChoices = Array.from(new Set([countryNow, where?.fromDevice, where?.fromConnection, "sn", "ci", "fr"].filter((code): code is string => Boolean(code))));
   const eurosHeld = money.rates?.usdPerEur ? Number(changeable) / 1_000_000 / money.rates.usdPerEur : undefined;
-  const uses = where?.ask && !answeredCountry ? [] : orderUses(usesFor(countryNow, where?.waysOut ?? {}, phoneOn), eurosHeld, (use) => netOf(use === "bank" ? WAY_OUT_EURO : WAY_OUT_CARD)?.net);
+  const uses = where?.ask && !answeredCountry ? [] : orderUses(usesFor(countryNow, where?.waysOut ?? {}, phoneOn, giftCardsOn), eurosHeld, (use) => netOf(use === "bank" ? WAY_OUT_EURO : WAY_OUT_CARD)?.net);
 
   // W11 and W12. The session closes itself; the balances decide the step, so nothing is remembered here and
   // nothing is lost. Signing in leads, and nothing else is offered: a second account would strand the money.
@@ -637,7 +647,7 @@ export function CashOut() {
           // The phone's figure is the balance itself, in the person's currency: what the top-up is taken from, since what
           // reaches the phone is priced once the number and the amount are known (D238).
           const figure = way ? (net ? figureIn(net.net, net.currency) : undefined) : holdings === null ? undefined : (money.figure(dollarsHeld)?.text ?? formatAusd(dollarsHeld));
-          const act = () => (way ? start(way) : void startPhone());
+          const act = () => (way ? start(way) : use === "giftcard" ? void startGiftCard() : void startPhone());
           return (
             <section key={use} className={CARD}>
               <div className="flex items-baseline justify-between gap-[var(--space-md)]">
@@ -671,6 +681,15 @@ export function CashOut() {
           ))}
           {money.rates ? <p>{W.rateLine(RATE_SOURCE.name, rateDateInWords(money.rates.date))}</p> : null}
         </details>
+      </div>
+    );
+  }
+
+  if (stage === "giftcard") {
+    return (
+      <div className="flex flex-col gap-[var(--space-xl)]">
+        {moneyCard}
+        <GiftCardOut country={countryNow} countryName={countryNow ? (countryInWords(countryNow) ?? countryNow.toUpperCase()) : null} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }
