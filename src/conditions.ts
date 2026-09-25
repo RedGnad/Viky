@@ -839,6 +839,34 @@ export const FITBIT_DAILY: Condition = {
  * secret, adds the distances, judges the day against the kilometres the funder set, and keeps the verdict alone.
  * Goal 4 of the daily contract, registered in the same Safe session as goal 6.
  */
+/**
+ * "Finish a marathon" (D273): a milestone of the Move family, read for the person from the timing company's own
+ * public results page, as an examination result is read from its board. The funder writes the runner's name and
+ * chooses the race; the person enters their bib before the start; the reading service reads the runner's own line.
+ * Being built until goal 30 is signed and the reading service runs the Breizh Chrono source.
+ */
+export const MARATHON_FINISH_LINE: Condition = {
+  id: "marathon-finish",
+  kind: "milestone",
+  nature: "read",
+  goalType: null,
+  live: false,
+  beforeItOpens: "Goal 30 signed by the owner, and the reading service redeployed with the Breizh Chrono source.",
+  source: "Breizh Chrono",
+  family: "move",
+  name: "Finish a marathon",
+  help: "The race's own results, read for them from the timing company's page: their name, their bib and their finish time on one line. It proves the result, not who wore the bib.",
+  link: { kind: "link", label: "Your bib number", help: "Enter the number on your bib on your gift's page before the race starts. After the finish, Viky reads your line on the results page." },
+  reading: "breizh-chrono-runner",
+  words: {
+    earnedDay: "When they finish, all of this becomes theirs",
+    connect: "Opened. Enter your bib number before the race starts.",
+    doIt: "Enter your bib number here before the start, then run. After the finish, Viky reads your line on the timing company's results page.",
+    eachDay: "the day the result is read",
+    preview: "Finish a marathon: the gift is yours when the results page says you did.",
+  },
+};
+
 export const STRAVA_DAILY: Condition = {
   id: "strava-daily",
   kind: "daily",
@@ -1155,6 +1183,7 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
 
 export const BUILDING: readonly Condition[] = [
   MITX_ONLINE_CERTIFICATE_LINE,
+  MARATHON_FINISH_LINE,
   CAMBRIDGE_ENGLISH_SHOWN,
   IELTS_SHOWN,
   BAC_MOROCCO_SHOWN,

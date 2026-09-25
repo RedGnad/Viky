@@ -358,6 +358,28 @@ export const MITX_ONLINE_CERTIFICATE: AttestedSource = {
 };
 
 /**
+ * A runner's own page on Breizh Chrono's results site (D273), server-rendered, measured on the Marathon de Dakar 2023
+ * on 26 Sep 2026 (bibs 347, 1, 184 and 141). The account is the race's reference, its heat and the bib, in one string.
+ * Three patterns: the runner and the bib in the page's title ("FALL Mor (N°347)", the degree sign matched as any
+ * character so the encoding never decides), and the official time in its own cell. A runner who did not finish has
+ * "00:00:00" there; a bib nobody wore answers an empty page, which no pattern matches.
+ */
+export const BREIZH_CHRONO_RUNNER: AttestedSource = {
+  id: "breizh-chrono-runner",
+  service: "Breizh Chrono",
+  accept: "text/html",
+  accepts: (account) => /^\d{10,16}-\d{1,6}\|[a-z0-9-]{1,40}\|\d{1,6}$/.test(account),
+  url: (account) => {
+    const [ref, heat, bib] = account.split("|");
+    return `https://resultats.breizhchrono.com/bc/resultats/coureur.jsp?ref=${ref}&heat=${heat}&dossard=${bib}`;
+  },
+  matches: [
+    { type: "regex", value: '<h1 class="title[^"]*"\\s*>(?<runner>[^<(]+?)\\s*\\(N[^\\d<]{0,3}(?<bib>\\d{1,6})\\)</h1>' },
+    { type: "regex", value: '<span class="timeTitle">Temps Officiel</span>\\s*<span class="timeValue">(?<official>\\d{1,2}:\\d{2}:\\d{2})</span>' },
+  ],
+};
+
+/**
  * A credential's public record on Accredible (D213), the JSON its page is drawn from, measured on a live credential on
  * 24 Sep 2026. Seven patterns, each anchored on its own key or object: the uuid and the title together, the day of
  * issue, expired, revoked, private, the recipient's name inside the recipient object (its masked email matched and
@@ -379,7 +401,7 @@ export const ACCREDIBLE_CREDENTIAL: AttestedSource = {
   ],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, MITX_ONLINE_CERTIFICATE, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, MITX_ONLINE_CERTIFICATE, BREIZH_CHRONO_RUNNER, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
 
 /**
  * The headers a source is read with, which is part of what is fetched and therefore lives with the sources: it is

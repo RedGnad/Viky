@@ -28,6 +28,7 @@ import {
   COURSERA_CERTIFICATE as COURSERA_CONDITION,
   EDX_CERTIFICATE as EDX_CONDITION,
   MITX_ONLINE_CERTIFICATE_LINE,
+  MARATHON_FINISH_LINE,
   ACCREDIBLE_CREDENTIAL as ACCREDIBLE_CONDITION,
   DUOLINGO_ENGLISH_TEST,
   type Condition,
@@ -49,6 +50,7 @@ import {
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
 import { EDX_DURATION_DAYS, EDX_GOAL_TYPE, EDX_HAS_IT, edxCertificateIdOf, edxCourseOf, edxSubject } from "./edx-certificate";
 import { MITX_ONLINE_DURATION_DAYS, MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineCourseOf, mitxOnlineKeyOf, mitxOnlineSubject } from "./mitx-online-certificate";
+import { isValidBib, MARATHON_DURATION_DAYS, MARATHON_FINISH, MARATHON_GOAL_TYPE, marathonRaceById, marathonSubject, marathonTargetInWords, marathonTargetUnderHours } from "./marathon";
 import { ACCREDIBLE_DURATION_DAYS, ACCREDIBLE_GOAL_TYPE, ACCREDIBLE_HAS_IT, accredibleCourseOf, accredibleIdOf, accredibleSubject } from "./accredible-credential";
 import { CREDLY_DURATION_DAYS, CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyBadgeIdOf, credlyPairOf, credlySubject } from "./credly-badge";
 import {
@@ -362,6 +364,8 @@ export type CertificateCondition = Readonly<{
       nothing: string;
       /** Asked as a list rather than a search while the list is short (D247): the university's portals. */
       listed?: boolean;
+      /** The list is the register of races (D273), drawn by its own chooser. */
+      races?: boolean;
     }>;
     /** The line of the check screen. */
     row: string;
@@ -625,6 +629,69 @@ export const MITX_ONLINE_MILESTONE: CertificateCondition = {
  * funder names: a certification is read by the pair of ids its issuer publishes, so it is chosen from the short list
  * whose ids we have read, rather than named by pasting a link.
  */
+/**
+ * "Finish a marathon" (D273): the certificate shape, with the runner's name asked, the race chosen from the register
+ * in a sheet (its chooser comes with the screens), and the target typed as hours, or 0 for "finish". The link the
+ * person gives is their bib, on the gift's page, before the race starts.
+ */
+export const MARATHON_MILESTONE: CertificateCondition = {
+  ...COURSERA_MILESTONE,
+  condition: MARATHON_FINISH_LINE,
+  goalType: MARATHON_GOAL_TYPE,
+  asksName: true,
+  readPath: "/api/marathon/result",
+  validLink: (value) => isValidBib(value),
+  validName: (value) => normaliseCertificateName(value).split(" ").filter(Boolean).length >= 2,
+  // Hours to finish under, with a decimal for the half hours (4.5), or 0 for "finish" whatever the time.
+  validTarget: (value) => value === 0 || (value > 0 && value < 24),
+  targetUnits: (hours) => (hours === 0 ? MARATHON_FINISH : marathonTargetUnderHours(hours)),
+  subject: ({ name, course }) => marathonSubject(name, String(course ?? "")),
+  course: {
+    label: "The race",
+    help: "Choose the race from the ones Viky reads.",
+    slugOf: (pasted) => marathonRaceById(pasted.trim())?.raceId,
+    search: { path: "/api/marathon/races", placeholder: "Choose the race", nothing: "Viky reads no race by that name yet.", listed: true, races: true },
+    row: "Which race",
+    named: (course) => `This gift will be for ${marathonRaceById(course.split(",")[0].trim())?.name ?? course}.`,
+  },
+  target: {
+    label: "Finish, or under how many hours?",
+    help: "0 for finishing whatever the time. Otherwise the hours to finish under, with a decimal for the half hours, like 4.5.",
+    min: 0,
+    max: 23.9,
+    step: 0.1,
+    suggested: 0,
+    inWords: (value) => (value === 0 ? "finish the race" : marathonTargetInWords(marathonTargetUnderHours(value))),
+  },
+  duration: MARATHON_DURATION_DAYS,
+  words: {
+    ...COURSERA_MILESTONE.words,
+    detailQuestion: "Their name, the race, and the time",
+    nameLabel: "Their name, as the race will print it",
+    nameHelp: "Their full name as they registered for the race. Case, accents and the order of the names do not matter; the name itself must match.",
+    linkLabel: "Your bib number",
+    linkHelp: "The number on your bib, entered before the race starts. After the finish, Viky reads your line on the timing company's results page.",
+    whatIsRead: "Viky reads three things from the timing company's page: the name on your line, your bib and your official time. It keeps those with the gift and nothing else.",
+    check: "Read my result",
+    checking: "Reading the results page",
+    goal: (target) => (target <= MARATHON_FINISH ? "Finish the race" : `Finish the race in ${marathonTargetInWords(target).replace("finish in ", "")}`),
+    mustShow: (name, target) => `The results page has to carry a line for ${name}'s bib, with that name and a finish time${target <= MARATHON_FINISH ? "" : `, ${marathonTargetInWords(target).replace("finish ", "")}`}. Nothing else is read from it.`,
+    durationHelp: "The result has to be read inside that time: make it end well after the race.",
+    whenReached: "When they finish, all of this becomes theirs",
+    refusals: {
+      ...COURSERA_MILESTONE.words.refusals,
+      targetShape: "0 to finish whatever the time, or the hours to finish under, like 4.5.",
+      nameShape: "Type their name as they registered for the race, first name and family name.",
+      linkShape: "A bib number is one to six figures.",
+      notPublic: "The timing company's page could not be read.",
+      expired: "The timing company has no finish time for that bib.",
+      notFound: "No runner answers to that bib in that race. Check the number on your bib.",
+      anotherName: "That line is in another name than the one this gift is for, so it cannot pay.",
+      below: (target, metric) => (metric === 0 ? "The results page has no finish time for that bib." : `That time is not under the hours this gift is for: it has to ${marathonTargetInWords(target)}.`),
+    },
+  },
+};
+
 export const CREDLY_MILESTONE: CertificateCondition = {
   condition: CREDLY_BADGE,
   shape: CERTIFICATE_SHAPE,
@@ -1361,6 +1428,7 @@ const CERTIFICATES: readonly CertificateCondition[] = [
   COURSERA_MILESTONE,
   EDX_MILESTONE,
   MITX_ONLINE_MILESTONE,
+  MARATHON_MILESTONE,
   CREDLY_MILESTONE,
   ACCREDIBLE_MILESTONE,
   TOEFL_SHOWN_MILESTONE,

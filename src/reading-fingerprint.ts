@@ -31,4 +31,4 @@ export function fingerprintOfContents(contents: readonly string[]): string {
  * fails if this line is not it, so the number cannot quietly fall behind the code: a commit that touches either file
  * has to change this line, which is the moment to redeploy the worker (docs/OPERATIONS.md).
  */
-export const READING_FINGERPRINT = "0xe62a901d425b94eca14d411a07a17dd3701e9e68204fe0d35a062d78085bfa33";
+export const READING_FINGERPRINT = "0x6b51fb26b2477ab1862a406f4c616295f8c30c3ea17460eb86ce42ed8eb87fad";

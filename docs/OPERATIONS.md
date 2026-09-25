@@ -996,6 +996,19 @@ Provider id `viky:provider:chsi-enrolment-shown:v1` = `0xe6bb6add0b9555f1d7cc0b0
 `pnpm safe:session` batches it with the other missing goals. The line opens when our provider is registered from a
 real CHSI report (docs/reclaim/chsi-enrolment-shown-provider.md) and pinned in `CHSI_PROVIDER`.
 
+## Goal 30 on the milestone contract: a marathon finished, read from Breizh Chrono (D273)
+
+Provider id `viky:provider:breizh-chrono-zkfetch:v1` = `0x59a029732fded0190d8c59b695d62b1410e08d6ca82dd5284b7a9e7cf9f80b55`, shape 1, data
+`0x5ba19152000000000000000000000000000000000000000000000000000000000000001e59a029732fded0190d8c59b695d62b1410e08d6ca82dd5284b7a9e7cf9f80b550000000000000000000000000000000000000000000000000000000000000001`.
+`pnpm safe:session` batches it with any other missing goal, carried by the relayer. The source `breizh-chrono-runner`
+is in the shared list: the service is redeployed from the branch before the merge, on the fingerprint
+`0x6b51fb26…7fad`.
+
+**A race is added** by one row of `MARATHON_RACES` (src/marathon.ts): the timing company's reference and heat, read
+from the race's page (`/resultats-courses/<slug>-<ref>/<heat>`, the reference is the tail of the slug), its name, its
+town and country, and its `startDate` as the page's schema.org data prints it, which is when the bib field closes.
+The next: the Marathon de Paris, the day its site answers (a 500 on 26 Sep 2026).
+
 ## Goal 29 on the milestone contract: an MIT course certificate from MITx Online (D222)
 
 Provider id `viky:provider:mitx-online-certificate-zkfetch:v1` = `0xf5fc73bf26b45520382592188d8fd1f5fcb1c82bb6a37a53f87388790b0931c1`, shape 1, data

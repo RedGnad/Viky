@@ -7127,3 +7127,29 @@ yet", a treasury that cannot pay refuses cleanly, a failure after the money arri
   has used it yet." as for the conditions. A data top-up is written as `data` on its row so the three are told apart.
 - **The legal page** says the route exists, and what happens when it cannot pay.
 - **Production**: `pnpm db:migrate` run in the same pass, for the gift card's sealed code column.
+
+## D273, 26 Sep 2026: "Finish a marathon", read from the timing company's results page
+
+The founder, 26 Sep 2026: a new condition, family Move, a milestone read for the person: the public results page
+of the timing company attests, as an examination board does. One line per timing company, one race per gift, the
+runner's name and bib as public inputs, "finish" or "under X hours". First race: the Marathon de Dakar, timed by
+Breizh Chrono. Verifiability by three ties: the name written by the funder at creation, the bib entered by the
+person before the race starts, and the timing company's line read by the service with that bib, that name and a
+finish time. On the chain, the race and the bib; the name stays in the terms, never published.
+
+- **Read on 26 Sep 2026.** The results list makes no further call: its rows are embedded in the page, base64 of the
+  bytes XOR "K", decoded by the page's own script, so no pattern can match them. Each runner has a server-rendered
+  page instead, `/bc/resultats/coureur.jsp?ref=<ref>&heat=<heat>&dossard=<bib>`: the name and the bib in its title,
+  "Temps Officiel" in its cell. A DNF or DNS keeps its page with "00:00:00"; a bib nobody wore answers an empty
+  page. The export CSV of the 2023 race: 142 FINISHER, 194 DNS, 20 DNF, 4 DSQ.
+- **The metric** is the finish time as seconds under twenty-four hours, so that the contract's "at least the
+  target" reads "under X hours"; "finish" is a target of one.
+- **The day the gift is judged by is the day the result is read**, not the race's date: the bib entered before the
+  start (the field closes then) ties the reading to the race, and a gift made on a race already run cannot bind a
+  bib. Default applied, to confirm: it is what lets the founder's three proofs run on a 2023 result.
+- **Terms**, read the same day: Klikego's CGU (26 Jun 2026) and legal notice; on the judges' page, the risk assumed.
+- **Proof (a) of the founder's three, done on 25 Sep 2026 at 21:43 UTC**: the reading service, redeployed on the
+  fingerprint `0x6b51fb26…7fad`, read the runner's page of bib 347 of the Marathon de Dakar 2023 through the attested
+  fetch: "FALL Mor", "02:30:05", 9,005 seconds, metric 77,395, one proof, nullifier `0x5ff69924…80c0`.
+- **Being built** until goal 30 is signed. The screens (the race chosen in a sheet, the name at creation, the bib on
+  the gift's page, the line read) and proofs (b) and (c) come next.
