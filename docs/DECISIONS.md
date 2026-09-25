@@ -6957,3 +6957,9 @@ grades). The other developer links to it from the empty state of "Which universi
   light falls to 0.42 on the far side (D255: 0.1 to 0.9), in the body's own deeper colour (`--character-hero-to`)
   multiplied at 45 %, where D255's dots were the ink. The dots are round-capped strokes of no length, one path per
   size, eight in all: 11.5 kB of markup, 2.5 kB once compressed. Only the landing's figure wears it (`HeroMoment`).
+
+## D261, 25 Sep 2026: the landing's halftone a third less fine
+
+- The founder, 25 Sep 2026, on D260: "moins fin les points". The grid goes from 1.2 to 1.6 apart and the dots from
+  0.06 to 0.42 to 0.08 to 0.56 in radius, a third larger, half way to the coarse screen of D255; the colour and its
+  45 % multiply stay.

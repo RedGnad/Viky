@@ -299,7 +299,9 @@ function Case({ id }: Readonly<{ id: string }>) {
  * rather than a grey screen laid on it. The dots are drawn as round-capped zero-length strokes, one path per size, so a
  * thousand dots are eight elements and a few kilobytes, not a thousand circles.
  */
-const HALFTONE = { step: 1.2, from: 0.06, to: 0.42, sizes: 8 } as const;
+// Less fine since D261 (the founder: "moins fin les points"): 1.6 apart and 0.08 to 0.56, a third larger than D260's
+// 1.2 and 0.06 to 0.42, half way to the coarse screen of D255.
+const HALFTONE = { step: 1.6, from: 0.08, to: 0.56, sizes: 8 } as const;
 function Halftone({ id }: Readonly<{ id: string }>) {
   const paths = Array.from({ length: HALFTONE.sizes }, () => [] as string[]);
   for (let row = 0, y = 4; y <= 36; row += 1, y += HALFTONE.step * 0.866) {

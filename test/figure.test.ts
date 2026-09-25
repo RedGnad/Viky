@@ -136,7 +136,7 @@ test("the landing's figure wears a fine halftone in the body's own colour, drawn
   const widths = strokes.map((m) => Number(m[2]));
   assert.ok(widths.every((w, i) => i === 0 || w > widths[i - 1]), "growing away from the light");
   const dots = strokes.reduce((sum, m) => sum + (m[1].match(/h0/g) ?? []).length, 0);
-  assert.ok(dots > 500 && dots < 1200, `${dots} dots`);
+  assert.ok(dots > 250 && dots < 700, `${dots} dots`);
   assert.ok(part.length < 20_000, `a few kilobytes: ${part.length}`);
-  assert.ok(widths[0] < 0.2 && widths[7] > 0.75, "fine: from about 0.1 to 0.8 across");
+  assert.ok(widths[0] < 0.25 && widths[7] > 1, "a little less fine since D261: from about 0.2 to 1.1 across");
 });
