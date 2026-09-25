@@ -1002,7 +1002,7 @@ Provider id `viky:provider:breizh-chrono-zkfetch:v1` = `0x59a029732fded0190d8c59
 `0x5ba19152000000000000000000000000000000000000000000000000000000000000001e59a029732fded0190d8c59b695d62b1410e08d6ca82dd5284b7a9e7cf9f80b550000000000000000000000000000000000000000000000000000000000000001`.
 `pnpm safe:session` batches it with any other missing goal, carried by the relayer. The source `breizh-chrono-runner`
 is in the shared list: the service is redeployed from the branch before the merge, on the fingerprint
-`0x6b51fb26…7fad`.
+`0x97df1bdf…1aa0`.
 
 **A race is added** by one row of `MARATHON_RACES` (src/marathon.ts): the timing company's reference and heat, read
 from the race's page (`/resultats-courses/<slug>-<ref>/<heat>`, the reference is the tail of the slug), its name, its
