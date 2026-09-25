@@ -6995,3 +6995,17 @@ grades). The other developer links to it from the empty state of "Which universi
   share button and "about ten minutes"; `UNIVERSITY_CHOICE` keeps only the list's own words and the invitation. The
   search route and `universityNamed` are unchanged, so a gift made before, whose title carries the mark, still reads as
   it was made. This replaces D247's help, fold and empty state; its list by country stays.
+
+## D265, 26 Sep 2026: every link to Viky carries the day's figure on the paper card
+
+- The founder, 26 Sep 2026: the pictures under shared links were dated. Measured: a gift's link drew the old gift (the
+  box and its bow) on the sun, from the drawing of 17 Sep; every other link, the landing's among them, carried no
+  picture at all, and a description the screens had left behind ("The money is already in their name...").
+- Four directions were drawn at 1200 by 630 for both links (night, day on the paper card, the sun kept, a split); the
+  founder chose B, the day: the lavender ground, the paper card along the foot as on the landing, the figure standing
+  on its edge with the halftone every figure wears, the words on the card, the name in a corner.
+- `app/og/preview.tsx` draws it once for both: a gift's link keeps its own sentence and line (`src/gift-preview.ts`,
+  the funder's name only with the link's key), and the site's link (`app/opengraph-image.tsx`, the picture of every
+  page that names none) says the landing's promise and its sentence, which are also the site's description now. The
+  figure is written by `pnpm make:icon` into `app/kit/figure-day.svg` in the day look's own colours, read from the
+  stylesheet as the icon's are (`scripts/look-figure.ts`); the gift's old drawing, its file and its helper are gone.

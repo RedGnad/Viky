@@ -7,7 +7,6 @@ import { Character } from "../app/kit/Character";
 import { CHARACTERS_FILE } from "../app/kit/character-file";
 import { characterKey, faceOf, REFERENCED_DRAWINGS } from "../app/kit/character-key";
 import { charactersFile, charactersVersion } from "../app/kit/character-sprite";
-import { characterSvg } from "../app/kit/character-svg";
 
 /**
  * The named characters (D206): the file is what the drawings make today, the address carries its version, a character
@@ -58,7 +57,6 @@ test("every character whose parts move is written into the page", () => {
   assert.match(row, /drawn=\{characterOf\(state\) === "earned" \|\| characterOf\(state\) === "returned" \? "inline" : "referenced"\}/, "the row of a gift's page writes only the days that move (D216)");
   assert.match(readFileSync("app/kit/DayStrip.tsx", "utf8"), /drawn=\{characterOf\(day\) === "earned" \|\| characterOf\(day\) === "returned" \|\| \(wake !== undefined && index === 0\) \? "inline" : "referenced"\}/, "the days that jump or leave in an arrival, and the first day of a card that opens its eyes (D226)");
   assert.match(readFileSync("app/components/PayGift.tsx", "utf8"), /<Success>\s*<Character state="gift" drawn="inline"/, "the gift answering a payment");
-  assert.match(characterSvg("gift"), /data-part="figure"/, "the picture drawn on the server writes the drawing, since it has no page to read a file from");
   assert.match(readFileSync("app/layout.tsx", "utf8"), /preload\(CHARACTERS_FILE, \{ as: "image"/, "the file is asked for in the head");
   assert.match(readFileSync("next.config.mjs", "utf8"), /source: "\/characters\.svg", headers: \[\{ key: "Cache-Control", value: "public, max-age=31536000, immutable" \}\]/);
 });

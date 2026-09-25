@@ -119,8 +119,8 @@ test("the app's icon is the rig's head, in the stylesheet's own night colours (D
   assert.ok(!head.includes('data-part="arm"') && !head.includes('data-part="leg"'), "no limbs on the head alone");
   assert.match(head, /viewBox="0 0 64 40"/, "its box stops at the diamond");
   const script = readFileSync("scripts/make-icon.ts", "utf8");
-  assert.match(script, /createElement\(Figure, \{ id: "icon", limbs: false \}\)/);
-  assert.match(script, /':root\[data-theme="dark"\] \{'/, "the night values read from the stylesheet, never copied by hand");
+  assert.match(script, /figureInLook\("dark", \{ id: "icon", limbs: false \}\)/);
+  assert.match(readFileSync("scripts/look-figure.ts", "utf8"), /':root\[data-theme="dark"\] \{'/, "the night values read from the stylesheet, never copied by hand");
   assert.doesNotMatch(script, /#3B3266/, "the night edge of D135 is not kept in the script");
 });
 
@@ -154,4 +154,24 @@ test("the three destinations' figures wear the same halftone as the landing's (D
   // Ids stay apart, so two figures on one page keep their own screen.
   const gifts = renderToStaticMarkup(createElement(Scene, { which: "gifts" }));
   assert.ok(gifts.includes('id="gifts-one-screen"') && gifts.includes('id="gifts-two-screen"'));
+});
+
+test("every link to Viky carries the same picture, the day's figure on the paper card (D265)", async () => {
+  const { figureInLook, lookValues, PREVIEW_FIGURE } = await import("../scripts/look-figure");
+  // The file the routes draw is what the component draws, in the day look: run pnpm make:icon when either changes.
+  assert.equal(readFileSync("app/kit/figure-day.svg", "utf8").trim(), figureInLook("light", PREVIEW_FIGURE), "run pnpm make:icon");
+  assert.equal(PREVIEW_FIGURE.halftone, true, "the halftone every figure wears");
+  // The picture's colours are the day look's own.
+  const { PREVIEW_LOOK } = await import("../app/og/preview");
+  const day = lookValues("light");
+  assert.deepEqual(
+    { ground: day["--background"], ink: day["--text"], paper: day["--paper"], onPaper: day["--on-surface"], quiet: day["--on-surface-muted"], edge: day["--card-placed-edge"] },
+    { ...PREVIEW_LOOK },
+  );
+  // The gift's link and the site's draw with the same layout; the site's says the landing's promise.
+  assert.match(readFileSync("app/api/gift/[id]/preview-image/route.tsx", "utf8"), /return previewImage\(\{ title: preview\.title, under: preview\.description/);
+  assert.match(readFileSync("app/opengraph-image.tsx", "utf8"), /previewImage\(\{ title: HOME\.promise, under: HOME\.promiseUnder/);
+  assert.match(readFileSync("app/layout.tsx", "utf8"), /const APP_DESCRIPTION = `\$\{HOME\.promise\} \$\{HOME\.promiseUnder\}`;/);
+  const config = readFileSync("next.config.mjs", "utf8");
+  assert.match(config, /"\/opengraph-image": \["\.\/app\/fonts\/\*\.ttf", "\.\/app\/kit\/figure-day\.svg"\]/, "the files travel with the route");
 });

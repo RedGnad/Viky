@@ -19,6 +19,7 @@ import { renderMinute } from "@/src/render-minute";
 import { draftFromTerms } from "@/src/gift-draft";
 import { moneyForTheReader } from "@/src/reader-money";
 import { THEME_BOOT_SCRIPT } from "@/src/theme";
+import { HOME } from "@/src/sentences";
 import { LAUNCH_TOP_SCRIPT } from "@/src/launch-top";
 import { Pressed } from "./kit/Pressed";
 import { Register } from "./serwist/Register";
@@ -28,8 +29,8 @@ import { CHARACTERS_FILE } from "./kit/character-file";
 const APP_NAME = "Viky";
 const APP_DEFAULT_TITLE = "Viky";
 const APP_TITLE_TEMPLATE = "%s, Viky";
-const APP_DESCRIPTION =
-  "The money is already in their name. Every day they miss, a piece comes back to you.";
+/** What a link to Viky says under its title (D265): the landing's promise and its sentence, as the screens say them now. */
+const APP_DESCRIPTION = `${HOME.promise} ${HOME.promiseUnder}`;
 
 export const metadata: Metadata = {
   applicationName: APP_NAME,
