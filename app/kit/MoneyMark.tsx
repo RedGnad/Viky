@@ -20,26 +20,25 @@ import { currencyMark } from "@/src/amount-in-currency";
  */
 
 /**
- * The euro: a C in one stroke, two bars through it, 29 tall on the line. Each bar is centred on the point where it
- * crosses the C's arc (the founder, 25 Sep 2026, D257: the bars sat to the right of it, which is not the sign's
- * construction): the arc's stroke passes x 3.34 at the upper bar's height and 3.43 at the lower one's, so the upper bar
- * runs 5.5 either side of that and the lower one, a little shorter as the sign draws it, 5 either side. The box widens
- * to the left for the bars' ends and their round caps.
+ * The euro: a C in one stroke, two bars through it, 29 tall on the line. Where the bars sit is the founder's eye twice
+ * over (25 Sep 2026): centred at x 9, well inside the bowl, they sat too far right; centred on the arc's crossing (x
+ * 3.3, D257), too far left. They are centred half way between the two, at x 6.2, the upper 11 long and the lower 10,
+ * which leaves a little more of each bar outside the bowl than inside it, as the drawn sign does.
  */
 function Euro() {
   return (
     <svg
-      viewBox="-4.9 0 25.4 29"
+      viewBox="-2.3 0 22.9 29"
       aria-hidden
       focusable="false"
-      style={{ height: "0.7436em", width: "0.6513em" }}
+      style={{ height: "0.7436em", width: "0.5872em" }}
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"
     >
       <path d="M17.35 5.95 A 8.6 11.5 0 1 0 17.35 23.05" strokeWidth="6" />
-      <path d="M-2.16 11.3 H 8.84" strokeWidth="5.2" />
-      <path d="M-1.57 18.1 H 8.43" strokeWidth="5.2" />
+      <path d="M0.7 11.3 H 11.7" strokeWidth="5.2" />
+      <path d="M1.2 18.1 H 11.2" strokeWidth="5.2" />
     </svg>
   );
 }

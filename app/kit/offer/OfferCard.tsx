@@ -5,15 +5,14 @@ import { useMoneyStart } from "@/src/client/money-start";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { formatAusd } from "@/src/gift-reader";
 import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type GiftDraft } from "@/src/gift-draft";
-import { conditionById, UNIVERSITY_ENROLLMENT_SHOWN } from "@/src/conditions";
-import { certificateById, milestoneById } from "@/src/milestone-conditions";
+import { conditionById } from "@/src/conditions";
 import { cardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
 import { figureWithMark, typedFromUnits, unitsFromTyped } from "@/src/amount-in-currency";
 import { figureIn } from "@/src/currencies";
 import { startingFigure } from "@/src/starting-amount";
 import { dollarsHeld, type Holdings } from "../money";
 import { AmountError } from "@/src/money";
-import { OFFER as W, UNIVERSITY_CHOICE } from "@/src/sentences";
+import { OFFER as W } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, CHOICE, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { CardFace } from "../GiftCard";
 import { Character } from "../Character";
@@ -129,7 +128,6 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
   };
   const quick = [bounds.min, bounds.suggested, bounds.max];
   /** Under a certificate's or a climb's one character: the register's own line on when all of it becomes theirs. */
-  const reached = certificateById(draft.conditionId)?.words.whenReached ?? milestoneById(draft.conditionId)?.words.whenReached;
   /** What the amount says back when it cannot be read as money: the same rule the route refuses by. */
   let amountRefusal: string | undefined;
   if (typed.trim().length > 0) {
@@ -201,12 +199,10 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
               {shape === "climb" || shape === "stamp" ? (
                 /* One character and nothing else (D132): the meter's bar belongs to a gift that has been read. It stands
                    in the middle of the card rather than at its left margin (the founder, 21 Sep 2026). */
-                <>
-                  <Character state="toCome" className="h-auto w-[96px]" standing={false} />
-                  {reached ? <span className={`${HELP} text-center`}>{reached}</span> : null}
-                  {/* What the same portal will be asked next, being built, said where enrolment is chosen (D247). */}
-                  {draft.conditionId === UNIVERSITY_ENROLLMENT_SHOWN.id ? <span className={`${HELP} text-center`}>{UNIVERSITY_CHOICE.soon}</span> : null}
-                </>
+                /* And no sentence under it (D258, the founder, 25 Sep 2026): the register's "when it becomes theirs" and
+                   the coming-soon line said what the condition's own line already says, and a long one stretched the
+                   card. What a mark is worth is said only under a row of days, where it is a figure nobody else gives. */
+                <Character state="toCome" className="h-auto w-[96px]" standing={false} />
               ) : (
                 <>
                   <DayStrip

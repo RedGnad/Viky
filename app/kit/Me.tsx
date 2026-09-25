@@ -1,5 +1,4 @@
 "use client";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import * as mera from "@/src/account/mera";
@@ -31,8 +30,9 @@ import { Shell } from "./Shell";
  * carries the same one door as the page without an account, and nothing else to do.
  */
 export function Me() {
-  const { address, reach, signOut, useAnotherAccount } = useAccount();
-  const router = useRouter();
+  const { address, reach, leave, useAnotherAccount } = useAccount();
+  /** Set while the session closes: the page stays as it is, and the key says what is happening (D258). */
+  const [leaving, setLeaving] = useState(false);
   /** What every screen reads in, and the list it may be changed from, both from one place (D152). */
   const money = useDisplayCurrency(address);
   const [reading, setReading] = useState(false);
@@ -97,16 +97,18 @@ export function Me() {
         {reach === "reading" ? <p className={HELP}>{W.passkeyWhenMoneyMoves}</p> : null}
         <div className="flex flex-wrap gap-[var(--tap-gap)]">
           {/* Signing out on the page that needs an account left a screen with nothing on it (D139): it lands on the
-              page anybody can read, which is the one with the card. */}
+              page anybody can read, which is the one with the card, and nothing for nobody is drawn on the way
+              (D258: this page stays until the landing is ready to be painted). */}
           <button
             type="button"
+            disabled={leaving}
             onClick={() => {
-              signOut();
-              router.push("/");
+              setLeaving(true);
+              void leave();
             }}
             className={INLINE_BUTTON}
           >
-            {W.signOut}
+            {leaving ? W.leaving : W.signOut}
           </button>
           <button type="button" onClick={useAnotherAccount} className={INLINE_BUTTON}>
             {W.anotherAccount}

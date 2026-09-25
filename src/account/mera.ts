@@ -195,7 +195,11 @@ export async function passkeyOutputFor(prfSalt: Uint8Array<ArrayBuffer>): Promis
 }
 
 /** Zeroes the key. Called on sign-out and after ten idle minutes. */
-export function signOut(): void {
+/**
+ * Closes the session and forgets the account. `quiet` does it without telling the screens (D258): a sign-out that is
+ * about to load the landing as a new document must not redraw the page it leaves as a page for nobody first.
+ */
+export function signOut({ quiet = false }: { quiet?: boolean } = {}): void {
   if (idleTimer) {
     clearTimeout(idleTimer);
     idleTimer = undefined;
@@ -205,7 +209,7 @@ export function signOut(): void {
   session = undefined;
   account = undefined;
   idleDeadlineMs = undefined;
-  if (wasSignedIn) notify();
+  if (wasSignedIn && !quiet) notify();
 }
 
 /** The live viem account, or undefined when signed out. Touching it extends the idle timer. */

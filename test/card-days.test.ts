@@ -26,8 +26,11 @@ test("the card is three groups: who and what, the days and the money, the action
   assert.match(card, /className=\{`\$\{PRIMARY_BUTTON\} mt-\[var\(--space-xl\)\]`\}/, "the action in its own group");
   assert.doesNotMatch(card, /W\.eachDay|mt-\[var\(--space-lg\)\]`\} disabled/, "the old sentence and the old spacing are gone");
   assert.match(card, /<span className=\{CHOICE\}>\{inTheirCurrency\(units \/ BigInt\(days\)\)\}<\/span> <span className=\{HELP\}>\{W\.aDay\}<\/span>/, "what one mark is worth, the figure in the title face");
-  assert.match(card, /<Character state="toCome" className="h-auto w-\[96px\]" standing=\{false\} \/>\n\s*\{reached \? <span className=\{`\$\{HELP\} text-center`\}>\{reached\}<\/span> : null\}/, "a certificate or a climb: one character at 96 and the register's line under it");
-  assert.match(card, /certificateById\(draft\.conditionId\)\?\.words\.whenReached \?\? milestoneById\(draft\.conditionId\)\?\.words\.whenReached/, "the line is the register's, never the card's own");
+  // A certificate or a climb: one character at 96 and nothing under it (D258): no sentence stretches the card.
+  const single = card.slice(card.indexOf('shape === "climb" || shape === "stamp" ? ('), card.indexOf("<DayStrip"));
+  assert.match(single, /<Character state="toCome" className="h-auto w-\[96px\]" standing=\{false\} \/>/);
+  assert.doesNotMatch(single, /<span/, "no line under the single character");
+  assert.doesNotMatch(card, /whenReached/);
   assert.equal(OFFER.aDay, "a day");
   assert.equal(OFFER.missedBack, "What's missed comes back to you.");
 });

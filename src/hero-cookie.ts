@@ -11,6 +11,11 @@ export const HERO_COOKIE = "viky.hero";
 
 export const heroPlayedFromCookie = (value: string | undefined | null): boolean => value === "1";
 
+/** The cookie gone: a sign-out is a new visit, and the landing it arrives on plays its moment again (D258). */
+export function heroCookieCleared(secure: boolean): string {
+  return `${HERO_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure ? "; Secure" : ""}`;
+}
+
 /** The cookie as the browser writes it once the moment has played: for the session, this site only. */
 export function heroCookieText(secure: boolean): string {
   return `${HERO_COOKIE}=1; Path=/; SameSite=Lax${secure ? "; Secure" : ""}`;

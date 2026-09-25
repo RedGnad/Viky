@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import test, { after, before } from "node:test";
+import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { GET as listGet } from "../app/api/portals/route";
 import { configurePortalStore, ensurePortalSchema, savePortal } from "../src/portal-store";
@@ -86,11 +86,10 @@ test("the sheet asks it as the brief says, one line of help, the rest folded, an
   assert.equal(UNIVERSITY_CHOICE.help.split(". ").length, 1, "one sentence");
   assert.match(UNIVERSITY_CHOICE.how.join(" "), /password never reaches Viky/);
   assert.match(UNIVERSITY_CHOICE.how.join(" "), /nothing about their marks is read/);
-  assert.equal(UNIVERSITY_CHOICE.soon, "Passed the year, and grades: soon, university by university.");
   // Not listed: the funder hands the student the page the catalogue line wrote (D246), by share sheet or clipboard.
   assert.match(chooser, /\$\{window\.location\.origin\}\/add-your-university/);
   assert.match(chooser, /navigator\.share\(\{ text: W\.shareText, url \}\)/);
   assert.ok(existsSync("app/add-your-university/page.tsx"), "the page the link opens");
   assert.match(UNIVERSITY_CHOICE.notHere, /about ten minutes/);
-  assert.match(card, /draft\.conditionId === UNIVERSITY_ENROLLMENT_SHOWN\.id \? <span className=\{`\$\{HELP\} text-center`\}>\{UNIVERSITY_CHOICE\.soon\}<\/span>/);
+  assert.doesNotMatch(card, /UNIVERSITY_CHOICE/, "no coming-soon line on the card since D258");
 });

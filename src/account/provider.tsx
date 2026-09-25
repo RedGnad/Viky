@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Address, LocalAccount } from "viem";
 import { currentServerSession, signInToServer, signOutOfServer } from "../client/server-session";
+import { heroCookieCleared } from "../hero-cookie";
 import { type AccountError, accountError, toAccountError } from "./errors";
 import { announcedAccount, sessionReach, type SessionReach } from "./session-gate";
 import * as mera from "./mera";
@@ -48,6 +49,12 @@ export type AccountContextValue = {
   createAccount: (displayName: string) => Promise<void>;
   signIn: () => Promise<void>;
   signOut: () => void;
+  /**
+   * Signs out from a screen and goes to the landing (D258): the server's session is closed first while the screen
+   * stays as it is, then the landing loads as a new document, which the browser paints over the old one only when it
+   * is ready, so no screen for nobody shows in between; and it is a new visit, so the hero moment plays again.
+   */
+  leave: () => Promise<void>;
   /**
    * Signs out and lets go of the passkey this device remembers, so the next sign-in offers the choice again.
    * Someone who holds two accounts, a funder and a recipient, had no way back to the other one: sign-in
@@ -156,6 +163,19 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
         setServerSessionFor(undefined);
         void signOutOfServer();
       },
+      leave: async () => {
+        await signOutOfServer();
+        mera.signOut({ quiet: true });
+        try {
+          document.cookie = heroCookieCleared(window.location.protocol === "https:");
+        } catch {
+          // A browser that refuses the cookie keeps the moment as played, which is what it had.
+        }
+        // A document load on purpose, not a client navigation: the browser keeps painting this page until the landing
+        // is ready (paint holding), where a client navigation redrew this page for nobody while it waited (D258).
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.assign("/");
+      },
       useAnotherAccount: () => {
         mera.forgetCredential();
         setServerSessionFor(undefined);
@@ -193,6 +213,7 @@ export function ExampleAccountProvider({ children }: { children: ReactNode }) {
       createAccount: async () => undefined,
       signIn: async () => undefined,
       signOut: () => undefined,
+      leave: async () => undefined,
       useAnotherAccount: () => undefined,
       clearError: () => undefined,
     }),

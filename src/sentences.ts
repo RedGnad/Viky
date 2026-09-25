@@ -1036,8 +1036,6 @@ export const UNIVERSITY_CHOICE = {
   sendHow: "Send them how",
   shareText: "Your university is not on Viky yet. Here is how to add it, about ten minutes:",
   copied: "The link is copied. Send it to them.",
-  /** Under the enrolment line on the card: what the same portal will be asked next, being built (D247). */
-  soon: "Passed the year, and grades: soon, university by university.",
 } as const;
 
 export const SHOW_PROOF = {
@@ -1116,6 +1114,8 @@ export const ME = {
   passkeyWhenMoneyMoves: "Your face or fingerprint is asked again the moment money moves.",
   signedOut: "Not signed in on this device.",
   signOut: "Sign out",
+  /** While the session closes, before the landing is painted (D258). */
+  leaving: "Signing out",
   anotherAccount: "Use another account",
   install: "Install Viky on this phone",
   installHow: "On iPhone: tap Share, then Add to Home Screen.",
