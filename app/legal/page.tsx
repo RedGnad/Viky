@@ -81,6 +81,12 @@ export default function LegalPage() {
           Those are their own published lists, read on 16 September 2026, and neither of them is ours to
           change.
         </p>
+        <p>
+          What Viky does not have: no payout to mobile money such as Orange Money or Wave, and no bank transfer in
+          Africa. A third route is being built and is not open yet: a phone top-up, bought on Bitrefill for the
+          person with their own money and sent to the number they give. It is open to nobody until a real top-up has
+          reached a real phone.
+        </p>
       </section>
     </Shell>
   );

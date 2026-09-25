@@ -324,6 +324,19 @@ export default async function JudgesPage() {
             otherwise.
           </li>
           <li>
+            <strong>The phone way out, being built.</strong> What it is: Viky buys a good, a phone top-up, for the
+            person, with the person&apos;s own money. They sign their AUSD over to Viky&apos;s treasury on Monad, and the
+            treasury pays Bitrefill&apos;s invoice in USDC on Base; a failure after the money arrived sends it back, by
+            itself. It is neither an exchange nor a bank payment, which is to be read again the day Viky is a company.
+            It runs on Bitrefill&apos;s Personal API, whose documentation names the Business API for an app that sells
+            its products; its terms say customers are end users and a buyer for resale may be frozen until verified
+            as a company (section 18), and an Agent acts for the customer who pays (section 29). The founder chose the
+            Personal API for the pilot, the risk assumed and written here, and is to ask Bitrefill for its agreement, or
+            for its Business API when the time comes.
+            The account&apos;s own limits are the pilot&apos;s: five top-ups and 500 USD a day for everybody together, and
+            Viky adds 50 USD a person a day. Not open to anybody until a real top-up has reached a real phone.
+          </li>
+          <li>
             <strong>Our own key.</strong> A reading counts because Viky&apos;s evidence signer signed it. That key can
             credit a day; it cannot move money, change a gift&apos;s terms, or take anything back. The journal on this
             page is what makes a signature without a real reading behind it detectable.
