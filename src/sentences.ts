@@ -1342,11 +1342,11 @@ export const YOUR_CODE = {
 } as const;
 
 /**
- * Their phone, the third way out (D238): three screens, where, how much, done. Every amount on them is the order's
+ * Your phone, the third way out (D238): three screens, where, how much, done. Every amount on them is the order's
  * own, priced by Bitrefill before anything moves (docs/SCREEN-CLAIMS.md).
  */
 export const PHONE_OUT = {
-  cardTitle: "Their phone",
+  cardTitle: "Your phone",
   cardLine: "Airtime or data, bought for you on Bitrefill and sent to the number. In Senegal: Orange, Tigo and Expresso.",
   choose: "Top up a phone",
   whereTitle: "Which phone?",

@@ -594,14 +594,14 @@ dollars; and the session countdown. Each test was checked by breaking the rule a
 | "It proves a course taken, not a place at MIT." | the page read is a course or program certificate, and nothing about enrolment | `MITX_ONLINE_CERTIFICATE` reads the title, the name, the day and the id | `test/mitx-online-certificate.test.ts` |
 | "No certificate answers to that link, or it was revoked." | a revoked certificate's page answers 404 | MITx Online's `ActiveCertificatesManager` (mitodl/mitxonline, `courses/models.py`), `readMitxOnlineCertificate` | `test/mitx-online-certificate.test.ts` |
 
-### Their phone, the third way out (D238)
+### Your phone, the third way out (D238)
 
 Offered to an operator's account alone until a real top-up reaches a real number (`PHONE_WAY_OPEN` false), and only
 once Bitrefill and the treasury are configured.
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
-| "Their phone", "Airtime or data, bought for you on Bitrefill and sent to the number. In Senegal: Orange, Tigo and Expresso." | Bitrefill sells those three for Senegal | its Senegal page lists orange-senegal, orange-data-senegal, tigo-senegal, tigo-freedata-senegal, expresso-senegal (read 25 Sep 2026); `operatorsFor` asks per number | `test/bitrefill.test.ts` |
+| "Your phone", "Airtime or data, bought for you on Bitrefill and sent to the number. In Senegal: Orange, Tigo and Expresso." | Bitrefill sells those three for Senegal | its Senegal page lists orange-senegal, orange-data-senegal, tigo-senegal, tigo-freedata-senegal, expresso-senegal (read 25 Sep 2026); `operatorsFor` asks per number | `test/bitrefill.test.ts` |
 | "Viky keeps it until the top-up arrives, then erases it." | the number is written with the order and set to null when it is delivered, refunded or dropped | `markDelivered`, `markRefunded`, `markAbandoned` | `test/phone-treasury.test.ts` |
 | "It takes $X, and $Y stays with you." | $X is the AUSD the order will take, equal to Bitrefill's USDC price rounded up to the unit; $Y is the balance less it | `pricePhoneTopUp`, `usdcUnits` | `test/phone-order.test.ts`, `test/bitrefill.test.ts` |
 | "2,000 XOF is on the phone, through Orange Senegal." | Bitrefill's invoice is complete and every order delivered | `outcomeOf`, `followPhoneTopUp` | `test/phone-order.test.ts` |
