@@ -6726,3 +6726,13 @@ back to the gift's history and the screen.
 - **The face.** The pale arc inside the smile and the grin is gone, and their corners are rounded by a thin stroke of
   the same ink with round joins. The small spot inside the gloss ("sparkle"), which read as a second lighter circle,
   is gone; the gloss and the one dot beside it stay.
+
+## D244, 25 Sep 2026: the suit grows in and out over 400 ms, and the crossed hands are level
+
+- The founder, 25 Sep 2026: the suit's appearance should be a little slower, easing in and out; the two hands of the
+  crossed arms sat at two heights, a subtle, strange asymmetry.
+- The suit grows on Material 3's standard easing, `cubic-bezier(0.2, 0, 0, 1)`, which starts and ends at rest, over
+  its duration token medium 4, 400 ms (both read in `@material/web`'s `_md-sys-motion.scss` on 25 Sep 2026). It was
+  the effects spring, 234 ms, over before it read.
+- The crossed arms end at one height, y 30 for both hands (29.3 and 30.7 before). The forearms still pass at two
+  heights in the middle, so the two lines cross rather than merge into one band.
