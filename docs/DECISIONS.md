@@ -6946,3 +6946,14 @@ grades). The other developer links to it from the empty state of "Which universi
 - Found on the way, in the variants' captures: after a currency was chosen, the focus came back to the key and the
   field's ring, drawn on `focus-within`, framed the whole field in the dark accent, pointer or not. The ring is now the
   figure's alone (`has-[input:focus]`); the key has its own ring for the keyboard.
+
+## D260, 25 Sep 2026: a fine halftone in the body's own colour on the landing's figure
+
+- The founder, 25 Sep 2026: try the halftone again, far finer and more subtle than D255's, only to give the body a
+  little material. Four variants were drawn at the landing's real sizes (272 on a phone, 360 from 1024), day and
+  night, with a crop at twice the size: fine shading in the ink, the shaded side only, an even print grain, and tone on
+  tone. He took the recommendation, tone on tone.
+- `Figure` takes `halftone` again: a staggered grid 1.2 apart (D255's was 2.2), each dot's radius from 0.06 where the
+  light falls to 0.42 on the far side (D255: 0.1 to 0.9), in the body's own deeper colour (`--character-hero-to`)
+  multiplied at 45 %, where D255's dots were the ink. The dots are round-capped strokes of no length, one path per
+  size, eight in all: 11.5 kB of markup, 2.5 kB once compressed. Only the landing's figure wears it (`HeroMoment`).
