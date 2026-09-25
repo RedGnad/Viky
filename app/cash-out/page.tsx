@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 /** A task: the mark, one way back at the same place on every step, the title, a narrow column, no bar. */
 export default function CashOutPage() {
   return (
-    <Shell kind="task" back="/" step={CASH_OUT.title} character={<HeadCharacter />}>
+    // The title is drawn by the screen itself, under the balance on its first step (D270).
+    <Shell kind="task" back="/" character={<HeadCharacter />}>
       <CashOut />
     </Shell>
   );

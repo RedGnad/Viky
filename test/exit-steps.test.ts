@@ -5,7 +5,7 @@ import { AUSD, MON, USDC } from "../src/coins";
 import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, netOfEverything, orderByWhatReaches, readyFor, toTheCent, twoDecimalsDown, unitsOfTwoDecimals } from "../src/exit-steps";
 import { CONVERSION_RESERVE } from "../src/funding-step";
 import { WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT } from "../src/rails";
-import { CASH_OUT } from "../src/sentences";
+import { CASH_OUT, USE_MONEY } from "../src/sentences";
 
 /**
  * The arithmetic of the three steps of the way out (flows W3 to W9, 17 Sep 2026). A payout service is ordered
@@ -136,13 +136,9 @@ test("the ways out are ordered by what reaches the person, after the country has
  */
 test("the way out shows one accent surface at a time, on the action it is waiting for (S4)", () => {
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
-  // The base: the first card carries the accent when it has a figure, and only then; the second never does.
-  assert.match(screen, /const leads = index === 0 && net !== undefined;/);
-  assert.match(screen, /onClick=\{\(\) => start\(way\)\}[^>]*className=\{leads \? PRIMARY_BUTTON : SECONDARY_BUTTON\}/);
-  // The gap is said on that card, and only when both figures exist and this one is the larger.
-  assert.match(screen, /const gap = leads && other && otherNet && net\.net > otherNet\.net \? net\.net - otherNet\.net : undefined;/);
-  assert.match(screen, /W\.moreThan\(figureIn\(gap, net!\.currency\), other\.title\)/);
-  assert.equal(CASH_OUT.moreThan("€2.01", "Your card"), "€2.01 more than to your card.");
+  // The base (D270): one sun, on the first use, the one that gives this person the most; every other use in outline.
+  assert.match(screen, /onClick=\{act\} disabled=\{holdings === null \|\| changeable === 0n\} className=\{index === 0 \? PRIMARY_BUTTON : SECONDARY_BUTTON\}/);
+  assert.equal((screen.match(/PRIMARY_BUTTON/g) ?? []).length > 0, true);
   // The figures come from one number: what can be changed, cut to the cent, and the head of the screen adds the other
   // coin cut the same way. Nothing on a card is computed on the six-decimal balance any more. What the gifts hold for
   // the account is part of that number, since the way out takes it first (D208).
@@ -150,11 +146,15 @@ test("the way out shows one accent surface at a time, on the action it is waitin
   assert.match(screen, /const dollarsHeld = dollarsToTheCent\(ausd \+ giftsHold, held\(USDC\)\);/);
   assert.match(screen, /netOfEverything\(changeable, way\.fee, money\.rates\)/);
   assert.doesNotMatch(screen, /netOfEverything\(ausd,/);
-  // The card in the person's words: its title, its one line, and no source on it; the sources are behind the fold.
-  assert.match(screen, /<h3 className=\{CARD_TITLE\}>\{way\.title\}<\/h3>/);
-  assert.match(screen, /<p className=\{BODY\}>\{way\.line\}<\/p>/);
-  const cards = screen.slice(screen.indexOf("{ordered.map((way, index) => {"), screen.indexOf("<details className={HELP}>"));
-  assert.doesNotMatch(cards, /sourceLine|feeSentence|way\.conditions|way\.name\}<\/h/, "the card that decides carries no source, no fee sentence, no list");
+  // The card in Viky's words (D270): its name, its nature, its two lines, and no source on it; the sources are behind
+  // the fold. The partner is named in the card's own sentence before the person goes to it, and never "crypto".
+  assert.match(screen, /<h3 className=\{CARD_TITLE\}>\{words\.name\}<\/h3>/);
+  assert.match(screen, /<p className=\{BODY\}>\{words\.body\}<\/p>/);
+  const cards = screen.slice(screen.indexOf("{uses.map((use, index) => {"), screen.indexOf("<details className={HELP}>"));
+  assert.doesNotMatch(cards, /sourceLine|feeSentence|way\.conditions|way\.line/, "the card that decides carries no source, no fee sentence, no list, no partner's line");
+  assert.match(USE_MONEY.bank.body, /Our partner Ramp asks for your ID, once\./);
+  assert.match(USE_MONEY.card.body, /Our partner Mercuryo asks for your ID and your card, once\./);
+  assert.doesNotMatch(JSON.stringify(USE_MONEY), /crypto/i, "the word is the partner's page's alone");
   for (const way of WAYS_OUT) {
     assert.doesNotMatch(way.title, /Ramp|Mercuryo/, "the title is where the money goes, not who carries it");
     assert.doesNotMatch(way.conditions.join(" "), /United Kingdom|Selling/, "what is off the subject of this withdrawal is off the card");

@@ -10,7 +10,7 @@ import { treasuryConfigured } from "@/src/phone-treasury";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Whether "Take it out" shows the phone card to this account (D238): a boolean, and nothing about why. */
+/** Whether "Use your money" shows the phone card to this account (D238): a boolean, and nothing about why. */
 export async function GET(request: Request) {
   try {
     const auth = readAccountAuthSession(request);

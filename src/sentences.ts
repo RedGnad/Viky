@@ -207,8 +207,8 @@ export const HOME = {
   ],
   inAccount: "In your account",
   /** Under the amount at display size: what is approximate, when the rate was read, and the dollars themselves. */
-  keep: "Yours to keep, to put behind another goal, or to take out.",
-  takeItOut: "Take it out",
+  keep: "Yours to keep, to put behind another goal, or to use.",
+  takeItOut: "Use your money",
   readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,
   readyLabel: (name: string) => `Ready to send to ${name}`,
   moving: "What's moving",
@@ -711,7 +711,7 @@ export const GIFT_LIVE = {
      * Under the figure, to the person it is for, while the gift still holds some of what they earned (D208): the
      * figure says how much, so this says only where it goes. True because the way out on Home takes it first.
      */
-    takeFromHome: "It is yours already. Take it out from Home whenever you like.",
+    takeFromHome: "It is yours already. Use it from Home whenever you like.",
     label: { yours: "Yours so far", theirs: "Theirs so far" },
   },
   /** A rating climbing towards its target: how far is left, and where they stand today. */
@@ -1161,7 +1161,7 @@ export const HELP = {
   questions: [
     {
       q: "Where is my money?",
-      a: "In your account, on Home, under the amount. What a gift earns lands there the moment you take it, and stays yours from one gift to the next. Take it out from Home whenever the account holds anything.",
+      a: "In your account, on Home, under the amount. What a gift earns lands there the moment you take it, and stays yours from one gift to the next. Use it from Home whenever the account holds anything.",
     },
     {
       q: "How does a gift work?",
@@ -1182,8 +1182,41 @@ export const HELP = {
   ],
 } as const;
 
+/**
+ * "Use your money" (D270, the founder's decision of 26 Sep 2026; the mockups use.html and use-france.html): the way
+ * out said as uses, every sentence Viky's own, and never a word of crypto, which only the partner's own page may say.
+ * A partner is named, once, before the person goes to it.
+ */
+export const USE_MONEY = {
+  yours: "Yours",
+  forNumberIn: (country: string) => `For a number in ${country}`,
+  forYourNumber: "For your number",
+  change: "change",
+  whereIsTheNumber: "Where is the number from?",
+  phone: {
+    name: "Your phone",
+    nature: "Credit or data, from your balance",
+    body: "Credit or mobile data on your number, from your own phone company. Nothing to sign up for, no ID.",
+    action: "Top up my phone",
+  },
+  bank: {
+    name: "Your bank",
+    nature: "You would get about",
+    body: "A transfer in euros to your IBAN, within two working days. Our partner Ramp asks for your ID, once.",
+    action: "Send to my bank",
+  },
+  card: {
+    name: "Your card",
+    nature: "You would get about",
+    body: "Onto your Visa or Mastercard. Our partner Mercuryo asks for your ID and your card, once.",
+    action: "Send to my card",
+  },
+  keepHere: "Or keep it here: it stays yours from one gift to the next.",
+  nothingHere: "Nothing works for a number there yet. It stays yours here.",
+} as const;
+
 export const CASH_OUT = {
-  title: "Take your money out",
+  title: "Use your money",
   yourMoney: "Your money",
   /** The balance at the head of the way out, and what it is for (out.html, 19 Sep 2026). */
   keepOrTakeOut: "Yours to keep, or to take out",
@@ -1346,10 +1379,10 @@ export const CASH_OUT = {
 /** The home page's card about money in the account, which is where the way out begins (W1). */
 export const YOUR_MONEY = {
   label: "In your account",
-  keep: "Yours to keep, to put behind another goal, or to take out.",
+  keep: "Yours to keep, to put behind another goal, or to use.",
   readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,
   readyLabel: (name: string) => `Ready to send to ${name}`,
-  takeItOut: "Take it out",
+  takeItOut: "Use your money",
 } as const;
 
 /** The account's own code, on the account page, where another account or a payout service asks for it (decision 11). */

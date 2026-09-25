@@ -7071,3 +7071,29 @@ WITNESS, Cheikh Anta Diop is AI. The corridor's universities come in with a WITN
   a grade" can open on a university as soon as its row carries the results page. Six steps where there were five.
   "What Viky never receives" now says the overall result is read when a gift on it is shown, and only whether it was
   reached is kept.
+
+## D270, 26 Sep 2026: "Use your money" replaces "Take it out"
+
+- The founder's decision, 26 Sep 2026, on the mockups `use.html` and `use-france.html` and the seven rules of their
+  README: the way out is said as uses, not as rails. The title is "Use your money"; a line under it in the meta voice
+  says the number's country ("For a number in Senegal · change") and it filters and orders the cards; one card per use,
+  its name and what it gives on one line, a meta line for its nature, two lines of Viky's own words, one button; one sun,
+  on the top card; the partner named in Viky's sentence before the person goes to it, and the word crypto never ours;
+  nothing that does not exist gets a card; the foot keeps "keep it here" and "send to another Viky account of mine".
+- **Built.** `src/use-money.ts`: `usesFor` offers the phone when the server offers it to the account (D238), the bank
+  unless Ramp's own payout list pays nobody in that country, the card unless Mercuryo's list restricts it or the country
+  is one where it pays no card (the EEA and the United States, its help centre of 15 Sep 2026, D72: the one country
+  list here, the Area's membership being fixed by its agreement). `orderUses` puts a rail first unless its published
+  minimum fee would take more than a tenth of the amount, the one that leaves more when both are offered, and otherwise
+  the phone: the mockups' two cases, the phone for $20.99 in Senegal and the bank for $120 in France. "change" opens the
+  country's question (the two signals and the corridor), and when the two signals disagree it is open from the start
+  and nothing is ordered until answered. The page's title moved from the shell into the screen, under the balance on the
+  first step, in the title face. "Take it out" is "Use your money" on Home too.
+- **Not as the mockups, and why.** No "A gift card": none is wired (Bitrefill sells only the top-up here), so by the
+  sixth rule it has no card. The cards at night are the app's night paper (D231), not cream: the brief asks for the same
+  components as the rest, and the rest of the app wears the night paper. The phone's figure is the balance, in the
+  person's currency, since what reaches a phone is priced once the number and the amount are known; its meta line says
+  "from your balance" rather than "in seconds", which nothing measured. The card's line drops "in minutes" for the same
+  reason. The fold with each service's published figures and sources stays, under the foot.
+- This replaces R1's "never hide a way out" for the ways out, at the founder's word: what does not work for the
+  number's country is not offered.

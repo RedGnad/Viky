@@ -13,17 +13,17 @@ import { readCoinBalance, sendMon } from "@/src/client/onchain";
 import { AUSD, coinAt, COINS, exactly, isNative, USDC, type Coin } from "@/src/coins";
 import { rateDateInWords, whenInWords } from "@/src/display-currency";
 import { exitAmount, type ExitAmount } from "@/src/exit-amount";
-import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, netOfEverything, orderByWhatReaches, readyFor, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
+import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, netOfEverything, readyFor, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
 import { formatAusd } from "@/src/gift-reader";
 import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords } from "@/src/rail-country";
-import { feeSentence, RATE_SOURCE, WAYS_OUT, type WayOut } from "@/src/rails";
-import { CASH_OUT as W } from "@/src/sentences";
+import { feeSentence, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "@/src/rails";
+import { CASH_OUT as W, USE_MONEY as U } from "@/src/sentences";
+import { orderUses, usesFor } from "@/src/use-money";
 import { AccountPanel } from "./AccountPanel";
 import { PhoneTopUp } from "./PhoneTopUp";
 import { phoneOffered } from "@/src/client/phone";
-import { PHONE_OUT } from "@/src/sentences";
-import { AMOUNT_IN_TITLE, BODY, CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, FIELD, HELP, INLINE_BUTTON, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
+import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, CHIP, FIELD, HELP, INLINE_BUTTON, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE, TITLE_IN_FACE } from "./ui";
 
 /**
  * The way out, rebuilt from docs/design/flows.md (states W1 to W13) on 17 Sep 2026.
@@ -127,6 +127,8 @@ export function CashOut() {
   // the tab: it orders cards and nothing else, so it is never worth asking twice in one sitting and never worth keeping.
   const [where, setWhere] = useState<RailsWhere | null>(null);
   const [answeredCountry, setAnsweredCountry] = useState<string | null>(null);
+  /** Whether the person opened "change" under the title, to say where their number is from (D270). */
+  const [picking, setPicking] = useState(false);
   const resumed = useRef(false);
   // The third way, their phone (D238): shown only when the server offers it to this account, and nothing is said when
   // it does not, since the way is not open to everybody before a real top-up has reached a real number.
@@ -213,7 +215,6 @@ export function CashOut() {
   const netOf = (way: WayOut) => netOfEverything(changeable, way.fee, money.rates);
   // Every way, in the order the screen shows them: the country may send one to the back (R1), then what reaches
   // the person decides, and nothing is ever removed.
-  const ordered = orderByWhatReaches(WAYS_OUT, where && !where.ask ? where.waysOut : {}, (way) => netOf(way)?.net);
 
   const changing = dollarsToChange(dollars, ausd, W.refusals);
   const maxToChange = twoDecimalsDown(ausd, AUSD.decimals);
@@ -469,6 +470,18 @@ export function CashOut() {
     }
   };
 
+  /**
+   * The page's title, in the screen rather than the shell (D270): on the first screen it stands under the balance with
+   * the line that says which country orders the uses, as the mockups draw it; on every other step it leads, as the
+   * shell's title did. In the title face, as the mockups set it.
+   */
+  const heading = <h1 className={TITLE_IN_FACE}>{W.title}</h1>;
+  // The uses for the number's country, ordered by the amount (D270): only what works there, the first in the sun.
+  const asking = picking || Boolean(where?.ask && !answeredCountry);
+  const countryChoices = Array.from(new Set([countryNow, where?.fromDevice, where?.fromConnection, "sn", "ci", "fr"].filter((code): code is string => Boolean(code))));
+  const eurosHeld = money.rates?.usdPerEur ? Number(changeable) / 1_000_000 / money.rates.usdPerEur : undefined;
+  const uses = where?.ask && !answeredCountry ? [] : orderUses(usesFor(countryNow, where?.waysOut ?? {}, phoneOn), eurosHeld, (use) => netOf(use === "bank" ? WAY_OUT_EURO : WAY_OUT_CARD)?.net);
+
   // W11 and W12. The session closes itself; the balances decide the step, so nothing is remembered here and
   // nothing is lost. Signing in leads, and nothing else is offered: a second account would strand the money.
   if (!address) {
@@ -476,6 +489,7 @@ export function CashOut() {
     const way = chosen ?? firstReady ?? null;
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
+        {heading}
         <section className={CARD}>
           <h1 className={TITLE}>{closed ? W.closedTitle : W.signInToSee}</h1>
           <p className={BODY}>{closed ? W.closedBody : W.signedOutBody}</p>
@@ -543,6 +557,7 @@ export function CashOut() {
   if (stage === "gathering") {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
+        {heading}
         {moneyCard}
         <p role="status" className={BODY}>
           {W.gathering}
@@ -554,7 +569,6 @@ export function CashOut() {
   if (stage === "base") {
     const figure = holdings === null ? undefined : money.figure(dollarsHeld);
     const cardBranch = holdings !== null && dollarsHeld === 0n && firstReady !== undefined;
-    const nets = ordered.map((way) => netOf(way));
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         {/* The balance, on the page ground and not in a box, as Home sets it: the dollars lead on the way out because
@@ -564,7 +578,7 @@ export function CashOut() {
           moneyCard
         ) : (
           <section className="money-display-box flex flex-col gap-[var(--space-xs)]">
-            <p className={HELP}>{W.keepOrTakeOut}</p>
+            <p className={CARD_LABEL}>{U.yours}</p>
             <p className={`money-display ${AMOUNT_IN_TITLE} tracking-[-0.02em]`} style={{ "--amount-chars": holdings === null ? 1 : formatAusd(dollarsHeld).length } as CSSProperties}>
               {holdings === null ? "…" : formatAusd(dollarsHeld)}
             </p>
@@ -578,68 +592,74 @@ export function CashOut() {
             {alert("gather")}
           </section>
         )}
-        {/* Two signals disagree about where this person is (a trip, a shared connection, a private network), so the
-            screen asks once. Until it is answered nothing is ordered, and nothing is hidden either (R1). */}
-        {where?.ask && !answeredCountry ? (
+        {/* "Use your money" (D270): the uses for the number's country, one card each, the first in the sun. The line
+            under the title says which country filters and orders them, and "change" answers it; when the two signals
+            disagree, the question is open from the start and nothing is ordered until it is answered (R1). */}
+        <div className="flex flex-col gap-[var(--space-xs)]">
+          {heading}
+          <p className={CARD_LABEL}>
+            {countryNow ? U.forNumberIn(countryInWords(countryNow) ?? countryNow.toUpperCase()) : U.forYourNumber}
+            {" · "}
+            <button type="button" onClick={() => setPicking((was) => !was)} aria-expanded={asking} className="underline underline-offset-2">
+              {U.change}
+            </button>
+          </p>
+        </div>
+        {asking ? (
           <section className={CARD}>
-            <h2 className={TITLE}>{W.whereIsYours}</h2>
-            <div className="flex flex-col gap-[var(--tap-gap)]">
-              {[where.fromDevice, where.fromConnection].filter((one): one is string => one !== null).map((code) => (
-                <button key={code} type="button" onClick={() => setAnsweredCountry(code)} className={SECONDARY_BUTTON}>
+            <h3 className={CARD_TITLE}>{U.whereIsTheNumber}</h3>
+            <div className="flex flex-wrap gap-[var(--space-sm)]">
+              {countryChoices.map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  aria-pressed={countryNow === code}
+                  onClick={() => {
+                    setAnsweredCountry(code);
+                    setPicking(false);
+                  }}
+                  className={`${CHIP} ${countryNow === code ? "bg-[var(--chosen)] font-bold" : ""}`}
+                >
                   {countryInWords(code) ?? code.toUpperCase()}
                 </button>
               ))}
             </div>
           </section>
         ) : null}
-        <h2 className={TITLE}>{W.whereTo}</h2>
-        {ordered.map((way, index) => {
-          const net = nets[index];
-          const other = ordered.find((one) => one !== way);
-          const otherNet = other ? netOf(other) : undefined;
-          // The accent marks the first card, which is where the order put the way that leaves the most (D124); no
-          // figure, no opinion. The line under its figure says by how much, when both figures exist and this one is
-          // the larger: the country may have put a way that leaves more at the back, and then nothing is claimed.
-          const leads = index === 0 && net !== undefined;
-          const gap = leads && other && otherNet && net.net > otherNet.net ? net.net - otherNet.net : undefined;
+        {uses.length === 0 ? <p className={BODY}>{U.nothingHere}</p> : null}
+        {uses.map((use, index) => {
+          const words = U[use];
+          const way = use === "bank" ? WAY_OUT_EURO : use === "card" ? WAY_OUT_CARD : undefined;
+          const net = way ? netOf(way) : undefined;
+          // The phone's figure is the balance itself, in the person's currency: what the top-up is taken from, since what
+          // reaches the phone is priced once the number and the amount are known (D238).
+          const figure = way ? (net ? figureIn(net.net, net.currency) : undefined) : holdings === null ? undefined : (money.figure(dollarsHeld)?.text ?? formatAusd(dollarsHeld));
+          const act = () => (way ? start(way) : void startPhone());
           return (
-            <section key={way.name} className={CARD}>
-              <h3 className={CARD_TITLE}>{way.title}</h3>
-              {/* What reaches the person, which is what the two cards are compared by: the published fee on the published
-                  rate, so it is marked "about", and it says nothing at all when no rate answered. */}
-              {net ? (
-                <div>
-                  <p className={CARD_LABEL}>{W.youWouldGet}</p>
-                  <p className={CARD_AMOUNT}>{figureIn(net.net, net.currency)}</p>
-                </div>
-              ) : null}
-              {gap !== undefined && other ? <p className={HELP}>{W.moreThan(figureIn(gap, net!.currency), other.title)}</p> : null}
-              <p className={BODY}>{way.line}</p>
-              {/* What that service itself says about this country today, read live. A rail that could not be read says
-                  nothing rather than something false, and the card stays where it is either way. */}
-              {countryNow && where?.waysOut[way.name] === "does-not" ? <p className={HELP}>{W.noPayoutThere(way.name, countryInWords(countryNow) ?? countryNow.toUpperCase())}</p> : null}
-              <button type="button" onClick={() => start(way)} disabled={holdings === null || changeable === 0n} className={leads ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
-                {way.coin === USDC.address ? W.chooseBank : W.chooseCard}
+            <section key={use} className={CARD}>
+              <div className="flex items-baseline justify-between gap-[var(--space-md)]">
+                <h3 className={CARD_TITLE}>{words.name}</h3>
+                {figure ? <p className={`${CARD_TITLE} whitespace-nowrap tabular-nums`}>{figure}</p> : null}
+              </div>
+              <p className={CARD_LABEL}>{words.nature}</p>
+              <p className={BODY}>{words.body}</p>
+              <button type="button" onClick={act} disabled={holdings === null || changeable === 0n} className={index === 0 ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
+                {words.action}
               </button>
               {holdings !== null && changeable === 0n ? <p className={HELP}>{W.nothingToSend}</p> : null}
             </section>
           );
         })}
-        {/* The third card, their phone (D238): the exact shape of the two above, with no figure since what reaches the
-            phone is priced only once the number and the amount are known. */}
-        {phoneOn ? (
-          <section className={CARD}>
-            <h3 className={CARD_TITLE}>{PHONE_OUT.cardTitle}</h3>
-            <p className={BODY}>{PHONE_OUT.cardLine}</p>
-            <button type="button" onClick={() => void startPhone()} disabled={holdings === null || changeable === 0n} className={SECONDARY_BUTTON}>
-              {PHONE_OUT.choose}
-            </button>
-            {holdings !== null && changeable === 0n ? <p className={HELP}>{W.nothingToSend}</p> : null}
-          </section>
-        ) : null}
-        {/* The published figures and where each was read, for whoever asks: one press away, off the cards that decide. */}
+        {/* The two gestures left, in one line (the README's seventh rule): keep it here, or send it to another account. */}
+        <p className={HELP}>
+          {U.keepHere}
+          {" · "}
+          <button type="button" onClick={() => { setProblem(null); setOwnAmount(ownMax); setStage("own"); }} disabled={holdings === null || dollarsHeld === 0n} className="inline underline underline-offset-2 disabled:no-underline">
+            {W.anotherAccount}
+          </button>
+        </p>
+        {/* The published figures and where each was read, for whoever asks: one press away, under everything. */}
         <details className={HELP}>
-          {/* A block, not a flex row: the disclosure marker is what says this opens, and a flex summary loses it. */}
           <summary className="min-h-[var(--tap-target)] cursor-pointer py-[var(--space-sm)] font-medium">{W.whereFrom}</summary>
           {WAYS_OUT.map((way) => (
             <p key={way.name}>
@@ -648,9 +668,6 @@ export function CashOut() {
           ))}
           {money.rates ? <p>{W.rateLine(RATE_SOURCE.name, rateDateInWords(money.rates.date))}</p> : null}
         </details>
-        <button type="button" onClick={() => { setProblem(null); setOwnAmount(ownMax); setStage("own"); }} disabled={holdings === null || dollarsHeld === 0n} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
-          {W.anotherAccount}
-        </button>
       </div>
     );
   }
@@ -658,6 +675,7 @@ export function CashOut() {
   if (stage === "phone") {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
+        {heading}
         {moneyCard}
         <PhoneTopUp ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
@@ -680,6 +698,7 @@ export function CashOut() {
     const priceRefused = problem?.where === "review" && (problem.code === "RATE_MOVED" || problem.code === "QUOTE_STALE");
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
+        {heading}
         {moneyCard}
         <section className={CARD}>
           <h2 className={TITLE}>{W.step1}</h2>
@@ -790,6 +809,7 @@ export function CashOut() {
     const sendable = deposit.trim() !== "" && problemWithCode === null;
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
+        {heading}
         {stage === "confirm" || stage === "sending" ? balanceInMeta : moneyCard}
         {stage === "sent" && sent ? (
           <section className={CARD}>
@@ -905,6 +925,7 @@ export function CashOut() {
   const ownProblem = ownCodeProblem();
   return (
     <div className="flex flex-col gap-[var(--space-xl)]">
+      {heading}
       {moneyCard}
       <section className={CARD}>
         <h2 className={TITLE}>{W.own.title}</h2>
