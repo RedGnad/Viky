@@ -110,7 +110,8 @@
    * concentric shapes take the parent's radius minus the padding), so the two curves share a centre and the gap stays
    * even round the corner.
    */
-  --field-radius: 10px;
+  /* 16 since D259: at 10 the key inside took 7, square on a 48 pixel key; the founder chose the softer pair of four. */
+  --field-radius: 16px;
   --field-inset: 3px;
   /* The fill of a button that is not the one action: quiet, and identified by its outline (K, rule 10). */
   --tonal: #E8E3F4;

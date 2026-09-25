@@ -239,7 +239,7 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
               <span className="flex flex-wrap items-center gap-x-[var(--space-md)] gap-y-[var(--space-md)]">
                 {/* The key nests in the field at one inset on every side (D257): 48 inside, 54 for the field. */}
                 <span
-                  className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent-text)]`}
+                  className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center has-[input:focus]:outline-2 has-[input:focus]:outline-offset-2 has-[input:focus]:outline-[var(--accent-text)]`}
                   style={{ paddingBlock: "var(--field-inset)", paddingLeft: "var(--field-inset)" }}
                 >
                   {/* The key that says what this card is read in, and that there is a list behind it (D152): the

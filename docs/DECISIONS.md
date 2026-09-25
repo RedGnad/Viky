@@ -6933,3 +6933,16 @@ grades). The other developer links to it from the empty state of "Which universi
   row of days, the one place it is a figure nobody else gives.
 - **The euro.** Centred at x 9 the bars were too far right, centred on the arc at 3.3 (D257) too far left: they sit
   half way, at 6.2.
+
+## D259, 25 Sep 2026: the key in the amount's field takes the field's hairline and softer corners, and the field's ring is the figure's alone
+
+- The founder, 25 Sep 2026, on D257: the key's edge was far darker than every other edge on the card and its corners
+  too sharp, perhaps both together. Four variants were drawn on the card, day and night, in dollars and in euros (a
+  hairline with the same corners; a hairline with softer corners; no edge; a capsule in a capsule); he took the
+  recommendation, B.
+- The nested key's edge is the field's own hairline (1 px of the faint ink) rather than a key's 2 px of ink; alone, as
+  on Me, it keeps a key's edge and its capsule. The field's radius goes from 10 to 16, so the key inside takes 13 by
+  the concentric rule of D257; the name's field takes the same 16.
+- Found on the way, in the variants' captures: after a currency was chosen, the focus came back to the key and the
+  field's ring, drawn on `focus-within`, framed the whole field in the dark accent, pointer or not. The ring is now the
+  figure's alone (`has-[input:focus]`); the key has its own ring for the keyboard.
