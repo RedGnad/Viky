@@ -75,7 +75,10 @@ export function Home({
             and the page says there is more (NN/g on the fold). One column, centred at every width. */}
         <div className="arrives-in-turn flex w-full flex-col items-center">
           <div className="hero-first-screen flex w-full flex-col items-center gap-[var(--space-md)] [@media(min-width:1024px)]:gap-[var(--space-sm)]">
-            {/* Its share of the room the first screen has left over, the same as the character's (globals.css). */}
+            {/* The room the first screen has left over goes in three equal shares (D248): above the words, between the
+                words and the action, between the action and the character. Three bands at one interval, so the
+                action reads as its own step rather than a line of the text, and the words rise from the middle. The
+                character's share is its stage's own auto margin (globals.css); the card does not move. */}
             <div className="mt-auto w-full text-center">
               <h1 className={HERO}>{W.promise}</h1>
               {/* Bounded at 460 on a phone and at 34em from 1024 (D210, the founder's default): a longer sentence
@@ -84,11 +87,13 @@ export function Home({
             </div>
             {/* The one action of the first screen, in the accent: it goes to the card, which is the product, and the
                 card's own action is a screen below, so each screen has its one accent (D221; ui.ts). */}
-            {/* 24 pixels under the sentence at every width, the column's gap made up (D242): it read as part of the text.
-                The room is taken from the two shares above and below, so the character and the card do not move. */}
-            <a href="#offer" className={`${PRIMARY_BUTTON} mt-[calc(var(--space-xl)-var(--space-md))] w-auto! px-[var(--space-xl)] text-center no-underline [@media(min-width:1024px)]:mt-[calc(var(--space-xl)-var(--space-sm))]`} onClick={goToTheCard}>
-              {W.offer}
-            </a>
+            {/* Its own share of the room (D248), and never less than 24 pixels under the sentence, the column's gap made
+                up, on a phone too short to leave any room (D242). */}
+            <div className="mt-auto pt-[calc(var(--space-xl)-var(--space-md))] [@media(min-width:1024px)]:pt-[calc(var(--space-xl)-var(--space-sm))]">
+              <a href="#offer" className={`${PRIMARY_BUTTON} w-auto! px-[var(--space-xl)] text-center no-underline`} onClick={goToTheCard}>
+                {W.offer}
+              </a>
+            </div>
             <HeroMoment played={heroPlayed} />
           </div>
           {/* Above the character, so the card's paper hides what of it is still behind. Focusable by the way to it, so
