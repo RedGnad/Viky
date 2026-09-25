@@ -21,7 +21,8 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const isIOS = () => typeof window !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
-const isStandalone = () => {
+/** Whether this window is the installed app (Safari's own flag, or the display mode every other engine reports). */
+export const isStandalone = () => {
   if (typeof window === "undefined") return false;
   const nav = window.navigator as Navigator & { standalone?: boolean };
   return Boolean(nav.standalone) || window.matchMedia("(display-mode: standalone)").matches;

@@ -11,8 +11,9 @@ import { EmptyState } from "./EmptyState";
 import { GiftCard } from "./GiftCard";
 import { HeadCharacter } from "./HeadCharacter";
 import { dropStaleCardFragment, goToTheCard } from "./WayToTheCard";
+import { topAfterLongAbsence } from "@/src/launch-top";
 import { HeroMoment } from "./HeroMoment";
-import { Install } from "./Install";
+import { Install, isStandalone } from "./Install";
 import { MoneyHero } from "./MoneyHero";
 import { OfferCard } from "./offer/OfferCard";
 import { Shell } from "./Shell";
@@ -33,6 +34,12 @@ import type { GiftSummary } from "@/src/client/gift";
  * What went: the button that opened an eight step assistant, and the example card that showed a gift nobody had
  * made. A page that offers a real object has no use for a picture of one (vision, section 9).
  */
+/**
+ * How the landing's first screen shares the room it has left over (D248, D250): above the words, before the action,
+ * before the character. Weights of flex spacers; the column's own gaps and the action's 24 pixel minimum come on top.
+ */
+export const ROOM = { aboveWords: 1, beforeAction: 0.9, beforeCharacter: 1.1 } as const;
+
 export function Home({
   initialHoldings,
   initialGifts,
@@ -66,6 +73,9 @@ export function Home({
     dropStaleCardFragment();
   }, []);
 
+  // The installed app brought back after a long absence opens on its landing's top, as Android does (D250).
+  useEffect(() => topAfterLongAbsence(isStandalone), []);
+
   if (!address) {
     return (
       <Shell kind="destination" active="home" action={<SignInDoor />} bare wide>
@@ -75,11 +85,12 @@ export function Home({
             and the page says there is more (NN/g on the fold). One column, centred at every width. */}
         <div className="arrives-in-turn flex w-full flex-col items-center">
           <div className="hero-first-screen flex w-full flex-col items-center gap-[var(--space-md)] [@media(min-width:1024px)]:gap-[var(--space-sm)]">
-            {/* The room the first screen has left over goes in three equal shares (D248): above the words, between the
-                words and the action, between the action and the character. Three bands at one interval, so the
-                action reads as its own step rather than a line of the text, and the words rise from the middle. The
-                character's share is its stage's own auto margin (globals.css); the card does not move. */}
-            <div className="mt-auto w-full text-center">
+            {/* The room the first screen has left over goes in three shares (D248): above the words, between the words and
+                the action, between the action and the character, so the action reads as its own step and the words
+                rise from the middle. Not rigidly equal (the founder, D250): the action's share is a little smaller and
+                the character's a little larger, 1 : 0.9 : 1.1, which lifts the action a touch. The card does not move. */}
+            <div aria-hidden className="basis-0" style={{ flexGrow: ROOM.aboveWords }} />
+            <div className="w-full text-center">
               <h1 className={HERO}>{W.promise}</h1>
               {/* Bounded at 460 on a phone and at 34em from 1024 (D210, the founder's default): a longer sentence
                   breaks into centred lines rather than running the column's width. */}
@@ -89,11 +100,13 @@ export function Home({
                 card's own action is a screen below, so each screen has its one accent (D221; ui.ts). */}
             {/* Its own share of the room (D248), and never less than 24 pixels under the sentence, the column's gap made
                 up, on a phone too short to leave any room (D242). */}
-            <div className="mt-auto pt-[calc(var(--space-xl)-var(--space-md))] [@media(min-width:1024px)]:pt-[calc(var(--space-xl)-var(--space-sm))]">
+            <div aria-hidden className="basis-0" style={{ flexGrow: ROOM.beforeAction }} />
+            <div className="[@media(min-width:1024px)]:pt-[calc(var(--space-xl)-2*var(--space-sm))]">
               <a href="#offer" className={`${PRIMARY_BUTTON} w-auto! px-[var(--space-xl)] text-center no-underline`} onClick={goToTheCard}>
                 {W.offer}
               </a>
             </div>
+            <div aria-hidden className="basis-0" style={{ flexGrow: ROOM.beforeCharacter }} />
             <HeroMoment played={heroPlayed} />
           </div>
           {/* Above the character, so the card's paper hides what of it is still behind. Focusable by the way to it, so

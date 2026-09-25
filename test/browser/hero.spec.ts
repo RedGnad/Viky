@@ -69,6 +69,15 @@ test.describe("the hero moment", () => {
     await expect(page.locator("#offer")).toBeVisible();
   });
 
+  test("a load of the landing starts at its top, wherever it was left (D250)", async ({ page }) => {
+    await page.goto("/", { waitUntil: "load" });
+    await page.evaluate(() => window.scrollTo(0, 600));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+    await page.reload({ waitUntil: "load" });
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  });
+
   test.describe("with the device asking for less movement", () => {
     test.use({ reducedMotion: "reduce" });
 
