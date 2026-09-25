@@ -46,6 +46,8 @@ export function Sheet({
   const inside = useRef<HTMLDivElement>(null);
   /** Which edge still has something behind it, which is what the fade is drawn from. */
   const [more, setMore] = useState<"none" | "above" | "below" | "both">("none");
+  /** Whether the questions overflow the sheet, so a finger on them scrolls them and nothing else. */
+  const [scrolls, setScrolls] = useState(false);
 
   useEffect(() => {
     const element = dialog.current;
@@ -70,6 +72,7 @@ export function Sheet({
       const above = body.scrollTop > 2;
       const below = body.scrollTop + body.clientHeight < body.scrollHeight - 2;
       setMore(above && below ? "both" : above ? "above" : below ? "below" : "none");
+      setScrolls(body.scrollHeight > body.clientHeight + 2);
     };
     read();
     body.addEventListener("scroll", read, { passive: true });
@@ -93,6 +96,25 @@ export function Sheet({
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 });
   }, [open, title]);
+
+  /*
+    A scroll that starts on the sheet stays on the sheet (D249, the founder, 25 Sep 2026): the page behind scrolls only
+    under a gesture on the part of it the sheet leaves exposed, where the target is the dialog's own backdrop. On a
+    touch screen the stylesheet does it (`touch-action` on the parts that do not scroll, `overscroll-behavior` at the
+    ends of the list); a wheel has no such property, so it is stopped here, unless the list under it can scroll.
+  */
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+    const wheel = (event: WheelEvent) => {
+      if (event.target === element) return;
+      const body = scroller.current;
+      const inList = body && body.contains(event.target as Node) && body.scrollHeight > body.clientHeight + 2;
+      if (!inList) event.preventDefault();
+    };
+    element.addEventListener("wheel", wheel, { passive: false });
+    return () => element.removeEventListener("wheel", wheel);
+  }, []);
 
   return (
     <dialog
@@ -157,13 +179,13 @@ export function Sheet({
           height of its head and its action with the questions scrolled away inside. `min-h-0` is what lets it shrink
           when the sheet meets its cap, so a long list scrolls in itself instead of pushing the action out of frame.
         */}
-        <div ref={scroller} data-more={more} className="sheet-body min-h-0 flex-auto overflow-y-auto px-[var(--space-lg)] py-[var(--space-md)]">
+        <div ref={scroller} data-more={more} data-scrolls={scrolls ? "yes" : "no"} className="sheet-body min-h-0 flex-auto overflow-y-auto px-[var(--space-lg)] py-[var(--space-md)]">
           <div ref={inside} className="space-y-[var(--space-md)]">
             {children}
           </div>
         </div>
         {footer ? (
-          <div className="flex flex-col gap-[var(--tap-gap)] border-t border-[var(--divider)] px-[var(--space-lg)] pt-[var(--space-md)] pb-[calc(var(--space-lg)+env(safe-area-inset-bottom,0px))]">
+          <div className="sheet-foot flex flex-col gap-[var(--tap-gap)] border-t border-[var(--divider)] px-[var(--space-lg)] pt-[var(--space-md)] pb-[calc(var(--space-lg)+env(safe-area-inset-bottom,0px))]">
             {footer}
           </div>
         ) : null}

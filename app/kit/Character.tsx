@@ -365,6 +365,11 @@ const TONES: Record<CharacterTone, Readonly<{ box: string; ribbon: string; face:
   sun: { box: "var(--accent)", ribbon: ONE, face: FACE },
 };
 
+/** A turn of the whole drawing from its feet, written only when it turns. */
+function Lean({ by, foot, children }: Readonly<{ by?: number; foot: number; children: ReactNode }>) {
+  return by ? <g transform={`rotate(${by} 32 ${foot})`}>{children}</g> : <>{children}</>;
+}
+
 export function Character({
   state,
   size = "large",
@@ -374,6 +379,7 @@ export function Character({
   drawn: how = "referenced",
   limbs = false,
   pose,
+  tilt,
   className,
 }: Readonly<{
   state: CharacterState;
@@ -398,6 +404,11 @@ export function Character({
   limbs?: boolean;
   /** How the limbs are held, when they are out: hanging, or in one of the poses `Limbs` knows. */
   pose?: LimbPose;
+  /**
+   * Degrees the whole drawing leans from its feet, turned inside the drawing (D249). A CSS rotation on the element
+   * around it made a layer of its own on Android, which painted the diamond's blend as a dotted rectangle.
+   */
+  tilt?: number;
   className?: string;
 }>) {
   const large = size === "large";
@@ -440,6 +451,9 @@ export function Character({
           style={{ fill: "var(--character-shadow)", fillOpacity: "var(--character-shadow-opacity)", ...FROM_MIDDLE }}
         />
       ) : null}
+      {/* The lean is a group of its own with no style, and only when there is one: a CSS transform-origin on the same
+          element would move its centre, and an empty group would change every drawing in the sprite file. */}
+      <Lean by={tilt} foot={withLimbs ? 53 : 40}>
       <g data-part="figure" style={{ ...FROM_FLOOR, ...(leaving ? { transform: "translateX(-6px)", opacity: 0.6 } : null) }}>
         {/* With limbs, one more group turning from its own middle: the whirl of the hero moment (D219). */}
         <g transform={parts.lean} {...(withLimbs ? { "data-part": "whirl", style: FROM_MIDDLE } : {})}>
@@ -457,6 +471,7 @@ export function Character({
           ) : null}
         </g>
       </g>
+      </Lean>
     </svg>
   );
 }

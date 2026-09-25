@@ -711,6 +711,20 @@ dialog.sheet-tall {
   --fade-above: 22px;
 }
 
+/*
+ * A scroll that starts on a sheet never scrolls the page behind it (D249). The list keeps its own scroll and does not
+ * hand the rest to the page at its ends; a list that fits, and the action under it, take no pan at all (a pinch still
+ * zooms). The page scrolls under a gesture on the part of it the sheet leaves exposed, which is the backdrop.
+ */
+.sheet-body {
+  overscroll-behavior: contain;
+}
+
+.sheet-body[data-scrolls="no"],
+.sheet-foot {
+  touch-action: pinch-zoom;
+}
+
 /* 36 and not the image's 22 below: the image's rows are 37 pixels of 13-pixel text, these are 48 of 17, and a fade
    shorter than a row's words leaves a glyph cut clean against the action (ui review, 20 Sep 2026, twice). */
 .sheet-body[data-more="below"],

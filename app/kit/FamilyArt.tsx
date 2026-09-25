@@ -21,9 +21,10 @@ export function FamilyArt({ family }: Readonly<{ family: ConditionFamily }>) {
   const running = family === "move";
   return (
     <span aria-hidden className="relative block h-[104px] w-[112px]" data-family-art={family}>
-      {/* The runner leans into its stride, from its feet. */}
-      <span className="absolute top-[24px] left-[12px] block w-[88px]" style={running ? { transform: "rotate(-8deg)", transformOrigin: "50% 100%" } : undefined}>
-        <Character state="diamond" tone="sun" standing={false} limbs={running} pose={running ? "running" : undefined} className="block h-auto w-full" />
+      {/* The runner leans into its stride, from its feet, inside its own drawing (D249): a CSS rotation here made a
+          layer of its own on Android, painted as a dotted rectangle behind the diamond. */}
+      <span className="absolute top-[24px] left-[12px] block w-[88px]">
+        <Character state="diamond" tone="sun" standing={false} limbs={running} pose={running ? "running" : undefined} tilt={running ? -8 : undefined} className="block h-auto w-full" />
       </span>
       {family === "learn" ? (
         <svg data-prop="book" aria-hidden focusable="false" viewBox="0 0 56 30" className="absolute top-[62px] left-[28px] w-[56px]">

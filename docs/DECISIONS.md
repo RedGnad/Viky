@@ -6798,3 +6798,20 @@ grades). The other developer links to it from the empty state of "Which universi
 - Measured before and after, the character and the card unmoved: at 390x844 the title from 189 to 156, the button
   from 349 to 383; at 1440x900 the title from 196 to 160, the button from 330 to 366; character tops 515 and 498 and
   card tops 740 and 796 unchanged.
+
+## D249, 25 Sep 2026: the runner leans inside its drawing, and a scroll on a sheet stays on the sheet
+
+- The founder, 25 Sep 2026, on his phone: the Move tile showed a dotted rectangle behind the diamond, day and night,
+  changing with the scroll; and a scroll on an open sheet should not move the page, only a scroll on the part of the
+  page the sheet leaves exposed.
+- **The tile.** It was the one tile whose drawing turned through a CSS rotation on the HTML element around it. A
+  rotated element is painted as a layer of its own, and the sheet's list is masked for its fades; on the phone that
+  layer's gradient came out as a dithered rectangle, which is what moved with the scroll. The runner now leans inside
+  its own drawing (`tilt` on `Character`, an SVG turn from its feet), written only when it leans, so every other
+  drawing and the sprite file are unchanged. Desktop Chromium never drew the artefact, so the fix is to the cause, not
+  checked against the symptom on the device.
+- **The scroll.** The list of a sheet keeps its own scroll and no longer hands the rest to the page at its ends
+  (`overscroll-behavior: contain`); a list that fits and the action under it take no pan (`touch-action: pinch-zoom`,
+  a pinch still zooms); the head already took none. A wheel, which has no such property, is stopped in the sheet
+  unless the list under it can scroll. A gesture on the backdrop still scrolls the page. `test/browser/sheet-scroll.spec.ts`
+  checks it with the wheel and a synthesised finger at every size; against production before this change it failed.
