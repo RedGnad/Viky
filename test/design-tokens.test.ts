@@ -788,3 +788,18 @@ test("the gift card's sizes are named tokens, carried by the stylesheet, and no 
   const block = css.slice(css.indexOf("/*\n * The card of a gift, drawn from the founder's mockup"), css.indexOf(".climb-flag-number {") + 200);
   assert.doesNotMatch(block, /font-size:\s*\d+px|line-height:\s*\d+px/, "a size written in the card's block");
 });
+
+test("a field on the card is identified by a line at 3:1 at least, day and night (D252, WCAG 1.4.11)", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  const field = css.slice(css.indexOf(".on-paper-field {"), css.indexOf("}", css.indexOf(".on-paper-field {")));
+  assert.match(field, /box-shadow: inset 0 -2px 0 var\(--on-surface-muted\);/, "the line is the muted ink, Material's on-surface-variant");
+  const value = (block: string, name: string) => block.match(new RegExp(`--${name}: (#[0-9A-Fa-f]{6});`))?.[1];
+  const day = css.slice(css.indexOf(":root {"));
+  const night = css.slice(css.indexOf(':root[data-theme="dark"] {'));
+  for (const [mode, block] of [["day", day], ["night", night]] as const) {
+    const line = value(block, "on-surface-muted")!;
+    const inside = value(block, "paper-field")!;
+    const ratio = contrastRatio(line, inside);
+    assert.ok(ratio >= NON_TEXT_CONTRAST_MINIMUM, `${mode}: ${line} on ${inside} is ${ratio.toFixed(2)}:1`);
+  }
+});
