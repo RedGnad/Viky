@@ -1,5 +1,5 @@
 import type { RailReach } from "./rail-country";
-import type { WayIn } from "./rails";
+import type { PublishedFee, WayIn } from "./rails";
 
 /**
  * What a gift should be worth, and what a funder must pay for it.
@@ -52,10 +52,35 @@ export function roughlyInDollars(euros: number): number {
  * the day's euro rate. Their fee is the larger of their share and their minimum, exactly as the way out's is.
  */
 export function giftCoinDollars(euros: number, way: WayIn, usdPerEur: number): number {
-  const fee = Math.max((euros * way.fee.percent) / 100, way.fee.minimum);
-  const left = euros - fee;
+  const left = euros - serviceChargeEur(euros, way.fee);
   if (left <= 0 || !(usdPerEur > 0)) return 0;
   return Math.round(left * usdPerEur * 100) / 100;
+}
+
+/**
+ * What a service keeps of a card payment, in its own currency, from the figures it publishes: the larger of its share
+ * and its minimum (`PublishedFee`). This is the figure the line "What the card service charges" prints (D239), never a
+ * difference between two measurements: the sheet used to print what the euros were worth at the day's rate less what
+ * the chain-coin measurement of 14 Sep 2026 said would arrive, and that difference is the noise between two days'
+ * prices, negative as often as not, which `Math.max(0, ...)` turned into "about $0.00" on a rail that keeps 3.8 %.
+ */
+export function serviceChargeEur(euros: number, fee: PublishedFee): number {
+  if (!(euros > 0)) return 0;
+  return Math.max((euros * fee.percent) / 100, fee.minimum);
+}
+
+/** The same figure in dollars at the day's rate, for the line on the sheet, and nothing without a rate. */
+export function serviceChargeDollars(euros: number, way: WayIn, usdPerEur: number | undefined): number | undefined {
+  if (usdPerEur === undefined || !(usdPerEur > 0)) return undefined;
+  return Math.round(serviceChargeEur(euros, way.fee) * usdPerEur * 100) / 100;
+}
+
+/**
+ * True when what the line prints is the service's published ceiling rather than its rate: a share published as "up
+ * to", and larger than the minimum at this amount. The line then says "up to" rather than "about".
+ */
+export function serviceChargeIsCeiling(euros: number, fee: PublishedFee): boolean {
+  return fee.upTo && (euros * fee.percent) / 100 > fee.minimum;
 }
 
 /**
@@ -118,41 +143,55 @@ export function eurosToBuyOn(shortfallUnits: bigint, way: WayIn, usdPerEur: numb
   return needed === 0 ? 0 : Math.max(way.smallestEur, needed);
 }
 
-/** One way in as the sheet may offer it: what it costs for this gift, and whether that is only its floor. */
+/** Why a way in refused this gift: its own answer about the country, its published floor, or its own asset list. */
+export type WayInRefusal = "country" | "floor" | "paused";
+
+/** The one way in the sheet offers: what it costs for this gift, whether that is only its floor, and whose place it took. */
 export type WayInOffer = Readonly<{
   way: WayIn;
   /** The whole euros to pay on it, or nothing when no rate was read and this rail's figure needs one. */
   euros: number | undefined;
   /** True when the gift needs less than this rail's floor and the floor is what is paid, the rest staying yours. */
   atFloor: boolean;
+  /** The way the register puts first and why it refused, when this is the next one. Absent while the first stands. */
+  insteadOf?: Readonly<{ way: WayIn; because: WayInRefusal }>;
 }>;
 
+/** What stops a way in from taking this gift, in the order a person would meet it, or nothing when it takes it. */
+function refusalOf(way: WayIn, needed: number | undefined, reach: Readonly<Record<string, RailReach>>): WayInRefusal | undefined {
+  if (reach[way.name] === "does-not") return "country";
+  if (reach[way.name] === "paused") return "paused";
+  if (needed !== undefined && needed !== 0 && needed < way.smallestEur) return "floor";
+  return undefined;
+}
+
 /**
- * Which ways in a gift may be paid on, and in what order (D125).
+ * The one way in offered for this gift (D239, the founder's decision of 25 Sep 2026).
  *
- * A way whose published floor is above what this gift needs is not offered for this gift: that is not a guess about
- * the person, it is that service's own figure, and at 6 EUR the rail with a 2.49 EUR minimum fee would keep 41 % of
- * the payment. Between the ways left, the one that asks the fewest euros for the same gift leaves the most in the
- * account, and it goes first. A country never hides a way (D96): it may only send one that says it does not serve
- * there to the back. And when no way's floor is met at all, the gift's own minimum does not move: the way with the
- * lowest floor is offered at its floor, and what the payment leaves over stays in the person's account.
+ * The register's first way stands in front of the action unless it refuses this person: its own answer says it does
+ * not serve their country, its own asset list says it is not selling what a gift holds just now, or its published
+ * floor is above what the gift needs. Then the next way that does not refuse takes its place, and the offer carries
+ * whose place it took and why, so the sheet can say so in our words. A silence ("unknown") is not a refusal.
+ *
+ * When every way refuses on its floor, the gift's own minimum does not move (D125): of the ways a country or a pause
+ * has not shut, the one with the lowest floor is paid at its floor, and what is left over stays in the account. When
+ * a country has shut every way, the first stands with no sentence: a country is a guess, and a guess never leaves the
+ * sheet with nothing to pay on; the rail's own identity check decides.
  */
-export function waysInFor(
+export function wayInFor(
   shortfallUnits: bigint,
-  ways: readonly WayIn[],
+  ways: readonly [WayIn, ...WayIn[]],
   usdPerEur: number | undefined,
   reach: Readonly<Record<string, RailReach>>,
-): readonly WayInOffer[] {
-  const rank = (way: WayIn) => (reach[way.name] === "does-not" ? 1 : 0);
-  const priced = ways.map((way) => ({ way, needed: eurosNeededOn(shortfallUnits, way, usdPerEur) }));
-  let offers: WayInOffer[] = priced
-    .filter(({ way, needed }) => needed === undefined || needed === 0 || needed >= way.smallestEur)
-    .map(({ way, needed }) => ({ way, euros: needed, atFloor: false }));
-  if (offers.length === 0) {
-    const lowest = [...ways].sort((left, right) => left.smallestEur - right.smallestEur)[0];
-    if (!lowest) return [];
-    offers = [{ way: lowest, euros: lowest.smallestEur, atFloor: true }];
-  }
-  const cost = (offer: WayInOffer) => offer.euros ?? Number.POSITIVE_INFINITY;
-  return offers.sort((left, right) => rank(left.way) - rank(right.way) || cost(left) - cost(right));
+): WayInOffer {
+  const priced = ways.map((way) => ({ way, needed: eurosNeededOn(shortfallUnits, way, usdPerEur), because: undefined as WayInRefusal | undefined }));
+  for (const entry of priced) entry.because = refusalOf(entry.way, entry.needed, reach);
+  const first = priced[0];
+  if (first.because === undefined) return { way: first.way, euros: first.needed, atFloor: false };
+  const insteadOf = { way: first.way, because: first.because };
+  const next = priced.slice(1).find((entry) => entry.because === undefined);
+  if (next) return { way: next.way, euros: next.needed, atFloor: false, insteadOf };
+  const lowest = priced.filter((entry) => entry.because === "floor").sort((left, right) => left.way.smallestEur - right.way.smallestEur)[0];
+  if (!lowest) return { way: first.way, euros: first.needed, atFloor: false };
+  return { way: lowest.way, euros: lowest.way.smallestEur, atFloor: true, ...(lowest.way === first.way ? {} : { insteadOf }) };
 }

@@ -67,17 +67,20 @@ export function guessCountry(input: { fromConnection?: string | null; fromDevice
   return { country: fromConnection ?? fromDevice, ask: false, fromConnection, fromDevice };
 }
 
-/** What a rail answered about one country: it serves it, it does not, or nothing could be read just now. */
-export type RailReach = "serves" | "does-not" | "unknown";
+/**
+ * What a rail answered about one country: it serves it, it does not, it serves it but is not selling what a gift needs
+ * just now (its own asset list says so, D239), or nothing could be read.
+ */
+export type RailReach = "serves" | "does-not" | "paused" | "unknown";
 
 /**
  * Rails in the order to show them, in or out. One rule, and only one: a rail whose own service says it does not serve
  * this country goes last. Everything else keeps the order the register gives it, which is the order somebody chose on
  * purpose, and nothing is ever removed.
  *
- * Why "serves" does not jump the queue: one of the two ways in publishes no per-country answer at all (D101), so
- * ranking an answer above a silence would push it behind for ever, everywhere, on a difference that says nothing
- * about the person. A silence is not a refusal.
+ * Why "serves" does not jump the queue: a rail that publishes no per-country answer would fall behind one that
+ * does, for ever and everywhere, on a difference that says nothing about the person. A silence is not a refusal.
+ * The ways in are not ordered here any more: the sheet offers one of them (`wayInFor`, D239).
  */
 export function orderRails<T extends { name: string }>(rails: readonly T[], reach: Readonly<Record<string, RailReach>>): readonly T[] {
   const rank = (rail: T) => (reach[rail.name] === "does-not" ? 1 : 0);

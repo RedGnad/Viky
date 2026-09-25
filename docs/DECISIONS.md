@@ -6623,3 +6623,45 @@ back to the gift's history and the screen.
 - **The screen** is a third card on "Take it out", the exact copy of the two existing ones (CashOut.tsx belongs to the
   other developer, which the PR says).
 - **One PR per step**: this client; the treasury and its ledger; the order; the card; the pages.
+
+## D239, 25 Sep 2026: one way in, chosen for the person, and the charge line prints the service's own figure
+
+- Statement, the founder's, 25 Sep 2026: the sheet that pays offers one card service, chosen for the person by their
+  country and the amount. Ramp from 6 EUR; Mercuryo from 25 EUR where Ramp does not serve. The button "Pay by card
+  another way" goes. The second way is offered only when the first refuses (country, floor, pause), and one sentence
+  in our words says so: "Ramp does not serve your country, so this goes through Mercuryo." This replaces the ordering
+  of D125 (cheapest first, the other under the action) and the "never hidden" of D101 for the ways in; the ways out
+  keep R1 and D96 untouched.
+- **What refuses, and where it is read.** Three things, each the rail's own answer and none a guess of ours:
+  - Country: Ramp publishes the countries it sells in, without a key, at
+    `https://api.ramp.network/api/host-api/countries` (`GET /host-api/countries` in its REST API v1 reference,
+    docs.rampnetwork.com/rest-api-reference: one `CountryInfo` per country with `code`, `name`,
+    `cardPaymentsEnabled`, `mainCurrencyCode`). Read 25 Sep 2026: 107 countries; fr, de, be, ch, gb, us on it; sn
+    and ci not; `cardPaymentsEnabled` true for all 107. D101 believed no per-country answer could be read without a
+    key: that was true of its quote endpoint and is not true of this one. `reachOfWaysIn` reads it live and answers
+    "does-not" for a country not on it. Mercuryo's own restriction per coin and country stays as it was.
+  - Pause: Ramp's asset list (`/api/host-api/v3/assets?currencyCode=EUR`) carries `MONAD_AUSD` with `enabled` and
+    `hidden`. The coin switched off is a refusal wherever the person is, answered as "paused", a new value of
+    `RailReach`. A list that cannot be read answers "unknown", and a silence is never a refusal.
+  - Floor: the published floors of D125 (6 EUR and 25 EUR, read 20 Sep 2026). A first way whose floor is above what
+    the gift needs gives way to the next; when every way refuses on its floor, the lowest floor is paid at its floor
+    and the sheet says so, as before. When a country has shut every way, the first stands with no sentence: a country
+    is a guess, and a guess never leaves the sheet with nothing to pay on.
+- **The rule, in code.** `wayInFor` (`src/gift-amount.ts`) replaces `waysInFor`: the register's first way unless
+  `refusalOf` says country, paused or floor, then the next that does not refuse, carrying `insteadOf` (which way
+  refused and why) for the sentence. `WAYS_IN` is typed as never empty so the sheet always has a way. The sentence
+  is the only place the sheet names a company; its lines and its button still say "the card service".
+- **The charge line was false on Mercuryo, and why.** "What the card service charges" printed "about $0.00" on a
+  rail that keeps 3.8 %. The sheet computed it as the euros at the day's rate less what `roughlyInDollars` said would
+  arrive, and that second figure is the measurement of 14 Sep 2026 (coin per euro, dollars per coin, the reserve),
+  with that day's rate baked in. Two days' prices subtracted give the noise between them, negative as often as not
+  (29 EUR at the ECB's rate of 24 Sep: 32.96 less 33.11), and `Math.max(0, ...)` printed the negative as nothing.
+  Now the line prints the service's own published figure at this amount: the larger of its share and its minimum
+  (`serviceChargeEur`), at the day's rate (`serviceChargeDollars`), "up to" rather than "about" when the share is
+  published as a ceiling and is what applies (`serviceChargeIsCeiling`). A test refuses a zero on any rail that
+  publishes a share, at its floor, at 29 EUR and at 100 EUR. Measured on the sheet: Mercuryo at 29 EUR, about $1.25;
+  Ramp at 29 EUR, its 2.49 EUR minimum, about $2.83.
+- **Not done here.** The sheet does not ask "where is your card?" when the two country signals disagree (the way out
+  does): with no country the first way stands. `WAY_IN_GIFT_COIN.closedIn` still carries the list read for the other
+  rail (Hungary and Iceland are on it, and Ramp sells in both): it decides who a gift can be sent to, not which way
+  pays, and it is left for its own task.

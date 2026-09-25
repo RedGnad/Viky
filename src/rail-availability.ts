@@ -25,6 +25,16 @@ import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_O
  */
 
 const RAMP_PAYOUT_METHODS = "https://api.ramp.network/api/host-api/v3/payout-methods";
+/**
+ * The countries the euro rail sells in, published without a key: `GET /host-api/countries` in Ramp's REST API v1
+ * reference (docs.rampnetwork.com/rest-api-reference), one `CountryInfo` per country with `code`, `name`,
+ * `cardPaymentsEnabled` and `mainCurrencyCode`. Read 25 Sep 2026: 107 countries, fr, de, be, ch, gb and us among
+ * them, sn and ci absent, `cardPaymentsEnabled` true for every one. This is the answer D101 said could not be read:
+ * it is the buying list, not the payout one, and it needs no key.
+ */
+const RAMP_COUNTRIES = "https://api.ramp.network/api/host-api/countries";
+/** The euro rail's asset list, where what a gift holds is `MONAD_AUSD`, `enabled` and not `hidden` (D101, D125). */
+const RAMP_ASSETS = "https://api.ramp.network/api/host-api/v3/assets?currencyCode=EUR";
 const MERCURYO_CURRENCIES = "https://api.mercuryo.io/v1.6/lib/currencies";
 
 /** Long enough that a screen and its reload ask once, short enough that a change is met within minutes. */
@@ -37,6 +47,8 @@ let rampCountries: Held<readonly string[] | null> | undefined;
 let cardRestricted: Held<readonly string[] | null> | undefined;
 let rampCurrencies: Held<readonly string[] | null> | undefined;
 let cardCurrencies: Held<readonly string[] | null> | undefined;
+let rampBuyCountries: Held<readonly string[] | null> | undefined;
+let rampSellsGiftCoin: Held<boolean | null> | undefined;
 
 /** Held only while it is both recent and not from the future: a clock that moved must not freeze an old answer. */
 function stillGood(held: Held<unknown> | undefined, now: number): boolean {
@@ -100,6 +112,39 @@ export async function cardRailCurrencies(now = Date.now()): Promise<readonly str
   return value;
 }
 
+/** Every country the euro rail sells in, from its own list, or nothing when that list could not be read. */
+export async function euroRailBuyCountries(now = Date.now()): Promise<readonly string[] | null> {
+  if (stillGood(rampBuyCountries, now)) return rampBuyCountries!.value;
+  const body = await readJson(RAMP_COUNTRIES);
+  const countries = Array.isArray(body)
+    ? body
+        .filter((one) => (one as { cardPaymentsEnabled?: unknown }).cardPaymentsEnabled !== false)
+        .map((one) => countryCode(String((one as { code?: unknown }).code)))
+        .filter((one): one is string => one !== null)
+    : null;
+  const value = countries && countries.length > 0 ? Array.from(new Set(countries)) : null;
+  rampBuyCountries = { at: now, value };
+  return value;
+}
+
+/**
+ * Whether the euro rail is selling what a gift holds just now: its asset list carries the coin on the chain, enabled
+ * and not hidden. False is that rail's own pause, true is its own yes, and nothing means the list could not be read.
+ */
+export async function euroRailSellsGiftCoin(now = Date.now()): Promise<boolean | null> {
+  if (stillGood(rampSellsGiftCoin, now)) return rampSellsGiftCoin!.value;
+  const body = await readJson(RAMP_ASSETS);
+  const assets = (body as { assets?: unknown } | null)?.assets;
+  const value = Array.isArray(assets)
+    ? assets.some((one) => {
+        const asset = one as { symbol?: unknown; chain?: unknown; enabled?: unknown; hidden?: unknown };
+        return asset.symbol === WAY_IN_GIFT_COIN.delivers.coin && String(asset.chain).toUpperCase() === WAY_IN_GIFT_COIN.delivers.network.toUpperCase() && asset.enabled === true && asset.hidden !== true;
+      })
+    : null;
+  rampSellsGiftCoin = { at: now, value };
+  return value;
+}
+
 /** The countries the card rail will not sell the chain's coin in, or nothing when its list could not be read. */
 export async function cardRailRestricted(now = Date.now()): Promise<readonly string[] | null> {
   if (stillGood(cardRestricted, now)) return cardRestricted!.value;
@@ -129,18 +174,21 @@ export async function reachOfWaysOut(country: string | null): Promise<Readonly<R
 }
 
 /**
- * The ways in, asked the same way (D101), with one difference worth naming:
+ * The ways in, each asked of its own rail (D101, D239):
  *
+ * - The rail that sells what a gift holds publishes the countries it sells in (`RAMP_COUNTRIES`, read 25 Sep 2026)
+ *   and whether it is selling that coin at all (`RAMP_ASSETS`). A country not on its list is "does-not"; a coin it has
+ *   switched off is "paused", wherever the person is; a list that could not be read says nothing. D101 believed no
+ *   such answer could be read without a key: its quote endpoint asks for one, its countries endpoint does not.
  * - The rail that sells the chain's coin publishes what it will not sell, per coin and per country, in the same
  *   answer as its payouts (`restricted_countries_onramp`, `["gb"]` for MON on MONAD on 18 Sep 2026).
- * - The rail that sells what a gift holds publishes **no** per-country answer anybody can read without a key: its
- *   quote endpoint asks for one (`hostApiKey must be a string`, measured the same day) and its payout list is about
- *   paying out, which is a different question. So it answers "unknown" everywhere, which orders nothing and says
- *   nothing. Guessing from the payout list would be inventing a fact about somebody's money.
  */
 export async function reachOfWaysIn(country: string | null): Promise<Readonly<Record<string, RailReach>>> {
   const asked = countryCode(country);
   const reach: Record<string, RailReach> = { [WAY_IN_GIFT_COIN.name]: "unknown", [WAY_IN_CHAIN_COIN.name]: "unknown" };
+  const [countries, selling] = await Promise.all([asked ? euroRailBuyCountries() : null, euroRailSellsGiftCoin()]);
+  if (asked && countries !== null) reach[WAY_IN_GIFT_COIN.name] = countries.includes(asked) ? "serves" : "does-not";
+  if (reach[WAY_IN_GIFT_COIN.name] !== "does-not" && selling === false) reach[WAY_IN_GIFT_COIN.name] = "paused";
   if (!asked) return reach;
   const body = await readJson(MERCURYO_CURRENCIES);
   const currencies = (body as { data?: { config?: { crypto_currencies?: unknown } } } | null)?.data?.config?.crypto_currencies;

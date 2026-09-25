@@ -139,8 +139,11 @@ export const WAY_IN_CHAIN_COIN: WayIn = {
   closedIn: [...RAIL_CLOSED_IN, "United Kingdom"],
 };
 
-/** Both ways in, in the order the screen shows them before a country says otherwise: the one with nothing to swap. */
-export const WAYS_IN: readonly WayIn[] = [WAY_IN_GIFT_COIN, WAY_IN_CHAIN_COIN];
+/**
+ * Both ways in, in the order the sheet tries them (D239): the one with nothing to swap first, the other only when the
+ * first refuses. Typed as never empty, so the sheet always has a way to stand in front of its action.
+ */
+export const WAYS_IN: readonly [WayIn, ...WayIn[]] = [WAY_IN_GIFT_COIN, WAY_IN_CHAIN_COIN];
 
 /** The rail money was added through before there were two, kept for what still reads a single one. */
 export const WAY_IN: RailHandoff = {
