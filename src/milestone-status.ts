@@ -5,6 +5,7 @@ import { cadenceOfGoal, certificateById, certificateOfGoal, CHESS_MILESTONE, mil
 import { milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
 import { SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
 import { attestedReadings, lastReading, latestRating, loadMilestoneGift, type MilestoneRecord, type MilestoneReading } from "./milestone-store";
+import { bibStillOpen, finishInWords, marathonRaceById } from "./marathon";
 import type { MilestoneStatus } from "./milestone-view";
 import { escrowOf } from "./relayer";
 
@@ -77,7 +78,20 @@ export function milestoneStatusOf(input: {
     accountClosed: input.last?.outcome === "refused:ACCOUNT_CLOSED",
     maximumStart: Number(state.maximumStart),
     standingAtOffer: input.milestone?.standingAtOffer ?? null,
+    marathon: marathonOf(input),
   };
+}
+
+/** The marathon's part of the status (D273): nothing for any other condition, and the line read only to those who may see the names. */
+function marathonOf(input: { record: GiftRecord; milestone: MilestoneRecord | null; latest: MilestoneReading | null; viewer: Viewer; nowSeconds: number }): MilestoneStatus["marathon"] {
+  if (input.milestone?.conditionId !== "marathon-finish") return null;
+  const race = marathonRaceById(String(input.milestone.course ?? ""));
+  if (!race) return null;
+  const seesNames = input.viewer.isRecipient || input.viewer.isFunder || input.viewer.holdsTheLink;
+  const bib = input.record.boundAt && input.record.goalUsername ? String(input.record.goalUsername) : null;
+  const latest = input.latest;
+  const result = seesNames && latest && latest.rating !== null && latest.playerId ? { runner: latest.username, bib: latest.playerId, official: finishInWords(latest.rating), finishSeconds: latest.rating } : null;
+  return { raceId: race.raceId, raceName: race.name, startsAt: race.startsAt, bibOpen: bibStillOpen(race, input.nowSeconds * 1_000), bib: seesNames ? bib : null, result };
 }
 
 /** Everything a milestone gift's page and card need, read live, for one viewer. */

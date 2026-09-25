@@ -314,7 +314,9 @@ export default async function JudgesPage() {
             the same notice says results are published for everybody to consult, and that a runner can ask the
             federation to be removed from them. Viky reads one runner&apos;s page per gift and keeps three fields, written
             here with the risk assumed as for edX. The race&apos;s date is the register&apos;s; the bib entered before the
-            start ties the reading to the race, and the day the result is read is the day the gift is judged by.
+            start ties the reading to the race, and the day the result is read is the day the gift is judged by. One
+            door stays open for the operator&apos;s accounts alone: a bib entered after the start, which is how the test
+            gift runs on the 2023 result and how the three proofs are shown here.
           </li>
           <li>
             <strong>WAEC&apos;s terms.</strong> WASSCE credits are shown by the person from WAEC&apos;s own result checker
