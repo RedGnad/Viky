@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import type { Hex, LocalAccount } from "viem";
 import { ApiError } from "@/src/client/api";
+import { lastNumber, rememberNumber } from "@/src/client/account-country";
 import { findPhoneOperators, followPhone, payPhone, phoneKindOf, pricePhone, type PhoneKind, type PhoneOperator, type PhonePrice, type PhoneStatus } from "@/src/client/phone";
 import { AUSD } from "@/src/coins";
 import { twoDecimalsDown } from "@/src/exit-steps";
@@ -33,7 +34,9 @@ function randomNonce(): Hex {
 
 export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
   const [screen, setScreen] = useState<Screen>("where");
-  const [phone, setPhone] = useState("");
+  // The number is only ever the top-up's destination (D274): the last one topped up on this device fills the field,
+  // and it decides nothing else, not the country and not the ways out.
+  const [phone, setPhone] = useState(() => (typeof window === "undefined" ? "" : (lastNumber() ?? "")));
   const [operators, setOperators] = useState<readonly PhoneOperator[] | null>(null);
   // Credit or data (the founder, 26 Sep 2026): the same order, the same treasury, the same ceilings, another product.
   const [kind, setKind] = useState<PhoneKind>("credit");
@@ -132,6 +135,7 @@ export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => P
     setProblem(null);
     try {
       setStatus(await payPhone({ account, price, nonce: randomNonce() }));
+      rememberNumber(phone);
       setScreen("done");
       await props.onChanged();
     } catch (error) {

@@ -7166,3 +7166,18 @@ finish time. On the chain, the race and the bib; the name stays in the terms, ne
   printed with provider `0x59a02973…b55`. Nothing moved.
 - **Being built** until goal 30 is signed. Then the line moves to `CONDITIONS` and proof (c), a test payment that
   goes, is the first gift.
+
+## D274, 27 Sep 2026: where the person lives is a fact of the account, never a number
+
+- **Decision (the founder, 27 Sep 2026)**: the country is asked once in Me, "Where do you live?", with a country
+  already in it (the country of a number this device topped up before, else the connection's country), changeable,
+  and kept on the account (`viky_accounts.country`, `/api/account/preferences`). The list is every country where at
+  least one way out works: the union of Ramp's payout countries, Mercuryo's own country list less its restricted
+  countries and where it pays no card (D72), and Bitrefill's phone top-up countries, read live and held a day
+  (`src/out-countries.ts`, `/api/rails/countries`); 206 countries on 27 Sep 2026. A service that could not be read adds
+  nothing, and Mercuryo's list counts only with its restrictions read.
+- "Use your money" reads that country ("Where you live: Senegal · change"), and its "change" opens the same full list and
+  saves to the account; the three chips it had are gone. "Which card?" is given the account's country.
+- The phone number is asked only inside "Your phone", as the top-up's destination. This device remembers the last one
+  to fill the field next time (`viky.phone.last-number`); it decides nothing else. The server's copy is still erased
+  when the order ends.

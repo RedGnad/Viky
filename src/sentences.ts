@@ -1189,10 +1189,10 @@ export const HELP = {
  */
 export const USE_MONEY = {
   yours: "Yours",
-  forNumberIn: (country: string) => `For a number in ${country}`,
-  forYourNumber: "For your number",
+  /** The line under the title: where the person lives, the account's own fact that orders the uses (D274). */
+  forWhereYouLive: (country: string) => `Where you live: ${country}`,
+  forYourNumber: "Where do you live?",
   change: "change",
-  whereIsTheNumber: "Where is the number from?",
   phone: {
     name: "Your phone",
     nature: "Credit or data, from your balance",
@@ -1219,6 +1219,22 @@ export const USE_MONEY = {
   },
   keepHere: "Or keep it here: it stays yours from one gift to the next.",
   nothingHere: "Nothing works for a number there yet. It stays yours here.",
+} as const;
+
+/**
+ * Where the person lives, a fact of the account (D274, the founder's decision of 27 Sep 2026): asked once in Me, from
+ * the countries where at least one way out works, and read by "Use your money" and the gift cards.
+ */
+export const WHERE_YOU_LIVE = {
+  question: "Where do you live?",
+  why: "It decides which ways to use your money Viky offers you, and in which order.",
+  keep: "Keep this country",
+  label: "Where you live",
+  youLive: (country: string) => `You live in ${country}.`,
+  change: "change",
+  reading: "Reading the countries",
+  choose: "Choose a country",
+  unreadable: "The list of countries could not be read right now. Try again in a moment.",
 } as const;
 
 export const CASH_OUT = {
@@ -1412,7 +1428,7 @@ export const PHONE_OUT = {
   choose: "Top up a phone",
   whereTitle: "Which phone?",
   number: "The number, with its country code",
-  numberHelp: "Like +221 77 123 45 67. Viky keeps it until the top-up arrives, then erases it.",
+  numberHelp: "Like +221 77 123 45 67. This phone remembers it for next time. Viky erases its own copy once the top-up arrives or is refunded.",
   find: "Find the phone company",
   finding: "Looking",
   whichCompany: "Which phone company?",

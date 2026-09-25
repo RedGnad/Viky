@@ -278,6 +278,26 @@ export async function giftCardById(id: string, deps: Deps = liveDeps()): Promise
   return card;
 }
 
+/**
+ * The countries Bitrefill tops up a phone in (D274): Bitrefill publishes no list of countries, so its phone top-ups are
+ * read page by page (`GET /products?category=refill`, fifty a page, docs.bitrefill.com "Retrieve product list", read
+ * 27 Sep 2026) and their `country_code` kept. Sixty pages at most; the caller holds the answer for a day.
+ */
+export async function refillCountries(deps: Deps = liveDeps()): Promise<readonly string[]> {
+  const countries = new Set<string>();
+  let path: string | null = "/products?category=refill&limit=50";
+  for (let page = 0; path && page < 60; page += 1) {
+    const response: { data?: unknown; meta?: { _next?: unknown } } = await callWhole(path, deps);
+    for (const raw of Array.isArray(response.data) ? response.data : []) {
+      const code = (raw as { country_code?: unknown }).country_code;
+      if (typeof code === "string" && /^[A-Za-z]{2}$/.test(code)) countries.add(code.toLowerCase());
+    }
+    const next = typeof response.meta?._next === "string" ? response.meta._next : null;
+    path = next ? next.replace(/^https:\/\/api-bitrefill\.com\/v2/, "") : null;
+  }
+  return [...countries];
+}
+
 /** The whole answer of a paged list, `data` and `meta` together. */
 async function callWhole(path: string, deps: Deps): Promise<{ data?: unknown; meta?: { _next?: unknown } }> {
   const authorization = bitrefillAuthorization(deps.env);

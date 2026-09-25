@@ -18,7 +18,23 @@ CREATE TABLE IF NOT EXISTS viky_accounts (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE viky_accounts ADD COLUMN IF NOT EXISTS appearance text;
+ALTER TABLE viky_accounts ADD COLUMN IF NOT EXISTS country text;
 `;
+
+/**
+ * Where the person lives, a fact of the account (D274): made on first use by the code that reads or writes it, so a
+ * deployment never serves a route before its column exists. Idempotent; once per instance.
+ */
+let countryColumn: Promise<void> | undefined;
+function withCountryColumn(): Promise<void> {
+  countryColumn ??= (async () => {
+    await sql()`ALTER TABLE viky_accounts ADD COLUMN IF NOT EXISTS country text`;
+  })().catch((error: unknown) => {
+    countryColumn = undefined;
+    throw error;
+  });
+  return countryColumn;
+}
 
 let executor: SqlExecutor | undefined;
 
@@ -46,12 +62,20 @@ export type Appearance = "light" | "dark";
 
 export const isAppearance = (value: unknown): value is Appearance => value === "light" || value === "dark";
 
-export type Preferences = Readonly<{ displayCurrency: DisplayCurrency | null; appearance: Appearance | null }>;
+export type Preferences = Readonly<{ displayCurrency: DisplayCurrency | null; appearance: Appearance | null; country: string | null }>;
+
+/** A country as the account keeps it: two letters, lower case. */
+export const isCountry = (value: unknown): value is string => typeof value === "string" && /^[a-z]{2}$/.test(value);
 
 export async function loadPreferences(account: string): Promise<Preferences> {
-  const rows = await sql()`SELECT display_currency, appearance FROM viky_accounts WHERE account = ${account.toLowerCase()}`;
+  await withCountryColumn();
+  const rows = await sql()`SELECT display_currency, appearance, country FROM viky_accounts WHERE account = ${account.toLowerCase()}`;
   const stored = rows[0]?.display_currency;
-  return { displayCurrency: isDisplayCurrency(stored) ? stored : null, appearance: isAppearance(rows[0]?.appearance) ? rows[0].appearance : null };
+  return {
+    displayCurrency: isDisplayCurrency(stored) ? stored : null,
+    appearance: isAppearance(rows[0]?.appearance) ? rows[0].appearance : null,
+    country: isCountry(rows[0]?.country) ? rows[0].country : null,
+  };
 }
 
 /**
@@ -64,6 +88,14 @@ export async function saveAppearance(account: string, appearance: Appearance): P
     INSERT INTO viky_accounts (account, appearance, updated_at)
     VALUES (${account.toLowerCase()}, ${appearance}, now())
     ON CONFLICT (account) DO UPDATE SET appearance = EXCLUDED.appearance, updated_at = now()`;
+}
+
+export async function saveCountry(account: string, country: string): Promise<void> {
+  await withCountryColumn();
+  await sql()`
+    INSERT INTO viky_accounts (account, country, updated_at)
+    VALUES (${account.toLowerCase()}, ${country}, now())
+    ON CONFLICT (account) DO UPDATE SET country = EXCLUDED.country, updated_at = now()`;
 }
 
 export async function saveDisplayCurrency(account: string, currency: DisplayCurrency): Promise<void> {

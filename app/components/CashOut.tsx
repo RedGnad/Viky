@@ -18,12 +18,14 @@ import { formatAusd } from "@/src/gift-reader";
 import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords } from "@/src/rail-country";
 import { feeSentence, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "@/src/rails";
-import { CASH_OUT as W, USE_MONEY as U } from "@/src/sentences";
+import { CASH_OUT as W, USE_MONEY as U, WHERE_YOU_LIVE as L } from "@/src/sentences";
 import { orderUses, usesFor } from "@/src/use-money";
+import { useAccountCountry } from "@/src/client/account-country";
+import { CountryPicker } from "../kit/CountryPicker";
 import { AccountPanel } from "./AccountPanel";
 import { PhoneTopUp } from "./PhoneTopUp";
 import { GiftCardOut } from "./GiftCardOut";
-import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, CHIP, FIELD, HELP, INLINE_BUTTON, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE, TITLE_IN_FACE } from "./ui";
+import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, FIELD, HELP, INLINE_BUTTON, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE, TITLE_IN_FACE } from "./ui";
 
 /**
  * The way out, rebuilt from docs/design/flows.md (states W1 to W13) on 17 Sep 2026.
@@ -126,7 +128,9 @@ export function CashOut() {
   // Where the rails serve, and the one answer the person may have given when the two signals disagreed (R1). Kept for
   // the tab: it orders cards and nothing else, so it is never worth asking twice in one sitting and never worth keeping.
   const [where, setWhere] = useState<RailsWhere | null>(null);
-  const [answeredCountry, setAnsweredCountry] = useState<string | null>(null);
+  // Where the person lives, a fact of the account (D274): read from it, and "change" below writes it back there.
+  const { country: accountCountry, save: saveCountry } = useAccountCountry(address);
+  const answeredCountry = accountCountry ?? null;
   /** Whether the person opened "change" under the title, to say where their number is from (D270). */
   const [picking, setPicking] = useState(false);
   const resumed = useRef(false);
@@ -472,7 +476,6 @@ export function CashOut() {
   const heading = <h1 className={TITLE_IN_FACE}>{W.title}</h1>;
   // The uses for the number's country, ordered by the amount (D270): only what works there, the first in the sun.
   const asking = picking || Boolean(where?.ask && !answeredCountry);
-  const countryChoices = Array.from(new Set([countryNow, where?.fromDevice, where?.fromConnection, "sn", "ci", "fr"].filter((code): code is string => Boolean(code))));
   const eurosHeld = money.rates?.usdPerEur ? Number(changeable) / 1_000_000 / money.rates.usdPerEur : undefined;
   const uses = where?.ask && !answeredCountry ? [] : orderUses(usesFor(countryNow, where?.waysOut ?? {}, true, true), eurosHeld, (use) => netOf(use === "bank" ? WAY_OUT_EURO : WAY_OUT_CARD)?.net);
 
@@ -592,7 +595,7 @@ export function CashOut() {
         <div className="flex flex-col gap-[var(--space-xs)]">
           {heading}
           <p className={CARD_LABEL}>
-            {countryNow ? U.forNumberIn(countryInWords(countryNow) ?? countryNow.toUpperCase()) : U.forYourNumber}
+            {countryNow ? U.forWhereYouLive(countryInWords(countryNow) ?? countryNow.toUpperCase()) : U.forYourNumber}
             {" · "}
             <button type="button" onClick={() => setPicking((was) => !was)} aria-expanded={asking} className="underline underline-offset-2">
               {U.change}
@@ -601,23 +604,16 @@ export function CashOut() {
         </div>
         {asking ? (
           <section className={CARD}>
-            <h3 className={CARD_TITLE}>{U.whereIsTheNumber}</h3>
-            <div className="flex flex-wrap gap-[var(--space-sm)]">
-              {countryChoices.map((code) => (
-                <button
-                  key={code}
-                  type="button"
-                  aria-pressed={countryNow === code}
-                  onClick={() => {
-                    setAnsweredCountry(code);
-                    setPicking(false);
-                  }}
-                  className={`${CHIP} ${countryNow === code ? "bg-[var(--chosen)] font-bold" : ""}`}
-                >
-                  {countryInWords(code) ?? code.toUpperCase()}
-                </button>
-              ))}
-            </div>
+            {/* The same list as Me (D274): every country where at least one way out works, kept on the account. */}
+            <CountryPicker
+              id="use-where-you-live"
+              label={L.question}
+              value={countryNow}
+              onChange={(code) => {
+                setPicking(false);
+                void saveCountry(code);
+              }}
+            />
           </section>
         ) : null}
         {uses.length === 0 ? <p className={BODY}>{U.nothingHere}</p> : null}
