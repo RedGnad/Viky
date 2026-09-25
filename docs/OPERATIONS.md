@@ -1408,6 +1408,11 @@ key was declined here): check after that `vercel env ls` lists `TREASURY_PRIVATE
 The file `~/viky-keys/viky-treasury` and its password are the only copy outside Vercel, whose sensitive values cannot
 be read back: keep both.
 
+**2 bis. The Bitrefill account delivers codes unsealed (D271, gift cards).** Bitrefill's terms (section 2) deliver a
+product sealed by default, "a right to claim a Product at a later stage", and let the customer change it on the account.
+A gift card's code reaches the person only once Bitrefill returns it, so the account's delivery setting is set to
+unsealed on bitrefill.com. Unverified: whether the API returns a sealed product's code at all.
+
 **3. The first funding of the treasury**, from the founder's own funds: USDC on Base for the invoices, and a little ETH on
 Base for their fees. No MON: on Monad the treasury only signs, and the relayer carries its refunds (src/phone-treasury.ts).
 

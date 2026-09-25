@@ -4,8 +4,9 @@ import { bitrefillConfigured } from "@/src/bitrefill";
 import { isOperator } from "@/src/dev-access";
 import { NO_STORE } from "@/src/gift-api";
 import { phoneErrorResponse } from "@/src/phone-api";
-import { phoneDataOffered, phoneWayOffered } from "@/src/phone-order";
+import { giftCardsOffered, phoneDataOffered, phoneWayOffered } from "@/src/phone-order";
 import { treasuryConfigured } from "@/src/phone-treasury";
+import { vaultConfigured } from "@/src/connect-vault";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +17,9 @@ export async function GET(request: Request) {
     const auth = readAccountAuthSession(request);
     const offered = phoneWayOffered(auth.account, { isOperator, configured: () => bitrefillConfigured() && treasuryConfigured() });
     const data = offered && phoneDataOffered(auth.account, { isOperator });
-    return NextResponse.json({ offered, data }, { headers: NO_STORE });
+    // A gift card's code is sealed before it is kept, so the vault is part of what makes them offered.
+    const giftCards = giftCardsOffered(auth.account, { isOperator, configured: () => bitrefillConfigured() && treasuryConfigured() && vaultConfigured() });
+    return NextResponse.json({ offered, data, giftCards }, { headers: NO_STORE });
   } catch (error) {
     return phoneErrorResponse(error);
   }

@@ -63,6 +63,10 @@ function world(overrides: Partial<PhoneDeps> = {}, price = "3.812346"): { deps: 
     },
     authorizationUsed: async () => false,
     store,
+    giftCardById: async (id) => ({ id, name: id === "boomplay-senegal" ? "Boomplay" : "Amazon.fr", countryCode: "SN", countryName: "Senegal", currency: "XOF", packages: [{ id: `${id}<&>1959`, value: "1959", priceUsd: 3.5 }], range: null }),
+    readOrderCode: async () => ({ code: "BOOM-1234-CODE", instructions: "Open Boomplay and redeem" }),
+    seal: (text) => `sealed:${Buffer.from(text).toString("base64")}`,
+    open: (sealed) => Buffer.from(sealed.slice("sealed:".length), "base64").toString(),
     sleep: async () => undefined,
     ...overrides,
   };
@@ -210,4 +214,51 @@ test("mobile data is offered to an operator alone until its own first real order
   assert.equal(PHONE_DATA_OPEN, false);
   assert.equal(phoneDataOffered(PERSON, { isOperator: () => true }), true);
   assert.equal(phoneDataOffered(PERSON, { isOperator: () => false }), false);
+});
+
+test("a gift card is priced like a top-up, and its code is sealed at rest and opened for its owner alone", async () => {
+  const { priceGiftCard } = await import("../src/phone-order");
+  const { deps } = world();
+  const priced = await priceGiftCard({ account: PERSON, productId: "boomplay-senegal", packageId: "boomplay-senegal<&>1959" }, deps);
+  assert.equal(priced.localAmount, "1959");
+  assert.equal((await store.loadPhoneOrder(priced.orderId))?.phoneNumber, null, "no number for a gift card");
+  const status = await payPhoneTopUp({ account: PERSON, orderId: priced.orderId, authorization: authorization(priced.ausdUnits) }, deps);
+  assert.equal(status.kind, "gift_card");
+  assert.equal(status.state, "delivered");
+  assert.deepEqual(status.code, { code: "BOOM-1234-CODE", instructions: "Open Boomplay and redeem" });
+  const row = await store.loadPhoneOrder(priced.orderId);
+  assert.ok(row?.codeSealed?.startsWith("sealed:"), "never at rest in the clear");
+  assert.ok(!String(row?.codeSealed).includes("BOOM-1234-CODE"));
+  await assert.rejects(followPhoneTopUp({ account: TREASURY, orderId: priced.orderId }, deps), refused("NOT_YOURS"));
+  assert.equal((await store.giftCardsOf(PERSON)).length, 1, "in its owner's history");
+});
+
+test("a gift card delivered before its code could be read is on its way until the code is there", async () => {
+  const { priceGiftCard } = await import("../src/phone-order");
+  let codeReady = false;
+  const { deps } = world({ readOrderCode: async () => (codeReady ? { code: "LATE-CODE" } : undefined) });
+  const priced = await priceGiftCard({ account: PERSON, productId: "boomplay-senegal", packageId: "boomplay-senegal<&>1959" }, deps);
+  const first = await payPhoneTopUp({ account: PERSON, orderId: priced.orderId, authorization: authorization(priced.ausdUnits) }, deps);
+  assert.equal(first.state, "on_its_way");
+  codeReady = true;
+  const later = await followPhoneTopUp({ account: PERSON, orderId: priced.orderId }, deps);
+  assert.equal(later.state, "delivered");
+  assert.equal(later.code?.code, "LATE-CODE");
+});
+
+test("the list puts the country's own cards first, then Bitrefill's own, then the rest, and says where each works in Bitrefill's words", async () => {
+  const { orderGiftCards, worksIn } = await import("../src/bitrefill");
+  const card = (id: string, name: string, countryCode: string, countryName: string, currency: string) => ({ id, name, countryCode, countryName, currency, packages: [], range: null });
+  const listed = [card("disney-usa", "Disney USD International", "US", "United States", "USD"), card("bitrefill-giftcard-usd", "Bitrefill Gift Card (USD)", "", "International", "USD"), card("boomplay-senegal", "Boomplay", "SN", "Senegal", "XOF"), card("amazon-fr", "Amazon.fr", "FR", "France", "EUR")];
+  assert.deepEqual(orderGiftCards(listed, "SN", "XOF").map((one) => one.id), ["boomplay-senegal", "bitrefill-giftcard-usd", "disney-usa", "amazon-fr"]);
+  assert.deepEqual(orderGiftCards(listed, "CI", "XOF").map((one) => one.id), ["boomplay-senegal", "amazon-fr", "bitrefill-giftcard-usd", "disney-usa"], "the founder's Amazon.fr for Ivory Coast, and XOF cards");
+  assert.equal(worksIn(listed[2]), "Works in: Senegal");
+});
+
+test("a gift card code in either of Bitrefill's two documented shapes", async () => {
+  const { giftCardCodeOf } = await import("../src/bitrefill");
+  assert.deepEqual(giftCardCodeOf({ code: "ABCD", pin: "12", expiration_date: "2027-01-01" }), { code: "ABCD", link: undefined, pin: "12", instructions: undefined, expires: "2027-01-01" });
+  assert.deepEqual(giftCardCodeOf("Go to example.com and paste ABCD"), { instructions: "Go to example.com and paste ABCD" });
+  assert.equal(giftCardCodeOf({}), undefined);
+  assert.equal(giftCardCodeOf(null), undefined);
 });
