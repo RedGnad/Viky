@@ -56,3 +56,18 @@ test("a finger on the sheet leaves the page where it is, and a finger on the pag
   await swipe(page, 20, Math.max(8, top / 2));
   await expect.poll(() => scrolled(page)).toBeGreaterThan(before);
 });
+
+test("a family's list opens at its top, even from a tile reached by scrolling the four (D251)", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 560 });
+  await page.goto("/", { waitUntil: "load" });
+  await page.locator("main section").first().getByRole("button", { name: /What they will do/i }).click();
+  const sheet = page.locator("dialog.sheet[open]");
+  const body = sheet.locator(".sheet-body");
+  await expect(sheet.locator("[data-family-art]")).toHaveCount(4);
+  // Part way down the four, then a tile pressed where it stands (a click without the test's own scrolling into view).
+  await body.evaluate((element) => element.scrollTo({ top: 40 }));
+  await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBeGreaterThan(20);
+  await sheet.getByRole("button", { name: /^Learn/ }).dispatchEvent("click");
+  await expect(sheet.getByRole("radio").first()).toBeVisible();
+  await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBe(0);
+});

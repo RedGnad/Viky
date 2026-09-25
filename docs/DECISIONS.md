@@ -6835,3 +6835,15 @@ grades). The other developer links to it from the empty state of "Which universi
   place of the three equal auto margins. At 390x844 the button from 383 to 373 and the title from 156 to 160; at
   1440x900 from 366 to 356 and 160 to 163; the character and the card unmoved. The 24 pixel minimum under the sentence
   stays.
+
+## D251, 25 Sep 2026: a sheet goes back to its top when what it shows changes, not only its title
+
+- Found by the browser suite failing now and then at 375 (the catalogue's list at 12 pixels instead of 0), twice
+  merged past: once with a policy test failing, once with this one, because the gate's output was piped into `tail`
+  and its failure lost. The gate is now one script that stops at the first failing stage, and a merge waits on its own
+  exit code.
+- The cause is the product's, not the test's: the chooser's four tiles and a family's list share one title, and a
+  sheet went back to its top only when its title changed (D113's rule). On a short phone, a person who scrolls the
+  four to reach a tile opened that family's list part way down. `Sheet` takes `view`, what it shows; the chooser
+  passes the family, or "families", or "questions"; any change sends the sheet back to its top. Reproduced on
+  production (the list at 40 after the four were scrolled to 40), fixed here (`sheet-scroll.spec.ts`).

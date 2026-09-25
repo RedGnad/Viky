@@ -22,6 +22,7 @@ export function Sheet({
   children,
   footer,
   tall = false,
+  view,
 }: Readonly<{
   open: boolean;
   title: string;
@@ -33,6 +34,11 @@ export function Sheet({
   children: ReactNode;
   /** The action that ends the sheet, kept at the bottom where the thumb is. */
   footer?: ReactNode;
+  /**
+   * What the sheet is showing, when it changes without its title changing (D251): the chooser's four tiles and a
+   * family's list share one title, and a list opened from a tile reached by scrolling began part way down.
+   */
+  view?: string;
   /** A sheet with more to say stops a little higher, at the cap pay.html draws, and still never fills the screen. */
   tall?: boolean;
 }>) {
@@ -95,7 +101,7 @@ export function Sheet({
   */
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 });
-  }, [open, title]);
+  }, [open, title, view]);
 
   /*
     A scroll that starts on the sheet stays on the sheet (D249, the founder, 25 Sep 2026): the page behind scrolls only

@@ -253,6 +253,7 @@ export function WillSheet({
     <Sheet
       open={open}
       title={title}
+      view={choosing || !condition ? (family ?? "families") : "questions"}
       onClose={() => {
         setAskedFor(null);
         onClose();
