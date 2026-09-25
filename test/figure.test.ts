@@ -15,6 +15,18 @@ test("one light, and the reflections follow it rather than the body", () => {
   assert.ok(shine.gloss.cx < 32 && shine.gloss.cy < 20, "the gloss sits toward the light, top left");
   assert.ok(shine.gradient.x1 < shine.gradient.x2 && shine.gradient.y1 < shine.gradient.y2, "the gradient runs from the lit corner");
   assert.ok(!("rims" in shine), "no rim along the far edges: it read as a stray line (D237)");
+  assert.ok(!("sparkle" in shine), "no spot inside the gloss: it read as a second, lighter circle (D243)");
+  const face = renderToStaticMarkup(createElement(Figure, { id: "f" }));
+  const gloss = face.slice(face.indexOf('data-part="gloss"'), face.indexOf("</g>", face.indexOf('data-part="gloss"')));
+  assert.equal((gloss.match(/<ellipse/g) ?? []).length, 1, "the gloss");
+  assert.equal((gloss.match(/<circle/g) ?? []).length, 1, "and one dot beside it, nothing inside it");
+  for (const mouth of ["smile", "grin"] as const) {
+    const drawn = renderToStaticMarkup(createElement(Figure, { id: "m", mouth }));
+    const lips = drawn.slice(drawn.indexOf('data-part="mouth"'), drawn.indexOf("</g>", drawn.indexOf('data-part="mouth"')));
+    assert.equal((lips.match(/<path/g) ?? []).length, 1, `${mouth}: one shape, no pale arc inside it (D243)`);
+    assert.match(lips, /stroke-linejoin:round/, `${mouth}: the corners rounded, not pointed`);
+    assert.doesNotMatch(lips, /rgba\(255/, `${mouth}: nothing shines inside the mouth`);
+  }
   const fromRight = lit({ x: 1, y: -1 });
   assert.ok(fromRight.gloss.cx > 32, "light from the right, gloss on the right");
   assert.ok(fromRight.gradient.x1 > fromRight.gradient.x2, "and the gradient turns with it");
@@ -76,11 +88,17 @@ test("the three destinations carry their scenes at the head, larger, and a chang
   assert.match(head, /if \(!scene \|\| !arrives \|\| !stage \|\| reduced\(\)\) return;/, "a cold load and a device asking for less show the final state from the first image");
   assert.match(head, /'\[data-part="arm"\]:not\(\[data-pose="rest"\]\)'/, "the raised arms come out");
   // Along their own curve from the joint, whatever direction it runs (D241): the arm on the shoulder lies sideways.
-  assert.match(head, /strokeDashoffset: 1 \}, \{ strokeDasharray: "1 1", strokeDashoffset: 0 \}/, "drawn out along the path");
+  assert.match(head, /strokeDashoffset: 1\.1 \}, \{ strokeDasharray: "1 2", strokeDashoffset: 0 \}/, "drawn out along the path");
   assert.doesNotMatch(head, /scaleY/, "never stretched on one axis");
   const gifts = renderToStaticMarkup(createElement(Scene, { which: "gifts" }));
   assert.match(gifts, /data-pose="shoulder"[^>]*><path data-part="reach" d="M51 26 C57 24\.5 65 19\.5 72 16\.5" pathLength="1"/, "the path starts at the joint");
-  assert.match(head, /"\[data-prop\]"/, "and the props grow from their middle");
+  assert.match(head, /'\[data-prop="suit"\]'/, "the suit grows onto the body");
+  assert.match(head, /'\[data-prop="case"\]'[\s\S]*?rotate\(-40deg\)[\s\S]*?rotate\(0deg\)/, "the case swings into the hand");
+  assert.match(head, /'\[data-prop="shades"\]'/, "the sunglasses come down onto the eyes");
+  // The blink of 25 Sep 2026 (D243): started after the paint, the first image was the scene complete. Before it, always.
+  assert.match(head, /useLayoutEffect\(\(\) => \{\n\s*aHeadWasDrawn = true;/);
+  assert.doesNotMatch(head, /useEffect\(/, "no arrival may start after the first paint");
+  assert.doesNotMatch(head, /data-part="figure"/, "the figure rides the row's own entrance, and fades only once");
   assert.doesNotMatch(head, /setInterval|iterations: Infinity/, "nothing on a clock, nothing loops");
   for (const [file, scene] of [["app/kit/Home.tsx", "home"], ["app/kit/Gifts.tsx", "gifts"], ["app/kit/Me.tsx", "me"]] as const) {
     assert.ok(readFileSync(file, "utf8").includes(`<HeadCharacter scene="${scene}" />`), `${scene} carries its scene`);
