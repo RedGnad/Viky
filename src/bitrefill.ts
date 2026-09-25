@@ -220,3 +220,114 @@ export function usdcUnits(price: string): bigint {
   const rest = /[1-9]/.test(decimals.slice(6)) ? 1n : 0n;
   return whole + kept + rest;
 }
+
+/**
+ * Gift cards (D271's second step): the cards Bitrefill lists for a country (`GET /products?country=<XX>&type=gift_card`,
+ * paged by `meta._next`, docs "Searching Products", read 26 Sep 2026), which is the catalogue its site shows as "Works
+ * in SN" (64 in Senegal, 65 in Ivory Coast, read the same day). Each carries Bitrefill's own `country_name`, which its
+ * product pages print as "Works in: Senegal".
+ */
+export type BitrefillGiftCard = Readonly<{
+  id: string;
+  name: string;
+  countryCode: string;
+  countryName: string;
+  currency: string;
+  packages: readonly BitrefillPackage[];
+  range: BitrefillOperator["range"];
+}>;
+
+function giftCardOf(raw: Record<string, unknown>): BitrefillGiftCard | undefined {
+  const operator = operatorOf(raw);
+  if (!operator) return undefined;
+  if (raw.in_stock === false) return undefined;
+  return {
+    id: operator.id,
+    name: operator.name,
+    countryCode: typeof raw.country_code === "string" ? raw.country_code.toUpperCase() : "",
+    countryName: typeof raw.country_name === "string" ? raw.country_name : "",
+    currency: operator.currency,
+    packages: operator.packages,
+    range: operator.range,
+  };
+}
+
+/** Every gift card Bitrefill lists for a country, in stock, in Bitrefill's own order. */
+export async function giftCardsFor(country: string, deps: Deps = liveDeps()): Promise<readonly BitrefillGiftCard[]> {
+  if (!/^[A-Z]{2}$/.test(country)) throw new BitrefillError("COUNTRY_NOT_SERVED", "No country to list gift cards for");
+  const cards: BitrefillGiftCard[] = [];
+  let path: string | null = `/products?country=${country}&type=gift_card&limit=50`;
+  for (let page = 0; path && page < 10; page += 1) {
+    const response: { data?: unknown; meta?: { _next?: unknown } } = await callWhole(path, deps);
+    for (const raw of Array.isArray(response.data) ? response.data : []) {
+      const card = giftCardOf(raw as Record<string, unknown>);
+      if (card) cards.push(card);
+    }
+    const next = typeof response.meta?._next === "string" ? response.meta._next : null;
+    path = next ? next.replace(/^https:\/\/api-bitrefill\.com\/v2/, "") : null;
+  }
+  if (cards.length === 0) throw new BitrefillError("COUNTRY_NOT_SERVED", "Bitrefill lists no gift card for that country");
+  return cards;
+}
+
+/** One gift card by its id, for pricing it: the name and the amounts it takes. */
+export async function giftCardById(id: string, deps: Deps = liveDeps()): Promise<BitrefillGiftCard> {
+  if (!/^[a-z0-9][a-z0-9_-]{1,80}$/i.test(id)) throw new BitrefillError("INVOICE_REFUSED", "That is not a gift card");
+  const card = giftCardOf(await call<Record<string, unknown>>(`/products/${id}`, { method: "GET" }, deps));
+  if (!card) throw new BitrefillError("INVOICE_REFUSED", "That gift card is not available");
+  return card;
+}
+
+/** The whole answer of a paged list, `data` and `meta` together. */
+async function callWhole(path: string, deps: Deps): Promise<{ data?: unknown; meta?: { _next?: unknown } }> {
+  const authorization = bitrefillAuthorization(deps.env);
+  let response: Response;
+  try {
+    response = await deps.fetch(`${BITREFILL_BASE_URL}${path}`, { method: "GET", headers: { authorization, accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(20_000) });
+  } catch (error) {
+    throw new BitrefillError("UNAVAILABLE", "Bitrefill could not be reached", { cause: error });
+  }
+  const body = (await response.json().catch(() => ({}))) as { data?: unknown; meta?: { _next?: unknown }; error_code?: unknown; message?: unknown };
+  if (!response.ok) throw errorOf(response.status, body);
+  return body;
+}
+
+/**
+ * The order of the list the person reads (the founder, 26 Sep 2026): first the cards of their own country, by its
+ * country or its currency, and the ones the founder named for it; then Bitrefill's own card, which works on the whole
+ * shop; then the rest, in Bitrefill's order. Nothing is removed.
+ */
+const FIRST_FOR: Readonly<Record<string, readonly RegExp[]>> = { CI: [/^amazon\.fr\b/i] };
+
+export function orderGiftCards(cards: readonly BitrefillGiftCard[], country: string, localCurrency: string | null): readonly BitrefillGiftCard[] {
+  const rank = (card: BitrefillGiftCard): number => {
+    if (card.countryCode === country || (localCurrency && card.currency === localCurrency) || (FIRST_FOR[country] ?? []).some((pattern) => pattern.test(card.name))) return 0;
+    if (/^bitrefill[-_]giftcard/i.test(card.id)) return 1;
+    return 2;
+  };
+  return cards.map((card, index) => ({ card, index })).sort((a, b) => rank(a.card) - rank(b.card) || a.index - b.index).map((entry) => entry.card);
+}
+
+/** Where a card works, in Bitrefill's words: its product pages print "Works in:" and the country it gives. */
+export function worksIn(card: Pick<BitrefillGiftCard, "countryName">): string {
+  return card.countryName ? `Works in: ${card.countryName}` : "";
+}
+
+/** What a delivered gift card carries, whichever form Bitrefill gives it in: an object of fields, or a sentence. */
+export type GiftCardCode = Readonly<{ code?: string; link?: string; pin?: string; instructions?: string; expires?: string }>;
+
+export function giftCardCodeOf(redemption: unknown): GiftCardCode | undefined {
+  if (typeof redemption === "string") return redemption.trim() ? { instructions: redemption.trim() } : undefined;
+  if (!redemption || typeof redemption !== "object") return undefined;
+  const r = redemption as Record<string, unknown>;
+  const text = (key: string) => (typeof r[key] === "string" && (r[key] as string).trim() ? (r[key] as string).trim() : undefined);
+  const code: GiftCardCode = { code: text("code"), link: text("link"), pin: text("pin"), instructions: text("instructions"), expires: text("expiration_date") };
+  return Object.values(code).some(Boolean) ? code : undefined;
+}
+
+/** A delivered order's code, read from Bitrefill when the invoice is complete. */
+export async function readOrderCode(orderId: string, deps: Deps = liveDeps()): Promise<GiftCardCode | undefined> {
+  if (!/^[A-Za-z0-9_-]{6,80}$/.test(orderId)) throw new BitrefillError("BAD_ANSWER", "That is not an order id");
+  const order = await call<Record<string, unknown>>(`/orders/${orderId}`, { method: "GET" }, deps);
+  return giftCardCodeOf(order.redemption_info);
+}

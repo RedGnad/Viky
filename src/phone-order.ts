@@ -1,5 +1,6 @@
 import { erc20Abi, getAddress, keccak256, stringToHex, type Abi, type Hex } from "viem";
-import { BITREFILL_ACCOUNT_LIMITS, BitrefillError, createInvoice, operatorsFor, outcomeOf, readInvoice, usdcUnits, type BitrefillInvoice, type BitrefillOperator } from "./bitrefill";
+import { BITREFILL_ACCOUNT_LIMITS, BitrefillError, createInvoice, giftCardById, operatorsFor, outcomeOf, readInvoice, readOrderCode, usdcUnits, type BitrefillInvoice, type BitrefillOperator, type GiftCardCode } from "./bitrefill";
+import { openSecret, sealSecret } from "./connect-vault";
 import { AUSD } from "./coins";
 import { monadChain, waitForFinality } from "./monad/chain";
 import { addMonadGasBuffer } from "./monad-gas";
@@ -28,6 +29,17 @@ import { relayerClients, relayerPreflight } from "./relayer";
  */
 export const PHONE_WAY_OPEN = false;
 
+/** A gift card opens on its own first real order, as credit and data do (the founder, 26 Sep 2026). */
+export const GIFT_CARD_OPEN = false;
+
+export function giftCardsOffered(account: string, deps: Readonly<{ isOperator: (account: string) => boolean; configured: () => boolean }>): boolean {
+  if (!deps.configured()) return false;
+  return GIFT_CARD_OPEN || deps.isOperator(account);
+}
+
+/** Every item Bitrefill's basic account may buy in a day, gift cards and top-ups together (terms section 8). */
+export const ACCOUNT_ITEMS_PER_DAY = 15;
+
 /** Mobile data opens on its own first real order, never with credit's (the founder, 26 Sep 2026). */
 export const PHONE_DATA_OPEN = false;
 
@@ -55,6 +67,7 @@ export type PhoneRefusal =
   | "OVER_ORDER"
   | "OVER_PERSON_DAY"
   | "OVER_SERVICE_ITEMS"
+  | "OVER_SERVICE_ALL_ITEMS"
   | "OVER_SERVICE_DAY"
   | "OVER_REFILL"
   | "TREASURY_SHORT"
@@ -84,6 +97,7 @@ export const PHONE_REFUSALS = {
   overOrder: () => `One top-up can be ${dollars(BigInt(PHONE_CEILINGS.usdPerOrder) * USDC)} at most for now. Nothing was taken.`,
   overPersonDay: (used: bigint) => `Up to ${dollars(BigInt(PHONE_CEILINGS.usdPerPersonPerDay) * USDC)} a day can go to phones for now, and ${dollars(used)} already went today. Nothing was taken.`,
   overServiceItems: () => `Viky can send ${BITREFILL_ACCOUNT_LIMITS.phoneItemsPerDay} top-ups a day for now, and today's are gone. Try again tomorrow. Nothing was taken.`,
+  overServiceAllItems: () => `Viky can buy ${ACCOUNT_ITEMS_PER_DAY} cards and top-ups a day for now, and today's are gone. Try again tomorrow. Nothing was taken.`,
   overServiceDay: () => `Viky can send ${dollars(BigInt(BITREFILL_ACCOUNT_LIMITS.usdPerDay) * USDC)} of top-ups a day for now, and today's is spent. Try again tomorrow. Nothing was taken.`,
   overRefill: () => `One top-up can be ${dollars(BigInt(BITREFILL_ACCOUNT_LIMITS.usdPerRefill) * USDC)} at most. Nothing was taken.`,
   treasuryShort: "Viky cannot send top-ups right now. Nothing was taken.",
@@ -125,7 +139,12 @@ export type PhoneDeps = Readonly<{
   relayToTreasury: (input: PersonAuthorization & { from: Hex; to: Hex }) => Promise<{ hash: Hex }>;
   /** Whether the token has consumed an authorization: the truth when a relay failed after it may have been sent. */
   authorizationUsed: (from: Hex, nonce: Hex) => Promise<boolean>;
-  store: Pick<typeof store, "recordPricedOrder" | "loadPhoneOrder" | "markReceived" | "markPaid" | "markDelivered" | "markFailed" | "markRefunded" | "markAbandoned" | "usedToday">;
+  store: Pick<typeof store, "recordPricedOrder" | "loadPhoneOrder" | "markReceived" | "markPaid" | "markDelivered" | "markFailed" | "markRefunded" | "markAbandoned" | "usedToday" | "keepSealedCode">;
+  giftCardById: typeof giftCardById;
+  readOrderCode: typeof readOrderCode;
+  /** The vault's seal and its opening, so a code is never at rest in the clear. */
+  seal: (text: string) => string;
+  open: (sealed: string) => string;
   sleep: (ms: number) => Promise<void>;
 }>;
 
@@ -171,10 +190,11 @@ export async function pricePhoneTopUp(
   }
   if (units > BigInt(BITREFILL_ACCOUNT_LIMITS.usdPerRefill) * USDC) throw new PhoneOrderError("OVER_REFILL", PHONE_REFUSALS.overRefill());
   if (units > BigInt(PHONE_CEILINGS.usdPerOrder) * USDC) throw new PhoneOrderError("OVER_ORDER", PHONE_REFUSALS.overOrder());
-  const [mine, everybody] = await Promise.all([deps.store.usedToday(input.account), deps.store.usedToday()]);
+  const [mine, phones, everything] = await Promise.all([deps.store.usedToday(input.account), deps.store.usedToday(undefined, undefined, "phone"), deps.store.usedToday()]);
   if (mine.usdcUnits + units > BigInt(PHONE_CEILINGS.usdPerPersonPerDay) * USDC) throw new PhoneOrderError("OVER_PERSON_DAY", PHONE_REFUSALS.overPersonDay(mine.usdcUnits));
-  if (everybody.items + 1 > BITREFILL_ACCOUNT_LIMITS.phoneItemsPerDay) throw new PhoneOrderError("OVER_SERVICE_ITEMS", PHONE_REFUSALS.overServiceItems());
-  if (everybody.usdcUnits + units > BigInt(BITREFILL_ACCOUNT_LIMITS.usdPerDay) * USDC) throw new PhoneOrderError("OVER_SERVICE_DAY", PHONE_REFUSALS.overServiceDay());
+  if (phones.items + 1 > BITREFILL_ACCOUNT_LIMITS.phoneItemsPerDay) throw new PhoneOrderError("OVER_SERVICE_ITEMS", PHONE_REFUSALS.overServiceItems());
+  if (everything.items + 1 > ACCOUNT_ITEMS_PER_DAY) throw new PhoneOrderError("OVER_SERVICE_ALL_ITEMS", PHONE_REFUSALS.overServiceAllItems());
+  if (phones.usdcUnits + units > BigInt(BITREFILL_ACCOUNT_LIMITS.usdPerDay) * USDC) throw new PhoneOrderError("OVER_SERVICE_DAY", PHONE_REFUSALS.overServiceDay());
   if ((await deps.heldAusd(input.account)) < units) throw new PhoneOrderError("NOT_ENOUGH", PHONE_REFUSALS.notEnough);
   if (!(await deps.treasuryCovers(units))) throw new PhoneOrderError("TREASURY_SHORT", PHONE_REFUSALS.treasuryShort, 503);
   const localAmount = input.value !== undefined ? String(input.value) : (operator.packages.find((p) => p.id === input.packageId)?.value ?? "");
@@ -196,11 +216,100 @@ export async function pricePhoneTopUp(
 
 export type PersonAuthorization = Readonly<{ value: bigint; validAfter: bigint; validBefore: bigint; nonce: Hex; signature: Hex }>;
 
-export type PhoneOrderStatus = Readonly<{ orderId: string; state: "on_its_way" | "delivered" | "refunded" | "refund_pending"; amount: string; operatorName: string }>;
+export type PhoneOrderStatus = Readonly<{
+  orderId: string;
+  state: "on_its_way" | "delivered" | "refunded" | "refund_pending";
+  amount: string;
+  operatorName: string;
+  kind: "phone" | "gift_card";
+  /** A delivered gift card's code, opened for the account that owns the order and nobody else. */
+  code?: GiftCardCode;
+}>;
 
-function statusOf(order: PhoneOrder): PhoneOrderStatus {
-  const state = order.state === "delivered" ? "delivered" : order.state === "refunded" ? "refunded" : order.state === "failed" ? "refund_pending" : "on_its_way";
-  return { orderId: order.id, state, amount: dollars(order.ausdUnits), operatorName: order.operatorName };
+function openedCode(order: PhoneOrder, open: ((sealed: string) => string) | undefined): GiftCardCode | undefined {
+  if (!order.codeSealed || !open) return undefined;
+  try {
+    return JSON.parse(open(order.codeSealed)) as GiftCardCode;
+  } catch {
+    return undefined;
+  }
+}
+
+function statusOf(order: PhoneOrder, open?: (sealed: string) => string): PhoneOrderStatus {
+  const delivered = order.state === "delivered";
+  // A gift card is delivered to the person when its code is there to show; until then it is on its way.
+  const code = order.kind === "gift_card" && delivered ? openedCode(order, open) : undefined;
+  const state = delivered && (order.kind !== "gift_card" || code) ? "delivered" : order.state === "refunded" ? "refunded" : order.state === "failed" ? "refund_pending" : "on_its_way";
+  return { orderId: order.id, state, amount: dollars(order.ausdUnits), operatorName: order.operatorName, kind: order.kind, ...(code ? { code } : {}) };
+}
+
+/**
+ * A gift card, priced and written down, moving nothing: the card and the amount the person chose, Bitrefill's invoice,
+ * and the same ceilings as a top-up, with the account's own limit on items a day.
+ */
+export async function priceGiftCard(input: Readonly<{ account: Hex; productId: string; packageId?: string; value?: number }>, deps: PhoneDeps = livePhoneDeps()): Promise<PricedPhoneOrder> {
+  let card;
+  try {
+    card = await deps.giftCardById(input.productId);
+  } catch (error) {
+    throw fromBitrefill(error);
+  }
+  let to: Hex;
+  try {
+    to = deps.treasuryAddress();
+  } catch {
+    throw new PhoneOrderError("NOT_CONFIGURED", PHONE_REFUSALS.notConfigured, 503);
+  }
+  let invoice: BitrefillInvoice;
+  try {
+    invoice = await deps.createInvoice({ productId: card.id, packageId: input.packageId, value: input.value, refundAddress: to });
+  } catch (error) {
+    throw fromBitrefill(error);
+  }
+  let units: bigint;
+  try {
+    units = usdcUnits(invoice.payment.price);
+  } catch {
+    throw new PhoneOrderError("UNAVAILABLE", PHONE_REFUSALS.unavailable, 503);
+  }
+  if (units > BigInt(PHONE_CEILINGS.usdPerOrder) * USDC) throw new PhoneOrderError("OVER_ORDER", PHONE_REFUSALS.overOrder());
+  const [mine, everything] = await Promise.all([deps.store.usedToday(input.account), deps.store.usedToday()]);
+  if (mine.usdcUnits + units > BigInt(PHONE_CEILINGS.usdPerPersonPerDay) * USDC) throw new PhoneOrderError("OVER_PERSON_DAY", PHONE_REFUSALS.overPersonDay(mine.usdcUnits));
+  if (everything.items + 1 > ACCOUNT_ITEMS_PER_DAY) throw new PhoneOrderError("OVER_SERVICE_ALL_ITEMS", PHONE_REFUSALS.overServiceAllItems());
+  if ((await deps.heldAusd(input.account)) < units) throw new PhoneOrderError("NOT_ENOUGH", PHONE_REFUSALS.notEnough);
+  if (!(await deps.treasuryCovers(units))) throw new PhoneOrderError("TREASURY_SHORT", PHONE_REFUSALS.treasuryShort, 503);
+  const localAmount = input.value !== undefined ? String(input.value) : (card.packages.find((p) => p.id === input.packageId)?.value ?? "");
+  const order = await deps.store.recordPricedOrder({
+    account: getAddress(input.account),
+    kind: "gift_card",
+    productId: card.id,
+    operatorName: card.name,
+    localAmount,
+    localCurrency: card.currency,
+    phoneNumber: null,
+    invoiceId: invoice.id,
+    usdcUnits: units,
+    ausdUnits: units,
+  });
+  return { orderId: order.id, operatorName: order.operatorName, localAmount: order.localAmount, localCurrency: order.localCurrency, ausdUnits: order.ausdUnits, to };
+}
+
+/** A delivered gift card's code, read from Bitrefill, sealed and kept once; nothing when Bitrefill has none yet. */
+async function keepCode(order: PhoneOrder, invoice: BitrefillInvoice | undefined, deps: PhoneDeps): Promise<PhoneOrder> {
+  if (order.kind !== "gift_card" || order.codeSealed) return order;
+  const orderId = invoice?.orders[0]?.id ?? (await deps.readInvoice(order.invoiceId).catch(() => undefined))?.orders[0]?.id;
+  if (!orderId) return order;
+  const code = await deps.readOrderCode(orderId).catch(() => undefined);
+  if (!code) return order;
+  let sealed: string;
+  try {
+    sealed = deps.seal(JSON.stringify(code));
+  } catch {
+    // No vault where this runs: the code is not kept in the clear, and the order stays on its way until it can be sealed.
+    console.error(`a gift card's code could not be sealed yet: ${order.id}`);
+    return order;
+  }
+  return (await deps.store.keepSealedCode(order.id, sealed)) ?? (await deps.store.loadPhoneOrder(order.id)) ?? order;
 }
 
 /** The nonce of an order's refund: the order's own, so a refund can happen once and never twice. */
@@ -228,7 +337,7 @@ async function refund(order: PhoneOrder, failure: string, deps: PhoneDeps): Prom
 export async function payPhoneTopUp(input: Readonly<{ account: Hex; orderId: string; authorization: PersonAuthorization }>, deps: PhoneDeps = livePhoneDeps()): Promise<PhoneOrderStatus> {
   const order = await deps.store.loadPhoneOrder(input.orderId);
   if (!order || getAddress(order.account) !== getAddress(input.account)) throw new PhoneOrderError("NOT_YOURS", PHONE_REFUSALS.notYours, 404);
-  if (order.state !== "priced") return statusOf(order);
+  if (order.state !== "priced") return statusOf(order, deps.open);
   let invoice: BitrefillInvoice;
   try {
     invoice = await deps.readInvoice(order.invoiceId);
@@ -279,6 +388,8 @@ export async function followPhoneTopUp(input: Readonly<{ account: Hex; orderId: 
   let order = await deps.store.loadPhoneOrder(input.orderId);
   if (!order || getAddress(order.account) !== getAddress(input.account)) throw new PhoneOrderError("NOT_YOURS", PHONE_REFUSALS.notYours, 404);
   if (order.state === "failed") return statusOf(await refund(order, order.failure ?? "failed", deps));
+  // A gift card delivered before its code could be read is read again here.
+  if (order.state === "delivered") return statusOf(await keepCode(order, undefined, deps), deps.open);
   const until = Date.now() + waitMs;
   while (order.state === "paid") {
     let invoice: BitrefillInvoice | undefined;
@@ -288,13 +399,13 @@ export async function followPhoneTopUp(input: Readonly<{ account: Hex; orderId: 
       invoice = undefined;
     }
     const outcome = invoice ? outcomeOf(invoice) : "waiting";
-    if (outcome === "delivered") return statusOf((await deps.store.markDelivered(order.id)) ?? order);
+    if (outcome === "delivered") return statusOf(await keepCode((await deps.store.markDelivered(order.id)) ?? order, invoice, deps), deps.open);
     if (outcome === "failed") return statusOf(await refund(order, `bitrefill:${invoice?.status ?? "failed"}`, deps));
     if (Date.now() >= until) break;
     await deps.sleep(3_000);
     order = (await deps.store.loadPhoneOrder(order.id)) ?? order;
   }
-  return statusOf(order);
+  return statusOf(order, deps.open);
 }
 
 const TRANSFER_ABI = [
@@ -355,6 +466,17 @@ export function livePhoneDeps(): PhoneDeps {
     relayToTreasury,
     authorizationUsed,
     store,
+    giftCardById,
+    readOrderCode,
+    seal: (text) => sealSecret(text),
+    open: (sealed) => openSecret(sealed),
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   };
+}
+
+/** The currency a country pays in, for the cards of its own currency at the head of the list (the CFA zones first). */
+const LOCAL_CURRENCY: Readonly<Record<string, string>> = { SN: "XOF", CI: "XOF", ML: "XOF", BF: "XOF", NE: "XOF", BJ: "XOF", TG: "XOF", GW: "XOF", CM: "XAF", GA: "XAF", CG: "XAF", TD: "XAF", CF: "XAF", GQ: "XAF", MA: "MAD", TN: "TND", FR: "EUR", BE: "EUR" };
+
+export function localCurrencyOf(country: string): string | null {
+  return LOCAL_CURRENCY[country] ?? null;
 }

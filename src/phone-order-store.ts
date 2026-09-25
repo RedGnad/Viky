@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS viky_phone_orders (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS viky_phone_orders_account ON viky_phone_orders (account, created_at DESC);
-CREATE INDEX IF NOT EXISTS viky_phone_orders_day ON viky_phone_orders (created_at)
+CREATE INDEX IF NOT EXISTS viky_phone_orders_day ON viky_phone_orders (created_at);
+ALTER TABLE viky_phone_orders ADD COLUMN IF NOT EXISTS code_sealed text
 `;
 
 export type PhoneOrderState = "priced" | "received" | "paid" | "delivered" | "failed" | "refunded";
@@ -60,6 +61,8 @@ export type PhoneOrder = Readonly<{
   refundTx: string | null;
   state: PhoneOrderState;
   failure: string | null;
+  /** A gift card's code, sealed by the vault (src/connect-vault.ts), opened for its owner alone (D271). */
+  codeSealed: string | null;
   createdAt: Date;
 }>;
 
@@ -102,12 +105,13 @@ function rowOf(row: Record<string, unknown>): PhoneOrder {
     refundTx: row.refund_tx ? String(row.refund_tx) : null,
     state: String(row.state) as PhoneOrderState,
     failure: row.failure ? String(row.failure) : null,
+    codeSealed: row.code_sealed ? String(row.code_sealed) : null,
     createdAt: row.created_at instanceof Date ? row.created_at : new Date(String(row.created_at)),
   };
 }
 
 /** A priced order, before anything moved: Bitrefill's invoice, its price in USDC, and the AUSD the person will send. */
-export async function recordPricedOrder(input: Omit<PhoneOrder, "id" | "ausdTx" | "paymentTx" | "refundTx" | "state" | "failure" | "createdAt">): Promise<PhoneOrder> {
+export async function recordPricedOrder(input: Omit<PhoneOrder, "id" | "ausdTx" | "paymentTx" | "refundTx" | "state" | "failure" | "createdAt" | "codeSealed">): Promise<PhoneOrder> {
   const id = `ph_${randomBytes(9).toString("base64url")}`;
   const rows = await sql()`
     INSERT INTO viky_phone_orders (id, account, kind, product_id, operator_name, local_amount, local_currency, phone_number, invoice_id, usdc_units, ausd_units, state)
@@ -143,6 +147,18 @@ async function advance(id: string, from: readonly PhoneOrderState[], to: PhoneOr
 export const markReceived = (id: string, ausdTx: string) => advance(id, ["priced"], "received", { ausdTx });
 export const markPaid = (id: string, paymentTx: string) => advance(id, ["received"], "paid", { paymentTx });
 export const markDelivered = (id: string) => advance(id, ["paid"], "delivered", { erasePhone: true });
+
+/** A delivered gift card's code, sealed, written once: a second write changes nothing. */
+export async function keepSealedCode(id: string, sealed: string): Promise<PhoneOrder | null> {
+  const rows = await sql()`UPDATE viky_phone_orders SET code_sealed = ${sealed}, updated_at = now() WHERE id = ${id} AND state = 'delivered' AND code_sealed IS NULL RETURNING *`;
+  return rows[0] ? rowOf(rows[0]) : null;
+}
+
+/** The gift cards an account received, newest first: the history the codes live in, and nowhere else. */
+export async function giftCardsOf(account: string): Promise<readonly PhoneOrder[]> {
+  const rows = await sql()`SELECT * FROM viky_phone_orders WHERE account = ${account} AND kind = 'gift_card' AND state = 'delivered' ORDER BY created_at DESC LIMIT 50`;
+  return rows.map(rowOf);
+}
 export const markFailed = (id: string, failure: string) => advance(id, ["received", "paid"], "failed", { failure });
 export const markRefunded = (id: string, refundTx: string) => advance(id, ["failed"], "refunded", { refundTx, erasePhone: true });
 /** A priced order the person never sent money for: nothing moved, so nothing is kept of the number either. */
@@ -152,11 +168,11 @@ export const markAbandoned = (id: string) => advance(id, ["priced"], "failed", {
  * What counts against a ceiling, since midnight UTC: the orders whose money came in and did not come back. `account`
  * narrows it to one person; without it, it is the whole service, which is what Bitrefill's account limits count.
  */
-export async function usedToday(account?: string, now: Date = new Date()): Promise<{ items: number; usdcUnits: bigint }> {
+export async function usedToday(account?: string, now: Date = new Date(), kind?: "phone" | "gift_card"): Promise<{ items: number; usdcUnits: bigint }> {
   const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
   const rows = account
-    ? await sql()`SELECT count(*)::int AS items, COALESCE(sum(usdc_units::numeric), 0)::text AS units FROM viky_phone_orders WHERE account = ${account} AND created_at >= ${day} AND state IN ('received', 'paid', 'delivered', 'failed')`
-    : await sql()`SELECT count(*)::int AS items, COALESCE(sum(usdc_units::numeric), 0)::text AS units FROM viky_phone_orders WHERE created_at >= ${day} AND state IN ('received', 'paid', 'delivered', 'failed')`;
+    ? await sql()`SELECT count(*)::int AS items, COALESCE(sum(usdc_units::numeric), 0)::text AS units FROM viky_phone_orders WHERE account = ${account} AND created_at >= ${day} AND state IN ('received', 'paid', 'delivered', 'failed') AND (${kind ?? null}::text IS NULL OR kind = ${kind ?? null})`
+    : await sql()`SELECT count(*)::int AS items, COALESCE(sum(usdc_units::numeric), 0)::text AS units FROM viky_phone_orders WHERE created_at >= ${day} AND state IN ('received', 'paid', 'delivered', 'failed') AND (${kind ?? null}::text IS NULL OR kind = ${kind ?? null})`;
   return { items: Number(rows[0]?.items ?? 0), usdcUnits: BigInt(String(rows[0]?.units ?? "0").split(".")[0]) };
 }
 

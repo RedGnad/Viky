@@ -637,3 +637,15 @@ once Bitrefill and the treasury are configured.
 | "That result is read only when a gift on it is shown, and Viky keeps whether it was reached, not the mark." | the year passed and the grade keep the verdict alone | `PRIVACY["university-year-passed-shown"]`, `PRIVACY["university-grade-shown"]`, kept "verdict" | `test/condition-privacy.test.ts` |
 | "Credit or data?", "Credit", "Mobile data" | the operators Bitrefill answers for the number are split by Bitrefill's own name ("Data", "Bundles", "Internet") | `phoneKindOf` | `test/phone-order.test.ts` |
 | "No mobile data for this number on Bitrefill. Choose the other." | none of the operators answered for the number is of that kind | `PhoneTopUp`, `phoneKindOf` | read by hand |
+
+### A gift card, on the Bitrefill way (D271)
+
+Offered to an operator's account alone until a first real order (`GIFT_CARD_OPEN` false), and only once Bitrefill,
+the treasury and the vault are configured. The screen comes in the next PR; these are the server's sentences.
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "Works in: Senegal" under a card | Bitrefill gives that country for the product; its product pages print "Works in:" | `worksIn`, `country_name` | `test/phone-order.test.ts` |
+| the order of the list | the country's own cards (its country, its currency, the founder's named ones), then Bitrefill's card, then the rest | `orderGiftCards` | `test/phone-order.test.ts` |
+| the code, on the page and in its history | Bitrefill returned it for the delivered order; it is sealed at rest and opened for its owner alone | `keepCode`, `keepSealedCode`, `/api/giftcards/codes` | `test/phone-order.test.ts` |
+| "Viky can buy 15 cards and top-ups a day for now" | Bitrefill's basic account buys fifteen items a day | `ACCOUNT_ITEMS_PER_DAY`, terms section 8 | `test/phone-order.test.ts` |
