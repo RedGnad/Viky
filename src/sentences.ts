@@ -1377,3 +1377,40 @@ export const PHONE_OUT = {
   checkAgain: "Check again",
   failed: "That did not work. Nothing was taken.",
 } as const;
+
+/**
+ * /add-your-university (D246): how a student adds their university from home in about ten minutes, in five steps, on
+ * the Reclaim account kept for students. The login is never written here or anywhere in the repository: the page
+ * sends the student back to whoever sent them. What they send at the end is three things, and what Viky never
+ * receives is said as plainly.
+ */
+export const ADD_UNIVERSITY = {
+  title: "Add your university",
+  intro: "About ten minutes, from home, with your own student account. At the end you send three things, and a gift can then pay when a student of your university shows they are enrolled.",
+  steps: [
+    {
+      title: "Get the login",
+      body: "Ask the person who sent you here for the login of Viky's student account on Reclaim. Reclaim is the service that checks one page of your student portal for Viky.",
+    },
+    {
+      title: "Start a new check on Reclaim",
+      body: "Sign in at dev.reclaimprotocol.org with that login and create a new provider, which is Reclaim's word for one page it knows how to check. If you are offered an AI option, do not choose it: Viky only accepts a check recorded from your own sign-in.",
+    },
+    {
+      title: "Sign in to your student portal, in Reclaim's window",
+      body: "Give the link to your university's student portal, then sign in as you always do. You type your password on your university's own page, in that window.",
+    },
+    {
+      title: "Open the page that says you are enrolled, and pick one line",
+      body: "The line with your status for this year, such as Enrolled or Inscrit, or the academic year you are registered for. Pick that line and nothing else: not your grades, not your student number, not your name.",
+    },
+    {
+      title: "Publish, and send us three things",
+      body: "Publish what you made, then send the person who sent you here: your university's full name, the link to its student portal, and the ID Reclaim shows for what you made, 36 letters, numbers and dashes.",
+    },
+  ],
+  neverTitle: "What Viky never receives",
+  never: "Your password, your grades, or anything else on your portal. Viky asks for none of them, and this page sends nothing anywhere.",
+  nextTitle: "What happens next",
+  next: "Viky adds your university from the three things you sent, and until then it is not in the list. The first student of it who shows they are enrolled confirms that the check works.",
+} as const;
