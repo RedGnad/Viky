@@ -187,3 +187,11 @@ test("a relay that failed after the money moved is read from the token, and an u
   const other = await price(refusedRelay.deps);
   await assert.rejects(payPhoneTopUp({ account: PERSON, orderId: other.orderId, authorization: authorization(other.ausdUnits) }, refusedRelay.deps), refused("INVALID_AUTHORIZATION"));
 });
+
+test("the phone card is offered to an operator alone until a real top-up opens it, and to nobody while unconfigured", async () => {
+  const { PHONE_WAY_OPEN, phoneWayOffered } = await import("../src/phone-order");
+  assert.equal(PHONE_WAY_OPEN, false, "nothing marked open before a real top-up on a real number");
+  assert.equal(phoneWayOffered(PERSON, { isOperator: () => true, configured: () => true }), true);
+  assert.equal(phoneWayOffered(PERSON, { isOperator: () => false, configured: () => true }), false);
+  assert.equal(phoneWayOffered(PERSON, { isOperator: () => true, configured: () => false }), false);
+});

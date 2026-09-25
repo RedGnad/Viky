@@ -1340,3 +1340,40 @@ export const YOUR_CODE = {
   copy: "Copy your code",
   copied: "Copied",
 } as const;
+
+/**
+ * Their phone, the third way out (D238): three screens, where, how much, done. Every amount on them is the order's
+ * own, priced by Bitrefill before anything moves (docs/SCREEN-CLAIMS.md).
+ */
+export const PHONE_OUT = {
+  cardTitle: "Their phone",
+  cardLine: "Airtime or data, bought for you on Bitrefill and sent to the number. In Senegal: Orange, Tigo and Expresso.",
+  choose: "Top up a phone",
+  whereTitle: "Which phone?",
+  number: "The number, with its country code",
+  numberHelp: "Like +221 77 123 45 67. Viky keeps it until the top-up arrives, then erases it.",
+  find: "Find the phone company",
+  finding: "Looking",
+  whichCompany: "Which phone company?",
+  howMuchTitle: "How much?",
+  howMuch: (currency: string) => `How much, in ${currency}`,
+  aboutDollars: (dollars: string) => `About ${dollars} from your balance.`,
+  range: (min: string, max: string, currency: string) => `Between ${min} and ${max} ${currency}.`,
+  getPrice: "See the price",
+  pricing: "Asking the price",
+  priced: (local: string, operator: string) => `${local} to the phone, through ${operator}.`,
+  costs: (dollars: string, left: string) => `It takes ${dollars}, and ${left} stays with you.`,
+  confirm: "Top it up",
+  confirming: "Topping it up",
+  doneTitle: "Done",
+  delivered: (local: string, operator: string) => `${local} is on the phone, through ${operator}.`,
+  onItsWayTitle: "On its way",
+  onItsWay: "The phone company usually takes a minute. You can leave this page: it will arrive, or your money comes back.",
+  refundedTitle: "It did not go through",
+  refunded: (dollars: string) => `The phone company did not take it, so your ${dollars} came back to you.`,
+  refundPending: (dollars: string) => `The phone company did not take it. Your ${dollars} is on its way back to you.`,
+  again: "Top up another phone",
+  back: "Back",
+  checkAgain: "Check again",
+  failed: "That did not work. Nothing was taken.",
+} as const;

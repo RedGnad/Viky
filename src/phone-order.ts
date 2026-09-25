@@ -21,6 +21,18 @@ import { relayerClients, relayerPreflight } from "./relayer";
  * Every refusal is a code and a sentence that says what the ceiling is and that nothing was taken.
  */
 
+/**
+ * Whether the phone way is open to everybody: not until a real top-up has reached a real number, the founder's rule
+ * (D238). Until then the card is offered to an operator's account alone, and only once Bitrefill and the treasury
+ * are both configured where this runs.
+ */
+export const PHONE_WAY_OPEN = false;
+
+export function phoneWayOffered(account: string, deps: Readonly<{ isOperator: (account: string) => boolean; configured: () => boolean }>): boolean {
+  if (!deps.configured()) return false;
+  return PHONE_WAY_OPEN || deps.isOperator(account);
+}
+
 /** Viky's own ceilings for the pilot, beside Bitrefill's account limits (the founder, 25 Sep 2026; per order, default applied). */
 export const PHONE_CEILINGS = Object.freeze({ usdPerPersonPerDay: 50, usdPerOrder: 50 });
 
