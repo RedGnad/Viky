@@ -44,6 +44,8 @@ export type FigureProps = Readonly<{
   whirl?: boolean;
   /** Arms and legs, or the head alone: the app's icon is the head, where limbs at 64 pixels are noise (D253). */
   limbs?: boolean;
+  /** A fine halftone in the body's own deeper colour (D260, the founder's choice of four): the landing's figure only. */
+  halftone?: boolean;
 }>;
 
 /** The box the figure is drawn in: 64 wide, 53 tall down to the feet (Character's diamond with limbs). */
@@ -290,8 +292,42 @@ function Case({ id }: Readonly<{ id: string }>) {
   );
 }
 
+/**
+ * A fine halftone on the body (D260, the founder's choice 4 of four, after a first and coarser one was taken off at
+ * D257): a staggered grid 1.2 apart, each dot's radius growing from 0.06 where the light falls to 0.42 on the far side,
+ * in the body's own deeper colour (`--character-hero-to`) multiplied at 45 %, so it reads as the material of the body
+ * rather than a grey screen laid on it. The dots are drawn as round-capped zero-length strokes, one path per size, so a
+ * thousand dots are eight elements and a few kilobytes, not a thousand circles.
+ */
+const HALFTONE = { step: 1.2, from: 0.06, to: 0.42, sizes: 8 } as const;
+function Halftone({ id }: Readonly<{ id: string }>) {
+  const paths = Array.from({ length: HALFTONE.sizes }, () => [] as string[]);
+  for (let row = 0, y = 4; y <= 36; row += 1, y += HALFTONE.step * 0.866) {
+    for (let x = 3 + (row % 2) * (HALFTONE.step / 2); x <= 61; x += HALFTONE.step) {
+      // Inside the diamond, with a dot's width to spare for the clip to finish.
+      if (Math.abs(x - CENTRE.x) / 29 + Math.abs(y - CENTRE.y) / 16 > 1.05) continue;
+      // 0 where the light falls (top left), 1 on the far side, as the gloss reads the same light.
+      const along = Math.min(1, Math.max(0, 0.5 + ((x - CENTRE.x) / 29 + (y - CENTRE.y) / 16) / 4));
+      paths[Math.min(HALFTONE.sizes - 1, Math.floor(along * HALFTONE.sizes))].push(`M${round(x)} ${round(y)}h0`);
+    }
+  }
+  return (
+    <g data-part="halftone" clipPath={`url(#${id}-screen)`} style={{ opacity: 0.45, mixBlendMode: "multiply" }}>
+      <defs>
+        <clipPath id={`${id}-screen`}>
+          <path d={DIAMOND} />
+        </clipPath>
+      </defs>
+      {paths.map((dots, size) => {
+        const radius = HALFTONE.from + ((size + 0.5) / HALFTONE.sizes) * (HALFTONE.to - HALFTONE.from);
+        return <path key={size} d={dots.join("")} style={{ fill: "none", stroke: "var(--character-hero-to)", strokeWidth: round(radius * 2), strokeLinecap: "round" }} />;
+      })}
+    </g>
+  );
+}
+
 /** The figure as a group, for a scene that composes several in one drawing. */
-export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", legs = "rest", lean = 0, gaze = { x: 0, y: 0 }, props = [], light = LIGHT, id = "figure", whirl = false, limbs = true }: FigureProps) {
+export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", legs = "rest", lean = 0, gaze = { x: 0, y: 0 }, props = [], light = LIGHT, id = "figure", whirl = false, limbs = true, halftone = false }: FigureProps) {
   const shine = lit(light, lean);
   return (
     <g data-part="figure" style={lean ? { ...FROM_FLOOR, transform: `rotate(${lean}deg)` } : FROM_FLOOR}>
@@ -309,6 +345,13 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
       {limbs ? <Limbs arms={arms} legs={legs} holding={props.includes("case")} /> : null}
       <g data-part="body">
         <path d={DIAMOND} style={{ fill: `url(#${id}-body)`, stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
+        {halftone ? (
+          <>
+            <Halftone id={id} />
+            {/* The edge again over the dots, so the screen stops at its inner side. */}
+            <path d={DIAMOND} style={{ fill: "none", stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
+          </>
+        ) : null}
       </g>
       {(limbs ? ARMS[arms] : []).filter((arm) => arm.over).map((arm, index) => (
         <Arm key={index} pose={arms} arm={arm} />

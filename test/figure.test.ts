@@ -123,3 +123,20 @@ test("the app's icon is the rig's head, in the stylesheet's own night colours (D
   assert.match(script, /':root\[data-theme="dark"\] \{'/, "the night values read from the stylesheet, never copied by hand");
   assert.doesNotMatch(script, /#3B3266/, "the night edge of D135 is not kept in the script");
 });
+
+test("the landing's figure wears a fine halftone in the body's own colour, drawn light (D260)", () => {
+  const plain = renderToStaticMarkup(createElement(Figure, { id: "p" }));
+  assert.ok(!plain.includes('data-part="halftone"'), "off unless asked");
+  const screened = renderToStaticMarkup(createElement(Figure, { id: "s", halftone: true }));
+  const part = screened.slice(screened.indexOf('data-part="halftone"'), screened.indexOf("</g>", screened.indexOf('data-part="halftone"')));
+  assert.match(part, /opacity:0\.45;mix-blend-mode:multiply/);
+  assert.match(part, /stroke:var\(--character-hero-to\)/, "the body's deeper colour, never the ink");
+  const strokes = [...part.matchAll(/<path d="([^"]*)" style="fill:none;stroke:var\(--character-hero-to\);stroke-width:([\d.]+)/g)];
+  assert.equal(strokes.length, 8, "eight paths, one per size");
+  const widths = strokes.map((m) => Number(m[2]));
+  assert.ok(widths.every((w, i) => i === 0 || w > widths[i - 1]), "growing away from the light");
+  const dots = strokes.reduce((sum, m) => sum + (m[1].match(/h0/g) ?? []).length, 0);
+  assert.ok(dots > 500 && dots < 1200, `${dots} dots`);
+  assert.ok(part.length < 20_000, `a few kilobytes: ${part.length}`);
+  assert.ok(widths[0] < 0.2 && widths[7] > 0.75, "fine: from about 0.1 to 0.8 across");
+});
