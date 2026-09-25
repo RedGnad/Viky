@@ -149,6 +149,29 @@ test("the first screen is as tall as the viewport less the header and the card's
   const firstScreen = home.indexOf('className="hero-first-screen');
   assert.ok(firstScreen > 0 && firstScreen < home.indexOf("<h1 className={HERO}>"), "the first screen holds the title");
   assert.ok(home.indexOf("<HeroMoment played={heroPlayed} />") < home.indexOf('<div id="offer"'), "and the character, and the card comes after it");
-  assert.match(home, /<div className="mt-auto w-full text-center">\n\s*<h1 className=\{HERO\}>/, "the title's share of the room, centred at every width");
+  assert.match(home, /style=\{\{ flexGrow: ROOM\.aboveWords \}\} \/>\n\s*<div className="w-full text-center">\n\s*<h1 className=\{HERO\}>/, "the title's share of the room, centred at every width");
+  // The three shares, not rigidly equal (D250): the action's a little smaller, the character's a little larger.
+  assert.match(home, /export const ROOM = \{ aboveWords: 1, beforeAction: 0\.9, beforeCharacter: 1\.1 \} as const;/);
+  assert.ok(home.indexOf("ROOM.beforeAction") < home.indexOf('href="#offer"') && home.indexOf('href="#offer"') < home.indexOf("ROOM.beforeCharacter"));
   assert.match(home, /className=\{`\$\{LEAD\} mx-auto /, "the sentence centred at every width");
+});
+
+test("the landing opens at its top at a launch, and the installed app after a long absence (D250)", async () => {
+  const { LAUNCH_TOP_SCRIPT, LONG_ABSENCE_MS, backAfterLongAbsence } = await import("../src/launch-top");
+  const layout = readFileSync("app/layout.tsx", "utf8");
+  assert.ok(layout.indexOf("THEME_BOOT_SCRIPT }} />") < layout.indexOf("LAUNCH_TOP_SCRIPT }} />"), "in the head, before the browser restores a position");
+  // The script itself, run against a stand-in of the browser's objects.
+  const run = (pathname: string, hash: string) => {
+    const history = { scrollRestoration: "auto" };
+    new Function("location", "history", LAUNCH_TOP_SCRIPT)({ pathname, hash }, history);
+    return history.scrollRestoration;
+  };
+  assert.equal(run("/", ""), "manual", "the landing: no old position restored");
+  assert.equal(run("/gifts", ""), "auto", "every other page keeps the browser's memory");
+  assert.equal(run("/", "#offer"), "auto", "an address that names a place keeps it");
+  assert.equal(LONG_ABSENCE_MS, 30 * 60 * 1000);
+  assert.equal(backAfterLongAbsence(0, LONG_ABSENCE_MS), true);
+  assert.equal(backAfterLongAbsence(0, LONG_ABSENCE_MS - 1), false, "a glance at another app is not a launch");
+  assert.equal(backAfterLongAbsence(null, LONG_ABSENCE_MS * 2), false);
+  assert.match(readFileSync("app/kit/Home.tsx", "utf8"), /useEffect\(\(\) => topAfterLongAbsence\(isStandalone\), \[\]\);/);
 });

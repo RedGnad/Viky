@@ -6815,3 +6815,23 @@ grades). The other developer links to it from the empty state of "Which universi
   a pinch still zooms); the head already took none. A wheel, which has no such property, is stopped in the sheet
   unless the list under it can scroll. A gesture on the backdrop still scrolls the page. `test/browser/sheet-scroll.spec.ts`
   checks it with the wheel and a synthesised finger at every size; against production before this change it failed.
+
+## D250, 25 Sep 2026: the landing opens at its top at every launch, and the action rises a touch
+
+- The founder, 25 Sep 2026: the app still sometimes opened part way down the landing after D240; and the equal shares
+  of D248 were more rigid than wanted: the action a little higher.
+- **The cause, reproduced.** A load of the landing that the browser treats as a return to a page it knew (a reload,
+  or an app window the system restores) restores the page's old scroll position: `history.scrollRestoration` is
+  "auto" by default. On production, scrolled to 600 and reloaded, the landing opened at 588. Nothing of ours saved it.
+  A script in the document's head, run before the browser restores anything, sets it to "manual" on "/" without a
+  fragment (`LAUNCH_TOP_SCRIPT`, `src/launch-top.ts`); every other page keeps the browser's memory. The same reload
+  now opens at 0 (`hero.spec.ts`).
+- **The installed app brought back from the background** is not loaded: its window shows where it was, as every app
+  does after a glance elsewhere. Android's own rule for a long absence is to bring an app back on its first screen
+  ("If the user leaves a task for a long time, the system clears the task of all activities except the root
+  activity", developer.android.com, Tasks and the back stack, read 25 Sep 2026). It names no duration; thirty minutes
+  is ours. After that long hidden, the installed app's landing goes back to its top (`topAfterLongAbsence`).
+- **The action.** The three shares of the room weigh 1, 0.9 and 1.1 (`ROOM` in `app/kit/Home.tsx`), flex spacers in
+  place of the three equal auto margins. At 390x844 the button from 383 to 373 and the title from 156 to 160; at
+  1440x900 from 366 to 356 and 160 to 163; the character and the card unmoved. The 24 pixel minimum under the sentence
+  stays.

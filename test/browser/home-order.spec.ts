@@ -66,16 +66,18 @@ for (const scheme of ["dark", "light"] as const) {
       expect(titleBox.y).toBeLessThan(sentence.y);
       expect(sentence.y + sentence.height).toBeLessThanOrEqual(way.y);
       // The way to the card stands apart from the text: never less than 24 pixels under the sentence (D242), and the
-      // room left over in three equal shares, above the words, before the action, before the character (D248).
+      // room left over in three shares, above the words, before the action, before the character (D248, D250).
       const aboveWords = titleBox.y - firstScreenTop;
       const beforeAction = way.y - (sentence.y + sentence.height);
       const beforeCharacter = character.y - (way.y + way.height);
       expect(beforeAction).toBeGreaterThanOrEqual(23.5);
-      if (aboveWords > 2) {
-        // Each share is the same; on top of it the action keeps its 24 pixels and the character the column's gap.
-        const columnGap = size.width >= 1024 ? 8 : 12;
-        expect(Math.abs(beforeAction - aboveWords - 24)).toBeLessThan(2);
-        expect(Math.abs(beforeCharacter - aboveWords - columnGap)).toBeLessThan(2);
+      // The shares weigh 1, 0.9 and 1.1 (D250); on top of them the action keeps its 24 pixels and each spacer the
+      // column's gap on both sides.
+      const columnGap = size.width >= 1024 ? 8 : 12;
+      const share = aboveWords - columnGap;
+      if (share > 4) {
+        expect(Math.abs(beforeAction - (0.9 * share + 24))).toBeLessThan(2);
+        expect(Math.abs(beforeCharacter - (1.1 * share + 2 * columnGap))).toBeLessThan(2);
       }
       expect(way.y + way.height).toBeLessThanOrEqual(character.y);
       expect(character.y + character.height).toBeLessThanOrEqual(card.y + 4);

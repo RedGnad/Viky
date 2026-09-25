@@ -19,6 +19,7 @@ import { renderMinute } from "@/src/render-minute";
 import { draftFromTerms } from "@/src/gift-draft";
 import { moneyForTheReader } from "@/src/reader-money";
 import { THEME_BOOT_SCRIPT } from "@/src/theme";
+import { LAUNCH_TOP_SCRIPT } from "@/src/launch-top";
 import { Pressed } from "./kit/Pressed";
 import { Register } from "./serwist/Register";
 import { preload } from "react-dom";
@@ -151,6 +152,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className="antialiased">
         {/* Before anything is painted, so a chosen appearance never flashes the other one first (D97). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        {/* Before the browser restores a scroll position: the landing always opens at its top (D250). */}
+        <script dangerouslySetInnerHTML={{ __html: LAUNCH_TOP_SCRIPT }} />
         {/* The worker is registered by `Register`, not by the provider, so a browser that refuses one is refused
             quietly rather than throwing on every screen (D150).
             `reloadOnOnline` is off (D153): the library reloads the whole page on every `online` event, which a phone
