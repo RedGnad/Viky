@@ -113,3 +113,13 @@ test("the three destinations carry their scenes at the head, larger, and a chang
     assert.ok(readFileSync(file, "utf8").includes("<HeadCharacter />"), `${file} keeps the plain diamond`);
   }
 });
+
+test("the app's icon is the rig's head, in the stylesheet's own night colours (D253)", () => {
+  const head = renderToStaticMarkup(createElement(Figure, { id: "icon", limbs: false }));
+  assert.ok(!head.includes('data-part="arm"') && !head.includes('data-part="leg"'), "no limbs on the head alone");
+  assert.match(head, /viewBox="0 0 64 40"/, "its box stops at the diamond");
+  const script = readFileSync("scripts/make-icon.ts", "utf8");
+  assert.match(script, /createElement\(Figure, \{ id: "icon", limbs: false \}\)/);
+  assert.match(script, /':root\[data-theme="dark"\] \{'/, "the night values read from the stylesheet, never copied by hand");
+  assert.doesNotMatch(script, /#3B3266/, "the night edge of D135 is not kept in the script");
+});

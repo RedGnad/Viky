@@ -103,9 +103,9 @@ test("the hero tone belongs to the gift on the link preview, and nowhere else do
   assert.match(hero, /var\(--on-accent\)/);
   assert.match(hero, /var\(--accent\)/);
   assert.doesNotMatch(hero, /data-part="shadow"/, "a tile has no floor to cast a shadow on");
-  // Since D135 the icon is the head character on the ink tile, and the link preview keeps the gift.
+  // Since D135 the icon is the head character on the ink tile, the rig's head since D253, and the link preview keeps the gift.
   const script = readFileSync("scripts/make-icon.ts", "utf8");
-  assert.match(script, /characterSvg\("diamond", \{ tone: "sun", appearance: "dark" \}\)/);
+  assert.match(script, /const svg = figureInNight\(\);/);
   assert.match(script, /background:\$\{COLOURS\.dark\.background\}/);
   assert.match(script, /characterSvg\("gift", \{ tone: "hero" \}\)/, "the link preview is still the gift");
   for (const state of STATES) assert.doesNotMatch(draw(state), /var\(--accent\)|var\(--on-accent\)/);

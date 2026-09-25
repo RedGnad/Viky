@@ -42,10 +42,14 @@ export type FigureProps = Readonly<{
   id?: string;
   /** One more group, turning from the body's middle, for the landing's leap (D219, carried onto the rig by D241). */
   whirl?: boolean;
+  /** Arms and legs, or the head alone: the app's icon is the head, where limbs at 64 pixels are noise (D253). */
+  limbs?: boolean;
 }>;
 
 /** The box the figure is drawn in: 64 wide, 53 tall down to the feet (Character's diamond with limbs). */
 export const FIGURE_BOX = { width: 64, height: 53 } as const;
+/** The head alone, down to the diamond's lowest point and its edge: 40, as `Character`'s diamond without limbs. */
+const HEAD_HEIGHT = 40;
 const CENTRE = { x: 32, y: 20 };
 /** The diamond's four corners, clockwise from the top, and the outward normal of the edge that starts at each. */
 const CORNERS: readonly (readonly [number, number])[] = [
@@ -287,7 +291,7 @@ function Case({ id }: Readonly<{ id: string }>) {
 }
 
 /** The figure as a group, for a scene that composes several in one drawing. */
-export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", legs = "rest", lean = 0, gaze = { x: 0, y: 0 }, props = [], light = LIGHT, id = "figure", whirl = false }: FigureProps) {
+export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", legs = "rest", lean = 0, gaze = { x: 0, y: 0 }, props = [], light = LIGHT, id = "figure", whirl = false, limbs = true }: FigureProps) {
   const shine = lit(light, lean);
   return (
     <g data-part="figure" style={lean ? { ...FROM_FLOOR, transform: `rotate(${lean}deg)` } : FROM_FLOOR}>
@@ -302,11 +306,11 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
           <stop offset="1" style={{ stopColor: "var(--character-hero-edge-deep)" }} />
         </linearGradient>
       </defs>
-      <Limbs arms={arms} legs={legs} holding={props.includes("case")} />
+      {limbs ? <Limbs arms={arms} legs={legs} holding={props.includes("case")} /> : null}
       <g data-part="body">
         <path d={DIAMOND} style={{ fill: `url(#${id}-body)`, stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
       </g>
-      {ARMS[arms].filter((arm) => arm.over).map((arm, index) => (
+      {(limbs ? ARMS[arms] : []).filter((arm) => arm.over).map((arm, index) => (
         <Arm key={index} pose={arms} arm={arm} />
       ))}
       {/* The gloss: where the surface faces halfway between the light and the eye, slanted along the lit edge, and one dot
@@ -329,7 +333,7 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
 /** The figure in its own box. */
 export function Figure({ className, ...figure }: FigureProps & Readonly<{ className?: string }>) {
   return (
-    <svg aria-hidden focusable="false" viewBox={`0 0 ${FIGURE_BOX.width} ${FIGURE_BOX.height}`} data-character="diamond" className={className} style={{ overflow: "visible" }}>
+    <svg aria-hidden focusable="false" viewBox={`0 0 ${FIGURE_BOX.width} ${figure.limbs === false ? HEAD_HEIGHT : FIGURE_BOX.height}`} data-character="diamond" className={className} style={{ overflow: "visible" }}>
       <FigureGroup {...figure} />
     </svg>
   );

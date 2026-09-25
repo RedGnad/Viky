@@ -1,6 +1,9 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { chromium } from "@playwright/test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { Figure } from "../app/kit/Figure";
 import { characterSvg } from "../app/kit/character-svg";
 import { COLOURS } from "../src/design-tokens";
 
@@ -60,7 +63,10 @@ async function main() {
   const gift = characterSvg("gift", { tone: "hero" });
   writeFileSync(resolve("app/kit/gift-hero.svg"), `${gift}\n`);
   console.log("app/kit/gift-hero.svg");
-  const svg = characterSvg("diamond", { tone: "sun", appearance: "dark" });
+  // The rig's head (D236, D253), in the night look a home screen shows (D135), its colours read from the stylesheet's
+  // own night block so the icon can never keep a colour the screens have left behind (it kept the night edge of D135
+  // until 25 Sep 2026).
+  const svg = figureInNight();
   const browser = await chromium.launch();
   try {
     for (const { file, size } of SIZES) {
@@ -82,6 +88,27 @@ async function main() {
   } finally {
     await browser.close();
   }
+}
+
+/** The night block's own values, a variable that names another followed to its colour. */
+function nightValues(): Record<string, string> {
+  const css = readFileSync(resolve("app/globals.css"), "utf8");
+  const start = css.indexOf(':root[data-theme="dark"] {');
+  const block = css.slice(start, css.indexOf("\n}", start));
+  const day = css.slice(css.indexOf(":root {"), css.indexOf("\n}", css.indexOf(":root {")));
+  const read = (text: string) => Object.fromEntries([...text.matchAll(/(--[a-z0-9-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+  const values: Record<string, string> = { ...read(day), ...read(block) };
+  const resolveOne = (value: string, depth = 0): string => {
+    const named = value.match(/^var\((--[a-z0-9-]+)\)$/);
+    return named && depth < 8 ? resolveOne(values[named[1]] ?? "transparent", depth + 1) : value;
+  };
+  return Object.fromEntries(Object.entries(values).map(([name, value]) => [name, resolveOne(value)]));
+}
+
+function figureInNight(): string {
+  const values = nightValues();
+  const markup = renderToStaticMarkup(createElement(Figure, { id: "icon", limbs: false }));
+  return markup.replace(/var\((--[a-z0-9-]+)\)/g, (_, name: string) => values[name] ?? "transparent");
 }
 
 main().catch((error) => {
