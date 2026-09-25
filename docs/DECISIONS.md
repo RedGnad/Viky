@@ -7043,3 +7043,16 @@ integrity point, each line noting what its portal reads, so the gift's sentence 
   student's record to Viky's server, which judges it not empty and keeps nothing.
 - **Production**: the migration and `pnpm portal:directory` (docs/OPERATIONS.md), run from the other developer's
   clone as for D199.
+
+## D268, 26 Sep 2026: the four family tiles are drawn on the rig, the figure doing its family's thing
+
+- The founder, 26 Sep 2026: the tiles' pictures (the cap, the rook, the speed lines, the book) looked unfinished; can
+  they be cleaner and more professional in the look we have? Four directions were drawn, day and night (the things in
+  the figure's own material; clean line icons; the figure using its thing; the head with a round badge); he chose C.
+- The tiles draw the rig (`Figure`, with its light, gloss and halftone) where they drew the old flat diamond: it reads
+  a book held open in both hands (a new arm pose, `read`, whose hands close over the book), waves under a graduate's
+  cap, stands with a rook at its hand, and runs with speed lines trailing it. The four things are props of the rig
+  (`book`, `cap`, `rook`, `speed`), in the character's colours lit from the top left like the case, their shade the
+  ink laid thin and their light a line of white, so only the character's own components paint the character's colours.
+  The speed lines are drawn outside the group that leans. The figure is 100 wide in the tile's 112 by 104, its legs
+  included. The diamond's own lean of D249, which only the old runner used, is gone with it.

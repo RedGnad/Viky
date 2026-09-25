@@ -23,9 +23,9 @@ export const LIGHT: Readonly<{ x: number; y: number }> = { x: -1, y: -1 };
 
 export type Eyes = "open" | "closed" | "half" | "shades";
 export type Mouth = "smile" | "grin" | "o" | "flat";
-export type ArmsPose = "rest" | "crossed" | "hold" | "wave" | "run" | "shoulder";
+export type ArmsPose = "rest" | "crossed" | "hold" | "wave" | "run" | "shoulder" | "read";
 export type LegsPose = "rest" | "run" | "apart";
-export type Prop = "suit" | "case";
+export type Prop = "suit" | "case" | "book" | "cap" | "rook" | "speed";
 
 export type FigureProps = Readonly<{
   eyes?: Eyes;
@@ -137,6 +137,11 @@ const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [numb
   shoulder: [
     { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2] },
     { d: "M51 26 C57 24.5 65 19.5 72 16.5", hand: [72.8, 16.1], over: true },
+  ],
+  // Holding a book open in front (D268): both arms come round and the hands close on its lower corners, over it.
+  read: [
+    { d: "M13 26 Q11.4 31.6 14.6 37.4", hand: [15.4, 38.4], over: true },
+    { d: "M51 26 Q52.6 31.6 49.4 37.4", hand: [48.6, 38.4], over: true },
   ],
 };
 const LEGS: Record<LegsPose, readonly Readonly<{ turn: number }>[]> = {
@@ -332,6 +337,70 @@ function Halftone({ id }: Readonly<{ id: string }>) {
   );
 }
 
+const SHINE = "rgba(255, 255, 255, 0.55)";
+
+/**
+ * The four families' things (D268, the founder's choice C of four): each in the figure's own material, the character's
+ * colours lit from the top left like the case, their shade the ink laid thin and their light a line of white. The
+ * book is held open in front (the "read" pose's hands close on it), the cap sits on the head, the rook stands at the
+ * hand of the "hold" pose, and the speed lines trail a runner.
+ */
+function Book() {
+  return (
+    <g data-prop="book" style={FROM_MIDDLE}>
+      <path d="M9 31 Q20.5 27.5 32 32 Q43.5 27.5 55 31 V42.5 Q43.5 39 32 43.5 Q20.5 39 9 42.5 Z" style={{ fill: "var(--character-2)" }} />
+      <path d="M9 40 Q20.5 36.5 32 41 Q43.5 36.5 55 40 V42.5 Q43.5 39 32 43.5 Q20.5 39 9 42.5 Z" style={{ fill: INK, fillOpacity: 0.18 }} />
+      <path d="M11 30.5 Q21 26.9 32 30.9 V41.7 Q21 37.9 11 41.1 Z" style={{ fill: "rgba(255, 255, 255, 0.96)" }} />
+      <path d="M53 30.5 Q43 26.9 32 30.9 V41.7 Q43 37.9 53 41.1 Z" style={{ fill: "rgba(255, 255, 255, 0.84)" }} />
+      <path d="M14 33.1 Q21 30.9 28.5 33.1 M14 35.8 Q21 33.6 28.5 35.8 M14 38.5 Q21 36.3 26 37.9 M35.5 33.1 Q43 30.9 50 33.1 M35.5 35.8 Q43 33.6 50 35.8" style={{ fill: "none", stroke: INK, strokeOpacity: 0.22, strokeWidth: 0.7, strokeLinecap: "round" }} />
+      <path d="M32 30.9 V41.7" style={{ stroke: INK, strokeOpacity: 0.35, strokeWidth: 0.8 }} />
+      <path d="M12 30.5 Q21 27.3 31 30.8" style={{ fill: "none", stroke: SHINE, strokeWidth: 0.7, strokeLinecap: "round" }} />
+    </g>
+  );
+}
+
+function Cap() {
+  return (
+    <g data-prop="cap" style={FROM_MIDDLE}>
+      <path d="M22 4.5 V9 Q32 13 42 9 V4.5 Z" style={{ fill: "var(--character-3)" }} />
+      <path d="M22 4.5 V9 Q32 13 42 9 V4.5 Z" style={{ fill: INK, fillOpacity: 0.3 }} />
+      <path d="M32 -3.2 L51 3.4 Q52.4 4 51 4.6 L32 11.2 L13 4.6 Q11.6 4 13 3.4 Z" style={{ fill: "var(--character-3)" }} />
+      <path d="M32 4.6 L51 3.4 Q52.4 4 51 4.6 L32 11.2 L13 4.6 Q11.6 4 13 3.4 Z" style={{ fill: INK, fillOpacity: 0.14 }} />
+      <path d="M15 3.6 L32 -2.2 L44 1.9" style={{ fill: "none", stroke: SHINE, strokeWidth: 0.7, strokeLinecap: "round" }} />
+      <path d="M32 4 Q42 5 46.5 6.5 V14" style={{ fill: "none", stroke: "var(--character-1)", strokeWidth: 1.2, strokeLinecap: "round" }} />
+      <path d="M45.2 14 h2.6 l0.6 3.6 q-1.9 1.2 -3.8 0 z" style={{ fill: "var(--character-1)" }} />
+      <circle cx={32} cy={4} r={1.3} style={{ fill: "var(--character-1)" }} />
+    </g>
+  );
+}
+
+function Rook() {
+  return (
+    <g data-prop="rook" transform="translate(47 29)">
+      <path d="M0.5 0 h3 v2.6 h2.2 V0 h3 v2.6 h2.2 V0 h3 v5.6 q0 1 -1 1.4 l-1 0.5 v11.5 l2 2 q0.8 0.8 0.8 1.8 v1.4 H-1.2 v-1.4 q0 -1 0.8 -1.8 l2 -2 V7.5 l-1 -0.5 q-1 -0.4 -1 -1.4 Z" style={{ fill: "var(--character-3)" }} />
+      <path d="M7.6 7.5 h3.3 v11.5 l2 2 q0.8 0.8 0.8 1.8 v1.4 H7.6 Z M7.6 0 h1.1 v2.6 h2.2 V0 h3 v5.6 q0 1 -1 1.4 l-1 0.5 H7.6 Z" style={{ fill: INK, fillOpacity: 0.25 }} />
+      <path d="M2.2 8.4 V18" style={{ stroke: SHINE, strokeWidth: 0.9, strokeLinecap: "round" }} />
+      <path d="M-1.2 23.9 h15.8" style={{ stroke: INK, strokeOpacity: 0.2, strokeWidth: 0.7 }} />
+    </g>
+  );
+}
+
+function Speed() {
+  const line = { fill: "none", stroke: "var(--character-2)", strokeWidth: 2.2, strokeLinecap: "round" as const };
+  return (
+    <g data-prop="speed">
+      <path d="M-9 12 H4" style={line} />
+      <path d="M-12 19.5 H1.5" style={{ ...line, strokeOpacity: 0.8 }} />
+      <path d="M-8 27 H3" style={{ ...line, strokeOpacity: 0.6 }} />
+      <g style={{ fill: "var(--character-3)", fillOpacity: 0.55 }}>
+        <circle cx={11} cy={50.5} r={1.6} />
+        <circle cx={6.5} cy={49} r={1.1} />
+        <circle cx={3} cy={50.8} r={0.8} />
+      </g>
+    </g>
+  );
+}
+
 /** The figure as a group, for a scene that composes several in one drawing. */
 export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", legs = "rest", lean = 0, gaze = { x: 0, y: 0 }, props = [], light = LIGHT, id = "figure", whirl = false, limbs = true, halftone = false }: FigureProps) {
   const shine = lit(light, lean);
@@ -359,6 +428,8 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
           </>
         ) : null}
       </g>
+      {/* The book is held in front of the body and under the hands that close on it (D268). */}
+      {props.includes("book") ? <Book /> : null}
       {(limbs ? ARMS[arms] : []).filter((arm) => arm.over).map((arm, index) => (
         <Arm key={index} pose={arms} arm={arm} />
       ))}
@@ -374,6 +445,8 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
         <MouthOf mouth={mouth} />
       </g>
       {props.includes("case") ? <Case id={id} /> : null}
+      {props.includes("cap") ? <Cap /> : null}
+      {props.includes("rook") ? <Rook /> : null}
       </g>
     </g>
   );
@@ -383,6 +456,8 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
 export function Figure({ className, ...figure }: FigureProps & Readonly<{ className?: string }>) {
   return (
     <svg aria-hidden focusable="false" viewBox={`0 0 ${FIGURE_BOX.width} ${figure.limbs === false ? HEAD_HEIGHT : FIGURE_BOX.height}`} data-character="diamond" className={className} style={{ overflow: "visible" }}>
+      {/* The speed lines trail the runner on the ground's own level: outside the group that leans (D268). */}
+      {figure.props?.includes("speed") ? <Speed /> : null}
       <FigureGroup {...figure} />
     </svg>
   );
