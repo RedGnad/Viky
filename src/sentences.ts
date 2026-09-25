@@ -1400,6 +1400,9 @@ export const YOUR_CODE = {
 export const PHONE_OUT = {
   cardTitle: "Your phone",
   cardLine: "Airtime or data, bought for you on Bitrefill and sent to the number. In Senegal: Orange, Tigo and Expresso.",
+  whatFor: "Credit or data?",
+  kinds: { credit: "Credit", data: "Mobile data" } as const,
+  noneOfKind: (kind: string) => `No ${kind.toLowerCase()} for this number on Bitrefill. Choose the other.`,
   choose: "Top up a phone",
   whereTitle: "Which phone?",
   number: "The number, with its country code",

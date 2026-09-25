@@ -28,6 +28,14 @@ import { relayerClients, relayerPreflight } from "./relayer";
  */
 export const PHONE_WAY_OPEN = false;
 
+/** Mobile data opens on its own first real order, never with credit's (the founder, 26 Sep 2026). */
+export const PHONE_DATA_OPEN = false;
+
+/** Whether this account is offered mobile data on the phone card, once the card itself is offered. */
+export function phoneDataOffered(account: string, deps: Readonly<{ isOperator: (account: string) => boolean }>): boolean {
+  return PHONE_DATA_OPEN || deps.isOperator(account);
+}
+
 export function phoneWayOffered(account: string, deps: Readonly<{ isOperator: (account: string) => boolean; configured: () => boolean }>): boolean {
   if (!deps.configured()) return false;
   return PHONE_WAY_OPEN || deps.isOperator(account);

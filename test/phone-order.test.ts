@@ -195,3 +195,19 @@ test("the phone card is offered to an operator alone until a real top-up opens i
   assert.equal(phoneWayOffered(PERSON, { isOperator: () => false, configured: () => true }), false);
   assert.equal(phoneWayOffered(PERSON, { isOperator: () => true, configured: () => false }), false);
 });
+
+test("credit or data is read from Bitrefill's own product name", async () => {
+  const { phoneKindOf } = await import("../src/client/phone");
+  assert.equal(phoneKindOf({ id: "orange-senegal", name: "Orange Senegal" }), "credit");
+  assert.equal(phoneKindOf({ id: "orange-data-senegal", name: "Orange Data Senegal" }), "data");
+  assert.equal(phoneKindOf({ id: "orange-senegal-bundles", name: "Orange Senegal Bundles" }), "data");
+  assert.equal(phoneKindOf({ id: "tigo-freedata-senegal", name: "Tigo Free Data Senegal" }), "data");
+  assert.equal(phoneKindOf({ id: "expresso-senegal", name: "Expresso Senegal" }), "credit");
+});
+
+test("mobile data is offered to an operator alone until its own first real order", async () => {
+  const { PHONE_DATA_OPEN, phoneDataOffered } = await import("../src/phone-order");
+  assert.equal(PHONE_DATA_OPEN, false);
+  assert.equal(phoneDataOffered(PERSON, { isOperator: () => true }), true);
+  assert.equal(phoneDataOffered(PERSON, { isOperator: () => false }), false);
+});

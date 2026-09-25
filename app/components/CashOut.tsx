@@ -133,11 +133,14 @@ export function CashOut() {
   // The third way, their phone (D238): shown only when the server offers it to this account, and nothing is said when
   // it does not, since the way is not open to everybody before a real top-up has reached a real number.
   const [phoneOn, setPhoneOn] = useState(false);
+  const [phoneDataOn, setPhoneDataOn] = useState(false);
   useEffect(() => {
     if (!address) return;
     let live = true;
-    phoneOffered().then((offered) => {
-      if (live) setPhoneOn(offered);
+    phoneOffered().then((offer) => {
+      if (!live) return;
+      setPhoneOn(offer.offered);
+      setPhoneDataOn(offer.data);
     }, () => undefined);
     return () => {
       live = false;
@@ -677,7 +680,7 @@ export function CashOut() {
       <div className="flex flex-col gap-[var(--space-xl)]">
         {heading}
         {moneyCard}
-        <PhoneTopUp ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
+        <PhoneTopUp ausd={ausd} dataOn={phoneDataOn} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }

@@ -7097,3 +7097,20 @@ WITNESS, Cheikh Anta Diop is AI. The corridor's universities come in with a WITN
   reason. The fold with each service's published figures and sources stays, under the foot.
 - This replaces R1's "never hide a way out" for the ways out, at the founder's word: what does not work for the
   number's country is not offered.
+
+## D271, 26 Sep 2026: mobile data beside credit, and gift cards, on the Bitrefill way
+
+The founder, 26 Sep 2026, in the spirit of "Use your money" (the mockups of 26 Sep): two additions to D238.
+
+- **Mobile data.** The "Your phone" card offers credit or data; the same order, the same treasury, the same ceilings.
+  Which a product is is read from Bitrefill's own name ("Orange Data Senegal", "Orange Senegal Bundles"), since its
+  documented product has no category. Unverified until the key exists: that `check_phone_number` answers the data
+  products with the credit ones for a number.
+- **Gift cards**, the "A gift card" card: the cards Bitrefill marks as working in the person's country (its site's
+  "Works in SN", 64 in Senegal, 65 in Ivory Coast), then an amount; ordered and paid like a top-up; the code reaches
+  the page and its history and nowhere else. Order of the list: first those of the country (its own country, or its
+  currency), then Bitrefill's own card, then the rest. Each card carries Bitrefill's line "Works in:" with the country
+  Bitrefill gives. Chosen in a sheet, as "Which university?" is.
+- **Nothing open before a first real order of each type**: credit, data and a gift card each have their own flag,
+  offered to an operator's account alone until then.
+- **One PR per step**: data on the phone card; gift cards on the server; their card and sheet.
