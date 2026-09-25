@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { databaseUrl } from "./database-guard";
 import type { SqlExecutor } from "./proof-session-store";
-import { countryInWords, isPortalId, resultsProblem, UNVERIFIED_MARK, type PortalExtract, type ResultsExtract } from "./university-shown";
+import { ACCOUNT_ONLY_MARK, countryInWords, isPortalId, resultsProblem, type PortalExtract, type PortalProves, type ResultsExtract } from "./university-shown";
 
 /**
  * The student portals Viky has proved, one row each (D165). Not the 11,882 shells of the Reclaim directory: a row is
@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS viky_portals (
 );
 ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS results jsonb;
 ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS unverified boolean NOT NULL DEFAULT false;
+-- What the portal proves (D267): 'enrolment', its status for the year, or 'account', a signed-in student account alone.
+ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS proves text NOT NULL DEFAULT 'enrolment';
 `;
 
 let executor: SqlExecutor | undefined;
@@ -78,13 +80,16 @@ export type Portal = Readonly<{
    * chooser says "unverified" beside the university, and the first real session confirms or corrects it.
    */
   unverified: boolean;
+  /** What a proof from this portal carries (D267): the year's enrolment status, or a student account alone. */
+  proves: PortalProves;
 }>;
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const HASH = /^0x[0-9a-fA-F]{64}$/;
 
 /** What a row must be to be written at all: the guard on the operator's own command. */
-export function portalProblem(input: Omit<Portal, "provenAt" | "results" | "unverified"> & { results?: ResultsExtract | null; unverified?: boolean }): string | undefined {
+export function portalProblem(input: Omit<Portal, "provenAt" | "results" | "unverified" | "proves"> & { results?: ResultsExtract | null; unverified?: boolean; proves?: PortalProves }): string | undefined {
+  if (input.proves !== undefined && input.proves !== "enrolment" && input.proves !== "account") return "what the portal proves: enrolment or account";
   if (!isPortalId(input.portalId)) return "the portal id is lower case letters, digits and dashes, 64 at most";
   if (!input.name.trim() || !input.university.trim()) return "a name and a university";
   if (!/^[A-Z]{2}$/.test(input.country)) return "a country of two capital letters";
@@ -111,19 +116,19 @@ export function portalProblem(input: Omit<Portal, "provenAt" | "results" | "unve
  * Writes a proved portal, or proves it again. The results extraction is kept when the command does not name one:
  * proving enrolment a second time must not undo the results page proved the first time.
  */
-export async function savePortal(input: Omit<Portal, "provenAt" | "results" | "unverified"> & { provenAt?: Date; results?: ResultsExtract | null; unverified?: boolean }): Promise<void> {
+export async function savePortal(input: Omit<Portal, "provenAt" | "results" | "unverified" | "proves"> & { provenAt?: Date; results?: ResultsExtract | null; unverified?: boolean; proves?: PortalProves }): Promise<void> {
   const problem = portalProblem(input);
   if (problem) throw new Error(`A portal row needs ${problem}`);
   const results = input.results ? JSON.stringify(normaliseResults(input.results)) : null;
   await sql()`
-    INSERT INTO viky_portals (portal_id, name, university, country, provider_id, provider_version, request_hash, login_url, extract, results, proven_at, proven_by, unverified)
+    INSERT INTO viky_portals (portal_id, name, university, country, provider_id, provider_version, request_hash, login_url, extract, results, proven_at, proven_by, unverified, proves)
     VALUES (${input.portalId}, ${input.name.trim()}, ${input.university.trim()}, ${input.country}, ${input.providerId}, ${input.providerVersion}, ${input.requestHash.toLowerCase()},
-            ${input.loginUrl}, ${JSON.stringify(input.extract)}::jsonb, ${results}::jsonb, ${(input.provenAt ?? new Date()).toISOString()}, ${input.provenBy.toLowerCase()}, ${input.unverified === true})
+            ${input.loginUrl}, ${JSON.stringify(input.extract)}::jsonb, ${results}::jsonb, ${(input.provenAt ?? new Date()).toISOString()}, ${input.provenBy.toLowerCase()}, ${input.unverified === true}, ${input.proves ?? "enrolment"})
     ON CONFLICT (portal_id) DO UPDATE SET
       name = EXCLUDED.name, university = EXCLUDED.university, country = EXCLUDED.country, provider_id = EXCLUDED.provider_id,
       provider_version = EXCLUDED.provider_version, request_hash = EXCLUDED.request_hash, login_url = EXCLUDED.login_url,
       extract = EXCLUDED.extract, results = COALESCE(EXCLUDED.results, viky_portals.results), proven_at = EXCLUDED.proven_at, proven_by = EXCLUDED.proven_by,
-      unverified = EXCLUDED.unverified`;
+      unverified = EXCLUDED.unverified, proves = EXCLUDED.proves`;
 }
 
 /** Writes the results page of a portal already proved for enrolment (D174). False when no such portal exists. */
@@ -162,6 +167,7 @@ function toPortal(row: Record<string, unknown>): Portal {
     provenAt: new Date(String(row.proven_at)),
     provenBy: String(row.proven_by),
     unverified: row.unverified === true,
+    proves: row.proves === "account" ? "account" : "enrolment",
   };
 }
 
@@ -219,8 +225,10 @@ export async function searchPortals(words: string): Promise<readonly Portal[]> {
  * is not sent: the funder chooses a university, and the person signs in from their own gift page.
  */
 export function portalFound(portal: Portal): Readonly<{ pair: string; title: string; issuer: string; path: string }> {
-  // A row defined from public pages says so on the line the funder presses (D193), until a student's session confirms it.
-  return { pair: portal.portalId, title: portal.unverified ? `${portal.university}${UNVERIFIED_MARK}` : portal.university, issuer: countryInWords(portal.country), path: "" };
+  // What the portal proves is on the line the funder presses (D267): a portal that shows a student account and no
+  // enrolment status says so. Whether anybody has shown it yet is not: that stays in the register and on the judges'
+  // page, the founder's rule of 26 Sep 2026, which retires D193's mark from the flow.
+  return { pair: portal.portalId, title: portal.proves === "account" ? `${portal.university}${ACCOUNT_ONLY_MARK}` : portal.university, issuer: countryInWords(portal.country), path: "" };
 }
 
 /**
@@ -237,8 +245,27 @@ export async function listPortals(): Promise<readonly Portal[]> {
  * by. No "(unverified)" (the founder, 26 Sep 2026, D264): every university with a portal row is listed by its name, and
  * a portal nobody has exercised yet meets its test at the moment of the proof, through the reading's own failure state.
  */
-export function portalListed(portal: Portal): Readonly<{ pair: string; title: string; issuer: string; country: string }> {
-  return { pair: portal.portalId, title: portal.university, issuer: countryInWords(portal.country), country: portal.country };
+export function portalListed(portal: Portal): Readonly<{ pair: string; title: string; issuer: string; country: string; proves: PortalProves }> {
+  // What the portal proves travels with the name (D267) and is said in the gift's sentence, never on the list's line.
+  return { pair: portal.portalId, title: portal.university, issuer: countryInWords(portal.country), country: portal.country, proves: portal.proves };
+}
+
+/**
+ * How many universities are listed, and how many have been read at least once (D267): a portal counts as read when an
+ * attested reading started or reached a gift made on it. For the judges' page, never for the flow.
+ */
+export async function portalsListedAndRead(): Promise<{ listed: number; read: number } | null> {
+  try {
+    const listed = await sql()`SELECT count(*)::int AS n FROM viky_portals`;
+    const read = await sql()`
+      SELECT count(DISTINCT g.portal)::int AS n
+        FROM viky_milestone_readings r
+        JOIN viky_milestone_gifts g ON g.gift_id = r.gift_id
+       WHERE g.portal IS NOT NULL AND r.attested AND r.outcome IN ('reached', 'started')`;
+    return { listed: Number(listed[0]?.n ?? 0), read: Number(read[0]?.n ?? 0) };
+  } catch {
+    return null;
+  }
 }
 
 export async function countPortals(): Promise<number> {

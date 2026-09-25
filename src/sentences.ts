@@ -1001,11 +1001,11 @@ export const CONDITION_NATURE = { read: "READ FOR YOU", shown: "SHOWN BY THEM", 
  * name comes from the register, never from here.
  */
 /**
- * A university whose portal row is marked unverified (D193), said to the funder where the university is chosen, before
- * they pay (D195, a default applied to confirm): the gift is made, and the sentence is true of the contract, which
- * returns everything at the deadline when nothing was proved.
+ * A university whose portal proves a student account and no enrolment status (D267), said where the university is
+ * chosen, before the funder pays, so the gift promises exactly what the proof will carry. D195's sentence, about a portal
+ * nobody had shown yet, left the flow with the founder's rule of 26 Sep 2026: that stays on the judges' page.
  */
-export const UNVERIFIED_PORTAL = "Nobody has shown a proof from this university yet. If it cannot be read, your money comes back to you at the deadline.";
+export const UNIVERSITY_ACCOUNT_ONLY = "Its student portal shows that a student account is active, not that they are enrolled this year: that is what this gift will check.";
 
 /**
  * "Which university?" asked as a list (D247), and as the founder set it on 26 Sep 2026 (D264): the names alone, grouped

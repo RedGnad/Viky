@@ -17,6 +17,7 @@ import { Nature } from "../Nature";
 import { Field } from "../Field";
 import { Sheet } from "../Sheet";
 import { UniversityChooser } from "./UniversityChooser";
+import { chosenUniversityTitle } from "@/src/university-choice";
 
 /**
  * The will case: what they will do, and everything that condition itself asks (the vision of 19 Sep 2026, section 6).
@@ -404,7 +405,7 @@ export function WillSheet({
                   label={certificate.course.label}
                   draft={draft}
                   named={certificate.course.named}
-                  onChoose={(one) => onChange({ ...draft, course: one.pair, courseTitle: `${one.title}, ${one.issuer}`, target: String(certificate.target.suggested) })}
+                  onChoose={(one) => onChange({ ...draft, course: one.pair, courseTitle: chosenUniversityTitle(one), target: String(certificate.target.suggested) })}
                 />
               ) : certificate.course?.search ? (
                 /* A source whose things are found rather than pasted: the funder types a word or two, reads each

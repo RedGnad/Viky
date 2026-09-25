@@ -4,6 +4,7 @@ import { JudgesAccount } from "../components/JudgesAccount";
 import { MilestoneJudges } from "../components/MilestoneJudges";
 import { DISPLAY, TITLE } from "../components/ui";
 import { readOwnership, ownershipWords } from "@/src/judges-owner";
+import { portalsListedAndRead } from "@/src/portal-store";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain";
 import { JudgesConditions } from "./JudgesConditions";
 import { JudgesContracts } from "./JudgesContracts";
@@ -29,6 +30,8 @@ export default async function JudgesPage() {
   // Who owns the contracts, asked of the chain now (D187): the page said the founder's key for three days after the
   // Safe had taken them. When the chain cannot be read, the sentence says so rather than repeating a name.
   const ownership = await readOwnership().catch(() => null);
+  // Universities listed, and how many have been read at least once (D267): here, and never in the flow.
+  const portals = await portalsListedAndRead();
   // Gifts created before the D30 corrections keep running on the contract that holds them, and every
   // gift record names its own contract, so both are listed here for as long as the older one holds one.
   const earlierEscrow = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
@@ -183,9 +186,15 @@ export default async function JudgesPage() {
             same portal&apos;s results page, a second page proved with a student and pinned on the same row, under the
             same unread terms; the grade is read on the scale the row declares and compared in hundredths, and a page of
             another year pays nothing where the portal dates its page. A row can be defined from a portal&apos;s public
-            pages before any student has sat with us (D193): it says &quot;unverified&quot; beside the university on the
-            chooser, its patterns sit on labels the page prints, and a page that does not carry them fails by its name,
-            the person told nothing is lost and the miss written in the gift&apos;s journal for the founder to correct.
+            pages, or taken from Reclaim&apos;s directory, before any student has shown it to Viky (D193): its patterns
+            sit on what the page prints, and a page that does not carry them fails by its name, the person told nothing
+            is lost and the miss written in the gift&apos;s journal. Whether a university has been read yet is said here
+            and not in the flow (the founder, 26 Sep 2026):{" "}
+            {portals ? `${portals.listed} universities listed, ${portals.read} read at least once.` : "the count could not be read right now."} What
+            each portal proves is said in the flow: some show the year&apos;s enrolment status, others only that a
+            student account is signed in, and the university&apos;s line and the gift say which. Portals that Reclaim&apos;s
+            directory holds only as AI-witnessed providers are not listed: Viky requires the attestor&apos;s TEE
+            attestation and refuses an AI-witnessed proof everywhere.
           </li>
           <li>
             <strong>Exam results services&apos; terms.</strong> Five examination results are shown by the person from

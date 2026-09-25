@@ -1414,3 +1414,17 @@ Base for their fees. No MON: on Monad the treasury only signs, and the relayer c
 **Reconciliation.** `viky_phone_orders` (created by `pnpm db:migrate`) holds one row per order: the AUSD received on
 Monad, the invoice paid on Base, or the refund. Money the treasury holds for somebody is every row still `received`,
 `paid` or `failed` (`unsettledOrders`).
+
+## The directory's portals, written to production (D267)
+
+Five rows from `src/directory-portals.ts`: Rome, and four that prove a student account. Two commands, with the
+operator command of "The test database" (`VIKY_ALLOW_PRODUCTION_DATABASE=1` and the production `DATABASE_URL`):
+
+```
+pnpm db:migrate
+PROVEN_BY=0x…<the operator account> DRY_RUN=1 pnpm portal:directory
+PROVEN_BY=0x…<the operator account> pnpm portal:directory
+```
+
+The migration adds `proves` to `viky_portals` (a row written before it reads as enrolment). The second line prints the
+five rows and writes nothing; the third writes them, each read back as the chooser would list it.
