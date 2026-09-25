@@ -20,6 +20,9 @@ import { countryInWords } from "@/src/rail-country";
 import { feeSentence, RATE_SOURCE, WAYS_OUT, type WayOut } from "@/src/rails";
 import { CASH_OUT as W } from "@/src/sentences";
 import { AccountPanel } from "./AccountPanel";
+import { PhoneTopUp } from "./PhoneTopUp";
+import { phoneOffered } from "@/src/client/phone";
+import { PHONE_OUT } from "@/src/sentences";
 import { AMOUNT_IN_TITLE, BODY, CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, FIELD, HELP, INLINE_BUTTON, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
 
 /**
@@ -40,7 +43,7 @@ import { AMOUNT_IN_TITLE, BODY, CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, FIELD
  * figure says by how much. The published figures and their sources are behind a fold under the cards.
  */
 
-type Stage = "base" | "gathering" | "amount" | "review" | "getting" | "ready" | "confirm" | "sending" | "sent" | "own" | "ownConfirm" | "ownSending" | "ownSent";
+type Stage = "base" | "phone" | "gathering" | "amount" | "review" | "getting" | "ready" | "confirm" | "sending" | "sent" | "own" | "ownConfirm" | "ownSending" | "ownSent";
 
 /** Where a refusal is shown: under the element that caused it, never in a box at the bottom of the page. */
 type Where = "gather" | "amount" | "review" | "code" | "send" | "own";
@@ -125,6 +128,19 @@ export function CashOut() {
   const [where, setWhere] = useState<RailsWhere | null>(null);
   const [answeredCountry, setAnsweredCountry] = useState<string | null>(null);
   const resumed = useRef(false);
+  // The third way, their phone (D238): shown only when the server offers it to this account, and nothing is said when
+  // it does not, since the way is not open to everybody before a real top-up has reached a real number.
+  const [phoneOn, setPhoneOn] = useState(false);
+  useEffect(() => {
+    if (!address) return;
+    let live = true;
+    phoneOffered().then((offered) => {
+      if (live) setPhoneOn(offered);
+    }, () => undefined);
+    return () => {
+      live = false;
+    };
+  }, [address]);
 
   useEffect(() => {
     let live = true;
@@ -272,6 +288,13 @@ export function CashOut() {
     setRefreshed(false);
     setDollars(twoDecimalsDown(now[AUSD.symbol] ?? 0n, AUSD.decimals));
     setStage("amount");
+  };
+
+  const startPhone = async () => {
+    const now = await gather();
+    if (!now) return;
+    setProblem(null);
+    setStage("phone");
   };
 
   const askPrice = async (again = false) => {
@@ -602,6 +625,18 @@ export function CashOut() {
             </section>
           );
         })}
+        {/* The third card, their phone (D238): the exact shape of the two above, with no figure since what reaches the
+            phone is priced only once the number and the amount are known. */}
+        {phoneOn ? (
+          <section className={CARD}>
+            <h3 className={CARD_TITLE}>{PHONE_OUT.cardTitle}</h3>
+            <p className={BODY}>{PHONE_OUT.cardLine}</p>
+            <button type="button" onClick={() => void startPhone()} disabled={holdings === null || changeable === 0n} className={SECONDARY_BUTTON}>
+              {PHONE_OUT.choose}
+            </button>
+            {holdings !== null && changeable === 0n ? <p className={HELP}>{W.nothingToSend}</p> : null}
+          </section>
+        ) : null}
         {/* The published figures and where each was read, for whoever asks: one press away, off the cards that decide. */}
         <details className={HELP}>
           {/* A block, not a flex row: the disclosure marker is what says this opens, and a flex summary loses it. */}
@@ -616,6 +651,15 @@ export function CashOut() {
         <button type="button" onClick={() => { setProblem(null); setOwnAmount(ownMax); setStage("own"); }} disabled={holdings === null || dollarsHeld === 0n} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
           {W.anotherAccount}
         </button>
+      </div>
+    );
+  }
+
+  if (stage === "phone") {
+    return (
+      <div className="flex flex-col gap-[var(--space-xl)]">
+        {moneyCard}
+        <PhoneTopUp ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }
