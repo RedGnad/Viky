@@ -152,16 +152,18 @@ test("the route reads the country of the connection, takes the device's language
   }
 });
 
-test("the way out offers what works for the number's country, and asks where it is from (D270, replacing R1's never hide)", () => {
+test("the way out offers what works where the person lives, read from the account (D270, D274)", () => {
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
-  // The founder's decision of 26 Sep 2026: nothing is offered that does not work for this number. The uses come from the
-  // rails' own answers for the country, and nothing is ordered until the person has answered when the signals disagree.
+  // The founder's decision of 26 Sep 2026: nothing is offered that does not work there. The uses come from the rails'
+  // own answers for the country, and nothing is ordered until the person has answered when the signals disagree.
   assert.match(screen, /orderUses\(usesFor\(countryNow, where\?\.waysOut \?\? \{\}, true, true\), eurosHeld,/);
   assert.match(screen, /const uses = where\?\.ask && !answeredCountry \? \[\] :/);
-  // The question: open when the signals disagree, or when the person presses "change"; the two signals among its answers.
+  // 27 Sep 2026: the country is a fact of the account, never a number; "change" opens the full list and saves there.
+  assert.match(screen, /useAccountCountry\(address\)/);
   assert.match(screen, /const asking = picking \|\| Boolean\(where\?\.ask && !answeredCountry\);/);
-  assert.match(screen, /\[countryNow, where\?\.fromDevice, where\?\.fromConnection, "sn", "ci", "fr"\]/);
-  assert.match(screen, /\{U\.whereIsTheNumber\}/);
+  assert.match(screen, /<CountryPicker/);
+  assert.match(screen, /void saveCountry\(code\)/);
+  assert.match(screen, /<GiftCardOut country=\{countryNow\}/);
 });
 
 test("a rail that cannot be reached says nothing, and what it said before is not kept for long", async () => {

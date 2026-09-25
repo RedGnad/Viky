@@ -15,6 +15,7 @@ import { MoneyKey } from "./MoneyKey";
 import { PrivateSpace } from "./PrivateSpace";
 import { SignInDoor } from "./SignInDoor";
 import { Shell } from "./Shell";
+import { WhereYouLive } from "./WhereYouLive";
 
 /**
  * Me, in the order the structure gives it (section 4): the display currency, the session in one sentence and sign out,
@@ -68,6 +69,9 @@ export function Me() {
 
   return (
     <Shell kind="destination" active="me" title={W.title} character={<HeadCharacter scene="me" />}>
+      {/* Where the person lives, a fact of the account (D274): asked once, then one line with "change". */}
+      <WhereYouLive address={address} />
+
       <section className={CARD}>
         {/* The same key and the same list as the card (D152): one way to change what money is read in, and the
             list is what the rails and the rate file answer today, not three names written here. */}
