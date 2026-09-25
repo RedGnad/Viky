@@ -5,6 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Character } from "../app/kit/Character";
 import { HERO_PEEK, heroTimeline } from "../app/kit/HeroMoment";
+import { CARD_FRAGMENT, dropStaleCardFragment, goToTheCard } from "../app/kit/WayToTheCard";
 import { MOTION } from "../src/design-tokens";
 import { HERO_COOKIE, heroCookieText, heroPlayedFromCookie } from "../src/hero-cookie";
 
@@ -86,6 +87,46 @@ test("the first image is the starting state, the choreography is on the tokens i
   const order = ["<h1 className={HERO}>", "{W.promiseUnder}", 'href="#offer"', "<HeroMoment played={heroPlayed} />", '<div id="offer"', "<OfferCard />"].map((mark) => home.indexOf(mark));
   assert.ok(order.every((at) => at > 0) && order.every((at, i) => i === 0 || at > order[i - 1]), "the promise, its sentence, the way to the card, the moment, the card");
   assert.match(home, /<a href="#offer" className=\{`\$\{PRIMARY_BUTTON\}/, "the way to the card carries the accent: the first screen's one action, the card's own a screen below");
+});
+
+/**
+ * The way to the card writes nothing in the address (D240). A fragment link keeps "#offer" in the address, and every
+ * later load of that address starts at the card: an installed app reopening on its last address, a reload, a restored
+ * tab. That is the landing the founder saw open part way down at launch (25 Sep 2026).
+ */
+test("the way to the card scrolls to it and leaves no fragment behind, and a stale one is dropped on arrival", () => {
+  const home = readFileSync("app/kit/Home.tsx", "utf8");
+  assert.equal(CARD_FRAGMENT, "#offer");
+  assert.match(home, /<a href="#offer" className=\{`\$\{PRIMARY_BUTTON\}[^>]*onClick=\{goToTheCard\}>/, "the link keeps its fragment for a browser without script, and the press does the rest");
+  assert.match(home, /<div id="offer" tabIndex=\{-1\} className="[^"]*outline-none/, "the card can take the keyboard's starting point, as a fragment would give it, without a ring");
+  assert.match(home, /useEffect\(\(\) => \{\n\s*dropStaleCardFragment\(\);\n\s*\}, \[\]\);/, "and a device that still holds the old address is cleaned on arrival");
+  // The press: the card scrolled into view, the default stopped, nothing written; without the card, the browser's own way.
+  const calls: string[] = [];
+  const card = { scrollIntoView: (options: unknown) => calls.push(`scroll ${JSON.stringify(options)}`), focus: (options: unknown) => calls.push(`focus ${JSON.stringify(options)}`) };
+  const realDocument = globalThis.document;
+  const realWindow = globalThis.window;
+  (globalThis as { document?: unknown }).document = { getElementById: (id: string) => (id === "offer" ? card : null) };
+  try {
+    goToTheCard({ preventDefault: () => calls.push("prevented") });
+    assert.deepEqual(calls, ["prevented", 'scroll {"block":"start"}', 'focus {"preventScroll":true}']);
+    (globalThis as { document?: unknown }).document = { getElementById: () => null };
+    calls.length = 0;
+    goToTheCard({ preventDefault: () => calls.push("prevented") });
+    assert.deepEqual(calls, [], "no card on the page: the browser follows the fragment as usual");
+    // Arrival: "#offer" in the address is replaced by the same address without it, and any other address is left alone.
+    const written: unknown[][] = [];
+    (globalThis as { window?: unknown }).window = { location: { hash: "#offer", pathname: "/", search: "" }, history: { replaceState: (...args: unknown[]) => written.push(args) } };
+    dropStaleCardFragment();
+    assert.equal(JSON.stringify(written), JSON.stringify([[null, "", "/"]]));
+    (globalThis as { window?: unknown }).window = { location: { hash: "", pathname: "/gifts", search: "?x=1" }, history: { replaceState: (...args: unknown[]) => written.push(args) } };
+    dropStaleCardFragment();
+    assert.equal(written.length, 1, "nothing to drop, nothing written");
+  } finally {
+    (globalThis as { document?: unknown }).document = realDocument;
+    (globalThis as { window?: unknown }).window = realWindow;
+  }
+  const way = readFileSync("app/kit/WayToTheCard.ts", "utf8");
+  assert.doesNotMatch(way, /pushState|location\.hash =|scrollTo\(/, "nothing is pushed, no hash is written, and nobody is scrolled back at load");
 });
 
 test("the first screen is as tall as the viewport less the header and the card's peek, and the room left over is shared (D221)", () => {
