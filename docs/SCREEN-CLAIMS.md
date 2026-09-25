@@ -635,3 +635,5 @@ once Bitrefill and the treasury are configured.
 |---|---|---|---|
 | "the ID Reclaim shows for each of the two pages", "how your university grades" | a portal row holds an enrolment provider and a results provider with its scale | `pnpm portal:add` with the `RESULTS_*` names (docs/OPERATIONS.md, "A university's portal, in thirty minutes", 1 bis) | `test/portal-store.test.ts` |
 | "That result is read only when a gift on it is shown, and Viky keeps whether it was reached, not the mark." | the year passed and the grade keep the verdict alone | `PRIVACY["university-year-passed-shown"]`, `PRIVACY["university-grade-shown"]`, kept "verdict" | `test/condition-privacy.test.ts` |
+| "Credit or data?", "Credit", "Mobile data" | the operators Bitrefill answers for the number are split by Bitrefill's own name ("Data", "Bundles", "Internet") | `phoneKindOf` | `test/phone-order.test.ts` |
+| "No mobile data for this number on Bitrefill. Choose the other." | none of the operators answered for the number is of that kind | `PhoneTopUp`, `phoneKindOf` | read by hand |

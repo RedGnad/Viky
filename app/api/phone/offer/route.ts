@@ -4,7 +4,7 @@ import { bitrefillConfigured } from "@/src/bitrefill";
 import { isOperator } from "@/src/dev-access";
 import { NO_STORE } from "@/src/gift-api";
 import { phoneErrorResponse } from "@/src/phone-api";
-import { phoneWayOffered } from "@/src/phone-order";
+import { phoneDataOffered, phoneWayOffered } from "@/src/phone-order";
 import { treasuryConfigured } from "@/src/phone-treasury";
 
 export const runtime = "nodejs";
@@ -15,7 +15,8 @@ export async function GET(request: Request) {
   try {
     const auth = readAccountAuthSession(request);
     const offered = phoneWayOffered(auth.account, { isOperator, configured: () => bitrefillConfigured() && treasuryConfigured() });
-    return NextResponse.json({ offered }, { headers: NO_STORE });
+    const data = offered && phoneDataOffered(auth.account, { isOperator });
+    return NextResponse.json({ offered, data }, { headers: NO_STORE });
   } catch (error) {
     return phoneErrorResponse(error);
   }

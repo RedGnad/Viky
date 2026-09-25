@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import type { Hex, LocalAccount } from "viem";
 import { ApiError } from "@/src/client/api";
-import { findPhoneOperators, followPhone, payPhone, pricePhone, type PhoneOperator, type PhonePrice, type PhoneStatus } from "@/src/client/phone";
+import { findPhoneOperators, followPhone, payPhone, phoneKindOf, pricePhone, type PhoneKind, type PhoneOperator, type PhonePrice, type PhoneStatus } from "@/src/client/phone";
 import { AUSD } from "@/src/coins";
 import { twoDecimalsDown } from "@/src/exit-steps";
 import { PHONE_OUT as W } from "@/src/sentences";
@@ -31,10 +31,12 @@ function randomNonce(): Hex {
   return `0x${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}` as Hex;
 }
 
-export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
+export function PhoneTopUp(props: Readonly<{ ausd: bigint; dataOn: boolean; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
   const [screen, setScreen] = useState<Screen>("where");
   const [phone, setPhone] = useState("");
   const [operators, setOperators] = useState<readonly PhoneOperator[] | null>(null);
+  // Credit or data (the founder, 26 Sep 2026): the same order, the same treasury, the same ceilings, another product.
+  const [kind, setKind] = useState<PhoneKind>("credit");
   const [operator, setOperator] = useState<PhoneOperator | null>(null);
   const [packageId, setPackageId] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
@@ -78,7 +80,8 @@ export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => P
     try {
       const found = await findPhoneOperators(phone);
       setOperators(found);
-      if (found.length === 1) choose(found[0]);
+      const ofKind = found.filter((one) => phoneKindOf(one) === kind);
+      if (ofKind.length === 1) choose(ofKind[0]);
     } catch (error) {
       refusal(error);
     } finally {
@@ -95,6 +98,7 @@ export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => P
     setScreen("howMuch");
   };
 
+  const ofKind = (operators ?? []).filter((one) => phoneKindOf(one) === kind);
   const typed = Number(amount.replace(/[\s,]/g, ""));
   const range = operator?.range ?? null;
   const typedFits = range !== null && Number.isFinite(typed) && typed >= range.min && typed <= range.max;
@@ -216,21 +220,34 @@ export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => P
   return (
     <section className={CARD}>
       <h2 className={TITLE}>{W.whereTitle}</h2>
+      {props.dataOn ? (
+      <div className="flex flex-col gap-[var(--tap-gap)]">
+        <p className={BODY}>{W.whatFor}</p>
+        <div className="grid grid-cols-2 gap-[var(--tap-gap)]">
+          {(["credit", "data"] as const).map((one) => (
+            <button key={one} type="button" aria-pressed={one === kind} onClick={() => { setKind(one); setProblem(null); if (operators && operators.filter((op) => phoneKindOf(op) === one).length === 1) choose(operators.find((op) => phoneKindOf(op) === one)!); }} disabled={busy} className={one === kind ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
+              {W.kinds[one]}
+            </button>
+          ))}
+        </div>
+      </div>
+      ) : null}
       <label className="flex flex-col gap-[var(--space-xs)]">
         <span className={BODY}>{W.number}</span>
         <input value={phone} onChange={(event) => { setPhone(event.target.value); setOperators(null); setProblem(null); }} inputMode="tel" autoComplete="tel" className={FIELD} disabled={busy} />
         <span className={HELP}>{W.numberHelp}</span>
       </label>
-      {operators && operators.length > 1 ? (
+      {operators && ofKind.length > 1 ? (
         <div className="flex flex-col gap-[var(--tap-gap)]">
           <p className={BODY}>{W.whichCompany}</p>
-          {operators.map((one) => (
+          {ofKind.map((one) => (
             <button key={one.id} type="button" onClick={() => choose(one)} disabled={busy} className={SECONDARY_BUTTON}>
               {one.name}
             </button>
           ))}
         </div>
       ) : null}
+      {operators && operators.length > 0 && ofKind.length === 0 ? <p className={HELP}>{W.noneOfKind(W.kinds[kind])}</p> : null}
       {alert}
       <div className="flex flex-wrap gap-[var(--tap-gap)]">
         <button type="button" onClick={() => void find()} disabled={busy || phone.trim().length < 8} className={PRIMARY_BUTTON}>
