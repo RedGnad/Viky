@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { Character } from "../app/kit/Character";
 import { FamilyArt } from "../app/kit/FamilyArt";
 import { FAMILIES } from "../src/conditions";
 import { OFFER } from "../src/sentences";
@@ -25,7 +26,7 @@ test("each family has its picture: the diamond in its situation, the props in th
   }
   const runner = renderToStaticMarkup(createElement(FamilyArt, { family: "move" }));
   assert.ok(runner.includes('data-part="arm"') && /transform:rotate\(75deg\)/.test(runner) && /transform:rotate\(-15deg\)/.test(runner), "the runner has its limbs out, turned from their joints");
-  assert.ok(runner.includes("transform:rotate(-8deg)"), "and leans into the stride");
+  assert.ok(runner.includes('<g transform="rotate(-8 32 53)">'), "and leans into the stride, inside its drawing (D249)");
   const reader = renderToStaticMarkup(createElement(FamilyArt, { family: "learn" }));
   assert.ok(!reader.includes('data-part="arm"'), "the others keep the head alone");
 });
@@ -47,4 +48,15 @@ test("the chooser opens on the four tiles from six conditions, every time, and t
   assert.equal(OFFER.choices(6), "6 choices");
   const ui = readFileSync("app/components/ui.ts", "utf8");
   assert.match(ui, /export const TILE = `\$\{FOCUS\} \$\{OUTLINE\} \$\{RELIEF\} flex min-h-\[var\(--tap-target\)\][^`]*bg-\[var\(--tonal\)\]/, "a tile is a tap target with the focus ring, the outline, the relief and the tonal fill of a key (D233)");
+});
+
+test("the runner leans inside its own drawing, never through a CSS rotation of the tile (D249)", () => {
+  const art = readFileSync("app/kit/FamilyArt.tsx", "utf8");
+  // A CSS rotation on the element around the drawing made a layer of its own on Android, painted as a dotted rectangle.
+  assert.doesNotMatch(art, /rotate\(-?\d+deg\)/);
+  assert.match(art, /tilt=\{running \? -8 : undefined\}/);
+  const leaning = renderToStaticMarkup(createElement(Character, { state: "diamond", tone: "sun", standing: false, limbs: true, pose: "running", tilt: -8 }));
+  assert.match(leaning, /<g transform="rotate\(-8 32 53\)">/, "from its feet, in the drawing's units");
+  const upright = renderToStaticMarkup(createElement(Character, { state: "diamond", tone: "sun", standing: false }));
+  assert.doesNotMatch(upright, /rotate\(/, "a diamond that does not lean carries no turn");
 });
