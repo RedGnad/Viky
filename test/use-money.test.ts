@@ -31,3 +31,14 @@ test("the sun goes to what gives the most without a word of crypto", () => {
   assert.deepEqual(orderUses(["bank"], 10, () => 8), ["bank"]);
   assert.deepEqual(orderUses([], 10, () => 8), []);
 });
+
+test("a gift card comes second, whatever leads, as both mockups draw it, and only with a country (D271)", () => {
+  // Senegal, a small amount: the phone leads, the gift card follows, then the card rail.
+  const senegal = usesFor("SN", { Ramp: "does-not" }, true, true);
+  assert.deepEqual(orderUses(senegal, 20, () => 10), ["phone", "giftcard", "card"]);
+  // France, a larger amount: the bank leads, the gift card follows, then the phone.
+  const france = usesFor("FR", {}, true, true);
+  assert.deepEqual(orderUses(france, 120, (use) => (use === "bank" ? 99 : undefined)), ["bank", "giftcard", "phone"]);
+  assert.equal(usesFor(null, {}, true, true).includes("giftcard"), false, "no country, no list of cards");
+  assert.equal(usesFor("SN", {}, true, false).includes("giftcard"), false, "not offered, not shown");
+});

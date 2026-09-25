@@ -156,7 +156,7 @@ test("the way out offers what works for the number's country, and asks where it 
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
   // The founder's decision of 26 Sep 2026: nothing is offered that does not work for this number. The uses come from the
   // rails' own answers for the country, and nothing is ordered until the person has answered when the signals disagree.
-  assert.match(screen, /orderUses\(usesFor\(countryNow, where\?\.waysOut \?\? \{\}, phoneOn\), eurosHeld,/);
+  assert.match(screen, /orderUses\(usesFor\(countryNow, where\?\.waysOut \?\? \{\}, phoneOn, giftCardsOn\), eurosHeld,/);
   assert.match(screen, /const uses = where\?\.ask && !answeredCountry \? \[\] :/);
   // The question: open when the signals disagree, or when the person presses "change"; the two signals among its answers.
   assert.match(screen, /const asking = picking \|\| Boolean\(where\?\.ask && !answeredCountry\);/);
