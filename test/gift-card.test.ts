@@ -354,7 +354,7 @@ test("the page without an account is the character, the title, the sentence and 
   assert.doesNotMatch(signedOut, /flex-row|order-1|order-2/, "no second column and no reordering");
   // The whole composition is centred in the window at every width, the card included (D131 from 1024, D221 below).
   assert.match(signedOut, /className="arrives-in-turn flex w-full flex-col items-center"/);
-  assert.match(signedOut, /className="mt-auto w-full text-center"/);
+  assert.match(signedOut, /className="w-full text-center"/, "the words centred; their share of the room is a spacer since D250");
   assert.doesNotMatch(signedOut, /items-start|\[@media\(min-width:1024px\)\]:text-center/, "nothing left-aligned on a phone");
   assert.match(signedOut, /<div className="arrives-in-turn flex w-full flex-col items-center/, "one column, on one axis, and its pieces arrive in turn (D147)");
   assert.doesNotMatch(signedOut, /<h1 className=\{`\$\{HERO\}[^`]*max-w/, "the title is free to take the column, which is what holds it on one line at 76");
