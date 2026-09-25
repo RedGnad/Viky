@@ -195,9 +195,12 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   // Every field on the card is a control at the size every control keeps, and the chips are the product's own button.
   // The name, the amount's box and its field, and the mark that changes the currency (D144): every one of them a
   // control at the size every control keeps.
-  // The name, the amount's box and its field; the key that opens the currencies carries its own 44 (D152).
+  // The name, the amount's box and its field at 48; the key beside the field keeps 48 too, inside the box's inset of 3
+  // on every side (D257), so the box stands 54.
   assert.equal((card.match(/min-h-\[var\(--tap-target\)\]/g) ?? []).length, 3, "the name and the amount twice");
-  assert.match(readFileSync("app/kit/MoneyKey.tsx", "utf8"), /min-h-\[var\(--tap-target\)\] min-w-\[var\(--tap-target\)\]/, "and the key is a thumb's size whatever its sign");
+  const key = readFileSync("app/kit/MoneyKey.tsx", "utf8");
+  assert.match(key, /min-h-\[var\(--tap-target\)\] \$\{nested \?/, "the key is a thumb's size whatever its sign, nested or alone");
+  assert.match(key, /min-w-\[var\(--tap-target\)\]/, "and never narrower than a thumb");
   // One line, not two (D137), and it opens the four families every time (D233): pressing it is to change.
   assert.equal((card.match(/\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/g) ?? []).length, 1, "one control for what they will do");
   assert.match(card, /onClick=\{\(\) => setChoosing\("list"\)\}/, "the catalogue, whatever the card carries (D233); one value carries whether it opens and on which face (D150)");

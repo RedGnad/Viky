@@ -241,11 +241,15 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
               {/* The money on one line when it fits (D226): the amount, then the three lengths beside it, wrapping under it
                   on a phone. */}
               <span className="flex flex-wrap items-center gap-x-[var(--space-md)] gap-y-[var(--space-md)]">
-                <span className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent-text)]`}>
+                {/* The key nests in the field at one inset on every side (D257): 48 inside, 54 for the field. */}
+                <span
+                  className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--accent-text)]`}
+                  style={{ paddingBlock: "var(--field-inset)", paddingLeft: "var(--field-inset)" }}
+                >
                   {/* The key that says what this card is read in, and that there is a list behind it (D152): the
                       mark in the house's own line, an edge, a relief and a chevron, like everything else that is
                       pressed here. A visitor has no page to set a currency on, so the card carries it (D144). */}
-                  <MoneyKey currency={money.currency} onOpen={() => setReading(true)} className="-ml-[var(--space-xs)] mr-[var(--space-xs)]" />
+                  <MoneyKey currency={money.currency} onOpen={() => setReading(true)} nested className="mr-[var(--space-xs)]" />
                   <input
                     value={typed}
                     onChange={(event) => typeAmount(event.target.value)}

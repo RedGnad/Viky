@@ -16,7 +16,23 @@ import { MoneyMark } from "./MoneyMark";
  * It opens a sheet. It never changes the currency by itself: with thirty-one to choose from, a press that moved to
  * the next one would be a press nobody could aim.
  */
-export function MoneyKey({ currency, onOpen, className = "" }: Readonly<{ currency: string; onOpen: () => void; className?: string }>) {
+export function MoneyKey({
+  currency,
+  onOpen,
+  className = "",
+  nested = false,
+}: Readonly<{
+  currency: string;
+  onOpen: () => void;
+  className?: string;
+  /**
+   * Inside a field (D257): the same inset on every side, and a radius concentric with the field's, its radius less
+   * that inset. A capsule inside a box rounded at 10 had two curves with no common centre, and it touched the field at
+   * the top and bottom (1 pixel) where it stood 3 from its left: the founder saw the key's rounding as foreign to the
+   * field's. On its own, as on Me, it stays the capsule every key is. 48 tall either way, the size every target keeps.
+   */
+  nested?: boolean;
+}>) {
   return (
     <button
       type="button"
@@ -27,7 +43,7 @@ export function MoneyKey({ currency, onOpen, className = "" }: Readonly<{ curren
          44 of WCAG 2.5.5 at AAA. A sign wider than that makes the key wider; none makes it smaller. The edge and the
          chevron say it is pressed; the relief every other control stands on is left off here (the founder, 21 Sep
          2026), because the key sits inside a field's own box, and a slab inside a box read as two boxes. */
-      className={`money-key inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center gap-[2px] rounded-full border-[length:var(--control-border-width)] border-[var(--control-border)] bg-[var(--tonal)] px-[var(--space-sm)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)] ${className}`}
+      className={`money-key inline-flex min-h-[var(--tap-target)] ${nested ? "rounded-[calc(var(--field-radius)-var(--field-inset))]" : "rounded-full"} min-w-[var(--tap-target)] items-center gap-[2px] border-[length:var(--control-border-width)] border-[var(--control-border)] bg-[var(--tonal)] px-[var(--space-sm)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)] ${className}`}
     >
       <MoneyMark currency={currency} />
       <Chevron />
