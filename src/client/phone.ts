@@ -13,16 +13,7 @@ export type PhoneOperator = Readonly<{
   range: Readonly<{ min: number; max: number; step: number; priceRate: number }> | null;
 }>;
 
-/**
- * Credit or data (D238's second step, the founder, 26 Sep 2026): Bitrefill sells mobile data for the same number as
- * separate products, named by Bitrefill with the word ("Orange Data Senegal", "Tigo Free Data Senegal", "Orange Senegal
- * Bundles"). Which a product is is read from Bitrefill's own name, since its documented product has no category.
- */
-export type PhoneKind = "credit" | "data";
-
-export function phoneKindOf(operator: Pick<PhoneOperator, "id" | "name">): PhoneKind {
-  return /\b(data|internet|bundles?)\b/i.test(`${operator.name} ${operator.id.replace(/-/g, " ")}`) ? "data" : "credit";
-}
+export { phoneKindOf, type PhoneKind } from "../phone-kind";
 
 export type PhonePrice = Readonly<{ orderId: string; operatorName: string; localAmount: string; localCurrency: string; ausdUnits: bigint; to: Hex }>;
 
@@ -36,10 +27,6 @@ export type PhoneStatus = Readonly<{
   code?: Readonly<{ code?: string; link?: string; pin?: string; instructions?: string; expires?: string }>;
 }>;
 
-export async function phoneOffered(): Promise<{ offered: boolean; data: boolean; giftCards: boolean }> {
-  const answer = await getJson<{ offered?: boolean; data?: boolean; giftCards?: boolean }>("/api/phone/offer");
-  return { offered: answer.offered === true, data: answer.data === true, giftCards: answer.giftCards === true };
-}
 
 export async function findPhoneOperators(phone: string): Promise<readonly PhoneOperator[]> {
   return (await postJson<{ operators: PhoneOperator[] }>("/api/phone/operators", { phone })).operators;

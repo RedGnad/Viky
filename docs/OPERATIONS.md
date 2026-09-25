@@ -1378,8 +1378,10 @@ paper `0xED4c…67B3`), carried by the relayer `0x150d…CFE4`, which only paid 
 
 ## The phone way out: what the founder sets (D238)
 
-Viky buys a phone top-up for the person, on Bitrefill, with the AUSD the person sends it. Nothing of this runs until
-the three items below exist, and the line is marked open only after a real top-up on a real number.
+Viky buys a phone top-up, credit or data, or a gift card for the person, on Bitrefill, with the AUSD the person sends
+it. The three cards are offered to everybody since their code was complete (the founder, 26 Sep 2026): until the three
+items below exist, a price refuses "not open yet" and nothing is taken; a treasury that cannot pay refuses the same
+way; a failure after the money arrived refunds it. The judges' page counts how many times each was used.
 
 **1. A Bitrefill account and its Personal API key.** Sign up on bitrefill.com, verify the email (a basic account:
 five phone items a day, 200 USD a refill, 500 USD a day, 2,000 USD a month, terms section 8, which are the pilot's

@@ -7114,3 +7114,16 @@ The founder, 26 Sep 2026, in the spirit of "Use your money" (the mockups of 26 S
 - **Nothing open before a first real order of each type**: credit, data and a gift card each have their own flag,
   offered to an operator's account alone until then.
 - **One PR per step**: data on the phone card; gift cards on the server; their card and sheet.
+
+## D272, 26 Sep 2026: no gate on a way out whose code is complete
+
+The founder, 26 Sep 2026, correcting D238 and D271: the door "open only after a first real order" is gone, for credit,
+for data, for gift cards and for every way out. A path whose code is complete is visible and usable by everybody the
+day it is deployed. What is really missing is said at its place, at the moment it is missing: no key refuses "not open
+yet", a treasury that cannot pay refuses cleanly, a failure after the money arrived refunds it, all already coded.
+
+- **Gone**: `PHONE_WAY_OPEN`, `PHONE_DATA_OPEN`, `GIFT_CARD_OPEN`, the offer route and the operator test in the flow.
+- **Kept, for the judges' page alone**: how many times each use was used, from the delivered orders, "Open. Nobody
+  has used it yet." as for the conditions. A data top-up is written as `data` on its row so the three are told apart.
+- **The legal page** says the route exists, and what happens when it cannot pay.
+- **Production**: `pnpm db:migrate` run in the same pass, for the gift card's sealed code column.

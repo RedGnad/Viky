@@ -83,9 +83,10 @@ export default function LegalPage() {
         </p>
         <p>
           What Viky does not have: no payout to mobile money such as Orange Money or Wave, and no bank transfer in
-          Africa. A third route is being built and is not open yet: a phone top-up, bought on Bitrefill for the
-          person with their own money and sent to the number they give. It is open to nobody until a real top-up has
-          reached a real phone.
+          Africa. A third route: a phone top-up, credit or data, or a gift card, bought on Bitrefill for the person
+          with their own money and sent to the number they give, or shown to them as a code. When Bitrefill or
+          Viky&apos;s own means cannot pay for one, the screen says so at that moment and nothing is taken; money that
+          arrived before a failure comes back by itself.
         </p>
       </section>
     </Shell>

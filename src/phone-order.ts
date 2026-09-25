@@ -1,6 +1,7 @@
 import { erc20Abi, getAddress, keccak256, stringToHex, type Abi, type Hex } from "viem";
 import { BITREFILL_ACCOUNT_LIMITS, BitrefillError, createInvoice, giftCardById, operatorsFor, outcomeOf, readInvoice, readOrderCode, usdcUnits, type BitrefillInvoice, type BitrefillOperator, type GiftCardCode } from "./bitrefill";
 import { openSecret, sealSecret } from "./connect-vault";
+import { phoneKindOf } from "./phone-kind";
 import { AUSD } from "./coins";
 import { monadChain, waitForFinality } from "./monad/chain";
 import { addMonadGasBuffer } from "./monad-gas";
@@ -22,36 +23,8 @@ import { relayerClients, relayerPreflight } from "./relayer";
  * Every refusal is a code and a sentence that says what the ceiling is and that nothing was taken.
  */
 
-/**
- * Whether the phone way is open to everybody: not until a real top-up has reached a real number, the founder's rule
- * (D238). Until then the card is offered to an operator's account alone, and only once Bitrefill and the treasury
- * are both configured where this runs.
- */
-export const PHONE_WAY_OPEN = false;
-
-/** A gift card opens on its own first real order, as credit and data do (the founder, 26 Sep 2026). */
-export const GIFT_CARD_OPEN = false;
-
-export function giftCardsOffered(account: string, deps: Readonly<{ isOperator: (account: string) => boolean; configured: () => boolean }>): boolean {
-  if (!deps.configured()) return false;
-  return GIFT_CARD_OPEN || deps.isOperator(account);
-}
-
 /** Every item Bitrefill's basic account may buy in a day, gift cards and top-ups together (terms section 8). */
 export const ACCOUNT_ITEMS_PER_DAY = 15;
-
-/** Mobile data opens on its own first real order, never with credit's (the founder, 26 Sep 2026). */
-export const PHONE_DATA_OPEN = false;
-
-/** Whether this account is offered mobile data on the phone card, once the card itself is offered. */
-export function phoneDataOffered(account: string, deps: Readonly<{ isOperator: (account: string) => boolean }>): boolean {
-  return PHONE_DATA_OPEN || deps.isOperator(account);
-}
-
-export function phoneWayOffered(account: string, deps: Readonly<{ isOperator: (account: string) => boolean; configured: () => boolean }>): boolean {
-  if (!deps.configured()) return false;
-  return PHONE_WAY_OPEN || deps.isOperator(account);
-}
 
 /** Viky's own ceilings for the pilot, beside Bitrefill's account limits (the founder, 25 Sep 2026; per order, default applied). */
 export const PHONE_CEILINGS = Object.freeze({ usdPerPersonPerDay: 50, usdPerOrder: 50 });
@@ -200,7 +173,8 @@ export async function pricePhoneTopUp(
   const localAmount = input.value !== undefined ? String(input.value) : (operator.packages.find((p) => p.id === input.packageId)?.value ?? "");
   const order = await deps.store.recordPricedOrder({
     account: getAddress(input.account),
-    kind: "phone",
+    // Credit or data, by Bitrefill's own name for the product (D271): the judges' count says which was used.
+    kind: phoneKindOf(operator) === "data" ? "data" : "phone",
     productId: operator.id,
     operatorName: operator.name,
     localAmount,
@@ -240,7 +214,7 @@ function statusOf(order: PhoneOrder, open?: (sealed: string) => string): PhoneOr
   // A gift card is delivered to the person when its code is there to show; until then it is on its way.
   const code = order.kind === "gift_card" && delivered ? openedCode(order, open) : undefined;
   const state = delivered && (order.kind !== "gift_card" || code) ? "delivered" : order.state === "refunded" ? "refunded" : order.state === "failed" ? "refund_pending" : "on_its_way";
-  return { orderId: order.id, state, amount: dollars(order.ausdUnits), operatorName: order.operatorName, kind: order.kind, ...(code ? { code } : {}) };
+  return { orderId: order.id, state, amount: dollars(order.ausdUnits), operatorName: order.operatorName, kind: order.kind === "gift_card" ? "gift_card" : "phone", ...(code ? { code } : {}) };
 }
 
 /**
