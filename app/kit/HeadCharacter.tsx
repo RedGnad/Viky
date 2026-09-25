@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { MOTION, SPRING } from "@/src/design-tokens";
+import { EASING, MOTION, SPRING } from "@/src/design-tokens";
 import { springEasing } from "@/src/motion";
 import { Character } from "./Character";
 import { Scene, type SceneName } from "./Figure";
@@ -44,8 +44,18 @@ export function HeadCharacter({ scene }: Readonly<{ scene?: SceneName }> = {}) {
     for (const prop of stage.querySelectorAll<SVGElement>("[data-prop]")) {
       running.push(prop.animate([{ transform: "scale(0.4)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: pop.durationMs, easing: pop.easing, delay: later, fill: "backwards" }));
     }
+    // A raised arm is drawn out along its own curve from the joint, then its hand closes on the end (D241): a stretch
+    // on one axis made the arm on the shoulder rise vertically before it lay sideways. No overshoot here, since a line
+    // drawn past its end would open a gap at the joint; the transform, which holds a pose's turn, is left alone.
     for (const arm of stage.querySelectorAll<SVGElement>('[data-part="arm"]:not([data-pose="rest"])')) {
-      running.push(arm.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], { duration: settle.durationMs, easing: settle.easing, delay: later, fill: "backwards" }));
+      const reach = arm.querySelector<SVGElement>('[data-part="reach"]');
+      const hand = arm.querySelector<SVGElement>('[data-part="hand"]');
+      if (reach) {
+        running.push(reach.animate([{ strokeDasharray: "1 1", strokeDashoffset: 1 }, { strokeDasharray: "1 1", strokeDashoffset: 0 }], { duration: settle.durationMs, easing: EASING.emphasizedDecelerate, delay: later, fill: "backwards" }));
+      }
+      if (hand) {
+        running.push(hand.animate([{ transform: "scale(0)" }, { transform: "scale(1)" }], { duration: pop.durationMs, easing: pop.easing, delay: later + settle.durationMs * 0.6, fill: "backwards" }));
+      }
     }
     return () => running.forEach((animation) => animation.cancel());
   }, [scene, arrives]);

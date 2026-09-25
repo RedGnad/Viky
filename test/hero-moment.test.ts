@@ -4,6 +4,7 @@ import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Character } from "../app/kit/Character";
+import { Figure } from "../app/kit/Figure";
 import { HERO_PEEK, heroTimeline } from "../app/kit/HeroMoment";
 import { CARD_FRAGMENT, dropStaleCardFragment, goToTheCard } from "../app/kit/WayToTheCard";
 import { MOTION } from "../src/design-tokens";
@@ -82,6 +83,11 @@ test("the first image is the starting state, the choreography is on the tokens i
   assert.match(hero, /if \(!figure \|\| reduced\(\)\) \{\n\s*show\(\);\n\s*return;/, "reduced motion: standing, nothing moves");
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n\s*\[data-hero="peeking"\] \[data-part="figure"\],[\s\S]*?transform: none;/, "and the first image is standing too");
   assert.doesNotMatch(hero, /setInterval|setTimeout|iterations: Infinity/, "nothing on a clock, nothing loops");
+  // The landing's figure is the rig, in its resting pose, with the group that whirls (D241).
+  assert.match(hero, /<Figure id="hero" whirl className="hero-character" \/>/);
+  const rig = renderToStaticMarkup(createElement(Figure, { id: "hero", whirl: true }));
+  for (const part of ["figure", "whirl", "arm", "leg", "mouth", "eye", "gloss"]) assert.ok(rig.includes(`data-part="${part}"`), part);
+  assert.ok(rig.indexOf('data-part="figure"') < rig.indexOf('data-part="whirl"'), "the whirl inside what leaps");
   assert.deepEqual(MOTION.hero.settle, { damping: 0.6, stiffness: 800 });
   const home = readFileSync("app/kit/Home.tsx", "utf8");
   const order = ["<h1 className={HERO}>", "{W.promiseUnder}", 'href="#offer"', "<HeroMoment played={heroPlayed} />", '<div id="offer"', "<OfferCard />"].map((mark) => home.indexOf(mark));

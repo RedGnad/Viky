@@ -6680,3 +6680,16 @@ back to the gift's history and the screen.
   fragment. `app/kit/WayToTheCard.ts`.
 - Left alone, on purpose: the browser's own memory of where a page was scrolled on a reload or on going back. That
   is the browser's, every site has it, and taking it away would cost the gifts list its place on the way back.
+
+## D241, 25 Sep 2026: the landing's figure is the rig, and a raised arm is drawn along its own curve
+
+- The founder, 25 Sep 2026: the figure at the head of the landing was still the old drawing, not the rig of D236; and
+  on the arrival at Gifts the arm on the other's shoulder, which lies sideways, grew vertically.
+- The landing's hero moment now draws `Figure` in its resting pose (open eyes, the smile, arms and legs hanging), with
+  the one light, the lit edge, the gloss and the smile of the destinations' scenes. A `whirl` group inside the figure
+  keeps the leap's turn; every part the choreography animates (figure, whirl, arm, leg, mouth) is where it was, so
+  the timeline of D234 is unchanged. The rig's drawings carry `data-character="diamond"`, as the old one did.
+- A raised arm on a page change is drawn out along its own path from the joint (`pathLength` 1, the dash offset from
+  1 to 0, on the emphasized decelerate curve so the line never passes its end), then its hand closes on the end on
+  the effects spring. A stretch on one axis was right only for an arm that hangs; the arms of the landing's leap still
+  hang, and still lengthen that way.

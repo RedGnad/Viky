@@ -40,6 +40,8 @@ export type FigureProps = Readonly<{
   light?: Readonly<{ x: number; y: number }>;
   /** A prefix for the gradient ids, so two figures on one page keep their own. */
   id?: string;
+  /** One more group, turning from the body's middle, for the landing's leap (D219, carried onto the rig by D241). */
+  whirl?: boolean;
 }>;
 
 /** The box the figure is drawn in: 64 wide, 53 tall down to the feet (Character's diamond with limbs). */
@@ -146,8 +148,9 @@ const line = { fill: "none", stroke: LIMB, strokeWidth: 1.8, strokeLinecap: "rou
 function Arm({ pose, arm, hand = true }: Readonly<{ pose: ArmsPose; arm: (typeof ARMS)[ArmsPose][number]; hand?: boolean }>) {
   return (
     <g data-part="arm" data-pose={pose} style={arm.turn ? { ...FROM_JOINT, transform: `rotate(${arm.turn}deg)` } : FROM_JOINT}>
-      <path d={arm.d} style={line} />
-      {hand ? <circle cx={arm.hand[0]} cy={arm.hand[1]} r={1.9} style={{ fill: LIMB }} /> : null}
+      {/* Measured as one unit long, so an arm can be drawn out along its own curve from the joint (D241). */}
+      <path data-part="reach" d={arm.d} pathLength={1} style={line} />
+      {hand ? <circle data-part="hand" cx={arm.hand[0]} cy={arm.hand[1]} r={1.9} style={{ fill: LIMB, ...FROM_MIDDLE }} /> : null}
     </g>
   );
 }
@@ -282,10 +285,11 @@ function Case({ id }: Readonly<{ id: string }>) {
 }
 
 /** The figure as a group, for a scene that composes several in one drawing. */
-export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", legs = "rest", lean = 0, gaze = { x: 0, y: 0 }, props = [], light = LIGHT, id = "figure" }: FigureProps) {
+export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", legs = "rest", lean = 0, gaze = { x: 0, y: 0 }, props = [], light = LIGHT, id = "figure", whirl = false }: FigureProps) {
   const shine = lit(light, lean);
   return (
     <g data-part="figure" style={lean ? { ...FROM_FLOOR, transform: `rotate(${lean}deg)` } : FROM_FLOOR}>
+      <g {...(whirl ? { "data-part": "whirl", style: FROM_MIDDLE } : {})}>
       <defs>
         <linearGradient id={`${id}-body`} x1={round(shine.gradient.x1)} y1={round(shine.gradient.y1)} x2={round(shine.gradient.x2)} y2={round(shine.gradient.y2)}>
           <stop offset="0" style={{ stopColor: "var(--character-hero-from)" }} />
@@ -315,6 +319,7 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
         <MouthOf mouth={mouth} />
       </g>
       {props.includes("case") ? <Case id={id} /> : null}
+      </g>
     </g>
   );
 }
@@ -322,7 +327,7 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
 /** The figure in its own box. */
 export function Figure({ className, ...figure }: FigureProps & Readonly<{ className?: string }>) {
   return (
-    <svg aria-hidden focusable="false" viewBox={`0 0 ${FIGURE_BOX.width} ${FIGURE_BOX.height}`} className={className} style={{ overflow: "visible" }}>
+    <svg aria-hidden focusable="false" viewBox={`0 0 ${FIGURE_BOX.width} ${FIGURE_BOX.height}`} data-character="diamond" className={className} style={{ overflow: "visible" }}>
       <FigureGroup {...figure} />
     </svg>
   );
@@ -337,7 +342,7 @@ export type SceneName = "home" | "gifts" | "me";
 export function Scene({ which, className, children }: Readonly<{ which: SceneName; className?: string; children?: ReactNode }>) {
   if (which === "gifts") {
     return (
-      <svg aria-hidden focusable="false" viewBox="0 0 118 53" className={className} style={{ overflow: "visible" }}>
+      <svg aria-hidden focusable="false" viewBox="0 0 118 53" data-character="diamond" className={className} style={{ overflow: "visible" }}>
         {/* The second first, a little smaller and on the same floor, so the first's arm lies over its shoulder. */}
         <g transform="translate(58 5.3) scale(0.9)">
           <FigureGroup id="gifts-two" mouth="smile" gaze={{ x: -0.6, y: -0.3 }} />
