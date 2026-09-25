@@ -152,17 +152,16 @@ test("the route reads the country of the connection, takes the device's language
   }
 });
 
-test("the screen orders and asks, and never hides a way out (R1)", () => {
+test("the way out offers what works for the number's country, and asks where it is from (D270, replacing R1's never hide)", () => {
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
-  // Both ways are always mapped; only their order changes, and the country's answer is used only once it exists.
-  assert.match(screen, /const ordered = orderByWhatReaches\(WAYS_OUT, where && !where\.ask \? where\.waysOut : \{\}, \(way\) => netOf\(way\)\?\.net\);/);
-  assert.match(screen, /\{ordered\.map\(\(way, index\) => \{/);
-  assert.doesNotMatch(screen, /WAYS_OUT\.filter|ordered\.filter/, "nothing filters a way out off the screen");
-  // The one question, with the two signals as its two answers.
-  assert.match(screen, /\{W\.whereIsYours\}/);
-  assert.match(screen, /\[where\.fromDevice, where\.fromConnection\]/);
-  // What a rail says about that country is said in the rail's own name, and only when it was really read.
-  assert.match(screen, /where\?\.waysOut\[way\.name\] === "does-not"/);
+  // The founder's decision of 26 Sep 2026: nothing is offered that does not work for this number. The uses come from the
+  // rails' own answers for the country, and nothing is ordered until the person has answered when the signals disagree.
+  assert.match(screen, /orderUses\(usesFor\(countryNow, where\?\.waysOut \?\? \{\}, phoneOn\), eurosHeld,/);
+  assert.match(screen, /const uses = where\?\.ask && !answeredCountry \? \[\] :/);
+  // The question: open when the signals disagree, or when the person presses "change"; the two signals among its answers.
+  assert.match(screen, /const asking = picking \|\| Boolean\(where\?\.ask && !answeredCountry\);/);
+  assert.match(screen, /\[countryNow, where\?\.fromDevice, where\?\.fromConnection, "sn", "ci", "fr"\]/);
+  assert.match(screen, /\{U\.whereIsTheNumber\}/);
 });
 
 test("a rail that cannot be reached says nothing, and what it said before is not kept for long", async () => {
