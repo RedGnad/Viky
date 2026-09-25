@@ -23,8 +23,8 @@ import { Expression, reduced } from "./Motion";
  */
 let aHeadWasDrawn = false;
 
-/** Material 3's duration token medium 4, 400 ms (`@material/web` tokens, `_md-sys-motion.scss`, read 25 Sep 2026). */
-const SUIT_MS = 400;
+/** Material 3's duration token medium 3, 350 ms (`@material/web` tokens, `_md-sys-motion.scss`, read 25 Sep 2026). */
+const SUIT_MS = 350;
 
 /**
  * The arrival of a scene, in one place (D243). It starts in a layout effect, before the browser paints the new screen:
@@ -43,10 +43,10 @@ function arrive(stage: HTMLElement): Animation[] {
   const swing = springEasing(SPRING.expressiveFastSpatial);
   const draw = { duration: MOTION.reveal.durationMs, easing: EASING.emphasizedDecelerate, fill: "backwards" as const };
   const running: Animation[] = [];
-  // The suit grows onto the body a little slower, easing in and out (D244): Material's standard curve, which starts
-  // and ends at rest, over its medium 4 duration of 400 ms; at the effects spring's 234 ms it was over before it read.
+  // The suit grows onto the body a little slower than the effects spring's 234 ms, on the curve Material gives what
+  // enters the screen, emphasized decelerate, the one the arms and the sunglasses use (D245, after D244's in and out).
   for (const suit of stage.querySelectorAll<SVGElement>('[data-prop="suit"]')) {
-    running.push(suit.animate([{ transform: "scale(0.4)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: SUIT_MS, easing: EASING.standard, fill: "backwards" }));
+    running.push(suit.animate([{ transform: "scale(0.4)", opacity: 0 }, { transform: "scale(1)", opacity: 1 }], { duration: SUIT_MS, easing: EASING.emphasizedDecelerate, fill: "backwards" }));
   }
   for (const shades of stage.querySelectorAll<SVGElement>('[data-prop="shades"]')) {
     running.push(shades.animate([{ transform: "translateY(-5px)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }], draw));

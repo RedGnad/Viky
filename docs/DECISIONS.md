@@ -6736,3 +6736,12 @@ back to the gift's history and the screen.
   the effects spring, 234 ms, over before it read.
 - The crossed arms end at one height, y 30 for both hands (29.3 and 30.7 before). The forearms still pass at two
   heights in the middle, so the two lines cross rather than merge into one band.
+
+## D245, 25 Sep 2026: the suit enters on the curve for what enters, 350 ms
+
+- The founder, 25 Sep 2026, after D244: "ease in and out" was an idea, the first movement was already very good; the
+  simplest good choice is left to us. Material 3 gives what enters the screen emphasized decelerate,
+  `cubic-bezier(0.05, 0.7, 0.1, 1)`, an ease out with no ease in, and it is already the curve of the arms and the
+  sunglasses in the same scene. The suit takes it, over the duration token medium 3, 350 ms (both read in
+  `@material/web`'s `_md-sys-motion.scss`): the first movement's shape, a little slower than its 234 ms. This replaces
+  D244's standard curve over 400 ms; the level hands of D244 stay.

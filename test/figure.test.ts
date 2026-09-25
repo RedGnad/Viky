@@ -97,8 +97,8 @@ test("the three destinations carry their scenes at the head, larger, and a chang
   const gifts = renderToStaticMarkup(createElement(Scene, { which: "gifts" }));
   assert.match(gifts, /data-pose="shoulder"[^>]*><path data-part="reach" d="M51 26 C57 24\.5 65 19\.5 72 16\.5" pathLength="1"/, "the path starts at the joint");
   assert.match(head, /'\[data-prop="suit"\]'/, "the suit grows onto the body");
-  assert.match(head, /duration: SUIT_MS, easing: EASING\.standard/, "slower, easing in and out (D244)");
-  assert.match(head, /const SUIT_MS = 400;/);
+  assert.match(head, /duration: SUIT_MS, easing: EASING\.emphasizedDecelerate/, "slower, on the curve for what enters (D245)");
+  assert.match(head, /const SUIT_MS = 350;/);
   assert.match(head, /'\[data-prop="case"\]'[\s\S]*?rotate\(-40deg\)[\s\S]*?rotate\(0deg\)/, "the case swings into the hand");
   assert.match(head, /'\[data-prop="shades"\]'/, "the sunglasses come down onto the eyes");
   // The blink of 25 Sep 2026 (D243): started after the paint, the first image was the scene complete. Before it, always.
