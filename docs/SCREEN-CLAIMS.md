@@ -608,3 +608,11 @@ once Bitrefill and the treasury are configured.
 | "The phone company did not take it, so your $X came back to you." | the treasury's refund of that order landed | `refundAusd`, `markRefunded` | `test/phone-order.test.ts` |
 | "One top-up can be $50.00 at most for now." / "Up to $50.00 a day can go to phones for now, and $X already went today." / "Viky can send 5 top-ups a day for now" / "$500.00 of top-ups a day" | the ceilings in `PHONE_CEILINGS` and `BITREFILL_ACCOUNT_LIMITS` | `pricePhoneTopUp` | `test/phone-order.test.ts` |
 | "Nothing was taken." after any refusal before "Top it up" | no refusal before the relay moves money | the order of `pricePhoneTopUp` and `payPhoneTopUp` | `test/phone-order.test.ts` |
+
+### Add your university (D246)
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "Ask the person who sent you here for the login" | the login of the Reclaim account kept for students is written nowhere in the repository or on the page | the page's words, `ADD_UNIVERSITY` | read by hand; `pnpm check:words` |
+| "Viky asks for none of them, and this page sends nothing anywhere." | the page has no form and calls no route | `app/add-your-university/page.tsx`, a document with no input | read by hand |
+| "Viky adds your university from the three things you sent, and until then it is not in the list." | a university is choosable only once its row is in `viky_portals` | `pnpm portal:add`, docs/OPERATIONS.md, "A university's portal, in thirty minutes" | `test/portal-store.test.ts` |

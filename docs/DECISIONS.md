@@ -6745,3 +6745,19 @@ back to the gift's history and the screen.
   sunglasses in the same scene. The suit takes it, over the duration token medium 3, 350 ms (both read in
   `@material/web`'s `_md-sys-motion.scss`): the first movement's shape, a little slower than its 234 ms. This replaces
   D244's standard curve over 400 ms; the level hands of D244 stay.
+
+## D246, 25 Sep 2026: a page for a student to add their university
+
+The founder, 25 Sep 2026: `/add-your-university`, public, five steps for a student to add their university from home
+in about ten minutes, on the Reclaim account kept for students ("viky Students"), in plain words; what they send at
+the end (the university's name, the link to its portal, the provider's id) and what Viky never receives (password,
+grades). The other developer links to it from the empty state of "Which university?".
+
+- **The login is written nowhere**: not in the repository, not on the page, which says "ask the person who sent you
+  here for the login".
+- **The page asks for nothing.** No form, no route: the student sends the three things to whoever sent them, and the
+  operator writes the row (`pnpm portal:add`).
+- **One line against the AI option.** Reclaim's dashboard can make a provider witnessed by an AI; Viky refuses those
+  everywhere (the TEE attestation is required), so the page says not to choose it.
+- **Unverified**: the dashboard's own labels. Nobody on the team signed in to the students' account while this was
+  written, so each step says what to do rather than which button to press.
