@@ -53,6 +53,10 @@ test("the figure is drawn from named parts, in the character's palette and nothi
   assert.equal((glasses.match(/<rect/g) ?? []).length, 3, "two lenses and a bridge, no temples, no streak (D237)");
   assert.doesNotMatch(glasses, /rgba\(255, 255, 255/, "nothing shines on the lenses");
   assert.ok(shades.includes('data-pose="crossed"') && shades.includes('data-pose="apart"'));
+  // The two hands of the crossed arms at one height (D244).
+  const hands = [...shades.matchAll(/data-part="hand" cx="([\d.]+)" cy="([\d.]+)"/g)].map((m) => Number(m[2]));
+  assert.equal(hands.length, 2);
+  assert.equal(hands[0], hands[1], "no lopsided figure");
   const closed = renderToStaticMarkup(createElement(Figure, { id: "c", eyes: "closed", mouth: "o" }));
   assert.equal((closed.match(/<rect data-part="eye"/g) ?? []).length, 2, "closed eyes are the pills an open eye can grow from");
   assert.ok(closed.includes('data-part="mouth"'));
@@ -93,6 +97,8 @@ test("the three destinations carry their scenes at the head, larger, and a chang
   const gifts = renderToStaticMarkup(createElement(Scene, { which: "gifts" }));
   assert.match(gifts, /data-pose="shoulder"[^>]*><path data-part="reach" d="M51 26 C57 24\.5 65 19\.5 72 16\.5" pathLength="1"/, "the path starts at the joint");
   assert.match(head, /'\[data-prop="suit"\]'/, "the suit grows onto the body");
+  assert.match(head, /duration: SUIT_MS, easing: EASING\.standard/, "slower, easing in and out (D244)");
+  assert.match(head, /const SUIT_MS = 400;/);
   assert.match(head, /'\[data-prop="case"\]'[\s\S]*?rotate\(-40deg\)[\s\S]*?rotate\(0deg\)/, "the case swings into the hand");
   assert.match(head, /'\[data-prop="shades"\]'/, "the sunglasses come down onto the eyes");
   // The blink of 25 Sep 2026 (D243): started after the paint, the first image was the scene complete. Before it, always.

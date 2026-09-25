@@ -110,9 +110,11 @@ const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [numb
     { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2] },
     { d: "M51 26 Q52 30.7 51 35.4", hand: [51, 37.2] },
   ],
+  // The two hands at one height (the founder, 25 Sep 2026, D244: 1.4 apart read as a lopsided figure); the forearms
+  // still pass at two heights in the middle, so the two lines cross rather than merge into one band.
   crossed: [
-    { d: "M13 25.5 C12 29 20 30.6 36.5 29.4", hand: [37.2, 29.3], over: true },
-    { d: "M51 25.5 C52 29 44 31.8 27.5 30.8", hand: [26.8, 30.7], over: true },
+    { d: "M13 25.5 C12 29 20 30.2 36.5 30", hand: [37.2, 30], over: true },
+    { d: "M51 25.5 C52 29 44 32 27.5 30", hand: [26.8, 30], over: true },
   ],
   hold: [
     { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2] },
