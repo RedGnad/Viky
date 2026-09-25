@@ -6847,3 +6847,13 @@ grades). The other developer links to it from the empty state of "Which universi
   four to reach a tile opened that family's list part way down. `Sheet` takes `view`, what it shows; the chooser
   passes the family, or "families", or "questions"; any change sends the sheet back to its top. Reproduced on
   production (the list at 40 after the four were scrolled to 40), fixed here (`sheet-scroll.spec.ts`).
+
+## D252, 25 Sep 2026: a field on the card says it is a field
+
+- The founder, 25 Sep 2026: the name and the amount on the card are too dark at night to read as places to type.
+- Measured: the line under a field was 1.2:1 against the field by day and by night, and at night darker than the paper
+  itself (tone 12.8 on 16.4), so the field read as a patch of card. WCAG 1.4.11 asks 3:1 of what identifies a field.
+  Material's filled text field draws that line in on-surface-variant, which is our muted ink: 4.3:1 by day, 7.8:1 by
+  night (now 7.2:1 on the lighter field). The night field itself goes from tone 19.8 to 22, Material's filled field in
+  the dark (surface container highest), same hue: `#3F322C`. The day field keeps its colour. `--paper-field-edge` is
+  gone; `test/design-tokens.test.ts` checks the line at 3:1 in both modes.

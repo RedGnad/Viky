@@ -238,13 +238,14 @@ test("a card is the object on the ground, as the rendered mockups draw it by day
     ["#FFF6E2", "#312627", 4.5, "the ink on the night paper"],
     ["#D0C5B1", "#312627", 4.5, "the quiet voice on it"],
     ["#A89D85", "#312627", 4.5, "and the faint one"],
-    ["#FFF6E2", "#3A2D28", 4.5, "the ink in a field"],
+    ["#FFF6E2", "#3F322C", 4.5, "the ink in a field"],
+    ["#A89D85", "#3F322C", 4.5, "the placeholder in a field"],
     ["#FFF6E2", "#443428", 4.5, "the ink on a chosen row"],
     ["#D0C5B1", "#443428", 4.5, "the quiet voice on a chosen row and on the shut action"],
     ["#FFC531", "#312627", 3, "the sun on it"],
     ["#7A6EAF", "#312627", 3, "the diamond's night edge on it"],
   ] as const) assert.ok(contrastRatio(ink, on) >= least, what);
-  for (const said of ["--paper-field: #3A2D28;", "--chosen: #443428;", "--on-surface: #FFF6E2;", "--on-surface-muted: #D0C5B1;", "--paper-relief: #D0C5B1;"]) {
+  for (const said of ["--paper-field: #3F322C;", "--chosen: #443428;", "--on-surface: #FFF6E2;", "--on-surface-muted: #D0C5B1;", "--paper-relief: #D0C5B1;"]) {
     assert.equal((css.match(new RegExp(said.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length, 2, `${said} in both night blocks`);
   }
   assert.match(css, /--control-relief-colour: var\(--paper-relief\);/, "a key on the paper stands on the paper's own relief");
