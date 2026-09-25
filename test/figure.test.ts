@@ -74,7 +74,12 @@ test("the three destinations carry their scenes at the head, larger, and a chang
   assert.match(head, /scene \? <Scene which=\{scene\} className=\{`h-auto shrink-0 \$\{scene === "gifts" \? "w-\[192px\]" : "w-\[104px\]"\}`\} \/> : <Character state="diamond"/, "the scene on a destination, the plain diamond elsewhere");
   assert.match(head, /let aHeadWasDrawn = false;/, "whether a head stood on a screen before this one in this tab");
   assert.match(head, /if \(!scene \|\| !arrives \|\| !stage \|\| reduced\(\)\) return;/, "a cold load and a device asking for less show the final state from the first image");
-  assert.match(head, /'\[data-part="arm"\]:not\(\[data-pose="rest"\]\)'/, "the raised arms lengthen from their joints");
+  assert.match(head, /'\[data-part="arm"\]:not\(\[data-pose="rest"\]\)'/, "the raised arms come out");
+  // Along their own curve from the joint, whatever direction it runs (D241): the arm on the shoulder lies sideways.
+  assert.match(head, /strokeDashoffset: 1 \}, \{ strokeDasharray: "1 1", strokeDashoffset: 0 \}/, "drawn out along the path");
+  assert.doesNotMatch(head, /scaleY/, "never stretched on one axis");
+  const gifts = renderToStaticMarkup(createElement(Scene, { which: "gifts" }));
+  assert.match(gifts, /data-pose="shoulder"[^>]*><path data-part="reach" d="M51 26 C57 24\.5 65 19\.5 72 16\.5" pathLength="1"/, "the path starts at the joint");
   assert.match(head, /"\[data-prop\]"/, "and the props grow from their middle");
   assert.doesNotMatch(head, /setInterval|iterations: Infinity/, "nothing on a clock, nothing loops");
   for (const [file, scene] of [["app/kit/Home.tsx", "home"], ["app/kit/Gifts.tsx", "gifts"], ["app/kit/Me.tsx", "me"]] as const) {

@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { EASING, MOTION } from "@/src/design-tokens";
 import { heroCookieText } from "@/src/hero-cookie";
 import { springEasing } from "@/src/motion";
-import { Character } from "./Character";
+import { Figure } from "./Figure";
 import { Expression, reduced } from "./Motion";
 
 /**
@@ -112,7 +112,8 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
     <div ref={root} className="hero-stage" data-hero={played ? undefined : "peeking"} aria-hidden>
       {/* It hears what the gift's record says, as the head of every screen does (D148); nothing else moves it (D216). */}
       <Expression>
-        <Character state="diamond" tone="sun" standing={false} limbs className="hero-character" />
+        {/* The rig (D236), in its resting pose: the same light, gloss, edge and smile as the destinations' scenes (D241). */}
+        <Figure id="hero" whirl className="hero-character" />
       </Expression>
     </div>
   );
