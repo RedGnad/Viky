@@ -6888,3 +6888,13 @@ grades). The other developer links to it from the empty state of "Which universi
   each dot's radius growing from 0.1 where the light falls to 0.9 on the far side, computed from the same light as the
   gloss. In the face's ink, at `--character-halftone` (0.22 by day, 0.35 at night). Only the landing's figure wears it
   (`HeroMoment`); taking it off is removing that one prop.
+
+## D256, 25 Sep 2026: a field on the card is outlined all around, not underlined
+
+- The founder, 25 Sep 2026, on D252: the line under the fields makes them look like buttons; outline all around, or
+  no line and a darker or lighter field. The line underneath was the same shape as the relief under every key.
+- Outlined all around: Material's outlined text field, a 1 dp hairline in its outline role (tones 50 by day and 60
+  at night), which our faint ink sits beside (56 and 65). It holds WCAG 1.4.11's 3:1 on the field and on the card in
+  both modes (3.1 and 3.4 by day, 4.6 and 5.5 at night). The other way was measured and not taken: a fill alone would
+  have to reach 3:1 against the card, a field near tone 70 on a card of 97 by day and near 38 on 16 at night, a patch
+  far heavier than the card's own voice. The field keeps its fill of D252.
