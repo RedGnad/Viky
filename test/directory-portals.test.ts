@@ -12,7 +12,13 @@ test("each pinned portal is a whole row", () => {
     assert.equal(portalProblem({ ...portal, provenBy: "0x000000000000000000000000000000000000a11c" }), undefined, portal.portalId);
     assert.ok(portal.usedBy >= 1, "used by another application in the directory");
   }
-  assert.deepEqual(DIRECTORY_PORTALS.map((portal) => portal.portalId), ["aur-it"]);
+  assert.deepEqual(DIRECTORY_PORTALS.map((portal) => portal.portalId), ["aur-it", "aus-ae", "innopolis-ru", "ignou-in", "du-bd"]);
+  // What each proves, which its line and its gift say (the founder's integrity point, 26 Sep 2026).
+  assert.deepEqual(Object.fromEntries(DIRECTORY_PORTALS.map((portal) => [portal.portalId, portal.proves])), { "aur-it": "enrolment", "aus-ae": "account", "innopolis-ru": "account", "ignou-in": "account", "du-bd": "account" });
+  for (const portal of DIRECTORY_PORTALS.filter((one) => one.proves === "account")) {
+    const pattern = new RegExp(portal.extract.matches);
+    assert.ok(pattern.test("Ada Example") && !pattern.test("") && !pattern.test("   "), `${portal.portalId}: a name, never an empty field`);
+  }
 });
 
 test("the American University of Rome: a schedule of this academic year is enrolled, another year's is not", () => {

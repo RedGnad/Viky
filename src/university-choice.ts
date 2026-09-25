@@ -1,3 +1,4 @@
+import { ACCOUNT_ONLY_MARK } from "./university-shown";
 /**
  * How "Which university?" is asked (D247, the advisor's brief of 25 Sep 2026). Browser safe: the list is small and it
  * is Viky's own table, so it is read whole and ordered here.
@@ -15,7 +16,16 @@ export const RADIOS_UP_TO = 5;
 export const CORRIDOR_COUNTRIES: readonly string[] = ["sn", "ci", "fr"];
 
 /** A university as the chooser lists it: the portal's id pressed, its name, its country in words and as a code. */
-export type ListedUniversity = Readonly<{ pair: string; title: string; issuer: string; country: string }>;
+export type ListedUniversity = Readonly<{ pair: string; title: string; issuer: string; country: string; proves?: "enrolment" | "account" }>;
+
+/**
+ * The chosen university as the gift's sentence reads it (D267): its name and country, and, when its portal proves a
+ * student account alone, the mark `universityNamed` turns into the sentence that says so. The list's line stays the
+ * name alone (D264).
+ */
+export function chosenUniversityTitle(one: ListedUniversity): string {
+  return `${one.title}, ${one.issuer}${one.proves === "account" ? ACCOUNT_ONLY_MARK : ""}`;
+}
 
 export type CountryGroup = Readonly<{ code: string; name: string; universities: readonly ListedUniversity[] }>;
 

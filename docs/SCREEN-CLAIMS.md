@@ -617,3 +617,13 @@ once Bitrefill and the treasury are configured.
 | "Ask the person who sent you here for the login" | the login of the Reclaim account kept for students is written nowhere in the repository or on the page | the page's words, `ADD_UNIVERSITY` | read by hand; `pnpm check:words` |
 | "Viky asks for none of them, and this page sends nothing anywhere." | the page has no form and calls no route | `app/add-your-university/page.tsx`, a document with no input | read by hand |
 | "Viky adds your university from the three things you sent, and until then it is not in the list." | a university is choosable only once its row is in `viky_portals` | `pnpm portal:add`, docs/OPERATIONS.md, "A university's portal, in thirty minutes" | `test/portal-store.test.ts` |
+
+### What a university's portal proves, and the register's mark (D267)
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "American University of Sharjah", its name alone on the list (D264) | nothing about proof on the list's line | `portalListed` | `test/university-choice.test.ts` |
+| "Its student portal shows that a student account is active, not that they are enrolled this year: that is what this gift will check." | the same | `universityNamed`, `UNIVERSITY_ACCOUNT_ONLY` | `test/portal-store.test.ts` |
+| "A student account", read back after a proof from such a portal | the proof's field matched on an account portal | `providerOfPortal` in `src/shown-conditions.ts` | read by hand |
+| no "(unverified)" anywhere in the flow | the founder's rule of 26 Sep 2026: the mark stays in the register and on the judges' page | `portalFound`, `universityNamed` | `test/portal-store.test.ts` |
+| "N universities listed, M read at least once." on the judges' page | rows of `viky_portals`, and portals of gifts with an attested reading that started or reached | `portalsListedAndRead` | read by hand |

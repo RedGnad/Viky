@@ -1,7 +1,16 @@
 import { keccak256, stringToHex, type Hex } from "viem";
 
-/** What the chooser prints beside a university whose portal row is unverified (D193), and what the sentence under the choice looks for (D195). */
+/** What the chooser printed beside a university whose portal row is unverified (D193, D195); out of the flow since D267. */
 export const UNVERIFIED_MARK = " (unverified)";
+
+/**
+ * What a portal proves (D267, the founder's integrity point of 26 Sep 2026): its enrolment status for the year, or only
+ * that a student account is signed in. The gift says which, so its sentence is exactly what the proof carries.
+ */
+export type PortalProves = "enrolment" | "account";
+
+/** What the chooser prints beside a university whose portal proves a student account and no enrolment status. */
+export const ACCOUNT_ONLY_MARK = " (student account)";
 
 /**
  * What a person shows from their own student portal (D165, D174): the second nature's university rail, and the

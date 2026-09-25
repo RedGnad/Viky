@@ -38,3 +38,21 @@ proof also carries (the name, the major) is read by the attestor and dropped by 
 
 The terms: the portal is AUR's own Jenzabar sign-in; nothing is claimed about what AUR allows a program to do, as for
 every portal (the judges' page).
+
+## 26 Sep 2026: every provider of the founder's list, read again (D267)
+
+The founder asked for a line per university provider of the 24 Sep census, with what each portal reads noted on its
+line. The directory was queried by name for every university and city of the list (`searchQuery`, as above), and
+the configuration of each of the 402 providers returned was read. What decides is the verification type:
+
+| verdict | providers |
+|---|---|
+| **listed, proves enrolment** | American University of Rome (`8a769077`, a current term), as before |
+| **listed, proves a student account** | American University of Sharjah (`3f649818`, iLearn's record of the signed-in user), Innopolis University (`337a2461`, the student's name on the profile's education tab), IGNOU (`5a293416` 3.4.0, the name in the profile's heading; 2.4.0 matches the whole page), University of Dhaka (`68cb338a`, the signed-in student's record, whose one pattern carries the whole answer) |
+| **out: one student's patterns** | HUJI (`70075b76`): the patterns carry one student's own name and number, so no other student's page matches |
+| **out: witnessed by AI** | 363 of the 402, among them every provider found for UCAD (1), Gaston Berger (1), BEM (5), UADB (2), IUA (2), Houphouët-Boigny (1), Hassan II (1), Mohammed V (3), UIR (4), UIC (2), Supdeco Marrakech (3), Tunis (14), IAM Bamako (1), ESC Ouagadougou (1), Niamey (1), Kinshasa (2), the French cities (149), London (36), Montréal (9), Brussels (9), Lausanne (6), Madrid (13), and the University of Lagos (`41bb2902`, D199). Viky requires the attestor's TEE attestation and refuses an AI-witnessed proof everywhere |
+| **out: nothing to pin** | Innopolis `3dd89a4f` 2.2.0 (its request is made by a script, no hash) and a demonstration provider with no request |
+| **not found by name** | Supdeco Dakar and EISMV: no provider answers those names |
+
+The four account lines say "(student account)" beside the university, and the gift's sentence says the portal shows
+an active student account, not the year's enrolment.

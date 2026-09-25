@@ -13,7 +13,7 @@ import { ensurePortalSchema, loadPortal, portalFound, savePortal } from "../src/
  */
 async function main() {
   const provenBy = getAddress(String(process.env.PROVEN_BY?.trim()));
-  const rows = DIRECTORY_PORTALS.map((pinned) => ({ portalId: pinned.portalId, name: pinned.name, university: pinned.university, country: pinned.country, providerId: pinned.providerId, providerVersion: pinned.providerVersion, requestHash: pinned.requestHash, loginUrl: pinned.loginUrl, extract: pinned.extract, provenBy, unverified: true }));
+  const rows = DIRECTORY_PORTALS.map((pinned) => ({ portalId: pinned.portalId, name: pinned.name, university: pinned.university, country: pinned.country, providerId: pinned.providerId, providerVersion: pinned.providerVersion, requestHash: pinned.requestHash, loginUrl: pinned.loginUrl, extract: pinned.extract, proves: pinned.proves, provenBy, unverified: true }));
   console.log(JSON.stringify({ step: process.env.DRY_RUN === "1" ? "would write" : "writing", rows: rows.map((row) => ({ portalId: row.portalId, providerId: row.providerId, requestHash: row.requestHash })) }, null, 2));
   if (process.env.DRY_RUN === "1") return;
   await ensurePortalSchema();

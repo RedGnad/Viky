@@ -1,11 +1,11 @@
-import { UNVERIFIED_PORTAL } from "./sentences";
+import { UNIVERSITY_ACCOUNT_ONLY } from "./sentences";
 import type { Hex } from "viem";
 import {
   gradeTargetProblem,
   gradeUnits,
   isGradeShape,
   isPortalId,
-  UNVERIFIED_MARK,
+  ACCOUNT_ONLY_MARK,
   NO_RESULTS_PAGE,
   type ResultsExtract,
   UNIVERSITY_DURATION_DAYS,
@@ -806,13 +806,13 @@ const UNIVERSITY_COURSE: NonNullable<CertificateCondition["course"]> = {
 };
 
 /**
- * The sentence under the chosen university, before the funder pays. A portal defined from its public pages carries
- * the unverified mark in its title (D193), and then the funder is also told, honestly, that nobody has shown a proof
- * from it yet and what happens if it cannot be read (D195). Creation is not refused.
+ * The sentence under the chosen university, before the funder pays. A portal that proves a student account and no
+ * enrolment status carries that in its title, and the sentence says exactly what the proof will carry (D267). Whether
+ * anybody has shown it yet is not said here: the founder's rule of 26 Sep 2026 retires D195's sentence from the flow.
  */
 export function universityNamed(what: string, course: string): string {
-  const named = `This gift will be for ${what}${course}.`;
-  return course.includes(UNVERIFIED_MARK) ? `${named} ${UNVERIFIED_PORTAL}` : named;
+  if (course.includes(ACCOUNT_ONLY_MARK)) return `This gift will be for ${what}${course.replace(ACCOUNT_ONLY_MARK, "")}. ${UNIVERSITY_ACCOUNT_ONLY}`;
+  return `This gift will be for ${what}${course}.`;
 }
 
 /**

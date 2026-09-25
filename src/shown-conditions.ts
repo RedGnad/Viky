@@ -126,8 +126,9 @@ function providerOfPortal(portal: Portal): ShownProvider {
     requestHashes: [portal.requestHash],
     loginUrl: portal.loginUrl,
     read: (fields) => {
-      if (!enrolledBy(portal.extract, fields)) refuseShown("NOT_ENROLLED", "The page shown does not say enrolled");
-      return { metricValue: BigInt(UNIVERSITY_ENROLLED), eventAt: null, accountKey: null, inWords: "Enrolled" };
+      if (!enrolledBy(portal.extract, fields)) refuseShown("NOT_ENROLLED", portal.proves === "account" ? "The page shown does not show a signed-in student account" : "The page shown does not say enrolled");
+      // What the proof carries, in its own words (D267): a portal that shows a student account says that, never enrolled.
+      return { metricValue: BigInt(UNIVERSITY_ENROLLED), eventAt: null, accountKey: null, inWords: portal.proves === "account" ? "A student account" : "Enrolled" };
     },
   };
 }

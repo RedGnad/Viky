@@ -67,7 +67,8 @@ test("the list route gives every portal with its country, and nothing else", asy
     });
     const answer = (await (await listGet(new Request("https://viky.test/api/portals"))).json()) as { results: ListedUniversity[] };
     assert.equal(answer.results.length, 1);
-    assert.deepEqual(Object.keys(answer.results[0]).sort(), ["country", "issuer", "pair", "title"], "no sign-in address, no provider");
+    assert.deepEqual(Object.keys(answer.results[0]).sort(), ["country", "issuer", "pair", "proves", "title"], "no sign-in address, no provider; what it proves, for the gift's sentence (D267)");
+    assert.equal(answer.results[0].proves, "enrolment");
     assert.equal(answer.results[0].pair, "ucad-sn");
     assert.equal(answer.results[0].country, "SN");
   } finally {
@@ -98,4 +99,13 @@ test("a listed university is its name alone, never marked unverified (D264)", ()
   const listed = store.slice(store.indexOf("export function portalListed"), store.indexOf("}\n", store.indexOf("export function portalListed")));
   assert.match(listed, /title: portal\.university,/);
   assert.doesNotMatch(listed, /UNVERIFIED_MARK|unverified/);
+});
+
+test("a portal that proves a student account keeps its name alone on the list, and the gift's sentence says what it proves", async () => {
+  const { chosenUniversityTitle } = await import("../src/university-choice");
+  const { universityNamed } = await import("../src/milestone-conditions");
+  const listed = { pair: "du-bd", title: "University of Dhaka", issuer: "Bangladesh", country: "BD", proves: "account" as const };
+  const title = chosenUniversityTitle(listed);
+  assert.equal(universityNamed("", title), "This gift will be for University of Dhaka, Bangladesh. Its student portal shows that a student account is active, not that they are enrolled this year: that is what this gift will check.");
+  assert.equal(chosenUniversityTitle({ ...listed, proves: "enrolment" }), "University of Dhaka, Bangladesh");
 });

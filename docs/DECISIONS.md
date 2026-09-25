@@ -7017,3 +7017,29 @@ grades). The other developer links to it from the empty state of "Which universi
   The figure and the card are now one column from the foot: the card is at least 230 and grows with what it says, and
   the figure stands on its edge whatever its height. The gallery's demonstration draws the longest line the register
   gives a link, under the longest title, so the worst case is the one looked at.
+
+## D267, 26 Sep 2026: a portal line per usable provider, what each proves, and the mark out of the flow
+
+The founder, 26 Sep 2026: a line for each university provider of the 24 Sep census; the "never shown" mark kept in
+the register and on the judges' page ("N universities listed, M read at least once"), never in the flow; and, as an
+integrity point, each line noting what its portal reads, so the gift's sentence says exactly what is proved.
+
+- **What was read.** 402 providers, by the directory's own API, for every name and city of the list
+  (docs/reclaim/directory-universities.md, 26 Sep). 363 are witnessed by AI, among them every provider of the
+  corridor's list and of the French, London, Montréal, Brussels, Lausanne and Madrid entries, and Lagos. Viky
+  requires the attestor's TEE attestation and refuses AI-witnessed proofs everywhere (CLAUDE.md, verification), so
+  none of them is a line: a line nobody's proof can pass would be a promise the product cannot keep. **The
+  founder's call**: keep the rule, or accept AI-witnessed proofs for portals, which would change what a proof is for
+  every condition that reads one.
+- **Listed.** Rome, which proves enrolment (D199), and four that prove a signed-in student account and no
+  enrolment status: Sharjah, Innopolis, IGNOU, Dhaka. Out: HUJI, whose patterns carry one student's own data.
+- **What each proves** is a column of the row (`proves`: enrolment or account). The list keeps the names alone
+  (D264); what the portal proves travels with the name to the sentence under the choice, which says the portal shows
+  an active student account, not the year's enrolment; a proof reads back "A student account", never "Enrolled".
+  `WillSheet.tsx`, the other developer's, builds the chosen title with `chosenUniversityTitle`: one line.
+- **The mark.** D193's "(unverified)" and D195's sentence leave the flow; the flag stays on the row, and the judges'
+  page counts universities listed and read at least once.
+- **Dhaka**, written as it is: its one pattern is the field alone, so the proof carries the whole answer of the
+  student's record to Viky's server, which judges it not empty and keeps nothing.
+- **Production**: the migration and `pnpm portal:directory` (docs/OPERATIONS.md), run from the other developer's
+  clone as for D199.

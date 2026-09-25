@@ -161,26 +161,36 @@ test("the shown register reads the year and the grade off the portal's results p
   assert.equal(await UNIVERSITY_GRADE_SHOWN.providerOf?.(record(null)), null);
 });
 
-test("a row defined from the portal's public pages is marked unverified, says so on the chooser, and loses the mark once written again from a session (D193)", async () => {
+test("a row not yet shown by a student keeps the mark in the register, and the flow never prints it (the founder, 26 Sep 2026)", async () => {
   await savePortal({ ...UCAD, unverified: true });
   const marked = await loadPortal("ucad-sn");
-  assert.equal(marked?.unverified, true);
-  assert.equal(portalFound(marked!).title, "Université Cheikh Anta Diop (unverified)", "the funder reads it on the line they press");
+  assert.equal(marked?.unverified, true, "in the register");
+  assert.equal(portalFound(marked!).title, "Université Cheikh Anta Diop", "never on the line the funder presses");
   await savePortal(UCAD);
-  const confirmed = await loadPortal("ucad-sn");
-  assert.equal(confirmed?.unverified, false, "proving it from a student's session writes the row without the mark");
-  assert.equal(portalFound(confirmed!).title, "Université Cheikh Anta Diop");
+  assert.equal((await loadPortal("ucad-sn"))?.unverified, false);
 });
 
-test("an unverified university does not refuse the gift: the funder reads, before paying, that nobody has shown a proof from it yet (D195)", async () => {
+test("a portal that proves a student account alone says so on its line, and a row says enrolment unless told otherwise", async () => {
+  await savePortal(UCAD);
+  assert.equal((await loadPortal("ucad-sn"))?.proves, "enrolment");
+  await savePortal({ ...UCAD, proves: "account" });
+  const account = await loadPortal("ucad-sn");
+  assert.equal(account?.proves, "account");
+  assert.equal(portalFound(account!).title, "Université Cheikh Anta Diop (student account)");
+  await savePortal(UCAD);
+});
+
+test("the gift's sentence says exactly what the portal proves, and nothing about whether it was shown yet", async () => {
   const { universityNamed, UNIVERSITY_SHOWN_MILESTONE } = await import("../src/milestone-conditions");
   const { scanSource } = await import("../src/consumer-words");
-  await savePortal({ ...UCAD, unverified: true });
+  await savePortal({ ...UCAD, unverified: true, proves: "account" });
   const found = portalFound((await loadPortal("ucad-sn"))!);
-  const title = `${found.title}, ${found.issuer}`;
-  const said = universityNamed("staying enrolled at ", title);
-  assert.equal(said, "This gift will be for staying enrolled at Université Cheikh Anta Diop (unverified), Senegal. Nobody has shown a proof from this university yet. If it cannot be read, your money comes back to you at the deadline.");
+  const said = universityNamed("staying enrolled at ", `${found.title}, ${found.issuer}`);
+  assert.equal(said, "This gift will be for staying enrolled at Université Cheikh Anta Diop, Senegal. Its student portal shows that a student account is active, not that they are enrolled this year: that is what this gift will check.");
   assert.deepEqual(scanSource("sentence", said), [], "through the consumer words check");
-  assert.equal(universityNamed("", "Université Cheikh Anta Diop, Senegal"), "This gift will be for Université Cheikh Anta Diop, Senegal.", "a verified row says nothing more");
-  assert.equal(UNIVERSITY_SHOWN_MILESTONE.portal?.refuses((await loadPortal("ucad-sn"))!, UNIVERSITY_SHOWN_MILESTONE.target.suggested), undefined, "made on an unverified portal: the mark refuses nothing");
+  await savePortal({ ...UCAD, unverified: true });
+  const enrolment = portalFound((await loadPortal("ucad-sn"))!);
+  assert.equal(universityNamed("", `${enrolment.title}, ${enrolment.issuer}`), "This gift will be for Université Cheikh Anta Diop, Senegal.", "enrolment, shown or not yet: nothing more");
+  assert.equal(UNIVERSITY_SHOWN_MILESTONE.portal?.refuses((await loadPortal("ucad-sn"))!, UNIVERSITY_SHOWN_MILESTONE.target.suggested), undefined, "the register's mark refuses nothing");
+  await savePortal(UCAD);
 });
