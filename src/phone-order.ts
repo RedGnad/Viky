@@ -9,7 +9,7 @@ import { payInvoiceOnBase, refundAusd, treasuryAddress, treasuryCovers, Treasury
 import { relayerClients, relayerPreflight } from "./relayer";
 
 /**
- * Their phone, the third way out (D238), from price to top-up. Server only. Three moves, each with its own route:
+ * Your phone, the third way out (D238), from price to top-up. Server only. Three moves, each with its own route:
  *
  * 1. `price`: the operators for the number, Bitrefill's invoice for the amount, every ceiling checked, a row written.
  *    Nothing moves: the person's money leaves only once the invoice exists and has a price (the founder, 25 Sep 2026).

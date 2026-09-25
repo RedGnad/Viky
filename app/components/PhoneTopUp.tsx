@@ -9,7 +9,7 @@ import { PHONE_OUT as W } from "@/src/sentences";
 import { BODY, CARD, CARD_AMOUNT, CARD_LABEL, FIELD, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
 
 /**
- * Their phone, the third way out (D238), in three screens at most: where (the number and its phone company), how much
+ * Your phone, the third way out (D238), in three screens at most: where (the number and its phone company), how much
  * (in the phone's own currency, with the dollars it takes and what stays), done. The person's money moves once, on
  * "Top it up", after Bitrefill has priced the top-up; every refusal is the server's own sentence, under what caused it.
  */
