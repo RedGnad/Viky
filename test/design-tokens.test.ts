@@ -467,19 +467,22 @@ test("every text size in the stylesheet is a step of the scale, and the promise 
  * anywhere, neither a filter nor a shadow. The ground is a flat; the gift card stands by its colour (17:1 on the
  * ink) and its 2 px edge and wears no shadow at all; no other card wears one either.
  */
-test("no blur anywhere: no halo on the ground, no shadow under a card, and the gift card keeps its 2 px edge", () => {
+test("no blur anywhere: no halo on the ground, no shadow under a card, and the gift card keeps its outline (D254)", () => {
   const css = readFileSync("app/globals.css", "utf8");
   assert.doesNotMatch(css, /blur\(/, "a filter with a blur is back");
   assert.doesNotMatch(css, /body::before|body::after/, "the two halos are gone with their pseudo-elements");
   assert.equal((css.match(/--card-shadow: none;/g) ?? []).length, 3, "day, the device's night and the chosen night");
   assert.doesNotMatch(css, /--card-shadow: 0 /, "no blurred shadow token remains");
-  assert.match(css, /\.gift-card-placed \{\s*border: 2px solid var\(--card-placed-edge\);\s*box-shadow: none;\s*\}/);
-  assert.equal(CARD_PLACED.edgeWidth, 2);
+  assert.match(css, /\.gift-card-placed \{\s*border: 1px solid var\(--card-placed-edge\);\s*box-shadow: none;\s*\}/);
+  assert.equal(CARD_PLACED.edgeWidth, 1, "Material's outlined card: 1 dp");
   const root = css.slice(0, css.indexOf("@media (prefers-color-scheme: dark)"));
   assert.match(root, new RegExp(`--card-placed-edge: ${CARD_PLACED.edge.light};`));
   const night = css.slice(css.indexOf("@media (prefers-color-scheme: dark)"));
   assert.equal((night.match(new RegExp(`--card-placed-edge: ${CARD_PLACED.edge.dark};`, "g")) ?? []).length, 2, "both night blocks");
-  assert.equal(CARD_PLACED.edge.dark, COLOURS.dark.controlBorder, "the night edge is the controls' edge");
+  // Material's outline variant, which is our divider, and never the controls' own edge: a card is not a key (D254).
+  assert.equal(CARD_PLACED.edge.dark, COLOURS.dark.divider);
+  assert.notEqual(CARD_PLACED.edge.dark, COLOURS.dark.controlBorder);
+  assert.ok(Math.abs(cielabLightness(CARD_PLACED.edge.light) - 80) < 2 && Math.abs(cielabLightness(CARD_PLACED.edge.dark) - 30) < 2, "tones 80 and 30");
   // The head of the page is the one character with an edge, and the founder chose its two colours (D133): the ink
   // at night, a light yellow by day, knowing that the yellow is under the ratio a control's border must hold.
   assert.match(css, /--character-hero-edge: #FFE7A8;/);

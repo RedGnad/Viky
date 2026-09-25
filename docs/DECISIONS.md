@@ -6869,3 +6869,22 @@ grades). The other developer links to it from the empty state of "Which universi
 - The splash of an installed app on Android is built from the manifest's largest icon and its background colour, so
   it follows. iOS draws no splash of ours (no startup image is declared). An icon already on a home screen changes when
   the phone next reads the manifest, which Chrome does on its own schedule; reinstalling shows it at once.
+
+## D254, 25 Sep 2026: the gift card's outline is Material's outlined card, not a key's edge
+
+- The founder, 25 Sep 2026: the gift card is the one object besides the buttons with an outline; keep it or take it
+  off? The recommendation he took: keep it, lighter. Without it the card nearly vanishes (1.3:1 against the ground by
+  day and by night); with the controls' own edge (2 px of ink by day, cream at night) the one card read as a key.
+- Material's outlined card draws a 1 dp line in outline variant. Our divider already sits on that role's tones (79
+  by day and 30 at night, where the role is 80 and 30), so the card's edge is 1 px of `#C5C2CF` by day and `#484360`
+  at night (`CARD_PLACED`).
+
+## D255, 25 Sep 2026: a halftone screen on the landing's figure, as an experiment
+
+- The founder, 25 Sep 2026, after a rendering bug laid a dot grid over a tile: try the effect on the hero figure,
+  removable if not liked. Four variants were drawn (even Ben-Day dots, halftone shading, light dots, a coarse screen);
+  he chose B, the halftone shading.
+- `Figure` takes `halftone`: a staggered grid of dots 2.2 apart, clipped to the body, the edge drawn again over them,
+  each dot's radius growing from 0.1 where the light falls to 0.9 on the far side, computed from the same light as the
+  gloss. In the face's ink, at `--character-halftone` (0.22 by day, 0.35 at night). Only the landing's figure wears it
+  (`HeroMoment`); taking it off is removing that one prop.

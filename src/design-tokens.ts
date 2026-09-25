@@ -332,10 +332,12 @@ export const HERO_TYPE = {
 export const LEAD_TYPE = { compact: { size: 16, lineHeight: 24 }, wide: { size: 20, lineHeight: 28 } } as const;
 
 /**
- * The gift card's edge (D127, D128): 2 px, the ink by day, the controls' night edge at night. No relief and no
- * shadow: cream on the ink ground measures 17:1, and the niche the founder named allows no blur anywhere.
+ * The gift card's edge (D127, D128, D254): Material's outlined card, 1 px in outline variant, which is our divider:
+ * tone 79 by day and 30 at night, where Material's role sits at 80 and 30. It was the controls' own edge, 2 px of ink
+ * by day and cream at night, which made the one card in the product read as a key (the founder, 25 Sep 2026: "the
+ * only object with an outline, besides the buttons"). No relief and no shadow: the niche allows no blur anywhere.
  */
-export const CARD_PLACED = { edgeWidth: 2, edge: { light: "#1E1633", dark: "#FFF6E2" } } as const;
+export const CARD_PLACED = { edgeWidth: 1, edge: { light: "#C5C2CF", dark: "#484360" } } as const;
 
 /** The card's three voices, each one step from the image of 19 Sep 2026 and on the scale (D126). */
 export const CARD_TYPE = { who: { size: 25, lineHeight: 30 }, amount: { size: 39 }, label: { size: 13 } } as const;
