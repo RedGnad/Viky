@@ -192,14 +192,6 @@ test("a relay that failed after the money moved is read from the token, and an u
   await assert.rejects(payPhoneTopUp({ account: PERSON, orderId: other.orderId, authorization: authorization(other.ausdUnits) }, refusedRelay.deps), refused("INVALID_AUTHORIZATION"));
 });
 
-test("the phone card is offered to an operator alone until a real top-up opens it, and to nobody while unconfigured", async () => {
-  const { PHONE_WAY_OPEN, phoneWayOffered } = await import("../src/phone-order");
-  assert.equal(PHONE_WAY_OPEN, false, "nothing marked open before a real top-up on a real number");
-  assert.equal(phoneWayOffered(PERSON, { isOperator: () => true, configured: () => true }), true);
-  assert.equal(phoneWayOffered(PERSON, { isOperator: () => false, configured: () => true }), false);
-  assert.equal(phoneWayOffered(PERSON, { isOperator: () => true, configured: () => false }), false);
-});
-
 test("credit or data is read from Bitrefill's own product name", async () => {
   const { phoneKindOf } = await import("../src/client/phone");
   assert.equal(phoneKindOf({ id: "orange-senegal", name: "Orange Senegal" }), "credit");
@@ -207,13 +199,6 @@ test("credit or data is read from Bitrefill's own product name", async () => {
   assert.equal(phoneKindOf({ id: "orange-senegal-bundles", name: "Orange Senegal Bundles" }), "data");
   assert.equal(phoneKindOf({ id: "tigo-freedata-senegal", name: "Tigo Free Data Senegal" }), "data");
   assert.equal(phoneKindOf({ id: "expresso-senegal", name: "Expresso Senegal" }), "credit");
-});
-
-test("mobile data is offered to an operator alone until its own first real order", async () => {
-  const { PHONE_DATA_OPEN, phoneDataOffered } = await import("../src/phone-order");
-  assert.equal(PHONE_DATA_OPEN, false);
-  assert.equal(phoneDataOffered(PERSON, { isOperator: () => true }), true);
-  assert.equal(phoneDataOffered(PERSON, { isOperator: () => false }), false);
 });
 
 test("a gift card is priced like a top-up, and its code is sealed at rest and opened for its owner alone", async () => {
@@ -261,4 +246,14 @@ test("a gift card code in either of Bitrefill's two documented shapes", async ()
   assert.deepEqual(giftCardCodeOf("Go to example.com and paste ABCD"), { instructions: "Go to example.com and paste ABCD" });
   assert.equal(giftCardCodeOf({}), undefined);
   assert.equal(giftCardCodeOf(null), undefined);
+});
+
+test("a data top-up is written as data, and the judges' count tells credit, data and gift cards apart", async () => {
+  const { deps } = world({ operatorsFor: async () => [{ ...ORANGE, id: "orange-data-senegal", name: "Orange Data Senegal" }] });
+  const priced = await pricePhoneTopUp({ account: PERSON, phoneNumber: "+221771234567", operatorId: "orange-data-senegal", value: 2000 }, deps);
+  assert.equal((await store.loadPhoneOrder(priced.orderId))?.kind, "data");
+  await payPhoneTopUp({ account: PERSON, orderId: priced.orderId, authorization: authorization(priced.ausdUnits) }, deps);
+  const counts = await store.usesDelivered();
+  assert.equal(counts?.data, 1);
+  assert.equal((await store.usedToday(undefined, undefined, "phone")).items, 1, "a data top-up is a phone item to Bitrefill's limits");
 });

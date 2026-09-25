@@ -23,7 +23,6 @@ import { orderUses, usesFor } from "@/src/use-money";
 import { AccountPanel } from "./AccountPanel";
 import { PhoneTopUp } from "./PhoneTopUp";
 import { GiftCardOut } from "./GiftCardOut";
-import { phoneOffered } from "@/src/client/phone";
 import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, CHIP, FIELD, HELP, INLINE_BUTTON, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE, TITLE_IN_FACE } from "./ui";
 
 /**
@@ -131,24 +130,6 @@ export function CashOut() {
   /** Whether the person opened "change" under the title, to say where their number is from (D270). */
   const [picking, setPicking] = useState(false);
   const resumed = useRef(false);
-  // The third way, their phone (D238): shown only when the server offers it to this account, and nothing is said when
-  // it does not, since the way is not open to everybody before a real top-up has reached a real number.
-  const [phoneOn, setPhoneOn] = useState(false);
-  const [phoneDataOn, setPhoneDataOn] = useState(false);
-  const [giftCardsOn, setGiftCardsOn] = useState(false);
-  useEffect(() => {
-    if (!address) return;
-    let live = true;
-    phoneOffered().then((offer) => {
-      if (!live) return;
-      setPhoneOn(offer.offered);
-      setPhoneDataOn(offer.data);
-      setGiftCardsOn(offer.giftCards);
-    }, () => undefined);
-    return () => {
-      live = false;
-    };
-  }, [address]);
 
   useEffect(() => {
     let live = true;
@@ -493,7 +474,7 @@ export function CashOut() {
   const asking = picking || Boolean(where?.ask && !answeredCountry);
   const countryChoices = Array.from(new Set([countryNow, where?.fromDevice, where?.fromConnection, "sn", "ci", "fr"].filter((code): code is string => Boolean(code))));
   const eurosHeld = money.rates?.usdPerEur ? Number(changeable) / 1_000_000 / money.rates.usdPerEur : undefined;
-  const uses = where?.ask && !answeredCountry ? [] : orderUses(usesFor(countryNow, where?.waysOut ?? {}, phoneOn, giftCardsOn), eurosHeld, (use) => netOf(use === "bank" ? WAY_OUT_EURO : WAY_OUT_CARD)?.net);
+  const uses = where?.ask && !answeredCountry ? [] : orderUses(usesFor(countryNow, where?.waysOut ?? {}, true, true), eurosHeld, (use) => netOf(use === "bank" ? WAY_OUT_EURO : WAY_OUT_CARD)?.net);
 
   // W11 and W12. The session closes itself; the balances decide the step, so nothing is remembered here and
   // nothing is lost. Signing in leads, and nothing else is offered: a second account would strand the money.
@@ -699,7 +680,7 @@ export function CashOut() {
       <div className="flex flex-col gap-[var(--space-xl)]">
         {heading}
         {moneyCard}
-        <PhoneTopUp ausd={ausd} dataOn={phoneDataOn} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
+        <PhoneTopUp ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }

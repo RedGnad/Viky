@@ -47,7 +47,8 @@ export type PhoneOrderState = "priced" | "received" | "paid" | "delivered" | "fa
 export type PhoneOrder = Readonly<{
   id: string;
   account: string;
-  kind: "phone" | "gift_card";
+  /** A top-up of credit, a top-up of data, or a gift card (D271). */
+  kind: "phone" | "data" | "gift_card";
   productId: string;
   operatorName: string;
   localAmount: string;
@@ -91,7 +92,7 @@ function rowOf(row: Record<string, unknown>): PhoneOrder {
   return {
     id: String(row.id),
     account: String(row.account),
-    kind: row.kind === "gift_card" ? "gift_card" : "phone",
+    kind: row.kind === "gift_card" ? "gift_card" : row.kind === "data" ? "data" : "phone",
     productId: String(row.product_id),
     operatorName: String(row.operator_name),
     localAmount: String(row.local_amount),
@@ -170,10 +171,30 @@ export const markAbandoned = (id: string) => advance(id, ["priced"], "failed", {
  */
 export async function usedToday(account?: string, now: Date = new Date(), kind?: "phone" | "gift_card"): Promise<{ items: number; usdcUnits: bigint }> {
   const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+  // "phone" counts credit and data together: both are phone items to Bitrefill's account limits (terms section 8).
+  const kinds = kind === "phone" ? ["phone", "data"] : kind === "gift_card" ? ["gift_card"] : ["phone", "data", "gift_card"];
   const rows = account
-    ? await sql()`SELECT count(*)::int AS items, COALESCE(sum(usdc_units::numeric), 0)::text AS units FROM viky_phone_orders WHERE account = ${account} AND created_at >= ${day} AND state IN ('received', 'paid', 'delivered', 'failed') AND (${kind ?? null}::text IS NULL OR kind = ${kind ?? null})`
-    : await sql()`SELECT count(*)::int AS items, COALESCE(sum(usdc_units::numeric), 0)::text AS units FROM viky_phone_orders WHERE created_at >= ${day} AND state IN ('received', 'paid', 'delivered', 'failed') AND (${kind ?? null}::text IS NULL OR kind = ${kind ?? null})`;
+    ? await sql()`SELECT count(*)::int AS items, COALESCE(sum(usdc_units::numeric), 0)::text AS units FROM viky_phone_orders WHERE account = ${account} AND created_at >= ${day} AND state IN ('received', 'paid', 'delivered', 'failed') AND kind = ANY(${kinds as unknown as string[]})`
+    : await sql()`SELECT count(*)::int AS items, COALESCE(sum(usdc_units::numeric), 0)::text AS units FROM viky_phone_orders WHERE created_at >= ${day} AND state IN ('received', 'paid', 'delivered', 'failed') AND kind = ANY(${kinds as unknown as string[]})`;
   return { items: Number(rows[0]?.items ?? 0), usdcUnits: BigInt(String(rows[0]?.units ?? "0").split(".")[0]) };
+}
+
+/**
+ * How many times each use has been used (D271, the founder's rule of 26 Sep 2026): delivered orders, by kind, for the
+ * judges' page and nowhere in the flow. Nothing when the rows cannot be read where the page is drawn.
+ */
+export async function usesDelivered(): Promise<Readonly<Record<"phone" | "data" | "gift_card", number>> | null> {
+  try {
+    const rows = await sql()`SELECT kind, count(*)::int AS n FROM viky_phone_orders WHERE state = 'delivered' GROUP BY kind`;
+    const counts = { phone: 0, data: 0, gift_card: 0 };
+    for (const row of rows) {
+      const kind = String(row.kind);
+      if (kind === "phone" || kind === "data" || kind === "gift_card") counts[kind] = Number(row.n);
+    }
+    return counts;
+  } catch {
+    return null;
+  }
 }
 
 /**

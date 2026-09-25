@@ -598,8 +598,10 @@ dollars; and the session countdown. Each test was checked by breaking the rule a
 
 ### Your phone, the third way out (D238)
 
-Offered to an operator's account alone until a real top-up reaches a real number (`PHONE_WAY_OPEN` false), and only
-once Bitrefill and the treasury are configured.
+Offered to everybody since its code was complete (the founder, 26 Sep 2026, no gate); what is missing refuses at its
+place: "Phone top-ups are not open yet. Nothing was taken." without a key, "Viky cannot send top-ups right now. Nothing
+was taken." without a treasury that covers the price. The judges' page says "Open. Nobody has used it yet." or how many
+times, from the delivered orders (`usesDelivered`).
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
@@ -640,8 +642,8 @@ once Bitrefill and the treasury are configured.
 
 ### A gift card, on the Bitrefill way (D271)
 
-Offered to an operator's account alone until a first real order (`GIFT_CARD_OPEN` false), and only once Bitrefill,
-the treasury and the vault are configured. The screen comes in the next PR; these are the server's sentences.
+Offered to everybody since its code was complete (the founder, 26 Sep 2026, no gate); the refusals are the top-up's,
+at their place. The judges' page counts its uses as it does the top-ups'.
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|

@@ -7,7 +7,8 @@ import { WAY_OUT_CARD, WAY_OUT_EURO, type PublishedFee } from "./rails";
  * Browser safe: no fetch, no key.
  *
  * Four uses: their phone (Bitrefill, D238), a gift card (Bitrefill, D271), their bank (Ramp, euros), their card
- * (Mercuryo). The phone and the gift card are there only when the server offers them to this account.
+ * (Mercuryo). Every one whose code is complete is offered to everybody the day it is deployed (the founder, 26 Sep
+ * 2026): what is missing is said where it is missing, by the route that refuses.
  */
 export type Use = "phone" | "giftcard" | "bank" | "card";
 
@@ -23,8 +24,8 @@ export const CARD_PAYOUT_CLOSED: readonly string[] = [
 ];
 
 /**
- * The uses offered for this number's country: only what works there (the README's second rule). The phone when the
- * server offers it to this account; the bank unless its own payout list says it pays nobody there; the card unless its
+ * The uses offered for this number's country: only what works there (the README's second rule). The phone and the gift
+ * card always, the gift card with a country to list cards for; the bank unless its own payout list says it pays nobody there; the card unless its
  * own list restricts that country or it is one the card rail pays no card in. A country nobody knows yet hides nothing.
  */
 export function usesFor(country: string | null, reach: Readonly<Record<string, RailReach>>, phoneOffered: boolean, giftCardsOffered = false): readonly Use[] {

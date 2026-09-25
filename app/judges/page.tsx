@@ -5,6 +5,7 @@ import { MilestoneJudges } from "../components/MilestoneJudges";
 import { DISPLAY, TITLE } from "../components/ui";
 import { readOwnership, ownershipWords } from "@/src/judges-owner";
 import { portalsListedAndRead } from "@/src/portal-store";
+import { usesDelivered } from "@/src/phone-order-store";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain";
 import { JudgesConditions } from "./JudgesConditions";
 import { JudgesContracts } from "./JudgesContracts";
@@ -32,6 +33,9 @@ export default async function JudgesPage() {
   const ownership = await readOwnership().catch(() => null);
   // Universities listed, and how many have been read at least once (D267): here, and never in the flow.
   const portals = await portalsListedAndRead();
+  // How many times each Bitrefill use was used (D271): said here, as for the conditions, and never in the flow.
+  const uses = await usesDelivered();
+  const used = (count: number | undefined) => (uses === null || count === undefined ? "the count could not be read right now" : count === 0 ? "Open. Nobody has used it yet." : count === 1 ? "Open. Used once." : `Open. Used ${count} times.`);
   // Gifts created before the D30 corrections keep running on the contract that holds them, and every
   // gift record names its own contract, so both are listed here for as long as the older one holds one.
   const earlierEscrow = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
@@ -333,8 +337,8 @@ export default async function JudgesPage() {
             otherwise.
           </li>
           <li>
-            <strong>The phone way out, being built.</strong> What it is: Viky buys a good, a phone top-up, for the
-            person, with the person&apos;s own money. They sign their AUSD over to Viky&apos;s treasury on Monad, and the
+            <strong>The Bitrefill way out.</strong> What it is: Viky buys a good, a phone top-up of credit or data or a
+            gift card, for the person, with the person&apos;s own money. They sign their AUSD over to Viky&apos;s treasury on Monad, and the
             treasury pays Bitrefill&apos;s invoice in USDC on Base; a failure after the money arrived sends it back, by
             itself. It is neither an exchange nor a bank payment, which is to be read again the day Viky is a company.
             It runs on Bitrefill&apos;s Personal API, whose documentation names the Business API for an app that sells
@@ -343,7 +347,9 @@ export default async function JudgesPage() {
             Personal API for the pilot, the risk assumed and written here, and is to ask Bitrefill for its agreement, or
             for its Business API when the time comes.
             The account&apos;s own limits are the pilot&apos;s: five top-ups and 500 USD a day for everybody together, and
-            Viky adds 50 USD a person a day. Not open to anybody until a real top-up has reached a real phone.
+            Viky adds 50 USD a person a day. Open to everybody since its code was complete (the founder, 26 Sep 2026);
+            what is missing is said at the moment it is missing, and nothing is taken. Credit: {used(uses?.phone)} Mobile
+            data: {used(uses?.data)} A gift card: {used(uses?.gift_card)}
           </li>
           <li>
             <strong>Our own key.</strong> A reading counts because Viky&apos;s evidence signer signed it. That key can

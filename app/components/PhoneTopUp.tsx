@@ -31,7 +31,7 @@ function randomNonce(): Hex {
   return `0x${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}` as Hex;
 }
 
-export function PhoneTopUp(props: Readonly<{ ausd: bigint; dataOn: boolean; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
+export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
   const [screen, setScreen] = useState<Screen>("where");
   const [phone, setPhone] = useState("");
   const [operators, setOperators] = useState<readonly PhoneOperator[] | null>(null);
@@ -220,7 +220,6 @@ export function PhoneTopUp(props: Readonly<{ ausd: bigint; dataOn: boolean; ensu
   return (
     <section className={CARD}>
       <h2 className={TITLE}>{W.whereTitle}</h2>
-      {props.dataOn ? (
       <div className="flex flex-col gap-[var(--tap-gap)]">
         <p className={BODY}>{W.whatFor}</p>
         <div className="grid grid-cols-2 gap-[var(--tap-gap)]">
@@ -231,7 +230,6 @@ export function PhoneTopUp(props: Readonly<{ ausd: bigint; dataOn: boolean; ensu
           ))}
         </div>
       </div>
-      ) : null}
       <label className="flex flex-col gap-[var(--space-xs)]">
         <span className={BODY}>{W.number}</span>
         <input value={phone} onChange={(event) => { setPhone(event.target.value); setOperators(null); setProblem(null); }} inputMode="tel" autoComplete="tel" className={FIELD} disabled={busy} />
