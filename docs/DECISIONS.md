@@ -6916,3 +6916,20 @@ grades). The other developer links to it from the empty state of "Which universi
   well inside the bowl, against an arc passing at 3.34 and 3.43; now each runs either side of its own crossing (5.5 for
   the upper, 5 for the lower), the box widened to the left for their ends.
 - **The halftone** of D255 is taken off at the founder's word, the prop, its drawing and its colours with it.
+
+## D258, 25 Sep 2026: signing out goes straight to the landing, the single character stands alone on the card, and the euro's bars sit half way
+
+- **Signing out.** The founder, 25 Sep 2026: a second of empty page before the landing, and sometimes the landing's
+  moment missed. Filmed on a production build, signed in on the test database: at 0 ms after "Sign out", Me was
+  already redrawn as "Not signed in on this device", because the account was emptied on the screen before the
+  landing had been fetched, and the server's cookie was deleted without being waited for; the landing then came as a
+  client navigation, its moment already marked as played in the session. Now `leave` waits for the server to close
+  the session while Me stays as it is ("Signing out" on its key), forgets the account without redrawing the page
+  (`mera.signOut({ quiet: true })`), clears the moment's cookie, and loads the landing as a new document, which the
+  browser paints over Me only when it is ready. Filmed again: Me, then the landing with its leap, nothing between.
+- **The single character on the card.** The founder: the register's "When they show they are enrolled, all of this
+  becomes theirs" and D247's "Passed the year, and grades: soon, university by university." under the one character
+  repeated the condition's own line and stretched the card. The character stands alone; "$1.00 a day" stays under a
+  row of days, the one place it is a figure nobody else gives.
+- **The euro.** Centred at x 9 the bars were too far right, centred on the arc at 3.3 (D257) too far left: they sit
+  half way, at 6.2.

@@ -823,13 +823,10 @@ test("a key nested in a field is concentric with it, and alone it stays a capsul
   assert.match(readFileSync("app/kit/Me.tsx", "utf8"), /<MoneyKey currency=\{money\.currency\} onOpen=\{\(\) => setReading\(true\)\} \/>/, "on its own, a capsule");
 });
 
-test("the euro's bars are centred where they cross its arc (D257)", () => {
+test("the euro's bars sit half way between the bowl's middle and its arc (D258)", () => {
   const mark = readFileSync("app/kit/MoneyMark.tsx", "utf8");
-  const arc = { cx: 17.35 - 8.6 * Math.sqrt(1 - ((14.5 - 5.95) / 11.5) ** 2), cy: 14.5, rx: 8.6, ry: 11.5 };
-  const bars = [...mark.matchAll(/d="M(-?[\d.]+) ([\d.]+) H (-?[\d.]+)"/g)].map((m) => [m[0], Number(m[2]), Number(m[1]), Number(m[3])] as const);
+  const bars = [...mark.matchAll(/d="M(-?[\d.]+) ([\d.]+) H (-?[\d.]+)"/g)].map((m) => (Number(m[1]) + Number(m[3])) / 2);
   assert.equal(bars.length, 2, "two bars");
-  for (const [, y, from, to] of bars) {
-    const crossing = arc.cx - arc.rx * Math.sqrt(1 - ((y - arc.cy) / arc.ry) ** 2);
-    assert.ok(Math.abs((from + to) / 2 - crossing) < 0.05, `the bar at ${y} is centred at ${(from + to) / 2}, the arc at ${crossing.toFixed(2)}`);
-  }
+  // The founder's two readings: centred at 9 was too far right, centred on the arc at 3.3 too far left.
+  for (const middle of bars) assert.ok(middle > 5.5 && middle < 7, `a bar centred at ${middle}`);
 });
