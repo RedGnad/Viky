@@ -6857,3 +6857,15 @@ grades). The other developer links to it from the empty state of "Which universi
   night (now 7.2:1 on the lighter field). The night field itself goes from tone 19.8 to 22, Material's filled field in
   the dark (surface container highest), same hue: `#3F322C`. The day field keeps its colour. `--paper-field-edge` is
   gone; `test/design-tokens.test.ts` checks the line at 3:1 in both modes.
+
+## D253, 25 Sep 2026: the app's icon, favicon and splash are the rig's head
+
+- The founder, 25 Sep 2026: the icon, the favicon and the splash screen no longer follow the character.
+- They were drawn from the old diamond (`Character`) with a night edge copied into `app/kit/character-svg.ts` by
+  hand at D135 (`#3B3266`), which the screens left behind at D229. `pnpm make:icon` now draws the rig's head
+  (`Figure` with `limbs: false`, a 64 by 40 box: at 64 pixels arms and legs are noise), with the lit edge, the gloss
+  and the smile of D236 and D243, in the night colours read from the stylesheet's own night block, so the icon cannot
+  keep a colour the screens have dropped. The link preview keeps the gift.
+- The splash of an installed app on Android is built from the manifest's largest icon and its background colour, so
+  it follows. iOS draws no splash of ours (no startup image is declared). An icon already on a home screen changes when
+  the phone next reads the manifest, which Chrome does on its own schedule; reinstalling shows it at once.
