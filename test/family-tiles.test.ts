@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Character } from "../app/kit/Character";
 import { FamilyArt } from "../app/kit/FamilyArt";
 import { FAMILIES } from "../src/conditions";
 import { OFFER } from "../src/sentences";
@@ -13,22 +12,26 @@ import { OFFER } from "../src/sentences";
  * that family's situation, opening that family's list; and the way back to the four above a family's list.
  */
 
-test("each family has its picture: the diamond in its situation, the props in the paper's ink, the runner's limbs in a stride", () => {
-  const props: Record<string, string> = { learn: "book", exam: "cap", play: "rook", move: "dash" };
+test("each family has its picture: the rig doing the family's thing, the thing in the figure's own material (D268)", () => {
+  const props: Record<string, string> = { learn: "book", exam: "cap", play: "rook", move: "speed" };
   for (const family of FAMILIES) {
     const art = renderToStaticMarkup(createElement(FamilyArt, { family: family.id }));
-    assert.ok(art.includes('data-character="diamond"'), `${family.id} has the diamond`);
-    assert.ok(art.includes(`data-prop="${props[family.id]}"`), `${family.id} has its prop`);
-    const prop = art.match(/<svg data-prop="[^"]+"[\s\S]*?<\/svg>/)?.[0] ?? "";
-    assert.ok(prop.length > 0 && !prop.includes("var(--character-"), "the prop paints with the paper's ink, never the character's palette");
+    assert.ok(art.includes('data-character="diamond"') && art.includes('data-part="halftone"'), `${family.id} is the rig, with its halftone`);
+    assert.ok(art.includes(`data-prop="${props[family.id]}"`), `${family.id} has its thing`);
+    assert.ok(art.includes(`id="family-${family.id}-body"`), "ids of its own, so four figures on one sheet keep their gradients");
     assert.ok(!/<polygon|<line |<polyline/.test(art), "round joins and caps only: nothing pointed");
     assert.ok(art.includes('aria-hidden="true"'), "a picture beside a word, never read aloud");
   }
-  const runner = renderToStaticMarkup(createElement(FamilyArt, { family: "move" }));
-  assert.ok(runner.includes('data-part="arm"') && /transform:rotate\(75deg\)/.test(runner) && /transform:rotate\(-15deg\)/.test(runner), "the runner has its limbs out, turned from their joints");
-  assert.ok(runner.includes('<g transform="rotate(-8 32 53)">'), "and leans into the stride, inside its drawing (D249)");
+  // Each family's figure does its thing.
   const reader = renderToStaticMarkup(createElement(FamilyArt, { family: "learn" }));
-  assert.ok(!reader.includes('data-part="arm"'), "the others keep the head alone");
+  assert.ok(reader.includes('data-pose="read"') && reader.indexOf('data-prop="book"') < reader.indexOf('data-pose="read"'), "the hands close over the book held in front");
+  assert.ok(renderToStaticMarkup(createElement(FamilyArt, { family: "exam" })).includes('data-pose="wave"'), "a wave under the cap");
+  assert.ok(renderToStaticMarkup(createElement(FamilyArt, { family: "play" })).includes('data-pose="hold"'), "the rook at its hand");
+  const runner = renderToStaticMarkup(createElement(FamilyArt, { family: "move" }));
+  assert.ok(runner.includes('data-pose="run"') && runner.includes("transform:rotate(-8deg)"), "the runner in its stride, leaning into it");
+  assert.ok(runner.indexOf('data-prop="speed"') < runner.indexOf('data-part="figure"'), "the speed lines outside the group that leans");
+  // No CSS rotation on the tile's own elements: that made a layer of its own on Android (D249).
+  assert.doesNotMatch(readFileSync("app/kit/FamilyArt.tsx", "utf8"), /rotate\(-?\d+deg\)/);
 });
 
 test("the chooser opens on the four tiles from six conditions, every time, and the way back leads to them", () => {
@@ -50,13 +53,3 @@ test("the chooser opens on the four tiles from six conditions, every time, and t
   assert.match(ui, /export const TILE = `\$\{FOCUS\} \$\{OUTLINE\} \$\{RELIEF\} flex min-h-\[var\(--tap-target\)\][^`]*bg-\[var\(--tonal\)\]/, "a tile is a tap target with the focus ring, the outline, the relief and the tonal fill of a key (D233)");
 });
 
-test("the runner leans inside its own drawing, never through a CSS rotation of the tile (D249)", () => {
-  const art = readFileSync("app/kit/FamilyArt.tsx", "utf8");
-  // A CSS rotation on the element around the drawing made a layer of its own on Android, painted as a dotted rectangle.
-  assert.doesNotMatch(art, /rotate\(-?\d+deg\)/);
-  assert.match(art, /tilt=\{running \? -8 : undefined\}/);
-  const leaning = renderToStaticMarkup(createElement(Character, { state: "diamond", tone: "sun", standing: false, limbs: true, pose: "running", tilt: -8 }));
-  assert.match(leaning, /<g transform="rotate\(-8 32 53\)">/, "from its feet, in the drawing's units");
-  const upright = renderToStaticMarkup(createElement(Character, { state: "diamond", tone: "sun", standing: false }));
-  assert.doesNotMatch(upright, /rotate\(/, "a diamond that does not lean carries no turn");
-});
