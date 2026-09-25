@@ -20,17 +20,21 @@ import { relayerClients, relayerPreflight, type RelayerClients } from "./relayer
 /** Circle's USDC on Base mainnet (developers.circle.com, "USDC contract addresses", read 25 Sep 2026). */
 export const BASE_USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as const;
 
-export type TreasuryErrorCode = "NOT_CONFIGURED" | "TREASURY_SHORT" | "PAYMENT_FAILED" | "REFUND_FAILED";
+export type TreasuryErrorCode = "NOT_CONFIGURED" | "TREASURY_SHORT" | "PAYMENT_FAILED" | "PAYMENT_UNCONFIRMED" | "REFUND_FAILED";
 
 export class TreasuryError extends Error {
   constructor(
     readonly code: TreasuryErrorCode,
     message: string,
-    options?: { cause?: unknown },
+    options?: { cause?: unknown; hash?: Hex },
   ) {
     super(message, options);
     this.name = "TreasuryError";
+    this.hash = options?.hash;
   }
+
+  /** The payment's hash when it was sent and its fate is not known yet (`PAYMENT_UNCONFIRMED`). */
+  readonly hash?: Hex;
 }
 
 /**
@@ -109,7 +113,13 @@ export async function payInvoiceOnBase(input: Readonly<{ to: string; usdcUnits: 
   } catch (error) {
     throw new TreasuryError("PAYMENT_FAILED", "The treasury's payment was not sent", { cause: error });
   }
-  const receipt = await clients.publicClient.waitForTransactionReceipt({ hash, confirmations: 2 });
+  let receipt;
+  try {
+    receipt = await clients.publicClient.waitForTransactionReceipt({ hash, confirmations: 2 });
+  } catch (error) {
+    // Sent, and not known yet: it may still land, so it is followed and never refunded as if it had failed.
+    throw new TreasuryError("PAYMENT_UNCONFIRMED", "The treasury's payment is not confirmed yet", { cause: error, hash });
+  }
   if (receipt.status !== "success") throw new TreasuryError("PAYMENT_FAILED", "The treasury's payment failed on Base");
   return { hash };
 }
