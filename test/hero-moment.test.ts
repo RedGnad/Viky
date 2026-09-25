@@ -86,7 +86,7 @@ test("the first image is the starting state, the choreography is on the tokens i
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n\s*\[data-hero="peeking"\] \[data-part="figure"\],[\s\S]*?transform: none;/, "and the first image is standing too");
   assert.doesNotMatch(hero, /setInterval|setTimeout|iterations: Infinity/, "nothing on a clock, nothing loops");
   // The landing's figure is the rig, in its resting pose, with the group that whirls (D241).
-  assert.match(hero, /<Figure id="hero" whirl className="hero-character" \/>/);
+  assert.match(hero, /<Figure id="hero" whirl halftone className="hero-character" \/>/);
   const rig = renderToStaticMarkup(createElement(Figure, { id: "hero", whirl: true }));
   for (const part of ["figure", "whirl", "arm", "leg", "mouth", "eye", "gloss"]) assert.ok(rig.includes(`data-part="${part}"`), part);
   assert.ok(rig.indexOf('data-part="figure"') < rig.indexOf('data-part="whirl"'), "the whirl inside what leaps");

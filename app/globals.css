@@ -103,7 +103,9 @@
    * The gift card's edge (D127, D128): 2 px, the ink by day and the controls' night edge at night. It carries no
    * shadow at all: cream on the ink ground measures 17:1 and needs none, and the niche allows no blur anywhere.
    */
-  --card-placed-edge: #1E1633;
+  --card-placed-edge: #C5C2CF;
+  /* The strength of the halftone screen on the landing's figure (D255): the ink's dots, lighter by day. */
+  --character-halftone: 0.22;
   /* The fill of a button that is not the one action: quiet, and identified by its outline (K, rule 10). */
   --tonal: #E8E3F4;
 
@@ -306,7 +308,8 @@
     /* No edge and no shadow on the card: on the ink ground it needs neither (D128), and the placed one has its own. */
     --card-edge: transparent;
     --card-shadow: none;
-    --card-placed-edge: #FFF6E2;
+    --card-placed-edge: #484360;
+    --character-halftone: 0.35;
     /* The paper after dark (D223, D231): the sun laid over the ground at 12 %, which is how Material brands a dark
        surface (its primary at a low opacity over the dark surface colour), 1.27:1 on the ground, where the day's cream
        stands on the lavender at 1.31:1: a warm paper on a cool night, as by day. What reads on it is the cream and the
@@ -363,7 +366,8 @@
   /* No edge and no shadow on the card: on the ink ground it needs neither (D128), and the placed one has its own. */
   --card-edge: transparent;
   --card-shadow: none;
-  --card-placed-edge: #FFF6E2;
+  --card-placed-edge: #484360;
+  --character-halftone: 0.35;
   /* The paper after dark (D223, D231): the sun laid over the ground at 12 %, which is how Material brands a dark
        surface (its primary at a low opacity over the dark surface colour), 1.27:1 on the ground, where the day's cream
        stands on the lavender at 1.31:1: a warm paper on a cool night, as by day. What reads on it is the cream and the
@@ -596,7 +600,7 @@ video {
 }
 
 .gift-card-placed {
-  border: 2px solid var(--card-placed-edge);
+  border: 1px solid var(--card-placed-edge);
   box-shadow: none;
 }
 

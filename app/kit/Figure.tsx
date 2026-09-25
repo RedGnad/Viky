@@ -44,6 +44,11 @@ export type FigureProps = Readonly<{
   whirl?: boolean;
   /** Arms and legs, or the head alone: the app's icon is the head, where limbs at 64 pixels are noise (D253). */
   limbs?: boolean;
+  /**
+   * A halftone screen on the body (D255, the founder's choice B of 25 Sep 2026): dots that grow away from the light,
+   * the shading of a print. An experiment on the landing's figure, taken off by removing this one prop.
+   */
+  halftone?: boolean;
 }>;
 
 /** The box the figure is drawn in: 64 wide, 53 tall down to the feet (Character's diamond with limbs). */
@@ -290,8 +295,39 @@ function Case({ id }: Readonly<{ id: string }>) {
   );
 }
 
+/**
+ * The halftone screen (D255): a staggered grid of dots, 2.2 apart, clipped to the body, each one's radius growing from
+ * 0.1 on the side the light falls on to 0.9 on the far side, so the dots are the body's shading, the way a print
+ * shades with a screen (Ben-Day and halftone dots). Computed from the same light as the gloss, so it turns with it. In
+ * the face's ink, at the strength `--character-halftone` gives each look.
+ */
+const HALFTONE_STEP = 2.2;
+function Halftone({ id, light }: Readonly<{ id: string; light: Readonly<{ x: number; y: number }> }>) {
+  const dots: ReactNode[] = [];
+  const reach = Math.abs(light.x) + Math.abs(light.y) || 1;
+  for (let row = 0, y = 4; y <= 36; row += 1, y += HALFTONE_STEP * 0.866) {
+    for (let x = 3 + (row % 2) * (HALFTONE_STEP / 2); x <= 61; x += HALFTONE_STEP) {
+      // 0 where the light falls, 1 on the far side: the point's position along the light, over the body's extent.
+      const along = Math.min(1, Math.max(0, 0.5 - ((x - CENTRE.x) / 29) * (light.x / (2 * reach)) - ((y - CENTRE.y) / 16) * (light.y / (2 * reach))));
+      dots.push(<circle key={`${row}-${x.toFixed(1)}`} cx={round(x)} cy={round(y)} r={round(0.1 + along * 0.8)} />);
+    }
+  }
+  return (
+    <g data-part="halftone">
+      <defs>
+        <clipPath id={`${id}-screen`}>
+          <path d={DIAMOND} />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${id}-screen)`} style={{ fill: INK, opacity: "var(--character-halftone)" }}>
+        {dots}
+      </g>
+    </g>
+  );
+}
+
 /** The figure as a group, for a scene that composes several in one drawing. */
-export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", legs = "rest", lean = 0, gaze = { x: 0, y: 0 }, props = [], light = LIGHT, id = "figure", whirl = false, limbs = true }: FigureProps) {
+export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", legs = "rest", lean = 0, gaze = { x: 0, y: 0 }, props = [], light = LIGHT, id = "figure", whirl = false, limbs = true, halftone = false }: FigureProps) {
   const shine = lit(light, lean);
   return (
     <g data-part="figure" style={lean ? { ...FROM_FLOOR, transform: `rotate(${lean}deg)` } : FROM_FLOOR}>
@@ -309,6 +345,13 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
       {limbs ? <Limbs arms={arms} legs={legs} holding={props.includes("case")} /> : null}
       <g data-part="body">
         <path d={DIAMOND} style={{ fill: `url(#${id}-body)`, stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
+        {halftone ? (
+          <>
+            <Halftone id={id} light={shine.light} />
+            {/* The edge again over the dots, so the screen stops at its inner side. */}
+            <path d={DIAMOND} style={{ fill: "none", stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
+          </>
+        ) : null}
       </g>
       {(limbs ? ARMS[arms] : []).filter((arm) => arm.over).map((arm, index) => (
         <Arm key={index} pose={arms} arm={arm} />
