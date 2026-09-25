@@ -5,7 +5,7 @@ import { useMoneyStart } from "@/src/client/money-start";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { formatAusd } from "@/src/gift-reader";
 import { draftUnits, durationBounds, filledCases, isComplete, shapeOf, type GiftDraft } from "@/src/gift-draft";
-import { conditionById } from "@/src/conditions";
+import { conditionById, UNIVERSITY_ENROLLMENT_SHOWN } from "@/src/conditions";
 import { certificateById, milestoneById } from "@/src/milestone-conditions";
 import { cardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
 import { figureWithMark, typedFromUnits, unitsFromTyped } from "@/src/amount-in-currency";
@@ -13,7 +13,7 @@ import { figureIn } from "@/src/currencies";
 import { startingFigure } from "@/src/starting-amount";
 import { dollarsHeld, type Holdings } from "../money";
 import { AmountError } from "@/src/money";
-import { OFFER as W } from "@/src/sentences";
+import { OFFER as W, UNIVERSITY_CHOICE } from "@/src/sentences";
 import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, CHOICE, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { CardFace } from "../GiftCard";
 import { Character } from "../Character";
@@ -204,6 +204,8 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                 <>
                   <Character state="toCome" className="h-auto w-[96px]" standing={false} />
                   {reached ? <span className={`${HELP} text-center`}>{reached}</span> : null}
+                  {/* What the same portal will be asked next, being built, said where enrolment is chosen (D247). */}
+                  {draft.conditionId === UNIVERSITY_ENROLLMENT_SHOWN.id ? <span className={`${HELP} text-center`}>{UNIVERSITY_CHOICE.soon}</span> : null}
                 </>
               ) : (
                 <>

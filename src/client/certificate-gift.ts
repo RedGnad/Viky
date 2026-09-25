@@ -6,6 +6,7 @@ import { milestoneFundingNonce, SHAPE_HAVE_OR_NOT, type MilestoneParams } from "
 import { getJson, postJson } from "./api";
 import { randomSalt, type CreatedGift } from "./gift";
 import { milestoneAddressFromEnv } from "./milestone";
+import type { ListedUniversity } from "../university-choice";
 
 /**
  * Browser-side steps of a gift on a supervised result (U3, C3).
@@ -118,6 +119,12 @@ export type CertificationFound = Readonly<{ pair: string; title: string; issuer:
  * The certifications a source knows by some words, through Viky's own route (the register names it): the funder
  * types, reads each answer with who awards it, and chooses. Nothing is kept from the answer but the one chosen.
  */
+/** Every university Viky can read, with its country, for "Which university?" asked as a list (D247). */
+export async function listUniversities(): Promise<readonly ListedUniversity[]> {
+  const answer = await getJson<{ results: readonly ListedUniversity[] }>("/api/portals");
+  return answer.results;
+}
+
 export async function searchCertifications(path: string, words: string): Promise<readonly CertificationFound[]> {
   const answer = await getJson<{ results: readonly CertificationFound[] }>(`${path}?q=${encodeURIComponent(words.trim())}`);
   return answer.results;

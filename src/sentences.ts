@@ -1007,6 +1007,39 @@ export const CONDITION_NATURE = { read: "READ FOR YOU", shown: "SHOWN BY THEM", 
  */
 export const UNVERIFIED_PORTAL = "Nobody has shown a proof from this university yet. If it cannot be read, your money comes back to you at the deadline.";
 
+/**
+ * "Which university?" asked as a list (D247, the advisor's brief of 25 Sep 2026). The help is one line; what a
+ * careful funder wants to know is one press away, folded under "How this is checked" (GOV.UK's details component).
+ * The brief's line was "Only universities a student has already connected."; a university defined from its public
+ * pages is on the list before any student has shown it (D193, marked "(unverified)" on its own line), so the line says
+ * what is true of every entry, and the fold says the rest.
+ */
+export const UNIVERSITY_CHOICE = {
+  help: "Only universities Viky has already connected.",
+  howChecked: "How this is checked",
+  how: [
+    "A university is on this list once its student portal is connected to Viky. One marked unverified has not been shown by a student yet.",
+    "When the gift is shown, the student signs in to their own portal themselves. Their password never reaches Viky, and nothing about their marks is read: Viky keeps that the portal said enrolled, and the day it was shown.",
+  ],
+  country: "Which country is it in?",
+  searchIn: (country: string) => `Search in ${country}`,
+  reading: "Reading the list",
+  unreadable: "The list could not be read right now. Close this and try again in a moment.",
+  none: "Viky cannot read any university yet.",
+  nothingThere: "No university of that name in this country yet.",
+  /**
+   * The empty state that grows the list (D247): their university is not listed, and the student can add it from home
+   * on the page the catalogue line wrote (`/add-your-university`, D246, "about ten minutes", the founder's figure),
+   * after which the operator writes the row. The funder hands the link over; Viky sends nothing for them.
+   */
+  notHere: "Their university is not here yet. It takes them about ten minutes to add it.",
+  sendHow: "Send them how",
+  shareText: "Your university is not on Viky yet. Here is how to add it, about ten minutes:",
+  copied: "The link is copied. Send it to them.",
+  /** Under the enrolment line on the card: what the same portal will be asked next, being built (D247). */
+  soon: "Passed the year, and grades: soon, university by university.",
+} as const;
+
 export const SHOW_PROOF = {
   title: (source: string) => `Show it from your ${source} account`,
   whatHappens: (source: string) =>

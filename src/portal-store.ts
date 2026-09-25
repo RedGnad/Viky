@@ -223,6 +223,21 @@ export function portalFound(portal: Portal): Readonly<{ pair: string; title: str
   return { pair: portal.portalId, title: portal.unverified ? `${portal.university}${UNVERIFIED_MARK}` : portal.university, issuer: countryInWords(portal.country), path: "" };
 }
 
+/**
+ * Every portal, for "Which university?" asked as a list (D247): the table is small and it is ours, so the chooser
+ * reads it whole and groups it by country. Two hundred at most, the day the list is long enough to need a bound.
+ */
+export async function listPortals(): Promise<readonly Portal[]> {
+  const rows = await sql()`SELECT * FROM viky_portals ORDER BY country, university, name LIMIT 200`;
+  return rows.map(toPortal);
+}
+
+/** A portal as the list gives it: the line `portalFound` draws, and the country's code to group and order by. */
+export function portalListed(portal: Portal): Readonly<{ pair: string; title: string; issuer: string; country: string }> {
+  const found = portalFound(portal);
+  return { pair: found.pair, title: found.title, issuer: found.issuer, country: portal.country };
+}
+
 export async function countPortals(): Promise<number> {
   const rows = await sql()`SELECT count(*)::int AS n FROM viky_portals`;
   return Number(rows[0]?.n ?? 0);
