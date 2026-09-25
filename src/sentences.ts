@@ -1398,18 +1398,18 @@ export const PHONE_OUT = {
 } as const;
 
 /**
- * /add-your-university (D246): how a student adds their university from home in about ten minutes, in five steps, on
+ * /add-your-university (D246, two pages since D269): how a student adds their university from home in about ten minutes, on
  * the Reclaim account kept for students. The login is never written here or anywhere in the repository: the page
  * sends the student back to whoever sent them. What they send at the end is three things, and what Viky never
  * receives is said as plainly.
  */
 export const ADD_UNIVERSITY = {
   title: "Add your university",
-  intro: "About ten minutes, from home, with your own student account. At the end you send three things, and a gift can then pay when a student of your university shows they are enrolled.",
+  intro: "About ten minutes, from home, with your own student account. You show Reclaim two pages of your portal, the one that says you are enrolled and your results, then send a few things. A gift can then pay when a student of your university shows they are enrolled, passed the year, or reached a grade.",
   steps: [
     {
       title: "Get the login",
-      body: "Ask the person who sent you here for the login of Viky's student account on Reclaim. Reclaim is the service that checks one page of your student portal for Viky.",
+      body: "Ask the person who sent you here for the login of Viky's student account on Reclaim. Reclaim is the service that checks a page of your student portal for Viky.",
     },
     {
       title: "Start a new check on Reclaim",
@@ -1420,16 +1420,20 @@ export const ADD_UNIVERSITY = {
       body: "Give the link to your university's student portal, then sign in as you always do. You type your password on your university's own page, in that window.",
     },
     {
-      title: "Open the page that says you are enrolled, and pick one line",
-      body: "The line with your status for this year, such as Enrolled or Inscrit, or the academic year you are registered for. Pick that line and nothing else: not your grades, not your student number, not your name.",
+      title: "First page: the one that says you are enrolled",
+      body: "Open it and pick one line: your status for this year, such as Enrolled or Inscrit, or the academic year you are registered for. Nothing else: not your student number, not your name. Publish it.",
     },
     {
-      title: "Publish, and send us three things",
-      body: "Publish what you made, then send the person who sent you here: your university's full name, the link to its student portal, and the ID Reclaim shows for what you made, 36 letters, numbers and dashes.",
+      title: "Second page: your results",
+      body: "Create a second provider the same way, open your results page, and pick the overall lines only: the decision (Passed, Admis), the overall average or grade (14.50 / 20, a GPA of 3.2), and the academic year if the page prints it. Not each subject's mark. Publish it.",
+    },
+    {
+      title: "Send us what you made",
+      body: "Send the person who sent you here: your university's full name, the link to its student portal, the ID Reclaim shows for each of the two pages (36 letters, numbers and dashes each), and how your university grades: out of 20, a GPA out of 4, or letters.",
     },
   ],
   neverTitle: "What Viky never receives",
-  never: "Your password, your grades, or anything else on your portal. Viky asks for none of them, and this page sends nothing anywhere.",
+  never: "Your password, or any mark but the overall result you picked. That result is read only when a gift on it is shown, and Viky keeps whether it was reached, not the mark. This page sends nothing anywhere.",
   nextTitle: "What happens next",
-  next: "Viky adds your university from the three things you sent, and until then it is not in the list. The first student of it who shows they are enrolled confirms that the check works.",
+  next: "Viky adds your university from what you sent, and until then it is not in the list. The first student of it who shows a page confirms that the check works.",
 } as const;

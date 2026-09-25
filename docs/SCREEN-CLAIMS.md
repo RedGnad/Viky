@@ -627,3 +627,10 @@ once Bitrefill and the treasury are configured.
 | "A student account", read back after a proof from such a portal | the proof's field matched on an account portal | `providerOfPortal` in `src/shown-conditions.ts` | read by hand |
 | no "(unverified)" anywhere in the flow | the founder's rule of 26 Sep 2026: the mark stays in the register and on the judges' page | `portalFound`, `universityNamed` | `test/portal-store.test.ts` |
 | "N universities listed, M read at least once." on the judges' page | rows of `viky_portals`, and portals of gifts with an attested reading that started or reached | `portalsListedAndRead` | read by hand |
+
+### Add your university, two pages (D269)
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "the ID Reclaim shows for each of the two pages", "how your university grades" | a portal row holds an enrolment provider and a results provider with its scale | `pnpm portal:add` with the `RESULTS_*` names (docs/OPERATIONS.md, "A university's portal, in thirty minutes", 1 bis) | `test/portal-store.test.ts` |
+| "That result is read only when a gift on it is shown, and Viky keeps whether it was reached, not the mark." | the year passed and the grade keep the verdict alone | `PRIVACY["university-year-passed-shown"]`, `PRIVACY["university-grade-shown"]`, kept "verdict" | `test/condition-privacy.test.ts` |

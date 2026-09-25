@@ -6,7 +6,7 @@ import { Shell } from "../kit/Shell";
 export const metadata: Metadata = { title: W.title };
 
 /**
- * How a student adds their university from home (D246): five steps on the Reclaim account kept for students, the
+ * How a student adds their university from home (D246): six steps and two pages (D269) on the Reclaim account kept for students, the
  * three things they send at the end, and what Viky never receives. Public, and it asks for nothing: the student sends
  * the three things to whoever sent them here. The shape is the help page's.
  */

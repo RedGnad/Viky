@@ -7056,3 +7056,18 @@ integrity point, each line noting what its portal reads, so the gift's sentence 
   ink laid thin and their light a line of white, so only the character's own components paint the character's colours.
   The speed lines are drawn outside the group that leans. The figure is 100 wide in the tile's 112 by 104, its legs
   included. The diamond's own lean of D249, which only the old runner used, is gone with it.
+
+## D269, 26 Sep 2026: no AI-witnessed providers, the five lines in production, and two pages asked of a student
+
+The founder, 26 Sep 2026, on D267's question: no provider in AI mode. "An AI witness is not a witness": Rome is
+WITNESS, Cheikh Anta Diop is AI. The corridor's universities come in with a WITNESS provider a student registers.
+
+- **The rule stands**: the attestor's TEE attestation is required and AI-witnessed proofs are refused everywhere. The
+  363 AI providers of D267 stay out; `/add-your-university` already tells a student not to choose the AI option.
+- **Production.** `pnpm db:migrate` then `pnpm portal:directory`, run on 26 Sep 2026 (docs/OPERATIONS.md): the five
+  rows are live, `/api/portals` lists them by name, 5 listed and 0 read.
+- **Two pages on `/add-your-university`.** The enrolled line and the results page (the decision, the overall average
+  or grade, the year when printed), two providers, and the grading scale sent with them, so "Pass the year" and "Reach
+  a grade" can open on a university as soon as its row carries the results page. Six steps where there were five.
+  "What Viky never receives" now says the overall result is read when a gift on it is shown, and only whether it was
+  reached is kept.
