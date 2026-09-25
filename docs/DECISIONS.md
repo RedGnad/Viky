@@ -6983,3 +6983,15 @@ grades). The other developer links to it from the empty state of "Which universi
   (`--character-halftone`, `#835EFF` by day and `#FF4D5B` at night), each path at 45 % of its own opacity, no group
   opacity. At the far side, where the dots are largest, the result is the multiply's exactly; captured side by side,
   day and night, the two read the same.
+
+## D264, 26 Sep 2026: "Which university?" lists names alone and invites the student's own
+
+- The founder's decision, 26 Sep 2026: the list shows every university that has a portal row, grouped by country, by
+  its name alone: no "(unverified)" suffix and no sentence about checking in the chooser. Under the list, one line, an
+  invitation: "Yours isn't here? Add your university", a link to `/add-your-university`. On the gift's page, "How this
+  is checked" stays folded as it is. A reading that fails on a portal nobody has exercised goes through the reading's
+  existing failure state, at the moment of the proof, never before.
+- Done: `portalListed` gives the university's name, never the mark; the chooser loses its help line, its fold and D247's
+  share button and "about ten minutes"; `UNIVERSITY_CHOICE` keeps only the list's own words and the invitation. The
+  search route and `universityNamed` are unchanged, so a gift made before, whose title carries the mark, still reads as
+  it was made. This replaces D247's help, fold and empty state; its list by country stays.

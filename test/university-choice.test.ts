@@ -76,20 +76,26 @@ test("the list route gives every portal with its country, and nothing else", asy
   }
 });
 
-test("the sheet asks it as the brief says, one line of help, the rest folded, and the card says what comes next", () => {
+test("the chooser lists names alone, says nothing about checking, and invites the student's own university (D264)", () => {
   const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
   const sheet = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
   const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
   assert.match(sheet, /certificate\.course\?\.search\?\.listed \? \(/, "the university's question takes the list");
   assert.match(chooser, /choiceMode\(list\.length\) === "radios"/);
-  assert.match(chooser, /<summary className="cursor-pointer font-medium">\{W\.howChecked\}<\/summary>/);
-  assert.equal(UNIVERSITY_CHOICE.help.split(". ").length, 1, "one sentence");
-  assert.match(UNIVERSITY_CHOICE.how.join(" "), /password never reaches Viky/);
-  assert.match(UNIVERSITY_CHOICE.how.join(" "), /nothing about their marks is read/);
-  // Not listed: the funder hands the student the page the catalogue line wrote (D246), by share sheet or clipboard.
-  assert.match(chooser, /\$\{window\.location\.origin\}\/add-your-university/);
-  assert.match(chooser, /navigator\.share\(\{ text: W\.shareText, url \}\)/);
+  // Nothing about checking in the chooser: that is said folded on the gift's page, where the proof is shown.
+  assert.doesNotMatch(chooser, /<details|<summary|navigator\.share|clipboard/);
+  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["addYours", "country", "none", "notListed", "nothingThere", "reading", "searchIn", "unreadable"]);
+  assert.doesNotMatch(JSON.stringify(Object.values(UNIVERSITY_CHOICE).filter((v) => typeof v === "string")), /unverified|password|proof|checked|connected/i);
+  // One line under the list: the question and the link to the page a student adds theirs from.
+  assert.equal(`${UNIVERSITY_CHOICE.notListed} ${UNIVERSITY_CHOICE.addYours}`, "Yours isn't here? Add your university");
+  assert.match(chooser, /\{W\.notListed\}\{" "\}\n\s*<Link href="\/add-your-university"/);
   assert.ok(existsSync("app/add-your-university/page.tsx"), "the page the link opens");
-  assert.match(UNIVERSITY_CHOICE.notHere, /about ten minutes/);
   assert.doesNotMatch(card, /UNIVERSITY_CHOICE/, "no coming-soon line on the card since D258");
+});
+
+test("a listed university is its name alone, never marked unverified (D264)", () => {
+  const store = readFileSync("src/portal-store.ts", "utf8");
+  const listed = store.slice(store.indexOf("export function portalListed"), store.indexOf("}\n", store.indexOf("export function portalListed")));
+  assert.match(listed, /title: portal\.university,/);
+  assert.doesNotMatch(listed, /UNVERIFIED_MARK|unverified/);
 });
