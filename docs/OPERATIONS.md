@@ -1375,3 +1375,38 @@ paper `0xED4c…67B3`), carried by the relayer `0x150d…CFE4`, which only paid 
 | relayer | 53.27 MON after |
 
 `SAFE_ADDRESS` is not in `.env.local`; the command takes it from the Safe's table above.
+
+## The phone way out: what the founder sets (D238)
+
+Viky buys a phone top-up for the person, on Bitrefill, with the AUSD the person sends it. Nothing of this runs until
+the three items below exist, and the line is marked open only after a real top-up on a real number.
+
+**1. A Bitrefill account and its Personal API key.** Sign up on bitrefill.com, verify the email (a basic account:
+five phone items a day, 200 USD a refill, 500 USD a day, 2,000 USD a month, terms section 8, which are the pilot's
+ceilings for everybody together), then Account > Developers > generate a key. From this repository's folder:
+
+```
+vercel env add BITREFILL_API_KEY production
+```
+
+It asks for the value without echoing it, and a production variable is sensitive by default (Vercel CLI 54). The
+Business API, if Bitrefill grants it, is `BITREFILL_API_ID` and `BITREFILL_API_SECRET` instead; nothing else changes.
+
+**2. The treasury key**, one key for one address that receives the person's AUSD on Monad and pays Bitrefill in USDC
+on Base; distinct from the relayer. Generated in the founder's own terminal, kept in an encrypted file, posted to
+Vercel without ever being printed:
+
+```
+cast wallet new ~/viky-keys viky-treasury --password
+cast wallet private-key --keystore ~/viky-keys/viky-treasury | grep -o '0x[0-9a-fA-F]\{64\}' | tr -d '\n' | vercel env add TREASURY_PRIVATE_KEY production
+```
+
+The first line asks for a password and prints the address, the only thing shared. The second asks for the same
+password and passes the key straight to Vercel: the `grep` keeps the 64 hexadecimal figures of the key whatever words
+`cast` prints around them, so nothing else reaches the variable. Not tried on this machine (generating even a throwaway
+key was declined here): check after that `vercel env ls` lists `TREASURY_PRIVATE_KEY`. The address also goes to Vercel, as `TREASURY_ADDRESS` (not secret).
+The file `~/viky-keys/viky-treasury` and its password are the only copy outside Vercel, whose sensitive values cannot
+be read back: keep both.
+
+**3. The first funding of the treasury**, from the founder's own funds: USDC on Base for the invoices, a little ETH on
+Base for their fees, and a little MON on Monad for the refunds the treasury sends back when a top-up fails.
