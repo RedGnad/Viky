@@ -232,10 +232,13 @@ export async function listPortals(): Promise<readonly Portal[]> {
   return rows.map(toPortal);
 }
 
-/** A portal as the list gives it: the line `portalFound` draws, and the country's code to group and order by. */
+/**
+ * A portal as the list gives it: its university's name alone, its country, and the country's code to group and order
+ * by. No "(unverified)" (the founder, 26 Sep 2026, D264): every university with a portal row is listed by its name, and
+ * a portal nobody has exercised yet meets its test at the moment of the proof, through the reading's own failure state.
+ */
 export function portalListed(portal: Portal): Readonly<{ pair: string; title: string; issuer: string; country: string }> {
-  const found = portalFound(portal);
-  return { pair: found.pair, title: found.title, issuer: found.issuer, country: portal.country };
+  return { pair: portal.portalId, title: portal.university, issuer: countryInWords(portal.country), country: portal.country };
 }
 
 export async function countPortals(): Promise<number> {

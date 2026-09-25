@@ -1,17 +1,18 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { listUniversities } from "@/src/client/certificate-gift";
 import type { GiftDraft } from "@/src/gift-draft";
 import { MILESTONE_FUND as M, UNIVERSITY_CHOICE as W } from "@/src/sentences";
 import { byCountry, choiceMode, inCountry, type ListedUniversity } from "@/src/university-choice";
-import { CHIP, HELP, SECONDARY_BUTTON } from "../../components/ui";
+import { CHIP, HELP } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { Field } from "../Field";
 
 /**
  * "Which university?" as the advisor's brief of 25 Sep 2026 asks it (D247). Up to five universities, radios grouped by
  * country and no search field; beyond five, the country first, as buttons with the corridor's in front, then the search
- * within that country. The help is one line, and how a university is checked is folded under it.
+ * within that country. The names alone, and under the list one invitation to add a university (D264).
  */
 export function UniversityChooser({
   open,
@@ -51,17 +52,6 @@ export function UniversityChooser({
     if (one) onChoose(one);
   };
 
-  const how = (
-    <details>
-      <summary className="cursor-pointer font-medium">{W.howChecked}</summary>
-      {W.how.map((line) => (
-        <p key={line} className={HELP}>
-          {line}
-        </p>
-      ))}
-    </details>
-  );
-
   if (list === null) return <p className={HELP}>{W.reading}</p>;
   if (list === "unreadable") return <p className={HELP}>{W.unreadable}</p>;
 
@@ -71,8 +61,6 @@ export function UniversityChooser({
   return (
     <div className="flex flex-col gap-[var(--space-sm)]">
       <p className="font-medium">{label}</p>
-      <p className={HELP}>{W.help}</p>
-      {how}
       {list.length === 0 ? (
         <p className={HELP}>{W.none}</p>
       ) : choiceMode(list.length) === "radios" ? (
@@ -119,46 +107,18 @@ export function UniversityChooser({
         </>
       )}
       {chosen}
-      <NotHere />
+      {/* One line under the list (D264): an invitation, and nothing about how a university is checked, which the gift's
+          page says where the proof is shown. */}
+      <p className={HELP}>
+        {W.notListed}{" "}
+        <Link href="/add-your-university" className="font-medium text-[var(--on-surface)] underline underline-offset-2">
+          {W.addYours}
+        </Link>
+      </p>
     </div>
   );
 }
 
-/**
- * Their university is not listed: the student adds it from home (`/add-your-university`, D246), and the funder hands
- * them the link, through the phone's share sheet where there is one and the clipboard otherwise (as `AskAgain`).
- * The address is this host's own, so an account made on either host sends a link that opens.
- */
-function NotHere() {
-  const [answer, setAnswer] = useState<"copied" | "refused" | null>(null);
-  const [link, setLink] = useState("");
-  const send = () => {
-    const url = `${window.location.origin}/add-your-university`;
-    setLink(url);
-    if (typeof navigator.share === "function") {
-      void navigator.share({ text: W.shareText, url }).catch(() => undefined);
-      return;
-    }
-    navigator.clipboard.writeText(`${W.shareText} ${url}`).then(
-      () => setAnswer("copied"),
-      () => setAnswer("refused"),
-    );
-  };
-  return (
-    <>
-      <p className={HELP}>{W.notHere}</p>
-      <button type="button" onClick={send} className={SECONDARY_BUTTON}>
-        {W.sendHow}
-      </button>
-      {answer === "copied" ? (
-        <p role="status" className={HELP}>
-          {W.copied}
-        </p>
-      ) : null}
-      {answer === "refused" ? <p className={`${HELP} select-all`}>{link}</p> : null}
-    </>
-  );
-}
 
 /** The search within one country, and its list of at most twelve, the way the sheet's other searches say it. */
 function CountrySearch({
