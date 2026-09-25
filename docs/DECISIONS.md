@@ -6703,3 +6703,26 @@ back to the gift's history and the screen.
   top 740 and 796, before and after).
 - The feet are 3.2 units long, from 4.5 (D235) and 6.5 before it, on the rig and on the limbed diamond alike, so
   every figure on every page and the landing's carry the same feet.
+
+## D243, 25 Sep 2026: a scene arrives from its first image, faster, and the face loses two spots of noise
+
+- The founder, 25 Sep 2026: the heads' arrival on a page change blinks, the case does not appear organically, the whole
+  is slow, and the suit is lovely but hard to read; and asked that the display flow be understood, not guessed.
+- **The flow, measured** (production build, signed in, Me to Home to Gifts to Me, every insertion and animation under
+  the header logged, a frame every 30 ms): the template builds the new screen, the old header is removed and the new
+  one inserted in the same task, the row holding the title and the head enters with `page-enter` (250 ms, 0.6 to 1,
+  8 px up). The head's own arrival was started in `useEffect`, after the browser had painted: the first image was
+  the scene complete (case, suit, hands), the next its starting state, so every prop appeared, vanished and came
+  back. That was the blink. On top of it the figure had its own 0.6 to 1 fade and 8 px rise over 451 ms, stacked on
+  the row's, so it started at about a third of its opacity and finished half a second after the page. A second head
+  counted on Home is the closed sheet's, never visible. The same blink the pages had (D196, D198) had the same cause:
+  a first image that was not the starting state.
+- **Now.** The arrival starts in `useLayoutEffect`, before the first paint, so the first image is the starting state.
+  The figure no longer moves on its own: it rides the row's entrance. What makes the scene moves, within about 300 ms:
+  the suit grows onto the body (effects spring, 234 ms), the sunglasses come down onto the eyes (250 ms), a raised arm
+  is drawn along its curve (250 ms, its dash starting just before the joint so no dot shows there) and its hand closes
+  on the end, and the case swings into the hand from the top of its handle, 40 degrees to rest on the expressive spring,
+  whose overshoot is the swing settling. Everything is in place at about 270 ms, where it was about 520.
+- **The face.** The pale arc inside the smile and the grin is gone, and their corners are rounded by a thin stroke of
+  the same ink with round joins. The small spot inside the gloss ("sparkle"), which read as a second lighter circle,
+  is gone; the gloss and the one dot beside it stay.

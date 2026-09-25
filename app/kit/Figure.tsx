@@ -60,6 +60,8 @@ const LIMB = "var(--character-limb)";
 const FROM_MIDDLE: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 50%" };
 const FROM_FLOOR: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 100%" };
 const FROM_JOINT: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 0%" };
+/** The case hangs from the top of its handle, the middle of its box's top edge: that is where it swings from (D243). */
+const FROM_HANDLE: CSSProperties = { transformBox: "fill-box", transformOrigin: "50% 0%" };
 
 const round = (value: number) => Math.round(value * 100) / 100;
 const unit = (v: Readonly<{ x: number; y: number }>) => {
@@ -86,8 +88,8 @@ function edges() {
 }
 
 /**
- * What the light does to the body: the gradient's two points, the gloss's place and slant, the sparkle on the lit
- * edge. All of it from one direction, so a pose never has to be lit by hand.
+ * What the light does to the body: the gradient's two points, the gloss's place and slant, and the dot beside it.
+ * All of it from one direction, so a pose never has to be lit by hand.
  */
 export function lit(light = LIGHT, lean = 0) {
   const l = turned(unit(light), lean);
@@ -96,11 +98,7 @@ export function lit(light = LIGHT, lean = 0) {
   const dot = { cx: CENTRE.x + l.x * 2, cy: CENTRE.y + l.y * 14.1 };
   const all = edges().map((edge) => ({ ...edge, facing: edge.normal.x * l.x + edge.normal.y * l.y }));
   const litEdge = all.reduce((best, edge) => (edge.facing > best.facing ? edge : best), all[0]);
-  const sparkle = {
-    cx: (litEdge.from[0] + litEdge.to[0]) / 2 - litEdge.normal.x * 3,
-    cy: (litEdge.from[1] + litEdge.to[1]) / 2 - litEdge.normal.y * 3,
-  };
-  return { light: l, gradient, gloss: { ...gloss, angle: round(litEdge.angle) }, dot, sparkle };
+  return { light: l, gradient, gloss: { ...gloss, angle: round(litEdge.angle) }, dot };
 }
 
 /**
@@ -201,22 +199,24 @@ function EyesOf({ eyes, gaze, id }: Readonly<{ eyes: Eyes; gaze: Readonly<{ x: n
   );
 }
 
-/** The mouths: the smile is a real one, an upper lip that curves and a lower one that shines, not a half circle. */
+/**
+ * The mouths: the smile is a real one, an upper lip that curves over a lower one, not a half circle. One ink and no
+ * shine inside it (the founder, 25 Sep 2026, D243: the pale arc was noise), and its corners rounded rather than pointed:
+ * a thin stroke of the same ink with round joins softens the two points where the lips meet.
+ */
+const LIPS = { fill: INK, stroke: INK, strokeWidth: 1.1, strokeLinejoin: "round" as const };
 function MouthOf({ mouth }: Readonly<{ mouth: Mouth }>) {
-  const shine = { fill: "none", stroke: "rgba(255, 255, 255, 0.35)", strokeWidth: 0.8, strokeLinecap: "round" as const };
   if (mouth === "smile") {
     return (
       <g data-part="mouth" style={FROM_MIDDLE}>
-        <path d="M27 23.4 C29 28.6 35.6 28.6 37.2 23.1 Q32 25.3 27 23.4 Z" style={{ fill: INK }} />
-        <path d="M29.4 25.9 Q32 27.3 34.6 25.8" style={shine} />
+        <path d="M27.3 23.5 C29.2 28.3 35.4 28.3 36.9 23.2 Q32 25.2 27.3 23.5 Z" style={LIPS} />
       </g>
     );
   }
   if (mouth === "grin") {
     return (
       <g data-part="mouth" style={FROM_MIDDLE}>
-        <path d="M26.5 23 C28.5 29.6 35.5 29.6 37.5 23 Q32 25.6 26.5 23 Z" style={{ fill: INK }} />
-        <path d="M28.4 26.8 Q32 28.6 35.6 26.7" style={shine} />
+        <path d="M26.8 23.1 C28.7 29.3 35.3 29.3 37.2 23.1 Q32 25.5 26.8 23.1 Z" style={LIPS} />
       </g>
     );
   }
@@ -266,7 +266,7 @@ function Suit() {
 function Case({ id }: Readonly<{ id: string }>) {
   const [x, y, w, h] = [45, 40, 14, 10];
   return (
-    <g data-prop="case" style={FROM_MIDDLE}>
+    <g data-prop="case" style={FROM_HANDLE}>
       <defs>
         <linearGradient id={`${id}-case`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" style={{ stopColor: "var(--character-2)" }} />
@@ -307,11 +307,11 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
       {ARMS[arms].filter((arm) => arm.over).map((arm, index) => (
         <Arm key={index} pose={arms} arm={arm} />
       ))}
-      {/* The gloss: where the surface faces halfway between the light and the eye, slanted along the lit edge. */}
+      {/* The gloss: where the surface faces halfway between the light and the eye, slanted along the lit edge, and one dot
+          beside it. A third, smaller spot inside the gloss read as a second, lighter circle and was taken off (D243). */}
       <g data-part="gloss">
         <ellipse cx={round(shine.gloss.cx)} cy={round(shine.gloss.cy)} rx={5.2} ry={3.2} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
         <circle cx={round(shine.dot.cx)} cy={round(shine.dot.cy)} r={1.9} style={{ fill: GLOSS }} />
-        <circle cx={round(shine.sparkle.cx)} cy={round(shine.sparkle.cy)} r={0.9} style={{ fill: GLOSS }} />
       </g>
       {props.includes("suit") ? <Suit /> : null}
       <g data-part="face">
