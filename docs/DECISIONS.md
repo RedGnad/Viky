@@ -7009,3 +7009,11 @@ grades). The other developer links to it from the empty state of "Which universi
   page that names none) says the landing's promise and its sentence, which are also the site's description now. The
   figure is written by `pnpm make:icon` into `app/kit/figure-day.svg` in the day look's own colours, read from the
   stylesheet as the icon's are (`scripts/look-figure.ts`); the gift's old drawing, its file and its helper are gone.
+
+## D266, 26 Sep 2026: the preview's card grows with its words
+
+- Checked on production after D265: a real gift's line runs to two lines ("A Duolingo lesson each day: each day you do
+  one, that day's share becomes yours."), and in a card of a fixed 230 pixels the title rose against its top edge.
+  The figure and the card are now one column from the foot: the card is at least 230 and grows with what it says, and
+  the figure stands on its edge whatever its height. The gallery's demonstration draws the longest line the register
+  gives a link, under the longest title, so the worst case is the one looked at.

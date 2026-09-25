@@ -47,22 +47,21 @@ export async function previewImage({ title, under, cacheSeconds }: Readonly<{ ti
       ));
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", position: "relative", background: PREVIEW_LOOK.ground }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", position: "relative", background: PREVIEW_LOOK.ground }}>
         <div style={{ position: "absolute", top: 56, right: 96, fontFamily: "Fredoka", fontSize: 44, color: PREVIEW_LOOK.ink }}>Viky</div>
-        {/* The figure stands on the card's top edge, its feet at the edge: the box is 64 by 53, the feet at 51.5. */}
+        {/* The figure stands on the card's top edge whatever the card's height (D266): the two are one column from the
+            foot, and the card grows with what it says, a gift's line running to two lines where the site's is one.
+            The drawing's box is 64 by 53 and its feet at 51.5, so 6 of its 248 pixels overlap the edge. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={drawing} width={300} height={248} alt="" style={{ position: "absolute", left: 100, bottom: 230 - 6 }} />
+        <img src={drawing} width={300} height={248} alt="" style={{ marginLeft: 100, marginBottom: -6 }} />
         <div
           style={{
-            position: "absolute",
-            left: 100,
-            right: 100,
-            bottom: 0,
-            height: 230,
+            margin: "0 100px",
+            minHeight: 230,
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
-            padding: "0 60px",
+            padding: "40px 60px 44px",
             background: PREVIEW_LOOK.paper,
             color: PREVIEW_LOOK.onPaper,
             border: `2px solid ${PREVIEW_LOOK.edge}`,
@@ -76,7 +75,7 @@ export async function previewImage({ title, under, cacheSeconds }: Readonly<{ ti
             {amount ? <span style={{ fontFamily: "DM Sans", marginRight: 16 }}>{amount}</span> : null}
             {words(after, "after")}
           </div>
-          <div style={{ fontFamily: "DM Sans", fontSize: 28, marginTop: 14, color: PREVIEW_LOOK.quiet }}>{under}</div>
+          <div style={{ fontFamily: "DM Sans", fontSize: 28, lineHeight: 1.3, marginTop: 14, color: PREVIEW_LOOK.quiet }}>{under}</div>
         </div>
       </div>
     ),
