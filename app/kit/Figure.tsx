@@ -139,8 +139,8 @@ const LEGS: Record<LegsPose, readonly Readonly<{ turn: number }>[]> = {
   apart: [{ turn: 10 }, { turn: -10 }],
 };
 const LEG_PATHS = [
-  { d: "M23.5 30 Q21.6 40.75 21.7 51.5", foot: "M21.7 51.5 H17.2" },
-  { d: "M40.5 30 Q42.4 40.75 42.3 51.5", foot: "M42.3 51.5 H46.8" },
+  { d: "M23.5 30 Q21.6 40.75 21.7 51.5", foot: "M21.7 51.5 H18.5" },
+  { d: "M40.5 30 Q42.4 40.75 42.3 51.5", foot: "M42.3 51.5 H45.5" },
 ] as const;
 
 const line = { fill: "none", stroke: LIMB, strokeWidth: 1.8, strokeLinecap: "round" as const };

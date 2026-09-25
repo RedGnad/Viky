@@ -6693,3 +6693,13 @@ back to the gift's history and the screen.
   1 to 0, on the emphasized decelerate curve so the line never passes its end), then its hand closes on the end on
   the effects spring. A stretch on one axis was right only for an arm that hangs; the arms of the landing's leap still
   hang, and still lengthen that way.
+
+## D242, 25 Sep 2026: the way to the card stands apart from the text, and the feet are shorter again
+
+- The founder, 25 Sep 2026: "Offer a gift" sat too close to the hero text, and the figures' feet are still long.
+- The button now stands 24 pixels under the sentence at every width (it was 12 on a phone, 8 from 1024): the column's
+  gap is made up by a top margin. The room comes out of the two auto shares of the first screen, so the character
+  and the card stay where they were, measured to the pixel at 390x844 and 1440x900 (character top 515 and 498, card
+  top 740 and 796, before and after).
+- The feet are 3.2 units long, from 4.5 (D235) and 6.5 before it, on the rig and on the limbed diamond alike, so
+  every figure on every page and the landing's carry the same feet.

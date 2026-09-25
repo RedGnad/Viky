@@ -64,6 +64,8 @@ for (const scheme of ["dark", "light"] as const) {
       // never under the card, and the character stands on the card's top edge (D214).
       expect(titleBox.y).toBeLessThan(sentence.y);
       expect(sentence.y + sentence.height).toBeLessThanOrEqual(way.y);
+      // The way to the card stands apart from the text: 24 pixels under the sentence at every width (D242).
+      expect(Math.abs(way.y - (sentence.y + sentence.height) - 24)).toBeLessThan(1.5);
       expect(way.y + way.height).toBeLessThanOrEqual(character.y);
       expect(character.y + character.height).toBeLessThanOrEqual(card.y + 4);
       // The card's top is cut by the fold: the first screen ends where the card's peek begins, at every size (D221).
