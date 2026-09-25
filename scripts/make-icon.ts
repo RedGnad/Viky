@@ -1,23 +1,20 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { chromium } from "@playwright/test";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { Figure } from "../app/kit/Figure";
-import { characterSvg } from "../app/kit/character-svg";
+import { figureInLook, PREVIEW_FIGURE } from "./look-figure";
 import { COLOURS } from "../src/design-tokens";
 
 /**
- * The app's icon and the gift's drawing, written once into files (the art direction brief of 17 Sep 2026, section 7
- * bis). The icon is the head character, the diamond, on the ink tile a phone rounds itself (D135), filling the whole
- * width of it (D141, after 0.74 and 0.92 both read as a small drawing in a large square); the gift's own drawing stays the gift, because what
- * it is used for is the picture under a gift's link. It is the third place a person meets Viky, after the link
- * preview and the morning message, and the first they see every day on their home screen.
+ * The app's icon and the link previews' figure, written once into files (the art direction brief of 17 Sep 2026,
+ * section 7 bis). The icon is the head character on the ink tile a phone rounds itself (D135), filling the whole width
+ * of it (D141, after 0.74 and 0.92 both read as a small drawing in a large square). The link previews draw the standing
+ * figure by day (D265), where they drew the gift until then. The icon is the first thing a person sees of Viky every
+ * day on their home screen.
  *
  * Run it whenever the look or the character changes: `pnpm make:icon`. It writes the sizes the manifest and the phones
- * ask for, app/icon.png, which is the one a browser tab reads, and app/kit/gift-hero.svg, which the link preview image
- * draws on the server. That file is written rather than rendered at request time because a route may not import
- * react-dom/server; test/character.test.ts fails if it drifts from the component.
+ * ask for, app/icon.png, which is the one a browser tab reads, and app/kit/figure-day.svg, which the link preview images
+ * draw on the server. That file is written rather than rendered at request time because a route may not import
+ * react-dom/server; test/figure.test.ts fails if it drifts from the component.
  */
 
 /** A .ico file around a PNG, which is what a browser asking for /favicon.ico still accepts. */
@@ -58,15 +55,13 @@ const SIZES = [
 ];
 
 async function main() {
-  // The link preview keeps the gift, because what it previews is a gift. The icon is the head of the page, which is
-  // the diamond since D131, and a phone's home screen shows what the product looks like at night (D135).
-  const gift = characterSvg("gift", { tone: "hero" });
-  writeFileSync(resolve("app/kit/gift-hero.svg"), `${gift}\n`);
-  console.log("app/kit/gift-hero.svg");
   // The rig's head (D236, D253), in the night look a home screen shows (D135), its colours read from the stylesheet's
   // own night block so the icon can never keep a colour the screens have left behind (it kept the night edge of D135
   // until 25 Sep 2026).
-  const svg = figureInNight();
+  const svg = figureInLook("dark", { id: "icon", limbs: false });
+  // The figure of the link previews, by day, standing (D265): the preview route may not import react-dom/server.
+  writeFileSync(resolve("app/kit/figure-day.svg"), `${figureInLook("light", PREVIEW_FIGURE)}\n`);
+  console.log("app/kit/figure-day.svg");
   const browser = await chromium.launch();
   try {
     for (const { file, size } of SIZES) {
@@ -88,27 +83,6 @@ async function main() {
   } finally {
     await browser.close();
   }
-}
-
-/** The night block's own values, a variable that names another followed to its colour. */
-function nightValues(): Record<string, string> {
-  const css = readFileSync(resolve("app/globals.css"), "utf8");
-  const start = css.indexOf(':root[data-theme="dark"] {');
-  const block = css.slice(start, css.indexOf("\n}", start));
-  const day = css.slice(css.indexOf(":root {"), css.indexOf("\n}", css.indexOf(":root {")));
-  const read = (text: string) => Object.fromEntries([...text.matchAll(/(--[a-z0-9-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
-  const values: Record<string, string> = { ...read(day), ...read(block) };
-  const resolveOne = (value: string, depth = 0): string => {
-    const named = value.match(/^var\((--[a-z0-9-]+)\)$/);
-    return named && depth < 8 ? resolveOne(values[named[1]] ?? "transparent", depth + 1) : value;
-  };
-  return Object.fromEntries(Object.entries(values).map(([name, value]) => [name, resolveOne(value)]));
-}
-
-function figureInNight(): string {
-  const values = nightValues();
-  const markup = renderToStaticMarkup(createElement(Figure, { id: "icon", limbs: false }));
-  return markup.replace(/var\((--[a-z0-9-]+)\)/g, (_, name: string) => values[name] ?? "transparent");
 }
 
 main().catch((error) => {

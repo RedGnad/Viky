@@ -28,10 +28,12 @@ const nextConfig = {
     ],
   },
   outputFileTracingIncludes: {
+    // The picture under a link to the site itself (D265), drawn the same way.
+    "/opengraph-image": ["./app/fonts/*.ttf", "./app/kit/figure-day.svg"],
     "/api/**": [
       // The picture a messaging app shows under a gift's link is drawn on the server, from these two faces and this drawing.
       "./app/fonts/*.ttf",
-      "./app/kit/gift-hero.svg",
+      "./app/kit/figure-day.svg",
       "./node_modules/.pnpm/@reclaimprotocol+attestor-core*/node_modules/@reclaimprotocol/attestor-core/**",
       "./node_modules/.pnpm/@reclaimprotocol+zk-symmetric-crypto*/node_modules/@reclaimprotocol/zk-symmetric-crypto/**",
       // Everything of zk-fetch but its four platform builds: only the Linux ones can run on a function, and the
