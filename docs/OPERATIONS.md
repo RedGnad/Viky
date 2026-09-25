@@ -1428,3 +1428,8 @@ PROVEN_BY=0x…<the operator account> pnpm portal:directory
 
 The migration adds `proves` to `viky_portals` (a row written before it reads as enrolment). The second line prints the
 five rows and writes nothing; the third writes them, each read back as the chooser would list it.
+
+**Run on 26 Sep 2026** from this clone, with `DATABASE_URL` taken from `../Viky/.env.ops.local` into the command's own
+environment and never printed, and `PROVEN_BY=0x350aF869ABa6ff26AB33517ECd3E38ACaF107761`: the migration added `proves`
+and `viky_phone_orders`; the five rows read back; `https://viky.cash/api/portals` lists the five, names alone, and
+`portalsListedAndRead` answers 5 listed, 0 read.
