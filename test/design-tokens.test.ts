@@ -811,12 +811,17 @@ test("a field on the card is identified by a hairline all around it at 3:1 at le
 
 test("a key nested in a field is concentric with it, and alone it stays a capsule (D257)", () => {
   const css = readFileSync("app/globals.css", "utf8");
-  assert.match(css, /--field-radius: 10px;/);
+  assert.match(css, /--field-radius: 16px;/, "the softer pair, 16 and 13 (D259)");
   assert.match(css, /--field-inset: 3px;/);
   assert.match(css, /\.on-paper-field \{\n\s*border-radius: var\(--field-radius\);/);
   const key = readFileSync("app/kit/MoneyKey.tsx", "utf8");
   // The concentric rule: the inner radius is the outer radius less the gap between them.
-  assert.match(key, /nested \? "rounded-\[calc\(var\(--field-radius\)-var\(--field-inset\)\)\]" : "rounded-full"/);
+  assert.match(key, /nested \? "rounded-\[calc\(var\(--field-radius\)-var\(--field-inset\)\)\] border border-\[var\(--on-surface-faint\)\]" : "rounded-full border-\[length:var\(--control-border-width\)\] border-\[var\(--control-border\)\]"/, "nested: the field's hairline; alone: a key's edge");
+  // The box's ring is for the figure being typed, never for the key beside it: a press on the key or the return of the
+  // focus from the currencies' sheet left a dark frame around the whole field (D259).
+  const field = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
+  assert.match(field, /has-\[input:focus\]:outline-2/);
+  assert.doesNotMatch(field, /focus-within:outline-2/);
   const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
   assert.match(card, /style=\{\{ paddingBlock: "var\(--field-inset\)", paddingLeft: "var\(--field-inset\)" \}\}/, "one inset on every side the key touches");
   assert.match(card, /<MoneyKey currency=\{money\.currency\} onOpen=\{\(\) => setReading\(true\)\} nested /);
