@@ -9,15 +9,15 @@ import { conditionById } from "@/src/conditions";
 import { certificateById, milestoneById } from "@/src/milestone-conditions";
 import { settlingTimeInWords } from "@/src/pass-schedule";
 import { draftToTerms, draftUnits, isComplete, type GiftDraft } from "@/src/gift-draft";
-import { arrivesInDollars, waysInFor } from "@/src/gift-amount";
+import { serviceChargeDollars, serviceChargeIsCeiling, wayInFor, type WayInOffer } from "@/src/gift-amount";
 import { tidyGiftName } from "@/src/gift-names";
 import { formatAusd } from "@/src/gift-reader";
 import { savePendingGift } from "@/src/pending-gift";
 import { rateDateInWords } from "@/src/display-currency";
 import type { RailReach } from "@/src/rail-country";
-import { feeSentence, WAYS_IN, type WayIn } from "@/src/rails";
+import { feeSentence, WAYS_IN } from "@/src/rails";
 import { CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
-import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../../components/ui";
+import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
 import { FieldRefusal } from "../FieldRefusal";
@@ -32,14 +32,15 @@ import { Sheet } from "../Sheet";
  * that Viky takes nothing, what the person actually pays in their own currency and at what rate, and that their face
  * or their fingerprint makes the account at the moment they press pay. Then one action in the sun.
  *
- * What it does not do: ask for an account first, ask them to choose between two card services in front of the
- * action, or read anything back that the card above it already says. The second way in is under the action, because
- * D101 says neither is hidden, and the mockup asks for one action rather than two cards of figures.
+ * What it does not do: ask for an account first, ask them to choose between two card services, or read anything back
+ * that the card above it already says.
  *
- * Which way in is in front of the action is decided by what it costs for this gift (D125): a way whose published
- * floor is above what the gift needs is not offered for it, and of the ways left the one that asks the fewest euros
- * goes first. A country only ever sends a way to the back (D96). No company is named on the sheet's lines or its
- * buttons: the person is paying by card, and the service is named where it is met, on the page that opens.
+ * One way in, chosen for the person (D239, the founder's decision of 25 Sep 2026): the rail that sells what a gift
+ * holds, from 6 EUR, unless it refuses them, by its own answer about their country, its own asset list, or its
+ * published floor; then the rail that sells the chain's coin, from 25 EUR, and one sentence in our words says which
+ * refused, why, and which this goes through instead. That sentence is the only place the sheet names a company: on
+ * its lines and its button the person is paying by card, and the service is named where it is met, on the page that
+ * opens. "What the card service charges" is that service's own published figure at this amount (`serviceChargeEur`).
  */
 function everyMinute(changed: () => void): () => void {
   const timer = setInterval(changed, 60_000);
@@ -47,6 +48,14 @@ function everyMinute(changed: () => void): () => void {
 }
 const thisMinute = () => Math.floor(Date.now() / 60_000) * 60_000;
 const noClock = () => 0;
+
+/** Which way refused, why, and which one stands instead, in our words. */
+function insteadSentence(offer: WayInOffer): string {
+  const first = offer.insteadOf!.way;
+  if (offer.insteadOf!.because === "country") return W.instead.country(first.name, offer.way.name);
+  if (offer.insteadOf!.because === "paused") return W.instead.paused(first.name, offer.way.name);
+  return W.instead.floor(first.name, first.smallestEur, offer.way.name);
+}
 
 export function PaySheet({
   open,
@@ -59,7 +68,6 @@ export function PaySheet({
   const money = useDisplayCurrency(address);
   const [held, setHeld] = useState<bigint | null>(null);
   const [railIn, setRailIn] = useState<Readonly<Record<string, RailReach>>>({});
-  const [chosen, setChosen] = useState<WayIn | null>(null);
   const [busy, setBusy] = useState(false);
   /** The reader's own clock, read once a minute: the hour the settling pass runs is said in it. */
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
@@ -68,7 +76,8 @@ export function PaySheet({
   useEffect(() => {
     if (!open) return;
     let live = true;
-    whereTheRailsServe(typeof navigator === "undefined" ? undefined : navigator.language)
+    // The device's language goes with the call itself; nothing here is an answer from the person.
+    whereTheRailsServe()
       .then((answer) => {
         if (live) setRailIn(answer.waysIn);
       })
@@ -103,18 +112,12 @@ export function PaySheet({
   const inAccount = held ?? 0n;
   const enough = units !== undefined && inAccount >= units;
   const short = units === undefined ? 0n : units - inAccount;
-  const offers = waysInFor(short, WAYS_IN, money.rates?.usdPerEur, railIn);
-  // The one the person asked for, while this gift can still be paid on it; otherwise the one that costs the least.
-  const offer = (chosen && offers.find((entry) => entry.way.name === chosen.name)) ?? offers[0];
+  const offer = wayInFor(short, WAYS_IN, money.rates?.usdPerEur, railIn);
   const way = offer.way;
-  const other = offers.find((entry) => entry.way.name !== way.name)?.way;
   const euros = units === undefined || enough ? 0 : offer.euros;
-  const arrives = euros === undefined || euros === 0 ? undefined : arrivesInDollars(euros, way, money.rates?.usdPerEur);
-  /** What the service keeps, in dollars: what the euros are worth, less what lands in the account. */
-  const charge =
-    euros === undefined || euros === 0 || arrives === undefined || money.rates?.usdPerEur === undefined
-      ? undefined
-      : Math.max(0, euros * money.rates.usdPerEur - arrives);
+  /** What the service keeps, in dollars: its own published share or minimum at this amount, at the day's rate. */
+  const charge = euros === undefined || euros === 0 ? undefined : serviceChargeDollars(euros, way, money.rates?.usdPerEur);
+  const chargeLine = charge === undefined ? W.about : euros && serviceChargeIsCeiling(euros, way.fee) ? W.upToDollars(charge) : W.aboutDollars(charge);
 
   /**
    * The passkey makes the account at the moment pay is pressed, which is what the sheet says it will do. After that
@@ -159,17 +162,11 @@ export function PaySheet({
           {/* The passkey is how an account is made here. When the device cannot, or the person waved the sheet away,
               the panel that creates one or signs an old one in appears in place, rather than on a screen of its own. */}
           {problem && !address ? <AccountPanel /> : null}
-          {/* The other way in is never hidden (D101); it is simply not in front of the action. */}
-          {other && !enough ? (
-            <button type="button" className={SECONDARY_BUTTON} onClick={() => setChosen(other)}>
-              {W.another}
-            </button>
-          ) : null}
         </>
       }
     >
       {line(W.rows.gift(recipient), formatAusd(units ?? 0n))}
-      {enough ? line(W.rows.fromAccount, formatAusd(inAccount)) : line(W.rows.service, charge === undefined ? W.about : W.aboutDollars(charge))}
+      {enough ? line(W.rows.fromAccount, formatAusd(inAccount)) : line(W.rows.service, chargeLine)}
       {line(W.rows.viky, W.nothing)}
 
       <div className="pt-[var(--space-sm)]">
@@ -179,6 +176,8 @@ export function PaySheet({
       {/* The rate, its source and why its day may be a Friday: one line, in full, rather than a label in a corner. */}
       {money.rates && !enough ? <p className={HELP}>{W.atTheRate(rateDateInWords(money.rates.date))}</p> : null}
       {offer.atFloor && !enough && euros ? <p className={HELP}>{W.floor(euros)}</p> : null}
+      {/* The first way refused this person, and the sheet says which, why and which this goes through instead (D239). */}
+      {offer.insteadOf && !enough ? <p className={HELP}>{insteadSentence(offer)}</p> : null}
 
       {/* Who this is from, said here because this is where a person becomes somebody to the recipient. It is the one
           thing on the card the image did not draw, and at the card's label size it would be under a thumb and under

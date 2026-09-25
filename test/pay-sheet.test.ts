@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { eurosNeededOn, waysInFor } from "../src/gift-amount";
+import { eurosNeededOn, roughlyInDollars, serviceChargeDollars, serviceChargeEur, serviceChargeIsCeiling, wayInFor } from "../src/gift-amount";
 import { PAY } from "../src/sentences";
-import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAYS_IN } from "../src/rails";
+import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAYS_IN, type WayIn } from "../src/rails";
 
 /**
  * Paying for the gift on the card, and the wait while it is made (the rendered mockups pay.html and paying.html of
@@ -11,8 +11,8 @@ import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAYS_IN } from "../src/rails";
  *
  * What is defended here is what the sheet promises: three lines and no fourth, a figure this person actually pays,
  * the account made at the press and not before, the terms written to the device before the service's page opens,
- * and the second way in still reachable. The old assistant's check screen made the same promises on a page; these
- * tests follow them to where they are said now.
+ * and one way in, chosen for the person, with a sentence when it is not the first (D239). The old assistant's check
+ * screen made the same promises on a page; these tests follow them to where they are said now.
  */
 
 const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
@@ -23,7 +23,7 @@ test("three lines, and the third is that Viky keeps nothing", () => {
   assert.equal(PAY.rows.gift("Léa"), "The gift, in Léa's name");
   // No company on the line (the founder, 20 Sep 2026): the person pays by card, and the service is named where it is met.
   assert.equal(PAY.rows.service, "What the card service charges");
-  assert.doesNotMatch(PAY.rows.service + PAY.another, /Ramp|Mercuryo/);
+  assert.doesNotMatch(PAY.rows.service + PAY.pay + PAY.payEuros(29), /Ramp|Mercuryo/);
   assert.equal(PAY.rows.viky, "Viky takes");
   assert.equal(PAY.nothing, "nothing");
   // True of the code: no rail of ours takes a share, and nothing in the money path adds one.
@@ -32,10 +32,8 @@ test("three lines, and the third is that Viky keeps nothing", () => {
 });
 
 test("what this person pays is their own figure, at a dated rate", () => {
-  assert.match(sheet, /waysInFor\(short, WAYS_IN, money\.rates\?\.usdPerEur, railIn\)/, "the euros are the offer's, on the way the cost put first");
-  assert.match(sheet, /arrivesInDollars\(euros, way, money\.rates\?\.usdPerEur\)/);
-  // What the service keeps is measured rather than quoted: what the euros are worth, less what lands.
-  assert.match(sheet, /euros \* money\.rates\.usdPerEur - arrives/);
+  assert.match(sheet, /wayInFor\(short, WAYS_IN, money\.rates\?\.usdPerEur, railIn\)/, "the euros are the offer's, on the one way chosen for the person");
+  assert.match(sheet, /serviceChargeDollars\(euros, way, money\.rates\?\.usdPerEur\)/, "and what the service charges is its own published figure on that way");
   assert.match(sheet, /W\.atTheRate\(rateDateInWords\(money\.rates\.date\)\)/);
   // The source named, and why a Friday's date stands on a Sunday: the line that looked stale says what it is.
   assert.equal(PAY.atTheRate("18 Sep 2026"), "At the European Central Bank's rate of 18 Sep 2026. It sets one each working day.");
@@ -52,51 +50,94 @@ test("the account is made at the press, and the sheet says so before it happens"
   assert.match(press, /router\.push\("\/fund\?step=paying"\)/, "and the wait takes over");
 });
 
-test("the second way in is reachable, and never in front of the action", () => {
-  assert.match(sheet, /\{W\.another\}/);
-  assert.equal(PAY.another, "Pay by card another way");
+test("one way in, one action, and no button to another (D239)", () => {
+  assert.ok(!("another" in PAY), "the second way is not a choice any more");
+  assert.doesNotMatch(sheet, /another way|SECONDARY_BUTTON|setChosen/);
   const footer = sheet.slice(sheet.indexOf("footer={"), sheet.indexOf("</Sheet>"));
-  assert.ok(footer.indexOf("PRIMARY_BUTTON") < footer.indexOf("W.another"), "the one action comes first");
+  assert.equal((footer.match(/<button/g) ?? []).length, 1, "the one action, and nothing under it but a refusal or the account panel");
+  // The sentence is the one place the sheet names the two services: which refused, why, and which this goes through.
+  assert.equal(PAY.instead.country("Ramp", "Mercuryo"), "Ramp does not serve your country, so this goes through Mercuryo.");
+  assert.equal(PAY.instead.paused("Ramp", "Mercuryo"), "Ramp is not selling right now, so this goes through Mercuryo.");
+  assert.equal(PAY.instead.floor("Ramp", 6, "Mercuryo"), "Ramp takes nothing under 6 EUR, so this goes through Mercuryo.");
+  assert.match(sheet, /\{offer\.insteadOf && !enough \? <p className=\{HELP\}>\{insteadSentence\(offer\)\}<\/p> : null\}/, "said on the sheet, and only while there is something to pay");
+  // The device's language goes with the call itself; the sheet passes nothing as if it were an answer from the person.
+  assert.match(sheet, /whereTheRailsServe\(\)/);
 });
 
 /**
- * Which way in stands in front of the action (D125). The floors are the services' own published figures: 6 EUR at
- * the rail that sells what a gift holds (`minPurchaseAmountEur`), 25 EUR at the rail that sells the chain's coin
- * (`fiat_payment_methods.EUR.limits.min`), both read again on 20 Sep 2026. A published floor above what the gift
- * needs takes that way off the sheet for that gift; the cost orders what is left; a country only ever sends one to
- * the back; and the gift's own minimum never moves.
+ * Which way in stands in front of the action (D239, replacing the ordering of D125). The floors are the services' own
+ * published figures: 6 EUR at the rail that sells what a gift holds (`minPurchaseAmountEur`), 25 EUR at the rail that
+ * sells the chain's coin (`fiat_payment_methods.EUR.limits.min`), both read again on 20 Sep 2026. The first way stands
+ * unless it refuses by country, by its own asset list or by its floor; then the next one, and the offer says why.
  */
-test("a way in is offered by what this gift needs against its published floor, and the cheapest goes first", () => {
+test("the first way stands unless it refuses; then the next, and the offer says which refused and why", () => {
   const rate = 1.1537; // dollars per euro, as the rates route answers it
-  const serves = { Ramp: "unknown", Mercuryo: "serves" } as const;
+  const france = { Ramp: "serves", Mercuryo: "serves" } as const;
+  const senegal = { Ramp: "does-not", Mercuryo: "serves" } as const;
+  const names = (offer: ReturnType<typeof wayInFor>) => [offer.way.name, offer.euros, offer.atFloor, offer.insteadOf?.because];
 
-  // Ten dollars: 12 EUR at the euro rail (8.67 of money plus their 2.49 minimum), above its 6 EUR floor; the chain
-  // rail would need 10 EUR, under its 25 EUR floor, so it is not offered for this gift.
-  const ten = waysInFor(10_000_000n, WAYS_IN, rate, serves);
-  assert.deepEqual(ten.map((offer) => [offer.way.name, offer.euros, offer.atFloor]), [["Ramp", 12, false]]);
+  // Ten dollars in France: 12 EUR at the euro rail (8.67 of money plus their 2.49 minimum), above its 6 EUR floor.
+  assert.deepEqual(names(wayInFor(10_000_000n, WAYS_IN, rate, france)), ["Ramp", 12, false, undefined]);
+  // Forty dollars: the same rail (34.67 EUR of money and their 2.49 minimum, 38 whole euros), whatever the other
+  // would cost; nothing is compared any more.
+  assert.deepEqual(names(wayInFor(40_000_000n, WAYS_IN, rate, france)), ["Ramp", 38, false, undefined]);
+  // A silence is not a refusal: with nothing read about either, the first stands.
+  assert.deepEqual(names(wayInFor(40_000_000n, WAYS_IN, rate, {})), ["Ramp", 38, false, undefined]);
+
+  // The euro rail's own list says it does not sell in Senegal: the chain rail, from its 25 EUR floor, and the sentence.
+  assert.deepEqual(names(wayInFor(40_000_000n, WAYS_IN, rate, senegal)), ["Mercuryo", 39, false, "country"]);
+  // Ten dollars there: 10 EUR is under the chain rail's floor, so its floor is paid, and both sentences are said.
   assert.equal(eurosNeededOn(10_000_000n, WAY_IN_CHAIN_COIN, rate), 10);
-
-  // Forty dollars: both floors are met, and the one that asks fewer euros for the same gift goes first.
-  const forty = waysInFor(40_000_000n, WAYS_IN, rate, serves);
-  assert.deepEqual(forty.map((offer) => offer.way.name), ["Ramp", "Mercuryo"]);
-  assert.ok(forty[0].euros! < forty[1].euros!, `${forty[0].euros} against ${forty[1].euros}`);
-
-  // A country never hides a way: the euro rail saying it does not serve there sends it to the back, and no further.
-  const senegal = waysInFor(40_000_000n, WAYS_IN, rate, { Ramp: "does-not", Mercuryo: "serves" });
-  assert.deepEqual(senegal.map((offer) => offer.way.name), ["Mercuryo", "Ramp"]);
+  assert.deepEqual(names(wayInFor(10_000_000n, WAYS_IN, rate, senegal)), ["Mercuryo", 25, true, "country"]);
+  // The euro rail's own asset list has switched the coin off: the same fall back, said as a pause.
+  assert.deepEqual(names(wayInFor(40_000_000n, WAYS_IN, rate, { Ramp: "paused", Mercuryo: "serves" })), ["Mercuryo", 39, false, "paused"]);
+  // Every way shut by the country: a country is a guess, so the first stands and nothing is said.
+  assert.deepEqual(names(wayInFor(40_000_000n, WAYS_IN, rate, { Ramp: "does-not", Mercuryo: "does-not" })), ["Ramp", 38, false, undefined]);
 
   // One dollar: under every floor. The gift's minimum does not move; the lowest floor is what is paid, and said so.
-  const one = waysInFor(1_000_000n, WAYS_IN, rate, serves);
-  assert.deepEqual(one.map((offer) => [offer.way.name, offer.euros, offer.atFloor]), [["Ramp", 6, true]]);
+  assert.deepEqual(names(wayInFor(1_000_000n, WAYS_IN, rate, france)), ["Ramp", 6, true, undefined]);
   assert.equal(eurosNeededOn(1_000_000n, WAY_IN_GIFT_COIN, rate), 4, "what it needs, before the floor");
   assert.match(PAY.floor(6), /takes nothing under 6 EUR, so that is what you pay/);
+  // A floor can send a gift to the next way too: a register whose first floor is the higher one, for the rule's sake.
+  const higherFirst: readonly [WayIn, WayIn] = [WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN];
+  assert.deepEqual(names(wayInFor(10_000_000n, higherFirst, rate, france)), ["Ramp", 12, false, "floor"]);
 
-  // No rate read: the euro rail's figure needs one, so it is kept without a figure, after the way that has one.
-  const noRate = waysInFor(40_000_000n, WAYS_IN, undefined, serves);
-  assert.deepEqual(noRate.map((offer) => [offer.way.name, offer.euros]), [["Mercuryo", 39], ["Ramp", undefined]]);
+  // No rate read: the euro rail's figure needs one, so it stands without a figure rather than giving way.
+  assert.deepEqual(names(wayInFor(40_000_000n, WAYS_IN, undefined, france)), ["Ramp", undefined, false, undefined]);
+  // Nothing short: the first, at nothing.
+  assert.deepEqual(names(wayInFor(0n, WAYS_IN, rate, france)), ["Ramp", 0, false, undefined]);
+});
 
-  // Nothing short: every way, at nothing, in the register's order.
-  assert.deepEqual(waysInFor(0n, WAYS_IN, rate, serves).map((offer) => [offer.way.name, offer.euros]), [["Ramp", 0], ["Mercuryo", 0]]);
+/**
+ * "What the card service charges" is that service's own published figure at this amount (D239). The line used to print
+ * what the euros were worth at the day's rate less what the chain-coin measurement of 14 Sep 2026 said would arrive:
+ * two days' prices subtracted, negative as often as not, and `Math.max(0, ...)` printed "about $0.00" on a rail that
+ * keeps 3.8 %. At the ECB's rate of 24 Sep 2026 the old figure for 29 EUR is below zero, which is the case the
+ * founder saw.
+ */
+test("the charge line prints the way's own published fee, and never zero on a rail that keeps a share", () => {
+  const rate = 1.1367; // the ECB's of 24 Sep 2026
+  assert.ok(29 * rate - roughlyInDollars(29) < 0, "the old formula: two measurements subtracted, under zero that day");
+  assert.doesNotMatch(sheet, /usdPerEur - arrives|Math\.max\(0/, "and it is gone from the sheet");
+  for (const way of WAYS_IN) {
+    assert.ok(way.fee.percent > 0, `${way.name} publishes a share`);
+    for (const euros of [way.smallestEur, 29, 100]) {
+      assert.ok(serviceChargeEur(euros, way.fee) > 0, `${way.name} at ${euros} EUR keeps something`);
+      assert.ok(serviceChargeDollars(euros, way, rate)! > 0, `${way.name} at ${euros} EUR is never printed as nothing`);
+    }
+  }
+  // The chain rail: 3.8 % of 29 EUR is 1.10 EUR, $1.25 at that rate. The euro rail: its 2.49 EUR minimum, $2.83.
+  assert.equal(serviceChargeDollars(29, WAY_IN_CHAIN_COIN, rate), 1.25);
+  assert.equal(serviceChargeDollars(29, WAY_IN_GIFT_COIN, rate), 2.83);
+  // At 100 EUR the euro rail's share, published as "up to 3.9 %", is larger than its minimum: the ceiling, and said so.
+  assert.equal(serviceChargeDollars(100, WAY_IN_GIFT_COIN, rate), 4.43);
+  assert.equal(serviceChargeIsCeiling(100, WAY_IN_GIFT_COIN.fee), true);
+  assert.equal(serviceChargeIsCeiling(29, WAY_IN_GIFT_COIN.fee), false, "the minimum is exact, so 'about'");
+  assert.equal(serviceChargeIsCeiling(100, WAY_IN_CHAIN_COIN.fee), false, "a rate published as the rate itself");
+  assert.equal(PAY.upToDollars(4.43), "up to $4.43");
+  assert.match(sheet, /serviceChargeIsCeiling\(euros, way\.fee\) \? W\.upToDollars\(charge\) : W\.aboutDollars\(charge\)/);
+  assert.equal(serviceChargeDollars(29, WAY_IN_CHAIN_COIN, undefined), undefined, "no rate, no figure, never a guess");
+  assert.equal(serviceChargeEur(0, WAY_IN_GIFT_COIN.fee), 0, "nothing paid, nothing charged");
 });
 
 test("the sheet stands where the mockup stands it, and the wait is the whole screen", () => {

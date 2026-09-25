@@ -137,6 +137,8 @@ export const PAY = {
   nothing: "nothing",
   about: "about",
   aboutDollars: (dollars: number) => `about $${dollars.toFixed(2)}`,
+  /** When the service publishes its share as a ceiling and the ceiling is what applies at this amount. */
+  upToDollars: (dollars: number) => `up to $${dollars.toFixed(2)}`,
   youPay: "You pay about",
   euros: (euros: number) => `${euros} EUR`,
   /**
@@ -146,6 +148,15 @@ export const PAY = {
   atTheRate: (day: string) => `At the European Central Bank's rate of ${day}. It sets one each working day.`,
   /** When the gift needs less than the smallest payment the card service takes (D125). */
   floor: (euros: number) => `The card service takes nothing under ${euros} EUR, so that is what you pay. What is left over stays in your account for your next gift.`,
+  /**
+   * The one time the two services are named on the sheet (D239): the first refused this person, and the sentence
+   * says which one, why, and which one this goes through instead. In our words, never theirs.
+   */
+  instead: {
+    country: (first: string, second: string) => `${first} does not serve your country, so this goes through ${second}.`,
+    paused: (first: string, second: string) => `${first} is not selling right now, so this goes through ${second}.`,
+    floor: (first: string, euros: number, second: string) => `${first} takes nothing under ${euros} EUR, so this goes through ${second}.`,
+  },
   /** Said before the action, because it is what pressing it does: nothing was asked of this person until now. */
   passkeyMakesTheAccount: "Your face or your fingerprint creates your account when you press pay. Nothing was asked of you until now.",
   signedIn: "Your face or your fingerprint is asked once, to sign what you are paying for.",
@@ -153,7 +164,6 @@ export const PAY = {
   payEuros: (euros: number) => `Pay ${euros} EUR`,
   payFromAccount: (amount: string) => `Put ${amount} in their name`,
   paying: "One moment",
-  another: "Pay by card another way",
   /** The quiet second button of the mockup: everything only some readers need, one press away. */
   whatHappens: "What happens to my money",
   notMade: "That did not go through, and nothing was taken. Try again.",
