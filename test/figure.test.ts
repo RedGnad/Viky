@@ -129,9 +129,13 @@ test("the landing's figure wears a fine halftone in the body's own colour, drawn
   assert.ok(!plain.includes('data-part="halftone"'), "off unless asked");
   const screened = renderToStaticMarkup(createElement(Figure, { id: "s", halftone: true }));
   const part = screened.slice(screened.indexOf('data-part="halftone"'), screened.indexOf("</g>", screened.indexOf('data-part="halftone"')));
-  assert.match(part, /opacity:0\.45;mix-blend-mode:multiply/);
-  assert.match(part, /stroke:var\(--character-hero-to\)/, "the body's deeper colour, never the ink");
-  const strokes = [...part.matchAll(/<path d="([^"]*)" style="fill:none;stroke:var\(--character-hero-to\);stroke-width:([\d.]+)/g)];
+  // No blend mode and no group opacity (D263): on a phone an animated figure is its own layer, and a multiply there
+  // blended against nothing. The colour a multiply gave is computed, and each dot carries its own 45 %.
+  assert.doesNotMatch(screened, /mix-blend-mode|mixBlendMode/);
+  assert.match(part, /stroke:var\(--character-halftone\);stroke-opacity:0\.45/, "the body's deeper colour, never the ink");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.equal((css.match(/--character-halftone: #/g) ?? []).length, 3, "day and both night blocks");
+  const strokes = [...part.matchAll(/<path d="([^"]*)" style="fill:none;stroke:var\(--character-halftone\);stroke-opacity:0\.45;stroke-width:([\d.]+)/g)];
   assert.equal(strokes.length, 8, "eight paths, one per size");
   const widths = strokes.map((m) => Number(m[2]));
   assert.ok(widths.every((w, i) => i === 0 || w > widths[i - 1]), "growing away from the light");

@@ -6970,3 +6970,16 @@ grades). The other developer links to it from the empty state of "Which universi
   of the Home, Gifts and Me scenes take the same halftone as the landing's (D260, D261), in the same drawing units, so
   it stays in proportion at their 104 and 192 pixels. Each keeps its own clip by its own id. The plain diamond of the
   task screens and the family tiles is not the rig, and does not wear it.
+
+## D263, 25 Sep 2026: the halftone without a blend mode
+
+- The founder, 25 Sep 2026, on his phone: pressing "Sign in", or during the landing's arrival, the texture went
+  transparent and broken, the dots visible and the rectangle of the image showing. Desktop Chromium drew every frame of
+  both correctly (filmed as a phone, a frame every 70 ms), as it did for the Move tile of D249, so the cause is read
+  from how a phone paints, not seen: an element that moves or changes is painted in a layer of its own, and a
+  `mix-blend-mode: multiply` inside such a layer blends against a transparent backdrop, which shows exactly the dots
+  over nothing and the layer's rectangle. The group's opacity made a second offscreen layer.
+- The dots now blend normally: their colour is what the multiply gave, the body's deeper colour multiplied by itself
+  (`--character-halftone`, `#835EFF` by day and `#FF4D5B` at night), each path at 45 % of its own opacity, no group
+  opacity. At the far side, where the dots are largest, the result is the multiply's exactly; captured side by side,
+  day and night, the two read the same.

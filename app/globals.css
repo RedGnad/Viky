@@ -144,6 +144,8 @@
    */
   --character-hero-from: #FF7F8E;
   --character-hero-to: #B79BFF;
+  /* The halftone's dots (D263): the body's deeper colour multiplied by itself, which a multiply blend gave on its far side. */
+  --character-halftone: #835EFF;
   --character-shade: rgba(30, 22, 51, 0.12);
   --character-shadow-opacity: 0.12;
 
@@ -340,6 +342,7 @@
     --character-hero-edge-deep: #564B8C;
     --character-hero-from: #FFC531;
     --character-hero-to: #FF8C98;
+    --character-halftone: #FF4D5B;
     --tonal: #2B2642;
     --card-border: #484360;
     --character-1: #FF8C98;
@@ -397,6 +400,7 @@
   --character-hero-edge-deep: #564B8C;
   --character-hero-from: #FFC531;
   --character-hero-to: #FF8C98;
+  --character-halftone: #FF4D5B;
   --tonal: #2B2642;
   --card-border: #484360;
   --character-1: #FF8C98;
