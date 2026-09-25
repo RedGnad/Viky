@@ -45,7 +45,7 @@ for (const scheme of ["dark", "light"] as const) {
       await expect(title).toBeVisible();
       // The four boxes in one read, from the page itself: the character's wrapper carries no box of its own, so it is
       // the character's drawing that is measured, exactly as review-captures/measure-home.ts measures it.
-      const { character, titleBox, sentence, way, card } = await page.evaluate(() => {
+      const { character, titleBox, sentence, way, card, firstScreenTop } = await page.evaluate(() => {
         const box = (el: Element | null) => {
           const r = el!.getBoundingClientRect();
           return { x: r.x, y: r.y, width: r.width, height: r.height };
@@ -56,6 +56,7 @@ for (const scheme of ["dark", "light"] as const) {
           titleBox: box(heading),
           sentence: box(heading.nextElementSibling),
           way: box(document.querySelector('a[href="#offer"]')),
+          firstScreenTop: document.querySelector(".hero-first-screen")!.getBoundingClientRect().top,
           card: box(document.querySelector("section.gift-card-placed")),
         };
       });
@@ -64,8 +65,18 @@ for (const scheme of ["dark", "light"] as const) {
       // never under the card, and the character stands on the card's top edge (D214).
       expect(titleBox.y).toBeLessThan(sentence.y);
       expect(sentence.y + sentence.height).toBeLessThanOrEqual(way.y);
-      // The way to the card stands apart from the text: 24 pixels under the sentence at every width (D242).
-      expect(Math.abs(way.y - (sentence.y + sentence.height) - 24)).toBeLessThan(1.5);
+      // The way to the card stands apart from the text: never less than 24 pixels under the sentence (D242), and the
+      // room left over in three equal shares, above the words, before the action, before the character (D248).
+      const aboveWords = titleBox.y - firstScreenTop;
+      const beforeAction = way.y - (sentence.y + sentence.height);
+      const beforeCharacter = character.y - (way.y + way.height);
+      expect(beforeAction).toBeGreaterThanOrEqual(23.5);
+      if (aboveWords > 2) {
+        // Each share is the same; on top of it the action keeps its 24 pixels and the character the column's gap.
+        const columnGap = size.width >= 1024 ? 8 : 12;
+        expect(Math.abs(beforeAction - aboveWords - 24)).toBeLessThan(2);
+        expect(Math.abs(beforeCharacter - aboveWords - columnGap)).toBeLessThan(2);
+      }
       expect(way.y + way.height).toBeLessThanOrEqual(character.y);
       expect(character.y + character.height).toBeLessThanOrEqual(card.y + 4);
       // The card's top is cut by the fold: the first screen ends where the card's peek begins, at every size (D221).

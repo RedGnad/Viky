@@ -6784,3 +6784,17 @@ grades). The other developer links to it from the empty state of "Which universi
 - **Not built: "Tell me when it is there".** It needs a place to keep a funder's e-mail address, a line on the privacy
   page, and a way to send the message. The repository sends no e-mail and has no sender; choosing one is a service and
   a secret, which is the founder's to decide. Until then the funder hands the link over and nothing is promised back.
+
+## D248, 25 Sep 2026: the landing's room in three equal shares, so the words rise and the action takes its own band
+
+- The founder, 25 Sep 2026: the hero text a little higher, the button a little lower still, by a design rule.
+- The room the first screen leaves over was split in two, above the words and above the character, so the words and
+  the action sat together in the middle. It is now three equal shares (three auto margins): above the words, between
+  the words and the action, between the action and the character. Equal intervals between the three bands make a
+  rhythm the eye reads as three steps (the Gestalt law of proximity: what is equally apart reads as separate groups of
+  equal rank), so the action stops reading as a line of the text, and the words rise from the middle of the screen
+  toward its upper part. The action keeps D242's minimum of 24 pixels under the sentence on a phone too short to leave
+  any room (375x667).
+- Measured before and after, the character and the card unmoved: at 390x844 the title from 189 to 156, the button
+  from 349 to 383; at 1440x900 the title from 196 to 160, the button from 330 to 366; character tops 515 and 498 and
+  card tops 740 and 796 unchanged.
