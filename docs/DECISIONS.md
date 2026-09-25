@@ -6761,3 +6761,26 @@ grades). The other developer links to it from the empty state of "Which universi
   everywhere (the TEE attestation is required), so the page says not to choose it.
 - **Unverified**: the dashboard's own labels. Nobody on the team signed in to the students' account while this was
   written, so each step says what to do rather than which button to press.
+
+## D247, 25 Sep 2026: "Which university?" is a list by country, and its empty state sends the student the way
+
+- The advisor's brief, passed on by the founder on 25 Sep 2026: up to five portals, radios grouped by country and no
+  search field; beyond, the country first (buttons, the corridor's in front), then the search in that country. One
+  line of help, the rest under "How this is checked". An empty state that grows the list, linking the page D246 wrote,
+  with "Tell me when it is there" and the funder's e-mail. Under enrolment, the card says what comes next.
+- **Built.** `/api/portals` gives every portal with its country (`listPortals`, `portalListed`); `byCountry`,
+  `choiceMode` and `inCountry` in `src/university-choice.ts` order and filter it (five or fewer: radios, Material's
+  bound; the corridor Senegal, Ivory Coast, France first, as `src/rails.ts` names the pilot's corridor);
+  `app/kit/offer/UniversityChooser.tsx` asks it; the privacy sentences moved into the fold. Under the list: "Their
+  university is not here yet. It takes them about ten minutes to add it." and "Send them how", which hands over this
+  host's `/add-your-university` through the phone's share sheet or the clipboard (D246's "about ten minutes"). The card
+  prints "Passed the year, and grades: soon, university by university." under enrolment: goals 15 and 16 are being
+  built. Production held one portal on 25 Sep 2026 (The American University of Rome, unverified), so the radios are
+  what a funder meets today; the country-first form is captured with a stubbed list of six.
+- **Changed from the brief.** Its help line, "Only universities a student has already connected.", is false of the one
+  university in production, a row defined from public pages (D193). It reads "Only universities Viky has already
+  connected.", and the fold says an unverified one has not been shown by a student yet. "Ten minutes" became "about
+  ten minutes", the page's own words.
+- **Not built: "Tell me when it is there".** It needs a place to keep a funder's e-mail address, a line on the privacy
+  page, and a way to send the message. The repository sends no e-mail and has no sender; choosing one is a service and
+  a secret, which is the founder's to decide. Until then the funder hands the link over and nothing is promised back.

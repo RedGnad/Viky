@@ -360,6 +360,8 @@ export type CertificateCondition = Readonly<{
       placeholder: string;
       /** What the field says under itself when the words gave nothing. */
       nothing: string;
+      /** Asked as a list rather than a search while the list is short (D247): the university's portals. */
+      listed?: boolean;
     }>;
     /** The line of the check screen. */
     row: string;
@@ -797,6 +799,7 @@ const UNIVERSITY_COURSE: NonNullable<CertificateCondition["course"]> = {
     path: "/api/portals/search",
     placeholder: "Search a university",
     nothing: "Viky has proved no student portal by those words yet. The list grows one university at a time, with a student present.",
+    listed: true,
   },
   row: "Which university",
   named: (course) => universityNamed("", course),

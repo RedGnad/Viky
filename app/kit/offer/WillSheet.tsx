@@ -16,6 +16,7 @@ import { FamilyArt } from "../FamilyArt";
 import { Nature } from "../Nature";
 import { Field } from "../Field";
 import { Sheet } from "../Sheet";
+import { UniversityChooser } from "./UniversityChooser";
 
 /**
  * The will case: what they will do, and everything that condition itself asks (the vision of 19 Sep 2026, section 6).
@@ -395,7 +396,16 @@ export function WillSheet({
                   autoComplete="off"
                 />
               ) : null}
-              {certificate.course?.search ? (
+              {certificate.course?.search?.listed ? (
+                /* The university, asked as a list grouped by country, or by country first when it is long (D247). */
+                <UniversityChooser
+                  open={open}
+                  label={certificate.course.label}
+                  draft={draft}
+                  named={certificate.course.named}
+                  onChoose={(one) => onChange({ ...draft, course: one.pair, courseTitle: `${one.title}, ${one.issuer}`, target: String(certificate.target.suggested) })}
+                />
+              ) : certificate.course?.search ? (
                 /* A source whose things are found rather than pasted: the funder types a word or two, reads each
                    answer with who awards it, and chooses. What the terms carry is the answer's own pair of ids. */
                 <>
@@ -466,7 +476,8 @@ export function WillSheet({
               {certificate.course && !certificate.course.search && draft.course ? <p className={HELP}>{certificate.course.named(draft.course)}</p> : null}
               {/* A proof the recipient shows themselves: what Viky keeps of it, in the register's words, so the face
                   says what there is to say when there is little to fill in (D233). */}
-              {condition.nature === "shown" ? <p className={HELP}>{certificate.words.whatIsRead}</p> : null}
+              {/* The university's chooser folds this under "How this is checked" instead (D247). */}
+              {condition.nature === "shown" && !certificate.course?.search?.listed ? <p className={HELP}>{certificate.words.whatIsRead}</p> : null}
             </>
           ) : null}
 
