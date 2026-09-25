@@ -84,7 +84,9 @@ export function Home({
             </div>
             {/* The one action of the first screen, in the accent: it goes to the card, which is the product, and the
                 card's own action is a screen below, so each screen has its one accent (D221; ui.ts). */}
-            <a href="#offer" className={`${PRIMARY_BUTTON} w-auto! px-[var(--space-xl)] text-center no-underline`} onClick={goToTheCard}>
+            {/* 24 pixels under the sentence at every width, the column's gap made up (D242): it read as part of the text.
+                The room is taken from the two shares above and below, so the character and the card do not move. */}
+            <a href="#offer" className={`${PRIMARY_BUTTON} mt-[calc(var(--space-xl)-var(--space-md))] w-auto! px-[var(--space-xl)] text-center no-underline [@media(min-width:1024px)]:mt-[calc(var(--space-xl)-var(--space-sm))]`} onClick={goToTheCard}>
               {W.offer}
             </a>
             <HeroMoment played={heroPlayed} />

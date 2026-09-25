@@ -32,7 +32,9 @@ test("the diamond takes arms and legs only when asked: thin, bowed, on the sketc
   assert.ok(limbed.includes('d="M13 26 Q12 30.7 13 35.4"') && limbed.includes('d="M51 26 Q52 30.7 51 35.4"'), "the arms, 19 from the middle");
   assert.ok(limbed.includes('cx="13" cy="37.2" r="1.9"') && limbed.includes('cx="51" cy="37.2" r="1.9"'), "the hands, just under the body's lowest point");
   assert.ok(limbed.includes('d="M23.5 30 Q21.6 40.75 21.7 51.5"') && limbed.includes('d="M40.5 30 Q42.4 40.75 42.3 51.5"'), "the legs, 15.5 below the body");
-  assert.ok(limbed.includes('d="M21.7 51.5 H17.2"') && limbed.includes('d="M42.3 51.5 H46.8"'), "the feet, 4.5 long, turned out (D235)");
+  assert.ok(limbed.includes('d="M21.7 51.5 H18.5"') && limbed.includes('d="M42.3 51.5 H45.5"'), "the feet, 3.2 long, turned out (D242)");
+  const rig = renderToStaticMarkup(createElement(Figure, { id: "feet" }));
+  assert.ok(rig.includes('d="M21.7 51.5 H18.5"') && rig.includes('d="M42.3 51.5 H45.5"'), "and the rig's the same, on every page");
   assert.ok(limbed.includes("stroke-linecap:round") && !limbed.includes("stroke-linecap:square"), "round caps: nothing pointed");
   assert.ok(limbed.includes("stroke:var(--character-limb)") && !limbed.includes("stroke:var(--character-face)"), "the limbs' own ink, readable by night");
   assert.match(limbed, /data-part="whirl" style="transform-box:fill-box;transform-origin:50% 50%"/, "and a group that turns from its middle");

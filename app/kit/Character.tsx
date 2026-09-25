@@ -99,7 +99,7 @@ const DIAMOND_WITH_LIMBS_BOX = "0 0 64 53";
  *
  * The measures are the sketch's, read in the body's units (its width is 58): a line 1.8 wide, a hand of radius 1.9,
  * the arms 19 from the middle and 9 long past the body's edge, the legs 8.5 from the middle at the hip and 10 at the
- * foot, 15.5 below the body's lowest point, the feet 4.5 long (6.5 until D235: the founder found them long).
+ * foot, 15.5 below the body's lowest point, the feet 3.2 long (6.5 until D235, 4.5 until D242: the founder found them long twice).
  */
 const LIMB = 1.8;
 const HAND = 1.9;
@@ -131,11 +131,11 @@ function Limbs({ pose }: Readonly<{ pose?: LimbPose }>) {
       </g>
       <g data-part="leg" style={turned("legs", 0)}>
         <path d="M23.5 30 Q21.6 40.75 21.7 51.5" style={ink} />
-        <path d="M21.7 51.5 H17.2" style={ink} />
+        <path d="M21.7 51.5 H18.5" style={ink} />
       </g>
       <g data-part="leg" style={turned("legs", 1)}>
         <path d="M40.5 30 Q42.4 40.75 42.3 51.5" style={ink} />
-        <path d="M42.3 51.5 H46.8" style={ink} />
+        <path d="M42.3 51.5 H45.5" style={ink} />
       </g>
     </g>
   );
