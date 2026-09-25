@@ -656,3 +656,14 @@ at their place. The judges' page counts its uses as it does the top-ups'.
 | "It takes $X, and $Y stays with you." on a card | the same as a top-up: Bitrefill's USDC price, rounded up to the unit | `priceGiftCard` | `test/phone-order.test.ts` |
 | the code, its PIN, where to use it | what Bitrefill returned for the delivered order, opened for its owner | `GiftCardCodeLines`, `followPhoneTopUp` | `test/phone-order.test.ts` |
 | "Your gift cards", each with its code | the account's delivered gift card orders | `/api/giftcards/codes`, `giftCardsOf` | `test/phone-order.test.ts` |
+
+### Finish a marathon, being built (D273)
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "Finish a marathon", READ FOR YOU, under "Move" with "Being built." | goal 30 not signed yet | `MARATHON_FINISH_LINE` in `BUILDING` | `test/marathon.test.ts` |
+| "Viky reads three things from the timing company's page: the name on your line, your bib and your official time." | the source matches the title and the official time and nothing else | `BREIZH_CHRONO_RUNNER` | `test/marathon.test.ts` |
+| "No runner answers to that bib in that race." | the runner's page is empty, or about another bib | `marathonResultOf` | `test/marathon.test.ts` |
+| "The results page has no finish time for that bib." | the official time is 00:00:00, a runner who did not finish | `finishSecondsOf` | `test/marathon.test.ts` |
+| "That line is in another name than the one this gift is for" | the name on the page, with no case, accents or order, is not the one hashed in the terms | `marathonSubject`, `proveCertificate` | `test/marathon.test.ts` |
+| "0 for finishing whatever the time. Otherwise the hours to finish under" | the target is seconds under a day, one for any finish | `marathonTargetUnderHours`, `MARATHON_FINISH` | `test/marathon.test.ts` |

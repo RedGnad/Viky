@@ -7,6 +7,8 @@ import { AccredibleReadError, attestAccredibleCredential } from "./accredible-re
 import { attestEdxCertificate, EdxReadError } from "./edx-reading";
 import { MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineProviderId } from "./mitx-online-certificate";
 import { attestMitxOnlineCertificate, MitxOnlineReadError } from "./mitx-online-reading";
+import { MARATHON_GOAL_TYPE, marathonProviderId } from "./marathon";
+import { attestMarathonResult, MarathonReadError } from "./marathon-reading";
 import { CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyProviderId } from "./credly-badge";
 import { attestCredlyBadge, CredlyReadError } from "./credly-reading";
 import { attestDetCertificate, DetReadError, type AttestedDetReading } from "./det-reading";
@@ -105,6 +107,12 @@ async function attestByGoal(goalType: number, link: string, signedSubject?: Hex)
     // Nothing to score: the badge exists, and the certification is inside the subject the funder signed.
     return { subject: reading.subject, score: CREDLY_HAS_IT, testDay: reading.issuedDay, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: credlyProviderId() };
   }
+  if (goalType === MARATHON_GOAL_TYPE) {
+    const reading = await attestMarathonResult(link);
+    // The day it is judged by is the day the result was read (D273): the race's own date is the register's, and the
+    // bib entered before the start is what ties the reading to the race.
+    return { subject: reading.subject, score: reading.metric, testDay: reading.observedAt, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: marathonProviderId() };
+  }
   if (goalType === MITX_ONLINE_GOAL_TYPE) {
     const reading = await attestMitxOnlineCertificate(link);
     // Nothing to score: the certificate exists, and the course is inside the subject the funder signed.
@@ -160,7 +168,7 @@ export async function proveCertificate(
   try {
     reading = await deps.attest(state.goalType, input.link, state.subject as Hex);
   } catch (error) {
-    if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError) && !(error instanceof EdxReadError) && !(error instanceof AccredibleReadError) && !(error instanceof MitxOnlineReadError)) {
+    if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError) && !(error instanceof EdxReadError) && !(error instanceof AccredibleReadError) && !(error instanceof MitxOnlineReadError) && !(error instanceof MarathonReadError)) {
       return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? "That could not be read right now");
     }
     switch (error.code) {
@@ -173,6 +181,13 @@ export async function proveCertificate(
       case "CERTIFICATE_EXPIRED":
         return refuse(giftId, "CERTIFICATE_EXPIRED", words?.expired ?? error.message);
       case "NO_CERTIFICATE":
+        return refuse(giftId, "NO_CERTIFICATE", words?.notFound ?? error.message);
+      case "NOT_FINISHED":
+        // A runner who did not finish (D273): real, and not what the gift is for.
+        return refuse(giftId, "BELOW_THE_TARGET", words?.below(1, 0) ?? error.message);
+      case "UNKNOWN_RACE":
+      case "ANOTHER_BIB":
+      case "NO_RESULT":
         return refuse(giftId, "NO_CERTIFICATE", words?.notFound ?? error.message);
       case "NOT_VERIFIED":
         // An edX certificate of a track edX does not verify (D212): real, and not what the gift is for.

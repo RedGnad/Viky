@@ -306,6 +306,17 @@ export default async function JudgesPage() {
             passed on MITx Online, never a place at MIT, and Viky is not affiliated with MIT.
           </li>
           <li>
+            <strong>Breizh Chrono&apos;s terms.</strong> A marathon finished is read from the runner&apos;s own page on the
+            timing company&apos;s public results site (D273), once each time the person asks after the race: the name
+            and the bib in its title, the official time in its cell. The site is run by Klikego, whose terms of use
+            (CGU of 26 Jun 2026) and legal notice claim the site&apos;s content and its database, forbid reproduction
+            without written consent, and count the use of robots among the reasons to close a member&apos;s account;
+            the same notice says results are published for everybody to consult, and that a runner can ask the
+            federation to be removed from them. Viky reads one runner&apos;s page per gift and keeps three fields, written
+            here with the risk assumed as for edX. The race&apos;s date is the register&apos;s; the bib entered before the
+            start ties the reading to the race, and the day the result is read is the day the gift is judged by.
+          </li>
+          <li>
             <strong>WAEC&apos;s terms.</strong> WASSCE credits are shown by the person from WAEC&apos;s own result checker
             (D217), and not read for them, because WAEC&apos;s privacy policy tells the holder of an access code it allocates
             &quot;you must not disclose it to any third party&quot;, and the result card&apos;s PIN is one. The card is typed on WAEC&apos;s page and

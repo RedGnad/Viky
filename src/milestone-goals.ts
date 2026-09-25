@@ -15,6 +15,7 @@ import { ECOLEDIRECTE_GOAL_TYPE, ecoleDirecteProviderId } from "./school-shown";
 import { CHSI_GOAL_TYPE, chsiProviderId } from "./chsi-shown";
 import { WAEC_GOAL_TYPE, waecProviderId } from "./waec-shown";
 import { MITX_ONLINE_GOAL_TYPE, mitxOnlineProviderId } from "./mitx-online-certificate";
+import { MARATHON_GOAL_TYPE, marathonProviderId } from "./marathon";
 import { PRONOTE_GOAL_TYPE, pronoteProviderId } from "./pronote-shown";
 
 /**
@@ -70,6 +71,8 @@ export const MILESTONE_GOALS: readonly MilestoneGoal[] = [
   { goalType: WAEC_GOAL_TYPE, providerId: waecProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "WAEC", detail: "WASSCE credits, shown" },
   // MITx Online (D222): a certificate from MIT's own course platform.
   { goalType: MITX_ONLINE_GOAL_TYPE, providerId: mitxOnlineProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "MITx Online", detail: "an MIT course certificate" },
+  // Breizh Chrono (D273): a marathon finished, read from the timing company's own results page.
+  { goalType: MARATHON_GOAL_TYPE, providerId: marathonProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Breizh Chrono", detail: "a marathon finished" },
   // A certification badge: granted once by an issuer that is not the person, so it is had or not (20 Sep 2026).
   { goalType: CREDLY_GOAL_TYPE, providerId: credlyProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Credly", detail: "a certification badge" },
   // Staying enrolled, shown from the person's own student portal: one goal for every portal, the portal pinned in

@@ -18,6 +18,7 @@ import { CHESS_USER_AGENT, chessStatusPattern } from "../src/chess-com";
 test("only the listed sources exist, and an unknown name is refused", () => {
   assert.deepEqual([...attestedSourceIds()].sort(), [
     "accredible-credential",
+    "breizh-chrono-runner",
     "chess-player",
     "chess-profile",
     "chess-ratings-blitz",

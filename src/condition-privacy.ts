@@ -25,6 +25,7 @@ export const PRIVACY: Readonly<Record<string, ConditionPrivacy>> = {
   "chess-tactics": { kept: "number", read: "your Chess.com username and player id, and the best puzzle rating the account ever reached, at each reading" },
   "duolingo-english-test": { kept: "number", read: "the score, the day of the test and the name printed on the certificate page you share" },
   "coursera-certificate": { kept: "fact", read: "the course the certificate names and the day it was issued, on the certificate page you share" },
+  "marathon-finish": { kept: "fact", read: "your line on the timing company's results page: your name, your bib and your official time" },
   "mitx-online-certificate": { kept: "fact", read: "the course or program the certificate names, and the day it was issued, on the certificate page you share" },
   "edx-certificate": { kept: "fact", read: "the course the certificate names, that it is verified, and the day it was issued, on the certificate page you share" },
   "accredible-credential": { kept: "fact", read: "the credential's title, its issuer's website and the day it was issued, on its public record" },

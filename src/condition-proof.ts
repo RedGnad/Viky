@@ -219,6 +219,15 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     whoActed: "Unknown: Coursera describes no supervision of each assignment.",
     sourcePolicing: "Coursera verifies identity once per account, with an official document and a selfie, and says some programmes require it while others only check a name. Nothing published says a certificate was earned under supervision.",
   },  {
+    conditionId: "marathon-finish",
+    supervised: false,
+    inShort: "Read from the timing company's public results page: one line, the name, the bib, the official time.",
+    data: "The runner's own page on the timing company's results site (Breizh Chrono for the Marathon de Dakar), read through an attested fetch when the person asks after the race, and again at every reading: the name and the bib in its title, and the official time. Nothing else is matched. A runner who did not finish has no time there and pays nothing; a bib nobody wore answers an empty page.",
+    account: "Three ties: the runner's name, written by the funder at creation and hashed into the terms they sign, never published; the bib, entered by the person on the gift's page before the race starts (the field closes at the start); and the timing company's line for that bib, which has to carry that bib, that name and a finish time. The name is compared with no case, no accents and no order. Two runners of the same name in the same race with bibs entered before the start cannot be told apart.",
+    whoActed: "Unknown: the timing company records who crossed the line wearing the bib. Whether the person wore their own bib is not read.",
+    sourcePolicing: "The timing company chips the bib and publishes the results for the organiser; a runner can ask the federation to be removed from them. Klikego's terms (CGU of 26 Jun 2026, and its legal notice) claim the site's content and its database, forbid reproduction without written consent, and count the use of robots among the reasons to close a member's account: Viky reads one runner's page per gift, when the person asks, and keeps three fields; written on the judges' page, the risk assumed as for edX.",
+  },
+  {
     conditionId: "mitx-online-certificate",
     supervised: false,
     inShort: "Read from the certificate's public page on MITx Online, MIT's own course platform. It proves a course passed on the certificate track, not a place at MIT.",
