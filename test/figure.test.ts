@@ -175,3 +175,11 @@ test("every link to Viky carries the same picture, the day's figure on the paper
   const config = readFileSync("next.config.mjs", "utf8");
   assert.match(config, /"\/opengraph-image": \["\.\/app\/fonts\/\*\.ttf", "\.\/app\/kit\/figure-day\.svg"\]/, "the files travel with the route");
 });
+
+test("the preview's card grows with its words, the figure always on its edge (D266)", () => {
+  const preview = readFileSync("app/og/preview.tsx", "utf8");
+  assert.match(preview, /flexDirection: "column", justifyContent: "flex-end"/, "the figure and the card one column from the foot");
+  assert.match(preview, /minHeight: 230,/, "the card at least its height, taller when the words need it");
+  assert.doesNotMatch(preview, /bottom: 230/, "never a figure fixed above a card of a fixed height");
+  assert.match(readFileSync("app/api/gift/[id]/preview-image/route.tsx", "utf8"), /description: LONGEST_LINE/, "the gallery draws the longest line there is");
+});
