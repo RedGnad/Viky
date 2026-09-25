@@ -7174,7 +7174,8 @@ finish time. On the chain, the race and the bib; the name stays in the terms, ne
   and kept on the account (`viky_accounts.country`, `/api/account/preferences`). The list is every country where at
   least one way out works: the union of Ramp's payout countries, Mercuryo's own country list less its restricted
   countries and where it pays no card (D72), and Bitrefill's phone top-up countries, read live and held a day
-  (`src/out-countries.ts`, `/api/rails/countries`); 206 countries on 27 Sep 2026. A service that could not be read adds
+  (`src/out-countries.ts`, `/api/rails/countries`); viky.cash served 239 countries on 26 Sep 2026 after the merge, 206
+  without Bitrefill's list. A service that could not be read adds
   nothing, and Mercuryo's list counts only with its restrictions read.
 - "Use your money" reads that country ("Where you live: Senegal · change"), and its "change" opens the same full list and
   saves to the account; the three chips it had are gone. "Which card?" is given the account's country.
