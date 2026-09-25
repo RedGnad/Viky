@@ -1408,5 +1408,9 @@ key was declined here): check after that `vercel env ls` lists `TREASURY_PRIVATE
 The file `~/viky-keys/viky-treasury` and its password are the only copy outside Vercel, whose sensitive values cannot
 be read back: keep both.
 
-**3. The first funding of the treasury**, from the founder's own funds: USDC on Base for the invoices, a little ETH on
-Base for their fees, and a little MON on Monad for the refunds the treasury sends back when a top-up fails.
+**3. The first funding of the treasury**, from the founder's own funds: USDC on Base for the invoices, and a little ETH on
+Base for their fees. No MON: on Monad the treasury only signs, and the relayer carries its refunds (src/phone-treasury.ts).
+
+**Reconciliation.** `viky_phone_orders` (created by `pnpm db:migrate`) holds one row per order: the AUSD received on
+Monad, the invoice paid on Base, or the refund. Money the treasury holds for somebody is every row still `received`,
+`paid` or `failed` (`unsettledOrders`).
