@@ -34,6 +34,7 @@ import { GIFT_LIVE as L, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE 
 import { AskAgain } from "../kit/AskAgain";
 import { CertificateProof } from "../kit/CertificateProof";
 import { MarathonProof, MarathonStanding } from "../kit/MarathonProof";
+import { WcaProof, WcaStanding } from "../kit/WcaProof";
 import { Confetti } from "../kit/Confetti";
 import { Nature } from "../kit/Nature";
 import { ShowProof } from "../kit/ShowProof";
@@ -458,6 +459,7 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
         // A shown condition takes its one proof from the person's own account; a certificate takes a pasted link (D162).
         // A marathon takes a bib before the start and a reading after the finish, on its own screen (D273).
         if (milestone.conditionId === "marathon-finish") return <MarathonProof giftId={giftId} status={milestone} yours={mine} onChanged={reload} />;
+        if (milestone.conditionId === "wca-time") return <WcaProof giftId={giftId} status={milestone} yours={mine} onChanged={reload} />;
         return conditionById(milestone.conditionId)?.nature === "shown" ? (
           <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onShown={reload} />
         ) : (
@@ -527,6 +529,7 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
           {milestone.startReading !== null ? <p className={HELP}>{M.startedAt(milestone.startReading)}</p> : null}
           {/* A marathon's bib and the line read, to whoever is not at the moment of entering or reading them (D273). */}
           {milestone.marathon && read.action !== "shareProof" ? <MarathonStanding marathon={milestone.marathon} /> : null}
+          {milestone.wca && read.action !== "shareProof" ? <WcaStanding wca={milestone.wca} /> : null}
         </>
       ) : daily ? (
         <>

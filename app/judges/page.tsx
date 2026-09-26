@@ -330,6 +330,16 @@ export default async function JudgesPage() {
             for edX. Nothing of theirs is offered until goal 31 is signed.
           </li>
           <li>
+            <strong>The WCA&apos;s public API.</strong> A time set at a speedcubing competition is read from the World Cube
+            Association&apos;s public API: the competition&apos;s competitors list before the first day, the person&apos;s own
+            list of results after it, one row (the competition, the event, the round of their best single, the name
+            and the times as the WCA prints them). Read on 26 Sep 2026: the API asks for no key for public data, the
+            WCA&apos;s privacy statement says competition results are not personal data, its results export may be
+            re-published with a notice that the results are the WCA&apos;s, and its <code>robots.txt</code> keeps robots
+            out of its search only. The API answers 403 to a bare user agent; Viky names itself and its site, as
+            for MikaTiming. Nothing of it is offered until goal 32 is signed.
+          </li>
+          <li>
             <strong>WAEC&apos;s terms.</strong> WASSCE credits are shown by the person from WAEC&apos;s own result checker
             (D217), and not read for them, because WAEC&apos;s privacy policy tells the holder of an access code it allocates
             &quot;you must not disclose it to any third party&quot;, and the result card&apos;s PIN is one. The card is typed on WAEC&apos;s page and

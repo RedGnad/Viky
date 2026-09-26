@@ -1038,6 +1038,33 @@ before the person reads (the account is built from the register at read time, no
 The Marathon de Dakar 2026 is added the day its organiser announces it (nothing on Klikego nor in the calendar on
 26 Sep 2026). The Marathon de Paris is timed by another company and needs its own source.
 
+## Goal 32 on the milestone contract: a time set at a WCA competition (D279)
+
+Provider id `viky:provider:wca-zkfetch:v1` = `0xe8fe5b823e9946efa5da357e01825f12d71f46b4cac1bd0e27afbc182c3a88fb`, shape 1, data
+`0x5ba191520000000000000000000000000000000000000000000000000000000000000020e8fe5b823e9946efa5da357e01825f12d71f46b4cac1bd0e27afbc182c3a88fb0000000000000000000000000000000000000000000000000000000000000001`.
+Batched with 31 and 33 in the one session the founder asked for.
+The line stays in `BUILDING` until the goal is read back; the opening PR moves it to `CONDITIONS`.
+
+**The reading, in two steps** (src/wca-reading.ts): the competition's results, `api/v0/competitions/<id>/results`,
+read plainly, give the person's rows in the event (by their WCA id, or by their name as they gave it when they
+checked the competitors list) and the round of their best single; that row is then read attested on the person's
+own list, `api/v0/persons/<wcaId>/results`, by the source `wca-person-results`, whose one pattern is built for the
+account (`matchesFor`, new with this line: a source may build its patterns from an account `accepts` let through;
+`matchesOf` is what the fetch and the verification both use). The pattern takes the row of that competition, event
+and round in the API's own key order and captures the best single, the average and the name. Before the first day,
+the competitors list (`api/v0/competitions/<id>/wcif/public`, `persons[]` with `registration.status` and
+`eventIds`) stands in for the bib: checked plainly, never attested.
+
+**The list** (`/api/wca/competitions`): `api/v0/competitions?start=<today>&sort=start_date&per_page=100&page=n`,
+six pages of a hundred on 26 Sep 2026 (521 competitions, 71 countries), read at most once an hour, the ones not yet
+started. The API answers 403 to a bare user agent (the founder's reading) and 200 to the named one every source of
+ours sends; its `robots.txt` keeps robots out of `/search` and `/api/v0/search` only. Terms read 26 Sep 2026: the
+privacy statement says competition results are not personal data; the results export's README allows re-publishing
+with a notice that the results are the WCA's; the disclaimer says nothing about data. Written on the judges' page.
+
+The source is in the shared list: the service is redeployed from the branch before the merge, on the fingerprint
+`0xb54eef6d…0225`.
+
 ## Goal 31 on the milestone contract: a marathon finished, read from MikaTiming (D277)
 
 Provider id `viky:provider:mika-timing-zkfetch:v1` = `0x5f162f6734f7ec9371fc0cfc3eff666a1c01397748a818073a2cec9b4a2708b7`, shape 1, data

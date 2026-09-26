@@ -52,9 +52,10 @@ test("no answer claims more than the code does, and supervision is claimed only 
     }
     assert.doesNotMatch(`${proof.data} ${proof.account} ${proof.inShort}`, /proves who|proves that the person|guarantees/i);
   }
-  // Exactly one condition is watched today, and a second one appearing silently is what this catches.
+  // Two conditions are watched today: the Duolingo English Test by its proctors, and a WCA competition by its judges,
+  // who time and check every attempt in the venue (the founder, 27 Sep 2026). A third one appearing silently is what this catches.
   assert.deepEqual(
     CONDITION_PROOFS.filter((proof) => proof.supervised).map((proof) => proof.conditionId),
-    ["duolingo-english-test"],
+    ["duolingo-english-test", "wca-time"],
   );
 });

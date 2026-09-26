@@ -228,6 +228,15 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     sourcePolicing: "The timing company chips the bib and publishes the results for the organiser; a runner can ask the federation to be removed from them. Klikego's terms (CGU of 26 Jun 2026, and its legal notice) claim the site's content and its database, forbid reproduction without written consent, and count the use of robots among the reasons to close a member's account: Viky reads one runner's page per gift, when the person asks, and keeps three fields; written on the judges' page, the risk assumed as for edX.",
   },
   {
+    conditionId: "wca-time",
+    supervised: true,
+    inShort: "Read from the WCA's public results: one row, the name, the event, the best single. Judged and timed at a WCA competition.",
+    data: "The person's own list of results on the World Cube Association's public API, read through an attested fetch when the person asks after the competition, and again at every reading: the row of that competition, that event and the round of their best single, with the name and the times as the WCA prints them. Nothing else is matched. An attempt that is a DNF has no time there and pays nothing.",
+    account: "Three ties: the person's name, written by the funder at creation and hashed into the terms they sign, never published; the competitors list of the competition, public, on which the person has to be registered in the event before the first day (that stands in for a bib); and the WCA's own results, which have to carry that name with a result in that event. The name is compared with no case, no accents and no order.",
+    whoActed: "The WCA's judges: every attempt at a WCA competition is timed and checked by a judge, the examiner of that attempt, under the WCA Regulations, at a table in the venue.",
+    sourcePolicing: "The WCA governs the competition under its Regulations and can invalidate results and review incidents; its results are published for everybody and, by its privacy statement, are not personal data. Its API is public and asks for no key; its export may be re-published with a notice that the results are the WCA's. Written on the judges' page.",
+  },
+  {
     conditionId: "mitx-online-certificate",
     supervised: false,
     inShort: "Read from the certificate's public page on MITx Online. It proves a course passed there, not a place at MIT.",

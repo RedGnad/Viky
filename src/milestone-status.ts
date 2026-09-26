@@ -6,6 +6,7 @@ import { milestonePhase, readMilestoneGift, type MilestoneState } from "./milest
 import { SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
 import { attestedReadings, lastReading, latestRating, loadMilestoneGift, type MilestoneRecord, type MilestoneReading } from "./milestone-store";
 import { bibStillOpen, DISTANCE_LABELS, finishInWords, marathonEventById } from "./marathon";
+import { isWcaId, WCA_EVENTS, wcaCourseOf, wcaResultInWords } from "./wca";
 import type { MilestoneStatus } from "./milestone-view";
 import { escrowOf } from "./relayer";
 
@@ -79,6 +80,28 @@ export function milestoneStatusOf(input: {
     maximumStart: Number(state.maximumStart),
     standingAtOffer: input.milestone?.standingAtOffer ?? null,
     marathon: marathonOf(input),
+    wca: wcaOf(input),
+  };
+}
+
+/** The WCA competition's part of the status: nothing for any other condition, and the names only to those who may see them. */
+function wcaOf(input: { record: GiftRecord; milestone: MilestoneRecord | null; latest: MilestoneReading | null; viewer: Viewer }): MilestoneStatus["wca"] {
+  if (input.milestone?.conditionId !== "wca-time") return null;
+  const course = wcaCourseOf(String(input.milestone.course ?? ""));
+  if (!course) return null;
+  const seesNames = input.viewer.isRecipient || input.viewer.isFunder || input.viewer.holdsTheLink;
+  const eventLabel = WCA_EVENTS[course.eventId];
+  const who = input.record.boundAt && input.record.goalUsername ? String(input.record.goalUsername) : null;
+  const profile = input.record.goalProfileId ? String(input.record.goalProfileId) : null;
+  const latest = input.latest;
+  const result = seesNames && latest && latest.rating !== null && latest.playerId ? { name: latest.username, wcaId: latest.playerId, best: latest.rating, inWords: wcaResultInWords(latest.rating, course.eventId) } : null;
+  return {
+    competitionId: course.competitionId,
+    eventId: course.eventId,
+    eventLabel,
+    title: input.record.goalCourseTitle ?? `${course.competitionId}, ${eventLabel}`,
+    registered: seesNames && who ? { who, wcaId: profile && isWcaId(profile) ? profile : null } : null,
+    result,
   };
 }
 

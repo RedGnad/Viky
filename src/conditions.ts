@@ -841,6 +841,36 @@ export const FITBIT_DAILY: Condition = {
  * Goal 4 of the daily contract, registered in the same Safe session as goal 6.
  */
 /**
+ * "Set a time at a WCA competition" (the founder, 27 Sep 2026): a milestone of the Play family, read for the person
+ * from the World Cube Association's public API, the way a marathon is read from its timing company (D273). The
+ * funder chooses the coming competition and the event and writes the person's name; before the day, the public list
+ * of competitors stands in for the bib; after it, the person's result in that event is read. Being built until goal
+ * 32 is signed and the reading service runs the WCA source.
+ */
+export const WCA_TIME_LINE: Condition = {
+  id: "wca-time",
+  kind: "milestone",
+  nature: "read",
+  goalType: null,
+  live: false,
+  beforeItOpens: "Goal 32 signed by the owner, and the reading service redeployed with the WCA source.",
+  source: "the WCA",
+  family: "play",
+  // The founder's "Set a time at a WCA competition" is thirty-one characters; the card holds thirty (21 Sep 2026).
+  name: "A time at a WCA competition",
+  help: "Their result in one event at one competition, read for them from the WCA's public results: the name, the event and the best single. It proves the result, not who solved.",
+  link: { kind: "link", label: "Your WCA ID or your name", help: "Before the competition, check on your gift's page that you are on its competitors list. After it, Viky reads your result." },
+  reading: "wca-person-results",
+  words: {
+    earnedDay: "When they set the time, all of this becomes theirs",
+    connect: "Opened. Check that you are on the competitors list before the competition; after it, Viky reads your result from the WCA.",
+    doIt: "Check that you are on the competitors list before the competition, then compete. After it, Viky reads your result from the WCA's public results.",
+    eachDay: "the day the result is read",
+    preview: "Set a time at a WCA competition: the gift is yours when the WCA's results say you did.",
+  },
+};
+
+/**
  * "Finish a marathon" (D273): a milestone of the Move family, read for the person from the timing company's own
  * public results page, as an examination result is read from its board. The funder writes the runner's name and
  * chooses the race; the person enters their bib before the start; the reading service reads the runner's own line.
@@ -1184,6 +1214,7 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
 
 
 export const BUILDING: readonly Condition[] = [
+  WCA_TIME_LINE,
   CAMBRIDGE_ENGLISH_SHOWN,
   IELTS_SHOWN,
   BAC_MOROCCO_SHOWN,
