@@ -31,20 +31,30 @@ function raceRef(race: Readonly<{ name: string; town: string }>): string {
   return /Marathon$/.test(withoutYear) ? `the ${withoutYear}` : withoutYear;
 }
 
+/** Whether a race's own name already says marathon, in the languages the register holds ("Syysmaraton", "Maratona"). */
+const SAYS_MARATHON = /marat(h)?on/i;
+
 /**
- * One phrase per distance a race offers, saying what it is (the founder, 27 Sep 2026: a half marathon or a trail is
- * named as such): "a finish at the Chicago Marathon", "a marathon at Maratona di Reggio Emilia", "a half marathon at
- * Tout Rennes Court", "a 10 km trail at Trail de la Ria d'Etel", "a 10 km run at Voie Royale". A trail is one the race
- * or its event calls a trail, as the timing company prints it.
+ * The distances a race offers, as a runner would say them (the founder, 27 Sep 2026: a half marathon or a trail is
+ * named as such, and never "a marathon at the ... Marathon"). A gift on a race waits for a finish at the distance the
+ * funder chose, whatever the time. A name that already says what the race is carries it alone:
+ * - the marathon: "a finish at the Chicago Marathon", "a finish at Maratona di Reggio Emilia";
+ * - the half: "the half at the Wase Marathon" where the name says marathon, else "a half marathon at Tout Rennes Court";
+ * - the 10 km: "a finish at Trail du Loup Vert" or "a finish at Le 10K'arnag" where the name says it, "a 10 km trail at
+ *   ..." where the event is a trail, "a 10 km race at Voie Royale" otherwise; and nothing for a 10 km at a race named a
+ *   marathon, which reads as the wrong race.
  */
 export function racePhrases(race: Readonly<{ name: string; town: string; events: readonly { distance: string; label: string }[] }>): readonly string[] {
   const ref = raceRef(race);
-  return race.events.map((event) => {
-    if (event.distance === "marathon") return ref.endsWith("Marathon") ? `a finish at ${ref}` : `a marathon at ${ref}`;
-    if (event.distance === "half") return `a half marathon at ${ref}`;
-    const trail = /trail/i.test(race.name) || /trail/i.test(event.label);
-    return `a 10 km ${trail ? "trail" : "run"} at ${ref}`;
-  });
+  const phrases: string[] = [];
+  for (const event of race.events) {
+    if (event.distance === "marathon") phrases.push(`a finish at ${ref}`);
+    else if (event.distance === "half") phrases.push(SAYS_MARATHON.test(ref) ? `the half at ${ref}` : `a half marathon at ${ref}`);
+    else if (SAYS_MARATHON.test(ref)) continue;
+    else if (/trail|10\s?k/i.test(ref)) phrases.push(`a finish at ${ref}`);
+    else phrases.push(/trail/i.test(event.label) ? `a 10 km trail at ${ref}` : `a 10 km race at ${ref}`);
+  }
+  return phrases;
 }
 
 export function landingGoals(nowMs: number = Date.now(), random: () => number = Math.random): LandingGoals {
