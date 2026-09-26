@@ -175,6 +175,44 @@ export const PAY = {
 } as const;
 
 /** Home: the money, the one action, the way out, and what is moving. */
+/**
+ * Under the card on the landing (the founder, 27 Sep 2026, after the reference page he gave, D282): four promises, each with its drawing,
+ * then the phone and one last way to the card. Every sentence is true of the code (docs/SCREEN-CLAIMS.md): the escrow
+ * allocates the money in the recipient's name, releases a day's share on a verified day, sends every missed day back to
+ * the funder and pays nobody else (`contracts/GiftEscrow.sol`); progress is read from the service or the certificate's
+ * page; the account is a passkey; the app is the website, installable.
+ */
+export const LANDING_STORY = {
+  blocks: [
+    {
+      key: "theirs",
+      title: "Theirs from day one.",
+      body: "The money is put in their name the moment you pay. Each day they reach the goal, that day's share becomes theirs to keep.",
+    },
+    {
+      key: "checked",
+      title: "Checked, not claimed.",
+      // The source is named by the register, never here: the live daily line's own source.
+      body: (lessonsOn: string) => `Viky reads their progress where it happens, like their lessons on ${lessonsOn} or a certificate's own page. Nothing to send in, and nobody's word to take.`,
+    },
+    {
+      key: "back",
+      title: "A missed day comes back to you.",
+      body: "Each day they miss goes back to you, by itself. Viky keeps none of it, and nobody profits from anyone failing.",
+    },
+    {
+      key: "face",
+      title: "Your face is the key.",
+      body: "Sign in with your face or your fingerprint. No password to invent, and nothing to download first.",
+    },
+  ],
+  phone: {
+    title: "On your phone, like an app.",
+    body: "Viky opens in the browser. Add it to your home screen and it opens like your other apps.",
+  },
+  last: { title: "Back someone's goal today." },
+} as const;
+
 export const HOME = {
   /** The promise, as the rendered mockups of 19 Sep 2026 write it: three short lines in the title face. */
   promise: "Send money that motivates.",

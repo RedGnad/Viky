@@ -23,7 +23,8 @@ test.describe("the character at the head of the page", () => {
   test("it is on the page, and on the sheet that pays", async ({ page }) => {
     await page.goto("/");
     // The one that is drawn: the sheet's own character is in the page from the first render, shut inside its dialog.
-    await expect(page.locator("main svg[data-character='diamond']:visible")).toHaveCount(1);
+    // The cast of the promises under the card (D282) is its own, and is not counted here.
+    await expect(page.locator("main svg[data-character='diamond']:visible:not([data-landing-story] svg)")).toHaveCount(1);
     await page.getByRole("button", { name: /^Send / }).click();
     const sheet = page.locator("dialog.sheet[open]");
     await expect(sheet).toBeVisible();

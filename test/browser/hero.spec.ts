@@ -41,7 +41,8 @@ test.describe("the hero moment", () => {
 
   test("the way to the card is the first screen's one action, it reaches the card, and it writes nothing in the address", async ({ page }) => {
     await page.goto("/", { waitUntil: "load" });
-    const way = page.getByRole("link", { name: "Offer a gift" });
+    // The first screen's: the last promise under the card (D282) leads to the card the same way, further down.
+    const way = page.getByRole("link", { name: "Offer a gift" }).first();
     await expect(way).toBeVisible();
     await way.click();
     // No "#offer" left behind (D240): the next launch of an installed app on its last address starts at the top.
