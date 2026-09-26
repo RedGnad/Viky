@@ -404,3 +404,24 @@ test("MikaTiming: its own goal and provider, one line for both timing companies,
   assert.match(readFileSync("app/api/gift/certificate/create/route.ts", "utf8"), /goalType: \(course && certificate\.goalTypeOf\?\.\(course\)\) \|\| certificate\.goalType/);
   assert.match(readFileSync("src/certificate-reading.ts", "utf8"), /if \(marathonGoalTypeOf\(reading\.race\.timer\) !== goalType\) throw new MarathonReadError\("PROOF_MISMATCH"/);
 });
+
+/** "Which race?" as the founder asks it on 27 Sep 2026: all countries by date, under one filter "Country · all". */
+import { byDate, countriesOf, inCountryOrAll } from "../src/marathon-choice";
+
+test("the list of races: every coming race by date, all countries, and one country kept when its chip is pressed", () => {
+  const list = [
+    { raceId: "b", country: "FR", startsAt: "2026-11-14T00:00:00+01:00" },
+    { raceId: "a", country: "US", startsAt: "2026-10-11T00:00:00-05:00" },
+    { raceId: "c", country: "DE", startsAt: "2026-10-25T00:00:00+02:00" },
+    { raceId: "d", country: "FR", startsAt: "2026-10-04T00:00:00+02:00" },
+  ];
+  assert.deepEqual(byDate(list).map((one) => one.raceId), ["d", "a", "c", "b"]);
+  assert.deepEqual(countriesOf(list), [{ code: "FR", name: "France" }, { code: "DE", name: "Germany" }, { code: "US", name: "United States" }]);
+  assert.deepEqual(inCountryOrAll(list, null).map((one) => one.raceId), ["b", "a", "c", "d"], "no country: everything, untouched");
+  assert.deepEqual(inCountryOrAll(list, "FR").map((one) => one.raceId), ["b", "d"]);
+  const chooser = readFileSync("app/kit/offer/MarathonChooser.tsx", "utf8");
+  assert.match(chooser, /setRaces\(byDate\(found\)\)/, "sorted by date as it arrives");
+  assert.match(chooser, /aria-pressed=\{country === null\} onClick=\{\(\) => setCountry\(null\)\}/, "the first chip is everything");
+  assert.match(chooser, /setCountry\(country === one\.code \? null : one\.code\)/, "pressing a chosen country again gives everything back");
+  assert.doesNotMatch(chooser, /country-first|Which country/, "no country step before the list");
+});
