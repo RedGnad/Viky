@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { conditionById } from "../src/conditions";
 import { HOME } from "../src/sentences";
-import { CERTIFICATE_LINES, NAMED_ON_THE_LANDING, UNIVERSITIES, certificateLinesLive, certificatePlatforms, namesInWords, pickUniversities } from "../src/universities";
+import { CERTIFICATE_LINES, UNIVERSITIES, certificateLinesLive, certificatePlatforms, pickUniversities } from "../src/universities";
 
 /**
  * The schools named at the foot of the landing (D225): the sentence is true of the code, the names are on the
@@ -19,8 +19,8 @@ test("the sentence stands on two live lines that read the certificate's own page
   assert.equal(certificateLinesLive(), true);
   const source = readFileSync("src/universities.ts", "utf8");
   assert.match(source, /if \(!certificateLinesLive\(\)\) return \[\];/, "no line live, no name printed");
-  const home = readFileSync("app/kit/Home.tsx", "utf8");
-  assert.match(home, /\{universities\.length > 0 \? \(/, "and the page prints nothing then");
+  // And the sentence under the card prints nothing when it has nothing to say (D285).
+  assert.match(readFileSync("app/kit/GoalsGoingBy.tsx", "utf8"), /if \(items\.length === 0\) return null;/);
 });
 
 test("every school named has its page on the platform Viky reads, and MIT waits for its own line", () => {
@@ -37,33 +37,20 @@ test("every school named has its page on the platform Viky reads, and MIT waits 
   assert.equal(pkg.scripts["check:universities"], "tsx scripts/check-universities.ts", "the pages are checked by a script that fails when one is gone");
 });
 
-test("four distinct names, by the random the server gives, and said as a list", () => {
+test("every school, distinct, in the order the server's random draws them", () => {
   const steps = [0.99, 0, 0.5, 0.5];
   let at = 0;
   const picked = pickUniversities(() => steps[at++ % steps.length]);
-  assert.equal(picked.length, NAMED_ON_THE_LANDING);
-  assert.equal(new Set(picked).size, 4, "distinct");
-  assert.deepEqual(picked, ["ETH Zürich", "Harvard", "Imperial", "Princeton"], "in the order they were drawn: nothing sorts them into a rank");
-  assert.equal(namesInWords(picked), "ETH Zürich, Harvard, Imperial or Princeton");
-  assert.equal(namesInWords(["Harvard"]), "Harvard");
-  assert.equal(namesInWords([]), "");
-  const page = readFileSync("app/page.tsx", "utf8");
-  assert.match(page, /universities=\{pickUniversities\(\)\}/, "picked by the server, once per request");
+  assert.equal(picked.length, UNIVERSITIES.length);
+  assert.equal(new Set(picked).size, UNIVERSITIES.length, "distinct");
+  assert.deepEqual(picked.slice(0, 4), ["ETH Zürich", "Harvard", "Imperial", "Princeton"], "in the order they were drawn: nothing sorts them into a rank");
+  assert.equal(pickUniversities(Math.random, 2).length, 2);
 });
 
-test("text only, no partnership claimed, the affiliation said, and nothing moves", () => {
-  const read = HOME.certificate.read(certificatePlatforms());
-  const words = `${HOME.certificate.before} ${HOME.certificate.after} ${read}`;
-  assert.doesNotMatch(words, /partner|trusted|as seen|official|endorse/i, "the universities' trademark rules");
-  assert.match(read, /not affiliated/);
+test("the schools are named as text only, no partnership claimed, the affiliation said", () => {
+  const read = HOME.waitsFor.read;
+  assert.doesNotMatch(`${HOME.waitsFor.lead} ${read}`, /partner|trusted|as seen|official|endorse/i, "the universities' trademark rules");
+  assert.match(read, /not affiliated with the schools/);
   assert.equal(certificatePlatforms(), "edX or Coursera", "the platforms as the register names them: no screen names a source itself");
-  assert.equal(read, "Read from the certificate's own page on edX or Coursera. Viky is not affiliated with these universities.");
-  assert.equal(HOME.certificate.before, "A verified certificate from a course by");
-  assert.equal(HOME.certificate.after, "can be what their gift waits for.");
-  const home = readFileSync("app/kit/Home.tsx", "utf8");
-  assert.match(home, /<span className=\{NAMED\}>\{namesInWords\(universities\)\}<\/span>/, "the names in the title face and the ink");
-  assert.doesNotMatch(home.slice(home.indexOf("{universities.length > 0"), home.indexOf('<Link href="/what-viky-can-check"')), /animate|setInterval|setTimeout|transition/, "no fade, no clock");
   assert.doesNotMatch(readFileSync("src/universities.ts", "utf8"), /\.svg|\.png|\.jpe?g|<img/i, "no logo, no crest: names only");
-  const claims = readFileSync("docs/SCREEN-CLAIMS.md", "utf8");
-  assert.match(claims, /A verified certificate from a course by .* can be what their gift waits for/, "the sentence is in the claims, with what makes it true");
 });

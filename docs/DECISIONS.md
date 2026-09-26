@@ -7408,3 +7408,22 @@ countries were chosen; and gave the criterion: coverage. So a census by platform
   staying the operator's test race.
 - **What is still to show.** A test gift on a race result race (Buenos Aires, bib 1, by the operator's door) and the
   marathon's proof (c). Until they have run, nothing here is called working.
+
+## D285, 27 Sep 2026: under the landing's card, what a gift can wait for goes by, one item at a time
+
+- **Decision (the founder, 27 Sep 2026)**: the sentence under the card, bigger; rather than four schools standing
+  still, the schools go by in the sentence on a periodic movement, and sometimes it says something else a gift can
+  wait for. This is the founder's current call over D225, which had kept the four names still because nothing on a
+  page ran on a clock (D189, D198).
+- The sentence is "Their gift can wait for" and then one item at a time, in the title face at 31 pixels on a phone and
+  39 from 1024, two steps of the scale (`--type-goal`): a certificate from each school of the list, a live goal of the register in its own
+  words, and a finish at each marathon still offered whose own name carries "<town> Marathon" (Frankfurt, Chicago,
+  Mansfield, Boston and Lusaka on 27 Sep 2026, after race result opened). The Paris marathon is not in the register of races, so it is not said. The items come from
+  `landingGoals` in `src/landing-goals.ts`, drawn by the server once per request, a school and something else in turn.
+- The movement (`MOTION.rotate`): each item held 2.8 seconds, leaving upward on Material's short4 and emphasized
+  accelerate, the next rising on medium2 and emphasized decelerate. It waits while the sentence is off the screen or
+  the tab is behind, and does not run at all under reduced motion. The room for the longest item is kept (two lines on
+  a phone, one from 1024), so nothing under it moves. A screen reader hears the whole sentence once, every item in it.
+- Under it, one line for all the items: "Each one is read where it happens: the certificate's own page, the service
+  itself, the race's results. Viky is not affiliated with the schools, races or services named."
+- The four still names and their words went (`HOME.certificate`, `namesInWords`, `NAMED_ON_THE_LANDING`).

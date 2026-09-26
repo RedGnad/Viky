@@ -38,23 +38,15 @@ export const certificatePlatforms = (): string =>
     .filter((name): name is string => typeof name === "string" && name.length > 0)
     .join(" or ");
 
-export const NAMED_ON_THE_LANDING = 4;
-
 /**
- * Four of them, distinct, in the order they were drawn, by the random the caller gives: the server's, once per
- * request, so the first image and the page the browser takes over agree (D160), and nothing on the page ever moves
- * to show the next name (D189: nothing on a clock, nothing loops).
+ * The schools, distinct, in the order they were drawn, by the random the caller gives: the server's, once per request,
+ * so the first image and the page the browser takes over agree (D160). Since D285 the landing names them one at a
+ * time in the sentence that goes by (`landingGoals`), all of them, rather than four standing still (D225).
  */
-export function pickUniversities(random: () => number = Math.random, count = NAMED_ON_THE_LANDING): readonly string[] {
+export function pickUniversities(random: () => number = Math.random, count = UNIVERSITIES.length): readonly string[] {
   if (!certificateLinesLive()) return [];
   const left = [...UNIVERSITIES];
   const picked: string[] = [];
   while (picked.length < count && left.length > 0) picked.push(left.splice(Math.floor(random() * left.length), 1)[0].name);
   return picked;
-}
-
-/** "Harvard, Sorbonne, EPFL or Imperial". */
-export function namesInWords(names: readonly string[]): string {
-  if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
 }

@@ -87,6 +87,9 @@
   --type-action: 16px;
   --type-say: 25px;
   --type-say-leading: 30px;
+  /* What a gift can wait for, going by under the card (D285): larger than the lead, smaller than the hero. */
+  --type-goal: 31px;
+  --type-goal-leading: 37px;
   /*
    * The promise on the page without an account (D128): 39 in the one column under 1024, 76 from 1024 where it stands
    * in the left column beside the card, with the lead sentence under it at 20 there and at the body's 16 below.
@@ -289,6 +292,9 @@
 /* From 1024 the page without an account is two columns, and the promise takes the size the advisor measured. */
 @media (min-width: 1024px) {
   :root {
+    /* What a gift can wait for takes the room a large screen gives it (D285): the step above the phone's. */
+    --type-goal: 39px;
+    --type-goal-leading: 46px;
     --type-hero: 76px;
     --type-hero-leading: 1.02;
     --type-hero-tracking: -2px;
