@@ -1543,6 +1543,9 @@ export const GIFT_CARD_OUT = {
 export const MARATHON_PROOF = {
   whichRace: "Which race?",
   whichDistance: "Which distance?",
+  /** The filter over the list, one chip: everything, or one country (the founder, 27 Sep 2026). */
+  countryAll: "Country · all",
+  countryFilter: "Country",
   readingRaces: "Reading the races",
   racesUnreadable: "The races could not be read right now. Close this and try again in a moment.",
   raceLine: (town: string, country: string, day: string) => `${town}, ${country}. Starts ${day}.`,

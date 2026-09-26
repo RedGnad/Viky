@@ -7265,3 +7265,14 @@ its pages read like Breizh Chrono's: so a line "MikaTiming" and its marathons of
   `0x5b5f62ae…1ea2` and healthy, read the runner's page of bib 3166 of the Frankfurt Marathon 2025 through the
   attested fetch, found from the search by bib: "Dr. Aarak, Kim Andre (NOR)", 03:21:04, year 2025, one proof,
   nullifier `0x58a63000…a705`. Proofs (b) and (c) wait for goal 31 and a race whose 2026 pages exist.
+
+## D278, 27 Sep 2026: the list of races, all countries by date, under one country filter
+
+The founder, 27 Sep 2026, correcting a first version that asked the country first: the sheet lists every coming race
+of the register, all countries, by date, with a filter "Country · all" at its head; choosing a country keeps its
+races only, taking it off gives everything back. Each race keeps its town and its date. The same for the WCA
+competitions when they come.
+
+- `byDate`, `countriesOf` and `inCountryOrAll` (src/marathon-choice.ts) do the sorting and the filter, browser
+  safe, so the WCA list can take them as they are; the chooser draws the chips with the sheet's own chip and the
+  first one, "Country · all", pressed while no country is chosen.
