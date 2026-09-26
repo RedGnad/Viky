@@ -153,6 +153,10 @@ function marathonError(error: unknown): MarathonReadError {
     case "REFUSED":
     case "NOT_ACCEPTED":
       return new MarathonReadError("FETCH_FAILED", "The timing company would not answer that reading", { cause: error });
+    case "FETCH_FAILED":
+      // Put off by the pace (the founder, 27 Sep 2026): nothing is counted, the person reads again later.
+      if (/^THROTTLED/.test(error.message)) return new MarathonReadError("FETCH_FAILED", "The timing company is being read too often right now. Nothing was counted: try again in half an hour.", { cause: error });
+      return new MarathonReadError("FETCH_FAILED", error.message, { cause: error });
     case "NO_MATCH":
       // An empty page, the answer for a bib nobody wore, matches no pattern.
       return new MarathonReadError("NO_RESULT", "No runner answers to that bib in that race", { cause: error });

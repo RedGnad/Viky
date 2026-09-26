@@ -3,6 +3,7 @@ import { attestedSource, headersFor, matchesOf, type AttestedSource, type Respon
 import { allowedAttestors, attestorAccepted, type ZkFetchProof } from "./duolingo-public";
 import { localProofVerified, proofVerifierMode } from "./proof-verification";
 import { READING_FINGERPRINT } from "./reading-fingerprint";
+import { isTooManyRequests } from "./source-throttle";
 
 /**
  * One attested read of one page from the list in src/attested-sources.ts, for any source. Server only.
@@ -126,6 +127,9 @@ export function readingOfProof(source: AttestedSource, account: string, proof: Z
  * the other two are mapped by the same phrasing and confirmed on the first real reading.
  */
 export function classifyFetchFailure(message: string, source: AttestedSource, account = ""): AttestedReadError {
+  // The platform asked the reader to slow down, or the service's own pace put the reading off: a failure to read
+  // now, whose message says so ("THROTTLED"), so a reading can tell the person to try later with nothing counted.
+  if (isTooManyRequests(message) || /^THROTTLED/.test(message)) return new AttestedReadError("FETCH_FAILED", `THROTTLED: the source is being read too often, try again later`);
   if (/HTTP response status 404|received HTTP 404/i.test(message)) return new AttestedReadError("NOT_FOUND", "Nothing answers to that name");
   if (/HTTP response status 403|received HTTP 403/i.test(message)) return new AttestedReadError("REFUSED", "That page is not public any more");
   if (/HTTP response status 400|received HTTP 400/i.test(message)) return new AttestedReadError("NOT_ACCEPTED", "The source will not serve that any more");
@@ -216,6 +220,7 @@ async function workerZkFetch(source: AttestedSource, account: string, bearer?: s
   }
   const body = (await response.json().catch(() => ({}))) as { proof?: ZkFetchProof; error?: string; message?: string };
   if (response.ok && body.proof) return body.proof;
+  if (body.error === "THROTTLED") throw new AttestedReadError("FETCH_FAILED", `THROTTLED: ${body.message ?? "the source is being read too often, try again later"}`);
   // The worker passes zkFetch's own words on, so they are read the same way as a local refusal.
   if (body.message) throw classifyFetchFailure(body.message, source);
   throw new AttestedReadError("FETCH_FAILED", `The attested fetch worker answered ${response.status}`);

@@ -7500,3 +7500,24 @@ countries were chosen; and gave the criterion: coverage. So a census by platform
   MiCA regulated by the Central Bank of Ireland (Ramp's licences page, read 27 Sep 2026); AUSD on Monad arriving,
   nothing swapped after it; Mercuryo the second way; the next step and whether the key is set on the deployment.
 - Not verified: a page filled in by a real key, since there is none yet.
+
+## D290, 27 Sep 2026: race result in bulk, read by bib only; a pace with the platforms; the catalogue frozen
+
+The founder, 27 Sep 2026: every coming race result event named marathon, half or 10 km, Africa first (Zambia,
+Botswana, Tanzania, Liberia, Lesotho), then the diaspora (Belgium, Canada, the United States, the United Kingdom),
+then the rest; a race only if its results list reads by bib; no fourth platform. After this pass the catalogue is
+frozen: no new source, only the proofs (c) and the tests.
+
+- **Read by bib, measured.** A list declared for one contest answers the search by bib with that bib's row, and
+  nothing for a bib of another contest; a list declared for all contests ("0") answers the search with nothing
+  (26 Sep 2026, a past event). Ten of the fifteen races written by hand in D283 had only such lists (Lusaka,
+  Francistown, Mansfield, Waterford, Kaarina, Loviisa, Monaco, Aspremont, Cagnes-sur-Mer, Almere): they could not
+  have been read, and are taken out. Five stay (Deutschkreutz, Bregenz, Sinaai, Reggio Emilia, Skopje).
+- **The generator** (`scripts/raceresult-register.ts`) applies the rule to all 221 named events and writes the
+  register's race result half. Its first run asked four times a second; race result answered this machine 429,
+  then 404 with a trap page, for hours, whatever the user agent. It now asks every three seconds and waits on a 429;
+  the bulk register is written the day it can run from an unthrottled address.
+- **The pace**, in the reading service (the founder's request): three seconds between two readings of race result
+  or MikaTiming, four hundred a day, thirty minutes after a 429; a reading put off is told to try later and nothing
+  is counted. The incident is written on the judges' page as it happened.
+- **The catalogue is frozen** from here: refreshing the register by the script is data; a new source or line is not.

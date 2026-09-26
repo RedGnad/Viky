@@ -1066,6 +1066,20 @@ source `race-result-row`, whose one pattern is built for the account (`matchesFo
 those columns. An empty time cell is a DNF, a DNS or a DSQ. The time read is the list's chip time where it separates
 chip and gun, its one time otherwise: the register says which, per race.
 
+**The register's race result half is generated** (D290): `pnpm exec tsx scripts/raceresult-register.ts` reads race
+result's coming events, keeps the running ones named marathon, half or 10 km, and writes `src/race-result-races.ts`
+with every distance whose results list is declared for its own contest, starts with the bib and shows a name and a
+time. A list declared for all contests does not answer the search by bib (measured on 26 Sep 2026) and is left out.
+The script asks once every three seconds and waits a minute on a 429: race result throttles bursts (the incident on
+the judges' page). Run it from an address race result has not throttled; this machine's has answered 404 and 429
+since 26 Sep 2026, 03:40 UTC. It refuses to write an empty register.
+
+**The pace of the reading service** (src/source-throttle.ts, D290): for race result and MikaTiming, three seconds at
+least between two readings, four hundred a day, and thirty minutes of silence after a 429. A reading put off answers
+503 `THROTTLED`; the app reads it as a failure to read now ("try again in half an hour, nothing was counted"),
+never as a fact about the runner. Redeploy the service after changing it (it is in the worker's code, not in the
+fingerprinted files).
+
 **A race result race is added** with `pnpm exec tsx scripts/raceresult-inspect.ts <event id>` (the figures in its
 `my.raceresult.com/<id>/` URL), which prints the contests, the lists and each list's columns with a sample row when
 results exist. The row: `ref` the event's id, one heat per contest offered (marathon, half, 10 km, by the contest's
