@@ -355,8 +355,8 @@ export default async function JudgesPage() {
             checking the list still names those columns as it did. Read on 26 Sep 2026: my race result&apos;s terms of
             use say organisers publish results with the athlete&apos;s permission and nothing about reading a page; its
             <code>robots.txt</code> keeps robots out of the list endpoint. Viky reads one row per gift, at the
-            person&apos;s request, naming itself, the risk assumed as for MikaTiming. Nothing of it is offered until goal
-            34 is signed.
+            person&apos;s request, naming itself, the risk assumed as for MikaTiming. Open since goal 34 was signed on
+            26 Sep 2026.
           </li>
           <li>
             <strong>WAEC&apos;s terms.</strong> WASSCE credits are shown by the person from WAEC&apos;s own result checker

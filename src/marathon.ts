@@ -44,8 +44,8 @@ export function marathonProviderIdOf(timer: MarathonTimer): Hex {
 }
 /** MikaTiming's races opened when goal 31 was signed on the contract (D281); before that they were listed to nobody and made by nobody. */
 export const MIKA_TIMING_OPEN = true;
-/** race result's races open when goal 34 is signed on the contract: until then they are listed to nobody and made by nobody. */
-export const RACE_RESULT_OPEN = false;
+/** race result's races opened when goal 34 was signed on the contract (D284); before that they were listed to nobody and made by nobody. */
+export const RACE_RESULT_OPEN = true;
 
 /**
  * The results sites MikaTiming runs for the races in the register, and no other host is ever read: each is

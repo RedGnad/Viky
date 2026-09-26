@@ -487,9 +487,12 @@ test("race result: the row is read plainly by bib, the list's columns are checke
   await assert.rejects(readMarathonResult("999999|1|1", rrFetch({})), refused("UNKNOWN_RACE"));
   assert.equal(marathonGoalTypeOf("race-result"), 34);
   assert.equal(marathonProviderIdOf("race-result"), "0x7cfa6c530b178b3d1b56fe7e1e080bc8cdce8cf60bae36dace0378c2cb4f2887");
-  assert.equal(RACE_RESULT_OPEN, false, "until the founder signs goal 34");
+  assert.equal(RACE_RESULT_OPEN, true, "since the founder signed goal 34");
   const now = new Date("2026-10-01T12:00:00Z").getTime();
-  assert.ok(!racesOffered(now, true).some((race) => race.timer === "race-result"), "listed to nobody, the operator included");
-  assert.equal(MARATHON_MILESTONE.course?.refuses?.("lusaka-2026/marathon", false)?.code, "NOT_OPEN");
+  const offered = racesOffered(now, false).map((race) => race.raceId);
+  assert.ok(offered.includes("lusaka-2026") && offered.includes("reggio-emilia-2026"), "listed to everybody once open");
+  assert.ok(!offered.includes("buenos-aires-2026"), "the test race stays the operator's");
+  assert.ok(racesOffered(now, true).some((race) => race.raceId === "buenos-aires-2026"));
+  assert.equal(MARATHON_MILESTONE.course?.refuses?.("lusaka-2026/marathon", false), undefined);
   assert.ok(MARATHON_RACES.filter((race) => race.timer === "race-result").length >= 15, "coverage: fifteen coming races and the test race");
 });
