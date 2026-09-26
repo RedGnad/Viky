@@ -1042,9 +1042,11 @@ The Marathon de Dakar 2026 is added the day its organiser announces it (nothing 
 
 Provider id `viky:provider:race-result-zkfetch:v1` = `0x7cfa6c530b178b3d1b56fe7e1e080bc8cdce8cf60bae36dace0378c2cb4f2887`, shape 1, data
 `0x5ba1915200000000000000000000000000000000000000000000000000000000000000227cfa6c530b178b3d1b56fe7e1e080bc8cdce8cf60bae36dace0378c2cb4f28870000000000000000000000000000000000000000000000000000000000000001`.
-`pnpm safe:session` batches it, carried by the relayer. Until it is signed, `RACE_RESULT_OPEN` (src/marathon.ts) is
-false: race result's races are listed to nobody, the operator included, and the create route refuses them
-(`NOT_OPEN`). The opening PR flips it after reading the goal back.
+**Registered on 26 Sep 2026** (D284), signatures given by the founder (the encrypted file `0x19d4…b794` and a
+phrase on paper), carried by the relayer: tx `0x01ac7b90c0a4264d9cf913cd17325abc5e2f9536d8b7bfa1c5e18df8074b3185`,
+block 108,066,185, success, 207,271 gas, hash signed `0x8a5679a92c2ec7066b99c964dbb7816f5f55e4e76b6b0fe2a285289d2eda9444`
+(the Safe's own `getTransactionHash` at nonce 11), Safe nonce 11 to 12; read back with the provider id and shape 1,
+`pnpm check:milestone-goals` finds nothing left to send; relayer 53.14 MON after. `RACE_RESULT_OPEN` is true since.
 
 **The census that chose it** (26 Sep 2026, the founder's criterion: coverage). Home pages say nothing; the events
 lists do. race result (`my.raceresult.com/RREvents/list?modes=upcoming&dateFrom=…&dateTo=…&limit=5000`, found in

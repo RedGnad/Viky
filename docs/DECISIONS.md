@@ -7395,3 +7395,16 @@ countries were chosen; and gave the criterion: coverage. So a census by platform
 - **Proof (a), done on 26 Sep 2026 at 02:54 UTC**: the reading service, redeployed on the fingerprint
   `0xc30bfb51…ae8d` and healthy, read bib 1 of the 42K de Buenos Aires 2026 through the attested fetch: "Bethwel
   Kibet Chumba", 2:08:24, metric 78,696, one proof, nullifier `0xb1ecf63f…49c5`.
+
+## D284, 27 Sep 2026: race result open, goal 34 on the chain
+
+- **The session.** One Safe transaction at nonce 11 registers goal 34 (race result, D282) on `MilestoneGift`, carried
+  by the relayer (hash signed `0x8a5679a92c2ec7066b99c964dbb7816f5f55e4e76b6b0fe2a285289d2eda9444`, equal to the
+  Safe's own `getTransactionHash`). Signed by the encrypted file and a phrase on paper: tx
+  `0x01ac7b90c0a4264d9cf913cd17325abc5e2f9536d8b7bfa1c5e18df8074b3185`, block 108,066,185, success, 207,271 gas,
+  Safe nonce 11 to 12. Read back: the provider id and shape 1; nothing left to send.
+- **What opens.** `RACE_RESULT_OPEN`: the fifteen coming race result races listed to everybody in "Which race?"
+  (Zambia, Botswana, Australia, Ireland, Italy, Monaco, North Macedonia and the rest), the 42K de Buenos Aires 2026
+  staying the operator's test race.
+- **What is still to show.** A test gift on a race result race (Buenos Aires, bib 1, by the operator's door) and the
+  marathon's proof (c). Until they have run, nothing here is called working.
