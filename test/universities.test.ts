@@ -20,7 +20,7 @@ test("the sentence stands on two live lines that read the certificate's own page
   const source = readFileSync("src/universities.ts", "utf8");
   assert.match(source, /if \(!certificateLinesLive\(\)\) return \[\];/, "no line live, no name printed");
   // And the sentence under the card prints nothing when it has nothing to say (D285).
-  assert.match(readFileSync("app/kit/GoalsGoingBy.tsx", "utf8"), /if \(items\.length === 0\) return null;/);
+  assert.match(readFileSync("app/kit/GoalsGoingBy.tsx", "utf8"), /if \(!first\) return null;/);
 });
 
 test("every school named has its page on the platform Viky reads, and MIT waits for its own line", () => {

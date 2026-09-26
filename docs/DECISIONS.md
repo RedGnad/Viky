@@ -7427,3 +7427,21 @@ countries were chosen; and gave the criterion: coverage. So a census by platform
 - Under it, one line for all the items: "Each one is read where it happens: the certificate's own page, the service
   itself, the race's results. Viky is not affiliated with the schools, races or services named."
 - The four still names and their words went (`HOME.certificate`, `namesInWords`, `NAMED_ON_THE_LANDING`).
+
+## D286, 27 Sep 2026: the sentence under the card says many things, at random, and names each race for what it is
+
+- **Decision (the founder, 27 Sep 2026)**: the phrases should not be few; the order should be random, never the same
+  cycle; a half marathon, a trail or any other race is named as such; ETH Zürich stays, since it is a university and
+  not Ethereum, and no less ambiguous name of it exists (the school asks for "ETH Zurich" in English).
+- Three kinds (`landingGoals` in `src/landing-goals.ts`): every school of the list; every live goal of the register
+  that is read where it happens (the "shown" ones are left out, since they are not read at their source), in its own
+  words or from its source when its name is not a thing to wait for; and one phrase per distance of every race still
+  offered (`racePhrases`): "a finish at the Chicago Marathon", "a marathon at Maratona di Reggio Emilia", "a half
+  marathon at Tout Rennes Court", "a 10 km trail at Trail du Loup Vert", "a 10 km run at Voie Royale". A trail is one
+  that the race or its event calls a trail. On 27 Sep 2026: 12 schools, 13 goals, 53 race phrases.
+- The first phrase is drawn by the server. Each next one is drawn in the browser (`nextGoal`): a kind other than the
+  last one said, then a phrase of it not said among the last eight, so the many races do not drown the rest and no two
+  visits follow the same order.
+- Every phrase lies in the same cell, the unseen ones hidden, so the room kept is the longest phrase's and nothing under
+  the sentence moves. A screen reader hears one sentence: "Their gift can wait for a certificate from a school, a goal
+  kept on a service they already use, or a race they finish."
