@@ -7352,3 +7352,20 @@ open.
   and open. Each source read once for real through the service (proofs (a) of D277, D279, D280).
 - **What is still to show.** A test gift on each of the three, and the marathon's proof (c). Until they have run,
   nothing here is called working.
+
+## D282, 27 Sep 2026: the landing says more under the card, as Duolingo's page does, in the art direction we have
+
+- **Decision (the founder, 27 Sep 2026)**: more images and text under the landing's card, done the way marketing
+  pages do it and Duolingo's page does it, transposed to Viky, without changing the art direction.
+- Duolingo's order, read on duolingo.com in a browser at 390 and 1440 on 27 Sep 2026: short promises with a title, two
+  lines and a drawing, alternating sides on a large screen and stacked on a phone; a band for the app; one last call
+  with the mascot; the links. Ours (`app/kit/LandingStory.tsx`, words in `LANDING_STORY`): "Theirs from day one.",
+  "Checked, not claimed." (with "What Viky can check"), "A missed day comes back to you.", "Your face is the key.",
+  then "On your phone, like an app." with the install button (not drawn in an installed window), then "Back someone's
+  goal today." and "Offer a gift", which goes to the card as the first screen's action does (D240).
+- The drawings are the rig's own cast in its halftone: the Gifts scene, the reading figure, a gift's day characters
+  (three kept, one gone back), the figure behind sunglasses, a waving figure and the runner. Each block rises once as
+  it first scrolls into view, and not at all with reduced motion.
+- The install line left the links at the foot, since the phone's card now says it.
+- Every sentence is listed in `docs/SCREEN-CLAIMS.md` with what makes it true: the escrow's release per verified day
+  and its refund to the funder with no fee, the readers, the passkey account, the manifest.

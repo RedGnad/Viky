@@ -13,7 +13,8 @@ import { HeadCharacter } from "./HeadCharacter";
 import { dropStaleCardFragment, goToTheCard } from "./WayToTheCard";
 import { topAfterLongAbsence } from "@/src/launch-top";
 import { HeroMoment } from "./HeroMoment";
-import { Install, isStandalone } from "./Install";
+import { isStandalone } from "./Install";
+import { LandingStory } from "./LandingStory";
 import { MoneyHero } from "./MoneyHero";
 import { OfferCard } from "./offer/OfferCard";
 import { Shell } from "./Shell";
@@ -127,6 +128,8 @@ export function Home({
             <p className={`${HELP} mx-auto mt-[var(--space-xs)] max-w-[460px] [@media(min-width:1024px)]:max-w-[34em]`}>{W.certificate.read(certificatePlatforms())}</p>
           </div>
         ) : null}
+        {/* Under the card, what Viky promises, drawn (the founder, 27 Sep 2026, D282). */}
+        <LandingStory />
         <p className={`${HELP} flex w-full flex-wrap gap-x-[var(--space-lg)] [@media(min-width:1024px)]:justify-center`}>
           <Link href="/what-viky-can-check" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
             {CATALOGUE.title}
@@ -137,8 +140,8 @@ export function Home({
           <Link href="/legal" className="inline-flex min-h-[var(--tap-target)] min-w-[var(--tap-target)] items-center underline">
             {ME.legal}
           </Link>
-          {/* Installing it needs no account, so the way to do it is on the page that needs none (D139). */}
-          <Install quiet />
+          {/* Installing it needs no account, so the way to do it is on the page that needs none (D139): the phone's own
+              card above says it now, so the line is not said twice. */}
         </p>
       </Shell>
     );
