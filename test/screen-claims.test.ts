@@ -142,7 +142,7 @@ test("a payment that outlasts the session is used where it sits, and the waiting
   // The terms are written down before the service's page opens, which since the mockups of 19 Sep 2026 both happen
   // inside the sheet that pays, in that order and in the same press.
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.ok(sheet.indexOf("savePendingGift(") > 0 && sheet.indexOf("savePendingGift(") < sheet.indexOf("window.open(way.page"));
+  assert.ok(sheet.indexOf("savePendingGift(") > 0 && sheet.indexOf("savePendingGift(") < sheet.indexOf("window.open(wayInPage(way"));
   const give = pay.slice(pay.indexOf("const give = useCallback"), pay.indexOf("// While paying: watch the account"));
   assert.match(give, /forgetPendingGift\(\)/);
 });

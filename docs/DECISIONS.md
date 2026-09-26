@@ -7477,3 +7477,26 @@ countries were chosen; and gave the criterion: coverage. So a census by platform
 - The runner's lean stays a CSS turn inside the drawing: turning it by an SVG attribute moved it (its turning point is
   its own box, not the figure's), and the three other tiles showed the rectangle without any lean.
 - Not verified on the device: the fix is to the two causes a phone paints apart, not checked against the symptom.
+
+## D289, 27 Sep 2026: the partner's page opens filled in, once Ramp gives its partner key
+
+- **Decision (the founder, 27 Sep 2026)**: the partner's page opens filled in, and the person types and pastes nothing.
+  Ramp gets the account (`userAddress`), the sheet's amount (`fiatCurrency=EUR`, `fiatValue`) and keeps
+  `swapAsset=MONAD_AUSD`, names Ramp's configuration page still describes (its newer ones are `inAsset`, `outAsset` and
+  `inAssetValue`). Mercuryo stays as it is: filling it in needs a partner `widget_id`. Before the page opens, a
+  sentence of Viky's, on the motif of "Use your money". The judges page says the money comes in through a licensed
+  partner, names the asset, and names the next step, the partner embedded with a key.
+- **Read on Ramp's live page, 27 Sep 2026, before writing any of it**: without `hostApiKey`, Ramp answers any
+  parameter at all with "Integration issue detected. The application isn't properly connected to Ramp Network", and
+  its widget reports `widget-loading-failed`; its script reads the key from the page's address and fails without it.
+  That includes the link production served until this change (`?swapAsset=MONAD_AUSD&flow=onramp`): a funder sent
+  there met that screen, whose one button leads to Ramp's generic buy page. Only the bare page opens.
+- So, until the key is set: Ramp opens bare (`https://app.ramp.network/`), which works, and the funder copies their
+  account from the waiting screen as before. With the key set on Vercel as `NEXT_PUBLIC_RAMP_HOST_API_KEY` (not set by
+  this line, which touches no Vercel variable): the page opens filled in, and the sheet shows the founder's sentence,
+  which is drawn only then because "Your account is already filled in" is only true then (`wayInPage`,
+  `wayInFillsIn` in `src/rails.ts`). The wait screen's buttons open the same page.
+- The judges page, "How money comes in": Ramp Swaps (Ireland) Limited, an authorised crypto-asset service provider under
+  MiCA regulated by the Central Bank of Ireland (Ramp's licences page, read 27 Sep 2026); AUSD on Monad arriving,
+  nothing swapped after it; Mercuryo the second way; the next step and whether the key is set on the deployment.
+- Not verified: a page filled in by a real key, since there is none yet.
