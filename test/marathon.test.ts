@@ -500,5 +500,6 @@ test("race result: the row is read plainly by bib, the list's columns are checke
   const generator = readFileSync("scripts/raceresult-register.ts", "utf8");
   assert.match(generator, /list\.contest === contestId/, "a list declared for that contest, never one for all contests");
   assert.match(generator, /fields\[0\] !== "BIB"/, "the bib first");
+  assert.match(generator, /process\.env\.RAILWAY_ENVIRONMENT/, "never from the address that reads in production");
   assert.match(readFileSync("src/marathon.ts", "utf8"), /\.\.\.RACE_RESULT_RACES/);
 });
