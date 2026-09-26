@@ -225,15 +225,14 @@ export const HOME = {
    */
   promiseUnder: "Back their goal. They earn it day by day.",
   /**
-   * The line at the foot of the landing (D225): a certificate from a course by one of the schools named can be what a
-   * gift waits for, true because the two certificate lines are live and read the certificate's own page; the
-   * platforms are named by the register, never here. Text only, and the affiliation said plainly: the universities'
-   * trademark rules.
+   * The sentence under the card since D285: the start, then one thing a gift can wait for at a time (`landingGoals`),
+   * and one line on where each is read. True of every item: a certificate from its own page, a goal from the service
+   * it names, a race from its timing company's results.
    */
-  certificate: {
-    before: "A verified certificate from a course by",
-    after: "can be what their gift waits for.",
-    read: (platforms: string) => `Read from the certificate's own page on ${platforms}. Viky is not affiliated with these universities.`,
+  waitsFor: {
+    lead: "Their gift can wait for",
+    all: (items: string) => `Their gift can wait for ${items}.`,
+    read: "Each one is read where it happens: the certificate's own page, the service itself, the race's results. Viky is not affiliated with the schools, races or services named.",
   },
   offer: "Offer a gift",
   finish: "Finish the gift you set up",

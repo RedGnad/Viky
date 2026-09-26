@@ -114,6 +114,8 @@ export const DISPLAY = `${TITLE_FACE} text-[length:var(--type-display)] leading-
  * centred over the ring. It is not a destination's title, so it is not the display.
  */
 export const SAY = `${TITLE_FACE} text-[length:var(--type-say)] leading-[var(--type-say-leading)] tracking-[var(--type-card-who-tracking)]`;
+/** What a gift can wait for, going by under the landing's card (D285), in the title face. */
+export const GOAL_SAID = `${TITLE_FACE} text-[length:var(--type-goal)] leading-[var(--type-goal-leading)] tracking-[var(--type-card-who-tracking)] [text-wrap:balance]`;
 
 /** The mark at the top of every screen, the same face at a size that is not a title. */
 export const MARK = `${TITLE_FACE} text-[length:var(--type-mark)] leading-[var(--type-mark-leading)]`;

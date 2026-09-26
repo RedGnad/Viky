@@ -400,6 +400,12 @@ export const SPRING = {
 export const MOTION = {
   /** A button pressed: the relief collapses and the button travels its depth. Between Material's short2 and short3. */
   press: { durationMs: 120, easing: EASING.standard },
+  /**
+   * The sentence under the landing's card going through what a gift can wait for (D285): each item held long enough to
+   * read, then it leaves upward on Material's short4 and emphasized accelerate while the next rises on medium2 and
+   * emphasized decelerate. The one movement on a clock outside the working ring, named, and still under reduced motion.
+   */
+  rotate: { holdMs: 2800, outMs: 200, inMs: 300, outEasing: EASING.emphasizedAccelerate, inEasing: EASING.emphasizedDecelerate, rise: "0.45em" },
   /** A day earned, on arrival: it gathers, jumps once, lands, and its face opens on the landing spring. */
   earned: {
     gatherMs: 80,
