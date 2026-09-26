@@ -87,6 +87,11 @@ async function configOf(eventId: string) {
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function main() {
+  // Never from the address that reads in production (the founder, 27 Sep 2026): a run that got it throttled would
+  // stop every real reading. Railway sets these in every service it runs.
+  if (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_SERVICE_ID || process.env.RAILWAY_PROJECT_ID) {
+    throw new Error("the register is never built from Railway, the address that reads in production: run it from a developer's machine or a throwaway address");
+  }
   const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
   const listed = await json<{ Events: ApiEvent[] }[]>(`https://my.raceresult.com/RREvents/list?group=0&user=0&userID=0&geoLocation=IP&lang=en&modes=upcoming&dateFrom=${tomorrow}&dateTo=2027-03-31&limit=5000`);
   const events = (listed?.[0]?.Events ?? []).filter((one) => one.eventTypeName === "Running" && one.dateFrom >= tomorrow && /^[A-Z]{2}$/.test(one.countryCode) && NAMED.test(one.name));

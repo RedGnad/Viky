@@ -1071,8 +1071,11 @@ result's coming events, keeps the running ones named marathon, half or 10 km, an
 with every distance whose results list is declared for its own contest, starts with the bib and shows a name and a
 time. A list declared for all contests does not answer the search by bib (measured on 26 Sep 2026) and is left out.
 The script asks once every three seconds and waits a minute on a 429: race result throttles bursts (the incident on
-the judges' page). Run it from an address race result has not throttled; this machine's has answered 404 and 429
-since 26 Sep 2026, 03:40 UTC. It refuses to write an empty register.
+the judges' page). Run it from a developer's machine or a throwaway address that race result has not throttled, never
+from Railway, which is the address that reads in production: a run that got it throttled would stop every real
+reading (the founder, 27 Sep 2026; the script refuses to start where Railway's variables are set). This machine's
+address has answered 404 and 429 since 26 Sep 2026, 03:40 UTC. It refuses to write an empty register. Until it has
+run, the five races that read by bib are the register.
 
 **The pace of the reading service** (src/source-throttle.ts, D290): for race result and MikaTiming, three seconds at
 least between two readings, four hundred a day, and thirty minutes of silence after a 429. A reading put off answers
