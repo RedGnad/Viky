@@ -658,20 +658,20 @@ at their place. The judges' page counts its uses as it does the top-ups'.
 | the code, its PIN, where to use it | what Bitrefill returned for the delivered order, opened for its owner | `GiftCardCodeLines`, `followPhoneTopUp` | `test/phone-order.test.ts` |
 | "Your gift cards", each with its code | the account's delivered gift card orders | `/api/giftcards/codes`, `giftCardsOf` | `test/phone-order.test.ts` |
 
-### Reach a Codeforces rating, being built (D280)
+### Reach a Codeforces rating, open (D280, D281)
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
-| "Reach a Codeforces rating", READ FOR YOU, under "Learn" with "Being built." | goal 33 not signed yet | `CODEFORCES_RATING` in `BUILDING` | `test/codeforces.test.ts` |
+| "Reach a Codeforces rating", READ FOR YOU, under "Learn", open | goal 33 registered on `MilestoneGift` to the Codeforces provider id, and the reading service running the Codeforces sources | `CODEFORCES_RATING` in `CONDITIONS`, `live: true` | `test/codeforces.test.ts` |
 | "Their Codeforces handle", "Today they are at 1712.", "Their best ever: 1803." | `user.info` read plainly: the handle as Codeforces spells it, the rating, the best rating ever; a handle nobody has is refused with the site's own answer, an account with no rated round has no rating | `/api/codeforces/standing`, `readCodeforcesStanding` | `test/codeforces.test.ts` |
 | "On Codeforces, open Settings, then Social. Put this code in your last name (English), and save:" | the binding reading takes the last name from `user.info` and the code must be in it (D27); the settings path is unverified on a live account | `CODEFORCES_USER_NAMED`, `attestCodeforcesRating`, `nameHasChessCode` | `test/codeforces.test.ts`, `test/milestone-reading.test.ts` |
 | the daily reading and "1712 on Codeforces" | the keeper reads every climb through one door, Chess.com's or Codeforces', with the goal's own provider and the house's own identity label | `climbOfGoal`, `climbProviderId`, `climbIdentityLabel`, `runMilestoneReading` | `test/codeforces.test.ts`, `test/milestone-reading.test.ts` |
 
-### A time at a WCA competition, being built (D279)
+### A time at a WCA competition, open (D279, D281)
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
-| "A time at a WCA competition", READ FOR YOU, under "Play" with "Being built." | goal 32 not signed yet | `WCA_TIME_LINE` in `BUILDING` | `test/wca.test.ts` |
+| "A time at a WCA competition", READ FOR YOU, under "Play", open | goal 32 registered on `MilestoneGift` to the WCA provider id, and the reading service running the WCA source | `WCA_TIME_LINE` in `CONDITIONS`, `live: true` | `test/wca.test.ts` |
 | "Which competition?", each with "Gan, France. Starts 17 October 2026.", under "Country · all" | the WCA's own list of coming competitions from today, the ones not yet started, all countries by date, read at most once an hour | `/api/wca/competitions`, `listWcaCompetitions`, `WcaChooser` | `test/wca.test.ts` |
 | "Which event?", "3x3x3 Cube", "2x2x2 Cube"… | the competition's own events, named as the WCA names them | `WCA_EVENTS`, `WcaChooser` | `test/wca.test.ts` |
 | "A result, or a single under how many seconds?" with "0 for any result…" | the target is hundredths of a second under an hour, one for any result; Fewest Moves and Multi-Blind count as a result only | `wcaTargetUnderSeconds`, `wcaMetricOf`, `WCA_ANY_RESULT` | `test/wca.test.ts` |
@@ -695,7 +695,7 @@ at their place. The judges' page counts its uses as it does the top-ups'.
 | "Country · all", then one chip per country listed | the filter over the list: everything while no country is pressed, one country's races when it is, everything again when it is pressed off | `countriesOf`, `inCountryOrAll`, `MarathonChooser` | `test/marathon.test.ts` |
 | "Which distance?", "Marathon", "Half marathon", "10 km", each with the heat's own name | the race's heats a gift can be made on, from the register, the heat's key derived from its name by the measured rule | `MarathonRace.events`, `heatSlugOf` | `test/marathon.test.ts` |
 | "That race has been run. Choose one still to come. Nothing was taken." | the create route refuses a race already started to anybody but an operator's account | `MARATHON_MILESTONE.course.refuses` | `test/marathon.test.ts` |
-| "That race's timing company is not open on Viky yet. Nothing was taken." | a MikaTiming race is listed to nobody and made by nobody until goal 31 is signed (`MIKA_TIMING_OPEN`) | `timerOpen`, `racesOffered`, `refuses` | `test/marathon.test.ts` |
+| Chicago, Frankfurt and Boston in "Which race?" | goal 31 registered on `MilestoneGift` to the MikaTiming provider id (`MIKA_TIMING_OPEN`), the source running on the reading service | `timerOpen`, `racesOffered` | `test/marathon.test.ts` |
 | "Read on the timing company's page: Aarak Kim Andre, bib 3166, 3:21:04." on a MikaTiming race | the runner's own page, found from the search by bib, read attested: the name with the nation and a title dropped, the bib exactly the one bound, the net finish time, the page's year the race's | `MIKA_TIMING_RUNNER`, `mikaRunnerAccount`, `marathonResultOf` | `test/marathon.test.ts` |
 | "Your bib number", "The number on your bib for the Marathon de Dakar 2023, before the start." | the bib route takes one bib, one to six figures, once, from the recipient, before the race's start | `/api/marathon/bib`, `isValidBib`, `bibStillOpen` | `test/marathon.test.ts` |
 | "The Marathon de Dakar 2023 has started and no bib was entered before it, so this gift cannot be read. What was put in it goes back at the deadline." | no bib bound and the start has passed: the route refuses `RACE_STARTED`, and the contract returns the amount at the deadline | `bibStillOpen`, `MarathonProof` | `test/marathon.test.ts` |

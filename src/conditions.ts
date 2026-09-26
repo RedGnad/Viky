@@ -851,8 +851,9 @@ export const CODEFORCES_RATING: Condition = {
   kind: "milestone",
   nature: "read",
   goalType: null,
-  live: false,
-  beforeItOpens: "Goal 33 signed by the owner, and the reading service redeployed with the Codeforces source.",
+  // Open since goal 33 was signed and the reading service ran the Codeforces sources (D281).
+  live: true,
+  state: "open",
   source: "Codeforces",
   family: "learn",
   name: "Reach a Codeforces rating",
@@ -877,6 +878,7 @@ export const CODEFORCES_RATING: Condition = {
     },
   },
   reading: "codeforces-user",
+  detailTitle: "Their Codeforces, and the rating they reach",
   words: {
     earnedDay: "When they reach it, all of this becomes theirs",
     connect: "Opened. Connect Codeforces to start the climb.",
@@ -898,13 +900,14 @@ export const WCA_TIME_LINE: Condition = {
   kind: "milestone",
   nature: "read",
   goalType: null,
-  live: false,
-  beforeItOpens: "Goal 32 signed by the owner, and the reading service redeployed with the WCA source.",
+  // Open since goal 32 was signed and the reading service ran the WCA source (D281).
+  live: true,
+  state: "open",
   source: "the WCA",
   family: "play",
   // The founder's "Set a time at a WCA competition" is thirty-one characters; the card holds thirty (21 Sep 2026).
   name: "A time at a WCA competition",
-  help: "Their result in one event at one competition, read for them from the WCA's public results: the name, the event and the best single. It proves the result, not who solved.",
+  help: "Their result in one event at one competition, read from the WCA's public results: the name, the event, the best single. It proves the result, not who solved.",
   link: { kind: "link", label: "Your WCA ID or your name", help: "Before the competition, check on your gift's page that you are on its competitors list. After it, Viky reads your result." },
   reading: "wca-person-results",
   words: {
@@ -995,7 +998,7 @@ export const STRAVA_DAILY: Condition = {
   },
 };
 
-export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, EDX_CERTIFICATE, MITX_ONLINE_CERTIFICATE_LINE, CREDLY_BADGE, ACCREDIBLE_CREDENTIAL, TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, FITBIT_DAILY, STRAVA_DAILY, MARATHON_FINISH_LINE];
+export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, WCA_TIME_LINE, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, EDX_CERTIFICATE, MITX_ONLINE_CERTIFICATE_LINE, CREDLY_BADGE, ACCREDIBLE_CREDENTIAL, CODEFORCES_RATING, TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, FITBIT_DAILY, STRAVA_DAILY, MARATHON_FINISH_LINE];
 
 /**
  * What is built with a piece really missing (D184): a provider not registered, a portal not proved. Nobody can make a
@@ -1260,8 +1263,6 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
 
 
 export const BUILDING: readonly Condition[] = [
-  CODEFORCES_RATING,
-  WCA_TIME_LINE,
   CAMBRIDGE_ENGLISH_SHOWN,
   IELTS_SHOWN,
   BAC_MOROCCO_SHOWN,

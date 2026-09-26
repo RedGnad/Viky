@@ -40,17 +40,19 @@ test("every condition in the register is filed under a family that exists", () =
     "mitx-online-certificate": "learn",
     "credly-badge": "learn",
     "accredible-credential": "learn",
+    "codeforces-rating": "learn",
     "duolingo-english-test": "exam",
     "toefl-mybest-shown": "exam",
     "university-enrollment-shown": "exam",
     "chess-rating": "play",
     "chess-tactics": "play",
+    "wca-time": "play",
     "fitbit-daily": "move",
     "strava-daily": "move",
     "marathon-finish": "move",
   });
   // Inside a family, the register's order: the founder's list is that order.
-  assert.deepEqual(CONDITIONS.filter((condition) => condition.family === "learn").map((condition) => condition.id), ["duolingo-daily", "coursera-certificate", "edx-certificate", "mitx-online-certificate", "credly-badge", "accredible-credential"]);
+  assert.deepEqual(CONDITIONS.filter((condition) => condition.family === "learn").map((condition) => condition.id), ["duolingo-daily", "coursera-certificate", "edx-certificate", "mitx-online-certificate", "credly-badge", "accredible-credential", "codeforces-rating"]);
   assert.deepEqual(CONDITIONS.filter((condition) => condition.family === "exam").map((condition) => condition.id), ["duolingo-english-test", "toefl-mybest-shown", "university-enrollment-shown"]);
 });
 

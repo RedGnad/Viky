@@ -4,7 +4,7 @@ import test from "node:test";
 import { matchesOf, WCA_PERSON_RESULTS } from "../src/attested-sources";
 import { privacyOf } from "../src/condition-privacy";
 import { proofOfCondition } from "../src/condition-proof";
-import { BUILDING, conditionById, WCA_TIME_LINE as LINE } from "../src/conditions";
+import { CONDITIONS, conditionById, WCA_TIME_LINE as LINE } from "../src/conditions";
 import { certificateById, certificateOfGoal, WCA_MILESTONE } from "../src/milestone-conditions";
 import { MILESTONE_GOALS } from "../src/milestone-goals";
 import { competitionStillOpen, isWcaId, sameCuber, wcaAccount, wcaAccountOf, wcaCourseOf, WCA_ANY_RESULT, WCA_GOAL_TYPE, WCA_MAX_CENTISECONDS, wcaMetricOf, wcaProviderId, wcaResultInWords, wcaSubject, wcaTargetInWords, wcaTargetUnderSeconds } from "../src/wca";
@@ -100,11 +100,11 @@ test("the result: the best single of the person's rounds in the event, a DNF eve
   assert.deepEqual(list[0].eventIds, ["333", "222"], "an id the WCA does not hold is dropped");
 });
 
-test("the line: read for them, Play, goal 32, being built, the fact rule, a name asked, the WCA's list as its chooser", () => {
+test("the line: read for them, Play, goal 32, open, the fact rule, a name asked, the WCA's list as its chooser", () => {
   assert.equal(LINE.family, "play");
   assert.equal(LINE.nature, "read");
-  assert.equal(LINE.live, false);
-  assert.ok(BUILDING.includes(LINE));
+  assert.equal(LINE.live, true);
+  assert.ok(CONDITIONS.includes(LINE));
   assert.ok(LINE.name.length <= 30, `${LINE.name.length} characters`);
   assert.equal(conditionById("wca-time"), LINE);
   assert.equal(certificateById("wca-time"), WCA_MILESTONE);

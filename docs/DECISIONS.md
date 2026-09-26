@@ -7334,3 +7334,21 @@ polices itself (plagiarism, rounds made unrated); a Reclaim provider "Codeforces
   `0x3e9a147c…f0fc` and healthy, read `user.info` for tourist through the attested fetch with the name: rating
   3,307, best ever 4,009, last name "Korotkevich", one proof, nullifier `0xbc79bfad…3ef5`. Proofs (b) and (c) wait
   for goal 33.
+
+## D281, 27 Sep 2026: MikaTiming, the WCA and Codeforces open, goals 31 to 33 on the chain
+
+The founder, 27 Sep 2026: one Safe session for the three goals, one signature for the three; then the three lines
+open.
+
+- **The session.** One Safe transaction at nonce 10 registers goals 31 (MikaTiming, D277), 32 (the WCA, D279) and 33
+  (Codeforces, D280) on `MilestoneGift`, carried by the relayer (hash to sign
+  `0x14333c89386bb2c651b921b0569a0afdf0a31f0f9607f9c662f1d43344fcaad7`, equal to the Safe's own `getTransactionHash`
+  read on Monad). Signed by the encrypted file (`0x19d4…b794`) and a phrase on paper, sent by the relayer: tx
+  `0xf46e2daff9dce964f67f2656fa5720432e80ebeab8f4a992b663c2e7b4efd311`, block 108,058,098, success, 324,210 gas,
+  Safe nonce 10 to 11. Read back: 31 and 32 with their provider ids and shape 1, 33 with its provider id and shape 0
+  (a climb); `pnpm check:milestone-goals` finds nothing left to send.
+- **What opens.** MikaTiming's races (`MIKA_TIMING_OPEN`: Chicago, Frankfurt, Boston listed to everybody), "A time
+  at a WCA competition" under Play and "Reach a Codeforces rating" under Learn, both moved to the register, `live`
+  and open. Each source read once for real through the service (proofs (a) of D277, D279, D280).
+- **What is still to show.** A test gift on each of the three, and the marathon's proof (c). Until they have run,
+  nothing here is called working.
