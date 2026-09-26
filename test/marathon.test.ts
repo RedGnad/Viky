@@ -501,5 +501,8 @@ test("race result: the row is read plainly by bib, the list's columns are checke
   assert.match(generator, /list\.contest === contestId/, "a list declared for that contest, never one for all contests");
   assert.match(generator, /fields\[0\] !== "BIB"/, "the bib first");
   assert.match(generator, /process\.env\.RAILWAY_ENVIRONMENT/, "never from the address that reads in production");
+  assert.match(generator, /SMALL_SERIES\.test\(event\.name\)/, "small recurring laps left out (the founder, 27 Sep 2026)");
+  assert.ok(!MARATHON_RACES.some((race) => race.timer === "race-result" && /teichwiesen|lost places|insel marathon/i.test(race.name)), "none in the register");
+  assert.equal(MARATHON_RACES.filter((race) => race.town === "Frankfurt").length, 1, "a race read by two timing companies is listed once");
   assert.match(readFileSync("src/marathon.ts", "utf8"), /\.\.\.RACE_RESULT_RACES/);
 });

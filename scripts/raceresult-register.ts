@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { headersFor, RACE_RESULT_ROW } from "../src/attested-sources";
-import { raceResultRows } from "../src/race-result";
+import { MARATHON_RACES } from "../src/marathon";
 
 /**
  * The race result half of the register, written by this script and by nothing else (the founder, 27 Sep 2026: every
@@ -36,6 +36,13 @@ const TIME_FIELD = /time|zeit|final|finish|arrivo|tiempo|temps|result|ziel|tid|a
 const NOT_TIME = /gap|pace|speed|lap|split|rank|pl\b|km|diff|rueckstand|behind|tempo|avg|info|eta|penalty/i;
 const LIST_GOOD = /result|ergebnis|gesamt|einlauf|\bziel\b|final|résultat|resultat|clasif|uitslag|finisher|zieleinlauf|classifica|tulokset|lista|overall/i;
 const LIST_BAD = /award|winner|podium|\btop ?\d|team|mannschaft|start|live|participant|teilnehmer|concurrent|split|\bak\b|age ?group|category|categor|kategor|club|verein|dnf|not finished|relay|staffel|club|school/i;
+
+/**
+ * Small recurring laps, not races a gift is made for (the founder, 27 Sep 2026: forty German races were noise):
+ * the Hamburg "Special Marathons" series (Teichwiesen, Lost Places, Insel), marathons run as laps on a track or a
+ * hill, an advent series, and ultras, which are not a marathon distance.
+ */
+const SMALL_SERIES = /teichwiesen|lost places|insel marathon|hamburg special marathons|höhenmetersammlung|bahnmarathon|adventsserie|ultramarathon|\b50 ?km\b/i;
 
 function distanceOf(contest: string): "marathon" | "half" | "10k" | undefined {
   if (NOT_A_RUNNER_RACE.test(contest)) return undefined;
@@ -167,7 +174,17 @@ async function main() {
   const cache: Record<string, Measured> = existsSync(cachePath) ? (JSON.parse(readFileSync(cachePath, "utf8")) as Record<string, Measured>) : {};
   const save = () => writeFileSync(cachePath, JSON.stringify(cache));
   console.error(`${Object.keys(cache).length} events already measured in ${cachePath}`);
+  // A race another timing company already reads is not listed twice (Frankfurt is MikaTiming's): same town, same month.
+  const readElsewhere = new Set(MARATHON_RACES.filter((race) => race.timer !== "race-result").map((race) => `${race.town.toLowerCase()}|${race.startsAt.slice(0, 7)}`));
   for (const event of events) {
+    if (SMALL_SERIES.test(event.name)) {
+      left.push({ name: event.name, why: "a small recurring lap" });
+      continue;
+    }
+    if (readElsewhere.has(`${event.location.trim().toLowerCase()}|${event.dateFrom.slice(0, 7)}`)) {
+      left.push({ name: event.name, why: "read by another timing company" });
+      continue;
+    }
     let measured = cache[String(event.id)];
     if (!measured) {
       try {
