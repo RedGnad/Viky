@@ -14,7 +14,7 @@ import { UNIVERSITIES } from "../src/universities";
 
 const NOW = Date.parse("2026-09-27T12:00:00Z");
 
-test("three kinds: every school, every live goal read where it happens, every distance of every race still offered", () => {
+test("three kinds: every school, every live goal read where it happens, every race still offered", () => {
   const { first, kinds } = landingGoals(NOW, () => 0.3);
   const [schools, goals, races] = kinds;
   assert.deepEqual(schools.toSorted(), UNIVERSITIES.map((school) => `a certificate from ${school.name}`).toSorted());
@@ -23,20 +23,22 @@ test("three kinds: every school, every live goal read where it happens, every di
   assert.ok(goals.includes(`a rating on ${conditionById("codeforces-rating")!.source}`), "a goal said from its source when its name is not a thing to wait for");
   const shown = liveConditions().filter((goal) => goal.nature === "shown");
   for (const goal of shown) assert.ok(!goals.some((phrase) => phrase.includes(goal.name.toLowerCase())), `${goal.id} is shown, not read`);
-  const expected = racesOffered(NOW, false).reduce((count, race) => count + race.events.length, 0);
-  assert.equal(races.length, expected, "one phrase per distance");
+  assert.deepEqual(races, [...new Set(racesOffered(NOW, false).flatMap(racePhrases))], "every race still offered, as it is said");
   assert.ok(kinds.flat().includes(first));
   assert.equal(new Set(kinds.flat()).size, kinds.flat().length, "each once");
 });
 
-test("a race is named for what it is: a marathon, a half marathon, a 10 km trail or a 10 km run", () => {
+test("a race is said as a runner says it, and never as the wrong race (D287)", () => {
   const race = (name: string, town: string, ...events: [string, string][]) => ({ name, town, events: events.map(([distance, label]) => ({ distance, label })) });
   assert.deepEqual(racePhrases(race("Bank of America Chicago Marathon 2026", "Chicago", ["marathon", "Marathon"])), ["a finish at the Chicago Marathon"]);
-  assert.deepEqual(racePhrases(race("Wase Marathon 2026", "Sinaai", ["half", "Halve Marathon"], ["marathon", "Marathon"])), ["a half marathon at the Wase Marathon", "a finish at the Wase Marathon"]);
-  assert.deepEqual(racePhrases(race("Maratona di Reggio Emilia 2026", "Reggio Emilia", ["marathon", "Maratona"])), ["a marathon at Maratona di Reggio Emilia"]);
-  assert.deepEqual(racePhrases(race("Trail du Loup Vert 2026", "Jumièges", ["10k", "10km"])), ["a 10 km trail at Trail du Loup Vert"]);
+  assert.deepEqual(racePhrases(race("Wase Marathon 2026", "Sinaai", ["half", "Halve Marathon"], ["marathon", "Marathon"])), ["the half at the Wase Marathon", "a finish at the Wase Marathon"]);
+  assert.deepEqual(racePhrases(race("Maratona di Reggio Emilia 2026", "Reggio Emilia", ["marathon", "Maratona"])), ["a finish at Maratona di Reggio Emilia"]);
+  assert.deepEqual(racePhrases(race("Mansfield Marathon 2026", "Mansfield", ["marathon", "Marathon"], ["half", "Half"], ["10k", "10km"])), ["a finish at the Mansfield Marathon", "the half at the Mansfield Marathon"], "no 10 km at a race named a marathon");
+  assert.deepEqual(racePhrases(race("Tout Rennes Court 2026", "Rennes", ["half", "Le S'MI"], ["10k", "10km"])), ["a half marathon at Tout Rennes Court", "a 10 km race at Tout Rennes Court"]);
+  assert.deepEqual(racePhrases(race("Trail du Loup Vert 2026", "Jumièges", ["10k", "10km"])), ["a finish at Trail du Loup Vert"], "the name says trail");
   assert.deepEqual(racePhrases(race("Somewhere 2026", "Town", ["10k", "Trail 10 km"])), ["a 10 km trail at Somewhere"]);
-  assert.deepEqual(racePhrases(race("Voie Royale 2026", "Saint-Denis", ["10k", "10km"])), ["a 10 km run at Voie Royale"]);
+  assert.deepEqual(racePhrases(race("Voie Royale 2026", "Saint-Denis", ["10k", "10km"])), ["a 10 km race at Voie Royale"]);
+  for (const phrase of landingGoals(NOW).kinds[2]) assert.doesNotMatch(phrase, /\bmarathon at .*marat/i, phrase);
 });
 
 test("a race that has started is no longer said", () => {

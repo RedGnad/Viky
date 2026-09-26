@@ -7445,3 +7445,18 @@ countries were chosen; and gave the criterion: coverage. So a census by platform
 - Every phrase lies in the same cell, the unseen ones hidden, so the room kept is the longest phrase's and nothing under
   the sentence moves. A screen reader hears one sentence: "Their gift can wait for a certificate from a school, a goal
   kept on a service they already use, or a race they finish."
+
+## D287, 27 Sep 2026: a race is said as a runner says it
+
+- **Decision (the founder, 27 Sep 2026)**: some race phrases of D286 read heavily ("a marathon at the ... Marathon",
+  "a 10 km run at the A1 Road Marathon").
+- `racePhrases` now lets a name that already says what the race is carry it alone: "a finish at the Chicago Marathon",
+  "a finish at Maratona di Reggio Emilia", "a finish at Trail du Loup Vert", "a finish at Le 10K'arnag"; the half is
+  "the half at the Wase Marathon" where the name says marathon, "a half marathon at Tout Rennes Court" otherwise; a
+  10 km is "a 10 km trail at ..." where its event is a trail and "a 10 km race at Voie Royale" otherwise; and a 10 km
+  at a race named a marathon is not said, since it reads as the wrong race. 46 race phrases on 27 Sep 2026.
+- What a gift on a race waits for, read in the code for the founder: the funder chooses the race, then one of the
+  distances it offers (marathon, half or 10 km, `MarathonChooser`), and the gift waits for a finish time at that
+  distance for the bound bib, whatever the time. The contract and the line accept a time to finish under
+  (`marathonTargetUnderHours`, "Finish, or under how many hours?"), but the sheet does not show that field for a race,
+  so every race gift made on a screen today is "finish the race".
