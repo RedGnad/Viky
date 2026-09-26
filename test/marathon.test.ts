@@ -397,10 +397,10 @@ test("MikaTiming: its own goal and provider, one line for both timing companies,
   assert.equal(certificateOfGoal(31), MARATHON_MILESTONE, "goal 31 reads with the marathon's words");
   assert.equal(MARATHON_MILESTONE.goalTypeOf?.("chicago-2026/marathon"), 31);
   assert.equal(MARATHON_MILESTONE.goalTypeOf?.("dakar-2023/marathon"), 30);
-  assert.equal(MIKA_TIMING_OPEN, false, "until the founder signs goal 31");
+  assert.equal(MIKA_TIMING_OPEN, true, "since the founder signed goal 31");
   const now = new Date("2026-10-01T12:00:00Z").getTime();
-  assert.ok(!racesOffered(now, true).some((race) => race.timer === "mika-timing"), "listed to nobody, the operator included");
-  assert.equal(MARATHON_MILESTONE.course?.refuses?.("chicago-2026/marathon", true)?.code, "NOT_OPEN");
+  assert.ok(racesOffered(now, false).some((race) => race.raceId === "chicago-2026"), "listed to everybody once open");
+  assert.equal(MARATHON_MILESTONE.course?.refuses?.("chicago-2026/marathon", false), undefined);
   assert.match(readFileSync("app/api/gift/certificate/create/route.ts", "utf8"), /goalType: \(course && certificate\.goalTypeOf\?\.\(course\)\) \|\| certificate\.goalType/);
   assert.match(readFileSync("src/certificate-reading.ts", "utf8"), /if \(marathonGoalTypeOf\(reading\.race\.timer\) !== goalType\) throw new MarathonReadError\("PROOF_MISMATCH"/);
 });

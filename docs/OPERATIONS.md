@@ -1038,11 +1038,24 @@ before the person reads (the account is built from the register at read time, no
 The Marathon de Dakar 2026 is added the day its organiser announces it (nothing on Klikego nor in the calendar on
 26 Sep 2026). The Marathon de Paris is timed by another company and needs its own source.
 
+## The Safe session of goals 31 to 33 (D281)
+
+**Sent on 26 Sep 2026**, signatures given by the founder (the encrypted file `0x19d4…b794` and a phrase on paper),
+carried by the relayer `0x150d…CFE4`, which only paid the gas:
+
+| | |
+|---|---|
+| transaction | `0xf46e2daff9dce964f67f2656fa5720432e80ebeab8f4a992b663c2e7b4efd311`, block 108,058,098, success, 324,210 gas |
+| the hash signed | `0x14333c89386bb2c651b921b0569a0afdf0a31f0f9607f9c662f1d43344fcaad7`, equal to the Safe's own `getTransactionHash` at nonce 10 |
+| the Safe | nonce 10 to 11 |
+| read back after | goals 31 and 32 on `MilestoneGift` with their provider ids and shape 1, goal 33 with its provider id and shape 0 (a climb); `pnpm check:milestone-goals` finds nothing left to send |
+| relayer | 53.16 MON after |
+
 ## Goal 33 on the milestone contract: a Codeforces rating reached (D280)
 
 Provider id `viky:provider:codeforces-rating-zkfetch:v1` = `0x8c198ec8f6c22bb4aa6709c9849ccc0369b08d3346b6017f3f64b6a7e93f7a45`, shape 0 (a climb), data
-`0x5ba191520000000000000000000000000000000000000000000000000000000000000021` + the provider id + a zero word (`pnpm safe:session` prints it). Batched with 31 and 32 in the one session the founder asked for. The line stays in
-`BUILDING` until the goal is read back.
+`0x5ba191520000000000000000000000000000000000000000000000000000000000000021` + the provider id + a zero word (`pnpm safe:session` prints it). Registered in the Safe session of goals 31 to 33 (the section "The Safe session of goals 31 to 33" below), read
+back; the line is open (D281).
 
 **The reading** (src/codeforces-reading.ts): `https://codeforces.com/api/user.info?handles=<handle>`, anonymous,
 one request every two seconds (the API help, read 26 Sep 2026), any user agent. Two sources: `codeforces-user`
@@ -1063,8 +1076,8 @@ The sources are in the shared list: the service is redeployed from the branch be
 
 Provider id `viky:provider:wca-zkfetch:v1` = `0xe8fe5b823e9946efa5da357e01825f12d71f46b4cac1bd0e27afbc182c3a88fb`, shape 1, data
 `0x5ba191520000000000000000000000000000000000000000000000000000000000000020e8fe5b823e9946efa5da357e01825f12d71f46b4cac1bd0e27afbc182c3a88fb0000000000000000000000000000000000000000000000000000000000000001`.
-Batched with 31 and 33 in the one session the founder asked for.
-The line stays in `BUILDING` until the goal is read back; the opening PR moves it to `CONDITIONS`.
+Registered in the Safe session of goals 31 to 33 (the section "The Safe session of goals 31 to 33" below), read
+back; the line is open (D281).
 
 **The reading, in two steps** (src/wca-reading.ts): the competition's results, `api/v0/competitions/<id>/results`,
 read plainly, give the person's rows in the event (by their WCA id, or by their name as they gave it when they
@@ -1090,11 +1103,9 @@ The source is in the shared list: the service is redeployed from the branch befo
 
 Provider id `viky:provider:mika-timing-zkfetch:v1` = `0x5f162f6734f7ec9371fc0cfc3eff666a1c01397748a818073a2cec9b4a2708b7`, shape 1, data
 `0x5ba19152000000000000000000000000000000000000000000000000000000000000001f5f162f6734f7ec9371fc0cfc3eff666a1c01397748a818073a2cec9b4a2708b70000000000000000000000000000000000000000000000000000000000000001`.
-`pnpm safe:session` batches it with any other missing goal, carried by the relayer. The line is the same, "Finish a
-marathon": the race chosen decides the goal (`goalTypeOf`), and a reading from one timing company never settles the
-other's goal. Until the goal is signed, `MIKA_TIMING_OPEN` (src/marathon.ts) is false: MikaTiming's races are listed
-to nobody, the operator included, and the create route refuses them (`NOT_OPEN`). The opening PR flips it, after
-reading the goal back.
+Registered in the Safe session of goals 31 to 33 (the section below), read back; `MIKA_TIMING_OPEN` (src/marathon.ts)
+is true since (D281). The line is the same, "Finish a marathon": the race chosen decides the goal (`goalTypeOf`),
+and a reading from one timing company never settles the other's goal.
 
 **The reading, in two steps** (src/mika-timing.ts, src/marathon-reading.ts): the search by bib on the race's
 results site, `https://<host>/<year>/?pid=search&search[start_no]=<bib>`, read plainly, whose rows carry the event's

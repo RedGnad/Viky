@@ -239,7 +239,7 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
   {
     conditionId: "wca-time",
     supervised: true,
-    inShort: "Read from the WCA's public results: one row, the name, the event, the best single. Judged and timed at a WCA competition.",
+    inShort: "Read from the WCA's public results: one row, the name, the event, the best single. Timed by a judge at the competition.",
     data: "The person's own list of results on the World Cube Association's public API, read through an attested fetch when the person asks after the competition, and again at every reading: the row of that competition, that event and the round of their best single, with the name and the times as the WCA prints them. Nothing else is matched. An attempt that is a DNF has no time there and pays nothing.",
     account: "Three ties: the person's name, written by the funder at creation and hashed into the terms they sign, never published; the competitors list of the competition, public, on which the person has to be registered in the event before the first day (that stands in for a bib); and the WCA's own results, which have to carry that name with a result in that event. The name is compared with no case, no accents and no order.",
     whoActed: "The WCA's judges: every attempt at a WCA competition is timed and checked by a judge, the examiner of that attempt, under the WCA Regulations, at a table in the venue.",

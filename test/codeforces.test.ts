@@ -7,7 +7,7 @@ import { CODEFORCES_GOAL_TYPE, CODEFORCES_IDENTITY_LABEL, codeforcesProviderId, 
 import { CodeforcesReadError, codeforcesPlayerId, readCodeforcesStanding } from "../src/codeforces-reading";
 import { privacyOf } from "../src/condition-privacy";
 import { proofOfCondition } from "../src/condition-proof";
-import { BUILDING, CODEFORCES_RATING as LINE, conditionById } from "../src/conditions";
+import { CONDITIONS, CODEFORCES_RATING as LINE, conditionById } from "../src/conditions";
 import { cadenceOfGoal, CODEFORCES_MILESTONE, milestoneById, milestoneOfClimb } from "../src/milestone-conditions";
 import { MILESTONE_GOALS } from "../src/milestone-goals";
 import { SHAPE_CLIMB } from "../src/milestone-protocol";
@@ -61,12 +61,12 @@ test("the plain read: the standing, an unrated account, a handle nobody has", as
   await assert.rejects(readCodeforcesStanding("down_site", fake), refused("FETCH_FAILED"));
 });
 
-test("the line: read for them, Learn, a climb in the chess rating's shape, goal 33, being built", () => {
+test("the line: read for them, Learn, a climb in the chess rating's shape, goal 33, open", () => {
   assert.equal(LINE.family, "learn");
   assert.equal(LINE.nature, "read");
   assert.equal(LINE.kind, "milestone");
-  assert.equal(LINE.live, false);
-  assert.ok(BUILDING.includes(LINE));
+  assert.equal(LINE.live, true);
+  assert.ok(CONDITIONS.includes(LINE));
   assert.ok(LINE.name.length <= 30, `${LINE.name.length} characters`);
   assert.equal(LINE.link.kind, "username");
   if (LINE.link.kind === "username") {
