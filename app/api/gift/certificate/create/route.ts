@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       funder: getAddress(auth.account),
       refundTo: getAddress(refundToRaw),
       recipientContactHash: NO_CONTACT_HASH,
-      goalType: certificate.goalType,
+      goalType: (course && certificate.goalTypeOf?.(course)) || certificate.goalType,
       shape: SHAPE_HAVE_OR_NOT,
       // A grade is typed on its scale and signed in hundredths, the same integer the browser signed (D174).
       target: BigInt(certificate.targetUnits ? certificate.targetUnits(target) : target),

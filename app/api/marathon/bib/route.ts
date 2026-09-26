@@ -31,11 +31,13 @@ export async function POST(request: Request) {
     if (!gift.recipient || gift.recipient.toLowerCase() !== auth.account.toLowerCase()) throw new GiftApiError("NOT_RECIPIENT", "Open the gift first.", 403);
     const race = marathonEventById(String(milestone.course ?? ""))?.race;
     if (!race) throw new GiftApiError("UNKNOWN_RACE", "This gift names no race Viky reads.", 409);
+    if (!isValidBib(bib, race.timer)) throw new GiftApiError("INVALID_BIB", "A bib number is one to six figures.");
     if (gift.boundAt) throw new GiftApiError("BIB_ALREADY_SET", "Your bib is already entered for this gift.", 409);
     if (!bibStillOpen(race, Date.now()) && !isOperator(auth.account)) throw new GiftApiError("RACE_STARTED", "The race has started, so a bib can no longer be entered for this gift.", 409);
-    await markConnectedAccount(giftId, bib);
-    await markBound(giftId, bib);
-    return NextResponse.json({ bib }, { headers: NO_STORE });
+    const kept = bib.toUpperCase();
+    await markConnectedAccount(giftId, kept);
+    await markBound(giftId, kept);
+    return NextResponse.json({ bib: kept }, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);
   }

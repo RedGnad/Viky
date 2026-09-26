@@ -319,6 +319,17 @@ export default async function JudgesPage() {
             gift runs on the 2023 result and how the three proofs are shown here.
           </li>
           <li>
+            <strong>MikaTiming&apos;s results sites.</strong> The same line reads the marathons MikaTiming times (Chicago,
+            Frankfurt, Boston) from the runner&apos;s own page on each race&apos;s results site, found from the site&apos;s
+            search by bib: the name, the bib and the net finish time. Read on 26 Sep 2026: the sites&apos; legal notice
+            and general terms (mika:timing GmbH, Bergisch Gladbach) say nothing about reading a page and their privacy
+            statement concerns visitors&apos; data; their <code>robots.txt</code> tells every robot to stay out
+            (<code>Disallow: /</code>), and they answer 403 to a bare user agent. Viky reads one runner&apos;s page per
+            gift, at the person&apos;s own request, naming itself and its site in its user agent
+            (<code>Viky/1.0; +https://viky.cash</code>), and keeps three fields, written here with the risk assumed as
+            for edX. Nothing of theirs is offered until goal 31 is signed.
+          </li>
+          <li>
             <strong>WAEC&apos;s terms.</strong> WASSCE credits are shown by the person from WAEC&apos;s own result checker
             (D217), and not read for them, because WAEC&apos;s privacy policy tells the holder of an access code it allocates
             &quot;you must not disclose it to any third party&quot;, and the result card&apos;s PIN is one. The card is typed on WAEC&apos;s page and
