@@ -717,6 +717,16 @@ dialog.sheet-tall {
 .sheet-body {
   --fade-above: 0px;
   --fade-below: 0px;
+}
+
+/*
+ * The mask only while something is hidden (D288): a masked list is painted as a layer of its own, and on a phone the
+ * rig's drawings inside it came out as rectangles of their gradient (the founder, 27 Sep 2026, on the family tiles,
+ * as D249's runner did). A list that fits is not masked at all.
+ */
+.sheet-body[data-more="above"],
+.sheet-body[data-more="below"],
+.sheet-body[data-more="both"] {
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0,

@@ -307,12 +307,13 @@ function Case({ id }: Readonly<{ id: string }>) {
 // Less fine since D261 (the founder: "moins fin les points"): 1.6 apart and 0.08 to 0.56, a third larger than D260's
 // 1.2 and 0.06 to 0.42, half way to the coarse screen of D255.
 const HALFTONE = { step: 1.6, from: 0.08, to: 0.56, sizes: 8 } as const;
-function Halftone({ id }: Readonly<{ id: string }>) {
+function Halftone() {
   const paths = Array.from({ length: HALFTONE.sizes }, () => [] as string[]);
   for (let row = 0, y = 4; y <= 36; row += 1, y += HALFTONE.step * 0.866) {
     for (let x = 3 + (row % 2) * (HALFTONE.step / 2); x <= 61; x += HALFTONE.step) {
-      // Inside the diamond, with a dot's width to spare for the clip to finish.
-      if (Math.abs(x - CENTRE.x) / 29 + Math.abs(y - CENTRE.y) / 16 > 1.05) continue;
+      // Inside the diamond, a dot's centre at most on its edge, and short of its four rounded tips: the edge drawn
+      // again over the dots (2.2 wide) covers the half of a dot that passes it, so no clip is needed (D288).
+      if (Math.abs(x - CENTRE.x) / 29 + Math.abs(y - CENTRE.y) / 16 > 1 || Math.abs(x - CENTRE.x) > 25.5 || Math.abs(y - CENTRE.y) > 14) continue;
       // 0 where the light falls (top left), 1 on the far side, as the gloss reads the same light.
       const along = Math.min(1, Math.max(0, 0.5 + ((x - CENTRE.x) / 29 + (y - CENTRE.y) / 16) / 4));
       paths[Math.min(HALFTONE.sizes - 1, Math.floor(along * HALFTONE.sizes))].push(`M${round(x)} ${round(y)}h0`);
@@ -322,13 +323,9 @@ function Halftone({ id }: Readonly<{ id: string }>) {
     // No blend mode and no group opacity (D263): on a phone, while the figure is animated, it is painted in a layer
     // of its own, and a multiply there blends against a transparent backdrop, which showed the dots over nothing and
     // the layer's rectangle. The colour a multiply gave is computed instead (`--character-halftone`, the body's deeper
-    // colour multiplied by itself), laid at 45 % by each dot's own opacity.
-    <g data-part="halftone" clipPath={`url(#${id}-screen)`}>
-      <defs>
-        <clipPath id={`${id}-screen`}>
-          <path d={DIAMOND} />
-        </clipPath>
-      </defs>
+    // colour multiplied by itself), laid at 45 % by each dot's own opacity. And no clip (D288): the dots stop at the
+    // edge by where they are placed, which leaves a phone nothing to paint apart.
+    <g data-part="halftone">
       {paths.map((dots, size) => {
         const radius = HALFTONE.from + ((size + 0.5) / HALFTONE.sizes) * (HALFTONE.to - HALFTONE.from);
         return <path key={size} d={dots.join("")} style={{ fill: "none", stroke: "var(--character-halftone)", strokeOpacity: 0.45, strokeWidth: round(radius * 2), strokeLinecap: "round" }} />;
@@ -422,7 +419,7 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
         <path d={DIAMOND} style={{ fill: `url(#${id}-body)`, stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
         {halftone ? (
           <>
-            <Halftone id={id} />
+            <Halftone />
             {/* The edge again over the dots, so the screen stops at its inner side. */}
             <path d={DIAMOND} style={{ fill: "none", stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
           </>

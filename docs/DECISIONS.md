@@ -7460,3 +7460,20 @@ countries were chosen; and gave the criterion: coverage. So a census by platform
   distance for the bound bib, whatever the time. The contract and the line accept a time to finish under
   (`marathonTargetUnderHours`, "Finish, or under how many hours?"), but the sheet does not show that field for a race,
   so every race gift made on a screen today is "finish the race".
+
+## D288, 27 Sep 2026: nothing in a sheet's list is painted apart when the list fits
+
+- The founder, 27 Sep 2026, on his phone, by day: in "What will they do?", each family tile showed a rectangle of the
+  body's pink-to-violet gradient behind its figure, the diamond and its dots drawn over it; the Move tile's rectangle
+  leaned with its runner. Desktop Chromium, emulating that phone, draws the four tiles correctly, as it did for D249
+  and D263, so the cause is read from how a phone paints: D249's runner showed the same rectangle, a drawing painted in
+  a layer of its own inside the sheet's list, which is masked for its fades.
+- The list was masked even when nothing was hidden (both fades at zero), so it was always its own layer. It is now
+  masked only while something is hidden above or below (`.sheet-body[data-more=...]` in `app/globals.css`).
+- The rig's halftone no longer uses a clip path, the one thing the rig drew apart inside the figure: its dots are
+  placed only where they fall inside the diamond, short of its rounded tips, and the edge drawn again over them covers
+  the half of a dot that passes it. Compared pixel by pixel with production at 390 by day and by night, the four
+  tiles read the same; the differences are single dots at the edge.
+- The runner's lean stays a CSS turn inside the drawing: turning it by an SVG attribute moved it (its turning point is
+  its own box, not the figure's), and the three other tiles showed the rectangle without any lean.
+- Not verified on the device: the fix is to the two causes a phone paints apart, not checked against the symptom.
