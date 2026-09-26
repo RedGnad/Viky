@@ -151,9 +151,13 @@ test("the three destinations' figures wear the same halftone as the landing's (D
     const figures = (scene.match(/data-part="figure"/g) ?? []).length;
     assert.equal((scene.match(/data-part="halftone"/g) ?? []).length, figures, `${which}: every figure`);
   }
-  // Ids stay apart, so two figures on one page keep their own screen.
+  // No clip (D288): a phone painted the clipped screen apart inside a sheet's list. The dots stop at the diamond's edge
+  // by where they are placed, and none is out beyond it or on a rounded tip.
   const gifts = renderToStaticMarkup(createElement(Scene, { which: "gifts" }));
-  assert.ok(gifts.includes('id="gifts-one-screen"') && gifts.includes('id="gifts-two-screen"'));
+  assert.doesNotMatch(gifts, /clipPath|clip-path/);
+  const dots = [...renderToStaticMarkup(createElement(Figure, { id: "d", halftone: true })).matchAll(/M([\d.]+) ([\d.]+)h0/g)].map((m) => [Number(m[1]), Number(m[2])]);
+  assert.ok(dots.length > 200);
+  for (const [x, y] of dots) assert.ok(Math.abs(x - 32) / 29 + Math.abs(y - 20) / 16 <= 1 && Math.abs(x - 32) <= 25.5 && Math.abs(y - 20) <= 14, `${x} ${y}`);
 });
 
 test("every link to Viky carries the same picture, the day's figure on the paper card (D265)", async () => {
