@@ -15,6 +15,7 @@ import { HeroMoment } from "./HeroMoment";
 import { isStandalone } from "./Install";
 import { LandingStory } from "./LandingStory";
 import { GoalsGoingBy } from "./GoalsGoingBy";
+import type { LandingGoals } from "@/src/landing-goals";
 import { MoneyHero } from "./MoneyHero";
 import { OfferCard } from "./offer/OfferCard";
 import { Shell } from "./Shell";
@@ -45,8 +46,8 @@ export function Home({
   initialHoldings,
   initialGifts,
   heroPlayed = false,
-  goals = [],
-}: Readonly<{ initialHoldings?: HeldAmounts | null; initialGifts?: GiftSummary[] | null; heroPlayed?: boolean; goals?: readonly string[] }> = {}) {
+  goals,
+}: Readonly<{ initialHoldings?: HeldAmounts | null; initialGifts?: GiftSummary[] | null; heroPlayed?: boolean; goals?: LandingGoals }> = {}) {
   /**
    * What the server read for this account while it drew the page (D160). Amounts cross as strings, because a
    * balance has more digits than a browser number holds, and become amounts here.
@@ -117,7 +118,7 @@ export function Home({
           </div>
         </div>
         {/* What a gift can wait for, one thing at a time, from the register (D285, over D225's four still names). */}
-        <GoalsGoingBy items={goals} />
+        {goals ? <GoalsGoingBy first={goals.first} kinds={goals.kinds} /> : null}
         {/* Under the card, what Viky promises, drawn (the founder, 27 Sep 2026, D282). */}
         <LandingStory />
         <p className={`${HELP} flex w-full flex-wrap gap-x-[var(--space-lg)] [@media(min-width:1024px)]:justify-center`}>

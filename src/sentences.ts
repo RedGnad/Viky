@@ -231,7 +231,7 @@ export const HOME = {
    */
   waitsFor: {
     lead: "Their gift can wait for",
-    all: (items: string) => `Their gift can wait for ${items}.`,
+    all: "Their gift can wait for a certificate from a school, a goal kept on a service they already use, or a race they finish.",
     read: "Each one is read where it happens: the certificate's own page, the service itself, the race's results. Viky is not affiliated with the schools, races or services named.",
   },
   offer: "Offer a gift",
