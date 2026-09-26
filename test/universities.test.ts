@@ -30,9 +30,9 @@ test("every school named has its page on the platform Viky reads, and MIT waits 
     const host = school.platform === "edx" ? "https://www.edx.org/school/" : "https://www.coursera.org/partners/";
     assert.ok(school.page.startsWith(host), `${school.name} is named on its platform's own page: ${school.page}`);
   }
-  // MIT's courses are on MITx Online, whose line is being wired (D222) and is not live: not named until it is.
+  // MIT's courses are on MITx Online, its own line (D222), not on Coursera or edX: this list names the schools of
+  // those two platforms by their pages there, so MIT is not in it.
   assert.ok(!UNIVERSITIES.some((school) => /\bMIT\b/.test(school.name)), "MIT is not named");
-  assert.equal(conditionById("mitx-online-certificate")?.live, false);
   const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
   assert.equal(pkg.scripts["check:universities"], "tsx scripts/check-universities.ts", "the pages are checked by a script that fails when one is gone");
 });

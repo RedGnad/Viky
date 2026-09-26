@@ -32,11 +32,12 @@ test("every condition in the register is filed under a family that exists", () =
   for (const condition of CONDITIONS) assert.ok(known.has(condition.family), `${condition.id} is filed under ${condition.family}`);
   // The audit's own filing, so a condition cannot drift into another family unnoticed.
   const filed = Object.fromEntries(CONDITIONS.map((condition) => [condition.id, condition.family]));
-  // The founder's filing of 24 Sep 2026 (D220), line by line.
+  // The founder's filing of 24 Sep 2026 (D220), line by line; MITx Online and the marathon opened on 26 Sep 2026 (D222, D273).
   assert.deepEqual(filed, {
     "duolingo-daily": "learn",
     "coursera-certificate": "learn",
     "edx-certificate": "learn",
+    "mitx-online-certificate": "learn",
     "credly-badge": "learn",
     "accredible-credential": "learn",
     "duolingo-english-test": "exam",
@@ -46,9 +47,10 @@ test("every condition in the register is filed under a family that exists", () =
     "chess-tactics": "play",
     "fitbit-daily": "move",
     "strava-daily": "move",
+    "marathon-finish": "move",
   });
   // Inside a family, the register's order: the founder's list is that order.
-  assert.deepEqual(CONDITIONS.filter((condition) => condition.family === "learn").map((condition) => condition.id), ["duolingo-daily", "coursera-certificate", "edx-certificate", "credly-badge", "accredible-credential"]);
+  assert.deepEqual(CONDITIONS.filter((condition) => condition.family === "learn").map((condition) => condition.id), ["duolingo-daily", "coursera-certificate", "edx-certificate", "mitx-online-certificate", "credly-badge", "accredible-credential"]);
   assert.deepEqual(CONDITIONS.filter((condition) => condition.family === "exam").map((condition) => condition.id), ["duolingo-english-test", "toefl-mybest-shown", "university-enrollment-shown"]);
 });
 

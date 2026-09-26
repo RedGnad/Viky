@@ -585,12 +585,13 @@ export const MITX_ONLINE_CERTIFICATE_LINE: Condition = {
   kind: "milestone",
   nature: "read",
   goalType: null,
-  live: false,
-  beforeItOpens: "Goal 29 signed by the owner, and the reading service redeployed with the MITx Online source.",
+  // Open since goal 29 was signed and the reading service ran the MITx Online source (D222, D275).
+  live: true,
+  state: "open",
   source: "MITx Online",
   family: "learn",
   name: "An MIT course certificate",
-  help: "The certificate's public page on MITx Online, MIT's own course platform, shared when they have it: the course and the day are read from it. It proves a course taken, not a place at MIT.",
+  help: "The certificate's public page on MITx Online, shared when they have it: the course and the day are read from it. It proves a course taken, not a place at MIT.",
   link: { kind: "link", label: "The link to your certificate", help: "In MITx Online, open the certificate from your dashboard and copy the whole link from your browser, mitxonline.mit.edu/certificate/ followed by its id, then paste it here." },
   reading: "mitx-online-certificate",
   words: {
@@ -850,17 +851,18 @@ export const MARATHON_FINISH_LINE: Condition = {
   kind: "milestone",
   nature: "read",
   goalType: null,
-  live: false,
-  beforeItOpens: "Goal 30 signed by the owner, and the reading service redeployed with the Breizh Chrono source.",
+  // Open since goal 30 was signed and the reading service ran the Breizh Chrono source (D273, D275).
+  live: true,
+  state: "open",
   source: "Breizh Chrono",
   family: "move",
   name: "Finish a marathon",
-  help: "The race's own results, read for them from the timing company's page: their name, their bib and their finish time on one line. It proves the result, not who wore the bib.",
+  help: "Their line on the timing company's results page, read for them: the name, the bib and the official time. It proves the result, not who wore the bib.",
   link: { kind: "link", label: "Your bib number", help: "Enter the number on your bib on your gift's page before the race starts. After the finish, Viky reads your line on the results page." },
   reading: "breizh-chrono-runner",
   words: {
     earnedDay: "When they finish, all of this becomes theirs",
-    connect: "Opened. Enter your bib number before the race starts.",
+    connect: "Opened. Enter your bib number before the race starts; after the finish, Viky reads your line on Breizh Chrono.",
     doIt: "Enter your bib number here before the start, then run. After the finish, Viky reads your line on the timing company's results page.",
     eachDay: "the day the result is read",
     preview: "Finish a marathon: the gift is yours when the results page says you did.",
@@ -917,7 +919,7 @@ export const STRAVA_DAILY: Condition = {
   },
 };
 
-export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, EDX_CERTIFICATE, CREDLY_BADGE, ACCREDIBLE_CREDENTIAL, TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, FITBIT_DAILY, STRAVA_DAILY];
+export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, EDX_CERTIFICATE, MITX_ONLINE_CERTIFICATE_LINE, CREDLY_BADGE, ACCREDIBLE_CREDENTIAL, TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, FITBIT_DAILY, STRAVA_DAILY, MARATHON_FINISH_LINE];
 
 /**
  * What is built with a piece really missing (D184): a provider not registered, a portal not proved. Nobody can make a
@@ -1182,8 +1184,6 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
 
 
 export const BUILDING: readonly Condition[] = [
-  MITX_ONLINE_CERTIFICATE_LINE,
-  MARATHON_FINISH_LINE,
   CAMBRIDGE_ENGLISH_SHOWN,
   IELTS_SHOWN,
   BAC_MOROCCO_SHOWN,

@@ -230,7 +230,7 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
   {
     conditionId: "mitx-online-certificate",
     supervised: false,
-    inShort: "Read from the certificate's public page on MITx Online, MIT's own course platform. It proves a course passed on the certificate track, not a place at MIT.",
+    inShort: "Read from the certificate's public page on MITx Online. It proves a course passed there, not a place at MIT.",
     data: "The public page MITx Online publishes for the certificate, read through an attested fetch when the person shares its link, and again at every reading: the course or program's title, the holder's name, the day of issue and the certificate's own id. Nothing else is matched. A certificate that is revoked answers 404 and stops paying.",
     account: "The funder names the person and the course by its title, and both are hashed into the terms they sign, so a certificate for another course or in another name pays nothing. Two people of the same name who finish the same course inside the same window cannot be told apart (D49's gap), as on edX.",
     whoActed: "Unknown: MITx Online issues a certificate on a passing grade in the paid track; its terms describe identity-verified proctoring for some courses only, and the page does not say which.",
