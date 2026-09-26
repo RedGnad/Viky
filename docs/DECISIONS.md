@@ -7562,3 +7562,12 @@ again.
   resumes; a 404 whose body is race result's trap page counts as throttling, never as "no results page".
 - The two runs that overlapped on 27 Sep morning (a probe of mine that launched the script while the founder ran
   it too) are what got the list server to throttle this machine for most of the day: one run at a time.
+
+## D293, 27 Sep 2026: the small German laps leave the register
+
+The founder, 27 Sep 2026: forty-six German races were noise; the small ones go. The rule is the generator's, so a
+new run gives the same register: the Hamburg "Special Marathons" series (Teichwiesen, Lost Places, Insel, about
+thirty dates between now and January), marathons run as laps on a track or a hill ("Bahnmarathon", "Bergmarathon
+mit Höhenmetersammlung"), an advent series, and ultras (not a marathon distance). A race another timing company
+already reads is listed once (the Frankfurt Marathon is MikaTiming's). Kept: 35 of 226, Germany 17 (city races:
+Hanover, Dortmund, Bremen, Aschaffenburg, Kandel, Bergisch Gladbach and the like).
