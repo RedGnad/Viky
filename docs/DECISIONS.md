@@ -7521,3 +7521,26 @@ frozen: no new source, only the proofs (c) and the tests.
   or MikaTiming, four hundred a day, thirty minutes after a 429; a reading put off is told to try later and nothing
   is counted. The incident is written on the judges' page as it happened.
 - **The catalogue is frozen** from here: refreshing the register by the script is data; a new source or line is not.
+
+## D291, 28 Sep 2026: the judges' path, a judge credit from the treasury on the judge's own account
+
+- **Decision (the founder, 28 Sep 2026)**: two gestures, no account kept by Viky, the judge keeps their own passkey.
+  (1) The judge credit: once their passkey has made their account, a judge types a code, and the treasury
+  (`src/phone-treasury.ts`, the same key) sends N AUSD to that account. The code lives in a Vercel variable, never in
+  the repository, which will be public at submission. Bounds: once per account, N and a total ceiling set by
+  variables, nothing after 27 Oct 2026, a one-line journal per credit the operator can read. After the credit, the pay
+  sheet takes its "the account already holds enough" path and opens no card service. (2) The gift for the judge: no
+  code; the founder makes it from the operator account, the judge opens it with their passkey and takes it out as phone
+  credit or a gift card.
+- Built: `giveJudgeCredit` in `src/judge-credit.ts` and `POST /api/judge/credit`, on the signed-in account only. The
+  code (`JUDGE_CODE`, at least 12 characters) is compared in constant time; five wrong codes lock the account. The
+  amount (`JUDGE_CREDIT_AUSD`) and the ceiling (`JUDGE_CREDIT_CAP_AUSD`) are variables; without all three nothing is
+  open. The row is claimed before money moves, in one statement that checks the ceiling, and the transfer is the
+  phone way's refund (`refundAusd`): the treasury signs an AUSD transfer authorization whose nonce is made from the
+  account, and the relayer carries it, so one account can be credited once whatever retries. The journal is
+  `viky_judge_credits`, read with `pnpm judge:credits` (docs/OPERATIONS.md, "The judge credit").
+- The judges page opens with "For judges, how to try it": the five steps, the credit said as it is ("a judge credit
+  from Viky's treasury, once per account. A real funder pays by card through Ramp, shown in the video."), Mera's
+  stateless test on the same account, and the code field. The code itself is only in the submission portal's
+  instructions.
+- Not verified: a credit on production, since the three variables are not set; the founder sets them.

@@ -1634,6 +1634,35 @@ Base for their fees. No MON: on Monad the treasury only signs, and the relayer c
 Monad, the invoice paid on Base, or the refund. Money the treasury holds for somebody is every row still `received`,
 `paid` or `failed` (`unsettledOrders`).
 
+## The judge credit: what the founder sets and reads (D291)
+
+A judge who has made their own account with a passkey types the judge code on the judges page, and the treasury (the
+phone way out's, the same key) sends a fixed amount of AUSD to that account, once per account, under a ceiling, until
+the end of 27 Oct 2026 (UTC). Until the three variables below exist, the page says credits are not open and the route
+refuses; nothing is sent.
+
+```
+vercel env add JUDGE_CODE production
+vercel env add JUDGE_CREDIT_AUSD production
+vercel env add JUDGE_CREDIT_CAP_AUSD production
+```
+
+- `JUDGE_CODE`: at least 12 characters, given to judges in the submission portal's instructions only. It is never in
+  this repository, which is public at submission, and never printed on a page.
+- `JUDGE_CREDIT_AUSD`: the amount of one credit, in AUSD, like `25`.
+- `JUDGE_CREDIT_CAP_AUSD`: the ceiling of all credits together, like `250`; at least one credit.
+
+The treasury must hold the AUSD on Monad; the relayer carries each transfer and pays its fee, so the treasury needs
+no MON. Five wrong codes lock an account. The journal, one line per account (when, the account, the amount, sent or
+failed, the transfer's hash, the wrong codes), is read with the production command of "The test database":
+
+```
+VIKY_ALLOW_PRODUCTION_DATABASE=1 pnpm judge:credits
+```
+
+A line left "sending" means the server stopped during a transfer: read its account on MonadVision before anything. A
+"failed" line may be tried again by the judge, with the same authorization nonce, so it can never arrive twice.
+
 ## The directory's portals, written to production (D267)
 
 Five rows from `src/directory-portals.ts`: Rome, and four that prove a student account. Two commands, with the
