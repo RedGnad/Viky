@@ -145,6 +145,40 @@ export const WAY_IN_CHAIN_COIN: WayIn = {
  */
 export const WAYS_IN: readonly [WayIn, ...WayIn[]] = [WAY_IN_GIFT_COIN, WAY_IN_CHAIN_COIN];
 
+/**
+ * Ramp's partner key (D289): public by design, it goes in the page's own address, and Ramp names the partner with it.
+ * Set on Vercel as `NEXT_PUBLIC_RAMP_HOST_API_KEY` once Ramp gives one; until then it is absent.
+ */
+export const rampHostApiKey = (): string | undefined => process.env.NEXT_PUBLIC_RAMP_HOST_API_KEY?.trim() || undefined;
+
+/** Ramp's page with nothing in its address: the one it opens without a partner key (read on 27 Sep 2026, D289). */
+export const RAMP_BARE_PAGE = "https://app.ramp.network/";
+
+/**
+ * The page a way in opens, filled in when it can be (D289, the founder's decision of 27 Sep 2026: the person types and
+ * pastes nothing). Ramp with its partner key: the account the money lands in (`userAddress`), the sheet's amount in
+ * euros (`fiatCurrency`, `fiatValue`) and what a gift holds (`swapAsset=MONAD_AUSD`), the names Ramp's configuration
+ * page still describes (`https://docs.rampnetwork.com/configuration`, read 27 Sep 2026; its newer names are `inAsset`,
+ * `outAsset` and `inAssetValue`). Without the key, Ramp answers any parameter with "Integration issue detected" (its
+ * own widget reads the key from the address and fails without it, read in its script on 27 Sep 2026), so the page
+ * opens bare, where it works. Mercuryo keeps its page: filling it in needs a partner `widget_id`.
+ */
+export function wayInPage(way: WayIn, fill: Readonly<{ account?: string; euros?: number }> = {}, key: string | undefined = rampHostApiKey()): string {
+  if (way !== WAY_IN_GIFT_COIN) return way.page;
+  if (!key) return RAMP_BARE_PAGE;
+  const address = new URL(way.page);
+  address.searchParams.set("hostApiKey", key);
+  if (fill.account) address.searchParams.set("userAddress", fill.account);
+  if (fill.euros && fill.euros > 0) {
+    address.searchParams.set("fiatCurrency", "EUR");
+    address.searchParams.set("fiatValue", String(Math.ceil(fill.euros)));
+  }
+  return address.toString();
+}
+
+/** Whether the page a way in opens arrives filled in with the account and the amount. */
+export const wayInFillsIn = (way: WayIn, key: string | undefined = rampHostApiKey()): boolean => way === WAY_IN_GIFT_COIN && key !== undefined;
+
 /** The rail money was added through before there were two, kept for what still reads a single one. */
 export const WAY_IN: RailHandoff = {
   name: WAY_IN_CHAIN_COIN.name,

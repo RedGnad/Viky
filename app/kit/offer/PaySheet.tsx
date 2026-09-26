@@ -15,7 +15,7 @@ import { formatAusd } from "@/src/gift-reader";
 import { savePendingGift } from "@/src/pending-gift";
 import { rateDateInWords } from "@/src/display-currency";
 import type { RailReach } from "@/src/rail-country";
-import { feeSentence, WAYS_IN } from "@/src/rails";
+import { feeSentence, wayInFillsIn, wayInPage, WAYS_IN } from "@/src/rails";
 import { CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
@@ -130,7 +130,8 @@ export function PaySheet({
     try {
       const account = address ?? (await ensureSigner()).address;
       savePendingGift({ ...draftToTerms(draft, account), wayIn: way.name });
-      if (!enough) window.open(way.page, "_blank", "noopener,noreferrer");
+      // Filled in with the account and the amount when the partner can take them (D289).
+      if (!enough) window.open(wayInPage(way, { account, euros }), "_blank", "noopener,noreferrer");
       router.push("/fund?step=paying");
     } catch {
       setProblem(W.notMade);
@@ -178,6 +179,8 @@ export function PaySheet({
       {offer.atFloor && !enough && euros ? <p className={HELP}>{W.floor(euros)}</p> : null}
       {/* The first way refused this person, and the sheet says which, why and which this goes through instead (D239). */}
       {offer.insteadOf && !enough ? <p className={HELP}>{insteadSentence(offer)}</p> : null}
+      {/* What the partner's page will be, before it opens (D289), said only where it is true: the page arrives filled in. */}
+      {!enough && wayInFillsIn(way) ? <p className={BODY}>{W.partnerFilledIn}</p> : null}
 
       {/* Who this is from, said here because this is where a person becomes somebody to the recipient. It is the one
           thing on the card the image did not draw, and at the card's label size it would be under a thumb and under

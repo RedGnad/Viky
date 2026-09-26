@@ -46,7 +46,7 @@ test("the account is made at the press, and the sheet says so before it happens"
   // The passkey opens inside the press, then the terms are written, then the service's page opens: that order.
   const press = sheet.slice(sheet.indexOf("const pay = async"), sheet.indexOf("const line ="));
   assert.ok(press.indexOf("await ensureSigner()") < press.indexOf("savePendingGift("), "the account comes before the terms are kept");
-  assert.ok(press.indexOf("savePendingGift(") < press.indexOf("window.open(way.page"), "and the terms before the page that takes the money");
+  assert.ok(press.indexOf("savePendingGift(") < press.indexOf("window.open(wayInPage(way"), "and the terms before the page that takes the money");
   assert.match(press, /router\.push\("\/fund\?step=paying"\)/, "and the wait takes over");
 });
 

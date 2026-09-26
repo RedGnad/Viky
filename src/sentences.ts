@@ -160,6 +160,12 @@ export const PAY = {
   /** Said before the action, because it is what pressing it does: nothing was asked of this person until now. */
   passkeyMakesTheAccount: "Your face or your fingerprint creates your account when you press pay. Nothing was asked of you until now.",
   signedIn: "Your face or your fingerprint is asked once, to sign what you are paying for.",
+  /**
+   * Before the partner's page opens (D289, the founder's words of 27 Sep 2026), shown only when that page arrives filled
+   * in with the account and the amount, which needs Ramp's partner key.
+   */
+  partnerFilledIn:
+    "Our partner Ramp takes your card, once with your ID. It shows the amount as digital dollars, AUSD: that is what your gift holds. Your account is already filled in. Come back here: the gift starts by itself.",
   pay: "Pay",
   payEuros: (euros: number) => `Pay ${euros} EUR`,
   payFromAccount: (amount: string) => `Put ${amount} in their name`,

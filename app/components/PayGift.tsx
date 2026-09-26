@@ -26,7 +26,7 @@ import { formatAusd } from "@/src/gift-reader";
 import { dollarsToUnits } from "@/src/money";
 import { settlingTimeInWords } from "@/src/pass-schedule";
 import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
-import { WAYS_IN, type WayIn } from "@/src/rails";
+import { wayInPage, WAYS_IN, type WayIn } from "@/src/rails";
 import { FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
 import { Character } from "../kit/Character";
 import { FieldRefusal } from "../kit/FieldRefusal";
@@ -537,7 +537,7 @@ export function PayGift() {
           <button
             type="button"
             onClick={() => {
-              window.open(wayIn.page, "_blank", "noopener,noreferrer");
+              window.open(wayInPage(wayIn, { account: address, euros: more }), "_blank", "noopener,noreferrer");
               setPhase("waiting");
             }}
             className={PRIMARY_BUTTON}
@@ -628,7 +628,7 @@ export function PayGift() {
           {wayIn.takes ? `${W.check.delay(wayIn.name, wayIn.takes)} ` : ""}
           {keptOnDevice ? W.waiting.leave : W.waiting.stay}
         </p>
-        <a href={wayIn.page} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON}>
+        <a href={wayInPage(wayIn, { account: address, euros: toBuy })} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON}>
           {W.waiting.openAgain(wayIn.name)}
         </a>
         <div className="flex flex-col gap-[var(--space-xs)]">

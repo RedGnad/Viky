@@ -1,3 +1,4 @@
+import { rampHostApiKey } from "@/src/rails";
 import type { Metadata } from "next";
 import { Shell } from "../kit/Shell";
 import { JudgesAccount } from "../components/JudgesAccount";
@@ -132,6 +133,26 @@ export default async function JudgesPage() {
       <JudgesContracts />
 
       <JudgesEarlyGifts />
+
+      {/* How money comes in (D289): through a licensed partner, the asset named, and the next step said as it is. */}
+      <section className="space-y-[var(--space-sm)]">
+        <h2 className={TITLE}>How money comes in</h2>
+        <p className={HELP}>
+          A funder pays by card or bank transfer on Ramp&apos;s own page, not Viky&apos;s. Ramp Swaps (Ireland) Limited is an
+          authorised crypto-asset service provider under MiCA, regulated by the Central Bank of Ireland (
+          <a className="underline" href="https://rampnetwork.com/licenses-and-registrations">Ramp&apos;s licences and registrations</a>
+          , read 27 Sep 2026). What arrives in the funder&apos;s account is AUSD on Monad, <code>MONAD_AUSD</code> in Ramp&apos;s
+          own asset list, the asset the gift contract holds, so nothing is swapped after it. Where Ramp does not serve, the
+          second way is Mercuryo, which delivers MON that the account then swaps to AUSD.
+        </p>
+        <p className={HELP}>
+          The next step is Ramp embedded with a partner key. Without one, Ramp&apos;s page answers any pre-filled
+          parameter with &quot;Integration issue detected&quot; (read on its live page and in its own script, 27 Sep 2026), so
+          today it opens bare and the funder copies their account from Viky&apos;s waiting screen. With the key, the page
+          opens with the account, the amount in euros and AUSD already filled in.{" "}
+          {rampHostApiKey() ? "The key is set on this deployment: the page opens filled in." : "The key is not set on this deployment yet."}
+        </p>
+      </section>
 
       <section className="space-y-[var(--space-sm)]">
         <h2 className={TITLE}>How a day is read</h2>
