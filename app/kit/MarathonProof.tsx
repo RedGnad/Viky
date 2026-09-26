@@ -95,7 +95,7 @@ export function MarathonProof({ giftId, status, yours, onChanged }: Readonly<{ g
 
   return (
     <section className={CARD}>
-      <p className="font-medium">{W.bibSet(marathon.bib, marathon.raceName)}</p>
+      <p className="font-medium">{W.bibSet(marathon.bib, marathon.raceName, marathon.distance)}</p>
       <p className={HELP}>{marathon.bibOpen ? W.beforeTheRace : W.afterTheRace}</p>
       {!marathon.bibOpen ? (
         <>
@@ -116,7 +116,7 @@ export function MarathonProof({ giftId, status, yours, onChanged }: Readonly<{ g
 export function MarathonStanding({ marathon }: Readonly<{ marathon: NonNullable<MilestoneStatus["marathon"]> }>) {
   return (
     <>
-      <p className={BODY}>{marathon.bib ? W.bibSet(marathon.bib, marathon.raceName) : W.noBibYet(marathon.raceName)}</p>
+      <p className={BODY}>{marathon.bib ? W.bibSet(marathon.bib, marathon.raceName, marathon.distance) : W.noBibYet(marathon.raceName)}</p>
       {marathon.result ? <p className={BODY}>{W.line(marathon.result.runner, marathon.result.bib, finishInWords(marathon.result.finishSeconds))}</p> : null}
     </>
   );

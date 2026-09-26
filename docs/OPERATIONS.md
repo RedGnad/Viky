@@ -1018,10 +1018,25 @@ carried by the relayer `0x150d…CFE4`, which only paid the gas:
 | read back after | goals 29 and 30 on `MilestoneGift`, each with the provider id of `MILESTONE_GOALS` and shape 1; `pnpm check:milestone-goals` finds nothing left to send |
 | relayer | 53.19 MON after |
 
-**A race is added** by one row of `MARATHON_RACES` (src/marathon.ts): the timing company's reference and heat, read
-from the race's page (`/resultats-courses/<slug>-<ref>/<heat>`, the reference is the tail of the slug), its name, its
-town and country, and its `startDate` as the page's schema.org data prints it, which is when the bib field closes.
-The next: the Marathon de Paris, the day its site answers (a 500 on 26 Sep 2026).
+**The register** (`MARATHON_RACES`, src/marathon.ts) holds the coming races with a marathon, a half or a 10 km, the
+distance chosen at creation (the founder, 27 Sep 2026). A race already run is offered to nobody; the Marathon de
+Dakar 2023 stays as `operatorOnly`, listed to the operator's accounts alone, for the test gift.
+
+**A race is added** from two public pages, read before the row is written. Breizh Chrono's calendar,
+`https://calendrier.breizhchrono.com/?page=<n>` (fifteen events a page, the whole coming calendar in eleven pages on
+26 Sep 2026), names each event and links its Klikego page, `https://www.klikego.com/event/<ref>`; that page's
+schema.org data (`application/ld+json`) gives `startDate` (midnight of the day, which is when the bib field closes),
+the town and country, and the `subEvent` names, "Marathon Vert Rennes Groupe Interaction - Le 10km Lamotte". The
+reference is the same on both sites (`1488071608761-442` is the Marathon de Dakar 2023 on Klikego and on the results
+site). The heat's key on the results site follows from the sub-event's name with the event's name and " - " taken
+off, by `heatSlugOf` (no accents, no case, apostrophes dropped, spaces to dashes): measured on the forty heats of
+eight past events on 26 Sep 2026, forty for forty. A row is `raceId`, `ref`, the name with the year, town, country,
+`startsAt` as Klikego prints it, and one `event(distance, label)` per heat offered, the label copied from Klikego.
+If an organiser renames a heat before the results are published, its key changes: fix the label in the register
+before the person reads (the account is built from the register at read time, nothing is stored in the gift).
+
+The Marathon de Dakar 2026 is added the day its organiser announces it (nothing on Klikego nor in the calendar on
+26 Sep 2026). The Marathon de Paris is timed by another company and needs its own source.
 
 **The bib after the start.** `/api/marathon/bib` refuses a bib once the race has started, for everybody but an
 operator account (`VIKY_OPERATOR_ACCOUNTS`): that door is how a test gift is run on a race already run, and it is

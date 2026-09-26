@@ -1542,6 +1542,7 @@ export const GIFT_CARD_OUT = {
  */
 export const MARATHON_PROOF = {
   whichRace: "Which race?",
+  whichDistance: "Which distance?",
   readingRaces: "Reading the races",
   racesUnreadable: "The races could not be read right now. Close this and try again in a moment.",
   raceLine: (town: string, country: string, day: string) => `${town}, ${country}. Starts ${day}.`,
@@ -1551,7 +1552,7 @@ export const MARATHON_PROOF = {
   bibShape: "A bib number is one to six figures.",
   saveBib: "Keep my bib number",
   saving: "Keeping it",
-  bibSet: (bib: string, race: string) => `Bib ${bib}, ${race}.`,
+  bibSet: (bib: string, race: string, distance: string) => `Bib ${bib}, ${race}, ${distance.toLowerCase()}.`,
   beforeTheRace: "Run. After the finish, come back here to read your result.",
   afterTheRace: "The race has been run. Read your line on the timing company's results page.",
   readMyResult: "Read my result",

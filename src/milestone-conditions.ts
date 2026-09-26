@@ -50,7 +50,7 @@ import {
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
 import { EDX_DURATION_DAYS, EDX_GOAL_TYPE, EDX_HAS_IT, edxCertificateIdOf, edxCourseOf, edxSubject } from "./edx-certificate";
 import { MITX_ONLINE_DURATION_DAYS, MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineCourseOf, mitxOnlineKeyOf, mitxOnlineSubject } from "./mitx-online-certificate";
-import { isValidBib, MARATHON_DURATION_DAYS, MARATHON_FINISH, MARATHON_GOAL_TYPE, marathonRaceById, marathonSubject, marathonTargetInWords, marathonTargetUnderHours } from "./marathon";
+import { bibStillOpen, DISTANCE_LABELS, isValidBib, MARATHON_DURATION_DAYS, MARATHON_FINISH, MARATHON_GOAL_TYPE, marathonEventById, marathonSubject, marathonTargetInWords, marathonTargetUnderHours } from "./marathon";
 import { ACCREDIBLE_DURATION_DAYS, ACCREDIBLE_GOAL_TYPE, ACCREDIBLE_HAS_IT, accredibleCourseOf, accredibleIdOf, accredibleSubject } from "./accredible-credential";
 import { CREDLY_DURATION_DAYS, CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyBadgeIdOf, credlyPairOf, credlySubject } from "./credly-badge";
 import {
@@ -351,6 +351,8 @@ export type CertificateCondition = Readonly<{
     help: string;
     /** The course inside whatever was pasted, or nothing. Where there is a list, what a choice from it answers. */
     slugOf: (pasted: string) => string | undefined;
+    /** A course the register holds but this funder may not make a gift on, by its name (a race already run, D273). */
+    refuses?: (course: string, operator: boolean) => { code: string; message: string } | undefined;
     /**
      * Where the source's own catalogue is searched, when the thing is found by its words rather than pasted as a
      * link: the funder types, reads each answer with who awards it, and chooses. What the terms then carry is the
@@ -649,10 +651,20 @@ export const MARATHON_MILESTONE: CertificateCondition = {
   course: {
     label: "The race",
     help: "Choose the race from the ones Viky reads.",
-    slugOf: (pasted) => marathonRaceById(pasted.trim())?.raceId,
+    slugOf: (pasted) => (marathonEventById(pasted.trim()) ? pasted.trim() : undefined),
+    // A race already run is offered to nobody but an operator's account, whose test gift runs on one (the founder, 27 Sep 2026).
+    refuses: (course, operator) => {
+      const found = marathonEventById(course);
+      if (!found) return { code: "UNKNOWN_RACE", message: "That race is not one Viky reads." };
+      if (!operator && (found.race.operatorOnly || !bibStillOpen(found.race, Date.now()))) return { code: "RACE_RUN", message: "That race has been run. Choose one still to come." };
+      return undefined;
+    },
     search: { path: "/api/marathon/races", placeholder: "Choose the race", nothing: "Viky reads no race by that name yet.", listed: true, races: true },
     row: "Which race",
-    named: (course) => `This gift will be for ${marathonRaceById(course.split(",")[0].trim())?.name ?? course}.`,
+    named: (course) => {
+      const found = marathonEventById(course.split(",")[0].trim());
+      return found ? `This gift will be for the ${DISTANCE_LABELS[found.event.distance].toLowerCase()} of the ${found.race.name}.` : `This gift will be for ${course}.`;
+    },
   },
   target: {
     label: "Finish, or under how many hours?",

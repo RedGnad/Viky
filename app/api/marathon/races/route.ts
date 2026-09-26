@@ -1,12 +1,32 @@
 import { NextResponse } from "next/server";
+import { readAccountAuthSession } from "@/src/account-auth-server";
+import { isOperator } from "@/src/dev-access";
 import { NO_STORE } from "@/src/gift-api";
-import { MARATHON_RACES } from "@/src/marathon";
+import { DISTANCE_LABELS, racesOffered } from "@/src/marathon";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** The races a gift can be made on (D273): the register, as the sheet lists it. Public, nothing about anybody. */
-export async function GET() {
-  const races = MARATHON_RACES.map((race) => ({ raceId: race.raceId, name: race.name, town: race.town, country: race.country, startsAt: race.startsAt, timer: race.timer }));
+/**
+ * The races a gift can be made on (D273): the register's coming races, as the sheet lists them, with their distances.
+ * A race already run is listed to an operator's account alone (the founder, 27 Sep 2026). Nothing about anybody.
+ */
+export async function GET(request: Request) {
+  let operator = false;
+  try {
+    operator = isOperator(readAccountAuthSession(request).account);
+  } catch {
+    operator = false;
+  }
+  const races = racesOffered(Date.now(), operator).map((race) => ({
+    raceId: race.raceId,
+    name: race.name,
+    town: race.town,
+    country: race.country,
+    startsAt: race.startsAt,
+    timer: race.timer,
+    events: race.events.map((one) => ({ distance: one.distance, label: DISTANCE_LABELS[one.distance], heat: one.label })),
+    ...(race.operatorOnly ? { operatorOnly: true } : {}),
+  }));
   return NextResponse.json({ races }, { headers: NO_STORE });
 }
