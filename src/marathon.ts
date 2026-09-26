@@ -30,10 +30,11 @@ export const MARATHON_SOURCE = "Breizh Chrono";
  * The timing companies read (the founder, 27 Sep 2026: a second platform, not a second race). Each has its own
  * attested source and its own goal on the contract, so a reading from one can never settle a gift made on the other.
  */
-export type MarathonTimer = "breizh-chrono" | "mika-timing";
+export type MarathonTimer = "breizh-chrono" | "mika-timing" | "race-result";
 export const MARATHON_TIMERS: Readonly<Record<MarathonTimer, { name: string; goalType: number; provider: string }>> = {
   "breizh-chrono": { name: "Breizh Chrono", goalType: 30, provider: "viky:provider:breizh-chrono-zkfetch:v1" },
   "mika-timing": { name: "MikaTiming", goalType: 31, provider: "viky:provider:mika-timing-zkfetch:v1" },
+  "race-result": { name: "race result", goalType: 34, provider: "viky:provider:race-result-zkfetch:v1" },
 };
 export function marathonGoalTypeOf(timer: MarathonTimer): number {
   return MARATHON_TIMERS[timer].goalType;
@@ -43,6 +44,8 @@ export function marathonProviderIdOf(timer: MarathonTimer): Hex {
 }
 /** MikaTiming's races opened when goal 31 was signed on the contract (D281); before that they were listed to nobody and made by nobody. */
 export const MIKA_TIMING_OPEN = true;
+/** race result's races open when goal 34 is signed on the contract: until then they are listed to nobody and made by nobody. */
+export const RACE_RESULT_OPEN = false;
 
 /**
  * The results sites MikaTiming runs for the races in the register, and no other host is ever read: each is
@@ -53,6 +56,14 @@ export const MIKA_TIMING_HOSTS: readonly string[] = ["results.chicagomarathon.co
 /** The distances a gift can be made on (the founder, 27 Sep 2026): the name of the line stays "Finish a marathon". */
 export type MarathonDistance = "marathon" | "half" | "10k";
 export const DISTANCE_LABELS: Readonly<Record<MarathonDistance, string>> = { marathon: "Marathon", half: "Half marathon", "10k": "10 km" };
+
+/**
+ * How a race result event's list is read (the founder, 27 Sep 2026: the platform with the widest coverage, 2,126
+ * coming events in 76 countries on 26 Sep 2026): the list's name on the event's results page, and the columns of
+ * the name and the time in that list's rows, with the field expressions the list publishes for them (`DataFields`),
+ * which the reading checks are still the same before it trusts a column. The bib is always the first column.
+ */
+export type RaceResultList = Readonly<{ listname: string; columns: Readonly<{ name: number; time: number }>; fields: Readonly<{ name: string; time: string }> }>;
 
 export type MarathonEvent = Readonly<{
   distance: MarathonDistance;
@@ -87,6 +98,8 @@ export type MarathonRace = Readonly<{
   events: readonly MarathonEvent[];
   /** A race already run, kept for the operator's test gift (the founder, 27 Sep 2026): listed to nobody else. */
   operatorOnly?: true;
+  /** On race result, the list read and its columns; the event's heats are its contests, by their ids. */
+  raceResult?: RaceResultList;
 }>;
 
 /**
@@ -179,6 +192,26 @@ export const MARATHON_RACES: readonly MarathonRace[] = [
   { raceId: "chicago-2026", timer: "mika-timing", ref: "results.chicagomarathon.com/2026", name: "Bank of America Chicago Marathon 2026", country: "US", town: "Chicago", startsAt: "2026-10-11T00:00:00-05:00", events: [{ distance: "marathon", label: "Marathon", heat: "MAR_" }] },
   { raceId: "frankfurt-2026", timer: "mika-timing", ref: "frankfurt.r.mikatiming.de/2026", name: "Mainova Frankfurt Marathon 2026", country: "DE", town: "Frankfurt", startsAt: "2026-10-25T00:00:00+02:00", events: [{ distance: "marathon", label: "Marathon", heat: "L_" }] },
   { raceId: "boston-2027", timer: "mika-timing", ref: "boston.r.mikatiming.com/2027", name: "Boston Marathon 2027", country: "US", town: "Boston", startsAt: "2027-04-19T00:00:00-04:00", events: [{ distance: "marathon", label: "Marathon", heat: "R" }] },
+  // race result (the founder, 27 Sep 2026, coverage first): each row read on the event's own results page on 26 Sep
+  // 2026, `pnpm raceresult:inspect <event>` printing its contests, its lists and their columns. The reference is the
+  // event's id, a heat is a contest's id, the list and its columns are `raceResult`. Dates are the calendar's day,
+  // midnight UTC. The 42K de Buenos Aires 2026 has run and stays for the operator's test gift.
+  { raceId: "buenos-aires-2026", timer: "race-result", ref: "423560", name: "42K de Buenos Aires 2026", country: "AR", town: "Buenos Aires", startsAt: "2026-09-20T00:00:00Z", events: [{ distance: "marathon", label: "Maratón", heat: "1" }], operatorOnly: true, raceResult: { listname: "Maratón 2026|Resultado General G/CH", columns: { name: 3, time: 7 }, fields: { name: "correctSpelling([FLNAME])", time: "[Final.CHIP]" } } },
+  { raceId: "blaufraenkischland-2026", timer: "race-result", ref: "372388", name: "Blaufränkischland Marathon 2026", country: "AT", town: "Deutschkreutz", startsAt: "2026-10-03T00:00:00Z", events: [{ distance: "marathon", label: "Marathon (42 km)", heat: "1" }, { distance: "half", label: "1/2 Marathon (21,3 km)", heat: "2" }], raceResult: { listname: "Ergebnislisten|Zieleinlaufliste", columns: { name: 3, time: 8 }, fields: { name: "AnzeigeName", time: "TIME" } } },
+  { raceId: "drei-laender-marathon-2026", timer: "race-result", ref: "367158", name: "3-Länder-Marathon 2026", country: "AT", town: "Bregenz", startsAt: "2026-10-11T00:00:00Z", events: [{ distance: "marathon", label: "Sparkasse Marathon", heat: "1" }], raceResult: { listname: "02_Ergebnislisten online|AA_Ergebnisliste MW", columns: { name: 3, time: 9 }, fields: { name: "AnzeigeName", time: "TIME1" } } },
+  { raceId: "kaarina-2026", timer: "race-result", ref: "418973", name: "Kaarinan Syysmaraton 2026", country: "FI", town: "Kaarina", startsAt: "2026-10-17T00:00:00Z", events: [{ distance: "10k", label: "10km", heat: "1" }, { distance: "half", label: "Puolimaraton", heat: "2" }, { distance: "marathon", label: "Maraton", heat: "3" }], raceResult: { listname: "Online|FinalChipTime", columns: { name: 5, time: 13 }, fields: { name: "DisplayName", time: "ChipTime" } } },
+  { raceId: "wase-2026", timer: "race-result", ref: "378799", name: "Wase Marathon 2026", country: "BE", town: "Sinaai", startsAt: "2026-10-18T00:00:00Z", events: [{ distance: "half", label: "Halve Marathon", heat: "3" }, { distance: "marathon", label: "Marathon", heat: "4" }], raceResult: { listname: "Result Lists|Overall Results", columns: { name: 3, time: 7 }, fields: { name: "FLNAME", time: "TIME" } } },
+  { raceId: "mansfield-2026", timer: "race-result", ref: "391368", name: "Mansfield Marathon 2026", country: "AU", town: "Mansfield", startsAt: "2026-10-25T00:00:00Z", events: [{ distance: "marathon", label: "Marathon", heat: "1" }, { distance: "half", label: "Half Marathon", heat: "2" }, { distance: "10k", label: "10km Walk/Run", heat: "3" }], raceResult: { listname: "02-Results|Results", columns: { name: 4, time: 11 }, fields: { name: "DisplayNameOrTeam", time: "OrStatus([TIME])" } } },
+  { raceId: "sarvilahti-2026", timer: "race-result", ref: "383775", name: "Sarvilahti Marathon 2026", country: "FI", town: "Loviisa", startsAt: "2026-10-31T00:00:00Z", events: [{ distance: "10k", label: "10 km", heat: "1" }, { distance: "half", label: "Half Marathon", heat: "2" }, { distance: "marathon", label: "Marathon", heat: "3" }], raceResult: { listname: "Online|Final", columns: { name: 3, time: 9 }, fields: { name: "DisplayName", time: "Chip time" } } },
+  { raceId: "port-hercule-2026", timer: "race-result", ref: "404223", name: "Port Hercule Marathon 2026", country: "MC", town: "Monaco", startsAt: "2026-11-12T00:00:00Z", events: [{ distance: "marathon", label: "Marathon", heat: "1" }], raceResult: { listname: "Ergebnislisten|Ergebnisliste MW", columns: { name: 3, time: 8 }, fields: { name: "AnzeigeName", time: "TIMETEXT" } } },
+  { raceId: "lusaka-2026", timer: "race-result", ref: "411564", name: "Lusaka Marathon 2026", country: "ZM", town: "Lusaka", startsAt: "2026-11-14T00:00:00Z", events: [{ distance: "marathon", label: "42km", heat: "1" }, { distance: "half", label: "21km", heat: "2" }, { distance: "10k", label: "10km", heat: "3" }], raceResult: { listname: "Online|Final", columns: { name: 4, time: 8 }, fields: { name: "DisplayName", time: "Finish.CHIP" } } },
+  { raceId: "via-aurelia-2026", timer: "race-result", ref: "404430", name: "Via Aurelia Marathon 2026", country: "FR", town: "Aspremont", startsAt: "2026-11-14T00:00:00Z", events: [{ distance: "marathon", label: "Marathon", heat: "1" }], raceResult: { listname: "Ergebnislisten|Ergebnisliste MW", columns: { name: 3, time: 8 }, fields: { name: "AnzeigeName", time: "TIMETEXT" } } },
+  { raceId: "promenade-de-la-plage-2026", timer: "race-result", ref: "404943", name: "Promenade de la Plage Marathon 2026", country: "FR", town: "Cagnes-sur-Mer", startsAt: "2026-11-16T00:00:00Z", events: [{ distance: "marathon", label: "Marathon", heat: "1" }], raceResult: { listname: "Ergebnislisten|Ergebnisliste MW", columns: { name: 3, time: 8 }, fields: { name: "AnzeigeName", time: "TIMETEXT" } } },
+  { raceId: "francistown-a1-2026", timer: "race-result", ref: "408724", name: "A1 Road Marathon 2026", country: "BW", town: "Francistown", startsAt: "2026-11-28T00:00:00Z", events: [{ distance: "half", label: "21km", heat: "1" }, { distance: "10k", label: "10km", heat: "2" }], raceResult: { listname: "Online|Final", columns: { name: 4, time: 8 }, fields: { name: "DisplayName", time: "Finish.CHIP" } } },
+  { raceId: "waterford-viking-2026", timer: "race-result", ref: "402206", name: "Waterford Viking Marathon 2026", country: "IE", town: "Waterford", startsAt: "2026-12-06T00:00:00Z", events: [{ distance: "marathon", label: "Waterford Viking Marathon", heat: "1" }, { distance: "half", label: "Waterford Viking Half Marathon", heat: "2" }], raceResult: { listname: "Online|Final", columns: { name: 3, time: 7 }, fields: { name: "DisplayName", time: "Finish.CHIP" } } },
+  { raceId: "reggio-emilia-2026", timer: "race-result", ref: "383024", name: "Maratona di Reggio Emilia 2026", country: "IT", town: "Reggio Emilia", startsAt: "2026-12-13T00:00:00Z", events: [{ distance: "marathon", label: "Maratona 42.195m", heat: "1" }], raceResult: { listname: "Online|Finale", columns: { name: 4, time: 11 }, fields: { name: "UCase([MostraNome])", time: 'If([STATUS]<=1;[Arrivo.CHIP];"")' } } },
+  { raceId: "mollen-2026-12-27", timer: "race-result", ref: "381592", name: "363e Mollen Marathon", country: "NL", town: "Almere", startsAt: "2026-12-27T00:00:00Z", events: [{ distance: "marathon", label: "42,195 km", heat: "1" }, { distance: "half", label: "21,1 km", heat: "3" }], raceResult: { listname: "Result Lists|Finisher List", columns: { name: 4, time: 9 }, fields: { name: "DisplayName", time: "TIMETEXT" } } },
+  { raceId: "sri-chinmoy-skopje-2027", timer: "race-result", ref: "389323", name: "Sri Chinmoy Marathon Skopje 2027", country: "MK", town: "Skopje", startsAt: "2027-03-14T00:00:00Z", events: [{ distance: "marathon", label: "Marathon", heat: "1" }, { distance: "half", label: "Half-marathon", heat: "2" }], raceResult: { listname: "Result Lists|Result List OverAll  · Генерален пласман", columns: { name: 3, time: 9 }, fields: { name: "FLNAME", time: "TIME" } } },
 ];
 
 export function marathonRaceById(raceId: string): MarathonRace | undefined {
@@ -199,7 +232,7 @@ export function marathonEventById(courseId: string): { race: MarathonRace; event
 
 /** Whether a race's timing company is open: its goal signed on the contract, its source running on the reading service. */
 export function timerOpen(timer: MarathonTimer): boolean {
-  return timer === "breizh-chrono" || MIKA_TIMING_OPEN;
+  return timer === "breizh-chrono" || (timer === "mika-timing" && MIKA_TIMING_OPEN) || (timer === "race-result" && RACE_RESULT_OPEN);
 }
 
 /** The races offered now: the ones not yet started whose timer is open, and to an operator's account the ones kept for the test gift too. */
@@ -209,7 +242,11 @@ export function racesOffered(nowMs: number, operator: boolean): readonly Maratho
 
 /** A bib as a timing company prints it: one to six figures, which MikaTiming may prefix with a letter or two ("F3166" at Frankfurt). */
 export function isValidBib(value: string, timer: MarathonTimer = "mika-timing"): boolean {
-  return timer === "breizh-chrono" ? /^\d{1,6}$/.test(value.trim()) : /^[A-Z]{0,2}\d{1,6}$/.test(value.trim().toUpperCase());
+  const bib = value.trim().toUpperCase();
+  if (timer === "breizh-chrono") return /^\d{1,6}$/.test(bib);
+  // race result prints bibs as its organisers give them, letters included ("F123", "921007" at Mansfield).
+  if (timer === "race-result") return /^[A-Z0-9]{1,8}$/.test(bib);
+  return /^[A-Z]{0,2}\d{1,6}$/.test(bib);
 }
 
 /** Whether the bib can still be entered: before the race starts, and never after (the founder, 26 Sep 2026). */
@@ -228,6 +265,12 @@ export function marathonAccount(race: Pick<MarathonRace, "ref">, chosen: Pick<Ma
 export function marathonAccountOf(account: string): Readonly<{ ref: string; heat: string; bib: string }> | undefined {
   const match = /^(\d{10,16}-\d{1,6})\|([a-z0-9-]{1,40})\|(\d{1,6})$/.exec(account);
   return match ? { ref: match[1], heat: match[2], bib: match[3] } : undefined;
+}
+
+/** A race result account: the event's id, the contest's id and the bib, the page the row is searched on being the register's list. */
+export function raceResultAccountOf(account: string): Readonly<{ eventId: string; contest: string; bib: string }> | undefined {
+  const match = /^(\d{4,8})\|(\d{1,3})\|([A-Z0-9]{1,8})$/.exec(account);
+  return match ? { eventId: match[1], contest: match[2], bib: match[3] } : undefined;
 }
 
 /** A MikaTiming account: the results site and the year, the event's code or its start, and the bib. */

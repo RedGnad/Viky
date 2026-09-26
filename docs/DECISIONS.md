@@ -7369,3 +7369,29 @@ open.
 - The install line left the links at the foot, since the phone's card now says it.
 - Every sentence is listed in `docs/SCREEN-CLAIMS.md` with what makes it true: the escrow's release per verified day
   and its refund to the funder with no fee, the readers, the passkey account, the manifest.
+
+## D283, 27 Sep 2026: race result, the third timing platform, chosen for its coverage
+
+The founder, 27 Sep 2026, asked why three countries: because two timing companies were read, not because three
+countries were chosen; and gave the criterion: coverage. So a census by platform, and the widest one first.
+
+- **The census, 26 Sep 2026.** Read from each platform's own events list, found in its page's script: race result
+  2,126 coming events in 76 countries (1,425 running, 218 named marathon, half or 10 km, Africa included);
+  Sportstats 84 in four months (Canada, Ironman); MikaTiming's events page names towns only; Sporthive's events page
+  is a 404 and Athlinks loads nothing without a search, both left for later; Kigali and Cape Town publish on their
+  own sites; Paris answers 500; Dakar's organiser still points at Breizh Chrono and announces no 2026 edition.
+- **race result reads by bib.** An event's results page publishes its lists and their columns before the race; a
+  list's search mode answers the one row of a bib. The register fixes, per race, the list and the columns of the
+  name and the time with the field expressions the list prints, and every reading checks them first. The time is
+  the chip time where the list separates it. The pattern is built for the account (`matchesFor`, D279).
+- **Sixteen races** written from the census with `scripts/raceresult-inspect.ts`: the 42K de Buenos Aires 2026 for
+  the operator's test, and fifteen to come in Austria, Australia, Belgium, Botswana, Finland, France, Ireland,
+  Italy, Monaco, the Netherlands, North Macedonia and Zambia. A race is one row; the script prints what to write.
+- **Terms and robots.** my race result's terms of use and privacy statement say nothing about reading a page; its
+  `robots.txt` bars the list endpoint. The same call as for MikaTiming (D277): open, Viky naming itself, the risk
+  written on the judges' page, "shown by them" as the fallback.
+- **Goal 34**, provider `viky:provider:race-result-zkfetch:v1` = `0x7cfa6c53…2887`, one Safe session. Being built
+  (`RACE_RESULT_OPEN` false) until it is signed.
+- **Proof (a), done on 26 Sep 2026 at 02:54 UTC**: the reading service, redeployed on the fingerprint
+  `0xc30bfb51…ae8d` and healthy, read bib 1 of the 42K de Buenos Aires 2026 through the attested fetch: "Bethwel
+  Kibet Chumba", 2:08:24, metric 78,696, one proof, nullifier `0xb1ecf63f…49c5`.

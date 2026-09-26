@@ -415,6 +415,39 @@ export const MIKA_TIMING_RUNNER: AttestedSource = {
 };
 
 /**
+ * A runner's row on a race result results list (the founder, 27 Sep 2026: coverage first; measured on the 42K de
+ * Buenos Aires 2026 and fifteen coming events on 26 Sep 2026). The list endpoint answers JSON rows, arrays of cells
+ * in the order of the list's own `DataFields`, and its search mode (`r=search&term=<bib>`) answers the one row of
+ * that bib. The account carries what the URL needs, all of it read from the event's public results page by the
+ * plain step (src/race-result.ts) and shaped by `accepts`: the shard (`my4.raceresult.com`), the event's id, the
+ * list's key (public, stable), the list's name percent-encoded, the contest's id, the bib, and the columns of the
+ * name and the time, which the register fixed when the race was written. The one pattern, built for the account,
+ * takes the row that starts with that bib and captures the two cells at those columns. The sites' `robots.txt`
+ * keeps robots out of the list endpoint (`Disallow: /*​/*​/list`): Viky reads one row per gift at the person's
+ * request, naming itself, the risk written on the judges' page.
+ */
+export const RACE_RESULT_ROW: AttestedSource = {
+  id: "race-result-row",
+  service: "race result",
+  accept: "application/json",
+  userAgent: "Mozilla/5.0 (compatible; Viky/1.0; +https://viky.cash)",
+  accepts: (account) => /^my\d?\.raceresult\.com\|\d{4,8}\|[0-9a-f]{32}\|[A-Za-z0-9%._-]{1,300}\|\d{1,3}\|[A-Z0-9]{1,8}\|\d{1,2}\|\d{1,2}$/.test(account),
+  url: (account) => {
+    const [server, eventId, key, listname, contest, bib] = account.split("|");
+    return `https://${server}/${eventId}/results/list?key=${key}&listname=${listname}&page=results&contest=${contest}&r=search&l=0&openedGroups=%7B%7D&term=${bib}`;
+  },
+  matches: [],
+  matchesFor: (account) => {
+    const parts = account.split("|");
+    const bib = parts[5];
+    const nameColumn = Number(parts[6]);
+    const timeColumn = Number(parts[7]);
+    const cell = '"(?:[^"\\\\]|\\\\.)*",';
+    return [{ type: "regex", value: `\\["${bib}",${cell.repeat(nameColumn - 1)}"(?<runner>(?:[^"\\\\]|\\\\.)*)",${cell.repeat(timeColumn - nameColumn - 1)}"(?<official>[^"]*)"` }];
+  },
+};
+
+/**
  * A speedcuber's results on the World Cube Association's public API (the founder, 27 Sep 2026: "Set a time at a WCA
  * competition"), measured on Saint Symphorien 2026 on 26 Sep 2026. The account is the person's WCA id, the
  * competition, the event and the round, `2019SCHO04|SaintSymphorienSpeedcubing2026|333|f`: the page is the person's
@@ -495,7 +528,7 @@ export const ACCREDIBLE_CREDENTIAL: AttestedSource = {
   ],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, MITX_ONLINE_CERTIFICATE, BREIZH_CHRONO_RUNNER, MIKA_TIMING_RUNNER, WCA_PERSON_RESULTS, CODEFORCES_USER, CODEFORCES_USER_NAMED, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, MITX_ONLINE_CERTIFICATE, BREIZH_CHRONO_RUNNER, MIKA_TIMING_RUNNER, RACE_RESULT_ROW, WCA_PERSON_RESULTS, CODEFORCES_USER, CODEFORCES_USER_NAMED, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
 
 /**
  * The headers a source is read with, which is part of what is fetched and therefore lives with the sources: it is

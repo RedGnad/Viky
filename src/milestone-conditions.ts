@@ -55,7 +55,7 @@ import { MITX_ONLINE_DURATION_DAYS, MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, m
 import { CODEFORCES_CLIMB, type ClimbId } from "./climbs";
 import { CODEFORCES_GOAL_TYPE, isValidCodeforcesHandle } from "./codeforces";
 import { isWcaId, wcaCourseOf, WCA_ANY_RESULT, WCA_DURATION_DAYS, WCA_EVENTS, WCA_GOAL_TYPE, wcaSubject, wcaTargetInWords, wcaTargetUnderSeconds } from "./wca";
-import { bibStillOpen, DISTANCE_LABELS, isValidBib, MARATHON_DURATION_DAYS, MARATHON_FINISH, MARATHON_GOAL_TYPE, marathonEventById, marathonGoalTypeOf, marathonSubject, marathonTargetInWords, marathonTargetUnderHours, MIKA_TIMING_GOAL_TYPE, timerOpen } from "./marathon";
+import { bibStillOpen, DISTANCE_LABELS, isValidBib, MARATHON_DURATION_DAYS, MARATHON_FINISH, MARATHON_GOAL_TYPE, MARATHON_TIMERS, marathonEventById, marathonGoalTypeOf, marathonSubject, marathonTargetInWords, marathonTargetUnderHours, timerOpen } from "./marathon";
 import { ACCREDIBLE_DURATION_DAYS, ACCREDIBLE_GOAL_TYPE, ACCREDIBLE_HAS_IT, accredibleCourseOf, accredibleIdOf, accredibleSubject } from "./accredible-credential";
 import { CREDLY_DURATION_DAYS, CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyBadgeIdOf, credlyPairOf, credlySubject } from "./credly-badge";
 import {
@@ -694,7 +694,7 @@ export const MARATHON_MILESTONE: CertificateCondition = {
   condition: MARATHON_FINISH_LINE,
   goalType: MARATHON_GOAL_TYPE,
   // One line, one goal per timing company: the race chosen decides which (the founder, 27 Sep 2026).
-  goalTypes: [MARATHON_GOAL_TYPE, MIKA_TIMING_GOAL_TYPE],
+  goalTypes: Object.values(MARATHON_TIMERS).map((timer) => timer.goalType),
   goalTypeOf: (course) => {
     const found = marathonEventById(course);
     return found ? marathonGoalTypeOf(found.race.timer) : undefined;

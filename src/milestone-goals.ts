@@ -15,7 +15,7 @@ import { ECOLEDIRECTE_GOAL_TYPE, ecoleDirecteProviderId } from "./school-shown";
 import { CHSI_GOAL_TYPE, chsiProviderId } from "./chsi-shown";
 import { WAEC_GOAL_TYPE, waecProviderId } from "./waec-shown";
 import { MITX_ONLINE_GOAL_TYPE, mitxOnlineProviderId } from "./mitx-online-certificate";
-import { MARATHON_GOAL_TYPE, marathonProviderId, marathonProviderIdOf, MIKA_TIMING_GOAL_TYPE } from "./marathon";
+import { MARATHON_GOAL_TYPE, MARATHON_TIMERS, marathonProviderId, marathonProviderIdOf, MIKA_TIMING_GOAL_TYPE } from "./marathon";
 import { WCA_GOAL_TYPE, wcaProviderId } from "./wca";
 import { CODEFORCES_GOAL_TYPE, codeforcesProviderId } from "./codeforces";
 import { PRONOTE_GOAL_TYPE, pronoteProviderId } from "./pronote-shown";
@@ -77,6 +77,8 @@ export const MILESTONE_GOALS: readonly MilestoneGoal[] = [
   { goalType: MARATHON_GOAL_TYPE, providerId: marathonProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "Breizh Chrono", detail: "a marathon finished" },
   // MikaTiming (the founder, 27 Sep 2026): the same line, read from the second timing company's results sites.
   { goalType: MIKA_TIMING_GOAL_TYPE, providerId: marathonProviderIdOf("mika-timing"), shape: SHAPE_HAVE_OR_NOT, source: "MikaTiming", detail: "a marathon finished" },
+  // race result (the founder, 27 Sep 2026): the same marathon line, read from the third timing platform's lists.
+  { goalType: MARATHON_TIMERS["race-result"].goalType, providerId: marathonProviderIdOf("race-result"), shape: SHAPE_HAVE_OR_NOT, source: "race result", detail: "a marathon finished" },
   // The WCA (the founder, 27 Sep 2026): a time set at a speedcubing competition, read from the WCA's public API.
   { goalType: WCA_GOAL_TYPE, providerId: wcaProviderId(), shape: SHAPE_HAVE_OR_NOT, source: "the WCA", detail: "a time set at a competition" },
   // Codeforces (the founder, 27 Sep 2026): the rating, read every day, in the chess rating's shape.

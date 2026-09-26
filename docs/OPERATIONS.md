@@ -1038,6 +1038,49 @@ before the person reads (the account is built from the register at read time, no
 The Marathon de Dakar 2026 is added the day its organiser announces it (nothing on Klikego nor in the calendar on
 26 Sep 2026). The Marathon de Paris is timed by another company and needs its own source.
 
+## Goal 34 on the milestone contract: a marathon finished, read from race result (D283)
+
+Provider id `viky:provider:race-result-zkfetch:v1` = `0x7cfa6c530b178b3d1b56fe7e1e080bc8cdce8cf60bae36dace0378c2cb4f2887`, shape 1, data
+`0x5ba1915200000000000000000000000000000000000000000000000000000000000000227cfa6c530b178b3d1b56fe7e1e080bc8cdce8cf60bae36dace0378c2cb4f28870000000000000000000000000000000000000000000000000000000000000001`.
+`pnpm safe:session` batches it, carried by the relayer. Until it is signed, `RACE_RESULT_OPEN` (src/marathon.ts) is
+false: race result's races are listed to nobody, the operator included, and the create route refuses them
+(`NOT_OPEN`). The opening PR flips it after reading the goal back.
+
+**The census that chose it** (26 Sep 2026, the founder's criterion: coverage). Home pages say nothing; the events
+lists do. race result (`my.raceresult.com/RREvents/list?modes=upcoming&dateFrom=…&dateTo=…&limit=5000`, found in
+the page's own script): 2,126 events to 31 Mar 2027 in 76 countries, 1,425 of them running, 218 with a marathon, a
+half or a 10 km in the name, Africa included (Lusaka, Monrovia, Dodoma, Francistown, Leribe). Sportstats
+(`public.sportstats.one/eventsearch_advanced`): 84 events in four months, Canada and Ironman. MikaTiming's events
+page lists towns, not results sites. Sporthive's events page is a 404 and Athlinks' loads nothing without a search:
+both left for a later census. Kigali and Cape Town publish their results on their own sites; Paris answers 500.
+
+**The reading** (src/race-result.ts): the event's results page is configured by
+`/<event>/results/config?page=results&noVisitor=1` (the list's public key, stable; the shard; the contests by id;
+the lists by name). A list is read at `/<event>/results/list?key=…&listname=…&contest=…&r=search&term=<bib>`, JSON
+rows in the order of the list's `DataFields`, the row of that bib alone in search mode (measured: `term=1` answers
+bib 1 only). The plain step reads the config, checks the list still publishes the register's field expressions at
+the register's columns (else `UNKNOWN_LIST`), and finds the row; the attested step reads the same URL through the
+source `race-result-row`, whose one pattern is built for the account (`matchesFor`) and takes the bib's own row at
+those columns. An empty time cell is a DNF, a DNS or a DSQ. The time read is the list's chip time where it separates
+chip and gun, its one time otherwise: the register says which, per race.
+
+**A race result race is added** with `pnpm exec tsx scripts/raceresult-inspect.ts <event id>` (the figures in its
+`my.raceresult.com/<id>/` URL), which prints the contests, the lists and each list's columns with a sample row when
+results exist. The row: `ref` the event's id, one heat per contest offered (marathon, half, 10 km, by the contest's
+id), `raceResult` the list's name and the columns and field expressions of the name and the time (the bib is
+column 0, checked). Lists exist before the race is run; a list an organiser reshapes before the results is caught by
+the check and fixed in the register before the person reads. The events without a results page yet (Liberia
+Marathon 2026 on 26 Sep 2026) wait.
+
+Terms read 26 Sep 2026: my race result's terms of use (German, organisers' and athletes' terms of the portal: §4.2
+organisers publish participant lists and results with the athlete's permission given at registration; nothing on
+reading a page), its data privacy statement, and its `robots.txt`, which keeps robots out of `/RREvents`,
+`/RRPublish` and `/*​/*​/list`, the very endpoints read: the same call as for MikaTiming (D277, the founder's rule),
+one row per gift at the person's request, Viky naming itself, written on the judges' page.
+
+**Proof (a), 26 Sep 2026, 02:54 UTC**, through the service on the fingerprint `0xc30bfb51…ae8d`: bib 1 of the 42K
+de Buenos Aires 2026, "Bethwel Kibet Chumba", 2:08:24, metric 78,696, nullifier `0xb1ecf63f…49c5`.
+
 ## The Safe session of goals 31 to 33 (D281)
 
 **Sent on 26 Sep 2026**, signatures given by the founder (the encrypted file `0x19d4…b794` and a phrase on paper),

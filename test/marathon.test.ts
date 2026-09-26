@@ -255,8 +255,10 @@ test("the routes build the account from the gift's race and bound bib, never fro
  * The register of races (the founder, 27 Sep 2026): the coming races with a marathon, a half or a 10 km, the
  * distance chosen at creation, a race already run offered to nobody but an operator's account.
  */
-import { DISTANCE_LABELS, heatSlugOf, marathonCourseId, marathonEventById, marathonGoalTypeOf, marathonProviderIdOf, MIKA_TIMING_GOAL_TYPE, MIKA_TIMING_HOSTS, MIKA_TIMING_OPEN, mikaAccountOf, mikaRunnerName, racesOffered } from "../src/marathon";
-import { MIKA_TIMING_RUNNER } from "../src/attested-sources";
+import { DISTANCE_LABELS, heatSlugOf, marathonCourseId, marathonEventById, marathonGoalTypeOf, marathonProviderIdOf, MIKA_TIMING_GOAL_TYPE, MIKA_TIMING_HOSTS, MIKA_TIMING_OPEN, mikaAccountOf, mikaRunnerName, RACE_RESULT_OPEN, raceResultAccountOf, racesOffered } from "../src/marathon";
+import { RACE_RESULT_ROW } from "../src/attested-sources";
+import { raceResultAccount, RaceResultError, raceResultRows, raceResultSeconds, readRaceResultConfig, readRaceResultRow } from "../src/race-result";
+import { matchesOf, MIKA_TIMING_RUNNER } from "../src/attested-sources";
 import { mikaDetailAccount, mikaEventMatches, mikaRowsOf, mikaRunnerIdOf, mikaSearchUrl, mikaValuesOf } from "../src/mika-timing";
 import { certificateOfGoal } from "../src/milestone-conditions";
 import { attestMarathonResult, mikaRunnerAccount } from "../src/marathon-reading";
@@ -286,7 +288,14 @@ test("the register: one id per race, a date that reads, a heat per distance, and
   assert.equal(new Set(ids).size, ids.length);
   for (const race of MARATHON_RACES) {
     if (race.timer === "breizh-chrono") assert.match(race.ref, /^\d{10,16}-\d{1,6}$/, race.raceId);
-    else {
+    else if (race.timer === "race-result") {
+      // A race result reference is the event's id; its heats are contests by id; its list and columns are written.
+      assert.match(race.ref, /^\d{4,8}$/, race.raceId);
+      assert.ok(race.raceResult, `${race.raceId} names its list`);
+      assert.ok(race.raceResult!.columns.name > 0 && race.raceResult!.columns.time > race.raceResult!.columns.name, `${race.raceId}: the bib first, then the name, then the time`);
+      assert.ok(race.raceResult!.fields.name.length > 0 && race.raceResult!.fields.time.length > 0);
+      for (const one of race.events) assert.match(one.heat, /^\d{1,3}$/, `${race.raceId} ${one.label}`);
+    } else {
       // A MikaTiming reference is one of the sites the source accepts and the race's year; its one heat is the event code's start.
       const [host, year] = race.ref.split("/");
       assert.ok(MIKA_TIMING_HOSTS.includes(host) && /^20\d\d$/.test(year), race.raceId);
@@ -424,4 +433,63 @@ test("the list of races: every coming race by date, all countries, and one count
   assert.match(chooser, /aria-pressed=\{country === null\} onClick=\{\(\) => setCountry\(null\)\}/, "the first chip is everything");
   assert.match(chooser, /setCountry\(country === one\.code \? null : one\.code\)/, "pressing a chosen country again gives everything back");
   assert.doesNotMatch(chooser, /country-first|Which country/, "no country step before the list");
+});
+
+/**
+ * race result, the third timing platform (the founder, 27 Sep 2026: coverage first), measured on the 42K de Buenos
+ * Aires 2026 on 26 Sep 2026: the list's own key order, one row per bib in search mode, an empty time for a DNF.
+ */
+const RR_CONFIG = JSON.stringify({ key: "bafa4cbc7e8acfb6a08aa821a73310c1", server: "my4.raceresult.com", eventname: "42K de Buenos Aires 2026", contests: { "1": "Maratón", "2": "DIS Maratón" }, TabConfig: { Lists: [{ Name: "Maratón 2026|Resultado General G/CH", Contest: "1" }] } });
+const RR_FIELDS = ["BIB", "ID", "ConEstatus([ClasifGeneral.p])", "correctSpelling([FLNAME])", "NATION.FLAG", "AGEGROUP.NAMESHORT", "SexoMF", "[Final.CHIP]", "[Final.GUN]", "[Final]"];
+const rrList = (rows: string[][], fields = RR_FIELDS) => JSON.stringify({ list: { ListName: "Maratón 2026|Resultado General G/CH" }, data: [...rows, [14259]], DataFields: fields });
+const RR_ROW = ["1", "1", "1.", "Bethwel Kibet Chumba", "[img:/graphics/flags/KE.svg]", "M35-39", "M", "2:08:24", "2:08:28", "2:08:28"];
+const RR_DNF = ["13", "13", "DNF", "Zacharia Krop", "[img:/graphics/flags/KE.svg]", "M18-29", "M", "", "", ""];
+const rrFetch = (answers: Record<string, string>) => async (url: string) => {
+  if (url.includes("/results/config")) return new Response(RR_CONFIG, { status: 200 });
+  const term = /term=([^&]*)/.exec(url)?.[1] ?? "";
+  return new Response(answers[term] ?? rrList([]), { status: 200 });
+};
+const BUENOS_AIRES = marathonEventById("buenos-aires-2026/marathon")!;
+
+test("race result: the account carries what the URL needs, and the pattern takes the bib's own row at the register's columns", async () => {
+  const account = raceResultAccount({ key: "bafa4cbc7e8acfb6a08aa821a73310c1", server: "my4.raceresult.com" }, BUENOS_AIRES.race, BUENOS_AIRES.event, " 1 ");
+  assert.equal(account, "my4.raceresult.com|423560|bafa4cbc7e8acfb6a08aa821a73310c1|Marat%C3%B3n%202026%7CResultado%20General%20G%2FCH|1|1|3|7");
+  assert.ok(RACE_RESULT_ROW.accepts(account) && !RACE_RESULT_ROW.accepts("evil.example|423560|bafa4cbc7e8acfb6a08aa821a73310c1|x|1|1|3|7"));
+  assert.equal(RACE_RESULT_ROW.url(account), "https://my4.raceresult.com/423560/results/list?key=bafa4cbc7e8acfb6a08aa821a73310c1&listname=Marat%C3%B3n%202026%7CResultado%20General%20G%2FCH&page=results&contest=1&r=search&l=0&openedGroups=%7B%7D&term=1");
+  const [pattern] = matchesOf(RACE_RESULT_ROW, account);
+  assert.deepEqual({ ...new RegExp(pattern.value).exec(rrList([RR_ROW]))?.groups }, { runner: "Bethwel Kibet Chumba", official: "2:08:24" });
+  assert.equal(new RegExp(pattern.value).exec(rrList([["4", "4", "2.", "John Hakizimana", "", "M30-34", "M", "2:08:36", "2:08:39", "2:08:39"]])), null, "another bib's row");
+  assert.deepEqual({ ...new RegExp(pattern.value).exec(rrList([RR_DNF.map((cell, index) => (index === 0 ? "1" : cell))]))?.groups }, { runner: "Zacharia Krop", official: "" }, "a DNF is an empty time, read as such");
+  assert.deepEqual(raceResultRows(JSON.parse(rrList([RR_ROW, RR_DNF])).data), [RR_ROW, RR_DNF], "the trailing count is not a row");
+  assert.deepEqual(raceResultRows({ "#1_f": [RR_ROW], "#2_m": { sub: [RR_DNF] } }), [RR_ROW, RR_DNF], "groups are flattened");
+  assert.equal(raceResultSeconds("2:08:24"), 7_704);
+  assert.equal(raceResultSeconds("12:29.14"), 749, "minutes, seconds and hundredths");
+  assert.equal(raceResultSeconds("1:05:32.5"), 3_932);
+  assert.equal(raceResultSeconds(""), undefined);
+  assert.equal(raceResultSeconds("DNF"), undefined);
+  assert.deepEqual(raceResultAccountOf("423560|1|F12"), { eventId: "423560", contest: "1", bib: "F12" });
+  assert.equal(raceResultAccountOf("423560|1|toolongbib"), undefined);
+  const config = await readRaceResultConfig("423560", rrFetch({}));
+  assert.deepEqual(config, { key: "bafa4cbc7e8acfb6a08aa821a73310c1", server: "my4.raceresult.com", eventName: "42K de Buenos Aires 2026", contests: { "1": "Maratón", "2": "DIS Maratón" }, lists: [{ name: "Maratón 2026|Resultado General G/CH", contest: "1" }] });
+});
+
+test("race result: the row is read plainly by bib, the list's columns are checked first, and the register's races are read through the marathon door", async () => {
+  const found = await readRaceResultRow(BUENOS_AIRES.race, BUENOS_AIRES.event, "1", rrFetch({ "1": rrList([RR_ROW]) }));
+  assert.deepEqual(found.row, { runner: "Bethwel Kibet Chumba", official: "2:08:24" });
+  await assert.rejects(readRaceResultRow(BUENOS_AIRES.race, BUENOS_AIRES.event, "999", rrFetch({})), (error: unknown) => error instanceof RaceResultError && error.code === "NO_RESULT");
+  const moved = [...RR_FIELDS]; moved[7] = "[Final.GUN]";
+  await assert.rejects(readRaceResultRow(BUENOS_AIRES.race, BUENOS_AIRES.event, "1", rrFetch({ "1": rrList([RR_ROW], moved) })), (error: unknown) => error instanceof RaceResultError && error.code === "UNKNOWN_LIST", "a list whose columns moved is not trusted");
+  const read = await readMarathonResult("423560|1|1", rrFetch({ "1": rrList([RR_ROW]) }));
+  assert.equal(read.finishSeconds, 7_704);
+  assert.equal(read.race.timer, "race-result");
+  assert.equal(read.subject, marathonSubject("Bethwel Kibet Chumba", "buenos-aires-2026/marathon"));
+  await assert.rejects(readMarathonResult("423560|1|13", rrFetch({ "13": rrList([RR_DNF]) })), refused("NOT_FINISHED"));
+  await assert.rejects(readMarathonResult("999999|1|1", rrFetch({})), refused("UNKNOWN_RACE"));
+  assert.equal(marathonGoalTypeOf("race-result"), 34);
+  assert.equal(marathonProviderIdOf("race-result"), "0x7cfa6c530b178b3d1b56fe7e1e080bc8cdce8cf60bae36dace0378c2cb4f2887");
+  assert.equal(RACE_RESULT_OPEN, false, "until the founder signs goal 34");
+  const now = new Date("2026-10-01T12:00:00Z").getTime();
+  assert.ok(!racesOffered(now, true).some((race) => race.timer === "race-result"), "listed to nobody, the operator included");
+  assert.equal(MARATHON_MILESTONE.course?.refuses?.("lusaka-2026/marathon", false)?.code, "NOT_OPEN");
+  assert.ok(MARATHON_RACES.filter((race) => race.timer === "race-result").length >= 15, "coverage: fifteen coming races and the test race");
 });
