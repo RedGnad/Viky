@@ -7179,6 +7179,9 @@ finish time. On the chain, the race and the bib; the name stays in the terms, ne
   nothing, and Mercuryo's list counts only with its restrictions read.
 - "Use your money" reads that country ("Where you live: Senegal · change"), and its "change" opens the same full list and
   saves to the account; the three chips it had are gone. "Which card?" is given the account's country.
+- Until the account says (the founder, 27 Sep 2026, after the merge): "Use your money" proposes the connection's
+  country, as Me does, and shows the uses for it at once with "change" beside it, even when the connection and the
+  device's region disagree. The list is never a screen on its own, and the proposal is not kept on the account.
 - The phone number is asked only inside "Your phone", as the top-up's destination. This device remembers the last one
   to fill the field next time (`viky.phone.last-number`); it decides nothing else. The server's copy is still erased
   when the order ends.

@@ -130,16 +130,24 @@ export function CashOut() {
   const [where, setWhere] = useState<RailsWhere | null>(null);
   // Where the person lives, a fact of the account (D274): read from it, and "change" below writes it back there.
   const { country: accountCountry, save: saveCountry } = useAccountCountry(address);
+  // Until the account says, the country the connection comes from is proposed, as in Me, and the uses are shown for it
+  // straight away (the founder, 27 Sep 2026): never a screen waiting on a question. Proposed only, never kept.
+  const [proposedCountry, setProposedCountry] = useState<string | null>(null);
   const answeredCountry = accountCountry ?? null;
+  const readFor = answeredCountry ?? proposedCountry;
   /** Whether the person opened "change" under the title, to say where their number is from (D270). */
   const [picking, setPicking] = useState(false);
   const resumed = useRef(false);
 
   useEffect(() => {
     let live = true;
-    whereTheRailsServe(answeredCountry)
+    whereTheRailsServe(readFor)
       .then((answer) => {
-        if (live) setWhere(answer);
+        if (!live) return;
+        // The two signals disagree and nothing was said: read again for the connection's country rather than ask.
+        const proposal = answer.ask && !readFor ? (answer.fromConnection ?? answer.fromDevice ?? null) : null;
+        if (proposal) setProposedCountry(proposal);
+        else setWhere(answer);
       })
       .catch(() => {
         // Nothing read is nothing ordered: the register's own order stands, and both ways stay on the screen.
@@ -148,7 +156,7 @@ export function CashOut() {
     return () => {
       live = false;
     };
-  }, [answeredCountry]);
+  }, [readFor]);
 
   const countryNow = answeredCountry ?? where?.country ?? null;
 
@@ -475,9 +483,9 @@ export function CashOut() {
    */
   const heading = <h1 className={TITLE_IN_FACE}>{W.title}</h1>;
   // The uses for the number's country, ordered by the amount (D270): only what works there, the first in the sun.
-  const asking = picking || Boolean(where?.ask && !answeredCountry);
+  const asking = picking;
   const eurosHeld = money.rates?.usdPerEur ? Number(changeable) / 1_000_000 / money.rates.usdPerEur : undefined;
-  const uses = where?.ask && !answeredCountry ? [] : orderUses(usesFor(countryNow, where?.waysOut ?? {}, true, true), eurosHeld, (use) => netOf(use === "bank" ? WAY_OUT_EURO : WAY_OUT_CARD)?.net);
+  const uses = orderUses(usesFor(countryNow, where?.waysOut ?? {}, true, true), eurosHeld, (use) => netOf(use === "bank" ? WAY_OUT_EURO : WAY_OUT_CARD)?.net);
 
   // W11 and W12. The session closes itself; the balances decide the step, so nothing is remembered here and
   // nothing is lost. Signing in leads, and nothing else is offered: a second account would strand the money.
