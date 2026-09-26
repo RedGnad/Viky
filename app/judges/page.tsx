@@ -1,3 +1,6 @@
+import { JudgeCredit } from "../components/JudgeCredit";
+import { formatAusd } from "@/src/gift-reader";
+import { judgeCreditConfig, judgeCreditOpen } from "@/src/judge-credit";
 import { rampHostApiKey } from "@/src/rails";
 import type { Metadata } from "next";
 import { Shell } from "../kit/Shell";
@@ -40,6 +43,8 @@ export default async function JudgesPage() {
   // Gifts created before the D30 corrections keep running on the contract that holds them, and every
   // gift record names its own contract, so both are listed here for as long as the older one holds one.
   const earlierEscrow = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
+  // The judge credit's amount, said on the page; its code is never read here (D291).
+  const judgeCredit = judgeCreditConfig();
   return (
     <Shell kind="document" back="/me">
       <header className="space-y-[var(--space-lg)]">
@@ -49,6 +54,36 @@ export default async function JudgesPage() {
           shown to funders or recipients.
         </p>
       </header>
+
+      {/* The judges' own path (D291): two gestures, no account kept by Viky, the judge keeps their passkey. The code
+          itself is only in the submission portal's instructions, never on this page. */}
+      <section className="space-y-[var(--space-sm)]">
+        <h2 className={TITLE}>For judges, how to try it</h2>
+        <ol className={`${HELP} list-decimal space-y-[var(--space-xs)] pl-[var(--space-lg)]`}>
+          <li>
+            On the home page, press Sign in and create your account: your face or your fingerprint makes a passkey on
+            your device. Viky keeps no account for you, and you keep the passkey.
+          </li>
+          <li>
+            Come back here through You, For judges, and type the judge code from the submission portal&apos;s
+            instructions. Your account receives {judgeCredit ? formatAusd(judgeCredit.units) : "a set amount"}: a judge
+            credit from Viky&apos;s treasury, once per account. A real funder pays by card through Ramp, shown in the video.
+          </li>
+          <li>
+            Offer a gift with it from the home page: the pay sheet sees your account already holds enough and opens no
+            card service.
+          </li>
+          <li>
+            Or open the gift the founder made for you from the operator account: it is in your name, and you can take
+            it out as phone credit or as a gift card from Use your money.
+          </li>
+          <li>
+            Mera&apos;s stateless test runs on this same account: sign out, then sign in from another browser or device
+            with the same passkey. The account and its money come back; nothing was kept on the first device.
+          </li>
+        </ol>
+        <JudgeCredit open={judgeCreditOpen()} />
+      </section>
 
       <section className="space-y-[var(--space-sm)]">
         <h2 className={TITLE}>Network</h2>
