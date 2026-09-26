@@ -589,11 +589,11 @@ dollars; and the session countdown. Each test was checked by breaking the rule a
 | "WAEC withholds part of that result, so it cannot pay." | the withheld table is not empty | `readWaecResult` | `test/waec-shown.test.ts` |
 | "Your card's PIN is typed on WAEC's page and never reaches Viky." | the card is typed in the verification tab, and no route of Viky takes it | `WAEC_MILESTONE.words.whatIsRead`, no WAEC route | `test/waec-shown.test.ts` |
 
-### An MIT course certificate, being built (D222)
+### An MIT course certificate, open (D222, D275)
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
-| "An MIT course certificate", READ FOR YOU, under "Learn" with "Being built." | goal 29 not signed yet, the source waiting for the service's redeploy | `MITX_ONLINE_CERTIFICATE_LINE` in `BUILDING` | `test/mitx-online-certificate.test.ts` |
+| "An MIT course certificate", READ FOR YOU, under "Learn", open | goal 29 registered on `MilestoneGift` to the MITx Online provider id, and the reading service running the `mitx-online-certificate` source | `MITX_ONLINE_CERTIFICATE_LINE` in `CONDITIONS`, `live: true` | `test/mitx-online-certificate.test.ts` |
 | "It proves a course taken, not a place at MIT." | the page read is a course or program certificate, and nothing about enrolment | `MITX_ONLINE_CERTIFICATE` reads the title, the name, the day and the id | `test/mitx-online-certificate.test.ts` |
 | "No certificate answers to that link, or it was revoked." | a revoked certificate's page answers 404 | MITx Online's `ActiveCertificatesManager` (mitodl/mitxonline, `courses/models.py`), `readMitxOnlineCertificate` | `test/mitx-online-certificate.test.ts` |
 
@@ -658,11 +658,11 @@ at their place. The judges' page counts its uses as it does the top-ups'.
 | the code, its PIN, where to use it | what Bitrefill returned for the delivered order, opened for its owner | `GiftCardCodeLines`, `followPhoneTopUp` | `test/phone-order.test.ts` |
 | "Your gift cards", each with its code | the account's delivered gift card orders | `/api/giftcards/codes`, `giftCardsOf` | `test/phone-order.test.ts` |
 
-### Finish a marathon, being built (D273, screens in #266)
+### Finish a marathon, open (D273, screens in #266, D275)
 
 | the screen says | what must be true | what makes it true | exercised by |
 |---|---|---|---|
-| "Finish a marathon", READ FOR YOU, under "Move" with "Being built." | goal 30 not signed yet | `MARATHON_FINISH_LINE` in `BUILDING` | `test/marathon.test.ts` |
+| "Finish a marathon", READ FOR YOU, under "Move", open | goal 30 registered on `MilestoneGift` to the Breizh Chrono provider id, and the reading service running the `breizh-chrono-runner` source | `MARATHON_FINISH_LINE` in `CONDITIONS`, `live: true` | `test/marathon.test.ts` |
 | "Viky reads three things from the timing company's page: the name on your line, your bib and your official time." | the source matches the title and the official time and nothing else | `BREIZH_CHRONO_RUNNER` | `test/marathon.test.ts` |
 | "No runner answers to that bib in that race." | the runner's page is empty, or about another bib | `marathonResultOf` | `test/marathon.test.ts` |
 | "The results page has no finish time for that bib." | the official time is 00:00:00, a runner who did not finish | `finishSecondsOf` | `test/marathon.test.ts` |

@@ -3,7 +3,7 @@ import test from "node:test";
 import { BREIZH_CHRONO_RUNNER } from "../src/attested-sources";
 import { privacyOf } from "../src/condition-privacy";
 import { proofOfCondition } from "../src/condition-proof";
-import { BUILDING, conditionById, MARATHON_FINISH_LINE as LINE } from "../src/conditions";
+import { CONDITIONS, conditionById, MARATHON_FINISH_LINE as LINE } from "../src/conditions";
 import { bibStillOpen, DAY_SECONDS, finishInWords, finishSecondsOf, isValidBib, MARATHON_FINISH, MARATHON_GOAL_TYPE, MARATHON_RACES, marathonAccount, marathonAccountOf, marathonProviderId, marathonSubject, marathonTargetInWords, marathonTargetUnderHours, sameRunner } from "../src/marathon";
 import { MarathonReadError, marathonResultOf, readMarathonResult } from "../src/marathon-reading";
 import { certificateById, MARATHON_MILESTONE } from "../src/milestone-conditions";
@@ -85,11 +85,11 @@ test("a plain read refuses by name when the page is not there", async () => {
   assert.equal(read.official, "03:59:59");
 });
 
-test("the line: read for them, Move, goal 30, being built, the fact rule, a name asked", () => {
+test("the line: read for them, Move, goal 30, open, the fact rule, a name asked", () => {
   assert.equal(LINE.family, "move");
   assert.equal(LINE.nature, "read");
-  assert.equal(LINE.live, false);
-  assert.ok(BUILDING.includes(LINE));
+  assert.equal(LINE.live, true);
+  assert.ok(CONDITIONS.includes(LINE));
   assert.ok(LINE.name.length <= 30);
   assert.equal(conditionById("marathon-finish"), LINE);
   assert.equal(certificateById("marathon-finish"), MARATHON_MILESTONE);

@@ -7182,3 +7182,21 @@ finish time. On the chain, the race and the bib; the name stays in the terms, ne
 - The phone number is asked only inside "Your phone", as the top-up's destination. This device remembers the last one
   to fill the field next time (`viky.phone.last-number`); it decides nothing else. The server's copy is still erased
   when the order ends.
+
+## D275, 26 Sep 2026: the marathon and MITx Online open, goals 29 and 30 on the chain
+
+The founder, 26 Sep 2026: the Safe session of goals 29 (MITx Online, D222) and 30 (Breizh Chrono, D273) together,
+then the marathon line moved from the lines being built to the register, offered to everybody in "What will they
+do?" under Move, without waiting for the test gift. MITx Online opens on the same signature, as D222 said it would.
+
+- **The session.** One Safe transaction at nonce 9 registers goals 29 and 30 on `MilestoneGift`, carried by the
+  relayer (hash to sign `0x8ac76065065bf94fdaf85fb2322e701772031e157db7f1968ea1736d776f010e`, equal to the Safe's own
+  `getTransactionHash` read on Monad). Signed by the encrypted file (`0x19d4…b794`) and a phrase on paper, sent by
+  the relayer: tx `0x74594169ab42b6ffd37588497759658203fcc60d8d9ea76e08ed513baa994319`, block 108,029,165, success,
+  278,045 gas, Safe nonce 9 to 10. Read back: goals 29 and 30 each carry the provider id and shape 1 the code expects,
+  and `pnpm check:milestone-goals` finds nothing left to send.
+- **What opens.** "Finish a marathon" (goal 30) and "An MIT course certificate" (goal 29): both sources run on the
+  reading service, each read once for real (D273 proof (a), D222). They move to the register, `live` and open.
+- **What is still to show.** Proof (c) of the marathon, a test payment that goes, is now the first gift on the line:
+  the operator's account, the Marathon de Dakar 2023, bib 347 entered through the operator door (the judges' page).
+  Until it has run, nothing here is called working.

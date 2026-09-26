@@ -1000,9 +1000,23 @@ real CHSI report (docs/reclaim/chsi-enrolment-shown-provider.md) and pinned in `
 
 Provider id `viky:provider:breizh-chrono-zkfetch:v1` = `0x59a029732fded0190d8c59b695d62b1410e08d6ca82dd5284b7a9e7cf9f80b55`, shape 1, data
 `0x5ba19152000000000000000000000000000000000000000000000000000000000000001e59a029732fded0190d8c59b695d62b1410e08d6ca82dd5284b7a9e7cf9f80b550000000000000000000000000000000000000000000000000000000000000001`.
-`pnpm safe:session` batches it with any other missing goal, carried by the relayer. The source `breizh-chrono-runner`
-is in the shared list: the service is redeployed from the branch before the merge, on the fingerprint
-`0x97df1bdf…1aa0`.
+Registered on 26 Sep 2026 in the Safe session of goals 29 and 30 (the section below), read back with the provider id
+and shape 1; the line is open (D275), before the test gift, by the founder's decision. The source
+`breizh-chrono-runner` is in the shared list: the service is redeployed from the branch before the merge, on the
+fingerprint `0x97df1bdf…1aa0`.
+
+## The Safe session of goals 29 and 30 (D275)
+
+**Sent on 26 Sep 2026**, signatures given by the founder (the encrypted file `0x19d4…b794` and a phrase on paper),
+carried by the relayer `0x150d…CFE4`, which only paid the gas:
+
+| | |
+|---|---|
+| transaction | `0x74594169ab42b6ffd37588497759658203fcc60d8d9ea76e08ed513baa994319`, block 108,029,165, success, 278,045 gas |
+| the hash signed | `0x8ac76065065bf94fdaf85fb2322e701772031e157db7f1968ea1736d776f010e`, equal to the Safe's own `getTransactionHash` at nonce 9 |
+| the Safe | nonce 9 to 10 |
+| read back after | goals 29 and 30 on `MilestoneGift`, each with the provider id of `MILESTONE_GOALS` and shape 1; `pnpm check:milestone-goals` finds nothing left to send |
+| relayer | 53.19 MON after |
 
 **A race is added** by one row of `MARATHON_RACES` (src/marathon.ts): the timing company's reference and heat, read
 from the race's page (`/resultats-courses/<slug>-<ref>/<heat>`, the reference is the tail of the slug), its name, its
@@ -1027,9 +1041,9 @@ enters bib 347 (the operator door above), presses "Read my result". The gift set
 
 Provider id `viky:provider:mitx-online-certificate-zkfetch:v1` = `0xf5fc73bf26b45520382592188d8fd1f5fcb1c82bb6a37a53f87388790b0931c1`, shape 1, data
 `0x5ba19152000000000000000000000000000000000000000000000000000000000000001df5fc73bf26b45520382592188d8fd1f5fcb1c82bb6a37a53f87388790b0931c10000000000000000000000000000000000000000000000000000000000000001`.
-`pnpm safe:session` batches it with any other missing goal, carried by the relayer. The source
-`mitx-online-certificate` is in the shared list: the service is redeployed from the branch before the merge, on the
-fingerprint `0xe62a901d…fa33`.
+Registered on 26 Sep 2026 in the Safe session of goals 29 and 30 (the section below), read back with the provider id
+and shape 1; the line is open (D275). The source `mitx-online-certificate` is in the shared list: the service is
+redeployed from the branch before the merge, on the fingerprint `0xe62a901d…fa33`.
 
 ## Goal 28 on the milestone contract: WASSCE credits, shown from WAEC (D217)
 

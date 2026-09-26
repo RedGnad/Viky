@@ -3,7 +3,7 @@ import test from "node:test";
 import { MITX_ONLINE_CERTIFICATE } from "../src/attested-sources";
 import { privacyOf } from "../src/condition-privacy";
 import { proofOfCondition } from "../src/condition-proof";
-import { BUILDING, conditionById, MITX_ONLINE_CERTIFICATE_LINE as LINE } from "../src/conditions";
+import { CONDITIONS, conditionById, MITX_ONLINE_CERTIFICATE_LINE as LINE } from "../src/conditions";
 import { certificateById, MITX_ONLINE_MILESTONE } from "../src/milestone-conditions";
 import { MILESTONE_GOALS } from "../src/milestone-goals";
 import { MITX_ONLINE_GOAL_TYPE, mitxOnlineCourseOf, mitxOnlineIssuedDaySeconds, mitxOnlineKeyOf, mitxOnlineProviderId, mitxOnlineSubject } from "../src/mitx-online-certificate";
@@ -70,11 +70,11 @@ test("a revoked or unknown certificate is a 404, and says so by name", async () 
   assert.equal(read.title, "Introduction to Mechanics");
 });
 
-test("the line: read for them, Learn, goal 29, being built, the fact rule, in the shared list", () => {
+test("the line: read for them, Learn, goal 29, open, the fact rule, in the shared list", () => {
   assert.equal(LINE.family, "learn");
   assert.equal(LINE.nature, "read");
-  assert.equal(LINE.live, false);
-  assert.ok(BUILDING.includes(LINE));
+  assert.equal(LINE.live, true);
+  assert.ok(CONDITIONS.includes(LINE));
   assert.ok(LINE.name.length <= 30);
   assert.match(LINE.help, /not a place at MIT/, "a course taken, never enrolled at MIT");
   assert.equal(conditionById("mitx-online-certificate"), LINE);
