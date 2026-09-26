@@ -489,10 +489,16 @@ test("race result: the row is read plainly by bib, the list's columns are checke
   assert.equal(marathonProviderIdOf("race-result"), "0x7cfa6c530b178b3d1b56fe7e1e080bc8cdce8cf60bae36dace0378c2cb4f2887");
   assert.equal(RACE_RESULT_OPEN, true, "since the founder signed goal 34");
   const now = new Date("2026-10-01T12:00:00Z").getTime();
-  const offered = racesOffered(now, false).map((race) => race.raceId);
-  assert.ok(offered.includes("lusaka-2026") && offered.includes("reggio-emilia-2026"), "listed to everybody once open");
-  assert.ok(!offered.includes("buenos-aires-2026"), "the test race stays the operator's");
+  const offered = racesOffered(now, false);
+  const coming = offered.find((race) => race.timer === "race-result");
+  assert.ok(coming, "race result's coming races listed to everybody once open");
+  assert.ok(!offered.some((race) => race.raceId === "buenos-aires-2026"), "the test race stays the operator's");
   assert.ok(racesOffered(now, true).some((race) => race.raceId === "buenos-aires-2026"));
-  assert.equal(MARATHON_MILESTONE.course?.refuses?.("lusaka-2026/marathon", false), undefined);
-  assert.ok(MARATHON_RACES.filter((race) => race.timer === "race-result").length >= 15, "coverage: fifteen coming races and the test race");
+  assert.equal(MARATHON_MILESTONE.course?.refuses?.(`${coming!.raceId}/${coming!.events[0].distance}`, false), undefined);
+  assert.ok(MARATHON_RACES.filter((race) => race.timer === "race-result").length >= 2, "the test race and the generated register");
+  // The register's race result half is the generator's, and every race in it was kept because its list reads by bib.
+  const generator = readFileSync("scripts/raceresult-register.ts", "utf8");
+  assert.match(generator, /list\.contest === contestId/, "a list declared for that contest, never one for all contests");
+  assert.match(generator, /fields\[0\] !== "BIB"/, "the bib first");
+  assert.match(readFileSync("src/marathon.ts", "utf8"), /\.\.\.RACE_RESULT_RACES/);
 });

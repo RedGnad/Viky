@@ -34,6 +34,7 @@ async function raceResultJson<T>(url: string, fetchImpl: PlainFetch): Promise<T>
   } catch (error) {
     throw new RaceResultError("FETCH_FAILED", "race result could not be read right now", { cause: error });
   }
+  if (response.status === 429) throw new RaceResultError("FETCH_FAILED", "race result is being read too often right now. Nothing was counted: try again in half an hour.");
   if (response.status === 404) throw new RaceResultError("UNKNOWN_RACE", "race result knows no event by that id");
   if (response.status !== 200) throw new RaceResultError("FETCH_FAILED", `race result answered ${response.status}`);
   try {

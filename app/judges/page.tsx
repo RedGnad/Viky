@@ -380,6 +380,16 @@ export default async function JudgesPage() {
             26 Sep 2026.
           </li>
           <li>
+            <strong>An incident, 26 Sep 2026: bursts are punished.</strong> Building the register of race result&apos;s races,
+            a script on a developer&apos;s machine asked race result four times a second; race result answered that
+            machine&apos;s address 429 &quot;too many requests&quot;, then 404 with a trap page, for hours, whatever the user
+            agent. Production reads from another address (the reading service, on Railway), one row per gift, at the
+            person&apos;s request, and was not touched. Since then the reading service keeps a pace with race result and
+            MikaTiming: at least three seconds between two readings of a platform, four hundred readings a day at most,
+            and after a 429 thirty minutes during which nothing is asked of it; a reading put off is told to try again
+            later, and nothing is counted for it.
+          </li>
+          <li>
             <strong>WAEC&apos;s terms.</strong> WASSCE credits are shown by the person from WAEC&apos;s own result checker
             (D217), and not read for them, because WAEC&apos;s privacy policy tells the holder of an access code it allocates
             &quot;you must not disclose it to any third party&quot;, and the result card&apos;s PIN is one. The card is typed on WAEC&apos;s page and
