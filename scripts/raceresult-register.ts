@@ -1,5 +1,7 @@
 import "../src/load-env";
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { headersFor, RACE_RESULT_ROW } from "../src/attested-sources";
 import { raceResultRows } from "../src/race-result";
 
@@ -27,13 +29,13 @@ const NOT_FULL = /half|semi|halb|halve|mezza|puoli|media|1\/2|1\/4|quarter|viert
 const HALF = /half|semi|halb|halve|mezza|puoli|media marat|\b21[.,]?1?\s?k?m?\b|\b21 ?km\b|1\/2/i;
 const TEN = /\b10 ?km\b|\b10k\b|\b10 000\b|\b10000\b|\b10 ?k\b/i;
 const NOT_A_RUNNER_RACE = /relay|relais|staffel|estafeta|duo|team|kids|walk|nordic|wheel|rollstuhl|handbike|silla|inline|skate|bike|virtual|virtuel/i;
-const NAME_FIELD = /name|nom\b|flname|lfname/i;
+const NAME_FIELD = /name|nome|nombre|naam|nom\b|flname|lfname/i;
 const NOT_NAME = /contest|agegroup|nation|club|team|city|verein|ort|firstname|lastname|vorname|nachname/i;
 const CHIP = /chip|netto|\bnet\b/i;
 const TIME_FIELD = /time|zeit|final|finish|arrivo|tiempo|temps|result|ziel|tid|aika|tijd/i;
 const NOT_TIME = /gap|pace|speed|lap|split|rank|pl\b|km|diff|rueckstand|behind|tempo|avg|info|eta|penalty/i;
-const LIST_GOOD = /result|ergebnis|final|résultat|resultat|clasif|uitslag|finisher|zieleinlauf|classifica|tulokset|lista|overall/i;
-const LIST_BAD = /team|mannschaft|start|live|participant|teilnehmer|concurrent|split|\bak\b|age ?group|category|categor|kategor|club|verein|dnf|not finished|relay|staffel|club|school/i;
+const LIST_GOOD = /result|ergebnis|gesamt|einlauf|\bziel\b|final|résultat|resultat|clasif|uitslag|finisher|zieleinlauf|classifica|tulokset|lista|overall/i;
+const LIST_BAD = /award|winner|podium|\btop ?\d|team|mannschaft|start|live|participant|teilnehmer|concurrent|split|\bak\b|age ?group|category|categor|kategor|club|verein|dnf|not finished|relay|staffel|club|school/i;
 
 function distanceOf(contest: string): "marathon" | "half" | "10k" | undefined {
   if (NOT_A_RUNNER_RACE.test(contest)) return undefined;
@@ -54,26 +56,45 @@ function offsetOf(lng: number): string {
 
 /**
  * race result answers 429 "too many requests" to a reader that asks faster than about one call every two seconds,
- * and keeps doing so for minutes (measured 26 Sep 2026): one call every three seconds, and a minute's wait on a 429.
+ * and keeps doing so for minutes (measured 26 Sep 2026, and again at one call every three seconds when two runs overlapped on 27 Sep): one call every five seconds, and a minute's wait on a 429.
  */
-const STEP_MS = 3_000;
+const STEP_MS = 5_000;
+/** The list endpoint, on its own shard, throttles sooner than the config (27 Sep 2026): fifteen seconds. */
+const LIST_STEP_MS = 15_000;
 let throttled = 0;
-async function json<T>(url: string): Promise<T | null> {
+/**
+ * One call. A 404 or a page that keeps failing (500, a timeout, a body that is not JSON) leaves that event out and
+ * the run goes on; only race result asking to slow down six times running stops the run, before anything is written.
+ */
+async function json<T>(url: string, stepMs = STEP_MS): Promise<T | null> {
+  let refusals = 0;
   for (let attempt = 0; attempt < 6; attempt += 1) {
-    await pause(STEP_MS);
+    await pause(stepMs);
     try {
       const response = await fetch(url, { headers: headersFor(RACE_RESULT_ROW), cache: "no-store", signal: AbortSignal.timeout(30_000) });
-      if (response.status === 404) return null;
+      if (response.status === 404) {
+        // A throttled address gets a 404 whose body is a trap page ("A":{"A":…), never a fact about the event.
+        const text = await response.text().catch(() => "");
+        if (!text.startsWith('"A":')) return null;
+        throttled += 1;
+        refusals += 1;
+        await pause(60_000);
+        continue;
+      }
       if (response.status === 200) return (await response.json()) as T;
       if (response.status === 429) {
         throttled += 1;
+        refusals += 1;
         await pause(60_000);
+        continue;
       }
     } catch {
-      await pause(5_000);
+      // a timeout or a body that is not JSON: tried again below
     }
+    if (attempt >= 2) return null;
   }
-  throw new Error(`race result would not answer ${url}`);
+  if (refusals >= 6) throw new Error(`race result kept asking to slow down at ${url}: nothing written`);
+  return null;
 }
 
 type Config = { key?: string; server?: string; eventname?: string; contests?: Record<string, string>; TabConfig?: { Lists?: { Name: string; Contest: string | null }[] } };
@@ -85,6 +106,41 @@ async function configOf(eventId: string) {
 }
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+type Measured = { kind: "left"; why: string } | { kind: "kept"; heats: { distance: string; label: string; heat: string }[]; list: { listname: string; name: number; time: number; nameField: string; timeField: string } };
+
+/** One event measured against the rule: which of its distances has a results list that reads by bib, and its columns. */
+async function measure(event: ApiEvent): Promise<Measured> {
+  const config = await configOf(String(event.id));
+  if (!config) return { kind: "left", why: "no results page" };
+  const heats: { distance: string; label: string; heat: string }[] = [];
+  let chosenList: { listname: string; name: number; time: number; nameField: string; timeField: string } | null = null;
+  for (const [contestId, contestName] of Object.entries(config.contests)) {
+    const distance = distanceOf(contestName);
+    if (!distance || heats.some((one) => one.distance === distance)) continue;
+    // The list's own name, after its group ("Result Lists|All Award Winners" is an award list, not the results).
+    const own = (name: string) => name.split("|").pop() ?? name;
+    const lists = config.lists.filter((list) => list.contest === contestId && LIST_GOOD.test(own(list.name)) && !LIST_BAD.test(own(list.name)));
+    for (const list of lists) {
+      if (chosenList && list.name !== chosenList.listname) continue;
+      const answer = await json<{ DataFields?: string[]; data?: unknown; error?: string }>(`https://${config.server}/${event.id}/results/list?key=${config.key}&listname=${encodeURIComponent(list.name)}&page=results&contest=${contestId}&r=search&l=0&openedGroups=%7B%7D&term=0`, LIST_STEP_MS);
+      if (!answer || answer.error) continue;
+      const fields = answer.DataFields ?? [];
+      if (fields[0] !== "BIB") continue;
+      const nameIndex = fields.findIndex((field, index) => index > 0 && NAME_FIELD.test(field) && !NOT_NAME.test(field));
+      if (nameIndex < 1) continue;
+      const after = fields.map((field, index) => ({ field, index })).filter((one) => one.index > nameIndex && TIME_FIELD.test(one.field) && !NOT_TIME.test(one.field));
+      const time = after.find((one) => CHIP.test(one.field)) ?? after[0];
+      if (!time) continue;
+      if (chosenList && (chosenList.name !== nameIndex || chosenList.time !== time.index)) continue;
+      chosenList = { listname: list.name, name: nameIndex, time: time.index, nameField: fields[nameIndex], timeField: time.field };
+      heats.push({ distance, label: contestName.replace(/\{EN:([^|}]*)[^}]*\}/, "$1").trim(), heat: contestId });
+      break;
+    }
+  }
+  if (!chosenList || heats.length === 0) return { kind: "left", why: "no per-contest results list read by bib" };
+  return { kind: "kept", heats, list: chosenList };
+}
 
 async function main() {
   // Never from the address that reads in production (the founder, 27 Sep 2026): a run that got it throttled would
@@ -105,40 +161,30 @@ async function main() {
   const kept: { country: string; name: string }[] = [];
   const left: { name: string; why: string }[] = [];
   const ids = new Set<string>();
+  // What each event measured, kept between runs outside the repository, so a run stopped by race result's pace
+  // resumes where it stopped instead of asking everything again (27 Sep 2026: a whole run is two hundred calls).
+  const cachePath = process.env.RACE_RESULT_CACHE ?? join(tmpdir(), "viky-raceresult-register.json");
+  const cache: Record<string, Measured> = existsSync(cachePath) ? (JSON.parse(readFileSync(cachePath, "utf8")) as Record<string, Measured>) : {};
+  const save = () => writeFileSync(cachePath, JSON.stringify(cache));
+  console.error(`${Object.keys(cache).length} events already measured in ${cachePath}`);
   for (const event of events) {
-    const config = await configOf(String(event.id));
-    if (!config) {
-      left.push({ name: event.name, why: "no results page" });
-      continue;
-    }
-    const heats: { distance: string; label: string; heat: string }[] = [];
-    let chosenList: { listname: string; name: number; time: number; nameField: string; timeField: string } | null = null;
-    for (const [contestId, contestName] of Object.entries(config.contests)) {
-      const distance = distanceOf(contestName);
-      if (!distance || heats.some((one) => one.distance === distance)) continue;
-      const lists = config.lists.filter((list) => list.contest === contestId && LIST_GOOD.test(list.name) && !LIST_BAD.test(list.name));
-      for (const list of lists) {
-        if (chosenList && list.name !== chosenList.listname) continue;
-        const answer = await json<{ DataFields?: string[]; data?: unknown; error?: string }>(`https://${config.server}/${event.id}/results/list?key=${config.key}&listname=${encodeURIComponent(list.name)}&page=results&contest=${contestId}&r=search&l=0&openedGroups=%7B%7D&term=0`);
-        if (!answer || answer.error) continue;
-        const fields = answer.DataFields ?? [];
-        if (fields[0] !== "BIB") continue;
-        const nameIndex = fields.findIndex((field, index) => index > 0 && NAME_FIELD.test(field) && !NOT_NAME.test(field));
-        if (nameIndex < 1) continue;
-        const after = fields.map((field, index) => ({ field, index })).filter((one) => one.index > nameIndex && TIME_FIELD.test(one.field) && !NOT_TIME.test(one.field));
-        const time = after.find((one) => CHIP.test(one.field)) ?? after[0];
-        if (!time) continue;
-        if (chosenList && (chosenList.name !== nameIndex || chosenList.time !== time.index)) continue;
-        chosenList = { listname: list.name, name: nameIndex, time: time.index, nameField: fields[nameIndex], timeField: time.field };
-        heats.push({ distance, label: contestName.replace(/\{EN:([^|}]*)[^}]*\}/, "$1").trim(), heat: contestId });
-        break;
+    let measured = cache[String(event.id)];
+    if (!measured) {
+      try {
+        measured = await measure(event);
+      } catch (error) {
+        save();
+        throw error;
       }
+      cache[String(event.id)] = measured;
+      save();
     }
-    void raceResultRows;
-    if (!chosenList || heats.length === 0) {
-      left.push({ name: event.name, why: "no per-contest results list read by bib" });
+    if (measured.kind === "left") {
+      left.push({ name: event.name, why: measured.why });
       continue;
     }
+    const heats = measured.heats;
+    const chosenList = measured.list;
     const name = event.name.replace(/\{EN:([^|}]*)[^}]*\}/, "$1").replace(/\s+/g, " ").trim();
     let raceId = `${slug(name)}-${event.id}`;
     while (ids.has(raceId)) raceId += "x";

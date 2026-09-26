@@ -1074,8 +1074,8 @@ The script asks once every three seconds and waits a minute on a 429: race resul
 the judges' page). Run it from a developer's machine or a throwaway address that race result has not throttled, never
 from Railway, which is the address that reads in production: a run that got it throttled would stop every real
 reading (the founder, 27 Sep 2026; the script refuses to start where Railway's variables are set). This machine's
-address has answered 404 and 429 since 26 Sep 2026, 03:40 UTC. It refuses to write an empty register. Until it has
-run, the five races that read by bib are the register.
+address has answered 404 and 429 since 26 Sep 2026, 03:40 UTC. It refuses to write an empty register. It ran on 27 Sep 2026 (D292):
+64 races kept of 226 named. It is resumable (a cache in the system's temporary folder); run one instance at a time.
 
 **The pace of the reading service** (src/source-throttle.ts, D290): for race result and MikaTiming, three seconds at
 least between two readings, four hundred a day, and thirty minutes of silence after a 429. A reading put off answers

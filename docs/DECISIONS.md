@@ -7544,3 +7544,21 @@ frozen: no new source, only the proofs (c) and the tests.
   stateless test on the same account, and the code field. The code itself is only in the submission portal's
   instructions.
 - Not verified: a credit on production, since the three variables are not set; the founder sets them.
+
+## D292, 27 Sep 2026: race result's register generated, 64 races that read by bib
+
+The bulk pass of D290, run once race result let this machine read its lists again (27 Sep 2026, afternoon; no 429 in
+the run). Of 226 coming running events named marathon, half or 10 km, 64 have a distance whose results list is
+declared for its own contest and reads by bib; 145 have only lists for all contests, 22 no results page yet.
+By country: DE 46, US 4, BE 3, AT 3, GB 2, SK 1, PR 1, NL 1, MK 1, IT 1, IE 1. No African event qualifies today: Lusaka and Francistown publish lists for all contests,
+Monrovia no results page; they enter the day their organisers publish per-distance lists and the script is run
+again.
+
+- **Two corrections to the generator before the register was kept**: a list is judged by its own name, after its
+  group ("Result Lists|All Award Winners" is winners only, and was taken for results because of its group's name);
+  award, winners, podium and "top N" lists are left out; German overall lists ("Gesamteinlaufliste", "21 km Gesamt",
+  "EG Ziel") and Italian, Spanish and Dutch name columns ("MostraNome", "nombre", "naam") are recognised.
+- **Resumable**: what each event measured is kept outside the repository between runs, so a run stopped by the pace
+  resumes; a 404 whose body is race result's trap page counts as throttling, never as "no results page".
+- The two runs that overlapped on 27 Sep morning (a probe of mine that launched the script while the founder ran
+  it too) are what got the list server to throttle this machine for most of the day: one run at a time.

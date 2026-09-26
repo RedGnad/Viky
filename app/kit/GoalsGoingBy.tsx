@@ -82,7 +82,8 @@ export function GoalsGoingBy({ first, kinds }: Readonly<{ first: string; kinds: 
       <p aria-hidden className={`${SAY} text-[var(--muted)]`}>
         {HOME.waitsFor.lead}
       </p>
-      <p aria-hidden className={`${GOAL_SAID} grid max-w-[880px] justify-items-center`}>
+      {/* A race's own name can be one long word ("Siebengebirgsmarathon"): it may break rather than push the page wider at 320. */}
+      <p aria-hidden className={`${GOAL_SAID} grid w-full max-w-[880px] justify-items-center [overflow-wrap:anywhere]`}>
         {all.map((phrase) => (
           <span key={phrase} className="invisible col-start-1 row-start-1">
             {phrase}.
