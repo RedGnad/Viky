@@ -602,13 +602,13 @@ export function CashOut() {
             disagree, the question is open from the start and nothing is ordered until it is answered (R1). */}
         <div className="flex flex-col gap-[var(--space-xs)]">
           {heading}
-          <p className={CARD_LABEL}>
-            {countryNow ? U.forWhereYouLive(countryInWords(countryNow) ?? countryNow.toUpperCase()) : U.forYourNumber}
-            {" · "}
-            <button type="button" onClick={() => setPicking((was) => !was)} aria-expanded={asking} className="underline underline-offset-2">
+          {/* "change" is the same key as Me's (the founder did not see it as a link in the label, 27 Sep 2026). */}
+          <div className="flex flex-wrap items-center justify-between gap-[var(--space-sm)]">
+            <p className={CARD_LABEL}>{countryNow ? U.forWhereYouLive(countryInWords(countryNow) ?? countryNow.toUpperCase()) : U.forYourNumber}</p>
+            <button type="button" onClick={() => setPicking((was) => !was)} aria-expanded={asking} className={INLINE_BUTTON}>
               {U.change}
             </button>
-          </p>
+          </div>
         </div>
         {asking ? (
           <section className={CARD}>
