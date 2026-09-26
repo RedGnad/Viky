@@ -1,6 +1,7 @@
 import { getAddress, type Hex } from "viem";
-import { CHESS_IDENTITY_LABEL, chessClimbOfGoal, chessProviderId, type ChessClimb } from "./chess-com";
-import { attestChessRating, ChessReadError, nameHasChessCode, readChessStanding, type AttestedChessReading } from "./chess-reading";
+import { attestClimbRating, isClimbReadError, readClimbStanding, type AttestedClimbReading } from "./climb-reading";
+import { climbIdentityLabel, climbOfGoal, climbProviderId, type ClimbId } from "./climbs";
+import { nameHasChessCode } from "./chess-reading";
 import { identityPseudonym } from "./gift-attestation";
 import { loadGift, markBound, type GiftRecord } from "./gift-store";
 import { milestoneRefusal } from "./milestone-api";
@@ -69,9 +70,10 @@ const MESSAGES: Readonly<Record<string, string>> = {
 export type MilestoneReadingDeps = {
   loadGift: (giftId: string) => Promise<GiftRecord | null>;
   readState: (contract: Hex, giftId: string) => Promise<MilestoneState>;
-  plain: (username: string, mode: ChessClimb) => Promise<ChessStanding>;
-  attest: (input: { username: string; mode: ChessClimb; withName: boolean }) => Promise<AttestedChessReading>;
-  identity: (playerId: string) => Hex;
+  plain: (username: string, mode: ClimbId) => Promise<ChessStanding>;
+  attest: (input: { username: string; mode: ClimbId; withName: boolean }) => Promise<AttestedClimbReading>;
+  /** The identity pseudonym of the player, with the label of the house the climb is read on. */
+  identity: (playerId: string, mode: ClimbId) => Hex;
   prove: (input: { contract: Hex; message: MilestoneProofMessage }) => Promise<ProvedReading>;
   markBound: (giftId: string, playerId: string) => Promise<boolean>;
   record: (reading: MilestoneReading) => Promise<void>;
@@ -83,9 +85,9 @@ export function liveMilestoneReadingDeps(): MilestoneReadingDeps {
   return {
     loadGift,
     readState: (contract, giftId) => readMilestoneGift(contract, giftId),
-    plain: (username, mode) => readChessStanding(username, mode),
-    attest: (input) => attestChessRating(input),
-    identity: (playerId) => identityPseudonym(CHESS_IDENTITY_LABEL, playerId),
+    plain: (username, mode) => readClimbStanding(username, mode),
+    attest: (input) => attestClimbRating(input),
+    identity: (playerId, mode) => identityPseudonym(climbIdentityLabel(mode), playerId),
     prove: relayProve,
     markBound,
     record: recordReading,
@@ -131,7 +133,7 @@ async function accountClosed(giftId: string, username: string, deps: MilestoneRe
   return refused(giftId, "ACCOUNT_CLOSED");
 }
 
-function readingOf(giftId: string, purpose: ReadingPurpose, attested: AttestedChessReading, outcome: MilestoneReading["outcome"], txHash: Hex | null): MilestoneReading {
+function readingOf(giftId: string, purpose: ReadingPurpose, attested: AttestedClimbReading, outcome: MilestoneReading["outcome"], txHash: Hex | null): MilestoneReading {
   return {
     giftId,
     purpose,
@@ -172,7 +174,7 @@ export async function runMilestoneReading(
     if (phase === "overdue") return { kind: "already", giftId, reason: "deadline_passed" };
     if (phase !== "climbing") return { kind: "already", giftId, reason: "not_bound" };
   }
-  const mode = chessClimbOfGoal(state.goalType);
+  const mode = climbOfGoal(state.goalType);
   if (!mode) return refused(giftId, "NOT_CONFIGURED");
   const username = record.goalUsername;
   const target = Number(state.target);
@@ -185,12 +187,12 @@ export async function runMilestoneReading(
     if (provesItsOwn && (!record.bindingCode || !record.bindingCodeExpiresAt || record.bindingCodeExpiresAt.getTime() < now * 1_000)) {
       return refused(giftId, "CODE_EXPIRED");
     }
-    let reading: AttestedChessReading;
+    let reading: AttestedClimbReading;
     try {
       reading = await deps.attest({ username, mode, withName: provesItsOwn });
     } catch (error) {
-      if (error instanceof ChessReadError && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
-      if (error instanceof ChessReadError) return refused(giftId, error.code);
+      if (isClimbReadError(error) && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
+      if (isClimbReadError(error)) return refused(giftId, error.code);
       throw error;
     }
     if (provesItsOwn && !nameHasChessCode(reading.name, record.bindingCode ?? "")) return refused(giftId, "CODE_NOT_IN_NAME", reading.rating);
@@ -223,17 +225,17 @@ export async function runMilestoneReading(
   } catch (error) {
     // A name that no longer resolves, or an account Chess.com has closed, is a fact about the account: the proof would
     // say the same thing, so no proof is paid for.
-    if (error instanceof ChessReadError && error.code === "PROFILE_NOT_FOUND") return refused(giftId, "PROFILE_NOT_FOUND");
-    if (error instanceof ChessReadError && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
-    if (!(error instanceof ChessReadError)) throw error;
+    if (isClimbReadError(error) && error.code === "PROFILE_NOT_FOUND") return refused(giftId, "PROFILE_NOT_FOUND");
+    if (isClimbReadError(error) && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
+    if (!isClimbReadError(error)) throw error;
   }
 
-  let reading: AttestedChessReading;
+  let reading: AttestedClimbReading;
   try {
     reading = await deps.attest({ username, mode, withName: false });
   } catch (error) {
-    if (error instanceof ChessReadError && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
-    if (error instanceof ChessReadError) return refused(giftId, error.code);
+    if (isClimbReadError(error) && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
+    if (isClimbReadError(error)) return refused(giftId, error.code);
     throw error;
   }
   if (reading.playerId !== record.goalProfileId) return refused(giftId, "OTHER_PLAYER", reading.rating);
@@ -249,7 +251,7 @@ async function prove(
   record: GiftRecord,
   state: MilestoneState,
   contract: Hex,
-  reading: AttestedChessReading,
+  reading: AttestedClimbReading,
   purpose: "start" | "reach",
   deps: MilestoneReadingDeps,
 ): Promise<MilestoneOutcome> {
@@ -259,8 +261,8 @@ async function prove(
   const message: MilestoneProofMessage = {
     giftId: BigInt(giftId),
     recipient: getAddress(record.recipient!),
-    identityHash: deps.identity(reading.playerId),
-    providerId: chessProviderId(mode),
+    identityHash: deps.identity(reading.playerId, mode),
+    providerId: climbProviderId(mode),
     metricValue: BigInt(reading.rating),
     eventAt: 0n,
     observedAt: BigInt(reading.observedAt),

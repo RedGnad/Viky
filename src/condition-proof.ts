@@ -228,6 +228,15 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     sourcePolicing: "The timing company chips the bib and publishes the results for the organiser; a runner can ask the federation to be removed from them. Klikego's terms (CGU of 26 Jun 2026, and its legal notice) claim the site's content and its database, forbid reproduction without written consent, and count the use of robots among the reasons to close a member's account: Viky reads one runner's page per gift, when the person asks, and keeps three fields; written on the judges' page, the risk assumed as for edX.",
   },
   {
+    conditionId: "codeforces-rating",
+    supervised: false,
+    inShort: "Read from Codeforces' public API every day: the handle and the rating. Codeforces polices cheating itself.",
+    data: "Codeforces' public API, `user.info`, read through an attested fetch when the person binds the account and at every daily reading: the handle as the site spells it, the rating, the best rating ever, and once the last name where the binding code was put. Nothing else is matched. An account with no rated round yet has no rating and can bind nothing.",
+    account: "The funder writes the handle; the person proves the account is theirs by putting Viky's code in the last name of their Codeforces profile before the first reading (D27), or the funder's own naming stands. The identity kept is the handle, in lower case.",
+    whoActed: "Unknown: Codeforces records what the account submitted in its rated rounds. Whether the person behind the account solved is not read.",
+    sourcePolicing: "Codeforces judges every submission itself, punishes plagiarism with a rating rollback and a public note, and makes a round unrated when it fails; its API is public and asks for no key (one request every two seconds). Its terms forbid commercial use of the website's material and any use that harms it; Viky reads one account's line a day, at the person's request, naming itself. Written on the judges' page.",
+  },
+  {
     conditionId: "wca-time",
     supervised: true,
     inShort: "Read from the WCA's public results: one row, the name, the event, the best single. Judged and timed at a WCA competition.",

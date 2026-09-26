@@ -1038,6 +1038,27 @@ before the person reads (the account is built from the register at read time, no
 The Marathon de Dakar 2026 is added the day its organiser announces it (nothing on Klikego nor in the calendar on
 26 Sep 2026). The Marathon de Paris is timed by another company and needs its own source.
 
+## Goal 33 on the milestone contract: a Codeforces rating reached (D280)
+
+Provider id `viky:provider:codeforces-rating-zkfetch:v1` = `0x8c198ec8f6c22bb4aa6709c9849ccc0369b08d3346b6017f3f64b6a7e93f7a45`, shape 0 (a climb), data
+`0x5ba191520000000000000000000000000000000000000000000000000000000000000021` + the provider id + a zero word (`pnpm safe:session` prints it). Batched with 31 and 32 in the one session the founder asked for. The line stays in
+`BUILDING` until the goal is read back.
+
+**The reading** (src/codeforces-reading.ts): `https://codeforces.com/api/user.info?handles=<handle>`, anonymous,
+one request every two seconds (the API help, read 26 Sep 2026), any user agent. Two sources: `codeforces-user`
+(the handle, the rating, the best ever) for the daily reading, `codeforces-user-named` (the last name too) for the
+binding reading, where Viky's code has to be in the last name (D27). The keeper, the create route and the rename
+flow read every climb through `src/climb-reading.ts`, which picks Chess.com's or Codeforces' reading by the climb
+(`src/climbs.ts`: the goal, the provider id, the identity label). A handle nobody has answers 400 with the site's
+words ("not found"); an account with no rated round carries no `rating`.
+
+Terms read 26 Sep 2026: the API help (anonymous public data, the rate limit), the terms and conditions (no
+commercial use of the website's material, nothing that harms it or impacts access), the privacy policy. Codeforces
+punishes plagiarism with a rating rollback and makes a round unrated when it fails. Written on the judges' page.
+
+The sources are in the shared list: the service is redeployed from the branch before the merge, on the fingerprint
+`0x3e9a147c…f0fc`.
+
 ## Goal 32 on the milestone contract: a time set at a WCA competition (D279)
 
 Provider id `viky:provider:wca-zkfetch:v1` = `0xe8fe5b823e9946efa5da357e01825f12d71f46b4cac1bd0e27afbc182c3a88fb`, shape 1, data

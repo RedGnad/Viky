@@ -26,6 +26,8 @@ test("only the listed sources exist, and an unknown name is refused", () => {
     "chess-ratings-daily",
     "chess-ratings-rapid",
     "chess-tactics",
+    "codeforces-user",
+    "codeforces-user-named",
     "coursera-certificate",
     "credly-assertion",
     "credly-badge-page",

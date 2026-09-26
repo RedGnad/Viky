@@ -95,11 +95,11 @@ test("the page lists every condition the register holds, offered or not, by fami
   // Exams & school (D220).
   assert.deepEqual(
     sections.flatMap((section) => section.building).map((condition) => condition.id),
-    ["udemy-course-shown", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "ecoledirecte-grade-shown", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown", "wca-time"],
+    ["codeforces-rating", "udemy-course-shown", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "ecoledirecte-grade-shown", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown", "wca-time"],
   );
   assert.deepEqual(sections.find((section) => section.family === "move")?.conditions.map((condition) => condition.id), ["fitbit-daily", "strava-daily", "marathon-finish"], "the family Move, its three lines open (D188, D191, D273)");
   assert.deepEqual(sections.find((section) => section.family === "move")?.building.map((condition) => condition.id), [], "nothing being built beside them since the marathon opened");
-  assert.deepEqual(sections.find((section) => section.family === "learn")?.building.map((condition) => condition.id), ["udemy-course-shown"], "beside the Coursera, edX and MITx Online certificates (D178, D218, D222)");
+  assert.deepEqual(sections.find((section) => section.family === "learn")?.building.map((condition) => condition.id), ["codeforces-rating", "udemy-course-shown"], "beside the Coursera, edX and MITx Online certificates (D178, D218, D222), Codeforces being built (27 Sep 2026)");
   assert.deepEqual(sections.find((section) => section.family === "exam")?.conditions.map((condition) => condition.id), ["duolingo-english-test", "toefl-mybest-shown", "university-enrollment-shown"], "the tests and enrolment open in Exams & school, the rest being built beside them");
   assert.deepEqual(sections.map((section) => section.family), ["learn", "exam", "play", "move"], "the four families, in the founder's order (D220)");
   for (const section of sections) {
@@ -146,11 +146,11 @@ test("every condition says its nature, and every one of the pilot is read for th
   // What is being built lives beside the register, resolvable by id and offered to an operator alone (D164, D165, D174, D176).
   assert.deepEqual(
     BUILDING.map((condition) => condition.id),
-    ["wca-time", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "ecoledirecte-grade-shown", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown", "udemy-course-shown"],
+    ["codeforces-rating", "wca-time", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "ecoledirecte-grade-shown", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown", "udemy-course-shown"],
   );
   for (const id of BUILDING.map((condition) => condition.id)) {
     const shown = conditionById(id);
-    assert.ok(shown?.nature === "shown" || shown?.nature === "connected" || id === "wca-time", `${id} is shown by them, or connected by them (D188); the WCA is read for them, waiting for its goal`);
+    assert.ok(shown?.nature === "shown" || shown?.nature === "connected" || id === "wca-time" || id === "codeforces-rating", `${id} is shown by them, or connected by them (D188); the WCA and Codeforces are read for them, waiting for their goals`);
     assert.equal(shown?.live, false, `${id} is not open until a real proof has run end to end, then the founder's word`);
     // No fifth state (D169): a line being built carries none, and the page says "Being built" of it.
     assert.equal(shown?.state, undefined, `${id} carries no state while it is being built`);

@@ -658,6 +658,15 @@ at their place. The judges' page counts its uses as it does the top-ups'.
 | the code, its PIN, where to use it | what Bitrefill returned for the delivered order, opened for its owner | `GiftCardCodeLines`, `followPhoneTopUp` | `test/phone-order.test.ts` |
 | "Your gift cards", each with its code | the account's delivered gift card orders | `/api/giftcards/codes`, `giftCardsOf` | `test/phone-order.test.ts` |
 
+### Reach a Codeforces rating, being built (D280)
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "Reach a Codeforces rating", READ FOR YOU, under "Learn" with "Being built." | goal 33 not signed yet | `CODEFORCES_RATING` in `BUILDING` | `test/codeforces.test.ts` |
+| "Their Codeforces handle", "Today they are at 1712.", "Their best ever: 1803." | `user.info` read plainly: the handle as Codeforces spells it, the rating, the best rating ever; a handle nobody has is refused with the site's own answer, an account with no rated round has no rating | `/api/codeforces/standing`, `readCodeforcesStanding` | `test/codeforces.test.ts` |
+| "On Codeforces, open Settings, then Social. Put this code in your last name (English), and save:" | the binding reading takes the last name from `user.info` and the code must be in it (D27); the settings path is unverified on a live account | `CODEFORCES_USER_NAMED`, `attestCodeforcesRating`, `nameHasChessCode` | `test/codeforces.test.ts`, `test/milestone-reading.test.ts` |
+| the daily reading and "1712 on Codeforces" | the keeper reads every climb through one door, Chess.com's or Codeforces', with the goal's own provider and the house's own identity label | `climbOfGoal`, `climbProviderId`, `climbIdentityLabel`, `runMilestoneReading` | `test/codeforces.test.ts`, `test/milestone-reading.test.ts` |
+
 ### A time at a WCA competition, being built (D279)
 
 | the screen says | what must be true | what makes it true | exercised by |

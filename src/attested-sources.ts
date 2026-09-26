@@ -443,6 +443,37 @@ export const WCA_PERSON_RESULTS: AttestedSource = {
 };
 
 /**
+ * A Codeforces user on the public API (the founder, 27 Sep 2026: "Reach a Codeforces rating"), `user.info`, measured
+ * on 26 Sep 2026. Two patterns: the handle as the site spells it, and the rating, which an account that never took
+ * part in a rated round does not carry (the pattern then fails, and the reading says "no rating yet"); the best
+ * rating ever is read beside it. The API answers anonymously, to any user agent, one request every two seconds.
+ */
+export const CODEFORCES_USER: AttestedSource = {
+  id: "codeforces-user",
+  service: "Codeforces",
+  accept: "application/json",
+  userAgent: "Mozilla/5.0 (compatible; Viky/1.0; +https://viky.cash)",
+  accepts: (account) => /^[A-Za-z0-9_.-]{3,24}$/.test(account),
+  url: (account) => `https://codeforces.com/api/user.info?handles=${encodeURIComponent(account)}`,
+  matches: [
+    { type: "regex", value: '"handle":"(?<handle>[A-Za-z0-9_.-]{3,24})"' },
+    { type: "regex", value: '"rating":(?<rating>\\d{1,5}),' },
+    { type: "regex", value: '"maxRating":(?<maxRating>\\d{1,5}),' },
+  ],
+};
+
+/**
+ * The same user with the last name the account shows (`lastName`, editable on the site, in English), read once when
+ * the person binds the account by putting Viky's code there (D27): a field absent on the answer fails the pattern,
+ * which the reading says in words.
+ */
+export const CODEFORCES_USER_NAMED: AttestedSource = {
+  ...CODEFORCES_USER,
+  id: "codeforces-user-named",
+  matches: [...CODEFORCES_USER.matches, { type: "regex", value: '"lastName":"(?<lastName>[^"]{0,100})"' }],
+};
+
+/**
  * A credential's public record on Accredible (D213), the JSON its page is drawn from, measured on a live credential on
  * 24 Sep 2026. Seven patterns, each anchored on its own key or object: the uuid and the title together, the day of
  * issue, expired, revoked, private, the recipient's name inside the recipient object (its masked email matched and
@@ -464,7 +495,7 @@ export const ACCREDIBLE_CREDENTIAL: AttestedSource = {
   ],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, MITX_ONLINE_CERTIFICATE, BREIZH_CHRONO_RUNNER, MIKA_TIMING_RUNNER, WCA_PERSON_RESULTS, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, MITX_ONLINE_CERTIFICATE, BREIZH_CHRONO_RUNNER, MIKA_TIMING_RUNNER, WCA_PERSON_RESULTS, CODEFORCES_USER, CODEFORCES_USER_NAMED, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
 
 /**
  * The headers a source is read with, which is part of what is fetched and therefore lives with the sources: it is
