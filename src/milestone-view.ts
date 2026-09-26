@@ -81,6 +81,19 @@ export type MilestoneStatus = Readonly<{
     bib: string | null;
     result: { runner: string; bib: string; official: string; finishSeconds: number } | null;
   } | null;
+  /**
+   * "Set a time at a WCA competition" (the founder, 27 Sep 2026): the competition and the event the gift was made
+   * on, the competitor once checked on the competitors list (as they gave themselves, and their WCA id), and the
+   * result read once there is one (the name, the id, the best single), to whoever may see the names.
+   */
+  wca: {
+    competitionId: string;
+    eventId: string;
+    eventLabel: string;
+    title: string;
+    registered: { who: string; wcaId: string | null } | null;
+    result: { name: string; wcaId: string; best: number; inWords: string } | null;
+  } | null;
 }>;
 
 /**

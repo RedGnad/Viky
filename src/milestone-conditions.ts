@@ -29,6 +29,7 @@ import {
   EDX_CERTIFICATE as EDX_CONDITION,
   MITX_ONLINE_CERTIFICATE_LINE,
   MARATHON_FINISH_LINE,
+  WCA_TIME_LINE,
   ACCREDIBLE_CREDENTIAL as ACCREDIBLE_CONDITION,
   DUOLINGO_ENGLISH_TEST,
   type Condition,
@@ -50,6 +51,7 @@ import {
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
 import { EDX_DURATION_DAYS, EDX_GOAL_TYPE, EDX_HAS_IT, edxCertificateIdOf, edxCourseOf, edxSubject } from "./edx-certificate";
 import { MITX_ONLINE_DURATION_DAYS, MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineCourseOf, mitxOnlineKeyOf, mitxOnlineSubject } from "./mitx-online-certificate";
+import { isWcaId, wcaCourseOf, WCA_ANY_RESULT, WCA_DURATION_DAYS, WCA_EVENTS, WCA_GOAL_TYPE, wcaSubject, wcaTargetInWords, wcaTargetUnderSeconds } from "./wca";
 import { bibStillOpen, DISTANCE_LABELS, isValidBib, MARATHON_DURATION_DAYS, MARATHON_FINISH, MARATHON_GOAL_TYPE, marathonEventById, marathonGoalTypeOf, marathonSubject, marathonTargetInWords, marathonTargetUnderHours, MIKA_TIMING_GOAL_TYPE, timerOpen } from "./marathon";
 import { ACCREDIBLE_DURATION_DAYS, ACCREDIBLE_GOAL_TYPE, ACCREDIBLE_HAS_IT, accredibleCourseOf, accredibleIdOf, accredibleSubject } from "./accredible-credential";
 import { CREDLY_DURATION_DAYS, CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyBadgeIdOf, credlyPairOf, credlySubject } from "./credly-badge";
@@ -372,6 +374,8 @@ export type CertificateCondition = Readonly<{
       listed?: boolean;
       /** The list is the register of races (D273), drawn by its own chooser. */
       races?: boolean;
+      /** The list is the WCA's coming competitions (the founder, 27 Sep 2026), drawn by its own chooser. */
+      competitions?: boolean;
     }>;
     /** The line of the check screen. */
     row: string;
@@ -711,6 +715,68 @@ export const MARATHON_MILESTONE: CertificateCondition = {
       notFound: "No runner answers to that bib in that race. Check the number on your bib.",
       anotherName: "That line is in another name than the one this gift is for, so it cannot pay.",
       below: (target, metric) => (metric === 0 ? "The results page has no finish time for that bib." : `That time is not under the hours this gift is for: it has to ${marathonTargetInWords(target)}.`),
+    },
+  },
+};
+
+/**
+ * "Set a time at a WCA competition" (the founder, 27 Sep 2026): the marathon's mechanics on the WCA's public API.
+ * The competition and the event are chosen from the WCA's own list of coming competitions, all countries by date;
+ * the name is written by the funder; the target is a best single to be under, in seconds, or 0 for any result.
+ */
+export const WCA_MILESTONE: CertificateCondition = {
+  ...COURSERA_MILESTONE,
+  condition: WCA_TIME_LINE,
+  goalType: WCA_GOAL_TYPE,
+  asksName: true,
+  readPath: "/api/wca/result",
+  validLink: (value) => isWcaId(value) || normaliseCertificateName(value).split(" ").filter(Boolean).length >= 2,
+  validName: (value) => normaliseCertificateName(value).split(" ").filter(Boolean).length >= 2,
+  // Seconds to be under, with hundredths (15.5), or 0 for a result whatever the time.
+  validTarget: (value) => value === 0 || (value > 0 && value < 3_600),
+  targetUnits: (seconds) => (seconds === 0 ? WCA_ANY_RESULT : wcaTargetUnderSeconds(seconds)),
+  subject: ({ name, course }) => wcaSubject(name, String(course ?? "")),
+  course: {
+    label: "The competition",
+    help: "Choose the competition and the event from the WCA's list of coming competitions.",
+    slugOf: (pasted) => (wcaCourseOf(pasted.trim()) ? pasted.trim() : undefined),
+    search: { path: "/api/wca/competitions", placeholder: "Choose the competition", nothing: "The WCA lists no competition by that name.", listed: true, competitions: true },
+    row: "Which competition",
+    named: (course) => {
+      const found = wcaCourseOf(course.split(",")[0].trim());
+      return found ? `This gift will be for ${WCA_EVENTS[found.eventId]} at ${found.competitionId}.` : `This gift will be for ${course}.`;
+    },
+  },
+  target: {
+    label: "A result, or a single under how many seconds?",
+    help: "0 for any result. Otherwise the seconds the best single has to be under, with hundredths, like 15.5.",
+    min: 0,
+    max: 3_599,
+    step: 0.01,
+    suggested: 0,
+    inWords: (value) => (value === 0 ? "set a result" : wcaTargetInWords(wcaTargetUnderSeconds(value))),
+  },
+  duration: WCA_DURATION_DAYS,
+  words: {
+    ...COURSERA_MILESTONE.words,
+    detailQuestion: "Their name, the competition, the event, and the time",
+    nameLabel: "Their name, as the WCA prints it",
+    nameHelp: "Their full name as they registered with the WCA. Case, accents and the order of the names do not matter; the name itself must match.",
+    linkLabel: "Your WCA ID, or your name as on the competitors list",
+    linkHelp: "Before the competition, Viky checks you are on its competitors list in that event. After it, Viky reads your result from the WCA's public results.",
+    whatIsRead: "Viky reads three things from the WCA's public results: the name on your result, the event and your best single. It keeps those with the gift and nothing else.",
+    check: "Read my result",
+    checking: "Reading the results",
+    goal: (target) => (target <= WCA_ANY_RESULT ? "Set a result" : `Set a single under ${wcaTargetInWords(target).replace("set a single under ", "")}`),
+    mustShow: (name, target) => `The WCA's results have to carry a result for ${name} in that event${target <= WCA_ANY_RESULT ? "" : `, a single under ${wcaTargetInWords(target).replace("set a single under ", "")}`}. Nothing else is read from them.`,
+    durationHelp: "The result has to be read inside that time: make it end well after the competition.",
+    whenReached: "When they set the time, all of this becomes theirs",
+    refusals: {
+      ...COURSERA_MILESTONE.words.refusals,
+      targetShape: "0 for any result, or the seconds the best single has to be under, like 15.5.",
+      nameShape: "Type their name as the WCA prints it, first name and family name.",
+      linkShape: "A WCA ID is four figures, four letters and two figures, like 2019SCHO04; otherwise your name as on the competitors list.",
+      notPublic: "The WCA's results could not be read.",
     },
   },
 };
@@ -1452,6 +1518,7 @@ const CERTIFICATES: readonly CertificateCondition[] = [
   EDX_MILESTONE,
   MITX_ONLINE_MILESTONE,
   MARATHON_MILESTONE,
+  WCA_MILESTONE,
   CREDLY_MILESTONE,
   ACCREDIBLE_MILESTONE,
   TOEFL_SHOWN_MILESTONE,

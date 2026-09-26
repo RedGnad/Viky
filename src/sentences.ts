@@ -1540,6 +1540,26 @@ export const GIFT_CARD_OUT = {
  * "Finish a marathon" on the gift's page and in the sheet (D273): the race chosen, the bib before the start, the
  * result read after the finish, and the one line the page shows, the name, the bib and the time.
  */
+export const WCA_PROOF = {
+  whichCompetition: "Which competition?",
+  whichEvent: "Which event?",
+  readingCompetitions: "Reading the WCA's competitions",
+  competitionsUnreadable: "The competitions could not be read right now. Close this and try again in a moment.",
+  competitionLine: (city: string, country: string, day: string) => `${city}, ${country}. Starts ${day}.`,
+  whoLabel: "Your WCA ID, or your name as on the competitors list",
+  whoHelp: (competition: string) => `Before the ${competition}, Viky checks you are on its competitors list in that event. After it, Viky reads your result from the WCA's public results.`,
+  whoShape: "A WCA ID is four figures, four letters and two figures, like 2019SCHO04; otherwise your name as on the competitors list.",
+  checkRegistration: "Check my registration",
+  checking: "Checking the competitors list",
+  registered: (name: string, competition: string) => `${name} is on the competitors list of the ${competition}.`,
+  notRegisteredYet: (competition: string) => `Not checked on the competitors list yet for the ${competition}.`,
+  beforeTheDay: "Compete. After the competition, come back here to read your result.",
+  readMyResult: "Read my result",
+  reading: "Reading the WCA's results",
+  line: (name: string, event: string, best: string) => `Read on the WCA's results: ${name}, ${event}, best single ${best}.`,
+  failed: "That did not work. Nothing was changed.",
+} as const;
+
 export const MARATHON_PROOF = {
   whichRace: "Which race?",
   whichDistance: "Which distance?",

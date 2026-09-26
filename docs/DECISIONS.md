@@ -7276,3 +7276,35 @@ competitions when they come.
 - `byDate`, `countriesOf` and `inCountryOrAll` (src/marathon-choice.ts) do the sorting and the filter, browser
   safe, so the WCA list can take them as they are; the chooser draws the chips with the sheet's own chip and the
   first one, "Country · all", pressed while no country is chosen.
+
+## D279, 27 Sep 2026: "A time at a WCA competition", read from the WCA's public API
+
+The founder, 27 Sep 2026: a new line in Play, "Set a time at a WCA competition" (speedcubing), read for them, the
+marathon's mechanics. The funder chooses the coming competition and the event, writes the name, and a time target
+is optional. Before the day, the public list of competitors stands in for the bib; after it, the WCA's results give
+name, WCA id, event, best and average in hundredths, and the declared name has to be there with a result. The API
+answers 403 to a bare agent and 200 to a named one: the same rule as MikaTiming, on the judges' page. Proof (a) on
+Saint Symphorien 2026 (607 rows).
+
+- **Read on 26 Sep 2026.** `api/v0/competitions` (521 coming, 71 countries, six pages), `…/<id>/wcif/public`
+  (`persons[]` with name, WCA id, `registration.status` and `eventIds`; the registrations endpoint itself carries
+  user ids only), `…/<id>/results` (607 rows at Saint Symphorien 2026: name, WCA id, event, round, best, average,
+  -1 for a DNF; every name there is on the WCIF too), `…/persons/<wcaId>/results` (the person's own rows, the same
+  shape). Terms: the privacy statement says competition results are not personal data; the export README allows
+  re-publishing with a notice; the disclaimer says nothing about data; `robots.txt` bars `/search` only.
+- **The name.** "Set a time at a WCA competition" is thirty-one characters and the card holds thirty (21 Sep 2026):
+  the line is "A time at a WCA competition". Default applied, to confirm.
+- **The bib.** The person gives their WCA id or their name as on the competitors list on the gift's page; the list is
+  read plainly, they must be accepted in the event, and the field closes at the first day (an operator's account
+  after it, for the test gift). What is kept is what they gave and the list's id.
+- **The reading.** Two steps: the competition's results, plainly, for the round of their best single; then that row,
+  attested, on their own list of results, by a pattern built for the account (`matchesFor`, new: a source may build
+  its patterns from an account `accepts` let through, and `matchesOf` is what the fetch and the verification both
+  use). The metric is hundredths of a second under an hour, "a result" is one; Fewest Moves and Multi-Blind count
+  as a result only. The day judged by is the day the result is read (D273).
+- **Goal 32**, provider `viky:provider:wca-zkfetch:v1` = `0xe8fe5b82…88fb`, in the one Safe session with 31 and
+  33. Being built until it is signed.
+- **Proof (a), done on 26 Sep 2026 at 01:36 UTC**: the reading service, redeployed on the fingerprint
+  `0xb54eef6d…0225` and healthy, read Saint Symphorien 2026 (607 rows) for Alexandre Schoeffel in 3x3x3 and then
+  his own list of results through the attested fetch: round 1, best 7.91 s (791), average 8.67 s, metric 359,209,
+  one proof, nullifier `0xbd155ee5…f5ee`. Proofs (b) and (c) wait for goal 32.

@@ -18,6 +18,7 @@ import { Field } from "../Field";
 import { Sheet } from "../Sheet";
 import { UniversityChooser } from "./UniversityChooser";
 import { MarathonChooser } from "./MarathonChooser";
+import { WcaChooser } from "./WcaChooser";
 import { chosenUniversityTitle } from "@/src/university-choice";
 
 /**
@@ -399,7 +400,15 @@ export function WillSheet({
                   autoComplete="off"
                 />
               ) : null}
-              {certificate.course?.search?.races ? (
+              {certificate.course?.search?.competitions ? (
+                /* The WCA's coming competitions, all countries by date, then the event (the founder, 27 Sep 2026). */
+                <WcaChooser
+                  open={open}
+                  draft={draft}
+                  named={certificate.course.named}
+                  onChoose={(courseId, title) => onChange({ ...draft, course: courseId, courseTitle: title, target: String(certificate.target.suggested) })}
+                />
+              ) : certificate.course?.search?.races ? (
                 /* The race, asked as a list from the register (D273): the marathon's own chooser. */
                 <MarathonChooser
                   open={open}

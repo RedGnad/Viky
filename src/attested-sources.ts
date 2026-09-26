@@ -35,6 +35,12 @@ export type AttestedSource = Readonly<{
   url: (account: string) => string;
   /** What the answer must contain for the proof to be worth anything. */
   matches: readonly ResponseMatch[];
+  /**
+   * The patterns for one account, when what must be found depends on it (a WCA id, a competition and a round in a
+   * list of results): built here from an account `accepts` let through, so nothing but letters and figures of the
+   * account's own shape ever enters a pattern. `matchesOf` reads it; `matches` is then empty.
+   */
+  matchesFor?: (account: string) => readonly ResponseMatch[];
   /** The user agent the page is read with, when the site asks for one of its own. */
   userAgent?: string;
   /**
@@ -409,6 +415,34 @@ export const MIKA_TIMING_RUNNER: AttestedSource = {
 };
 
 /**
+ * A speedcuber's results on the World Cube Association's public API (the founder, 27 Sep 2026: "Set a time at a WCA
+ * competition"), measured on Saint Symphorien 2026 on 26 Sep 2026. The account is the person's WCA id, the
+ * competition, the event and the round, `2019SCHO04|SaintSymphorienSpeedcubing2026|333|f`: the page is the person's
+ * own list of results, and the one pattern, built for the account, takes the row of that competition, that event and
+ * that round in the order the API prints its keys, with the best single, the average and the name as it prints them
+ * (a time in hundredths of a second, -1 for a DNF). The API answers 403 to a bare user agent and 200 to one that
+ * names its author and its site (measured 26 Sep 2026); its `robots.txt` keeps robots out of its search only.
+ */
+export const WCA_PERSON_RESULTS: AttestedSource = {
+  id: "wca-person-results",
+  service: "the WCA",
+  accept: "application/json",
+  userAgent: "Mozilla/5.0 (compatible; Viky/1.0; +https://viky.cash)",
+  accepts: (account) => /^\d{4}[A-Z]{4}\d{2}\|[A-Za-z0-9]{1,64}\|[a-z0-9]{3,6}\|[0-9a-h]$/.test(account),
+  url: (account) => `https://www.worldcubeassociation.org/api/v0/persons/${account.split("|")[0]}/results`,
+  matches: [],
+  matchesFor: (account) => {
+    const [wcaId, competition, event, round] = account.split("|");
+    return [
+      {
+        type: "regex",
+        value: `"best":(?<best>-?\\d+),"average":(?<average>-?\\d+),"name":"(?<name>[^"]{1,120})","country_iso2":"[A-Z]{2}","competition_id":"${competition}","event_id":"${event}","round_type_id":"${round}","format_id":"[a-z0-9]","wca_id":"${wcaId}"`,
+      },
+    ];
+  },
+};
+
+/**
  * A credential's public record on Accredible (D213), the JSON its page is drawn from, measured on a live credential on
  * 24 Sep 2026. Seven patterns, each anchored on its own key or object: the uuid and the title together, the day of
  * issue, expired, revoked, private, the recipient's name inside the recipient object (its masked email matched and
@@ -430,7 +464,7 @@ export const ACCREDIBLE_CREDENTIAL: AttestedSource = {
   ],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, MITX_ONLINE_CERTIFICATE, BREIZH_CHRONO_RUNNER, MIKA_TIMING_RUNNER, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, MITX_ONLINE_CERTIFICATE, BREIZH_CHRONO_RUNNER, MIKA_TIMING_RUNNER, WCA_PERSON_RESULTS, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
 
 /**
  * The headers a source is read with, which is part of what is fetched and therefore lives with the sources: it is
@@ -439,6 +473,11 @@ const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_P
  * Chess.com answers a request without a user agent with a challenge page, and Credly's badge page varies on
  * `Accept` and answers 500 to `application/json` (measured 20 Sep 2026), so both are the source's to say.
  */
+/** The patterns a reading of this account is verified with: the source's own, or the ones it builds for the account. */
+export function matchesOf(source: AttestedSource, account: string): readonly ResponseMatch[] {
+  return source.matchesFor ? source.matchesFor(account) : source.matches;
+}
+
 export function headersFor(source: AttestedSource): Record<string, string> {
   return { accept: source.accept ?? "application/json", "user-agent": source.userAgent ?? "Mozilla/5.0 (Viky)" };
 }

@@ -1,5 +1,5 @@
 import { keccak256, stringToHex, type Hex } from "viem";
-import { attestedSource, headersFor, type AttestedSource, type ResponseMatch } from "./attested-sources";
+import { attestedSource, headersFor, matchesOf, type AttestedSource, type ResponseMatch } from "./attested-sources";
 import { allowedAttestors, attestorAccepted, type ZkFetchProof } from "./duolingo-public";
 import { localProofVerified, proofVerifierMode } from "./proof-verification";
 import { READING_FINGERPRINT } from "./reading-fingerprint";
@@ -94,7 +94,7 @@ export function readingOfProof(source: AttestedSource, account: string, proof: Z
   const expectedMethod = asked.method ?? "GET";
   if (url !== source.url(account) || method !== expectedMethod) throw new AttestedReadError("PROOF_MISMATCH", "The proof is not about this page");
   if (asked.body && String(parameters.body ?? "") !== asked.body(account)) throw new AttestedReadError("PROOF_MISMATCH", "The proof asked the page something else");
-  if (!sameMatches(parameters.responseMatches, source.matches)) throw new AttestedReadError("PROOF_MISMATCH", "The proof was read with other patterns");
+  if (!sameMatches(parameters.responseMatches, matchesOf(source, account))) throw new AttestedReadError("PROOF_MISMATCH", "The proof was read with other patterns");
   const context = parseJson(proof.claimData.context, "context");
   const extracted = context.extractedParameters;
   if (!extracted || typeof extracted !== "object") throw new AttestedReadError("PROOF_INVALID", "The proof carries nothing it read");
@@ -125,12 +125,12 @@ export function readingOfProof(source: AttestedSource, account: string, proof: Z
  * would otherwise be held for ever instead of refused. Only the 404 phrasing has been seen from the worker itself;
  * the other two are mapped by the same phrasing and confirmed on the first real reading.
  */
-export function classifyFetchFailure(message: string, source: AttestedSource): AttestedReadError {
+export function classifyFetchFailure(message: string, source: AttestedSource, account = ""): AttestedReadError {
   if (/HTTP response status 404|received HTTP 404/i.test(message)) return new AttestedReadError("NOT_FOUND", "Nothing answers to that name");
   if (/HTTP response status 403|received HTTP 403/i.test(message)) return new AttestedReadError("REFUSED", "That page is not public any more");
   if (/HTTP response status 400|received HTTP 400/i.test(message)) return new AttestedReadError("NOT_ACCEPTED", "The source will not serve that any more");
   if (/didn't match|did not match/i.test(message)) {
-    const pattern = source.matches.find((match) => message.includes(match.value))?.value;
+    const pattern = matchesOf(source, account).find((match) => message.includes(match.value))?.value;
     return new AttestedReadError("NO_MATCH", "The page does not carry what this reading needs", pattern);
   }
   return new AttestedReadError("FETCH_FAILED", "The page could not be read right now");
@@ -149,7 +149,7 @@ export async function attestedRead(sourceId: string, account: string, deps: Atte
     proof = await deps.zkFetch(source, account, bearer);
   } catch (error) {
     if (error instanceof AttestedReadError) throw error;
-    throw classifyFetchFailure(error instanceof Error ? error.message : String(error), source);
+    throw classifyFetchFailure(error instanceof Error ? error.message : String(error), source, account);
   }
   let valid = false;
   try {
@@ -238,7 +238,7 @@ async function localZkFetch(source: AttestedSource, account: string, bearer?: st
       ...(source.body ? { body: source.body!(account) } : {}),
       useTee: true,
     } as never,
-    { responseMatches: source.matches.map((match) => ({ ...match })), ...(bearer ? { headers: { Authorization: `Bearer ${bearer}` } } : {}) } as never,
+    { responseMatches: matchesOf(source, account).map((match) => ({ ...match })), ...(bearer ? { headers: { Authorization: `Bearer ${bearer}` } } : {}) } as never,
   )) as unknown as ZkFetchProof;
 }
 

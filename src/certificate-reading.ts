@@ -9,6 +9,8 @@ import { MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineProviderId } from 
 import { attestMitxOnlineCertificate, MitxOnlineReadError } from "./mitx-online-reading";
 import { finishInWords, MARATHON_GOAL_TYPE, marathonGoalTypeOf, marathonProviderIdOf, MIKA_TIMING_GOAL_TYPE } from "./marathon";
 import { attestMarathonResult, MarathonReadError } from "./marathon-reading";
+import { WCA_GOAL_TYPE, wcaProviderId } from "./wca";
+import { attestWcaResult, WcaReadError } from "./wca-reading";
 import { CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyProviderId } from "./credly-badge";
 import { attestCredlyBadge, CredlyReadError } from "./credly-reading";
 import { attestDetCertificate, DetReadError, type AttestedDetReading } from "./det-reading";
@@ -118,6 +120,14 @@ export async function attestByGoal(goalType: number, link: string, signedSubject
     // bib entered before the start is what ties the reading to the race.
     return { subject: reading.subject, score: reading.metric, testDay: reading.observedAt, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: marathonProviderIdOf(reading.race.timer), line: { username: reading.runner, playerId: reading.bib, rating: reading.finishSeconds } };
   }
+  if (goalType === WCA_GOAL_TYPE) {
+    // The link is the competition and the event, then the person as they gave themselves on their page (their WCA
+    // id or their name as on the competitors list): the row read is the best single of their rounds (D273's rule
+    // for the day: judged by the day the result is read).
+    const bar = link.indexOf("|");
+    const reading = await attestWcaResult(bar > 0 ? link.slice(0, bar) : link, bar > 0 ? link.slice(bar + 1) : "");
+    return { subject: reading.subject, score: reading.metric, testDay: reading.observedAt, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: wcaProviderId(), line: { username: reading.name, playerId: reading.wcaId, rating: reading.best } };
+  }
   if (goalType === MITX_ONLINE_GOAL_TYPE) {
     const reading = await attestMitxOnlineCertificate(link);
     // Nothing to score: the certificate exists, and the course is inside the subject the funder signed.
@@ -173,7 +183,7 @@ export async function proveCertificate(
   try {
     reading = await deps.attest(state.goalType, input.link, state.subject as Hex);
   } catch (error) {
-    if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError) && !(error instanceof EdxReadError) && !(error instanceof AccredibleReadError) && !(error instanceof MitxOnlineReadError) && !(error instanceof MarathonReadError)) {
+    if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError) && !(error instanceof EdxReadError) && !(error instanceof AccredibleReadError) && !(error instanceof MitxOnlineReadError) && !(error instanceof MarathonReadError) && !(error instanceof WcaReadError)) {
       return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? "That could not be read right now");
     }
     switch (error.code) {
@@ -192,6 +202,8 @@ export async function proveCertificate(
         return refuse(giftId, "BELOW_THE_TARGET", words?.below(1, 0) ?? error.message);
       case "UNKNOWN_RACE":
       case "ANOTHER_BIB":
+      case "UNKNOWN_COMPETITION":
+      case "NOT_REGISTERED":
       case "NO_RESULT":
         return refuse(giftId, "NO_CERTIFICATE", words?.notFound ?? error.message);
       case "NOT_VERIFIED":

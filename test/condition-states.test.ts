@@ -95,7 +95,7 @@ test("the page lists every condition the register holds, offered or not, by fami
   // Exams & school (D220).
   assert.deepEqual(
     sections.flatMap((section) => section.building).map((condition) => condition.id),
-    ["udemy-course-shown", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "ecoledirecte-grade-shown", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown"],
+    ["udemy-course-shown", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "ecoledirecte-grade-shown", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown", "wca-time"],
   );
   assert.deepEqual(sections.find((section) => section.family === "move")?.conditions.map((condition) => condition.id), ["fitbit-daily", "strava-daily", "marathon-finish"], "the family Move, its three lines open (D188, D191, D273)");
   assert.deepEqual(sections.find((section) => section.family === "move")?.building.map((condition) => condition.id), [], "nothing being built beside them since the marathon opened");
@@ -146,11 +146,11 @@ test("every condition says its nature, and every one of the pilot is read for th
   // What is being built lives beside the register, resolvable by id and offered to an operator alone (D164, D165, D174, D176).
   assert.deepEqual(
     BUILDING.map((condition) => condition.id),
-    ["cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "ecoledirecte-grade-shown", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown", "udemy-course-shown"],
+    ["wca-time", "cambridge-english-shown", "ielts-shown", "bac-morocco-shown", "bac-cameroon-shown", "bac-france-shown", "waec-result-shown", "ecoledirecte-grade-shown", "chsi-enrolment-shown", "university-year-passed-shown", "university-grade-shown", "udemy-course-shown"],
   );
   for (const id of BUILDING.map((condition) => condition.id)) {
     const shown = conditionById(id);
-    assert.ok(shown?.nature === "shown" || shown?.nature === "connected", `${id} is shown by them, or connected by them (D188)`);
+    assert.ok(shown?.nature === "shown" || shown?.nature === "connected" || id === "wca-time", `${id} is shown by them, or connected by them (D188); the WCA is read for them, waiting for its goal`);
     assert.equal(shown?.live, false, `${id} is not open until a real proof has run end to end, then the founder's word`);
     // No fifth state (D169): a line being built carries none, and the page says "Being built" of it.
     assert.equal(shown?.state, undefined, `${id} carries no state while it is being built`);

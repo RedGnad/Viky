@@ -658,6 +658,20 @@ at their place. The judges' page counts its uses as it does the top-ups'.
 | the code, its PIN, where to use it | what Bitrefill returned for the delivered order, opened for its owner | `GiftCardCodeLines`, `followPhoneTopUp` | `test/phone-order.test.ts` |
 | "Your gift cards", each with its code | the account's delivered gift card orders | `/api/giftcards/codes`, `giftCardsOf` | `test/phone-order.test.ts` |
 
+### A time at a WCA competition, being built (D279)
+
+| the screen says | what must be true | what makes it true | exercised by |
+|---|---|---|---|
+| "A time at a WCA competition", READ FOR YOU, under "Play" with "Being built." | goal 32 not signed yet | `WCA_TIME_LINE` in `BUILDING` | `test/wca.test.ts` |
+| "Which competition?", each with "Gan, France. Starts 17 October 2026.", under "Country · all" | the WCA's own list of coming competitions from today, the ones not yet started, all countries by date, read at most once an hour | `/api/wca/competitions`, `listWcaCompetitions`, `WcaChooser` | `test/wca.test.ts` |
+| "Which event?", "3x3x3 Cube", "2x2x2 Cube"… | the competition's own events, named as the WCA names them | `WCA_EVENTS`, `WcaChooser` | `test/wca.test.ts` |
+| "A result, or a single under how many seconds?" with "0 for any result…" | the target is hundredths of a second under an hour, one for any result; Fewest Moves and Multi-Blind count as a result only | `wcaTargetUnderSeconds`, `wcaMetricOf`, `WCA_ANY_RESULT` | `test/wca.test.ts` |
+| "Your WCA ID, or your name as on the competitors list", "Check my registration" | the competition's public competitors list (WCIF) carries them, accepted, in that event, checked before the first day (an operator's account after it) | `/api/wca/registration`, `readWcaRegistration`, `competitionStillOpen` | `test/wca.test.ts` |
+| "Ada Example is on the competitors list of the Gan Open 2026, 3x3x3 Cube." | what they gave and the list's own name, kept with the gift once checked | `wcaOf`, `WcaProof`, `WcaStanding` | `test/wca.test.ts` |
+| "Read my result" | the competition's results are read plainly for their best single in the event, then that row is read attested on their own list, keyed by their WCA id, competition, event and round | `/api/wca/result`, `/api/wca/prove`, `attestWcaResult`, `WCA_PERSON_RESULTS` | `test/wca.test.ts` |
+| "Read on the WCA's results: Ada Example, 3x3x3 Cube, best single 7.91 s." | the name, the event and the best single as the reading kept them, to the two people and a reader with the link | `wcaOf`, `proveCertificate` (`line`), `wcaResultInWords` | `test/wca.test.ts` |
+| "No result of theirs in that event at that competition." / "Every attempt of theirs in that event was a DNF or a DNS" | no row of theirs in the event, or none with a time | `bestRowOf` | `test/wca.test.ts` |
+
 ### Finish a marathon, open (D273, screens in #266, D275)
 
 | the screen says | what must be true | what makes it true | exercised by |
