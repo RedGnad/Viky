@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getAddress, isAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "./account-auth-server";
 import { assertNotTooSmall } from "./relay-admission";
-import { attestChessRating, ChessReadError, newChessCode } from "./chess-reading";
+import { newChessCode } from "./chess-reading";
+import { attestClimbRating, isClimbReadError } from "./climb-reading";
 import { GiftApiError, NO_STORE } from "./gift-api";
 import { holdsGiftLink, loadGift, loadRelayed, markClaimed, type GiftRecord } from "./gift-store";
 import { milestoneById, cadenceOfGoal, CHESS_MILESTONE } from "./milestone-conditions";
@@ -11,7 +12,7 @@ import { relayMilestoneClaim, relayMilestoneWithdraw } from "./milestone-relay";
 import { loadMilestoneStatus } from "./milestone-status";
 import type { MilestoneStatus } from "./milestone-view";
 import { followRename, loadMilestoneGift, setMilestoneCode } from "./milestone-store";
-import { chessClimbOfGoal } from "./chess-com";
+import { climbOfGoal } from "./climbs";
 import { readMilestoneGift } from "./milestone-reader";
 import { escrowOf } from "./relayer";
 
@@ -88,16 +89,16 @@ export async function milestoneAccount(request: Request, giftId: string, body: {
   const username = String(body.username ?? "").trim();
   if (!milestone.validName(username)) throw new GiftApiError("INVALID_USERNAME", milestone.words.refusals.nameShape, 400);
   const state = await readMilestoneGift(escrowOf(record), giftId);
-  const mode = chessClimbOfGoal(state.goalType);
+  const mode = climbOfGoal(state.goalType);
   if (!mode || !cadenceOfGoal(milestone, state.goalType)) throw new GiftApiError("NOT_CONFIGURED", "Viky is not ready for this yet. Nothing was changed.", 503);
   try {
-    const reading = await attestChessRating({ username, mode, withName: false });
+    const reading = await attestClimbRating({ username, mode, withName: false });
     if (reading.playerId !== record.goalProfileId) throw new GiftApiError("OTHER_PLAYER", "That name belongs to another Chess.com player than the one this gift is for.", 409);
     await followRename(giftId, reading.playerId, reading.username);
     return NextResponse.json({ giftId, username: reading.username }, { headers: NO_STORE });
   } catch (error) {
-    if (error instanceof ChessReadError && error.code === "PROFILE_NOT_FOUND") throw new GiftApiError("NO_SUCH_PROFILE", milestone.words.refusals.notFound, 404);
-    if (error instanceof ChessReadError) throw new GiftApiError("SOURCE_UNAVAILABLE", milestone.words.refusals.unavailable, 503);
+    if (isClimbReadError(error) && error.code === "PROFILE_NOT_FOUND") throw new GiftApiError("NO_SUCH_PROFILE", milestone.words.refusals.notFound, 404);
+    if (isClimbReadError(error)) throw new GiftApiError("SOURCE_UNAVAILABLE", milestone.words.refusals.unavailable, 503);
     throw error;
   }
 }

@@ -30,6 +30,7 @@ import {
   MITX_ONLINE_CERTIFICATE_LINE,
   MARATHON_FINISH_LINE,
   WCA_TIME_LINE,
+  CODEFORCES_RATING,
   ACCREDIBLE_CREDENTIAL as ACCREDIBLE_CONDITION,
   DUOLINGO_ENGLISH_TEST,
   type Condition,
@@ -51,6 +52,8 @@ import {
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
 import { EDX_DURATION_DAYS, EDX_GOAL_TYPE, EDX_HAS_IT, edxCertificateIdOf, edxCourseOf, edxSubject } from "./edx-certificate";
 import { MITX_ONLINE_DURATION_DAYS, MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineCourseOf, mitxOnlineKeyOf, mitxOnlineSubject } from "./mitx-online-certificate";
+import { CODEFORCES_CLIMB, type ClimbId } from "./climbs";
+import { CODEFORCES_GOAL_TYPE, isValidCodeforcesHandle } from "./codeforces";
 import { isWcaId, wcaCourseOf, WCA_ANY_RESULT, WCA_DURATION_DAYS, WCA_EVENTS, WCA_GOAL_TYPE, wcaSubject, wcaTargetInWords, wcaTargetUnderSeconds } from "./wca";
 import { bibStillOpen, DISTANCE_LABELS, isValidBib, MARATHON_DURATION_DAYS, MARATHON_FINISH, MARATHON_GOAL_TYPE, marathonEventById, marathonGoalTypeOf, marathonSubject, marathonTargetInWords, marathonTargetUnderHours, MIKA_TIMING_GOAL_TYPE, timerOpen } from "./marathon";
 import { ACCREDIBLE_DURATION_DAYS, ACCREDIBLE_GOAL_TYPE, ACCREDIBLE_HAS_IT, accredibleCourseOf, accredibleIdOf, accredibleSubject } from "./accredible-credential";
@@ -99,7 +102,7 @@ import { PRONOTE_GOAL_TYPE, PRONOTE_NOT_REGISTERED, PRONOTE_PROVIDER, pronoteSpa
  */
 
 export type MilestoneCadence = Readonly<{
-  id: ChessClimb;
+  id: ClimbId;
   /** The goal type on the milestone contract. */
   goalType: number;
   label: string;
@@ -262,7 +265,49 @@ export const CHESS_TACTICS_MILESTONE: MilestoneCondition = {
   },
 };
 
-const MILESTONES: readonly MilestoneCondition[] = [CHESS_MILESTONE, CHESS_TACTICS_MILESTONE];
+/**
+ * "Reach a Codeforces rating" (the founder, 27 Sep 2026): the chess rating's shape on Codeforces' one rating. The
+ * funder gives the handle and the rating to reach; the person binds the account with a code in their last name (D27);
+ * the keeper reads `user.info` every day. Nothing settles here: Codeforces publishes no deviation, and a rating
+ * moves only with a rated round.
+ */
+const CODEFORCES_CLIMBS: readonly MilestoneCadence[] = [{ id: CODEFORCES_CLIMB, goalType: CODEFORCES_GOAL_TYPE, label: "Rating", help: "Their Codeforces rating, the one shown on their profile." }];
+
+export const CODEFORCES_MILESTONE: MilestoneCondition = {
+  condition: CODEFORCES_RATING,
+  shape: CHESS_RATING_SHAPE,
+  cadences: CODEFORCES_CLIMBS,
+  standingPath: "/api/codeforces/standing",
+  validName: isValidCodeforcesHandle,
+  settled: () => true,
+  duration: { min: 1, max: 365, suggested: 60 },
+  words: {
+    ...CHESS_MILESTONE.words,
+    cadenceQuestion: "Which rating?",
+    targetLabel: "The rating they reach",
+    today: (standing) => `Today they are at ${standing}.`,
+    todayRow: (standing) => `${standing}`,
+    best: (best) => `Their best ever: ${best}.`,
+    read: "Read their rating",
+    reading: "Reading their rating",
+    refusals: {
+      ...CHESS_MILESTONE.words.refusals,
+      nameShape: "A Codeforces handle has three to twenty-four letters, figures, underscores, hyphens or dots, like tourist.",
+      notFound: "No Codeforces user goes by that handle. Check the spelling.",
+      noRating: () => "They have no rating yet. Ask them to take part in a rated round first.",
+      unavailable: "Codeforces is not answering. Try again in a moment.",
+      closed: "Codeforces has closed this account, so nothing on it can be earned.",
+    },
+    goal: (target) => `${target} on Codeforces`,
+    durationHelp: "Counted from the day they connect Codeforces, so opening the link late costs them nothing.",
+    durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from the day they connect Codeforces`,
+    // Codeforces' settings, Social tab: first name and last name, in English (unverified on a live account, 26 Sep 2026).
+    codeSteps: "On Codeforces, open Settings, then Social. Put this code in your last name (English), and save:",
+    accountClosed: "Codeforces has closed this account, so this gift can no longer be earned.",
+  },
+};
+
+const MILESTONES: readonly MilestoneCondition[] = [CHESS_MILESTONE, CHESS_TACTICS_MILESTONE, CODEFORCES_MILESTONE];
 
 /** The milestone detail of a condition, or nothing for a daily one. */
 export function milestoneOf(condition: Condition | undefined): MilestoneCondition | undefined {

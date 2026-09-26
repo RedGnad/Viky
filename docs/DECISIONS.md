@@ -7308,3 +7308,29 @@ Saint Symphorien 2026 (607 rows).
   `0xb54eef6d…0225` and healthy, read Saint Symphorien 2026 (607 rows) for Alexandre Schoeffel in 3x3x3 and then
   his own list of results through the attested fetch: round 1, best 7.91 s (791), average 8.67 s, metric 359,209,
   one proof, nullifier `0xbd155ee5…f5ee`. Proofs (b) and (c) wait for goal 32.
+
+## D280, 27 Sep 2026: "Reach a Codeforces rating", the chess rating's shape on Codeforces' public API
+
+The founder, 27 Sep 2026: a new line in Learn, in the shape of the chess rating: the person gives their handle at
+the connect step, Viky reads `codeforces.com/api/user.info?handles=<handle>` (the rating) for them, Codeforces
+polices itself (plagiarism, rounds made unrated); a Reclaim provider "Codeforces Rating" exists.
+
+- **Read on 26 Sep 2026.** The API help (anonymous for public data, one request every two seconds, the `User`
+  object: handle, rating, maxRating, first and last name, organization), the terms and conditions (no commercial
+  use of the website's material, nothing that harms it), a live answer for `tourist`. The Reclaim directory lists
+  four Codeforces providers, "Codeforces Rating" among them; Viky reads the API through its own attested fetch, as
+  for every line read for the person, and takes no provider of the directory.
+- **One door for every climb.** The keeper, the create route and the rename flow read Chess.com's cadences and
+  Codeforces' rating through `src/climb-reading.ts`; the climb decides the goal, the provider id and the identity
+  label (`src/climbs.ts`). Chess.com's readings are unchanged, held by their tests.
+- **The binding.** The funder gives the handle; if the person names it themselves, they put Viky's code in the last
+  name of their Codeforces profile (D27's rule), which the binding reading takes from `user.info`. The settings path
+  ("Settings, then Social, last name in English") is unverified on a live account: default applied, to confirm.
+- **Nothing settles.** Codeforces publishes no deviation; a rating moves only with a rated round, so a gift can be
+  made on any rated account.
+- **Goal 33**, provider `viky:provider:codeforces-rating-zkfetch:v1` = `0x8c198ec8…7a45`, shape climb, in the one
+  Safe session with 31 and 32. Being built until it is signed.
+- **Proof (a), done on 26 Sep 2026 at 01:51 UTC**: the reading service, redeployed on the fingerprint
+  `0x3e9a147c…f0fc` and healthy, read `user.info` for tourist through the attested fetch with the name: rating
+  3,307, best ever 4,009, last name "Korotkevich", one proof, nullifier `0xbc79bfad…3ef5`. Proofs (b) and (c) wait
+  for goal 33.

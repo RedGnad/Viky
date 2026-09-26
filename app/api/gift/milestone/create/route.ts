@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getAddress, isAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
-import { isChessClimb } from "@/src/chess-com";
-import { ChessReadError, readChessStanding } from "@/src/chess-reading";
+import { isClimbReadError, readClimbStanding } from "@/src/climb-reading";
+import { climbOfGoal } from "@/src/climbs";
 import { NO_CONTACT_HASH } from "@/src/contact-hash";
 import { isOperator } from "@/src/dev-access";
 import { GiftApiError, NO_STORE } from "@/src/gift-api";
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     // No operator door (the founder's rule of 23 Sep 2026, D184): a climb is live for everybody or made by nobody.
     if (!milestone || !milestone.condition.live) throw new GiftApiError("GOAL_NOT_OFFERED", "This goal is not offered yet.");
     const cadence = cadenceOf(milestone, String(body.cadence ?? ""));
-    if (!cadence || !isChessClimb(cadence.id)) throw new GiftApiError("INVALID_MODE", milestone.words.refusals.noCadence);
+    if (!cadence || climbOfGoal(cadence.goalType) !== cadence.id) throw new GiftApiError("INVALID_MODE", milestone.words.refusals.noCadence);
     const username = String(body.username ?? "").trim();
     if (!milestone.validName(username)) throw new GiftApiError("INVALID_USERNAME", milestone.words.refusals.nameShape);
 
@@ -144,13 +144,13 @@ export async function POST(request: Request) {
     const existing = await loadCreation(nonce);
     if (!(existing && (existing.status === "complete" || existing.txHash !== null))) {
       // Read again, just before the money moves: the card payment can take an hour, and a rating moves with every game.
-      let now: Awaited<ReturnType<typeof readChessStanding>>;
+      let now: Awaited<ReturnType<typeof readClimbStanding>>;
       try {
-        now = await readChessStanding(username, cadence.id);
+        now = await readClimbStanding(username, cadence.id);
       } catch (error) {
-        if (error instanceof ChessReadError && error.code === "PROFILE_NOT_FOUND") throw new GiftApiError("NO_SUCH_PROFILE", `${milestone.words.refusals.notFound} Nothing was taken.`, 400);
-        if (error instanceof ChessReadError && error.code === "INVALID_USERNAME") throw new GiftApiError("INVALID_USERNAME", milestone.words.refusals.nameShape, 400);
-        if (error instanceof ChessReadError && error.code === "ACCOUNT_CLOSED") throw new GiftApiError("ACCOUNT_CLOSED", `${milestone.words.refusals.closed} Nothing was taken.`, 409);
+        if (isClimbReadError(error) && error.code === "PROFILE_NOT_FOUND") throw new GiftApiError("NO_SUCH_PROFILE", `${milestone.words.refusals.notFound} Nothing was taken.`, 400);
+        if (isClimbReadError(error) && error.code === "INVALID_USERNAME") throw new GiftApiError("INVALID_USERNAME", milestone.words.refusals.nameShape, 400);
+        if (isClimbReadError(error) && error.code === "ACCOUNT_CLOSED") throw new GiftApiError("ACCOUNT_CLOSED", `${milestone.words.refusals.closed} Nothing was taken.`, 409);
         throw new GiftApiError("SOURCE_UNAVAILABLE", `${milestone.words.refusals.unavailable} The gift was not made and nothing was taken.`, 503);
       }
       if (now.rating === null) throw new GiftApiError("NO_RATING", `${milestone.words.refusals.noRating(cadence.label)} Nothing was taken.`, 400);

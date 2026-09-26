@@ -340,6 +340,15 @@ export default async function JudgesPage() {
             for MikaTiming. Nothing of it is offered until goal 32 is signed.
           </li>
           <li>
+            <strong>Codeforces&apos; public API.</strong> A Codeforces rating is read every day from
+            <code>codeforces.com/api/user.info</code>, anonymous public data, one request every two seconds (the API
+            help, read 26 Sep 2026): the handle, the rating and the best rating ever, and once, when the person binds the
+            account with Viky&apos;s code, the last name of their profile. Its terms forbid commercial use of the site&apos;s
+            material and any use that harms it or impacts access; Viky reads one account&apos;s line a day, at the
+            person&apos;s request, naming itself. Codeforces polices itself: plagiarism is punished with a rating rollback
+            and a round that fails is made unrated. Nothing of it is offered until goal 33 is signed.
+          </li>
+          <li>
             <strong>WAEC&apos;s terms.</strong> WASSCE credits are shown by the person from WAEC&apos;s own result checker
             (D217), and not read for them, because WAEC&apos;s privacy policy tells the holder of an access code it allocates
             &quot;you must not disclose it to any third party&quot;, and the result card&apos;s PIN is one. The card is typed on WAEC&apos;s page and

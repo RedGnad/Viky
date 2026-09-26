@@ -12,7 +12,8 @@ import { GET as mineRoute } from "../app/api/gifts/mine/route";
 import { ACCOUNT_AUTH_COOKIE_NAME, createAccountAuthChallenge, issueAccountAuthSession } from "../src/account-auth-server";
 import { receiveAuthorizationMessage, receiveAuthorizationTypedData, toContractAuthorization } from "../src/ausd-authorization";
 import { CHESS_SETTLED_RD_BELOW, chessGoalType, type ChessMode } from "../src/chess-com";
-import { attestChessRating, readChessStanding } from "../src/chess-reading";
+import { readChessStanding } from "../src/chess-reading";
+import { attestClimbRating } from "../src/climb-reading";
 import { NO_CONTACT_HASH } from "../src/contact-hash";
 import { configureGiftStore, ensureGiftSchema } from "../src/gift-store";
 import { CHESS_MILESTONE } from "../src/milestone-conditions";
@@ -137,7 +138,7 @@ async function main() {
   console.log("STEP code", response.status, JSON.stringify(coded));
 
   const live = liveMilestoneReadingDeps();
-  const started = await runMilestoneReading({ giftId, purpose: "start" }, { ...live, attest: async (input) => ({ ...(await attestChessRating(input)), name: `Rehearsal ${coded.code}` }) });
+  const started = await runMilestoneReading({ giftId, purpose: "start" }, { ...live, attest: async (input) => ({ ...(await attestClimbRating(input)), name: `Rehearsal ${coded.code}` }) });
   console.log("STEP start (real proofs)", JSON.stringify(started));
 
   response = await statusRoute(new Request(`${ORIGIN}/api/gift/${giftId}`, { headers: headers(recipientCookie) }), { params: Promise.resolve({ id: giftId }) });

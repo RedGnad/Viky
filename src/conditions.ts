@@ -841,6 +841,52 @@ export const FITBIT_DAILY: Condition = {
  * Goal 4 of the daily contract, registered in the same Safe session as goal 6.
  */
 /**
+ * "Reach a Codeforces rating" (the founder, 27 Sep 2026): a climb of the Learn family in the chess rating's shape,
+ * read for the person from Codeforces' public API every day. The funder gives the handle and the rating; the person
+ * binds the account with a code in their profile; Codeforces polices itself (plagiarism, rounds made unrated). Being
+ * built until goal 33 is signed and the reading service runs the Codeforces source.
+ */
+export const CODEFORCES_RATING: Condition = {
+  id: "codeforces-rating",
+  kind: "milestone",
+  nature: "read",
+  goalType: null,
+  live: false,
+  beforeItOpens: "Goal 33 signed by the owner, and the reading service redeployed with the Codeforces source.",
+  source: "Codeforces",
+  family: "learn",
+  name: "Reach a Codeforces rating",
+  help: "Their public Codeforces rating, read every day: Codeforces polices cheating itself and makes rounds unrated when it must. It proves the rating, not who solved.",
+  link: {
+    kind: "username",
+    label: "Their Codeforces handle",
+    help: "The handle on their Codeforces profile, like tourist. It is needed to read where they stand today.",
+    why: "Only that Codeforces account can earn this gift, and they prove it is theirs with a short code when they open it.",
+    example: "tourist",
+    row: "Their Codeforces handle",
+    noneGiven: "Not given",
+    // The handle is checked by reading where they stand, before any money moves: the same rule as `isValidCodeforcesHandle`.
+    check: {
+      valid: (value) => /^[A-Za-z0-9_.-]{3,24}$/.test(value),
+      path: "/api/codeforces/standing",
+      refusals: {
+        shape: "A Codeforces handle has three to twenty-four letters, figures, underscores, hyphens or dots, like tourist.",
+        notFound: "No Codeforces user goes by that handle. Check the spelling.",
+        unavailable: "Codeforces is not answering. Try again in a moment.",
+      },
+    },
+  },
+  reading: "codeforces-user",
+  words: {
+    earnedDay: "When they reach it, all of this becomes theirs",
+    connect: "Opened. Connect Codeforces to start the climb.",
+    doIt: "Connect your Codeforces account, then climb. Viky reads your rating every day.",
+    eachDay: "the day the rating is read",
+    preview: "Reach a Codeforces rating: the gift is yours the day your rating gets there.",
+  },
+};
+
+/**
  * "Set a time at a WCA competition" (the founder, 27 Sep 2026): a milestone of the Play family, read for the person
  * from the World Cube Association's public API, the way a marathon is read from its timing company (D273). The
  * funder chooses the coming competition and the event and writes the person's name; before the day, the public list
@@ -1214,6 +1260,7 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
 
 
 export const BUILDING: readonly Condition[] = [
+  CODEFORCES_RATING,
   WCA_TIME_LINE,
   CAMBRIDGE_ENGLISH_SHOWN,
   IELTS_SHOWN,
