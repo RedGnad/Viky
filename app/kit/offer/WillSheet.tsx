@@ -405,7 +405,7 @@ export function WillSheet({
                   open={open}
                   draft={draft}
                   named={certificate.course.named}
-                  onChoose={(race) => onChange({ ...draft, course: race.raceId, courseTitle: race.name, target: String(certificate.target.suggested) })}
+                  onChoose={(courseId, title) => onChange({ ...draft, course: courseId, courseTitle: title, target: String(certificate.target.suggested) })}
                 />
               ) : certificate.course?.search?.listed ? (
                 /* The university, asked as a list grouped by country, or by country first when it is long (D247). */

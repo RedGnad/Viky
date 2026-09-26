@@ -74,6 +74,8 @@ export type MilestoneStatus = Readonly<{
   marathon: {
     raceId: string;
     raceName: string;
+    /** The distance the gift was made on, "Half marathon". */
+    distance: string;
     startsAt: string;
     bibOpen: boolean;
     bib: string | null;

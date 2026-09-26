@@ -2,7 +2,7 @@ import type { Hex } from "viem";
 import { attestedRead, AttestedReadError, reclaimAttestedReadDeps, type AttestedReadDeps } from "./attested-read";
 import { BREIZH_CHRONO_RUNNER } from "./attested-sources";
 import type { ZkFetchProof } from "./duolingo-public";
-import { finishSecondsOf, MARATHON_RACES, marathonAccountOf, marathonMetricOf, marathonSubject, type MarathonRace } from "./marathon";
+import { finishSecondsOf, MARATHON_RACES, marathonAccountOf, marathonCourseId, marathonMetricOf, marathonSubject, type MarathonEvent, type MarathonRace } from "./marathon";
 
 /**
  * Reading a runner's result on Breizh Chrono, two ways, on the model of a certificate's (src/edx-reading.ts). Server
@@ -25,6 +25,7 @@ export class MarathonReadError extends Error {
 
 export type MarathonResult = Readonly<{
   race: MarathonRace;
+  event: MarathonEvent;
   bib: string;
   /** The runner as the page prints them, "FALL Mor". */
   runner: string;
@@ -49,24 +50,27 @@ function valuesOf(page: string): Record<string, string> {
   return values;
 }
 
-/** The race the account names, from the register: a reference and a heat nobody pinned read nothing. */
-export function raceOfAccount(account: string): { race: MarathonRace; bib: string } {
+/** The race and the heat the account names, from the register: a reference and a heat nobody pinned read nothing. */
+export function raceOfAccount(account: string): { race: MarathonRace; event: MarathonEvent; bib: string } {
   const parts = marathonAccountOf(account);
   if (!parts) throw new MarathonReadError("INVALID_LINK", "That is not a race and a bib");
-  const race = MARATHON_RACES.find((one) => one.ref === parts.ref && one.heat === parts.heat);
-  if (!race) throw new MarathonReadError("UNKNOWN_RACE", "That race is not one Viky reads");
-  return { race, bib: parts.bib };
+  for (const race of MARATHON_RACES) {
+    if (race.ref !== parts.ref) continue;
+    const event = race.events.find((one) => one.heat === parts.heat);
+    if (event) return { race, event, bib: parts.bib };
+  }
+  throw new MarathonReadError("UNKNOWN_RACE", "That race is not one Viky reads");
 }
 
 export function marathonResultOf(account: string, values: Readonly<Record<string, string>>): MarathonResult {
-  const { race, bib } = raceOfAccount(account);
+  const { race, event, bib } = raceOfAccount(account);
   const runner = (values.runner ?? "").replace(/\s+/g, " ").trim();
   if (!runner || !values.bib) throw new MarathonReadError("NO_RESULT", "No runner answers to that bib in that race");
   if (values.bib !== bib) throw new MarathonReadError("ANOTHER_BIB", "That page is about another bib");
   const official = (values.official ?? "").trim();
   const finishSeconds = finishSecondsOf(official);
   if (finishSeconds === undefined) throw new MarathonReadError("NOT_FINISHED", "The timing company has no finish time for that bib");
-  return { race, bib, runner, finishSeconds, official, metric: marathonMetricOf(finishSeconds), subject: marathonSubject(runner, race.raceId) };
+  return { race, event, bib, runner, finishSeconds, official, metric: marathonMetricOf(finishSeconds), subject: marathonSubject(runner, marathonCourseId(race, event)) };
 }
 
 /** The result behind a race and a bib, read plainly. Every refusal is typed, and none of them guesses. */

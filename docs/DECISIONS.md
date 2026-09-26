@@ -7203,3 +7203,34 @@ do?" under Move, without waiting for the test gift. MITx Online opens on the sam
 - **What is still to show.** Proof (c) of the marathon, a test payment that goes, is now the first gift on the line:
   the operator's account, the Marathon de Dakar 2023, bib 347 entered through the operator door (the judges' page).
   Until it has run, nothing here is called working.
+
+## D276, 27 Sep 2026: the register of races, coming races only, the distance chosen at creation
+
+The founder, 27 Sep 2026: a race already run is not offered; the Marathon de Dakar 2023 stays as an operator's entry
+for the test gift. The register carries the coming races whose platform is readable: on Breizh Chrono, the October
+and November races with a marathon, a half or a 10 km (the line keeps its name, "Finish a marathon"; the distance is
+chosen at creation), and the Marathon de Dakar 2026 the day its organiser announces it. Each race shown carries its
+town and its date, to come. Then a second platform, not a second race: MikaTiming, if its pages read like Breizh
+Chrono's.
+
+- **Read on 26 Sep 2026.** Breizh Chrono's calendar lists 41 events in October and November, each with its Klikego
+  page whose schema.org data gives the date, the town and the sub-events. Seventeen have a marathon, a half or a
+  10 km: Marathon Vert Rennes (17 Oct, marathon and 10 km), Marathon International de Deauville (14 Nov, the three),
+  Tout Rennes Court (4 Oct, half and 10 km), and fourteen 10 km. The key of a heat on the results site follows from
+  its name by one rule (`heatSlugOf`), measured forty for forty on eight past events. The Marathon de Dakar 2026 is
+  announced nowhere (Klikego, the calendar, the web); the only "Marathon Eiffage de Dakar" found is dated 10 May
+  2026 and is not timed by Breizh Chrono.
+- **The register.** A race carries its heats, one per distance offered (`events`), and a gift is made on one race
+  and one distance, `marathon-vert-rennes-2026/10k`, which the terms sign (`marathonSubject`) and the status names
+  ("Bib 347, Marathon de Dakar 2023, marathon."). `racesOffered` lists the races not yet started to everybody and
+  the `operatorOnly` ones to an operator's account; the create route refuses a race already run to anybody else
+  (`RACE_RUN`). The chooser asks the race, then the distance when the race has more than one.
+- **MikaTiming, verified at the source on 26 Sep 2026.** Its pages read like Breizh Chrono's: the search by bib
+  (`?pid=search&search[start_no]=<bib>`) is server-rendered but answers the lettered twin too ("3166" and "F3166",
+  the women's bibs at Frankfurt); the runner's own page (`?content=detail&idp=<id>`) is one runner, the same on
+  Berlin, Chicago, Frankfurt and Boston: `f-__fullname` ("Aarak, Kim Andre (NOR)"), `f-start_no` or
+  `f-start_no_text`, `f-time_finish_netto` (the net time, the only one every event prints; Chicago prints no gun
+  time), and its `og:url` carries the year. So the line reads in two steps, a plain search for the id then the
+  attested runner's page, a source of its own (goal 31, a Safe session). No 2026 race of theirs can be registered
+  today: Berlin ran on 27 Sep, Chicago 2026 has not published its event, Frankfurt 2026 answers with 2025, Boston
+  and Tokyo 2027 are not up. The source and the line come in their own PR; the races the day their pages exist.

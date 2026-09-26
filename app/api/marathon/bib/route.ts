@@ -4,7 +4,7 @@ import { readJsonBody } from "@/src/api-guard";
 import { isOperator } from "@/src/dev-access";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { loadGift, markBound, markConnectedAccount } from "@/src/gift-store";
-import { bibStillOpen, isValidBib, marathonRaceById } from "@/src/marathon";
+import { bibStillOpen, isValidBib, marathonEventById } from "@/src/marathon";
 import { loadMilestoneGift } from "@/src/milestone-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const [gift, milestone] = await Promise.all([loadGift(giftId), loadMilestoneGift(giftId)]);
     if (!gift || !milestone || milestone.conditionId !== "marathon-finish") throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
     if (!gift.recipient || gift.recipient.toLowerCase() !== auth.account.toLowerCase()) throw new GiftApiError("NOT_RECIPIENT", "Open the gift first.", 403);
-    const race = marathonRaceById(String(milestone.course ?? ""));
+    const race = marathonEventById(String(milestone.course ?? ""))?.race;
     if (!race) throw new GiftApiError("UNKNOWN_RACE", "This gift names no race Viky reads.", 409);
     if (gift.boundAt) throw new GiftApiError("BIB_ALREADY_SET", "Your bib is already entered for this gift.", 409);
     if (!bibStillOpen(race, Date.now()) && !isOperator(auth.account)) throw new GiftApiError("RACE_STARTED", "The race has started, so a bib can no longer be entered for this gift.", 409);

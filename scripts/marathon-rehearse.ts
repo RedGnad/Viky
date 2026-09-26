@@ -1,7 +1,7 @@
 import "../src/load-env";
 import { keccak256, stringToHex, type Hex } from "viem";
 import { attestByGoal, proveCertificate, type CertificateReadingDeps } from "../src/certificate-reading";
-import { MARATHON_GOAL_TYPE, MARATHON_RACES, marathonAccount, marathonSubject } from "../src/marathon";
+import { MARATHON_GOAL_TYPE, marathonAccount, marathonEventById, marathonSubject } from "../src/marathon";
 import { SHAPE_HAVE_OR_NOT } from "../src/milestone-protocol";
 
 /**
@@ -9,7 +9,7 @@ import { SHAPE_HAVE_OR_NOT } from "../src/milestone-protocol";
  * result, with everything else stood in for. The reading service reads the runner's page through the attested fetch,
  * exactly as production does; the gift, its state and the relay are fakes that print what they would have received.
  *
- *   NAME="Mor Fall" BIB=347 RACE=dakar-2023 pnpm tsx scripts/marathon-rehearse.ts
+ *   NAME="Mor Fall" BIB=347 RACE=dakar-2023/marathon pnpm exec tsx scripts/marathon-rehearse.ts
  *
  * Nothing moves: the "relay" prints the EIP-712 message it would have sent and returns a made-up hash, and the
  * "record" prints the reading line. Proof (c), a test payment that goes, is the same path with the real gift.
@@ -17,12 +17,12 @@ import { SHAPE_HAVE_OR_NOT } from "../src/milestone-protocol";
 async function main() {
   const name = process.env.NAME?.trim() || "Mor Fall";
   const bib = process.env.BIB?.trim() || "347";
-  const raceId = process.env.RACE?.trim() || "dakar-2023";
-  const race = MARATHON_RACES.find((one) => one.raceId === raceId);
-  if (!race) throw new Error(`no race ${raceId}`);
+  const courseId = process.env.RACE?.trim() || "dakar-2023/marathon";
+  const found = marathonEventById(courseId);
+  if (!found) throw new Error(`no race ${courseId}`);
   const giftId = "424242";
   const recipient = "0x1111111111111111111111111111111111111111" as Hex;
-  const subject = marathonSubject(name, raceId);
+  const subject = marathonSubject(name, courseId);
   const now = Math.floor(Date.now() / 1_000);
   const sent: unknown[] = [];
   const deps: CertificateReadingDeps = {
@@ -38,7 +38,7 @@ async function main() {
     },
     now: () => now,
   };
-  const outcome = await proveCertificate({ giftId, link: marathonAccount(race, bib) }, deps);
+  const outcome = await proveCertificate({ giftId, link: marathonAccount(found.race, found.event, bib) }, deps);
   console.log(JSON.stringify({ step: "outcome", ...outcome }, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2));
   console.log(JSON.stringify({ step: "message the relay would sign", messages: sent }, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2));
 }

@@ -2,7 +2,18 @@ import { getJson, postJson } from "./api";
 
 /** The browser's side of "Finish a marathon" (D273): the races, the bib, the plain read, the proof. */
 
-export type ListedRace = Readonly<{ raceId: string; name: string; town: string; country: string; startsAt: string; timer: string }>;
+export type ListedRace = Readonly<{
+  raceId: string;
+  name: string;
+  town: string;
+  country: string;
+  startsAt: string;
+  timer: string;
+  /** The distances a gift can be made on, each with the heat's name on the timing company's pages. */
+  events: readonly { distance: string; label: string; heat: string }[];
+  /** Listed to an operator's account only: a race already run, kept for the test gift. */
+  operatorOnly?: boolean;
+}>;
 
 export type MarathonLine = Readonly<{ runner: string; bib: string; official: string; finishSeconds: number }>;
 

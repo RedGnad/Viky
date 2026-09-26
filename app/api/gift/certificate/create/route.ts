@@ -61,6 +61,10 @@ export async function POST(request: Request) {
     const course = certificate.course ? certificate.course.slugOf(String(body.course ?? "")) : undefined;
     if (certificate.course && !course) throw new GiftApiError("INVALID_COURSE", certificate.course.help);
     if (!certificate.course && body.course) throw new GiftApiError("INVALID_COURSE", "That gift takes no course");
+    if (certificate.course?.refuses && course) {
+      const refused = certificate.course.refuses(course, isOperator(account));
+      if (refused) throw new GiftApiError(refused.code, `${refused.message} Nothing was taken.`, 409);
+    }
     // A university gift is made on a portal Viky has proved with a student, and on no other (D165): a gift on a portal
     // nobody can show would hold the money until its last day for nothing. And the row must hold what the condition
     // reads, its results page for the year or a grade, on a scale the target is on (D174): each refusal by its name.

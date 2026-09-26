@@ -27,7 +27,7 @@ function valuesOf(page: string): Record<string, string> {
 const refused = (code: string) => (error: unknown) => error instanceof MarathonReadError && error.code === code;
 
 test("the account is the race's reference, its heat and the bib, and nothing else reads", () => {
-  assert.equal(marathonAccount(MARATHON_RACES[0], " 347 "), ACCOUNT);
+  assert.equal(marathonAccount(MARATHON_RACES[0], MARATHON_RACES[0].events[0], " 347 "), ACCOUNT);
   assert.deepEqual(marathonAccountOf(ACCOUNT), { ref: "1488071608761-442", heat: "marathon", bib: "347" });
   assert.equal(marathonAccountOf("1488071608761-442|marathon|../x"), undefined);
   assert.ok(BREIZH_CHRONO_RUNNER.accepts(ACCOUNT) && !BREIZH_CHRONO_RUNNER.accepts("x|y|z"));
@@ -41,7 +41,7 @@ test("the two patterns read a runner's page: the name, the bib and the official 
   assert.equal(result.bib, "347");
   assert.equal(result.finishSeconds, 2 * 3600 + 30 * 60 + 5);
   assert.equal(result.metric, DAY_SECONDS - result.finishSeconds);
-  assert.equal(result.subject, marathonSubject("Ada Example", "dakar-2023"), "no case, no accents, no order");
+  assert.equal(result.subject, marathonSubject("Ada Example", "dakar-2023/marathon"), "no case, no accents, no order");
   assert.throws(() => marathonResultOf(ACCOUNT, valuesOf(runnerPage("TINE Abdou", "347", "00:00:00"))), refused("NOT_FINISHED"), "a runner who did not finish");
   assert.throws(() => marathonResultOf(ACCOUNT, valuesOf(runnerPage("EXAMPLE Ada", "348", "02:30:05"))), refused("ANOTHER_BIB"));
   assert.throws(() => marathonResultOf(ACCOUNT, valuesOf("")), refused("NO_RESULT"), "the empty page of a bib nobody wore");
@@ -131,13 +131,13 @@ const RECORD = {
   recipientName: "Mor",
   funderName: "Sam",
 } as unknown as GiftRecord;
-const MILESTONE = { giftId: "1000002", conditionId: "marathon-finish", mode: "", standingAtOffer: 0, standingReadAt: new Date(0), portal: null, course: RACE.raceId } as MilestoneRecord;
+const MILESTONE = { giftId: "1000002", conditionId: "marathon-finish", mode: "", standingAtOffer: 0, standingReadAt: new Date(0), portal: null, course: `${RACE.raceId}/marathon` } as MilestoneRecord;
 const STATE = {
   giftId: "1000002",
   recipient: RECIPIENT,
   shape: SHAPE_HAVE_OR_NOT,
   goalType: MARATHON_GOAL_TYPE,
-  subject: marathonSubject("Mor Fall", RACE.raceId),
+  subject: marathonSubject("Mor Fall", `${RACE.raceId}/marathon`),
   target: BigInt(MARATHON_FINISH),
   maximumStart: 0n,
   fundedAt: NOW - 86_400,
@@ -201,7 +201,7 @@ test("the proof leaves the line read with the reading, and answers it, so the pa
     loadGift: async () => RECORD,
     readState: async () => STATE,
     attest: async () => ({
-      subject: marathonSubject("Mor Fall", RACE.raceId),
+      subject: marathonSubject("Mor Fall", `${RACE.raceId}/marathon`),
       score: DAY_SECONDS - 9_005,
       testDay: NOW - 60,
       observedAt: NOW - 60,
@@ -232,7 +232,7 @@ test("the proof leaves the line read with the reading, and answers it, so the pa
 
 test("the routes build the account from the gift's race and bound bib, never from the browser, and the bib closes at the start", () => {
   const gift = readFileSync("src/marathon-gift.ts", "utf8");
-  assert.match(gift, /account: marathonAccount\(race, bib\)/);
+  assert.match(gift, /account: marathonAccount\(race, event, bib\)/);
   assert.match(gift, /const bib = gift\.boundAt && gift\.goalUsername \? String\(gift\.goalUsername\) : ""/);
   for (const route of ["result", "prove"]) {
     const source = readFileSync(`app/api/marathon/${route}/route.ts`, "utf8");
@@ -247,4 +247,65 @@ test("the routes build the account from the gift's race and bound bib, never fro
   assert.match(page, /milestone\.marathon && read\.action !== "shareProof" \? <MarathonStanding/);
   const sheet = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
   assert.match(sheet, /certificate\.course\?\.search\?\.races \? \(/);
+});
+
+/**
+ * The register of races (the founder, 27 Sep 2026): the coming races with a marathon, a half or a 10 km, the
+ * distance chosen at creation, a race already run offered to nobody but an operator's account.
+ */
+import { DISTANCE_LABELS, heatSlugOf, marathonCourseId, marathonEventById, racesOffered } from "../src/marathon";
+
+test("the heat's key on the results site follows from its name: measured on forty heats of eight past events", () => {
+  const measured: [string, string][] = [
+    ["Le S'MI Ouest-France", "le-smi-ouest-france"],
+    ["L'Eau du Bassin Rennais - Poussins", "leau-du-bassin-rennais---poussins"],
+    ["Le 5km - Chronométré", "le-5km---chronometre"],
+    ["Marathon en relais à 2", "marathon-en-relais-a-2"],
+    ["10 KM", "10-km"],
+    ["Semi-Marathon", "semi-marathon"],
+    ["Course Groupe QUEGUINER", "course-groupe-queguiner"],
+    ["10km McDo", "10km-mcdo"],
+    ["La Course Féminine Yves Rocher", "la-course-feminine-yves-rocher"],
+    ["Le Marathon Vert Rennes", "le-marathon-vert-rennes"],
+  ];
+  for (const [label, heat] of measured) assert.equal(heatSlugOf(label), heat, label);
+  for (const race of MARATHON_RACES) for (const one of race.events) assert.equal(one.heat, heatSlugOf(one.label), `${race.raceId} ${one.label}`);
+});
+
+test("the register: one id per race, a date that reads, a heat per distance, and the reference the results site keys on", () => {
+  const ids = MARATHON_RACES.map((race) => race.raceId);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const race of MARATHON_RACES) {
+    assert.match(race.ref, /^\d{10,16}-\d{1,6}$/, race.raceId);
+    assert.ok(Number.isFinite(new Date(race.startsAt).getTime()), `${race.raceId} has a date`);
+    assert.ok(race.events.length >= 1 && race.events.length <= 3);
+    assert.equal(new Set(race.events.map((one) => one.distance)).size, race.events.length, `${race.raceId}: one heat per distance`);
+    for (const one of race.events) assert.ok(one.distance in DISTANCE_LABELS);
+    assert.ok(race.town.length > 0 && /^[A-Z]{2}$/.test(race.country));
+  }
+  const found = marathonEventById("dakar-2023/half");
+  assert.equal(found?.event.heat, "semi-marathon");
+  assert.equal(marathonCourseId(found!.race, found!.event), "dakar-2023/half");
+  assert.equal(marathonEventById("dakar-2023"), undefined, "a race alone is not a course");
+  assert.equal(marathonEventById("dakar-2023/5k"), undefined);
+  assert.equal(marathonEventById("nowhere-2026/marathon"), undefined);
+});
+
+test("a race already run is offered to nobody but an operator's account, and a coming one to everybody until it starts", () => {
+  const now = new Date("2026-10-05T12:00:00Z").getTime();
+  const everybody = racesOffered(now, false).map((race) => race.raceId);
+  assert.ok(!everybody.includes("dakar-2023"), "the test race is not offered");
+  assert.ok(!everybody.includes("tout-rennes-court-2026"), "a race started the day before is not offered");
+  assert.ok(everybody.includes("marathon-vert-rennes-2026") && everybody.includes("marathon-deauville-2026"));
+  const operator = racesOffered(now, true).map((race) => race.raceId);
+  assert.ok(operator.includes("dakar-2023") && !operator.includes("tout-rennes-court-2026"), "the operator sees the test race, and no other race already run");
+  const refuses = MARATHON_MILESTONE.course?.refuses;
+  assert.ok(refuses);
+  assert.equal(refuses("dakar-2023/marathon", false)?.code, "RACE_RUN");
+  assert.equal(refuses("dakar-2023/marathon", true), undefined);
+  assert.equal(refuses("nowhere/marathon", true)?.code, "UNKNOWN_RACE");
+  assert.equal(MARATHON_MILESTONE.course?.slugOf("dakar-2023/marathon"), "dakar-2023/marathon");
+  assert.equal(MARATHON_MILESTONE.course?.slugOf("dakar-2023"), undefined);
+  assert.match(readFileSync("app/api/gift/certificate/create/route.ts", "utf8"), /certificate\.course\.refuses\(course, isOperator\(account\)\)/);
+  assert.match(readFileSync("app/api/marathon/races/route.ts", "utf8"), /racesOffered\(Date\.now\(\), operator\)/);
 });
