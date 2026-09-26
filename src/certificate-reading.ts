@@ -7,7 +7,7 @@ import { AccredibleReadError, attestAccredibleCredential } from "./accredible-re
 import { attestEdxCertificate, EdxReadError } from "./edx-reading";
 import { MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineProviderId } from "./mitx-online-certificate";
 import { attestMitxOnlineCertificate, MitxOnlineReadError } from "./mitx-online-reading";
-import { finishInWords, MARATHON_GOAL_TYPE, marathonGoalTypeOf, marathonProviderIdOf, MIKA_TIMING_GOAL_TYPE } from "./marathon";
+import { finishInWords, MARATHON_TIMERS, marathonGoalTypeOf, marathonProviderIdOf } from "./marathon";
 import { attestMarathonResult, MarathonReadError } from "./marathon-reading";
 import { WCA_GOAL_TYPE, wcaProviderId } from "./wca";
 import { attestWcaResult, WcaReadError } from "./wca-reading";
@@ -111,7 +111,7 @@ export async function attestByGoal(goalType: number, link: string, signedSubject
     // Nothing to score: the badge exists, and the certification is inside the subject the funder signed.
     return { subject: reading.subject, score: CREDLY_HAS_IT, testDay: reading.issuedDay, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: credlyProviderId() };
   }
-  if (goalType === MARATHON_GOAL_TYPE || goalType === MIKA_TIMING_GOAL_TYPE) {
+  if (Object.values(MARATHON_TIMERS).some((timer) => timer.goalType === goalType)) {
     const reading = await attestMarathonResult(link);
     // One goal per timing company: a page of the other's would carry the other's provider, and the contract would
     // refuse it; it is refused here first, by its name.

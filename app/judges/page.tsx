@@ -349,6 +349,16 @@ export default async function JudgesPage() {
             and a round that fails is made unrated. Nothing of it is offered until goal 33 is signed.
           </li>
           <li>
+            <strong>race result&apos;s lists.</strong> The same marathon line reads the events race result times (2,126 coming
+            events in 76 countries on 26 Sep 2026, Lusaka and Francistown among them) from the event&apos;s own results
+            list, the bib&apos;s row alone: the name and the time at the columns the register fixed for that race, after
+            checking the list still names those columns as it did. Read on 26 Sep 2026: my race result&apos;s terms of
+            use say organisers publish results with the athlete&apos;s permission and nothing about reading a page; its
+            <code>robots.txt</code> keeps robots out of the list endpoint. Viky reads one row per gift, at the
+            person&apos;s request, naming itself, the risk assumed as for MikaTiming. Nothing of it is offered until goal
+            34 is signed.
+          </li>
+          <li>
             <strong>WAEC&apos;s terms.</strong> WASSCE credits are shown by the person from WAEC&apos;s own result checker
             (D217), and not read for them, because WAEC&apos;s privacy policy tells the holder of an access code it allocates
             &quot;you must not disclose it to any third party&quot;, and the result card&apos;s PIN is one. The card is typed on WAEC&apos;s page and
