@@ -63,7 +63,8 @@ export function WhereYouLive({ address }: Readonly<{ address: string }>) {
       <p className={HELP}>{W.why}</p>
       <CountryPicker
         id="where-you-live"
-        label={W.label}
+        label={W.question}
+        hideLabel
         value={chosen}
         onChange={(next) => {
           if (changing) {

@@ -10,7 +10,7 @@ import { FIELD, HELP } from "../components/ui";
  * under "Use your money", named in the words `Intl` gives and sorted by those names. A native select, so a phone opens
  * its own wheel or list and the keyboard gets it for free.
  */
-export function CountryPicker({ id, label, value, onChange }: Readonly<{ id: string; label: string; value: string | null; onChange: (country: string) => void }>) {
+export function CountryPicker({ id, label, hideLabel = false, value, onChange }: Readonly<{ id: string; label: string; hideLabel?: boolean; value: string | null; onChange: (country: string) => void }>) {
   const [countries, setCountries] = useState<readonly { code: string; name: string }[] | null | "unreadable">(null);
   useEffect(() => {
     let live = true;
@@ -32,7 +32,8 @@ export function CountryPicker({ id, label, value, onChange }: Readonly<{ id: str
   if (countries === "unreadable") return <p className={HELP}>{WORDS.unreadable}</p>;
   return (
     <div className="flex flex-col gap-[var(--space-xs)]">
-      <label htmlFor={id} className="font-medium">
+      {/* Hidden where a heading above already asks the question: still read aloud, never printed twice. */}
+      <label htmlFor={id} className={hideLabel ? "sr-only" : "font-medium"}>
         {label}
       </label>
       <select id={id} className={FIELD} value={value ?? ""} disabled={countries === null} onChange={(event) => event.target.value && onChange(event.target.value)}>
