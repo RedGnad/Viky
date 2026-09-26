@@ -7,7 +7,7 @@ import { AccredibleReadError, attestAccredibleCredential } from "./accredible-re
 import { attestEdxCertificate, EdxReadError } from "./edx-reading";
 import { MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineProviderId } from "./mitx-online-certificate";
 import { attestMitxOnlineCertificate, MitxOnlineReadError } from "./mitx-online-reading";
-import { finishInWords, MARATHON_GOAL_TYPE, marathonProviderId } from "./marathon";
+import { finishInWords, MARATHON_GOAL_TYPE, marathonGoalTypeOf, marathonProviderIdOf, MIKA_TIMING_GOAL_TYPE } from "./marathon";
 import { attestMarathonResult, MarathonReadError } from "./marathon-reading";
 import { CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyProviderId } from "./credly-badge";
 import { attestCredlyBadge, CredlyReadError } from "./credly-reading";
@@ -109,11 +109,14 @@ export async function attestByGoal(goalType: number, link: string, signedSubject
     // Nothing to score: the badge exists, and the certification is inside the subject the funder signed.
     return { subject: reading.subject, score: CREDLY_HAS_IT, testDay: reading.issuedDay, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: credlyProviderId() };
   }
-  if (goalType === MARATHON_GOAL_TYPE) {
+  if (goalType === MARATHON_GOAL_TYPE || goalType === MIKA_TIMING_GOAL_TYPE) {
     const reading = await attestMarathonResult(link);
+    // One goal per timing company: a page of the other's would carry the other's provider, and the contract would
+    // refuse it; it is refused here first, by its name.
+    if (marathonGoalTypeOf(reading.race.timer) !== goalType) throw new MarathonReadError("PROOF_MISMATCH", "That result is from another timing company than the one this gift reads");
     // The day it is judged by is the day the result was read (D273): the race's own date is the register's, and the
     // bib entered before the start is what ties the reading to the race.
-    return { subject: reading.subject, score: reading.metric, testDay: reading.observedAt, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: marathonProviderId(), line: { username: reading.runner, playerId: reading.bib, rating: reading.finishSeconds } };
+    return { subject: reading.subject, score: reading.metric, testDay: reading.observedAt, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: marathonProviderIdOf(reading.race.timer), line: { username: reading.runner, playerId: reading.bib, rating: reading.finishSeconds } };
   }
   if (goalType === MITX_ONLINE_GOAL_TYPE) {
     const reading = await attestMitxOnlineCertificate(link);

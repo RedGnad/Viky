@@ -26,6 +26,30 @@ import { normaliseCertificateName } from "./duolingo-english-test";
 
 export const MARATHON_SOURCE = "Breizh Chrono";
 
+/**
+ * The timing companies read (the founder, 27 Sep 2026: a second platform, not a second race). Each has its own
+ * attested source and its own goal on the contract, so a reading from one can never settle a gift made on the other.
+ */
+export type MarathonTimer = "breizh-chrono" | "mika-timing";
+export const MARATHON_TIMERS: Readonly<Record<MarathonTimer, { name: string; goalType: number; provider: string }>> = {
+  "breizh-chrono": { name: "Breizh Chrono", goalType: 30, provider: "viky:provider:breizh-chrono-zkfetch:v1" },
+  "mika-timing": { name: "MikaTiming", goalType: 31, provider: "viky:provider:mika-timing-zkfetch:v1" },
+};
+export function marathonGoalTypeOf(timer: MarathonTimer): number {
+  return MARATHON_TIMERS[timer].goalType;
+}
+export function marathonProviderIdOf(timer: MarathonTimer): Hex {
+  return keccak256(stringToHex(MARATHON_TIMERS[timer].provider));
+}
+/** MikaTiming's races open when goal 31 is signed on the contract: until then they are listed to nobody and made by nobody. */
+export const MIKA_TIMING_OPEN = false;
+
+/**
+ * The results sites MikaTiming runs for the races in the register, and no other host is ever read: each is
+ * `<host>/<year>`, the tail of every page's URL there (read 26 Sep 2026).
+ */
+export const MIKA_TIMING_HOSTS: readonly string[] = ["results.chicagomarathon.com", "frankfurt.r.mikatiming.de", "boston.r.mikatiming.com", "berlin.r.mikatiming.com"];
+
 /** The distances a gift can be made on (the founder, 27 Sep 2026): the name of the line stays "Finish a marathon". */
 export type MarathonDistance = "marathon" | "half" | "10k";
 export const DISTANCE_LABELS: Readonly<Record<MarathonDistance, string>> = { marathon: "Marathon", half: "Half marathon", "10k": "10 km" };
@@ -34,16 +58,23 @@ export type MarathonEvent = Readonly<{
   distance: MarathonDistance;
   /** The heat as the timing company names it on its own pages, "Le 10km Lamotte". */
   label: string;
-  /** The heat's key on the results site, derived from the label by `heatSlugOf` (measured on 40 heats, 26 Sep 2026). */
+  /**
+   * The heat's key on the results site: on Breizh Chrono derived from the label by `heatSlugOf` (measured on 40
+   * heats, 26 Sep 2026); on MikaTiming the start of the event's code in the results rows (`event-MAR_…` at Chicago,
+   * `event-L_…` at Frankfurt, `event-R` at Boston), read on their 2025 and 2026 pages on 26 Sep 2026.
+   */
   heat: string;
 }>;
 
 export type MarathonRace = Readonly<{
   /** The race in Viky's terms, `marathon-vert-rennes-2026`. */
   raceId: string;
-  /** Who times it, which decides the source that reads it. */
-  timer: "breizh-chrono";
-  /** The timing company's own reference of the event, the tail of its results URL and of its Klikego page. */
+  /** Who times it, which decides the source that reads it and the goal on the contract. */
+  timer: MarathonTimer;
+  /**
+   * The timing company's own reference of the event: on Breizh Chrono the tail of its results URL and of its Klikego
+   * page, `1488071608761-442`; on MikaTiming the results site and the year, `results.chicagomarathon.com/2026`.
+   */
   ref: string;
   /** The race as the timing company names it, with the year. */
   name: string;
@@ -142,6 +173,12 @@ export const MARATHON_RACES: readonly MarathonRace[] = [
   { raceId: "dsn-by-night-2026", timer: "breizh-chrono", ref: "1488071608761-946", name: "DSN By Night 2026", country: "FR", town: "Dol-de-Bretagne", startsAt: "2026-11-27T00:00:00+01:00", events: [event("10k", "10km")] },
   { raceId: "la-creative-chantepie-2026", timer: "breizh-chrono", ref: "1254897502069-19", name: "La Créative Chantepie 2026", country: "FR", town: "Chantepie", startsAt: "2026-11-29T00:00:00+01:00", events: [event("10k", "LE 10KM CREATIVE CHANTEPIE")] },
   { raceId: "la-grimpette-2026", timer: "breizh-chrono", ref: "1488071608761-947", name: "La Grimpette 2026", country: "FR", town: "Coesmes", startsAt: "2026-11-29T00:00:00+01:00", events: [event("10k", "10km")] },
+  // MikaTiming's marathons of the year, dated on each race's own site on 26 Sep 2026 ("October 11, 2026", "25th
+  // OCTOBER 2026", "Apr 19th, 2027"), midnight of the day where the race is run. Berlin ran on 27 Sep 2026 and is
+  // not offered; Tokyo's results site did not answer.
+  { raceId: "chicago-2026", timer: "mika-timing", ref: "results.chicagomarathon.com/2026", name: "Bank of America Chicago Marathon 2026", country: "US", town: "Chicago", startsAt: "2026-10-11T00:00:00-05:00", events: [{ distance: "marathon", label: "Marathon", heat: "MAR_" }] },
+  { raceId: "frankfurt-2026", timer: "mika-timing", ref: "frankfurt.r.mikatiming.de/2026", name: "Mainova Frankfurt Marathon 2026", country: "DE", town: "Frankfurt", startsAt: "2026-10-25T00:00:00+02:00", events: [{ distance: "marathon", label: "Marathon", heat: "L_" }] },
+  { raceId: "boston-2027", timer: "mika-timing", ref: "boston.r.mikatiming.com/2027", name: "Boston Marathon 2027", country: "US", town: "Boston", startsAt: "2027-04-19T00:00:00-04:00", events: [{ distance: "marathon", label: "Marathon", heat: "R" }] },
 ];
 
 export function marathonRaceById(raceId: string): MarathonRace | undefined {
@@ -160,14 +197,19 @@ export function marathonEventById(courseId: string): { race: MarathonRace; event
   return race && chosen ? { race, event: chosen } : undefined;
 }
 
-/** The races offered now: the ones not yet started, and to an operator's account the ones kept for the test gift too. */
-export function racesOffered(nowMs: number, operator: boolean): readonly MarathonRace[] {
-  return MARATHON_RACES.filter((race) => (race.operatorOnly ? operator : bibStillOpen(race, nowMs)));
+/** Whether a race's timing company is open: its goal signed on the contract, its source running on the reading service. */
+export function timerOpen(timer: MarathonTimer): boolean {
+  return timer === "breizh-chrono" || MIKA_TIMING_OPEN;
 }
 
-/** A bib as a timing company prints it: one to six figures. */
-export function isValidBib(value: string): boolean {
-  return /^\d{1,6}$/.test(value.trim());
+/** The races offered now: the ones not yet started whose timer is open, and to an operator's account the ones kept for the test gift too. */
+export function racesOffered(nowMs: number, operator: boolean): readonly MarathonRace[] {
+  return MARATHON_RACES.filter((race) => timerOpen(race.timer) && (race.operatorOnly ? operator : bibStillOpen(race, nowMs)));
+}
+
+/** A bib as a timing company prints it: one to six figures, which MikaTiming may prefix with a letter or two ("F3166" at Frankfurt). */
+export function isValidBib(value: string, timer: MarathonTimer = "mika-timing"): boolean {
+  return timer === "breizh-chrono" ? /^\d{1,6}$/.test(value.trim()) : /^[A-Z]{0,2}\d{1,6}$/.test(value.trim().toUpperCase());
 }
 
 /** Whether the bib can still be entered: before the race starts, and never after (the founder, 26 Sep 2026). */
@@ -175,14 +217,37 @@ export function bibStillOpen(race: MarathonRace, nowMs: number): boolean {
   return nowMs < new Date(race.startsAt).getTime();
 }
 
-/** The account the reading service reads: the race's reference and the heat, and the bib, in one string. */
+/**
+ * The account a gift reads with: the race's reference and the heat, and the bib, in one string. On Breizh Chrono it
+ * is the page the service reads; on MikaTiming it names the search, and the page read is found from it (src/mika-timing.ts).
+ */
 export function marathonAccount(race: Pick<MarathonRace, "ref">, chosen: Pick<MarathonEvent, "heat">, bib: string): string {
-  return `${race.ref}|${chosen.heat}|${bib.trim()}`;
+  return `${race.ref}|${chosen.heat}|${bib.trim().toUpperCase()}`;
 }
 
 export function marathonAccountOf(account: string): Readonly<{ ref: string; heat: string; bib: string }> | undefined {
   const match = /^(\d{10,16}-\d{1,6})\|([a-z0-9-]{1,40})\|(\d{1,6})$/.exec(account);
   return match ? { ref: match[1], heat: match[2], bib: match[3] } : undefined;
+}
+
+/** A MikaTiming account: the results site and the year, the event's code or its start, and the bib. */
+export function mikaAccountOf(account: string): Readonly<{ host: string; year: string; heat: string; bib: string }> | undefined {
+  const match = /^([a-z0-9.-]{4,60})\/(20\d\d)\|([A-Z][A-Z0-9_]{0,12})\|([A-Z]{0,2}\d{1,6})$/.exec(account);
+  return match && MIKA_TIMING_HOSTS.includes(match[1]) ? { host: match[1], year: match[2], heat: match[3], bib: match[4] } : undefined;
+}
+
+/**
+ * A runner's name as MikaTiming prints it, "Dr. Aarak, Kim Andre (NOR)" (measured at Frankfurt, Chicago, Berlin and
+ * Boston on 26 Sep 2026), brought to what a funder would write: the nation in brackets and a title before the name
+ * dropped, the comma between the names a space. The order of the names never counts (`normaliseCertificateName`).
+ */
+export function mikaRunnerName(printed: string): string {
+  return printed
+    .replace(/\s*\([A-Z]{2,3}\)\s*$/, "")
+    .replace(/^(?:dr|prof|mr|mrs|ms)\.?\s+/i, "")
+    .replace(/,/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** The person, the race and its heat, as the funder signs them (`subject`): the result pays only when all match. */
@@ -236,9 +301,10 @@ export function finishInWords(finishSeconds: number): string {
 
 export const MARATHON_DURATION_DAYS = Object.freeze({ min: 7, max: 400, suggested: 120 });
 
-/** Goal 30 on `MilestoneGift`, after MITx Online's 29. */
-export const MARATHON_GOAL_TYPE = 30;
+/** Goal 30 on `MilestoneGift`, after MITx Online's 29: Breizh Chrono. MikaTiming's is 31 (`MARATHON_TIMERS`). */
+export const MARATHON_GOAL_TYPE = MARATHON_TIMERS["breizh-chrono"].goalType;
+export const MIKA_TIMING_GOAL_TYPE = MARATHON_TIMERS["mika-timing"].goalType;
 
 export function marathonProviderId(): Hex {
-  return keccak256(stringToHex("viky:provider:breizh-chrono-zkfetch:v1"));
+  return marathonProviderIdOf("breizh-chrono");
 }

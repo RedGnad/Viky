@@ -1038,6 +1038,41 @@ before the person reads (the account is built from the register at read time, no
 The Marathon de Dakar 2026 is added the day its organiser announces it (nothing on Klikego nor in the calendar on
 26 Sep 2026). The Marathon de Paris is timed by another company and needs its own source.
 
+## Goal 31 on the milestone contract: a marathon finished, read from MikaTiming (D277)
+
+Provider id `viky:provider:mika-timing-zkfetch:v1` = `0x5f162f6734f7ec9371fc0cfc3eff666a1c01397748a818073a2cec9b4a2708b7`, shape 1, data
+`0x5ba19152000000000000000000000000000000000000000000000000000000000000001f5f162f6734f7ec9371fc0cfc3eff666a1c01397748a818073a2cec9b4a2708b70000000000000000000000000000000000000000000000000000000000000001`.
+`pnpm safe:session` batches it with any other missing goal, carried by the relayer. The line is the same, "Finish a
+marathon": the race chosen decides the goal (`goalTypeOf`), and a reading from one timing company never settles the
+other's goal. Until the goal is signed, `MIKA_TIMING_OPEN` (src/marathon.ts) is false: MikaTiming's races are listed
+to nobody, the operator included, and the create route refuses them (`NOT_OPEN`). The opening PR flips it, after
+reading the goal back.
+
+**The reading, in two steps** (src/mika-timing.ts, src/marathon-reading.ts): the search by bib on the race's
+results site, `https://<host>/<year>/?pid=search&search[start_no]=<bib>`, read plainly, whose rows carry the event's
+code (`event-MAR_…`), the bib as printed and the runner's id (`idp=…`); the row taken is the exact bib in the race's
+event (the search answers the lettered twin too, "3166" and "F3166"). Then the runner's own page,
+`?content=detail&idp=<id>`, read attested by the source `mika-timing-runner`: the name, the bib, the net finish time
+(the one every site prints; Chicago prints no gun time), and the page's `og:url`, which carries the year, so a site
+still answering last year's pages (Frankfurt 2026 answered 2025's on 26 Sep 2026) is refused. The source reads four
+hosts and no other (`MIKA_TIMING_HOSTS`). The name is printed "Aarak, Kim Andre (NOR)", sometimes with a title:
+`mikaRunnerName` drops the nation and the title before the terms are compared.
+
+**A MikaTiming race is added** by one row: `ref` is `<host>/<year>` as the site's own URLs print it, `startsAt` is
+midnight of the day the race's own site dates it, and its one heat is the start of the event's code in the results
+rows (`MAR_` at Chicago, `L_` at Frankfurt, `R` at Boston, read on their pages). Registered on 26 Sep 2026: Chicago
+(11 Oct 2026), Frankfurt (25 Oct 2026), Boston (19 Apr 2027). Berlin ran on 27 Sep 2026; Tokyo's results site
+answered 403. The sites' `robots.txt` say `Disallow: /` to every robot, and they answer 403 to a bare user agent:
+the source names Viky and its site in its user agent (`Mozilla/5.0 (compatible; Viky/1.0; +https://viky.cash)`),
+which they answer 200 to. Both written on the judges' page, the risk assumed.
+
+**Proof (a), 26 Sep 2026, 00:56 UTC**, through the service: `ZKFETCH_WORKER_URL=<the service> pnpm exec tsx -e` with
+`attestedRead("mika-timing-runner", "frankfurt.r.mikatiming.de/2025|HCH3BKLB662C9A|3166", reclaimAttestedReadDeps())`
+answered "Dr. Aarak, Kim Andre (NOR)", 03:21:04, nullifier `0x58a63000…a705`.
+
+The source is in the shared list: the service is redeployed from the branch before the merge, on the fingerprint
+`0x5b5f62ae…1ea2`.
+
 **The bib after the start.** `/api/marathon/bib` refuses a bib once the race has started, for everybody but an
 operator account (`VIKY_OPERATOR_ACCOUNTS`): that door is how a test gift is run on a race already run, and it is
 written on the judges' page. A bib is entered once; there is no route to change it.

@@ -7234,3 +7234,34 @@ Chrono's.
   attested runner's page, a source of its own (goal 31, a Safe session). No 2026 race of theirs can be registered
   today: Berlin ran on 27 Sep, Chicago 2026 has not published its event, Frankfurt 2026 answers with 2025, Boston
   and Tokyo 2027 are not up. The source and the line come in their own PR; the races the day their pages exist.
+
+## D277, 27 Sep 2026: MikaTiming, the second timing company of "Finish a marathon"
+
+The founder, 27 Sep 2026: a second platform, not a second race. Verified at the source on 26 Sep 2026 (D276) that
+its pages read like Breizh Chrono's: so a line "MikaTiming" and its marathons of the year in the register.
+
+- **One line, one goal per timing company.** "Finish a marathon" stays the one card; the race chosen decides the goal
+  (`goalTypeOf`: 30 for Breizh Chrono, 31 for MikaTiming, provider `viky:provider:mika-timing-zkfetch:v1` =
+  `0x5f162f67…08b7`), and a reading from one company never settles the other's goal (`PROOF_MISMATCH` before the
+  contract would refuse it). Default applied, to confirm: the founder wrote "une ligne MikaTiming"; a second card
+  with the same name would not tell a funder anything the race's line does not.
+- **The reading, in two steps.** The search by bib is read plainly and finds the runner's id; the runner's own page
+  is read attested (`mika-timing-runner`, four patterns: name, bib, net finish time, the page's own year and id).
+  The net time is the one every site prints (Chicago prints no gun time). The name is printed "Aarak, Kim Andre
+  (NOR)", sometimes with a title: nation and title are dropped before the terms are compared. A bib may carry a
+  letter or two on MikaTiming ("F3166"); the bib field takes them for those races only.
+- **The register.** Chicago (11 Oct 2026), Frankfurt (25 Oct 2026) and Boston (19 Apr 2027), dated on their own
+  sites, each on `<host>/<year>` and the event code's start. Berlin ran on 27 Sep 2026; Tokyo's site answered 403.
+  Nothing of MikaTiming's is offered until goal 31 is signed (`MIKA_TIMING_OPEN`), the operator included.
+- **Terms**, read the same day: the results sites' legal notice and mika:timing's general terms (organisers' terms)
+  say nothing about reading a page; the privacy statement concerns visitors' data; the sites' `robots.txt` say
+  `Disallow: /` to every robot. Written on the judges' page as the risk assumed; the founder decides whether the
+  line opens.
+- **The user agent.** The sites answer 403 to a bare user agent ("Mozilla/5.0 (Viky)", curl) and 200 to one that
+  names its author and its site in the form every crawler uses: the source sends
+  `Mozilla/5.0 (compatible; Viky/1.0; +https://viky.cash)`, which says who is reading and never pretends to be a
+  browser. Default applied, to confirm.
+- **Proof (a), done on 26 Sep 2026 at 00:56 UTC**: the reading service, redeployed on the fingerprint
+  `0x5b5f62ae…1ea2` and healthy, read the runner's page of bib 3166 of the Frankfurt Marathon 2025 through the
+  attested fetch, found from the search by bib: "Dr. Aarak, Kim Andre (NOR)", 03:21:04, year 2025, one proof,
+  nullifier `0x58a63000…a705`. Proofs (b) and (c) wait for goal 31 and a race whose 2026 pages exist.

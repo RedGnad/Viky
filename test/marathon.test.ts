@@ -32,7 +32,9 @@ test("the account is the race's reference, its heat and the bib, and nothing els
   assert.equal(marathonAccountOf("1488071608761-442|marathon|../x"), undefined);
   assert.ok(BREIZH_CHRONO_RUNNER.accepts(ACCOUNT) && !BREIZH_CHRONO_RUNNER.accepts("x|y|z"));
   assert.equal(BREIZH_CHRONO_RUNNER.url(ACCOUNT), "https://resultats.breizhchrono.com/bc/resultats/coureur.jsp?ref=1488071608761-442&heat=marathon&dossard=347");
-  assert.ok(isValidBib("347") && isValidBib("1") && !isValidBib("A347") && !isValidBib("1234567"));
+  assert.ok(isValidBib("347", "breizh-chrono") && isValidBib("1", "breizh-chrono") && !isValidBib("A347", "breizh-chrono") && !isValidBib("1234567", "breizh-chrono"));
+  // MikaTiming prints a letter or two before some bibs ("F3166", the women's bibs at Frankfurt).
+  assert.ok(isValidBib("F3166", "mika-timing") && isValidBib("f3166") && isValidBib("21735") && !isValidBib("FFF1") && !isValidBib("3166F"));
 });
 
 test("the two patterns read a runner's page: the name, the bib and the official time", () => {
@@ -253,7 +255,11 @@ test("the routes build the account from the gift's race and bound bib, never fro
  * The register of races (the founder, 27 Sep 2026): the coming races with a marathon, a half or a 10 km, the
  * distance chosen at creation, a race already run offered to nobody but an operator's account.
  */
-import { DISTANCE_LABELS, heatSlugOf, marathonCourseId, marathonEventById, racesOffered } from "../src/marathon";
+import { DISTANCE_LABELS, heatSlugOf, marathonCourseId, marathonEventById, marathonGoalTypeOf, marathonProviderIdOf, MIKA_TIMING_GOAL_TYPE, MIKA_TIMING_HOSTS, MIKA_TIMING_OPEN, mikaAccountOf, mikaRunnerName, racesOffered } from "../src/marathon";
+import { MIKA_TIMING_RUNNER } from "../src/attested-sources";
+import { mikaDetailAccount, mikaEventMatches, mikaRowsOf, mikaRunnerIdOf, mikaSearchUrl, mikaValuesOf } from "../src/mika-timing";
+import { certificateOfGoal } from "../src/milestone-conditions";
+import { attestMarathonResult, mikaRunnerAccount } from "../src/marathon-reading";
 
 test("the heat's key on the results site follows from its name: measured on forty heats of eight past events", () => {
   const measured: [string, string][] = [
@@ -269,14 +275,25 @@ test("the heat's key on the results site follows from its name: measured on fort
     ["Le Marathon Vert Rennes", "le-marathon-vert-rennes"],
   ];
   for (const [label, heat] of measured) assert.equal(heatSlugOf(label), heat, label);
-  for (const race of MARATHON_RACES) for (const one of race.events) assert.equal(one.heat, heatSlugOf(one.label), `${race.raceId} ${one.label}`);
+  for (const race of MARATHON_RACES) {
+    if (race.timer !== "breizh-chrono") continue;
+    for (const one of race.events) assert.equal(one.heat, heatSlugOf(one.label), `${race.raceId} ${one.label}`);
+  }
 });
 
 test("the register: one id per race, a date that reads, a heat per distance, and the reference the results site keys on", () => {
   const ids = MARATHON_RACES.map((race) => race.raceId);
   assert.equal(new Set(ids).size, ids.length);
   for (const race of MARATHON_RACES) {
-    assert.match(race.ref, /^\d{10,16}-\d{1,6}$/, race.raceId);
+    if (race.timer === "breizh-chrono") assert.match(race.ref, /^\d{10,16}-\d{1,6}$/, race.raceId);
+    else {
+      // A MikaTiming reference is one of the sites the source accepts and the race's year; its one heat is the event code's start.
+      const [host, year] = race.ref.split("/");
+      assert.ok(MIKA_TIMING_HOSTS.includes(host) && /^20\d\d$/.test(year), race.raceId);
+      assert.equal(race.events.length, 1);
+      assert.match(race.events[0].heat, /^[A-Z][A-Z0-9_]{0,12}$/);
+      assert.equal(new Date(race.startsAt).getUTCFullYear(), Number(year), `${race.raceId} is dated in its year`);
+    }
     assert.ok(Number.isFinite(new Date(race.startsAt).getTime()), `${race.raceId} has a date`);
     assert.ok(race.events.length >= 1 && race.events.length <= 3);
     assert.equal(new Set(race.events.map((one) => one.distance)).size, race.events.length, `${race.raceId}: one heat per distance`);
@@ -308,4 +325,82 @@ test("a race already run is offered to nobody but an operator's account, and a c
   assert.equal(MARATHON_MILESTONE.course?.slugOf("dakar-2023"), undefined);
   assert.match(readFileSync("app/api/gift/certificate/create/route.ts", "utf8"), /certificate\.course\.refuses\(course, isOperator\(account\)\)/);
   assert.match(readFileSync("app/api/marathon/races/route.ts", "utf8"), /racesOffered\(Date\.now\(\), operator\)/);
+});
+
+/**
+ * MikaTiming, the second timing company (the founder, 27 Sep 2026), measured on 26 Sep 2026 at Frankfurt 2025 (bib
+ * 3166, and its lettered twin F3166), Chicago 2025, Berlin 2025 and Boston 2026. The pages below are those, trimmed
+ * to what is read.
+ */
+const MIKA_SEARCH = `<ul class="list-group list-group-multicolumn"><li class=" list-group row list-group-item list-group-header "><div>Place</div></li>
+<li class=" list-active event-L_HCH3BKLB3B8 list-group-item row"> <div class="row"> <h4 class=" list-field type-fullname"><a href="?content=detail&amp;fpid=search&amp;pid=search&amp;idp=HCH3BKLB662C9A&amp;lang=EN_CAP&amp;event=L_HCH3BKLB3B8&amp;search%5Bstart_no%5D=3166&amp;search_event=L_HCH3BKLB3B8">Dr. Aarak, Kim Andre (NOR)</a></h4> </div>
+<div class=" list-field type-field" style="width: 50px"><div class="visible-xs-block visible-sm-block list-label">Bib Number</div>3166</div> </li>
+<li class=" event-L_HCH3BKLB3B8 list-group-item row"> <h4 class=" list-field type-fullname"><a href="?content=detail&amp;idp=HCH3BKLB664F51&amp;event=L_HCH3BKLB3B8">Althoff, Kim (GER)</a></h4>
+<div class=" list-field type-field" style="width: 50px"><div class="visible-xs-block visible-sm-block list-label">Bib Number</div>F3166</div> </li>
+<li class=" event-S_HCH3BKLB3B9 list-group-item row"> <h4 class=" list-field type-fullname"><a href="?content=detail&amp;idp=HCH3BKLB66AAAA&amp;event=S_HCH3BKLB3B9">Relay, Team</a></h4>
+<div class=" list-field type-field" style="width: 50px"><div class="visible-xs-block visible-sm-block list-label">Bib Number</div>3166</div> </li></ul>`;
+function mikaDetailPage(runner: string, bib: string, official: string | null, year = "2026", idp = "HCH3BKLB662C9A"): string {
+  return `<meta property="og:url" content="https://frankfurt.r.mikatiming.de/${year}/?content=detail&amp;event=L_HCH3BKLB3B8&amp;event_main_group=${year}&amp;idp=${idp}" />
+<table class="table table-condensed"> <tbody> <tr class=" f-__fullname" > <th class="desc" >Name</th> <td class="f-__fullname last">${runner}</td> </tr>
+<tr class="list-highlight f-start_no_text" > <th class="desc" >Bib Number</th> <td class="f-start_no_text last">${bib}</td> </tr>
+${official ? `<tr class="list-highlight f-time_finish_netto" > <th class="desc" >Time Total</th> <td class="f-time_finish_netto last">${official}</td> </tr>` : ""}
+<tr class=" f-time_finish_brutto" > <th class="desc" >Finish Time (Gun)</th> <td class="f-time_finish_brutto last">03:29:22</td> </tr> </tbody> </table>`;
+}
+const FRANKFURT = "frankfurt.r.mikatiming.de/2026|L_|3166";
+
+test("MikaTiming: the search by bib gives the runner's id, the lettered twin and another event's bib left aside", () => {
+  assert.equal(mikaSearchUrl("frankfurt.r.mikatiming.de", "2026", "F3166"), "https://frankfurt.r.mikatiming.de/2026/?pid=search&search%5Bstart_no%5D=F3166");
+  const rows = mikaRowsOf(MIKA_SEARCH);
+  assert.deepEqual(rows, [
+    { code: "L_HCH3BKLB3B8", bib: "3166", idp: "HCH3BKLB662C9A" },
+    { code: "L_HCH3BKLB3B8", bib: "F3166", idp: "HCH3BKLB664F51" },
+    { code: "S_HCH3BKLB3B9", bib: "3166", idp: "HCH3BKLB66AAAA" },
+  ]);
+  assert.equal(mikaRunnerIdOf(rows, "L_", "3166"), "HCH3BKLB662C9A");
+  assert.equal(mikaRunnerIdOf(rows, "L_", "F3166"), "HCH3BKLB664F51", "the women's bib is its own runner");
+  assert.equal(mikaRunnerIdOf(rows, "L_", "316"), undefined, "a bib is exact, never a prefix");
+  assert.ok(mikaEventMatches("MAR_9TGG96381A5", "MAR_") && mikaEventMatches("R", "R") && !mikaEventMatches("RW", "R") && !mikaEventMatches("S_X", "L_"));
+  assert.equal(mikaDetailAccount("frankfurt.r.mikatiming.de", "2026", "HCH3BKLB662C9A", "3166"), "frankfurt.r.mikatiming.de/2026|HCH3BKLB662C9A|3166");
+});
+
+test("MikaTiming: the runner's page is read by four patterns, and its name is brought to what a funder writes", () => {
+  const values = mikaValuesOf(mikaDetailPage("Dr. Aarak, Kim Andre (NOR)", "3166", "03:21:04"));
+  assert.deepEqual(values, { runner: "Dr. Aarak, Kim Andre (NOR)", bib: "3166", official: "03:21:04", year: "2026", idp: "HCH3BKLB662C9A" });
+  assert.equal(mikaRunnerName("Dr. Aarak, Kim Andre (NOR)"), "Aarak Kim Andre");
+  assert.equal(mikaRunnerName("Abadi, Kidani"), "Abadi Kidani");
+  assert.ok(sameRunner(mikaRunnerName("Dr. Aarak, Kim Andre (NOR)"), "Kim Andre Aarak"), "the name the funder writes, in its own order");
+  const account = "frankfurt.r.mikatiming.de/2026|HCH3BKLB662C9A|3166";
+  assert.ok(MIKA_TIMING_RUNNER.accepts(account) && !MIKA_TIMING_RUNNER.accepts("evil.example/2026|HCH3BKLB662C9A|3166") && !MIKA_TIMING_RUNNER.accepts(FRANKFURT));
+  assert.equal(MIKA_TIMING_RUNNER.url(account), "https://frankfurt.r.mikatiming.de/2026/?content=detail&idp=HCH3BKLB662C9A");
+  assert.deepEqual(mikaAccountOf(FRANKFURT), { host: "frankfurt.r.mikatiming.de", year: "2026", heat: "L_", bib: "3166" });
+  assert.equal(mikaAccountOf("evil.example/2026|L_|3166"), undefined, "no host but the sites listed");
+});
+
+test("MikaTiming: a plain read finds the runner then reads their page; the year, the bib and the finish are checked", async () => {
+  const pages = (detail: string) => async (url: string) => new Response(url.includes("pid=search") ? MIKA_SEARCH : detail, { status: 200 });
+  const read = await readMarathonResult(FRANKFURT, pages(mikaDetailPage("Dr. Aarak, Kim Andre (NOR)", "3166", "03:21:04")));
+  assert.equal(read.runner, "Aarak Kim Andre");
+  assert.equal(read.finishSeconds, 3 * 3600 + 21 * 60 + 4);
+  assert.equal(read.subject, marathonSubject("Kim Andre Aarak", "frankfurt-2026/marathon"));
+  assert.equal(await mikaRunnerAccount(FRANKFURT, pages("")), "frankfurt.r.mikatiming.de/2026|HCH3BKLB662C9A|3166");
+  await assert.rejects(readMarathonResult("frankfurt.r.mikatiming.de/2026|L_|9999", pages("")), refused("NO_RESULT"));
+  await assert.rejects(readMarathonResult(FRANKFURT, pages(mikaDetailPage("Dr. Aarak, Kim Andre (NOR)", "3166", "03:21:04", "2025"))), refused("NO_RESULT"), "a site still answering last year's pages");
+  await assert.rejects(readMarathonResult(FRANKFURT, pages(mikaDetailPage("Dr. Aarak, Kim Andre (NOR)", "3166", null))), refused("NOT_FINISHED"));
+  await assert.rejects(readMarathonResult(FRANKFURT, pages(mikaDetailPage("Someone, Else", "F3166", "03:21:04"))), refused("ANOTHER_BIB"));
+  await assert.rejects(readMarathonResult("frankfurt.r.mikatiming.de/2031|L_|3166", pages("")), refused("UNKNOWN_RACE"));
+});
+
+test("MikaTiming: its own goal and provider, one line for both timing companies, and nothing offered until goal 31 is signed", () => {
+  assert.equal(MIKA_TIMING_GOAL_TYPE, 31);
+  assert.equal(marathonGoalTypeOf("mika-timing"), 31);
+  assert.equal(marathonProviderIdOf("mika-timing"), "0x5f162f6734f7ec9371fc0cfc3eff666a1c01397748a818073a2cec9b4a2708b7");
+  assert.equal(certificateOfGoal(31), MARATHON_MILESTONE, "goal 31 reads with the marathon's words");
+  assert.equal(MARATHON_MILESTONE.goalTypeOf?.("chicago-2026/marathon"), 31);
+  assert.equal(MARATHON_MILESTONE.goalTypeOf?.("dakar-2023/marathon"), 30);
+  assert.equal(MIKA_TIMING_OPEN, false, "until the founder signs goal 31");
+  const now = new Date("2026-10-01T12:00:00Z").getTime();
+  assert.ok(!racesOffered(now, true).some((race) => race.timer === "mika-timing"), "listed to nobody, the operator included");
+  assert.equal(MARATHON_MILESTONE.course?.refuses?.("chicago-2026/marathon", true)?.code, "NOT_OPEN");
+  assert.match(readFileSync("app/api/gift/certificate/create/route.ts", "utf8"), /goalType: \(course && certificate\.goalTypeOf\?\.\(course\)\) \|\| certificate\.goalType/);
+  assert.match(readFileSync("src/certificate-reading.ts", "utf8"), /if \(marathonGoalTypeOf\(reading\.race\.timer\) !== goalType\) throw new MarathonReadError\("PROOF_MISMATCH"/);
 });

@@ -380,6 +380,35 @@ export const BREIZH_CHRONO_RUNNER: AttestedSource = {
 };
 
 /**
+ * A runner's own page on a results site MikaTiming runs (the founder, 27 Sep 2026: a second timing company), measured
+ * on Frankfurt 2025, Chicago 2025, Berlin 2025 and Boston 2026 on 26 Sep 2026. The account names the site and the
+ * year, the runner's id on it (found by src/mika-timing.ts from the search by bib, which is not attested) and the bib
+ * the gift binds: `frankfurt.r.mikatiming.de/2025|HCH3BKLB662C9A|3166`. Four patterns: the name, the bib as the page
+ * prints it (which the reading compares with the account's), the net finish time (the one every site prints; Chicago
+ * prints no gun time), and the page's own `og:url`, which carries the year and the id, so a site that answers another
+ * year's page (Frankfurt 2026 answered 2025's on 26 Sep 2026) is caught. The sites answer 403 to a bare user agent
+ * ("Mozilla/5.0 (Viky)", "curl", measured 26 Sep 2026) and 200 to one that names its author and its site in the
+ * form every crawler uses, which is the one sent: Viky says who it is, never pretends to be a browser.
+ */
+export const MIKA_TIMING_RUNNER: AttestedSource = {
+  id: "mika-timing-runner",
+  service: "MikaTiming",
+  accept: "text/html",
+  userAgent: "Mozilla/5.0 (compatible; Viky/1.0; +https://viky.cash)",
+  accepts: (account) => /^(?:results\.chicagomarathon\.com|frankfurt\.r\.mikatiming\.de|boston\.r\.mikatiming\.com|berlin\.r\.mikatiming\.com)\/20\d\d\|[A-Z0-9]{8,24}\|[A-Z]{0,2}\d{1,6}$/.test(account),
+  url: (account) => {
+    const [site, idp] = account.split("|");
+    return `https://${site}/?content=detail&idp=${idp}`;
+  },
+  matches: [
+    { type: "regex", value: '<td class="f-__fullname last">(?<runner>[^<]+)</td>' },
+    { type: "regex", value: '<td class="f-start_no(?:_text)? last">(?<bib>[A-Z]{0,2}\\d{1,6})</td>' },
+    { type: "regex", value: '<td class="f-time_finish_netto last">(?<official>\\d{1,2}:\\d{2}:\\d{2})</td>' },
+    { type: "regex", value: 'property="og:url" content="https://[a-z0-9.-]+/(?<year>20\\d\\d)/\\?content=detail&amp;event=[A-Za-z0-9_]+&amp;(?:event_main_group=\\d+&amp;)?idp=(?<idp>[A-Z0-9]+)' },
+  ],
+};
+
+/**
  * A credential's public record on Accredible (D213), the JSON its page is drawn from, measured on a live credential on
  * 24 Sep 2026. Seven patterns, each anchored on its own key or object: the uuid and the title together, the day of
  * issue, expired, revoked, private, the recipient's name inside the recipient object (its masked email matched and
@@ -401,7 +430,7 @@ export const ACCREDIBLE_CREDENTIAL: AttestedSource = {
   ],
 };
 
-const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, MITX_ONLINE_CERTIFICATE, BREIZH_CHRONO_RUNNER, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
+const ALL: readonly AttestedSource[] = [DUOLINGO_PROFILE, CHESS_PROFILE, CHESS_PLAYER, ...Object.values(CHESS_RATINGS), CHESS_TACTICS_RATING, COURSERA_CERTIFICATE, CREDLY_ASSERTION, CREDLY_BADGE_PAGE, DET_CERTIFICATE, EDX_CERTIFICATE, ACCREDIBLE_CREDENTIAL, MITX_ONLINE_CERTIFICATE, BREIZH_CHRONO_RUNNER, MIKA_TIMING_RUNNER, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES];
 
 /**
  * The headers a source is read with, which is part of what is fetched and therefore lives with the sources: it is

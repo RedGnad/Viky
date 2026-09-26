@@ -50,7 +50,7 @@ import {
 import { COURSERA_DURATION_DAYS, COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraCodeOf, courseraSlugOf, courseraSubject } from "./coursera-certificate";
 import { EDX_DURATION_DAYS, EDX_GOAL_TYPE, EDX_HAS_IT, edxCertificateIdOf, edxCourseOf, edxSubject } from "./edx-certificate";
 import { MITX_ONLINE_DURATION_DAYS, MITX_ONLINE_GOAL_TYPE, MITX_ONLINE_HAS_IT, mitxOnlineCourseOf, mitxOnlineKeyOf, mitxOnlineSubject } from "./mitx-online-certificate";
-import { bibStillOpen, DISTANCE_LABELS, isValidBib, MARATHON_DURATION_DAYS, MARATHON_FINISH, MARATHON_GOAL_TYPE, marathonEventById, marathonSubject, marathonTargetInWords, marathonTargetUnderHours } from "./marathon";
+import { bibStillOpen, DISTANCE_LABELS, isValidBib, MARATHON_DURATION_DAYS, MARATHON_FINISH, MARATHON_GOAL_TYPE, marathonEventById, marathonGoalTypeOf, marathonSubject, marathonTargetInWords, marathonTargetUnderHours, MIKA_TIMING_GOAL_TYPE, timerOpen } from "./marathon";
 import { ACCREDIBLE_DURATION_DAYS, ACCREDIBLE_GOAL_TYPE, ACCREDIBLE_HAS_IT, accredibleCourseOf, accredibleIdOf, accredibleSubject } from "./accredible-credential";
 import { CREDLY_DURATION_DAYS, CREDLY_GOAL_TYPE, CREDLY_HAS_IT, credlyBadgeIdOf, credlyPairOf, credlySubject } from "./credly-badge";
 import {
@@ -303,6 +303,10 @@ export type CertificateCondition = Readonly<{
   shape: MilestoneShape;
   /** The goal type on the milestone contract; its shape is fixed there when the goal is registered. */
   goalType: number;
+  /** Every goal this line settles through, when the thing chosen at creation decides which (a marathon's timing company). */
+  goalTypes?: readonly number[];
+  /** The goal for one course, when it is not `goalType`; nothing when the course is unknown. */
+  goalTypeOf?: (course: string) => number | undefined;
   /** Viky's route that reads a pasted certificate, plainly, before any money moves. A shown condition has none. */
   readPath?: string;
   /**
@@ -640,6 +644,12 @@ export const MARATHON_MILESTONE: CertificateCondition = {
   ...COURSERA_MILESTONE,
   condition: MARATHON_FINISH_LINE,
   goalType: MARATHON_GOAL_TYPE,
+  // One line, one goal per timing company: the race chosen decides which (the founder, 27 Sep 2026).
+  goalTypes: [MARATHON_GOAL_TYPE, MIKA_TIMING_GOAL_TYPE],
+  goalTypeOf: (course) => {
+    const found = marathonEventById(course);
+    return found ? marathonGoalTypeOf(found.race.timer) : undefined;
+  },
   asksName: true,
   readPath: "/api/marathon/result",
   validLink: (value) => isValidBib(value),
@@ -656,6 +666,7 @@ export const MARATHON_MILESTONE: CertificateCondition = {
     refuses: (course, operator) => {
       const found = marathonEventById(course);
       if (!found) return { code: "UNKNOWN_RACE", message: "That race is not one Viky reads." };
+      if (!timerOpen(found.race.timer)) return { code: "NOT_OPEN", message: "That race's timing company is not open on Viky yet." };
       if (!operator && (found.race.operatorOnly || !bibStillOpen(found.race, Date.now()))) return { code: "RACE_RUN", message: "That race has been run. Choose one still to come." };
       return undefined;
     },
@@ -1465,5 +1476,5 @@ export function certificateById(conditionId: string): CertificateCondition | und
 
 /** The certificate condition a gift's goal type on the contract stands for, which is how a reading finds its words. */
 export function certificateOfGoal(goalType: number): CertificateCondition | undefined {
-  return CERTIFICATES.find((entry) => entry.goalType === goalType);
+  return CERTIFICATES.find((entry) => entry.goalType === goalType || entry.goalTypes?.includes(goalType));
 }
