@@ -258,7 +258,14 @@ async function runPass(
       lines.push({ giftId, step: "drain", result: error instanceof Error ? error.message : "no contract recorded" });
       continue;
     }
-    const gift = await deps.read(escrow, giftId);
+    let gift: Awaited<ReturnType<DailyPassDeps["read"]>>;
+    try {
+      gift = await deps.read(escrow, giftId);
+    } catch (error) {
+      // A gift the chain could not be read for is one line of the report; the others are still settled.
+      lines.push({ giftId, step: "read", result: `failed: ${failureCode(error)}` });
+      continue;
+    }
     if (gift.cancelled || gift.finalised) {
       // Closed, and nothing to drain or finalise; but what it still owes its funder is sent, by the settling pass.
       if (plan.refund && stillOwedToFunder(gift) > 0n) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
@@ -274,7 +281,14 @@ async function runPass(
     lines.push(await attempt(giftId, "finalise", () => deps.finalise(giftId, escrow)));
     if (plan.refund) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
   }
-  if (deps.milestones) lines.push(...(await deps.milestones(plan.refund)));
+  if (deps.milestones) {
+    try {
+      lines.push(...(await deps.milestones(plan.refund)));
+    } catch (error) {
+      if (stopsEveryRelay(error)) throw error;
+      lines.push({ giftId: "milestones", step: "drain", result: `failed: ${failureCode(error)}` });
+    }
+  }
   // Terms nobody can use any more say so, on the pass that settles. Nothing here moves money: the contract already
   // refuses a deadline that has passed, and this is the row catching up with that fact (the audit's gap e).
   if (plan.refund && deps.retireExits) {
@@ -297,12 +311,24 @@ function describe(outcome: PublicCheckInOutcome): DailyPassLine {
   }
 }
 
+/** A failure every later relay of the pass would meet as well: the relayer below its reserve, on the wrong chain, or not set up. */
+function stopsEveryRelay(error: unknown): boolean {
+  return error instanceof RelayerError && (error.code === "RESERVE_TOO_LOW" || error.code === "WRONG_CHAIN" || error.code === "NOT_CONFIGURED");
+}
+
+/**
+ * One step for one gift. A refusal of the contract, or a failure of this step alone (a finality wait that ran out, an
+ * endpoint that did not answer), is a line of the report and the pass goes on to every other gift (the money path
+ * audit of 27 Sep 2026: one timeout used to end the pass, milestones and exits included). Only a failure every later
+ * relay would meet stops it.
+ */
 async function attempt(giftId: string, step: "drain" | "finalise" | "refund", action: () => Promise<{ hash: string }>): Promise<DailyPassLine> {
   try {
     const result = await action();
     return { giftId, step, result: "sent", hash: result.hash };
   } catch (error) {
     if (error instanceof RelayerError && error.code === "REVERTED") return { giftId, step, result: `refused: ${error.contractError ?? "unknown"}` };
-    throw error;
+    if (stopsEveryRelay(error)) throw error;
+    return { giftId, step, result: `failed: ${failureCode(error)}` };
   }
 }
