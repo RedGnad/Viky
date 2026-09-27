@@ -11,9 +11,9 @@ import { Figure, type FigureProps } from "./Figure";
  * it, both inside the tile's own padding.
  */
 const FIGURES: Readonly<Record<ConditionFamily, FigureProps>> = {
-  learn: { arms: "read", props: ["book"], gaze: { x: 0, y: 0.7 } },
+  learn: { arms: "read", props: ["book"], mouth: "soft", gaze: { x: 0, y: 0.7 } },
   exam: { arms: "wave", mouth: "grin", props: ["cap"] },
-  play: { arms: "hold", props: ["rook"], gaze: { x: 0.7, y: 0.3 } },
+  play: { arms: "hold", props: ["rook"], mouth: "soft", gaze: { x: 0.7, y: 0.3 } },
   move: { arms: "run", legs: "run", lean: -8, mouth: "grin", props: ["speed"] },
 };
 
