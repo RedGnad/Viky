@@ -1,7 +1,8 @@
-import { createPublicClient, createWalletClient, erc20Abi, getAddress, http, type Abi, type Hex, type PublicClient, type WalletClient } from "viem";
+import { createPublicClient, createWalletClient, encodeFunctionData, erc20Abi, getAddress, http, keccak256, type Abi, type Hex, type PublicClient, type WalletClient } from "viem";
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { base } from "viem/chains";
 import { transferAuthorizationMessage, transferAuthorizationTypedData } from "./ausd-authorization";
+import { sendRefusedAndUnknown } from "./base-send-refusal";
 import { AUSD } from "./coins";
 import { AUSD_ADDRESS, monadChain, waitForFinality } from "./monad/chain";
 import { addMonadGasBuffer } from "./monad-gas";
@@ -102,16 +103,31 @@ export async function treasuryCovers(usdcUnits: bigint, clients: BaseClients = b
   return held.usdcUnits >= usdcUnits && held.ethWei > 0n;
 }
 
-/** Pays one invoice: the exact USDC Bitrefill asked, to the address it gave, on Base, and waits for the receipt. */
+/**
+ * Pays one invoice: the exact USDC Bitrefill asked, to the address it gave, on Base, and waits for the receipt. The
+ * transfer is signed here and its hash known before it is sent, so a send that throws after signing is
+ * PAYMENT_UNCONFIRMED with that hash, which the order keeps and follows instead of refunding. It is PAYMENT_FAILED only
+ * when it was never signed, or when Base plainly refused it and does not know it.
+ */
 export async function payInvoiceOnBase(input: Readonly<{ to: string; usdcUnits: bigint }>, clients: BaseClients = baseClients()): Promise<{ hash: Hex }> {
   if (!/^0x[0-9a-fA-F]{40}$/.test(input.to)) throw new TreasuryError("PAYMENT_FAILED", "Bitrefill's payment address is not an address on Base");
   if (input.usdcUnits <= 0n) throw new TreasuryError("PAYMENT_FAILED", "Nothing to pay");
   if (!(await treasuryCovers(input.usdcUnits, clients))) throw new TreasuryError("TREASURY_SHORT", "The treasury cannot pay this right now");
-  let hash: Hex;
+  let serializedTransaction: Hex;
   try {
-    hash = await clients.walletClient.writeContract({ address: BASE_USDC_ADDRESS, abi: erc20Abi, functionName: "transfer", args: [getAddress(input.to), input.usdcUnits], account: clients.account, chain: base });
+    const data = encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [getAddress(input.to), input.usdcUnits] });
+    const request = await clients.walletClient.prepareTransactionRequest({ account: clients.account, chain: base, to: BASE_USDC_ADDRESS, data });
+    serializedTransaction = await clients.account.signTransaction(request as Parameters<PrivateKeyAccount["signTransaction"]>[0], { serializer: base.serializers?.transaction });
   } catch (error) {
     throw new TreasuryError("PAYMENT_FAILED", "The treasury's payment was not sent", { cause: error });
+  }
+  const hash = keccak256(serializedTransaction);
+  try {
+    await clients.walletClient.sendRawTransaction({ serializedTransaction });
+  } catch (error) {
+    if (await sendRefusedAndUnknown(error, hash, clients.publicClient)) throw new TreasuryError("PAYMENT_FAILED", "Base refused the treasury's payment", { cause: error });
+    // Signed, and not plainly refused: the node may have taken it and it may still land, so it is followed.
+    throw new TreasuryError("PAYMENT_UNCONFIRMED", "The treasury's payment may have been sent", { cause: error, hash });
   }
   let receipt;
   try {

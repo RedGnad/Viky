@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import test, { after, before } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
-import { recoverTypedDataAddress, type Hex } from "viem";
+import { decodeFunctionData, erc20Abi, keccak256, recoverTypedDataAddress, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { transferAuthorizationTypedData } from "../src/ausd-authorization";
 import { AUSD } from "../src/coins";
@@ -107,10 +107,11 @@ function baseClientsHolding(usdcUnits: bigint, ethWei: bigint, sent: unknown[]):
       waitForTransactionReceipt: async () => ({ status: "success" }),
     } as unknown as BaseClients["publicClient"],
     walletClient: {
-      writeContract: async (call: unknown) => {
-        sent.push(call);
-        return "0xpaid" as Hex;
+      prepareTransactionRequest: async (call: { to: Hex; data: Hex }) => {
+        sent.push({ address: call.to, ...decodeFunctionData({ abi: erc20Abi, data: call.data }) });
+        return { ...call, chainId: 8453, type: "eip1559", nonce: 0, gas: 60_000n, maxFeePerGas: 2n, maxPriorityFeePerGas: 1n };
       },
+      sendRawTransaction: async ({ serializedTransaction }: { serializedTransaction: Hex }) => keccak256(serializedTransaction),
     } as unknown as BaseClients["walletClient"],
   };
 }
@@ -118,7 +119,7 @@ function baseClientsHolding(usdcUnits: bigint, ethWei: bigint, sent: unknown[]):
 test("an invoice is paid with the exact USDC asked, and never when the treasury cannot cover it", async () => {
   const sent: Array<{ address: string; functionName: string; args: readonly unknown[] }> = [];
   const paid = await payInvoiceOnBase({ to: "0x3333333333333333333333333333333333333333", usdcUnits: 3_812_346n }, baseClientsHolding(10_000_000n, 1n, sent));
-  assert.equal(paid.hash, "0xpaid");
+  assert.match(paid.hash, /^0x[0-9a-f]{64}$/, "the hash of the transfer the treasury signed");
   assert.equal(sent[0].address, BASE_USDC_ADDRESS);
   assert.equal(sent[0].functionName, "transfer");
   assert.equal(sent[0].args[1], 3_812_346n);
