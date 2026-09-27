@@ -7571,3 +7571,30 @@ thirty dates between now and January), marathons run as laps on a track or a hil
 mit Höhenmetersammlung"), an advent series, and ultras (not a marathon distance). A race another timing company
 already reads is listed once (the Frankfurt Marathon is MikaTiming's). Kept: 35 of 226, Germany 17 (city races:
 Hanover, Dortmund, Bremen, Aschaffenburg, Kandel, Bergisch Gladbach and the like).
+
+## D294, 28 Sep 2026: the sentence before the partner's page, without the key too, and the code one press away
+
+- **Decision (the founder, 28 Sep 2026, in the words he confirmed that day)**: the sentence before the partner's page
+  shows without Ramp's key as well, just before the tab opens; the funder's code is copied in one press on the same
+  sheet; with the key, D289's "already filled in" replaces it; the same for Mercuryo, with its name.
+- Said differently from the brief, and confirmed by the founder before any code: without the key Ramp opens bare and
+  shows neither the amount nor AUSD, so the sentence says what to choose there ("Choose AUSD on Monad there"); Mercuryo
+  delivers MON, which one confirmed step turns into what a gift holds (D101), so its sentence says "Choose MON on Monad
+  there" and "Come back here to confirm the last step", never "by itself"; a first funder has no account before
+  pressing pay (the passkey makes it then), so the code and its copy show once the account exists, and the waiting
+  screen keeps its own.
+- "Paste your code where it asks for an address": "address" is on the list of words a person never sees (CLAUDE.md);
+  the founder wrote it, as the partner page's own word for the field, and his current call outranks the list. The two
+  lines carry `consumer-words: allow` with that reason.
+- Built in `PAY.partnerPaste` (the coin and network are the rail's own `delivers`) and the pay sheet; captured signed
+  in at 390 and 1440, by day and by night, through Ramp and through Mercuryo, and sent to the founder before merging.
+
+## D295, 28 Sep 2026: the judge's line on the pay sheet
+
+- **Decision (the founder, 28 Sep 2026)**: when an account the judge code credited pays from its balance, the pay
+  sheet carries, above "Put $X in their name", in help text: "Paid from your judge credit. A funder pays by card,
+  inside this sheet, once our payment partner is embedded." Only for such an account, never for a funder.
+- Built: `isJudgeCredited` reads the journal of D291 (a "sent" line for the account) and `GET /api/judge/credit`
+  answers it for the signed-in account only; the sheet asks once it is open and signed in, and draws the line while the
+  balance covers the gift. Captured on the test database: the same account before its line was marked, no sentence;
+  after, the sentence above the action, at 390 and 1440, by day and by night.

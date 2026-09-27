@@ -2,6 +2,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "@/src/account/provider";
+import { getJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { readAusdBalance } from "@/src/client/onchain";
 import { whereTheRailsServe } from "@/src/client/rails";
@@ -17,7 +18,7 @@ import { rateDateInWords } from "@/src/display-currency";
 import type { RailReach } from "@/src/rail-country";
 import { feeSentence, wayInFillsIn, wayInPage, WAYS_IN } from "@/src/rails";
 import { CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
-import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON } from "../../components/ui";
+import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
 import { FieldRefusal } from "../FieldRefusal";
@@ -69,6 +70,25 @@ export function PaySheet({
   const [held, setHeld] = useState<bigint | null>(null);
   const [railIn, setRailIn] = useState<Readonly<Record<string, RailReach>>>({});
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [copyRefused, setCopyRefused] = useState(false);
+  // Whether this account is a judge's, credited by the judge code (D295): asked of the server, false until it says so.
+  const [judge, setJudge] = useState(false);
+  useEffect(() => {
+    if (!open || !address) return;
+    let live = true;
+    getJson<{ credited?: boolean }>("/api/judge/credit").then(
+      (answer) => {
+        if (live) setJudge(answer.credited === true);
+      },
+      () => {
+        if (live) setJudge(false);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [open, address]);
   /** The reader's own clock, read once a minute: the hour the settling pass runs is said in it. */
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   const [problem, setProblem] = useState<string | null>(null);
@@ -156,6 +176,8 @@ export function PaySheet({
       tall
       footer={
         <>
+          {/* Only for an account the judge code credited, read from the server's journal (D295). */}
+          {enough && judge ? <p className={HELP}>{W.fromJudgeCredit}</p> : null}
           <button type="button" className={PRIMARY_BUTTON} disabled={!ready || busy || status === "busy"} onClick={() => void pay()}>
             {busy ? W.paying : enough ? W.payFromAccount(formatAusd(units ?? 0n)) : euros ? W.payEuros(euros) : W.pay}
           </button>
@@ -180,7 +202,32 @@ export function PaySheet({
       {/* The first way refused this person, and the sheet says which, why and which this goes through instead (D239). */}
       {offer.insteadOf && !enough ? <p className={HELP}>{insteadSentence(offer)}</p> : null}
       {/* What the partner's page will be, before it opens (D289), said only where it is true: the page arrives filled in. */}
-      {!enough && wayInFillsIn(way) ? <p className={BODY}>{W.partnerFilledIn}</p> : null}
+      {/* What the partner's page will ask, just before it opens (D289, D294): filled in with Ramp's key, and without it
+          what to choose there and where the code goes, with the code one press away once the account exists. */}
+      {!enough ? <p className={BODY}>{wayInFillsIn(way) ? W.partnerFilledIn : W.partnerPaste(way.name, way.delivers.coin, way.delivers.network, way.arrives === "gift")}</p> : null}
+      {!enough && !wayInFillsIn(way) && address ? (
+        <div className="flex flex-col gap-[var(--space-xs)]">
+          <p className={CARD_LABEL}>{W.yourCode}</p>
+          <p className={`${HELP} select-all break-all tabular-nums`}>{address}</p>
+          <button
+            type="button"
+            // A small key and not a second action (D239): the sheet's one action stays "Pay".
+            className={`${INLINE_BUTTON} self-start`}
+            onClick={() =>
+              void navigator.clipboard.writeText(address).then(
+                () => {
+                  setCopied(true);
+                  setCopyRefused(false);
+                },
+                () => setCopyRefused(true),
+              )
+            }
+          >
+            {copied ? FUND.waiting.copied : FUND.waiting.copy}
+          </button>
+          {copyRefused ? <FieldRefusal id="code-copy-refused">{FUND.waiting.copyRefused}</FieldRefusal> : null}
+        </div>
+      ) : null}
 
       {/* Who this is from, said here because this is where a person becomes somebody to the recipient. It is the one
           thing on the card the image did not draw, and at the card's label size it would be under a thumb and under

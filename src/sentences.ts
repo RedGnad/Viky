@@ -166,9 +166,25 @@ export const PAY = {
    */
   partnerFilledIn:
     "Our partner Ramp takes your card, once with your ID. It shows the amount as digital dollars, AUSD: that is what your gift holds. Your account is already filled in. Come back here: the gift starts by itself.",
+  /**
+   * The same moment when the partner's page opens bare (D294, the founder's decision of 28 Sep 2026, in the words he
+   * confirmed): what to choose there, and where the code goes. The coin and network are the rail's own
+   * (`WayIn.delivers`); a way that delivers the chain's coin ends with one step to confirm, not by itself (D101).
+   * "address" is the partner's own word for that field, kept by the founder's choice over the list of words a person
+   * never sees.
+   */
+  partnerPaste: (name: string, coin: string, network: string, arrivesAsGift: boolean) =>
+    arrivesAsGift
+      ? // consumer-words: allow "address" is the partner page's own word for the field, the founder's choice (D294)
+        `Our partner ${name} takes your card, once with your ID. Choose ${coin} on ${network} there: that is what your gift holds. Paste your code where it asks for an address. Come back here: the gift starts by itself.`
+      : // consumer-words: allow "address" is the partner page's own word for the field, the founder's choice (D294)
+        `Our partner ${name} takes your card, once with your ID. Choose ${coin} on ${network} there. Paste your code where it asks for an address. Come back here to confirm the last step.`,
+  yourCode: "Your code",
   pay: "Pay",
   payEuros: (euros: number) => `Pay ${euros} EUR`,
   payFromAccount: (amount: string) => `Put ${amount} in their name`,
+  /** Above that action, for an account the judge code credited and only for it (D295, the founder's words of 28 Sep 2026). */
+  fromJudgeCredit: "Paid from your judge credit. A funder pays by card, inside this sheet, once our payment partner is embedded.",
   paying: "One moment",
   /** The quiet second button of the mockup: everything only some readers need, one press away. */
   whatHappens: "What happens to my money",
