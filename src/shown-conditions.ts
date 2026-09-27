@@ -6,7 +6,6 @@ import type { MilestoneRecord } from "./milestone-store";
 import { loadPortal, type Portal } from "./portal-store";
 import { TOEFL_RECLAIM_PROVIDER, TOEFL_SHOWN_SUBJECT, toeflScoreOf, toeflShownProviderId } from "./toefl-shown";
 import { EXAM_NOT_REGISTERED, EXAM_PROVIDERS, examProviderId, examSubject, readBacPassed, readCambridge, readIelts, type ExamId } from "./exam-shown";
-import { readUdemyCourse, UDEMY_LOGIN_URL, UDEMY_NOT_REGISTERED, UDEMY_PROVIDER, udemyProviderId, udemySubject } from "./udemy-shown";
 import { readWaecResult, WAEC_LOGIN_URL, WAEC_NOT_REGISTERED, WAEC_PROVIDER, WAEC_SUBJECT, waecProviderId } from "./waec-shown";
 import { CHSI_NOT_REGISTERED, CHSI_PROVIDER, CHSI_SUBJECT, chsiProviderId, readChsiStatus } from "./chsi-shown";
 import { PRONOTE_NOT_REGISTERED, PRONOTE_PROVIDER, pronoteLoginUrl, pronoteProviderId, pronoteSubject } from "./pronote-shown";
@@ -250,38 +249,6 @@ export const BAC_MOROCCO_ENTRY = examEntry("bac-morocco-shown", readBacPassed);
 export const BAC_CAMEROON_ENTRY = examEntry("bac-cameroon-shown", readBacPassed);
 export const BAC_FRANCE_ENTRY = examEntry("bac-france-shown", readBacPassed);
 
-/**
- * A Udemy course finished, shown from the person's own account (D178): the subject is the gift's course, bound in
- * what the funder signed and remembered on the gift's record; the provider, once registered from a real account,
- * reads the course and whether it is finished, and a proof of another course is refused by name.
- */
-export const UDEMY_SHOWN: ShownEntry = {
-  kind: "milestone",
-  subjectOf: (record) => (record.course ? udemySubject(record.course) : null),
-  providerOf: async (record) => {
-    if (!UDEMY_PROVIDER || !record.course) return null;
-    const course = record.course;
-    return {
-      providerId: UDEMY_PROVIDER.id,
-      providerVersion: UDEMY_PROVIDER.version,
-      requestHashes: [UDEMY_PROVIDER.requestHash],
-      loginUrl: UDEMY_LOGIN_URL,
-      read: (fields) => readingOf(readUdemyCourse(fields, course)),
-    };
-  },
-  ...(UDEMY_PROVIDER ? {} : { notRegistered: UDEMY_NOT_REGISTERED }),
-  condition: {
-    conditionId: "udemy-course-shown",
-    providerId: "",
-    providerVersion: "",
-    requestHashes: [],
-    proofCount: 1,
-    phases: ["reach"],
-    attestationProviderId: udemyProviderId(),
-    read: () => refuseShown("NO_COURSE", "A Udemy gift reads its course from its record, and this gift names none"),
-  },
-};
-
 /** An average at school, shown from the person's own EcoleDirecte account (D179): the TOEFL's shape with a provider of ours to come. */
 export const ECOLEDIRECTE_SHOWN: ShownEntry = {
   kind: "milestone",
@@ -377,7 +344,6 @@ export const WAEC_SHOWN: ShownEntry = {
 export const SHOWN_CONDITIONS: readonly ShownEntry[] = [
   DUOLINGO_SHOWN,
   TOEFL_SHOWN,
-  UDEMY_SHOWN,
   CAMBRIDGE_SHOWN,
   IELTS_SHOWN_ENTRY,
   BAC_MOROCCO_ENTRY,

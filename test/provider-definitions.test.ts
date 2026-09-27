@@ -7,7 +7,7 @@ import test from "node:test";
  * says where each pattern comes from, sits on a label the page prints, and says what a page that does not carry it
  * does. A definition that stops saying so fails here, not in front of a person.
  */
-const OURS = ["bac-cameroon", "bac-france", "bac-morocco", "cambridge-english", "ecoledirecte-grade", "ielts", "udemy-course"].map((name) => `docs/reclaim/${name}-shown-provider.md`);
+const OURS = ["bac-cameroon", "bac-france", "bac-morocco", "cambridge-english", "ecoledirecte-grade", "ielts"].map((name) => `docs/reclaim/${name}-shown-provider.md`);
 const CORRIDOR = ["docs/reclaim/ucad-sn-portal.md", "docs/reclaim/ufhb-ci-portal.md"];
 
 test("each of our provider definitions says what a missed extraction does, by name, with nothing lost and the journal", () => {

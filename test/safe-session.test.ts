@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { decodeFunctionData, encodeFunctionData, getAddress, hexToBigInt, sliceHex, type Abi, type Hex } from "viem";
+import { decodeFunctionData, encodeFunctionData, getAddress, hexToBigInt, keccak256, sliceHex, stringToHex, type Abi, type Hex } from "viem";
 import { giftEscrowAbi } from "../src/gift-escrow-abi";
 import { milestoneGiftAbi } from "../src/milestone-gift-abi";
 import { MILESTONE_GOALS } from "../src/milestone-goals";
+import { SHAPE_HAVE_OR_NOT } from "../src/milestone-protocol";
 import { MULTI_SEND_CALL_ONLY, multiSendData, safeCall, safeMultiSendCallOnly, safeTxHash } from "../src/safe";
 import { DAILY_SESSION_GOALS } from "../scripts/safe-session";
 
@@ -17,8 +18,15 @@ const SAFE = getAddress("0xE08D926c148A5065F4Df2892702785a183de86F9");
 const MILESTONE = getAddress("0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e");
 const ESCROW = getAddress("0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233");
 
+/**
+ * Goal 22, a Udemy course finished (D178), was in the session signed on 23 Sep 2026 and left the register on 28 Sep
+ * 2026 (a course is marked finished by its own account): the session is history, so its call is written out here.
+ */
+const UDEMY_GOAL_OF_THE_SESSION = { goalType: 22, providerId: keccak256(stringToHex("viky:provider:udemy-course-shown:v1")), shape: SHAPE_HAVE_OR_NOT };
+
 function sessionCalls() {
-  const milestone = MILESTONE_GOALS.filter((goal) => goal.goalType >= 15 && goal.goalType <= 23).map((goal) => ({
+  const goals = [...MILESTONE_GOALS.filter((goal) => goal.goalType >= 15 && goal.goalType <= 23), UDEMY_GOAL_OF_THE_SESSION].sort((one, other) => one.goalType - other.goalType);
+  const milestone = goals.map((goal) => ({
     to: MILESTONE,
     data: encodeFunctionData({ abi: milestoneGiftAbi as unknown as Abi, functionName: "registerGoal", args: [goal.goalType, goal.providerId, goal.shape] }),
   }));
