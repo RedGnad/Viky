@@ -449,6 +449,26 @@ export default async function JudgesPage() {
             readings never settles.
           </li>
           <li>
+            <strong>The relayer&apos;s one key, found by the audit of 27 Sep 2026.</strong> Every relayed step is sent by one
+            key, and the servers that send them do not share a count of its transactions. Two steps sent at the same moment
+            from two servers can take the same number: the network keeps one, the other is refused and its person is told
+            it did not go through. Nothing moves twice, and the refused step can be sent again. Sharing that count between
+            servers is not built.
+          </li>
+          <li>
+            <strong>A step whose confirmation runs out, found by the same audit.</strong> A claim, a day counted, a
+            withdrawal or a proof is written in Viky&apos;s journal once the chain has made it final. When the wait for that
+            runs out, the step may still land with no line in the journal until it is read again. The contract&apos;s own
+            record is then the truth, and the commands on this page read it. A gift&apos;s creation and a judge credit are
+            already read back from the chain in that case, and a send says it is being confirmed rather than that it failed.
+          </li>
+          <li>
+            <strong>A gift card or top-up whose invoice lapses, found by the same audit.</strong> Which status Bitrefill
+            gives an invoice whose time to pay has run out is not in its documentation, and it could not be read without an
+            account key. An order in that state is listed for an operator rather than guessed, and its money stays counted
+            as held for its person until it is settled.
+          </li>
+          <li>
             <strong>The way out.</strong> Viky can say that the payout service reports the payment as completed. It can
             never say the money arrived in a bank: the bank leg is outside anything Viky can read, and no screen claims
             otherwise.
