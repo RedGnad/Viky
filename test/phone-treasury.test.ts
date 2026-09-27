@@ -118,13 +118,13 @@ function baseClientsHolding(usdcUnits: bigint, ethWei: bigint, sent: unknown[]):
 
 test("an invoice is paid with the exact USDC asked, and never when the treasury cannot cover it", async () => {
   const sent: Array<{ address: string; functionName: string; args: readonly unknown[] }> = [];
-  const paid = await payInvoiceOnBase({ to: "0x3333333333333333333333333333333333333333", usdcUnits: 3_812_346n }, baseClientsHolding(10_000_000n, 1n, sent));
+  const paid = await payInvoiceOnBase({ to: "0x3333333333333333333333333333333333333333", usdcUnits: 3_812_346n }, baseClientsHolding(10_000_000n, 10n ** 15n, sent));
   assert.match(paid.hash, /^0x[0-9a-f]{64}$/, "the hash of the transfer the treasury signed");
   assert.equal(sent[0].address, BASE_USDC_ADDRESS);
   assert.equal(sent[0].functionName, "transfer");
   assert.equal(sent[0].args[1], 3_812_346n);
   const short = (error: unknown) => error instanceof TreasuryError && error.code === "TREASURY_SHORT";
-  await assert.rejects(payInvoiceOnBase({ to: "0x3333333333333333333333333333333333333333", usdcUnits: 3_812_346n }, baseClientsHolding(1_000_000n, 1n, [])), short);
+  await assert.rejects(payInvoiceOnBase({ to: "0x3333333333333333333333333333333333333333", usdcUnits: 3_812_346n }, baseClientsHolding(1_000_000n, 10n ** 15n, [])), short);
   await assert.rejects(payInvoiceOnBase({ to: "0x3333333333333333333333333333333333333333", usdcUnits: 3_812_346n }, baseClientsHolding(10_000_000n, 0n, [])), short, "no ETH for the fee");
 });
 

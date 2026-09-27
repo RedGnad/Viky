@@ -7,6 +7,7 @@ import { sendRefusedAndUnknown } from "./base-send-refusal";
 import { AUSD } from "./coins";
 import { AUSD_ADDRESS, monadChain, waitForFinality } from "./monad/chain";
 import { addMonadGasBuffer } from "./monad-gas";
+import { usdcInFlight } from "./phone-order-store";
 import { relayerClients, relayerPreflight, type RelayerClients } from "./relayer";
 
 /**
@@ -98,10 +99,21 @@ export async function treasuryOnBase(clients: BaseClients = baseClients()): Prom
   return { usdcUnits, ethWei };
 }
 
-/** Whether the treasury can pay this invoice now: checked before the person is asked for anything. */
-export async function treasuryCovers(usdcUnits: bigint, clients: BaseClients = baseClients()): Promise<boolean> {
-  const held = await treasuryOnBase(clients);
-  return held.usdcUnits >= usdcUnits && held.ethWei > 0n;
+/**
+ * The ETH kept for the fees of Base payments (the money path audit of 27 Sep 2026). Read that day at block 51,872,890:
+ * a base fee of 0.005 gwei and a gas price of 0.006 gwei, so a USDC transfer of about 65,000 gas costs about 0.0000004
+ * ETH before Base's L1 data fee. 0.00005 ETH leaves a margin of about a hundred such payments; one wei used to pass.
+ */
+export const BASE_FEE_RESERVE_WEI = 50_000_000_000_000n;
+
+/**
+ * Whether the treasury can pay this invoice now: checked before the person is asked for anything. The USDC must cover
+ * this order and every order whose AUSD already came in and whose invoice is not paid yet (`inFlight`), and the ETH the
+ * fee reserve: otherwise the person's AUSD would be taken for a payment that then fails.
+ */
+export async function treasuryCovers(usdcUnits: bigint, clients: BaseClients = baseClients(), inFlight: () => Promise<bigint> = usdcInFlight): Promise<boolean> {
+  const [held, owed] = await Promise.all([treasuryOnBase(clients), inFlight()]);
+  return held.usdcUnits >= usdcUnits + owed && held.ethWei >= BASE_FEE_RESERVE_WEI;
 }
 
 /** The treasury's turn to pay on Base, or null when another payment still holds it after the wait. */
@@ -146,7 +158,8 @@ export async function payInvoiceOnBase(
 
 /** The payment itself, run while the treasury holds its turn on Base. */
 async function payInTurn(input: Readonly<{ to: string; usdcUnits: bigint }>, clients: BaseClients): Promise<{ hash: Hex }> {
-  if (!(await treasuryCovers(input.usdcUnits, clients))) throw new TreasuryError("TREASURY_SHORT", "The treasury cannot pay this right now");
+  // This order is one of those in flight now: only itself is counted here, and the turn keeps the others from paying meanwhile.
+  if (!(await treasuryCovers(input.usdcUnits, clients, async () => 0n))) throw new TreasuryError("TREASURY_SHORT", "The treasury cannot pay this right now");
   let serializedTransaction: Hex;
   try {
     const data = encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [getAddress(input.to), input.usdcUnits] });
