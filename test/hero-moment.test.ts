@@ -101,7 +101,7 @@ test("the first image is the starting state, the choreography is on the tokens i
   assert.doesNotMatch(arrival, /setInterval|setTimeout|iterations: Infinity/, "the arrival: nothing on a clock, nothing loops");
   assert.doesNotMatch(hero, /setInterval|iterations: Infinity/);
   assert.match(hero, /blink\.fromMs \+ Math\.random\(\) \* \(blink\.toMs - blink\.fromMs\)/, "a blink at a random moment, never a beat");
-  assert.match(hero, /if \(seen && !document\.hidden\)/, "and only while it can be seen");
+  assert.match(hero, /if \(seen && !document\.hidden && msSinceBlink\(\) >= blink\.fromMs\)/, "and only while it can be seen, and not soon after another blink (D309)");
   assert.match(hero, /if \(!stage \|\| reduced\(\)\) return;/, "nothing of it under reduced motion");
   // Folded into the body past the top of the page, lengthened out again at the top (D301).
   assert.match(hero, /const want = window\.scrollY > tuck\.afterPx && \(!action \|\| action\.getBoundingClientRect\(\)\.top < window\.innerHeight\);/, "folded once the card's Send starts to show (D303)");
@@ -218,4 +218,13 @@ test("every character blinks as the light changes, once, and not under reduced m
   assert.match(control, /if \(reduced\(\)\) return;/);
   assert.match(control, /document\.querySelectorAll<SVGElement>\('\[data-part="lid"\]'\)/, "every open eye's lid on the screen");
   assert.doesNotMatch(control, /iterations|setInterval/, "once");
+});
+
+test("a blink now and then waits after any blink, the one as the light changes included (D309)", async () => {
+  const { noteBlink, msSinceBlink } = await import("../app/kit/blink-clock");
+  noteBlink(1_000);
+  assert.equal(msSinceBlink(1_500), 500);
+  const hero = readFileSync("app/kit/HeroMoment.tsx", "utf8");
+  assert.match(hero, /if \(seen && !document\.hidden && msSinceBlink\(\) >= blink\.fromMs\) \{\n\s*noteBlink\(\);/);
+  assert.match(readFileSync("app/kit/Appearance.tsx", "utf8"), /if \(reduced\(\)\) return;\n\s*noteBlink\(\);/);
 });
