@@ -143,6 +143,19 @@ export async function readMarathonResult(account: string, fetchImpl: PlainFetch 
 
 export type AttestedMarathonReading = MarathonResult & Readonly<{ observedAt: number; nullifier: Hex; proofs: readonly ZkFetchProof[] }>;
 
+/**
+ * What a reading put off by the pace tells the person (the money path audit of 27 Sep 2026): when to come back, from the
+ * wait the reading service gave, never a fixed half hour. A put-off that lasts past midnight UTC is the day's ceiling.
+ */
+export function putOffSentence(message: string): string {
+  const seconds = Number(/retry-after=(\d+)/.exec(message)?.[1] ?? NaN);
+  const head = "The timing company is being read too often right now. Nothing was counted:";
+  if (!Number.isFinite(seconds) || seconds <= 0) return `${head} try again later.`;
+  const minutes = Math.ceil(seconds / 60);
+  if (minutes > 90) return `${head} try again after midnight UTC.`;
+  return `${head} try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;
+}
+
 function marathonError(error: unknown): MarathonReadError {
   if (!(error instanceof AttestedReadError)) return new MarathonReadError("FETCH_FAILED", "The result could not be read right now", { cause: error });
   switch (error.code) {
@@ -155,7 +168,7 @@ function marathonError(error: unknown): MarathonReadError {
       return new MarathonReadError("FETCH_FAILED", "The timing company would not answer that reading", { cause: error });
     case "FETCH_FAILED":
       // Put off by the pace (the founder, 27 Sep 2026): nothing is counted, the person reads again later.
-      if (/^THROTTLED/.test(error.message)) return new MarathonReadError("FETCH_FAILED", "The timing company is being read too often right now. Nothing was counted: try again in half an hour.", { cause: error });
+      if (/^THROTTLED/.test(error.message)) return new MarathonReadError("FETCH_FAILED", putOffSentence(error.message), { cause: error });
       return new MarathonReadError("FETCH_FAILED", error.message, { cause: error });
     case "NO_MATCH":
       // An empty page, the answer for a bib nobody wore, matches no pattern.

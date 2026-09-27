@@ -186,6 +186,10 @@ export async function proveCertificate(
     if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError) && !(error instanceof EdxReadError) && !(error instanceof AccredibleReadError) && !(error instanceof MitxOnlineReadError) && !(error instanceof MarathonReadError) && !(error instanceof WcaReadError)) {
       return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? "That could not be read right now");
     }
+    // A reading put off by the pace says when to come back, in its own words, never "in a moment" (the audit of 27 Sep 2026).
+    if (error instanceof MarathonReadError && error.code === "FETCH_FAILED" && error.message.startsWith("The timing company is being read too often")) {
+      return refuse(giftId, "SOURCE_UNAVAILABLE", error.message);
+    }
     switch (error.code) {
       case "INVALID_LINK":
         return refuse(giftId, "INVALID_LINK", words?.linkShape ?? error.message);

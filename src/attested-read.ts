@@ -218,9 +218,10 @@ async function workerZkFetch(source: AttestedSource, account: string, bearer?: s
   } catch (error) {
     throw new AttestedReadError("FETCH_FAILED", "The attested fetch worker did not answer", undefined, { cause: error });
   }
-  const body = (await response.json().catch(() => ({}))) as { proof?: ZkFetchProof; error?: string; message?: string };
+  const body = (await response.json().catch(() => ({}))) as { proof?: ZkFetchProof; error?: string; message?: string; retryAfterSeconds?: number };
   if (response.ok && body.proof) return body.proof;
-  if (body.error === "THROTTLED") throw new AttestedReadError("FETCH_FAILED", `THROTTLED: ${body.message ?? "the source is being read too often, try again later"}`);
+  // Put off by the pace: the wait the service gives travels with the refusal, so the person can be told when to come back.
+  if (body.error === "THROTTLED") throw new AttestedReadError("FETCH_FAILED", `THROTTLED${typeof body.retryAfterSeconds === "number" && body.retryAfterSeconds > 0 ? ` retry-after=${Math.ceil(body.retryAfterSeconds)}` : ""}: ${body.message ?? "the source is being read too often, try again later"}`);
   // The worker passes zkFetch's own words on, so they are read the same way as a local refusal.
   if (body.message) throw classifyFetchFailure(body.message, source);
   throw new AttestedReadError("FETCH_FAILED", `The attested fetch worker answered ${response.status}`);
