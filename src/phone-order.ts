@@ -406,16 +406,22 @@ async function payReceived(inTreasury: PhoneOrder | null, order: PhoneOrder, dep
     if (!invoice) return statusOf(inTreasury);
     if (invoice.status !== "unpaid") return statusOf(await refund(inTreasury, `bitrefill:${invoice.status}`, deps));
   }
+  let paid: Hex;
   try {
-    const paid = await deps.payInvoiceOnBase({ to: invoice.payment.address, usdcUnits: inTreasury.usdcUnits });
-    await deps.store.markPaid(inTreasury.id, paid.hash);
+    paid = (await deps.payInvoiceOnBase({ to: invoice.payment.address, usdcUnits: inTreasury.usdcUnits })).hash;
   } catch (error) {
-    if (error instanceof TreasuryError && error.code === "PAYMENT_UNCONFIRMED" && error.hash) {
-      await deps.store.markPaid(inTreasury.id, error.hash);
-      return followPhoneTopUp({ account: getAddress(inTreasury.account), orderId: inTreasury.id }, deps, 45_000);
+    if (!(error instanceof TreasuryError && error.code === "PAYMENT_UNCONFIRMED" && error.hash)) {
+      const reason = error instanceof TreasuryError ? error.code : "PAYMENT_FAILED";
+      return statusOf(await refund(inTreasury, reason, deps));
     }
-    const reason = error instanceof TreasuryError ? error.code : "PAYMENT_FAILED";
-    return statusOf(await refund(inTreasury, reason, deps));
+    paid = error.hash;
+  }
+  // From here the invoice is paid, or may still be: whatever fails below, the AUSD is never sent back for it.
+  try {
+    await deps.store.markPaid(inTreasury.id, paid);
+  } catch (error) {
+    console.error(`a phone order was paid on Base but not recorded: ${inTreasury.id} ${paid} ${error instanceof Error ? error.message : String(error)}`);
+    return statusOf(inTreasury);
   }
   return followPhoneTopUp({ account: getAddress(inTreasury.account), orderId: inTreasury.id }, deps, 45_000);
 }
