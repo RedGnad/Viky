@@ -2,7 +2,9 @@
 import { APPEARANCE as W } from "@/src/sentences";
 import { useAccount } from "@/src/account/provider";
 import { putJson } from "@/src/client/api";
+import { MOTION } from "@/src/design-tokens";
 import { applyThemeChoice } from "@/src/theme";
+import { reduced } from "./Motion";
 
 /**
  * The appearance control (D97, 18 Sep 2026): one icon in the header of every screen, opposite the mark.
@@ -19,6 +21,19 @@ import { applyThemeChoice } from "@/src/theme";
 
 const BUTTON =
   "inline-flex h-[var(--tap-target)] w-[var(--tap-target)] flex-none items-center justify-center rounded-full text-[var(--text)] transition-colors duration-[var(--hover-duration)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-text)] motion-reduce:transition-none [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--surface)]";
+
+/**
+ * Every character on the screen blinks as the light changes (D308, the founder, 28 Sep 2026): the lid of each open eye
+ * closes and opens once, over the change, which is instant. Nothing moves under reduced motion.
+ */
+function blinkEveryone(): void {
+  if (reduced()) return;
+  const { themeDurationMs, easing, closedTo } = MOTION.blink;
+  const closed = `scaleY(${closedTo})`;
+  document.querySelectorAll<SVGElement>('[data-part="lid"]').forEach((lid) =>
+    lid.animate([{ transform: "scaleY(1)" }, { transform: closed, offset: 0.4 }, { transform: "scaleY(1)" }], { duration: themeDurationMs, easing }),
+  );
+}
 
 /** The appearance the screen is in right now: what was chosen, or else what the device says. */
 function appearanceNow(): "light" | "dark" {
@@ -37,6 +52,7 @@ export function Appearance() {
   const press = () => {
     const next = appearanceNow() === "dark" ? "light" : "dark";
     applyThemeChoice(next);
+    blinkEveryone();
     if (address) void putJson<{ appearance: string }>("/api/account/preferences", { appearance: next }).catch(() => undefined);
   };
   // Nothing is read at render: which icon shows is the stylesheet's decision, from the same rule that paints the

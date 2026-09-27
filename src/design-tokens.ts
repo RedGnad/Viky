@@ -406,7 +406,8 @@ export const MOTION = {
    * is scrolled past the top it folds its arms and legs into its body on medium2, and lengthens them out again at the
    * top. Neither plays under reduced motion, nor while the figure cannot be seen.
    */
-  blink: { durationMs: 150, easing: EASING.standard, closedTo: 0.1, fromMs: 2800, toMs: 6500 },
+  // A blink as the light changes lasts a little longer, Material's medium1, so it is seen over the change (D308).
+  blink: { durationMs: 150, themeDurationMs: 250, easing: EASING.standard, closedTo: 0.1, fromMs: 2800, toMs: 6500 },
   tuck: { durationMs: 420, afterPx: 32 },
   /**
    * The sentence under the landing's card going through what a gift can wait for (D285): each item held long enough to
