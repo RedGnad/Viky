@@ -21,12 +21,12 @@ test.describe("the nature of a condition", () => {
     // On every line of the list, chosen or not: one of the natures' words on each. The list is one family at a time
     // since D224, the card's own family first; the TOEFL score, which is shown by them (D184), is among the exams.
     const said = await sheet.getByText(WORDS).filter({ visible: true }).allTextContents();
-    expect(said.length).toBe(await sheet.getByRole("radio").count());
+    expect(said.length).toBe(await sheet.locator('div[role="group"] > button').count());
     expect(said.every((words) => WORDS.test(words))).toBe(true);
     await sheet.getByRole("button", { name: /All families/i }).click();
     await sheet.getByRole("button", { name: /Exams & school/ }).click();
     const exams = await sheet.getByText(WORDS).filter({ visible: true }).allTextContents();
-    expect(exams.length).toBe(await sheet.getByRole("radio").count());
+    expect(exams.length).toBe(await sheet.locator('div[role="group"] > button').count());
     expect(exams).toContain("SHOWN BY THEM");
     // The meta voice: 13 px, capitals, a pixel of tracking, the muted ink, and no fill behind it.
     const tag = sheet.getByText(WORDS).first();

@@ -13,7 +13,7 @@ import { startingFigure } from "@/src/starting-amount";
 import { dollarsHeld, type Holdings } from "../money";
 import { AmountError } from "@/src/money";
 import { OFFER as W } from "@/src/sentences";
-import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, CHOICE, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
+import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { CardFace } from "../GiftCard";
 import { Character } from "../Character";
 import { CurrencySheet } from "../CurrencySheet";
@@ -215,13 +215,11 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                     wake={ready && filled.for}
                     /* And the days answer a new condition as they answer a new length: they arrive again, in turn (D230). */
                     changedOn={draft.conditionId}
+                    /* What one mark is worth, small under each of them (D304): the figure follows the amount. */
+                    each={units !== undefined && days > 0 ? inTheirCurrency(units / BigInt(days)) : undefined}
                   />
-                  {/* What one mark is worth: the figure follows the amount as a figure does, and nothing moves for it. */}
-                  {units !== undefined && days > 0 ? (
-                    <span className="text-center">
-                      <span className={CHOICE}>{inTheirCurrency(units / BigInt(days))}</span> <span className={HELP}>{W.aDay}</span>
-                    </span>
-                  ) : null}
+                  {/* The row is a picture, so a reader of the screen hears what a day is worth once, in words. */}
+                  {units !== undefined && days > 0 ? <span className="sr-only">{`${inTheirCurrency(units / BigInt(days))} ${W.aDay}`}</span> : null}
                 </>
               )}
             </div>

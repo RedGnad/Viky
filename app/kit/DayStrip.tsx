@@ -115,6 +115,7 @@ export function DayStrip({
   width = 60,
   wake,
   changedOn,
+  each,
 }: Readonly<{
   id: string;
   gift: Shape;
@@ -129,6 +130,8 @@ export function DayStrip({
   wake?: boolean;
   /** Something else the days answer when it changes, as they answer a change of length (D230): the card's condition. */
   changedOn?: string;
+  /** What one day is worth, written small under each of them (D304, the founder, 28 Sep 2026): the card's row only. */
+  each?: string;
 }>) {
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   const row = useRef<HTMLSpanElement>(null);
@@ -167,7 +170,7 @@ export function DayStrip({
   return (
     <span ref={row} aria-hidden data-more={endsHidden(hidden)} style={fadeOf(hidden)} className="day-row-days flex w-full items-end">
       {days.map((day, index) => (
-        <span key={index} data-day={day} data-awake={wake && index === 0 ? "" : undefined} className={`flex ${WIDTHS[width]} flex-none items-end`}>
+        <span key={index} data-day={day} data-awake={wake && index === 0 ? "" : undefined} className={`flex ${WIDTHS[width]} flex-none ${each ? "flex-col items-center" : "items-end"}`}>
           <ArrivalDay gift={id} index={index}>
             {/* A day earned jumps and a day gone back leaves, in the arrival: those two are written into the page (D206),
                 and so is the first day of a card that can open its eyes. */}
@@ -178,6 +181,7 @@ export function DayStrip({
               className="h-auto w-full"
             />
           </ArrivalDay>
+          {each ? <span data-day-worth className="text-[length:var(--type-meta)] leading-[var(--type-meta-leading)] font-medium tabular-nums text-[var(--muted)]">{each}</span> : null}
         </span>
       ))}
     </span>

@@ -31,7 +31,7 @@ async function choose(page: Page, name: RegExp, family: RegExp) {
   const change = sheet(page).getByRole("button", { name: /^Change/i });
   if (await change.isVisible().catch(() => false)) await change.click();
   // The catalogue is one family's list at a time since D224: the line's family is reached from the four tiles.
-  const radio = sheet(page).getByRole("radio", { name });
+  const radio = sheet(page).getByRole("button", { name });
   if (!(await radio.isVisible().catch(() => false))) {
     const all = sheet(page).getByRole("button", { name: /All families/i });
     if (await all.isVisible().catch(() => false)) await all.click();
@@ -63,7 +63,7 @@ test.describe("the line that opens what they will do", () => {
       await line.click();
       await expect(sheet(page)).toBeVisible();
       // The four families, whatever the card carries (D233): no line to pick yet, no way back, four tiles.
-      await expect(sheet(page).getByRole("radio")).toHaveCount(0);
+      await expect(sheet(page).locator('div[role="group"] > button')).toHaveCount(0);
       await expect(sheet(page).getByRole("button", { name: /^Change/i })).toHaveCount(0);
       await expect(sheet(page).locator("[data-family-art]")).toHaveCount(4);
       await sheet(page).getByRole("button", { name: "Close" }).click();
@@ -77,7 +77,7 @@ test.describe("the line that opens what they will do", () => {
     await card(page).getByRole("button").first().click();
     const step = sheet(page);
     await step.getByRole("button", { name: /^Learn/ }).click();
-    await step.getByRole("radio", { name: /Duolingo lesson each day/i }).click();
+    await step.getByRole("button", { name: /Duolingo lesson each day/i }).click();
     await step.getByLabel(/name, if you know it/i).fill("Luis");
     await step.getByLabel(/name, if you know it/i).blur();
     await expect(step.getByRole("radio", { name: /Any course on that profile/i })).toBeChecked();
@@ -97,7 +97,7 @@ test.describe("the line that opens what they will do", () => {
     await expect(line).not.toContainText(/XP a day/i);
     await line.click();
     await sheet(page).getByRole("button", { name: /^Learn/ }).click();
-    await sheet(page).getByRole("radio", { name: /Duolingo lesson each day/i }).click();
+    await sheet(page).getByRole("button", { name: /Duolingo lesson each day/i }).click();
     await expect(sheet(page).getByLabel(/name, if you know it/i)).toBeVisible();
     await expect(sheet(page).getByText(/the courses appear here/i)).toBeVisible();
     await expect(sheet(page).getByRole("button", { name: /^Done$/ })).toBeEnabled();

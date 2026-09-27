@@ -113,16 +113,22 @@ export function lit(light = LIGHT, lean = 0) {
  * rather than from behind), at (15.5, 24.8) and (48.5, 24.8), so it always comes out from behind; only an arm that has
  * to cross the body (raised straight up, folded, holding a book) is drawn over it, from the edge.
  */
-const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [number, number]; turn?: number; over?: boolean; handOver?: boolean }>[]> = {
+/**
+ * `overlay`: the part of an arm that has to show in front (D304), drawn after the body and what it holds, starting just
+ * outside the body's edge on the arm's own curve; the whole arm is drawn under the body as well, so it leaves from
+ * behind and passes in front. `handOver`: the hand drawn in front too.
+ */
+const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [number, number]; turn?: number; over?: boolean; handOver?: boolean; overlay?: string }>[]> = {
   rest: [
     { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13, 37.2] },
     { d: "M48.5 24.8 Q52 30.7 51 35.4", hand: [51, 37.2] },
   ],
   // The two hands at one height (the founder, 25 Sep 2026, D244: 1.4 apart read as a lopsided figure); the forearms
   // still pass at two heights in the middle, so the two lines cross rather than merge into one band.
+  // Folded, the arms still leave from behind the body at their base (D304), and cross in front of it.
   crossed: [
-    { d: "M13 25.5 C12 29 20 30.2 36.5 30", hand: [37.2, 30], over: true },
-    { d: "M51 25.5 C52 29 44 32 27.5 30", hand: [26.8, 30], over: true },
+    { d: "M15.5 24.8 L13 25.5 C12 29 20 30.2 36.5 30", hand: [37.2, 30], handOver: true, overlay: "M13.16 26.92 C14.59 29.33 22.48 30.17 36.5 30" },
+    { d: "M48.5 24.8 L51 25.5 C52 29 44 32 27.5 30", hand: [26.8, 30], handOver: true, overlay: "M50.84 27.03 C49.41 29.79 41.53 31.7 27.5 30" },
   ],
   hold: [
     { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13, 37.2] },
@@ -143,9 +149,10 @@ const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [numb
   ],
   // Holding a book open in front (D268): the arms leave from under the body like the others (D302, the founder, 28 Sep
   // 2026) and pass behind the book; only the hands come over it, closing on its lower corners.
+  // In front of the book from where they leave the body (D304: behind it, they vanished under the book).
   read: [
-    { d: "M15.5 24.8 Q11.4 31.6 14.6 37.4", hand: [15.4, 38.4], handOver: true },
-    { d: "M48.5 24.8 Q52.6 31.6 49.4 37.4", hand: [48.6, 38.4], handOver: true },
+    { d: "M15.5 24.8 Q11.4 31.6 14.6 37.4", hand: [15.4, 38.4], handOver: true, overlay: "M13.7 28.79 Q12.36 33.34 14.6 37.4" },
+    { d: "M48.5 24.8 Q52.6 31.6 49.4 37.4", hand: [48.6, 38.4], handOver: true, overlay: "M50.3 28.79 Q51.64 33.34 49.4 37.4" },
   ],
 };
 const LEGS: Record<LegsPose, readonly Readonly<{ turn: number }>[]> = {
@@ -468,7 +475,12 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
       </g>
       {/* The book is held in front of the body and under the hands that close on it (D268). */}
       {props.includes("book") ? <Book /> : null}
-      {/* Hands that close over what the figure holds, their arms behind it (D302). */}
+      {/* The front part of arms that leave from behind the body (D304), then the hands in front (D302). */}
+      {(limbs ? ARMS[arms] : []).filter((arm) => arm.overlay).map((arm, index) => (
+        <g key={`front-${index}`} data-part="arm" data-pose={arms}>
+          <path data-part="reach" d={arm.overlay} pathLength={1} style={line} />
+        </g>
+      ))}
       {(limbs ? ARMS[arms] : []).filter((arm) => arm.handOver).map((arm, index) => (
         <circle key={`hand-${index}`} data-part="hand" cx={arm.hand[0]} cy={arm.hand[1]} r={1.9} style={{ fill: LIMB, ...FROM_MIDDLE }} />
       ))}
