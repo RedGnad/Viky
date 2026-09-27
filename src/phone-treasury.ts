@@ -2,6 +2,7 @@ import { createPublicClient, createWalletClient, encodeFunctionData, erc20Abi, g
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { base } from "viem/chains";
 import { transferAuthorizationMessage, transferAuthorizationTypedData } from "./ausd-authorization";
+import { takeBasePaymentTurn, type BasePaymentTurn } from "./base-payment-lease";
 import { sendRefusedAndUnknown } from "./base-send-refusal";
 import { AUSD } from "./coins";
 import { AUSD_ADDRESS, monadChain, waitForFinality } from "./monad/chain";
@@ -103,15 +104,48 @@ export async function treasuryCovers(usdcUnits: bigint, clients: BaseClients = b
   return held.usdcUnits >= usdcUnits && held.ethWei > 0n;
 }
 
+/** The treasury's turn to pay on Base, or null when another payment still holds it after the wait. */
+export type TakeBaseTurn = (payer: Hex) => Promise<BasePaymentTurn | null>;
+
 /**
  * Pays one invoice: the exact USDC Bitrefill asked, to the address it gave, on Base, and waits for the receipt. The
  * transfer is signed here and its hash known before it is sent, so a send that throws after signing is
  * PAYMENT_UNCONFIRMED with that hash, which the order keeps and follows instead of refunding. It is PAYMENT_FAILED only
  * when it was never signed, or when Base plainly refused it and does not know it.
+ *
+ * One payment at a time, across every server instance (src/base-payment-lease.ts): the turn is taken before the balance
+ * or the nonce is read, so two payments never read the treasury's nonce at the same time. A payment that does not get it within the wait is
+ * PAYMENT_FAILED, with nothing read, signed or sent. The turn is handed back once the payment's fate is known; a payment
+ * left PAYMENT_UNCONFIRMED may still spend its nonce, so it keeps the turn until the turn's time is over.
  */
-export async function payInvoiceOnBase(input: Readonly<{ to: string; usdcUnits: bigint }>, clients: BaseClients = baseClients()): Promise<{ hash: Hex }> {
+export async function payInvoiceOnBase(
+  input: Readonly<{ to: string; usdcUnits: bigint }>,
+  clients: BaseClients = baseClients(),
+  takeTurn: TakeBaseTurn = (payer) => takeBasePaymentTurn(payer),
+): Promise<{ hash: Hex }> {
   if (!/^0x[0-9a-fA-F]{40}$/.test(input.to)) throw new TreasuryError("PAYMENT_FAILED", "Bitrefill's payment address is not an address on Base");
   if (input.usdcUnits <= 0n) throw new TreasuryError("PAYMENT_FAILED", "Nothing to pay");
+  let turn: BasePaymentTurn | null;
+  try {
+    turn = await takeTurn(clients.account.address);
+  } catch (error) {
+    throw new TreasuryError("PAYMENT_FAILED", "The treasury's turn to pay on Base could not be taken", { cause: error });
+  }
+  if (!turn) throw new TreasuryError("PAYMENT_FAILED", "Another payment of the treasury is still under way on Base");
+  let fateKnown = true;
+  try {
+    return await payInTurn(input, clients);
+  } catch (error) {
+    if (error instanceof TreasuryError && error.code === "PAYMENT_UNCONFIRMED") fateKnown = false;
+    throw error;
+  } finally {
+    // A turn not handed back ends with its time: the payment's answer stands either way.
+    if (fateKnown) await turn.release().catch(() => undefined);
+  }
+}
+
+/** The payment itself, run while the treasury holds its turn on Base. */
+async function payInTurn(input: Readonly<{ to: string; usdcUnits: bigint }>, clients: BaseClients): Promise<{ hash: Hex }> {
   if (!(await treasuryCovers(input.usdcUnits, clients))) throw new TreasuryError("TREASURY_SHORT", "The treasury cannot pay this right now");
   let serializedTransaction: Hex;
   try {
