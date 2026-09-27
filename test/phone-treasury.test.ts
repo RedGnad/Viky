@@ -86,7 +86,7 @@ test("the day's use counts the money that came in and did not come back, per per
   const mine = await usedToday(person);
   assert.equal(mine.items, 1, "a priced order nobody paid for does not count");
   assert.equal(mine.usdcUnits, 10_000_000n);
-  assert.ok((await usedToday()).items >= 3, "the whole service's count, for the account's own limits");
+  assert.ok((await usedToday()).items >= 2, "the whole service's count, for the account's own limits (the delivered and the received order; the abandoned one moved nothing)");
 });
 
 test("the treasury's key must make the address shared, and must not be the relayer's", () => {

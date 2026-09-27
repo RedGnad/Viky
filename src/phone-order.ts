@@ -294,7 +294,8 @@ export function refundNonce(orderId: string): Hex {
 /** Sends the AUSD back and marks it; a refund that could not be sent yet stays `failed` and is tried again by `follow`. */
 async function refund(order: PhoneOrder, failure: string, deps: PhoneDeps): Promise<PhoneOrder> {
   const failed = (await deps.store.markFailed(order.id, failure)) ?? (await deps.store.loadPhoneOrder(order.id)) ?? order;
-  if (failed.state !== "failed") return failed;
+  // Nothing came in, nothing goes back: a lapsed price is `failed` with no AUSD received, and is never refunded.
+  if (failed.state !== "failed" || failed.ausdTx === null) return failed;
   try {
     const sent = await deps.refundAusd({ to: getAddress(order.account), ausdUnits: order.ausdUnits, nonce: refundNonce(order.id) });
     return (await deps.store.markRefunded(order.id, sent.hash)) ?? failed;
@@ -311,6 +312,8 @@ async function refund(order: PhoneOrder, failure: string, deps: PhoneDeps): Prom
 export async function payPhoneTopUp(input: Readonly<{ account: Hex; orderId: string; authorization: PersonAuthorization }>, deps: PhoneDeps = livePhoneDeps()): Promise<PhoneOrderStatus> {
   const order = await deps.store.loadPhoneOrder(input.orderId);
   if (!order || getAddress(order.account) !== getAddress(input.account)) throw new PhoneOrderError("NOT_YOURS", PHONE_REFUSALS.notYours, 404);
+  // A lapsed price moved nothing: it is refused as lapsed, never shown as money on its way back.
+  if (order.state === "failed" && order.ausdTx === null) throw new PhoneOrderError("PRICE_EXPIRED", PHONE_REFUSALS.priceExpired);
   if (order.state !== "priced") return statusOf(order, deps.open);
   let invoice: BitrefillInvoice;
   try {
@@ -361,7 +364,11 @@ export async function payPhoneTopUp(input: Readonly<{ account: Hex; orderId: str
 export async function followPhoneTopUp(input: Readonly<{ account: Hex; orderId: string }>, deps: PhoneDeps = livePhoneDeps(), waitMs = 0): Promise<PhoneOrderStatus> {
   let order = await deps.store.loadPhoneOrder(input.orderId);
   if (!order || getAddress(order.account) !== getAddress(input.account)) throw new PhoneOrderError("NOT_YOURS", PHONE_REFUSALS.notYours, 404);
-  if (order.state === "failed") return statusOf(await refund(order, order.failure ?? "failed", deps));
+  if (order.state === "failed") {
+    const settled = await refund(order, order.failure ?? "failed", deps);
+    if (settled.state === "failed" && settled.ausdTx === null) throw new PhoneOrderError("PRICE_EXPIRED", PHONE_REFUSALS.priceExpired);
+    return statusOf(settled);
+  }
   // A gift card delivered before its code could be read is read again here.
   if (order.state === "delivered") return statusOf(await keepCode(order, undefined, deps), deps.open);
   const until = Date.now() + waitMs;
