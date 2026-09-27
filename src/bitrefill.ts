@@ -196,6 +196,9 @@ export async function createInvoice(
     deps,
   );
   const invoice = invoiceOf(data);
+  // The journal line of every invoice, for the reconciliation and to read what Bitrefill actually prices it in: its
+  // product prices come in satoshis whatever the account shows (read on production, 28 Sep 2026). No personal data.
+  console.log(JSON.stringify({ at: new Date().toISOString(), bitrefillInvoice: invoice.id, method: invoice.payment.method, currency: invoice.payment.currency, price: invoice.payment.price }));
   if (invoice.payment.method && invoice.payment.method !== BITREFILL_PAYMENT_METHOD) throw new BitrefillError("BAD_ANSWER", `Bitrefill priced the invoice in ${invoice.payment.method}`);
   return invoice;
 }
