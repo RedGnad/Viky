@@ -31,7 +31,19 @@ function after(plan: { runs: number; soonestSeconds: number; latestSeconds: numb
  * percentage that would quietly turn a missed run into a good one.
  */
 export async function JudgesReliability() {
-  const [since, readings, held, refusals] = await Promise.all([passesSince(), readingTotals(), heldDays(), refusalsByCode()]);
+  // A journal that cannot be read is said so here, and never takes the rest of the judges page down with it.
+  const read = await Promise.all([passesSince(), readingTotals(), heldDays(), refusalsByCode()]).catch(() => null);
+  if (!read) {
+    return (
+      <section className="space-y-[var(--space-sm)]">
+        <h2 className={TITLE}>How reliable the readings are</h2>
+        <p className={HELP}>
+          The journal could not be read just now, so no figure is shown here rather than an old one.
+        </p>
+      </section>
+    );
+  }
+  const [since, readings, held, refusals] = read;
   if (!since.firstPassAt) {
     return (
       <section className="space-y-[var(--space-sm)]">
