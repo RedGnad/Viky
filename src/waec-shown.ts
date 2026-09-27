@@ -5,7 +5,7 @@ import { refuseShown, type ShownReading } from "./shown-proof";
  * A WASSCE result, shown from WAEC's own result checker (D217): the West African school certificate of Nigeria, Ghana,
  * Sierra Leone, Liberia and The Gambia, results from 1980. The person opens `waecdirect.org` in the verification tab
  * and types their examination number, the year, school or private, and the serial and PIN of the card they bought, on
- * WAEC's own page. Family "Exams & school", goal 28.
+ * WAEC's own page. Family "School & studies", goal 28.
  *
  * Shown and not read for them, because of WAEC's own terms: its privacy policy (waecnigeria.org, read 24 Sep 2026)
  * says any access code WAEC allocates must be kept confidential and never disclosed to a third party. The card's PIN is

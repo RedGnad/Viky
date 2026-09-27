@@ -2,7 +2,7 @@ import { keccak256, stringToHex, type Hex } from "viem";
 import { gradeInWords, gradeOf, gradeUnits, isGradeOnScale, type GradeScale, type ResultsVerdict } from "./university-shown";
 
 /**
- * A school average shown from the pupil's or the family's own EcoleDirecte account (D179): the family "Exams & school" (School until D220), of
+ * A school average shown from the pupil's or the family's own EcoleDirecte account (D179): the family "School & studies" (School until D220), of
  * the second nature (D162), with a target as the university grade has (D174). Two services were read for it, and one
  * is built: EcoleDirecte, whose publisher's terms (Aplim, "Dispositions générales applicables EcoleDirecte", read
  * 23 Sep 2026) say the holder of a password reaches only the information about themselves or those they answer for,

@@ -73,8 +73,8 @@ test("links, codes and days as a person types them", () => {
   assert.equal(edxIssuedDaySeconds("February 30, 2020"), undefined);
 });
 
-test("the line: read for them, Learn, goal 25, open, the fact rule, in the shared list", () => {
-  assert.equal(EDX_LINE.family, "learn");
+test("the line: read for them, School & studies, goal 25, open, the fact rule, in the shared list", () => {
+  assert.equal(EDX_LINE.family, "exam");
   assert.equal(EDX_LINE.nature, "read");
   assert.equal(EDX_LINE.live, true);
   assert.equal(EDX_LINE.state, "open");
