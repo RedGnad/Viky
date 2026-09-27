@@ -8,13 +8,15 @@ import { MILESTONE_GOALS, planFor } from "../src/milestone-goals";
 import { addMonadGasBuffer } from "../src/monad-gas";
 import { MONAD_CHAIN_ID, monadChain, monadTransport, waitForFinality } from "../src/monad/chain";
 import { execTransactionData, MULTI_SEND_CALL_ONLY, MULTI_SEND_CALL_ONLY_CODE_HASH, packSafeSignatures, safeAbi, safeMultiSendCallOnly, safeTxHash, SAFE_VERSION, type BatchCall } from "../src/safe";
+import { signWithHiddenPhrase } from "../src/safe-phrase";
 
 /**
  * Every goal not yet on the chain, registered in one Safe transaction (D194): the calls of `registerGoal` on
  * `MilestoneGift` and `GiftEscrow`, batched by Safe's canonical MultiSendCallOnly 1.4.1, one hash to sign, one
  * signature per key. The same three passes as `pnpm safe:action`, each possible on another machine:
  *   1. build:   pnpm safe:session                                prints the batch and the one hash to sign
- *   2. sign:    cast wallet sign --no-hash <hash> …              once per key, where the key lives
+ *   2. sign:    cast wallet sign --no-hash <hash> --keystore …   once per key, where the key lives
+ *          or:  SIGN=1 pnpm safe:session                         a phrase on paper, typed at a hidden prompt
  *   3. execute: SIGNATURES="0x…,0x…" SEND=1 EXECUTOR_PRIVATE_KEY=<the relayer's key> pnpm safe:session
  *
  * The signed transaction is always carried by the relayer's key, which pays the gas and signs nothing of the Safe's:
@@ -96,10 +98,17 @@ async function main() {
     .split(",")
     .map((value) => value.trim())
     .filter((value) => value.length > 0) as Hex[];
+  if (process.env.SIGN === "1") {
+    // A paper owner: the words are asked here with the terminal's echo off, never written on a command line.
+    const signed = await signWithHiddenPhrase({ hash, owners, input: process.stdin, output: process.stderr });
+    console.log(JSON.stringify({ step: "signed", owner: signed.owner, hash, signature: signed.signature }, null, 2));
+    console.log(`Take this signature to the other key, and check it signs the same hash. With both: SIGNATURES="first,second" SEND=1 … pnpm safe:session`);
+    return;
+  }
   if (given.length === 0) {
     console.log(`Sign this one hash with ${threshold} of the owners, each where their key lives:`);
     console.log(`  cast wallet sign --no-hash ${hash} --keystore <the keystore file>`);
-    console.log(`  cast wallet sign --no-hash ${hash} --mnemonic "<the twelve words>"`);
+    console.log(`  SIGN=1 SAFE_ADDRESS=${safe} NONCE=${nonce} pnpm safe:session   (a phrase on paper: the words are asked at a hidden prompt, never put on the command line)`);
     console.log(`Then, carried by the relayer: SIGNATURES="0xfirst,0xsecond" EXECUTOR_PRIVATE_KEY=<the relayer's key> SEND=1 pnpm safe:session (and NONCE=${nonce} if the Safe moves meanwhile).`);
     return;
   }

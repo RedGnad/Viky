@@ -7,6 +7,7 @@ import { milestoneGiftAbi } from "../src/milestone-gift-abi";
 import { addMonadGasBuffer } from "../src/monad-gas";
 import { MONAD_CHAIN_ID, monadChain, monadTransport, waitForFinality } from "../src/monad/chain";
 import { execTransactionData, packSafeSignatures, safeAbi, safeCall, safeTxHash, SAFE_VERSION, type SafeTransaction } from "../src/safe";
+import { signWithHiddenPhrase } from "../src/safe-phrase";
 
 /**
  * One owner action, signed by both keys of the Safe and executed (mitigation a). It is the whole of what the four
@@ -14,12 +15,15 @@ import { execTransactionData, packSafeSignatures, safeAbi, safeCall, safeTxHash,
  *
  * It runs in three passes, and each pass can happen on a different machine:
  *   1. build:   ACTION=… pnpm safe:action                          prints the transaction and the hash to sign
- *   2. sign:    SIGN=1 SIGNER_PRIVATE_KEY=0x… pnpm safe:action     prints one signature, once per key
+ *   2. sign:    SIGN=1 ACTION=… pnpm safe:action                   prints one signature, once per key: a phrase on
+ *                                                                  paper is typed at its hidden prompt, a raw key
+ *                                                                  comes as SIGNER_PRIVATE_KEY in your own shell
  *   3. execute: SIGNATURES="0x…,0x…" SEND=1 … pnpm safe:action     packs both and sends it
  *
- * Nothing here holds a key, and step 3 recovers both signers from the signatures themselves: a signature from
- * somebody who is not an owner of this Safe, or one taken over a different transaction, is refused before any gas is
- * spent. The nonce is the Safe's own, so a transaction signed for one nonce cannot be replayed at another.
+ * Nothing in this repository keeps a key, and step 3 recovers both signers from the signatures themselves: a
+ * signature from somebody who is not an owner of this Safe, or one taken over a different transaction, is refused
+ * before any gas is spent. The nonce is the Safe's own, so a transaction signed for one nonce cannot be replayed at
+ * another.
  */
 
 const escrowAbi = giftEscrowAbi as unknown as Abi;
@@ -92,7 +96,13 @@ async function main() {
 
   if (process.env.SIGN === "1") {
     const key = process.env.SIGNER_PRIVATE_KEY?.trim();
-    if (!key) throw new Error("SIGN=1 needs SIGNER_PRIVATE_KEY in your own shell; nothing in this repository holds a key");
+    if (!key) {
+      // A paper owner: the words are asked here with the terminal's echo off, never written on a command line.
+      const signed = await signWithHiddenPhrase({ hash, owners, input: process.stdin, output: process.stderr });
+      console.log(JSON.stringify({ step: "signed", owner: signed.owner, hash, signature: signed.signature }, null, 2));
+      console.log(`Take this signature to the other key, and check it signs the same hash. With both: SIGNATURES="first,second" SEND=1 … pnpm safe:action`);
+      return;
+    }
     const account = privateKeyToAccount((key.startsWith("0x") ? key : `0x${key}`) as Hex);
     if (!owners.includes(getAddress(account.address))) throw new Error(`Refusing to sign: ${account.address} is not an owner of ${safe}`);
     const signature = await account.sign({ hash });
@@ -106,12 +116,13 @@ async function main() {
     .map((value) => value.trim())
     .filter((value) => value.length > 0) as Hex[];
   if (given.length === 0) {
-    // The comfortable way, and the one that keeps every key where it already lives: cast signs the hash from a
-    // keystore (with the fingerprint or its password), from a paper mnemonic, or from a hardware wallet. Nothing is
-    // decrypted into a shell. SIGN=1 below stays for a raw key, which is the rarer case.
+    // Every key signs where it already lives: cast signs the hash from a keystore (with the fingerprint or its
+    // password) or from a hardware wallet, and a phrase on paper is typed at this script's hidden prompt (SIGN=1),
+    // never on a command line, where the shell's history file would keep it. SIGN=1 with SIGNER_PRIVATE_KEY stays for
+    // a raw key, which is the rarer case.
     console.log(`Sign this hash with ${threshold} of the owners, each where their key lives:`);
     console.log(`  cast wallet sign --no-hash ${hash} --keystore <the keystore file>`);
-    console.log(`  cast wallet sign --no-hash ${hash} --mnemonic "<the twelve words>"`);
+    console.log(`  SIGN=1 NONCE=${nonce} … pnpm safe:action   (a phrase on paper, the same ACTION: the words are asked at a hidden prompt, never put on the command line)`);
     console.log(`  cast wallet sign --no-hash ${hash} --ledger`);
     console.log(`Then: SIGNATURES="0xfirst,0xsecond" SEND=1 … (same ACTION, and NONCE=${nonce} if the Safe moves meanwhile).`);
     return;
