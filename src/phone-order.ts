@@ -117,7 +117,7 @@ export type PhoneDeps = Readonly<{
   relayLanded: (hash: Hex) => Promise<"landed" | "reverted" | "unknown">;
   /** Whether the token has consumed an authorization: used only to free a claim whose request stopped before sending. */
   authorizationUsed: (from: Hex, nonce: Hex) => Promise<boolean>;
-  store: Pick<typeof store, "recordPricedOrder" | "loadPhoneOrder" | "markReceived" | "markPaid" | "markDelivered" | "markFailed" | "markRefunded" | "markAbandoned" | "usedToday" | "keepSealedCode" | "claimRelay" | "noteRelay" | "releaseRelay">;
+  store: Pick<typeof store, "recordPricedOrder" | "loadPhoneOrder" | "markReceived" | "markPaid" | "markDelivered" | "markFailed" | "markRefunded" | "markAbandoned" | "usedToday" | "keepSealedCode" | "claimRelay" | "noteRelay" | "releaseRelay" | "unsettledOrders">;
   giftCardById: typeof giftCardById;
   readOrderCode: typeof readOrderCode;
   /** The vault's seal and its opening, so a code is never at rest in the clear. */
@@ -462,6 +462,45 @@ export async function followPhoneTopUp(input: Readonly<{ account: Hex; orderId: 
     order = (await deps.store.loadPhoneOrder(order.id)) ?? order;
   }
   return statusOf(order, deps.open);
+}
+
+/** Bitrefill's invoice statuses that say it received the payment (docs.bitrefill.com, core concepts, read 27 Sep 2026). */
+const INVOICE_PAID = ["payment_detected", "payment_confirmed", "pending", "complete"];
+
+export type FollowLine = Readonly<{ orderId: string; state: string }>;
+
+/**
+ * Every order whose money came in and has not ended, moved on with nobody's screen open (the money path audit of
+ * 27 Sep 2026): run by the daily settling pass, so a failure after the money arrived is sent back when the order is
+ * next read, by the person or at the latest by the next pass. An order whose AUSD arrived and whose payment on Base is
+ * not known is paid only when Bitrefill says it received it; otherwise it waits for an operator, and never pays twice.
+ */
+export async function followUnsettledOrders(deps: PhoneDeps = livePhoneDeps()): Promise<readonly FollowLine[]> {
+  const lines: FollowLine[] = [];
+  for (const order of await deps.store.unsettledOrders()) {
+    try {
+      if (order.state === "received") {
+        const invoice = await deps.readInvoice(order.invoiceId).catch(() => undefined);
+        if (!invoice) {
+          lines.push({ orderId: order.id, state: "received, the invoice could not be read" });
+          continue;
+        }
+        if (outcomeOf(invoice) === "failed") {
+          lines.push({ orderId: order.id, state: statusOf(await refund(order, `bitrefill:${invoice.status}`, deps)).state });
+          continue;
+        }
+        if (!INVOICE_PAID.includes(invoice.status)) {
+          lines.push({ orderId: order.id, state: `received, invoice ${invoice.status}: for an operator` });
+          continue;
+        }
+        await deps.store.markPaid(order.id, `invoice:${order.invoiceId}`);
+      }
+      lines.push({ orderId: order.id, state: (await followPhoneTopUp({ account: getAddress(order.account), orderId: order.id }, deps)).state });
+    } catch (error) {
+      lines.push({ orderId: order.id, state: `not followed: ${error instanceof Error ? error.message : String(error)}` });
+    }
+  }
+  return lines;
 }
 
 const TRANSFER_ABI = [
