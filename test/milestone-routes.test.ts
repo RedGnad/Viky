@@ -161,8 +161,12 @@ test("a rating still settling is refused before anything is relayed, to everybod
   };
   configureGiftStore(exec);
   configureMilestoneStore(exec);
+  // The creation now passes the relay door (D204) before the relayer, which counts in the same database.
+  const { configureRelayCeilingStore, ensureRelayCeilingSchema } = await import("../src/relay-ceiling-store");
+  configureRelayCeilingStore(exec);
   await ensureGiftSchema();
   await ensureMilestoneSchema();
+  await ensureRelayCeilingSchema();
   try {
     // Signed over the terms the route rebuilds, so the refusal met is the rating's and not the signature's.
     const { receiveAuthorizationMessage, receiveAuthorizationTypedData, toContractAuthorization } = await import("../src/ausd-authorization");
@@ -222,6 +226,7 @@ test("a rating still settling is refused before anything is relayed, to everybod
     globalThis.fetch = realFetch;
     (CHESS_RATING as { live: boolean }).live = wasLive;
     configureGiftStore(undefined);
+    (await import("../src/relay-ceiling-store")).configureRelayCeilingStore(undefined);
     configureMilestoneStore(undefined);
     await db.close();
   }

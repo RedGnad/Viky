@@ -166,6 +166,8 @@ test("every route that asks the relayer to pay goes through the door first; the 
     ["app/api/gift/check-in/route.ts", /relayCheckIn\(/],
     ["app/api/proof/verify/route.ts", /relayCheckIn\(/],
     ["app/api/gift/create/route.ts", /makeGift\(/],
+    ["app/api/gift/milestone/create/route.ts", /makeMilestoneGift\(/],
+    ["app/api/gift/certificate/create/route.ts", /makeMilestoneGift\(/],
   ];
   for (const [file, relays] of routes) {
     const source = readFileSync(file, "utf8");
