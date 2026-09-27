@@ -367,6 +367,23 @@
   }
 }
 
+/*
+ * The yellow action by night (D307, the founder, 28 Sep 2026): its edge and relief in a mid violet rather than the
+ * cream the other keys wear, which melted into the yellow (1.47:1). As by day, the edge is the colour that stands out on
+ * the ground (5.9:1 on the night ground, 4.6:1 on the paper), and violet sets the yellow off (2:1) where cream did not.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .action-relief:not(:disabled) {
+    --control-border: #9B7BFF;
+    --control-relief-colour: #9B7BFF;
+  }
+}
+
+:root[data-theme="dark"] .action-relief:not(:disabled) {
+  --control-border: #9B7BFF;
+  --control-relief-colour: #9B7BFF;
+}
+
 /* Night because the person asked for it, whatever their device says. The values are the ones above. */
 :root[data-theme="dark"] {
   --background: #151026;

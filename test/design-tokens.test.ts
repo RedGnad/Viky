@@ -578,8 +578,9 @@ test("the night a person chooses says everything the night a device reports says
  */
 test("the app a phone installs is painted in the product's own ground", () => {
   const manifest = JSON.parse(readFileSync("public/manifest.json", "utf8")) as Record<string, string> & { icons: { src: string }[] };
-  assert.equal(manifest.background_color, COLOURS.dark.background);
-  assert.equal(manifest.theme_color, COLOURS.dark.background);
+  // The day's lavender since D307: the splash and the icon are the day version (the founder, 28 Sep 2026).
+  assert.equal(manifest.background_color, COLOURS.light.background);
+  assert.equal(manifest.theme_color, COLOURS.light.background);
   for (const icon of manifest.icons) assert.ok(globSync(`public${icon.src}`).length === 1, `${icon.src} is written`);
 });
 

@@ -39,7 +39,9 @@ function icoAround(png: Buffer, size: number): Buffer {
  * are its farthest pixels: at 0.78 of the square they sit just inside that circle, which is as large as a shape this
  * wide can be drawn there. Everything else is drawn at 1, because nothing crops it.
  */
-const FILLS: Readonly<Record<string, number>> = { "public/icons/android-chrome-192x192.png": 0.78, "public/icons/icon-512-maskable.png": 0.78 };
+// Every icon at its largest (D307, the founder, 28 Sep 2026: "the biggest"), the maskable ones included; a launcher that
+// crops to a circle may cut the diamond's two points, which was the price the founder chose.
+const FILLS: Readonly<Record<string, number>> = {};
 const FULL = 1;
 
 const SIZES = [
@@ -55,10 +57,11 @@ const SIZES = [
 ];
 
 async function main() {
-  // The rig's head (D236, D253), in the night look a home screen shows (D135), its colours read from the stylesheet's
-  // own night block so the icon can never keep a colour the screens have left behind (it kept the night edge of D135
-  // until 25 Sep 2026).
-  const svg = figureInLook("dark", { id: "icon", limbs: false });
+  // The rig's head (D236, D253), in the day look on the day's lavender (D307, the founder, 28 Sep 2026: the day version
+  // rather than the night one), its colours read from the stylesheet's own day block so the icon can never keep a
+  // colour the screens have left behind.
+  // The landing's own figure (D307): its soft smile and its halftone, as HeroMoment draws it, the head alone.
+  const svg = figureInLook("light", { id: "icon", limbs: false, mouth: "soft", halftone: true });
   // The figure of the link previews, by day, standing (D265): the preview route may not import react-dom/server.
   writeFileSync(resolve("app/kit/figure-day.svg"), `${figureInLook("light", PREVIEW_FIGURE)}\n`);
   console.log("app/kit/figure-day.svg");
@@ -67,7 +70,7 @@ async function main() {
     for (const { file, size } of SIZES) {
       const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
       await page.setContent(
-        `<!doctype html><body style="margin:0;width:${size}px;height:${size}px;background:${COLOURS.dark.background};display:flex;align-items:center;justify-content:center">` +
+        `<!doctype html><body style="margin:0;width:${size}px;height:${size}px;background:${COLOURS.light.background};display:flex;align-items:center;justify-content:center">` +
           `<div style="width:${Math.round(size * (FILLS[file] ?? FULL))}px">${svg}</div></body>`,
       );
       const picture = await page.screenshot({ clip: { x: 0, y: 0, width: size, height: size } });

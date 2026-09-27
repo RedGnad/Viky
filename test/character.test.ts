@@ -106,8 +106,9 @@ test("the hero tone belongs to the gift on the link preview, and nowhere else do
   // Since D135 the icon is the head character on the ink tile, the rig's head since D253; the link previews draw the
   // standing figure since D265, and no longer the gift.
   const script = readFileSync("scripts/make-icon.ts", "utf8");
-  assert.match(script, /const svg = figureInLook\("dark", \{ id: "icon", limbs: false \}\);/);
-  assert.match(script, /background:\$\{COLOURS\.dark\.background\}/);
+  // The day version since D307, the landing's figure as it stands: its soft smile and its halftone.
+  assert.match(script, /const svg = figureInLook\("light", \{ id: "icon", limbs: false, mouth: "soft", halftone: true \}\);/);
+  assert.match(script, /background:\$\{COLOURS\.light\.background\}/);
   assert.doesNotMatch(script, /characterSvg|gift-hero/);
   for (const state of STATES) assert.doesNotMatch(draw(state), /var\(--accent\)|var\(--on-accent\)/);
   // The tone is for the gift only: a day asked for it keeps its range.
