@@ -27,6 +27,7 @@ import { dollarsToUnits } from "@/src/money";
 import { settlingTimeInWords } from "@/src/pass-schedule";
 import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
 import { wayInPage, WAYS_IN, type WayIn } from "@/src/rails";
+import { JudgeCode } from "../kit/offer/JudgeCode";
 import { FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
 import { Character } from "../kit/Character";
 import { FieldRefusal } from "../kit/FieldRefusal";
@@ -606,6 +607,14 @@ export function PayGift() {
         <section className="flex flex-col gap-[var(--space-xs)]">
           <p className={HELP}>{W.waiting.inAccountNow(balance === null ? "…" : formatAusd(held))}</p>
           <p className={BODY}>{milestone ? M.account.yourGift(gift, recipient) : W.account.yourGift(gift, recipient, days)}</p>
+          {/* Where a first funder lands once pay has made their account: the judge code is asked here too (D299). A
+              credit that covers the gift is made into it by the watch above, as any payment that lands is. */}
+          <JudgeCode
+            covered={balance !== null && held >= units}
+            held={balance}
+            onCredited={() => void refresh()}
+            onMakeIt={(dollars) => writeCardDraft({ ...draft, dollars, typedAmount: dollars, typedIn: "USD" }, address)}
+          />
         </section>
         {problem ? <FieldRefusal id="waiting-refused">{problem}</FieldRefusal> : null}
         <section className={CARD}>

@@ -7639,3 +7639,19 @@ Hanover, Dortmund, Bremen, Aschaffenburg, Kandel, Bergisch Gladbach and the like
   opened only if one already existed for another account. A person with a passkey on the device and no session (signed
   out, or a first visit on this browser) got none, and every step that asks the server was refused. The session is now
   opened whenever the server does not already name the account the passkey opened.
+
+## D299, 28 Sep 2026: the judge code on the waiting screen too, and a gift with no name said without one
+
+- The founder, 28 Sep 2026, paying from the landing's card and signing in at pay: he never saw "Have a code?". The key
+  was on the pay sheet for a signed-in account only (D297), and a person signed out at the sheet signs in at pay, which
+  takes them straight to the waiting screen. The code is now a shared piece (`JudgeCode` in
+  `app/kit/offer/JudgeCode.tsx`) on both: the sheet, and the waiting screen, where the account always exists. There a
+  credit that covers the gift is made into it by the screen's own watch, as any payment that lands is; one that does
+  not offers "Make the gift $Y", which writes the card at what the account holds.
+- The same capture showed "Your gift: $34.20 for , 30 days.": a card may be paid for without the recipient's name (the
+  founder, 20 Sep 2026), and ten sentences named them anyway ("for ,", "Pay for 's gift", "Send it only to ."). The
+  possessive and "for" now read without a name ("Pay for their gift", "Your gift: $34.20, 30 days.", "Send it only to
+  the person it is for."), held by `test/unnamed-recipient.test.ts`.
+- Captured on the founder's path (a passkey on the device, no session, no first name, pay from the landing), the credit
+  and the balance stubbed in the browser: "Have a code?" under the gift on the waiting screen, then the credit and
+  "Make the gift $13.99". "Make the gift" was not pressed in the capture: the watch would then make a real gift.
