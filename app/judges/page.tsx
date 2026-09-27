@@ -128,8 +128,8 @@ export default async function JudgesPage() {
             <a className="underline" href="https://monadvision.com/tx/0xcd2b1ac3ef8c334596d49d7154fb8288efb14ad268bf272a86c79367bfe67b78">
               0xcd2b1ac3…7b78
             </a>{" "}
-            (the way out), from the founder&apos;s key 0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64, which had held them since 18 Sep 2026
-            and never was the key that deployed them (the gift contract in{" "}
+            (the way out), from the founder&apos;s key 0x80fb079237Af2A634ba9B95263Ba0bd53d20Cd64, which had held each since its deployment or
+            its hand-over, from 16 to 18 Sep 2026, and never was the key that deployed them (the gift contract in{" "}
             <a className="underline" href="https://monadvision.com/tx/0xa01ae787c52409157ec83aa95cc2ca2a4dca4a2caaab3caef8ea8c5650dfa009">
               0xa01ae787…a009
             </a>
@@ -138,8 +138,8 @@ export default async function JudgesPage() {
               0xe6f5b531…3840
             </a>
             ). Each owner is read again from the chain further down, with what that owner can and cannot do. Handing
-            ownership over moves no money: the earlier contract still holds the 8.571432 AUSD of its first gift, as it did
-            before.
+            ownership over moved no money: the earlier contract held the 8.571432 AUSD of its first gift before and after
+            it. That gift has since ended, and its last refund went back to its funder on 23 Sep 2026.
           </dd>
           {earlierEscrow ? (
             <>
@@ -381,7 +381,7 @@ export default async function JudgesPage() {
             (<code>Disallow: /</code>), and they answer 403 to a bare user agent. Viky reads one runner&apos;s page per
             gift, at the person&apos;s own request, naming itself and its site in its user agent
             (<code>Viky/1.0; +https://viky.cash</code>), and keeps three fields, written here with the risk assumed as
-            for edX. Nothing of theirs is offered until goal 31 is signed.
+            for edX. Open since goal 31 was signed on 26 Sep 2026.
           </li>
           <li>
             <strong>The WCA&apos;s public API.</strong> A time set at a speedcubing competition is read from the World Cube
@@ -391,7 +391,7 @@ export default async function JudgesPage() {
             WCA&apos;s privacy statement says competition results are not personal data, its results export may be
             re-published with a notice that the results are the WCA&apos;s, and its <code>robots.txt</code> keeps robots
             out of its search only. The API answers 403 to a bare user agent; Viky names itself and its site, as
-            for MikaTiming. Nothing of it is offered until goal 32 is signed.
+            for MikaTiming. Open since goal 32 was signed on 26 Sep 2026.
           </li>
           <li>
             <strong>Codeforces&apos; public API.</strong> A Codeforces rating is read every day from
@@ -400,7 +400,7 @@ export default async function JudgesPage() {
             account with Viky&apos;s code, the last name of their profile. Its terms forbid commercial use of the site&apos;s
             material and any use that harms it or impacts access; Viky reads one account&apos;s line a day, at the
             person&apos;s request, naming itself. Codeforces polices itself: plagiarism is punished with a rating rollback
-            and a round that fails is made unrated. Nothing of it is offered until goal 33 is signed.
+            and a round that fails is made unrated. Open since goal 33 was signed on 26 Sep 2026.
           </li>
           <li>
             <strong>race result&apos;s lists.</strong> The same marathon line reads the events race result times (2,126 coming
