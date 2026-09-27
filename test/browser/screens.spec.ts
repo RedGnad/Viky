@@ -126,7 +126,7 @@ test.describe("the screens a person meets", () => {
     await openTheCatalogue(page);
     await openTheFamily(page, /^Learn/);
     const sheet = page.locator("dialog.sheet[open]");
-    await sheet.getByRole("radio", { name: /certification on Credly/i }).click();
+    await sheet.getByRole("button", { name: /certification on Credly/i }).click();
     await sheet.getByRole("button", { name: "Close" }).click();
     await expect(page.locator("dialog.sheet[open]")).toHaveCount(0);
     // Coursera's and Credly's window is 30 to 365, suggested 120 (src/credly-badge.ts): the 7 days a lesson offers
@@ -182,7 +182,7 @@ test.describe("the screens a person meets", () => {
     // At the end of the list there is nothing below any more, and the last choice is whole rather than cut.
     await expect(body).toHaveAttribute("data-more", "above");
     await actionIsWhole();
-    const last = sheet.getByRole("radio").last();
+    const last = sheet.locator('div[role="group"] > button').last();
     const [choice, frame] = [(await last.boundingBox())!, (await body.boundingBox())!];
     expect(choice.y + choice.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
   });
@@ -208,24 +208,24 @@ test.describe("the screens a person meets", () => {
     if (width <= 560) expect(box.x).toBeLessThanOrEqual(1);
 
     // One row explains itself and no other: the one the card already carries (the card opens filled).
-    const conditions = sheet.getByRole("radio");
+    const conditions = sheet.locator('div[role="group"] > button');
     await expect(conditions).not.toHaveCount(0);
     // A row explains itself when it carries a line of help beyond its name and its nature: the nature is said on every
     // line in the meta voice (capitals, D162), the help on the chosen one alone.
     const explained = async () =>
       body.evaluate((element) =>
-        [...element.querySelectorAll("label")].filter((label) =>
+        [...element.querySelectorAll('div[role="group"] > button')].filter((label) =>
           [...label.querySelectorAll(":scope > span > span")].slice(1).some((line) => getComputedStyle(line).textTransform !== "uppercase"),
         ).length,
       );
     expect(await explained()).toBe(1);
     // The one the card carries, by its own name: the catalogue is ordered by title inside a family, so "first" is
     // whatever the register's words sort to, and that is not what this check is about.
-    await expect(sheet.getByRole("radio", { name: /A Duolingo lesson each day/i })).toBeChecked();
+    await expect(sheet.getByRole("button", { name: /A Duolingo lesson each day/i })).toHaveAttribute("aria-current", "true");
     // Its family's list, with the way to the four above it (D224); the four are tiles, a picture and a count each.
     await expect(sheet.getByRole("button", { name: /All families/i })).toBeVisible();
     await sheet.getByRole("button", { name: /All families/i }).click();
-    await expect(sheet.getByRole("radio")).toHaveCount(0);
+    await expect(sheet.locator('div[role="group"] > button')).toHaveCount(0);
     const tiles = sheet.locator("[data-family-art]");
     await expect(tiles).toHaveCount(4);
     await expect(sheet.getByRole("button", { name: /Exams & school/ })).toContainText(/\d+ choices/);
@@ -233,12 +233,12 @@ test.describe("the screens a person meets", () => {
     // Choosing another, in another family, shows that one's own questions; the way back leads to the four (D233), and
     // that family's list shows the new one checked and alone explained.
     await openTheFamily(page, /Exams & school/);
-    const other = sheet.getByRole("radio", { name: /A Duolingo English Test score/i });
+    const other = sheet.getByRole("button", { name: /A Duolingo English Test score/i });
     await other.click();
     await sheet.getByRole("button", { name: /change/i }).click();
     await expect(sheet.locator("[data-family-art]")).toHaveCount(4);
     await openTheFamily(page, /Exams & school/);
-    await expect(sheet.getByRole("radio", { name: /A Duolingo English Test score/i })).toBeChecked();
+    await expect(sheet.getByRole("button", { name: /A Duolingo English Test score/i })).toHaveAttribute("aria-current", "true");
     expect(await explained()).toBe(1);
     expect(await body.evaluate((element) => element.scrollTop)).toBe(0);
   });

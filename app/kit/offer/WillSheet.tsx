@@ -10,7 +10,7 @@ import { searchCertifications, type CertificationFound } from "@/src/client/cert
 import { ApiError } from "@/src/client/api";
 import { smallestTarget } from "@/src/milestone-terms";
 import { FUND, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
-import { CHOICE, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON, TILE } from "../../components/ui";
+import { CARD_LABEL, CHOICE, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON, TILE } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { FamilyArt } from "../FamilyArt";
 import { Nature } from "../Nature";
@@ -271,24 +271,40 @@ export function WillSheet({
         sections ? (
           shownSection ? (
             <>
-              {/* Where this family sits: the way back to the four, above its list (D224). */}
-              <button type="button" className={INLINE_BUTTON} onClick={() => setFamily(null)}>
-                {W.families}
+              {/* The way back to the four, as an arrow (D304, the founder, 28 Sep 2026), named for a reader of the screen. */}
+              <button type="button" aria-label={W.families} className={`${INLINE_BUTTON} self-start`} onClick={() => setFamily(null)}>
+                <svg aria-hidden focusable="false" width="20" height="20" viewBox="0 0 24 24">
+                  <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </button>
-              <ChoiceList
-                key={shownSection.family}
-                name="condition"
-                shape="lines"
-                legend={shownSection.title}
-                value={draft.conditionId || null}
-                onChange={choose}
-                options={shownSection.conditions.map((option) => ({
-                  value: option.id,
-                  label: option.name,
-                  tag: <Nature nature={option.nature} />,
-                  help: option.live ? option.help : `${option.help} ${M.operatorOnly}`,
-                }))}
-              />
+              {/* Each condition is a button that goes on to its questions, with the card's own chevron (D304): a radio
+                  said "pick one and stay", and pressing one went on anyway. The one on the card is marked. */}
+              <div role="group" aria-label={shownSection.title} className="flex flex-col gap-[var(--space-sm)]">
+                <p className={CARD_LABEL}>{shownSection.title}</p>
+                {shownSection.conditions.map((option) => {
+                  const chosen = draft.conditionId === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-current={chosen ? "true" : undefined}
+                      onClick={() => choose(option.id)}
+                      className={`${INLINE_BUTTON} w-full justify-between! text-left ${chosen ? "bg-[var(--chosen)]!" : ""}`}
+                    >
+                      <span className="flex min-w-0 flex-1 flex-col items-start text-left">
+                        <span className={`${CHOICE} break-words`}>{option.name}</span>
+                        <Nature nature={option.nature} />
+                        {/* What it proves, under the one on the card alone, as the list said it before (D304). */}
+                        {chosen ? <span className={HELP}>{option.help}</span> : null}
+                        {option.live ? null : <span className={HELP}>{M.operatorOnly}</span>}
+                      </span>
+                      <svg aria-hidden focusable="false" width="20" height="20" viewBox="0 0 24 24" className="shrink-0 text-[var(--on-surface-muted)]">
+                        <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  );
+                })}
+              </div>
             </>
           ) : (
             /* The four families, two by two: a picture, a name, a count. Each is a button and looks like one (D233):

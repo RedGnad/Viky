@@ -103,14 +103,14 @@ test("a family with nothing offered does not appear at all", () => {
 test("the screen takes the families from the register and writes none of its own", () => {
   const screen = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
   assert.match(screen, /chooserSections\(offered\)/);
-  assert.match(screen, /legend=\{shownSection\.title\}/, "the heading of a family's list is the register's title");
+  assert.match(screen, /<p className=\{CARD_LABEL\}>\{shownSection\.title\}<\/p>/, "the heading of a family's list is the register's title");
   assert.match(screen, /<span className=\{CHOICE\}>\{section\.title\}<\/span>/, "and so is the name on its tile (D224)");
   // A title written as a literal is what this catches; "Move" inside a word like priceMoved is not one.
   for (const { title } of FAMILIES) {
     assert.doesNotMatch(screen, new RegExp(`["'>]\\s*${title}\\s*["'<]`), `${title} is written into the screen`);
   }
-  // One radio group whichever shape is drawn, so the selection stays single across sections.
-  assert.equal(screen.match(/name="condition"/g)?.length, 2, "both branches name the same group");
+  // The flat list without families stays one radio group; a family's list is buttons that go on (D304).
+  assert.equal(screen.match(/name="condition"/g)?.length, 1, "the one radio group left");
 });
 
 test("a condition that turned live is offered once, never beside its own preview", () => {

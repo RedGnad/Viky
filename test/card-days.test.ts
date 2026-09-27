@@ -25,7 +25,9 @@ test("the card is three groups: who and what, the days and the money, the action
   assert.match(card, /<span className="flex flex-wrap items-center gap-x-\[var\(--space-md\)\] gap-y-\[var\(--space-md\)\]">\n(\s*\{\/\*[^*]*\*\/\}\n)?\s*<span\n?\s*className=\{`\$\{CARD_AMOUNT\}/, "the amount and the lengths in one row that wraps");
   assert.match(card, /className=\{`\$\{PRIMARY_BUTTON\} mt-\[var\(--space-xl\)\]`\}/, "the action in its own group");
   assert.doesNotMatch(card, /W\.eachDay|mt-\[var\(--space-lg\)\]`\} disabled/, "the old sentence and the old spacing are gone");
-  assert.match(card, /<span className=\{CHOICE\}>\{inTheirCurrency\(units \/ BigInt\(days\)\)\}<\/span> <span className=\{HELP\}>\{W\.aDay\}<\/span>/, "what one mark is worth, the figure in the title face");
+  // What one mark is worth, small under each of them (D304), and once in words for a reader of the screen.
+  assert.match(card, /each=\{units !== undefined && days > 0 \? inTheirCurrency\(units \/ BigInt\(days\)\) : undefined\}/, "what one mark is worth, under each mark");
+  assert.match(card, /<span className="sr-only">\{`\$\{inTheirCurrency\(units \/ BigInt\(days\)\)\} \$\{W\.aDay\}`\}<\/span>/);
   // A certificate or a climb: one character at 96 and nothing under it (D258): no sentence stretches the card.
   const single = card.slice(card.indexOf('shape === "climb" || shape === "stamp" ? ('), card.indexOf("<DayStrip"));
   assert.match(single, /<Character state="toCome" className="h-auto w-\[96px\]" standing=\{false\} \/>/);
@@ -38,7 +40,8 @@ test("the card is three groups: who and what, the days and the money, the action
 test("the days on the card are 72 wide, and the strip keeps 60 everywhere else", () => {
   assert.match(strip, /const WIDTHS = \{ 60: "w-\[60px\]", 72: "w-\[72px\]" \} as const;/);
   assert.match(strip, /width = 60,/, "60 unless asked");
-  assert.match(strip, /className=\{`flex \$\{WIDTHS\[width\]\} flex-none items-end`\}/);
+  assert.match(strip, /className=\{`flex \$\{WIDTHS\[width\]\} flex-none \$\{each \? "flex-col items-center" : "items-end"\}`\}/);
+  assert.match(strip, /\{each \? <span data-day-worth/, "a day's worth under it, only when asked");
   const page = readFileSync("app/components/GiftPage.tsx", "utf8") + readFileSync("app/kit/GiftCard.tsx", "utf8");
   assert.doesNotMatch(page, /width=\{72\}/, "a gift read keeps its row at 60");
 });

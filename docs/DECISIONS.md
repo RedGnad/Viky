@@ -7718,3 +7718,17 @@ Hanover, Dortmund, Bremen, Aschaffenburg, Kandel, Bergisch Gladbach and the like
   - The limbs fold later: once the card's "Send" starts to show (`data-card-action`), rather than after the first
     pixels of scroll; they come back out when it leaves. Measured at 390 by 844 and 1440 by 900: the fold starts with
     Send's top 2 pixels above the screen's bottom edge.
+
+## D304, 28 Sep 2026: a day's worth under each day, a family's list as buttons, the arms in front of the book, crossed from behind
+
+- **Decisions (the founder, 28 Sep 2026)**:
+  - Where the card shows its row of days, the amount is small text under each day ("$1.00"), not one line "$1.00 a
+    day" under the row; a reader of the screen still hears "$1.00 a day" once (`each` on `DayStrip`).
+  - In "What will they do?", a family's list: "All families" is a back arrow (named for a reader), and each condition
+    is a button with the card's own chevron rather than a radio, since pressing one goes on to its questions; the one on
+    the card is marked (`aria-current`).
+  - Since D302 the reading figure's arms passed under the book: they now show in front of it from where they leave the
+    body, the whole arm drawn under the body and its front part (`overlay`, a piece of the same curve starting just
+    outside the body's edge) drawn after the book. The folded arms (the sunglasses figure) leave from behind the body
+    at their base the same way and cross in front.
+- Captured at 390 and 1440, by day and by night: the card, a family's list, the reading figure and the folded arms.

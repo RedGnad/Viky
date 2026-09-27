@@ -68,6 +68,6 @@ test("a family's list opens at its top, even from a tile reached by scrolling th
   await body.evaluate((element) => element.scrollTo({ top: 40 }));
   await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBeGreaterThan(20);
   await sheet.getByRole("button", { name: /^Learn/ }).dispatchEvent("click");
-  await expect(sheet.getByRole("radio").first()).toBeVisible();
+  await expect(sheet.locator('div[role="group"] > button').first()).toBeVisible();
   await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBe(0);
 });

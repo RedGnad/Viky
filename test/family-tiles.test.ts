@@ -42,10 +42,15 @@ test("the chooser opens on the four tiles from six conditions, every time, and t
   assert.match(sheet, /grid grid-cols-2 gap-\[var\(--space-md\)\]/, "two by two");
   assert.match(sheet, /const shownSection = sections\?\.find\(\(section\) => section\.family === family\);/, "a family's list only once a tile was pressed");
   assert.match(sheet, /setFamily\(null\);\n\s*\}\n\s*\}/, "every opening starts on the four (D233)");
-  assert.match(sheet, /<button type="button" className=\{INLINE_BUTTON\} onClick=\{\(\) => setFamily\(null\)\}>\n\s*\{W\.families\}/, "the way back to the four above a family's list");
+  // The way back to the four is an arrow above a family's list, named for a reader (D304); each condition is a button
+  // with the card's chevron, since pressing one goes on to its questions.
+  assert.match(sheet, /<button type="button" aria-label=\{W\.families\} className=\{`\$\{INLINE_BUTTON\} self-start`\} onClick=\{\(\) => setFamily\(null\)\}>/, "the way back to the four above a family's list");
+  assert.match(sheet, /onClick=\{\(\) => choose\(option\.id\)\}/);
+  assert.match(sheet, /aria-current=\{chosen \? "true" : undefined\}/, "the one on the card is marked");
   assert.match(sheet, /setFamily\(null\);\n\s*setAskedFor\("list"\);/, "and from a condition's questions, the way back is to the four too (D233)");
   assert.match(sheet, /\{W\.choices\(section\.conditions\.length\)\}/, "what each tile holds, counted");
-  assert.doesNotMatch(sheet, /aria-current|holds \?/, "nothing marks a tile: pressing it is the choice");
+  const tiles = sheet.slice(sheet.indexOf('<div className="grid grid-cols-2'), sheet.indexOf("</div>", sheet.indexOf('<div className="grid grid-cols-2')));
+  assert.doesNotMatch(tiles, /aria-current|holds \?/, "nothing marks a tile: pressing it is the choice");
   assert.match(sheet, /onClick=\{\(\) => setFamily\(section\.family\)\} className=\{TILE\}>/, "a tile is the button it looks like");
   assert.ok(sheet.indexOf("sections ? (") < sheet.indexOf("<FamilyArt"), "only from six conditions: under that the flat list stays");
   assert.equal(OFFER.families, "All families");
