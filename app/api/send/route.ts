@@ -116,7 +116,15 @@ export async function POST(request: Request) {
       account: clients.walletClient.account!,
       chain: monadChain,
     });
-    const receipt = await waitForFinality(clients.publicClient, hash);
+    let receipt;
+    try {
+      receipt = await waitForFinality(clients.publicClient, hash);
+    } catch (error) {
+      // Sent, and not known final yet: the money may have moved, so it is never said that nothing did, and the person
+      // is asked to look before sending again rather than moving it twice (the money path audit of 27 Sep 2026).
+      console.error(JSON.stringify({ at: new Date().toISOString(), sendUnconfirmed: hash, from, error: error instanceof Error ? error.message : String(error) }));
+      throw new GiftApiError("SENT_UNCONFIRMED", "It was sent and is being confirmed. Check your balance in a minute before sending again.", 409);
+    }
     if (receipt.status !== "success") throw new RelayerError("REVERTED", "That could not be sent. Nothing was taken.");
     // Written down once it is final, so the confirmation has a reference to print (decision 7). The money moved
     // whether or not this row lands, so a store that refuses is logged rather than turned into a refusal.
