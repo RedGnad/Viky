@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { after, before, beforeEach, test } from "node:test";
 import type { Hex } from "viem";
 import { GiftApiError } from "../src/gift-api";
-import { configureJudgeCreditStore, ensureJudgeCreditSchema, giveJudgeCredit, JUDGE_CREDIT_ENDS, judgeCreditConfig, judgeCreditNonce, judgeCreditOpen, loadJudgeCredits } from "../src/judge-credit";
+import { configureJudgeCreditStore, ensureJudgeCreditSchema, giveJudgeCredit, isJudgeCredited, JUDGE_CREDIT_ENDS, judgeCreditConfig, judgeCreditNonce, judgeCreditOpen, loadJudgeCredits } from "../src/judge-credit";
 import type { SqlExecutor } from "../src/proof-session-store";
 
 /**
@@ -112,4 +112,18 @@ test("the code is never in the repository, the route reads the signed-in account
   assert.doesNotMatch(page, /judgeCredit\.code|JUDGE_CODE/);
   assert.match(page, /a judge\s+credit from Viky&apos;s treasury, once per account\. A real funder pays by card through Ramp, shown in the video\./);
   assert.match(page, /Mera&apos;s stateless test runs on this same account/);
+});
+
+test("an account is a judge's once its credit is sent, and not for a wrong code or a failed send (D295)", async () => {
+  assert.equal(await isJudgeCredited(A), false);
+  await assert.rejects(giveJudgeCredit({ account: A, code: "not-the-code-at-all" }, { config: CONFIG, nowMs: NOW, send }));
+  assert.equal(await isJudgeCredited(A), false, "a wrong code writes a line, and it is not a credit");
+  await giveJudgeCredit({ account: A, code: CODE }, { config: CONFIG, nowMs: NOW, send });
+  assert.equal(await isJudgeCredited(A), true);
+  assert.equal(await isJudgeCredited(B), false);
+  const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
+  assert.match(sheet, /\{enough && judge \? <p className=\{HELP\}>\{W\.fromJudgeCredit\}<\/p> : null\}/);
+  assert.match(sheet, /getJson<\{ credited\?: boolean \}>\("\/api\/judge\/credit"\)/);
+  assert.ok(sheet.indexOf("W.fromJudgeCredit") < sheet.indexOf("W.payFromAccount"), "above the action");
+  assert.match(readFileSync("app/api/judge/credit/route.ts", "utf8"), /isJudgeCredited\(auth\.account\)/);
 });

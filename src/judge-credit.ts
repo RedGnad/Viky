@@ -119,6 +119,13 @@ export async function loadJudgeCredits(): Promise<readonly JudgeCreditRow[]> {
   }));
 }
 
+/** Whether this account received its judge credit: a "sent" line in the journal (D295). */
+export async function isJudgeCredited(account: string): Promise<boolean> {
+  await ensureJudgeCreditSchema();
+  const rows = await sql()`SELECT 1 FROM viky_judge_credits WHERE account = ${getAddress(account).toLowerCase()} AND state = 'sent'`;
+  return rows.length > 0;
+}
+
 type Send = (input: Readonly<{ to: Hex; ausdUnits: bigint; nonce: Hex }>) => Promise<{ hash: Hex }>;
 
 /**

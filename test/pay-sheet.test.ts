@@ -53,8 +53,13 @@ test("the account is made at the press, and the sheet says so before it happens"
 test("one way in, one action, and no button to another (D239)", () => {
   assert.ok(!("another" in PAY), "the second way is not a choice any more");
   assert.doesNotMatch(sheet, /another way|SECONDARY_BUTTON|setChosen/);
-  const footer = sheet.slice(sheet.indexOf("footer={"), sheet.indexOf("</Sheet>"));
+  // The footer only, from its opening to its fragment's close: the body's small keys are not actions (D294's copy).
+  const footer = sheet.slice(sheet.indexOf("footer={"), sheet.indexOf("</>", sheet.indexOf("footer={")));
   assert.equal((footer.match(/<button/g) ?? []).length, 1, "the one action, and nothing under it but a refusal or the account panel");
+  // The one other button of the sheet copies the code, as a small key (D294), never a second action.
+  const body = sheet.slice(sheet.indexOf("</>", sheet.indexOf("footer={")), sheet.indexOf("</Sheet>"));
+  assert.equal((body.match(/<button/g) ?? []).length, 1);
+  assert.match(body, /className=\{`\$\{INLINE_BUTTON\} self-start`\}/);
   // The sentence is the one place the sheet names the two services: which refused, why, and which this goes through.
   assert.equal(PAY.instead.country("Ramp", "Mercuryo"), "Ramp does not serve your country, so this goes through Mercuryo.");
   assert.equal(PAY.instead.paused("Ramp", "Mercuryo"), "Ramp is not selling right now, so this goes through Mercuryo.");

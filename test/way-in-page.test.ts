@@ -28,7 +28,7 @@ test("without the key, Ramp opens bare, where it works, and nothing says it is f
   assert.equal(wayInPage(WAY_IN_GIFT_COIN, { account: ACCOUNT, euros: 26 }, undefined), RAMP_BARE_PAGE);
   assert.equal(wayInFillsIn(WAY_IN_GIFT_COIN, undefined), false);
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.match(sheet, /!enough && wayInFillsIn\(way\) \? <p className=\{BODY\}>\{W\.partnerFilledIn\}<\/p> : null/);
+  assert.match(sheet, /wayInFillsIn\(way\) \? W\.partnerFilledIn : W\.partnerPaste\(way\.name, way\.delivers\.coin, way\.delivers\.network, way\.arrives === "gift"\)/);
   assert.match(PAY.partnerFilledIn, /Your account is already filled in\./);
 });
 
@@ -45,4 +45,19 @@ test("every screen that opens the partner opens the page this builds, and the ju
   assert.match(judges, /authorised crypto-asset service provider under MiCA, regulated by the Central Bank of Ireland/);
   assert.match(judges, /MONAD_AUSD/);
   assert.match(judges, /The next step is Ramp embedded with a partner key/);
+});
+
+test("without the key, the sheet says what to choose on the partner's page and where the code goes, and offers the code (D294)", () => {
+  assert.equal(
+    PAY.partnerPaste(WAY_IN_GIFT_COIN.name, WAY_IN_GIFT_COIN.delivers.coin, WAY_IN_GIFT_COIN.delivers.network, true),
+    "Our partner Ramp takes your card, once with your ID. Choose AUSD on Monad there: that is what your gift holds. Paste your code where it asks for an address. Come back here: the gift starts by itself.",
+  );
+  // Mercuryo delivers the chain's coin, which one confirmed step turns into what a gift holds (D101): never "by itself".
+  const mercuryo = PAY.partnerPaste(WAY_IN_CHAIN_COIN.name, WAY_IN_CHAIN_COIN.delivers.coin, WAY_IN_CHAIN_COIN.delivers.network, WAY_IN_CHAIN_COIN.arrives === "gift");
+  assert.equal(mercuryo, "Our partner Mercuryo takes your card, once with your ID. Choose MON on Monad there. Paste your code where it asks for an address. Come back here to confirm the last step.");
+  assert.doesNotMatch(mercuryo, /by itself|what your gift holds/);
+  const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
+  // The code exists once the account does: before the first press there is no account, and nothing to copy.
+  assert.match(sheet, /!enough && !wayInFillsIn\(way\) && address \? \(/);
+  assert.match(sheet, /navigator\.clipboard\.writeText\(address\)/);
 });
