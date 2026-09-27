@@ -54,7 +54,7 @@ function sender(after: "returns" | "throws" | "hangs" | "fails before" = "return
   };
 }
 const authorizationUsed = async (nonce: Hex) => used.has(nonce);
-const deps = (send: ReturnType<typeof sender>) => ({ config: CONFIG, nowMs: NOW, send, authorizationUsed });
+const deps = (send: ReturnType<typeof sender>) => ({ config: CONFIG, nowMs: NOW, send, authorizationUsed, spendable: async () => 10n ** 18n });
 const refusal = (code: string) => (error: unknown) => error instanceof GiftApiError && error.code === code;
 const line = async (account: string) => (await loadJudgeCredits()).find((row) => row.account === account.toLowerCase());
 const total = () => moved.reduce((sum, m) => sum + m.units, 0n);

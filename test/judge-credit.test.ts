@@ -48,14 +48,17 @@ after(async () => {
   await db.close();
 });
 
+/** A treasury with plenty that belongs to nobody else: the credit tests are about the credit, not the treasury. */
+const plenty = async () => 10n ** 18n;
+
 test("the right code sends the set amount to the signed-in account, once, and writes one line", async () => {
-  const given = await giveJudgeCredit({ account: A, code: ` ${CODE} ` }, { config: CONFIG, nowMs: NOW, send });
+  const given = await giveJudgeCredit({ account: A, code: ` ${CODE} ` }, { config: CONFIG, nowMs: NOW, send, spendable: plenty });
   assert.equal(given.units, "25000000");
   assert.equal(sent.length, 1);
   assert.equal(sent[0].to.toLowerCase(), A.toLowerCase());
   assert.equal(sent[0].ausdUnits, 25_000_000n);
   assert.equal(sent[0].nonce, judgeCreditNonce(A), "one account, one nonce: the token itself refuses a second transfer");
-  await assert.rejects(giveJudgeCredit({ account: A, code: CODE }, { config: CONFIG, nowMs: NOW, send }), refusal("JUDGE_ALREADY_CREDITED"));
+  await assert.rejects(giveJudgeCredit({ account: A, code: CODE }, { config: CONFIG, nowMs: NOW, send, spendable: plenty }), refusal("JUDGE_ALREADY_CREDITED"));
   assert.equal(sent.length, 1);
   const lines = await loadJudgeCredits();
   assert.equal(lines.length, 1);
@@ -64,21 +67,21 @@ test("the right code sends the set amount to the signed-in account, once, and wr
 });
 
 test("a wrong code moves nothing, is counted, and five lock the account", async () => {
-  for (let i = 0; i < 5; i++) await assert.rejects(giveJudgeCredit({ account: B, code: "not-the-code-at-all" }, { config: CONFIG, nowMs: NOW, send }), refusal("JUDGE_CODE_WRONG"));
-  await assert.rejects(giveJudgeCredit({ account: B, code: CODE }, { config: CONFIG, nowMs: NOW, send }), refusal("JUDGE_CODE_LOCKED"));
+  for (let i = 0; i < 5; i++) await assert.rejects(giveJudgeCredit({ account: B, code: "not-the-code-at-all" }, { config: CONFIG, nowMs: NOW, send, spendable: plenty }), refusal("JUDGE_CODE_WRONG"));
+  await assert.rejects(giveJudgeCredit({ account: B, code: CODE }, { config: CONFIG, nowMs: NOW, send, spendable: plenty }), refusal("JUDGE_CODE_LOCKED"));
   assert.equal(sent.length, 0);
 });
 
 test("a wrong code then the right one still gives the credit", async () => {
-  await assert.rejects(giveJudgeCredit({ account: B, code: "a-wrong-one-typed" }, { config: CONFIG, nowMs: NOW, send }), refusal("JUDGE_CODE_WRONG"));
-  await giveJudgeCredit({ account: B, code: CODE }, { config: CONFIG, nowMs: NOW, send });
+  await assert.rejects(giveJudgeCredit({ account: B, code: "a-wrong-one-typed" }, { config: CONFIG, nowMs: NOW, send, spendable: plenty }), refusal("JUDGE_CODE_WRONG"));
+  await giveJudgeCredit({ account: B, code: CODE }, { config: CONFIG, nowMs: NOW, send, spendable: plenty });
   assert.equal(sent.length, 1);
 });
 
 test("the ceiling holds across accounts", async () => {
-  await giveJudgeCredit({ account: A, code: CODE }, { config: CONFIG, nowMs: NOW, send });
-  await giveJudgeCredit({ account: B, code: CODE }, { config: CONFIG, nowMs: NOW, send });
-  await assert.rejects(giveJudgeCredit({ account: C, code: CODE }, { config: CONFIG, nowMs: NOW, send }), refusal("JUDGE_CREDIT_CAP"), "50 given, 25 more would pass 60");
+  await giveJudgeCredit({ account: A, code: CODE }, { config: CONFIG, nowMs: NOW, send, spendable: plenty });
+  await giveJudgeCredit({ account: B, code: CODE }, { config: CONFIG, nowMs: NOW, send, spendable: plenty });
+  await assert.rejects(giveJudgeCredit({ account: C, code: CODE }, { config: CONFIG, nowMs: NOW, send, spendable: plenty }), refusal("JUDGE_CREDIT_CAP"), "50 given, 25 more would pass 60");
   assert.equal(sent.length, 2);
 });
 
@@ -86,14 +89,14 @@ test("a send that failed can be tried again, with the same nonce, so it can only
   const failing = async () => {
     throw new Error("the chain did not answer");
   };
-  await assert.rejects(giveJudgeCredit({ account: A, code: CODE }, { config: CONFIG, nowMs: NOW, send: failing }), refusal("JUDGE_CREDIT_NOT_SENT"));
+  await assert.rejects(giveJudgeCredit({ account: A, code: CODE }, { config: CONFIG, nowMs: NOW, send: failing, spendable: plenty }), refusal("JUDGE_CREDIT_NOT_SENT"));
   assert.equal((await loadJudgeCredits())[0].state, "failed");
-  await giveJudgeCredit({ account: A, code: CODE }, { config: CONFIG, nowMs: NOW, send });
+  await giveJudgeCredit({ account: A, code: CODE }, { config: CONFIG, nowMs: NOW, send, spendable: plenty });
   assert.equal(sent[0].nonce, judgeCreditNonce(A));
 });
 
 test("closed without its three variables, and after 27 Oct 2026", async () => {
-  await assert.rejects(giveJudgeCredit({ account: A, code: CODE }, { config: null, nowMs: NOW, send }), refusal("JUDGE_CREDIT_CLOSED"));
+  await assert.rejects(giveJudgeCredit({ account: A, code: CODE }, { config: null, nowMs: NOW, send, spendable: plenty }), refusal("JUDGE_CREDIT_CLOSED"));
   await assert.rejects(giveJudgeCredit({ account: A, code: CODE }, { config: CONFIG, nowMs: JUDGE_CREDIT_ENDS, send }), refusal("JUDGE_CREDIT_ENDED"));
   assert.equal(JUDGE_CREDIT_ENDS, Date.parse("2026-10-28T00:00:00Z"), "the whole of 27 Oct, UTC");
   assert.equal(judgeCreditConfig(env({ JUDGE_CODE: "short", JUDGE_CREDIT_AUSD: "25", JUDGE_CREDIT_CAP_AUSD: "100" })), null, "a code under 12 characters is no code");
@@ -117,9 +120,9 @@ test("the code is never in the repository, the route reads the signed-in account
 
 test("an account is a judge's once its credit is sent, and not for a wrong code or a failed send (D295)", async () => {
   assert.equal(await isJudgeCredited(A), false);
-  await assert.rejects(giveJudgeCredit({ account: A, code: "not-the-code-at-all" }, { config: CONFIG, nowMs: NOW, send }));
+  await assert.rejects(giveJudgeCredit({ account: A, code: "not-the-code-at-all" }, { config: CONFIG, nowMs: NOW, send, spendable: plenty }));
   assert.equal(await isJudgeCredited(A), false, "a wrong code writes a line, and it is not a credit");
-  await giveJudgeCredit({ account: A, code: CODE }, { config: CONFIG, nowMs: NOW, send });
+  await giveJudgeCredit({ account: A, code: CODE }, { config: CONFIG, nowMs: NOW, send, spendable: plenty });
   assert.equal(await isJudgeCredited(A), true);
   assert.equal(await isJudgeCredited(B), false);
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
