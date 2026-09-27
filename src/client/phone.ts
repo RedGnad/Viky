@@ -15,7 +15,7 @@ export type PhoneOperator = Readonly<{
 
 export { phoneKindOf, type PhoneKind } from "../phone-kind";
 
-export type PhonePrice = Readonly<{ orderId: string; operatorName: string; localAmount: string; localCurrency: string; ausdUnits: bigint; to: Hex }>;
+export type PhonePrice = Readonly<{ orderId: string; operatorName: string; localAmount: string; localCurrency: string; ausdUnits: bigint; feeUnits: bigint; to: Hex }>;
 
 export type PhoneStatus = Readonly<{
   orderId: string;
@@ -33,8 +33,8 @@ export async function findPhoneOperators(phone: string): Promise<readonly PhoneO
 }
 
 export async function pricePhone(input: Readonly<{ phone: string; operatorId: string; packageId?: string; value?: number }>): Promise<PhonePrice> {
-  const answer = await postJson<Omit<PhonePrice, "ausdUnits"> & { ausdUnits: string }>("/api/phone/price", input);
-  return { ...answer, ausdUnits: BigInt(answer.ausdUnits) };
+  const answer = await postJson<Omit<PhonePrice, "ausdUnits" | "feeUnits"> & { ausdUnits: string; feeUnits?: string }>("/api/phone/price", input);
+  return { ...answer, ausdUnits: BigInt(answer.ausdUnits), feeUnits: BigInt(answer.feeUnits ?? "0") };
 }
 
 /**

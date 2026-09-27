@@ -199,7 +199,7 @@ export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => P
           <div>
             <p className={CARD_LABEL}>{W.priced(local(price.localAmount, price.localCurrency), price.operatorName)}</p>
             <p className={CARD_AMOUNT}>{dollars(price.ausdUnits)}</p>
-            <p className={HELP}>{W.costs(dollars(price.ausdUnits), dollars(props.ausd > price.ausdUnits ? props.ausd - price.ausdUnits : 0n))}</p>
+            <p className={HELP}>{W.costs(dollars(price.ausdUnits), dollars(props.ausd > price.ausdUnits ? props.ausd - price.ausdUnits : 0n), price.feeUnits > 0n ? dollars(price.feeUnits) : undefined)}</p>
           </div>
         ) : null}
         {alert}

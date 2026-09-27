@@ -40,7 +40,9 @@ CREATE TABLE IF NOT EXISTS viky_phone_orders (
 CREATE INDEX IF NOT EXISTS viky_phone_orders_account ON viky_phone_orders (account, created_at DESC);
 CREATE INDEX IF NOT EXISTS viky_phone_orders_day ON viky_phone_orders (created_at);
 ALTER TABLE viky_phone_orders ADD COLUMN IF NOT EXISTS code_sealed text;
-ALTER TABLE viky_phone_orders ADD COLUMN IF NOT EXISTS relay_tx text
+ALTER TABLE viky_phone_orders ADD COLUMN IF NOT EXISTS relay_tx text;
+ALTER TABLE viky_phone_orders ADD COLUMN IF NOT EXISTS bridge_to text;
+ALTER TABLE viky_phone_orders ADD COLUMN IF NOT EXISTS bridge_request text
 `;
 
 export type PhoneOrderState = "priced" | "received" | "paid" | "delivered" | "failed" | "refunded";
@@ -67,6 +69,10 @@ export type PhoneOrder = Readonly<{
   codeSealed: string | null;
   /** The one relay that pays the order: `pending:<the person's nonce>` while it is being sent, then its hash. */
   relayTx: string | null;
+  /** Relay's strict deposit address for this order, where its AUSD pays the invoice on Base (null: paid from Base). */
+  bridgeTo: string | null;
+  /** Relay's request for that deposit, to follow the fill. */
+  bridgeRequest: string | null;
   createdAt: Date;
 }>;
 
@@ -111,16 +117,18 @@ function rowOf(row: Record<string, unknown>): PhoneOrder {
     failure: row.failure ? String(row.failure) : null,
     codeSealed: row.code_sealed ? String(row.code_sealed) : null,
     relayTx: row.relay_tx ? String(row.relay_tx) : null,
+    bridgeTo: row.bridge_to ? String(row.bridge_to) : null,
+    bridgeRequest: row.bridge_request ? String(row.bridge_request) : null,
     createdAt: row.created_at instanceof Date ? row.created_at : new Date(String(row.created_at)),
   };
 }
 
 /** A priced order, before anything moved: Bitrefill's invoice, its price in USDC, and the AUSD the person will send. */
-export async function recordPricedOrder(input: Omit<PhoneOrder, "id" | "ausdTx" | "paymentTx" | "refundTx" | "state" | "failure" | "createdAt" | "codeSealed" | "relayTx">): Promise<PhoneOrder> {
+export async function recordPricedOrder(input: Omit<PhoneOrder, "id" | "ausdTx" | "paymentTx" | "refundTx" | "state" | "failure" | "createdAt" | "codeSealed" | "relayTx" | "bridgeTo" | "bridgeRequest"> & { bridgeTo?: string | null; bridgeRequest?: string | null }): Promise<PhoneOrder> {
   const id = `ph_${randomBytes(9).toString("base64url")}`;
   const rows = await sql()`
-    INSERT INTO viky_phone_orders (id, account, kind, product_id, operator_name, local_amount, local_currency, phone_number, invoice_id, usdc_units, ausd_units, state)
-    VALUES (${id}, ${input.account}, ${input.kind}, ${input.productId}, ${input.operatorName}, ${input.localAmount}, ${input.localCurrency}, ${input.phoneNumber}, ${input.invoiceId}, ${input.usdcUnits.toString()}, ${input.ausdUnits.toString()}, 'priced')
+    INSERT INTO viky_phone_orders (id, account, kind, product_id, operator_name, local_amount, local_currency, phone_number, invoice_id, usdc_units, ausd_units, state, bridge_to, bridge_request)
+    VALUES (${id}, ${input.account}, ${input.kind}, ${input.productId}, ${input.operatorName}, ${input.localAmount}, ${input.localCurrency}, ${input.phoneNumber}, ${input.invoiceId}, ${input.usdcUnits.toString()}, ${input.ausdUnits.toString()}, 'priced', ${input.bridgeTo ?? null}, ${input.bridgeRequest ?? null})
     RETURNING *`;
   return rowOf(rows[0]);
 }

@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const value = typeof body.value === "number" && Number.isFinite(body.value) && body.value > 0 ? body.value : undefined;
     const packageId = typeof body.packageId === "string" && body.packageId.length <= 120 ? body.packageId : undefined;
     const priced = await priceGiftCard({ account: auth.account as Hex, productId: String(body.productId ?? ""), packageId, value });
-    return NextResponse.json({ ...priced, ausdUnits: priced.ausdUnits.toString() }, { headers: NO_STORE });
+    return NextResponse.json({ ...priced, ausdUnits: priced.ausdUnits.toString(), feeUnits: priced.feeUnits.toString() }, { headers: NO_STORE });
   } catch (error) {
     return phoneErrorResponse(error);
   }

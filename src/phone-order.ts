@@ -8,6 +8,7 @@ import { addMonadGasBuffer } from "./monad-gas";
 import * as store from "./phone-order-store";
 import type { PhoneOrder } from "./phone-order-store";
 import { payInvoiceOnBase, refundAusd, treasuryAddress, treasuryCovers, TreasuryError } from "./phone-treasury";
+import { bridgeStatus, quoteAusdToBaseUsdc, type BridgeQuote, type BridgeStatus } from "./relay-bridge";
 import { relayerClients, relayerPreflight } from "./relayer";
 
 /**
@@ -124,6 +125,14 @@ export type PhoneDeps = Readonly<{
   seal: (text: string) => string;
   open: (sealed: string) => string;
   sleep: (ms: number) => Promise<void>;
+  /**
+   * The way an order is paid without a float (the founder, 28 Sep 2026): Relay's price and strict deposit address for
+   * the invoice (src/relay-bridge.ts), the treasury's transfer of the order's AUSD to it, carried by the relayer as a
+   * refund is, and where Relay's fill stands. Without them, the treasury pays the invoice from its own USDC on Base.
+   */
+  quoteBridge?: (input: { usdcUnits: bigint; payTo: string; treasury: Hex }) => Promise<BridgeQuote>;
+  sendToBridge?: (input: { to: Hex; ausdUnits: bigint; nonce: Hex }) => Promise<{ hash: Hex }>;
+  bridgeStatus?: (requestId: string) => Promise<BridgeStatus>;
 }>;
 
 /** The operators for a number, as the screen offers them: name, currency, the amounts it takes. */
@@ -147,7 +156,32 @@ async function assertWithinTheDay(account: Hex, units: bigint, deps: PhoneDeps):
   if (everything.usdcUnits + units > BigInt(PHONE_CEILINGS.usdPerDay) * USDC) throw new PhoneOrderError("OVER_SERVICE_DAY", PHONE_REFUSALS.overServiceDay());
 }
 
-export type PricedPhoneOrder = Readonly<{ orderId: string; operatorName: string; localAmount: string; localCurrency: string; ausdUnits: bigint; to: Hex }>;
+/** `feeUnits`: what the person pays beyond the invoice, the transfer's fee to Relay, shown with the price. */
+export type PricedPhoneOrder = Readonly<{ orderId: string; operatorName: string; localAmount: string; localCurrency: string; ausdUnits: bigint; feeUnits: bigint; to: Hex }>;
+
+/**
+ * What the order costs the person, and how it is paid. Through Relay, the person pays the invoice's USDC plus Relay's
+ * fee, both in their own AUSD, and nothing comes out of a float; without Relay, one AUSD for one USDC, paid from the
+ * treasury's USDC on Base, which must cover it.
+ */
+async function costOf(units: bigint, invoice: BitrefillInvoice, treasury: Hex, deps: PhoneDeps): Promise<{ ausdUnits: bigint; bridgeTo: string | null; bridgeRequest: string | null }> {
+  if (!deps.quoteBridge) {
+    if (!(await deps.treasuryCovers(units))) throw new PhoneOrderError("TREASURY_SHORT", PHONE_REFUSALS.treasuryShort, 503);
+    return { ausdUnits: units, bridgeTo: null, bridgeRequest: null };
+  }
+  try {
+    const quote = await deps.quoteBridge({ usdcUnits: units, payTo: invoice.payment.address, treasury });
+    return { ausdUnits: quote.ausdUnits, bridgeTo: quote.depositAddress, bridgeRequest: quote.requestId };
+  } catch (error) {
+    console.error(`Relay gave no price for invoice ${invoice.id}: ${error instanceof Error ? error.message : String(error)}`);
+    throw new PhoneOrderError("UNAVAILABLE", PHONE_REFUSALS.unavailable, 503);
+  }
+}
+
+/** The nonce of the treasury's transfer of an order's AUSD to Relay: the order's own, so it can go once and never twice. */
+export function bridgeNonce(orderId: string): Hex {
+  return keccak256(stringToHex(`viky:phone-bridge:v1:${orderId}`));
+}
 
 /**
  * Prices a top-up and writes it down, moving nothing. The invoice comes first because its price is what every ceiling
@@ -181,8 +215,8 @@ export async function pricePhoneTopUp(
   if (units > BigInt(BITREFILL_ACCOUNT_LIMITS.usdPerRefill) * USDC) throw new PhoneOrderError("OVER_REFILL", PHONE_REFUSALS.overRefill());
   if (units > BigInt(PHONE_CEILINGS.usdPerOrder) * USDC) throw new PhoneOrderError("OVER_ORDER", PHONE_REFUSALS.overOrder());
   await assertWithinTheDay(input.account, units, deps);
-  if ((await deps.heldAusd(input.account)) < units) throw new PhoneOrderError("NOT_ENOUGH", PHONE_REFUSALS.notEnough);
-  if (!(await deps.treasuryCovers(units))) throw new PhoneOrderError("TREASURY_SHORT", PHONE_REFUSALS.treasuryShort, 503);
+  const cost = await costOf(units, invoice, to, deps);
+  if ((await deps.heldAusd(input.account)) < cost.ausdUnits) throw new PhoneOrderError("NOT_ENOUGH", PHONE_REFUSALS.notEnough);
   const localAmount = input.value !== undefined ? String(input.value) : (operator.packages.find((p) => p.id === input.packageId)?.value ?? "");
   const order = await deps.store.recordPricedOrder({
     account: getAddress(input.account),
@@ -194,11 +228,12 @@ export async function pricePhoneTopUp(
     localCurrency: operator.currency,
     phoneNumber: input.phoneNumber,
     invoiceId: invoice.id,
-    // One AUSD for one USDC: both are dollars with six decimals, and the treasury is funded to pay the difference in fees.
     usdcUnits: units,
-    ausdUnits: units,
+    ausdUnits: cost.ausdUnits,
+    bridgeTo: cost.bridgeTo,
+    bridgeRequest: cost.bridgeRequest,
   });
-  return { orderId: order.id, operatorName: order.operatorName, localAmount: order.localAmount, localCurrency: order.localCurrency, ausdUnits: order.ausdUnits, to };
+  return { orderId: order.id, operatorName: order.operatorName, localAmount: order.localAmount, localCurrency: order.localCurrency, ausdUnits: order.ausdUnits, feeUnits: order.ausdUnits - order.usdcUnits, to };
 }
 
 export type PersonAuthorization = Readonly<{ value: bigint; validAfter: bigint; validBefore: bigint; nonce: Hex; signature: Hex }>;
@@ -261,8 +296,8 @@ export async function priceGiftCard(input: Readonly<{ account: Hex; productId: s
   }
   if (units > BigInt(PHONE_CEILINGS.usdPerOrder) * USDC) throw new PhoneOrderError("OVER_ORDER", PHONE_REFUSALS.overOrder());
   await assertWithinTheDay(input.account, units, deps);
-  if ((await deps.heldAusd(input.account)) < units) throw new PhoneOrderError("NOT_ENOUGH", PHONE_REFUSALS.notEnough);
-  if (!(await deps.treasuryCovers(units))) throw new PhoneOrderError("TREASURY_SHORT", PHONE_REFUSALS.treasuryShort, 503);
+  const cost = await costOf(units, invoice, to, deps);
+  if ((await deps.heldAusd(input.account)) < cost.ausdUnits) throw new PhoneOrderError("NOT_ENOUGH", PHONE_REFUSALS.notEnough);
   const localAmount = input.value !== undefined ? String(input.value) : (card.packages.find((p) => p.id === input.packageId)?.value ?? "");
   const order = await deps.store.recordPricedOrder({
     account: getAddress(input.account),
@@ -274,9 +309,11 @@ export async function priceGiftCard(input: Readonly<{ account: Hex; productId: s
     phoneNumber: null,
     invoiceId: invoice.id,
     usdcUnits: units,
-    ausdUnits: units,
+    ausdUnits: cost.ausdUnits,
+    bridgeTo: cost.bridgeTo,
+    bridgeRequest: cost.bridgeRequest,
   });
-  return { orderId: order.id, operatorName: order.operatorName, localAmount: order.localAmount, localCurrency: order.localCurrency, ausdUnits: order.ausdUnits, to };
+  return { orderId: order.id, operatorName: order.operatorName, localAmount: order.localAmount, localCurrency: order.localCurrency, ausdUnits: order.ausdUnits, feeUnits: order.ausdUnits - order.usdcUnits, to };
 }
 
 /** A delivered gift card's code, read from Bitrefill, sealed and kept once; nothing when Bitrefill has none yet. */
@@ -350,7 +387,8 @@ export async function payPhoneTopUp(input: Readonly<{ account: Hex; orderId: str
   if (input.authorization.value !== order.ausdUnits) throw new PhoneOrderError("INVALID_AUTHORIZATION", PHONE_REFUSALS.invalidAuthorization, 400);
   if (usdcUnits(invoice.payment.price) !== order.usdcUnits) throw new PhoneOrderError("PRICE_EXPIRED", PHONE_REFUSALS.priceExpired);
   if ((await deps.heldAusd(input.account)) < order.ausdUnits) throw new PhoneOrderError("NOT_ENOUGH", PHONE_REFUSALS.notEnough);
-  if (!(await deps.treasuryCovers(order.usdcUnits))) throw new PhoneOrderError("TREASURY_SHORT", PHONE_REFUSALS.treasuryShort, 503);
+  // Paid through Relay, the order needs nothing of the treasury's own; paid from Base, the treasury must cover it.
+  if (!order.bridgeTo && !(await deps.treasuryCovers(order.usdcUnits))) throw new PhoneOrderError("TREASURY_SHORT", PHONE_REFUSALS.treasuryShort, 503);
   await assertWithinTheDay(from, order.usdcUnits, deps);
 
   const claim = `pending:${input.authorization.nonce}`;
@@ -412,6 +450,7 @@ async function payReceived(inTreasury: PhoneOrder | null, order: PhoneOrder, dep
     if (!invoice) return statusOf(inTreasury);
     if (invoice.status !== "unpaid") return statusOf(await refund(inTreasury, `bitrefill:${invoice.status}`, deps));
   }
+  if (inTreasury.bridgeTo && deps.sendToBridge) return payThroughBridge(inTreasury, deps);
   let paid: Hex;
   try {
     paid = (await deps.payInvoiceOnBase({ to: invoice.payment.address, usdcUnits: inTreasury.usdcUnits })).hash;
@@ -427,6 +466,32 @@ async function payReceived(inTreasury: PhoneOrder | null, order: PhoneOrder, dep
     await deps.store.markPaid(inTreasury.id, paid);
   } catch (error) {
     console.error(`a phone order was paid on Base but not recorded: ${inTreasury.id} ${paid} ${error instanceof Error ? error.message : String(error)}`);
+    return statusOf(inTreasury);
+  }
+  return followPhoneTopUp({ account: getAddress(inTreasury.account), orderId: inTreasury.id }, deps, 45_000);
+}
+
+/**
+ * The order's AUSD, from the treasury to Relay's deposit address, which pays the invoice on Base. The treasury signs it
+ * with the order's own nonce and the relayer carries it; a send that failed is read back from the token, so it is never
+ * sent twice, and never refunded when it went.
+ */
+async function payThroughBridge(inTreasury: PhoneOrder, deps: PhoneDeps): Promise<PhoneOrderStatus> {
+  const nonce = bridgeNonce(inTreasury.id);
+  let sent: string;
+  try {
+    sent = (await deps.sendToBridge!({ to: getAddress(inTreasury.bridgeTo!), ausdUnits: inTreasury.ausdUnits, nonce })).hash;
+  } catch (error) {
+    const went = await deps.authorizationUsed(deps.treasuryAddress(), nonce).catch(() => null);
+    if (went === false) return statusOf(await refund(inTreasury, "BRIDGE_NOT_SENT", deps));
+    console.error(`a phone order's transfer to Relay may have gone: ${inTreasury.id} ${error instanceof Error ? error.message : String(error)}`);
+    if (went === null) return statusOf(inTreasury);
+    sent = `authorization:${nonce}`;
+  }
+  try {
+    await deps.store.markPaid(inTreasury.id, sent);
+  } catch (error) {
+    console.error(`a phone order was sent to Relay but not recorded: ${inTreasury.id} ${sent} ${error instanceof Error ? error.message : String(error)}`);
     return statusOf(inTreasury);
   }
   return followPhoneTopUp({ account: getAddress(inTreasury.account), orderId: inTreasury.id }, deps, 45_000);
@@ -457,6 +522,12 @@ export async function followPhoneTopUp(input: Readonly<{ account: Hex; orderId: 
     const outcome = invoice ? outcomeOf(invoice) : "waiting";
     if (outcome === "delivered") return statusOf(await keepCode((await deps.store.markDelivered(order.id)) ?? order, invoice, deps), deps.open);
     if (outcome === "failed") return statusOf(await refund(order, `bitrefill:${invoice?.status ?? "failed"}`, deps));
+    // Paid through Relay and the invoice still waiting: a fill Relay could not complete came back to the treasury, and
+    // goes back to the person.
+    if (outcome === "waiting" && invoice?.status === "unpaid" && order.bridgeRequest && deps.bridgeStatus) {
+      const bridge = await deps.bridgeStatus(order.bridgeRequest);
+      if (bridge === "refund" || bridge === "failure") return statusOf(await refund(order, `relay:${bridge}`, deps));
+    }
     if (Date.now() >= until) break;
     await deps.sleep(3_000);
     order = (await deps.store.loadPhoneOrder(order.id)) ?? order;
@@ -582,6 +653,10 @@ export function livePhoneDeps(): PhoneDeps {
     seal: (text) => sealSecret(text),
     open: (sealed) => openSecret(sealed),
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    quoteBridge: (input) => quoteAusdToBaseUsdc(input),
+    // The same carrying as a refund: the treasury signs an AUSD transfer with the order's nonce, the relayer pays its fee.
+    sendToBridge: (input) => refundAusd(input),
+    bridgeStatus: (requestId) => bridgeStatus(requestId),
   };
 }
 

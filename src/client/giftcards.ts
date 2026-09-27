@@ -22,8 +22,8 @@ export async function listGiftCards(country: string): Promise<readonly GiftCardL
 }
 
 export async function priceGiftCard(input: Readonly<{ productId: string; packageId?: string; value?: number }>): Promise<PhonePrice> {
-  const answer = await postJson<Omit<PhonePrice, "ausdUnits"> & { ausdUnits: string }>("/api/giftcards/price", input);
-  return { ...answer, ausdUnits: BigInt(answer.ausdUnits) };
+  const answer = await postJson<Omit<PhonePrice, "ausdUnits" | "feeUnits"> & { ausdUnits: string; feeUnits?: string }>("/api/giftcards/price", input);
+  return { ...answer, ausdUnits: BigInt(answer.ausdUnits), feeUnits: BigInt(answer.feeUnits ?? "0") };
 }
 
 export async function giftCardCodes(): Promise<readonly GiftCardKept[]> {
