@@ -8,6 +8,7 @@ import { GOAL_TYPE_DUOLINGO_XP } from "@/src/gift-terms";
 import { loadLatestEvidence, pruneExpiredProofSessions, saveProofSession, type ProofSessionPhase } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { reclaimChannelInitOptions, reclaimChannelLaunchOptions, resolveReclaimChannel } from "@/src/reclaim-channel";
+import { loadGift } from "@/src/gift-store";
 import { loadMilestoneGift } from "@/src/milestone-store";
 import { shownConditionById, type ShownProvider } from "@/src/shown-conditions";
 import { shownContextMessage } from "@/src/shown-proof";
@@ -65,6 +66,11 @@ export async function POST(request: Request) {
       bound = { username: profile.username, profileId: profile.id };
     }
 
+    // Only the person the gift is for opens a proof for it (the review of 23 Sep 2026, finding 5): a session is a
+    // Reclaim verification, counted against the account's quota, and a proof is only ever theirs to show.
+    const gift = await loadGift(giftId);
+    if (!gift) throw new Error("Unknown gift");
+    if (gift.recipient?.toLowerCase() !== account.toLowerCase()) throw new Error("This gift is not yours to prove");
     const appId = process.env.RECLAIM_APP_ID?.trim();
     const appSecret = process.env.RECLAIM_APP_SECRET?.trim();
     if (!appId || !appSecret) throw new Error("The Reclaim application is not configured");
