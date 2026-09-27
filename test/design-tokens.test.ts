@@ -488,7 +488,7 @@ test("no blur anywhere: no halo on the ground, no shadow under a card, and the g
   assert.match(css, /--character-hero-edge: #FFE7A8;/);
   // At night it is a violet above the ground, not black, and lighter at each asking: 1.25, then 1.62, then 2.14:1;
   // since D227 the tint's tone 50 at twice the chroma, 4.12:1 on the ground and 3.21:1 on the paper (D229).
-  assert.equal((css.match(/--character-hero-edge: #FFE7A8;/g) ?? []).length, 3, "the day's cream edge, by day and in both night blocks since D305");
+  assert.equal((css.match(/--character-hero-edge: #B79BFF;/g) ?? []).length, 2, "both night blocks: the day's violet at the edge since D306");
   assert.match(readFileSync("app/kit/offer/OfferCard.tsx", "utf8"), /gift-card-width gift-card-placed/, "and the one card is the one placed");
 });
 

@@ -342,19 +342,21 @@
     --action-off: #433D52;
     --action-off-deep: #221D30;
     --action-off-ink: #C7C4DA;
-    --character-hero-edge: #FFE7A8;
-    --character-hero-edge-light: #FFF4D0;
-    --character-hero-edge-deep: #E8B860;
-    --character-hero-from: #FF7F8E;
-    --character-hero-to: #B79BFF;
-    --character-halftone: #835EFF;
+    /* By night the character's colours change places (D306, the founder, 28 Sep 2026): gold inside, the day's violet
+       at its edge, the halftone the gold multiplied by itself; limbs in the day's field cream. */
+    --character-hero-edge: #B79BFF;
+    --character-hero-edge-light: #B79BFF;
+    --character-hero-edge-deep: #835EFF;
+    --character-hero-from: #FFF4D0;
+    --character-hero-to: #E8B860;
+    --character-halftone: #D38421;
     --tonal: #2B2642;
     --card-border: #494454;
     --character-1: #FF7F8E;
     --character-2: #5AB4FF;
     --character-3: #B79BFF;
     --character-face: #151026;
-    --character-limb: #E8E3F4;
+    --character-limb: #F6EACB;
     --character-shadow: #08060F;
     --character-shadow-opacity: 0.45;
     /* A shade under the ground, read as depth: the ink after dark read as a thick white edge. */
@@ -398,19 +400,19 @@
   --action-off: #433D52;
   --action-off-deep: #221D30;
   --action-off-ink: #C7C4DA;
-  --character-hero-edge: #FFE7A8;
-  --character-hero-edge-light: #FFF4D0;
-  --character-hero-edge-deep: #E8B860;
-  --character-hero-from: #FF7F8E;
-  --character-hero-to: #B79BFF;
-  --character-halftone: #835EFF;
+  --character-hero-edge: #B79BFF;
+  --character-hero-edge-light: #B79BFF;
+  --character-hero-edge-deep: #835EFF;
+  --character-hero-from: #FFF4D0;
+  --character-hero-to: #E8B860;
+  --character-halftone: #D38421;
   --tonal: #2B2642;
   --card-border: #494454;
   --character-1: #FF7F8E;
   --character-2: #5AB4FF;
   --character-3: #B79BFF;
   --character-face: #151026;
-  --character-limb: #E8E3F4;
+  --character-limb: #F6EACB;
   --character-shadow: #08060F;
   --character-shadow-opacity: 0.45;
   /* A shade under the ground, read as depth: the ink after dark read as a thick white edge. */
