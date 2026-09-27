@@ -370,7 +370,13 @@ export const GIFT_CARD = {
 } as const;
 
 /** "Léa's", for a name the funder typed. */
-const their = (name: string) => `${name}'s`;
+/**
+ * A recipient named or not (D299): a card can be paid for without a name, a gift for whoever opens the link (the
+ * founder, 20 Sep 2026), so every sentence that names them says it without one too, never "for ," or "'s gift".
+ */
+const their = (name: string) => (name.trim() ? `${name}'s` : "their");
+const forThem = (name: string) => (name.trim() ? ` for ${name}` : "");
+const onlyTo = (name: string) => (name.trim() ? name : "the person it is for");
 
 /**
  * Offering a gift, flows F1 to F11 on the product structure: who it is for, what they will do, the condition's own
@@ -444,7 +450,7 @@ export const FUND = {
     missed: (time: string) =>
       `A day they miss can still be caught up the next day. If it is not, it comes back to you by itself the morning after, at about ${time} your time.`,
     namesSeen: (recipient: string, funder: string) => `${recipient} and ${funder} show on the gift, to whoever opens its link.`,
-    linkRisk: (recipient: string) => `The link you will get opens the gift for whoever opens it first. Send it only to ${recipient}.`,
+    linkRisk: (recipient: string) => `The link you will get opens the gift for whoever opens it first. Send it only to ${onlyTo(recipient)}.`,
     fourteenDays: "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
     /** The two disclosures of the check (GOV.UK Details): what only some readers need, out of everybody's way. */
     elseTitle: "What else this means",
@@ -479,7 +485,7 @@ export const FUND = {
 
   account: {
     title: "One account, and then you can pay",
-    yourGift: (amount: string, recipient: string, days: number) => `Your gift: ${amount} for ${recipient}, ${days} days.`,
+    yourGift: (amount: string, recipient: string, days: number) => `Your gift: ${amount}${forThem(recipient)}, ${days} days.`,
     why: "The money is held in your name until they earn it, so it needs somewhere of yours to be held.",
   },
 
@@ -535,15 +541,15 @@ export const FUND = {
 
   closed: {
     title: "Your session closed while you were paying",
-    kept: (amount: string, recipient: string) => `Nothing is lost. Your ${amount} gift for ${recipient} is kept on this device, and whatever you paid stays in your account.`,
+    kept: (amount: string, recipient: string) => `Nothing is lost. Your ${amount} gift${forThem(recipient)} is kept on this device, and whatever you paid stays in your account.`,
     keptWhileOpen: (amount: string, recipient: string) =>
-      `Nothing is lost. Your ${amount} gift for ${recipient} is kept while this page stays open, and whatever you paid stays in your account.`,
+      `Nothing is lost. Your ${amount} gift${forThem(recipient)} is kept while this page stays open, and whatever you paid stays in your account.`,
     signInAgain: "Sign in again and Viky picks up where it stopped: your payment becomes the gift as soon as it is here.",
   },
 
   waitingGift: {
     title: "A gift is waiting for your payment",
-    which: (amount: string, recipient: string) => `${amount} for ${recipient}, set up on this device and not made yet.`,
+    which: (amount: string, recipient: string) => `${amount}${forThem(recipient)}, set up on this device and not made yet.`,
     whichUnnamed: (amount: string) => `${amount}, set up on this device and not made yet.`,
     signIn: "Sign in to pick it up",
     staysInAccount: "Whatever you paid stays in your account.",
@@ -558,9 +564,9 @@ export const FUND = {
     copy: "Copy the link",
     copied: "Copied",
     share: "Share",
-    shareText: (recipient: string) => `${recipient}, this is for you.`,
+    shareText: (recipient: string) => (recipient.trim() ? `${recipient}, this is for you.` : "This is for you."),
     copyRefused: "Your browser would not let us copy it. Press and hold the link above, then choose Copy.",
-    onlyThem: (recipient: string) => `Whoever opens this link takes the gift, so send it only to ${recipient}.`,
+    onlyThem: (recipient: string) => `Whoever opens this link takes the gift, so send it only to ${onlyTo(recipient)}.`,
     /** Because the link is lost the moment this tab closes, and only the gift's page can make another (gift 1000001). */
     findItAgain: "Lose this link and the gift's page makes you a new one, as long as nobody has opened it.",
     nextTitle: "What happens next",
@@ -916,7 +922,7 @@ export const MILESTONE_FUND = {
     fourteenDays: "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
   },
   account: {
-    yourGift: (amount: string, recipient: string) => `Your gift: ${amount} for ${recipient}.`,
+    yourGift: (amount: string, recipient: string) => `Your gift: ${amount}${forThem(recipient)}.`,
   },
   made: {
     terms: (amount: string, goal: string, days: number, source: string) =>

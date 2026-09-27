@@ -2,7 +2,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "@/src/account/provider";
-import { ApiError, getJson, postJson } from "@/src/client/api";
+import { getJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { readAusdBalance } from "@/src/client/onchain";
 import { whereTheRailsServe } from "@/src/client/rails";
@@ -21,6 +21,7 @@ import { CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
+import { JudgeCode } from "./JudgeCode";
 import { FieldRefusal } from "../FieldRefusal";
 import { HeadCharacter } from "../HeadCharacter";
 import { Sheet } from "../Sheet";
@@ -58,12 +59,6 @@ function insteadSentence(offer: WayInOffer): string {
   return W.instead.floor(first.name, first.smallestEur, offer.way.name);
 }
 
-/** A balance as whole cents, rounded down, as the card's amount field takes it: 25.004999 is "25.00". */
-function centsDown(units: bigint): string {
-  const cents = units / 10_000n;
-  return `${cents / 100n}.${String(cents % 100n).padStart(2, "0")}`;
-}
-
 export function PaySheet({
   open,
   draft,
@@ -78,10 +73,9 @@ export function PaySheet({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copyRefused, setCopyRefused] = useState(false);
-  // Whether this account is a judge's, credited by the judge code (D295), and whether a code can be used now (D297):
-  // asked of the server, false until it says so.
+  // Whether this account is a judge's, credited by the judge code (D295): asked of the server, false until it says so.
+  // The code itself is `JudgeCode`'s (D297, D299).
   const [judge, setJudge] = useState(false);
-  const [codesOpen, setCodesOpen] = useState(false);
   useEffect(() => {
     if (!open) return;
     let live = true;
@@ -89,7 +83,6 @@ export function PaySheet({
       (answer) => {
         if (!live) return;
         setJudge(answer.credited === true);
-        setCodesOpen(answer.open === true);
       },
       () => {
         if (live) setJudge(false);
@@ -99,28 +92,7 @@ export function PaySheet({
       live = false;
     };
   }, [open, address]);
-  // The code, asked as a checkout asks one (D297): folded behind a small key, for an account already signed in (the
-  // server credits the session's account and no other), the balance read again once the treasury has sent the credit.
-  const [codeShown, setCodeShown] = useState(false);
-  const [code, setCode] = useState("");
-  const [codeBusy, setCodeBusy] = useState(false);
-  const [codeProblem, setCodeProblem] = useState<string | null>(null);
-  const [codeGiven, setCodeGiven] = useState<bigint | null>(null);
   const [balanceRead, setBalanceRead] = useState(0);
-  const redeemCode = async () => {
-    setCodeBusy(true);
-    setCodeProblem(null);
-    try {
-      const given = await postJson<{ units: string }>("/api/judge/credit", { code });
-      setCodeGiven(BigInt(given.units));
-      setJudge(true);
-      setBalanceRead((n) => n + 1);
-    } catch (error) {
-      setCodeProblem(error instanceof ApiError ? error.message : W.code.failed);
-    } finally {
-      setCodeBusy(false);
-    }
-  };
   /** The reader's own clock, read once a minute: the hour the settling pass runs is said in it. */
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   const [problem, setProblem] = useState<string | null>(null);
@@ -242,29 +214,16 @@ export function PaySheet({
           what to choose there and where the code goes, with the code one press away once the account exists. */}
       {!enough ? <p className={BODY}>{wayInFillsIn(way) ? W.partnerFilledIn : W.partnerPaste(way.name, way.delivers.coin, way.delivers.network, way.arrives === "gift")}</p> : null}
       {/* A judge's code (D297): only while credits are open, and the gift is not yet covered. */}
-      {codeGiven !== null ? <p className={HELP} role="status">{W.code.given(formatAusd(codeGiven))}</p> : null}
-      {codeGiven !== null && !enough && held !== null && held > 0n ? (
-        <div className="flex flex-col gap-[var(--space-xs)]">
-          <p className={HELP}>{W.code.short(formatAusd(held))}</p>
-          <button type="button" className={`${INLINE_BUTTON} self-start`} onClick={() => onChange({ ...draft, dollars: centsDown(held), typedAmount: centsDown(held), typedIn: "USD" })}>
-            {W.code.makeIt(formatAusd(BigInt(centsDown(held).replace(".", "")) * 10_000n))}
-          </button>
-        </div>
-      ) : null}
-      {!enough && codesOpen && address && codeGiven === null && !judge ? (
-        codeShown ? (
-          <div className="flex flex-col gap-[var(--space-xs)]">
-            <Field id="gift-code" label={W.code.label} value={code} onChange={setCode} autoComplete="off" spellCheck={false} />
-            {codeProblem ? <FieldRefusal id="gift-code-refused">{codeProblem}</FieldRefusal> : null}
-            <button type="button" className={`${INLINE_BUTTON} self-start`} disabled={codeBusy || code.trim().length === 0} onClick={() => void redeemCode()}>
-              {codeBusy ? W.code.using : W.code.use}
-            </button>
-          </div>
-        ) : (
-          <button type="button" className={`${INLINE_BUTTON} self-start`} onClick={() => setCodeShown(true)}>
-            {W.code.have}
-          </button>
-        )
+      {address ? (
+        <JudgeCode
+          covered={enough}
+          held={held}
+          onCredited={() => {
+            setJudge(true);
+            setBalanceRead((n) => n + 1);
+          }}
+          onMakeIt={(dollars) => onChange({ ...draft, dollars, typedAmount: dollars, typedIn: "USD" })}
+        />
       ) : null}
       {!enough && !wayInFillsIn(way) && address ? (
         <div className="flex flex-col gap-[var(--space-xs)]">
