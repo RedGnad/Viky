@@ -84,9 +84,19 @@ export default function LegalPage() {
         <p>
           What Viky does not have: no payout to mobile money such as Orange Money or Wave, and no bank transfer in
           Africa. A third route: a phone top-up, credit or data, or a gift card, bought on Bitrefill for the person
-          with their own money and sent to the number they give, or shown to them as a code. When Bitrefill or
-          Viky&apos;s own means cannot pay for one, the screen says so at that moment and nothing is taken; money that
-          arrived before a failure comes back by itself.
+          with their own money and sent to the number they give, or shown to them as a code. It is offered wherever
+          Bitrefill sells a top-up for the number&apos;s phone company, or lists a gift card that works in the
+          person&apos;s country, Senegal and Ivory Coast among them: Bitrefill&apos;s own lists, read when the person
+          chooses, and the gift cards of those two countries read on its site on 26 September 2026.
+        </p>
+        <p>
+          This route is the one exception to what is said above about money, and it is bounded. For a top-up or a
+          gift card, Viky holds the person&apos;s money in its treasury for the time it takes to pay the order, within
+          its ceilings: five orders and $500.00 a day for everybody together, and $50.00 a person a day. If the order
+          fails, the money is sent back by itself, when the order is next read and at the latest by the next daily
+          pass. Every order is written down, one line each, from the money received to the top-up or card delivered
+          or the money sent back. When Bitrefill or Viky&apos;s own means cannot pay for an order, the screen says so
+          at that moment and nothing is taken.
         </p>
       </section>
     </Shell>
