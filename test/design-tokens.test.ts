@@ -204,8 +204,8 @@ test("the card stands off the ground it is on, by day and by night, and the nigh
   assert.ok(night.chroma >= 0.04, "a tint, not a grey");
   assert.ok(hueDistance(night.hue, day.hue) <= 20, `the night ground is ${hueDistance(night.hue, day.hue).toFixed(0)} degrees from the day's`);
   assert.ok(contrastRatio("#FFF6E2", COLOURS.light.background) >= 1.3, "the cream on the day ground");
-  assert.ok(contrastRatio("#312627", COLOURS.dark.background) >= 1.25, "and the night paper, the sun over the ground at 12 %, on the night one, the same step (D231)");
-  assert.ok(contrastRatio("#312627", COLOURS.dark.background) < 2, "a step, not a glow: the cream stood at 17:1 there");
+  assert.ok(contrastRatio("#2C2738", COLOURS.dark.background) >= 1.25, "and the night paper, the day's lavender at tone 17 on the night ground, the same step (D305)");
+  assert.ok(contrastRatio("#2C2738", COLOURS.dark.background) < 2, "a step, not a glow: the cream stood at 17:1 there");
   // The surface the fields, the bar and the rail sit on is not a card: it stays near its ground, and the white one
   // of day sits at 1.41:1 on the lavender, which is a shade and not an object.
   for (const appearance of ["light", "dark"] as Appearance[]) {
@@ -294,9 +294,9 @@ test("the quiet button is filled, seen on both grounds, and its words clear 4.5:
   // One shut action, on the cream of the card by day and on its night paper after dark (D223), and its words readable
   // on it in both: the image's own #9A8B62 measured 2.64:1 on the cream.
   assert.ok(contrastRatio("#6F6133", "#EFE3C4") >= TEXT_CONTRAST_MINIMUM, "the words of the shut action are readable on it by day");
-  assert.ok(contrastRatio("#D0C5B1", "#443428") >= TEXT_CONTRAST_MINIMUM, "and by night");
+  assert.ok(contrastRatio("#C7C4DA", "#433D52") >= TEXT_CONTRAST_MINIMUM, "and by night");
   assert.match(css, /--action-off-ink: #6F6133;/);
-  assert.equal((css.match(/--action-off-ink: #D0C5B1;/g) ?? []).length, 2, "the night's, in both night blocks");
+  assert.equal((css.match(/--action-off-ink: #C7C4DA;/g) ?? []).length, 2, "the night's, in both night blocks");
   // The ink under it, not a darker yellow: the same slab every control stands on, and the only one that reads as a
   // thickness against a sun fill (D142).
   assert.match(primary, /\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--control-relief-colour\)\]/, "the ink is under it when it can be pressed");
@@ -488,7 +488,7 @@ test("no blur anywhere: no halo on the ground, no shadow under a card, and the g
   assert.match(css, /--character-hero-edge: #FFE7A8;/);
   // At night it is a violet above the ground, not black, and lighter at each asking: 1.25, then 1.62, then 2.14:1;
   // since D227 the tint's tone 50 at twice the chroma, 4.12:1 on the ground and 3.21:1 on the paper (D229).
-  assert.equal((css.match(/--character-hero-edge: #7A6EAF;/g) ?? []).length, 2, "both night blocks");
+  assert.equal((css.match(/--character-hero-edge: #FFE7A8;/g) ?? []).length, 3, "the day's cream edge, by day and in both night blocks since D305");
   assert.match(readFileSync("app/kit/offer/OfferCard.tsx", "utf8"), /gift-card-width gift-card-placed/, "and the one card is the one placed");
 });
 

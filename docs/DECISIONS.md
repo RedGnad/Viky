@@ -7732,3 +7732,22 @@ Hanover, Dortmund, Bremen, Aschaffenburg, Kandel, Bergisch Gladbach and the like
     outside the body's edge) drawn after the book. The folded arms (the sunglasses figure) leave from behind the body
     at their base the same way and cross in front.
 - Captured at 390 and 1440, by day and by night: the card, a family's list, the reading figure and the folded arms.
+
+## D305, 28 Sep 2026: the night in the day's lavender, with the day's character (direction A)
+
+- The founder, 28 Sep 2026: the night's colours displeased him; he loves the day's. The night mixed three families
+  that did not speak to each other: a violet ink ground, brown cards (D223's sun at 12 % over the ground) and a
+  sun-to-coral character, where the day stays in one: lavender, cream, pink and violet pastels.
+- Research: Duolingo's own dark mode, read on its page (its variables, 28 Sep 2026): ground #131F24, surfaces one step
+  lighter in the same hue (#202F36), borders #37464F, near-white text, the brand colours kept bright; one hue for ground
+  and surfaces, colour kept for the brand. Dark-mode guides say the same (keep brand colours, change their use, avoid
+  pure black, pastels read on a deep ground). Four directions were rendered on the real screens at 390 (lavender, blue
+  grey, cream cards on the night, warm plum); **the founder chose A**.
+- A: the ground stays #151026 (tone 6); the paper is the day's lavender at dark tones, one family with the ground
+  (Material's tone scale in CIELAB L*): paper #2C2738 (17), raised #332E3F (20), field #3C3648 (24), chosen #433D52
+  (27), rules #554F62 (35); the quiet voices lavender (#EAE4F2, #C7C4DA, #A8A2BC). The character keeps its day colours
+  by night (pink to violet, the cream-gold edge, the violet halftone), its limbs a pale lavender (#E8E3F4). Measured:
+  the cream on the paper 13.4:1, the faintest voice 4.72:1 in a field and 5.89:1 on the paper, the sun on the paper
+  9.1:1.
+- Not changed: the app's icon, drawn in the night look, is the one the last `pnpm make:icon` wrote; it is not redrawn
+  here, so it keeps its colours until the founder asks.

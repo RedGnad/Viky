@@ -270,7 +270,7 @@ export const GROUNDS = ["background", "surface"] as const;
  */
 export const CHARACTERS: Record<Appearance, Record<string, string>> = {
   light: { one: "#FF7F8E", two: "#5AB4FF", three: "#B79BFF", face: "#1E1633", shadow: "#1E1633" },
-  dark: { one: "#FF8C98", two: "#6DBDFB", three: "#BBA3FA", face: "#151026", shadow: "#08060F" },
+  dark: { one: "#FF7F8E", two: "#5AB4FF", three: "#B79BFF", face: "#151026", shadow: "#08060F" },
 };
 
 /**
