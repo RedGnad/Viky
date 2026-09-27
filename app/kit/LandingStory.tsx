@@ -75,7 +75,8 @@ export function LandingStory() {
       {standalone ? null : (
         <Reveal>
           <section className={`${CARD} flex flex-col items-center gap-[var(--space-lg)] text-center [@media(min-width:1024px)]:flex-row [@media(min-width:1024px)]:text-left`}>
-            <Figure id="story-phone" arms="wave" mouth="grin" halftone className="h-auto w-[110px] flex-none" />
+            {/* A soft smile, this one in particular (D303, the founder, 28 Sep 2026). */}
+            <Figure id="story-phone" arms="wave" mouth="soft" halftone className="h-auto w-[110px] flex-none" />
             <div className="flex w-full flex-col gap-[var(--space-sm)]">
               <h2 className={`${SAY} [text-wrap:balance]`}>{W.phone.title}</h2>
               <p className={`${BODY} text-[var(--muted)]`}>{W.phone.body}</p>

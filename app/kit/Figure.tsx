@@ -157,11 +157,12 @@ const LEGS: Record<LegsPose, readonly Readonly<{ turn: number }>[]> = {
  * The legs down to the box's floor (53), so the feet stand on whatever the drawing stands on, the card on the landing
  * (D301, the founder, 28 Sep 2026: they floated a unit and a half above it). A foot is the upper half of the old
  * rounded stroke: round on top, flat underneath (the look the link preview gave by cutting them at the card's edge),
- * and a leg ends square on it, so nothing round shows under the foot.
+ * and a leg ends square on it, so nothing round shows under the foot. 1.3 thick rather than half the stroke's 1.8 (D303,
+ * the founder: cut too thin), its top corners rounded.
  */
 const LEG_PATHS = [
-  { d: "M23.5 30 Q21.6 41.5 21.7 53", foot: "M17.6 53 A0.9 0.9 0 0 1 18.5 52.1 H21.7 A0.9 0.9 0 0 1 22.6 53 Z" },
-  { d: "M40.5 30 Q42.4 41.5 42.3 53", foot: "M41.4 53 A0.9 0.9 0 0 1 42.3 52.1 H45.5 A0.9 0.9 0 0 1 46.4 53 Z" },
+  { d: "M23.5 30 Q21.6 41.5 21.7 53", foot: "M17.6 53 V52.35 A0.65 0.65 0 0 1 18.25 51.7 H21.95 A0.65 0.65 0 0 1 22.6 52.35 V53 Z" },
+  { d: "M40.5 30 Q42.4 41.5 42.3 53", foot: "M41.4 53 V52.35 A0.65 0.65 0 0 1 42.05 51.7 H45.75 A0.65 0.65 0 0 1 46.4 52.35 V53 Z" },
 ] as const;
 
 /**

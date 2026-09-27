@@ -281,7 +281,7 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
               {/* One action, in the sun, full width, saying what it will take from the first second; shut, it says what it
                   is waiting for rather than its price (ui review, 20 Sep 2026: a muted "Pay $30.00" with no reason).
                   Its own group, 24 pixels under the money (D226). */}
-              <button type="button" className={`${PRIMARY_BUTTON} mt-[var(--space-xl)]`} disabled={!ready} onClick={() => setPaying(true)}>
+              <button type="button" data-card-action className={`${PRIMARY_BUTTON} mt-[var(--space-xl)]`} disabled={!ready} onClick={() => setPaying(true)}>
                 <span>{!filled.will ? W.finishWill : !filled.howLong ? W.chooseLength : units === undefined ? W.stillNeeded : W.pay(asked(units))}</span>
               </button>
               {/* The other half of the promise, under the action; what a day is worth is under the days now (D226). The
