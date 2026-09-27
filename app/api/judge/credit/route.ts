@@ -10,7 +10,7 @@ export const maxDuration = 60;
 
 /**
  * The judge credit (D291): the signed-in account, never one the browser names, and the code the judge typed. The
- * answer is the amount sent and its hash, or a typed refusal.
+ * answer is the amount sent and its hash (null when only the token showed it went out), or a typed refusal.
  */
 export async function POST(request: Request) {
   try {
