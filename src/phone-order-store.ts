@@ -162,7 +162,10 @@ export async function giftCardsOf(account: string): Promise<readonly PhoneOrder[
 }
 export const markFailed = (id: string, failure: string) => advance(id, ["received", "paid"], "failed", { failure });
 export const markRefunded = (id: string, refundTx: string) => advance(id, ["failed"], "refunded", { refundTx, erasePhone: true });
-/** A priced order the person never sent money for: nothing moved, so nothing is kept of the number either. */
+/**
+ * A priced order the person never sent money for: nothing moved, so nothing is kept of the number either. It stays
+ * `failed` with no `ausd_tx`, which every reader takes as nothing came in: never refunded, counted or listed as held.
+ */
 export const markAbandoned = (id: string) => advance(id, ["priced"], "failed", { failure: "abandoned", erasePhone: true });
 
 /**
@@ -174,8 +177,8 @@ export async function usedToday(account?: string, now: Date = new Date(), kind?:
   // "phone" counts credit and data together: both are phone items to Bitrefill's account limits (terms section 8).
   const kinds = kind === "phone" ? ["phone", "data"] : kind === "gift_card" ? ["gift_card"] : ["phone", "data", "gift_card"];
   const rows = account
-    ? await sql()`SELECT count(*)::int AS items, COALESCE(sum(usdc_units::numeric), 0)::text AS units FROM viky_phone_orders WHERE account = ${account} AND created_at >= ${day} AND state IN ('received', 'paid', 'delivered', 'failed') AND kind = ANY(${kinds as unknown as string[]})`
-    : await sql()`SELECT count(*)::int AS items, COALESCE(sum(usdc_units::numeric), 0)::text AS units FROM viky_phone_orders WHERE created_at >= ${day} AND state IN ('received', 'paid', 'delivered', 'failed') AND kind = ANY(${kinds as unknown as string[]})`;
+    ? await sql()`SELECT count(*)::int AS items, COALESCE(sum(usdc_units::numeric), 0)::text AS units FROM viky_phone_orders WHERE account = ${account} AND created_at >= ${day} AND state IN ('received', 'paid', 'delivered', 'failed') AND ausd_tx IS NOT NULL AND kind = ANY(${kinds as unknown as string[]})`
+    : await sql()`SELECT count(*)::int AS items, COALESCE(sum(usdc_units::numeric), 0)::text AS units FROM viky_phone_orders WHERE created_at >= ${day} AND state IN ('received', 'paid', 'delivered', 'failed') AND ausd_tx IS NOT NULL AND kind = ANY(${kinds as unknown as string[]})`;
   return { items: Number(rows[0]?.items ?? 0), usdcUnits: BigInt(String(rows[0]?.units ?? "0").split(".")[0]) };
 }
 
@@ -202,6 +205,6 @@ export async function usesDelivered(): Promise<Readonly<Record<"phone" | "data" 
  * listed here is money the treasury holds for somebody, with the order that says why.
  */
 export async function unsettledOrders(): Promise<readonly PhoneOrder[]> {
-  const rows = await sql()`SELECT * FROM viky_phone_orders WHERE state IN ('received', 'paid', 'failed') ORDER BY created_at`;
+  const rows = await sql()`SELECT * FROM viky_phone_orders WHERE state IN ('received', 'paid', 'failed') AND ausd_tx IS NOT NULL ORDER BY created_at`;
   return rows.map(rowOf);
 }
