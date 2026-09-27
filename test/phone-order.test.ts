@@ -57,10 +57,13 @@ function world(overrides: Partial<PhoneDeps> = {}, price = "3.812346"): { deps: 
       return { hash: `0xrefund${w.refunds.length}` as Hex };
     },
     heldAusd: async () => w.held,
-    relayToTreasury: async () => {
+    relayToTreasury: async (_input, onSubmitted) => {
       w.relayed += 1;
-      return { hash: `0xin${w.relayed}` as Hex };
+      const hash = `0xin${w.relayed}` as Hex;
+      await onSubmitted?.(hash);
+      return { hash };
     },
+    relayLanded: async () => "landed",
     authorizationUsed: async () => false,
     store,
     giftCardById: async (id) => ({ id, name: id === "boomplay-senegal" ? "Boomplay" : "Amazon.fr", countryCode: "SN", countryName: "Senegal", currency: "XOF", packages: [{ id: `${id}<&>1959`, value: "1959", priceUsd: 3.5 }], range: null }),
@@ -171,10 +174,13 @@ test("Bitrefill failing after the payment refunds, and a refund that could not b
   assert.equal(w.refunds.length, 1);
 });
 
-test("a relay that failed after the money moved is read from the token, and an unconfirmed payment is followed, not refunded", async () => {
+test("a relay that failed after it was sent is read from its own transaction, and an unconfirmed payment is followed, not refunded", async () => {
   const { deps, w } = world({
-    relayToTreasury: async () => { throw new Error("finality timed out"); },
-    authorizationUsed: async () => true,
+    relayToTreasury: async (_input, onSubmitted) => {
+      await onSubmitted?.("0xrelayed" as Hex);
+      throw new Error("finality timed out");
+    },
+    relayLanded: async () => "landed",
     payInvoiceOnBase: async () => {
       for (const [id, invoice] of w.invoices) w.invoices.set(id, { ...invoice, status: "complete", orders: [{ id: "o", status: "delivered" }] });
       throw new TreasuryError("PAYMENT_UNCONFIRMED", "later", { hash: "0xslow" as Hex });
@@ -185,7 +191,7 @@ test("a relay that failed after the money moved is read from the token, and an u
   assert.equal(status.state, "delivered");
   assert.equal(w.refunds.length, 0);
   const row = await store.loadPhoneOrder(priced.orderId);
-  assert.match(String(row?.ausdTx), /^authorization:0x/);
+  assert.equal(row?.ausdTx, "0xrelayed");
   assert.equal(row?.paymentTx, "0xslow");
   const refusedRelay = world({ relayToTreasury: async () => { throw new Error("reverted"); } });
   const other = await price(refusedRelay.deps);

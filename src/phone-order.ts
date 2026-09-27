@@ -48,6 +48,7 @@ export type PhoneRefusal =
   | "PRICE_EXPIRED"
   | "NOT_YOURS"
   | "INVALID_AUTHORIZATION"
+  | "PAYMENT_CONFIRMING"
   | "UNAVAILABLE";
 
 export class PhoneOrderError extends Error {
@@ -78,6 +79,8 @@ export const PHONE_REFUSALS = {
   priceExpired: "That price has run out. Start again: nothing was taken.",
   notYours: "That top-up is not one of yours.",
   invalidAuthorization: "That could not be confirmed. Nothing was taken.",
+  // Said once the person's money may have been sent: never "Nothing was taken" from then on.
+  paymentConfirming: "Your payment is being confirmed. Look again in a minute.",
   unavailable: "The phone company could not be reached. Nothing was taken.",
 } as const;
 
@@ -109,10 +112,13 @@ export type PhoneDeps = Readonly<{
   payInvoiceOnBase: (input: { to: string; usdcUnits: bigint }) => Promise<{ hash: Hex }>;
   refundAusd: (input: { to: Hex; ausdUnits: bigint; nonce: Hex }) => Promise<{ hash: Hex }>;
   heldAusd: (account: Hex) => Promise<bigint>;
-  relayToTreasury: (input: PersonAuthorization & { from: Hex; to: Hex }) => Promise<{ hash: Hex }>;
-  /** Whether the token has consumed an authorization: the truth when a relay failed after it may have been sent. */
+  /** Carries the person's authorization; `onSubmitted` hears the transaction's hash the moment it is sent. */
+  relayToTreasury: (input: PersonAuthorization & { from: Hex; to: Hex }, onSubmitted?: (hash: Hex) => Promise<void>) => Promise<{ hash: Hex }>;
+  /** Where one of the relayer's own transactions stands: final and successful, final and reverted, or not known yet. */
+  relayLanded: (hash: Hex) => Promise<"landed" | "reverted" | "unknown">;
+  /** Whether the token has consumed an authorization: used only to free a claim whose request stopped before sending. */
   authorizationUsed: (from: Hex, nonce: Hex) => Promise<boolean>;
-  store: Pick<typeof store, "recordPricedOrder" | "loadPhoneOrder" | "markReceived" | "markPaid" | "markDelivered" | "markFailed" | "markRefunded" | "markAbandoned" | "usedToday" | "keepSealedCode">;
+  store: Pick<typeof store, "recordPricedOrder" | "loadPhoneOrder" | "markReceived" | "markPaid" | "markDelivered" | "markFailed" | "markRefunded" | "markAbandoned" | "usedToday" | "keepSealedCode" | "claimRelay" | "noteRelay" | "releaseRelay">;
   giftCardById: typeof giftCardById;
   readOrderCode: typeof readOrderCode;
   /** The vault's seal and its opening, so a code is never at rest in the clear. */
@@ -305,9 +311,16 @@ async function refund(order: PhoneOrder, failure: string, deps: PhoneDeps): Prom
   }
 }
 
+const confirming = () => new PhoneOrderError("PAYMENT_CONFIRMING", PHONE_REFUSALS.paymentConfirming);
+const notConfirmed = () => new PhoneOrderError("INVALID_AUTHORIZATION", PHONE_REFUSALS.invalidAuthorization);
+
 /**
  * The person's money goes, and the invoice is paid. Checked before anything moves: the order is theirs and still
  * priced, the invoice still waits for its money, the authorization is for the treasury and for this amount exactly.
+ *
+ * One order is paid by one relay (the audit of 27 Sep 2026): the request that claims the order carries the
+ * authorization and records its transaction's hash as soon as it is sent. Whether the money arrived is read from that
+ * transaction alone, final, never from the token's record of a nonce, which says neither where nor how much.
  */
 export async function payPhoneTopUp(input: Readonly<{ account: Hex; orderId: string; authorization: PersonAuthorization }>, deps: PhoneDeps = livePhoneDeps()): Promise<PhoneOrderStatus> {
   const order = await deps.store.loadPhoneOrder(input.orderId);
@@ -315,6 +328,9 @@ export async function payPhoneTopUp(input: Readonly<{ account: Hex; orderId: str
   // A lapsed price moved nothing: it is refused as lapsed, never shown as money on its way back.
   if (order.state === "failed" && order.ausdTx === null) throw new PhoneOrderError("PRICE_EXPIRED", PHONE_REFUSALS.priceExpired);
   if (order.state !== "priced") return statusOf(order, deps.open);
+  const from = getAddress(input.account);
+  // A relay already sent for this order is settled from its own transaction before anything else.
+  if (order.relayTx?.startsWith("0x")) return payReceived(await receivedBy(order, order.relayTx as Hex, deps), order, deps);
   let invoice: BitrefillInvoice;
   try {
     invoice = await deps.readInvoice(order.invoiceId);
@@ -322,6 +338,7 @@ export async function payPhoneTopUp(input: Readonly<{ account: Hex; orderId: str
     throw fromBitrefill(error);
   }
   if (invoice.status !== "unpaid") {
+    if (order.relayTx) throw confirming();
     await deps.store.markAbandoned(order.id);
     throw new PhoneOrderError("PRICE_EXPIRED", PHONE_REFUSALS.priceExpired);
   }
@@ -330,31 +347,77 @@ export async function payPhoneTopUp(input: Readonly<{ account: Hex; orderId: str
   if ((await deps.heldAusd(input.account)) < order.ausdUnits) throw new PhoneOrderError("NOT_ENOUGH", PHONE_REFUSALS.notEnough);
   if (!(await deps.treasuryCovers(order.usdcUnits))) throw new PhoneOrderError("TREASURY_SHORT", PHONE_REFUSALS.treasuryShort, 503);
 
-  let receivedTx: string;
-  try {
-    receivedTx = (await deps.relayToTreasury({ ...input.authorization, from: getAddress(input.account), to: deps.treasuryAddress() })).hash;
-  } catch {
-    // A relay that failed may still have moved the money (a finality wait that ran out): the token says which.
-    if (!(await deps.authorizationUsed(getAddress(input.account), input.authorization.nonce).catch(() => false))) {
-      throw new PhoneOrderError("INVALID_AUTHORIZATION", PHONE_REFUSALS.invalidAuthorization);
-    }
-    receivedTx = `authorization:${input.authorization.nonce}`;
+  const claim = `pending:${input.authorization.nonce}`;
+  if (!(await claimRelay(order, from, input.authorization.nonce, deps))) {
+    // Another request holds the order's one relay: its transaction, once sent, is what this answers from.
+    const current = (await deps.store.loadPhoneOrder(order.id)) ?? order;
+    if (current.state !== "priced") return statusOf(current, deps.open);
+    if (current.relayTx?.startsWith("0x")) return payReceived(await receivedBy(current, current.relayTx as Hex, deps), current, deps);
+    throw confirming();
   }
-  // Only the request that moved the order on pays: a second one arriving at the same time stops here.
-  const inTreasury = await deps.store.markReceived(order.id, receivedTx);
-  if (!inTreasury) return statusOf((await deps.store.loadPhoneOrder(order.id)) ?? order);
+  let sent: Hex | undefined;
   try {
-    const paid = await deps.payInvoiceOnBase({ to: invoice.payment.address, usdcUnits: order.usdcUnits });
-    await deps.store.markPaid(order.id, paid.hash);
+    sent = (
+      await deps.relayToTreasury({ ...input.authorization, from, to: deps.treasuryAddress() }, async (hash) => {
+        sent = hash;
+        await deps.store.noteRelay(order.id, hash);
+      })
+    ).hash;
+  } catch {
+    if (!sent) {
+      // Refused before anything was sent (the simulation, the relayer's own checks): nothing moved.
+      await deps.store.releaseRelay(order.id, claim);
+      throw notConfirmed();
+    }
+    return payReceived(await receivedBy(order, sent, deps), order, deps);
+  }
+  return payReceived(await deps.store.markReceived(order.id, sent), order, deps, invoice);
+}
+
+/** A claim, or a claim taken again from a request that stopped before sending: its authorization was never used. */
+async function claimRelay(order: PhoneOrder, from: Hex, nonce: Hex, deps: PhoneDeps): Promise<boolean> {
+  if (await deps.store.claimRelay(order.id, nonce)) return true;
+  const held = (await deps.store.loadPhoneOrder(order.id))?.relayTx;
+  if (!held?.startsWith("pending:")) return false;
+  if (await deps.authorizationUsed(from, held.slice("pending:".length) as Hex).catch(() => true)) return false;
+  return (await deps.store.claimRelay(order.id, nonce, held)) !== null;
+}
+
+/** The order's AUSD, received once its own relay is final and successful; a revert moved nothing and frees the order. */
+async function receivedBy(order: PhoneOrder, hash: Hex, deps: PhoneDeps): Promise<PhoneOrder | null> {
+  const landed = await deps.relayLanded(hash).catch(() => "unknown" as const);
+  if (landed === "unknown") throw confirming();
+  if (landed === "reverted") {
+    await deps.store.releaseRelay(order.id, hash);
+    throw notConfirmed();
+  }
+  return deps.store.markReceived(order.id, hash);
+}
+
+/**
+ * Pays the invoice for an order whose AUSD is in the treasury. Only the request that moved the order to `received`
+ * pays; any other answers where it stands. An invoice that can no longer be paid sends the AUSD back.
+ */
+async function payReceived(inTreasury: PhoneOrder | null, order: PhoneOrder, deps: PhoneDeps, known?: BitrefillInvoice): Promise<PhoneOrderStatus> {
+  if (!inTreasury) return statusOf((await deps.store.loadPhoneOrder(order.id)) ?? order, deps.open);
+  let invoice = known;
+  if (!invoice) {
+    invoice = await deps.readInvoice(inTreasury.invoiceId).catch(() => undefined);
+    if (!invoice) return statusOf(inTreasury);
+    if (invoice.status !== "unpaid") return statusOf(await refund(inTreasury, `bitrefill:${invoice.status}`, deps));
+  }
+  try {
+    const paid = await deps.payInvoiceOnBase({ to: invoice.payment.address, usdcUnits: inTreasury.usdcUnits });
+    await deps.store.markPaid(inTreasury.id, paid.hash);
   } catch (error) {
     if (error instanceof TreasuryError && error.code === "PAYMENT_UNCONFIRMED" && error.hash) {
-      await deps.store.markPaid(order.id, error.hash);
-      return followPhoneTopUp({ account: input.account, orderId: order.id }, deps, 45_000);
+      await deps.store.markPaid(inTreasury.id, error.hash);
+      return followPhoneTopUp({ account: getAddress(inTreasury.account), orderId: inTreasury.id }, deps, 45_000);
     }
     const reason = error instanceof TreasuryError ? error.code : "PAYMENT_FAILED";
     return statusOf(await refund(inTreasury, reason, deps));
   }
-  return followPhoneTopUp({ account: input.account, orderId: order.id }, deps, 45_000);
+  return followPhoneTopUp({ account: getAddress(inTreasury.account), orderId: inTreasury.id }, deps, 45_000);
 }
 
 /**
@@ -408,13 +471,19 @@ const TRANSFER_ABI = [
 ] as const satisfies Abi;
 
 /** The person's AUSD to the treasury, from the authorization they signed: the same carrying as their own sends. */
-async function relayToTreasury(input: PersonAuthorization & { from: Hex; to: Hex }): Promise<{ hash: Hex }> {
+async function relayToTreasury(input: PersonAuthorization & { from: Hex; to: Hex }, onSubmitted?: (hash: Hex) => Promise<void>): Promise<{ hash: Hex }> {
   const clients = relayerClients();
   await relayerPreflight(clients);
   const args = [input.from, input.to, input.value, input.validAfter, input.validBefore, input.nonce, input.signature] as const;
   await clients.publicClient.simulateContract({ address: AUSD.address, abi: TRANSFER_ABI, functionName: "transferWithAuthorization", args, account: clients.address });
   const estimate = await clients.publicClient.estimateContractGas({ address: AUSD.address, abi: TRANSFER_ABI, functionName: "transferWithAuthorization", args, account: clients.address });
   const hash = await clients.walletClient.writeContract({ address: AUSD.address, abi: TRANSFER_ABI, functionName: "transferWithAuthorization", args, gas: addMonadGasBuffer(estimate), account: clients.walletClient.account!, chain: monadChain });
+  try {
+    await onSubmitted?.(hash);
+  } catch (error) {
+    // The transaction is out; failing to note it must not stop us waiting for it.
+    console.error(`a phone order's relay ${hash} was sent but could not be recorded: ${error instanceof Error ? error.message : String(error)}`);
+  }
   const receipt = await waitForFinality(clients.publicClient, hash);
   if (receipt.status !== "success") throw new Error("reverted");
   return { hash };
@@ -423,6 +492,15 @@ async function relayToTreasury(input: PersonAuthorization & { from: Hex; to: Hex
 const AUTHORIZATION_STATE_ABI = [
   { type: "function", name: "authorizationState", stateMutability: "view", inputs: [{ name: "authorizer", type: "address" }, { name: "nonce", type: "bytes32" }], outputs: [{ type: "bool" }] },
 ] as const satisfies Abi;
+
+async function relayLanded(hash: Hex): Promise<"landed" | "reverted" | "unknown"> {
+  const { publicClient } = relayerClients();
+  const receipt = await publicClient.getTransactionReceipt({ hash }).catch(() => null);
+  if (!receipt) return "unknown";
+  const finalized = await publicClient.getBlock({ blockTag: "finalized" });
+  if (finalized.number < receipt.blockNumber) return "unknown";
+  return receipt.status === "success" ? "landed" : "reverted";
+}
 
 async function authorizationUsed(from: Hex, nonce: Hex): Promise<boolean> {
   const clients = relayerClients();
@@ -445,6 +523,7 @@ export function livePhoneDeps(): PhoneDeps {
     refundAusd: (input) => refundAusd(input),
     heldAusd,
     relayToTreasury,
+    relayLanded,
     authorizationUsed,
     store,
     giftCardById,
