@@ -131,8 +131,9 @@ async function call<T>(path: string, init: RequestInit, deps: Deps): Promise<T> 
 
 function operatorOf(raw: Record<string, unknown>): BitrefillOperator | undefined {
   if (typeof raw.id !== "string" || typeof raw.name !== "string") return undefined;
-  const packages = Array.isArray(raw.packages)
-    ? raw.packages.flatMap((item) => {
+  const listed = Array.isArray(raw.packages) ? raw.packages : raw.packages && typeof raw.packages === "object" ? [raw.packages] : undefined;
+  const packages = listed
+    ? listed.flatMap((item) => {
         const p = item as Record<string, unknown>;
         const price = Number(p.price);
         return typeof p.id === "string" && Number.isFinite(price) && price > 0 ? [{ id: p.id, value: String(p.value), priceUsd: price }] : [];
@@ -150,8 +151,12 @@ function operatorOf(raw: Record<string, unknown>): BitrefillOperator | undefined
 export async function operatorsFor(phoneNumber: string, deps: Deps = liveDeps()): Promise<readonly BitrefillOperator[]> {
   const e164 = e164Of(phoneNumber);
   if (!e164) throw new BitrefillError("INVALID_PHONE_NUMBER", "That is not a phone number in international form");
-  const data = await call<{ operators?: unknown }>(`/check_phone_number?phone_number=${encodeURIComponent(e164)}`, { method: "GET" }, deps);
-  const operators = Array.isArray(data.operators) ? data.operators.flatMap((raw) => operatorOf(raw as Record<string, unknown>) ?? []) : [];
+  // Bitrefill's v2 answer (docs.bitrefill.com, "Searches for providers for the specified phone number", read 27 Sep
+  // 2026): `data` is the operator's product when it recognises the number (`operator_found`), or the list of the
+  // products that may serve it when it does not. There is no `operators` field: reading one found none, for every number.
+  const data = await call<unknown>(`/check_phone_number?phone_number=${encodeURIComponent(e164)}`, { method: "GET" }, deps);
+  const products = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : [];
+  const operators = products.flatMap((raw) => operatorOf(raw as Record<string, unknown>) ?? []);
   if (operators.length === 0) throw new BitrefillError("COUNTRY_NOT_SERVED", "No operator Bitrefill serves answers for that number");
   return operators;
 }

@@ -31,15 +31,22 @@ test("a number in international form, and nothing else", () => {
 
 test("the operators for a number, and a country Bitrefill does not serve refused by name", async () => {
   const seen: Array<{ url: string; init: RequestInit }> = [];
-  const operators = await operatorsFor("+221 77 123 45 67", answering(200, { data: { operators: [
+  // Bitrefill's documented answer when it recognises the number: `data` is the operator's product, one object.
+  const operators = await operatorsFor("+221 77 123 45 67", answering(200, { meta: { phone_number: "+221771234567" }, operator_found: true, data:
     { id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [{ id: "orange-senegal<&>1000", value: "1000", price: 1.9 }], range: { min: 500, max: 50000, step: 1, price_rate: 0.0019 } },
-    { id: "broken" },
-  ] } }, seen));
+  }, seen));
   assert.equal(seen[0].url, "https://api-bitrefill.com/v2/check_phone_number?phone_number=%2B221771234567");
   assert.equal((seen[0].init.headers as Record<string, string>).authorization, "Bearer k");
   assert.deepEqual(operators.map((operator) => operator.id), ["orange-senegal"]);
   assert.equal(operators[0].range?.priceRate, 0.0019);
-  await assert.rejects(operatorsFor("+221771234567", answering(200, { data: { operators: [] } })), refused("COUNTRY_NOT_SERVED"));
+  // When it does not recognise the number: the list of the products that may serve it, the broken one left out.
+  const candidates = await operatorsFor("+221771234567", answering(200, { operator_found: false, data: [
+    { id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1, price_rate: 0.0019 } },
+    { id: "free-senegal", name: "Free Senegal", currency: "XOF", packages: [], range: null },
+    { id: "broken" },
+  ] }));
+  assert.deepEqual(candidates.map((operator) => operator.id), ["orange-senegal", "free-senegal"]);
+  await assert.rejects(operatorsFor("+221771234567", answering(200, { operator_found: false, data: [] })), refused("COUNTRY_NOT_SERVED"));
   await assert.rejects(operatorsFor("771234567", answering(200, {})), refused("INVALID_PHONE_NUMBER"));
   await assert.rejects(operatorsFor("+221771234567", answering(400, { error_code: "unsupported_operator", message: "no" })), refused("UNSUPPORTED_OPERATOR"));
   await assert.rejects(operatorsFor("+221771234567", answering(429, {})), refused("RATE_LIMITED"));
