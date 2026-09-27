@@ -11,6 +11,7 @@ import { loadPortal } from "@/src/portal-store";
 import { milestoneErrorResponse } from "@/src/milestone-api";
 import { MILESTONE_MAX_AMOUNT, MILESTONE_MIN_AMOUNT, milestoneFundingNonce, SHAPE_HAVE_OR_NOT, type MilestoneParams } from "@/src/milestone-protocol";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { admitRelay } from "@/src/relay-admission";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -114,6 +115,9 @@ export async function POST(request: Request) {
     }
 
     const nonce = String(a.nonce) as Hex;
+    // Counted against the account's and the connection's ceilings before the relayer is asked for anything (D204): a
+    // creation declares the most gas of any relayed step, and was the one step that went around the door.
+    await admitRelay(request, auth.account);
     const created = await makeMilestoneGift({
       params,
       nonce,
