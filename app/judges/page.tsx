@@ -469,9 +469,16 @@ export default async function JudgesPage() {
             data: {used(uses?.data)} A gift card: {used(uses?.gift_card)}
           </li>
           <li>
-            <strong>Our own key.</strong> A reading counts because Viky&apos;s evidence signer signed it. That key can
-            credit a day; it cannot move money, change a gift&apos;s terms, or take anything back. The journal on this
-            page is what makes a signature without a real reading behind it detectable.
+            <strong>Our own key.</strong> A reading counts because Viky&apos;s evidence signer signed it, and so does the
+            opening of a gift: that key is what tells the contract which account opened it. So whoever holds it, and the
+            owner can put another key in its place, could open a gift still waiting for its recipient into an account of
+            their own, sign readings for it and take it: the whole amount at once on a milestone, a day at a time on a
+            daily gift. On a gift someone has already opened, money leaves only at that person&apos;s own signed request or
+            to the refund address the funder signed, and the key can still tip it either way: it could sign readings
+            nobody made, which pays the recipient what the funder should have had back, or a reading after which no real
+            one counts, which sends what was not yet earned back to the funder. It cannot change the terms a funder
+            signed or take back what was already credited. The journal on this page is what makes a signature without a
+            real reading behind it detectable, for the readings whose proof is kept.
           </li>
         </ul>
       </section>
