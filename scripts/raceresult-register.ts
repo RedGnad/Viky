@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { headersFor, RACE_RESULT_ROW } from "../src/attested-sources";
 import { MARATHON_RACES } from "../src/marathon";
+import { isRaceResultTrap } from "../src/race-result";
 
 /**
  * The race result half of the register, written by this script and by nothing else (the founder, 27 Sep 2026: every
@@ -82,7 +83,7 @@ async function json<T>(url: string, stepMs = STEP_MS): Promise<T | null> {
       if (response.status === 404) {
         // A throttled address gets a 404 whose body is a trap page ("A":{"A":…), never a fact about the event.
         const text = await response.text().catch(() => "");
-        if (!text.startsWith('"A":')) return null;
+        if (!isRaceResultTrap(text)) return null;
         throttled += 1;
         refusals += 1;
         await pause(60_000);

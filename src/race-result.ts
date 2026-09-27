@@ -27,6 +27,18 @@ export class RaceResultError extends Error {
   }
 }
 
+/**
+ * race result's other way of asking a reader to slow down (D290, D292): after its 429s, a throttled address is
+ * answered 404 with a trap page, a body that starts `"A":`, for hours, whatever the user agent. That 404 says nothing
+ * about the event or the runner, so wherever race result is read it counts as a 429. The register generator reads it
+ * with this same rule.
+ */
+export function isRaceResultTrap(body: string): boolean {
+  return body.trimStart().startsWith('"A":');
+}
+
+const THROTTLED = "race result is being read too often right now. Nothing was counted: try again in half an hour.";
+
 async function raceResultJson<T>(url: string, fetchImpl: PlainFetch): Promise<T> {
   let response: Response;
   try {
@@ -34,8 +46,11 @@ async function raceResultJson<T>(url: string, fetchImpl: PlainFetch): Promise<T>
   } catch (error) {
     throw new RaceResultError("FETCH_FAILED", "race result could not be read right now", { cause: error });
   }
-  if (response.status === 429) throw new RaceResultError("FETCH_FAILED", "race result is being read too often right now. Nothing was counted: try again in half an hour.");
-  if (response.status === 404) throw new RaceResultError("UNKNOWN_RACE", "race result knows no event by that id");
+  if (response.status === 429) throw new RaceResultError("FETCH_FAILED", THROTTLED);
+  if (response.status === 404) {
+    if (isRaceResultTrap(await response.text().catch(() => ""))) throw new RaceResultError("FETCH_FAILED", THROTTLED);
+    throw new RaceResultError("UNKNOWN_RACE", "race result knows no event by that id");
+  }
   if (response.status !== 200) throw new RaceResultError("FETCH_FAILED", `race result answered ${response.status}`);
   try {
     return (await response.json()) as T;

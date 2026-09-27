@@ -5,7 +5,8 @@ import { classifyFetchFailure, localAttestedFetch } from "../src/attested-read";
 import { attestedSource } from "../src/attested-sources";
 import { fetchPublicProfile, PublicProfileError, reclaimLocalProfileDeps } from "../src/duolingo-public";
 import { fingerprintOfContents, READING_FILES } from "../src/reading-fingerprint";
-import { isTooManyRequests, SourcePace } from "../src/source-throttle";
+import { SourcePace } from "../src/source-throttle";
+import { throttleAnswerOf } from "../src/throttle-answer";
 
 /** One pace per process: race result and MikaTiming punish bursts (the founder, 27 Sep 2026). */
 const pace = new SourcePace();
@@ -86,10 +87,12 @@ const server = createServer(async (request, response) => {
       return reply(200, { proof });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (isTooManyRequests(message)) {
+      // A 429, or race result's trap 404: the platform is paused and this reading is not counted.
+      const throttle = throttleAnswerOf(source, message);
+      if (throttle) {
         const pausedMs = pace.answered429(source.id, Date.now());
-        console.log(JSON.stringify({ at: new Date().toISOString(), source: source.id, account, ok: false, code: "THROTTLED", reason: "ANSWERED_429", pausedMinutes: pausedMs / 60_000 }));
-        return reply(503, { error: "THROTTLED", message: `THROTTLED ANSWERED_429: the platform asked to slow down; read again in ${pausedMs / 60_000} minutes`, retryAfterSeconds: pausedMs / 1_000 });
+        console.log(JSON.stringify({ at: new Date().toISOString(), source: source.id, account, ok: false, code: "THROTTLED", reason: throttle, pausedMinutes: pausedMs / 60_000 }));
+        return reply(503, { error: "THROTTLED", message: `THROTTLED ${throttle}: the platform asked to slow down; read again in ${pausedMs / 60_000} minutes`, retryAfterSeconds: pausedMs / 1_000 });
       }
       const code = classifyFetchFailure(message, source).code;
       console.log(JSON.stringify({ at: new Date().toISOString(), source: source.id, account, ms: Date.now() - started, ok: false, code, message }));
