@@ -7671,3 +7671,24 @@ Hanover, Dortmund, Bremen, Aschaffenburg, Kandel, Bergisch Gladbach and the like
   funder replaces it. Captures use Boo from now on.
 - Captured on the test database, the credit and the balance stubbed and gift creation refused in the browser: the card
   on "For Boo", "Have a code?", the code, then "Your gift is now $2.00" and "Put $2.00 in their name".
+
+## D301, 28 Sep 2026: the figure stands on the card, flat feet, arms from behind, a soft smile, a blink, and it folds on scroll
+
+- **Decisions (the founder, 28 Sep 2026, the first step of a visual pass)**:
+  - The feet touch the card: the legs now reach the box's floor (53 instead of 51.5), so the landing's figure stands
+    on the card (measured: feet and card at the same pixel, 390 and 1440), and every drawing stands on its ground.
+  - A foot is cut in two horizontally, flat underneath, as the link preview showed by cutting it at the card's edge:
+    the upper half of the old rounded stroke, and the leg ends square on it. The reading figure keeps its round feet:
+    with the book held in front they give it the look of sitting, which he likes.
+  - An arm drawn under the body now starts inside it, so at rest and raised aslant it comes out from behind; the arm on
+    the other figure's shoulder (the Gifts scene) is drawn under its own body too. Only an arm that must cross the
+    body (raised straight up, folded, holding a book) is still drawn over it.
+  - The landing's figure smiles softly at rest (a new mouth, "soft", the lips closed): the wide smile all the time read
+    oddly.
+  - It blinks now and then: a lid around each eye closes and opens on Material's short3, at a random moment between
+    2.8 and 6.5 seconds, only while it can be seen and never under reduced motion. This is the founder's call over
+    D189's rule that nothing plays on a clock; the arrival itself still plays once.
+  - Once it stands, scrolling past the top folds its arms and legs into its body (medium2), and they lengthen out again
+    at the top.
+- Captured at 390 and 1440, by day and by night: standing on the card, a blink held at its middle, folded after a
+  scroll, back out at the top; the family tiles, the Gifts scene and the link preview.
