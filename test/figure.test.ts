@@ -115,12 +115,14 @@ test("the three destinations carry their scenes at the head, larger, and a chang
   }
 });
 
-test("the app's icon is the rig's head, in the stylesheet's own night colours (D253)", () => {
+test("the app's icon is the landing figure's head, in the stylesheet's own day colours (D253, D307)", () => {
   const head = renderToStaticMarkup(createElement(Figure, { id: "icon", limbs: false }));
   assert.ok(!head.includes('data-part="arm"') && !head.includes('data-part="leg"'), "no limbs on the head alone");
   assert.match(head, /viewBox="0 0 64 40"/, "its box stops at the diamond");
   const script = readFileSync("scripts/make-icon.ts", "utf8");
-  assert.match(script, /figureInLook\("dark", \{ id: "icon", limbs: false \}\)/);
+  assert.match(script, /figureInLook\("light", \{ id: "icon", limbs: false, mouth: "soft", halftone: true \}\)/);
+  // The same mouth and halftone as the landing's figure, so the icon is the character a person has just seen.
+  assert.match(readFileSync("app/kit/HeroMoment.tsx", "utf8"), /<Figure id="hero" whirl halftone mouth="soft"/);
   assert.match(readFileSync("scripts/look-figure.ts", "utf8"), /':root\[data-theme="dark"\] \{'/, "the night values read from the stylesheet, never copied by hand");
   assert.doesNotMatch(script, /#3B3266/, "the night edge of D135 is not kept in the script");
 });
