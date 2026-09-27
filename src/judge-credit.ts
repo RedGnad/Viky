@@ -5,6 +5,7 @@ import { AUTHORIZATION_VALIDITY_SECONDS } from "./ausd-authorization";
 import { databaseUrl } from "./database-guard";
 import { GiftApiError } from "./gift-api";
 import { AUSD_ADDRESS, createMonadPublicClient } from "./monad/chain";
+import { unsettledOrders } from "./phone-order-store";
 import { refundAusd, treasuryAddress, TreasuryError } from "./phone-treasury";
 import type { SqlExecutor } from "./proof-session-store";
 
@@ -60,6 +61,7 @@ export const JUDGE_REFUSALS = {
   sending: `Your credit is on its way. If it has not arrived in ${JUDGE_SENDING_SETTLED_MINUTES} minutes, type the code again: it can only ever arrive once.`,
   capReached: "No judge credit is left.",
   notSent: "The credit could not be sent just now. Try again in a moment: it can only ever arrive once.",
+  treasuryHeld: "Judge credits cannot be sent right now. Try again later: it can only ever arrive once.",
 } as const;
 
 export type JudgeCreditConfig = Readonly<{ code: string; units: bigint; capUnits: bigint }>;
@@ -140,6 +142,22 @@ export async function isJudgeCredited(account: string): Promise<boolean> {
 }
 
 type Send = (input: Readonly<{ to: Hex; ausdUnits: bigint; nonce: Hex }>) => Promise<{ hash: Hex }>;
+/** What the treasury may give: its AUSD on Monad, less what it holds for people's phone and gift card orders. */
+type Spendable = () => Promise<bigint>;
+
+const BALANCE_ABI = [{ type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] }] as const satisfies Abi;
+
+/**
+ * The treasury's AUSD that belongs to nobody else (the money path audit of 27 Sep 2026): the same key receives people's
+ * AUSD for their Bitrefill orders and refunds it when an order fails, so a credit is never paid out of that money.
+ */
+async function treasurySpendable(): Promise<bigint> {
+  const [held, orders] = await Promise.all([
+    createMonadPublicClient().readContract({ address: AUSD_ADDRESS, abi: BALANCE_ABI, functionName: "balanceOf", args: [treasuryAddress()] }) as Promise<bigint>,
+    unsettledOrders(),
+  ]);
+  return held - orders.reduce((sum, order) => sum + order.ausdUnits, 0n);
+}
 /** Whether the token has consumed the treasury's authorization with this nonce. */
 type AuthorizationUsed = (nonce: Hex) => Promise<boolean>;
 
@@ -191,7 +209,7 @@ function why(error: unknown): string {
  */
 export async function giveJudgeCredit(
   input: Readonly<{ account: string; code: string }>,
-  deps: Readonly<{ config?: JudgeCreditConfig | null; nowMs?: number; send?: Send; authorizationUsed?: AuthorizationUsed }> = {},
+  deps: Readonly<{ config?: JudgeCreditConfig | null; nowMs?: number; send?: Send; authorizationUsed?: AuthorizationUsed; spendable?: Spendable }> = {},
 ): Promise<{ units: string; hash: Hex | null }> {
   const config = deps.config === undefined ? judgeCreditConfig() : deps.config;
   if (!config) throw new GiftApiError("JUDGE_CREDIT_CLOSED", JUDGE_REFUSALS.notOpen, 503);
@@ -232,6 +250,16 @@ export async function giveJudgeCredit(
     // While its authorization may still land, nothing is signed again.
     if (existing.state === "sending" && existing.settled !== true) throw new GiftApiError("JUDGE_CREDIT_SENDING", JUDGE_REFUSALS.sending, 409);
   }
+
+  // Never out of money the treasury holds for somebody's order. A reading that fails refuses too: it claims nothing.
+  let spendable: bigint | null;
+  try {
+    spendable = await (deps.spendable ?? treasurySpendable)();
+  } catch (error) {
+    console.error(`judge credit: what the treasury may give could not be read for ${account}: ${why(error)}`);
+    spendable = null;
+  }
+  if (spendable === null || spendable < config.units) throw new GiftApiError("JUDGE_CREDIT_TREASURY", JUDGE_REFUSALS.treasuryHeld, 503);
 
   // Claimed in one statement: only while what is given, on its way, or on a failed line (which may have landed, and
   // stays its judge's to try again), this credit included, stays under the ceiling. A "sending" line is taken back only
