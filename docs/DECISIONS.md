@@ -7598,3 +7598,19 @@ Hanover, Dortmund, Bremen, Aschaffenburg, Kandel, Bergisch Gladbach and the like
   answers it for the signed-in account only; the sheet asks once it is open and signed in, and draws the line while the
   balance covers the gift. Captured on the test database: the same account before its line was marked, no sentence;
   after, the sentence above the action, at 390 and 1440, by day and by night.
+
+## D296, 28 Sep 2026: without the key, the pay press opens nothing; the waiting screen shows the code, then opens
+
+- The founder, 28 Sep 2026: pressing pay sent him to the partner's page at once, before he had seen the explanation and
+  the code. It did: the press opened the page in the same gesture (a browser only opens a tab inside one), and a first
+  funder's account, so their code, only exists from that press on.
+- Now the press opens the partner's page only when it arrives filled in (Ramp with its key, D289), and then the
+  waiting screen says "Open Ramp again". Otherwise the press makes the account and goes to the waiting screen, which
+  already shows what to set on the partner's page, the code and its copy, and then "Open Ramp" (`openFirst`), which
+  becomes "Open Ramp again" once pressed. Captured signed in at 390 and 1440, by day and by night: no tab opened by the
+  press, "Open Ramp" under the code.
+- Seen while capturing, not changed here: in the emulated browser, a first press with no passkey on the device shows
+  the account panel, and "Create my account" there closes the sheet and returns to Home signed in, with the card's
+  first name empty; the person presses "Send" again.
+- The judges page's "Not signed in" line said the session lives in memory and is lost on a reload; the account has been
+  restored from the session cookie since D156, so the line now only says where to go.

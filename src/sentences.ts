@@ -497,6 +497,8 @@ export const FUND = {
     leave: "You can leave this page: the gift is kept, and Viky picks it up when you come back.",
     stay: "Keep this page open: this device would not keep the gift.",
     openAgain: (name: string) => `Open ${name} again`,
+    /** The first time, when the page was not opened by the pay press (D296): the code is on this screen first. */
+    openFirst: (name: string) => `Open ${name}`,
     different: "Set up a different gift instead",
     staysInAccount: "Whatever you paid stays in your account, for this gift or the next one.",
   },
