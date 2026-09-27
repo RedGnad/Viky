@@ -211,3 +211,11 @@ test("signing out never draws a screen for nobody on the way, and the landing it
   const mera = readFileSync("src/account/mera.ts", "utf8");
   assert.match(mera, /if \(wasSignedIn && !quiet\) notify\(\);/);
 });
+
+test("every character blinks as the light changes, once, and not under reduced motion (D308)", () => {
+  const control = readFileSync("app/kit/Appearance.tsx", "utf8");
+  assert.match(control, /applyThemeChoice\(next\);\n\s*blinkEveryone\(\);/, "the change is instant, the blink over it");
+  assert.match(control, /if \(reduced\(\)\) return;/);
+  assert.match(control, /document\.querySelectorAll<SVGElement>\('\[data-part="lid"\]'\)/, "every open eye's lid on the screen");
+  assert.doesNotMatch(control, /iterations|setInterval/, "once");
+});
