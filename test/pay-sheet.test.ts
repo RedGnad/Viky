@@ -56,10 +56,11 @@ test("one way in, one action, and no button to another (D239)", () => {
   // The footer only, from its opening to its fragment's close: the body's small keys are not actions (D294's copy).
   const footer = sheet.slice(sheet.indexOf("footer={"), sheet.indexOf("</>", sheet.indexOf("footer={")));
   assert.equal((footer.match(/<button/g) ?? []).length, 1, "the one action, and nothing under it but a refusal or the account panel");
-  // The one other button of the sheet copies the code, as a small key (D294), never a second action.
+  // Every other button of the sheet is a small key (the code's copy, D294; the judge code, D297), never a second action.
   const body = sheet.slice(sheet.indexOf("</>", sheet.indexOf("footer={")), sheet.indexOf("</Sheet>"));
-  assert.equal((body.match(/<button/g) ?? []).length, 1);
-  assert.match(body, /className=\{`\$\{INLINE_BUTTON\} self-start`\}/);
+  const buttons = body.match(/<button[^>]*>/g) ?? [];
+  assert.ok(buttons.length >= 1);
+  for (const button of buttons) assert.match(button, /INLINE_BUTTON/, button);
   // The sentence is the one place the sheet names the two services: which refused, why, and which this goes through.
   assert.equal(PAY.instead.country("Ramp", "Mercuryo"), "Ramp does not serve your country, so this goes through Mercuryo.");
   assert.equal(PAY.instead.paused("Ramp", "Mercuryo"), "Ramp is not selling right now, so this goes through Mercuryo.");

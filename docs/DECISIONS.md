@@ -7614,3 +7614,28 @@ Hanover, Dortmund, Bremen, Aschaffenburg, Kandel, Bergisch Gladbach and the like
   first name empty; the person presses "Send" again.
 - The judges page's "Not signed in" line said the session lives in memory and is lost on a reload; the account has been
   restored from the session cookie since D156, so the line now only says where to go.
+
+## D297, 28 Sep 2026: the judge code is typed in the pay sheet, as a code at a checkout
+
+- **Decision (the founder, 28 Sep 2026, choice A of three)**: a judge tests the product through its own path and will
+  not look for a secondary page, so the code belongs in the core flow, where it is needed: the pay sheet.
+- On the pay sheet, for a signed-in account, while credits are open (`GET /api/judge/credit` now answers `open` too,
+  and answers without a session) and while the account does not cover the gift: a small key "Have a code?" opens
+  "Code" and "Use the code". The server credits the session's account (D291's bounds unchanged); the sheet says what
+  arrived, reads the balance again, and when the gift is more than the account holds offers "Make the gift $Y", which
+  sets the card to that amount, rounded down to the cent and marked as chosen. The sheet then takes its "the account
+  already holds enough" path, with D295's judge line above "Put $Y in their name".
+- Only for an account already signed in: making an account from inside the landing's sheet closes the sheet (D296), and
+  the judges' path starts with "Sign in" on the home page anyway. The judges page keeps the explanation and points to
+  "Have a code?"; its own code field is gone, so there is one place to type it.
+- Captured on the test database, the treasury's answer and the balance stubbed in the browser (nothing sent): the
+  key, the field, the credit with "Make the gift $25.00", and "Put $25.00 in their name" with the judge line.
+
+## D298, 28 Sep 2026: the passkey opened from the pay sheet signs the server in, a first account included
+
+- The founder, 28 Sep 2026, paying from the landing's card: the waiting screen said "Account authentication is
+  required" after "Your payment arrived", and "Back to my gifts" said the gifts could not be loaded.
+- The cause, read in `ensureSigner` (`src/account/provider.tsx`): when pay opens the passkey, the server's session was
+  opened only if one already existed for another account. A person with a passkey on the device and no session (signed
+  out, or a first visit on this browser) got none, and every step that asks the server was refused. The session is now
+  opened whenever the server does not already name the account the passkey opened.

@@ -134,7 +134,11 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
       await withTimeout(mera.signIn(), CEREMONY_TIMEOUT_MS);
       const account = mera.currentAccount();
       if (!account) throw accountError("TIMED_OUT");
-      if (serverSessionFor && account.address !== serverSessionFor) {
+      // The server's session follows the passkey whenever it does not already name this account, a first one included
+      // (D298): before, only a session for another account was replaced, so a person who opened their passkey from the
+      // pay sheet with no session at all had none, and every step after it was refused ("Account authentication is
+      // required" on the waiting screen, "your gifts could not be loaded" behind it).
+      if (account.address !== serverSessionFor) {
         await withTimeout(signInToServer(account), SERVER_TIMEOUT_MS);
       }
       setServerSessionFor(account.address);

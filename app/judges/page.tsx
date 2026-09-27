@@ -1,6 +1,5 @@
-import { JudgeCredit } from "../components/JudgeCredit";
 import { formatAusd } from "@/src/gift-reader";
-import { judgeCreditConfig, judgeCreditOpen } from "@/src/judge-credit";
+import { judgeCreditConfig } from "@/src/judge-credit";
 import { rampHostApiKey } from "@/src/rails";
 import type { Metadata } from "next";
 import { Shell } from "../kit/Shell";
@@ -65,13 +64,13 @@ export default async function JudgesPage() {
             your device. Viky keeps no account for you, and you keep the passkey.
           </li>
           <li>
-            Come back here through You, For judges, and type the judge code from the submission portal&apos;s
-            instructions. Your account receives {judgeCredit ? formatAusd(judgeCredit.units) : "a set amount"}: a judge
-            credit from Viky&apos;s treasury, once per account. A real funder pays by card through Ramp, shown in the video.
+            Offer a gift from the home page. On the pay sheet, press &quot;Have a code?&quot; and type the judge code from the
+            submission portal&apos;s instructions. Your account receives {judgeCredit ? formatAusd(judgeCredit.units) : "a set amount"}: a judge credit from
+            Viky&apos;s treasury, once per account. A real funder pays by card through Ramp, shown in the video.
           </li>
           <li>
-            Offer a gift with it from the home page: the pay sheet sees your account already holds enough and opens no
-            card service.
+            The sheet then pays from your account and opens no card service; if the gift is more than the credit, it
+            offers to make the gift that amount.
           </li>
           <li>
             Or open the gift the founder made for you from the operator account: it is in your name, and you can take
@@ -82,7 +81,6 @@ export default async function JudgesPage() {
             with the same passkey. The account and its money come back; nothing was kept on the first device.
           </li>
         </ol>
-        <JudgeCredit open={judgeCreditOpen()} />
       </section>
 
       <section className="space-y-[var(--space-sm)]">

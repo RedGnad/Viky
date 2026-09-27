@@ -185,6 +185,17 @@ export const PAY = {
   payFromAccount: (amount: string) => `Put ${amount} in their name`,
   /** Above that action, for an account the judge code credited and only for it (D295, the founder's words of 28 Sep 2026). */
   fromJudgeCredit: "Paid from your judge credit. A funder pays by card, inside this sheet, once our payment partner is embedded.",
+  /** The judge code in the pay sheet, as a code is asked at a checkout (D297, the founder's choice A of 28 Sep 2026). */
+  code: {
+    have: "Have a code?",
+    label: "Code",
+    use: "Use the code",
+    using: "Checking the code",
+    given: (amount: string) => `${amount} from your judge credit is in your account.`,
+    short: (held: string) => `Your account holds ${held}. Make the gift that amount or less to pay from it.`,
+    makeIt: (amount: string) => `Make the gift ${amount}`,
+    failed: "The code could not be checked just now.",
+  },
   paying: "One moment",
   /** The quiet second button of the mockup: everything only some readers need, one press away. */
   whatHappens: "What happens to my money",

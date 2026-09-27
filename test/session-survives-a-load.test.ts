@@ -70,3 +70,11 @@ test("the signer never signs as an account the server has not accepted", () => {
   assert.match(opener, /signInToServer\(account\)/);
   assert.match(opener, /setServerSessionFor\(account\.address\)/);
 });
+
+test("the passkey opened from the pay sheet signs the server in, a first account included (D298)", () => {
+  const provider = readFileSync("src/account/provider.tsx", "utf8");
+  const ensure = provider.slice(provider.indexOf("const ensureSigner = useCallback"), provider.indexOf("}, [serverSessionFor]);"));
+  // A session is opened whenever the server does not already name this account: never only when it named another.
+  assert.match(ensure, /if \(account\.address !== serverSessionFor\) \{\s*await withTimeout\(signInToServer\(account\), SERVER_TIMEOUT_MS\);/);
+  assert.doesNotMatch(ensure, /serverSessionFor && account\.address !== serverSessionFor/);
+});
