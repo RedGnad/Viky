@@ -103,7 +103,7 @@ test("every ceiling refuses by name, with the figure in the sentence, before any
     const order = await pricePhoneTopUp({ account: `0x${String(i + 5).repeat(40)}` as Hex, phoneNumber: "+221771234567", operatorId: ORANGE.id, value: 500 }, many);
     await payPhoneTopUp({ account: `0x${String(i + 5).repeat(40)}` as Hex, orderId: order.orderId, authorization: authorization(1_000_000n) }, many);
   }
-  await assert.rejects(price(many), (error: unknown) => refused("OVER_SERVICE_ITEMS")(error) && /5 top-ups a day/.test((error as Error).message));
+  await assert.rejects(price(many), (error: unknown) => refused("OVER_SERVICE_ITEMS")(error) && /5 top-ups and gift cards a day/.test((error as Error).message));
   await db.query("DELETE FROM viky_phone_orders");
   const poor = world();
   poor.w.held = 1n;

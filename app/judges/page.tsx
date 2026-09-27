@@ -463,8 +463,8 @@ export default async function JudgesPage() {
             as a company (section 18), and an Agent acts for the customer who pays (section 29). The founder chose the
             Personal API for the pilot, the risk assumed and written here, and is to ask Bitrefill for its agreement, or
             for its Business API when the time comes.
-            The account&apos;s own limits are the pilot&apos;s: five top-ups and 500 USD a day for everybody together, and
-            Viky adds 50 USD a person a day. Open to everybody since its code was complete (the founder, 26 Sep 2026);
+            The pilot&apos;s limits, within the account&apos;s own: five orders and 500 USD a day for everybody together, top-ups
+            and gift cards alike, and 50 USD a person a day, checked when the price is given and again when the person pays. Open to everybody since its code was complete (the founder, 26 Sep 2026);
             what is missing is said at the moment it is missing, and nothing is taken. Credit: {used(uses?.phone)} Mobile
             data: {used(uses?.data)} A gift card: {used(uses?.gift_card)}
           </li>

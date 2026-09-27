@@ -23,11 +23,12 @@ import { relayerClients, relayerPreflight } from "./relayer";
  * Every refusal is a code and a sentence that says what the ceiling is and that nothing was taken.
  */
 
-/** Every item Bitrefill's basic account may buy in a day, gift cards and top-ups together (terms section 8). */
-export const ACCOUNT_ITEMS_PER_DAY = 15;
-
-/** Viky's own ceilings for the pilot, beside Bitrefill's account limits (the founder, 25 Sep 2026; per order, default applied). */
-export const PHONE_CEILINGS = Object.freeze({ usdPerPersonPerDay: 50, usdPerOrder: 50 });
+/**
+ * Viky's own ceilings for the pilot (the founder, 25 Sep 2026; per order, default applied), and for everybody together,
+ * top-ups and gift cards alike, five orders and $500 a day (the founder, 27 Sep 2026, the words of the legal notice).
+ * They sit within Bitrefill's basic account limits (terms section 8), which count top-ups alone.
+ */
+export const PHONE_CEILINGS = Object.freeze({ usdPerPersonPerDay: 50, usdPerOrder: 50, ordersPerDay: 5, usdPerDay: 500 });
 
 const USDC = 1_000_000n;
 const dollars = (units: bigint) => `$${(Number(units) / 1e6).toFixed(2)}`;
@@ -40,7 +41,6 @@ export type PhoneRefusal =
   | "OVER_ORDER"
   | "OVER_PERSON_DAY"
   | "OVER_SERVICE_ITEMS"
-  | "OVER_SERVICE_ALL_ITEMS"
   | "OVER_SERVICE_DAY"
   | "OVER_REFILL"
   | "TREASURY_SHORT"
@@ -70,9 +70,8 @@ export const PHONE_REFUSALS = {
   operatorRefused: "The phone company did not accept that top-up. Nothing was taken.",
   overOrder: () => `One top-up can be ${dollars(BigInt(PHONE_CEILINGS.usdPerOrder) * USDC)} at most for now. Nothing was taken.`,
   overPersonDay: (used: bigint) => `Up to ${dollars(BigInt(PHONE_CEILINGS.usdPerPersonPerDay) * USDC)} a day can go to phones for now, and ${dollars(used)} already went today. Nothing was taken.`,
-  overServiceItems: () => `Viky can send ${BITREFILL_ACCOUNT_LIMITS.phoneItemsPerDay} top-ups a day for now, and today's are gone. Try again tomorrow. Nothing was taken.`,
-  overServiceAllItems: () => `Viky can buy ${ACCOUNT_ITEMS_PER_DAY} cards and top-ups a day for now, and today's are gone. Try again tomorrow. Nothing was taken.`,
-  overServiceDay: () => `Viky can send ${dollars(BigInt(BITREFILL_ACCOUNT_LIMITS.usdPerDay) * USDC)} of top-ups a day for now, and today's is spent. Try again tomorrow. Nothing was taken.`,
+  overServiceItems: () => `Viky can buy ${PHONE_CEILINGS.ordersPerDay} top-ups and gift cards a day for now, and today's are gone. Try again tomorrow. Nothing was taken.`,
+  overServiceDay: () => `Viky can spend ${dollars(BigInt(PHONE_CEILINGS.usdPerDay) * USDC)} a day on top-ups and gift cards for now, and today's is spent. Try again tomorrow. Nothing was taken.`,
   overRefill: () => `One top-up can be ${dollars(BigInt(BITREFILL_ACCOUNT_LIMITS.usdPerRefill) * USDC)} at most. Nothing was taken.`,
   treasuryShort: "Viky cannot send top-ups right now. Nothing was taken.",
   notEnough: "That is more than you have.",
@@ -136,6 +135,18 @@ export async function phoneOperators(phoneNumber: string, deps: Pick<PhoneDeps, 
   }
 }
 
+/**
+ * The day's ceilings, Viky's and Bitrefill's account limits, for one more item of this amount. Checked when the price
+ * is given and again when the person pays (the money path audit of 27 Sep 2026): a price moves nothing and does not
+ * count, so orders priced one after another would otherwise all pass, and be paid together past every ceiling.
+ */
+async function assertWithinTheDay(account: Hex, units: bigint, deps: PhoneDeps): Promise<void> {
+  const [mine, everything] = await Promise.all([deps.store.usedToday(account), deps.store.usedToday()]);
+  if (mine.usdcUnits + units > BigInt(PHONE_CEILINGS.usdPerPersonPerDay) * USDC) throw new PhoneOrderError("OVER_PERSON_DAY", PHONE_REFUSALS.overPersonDay(mine.usdcUnits));
+  if (everything.items + 1 > PHONE_CEILINGS.ordersPerDay) throw new PhoneOrderError("OVER_SERVICE_ITEMS", PHONE_REFUSALS.overServiceItems());
+  if (everything.usdcUnits + units > BigInt(PHONE_CEILINGS.usdPerDay) * USDC) throw new PhoneOrderError("OVER_SERVICE_DAY", PHONE_REFUSALS.overServiceDay());
+}
+
 export type PricedPhoneOrder = Readonly<{ orderId: string; operatorName: string; localAmount: string; localCurrency: string; ausdUnits: bigint; to: Hex }>;
 
 /**
@@ -169,11 +180,7 @@ export async function pricePhoneTopUp(
   }
   if (units > BigInt(BITREFILL_ACCOUNT_LIMITS.usdPerRefill) * USDC) throw new PhoneOrderError("OVER_REFILL", PHONE_REFUSALS.overRefill());
   if (units > BigInt(PHONE_CEILINGS.usdPerOrder) * USDC) throw new PhoneOrderError("OVER_ORDER", PHONE_REFUSALS.overOrder());
-  const [mine, phones, everything] = await Promise.all([deps.store.usedToday(input.account), deps.store.usedToday(undefined, undefined, "phone"), deps.store.usedToday()]);
-  if (mine.usdcUnits + units > BigInt(PHONE_CEILINGS.usdPerPersonPerDay) * USDC) throw new PhoneOrderError("OVER_PERSON_DAY", PHONE_REFUSALS.overPersonDay(mine.usdcUnits));
-  if (phones.items + 1 > BITREFILL_ACCOUNT_LIMITS.phoneItemsPerDay) throw new PhoneOrderError("OVER_SERVICE_ITEMS", PHONE_REFUSALS.overServiceItems());
-  if (everything.items + 1 > ACCOUNT_ITEMS_PER_DAY) throw new PhoneOrderError("OVER_SERVICE_ALL_ITEMS", PHONE_REFUSALS.overServiceAllItems());
-  if (phones.usdcUnits + units > BigInt(BITREFILL_ACCOUNT_LIMITS.usdPerDay) * USDC) throw new PhoneOrderError("OVER_SERVICE_DAY", PHONE_REFUSALS.overServiceDay());
+  await assertWithinTheDay(input.account, units, deps);
   if ((await deps.heldAusd(input.account)) < units) throw new PhoneOrderError("NOT_ENOUGH", PHONE_REFUSALS.notEnough);
   if (!(await deps.treasuryCovers(units))) throw new PhoneOrderError("TREASURY_SHORT", PHONE_REFUSALS.treasuryShort, 503);
   const localAmount = input.value !== undefined ? String(input.value) : (operator.packages.find((p) => p.id === input.packageId)?.value ?? "");
@@ -253,9 +260,7 @@ export async function priceGiftCard(input: Readonly<{ account: Hex; productId: s
     throw new PhoneOrderError("UNAVAILABLE", PHONE_REFUSALS.unavailable, 503);
   }
   if (units > BigInt(PHONE_CEILINGS.usdPerOrder) * USDC) throw new PhoneOrderError("OVER_ORDER", PHONE_REFUSALS.overOrder());
-  const [mine, everything] = await Promise.all([deps.store.usedToday(input.account), deps.store.usedToday()]);
-  if (mine.usdcUnits + units > BigInt(PHONE_CEILINGS.usdPerPersonPerDay) * USDC) throw new PhoneOrderError("OVER_PERSON_DAY", PHONE_REFUSALS.overPersonDay(mine.usdcUnits));
-  if (everything.items + 1 > ACCOUNT_ITEMS_PER_DAY) throw new PhoneOrderError("OVER_SERVICE_ALL_ITEMS", PHONE_REFUSALS.overServiceAllItems());
+  await assertWithinTheDay(input.account, units, deps);
   if ((await deps.heldAusd(input.account)) < units) throw new PhoneOrderError("NOT_ENOUGH", PHONE_REFUSALS.notEnough);
   if (!(await deps.treasuryCovers(units))) throw new PhoneOrderError("TREASURY_SHORT", PHONE_REFUSALS.treasuryShort, 503);
   const localAmount = input.value !== undefined ? String(input.value) : (card.packages.find((p) => p.id === input.packageId)?.value ?? "");
@@ -346,6 +351,7 @@ export async function payPhoneTopUp(input: Readonly<{ account: Hex; orderId: str
   if (usdcUnits(invoice.payment.price) !== order.usdcUnits) throw new PhoneOrderError("PRICE_EXPIRED", PHONE_REFUSALS.priceExpired);
   if ((await deps.heldAusd(input.account)) < order.ausdUnits) throw new PhoneOrderError("NOT_ENOUGH", PHONE_REFUSALS.notEnough);
   if (!(await deps.treasuryCovers(order.usdcUnits))) throw new PhoneOrderError("TREASURY_SHORT", PHONE_REFUSALS.treasuryShort, 503);
+  await assertWithinTheDay(from, order.usdcUnits, deps);
 
   const claim = `pending:${input.authorization.nonce}`;
   if (!(await claimRelay(order, from, input.authorization.nonce, deps))) {
