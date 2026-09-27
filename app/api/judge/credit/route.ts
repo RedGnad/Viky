@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { giveJudgeCredit, isJudgeCredited, judgeCreditOpen } from "@/src/judge-credit";
+import { untouchedJudgeCredit } from "@/src/judge-credit-untouched";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
@@ -26,8 +27,10 @@ export async function POST(request: Request) {
 }
 
 /**
- * Whether a code can be used now, and whether the signed-in account already received its judge credit (D295, D297),
- * for the pay sheet. Read from the journal, never from the browser; without a session nobody is a judge yet.
+ * Whether a code can be used now, whether the signed-in account already received its judge credit (D295, D297), and
+ * that credit's units while nothing has left the account since (`untouchedJudgeCredit`): the pay sheet draws its line
+ * from this and the balance, never from `credited`. Read from the journal, never from the browser; without a session
+ * nobody is a judge yet.
  */
 export async function GET(request: Request) {
   const open = judgeCreditOpen();
@@ -38,7 +41,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ open, credited: false }, { headers: NO_STORE });
   }
   try {
-    return NextResponse.json({ open, credited: await isJudgeCredited(account) }, { headers: NO_STORE });
+    const credited = await isJudgeCredited(account);
+    const untouched = credited ? await untouchedJudgeCredit(account) : null;
+    return NextResponse.json({ open, credited, untouchedCredit: untouched === null ? null : untouched.toString() }, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);
   }

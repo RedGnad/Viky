@@ -123,8 +123,9 @@ test("an account is a judge's once its credit is sent, and not for a wrong code 
   assert.equal(await isJudgeCredited(A), true);
   assert.equal(await isJudgeCredited(B), false);
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.match(sheet, /\{enough && judge \? <p className=\{HELP\}>\{W\.fromJudgeCredit\}<\/p> : null\}/);
-  assert.match(sheet, /getJson<\{ open\?: boolean; credited\?: boolean \}>\("\/api\/judge\/credit"\)/);
+  // Drawn only when it is true (the money path audit): test/audit-judge-line-when-credit-pays.test.ts.
+  assert.match(sheet, /\{judgeLineIsTrue\(\{ gift: units, held, untouchedCredit \}\) \? <p className=\{HELP\}>\{W\.fromJudgeCredit\}<\/p> : null\}/);
+  assert.match(sheet, /getJson<\{ open\?: boolean; credited\?: boolean; untouchedCredit\?: string \| null \}>\("\/api\/judge\/credit"\)/);
   assert.ok(sheet.indexOf("W.fromJudgeCredit") < sheet.indexOf("W.payFromAccount"), "above the action");
   assert.match(readFileSync("app/api/judge/credit/route.ts", "utf8"), /account = readAccountAuthSession\(request\)\.account;[\s\S]*isJudgeCredited\(account\)/);
 });
