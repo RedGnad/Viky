@@ -123,7 +123,6 @@ export function GiftCardOut(props: Readonly<{ country: string | null; countryNam
   const range = card?.range ?? null;
   const typedFits = range !== null && Number.isFinite(typed) && typed >= range.min && typed <= range.max;
   const chosenPackage = card?.packages.find((one) => one.id === packageId) ?? null;
-  const estimate = chosenPackage ? chosenPackage.priceUsd : typedFits && range ? typed * range.priceRate : undefined;
 
   const askPrice = async () => {
     if (!card) return;
@@ -231,7 +230,6 @@ export function GiftCardOut(props: Readonly<{ country: string | null; countryNam
             <span className={HELP}>{W.range(String(range.min), String(range.max), card.currency)}</span>
           </label>
         ) : null}
-        {estimate !== undefined && !price ? <p className={HELP}>{W.aboutDollars(`$${estimate.toFixed(2)}`)}</p> : null}
         {price && card ? (
           <div>
             <p className={CARD_LABEL}>{W.priced(local(price.localAmount, price.localCurrency), card.name)}</p>

@@ -106,7 +106,6 @@ export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => P
   const range = operator?.range ?? null;
   const typedFits = range !== null && Number.isFinite(typed) && typed >= range.min && typed <= range.max;
   const chosenPackage = operator?.packages.find((one) => one.id === packageId) ?? null;
-  const estimate = chosenPackage ? chosenPackage.priceUsd : typedFits && range ? typed * range.priceRate : undefined;
 
   const askPrice = async () => {
     if (!operator) return;
@@ -194,7 +193,6 @@ export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => P
             <span className={HELP}>{W.range(local(String(range.min), "").trim(), local(String(range.max), "").trim(), operator.currency)}</span>
           </label>
         ) : null}
-        {estimate !== undefined && !price ? <p className={HELP}>{W.aboutDollars(`$${estimate.toFixed(2)}`)}</p> : null}
         {price ? (
           <div>
             <p className={CARD_LABEL}>{W.priced(local(price.localAmount, price.localCurrency), price.operatorName)}</p>

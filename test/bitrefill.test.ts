@@ -62,6 +62,10 @@ test("an invoice for one product, priced in USDC on Base, with the treasury as t
   const body = JSON.parse(String(seen[0].init.body));
   assert.deepEqual(body, { products: [{ product_id: "orange-senegal", quantity: 1, value: 2000, phone_number: "+221771234567" }], payment_method: "usdc_base", refund_address: "0x1111111111111111111111111111111111111111", auto_pay: false });
   assert.equal(invoice.payment.price, "3.812345");
+  // What Bitrefill really answers for an USDC invoice: its smallest unit, six decimals (production, 28 Sep 2026).
+  const micro = await createInvoice({ productId: "orange-senegal", packageId: "orange-senegal<&>2000", phoneNumber: "+221771234567", refundAddress: "0x1" }, answering(200, { data: { id: "196d1041-5be9-48f8-a5f9-f2ab24eb9c65", status: "unpaid", payment: { method: "usdc_base", address: "0x2222222222222222222222222222222222222222", price: "3500000", currency: "USDC" }, orders: [] } }));
+  assert.equal(micro.payment.price, "3.500000");
+  assert.equal(usdcUnits(micro.payment.price), 3_500_000n, "3.50 USDC, not three and a half million");
   await assert.rejects(createInvoice({ productId: "x", refundAddress: "0x1" }, answering(200, {})), refused("INVOICE_REFUSED"));
   await assert.rejects(createInvoice({ productId: "x", value: 1, refundAddress: "0x1" }, answering(200, { data: { id: "i", payment: { method: "bitcoin", address: "bc1", price: 1 } } })), refused("BAD_ANSWER"));
   await assert.rejects(readInvoice("../x", answering(200, {})), refused("BAD_ANSWER"));
