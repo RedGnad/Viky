@@ -43,8 +43,8 @@ test("the diamond takes arms and legs only when asked: thin, bowed, on the sketc
   assert.match(limbed, /data-part="whirl" style="transform-box:fill-box;transform-origin:50% 50%"/, "and a group that turns from its middle");
   const css = readFileSync("app/globals.css", "utf8");
   assert.match(css, /--character-limb: #1E1633;/, "the ink by day");
-  // By night the limbs are the day's pale lavender since D305, the edge having become the day's cream (D235 before).
-  assert.equal((css.slice(css.indexOf("@media (prefers-color-scheme: dark)")).match(/--character-limb: #E8E3F4;/g) ?? []).length, 2, "by night, a pale lavender, in both night blocks (D305)");
+  // By night the limbs are the day's field cream (D306), on the ink ground.
+  assert.equal((css.slice(css.indexOf("@media (prefers-color-scheme: dark)")).match(/--character-limb: #F6EACB;/g) ?? []).length, 2, "by night, cream, in both night blocks (D306)");
   const earned = renderToStaticMarkup(createElement(Character, { state: "earned", limbs: true, drawn: "inline" }));
   assert.ok(!earned.includes('data-part="limbs"'), "other states never take limbs");
 });

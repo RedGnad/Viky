@@ -247,7 +247,7 @@ test("a card is the object on the ground, as the rendered mockups draw it by day
     ["#FFF6E2", "#433D52", 4.5, "the ink on a chosen row"],
     ["#C7C4DA", "#433D52", 4.5, "the quiet voice on a chosen row and on the shut action"],
     ["#FFC531", "#2C2738", 3, "the sun on it"],
-    ["#FFE7A8", "#2C2738", 3, "the diamond's night edge on it"],
+    ["#B79BFF", "#2C2738", 3, "the diamond's night edge on it"],
   ] as const) assert.ok(contrastRatio(ink, on) >= least, what);
   for (const said of ["--paper-field: #3C3648;", "--chosen: #433D52;", "--on-surface: #FFF6E2;", "--on-surface-muted: #C7C4DA;", "--paper-relief: #C7C4DA;"]) {
     assert.equal((css.match(new RegExp(said.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length, 2, `${said} in both night blocks`);
