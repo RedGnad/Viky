@@ -1,6 +1,5 @@
 import { isValidDuolingoUsername } from "./duolingo-public-terms";
 import { UNIVERSITY_SOURCE } from "./university-shown";
-import { UDEMY_SOURCE } from "./udemy-shown";
 import { ECOLEDIRECTE_SOURCE } from "./school-shown";
 import { PRONOTE_SOURCE } from "./pronote-shown";
 import { GOAL_TYPE_DUOLINGO_COURSE_XP, GOAL_TYPE_DUOLINGO_XP, GOAL_TYPE_FITBIT_ACTIVITY, GOAL_TYPE_STRAVA_DISTANCE } from "./gift-terms";
@@ -1183,33 +1182,6 @@ export const BAC_FRANCE_SHOWN: Condition = {
 };
 
 /**
- * A Udemy course finished, shown from the person's own account (D178): the shelf of courses' second nature, beside
- * the Coursera certificate. Udemy's terms forbid a program reading its pages, so nothing is read for the person; what
- * they show from their own "My learning" page, in their own browser, is what counts. Waits for a provider of ours.
- */
-export const UDEMY_COURSE_SHOWN: Condition = {
-  id: "udemy-course-shown",
-  kind: "milestone",
-  nature: "shown",
-  goalType: null,
-  live: false,
-  beforeItOpens: "Its provider, registered on the Reclaim dashboard from the definition in docs/reclaim, and goal 22 signed by the owner.",
-  source: UDEMY_SOURCE,
-  family: "learn",
-  name: "A Udemy course finished, shown",
-  help: "Their own Udemy account, shown by them: the course the gift names, finished. It proves the account, not who watched the lessons.",
-  link: { kind: "link", label: "Show it from your Udemy account", help: "Press Show it on your gift's page and sign in to Udemy in the tab that opens. Nothing to paste." },
-  reading: "udemy-course-shown",
-  words: {
-    earnedDay: "When they show it finished, all of this becomes theirs",
-    connect: "Opened. Show the course finished from your Udemy account when it is.",
-    doIt: "Finish the course. Then press Show it and sign in to Udemy in the tab that opens: the course marked finished is what counts.",
-    eachDay: "the day it is shown",
-    preview: "A Udemy course finished, shown from your own account: the gift is yours when you show it.",
-  },
-};
-
-/**
  * A school average shown from the pupil's or the family's own EcoleDirecte account (D179): the family "School & studies" (School until D220), with a
  * target out of 20 as the university grade has. PRONOTE is built beside it (D203), its publisher's terms and the risk written.
  */
@@ -1275,7 +1247,6 @@ export const BUILDING: readonly Condition[] = [
   CAMBRIDGE_ENGLISH_SHOWN,
   IELTS_SHOWN,
   ECOLEDIRECTE_GRADE_SHOWN,
-  UDEMY_COURSE_SHOWN,
 ];
 
 /**

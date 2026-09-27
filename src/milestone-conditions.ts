@@ -36,7 +36,6 @@ import {
   type Condition,
   ECOLEDIRECTE_GRADE_SHOWN,
   PRONOTE_GRADE_SHOWN,
-  UDEMY_COURSE_SHOWN,
   BAC_CAMEROON_SHOWN,
   BAC_FRANCE_SHOWN,
   BAC_MOROCCO_SHOWN,
@@ -88,7 +87,6 @@ import {
   type ExamId,
 } from "./exam-shown";
 import { CERTIFICATE as CERTIFICATE_SHAPE, CHESS_RATING as CHESS_RATING_SHAPE, type MilestoneShape } from "./milestone-terms";
-import { UDEMY_DURATION_DAYS, UDEMY_FINISHED, UDEMY_GOAL_TYPE, UDEMY_NOT_REGISTERED, UDEMY_PROVIDER, udemySlugOf, udemySubject } from "./udemy-shown";
 import { ECOLEDIRECTE_GOAL_TYPE, ECOLEDIRECTE_NOT_REGISTERED, ECOLEDIRECTE_PROVIDER, ECOLEDIRECTE_SUBJECT, isValidSchoolTarget, SCHOOL_DURATION_DAYS, schoolGradeInWords } from "./school-shown";
 import { WAEC_CREDITS, WAEC_DURATION_DAYS, WAEC_GOAL_TYPE, WAEC_NOT_REGISTERED, WAEC_PROVIDER, WAEC_SUBJECT, waecCreditsInWords } from "./waec-shown";
 import { CHSI_ENROLLED, CHSI_GOAL_TYPE, CHSI_NOT_REGISTERED, CHSI_PROVIDER, CHSI_SUBJECT } from "./chsi-shown";
@@ -1391,61 +1389,6 @@ export const BAC_FRANCE_MILESTONE = bacMilestone(
 );
 
 /**
- * A Udemy course finished, shown (D178): the Coursera shape's question, the course by its link, with nothing to paste
- * afterwards and no name asked. The course's slug is the subject the funder signs; the person shows their own account.
- */
-export const UDEMY_MILESTONE: CertificateCondition = {
-  condition: UDEMY_COURSE_SHOWN,
-  shape: CERTIFICATE_SHAPE,
-  goalType: UDEMY_GOAL_TYPE,
-  asksName: false,
-  readPath: "",
-  validLink: () => false,
-  validName: () => true,
-  validTarget: (value) => value === UDEMY_FINISHED,
-  subject: ({ course }) => udemySubject(String(course ?? "")),
-  ...(UDEMY_PROVIDER ? {} : { notOpen: UDEMY_NOT_REGISTERED }),
-  course: {
-    label: "The course, by its link",
-    help: "Open the course on Udemy and paste the whole link from your browser, like https://www.udemy.com/course/the-complete-python-bootcamp/.",
-    slugOf: udemySlugOf,
-    row: "Which course",
-    named: (course) => `This gift will be for ${course}. That is the word Udemy puts in the course's link.`,
-  },
-  target: {
-    label: "What has to be shown",
-    help: "A course is finished or it is not, so there is nothing to choose here.",
-    min: UDEMY_FINISHED,
-    max: UDEMY_FINISHED,
-    step: 1,
-    suggested: UDEMY_FINISHED,
-    inWords: () => "that course, finished",
-  },
-  duration: UDEMY_DURATION_DAYS,
-  words: {
-    detailQuestion: "The course, and how long",
-    nameLabel: "",
-    nameHelp: "",
-    linkLabel: "",
-    linkHelp: "",
-    whatIsRead: "Viky keeps that your Udemy account shows this course finished, and the day it was shown, and nothing else. Your Udemy password never reaches Viky.",
-    check: "",
-    checking: "",
-    goal: () => "Show that course finished",
-    mustShow: () => "The person's own Udemy account showing that course finished, shown from their own browser. When it was finished is not read.",
-    ...EXAM_DURATION_WORDS,
-    durationHelp: "The course has to be shown finished inside that time, and the day it is shown is what counts.",
-    whenReached: "When they show it finished, all of this becomes theirs",
-    refusals: {
-      ...EXAM_REFUSALS,
-      targetShape: "",
-      anotherName: "That was shown for another course than the one this gift is for.",
-      below: () => "The course shown is not finished yet.",
-    },
-  },
-};
-
-/**
  * An average at school, shown from the pupil's or the family's own EcoleDirecte account (D179): the university grade's
  * shape on the one scale of French schools, out of 20 in hundredths, with no portal to choose and no name asked.
  */
@@ -1568,7 +1511,6 @@ const CERTIFICATES: readonly CertificateCondition[] = [
   ACCREDIBLE_MILESTONE,
   TOEFL_SHOWN_MILESTONE,
   ...EXAM_MILESTONES,
-  UDEMY_MILESTONE,
   UNIVERSITY_SHOWN_MILESTONE,
   CHSI_MILESTONE,
   WAEC_MILESTONE,
