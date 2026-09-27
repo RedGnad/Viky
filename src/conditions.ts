@@ -36,18 +36,18 @@ export type ConditionKind = "daily" | "milestone";
  * into a shelf of brands rather than of efforts. Inside a family the order is alphabetical, the GOV.UK rule, so that
  * an editor's choice is never read as advice.
  *
- * Four of them, the founder's decision of 24 Sep 2026 (D220), in this order: Learn, Exams & school, Play, Move. Learn
- * holds what the person learns at their own pace and has read or shown for them: the daily lesson, the course
- * certificates, the certifications an issuer awards. Exams & school holds what an examining body or a school
- * decides: the English tests, enrolment, the year passed, a grade, the state diplomas. Inside a family the order is
- * the register's (D139).
+ * Four of them, filed by what the person does and not by who issues it (the founder, 28 Sep 2026), in this order:
+ * School & studies, Learn, Play, Move. School & studies holds the university (enrolment, the year, a grade), the
+ * examinations (TOEFL, the Duolingo English Test, the baccalauréat, WAEC, Cambridge, IELTS) and the online courses of
+ * universities, named by the university. Learn holds the daily lesson, the Codeforces rating and the certifications an
+ * issuer awards. Inside a family the order is the register's (D139).
  */
 export type ConditionFamily = "learn" | "exam" | "play" | "move";
 
 export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>[] = [
-  { id: "learn", title: "Learn" },
   // The id stays `exam`, the one the examination results had since D176: only the title widens.
-  { id: "exam", title: "Exams & school" },
+  { id: "exam", title: "School & studies" },
+  { id: "learn", title: "Learn" },
   { id: "play", title: "Play" },
   // Move (D188): a source the person connects once, read each morning with their key.
   { id: "move", title: "Move" },
@@ -534,7 +534,7 @@ export const COURSERA_CERTIFICATE: Condition = {
   live: true,
   state: "open",
   source: "Coursera",
-  family: "learn",
+  family: "exam",
   name: "A Coursera certificate",
   help: "The certificate's public page, shared when they have it: the course and the day are read from it, and Coursera checks identity once, not each piece of work.",
   link: { kind: "link", label: "The link to your certificate", help: "In Coursera, open the certificate and choose Share, then paste the link here." },
@@ -562,7 +562,7 @@ export const EDX_CERTIFICATE: Condition = {
   live: true,
   state: "open",
   source: "edX",
-  family: "learn",
+  family: "exam",
   name: "An edX certificate",
   help: "The verified certificate's public page on edX, shared when they have it: the course and the day are read from it, and edX checks identity for that track.",
   link: { kind: "link", label: "The link to your certificate", help: "In edX, open the certificate and copy the whole link from your browser, courses.edx.org/certificates/ followed by its id, then paste it here." },
@@ -589,7 +589,7 @@ export const MITX_ONLINE_CERTIFICATE_LINE: Condition = {
   live: true,
   state: "open",
   source: "MITx Online",
-  family: "learn",
+  family: "exam",
   name: "An MIT course certificate",
   help: "The certificate's public page on MITx Online, shared when they have it: the course and the day are read from it. It proves a course taken, not a place at MIT.",
   link: { kind: "link", label: "The link to your certificate", help: "In MITx Online, open the certificate from your dashboard and copy the whole link from your browser, mitxonline.mit.edu/certificate/ followed by its id, then paste it here." },
@@ -998,7 +998,9 @@ export const STRAVA_DAILY: Condition = {
   },
 };
 
-export const CONDITIONS: readonly Condition[] = [DUOLINGO_DAILY, CHESS_RATING, CHESS_TACTICS_RECORD, WCA_TIME_LINE, DUOLINGO_ENGLISH_TEST, COURSERA_CERTIFICATE, EDX_CERTIFICATE, MITX_ONLINE_CERTIFICATE_LINE, CREDLY_BADGE, ACCREDIBLE_CREDENTIAL, CODEFORCES_RATING, TOEFL_MYBEST_SHOWN, UNIVERSITY_ENROLLMENT_SHOWN, FITBIT_DAILY, STRAVA_DAILY, MARATHON_FINISH_LINE];
+// The order inside each family is the founder's of 28 Sep 2026: the university, then the examinations, then the
+// universities' online courses; Duolingo, Codeforces, Credly, Accredible; chess, WCA; Fitbit, Strava, the races.
+export const CONDITIONS: readonly Condition[] = [UNIVERSITY_ENROLLMENT_SHOWN, TOEFL_MYBEST_SHOWN, DUOLINGO_ENGLISH_TEST, EDX_CERTIFICATE, MITX_ONLINE_CERTIFICATE_LINE, COURSERA_CERTIFICATE, DUOLINGO_DAILY, CODEFORCES_RATING, CREDLY_BADGE, ACCREDIBLE_CREDENTIAL, CHESS_RATING, CHESS_TACTICS_RECORD, WCA_TIME_LINE, FITBIT_DAILY, STRAVA_DAILY, MARATHON_FINISH_LINE];
 
 /**
  * What is built with a piece really missing (D184): a provider not registered, a portal not proved. Nobody can make a
@@ -1208,7 +1210,7 @@ export const UDEMY_COURSE_SHOWN: Condition = {
 };
 
 /**
- * A school average shown from the pupil's or the family's own EcoleDirecte account (D179): the family "Exams & school" (School until D220), with a
+ * A school average shown from the pupil's or the family's own EcoleDirecte account (D179): the family "School & studies" (School until D220), with a
  * target out of 20 as the university grade has. PRONOTE is built beside it (D203), its publisher's terms and the risk written.
  */
 export const ECOLEDIRECTE_GRADE_SHOWN: Condition = {
@@ -1263,16 +1265,16 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
 
 
 export const BUILDING: readonly Condition[] = [
-  CAMBRIDGE_ENGLISH_SHOWN,
-  IELTS_SHOWN,
+  CHSI_ENROLMENT_SHOWN,
+  UNIVERSITY_YEAR_PASSED_SHOWN,
+  UNIVERSITY_GRADE_SHOWN,
   BAC_MOROCCO_SHOWN,
   BAC_CAMEROON_SHOWN,
   BAC_FRANCE_SHOWN,
   WAEC_RESULT_SHOWN,
+  CAMBRIDGE_ENGLISH_SHOWN,
+  IELTS_SHOWN,
   ECOLEDIRECTE_GRADE_SHOWN,
-  CHSI_ENROLMENT_SHOWN,
-  UNIVERSITY_YEAR_PASSED_SHOWN,
-  UNIVERSITY_GRADE_SHOWN,
   UDEMY_COURSE_SHOWN,
 ];
 
@@ -1316,7 +1318,7 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "A Cambridge, IELTS or TOEFL result",
     state: "no-public-page",
     why: "The result goes to institutions. Checking one means an account an organisation applies for, opened with numbers the candidate hands over, and nothing about one person that anybody else can open. Read on 19 Sep 2026 on Cambridge English's, IELTS's and ETS's own pages.",
-    building: "a Cambridge English result and an IELTS band the person shows from their own account, with the two words SHOWN BY THEM on it; the TOEFL score is open, under Exams & school.",
+    building: "a Cambridge English result and an IELTS band the person shows from their own account, with the two words SHOWN BY THEM on it; the TOEFL score is open, under School & studies.",
   },
   {
     id: "university-enrolment",
@@ -1331,7 +1333,7 @@ export const FRONTIERS: readonly Frontier[] = [
     name: "A state diploma",
     state: "no-public-page",
     why: "In France the holder draws an attestation from the state's own service, and a check needs the control key printed on it. Nothing anybody can open, and what a program could read would be that attestation rather than the diploma. Read on 19 Sep 2026 on diplome.gouv.fr.",
-    // The baccalauréat is a state diploma, and its three lines (D176) print under "Exams & school" with the frontier's
+    // The baccalauréat is a state diploma, and its three lines (D176) print under "School & studies" with the frontier's
     // word: this line says they are on their way and names none, so nothing is printed twice.
     building: "the baccalauréat passed, shown by the candidate from the examining body's own results page, in Morocco, Cameroon and France, with the two words SHOWN BY THEM on it.",
   },

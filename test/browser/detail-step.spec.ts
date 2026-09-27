@@ -46,10 +46,10 @@ test.describe("the line that opens what they will do", () => {
   test("whatever the card carries, it opens the four families, and a condition's own step is reached by choosing it (D233)", async ({ page }) => {
     const names: [RegExp, RegExp][] = [
       [/Duolingo lesson each day/i, /^Learn/],
-      [/Duolingo English Test score/i, /Exams & school/],
+      [/Duolingo English Test score/i, /School & studies/],
       [/puzzle record/i, /^Play/],
       [/chess rating/i, /^Play/],
-      [/Coursera certificate/i, /^Learn/],
+      [/Coursera certificate/i, /School & studies/],
       [/certification on Credly/i, /^Learn/],
     ];
     for (const [name, family] of names) {

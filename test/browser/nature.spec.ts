@@ -24,7 +24,7 @@ test.describe("the nature of a condition", () => {
     expect(said.length).toBe(await sheet.locator('div[role="group"] > button').count());
     expect(said.every((words) => WORDS.test(words))).toBe(true);
     await sheet.getByRole("button", { name: /All families/i }).click();
-    await sheet.getByRole("button", { name: /Exams & school/ }).click();
+    await sheet.getByRole("button", { name: /School & studies/ }).click();
     const exams = await sheet.getByText(WORDS).filter({ visible: true }).allTextContents();
     expect(exams.length).toBe(await sheet.locator('div[role="group"] > button').count());
     expect(exams).toContain("SHOWN BY THEM");

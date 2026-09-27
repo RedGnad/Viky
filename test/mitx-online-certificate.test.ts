@@ -70,8 +70,8 @@ test("a revoked or unknown certificate is a 404, and says so by name", async () 
   assert.equal(read.title, "Introduction to Mechanics");
 });
 
-test("the line: read for them, Learn, goal 29, open, the fact rule, in the shared list", () => {
-  assert.equal(LINE.family, "learn");
+test("the line: read for them, School & studies, goal 29, open, the fact rule, in the shared list", () => {
+  assert.equal(LINE.family, "exam");
   assert.equal(LINE.nature, "read");
   assert.equal(LINE.live, true);
   assert.ok(CONDITIONS.includes(LINE));

@@ -158,7 +158,7 @@ test.describe("the screens a person meets", () => {
     await page.goto("/");
     await openTheCatalogue(page);
     // The longest list, so the sheet has something past its edge to say (D233: the tiles come first, and fit).
-    await openTheFamily(page, /Exams & school/);
+    await openTheFamily(page, /School & studies/);
     const sheet = page.locator("dialog.sheet[open]");
     // A sheet rises 24 pixels when it opens: measured while it is still on its way, its action is up to 24 pixels
     // below where it will stand, which is a measurement of the movement rather than of the screen.
@@ -228,16 +228,16 @@ test.describe("the screens a person meets", () => {
     await expect(sheet.locator('div[role="group"] > button')).toHaveCount(0);
     const tiles = sheet.locator("[data-family-art]");
     await expect(tiles).toHaveCount(4);
-    await expect(sheet.getByRole("button", { name: /Exams & school/ })).toContainText(/\d+ choices/);
+    await expect(sheet.getByRole("button", { name: /School & studies/ })).toContainText(/\d+ choices/);
 
     // Choosing another, in another family, shows that one's own questions; the way back leads to the four (D233), and
     // that family's list shows the new one checked and alone explained.
-    await openTheFamily(page, /Exams & school/);
+    await openTheFamily(page, /School & studies/);
     const other = sheet.getByRole("button", { name: /A Duolingo English Test score/i });
     await other.click();
     await sheet.getByRole("button", { name: /change/i }).click();
     await expect(sheet.locator("[data-family-art]")).toHaveCount(4);
-    await openTheFamily(page, /Exams & school/);
+    await openTheFamily(page, /School & studies/);
     await expect(sheet.getByRole("button", { name: /A Duolingo English Test score/i })).toHaveAttribute("aria-current", "true");
     expect(await explained()).toBe(1);
     expect(await body.evaluate((element) => element.scrollTop)).toBe(0);
