@@ -20,7 +20,7 @@ async function admit(scopes: readonly RelayScope[], nowMs: number, code: "RELAY_
   const over = overTheCeiling(counted);
   if (over) {
     await uncountRelays(rows);
-    throw new GiftApiError(code, ceilingSentence(over, nowMs), 429);
+    throw new GiftApiError(over.window === "ever" ? "TOP_UPS_FOR_GIFT" : code, ceilingSentence(over, nowMs), 429);
   }
   // The first action of an hour for this account sweeps the rows nothing reads any more.
   if (counted[0]?.count === 1) await forgetRelayCountsBefore(new Date(nowMs - TWO_DAYS_MS));
@@ -31,9 +31,12 @@ export async function admitRelay(request: Request, account: string, nowMs = Date
   await admit(relayScopes(account, clientIpFromRequest(request), ceilings), nowMs, "RELAY_CEILING");
 }
 
-/** Counts a readying top-up of MON, one a minute for the account and for the connection: `TOP_UP_TOO_SOON`, 429. */
-export async function admitTopUp(request: Request, account: string, nowMs = Date.now(), ceilings: RelayCeilings = relayCeilings()): Promise<void> {
-  await admit(topUpScopes(account, clientIpFromRequest(request), ceilings), nowMs, "TOP_UP_TOO_SOON");
+/**
+ * Counts a readying top-up of MON: one a minute for the account and for the connection (`TOP_UP_TOO_SOON`), and a few
+ * for the gift, for as long as it lives (`TOP_UPS_FOR_GIFT`), both 429.
+ */
+export async function admitTopUp(request: Request, account: string, giftId: string, nowMs = Date.now(), ceilings: RelayCeilings = relayCeilings()): Promise<void> {
+  await admit(topUpScopes(account, clientIpFromRequest(request), ceilings, giftId), nowMs, "TOP_UP_TOO_SOON");
 }
 
 /** A relayed send or withdrawal below the smallest amount, unless it is everything there is: `TOO_SMALL_TO_RELAY`, 409. */

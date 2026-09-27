@@ -79,8 +79,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         throw new GiftApiError("TOO_EXPENSIVE", "This cannot be done right now. Nothing was changed.", 503);
       }
       // One readying a minute, for the account and for the connection (D204): the top-up is MON of the relayer's.
-      await admitTopUp(request, auth.account);
+      // And a few a gift for as long as it lives (the money path audit of 27 Sep 2026), so MON swept out after each
+      // top-up cannot be asked for again in a loop.
+      await admitTopUp(request, auth.account, id);
       sent = await clients.walletClient.sendTransaction({ account: clients.walletClient.account!, chain: monadChain, to: funder, value, gas: 21_000n });
+      // The journal line of the relayer's MON given away: which gift, to whom, how much, under which transaction.
+      console.log(JSON.stringify({ at: new Date().toISOString(), giftId: id, topUp: formatEther(value), to: funder, tx: sent }));
       await waitForFinality(clients.publicClient, sent);
     }
 
