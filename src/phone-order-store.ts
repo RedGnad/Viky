@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS viky_phone_orders (
 );
 CREATE INDEX IF NOT EXISTS viky_phone_orders_account ON viky_phone_orders (account, created_at DESC);
 CREATE INDEX IF NOT EXISTS viky_phone_orders_day ON viky_phone_orders (created_at);
-ALTER TABLE viky_phone_orders ADD COLUMN IF NOT EXISTS code_sealed text
+ALTER TABLE viky_phone_orders ADD COLUMN IF NOT EXISTS code_sealed text;
+ALTER TABLE viky_phone_orders ADD COLUMN IF NOT EXISTS relay_tx text
 `;
 
 export type PhoneOrderState = "priced" | "received" | "paid" | "delivered" | "failed" | "refunded";
@@ -64,6 +65,8 @@ export type PhoneOrder = Readonly<{
   failure: string | null;
   /** A gift card's code, sealed by the vault (src/connect-vault.ts), opened for its owner alone (D271). */
   codeSealed: string | null;
+  /** The one relay that pays the order: `pending:<the person's nonce>` while it is being sent, then its hash. */
+  relayTx: string | null;
   createdAt: Date;
 }>;
 
@@ -107,12 +110,13 @@ function rowOf(row: Record<string, unknown>): PhoneOrder {
     state: String(row.state) as PhoneOrderState,
     failure: row.failure ? String(row.failure) : null,
     codeSealed: row.code_sealed ? String(row.code_sealed) : null,
+    relayTx: row.relay_tx ? String(row.relay_tx) : null,
     createdAt: row.created_at instanceof Date ? row.created_at : new Date(String(row.created_at)),
   };
 }
 
 /** A priced order, before anything moved: Bitrefill's invoice, its price in USDC, and the AUSD the person will send. */
-export async function recordPricedOrder(input: Omit<PhoneOrder, "id" | "ausdTx" | "paymentTx" | "refundTx" | "state" | "failure" | "createdAt" | "codeSealed">): Promise<PhoneOrder> {
+export async function recordPricedOrder(input: Omit<PhoneOrder, "id" | "ausdTx" | "paymentTx" | "refundTx" | "state" | "failure" | "createdAt" | "codeSealed" | "relayTx">): Promise<PhoneOrder> {
   const id = `ph_${randomBytes(9).toString("base64url")}`;
   const rows = await sql()`
     INSERT INTO viky_phone_orders (id, account, kind, product_id, operator_name, local_amount, local_currency, phone_number, invoice_id, usdc_units, ausd_units, state)
@@ -166,7 +170,38 @@ export const markRefunded = (id: string, refundTx: string) => advance(id, ["fail
  * A priced order the person never sent money for: nothing moved, so nothing is kept of the number either. It stays
  * `failed` with no `ausd_tx`, which every reader takes as nothing came in: never refunded, counted or listed as held.
  */
-export const markAbandoned = (id: string) => advance(id, ["priced"], "failed", { failure: "abandoned", erasePhone: true });
+export async function markAbandoned(id: string): Promise<PhoneOrder | null> {
+  // Never an order a relay was started for: that one is settled from its own transaction first.
+  const rows = await sql()`UPDATE viky_phone_orders SET state = 'failed', failure = COALESCE(failure, 'abandoned'), phone_number = NULL, updated_at = now() WHERE id = ${id} AND state = 'priced' AND relay_tx IS NULL RETURNING *`;
+  return rows[0] ? rowOf(rows[0]) : null;
+}
+
+/**
+ * Only one relay ever pays an order. The request that takes this claim writes the person's nonce, then its
+ * transaction's hash the moment it is sent; any other request for the order settles from that transaction instead
+ * of carrying a second authorization. A claim still pending five minutes later belongs to a request that stopped
+ * before sending, and may be taken again (`stale`) once its authorization is known unused.
+ */
+export async function claimRelay(id: string, nonce: string, stale: string | null = null): Promise<PhoneOrder | null> {
+  const claim = `pending:${nonce}`;
+  const rows =
+    stale === null
+      ? await sql()`UPDATE viky_phone_orders SET relay_tx = ${claim}, updated_at = now() WHERE id = ${id} AND state = 'priced' AND relay_tx IS NULL RETURNING *`
+      : await sql()`UPDATE viky_phone_orders SET relay_tx = ${claim}, updated_at = now() WHERE id = ${id} AND state = 'priced' AND relay_tx = ${stale} AND updated_at < now() - interval '5 minutes' RETURNING *`;
+  return rows[0] ? rowOf(rows[0]) : null;
+}
+
+/** The claimed relay's hash, written as soon as it is sent, before its finality. */
+export async function noteRelay(id: string, hash: string): Promise<PhoneOrder | null> {
+  const rows = await sql()`UPDATE viky_phone_orders SET relay_tx = ${hash}, updated_at = now() WHERE id = ${id} AND state = 'priced' AND relay_tx LIKE 'pending:%' RETURNING *`;
+  return rows[0] ? rowOf(rows[0]) : null;
+}
+
+/** A claim whose relay moved nothing (refused before sending, or reverted): the order may be paid again. */
+export async function releaseRelay(id: string, held: string): Promise<PhoneOrder | null> {
+  const rows = await sql()`UPDATE viky_phone_orders SET relay_tx = NULL, updated_at = now() WHERE id = ${id} AND state = 'priced' AND relay_tx = ${held} RETURNING *`;
+  return rows[0] ? rowOf(rows[0]) : null;
+}
 
 /**
  * What counts against a ceiling, since midnight UTC: the orders whose money came in and did not come back. `account`

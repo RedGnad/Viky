@@ -57,10 +57,13 @@ function world(overrides: Partial<PhoneDeps> = {}, price = "50"): { deps: PhoneD
       return { hash: `0xrefund${w.refunds.length}` as Hex };
     },
     heldAusd: async () => 100_000_000n,
-    relayToTreasury: async () => {
+    relayToTreasury: async (_input, onSubmitted) => {
       w.relayed += 1;
-      return { hash: `0xin${w.relayed}` as Hex };
+      const hash = `0xin${w.relayed}` as Hex;
+      await onSubmitted?.(hash);
+      return { hash };
     },
+    relayLanded: async () => "landed",
     authorizationUsed: async () => false,
     store,
     giftCardById: async (id) => ({ id, name: "Boomplay", countryCode: "SN", countryName: "Senegal", currency: "XOF", packages: [{ id: `${id}<&>1959`, value: "1959", priceUsd: 50 }], range: null }),
