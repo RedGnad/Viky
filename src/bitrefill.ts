@@ -161,6 +161,18 @@ export async function operatorsFor(phoneNumber: string, deps: Deps = liveDeps())
   return operators;
 }
 
+/**
+ * An USDC invoice's price, as USDC with its decimals. Bitrefill prices it in USDC's smallest unit, six decimals: the
+ * invoice of a 2,000 XOF top-up read `"price":"3500000"` with `"currency":"USDC"`, which is 3.50 USDC (read on
+ * production, 28 Sep 2026; the documentation gives no unit). A price already written with a decimal point is kept.
+ */
+function priceInUsdc(price: unknown, currency: unknown): string {
+  const text = String(price).trim();
+  if (!/^usdc$/i.test(String(currency ?? "")) || !/^\d+$/.test(text)) return text;
+  const units = BigInt(text);
+  return `${units / 1_000_000n}.${(units % 1_000_000n).toString().padStart(6, "0")}`;
+}
+
 function invoiceOf(raw: Record<string, unknown>): BitrefillInvoice {
   const payment = (raw.payment ?? {}) as Record<string, unknown>;
   if (typeof raw.id !== "string" || typeof payment.address !== "string" || payment.price === undefined) throw new BitrefillError("BAD_ANSWER", "Bitrefill answered an invoice without a price or an address");
@@ -168,7 +180,7 @@ function invoiceOf(raw: Record<string, unknown>): BitrefillInvoice {
   return {
     id: raw.id,
     status: String(raw.status ?? ""),
-    payment: { method: String(payment.method ?? ""), address: payment.address, price: String(payment.price), currency: String(payment.currency ?? "") },
+    payment: { method: String(payment.method ?? ""), address: payment.address, price: priceInUsdc(payment.price, payment.currency), currency: String(payment.currency ?? "") },
     orders,
   };
 }
