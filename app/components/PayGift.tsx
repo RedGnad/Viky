@@ -122,6 +122,8 @@ export function PayGift() {
   const sharing = useSyncExternalStore(never, canShare, onServer);
   const params = useSearchParams();
   const asked = params.get("step");
+  // Whether the pay press already opened the partner's page (D296): only when that page arrives filled in.
+  const [partnerOpened, setPartnerOpened] = useState(params.get("opened") === "1");
   const step: Step = ALL_STEPS.includes(asked as Step) ? (asked as Step) : "pay";
 
   // The gift is read from the same store the card writes (src/card-draft.ts): one gift, in one place, on the device.
@@ -628,8 +630,8 @@ export function PayGift() {
           {wayIn.takes ? `${W.check.delay(wayIn.name, wayIn.takes)} ` : ""}
           {keptOnDevice ? W.waiting.leave : W.waiting.stay}
         </p>
-        <a href={wayInPage(wayIn, { account: address, euros: toBuy })} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON}>
-          {W.waiting.openAgain(wayIn.name)}
+        <a href={wayInPage(wayIn, { account: address, euros: toBuy })} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON} onClick={() => setPartnerOpened(true)}>
+          {partnerOpened ? W.waiting.openAgain(wayIn.name) : W.waiting.openFirst(wayIn.name)}
         </a>
         <div className="flex flex-col gap-[var(--space-xs)]">
           <button type="button" onClick={differentGift} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>

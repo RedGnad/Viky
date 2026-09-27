@@ -150,9 +150,13 @@ export function PaySheet({
     try {
       const account = address ?? (await ensureSigner()).address;
       savePendingGift({ ...draftToTerms(draft, account), wayIn: way.name });
-      // Filled in with the account and the amount when the partner can take them (D289).
-      if (!enough) window.open(wayInPage(way, { account, euros }), "_blank", "noopener,noreferrer");
-      router.push("/fund?step=paying");
+      // The partner's page opens in this press only when it arrives filled in (D289). Otherwise the person has not seen
+      // their code yet, a first funder has only just made it: the waiting screen shows it, with its copy, and opens the
+      // page when they press (D296).
+      if (!enough && wayInFillsIn(way)) {
+        window.open(wayInPage(way, { account, euros }), "_blank", "noopener,noreferrer");
+        router.push("/fund?step=paying&opened=1");
+      } else router.push("/fund?step=paying");
     } catch {
       setProblem(W.notMade);
     } finally {

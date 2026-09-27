@@ -61,3 +61,12 @@ test("without the key, the sheet says what to choose on the partner's page and w
   assert.match(sheet, /!enough && !wayInFillsIn\(way\) && address \? \(/);
   assert.match(sheet, /navigator\.clipboard\.writeText\(address\)/);
 });
+
+test("without the key, the pay press opens nothing: the waiting screen shows the code first, then opens the partner (D296)", () => {
+  const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
+  assert.match(sheet, /if \(!enough && wayInFillsIn\(way\)\) \{\s*window\.open\(wayInPage\(way, \{ account, euros \}\), "_blank", "noopener,noreferrer"\);\s*router\.push\("\/fund\?step=paying&opened=1"\);\s*\} else router\.push\("\/fund\?step=paying"\);/);
+  const wait = readFileSync("app/components/PayGift.tsx", "utf8");
+  assert.match(wait, /partnerOpened \? W\.waiting\.openAgain\(wayIn\.name\) : W\.waiting\.openFirst\(wayIn\.name\)/);
+  // On the waiting screen the code and its copy come before the button that opens the partner.
+  assert.ok(wait.indexOf("W.waiting.codeLabel(wayIn.name)") < wait.indexOf("W.waiting.openFirst(wayIn.name)"));
+});
