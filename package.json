@@ -34,6 +34,7 @@
     "keeper": "tsx scripts/keeper.ts",
     "proof:capture": "tsx scripts/capture-duolingo-proof.ts",
     "proof:transform": "tsx scripts/transform-duolingo-proof.ts",
+    "proof:inspect": "tsx scripts/inspect-proof.ts",
     "register:goal": "tsx scripts/register-goal.ts",
     "count:gift": "tsx scripts/count-gift.ts",
     "verify:day": "tsx scripts/verify-day.ts",
