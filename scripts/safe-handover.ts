@@ -128,7 +128,7 @@ async function main() {
     if (now !== safe) throw new Error(`${contract.name} still answers ${now} after ${hash}`);
     console.log(JSON.stringify({ step: `handed ${contract.name} over`, contract: contract.address, txHash: hash, block: receipt.blockNumber.toString(), owner: now }));
   }
-  console.log(`All four contracts now answer ${safe}. Every owner action from here needs two signatures: see docs/OPERATIONS.md.`);
+  console.log(`All four contracts now answer ${safe}. Every owner action from here needs two signatures.`);
 }
 
 main().catch((error) => {

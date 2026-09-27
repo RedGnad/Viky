@@ -106,8 +106,8 @@ export default async function JudgesPage() {
             ) : (
               "Not deployed yet."
             )}{" "}
-            Nothing is claimed as working until the first gift has run end to end on mainnet; the record is in
-            docs/spikes/KT1.md.
+            Nothing is claimed as working until the first gift has run end to end on mainnet; the first gifts are
+            read from the chain further down this page.
           </dd>
           <dt className="text-[var(--muted)]">Who owns the contracts</dt>
           <dd className="[overflow-wrap:anywhere]">

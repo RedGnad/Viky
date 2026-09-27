@@ -1,3 +1,7 @@
+# Internal working documents, kept on the developers' machines only
+/internal/
+CLAUDE.local.md
+
 # Secrets
 .env
 .env.*

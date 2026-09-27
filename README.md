@@ -6,11 +6,14 @@ Viky is a conditional gift on Monad. A funder puts money behind someone's goal. 
 allocated in the recipient's name from day one, becomes theirs as verified progress accrues, and
 returns to the funder for whatever is not accomplished. Nobody else ever profits from a missed day.
 
-Status: skeleton. Nothing here is claimed as working until the first gift has run end to end on
-mainnet with real amounts. See `docs/SPEC.md` for the product and technical specification and
-`docs/DECISIONS.md` for every fact that was checked at its source and every design decision.
+Live app: [viky.cash](https://viky.cash). Built for Monad Metropolis, track Consumer Products & Payments.
 
-live app : viky.cash
+## For judges
+
+[viky.cash/judges](https://viky.cash/judges) is the one page for verifying Viky: the contract addresses on Monad
+mainnet, who owns them (read from the chain when the page is served), every condition a gift can wait for and the
+source it is read from, the commands to re-verify a credited day yourself, and the risks and limits, written as they
+are. It also says how to try the product with your own passkey.
 
 ## Stack
 
@@ -18,7 +21,7 @@ live app : viky.cash
 - Accounts: Mera passkeys only. A passkey's PRF output derives an ordinary Monad account
   (BIP-44 `m/44'/60'/0'/0/0`). No seed phrase, no extension, no custody backend. The same passkey, under its own
   salt (`viky:private:v1`), gives the key of the funder's private space (nicknames and notes), sealed in the browser
-  and kept on the server as an envelope it cannot open (D202).
+  and kept on the server as an envelope it cannot open.
 - Asset: AUSD on Monad mainnet.
 - Contracts: Foundry 1.8 with `network = "monad"`.
 - Tests: `node:test` through `tsx` for TypeScript, `forge test --network monad` for Solidity.
@@ -105,7 +108,7 @@ The functions run in Vercel's Paris region (`vercel.json`), next to the Frankfur
 `contracts/GiftEscrow.sol` holds every gift: creation and funding in one transaction through the funder's
 EIP-3009 authorization (its nonce is derived from the gift terms), claim by the recipient's account, daily
 check-ins attested by the evidence signer, draining of missed days after a one-day catch-up window,
-withdrawal of what is earned, refund of what is not. Guards come from Lock-in's escrow: attestation
+withdrawal of what is earned, refund of what is not. Guards: attestation
 freshness, clock skew, nullifiers, identity binding, pauses, typed errors. `forge test --network monad`
 runs the unit suite, the accounting fuzz and the typehash parity pin; with `MONAD_RPC_URL` set it also
 runs the mainnet fork test of the real AUSD funding path. `pnpm deploy:gift-escrow` deploys and
@@ -172,3 +175,11 @@ pnpm test:policy
 pnpm test:solidity
 pnpm test
 ```
+
+## Security
+
+See [SECURITY.md](SECURITY.md) to report a vulnerability.
+
+## License
+
+[MIT](LICENSE)
