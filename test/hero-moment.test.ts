@@ -59,7 +59,7 @@ test("the session remembers the moment: a cookie with no age, read by the server
   assert.match(page, /heroPlayed=\{heroPlayedFromCookie\(\(await cookies\(\)\)\.get\(HERO_COOKIE\)\?\.value\)\}/, "the server reads it while it draws the landing");
 });
 
-test("the first image is the starting state, the choreography is on the tokens in its order, and reduced motion stands still", () => {
+test("the first image is the starting state, the choreography is on the tokens in its order, and reduced motion stands still", async () => {
   const hero = readFileSync("app/kit/HeroMoment.tsx", "utf8");
   const css = readFileSync("app/globals.css", "utf8");
   assert.equal(HERO_PEEK, 53 - 18 - 4, "the box is 53 tall, the head's top at 4: 18 units of head stay over the card's edge");
@@ -81,9 +81,16 @@ test("the first image is the starting state, the choreography is on the tokens i
   assert.match(hero, /transform: body\(0, hero\.squash\), easing: EASING\.emphasizedDecelerate/, "it squashes on the floor");
   assert.match(hero, /transform: body\(-hero\.leapAbove, hero\.stretch\), easing: EASING\.emphasizedAccelerate/, "and stretches at the top of the leap, falling faster and faster");
   assert.match(hero, /easing: time\.settle\.easing \}/, "the landing settles on the spring");
-  assert.match(hero, /transform: "scaleY\(0\)" \}, \{ transform: "scaleY\(1\)" \}\], \{ duration: spring\.durationMs, easing: spring\.easing, delay: at, fill: "backwards" \}/, "each limb lengthens along its own axis");
-  assert.match(hero, /arms\.forEach\(\(arm, index\) => running\.push\(lengthen\(arm, time\.armsAt \+ index \* hero\.limbPairStaggerMs, time\.settle\)\)\)/, "the arms on the expressive spring");
-  assert.match(hero, /legs\.forEach\(\(leg, index\) => running\.push\(lengthen\(leg, time\.legsAt \+ index \* hero\.limbPairStaggerMs, time\.unfold\)\)\)/, "the legs on the spring that never overshoots");
+  // Each limb comes out of the body at a wider angle, lengthening, then swings to where it rests (D302).
+  assert.match(hero, /limb\.animate\(unfoldFrames\(spread, spring\.easing, hero\.spread\.outMs \/ \(hero\.spread\.outMs \+ spring\.durationMs\)\), \{ duration: hero\.spread\.outMs \+ spring\.durationMs, delay: at, fill: "backwards" \}\)/, "each limb comes out wide, then settles");
+  assert.match(hero, /running\.push\(lengthen\(arm, time\.armsAt \+ index \* hero\.limbPairStaggerMs, time\.settle, outward\(index, hero\.spread\.armsDeg\)\)\)/, "the arms on the expressive spring, wider");
+  assert.match(hero, /running\.push\(lengthen\(leg, time\.legsAt \+ index \* hero\.limbPairStaggerMs, time\.unfold, outward\(index, hero\.spread\.legsDeg\)\)\)/, "the legs on the spring that never overshoots");
+  const { unfoldFrames, foldFrames, outward } = await import("../app/kit/HeroMoment");
+  const frames = unfoldFrames(38, "linear", 0.25);
+  assert.deepEqual(frames.map((f) => f.transform), ["rotate(38deg) scaleY(0)", "rotate(38deg) scaleY(1)", "rotate(0deg) scaleY(1)"], "out wide, lengthened, then to rest");
+  assert.deepEqual(foldFrames(38, 0.25).map((f) => f.transform), ["rotate(0deg) scaleY(1)", "rotate(38deg) scaleY(1)", "rotate(38deg) scaleY(0)"], "folding is the same, backwards");
+  assert.equal(outward(0, 38), 38, "the left limb opens clockwise");
+  assert.equal(outward(1, 38), -38, "the right one the other way");
   assert.match(hero, /delay: time\.floor, fill: "backwards"/, "the mouth opens with the landing");
   assert.match(hero, /if \(!figure \|\| reduced\(\)\) \{\n\s*show\(\);\n\s*return;/, "reduced motion: standing, nothing moves");
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n\s*\[data-hero="peeking"\] \[data-part="figure"\],[\s\S]*?transform: none;/, "and the first image is standing too");

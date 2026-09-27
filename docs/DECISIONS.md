@@ -7692,3 +7692,19 @@ Hanover, Dortmund, Bremen, Aschaffenburg, Kandel, Bergisch Gladbach and the like
     at the top.
 - Captured at 390 and 1440, by day and by night: standing on the card, a blink held at its middle, folded after a
   scroll, back out at the top; the family tiles, the Gifts scene and the link preview.
+
+## D302, 28 Sep 2026: limbs come out wide then settle, the book's arms from under the body, soft smiles on four figures
+
+- **Decisions (the founder, 28 Sep 2026)**:
+  - A limb no longer only stretches out of the body: it leaves at a wider angle (arms 38 degrees, legs 24), lengthening
+    on Material's short4 and emphasized decelerate, then swings to where it rests on its spring; folding is the same
+    backwards, swinging out then shortening into the body (`unfoldFrames`, `foldFrames` and `outward` in
+    `app/kit/HeroMoment.tsx`, `MOTION.hero.spread`). It is used for the landing's arrival and for the fold on scroll
+    and back.
+  - The reading figure's arms leave from under the body like the others and pass behind the book; only the hands
+    close over its corners (`handOver`).
+  - The soft smile of D301 on other figures: the Home scene (the suit and the case), the second figure of the Gifts
+    scene, the reading figure (its tile and the landing's block) and the chess figure. The ones that wave, run, wear
+    the cap or the sunglasses keep their wide smile.
+- Captured frame by frame at 390, the limbs' animations paused and stepped: the fold after a scroll and the unfold at
+  the top; the family tiles and the landing's blocks.

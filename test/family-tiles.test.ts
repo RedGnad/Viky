@@ -24,7 +24,9 @@ test("each family has its picture: the rig doing the family's thing, the thing i
   }
   // Each family's figure does its thing.
   const reader = renderToStaticMarkup(createElement(FamilyArt, { family: "learn" }));
-  assert.ok(reader.includes('data-pose="read"') && reader.indexOf('data-prop="book"') < reader.indexOf('data-pose="read"'), "the hands close over the book held in front");
+  // The arms leave from under the body and pass behind the book; only the hands close over it (D302).
+  assert.ok(reader.includes('data-pose="read"') && reader.indexOf('data-pose="read"') < reader.indexOf('data-prop="book"'), "the arms behind the book");
+  assert.ok(reader.lastIndexOf('data-part="hand"') > reader.indexOf('data-prop="book"'), "the hands close over the book held in front");
   assert.ok(renderToStaticMarkup(createElement(FamilyArt, { family: "exam" })).includes('data-pose="wave"'), "a wave under the cap");
   assert.ok(renderToStaticMarkup(createElement(FamilyArt, { family: "play" })).includes('data-pose="hold"'), "the rook at its hand");
   const runner = renderToStaticMarkup(createElement(FamilyArt, { family: "move" }));

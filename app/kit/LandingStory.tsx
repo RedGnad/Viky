@@ -23,7 +23,7 @@ const ART: Readonly<Record<(typeof W.blocks)[number]["key"], ReactNode>> = {
   // The funder's arm on the recipient's shoulder: the Gifts scene.
   theirs: <Scene which="gifts" className="h-auto w-[220px] [@media(min-width:1024px)]:w-[320px]" />,
   // Reading, the book held open: the drawing of the catalogue's "learn" (D268).
-  checked: <Figure id="story-checked" arms="read" props={["book"]} gaze={{ x: 0, y: 0.7 }} halftone className="h-auto w-[150px] [@media(min-width:1024px)]:w-[210px]" />,
+  checked: <Figure id="story-checked" arms="read" props={["book"]} mouth="soft" gaze={{ x: 0, y: 0.7 }} halftone className="h-auto w-[150px] [@media(min-width:1024px)]:w-[210px]" />,
   // Three days kept and one gone back, as a gift's own row draws them.
   back: (
     <span className="flex items-end">

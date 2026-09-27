@@ -50,6 +50,30 @@ export function heroTimeline(hero = MOTION.hero) {
   return { top, floor, hopTop, floorAgain, still, settle, unfold, armsAt, legsAt, done: Math.max(still, armsDone, legsDone) };
 }
 
+/**
+ * A limb coming out of the body (D302): folded into its joint at a wider angle, it lengthens there, then swings to where
+ * it rests. `out` is the share of the time spent lengthening; the swing takes the rest, on the given easing.
+ */
+export function unfoldFrames(spread: number, settle: string, out: number): Keyframe[] {
+  return [
+    { offset: 0, transform: `rotate(${spread}deg) scaleY(0)`, easing: EASING.emphasizedDecelerate },
+    { offset: out, transform: `rotate(${spread}deg) scaleY(1)`, easing: settle },
+    { offset: 1, transform: "rotate(0deg) scaleY(1)" },
+  ];
+}
+
+/** The same, backwards (D302): it swings out, then shortens into the body. */
+export function foldFrames(spread: number, out: number): Keyframe[] {
+  return [
+    { offset: 0, transform: "rotate(0deg) scaleY(1)", easing: EASING.standard },
+    { offset: 1 - out, transform: `rotate(${spread}deg) scaleY(1)`, easing: EASING.emphasizedAccelerate },
+    { offset: 1, transform: `rotate(${spread}deg) scaleY(0)` },
+  ];
+}
+
+/** Outward for each side: the left limb (drawn first) turns clockwise to open, the right one the other way. */
+export const outward = (index: number, degrees: number) => (index % 2 === 0 ? degrees : -degrees);
+
 export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -100,10 +124,11 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
     // it (D234): overlapping action. The arms open as the leap slows to its top, on the expressive spring, and turn
     // with the whirl; the legs unfold during the fall, on the spring that never overshoots, so the feet arrive with
     // the landing and its squash compresses them. Left then right within each pair.
-    const lengthen = (limb: SVGElement, at: number, spring: typeof time.settle) =>
-      limb.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], { duration: spring.durationMs, easing: spring.easing, delay: at, fill: "backwards" });
-    arms.forEach((arm, index) => running.push(lengthen(arm, time.armsAt + index * hero.limbPairStaggerMs, time.settle)));
-    legs.forEach((leg, index) => running.push(lengthen(leg, time.legsAt + index * hero.limbPairStaggerMs, time.unfold)));
+    // It leaves the body at a wider angle, then swings to where it rests (D302).
+    const lengthen = (limb: SVGElement, at: number, spring: typeof time.settle, spread: number) =>
+      limb.animate(unfoldFrames(spread, spring.easing, hero.spread.outMs / (hero.spread.outMs + spring.durationMs)), { duration: hero.spread.outMs + spring.durationMs, delay: at, fill: "backwards" });
+    arms.forEach((arm, index) => running.push(lengthen(arm, time.armsAt + index * hero.limbPairStaggerMs, time.settle, outward(index, hero.spread.armsDeg))));
+    legs.forEach((leg, index) => running.push(lengthen(leg, time.legsAt + index * hero.limbPairStaggerMs, time.unfold, outward(index, hero.spread.legsDeg))));
     // The starting state came from the stylesheet; from here the animations hold it, in the same task.
     show();
     return () => running.forEach((animation) => animation.cancel());
@@ -119,7 +144,9 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
     const { blink, tuck } = MOTION;
     const readyAt = performance.now() + (played ? 0 : heroTimeline().done);
     const lids = [...stage.querySelectorAll<SVGElement>('[data-part="lid"]')];
-    const limbs = [...stage.querySelectorAll<SVGElement>('[data-part="arm"], [data-part="leg"]')];
+    const arms = [...stage.querySelectorAll<SVGElement>('[data-part="arm"]')].map((limb, index) => ({ limb, spread: outward(index, MOTION.hero.spread.armsDeg) }));
+    const legs = [...stage.querySelectorAll<SVGElement>('[data-part="leg"]')].map((limb, index) => ({ limb, spread: outward(index, MOTION.hero.spread.legsDeg) }));
+    const limbs = [...arms, ...legs];
     let seen = true;
     let blinkTimer: number | undefined;
     const nextBlink = () => {
@@ -140,8 +167,10 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
       if (want === tucked) return;
       tucked = want;
       folding.forEach((animation) => animation.cancel());
-      folding = limbs.map((limb) =>
-        limb.animate([{ transform: want ? "scaleY(1)" : "scaleY(0)" }, { transform: want ? "scaleY(0)" : "scaleY(1)" }], { duration: tuck.durationMs, easing: tuck.easing, fill: "forwards" }),
+      // Swinging out then shortening into the body, or coming out wide then swinging back (D302).
+      const out = MOTION.hero.spread.outMs / tuck.durationMs;
+      folding = limbs.map(({ limb, spread }) =>
+        limb.animate(want ? foldFrames(spread, out) : unfoldFrames(spread, EASING.emphasizedDecelerate, out), { duration: tuck.durationMs, fill: "forwards" }),
       );
     };
     const settled = window.setTimeout(follow, Math.max(0, readyAt - performance.now()));

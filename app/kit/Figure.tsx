@@ -113,7 +113,7 @@ export function lit(light = LIGHT, lean = 0) {
  * rather than from behind), at (15.5, 24.8) and (48.5, 24.8), so it always comes out from behind; only an arm that has
  * to cross the body (raised straight up, folded, holding a book) is drawn over it, from the edge.
  */
-const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [number, number]; turn?: number; over?: boolean }>[]> = {
+const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [number, number]; turn?: number; over?: boolean; handOver?: boolean }>[]> = {
   rest: [
     { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13, 37.2] },
     { d: "M48.5 24.8 Q52 30.7 51 35.4", hand: [51, 37.2] },
@@ -141,10 +141,11 @@ const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [numb
     { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13, 37.2] },
     { d: "M48.5 25.4 C57 24.5 65 19.5 72 16.5", hand: [72.8, 16.1] },
   ],
-  // Holding a book open in front (D268): both arms come round and the hands close on its lower corners, over it.
+  // Holding a book open in front (D268): the arms leave from under the body like the others (D302, the founder, 28 Sep
+  // 2026) and pass behind the book; only the hands come over it, closing on its lower corners.
   read: [
-    { d: "M13 26 Q11.4 31.6 14.6 37.4", hand: [15.4, 38.4], over: true },
-    { d: "M51 26 Q52.6 31.6 49.4 37.4", hand: [48.6, 38.4], over: true },
+    { d: "M15.5 24.8 Q11.4 31.6 14.6 37.4", hand: [15.4, 38.4], handOver: true },
+    { d: "M48.5 24.8 Q52.6 31.6 49.4 37.4", hand: [48.6, 38.4], handOver: true },
   ],
 };
 const LEGS: Record<LegsPose, readonly Readonly<{ turn: number }>[]> = {
@@ -193,7 +194,7 @@ function Limbs({ arms, legs, holding }: Readonly<{ arms: ArmsPose; legs: LegsPos
   return (
     <g data-part="limbs">
       {ARMS[arms].filter((arm) => !arm.over).map((arm, index) => (
-        <Arm key={index} pose={arms} arm={arm} hand={!(holding && arms === "hold" && index === 1)} />
+        <Arm key={index} pose={arms} arm={arm} hand={!arm.handOver && !(holding && arms === "hold" && index === 1)} />
       ))}
       {LEGS[legs].map((leg, index) => (
         <g key={index} data-part="leg" data-pose={legs} style={leg.turn ? { ...FROM_JOINT, transform: `rotate(${leg.turn}deg)` } : FROM_JOINT}>
@@ -466,6 +467,10 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
       </g>
       {/* The book is held in front of the body and under the hands that close on it (D268). */}
       {props.includes("book") ? <Book /> : null}
+      {/* Hands that close over what the figure holds, their arms behind it (D302). */}
+      {(limbs ? ARMS[arms] : []).filter((arm) => arm.handOver).map((arm, index) => (
+        <circle key={`hand-${index}`} data-part="hand" cx={arm.hand[0]} cy={arm.hand[1]} r={1.9} style={{ fill: LIMB, ...FROM_MIDDLE }} />
+      ))}
       {(limbs ? ARMS[arms] : []).filter((arm) => arm.over).map((arm, index) => (
         <Arm key={index} pose={arms} arm={arm} />
       ))}
@@ -511,7 +516,7 @@ export function Scene({ which, className, children }: Readonly<{ which: SceneNam
       <svg aria-hidden focusable="false" viewBox="0 0 118 53" data-character="diamond" className={className} style={{ overflow: "visible" }}>
         {/* The second first, a little smaller and on the same floor, so the first's arm lies over its shoulder. */}
         <g transform="translate(58 5.3) scale(0.9)">
-          <FigureGroup id="gifts-two" mouth="smile" gaze={{ x: -0.6, y: -0.3 }} halftone />
+          <FigureGroup id="gifts-two" mouth="soft" gaze={{ x: -0.6, y: -0.3 }} halftone />
         </g>
         <FigureGroup id="gifts-one" arms="shoulder" mouth="grin" gaze={{ x: 0.6, y: 0 }} halftone />
         {children}
@@ -519,6 +524,6 @@ export function Scene({ which, className, children }: Readonly<{ which: SceneNam
     );
   }
   // Every figure of the rig wears the landing's halftone (D262): one material, whatever the scene.
-  if (which === "home") return <Figure className={className} id="home" arms="hold" props={["suit", "case"]} halftone />;
+  if (which === "home") return <Figure className={className} id="home" arms="hold" mouth="soft" props={["suit", "case"]} halftone />;
   return <Figure className={className} id="me" eyes="shades" mouth="grin" arms="crossed" halftone />;
 }

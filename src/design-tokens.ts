@@ -407,7 +407,7 @@ export const MOTION = {
    * top. Neither plays under reduced motion, nor while the figure cannot be seen.
    */
   blink: { durationMs: 150, easing: EASING.standard, closedTo: 0.1, fromMs: 2800, toMs: 6500 },
-  tuck: { durationMs: 300, easing: EASING.standard, afterPx: 32 },
+  tuck: { durationMs: 420, afterPx: 32 },
   /**
    * The sentence under the landing's card going through what a gift can wait for (D285): each item held long enough to
    * read, then it leaves upward on Material's short4 and emphasized accelerate while the next rises on medium2 and
@@ -458,6 +458,12 @@ export const MOTION = {
     armsBeforeTopMs: 100,
     legsBeforeFloorMs: 100,
     limbPairStaggerMs: 40,
+    /**
+     * How a limb comes out of the body (D302, the founder, 28 Sep 2026: not only stretched along its axis): it leaves
+     * at a wider angle, arms more than legs, lengthening on Material's short4 and emphasized decelerate, then swings to
+     * where it rests on its spring. Folding is the same, backwards: it swings out, then shortens into the body.
+     */
+    spread: { armsDeg: 38, legsDeg: 24, outMs: 200 },
     settle: SPRING.expressiveFastSpatial,
     effects: SPRING.effects,
     turns: 1,
