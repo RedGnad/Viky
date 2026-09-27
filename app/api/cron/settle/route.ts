@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dailyPass, SETTLING_PASS } from "@/src/daily-pass";
 import { NO_STORE } from "@/src/gift-api";
+import { followUnsettledOrders } from "@/src/phone-order";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +19,10 @@ export async function GET(request: Request) {
   }
   try {
     const report = await dailyPass(SETTLING_PASS);
-    return NextResponse.json(report, { headers: NO_STORE });
+    // The phone and gift card orders whose money came in and did not end, moved on with nobody's screen open: a failure
+    // after the money arrived is sent back here at the latest. Its own failure never stops the gifts' pass.
+    const phoneOrders = await followUnsettledOrders().catch((error: unknown) => [{ orderId: "all", state: `not followed: ${error instanceof Error ? error.message : String(error)}` }]);
+    return NextResponse.json({ ...report, phoneOrders }, { headers: NO_STORE });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "The settling pass failed" }, { status: 500, headers: NO_STORE });
   }

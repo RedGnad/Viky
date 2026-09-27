@@ -456,8 +456,9 @@ export default async function JudgesPage() {
           <li>
             <strong>The Bitrefill way out.</strong> What it is: Viky buys a good, a phone top-up of credit or data or a
             gift card, for the person, with the person&apos;s own money. They sign their AUSD over to Viky&apos;s treasury on Monad, and the
-            treasury pays Bitrefill&apos;s invoice in USDC on Base; a failure after the money arrived sends it back, by
-            itself. It is neither an exchange nor a bank payment, which is to be read again the day Viky is a company.
+            treasury pays Bitrefill&apos;s invoice in USDC on Base; a failure after the money arrived sends it back by
+            itself, when the order is next read and at the latest by the daily settling pass at 07:00 UTC. It is neither an
+            exchange nor a bank payment, which is to be read again the day Viky is a company.
             It runs on Bitrefill&apos;s Personal API, whose documentation names the Business API for an app that sells
             its products; its terms say customers are end users and a buyer for resale may be frozen until verified
             as a company (section 18), and an Agent acts for the customer who pays (section 29). The founder chose the
