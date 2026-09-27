@@ -3,9 +3,13 @@ import { readAccountAuthSession } from "@/src/account-auth-server";
 import { proveCertificate } from "@/src/certificate-reading";
 import { NO_STORE } from "@/src/gift-api";
 import { loadGift } from "@/src/gift-store";
+import { loadMilestoneGift } from "@/src/milestone-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
+
+/** The goals whose account is built from the gift's record by their own route, and never taken from this one's link. */
+const READ_FROM_ITS_OWN_RECORD = new Set(["marathon-finish", "wca-time"]);
 export const dynamic = "force-dynamic";
 
 /**
@@ -40,6 +44,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const record = await loadGift(id);
   if (!record) return NextResponse.json({ error: "UNKNOWN_GIFT" }, { status: 404, headers: NO_STORE });
   if (record.recipient?.toLowerCase() !== account) return NextResponse.json({ error: "NOT_YOURS" }, { status: 403, headers: NO_STORE });
+  // A marathon or a WCA time is read from the account the gift's own record builds (/api/marathon/prove,
+  // /api/wca/prove), never from a link the browser sends: the bib bound before the start is what ties it to the race.
+  const milestone = await loadMilestoneGift(id);
+  if (milestone && READ_FROM_ITS_OWN_RECORD.has(milestone.conditionId)) {
+    return NextResponse.json({ kind: "refused", giftId: id, code: "READ_FROM_ITS_RECORD", message: "This result is read from the race the gift names, not from a link." }, { status: 409, headers: NO_STORE });
+  }
 
   try {
     return NextResponse.json(await proveCertificate({ giftId: id, link }), { headers: NO_STORE });
