@@ -64,8 +64,9 @@ function sessionClosed(error: unknown): boolean {
 
 /**
  * What the person reads when a route refuses, branched on the typed code and never on the server's prose. On
- * a screen about money nothing may arrive as a shrug (D80): every branch below ends on what is always true here,
- * that nothing was taken, because the router holds nothing between transactions.
+ * a screen about money nothing may arrive as a shrug (D80): every branch below ends on what is true here, that nothing
+ * was taken, because the router holds nothing between transactions, or, for a send that went out and is not final yet,
+ * the route's own sentence that it is being confirmed.
  */
 function refusalText(error: unknown, way: WayOut | null): string {
   if (error instanceof ApiError) {
@@ -91,6 +92,7 @@ function refusalText(error: unknown, way: WayOut | null): string {
       case "QUOTE_UNAVAILABLE":
       case "EXCHANGE_REFUSED":
       case "TOO_SLOW":
+      case "SENT_UNCONFIRMED":
         // These carry the figures or the fact the route measured, so its sentence is the true one.
         return error.message;
       default:
