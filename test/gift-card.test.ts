@@ -67,13 +67,13 @@ test("four cases, and each one is filled by its own answer", () => {
  * The card a visitor meets is a plausible gift, not four holes: the one thing left empty is the first name, and the
  * action can be pressed from the first second, because nothing is taken until the passkey (the founder, 20 Sep 2026).
  */
-test("the card opens filled, and the only empty thing on it is the name", () => {
-  assert.equal(STARTING_DRAFT.recipientName, "", "the one thing Viky cannot guess");
+test("the card opens filled, the name included: Boo, which the funder replaces (D300)", () => {
+  assert.equal(STARTING_DRAFT.recipientName, "Boo", "the founder's default name, 28 Sep 2026");
   assert.equal(STARTING_DRAFT.funderName, "");
   assert.equal(STARTING_DRAFT.dollars, "30");
   assert.equal(STARTING_DRAFT.days, String(DAILY_DURATION.suggested));
   assert.ok(STARTING_DRAFT.conditionId.length > 0 && conditionById(STARTING_DRAFT.conditionId)?.live, "a condition a gift can really be made on");
-  assert.deepEqual(filledCases(STARTING_DRAFT), { for: false, will: true, amount: true, howLong: true });
+  assert.deepEqual(filledCases(STARTING_DRAFT), { for: true, will: true, amount: true, howLong: true });
   assert.equal(isComplete(STARTING_DRAFT), true, "the action says what it will take from the first screen");
   // And the screens read that card rather than an empty one, on the server as in the browser.
   assert.match(readFileSync("src/card-draft.ts", "utf8"), /return STARTING_DRAFT;/);

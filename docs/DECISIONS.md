@@ -7655,3 +7655,19 @@ Hanover, Dortmund, Bremen, Aschaffenburg, Kandel, Bergisch Gladbach and the like
 - Captured on the founder's path (a passkey on the device, no session, no first name, pay from the landing), the credit
   and the balance stubbed in the browser: "Have a code?" under the gift on the waiting screen, then the credit and
   "Make the gift $13.99". "Make the gift" was not pressed in the capture: the watch would then make a real gift.
+
+## D300, 28 Sep 2026: a judge's gift is brought to the credit by itself, and the card starts on Boo
+
+- **Decision (the founder, 28 Sep 2026, choice B of four)**: a judge on the thirty-dollar card who types the code gets a
+  credit smaller than the gift. Rather than a key to understand ("Make the gift $Y", D297), once the code is accepted
+  the gift is brought to what the account then holds, rounded down to the cent, and one line says so: "Your gift is now
+  $Y, what your account holds." Thirty dollars stays the card's starting amount for funders. The other choices: a
+  credit the size of a gift (not affordable today, and it combines with this one later), the code before the card
+  (a judge who fills the card first meets the same gap), or keeping the key.
+- Done in the press itself (`JudgeCode`): the treasury answers once its transfer is final, so the account holds what it
+  held plus the credit. On the pay sheet the action becomes "Put $Y in their name" with D295's judge line; on the
+  waiting screen the watch makes the gift at once, as for any payment that lands. No card service is opened.
+- **Decision (the founder, same day)**: the card has a default first name, Boo (`STARTING_DRAFT.recipientName`); the
+  funder replaces it. Captures use Boo from now on.
+- Captured on the test database, the credit and the balance stubbed and gift creation refused in the browser: the card
+  on "For Boo", "Have a code?", the code, then "Your gift is now $2.00" and "Put $2.00 in their name".

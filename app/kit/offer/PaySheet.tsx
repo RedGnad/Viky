@@ -216,7 +216,7 @@ export function PaySheet({
       {/* A judge's code (D297): only while credits are open, and the gift is not yet covered. */}
       {address ? (
         <JudgeCode
-          covered={enough}
+          needed={units ?? null}
           held={held}
           onCredited={() => {
             setJudge(true);
