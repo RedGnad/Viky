@@ -243,3 +243,9 @@ export async function unsettledOrders(): Promise<readonly PhoneOrder[]> {
   const rows = await sql()`SELECT * FROM viky_phone_orders WHERE state IN ('received', 'paid', 'failed') AND ausd_tx IS NOT NULL ORDER BY created_at`;
   return rows.map(rowOf);
 }
+
+/** The USDC the treasury owes Bitrefill for orders whose AUSD came in and whose invoice is not paid yet. */
+export async function usdcInFlight(): Promise<bigint> {
+  const rows = await sql()`SELECT COALESCE(sum(usdc_units::numeric), 0)::text AS units FROM viky_phone_orders WHERE state = 'received'`;
+  return BigInt(String(rows[0]?.units ?? "0").split(".")[0]);
+}
