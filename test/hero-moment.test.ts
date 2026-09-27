@@ -35,7 +35,7 @@ test("the diamond takes arms and legs only when asked: thin, bowed, on the sketc
   assert.ok(limbed.includes('d="M21.7 51.5 H18.5"') && limbed.includes('d="M42.3 51.5 H45.5"'), "the feet, 3.2 long, turned out (D242)");
   // The rig's feet stand on the box's floor, flat underneath (D301); the reading pose keeps the round ones.
   const rig = renderToStaticMarkup(createElement(Figure, { id: "feet" }));
-  assert.ok(rig.includes('d="M23.5 30 Q21.6 41.5 21.7 53"') && rig.includes('d="M17.6 53 A0.9 0.9 0 0 1 18.5 52.1 H21.7 A0.9 0.9 0 0 1 22.6 53 Z"'), "the rig's legs reach the floor, the foot flat under");
+  assert.ok(rig.includes('d="M23.5 30 Q21.6 41.5 21.7 53"') && rig.includes('d="M17.6 53 V52.35 A0.65 0.65 0 0 1 18.25 51.7 H21.95 A0.65 0.65 0 0 1 22.6 52.35 V53 Z"'), "the rig's legs reach the floor, the foot flat under");
   const reading = renderToStaticMarkup(createElement(Figure, { id: "book", arms: "read", props: ["book"] }));
   assert.ok(reading.includes('d="M21.7 51.5 H18.5"') && reading.includes('d="M42.3 51.5 H45.5"'), "and the reading figure keeps its round feet, as if sitting");
   assert.ok(limbed.includes("stroke-linecap:round") && !limbed.includes("stroke-linecap:square"), "round caps: nothing pointed");
@@ -103,7 +103,7 @@ test("the first image is the starting state, the choreography is on the tokens i
   assert.match(hero, /if \(seen && !document\.hidden\)/, "and only while it can be seen");
   assert.match(hero, /if \(!stage \|\| reduced\(\)\) return;/, "nothing of it under reduced motion");
   // Folded into the body past the top of the page, lengthened out again at the top (D301).
-  assert.match(hero, /const want = window\.scrollY > tuck\.afterPx;/);
+  assert.match(hero, /const want = window\.scrollY > tuck\.afterPx && \(!action \|\| action\.getBoundingClientRect\(\)\.top < window\.innerHeight\);/, "folded once the card's Send starts to show (D303)");
   // The landing's figure is the rig, in its resting pose, with the group that whirls (D241), smiling softly (D301).
   assert.match(hero, /<Figure id="hero" whirl halftone mouth="soft" className="hero-character" \/>/, "the fine halftone of D260, the coarse one of D255 having gone at D257");
   const rig = renderToStaticMarkup(createElement(Figure, { id: "hero", whirl: true }));

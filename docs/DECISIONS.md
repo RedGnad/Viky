@@ -7708,3 +7708,13 @@ Hanover, Dortmund, Bremen, Aschaffenburg, Kandel, Bergisch Gladbach and the like
     the cap or the sunglasses keep their wide smile.
 - Captured frame by frame at 390, the limbs' animations paused and stepped: the fold after a scroll and the unfold at
   the top; the family tiles and the landing's blocks.
+
+## D303, 28 Sep 2026: feet a little thicker, the phone figure's soft smile, and the fold waits for the card's Send
+
+- **Decisions (the founder, 28 Sep 2026)**:
+  - The flat feet of D301 were cut too thin: a foot is now 1.3 thick (half the stroke was 0.9), still flat underneath,
+    its top corners rounded.
+  - The figure beside "On your phone, like an app." smiles softly, that one in particular.
+  - The limbs fold later: once the card's "Send" starts to show (`data-card-action`), rather than after the first
+    pixels of scroll; they come back out when it leaves. Measured at 390 by 844 and 1440 by 900: the fold starts with
+    Send's top 2 pixels above the screen's bottom edge.

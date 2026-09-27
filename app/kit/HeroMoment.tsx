@@ -134,8 +134,8 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
     return () => running.forEach((animation) => animation.cancel());
   }, [played]);
   /**
-   * Once the figure stands (D301): it blinks now and then, and folds its arms and legs into its body when the page is
-   * scrolled past the top, lengthening them out again at the top. Each blink is drawn at a random moment between two
+   * Once the figure stands (D301): it blinks now and then, and folds its arms and legs into its body once the page is
+   * scrolled far enough for the card's "Send" to start showing (D303), lengthening them out again when it goes. Each blink is drawn at a random moment between two
    * gaps, and waits while the figure is off the screen or the tab is behind; nothing here plays under reduced motion.
    */
   useEffect(() => {
@@ -163,7 +163,9 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
     let folding: Animation[] = [];
     const follow = () => {
       if (performance.now() < readyAt) return;
-      const want = window.scrollY > tuck.afterPx;
+      // Later than the first pixels of scroll (D303, the founder, 28 Sep 2026): once the card's "Send" starts to show.
+      const action = document.querySelector("[data-card-action]");
+      const want = window.scrollY > tuck.afterPx && (!action || action.getBoundingClientRect().top < window.innerHeight);
       if (want === tucked) return;
       tucked = want;
       folding.forEach((animation) => animation.cancel());
