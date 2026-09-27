@@ -110,7 +110,8 @@ test("the code is never in the repository, the route reads the signed-in account
   assert.match(route, /giveJudgeCredit\(\{ account: auth\.account, code \}\)/);
   const page = readFileSync("app/judges/page.tsx", "utf8");
   assert.doesNotMatch(page, /judgeCredit\.code|JUDGE_CODE/);
-  assert.match(page, /a judge\s+credit from Viky&apos;s treasury, once per account\. A real funder pays by card through Ramp, shown in the video\./);
+  assert.match(page, /a judge\s+credit\s+from\s+Viky&apos;s\s+treasury,\s+once\s+per\s+account\.\s+A\s+real\s+funder\s+pays\s+by\s+card\s+through\s+Ramp,\s+shown\s+in\s+the\s+video\./);
+  assert.match(page, /press &quot;Have a code\?&quot;/, "the page points to the pay sheet, where the code is typed (D297)");
   assert.match(page, /Mera&apos;s stateless test runs on this same account/);
 });
 
@@ -123,7 +124,21 @@ test("an account is a judge's once its credit is sent, and not for a wrong code 
   assert.equal(await isJudgeCredited(B), false);
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   assert.match(sheet, /\{enough && judge \? <p className=\{HELP\}>\{W\.fromJudgeCredit\}<\/p> : null\}/);
-  assert.match(sheet, /getJson<\{ credited\?: boolean \}>\("\/api\/judge\/credit"\)/);
+  assert.match(sheet, /getJson<\{ open\?: boolean; credited\?: boolean \}>\("\/api\/judge\/credit"\)/);
   assert.ok(sheet.indexOf("W.fromJudgeCredit") < sheet.indexOf("W.payFromAccount"), "above the action");
-  assert.match(readFileSync("app/api/judge/credit/route.ts", "utf8"), /isJudgeCredited\(auth\.account\)/);
+  assert.match(readFileSync("app/api/judge/credit/route.ts", "utf8"), /account = readAccountAuthSession\(request\)\.account;[\s\S]*isJudgeCredited\(account\)/);
+});
+
+test("the code is asked in the pay sheet, as at a checkout, for a signed-in account while credits are open (D297)", () => {
+  const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
+  assert.match(sheet, /!enough && codesOpen && address && codeGiven === null && !judge \? \(/);
+  assert.match(sheet, /postJson<\{ units: string \}>\("\/api\/judge\/credit", \{ code \}\)/);
+  assert.match(sheet, /setBalanceRead\(\(n\) => n \+ 1\)/, "the balance is read again once the credit is sent");
+  assert.match(sheet, /\[open, address, balanceRead\]/);
+  // A gift above what the account holds is offered at that amount, in whole cents, never above it, and marked as
+  // chosen, or the card would go back to its starting figure (D158).
+  assert.match(sheet, /onChange\(\{ \.\.\.draft, dollars: centsDown\(held\), typedAmount: centsDown\(held\), typedIn: "USD" \}\)/);
+  const route = readFileSync("app/api/judge/credit/route.ts", "utf8");
+  assert.match(route, /return NextResponse\.json\(\{ open, credited: false \}/, "without a session: open or not, and nobody is a judge yet");
+  assert.doesNotMatch(readFileSync("app/judges/page.tsx", "utf8"), /JudgeCredit/, "no second field on the judges page");
 });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
-import { giveJudgeCredit, isJudgeCredited } from "@/src/judge-credit";
+import { giveJudgeCredit, isJudgeCredited, judgeCreditOpen } from "@/src/judge-credit";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
@@ -26,13 +26,19 @@ export async function POST(request: Request) {
 }
 
 /**
- * Whether the signed-in account received its judge credit (D295), for the pay sheet's one line. Read from the journal,
- * never from the browser; an account without a session is not a judge.
+ * Whether a code can be used now, and whether the signed-in account already received its judge credit (D295, D297),
+ * for the pay sheet. Read from the journal, never from the browser; without a session nobody is a judge yet.
  */
 export async function GET(request: Request) {
+  const open = judgeCreditOpen();
+  let account: string;
   try {
-    const auth = readAccountAuthSession(request);
-    return NextResponse.json({ credited: await isJudgeCredited(auth.account) }, { headers: NO_STORE });
+    account = readAccountAuthSession(request).account;
+  } catch {
+    return NextResponse.json({ open, credited: false }, { headers: NO_STORE });
+  }
+  try {
+    return NextResponse.json({ open, credited: await isJudgeCredited(account) }, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);
   }
