@@ -12,6 +12,7 @@ import { settlingTimeInWords } from "@/src/pass-schedule";
 import { draftToTerms, draftUnits, isComplete, type GiftDraft } from "@/src/gift-draft";
 import { serviceChargeDollars, serviceChargeIsCeiling, wayInFor, type WayInOffer } from "@/src/gift-amount";
 import { tidyGiftName } from "@/src/gift-names";
+import { judgeLineIsTrue } from "@/src/judge-line";
 import { formatAusd } from "@/src/gift-reader";
 import { savePendingGift } from "@/src/pending-gift";
 import { rateDateInWords } from "@/src/display-currency";
@@ -73,26 +74,27 @@ export function PaySheet({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copyRefused, setCopyRefused] = useState(false);
-  // Whether this account is a judge's, credited by the judge code (D295): asked of the server, false until it says so.
-  // The code itself is `JudgeCode`'s (D297, D299).
-  const [judge, setJudge] = useState(false);
+  const [balanceRead, setBalanceRead] = useState(0);
+  // The judge credit this account received from the judge code, while nothing has left the account since (D295): asked
+  // of the server, and read again once the code has given it, null until the server says so. The code itself is
+  // `JudgeCode`'s (D297, D299).
+  const [untouchedCredit, setUntouchedCredit] = useState<bigint | null>(null);
   useEffect(() => {
     if (!open) return;
     let live = true;
-    getJson<{ open?: boolean; credited?: boolean }>("/api/judge/credit").then(
+    getJson<{ open?: boolean; credited?: boolean; untouchedCredit?: string | null }>("/api/judge/credit").then(
       (answer) => {
         if (!live) return;
-        setJudge(answer.credited === true);
+        setUntouchedCredit(typeof answer.untouchedCredit === "string" && /^\d+$/.test(answer.untouchedCredit) ? BigInt(answer.untouchedCredit) : null);
       },
       () => {
-        if (live) setJudge(false);
+        if (live) setUntouchedCredit(null);
       },
     );
     return () => {
       live = false;
     };
-  }, [open, address]);
-  const [balanceRead, setBalanceRead] = useState(0);
+  }, [open, address, balanceRead]);
   /** The reader's own clock, read once a minute: the hour the settling pass runs is said in it. */
   const nowMs = useSyncExternalStore(everyMinute, thisMinute, noClock);
   const [problem, setProblem] = useState<string | null>(null);
@@ -184,8 +186,9 @@ export function PaySheet({
       tall
       footer={
         <>
-          {/* Only for an account the judge code credited, read from the server's journal (D295). */}
-          {enough && judge ? <p className={HELP}>{W.fromJudgeCredit}</p> : null}
+          {/* Only when the gift is paid from a balance no larger than the judge credit, with nothing gone out of the
+              account since it arrived (D295): the balance is then the credit alone. */}
+          {judgeLineIsTrue({ gift: units, held, untouchedCredit }) ? <p className={HELP}>{W.fromJudgeCredit}</p> : null}
           <button type="button" className={PRIMARY_BUTTON} disabled={!ready || busy || status === "busy"} onClick={() => void pay()}>
             {busy ? W.paying : enough ? W.payFromAccount(formatAusd(units ?? 0n)) : euros ? W.payEuros(euros) : W.pay}
           </button>
@@ -218,10 +221,7 @@ export function PaySheet({
         <JudgeCode
           needed={units ?? null}
           held={held}
-          onCredited={() => {
-            setJudge(true);
-            setBalanceRead((n) => n + 1);
-          }}
+          onCredited={() => setBalanceRead((n) => n + 1)}
           onMakeIt={(dollars) => onChange({ ...draft, dollars, typedAmount: dollars, typedIn: "USD" })}
         />
       ) : null}
