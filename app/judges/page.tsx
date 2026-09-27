@@ -217,8 +217,13 @@ export default async function JudgesPage() {
         </p>
         <p className={HELP}>
           What a reading costs, written here on purpose: each attested read is paid on Reclaim&apos;s side (their public
-          price starts at $0.10 per verification; one read per recipient per day, never per gift). Private sources keep
-          the user-proof path through the Reclaim verifier app.
+          price starts at $0.10 per verification). Reads are counted per gift, never per person: the morning pass reads
+          each daily gift once and skips one already counted that day, so two gifts on one Duolingo account are two reads a
+          day. Each attempt to connect the account is one more, and so is each count the person asks for: no daily ceiling
+          bounds those, only ten asks in ten minutes from one IP address, counted in each app server&apos;s memory. A climb
+          is looked at plainly, not through Reclaim, in both of the day&apos;s passes and at each ask, and read attested
+          only to connect the account or when that look does not show it below its target. Private sources keep the
+          user-proof path through the Reclaim verifier app.
         </p>
       </section>
 
@@ -228,7 +233,8 @@ export default async function JudgesPage() {
           <li>
             <strong>Duolingo&apos;s terms.</strong> The profile Viky reads is a public endpoint Duolingo does not
             document, and Duolingo&apos;s terms say &quot;You may not use any data mining, robots, scraping, or similar
-            data gathering or extraction methods&quot;. Viky reads one profile per recipient per day. The risk is
+            data gathering or extraction methods&quot;. Viky reads a profile once a day for each gift made on it, and
+            again each time the person connects it or asks for a count. The risk is
             accepted and spread by having several conditions rather than one; the shape of that endpoint is pinned by
             the tests, like any other source that could drift, and if it changes or closes, the reading fails on our
             side, which holds the day open rather than taking it away from anybody.
@@ -416,11 +422,19 @@ export default async function JudgesPage() {
             <strong>An incident, 26 Sep 2026: bursts are punished.</strong> Building the register of race result&apos;s races,
             a script on a developer&apos;s machine asked race result four times a second; race result answered that
             machine&apos;s address 429 &quot;too many requests&quot;, then 404 with a trap page, for hours, whatever the user
-            agent. Production reads from another address (the reading service, on Railway), one row per gift, at the
-            person&apos;s request, and was not touched. Since then the reading service keeps a pace with race result and
-            MikaTiming: at least three seconds between two readings of a platform, four hundred readings a day at most,
-            and after a 429 thirty minutes during which nothing is asked of it; a reading put off is told to try again
-            later, and nothing is counted for it.
+            agent. Production does not read from that machine, and reads a race only when the person asks. Each press of
+            &quot;Read my result&quot; reads the platform plainly from Viky&apos;s own app servers (Vercel, Paris), once to
+            show the line and, if that works, once more just before the proof: four requests to race result in all (the
+            event&apos;s configuration and the bib&apos;s row, each time), three to MikaTiming (the search by bib twice, the
+            runner&apos;s page once). Those plain requests keep no pace; what bounds them is how often one person may ask,
+            per account and IP address: ten reads of the line and twenty proofs in ten minutes, counted in each app
+            server&apos;s memory. Only the attested reading goes through the reading service (on Railway, through
+            Reclaim&apos;s TEE client, so which address the platform sees for it is not verified), and since then that
+            service keeps a pace with race result and MikaTiming: at least three seconds between two readings of a
+            platform, four hundred a day, and after a 429, or race result&apos;s trap page, thirty minutes during which it
+            takes no new reading of that platform, though one already waiting its turn still goes; a reading put off is
+            told to try again later, and nothing is counted for it. The pace is held in the service&apos;s memory: a
+            restart or a redeploy of the service forgets a pause and starts the day&apos;s count again.
           </li>
           <li>
             <strong>WAEC&apos;s terms.</strong> WASSCE credits are shown by the person from WAEC&apos;s own result checker
