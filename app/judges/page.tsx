@@ -432,7 +432,7 @@ export default async function JudgesPage() {
             Reclaim&apos;s TEE client, so which address the platform sees for it is not verified), and since then that
             service keeps a pace with race result and MikaTiming: at least three seconds between two readings of a
             platform, four hundred a day, and after a 429, or race result&apos;s trap page, thirty minutes during which it
-            takes no new reading of that platform, though one already waiting its turn still goes; a reading put off is
+            takes no new reading of that platform, and one already waiting its turn is put off too; a reading put off is
             told to try again later, and nothing is counted for it. The pace is held in the service&apos;s memory: a
             restart or a redeploy of the service forgets a pause and starts the day&apos;s count again.
           </li>

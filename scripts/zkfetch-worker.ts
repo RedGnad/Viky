@@ -5,7 +5,7 @@ import { classifyFetchFailure, localAttestedFetch } from "../src/attested-read";
 import { attestedSource } from "../src/attested-sources";
 import { fetchPublicProfile, PublicProfileError, reclaimLocalProfileDeps } from "../src/duolingo-public";
 import { fingerprintOfContents, READING_FILES } from "../src/reading-fingerprint";
-import { SourcePace } from "../src/source-throttle";
+import { SourcePace, type PaceAnswer } from "../src/source-throttle";
 import { throttleAnswerOf } from "../src/throttle-answer";
 
 /** One pace per process: race result and MikaTiming punish bursts (the founder, 27 Sep 2026). */
@@ -74,13 +74,22 @@ const server = createServer(async (request, response) => {
     // The person's key, for a source that opens with one (D188): handed to zkFetch as a secret, never logged.
     const bearer = typeof body.bearer === "string" && body.bearer.length > 0 && body.bearer.length <= 8_192 ? body.bearer : undefined;
     if ((source.auth === "bearer") !== (bearer !== undefined)) return reply(400, { error: source.auth === "bearer" ? "KEY_REQUIRED" : "NO_KEY_TAKEN" });
-    // The platform's pace first: a reading put off is answered at once, never queued past the caller's patience.
+    // The platform's pace first: a reading put off is answered at once, and not counted.
+    const putOff = (answer: Extract<PaceAnswer, { go: false }>) => {
+      console.log(JSON.stringify({ at: new Date().toISOString(), source: source.id, account, ok: false, code: "THROTTLED", reason: answer.reason, retryAfterSeconds: Math.ceil(answer.retryAfterMs / 1_000) }));
+      return reply(503, { error: "THROTTLED", message: `THROTTLED ${answer.reason}: ${answer.platform} is read again in ${Math.ceil(answer.retryAfterMs / 60_000)} minutes`, retryAfterSeconds: Math.ceil(answer.retryAfterMs / 1_000) });
+    };
     const booked = pace.take(source.id, Date.now());
-    if (!booked.go) {
-      console.log(JSON.stringify({ at: new Date().toISOString(), source: source.id, account, ok: false, code: "THROTTLED", reason: booked.reason, retryAfterSeconds: Math.ceil(booked.retryAfterMs / 1_000) }));
-      return reply(503, { error: "THROTTLED", message: `THROTTLED ${booked.reason}: ${booked.platform} is read again in ${Math.ceil(booked.retryAfterMs / 60_000)} minutes`, retryAfterSeconds: Math.ceil(booked.retryAfterMs / 1_000) });
-    }
+    if (!booked.go) return putOff(booked);
     if (booked.waitMs > 0) await wait(booked.waitMs);
+    // A 429 (or race result's trap 404) on a reading ahead may have paused the platform while this one waited its turn:
+    // it asks again just before it goes, and is put off. Its count goes back to the UTC day this request came in, the
+    // day it was booked on; were midnight to fall between the two, nothing goes back, never too much.
+    const again = pace.stillOpen(source.id, Date.now());
+    if (!again.go) {
+      pace.release(source.id, started);
+      return putOff(again);
+    }
     try {
       const proof = await localAttestedFetch(source, account, bearer);
       console.log(JSON.stringify({ at: new Date().toISOString(), source: source.id, account, ms: Date.now() - started, ok: true }));

@@ -2,9 +2,11 @@
  * The pace the reading service keeps with the timing platforms that punish bursts (the founder, 27 Sep 2026, after
  * race result answered this machine 429 then 404 for hours, 26 Sep 2026, when a register run asked four times a
  * second). For each platform: a minimum interval between two readings, a ceiling per UTC day, and a pause after a
- * 429 during which nothing is asked of it. A reading refused by the pace is put off, never counted: the day's
- * ceiling is given back when the platform answered 429, and the person is told to try again later. Pure, with the
- * clock handed in, so the rules are tested as they run. The service keeps one of these per process.
+ * 429 during which nothing is asked of it: a reading booked before the 429 and still waiting its turn asks again just
+ * before it goes, and one already under way is not recalled. A reading refused by the pace is put off, never counted:
+ * the day's ceiling is given back when the platform answered 429 or the pause put off a booked reading, and the person
+ * is told to try again later. Pure, with the clock handed in, so the rules are tested as they run. The service keeps
+ * one of these per process.
  */
 
 export type PlatformPace = Readonly<{ sources: readonly string[]; minIntervalMs: number; perDay: number; pauseAfter429Ms: number }>;
@@ -47,15 +49,41 @@ export class SourcePace {
     return { go: true, waitMs: start - nowMs, platform };
   }
 
-  /** The platform answered 429: nothing more is asked of it for a while, and this reading is not counted. */
+  /**
+   * Asked again by a booked reading just before it goes, after its wait: a 429 may have paused the platform meanwhile.
+   * The reading is already counted, so only the pause is looked at; one put off here is given back with `release`.
+   */
+  stillOpen(sourceId: string, nowMs: number): PaceAnswer {
+    const platform = this.platformOf(sourceId);
+    if (!platform) return { go: true, waitMs: 0, platform: null };
+    const paused = this.pausedUntil.get(platform) ?? 0;
+    if (nowMs < paused) return { go: false, reason: "PAUSED_AFTER_429", retryAfterMs: paused - nowMs, platform };
+    return { go: true, waitMs: 0, platform };
+  }
+
+  /**
+   * One reading is given back to the UTC day of `atMs`, only while that day is the one being counted and never below
+   * zero; the spacing of the readings booked behind it is kept. Used for a booked reading that never went, and by
+   * `answered429`.
+   */
+  release(sourceId: string, atMs: number): void {
+    const platform = this.platformOf(sourceId);
+    if (!platform) return;
+    const day = Math.floor(atMs / DAY_MS);
+    const counted = this.counted.get(platform);
+    if (counted && counted.day === day && counted.count > 0) this.counted.set(platform, { day, count: counted.count - 1 });
+  }
+
+  /**
+   * The platform answered 429: nothing more is asked of it for a while. The reading is given back to the UTC day the
+   * 429 came in, which is the day it was booked on unless midnight fell while it was read.
+   */
   answered429(sourceId: string, nowMs: number): number {
     const platform = this.platformOf(sourceId);
     if (!platform) return 0;
     const pace = this.table[platform];
     this.pausedUntil.set(platform, nowMs + pace.pauseAfter429Ms);
-    const day = Math.floor(nowMs / DAY_MS);
-    const counted = this.counted.get(platform);
-    if (counted && counted.day === day && counted.count > 0) this.counted.set(platform, { day, count: counted.count - 1 });
+    this.release(sourceId, nowMs);
     return pace.pauseAfter429Ms;
   }
 }
