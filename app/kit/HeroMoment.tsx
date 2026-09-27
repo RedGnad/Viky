@@ -108,13 +108,65 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
     show();
     return () => running.forEach((animation) => animation.cancel());
   }, [played]);
+  /**
+   * Once the figure stands (D301): it blinks now and then, and folds its arms and legs into its body when the page is
+   * scrolled past the top, lengthening them out again at the top. Each blink is drawn at a random moment between two
+   * gaps, and waits while the figure is off the screen or the tab is behind; nothing here plays under reduced motion.
+   */
+  useEffect(() => {
+    const stage = root.current;
+    if (!stage || reduced()) return;
+    const { blink, tuck } = MOTION;
+    const readyAt = performance.now() + (played ? 0 : heroTimeline().done);
+    const lids = [...stage.querySelectorAll<SVGElement>('[data-part="lid"]')];
+    const limbs = [...stage.querySelectorAll<SVGElement>('[data-part="arm"], [data-part="leg"]')];
+    let seen = true;
+    let blinkTimer: number | undefined;
+    const nextBlink = () => {
+      blinkTimer = window.setTimeout(() => {
+        if (seen && !document.hidden) {
+          const closed = `scaleY(${blink.closedTo})`;
+          lids.forEach((lid) => lid.animate([{ transform: "scaleY(1)" }, { transform: closed, offset: 0.5 }, { transform: "scaleY(1)" }], { duration: blink.durationMs, easing: blink.easing }));
+        }
+        nextBlink();
+      }, blink.fromMs + Math.random() * (blink.toMs - blink.fromMs));
+    };
+    blinkTimer = window.setTimeout(nextBlink, Math.max(0, readyAt - performance.now()));
+    let tucked = false;
+    let folding: Animation[] = [];
+    const follow = () => {
+      if (performance.now() < readyAt) return;
+      const want = window.scrollY > tuck.afterPx;
+      if (want === tucked) return;
+      tucked = want;
+      folding.forEach((animation) => animation.cancel());
+      folding = limbs.map((limb) =>
+        limb.animate([{ transform: want ? "scaleY(1)" : "scaleY(0)" }, { transform: want ? "scaleY(0)" : "scaleY(1)" }], { duration: tuck.durationMs, easing: tuck.easing, fill: "forwards" }),
+      );
+    };
+    const settled = window.setTimeout(follow, Math.max(0, readyAt - performance.now()));
+    window.addEventListener("scroll", follow, { passive: true });
+    const observer = new IntersectionObserver((entries) => {
+      seen = entries[entries.length - 1].isIntersecting;
+    });
+    observer.observe(stage);
+    return () => {
+      window.clearTimeout(blinkTimer);
+      window.clearTimeout(settled);
+      window.removeEventListener("scroll", follow);
+      observer.disconnect();
+      folding.forEach((animation) => animation.cancel());
+    };
+  }, [played]);
+
   return (
     <div ref={root} className="hero-stage" data-hero={played ? undefined : "peeking"} aria-hidden>
       {/* It hears what the gift's record says, as the head of every screen does (D148); nothing else moves it (D216). */}
       <Expression>
         {/* The rig (D236), in its resting pose: the same light, gloss, edge and smile as the destinations' scenes (D241). */}
         {/* A fine halftone in the body's own colour (D260): taking it off is removing `halftone`. */}
-        <Figure id="hero" whirl halftone className="hero-character" />
+        {/* A soft smile at rest (D301): the wide one all the time read oddly. */}
+        <Figure id="hero" whirl halftone mouth="soft" className="hero-character" />
       </Expression>
     </div>
   );

@@ -401,6 +401,14 @@ export const MOTION = {
   /** A button pressed: the relief collapses and the button travels its depth. Between Material's short2 and short3. */
   press: { durationMs: 120, easing: EASING.standard },
   /**
+   * The landing's figure once it stands (D301, the founder, 28 Sep 2026): it blinks now and then, a lid closing and
+   * opening in Material's short3, at a random moment between two gaps so it never beats like a clock; and when the page
+   * is scrolled past the top it folds its arms and legs into its body on medium2, and lengthens them out again at the
+   * top. Neither plays under reduced motion, nor while the figure cannot be seen.
+   */
+  blink: { durationMs: 150, easing: EASING.standard, closedTo: 0.1, fromMs: 2800, toMs: 6500 },
+  tuck: { durationMs: 300, easing: EASING.standard, afterPx: 32 },
+  /**
    * The sentence under the landing's card going through what a gift can wait for (D285): each item held long enough to
    * read, then it leaves upward on Material's short4 and emphasized accelerate while the next rises on medium2 and
    * emphasized decelerate. The one movement on a clock outside the working ring, named, and still under reduced motion.

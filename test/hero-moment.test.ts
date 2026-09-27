@@ -33,8 +33,11 @@ test("the diamond takes arms and legs only when asked: thin, bowed, on the sketc
   assert.ok(limbed.includes('cx="13" cy="37.2" r="1.9"') && limbed.includes('cx="51" cy="37.2" r="1.9"'), "the hands, just under the body's lowest point");
   assert.ok(limbed.includes('d="M23.5 30 Q21.6 40.75 21.7 51.5"') && limbed.includes('d="M40.5 30 Q42.4 40.75 42.3 51.5"'), "the legs, 15.5 below the body");
   assert.ok(limbed.includes('d="M21.7 51.5 H18.5"') && limbed.includes('d="M42.3 51.5 H45.5"'), "the feet, 3.2 long, turned out (D242)");
+  // The rig's feet stand on the box's floor, flat underneath (D301); the reading pose keeps the round ones.
   const rig = renderToStaticMarkup(createElement(Figure, { id: "feet" }));
-  assert.ok(rig.includes('d="M21.7 51.5 H18.5"') && rig.includes('d="M42.3 51.5 H45.5"'), "and the rig's the same, on every page");
+  assert.ok(rig.includes('d="M23.5 30 Q21.6 41.5 21.7 53"') && rig.includes('d="M17.6 53 A0.9 0.9 0 0 1 18.5 52.1 H21.7 A0.9 0.9 0 0 1 22.6 53 Z"'), "the rig's legs reach the floor, the foot flat under");
+  const reading = renderToStaticMarkup(createElement(Figure, { id: "book", arms: "read", props: ["book"] }));
+  assert.ok(reading.includes('d="M21.7 51.5 H18.5"') && reading.includes('d="M42.3 51.5 H45.5"'), "and the reading figure keeps its round feet, as if sitting");
   assert.ok(limbed.includes("stroke-linecap:round") && !limbed.includes("stroke-linecap:square"), "round caps: nothing pointed");
   assert.ok(limbed.includes("stroke:var(--character-limb)") && !limbed.includes("stroke:var(--character-face)"), "the limbs' own ink, readable by night");
   assert.match(limbed, /data-part="whirl" style="transform-box:fill-box;transform-origin:50% 50%"/, "and a group that turns from its middle");
@@ -84,9 +87,18 @@ test("the first image is the starting state, the choreography is on the tokens i
   assert.match(hero, /delay: time\.floor, fill: "backwards"/, "the mouth opens with the landing");
   assert.match(hero, /if \(!figure \|\| reduced\(\)\) \{\n\s*show\(\);\n\s*return;/, "reduced motion: standing, nothing moves");
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n\s*\[data-hero="peeking"\] \[data-part="figure"\],[\s\S]*?transform: none;/, "and the first image is standing too");
-  assert.doesNotMatch(hero, /setInterval|setTimeout|iterations: Infinity/, "nothing on a clock, nothing loops");
-  // The landing's figure is the rig, in its resting pose, with the group that whirls (D241).
-  assert.match(hero, /<Figure id="hero" whirl halftone className="hero-character" \/>/, "the fine halftone of D260, the coarse one of D255 having gone at D257");
+  // The arrival plays once and on no clock; the one clock is the blink the founder asked for (D301), drawn at a random
+  // moment between two gaps, waiting while the figure is unseen, and never under reduced motion.
+  const arrival = hero.slice(hero.indexOf("export function HeroMoment"), hero.indexOf("  /**\n   * Once the figure stands (D301)"));
+  assert.doesNotMatch(arrival, /setInterval|setTimeout|iterations: Infinity/, "the arrival: nothing on a clock, nothing loops");
+  assert.doesNotMatch(hero, /setInterval|iterations: Infinity/);
+  assert.match(hero, /blink\.fromMs \+ Math\.random\(\) \* \(blink\.toMs - blink\.fromMs\)/, "a blink at a random moment, never a beat");
+  assert.match(hero, /if \(seen && !document\.hidden\)/, "and only while it can be seen");
+  assert.match(hero, /if \(!stage \|\| reduced\(\)\) return;/, "nothing of it under reduced motion");
+  // Folded into the body past the top of the page, lengthened out again at the top (D301).
+  assert.match(hero, /const want = window\.scrollY > tuck\.afterPx;/);
+  // The landing's figure is the rig, in its resting pose, with the group that whirls (D241), smiling softly (D301).
+  assert.match(hero, /<Figure id="hero" whirl halftone mouth="soft" className="hero-character" \/>/, "the fine halftone of D260, the coarse one of D255 having gone at D257");
   const rig = renderToStaticMarkup(createElement(Figure, { id: "hero", whirl: true }));
   for (const part of ["figure", "whirl", "arm", "leg", "mouth", "eye", "gloss"]) assert.ok(rig.includes(`data-part="${part}"`), part);
   assert.ok(rig.indexOf('data-part="figure"') < rig.indexOf('data-part="whirl"'), "the whirl inside what leaps");

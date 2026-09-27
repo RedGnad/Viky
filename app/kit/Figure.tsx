@@ -22,7 +22,7 @@ import { DIAMOND } from "./Character";
 export const LIGHT: Readonly<{ x: number; y: number }> = { x: -1, y: -1 };
 
 export type Eyes = "open" | "closed" | "half" | "shades";
-export type Mouth = "smile" | "grin" | "o" | "flat";
+export type Mouth = "smile" | "grin" | "o" | "flat" | "soft";
 export type ArmsPose = "rest" | "crossed" | "hold" | "wave" | "run" | "shoulder" | "read";
 export type LegsPose = "rest" | "run" | "apart";
 export type Prop = "suit" | "case" | "book" | "cap" | "rook" | "speed";
@@ -108,13 +108,15 @@ export function lit(light = LIGHT, lean = 0) {
 }
 
 /**
- * Each pose of the arms: a path for each arm, its hand, and a turn from the joint; the left arm first. An arm that
- * hangs is drawn under the body, so its joint is hidden; one that rises or crosses is drawn over it, or it would be.
+ * Each pose of the arms: a path for each arm, its hand, and a turn from the joint; the left arm first. An arm drawn
+ * under the body starts inside it (D301, the founder, 28 Sep 2026: at rest and raised aslant, it came out of the edge
+ * rather than from behind), at (15.5, 24.8) and (48.5, 24.8), so it always comes out from behind; only an arm that has
+ * to cross the body (raised straight up, folded, holding a book) is drawn over it, from the edge.
  */
 const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [number, number]; turn?: number; over?: boolean }>[]> = {
   rest: [
-    { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2] },
-    { d: "M51 26 Q52 30.7 51 35.4", hand: [51, 37.2] },
+    { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13, 37.2] },
+    { d: "M48.5 24.8 Q52 30.7 51 35.4", hand: [51, 37.2] },
   ],
   // The two hands at one height (the founder, 25 Sep 2026, D244: 1.4 apart read as a lopsided figure); the forearms
   // still pass at two heights in the middle, so the two lines cross rather than merge into one band.
@@ -123,20 +125,21 @@ const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [numb
     { d: "M51 25.5 C52 29 44 32 27.5 30", hand: [26.8, 30], over: true },
   ],
   hold: [
-    { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2] },
-    { d: "M51 26 Q52.4 31 52 36", hand: [52, 37.8] },
+    { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13, 37.2] },
+    { d: "M48.5 24.8 Q52.4 31 52 36", hand: [52, 37.8] },
   ],
   wave: [
     { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2], turn: 150, over: true },
-    { d: "M51 26 Q52 30.7 51 35.4", hand: [51, 37.2] },
+    { d: "M48.5 24.8 Q52 30.7 51 35.4", hand: [51, 37.2] },
   ],
   run: [
-    { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2], turn: 75 },
-    { d: "M51 26 Q52 30.7 51 35.4", hand: [51, 37.2], turn: -20 },
+    { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13, 37.2], turn: 75 },
+    { d: "M48.5 24.8 Q52 30.7 51 35.4", hand: [51, 37.2], turn: -20 },
   ],
+  // The arm on the other's shoulder leaves from behind its own body, like any arm raised aslant (D301).
   shoulder: [
-    { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2] },
-    { d: "M51 26 C57 24.5 65 19.5 72 16.5", hand: [72.8, 16.1], over: true },
+    { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13, 37.2] },
+    { d: "M48.5 25.4 C57 24.5 65 19.5 72 16.5", hand: [72.8, 16.1] },
   ],
   // Holding a book open in front (D268): both arms come round and the hands close on its lower corners, over it.
   read: [
@@ -149,12 +152,28 @@ const LEGS: Record<LegsPose, readonly Readonly<{ turn: number }>[]> = {
   run: [{ turn: 35 }, { turn: -15 }],
   apart: [{ turn: 10 }, { turn: -10 }],
 };
+/**
+ * The legs down to the box's floor (53), so the feet stand on whatever the drawing stands on, the card on the landing
+ * (D301, the founder, 28 Sep 2026: they floated a unit and a half above it). A foot is the upper half of the old
+ * rounded stroke: round on top, flat underneath (the look the link preview gave by cutting them at the card's edge),
+ * and a leg ends square on it, so nothing round shows under the foot.
+ */
 const LEG_PATHS = [
+  { d: "M23.5 30 Q21.6 41.5 21.7 53", foot: "M17.6 53 A0.9 0.9 0 0 1 18.5 52.1 H21.7 A0.9 0.9 0 0 1 22.6 53 Z" },
+  { d: "M40.5 30 Q42.4 41.5 42.3 53", foot: "M41.4 53 A0.9 0.9 0 0 1 42.3 52.1 H45.5 A0.9 0.9 0 0 1 46.4 53 Z" },
+] as const;
+
+/**
+ * The feet as they were before D301, round all round, kept for the reading pose only (the founder, 28 Sep 2026: with
+ * the book held in front, they give the figure the look of sitting, which he likes).
+ */
+const ROUND_LEG_PATHS = [
   { d: "M23.5 30 Q21.6 40.75 21.7 51.5", foot: "M21.7 51.5 H18.5" },
   { d: "M40.5 30 Q42.4 40.75 42.3 51.5", foot: "M42.3 51.5 H45.5" },
 ] as const;
 
 const line = { fill: "none", stroke: LIMB, strokeWidth: 1.8, strokeLinecap: "round" as const };
+const legLine = { ...line, strokeLinecap: "butt" as const };
 
 function Arm({ pose, arm, hand = true }: Readonly<{ pose: ArmsPose; arm: (typeof ARMS)[ArmsPose][number]; hand?: boolean }>) {
   return (
@@ -178,8 +197,17 @@ function Limbs({ arms, legs, holding }: Readonly<{ arms: ArmsPose; legs: LegsPos
       ))}
       {LEGS[legs].map((leg, index) => (
         <g key={index} data-part="leg" data-pose={legs} style={leg.turn ? { ...FROM_JOINT, transform: `rotate(${leg.turn}deg)` } : FROM_JOINT}>
-          <path d={LEG_PATHS[index].d} style={line} />
-          <path d={LEG_PATHS[index].foot} style={line} />
+          {arms === "read" ? (
+            <>
+              <path d={ROUND_LEG_PATHS[index].d} style={line} />
+              <path d={ROUND_LEG_PATHS[index].foot} style={line} />
+            </>
+          ) : (
+            <>
+              <path d={LEG_PATHS[index].d} style={legLine} />
+              <path d={LEG_PATHS[index].foot} style={{ fill: LIMB }} />
+            </>
+          )}
         </g>
       ))}
     </g>
@@ -198,7 +226,10 @@ function EyesOf({ eyes, gaze, id }: Readonly<{ eyes: Eyes; gaze: Readonly<{ x: n
       <g data-part="gaze">
       {at.map(([x, y]) =>
         eyes === "open" ? (
-          <circle key={x} data-part="eye" cx={x} cy={y} r={2.8} style={{ fill: INK, ...FROM_MIDDLE }} />
+          // The lid: what a blink closes (D301), around the eye so the eye's own transform stays its expression's.
+          <g key={x} data-part="lid" style={FROM_MIDDLE}>
+            <circle data-part="eye" cx={x} cy={y} r={2.8} style={{ fill: INK, ...FROM_MIDDLE }} />
+          </g>
         ) : eyes === "closed" ? (
           <rect key={x} data-part="eye" x={x - 3.4} y={y - 1.2} width={6.8} height={2.4} rx={3.4} ry={1.2} style={{ fill: INK, ...FROM_MIDDLE }} />
         ) : (
@@ -230,6 +261,14 @@ function MouthOf({ mouth }: Readonly<{ mouth: Mouth }>) {
     return (
       <g data-part="mouth" style={FROM_MIDDLE}>
         <path d="M26.8 23.1 C28.7 29.3 35.3 29.3 37.2 23.1 Q32 25.5 26.8 23.1 Z" style={LIPS} />
+      </g>
+    );
+  }
+  // A soft smile, the lips closed (D301, the founder, 28 Sep 2026: the landing's figure smiled wide all the time).
+  if (mouth === "soft") {
+    return (
+      <g data-part="mouth" style={FROM_MIDDLE}>
+        <path d="M28.1 23.8 Q32 27.1 35.9 23.8" style={{ fill: "none", stroke: INK, strokeWidth: 1.5, strokeLinecap: "round" }} />
       </g>
     );
   }
