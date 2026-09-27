@@ -5,6 +5,7 @@ import { proveCertificate } from "@/src/certificate-reading";
 import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { marathonAccountOfGift } from "@/src/marathon-gift";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { admitPacedReading } from "@/src/reading-admission";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,8 @@ export async function POST(request: Request) {
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
     const body = await readJsonBody<{ giftId?: unknown }>(request, 1_024);
     const { giftId, account } = await marathonAccountOfGift(String(body.giftId ?? ""), auth.account);
+    // A paced platform's readings are shared by everybody: one account, or one connection, takes a few a day at most.
+    await admitPacedReading(request, auth.account);
     try {
       return NextResponse.json(await proveCertificate({ giftId, link: account }), { headers: NO_STORE });
     } catch (error) {
