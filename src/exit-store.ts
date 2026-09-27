@@ -220,9 +220,13 @@ export async function retireExpiredExits(nowSeconds: number = Math.floor(Date.no
   return rows.length;
 }
 
-export async function markExitSent(id: string, txHash: Hex): Promise<boolean> {
+/**
+ * `txHash` null means the token says these terms were spent and this call never heard which transaction did it: the
+ * hash written when it was submitted stays, and nothing is invented in its place (the money path audit of 27 Sep 2026).
+ */
+export async function markExitSent(id: string, txHash: Hex | null): Promise<boolean> {
   const rows = await sql()`
-    UPDATE viky_exits SET tx_hash = ${txHash}, sent_at = now(), state = 'sent'
+    UPDATE viky_exits SET tx_hash = COALESCE(${txHash}, tx_hash), sent_at = now(), state = 'sent'
      WHERE id = ${id} AND state = 'signed' RETURNING id`;
   return rows.length === 1;
 }
@@ -230,4 +234,48 @@ export async function markExitSent(id: string, txHash: Hex): Promise<boolean> {
 /** What the planner needs and nothing more. */
 export function asOpenExit(record: ExitRecord): OpenExit {
   return { id: record.id, amount: record.amount, tokenOut: record.tokenOut, minOut: record.minOut, signature: record.signature };
+}
+
+/**
+ * How long one attempt holds signed terms before another may carry them. Longer than the relay route may live (its
+ * maxDuration is 60 s), so a claim is never taken from an attempt that is still running.
+ */
+export const EXIT_RELAY_LEASE_SECONDS = 120;
+
+/**
+ * Lets one attempt at a time carry these signed terms to the chain (the money path audit of 27 Sep 2026). Without it,
+ * requests that arrived together each asked the token, each found the terms unspent, and each had the relayer send
+ * them: at most one can land, any other that is mined reverts at the relayer's expense, and no hash but the winner's
+ * was ever written down.
+ *
+ * One conditional statement, so of two requests only one is answered with the row. The state stays `signed`, because
+ * a live authorization still exists and `openExit`, the planner and the keeper must go on seeing it: while it is
+ * `signed`, `sent_at` is when the attempt holding it set out. An attempt that dies holding it lets go when the lease
+ * runs out, and the next attempt asks the token before anything else.
+ */
+export async function claimExitRelay(id: string): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE viky_exits SET sent_at = now()
+     WHERE id = ${id} AND state = 'signed'
+       AND (sent_at IS NULL OR sent_at < now() - make_interval(secs => ${EXIT_RELAY_LEASE_SECONDS}))
+     RETURNING id`;
+  return rows.length === 1;
+}
+
+/** Gives the terms back at once, for an attempt that is sure nothing of it is in flight. */
+export async function releaseExitRelay(id: string): Promise<void> {
+  await sql()`UPDATE viky_exits SET sent_at = NULL WHERE id = ${id} AND state = 'signed'`;
+}
+
+/**
+ * Writes the hash down the moment the transaction is submitted, before finality, so an attempt that dies waiting leaves
+ * the next one a transaction to find (D87, which the way out never had). A later attempt's hash replaces an earlier
+ * one's, because a later attempt only sends once the token says the earlier one has not landed. A row a retry already
+ * marked sent without a hash takes this one too, rather than staying without any: it was sent while this attempt held
+ * the terms.
+ */
+export async function noteExitHash(id: string, txHash: Hex): Promise<void> {
+  await sql()`
+    UPDATE viky_exits SET tx_hash = ${txHash}
+     WHERE id = ${id} AND (state = 'signed' OR (state = 'sent' AND tx_hash IS NULL))`;
 }

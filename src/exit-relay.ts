@@ -108,6 +108,8 @@ export async function relayExit(input: {
   authorization: ExitAuthorization;
   callData: Hex;
   clients?: RelayerClients;
+  /** Told the transaction's hash the moment it is submitted, before finality, as `relayCall` is (D87). */
+  onSubmitted?: (hash: Hex) => Promise<void>;
 }): Promise<{ hash: Hex }> {
   const clients = input.clients ?? relayerClients();
   await relayerPreflight(clients);
@@ -132,6 +134,14 @@ export async function relayExit(input: {
     account: clients.walletClient.account!,
     chain: monadChain,
   });
+  if (input.onSubmitted) {
+    try {
+      await input.onSubmitted(hash);
+    } catch (error) {
+      // The transaction is out; failing to note it must not stop us waiting for it.
+      console.error(`submitted the way out ${hash} but could not record it: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
   const receipt = await waitForFinality(clients.publicClient, hash);
   if (receipt.status !== "success") throw new RelayerError("REVERTED", "That could not be paid out. Nothing was taken.");
   return { hash };
