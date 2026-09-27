@@ -192,8 +192,8 @@ export const PAY = {
     use: "Use the code",
     using: "Checking the code",
     given: (amount: string) => `${amount} from your judge credit is in your account.`,
-    short: (held: string) => `Your account holds ${held}. Make the gift that amount or less to pay from it.`,
-    makeIt: (amount: string) => `Make the gift ${amount}`,
+    /** The gift brought to what the account holds once a judge's credit is in, said as it is done (D300, choice B). */
+    adjusted: (amount: string) => `Your gift is now ${amount}, what your account holds.`,
     failed: "The code could not be checked just now.",
   },
   paying: "One moment",

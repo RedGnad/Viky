@@ -132,16 +132,20 @@ test("an account is a judge's once its credit is sent, and not for a wrong code 
 test("the code is asked where a signed-in person is about to pay: the pay sheet and the waiting screen (D297, D299)", () => {
   const code = readFileSync("app/kit/offer/JudgeCode.tsx", "utf8");
   assert.match(code, /if \(covered \|\| !open \|\| credited\) return null;/, "only while credits are open, the gift not covered, the account not yet credited");
+  assert.match(code, /const covered = needed !== null && held !== null && held >= needed;/);
   assert.match(code, /postJson<\{ units: string \}>\("\/api\/judge\/credit", \{ code \}\)/);
   assert.match(code, /onCredited\(\);/, "the balance is read again once the credit is sent");
-  assert.match(code, /onMakeIt\(centsDown\(held\)\)/, "a gift above what the account holds is offered at that amount, in whole cents");
+  // Choice B (D300): a gift above what the account now holds is brought to it by itself, in whole cents, and said.
+  assert.match(code, /const holds = \(held \?\? 0n\) \+ credit;\s*if \(needed !== null && needed > holds\) \{\s*const dollars = centsDown\(holds\);/);
+  assert.match(code, /onMakeIt\(dollars\);/);
+  assert.match(code, /W\.code\.adjusted\(formatAusd\(adjustedTo\)\)/);
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   assert.match(sheet, /\{address \? \(\s*<JudgeCode/, "on the sheet, for a signed-in account");
   // Marked as chosen, or the card would go back to its starting figure (D158).
   assert.match(sheet, /onMakeIt=\{\(dollars\) => onChange\(\{ \.\.\.draft, dollars, typedAmount: dollars, typedIn: "USD" \}\)\}/);
   assert.match(sheet, /\[open, address, balanceRead\]/);
   const wait = readFileSync("app/components/PayGift.tsx", "utf8");
-  assert.match(wait, /<JudgeCode\s+covered=\{balance !== null && held >= units\}/, "on the waiting screen a first funder lands on");
+  assert.match(wait, /<JudgeCode\s+needed=\{units\}/, "on the waiting screen a first funder lands on");
   assert.match(wait, /onMakeIt=\{\(dollars\) => writeCardDraft\(\{ \.\.\.draft, dollars, typedAmount: dollars, typedIn: "USD" \}, address\)\}/);
   const route = readFileSync("app/api/judge/credit/route.ts", "utf8");
   assert.match(route, /return NextResponse\.json\(\{ open, credited: false \}/, "without a session: open or not, and nobody is a judge yet");

@@ -17,15 +17,16 @@ export function centsDown(units: bigint): string {
  * The judge code, asked as a checkout asks one (D297), wherever a signed-in person is about to pay: the pay sheet, and
  * the waiting screen a first funder lands on once pay has made their account (D299). Folded behind a small key while
  * credits are open and the account has not had its credit; the server credits the session's account and no other.
- * Once it is sent, `onCredited` reads the balance again, and when the gift is more than the account holds, "Make the
- * gift" offers what it holds, rounded down to the cent.
+ * Once it is sent, `onCredited` reads the balance again, and when the gift is more than the account holds, the gift is
+ * brought to what it holds, rounded down to the cent, and a line says so (choice B, D300).
  */
 export function JudgeCode({
-  covered,
+  needed,
   held,
   onCredited,
   onMakeIt,
-}: Readonly<{ covered: boolean; held: bigint | null; onCredited: () => void; onMakeIt: (dollars: string) => void }>) {
+}: Readonly<{ needed: bigint | null; held: bigint | null; onCredited: () => void; onMakeIt: (dollars: string) => void }>) {
+  const covered = needed !== null && held !== null && held >= needed;
   const [open, setOpen] = useState(false);
   const [credited, setCredited] = useState(false);
   const [shown, setShown] = useState(false);
@@ -33,6 +34,7 @@ export function JudgeCode({
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [given, setGiven] = useState<bigint | null>(null);
+  const [adjustedTo, setAdjustedTo] = useState<bigint | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -54,9 +56,21 @@ export function JudgeCode({
     setProblem(null);
     try {
       const answer = await postJson<{ units: string }>("/api/judge/credit", { code });
-      setGiven(BigInt(answer.units));
+      const credit = BigInt(answer.units);
+      setGiven(credit);
       setCredited(true);
       onCredited();
+      // Choice B (D300): the treasury answers once its transfer is final, so the account now holds what it held plus
+      // the credit. A gift above that is brought to it, to the cent below, with nothing more for a judge to understand.
+      const holds = (held ?? 0n) + credit;
+      if (needed !== null && needed > holds) {
+        const dollars = centsDown(holds);
+        const units = BigInt(dollars.replace(".", "")) * 10_000n;
+        if (units > 0n) {
+          setAdjustedTo(units);
+          onMakeIt(dollars);
+        }
+      }
     } catch (error) {
       setProblem(error instanceof ApiError ? error.message : W.code.failed);
     } finally {
@@ -70,14 +84,7 @@ export function JudgeCode({
         <p className={HELP} role="status">
           {W.code.given(formatAusd(given))}
         </p>
-        {!covered && held !== null && held > 0n ? (
-          <>
-            <p className={HELP}>{W.code.short(formatAusd(held))}</p>
-            <button type="button" className={`${INLINE_BUTTON} self-start`} onClick={() => onMakeIt(centsDown(held))}>
-              {W.code.makeIt(formatAusd(BigInt(centsDown(held).replace(".", "")) * 10_000n))}
-            </button>
-          </>
-        ) : null}
+        {adjustedTo !== null ? <p className={HELP}>{W.code.adjusted(formatAusd(adjustedTo))}</p> : null}
       </div>
     );
   }

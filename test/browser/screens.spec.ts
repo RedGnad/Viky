@@ -54,18 +54,18 @@ test.describe("the screens a person meets", () => {
    * being one (the product vision, D110). What is asserted is the same thing from closer in: the first screen is the
    * object itself, and the account waits until money does.
    */
-  test("a first visit meets a gift already filled in, with one thing left to say", async ({ page }) => {
+  test("a first visit meets a gift already filled in, Boo's, the name the funder replaces (D300)", async ({ page }) => {
     await page.goto("/");
     // The card is the body of the page, and it is a plausible gift rather than four holes (the founder, 20 Sep 2026).
     const card = page.locator("main section").first();
     // No line saying whose gift it is on the card being filled in (D138): it said what the funder already knew.
     await expect(card.getByText("A gift from you", { exact: true })).toHaveCount(0);
-    await expect(card.getByLabel(/Their first name/i)).toHaveValue("");
+    await expect(card.getByLabel(/Their first name/i)).toHaveValue("Boo");
     // Two decimals, because the field now holds the figure in the currency the person reads in (D143), and that
     // figure is written the way that currency writes money.
     await expect(card.getByLabel(/How much/i)).toHaveValue("30.00");
     await expect(card.getByRole("button", { name: "30 days", exact: true })).toHaveAttribute("aria-pressed", "true");
-    // The one empty field is the one Viky cannot guess.
+    // The name starts as Boo (the founder, 28 Sep 2026), the one field the funder is expected to change.
     // And nothing takes the cursor on arrival (D140): on a phone that raised the keyboard over half the page.
     await expect(card.getByLabel(/Their first name/i)).not.toBeFocused();
     // The action says what it will take from the first second: the passkey is the door, not the button.

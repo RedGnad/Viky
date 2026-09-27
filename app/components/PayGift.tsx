@@ -610,7 +610,7 @@ export function PayGift() {
           {/* Where a first funder lands once pay has made their account: the judge code is asked here too (D299). A
               credit that covers the gift is made into it by the watch above, as any payment that lands is. */}
           <JudgeCode
-            covered={balance !== null && held >= units}
+            needed={units}
             held={balance}
             onCredited={() => void refresh()}
             onMakeIt={(dollars) => writeCardDraft({ ...draft, dollars, typedAmount: dollars, typedIn: "USD" }, address)}
