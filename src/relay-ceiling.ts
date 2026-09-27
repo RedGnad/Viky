@@ -11,41 +11,48 @@ import { RELAY_CEILING as W } from "./sentences";
  *
  * The numbers are the founder's defaults and read from the environment when it names others.
  */
-export type RelayCeilings = Readonly<{ perHour: number; perDay: number; minimumUnits: bigint; topUpsPerMinute: number }>;
+export type RelayCeilings = Readonly<{ perHour: number; perDay: number; minimumUnits: bigint; topUpsPerMinute: number; topUpsPerGift: number }>;
 
-export const DEFAULT_RELAY_CEILINGS: RelayCeilings = { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1 };
+// Two top-ups a gift, for as long as it lives (the money path audit of 27 Sep 2026): a fee that rose between the
+// answer and the send may be readied once more, and a funder who sweeps the MON out cannot be readied in a loop.
+export const DEFAULT_RELAY_CEILINGS: RelayCeilings = { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1, topUpsPerGift: 2 };
 
 const wholeNumber = (value: string | undefined, fallback: number): number => {
   const parsed = Number(value?.trim());
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-/** `RELAY_PER_HOUR`, `RELAY_PER_DAY`, `RELAY_MINIMUM_CENTS` (100 is one dollar), `TOP_UPS_PER_MINUTE`. */
+/** `RELAY_PER_HOUR`, `RELAY_PER_DAY`, `RELAY_MINIMUM_CENTS` (100 is one dollar), `TOP_UPS_PER_MINUTE`, `TOP_UPS_PER_GIFT`. */
 export function relayCeilings(env: Readonly<Record<string, string | undefined>> = process.env): RelayCeilings {
   return {
     perHour: wholeNumber(env.RELAY_PER_HOUR, DEFAULT_RELAY_CEILINGS.perHour),
     perDay: wholeNumber(env.RELAY_PER_DAY, DEFAULT_RELAY_CEILINGS.perDay),
     minimumUnits: BigInt(wholeNumber(env.RELAY_MINIMUM_CENTS, Number(DEFAULT_RELAY_CEILINGS.minimumUnits / 10_000n))) * 10_000n,
     topUpsPerMinute: wholeNumber(env.TOP_UPS_PER_MINUTE, DEFAULT_RELAY_CEILINGS.topUpsPerMinute),
+    topUpsPerGift: wholeNumber(env.TOP_UPS_PER_GIFT, DEFAULT_RELAY_CEILINGS.topUpsPerGift),
   };
 }
 
-export type RelayWindow = "minute" | "hour" | "day";
+export type RelayWindow = "minute" | "hour" | "day" | "ever";
 
-const LENGTH_MS: Record<RelayWindow, number> = { minute: 60_000, hour: 3_600_000, day: 86_400_000 };
+const LENGTH_MS: Record<Exclude<RelayWindow, "ever">, number> = { minute: 60_000, hour: 3_600_000, day: 86_400_000 };
+
+/** The one bucket of a count that never ends, dated where the sweep of old windows never reaches it. */
+const EVER = new Date("9999-12-31T00:00:00Z");
 
 /** The start of the window the moment falls in, in UTC: every server counts in the same buckets. */
 export function bucketOf(window: RelayWindow, nowMs: number): Date {
+  if (window === "ever") return EVER;
   return new Date(Math.floor(nowMs / LENGTH_MS[window]) * LENGTH_MS[window]);
 }
 
-export function windowEndsMs(window: RelayWindow, nowMs: number): number {
+export function windowEndsMs(window: Exclude<RelayWindow, "ever">, nowMs: number): number {
   return bucketOf(window, nowMs).getTime() + LENGTH_MS[window];
 }
 
-export const minutesUntil = (window: RelayWindow, nowMs: number): number => Math.max(1, Math.ceil((windowEndsMs(window, nowMs) - nowMs) / 60_000));
+export const minutesUntil = (window: Exclude<RelayWindow, "ever">, nowMs: number): number => Math.max(1, Math.ceil((windowEndsMs(window, nowMs) - nowMs) / 60_000));
 
-export type RelayScope = Readonly<{ scope: string; window: RelayWindow; limit: number; who: "account" | "connection" }>;
+export type RelayScope = Readonly<{ scope: string; window: RelayWindow; limit: number; who: "account" | "connection" | "gift" }>;
 
 /** The four counts a relayed action is held against: the account and the connection, each by the hour and by the day. */
 export function relayScopes(account: string, ip: string, ceilings: RelayCeilings): readonly RelayScope[] {
@@ -58,11 +65,15 @@ export function relayScopes(account: string, ip: string, ceilings: RelayCeilings
   ];
 }
 
-/** The two counts a readying top-up is held against: one a minute for the account, one a minute for the connection. */
-export function topUpScopes(account: string, ip: string, ceilings: RelayCeilings): readonly RelayScope[] {
+/**
+ * The counts a readying top-up is held against: one a minute for the account, one a minute for the connection, and a
+ * few for the gift being cancelled, for as long as it lives.
+ */
+export function topUpScopes(account: string, ip: string, ceilings: RelayCeilings, giftId: string): readonly RelayScope[] {
   return [
     { scope: `topup:minute:account:${account.toLowerCase()}`, window: "minute", limit: ceilings.topUpsPerMinute, who: "account" },
     { scope: `topup:minute:ip:${ip}`, window: "minute", limit: ceilings.topUpsPerMinute, who: "connection" },
+    { scope: `topup:gift:${giftId}`, window: "ever", limit: ceilings.topUpsPerGift, who: "gift" },
   ];
 }
 
@@ -74,9 +85,10 @@ export function overTheCeiling(counted: readonly Counted[]): Counted | undefined
 }
 
 export function ceilingSentence(over: Counted, nowMs: number): string {
-  if (over.window === "day") return W.day(over.who);
+  if (over.window === "day") return W.day(over.who === "gift" ? "account" : over.who);
   if (over.window === "minute") return W.topUpTooSoon;
-  return W.hour(over.who, minutesUntil("hour", nowMs));
+  if (over.window === "ever") return W.topUpsForGift;
+  return W.hour(over.who === "gift" ? "account" : over.who, minutesUntil("hour", nowMs));
 }
 
 /** Below the smallest amount, unless it is everything there is: small money is never locked, and dust is never relayed. */

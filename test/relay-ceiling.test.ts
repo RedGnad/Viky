@@ -55,8 +55,8 @@ after(async () => {
 
 test("the founder's defaults, and the environment's numbers when it names them", () => {
   assert.deepEqual(relayCeilings({}), DEFAULT_RELAY_CEILINGS);
-  assert.deepEqual(DEFAULT_RELAY_CEILINGS, { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1 });
-  assert.deepEqual(relayCeilings({ RELAY_PER_HOUR: "5", RELAY_PER_DAY: "40", RELAY_MINIMUM_CENTS: "250", TOP_UPS_PER_MINUTE: "2" }), { perHour: 5, perDay: 40, minimumUnits: 2_500_000n, topUpsPerMinute: 2 });
+  assert.deepEqual(DEFAULT_RELAY_CEILINGS, { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1, topUpsPerGift: 2 });
+  assert.deepEqual(relayCeilings({ RELAY_PER_HOUR: "5", RELAY_PER_DAY: "40", RELAY_MINIMUM_CENTS: "250", TOP_UPS_PER_MINUTE: "2", TOP_UPS_PER_GIFT: "3" }), { perHour: 5, perDay: 40, minimumUnits: 2_500_000n, topUpsPerMinute: 2, topUpsPerGift: 3 });
   // Nonsense keeps the default rather than opening the door or closing it.
   assert.deepEqual(relayCeilings({ RELAY_PER_HOUR: "0", RELAY_PER_DAY: "many", RELAY_MINIMUM_CENTS: "-1" }), DEFAULT_RELAY_CEILINGS);
 });
@@ -81,7 +81,7 @@ test("four counts for a relayed action, two for a top-up, and the first over its
       ["relay:day:ip:203.0.113.9", "day", 100],
     ],
   );
-  assert.equal(topUpScopes(ACCOUNT, "203.0.113.9", DEFAULT_RELAY_CEILINGS).length, 2);
+  assert.equal(topUpScopes(ACCOUNT, "203.0.113.9", DEFAULT_RELAY_CEILINGS, "1").length, 3);
   assert.equal(overTheCeiling(scopes.map((one) => ({ ...one, count: one.limit }))), undefined, "at the ceiling is within it");
   const over = overTheCeiling(scopes.map((one, index) => ({ ...one, count: index === 3 ? 101 : 1 })));
   assert.equal(over?.scope, "relay:day:ip:203.0.113.9");
@@ -149,11 +149,11 @@ test("the ceilings are adjustable, and a top-up is one a minute", async () => {
   await admitRelay(request, ACCOUNT, NOW, tight);
   await admitRelay(request, ACCOUNT, NOW, tight);
   assert.equal((await refused(() => admitRelay(request, ACCOUNT, NOW, tight))).code, "RELAY_CEILING");
-  await admitTopUp(request, ACCOUNT, NOW);
-  const again = await refused(() => admitTopUp(request, ACCOUNT, NOW + 20_000));
+  await admitTopUp(request, ACCOUNT, "1", NOW);
+  const again = await refused(() => admitTopUp(request, ACCOUNT, "1", NOW + 20_000));
   assert.equal(again.code, "TOP_UP_TOO_SOON");
   assert.equal(again.message, "Viky readied this account for a cancel less than a minute ago. Try again in a moment.");
-  await admitTopUp(request, ACCOUNT, NOW + 61_000);
+  await admitTopUp(request, ACCOUNT, "1", NOW + 61_000);
 });
 
 test("every route that asks the relayer to pay goes through the door first; the daily pass and the keeper do not", () => {
@@ -174,7 +174,7 @@ test("every route that asks the relayer to pay goes through the door first; the 
     assert.ok(door > 0, `${file}: goes through the door`);
     assert.ok(paid > door, `${file}: the door comes before the relayer is asked`);
   }
-  assert.match(readFileSync("app/api/gift/[id]/cancel/route.ts", "utf8"), /await admitTopUp\(request, auth\.account\);\n\s*sent = await clients\.walletClient\.sendTransaction/, "the top-up has its own door, right before the MON goes");
+  assert.match(readFileSync("app/api/gift/[id]/cancel/route.ts", "utf8"), /await admitTopUp\(request, auth\.account, id\);\n\s*sent = await clients\.walletClient\.sendTransaction/, "the top-up has its own door, right before the MON goes");
   assert.match(readFileSync("app/api/send/route.ts", "utf8"), /assertNotTooSmall\("send", value, held\)/);
   assert.match(readFileSync("app/api/gift/withdraw/route.ts", "utf8"), /assertNotTooSmall\("takeOut", amount, gift\.earnedBalance\)/);
   assert.match(readFileSync("src/milestone-routes.ts", "utf8"), /assertNotTooSmall\("takeOut", input\.amount, state\.earnedBalance\)/);

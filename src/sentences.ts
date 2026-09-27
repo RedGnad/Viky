@@ -1206,6 +1206,7 @@ export const RELAY_CEILING = {
   tooSmallToSend: (least: string) => `Viky sends ${least} or more at a time. Below that, send everything you have at once.`,
   tooSmallToTakeOut: (least: string) => `Viky takes out ${least} or more at a time. Below that, take out everything that is yours at once.`,
   topUpTooSoon: "Viky readied this account for a cancel less than a minute ago. Try again in a moment.",
+  topUpsForGift: "Viky has already readied this account twice to cancel this gift. Nothing was changed.",
 } as const;
 
 /**
