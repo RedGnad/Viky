@@ -676,7 +676,7 @@ export function CashOut() {
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
         {moneyCard}
-        <GiftCardOut country={countryNow} countryName={countryNow ? (countryInWords(countryNow) ?? countryNow.toUpperCase()) : null} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
+        <GiftCardOut country={countryNow} rates={money.rates} countryName={countryNow ? (countryInWords(countryNow) ?? countryNow.toUpperCase()) : null} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }
@@ -686,7 +686,7 @@ export function CashOut() {
       <div className="flex flex-col gap-[var(--space-xl)]">
         {heading}
         {moneyCard}
-        <PhoneTopUp ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
+        <PhoneTopUp rates={money.rates} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }

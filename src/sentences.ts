@@ -1313,6 +1313,8 @@ export const WHERE_YOU_LIVE = {
   change: "change",
   reading: "Reading the countries",
   choose: "Choose a country",
+  search: "Search a country",
+  noMatch: "No country by that name.",
   unreadable: "The list of countries could not be read right now. Try again in a moment.",
 } as const;
 
@@ -1499,6 +1501,8 @@ export const YOUR_CODE = {
  * own, priced by Bitrefill before anything moves (docs/SCREEN-CLAIMS.md).
  */
 export const PHONE_OUT = {
+  /** Beside an amount whose face value alone is more than the person holds (src/out-of-reach.ts). */
+  outOfReach: "More than you have",
   cardTitle: "Your phone",
   cardLine: "Airtime or data, bought for you on Bitrefill and sent to the number. In Senegal: Orange, Tigo and Expresso.",
   whatFor: "Credit or data?",
@@ -1580,6 +1584,8 @@ export const ADD_UNIVERSITY = {
  * it works is Bitrefill's, never ours; the code is shown here and in the history under it, and nowhere else.
  */
 export const GIFT_CARD_OUT = {
+  /** Beside an amount whose face value alone is more than the person holds (src/out-of-reach.ts). */
+  outOfReach: "More than you have",
   title: "A gift card",
   chooseTitle: "Which card?",
   chooseHelp: (country: string) => `The cards Bitrefill lists for ${country}, the ones for ${country} first. Some are for online shops abroad, and each says where it works.`,
