@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+import { surelyOutOfReach } from "@/src/out-of-reach";
+import type { Rates } from "@/src/rates";
 import type { Hex, LocalAccount } from "viem";
 import { ApiError } from "@/src/client/api";
 import { lastNumber, rememberNumber } from "@/src/client/account-country";
@@ -32,7 +34,7 @@ function randomNonce(): Hex {
   return `0x${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}` as Hex;
 }
 
-export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
+export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
   const [screen, setScreen] = useState<Screen>("where");
   // The number is only ever the top-up's destination (D274): the last one topped up on this device fills the field,
   // and it decides nothing else, not the country and not the ways out.
@@ -105,6 +107,7 @@ export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => P
   const typed = Number(amount.replace(/[\s,]/g, ""));
   const range = operator?.range ?? null;
   const typedFits = range !== null && Number.isFinite(typed) && typed >= range.min && typed <= range.max;
+  const typedFar = typedFits && operator !== null && surelyOutOfReach(typed, operator.currency, props.ausd, props.rates);
   const chosenPackage = operator?.packages.find((one) => one.id === packageId) ?? null;
 
   const askPrice = async () => {
@@ -179,11 +182,16 @@ export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => P
         <h2 className={TITLE}>{W.howMuchTitle}</h2>
         {operator.packages.length > 0 ? (
           <div className="flex flex-col gap-[var(--tap-gap)]">
-            {operator.packages.map((one) => (
-              <button key={one.id} type="button" aria-pressed={one.id === packageId} onClick={() => { setPackageId(one.id); setAmount(""); setPrice(null); setProblem(null); }} disabled={busy} className={one.id === packageId ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
-                {local(one.value, operator.currency)}
-              </button>
-            ))}
+            {operator.packages.map((one) => {
+              // Its face value alone is more than they hold: shown, never hidden, and said why it cannot be chosen.
+              const far = surelyOutOfReach(Number(one.value), operator.currency, props.ausd, props.rates);
+              return (
+                <button key={one.id} type="button" aria-pressed={one.id === packageId} onClick={() => { setPackageId(one.id); setAmount(""); setPrice(null); setProblem(null); }} disabled={busy || far} className={one.id === packageId ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
+                  {local(one.value, operator.currency)}
+                  {far ? <span className="block text-[length:var(--type-help)]">{W.outOfReach}</span> : null}
+                </button>
+              );
+            })}
           </div>
         ) : null}
         {range ? (
@@ -191,6 +199,7 @@ export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => P
             <span className={BODY}>{W.howMuch(operator.currency)}</span>
             <input value={amount} onChange={(event) => { setAmount(event.target.value); setPackageId(null); setPrice(null); setProblem(null); }} inputMode="numeric" className={FIELD} disabled={busy} />
             <span className={HELP}>{W.range(local(String(range.min), "").trim(), local(String(range.max), "").trim(), operator.currency)}</span>
+            {typedFar ? <span className={HELP}>{W.outOfReach}</span> : null}
           </label>
         ) : null}
         {price ? (
@@ -207,7 +216,7 @@ export function PhoneTopUp(props: Readonly<{ ausd: bigint; ensureSigner: () => P
               {busy ? W.confirming : W.confirm}
             </button>
           ) : (
-            <button type="button" onClick={() => void askPrice()} disabled={busy || (!chosenPackage && !typedFits)} className={PRIMARY_BUTTON}>
+            <button type="button" onClick={() => void askPrice()} disabled={busy || (!chosenPackage && (!typedFits || typedFar))} className={PRIMARY_BUTTON}>
               {busy ? W.pricing : W.getPrice}
             </button>
           )}

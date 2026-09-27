@@ -1205,5 +1205,43 @@ function withdrawal(): Scenario[] {
         await s.shot("withdrawal", "to another Viky account of mine", `${WAY}, Send to another Viky account of mine`);
       },
     },
+    {
+      name: "use your money: the country in a sheet, and a gift card's amounts beyond the balance",
+      run: async (s) => {
+        // $20.99 held: 10 € is within reach, 25 € and 50 € are shown and marked, never hidden (the founder, 28 Sep 2026).
+        await s.reset(before);
+        await gifts(s);
+        await s.api("GET", "/api/rates", () => ({ status: 200, body: { rates: { ...RATES.rates, eurPer: { EUR: 1, USD: 1.1537, XOF: 655.957 } } } }), "GET /api/rates");
+        await rails(s, RAILS_SENEGAL);
+        await currency(s, null);
+        const countries = ["be", "bj", "ci", "cm", "de", "es", "fr", "gb", "it", "ml", "ng", "sn", "tg", "us"];
+        await s.api("GET", "/api/rails/countries", () => ({ status: 200, body: { countries, prefixes: {}, unread: [] } }), "GET /api/rails/countries");
+        await s.api("GET", /\/api\/giftcards\?country=/, () => ({
+          status: 200,
+          body: {
+            cards: [
+              { id: "amazon_fr-france", name: "Amazon.fr", worksIn: "Works in: France", currency: "EUR", range: null, packages: [10, 25, 50].map((value) => ({ id: `amazon-${value}`, value: String(value), priceUsd: value * 1.1537 })) },
+              { id: "jumia-senegal", name: "Jumia", worksIn: "Works in: Senegal", currency: "XOF", range: null, packages: [5000, 10000, 20000].map((value) => ({ id: `jumia-${value}`, value: String(value), priceUsd: value / 568.6 })) },
+            ],
+          },
+        }), "GET /api/giftcards");
+        await s.api("GET", "/api/giftcards/codes", () => ({ status: 200, body: { cards: [] } }), "GET /api/giftcards/codes");
+        await s.signIn();
+        await s.click("Take it out");
+        await s.click(exact("change"));
+        await s.page.locator("#use-where-you-live").click();
+        await s.page.getByRole("dialog").waitFor({ state: "visible" });
+        await s.shot("use your money", "where you live, the sheet", `${WAY}, change, then the country`);
+        await s.page.getByRole("searchbox", { name: "Search a country" }).fill("ben");
+        await s.shot("use your money", "where you live, searched", `${WAY}, change, the country, "ben" typed`);
+        await s.page.keyboard.press("Escape");
+        await s.page.getByRole("dialog").waitFor({ state: "hidden" });
+        await s.click(exact("Choose a card"));
+        await s.click(exact("Choose a card"));
+        await s.page.getByRole("dialog").getByText("Amazon.fr").click();
+        await s.text("More than you have");
+        await s.shot("use your money", "gift card amounts beyond the balance", `${WAY}, Choose a card, Amazon.fr, with $20.99 held`);
+      },
+    },
   ];
 }

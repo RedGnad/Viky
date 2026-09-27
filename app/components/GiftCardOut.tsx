@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+import { surelyOutOfReach } from "@/src/out-of-reach";
+import type { Rates } from "@/src/rates";
 import type { Hex, LocalAccount } from "viem";
 import { ApiError } from "@/src/client/api";
 import { giftCardCodes, listGiftCards, priceGiftCard, type GiftCardCode, type GiftCardKept, type GiftCardListed } from "@/src/client/giftcards";
@@ -54,7 +56,7 @@ export function GiftCardCodeLines({ code }: Readonly<{ code: GiftCardCode }>) {
   );
 }
 
-export function GiftCardOut(props: Readonly<{ country: string | null; countryName: string | null; ausd: bigint; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
+export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | null; countryName: string | null; ausd: bigint; ensureSigner: () => Promise<LocalAccount>; onSessionClosed: () => void; onChanged: () => Promise<unknown>; onBack: () => void }>) {
   const [cards, setCards] = useState<readonly GiftCardListed[] | null | "unreadable">(null);
   const [sheetOpen, setSheetOpen] = useState(true);
   const [card, setCard] = useState<GiftCardListed | null>(null);
@@ -122,6 +124,7 @@ export function GiftCardOut(props: Readonly<{ country: string | null; countryNam
   const typed = Number(amount.replace(/[\s,]/g, ""));
   const range = card?.range ?? null;
   const typedFits = range !== null && Number.isFinite(typed) && typed >= range.min && typed <= range.max;
+  const typedFar = typedFits && card !== null && surelyOutOfReach(typed, card.currency, props.ausd, props.rates);
   const chosenPackage = card?.packages.find((one) => one.id === packageId) ?? null;
 
   const askPrice = async () => {
@@ -216,11 +219,16 @@ export function GiftCardOut(props: Readonly<{ country: string | null; countryNam
         {!props.country ? <p className={BODY}>{W.noCountry}</p> : null}
         {card && card.packages.length > 0 ? (
           <div className="flex flex-col gap-[var(--tap-gap)]">
-            {card.packages.map((one) => (
-              <button key={one.id} type="button" aria-pressed={one.id === packageId} onClick={() => { setPackageId(one.id); setAmount(""); setPrice(null); setProblem(null); }} disabled={busy} className={one.id === packageId ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
-                {local(one.value, card.currency)}
-              </button>
-            ))}
+            {card.packages.map((one) => {
+              // Its face value alone is more than they hold: shown, never hidden, and said why it cannot be chosen.
+              const far = surelyOutOfReach(Number(one.value), card.currency, props.ausd, props.rates);
+              return (
+                <button key={one.id} type="button" aria-pressed={one.id === packageId} onClick={() => { setPackageId(one.id); setAmount(""); setPrice(null); setProblem(null); }} disabled={busy || far} className={one.id === packageId ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
+                  {local(one.value, card.currency)}
+                  {far ? <span className="block text-[length:var(--type-help)]">{W.outOfReach}</span> : null}
+                </button>
+              );
+            })}
           </div>
         ) : null}
         {card && range ? (
@@ -228,6 +236,7 @@ export function GiftCardOut(props: Readonly<{ country: string | null; countryNam
             <span className={BODY}>{W.howMuch(card.currency)}</span>
             <input value={amount} onChange={(event) => { setAmount(event.target.value); setPackageId(null); setPrice(null); setProblem(null); }} inputMode="decimal" className={FIELD} disabled={busy} />
             <span className={HELP}>{W.range(String(range.min), String(range.max), card.currency)}</span>
+            {typedFar ? <span className={HELP}>{W.outOfReach}</span> : null}
           </label>
         ) : null}
         {price && card ? (
@@ -245,7 +254,7 @@ export function GiftCardOut(props: Readonly<{ country: string | null; countryNam
                 {busy ? W.confirming : W.confirm}
               </button>
             ) : (
-              <button type="button" onClick={() => void askPrice()} disabled={busy || (!chosenPackage && !typedFits)} className={PRIMARY_BUTTON}>
+              <button type="button" onClick={() => void askPrice()} disabled={busy || (!chosenPackage && (!typedFits || typedFar))} className={PRIMARY_BUTTON}>
                 {busy ? W.pricing : W.getPrice}
               </button>
             )
