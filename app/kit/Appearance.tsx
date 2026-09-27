@@ -4,6 +4,7 @@ import { useAccount } from "@/src/account/provider";
 import { putJson } from "@/src/client/api";
 import { MOTION } from "@/src/design-tokens";
 import { applyThemeChoice } from "@/src/theme";
+import { noteBlink } from "./blink-clock";
 import { reduced } from "./Motion";
 
 /**
@@ -28,6 +29,7 @@ const BUTTON =
  */
 function blinkEveryone(): void {
   if (reduced()) return;
+  noteBlink();
   const { themeDurationMs, easing, closedTo } = MOTION.blink;
   const closed = `scaleY(${closedTo})`;
   document.querySelectorAll<SVGElement>('[data-part="lid"]').forEach((lid) =>

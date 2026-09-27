@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { EASING, MOTION } from "@/src/design-tokens";
 import { heroCookieText } from "@/src/hero-cookie";
 import { springEasing } from "@/src/motion";
+import { msSinceBlink, noteBlink } from "./blink-clock";
 import { Figure } from "./Figure";
 import { Expression, reduced } from "./Motion";
 
@@ -151,7 +152,9 @@ export function HeroMoment({ played }: Readonly<{ played: boolean }>) {
     let blinkTimer: number | undefined;
     const nextBlink = () => {
       blinkTimer = window.setTimeout(() => {
-        if (seen && !document.hidden) {
+        // Not so soon after another blink, the one as the light changes included (D309).
+        if (seen && !document.hidden && msSinceBlink() >= blink.fromMs) {
+          noteBlink();
           const closed = `scaleY(${blink.closedTo})`;
           lids.forEach((lid) => lid.animate([{ transform: "scaleY(1)" }, { transform: closed, offset: 0.5 }, { transform: "scaleY(1)" }], { duration: blink.durationMs, easing: blink.easing }));
         }
