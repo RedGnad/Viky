@@ -1,34 +1,68 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { LANDING_COLUMN, shownFrom, SPOTS } from "../app/kit/SideCrowd";
+import { BAND, CLEAR_OF_COLUMN, CROWD_FROM, LANDING_COLUMN, placedAt, SPOTS, topOf } from "../app/kit/SideCrowd";
 
-/** The day characters beside the landing's top (the founder, 28 Sep 2026: direction A, not symmetrical). */
+/** The day characters beside the landing's top (the founder, 28 Sep 2026: direction A, then C, a scene wider than the window). */
 
-test("a character shows only once its side has room for it whole, clear of the column", () => {
-  for (const spot of SPOTS) {
-    const from = shownFrom(spot);
-    const room = (from - LANDING_COLUMN) / 2;
-    assert.ok(room * spot.share + spot.size + 24 <= room + 1, `spot at ${spot.share} of ${spot.side} fits at ${from}`);
-    assert.ok(from > 1024, "never beside the column of a tablet or a phone");
+test("the scene: every character clear of the column, none covering another, all of it shown on a very wide window", () => {
+  for (const spot of SPOTS) assert.ok(spot.away >= CLEAR_OF_COLUMN, "clear of the column");
+  for (const height of [800, 900, 1080]) {
+    const drawn = SPOTS.map((spot) => placedAt(spot, 2560, height));
+    for (const place of drawn) {
+      assert.equal(place.inside, 1, "a 2560 window shows the whole scene");
+      assert.ok(place.top >= BAND.top && place.top + place.size <= height - BAND.aboveFoldEnd + 0.01, `inside the band at ${height}`);
+    }
+    drawn.forEach((one, index) => drawn.slice(index + 1).forEach((other) => {
+      const apart = one.left + one.size <= other.left || other.left + other.size <= one.left || one.top + one.size <= other.top || other.top + other.size <= one.top;
+      assert.ok(apart, `two characters overlap at ${height}`);
+    }));
   }
 });
 
-test("the two sides are not mirrors of each other", () => {
+test("as the window narrows its edge passes over them: never resized, never pushed together, the farthest leaving first", () => {
+  const place = (width: number) => SPOTS.map((spot) => ({ spot, at: placedAt(spot, width, 900) }));
+  for (let width = CROWD_FROM; width <= 2560; width += 16) {
+    for (const { spot, at } of place(width)) {
+      assert.equal(at.size, spot.size, "its own size at every width");
+      // Its distance from the column never changes: the scene is held, only the window's edge moves.
+      const column = spot.side === "left" ? (width - LANDING_COLUMN) / 2 - (at.left + at.size) : at.left - (width + LANDING_COLUMN) / 2;
+      assert.ok(Math.abs(column - spot.away) < 0.01, "held at its distance from the column");
+    }
+  }
+  const whole = (width: number) => place(width).filter(({ at }) => at.inside === 1).length;
+  assert.ok(whole(1100) < whole(1440) && whole(1440) < whole(1920) && whole(1920) < whole(2560), "more of the scene as the window widens");
+  // One by one: at some width a character is only partly in, cut by the edge, on its way out.
+  assert.ok(place(1440).some(({ at }) => at.inside > 0 && at.inside < 1), "cut by the edge, not popped");
+  const byAway = SPOTS.slice().sort((a, b) => b.away + b.size - (a.away + a.size));
+  assert.ok(placedAt(byAway[0], 1600, 900).inside <= placedAt(byAway[byAway.length - 1], 1600, 900).inside, "the farthest leave first");
+});
+
+test("a little bigger, circles and triangles only, never a pill, scattered, each side its own", () => {
+  assert.ok(Math.min(...SPOTS.map((spot) => spot.size)) >= 42 && Math.max(...SPOTS.map((spot) => spot.size)) >= 100, "bigger than before");
+  assert.ok(SPOTS.every((spot) => spot.state === "earned" || spot.state === "today" || spot.state === "catchable"), "the card's row already shows the pill");
+  for (const side of ["left", "right"] as const) {
+    const heights = SPOTS.filter((spot) => spot.side === side).map((spot) => spot.height).sort((a, b) => a - b);
+    const gaps = heights.slice(1).map((height, index) => Math.round((height - heights[index]) * 100));
+    assert.equal(new Set(gaps).size, gaps.length, `${side}: no two gaps alike`);
+  }
   const left = SPOTS.filter((spot) => spot.side === "left");
-  const right = SPOTS.filter((spot) => spot.side === "right");
-  assert.ok(left.length > 0 && right.length > 0);
-  for (const one of left) {
-    assert.ok(!right.some((other) => other.top === one.top && other.share === one.share && other.size === one.size), "no spot is the other side's mirror");
-  }
-  assert.notDeepEqual(left.map((spot) => spot.top), right.map((spot) => spot.top), "their heights differ");
+  for (const one of SPOTS.filter((spot) => spot.side === "right")) assert.ok(!left.some((other) => other.height === one.height && other.away === one.away), "no mirror");
+  assert.ok(SPOTS.some((spot) => spot.tilt >= 18) && SPOTS.some((spot) => spot.tilt <= -18), "tilts both ways");
+  assert.match(readFileSync("app/kit/SideCrowd.tsx", "utf8"), /standing=\{false\}/, "no floor, so no shadow");
 });
 
-test("the layer catches no press, says nothing to a reader, and sits only on the first screen of the landing", () => {
+test("only colours already on the screen, the band above the card's view, and a decoration only", () => {
   const css = readFileSync("app/globals.css", "utf8");
-  assert.match(css, /\.side-crowd \{[^}]*pointer-events: none;[^}]*\}/);
-  assert.match(css, /\.side-crowd > div \{\n  display: none;/, "hidden until its own width");
+  const layer = css.slice(css.indexOf(".side-crowd {\n  position: absolute;"), css.indexOf("}", css.indexOf(".side-crowd {\n  position: absolute;")));
+  assert.match(layer, /--character-1: var\(--character-hero-edge\);/);
+  assert.match(layer, /--character-2: var\(--character-hero-edge-deep\);/);
+  assert.match(layer, /height: calc\(100svh - 182px\);/);
+  assert.match(layer, /overflow: hidden;/, "the window's edge cuts them");
+  assert.match(layer, /pointer-events: none;/);
+  assert.doesNotMatch(css.slice(css.indexOf(".side-crowd > div {"), css.indexOf("}", css.indexOf(".side-crowd > div {"))), /transition|opacity/, "nothing fades: the edge passes over them");
+  assert.equal(BAND.aboveFoldEnd, 182);
+  for (const spot of SPOTS) assert.match(topOf(spot), /^calc\(96px \+ \(100svh - \d+px\) \* [\d.]+\)$/);
   assert.match(readFileSync("app/kit/SideCrowd.tsx", "utf8"), /<div aria-hidden className="side-crowd">/);
-  const home = readFileSync("app/kit/Home.tsx", "utf8");
-  assert.equal(home.match(/<SideCrowd \/>/g)?.length, 1, "on the landing without an account only");
+  assert.equal(readFileSync("app/kit/Home.tsx", "utf8").match(/<SideCrowd \/>/g)?.length, 1, "on the landing without an account only");
 });
