@@ -98,6 +98,19 @@ export const OFFER = {
   finishWill: "Finish what they will do to pay",
   chooseLength: "Choose how long to pay",
   done: "Done",
+  /**
+   * What Done says when something is still to answer, instead of going grey with no word (the founder, 28 Sep 2026):
+   * the first thing missing, and pressing it takes the person there.
+   */
+  unanswered: {
+    condition: "Choose what they will do.",
+    name: "Their name is still to fill in.",
+    cadence: "Choose which one.",
+    standing: "Reading where they stand today.",
+    target: "Set the goal they reach.",
+    course: "Choose the course.",
+    scale: "Choose the grading scale.",
+  },
   /** The chooser's first face from six conditions (D224): a tile per family, and the way back to them from a family's list. */
   families: "All families",
   sheets: {
@@ -907,7 +920,8 @@ export const MILESTONE_FUND = {
     searching: "Asking",
     /** The route hands back twelve at most, so at twelve the list may go on: say so rather than count. */
     found: (count: number) => (count >= 12 ? "The first twelve. Choose one below, or add a word to narrow it." : `${count} found. Choose one below.`),
-    smallest: (smallest: number) => `${smallest} or more, so the gift is worth earning.`,
+    /** Any rating above today's counts; the proposal is a real climb, and says what it is (the founder, 28 Sep 2026). */
+    smallest: (suggested: number) => `Any rating above it counts. ${suggested} is about five wins from there.`,
     readAgain: "The name or the rating changed. Read their rating again.",
     readAt: (time: string) => `Read at ${time}.`,
     settlingRehearsal:

@@ -151,45 +151,59 @@ function targetNumber(draft: GiftDraft): number | undefined {
  * Whether what the condition itself asks has been answered. It is part of the will case, not a case of its own: the
  * vision keeps a condition's own questions in the sheet that chose it, because they are one thought (section 6).
  */
-export function conditionAnswered(draft: GiftDraft): boolean {
+/**
+ * What a condition still needs, the first thing only, or nothing when it is answered (the founder, 28 Sep 2026: a Done
+ * that went grey with every field filled, and no word of why). The same rules the route will judge by, in the order
+ * the questions are asked, so a screen can say which one and take the person to it.
+ */
+export type Unanswered = "condition" | "name" | "cadence" | "standing" | "target" | "course" | "scale";
+
+export function unanswered(draft: GiftDraft): Unanswered | null {
   const condition = conditionOfDraft(draft);
-  if (!condition) return false;
+  if (!condition) return "condition";
   const target = targetNumber(draft);
   const certificate = certificateById(draft.conditionId);
   if (certificate) {
     // Judged exactly as the route will judge it, by the condition's own rules: the test prints a legal name and asks
     // for two words, a course certificate can carry one. The score is the source's own scale, never a number of ours,
     // and where there is nothing to score the funder names the course instead (C3).
-    if (certificate.asksName !== false && !certificate.validName(draft.subject)) return false;
+    if (certificate.asksName !== false && !certificate.validName(draft.subject)) return "name";
     if (certificate.course) {
-      if (!draft.course || !certificate.validTarget(target ?? Number.NaN)) return false;
+      if (!draft.course) return "course";
+      if (!certificate.validTarget(target ?? Number.NaN)) return "target";
       // A grade is typed on a scale, the university's pinned one or the funder's choice (the founder, 28 Sep 2026).
       if (certificate.portal?.scaled) {
         const scale = scaleOfKey(draft.scale);
-        return scale !== undefined && gradeTargetProblem(scale, target ?? Number.NaN) === undefined;
+        if (scale === undefined) return "scale";
+        return gradeTargetProblem(scale, target ?? Number.NaN) === undefined ? null : "target";
       }
-      return true;
+      return null;
     }
-    return target !== undefined && certificate.validTarget(target);
+    return target !== undefined && certificate.validTarget(target) ? null : "target";
   }
   const milestone = milestoneById(draft.conditionId);
   if (milestone) {
-    if (!milestone.validName(draft.subject.trim())) return false;
-    if (!draft.cadence || draft.standing === undefined || !draft.standingReadAt) return false;
-    if (target === undefined) return false;
+    if (!milestone.validName(draft.subject.trim())) return "name";
+    if (!draft.cadence) return "cadence";
+    if (draft.standing === undefined || !draft.standingReadAt) return "standing";
+    if (target === undefined) return "target";
     try {
       checkTarget(milestone.shape, draft.standing, target);
     } catch (error) {
-      if (error instanceof MilestoneTermsError) return false;
+      if (error instanceof MilestoneTermsError) return "target";
       throw error;
     }
-    return true;
+    return null;
   }
   // A daily condition: the bar for a day, and a name only if the funder knows it, because the recipient can give
   // their own when they open the link (D27). An empty name is an answer here, a wrong one is not.
-  if (draft.subject.trim().length > 0 && !subjectLooksRight(draft.conditionId, draft.subject)) return false;
+  if (draft.subject.trim().length > 0 && !subjectLooksRight(draft.conditionId, draft.subject)) return "name";
   const bar = condition.target?.min ?? 1;
-  return target !== undefined && target >= bar;
+  return target !== undefined && target >= bar ? null : "target";
+}
+
+export function conditionAnswered(draft: GiftDraft): boolean {
+  return unanswered(draft) === null;
 }
 
 export function amountGiven(draft: GiftDraft): boolean {

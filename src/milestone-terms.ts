@@ -12,21 +12,24 @@
  */
 
 export type MilestoneShape = Readonly<{
-  /** How far above today's reading the target must be for the gift to mean anything. */
+  /** How far above today's reading the target must be at least: one, anything above today (the founder, 28 Sep 2026). */
   minimumClimb: number;
+  /** How far above today's reading the target is proposed, which the funder is free to change. */
+  suggestedClimb: number;
   /** True when the thing is had or not had, so today's reading is zero and no ceiling is worth showing. */
   allOrNothing: boolean;
 }>;
 
 /**
- * Fifty points is about five net wins from where they stand the day the funder pays: below that the gift would pay for
- * a normal afternoon. Measured on 17 Sep 2026 (D90): a rating whose RD is under 60 moves by 1 to 13 points a game, and
- * far more above it, which is why a cadence whose rating has not settled is refused (`ratingHasSettled`).
+ * Any rating above today's is a target (the founder, 28 Sep 2026: the fifty points asked of every target were arbitrary,
+ * and they were why Done stayed grey with the fields filled). Fifty stays as what is proposed, about five net wins from
+ * where they stand (D90, measured on 17 Sep 2026: a rating whose RD is under 60 moves by 1 to 13 points a game), which
+ * the funder changes as they like. A cadence whose rating has not settled is still refused (`ratingHasSettled`).
  */
-export const CHESS_RATING: MilestoneShape = { minimumClimb: 50, allOrNothing: false };
+export const CHESS_RATING: MilestoneShape = { minimumClimb: 1, suggestedClimb: 50, allOrNothing: false };
 
 /** A certificate is had or not had. Today's reading is zero, the ceiling is zero, the target is one. */
-export const CERTIFICATE: MilestoneShape = { minimumClimb: 1, allOrNothing: true };
+export const CERTIFICATE: MilestoneShape = { minimumClimb: 1, suggestedClimb: 1, allOrNothing: true };
 
 export class MilestoneTermsError extends Error {
   constructor(message: string) {
@@ -38,6 +41,11 @@ export class MilestoneTermsError extends Error {
 /** The smallest target worth offering, given where the person stands today. */
 export function smallestTarget(shape: MilestoneShape, standingToday: number): number {
   return standingToday + shape.minimumClimb;
+}
+
+/** The target proposed once today's reading is known: a real climb, which the funder is free to change. */
+export function suggestedTarget(shape: MilestoneShape, standingToday: number): number {
+  return standingToday + shape.suggestedClimb;
 }
 
 /**
@@ -61,7 +69,7 @@ export function checkTarget(shape: MilestoneShape, standingToday: number, target
     throw new MilestoneTermsError(
       shape.allOrNothing
         ? "They already have it, so there is nothing to earn"
-        : `They are at ${standingToday} today. Choose ${smallestTarget(shape, standingToday)} or more, so the gift is worth earning.`,
+        : `They are at ${standingToday} today. Choose a rating above it.`,
     );
   }
 }

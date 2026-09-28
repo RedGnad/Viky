@@ -41,7 +41,7 @@ test("the chooser opens on the four tiles from six conditions, every time, and t
   assert.ok(sheet.indexOf("<FamilyArt family={section.family} />") > 0, "a picture on every tile");
   assert.match(sheet, /grid grid-cols-2 gap-\[var\(--space-md\)\]/, "two by two");
   assert.match(sheet, /const shownSection = sections\?\.find\(\(section\) => section\.family === family\);/, "a family's list only once a tile was pressed");
-  assert.match(sheet, /setFamily\(null\);\n\s*\}\n\s*\}/, "every opening starts on the four (D233)");
+  assert.match(sheet, /setFamily\(null\);\n\s*setPressedDone\(false\);\n\s*\}\n\s*\}/, "every opening starts on the four (D233), with nothing said yet about Done");
   // The way back to the four is an arrow above a family's list, named for a reader (D304); each condition is a button
   // with the card's chevron, since pressing one goes on to its questions.
   assert.match(sheet, /<button type="button" aria-label=\{W\.families\} className=\{`\$\{INLINE_BUTTON\} self-start`\} onClick=\{\(\) => setFamily\(null\)\}>/, "the way back to the four above a family's list");

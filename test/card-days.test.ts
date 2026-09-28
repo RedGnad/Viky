@@ -18,7 +18,7 @@ const strip = readFileSync("app/kit/DayStrip.tsx", "utf8");
 const css = readFileSync("app/globals.css", "utf8");
 
 test("the card is three groups: who and what, the days and the money, the action, told apart by air", () => {
-  const marks = ['title={', "under={", "shape={", 'width={72}', "wake={ready && filled.for}", "{W.aDay}", "bottom={", "<MoneyKey", "{quick.map(", "onClick={() => setPaying(true)}", "{W.missedBack}"];
+  const marks = ['title={', "under={", "shape={", 'width={72}', "wake={ready && filled.for}", "{W.aDay}", "bottom={", "<MoneyKey", "{quick.map(", "setPaying(true)", "{W.missedBack}"];
   const at = marks.map((mark) => card.indexOf(mark));
   assert.ok(at.every((i) => i > 0) && at.every((i, n) => n === 0 || i > at[n - 1]), "who, what, the days and their worth, the money, the lengths, the action, the promise");
   assert.match(card, /shape=\{\n\s*<div className="my-\[var\(--space-md\)\] flex flex-col items-center gap-\[var\(--space-sm\)\]">/, "the days' own group, 24 pixels from the others");
