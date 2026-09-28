@@ -1,41 +1,79 @@
 import "../src/load-env";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { getHostname } from "tldts";
 import { getAddress } from "viem";
-import { DIRECTORY_PORTALS, WITNESS_PORTALS } from "../src/directory-portals";
-import { ensurePortalSchema, loadPortal, portalFound, savePortal } from "../src/portal-store";
+import { CORRIDOR_PORTALS, DIRECTORY_PORTALS } from "../src/directory-portals";
+import { countPortals, ensurePortalSchema, loadPortal, portalCountries, savePortal, savePortalRows, type PortalRowInput } from "../src/portal-store";
 
 /**
- * Writes the directory's portals pinned in src/directory-portals.ts as portal rows, marked unverified (D193), and the
- * corridor's witness portals with no pin yet (D312), which a later write never unpins: one
- * command, run by an operator against the database the environment names. `DRY_RUN=1` prints the rows and writes
- * nothing. Against production, the operator command of "The test database" applies (`VIKY_ALLOW_PRODUCTION_DATABASE=1`,
- * and the production `DATABASE_URL` in the shell).
+ * Writes the list of universities (D199, D313): the rows written by hand in src/directory-portals.ts (Rome's with its
+ * enrolment provider, the corridor's with their portals looked up one by one), then the world's list,
+ * data/university-register.json (`pnpm universities:register`), less every university a hand-written row already
+ * names, by a directory provider it came from, its sign-in host, or its name in the same country. Rows only: a provider is added by
+ * `pnpm provider:add` once built, and a provider already there is never touched by this command.
+ *
+ * One command, run by an operator against the database the environment names. `DRY_RUN=1` counts what would be
+ * written, by country, and writes nothing. Against production, the operator command of "The test database" applies
+ * (`VIKY_ALLOW_PRODUCTION_DATABASE=1`, and the production `DATABASE_URL` in the shell).
  *
  *   PROVEN_BY=0x…<the operator account> pnpm portal:directory
  */
+
+type RegisterRow = { portalId: string; university: string; country: string; loginUrl: string; host: string; domain: string; sourceProviderIds: string[]; answered: number };
+
+function registerRows(): readonly RegisterRow[] {
+  const file = join(process.cwd(), "data", "university-register.json");
+  if (!existsSync(file)) return [];
+  return (JSON.parse(readFileSync(file, "utf8")) as { rows: RegisterRow[] }).rows;
+}
+
+function hostOf(url: string): string {
+  return (getHostname(url) ?? "").toLowerCase();
+}
+
+/** A university's name and country, folded, so a hand-written row and the world's line for it are one. */
+function nameKey(name: string, country: string): string {
+  return `${name.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()}|${country}`;
+}
+
 async function main() {
   const provenBy = getAddress(String(process.env.PROVEN_BY?.trim()));
-  const pinnedRows = DIRECTORY_PORTALS.map((pinned) => ({ portalId: pinned.portalId, name: pinned.name, university: pinned.university, country: pinned.country, providerId: pinned.providerId, providerVersion: pinned.providerVersion, requestHash: pinned.requestHash, loginUrl: pinned.loginUrl, extract: pinned.extract, proves: pinned.proves, provenBy, unverified: true }));
-  // A witness row has no request, no field and no version until its first proof is pinned: it says a student account.
-  const witnessRows = WITNESS_PORTALS.map((listed) => ({
-    ...listed,
-    providerVersion: "",
-    requestHash: "",
-    extract: { field: "", matches: "", keeps: "" },
-    proves: "account" as const,
-    verification: "witness" as const,
-    provenBy,
-    unverified: true,
-  }));
-  const rows = [...pinnedRows, ...witnessRows];
-  console.log(JSON.stringify({ step: process.env.DRY_RUN === "1" ? "would write" : "writing", rows: rows.map((row) => ({ portalId: row.portalId, providerId: row.providerId, requestHash: row.requestHash })) }, null, 2));
-  if (process.env.DRY_RUN === "1") return;
+  const dry = process.env.DRY_RUN === "1";
+  const handRows = [...DIRECTORY_PORTALS, ...CORRIDOR_PORTALS];
+  const taken = {
+    ids: new Set(handRows.map((row) => row.portalId)),
+    sources: new Set(CORRIDOR_PORTALS.map((row) => row.sourceProviderId)),
+    // By the sign-in host, not its registrable domain: a hosting platform serves several universities under one domain.
+    hosts: new Set(handRows.map((row) => hostOf(row.loginUrl))),
+    names: new Set(handRows.map((row) => nameKey(row.university, row.country))),
+  };
+  const world = registerRows().filter(
+    (row) => !taken.ids.has(row.portalId) && !row.sourceProviderIds.some((id) => taken.sources.has(id)) && !taken.hosts.has(hostOf(row.loginUrl)) && !taken.names.has(nameKey(row.university, row.country)),
+  );
+  const worldRows: PortalRowInput[] = world.map((row) => ({ portalId: row.portalId, name: row.university, university: row.university, country: row.country, loginUrl: row.loginUrl, provenBy, unverified: true }));
+  const corridorRows: PortalRowInput[] = CORRIDOR_PORTALS.map((row) => ({ portalId: row.portalId, name: row.name, university: row.university, country: row.country, loginUrl: row.loginUrl, provenBy, unverified: true }));
+
+  const byCountry = new Map<string, number>();
+  for (const row of [...DIRECTORY_PORTALS, ...corridorRows, ...worldRows]) byCountry.set(row.country, (byCountry.get(row.country) ?? 0) + 1);
+  console.log(
+    JSON.stringify({
+      step: dry ? "would write" : "writing",
+      handWritten: DIRECTORY_PORTALS.length + corridorRows.length,
+      world: worldRows.length,
+      countries: byCountry.size,
+      byCountry: Object.fromEntries([...byCountry.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))),
+    }),
+  );
+  if (dry) return;
   await ensurePortalSchema();
-  for (const row of rows) {
-    await savePortal(row);
-    const back = await loadPortal(row.portalId);
-    if (!back) throw new Error(`${row.portalId} did not read back`);
-    console.log(JSON.stringify({ step: "read back", portalId: back.portalId, chooser: portalFound(back) }));
+  for (const pinned of DIRECTORY_PORTALS) {
+    const provider = pinned.providerId ? { providerId: pinned.providerId, providerVersion: pinned.providerVersion, requestHash: pinned.requestHash, extract: pinned.extract } : {};
+    await savePortal({ portalId: pinned.portalId, name: pinned.name, university: pinned.university, country: pinned.country, loginUrl: pinned.loginUrl, provenBy, unverified: true, ...provider });
+    if (!(await loadPortal(pinned.portalId))) throw new Error(`${pinned.portalId} did not read back`);
   }
+  const written = await savePortalRows([...corridorRows, ...worldRows]);
+  console.log(JSON.stringify({ step: "read back", written, portals: await countPortals(), countries: (await portalCountries()).length }));
 }
 
 main().catch((error) => {

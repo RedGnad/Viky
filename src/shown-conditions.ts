@@ -3,7 +3,7 @@ import { DUOLINGO_SESSION_PROVIDER_ID } from "./gift-terms";
 import { refuseShown, type ShownCondition, type ShownReading } from "./shown-proof";
 import type { Hex } from "viem";
 import type { MilestoneRecord } from "./milestone-store";
-import { loadPortal, type Portal } from "./portal-store";
+import { loadPortal, resultsExtractOf, type Portal, type PortalSense } from "./portal-store";
 import type { WitnessPin } from "./witness-portal";
 import { TOEFL_RECLAIM_PROVIDER, TOEFL_SHOWN_SUBJECT, toeflScoreOf, toeflShownProviderId } from "./toefl-shown";
 import { EXAM_NOT_REGISTERED, EXAM_PROVIDERS, examProviderId, examSubject, readBacPassed, readCambridge, readIelts, type ExamId } from "./exam-shown";
@@ -14,7 +14,7 @@ import { ECOLEDIRECTE_NOT_REGISTERED, ECOLEDIRECTE_PROVIDER, ECOLEDIRECTE_SUBJEC
 import {
   enrolledBy,
   gradeShownBy,
-  NO_RESULTS_PAGE,
+  PROVIDER_BUILDING,
   type ResultsExtract,
   type ResultsVerdict,
   UNIVERSITY_ENROLLED,
@@ -59,7 +59,7 @@ export type ShownProvider = Readonly<{
    * A portal read through a Reclaim AI provider (D312): verified by the pinned witness on the portal's domain, with no
    * enclave. Without a pin, its proof is held for the operator's review and never paid alone.
    */
-  witness?: Readonly<{ portalId: string; domain: string; pin: WitnessPin | null }>;
+  witness?: Readonly<{ portalId: string; sense: PortalSense; domain: string; pin: WitnessPin | null }>;
 }>;
 
 export type ShownEntry = Readonly<{
@@ -123,36 +123,74 @@ export const TOEFL_SHOWN: ShownEntry = {
   },
 };
 
-/** A portal's own provider, as its row pins it, and what its field means (D165). */
-export function providerOfPortal(portal: Portal): ShownProvider {
-  // A witness portal (D312) pins the version its agent wrote and the spec it signed, once its first proof is read.
-  const witness = portal.verification === "witness" && portal.witnessDomain ? { portalId: portal.portalId, domain: portal.witnessDomain, pin: portal.pin } : undefined;
-  return {
-    providerId: portal.providerId,
-    providerVersion: witness ? (witness.pin?.providerVersion ?? "") : portal.providerVersion,
-    requestHashes: witness ? (witness.pin ? [witness.pin.specHash] : []) : [portal.requestHash],
-    loginUrl: portal.loginUrl,
-    ...(witness ? { witness } : {}),
-    read: (fields) => {
-      if (!enrolledBy(portal.extract, fields)) refuseShown("NOT_ENROLLED", portal.proves === "account" ? "The page shown does not show a signed-in student account" : "The page shown does not say enrolled");
-      // What the proof carries, in its own words (D267): a portal that shows a student account says that, never enrolled.
-      return { metricValue: BigInt(UNIVERSITY_ENROLLED), eventAt: null, accountKey: null, inWords: portal.proves === "account" ? "A student account" : "Enrolled" };
-    },
-  };
+/**
+ * A university's provider of one sense, as its row holds it (D165, D174, D313), and what its fields mean. A classic
+ * provider is read by its pinned request; a witness provider by the pinned witness on its own domain, held for review
+ * until its first proof is read, then by its pin. A university with no provider of that sense cannot serve a proof
+ * yet: the operator has been asked for one, and the refusal says it is being built.
+ */
+function portalProvider(portal: Portal, sense: PortalSense, read: (fields: Readonly<Record<string, string>>) => ShownReading): ShownProvider {
+  const provider = portal[sense];
+  if (!provider) return { providerId: "", providerVersion: "", requestHashes: [], loginUrl: portal.loginUrl, missing: PROVIDER_BUILDING, read: () => refuseShown(PROVIDER_BUILDING.code, PROVIDER_BUILDING.message) };
+  if (provider.verification === "witness") {
+    return {
+      providerId: provider.providerId,
+      providerVersion: provider.pin?.providerVersion ?? "",
+      requestHashes: provider.pin ? [provider.pin.specHash] : [],
+      loginUrl: portal.loginUrl,
+      witness: { portalId: portal.portalId, sense, domain: provider.domain ?? "", pin: provider.pin && provider.extract ? provider.pin : null },
+      read,
+    };
+  }
+  return { providerId: provider.providerId, providerVersion: provider.providerVersion, requestHashes: [provider.requestHash], loginUrl: portal.loginUrl, read };
+}
+
+/** Enrolled, read by the enrolment provider's field and pattern. */
+function enrolmentProvider(portal: Portal): ShownProvider {
+  return portalProvider(portal, "enrolment", (fields) => {
+    const extract = portal.enrolment?.extract;
+    if (!extract || !enrolledBy(extract, fields)) refuseShown("NOT_ENROLLED", "The page shown does not say enrolled");
+    return { metricValue: BigInt(UNIVERSITY_ENROLLED), eventAt: null, accountKey: null, inWords: "Enrolled" };
+  });
+}
+
+/** What a results page carries once read by the row's own rule, as the policy takes it, or the typed refusal. */
+function readingOf(verdict: ResultsVerdict): ShownReading {
+  if (verdict.kind === "refused") refuseShown(verdict.code, verdict.message);
+  return { metricValue: BigInt(verdict.metricValue), eventAt: null, accountKey: null, inWords: verdict.inWords };
+}
+
+/** The year passed or a grade reached, read by the results provider's fields (D174). */
+function resultsProvider(portal: Portal, read: (results: ResultsExtract, fields: Readonly<Record<string, string>>) => ResultsVerdict): ShownProvider {
+  return portalProvider(portal, "results", (fields) => {
+    const results = resultsExtractOf(portal.results);
+    if (!results) refuseShown(PROVIDER_BUILDING.code, PROVIDER_BUILDING.message);
+    return readingOf(read(results, fields));
+  });
+}
+
+/** The provider a university gift's proof comes from, by the gift's condition, read off the university's row. */
+export function portalProviderFor(conditionId: string, portal: Portal): ShownProvider | null {
+  if (conditionId === "university-enrollment-shown") return enrolmentProvider(portal);
+  if (conditionId === "university-year-passed-shown") return resultsProvider(portal, yearPassedBy);
+  if (conditionId === "university-grade-shown") return resultsProvider(portal, gradeShownBy);
+  return null;
+}
+
+async function providerOfRecord(conditionId: string, record: MilestoneRecord): Promise<ShownProvider | null> {
+  if (!record.portal) return null;
+  const portal = await loadPortal(record.portal);
+  return portal ? portalProviderFor(conditionId, portal) : null;
 }
 
 /**
  * Staying enrolled, shown from the person's own student portal (D165). The condition has no provider of its own: each
- * gift names the portal it was made on, and the portal's row says which provider, which request and which field.
+ * gift names the university it was made on, and the university's enrolment provider says how its page is read.
  */
 export const UNIVERSITY_SHOWN: ShownEntry = {
   kind: "milestone",
   subjectOf: (record) => (record.portal ? universitySubject(record.portal) : null),
-  providerOf: async (record) => {
-    if (!record.portal) return null;
-    const portal = await loadPortal(record.portal);
-    return portal ? providerOfPortal(portal) : null;
-  },
+  providerOf: (record) => providerOfRecord("university-enrollment-shown", record),
   condition: {
     conditionId: "university-enrollment-shown",
     providerId: "",
@@ -165,40 +203,11 @@ export const UNIVERSITY_SHOWN: ShownEntry = {
   },
 };
 
-/** What a results page carries once read by the row's own rule, as the policy takes it, or the typed refusal. */
-function readingOf(verdict: ResultsVerdict): ShownReading {
-  if (verdict.kind === "refused") refuseShown(verdict.code, verdict.message);
-  return { metricValue: BigInt(verdict.metricValue), eventAt: null, accountKey: null, inWords: verdict.inWords };
-}
-
-/**
- * The results page of a portal, as its row pins it (D174): the second provider on the row, or, when only enrolment
- * has been proved there, a provider that cannot serve and says why, so a gift on the year or a grade is refused
- * `NO_RESULTS_PAGE` by name and never `NO_PORTAL`.
- */
-function resultsProviderOf(portal: Portal, read: (results: ResultsExtract, fields: Readonly<Record<string, string>>) => ResultsVerdict): ShownProvider {
-  const results = portal.results;
-  if (!results) return { providerId: "", providerVersion: "", requestHashes: [], missing: NO_RESULTS_PAGE, read: () => refuseShown(NO_RESULTS_PAGE.code, NO_RESULTS_PAGE.message) };
-  return {
-    providerId: results.providerId,
-    providerVersion: results.providerVersion,
-    requestHashes: [results.requestHash],
-    loginUrl: portal.loginUrl,
-    read: (fields) => readingOf(read(results, fields)),
-  };
-}
-
-async function resultsOf(record: MilestoneRecord, read: (results: ResultsExtract, fields: Readonly<Record<string, string>>) => ResultsVerdict): Promise<ShownProvider | null> {
-  if (!record.portal) return null;
-  const portal = await loadPortal(record.portal);
-  return portal ? resultsProviderOf(portal, read) : null;
-}
-
 /** Passing the year at their university, shown from the results page of the portal the gift names (D174). */
 export const UNIVERSITY_YEAR_SHOWN: ShownEntry = {
   kind: "milestone",
   subjectOf: (record) => (record.portal ? universityYearSubject(record.portal) : null),
-  providerOf: (record) => resultsOf(record, yearPassedBy),
+  providerOf: (record) => providerOfRecord("university-year-passed-shown", record),
   condition: {
     conditionId: "university-year-passed-shown",
     providerId: "",
@@ -215,7 +224,7 @@ export const UNIVERSITY_YEAR_SHOWN: ShownEntry = {
 export const UNIVERSITY_GRADE_SHOWN: ShownEntry = {
   kind: "milestone",
   subjectOf: (record) => (record.portal ? universityGradeSubject(record.portal) : null),
-  providerOf: (record) => resultsOf(record, gradeShownBy),
+  providerOf: (record) => providerOfRecord("university-grade-shown", record),
   condition: {
     conditionId: "university-grade-shown",
     providerId: "",

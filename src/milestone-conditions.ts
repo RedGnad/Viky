@@ -1,12 +1,9 @@
-import { UNIVERSITY_ACCOUNT_ONLY } from "./sentences";
 import type { Hex } from "viem";
 import {
   gradeTargetProblem,
   gradeUnits,
   isGradeShape,
   isPortalId,
-  ACCOUNT_ONLY_MARK,
-  NO_RESULTS_PAGE,
   type ResultsExtract,
   UNIVERSITY_DURATION_DAYS,
   UNIVERSITY_ENROLLED,
@@ -386,11 +383,15 @@ export type CertificateCondition = Readonly<{
    */
   targetUnits?: (target: number) => number;
   /**
-   * A condition made on a student portal Viky has proved (D165, D174): the portal is what the funder chose in
+   * A condition made on a university of the list (D165, D174, D313): the university is what the funder chose in
    * `course`, and the condition says why a row cannot take a gift on it with this target, by code, before any money
    * moves: no results page proved, a scale of letters, a target off the scale.
    */
-  portal?: Readonly<{ refuses: (portal: Readonly<{ results: ResultsExtract | null }>, target: number) => Readonly<{ code: string; message: string }> | undefined }>;
+  portal?: Readonly<{
+    /** Which of the university's providers the condition reads (D313): its enrolment, or its results page. */
+    sense: "enrolment" | "results";
+    refuses: (portal: Readonly<{ results: ResultsExtract | null }>, target: number) => Readonly<{ code: string; message: string }> | undefined;
+  }>;
   /**
    * What the funder names instead of a score, where there is nothing to score (C3). The certificate page carries the
    * same word as an ordinary course link, so the funder pastes the link and nothing is resolved between the two.
@@ -989,15 +990,15 @@ export const TOEFL_SHOWN_MILESTONE: CertificateCondition = {
   },
 };
 
-/** "Which university?", as the three conditions on the rail ask it: the same search over the proved portals (D165). */
+/** "Which university?", as the three conditions on the rail ask it: the same list, the world's since D313. */
 const UNIVERSITY_COURSE: NonNullable<CertificateCondition["course"]> = {
   label: "Which university?",
-  help: "Type a word of its name. Only a portal Viky has already proved with a student can be chosen: that is what makes the proof worth anything.",
+  help: "Type a word of its name. A university whose student portal Viky does not read yet is set up within a day of the gift.",
   slugOf: (picked) => (isPortalId(picked.trim()) ? picked.trim() : undefined),
   search: {
     path: "/api/portals/search",
     placeholder: "Search a university",
-    nothing: "Viky has proved no student portal by those words yet. The list grows one university at a time, with a student present.",
+    nothing: "No university by those words in Viky's list. Yours isn't here? Add your university.",
     listed: true,
   },
   row: "Which university",
@@ -1005,18 +1006,16 @@ const UNIVERSITY_COURSE: NonNullable<CertificateCondition["course"]> = {
 };
 
 /**
- * The sentence under the chosen university, before the funder pays. A portal that proves a student account and no
- * enrolment status carries that in its title, and the sentence says exactly what the proof will carry (D267). Whether
- * anybody has shown it yet is not said here: the founder's rule of 26 Sep 2026 retires D195's sentence from the flow.
+ * The sentence under the chosen university, before the funder pays. Whether anybody has shown it yet is not said here
+ * (the founder's rule of 26 Sep 2026), and "a student account" is no longer a sense a gift is made on (D313).
  */
 export function universityNamed(what: string, course: string): string {
-  if (course.includes(ACCOUNT_ONLY_MARK)) return `This gift will be for ${what}${course.replace(ACCOUNT_ONLY_MARK, "")}. ${UNIVERSITY_ACCOUNT_ONLY}`;
   return `This gift will be for ${what}${course}.`;
 }
 
 /**
  * Staying enrolled, shown from the person's own student portal (D165). The certificate shape with no name asked:
- * what the funder chooses is the portal, from the ones Viky has proved, and it is bound into the subject they sign.
+ * what the funder chooses is the university, from the list, and it is bound into the subject they sign.
  * There is nothing to score: enrolled is one, and the page that says so is what the person shows.
  */
 export const UNIVERSITY_SHOWN_MILESTONE: CertificateCondition = {
@@ -1030,7 +1029,7 @@ export const UNIVERSITY_SHOWN_MILESTONE: CertificateCondition = {
   validTarget: (value) => value === UNIVERSITY_ENROLLED,
   subject: ({ course }) => universitySubject(String(course ?? "")),
   // Any proved portal takes a gift on enrolment: that is what proving it means.
-  portal: { refuses: () => undefined },
+  portal: { sense: "enrolment", refuses: () => undefined },
   course: { ...UNIVERSITY_COURSE, named: (course) => universityNamed("staying enrolled at ", course) },
   target: {
     label: "What has to be shown",
@@ -1111,7 +1110,8 @@ export const UNIVERSITY_YEAR_MILESTONE: CertificateCondition = {
   validName: () => true,
   validTarget: (value) => value === UNIVERSITY_PASSED,
   subject: ({ course }) => universityYearSubject(String(course ?? "")),
-  portal: { refuses: (portal) => (portal.results ? undefined : NO_RESULTS_PAGE) },
+  // Without a results provider yet, the gift is made all the same and the provider is asked for (D313).
+  portal: { sense: "results", refuses: () => undefined },
   course: { ...UNIVERSITY_COURSE, named: (course) => universityNamed("passing the year at ", course) },
   target: {
     label: "What has to be shown",
@@ -1174,11 +1174,14 @@ export const UNIVERSITY_GRADE_MILESTONE: CertificateCondition = {
   validTarget: isGradeShape,
   targetUnits: gradeUnits,
   subject: ({ course }) => universityGradeSubject(String(course ?? "")),
-  portal: { refuses: (portal, target) => (portal.results ? gradeTargetProblem(portal.results.grade.scale, target) : NO_RESULTS_PAGE) },
+  // A grade is signed on the university's own scale (D174). Where the results page is not read yet, the gift is made like
+  // any other and the scale is read and pinned with the first proof the operator reviews (the founder, 28 Sep 2026);
+  // where it is, a target off the scale is refused before anything moves.
+  portal: { sense: "results", refuses: (portal, target) => (portal.results ? gradeTargetProblem(portal.results.grade.scale, target) : undefined) },
   course: { ...UNIVERSITY_COURSE, named: (course) => universityNamed("a grade at ", course) },
   target: {
     label: "The grade they reach",
-    help: "On the university's own scale, with a dot for decimals: 14.5 out of 20, or 3.5 for a GPA out of 4. A grade off that scale is refused when the gift is made.",
+    help: "On the university's own scale, with a dot for decimals: 14.5 out of 20, or 3.5 for a GPA out of 4. Where Viky already reads that scale, a grade off it is refused when the gift is made.",
     min: 0.01,
     max: 1_000,
     step: 0.01,

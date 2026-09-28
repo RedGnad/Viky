@@ -13,15 +13,30 @@ import { Sheet } from "./Sheet";
  * list, as a currency is (the founder, 28 Sep 2026: the native select was the one list outside the art direction),
  * with a search above it, because there are more than a hundred and fifty countries.
  */
-export function CountryPicker({ id, label, hideLabel = false, value, onChange }: Readonly<{ id: string; label: string; hideLabel?: boolean; value: string | null; onChange: (country: string) => void }>) {
+export function CountryPicker({
+  id,
+  label,
+  hideLabel = false,
+  value,
+  onChange,
+  load = async () => (await loadOutCountries()).countries,
+}: Readonly<{
+  id: string;
+  label: string;
+  hideLabel?: boolean;
+  value: string | null;
+  onChange: (country: string) => void;
+  /** The countries to choose from: by default where a way out works; the universities' own list for "Which university?" (D313). */
+  load?: () => Promise<readonly string[]>;
+}>) {
   const [countries, setCountries] = useState<readonly { code: string; name: string }[] | null | "unreadable">(null);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   useEffect(() => {
     let live = true;
-    loadOutCountries().then(
-      (answer) => {
-        const named = answer.countries.map((code) => ({ code, name: countryInWords(code) ?? code.toUpperCase() }));
+    load().then(
+      (codes) => {
+        const named = codes.map((code) => ({ code, name: countryInWords(code) ?? code.toUpperCase() }));
         // A country already chosen stays in the list even if a service stopped listing it today.
         if (value && !named.some((one) => one.code === value)) named.push({ code: value, name: countryInWords(value) ?? value.toUpperCase() });
         if (live) setCountries(named.sort((left, right) => left.name.localeCompare(right.name)));
@@ -33,6 +48,8 @@ export function CountryPicker({ id, label, hideLabel = false, value, onChange }:
     return () => {
       live = false;
     };
+    // The loader is the caller's constant: read again when the chosen country changes, as before.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
   if (countries === "unreadable") return <p className={HELP}>{WORDS.unreadable}</p>;
   const chosen = value ? (countryInWords(value) ?? value.toUpperCase()) : null;

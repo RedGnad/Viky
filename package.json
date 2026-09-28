@@ -61,6 +61,9 @@
     "portal:directory": "tsx scripts/portal-directory.ts",
     "portal:pin": "tsx scripts/portal-pin.ts",
     "portal:remove": "tsx scripts/portal-remove.ts",
+    "provider:requests": "tsx scripts/provider-requests.ts",
+    "provider:add": "tsx scripts/provider-requests.ts add",
+    "universities:register": "tsx scripts/university-register.ts",
     "check:milestone-goals": "CHECK_ONLY=1 DRY_RUN=1 tsx scripts/register-milestone-goals.ts",
     "prepare:milestone-goals": "WALLET=1 tsx scripts/register-milestone-goals.ts",
     "safe:create": "tsx scripts/safe-create.ts",
@@ -79,6 +82,7 @@
     "next": "16.3.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "tldts": "7.4.16",
     "viem": "2.56.3",
     "web-push": "3.6.7"
   },

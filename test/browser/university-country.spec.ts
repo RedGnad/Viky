@@ -1,0 +1,38 @@
+import { expect, test, type Page } from "@playwright/test";
+
+/**
+ * "Which university?" since D313: the country in its own sheet, opened from the sheet of what they will do, then that
+ * country's universities. The defect this pins: choosing a country closed both sheets, because React carries a nested
+ * dialog's close up to its parent's handler. The list is answered here, so the screen is measured and not the table.
+ */
+const sheet = (page: Page) => page.locator("dialog.sheet[open]");
+
+test("choosing a country closes its own sheet only, and the country's universities are listed and searched", async ({ page }) => {
+  await page.route(/\/api\/portals(\?.*)?$/, (route) => {
+    const country = new URL(route.request().url()).searchParams.get("country");
+    const body = country
+      ? { results: [{ pair: "ucad-sn", title: "Université Cheikh Anta Diop", issuer: "Senegal", country: "SN" }, { pair: "ugb-sn", title: "Université Gaston Berger", issuer: "Senegal", country: "SN" }] }
+      : { countries: [{ code: "NG", count: 156 }, { code: "SN", count: 9 }] };
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+  });
+  await page.goto("/");
+  await page.locator("main section").first().getByRole("button").first().click();
+  const change = sheet(page).getByRole("button", { name: /^Change/i });
+  if (await change.isVisible().catch(() => false)) await change.click();
+  const line = sheet(page).getByRole("button", { name: /Enrolled at university/i });
+  if (!(await line.isVisible().catch(() => false))) {
+    const all = sheet(page).getByRole("button", { name: /All families/i });
+    if (await all.isVisible().catch(() => false)) await all.click();
+    await sheet(page).getByRole("button", { name: /School & studies/ }).click();
+  }
+  await line.click();
+  await sheet(page).getByRole("button", { name: /Which country is it in\?/ }).click();
+  await expect(sheet(page)).toHaveCount(2);
+  await sheet(page).last().getByText("Senegal", { exact: true }).click();
+  await expect(sheet(page)).toHaveCount(1);
+  await expect(sheet(page).getByText("Search in Senegal")).toBeVisible();
+  await expect(sheet(page).getByText("Université Gaston Berger")).toBeVisible();
+  await sheet(page).getByLabel("Search in Senegal").fill("cheikh");
+  await expect(sheet(page).getByText("Université Gaston Berger")).toHaveCount(0);
+  await expect(sheet(page).getByText("Université Cheikh Anta Diop")).toBeVisible();
+});

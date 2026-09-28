@@ -7,10 +7,6 @@ export const UNVERIFIED_MARK = " (unverified)";
  * What a portal proves (D267, the founder's integrity point of 26 Sep 2026): its enrolment status for the year, or only
  * that a student account is signed in. The gift says which, so its sentence is exactly what the proof carries.
  */
-export type PortalProves = "enrolment" | "account";
-
-/** What the chooser prints beside a university whose portal proves a student account and no enrolment status. */
-export const ACCOUNT_ONLY_MARK = " (student account)";
 
 /**
  * What a person shows from their own student portal (D165, D174): the second nature's university rail, and the
@@ -206,10 +202,13 @@ export function isGradeShape(value: number): boolean {
   return inHundredths(value) && value > 0 && value <= 1_000;
 }
 
-/** Why a gift on the year or on a grade cannot be made on a portal proved for enrolment alone (D174). */
-export const NO_RESULTS_PAGE = Object.freeze({
-  code: "NO_RESULTS_PAGE",
-  message: "Viky has proved this university's portal for enrolment and not for its results page yet, so nothing can be shown from it.",
+/**
+ * A university chosen for a sense it has no provider for yet (D313): the operator has been asked for one, with the exact
+ * instruction, and builds it within the day. Until then nothing can be shown from it, and nothing is lost.
+ */
+export const PROVIDER_BUILDING = Object.freeze({
+  code: "PROVIDER_BUILDING",
+  message: "Your university's page is being set up: checked within a day. Then you show it here. Nothing is lost meanwhile.",
 });
 
 /** Whether a value read from a page is a grade on this numeric scale: from zero to its top, in hundredths. */

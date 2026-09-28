@@ -1090,12 +1090,6 @@ export const CONDITION_NATURE = { read: "READ FOR YOU", shown: "SHOWN BY THEM", 
  * A proof the person shows from their own account (D162): one button, and what happens around it. The source's
  * name comes from the register, never from here.
  */
-/**
- * A university whose portal proves a student account and no enrolment status (D267), said where the university is
- * chosen, before the funder pays, so the gift promises exactly what the proof will carry. D195's sentence, about a portal
- * nobody had shown yet, left the flow with the founder's rule of 26 Sep 2026: that stays on the judges' page.
- */
-export const UNIVERSITY_ACCOUNT_ONLY = "Its student portal shows that a student account is active, not that they are enrolled this year: that is what this gift will check.";
 
 /**
  * "Which university?" asked as a list (D247), and as the founder set it on 26 Sep 2026 (D264): the names alone, grouped
@@ -1137,6 +1131,11 @@ export const SHOW_PROOF = {
    * the operator's review, nothing relayed. True of `pnpm portal:pin`: the operator reads it and settles or refuses.
    */
   held: "First proof from this university: checked within a day.",
+  /**
+   * A university chosen for a sense it has no provider for yet (D313): the operator was asked when the gift was made and
+   * builds it within the day. Nothing can be shown until then, and nothing is lost: the contract holds the money.
+   */
+  building: "Your university's page is being set up: checked within a day. Then you show it here.",
   /** The review found the page does not show what the gift is for (D312): nothing relayed, the contract untouched. */
   reviewRefused: "This university's page did not show what this gift is for, so nothing was counted. The money stays where it is.",
   refusals: {

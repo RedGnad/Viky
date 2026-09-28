@@ -19,7 +19,6 @@ import {
   gradeUnits,
   isGradeShape,
   isUniversityGoal,
-  NO_RESULTS_PAGE,
   resultsProblem,
   UNIVERSITY_GRADE_GOAL_TYPE,
   UNIVERSITY_YEAR_GOAL_TYPE,
@@ -161,14 +160,19 @@ test("a target is refused by name when the scale is letters or the target is off
   assert.match(String(gradeTargetProblem(halves, 21)?.message), /out of 20, in steps of 0\.5/);
   assert.equal(gradeTargetProblem(LETTERS.grade.scale, 14)?.code, "LETTER_SCALE");
   // What the create route asks each condition of the row it found.
-  assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: null }, 14), NO_RESULTS_PAGE);
+  // A grade with no results provider yet: made like any other, the scale pinned with the first reviewed proof (the founder,
+  // 28 Sep 2026).
+  assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: null }, 14), undefined);
   assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: OUT_OF_20 }, 14.5), undefined);
   assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: OUT_OF_20 }, 21)?.code, "INVALID_TARGET");
   assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: LETTERS }, 14)?.code, "LETTER_SCALE");
-  assert.equal(UNIVERSITY_YEAR_MILESTONE.portal?.refuses({ results: null }, 1), NO_RESULTS_PAGE);
+  // The year passed on a university with no results provider yet: made all the same, the provider asked for (D313).
+  assert.equal(UNIVERSITY_YEAR_MILESTONE.portal?.refuses({ results: null }, 1), undefined);
+  assert.equal(UNIVERSITY_YEAR_MILESTONE.portal?.sense, "results");
+  assert.equal(UNIVERSITY_SHOWN_MILESTONE.portal?.sense, "enrolment");
   assert.equal(UNIVERSITY_YEAR_MILESTONE.portal?.refuses({ results: OUT_OF_20 }, 1), undefined);
   assert.equal(UNIVERSITY_YEAR_MILESTONE.portal?.refuses({ results: LETTERS }, 1), undefined, "the year passed reads no grade, so letters are no obstacle");
-  assert.equal(UNIVERSITY_SHOWN_MILESTONE.portal?.refuses({ results: null }, 1), undefined, "any proved portal takes a gift on enrolment");
+  assert.equal(UNIVERSITY_SHOWN_MILESTONE.portal?.refuses({ results: null }, 1), undefined, "any listed university takes a gift on enrolment");
   // The grade the funder types is on the scale, and what is signed is the integer in hundredths, on both sides.
   assert.equal(UNIVERSITY_GRADE_MILESTONE.targetUnits?.(14.5), 1450);
   assert.ok(UNIVERSITY_GRADE_MILESTONE.validTarget(14.5));

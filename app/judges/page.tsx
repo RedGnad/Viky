@@ -7,7 +7,7 @@ import { JudgesAccount } from "../components/JudgesAccount";
 import { MilestoneJudges } from "../components/MilestoneJudges";
 import { DISPLAY, TITLE } from "../components/ui";
 import { readOwnership, ownershipWords } from "@/src/judges-owner";
-import { listPortals, portalsListedAndRead, witnessPortalCounts } from "@/src/portal-store";
+import { portalsListedAndRead, providerCounts, witnessProviders } from "@/src/portal-store";
 import { countryInWords } from "@/src/university-shown";
 import { usesDelivered } from "@/src/phone-order-store";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain";
@@ -37,11 +37,10 @@ export default async function JudgesPage() {
   const ownership = await readOwnership().catch(() => null);
   // Universities listed, and how many have been read at least once (D267): here, and never in the flow.
   const portals = await portalsListedAndRead();
-  // The universities read through a witness and no enclave (D312), each by name, and how many carry a pin.
-  const witnessCounts = await witnessPortalCounts();
-  const witnessLines = await listPortals()
-    .then((all) => all.filter((portal) => portal.verification === "witness"))
-    .catch(() => null);
+  // The providers by sense, the requests open, and the providers read through a witness and no enclave (D312), each
+  // by its university, with how many carry a pin.
+  const counts = await providerCounts();
+  const witnessLines = await witnessProviders();
   // How many times each Bitrefill use was used (D271): said here, as for the conditions, and never in the flow.
   const uses = await usesDelivered();
   const used = (count: number | undefined) => (uses === null || count === undefined ? "the count could not be read right now" : count === 0 ? "Open. Nobody has used it yet." : count === 1 ? "Open. Used once." : `Open. Used ${count} times.`);
@@ -260,28 +259,39 @@ export default async function JudgesPage() {
             sit on what the page prints, and a page that does not carry them fails by its name, the person told nothing
             is lost and the miss written in the gift&apos;s journal. Whether a university has been read yet is said here
             and not in the flow (the founder, 26 Sep 2026):{" "}
-            {portals ? `${portals.listed} universities listed, ${portals.read} read at least once.` : "the count could not be read right now."} What
-            each portal proves is said in the flow: some show the year&apos;s enrolment status, others only that a
-            student account is signed in, and the university&apos;s line and the gift say which.
+            {portals ? `${portals.listed} universities listed, ${portals.read} read at least once.` : "the count could not be read right now."}
           </li>
           <li>
-            <strong>Universities read through a witness, no enclave.</strong> Where Reclaim&apos;s directory holds a
-            university only as an AI provider (D312), its proof carries no enclave attestation. Viky verifies it the way
-            it verifies its own readings: the claim must be signed by Viky&apos;s pinned witness and by nobody else, and
-            must have read the university&apos;s own domain. An AI provider names no request until Reclaim&apos;s agent
-            writes one at the first real run, so a line has no pattern until a student shows a first proof. That first
-            proof is held, never paid on its own: the operator reads what the pattern read, then pins the line (the
-            version, the request, the match, the redaction and the field) and the held gift is settled, or refuses it
-            and the person reads why, the money left where it is. After the pin, a proof from another domain, another
-            request or another pattern is refused. Until its pin a line says a student account; the pin says whether it
-            is the year&apos;s enrolment.{" "}
-            {witnessCounts ? `${witnessCounts.listed} such universities listed, ${witnessCounts.pinned} pinned.` : "The count could not be read right now."}
+            <strong>The world&apos;s universities, a provider per sense.</strong> Since D313 the list is every university of
+            Reclaim&apos;s directory whose student portal answered a plain request on 28 Sep 2026, wherever it is, placed in
+            its country by the world universities list and, failing that, by its domain&apos;s country code. What reads a
+            portal is a provider per sense: one for enrolment, one for the results page, each with its own domain, since a
+            university&apos;s results can live on another site than its enrolment. A funder can choose a university that
+            has neither: the operator is asked, with the exact instruction for Reclaim&apos;s agent, and builds the
+            provider within the day, and the person reads that it is checked within a day, the money held by the
+            contract meanwhile. A grade is signed on the university&apos;s own scale: where the results page is not read
+            yet, the scale is read and pinned with the first proof the operator reviews, so a target off it could not
+            pay. &quot;A student account&quot; is no longer something a gift can be made on.{" "}
+            {counts
+              ? `${counts.listed} universities listed; ${counts.enrolment} with an enrolment provider, ${counts.results} with a results provider; ${counts.requested} ${counts.requested === 1 ? "provider" : "providers"} asked for and not built yet.`
+              : "The counts could not be read right now."}
+          </li>
+          <li>
+            <strong>Providers read through a witness, no enclave.</strong> An AI provider (D311, D312) carries no enclave
+            attestation. Viky verifies its proof the way it verifies its own readings: the claim must be signed by
+            Viky&apos;s pinned witness and by nobody else, and must have read the provider&apos;s own domain. An AI provider
+            names no request until Reclaim&apos;s agent writes one at the first real run, so it has no pattern until a
+            student shows a first proof. That first proof is held, never paid on its own: the operator reads what the
+            pattern read, then pins the provider (the version, the request, the match, the redaction and the fields) and
+            the held gift is settled, or refuses it and the person reads why, the money left where it is. After the pin,
+            a proof from another domain, another request or another pattern is refused.{" "}
+            {counts ? `${counts.witness} such ${counts.witness === 1 ? "provider" : "providers"}, ${counts.pinned} pinned.` : "The count could not be read right now."}
             {witnessLines && witnessLines.length > 0 ? (
               <ul className="mt-[var(--space-sm)] flex flex-col gap-[var(--space-xs)]">
-                {witnessLines.map((portal) => (
-                  <li key={portal.portalId}>
-                    {portal.university}, {countryInWords(portal.country)}: witness signature, no enclave; {portal.witnessDomain};{" "}
-                    {portal.pin ? `pinned, proves ${portal.proves === "enrolment" ? "enrolment" : "a student account"}` : "first proof awaited"}.
+                {witnessLines.map((line) => (
+                  <li key={`${line.portalId}-${line.sense}`}>
+                    {line.university}, {countryInWords(line.country)}, {line.sense}: witness signature, no enclave; {line.domain};{" "}
+                    {line.pin ? "pinned" : "first proof awaited"}.
                   </li>
                 ))}
               </ul>

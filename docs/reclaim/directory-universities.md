@@ -1,7 +1,9 @@
 # Seven university providers of the Reclaim directory, read (D199)
 
 **Querying the directory** (read 24 Sep 2026): `GET https://devapi.reclaimprotocol.org/api/providers/explore/paginated`
-with `searchQuery=<words>`, `pageSize=<n>` and `pageKey=0` (a page number from 0), all three required; `search`,
+with `searchQuery=<words>`, `pageSize=<n>` and `pageKey=<offset>`, all three required. `pageKey` is an offset in
+providers, not a page number (measured 28 Sep 2026: `pageKey=1` answers the first page less one), and an empty
+`searchQuery` answers the whole directory (24,883 active providers, 11,882 tagged `university`, that day); `search`,
 `query` and `name` are ignored and return the whole directory (24,869 active providers that day). The search matches
 the provider's name only, not its sign-in address, so a source is looked for by name and then by reading the
 configurations (`https://api.reclaimprotocol.org/api/providers/<id>/configs`) of the providers the name returns.
@@ -110,3 +112,30 @@ wrapper that keeps the host. Every portal was then opened by hand: its title and
 | Institut des Hautes Études de Tunis | ihet.ens.tn | http://196.179.231.241/konosys | by hand | `ihet.ens.tn/konosys/` only redirects to plain http on a bare address, which does not answer from here: nothing a proof on the university's domain can read |
 | MIT Polytech (Mediterranean Institute of Tunisia) | mit-polytech.tn | none | by hand | the student space is on an OVH server name that no longer resolves, and the provider's `polytech.vmit.cloud` does not resolve either |
 | University of Lagos | unilag.edu.ng | https://studentportal.unilag.edu.ng/ | by hand | "Student Portal"; the agent found `unilag.edu.ng/student-portal/` and `dli.unilag.edu.ng` |
+
+## The world's list (D313, 28 Sep 2026)
+
+The founder's reframing of 28 Sep 2026: the list of universities is the world's, not the corridor's. Every university
+of Reclaim's directory whose student portal answers is listed, with the same witness verification and the first proof
+read by the operator. `pnpm universities:register` (scripts/university-register.ts) writes data/university-register.json,
+and `pnpm portal:directory` writes it after the hand-written rows, less every university they already name.
+
+How it was read, from a machine and never from Railway:
+
+- The directory, whole: an empty `searchQuery` and `pageKey` as an offset, 24,883 active providers, 22,244 of them
+  tagged `university`, and each one's configuration for its sign-in address (30 have none).
+- One line per portal, then one GET of its sign-in address, over https, naming Viky in its user agent: 4,523 did not
+  answer (no DNS, no connection, a timeout of 20 seconds, a server error or "not found"), 42 answered on http only, 7 on
+  a parked domain. A portal answering 403 or 401 is kept: it is up, and a person signs in where a robot is turned away.
+- Its country: the world universities list (github.com/Hipo/university-domains-list) by domain, then the country code of
+  the domain itself (`.edu` is the United States); 1,695 whose country neither says are left out.
+- A sign-in page more than twenty institutions share is an identity federation, not a portal (Uganda's RENU served 181,
+  secondary schools among them): 213 left out. An institution that is neither in the world universities list nor named
+  like higher education (a university, a college, a faculty, an institute, a polytechnic, in the languages the names
+  come in), or that is named like a school, is left out: 711, CERN among them. A provider's name is read less the
+  marks its author left on it ("[test] Deakin University", "(Copy)"), so a test provider folds into its university.
+- One line per university and country: a campus named after its university folds into it, and of a university's
+  sign-in addresses the one most like a student's own space is kept (Stanford had four): 1,017 merged.
+
+The result: 10,998 universities from the directory and 23 written by hand, 11,021 in 182 countries (Africa 684).
+By country, as written on 28 Sep 2026: United States 1978, Brazil 894, India 478, Japan 474, Germany 470, Indonesia 427, China 376, Mexico 335, Russia 294, Philippines 266, France 209, United Kingdom 199, Türkiye 181, Poland 175, South Korea 157, Canada 156, Nigeria 156, Italy 128, Spain 124, Argentina 108, Portugal 108, Iran 104, Czechia 95, Pakistan 91, Ukraine 86, Vietnam 83, Ecuador 82, Australia 76, Thailand 73, Sweden 72, Colombia 68, Malaysia 68, Taiwan 67, Switzerland 63, Bangladesh 62, Hungary 61, Peru 59, Kenya 58, Romania 56, Belgium 54, Chile 53, Algeria 53, Ireland 53, Austria 52, South Africa 46, Denmark 44, Netherlands 43, Saudi Arabia 43, Bolivia 37, Slovakia 36, Iraq 35, Kazakhstan 35, Tanzania 35, Paraguay 34, Greece 33, Guatemala 33, Oman 33, Uzbekistan 33, Ghana 31, Israel 31, Morocco 31, Finland 30, Tunisia 28, Bulgaria 27, Georgia 27, Sri Lanka 27, United Arab Emirates 26, Norway 26, Uganda 26, Dominican Republic 25, Lithuania 25, Armenia 24, Bosnia & Herzegovina 24, Egypt 24, New Zealand 24, Cyprus 22, Venezuela 22, Belarus 21, Slovenia 21, El Salvador 21, Afghanistan 20, Ethiopia 20, Mozambique 19, Sudan 18, Zambia 18, Lebanon 17, Latvia 17, Nicaragua 17, Palestinian Territories 17, Albania 16, Jordan 16, Panama 16, Singapore 14, Zimbabwe 14, Azerbaijan 13, Hong Kong SAR China 13, Kyrgyzstan 13, Syria 13, Costa Rica 12, Mongolia 12, Honduras 11, Iceland 11, North Macedonia 11, Myanmar (Burma) 11, Rwanda 11, Kuwait 10, Angola 9, Bahrain 9, Estonia 9, Fiji 9, Croatia 9, Jamaica 9, Moldova 9, Nepal 9, Puerto Rico 9, Serbia 9, Senegal 9, Côte d’Ivoire 8, Maldives 8, Malawi 8, Cambodia 7, Uruguay 7, Botswana 6, Congo - Kinshasa 6, Libya 6, Macao SAR China 6, Cape Verde 5, Burkina Faso 4, Mauritius 4, Namibia 4, Papua New Guinea 4, Tajikistan 4, Trinidad & Tobago 4, Yemen 4, Brunei 3, Belize 3, Cameroon 3, Cuba 3, Guyana 3, Haiti 3, Cayman Islands 3, Lesotho 3, Malta 3, Réunion 3, Suriname 3, Burundi 2, Benin 2, Dominica 2, Guadeloupe 2, Liechtenstein 2, Mali 2, Niger 2, French Polynesia 2, Qatar 2, Eswatini 2, Turkmenistan 2, Vatican City 2, Andorra 1, Antigua & Barbuda 1, Åland Islands 1, Bahamas 1, Bhutan 1, Curaçao 1, Faroe Islands 1, Grenada 1, Gambia 1, Guinea 1, St. Kitts & Nevis 1, Laos 1, St. Lucia 1, Liberia 1, Luxembourg 1, Madagascar 1, New Caledonia 1, Solomon Islands 1, Seychelles 1, Sierra Leone 1, Somalia 1, Chad 1, British Virgin Islands 1, Samoa 1, Kosovo 1.

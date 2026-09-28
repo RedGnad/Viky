@@ -9,13 +9,12 @@ import { privateKeyToAccount } from "viem/accounts";
 import { VerificationError } from "../src/duolingo-verification";
 import type { MilestoneProofMessage } from "../src/milestone-protocol";
 import type { Portal, PortalReview } from "../src/portal-store";
-import { awaitingPin, portalProblem } from "../src/portal-store";
+import { awaitingPin } from "../src/portal-store";
 import type { ProofSession } from "../src/proof-session-store";
-import { providerOfPortal, SHOWN_CONDITIONS, UNIVERSITY_SHOWN, type ShownEntry } from "../src/shown-conditions";
+import { portalProviderFor, SHOWN_CONDITIONS, UNIVERSITY_SHOWN, type ShownEntry } from "../src/shown-conditions";
 import { settleHeldReview, verifyShownSession, type ShownVerificationDeps } from "../src/shown-verification";
 import { UNIVERSITY_ENROLLED, universitySubject } from "../src/university-shown";
 import { canonical, onDomain, pinOf, verifyWitnessProof, WitnessProofError, type WitnessPin } from "../src/witness-portal";
-import { WITNESS_PORTALS } from "../src/directory-portals";
 
 /**
  * A university read through a Reclaim AI provider (D312): the proof carries no enclave, so it is verified by the
@@ -58,29 +57,29 @@ async function witnessProof(page: Page = {}, signer = WITNESS, timestampS = NOW 
   return { identifier, claimData: { ...claim, identifier }, signatures: [signature], witnesses: [] } as unknown as Proof;
 }
 
+const OPERATOR = "0x000000000000000000000000000000000000beef";
 const UCAD: Portal = {
   portalId: "ucad-sn",
   name: "UCAD, student center",
   university: "Université Cheikh Anta Diop",
   country: "SN",
-  providerId: "10560c0d-b009-412b-8e78-762d79fa7cc4",
-  providerVersion: "",
-  requestHash: "",
   loginUrl: "https://studentcenter.ucad.sn/login",
-  extract: { field: "", matches: "", keeps: "" },
-  results: null,
   provenAt: new Date(0),
-  provenBy: "0x000000000000000000000000000000000000beef",
+  provenBy: OPERATOR,
   unverified: true,
-  proves: "account",
-  verification: "witness",
-  witnessDomain: "ucad.sn",
-  pin: null,
+  // Built from the enrolment instruction (D312): a witness provider on the university's own domain, no pin yet.
+  enrolment: { portalId: "ucad-sn", sense: "enrolment", providerId: "10560c0d-b009-412b-8e78-762d79fa7cc4", verification: "witness", domain: "ucad.sn", providerVersion: "", requestHash: "", extract: null, pin: null, addedBy: OPERATOR },
+  results: null,
 };
 
 async function pinned(): Promise<Portal> {
   const reading = verifyWitnessProof(await witnessProof(), { domain: "ucad.sn", method: "GET", pin: null, providerVersion: AGENT_VERSION, witness: WITNESS.address });
-  return { ...UCAD, pin: pinOf(reading, AGENT_VERSION), providerVersion: AGENT_VERSION, requestHash: reading.specHash, extract: { field: "status", matches: "^Inscrit 2026", keeps: "whether the page says enrolled for 2026-2027" }, proves: "enrolment", unverified: false };
+  const pin = pinOf(reading, AGENT_VERSION);
+  return {
+    ...UCAD,
+    unverified: false,
+    enrolment: { ...UCAD.enrolment!, pin, providerVersion: AGENT_VERSION, requestHash: reading.specHash, extract: { field: "status", matches: "^Inscrit 2026", keeps: "whether the page says enrolled for 2026-2027" } },
+  };
 }
 
 function expect(pin: WitnessPin | null, version = AGENT_VERSION) {
@@ -120,7 +119,7 @@ test("a witness proof is read only when the witness alone signed what it holds, 
 });
 
 test("once pinned, another pattern, another request or another version of the provider is refused", async () => {
-  const pin = (await pinned()).pin!;
+  const pin = (await pinned()).enrolment!.pin!;
   verifyWitnessProof(proofSync.good, expect(pin));
   assert.throws(() => verifyWitnessProof(proofSync.otherPattern, expect(pin)), refusedAs("WITNESS_OTHER_PATTERN"));
   assert.throws(() => verifyWitnessProof(proofSync.otherPage, expect(pin)), refusedAs("WITNESS_OTHER_PATTERN"));
@@ -142,7 +141,7 @@ test.before(async () => {
 let portal: Portal = UCAD;
 const WITNESS_SHOWN: ShownEntry = {
   ...UNIVERSITY_SHOWN,
-  providerOf: async () => providerOfPortal(portal),
+  providerOf: async () => portalProviderFor("university-enrollment-shown", portal),
   subjectOf: () => universitySubject(portal.portalId),
   condition: { ...UNIVERSITY_SHOWN.condition, conditionId: "test-witness-shown" },
 };
@@ -164,7 +163,7 @@ function deps(proofs: Proof[], version = AGENT_VERSION, overrides: Partial<Shown
       consumed.push(input);
       return true;
     },
-    fetchStatus: async () => ({ session: { sessionId: SESSION_ID, appId: APP_ID, providerId: UCAD.providerId, providerVersionString: version, statusV2: "PROOF_SUBMITTED", proofs } as never }),
+    fetchStatus: async () => ({ session: { sessionId: SESSION_ID, appId: APP_ID, providerId: UCAD.enrolment!.providerId, providerVersionString: version, statusV2: "PROOF_SUBMITTED", proofs } as never }),
     verifyProofs: async () => {
       throw new Error("a witness proof never goes to the SDK's TEE verification");
     },
@@ -192,7 +191,7 @@ function deps(proofs: Proof[], version = AGENT_VERSION, overrides: Partial<Shown
 
 test("a first proof from a portal with no pin is checked on what is sure, held, and never relayed", async () => {
   portal = UCAD;
-  assert.equal(awaitingPin(UCAD), true);
+  assert.equal(awaitingPin(UCAD.enrolment!), true);
   const run = deps([proofSync.good]);
   const outcome = await verifyShownSession(run.deps, { sessionId: SESSION_ID, account: ACCOUNT });
   assert.equal(outcome.kind, "held");
@@ -240,6 +239,7 @@ test("a held proof is settled once its portal is pinned, and only on that pin", 
   const review: PortalReview = {
     sessionId: SESSION_ID,
     portalId: "ucad-sn",
+    sense: "enrolment",
     giftId: GIFT,
     account: ACCOUNT,
     providerVersion: AGENT_VERSION,
@@ -264,16 +264,4 @@ test("a held proof is settled once its portal is pinned, and only on that pin", 
   // A gift made on another portal is not settled by this one.
   const elsewhere = deps([], AGENT_VERSION, { milestoneRecordOf: async () => ({ giftId: GIFT, conditionId: "university-enrollment-shown", mode: "shown", standingAtOffer: 0, standingReadAt: new Date(0), portal: "ugb-sn" }) });
   await assert.rejects(settleHeldReview(elsewhere.deps, { review, portal: await pinned() }), refusedAs("UNKNOWN_GIFT"));
-});
-
-test("the corridor's witness rows are well formed, each on its own https domain, with no pin in the register", () => {
-  const ids = new Set<string>();
-  for (const row of WITNESS_PORTALS) {
-    assert.equal(ids.has(row.portalId), false, `${row.portalId} twice`);
-    ids.add(row.portalId);
-    assert.equal(onDomain(row.loginUrl, row.witnessDomain), true, `${row.portalId} signs in on its own domain`);
-    const problem = portalProblem({ ...row, providerVersion: "", requestHash: "", extract: { field: "", matches: "", keeps: "" }, provenBy: "0x000000000000000000000000000000000000beef", verification: "witness", proves: "account" });
-    assert.equal(problem, undefined, `${row.portalId}: ${problem}`);
-  }
-  assert.equal(WITNESS_PORTALS.length, 18);
 });

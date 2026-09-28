@@ -1,18 +1,20 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { listUniversities } from "@/src/client/certificate-gift";
+import { listUniversitiesIn, listUniversityCountries } from "@/src/client/certificate-gift";
 import type { GiftDraft } from "@/src/gift-draft";
 import { MILESTONE_FUND as M, UNIVERSITY_CHOICE as W } from "@/src/sentences";
-import { byCountry, choiceMode, inCountry, type ListedUniversity } from "@/src/university-choice";
-import { CHIP, HELP } from "../../components/ui";
+import { matching, type ListedUniversity } from "@/src/university-choice";
+import { HELP } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
+import { CountryPicker } from "../CountryPicker";
 import { Field } from "../Field";
 
 /**
- * "Which university?" as the advisor's brief of 25 Sep 2026 asks it (D247). Up to five universities, radios grouped by
- * country and no search field; beyond five, the country first, as buttons with the corridor's in front, then the search
- * within that country. The names alone, and under the list one invitation to add a university (D264).
+ * "Which university?" (D247, D313). The world's list is thousands long, so the country comes first, in the same sheet
+ * with a search as "Where you live", then that country's universities, read on their own and searched within. The
+ * names alone, and under the list one invitation to add a university (D264). A university is chosen whether or not
+ * Viky reads its portal yet: the provider is asked for when the gift is made, and built within the day.
  */
 export function UniversityChooser({
   open,
@@ -24,18 +26,18 @@ export function UniversityChooser({
   open: boolean;
   label: string;
   draft: GiftDraft;
-  /** The sentence under the chosen university (`universityNamed`), which carries the unverified warning when it applies. */
+  /** The sentence under the chosen university (`universityNamed`). */
   named: (course: string) => string;
   onChoose: (one: ListedUniversity) => void;
 }>) {
-  const [list, setList] = useState<readonly ListedUniversity[] | null | "unreadable">(null);
   const [country, setCountry] = useState<string | null>(null);
+  const [list, setList] = useState<readonly ListedUniversity[] | null | "unreadable">(null);
   const [words, setWords] = useState("");
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !country) return;
     let live = true;
-    listUniversities()
+    listUniversitiesIn(country)
       .then((found) => {
         if (live) setList(found);
       })
@@ -45,67 +47,44 @@ export function UniversityChooser({
     return () => {
       live = false;
     };
-  }, [open]);
+  }, [open, country]);
 
-  const choose = (all: readonly ListedUniversity[]) => (value: string) => {
-    const one = all.find((entry) => entry.pair === value);
-    if (one) onChoose(one);
-  };
-
-  if (list === null) return <p className={HELP}>{W.reading}</p>;
-  if (list === "unreadable") return <p className={HELP}>{W.unreadable}</p>;
-
-  const groups = byCountry(list);
   const chosen = draft.course && draft.courseTitle ? <p className="font-medium">{named(draft.courseTitle)}</p> : null;
 
   return (
     <div className="flex flex-col gap-[var(--space-sm)]">
       <p className="font-medium">{label}</p>
-      {list.length === 0 ? (
-        <p className={HELP}>{W.none}</p>
-      ) : choiceMode(list.length) === "radios" ? (
-        groups.map((group) => (
-          <ChoiceList
-            key={group.code}
-            name="university"
-            legend={group.name}
-            shape="lines"
+      <CountryPicker
+        id="university-country"
+        label={W.country}
+        value={country}
+        onChange={(code) => {
+          // The list of the country chosen before is not shown while this one is read.
+          setList(null);
+          setCountry(code);
+          setWords("");
+        }}
+        load={async () => (await listUniversityCountries()).map((one) => one.code)}
+      />
+      {country ? (
+        list === null ? (
+          <p className={HELP}>{W.reading}</p>
+        ) : list === "unreadable" ? (
+          <p className={HELP}>{W.unreadable}</p>
+        ) : (
+          <CountrySearch
+            country={list[0]?.issuer ?? country}
+            found={matching(list, words)}
+            words={words}
+            onWords={setWords}
             value={draft.course ?? null}
-            onChange={choose(list)}
-            options={group.universities.map((one) => ({ value: one.pair, label: one.title }))}
+            onChange={(value) => {
+              const one = list.find((entry) => entry.pair === value);
+              if (one) onChoose(one);
+            }}
           />
-        ))
-      ) : (
-        <>
-          <p className="font-medium">{W.country}</p>
-          <div className="flex flex-wrap gap-[var(--space-sm)]">
-            {groups.map((group) => (
-              <button
-                key={group.code}
-                type="button"
-                aria-pressed={country === group.code}
-                onClick={() => {
-                  setCountry(group.code);
-                  setWords("");
-                }}
-                className={`${CHIP} ${country === group.code ? "bg-[var(--chosen)] font-bold" : ""}`}
-              >
-                {group.name}
-              </button>
-            ))}
-          </div>
-          {country ? (
-            <CountrySearch
-              country={groups.find((group) => group.code === country)?.name ?? country}
-              found={inCountry(list, country, words)}
-              words={words}
-              onWords={setWords}
-              value={draft.course ?? null}
-              onChange={choose(list)}
-            />
-          ) : null}
-        </>
-      )}
+        )
+      ) : null}
       {chosen}
       {/* One line under the list (D264): an invitation, and nothing about how a university is checked, which the gift's
           page says where the proof is shown. */}
@@ -118,7 +97,6 @@ export function UniversityChooser({
     </div>
   );
 }
-
 
 /** The search within one country, and its list of at most twelve, the way the sheet's other searches say it. */
 function CountrySearch({

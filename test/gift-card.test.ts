@@ -331,7 +331,8 @@ test("nothing on the card asks for an account, and the sheet that pays makes it 
 
 test("a case opens in a sheet, and a sheet is a dialog rather than a page", () => {
   assert.match(sheetFile, /showModal\(\)/, "the browser keeps the focus inside it and Escape closes it");
-  assert.match(sheetFile, /onCancel=\{onClose\}/);
+  // Escape closes it, and only its own: a nested sheet's close never closes the sheet it was opened from (D313).
+  assert.match(sheetFile, /onCancel=\{\(event\) => \{\n\s+if \(event\.target === dialog\.current\) onClose\(\);/);
   assert.match(sheetFile, /event\.target === dialog\.current/, "and pressing the backdrop leaves it");
   for (const source of sheets) {
     assert.match(source, /<Sheet\n?\s+open=\{open\}/, "each case is drawn in a sheet");

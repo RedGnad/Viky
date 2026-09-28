@@ -81,7 +81,8 @@ export async function POST(request: Request) {
     const provider: ShownProvider | null = entry.providerOf && record ? await entry.providerOf(record) : null;
     const providerId = provider?.providerId ?? entry.condition.providerId;
     const providerVersion = provider?.providerVersion ?? entry.condition.providerVersion;
-    if (!providerId) throw new Error("This gift names no portal a proof could come from");
+    // A university whose provider of this sense is being built (D313): said as such, never as "no portal".
+    if (!providerId) throw new Error(provider?.missing?.message ?? "This gift names no portal a proof could come from");
 
     // A university read through a Reclaim AI provider (D312): the one case AI is accepted, verified by the pinned
     // witness on the portal's domain. Before its pin, whichever version the agent writes; after, the pinned one.
