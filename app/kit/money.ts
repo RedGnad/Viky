@@ -7,23 +7,49 @@ import { dollarsToTheCent, readyFor, type Ready } from "@/src/exit-steps";
 import { WAYS_OUT, type WayOut } from "@/src/rails";
 
 /**
- * What the account holds, of all three coins, read once for a screen. The way out is offered as soon as any of
- * them is above what an account cannot spend, which is why all three are read and not only what a gift holds.
+ * What the account holds, of all three coins. The way out is offered as soon as any of them is above what an account
+ * cannot spend, which is why all three are read and not only what a gift holds.
+ *
+ * Read again while the screen is in front of the person, and at once when they come back to it (the founder, 28 Sep
+ * 2026): money that arrives shows without reloading the page. A reading that finds the same amounts changes nothing.
  */
 export type Holdings = Readonly<Record<string, bigint>>;
+
+/** How often the holdings are read again while the screen is visible. */
+export const HOLDINGS_EVERY_MS = 10_000;
+
+function sameHoldings(one: Holdings | null, other: Holdings): boolean {
+  return one !== null && COINS.every((coin) => one[coin.symbol] === other[coin.symbol]);
+}
 
 export function useHoldings(address: string | undefined, start?: Holdings | null): Holdings | null {
   const [holdings, setHoldings] = useState<Holdings | null>(start ?? null);
   useEffect(() => {
     if (!address) return;
     let live = true;
-    Promise.all(COINS.map((coin) => readCoinBalance(coin, address as Hex)))
-      .then((read) => {
-        if (live) setHoldings(Object.fromEntries(COINS.map((coin, index) => [coin.symbol, read[index]])));
-      })
-      .catch(() => {});
+    let reading = false;
+    const read = () => {
+      if (reading || document.visibilityState !== "visible") return;
+      reading = true;
+      Promise.all(COINS.map((coin) => readCoinBalance(coin, address as Hex)))
+        .then((amounts) => {
+          const next: Holdings = Object.fromEntries(COINS.map((coin, index) => [coin.symbol, amounts[index]]));
+          if (live) setHoldings((was) => (sameHoldings(was, next) ? was : next));
+        })
+        .catch(() => {})
+        .finally(() => {
+          reading = false;
+        });
+    };
+    read();
+    const timer = setInterval(read, HOLDINGS_EVERY_MS);
+    document.addEventListener("visibilitychange", read);
+    window.addEventListener("focus", read);
     return () => {
       live = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", read);
+      window.removeEventListener("focus", read);
     };
   }, [address]);
   return address ? holdings : null;
