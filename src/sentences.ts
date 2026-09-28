@@ -943,7 +943,8 @@ export const MILESTONE_FUND = {
   failures: {
     standingMoved: "Choose the rating again",
   },
-  operatorOnly: "Not offered to anyone yet. You see it because this account runs Viky.",
+  // A line listed while it is being built (D311): the same two words the public catalogue prints of it.
+  building: "Being built",
 } as const;
 
 /**

@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
 import { GET as conditions } from "../app/api/conditions/route";
+import { POST as createCertificate } from "../app/api/gift/certificate/create/route";
 import { ACCOUNT_AUTH_COOKIE_NAME, createAccountAuthChallenge, issueAccountAuthSession } from "../src/account-auth-server";
-import { CHESS_MILESTONE, DET_MILESTONE } from "../src/milestone-conditions";
+import { conditionById, OFFERED_WHILE_BUILDING } from "../src/conditions";
+import { certificateById, CHESS_MILESTONE, DET_MILESTONE } from "../src/milestone-conditions";
 
 /**
  * Which conditions a person may offer. A condition that is wired and not live yet is offered to an account that runs
@@ -42,34 +44,51 @@ async function answerFor(cookie?: string): Promise<{ ids: string[]; preview: str
   return (await (await conditions(ask(cookie))).json()) as { ids: string[]; preview: string[] };
 }
 
-test("there is no door: an operator is offered the live conditions like everybody, and the preview is empty (D184)", async () => {
+test("there is no door: an operator is offered the live conditions like everybody, and the same lines being built (D184, D311)", async () => {
   const answer = await answerFor(await cookieFor(OPERATOR));
   // The founder's rule of 23 Sep 2026: a condition built is open to all, a condition with a piece missing to nobody.
-  assert.deepEqual(answer.preview, [], "nothing is previewed to anybody any more");
+  assert.deepEqual(answer.preview, ["ecoledirecte-grade-shown"], "the EcoleDirecte average, listed while it is being built, and nothing else (D311)");
+  assert.ok(!answer.ids.includes("ecoledirecte-grade-shown"), "and it is not live");
   assert.ok(answer.ids.includes("duolingo-daily"), "and the live ones are there for everybody");
   assert.ok(answer.ids.includes(CHESS_MILESTONE.condition.id));
   assert.ok(answer.ids.includes(DET_MILESTONE.condition.id), "the supervised result is live since its goal was registered");
   assert.ok(answer.ids.includes("toefl-mybest-shown"), "the TOEFL score, open since its path was complete");
 });
 
-test("everybody else is offered the live conditions and nothing else", async () => {
+test("everybody else is offered the same answer", async () => {
   for (const cookie of [await cookieFor(SOMEBODY), undefined]) {
     const answer = await answerFor(cookie);
-    assert.deepEqual(answer.preview, [], "a signed-in stranger and a stranger get the same answer here");
+    assert.deepEqual(answer.preview, ["ecoledirecte-grade-shown"], "a signed-in stranger and a stranger get the same answer here");
     assert.ok(answer.ids.includes(CHESS_MILESTONE.condition.id), "a live milestone is offered like any live condition");
     assert.ok(answer.ids.includes(DET_MILESTONE.condition.id), "and so is the one that opened on 19 Sep 2026");
     // The course certificate opened on 20 Sep with goal 10 registered, so the register holds nothing closed today.
-    // What stands is the shape of the answer: `preview` is empty for everybody who does not run Viky, whatever it holds.
     assert.ok(answer.ids.includes("coursera-certificate"), "and the one that opened on 20 Sep 2026");
   }
 });
 
-test("an empty operator list offers the preview to nobody, however valid the session", async () => {
+test("the operator list changes nothing in the preview, however valid the session", async () => {
   const kept = process.env.VIKY_OPERATOR_ACCOUNTS;
   process.env.VIKY_OPERATOR_ACCOUNTS = "";
   try {
-    assert.deepEqual((await answerFor(await cookieFor(OPERATOR))).preview, []);
+    assert.deepEqual((await answerFor(await cookieFor(OPERATOR))).preview, ["ecoledirecte-grade-shown"]);
   } finally {
     process.env.VIKY_OPERATOR_ACCOUNTS = kept;
+  }
+});
+
+test("a line listed while it is being built is refused at creation while its provider is missing, before anything is taken (D311)", async () => {
+  for (const id of OFFERED_WHILE_BUILDING) {
+    const line = conditionById(id);
+    assert.ok(line && !line.live, `${id} is being built`);
+    assert.ok(certificateById(id)?.notOpen, `${id} has no provider yet, so its creation says so and takes nothing`);
+    const answer = await createCertificate(new Request(`${ORIGIN}/api/gift/certificate/create`, {
+      method: "POST",
+      headers: { origin: ORIGIN, host: "viky.test", cookie: await cookieFor(SOMEBODY), "content-type": "application/json" },
+      body: JSON.stringify({ conditionId: id }),
+    }));
+    const body = (await answer.json()) as { code: string; error: string };
+    assert.equal(answer.status, 503);
+    assert.equal(body.code, "NOT_CONFIGURED", "the refusal that says what is missing, not an unknown condition");
+    assert.match(body.error, /Nothing was taken\.$/);
   }
 });
