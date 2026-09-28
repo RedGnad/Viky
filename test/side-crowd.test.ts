@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { BAND, CLEAR_OF_COLUMN, CROWD_FROM, LANDING_COLUMN, placedAt, SPOTS, topOf } from "../app/kit/SideCrowd";
+import { awayAt, BAND, CLEAR_OF_COLUMN, CROWD_FROM, FULL_ROOM, LANDING_COLUMN, placedAt, SPOTS, topOf } from "../app/kit/SideCrowd";
 
 /** The day characters beside the landing's top (the founder, 28 Sep 2026: direction A, then C, a scene wider than the window). */
 
@@ -25,15 +25,22 @@ test("as the window narrows its edge passes over them: never resized, never push
   for (let width = CROWD_FROM; width <= 2560; width += 16) {
     for (const { spot, at } of place(width)) {
       assert.equal(at.size, spot.size, "its own size at every width");
-      // Its distance from the column never changes: the scene is held, only the window's edge moves.
+      // Its distance from the column is its place, plus its parallax as the window loses room: never closer.
       const column = spot.side === "left" ? (width - LANDING_COLUMN) / 2 - (at.left + at.size) : at.left - (width + LANDING_COLUMN) / 2;
-      assert.ok(Math.abs(column - spot.away) < 0.01, "held at its distance from the column");
+      assert.ok(column >= spot.away - 0.01, "never pushed towards the column");
+      assert.ok(Math.abs(column - awayAt(spot, (width - LANDING_COLUMN) / 2)) < 0.01);
     }
   }
   const whole = (width: number) => place(width).filter(({ at }) => at.inside === 1).length;
   assert.ok(whole(1100) < whole(1440) && whole(1440) < whole(1920) && whole(1920) < whole(2560), "more of the scene as the window widens");
   // One by one: at some width a character is only partly in, cut by the edge, on its way out.
   assert.ok(place(1440).some(({ at }) => at.inside > 0 && at.inside < 1), "cut by the edge, not popped");
+  // Parallax: narrowing by the same amount, a near one moves out further than a far one.
+  const near = SPOTS.slice().sort((a, b) => b.depth - a.depth)[0];
+  const far = SPOTS.slice().sort((a, b) => a.depth - b.depth)[0];
+  const moved = (spot: (typeof SPOTS)[number]) => awayAt(spot, (1440 - LANDING_COLUMN) / 2) - awayAt(spot, (2560 - LANDING_COLUMN) / 2);
+  assert.ok(moved(near) > 3 * moved(far), "the near ones slide out faster than the far ones");
+  assert.equal(awayAt(near, FULL_ROOM), near.away, "at the full scene, every one at its place");
   const byAway = SPOTS.slice().sort((a, b) => b.away + b.size - (a.away + a.size));
   assert.ok(placedAt(byAway[0], 1600, 900).inside <= placedAt(byAway[byAway.length - 1], 1600, 900).inside, "the farthest leave first");
 });

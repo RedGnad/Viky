@@ -14,7 +14,8 @@ import { Character, type CharacterState } from "./Character";
  * Then "a little bigger", and "not squeezed as the window changes: they slide out and leave one by one, rather than
  * pop". So the crowd is a scene wider than any window, held at fixed distances from the column: a wide window shows it
  * all, and as the window narrows its edge moves in over the scene, the farthest characters cut by the edge and then
- * gone, the nearest last. Nothing is resized, pushed together, or faded. They drift a little with the scroll, each at
+ * gone, the nearest last. Nothing is resized, pushed together, or faded. And "a little parallax as it narrows": each
+ * also moves out by its depth, the near ones faster than the far ones, so the layers slide apart. They drift a little with the scroll, each at
  * its own depth, where the browser follows a scroll itself; nothing moves on a clock, and nothing under reduced motion.
  */
 
@@ -56,34 +57,49 @@ export const SPOTS: readonly Spot[] = [
   { side: "left", away: 700, height: 0.42, size: 96, tilt: -6, depth: 0.8, state: "earned", variant: 2 },
   { side: "left", away: 260, height: 0.61, size: 64, tilt: 22, depth: 0.4, state: "catchable", variant: 3 },
   { side: "left", away: 560, height: 0.97, size: 60, tilt: -18, depth: 0.6, state: "earned", variant: 1 },
-  { side: "left", away: 150, height: 0.2, size: 52, tilt: 18, depth: 0.25, state: "today", variant: 1 },
-  { side: "left", away: 90, height: 0.86, size: 46, tilt: 8, depth: 0.2, state: "today", variant: 2 },
-  { side: "left", away: 40, height: 0.47, size: 54, tilt: -12, depth: 0.3, state: "earned", variant: 3 },
+  { side: "left", away: 150, height: 0.2, size: 52, tilt: 18, depth: 0.15, state: "today", variant: 1 },
+  { side: "left", away: 90, height: 0.86, size: 46, tilt: 8, depth: 0.12, state: "today", variant: 2 },
+  { side: "left", away: 40, height: 0.47, size: 54, tilt: -12, depth: 0.05, state: "earned", variant: 3 },
   { side: "left", away: 380, height: 0.3, size: 42, tilt: 10, depth: 0.2, state: "today", variant: 0 },
-  { side: "left", away: 60, height: 0.07, size: 70, tilt: 4, depth: 0.5, state: "catchable", variant: 2 },
+  { side: "left", away: 60, height: 0.07, size: 70, tilt: 4, depth: 0.08, state: "catchable", variant: 2 },
   { side: "right", away: 200, height: 0, size: 56, tilt: 16, depth: 0.3, state: "catchable", variant: 3 },
   { side: "right", away: 600, height: 0.14, size: 94, tilt: -10, depth: 0.7, state: "earned", variant: 2 },
   { side: "right", away: 420, height: 0.52, size: 108, tilt: 6, depth: 0.85, state: "earned", variant: 1 },
   { side: "right", away: 750, height: 0.81, size: 72, tilt: 14, depth: 0.5, state: "today", variant: 3 },
-  { side: "right", away: 70, height: 0.36, size: 46, tilt: -20, depth: 0.2, state: "today", variant: 0 },
-  { side: "right", away: 150, height: 0.94, size: 62, tilt: -8, depth: 0.35, state: "catchable", variant: 0 },
-  { side: "right", away: 40, height: 0.67, size: 52, tilt: 12, depth: 0.25, state: "earned", variant: 1 },
+  { side: "right", away: 70, height: 0.36, size: 46, tilt: -20, depth: 0.1, state: "today", variant: 0 },
+  { side: "right", away: 150, height: 0.94, size: 62, tilt: -8, depth: 0.15, state: "catchable", variant: 0 },
+  { side: "right", away: 40, height: 0.67, size: 52, tilt: 12, depth: 0.05, state: "earned", variant: 1 },
   { side: "right", away: 320, height: 0.24, size: 44, tilt: -6, depth: 0.2, state: "today", variant: 2 },
   { side: "right", away: 580, height: 0.72, size: 60, tilt: 20, depth: 0.45, state: "catchable", variant: 1 },
 ];
 
 /** The room beside the column on each side, as the layer (the window's width) reads it. */
 const ROOM = `max(0px, (100% - ${LANDING_COLUMN}px) / 2)`;
+/** The room of the widest window the scene is drawn for, 2560: at or past it, every character is where it was placed. */
+export const FULL_ROOM = 830;
+/**
+ * The parallax of a narrowing window (the founder, 28 Sep 2026): for every pixel of room the window has lost from the
+ * full scene, a character moves out by this much times its depth, so the near ones slide off towards the edge faster
+ * and the far ones stay almost still, and the crowd reads as layers rather than one block.
+ */
+export const PARALLAX = 0.35;
 
-/** A spot's distance from the window's edge: the room less its distance from the column and its size, negative once the edge has passed it. */
-export function offsetOf(spot: Pick<Spot, "away" | "size">): string {
-  return `calc(${ROOM} - ${spot.away + spot.size}px)`;
+/** A spot's distance from the window's edge: the room less its distance from the column, its size and its parallax, negative once the edge has passed it. */
+export function offsetOf(spot: Pick<Spot, "away" | "size" | "depth">): string {
+  return `calc(${ROOM} - ${spot.away + spot.size}px - max(0px, ${FULL_ROOM}px - ${ROOM}) * ${round(spot.depth * PARALLAX)})`;
+}
+
+const round = (value: number) => Math.round(value * 1000) / 1000;
+
+/** How far a spot sits from the column in a window of this room: its place, and its parallax once the room is less than the full scene's. */
+export function awayAt(spot: Pick<Spot, "away" | "depth">, room: number): number {
+  return spot.away + Math.max(0, FULL_ROOM - room) * round(spot.depth * PARALLAX);
 }
 
 /** The same in numbers, for a window of a given size: where the stylesheet draws it, and how much of it is inside. */
 export function placedAt(spot: Spot, windowWidth: number, windowHeight: number): Readonly<{ left: number; top: number; size: number; inside: number }> {
   const room = Math.max(0, (windowWidth - LANDING_COLUMN) / 2);
-  const offset = room - spot.away - spot.size;
+  const offset = room - awayAt(spot, room) - spot.size;
   const left = spot.side === "left" ? offset : windowWidth - offset - spot.size;
   const top = BAND.top + (windowHeight - BAND.aboveFoldEnd - BAND.top - spot.size) * spot.height;
   const inside = Math.max(0, Math.min(spot.size, spot.size + offset)) / spot.size;
