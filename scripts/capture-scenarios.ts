@@ -1,4 +1,30 @@
+import { mnemonicToAccount } from "viem/accounts";
 import type { Session } from "./capture-connected";
+
+/**
+ * Bitrefill's list for a country as viky.cash serves it now, read signed in as the public Foundry/Hardhat test account
+ * (its key is published everywhere and it holds nothing). A local server has no Bitrefill key, so this is how a
+ * capture shows the real list without anyone handling one.
+ */
+async function giftCardsServed(country: string): Promise<unknown> {
+  const base = "https://viky.cash";
+  const account = mnemonicToAccount("test test test test test test test test test test test junk");
+  let cookie = "";
+  const call = async (method: string, path: string, body?: unknown) => {
+    const response = await fetch(`${base}${path}`, { method, headers: { "content-type": "application/json", origin: base, cookie }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const set = response.headers.getSetCookie();
+    if (set.length) cookie = set.map((line) => line.split(";")[0]).join("; ");
+    if (!response.ok) throw new Error(`${method} ${path} answered ${response.status}`);
+    return (await response.json()) as Record<string, string>;
+  };
+  const challenge = await call("POST", "/api/account/challenge", { account: account.address });
+  await call("POST", "/api/account/session", { challenge: challenge.challenge, signature: await account.signMessage({ message: challenge.message }) });
+  try {
+    return await call("GET", `/api/giftcards?country=${country}`);
+  } finally {
+    await call("DELETE", "/api/account/session").catch(() => undefined);
+  }
+}
 
 /**
  * The states themselves, in the order they run inside one browser.
@@ -1242,6 +1268,28 @@ function withdrawal(): Scenario[] {
         await s.page.getByRole("dialog").getByText("Amazon.fr").click();
         await s.text("More than you have");
         await s.shot("use your money", "gift card amounts beyond the balance", `${WAY}, Choose a card, Amazon.fr, with $20.99 held`);
+      },
+    },
+    {
+      name: "use your money: Bitrefill's real list for France, only the balance invented",
+      run: async (s) => {
+        // Nothing but the balance ($20.99) and the country (France) is invented: the cards and their amounts are Bitrefill's
+        // as viky.cash serves them at the time of the run, the rates and the countries what the local server reads.
+        const served = await giftCardsServed("fr");
+        await s.reset(before);
+        await gifts(s);
+        await rails(s, RAILS_FRANCE);
+        await currency(s, null);
+        await s.api("GET", /\/api\/giftcards\?country=/, () => ({ status: 200, body: served }), "GET /api/giftcards, as viky.cash served it at the run");
+        await s.signIn();
+        await s.click("Use your money");
+        await s.click(exact("Choose a card"));
+        const first = s.page.getByRole("dialog").locator("label").first();
+        await first.waitFor({ state: "visible", timeout: 40_000 });
+        await s.shot("use your money", "real list for France", `${WAY}, Choose a card, Bitrefill's list as read at the run`);
+        await first.click();
+        await s.page.getByRole("dialog").waitFor({ state: "hidden" });
+        await s.shot("use your money", "real list, the first card", `${WAY}, Choose a card, the first card of Bitrefill's list, with $20.99 held`);
       },
     },
   ];
