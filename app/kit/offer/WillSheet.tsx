@@ -294,8 +294,8 @@ export function WillSheet({
                       <span className="flex min-w-0 flex-1 flex-col items-start text-left">
                         <span className={`${CHOICE} break-words`}>{option.name}</span>
                         <Nature nature={option.nature} />
-                        {/* What it proves, under the one on the card alone, as the list said it before (D304). */}
-                        {chosen ? <span className={HELP}>{option.help}</span> : null}
+                        {/* Every line the same height, chosen or not (the founder, 28 Sep 2026): what it proves is said on
+                            its questions, where the detail is decided, not in the button, which grew when pressed. */}
                         {/* A line listed while it is being built says so in the meta voice, beside its nature (D311). */}
                         {option.live ? null : <span className={`block ${META}`}>{M.building}</span>}
                       </span>
@@ -352,6 +352,10 @@ export function WillSheet({
               <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
+          {/* What it proves, under the questions' title, where the detail is decided (the founder, 28 Sep 2026). */}
+          <p data-condition-help="" className={HELP}>
+            {condition.help}
+          </p>
 
           {/* A climb: the account, the cadence, today's reading, then what they reach. */}
           {milestone ? (

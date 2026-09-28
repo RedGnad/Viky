@@ -117,11 +117,15 @@ export function lit(light = LIGHT, lean = 0) {
  * `overlay`: the part of an arm that has to show in front (D304), drawn after the body and what it holds, starting just
  * outside the body's edge on the arm's own curve; the whole arm is drawn under the body as well, so it leaves from
  * behind and passes in front. `handOver`: the hand drawn in front too.
+ *
+ * A hand that ends a free arm sits on the arm's own line, 1.8 past its end along the direction the arm is going there
+ * (the founder, 28 Sep 2026: straight under the end, it sat a little outside the arm and read as imperfect). A hand
+ * that closes on something (the book, a shoulder, the other arm) is placed where it closes, by hand.
  */
 const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [number, number]; turn?: number; over?: boolean; handOver?: boolean; overlay?: string }>[]> = {
   rest: [
-    { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13, 37.2] },
-    { d: "M48.5 24.8 Q52 30.7 51 35.4", hand: [51, 37.2] },
+    { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13.37, 37.16] },
+    { d: "M48.5 24.8 Q52 30.7 51 35.4", hand: [50.63, 37.16] },
   ],
   // The two hands at one height (the founder, 25 Sep 2026, D244: 1.4 apart read as a lopsided figure); the forearms
   // still pass at two heights in the middle, so the two lines cross rather than merge into one band.
@@ -131,20 +135,20 @@ const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [numb
     { d: "M48.5 24.8 L51 25.5 C52 29 44 32 27.5 30", hand: [26.8, 30], handOver: true, overlay: "M50.84 27.03 C49.41 29.79 41.53 31.7 27.5 30" },
   ],
   hold: [
-    { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13, 37.2] },
-    { d: "M48.5 24.8 Q52.4 31 52 36", hand: [52, 37.8] },
+    { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13.37, 37.16] },
+    { d: "M48.5 24.8 Q52.4 31 52 36", hand: [51.86, 37.79] },
   ],
   wave: [
-    { d: "M13 26 Q12 30.7 13 35.4", hand: [13, 37.2], turn: 150, over: true },
-    { d: "M48.5 24.8 Q52 30.7 51 35.4", hand: [51, 37.2] },
+    { d: "M13 26 Q12 30.7 13 35.4", hand: [13.37, 37.16], turn: 150, over: true },
+    { d: "M48.5 24.8 Q52 30.7 51 35.4", hand: [50.63, 37.16] },
   ],
   run: [
-    { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13, 37.2], turn: 75 },
-    { d: "M48.5 24.8 Q52 30.7 51 35.4", hand: [51, 37.2], turn: -20 },
+    { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13.37, 37.16], turn: 75 },
+    { d: "M48.5 24.8 Q52 30.7 51 35.4", hand: [50.63, 37.16], turn: -20 },
   ],
   // The arm on the other's shoulder leaves from behind its own body, like any arm raised aslant (D301).
   shoulder: [
-    { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13, 37.2] },
+    { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13.37, 37.16] },
     { d: "M48.5 25.4 C57 24.5 65 19.5 72 16.5", hand: [72.8, 16.1] },
   ],
   // Holding a book open in front (D268): the arms leave from under the body like the others (D302, the founder, 28 Sep
