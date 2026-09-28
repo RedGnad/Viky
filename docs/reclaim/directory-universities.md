@@ -77,3 +77,35 @@ University of Lagos (Nigeria). The domain is the university's own; where its por
 the provider called "Dakar Bourguiba University" (`cf828716`) signs in on `uadb.edu.sn`, Alioune Diop University of
 Bambey's, and is listed under that name; Mohammed V's provider gives an http sign-in, and the row names the https one,
 since a proof of an http page cannot be verified.
+
+## The corridor's student portals, looked up (28 Sep 2026)
+
+Looked up for the second step of D312: one AI provider per university and per condition (enrolled, the year passed, a
+grade), each with its own instruction, needs the portal a student signs in to. `reclaim-portal-agent`
+(`python -m agent.lookup <domain> --name <university> --portals-only --json`, free OpenRouter models) was run on the
+twenty domains, one at a time where the models were rate limited, and again on the university's own site where the
+first domain was wrong. The agent strips `www.`, so the universities that answer only on `www.` were run through a
+wrapper that keeps the host. Every portal was then opened by hand: its title and whether it asks for a password.
+
+| university | domain | portal sign-in | found by | note |
+|---|---|---|---|---|
+| Université Cheikh Anta Diop | ucad.sn | https://studentcenter.ucad.sn/login | agent | "Digital Services", password; also `fad.ucad.sn` (Moodle) |
+| Université Gaston Berger | ugb.sn | https://portail.ugbnumerique.sn/ | web archive of ugb.sn | every `ugb.sn` host and `ugbnumerique.sn` time out from outside Senegal; the provider's address is the home page, not a portal |
+| Université Alioune Diop de Bambey | uadb.edu.sn | https://si.uadb.edu.sn/etudiant/user/login | agent | "Espace Etudiant", password; the directory calls it "Dakar Bourguiba University" |
+| Université Dakar Bourguiba | udb.sn | https://udb.sn/login | by hand | a JavaScript app: the page carries no form in its HTML, not confirmed as a student sign-in |
+| BEM Dakar Management School | bem.sn | https://bem.sn/connecter | agent | password |
+| Université Félix Houphouët-Boigny | univ-fhb.edu.ci | https://w.univ-fhb.edu.ci/mon-espace/ | agent | "Mon Espace", password; the schooling office is on another domain, `scolarite-ufhb.edu.ci` |
+| Université Hassan II de Casablanca | univh2c.ma | https://ent.univh2c.ma/uPortal/f/welcome/normal/render.uP | agent (www) | the ENT answered "an error has occured" from here; `univh2c.ma` without `www` is the staff webmail |
+| Université Mohammed V de Rabat | um5.ac.ma | https://etu.um5.ac.ma/ | by hand | "ETU-SERVICES", password; the agent read 197 links and the models were rate limited; `um5.ac.ma` without `www` does not resolve |
+| Université Internationale de Rabat | uir.ac.ma | https://connect.uir.ac.ma/ | by hand | "UIR Learning Hub", password; the agent found only the complaints desk, `reclamations.uir.ac.ma` |
+| École Nationale Supérieure des Mines de Rabat | mines-rabat.ma, enim.ac.ma | https://my.mines-rabat.ma/ | by hand | "App - Espace Etudiant"; the agent, on `enim.ac.ma`, found `edu.mines-rabat.ma` (Moodle) |
+| Université Privée de Marrakech | upm.ac.ma | https://extranet.upm.ac.ma/ | by hand | "UPM", password; the agent found only the residency, health and grants sites |
+| École Supérieure de Commerce de Marrakech | supdeco.ma | https://start.supdeco.ma/ | by hand | no form in its HTML, not confirmed; the models were rate limited |
+| International Institute of Management of Bamako | iambamako.com | https://elearning-iambamako.com/ | agent | password; another domain than the provider's `elearning.iambamako.com`, which does not resolve |
+| Université Abdou Moumouni de Niamey | uam.campusniger.com | https://uam.campusniger.com/auth/login | agent | password |
+| École Supérieure de Commerce de Ouagadougou | esc-ouaga.com | https://esc-ouaga.com/connexion/ | agent | password; `espace-etudiant` leads there |
+| Université de Kinshasa | unikin.ac.cd | https://unikin.optsolution.net/ | by hand | "Plateforme Universitaire Digitale", password; the provider's `futuriss.unikinrdc.com` is a parked domain |
+| Institut Supérieur de Statistique de Kinshasa | iss-kin.optsolution.net | https://iss-kin.optsolution.net/student/connexion | agent | "Espace Étudiant", password |
+| Institut des Hautes Études de Tunis | ihet.ens.tn | http://196.179.231.241/konosys | by hand | `ihet.ens.tn/konosys/` only redirects to plain http on a bare address, which does not answer from here: nothing a proof on the university's domain can read |
+| MIT Polytech (Mediterranean Institute of Tunisia) | mit-polytech.tn | none | by hand | the student space is on an OVH server name that no longer resolves, and the provider's `polytech.vmit.cloud` does not resolve either |
+| University of Lagos | unilag.edu.ng | https://studentportal.unilag.edu.ng/ | by hand | "Student Portal"; the agent found `unilag.edu.ng/student-portal/` and `dli.unilag.edu.ng` |
