@@ -1,6 +1,6 @@
 "use client";
 import { useLayoutEffect, useState } from "react";
-import { INTRO_ATTRIBUTE, INTRO_SEEN_KEY, INTRO_TIMING } from "@/src/launch-intro";
+import { INTRO_ATTRIBUTE, INTRO_SEEN_KEY, INTRO_SHOWN_ATTRIBUTE, INTRO_TIMING } from "@/src/launch-intro";
 import { FIGURE_ICON_SVG } from "./figure-icon";
 
 /**
@@ -16,6 +16,8 @@ export function LaunchIntro() {
   useLayoutEffect(() => {
     const root = document.documentElement;
     if (!root.hasAttribute(INTRO_ATTRIBUTE)) return;
+    // The screen is on the page now: the ground gives its drawing back, so nothing shows through the fade.
+    root.setAttribute(INTRO_SHOWN_ATTRIBUTE, "");
     try {
       window.localStorage.setItem(INTRO_SEEN_KEY, "1");
     } catch {

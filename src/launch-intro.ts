@@ -12,8 +12,23 @@
  */
 export const INTRO_SEEN_KEY = "viky.intro.seen";
 export const INTRO_ATTRIBUTE = "data-intro";
+/** Set once the screen itself is on the page, which takes the drawing off the ground so it never shows through the fade. */
+export const INTRO_SHOWN_ATTRIBUTE = "data-intro-shown";
 
 export const INTRO_BOOT_SCRIPT = `try{if(location.pathname==="/"&&matchMedia("(display-mode: standalone)").matches&&!matchMedia("(prefers-reduced-motion: reduce)").matches&&!localStorage.getItem("${INTRO_SEEN_KEY}")){document.documentElement.setAttribute("${INTRO_ATTRIBUTE}","")}}catch(e){}`;
 
 /** How long the screen lasts once it starts, the hop and the letters, then the hold before it fades. */
 export const INTRO_TIMING = { holdMs: 1_150, fadeMs: 250 } as const;
+
+/**
+ * The launch screen's image as the page's own ground, set in the head before anything is painted. The browser may
+ * paint the ground before the page's first elements have arrived; without this, that first image would be an empty
+ * lavender (or the night's ink) between the phone's launch screen and this one, and the character would blink. The
+ * drawing is the same as the screen's, at the same place, so the ground and the screen above it are one image.
+ */
+export function introGroundStyle(figureSvg: string): string {
+  const svg = figureSvg.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ');
+  const url = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  const ground = `html[${INTRO_ATTRIBUTE}]:not([${INTRO_SHOWN_ATTRIBUTE}])`;
+  return `${ground},${ground} body{background:#ddd6eb ${url} no-repeat fixed center/66vw auto}`;
+}

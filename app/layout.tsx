@@ -21,7 +21,8 @@ import { moneyForTheReader } from "@/src/reader-money";
 import { THEME_BOOT_SCRIPT } from "@/src/theme";
 import { HOME } from "@/src/sentences";
 import { LAUNCH_TOP_SCRIPT } from "@/src/launch-top";
-import { INTRO_BOOT_SCRIPT } from "@/src/launch-intro";
+import { INTRO_BOOT_SCRIPT, introGroundStyle } from "@/src/launch-intro";
+import { FIGURE_ICON_SVG } from "./kit/figure-icon";
 import { LaunchIntro } from "./kit/LaunchIntro";
 import { Pressed } from "./kit/Pressed";
 import { Register } from "./serwist/Register";
@@ -152,13 +153,17 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     // The look's font variables sit on the document itself, because app/globals.css reads them from :root.
     <html lang="en" dir="ltr" className={`${fredoka.variable} ${dmSans.variable}`} {...(chosen ? { "data-theme": chosen } : {})}>
+      <head>
+        {/* In the head, before the first paint: the installed app's first opening decides here and grounds the page on
+            the launch screen's own image, so not even the first painted image goes empty (src/launch-intro.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: INTRO_BOOT_SCRIPT }} />
+        <style dangerouslySetInnerHTML={{ __html: introGroundStyle(FIGURE_ICON_SVG) }} />
+      </head>
       <body className="antialiased">
         {/* Before anything is painted, so a chosen appearance never flashes the other one first (D97). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         {/* Before the browser restores a scroll position: the landing always opens at its top (D250). */}
         <script dangerouslySetInnerHTML={{ __html: LAUNCH_TOP_SCRIPT }} />
-        {/* Before anything is painted: the installed app's first opening starts on the launch screen's own image. */}
-        <script dangerouslySetInnerHTML={{ __html: INTRO_BOOT_SCRIPT }} />
         <LaunchIntro />
         {/* The worker is registered by `Register`, not by the provider, so a browser that refuses one is refused
             quietly rather than throwing on every screen (D150).
