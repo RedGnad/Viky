@@ -16,6 +16,7 @@ import { FamilyArt } from "../FamilyArt";
 import { Nature } from "../Nature";
 import { Field } from "../Field";
 import { Sheet } from "../Sheet";
+import { GradeTarget } from "./GradeTarget";
 import { UniversityChooser } from "./UniversityChooser";
 import { MarathonChooser } from "./MarathonChooser";
 import { WcaChooser } from "./WcaChooser";
@@ -442,13 +443,28 @@ export function WillSheet({
                 />
               ) : certificate.course?.search?.listed ? (
                 /* The university, asked as a list grouped by country, or by country first when it is long (D247). */
-                <UniversityChooser
-                  open={open}
-                  label={certificate.course.label}
-                  draft={draft}
-                  named={certificate.course.named}
-                  onChoose={(one) => onChange({ ...draft, course: one.pair, courseTitle: chosenUniversityTitle(one), target: String(certificate.target.suggested) })}
-                />
+                <>
+                  <UniversityChooser
+                    open={open}
+                    label={certificate.course.label}
+                    draft={draft}
+                    named={certificate.course.named}
+                    onChoose={(one) =>
+                      onChange({
+                        ...draft,
+                        course: one.pair,
+                        courseTitle: chosenUniversityTitle(one),
+                        target: String(certificate.target.suggested),
+                        // The scale a grade is typed on: the university's own when pinned, the funder's choice otherwise.
+                        scale: one.scale ?? undefined,
+                        scaleFixed: Boolean(one.scale),
+                      })
+                    }
+                  />
+                  {certificate.portal?.scaled && draft.course ? (
+                    <GradeTarget draft={draft} label={certificate.target.label} help={certificate.target.help} refusal={certificate.words.refusals.targetShape} onChange={onChange} />
+                  ) : null}
+                </>
               ) : certificate.course?.search ? (
                 /* A source whose things are found rather than pasted: the funder types a word or two, reads each
                    answer with who awards it, and chooses. What the terms carry is the answer's own pair of ids. */

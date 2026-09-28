@@ -269,9 +269,11 @@ export default async function JudgesPage() {
             university&apos;s results can live on another site than its enrolment. A funder can choose a university that
             has neither: the operator is asked, with the exact instruction for Reclaim&apos;s agent, and builds the
             provider within the day, and the person reads that it is checked within a day, the money held by the
-            contract meanwhile. A grade is signed on the university&apos;s own scale: where the results page is not read
-            yet, the scale is read and pinned with the first proof the operator reviews, so a target off it could not
-            pay. &quot;A student account&quot; is no longer something a gift can be made on.{" "}
+            contract meanwhile, and the operator is emailed about each request. A grade is signed on a scale: the
+            university&apos;s own where its results page is pinned; before, the one the funder chooses (out of 20, 4 or
+            100, or letters, ranked in one order), which the first results page the operator reviews confirms, or
+            refuses the gift, the person told why and the money left where it is. &quot;A student account&quot; is no
+            longer something a gift can be made on.{" "}
             {counts
               ? `${counts.listed} universities listed; ${counts.enrolment} with an enrolment provider, ${counts.results} with a results provider; ${counts.requested} ${counts.requested === 1 ? "provider" : "providers"} asked for and not built yet.`
               : "The counts could not be read right now."}

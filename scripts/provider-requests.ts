@@ -1,6 +1,7 @@
 import "../src/load-env";
 import { getAddress } from "viem";
-import { ensurePortalSchema, loadPortal, markRequestBuilt, openRequests, saveProvider, type PortalSense } from "../src/portal-store";
+import { ensurePortalSchema, loadPortal, markRequestAlerted, markRequestBuilt, openRequests, saveProvider, type PortalSense } from "../src/portal-store";
+import { sendProviderAlert } from "../src/provider-alert";
 import { defaultProviderDomain } from "../src/provider-instruction";
 
 /**
@@ -10,7 +11,10 @@ import { defaultProviderDomain } from "../src/provider-instruction";
  *
  *   pnpm provider:requests
  *     lists the open requests, oldest first: the university, the sense, its sign-in page, the gift that asked first,
- *     and the instruction to build the provider with.
+ *     whether founder@viky.cash was emailed, and the instruction to build the provider with.
+ *   pnpm provider:requests --alert
+ *     emails the open requests nobody was emailed about yet (made before `RESEND_API_KEY` existed, or whose email
+ *     failed), once each.
  *   PROVEN_BY=0x… pnpm provider:add <portal id> <enrolment|results> <provider id> [--domain <domain>]
  *     registers the provider built from it as a witness provider with no pin yet, on the domain given or the sign-in
  *     page's own, and closes the request: the next proof from it is held for review (`pnpm portal:pin`).
@@ -22,11 +26,18 @@ async function main() {
   await ensurePortalSchema();
   const [, , verb, portalId, sense, providerId] = process.argv;
   if (verb !== "add") {
+    const alert = process.argv.includes("--alert");
     const requests = await openRequests();
     const listed = await Promise.all(
       requests.map(async (one) => {
         const portal = await loadPortal(one.portalId);
-        return { portal: one.portalId, sense: one.sense, university: portal?.university ?? null, country: portal?.country ?? null, signIn: portal?.loginUrl ?? null, firstGift: one.firstGiftId, asked: one.createdAt.toISOString(), instruction: one.instruction };
+        let emailed = one.alertedAt?.toISOString() ?? null;
+        if (alert && !emailed && portal) {
+          const outcome = await sendProviderAlert(portal, one);
+          if (outcome === "sent" && (await markRequestAlerted(one.portalId, one.sense))) emailed = "now";
+          else emailed = outcome;
+        }
+        return { portal: one.portalId, sense: one.sense, university: portal?.university ?? null, country: portal?.country ?? null, signIn: portal?.loginUrl ?? null, firstGift: one.firstGiftId, asked: one.createdAt.toISOString(), emailed, instruction: one.instruction };
       }),
     );
     console.log(JSON.stringify({ open: listed.length, requests: listed }, null, 2));

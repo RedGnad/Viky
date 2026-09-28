@@ -10,7 +10,7 @@ import { ENROLMENT_FIELD, RESULTS_FIELDS } from "../src/provider-instruction";
 import { escrowOf } from "../src/relayer";
 import { settleHeldReview, type SettleDeps } from "../src/shown-verification";
 import { VerificationError } from "../src/duolingo-verification";
-import { enrolledBy, gradeScaleOf, gradeShownBy, type PortalExtract } from "../src/university-shown";
+import { enrolledBy, gradeScaleOf, gradeShownBy, LETTER_GRADES, letterRank, type PortalExtract } from "../src/university-shown";
 import type { WitnessPin } from "../src/witness-portal";
 
 /**
@@ -24,6 +24,8 @@ import type { WitnessPin } from "../src/witness-portal";
  *     lists the held proofs: the portal, the sense, the gift, the request and the fields the pattern read.
  *   PROVEN_BY=0x… pnpm portal:pin <session> --matches "<regex>" --keeps "<words>"                     (enrolment)
  *   PROVEN_BY=0x… pnpm portal:pin <session> --admitted "<regex>" --scale 20 [--year "<regex>"]         (results)
+ *     `--scale` is the scale the page shows: 20, 4, 100, 20/0.5, or letters:A,B,C,D,E,F. A grade gift made on another
+ *     scale before this pin is refused with its own sentence; one made on it is read.
  *     checks the fields against what was read, pins the provider (version, request, match, redaction, spec hash),
  *     relays the held proof to the milestone contract, then settles every other proof held for the same provider,
  *     refusing by its code any that the pin does not fit. `--field`, `--admitted-field`, `--grade-field` and
@@ -131,6 +133,8 @@ async function main() {
   } else {
     const scale = gradeScaleOf(need("scale"));
     if (!scale) throw new Error("--scale is 20, 4, 20/0.5 or letters:A,B,C");
+    // Letters are ranked in one order whatever the university (LETTER_GRADES): a letter outside it could not be compared.
+    if (scale.kind === "letters" && scale.grades.some((grade) => letterRank(grade) === undefined)) throw new Error(`--scale letters must be among ${LETTER_GRADES.join(", ")}`);
     const yearMatches = flag("year")?.trim();
     const results: ResultsFields = {
       admitted: { field: flag("admitted-field")?.trim() || RESULTS_FIELDS.decision, matches: need("admitted") },
@@ -139,7 +143,7 @@ async function main() {
     };
     const asRead = { providerId: provider.providerId, providerVersion: review.providerVersion, requestHash: read.specHash, ...results };
     const grade = gradeShownBy(asRead, fields);
-    if (grade.kind === "refused" && grade.code !== "LETTER_SCALE") throw new Error(`${grade.message} (${grade.code}): nothing pinned`);
+    if (grade.kind === "refused") throw new Error(`${grade.message} (${grade.code}): nothing pinned`);
     if (!(results.admitted.field in fields)) throw new Error(`this proof carries no field ${results.admitted.field}: nothing pinned`);
     extract = results;
   }

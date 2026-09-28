@@ -169,7 +169,7 @@ test("the funder's review says what the certificate must show, and what happens 
   assert.match(DET_MILESTONE.words.ifNot, /comes back to you/);
   // Said where the money is about to move, which since the mockups of 19 Sep 2026 is the sheet that pays.
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.match(sheet, /certificate\.words\.mustShow\(draft\.subject\.trim\(\), target\)/);
+  assert.match(sheet, /certificate\.words\.mustShow\(draft\.subject\.trim\(\), target, draft\.scale\)/);
   assert.match(sheet, /certificate\.words\.ifNot/);
 });
 

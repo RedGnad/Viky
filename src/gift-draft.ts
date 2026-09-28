@@ -3,6 +3,7 @@ import type { PendingGiftTerms } from "./pending-gift";
 import { AmountError, dollarsToUnits } from "./money";
 import { certificateById, milestoneById } from "./milestone-conditions";
 import { checkTarget, MilestoneTermsError } from "./milestone-terms";
+import { gradeTargetProblem, scaleOfKey } from "./university-shown";
 
 /**
  * The gift being filled in, as an object rather than as a journey (the product vision of 19 Sep 2026, section 6).
@@ -37,6 +38,13 @@ export type GiftDraft = Readonly<{
   /** The one course a day is counted on, when the source holds several and the funder chose one (U1). */
   course?: string;
   courseTitle?: string;
+  /**
+   * The scale a grade is typed on (the founder, 28 Sep 2026): the university's own when it is pinned, or the one the
+   * funder chose, "20", "4", "100" or "letters", which the first reviewed results page confirms or refuses.
+   */
+  scale?: string;
+  /** Whether that scale is the university's own, pinned, rather than the funder's choice. */
+  scaleFixed?: boolean;
   /** A climb's cadence, and where that account stood when the funder chose the target (C2, D44). */
   cadence?: string;
   standing?: number;
@@ -153,7 +161,15 @@ export function conditionAnswered(draft: GiftDraft): boolean {
     // for two words, a course certificate can carry one. The score is the source's own scale, never a number of ours,
     // and where there is nothing to score the funder names the course instead (C3).
     if (certificate.asksName !== false && !certificate.validName(draft.subject)) return false;
-    if (certificate.course) return Boolean(draft.course) && certificate.validTarget(target ?? Number.NaN);
+    if (certificate.course) {
+      if (!draft.course || !certificate.validTarget(target ?? Number.NaN)) return false;
+      // A grade is typed on a scale, the university's pinned one or the funder's choice (the founder, 28 Sep 2026).
+      if (certificate.portal?.scaled) {
+        const scale = scaleOfKey(draft.scale);
+        return scale !== undefined && gradeTargetProblem(scale, target ?? Number.NaN) === undefined;
+      }
+      return true;
+    }
     return target !== undefined && certificate.validTarget(target);
   }
   const milestone = milestoneById(draft.conditionId);
@@ -238,6 +254,7 @@ export function draftToTerms(draft: GiftDraft, account: string | undefined): Pen
     days: draft.days,
     target: draft.target,
     ...(draft.course ? { course: draft.course, courseTitle: draft.courseTitle ?? "" } : {}),
+    ...(draft.scale ? { scale: draft.scale, scaleFixed: draft.scaleFixed === true } : {}),
     ...(draft.cadence ? { cadence: draft.cadence } : {}),
     ...(draft.standing !== undefined ? { standing: draft.standing } : {}),
     ...(draft.standingReadAt ? { standingReadAt: draft.standingReadAt } : {}),
@@ -251,6 +268,7 @@ export function draftFromTerms(terms: PendingGiftTerms): GiftDraft {
     conditionId: terms.conditionId,
     subject: terms.username,
     ...(terms.course ? { course: terms.course, courseTitle: terms.courseTitle ?? "" } : {}),
+    ...(terms.scale ? { scale: terms.scale, scaleFixed: terms.scaleFixed === true } : {}),
     ...(terms.cadence ? { cadence: terms.cadence } : {}),
     ...(terms.standing !== undefined ? { standing: terms.standing } : {}),
     ...(terms.standingReadAt ? { standingReadAt: terms.standingReadAt } : {}),

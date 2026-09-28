@@ -15,6 +15,8 @@ import {
   enrolledBy,
   gradeShownBy,
   PROVIDER_BUILDING,
+  scaleMismatch,
+  scaleOfChoice,
   type ResultsExtract,
   type ResultsVerdict,
   UNIVERSITY_ENROLLED,
@@ -160,27 +162,33 @@ function readingOf(verdict: ResultsVerdict): ShownReading {
   return { metricValue: BigInt(verdict.metricValue), eventAt: null, accountKey: null, inWords: verdict.inWords };
 }
 
-/** The year passed or a grade reached, read by the results provider's fields (D174). */
-function resultsProvider(portal: Portal, read: (results: ResultsExtract, fields: Readonly<Record<string, string>>) => ResultsVerdict): ShownProvider {
+/**
+ * The year passed or a grade reached, read by the results provider's fields (D174). A grade gift made on a scale the
+ * funder chose before the university's was pinned is read only if the two agree (the founder, 28 Sep 2026).
+ */
+function resultsProvider(portal: Portal, read: (results: ResultsExtract, fields: Readonly<Record<string, string>>) => ResultsVerdict, chosenScale?: string | null): ShownProvider {
   return portalProvider(portal, "results", (fields) => {
     const results = resultsExtractOf(portal.results);
     if (!results) refuseShown(PROVIDER_BUILDING.code, PROVIDER_BUILDING.message);
+    const chosen = scaleOfChoice(chosenScale ?? undefined);
+    const mismatch = chosen ? scaleMismatch(chosen, results.grade.scale) : undefined;
+    if (mismatch) refuseShown(mismatch.code, mismatch.message);
     return readingOf(read(results, fields));
   });
 }
 
 /** The provider a university gift's proof comes from, by the gift's condition, read off the university's row. */
-export function portalProviderFor(conditionId: string, portal: Portal): ShownProvider | null {
+export function portalProviderFor(conditionId: string, portal: Portal, gradeScale?: string | null): ShownProvider | null {
   if (conditionId === "university-enrollment-shown") return enrolmentProvider(portal);
   if (conditionId === "university-year-passed-shown") return resultsProvider(portal, yearPassedBy);
-  if (conditionId === "university-grade-shown") return resultsProvider(portal, gradeShownBy);
+  if (conditionId === "university-grade-shown") return resultsProvider(portal, gradeShownBy, gradeScale);
   return null;
 }
 
 async function providerOfRecord(conditionId: string, record: MilestoneRecord): Promise<ShownProvider | null> {
   if (!record.portal) return null;
   const portal = await loadPortal(record.portal);
-  return portal ? portalProviderFor(conditionId, portal) : null;
+  return portal ? portalProviderFor(conditionId, portal, record.gradeScale) : null;
 }
 
 /**

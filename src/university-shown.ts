@@ -121,9 +121,9 @@ export function enrolledBy(extract: PortalExtract, fields: Readonly<Record<strin
 }
 
 /**
- * How a portal grades (D174). Numeric scales only tonight: out of 20, a GPA out of 4, or out of N in a step. A
- * scale of letters is declared on the row so the portal is described as it is, and a gift on a grade is refused
- * at creation with `LETTER_SCALE` until a later PR says what a letter is worth.
+ * How a portal grades (D174): out of 20, a GPA out of 4, out of N in a step, or in letters. Letters are compared in one
+ * order whatever the university (`LETTER_GRADES`), so a letter a funder chose and a letter a page prints are ranked the
+ * same way (the founder, 28 Sep 2026).
  */
 export type GradeScale =
   | Readonly<{ kind: "numeric"; max: number; step: number }>
@@ -131,6 +131,21 @@ export type GradeScale =
 
 /** A grade is carried to the contract in hundredths: 14.00 out of 20 is 1400, a GPA of 3.50 is 350. */
 export const GRADE_UNITS = 100;
+
+/** Letter grades, best first: the one order a letter is ranked in, from A+ (14) down to F (1). */
+export const LETTER_GRADES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "E", "F"] as const;
+
+/** A letter's rank, 14 for A+ down to 1 for F, whatever its case and spaces, or nothing. */
+export function letterRank(letter: string | undefined): number | undefined {
+  if (typeof letter !== "string") return undefined;
+  const at = (LETTER_GRADES as readonly string[]).indexOf(letter.replace(/\s+/g, "").toUpperCase());
+  return at === -1 ? undefined : LETTER_GRADES.length - at;
+}
+
+/** The letter of a rank, or nothing. */
+export function letterOfRank(rank: number): string | undefined {
+  return Number.isInteger(rank) && rank >= 1 && rank <= LETTER_GRADES.length ? LETTER_GRADES[LETTER_GRADES.length - rank] : undefined;
+}
 
 /** The most decimals a grade or a step can carry: two, which is what a page prints and what the units hold. */
 function inHundredths(value: number): boolean {
@@ -171,9 +186,45 @@ export function gradeScaleOf(text: string): GradeScale | undefined {
   return gradeScaleProblem(scale) ? undefined : scale;
 }
 
+/**
+ * The four scales a funder chooses between when a university's own is not pinned yet (the founder, 28 Sep 2026): the
+ * first results page shown is reviewed, and confirms it or refuses the gift.
+ */
+export const SCALE_CHOICES = ["20", "4", "100", "letters"] as const;
+export type ScaleChoice = (typeof SCALE_CHOICES)[number];
+
+export function scaleOfChoice(choice: string | undefined): GradeScale | undefined {
+  if (choice === "letters") return { kind: "letters", grades: [...LETTER_GRADES] };
+  return choice === "20" || choice === "4" || choice === "100" ? { kind: "numeric", max: Number(choice), step: 1 / GRADE_UNITS } : undefined;
+}
+
+/** A grade target in words, on its scale where it has one: "14.50 out of 20", "B", or "12.00" on a scale not known. */
+export function gradeTargetInWords(target: number, key?: string): string {
+  const scale = scaleOfKey(key);
+  if (scale?.kind === "letters") return letterOfRank(target) ?? String(target);
+  return scale ? `${target.toFixed(2)} ${gradeScaleInWords(scale)}` : `${target.toFixed(2)} on the university's own scale`;
+}
+
+/** A scale as the list and the draft carry it: "20", "4", "100", "20/0.5", or "letters". */
+export function scaleKey(scale: GradeScale): string {
+  if (scale.kind === "letters") return "letters";
+  return scale.step === 1 / GRADE_UNITS ? String(scale.max) : `${scale.max}/${scale.step}`;
+}
+
+/** A scale from its key, whether a funder's choice or a university's pinned one. */
+export function scaleOfKey(key: string | undefined): GradeScale | undefined {
+  return scaleOfChoice(key) ?? (key ? gradeScaleOf(key) : undefined);
+}
+
+/** Whether a gift made on one scale can be read on another: the same top for numbers, letters for letters. */
+export function sameScale(chosen: GradeScale, pinned: GradeScale): boolean {
+  if (chosen.kind === "letters" || pinned.kind === "letters") return chosen.kind === pinned.kind;
+  return chosen.max === pinned.max;
+}
+
 /** The scale in words, for a refusal: "out of 20, in steps of 0.5". */
 export function gradeScaleInWords(scale: GradeScale): string {
-  if (scale.kind === "letters") return `letters, ${scale.grades.join(", ")}`;
+  if (scale.kind === "letters") return "letters";
   return scale.step === 1 / GRADE_UNITS ? `out of ${scale.max}` : `out of ${scale.max}, in steps of ${scale.step}`;
 }
 
@@ -185,7 +236,7 @@ export function gradeUnits(value: number): number {
 /** A grade as the person and the funder read it: two decimals and the scale's top, "14.00 / 20". */
 export function gradeInWords(units: number | bigint, scale: GradeScale): string {
   const value = Number(units) / GRADE_UNITS;
-  if (scale.kind === "letters") return value.toFixed(2);
+  if (scale.kind === "letters") return letterOfRank(value) ?? value.toFixed(2);
   return `${value.toFixed(2)} / ${scale.max}`;
 }
 
@@ -219,7 +270,8 @@ export function isGradeOnScale(scale: GradeScale, value: number): boolean {
 
 /** Why a target the funder typed cannot be signed on this scale, by code, or nothing. */
 export function gradeTargetProblem(scale: GradeScale, target: number): Readonly<{ code: string; message: string }> | undefined {
-  if (scale.kind === "letters") return { code: "LETTER_SCALE", message: `This university grades in ${gradeScaleInWords(scale)}, and a gift on a letter grade is not offered yet.` };
+  // A letter target is its rank, a whole number from 1 (F) to 14 (A+).
+  if (scale.kind === "letters") return letterOfRank(target) ? undefined : { code: "INVALID_TARGET", message: "A letter from A+ down to E." };
   const stepUnits = gradeUnits(scale.step);
   if (!isGradeOnScale(scale, target) || target <= 0 || gradeUnits(target) % stepUnits !== 0) {
     return { code: "INVALID_TARGET", message: `A grade above 0 and up to ${scale.max}, ${gradeScaleInWords(scale)}.` };
@@ -285,12 +337,28 @@ export function yearPassedBy(results: ResultsExtract, fields: Readonly<Record<st
   return { kind: "read", metricValue: UNIVERSITY_PASSED, inWords: "Passed" };
 }
 
-/** The grade the results page carries, on the row's scale, in hundredths for the contract and in words for the person. */
+/**
+ * Why a gift made on one scale is not read on the university's own (the founder, 28 Sep 2026): the funder chose the
+ * scale before the first results page was reviewed, and the page grades otherwise.
+ */
+export function scaleMismatch(chosen: GradeScale, pinned: GradeScale): Readonly<{ code: string; message: string }> | undefined {
+  if (sameScale(chosen, pinned)) return undefined;
+  return { code: "SCALE_MISMATCH", message: `This university grades ${gradeScaleInWords(pinned)}, not ${gradeScaleInWords(chosen)} as this gift was made on, so nothing was counted. The money stays where it is.` };
+}
+
+/**
+ * The grade the results page carries, on the row's scale, in hundredths for the contract and in words for the person.
+ * A letter is carried by its rank in `LETTER_GRADES`, in hundredths like a number, so the contract compares it the same.
+ */
 export function gradeShownBy(results: ResultsExtract, fields: Readonly<Record<string, string>>): ResultsVerdict {
   const term = wrongTerm(results, fields);
   if (term) return term;
   const scale = results.grade.scale;
-  if (scale.kind === "letters") return { kind: "refused", code: "LETTER_SCALE", message: "This university grades in letters, and a letter grade cannot settle a gift yet." };
+  if (scale.kind === "letters") {
+    const rank = letterRank(fields[results.grade.field]);
+    if (rank === undefined) return { kind: "refused", code: "NO_GRADE", message: "The results page shown carries no letter grade." };
+    return { kind: "read", metricValue: gradeUnits(rank), inWords: letterOfRank(rank)! };
+  }
   const grade = gradeOf(fields[results.grade.field]);
   if (grade === undefined || !isGradeOnScale(scale, grade)) return { kind: "refused", code: "NO_GRADE", message: "The results page shown carries no grade on the university's scale." };
   const units = gradeUnits(grade);

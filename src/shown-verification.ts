@@ -319,7 +319,7 @@ export async function settleHeldReview(deps: SettleDeps, input: { review: Portal
   const record = await deps.milestoneRecordOf(review.giftId);
   if (!record || record.portal !== portal.portalId || portal.portalId !== review.portalId) throw new VerificationError("UNKNOWN_GIFT", "This gift was not made on this portal");
   const entry = shownConditionById(record.conditionId);
-  const provider = entry ? portalProviderFor(record.conditionId, portal) : null;
+  const provider = entry ? portalProviderFor(record.conditionId, portal, record.gradeScale) : null;
   const witness = provider?.witness;
   if (!entry || !provider || !witness || witness.sense !== review.sense || !witness.pin) throw new VerificationError("NOT_CONFIGURED", "The provider is not pinned yet", 503);
   const subject = entry.subjectOf?.(record) ?? entry.subject;

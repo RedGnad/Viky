@@ -45,7 +45,8 @@ test("the list route gives the countries with their counts, then one country's u
     assert.deepEqual(countries.countries, [{ code: "NG", count: 1 }, { code: "SN", count: 2 }]);
     const senegal = (await (await listGet(new Request("https://viky.test/api/portals?country=sn"))).json()) as { results: ListedUniversity[] };
     assert.deepEqual(senegal.results.map((u) => u.pair), ["ucad-sn", "ugb-sn"]);
-    assert.deepEqual(Object.keys(senegal.results[0]).sort(), ["country", "issuer", "pair", "title"], "no sign-in address, no provider");
+    assert.deepEqual(Object.keys(senegal.results[0]).sort(), ["country", "issuer", "pair", "scale", "title"], "no sign-in address, no provider; the scale a grade is typed on, when pinned");
+    assert.equal(senegal.results[0].scale, null);
     assert.equal(senegal.results[0].issuer, "Senegal");
     assert.equal((await listGet(new Request("https://viky.test/api/portals?country=Senegal"))).status, 400);
   } finally {
