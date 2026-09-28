@@ -268,7 +268,7 @@ export default async function JudgesPage() {
             portal is a provider per sense: one for enrolment, one for the results page, each with its own domain, since a
             university&apos;s results can live on another site than its enrolment. A funder can choose a university that
             has neither: the operator is asked, with the exact instruction for Reclaim&apos;s agent, and builds the
-            provider within the day, and the person reads that it is checked within a day, the money held by the
+            provider within two days, and the person reads that it is set up within two days, the money held by the
             contract meanwhile, and the operator is emailed about each request. A grade is signed on a scale: the
             university&apos;s own where its results page is pinned; before, the one the funder chooses (out of 20, 4 or
             100, or letters, ranked in one order), which the first results page the operator reviews confirms, or

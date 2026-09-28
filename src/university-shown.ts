@@ -255,11 +255,11 @@ export function isGradeShape(value: number): boolean {
 
 /**
  * A university chosen for a sense it has no provider for yet (D313): the operator has been asked for one, with the exact
- * instruction, and builds it within the day. Until then nothing can be shown from it, and nothing is lost.
+ * instruction, and builds it within two days. Until then nothing can be shown from it, and nothing is lost.
  */
 export const PROVIDER_BUILDING = Object.freeze({
   code: "PROVIDER_BUILDING",
-  message: "Your university's page is being set up: checked within a day. Then you show it here. Nothing is lost meanwhile.",
+  message: "Your university's page is being set up within two days. Then you show it here. Nothing is lost meanwhile.",
 });
 
 /** Whether a value read from a page is a grade on this numeric scale: from zero to its top, in hundredths. */

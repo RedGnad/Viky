@@ -1001,7 +1001,7 @@ export const TOEFL_SHOWN_MILESTONE: CertificateCondition = {
 /** "Which university?", as the three conditions on the rail ask it: the same list, the world's since D313. */
 const UNIVERSITY_COURSE: NonNullable<CertificateCondition["course"]> = {
   label: "Which university?",
-  help: "Type a word of its name. A university whose student portal Viky does not read yet is set up within a day of the gift.",
+  help: "Type a word of its name. A university whose student portal Viky does not read yet is set up within two days of the gift.",
   slugOf: (picked) => (isPortalId(picked.trim()) ? picked.trim() : undefined),
   search: {
     path: "/api/portals/search",

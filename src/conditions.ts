@@ -732,7 +732,7 @@ export const UNIVERSITY_YEAR_PASSED_SHOWN: Condition = {
   nature: "shown",
   goalType: null,
   // Open since D313 (the founder, 28 Sep 2026): a university without a results provider takes the gift all the same,
-  // and the provider is asked for and built within the day.
+  // and the provider is asked for and built within two days.
   live: true,
   state: "open",
   source: UNIVERSITY_SOURCE,
@@ -762,7 +762,7 @@ export const UNIVERSITY_GRADE_SHOWN: Condition = {
   nature: "shown",
   goalType: null,
   // Open since D313 (the founder, 28 Sep 2026): a university without a results provider takes the gift all the same,
-  // and the provider is asked for and built within the day.
+  // and the provider is asked for and built within two days.
   live: true,
   state: "open",
   source: UNIVERSITY_SOURCE,

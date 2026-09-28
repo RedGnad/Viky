@@ -14,7 +14,7 @@ import { Field } from "../Field";
  * "Which university?" (D247, D313). The world's list is thousands long, so the country comes first, in the same sheet
  * with a search as "Where you live", then that country's universities, read on their own and searched within. The
  * names alone, and under the list one invitation to add a university (D264). A university is chosen whether or not
- * Viky reads its portal yet: the provider is asked for when the gift is made, and built within the day.
+ * Viky reads its portal yet: the provider is asked for when the gift is made, and built within two days.
  */
 export function UniversityChooser({
   open,

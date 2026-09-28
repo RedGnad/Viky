@@ -4,7 +4,7 @@ import { countryInWords } from "./university-shown";
 
 /**
  * The operator's alert for a provider request (the founder, 28 Sep 2026): each request a gift makes sends one email to
- * founder@viky.cash with the university, the sense and the command to run, so "checked within a day" does not rest on
+ * founder@viky.cash with the university, the sense and the command to run, so "within two days" does not rest on
  * somebody remembering to look. Sent once per request, through Resend (the Vercel Marketplace's email integration,
  * `RESEND_API_KEY`). Without the key nothing is sent and the gift is made all the same: `pnpm provider:requests` still
  * lists what waits.
@@ -24,7 +24,7 @@ export function providerAlert(portal: Pick<Portal, "portalId" | "university" | "
   return {
     subject: `Provider to build: ${portal.university} (${country}), ${request.sense}`,
     text: [
-      `A gift needs the ${request.sense} provider of ${portal.university} (${country}).`,
+      `A gift needs the ${request.sense} provider of ${portal.university} (${country}). The person reads that it is set up within two days.`,
       `Sign-in page: ${portal.loginUrl}`,
       request.firstGiftId ? `Gift: ${request.firstGiftId}` : "",
       "",
