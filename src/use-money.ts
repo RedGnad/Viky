@@ -65,3 +65,16 @@ export function orderUses(uses: readonly Use[], euros: number | undefined, net: 
   const gift: Use[] = uses.includes("giftcard") && first !== "giftcard" ? ["giftcard"] : [];
   return [first, ...gift, ...rest.filter((use) => use !== first)];
 }
+
+/**
+ * From how much a gift card is worth offering in the sun beside the first card (the founder, 28 Sep 2026): the price
+ * of an ordinary card, ten euros in the euro zone, so a person holding that much sees the gift card's button in the
+ * main colour as well, and below it the gift card stays a second choice.
+ */
+export const GIFT_CARD_SUN_FROM_EUROS = 10;
+
+/** Whether a use's button is drawn in the main colour: the first card always, the gift card from an ordinary card's price. */
+export function inTheSun(use: Use, index: number, euros: number | undefined): boolean {
+  if (index === 0) return true;
+  return use === "giftcard" && euros !== undefined && euros >= GIFT_CARD_SUN_FROM_EUROS;
+}

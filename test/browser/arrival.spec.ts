@@ -22,6 +22,8 @@ const writeEachOneDown = (page: Page) =>
     document.addEventListener(
       "animationstart",
       (event) => {
+        // The day row's fades follow its scroll, not the clock: they start with the page and are not an arrival.
+        if ((event as AnimationEvent).animationName.startsWith("row-fade-")) return;
         const target = event.target as HTMLElement;
         const style = getComputedStyle(target);
         played.push({
@@ -38,7 +40,9 @@ const writeEachOneDown = (page: Page) =>
 
 const played = (page: Page) => page.evaluate(() => (window as unknown as { played: Played[] }).played);
 const forgetThem = (page: Page) => page.evaluate(() => ((window as unknown as { played: Played[] }).played.length = 0));
-const stillPlaying = (page: Page) => page.evaluate(() => document.getAnimations().length);
+// Only what plays on the clock: the day row's fades follow its scroll (app/globals.css) and stay attached for as long as
+// the row is on the page, which is not a movement.
+const stillPlaying = (page: Page) => page.evaluate(() => document.getAnimations().filter((one) => one.timeline === document.timeline).length);
 
 /**
  * What entered, once something has. A page change is a URL and then, a moment later, a screen: reading the record the

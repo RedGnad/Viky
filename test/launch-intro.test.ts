@@ -5,13 +5,16 @@ import { INTRO_BOOT_SCRIPT, INTRO_SEEN_KEY, INTRO_TIMING, introGroundStyle } fro
 
 /** The installed app's first opening (the founder, 28 Sep 2026, direction C). */
 
+const stored = new Map<string, string>();
+
 function decide(options: { path: string; standalone: boolean; reduced: boolean; seen: boolean }): boolean {
   const attributes = new Set<string>();
+  stored.clear();
   const run = new Function("location", "matchMedia", "localStorage", "document", INTRO_BOOT_SCRIPT);
   run(
     { pathname: options.path },
     (query: string) => ({ matches: query.includes("standalone") ? options.standalone : options.reduced }),
-    { getItem: (key: string) => (key === INTRO_SEEN_KEY && options.seen ? "1" : null) },
+    { getItem: (key: string) => (key === INTRO_SEEN_KEY && options.seen ? "1" : null), setItem: (key: string, value: string) => stored.set(key, value) },
     { documentElement: { setAttribute: (name: string) => attributes.add(name) } },
   );
   return attributes.has("data-intro");
@@ -25,6 +28,13 @@ test("it plays only in the installed app, on Home, the first time, with motion a
   assert.equal(decide({ path: "/", standalone: true, reduced: true, seen: false }), false, "never against reduced motion");
 });
 
+test("the device remembers it the moment it decides, so no reload or rebuilt page ever plays it again", () => {
+  assert.equal(decide({ path: "/", standalone: true, reduced: false, seen: false }), true);
+  assert.equal(stored.get(INTRO_SEEN_KEY), "1", "written before anything is painted, not when it ends");
+  decide({ path: "/", standalone: false, reduced: false, seen: false });
+  assert.equal(stored.size, 0, "a browser tab writes nothing");
+});
+
 test("it is short, it is in the page before any paint, and a tap ends it", () => {
   assert.ok(INTRO_TIMING.holdMs + INTRO_TIMING.fadeMs <= 1_500, "about a second after the launch screen");
   const layout = readFileSync("app/layout.tsx", "utf8");
@@ -32,7 +42,7 @@ test("it is short, it is in the page before any paint, and a tap ends it", () =>
   assert.match(layout, /<LaunchIntro \/>/);
   const intro = readFileSync("app/kit/LaunchIntro.tsx", "utf8");
   assert.match(intro, /onPointerDown=/);
-  assert.match(intro, /localStorage\.setItem\(INTRO_SEEN_KEY, "1"\)/);
+  assert.doesNotMatch(intro, /localStorage/, "the screen itself remembers nothing: the boot script already has");
   const css = readFileSync("app/globals.css", "utf8");
   assert.match(css, /\.launch-intro \{\n  display: none;\n\}/, "hidden unless the document is marked");
   assert.match(css, /html\[data-intro\] \.launch-intro \{[^}]*background: #ddd6eb;/, "the launch screen's own lavender");

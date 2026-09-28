@@ -15,7 +15,12 @@ export const INTRO_ATTRIBUTE = "data-intro";
 /** Set once the screen itself is on the page, which takes the drawing off the ground so it never shows through the fade. */
 export const INTRO_SHOWN_ATTRIBUTE = "data-intro-shown";
 
-export const INTRO_BOOT_SCRIPT = `try{if(location.pathname==="/"&&matchMedia("(display-mode: standalone)").matches&&!matchMedia("(prefers-reduced-motion: reduce)").matches&&!localStorage.getItem("${INTRO_SEEN_KEY}")){document.documentElement.setAttribute("${INTRO_ATTRIBUTE}","")}}catch(e){}`;
+/**
+ * The device remembers it the moment it decides to play it, before anything is painted, and not when it ends (the
+ * founder, 28 Sep 2026: it came back on every opening and every reload on his phone). Whatever happens to the page
+ * after that, a reload, a page rebuilt by the browser, an app closed half way, it never plays a second time.
+ */
+export const INTRO_BOOT_SCRIPT = `try{if(location.pathname==="/"&&matchMedia("(display-mode: standalone)").matches&&!matchMedia("(prefers-reduced-motion: reduce)").matches&&!localStorage.getItem("${INTRO_SEEN_KEY}")){localStorage.setItem("${INTRO_SEEN_KEY}","1");document.documentElement.setAttribute("${INTRO_ATTRIBUTE}","")}}catch(e){}`;
 
 /** How long the screen lasts once it starts, the hop and the letters, then the hold before it fades. */
 export const INTRO_TIMING = { holdMs: 1_150, fadeMs: 250 } as const;
