@@ -12,6 +12,7 @@ node_modules/
 .next/
 out/
 cache/
+.cache/
 broadcast/
 public/sw.js
 public/sw.js.map

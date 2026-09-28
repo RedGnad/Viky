@@ -5,26 +5,31 @@ import { readMilestoneGift } from "../src/milestone-reader";
 import { relayProve } from "../src/milestone-relay";
 import { loadMilestoneGift, recordReading } from "../src/milestone-store";
 import { isMilestoneGiftId } from "../src/milestone-protocol";
-import { decideReview, ensurePortalSchema, loadPortal, loadReview, pendingReviews, pinPortal, type PortalReview } from "../src/portal-store";
+import { decideReview, ensurePortalSchema, loadPortal, loadReview, pendingReviews, pinProvider, type PortalReview, type ResultsFields } from "../src/portal-store";
+import { ENROLMENT_FIELD, RESULTS_FIELDS } from "../src/provider-instruction";
 import { escrowOf } from "../src/relayer";
 import { settleHeldReview, type SettleDeps } from "../src/shown-verification";
 import { VerificationError } from "../src/duolingo-verification";
-import { enrolledBy, type PortalExtract } from "../src/university-shown";
+import { enrolledBy, gradeScaleOf, gradeShownBy, type PortalExtract } from "../src/university-shown";
 import type { WitnessPin } from "../src/witness-portal";
 
 /**
- * The operator's review of a witness portal's first proof (D312). A first proof from a university read through a
- * Reclaim AI provider is checked on what is sure (the pinned witness, the domain, the method) and held; this command
- * shows what its pattern read, and then either pins the portal from it and settles the gift, or refuses it.
+ * The operator's review of a witness provider's first proof (D312). A first proof from a university read through a
+ * Reclaim AI provider is checked on what is sure (the pinned witness, the provider's domain, the method) and held;
+ * this command shows what its pattern read, and then either pins the provider from it and settles the gift, or
+ * refuses it. The fields are named by the instruction the provider was built with (src/provider-instruction.ts), so
+ * the patterns are the only thing the operator writes.
  *
  *   pnpm portal:pin
- *     lists the held proofs: the portal, the gift, the request and the fields the pattern read.
- *   PROVEN_BY=0x… pnpm portal:pin <session> --field <name> --matches <regex> --keeps "<words>" --proves account|enrolment
- *     checks the field against what was read, pins the portal (version, request, match, redaction, spec hash), relays
- *     the held proof to the milestone contract, then settles every other proof held for the same portal the same way,
- *     refusing by its code any that the pin does not fit.
+ *     lists the held proofs: the portal, the sense, the gift, the request and the fields the pattern read.
+ *   PROVEN_BY=0x… pnpm portal:pin <session> --matches "<regex>" --keeps "<words>"                     (enrolment)
+ *   PROVEN_BY=0x… pnpm portal:pin <session> --admitted "<regex>" --scale 20 [--year "<regex>"]         (results)
+ *     checks the fields against what was read, pins the provider (version, request, match, redaction, spec hash),
+ *     relays the held proof to the milestone contract, then settles every other proof held for the same provider,
+ *     refusing by its code any that the pin does not fit. `--field`, `--admitted-field`, `--grade-field` and
+ *     `--year-field` name another field than the instruction's.
  *   pnpm portal:pin <session>
- *     for a proof held before its portal was pinned by another: settles it on that pin.
+ *     for a proof held before its provider was pinned by another: settles it on that pin.
  *   pnpm portal:pin <session> --refuse "<note for the journal>"
  *     closes the review: the person reads that the page did not show what the gift is for, and nothing moves.
  *
@@ -44,7 +49,7 @@ function need(name: string): string {
 }
 
 function shown(review: PortalReview) {
-  return { session: review.sessionId, portal: review.portalId, gift: review.giftId, version: review.providerVersion, observedAt: new Date(review.observedAt * 1_000).toISOString(), read: review.reading };
+  return { session: review.sessionId, portal: review.portalId, sense: review.sense, gift: review.giftId, version: review.providerVersion, observedAt: new Date(review.observedAt * 1_000).toISOString(), read: review.reading };
 }
 
 const deps: SettleDeps = {
@@ -71,6 +76,13 @@ async function settle(review: PortalReview): Promise<void> {
     await decideReview(review.sessionId, "pinned", null);
     console.log(JSON.stringify({ step: "settled", session: review.sessionId, gift: review.giftId, outcome }, (_key, value) => (typeof value === "bigint" ? value.toString() : value)));
   } catch (error) {
+    // A grade read on the pinned scale and under the target: the provider works, the grade is not there yet, and the
+    // person shows it again when it is (the gift's page offers "Show it" again).
+    if (error instanceof VerificationError && error.code === "NOT_THERE_YET") {
+      await decideReview(review.sessionId, "pinned", "NOT_THERE_YET");
+      console.log(JSON.stringify({ step: "read, not there yet", session: review.sessionId, gift: review.giftId }));
+      return;
+    }
     // A proof the pin does not fit, a page without the field, a gift already over: refused by its code, said to the
     // person as the review's refusal. Anything else (the network, the chain) leaves it held for the next run.
     const final = error instanceof VerificationError && !["NOT_CONFIGURED", "UNKNOWN_GIFT"].includes(error.code);
@@ -100,27 +112,45 @@ async function main() {
   }
 
   const portal = await loadPortal(review.portalId);
-  if (!portal || portal.verification !== "witness") throw new Error(`${review.portalId} is not a witness portal`);
-  // Held before the pin was set by another proof: settled on the pin the portal has.
-  if (portal.pin) {
+  const provider = portal?.[review.sense];
+  if (!portal || !provider || provider.verification !== "witness") throw new Error(`${review.portalId} has no witness provider for ${review.sense}`);
+  // Held before the pin was set by another proof: settled on the pin the provider has.
+  if (provider.pin && provider.extract) {
     console.log(JSON.stringify({ step: dry ? "would settle on the pin" : "settling on the pin", ...shown(review) }, null, 2));
     if (!dry) await settle(review);
     return;
   }
-  const proves = need("proves");
-  if (proves !== "account" && proves !== "enrolment") throw new Error("--proves is account or enrolment");
-  const extract: PortalExtract = { field: need("field"), matches: need("matches"), keeps: need("keeps") };
   const read = review.reading as { fields?: Record<string, string>; url: string; method: string; responseMatches: string; responseRedactions: string; specHash: string };
-  // The field must say it on the proof being pinned, or the pin would be born refusing its own first proof.
-  if (!enrolledBy(extract, read.fields ?? {})) throw new Error(`the field ${extract.field} does not match ${extract.matches} on this proof: nothing pinned`);
+  const fields = read.fields ?? {};
+  // The fields must be read on the proof being pinned, or the pin would be born refusing its own first proof.
+  let extract: PortalExtract | ResultsFields;
+  if (review.sense === "enrolment") {
+    const enrolment: PortalExtract = { field: flag("field")?.trim() || ENROLMENT_FIELD, matches: need("matches"), keeps: need("keeps") };
+    if (!enrolledBy(enrolment, fields)) throw new Error(`the field ${enrolment.field} does not match ${enrolment.matches} on this proof: nothing pinned`);
+    extract = enrolment;
+  } else {
+    const scale = gradeScaleOf(need("scale"));
+    if (!scale) throw new Error("--scale is 20, 4, 20/0.5 or letters:A,B,C");
+    const yearMatches = flag("year")?.trim();
+    const results: ResultsFields = {
+      admitted: { field: flag("admitted-field")?.trim() || RESULTS_FIELDS.decision, matches: need("admitted") },
+      grade: { field: flag("grade-field")?.trim() || RESULTS_FIELDS.average, scale },
+      ...(yearMatches ? { year: { field: flag("year-field")?.trim() || RESULTS_FIELDS.year, matches: yearMatches } } : {}),
+    };
+    const asRead = { providerId: provider.providerId, providerVersion: review.providerVersion, requestHash: read.specHash, ...results };
+    const grade = gradeShownBy(asRead, fields);
+    if (grade.kind === "refused" && grade.code !== "LETTER_SCALE") throw new Error(`${grade.message} (${grade.code}): nothing pinned`);
+    if (!(results.admitted.field in fields)) throw new Error(`this proof carries no field ${results.admitted.field}: nothing pinned`);
+    extract = results;
+  }
   const pin: WitnessPin = { providerVersion: review.providerVersion, url: read.url, method: read.method, responseMatches: read.responseMatches, responseRedactions: read.responseRedactions, specHash: read.specHash };
   const operator = getAddress(String(process.env.PROVEN_BY?.trim()));
-  console.log(JSON.stringify({ step: dry ? "would pin" : "pinning", portal: portal.portalId, pin, extract, proves }, null, 2));
+  console.log(JSON.stringify({ step: dry ? "would pin" : "pinning", portal: portal.portalId, sense: review.sense, pin, extract }, null, 2));
   if (dry) return;
-  if (!(await pinPortal(portal.portalId, { pin, extract, proves, operator }))) throw new Error("the portal could not be pinned");
+  if (!(await pinProvider(portal.portalId, review.sense, { pin, extract, operator }))) throw new Error("the provider could not be pinned");
 
   await settle(review);
-  for (const other of await pendingReviews()) if (other.portalId === portal.portalId) await settle(other);
+  for (const other of await pendingReviews()) if (other.portalId === portal.portalId && other.sense === review.sense) await settle(other);
 }
 
 main().catch((error) => {

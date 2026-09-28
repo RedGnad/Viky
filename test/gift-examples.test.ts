@@ -19,13 +19,14 @@ const EXPECTED: Record<ExampleMoment, readonly Moment[]> = {
   over: ["over"],
   cameBack: ["cameBack"],
   // A university's first proof held for review, or refused by it (D312): still waiting for its proof.
+  building: ["awaitingProof"],
   held: ["awaitingProof"],
   reviewRefused: ["awaitingProof"],
 };
 
 test("every example on the board is the moment its name says, read by the page's own functions", () => {
   const examples = allExamples(Date.UTC(2026, 8, 23, 12));
-  assert.equal(examples.length, 108, "five shapes, their moments (7, 7, 5, 5, 3), four readers");
+  assert.equal(examples.length, 112, "five shapes, their moments (7, 7, 5, 5, 4), four readers");
   for (const example of examples) {
     const status = example.status;
     const gift = status.kind === "milestone" ? giftOfMilestone(status) : giftOfSummary(status);

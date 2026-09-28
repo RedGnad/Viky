@@ -24,7 +24,7 @@ async function main() {
   if (!(await saveResults(portalId, results))) throw new Error(`no portal ${portalId}: prove it for enrolment first, with pnpm portal:add`);
   const back = await loadPortal(portalId);
   if (!back?.results) throw new Error("the results page did not read back");
-  console.log(JSON.stringify({ step: "read back", portalId: back.portalId, university: back.university, scale: back.results.grade.scale, year: back.results.year ?? "the day of the proof" }, null, 2));
+  console.log(JSON.stringify({ step: "read back", portalId: back.portalId, university: back.university, scale: back.results.extract?.grade.scale ?? null, year: back.results.extract?.year ?? "the day of the proof" }, null, 2));
 }
 
 main().catch((error) => {

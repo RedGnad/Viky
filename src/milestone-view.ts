@@ -87,10 +87,11 @@ export type MilestoneStatus = Readonly<{
    * result read once there is one (the name, the id, the best single), to whoever may see the names.
    */
   /**
-   * A first proof from a university read through a witness with no pin yet (D312): held for the operator's review, or
-   * refused by it. Nothing once it is settled, and nothing for any other gift.
+   * What a university gift waits on (D313): its provider being built, which the operator was asked for when the gift
+   * was made; or a first proof read through a witness with no pin yet, held for review or refused by it. Nothing once
+   * it is settled, and nothing for any other gift.
    */
-  review: Readonly<{ status: "pending" | "refused" }> | null;
+  review: Readonly<{ status: "building" | "pending" | "refused" }> | null;
   wca: {
     competitionId: string;
     eventId: string;

@@ -694,7 +694,7 @@ export const TOEFL_MYBEST_SHOWN: Condition = {
 
 /**
  * Staying enrolled at a university, shown from the person's own student portal (D165). The portal is chosen by the
- * funder from the portals Viky has proved (src/portal-store.ts) and bound into what they sign; the person shows the
+ * funder from the list (src/portal-store.ts, the world's since D313) and bound into what they sign; the person shows the
  * page that says they are enrolled. It opens the day a real portal has been proved end to end, and on the founder's
  * word.
  */
@@ -718,6 +718,65 @@ export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
     doIt: "Press Show it and sign in to your student portal in the tab that opens. The page that says you are enrolled is what counts.",
     eachDay: "the day it is shown",
     preview: "Enrolled at your university, shown from your own student portal: the gift is yours when you show it.",
+  },
+};
+
+/**
+ * Passing the year at their university, shown from the results page of the person's own student portal (D174): the
+ * second line on the rail. The same university as enrolment, chosen by the funder from the list, and its results
+ * provider (D313); the year, or the semester, as the page itself says it.
+ */
+export const UNIVERSITY_YEAR_PASSED_SHOWN: Condition = {
+  id: "university-year-passed-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  // Open since D313 (the founder, 28 Sep 2026): a university without a results provider takes the gift all the same,
+  // and the provider is asked for and built within the day.
+  live: true,
+  state: "open",
+  source: UNIVERSITY_SOURCE,
+  family: "exam",
+  name: "Passed the year at university",
+  help: "The results page of their own student portal, shown by them, saying they passed the year or the semester: it proves the account, not who sat the exams.",
+  link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
+  reading: "university-year-passed-shown",
+  words: {
+    earnedDay: "When they show they passed, all of this becomes theirs",
+    connect: `Opened. Nothing shown yet from ${UNIVERSITY_SOURCE}.`,
+    doIt: "Press Show it and sign in to your student portal in the tab that opens. The results page that says you passed is what counts.",
+    eachDay: "the day it is shown",
+    preview: "The year passed at your university, shown from your own student portal: the gift is yours when you show it.",
+  },
+};
+
+/**
+ * Reaching a grade at their university, shown from the same results page (D174): the third line on the rail, and
+ * the one with a target, as the TOEFL score has. The grade is read on the university's own scale, the one the
+ * portal's row declares; a scale of letters is declared and refused until a later decision says what a letter is
+ * worth.
+ */
+export const UNIVERSITY_GRADE_SHOWN: Condition = {
+  id: "university-grade-shown",
+  kind: "milestone",
+  nature: "shown",
+  goalType: null,
+  // Open since D313 (the founder, 28 Sep 2026): a university without a results provider takes the gift all the same,
+  // and the provider is asked for and built within the day.
+  live: true,
+  state: "open",
+  source: UNIVERSITY_SOURCE,
+  family: "exam",
+  name: "Reached a grade at university",
+  help: "The results page of their own student portal, shown by them, with the grade read on the university's own scale: it proves the account, not who sat the exams.",
+  link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
+  reading: "university-grade-shown",
+  words: {
+    earnedDay: "When they show that grade, all of this becomes theirs",
+    connect: `Opened. Nothing shown yet from ${UNIVERSITY_SOURCE}.`,
+    doIt: "Press Show it and sign in to your student portal in the tab that opens. The grade on your results page is what counts.",
+    eachDay: "the day it is shown",
+    preview: "A grade at your university, shown from your own student portal: the gift is yours when you show it.",
   },
 };
 
@@ -1000,69 +1059,13 @@ export const STRAVA_DAILY: Condition = {
 
 // The order inside each family is the founder's of 28 Sep 2026: the university, then the examinations, then the
 // universities' online courses; Duolingo, Codeforces, Credly, Accredible; chess, WCA; Fitbit, Strava, the races.
-export const CONDITIONS: readonly Condition[] = [UNIVERSITY_ENROLLMENT_SHOWN, TOEFL_MYBEST_SHOWN, DUOLINGO_ENGLISH_TEST, EDX_CERTIFICATE, MITX_ONLINE_CERTIFICATE_LINE, COURSERA_CERTIFICATE, DUOLINGO_DAILY, CODEFORCES_RATING, CREDLY_BADGE, ACCREDIBLE_CREDENTIAL, CHESS_RATING, CHESS_TACTICS_RECORD, WCA_TIME_LINE, FITBIT_DAILY, STRAVA_DAILY, MARATHON_FINISH_LINE];
+export const CONDITIONS: readonly Condition[] = [UNIVERSITY_ENROLLMENT_SHOWN, UNIVERSITY_YEAR_PASSED_SHOWN, UNIVERSITY_GRADE_SHOWN, TOEFL_MYBEST_SHOWN, DUOLINGO_ENGLISH_TEST, EDX_CERTIFICATE, MITX_ONLINE_CERTIFICATE_LINE, COURSERA_CERTIFICATE, DUOLINGO_DAILY, CODEFORCES_RATING, CREDLY_BADGE, ACCREDIBLE_CREDENTIAL, CHESS_RATING, CHESS_TACTICS_RECORD, WCA_TIME_LINE, FITBIT_DAILY, STRAVA_DAILY, MARATHON_FINISH_LINE];
 
 /**
  * What is built with a piece really missing (D184): a provider not registered, a portal not proved. Nobody can make a
  * gift on these, operator or not; the public page prints them under their family with "Being built" and the missing
  * piece in one line. The day the piece exists, the line moves into the register above, open, and this list shrinks.
  */
-
-/**
- * Passing the year at their university, shown from the results page of the person's own student portal (D174): the
- * second line on the rail. The same portal as enrolment, chosen by the funder from the ones Viky has proved, and its
- * results page proved on the row too; the year, or the semester, as the page itself says it. It opens the day a real
- * results page has been proved end to end, and on the founder's word.
- */
-export const UNIVERSITY_YEAR_PASSED_SHOWN: Condition = {
-  id: "university-year-passed-shown",
-  kind: "milestone",
-  nature: "shown",
-  goalType: null,
-  live: false,
-  beforeItOpens: "A portal whose results page is on its row: its provider registered from the portal's results page, then the row's results extraction.",
-  source: UNIVERSITY_SOURCE,
-  family: "exam",
-  name: "Pass the year at their university",
-  help: "The results page of their own student portal, shown by them, saying they passed the year or the semester: it proves the account, not who sat the exams.",
-  link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
-  reading: "university-year-passed-shown",
-  words: {
-    earnedDay: "When they show they passed, all of this becomes theirs",
-    connect: "Opened. Show your results from your university's portal when they are out.",
-    doIt: "Press Show it and sign in to your student portal in the tab that opens. The results page that says you passed is what counts.",
-    eachDay: "the day it is shown",
-    preview: "The year passed at your university, shown from your own student portal: the gift is yours when you show it.",
-  },
-};
-
-/**
- * Reaching a grade at their university, shown from the same results page (D174): the third line on the rail, and
- * the one with a target, as the TOEFL score has. The grade is read on the university's own scale, the one the
- * portal's row declares; a scale of letters is declared and refused until a later decision says what a letter is
- * worth.
- */
-export const UNIVERSITY_GRADE_SHOWN: Condition = {
-  id: "university-grade-shown",
-  kind: "milestone",
-  nature: "shown",
-  goalType: null,
-  live: false,
-  beforeItOpens: "A portal whose results page is on its row: its provider registered from the portal's results page, then the row's results extraction.",
-  source: UNIVERSITY_SOURCE,
-  family: "exam",
-  name: "Reach a grade at their university",
-  help: "The results page of their own student portal, shown by them, with the grade read on the university's own scale: it proves the account, not who sat the exams.",
-  link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
-  reading: "university-grade-shown",
-  words: {
-    earnedDay: "When they show that grade, all of this becomes theirs",
-    connect: "Opened. Show your results from your university's portal when they are out.",
-    doIt: "Press Show it and sign in to your student portal in the tab that opens. The grade on your results page is what counts.",
-    eachDay: "the day it is shown",
-    preview: "A grade at your university, shown from your own student portal: the gift is yours when you show it.",
-  },
-};
 
 /**
  * The five examination results of D176, each shown from the person's own account with the examining body, each
@@ -1239,8 +1242,6 @@ export const PRONOTE_GRADE_SHOWN: Condition = {
 
 export const BUILDING: readonly Condition[] = [
   CHSI_ENROLMENT_SHOWN,
-  UNIVERSITY_YEAR_PASSED_SHOWN,
-  UNIVERSITY_GRADE_SHOWN,
   BAC_MOROCCO_SHOWN,
   BAC_CAMEROON_SHOWN,
   BAC_FRANCE_SHOWN,

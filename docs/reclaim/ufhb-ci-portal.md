@@ -76,7 +76,8 @@ UNVERIFIED=1 PROVEN_BY=<the founder's account> VIKY_ALLOW_PRODUCTION_DATABASE=1 
 ```
 
 With the row, "Staying enrolled" opens on this portal (D184), "unverified" beside the university; the year passed and
-the grade wait for the results page (`NO_RESULTS_PAGE`, by its name).
+the grade wait for the results page. Since D313 a gift on them is made all the same, the results provider is asked for,
+and the person reads that it is being set up (`PROVIDER_BUILDING`).
 
 ## The terms
 

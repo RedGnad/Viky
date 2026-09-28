@@ -7,9 +7,9 @@ import type { ProvedReading } from "./milestone-relay";
 import type { ProofSession, StoredAttestation } from "./proof-session-store";
 import { assertReclaimSessionProvenance, assertSdkProofSet, ReclaimProofRejectedError } from "./reclaim-proof-set";
 import type { ReclaimTrustedData } from "./reclaim-types";
-import { providerOfPortal, shownConditionById, UNIVERSITY_SHOWN, type ShownEntry, type ShownProvider } from "./shown-conditions";
+import { portalProviderFor, shownConditionById, type ShownEntry, type ShownProvider } from "./shown-conditions";
 import type { Portal, PortalReview } from "./portal-store";
-import { isAgentVersion, verifyWitnessProof, WitnessProofError, type WitnessReading } from "./witness-portal";
+import { isAgentVersion, verifyWitnessProof, WitnessProofError, type WitnessPin, type WitnessReading } from "./witness-portal";
 import type { MilestoneRecord } from "./milestone-store";
 import { ShownProofError, validateShownEvidence, type ShownEvidence } from "./shown-proof";
 import { ATTESTATION_TTL_SECONDS } from "./gift-terms";
@@ -183,6 +183,7 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
     const stored = await deps.holdForReview({
       sessionId: session.sessionId,
       portalId: witness.portalId,
+      sense: witness.sense,
       giftId: session.giftId,
       account: session.account,
       providerVersion,
@@ -200,7 +201,7 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
 }
 
 /** Each proof of a witness portal, verified on the pinned witness, the portal's domain and, once pinned, its pattern. */
-function witnessReadings(proofs: readonly Proof[], expected: Readonly<{ domain: string; pin: Portal["pin"]; providerVersion: string; witness?: string }>): WitnessReading[] {
+function witnessReadings(proofs: readonly Proof[], expected: Readonly<{ domain: string; pin: WitnessPin | null; providerVersion: string; witness?: string }>): WitnessReading[] {
   try {
     // A page is read with GET until the pin says otherwise: the method is part of what the first proof fixes.
     return proofs.map((proof) => verifyWitnessProof(proof, { domain: expected.domain, method: expected.pin?.method ?? "GET", pin: expected.pin, providerVersion: expected.providerVersion, witness: expected.witness }));
@@ -315,30 +316,30 @@ async function settleShown(
 export async function settleHeldReview(deps: SettleDeps, input: { review: PortalReview; portal: Portal }): Promise<ShownOutcome> {
   const { review, portal } = input;
   if (review.status !== "pending") throw new VerificationError("ALREADY_RECORDED", "This review is already decided", 409);
-  if (portal.portalId !== review.portalId || portal.verification !== "witness" || !portal.pin || !portal.witnessDomain) {
-    throw new VerificationError("NOT_CONFIGURED", "The portal is not pinned yet", 503);
-  }
   const record = await deps.milestoneRecordOf(review.giftId);
-  if (!record || record.portal !== portal.portalId) throw new VerificationError("UNKNOWN_GIFT", "This gift was not made on this portal");
-  const subject = UNIVERSITY_SHOWN.subjectOf?.(record);
+  if (!record || record.portal !== portal.portalId || portal.portalId !== review.portalId) throw new VerificationError("UNKNOWN_GIFT", "This gift was not made on this portal");
+  const entry = shownConditionById(record.conditionId);
+  const provider = entry ? portalProviderFor(record.conditionId, portal) : null;
+  const witness = provider?.witness;
+  if (!entry || !provider || !witness || witness.sense !== review.sense || !witness.pin) throw new VerificationError("NOT_CONFIGURED", "The provider is not pinned yet", 503);
+  const subject = entry.subjectOf?.(record) ?? entry.subject;
   if (!subject) throw new VerificationError("NOT_CONFIGURED", "This condition has no subject to sign", 503);
-  const provider = providerOfPortal(portal);
   let proofs: Proof[];
   try {
-    proofs = assertSdkProofSet(review.proofs, { expectedCount: UNIVERSITY_SHOWN.condition.proofCount, maxSignedJsonBytes: SHOWN_MAX_SIGNED_JSON_BYTES, witnessOnly: true });
+    proofs = assertSdkProofSet(review.proofs, { expectedCount: entry.condition.proofCount, maxSignedJsonBytes: SHOWN_MAX_SIGNED_JSON_BYTES, witnessOnly: true });
   } catch (error) {
     if (error instanceof ReclaimProofRejectedError) throw new VerificationError("PROOF_REJECTED", error.message);
     throw error;
   }
-  const witnessed = witnessReadings(proofs, { domain: portal.witnessDomain, pin: portal.pin, providerVersion: review.providerVersion, witness: deps.witnessAddress });
+  const witnessed = witnessReadings(proofs, { domain: witness.domain, pin: witness.pin, providerVersion: review.providerVersion, witness: deps.witnessAddress });
   const now = deps.now();
   const evidence = await evidenceOf(deps, {
-    condition: { ...UNIVERSITY_SHOWN.condition, providerId: provider.providerId, providerVersion: provider.providerVersion, requestHashes: provider.requestHashes, read: provider.read },
+    condition: { ...entry.condition, providerId: provider.providerId, providerVersion: provider.providerVersion, requestHashes: provider.requestHashes, read: provider.read },
     data: witnessed.map((reading) => reading.data),
     timestamps: proofs.map((proof) => Number(proof.claimData.timestampS)),
     session: { sessionId: review.sessionId, giftId: review.giftId, account: review.account },
     now,
   });
   const gift = await provableGift(deps, review.giftId, review.account);
-  return settleShown(deps, { entry: UNIVERSITY_SHOWN, subject, sessionId: review.sessionId, giftId: review.giftId, gift, evidence, proofs, now, consume: false });
+  return settleShown(deps, { entry, subject, sessionId: review.sessionId, giftId: review.giftId, gift, evidence, proofs, now, consume: false });
 }

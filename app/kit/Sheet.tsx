@@ -128,8 +128,14 @@ export function Sheet({
       className={tall ? "sheet sheet-tall" : "sheet"}
       aria-labelledby={labelId}
       // Escape, the close button and the backdrop all end in the same place: the dialog's own close event.
-      onClose={onClose}
-      onCancel={onClose}
+      // React carries a nested sheet's close up to this one's handler (a country chosen in "Which country is it in?"
+      // closed the sheet it was opened from): only this dialog's own close and cancel close this sheet.
+      onClose={(event) => {
+        if (event.target === dialog.current) onClose();
+      }}
+      onCancel={(event) => {
+        if (event.target === dialog.current) onClose();
+      }}
       onClick={(event) => {
         if (event.target === dialog.current) dialog.current?.close();
       }}

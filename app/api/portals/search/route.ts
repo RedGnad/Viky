@@ -7,8 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * "Which university?": the chooser's search over the portals Viky has proved (D165), and over nothing else. The
- * answer is our own table, so an empty answer means no portal has been proved for those words, never that a
+ * "Which university?": the chooser's search over Viky's list (D165, the world's since D313), and over nothing else.
+ * The answer is our own table, so an empty answer means the list holds no university by those words, never that a
  * university does not exist. Public and unsigned, like the catalogue: which universities Viky can read is nobody's
  * secret, and the funder searching may not have an account yet.
  */

@@ -12,7 +12,7 @@ import type { MilestoneStatus } from "@/src/milestone-view";
 export const SHAPES = ["days", "climb", "stamp", "shown", "university"] as const;
 export type Shape = (typeof SHAPES)[number];
 
-export const MOMENTS = ["unopened", "notConnected", "running", "runningBack", "startTooHigh", "won", "over", "cameBack", "held", "reviewRefused"] as const;
+export const MOMENTS = ["unopened", "notConnected", "running", "runningBack", "startTooHigh", "won", "over", "cameBack", "building", "held", "reviewRefused"] as const;
 export type ExampleMoment = (typeof MOMENTS)[number];
 
 /** The funder, the person it is for, somebody signed in who is neither, and somebody with no account at all. */
@@ -27,9 +27,9 @@ const RECIPIENT = "Léa";
 
 /** Which moments each shape has: a daily gift has no start too high, and the "went back" day is a daily gift's alone. */
 export function momentsOf(shape: Shape): readonly ExampleMoment[] {
-  // A university read through a witness with no pin yet (D312): its first proof held for review, or refused by it.
-  if (shape === "university") return ["running", "held", "reviewRefused"];
-  const own = MOMENTS.filter((moment) => moment !== "held" && moment !== "reviewRefused");
+  // A university (D312): its provider being built, its first proof held for review, or refused by it.
+  if (shape === "university") return ["running", "building", "held", "reviewRefused"];
+  const own = MOMENTS.filter((moment) => moment !== "building" && moment !== "held" && moment !== "reviewRefused");
   if (shape === "days") return own.filter((moment) => moment !== "startTooHigh");
   if (shape === "climb") return own.filter((moment) => moment !== "runningBack");
   // A certificate's clock starts when it is funded (MilestoneGift sets its deadline then), so it is never opened and
@@ -196,6 +196,6 @@ function milestone(shape: Exclude<Shape, "days">, moment: ExampleMoment, reader:
     standingAtOffer: climb ? 1280 : null,
     marathon: null,
     wca: null,
-    review: moment === "held" ? { status: "pending" } : moment === "reviewRefused" ? { status: "refused" } : null,
+    review: moment === "building" ? { status: "building" } : moment === "held" ? { status: "pending" } : moment === "reviewRefused" ? { status: "refused" } : null,
   };
 }

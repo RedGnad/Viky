@@ -98,7 +98,8 @@ async function main() {
     const portal = typeof context.providerHash === "string" ? await portalByRequestHash(context.providerHash) : null;
     // Either of its two pages (D174): the enrolment's request or the results page's, said with the row it matched.
     const page = portal && typeof context.providerHash === "string" ? pageOfRequest(portal, context.providerHash) : null;
-    const provider = page === "results" && portal?.results ? `${portal.results.providerId}@${portal.results.providerVersion}` : `${portal?.providerId}@${portal?.providerVersion}`;
+    const read = page ? portal?.[page] : null;
+    const provider = read ? `${read.providerId}@${read.providerVersion}` : "none";
     if (portal) console.log(`portal: ${portal.portalId}, ${portal.university} (${portal.country}), page ${page ?? "unknown"}, provider ${provider}, ${portal.unverified ? "unverified, defined from public pages on" : "proved"} ${portal.provenAt.toISOString().slice(0, 10)}`);
   } catch {
     // A context that is not JSON is refused below, where the claim is checked.

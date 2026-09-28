@@ -35,6 +35,8 @@ test("every condition in the register is filed under a family that exists", () =
   // The founder's filing of 28 Sep 2026, line by line: the universities' online courses went to School & studies.
   assert.deepEqual(filed, {
     "university-enrollment-shown": "exam",
+    "university-year-passed-shown": "exam",
+    "university-grade-shown": "exam",
     "toefl-mybest-shown": "exam",
     "duolingo-english-test": "exam",
     "edx-certificate": "exam",
@@ -53,7 +55,7 @@ test("every condition in the register is filed under a family that exists", () =
   });
   // Inside a family, the register's order: the founder's list is that order.
   assert.deepEqual(CONDITIONS.filter((condition) => condition.family === "learn").map((condition) => condition.id), ["duolingo-daily", "codeforces-rating", "credly-badge", "accredible-credential"]);
-  assert.deepEqual(CONDITIONS.filter((condition) => condition.family === "exam").map((condition) => condition.id), ["university-enrollment-shown", "toefl-mybest-shown", "duolingo-english-test", "edx-certificate", "mitx-online-certificate", "coursera-certificate"]);
+  assert.deepEqual(CONDITIONS.filter((condition) => condition.family === "exam").map((condition) => condition.id), ["university-enrollment-shown", "university-year-passed-shown", "university-grade-shown", "toefl-mybest-shown", "duolingo-english-test", "edx-certificate", "mitx-online-certificate", "coursera-certificate"]);
 });
 
 test("a family id retired on 24 Sep 2026 still reads, to the family its lines went to", () => {
