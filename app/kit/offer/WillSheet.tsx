@@ -10,7 +10,7 @@ import { searchCertifications, type CertificationFound } from "@/src/client/cert
 import { ApiError } from "@/src/client/api";
 import { smallestTarget } from "@/src/milestone-terms";
 import { FUND, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
-import { CARD_LABEL, CHOICE, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON, TILE } from "../../components/ui";
+import { CARD_LABEL, CHOICE, HELP, INLINE_BUTTON, META, PRIMARY_BUTTON, SECONDARY_BUTTON, TILE } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { FamilyArt } from "../FamilyArt";
 import { Nature } from "../Nature";
@@ -95,8 +95,8 @@ export function WillSheet({
   /** The words typed to find a certification, and what the source knows by them (Credly, 20 Sep 2026). */
   const [search, setSearch] = useState<{ words: string; found: readonly CertificationFound[]; busy: boolean; nothing: boolean }>({ words: "", found: [], busy: false, nothing: false });
 
-  // What this account may offer: the live conditions for everybody, plus whatever is wired and not live yet for an
-  // account that runs Viky. Nothing else is ever listed here.
+  // What this account may offer: the live conditions, plus the lines being built the founder lists anyway (D311),
+  // the same for everybody. Nothing else is ever listed here.
   useEffect(() => {
     if (!open) return;
     let live = true;
@@ -296,7 +296,8 @@ export function WillSheet({
                         <Nature nature={option.nature} />
                         {/* What it proves, under the one on the card alone, as the list said it before (D304). */}
                         {chosen ? <span className={HELP}>{option.help}</span> : null}
-                        {option.live ? null : <span className={HELP}>{M.operatorOnly}</span>}
+                        {/* A line listed while it is being built says so in the meta voice, beside its nature (D311). */}
+                        {option.live ? null : <span className={`block ${META}`}>{M.building}</span>}
                       </span>
                       <svg aria-hidden focusable="false" width="20" height="20" viewBox="0 0 24 24" className="shrink-0 text-[var(--on-surface-muted)]">
                         <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
@@ -331,7 +332,7 @@ export function WillSheet({
               value: option.id,
               label: option.name,
               tag: <Nature nature={option.nature} />,
-                help: option.live ? option.help : `${option.help} ${M.operatorOnly}`,
+                help: option.live ? option.help : `${option.help} ${M.building}.`,
             }))}
           />
         )

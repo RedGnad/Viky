@@ -1318,6 +1318,14 @@ export const FRONTIERS: readonly Frontier[] = [
   },
 ];
 
+/**
+ * Lines being built that "What will they do?" lists anyway, marked "Being built" (the founder, 28 Sep 2026, D311): the
+ * EcoleDirecte average waits only for its provider, built from a real account the founder is looking for before the
+ * submission; failing that, it leaves the register. It is listed and not live: the gift's creation refuses it before
+ * anything is taken while its provider is missing (`notOpen`), so no money is ever held on a line nobody can win.
+ */
+export const OFFERED_WHILE_BUILDING: readonly string[] = ["ecoledirecte-grade-shown"];
+
 /** What "What will they do?" lists: only what works from end to end today. */
 export function liveConditions(): readonly Condition[] {
   return CONDITIONS.filter((condition) => condition.live);

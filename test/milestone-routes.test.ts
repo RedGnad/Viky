@@ -79,13 +79,13 @@ test("a condition that is not live is offered to nobody but an account that runs
   assert.equal(((await onLive.json()) as { code: string }).code, "TERMS_MISMATCH");
 
   const listed = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`, { headers: { cookie: await cookieFor(FUNDER) } }))).json()) as { ids: string[]; preview: string[] };
-  assert.deepEqual(listed.preview, [], "a funder sees only what is live");
+  assert.deepEqual(listed.preview, ["ecoledirecte-grade-shown"], "a funder sees what is live, and the line being built the founder lists (D311)");
   assert.ok(listed.ids.includes("chess-rating"));
   const operatorSees = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`, { headers: { cookie: await cookieFor(OPERATOR) } }))).json()) as { ids: string[]; preview: string[] };
-  // No door (the founder's rule of 23 Sep 2026, D184): an operator previews nothing, like everybody.
-  assert.deepEqual(operatorSees.preview, []);
+  // No door (the founder's rule of 23 Sep 2026, D184): an operator is offered what everybody is.
+  assert.deepEqual(operatorSees.preview, listed.preview);
   const anonymous = (await (await conditionsGet(new Request(`${ORIGIN}/api/conditions`))).json()) as { preview: string[] };
-  assert.deepEqual(anonymous.preview, []);
+  assert.deepEqual(anonymous.preview, listed.preview);
 });
 
 test("terms that are not a climb, or not the terms signed, are refused by name before anything is read or sent", async () => {
