@@ -107,7 +107,8 @@ test("the hero tone belongs to the gift on the link preview, and nowhere else do
   // standing figure since D265, and no longer the gift.
   const script = readFileSync("scripts/make-icon.ts", "utf8");
   // The day version since D307, the landing's figure as it stands: its soft smile and its halftone.
-  assert.match(script, /const svg = figureInLook\("light", \{ id: "icon", limbs: false, mouth: "soft", halftone: true \}\);/);
+  assert.match(script, /const svg = figureInLook\("light", ICON_FIGURE\);/);
+  assert.match(readFileSync("scripts/look-figure.ts", "utf8"), /ICON_FIGURE: FigureProps = \{ id: "icon", limbs: false, mouth: "soft", halftone: true \}/);
   assert.match(script, /background:\$\{COLOURS\.light\.background\}/);
   assert.doesNotMatch(script, /characterSvg|gift-hero/);
   for (const state of STATES) assert.doesNotMatch(draw(state), /var\(--accent\)|var\(--on-accent\)/);

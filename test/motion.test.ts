@@ -120,8 +120,14 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
     .replace(/\.page-enters > \*:not\(header, dialog\),\n\s*\.page-enters > header > \*:not\(\.page-mark\)(,\n\s*\.page-enters \.arrives-in-turn > \*)? \{[\s\S]*?\n\s*\}/g, "")
     .replace(/\.page-enters \.arrives-in-turn[^{]*\{[\s\S]*?\n\s*\}/g, "")
     .replace(/@keyframes page-enter \{[\s\S]*?\n\}/, "")
-    .replace(/@keyframes page-fade \{[\s\S]*?\n\}/, "");
-  assert.doesNotMatch(outsideTheRing, /@keyframes|animation-name|infinite/, "the stylesheet plays no animation of its own beyond the one loop, the sheet and the arrival");
+    .replace(/@keyframes page-fade \{[\s\S]*?\n\}/, "")
+    // The fourth exception, and it answers the first gesture of all, opening the installed app: once per device, on
+    // the launch screen's own image, never against reduced motion (src/launch-intro.ts, the founder, 28 Sep 2026).
+    .replace(/\.launch-intro-figure \{[\s\S]*?\n\}/, "")
+    .replace(/@keyframes launch-intro-hop \{[\s\S]*?\n\}/, "")
+    .replace(/\.launch-intro-word span \{[\s\S]*?\n\}/, "")
+    .replace(/@keyframes launch-intro-drop \{[\s\S]*?\n\}/, "");
+  assert.doesNotMatch(outsideTheRing, /@keyframes|animation-name|infinite/, "the stylesheet plays no animation of its own beyond the one loop, the sheet, the arrival and the first opening");
   assert.match(css, /dialog\.sheet\[open\] \{\s*\n\s*animation: sheet-rise \d+ms/, "the sheet rises once, on the press that opened it");
   assert.match(css, /animation: working-turn \d+ms linear infinite/, "the one loop is the working ring, and it is the only one");
   assert.equal(css.match(/infinite/g)?.length, 1, "exactly one loop in the whole stylesheet");

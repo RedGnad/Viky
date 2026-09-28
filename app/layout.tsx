@@ -21,6 +21,8 @@ import { moneyForTheReader } from "@/src/reader-money";
 import { THEME_BOOT_SCRIPT } from "@/src/theme";
 import { HOME } from "@/src/sentences";
 import { LAUNCH_TOP_SCRIPT } from "@/src/launch-top";
+import { INTRO_BOOT_SCRIPT } from "@/src/launch-intro";
+import { LaunchIntro } from "./kit/LaunchIntro";
 import { Pressed } from "./kit/Pressed";
 import { Register } from "./serwist/Register";
 import { preload } from "react-dom";
@@ -155,6 +157,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         {/* Before the browser restores a scroll position: the landing always opens at its top (D250). */}
         <script dangerouslySetInnerHTML={{ __html: LAUNCH_TOP_SCRIPT }} />
+        {/* Before anything is painted: the installed app's first opening starts on the launch screen's own image. */}
+        <script dangerouslySetInnerHTML={{ __html: INTRO_BOOT_SCRIPT }} />
+        <LaunchIntro />
         {/* The worker is registered by `Register`, not by the provider, so a browser that refuses one is refused
             quietly rather than throwing on every screen (D150).
             `reloadOnOnline` is off (D153): the library reloads the whole page on every `online` event, which a phone

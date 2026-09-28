@@ -1366,3 +1366,72 @@ dialog.sheet[open] {
     transition: none;
   }
 }
+
+/*
+ * The installed app's first opening (src/launch-intro.ts, the founder, 28 Sep 2026, direction C): the launch screen's
+ * own image, then the character hops up and fades as it goes, and "Viky" drops in where it was: the word alone at the end. Hidden unless the boot script marked the
+ * document; the lavender is the manifest's background, the launch screen's, whatever the look.
+ */
+.launch-intro {
+  display: none;
+}
+html[data-intro] .launch-intro {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  background: #ddd6eb;
+  opacity: 1;
+  transition: opacity 250ms ease-out;
+}
+html[data-intro] .launch-intro.launch-intro-leaving {
+  opacity: 0;
+}
+.launch-intro-figure {
+  position: absolute;
+  left: 17vw;
+  top: 50%;
+  width: 66vw;
+  transform: translateY(-50%);
+  line-height: 0;
+  animation: launch-intro-hop 500ms cubic-bezier(0.3, 1.5, 0.5, 1) 150ms forwards;
+}
+@keyframes launch-intro-hop {
+  to {
+    transform: translateY(calc(-50% - 18vh));
+    opacity: 0;
+  }
+}
+.launch-intro-word {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-title);
+  font-weight: var(--font-title-weight);
+  font-size: 20vw;
+  line-height: 1;
+  color: #2c2738;
+}
+.launch-intro-word span {
+  display: inline-block;
+  opacity: 0;
+  animation: launch-intro-drop 450ms cubic-bezier(0.3, 1.6, 0.5, 1) forwards;
+  animation-delay: calc(350ms + var(--i) * 70ms);
+}
+@keyframes launch-intro-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
