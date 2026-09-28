@@ -1,11 +1,11 @@
 "use client";
 import { useLayoutEffect, useState } from "react";
-import { INTRO_ATTRIBUTE, INTRO_SEEN_KEY, INTRO_SHOWN_ATTRIBUTE, INTRO_TIMING } from "@/src/launch-intro";
+import { INTRO_ATTRIBUTE, INTRO_SHOWN_ATTRIBUTE, INTRO_TIMING } from "@/src/launch-intro";
 import { FIGURE_ICON_SVG } from "./figure-icon";
 
 /**
  * The screen of the installed app's first opening (src/launch-intro.ts). It is always in the page and hidden; the
- * boot script marks the document when it should play, and this starts it, remembers it, and takes it away.
+ * boot script marks the document when it should play and remembers it there; this starts it and takes it away.
  *
  * The character is the icon's own drawing, the picture the phone's launch screen was showing, at the size and place
  * the founder's phone draws it (two thirds of the width, in the middle), on the same lavender, so the first frame is
@@ -18,11 +18,6 @@ export function LaunchIntro() {
     if (!root.hasAttribute(INTRO_ATTRIBUTE)) return;
     // The screen is on the page now: the ground gives its drawing back, so nothing shows through the fade.
     root.setAttribute(INTRO_SHOWN_ATTRIBUTE, "");
-    try {
-      window.localStorage.setItem(INTRO_SEEN_KEY, "1");
-    } catch {
-      // A device that cannot remember sees it again next time, which is harmless.
-    }
     const end = () => {
       setLeaving(true);
       window.setTimeout(() => root.removeAttribute(INTRO_ATTRIBUTE), INTRO_TIMING.fadeMs);

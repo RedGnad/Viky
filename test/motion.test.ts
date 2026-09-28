@@ -126,7 +126,12 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
     .replace(/\.launch-intro-figure \{[\s\S]*?\n\}/, "")
     .replace(/@keyframes launch-intro-hop \{[\s\S]*?\n\}/, "")
     .replace(/\.launch-intro-word span \{[\s\S]*?\n\}/, "")
-    .replace(/@keyframes launch-intro-drop \{[\s\S]*?\n\}/, "");
+    .replace(/@keyframes launch-intro-drop \{[\s\S]*?\n\}/, "")
+    // Not a movement at all: the day row's fades follow its scroll from the first image, a timeline of the scroll and
+    // not of the clock, so nothing plays by itself (the founder, 28 Sep 2026).
+    .replace(/@supports \(animation-timeline: scroll\(\)\) \{[\s\S]*?\n\}/, "")
+    .replace(/@keyframes row-fade-left \{[\s\S]*?\n\}/, "")
+    .replace(/@keyframes row-fade-right \{[\s\S]*?\n\}/, "");
   assert.doesNotMatch(outsideTheRing, /@keyframes|animation-name|infinite/, "the stylesheet plays no animation of its own beyond the one loop, the sheet, the arrival and the first opening");
   assert.match(css, /dialog\.sheet\[open\] \{\s*\n\s*animation: sheet-rise \d+ms/, "the sheet rises once, on the press that opened it");
   assert.match(css, /animation: working-turn \d+ms linear infinite/, "the one loop is the working ring, and it is the only one");

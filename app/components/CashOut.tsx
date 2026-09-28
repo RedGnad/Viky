@@ -19,7 +19,7 @@ import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords } from "@/src/rail-country";
 import { feeSentence, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "@/src/rails";
 import { CASH_OUT as W, USE_MONEY as U, WHERE_YOU_LIVE as L } from "@/src/sentences";
-import { orderUses, usesFor } from "@/src/use-money";
+import { inTheSun, orderUses, usesFor } from "@/src/use-money";
 import { useAccountCountry } from "@/src/client/account-country";
 import { CountryPicker } from "../kit/CountryPicker";
 import { AccountPanel } from "./AccountPanel";
@@ -643,7 +643,7 @@ export function CashOut() {
               </div>
               <p className={CARD_LABEL}>{words.nature}</p>
               <p className={BODY}>{words.body}</p>
-              <button type="button" onClick={act} disabled={holdings === null || changeable === 0n} className={index === 0 ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
+              <button type="button" onClick={act} disabled={holdings === null || changeable === 0n} className={inTheSun(use, index, eurosHeld) ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
                 {words.action}
               </button>
               {holdings !== null && changeable === 0n ? <p className={HELP}>{W.nothingToSend}</p> : null}

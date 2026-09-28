@@ -136,8 +136,10 @@ test("the ways out are ordered by what reaches the person, after the country has
  */
 test("the way out shows one accent surface at a time, on the action it is waiting for (S4)", () => {
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
-  // The base (D270): one sun, on the first use, the one that gives this person the most; every other use in outline.
-  assert.match(screen, /onClick=\{act\} disabled=\{holdings === null \|\| changeable === 0n\} className=\{index === 0 \? PRIMARY_BUTTON : SECONDARY_BUTTON\}/);
+  // The base (D270): the sun on the first use, the one that gives this person the most, and since the founder's word of
+  // 28 Sep 2026 on the gift card too once the person holds an ordinary card's price (inTheSun, src/use-money.ts); every
+  // other use in outline.
+  assert.match(screen, /onClick=\{act\} disabled=\{holdings === null \|\| changeable === 0n\} className=\{inTheSun\(use, index, eurosHeld\) \? PRIMARY_BUTTON : SECONDARY_BUTTON\}/);
   assert.equal((screen.match(/PRIMARY_BUTTON/g) ?? []).length > 0, true);
   // The figures come from one number: what can be changed, cut to the cent, and the head of the screen adds the other
   // coin cut the same way. Nothing on a card is computed on the six-decimal balance any more. What the gifts hold for

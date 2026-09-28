@@ -1057,6 +1057,50 @@ dialog.sheet[open] {
   display: none;
 }
 
+/*
+ * The same fades from the first painted image, where the browser can follow a scroll itself (the founder, 28 Sep
+ * 2026: the last day showed whole, then was cut, because the row measured itself only once the page had come alive).
+ * Each end fades by what it hides up to a day's width, exactly as DayStrip.tsx measures it: the left over the first
+ * 56 pixels scrolled, the right over the last 56. A row with nothing to scroll has no timeline, so nothing applies
+ * and it stays flat. Where this is not supported, the measure in DayStrip.tsx does it, as before.
+ */
+@property --fade-left {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --fade-right {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@supports (animation-timeline: scroll()) {
+  .day-row-days {
+    animation-name: row-fade-left, row-fade-right;
+    animation-duration: auto;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+    animation-timeline: scroll(self inline), scroll(self inline);
+    animation-range: 0px 56px, calc(100% - 56px) 100%;
+  }
+}
+@keyframes row-fade-left {
+  from {
+    --fade-left: 0px;
+  }
+  to {
+    --fade-left: 56px;
+  }
+}
+@keyframes row-fade-right {
+  from {
+    --fade-right: 56px;
+  }
+  to {
+    --fade-right: 0px;
+  }
+}
+
 /* The first day of a card being filled in has its eyes open while the card is ready (D226): the state is in the
    markup, so the first image is right, and DayStrip plays the change from it. */
 .day-row-days [data-awake] [data-part="eye"] {
