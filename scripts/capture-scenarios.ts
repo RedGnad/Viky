@@ -963,7 +963,7 @@ function withdrawal(): Scenario[] {
     },
   };
   /** The ECB's rates of 16 Sep 2026, as the rates route answers them, read at the time of the run. */
-  const RATES = { rates: { date: "2026-09-16", usdPerEur: 1.1537, eurPerUsd: 1 / 1.1537, xofPerUsd: 655.957 / 1.1537, readAtMs: Date.now() } };
+  const RATES = { rates: { date: "2026-09-16", usdPerEur: 1.1537, eurPerUsd: 1 / 1.1537, xofPerUsd: 655.957 / 1.1537, eurPer: { USD: 1.1537, EUR: 1, XOF: 655.957 }, readAtMs: Date.now() } };
   const before = { AUSD: 20_994_751n, USDC: 0n, MON: 0n };
   const after = { AUSD: 10_994_751n, USDC: 9_999_586n, MON: 0n };
 
@@ -973,9 +973,9 @@ function withdrawal(): Scenario[] {
    * order is the register's and no question is asked. The second shape, with the two signals disagreeing, is the one
    * question the screen may ask.
    */
-  const RAILS_FRANCE = { country: "fr", ask: false, fromConnection: "fr", fromDevice: "fr", waysOut: { Ramp: "serves", Mercuryo: "serves" }, wayIn: "serves" };
-  const RAILS_SENEGAL = { country: "sn", ask: false, fromConnection: "sn", fromDevice: "sn", waysOut: { Ramp: "does-not", Mercuryo: "serves" }, wayIn: "serves" };
-  const RAILS_ASK = { country: null, ask: true, fromConnection: "de", fromDevice: "sn", waysOut: { Ramp: "unknown", Mercuryo: "unknown" }, wayIn: "unknown" };
+  const RAILS_FRANCE = { country: "fr", ask: false, fromConnection: "fr", fromDevice: "fr", waysOut: { Ramp: "serves", Mercuryo: "serves" }, waysIn: { Ramp: "serves", Mercuryo: "serves" } };
+  const RAILS_SENEGAL = { country: "sn", ask: false, fromConnection: "sn", fromDevice: "sn", waysOut: { Ramp: "does-not", Mercuryo: "serves" }, waysIn: { Ramp: "does-not", Mercuryo: "serves" } };
+  const RAILS_ASK = { country: null, ask: true, fromConnection: "de", fromDevice: "sn", waysOut: { Ramp: "unknown", Mercuryo: "unknown" }, waysIn: { Ramp: "unknown", Mercuryo: "unknown" } };
   const rails = (s: Session, body: unknown = RAILS_FRANCE) =>
     s.api("GET", /\/api\/rails\/where/, () => ({ status: 200, body }), "GET /api/rails/where");
   const rates = (s: Session) => s.api("GET", "/api/rates", () => ({ status: 200, body: RATES }), "GET /api/rates");
@@ -985,7 +985,7 @@ function withdrawal(): Scenario[] {
   /** From home to the review of step 1, which every refusal after the price starts from. */
   const toReview = async (s: Session) => {
     await s.signIn();
-    await s.click("Take it out");
+    await s.click("Use your money");
     await s.click("Send to my bank");
     await s.page.getByLabel("How much do you want to send to your bank?").fill("10");
     await s.click("See what you will get");
@@ -1002,7 +1002,7 @@ function withdrawal(): Scenario[] {
         await rails(s);
         await currency(s, null);
         await s.signIn();
-        await s.click("Take it out");
+        await s.click("Use your money");
         await s.text("Send to my bank");
         await s.shot("withdrawal", "base", `${WAY}`);
       },
@@ -1018,7 +1018,7 @@ function withdrawal(): Scenario[] {
         await rails(s, RAILS_SENEGAL);
         await currency(s, null);
         await s.signIn();
-        await s.click("Take it out");
+        await s.click("Use your money");
         await s.text("Send to my card");
         await s.shot("withdrawal", "ordered for where they are", `${WAY}, with the rails answering for Senegal`);
 
@@ -1029,7 +1029,7 @@ function withdrawal(): Scenario[] {
         await rails(s, RAILS_ASK);
         await currency(s, null);
         await s.signIn();
-        await s.click("Take it out");
+        await s.click("Use your money");
         await s.text("Where is your bank or card?");
         await s.shot("withdrawal", "where is your bank or card", `${WAY}, with the two signals disagreeing`);
       },
@@ -1043,9 +1043,28 @@ function withdrawal(): Scenario[] {
         await rails(s);
         await currency(s, "EUR");
         await s.signIn();
-        await s.click("Take it out");
+        await s.click("Use your money");
         await s.text(/rate of 16 Sep\b/);
         await s.shot("withdrawal", "base, read in euros", `${WAY}, on an account whose display currency is the euro`);
+      },
+    },
+    {
+      name: "read in euros: the pay sheet from the account, and the made screen",
+      run: async (s) => {
+        await s.reset({ AUSD: 30_000_000n, USDC: 0n, MON: 0n });
+        await gifts(s);
+        await rates(s);
+        await rails(s);
+        await currency(s, "EUR");
+        await s.signIn();
+        await s.page.locator("[data-card-action]").first().click();
+        await s.page.getByRole("dialog").waitFor({ state: "visible", timeout: 20_000 });
+        await s.page.waitForTimeout(1500);
+        await s.shot("euros", "pay sheet from the account", "the card's action, account holding $30.00, read in euros");
+        await s.page.evaluate(`window.sessionStorage.setItem("viky.giftMade", JSON.stringify({ giftId: "42", claimUrl: "https://viky.cash/g/42?t=x", atMs: Date.now(), recipientName: "Boo", conditionId: "duolingo-daily", amount: "25000000", days: 30 }))`);
+        await s.goto("/fund?step=done");
+        await s.page.waitForTimeout(2500);
+        await s.shot("euros", "made", "the made screen, read in euros");
       },
     },
     {
@@ -1068,7 +1087,7 @@ function withdrawal(): Scenario[] {
         }, "POST /api/send");
 
         await s.signIn();
-        await s.click("Take it out");
+        await s.click("Use your money");
         await s.click("Send to my bank");
         await s.page.getByLabel("How much do you want to send to your bank?").waitFor({ state: "visible" });
         await s.shot("withdrawal", "step 1, how much", `${WAY}, Send to my bank`);
@@ -1110,7 +1129,7 @@ function withdrawal(): Scenario[] {
         await s.signIn();
         await s.text("$9.99 of it is ready to send to Ramp.");
         await s.shot("withdrawal", "home with 9.99 ready", `${HOME}, after a change left 9.99 ready for Ramp`);
-        await s.click("Take it out");
+        await s.click("Use your money");
         await s.text("Ready: $9.99");
         await s.shot("withdrawal", "resumed at step 2", `${WAY}, after a change left 9.99 ready: the steps open on the second`);
       },
@@ -1127,7 +1146,7 @@ function withdrawal(): Scenario[] {
         // What 138.43 is worth, as the price answers it: about $3.24 at the rate measured on 14 Sep 2026.
         await s.api("POST", "/api/fund/quote", () => ({ status: 200, body: { output: "3240000", minOut: "3230000", to: ESCROW, data: "0x", value: "0" } }), "POST /api/fund/quote");
         await s.signIn();
-        await s.click("Take it out");
+        await s.click("Use your money");
         // The money leads and the quantity follows (D104): "Ready: about $3.24", with 138.43 said under the action.
         await s.text("Ready: about $3.24");
         await s.text(/asks for the exact quantity: 138\.43/);
@@ -1143,7 +1162,7 @@ function withdrawal(): Scenario[] {
         await rails(s);
         await currency(s, null);
         await s.signIn();
-        await s.click("Take it out");
+        await s.click("Use your money");
         await s.click("Send to my bank");
         await s.page.getByLabel("How much do you want to send to your bank?").fill("25");
         await s.text("That is more than your $20.99.");
@@ -1225,7 +1244,7 @@ function withdrawal(): Scenario[] {
         await rails(s);
         await currency(s, null);
         await s.signIn();
-        await s.click("Take it out");
+        await s.click("Use your money");
         await s.click("Send to another Viky account of mine");
         await s.page.getByLabel("Paste that account's code").waitFor({ state: "visible" });
         await s.shot("withdrawal", "to another Viky account of mine", `${WAY}, Send to another Viky account of mine`);

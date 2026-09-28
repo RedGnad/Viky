@@ -15,6 +15,7 @@ import { rateDateInWords, whenInWords } from "@/src/display-currency";
 import { exitAmount, type ExitAmount } from "@/src/exit-amount";
 import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, netOfEverything, readyFor, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
 import { formatAusd } from "@/src/gift-reader";
+import { ExactLine, LedFigure } from "../kit/LedAmount";
 import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords } from "@/src/rail-country";
 import { feeSentence, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "@/src/rails";
@@ -542,12 +543,10 @@ export function CashOut() {
             </p>
           ) : null}
         </>
-      ) : money.about(dollarsHeld) ? (
+      ) : money.led(dollarsHeld).converted ? (
         <>
-          <p className={MONEY}>{money.about(dollarsHeld)!.replace(/ \(rate of .*\)$/, "")}</p>
-          <p className={HELP}>
-            {formatAusd(dollarsHeld)}, {money.about(dollarsHeld)!.match(/\((rate of .*)\)$/)?.[1]}
-          </p>
+          <LedFigure amount={money.led(dollarsHeld)} className={MONEY} />
+          <ExactLine amount={money.led(dollarsHeld)} />
         </>
       ) : (
         <>
@@ -574,23 +573,27 @@ export function CashOut() {
   }
 
   if (stage === "base") {
-    const figure = holdings === null ? undefined : money.figure(dollarsHeld);
+    const led = holdings === null ? undefined : money.led(dollarsHeld);
     const cardBranch = holdings !== null && dollarsHeld === 0n && firstReady !== undefined;
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
-        {/* The balance, on the page ground and not in a box, as Home sets it: the dollars lead on the way out because
-            the cards under them say what arrives in the person's currency, and the conversion is the caption. When
-            the dollar coins are empty and something is ready for the card service, that card leads instead. */}
+        {/* The balance, on the page ground and not in a box, as Home sets it: the person's currency leads with "about"
+            before it, and the exact dollars held are the caption (the founder, 29 Sep 2026), since they are what
+            leaves. When the dollar coins are empty and something is ready for the card service, that card leads. */}
         {cardBranch ? (
           moneyCard
         ) : (
           <section className="money-display-box flex flex-col gap-[var(--space-xs)]">
             <p className={CARD_LABEL}>{U.yours}</p>
-            <p className={`money-display ${AMOUNT_IN_TITLE} tracking-[-0.02em]`} style={{ "--amount-chars": holdings === null ? 1 : formatAusd(dollarsHeld).length } as CSSProperties}>
-              {holdings === null ? "…" : formatAusd(dollarsHeld)}
-            </p>
-            {figure?.rateDate ? <p className={HELP}>{W.aboutLine(figure.text, figure.rateDate)}</p> : null}
-            {holdings !== null && !figure?.rateDate && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
+            {led ? (
+              <LedFigure amount={led} className={`money-display ${AMOUNT_IN_TITLE} tracking-[-0.02em]`} style={{ "--amount-chars": led.lead.length } as CSSProperties} />
+            ) : (
+              <p className={`money-display ${AMOUNT_IN_TITLE} tracking-[-0.02em]`} style={{ "--amount-chars": 1 } as CSSProperties}>
+                …
+              </p>
+            )}
+            {led ? <ExactLine amount={led} /> : null}
+            {led && !led.converted && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
             {firstReady && dollarsHeld > 0n && !isNative(coinOf(firstReady)) ? (
               <p className={HELP}>{W.readyLine(firstReady.name, amountOf(firstReady, readyOf(firstReady)!).lead)}</p>
             ) : null}

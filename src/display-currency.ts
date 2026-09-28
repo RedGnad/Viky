@@ -1,6 +1,7 @@
 import type { Rates } from "./rates";
 import { PRODUCT_LOCALE } from "./moments";
-import { currencyOf, figureIn, isCurrencyCode, NOT_OFFERED, perDollar } from "./currencies";
+import { currencyOf, figureIn, isCurrencyCode, markOf, NOT_OFFERED, perDollar } from "./currencies";
+import { formatAusd } from "./gift-reader";
 
 /**
  * One display currency per account, and how a dollar figure is said in it.
@@ -139,4 +140,34 @@ export function figureInDisplayCurrency(units: bigint, currency: DisplayCurrency
     after: "",
     rateDate: code === "USD" ? undefined : rateDateInWords(rates!.date),
   };
+}
+
+/**
+ * An amount led by the reader's own currency, the exact dollars under it (the founder, 29 Sep 2026): the figure a person
+ * reads first is the one they count in, with "about" before it, because the account holds dollars and a conversion is
+ * never exact; the dollars are the caption, which is what is really held and what an irreversible gesture moves.
+ * When the reader counts in dollars, or no usable rate exists, the dollars lead alone and nothing is "about".
+ */
+export type LedAmount = Readonly<{
+  /** The figure a person reads first, with its sign: "€7.53", "F CFA 4,940", or the dollars themselves. */
+  lead: string;
+  /** Whether `lead` is a conversion, so the screen says "about" before it and the exact dollars under it. */
+  converted: boolean;
+  /** The dollars held, exact to the cent: "$8.57". */
+  exact: string;
+  /** The rate's day in words, when converted. */
+  rateDate: string | undefined;
+}>;
+
+export function ledAmount(units: bigint, currency: DisplayCurrency, rates: Rates | undefined): LedAmount {
+  const figure = figureInDisplayCurrency(units, currency, rates);
+  const exact = formatAusd(units);
+  if (!figure.rateDate) return { lead: exact, converted: false, exact, rateDate: undefined };
+  // The sign keeps the space its currency is written with: "F CFA 4,940" stands apart, "€7.53" does not.
+  return { lead: `${figure.symbol}${markOf(currency).gap}${figureIn(figure.value, currency)}`, converted: true, exact, rateDate: figure.rateDate };
+}
+
+/** A led amount inside a sentence: "about €21.67" when converted, the exact dollars otherwise; "About" to open one. */
+export function spokenAmount(amount: LedAmount, first = false): string {
+  return amount.converted ? `${first ? "About" : "about"} ${amount.lead}` : amount.lead;
 }

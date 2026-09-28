@@ -14,7 +14,7 @@ import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/clie
 import { conditionById } from "@/src/conditions";
 import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { cadenceOf, certificateById, milestoneById } from "@/src/milestone-conditions";
-import { whenInWords } from "@/src/display-currency";
+import { spokenAmount, whenInWords } from "@/src/display-currency";
 import { twoDecimalsDown } from "@/src/exit-steps";
 import { nextFundingStep } from "@/src/funding-step";
 import { eurosToBuyOn } from "@/src/gift-amount";
@@ -29,6 +29,7 @@ import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift }
 import { wayInPage, WAYS_IN, type WayIn } from "@/src/rails";
 import { JudgeCode } from "../kit/offer/JudgeCode";
 import { FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
+import { ExactLine } from "../kit/LedAmount";
 import { Figure } from "../kit/Figure";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { Success } from "../kit/Motion";
@@ -413,14 +414,17 @@ export function PayGift() {
     const madeMilestone = made.goal !== undefined && made.target !== undefined;
     const madeUnits = BigInt(made.amount);
     const day = madeUnits / BigInt(made.days);
-    const about = money.about(madeUnits);
+    // The person's currency leads with "about", and the dollars put in their name are under the title, exact (the
+    // founder, 29 Sep 2026). The terms say the same currency; a converted day is "about" already, so it is not said twice.
+    const led = money.led(madeUnits);
+    const perDay = money.led(day);
     return (
       <Shell
         kind="task"
         back="/gifts"
         backLabel={W.backToGifts}
         backFollows
-        step={W.made.title(formatAusd(madeUnits), made.recipientName)}
+        step={W.made.title(spokenAmount(led, true), made.recipientName)}
         /* At payment, the character arrives on the expressive spring, once, and no confetti: the one confetti of the app
            is the gift reached (decision B, V4). It is the app's own character, waving, where the gift box of the first
            look stood (the founder, 28 Sep 2026: that box is kept as the kid, for later, and drawn on no screen now). */
@@ -439,11 +443,11 @@ export function PayGift() {
         }
       >
         <section className="flex flex-col gap-[var(--space-sm)]">
-          {about ? <p className={HELP}>{about}</p> : null}
+          <ExactLine amount={led} />
           <p className={BODY}>
             {madeMilestone
-              ? M.made.terms(formatAusd(madeUnits), made.goal ?? "", made.days, madeCondition?.source ?? "")
-              : W.made.terms(formatAusd(madeUnits), made.days, formatAusd(day), day * BigInt(made.days) === madeUnits, madeCondition?.source ?? "")}
+              ? M.made.terms(spokenAmount(led, true), made.goal ?? "", made.days, madeCondition?.source ?? "")
+              : W.made.terms(spokenAmount(led, true), made.days, spokenAmount(perDay), perDay.converted || day * BigInt(made.days) === madeUnits, madeCondition?.source ?? "")}
           </p>
           <p className={HELP}>{W.made.reference(whenInWords(made.atMs), made.giftId)}</p>
         </section>
@@ -471,7 +475,7 @@ export function PayGift() {
           <ol className={`flex list-decimal flex-col gap-[var(--space-sm)] pl-[var(--space-lg)] ${BODY}`}>
             {(madeMilestone
               ? M.made.next(made.recipientName, madeCondition?.source ?? "", made.target ?? 0, made.days, settlingTimeInWords(made.atMs), made.namedByFunder === true)
-              : W.made.next(made.recipientName, madeCondition?.words.theyConnect ?? W.made.theyConnectAny, madeCondition?.words.eachDay ?? "", formatAusd(day), settlingTimeInWords(made.atMs))
+              : W.made.next(made.recipientName, madeCondition?.words.theyConnect ?? W.made.theyConnectAny, madeCondition?.words.eachDay ?? "", spokenAmount(perDay), settlingTimeInWords(made.atMs))
             ).map((line) => (
               <li key={line}>{line}</li>
             ))}

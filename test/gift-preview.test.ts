@@ -74,6 +74,19 @@ test("without the key, or with a wrong one, a gift with names still says someone
   assert.equal(previewOf({ amount: 7_000_000n, funderName: "Maman", goalType: 1 }, true).title, "Maman put $7.00 in your name");
 });
 
+const RATES = { date: "2026-09-29", usdPerEur: 1.25, eurPerUsd: 0.8, xofPerUsd: 0.8 * 655.957, eurPer: { USD: 1.25, EUR: 1, XOF: 655.957 }, readAtMs: Date.now() };
+
+test("with the link's key, the amount is said about, in the funder's own currency, and in dollars without it", () => {
+  const record = { amount: 25_000_000n, funderName: "Maman", goalType: 1 };
+  assert.equal(previewOf(record, true, {}, { currency: "EUR", rates: RATES }).title, "Maman put about €20.00 in your name");
+  // The CFA franc has no subunit, and its sign stands apart from the figure as Intl writes it (spaces vary by runtime).
+  assert.match(previewOf(record, true, {}, { currency: "XOF", rates: RATES }).title, /^Maman put about F\sCFA\s13,119 in your name$/);
+  // A guessed number names nobody, so it does not say where the funder lives either.
+  assert.equal(previewOf(record, false, {}, { currency: "EUR", rates: RATES }).title, "Someone put $25.00 in your name");
+  // A currency the day's file does not carry is not guessed at.
+  assert.equal(previewOf(record, true, {}, { currency: "JPY", rates: RATES }).title, "Maman put $25.00 in your name");
+});
+
 test("a milestone gift's line is its own condition's, not the one its goal type means on the daily contract", async () => {
   const preview = await giftPreview("1000000", MILESTONE_KEY);
   assert.equal(preview.title, "Red put $25.00 in your name");

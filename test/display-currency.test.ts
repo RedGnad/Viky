@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { aboutInDisplayCurrency, isDisplayCurrency, proposedDisplayCurrency, rateDateInWords, regionOf, SHOWN_IN_DOLLARS, whenInWords } from "../src/display-currency";
+import { aboutInDisplayCurrency, isDisplayCurrency, ledAmount, proposedDisplayCurrency, rateDateInWords, regionOf, SHOWN_IN_DOLLARS, whenInWords } from "../src/display-currency";
 import { parseEcbRates } from "../src/rates";
 
 /**
@@ -55,4 +55,15 @@ test("a converted figure carries about and the date of the rate; the dollar is n
 test("the one line printed when the rate could not be read says so, in the person's words", () => {
   assert.match(SHOWN_IN_DOLLARS, /Shown in dollars/);
   assert.doesNotMatch(SHOWN_IN_DOLLARS, /\b(wallet|gas|chain|seed|token|address)\b/i);
+});
+
+test("an amount is led by the reader's currency with about, and the exact dollars stay under it", () => {
+  // $8.57 at 1.1537 dollars a euro is 7.428... euros, the founder's cash-out of 29 Sep 2026 in its own shape.
+  assert.deepEqual(ledAmount(8_570_000n, "EUR", RATES), { lead: "€7.43", converted: true, exact: "$8.57", rateDate: "16 Sep 2026" });
+  // The franc's sign stands apart from its figure, and it has no subunit.
+  const franc = ledAmount(8_570_000n, "XOF", RATES);
+  assert.match(franc.lead, /^F\sCFA\s4,873$/);
+  // In dollars, or without a rate, the dollars lead alone and nothing is about.
+  assert.deepEqual(ledAmount(8_570_000n, "USD", RATES), { lead: "$8.57", converted: false, exact: "$8.57", rateDate: undefined });
+  assert.equal(ledAmount(8_570_000n, "EUR", undefined).converted, false);
 });
