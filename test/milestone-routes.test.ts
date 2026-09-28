@@ -93,8 +93,8 @@ test("terms that are not a climb, or not the terms signed, are refused by name b
   const cases: Array<[Record<string, unknown>, string]> = [
     [{ cadence: "chess960" }, "INVALID_MODE"],
     [{ username: "a b" }, "INVALID_USERNAME"],
-    [{ target: 1953 }, "INVALID_TARGET"],
     [{ target: 1904 }, "INVALID_TARGET"],
+    [{ target: 1903 }, "INVALID_TARGET"],
     [{ durationDays: 0 }, "INVALID_DURATION"],
     [{ durationDays: 366 }, "INVALID_DURATION"],
     [{ amount: "999999" }, "INVALID_AMOUNT"],
@@ -109,9 +109,9 @@ test("terms that are not a climb, or not the terms signed, are refused by name b
     assert.equal(body.code, code, JSON.stringify(change));
     assert.equal(response.status, 400);
   }
-  // The smallest climb is the register's, said in the funder's own numbers.
-  const small = await createPost(post({ ...TERMS, target: 1953 }, cookie));
-  assert.match(((await small.json()) as { error: string }).error, /They are at 1904 today\. Choose 1954 or more/);
+  // Any rating above today's is a target (the founder, 28 Sep 2026); at or under it is refused in their own numbers.
+  const small = await createPost(post({ ...TERMS, target: 1904 }, cookie));
+  assert.match(((await small.json()) as { error: string }).error, /They are at 1904 today\. Choose a rating above it\./);
 });
 
 test("the standing route refuses a cadence it does not know before reading anything", async () => {

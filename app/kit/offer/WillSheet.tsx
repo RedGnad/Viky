@@ -1,14 +1,14 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAccount } from "@/src/account/provider";
 import { chooserSections, conditionById, liveConditions, type Condition, type ConditionFamily } from "@/src/conditions";
-import { conditionAnswered, durationBounds, type GiftDraft } from "@/src/gift-draft";
+import { conditionAnswered, durationBounds, unanswered, type GiftDraft, type Unanswered } from "@/src/gift-draft";
 import { certificateById, cadenceOf, milestoneById } from "@/src/milestone-conditions";
 import { loadOfferedConditions, readStanding } from "@/src/client/milestone";
 import { checkSourceName } from "@/src/client/gift";
 import { searchCertifications, type CertificationFound } from "@/src/client/certificate-gift";
 import { ApiError } from "@/src/client/api";
-import { smallestTarget } from "@/src/milestone-terms";
+import { suggestedTarget } from "@/src/milestone-terms";
 import { FUND, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
 import { CARD_LABEL, CHOICE, HELP, INLINE_BUTTON, META, PRIMARY_BUTTON, SECONDARY_BUTTON, TILE } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
@@ -37,6 +37,17 @@ import { chosenUniversityTitle } from "@/src/university-choice";
  */
 /** What the list calls the whole profile: an id no course can have, so it never collides with a real one. */
 const WHOLE_PROFILE = "whole-profile";
+
+/** Where each missing answer is asked on the questions' face, so Done can take the person to it. */
+const SPOTS_OF: Readonly<Record<Unanswered, string | null>> = {
+  condition: null,
+  name: "#source-name, #person-name",
+  cadence: 'input[name="cadence"]',
+  standing: "[data-reading]",
+  target: "#gift-target, #certificate-target",
+  course: '#certificate-course, input[name="course"], input[name="certification"], #certificate-search',
+  scale: 'input[name="scale"], select[name="scale"]',
+};
 
 export function WillSheet({
   openAt,
@@ -78,6 +89,8 @@ export function WillSheet({
    * what React asks for a value derived from props: an effect writing state here renders the sheet twice on every
    * opening, and the first of the two shows the wrong face.
    */
+  /** Done was pressed with something still to answer: the sheet then says what, and stays (the founder, 28 Sep 2026). */
+  const [pressedDone, setPressedDone] = useState(false);
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
     setWasOpen(open);
@@ -87,6 +100,7 @@ export function WillSheet({
     if (open) {
       setAskedFor(openAt);
       setFamily(null);
+      setPressedDone(false);
     }
   }
   const choosing = askedFor === null || askedFor === "list";
@@ -230,7 +244,7 @@ export function WillSheet({
         subject: found.username,
         standing: found.rating,
         standingReadAt: found.readAt,
-        target: String(smallestTarget(milestone.shape, found.rating)),
+        target: String(suggestedTarget(milestone.shape, found.rating)),
       });
       setReading({ busy: false });
     } catch (error) {
@@ -253,6 +267,41 @@ export function WillSheet({
 
   const title = choosing || !condition ? W.sheets.will : (condition.detailTitle ?? certificate?.words.detailQuestion ?? condition.name);
 
+  /**
+   * Done closes the sheet once the condition is answered. Before that it stays, says the first thing missing and takes
+   * the person to it, where a grey button had said nothing (Smashing Magazine, "Usability Pitfalls of Disabled
+   * Buttons", 2021: a disabled button does not say what is wrong).
+   */
+  const missing: Unanswered | null = choosing ? null : unanswered(draft);
+  const done = () => {
+    if (!missing) {
+      setPressedDone(false);
+      return onClose();
+    }
+    setPressedDone(true);
+    const where = SPOTS_OF[missing];
+    const field = where ? document.querySelector<HTMLElement>(where) : null;
+    field?.scrollIntoView({ block: "center" });
+    field?.focus({ preventScroll: true });
+  };
+
+  // The reading asks itself once a valid name and a rating are known, a moment after the last keystroke, and once per
+  // name and rating: a refusal is shown rather than asked again in a loop.
+  const tried = useRef("");
+  const readingFor = milestone && draft.standing === undefined ? `${draft.subject.trim().toLowerCase()}|${draft.cadence ?? (milestone.cadences.length === 1 ? milestone.cadences[0].id : "")}` : "";
+  useEffect(() => {
+    if (!open || !milestone || !readingFor || readingFor === tried.current) return;
+    const [name, climb] = readingFor.split("|");
+    if (!climb || !milestone.validName(name)) return;
+    const timer = window.setTimeout(() => {
+      tried.current = readingFor;
+      void readRating();
+    }, 600);
+    return () => window.clearTimeout(timer);
+    // readRating reads the draft of the render that scheduled it, which is the one this key was taken from.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, readingFor]);
+
   return (
     <Sheet
       open={open}
@@ -263,9 +312,17 @@ export function WillSheet({
         onClose();
       }}
       footer={
-        <button type="button" className={PRIMARY_BUTTON} disabled={choosing ? !condition : !ready} onClick={onClose}>
-          {W.done}
-        </button>
+        <div className="flex flex-col gap-[var(--space-xs)]">
+          {/* What is still missing, said once Done has been pressed, instead of a grey button with no word. */}
+          {pressedDone && missing ? (
+            <p role="status" className={`${HELP} text-center text-[var(--on-surface)]`}>
+              {W.unanswered[missing]}
+            </p>
+          ) : null}
+          <button type="button" className={PRIMARY_BUTTON} disabled={choosing && !condition} onClick={done}>
+            {W.done}
+          </button>
+        </div>
       }
     >
       {choosing || !condition ? (
@@ -367,6 +424,9 @@ export function WillSheet({
                 help={milestone.condition.link.kind === "username" ? milestone.condition.link.help : undefined}
                 value={draft.subject}
                 onChange={(value) => {
+                  // The reading belongs to a name: it goes only when the name itself changes, not with a space or a
+                  // capital (the founder, 28 Sep 2026: one keystroke in the box silently undid the reading).
+                  if (value.trim().toLowerCase() === draft.subject.trim().toLowerCase()) return onChange({ ...draft, subject: value });
                   setReading({ busy: false });
                   onChange({ ...draft, subject: value, standing: undefined, standingReadAt: undefined });
                 }}
@@ -388,14 +448,22 @@ export function WillSheet({
               ) : null}
               {reading.cadenceRefusal ? <p className="font-semibold">{reading.cadenceRefusal}</p> : null}
               {draft.standing === undefined ? (
-                <button type="button" className={SECONDARY_BUTTON} disabled={reading.busy} onClick={() => void readRating()}>
-                  {reading.busy ? milestone.words.reading : milestone.words.read}
-                </button>
+                /* Read as soon as the name and the rating are known, with nothing to press (the founder, 28 Sep 2026:
+                   a reading nobody remembered to ask for left every field filled and Done grey). The button stays for
+                   a reading that failed, to try again. */
+                <div data-reading="" className="flex flex-col gap-[var(--space-xs)]">
+                  {reading.busy ? <p className={HELP} role="status">{milestone.words.reading}…</p> : null}
+                  {!reading.busy && (reading.nameRefusal || reading.cadenceRefusal) ? (
+                    <button type="button" className={SECONDARY_BUTTON} onClick={() => void readRating()}>
+                      {milestone.words.read}
+                    </button>
+                  ) : null}
+                </div>
               ) : (
                 <Field
                   id="gift-target"
                   label={milestone.words.targetLabel}
-                  help={`${milestone.words.today(draft.standing, cadence?.label ?? "")} ${M.detail.smallest(smallestTarget(milestone.shape, draft.standing))}`}
+                  help={`${milestone.words.today(draft.standing, cadence?.label ?? "")} ${M.detail.smallest(suggestedTarget(milestone.shape, draft.standing))}`}
                   value={draft.target}
                   onChange={(value) => onChange({ ...draft, target: value })}
                   refusal={ready || draft.target.trim().length === 0 ? undefined : milestone.words.refusals.targetShape}

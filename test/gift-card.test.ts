@@ -170,7 +170,10 @@ test("the card shows what the rendered mockups show, in their order", () => {
   assert.match(card, /const quick = \[bounds\.min, bounds\.suggested, bounds\.max\];/);
   assert.doesNotMatch(card, /otherLength|typingDays|aria-label=\{W\.daysLabel\}/);
   assert.doesNotMatch(readFileSync("src/sentences.ts", "utf8"), /otherLength:/, "and the sentence it carried is gone with it");
-  assert.match(card, /disabled=\{!ready\}/);
+  // The action waits for the length and the amount, which are on the card; what it waits for inside the sheet, it opens
+  // the sheet on rather than going grey (the founder, 28 Sep 2026).
+  assert.match(card, /disabled=\{filled\.will && !ready\}/);
+  assert.match(card, /onClick=\{\(\) => \(filled\.will \? setPaying\(true\) : setChoosing\(condition \? "questions" : "list"\)\)\}/);
 });
 
 /**
@@ -201,10 +204,10 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   const key = readFileSync("app/kit/MoneyKey.tsx", "utf8");
   assert.match(key, /min-h-\[var\(--tap-target\)\] \$\{nested \?/, "the key is a thumb's size whatever its sign, nested or alone");
   assert.match(key, /min-w-\[var\(--tap-target\)\]/, "and never narrower than a thumb");
-  // One line, not two (D137), and it opens the four families every time (D233): pressing it is to change.
+  // One line, not two (D137). It opens the four families (D233), except while the condition on the card is not answered:
+  // then its own questions, where the person left them (the founder, 28 Sep 2026).
   assert.equal((card.match(/\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/g) ?? []).length, 1, "one control for what they will do");
-  assert.match(card, /onClick=\{\(\) => setChoosing\("list"\)\}/, "the catalogue, whatever the card carries (D233); one value carries whether it opens and on which face (D150)");
-  assert.doesNotMatch(card, /setChoosing\(condition \? "questions"/, "never the chosen condition's questions from the line");
+  assert.match(card, /onClick=\{\(\) => setChoosing\(condition && !filled\.will \? "questions" : "list"\)\}/, "the catalogue, or the questions left half answered; one value carries whether it opens and on which face (D150)");
   assert.doesNotMatch(card, /cardDetail|detail\.said/, "the line says the label and the name, and the rest lives in the step it opens (D138)");
   assert.match(card, /className=\{`\$\{CHIP\} /, "a chip is the inline button at the size of a choice");
   assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/, "and the condition line is one too, so every control lifts the same way");

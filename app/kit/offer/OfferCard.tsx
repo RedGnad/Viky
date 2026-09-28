@@ -171,11 +171,12 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
           under={
             <button
               type="button"
-              /* One line, and it opens the four families every time (D233, the founder: pressing it is to change what
-                 they will do, whatever is on the card), where D137 had it open the chosen condition's own questions.
-                 It says the label and the condition's name and nothing else (D138): what that condition has been told
-                 lives in the step choosing it opens, which is where somebody goes to change it. */
-              onClick={() => setChoosing("list")}
+              /* One line. It opens the four families (D233, the founder: pressing it is to change what they will do),
+                 except while the condition on the card is not answered yet: then it reopens that condition's own
+                 questions, where the person left them (the founder, 28 Sep 2026: a sheet closed by a click beside it
+                 sent them back to the four, to find their way to a half-filled face again). It says the label and the
+                 condition's name and nothing else (D138). */
+              onClick={() => setChoosing(condition && !filled.will ? "questions" : "list")}
               /* Eight pixels more than a caption gets under a title: this one is a control, and at four it sat on
                  the name's own box (the founder, 21 Sep 2026). */
               className={`${INLINE_BUTTON} mt-[var(--space-sm)] w-full justify-between text-left`}
@@ -279,7 +280,15 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
               {/* One action, in the sun, full width, saying what it will take from the first second; shut, it says what it
                   is waiting for rather than its price (ui review, 20 Sep 2026: a muted "Pay $30.00" with no reason).
                   Its own group, 24 pixels under the money (D226). */}
-              <button type="button" data-card-action className={`${PRIMARY_BUTTON} mt-[var(--space-xl)]`} disabled={!ready} onClick={() => setPaying(true)}>
+              {/* What it waits for inside the sheet, it opens the sheet on (the founder, 28 Sep 2026): "Finish what they
+                  will do" is a way there, not a grey wall; the length and the amount are on the card itself. */}
+              <button
+                type="button"
+                data-card-action
+                className={`${PRIMARY_BUTTON} mt-[var(--space-xl)]`}
+                disabled={filled.will && !ready}
+                onClick={() => (filled.will ? setPaying(true) : setChoosing(condition ? "questions" : "list"))}
+              >
                 <span>{!filled.will ? W.finishWill : !filled.howLong ? W.chooseLength : units === undefined ? W.stillNeeded : W.pay(asked(units))}</span>
               </button>
               {/* The other half of the promise, under the action; what a day is worth is under the days now (D226). The

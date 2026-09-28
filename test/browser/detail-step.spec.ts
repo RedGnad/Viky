@@ -43,16 +43,17 @@ async function choose(page: Page, name: RegExp, family: RegExp) {
 }
 
 test.describe("the line that opens what they will do", () => {
-  test("whatever the card carries, it opens the four families, and a condition's own step is reached by choosing it (D233)", async ({ page }) => {
-    const names: [RegExp, RegExp][] = [
-      [/Duolingo lesson each day/i, /^Learn/],
-      [/Duolingo English Test score/i, /School & studies/],
-      [/puzzle record/i, /^Play/],
-      [/chess rating/i, /^Play/],
-      [/Coursera certificate/i, /School & studies/],
-      [/certification on Credly/i, /^Learn/],
+  test("the card's line opens the four families, or a condition's own questions while it is half answered (D233, 28 Sep 2026)", async ({ page }) => {
+    // Whether the condition is answered once chosen, with nothing typed: the daily lesson has its bar already.
+    const names: [RegExp, RegExp, boolean][] = [
+      [/Duolingo lesson each day/i, /^Learn/, true],
+      [/Duolingo English Test score/i, /School & studies/, false],
+      [/puzzle record/i, /^Play/, false],
+      [/chess rating/i, /^Play/, false],
+      [/Coursera certificate/i, /School & studies/, false],
+      [/certification on Credly/i, /^Learn/, false],
     ];
-    for (const [name, family] of names) {
+    for (const [name, family, answered] of names) {
       await page.goto("/");
       await choose(page, name, family);
       // The sheet is on that condition's questions already; close it and come back through the card's one line.
@@ -62,10 +63,16 @@ test.describe("the line that opens what they will do", () => {
       await expect(line).toBeVisible();
       await line.click();
       await expect(sheet(page)).toBeVisible();
-      // The four families, whatever the card carries (D233): no line to pick yet, no way back, four tiles.
-      await expect(sheet(page).locator('div[role="group"] > button')).toHaveCount(0);
-      await expect(sheet(page).getByRole("button", { name: /^Change/i })).toHaveCount(0);
-      await expect(sheet(page).locator("[data-family-art]")).toHaveCount(4);
+      if (answered) {
+        // Answered: the four families (D233), no line to pick yet, no way back, four tiles.
+        await expect(sheet(page).locator('div[role="group"] > button')).toHaveCount(0);
+        await expect(sheet(page).getByRole("button", { name: /^Change/i })).toHaveCount(0);
+        await expect(sheet(page).locator("[data-family-art]")).toHaveCount(4);
+      } else {
+        // Half answered: its own questions, where the person left them, with the way back to its list.
+        await expect(sheet(page).locator("[data-condition-help]")).toBeVisible();
+        await expect(sheet(page).getByRole("button", { name: /^Change/i })).toHaveCount(1);
+      }
       await sheet(page).getByRole("button", { name: "Close" }).click();
     }
   });

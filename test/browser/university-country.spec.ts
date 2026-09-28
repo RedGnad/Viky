@@ -66,17 +66,21 @@ async function chooseGradeAt(page: Page, scale: string | null) {
 test("before the university's scale is pinned, the funder chooses it, and a letter is chosen rather than typed", async ({ page }) => {
   await chooseGradeAt(page, null);
   await expect(sheet(page).getByText("How does their university grade?")).toBeVisible();
+  // Done is never grey (the founder, 28 Sep 2026): pressed with something missing, it stays and says what.
   const done = sheet(page).getByRole("button", { name: /^Done$/ });
-  await expect(done).toBeDisabled();
+  await done.click();
+  await expect(sheet(page).getByRole("status")).toHaveText("Choose the grading scale.");
   await sheet(page).getByRole("button", { name: "In letters" }).click();
   await expect(sheet(page).getByRole("button", { name: "B", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(sheet(page).getByRole("button", { name: "F", exact: true })).toHaveCount(0);
-  await expect(done).toBeEnabled();
+  await expect(sheet(page).getByRole("status")).toHaveCount(0);
   await sheet(page).getByRole("button", { name: "Out of 4" }).click();
   await sheet(page).getByLabel("The grade they reach").fill("14");
-  await expect(done).toBeDisabled();
+  await done.click();
+  await expect(sheet(page).getByRole("status")).toHaveText("Set the goal they reach.");
   await sheet(page).getByLabel("The grade they reach").fill("3.5");
-  await expect(done).toBeEnabled();
+  await done.click();
+  await expect(page.locator("dialog.sheet[open]")).toHaveCount(0);
 });
 
 test("once the university's scale is pinned, it is said, and the grade is typed on it", async ({ page }) => {
