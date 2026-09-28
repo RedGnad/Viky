@@ -117,6 +117,9 @@ export const DIRECTORY_PORTALS: readonly DirectoryPortal[] = [
  * Read on 28 Sep 2026 from the directory's API and each provider's configuration: every one `verificationType: AI`,
  * `requestData: []`, used by nobody yet. The domain is the university's own, or, where the portal is hosted on a shared
  * platform, the portal's host alone, so no other tenant of that platform can stand in for it.
+ *
+ * IHET (Tunis) and MIT Polytech (Tunis) were taken out on 28 Sep 2026 (the founder): no portal of theirs can be read,
+ * the first a plain http page on a bare address, the second a server name that no longer resolves.
  */
 export type WitnessDirectoryPortal = Pick<Portal, "portalId" | "name" | "university" | "country" | "providerId" | "loginUrl"> & Readonly<{ witnessDomain: string }>;
 
@@ -140,7 +143,5 @@ export const WITNESS_PORTALS: readonly WitnessDirectoryPortal[] = [
   { portalId: "esc-ouaga-bf", name: "ESC Ouaga, espace étudiant", university: "École Supérieure de Commerce de Ouagadougou", country: "BF", providerId: "663a4e6a-13ff-4fb3-a7ad-b759051cd830", loginUrl: "https://esc-ouaga.com/espace-etudiant/", witnessDomain: "esc-ouaga.com" },
   { portalId: "unikin-cd", name: "UNIKIN, Futuriss", university: "Université de Kinshasa", country: "CD", providerId: "654a3de5-b694-4fbc-943f-0331780849c3", loginUrl: "https://futuriss.unikinrdc.com/login", witnessDomain: "futuriss.unikinrdc.com" },
   { portalId: "iss-kin-cd", name: "ISS Kinshasa", university: "Institut Supérieur de Statistique de Kinshasa", country: "CD", providerId: "0eabf1ff-a7b0-444b-beb1-f56d0c7c351c", loginUrl: "https://iss-kin.optsolution.net/login", witnessDomain: "iss-kin.optsolution.net" },
-  { portalId: "ihet-tn", name: "IHET, Konosys", university: "Institut des Hautes Études de Tunis", country: "TN", providerId: "4ce69ac7-dda5-4631-8833-9ac54c9c95a7", loginUrl: "https://ihet.ens.tn/konosys/", witnessDomain: "ihet.ens.tn" },
-  { portalId: "polytech-med-tn", name: "Mediterranean Polytech", university: "Mediterranean Private Polytechnic School", country: "TN", providerId: "07febfe0-81c2-4126-88f8-6980dde1db36", loginUrl: "https://polytech.vmit.cloud/", witnessDomain: "polytech.vmit.cloud" },
   { portalId: "unilag-ng", name: "UNILAG, student portal", university: "University of Lagos", country: "NG", providerId: "41bb2902-daf8-44f1-a06a-5cd6b5cc9df5", loginUrl: "https://studentportal.unilag.edu.ng", witnessDomain: "unilag.edu.ng" },
 ];
