@@ -14,16 +14,36 @@
  */
 export const CARD_FRAGMENT = "#offer";
 
+/** The phrase under the card that says what a gift can wait for, as shown now, which the way to the card centres with it. */
+export const FOLLOWS_CARD = "data-follows-card";
+
+/** The room kept above the card when the card and its line are taller than the screen. */
+const ROOM_ABOVE = 16;
+
 /**
- * Pressed: scroll to the card, smoothly where movement is welcome (`scroll-behavior` in globals.css decides), put the
- * keyboard's starting point on it as a fragment would, and write nothing in the address. Without the card on the
- * page, the browser follows the fragment as usual.
+ * Where the page stops (the founder, 28 Sep 2026: the card came to the very top and its line to the very bottom): the
+ * card and the line that follows it, centred together in the screen, which leaves the character just gone above. When
+ * the two are taller than the screen, the card's top with a little room, so the card is never cut.
+ */
+export function cardScrollTop(place: Readonly<{ cardTop: number; groupBottom: number; viewport: number }>): number {
+  const tall = place.groupBottom - place.cardTop;
+  const top = tall <= place.viewport - 2 * ROOM_ABOVE ? place.cardTop - (place.viewport - tall) / 2 : place.cardTop - ROOM_ABOVE;
+  return Math.max(0, Math.round(top));
+}
+
+/**
+ * Pressed: scroll to the card and its line, smoothly where movement is welcome (`scroll-behavior` in globals.css
+ * decides), put the keyboard's starting point on it as a fragment would, and write nothing in the address. Without the
+ * card on the page, the browser follows the fragment as usual.
  */
 export function goToTheCard(event: { preventDefault: () => void }): void {
   const card = document.getElementById(CARD_FRAGMENT.slice(1));
   if (!card) return;
   event.preventDefault();
-  card.scrollIntoView({ block: "start" });
+  const line = document.querySelector(`[${FOLLOWS_CARD}]`);
+  const cardTop = card.getBoundingClientRect().top + window.scrollY;
+  const groupBottom = (line ?? card).getBoundingClientRect().bottom + window.scrollY;
+  window.scrollTo({ top: cardScrollTop({ cardTop, groupBottom, viewport: window.innerHeight }) });
   card.focus({ preventScroll: true });
 }
 
