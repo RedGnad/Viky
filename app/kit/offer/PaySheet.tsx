@@ -24,7 +24,6 @@ import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
 import { JudgeCode } from "./JudgeCode";
 import { FieldRefusal } from "../FieldRefusal";
-import { HeadCharacter } from "../HeadCharacter";
 import { Sheet } from "../Sheet";
 
 /**
@@ -181,7 +180,6 @@ export function PaySheet({
     <Sheet
       open={open}
       title={W.title(recipient)}
-      beside={<HeadCharacter />}
       onClose={onClose}
       tall
       footer={

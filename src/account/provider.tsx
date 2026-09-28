@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Address, LocalAccount } from "viem";
-import { currentServerSession, signInToServer, signOutOfServer } from "../client/server-session";
+import { ACCOUNT_CHANNEL, currentServerSession, serverStillKnows, signInToServer, signOutOfServer, tellOtherTabsSignedOut } from "../client/server-session";
 import { heroCookieCleared } from "../hero-cookie";
 import { type AccountError, accountError, toAccountError } from "./errors";
 import { announcedAccount, sessionReach, type SessionReach } from "./session-gate";
@@ -49,6 +49,8 @@ export type AccountContextValue = {
   createAccount: (displayName: string) => Promise<void>;
   signIn: () => Promise<void>;
   signOut: () => void;
+  /** The server answered "sign in first" for this browser: the screen becomes the signed-out one, the passkey kept. */
+  serverForgot: () => void;
   /**
    * Signs out from a screen and goes to the landing (D258): the server's session is closed first while the screen
    * stays as it is, then the landing loads as a new document, which the browser paints over the old one only when it
@@ -95,6 +97,42 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
       live = false;
     };
   }, []);
+
+  /**
+   * A session the server forgot is a sign-out on this screen too (the founder, 28 Sep 2026: signed out in one tab, he
+   * came back to another that still showed his account, and "Back to my gifts" said the gifts could not be loaded).
+   * Told by another tab of this browser the moment it signs out, and asked again of the server whenever this tab comes
+   * back to the front; only the server's own "sign in first" counts, never a network that failed to answer.
+   */
+  const serverForgot = useCallback(() => {
+    mera.signOut({ quiet: true });
+    setServerSessionFor(undefined);
+  }, []);
+  useEffect(() => {
+    if (!serverSessionFor) return;
+    let channel: BroadcastChannel | undefined;
+    try {
+      channel = new BroadcastChannel(ACCOUNT_CHANNEL);
+      channel.onmessage = (event) => {
+        if (event.data === "signed-out") serverForgot();
+      };
+    } catch {
+      channel = undefined;
+    }
+    const check = () => {
+      if (document.visibilityState !== "visible") return;
+      void serverStillKnows().then((known) => {
+        if (known === "gone") serverForgot();
+      });
+    };
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
+    return () => {
+      channel?.close();
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
+    };
+  }, [serverSessionFor, serverForgot]);
 
   const address = announcedAccount(signedInAddress, serverSessionFor);
   const reach = sessionReach(signedInAddress, serverSessionFor);
@@ -165,10 +203,12 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
       signOut: () => {
         mera.signOut();
         setServerSessionFor(undefined);
-        void signOutOfServer();
+        void signOutOfServer().then(tellOtherTabsSignedOut);
       },
+      serverForgot,
       leave: async () => {
         await signOutOfServer();
+        tellOtherTabsSignedOut();
         mera.signOut({ quiet: true });
         try {
           document.cookie = heroCookieCleared(window.location.protocol === "https:");
@@ -184,11 +224,11 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
         mera.forgetCredential();
         setServerSessionFor(undefined);
         setError(undefined);
-        void signOutOfServer();
+        void signOutOfServer().then(tellOtherTabsSignedOut);
       },
       clearError: () => setError(undefined),
     }),
-    [address, hasCredential, reach, ensureSigner, status, error, run],
+    [address, hasCredential, reach, ensureSigner, status, error, run, serverForgot],
   );
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
@@ -217,6 +257,7 @@ export function ExampleAccountProvider({ children }: { children: ReactNode }) {
       createAccount: async () => undefined,
       signIn: async () => undefined,
       signOut: () => undefined,
+      serverForgot: () => undefined,
       leave: async () => undefined,
       useAnotherAccount: () => undefined,
       clearError: () => undefined,

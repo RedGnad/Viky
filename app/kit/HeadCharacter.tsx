@@ -2,8 +2,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { EASING, MOTION, SPRING } from "@/src/design-tokens";
 import { springEasing } from "@/src/motion";
-import { Character } from "./Character";
-import { Scene, type SceneName } from "./Figure";
+import { Figure, Scene, type SceneName } from "./Figure";
 import { Expression, reduced } from "./Motion";
 
 /**
@@ -87,7 +86,15 @@ export function HeadCharacter({ scene }: Readonly<{ scene?: SceneName }> = {}) {
   return (
     <Expression>
       <span ref={root} className="contents">
-        {scene ? <Scene which={scene} className={`h-auto shrink-0 ${scene === "gifts" ? "w-[192px]" : "w-[104px]"}`} /> : <Character state="diamond" tone="sun" standing={false} className="h-auto w-[72px] shrink-0" />}
+        {/* A screen with no scene of its own shows the app's own character's head, as the icon does, where the first
+            look's sun diamond stood (the founder, 28 Sep 2026). */}
+        {scene ? (
+          <Scene which={scene} className={`h-auto shrink-0 ${scene === "gifts" ? "w-[192px]" : "w-[104px]"}`} />
+        ) : (
+          <span className="block w-[72px] shrink-0">
+            <Figure id="head" limbs={false} mouth="soft" halftone />
+          </span>
+        )}
       </span>
     </Expression>
   );

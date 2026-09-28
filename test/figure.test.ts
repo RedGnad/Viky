@@ -87,7 +87,7 @@ test("the three destinations have their scenes, and the sheet is served only in 
 
 test("the three destinations carry their scenes at the head, larger, and a change of page is a movement, once", () => {
   const head = readFileSync("app/kit/HeadCharacter.tsx", "utf8");
-  assert.match(head, /scene \? <Scene which=\{scene\} className=\{`h-auto shrink-0 \$\{scene === "gifts" \? "w-\[192px\]" : "w-\[104px\]"\}`\} \/> : <Character state="diamond"/, "the scene on a destination, the plain diamond elsewhere");
+  assert.match(head, /<Scene which=\{scene\} className=\{`h-auto shrink-0 \$\{scene === "gifts" \? "w-\[192px\]" : "w-\[104px\]"\}`\} \/>\s*\) : \(\s*<span className="block w-\[72px\] shrink-0">\s*<Figure id="head" limbs=\{false\} mouth="soft" halftone \/>/, "the scene on a destination, the app's own character's head elsewhere (28 Sep 2026)");
   assert.match(head, /let aHeadWasDrawn = false;/, "whether a head stood on a screen before this one in this tab");
   assert.match(head, /if \(!scene \|\| !arrives \|\| !stage \|\| reduced\(\)\) return;/, "a cold load and a device asking for less show the final state from the first image");
   assert.match(head, /'\[data-part="arm"\]:not\(\[data-pose="rest"\]\)'/, "the raised arms come out");
@@ -110,9 +110,11 @@ test("the three destinations carry their scenes at the head, larger, and a chang
   for (const [file, scene] of [["app/kit/Home.tsx", "home"], ["app/kit/Gifts.tsx", "gifts"], ["app/kit/Me.tsx", "me"]] as const) {
     assert.ok(readFileSync(file, "utf8").includes(`<HeadCharacter scene="${scene}" />`), `${scene} carries its scene`);
   }
-  for (const file of ["app/components/GiftPage.tsx", "app/cash-out/page.tsx", "app/kit/offer/PaySheet.tsx"]) {
-    assert.ok(readFileSync(file, "utf8").includes("<HeadCharacter />"), `${file} keeps the plain diamond`);
+  for (const file of ["app/components/GiftPage.tsx", "app/cash-out/page.tsx"]) {
+    assert.ok(readFileSync(file, "utf8").includes("<HeadCharacter />"), `${file} keeps the character's head`);
   }
+  // The pay sheet carries none: its title is the gift, and a character beside it said nothing (the founder, 28 Sep 2026).
+  assert.ok(!readFileSync("app/kit/offer/PaySheet.tsx", "utf8").includes("HeadCharacter"), "no character on the pay sheet");
 });
 
 test("the app's icon is the landing figure's head, in the stylesheet's own day colours (D253, D307)", () => {
@@ -187,7 +189,12 @@ test("every link to Viky carries the same picture, the day's figure on the paper
 test("the preview's card grows with its words, the figure always on its edge (D266)", () => {
   const preview = readFileSync("app/og/preview.tsx", "utf8");
   assert.match(preview, /flexDirection: "column", justifyContent: "flex-end"/, "the figure and the card one column from the foot");
-  assert.match(preview, /minHeight: 230,/, "the card at least its height, taller when the words need it");
+  assert.match(preview, /minHeight: 200,/, "the card at least its height, taller when the words need it");
+  // Whole, with its four corners and the ground under it, and the figure's feet whole on its edge (28 Sep 2026).
+  assert.match(preview, /margin: "0 100px 44px",/);
+  assert.match(preview, /borderRadius: 40,/);
+  assert.doesNotMatch(preview, /borderBottom: "none"/);
+  assert.match(preview, /marginBottom: -2 \}\}/);
   assert.doesNotMatch(preview, /bottom: 230/, "never a figure fixed above a card of a fixed height");
   assert.match(readFileSync("app/api/gift/[id]/preview-image/route.tsx", "utf8"), /description: LONGEST_LINE/, "the gallery draws the longest line there is");
 });

@@ -29,7 +29,7 @@ import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift }
 import { wayInPage, WAYS_IN, type WayIn } from "@/src/rails";
 import { JudgeCode } from "../kit/offer/JudgeCode";
 import { FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
-import { Character } from "../kit/Character";
+import { Figure } from "../kit/Figure";
 import { FieldRefusal } from "../kit/FieldRefusal";
 import { Success } from "../kit/Motion";
 import { Shell } from "../kit/Shell";
@@ -421,15 +421,20 @@ export function PayGift() {
         backLabel={W.backToGifts}
         backFollows
         step={W.made.title(formatAusd(madeUnits), made.recipientName)}
-        /* At payment, the gift's character arrives on the expressive spring, its bow a beat after, once, and no
-           confetti: the one confetti of the app is the gift reached (decision B, V4). */
+        /* At payment, the character arrives on the expressive spring, once, and no confetti: the one confetti of the app
+           is the gift reached (decision B, V4). It is the app's own character, waving, where the gift box of the first
+           look stood (the founder, 28 Sep 2026: that box is kept as the kid, for later, and drawn on no screen now). */
         character={
           justMade ? (
             <Success>
-              <Character state="gift" drawn="inline" className="h-auto w-[72px] shrink-0" />
+              <span className="block w-[72px] shrink-0">
+                <Figure id="made" arms="wave" mouth="soft" halftone />
+              </span>
             </Success>
           ) : (
-            <Character state="gift" className="h-auto w-[72px] shrink-0" />
+            <span className="block w-[72px] shrink-0">
+              <Figure id="made" arms="wave" mouth="soft" halftone />
+            </span>
           )
         }
       >

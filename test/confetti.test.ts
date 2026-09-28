@@ -23,6 +23,6 @@ test("the confetti is thrown in one place, on a gift reached, to its two people 
 test("at payment, the gift's character arrives on its spring, only when the payment was just made, and nothing is thrown", () => {
   const pay = readFileSync("app/components/PayGift.tsx", "utf8");
   assert.doesNotMatch(pay, /Confetti/);
-  assert.match(pay, /justMade \? \(\s*<Success>\s*<Character state="gift"/);
+  assert.match(pay, /justMade \? \(\s*<Success>\s*<span className="block w-\[72px\] shrink-0">\s*<Figure id="made"/);
   assert.match(pay, /setMade\(record\);\n\s*setJustMade\(true\);/, "the press that made it, and not a reload, is what plays it");
 });

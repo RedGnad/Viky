@@ -51,13 +51,17 @@ export async function previewImage({ title, under, cacheSeconds }: Readonly<{ ti
         <div style={{ position: "absolute", top: 56, right: 96, fontFamily: "Fredoka", fontSize: 44, color: PREVIEW_LOOK.ink }}>Viky</div>
         {/* The figure stands on the card's top edge whatever the card's height (D266): the two are one column from the
             foot, and the card grows with what it says, a gift's line running to two lines where the site's is one.
-            The drawing's box is 64 by 53 and its feet at 51.5, so 6 of its 248 pixels overlap the edge. */}
+            Its feet stand on the edge, whole (the founder, 28 Sep 2026: they were hidden behind it): the drawing's box
+            is 64 by 53 and the feet's stroke ends about 2 pixels above the box's foot at this size, so only those 2
+            overlap the card. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={drawing} width={300} height={248} alt="" style={{ marginLeft: 100, marginBottom: -6 }} />
+        <img src={drawing} width={300} height={248} alt="" style={{ marginLeft: 100, marginBottom: -2 }} />
+        {/* The card whole, its four corners inside the image, with the ground's air under it (the founder, 28 Sep 2026:
+            its foot was cut by the image's edge, and a messaging app crops the edge further). */}
         <div
           style={{
-            margin: "0 100px",
-            minHeight: 230,
+            margin: "0 100px 44px",
+            minHeight: 200,
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
@@ -65,9 +69,7 @@ export async function previewImage({ title, under, cacheSeconds }: Readonly<{ ti
             background: PREVIEW_LOOK.paper,
             color: PREVIEW_LOOK.onPaper,
             border: `2px solid ${PREVIEW_LOOK.edge}`,
-            borderBottom: "none",
-            borderTopLeftRadius: 40,
-            borderTopRightRadius: 40,
+            borderRadius: 40,
           }}
         >
           <div style={{ fontFamily: "Fredoka", fontSize: 64, lineHeight: 1.1, display: "flex", flexWrap: "wrap", alignItems: "baseline" }}>
