@@ -1479,3 +1479,44 @@ html[data-intro] .launch-intro.launch-intro-leaving {
     transform: none;
   }
 }
+
+/*
+ * The day characters beside the landing's top on a wide screen (app/kit/SideCrowd.tsx): a layer the width of the
+ * window over the first screen, under everything, catching no press. Each character is hidden until its side has room
+ * for it (the rules written by the component), tilted by its own angle, and drifts up a little with the scroll at its
+ * own depth where the browser follows a scroll itself: a timeline of the scroll, not of the clock.
+ */
+.side-crowd {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 820px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.side-crowd > div {
+  display: none;
+  position: absolute;
+  transform: rotate(var(--tilt));
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .side-crowd > div {
+      animation-name: side-drift;
+      animation-duration: auto;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: scroll(root block);
+      animation-range: 0px 800px;
+    }
+  }
+}
+@keyframes side-drift {
+  from {
+    transform: translateY(0) rotate(var(--tilt));
+  }
+  to {
+    transform: translateY(calc(var(--depth) * -160px)) rotate(var(--tilt));
+  }
+}

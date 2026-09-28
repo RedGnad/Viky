@@ -131,7 +131,11 @@ test("every movement answers a gesture: nothing plays on a clock, nothing repeat
     // not of the clock, so nothing plays by itself (the founder, 28 Sep 2026).
     .replace(/@supports \(animation-timeline: scroll\(\)\) \{[\s\S]*?\n\}/, "")
     .replace(/@keyframes row-fade-left \{[\s\S]*?\n\}/, "")
-    .replace(/@keyframes row-fade-right \{[\s\S]*?\n\}/, "");
+    .replace(/@keyframes row-fade-right \{[\s\S]*?\n\}/, "")
+    // The same for the characters beside the landing's top: they drift with the scroll of the page, never on a clock,
+    // and not at all under reduced motion (app/kit/SideCrowd.tsx, the founder, 28 Sep 2026).
+    .replace(/@media \(prefers-reduced-motion: no-preference\) \{\n  @supports \(animation-timeline: scroll\(\)\) \{\n    \.side-crowd[\s\S]*?\n  \}\n\}/, "")
+    .replace(/@keyframes side-drift \{[\s\S]*?\n\}/, "");
   assert.doesNotMatch(outsideTheRing, /@keyframes|animation-name|infinite/, "the stylesheet plays no animation of its own beyond the one loop, the sheet, the arrival and the first opening");
   assert.match(css, /dialog\.sheet\[open\] \{\s*\n\s*animation: sheet-rise \d+ms/, "the sheet rises once, on the press that opened it");
   assert.match(css, /animation: working-turn \d+ms linear infinite/, "the one loop is the working ring, and it is the only one");
