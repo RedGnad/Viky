@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS viky_milestone_gifts (
 );
 ALTER TABLE viky_milestone_gifts ADD COLUMN IF NOT EXISTS portal text;
 ALTER TABLE viky_milestone_gifts ADD COLUMN IF NOT EXISTS course text;
+-- The scale a grade gift was made on when its university's was not pinned yet (the founder, 28 Sep 2026): "20", "4",
+-- "100" or "letters", checked against the university's own when its first results page is reviewed.
+ALTER TABLE viky_milestone_gifts ADD COLUMN IF NOT EXISTS grade_scale text;
 CREATE TABLE IF NOT EXISTS viky_milestone_readings (
   id serial PRIMARY KEY,
   gift_id text NOT NULL,
@@ -77,12 +80,14 @@ export type MilestoneRecord = Readonly<{
   portal: string | null;
   /** The course a shown course gift is for (D178), by its slug on the source; nothing for the rest. */
   course?: string | null;
+  /** The scale a grade gift was made on before its university's was pinned: "20", "4", "100" or "letters". */
+  gradeScale?: string | null;
 }>;
 
-export async function saveMilestoneGift(input: { giftId: string; conditionId: string; mode: string; standingAtOffer: number; standingReadAt: Date; portal?: string | null; course?: string | null }): Promise<void> {
+export async function saveMilestoneGift(input: { giftId: string; conditionId: string; mode: string; standingAtOffer: number; standingReadAt: Date; portal?: string | null; course?: string | null; gradeScale?: string | null }): Promise<void> {
   await sql()`
-    INSERT INTO viky_milestone_gifts (gift_id, condition_id, mode, standing_at_offer, standing_read_at, portal, course)
-    VALUES (${input.giftId}, ${input.conditionId}, ${input.mode}, ${input.standingAtOffer}, ${input.standingReadAt.toISOString()}, ${input.portal ?? null}, ${input.course ?? null})
+    INSERT INTO viky_milestone_gifts (gift_id, condition_id, mode, standing_at_offer, standing_read_at, portal, course, grade_scale)
+    VALUES (${input.giftId}, ${input.conditionId}, ${input.mode}, ${input.standingAtOffer}, ${input.standingReadAt.toISOString()}, ${input.portal ?? null}, ${input.course ?? null}, ${input.gradeScale ?? null})
     ON CONFLICT (gift_id) DO NOTHING`;
 }
 
@@ -95,6 +100,7 @@ function toRecord(row: Record<string, unknown>): MilestoneRecord {
     standingReadAt: row.standing_read_at instanceof Date ? row.standing_read_at : new Date(String(row.standing_read_at)),
     portal: row.portal === null || row.portal === undefined ? null : String(row.portal),
     course: row.course === null || row.course === undefined ? null : String(row.course),
+    gradeScale: row.grade_scale === null || row.grade_scale === undefined ? null : String(row.grade_scale),
   };
 }
 

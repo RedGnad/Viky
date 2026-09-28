@@ -38,6 +38,9 @@ export type PendingGiftTerms = Readonly<{
   /** The one course a day is counted on, and its title, when the funder chose one (U1). */
   course?: string;
   courseTitle?: string;
+  /** The scale a grade is typed on, and whether it is the university's own (the founder, 28 Sep 2026). */
+  scale?: string;
+  scaleFixed?: boolean;
   /** The way in the funder pressed, by name, so the wait says what to set on the page they opened (D101). */
   wayIn?: string;
   /** A milestone's cadence, and where the person stood when the funder chose: the ceiling they sign is built on it (C2). */
@@ -79,6 +82,7 @@ export function pendingGiftFor(raw: string | null, account: string | undefined, 
     ...(text("wayIn") !== undefined ? { wayIn: text("wayIn") } : {}),
     ...(text("course") !== undefined ? { course: text("course") } : {}),
     ...(text("courseTitle") !== undefined ? { courseTitle: text("courseTitle") } : {}),
+    ...(text("scale") !== undefined ? { scale: text("scale"), scaleFixed: record.scaleFixed === true } : {}),
     ...(text("cadence") !== undefined ? { cadence: text("cadence") } : {}),
     ...(typeof record.standing === "number" ? { standing: record.standing } : {}),
     ...(text("standingReadAt") !== undefined ? { standingReadAt: text("standingReadAt") } : {}),
@@ -169,6 +173,7 @@ export function cardDraftFrom(raw: string | null, nowMs: number): PendingGiftTer
     target: text("target") ?? "",
     ...(text("course") !== undefined ? { course: text("course") } : {}),
     ...(text("courseTitle") !== undefined ? { courseTitle: text("courseTitle") } : {}),
+    ...(text("scale") !== undefined ? { scale: text("scale"), scaleFixed: record.scaleFixed === true } : {}),
     ...(text("cadence") !== undefined ? { cadence: text("cadence") } : {}),
     ...(typeof record.standing === "number" ? { standing: record.standing } : {}),
     ...(text("standingReadAt") !== undefined ? { standingReadAt: text("standingReadAt") } : {}),

@@ -70,7 +70,7 @@ test("a milestone gift keeps its condition, its cadence and where they stood whe
   await saveMilestoneGift({ giftId: GIFT, conditionId: "chess-rating", mode: "rapid", standingAtOffer: 1904, standingReadAt: readAt });
   await saveMilestoneGift({ giftId: GIFT, conditionId: "chess-rating", mode: "blitz", standingAtOffer: 1, standingReadAt: readAt });
   const record = await loadMilestoneGift(GIFT);
-  assert.deepEqual(record, { giftId: GIFT, conditionId: "chess-rating", mode: "rapid", standingAtOffer: 1904, standingReadAt: readAt, portal: null, course: null }, "the first record stands, and a gift on no portal says so");
+  assert.deepEqual(record, { giftId: GIFT, conditionId: "chess-rating", mode: "rapid", standingAtOffer: 1904, standingReadAt: readAt, portal: null, course: null, gradeScale: null }, "the first record stands, and a gift on no portal says so");
   assert.equal((await loadGift(GIFT))?.usernameSource, "funder");
   const many = await loadMilestoneGifts([GIFT, "999"]);
   assert.deepEqual([...many.keys()], [GIFT]);

@@ -15,8 +15,16 @@ import {
   gradeScaleOf,
   gradeScaleProblem,
   gradeShownBy,
+  gradeTargetInWords,
   gradeTargetProblem,
   gradeUnits,
+  letterOfRank,
+  letterRank,
+  SCALE_CHOICES,
+  scaleKey,
+  scaleMismatch,
+  scaleOfChoice,
+  scaleOfKey,
   isGradeShape,
   isUniversityGoal,
   resultsProblem,
@@ -133,7 +141,7 @@ test("a scale is numeric or letters, typed on the command line as the operator w
   assert.match(String(gradeScaleProblem({ kind: "percent" })), /numeric or letters/);
   assert.equal(gradeScaleInWords({ kind: "numeric", max: 20, step: 0.01 }), "out of 20");
   assert.equal(gradeScaleInWords({ kind: "numeric", max: 20, step: 0.5 }), "out of 20, in steps of 0.5");
-  assert.equal(gradeScaleInWords({ kind: "letters", grades: ["A", "B"] }), "letters, A, B");
+  assert.equal(gradeScaleInWords({ kind: "letters", grades: ["A", "B"] }), "letters");
 });
 
 test("a grade is carried in hundredths and read back in words on its scale", () => {
@@ -152,20 +160,29 @@ test("a grade is carried in hundredths and read back in words on its scale", () 
   for (const bad of [0, -1, 14.555, 1_001, Number.NaN]) assert.equal(isGradeShape(bad), false, String(bad));
 });
 
-test("a target is refused by name when the scale is letters or the target is off it, before any money moves", () => {
+test("a target is refused by name when it is off its scale, and a letter target is its rank, before any money moves", () => {
   const halves = { kind: "numeric", max: 20, step: 0.5 } as const;
   assert.equal(gradeTargetProblem(halves, 14.5), undefined);
   assert.equal(gradeTargetProblem(halves, 20), undefined);
   for (const off of [14.3, 21, 0, 0.25]) assert.equal(gradeTargetProblem(halves, off)?.code, "INVALID_TARGET", String(off));
   assert.match(String(gradeTargetProblem(halves, 21)?.message), /out of 20, in steps of 0\.5/);
-  assert.equal(gradeTargetProblem(LETTERS.grade.scale, 14)?.code, "LETTER_SCALE");
+  // A letter target is its rank, 14 for A+ down to 1 for F (the founder, 28 Sep 2026).
+  assert.equal(gradeTargetProblem(LETTERS.grade.scale, letterRank("B")!), undefined);
+  assert.equal(gradeTargetProblem(LETTERS.grade.scale, 15)?.code, "INVALID_TARGET");
+  assert.equal(gradeTargetProblem(LETTERS.grade.scale, 10.5)?.code, "INVALID_TARGET");
   // What the create route asks each condition of the row it found.
-  // A grade with no results provider yet: made like any other, the scale pinned with the first reviewed proof (the founder,
-  // 28 Sep 2026).
-  assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: null }, 14), undefined);
+  // A grade with no results provider yet: made like any other, on the scale the funder chooses, which the first reviewed
+  // results page confirms or refuses (the founder, 28 Sep 2026).
   assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: OUT_OF_20 }, 14.5), undefined);
   assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: OUT_OF_20 }, 21)?.code, "INVALID_TARGET");
-  assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: LETTERS }, 14)?.code, "LETTER_SCALE");
+  assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: LETTERS }, 14), undefined, "A+");
+  // Before the university's scale is pinned: the funder's choice, required, and the target judged on it.
+  assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: null }, 14)?.code, "SCALE_REQUIRED");
+  assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: null }, 14.5, "20"), undefined);
+  assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: null }, 14, "4")?.code, "INVALID_TARGET");
+  assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: null }, 85, "100"), undefined);
+  assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: null }, letterRank("B")!, "letters"), undefined);
+  assert.equal(UNIVERSITY_GRADE_MILESTONE.portal?.refuses({ results: null }, 14, "percent")?.code, "SCALE_REQUIRED");
   // The year passed on a university with no results provider yet: made all the same, the provider asked for (D313).
   assert.equal(UNIVERSITY_YEAR_MILESTONE.portal?.refuses({ results: null }, 1), undefined);
   assert.equal(UNIVERSITY_YEAR_MILESTONE.portal?.sense, "results");
@@ -207,13 +224,37 @@ test("the results page is read by the row's own rule: passed, the grade on the s
     const verdict = gradeShownBy(OUT_OF_20, fields);
     assert.equal(verdict.kind === "refused" && verdict.code, code, JSON.stringify(fields));
   }
-  const letters = gradeShownBy(LETTERS, { grade: "A", ...THIS_YEAR });
-  assert.equal(letters.kind === "refused" && letters.code, "LETTER_SCALE");
+  // Letters are read by their rank, in hundredths like a number, and said as letters.
+  assert.deepEqual(gradeShownBy(LETTERS, { grade: "b+", ...THIS_YEAR }), { kind: "read", metricValue: letterRank("B+")! * 100, inWords: "B+" });
+  const notALetter = gradeShownBy(LETTERS, { grade: "Excellent", ...THIS_YEAR });
+  assert.equal(notALetter.kind === "refused" && notALetter.code, "NO_GRADE");
+});
+
+test("letters rank in one order, a scale chosen before the pin is checked against the pinned one, and a target is said on its scale", () => {
+  assert.equal(letterRank("A+"), 14);
+  assert.equal(letterRank(" a- "), 12);
+  assert.equal(letterRank("F"), 1);
+  assert.equal(letterRank("G"), undefined);
+  assert.equal(letterOfRank(10), "B");
+  assert.equal(letterOfRank(15), undefined);
+  assert.deepEqual(SCALE_CHOICES, ["20", "4", "100", "letters"]);
+  assert.equal(scaleMismatch(scaleOfChoice("20")!, gradeScaleOf("20/0.5")!), undefined, "out of 20 in halves is out of 20");
+  assert.equal(scaleMismatch(scaleOfChoice("letters")!, LETTERS.grade.scale), undefined);
+  const mismatch = scaleMismatch(scaleOfChoice("20")!, gradeScaleOf("4")!);
+  assert.equal(mismatch?.code, "SCALE_MISMATCH");
+  assert.equal(mismatch?.message, "This university grades out of 4, not out of 20 as this gift was made on, so nothing was counted. The money stays where it is.");
+  assert.equal(scaleMismatch(scaleOfChoice("100")!, LETTERS.grade.scale)?.code, "SCALE_MISMATCH");
+  assert.equal(scaleKey(gradeScaleOf("20/0.5")!), "20/0.5");
+  assert.equal(scaleKey(LETTERS.grade.scale), "letters");
+  assert.deepEqual(scaleOfKey("20/0.5"), gradeScaleOf("20/0.5"));
+  assert.equal(gradeTargetInWords(14.5, "20"), "14.50 out of 20");
+  assert.equal(gradeTargetInWords(10, "letters"), "B");
+  assert.equal(gradeTargetInWords(12, undefined), "12.00 on the university's own scale");
 });
 
 test("a results extraction is written only whole", () => {
   assert.equal(resultsProblem(OUT_OF_20), undefined);
-  assert.equal(resultsProblem(LETTERS), undefined, "a scale of letters is declared, and refused at creation");
+  assert.equal(resultsProblem(LETTERS), undefined, "a scale of letters, read by rank");
   assert.match(String(resultsProblem({ ...OUT_OF_20, providerId: "nope" })), /provider's id/);
   assert.match(String(resultsProblem({ ...OUT_OF_20, requestHash: "0x12" })), /request's hash/);
   assert.match(String(resultsProblem({ ...OUT_OF_20, admitted: { field: "decision", matches: "(" } })), /regular expression/);
@@ -225,8 +266,15 @@ test("a results extraction is written only whole", () => {
 
 test("the funder's draft takes a grade with decimals, and a whole number everywhere else", () => {
   const draft = (over: Partial<GiftDraft>): GiftDraft =>
-    ({ recipientName: "Ama", funderName: "", conditionId: "university-grade-shown", subject: "", course: "ucad-sn", target: "14.5", dollars: "20", days: "180", ...over }) as unknown as GiftDraft;
+    ({ recipientName: "Ama", funderName: "", conditionId: "university-grade-shown", subject: "", course: "ucad-sn", target: "14.5", scale: "20", dollars: "20", days: "180", ...over }) as unknown as GiftDraft;
   assert.ok(conditionAnswered(draft({})));
+  // The scale, the university's pinned one or the funder's choice, and the target on it (the founder, 28 Sep 2026).
+  assert.ok(!conditionAnswered(draft({ scale: undefined })), "no scale, no grade");
+  assert.ok(!conditionAnswered(draft({ scale: "4" })), "14.5 is not a grade out of 4");
+  assert.ok(conditionAnswered(draft({ scale: "4", target: "3.5" })));
+  assert.ok(conditionAnswered(draft({ scale: "letters", target: "10" })), "B");
+  assert.ok(!conditionAnswered(draft({ scale: "letters", target: "10.5" })));
+  assert.ok(conditionAnswered(draft({ scale: "20/0.5", scaleFixed: true, target: "14.5" })), "a pinned scale in halves");
   assert.ok(conditionAnswered(draft({ target: "14" })));
   assert.ok(!conditionAnswered(draft({ target: "14,5" })), "a comma is not a number to the sheet, and the refusal says a dot");
   assert.ok(!conditionAnswered(draft({ target: "0" })));

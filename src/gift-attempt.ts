@@ -26,6 +26,9 @@ export type AttemptTerms = Readonly<{
   /** A milestone's terms beyond those every gift has: its target and where they stood when it was chosen (C2). */
   target?: number;
   standing?: number;
+  /** The course or university a gift is made on, and the scale a grade is typed on: a request for another is not this one. */
+  course?: string;
+  scale?: string;
 }>;
 
 /** A certificate gift is signed the same way and kept the same way: one signature per set of terms (D87). */
@@ -44,7 +47,9 @@ function sameTerms(a: AttemptTerms, b: AttemptTerms): boolean {
     a.durationDays === b.durationDays &&
     a.amount === b.amount &&
     a.target === b.target &&
-    a.standing === b.standing
+    a.standing === b.standing &&
+    (a.course ?? "") === (b.course ?? "") &&
+    (a.scale ?? "") === (b.scale ?? "")
   );
 }
 

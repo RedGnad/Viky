@@ -21,6 +21,8 @@ export type CertificateGiftRequest = Readonly<{
   personName: string;
   /** The course, where the condition asks for one: hashed into the terms with the name, and sent for the same reason. */
   course?: string;
+  /** The scale a grade is typed on while the university's own is not pinned: "20", "4", "100" or "letters". */
+  scale?: string;
   target: number;
   durationDays: number;
   amount: string;
@@ -43,6 +45,8 @@ export async function prepareCertificateGift(input: {
   funderName?: string;
   /** The course a certificate gift is for, where the condition asks for one (C3). */
   course?: string;
+  /** The scale a grade is typed on while the university's own is not pinned (the founder, 28 Sep 2026). */
+  scale?: string;
 }): Promise<CertificateGiftRequest> {
   const contract = milestoneAddressFromEnv();
   const funder = getAddress(input.account.address);
@@ -68,6 +72,7 @@ export async function prepareCertificateGift(input: {
     conditionId: input.certificate.condition.id,
     personName: input.personName,
     course: input.course,
+    ...(input.scale ? { scale: input.scale } : {}),
     target: input.target,
     durationDays: input.durationDays,
     amount: input.amount.toString(),

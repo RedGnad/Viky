@@ -9,7 +9,8 @@ import { bibStillOpen, DISTANCE_LABELS, finishInWords, marathonEventById } from 
 import { isWcaId, WCA_EVENTS, wcaCourseOf, wcaResultInWords } from "./wca";
 import type { MilestoneStatus } from "./milestone-view";
 import { escrowOf } from "./relayer";
-import { latestReviewOf, loadPortal, type PortalReview, type PortalSense } from "./portal-store";
+import { latestReviewOf, loadPortal, resultsExtractOf, type PortalReview, type PortalSense } from "./portal-store";
+import { GRADE_UNITS, gradeTargetInWords, scaleKey, scaleMismatch, scaleOfChoice } from "./university-shown";
 
 /**
  * A milestone gift as its page and its card read it (src/milestone-view.ts), from the contract, the gift's record and
@@ -29,8 +30,10 @@ export function milestoneStatusOf(input: {
   reachedAt: number | null;
   viewer: Viewer;
   nowSeconds: number;
-  /** What a university gift waits on (D312): its provider being built, or its first proof's review. */
-  review?: Readonly<{ status: "building" | PortalReview["status"] }> | null;
+  /** A grade gift's target in words, on its scale (the founder, 28 Sep 2026). */
+  targetWords?: string | null;
+  /** What a university gift waits on (D313): its provider being built, or its first proof's review. */
+  review?: Readonly<{ status: "building" | PortalReview["status"]; message?: string }> | null;
 }): MilestoneStatus {
   const { record, state, viewer } = input;
   const conditionId = input.milestone?.conditionId ?? "";
@@ -84,7 +87,8 @@ export function milestoneStatusOf(input: {
     standingAtOffer: input.milestone?.standingAtOffer ?? null,
     marathon: marathonOf(input),
     wca: wcaOf(input),
-    review: !reached && input.review && input.review.status !== "pinned" ? { status: input.review.status } : null,
+    targetWords: input.targetWords ?? null,
+    review: !reached && input.review && input.review.status !== "pinned" ? { status: input.review.status, ...(input.review.message ? { message: input.review.message } : {}) } : null,
   };
 }
 
@@ -134,17 +138,33 @@ const UNIVERSITY_SENSES: Readonly<Record<string, PortalSense>> = {
  * when the gift was made; or its first proof held for review, or refused by it. Nothing for any other gift, and
  * nothing when the tables cannot be read.
  */
-async function universityWait(giftId: string, milestone: MilestoneRecord | null): Promise<Readonly<{ status: "building" | PortalReview["status"] }> | null> {
+async function universityWait(giftId: string, milestone: MilestoneRecord | null): Promise<Readonly<{ status: "building" | PortalReview["status"]; message?: string }> | null> {
   const sense = milestone ? UNIVERSITY_SENSES[milestone.conditionId] : undefined;
   if (!sense || !milestone?.portal) return null;
   try {
     const portal = await loadPortal(milestone.portal);
     if (portal && !portal[sense]) return { status: "building" };
     const review = await latestReviewOf(giftId);
-    return review ? { status: review.status } : null;
+    if (!review) return null;
+    // The review found the university grades on another scale than the gift was made on: said with both scales.
+    const chosen = scaleOfChoice(milestone.gradeScale ?? undefined);
+    const pinned = resultsExtractOf(portal?.results ?? null)?.grade.scale;
+    const mismatch = review.status === "refused" && review.reason === "SCALE_MISMATCH" && chosen && pinned ? scaleMismatch(chosen, pinned) : undefined;
+    return mismatch ? { status: review.status, message: mismatch.message } : { status: review.status };
   } catch {
     return null;
   }
+}
+
+/** A grade gift's target, from the contract's hundredths, on the scale it was made on or the university's pinned one. */
+async function gradeTargetWords(milestone: MilestoneRecord | null, targetUnits: number): Promise<string | null> {
+  if (milestone?.conditionId !== "university-grade-shown") return null;
+  let key = milestone.gradeScale ?? undefined;
+  if (!key && milestone.portal) {
+    const pinned = resultsExtractOf((await loadPortal(milestone.portal).catch(() => null))?.results ?? null)?.grade.scale;
+    key = pinned ? scaleKey(pinned) : undefined;
+  }
+  return gradeTargetInWords(targetUnits / GRADE_UNITS, key);
 }
 
 /** Everything a milestone gift's page and card need, read live, for one viewer. */
@@ -158,7 +178,8 @@ export async function loadMilestoneStatus(record: GiftRecord, viewer: Viewer): P
     attestedReadings(record.giftId),
   ]);
   const review = await universityWait(record.giftId, milestone);
+  const targetWords = await gradeTargetWords(milestone, Number(state.target));
   const reachedAt = proven.find((reading) => reading.outcome === "reached")?.observedAt ?? null;
-  const status = milestoneStatusOf({ record, milestone, state, contract, latest, last, reachedAt, viewer, nowSeconds: Math.floor(Date.now() / 1_000), review });
+  const status = milestoneStatusOf({ record, milestone, state, contract, latest, last, reachedAt, viewer, nowSeconds: Math.floor(Date.now() / 1_000), review, targetWords });
   return { status, state, contract };
 }

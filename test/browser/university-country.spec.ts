@@ -36,3 +36,53 @@ test("choosing a country closes its own sheet only, and the country's universiti
   await expect(sheet(page).getByText("Université Gaston Berger")).toHaveCount(0);
   await expect(sheet(page).getByText("Université Cheikh Anta Diop")).toBeVisible();
 });
+
+/**
+ * "Reached a grade" (the founder, 28 Sep 2026): once the university is chosen, the grade is typed on a scale. Its own
+ * when pinned, said in one line; before, the funder chooses it among four, and a letter is chosen rather than typed.
+ */
+async function chooseGradeAt(page: Page, scale: string | null) {
+  await page.route(/\/api\/portals(\?.*)?$/, (route) => {
+    const country = new URL(route.request().url()).searchParams.get("country");
+    const body = country ? { results: [{ pair: "ucad-sn", title: "Université Cheikh Anta Diop", issuer: "Senegal", country: "SN", scale }] } : { countries: [{ code: "SN", count: 1 }] };
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+  });
+  await page.goto("/");
+  await page.locator("main section").first().getByRole("button").first().click();
+  const change = sheet(page).getByRole("button", { name: /^Change/i });
+  if (await change.isVisible().catch(() => false)) await change.click();
+  const line = sheet(page).getByRole("button", { name: /Reached a grade/i });
+  if (!(await line.isVisible().catch(() => false))) {
+    const all = sheet(page).getByRole("button", { name: /All families/i });
+    if (await all.isVisible().catch(() => false)) await all.click();
+    await sheet(page).getByRole("button", { name: /School & studies/ }).click();
+  }
+  await line.click();
+  await sheet(page).getByRole("button", { name: /Which country is it in\?/ }).click();
+  await sheet(page).last().getByText("Senegal", { exact: true }).click();
+  await sheet(page).getByText("Université Cheikh Anta Diop", { exact: true }).click();
+}
+
+test("before the university's scale is pinned, the funder chooses it, and a letter is chosen rather than typed", async ({ page }) => {
+  await chooseGradeAt(page, null);
+  await expect(sheet(page).getByText("How does their university grade?")).toBeVisible();
+  const done = sheet(page).getByRole("button", { name: /^Done$/ });
+  await expect(done).toBeDisabled();
+  await sheet(page).getByRole("button", { name: "In letters" }).click();
+  await expect(sheet(page).getByRole("button", { name: "B", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(sheet(page).getByRole("button", { name: "F", exact: true })).toHaveCount(0);
+  await expect(done).toBeEnabled();
+  await sheet(page).getByRole("button", { name: "Out of 4" }).click();
+  await sheet(page).getByLabel("The grade they reach").fill("14");
+  await expect(done).toBeDisabled();
+  await sheet(page).getByLabel("The grade they reach").fill("3.5");
+  await expect(done).toBeEnabled();
+});
+
+test("once the university's scale is pinned, it is said, and the grade is typed on it", async ({ page }) => {
+  await chooseGradeAt(page, "20");
+  await expect(sheet(page).getByText("Their university grades out of 20.")).toBeVisible();
+  await expect(sheet(page).getByText("How does their university grade?")).toHaveCount(0);
+  await sheet(page).getByLabel("The grade they reach").fill("14.5");
+  await expect(sheet(page).getByRole("button", { name: /^Done$/ })).toBeEnabled();
+});

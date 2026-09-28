@@ -91,7 +91,12 @@ export type MilestoneStatus = Readonly<{
    * was made; or a first proof read through a witness with no pin yet, held for review or refused by it. Nothing once
    * it is settled, and nothing for any other gift.
    */
-  review: Readonly<{ status: "building" | "pending" | "refused" }> | null;
+  /**
+   * A grade gift's target in words, on the scale it was made on or the university's pinned one: "14.50 out of 20", "B".
+   * The contract holds hundredths, which are no words to read. Nothing for any other gift.
+   */
+  targetWords?: string | null;
+  review: Readonly<{ status: "building" | "pending" | "refused"; /** The refusal in its own words, where it has them: a scale that does not match. */ message?: string }> | null;
   wca: {
     competitionId: string;
     eventId: string;

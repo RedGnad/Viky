@@ -7,7 +7,14 @@
  */
 
 /** A university as the chooser lists it: the portal's id pressed, its name, its country in words and as a code. */
-export type ListedUniversity = Readonly<{ pair: string; title: string; issuer: string; country: string }>;
+export type ListedUniversity = Readonly<{
+  pair: string;
+  title: string;
+  issuer: string;
+  country: string;
+  /** The grading scale its results provider pins ("20", "letters"), or nothing while none is pinned. */
+  scale?: string | null;
+}>;
 
 /** A country of the list, and how many universities it holds. */
 export type ListedCountry = Readonly<{ code: string; count: number }>;

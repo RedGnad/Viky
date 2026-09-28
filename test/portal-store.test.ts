@@ -21,6 +21,7 @@ import {
   portalByRequestHash,
   portalCountries,
   portalFound,
+  portalListed,
   portalProblem,
   portalsIn,
   providerCounts,
@@ -181,6 +182,22 @@ test("the shown register reads the year and the grade off the results provider, 
   assert.throws(() => none?.read({}), (error: unknown) => error instanceof ShownProofError && error.code === "PROVIDER_BUILDING");
   assert.equal(await UNIVERSITY_GRADE_SHOWN.providerOf?.(record("nobody-knows")), null);
   assert.equal(await UNIVERSITY_GRADE_SHOWN.providerOf?.(record(null)), null);
+});
+
+test("a grade gift made on a scale before the pin is read on the pinned one only if they agree, and the list says the pinned scale", async () => {
+  const gift = (gradeScale: string | null) => ({ ...record("ucad-sn"), gradeScale });
+  // UCAD's results provider, written above, grades out of 20 in halves.
+  const onTwenty = await UNIVERSITY_GRADE_SHOWN.providerOf?.(gift("20"));
+  assert.deepEqual(onTwenty?.read({ moyenne: "14,50", academicYear: "2026-2027" }), { metricValue: 1450n, eventAt: null, accountKey: null, inWords: "14.50 / 20" });
+  const onFour = await UNIVERSITY_GRADE_SHOWN.providerOf?.(gift("4"));
+  assert.throws(
+    () => onFour?.read({ moyenne: "14,50", academicYear: "2026-2027" }),
+    (error: unknown) => error instanceof ShownProofError && error.code === "SCALE_MISMATCH" && /grades out of 20, in steps of 0.5, not out of 4/.test(error.message),
+  );
+  const noChoice = await UNIVERSITY_GRADE_SHOWN.providerOf?.(gift(null));
+  assert.equal(noChoice?.read({ moyenne: "14,50", academicYear: "2026-2027" }).metricValue, 1450n, "a gift made after the pin is on the pinned scale");
+  assert.equal(portalListed((await loadPortal("ucad-sn"))!).scale, "20/0.5");
+  assert.equal(portalListed((await loadPortal("sorbonne-fr"))!).scale, null, "no results provider, no scale");
 });
 
 test("a row not yet shown by a student keeps the mark in the register, and the flow never prints it (the founder, 26 Sep 2026)", async () => {

@@ -8,7 +8,8 @@ import { giftNameProblem, tidyGiftName } from "@/src/gift-names";
 import { makeMilestoneGift } from "@/src/milestone-creation";
 import { OFFERED_WHILE_BUILDING } from "@/src/conditions";
 import { certificateById } from "@/src/milestone-conditions";
-import { loadPortal, requestProvider, resultsExtractOf, type Portal, type PortalSense } from "@/src/portal-store";
+import { loadPortal, markRequestAlerted, requestProvider, resultsExtractOf, type Portal, type PortalSense } from "@/src/portal-store";
+import { sendProviderAlert } from "@/src/provider-alert";
 import { providerInstruction } from "@/src/provider-instruction";
 import { milestoneErrorResponse } from "@/src/milestone-api";
 import { MILESTONE_MAX_AMOUNT, MILESTONE_MIN_AMOUNT, milestoneFundingNonce, SHAPE_HAVE_OR_NOT, type MilestoneParams } from "@/src/milestone-protocol";
@@ -75,6 +76,8 @@ export async function POST(request: Request) {
     // A university without a provider of the sense the condition reads is chosen all the same (D313): the operator is
     // asked for it before anything moves, with the exact instruction, and builds it within the day.
     let requested: { portal: Portal; sense: PortalSense } | null = null;
+    // The scale a grade gift is made on while its university's is not pinned (the founder, 28 Sep 2026).
+    let gradeScale: string | undefined;
     if (certificate.portal && course) {
       const portal = await loadPortal(course);
       if (!portal) throw new GiftApiError("NO_SUCH_PORTAL", "Viky lists no university by that name. Choose one from the list. Nothing was taken.", 409);
@@ -83,8 +86,11 @@ export async function POST(request: Request) {
         requested = { portal, sense };
         await requestProvider({ portalId: portal.portalId, sense, instruction: providerInstruction(portal, sense), giftId: null });
       }
-      const refused = certificate.portal.refuses({ results: resultsExtractOf(portal.results) }, target);
-      if (refused) throw new GiftApiError(refused.code, `${refused.message} Nothing was taken.`, refused.code === "INVALID_TARGET" ? 400 : 409);
+      const results = resultsExtractOf(portal.results);
+      const chosenScale = typeof body.scale === "string" ? body.scale : undefined;
+      const refused = certificate.portal.refuses({ results }, target, chosenScale);
+      if (refused) throw new GiftApiError(refused.code, `${refused.message} Nothing was taken.`, refused.code === "INVALID_TARGET" || refused.code === "SCALE_REQUIRED" ? 400 : 409);
+      if (certificate.portal.scaled && !results) gradeScale = chosenScale;
     }
     const durationDays = Number(body.durationDays);
     const { min, max } = certificate.duration;
@@ -153,11 +159,18 @@ export async function POST(request: Request) {
         standingReadAt: new Date().toISOString(),
         ...(certificate.portal && course ? { portal: course } : {}),
         ...(!certificate.portal && certificate.course && course ? { course } : {}),
+        ...(gradeScale ? { gradeScale } : {}),
       },
     });
 
-    // Which gift asked first, for the operator who builds the provider: best effort, the request itself is already written.
-    if (requested) await requestProvider({ portalId: requested.portal.portalId, sense: requested.sense, instruction: providerInstruction(requested.portal, requested.sense), giftId: created.giftId }).catch(() => undefined);
+    // Which gift asked first, for the operator who builds the provider, and the operator's email, once per request (the
+    // founder, 28 Sep 2026): best effort both, the request itself is already written and the gift made.
+    if (requested) {
+      const request = await requestProvider({ portalId: requested.portal.portalId, sense: requested.sense, instruction: providerInstruction(requested.portal, requested.sense), giftId: created.giftId }).catch(() => null);
+      if (request && !request.alertedAt && !request.builtAt && (await sendProviderAlert(requested.portal, request)) === "sent") {
+        await markRequestAlerted(requested.portal.portalId, requested.sense).catch(() => undefined);
+      }
+    }
     const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin;
     return NextResponse.json({ giftId: created.giftId, claimUrl: `${origin}/g/${created.giftId}?t=${created.claimToken}`, funded: true }, { headers: NO_STORE });
   } catch (error) {

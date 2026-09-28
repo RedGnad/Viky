@@ -277,7 +277,7 @@ export function PaySheet({
           </>
         ) : certificate ? (
           <>
-            <p className={BODY}>{certificate.words.mustShow(draft.subject.trim(), target)}</p>
+            <p className={BODY}>{certificate.words.mustShow(draft.subject.trim(), target, draft.scale)}</p>
             <p className={BODY}>{certificate.words.ifNot}</p>
           </>
         ) : (

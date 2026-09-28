@@ -216,6 +216,8 @@ export function PayGift() {
       durationDays: days,
       amount: units.toString(),
       ...(milestone ? { target, standing: draft.standing ?? 0 } : {}),
+      // A certificate's target, and the scale a grade is typed on, are its terms too (the founder, 28 Sep 2026).
+      ...(certificate ? { target, scale: draft.scale ?? "" } : {}),
     };
     let request = attemptFor(readSession(GIFT_ATTEMPT_KEY), terms);
     if (!request && certificate) {
@@ -228,6 +230,10 @@ export function PayGift() {
         amount: units,
         recipientName: recipient,
         funderName: funder,
+        // The course or university the gift is made on (C3, D165), and the scale a grade is typed on before the
+        // university's own is pinned: without them the route could not rebuild the terms the funder signed.
+        ...(draft.course ? { course: draft.course } : {}),
+        ...(draft.scale ? { scale: draft.scale } : {}),
       });
     }
     if (!request && milestone) {
@@ -284,7 +290,7 @@ export function PayGift() {
       amount: units.toString(),
       days,
       ...(milestone && cadence ? { goal: milestone.words.goal(target, cadence.label), target, namedByFunder: subject.length > 0 } : {}),
-      ...(certificate ? { goal: certificate.words.goal(target), target } : {}),
+      ...(certificate ? { goal: certificate.words.goal(target, draft.scale), target } : {}),
     };
     writeSession(MADE_KEY, record);
     // This device keeps the link, so the gift's page can offer it again long after this screen is gone.

@@ -884,7 +884,8 @@ export const GIFT_LIVE = {
  * The target and the readings are the gift's own data; the source's name is the register's.
  */
 export const MILESTONE_PAGE = {
-  target: (target: number, source: string) => `Reach ${target} on ${source}`,
+  /** The target as a number, or in words where the contract's number is not what is read (a grade, "14.50 out of 20"). */
+  target: (target: number | string, source: string) => `Reach ${target} on ${source}`,
   /** "by 17 Oct 2026" once the first reading has started the clock; "within 30 days of connecting" before (D46). */
   byDate: (date: string) => `by ${date}`,
   withinDays: (days: number) => `within ${days} ${days === 1 ? "day" : "days"} of connecting`,
@@ -1096,6 +1097,20 @@ export const CONDITION_NATURE = { read: "READ FOR YOU", shown: "SHOWN BY THEM", 
  * by country, no sentence about checking in the chooser, and under the list one invitation to the page where a student
  * adds their own. How a university is checked is said on the gift's page, folded, where the proof is shown.
  */
+/**
+ * The scale a grade is typed on (the founder, 28 Sep 2026): the university's own once its first results page has been
+ * reviewed, or, before, the one the funder chooses. True of the code: a scale the page does not confirm refuses the gift
+ * at the review, nothing is paid, and the contract returns the amount at the deadline.
+ */
+export const GRADE_SCALE = {
+  question: "How does their university grade?",
+  choices: { "20": "Out of 20", "4": "Out of 4", "100": "Out of 100", letters: "In letters" } as Record<string, string>,
+  help: "Their first results page confirms it. If their university grades another way, the gift cannot pay, and what you put in comes back to you at the end.",
+  fixed: (words: string) => `Their university grades ${words}.`,
+  letter: "The grade they reach",
+  letterHelp: "That letter or a better one.",
+} as const;
+
 export const UNIVERSITY_CHOICE = {
   country: "Which country is it in?",
   searchIn: (country: string) => `Search in ${country}`,

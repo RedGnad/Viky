@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { databaseUrl } from "./database-guard";
 import type { SqlExecutor } from "./proof-session-store";
-import { countryInWords, isPortalId, resultsProblem, type PortalExtract, type ResultsExtract } from "./university-shown";
+import { countryInWords, isPortalId, resultsProblem, scaleKey, type PortalExtract, type ResultsExtract } from "./university-shown";
 import { isAgentVersion, type WitnessPin } from "./witness-portal";
 
 /**
@@ -104,6 +104,8 @@ CREATE TABLE IF NOT EXISTS viky_provider_requests (
   built_at timestamptz,
   PRIMARY KEY (portal_id, sense)
 );
+-- When the operator was emailed about it (the founder, 28 Sep 2026): once per request.
+ALTER TABLE viky_provider_requests ADD COLUMN IF NOT EXISTS alerted_at timestamptz;
 `;
 
 let executor: SqlExecutor | undefined;
@@ -512,7 +514,7 @@ export async function decideReview(sessionId: string, status: "pinned" | "refuse
   return rows.length > 0;
 }
 
-export type ProviderRequest = Readonly<{ portalId: string; sense: PortalSense; instruction: string; firstGiftId: string | null; createdAt: Date; builtAt: Date | null }>;
+export type ProviderRequest = Readonly<{ portalId: string; sense: PortalSense; instruction: string; firstGiftId: string | null; createdAt: Date; builtAt: Date | null; alertedAt: Date | null }>;
 
 function toRequest(row: Record<string, unknown>): ProviderRequest {
   return {
@@ -522,6 +524,7 @@ function toRequest(row: Record<string, unknown>): ProviderRequest {
     firstGiftId: row.first_gift_id === null || row.first_gift_id === undefined ? null : String(row.first_gift_id),
     createdAt: new Date(String(row.created_at)),
     builtAt: row.built_at === null || row.built_at === undefined ? null : new Date(String(row.built_at)),
+    alertedAt: row.alerted_at === null || row.alerted_at === undefined ? null : new Date(String(row.alerted_at)),
   };
 }
 
@@ -548,6 +551,12 @@ export async function openRequests(): Promise<readonly ProviderRequest[]> {
 export async function requestOf(portalId: string, sense: PortalSense): Promise<ProviderRequest | null> {
   const rows = await sql()`SELECT * FROM viky_provider_requests WHERE portal_id = ${portalId} AND sense = ${sense}`;
   return rows[0] ? toRequest(rows[0]) : null;
+}
+
+/** Notes that the operator was emailed about a request: once, the first time. */
+export async function markRequestAlerted(portalId: string, sense: PortalSense): Promise<boolean> {
+  const rows = await sql()`UPDATE viky_provider_requests SET alerted_at = now() WHERE portal_id = ${portalId} AND sense = ${sense} AND alerted_at IS NULL RETURNING portal_id`;
+  return rows.length > 0;
 }
 
 export async function markRequestBuilt(portalId: string, sense: PortalSense): Promise<void> {
@@ -651,12 +660,16 @@ export async function portalCountries(): Promise<readonly { code: string; count:
 export async function portalsIn(country: string): Promise<readonly Portal[]> {
   if (!/^[A-Z]{2}$/.test(country)) return [];
   const rows = await sql()`SELECT * FROM viky_portals WHERE country = ${country} ORDER BY university, name LIMIT 5000`;
-  return rows.map((row) => toPortal(row, []));
+  return withProviders(rows);
 }
 
-/** A university as the list gives it: its name alone, its country, and the country's code to group and order by. */
-export function portalListed(portal: Pick<Portal, "portalId" | "university" | "country">): Readonly<{ pair: string; title: string; issuer: string; country: string }> {
-  return { pair: portal.portalId, title: portal.university, issuer: countryInWords(portal.country), country: portal.country };
+/**
+ * A university as the list gives it: its name alone, its country, the country's code to group and order by, and the
+ * grading scale its results provider pins, when it pins one, so a grade is typed on it (the founder, 28 Sep 2026).
+ */
+export function portalListed(portal: Pick<Portal, "portalId" | "university" | "country"> & Partial<Pick<Portal, "results">>): Readonly<{ pair: string; title: string; issuer: string; country: string; scale: string | null }> {
+  const scale = resultsExtractOf(portal.results ?? null)?.grade.scale;
+  return { pair: portal.portalId, title: portal.university, issuer: countryInWords(portal.country), country: portal.country, scale: scale ? scaleKey(scale) : null };
 }
 
 /**

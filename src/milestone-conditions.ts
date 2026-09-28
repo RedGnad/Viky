@@ -1,6 +1,8 @@
 import type { Hex } from "viem";
 import {
+  gradeTargetInWords,
   gradeTargetProblem,
+  scaleOfChoice,
   gradeUnits,
   isGradeShape,
   isPortalId,
@@ -390,7 +392,12 @@ export type CertificateCondition = Readonly<{
   portal?: Readonly<{
     /** Which of the university's providers the condition reads (D313): its enrolment, or its results page. */
     sense: "enrolment" | "results";
-    refuses: (portal: Readonly<{ results: ResultsExtract | null }>, target: number) => Readonly<{ code: string; message: string }> | undefined;
+    /**
+     * A grade is typed on a scale (the founder, 28 Sep 2026): the university's own once pinned, or, before, the one the
+     * funder chooses (`SCALE_CHOICES`), which the gift keeps and the first reviewed results page confirms or refuses.
+     */
+    scaled?: true;
+    refuses: (portal: Readonly<{ results: ResultsExtract | null }>, target: number, chosenScale?: string) => Readonly<{ code: string; message: string }> | undefined;
   }>;
   /**
    * What the funder names instead of a score, where there is nothing to score (C3). The certificate page carries the
@@ -455,9 +462,10 @@ export type CertificateCondition = Readonly<{
     check: string;
     checking: string;
     /** What the gift pays for, on the check screen. */
-    goal: (target: number) => string;
+    /** The scale, where a grade is typed on one (the founder, 28 Sep 2026): "20", "4", "100", "letters". */
+    goal: (target: number, scale?: string) => string;
     /** The review, in one line: what the certificate has to show for this gift to pay. */
-    mustShow: (name: string, target: number) => string;
+    mustShow: (name: string, target: number, scale?: string) => string;
     durationLabel: string;
     durationHelp: string;
     durationShape: (min: number, max: number) => string;
@@ -1174,14 +1182,22 @@ export const UNIVERSITY_GRADE_MILESTONE: CertificateCondition = {
   validTarget: isGradeShape,
   targetUnits: gradeUnits,
   subject: ({ course }) => universityGradeSubject(String(course ?? "")),
-  // A grade is signed on the university's own scale (D174). Where the results page is not read yet, the gift is made like
-  // any other and the scale is read and pinned with the first proof the operator reviews (the founder, 28 Sep 2026);
-  // where it is, a target off the scale is refused before anything moves.
-  portal: { sense: "results", refuses: (portal, target) => (portal.results ? gradeTargetProblem(portal.results.grade.scale, target) : undefined) },
+  // A grade is signed on the university's own scale (D174). Where it is pinned, a target off it is refused before
+  // anything moves; where it is not yet, the funder chooses the scale, the target is judged on it, and the first
+  // results page the operator reviews confirms the scale or refuses the gift (the founder, 28 Sep 2026).
+  portal: {
+    sense: "results",
+    scaled: true,
+    refuses: (portal, target, chosenScale) => {
+      if (portal.results) return gradeTargetProblem(portal.results.grade.scale, target);
+      const chosen = scaleOfChoice(chosenScale);
+      return chosen ? gradeTargetProblem(chosen, target) : { code: "SCALE_REQUIRED", message: "Choose how their university grades: out of 20, out of 4, out of 100, or in letters." };
+    },
+  },
   course: { ...UNIVERSITY_COURSE, named: (course) => universityNamed("a grade at ", course) },
   target: {
     label: "The grade they reach",
-    help: "On the university's own scale, with a dot for decimals: 14.5 out of 20, or 3.5 for a GPA out of 4. Where Viky already reads that scale, a grade off it is refused when the gift is made.",
+    help: "On that scale, with a dot for decimals: 14.5 out of 20, or 3.5 out of 4. A grade off the scale is refused when the gift is made.",
     min: 0.01,
     max: 1_000,
     step: 0.01,
@@ -1198,8 +1214,8 @@ export const UNIVERSITY_GRADE_MILESTONE: CertificateCondition = {
     whatIsRead: "Viky keeps the grade the results page carries, on the university's own scale, and the day it was shown, and nothing else. Your portal password never reaches Viky.",
     check: "",
     checking: "",
-    goal: (target) => `Reach ${target.toFixed(2)} at their university`,
-    mustShow: (_name, target) => `A grade of ${target.toFixed(2)} or more on the university's own scale, shown from their own results page. A page of another year does not count where the portal dates it.`,
+    goal: (target, scale) => `Reach ${gradeTargetInWords(target, scale)} at their university`,
+    mustShow: (_name, target, scale) => `A grade of ${gradeTargetInWords(target, scale)} or better, shown from their own results page. A page of another year does not count where the portal dates it.`,
     durationLabel: "How long do they have?",
     durationHelp: "The grade has to be shown inside that time, and the day it is shown is what counts.",
     durationShape: (min, max) => `Between ${min} and ${max} days.`,
