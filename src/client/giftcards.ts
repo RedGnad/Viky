@@ -9,8 +9,8 @@ export type GiftCardListed = Readonly<{
   /** Bitrefill's own line on where the card works: "Works in: Senegal". */
   worksIn: string;
   currency: string;
-  packages: ReadonlyArray<Readonly<{ id: string; value: string; priceUsd: number }>>;
-  range: Readonly<{ min: number; max: number; step: number; priceRate: number }> | null;
+  packages: ReadonlyArray<Readonly<{ id: string; value: string }>>;
+  range: Readonly<{ min: number; max: number; step: number }> | null;
 }>;
 
 export type GiftCardCode = Readonly<{ code?: string; link?: string; pin?: string; instructions?: string; expires?: string }>;

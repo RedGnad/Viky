@@ -33,12 +33,14 @@ test("the operators for a number, and a country Bitrefill does not serve refused
   const seen: Array<{ url: string; init: RequestInit }> = [];
   // Bitrefill's documented answer when it recognises the number: `data` is the operator's product, one object.
   const operators = await operatorsFor("+221 77 123 45 67", answering(200, { meta: { phone_number: "+221771234567" }, operator_found: true, data:
-    { id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [{ id: "orange-senegal<&>1000", value: "1000", price: 1.9 }], range: { min: 500, max: 50000, step: 1, price_rate: 0.0019 } },
+    { id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [{ id: "orange-senegal<&>1000", value: "1000", price: 2078 }], range: { min: 500, max: 50000, step: 1, price_rate: 2.078 } },
   }, seen));
   assert.equal(seen[0].url, "https://api-bitrefill.com/v2/check_phone_number?phone_number=%2B221771234567");
   assert.equal((seen[0].init.headers as Record<string, string>).authorization, "Bearer k");
   assert.deepEqual(operators.map((operator) => operator.id), ["orange-senegal"]);
-  assert.equal(operators[0].range?.priceRate, 0.0019);
+  // Bitrefill's prices are in satoshis (1,000 XOF listed at 2,078 on 28 Sep 2026): none is carried, the invoice prices.
+  assert.deepEqual(operators[0].packages, [{ id: "orange-senegal<&>1000", value: "1000" }]);
+  assert.deepEqual(operators[0].range, { min: 500, max: 50000, step: 1 });
   // When it does not recognise the number: the list of the products that may serve it, the broken one left out.
   const candidates = await operatorsFor("+221771234567", answering(200, { operator_found: false, data: [
     { id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1, price_rate: 0.0019 } },

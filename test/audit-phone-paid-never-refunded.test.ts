@@ -31,7 +31,7 @@ let invoiceCount = 0;
 function deps(payment: () => Promise<{ hash: Hex }>, refunds: unknown[]): PhoneDeps {
   const invoices = new Map<string, BitrefillInvoice>();
   return {
-    operatorsFor: async () => [{ id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1, priceRate: 0.0019 } }],
+    operatorsFor: async () => [{ id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1 } }],
     createInvoice: async () => {
       const invoice: BitrefillInvoice = { id: `inv-${++invoiceCount}`, status: "unpaid", payment: { method: "usdc_base", address: "0x3333333333333333333333333333333333333333", price: "3.812346", currency: "USDC" }, orders: [{ id: "o", status: "created" }] };
       invoices.set(invoice.id, invoice);

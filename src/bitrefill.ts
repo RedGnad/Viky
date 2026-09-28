@@ -72,14 +72,18 @@ export function e164Of(typed: string): string | undefined {
   return /^\+[1-9]\d{7,14}$/.test(international) ? international : undefined;
 }
 
-export type BitrefillPackage = Readonly<{ id: string; value: string; priceUsd: number }>;
+/**
+ * An amount the operator or card sells. Bitrefill also sends a price, in satoshis whatever the account's currency, and a
+ * range's `price_rate` in the same unit: neither is carried, because what the person pays is the invoice's own price.
+ */
+export type BitrefillPackage = Readonly<{ id: string; value: string }>;
 export type BitrefillOperator = Readonly<{
   id: string;
   name: string;
   /** The currency the operator's amounts are in, XOF for Orange Sénégal. */
   currency: string;
   packages: readonly BitrefillPackage[];
-  range: Readonly<{ min: number; max: number; step: number; priceRate: number }> | null;
+  range: Readonly<{ min: number; max: number; step: number }> | null;
 }>;
 
 export type BitrefillInvoice = Readonly<{
@@ -136,13 +140,13 @@ function operatorOf(raw: Record<string, unknown>): BitrefillOperator | undefined
     ? listed.flatMap((item) => {
         const p = item as Record<string, unknown>;
         const price = Number(p.price);
-        return typeof p.id === "string" && Number.isFinite(price) && price > 0 ? [{ id: p.id, value: String(p.value), priceUsd: price }] : [];
+        return typeof p.id === "string" && Number.isFinite(price) && price > 0 ? [{ id: p.id, value: String(p.value) }] : [];
       })
     : [];
   const r = raw.range as Record<string, unknown> | undefined;
   const range =
     r && [r.min, r.max, r.step, r.price_rate].every((n) => Number.isFinite(Number(n)) && Number(n) > 0)
-      ? { min: Number(r.min), max: Number(r.max), step: Number(r.step), priceRate: Number(r.price_rate) }
+      ? { min: Number(r.min), max: Number(r.max), step: Number(r.step) }
       : null;
   return { id: raw.id, name: raw.name, currency: typeof raw.currency === "string" ? raw.currency : "", packages, range };
 }

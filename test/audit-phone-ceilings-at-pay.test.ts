@@ -34,7 +34,7 @@ function world(price = "30"): { deps: PhoneDeps; relayed: () => number } {
   const invoices = new Map<string, BitrefillInvoice>();
   let relayed = 0;
   const deps: PhoneDeps = {
-    operatorsFor: async () => [{ id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1, priceRate: 0.0019 } }],
+    operatorsFor: async () => [{ id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1 } }],
     createInvoice: async () => {
       const id = ++count;
       const invoice: BitrefillInvoice = { id: `inv-${id}`, status: "unpaid", payment: { method: "usdc_base", address: `0x${id.toString(16).padStart(40, "3")}`, price, currency: "USDC" }, orders: [{ id: "o", status: "created" }] };
