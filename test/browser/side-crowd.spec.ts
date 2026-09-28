@@ -29,8 +29,9 @@ test("the characters beside the top keep clear of the column, and only on a scre
     expect(measured.shown).toBe(0);
     return;
   }
-  // The placement's column (LANDING_COLUMN in app/kit/SideCrowd.tsx) is the headline on one line.
-  expect(measured.column).toBe(903);
+  // The placement's column (columnAt in app/kit/SideCrowd.tsx) is the page's own, measured.
+  const expected = Math.min(903, Math.max(880, 0.8139 * measured.width - 268.95));
+  expect(Math.abs(measured.column - expected)).toBeLessThanOrEqual(1);
   expect(measured.shown).toBeGreaterThan(0);
   expect(measured.touching).toBe(0);
   // Cut by the window's edge is how a character leaves as the window narrows; nothing scrolls sideways for it.

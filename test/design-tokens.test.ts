@@ -448,7 +448,10 @@ test("every text size in the stylesheet is a step of the scale, and the promise 
   // The promise's step on a phone, which gives way only where the screen cannot hold its longest line (D235).
   assert.match(root, new RegExp(`--type-hero: min\\(${HERO_TYPE.compact.size}px, calc\\(\\(100vw - 2 \\* var\\(--page-margin\\)\\) \\* 0\\.15\\)\\);`));
   assert.match(root, new RegExp(`--type-lead: ${LEAD_TYPE.compact.size}px;`));
-  assert.match(from1024, new RegExp(`--type-hero: ${HERO_TYPE.wide.size}px;`));
+  // From 1024 it grows with the window, the phone's step at 1024 and the wide one at 1600, so no width jumps it.
+  assert.match(from1024, new RegExp(`--type-hero: clamp\\(${HERO_TYPE.compact.size}px, calc\\(6\\.4904vw - 17\\.46px\\), ${HERO_TYPE.wide.size}px\\);`));
+  assert.equal(Math.round(((6.4904 * HERO_TYPE.from) / 100 - 17.46) * 10) / 10, HERO_TYPE.compact.size, "49 at 1024");
+  assert.equal(Math.round(((6.4904 * HERO_TYPE.fullFrom) / 100 - 17.46) * 10) / 10, HERO_TYPE.wide.size, "76 at 1440");
   assert.match(from1024, new RegExp(`--type-hero-leading: ${HERO_TYPE.wide.lineHeight};`), "the advisor's 1.02, unitless");
   assert.match(from1024, new RegExp(`--type-lead: ${LEAD_TYPE.wide.size}px;`));
   for (const size of [HERO_TYPE.compact.size, HERO_TYPE.wide.size, LEAD_TYPE.compact.size, LEAD_TYPE.wide.size]) assert.ok(SCALE.includes(size), `${size}`);
