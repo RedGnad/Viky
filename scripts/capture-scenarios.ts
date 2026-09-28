@@ -1227,16 +1227,17 @@ function withdrawal(): Scenario[] {
         }), "GET /api/giftcards");
         await s.api("GET", "/api/giftcards/codes", () => ({ status: 200, body: { cards: [] } }), "GET /api/giftcards/codes");
         await s.signIn();
-        await s.click("Take it out");
+        await s.click("Use your money");
         await s.click(exact("change"));
         await s.page.locator("#use-where-you-live").click();
         await s.page.getByRole("dialog").waitFor({ state: "visible" });
         await s.shot("use your money", "where you live, the sheet", `${WAY}, change, then the country`);
         await s.page.getByRole("searchbox", { name: "Search a country" }).fill("ben");
         await s.shot("use your money", "where you live, searched", `${WAY}, change, the country, "ben" typed`);
-        await s.page.keyboard.press("Escape");
+        // Escape in a search field first clears the text, as a browser does, so the sheet is left by its own button.
+        await s.page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
         await s.page.getByRole("dialog").waitFor({ state: "hidden" });
-        await s.click(exact("Choose a card"));
+        // The use's own button opens the list of cards at once.
         await s.click(exact("Choose a card"));
         await s.page.getByRole("dialog").getByText("Amazon.fr").click();
         await s.text("More than you have");
