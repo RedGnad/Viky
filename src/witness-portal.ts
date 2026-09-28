@@ -72,6 +72,14 @@ export function onDomain(url: string, domain: string): boolean {
   return wanted.length > 0 && (host === wanted || host.endsWith(`.${wanted}`));
 }
 
+/**
+ * Whether a URL is on one of a provider's domains, written "utoulouse.fr,univ-tlse3.fr": a university can answer on
+ * two of its own (the Université de Toulouse, Paul Sabatier's until 2025, D313).
+ */
+export function onAnyDomain(url: string, domains: string): boolean {
+  return domains.split(",").some((domain) => onDomain(url, domain));
+}
+
 export type WitnessReading = Readonly<{
   /** What the claim carries, trusted once the witness's signature on it is verified. */
   data: ReclaimTrustedData;
@@ -111,7 +119,7 @@ export function verifyWitnessProof(
   const context = parsed(claim.context);
   const url = String(parameters.url ?? "");
   const method = String(parameters.method ?? "GET").toUpperCase();
-  if (!onDomain(url, expected.domain)) throw new WitnessProofError("WITNESS_OTHER_DOMAIN", "The proof read another site than this university's portal");
+  if (!onAnyDomain(url, expected.domain)) throw new WitnessProofError("WITNESS_OTHER_DOMAIN", "The proof read another site than this university's portal");
   if (method !== expected.method.toUpperCase()) throw new WitnessProofError("WITNESS_OTHER_METHOD", "The proof asked the portal in another way than this university's pin");
   const responseMatches = canonical(parameters.responseMatches ?? []);
   const responseRedactions = canonical(parameters.responseRedactions ?? []);
@@ -147,4 +155,13 @@ export function pinOf(reading: WitnessReading, providerVersion: string): Witness
 /** An agent-written version of an AI provider: its base and "-ai.N". */
 export function isAgentVersion(version: string): boolean {
   return /^\d+\.\d+\.\d+-ai\.\d+$/.test(version);
+}
+
+/**
+ * A version an AI provider's session can report: the agent's ("1.0.0-ai.1", what a submitted proof has shown so far),
+ * or the provider's own base ("1.0.0", what a session reports when it opens). A first proof is held on either, so a
+ * student's visit is never lost to the name of a version; the pin is what is checked after it.
+ */
+export function isWitnessVersion(version: string): boolean {
+  return isAgentVersion(version) || /^\d+\.\d+\.\d+$/.test(version);
 }

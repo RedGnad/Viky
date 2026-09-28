@@ -291,7 +291,9 @@ async function main() {
     if (final.protocol !== "https:") return void (counted.notHttps += 1);
     const country = countryOf(group.host);
     if (!country) return void (counted.noCountry += 1);
-    const name = campusOf(cleanName(group.name));
+    // A dash left inside a name once its campus is folded ("Higher Colleges of Technology, dash, Ruwais Campus") is read
+    // as a comma: no dash on a screen.
+    const name = campusOf(cleanName(group.name)).replace(/\s*[\u2013\u2014]\s*/g, ", ");
     if (name.length < 3) return void (counted.notHigherEducation += 1);
     candidates.push({ name, country, url: group.url, host: group.host, status: answered.status, providers: group.providers, listed: inWorldList(group.host) });
   });

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getHostname } from "tldts";
 import { getAddress } from "viem";
-import { CORRIDOR_PORTALS, DIRECTORY_PORTALS } from "../src/directory-portals";
+import { ADDED_PORTALS, CORRIDOR_PORTALS, DIRECTORY_PORTALS } from "../src/directory-portals";
 import { countPortals, ensurePortalSchema, loadPortal, portalCountries, savePortal, savePortalRows, type PortalRowInput } from "../src/portal-store";
 
 /**
@@ -40,10 +40,11 @@ function nameKey(name: string, country: string): string {
 async function main() {
   const provenBy = getAddress(String(process.env.PROVEN_BY?.trim()));
   const dry = process.env.DRY_RUN === "1";
-  const handRows = [...DIRECTORY_PORTALS, ...CORRIDOR_PORTALS];
+  const handWritten = [...CORRIDOR_PORTALS, ...ADDED_PORTALS];
+  const handRows = [...DIRECTORY_PORTALS, ...handWritten];
   const taken = {
     ids: new Set(handRows.map((row) => row.portalId)),
-    sources: new Set(CORRIDOR_PORTALS.map((row) => row.sourceProviderId)),
+    sources: new Set(handWritten.map((row) => row.sourceProviderId)),
     // By the sign-in host, not its registrable domain: a hosting platform serves several universities under one domain.
     hosts: new Set(handRows.map((row) => hostOf(row.loginUrl))),
     names: new Set(handRows.map((row) => nameKey(row.university, row.country))),
@@ -52,7 +53,7 @@ async function main() {
     (row) => !taken.ids.has(row.portalId) && !row.sourceProviderIds.some((id) => taken.sources.has(id)) && !taken.hosts.has(hostOf(row.loginUrl)) && !taken.names.has(nameKey(row.university, row.country)),
   );
   const worldRows: PortalRowInput[] = world.map((row) => ({ portalId: row.portalId, name: row.university, university: row.university, country: row.country, loginUrl: row.loginUrl, provenBy, unverified: true }));
-  const corridorRows: PortalRowInput[] = CORRIDOR_PORTALS.map((row) => ({ portalId: row.portalId, name: row.name, university: row.university, country: row.country, loginUrl: row.loginUrl, provenBy, unverified: true }));
+  const corridorRows: PortalRowInput[] = handWritten.map((row) => ({ portalId: row.portalId, name: row.name, university: row.university, country: row.country, loginUrl: row.loginUrl, provenBy, unverified: true }));
 
   const byCountry = new Map<string, number>();
   for (const row of [...DIRECTORY_PORTALS, ...corridorRows, ...worldRows]) byCountry.set(row.country, (byCountry.get(row.country) ?? 0) + 1);

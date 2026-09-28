@@ -14,7 +14,7 @@ import type { ProofSession } from "../src/proof-session-store";
 import { portalProviderFor, SHOWN_CONDITIONS, UNIVERSITY_SHOWN, type ShownEntry } from "../src/shown-conditions";
 import { settleHeldReview, verifyShownSession, type ShownVerificationDeps } from "../src/shown-verification";
 import { UNIVERSITY_ENROLLED, universitySubject } from "../src/university-shown";
-import { canonical, onDomain, pinOf, verifyWitnessProof, WitnessProofError, type WitnessPin } from "../src/witness-portal";
+import { canonical, onAnyDomain, onDomain, pinOf, verifyWitnessProof, WitnessProofError, type WitnessPin } from "../src/witness-portal";
 
 /**
  * A university read through a Reclaim AI provider (D312): the proof carries no enclave, so it is verified by the
@@ -97,6 +97,10 @@ test("the portal's domain is its own or a subdomain, over https, and nothing tha
   assert.equal(onDomain("https://ucad.sn.evil.com/", "ucad.sn"), false);
   assert.equal(onDomain("http://studentcenter.ucad.sn/", "ucad.sn"), false, "a proof is of a TLS page");
   assert.equal(canonical({ b: 1, a: [2, { d: 3, c: 4 }] }), canonical({ a: [2, { c: 4, d: 3 }], b: 1 }));
+  // A provider on two of a university's own domains (the Université de Toulouse, D313).
+  assert.equal(onAnyDomain("https://ent-etudiants.univ-tlse3.fr/scolarite", "utoulouse.fr,univ-tlse3.fr"), true);
+  assert.equal(onAnyDomain("https://ent.utoulouse.fr/", "utoulouse.fr,univ-tlse3.fr"), true);
+  assert.equal(onAnyDomain("https://univ-tlse2.fr/", "utoulouse.fr,univ-tlse3.fr"), false);
 });
 
 test("a witness proof is read only when the witness alone signed what it holds, on the portal's domain", async () => {
@@ -212,8 +216,12 @@ test("before the pin, a proof from another site, another signer, another account
   await assert.rejects(verifyShownSession(await other(proofSync.stranger), { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("WITNESS_OTHER_SIGNER"));
   await assert.rejects(verifyShownSession(await other(await witnessProof({ message: "1000010:reach" })), { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("WRONG_GIFT_PHASE"));
   await assert.rejects(verifyShownSession(await other(await witnessProof({}, WITNESS, NOW - 3_600)), { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("PROOF_TOO_OLD"));
-  // A version the agent did not write: a classic provider's, which would need its enclave.
-  await assert.rejects(verifyShownSession(deps([proofSync.good], "1.0.0").deps, { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("PROOF_REJECTED"));
+  // A version that is no version at all is refused; the provider's base ("1.0.0", what a session reports when it opens)
+  // is held like the agent's, so a student's first proof is never lost to the name of a version.
+  await assert.rejects(verifyShownSession(deps([proofSync.good], "latest").deps, { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("PROOF_REJECTED"));
+  const onBase = deps([proofSync.good], "1.0.0");
+  assert.equal((await verifyShownSession(onBase.deps, { sessionId: SESSION_ID, account: ACCOUNT })).kind, "held");
+  assert.equal(onBase.held[0].providerVersion, "1.0.0");
   // Without the witness key a test stands in for, the pinned witness is required, and the test key is not it.
   await assert.rejects(verifyShownSession(deps([proofSync.good], AGENT_VERSION, { witnessAddress: undefined }).deps, { sessionId: SESSION_ID, account: ACCOUNT }), refusedAs("WITNESS_OTHER_SIGNER"));
 });

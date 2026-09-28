@@ -123,3 +123,14 @@ export const CORRIDOR_PORTALS: readonly CorridorPortal[] = [
   { portalId: "iss-kin-cd", name: "ISS Kinshasa, espace étudiant", university: "Institut Supérieur de Statistique de Kinshasa", country: "CD", sourceProviderId: "0eabf1ff-a7b0-444b-beb1-f56d0c7c351c", loginUrl: "https://iss-kin.optsolution.net/student/connexion" },
   { portalId: "unilag-ng", name: "UNILAG, student portal", university: "University of Lagos", country: "NG", sourceProviderId: "41bb2902-daf8-44f1-a06a-5cd6b5cc9df5", loginUrl: "https://studentportal.unilag.edu.ng/" },
 ];
+
+/**
+ * Universities added by hand outside the corridor, each once its provider exists (D313). The Université de Toulouse
+ * (the founder, 29 Sep 2026): Paul Sabatier's until 1 January 2025, missing from Reclaim's directory under that name,
+ * neither Toulouse Capitole nor Jean Jaurès. Its students sign in at ent.utoulouse.fr through auth.utoulouse.fr; its
+ * enrolment provider `c560dffd` reads its own two domains, utoulouse.fr and univ-tlse3.fr, registered with
+ * `pnpm provider:add`.
+ */
+export const ADDED_PORTALS: readonly CorridorPortal[] = [
+  { portalId: "utoulouse-fr", name: "Université de Toulouse, ENT", university: "Université de Toulouse", country: "FR", sourceProviderId: "c560dffd-5f37-4b8a-94ed-106ce9e9ee27", loginUrl: "https://ent.utoulouse.fr/" },
+];

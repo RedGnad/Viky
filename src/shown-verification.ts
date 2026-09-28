@@ -9,7 +9,7 @@ import { assertReclaimSessionProvenance, assertSdkProofSet, ReclaimProofRejected
 import type { ReclaimTrustedData } from "./reclaim-types";
 import { portalProviderFor, shownConditionById, type ShownEntry, type ShownProvider } from "./shown-conditions";
 import type { Portal, PortalReview } from "./portal-store";
-import { isAgentVersion, verifyWitnessProof, WitnessProofError, type WitnessPin, type WitnessReading } from "./witness-portal";
+import { isWitnessVersion, verifyWitnessProof, WitnessProofError, type WitnessPin, type WitnessReading } from "./witness-portal";
 import type { MilestoneRecord } from "./milestone-store";
 import { ShownProofError, validateShownEvidence, type ShownEvidence } from "./shown-proof";
 import { ATTESTATION_TTL_SECONDS } from "./gift-terms";
@@ -130,7 +130,7 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
   // version Reclaim's agent wrote for it, and nothing else.
   const witness = provider.witness;
   const agentVersion = String(status.session?.providerVersionString ?? "");
-  const providerVersion = witness && !witness.pin ? (isAgentVersion(agentVersion) ? agentVersion : "an agent version") : provider.providerVersion;
+  const providerVersion = witness && !witness.pin ? (isWitnessVersion(agentVersion) ? agentVersion : "a witness version") : provider.providerVersion;
   let proofs: Proof[];
   try {
     // Provenance first (pinned provider and version, our app, PROOF_SUBMITTED and never AI_PROOF_SUBMITTED), then
@@ -206,7 +206,19 @@ function witnessReadings(proofs: readonly Proof[], expected: Readonly<{ domain: 
     // A page is read with GET until the pin says otherwise: the method is part of what the first proof fixes.
     return proofs.map((proof) => verifyWitnessProof(proof, { domain: expected.domain, method: expected.pin?.method ?? "GET", pin: expected.pin, providerVersion: expected.providerVersion, witness: expected.witness }));
   } catch (error) {
-    if (error instanceof WitnessProofError) throw new VerificationError(error.code, error.message);
+    if (error instanceof WitnessProofError) {
+      // What was read, by its host alone (never a path, which can carry a student's number): a domain or a method the
+      // row did not expect is corrected the same day from this line in the logs.
+      const hosts = proofs.map((proof) => {
+        try {
+          return new URL(String(JSON.parse(proof.claimData.parameters).url)).hostname;
+        } catch {
+          return "unreadable";
+        }
+      });
+      console.warn(JSON.stringify({ witnessRefused: error.code, expectedDomain: expected.domain, hosts }));
+      throw new VerificationError(error.code, error.message);
+    }
     throw error;
   }
 }

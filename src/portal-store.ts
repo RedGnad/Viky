@@ -2,7 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import { databaseUrl } from "./database-guard";
 import type { SqlExecutor } from "./proof-session-store";
 import { countryInWords, isPortalId, resultsProblem, scaleKey, type PortalExtract, type ResultsExtract } from "./university-shown";
-import { isAgentVersion, type WitnessPin } from "./witness-portal";
+import { isWitnessVersion, type WitnessPin } from "./witness-portal";
 
 /**
  * The universities Viky lists, and the Reclaim providers that read their student portals (D165, D313).
@@ -224,9 +224,10 @@ export function providerProblem(provider: PortalProvider): string | undefined {
   if (!UUID.test(provider.providerId)) return "a Reclaim provider id, 36 characters";
   if (!ADDRESS.test(provider.addedBy)) return "the operator account that added it";
   if (provider.verification === "witness") {
-    if (!provider.domain || !DOMAIN.test(provider.domain)) return "the domain its proofs read, like ucad.sn";
+    // One domain, or a few of the university's own, "utoulouse.fr,univ-tlse3.fr".
+    if (!provider.domain || !provider.domain.split(",").every((domain) => DOMAIN.test(domain))) return "the domain its proofs read, like ucad.sn, or several separated by commas";
     if (!provider.pin) return provider.extract === null ? undefined : "a field to read only once the provider is pinned";
-    if (!isAgentVersion(provider.pin.providerVersion)) return "a pinned version the agent wrote, like 1.0.0-ai.1";
+    if (!isWitnessVersion(provider.pin.providerVersion)) return "a pinned version the session reported, like 1.0.0-ai.1";
     if (!HASH.test(provider.pin.specHash)) return "the pinned request spec's hash";
   } else if (provider.verification === "tee") {
     if (!/^\d+\.\d+\.\d+$/.test(provider.providerVersion)) return "a provider version like 1.0.0";

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { CORRIDOR_PORTALS, DIRECTORY_PORTALS } from "../src/directory-portals";
+import { ADDED_PORTALS, CORRIDOR_PORTALS, DIRECTORY_PORTALS } from "../src/directory-portals";
 import { portalProblem, rowProblem } from "../src/portal-store";
 
 const OPERATOR = "0x000000000000000000000000000000000000a11c";
@@ -38,6 +38,18 @@ test("the corridor's universities: whole rows on https, each once, IHET and MIT 
   assert.equal(ids.has("ihet-tn") || ids.has("polytech-med-tn"), false);
   assert.equal(CORRIDOR_PORTALS.find((row) => row.portalId === "unikin-cd")?.loginUrl, "https://unikin.optsolution.net/");
   assert.equal(CORRIDOR_PORTALS.find((row) => row.portalId === "iam-ml")?.loginUrl, "https://elearning-iambamako.com/");
+});
+
+test("the Université de Toulouse is added by hand, on its ENT, and is neither Capitole nor Jean Jaurès (D313)", () => {
+  const toulouse = ADDED_PORTALS.find((row) => row.portalId === "utoulouse-fr");
+  assert.equal(rowProblem({ ...toulouse!, provenBy: OPERATOR }), undefined);
+  assert.equal(toulouse?.university, "Université de Toulouse");
+  assert.equal(toulouse?.loginUrl, "https://ent.utoulouse.fr/");
+  assert.equal(toulouse?.sourceProviderId, "c560dffd-5f37-4b8a-94ed-106ce9e9ee27");
+  const { rows } = JSON.parse(readFileSync("data/university-register.json", "utf8")) as { rows: { portalId: string; university: string }[] };
+  assert.ok(!rows.some((row) => row.portalId === "utoulouse-fr"), "not in the world's list, written by hand");
+  assert.ok(rows.some((row) => row.university === "Toulouse I Capitole University") && rows.some((row) => row.university === "University of Toulouse Jean Jaurès"));
+  assert.ok(!rows.some((row) => /[\u2013\u2014]/.test(row.university)), "no dash in any name");
 });
 
 test("the world's list: every line a whole row, each id once, one line per university and country (D313)", () => {
