@@ -16,6 +16,7 @@ test("the email names the university, the sense, the gift, the instruction and t
   assert.equal(subject, "Provider to build: Université Cheikh Anta Diop (Senegal), results");
   assert.match(text, /Sign-in page: https:\/\/studentcenter\.ucad\.sn\/login/);
   assert.match(text, /Gift: 1000042/);
+  assert.match(text, /The person reads that it is set up within two days\./);
   assert.match(text, /pnpm provider:add ucad-sn results <the provider's id> --domain ucad\.sn/);
   assert.match(text, /pnpm provider:requests/);
   assert.doesNotMatch(text, /\n\n\n/, "no empty lines stacked");

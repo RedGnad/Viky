@@ -1145,12 +1145,12 @@ export const SHOW_PROOF = {
    * A first proof from a university read through a witness with no pin yet (D312): checked on what is sure, held for
    * the operator's review, nothing relayed. True of `pnpm portal:pin`: the operator reads it and settles or refuses.
    */
-  held: "First proof from this university: checked within a day.",
+  held: "First proof from this university: checked within two days.",
   /**
    * A university chosen for a sense it has no provider for yet (D313): the operator was asked when the gift was made and
-   * builds it within the day. Nothing can be shown until then, and nothing is lost: the contract holds the money.
+   * builds it within two days. Nothing can be shown until then, and nothing is lost: the contract holds the money.
    */
-  building: "Your university's page is being set up: checked within a day. Then you show it here.",
+  building: "Your university's page is being set up within two days. Then you show it here.",
   /** The review found the page does not show what the gift is for (D312): nothing relayed, the contract untouched. */
   reviewRefused: "This university's page did not show what this gift is for, so nothing was counted. The money stays where it is.",
   refusals: {

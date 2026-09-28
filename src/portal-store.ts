@@ -13,7 +13,7 @@ import { isAgentVersion, type WitnessPin } from "./witness-portal";
  *
  * What reads the portal is a provider, one per sense: `enrolment` (staying enrolled) and `results` (the year passed, a
  * grade reached). A university may have neither: a funder can still choose it, a request goes to the operator with the
- * exact instruction for the provider to build, and the person reads that it is checked within a day. Each provider
+ * exact instruction for the provider to build, and the person reads that it is set up within two days. Each provider
  * carries how its proofs are verified: `tee`, a classic provider pinned by version and request hash, verified with the
  * enclave's attestation; or `witness`, a Reclaim AI provider verified by the pinned witness's signature on its own
  * domain (a university's results may live on another site than its enrolment, so the domain is the provider's), and
@@ -93,8 +93,8 @@ CREATE TABLE IF NOT EXISTS viky_portal_reviews (
 );
 ALTER TABLE viky_portal_reviews ADD COLUMN IF NOT EXISTS sense text NOT NULL DEFAULT 'enrolment';
 CREATE INDEX IF NOT EXISTS viky_portal_reviews_gift ON viky_portal_reviews (gift_id, created_at DESC);
--- A university chosen for a sense it has no provider for (D313): the operator builds it within the day from the exact
--- instruction written here, and the person reads that it is checked within a day.
+-- A university chosen for a sense it has no provider for (D313): the operator builds it within two days from the exact
+-- instruction written here, and the person reads that it is set up within two days.
 CREATE TABLE IF NOT EXISTS viky_provider_requests (
   portal_id text NOT NULL,
   sense text NOT NULL,
@@ -494,7 +494,7 @@ export async function loadReview(sessionId: string): Promise<PortalReview | null
   return rows[0] ? toReview(rows[0]) : null;
 }
 
-/** The latest review of a gift, for its page: pending says "checked within a day", refused says why. */
+/** The latest review of a gift, for its page: pending says "checked within two days", refused says why. */
 export async function latestReviewOf(giftId: string): Promise<PortalReview | null> {
   const rows = await sql()`SELECT * FROM viky_portal_reviews WHERE gift_id = ${giftId} ORDER BY created_at DESC LIMIT 1`;
   return rows[0] ? toReview(rows[0]) : null;
@@ -644,7 +644,7 @@ export async function searchPortals(words: string): Promise<readonly Portal[]> {
 /**
  * A university as the chooser lists it, in the shape every search of the sheet reads (`CertificationFound`): what is
  * pressed is the portal id, and the line reads "Université Cheikh Anta Diop, Senegal". Nothing about which of its
- * providers exist: a university without one is chosen all the same, and its provider is built within the day (D313).
+ * providers exist: a university without one is chosen all the same, and its provider is built within two days (D313).
  */
 export function portalFound(portal: Pick<Portal, "portalId" | "university" | "country">): Readonly<{ pair: string; title: string; issuer: string; path: string }> {
   return { pair: portal.portalId, title: portal.university, issuer: countryInWords(portal.country), path: "" };

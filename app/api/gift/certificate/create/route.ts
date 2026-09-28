@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     // already declares its scale, a grade off it is refused by its name (D174); where it does not, the scale is pinned
     // with the first reviewed proof.
     // A university without a provider of the sense the condition reads is chosen all the same (D313): the operator is
-    // asked for it before anything moves, with the exact instruction, and builds it within the day.
+    // asked for it before anything moves, with the exact instruction, and builds it within two days.
     let requested: { portal: Portal; sense: PortalSense } | null = null;
     // The scale a grade gift is made on while its university's is not pinned (the founder, 28 Sep 2026).
     let gradeScale: string | undefined;
