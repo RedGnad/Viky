@@ -94,7 +94,7 @@ export function GoalsGoingBy({ first, kinds }: Readonly<{ first: string; kinds: 
           {now}.
         </span>
       </p>
-      <p className={`${HELP} mx-auto max-w-[460px] [@media(min-width:1024px)]:max-w-[34em]`}>{HOME.waitsFor.read}</p>
+      <p data-card-note="" className={`${HELP} mx-auto max-w-[460px] [@media(min-width:1024px)]:max-w-[34em]`}>{HOME.waitsFor.read}</p>
     </div>
   );
 }

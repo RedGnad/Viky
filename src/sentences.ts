@@ -100,7 +100,6 @@ export const OFFER = {
   done: "Done",
   /** The chooser's first face from six conditions (D224): a tile per family, and the way back to them from a family's list. */
   families: "All families",
-  choices: (count: number) => (count === 1 ? "1 choice" : `${count} choices`),
   sheets: {
     who: "Who is it for?",
     will: "What will they do?",

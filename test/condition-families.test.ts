@@ -19,7 +19,7 @@ test("the families are the chooser's, in its order, in everyday verbs and naming
   // Four, in the founder's order of 28 Sep 2026, the tiles' two rows: filed by what the person does, not by who issues it.
   assert.deepEqual(
     FAMILIES.map((family) => family.title),
-    ["Learn", "School & studies", "Move", "Play"],
+    ["Learn", "School & studies", "Play", "Move"],
   );
   const sources = CONDITIONS.map((condition) => condition.source);
   for (const { title } of FAMILIES) {
@@ -83,13 +83,13 @@ test("from six on it is one section per family, in the register's order and alph
   ];
   const sections = chooserSections(offered);
   assert.ok(sections);
-  assert.deepEqual(sections.map((section) => section.title), ["Learn", "School & studies", "Move", "Play"]);
+  assert.deepEqual(sections.map((section) => section.title), ["Learn", "School & studies", "Play", "Move"]);
   assert.deepEqual(
     sections[0].conditions.map((condition) => condition.name),
     ["A Duolingo lesson each day", "Get a Coursera certificate"],
     "inside a family, the order they are offered in (D139)",
   );
-  assert.deepEqual(sections[3].conditions.map((condition) => condition.name), ["Reach a chess rating on Chess.com", "Reach a chess rating on Lichess"]);
+  assert.deepEqual(sections[2].conditions.map((condition) => condition.name), ["Reach a chess rating on Chess.com", "Reach a chess rating on Lichess"]);
 });
 
 test("a family with nothing offered does not appear at all", () => {

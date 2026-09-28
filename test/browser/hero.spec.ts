@@ -48,22 +48,23 @@ test.describe("the hero moment", () => {
     // No "#offer" left behind (D240): the next launch of an installed app on its last address starts at the top.
     await page.waitForTimeout(100);
     expect(page.url()).not.toContain("#");
-    // The card and the phrase shown under it come into the screen whole, centred together (the founder, 28 Sep
-    // 2026), or the card's top with a little room when the two are taller than the screen; unless the page is too short
-    // to scroll that far, in which case it has scrolled to its end and the card is whole on the screen.
+    // Where it stops (the founder, 28 Sep 2026): the card whole on the screen; on a phone the small print under the
+    // phrase stays below the screen, on a larger screen no piece of the character shows above; unless the page is too
+    // short to scroll that far, in which case it has scrolled to its end and the card is whole on the screen.
     await expect
       .poll(
         () =>
           page.evaluate(() => {
             const card = document.getElementById("offer")!.getBoundingClientRect();
-            const phrase = document.querySelector("[data-follows-card]")?.getBoundingClientRect();
             const atTheEnd = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
             if (atTheEnd && window.scrollY > 0) return true;
-            if (!phrase) return card.top >= 0 && card.top <= 80;
-            const bottom = phrase.bottom;
-            const tall = bottom - card.top;
-            if (tall > window.innerHeight - 32) return Math.abs(card.top - 16) <= 2;
-            return card.top >= 0 && bottom <= window.innerHeight && Math.abs(card.top - (window.innerHeight - bottom)) <= 4;
+            if (card.top < 0) return false;
+            if (window.innerWidth < 600) {
+              const note = document.querySelector("[data-card-note]")?.getBoundingClientRect();
+              return !note || note.top >= window.innerHeight - 1;
+            }
+            const parts = Array.from(document.querySelectorAll('.hero-stage [data-part="body"], .hero-stage [data-part="arm"], .hero-stage [data-part="hand"]'));
+            return parts.every((part) => part.getBoundingClientRect().bottom <= 1);
           }),
         { timeout: 3000 },
       )

@@ -47,15 +47,15 @@ test("the chooser opens on the four tiles from six conditions, every time, and t
   assert.match(sheet, /<button type="button" aria-label=\{W\.families\} className=\{`\$\{INLINE_BUTTON\} self-start`\} onClick=\{\(\) => setFamily\(null\)\}>/, "the way back to the four above a family's list");
   assert.match(sheet, /onClick=\{\(\) => choose\(option\.id\)\}/);
   assert.match(sheet, /aria-current=\{chosen \? "true" : undefined\}/, "the one on the card is marked");
-  assert.match(sheet, /setFamily\(null\);\n\s*setAskedFor\("list"\);/, "and from a condition's questions, the way back is to the four too (D233)");
-  assert.match(sheet, /\{W\.choices\(section\.conditions\.length\)\}/, "what each tile holds, counted");
+  // From a condition's questions, an arrow back to the list it was chosen in, the screen before (the founder, 28 Sep
+  // 2026, over D233's way back to the four).
+  assert.match(sheet, /aria-label=\{W\.change\(W\.slots\.will\.label\)\}[\s\S]{0,120}setFamily\(condition\.family\);\n\s*setAskedFor\("list"\);/);
+  assert.doesNotMatch(sheet, /W\.choices/, "no count on a tile (the founder, 28 Sep 2026)");
   const tiles = sheet.slice(sheet.indexOf('<div className="grid grid-cols-2'), sheet.indexOf("</div>", sheet.indexOf('<div className="grid grid-cols-2')));
   assert.doesNotMatch(tiles, /aria-current|holds \?/, "nothing marks a tile: pressing it is the choice");
   assert.match(sheet, /onClick=\{\(\) => setFamily\(section\.family\)\} className=\{TILE\}>/, "a tile is the button it looks like");
   assert.ok(sheet.indexOf("sections ? (") < sheet.indexOf("<FamilyArt"), "only from six conditions: under that the flat list stays");
   assert.equal(OFFER.families, "All families");
-  assert.equal(OFFER.choices(1), "1 choice");
-  assert.equal(OFFER.choices(6), "6 choices");
   const ui = readFileSync("app/components/ui.ts", "utf8");
   assert.match(ui, /export const TILE = `\$\{FOCUS\} \$\{OUTLINE\} \$\{RELIEF\} flex min-h-\[var\(--tap-target\)\][^`]*bg-\[var\(--tonal\)\]/, "a tile is a tap target with the focus ring, the outline, the relief and the tonal fill of a key (D233)");
 });

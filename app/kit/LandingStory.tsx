@@ -61,7 +61,10 @@ function Block({ title, body, art, flip, children }: Readonly<{ title: string; b
 export function LandingStory() {
   const standalone = useSyncExternalStore(never, isStandalone, serverFalse);
   return (
-    <div data-landing-story className="flex w-full max-w-[880px] flex-col gap-[calc(2*var(--space-xl))] self-center py-[var(--space-xl)]">
+    // On a larger screen the way to the card stops just past the character, and a tall screen then showed this story's
+    // first block cut at its foot (the founder, 28 Sep 2026): it starts 859 pixels under that stop, so from a screen
+    // taller than that it is pushed down by the difference, plus a little, and nothing of it shows there.
+    <div data-landing-story className="flex w-full max-w-[880px] flex-col gap-[calc(2*var(--space-xl))] self-center py-[var(--space-xl)] [@media(min-width:1024px)]:mt-[max(0px,calc(100vh-835px))]">
       {W.blocks.map((block, index) => (
         <Block key={block.key} title={block.title} body={typeof block.body === "function" ? block.body(DUOLINGO_DAILY.source) : block.body} art={ART[block.key]} flip={index % 2 === 1}>
           {block.key === "checked" ? (
