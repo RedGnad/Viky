@@ -89,7 +89,8 @@ export function GoalsGoingBy({ first, kinds }: Readonly<{ first: string; kinds: 
             {phrase}.
           </span>
         ))}
-        <span ref={said} data-goal-said className="col-start-1 row-start-1 inline-block">
+        {/* The phrase shown now is what the way to the card centres with it, not the room kept for the longest one. */}
+        <span ref={said} data-goal-said data-follows-card="" className="col-start-1 row-start-1 inline-block">
           {now}.
         </span>
       </p>

@@ -48,15 +48,22 @@ test.describe("the hero moment", () => {
     // No "#offer" left behind (D240): the next launch of an installed app on its last address starts at the top.
     await page.waitForTimeout(100);
     expect(page.url()).not.toContain("#");
-    // The card's top comes to the head of the screen, within a header's height of it, unless the page is too short to
-    // scroll that far, in which case the page has scrolled to its end and the card is whole on the screen.
+    // The card and the phrase shown under it come into the screen whole, centred together (the founder, 28 Sep
+    // 2026), or the card's top with a little room when the two are taller than the screen; unless the page is too short
+    // to scroll that far, in which case it has scrolled to its end and the card is whole on the screen.
     await expect
       .poll(
         () =>
           page.evaluate(() => {
-            const top = Math.round(document.getElementById("offer")!.getBoundingClientRect().top);
+            const card = document.getElementById("offer")!.getBoundingClientRect();
+            const phrase = document.querySelector("[data-follows-card]")?.getBoundingClientRect();
             const atTheEnd = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
-            return top <= 80 || (atTheEnd && window.scrollY > 0);
+            if (atTheEnd && window.scrollY > 0) return true;
+            if (!phrase) return card.top >= 0 && card.top <= 80;
+            const bottom = phrase.bottom;
+            const tall = bottom - card.top;
+            if (tall > window.innerHeight - 32) return Math.abs(card.top - 16) <= 2;
+            return card.top >= 0 && bottom <= window.innerHeight && Math.abs(card.top - (window.innerHeight - bottom)) <= 4;
           }),
         { timeout: 3000 },
       )

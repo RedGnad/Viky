@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Character } from "../app/kit/Character";
 import { Figure } from "../app/kit/Figure";
 import { HERO_PEEK, heroTimeline } from "../app/kit/HeroMoment";
-import { CARD_FRAGMENT, dropStaleCardFragment, goToTheCard } from "../app/kit/WayToTheCard";
+import { CARD_FRAGMENT, cardScrollTop, dropStaleCardFragment, goToTheCard } from "../app/kit/WayToTheCard";
 import { MOTION } from "../src/design-tokens";
 import { HERO_COOKIE, heroCookieText, heroPlayedFromCookie } from "../src/hero-cookie";
 
@@ -130,13 +130,16 @@ test("the way to the card scrolls to it and leaves no fragment behind, and a sta
   assert.match(home, /useEffect\(\(\) => \{\n\s*dropStaleCardFragment\(\);\n\s*\}, \[\]\);/, "and a device that still holds the old address is cleaned on arrival");
   // The press: the card scrolled into view, the default stopped, nothing written; without the card, the browser's own way.
   const calls: string[] = [];
-  const card = { scrollIntoView: (options: unknown) => calls.push(`scroll ${JSON.stringify(options)}`), focus: (options: unknown) => calls.push(`focus ${JSON.stringify(options)}`) };
+  const card = { getBoundingClientRect: () => ({ top: 300, bottom: 817 }), focus: (options: unknown) => calls.push(`focus ${JSON.stringify(options)}`) };
+  const line = { getBoundingClientRect: () => ({ bottom: 930 }) };
   const realDocument = globalThis.document;
   const realWindow = globalThis.window;
-  (globalThis as { document?: unknown }).document = { getElementById: (id: string) => (id === "offer" ? card : null) };
+  (globalThis as { document?: unknown }).document = { getElementById: (id: string) => (id === "offer" ? card : null), querySelector: (query: string) => (query === "[data-follows-card]" ? line : null) };
+  (globalThis as { window?: unknown }).window = { scrollY: 440, innerHeight: 844, scrollTo: (options: unknown) => calls.push(`scroll ${JSON.stringify(options)}`) };
   try {
     goToTheCard({ preventDefault: () => calls.push("prevented") });
-    assert.deepEqual(calls, ["prevented", 'scroll {"block":"start"}', 'focus {"preventScroll":true}']);
+    // The card at 740 on the page, its line ending at 1370: 630 tall, centred in 844, so the page stops at 633.
+    assert.deepEqual(calls, ["prevented", 'scroll {"top":633}', 'focus {"preventScroll":true}']);
     (globalThis as { document?: unknown }).document = { getElementById: () => null };
     calls.length = 0;
     goToTheCard({ preventDefault: () => calls.push("prevented") });
@@ -154,7 +157,12 @@ test("the way to the card scrolls to it and leaves no fragment behind, and a sta
     (globalThis as { window?: unknown }).window = realWindow;
   }
   const way = readFileSync("app/kit/WayToTheCard.ts", "utf8");
-  assert.doesNotMatch(way, /pushState|location\.hash =|scrollTo\(/, "nothing is pushed, no hash is written, and nobody is scrolled back at load");
+  assert.doesNotMatch(way, /pushState|location\.hash =/, "nothing is pushed and no hash is written");
+  assert.doesNotMatch(way.slice(way.indexOf("export function dropStaleCardFragment")), /scrollTo\(/, "and nobody is scrolled back at load");
+  // Where the page stops: the card and its line centred together, or the card's top with 16 pixels when they do not fit.
+  assert.equal(cardScrollTop({ cardTop: 740, groupBottom: 1370, viewport: 844 }), 633);
+  assert.equal(cardScrollTop({ cardTop: 740, groupBottom: 1700, viewport: 844 }), 724, "too tall: the card is never cut");
+  assert.equal(cardScrollTop({ cardTop: 100, groupBottom: 300, viewport: 844 }), 0, "never above the page");
 });
 
 test("the first screen is as tall as the viewport less the header and the card's peek, and the room left over is shared (D221)", () => {

@@ -101,7 +101,7 @@ test("the page lists every condition the register holds, offered or not, by fami
   assert.deepEqual(sections.find((section) => section.family === "move")?.building.map((condition) => condition.id), [], "nothing being built beside them since the marathon opened");
   assert.deepEqual(sections.find((section) => section.family === "learn")?.building.map((condition) => condition.id), [], "nothing being built beside the daily lesson, the Codeforces rating and the certifications: the Udemy course was taken out, a course marked finished by its own account (28 Sep 2026)");
   assert.deepEqual(sections.find((section) => section.family === "exam")?.conditions.map((condition) => condition.id), ["university-enrollment-shown", "toefl-mybest-shown", "duolingo-english-test", "edx-certificate", "mitx-online-certificate", "coursera-certificate"], "enrolment, the tests and the universities' courses open in School & studies, the rest being built beside them");
-  assert.deepEqual(sections.map((section) => section.family), ["exam", "learn", "play", "move"], "the four families, in the founder's order of 28 Sep 2026");
+  assert.deepEqual(sections.map((section) => section.family), ["learn", "exam", "move", "play"], "the four families, in the founder's order of 28 Sep 2026: the tiles' two rows");
   for (const section of sections) {
     const names = section.conditions.map((condition) => condition.name);
     // In the register's own order inside a family, not the alphabet's (D139): the first line of a family is the one

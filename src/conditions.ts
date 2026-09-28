@@ -36,20 +36,21 @@ export type ConditionKind = "daily" | "milestone";
  * an editor's choice is never read as advice.
  *
  * Four of them, filed by what the person does and not by who issues it (the founder, 28 Sep 2026), in this order:
- * School & studies, Learn, Play, Move. School & studies holds the university (enrolment, the year, a grade), the
- * examinations (TOEFL, the Duolingo English Test, the baccalauréat, WAEC, Cambridge, IELTS) and the online courses of
- * universities, named by the university. Learn holds the daily lesson, the Codeforces rating and the certifications an
+ * Learn, School & studies, Move, Play, which the chooser draws as two rows of two tiles. School & studies holds the
+ * university (enrolment, the year, a grade), the examinations (TOEFL, the Duolingo English Test, the baccalauréat,
+ * WAEC, Cambridge, IELTS) and the online courses of universities, named by the university. Learn holds the daily lesson, the Codeforces rating and the certifications an
  * issuer awards. Inside a family the order is the register's (D139).
  */
 export type ConditionFamily = "learn" | "exam" | "play" | "move";
 
 export const FAMILIES: readonly Readonly<{ id: ConditionFamily; title: string }>[] = [
+  // The founder's order of 28 Sep 2026, which is also the four tiles' two rows: Learn, School & studies; Move, Play.
+  { id: "learn", title: "Learn" },
   // The id stays `exam`, the one the examination results had since D176: only the title widens.
   { id: "exam", title: "School & studies" },
-  { id: "learn", title: "Learn" },
-  { id: "play", title: "Play" },
   // Move (D188): a source the person connects once, read each morning with their key.
   { id: "move", title: "Move" },
+  { id: "play", title: "Play" },
 ];
 
 /**
