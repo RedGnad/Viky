@@ -83,12 +83,15 @@ export async function POST(request: Request) {
     const providerVersion = provider?.providerVersion ?? entry.condition.providerVersion;
     if (!providerId) throw new Error("This gift names no portal a proof could come from");
 
+    // A university read through a Reclaim AI provider (D311): the one case AI is accepted, verified by the pinned
+    // witness on the portal's domain. Before its pin, whichever version the agent writes; after, the pinned one.
+    const witness = provider?.witness;
     const channel = resolveReclaimChannel();
     const proofRequest = await ReclaimProofRequest.init(appId, appSecret, providerId, {
-      providerVersion,
-      // The portal can substitute AI-witnessed proofs while still reporting success. We refuse AI here, and the
-      // verify route refuses anything without a verified TEE attestation anyway.
-      acceptAiProviders: false,
+      ...(witness && !witness.pin ? {} : { providerVersion }),
+      // Everywhere else the portal can substitute AI-witnessed proofs while still reporting success. We refuse AI
+      // there, and the verify route refuses anything without a verified TEE attestation anyway.
+      acceptAiProviders: Boolean(witness),
       ...reclaimChannelInitOptions(channel),
     });
     if (bound) proofRequest.setParams({ duolingo_user_id: bound.profileId });

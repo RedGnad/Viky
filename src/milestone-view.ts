@@ -86,6 +86,11 @@ export type MilestoneStatus = Readonly<{
    * on, the competitor once checked on the competitors list (as they gave themselves, and their WCA id), and the
    * result read once there is one (the name, the id, the best single), to whoever may see the names.
    */
+  /**
+   * A first proof from a university read through a witness with no pin yet (D311): held for the operator's review, or
+   * refused by it. Nothing once it is settled, and nothing for any other gift.
+   */
+  review: Readonly<{ status: "pending" | "refused" }> | null;
   wca: {
     competitionId: string;
     eventId: string;

@@ -193,5 +193,6 @@ function milestone(shape: Exclude<Shape, "days">, moment: ExampleMoment, reader:
     standingAtOffer: climb ? 1280 : null,
     marathon: null,
     wca: null,
+    review: null,
   };
 }

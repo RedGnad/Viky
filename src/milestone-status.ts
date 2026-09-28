@@ -9,6 +9,7 @@ import { bibStillOpen, DISTANCE_LABELS, finishInWords, marathonEventById } from 
 import { isWcaId, WCA_EVENTS, wcaCourseOf, wcaResultInWords } from "./wca";
 import type { MilestoneStatus } from "./milestone-view";
 import { escrowOf } from "./relayer";
+import { latestReviewOf, type PortalReview } from "./portal-store";
 
 /**
  * A milestone gift as its page and its card read it (src/milestone-view.ts), from the contract, the gift's record and
@@ -28,6 +29,8 @@ export function milestoneStatusOf(input: {
   reachedAt: number | null;
   viewer: Viewer;
   nowSeconds: number;
+  /** The gift's latest portal review (D311), when its portal is read through a witness. */
+  review?: Pick<PortalReview, "status"> | null;
 }): MilestoneStatus {
   const { record, state, viewer } = input;
   const conditionId = input.milestone?.conditionId ?? "";
@@ -81,6 +84,7 @@ export function milestoneStatusOf(input: {
     standingAtOffer: input.milestone?.standingAtOffer ?? null,
     marathon: marathonOf(input),
     wca: wcaOf(input),
+    review: !reached && input.review && input.review.status !== "pinned" ? { status: input.review.status } : null,
   };
 }
 
@@ -128,7 +132,9 @@ export async function loadMilestoneStatus(record: GiftRecord, viewer: Viewer): P
     lastReading(record.giftId),
     attestedReadings(record.giftId),
   ]);
+  // A university gift may wait on a first proof's review (D311); a table not there yet is no review.
+  const review = milestone?.conditionId === "university-enrollment-shown" && milestone.portal ? await latestReviewOf(record.giftId).catch(() => null) : null;
   const reachedAt = proven.find((reading) => reading.outcome === "reached")?.observedAt ?? null;
-  const status = milestoneStatusOf({ record, milestone, state, contract, latest, last, reachedAt, viewer, nowSeconds: Math.floor(Date.now() / 1_000) });
+  const status = milestoneStatusOf({ record, milestone, state, contract, latest, last, reachedAt, viewer, nowSeconds: Math.floor(Date.now() / 1_000), review });
   return { status, state, contract };
 }

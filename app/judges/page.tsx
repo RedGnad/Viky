@@ -7,7 +7,8 @@ import { JudgesAccount } from "../components/JudgesAccount";
 import { MilestoneJudges } from "../components/MilestoneJudges";
 import { DISPLAY, TITLE } from "../components/ui";
 import { readOwnership, ownershipWords } from "@/src/judges-owner";
-import { portalsListedAndRead } from "@/src/portal-store";
+import { listPortals, portalsListedAndRead, witnessPortalCounts } from "@/src/portal-store";
+import { countryInWords } from "@/src/university-shown";
 import { usesDelivered } from "@/src/phone-order-store";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain";
 import { JudgesConditions } from "./JudgesConditions";
@@ -36,6 +37,11 @@ export default async function JudgesPage() {
   const ownership = await readOwnership().catch(() => null);
   // Universities listed, and how many have been read at least once (D267): here, and never in the flow.
   const portals = await portalsListedAndRead();
+  // The universities read through a witness and no enclave (D311), each by name, and how many carry a pin.
+  const witnessCounts = await witnessPortalCounts();
+  const witnessLines = await listPortals()
+    .then((all) => all.filter((portal) => portal.verification === "witness"))
+    .catch(() => null);
   // How many times each Bitrefill use was used (D271): said here, as for the conditions, and never in the flow.
   const uses = await usesDelivered();
   const used = (count: number | undefined) => (uses === null || count === undefined ? "the count could not be read right now" : count === 0 ? "Open. Nobody has used it yet." : count === 1 ? "Open. Used once." : `Open. Used ${count} times.`);
@@ -256,9 +262,30 @@ export default async function JudgesPage() {
             and not in the flow (the founder, 26 Sep 2026):{" "}
             {portals ? `${portals.listed} universities listed, ${portals.read} read at least once.` : "the count could not be read right now."} What
             each portal proves is said in the flow: some show the year&apos;s enrolment status, others only that a
-            student account is signed in, and the university&apos;s line and the gift say which. Portals that Reclaim&apos;s
-            directory holds only as AI-witnessed providers are not listed: Viky requires the attestor&apos;s TEE
-            attestation and refuses an AI-witnessed proof everywhere.
+            student account is signed in, and the university&apos;s line and the gift say which.
+          </li>
+          <li>
+            <strong>Universities read through a witness, no enclave.</strong> Where Reclaim&apos;s directory holds a
+            university only as an AI provider (D311), its proof carries no enclave attestation. Viky verifies it the way
+            it verifies its own readings: the claim must be signed by Viky&apos;s pinned witness and by nobody else, and
+            must have read the university&apos;s own domain. An AI provider names no request until Reclaim&apos;s agent
+            writes one at the first real run, so a line has no pattern until a student shows a first proof. That first
+            proof is held, never paid on its own: the operator reads what the pattern read, then pins the line (the
+            version, the request, the match, the redaction and the field) and the held gift is settled, or refuses it
+            and the person reads why, the money left where it is. After the pin, a proof from another domain, another
+            request or another pattern is refused. Until its pin a line says a student account; the pin says whether it
+            is the year&apos;s enrolment.{" "}
+            {witnessCounts ? `${witnessCounts.listed} such universities listed, ${witnessCounts.pinned} pinned.` : "The count could not be read right now."}
+            {witnessLines && witnessLines.length > 0 ? (
+              <ul className="mt-[var(--space-sm)] flex flex-col gap-[var(--space-xs)]">
+                {witnessLines.map((portal) => (
+                  <li key={portal.portalId}>
+                    {portal.university}, {countryInWords(portal.country)}: witness signature, no enclave; {portal.witnessDomain};{" "}
+                    {portal.pin ? `pinned, proves ${portal.proves === "enrolment" ? "enrolment" : "a student account"}` : "first proof awaited"}.
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </li>
           <li>
             <strong>Exam results services&apos; terms.</strong> Five examination results are shown by the person from

@@ -1121,6 +1121,13 @@ export const SHOW_PROOF = {
    * contract: nothing was signed, and the money goes back to the funder at the deadline and not before.
    */
   nothingLost: "Nothing was counted and nothing is lost: this gift stays yours to earn until its deadline, and only then does the money go back.",
+  /**
+   * A first proof from a university read through a witness with no pin yet (D311): checked on what is sure, held for
+   * the operator's review, nothing relayed. True of `pnpm portal:pin`: the operator reads it and settles or refuses.
+   */
+  held: "First proof from this university: checked within a day.",
+  /** The review found the page does not show what the gift is for (D311): nothing relayed, the contract untouched. */
+  reviewRefused: "This university's page did not show what this gift is for, so nothing was counted. The money stays where it is.",
   refusals: {
     notConfigured: "Showing a proof is not open yet. Nothing was changed.",
     tooOld: "That proof took too long. Show it again.",

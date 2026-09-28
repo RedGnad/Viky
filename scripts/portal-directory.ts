@@ -1,10 +1,11 @@
 import "../src/load-env";
 import { getAddress } from "viem";
-import { DIRECTORY_PORTALS } from "../src/directory-portals";
+import { DIRECTORY_PORTALS, WITNESS_PORTALS } from "../src/directory-portals";
 import { ensurePortalSchema, loadPortal, portalFound, savePortal } from "../src/portal-store";
 
 /**
- * Writes the directory's portals pinned in src/directory-portals.ts as portal rows, marked unverified (D193): one
+ * Writes the directory's portals pinned in src/directory-portals.ts as portal rows, marked unverified (D193), and the
+ * corridor's witness portals with no pin yet (D311), which a later write never unpins: one
  * command, run by an operator against the database the environment names. `DRY_RUN=1` prints the rows and writes
  * nothing. Against production, the operator command of "The test database" applies (`VIKY_ALLOW_PRODUCTION_DATABASE=1`,
  * and the production `DATABASE_URL` in the shell).
@@ -13,7 +14,19 @@ import { ensurePortalSchema, loadPortal, portalFound, savePortal } from "../src/
  */
 async function main() {
   const provenBy = getAddress(String(process.env.PROVEN_BY?.trim()));
-  const rows = DIRECTORY_PORTALS.map((pinned) => ({ portalId: pinned.portalId, name: pinned.name, university: pinned.university, country: pinned.country, providerId: pinned.providerId, providerVersion: pinned.providerVersion, requestHash: pinned.requestHash, loginUrl: pinned.loginUrl, extract: pinned.extract, proves: pinned.proves, provenBy, unverified: true }));
+  const pinnedRows = DIRECTORY_PORTALS.map((pinned) => ({ portalId: pinned.portalId, name: pinned.name, university: pinned.university, country: pinned.country, providerId: pinned.providerId, providerVersion: pinned.providerVersion, requestHash: pinned.requestHash, loginUrl: pinned.loginUrl, extract: pinned.extract, proves: pinned.proves, provenBy, unverified: true }));
+  // A witness row has no request, no field and no version until its first proof is pinned: it says a student account.
+  const witnessRows = WITNESS_PORTALS.map((listed) => ({
+    ...listed,
+    providerVersion: "",
+    requestHash: "",
+    extract: { field: "", matches: "", keeps: "" },
+    proves: "account" as const,
+    verification: "witness" as const,
+    provenBy,
+    unverified: true,
+  }));
+  const rows = [...pinnedRows, ...witnessRows];
   console.log(JSON.stringify({ step: process.env.DRY_RUN === "1" ? "would write" : "writing", rows: rows.map((row) => ({ portalId: row.portalId, providerId: row.providerId, requestHash: row.requestHash })) }, null, 2));
   if (process.env.DRY_RUN === "1") return;
   await ensurePortalSchema();

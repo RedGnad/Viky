@@ -7,7 +7,9 @@ import type { ProvedReading } from "./milestone-relay";
 import type { ProofSession, StoredAttestation } from "./proof-session-store";
 import { assertReclaimSessionProvenance, assertSdkProofSet, ReclaimProofRejectedError } from "./reclaim-proof-set";
 import type { ReclaimTrustedData } from "./reclaim-types";
-import { shownConditionById, type ShownEntry, type ShownProvider } from "./shown-conditions";
+import { providerOfPortal, shownConditionById, UNIVERSITY_SHOWN, type ShownEntry, type ShownProvider } from "./shown-conditions";
+import type { Portal, PortalReview } from "./portal-store";
+import { isAgentVersion, verifyWitnessProof, WitnessProofError, type WitnessReading } from "./witness-portal";
 import type { MilestoneRecord } from "./milestone-store";
 import { ShownProofError, validateShownEvidence, type ShownEvidence } from "./shown-proof";
 import { ATTESTATION_TTL_SECONDS } from "./gift-terms";
@@ -34,9 +36,13 @@ export type ShownVerificationDeps = VerificationDeps & {
   /** The milestone gift's recipient, contract and target, read from the contract itself, or nothing when it is not a milestone. */
   milestoneOf(giftId: string): Promise<{ contract: Hex; recipient: Hex; opened: boolean; settled: boolean; target: bigint } | null>;
   /** Records the milestone proof against the session so a replay is refused; the daily path has its own. */
-  consumeShownSession(input: { sessionId: string; evidence: StoredShownEvidence; attestation: StoredAttestation; proofs: unknown }): Promise<boolean>;
+  consumeShownSession(input: { sessionId: string; evidence: StoredShownEvidence | Readonly<{ held: string }>; attestation: StoredAttestation; proofs: unknown }): Promise<boolean>;
   /** The milestone gift's own record (its condition, its portal), or nothing when it has none. */
   milestoneRecordOf(giftId: string): Promise<MilestoneRecord | null>;
+  /** Holds the first proof of a witness portal with no pin for the operator's review (D311); false when already held. */
+  holdForReview?(review: Omit<PortalReview, "status" | "reason">): Promise<boolean>;
+  /** Tests only: the witness a test key stands for. Production never sets it, and the pinned witness is required. */
+  witnessAddress?: string;
 };
 
 export type ShownOutcome =
@@ -50,7 +56,9 @@ export type ShownOutcome =
       shown: string;
       observedAt: number;
       hash: Hex;
-    }>;
+    }>
+  /** A first proof from a witness portal with no pin (D311): checked on what is sure, held, nothing relayed. */
+  | Readonly<{ kind: "held"; sessionId: string; giftId: string; message: string }>;
 
 /**
  * What the session row keeps of the evidence: the number as a string, since JSON has no bigint and the row is JSON
@@ -118,52 +126,132 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
   const candidates = Array.isArray(rawProofs) ? rawProofs : rawProofs ? [rawProofs] : [];
   if (candidates.length === 0) throw new VerificationError("NO_PROOF_YET", "Reclaim has not returned a proof yet");
 
+  // A witness portal (D311) has no enclave to require. Its version is the pinned one, or, before the pin, whichever
+  // version Reclaim's agent wrote for it, and nothing else.
+  const witness = provider.witness;
+  const agentVersion = String(status.session?.providerVersionString ?? "");
+  const providerVersion = witness && !witness.pin ? (isAgentVersion(agentVersion) ? agentVersion : "an agent version") : provider.providerVersion;
   let proofs: Proof[];
   try {
     // Provenance first (pinned provider and version, our app, PROOF_SUBMITTED and never AI_PROOF_SUBMITTED), then
-    // shape: a proof with no teeAttestation object is the AI fallback, and it stops here.
+    // shape: a proof with no teeAttestation object is the AI fallback, and it stops here, witness portals aside.
     assertReclaimSessionProvenance({
       session: status.session,
-      expected: { sessionId: session.sessionId, appId: deps.appId, providerId: provider.providerId, providerVersion: provider.providerVersion },
+      expected: { sessionId: session.sessionId, appId: deps.appId, providerId: provider.providerId, providerVersion },
     });
-    proofs = assertSdkProofSet(candidates, { expectedCount: entry.condition.proofCount, maxSignedJsonBytes: SHOWN_MAX_SIGNED_JSON_BYTES });
+    proofs = assertSdkProofSet(candidates, { expectedCount: entry.condition.proofCount, maxSignedJsonBytes: SHOWN_MAX_SIGNED_JSON_BYTES, witnessOnly: Boolean(witness) });
   } catch (error) {
     if (error instanceof ReclaimProofRejectedError) throw new VerificationError("PROOF_REJECTED", error.message);
     throw error;
   }
 
-  const verified: SdkVerification = await deps.verifyProofs(proofs);
-  if (!verified.isVerified || !verified.isTeeAttestationVerified) throw new VerificationError("TEE_NOT_VERIFIED", "The proof failed SDK or TEE verification");
+  let data: ReclaimTrustedData[];
+  let witnessed: WitnessReading[] = [];
+  if (witness) {
+    witnessed = witnessReadings(proofs, { domain: witness.domain, pin: witness.pin, providerVersion, witness: deps.witnessAddress });
+    data = witnessed.map((reading) => reading.data);
+  } else {
+    const verified: SdkVerification = await deps.verifyProofs(proofs);
+    if (!verified.isVerified || !verified.isTeeAttestationVerified) throw new VerificationError("TEE_NOT_VERIFIED", "The proof failed SDK or TEE verification");
+    data = verified.data as ReclaimTrustedData[];
+  }
 
   const timestamps = proofs.map((proof) => Number(proof.claimData.timestampS));
   const now = deps.now();
   assertFresh(timestamps, now);
 
-  let evidence: ShownEvidence;
+  // Before a pin nothing is read by a field: there is none yet. The binding to this account, gift and session is.
+  const held = Boolean(witness && !witness.pin);
+  const evidence = await evidenceOf(deps, {
+    condition: {
+      ...entry.condition,
+      providerId: provider.providerId,
+      providerVersion,
+      requestHashes: held ? witnessed.map((reading) => reading.specHash) : provider.requestHashes,
+      read: held ? () => ({ metricValue: 0n, eventAt: null, accountKey: null }) : provider.read,
+    },
+    data,
+    timestamps,
+    session: { sessionId: session.sessionId, giftId: session.giftId, account: session.account },
+    now,
+  });
+
+  const gift = await provableGift(deps, session.giftId, session.account);
+  if (witness && held) {
+    if (!deps.holdForReview) throw new VerificationError("NOT_CONFIGURED", "Proofs from this university cannot be held for review here", 503);
+    const first = witnessed[0];
+    const stored = await deps.holdForReview({
+      sessionId: session.sessionId,
+      portalId: witness.portalId,
+      giftId: session.giftId,
+      account: session.account,
+      providerVersion,
+      // What the operator reads before pinning: what the pattern read, and the request it read it with.
+      reading: { fields: first.data.extractedParameters, url: first.url, method: first.method, responseMatches: first.responseMatches, responseRedactions: first.responseRedactions, specHash: first.specHash },
+      proofs,
+      observedAt: evidence.observedAt,
+    });
+    if (!stored) throw new VerificationError("ALREADY_RECORDED", "This proof has already been recorded", 409);
+    // The session is spent here, so it is not pruned and cannot be shown twice; the proofs live in the review row.
+    await deps.consumeShownSession({ sessionId: session.sessionId, evidence: { held: witness.portalId }, attestation: { message: {}, signature: "0x" }, proofs: null });
+    return { kind: "held", sessionId: session.sessionId, giftId: session.giftId, message: SHOW_PROOF.held };
+  }
+  return settleShown(deps, { entry, subject, sessionId: session.sessionId, giftId: session.giftId, gift, evidence, proofs, now, consume: true });
+}
+
+/** Each proof of a witness portal, verified on the pinned witness, the portal's domain and, once pinned, its pattern. */
+function witnessReadings(proofs: readonly Proof[], expected: Readonly<{ domain: string; pin: Portal["pin"]; providerVersion: string; witness?: string }>): WitnessReading[] {
   try {
-    evidence = validateShownEvidence({
-      condition: { ...entry.condition, providerId: provider.providerId, providerVersion: provider.providerVersion, requestHashes: provider.requestHashes, read: provider.read },
-      data: verified.data as ReclaimTrustedData[],
-      timestamps,
-      policy: { account: session.account, giftId: session.giftId, phase: "reach", expectedSessionId: session.sessionId },
+    // A page is read with GET until the pin says otherwise: the method is part of what the first proof fixes.
+    return proofs.map((proof) => verifyWitnessProof(proof, { domain: expected.domain, method: expected.pin?.method ?? "GET", pin: expected.pin, providerVersion: expected.providerVersion, witness: expected.witness }));
+  } catch (error) {
+    if (error instanceof WitnessProofError) throw new VerificationError(error.code, error.message);
+    throw error;
+  }
+}
+
+async function evidenceOf(
+  deps: SettleDeps,
+  input: { condition: ShownEntry["condition"]; data: ReclaimTrustedData[]; timestamps: number[]; session: { sessionId: string; giftId: string; account: string }; now: number },
+): Promise<ShownEvidence> {
+  try {
+    return validateShownEvidence({
+      condition: input.condition,
+      data: input.data,
+      timestamps: input.timestamps,
+      policy: { account: input.session.account, giftId: input.session.giftId, phase: "reach", expectedSessionId: input.session.sessionId },
     });
   } catch (error) {
     if (error instanceof ShownProofError) {
       // A page that does not carry what the pattern names (D193): a named event in the gift's journal, with no
       // number and no proof, so the miss can be read by the founder and corrected in one commit; and the person is
       // told what was not found and that nothing is lost.
-      await deps.record({ giftId: session.giftId, purpose: "reach", attested: false, username: "", playerId: null, rating: null, ratedAt: null, observedAt: now, nullifier: null, outcome: `refused:${error.code}`, txHash: null });
+      await deps.record({ giftId: input.session.giftId, purpose: "reach", attested: false, username: "", playerId: null, rating: null, ratedAt: null, observedAt: input.now, nullifier: null, outcome: `refused:${error.code}`, txHash: null });
       throw new VerificationError(error.code, `${error.message} ${SHOW_PROOF.nothingLost}`);
     }
     throw error;
   }
+}
 
-  const gift = await deps.milestoneOf(session.giftId);
+type ProvableGift = { contract: Hex; recipient: Hex; opened: boolean; settled: boolean; target: bigint };
+
+/** What settling a proof needs, and nothing of Reclaim's: an operator script can hold these (`pnpm portal:pin`). */
+export type SettleDeps = Pick<ShownVerificationDeps, "prove" | "record" | "milestoneOf" | "milestoneRecordOf" | "now"> & Partial<Pick<ShownVerificationDeps, "consumeShownSession" | "witnessAddress">>;
+
+async function provableGift(deps: SettleDeps, giftId: string, account: string): Promise<ProvableGift> {
+  const gift = await deps.milestoneOf(giftId);
   if (!gift) throw new VerificationError("UNKNOWN_GIFT", "This gift is not one a proof can be shown for");
   if (!gift.opened) throw new VerificationError("NOT_OPENED", "Open the gift before showing a proof");
   if (gift.settled) throw new VerificationError("ALREADY_SETTLED", "This gift is already settled", 409);
-  if (gift.recipient.toLowerCase() !== session.account.toLowerCase()) throw new VerificationError("NOT_RECIPIENT", "Only the person the gift is for can show a proof");
+  if (gift.recipient.toLowerCase() !== account.toLowerCase()) throw new VerificationError("NOT_RECIPIENT", "Only the person the gift is for can show a proof");
+  return gift;
+}
 
+async function settleShown(
+  deps: SettleDeps,
+  input: { entry: ShownEntry; subject: Hex; sessionId: string; giftId: string; gift: ProvableGift; evidence: ShownEvidence; proofs: Proof[]; now: number; consume: boolean },
+): Promise<ShownOutcome> {
+  const { entry, gift, evidence, proofs, now } = input;
   // A number that is the person's own (D185): seen once by them, kept nowhere. Under the target nothing is relayed and
   // they are told with the number; at or over it the attestation carries the target as its value, which is the
   // verdict, and the rows keep neither the number nor the proofs. A number a source publishes is kept as read.
@@ -173,10 +261,10 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
   const attestedValue = verdict ? gift.target : evidence.reading.metricValue;
 
   const message: MilestoneProofMessage = {
-    giftId: BigInt(session.giftId),
+    giftId: BigInt(input.giftId),
     recipient: gift.recipient,
     // The subject the funder signed: constant per condition, or the gift's portal (D162, D165); never a name.
-    identityHash: subject,
+    identityHash: input.subject,
     providerId: entry.condition.attestationProviderId,
     metricValue: attestedValue,
     // A possession, like a certificate whose page gives no date: the day it was shown is the event the contract
@@ -189,7 +277,7 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
   };
   const proved = await deps.prove({ contract: gift.contract, message });
   await deps.record({
-    giftId: session.giftId,
+    giftId: input.giftId,
     purpose: "reach",
     attested: true,
     username: "",
@@ -202,16 +290,55 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
     txHash: proved.hash,
     ...(verdict ? {} : { proofs }),
   });
-  const recorded = await deps.consumeShownSession({ sessionId: session.sessionId, evidence: storedEvidence(evidence, verdict), attestation: { message: serialise(message), signature: "0x" }, proofs: verdict ? null : proofs });
-  if (!recorded) throw new VerificationError("ALREADY_RECORDED", "This proof has already been recorded", 409);
+  if (input.consume) {
+    if (!deps.consumeShownSession) throw new VerificationError("NOT_CONFIGURED", "The session cannot be recorded here", 503);
+    const recorded = await deps.consumeShownSession({ sessionId: input.sessionId, evidence: storedEvidence(evidence, verdict), attestation: { message: serialise(message), signature: "0x" }, proofs: verdict ? null : proofs });
+    if (!recorded) throw new VerificationError("ALREADY_RECORDED", "This proof has already been recorded", 409);
+  }
   return {
     kind: "reached",
-    sessionId: session.sessionId,
-    giftId: session.giftId,
+    sessionId: input.sessionId,
+    giftId: input.giftId,
     // What the contract received: the number where the number is public, the target where it is the person's own.
     metricValue: attestedValue.toString(),
     shown: shownWords,
     observedAt: evidence.observedAt,
     hash: proved.hash,
   };
+}
+
+/**
+ * A held first proof, settled once its portal is pinned (D311, `pnpm portal:pin`): verified again on the pin, read by
+ * the field the operator named, then relayed exactly as a live proof is. Its freshness was checked when it was held;
+ * the contract's own nullifier and the review's single decision stop it from paying twice.
+ */
+export async function settleHeldReview(deps: SettleDeps, input: { review: PortalReview; portal: Portal }): Promise<ShownOutcome> {
+  const { review, portal } = input;
+  if (review.status !== "pending") throw new VerificationError("ALREADY_RECORDED", "This review is already decided", 409);
+  if (portal.portalId !== review.portalId || portal.verification !== "witness" || !portal.pin || !portal.witnessDomain) {
+    throw new VerificationError("NOT_CONFIGURED", "The portal is not pinned yet", 503);
+  }
+  const record = await deps.milestoneRecordOf(review.giftId);
+  if (!record || record.portal !== portal.portalId) throw new VerificationError("UNKNOWN_GIFT", "This gift was not made on this portal");
+  const subject = UNIVERSITY_SHOWN.subjectOf?.(record);
+  if (!subject) throw new VerificationError("NOT_CONFIGURED", "This condition has no subject to sign", 503);
+  const provider = providerOfPortal(portal);
+  let proofs: Proof[];
+  try {
+    proofs = assertSdkProofSet(review.proofs, { expectedCount: UNIVERSITY_SHOWN.condition.proofCount, maxSignedJsonBytes: SHOWN_MAX_SIGNED_JSON_BYTES, witnessOnly: true });
+  } catch (error) {
+    if (error instanceof ReclaimProofRejectedError) throw new VerificationError("PROOF_REJECTED", error.message);
+    throw error;
+  }
+  const witnessed = witnessReadings(proofs, { domain: portal.witnessDomain, pin: portal.pin, providerVersion: review.providerVersion, witness: deps.witnessAddress });
+  const now = deps.now();
+  const evidence = await evidenceOf(deps, {
+    condition: { ...UNIVERSITY_SHOWN.condition, providerId: provider.providerId, providerVersion: provider.providerVersion, requestHashes: provider.requestHashes, read: provider.read },
+    data: witnessed.map((reading) => reading.data),
+    timestamps: proofs.map((proof) => Number(proof.claimData.timestampS)),
+    session: { sessionId: review.sessionId, giftId: review.giftId, account: review.account },
+    now,
+  });
+  const gift = await provableGift(deps, review.giftId, review.account);
+  return settleShown(deps, { entry: UNIVERSITY_SHOWN, subject, sessionId: review.sessionId, giftId: review.giftId, gift, evidence, proofs, now, consume: false });
 }
