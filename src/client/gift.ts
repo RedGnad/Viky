@@ -274,7 +274,9 @@ export type ShownProofOutcome =
       shown: string;
       observedAt: number;
       hash: string;
-    };
+    }
+  /** A first proof from a university with no pin yet (D311): held for review, nothing relayed. */
+  | { kind: "held"; giftId: string; message: string };
 
 /**
  * Opens a Reclaim session for this gift's condition, hands the person to the verification tab, then polls the

@@ -14,11 +14,17 @@ import { BODY, HELP, PRIMARY_BUTTON } from "../components/ui";
  * The character at the head of the page answers a proof shown as it answers a day earned: once, from the button,
  * the happy face (app/kit/mood.ts), and back to rest by itself.
  */
-type State = { at: "asking" } | { at: "opening" } | { at: "waiting"; attempt: number } | { at: "done"; score: string } | { at: "refused"; message: string };
+type State = { at: "asking" } | { at: "opening" } | { at: "waiting"; attempt: number } | { at: "done"; score: string } | { at: "held" } | { at: "refused"; message: string };
 
 const CARD = "on-paper flex flex-col gap-[var(--space-md)] rounded-[var(--radius-card)] p-[var(--space-lg)]";
 
-export function ShowProof({ giftId, conditionId, yours, onShown }: Readonly<{ giftId: string; conditionId: string; yours: boolean; onShown: () => Promise<void> | void }>) {
+export function ShowProof({
+  giftId,
+  conditionId,
+  yours,
+  review = null,
+  onShown,
+}: Readonly<{ giftId: string; conditionId: string; yours: boolean; /** A first proof under review, or refused by it (D311). */ review?: "pending" | "refused" | null; onShown: () => Promise<void> | void }>) {
   const condition = conditionById(conditionId);
   const [state, setState] = useState<State>({ at: "asking" });
   const button = useRef<HTMLButtonElement>(null);
@@ -40,6 +46,11 @@ export function ShowProof({ giftId, conditionId, yours, onShown }: Readonly<{ gi
         await onShown();
         return;
       }
+      if (outcome.kind === "held") {
+        setState({ at: "held" });
+        await onShown();
+        return;
+      }
       setState({ at: "refused", message: W.refusals.unavailable });
     } catch (error) {
       const code = error instanceof ApiError ? error.code : "";
@@ -52,6 +63,15 @@ export function ShowProof({ giftId, conditionId, yours, onShown }: Readonly<{ gi
       setState({ at: "refused", message: said[code] ?? (error instanceof ApiError && error.message ? error.message : W.refusals.unavailable) });
     }
   };
+
+  // Held for review, or refused by it (D311): said in the button's place, since showing it again changes nothing.
+  if (state.at === "held" || review) {
+    return (
+      <section className={CARD} role="status">
+        <p className="font-medium">{review === "refused" && state.at !== "held" ? W.reviewRefused : W.held}</p>
+      </section>
+    );
+  }
 
   if (state.at === "done") {
     return (

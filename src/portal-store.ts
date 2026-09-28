@@ -2,6 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import { databaseUrl } from "./database-guard";
 import type { SqlExecutor } from "./proof-session-store";
 import { ACCOUNT_ONLY_MARK, countryInWords, isPortalId, resultsProblem, type PortalExtract, type PortalProves, type ResultsExtract } from "./university-shown";
+import { isAgentVersion, type WitnessPin } from "./witness-portal";
 
 /**
  * The student portals Viky has proved, one row each (D165). Not the 11,882 shells of the Reclaim directory: a row is
@@ -37,6 +38,28 @@ ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS results jsonb;
 ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS unverified boolean NOT NULL DEFAULT false;
 -- What the portal proves (D267): 'enrolment', its status for the year, or 'account', a signed-in student account alone.
 ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS proves text NOT NULL DEFAULT 'enrolment';
+-- How a proof from the portal is verified (D311): 'tee', the SDK with the enclave's attestation, or 'witness', a Reclaim
+-- AI provider verified by the pinned witness's signature on the portal's domain, and, once pinned, its pattern.
+ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS verification text NOT NULL DEFAULT 'tee';
+ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS witness_domain text;
+ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS pin jsonb;
+-- A first proof from a witness portal with no pin yet (D311): checked on what is sure, held, never paid alone, until the
+-- operator reads what the pattern read and pins the portal (or refuses, in the person's words).
+CREATE TABLE IF NOT EXISTS viky_portal_reviews (
+  session_id text PRIMARY KEY,
+  portal_id text NOT NULL,
+  gift_id text NOT NULL,
+  account text NOT NULL,
+  provider_version text NOT NULL,
+  reading jsonb NOT NULL,
+  proofs jsonb NOT NULL,
+  observed_at bigint NOT NULL,
+  status text NOT NULL DEFAULT 'pending',
+  reason text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  decided_at timestamptz
+);
+CREATE INDEX IF NOT EXISTS viky_portal_reviews_gift ON viky_portal_reviews (gift_id, created_at DESC);
 `;
 
 let executor: SqlExecutor | undefined;
@@ -82,14 +105,54 @@ export type Portal = Readonly<{
   unverified: boolean;
   /** What a proof from this portal carries (D267): the year's enrolment status, or a student account alone. */
   proves: PortalProves;
+  /** How a proof from it is verified (D311): the enclave's attestation, or the pinned witness alone. */
+  verification: "tee" | "witness";
+  /** For a witness portal: the site's domain a proof must read, "ucad.sn". */
+  witnessDomain: string | null;
+  /** For a witness portal: what its first proof read, fixed by the operator; nothing until then. */
+  pin: WitnessPin | null;
 }>;
+
+/** A witness portal whose first proof has not been read yet: its proofs are held, never paid alone. */
+export function awaitingPin(portal: Portal): boolean {
+  return portal.verification === "witness" && portal.pin === null;
+}
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const HASH = /^0x[0-9a-fA-F]{64}$/;
 
 /** What a row must be to be written at all: the guard on the operator's own command. */
-export function portalProblem(input: Omit<Portal, "provenAt" | "results" | "unverified" | "proves"> & { results?: ResultsExtract | null; unverified?: boolean; proves?: PortalProves }): string | undefined {
+type PortalInput = Omit<Portal, "provenAt" | "results" | "unverified" | "proves" | "verification" | "witnessDomain" | "pin"> & {
+  results?: ResultsExtract | null;
+  unverified?: boolean;
+  proves?: PortalProves;
+  verification?: "tee" | "witness";
+  witnessDomain?: string | null;
+  pin?: WitnessPin | null;
+};
+
+export function portalProblem(input: PortalInput): string | undefined {
   if (input.proves !== undefined && input.proves !== "enrolment" && input.proves !== "account") return "what the portal proves: enrolment or account";
+  if (input.verification === "witness") {
+    // A witness portal (D311): its domain always; its request, field and version only once its first proof is pinned.
+    if (!input.witnessDomain || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(input.witnessDomain)) return "the portal's domain, like ucad.sn";
+    if (!isPortalId(input.portalId)) return "the portal id is lower case letters, digits and dashes, 64 at most";
+    if (!input.name.trim() || !input.university.trim()) return "a name and a university";
+    if (!/^[A-Z]{2}$/.test(input.country)) return "a country of two capital letters";
+    if (!/^[0-9a-f-]{36}$/.test(input.providerId)) return "a Reclaim provider id, 36 characters";
+    if (!/^https:\/\//.test(input.loginUrl)) return "the portal's sign-in address, https";
+    if (!ADDRESS.test(input.provenBy)) return "the operator account that proved it";
+    if (!input.pin) return undefined;
+    if (!isAgentVersion(input.pin.providerVersion)) return "a pinned version the agent wrote, like 1.0.0-ai.1";
+    if (!HASH.test(input.pin.specHash)) return "the pinned request spec's hash";
+    if (!input.extract.field.trim() || !input.extract.matches.trim() || !input.extract.keeps.trim()) return "what is extracted: the field, what it must match, and what is kept in words";
+    try {
+      new RegExp(input.extract.matches);
+    } catch {
+      return "the pattern is not a valid regular expression";
+    }
+    return undefined;
+  }
   if (!isPortalId(input.portalId)) return "the portal id is lower case letters, digits and dashes, 64 at most";
   if (!input.name.trim() || !input.university.trim()) return "a name and a university";
   if (!/^[A-Z]{2}$/.test(input.country)) return "a country of two capital letters";
@@ -116,19 +179,26 @@ export function portalProblem(input: Omit<Portal, "provenAt" | "results" | "unve
  * Writes a proved portal, or proves it again. The results extraction is kept when the command does not name one:
  * proving enrolment a second time must not undo the results page proved the first time.
  */
-export async function savePortal(input: Omit<Portal, "provenAt" | "results" | "unverified" | "proves"> & { provenAt?: Date; results?: ResultsExtract | null; unverified?: boolean; proves?: PortalProves }): Promise<void> {
+export async function savePortal(given: PortalInput & { provenAt?: Date }): Promise<void> {
+  // Writing a witness row again must not undo its pin (D311): what the pin fixed stays, whatever the register says.
+  const pinned = given.verification === "witness" && !given.pin ? await loadPortal(given.portalId) : null;
+  const input = pinned?.pin
+    ? { ...given, pin: pinned.pin, extract: pinned.extract, proves: pinned.proves, providerVersion: pinned.providerVersion, requestHash: pinned.requestHash, provenBy: pinned.provenBy, provenAt: pinned.provenAt, unverified: false }
+    : given;
   const problem = portalProblem(input);
   if (problem) throw new Error(`A portal row needs ${problem}`);
   const results = input.results ? JSON.stringify(normaliseResults(input.results)) : null;
   await sql()`
-    INSERT INTO viky_portals (portal_id, name, university, country, provider_id, provider_version, request_hash, login_url, extract, results, proven_at, proven_by, unverified, proves)
+    INSERT INTO viky_portals (portal_id, name, university, country, provider_id, provider_version, request_hash, login_url, extract, results, proven_at, proven_by, unverified, proves, verification, witness_domain, pin)
     VALUES (${input.portalId}, ${input.name.trim()}, ${input.university.trim()}, ${input.country}, ${input.providerId}, ${input.providerVersion}, ${input.requestHash.toLowerCase()},
-            ${input.loginUrl}, ${JSON.stringify(input.extract)}::jsonb, ${results}::jsonb, ${(input.provenAt ?? new Date()).toISOString()}, ${input.provenBy.toLowerCase()}, ${input.unverified === true}, ${input.proves ?? "enrolment"})
+            ${input.loginUrl}, ${JSON.stringify(input.extract)}::jsonb, ${results}::jsonb, ${(input.provenAt ?? new Date()).toISOString()}, ${input.provenBy.toLowerCase()}, ${input.unverified === true}, ${input.proves ?? "enrolment"},
+            ${input.verification ?? "tee"}, ${input.witnessDomain ?? null}, ${input.pin ? JSON.stringify(input.pin) : null}::jsonb)
     ON CONFLICT (portal_id) DO UPDATE SET
       name = EXCLUDED.name, university = EXCLUDED.university, country = EXCLUDED.country, provider_id = EXCLUDED.provider_id,
       provider_version = EXCLUDED.provider_version, request_hash = EXCLUDED.request_hash, login_url = EXCLUDED.login_url,
       extract = EXCLUDED.extract, results = COALESCE(EXCLUDED.results, viky_portals.results), proven_at = EXCLUDED.proven_at, proven_by = EXCLUDED.proven_by,
-      unverified = EXCLUDED.unverified, proves = EXCLUDED.proves`;
+      unverified = EXCLUDED.unverified, proves = EXCLUDED.proves, verification = EXCLUDED.verification, witness_domain = EXCLUDED.witness_domain,
+      pin = COALESCE(EXCLUDED.pin, viky_portals.pin)`;
 }
 
 /** Writes the results page of a portal already proved for enrolment (D174). False when no such portal exists. */
@@ -168,7 +238,106 @@ function toPortal(row: Record<string, unknown>): Portal {
     provenBy: String(row.proven_by),
     unverified: row.unverified === true,
     proves: row.proves === "account" ? "account" : "enrolment",
+    verification: row.verification === "witness" ? "witness" : "tee",
+    witnessDomain: row.witness_domain === null || row.witness_domain === undefined ? null : String(row.witness_domain),
+    pin: toPin(row.pin),
   };
+}
+
+function toPin(value: unknown): WitnessPin | null {
+  if (value === null || value === undefined) return null;
+  const pin = (typeof value === "string" ? JSON.parse(value) : value) as WitnessPin;
+  return typeof pin.specHash === "string" && typeof pin.url === "string" ? pin : null;
+}
+
+/** Pins a witness portal from its first proof, with what the operator read it proves and the field that says it (D311). */
+export async function pinPortal(portalId: string, input: { pin: WitnessPin; extract: PortalExtract; proves: PortalProves; operator: string }): Promise<boolean> {
+  const portal = await loadPortal(portalId);
+  if (!portal || portal.verification !== "witness") return false;
+  const next = { ...portal, pin: input.pin, extract: input.extract, proves: input.proves, providerVersion: input.pin.providerVersion, requestHash: input.pin.specHash, provenBy: input.operator };
+  const problem = portalProblem(next);
+  if (problem) throw new Error(`A pinned portal needs ${problem}`);
+  await sql()`
+    UPDATE viky_portals
+       SET pin = ${JSON.stringify(input.pin)}::jsonb, extract = ${JSON.stringify(input.extract)}::jsonb, proves = ${input.proves},
+           provider_version = ${input.pin.providerVersion}, request_hash = ${input.pin.specHash.toLowerCase()}, proven_by = ${input.operator.toLowerCase()}, proven_at = now(), unverified = false
+     WHERE portal_id = ${portalId}`;
+  return true;
+}
+
+export type PortalReview = Readonly<{
+  sessionId: string;
+  portalId: string;
+  giftId: string;
+  account: string;
+  providerVersion: string;
+  reading: Readonly<Record<string, unknown>>;
+  proofs: unknown;
+  observedAt: number;
+  status: "pending" | "pinned" | "refused";
+  reason: string | null;
+}>;
+
+function toReview(row: Record<string, unknown>): PortalReview {
+  const json = (value: unknown) => (typeof value === "string" ? JSON.parse(value) : value);
+  const status = row.status === "pinned" || row.status === "refused" ? row.status : "pending";
+  return {
+    sessionId: String(row.session_id),
+    portalId: String(row.portal_id),
+    giftId: String(row.gift_id),
+    account: String(row.account),
+    providerVersion: String(row.provider_version),
+    reading: json(row.reading) as Record<string, unknown>,
+    proofs: json(row.proofs),
+    observedAt: Number(row.observed_at),
+    status,
+    reason: row.reason === null || row.reason === undefined ? null : String(row.reason),
+  };
+}
+
+/** Holds a first proof for review. False when that session is already held: a proof is held once. */
+export async function holdForReview(input: Omit<PortalReview, "status" | "reason">): Promise<boolean> {
+  const rows = await sql()`
+    INSERT INTO viky_portal_reviews (session_id, portal_id, gift_id, account, provider_version, reading, proofs, observed_at)
+    VALUES (${input.sessionId}, ${input.portalId}, ${input.giftId}, ${input.account.toLowerCase()}, ${input.providerVersion}, ${JSON.stringify(input.reading)}::jsonb, ${JSON.stringify(input.proofs)}::jsonb, ${input.observedAt})
+    ON CONFLICT (session_id) DO NOTHING
+    RETURNING session_id`;
+  return rows.length > 0;
+}
+
+export async function loadReview(sessionId: string): Promise<PortalReview | null> {
+  const rows = await sql()`SELECT * FROM viky_portal_reviews WHERE session_id = ${sessionId}`;
+  return rows[0] ? toReview(rows[0]) : null;
+}
+
+/** The latest review of a gift, for its page: pending says "checked within a day", refused says why. */
+export async function latestReviewOf(giftId: string): Promise<PortalReview | null> {
+  const rows = await sql()`SELECT * FROM viky_portal_reviews WHERE gift_id = ${giftId} ORDER BY created_at DESC LIMIT 1`;
+  return rows[0] ? toReview(rows[0]) : null;
+}
+
+export async function pendingReviews(): Promise<readonly PortalReview[]> {
+  const rows = await sql()`SELECT * FROM viky_portal_reviews WHERE status = 'pending' ORDER BY created_at LIMIT 100`;
+  return rows.map(toReview);
+}
+
+/** Closes a review, once: the proofs are dropped with it, since they carry one person's account. */
+export async function decideReview(sessionId: string, status: "pinned" | "refused", reason: string | null): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE viky_portal_reviews SET status = ${status}, reason = ${reason}, decided_at = now(), proofs = 'null'::jsonb
+     WHERE session_id = ${sessionId} AND status = 'pending'
+     RETURNING session_id`;
+  return rows.length > 0;
+}
+
+/** How many witness portals are listed and how many carry a pin, for the judges' page. */
+export async function witnessPortalCounts(): Promise<{ listed: number; pinned: number } | null> {
+  try {
+    const rows = await sql()`SELECT count(*)::int AS listed, count(pin)::int AS pinned FROM viky_portals WHERE verification = 'witness'`;
+    return { listed: Number(rows[0]?.listed ?? 0), pinned: Number(rows[0]?.pinned ?? 0) };
+  } catch {
+    return null;
+  }
 }
 
 export async function loadPortal(portalId: string): Promise<Portal | null> {

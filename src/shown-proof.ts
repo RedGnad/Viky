@@ -15,7 +15,8 @@ import type { ReclaimTrustedData } from "./reclaim-types";
  *   `<giftId>:<phase>` as `contextMessage`, so a proof cannot be moved between accounts, gifts or phases;
  * - the Reclaim session id is in the context too, so a proof cannot be moved between sessions;
  * - the provider and its version are pinned, and every request the provider makes is pinned by its hash;
- * - a proof without a TEE attestation is the AI fallback, and it is refused before this is ever read.
+ * - a proof without a TEE attestation is the AI fallback, and it is refused before this is ever read, except from a
+ *   witness portal (D311), whose proof is verified by the pinned witness on the portal's domain and, once pinned, its pattern.
  */
 
 /** One phase of a gift: the baseline that binds the account, a day's check-in, or the one proof a milestone takes. */

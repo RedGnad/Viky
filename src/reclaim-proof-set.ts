@@ -145,7 +145,7 @@ export function assertReclaimSessionProvenance(input: {
  * signatures must remain an array: accepting a hand-shaped singular signature here
  * would make SDK verification and Solidity calldata validate different objects.
  */
-export function assertSdkProofSet(value: unknown, options: { expectedCount: number; maxSignedJsonBytes: number }): Proof[] {
+export function assertSdkProofSet(value: unknown, options: { expectedCount: number; maxSignedJsonBytes: number; /** A witness portal's proof (D311): no enclave to require. */ witnessOnly?: boolean }): Proof[] {
   const proofs = Array.isArray(value) ? value : value ? [value] : [];
   if (!Number.isInteger(options.expectedCount) || options.expectedCount < 1) rejectProof("Invalid expected proof count");
   if (proofs.length !== options.expectedCount) rejectProof("Unexpected Reclaim proof count");
@@ -175,7 +175,7 @@ export function assertSdkProofSet(value: unknown, options: { expectedCount: numb
       rejectProof("A Reclaim proof must contain one SDK signature in an array");
     }
     if (!Array.isArray(proof.witnesses)) rejectProof("Reclaim witnesses have an invalid shape");
-    if (!proof.teeAttestation || typeof proof.teeAttestation !== "object") rejectProof("TEE attestation is missing");
+    if (!options.witnessOnly && (!proof.teeAttestation || typeof proof.teeAttestation !== "object")) rejectProof("TEE attestation is missing");
     inspectSignedJson(claimData.parameters, `proof ${index} parameters`, options.maxSignedJsonBytes);
     inspectSignedJson(claimData.context, `proof ${index} context`, options.maxSignedJsonBytes);
     const computedIdentifier = getIdentifierFromClaimInfo(claimData as Parameters<typeof getIdentifierFromClaimInfo>[0]);

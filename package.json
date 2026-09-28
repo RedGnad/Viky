@@ -59,6 +59,7 @@
     "portal:results": "tsx scripts/portal-results.ts",
     "judge:credits": "tsx scripts/judge-credits.ts",
     "portal:directory": "tsx scripts/portal-directory.ts",
+    "portal:pin": "tsx scripts/portal-pin.ts",
     "check:milestone-goals": "CHECK_ONLY=1 DRY_RUN=1 tsx scripts/register-milestone-goals.ts",
     "prepare:milestone-goals": "WALLET=1 tsx scripts/register-milestone-goals.ts",
     "safe:create": "tsx scripts/safe-create.ts",

@@ -4,6 +4,7 @@ import { refuseShown, type ShownCondition, type ShownReading } from "./shown-pro
 import type { Hex } from "viem";
 import type { MilestoneRecord } from "./milestone-store";
 import { loadPortal, type Portal } from "./portal-store";
+import type { WitnessPin } from "./witness-portal";
 import { TOEFL_RECLAIM_PROVIDER, TOEFL_SHOWN_SUBJECT, toeflScoreOf, toeflShownProviderId } from "./toefl-shown";
 import { EXAM_NOT_REGISTERED, EXAM_PROVIDERS, examProviderId, examSubject, readBacPassed, readCambridge, readIelts, type ExamId } from "./exam-shown";
 import { readWaecResult, WAEC_LOGIN_URL, WAEC_NOT_REGISTERED, WAEC_PROVIDER, WAEC_SUBJECT, waecProviderId } from "./waec-shown";
@@ -54,6 +55,11 @@ export type ShownProvider = Readonly<{
    * enrolment and not for its results page (D174). Set with an empty provider id, and said by its code.
    */
   missing?: Readonly<{ code: string; message: string }>;
+  /**
+   * A portal read through a Reclaim AI provider (D311): verified by the pinned witness on the portal's domain, with no
+   * enclave. Without a pin, its proof is held for the operator's review and never paid alone.
+   */
+  witness?: Readonly<{ portalId: string; domain: string; pin: WitnessPin | null }>;
 }>;
 
 export type ShownEntry = Readonly<{
@@ -118,12 +124,15 @@ export const TOEFL_SHOWN: ShownEntry = {
 };
 
 /** A portal's own provider, as its row pins it, and what its field means (D165). */
-function providerOfPortal(portal: Portal): ShownProvider {
+export function providerOfPortal(portal: Portal): ShownProvider {
+  // A witness portal (D311) pins the version its agent wrote and the spec it signed, once its first proof is read.
+  const witness = portal.verification === "witness" && portal.witnessDomain ? { portalId: portal.portalId, domain: portal.witnessDomain, pin: portal.pin } : undefined;
   return {
     providerId: portal.providerId,
-    providerVersion: portal.providerVersion,
-    requestHashes: [portal.requestHash],
+    providerVersion: witness ? (witness.pin?.providerVersion ?? "") : portal.providerVersion,
+    requestHashes: witness ? (witness.pin ? [witness.pin.specHash] : []) : [portal.requestHash],
     loginUrl: portal.loginUrl,
+    ...(witness ? { witness } : {}),
     read: (fields) => {
       if (!enrolledBy(portal.extract, fields)) refuseShown("NOT_ENROLLED", portal.proves === "account" ? "The page shown does not show a signed-in student account" : "The page shown does not say enrolled");
       // What the proof carries, in its own words (D267): a portal that shows a student account says that, never enrolled.
