@@ -18,11 +18,14 @@ const EXPECTED: Record<ExampleMoment, readonly Moment[]> = {
   won: ["won"],
   over: ["over"],
   cameBack: ["cameBack"],
+  // A university's first proof held for review, or refused by it (D312): still waiting for its proof.
+  held: ["awaitingProof"],
+  reviewRefused: ["awaitingProof"],
 };
 
 test("every example on the board is the moment its name says, read by the page's own functions", () => {
   const examples = allExamples(Date.UTC(2026, 8, 23, 12));
-  assert.equal(examples.length, 96, "four shapes, their moments (7, 7, 5, 5), four readers");
+  assert.equal(examples.length, 108, "five shapes, their moments (7, 7, 5, 5, 3), four readers");
   for (const example of examples) {
     const status = example.status;
     const gift = status.kind === "milestone" ? giftOfMilestone(status) : giftOfSummary(status);
@@ -37,4 +40,11 @@ test("every example on the board is the moment its name says, read by the page's
     if (example.reader === "recipient") assert.equal(voice, "recipient", example.id);
     if (example.reader === "outsider" && status.opened) assert.equal(voice, "reader", example.id);
   }
+});
+
+test("a source named from the funder's side is said to the person it is for as theirs, never 'your their university'", async () => {
+  const { SHOW_PROOF } = await import("../src/sentences");
+  assert.equal(SHOW_PROOF.title("their university"), "Show it from your university account");
+  assert.match(SHOW_PROOF.whatHappens("their university"), /You sign in to your university there/);
+  assert.equal(SHOW_PROOF.title("Acme"), "Show it from your Acme account");
 });

@@ -14,6 +14,18 @@ import { PILOT_CAP_SENTENCE } from "./money";
  * No sentence here names a source either: those words are in the register, src/conditions.ts.
  */
 
+/**
+ * A source named from the funder's side, "their university", said to the person it is for: "your university". Every
+ * other source is a proper name and is said as it is.
+ */
+function yourOwn(source: string): string {
+  return source.startsWith("their ") ? source.slice("their ".length) : source;
+}
+
+function spokenTo(source: string): string {
+  return source.startsWith("their ") ? `your ${yourOwn(source)}` : source;
+}
+
 /** The three destinations of the bar and the rail, and the mark. */
 export const NAV = {
   mark: "Viky",
@@ -804,7 +816,7 @@ export const GIFT_LIVE = {
     yours: "Share the page that proves it, and the gift is yours.",
     theirs: (recipient: string | null) => `${recipient ? `${recipient} has` : "They have"} not shared the proof yet.`,
     /** A proof the person shows from their own account (D162): the gesture is "show", never "share a page". */
-    shownYours: (source: string) => `Show it from your own ${source} account, and it is yours.`,
+    shownYours: (source: string) => `Show it from your own ${yourOwn(source)} account, and it is yours.`,
     shownTheirs: (recipient: string | null) => `${recipient ? `${recipient} has` : "They have"} not shown it yet.`,
     label: { yours: "In your name", theirs: "In their name" },
   },
@@ -1104,9 +1116,9 @@ export const UNIVERSITY_CHOICE = {
 } as const;
 
 export const SHOW_PROOF = {
-  title: (source: string) => `Show it from your ${source} account`,
+  title: (source: string) => `Show it from your ${yourOwn(source)} account`,
   whatHappens: (source: string) =>
-    `A verification tab opens. You sign in to ${source} there, in your own browser, and what that page shows is proved without Viky ever seeing your password. Viky keeps the score it proves and nothing else.`,
+    `A verification tab opens. You sign in to ${spokenTo(source)} there, in your own browser, and what that page shows is proved without Viky ever seeing your password. Viky keeps the score it proves and nothing else.`,
   button: "Show it",
   opening: "Opening the verification",
   waiting: "Waiting for the proof",

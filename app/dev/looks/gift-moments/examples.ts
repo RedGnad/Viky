@@ -9,10 +9,10 @@ import type { MilestoneStatus } from "@/src/milestone-view";
  * Production holds six gifts today, all of them connected, so most of the nine moments can only be seen here.
  */
 
-export const SHAPES = ["days", "climb", "stamp", "shown"] as const;
+export const SHAPES = ["days", "climb", "stamp", "shown", "university"] as const;
 export type Shape = (typeof SHAPES)[number];
 
-export const MOMENTS = ["unopened", "notConnected", "running", "runningBack", "startTooHigh", "won", "over", "cameBack"] as const;
+export const MOMENTS = ["unopened", "notConnected", "running", "runningBack", "startTooHigh", "won", "over", "cameBack", "held", "reviewRefused"] as const;
 export type ExampleMoment = (typeof MOMENTS)[number];
 
 /** The funder, the person it is for, somebody signed in who is neither, and somebody with no account at all. */
@@ -27,11 +27,14 @@ const RECIPIENT = "Léa";
 
 /** Which moments each shape has: a daily gift has no start too high, and the "went back" day is a daily gift's alone. */
 export function momentsOf(shape: Shape): readonly ExampleMoment[] {
-  if (shape === "days") return MOMENTS.filter((moment) => moment !== "startTooHigh");
-  if (shape === "climb") return MOMENTS.filter((moment) => moment !== "runningBack");
+  // A university read through a witness with no pin yet (D312): its first proof held for review, or refused by it.
+  if (shape === "university") return ["running", "held", "reviewRefused"];
+  const own = MOMENTS.filter((moment) => moment !== "held" && moment !== "reviewRefused");
+  if (shape === "days") return own.filter((moment) => moment !== "startTooHigh");
+  if (shape === "climb") return own.filter((moment) => moment !== "runningBack");
   // A certificate's clock starts when it is funded (MilestoneGift sets its deadline then), so it is never opened and
   // not started: it goes from unopened straight to waiting for its proof.
-  return MOMENTS.filter((moment) => moment !== "runningBack" && moment !== "startTooHigh" && moment !== "notConnected");
+  return own.filter((moment) => moment !== "runningBack" && moment !== "startTooHigh" && moment !== "notConnected");
 }
 
 export function exampleId(shape: Shape, moment: ExampleMoment, reader: Reader): string {
@@ -160,7 +163,7 @@ function milestone(shape: Exclude<Shape, "days">, moment: ExampleMoment, reader:
     kind: "milestone",
     shape: climb ? "climb" : "certificate",
     giftId: "1900001",
-    conditionId: climb ? "chess-rating" : shape === "shown" ? "toefl-mybest-shown" : "coursera-certificate",
+    conditionId: climb ? "chess-rating" : shape === "shown" ? "toefl-mybest-shown" : shape === "university" ? "university-enrollment-shown" : "coursera-certificate",
     ...who(reader),
     names: names(reader),
     goalAccount: { username: climb ? "lea_plays" : null, bound: connected, code: null, codeExpiresAt: null, namedByFunder: true },
@@ -193,6 +196,6 @@ function milestone(shape: Exclude<Shape, "days">, moment: ExampleMoment, reader:
     standingAtOffer: climb ? 1280 : null,
     marathon: null,
     wca: null,
-    review: null,
+    review: moment === "held" ? { status: "pending" } : moment === "reviewRefused" ? { status: "refused" } : null,
   };
 }
