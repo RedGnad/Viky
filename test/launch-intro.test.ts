@@ -1,38 +1,41 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { INTRO_BOOT_SCRIPT, INTRO_SEEN_KEY, INTRO_TIMING, introGroundStyle } from "../src/launch-intro";
+import { INTRO_BOOT_SCRIPT, INTRO_SESSION_KEY, INTRO_TIMING, introGroundStyle } from "../src/launch-intro";
 
 /** The installed app's first opening (the founder, 28 Sep 2026, direction C). */
 
-const stored = new Map<string, string>();
+const session = new Map<string, string>();
 
-function decide(options: { path: string; standalone: boolean; reduced: boolean; seen: boolean }): boolean {
+function decide(options: { path: string; standalone: boolean; reduced: boolean; seen: boolean; type?: string }): boolean {
   const attributes = new Set<string>();
-  stored.clear();
-  const run = new Function("location", "matchMedia", "localStorage", "document", INTRO_BOOT_SCRIPT);
+  session.clear();
+  if (options.seen) session.set(INTRO_SESSION_KEY, "1");
+  const run = new Function("location", "matchMedia", "sessionStorage", "document", "performance", INTRO_BOOT_SCRIPT);
   run(
     { pathname: options.path },
     (query: string) => ({ matches: query.includes("standalone") ? options.standalone : options.reduced }),
-    { getItem: (key: string) => (key === INTRO_SEEN_KEY && options.seen ? "1" : null), setItem: (key: string, value: string) => stored.set(key, value) },
+    { getItem: (key: string) => session.get(key) ?? null, setItem: (key: string, value: string) => session.set(key, value) },
     { documentElement: { setAttribute: (name: string) => attributes.add(name) } },
+    { getEntriesByType: () => [{ type: options.type ?? "navigate" }] },
   );
   return attributes.has("data-intro");
 }
 
-test("it plays only in the installed app, on Home, the first time, with motion allowed", () => {
-  assert.equal(decide({ path: "/", standalone: true, reduced: false, seen: false }), true);
+test("it plays at every launch of the installed app, on Home, with motion allowed", () => {
+  assert.equal(decide({ path: "/", standalone: true, reduced: false, seen: false }), true, "a launch");
   assert.equal(decide({ path: "/", standalone: false, reduced: false, seen: false }), false, "never in a browser tab");
   assert.equal(decide({ path: "/gift/12", standalone: true, reduced: false, seen: false }), false, "never on a gift link");
-  assert.equal(decide({ path: "/", standalone: true, reduced: false, seen: true }), false, "once per device");
   assert.equal(decide({ path: "/", standalone: true, reduced: true, seen: false }), false, "never against reduced motion");
 });
 
-test("the device remembers it the moment it decides, so no reload or rebuilt page ever plays it again", () => {
-  assert.equal(decide({ path: "/", standalone: true, reduced: false, seen: false }), true);
-  assert.equal(stored.get(INTRO_SEEN_KEY), "1", "written before anything is painted, not when it ends");
+test("nothing inside a launch plays it again: a reload, the landing after a sign-out, a page reached from another", () => {
+  assert.equal(decide({ path: "/", standalone: true, reduced: false, seen: false, type: "reload" }), false, "a reload is not a launch");
+  assert.equal(decide({ path: "/", standalone: true, reduced: false, seen: true }), false, "the session already started");
+  decide({ path: "/gift/12", standalone: true, reduced: false, seen: false });
+  assert.equal(session.get(INTRO_SESSION_KEY), "1", "a launch on another page marks the session too, so Home after it does not play");
   decide({ path: "/", standalone: false, reduced: false, seen: false });
-  assert.equal(stored.size, 0, "a browser tab writes nothing");
+  assert.equal(session.get(INTRO_SESSION_KEY), "1", "every page marks it");
 });
 
 test("it is short, it is in the page before any paint, and a tap ends it", () => {
