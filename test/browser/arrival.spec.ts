@@ -22,8 +22,8 @@ const writeEachOneDown = (page: Page) =>
     document.addEventListener(
       "animationstart",
       (event) => {
-        // The day row's fades follow its scroll, not the clock: they start with the page and are not an arrival.
-        if ((event as AnimationEvent).animationName.startsWith("row-fade-")) return;
+        // The day row's fades and the landing's side characters follow the scroll, not the clock: not an arrival.
+        if (/^(row-fade-|side-drift)/.test((event as AnimationEvent).animationName)) return;
         const target = event.target as HTMLElement;
         const style = getComputedStyle(target);
         played.push({

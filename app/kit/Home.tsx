@@ -14,6 +14,7 @@ import { topAfterLongAbsence } from "@/src/launch-top";
 import { HeroMoment } from "./HeroMoment";
 import { isStandalone } from "./Install";
 import { LandingStory } from "./LandingStory";
+import { SideCrowd } from "./SideCrowd";
 import { GoalsGoingBy } from "./GoalsGoingBy";
 import type { LandingGoals } from "@/src/landing-goals";
 import { MoneyHero } from "./MoneyHero";
@@ -81,6 +82,8 @@ export function Home({
   if (!address) {
     return (
       <Shell kind="destination" active="home" action={<SignInDoor />} bare wide>
+        {/* The day characters beside the top, on a screen with room beside the column (the founder, 28 Sep 2026). */}
+        <SideCrowd />
         {/* Home without an account, in the order of the founder's sketch of 24 Sep 2026 (D214, D221): the promise,
             its sentence, the way to the card, the hero moment, then the card. The first four are the first screen, as
             tall as the viewport less what of the card it shows, so the card's top is cut by the fold on every phone
