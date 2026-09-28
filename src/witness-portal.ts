@@ -4,7 +4,7 @@ import { PINNED_RECLAIM_WITNESS } from "./reclaim-proof-set";
 import type { ReclaimTrustedData } from "./reclaim-types";
 
 /**
- * A portal read through a Reclaim AI provider (D311, the founder's decision of 28 Sep 2026): no enclave, the proof
+ * A portal read through a Reclaim AI provider (D312, the founder's decision of 28 Sep 2026): no enclave, the proof
  * verified the way a zkFetch reading is, by the pinned witness's signature on the claim and by what the claim says it
  * read. An AI provider's configuration names no request; Reclaim's agent writes one at the first real run and keeps it
  * as a version of its own ("1.0.0-ai.1"): the URL, the method, the response match and the redaction. That version and

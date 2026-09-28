@@ -145,7 +145,7 @@ export function assertReclaimSessionProvenance(input: {
  * signatures must remain an array: accepting a hand-shaped singular signature here
  * would make SDK verification and Solidity calldata validate different objects.
  */
-export function assertSdkProofSet(value: unknown, options: { expectedCount: number; maxSignedJsonBytes: number; /** A witness portal's proof (D311): no enclave to require. */ witnessOnly?: boolean }): Proof[] {
+export function assertSdkProofSet(value: unknown, options: { expectedCount: number; maxSignedJsonBytes: number; /** A witness portal's proof (D312): no enclave to require. */ witnessOnly?: boolean }): Proof[] {
   const proofs = Array.isArray(value) ? value : value ? [value] : [];
   if (!Number.isInteger(options.expectedCount) || options.expectedCount < 1) rejectProof("Invalid expected proof count");
   if (proofs.length !== options.expectedCount) rejectProof("Unexpected Reclaim proof count");

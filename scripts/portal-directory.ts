@@ -5,7 +5,7 @@ import { ensurePortalSchema, loadPortal, portalFound, savePortal } from "../src/
 
 /**
  * Writes the directory's portals pinned in src/directory-portals.ts as portal rows, marked unverified (D193), and the
- * corridor's witness portals with no pin yet (D311), which a later write never unpins: one
+ * corridor's witness portals with no pin yet (D312), which a later write never unpins: one
  * command, run by an operator against the database the environment names. `DRY_RUN=1` prints the rows and writes
  * nothing. Against production, the operator command of "The test database" applies (`VIKY_ALLOW_PRODUCTION_DATABASE=1`,
  * and the production `DATABASE_URL` in the shell).

@@ -37,7 +37,7 @@ export default async function JudgesPage() {
   const ownership = await readOwnership().catch(() => null);
   // Universities listed, and how many have been read at least once (D267): here, and never in the flow.
   const portals = await portalsListedAndRead();
-  // The universities read through a witness and no enclave (D311), each by name, and how many carry a pin.
+  // The universities read through a witness and no enclave (D312), each by name, and how many carry a pin.
   const witnessCounts = await witnessPortalCounts();
   const witnessLines = await listPortals()
     .then((all) => all.filter((portal) => portal.verification === "witness"))
@@ -266,7 +266,7 @@ export default async function JudgesPage() {
           </li>
           <li>
             <strong>Universities read through a witness, no enclave.</strong> Where Reclaim&apos;s directory holds a
-            university only as an AI provider (D311), its proof carries no enclave attestation. Viky verifies it the way
+            university only as an AI provider (D312), its proof carries no enclave attestation. Viky verifies it the way
             it verifies its own readings: the claim must be signed by Viky&apos;s pinned witness and by nobody else, and
             must have read the university&apos;s own domain. An AI provider names no request until Reclaim&apos;s agent
             writes one at the first real run, so a line has no pattern until a student shows a first proof. That first

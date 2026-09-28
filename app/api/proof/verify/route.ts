@@ -28,7 +28,7 @@ export const maxDuration = 60;
 
 /**
  * Verifies one shown-proof session and, when it passes, records what the contract needs (D162). Ported from
- * Lock-in's verify route, where it knew one source by name. A witness portal aside (D311, verified by the pinned
+ * Lock-in's verify route, where it knew one source by name. A witness portal aside (D312, verified by the pinned
  * witness on its own domain, and held for review until pinned), the AI fallback is refused by requiring a TEE
  * attestation, not by reading the self-reported isAiProof flag: that flag lives in a context a liar controls, the
  * attestation is cryptographic. The browser only says "session X finished".
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     );
 
     if (result.kind === "reached") return NextResponse.json({ ...result, attested: true }, { headers: { "Cache-Control": "no-store" } });
-    // A first proof held for review (D311): nothing attested, nothing relayed.
+    // A first proof held for review (D312): nothing attested, nothing relayed.
     if (result.kind === "held") return NextResponse.json({ ...result, attested: false }, { headers: { "Cache-Control": "no-store" } });
 
     // A daily attestation expires in ten minutes: relay it now. A contract refusal is reported as such, with its

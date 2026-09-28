@@ -39,7 +39,7 @@ export type ShownVerificationDeps = VerificationDeps & {
   consumeShownSession(input: { sessionId: string; evidence: StoredShownEvidence | Readonly<{ held: string }>; attestation: StoredAttestation; proofs: unknown }): Promise<boolean>;
   /** The milestone gift's own record (its condition, its portal), or nothing when it has none. */
   milestoneRecordOf(giftId: string): Promise<MilestoneRecord | null>;
-  /** Holds the first proof of a witness portal with no pin for the operator's review (D311); false when already held. */
+  /** Holds the first proof of a witness portal with no pin for the operator's review (D312); false when already held. */
   holdForReview?(review: Omit<PortalReview, "status" | "reason">): Promise<boolean>;
   /** Tests only: the witness a test key stands for. Production never sets it, and the pinned witness is required. */
   witnessAddress?: string;
@@ -57,7 +57,7 @@ export type ShownOutcome =
       observedAt: number;
       hash: Hex;
     }>
-  /** A first proof from a witness portal with no pin (D311): checked on what is sure, held, nothing relayed. */
+  /** A first proof from a witness portal with no pin (D312): checked on what is sure, held, nothing relayed. */
   | Readonly<{ kind: "held"; sessionId: string; giftId: string; message: string }>;
 
 /**
@@ -126,7 +126,7 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
   const candidates = Array.isArray(rawProofs) ? rawProofs : rawProofs ? [rawProofs] : [];
   if (candidates.length === 0) throw new VerificationError("NO_PROOF_YET", "Reclaim has not returned a proof yet");
 
-  // A witness portal (D311) has no enclave to require. Its version is the pinned one, or, before the pin, whichever
+  // A witness portal (D312) has no enclave to require. Its version is the pinned one, or, before the pin, whichever
   // version Reclaim's agent wrote for it, and nothing else.
   const witness = provider.witness;
   const agentVersion = String(status.session?.providerVersionString ?? "");
@@ -308,7 +308,7 @@ async function settleShown(
 }
 
 /**
- * A held first proof, settled once its portal is pinned (D311, `pnpm portal:pin`): verified again on the pin, read by
+ * A held first proof, settled once its portal is pinned (D312, `pnpm portal:pin`): verified again on the pin, read by
  * the field the operator named, then relayed exactly as a live proof is. Its freshness was checked when it was held;
  * the contract's own nullifier and the review's single decision stop it from paying twice.
  */

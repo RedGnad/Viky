@@ -56,7 +56,7 @@ export type ShownProvider = Readonly<{
    */
   missing?: Readonly<{ code: string; message: string }>;
   /**
-   * A portal read through a Reclaim AI provider (D311): verified by the pinned witness on the portal's domain, with no
+   * A portal read through a Reclaim AI provider (D312): verified by the pinned witness on the portal's domain, with no
    * enclave. Without a pin, its proof is held for the operator's review and never paid alone.
    */
   witness?: Readonly<{ portalId: string; domain: string; pin: WitnessPin | null }>;
@@ -125,7 +125,7 @@ export const TOEFL_SHOWN: ShownEntry = {
 
 /** A portal's own provider, as its row pins it, and what its field means (D165). */
 export function providerOfPortal(portal: Portal): ShownProvider {
-  // A witness portal (D311) pins the version its agent wrote and the spec it signed, once its first proof is read.
+  // A witness portal (D312) pins the version its agent wrote and the spec it signed, once its first proof is read.
   const witness = portal.verification === "witness" && portal.witnessDomain ? { portalId: portal.portalId, domain: portal.witnessDomain, pin: portal.pin } : undefined;
   return {
     providerId: portal.providerId,
