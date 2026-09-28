@@ -491,6 +491,7 @@ async function runIn(
   const context = await browser.newContext({ ...size.use, colorScheme: appearance.colorScheme, serviceWorkers: "block" });
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: base });
   const page = await context.newPage();
+  page.on("pageerror", (error) => console.log(`  pageerror: ${String(error.stack ?? error).slice(0, 900)}`));
   page.setDefaultTimeout(30_000);
   // "Add money and give" opens the card service in a new tab; nothing about that tab is being reviewed here.
   context.on("page", (other) => {

@@ -28,7 +28,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   // under the longest line any condition of the register gives a link (D266).
   const preview =
     asked.has("demo") && galleryOpen()
-      ? { title: LINK_PREVIEW.named("Mum", "$25.00"), description: LONGEST_LINE }
+      ? { title: LINK_PREVIEW.named("Mum", LINK_PREVIEW.about("€21.67")), description: LONGEST_LINE }
       : await giftPreview(id, key(asked.get("t")));
   return previewImage({ title: preview.title, under: preview.description, cacheSeconds: 3600 });
 }

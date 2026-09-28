@@ -1026,9 +1026,20 @@ export const MILESTONE_ACTIONS = {
  * The preview a messaging app draws from a gift's link, the first thing the person it is for sees. The funder's name
  * only when the link carries its key; "Someone" otherwise, so a guessed gift number never names anybody.
  */
+/**
+ * An amount led by the reader's currency (src/display-currency.ts, `ledAmount`): "about" before the converted figure,
+ * and the exact dollars under it with the rate's day.
+ */
+export const LED_AMOUNT = {
+  about: "about",
+  exactly: (dollars: string, day: string) => `Exactly ${dollars}, at the rate of ${day}.`,
+} as const;
+
 export const LINK_PREVIEW = {
   named: (funder: string, amount: string) => `${funder} put ${amount} in your name`,
   someone: (amount: string) => `Someone put ${amount} in your name`,
+  /** A converted amount in the title: the gift is held in dollars, so the funder's currency is never exact. */
+  about: (figure: string) => `about ${figure}`,
   unknown: "A gift on Viky",
   asYouGo: "It becomes yours as you go.",
   /** A gift that pays at a target, when the condition behind it could not be read: true of every milestone. */
@@ -1370,7 +1381,6 @@ export const CASH_OUT = {
   yourMoney: "Your money",
   /** The balance at the head of the way out, and what it is for (out.html, 19 Sep 2026). */
   keepOrTakeOut: "Yours to keep, or to take out",
-  aboutLine: (figure: string, day: string) => `About ${figure}, at the rate of ${day}.`,
   whereTo: "Where do you want it?",
   /** The label over the figure each way leads with: what would reach the person, said as the estimate it is. */
   youWouldGet: "You would get about",

@@ -14,8 +14,9 @@ import { serviceChargeDollars, serviceChargeIsCeiling, wayInFor, type WayInOffer
 import { tidyGiftName } from "@/src/gift-names";
 import { judgeLineIsTrue } from "@/src/judge-line";
 import { formatAusd } from "@/src/gift-reader";
+import { ExactLine, LedFigure } from "../LedAmount";
 import { savePendingGift } from "@/src/pending-gift";
-import { rateDateInWords } from "@/src/display-currency";
+import { rateDateInWords, spokenAmount } from "@/src/display-currency";
 import type { RailReach } from "@/src/rail-country";
 import { feeSentence, wayInFillsIn, wayInPage, WAYS_IN } from "@/src/rails";
 import { CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
@@ -197,13 +198,22 @@ export function PaySheet({
         </>
       }
     >
-      {line(W.rows.gift(recipient), formatAusd(units ?? 0n))}
-      {enough ? line(W.rows.fromAccount, formatAusd(inAccount)) : line(W.rows.service, chargeLine)}
+      {line(W.rows.gift(recipient), spokenAmount(money.led(units ?? 0n)))}
+      {enough ? line(W.rows.fromAccount, spokenAmount(money.led(inAccount))) : line(W.rows.service, chargeLine)}
       {line(W.rows.viky, W.nothing)}
 
       <div className="pt-[var(--space-sm)]">
         <p className={CARD_LABEL}>{enough ? W.rows.fromAccount : W.youPay}</p>
-        <p className={`${CARD_AMOUNT} whitespace-nowrap`}>{enough || euros === undefined || euros === 0 ? formatAusd(units ?? 0n) : W.euros(euros)}</p>
+        {/* From the account, the person's currency leads and the dollars that leave are under it (the founder, 29 Sep
+            2026); by card, the euros the service charges are exact, so they lead alone. */}
+        {enough || euros === undefined || euros === 0 ? (
+          <>
+            <LedFigure amount={money.led(units ?? 0n)} className={`${CARD_AMOUNT} whitespace-nowrap`} />
+            <ExactLine amount={money.led(units ?? 0n)} />
+          </>
+        ) : (
+          <p className={`${CARD_AMOUNT} whitespace-nowrap`}>{W.euros(euros)}</p>
+        )}
       </div>
       {/* The rate, its source and why its day may be a Friday: one line, in full, rather than a label in a corner. */}
       {money.rates && !enough ? <p className={HELP}>{W.atTheRate(rateDateInWords(money.rates.date))}</p> : null}

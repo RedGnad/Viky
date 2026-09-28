@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { aboutInDisplayCurrency, CURRENCY_COOKIE, figureInDisplayCurrency, isDisplayCurrency, proposedDisplayCurrency, SHOWN_IN_DOLLARS, type DisplayCurrency, type DisplayFigure } from "../display-currency";
+import { aboutInDisplayCurrency, CURRENCY_COOKIE, figureInDisplayCurrency, isDisplayCurrency, ledAmount, proposedDisplayCurrency, SHOWN_IN_DOLLARS, type DisplayCurrency, type DisplayFigure, type LedAmount } from "../display-currency";
 import { CURRENCIES_WHEN_SILENT } from "../currencies";
 import { ratesUsable, type Rates } from "../rates";
 import { getJson, putJson } from "./api";
@@ -65,6 +65,8 @@ export type DisplayMoney = Readonly<{
   about: (units: bigint) => string | undefined;
   /** The amount as the display size shows it: the symbol and the number, and the rate's day for the caption. */
   figure: (units: bigint) => DisplayFigure;
+  /** The amount led by the reader's currency, "about" before it and the exact dollars under it. */
+  led: (units: bigint) => LedAmount;
   /** The line to print once on a screen that wanted to convert and could not. Empty when it could, or never wanted to. */
   unavailable: string | undefined;
 }>;
@@ -167,6 +169,7 @@ export function useDisplayCurrency(address: string | undefined): DisplayMoney {
     },
     about: (units) => aboutInDisplayCurrency(units, currency, rates),
     figure: (units) => figureInDisplayCurrency(units, currency, rates),
+    led: (units) => ledAmount(units, currency, rates),
     unavailable: asked !== "USD" && !rates ? SHOWN_IN_DOLLARS : undefined,
   };
 }
