@@ -269,6 +269,8 @@ test("a missing provider is asked for once, with its instruction, and a witness 
   // Built: a witness provider on its own domain, no pin yet.
   const witness = { portalId: "uni-a-br", sense: "enrolment" as const, providerId: "abcdefab-0000-4000-8000-000000000001", verification: "witness" as const, domain: "a.br", providerVersion: "", requestHash: "", extract: null, pin: null, addedBy: OPERATOR };
   assert.match(String(providerProblem({ ...witness, domain: null })), /domain/);
+  assert.equal(providerProblem({ ...witness, domain: "utoulouse.fr,univ-tlse3.fr" }), undefined, "a university's two own domains");
+  assert.match(String(providerProblem({ ...witness, domain: "utoulouse.fr,not a domain" })), /domain/);
   assert.match(String(providerProblem({ ...witness, extract: { field: "enrolment", matches: "2026", keeps: "k" } })), /only once the provider is pinned/);
   await saveProvider(witness);
   await markRequestBuilt("uni-a-br", "enrolment");
