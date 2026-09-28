@@ -24,7 +24,7 @@ export function ShowProof({
   yours,
   review = null,
   onShown,
-}: Readonly<{ giftId: string; conditionId: string; yours: boolean; /** A first proof under review, or refused by it (D311). */ review?: "pending" | "refused" | null; onShown: () => Promise<void> | void }>) {
+}: Readonly<{ giftId: string; conditionId: string; yours: boolean; /** A first proof under review, or refused by it (D312). */ review?: "pending" | "refused" | null; onShown: () => Promise<void> | void }>) {
   const condition = conditionById(conditionId);
   const [state, setState] = useState<State>({ at: "asking" });
   const button = useRef<HTMLButtonElement>(null);
@@ -64,7 +64,7 @@ export function ShowProof({
     }
   };
 
-  // Held for review, or refused by it (D311): said in the button's place, since showing it again changes nothing.
+  // Held for review, or refused by it (D312): said in the button's place, since showing it again changes nothing.
   if (state.at === "held" || review) {
     return (
       <section className={CARD} role="status">

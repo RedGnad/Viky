@@ -13,7 +13,7 @@ import { enrolledBy, type PortalExtract } from "../src/university-shown";
 import type { WitnessPin } from "../src/witness-portal";
 
 /**
- * The operator's review of a witness portal's first proof (D311). A first proof from a university read through a
+ * The operator's review of a witness portal's first proof (D312). A first proof from a university read through a
  * Reclaim AI provider is checked on what is sure (the pinned witness, the domain, the method) and held; this command
  * shows what its pattern read, and then either pins the portal from it and settles the gift, or refuses it.
  *

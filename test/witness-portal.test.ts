@@ -18,7 +18,7 @@ import { canonical, onDomain, pinOf, verifyWitnessProof, WitnessProofError, type
 import { WITNESS_PORTALS } from "../src/directory-portals";
 
 /**
- * A university read through a Reclaim AI provider (D311): the proof carries no enclave, so it is verified by the
+ * A university read through a Reclaim AI provider (D312): the proof carries no enclave, so it is verified by the
  * witness's signature on the claim and by what the claim says it read. The claims here are built and signed the way
  * Reclaim's attestor signs them (`createSignDataForClaim`), by a test key standing in for the pinned witness.
  */

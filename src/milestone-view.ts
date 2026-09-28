@@ -87,7 +87,7 @@ export type MilestoneStatus = Readonly<{
    * result read once there is one (the name, the id, the best single), to whoever may see the names.
    */
   /**
-   * A first proof from a university read through a witness with no pin yet (D311): held for the operator's review, or
+   * A first proof from a university read through a witness with no pin yet (D312): held for the operator's review, or
    * refused by it. Nothing once it is settled, and nothing for any other gift.
    */
   review: Readonly<{ status: "pending" | "refused" }> | null;

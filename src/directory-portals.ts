@@ -9,7 +9,7 @@ import type { Portal } from "./portal-store";
  *
  * Rome proves enrolment, a current term. Four more (D267) prove a signed-in student account alone, and say so. HUJI
  * stays out: its patterns carry one student's own name and number. The rest of the founder's list is witnessed by AI:
- * the corridor's among them are listed below as witness portals (D311); docs/reclaim/directory-universities.md says each one.
+ * the corridor's among them are listed below as witness portals (D312); docs/reclaim/directory-universities.md says each one.
  */
 export type DirectoryPortal = Omit<Portal, "provenAt" | "provenBy" | "results" | "unverified" | "verification" | "witnessDomain" | "pin"> &
   Readonly<{ usedBy: number; read: string }>;
@@ -107,7 +107,7 @@ export const DIRECTORY_PORTALS: readonly DirectoryPortal[] = [
 ];
 
 /**
- * The corridor's universities whose only Reclaim provider is an AI one (D311, the founder's decision of 28 Sep 2026):
+ * The corridor's universities whose only Reclaim provider is an AI one (D312, the founder's decision of 28 Sep 2026):
  * listed now, for everybody, and verified by the pinned witness on the university's own domain, with no enclave. The
  * provider's configuration names no request: Reclaim's agent writes one at the first real run. So a row has no pattern
  * until a student shows a first proof, which is held for the operator's review and never paid alone; `pnpm portal:pin`

@@ -38,12 +38,12 @@ ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS results jsonb;
 ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS unverified boolean NOT NULL DEFAULT false;
 -- What the portal proves (D267): 'enrolment', its status for the year, or 'account', a signed-in student account alone.
 ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS proves text NOT NULL DEFAULT 'enrolment';
--- How a proof from the portal is verified (D311): 'tee', the SDK with the enclave's attestation, or 'witness', a Reclaim
+-- How a proof from the portal is verified (D312): 'tee', the SDK with the enclave's attestation, or 'witness', a Reclaim
 -- AI provider verified by the pinned witness's signature on the portal's domain, and, once pinned, its pattern.
 ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS verification text NOT NULL DEFAULT 'tee';
 ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS witness_domain text;
 ALTER TABLE viky_portals ADD COLUMN IF NOT EXISTS pin jsonb;
--- A first proof from a witness portal with no pin yet (D311): checked on what is sure, held, never paid alone, until the
+-- A first proof from a witness portal with no pin yet (D312): checked on what is sure, held, never paid alone, until the
 -- operator reads what the pattern read and pins the portal (or refuses, in the person's words).
 CREATE TABLE IF NOT EXISTS viky_portal_reviews (
   session_id text PRIMARY KEY,
@@ -105,7 +105,7 @@ export type Portal = Readonly<{
   unverified: boolean;
   /** What a proof from this portal carries (D267): the year's enrolment status, or a student account alone. */
   proves: PortalProves;
-  /** How a proof from it is verified (D311): the enclave's attestation, or the pinned witness alone. */
+  /** How a proof from it is verified (D312): the enclave's attestation, or the pinned witness alone. */
   verification: "tee" | "witness";
   /** For a witness portal: the site's domain a proof must read, "ucad.sn". */
   witnessDomain: string | null;
@@ -134,7 +134,7 @@ type PortalInput = Omit<Portal, "provenAt" | "results" | "unverified" | "proves"
 export function portalProblem(input: PortalInput): string | undefined {
   if (input.proves !== undefined && input.proves !== "enrolment" && input.proves !== "account") return "what the portal proves: enrolment or account";
   if (input.verification === "witness") {
-    // A witness portal (D311): its domain always; its request, field and version only once its first proof is pinned.
+    // A witness portal (D312): its domain always; its request, field and version only once its first proof is pinned.
     if (!input.witnessDomain || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(input.witnessDomain)) return "the portal's domain, like ucad.sn";
     if (!isPortalId(input.portalId)) return "the portal id is lower case letters, digits and dashes, 64 at most";
     if (!input.name.trim() || !input.university.trim()) return "a name and a university";
@@ -180,7 +180,7 @@ export function portalProblem(input: PortalInput): string | undefined {
  * proving enrolment a second time must not undo the results page proved the first time.
  */
 export async function savePortal(given: PortalInput & { provenAt?: Date }): Promise<void> {
-  // Writing a witness row again must not undo its pin (D311): what the pin fixed stays, whatever the register says.
+  // Writing a witness row again must not undo its pin (D312): what the pin fixed stays, whatever the register says.
   const pinned = given.verification === "witness" && !given.pin ? await loadPortal(given.portalId) : null;
   const input = pinned?.pin
     ? { ...given, pin: pinned.pin, extract: pinned.extract, proves: pinned.proves, providerVersion: pinned.providerVersion, requestHash: pinned.requestHash, provenBy: pinned.provenBy, provenAt: pinned.provenAt, unverified: false }
@@ -250,7 +250,7 @@ function toPin(value: unknown): WitnessPin | null {
   return typeof pin.specHash === "string" && typeof pin.url === "string" ? pin : null;
 }
 
-/** Pins a witness portal from its first proof, with what the operator read it proves and the field that says it (D311). */
+/** Pins a witness portal from its first proof, with what the operator read it proves and the field that says it (D312). */
 export async function pinPortal(portalId: string, input: { pin: WitnessPin; extract: PortalExtract; proves: PortalProves; operator: string }): Promise<boolean> {
   const portal = await loadPortal(portalId);
   if (!portal || portal.verification !== "witness") return false;

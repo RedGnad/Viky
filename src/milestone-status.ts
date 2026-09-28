@@ -29,7 +29,7 @@ export function milestoneStatusOf(input: {
   reachedAt: number | null;
   viewer: Viewer;
   nowSeconds: number;
-  /** The gift's latest portal review (D311), when its portal is read through a witness. */
+  /** The gift's latest portal review (D312), when its portal is read through a witness. */
   review?: Pick<PortalReview, "status"> | null;
 }): MilestoneStatus {
   const { record, state, viewer } = input;
@@ -132,7 +132,7 @@ export async function loadMilestoneStatus(record: GiftRecord, viewer: Viewer): P
     lastReading(record.giftId),
     attestedReadings(record.giftId),
   ]);
-  // A university gift may wait on a first proof's review (D311); a table not there yet is no review.
+  // A university gift may wait on a first proof's review (D312); a table not there yet is no review.
   const review = milestone?.conditionId === "university-enrollment-shown" && milestone.portal ? await latestReviewOf(record.giftId).catch(() => null) : null;
   const reachedAt = proven.find((reading) => reading.outcome === "reached")?.observedAt ?? null;
   const status = milestoneStatusOf({ record, milestone, state, contract, latest, last, reachedAt, viewer, nowSeconds: Math.floor(Date.now() / 1_000), review });
