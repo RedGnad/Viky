@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { chromium } from "@playwright/test";
-import { figureInLook, PREVIEW_FIGURE } from "./look-figure";
+import { figureInLook, ICON_FIGURE, iconModule, PREVIEW_FIGURE } from "./look-figure";
 import { COLOURS } from "../src/design-tokens";
 
 /**
@@ -61,10 +61,14 @@ async function main() {
   // rather than the night one), its colours read from the stylesheet's own day block so the icon can never keep a
   // colour the screens have left behind.
   // The landing's own figure (D307): its soft smile and its halftone, as HeroMoment draws it, the head alone.
-  const svg = figureInLook("light", { id: "icon", limbs: false, mouth: "soft", halftone: true });
+  const svg = figureInLook("light", ICON_FIGURE);
   // The figure of the link previews, by day, standing (D265): the preview route may not import react-dom/server.
   writeFileSync(resolve("app/kit/figure-day.svg"), `${figureInLook("light", PREVIEW_FIGURE)}\n`);
   console.log("app/kit/figure-day.svg");
+  // The icon's own drawing for the installed app's first opening (src/launch-intro.ts): painted in the page's first
+  // image, so it is written in rather than fetched.
+  writeFileSync(resolve("app/kit/figure-icon.ts"), iconModule());
+  console.log("app/kit/figure-icon.ts");
   const browser = await chromium.launch();
   try {
     for (const { file, size } of SIZES) {

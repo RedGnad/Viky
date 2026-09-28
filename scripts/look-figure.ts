@@ -32,3 +32,11 @@ export function figureInLook(appearance: "light" | "dark", props: FigureProps): 
 
 /** The figure of the link previews (D265): standing, lit, in the day look, with the halftone every figure wears. */
 export const PREVIEW_FIGURE: FigureProps = { id: "preview", halftone: true };
+
+/** The app icon's head (D253, D307): the landing's soft smile and halftone, no limbs. */
+export const ICON_FIGURE: FigureProps = { id: "icon", limbs: false, mouth: "soft", halftone: true };
+
+/** The icon's drawing as a module, for the installed app's first opening (src/launch-intro.ts): painted, never fetched. */
+export function iconModule(): string {
+  return `// Written by \`pnpm make:icon\`: the app icon's drawing in the day look, for the first opening (src/launch-intro.ts).\nexport const FIGURE_ICON_SVG = ${JSON.stringify(figureInLook("light", ICON_FIGURE))};\n`;
+}
