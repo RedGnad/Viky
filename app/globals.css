@@ -1482,21 +1482,33 @@ html[data-intro] .launch-intro.launch-intro-leaving {
 
 /*
  * The day characters beside the landing's top on a wide screen (app/kit/SideCrowd.tsx): a layer the width of the
- * window over the first screen, under everything, catching no press. Each character is hidden until its side has room
- * for it (the rules written by the component), tilted by its own angle, and drifts up a little with the scroll at its
- * own depth where the browser follows a scroll itself: a timeline of the scroll, not of the clock.
+ * window over the first screen, under everything, catching no press, from a window of 1024 (CROWD_FROM). Each
+ * character keeps its size and its distance from the column (the component's own offsets), so a narrowing window's
+ * edge passes over it, tilted by its own angle, and drifts up a little with the scroll at its own depth where the browser follows a scroll itself: a
+ * timeline of the scroll, not of the clock.
  */
 .side-crowd {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 820px;
+  height: calc(100svh - 182px);
+  /* Only colours already on the screen (direction C): the hero's own edge, cream and gold by day, violet by night. */
+  --character-1: var(--character-hero-edge);
+  --character-2: var(--character-hero-edge-deep);
+  --character-3: var(--character-hero-edge-deep);
   overflow: hidden;
   pointer-events: none;
 }
-.side-crowd > div {
+.side-crowd {
   display: none;
+}
+@media (min-width: 1024px) {
+  .side-crowd {
+    display: block;
+  }
+}
+.side-crowd > div {
   position: absolute;
   transform: rotate(var(--tilt));
 }
