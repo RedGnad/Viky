@@ -68,7 +68,8 @@ the pattern read and runs `pnpm portal:pin`, which fixes the version, the URL, t
 and the field, and settles the held gift (or refuses it, and the person reads why). After the pin a proof on another
 domain, request or pattern is refused.
 
-The twenty rows are in `src/directory-portals.ts` (`WITNESS_PORTALS`), written by `pnpm portal:directory`: UCAD,
+Twenty rows were listed; IHET and MIT Polytech (Tunisia) were taken out the same day, no portal of theirs being
+readable (below), with `pnpm portal:remove`. The rows are in `src/directory-portals.ts` (`WITNESS_PORTALS`), written by `pnpm portal:directory`: UCAD,
 Gaston Berger, UADB, Université Dakar Bourguiba, BEM (Senegal); Félix Houphouët-Boigny (Côte d'Ivoire); Hassan II,
 Mohammed V, UIR, Mines Rabat, UPM, Sup de Co Marrakech (Morocco); IAM Bamako (Mali); Abdou Moumouni (Niger); ESC
 Ouagadougou (Burkina Faso); UNIKIN and ISS Kinshasa (DR Congo); IHET and the Mediterranean polytechnic (Tunisia);

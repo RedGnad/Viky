@@ -275,5 +275,5 @@ test("the corridor's witness rows are well formed, each on its own https domain,
     const problem = portalProblem({ ...row, providerVersion: "", requestHash: "", extract: { field: "", matches: "", keeps: "" }, provenBy: "0x000000000000000000000000000000000000beef", verification: "witness", proves: "account" });
     assert.equal(problem, undefined, `${row.portalId}: ${problem}`);
   }
-  assert.equal(WITNESS_PORTALS.length, 20);
+  assert.equal(WITNESS_PORTALS.length, 18);
 });

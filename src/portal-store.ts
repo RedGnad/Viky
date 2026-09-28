@@ -441,3 +441,21 @@ export async function countPortals(): Promise<number> {
   const rows = await sql()`SELECT count(*)::int AS n FROM viky_portals`;
   return Number(rows[0]?.n ?? 0);
 }
+
+/** How many gifts were made on a portal: a portal a gift names is never removed. */
+export async function giftsOnPortal(portalId: string): Promise<number> {
+  const rows = await sql()`SELECT count(*)::int AS n FROM viky_milestone_gifts WHERE portal = ${portalId}`;
+  return Number(rows[0]?.n ?? 0);
+}
+
+/**
+ * Removes a portal nobody can prove from, once no gift names it (the founder, 28 Sep 2026: a university whose portal
+ * cannot be read is not offered). False when there was no such row. Its held reviews go with it.
+ */
+export async function removePortal(portalId: string): Promise<boolean> {
+  if (!isPortalId(portalId)) return false;
+  if ((await giftsOnPortal(portalId)) > 0) throw new Error(`${portalId} is named by a gift: it stays`);
+  await sql()`DELETE FROM viky_portal_reviews WHERE portal_id = ${portalId}`;
+  const rows = await sql()`DELETE FROM viky_portals WHERE portal_id = ${portalId} RETURNING portal_id`;
+  return rows.length > 0;
+}
