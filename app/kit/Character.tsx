@@ -300,6 +300,8 @@ function drawing(
           </>
         ) : null,
       };
+    // The gift box of the first look, kept as the kid for later (the founder, 28 Sep 2026): drawn on no product screen
+    // now, where the app's own character stands instead (test/old-look.test.ts).
     case "gift":
       return {
         // A box under a lid, so the face sits on the box and never across a ribbon.

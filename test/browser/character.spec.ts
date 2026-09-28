@@ -20,7 +20,7 @@ const face = (page: Page) =>
 const AT_REST = { gaze: "matrix(1, 0, 0, 1, 0, 0)", eye: "matrix(1, 0, 0, 1, 0, 0)", mouth: "matrix(1, 0, 0, 1, 0, 0)" };
 
 test.describe("the character at the head of the page", () => {
-  test("it is on the page, and on the sheet that pays", async ({ page }) => {
+  test("it is on the page, and not on the sheet that pays (28 Sep 2026)", async ({ page }) => {
     await page.goto("/");
     // The one that is drawn: the sheet's own character is in the page from the first render, shut inside its dialog.
     // The cast of the promises under the card (D282) is its own, and is not counted here.
@@ -28,7 +28,8 @@ test.describe("the character at the head of the page", () => {
     await page.getByRole("button", { name: /^Send / }).click();
     const sheet = page.locator("dialog.sheet[open]");
     await expect(sheet).toBeVisible();
-    await expect(sheet.locator("svg[data-character='diamond']:visible")).toHaveCount(1);
+    // The pay sheet's title is the gift; a character beside it said nothing (the founder, 28 Sep 2026).
+    await expect(sheet.locator("svg[data-character='diamond']:visible")).toHaveCount(0);
   });
 
   test("nothing hovered or pressed on the card moves its face (D216)", async ({ page }) => {

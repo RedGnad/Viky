@@ -201,12 +201,11 @@ test("the character stands on the four screens, and answers with the parts it al
     assert.match(drawing, new RegExp(`data-part="${part}"`), `the ${part} is named, so an expression can move it`);
   }
   const head = readFileSync("app/kit/HeadCharacter.tsx", "utf8");
-  assert.match(head, /<Expression>[\s\S]*state="diamond"/, "the same character as the page without an account, and it feels what the record says");
+  assert.match(head, /<Expression>[\s\S]*<Figure id="head" limbs=\{false\}/, "the same character as the page without an account, and it feels what the record says");
   assert.doesNotMatch(head, /<Gaze/, "and it follows no pointer (D216)");
   for (const [screen, file] of Object.entries({
     "a gift's page": "app/components/GiftPage.tsx",
     "the way out": "app/cash-out/page.tsx",
-    "the sheet that pays": "app/kit/offer/PaySheet.tsx",
   })) {
     assert.match(readFileSync(file, "utf8"), /<HeadCharacter \/>/, `${screen} carries the character`);
   }
