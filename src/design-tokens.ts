@@ -328,6 +328,8 @@ export const HERO_TYPE = {
   compact: { size: 49, lineHeight: 54, tracking: -1 },
   wide: { size: 76, lineHeight: 1.02, tracking: -2 },
   from: 1024,
+  /** Where the promise reaches its wide size: from 1024 it grows with the window, 49 there, 76 here (28 Sep 2026). */
+  fullFrom: 1440,
 } as const;
 export const LEAD_TYPE = { compact: { size: 16, lineHeight: 24 }, wide: { size: 20, lineHeight: 28 } } as const;
 

@@ -90,8 +90,9 @@ for (const scheme of ["dark", "light"] as const) {
       const middle = size.width / 2;
       for (const box of [character, titleBox, sentence, way, card]) expect(Math.abs(box.x + box.width / 2 - middle)).toBeLessThan(2);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(size.width);
-      // The title at its step: 76 from 1024, 49 below (D131).
-      expect(await title.evaluate((el) => getComputedStyle(el).fontSize)).toBe(size.width >= 1024 ? "76px" : "49px");
+      // The title at its step: 49 below 1024, then growing with the window to 76 at 1440 (the founder, 28 Sep 2026).
+      const expected = size.width < 1024 ? 49 : Math.min(76, Math.max(49, (6.4904 * size.width) / 100 - 17.46));
+      expect(Math.abs(parseFloat(await title.evaluate((el) => getComputedStyle(el).fontSize)) - expected)).toBeLessThan(0.1);
       // Two lines on a phone, never a short word alone on a third (D235).
       if (size.width < 1024) expect(await title.evaluate((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)))).toBe(2);
       // No blur, on the ground or under anything.
