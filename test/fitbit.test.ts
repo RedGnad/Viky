@@ -33,7 +33,7 @@ test("the line: connected by them, the family Move, goal 6 on the daily contract
   assert.equal(FITBIT_DAILY.goalType, 6);
   assert.equal(conditionOfGoal(6), FITBIT_DAILY, "a gift on goal 6 is this line, behind the door");
   assert.ok(!BUILDING.includes(FITBIT_DAILY));
-  assert.equal(FAMILIES.at(2)?.title, "Move", "the first tile of the second row (the founder, 28 Sep 2026)");
+  assert.equal(FAMILIES.at(-1)?.title, "Move", "the last tile, bottom right (the founder, 28 Sep 2026)");
   assert.equal(CONDITION_NATURE.connected, "CONNECTED BY THEM");
   assert.equal(FITBIT_DAILY.link.kind, "connect");
   if (FITBIT_DAILY.link.kind === "connect") {

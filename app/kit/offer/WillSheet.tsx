@@ -315,7 +315,6 @@ export function WillSheet({
                 <button key={section.family} type="button" onClick={() => setFamily(section.family)} className={TILE}>
                   <FamilyArt family={section.family} />
                   <span className={CHOICE}>{section.title}</span>
-                  <span className={HELP}>{W.choices(section.conditions.length)}</span>
                 </button>
               ))}
             </div>
@@ -338,16 +337,20 @@ export function WillSheet({
         )
       ) : (
         <>
-          {/* The way back from a condition's questions: to the four families (D233), never to a list. */}
+          {/* The way back from a condition's questions, as an arrow like the family's (the founder, 28 Sep 2026, over
+              D233): to the list it was chosen in, the screen before, not to the four families. */}
           <button
             type="button"
-            className={INLINE_BUTTON}
+            aria-label={W.change(W.slots.will.label)}
+            className={`${INLINE_BUTTON} self-start`}
             onClick={() => {
-              setFamily(null);
+              setFamily(condition.family);
               setAskedFor("list");
             }}
           >
-            {W.change(W.slots.will.label)}
+            <svg aria-hidden focusable="false" width="20" height="20" viewBox="0 0 24 24">
+              <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
 
           {/* A climb: the account, the cadence, today's reading, then what they reach. */}

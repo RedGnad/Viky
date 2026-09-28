@@ -131,15 +131,22 @@ test("the way to the card scrolls to it and leaves no fragment behind, and a sta
   // The press: the card scrolled into view, the default stopped, nothing written; without the card, the browser's own way.
   const calls: string[] = [];
   const card = { getBoundingClientRect: () => ({ top: 300, bottom: 817 }), focus: (options: unknown) => calls.push(`focus ${JSON.stringify(options)}`) };
-  const line = { getBoundingClientRect: () => ({ bottom: 930 }) };
+  const box = (top: number, bottom: number) => ({ getBoundingClientRect: () => ({ top, bottom }) });
   const realDocument = globalThis.document;
   const realWindow = globalThis.window;
-  (globalThis as { document?: unknown }).document = { getElementById: (id: string) => (id === "offer" ? card : null), querySelector: (query: string) => (query === "[data-follows-card]" ? line : null) };
-  (globalThis as { window?: unknown }).window = { scrollY: 440, innerHeight: 844, scrollTo: (options: unknown) => calls.push(`scroll ${JSON.stringify(options)}`) };
+  // The phone of the founder's capture, 390 by 844, scrolled to 440: the card at 740 on the page, the phrase's text
+  // ending at 1393, the character's hands at 681, the small print at 1512.
+  (globalThis as { document?: unknown }).document = {
+    getElementById: (id: string) => (id === "offer" ? card : null),
+    querySelector: (query: string) => (query === "[data-follows-card]" ? {} : query === "[data-card-note]" ? box(1072, 1126) : null),
+    querySelectorAll: () => [box(0, 220), box(0, 241)],
+    createRange: () => ({ selectNodeContents: () => undefined, getBoundingClientRect: () => ({ top: 880, bottom: 953 }) }),
+  };
+  (globalThis as { window?: unknown }).window = { scrollY: 440, innerHeight: 844, innerWidth: 390, scrollTo: (options: unknown) => calls.push(`scroll ${JSON.stringify(options)}`) };
   try {
     goToTheCard({ preventDefault: () => calls.push("prevented") });
-    // The card at 740 on the page, its line ending at 1370: 630 tall, centred in 844, so the page stops at 633.
-    assert.deepEqual(calls, ["prevented", 'scroll {"top":633}', 'focus {"preventScroll":true}']);
+    // The small print leaves first on a phone: 1512 - 844.
+    assert.deepEqual(calls, ["prevented", 'scroll {"top":668}', 'focus {"preventScroll":true}']);
     (globalThis as { document?: unknown }).document = { getElementById: () => null };
     calls.length = 0;
     goToTheCard({ preventDefault: () => calls.push("prevented") });
@@ -159,8 +166,12 @@ test("the way to the card scrolls to it and leaves no fragment behind, and a sta
   const way = readFileSync("app/kit/WayToTheCard.ts", "utf8");
   assert.doesNotMatch(way, /pushState|location\.hash =/, "nothing is pushed and no hash is written");
   assert.doesNotMatch(way.slice(way.indexOf("export function dropStaleCardFragment")), /scrollTo\(/, "and nobody is scrolled back at load");
-  // Where the page stops: the card and its line centred together, or the card's top with 16 pixels when they do not fit.
-  assert.equal(cardScrollTop({ cardTop: 740, groupBottom: 1370, viewport: 844 }), 633);
+  // Where the page stops: the card and its phrase centred together, between the character and the small print.
+  assert.equal(cardScrollTop({ cardTop: 740, groupBottom: 1370, viewport: 844 }), 633, "nothing around: centred");
+  assert.equal(cardScrollTop({ cardTop: 740, groupBottom: 1393, viewport: 844, heroBottom: 681, noteTop: 1512, phone: true }), 668, "a phone: the small print leaves first");
+  assert.equal(cardScrollTop({ cardTop: 796, groupBottom: 1421, viewport: 900, heroBottom: 718, noteTop: 1475, phone: false }), 718, "a larger screen: no piece of the character");
+  assert.equal(cardScrollTop({ cardTop: 740, groupBottom: 1300, viewport: 844, heroBottom: 500, noteTop: 1700 }), 598, "room for both: centred");
+  assert.equal(cardScrollTop({ cardTop: 740, groupBottom: 1300, viewport: 844, heroBottom: 650, noteTop: 1700 }), 650, "centred would cut the character: just past it");
   assert.equal(cardScrollTop({ cardTop: 740, groupBottom: 1700, viewport: 844 }), 724, "too tall: the card is never cut");
   assert.equal(cardScrollTop({ cardTop: 100, groupBottom: 300, viewport: 844 }), 0, "never above the page");
 });

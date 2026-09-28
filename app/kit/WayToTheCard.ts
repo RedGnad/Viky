@@ -16,23 +16,51 @@ export const CARD_FRAGMENT = "#offer";
 
 /** The phrase under the card that says what a gift can wait for, as shown now, which the way to the card centres with it. */
 export const FOLLOWS_CARD = "data-follows-card";
+/** The small print under that phrase, which the way to the card keeps below the screen where it can. */
+export const CARD_NOTE = "data-card-note";
 
 /** The room kept above the card when the card and its line are taller than the screen. */
 const ROOM_ABOVE = 16;
+/** Below this width the screen is a phone's, where the small print leaves first; above it, the character does. */
+export const PHONE_WIDTH = 600;
+
+export type CardPlace = Readonly<{
+  cardTop: number;
+  /** The bottom of the phrase's shown text. */
+  groupBottom: number;
+  viewport: number;
+  /** The lowest point of the character above the card that a cut would show: its body and its hands, not its legs. */
+  heroBottom?: number;
+  /** The top of the small print under the phrase. */
+  noteTop?: number;
+  phone?: boolean;
+}>;
 
 /**
- * Where the page stops (the founder, 28 Sep 2026: the card came to the very top and its line to the very bottom): the
- * card and the line that follows it, centred together in the screen, which leaves the character just gone above. When
- * the two are taller than the screen, the card's top with a little room, so the card is never cut.
+ * Where the page stops (the founder, 28 Sep 2026): the card and the phrase shown under it centred together, as close
+ * as the two edges allow. Above, no piece of the character cut by the top of the screen; below, no small print cut by
+ * its bottom. When both cannot be had, a phone lets the character's hands show before the small print, and a larger
+ * screen the small print before the character (his word for each). When the card and its phrase are taller than the
+ * screen, the card's top with a little room, so the card is never cut.
  */
-export function cardScrollTop(place: Readonly<{ cardTop: number; groupBottom: number; viewport: number }>): number {
+export function cardScrollTop(place: CardPlace): number {
   const tall = place.groupBottom - place.cardTop;
-  const top = tall <= place.viewport - 2 * ROOM_ABOVE ? place.cardTop - (place.viewport - tall) / 2 : place.cardTop - ROOM_ABOVE;
-  return Math.max(0, Math.round(top));
+  if (tall > place.viewport - 2 * ROOM_ABOVE) return Math.max(0, Math.round(place.cardTop - ROOM_ABOVE));
+  const centred = place.cardTop - (place.viewport - tall) / 2;
+  const lowest = place.heroBottom ?? -Infinity;
+  const highest = place.noteTop === undefined ? Infinity : place.noteTop - place.viewport;
+  let top = centred;
+  if (lowest <= highest) top = Math.min(Math.max(centred, lowest), highest);
+  else top = place.phone ? highest : lowest;
+  // Never so far that the card's own top leaves the screen.
+  return Math.max(0, Math.round(Math.min(top, place.cardTop)));
 }
 
+/** Where an element sits on the page, from the top of the page. */
+const onThePage = (box: DOMRect, edge: "top" | "bottom") => box[edge] + window.scrollY;
+
 /**
- * Pressed: scroll to the card and its line, smoothly where movement is welcome (`scroll-behavior` in globals.css
+ * Pressed: scroll to the card and its phrase, smoothly where movement is welcome (`scroll-behavior` in globals.css
  * decides), put the keyboard's starting point on it as a fragment would, and write nothing in the address. Without the
  * card on the page, the browser follows the fragment as usual.
  */
@@ -40,10 +68,21 @@ export function goToTheCard(event: { preventDefault: () => void }): void {
   const card = document.getElementById(CARD_FRAGMENT.slice(1));
   if (!card) return;
   event.preventDefault();
-  const line = document.querySelector(`[${FOLLOWS_CARD}]`);
-  const cardTop = card.getBoundingClientRect().top + window.scrollY;
-  const groupBottom = (line ?? card).getBoundingClientRect().bottom + window.scrollY;
-  window.scrollTo({ top: cardScrollTop({ cardTop, groupBottom, viewport: window.innerHeight }) });
+  const cardTop = onThePage(card.getBoundingClientRect(), "top");
+  // The phrase's shown text, not its element, which keeps the room of the longest phrase.
+  const said = document.querySelector(`[${FOLLOWS_CARD}]`);
+  let groupBottom = onThePage(card.getBoundingClientRect(), "bottom");
+  if (said) {
+    const range = document.createRange();
+    range.selectNodeContents(said);
+    groupBottom = onThePage(range.getBoundingClientRect(), "bottom");
+  }
+  const parts = Array.from(document.querySelectorAll('.hero-stage [data-part="body"], .hero-stage [data-part="arm"], .hero-stage [data-part="hand"]'));
+  const heroBottom = parts.length ? Math.max(...parts.map((part) => onThePage(part.getBoundingClientRect(), "bottom"))) : undefined;
+  const note = document.querySelector(`[${CARD_NOTE}]`);
+  const noteTop = note ? onThePage(note.getBoundingClientRect(), "top") : undefined;
+  const place = { cardTop, groupBottom, viewport: window.innerHeight, heroBottom, noteTop, phone: window.innerWidth < PHONE_WIDTH };
+  window.scrollTo({ top: cardScrollTop(place) });
   card.focus({ preventScroll: true });
 }
 
