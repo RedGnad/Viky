@@ -9,8 +9,8 @@ export type PhoneOperator = Readonly<{
   id: string;
   name: string;
   currency: string;
-  packages: ReadonlyArray<Readonly<{ id: string; value: string; priceUsd: number }>>;
-  range: Readonly<{ min: number; max: number; step: number; priceRate: number }> | null;
+  packages: ReadonlyArray<Readonly<{ id: string; value: string }>>;
+  range: Readonly<{ min: number; max: number; step: number }> | null;
 }>;
 
 export { phoneKindOf, type PhoneKind } from "../phone-kind";

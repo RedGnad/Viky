@@ -29,7 +29,7 @@ beforeEach(async () => {
 });
 
 const PERSON = "0x1111111111111111111111111111111111111111" as Hex;
-const ORANGE: BitrefillOperator = { id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1, priceRate: 0.0019 } };
+const ORANGE: BitrefillOperator = { id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1 } };
 
 type World = { invoices: Map<string, BitrefillInvoice>; paid: number; relayed: number; landed: "landed" | "reverted" | "unknown"; used: boolean };
 

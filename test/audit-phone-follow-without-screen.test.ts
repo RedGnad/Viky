@@ -36,7 +36,7 @@ function world() {
   const refunds: unknown[] = [];
   let paid = 0;
   const deps: PhoneDeps = {
-    operatorsFor: async () => [{ id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1, priceRate: 0.0019 } }],
+    operatorsFor: async () => [{ id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1 } }],
     createInvoice: async () => {
       const invoice: BitrefillInvoice = { id: `inv-${++count}`, status: "unpaid", payment: { method: "usdc_base", address: "0x3333333333333333333333333333333333333333", price: "4", currency: "USDC" }, orders: [{ id: "o", status: "created" }] };
       invoices.set(invoice.id, invoice);

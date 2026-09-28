@@ -30,7 +30,7 @@ beforeEach(async () => {
 
 const PERSON = "0x1111111111111111111111111111111111111111" as Hex;
 const TREASURY = "0x2222222222222222222222222222222222222222" as Hex;
-const ORANGE: BitrefillOperator = { id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1, priceRate: 0.0019 } };
+const ORANGE: BitrefillOperator = { id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1 } };
 
 let invoiceCount = 0;
 
@@ -66,7 +66,7 @@ function world(overrides: Partial<PhoneDeps> = {}, price = "50"): { deps: PhoneD
     relayLanded: async () => "landed",
     authorizationUsed: async () => false,
     store,
-    giftCardById: async (id) => ({ id, name: "Boomplay", countryCode: "SN", countryName: "Senegal", currency: "XOF", packages: [{ id: `${id}<&>1959`, value: "1959", priceUsd: 50 }], range: null }),
+    giftCardById: async (id) => ({ id, name: "Boomplay", countryCode: "SN", countryName: "Senegal", currency: "XOF", packages: [{ id: `${id}<&>1959`, value: "1959" }], range: null }),
     readOrderCode: async () => undefined,
     seal: (text) => `sealed:${Buffer.from(text).toString("base64")}`,
     open: (sealed) => Buffer.from(sealed.slice("sealed:".length), "base64").toString(),

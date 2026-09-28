@@ -40,7 +40,7 @@ function world(over: Partial<PhoneDeps> = {}) {
   const invoices = new Map<string, BitrefillInvoice>();
   const w = { paidOnBase: 0, toBridge: [] as Array<{ to: Hex; ausdUnits: bigint; nonce: Hex }>, refunds: [] as unknown[], relayed: 0, used: false as boolean | null, bridge: "pending" as const as string };
   const deps: PhoneDeps = {
-    operatorsFor: async () => [{ id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1, priceRate: 0.0019 } }],
+    operatorsFor: async () => [{ id: "orange-senegal", name: "Orange Senegal", currency: "XOF", packages: [], range: { min: 500, max: 50000, step: 1 } }],
     createInvoice: async () => {
       const invoice: BitrefillInvoice = { id: `inv-${++count}`, status: "unpaid", payment: { method: "usdc_base", address: PAY_TO, price: "1", currency: "USDC" }, orders: [{ id: "o", status: "created" }] };
       invoices.set(invoice.id, invoice);

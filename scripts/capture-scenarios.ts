@@ -1220,8 +1220,8 @@ function withdrawal(): Scenario[] {
           status: 200,
           body: {
             cards: [
-              { id: "amazon_fr-france", name: "Amazon.fr", worksIn: "Works in: France", currency: "EUR", range: null, packages: [10, 25, 50].map((value) => ({ id: `amazon-${value}`, value: String(value), priceUsd: value * 1.1537 })) },
-              { id: "jumia-senegal", name: "Jumia", worksIn: "Works in: Senegal", currency: "XOF", range: null, packages: [5000, 10000, 20000].map((value) => ({ id: `jumia-${value}`, value: String(value), priceUsd: value / 568.6 })) },
+              { id: "amazon_fr-france", name: "Amazon.fr", worksIn: "Works in: France", currency: "EUR", range: null, packages: [10, 25, 50].map((value) => ({ id: `amazon-${value}`, value: String(value) })) },
+              { id: "jumia-senegal", name: "Jumia", worksIn: "Works in: Senegal", currency: "XOF", range: null, packages: [5000, 10000, 20000].map((value) => ({ id: `jumia-${value}`, value: String(value) })) },
             ],
           },
         }), "GET /api/giftcards");
