@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { agreeFirst } from "@/src/client/consent";
 import { ApiError } from "@/src/client/api";
 import { runShownProof } from "@/src/client/gift";
+import { verdictOnly } from "@/src/condition-privacy";
 import { conditionById } from "@/src/conditions";
 import { SHOW_PROOF as W } from "@/src/sentences";
 import { BODY, HELP, PRIMARY_BUTTON } from "../components/ui";
@@ -88,7 +89,9 @@ export function ShowProof({
   return (
     <section className={CARD}>
       <p className="font-medium">{W.title(condition.source)}</p>
-      <p className={HELP}>{W.whatHappens(condition.source)}</p>
+      <p className={HELP}>
+        {W.whatHappens(condition.source)} {W.kept[conditionId] ?? (verdictOnly(conditionId) ? W.keptVerdict : W.keptNumber)}
+      </p>
       <button ref={button} type="button" onClick={() => void show()} disabled={busy} className={PRIMARY_BUTTON}>
         {state.at === "opening" ? W.opening : state.at === "waiting" ? W.waiting : W.button}
       </button>

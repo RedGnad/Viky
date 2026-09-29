@@ -19,7 +19,8 @@ import { giftReadingLeave } from "@/src/consent-guard";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { admitRelay } from "@/src/relay-admission";
 import { escrowOf, RelayerError } from "@/src/relayer";
-import { holdForReview } from "@/src/portal-store";
+import { holdForReview, loadPortal } from "@/src/portal-store";
+import { sendReviewAlert } from "@/src/provider-alert";
 import { shownConditionById } from "@/src/shown-conditions";
 import { verifyShownSession } from "@/src/shown-verification";
 
@@ -85,7 +86,12 @@ export async function POST(request: Request) {
         record: recordReading,
         milestoneRecordOf: loadMilestoneGift,
         leave: giftReadingLeave,
-        holdForReview,
+        // A first proof held for review is checked within an hour (the founder, 29 Sep 2026): the operator is told at once.
+        holdForReview: async (review) => {
+          const held = await holdForReview(review);
+          if (held) await sendReviewAlert(review, (await loadPortal(review.portalId).catch(() => null))?.university ?? null);
+          return held;
+        },
         milestoneOf: async (giftId) => {
           if (!isMilestoneGiftId(giftId)) return null;
           const state = await readMilestoneGift(giftEscrow, giftId);
