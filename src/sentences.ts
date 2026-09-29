@@ -389,6 +389,9 @@ export const GIFT_CARD = {
   theirsGoneBack: (theirs: string, total: string, back: string) => `${theirs} of ${total} theirs, ${back} gone back`,
   milestoneToday: (reading: number, target: number) => `Today: ${reading}, target ${target}.`,
   milestoneNotRead: (target: number) => `Target ${target}. Not read yet.`,
+  /** A climb whose figures this reader is not shown: where it stands goes only where the names go (29 Sep 2026). */
+  milestoneUnderWay: "Under way.",
+  milestoneEnded: "It has ended.",
   milestoneReached: (target: number) => `Reached ${target}.`,
   milestoneMissed: (target: number) => `Did not reach ${target} in time.`,
   /** "$25.00, by 1 Oct 2026" once started; "$25.00, within 30 days of connecting" before. */
@@ -1316,29 +1319,6 @@ export const RELAY_CEILING = {
   topUpsForGift: "Viky has already readied this account twice to cancel this gift. Nothing was changed.",
 } as const;
 
-/**
- * The funder's private space on You (D202): their people's nicknames and their own notes, sealed in this browser with
- * a key the passkey gives under its own salt. Every sentence here is true of `app/kit/PrivateSpace.tsx`: the server
- * keeps only the sealed envelope, and the first name on a gift stays in clear on the gift.
- */
-export const PRIVATE = {
-  title: "Private to you",
-  what: "Nicknames for the people you back, and your own notes. Sealed on this device with your passkey before they are kept, so Viky cannot read them. The same passkey opens them on your other devices.",
-  firstNameStays: "The first name you wrote on a gift stays on the gift, where they read it.",
-  open: "Open",
-  opening: "Opening",
-  nobodyYet: "Nobody yet. The people you back appear here once you offer a gift.",
-  nickname: (firstName: string) => `Your name for ${firstName}`,
-  notes: "Your notes",
-  keep: "Keep",
-  keeping: "Keeping",
-  kept: "Kept.",
-  close: "Close",
-  notThisPasskey: "This passkey does not open it. Sign in with the passkey you kept it with.",
-  notASpace: "What is kept could not be read. Nothing was changed.",
-  changedElsewhere: "It was changed on another device. Open it again to see the latest.",
-  failed: "It could not be reached. Try again in a moment.",
-} as const;
 
 /** The help page: five questions, each answered with a sentence the product already keeps true. */
 export const HELP = {

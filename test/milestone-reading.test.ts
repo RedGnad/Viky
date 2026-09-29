@@ -387,3 +387,33 @@ test("every gesture on a gift's page answers beside its own button, and nothing 
   assert.match(page, /default:\n        return A\.failed;/);
   assert.match(page, /outcome\.message\.trim\(\)\.length > 0 \? outcome\.message : A\.failed/);
 });
+
+test("the account read and the figures of a climb go only where the names go: funder, recipient, or the link's key", () => {
+  const latest: MilestoneReading = { giftId: "1000000", purpose: "look", attested: false, username: "lea_plays", playerId: "41", rating: 1410, ratedAt: NOW, rd: null, observedAt: NOW, nullifier: null, outcome: "notYet", txHash: null };
+  const status = (viewer: { isRecipient: boolean; isFunder: boolean; holdsTheLink: boolean }) =>
+    milestoneStatusOf({ record: BOUND, milestone: null, state: CLIMBING, contract: CONTRACT, latest, last: latest, reachedAt: null, viewer, nowSeconds: NOW, targetWords: "14.00 / 20" });
+  const stranger = status({ isRecipient: false, isFunder: false, holdsTheLink: false });
+  assert.equal(stranger.goalAccount.username, null);
+  assert.equal(stranger.todayReading, null);
+  assert.equal(stranger.startReading, null);
+  assert.equal(stranger.target, null);
+  assert.equal(stranger.standingAtOffer, null);
+  assert.equal(stranger.targetWords, null);
+  assert.equal(stranger.names, null);
+  for (const viewer of [{ isRecipient: true, isFunder: false, holdsTheLink: false }, { isRecipient: false, isFunder: true, holdsTheLink: false }, { isRecipient: false, isFunder: false, holdsTheLink: true }]) {
+    const seen = status(viewer);
+    assert.equal(seen.todayReading, 1410);
+    assert.notEqual(seen.target, null);
+    assert.equal(seen.goalAccount.username, BOUND.goalUsername);
+  }
+});
+
+test("the public journal gives why a reading was refused to the funder and the recipient only; disconnecting erases the source's ids; counting reads by the condition's nature", () => {
+  const journal = readFileSync("app/api/gift/[id]/journal/route.ts", "utf8");
+  assert.match(journal, /insider \? readings : readings\.map\(\(reading\) => \(\{ \.\.\.reading, outcome: reading\.outcome\.startsWith\("refused:"\) \? "refused" : reading\.outcome \}\)\)/);
+  assert.match(journal, /account === record\.funder\.toLowerCase\(\) \|\| account === record\.recipient\?\.toLowerCase\(\)/);
+  for (const file of ["src/connect-strava.ts", "src/connect-fitbit.ts"]) assert.match(readFileSync(file, "utf8"), /await eraseConnection\(giftId\);\n[^\n]*\n\s*await forgetConnectedAccount\(giftId\);/, file);
+  assert.match(readFileSync("src/gift-store.ts", "utf8"), /SET goal_username = NULL, goal_profile_id = NULL/);
+  const daily = readFileSync("src/gift-status.ts", "utf8");
+  assert.match(daily, /username: names \? \(record\?\.goalUsername \?\? null\) : null,/);
+});

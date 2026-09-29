@@ -43,6 +43,10 @@ export function milestoneStatusOf(input: {
   const cadence = condition ? cadenceOfGoal(condition, state.goalType) : undefined;
   const started = state.deadline > 0;
   const reached = state.settled && state.earned > 0n;
+  // Gift numbers follow each other, so what identifies the person or measures them goes only where the names go: the
+  // funder, the person it is for, or whoever holds the link's key (the founder, 29 Sep 2026). The account read and the
+  // figures of the climb, a reading, a target, where it started, are theirs as much as a first name is.
+  const insider = viewer.isRecipient || viewer.isFunder || viewer.holdsTheLink;
   return {
     kind: "milestone",
     shape: state.shape === SHAPE_HAVE_OR_NOT ? "certificate" : "climb",
@@ -52,7 +56,7 @@ export function milestoneStatusOf(input: {
     youAreTheFunder: viewer.isFunder,
     names: viewer.isRecipient || viewer.isFunder || viewer.holdsTheLink ? { recipientName: record.recipientName, funderName: record.funderName } : null,
     goalAccount: {
-      username: record.goalUsername,
+      username: insider ? record.goalUsername : null,
       bound: record.boundAt !== null,
       code: viewer.isRecipient ? record.bindingCode : null,
       codeExpiresAt: viewer.isRecipient ? (record.bindingCodeExpiresAt?.toISOString() ?? null) : null,
@@ -60,9 +64,9 @@ export function milestoneStatusOf(input: {
     },
     amount: state.amount.toString(),
     amountDisplay: formatAusd(state.amount),
-    startReading: started ? Number(state.startingValue) : null,
-    target: Number(state.target),
-    todayReading: input.latest?.rating ?? null,
+    startReading: insider && started ? Number(state.startingValue) : null,
+    target: insider ? Number(state.target) : null,
+    todayReading: insider ? (input.latest?.rating ?? null) : null,
     readAtMs: input.latest ? input.latest.observedAt * 1_000 : null,
     deadlineMs: started ? state.deadline * 1_000 : null,
     durationDays: state.durationDays,
@@ -84,10 +88,10 @@ export function milestoneStatusOf(input: {
     cadence: { id: cadence?.id ?? "", label: cadence?.label ?? "" },
     accountClosed: input.last?.outcome === "refused:ACCOUNT_CLOSED",
     maximumStart: Number(state.maximumStart),
-    standingAtOffer: input.milestone?.standingAtOffer ?? null,
+    standingAtOffer: insider ? (input.milestone?.standingAtOffer ?? null) : null,
     marathon: marathonOf(input),
     wca: wcaOf(input),
-    targetWords: input.targetWords ?? null,
+    targetWords: insider ? (input.targetWords ?? null) : null,
     review: !reached && input.review && input.review.status !== "pinned" ? { status: input.review.status, ...(input.review.message ? { message: input.review.message } : {}) } : null,
   };
 }

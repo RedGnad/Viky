@@ -42,8 +42,9 @@ export async function giftStatusFor(id: string, reader: GiftReader): Promise<Any
   const viewerIsFunder = account !== null && account === gift.funder.toLowerCase();
   const holdsTheLink = holdsGiftLink(record, reader.linkKey);
   const names = viewerIsRecipient || viewerIsFunder || holdsTheLink ? { recipientName: record.recipientName, funderName: record.funderName } : null;
+  // The account read goes only where the names go: gift numbers follow each other (the founder, 29 Sep 2026).
   const goalAccount = {
-    username: record?.goalUsername ?? null,
+    username: names ? (record?.goalUsername ?? null) : null,
     source: record?.usernameSource ?? null,
     bound: record?.boundAt !== null && record?.boundAt !== undefined,
     code: viewerIsRecipient ? (record?.bindingCode ?? null) : null,
