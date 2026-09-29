@@ -563,7 +563,8 @@ export const EDX_CERTIFICATE: Condition = {
   state: "open",
   source: "edX",
   family: "exam",
-  name: "An edX certificate",
+  // The schools behind the courses, which is what a funder recognises (the founder, 29 Sep 2026), in the register's 30.
+  name: "Harvard, MIT and more, on edX",
   help: "The verified certificate's public page on edX, shared when they have it: the course and the day are read from it, and edX checks identity for that track.",
   link: { kind: "link", label: "The link to your certificate", help: "In edX, open the certificate and copy the whole link from your browser, courses.edx.org/certificates/ followed by its id, then paste it here." },
   reading: "edx-certificate",
