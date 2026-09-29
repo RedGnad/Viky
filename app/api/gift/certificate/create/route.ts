@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isSubjectKey, keyedSubject } from "@/src/subject-key";
 import { getAddress, isAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { NO_CONTACT_HASH } from "@/src/contact-hash";
@@ -108,6 +109,10 @@ export async function POST(request: Request) {
     if (!isAddress(refundToRaw)) throw new GiftApiError("INVALID_REFUND", "The return destination is invalid");
     const salt = String(body.salt ?? "");
     if (!HEX32.test(salt)) throw new GiftApiError("INVALID_SALT", "Please try again");
+    // The key the subject is hashed with (src/subject-key.ts), drawn by the funder's browser: every gift made since 29
+    // Sep 2026 carries one. A page open from before sends none and is asked to load again.
+    const subjectKey = body.subjectKey;
+    if (!isSubjectKey(subjectKey)) throw new GiftApiError("INVALID_SALT", "This page is out of date. Load it again and send the gift from there. Nothing was taken.");
     const a = (body.authorization ?? {}) as Record<string, unknown>;
     if (!HEX32.test(String(a.nonce ?? "")) || !HEX32.test(String(a.r ?? "")) || !HEX32.test(String(a.s ?? "")) || (Number(a.v) !== 27 && Number(a.v) !== 28)) {
       throw new GiftApiError("INVALID_AUTHORIZATION", "The signed authorization is malformed");
@@ -122,7 +127,7 @@ export async function POST(request: Request) {
       // A grade is typed on its scale and signed in hundredths, the same integer the browser signed (D174).
       target: BigInt(certificate.targetUnits ? certificate.targetUnits(target) : target),
       maximumStart: 0n,
-      subject: certificate.subject({ name: personName, course }),
+      subject: keyedSubject(certificate.subject({ name: personName, course }), subjectKey),
       durationDays,
       amount,
       salt: salt as Hex,
@@ -160,6 +165,7 @@ export async function POST(request: Request) {
         ...(certificate.portal && course ? { portal: course } : {}),
         ...(!certificate.portal && certificate.course && course ? { course } : {}),
         ...(gradeScale ? { gradeScale } : {}),
+        subjectKey,
       },
     });
 

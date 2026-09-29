@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { keyedSubject, newSubjectKey, signedSubjectOf } from "../src/subject-key";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import type { Hex } from "viem";
@@ -181,4 +182,28 @@ test("a gift on this result ends well inside the two years, on the screen as in 
   assert.match(card, /durationBounds\(draft\.conditionId\)/);
   // Since D130 the card offers those bounds as its three chips and nothing else, so nothing outside them can be asked.
   assert.match(card, /const quick = \[bounds\.min, bounds\.suggested, bounds\.max\];/);
+});
+
+test("a gift made with a subject key is settled by its certificate and its key, and a guess at the open subject is not its subject", async () => {
+  const key = newSubjectKey();
+  const onChain = keyedSubject(SUBJECT, key);
+  assert.notEqual(onChain, SUBJECT, "what is on chain is not the hash of the name anybody could compute");
+  assert.equal(keyedSubject(SUBJECT, key), onChain, "the same key gives the same subject");
+  assert.notEqual(keyedSubject(SUBJECT, newSubjectKey()), onChain, "and another key another");
+  assert.equal(signedSubjectOf(SUBJECT, null), SUBJECT, "a gift made before keys keeps its open subject");
+
+  const sent: MilestoneProofMessage[] = [];
+  const settled = await proveCertificate({ giftId: "1000001", link: "x" }, deps({ readState: async () => state({ subject: onChain }), subjectKey: async () => key }, sent));
+  assert.equal(settled.kind, "reached");
+  assert.equal(sent[0]?.identityHash, onChain, "the attestation carries the subject the contract holds");
+  const without = await proveCertificate({ giftId: "1000001", link: "x" }, deps({ readState: async () => state({ subject: onChain }) }));
+  assert.equal(without.kind, "refused", "without the key the certificate matches nothing");
+
+  const client = readFileSync("src/client/certificate-gift.ts", "utf8");
+  assert.match(client, /subject: keyedSubject\(input\.certificate\.subject\(\{ name: input\.personName, course: input\.course \}\), subjectKey\)/);
+  const route = readFileSync("app/api/gift/certificate/create/route.ts", "utf8");
+  assert.match(route, /if \(!isSubjectKey\(subjectKey\)\) throw new GiftApiError/, "every new gift carries one");
+  assert.match(route, /subject: keyedSubject\(certificate\.subject\(\{ name: personName, course \}\), subjectKey\)/);
+  assert.match(route, /subjectKey,\n\s*\},/, "kept with the gift, never on chain");
+  assert.match(readFileSync("src/shown-verification.ts", "utf8"), /const subject = open \? signedSubjectOf\(open, record\?\.subjectKey\) : open;/);
 });
