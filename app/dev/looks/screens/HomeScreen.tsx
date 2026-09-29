@@ -36,7 +36,6 @@ export function HomeScreen() {
           </p>
           {/* Zero is "no clock yet" (app/kit/clock.ts): a rate dated from it would name a day in 1970. */}
           {nowMs === 0 ? null : <p className={HELP}>{LAB.rateCaption(rateDate(nowMs), ACCOUNT.dollars)}</p>}
-          <p className={HELP}>{HOME.keep}</p>
         </section>
         <Link href={labHref("amount")} className={PRIMARY_BUTTON}>
           {HOME.offer}

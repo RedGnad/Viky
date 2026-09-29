@@ -5,7 +5,7 @@ import { CARD_PAYOUT_CLOSED } from "./use-money";
 
 /**
  * Every country where at least one way out works (D274, the founder's decision of 27 Sep 2026): the list a person picks
- * where they live from, in Me and under "Use your money". The union of what each service publishes, read live and held
+ * where they live from, in Me and under "Spend or withdraw". The union of what each service publishes, read live and held
  * for a day, never copied into the repository:
  * - Ramp's payout methods and their countries (`euroRailCountries`, D96);
  * - Mercuryo's own list of countries (`GET https://api.mercuryo.io/v1.6/lib/countries`, no key, read 27 Sep 2026),

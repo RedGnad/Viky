@@ -6,14 +6,17 @@ import { useAccount } from "@/src/account/provider";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { currencyOf } from "@/src/currencies";
 import { PRODUCT_LOCALE } from "@/src/moments";
-import { CATALOGUE, ME as W } from "@/src/sentences";
-import { CARD, HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../components/ui";
+import { CATALOGUE, HOME as H, ME as W } from "@/src/sentences";
+import { AMOUNT_IN_TITLE, CARD, HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../components/ui";
 import { CurrencySheet } from "./CurrencySheet";
 import { HeadCharacter } from "./HeadCharacter";
 import { Install } from "./Install";
 import { MoneyKey } from "./MoneyKey";
+import { dollarsHeld, holdsAnything, useHoldings } from "./money";
+import { useMyGifts } from "./my-gifts";
 import { PrivateSpace } from "./PrivateSpace";
 import { SignInDoor } from "./SignInDoor";
+import { SpendOrWithdraw } from "./SpendOrWithdraw";
 import { Shell } from "./Shell";
 import { WhereYouLive } from "./WhereYouLive";
 
@@ -36,6 +39,9 @@ export function Me() {
   const [leaving, setLeaving] = useState(false);
   /** What every screen reads in, and the list it may be changed from, both from one place (D152). */
   const money = useDisplayCurrency(address);
+  const holdings = useHoldings(address);
+  const { gifts } = useMyGifts(address);
+  const figure = holdings === null ? undefined : money.figure(dollarsHeld(holdings));
   const [reading, setReading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [until, setUntil] = useState<string | null>(null);
@@ -69,6 +75,16 @@ export function Me() {
 
   return (
     <Shell kind="destination" active="me" title={W.title} character={<HeadCharacter scene="me" />}>
+      {/* The money at the top, with the same action as under Home's balance (the founder, 29 Sep 2026; Venmo's Me tab
+          sets its wallet and "Transfer" there). The figure is Home's, in the account's own currency (D147). */}
+      <section className={CARD}>
+        <p className={HELP}>{H.inAccount}</p>
+        <div className="flex flex-wrap items-center justify-between gap-[var(--space-md)]">
+          <p className={`${AMOUNT_IN_TITLE} text-[length:var(--type-card-amount)] leading-[1] tracking-[-0.02em]`}>{figure ? figure.text : "…"}</p>
+          {holdings !== null && holdsAnything(holdings, gifts) ? <SpendOrWithdraw /> : null}
+        </div>
+      </section>
+
       {/* Where the person lives, a fact of the account (D274): asked once, then one line with "change". */}
       <WhereYouLive address={address} />
 

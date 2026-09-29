@@ -44,13 +44,18 @@ function icoAround(png: Buffer, size: number): Buffer {
 const FILLS: Readonly<Record<string, number>> = {};
 const FULL = 1;
 
-const SIZES = [
+/**
+ * The icons a browser tab shows, app/icon.png and the 64 the .ico is made of, are the character alone on nothing (the
+ * founder, 29 Sep 2026): a tab has its own ground. The ones a phone puts on a home screen keep their tile, because iOS
+ * fills what is transparent with black and a maskable icon must cover its square.
+ */
+const SIZES: readonly Readonly<{ file: string; size: number; transparent?: boolean }>[] = [
   { file: "public/icons/icon-512x512.png", size: 512 },
   { file: "public/icons/android-chrome-192x192.png", size: 192 },
   { file: "public/icons/apple-touch-icon.png", size: 180 },
-  { file: "app/icon.png", size: 512 },
+  { file: "app/icon.png", size: 512, transparent: true },
   { file: "app/apple-icon.png", size: 180 },
-  { file: "public/icons/icon-64x64.png", size: 64 },
+  { file: "public/icons/icon-64x64.png", size: 64, transparent: true },
   // The one a launcher crops, at the size it wants: Android prefers the largest maskable icon, and upscaling the
   // 192 for a 512 slot is what made the icon on the founder's home screen look small and soft (D142).
   { file: "public/icons/icon-512-maskable.png", size: 512 },
@@ -71,13 +76,13 @@ async function main() {
   console.log("app/kit/figure-icon.ts");
   const browser = await chromium.launch();
   try {
-    for (const { file, size } of SIZES) {
+    for (const { file, size, transparent } of SIZES) {
       const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
       await page.setContent(
-        `<!doctype html><body style="margin:0;width:${size}px;height:${size}px;background:${COLOURS.light.background};display:flex;align-items:center;justify-content:center">` +
+        `<!doctype html><body style="margin:0;width:${size}px;height:${size}px;background:${transparent ? "transparent" : COLOURS.light.background};display:flex;align-items:center;justify-content:center">` +
           `<div style="width:${Math.round(size * (FILLS[file] ?? FULL))}px">${svg}</div></body>`,
       );
-      const picture = await page.screenshot({ clip: { x: 0, y: 0, width: size, height: size } });
+      const picture = await page.screenshot({ clip: { x: 0, y: 0, width: size, height: size }, omitBackground: Boolean(transparent) });
       await page.close();
       mkdirSync(resolve(file, ".."), { recursive: true });
       writeFileSync(resolve(file), picture);

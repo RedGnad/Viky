@@ -285,7 +285,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       {
         name: "The account holds something",
         when: "anything at all is in the account, of any of the three coins, from a gift taken, a change, or a payment left over",
-        says: ["In your account", "Yours to keep, to put behind another goal, or to use.", "Use your money"],
+        says: ["In your account", "Spend or withdraw", "Offer a gift"],
       },
       {
         name: "Something is ready to send to a payout service",
@@ -315,7 +315,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
     screen: "Their money",
     file: "src/sentences.ts",
     states: [
-      { name: "What is there", when: "the way out is opened, from the home page, with anything in the account", says: ["Use your money", "Yours"] },
+      { name: "What is there", when: "the way out is opened, from the home page, with anything in the account", says: ["Spend or withdraw", "Yours"] },
       {
         name: "The two ways out",
         when: "nothing is ready yet: a card per service, with where it pays, what it keeps, and where that was read",

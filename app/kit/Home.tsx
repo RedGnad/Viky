@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo } from "react";
 import { useAccount } from "@/src/account/provider";
 import { CATALOGUE, HOME as W, ME, NAV } from "@/src/sentences";
-import { BODY, HELP, HERO, LEAD, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "../components/ui";
+import { BODY, HELP, HERO, LEAD, PRIMARY_BUTTON, TITLE } from "../components/ui";
 import { Arrival, Reveal, type ArrivalGift } from "./Motion";
 import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
@@ -18,6 +18,7 @@ import { SideCrowd } from "./SideCrowd";
 import { GoalsGoingBy } from "./GoalsGoingBy";
 import type { LandingGoals } from "@/src/landing-goals";
 import { MoneyHero } from "./MoneyHero";
+import { SpendOrWithdraw } from "./SpendOrWithdraw";
 import { ReachedMoments, reachedOfSummary, type ReachedGift } from "./ReachedMoment";
 import { OfferCard } from "./offer/OfferCard";
 import { Shell } from "./Shell";
@@ -162,20 +163,13 @@ export function Home({
       <Shell kind="destination" active="home" width="card" title={NAV.home} character={<HeadCharacter scene="home" />}>
         <ReachedMoments gifts={owed} />
         <MoneyHero address={address} holdings={holdings} />
-        {/* The way out keeps its place while the balance is being read (D147), so the card under it does not jump
-            down when the answer lands. The room is held only on a device that saw money here last time: a first
-            visit holds nothing, and an account with nothing to take never keeps a hole where a button is not. */}
-        {holdings === null ? (
-          sawMoney ? (
-            <span aria-hidden className={`${SECONDARY_BUTTON} invisible`}>
-              {W.takeItOut}
-            </span>
-          ) : null
-        ) : holdsAnything(holdings, gifts) ? (
-          <Link href="/cash-out" className={SECONDARY_BUTTON}>
-            {W.takeItOut}
-          </Link>
-        ) : null}
+        {/* The balance's own action, small and under it (the founder, 29 Sep 2026). It keeps its place while the
+            balance is being read (D147), so the card under it does not jump down when the answer lands. The room is
+            held only on a device that saw money here last time: a first visit holds nothing, and an account with
+            nothing to take never keeps a hole where a button is not. */}
+        {holdings === null ? sawMoney ? <SpendOrWithdraw holding /> : null : holdsAnything(holdings, gifts) ? <SpendOrWithdraw /> : null}
+        {/* The gift form under its own title, apart from the money above it: nothing between the two reads as one. */}
+        <h2 className={`${TITLE} mt-[var(--space-lg)]`}>{W.offer}</h2>
         {/* The card starts on the account's own money when it holds any (D157). */}
         <OfferCard holdings={holdings} />
         {/* The gifts land one after another rather than all at once (D154). */}
