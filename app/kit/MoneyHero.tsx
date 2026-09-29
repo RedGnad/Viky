@@ -46,7 +46,6 @@ export function MoneyHero({ address, holdings }: Readonly<{ address: string | un
         <p aria-hidden className={`${AMOUNT} text-[var(--on-surface-faint)]`} style={chars(5)}>
           …
         </p>
-        <p className={HELP}>{W.keep}</p>
       </section>
     );
   }
@@ -59,7 +58,6 @@ export function MoneyHero({ address, holdings }: Readonly<{ address: string | un
         <p className={AMOUNT} style={chars(ready.ready.number.length)}>
           {ready.ready.number}
         </p>
-        <p className={HELP}>{W.keep}</p>
       </section>
     );
   }
@@ -75,7 +73,6 @@ export function MoneyHero({ address, holdings }: Readonly<{ address: string | un
       {ready && !ready.native && dollars > 0n ? (
         <p className={HELP}>{W.readyLine(ready.way.name, exitAmount({ number: ready.ready.number, native: false }).lead)}</p>
       ) : null}
-      <p className={HELP}>{W.keep}</p>
     </section>
   );
 }

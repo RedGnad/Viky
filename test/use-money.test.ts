@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CARD_PAYOUT_CLOSED, GIFT_CARD_SUN_FROM_EUROS, inTheSun, orderUses, SMALL_SHARE, smallFor, usesFor } from "../src/use-money";
+import { CARD_PAYOUT_CLOSED, GIFT_CARD_SUN_FROM_EUROS, inTheSun, orderUses, SMALL_SHARE, smallFor, usesFor, usesSentence } from "../src/use-money";
 
-/** "Use your money" (D270): the uses for the number's country, and the one that takes the sun. */
+/** "Spend or withdraw", once "Use your money" (D270): the uses for the number's country, and the one that takes the sun. */
 
 const serves = { Ramp: "serves", Mercuryo: "serves" } as const;
 const senegal = { Ramp: "does-not", Mercuryo: "serves" } as const;
@@ -51,4 +51,13 @@ test("the gift card's button takes the main colour from an ordinary card's price
   assert.equal(inTheSun("giftcard", 1, 9.99), false, "below it, a second choice");
   assert.equal(inTheSun("giftcard", 1, undefined), false, "an amount not known yet is not in the sun");
   assert.equal(inTheSun("bank", 2, 500), false, "only the gift card joins the first");
+});
+
+test("the line under Spend or withdraw says the ways shown, in their order, and never one that is not offered", () => {
+  assert.equal(usesSentence(["giftcard", "phone", "bank", "card"]), "A gift card, credit for your phone, or a transfer to your bank or card.");
+  assert.equal(usesSentence(["bank", "giftcard", "card", "phone"]), "A transfer to your bank or card, a gift card, or credit for your phone.");
+  assert.equal(usesSentence(["phone", "giftcard", "card"]), "Credit for your phone, a gift card, or a transfer to your card.", "no bank where it pays nobody");
+  assert.equal(usesSentence(["phone"]), "Credit for your phone.");
+  assert.equal(usesSentence(["phone", "giftcard"]), "Credit for your phone or a gift card.");
+  assert.equal(usesSentence([]), null);
 });

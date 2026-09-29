@@ -20,7 +20,7 @@ import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords } from "@/src/rail-country";
 import { feeSentence, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "@/src/rails";
 import { CASH_OUT as W, USE_MONEY as U, WHERE_YOU_LIVE as L } from "@/src/sentences";
-import { inTheSun, orderUses, usesFor } from "@/src/use-money";
+import { inTheSun, orderUses, usesFor, usesSentence } from "@/src/use-money";
 import { useAccountCountry } from "@/src/client/account-country";
 import { CountryPicker } from "../kit/CountryPicker";
 import { AccountPanel } from "./AccountPanel";
@@ -602,11 +602,13 @@ export function CashOut() {
             {alert("gather")}
           </section>
         )}
-        {/* "Use your money" (D270): the uses for the number's country, one card each, the first in the sun. The line
-            under the title says which country filters and orders them, and "change" answers it; when the two signals
+        {/* "Spend or withdraw" (D270, renamed 29 Sep 2026): the uses for the number's country, one card each, the first
+            in the sun. Under the title, the ways shown here in one sentence and in their order, never one that is not
+            offered; then the country that filters and orders them, and "change" answers it; when the two signals
             disagree, the question is open from the start and nothing is ordered until it is answered (R1). */}
         <div className="flex flex-col gap-[var(--space-xs)]">
           {heading}
+          {usesSentence(uses) ? <p className={BODY}>{usesSentence(uses)}</p> : null}
           {/* "change" is the same key as Me's (the founder did not see it as a link in the label, 27 Sep 2026). */}
           <div className="flex flex-wrap items-center justify-between gap-[var(--space-sm)]">
             <p className={CARD_LABEL}>{countryNow ? U.forWhereYouLive(countryInWords(countryNow) ?? countryNow.toUpperCase()) : U.forYourNumber}</p>

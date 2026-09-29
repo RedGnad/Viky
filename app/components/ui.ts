@@ -135,7 +135,7 @@ export const LEAD = "text-[length:var(--type-lead)] leading-[var(--type-lead-lea
  * compose MARK rather than naming the face again: the face is still set in exactly two places in this file.
  */
 export const CARD_TITLE = `${TITLE_FACE} text-[length:var(--type-card-who)] leading-[var(--type-card-who-leading)] tracking-[var(--type-card-who-tracking)]`;
-/** A page's title set in the title face, as the "Use your money" mockups set it under the balance (D270). */
+/** A page's title set in the title face, as the "Spend or withdraw" screen sets it under the balance (D270). */
 export const TITLE_IN_FACE = `${TITLE_FACE} text-[length:var(--type-title)] leading-[var(--type-title-leading)]`;
 
 /**

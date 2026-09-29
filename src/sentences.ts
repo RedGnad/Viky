@@ -301,8 +301,11 @@ export const HOME = {
   ],
   inAccount: "In your account",
   /** Under the amount at display size: what is approximate, when the rate was read, and the dollars themselves. */
-  keep: "Yours to keep, to put behind another goal, or to use.",
-  takeItOut: "Use your money",
+  /**
+   * The balance's own action (the founder, 29 Sep 2026): a first outside tester read "Use your money" as "use it to make
+   * a gift". Both verbs, since the ways out lead with gift cards and phone credit, which are spent, not withdrawn.
+   */
+  takeItOut: "Spend or withdraw",
   readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,
   readyLabel: (name: string) => `Ready to send to ${name}`,
   moving: "What's moving",
@@ -1366,7 +1369,7 @@ export const HELP = {
 } as const;
 
 /**
- * "Use your money" (D270, the founder's decision of 26 Sep 2026; the mockups use.html and use-france.html): the way
+ * "Spend or withdraw", once "Use your money" (D270, the founder's decision of 26 Sep 2026; the mockups use.html and use-france.html): the way
  * out said as uses, every sentence Viky's own, and never a word of crypto, which only the partner's own page may say.
  * A partner is named, once, before the person goes to it.
  */
@@ -1401,12 +1404,17 @@ export const USE_MONEY = {
     action: "Choose a card",
   },
   keepHere: "Or keep it here: it stays yours from one gift to the next.",
+  /**
+   * The line under the title, built from the cards shown for the country and in their order (the founder, 29 Sep 2026):
+   * never a way that is not offered there. The bank and the card are one transfer when both are offered.
+   */
+  ways: { giftcard: "a gift card", phone: "credit for your phone", bank: "a transfer to your bank", card: "a transfer to your card", bankOrCard: "a transfer to your bank or card" },
   nothingHere: "Nothing works for a number there yet. It stays yours here.",
 } as const;
 
 /**
  * Where the person lives, a fact of the account (D274, the founder's decision of 27 Sep 2026): asked once in Me, from
- * the countries where at least one way out works, and read by "Use your money" and the gift cards.
+ * the countries where at least one way out works, and read by "Spend or withdraw" and the gift cards.
  */
 export const WHERE_YOU_LIVE = {
   question: "Where do you live?",
@@ -1423,7 +1431,7 @@ export const WHERE_YOU_LIVE = {
 } as const;
 
 export const CASH_OUT = {
-  title: "Use your money",
+  title: "Spend or withdraw",
   yourMoney: "Your money",
   /** The balance at the head of the way out, and what it is for (out.html, 19 Sep 2026). */
   keepOrTakeOut: "Yours to keep, or to take out",
@@ -1585,10 +1593,13 @@ export const CASH_OUT = {
 /** The home page's card about money in the account, which is where the way out begins (W1). */
 export const YOUR_MONEY = {
   label: "In your account",
-  keep: "Yours to keep, to put behind another goal, or to use.",
   readyLine: (name: string, amount: string) => `${amount} of it is ready to send to ${name}.`,
   readyLabel: (name: string) => `Ready to send to ${name}`,
-  takeItOut: "Use your money",
+  /**
+   * The balance's own action (the founder, 29 Sep 2026): a first outside tester read "Use your money" as "use it to make
+   * a gift". Both verbs, since the ways out lead with gift cards and phone credit, which are spent, not withdrawn.
+   */
+  takeItOut: "Spend or withdraw",
 } as const;
 
 /** The account's own code, on the account page, where another account or a payout service asks for it (decision 11). */

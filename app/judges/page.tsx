@@ -79,7 +79,7 @@ export default async function JudgesPage() {
           </li>
           <li>
             Or open the gift the founder made for you from the operator account: it is in your name, and you can take
-            it out as phone credit or as a gift card from Use your money.
+            it out as phone credit or as a gift card from Spend or withdraw.
           </li>
           <li>
             Mera&apos;s stateless test runs on this same account: sign out, then sign in from another browser or device

@@ -9,7 +9,7 @@ import { Sheet } from "./Sheet";
 
 /**
  * Where the person lives, chosen from every country where at least one way out works (D274): the same list in Me and
- * under "Use your money", named in the words `Intl` gives and sorted by those names. Chosen in a sheet with Viky's own
+ * under "Spend or withdraw", named in the words `Intl` gives and sorted by those names. Chosen in a sheet with Viky's own
  * list, as a currency is (the founder, 28 Sep 2026: the native select was the one list outside the art direction),
  * with a search above it, because there are more than a hundred and fifty countries.
  */

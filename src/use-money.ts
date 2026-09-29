@@ -1,8 +1,9 @@
 import type { RailReach } from "./rail-country";
 import { WAY_OUT_CARD, WAY_OUT_EURO, type PublishedFee } from "./rails";
+import { USE_MONEY } from "./sentences";
 
 /**
- * "Use your money" (D270, the founder's decision of 26 Sep 2026, the mockups use.html and use-france.html): the way
+ * "Spend or withdraw", once "Use your money" (D270, the founder's decision of 26 Sep 2026, the mockups use.html and use-france.html): the way
  * out said as uses, one card per use, filtered and ordered by the country of the person's number and by the amount.
  * Browser safe: no fetch, no key.
  *
@@ -77,4 +78,21 @@ export const GIFT_CARD_SUN_FROM_EUROS = 10;
 export function inTheSun(use: Use, index: number, euros: number | undefined): boolean {
   if (index === 0) return true;
   return use === "giftcard" && euros !== undefined && euros >= GIFT_CARD_SUN_FROM_EUROS;
+}
+
+/**
+ * The line under "Spend or withdraw" (the founder, 29 Sep 2026): the uses offered, in the order their cards are shown,
+ * as one sentence, "A gift card, credit for your phone, or a transfer to your bank or card.", so it never names a way
+ * that is not offered in that country. Nothing when nothing is offered: the screen says that on its own.
+ */
+export function usesSentence(uses: readonly Use[]): string | null {
+  const W = USE_MONEY.ways;
+  const parts: string[] = [];
+  for (const use of uses) {
+    if (use === "card" && uses.includes("bank")) continue;
+    parts.push(use === "bank" && uses.includes("card") ? W.bankOrCard : W[use]);
+  }
+  if (parts.length === 0) return null;
+  const said = parts.length === 1 ? parts[0] : parts.length === 2 ? `${parts[0]} or ${parts[1]}` : `${parts.slice(0, -1).join(", ")}, or ${parts.at(-1)}`;
+  return `${said.charAt(0).toUpperCase()}${said.slice(1)}.`;
 }
