@@ -2,7 +2,7 @@
 
 The money is already in their name. Every day they miss, a piece comes back to you.
 
-Viky is a conditional gift on Monad. A funder puts money behind someone's goal. The money is
+Viky is a conditional payment on Monad. A funder puts money behind someone's goal. The money is
 allocated in the recipient's name from day one, becomes theirs as verified progress accrues, and
 returns to the funder for whatever is not accomplished. Nobody else ever profits from a missed day.
 
