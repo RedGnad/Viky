@@ -96,7 +96,7 @@ test("the three destinations carry their scenes at the head, larger, and a chang
   assert.doesNotMatch(head, /scaleY/, "never stretched on one axis");
   const gifts = renderToStaticMarkup(createElement(Scene, { which: "gifts" }));
   // From behind its own body (D301): the arm on the shoulder starts inside the body and is drawn under it.
-  assert.match(gifts, /data-pose="shoulder"[^>]*><path data-part="reach" d="M48\.5 25\.4 C57 24\.5 65 19\.5 72 16\.5" pathLength="1"/, "the path starts at the joint, inside the body");
+  assert.match(gifts, /data-pose="shoulder"[^>]*><path data-part="reach" d="M48\.5 25\.4 C53\.5 25\.3 58\.5 24\.1 62\.3 22\.6" pathLength="1"/, "the path starts at the joint, inside the body");
   assert.match(head, /'\[data-prop="suit"\]'/, "the suit grows onto the body");
   assert.match(head, /duration: SUIT_MS, easing: EASING\.emphasizedDecelerate/, "slower, on the curve for what enters (D245)");
   assert.match(head, /const SUIT_MS = 350;/);
