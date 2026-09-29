@@ -668,9 +668,19 @@ export async function portalsIn(country: string): Promise<readonly Portal[]> {
  * A university as the list gives it: its name alone, its country, the country's code to group and order by, and the
  * grading scale its results provider pins, when it pins one, so a grade is typed on it (the founder, 28 Sep 2026).
  */
-export function portalListed(portal: Pick<Portal, "portalId" | "university" | "country"> & Partial<Pick<Portal, "results">>): Readonly<{ pair: string; title: string; issuer: string; country: string; scale: string | null }> {
+export function portalListed(
+  portal: Pick<Portal, "portalId" | "university" | "country"> & Partial<Pick<Portal, "enrolment" | "results">>,
+): Readonly<{ pair: string; title: string; issuer: string; country: string; scale: string | null; tested: boolean }> {
   const scale = resultsExtractOf(portal.results ?? null)?.grade.scale;
-  return { pair: portal.portalId, title: portal.university, issuer: countryInWords(portal.country), country: portal.country, scale: scale ? scaleKey(scale) : null };
+  return { pair: portal.portalId, title: portal.university, issuer: countryInWords(portal.country), country: portal.country, scale: scale ? scaleKey(scale) : null, tested: testedWithAStudent(portal) };
+}
+
+/**
+ * Whether a university has been tested with a student (the founder, 29 Sep 2026): a provider of it whose first proof was
+ * reviewed and pinned. The chooser lists these first; nothing is written on the line itself.
+ */
+export function testedWithAStudent(portal: Partial<Pick<Portal, "enrolment" | "results">>): boolean {
+  return [portal.enrolment, portal.results].some((provider) => provider?.verification === "witness" && provider.pin !== null);
 }
 
 /**

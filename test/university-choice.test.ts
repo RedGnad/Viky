@@ -6,7 +6,7 @@ import { GET as listGet } from "../app/api/portals/route";
 import { configurePortalStore, ensurePortalSchema, savePortalRows } from "../src/portal-store";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { UNIVERSITY_CHOICE } from "../src/sentences";
-import { matching, type ListedUniversity } from "../src/university-choice";
+import { inGroups, matching, type ListedUniversity } from "../src/university-choice";
 
 /**
  * "Which university?" (D247, D313): the world's list, read a country at a time. The country in the same sheet with a
@@ -19,6 +19,15 @@ const LIST = [
   one("ugb-sn", "Université Gaston Berger", "Senegal", "SN"),
   one("bem-sn", "BEM Dakar Management School", "Senegal", "SN"),
 ];
+
+test("a country's list in two groups, the tested first, the search on both, and a tested one never twice (the founder, 29 Sep 2026)", () => {
+  const list = [...LIST, { ...one("uadb-sn", "Université Alioune Diop de Bambey", "Senegal", "SN"), tested: true }];
+  assert.deepEqual(inGroups(list, "").tested.map((u) => u.pair), ["uadb-sn"]);
+  assert.deepEqual(inGroups(list, "").others.map((u) => u.pair), ["bem-sn", "ucad-sn", "ugb-sn"]);
+  assert.deepEqual(inGroups(list, "universite").tested.map((u) => u.pair), ["uadb-sn"]);
+  assert.deepEqual(inGroups(list, "universite").others.map((u) => u.pair), ["ucad-sn", "ugb-sn"]);
+  assert.deepEqual(inGroups(list, "bem"), { tested: [], others: [LIST[2]] });
+});
 
 test("the search within a country: every word, without case or accents, by name, and all of them when nothing is typed", () => {
   assert.deepEqual(matching(LIST, "").map((u) => u.pair), ["bem-sn", "ucad-sn", "ugb-sn"]);
@@ -45,7 +54,8 @@ test("the list route gives the countries with their counts, then one country's u
     assert.deepEqual(countries.countries, [{ code: "NG", count: 1 }, { code: "SN", count: 2 }]);
     const senegal = (await (await listGet(new Request("https://viky.test/api/portals?country=sn"))).json()) as { results: ListedUniversity[] };
     assert.deepEqual(senegal.results.map((u) => u.pair), ["ucad-sn", "ugb-sn"]);
-    assert.deepEqual(Object.keys(senegal.results[0]).sort(), ["country", "issuer", "pair", "scale", "title"], "no sign-in address, no provider; the scale a grade is typed on, when pinned");
+    assert.deepEqual(Object.keys(senegal.results[0]).sort(), ["country", "issuer", "pair", "scale", "tested", "title"], "no sign-in address, no provider; the scale a grade is typed on, and whether it was tested, for grouping");
+    assert.equal(senegal.results[0].tested, false);
     assert.equal(senegal.results[0].scale, null);
     assert.equal(senegal.results[0].issuer, "Senegal");
     assert.equal((await listGet(new Request("https://viky.test/api/portals?country=Senegal"))).status, 400);
@@ -63,7 +73,11 @@ test("the chooser lists names alone, says nothing about checking, and invites th
   assert.match(chooser, /<CountryPicker/, "the country in the same sheet as \"Where you live\" (D313)");
   // Nothing about checking in the chooser: that is said folded on the gift's page, where the proof is shown.
   assert.doesNotMatch(chooser, /<details|<summary|navigator\.share|clipboard/);
-  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["addYours", "country", "none", "notListed", "nothingThere", "reading", "searchIn", "unreadable"]);
+  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["addYours", "all", "allLine", "country", "none", "notListed", "nothingThere", "reading", "searchIn", "tested", "unreadable"]);
+  // The two groups' words, as the founder wrote them (29 Sep 2026), and nothing on each line.
+  assert.equal(UNIVERSITY_CHOICE.tested, "Tested with a student");
+  assert.equal(UNIVERSITY_CHOICE.all, "All universities");
+  assert.equal(UNIVERSITY_CHOICE.allLine, "Set up on the first gift, within two days.");
   assert.doesNotMatch(JSON.stringify(Object.values(UNIVERSITY_CHOICE).filter((v) => typeof v === "string")), /unverified|password|proof|checked|connected/i);
   // One line under the list: the question and the link to the page a student adds theirs from.
   assert.equal(`${UNIVERSITY_CHOICE.notListed} ${UNIVERSITY_CHOICE.addYours}`, "Yours isn't here? Add your university");

@@ -41,6 +41,7 @@ export function ChoiceList<T extends string>({
   onChange,
   disabled = false,
   legendHidden = false,
+  note,
   shape = "cards",
 }: Readonly<{
   name: string;
@@ -51,6 +52,8 @@ export function ChoiceList<T extends string>({
   disabled?: boolean;
   /** When the page's title already asks the question, the legend is read aloud and not drawn twice. */
   legendHidden?: boolean;
+  /** One line under the legend, said once for the whole group rather than on each option. */
+  note?: string;
   /** How the options are drawn, and how much each of them says before it is chosen. */
   shape?: "cards" | "lines";
 }>) {
@@ -61,6 +64,7 @@ export function ChoiceList<T extends string>({
     <fieldset className={`m-0 flex flex-col border-0 p-0 ${lines ? "gap-[var(--space-xs)]" : "gap-[var(--space-sm)]"}`} disabled={disabled}>
       {/* A family of a catalogue is a heading over its own rows, in the third voice, not a question in the body. */}
       <legend className={legendHidden ? "sr-only" : lines ? `${CARD_LABEL} mb-[var(--space-sm)]` : "mb-[var(--space-sm)] font-medium"}>{legend}</legend>
+      {note ? <p className={`${HELP} mb-[var(--space-xs)]`}>{note}</p> : null}
       {options.map((option) => {
         const chosen = value === option.value;
         const box = chosen

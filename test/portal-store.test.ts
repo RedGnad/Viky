@@ -285,6 +285,10 @@ test("a missing provider is asked for once, with its instruction, and a witness 
   assert.equal(pinned?.enrolment?.pin?.specHash, pin.specHash);
   assert.equal(pinned?.enrolment?.requestHash, pin.specHash);
   assert.equal(pinned?.enrolment && awaitingPin(pinned.enrolment), false);
+  // Pinned from a reviewed first proof: tested with a student, which the chooser lists first (the founder, 29 Sep 2026).
+  assert.equal(portalListed(pinned!).tested, true);
+  assert.equal(portalListed((await loadPortal("uni-b-br"))!).tested, false);
+  assert.equal(portalListed((await loadPortal("ucad-sn"))!).tested, false, "a classic provider was not tested with a student here");
   // Asked again for the same sense once built: the request stays built.
   assert.notEqual((await requestProvider({ portalId: "uni-a-br", sense: "enrolment", instruction, giftId: null })).builtAt, null);
   assert.deepEqual((await witnessProviders())?.map((one) => [one.portalId, one.sense, one.domain]), [["uni-a-br", "enrolment", "a.br"]]);

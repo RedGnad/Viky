@@ -1143,6 +1143,10 @@ export const UNIVERSITY_CHOICE = {
   unreadable: "The list could not be read right now. Close this and try again in a moment.",
   none: "Viky cannot read any university yet.",
   nothingThere: "No university of that name in this country yet.",
+  /** The two groups of a country's list (the founder, 29 Sep 2026): the tested first, and one line under the others. */
+  tested: "Tested with a student",
+  all: "All universities",
+  allLine: "Set up on the first gift, within two days.",
   /** The one line under the list: a question, and the link that answers it. */
   notListed: "Yours isn't here?",
   addYours: "Add your university",

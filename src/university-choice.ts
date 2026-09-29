@@ -14,6 +14,8 @@ export type ListedUniversity = Readonly<{
   country: string;
   /** The grading scale its results provider pins ("20", "letters"), or nothing while none is pinned. */
   scale?: string | null;
+  /** Tested with a student: a provider of it pinned from a reviewed first proof. Only for grouping, never said on the line. */
+  tested?: boolean;
 }>;
 
 /** A country of the list, and how many universities it holds. */
@@ -26,6 +28,15 @@ export function chosenUniversityTitle(one: ListedUniversity): string {
 
 /** Folded for comparison: case and accents gone, so "universite" finds "Université". */
 const folded = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+
+/**
+ * One country's universities as the chooser draws them (the founder, 29 Sep 2026): those tested with a student first,
+ * then all the others, the search on both.
+ */
+export function inGroups(universities: readonly ListedUniversity[], words: string): Readonly<{ tested: readonly ListedUniversity[]; others: readonly ListedUniversity[] }> {
+  const found = matching(universities, words);
+  return { tested: found.filter((one) => one.tested === true), others: found.filter((one) => one.tested !== true) };
+}
 
 /** The universities whose name carries every word typed, by name; all of them when nothing is typed. */
 export function matching(universities: readonly ListedUniversity[], words: string): readonly ListedUniversity[] {
