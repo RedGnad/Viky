@@ -236,23 +236,23 @@ test("a card is the object on the ground, as the rendered mockups draw it by day
   // Night: a paper of its own since D223, one step above the ink ground, no shadow and no edge at all. The cream it
   // replaced stood at 17:1 on that ground, the brightest thing on a screen somebody had set to dark.
   assert.match(css, /--paper: #FFF6E2;/);
-  assert.equal((css.match(/--paper: #373244;/g) ?? []).length, 2, "the night paper, in both night blocks");
-  assert.ok(contrastRatio("#373244", COLOURS.dark.background) >= 1.25, "the card and the ground are never the same value");
+  assert.equal((css.match(/--paper: #332E3F;/g) ?? []).length, 2, "the night paper, in both night blocks");
+  assert.ok(contrastRatio("#332E3F", COLOURS.dark.background) >= 1.25, "the card and the ground are never the same value");
   // A warm paper on a cool night (D231): the sun over the ground at 12 %, as Material brands a dark surface, so it
   // has more red than blue where the ground has more blue than red.
   // The ground's own family since D305 (the founder's direction A): lavender, blue above red, like the ground.
-  assert.ok(parseInt("#373244".slice(5, 7), 16) > parseInt("#373244".slice(1, 3), 16), "the lavender of the ground");
+  assert.ok(parseInt("#332E3F".slice(5, 7), 16) > parseInt("#332E3F".slice(1, 3), 16), "the lavender of the ground");
   assert.ok(parseInt(COLOURS.dark.background.slice(1, 3), 16) < parseInt(COLOURS.dark.background.slice(5, 7), 16), "on a cool ground");
   for (const [ink, on, least, what] of [
-    ["#FFF6E2", "#373244", 4.5, "the ink on the night paper"],
-    ["#C7C4DA", "#373244", 4.5, "the quiet voice on it"],
-    ["#B9B2CD", "#373244", 4.5, "and the faint one"],
+    ["#FFF6E2", "#332E3F", 4.5, "the ink on the night paper"],
+    ["#C7C4DA", "#332E3F", 4.5, "the quiet voice on it"],
+    ["#B9B2CD", "#332E3F", 4.5, "and the faint one"],
     ["#FFF6E2", "#484154", 4.5, "the ink in a field"],
     ["#B9B2CD", "#484154", 4.5, "the placeholder in a field"],
     ["#FFF6E2", "#4E485E", 4.5, "the ink on a chosen row"],
     ["#C7C4DA", "#4E485E", 4.5, "the quiet voice on a chosen row and on the shut action"],
-    ["#FFC531", "#373244", 3, "the sun on it"],
-    ["#B79BFF", "#373244", 3, "the diamond's night edge on it"],
+    ["#FFC531", "#332E3F", 3, "the sun on it"],
+    ["#B79BFF", "#332E3F", 3, "the diamond's night edge on it"],
   ] as const) assert.ok(contrastRatio(ink, on) >= least, what);
   for (const said of ["--paper-field: #484154;", "--chosen: #4E485E;", "--on-surface: #FFF6E2;", "--on-surface-muted: #C7C4DA;", "--paper-relief: #C7C4DA;"]) {
     assert.equal((css.match(new RegExp(said.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length, 2, `${said} in both night blocks`);

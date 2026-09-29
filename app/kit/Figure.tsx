@@ -469,13 +469,17 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
       {limbs ? <Limbs arms={arms} legs={legs} holding={props.includes("case")} /> : null}
       <g data-part="body">
         <path d={DIAMOND} style={{ fill: `url(#${id}-body)`, stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
-        {halftone ? (
-          <>
-            <Halftone />
-            {/* The edge again over the dots, so the screen stops at its inner side. */}
-            <path d={DIAMOND} style={{ fill: "none", stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
-          </>
-        ) : null}
+        {halftone ? <Halftone /> : null}
+        {/* The gloss: where the surface faces halfway between the light and the eye, slanted along the lit edge, and one
+            dot beside it. A third, smaller spot inside the gloss read as a second, lighter circle and was taken off (D243). */}
+        <g data-part="gloss">
+          <ellipse cx={round(shine.gloss.cx)} cy={round(shine.gloss.cy)} rx={5.2} ry={3.2} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
+          <circle cx={round(shine.dot.cx)} cy={round(shine.dot.cy)} r={1.9} style={{ fill: GLOSS }} />
+        </g>
+        {/* The edge again over the dots and the gloss, so both stop at its inner side (the founder, 29 Sep 2026: the gloss
+            lay on the coloured edge), without a clip (D288). Inside the body's group, so what the figure holds in front of
+            it, a book, crossed or raised arms, stays in front of the edge. */}
+        <path data-part="edge" d={DIAMOND} style={{ fill: "none", stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
       </g>
       {/* The book is held in front of the body and under the hands that close on it (D268). */}
       {props.includes("book") ? <Book /> : null}
@@ -491,15 +495,6 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
       {(limbs ? ARMS[arms] : []).filter((arm) => arm.over).map((arm, index) => (
         <Arm key={index} pose={arms} arm={arm} />
       ))}
-      {/* The gloss: where the surface faces halfway between the light and the eye, slanted along the lit edge, and one dot
-          beside it. A third, smaller spot inside the gloss read as a second, lighter circle and was taken off (D243).
-          The edge is drawn again over it, so it never lies on the coloured edge (the founder, 29 Sep 2026), without a clip
-          (D288: a phone painted a clipped part apart inside a sheet's list). */}
-      <g data-part="gloss">
-        <ellipse cx={round(shine.gloss.cx)} cy={round(shine.gloss.cy)} rx={5.2} ry={3.2} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
-        <circle cx={round(shine.dot.cx)} cy={round(shine.dot.cy)} r={1.9} style={{ fill: GLOSS }} />
-      </g>
-      <path data-part="edge" d={DIAMOND} style={{ fill: "none", stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
       {props.includes("suit") ? <Suit /> : null}
       <g data-part="face">
         <EyesOf eyes={eyes} gaze={gaze} id={id} />
