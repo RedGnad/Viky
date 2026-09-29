@@ -28,6 +28,8 @@ import { settlingTimeInWords } from "@/src/pass-schedule";
 import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
 import { wayInPage, WAYS_IN, type WayIn } from "@/src/rails";
 import { JudgeCode } from "../kit/offer/JudgeCode";
+import { CardNotOffered, CardTermsLine } from "../kit/offer/CardTerms";
+import { whereTheRailsServe } from "@/src/client/rails";
 import { FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
 import { ExactLine } from "../kit/LedAmount";
 import { Figure } from "../kit/Figure";
@@ -153,6 +155,20 @@ export function PayGift() {
   if (address && !hadAccount) setHadAccount(true);
 
   const wayIn: WayIn = chosenWay ?? WAYS_IN.find((entry) => entry.name === kept?.wayIn) ?? WAYS_IN[0];
+  /** Whether the card is offered to this payer (src/card-rail.ts): not in a country its providers' terms exclude. */
+  const [card, setCard] = useState<Readonly<{ offered: boolean; country: string | null }> | null>(null);
+  useEffect(() => {
+    let live = true;
+    whereTheRailsServe()
+      .then((answer) => {
+        if (live) setCard(answer.card ?? null);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [address]);
+  const cardClosed = card?.offered === false;
   const money = useDisplayCurrency(address);
   const condition = conditionById(draft.conditionId);
   const milestone = milestoneById(draft.conditionId);
@@ -552,16 +568,23 @@ export function PayGift() {
       return (
         <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
           <p className={BODY}>{W.arrived.short(arrivedFigure, gift, more, `$${makeIt}`)}</p>
-          <button
-            type="button"
-            onClick={() => {
-              window.open(wayInPage(wayIn, { account: address, euros: more }), "_blank", "noopener,noreferrer");
-              setPhase("waiting");
-            }}
-            className={PRIMARY_BUTTON}
-          >
-            {W.arrived.payMore(more)}
-          </button>
+          {cardClosed ? (
+            <CardNotOffered country={card?.country ?? null} />
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  window.open(wayInPage(wayIn, { account: address, euros: more }), "_blank", "noopener,noreferrer");
+                  setPhase("waiting");
+                }}
+                className={PRIMARY_BUTTON}
+              >
+                {W.arrived.payMore(more)}
+              </button>
+              <CardTermsLine way={wayIn} />
+            </>
+          )}
           {held >= 1_000_000n ? (
             <button
               type="button"
@@ -633,15 +656,20 @@ export function PayGift() {
         </section>
         {problem ? <FieldRefusal id="waiting-refused">{problem}</FieldRefusal> : null}
         <section className={CARD}>
-          <p className="font-medium">{W.waiting.setThese(wayIn.name)}</p>
-          <ul className={`flex flex-col gap-[var(--space-xs)] ${BODY}`}>
-            {W.waiting.settings(toBuy, wayIn.delivers).map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-          <p className={HELP}>{W.waiting.theirWords(wayIn.name, wayIn.delivers)}</p>
-          {/* What the wait ends with: money a gift can hold at once, or a step the person confirms (D101). */}
-          <p className={HELP}>{wayIn.arrives === "gift" ? W.waiting.thenNothing : W.waiting.thenChanged}</p>
+          {/* What to set on the card partner's page, only where that page is offered to this payer. */}
+          {cardClosed ? null : (
+            <>
+              <p className="font-medium">{W.waiting.setThese(wayIn.name)}</p>
+              <ul className={`flex flex-col gap-[var(--space-xs)] ${BODY}`}>
+                {W.waiting.settings(toBuy, wayIn.delivers).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+              <p className={HELP}>{W.waiting.theirWords(wayIn.name, wayIn.delivers)}</p>
+              {/* What the wait ends with: money a gift can hold at once, or a step the person confirms (D101). */}
+              <p className={HELP}>{wayIn.arrives === "gift" ? W.waiting.thenNothing : W.waiting.thenChanged}</p>
+            </>
+          )}
           <p className="font-medium">{W.waiting.codeLabel(wayIn.name)}</p>
           <p className="select-all break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--background)] p-[var(--space-md)] text-[length:var(--type-help)] tabular-nums">{address}</p>
           <button type="button" onClick={() => copy("code", address)} className={SECONDARY_BUTTON}>
@@ -651,12 +679,19 @@ export function PayGift() {
           <p className={HELP}>{W.waiting.startsEnds(start, end)}</p>
         </section>
         <p className={BODY}>
-          {wayIn.takes ? `${W.check.delay(wayIn.name, wayIn.takes)} ` : ""}
+          {wayIn.takes && !cardClosed ? `${W.check.delay(wayIn.name, wayIn.takes)} ` : ""}
           {keptOnDevice ? W.waiting.leave : W.waiting.stay}
         </p>
-        <a href={wayInPage(wayIn, { account: address, euros: toBuy })} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON} onClick={() => setPartnerOpened(true)}>
-          {partnerOpened ? W.waiting.openAgain(wayIn.name) : W.waiting.openFirst(wayIn.name)}
-        </a>
+        {cardClosed ? (
+          <CardNotOffered country={card?.country ?? null} />
+        ) : (
+          <>
+            <a href={wayInPage(wayIn, { account: address, euros: toBuy })} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON} onClick={() => setPartnerOpened(true)}>
+              {partnerOpened ? W.waiting.openAgain(wayIn.name) : W.waiting.openFirst(wayIn.name)}
+            </a>
+            <CardTermsLine way={wayIn} />
+          </>
+        )}
         <div className="flex flex-col gap-[var(--space-xs)]">
           <button type="button" onClick={differentGift} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
             {W.waiting.different}

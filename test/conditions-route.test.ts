@@ -47,7 +47,7 @@ async function answerFor(cookie?: string): Promise<{ ids: string[]; preview: str
 test("there is no door: an operator is offered the live conditions like everybody, and the same lines being built (D184, D311)", async () => {
   const answer = await answerFor(await cookieFor(OPERATOR));
   // The founder's rule of 23 Sep 2026: a condition built is open to all, a condition with a piece missing to nobody.
-  assert.deepEqual(answer.preview, ["ecoledirecte-grade-shown"], "the EcoleDirecte average, listed while it is being built, and nothing else (D311)");
+  assert.deepEqual(answer.preview, [], "nothing being built is listed: the EcoleDirecte average left the screens on 29 Sep 2026");
   assert.ok(!answer.ids.includes("ecoledirecte-grade-shown"), "and it is not live");
   assert.ok(answer.ids.includes("duolingo-daily"), "and the live ones are there for everybody");
   assert.ok(answer.ids.includes(CHESS_MILESTONE.condition.id));
@@ -58,7 +58,7 @@ test("there is no door: an operator is offered the live conditions like everybod
 test("everybody else is offered the same answer", async () => {
   for (const cookie of [await cookieFor(SOMEBODY), undefined]) {
     const answer = await answerFor(cookie);
-    assert.deepEqual(answer.preview, ["ecoledirecte-grade-shown"], "a signed-in stranger and a stranger get the same answer here");
+    assert.deepEqual(answer.preview, [], "a signed-in stranger and a stranger get the same answer here");
     assert.ok(answer.ids.includes(CHESS_MILESTONE.condition.id), "a live milestone is offered like any live condition");
     assert.ok(answer.ids.includes(DET_MILESTONE.condition.id), "and so is the one that opened on 19 Sep 2026");
     // The course certificate opened on 20 Sep with goal 10 registered, so the register holds nothing closed today.
@@ -70,10 +70,23 @@ test("the operator list changes nothing in the preview, however valid the sessio
   const kept = process.env.VIKY_OPERATOR_ACCOUNTS;
   process.env.VIKY_OPERATOR_ACCOUNTS = "";
   try {
-    assert.deepEqual((await answerFor(await cookieFor(OPERATOR))).preview, ["ecoledirecte-grade-shown"]);
+    assert.deepEqual((await answerFor(await cookieFor(OPERATOR))).preview, []);
   } finally {
     process.env.VIKY_OPERATOR_ACCOUNTS = kept;
   }
+});
+
+test("the EcoleDirecte average, kept in the register while it is being built, can no longer be offered, and nothing is taken", async () => {
+  assert.deepEqual(OFFERED_WHILE_BUILDING, [], "the founder, 29 Sep 2026: off the screens while it is being built");
+  const line = conditionById("ecoledirecte-grade-shown");
+  assert.ok(line && !line.live, "the condition and its code stay, not live");
+  const refused = await createCertificate(new Request(`${ORIGIN}/api/gift/certificate/create`, {
+    method: "POST",
+    headers: { origin: ORIGIN, host: "viky.test", cookie: await cookieFor(SOMEBODY), "content-type": "application/json" },
+    body: JSON.stringify({ conditionId: "ecoledirecte-grade-shown" }),
+  }));
+  assert.equal(refused.status, 404);
+  assert.equal(((await refused.json()) as { code: string }).code, "UNKNOWN_CONDITION");
 });
 
 test("a line listed while it is being built is refused at creation while its provider is missing, before anything is taken (D311)", async () => {

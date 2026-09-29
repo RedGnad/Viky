@@ -58,7 +58,7 @@ test("without the key, the sheet says what to choose on the partner's page and w
   assert.doesNotMatch(mercuryo, /by itself|what your gift holds/);
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   // The code exists once the account does: before the first press there is no account, and nothing to copy.
-  assert.match(sheet, /!enough && !wayInFillsIn\(way\) && address \? \(/);
+  assert.match(sheet, /!enough && \(cardClosed \|\| !wayInFillsIn\(way\)\) && address \? \(/);
   assert.match(sheet, /navigator\.clipboard\.writeText\(address\)/);
 });
 

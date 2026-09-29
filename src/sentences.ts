@@ -204,6 +204,18 @@ export const PAY = {
       : // consumer-words: allow "address" is the partner page's own word for the field, the founder's choice (D294)
         `Our partner ${name} takes your card, once with your ID. Choose ${coin} on ${network} there. Paste your code where it asks for an address. Come back here to confirm the last step.`,
   yourCode: "Your code",
+  /**
+   * Under every button or link that pays by card, for the payer alone (the founder, 29 Sep 2026): no box to tick and no
+   * screen more. The partner is the one the card goes to, and its terms are linked on its own site.
+   */
+  cardTerms: {
+    before: "By paying by card, you confirm you are 18 or older and accept ",
+    link: (partner: string) => `${partner}'s terms`,
+    after: ".",
+  },
+  /** In the card's place, for a payer in a country its providers' terms exclude; every other way to pay stays. */
+  cardNotOffered: (country: string | null) =>
+    `Paying by card is not offered ${country ? `in ${country}` : "where you are"}. You can still pay from your account: money sent to your code arrives there.`,
   pay: "Pay",
   payEuros: (euros: number) => `Pay ${euros} EUR`,
   payFromAccount: (amount: string) => `Put ${amount} in their name`,
