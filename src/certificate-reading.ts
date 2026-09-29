@@ -1,4 +1,5 @@
 import type { Hex } from "viem";
+import { signedSubjectOf } from "./subject-key";
 import { COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraProviderId } from "./coursera-certificate";
 import { attestCourseraCertificate, CourseraReadError } from "./coursera-reading";
 import { EDX_GOAL_TYPE, EDX_HAS_IT, edxProviderId } from "./edx-certificate";
@@ -17,7 +18,7 @@ import { attestDetCertificate, DetReadError, type AttestedDetReading } from "./d
 import { detProviderId } from "./duolingo-english-test";
 import { loadGift, type GiftRecord } from "./gift-store";
 import { certificateOfGoal } from "./milestone-conditions";
-import { recordReading } from "./milestone-store";
+import { loadMilestoneGift, recordReading } from "./milestone-store";
 import { milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
 import { SHAPE_HAVE_OR_NOT, type MilestoneProofMessage } from "./milestone-protocol";
 import { relayProve } from "./milestone-relay";
@@ -77,7 +78,9 @@ export type CertificateReadingDeps = {
   loadGift: (giftId: string) => Promise<GiftRecord | null>;
   readState: (contract: Hex, giftId: string) => Promise<MilestoneState>;
   /** The subject the funder signed rides along for a source whose reading can match several (Accredible's domains). */
-  attest: (goalType: number, link: string, signedSubject?: Hex) => Promise<ReadCertificate>;
+  attest: (goalType: number, link: string, signedSubject?: Hex, subjectKey?: string | null) => Promise<ReadCertificate>;
+  /** The key the gift's subject was hashed with (src/subject-key.ts), or nothing for a gift made before keys. */
+  subjectKey?: (giftId: string) => Promise<string | null>;
   prove: (input: { contract: Hex; message: MilestoneProofMessage }) => Promise<{ hash: string }>;
   record: (reading: Parameters<typeof recordReading>[0]) => Promise<void>;
   now: () => number;
@@ -88,6 +91,7 @@ export function liveCertificateReadingDeps(): CertificateReadingDeps {
     loadGift,
     readState: (contract, giftId) => readMilestoneGift(contract, giftId),
     attest: attestByGoal,
+    subjectKey: (giftId) => loadMilestoneGift(giftId).then((gift) => gift?.subjectKey ?? null),
     prove: relayProve,
     record: recordReading,
     now: () => Math.floor(Date.now() / 1_000),
@@ -99,11 +103,11 @@ export function liveCertificateReadingDeps(): CertificateReadingDeps {
  * can never be offered to a gift made on the test, nor the other way round: each carries its own provider id and the
  * contract checks it again.
  */
-export async function attestByGoal(goalType: number, link: string, signedSubject?: Hex): Promise<ReadCertificate> {
+export async function attestByGoal(goalType: number, link: string, signedSubject?: Hex, subjectKey?: string | null): Promise<ReadCertificate> {
   if (goalType === ACCREDIBLE_GOAL_TYPE) {
     const reading = await attestAccredibleCredential(link);
     // The issuer's site can sit under several domains; the one the funder named is the subject they signed.
-    const subject = reading.subjects.find((candidate) => signedSubject && candidate.toLowerCase() === signedSubject.toLowerCase()) ?? reading.subjects[0];
+    const subject = reading.subjects.find((candidate) => signedSubject && signedSubjectOf(candidate, subjectKey).toLowerCase() === signedSubject.toLowerCase()) ?? reading.subjects[0];
     return { subject, score: ACCREDIBLE_HAS_IT, testDay: reading.issuedDay, observedAt: reading.observedAt, nullifier: reading.nullifier, providerId: accredibleProviderId() };
   }
   if (goalType === CREDLY_GOAL_TYPE) {
@@ -178,10 +182,11 @@ export async function proveCertificate(
   if (phase === "cancelled") return { kind: "already", giftId, reason: "cancelled" };
   if (phase === "reached" || phase === "returned") return { kind: "already", giftId, reason: "finished" };
   const words = certificate?.words.refusals;
+  const subjectKey = deps.subjectKey ? await deps.subjectKey(giftId) : null;
 
   let reading: ReadCertificate;
   try {
-    reading = await deps.attest(state.goalType, input.link, state.subject as Hex);
+    reading = await deps.attest(state.goalType, input.link, state.subject as Hex, subjectKey);
   } catch (error) {
     if (!(error instanceof DetReadError) && !(error instanceof CourseraReadError) && !(error instanceof CredlyReadError) && !(error instanceof EdxReadError) && !(error instanceof AccredibleReadError) && !(error instanceof MitxOnlineReadError) && !(error instanceof MarathonReadError) && !(error instanceof WcaReadError)) {
       return refuse(giftId, "SOURCE_UNAVAILABLE", words?.unavailable ?? "That could not be read right now");
@@ -218,8 +223,10 @@ export async function proveCertificate(
     }
   }
 
-  // The person and the thing the funder signed. The contract checks it too; this is so nobody meets a revert.
-  if (reading.subject.toLowerCase() !== state.subject.toLowerCase()) {
+  // The person and the thing the funder signed, hashed with the gift's key when it has one (src/subject-key.ts). The
+  // contract checks it too; this is so nobody meets a revert.
+  const signedSubject = signedSubjectOf(reading.subject, subjectKey);
+  if (signedSubject.toLowerCase() !== state.subject.toLowerCase()) {
     return refuse(giftId, "ANOTHER_NAME", words?.anotherName ?? "That certificate is in another name");
   }
   const target = Number(state.target);
@@ -237,7 +244,7 @@ export async function proveCertificate(
   const message: MilestoneProofMessage = {
     giftId: BigInt(giftId),
     recipient: state.recipient as Hex,
-    identityHash: reading.subject,
+    identityHash: signedSubject,
     providerId: reading.providerId,
     metricValue: BigInt(reading.score),
     // The day the page itself says the test was taken, which is what this shape is judged by (D47).

@@ -83,7 +83,7 @@ test("a milestone gift is recorded as a creation first, relayed with its own ter
   assert.equal(gift?.goalUsername, "erik");
   assert.equal(gift?.dailyTarget, 0, "a milestone has no bar for a day");
   assert.ok(gift && holdsGiftLink(gift, made.claimToken));
-  assert.deepEqual({ ...(await loadMilestoneGift("1000000")), standingReadAt: undefined }, { giftId: "1000000", conditionId: "chess-rating", mode: "rapid", standingAtOffer: 1904, standingReadAt: undefined, portal: null, course: null, gradeScale: null });
+  assert.deepEqual({ ...(await loadMilestoneGift("1000000")), standingReadAt: undefined }, { giftId: "1000000", conditionId: "chess-rating", mode: "rapid", standingAtOffer: 1904, standingReadAt: undefined, portal: null, course: null, gradeScale: null, subjectKey: null });
   const creation = await loadCreation(`0x${"01".repeat(32)}`);
   assert.equal(creation?.status, "complete");
   assert.equal(creation?.kind, "milestone");

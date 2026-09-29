@@ -3,6 +3,7 @@ import { receiveAuthorizationMessage, receiveAuthorizationTypedData, toContractA
 import { NO_CONTACT_HASH } from "../contact-hash";
 import type { CertificateCondition } from "../milestone-conditions";
 import { milestoneFundingNonce, SHAPE_HAVE_OR_NOT, type MilestoneParams } from "../milestone-protocol";
+import { keyedSubject, newSubjectKey } from "../subject-key";
 import { getJson, postJson } from "./api";
 import { randomSalt, type CreatedGift } from "./gift";
 import { milestoneAddressFromEnv } from "./milestone";
@@ -28,6 +29,8 @@ export type CertificateGiftRequest = Readonly<{
   amount: string;
   refundTo: string;
   salt: Hex;
+  /** The key the subject is hashed with (src/subject-key.ts): kept by the server with the gift, never on chain. */
+  subjectKey: Hex;
   recipientName?: string;
   funderName?: string;
   authorization: { validAfter: string; validBefore: string; nonce: Hex; v: number; r: Hex; s: Hex };
@@ -50,6 +53,8 @@ export async function prepareCertificateGift(input: {
 }): Promise<CertificateGiftRequest> {
   const contract = milestoneAddressFromEnv();
   const funder = getAddress(input.account.address);
+  // Drawn here and sent with the request, so the subject on chain is a hash nobody can guess a name or a portal from.
+  const subjectKey = newSubjectKey();
   const params: MilestoneParams = {
     funder,
     refundTo: funder,
@@ -60,7 +65,7 @@ export async function prepareCertificateGift(input: {
     target: BigInt(input.certificate.targetUnits ? input.certificate.targetUnits(input.target) : input.target),
     // Nothing to start from: the ceiling is zero and the contract refuses anything else for this shape.
     maximumStart: 0n,
-    subject: input.certificate.subject({ name: input.personName, course: input.course }),
+    subject: keyedSubject(input.certificate.subject({ name: input.personName, course: input.course }), subjectKey),
     durationDays: input.durationDays,
     amount: input.amount,
     salt: randomSalt(),
@@ -78,6 +83,7 @@ export async function prepareCertificateGift(input: {
     amount: input.amount.toString(),
     refundTo: funder,
     salt: params.salt,
+    subjectKey,
     recipientName: input.recipientName,
     funderName: input.funderName,
     authorization: {

@@ -1,4 +1,5 @@
 import type { Hex } from "viem";
+import { signedSubjectOf } from "./subject-key";
 import type { Proof } from "@reclaimprotocol/js-sdk";
 import { MAX_PROOF_AGE_SECONDS, MAX_PROOF_FUTURE_SKEW_SECONDS, VerificationError, verifyDuolingoSession, type ReclaimStatus, type SdkVerification, type VerificationDeps } from "./duolingo-verification";
 import type { MilestoneReading } from "./milestone-store";
@@ -118,7 +119,9 @@ async function verifyMilestoneShown(deps: ShownVerificationDeps, entry: ShownEnt
   // A gift naming no portal, a portal proved for enrolment and not for its results page (D174), or a provider not
   // registered yet (D176): each by its name.
   if (!provider.providerId) throw new VerificationError(provider.missing?.code ?? "NO_PORTAL", provider.missing?.message ?? "This gift names no portal a proof could come from");
-  const subject = (entry.subjectOf && record ? entry.subjectOf(record) : null) ?? entry.subject;
+  // Hashed with the gift's key when it has one (src/subject-key.ts): what the funder signed and the contract holds.
+  const open = (entry.subjectOf && record ? entry.subjectOf(record) : null) ?? entry.subject;
+  const subject = open ? signedSubjectOf(open, record?.subjectKey) : open;
   if (!subject) throw new VerificationError("NOT_CONFIGURED", "This condition has no subject to sign", 503);
 
   const status: ReclaimStatus = await deps.fetchStatus(session.sessionId);
@@ -334,7 +337,8 @@ export async function settleHeldReview(deps: SettleDeps, input: { review: Portal
   const provider = entry ? portalProviderFor(record.conditionId, portal, record.gradeScale) : null;
   const witness = provider?.witness;
   if (!entry || !provider || !witness || witness.sense !== review.sense || !witness.pin) throw new VerificationError("NOT_CONFIGURED", "The provider is not pinned yet", 503);
-  const subject = entry.subjectOf?.(record) ?? entry.subject;
+  const open = entry.subjectOf?.(record) ?? entry.subject;
+  const subject = open ? signedSubjectOf(open, record.subjectKey) : open;
   if (!subject) throw new VerificationError("NOT_CONFIGURED", "This condition has no subject to sign", 503);
   let proofs: Proof[];
   try {

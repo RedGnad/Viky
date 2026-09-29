@@ -56,7 +56,7 @@ export function liveMilestoneCreationDeps(params?: MilestoneParams, facts?: Mile
       const row = await loadCreation(nonce);
       const recorded = facts ?? row?.milestone ?? null;
       if (!recorded) throw new Error(`Creation ${nonce} carries no milestone record`);
-      await saveMilestoneGift({ giftId, conditionId: recorded.conditionId, mode: recorded.mode, standingAtOffer: recorded.standingAtOffer, standingReadAt: new Date(recorded.standingReadAt), portal: recorded.portal ?? null, course: recorded.course ?? null, gradeScale: recorded.gradeScale ?? null });
+      await saveMilestoneGift({ giftId, conditionId: recorded.conditionId, mode: recorded.mode, standingAtOffer: recorded.standingAtOffer, standingReadAt: new Date(recorded.standingReadAt), portal: recorded.portal ?? null, course: recorded.course ?? null, gradeScale: recorded.gradeScale ?? null, subjectKey: recorded.subjectKey ?? null });
       await completeCreation(nonce, giftId, txHash, claimTokenHashOfLink);
     },
     abandon: abandonCreation,
