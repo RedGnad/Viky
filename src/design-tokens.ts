@@ -433,11 +433,11 @@ export const MOTION = {
   arrival: { budgetMs: 2000, staggerMs: 120 },
   /**
    * The moment a gift is reached (the founder, 29 Sep 2026: the climax of the product, and a first tester did not see
-   * it). Played once the page has loaded, over the whole screen: the moment rises in, the character jumps, the amount
-   * turns "yours" `becomesAfterMs` in, and the confetti falls across the screen for long enough to be seen, each piece
+   * it). Played once the page has loaded, over the whole screen: the moment rises in, the amount turns "yours"
+   * `becomesAfterMs` in, and the confetti falls across the screen for long enough to be seen, each piece
    * `fallMs` long, set off over `spreadMs`, so the rain lasts about three seconds and then is gone.
    */
-  moment: { inMs: 450, becomesAfterMs: 900, pieces: 64, fallMs: 2200, spreadMs: 1100, jump: 26 },
+  moment: { inMs: 450, becomesAfterMs: 900, pieces: 64, fallMs: 2200, spreadMs: 1100 },
   /** A gift made or money taken, answering the press that did it: the gift character arrives once, its bow a beat after. */
   gift: { spatial: SPRING.expressiveFastSpatial, effects: SPRING.effects, fromScale: 0.55, bowDelayMs: 120 },
   /**

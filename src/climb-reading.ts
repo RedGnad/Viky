@@ -1,4 +1,5 @@
-import { attestChessRating, ChessReadError, readChessStanding, type AttestedChessReading, type ReadStanding } from "./chess-reading";
+import type { ChessStanding } from "./chess-com";
+import { attestChessRating, ChessReadError, readChessStanding, type AttestedChessReading } from "./chess-reading";
 import { climbSource, CODEFORCES_CLIMB, type ClimbId } from "./climbs";
 import { attestCodeforcesRating, CodeforcesReadError, readCodeforcesStanding } from "./codeforces-reading";
 
@@ -16,7 +17,7 @@ export function isClimbReadError(error: unknown): error is ClimbReadError {
 /** A reading of any climb: Chess.com's, with its cadence, or Codeforces' one rating. */
 export type AttestedClimbReading = Omit<AttestedChessReading, "mode"> & Readonly<{ mode: ClimbId }>;
 
-export async function readClimbStanding(username: string, climb: ClimbId): Promise<ReadStanding> {
+export async function readClimbStanding(username: string, climb: ClimbId): Promise<ChessStanding> {
   return climbSource(climb) === "codeforces" ? readCodeforcesStanding(username) : readChessStanding(username, climb === CODEFORCES_CLIMB ? "rapid" : climb);
 }
 

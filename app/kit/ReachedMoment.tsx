@@ -12,7 +12,6 @@ import { dateInWords } from "@/src/moments";
 import { springEasing } from "@/src/motion";
 import { REACHED_MOMENT as W } from "@/src/sentences";
 import { AMOUNT_IN_TITLE, BODY, CARD_LABEL, HERO, INLINE_BUTTON, PRIMARY_BUTTON } from "../components/ui";
-import { Figure } from "./Figure";
 import { ExactLine, LedFigure } from "./LedAmount";
 import { reduced } from "./Motion";
 
@@ -22,10 +21,11 @@ import { reduced } from "./Motion";
  * once for the funder, kept on the account rather than on the device (src/reached-seen-store.ts), and only after the
  * page has finished loading, so nothing else moves while it plays. Several reached gifts play one after another.
  *
- * The whole screen, on the page's own ground: the character jumps, the amount turns from "in your name" to "yours",
- * the confetti falls across the screen for about three seconds, and one action stands under it. For the person it is
- * for, taking it; for the funder, "They did it" and what that means for the money. A device that asks for less motion
- * gets the same screen, still: the amount already "yours", no jump, no confetti.
+ * The whole screen, on the page's own ground: the amount turns from "in your name" to "yours", the confetti falls
+ * across the screen for about three seconds, and one action stands under it. For the person it is for, taking it; for
+ * the funder, "They did it" and what that means for the money. A device that asks for less motion gets the same
+ * screen, still: the amount already "yours", no confetti. No character and no other movement here until the animated
+ * mockup the founder is having made replaces this one (29 Sep 2026).
  *
  * The confetti is the characters' three shapes in the look's colours (decision B), never at payment.
  */
@@ -174,7 +174,6 @@ export function ReachedMoment({ gift, onClose }: Readonly<{ gift: ReachedGift; o
   const zone = useReaderZone();
   const dialog = useRef<HTMLDialogElement>(null);
   const layer = useRef<HTMLDivElement>(null);
-  const figure = useRef<HTMLSpanElement>(null);
   const amount = useRef<HTMLDivElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
   // Still, under reduced motion, the amount is already theirs; moving, it turns at `becomesAfterMs`. This screen is
@@ -198,22 +197,9 @@ export function ReachedMoment({ gift, onClose }: Readonly<{ gift: ReachedGift; o
     const element = dialog.current;
     if (!element) return;
     if (still) return;
-    const { inMs, becomesAfterMs, jump } = MOTION.moment;
+    const { inMs, becomesAfterMs } = MOTION.moment;
     const spring = springEasing(SPRING.expressiveFastSpatial);
     const animations: Animation[] = [element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: inMs, easing: "ease-out" })];
-    if (figure.current) {
-      animations.push(
-        figure.current.animate(
-          [
-            { transform: "translateY(0) scale(1, 1)" },
-            { transform: "translateY(4px) scale(1.08, 0.9)", offset: 0.15 },
-            { transform: `translateY(-${jump * 2}px) scale(0.96, 1.06)`, offset: 0.5 },
-            { transform: "translateY(0) scale(1, 1)" },
-          ],
-          { duration: spring.durationMs * 2, delay: inMs, easing: "ease-in-out" },
-        ),
-      );
-    }
     // The amount turns: it swells once on the expressive spring as its word changes from "in your name" to "yours".
     const turn = amount.current?.animate([{ transform: "scale(1)" }, { transform: "scale(1.12)" }, { transform: "scale(1)" }], {
       duration: spring.durationMs * 1.5,
@@ -249,9 +235,6 @@ export function ReachedMoment({ gift, onClose }: Readonly<{ gift: ReachedGift; o
         <span aria-hidden="true">&times;</span>
       </button>
       <div className="relative mx-auto flex min-h-full w-full max-w-[440px] flex-col items-center justify-center gap-[var(--space-md)] px-[var(--page-margin)] py-[var(--space-xl)] text-center">
-        <span ref={figure} className="block w-[132px]" style={{ transformOrigin: "50% 100%" } as CSSProperties}>
-          <Figure id="reached" arms="wave" mouth="grin" halftone />
-        </span>
         <p className={CARD_LABEL}>{recipient ? W.fromFunder(gift.funderName) : W.giftOf(gift.recipientName)}</p>
         <h1 ref={title} id="reached-title" tabIndex={-1} className={`${HERO} outline-none`}>
           {recipient ? W.youDidIt : W.theyDidIt}

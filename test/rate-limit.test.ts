@@ -114,5 +114,5 @@ test("validates limiter configuration", () => {
 });
 
 test("exposes one policy per Viky route family", () => {
-  assert.deepEqual(Object.keys(rateLimitPolicies).sort(), ["relay", "session", "status", "verify"]);
+  assert.deepEqual(Object.keys(rateLimitPolicies).sort(), ["reading", "relay", "session", "status", "verify"]);
 });

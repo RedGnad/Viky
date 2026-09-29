@@ -58,7 +58,7 @@ export class ChessReadError extends Error {
 
 export type PlainFetch = (url: string, init: RequestInit) => Promise<Response>;
 
-async function readJson(url: string, fetchImpl: PlainFetch): Promise<{ status: number; body: unknown; lastModified: number | null }> {
+async function readJson(url: string, fetchImpl: PlainFetch): Promise<{ status: number; body: unknown }> {
   let response: Response;
   try {
     response = await fetchImpl(url, { headers: { accept: "application/json", "user-agent": CHESS_USER_AGENT }, cache: "no-store", signal: AbortSignal.timeout(10_000) });
@@ -66,26 +66,11 @@ async function readJson(url: string, fetchImpl: PlainFetch): Promise<{ status: n
     throw new ChessReadError("FETCH_FAILED", "Chess.com is not answering", { cause: error });
   }
   const body = (await response.json().catch(() => null)) as unknown;
-  return { status: response.status, body, lastModified: lastModifiedOf(response.headers.get("last-modified")) };
+  return { status: response.status, body };
 }
-
-/** A `Last-Modified` header as epoch milliseconds, or null when it is missing or not a date. */
-export function lastModifiedOf(header: string | null): number | null {
-  if (!header) return null;
-  const at = Date.parse(header);
-  return Number.isFinite(at) ? at : null;
-}
-
-/**
- * A plain standing, with when the source last rebuilt the page read, from its own `Last-Modified` (epoch milliseconds),
- * or null when it gives none. Chess.com caches its statistics for hours (about 11 behind, measured on the first outside
- * tester's gift, 29 Sep 2026), so a win shows only once it has; the gift's page says when that was. Kept out of
- * src/chess-com.ts, whose every change is a new reading fingerprint and a redeployed worker.
- */
-export type ReadStanding = ChessStanding & Readonly<{ sourceUpdatedAt?: number | null }>;
 
 /** Where a player stands today in one climb, read plainly. Every failure is typed. */
-export async function readChessStanding(username: string, climb: ChessClimb, fetchImpl: PlainFetch = fetch): Promise<ReadStanding> {
+export async function readChessStanding(username: string, climb: ChessClimb, fetchImpl: PlainFetch = fetch): Promise<ChessStanding> {
   if (!isValidChessUsername(username)) throw new ChessReadError("INVALID_USERNAME", "That is not a Chess.com name");
   const profile = await readJson(chessProfileUrl(username), fetchImpl);
   if (profile.status === 404) throw new ChessReadError("PROFILE_NOT_FOUND", "No Chess.com player goes by that name");
@@ -105,7 +90,6 @@ export async function readChessStanding(username: string, climb: ChessClimb, fet
     ratedAt: rating?.ratedAt ?? null,
     rd: rating?.rd ?? null,
     best: rating?.best ?? null,
-    sourceUpdatedAt: stats.lastModified,
   };
 }
 

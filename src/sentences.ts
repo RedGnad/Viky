@@ -824,13 +824,15 @@ export const GIFT_LIVE = {
     /** Under today's reading, as the mockup of 19 Sep 2026 has it ("1429 today"). */
     label: { yours: "Today", theirs: "Today" },
     /**
-     * The one quiet line under today's figure (the founder, 29 Sep 2026): when the source last rebuilt what was read,
-     * from its own `Last-Modified`, read each time the page opens. A source may rebuild its ratings page only every few
-     * hours, so a win shows here once it has. "today at 13:55" is said "at 13:55".
+     * The one live line under today's figure (the founder, 29 Sep 2026): the page reads the source every minute while it
+     * is in front, and says where that stands, the seconds counting up, and a failure in the same place.
      */
-    lastUpdated: (when: string) => `Last updated ${when.replace(/^today /, "")}.`,
-    /** Viky's own next reading, by the next pass: "about", because a pass can start a few minutes late. */
-    nextReading: (when: string) => `Next reading ${when.replace(/ at /, " at about ")}.`,
+    checking: (source: string) => `Checking ${source}…`,
+    checkedJustNow: "Checked just now",
+    checkedSecondsAgo: (seconds: number) => `Checked ${seconds} s ago`,
+    checkedMinutesAgo: (minutes: number) => `Checked ${minutes} min ago`,
+    checkFailed: "Could not check just now. Trying again in a minute.",
+    tooManyChecks: "Checked too often for now. Trying again in a minute.",
     /** Outside the card, in the ground's voice: being told when the target is reached, and how when the phone refused. */
     /** "When", not "the moment": the message leaves when Viky sees the target reached, which can be hours after the game. */
     alert: { yours: (target: string) => `Get a message when you reach ${target}.`, theirs: (target: string) => `Get a message when they reach ${target}.` },

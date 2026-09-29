@@ -27,10 +27,9 @@ test("it opens when a day earned lands and looks down when a day goes back, cued
   assert.match(motion, /if \(mood\.feeling === "down"\) return \{ \.\.\.AT_REST, gaze: `translate\(0px, \$\{MOTION\.hover\.gaze\}px\)` \};/);
 });
 
-test("it jumps once when the gift is reached, in the moment, and not under reduced motion", () => {
+test("the moment a gift is reached draws no character and makes it jump no more, until its animated mockup", () => {
   const moment = readFileSync("app/kit/ReachedMoment.tsx", "utf8");
-  assert.match(moment, /figure\.current\.animate\(/);
-  assert.ok(moment.indexOf("figure.current.animate(") > moment.indexOf("if (still) return;"), "after the reduced-motion door, never before");
+  assert.doesNotMatch(moment, /<Figure\b|figure\.current|feel\(/);
   const motion = readFileSync("app/kit/Motion.tsx", "utf8");
   assert.match(motion, /if \(mood\.feeling === "jump"\) \{\n\s*const jumping = playEarned\(element, 0\);/);
 });
