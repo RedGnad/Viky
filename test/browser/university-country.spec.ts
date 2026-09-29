@@ -11,7 +11,7 @@ test("choosing a country closes its own sheet only, and the country's universiti
   await page.route(/\/api\/portals(\?.*)?$/, (route) => {
     const country = new URL(route.request().url()).searchParams.get("country");
     const body = country
-      ? { results: [{ pair: "ucad-sn", title: "Université Cheikh Anta Diop", issuer: "Senegal", country: "SN" }, { pair: "ugb-sn", title: "Université Gaston Berger", issuer: "Senegal", country: "SN" }] }
+      ? { results: [{ pair: "ucad-sn", title: "Université Cheikh Anta Diop", issuer: "Senegal", country: "SN", tested: true }, { pair: "ugb-sn", title: "Université Gaston Berger", issuer: "Senegal", country: "SN", tested: false }] }
       : { countries: [{ code: "NG", count: 156 }, { code: "SN", count: 9 }] };
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   });
@@ -31,10 +31,21 @@ test("choosing a country closes its own sheet only, and the country's universiti
   await sheet(page).last().getByText("Senegal", { exact: true }).click();
   await expect(sheet(page)).toHaveCount(1);
   await expect(sheet(page).getByText("Search in Senegal")).toBeVisible();
-  await expect(sheet(page).getByText("Université Gaston Berger")).toBeVisible();
+  // Two groups (the founder, 29 Sep 2026): the tested first, then all the others under one line; nothing on each line.
+  const tested = sheet(page).getByRole("group", { name: "Tested with a student" });
+  const all = sheet(page).getByRole("group", { name: "All universities" });
+  await expect(tested.getByText("Université Cheikh Anta Diop")).toBeVisible();
+  await expect(all.getByText("Université Gaston Berger")).toBeVisible();
+  await expect(all.getByText("Set up on the first gift, within two days.")).toBeVisible();
+  await expect(all.getByText("Université Cheikh Anta Diop")).toHaveCount(0);
+  // The search runs on both groups, and a group left empty is not drawn.
   await sheet(page).getByLabel("Search in Senegal").fill("cheikh");
   await expect(sheet(page).getByText("Université Gaston Berger")).toHaveCount(0);
-  await expect(sheet(page).getByText("Université Cheikh Anta Diop")).toBeVisible();
+  await expect(tested.getByText("Université Cheikh Anta Diop")).toBeVisible();
+  await expect(all).toHaveCount(0);
+  await sheet(page).getByLabel("Search in Senegal").fill("gaston");
+  await expect(tested).toHaveCount(0);
+  await expect(all.getByText("Université Gaston Berger")).toBeVisible();
 });
 
 /**

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { listUniversitiesIn, listUniversityCountries } from "@/src/client/certificate-gift";
 import type { GiftDraft } from "@/src/gift-draft";
 import { MILESTONE_FUND as M, UNIVERSITY_CHOICE as W } from "@/src/sentences";
-import { matching, type ListedUniversity } from "@/src/university-choice";
+import { inGroups, type ListedUniversity } from "@/src/university-choice";
 import { HELP } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { CountryPicker } from "../CountryPicker";
@@ -74,7 +74,7 @@ export function UniversityChooser({
         ) : (
           <CountrySearch
             country={list[0]?.issuer ?? country}
-            found={matching(list, words)}
+            found={list}
             words={words}
             onWords={setWords}
             value={draft.course ?? null}
@@ -98,7 +98,11 @@ export function UniversityChooser({
   );
 }
 
-/** The search within one country, and its list of at most twelve, the way the sheet's other searches say it. */
+/**
+ * The search within one country, and its two groups (the founder, 29 Sep 2026): the universities tested with a student
+ * first, then all the others with the one line that says how they are set up. The search runs on both; nothing is
+ * written on a line. Twelve of the others at most, the way the sheet's other searches say it.
+ */
 function CountrySearch({
   country,
   found,
@@ -107,13 +111,18 @@ function CountrySearch({
   value,
   onChange,
 }: Readonly<{ country: string; found: readonly ListedUniversity[]; words: string; onWords: (words: string) => void; value: string | null; onChange: (value: string) => void }>) {
-  const shown = found.slice(0, 12);
+  const { tested, others } = inGroups(found, words);
+  const count = tested.length + others.length;
+  const shown = others.slice(0, 12);
   return (
     <>
       <Field id="university-search" label={W.searchIn(country)} value={words} onChange={onWords} autoComplete="off" spellCheck={false} />
-      {shown.length === 0 ? <p className={HELP}>{W.nothingThere}</p> : <p className={HELP}>{M.detail.found(found.length)}</p>}
+      {count === 0 ? <p className={HELP}>{W.nothingThere}</p> : <p className={HELP}>{M.detail.found(count)}</p>}
+      {tested.length > 0 ? (
+        <ChoiceList name="university" legend={W.tested} shape="lines" value={value} onChange={onChange} options={tested.map((one) => ({ value: one.pair, label: one.title }))} />
+      ) : null}
       {shown.length > 0 ? (
-        <ChoiceList name="university" legend={country} legendHidden shape="lines" value={value} onChange={onChange} options={shown.map((one) => ({ value: one.pair, label: one.title }))} />
+        <ChoiceList name="university" legend={W.all} note={W.allLine} shape="lines" value={value} onChange={onChange} options={shown.map((one) => ({ value: one.pair, label: one.title }))} />
       ) : null}
     </>
   );
