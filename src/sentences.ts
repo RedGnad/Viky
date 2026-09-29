@@ -821,7 +821,24 @@ export const GIFT_LIVE = {
     toGo: (left: number) => `${left} to go.`,
     reachedAlready: "Reached. The next reading settles it.",
     notReadYet: { yours: "Your first reading starts the climb.", theirs: "Their first reading starts the climb." },
-    label: { yours: "Where you are", theirs: "Where they are" },
+    /** Under today's reading, as the mockup of 19 Sep 2026 has it ("1429 today"). */
+    label: { yours: "Today", theirs: "Today" },
+    /**
+     * The one quiet line under today's figure (the founder, 29 Sep 2026): when the source last rebuilt what was read,
+     * from its own `Last-Modified`, read each time the page opens. A source may rebuild its ratings page only every few
+     * hours, so a win shows here once it has. "today at 13:55" is said "at 13:55".
+     */
+    lastUpdated: (when: string) => `Last updated ${when.replace(/^today /, "")}.`,
+    /** Viky's own next reading, by the next pass: "about", because a pass can start a few minutes late. */
+    nextReading: (when: string) => `Next reading ${when.replace(/ at /, " at about ")}.`,
+    /** Outside the card, in the ground's voice: being told when the target is reached, and how when the phone refused. */
+    /** "When", not "the moment": the message leaves when Viky sees the target reached, which can be hours after the game. */
+    alert: { yours: (target: string) => `Get a message when you reach ${target}.`, theirs: (target: string) => `Get a message when they reach ${target}.` },
+    alertOn: { yours: (target: string) => `Viky will tell you when you reach ${target}.`, theirs: (target: string) => `Viky will tell you when they reach ${target}.` },
+    turnOn: "Turn on",
+    turnOff: "Turn off",
+    alertRefused: "Your phone is not letting Viky tell you. Turn notifications on for Viky in your phone's settings.",
+    alertInstall: "Add Viky to your Home Screen first, then open this page from there.",
   },
   /** Something granted once, waiting for the proof that it was. */
   awaitingProof: {
@@ -902,8 +919,8 @@ export const MILESTONE_PAGE = {
   /** "by 17 Oct 2026" once the first reading has started the clock; "within 30 days of connecting" before (D46). */
   byDate: (date: string) => `by ${date}`,
   withinDays: (days: number) => `within ${days} ${days === 1 ? "day" : "days"} of connecting`,
-  ruleYours: (target: number, by: string, time: string) => `It is yours when you reach ${target}, ${by}. Checked every day at about ${time} your time.`,
-  ruleTheirs: (target: number, by: string, time: string) => `It is theirs when they reach ${target}, ${by}. Checked every day at about ${time} your time.`,
+  ruleYours: (target: number, by: string) => `It is yours when you reach ${target}, ${by}.`,
+  ruleTheirs: (target: number, by: string) => `It is theirs when they reach ${target}, ${by}.`,
   startedAt: (reading: number) => `Started at ${reading}.`,
   atDeadlineYours: (by: string, funder: string | null) => `Reach it ${by} and it is yours. If not, it goes back to ${funder ?? "them"}.`,
   atDeadlineTheirs: (by: string) => `If they reach it ${by} it is theirs. If not, it comes back to you.`,
@@ -1026,6 +1043,29 @@ export const MILESTONE_ACTIONS = {
  * The preview a messaging app draws from a gift's link, the first thing the person it is for sees. The funder's name
  * only when the link carries its key; "Someone" otherwise, so a guessed gift number never names anybody.
  */
+/**
+ * The moment a gift is reached (the founder, 29 Sep 2026), over whatever screen the person arrives on, once for the
+ * person it is for and once for the funder. The first says what is now theirs and gives the one action, taking it; the
+ * second says they did it, and what that means for the money.
+ */
+export const REACHED_MOMENT = {
+  fromFunder: (funder: string | null) => (funder?.trim() ? `A gift from ${funder}` : "A gift for you"),
+  giftOf: (recipient: string | null) => (recipient?.trim() ? `${their(recipient)} gift` : "Your gift"),
+  youDidIt: "You did it.",
+  theyDidIt: "They did it.",
+  reached: (what: string, when: string) => `${what}: reached on ${when}.`,
+  theirsNow: (recipient: string | null, when: string) =>
+    `${recipient?.trim() ? recipient : "They"} reached it on ${when}. What you put in their name is theirs now, and none of it comes back.`,
+  inYourName: "In your name",
+  yours: "Yours",
+  inTheirName: "In their name",
+  theirs: "Theirs",
+  take: (amount: string) => `Take ${amount}`,
+  seeTheGift: "See the gift",
+  close: "Close",
+  seeItAgain: "See it again",
+} as const;
+
 /**
  * An amount led by the reader's currency (src/display-currency.ts, `ledAmount`): "about" before the converted figure,
  * and the exact dollars under it with the rate's day.

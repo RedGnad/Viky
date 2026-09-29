@@ -184,7 +184,7 @@ test("the characters have three colours, none grey, none the sun, and a face tha
   // Only the character draws with them: never a word, never a ground. And the one confetti (D175), whose pieces are
   // the characters' own three shapes thrown for a gift reached, which is neither a word nor a ground either.
   const painters = globSync("app/**/*.{ts,tsx}").filter((file) => /var\(--character-/.test(readFileSync(file, "utf8")));
-  assert.deepEqual(painters.sort(), ["app/kit/Character.tsx", "app/kit/Confetti.tsx", "app/kit/Figure.tsx"], "and the rig of the figure (D236)");
+  assert.deepEqual(painters.sort(), ["app/kit/Character.tsx", "app/kit/Figure.tsx", "app/kit/ReachedMoment.tsx"], "and the rig of the figure (D236)");
 });
 
 /**

@@ -3,6 +3,7 @@ import { formatAusd, readGift, theirsSoFar } from "./gift-reader";
 import { loadGiftsOf, loadSettledDays } from "./gift-store";
 import { isMilestoneGiftId } from "./milestone-protocol";
 import { loadMilestoneStatus } from "./milestone-status";
+import { reachedSeenOf } from "./reached-seen-store";
 import { escrowOf } from "./relayer";
 import type { GiftSummary } from "./client/gift";
 
@@ -89,5 +90,17 @@ export async function giftsOf(account: string): Promise<GiftSummary[]> {
   );
   // Newest first, by the moment the money went in, which is what "what's moving" shows first (structure, Home).
   gifts.sort((a, b) => b.fundedAt - a.fundedAt);
-  return gifts as GiftSummary[];
+  return withReachedSeen(account, gifts as GiftSummary[]);
+}
+
+/**
+ * Whether this account has had the moment of each reached gift (src/reached-seen-store.ts), so Home plays the ones it
+ * has not, once. A store that cannot be read counts them seen: a moment missed is less wrong than one replayed at
+ * every visit.
+ */
+async function withReachedSeen(account: string, gifts: GiftSummary[]): Promise<GiftSummary[]> {
+  const reached = gifts.filter((gift) => gift.milestone?.reached).map((gift) => gift.giftId);
+  if (reached.length === 0) return gifts;
+  const seen = await reachedSeenOf(account, reached).catch(() => new Set(reached));
+  return gifts.map((gift) => (gift.milestone?.reached ? { ...gift, reachedSeen: seen.has(gift.giftId) } : gift));
 }

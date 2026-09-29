@@ -32,6 +32,7 @@ export function GiftLive({
   live,
   figureNode,
   closed,
+  reading,
   action,
   agreed,
   checked,
@@ -52,6 +53,8 @@ export function GiftLive({
   figureNode?: ReactNode;
   /** What the source itself did to the account, when it closed it: the state, said under the state. */
   closed?: string | null;
+  /** When the source last updated what was read as the page opened, quietly under the figure, or nothing. */
+  reading?: ReactNode;
   /** The one action of this moment, or nothing. Never two of the same weight. */
   action?: ReactNode;
   /** What was agreed, folded under its name, and open at the one moment a person is discovering it. */
@@ -81,6 +84,7 @@ export function GiftLive({
             <div>
               <p className={CARD_AMOUNT}>{figureNode ?? live.figure.value}</p>
               <p className={`${CARD_LABEL} gift-meta`}>{live.figure.label}</p>
+              {reading ? <p className="gift-updated">{reading}</p> : null}
             </div>
             {live.back ? (
               <div className="text-right">
@@ -92,6 +96,7 @@ export function GiftLive({
         ) : null}
 
         {live.quiet ? <p className={`${CARD_LABEL} gift-meta`}>{live.quiet}</p> : null}
+
         {action ? <div className="gift-action">{action}</div> : null}
 
         <details className="gift-fold" open={agreed.open}>

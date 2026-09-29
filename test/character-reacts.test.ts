@@ -27,10 +27,10 @@ test("it opens when a day earned lands and looks down when a day goes back, cued
   assert.match(motion, /if \(mood\.feeling === "down"\) return \{ \.\.\.AT_REST, gaze: `translate\(0px, \$\{MOTION\.hover\.gaze\}px\)` \};/);
 });
 
-test("it jumps once when the gift is reached, with the confetti, and not under reduced motion", () => {
-  const confetti = readFileSync("app/kit/Confetti.tsx", "utf8");
-  assert.match(confetti, /feel\("jump", drawing, true\);/);
-  assert.ok(confetti.indexOf('feel("jump"') > confetti.indexOf("prefers-reduced-motion: reduce"), "after the reduced-motion door, never before");
+test("it jumps once when the gift is reached, in the moment, and not under reduced motion", () => {
+  const moment = readFileSync("app/kit/ReachedMoment.tsx", "utf8");
+  assert.match(moment, /figure\.current\.animate\(/);
+  assert.ok(moment.indexOf("figure.current.animate(") > moment.indexOf("if (still) return;"), "after the reduced-motion door, never before");
   const motion = readFileSync("app/kit/Motion.tsx", "utf8");
   assert.match(motion, /if \(mood\.feeling === "jump"\) \{\n\s*const jumping = playEarned\(element, 0\);/);
 });

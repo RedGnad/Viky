@@ -432,12 +432,12 @@ export const MOTION = {
   /** The whole arrival, whatever changed: under two seconds, the days a little apart from each other. */
   arrival: { budgetMs: 2000, staggerMs: 120 },
   /**
-   * The one confetti of the app (the founder, 23 Sep 2026, decision B): on "Atteint" alone, for the person it is for
-   * and for the funder, the first time this device sees the gift reached; never at payment. Twenty-four pieces in the
-   * characters' three shapes and the look's colours burst from the gift's drawing and fall, once, in Material's
-   * extra-long3 on the emphasized curves. With it the stamp of a gift had or not lands, on the expressive spring.
+   * The moment a gift is reached (the founder, 29 Sep 2026: the climax of the product, and a first tester did not see
+   * it). Played once the page has loaded, over the whole screen: the moment rises in, the character jumps, the amount
+   * turns "yours" `becomesAfterMs` in, and the confetti falls across the screen for long enough to be seen, each piece
+   * `fallMs` long, set off over `spreadMs`, so the rain lasts about three seconds and then is gone.
    */
-  confetti: { durationMs: 900, pieces: 24, burst: EASING.emphasizedDecelerate, fall: EASING.emphasizedAccelerate, stampFrom: 1.5 },
+  moment: { inMs: 450, becomesAfterMs: 900, pieces: 64, fallMs: 2200, spreadMs: 1100, jump: 26 },
   /** A gift made or money taken, answering the press that did it: the gift character arrives once, its bow a beat after. */
   gift: { spatial: SPRING.expressiveFastSpatial, effects: SPRING.effects, fromScale: 0.55, bowDelayMs: 120 },
   /**
