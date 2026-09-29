@@ -10,7 +10,7 @@ import { milestonePhase, readMilestoneGift, type MilestoneState } from "./milest
 import { relayProve, type ProvedReading } from "./milestone-relay";
 import { readSince, recordReading, type MilestoneReading, type ReadingPurpose } from "./milestone-store";
 import { escrowOf, RelayerError } from "./relayer";
-import type { ReadStanding } from "./chess-reading";
+import type { ChessStanding } from "./chess-com";
 
 /**
  * Reading a milestone gift and acting on what the reading says (C2). Two purposes, as for Duolingo's public mode:
@@ -34,7 +34,7 @@ import type { ReadStanding } from "./chess-reading";
 export type MilestoneOutcome =
   | Readonly<{ kind: "started"; giftId: string; rating: number; hash: Hex; aboveAccepted: boolean; deadline: number }>
   | Readonly<{ kind: "reached"; giftId: string; rating: number; hash: Hex }>
-  | Readonly<{ kind: "notYet"; giftId: string; rating: number; target: number; attested: boolean; sourceUpdatedAt?: number | null }>
+  | Readonly<{ kind: "notYet"; giftId: string; rating: number; target: number; attested: boolean }>
   | Readonly<{
       kind: "already";
       giftId: string;
@@ -70,7 +70,7 @@ const MESSAGES: Readonly<Record<string, string>> = {
 export type MilestoneReadingDeps = {
   loadGift: (giftId: string) => Promise<GiftRecord | null>;
   readState: (contract: Hex, giftId: string) => Promise<MilestoneState>;
-  plain: (username: string, mode: ClimbId) => Promise<ReadStanding>;
+  plain: (username: string, mode: ClimbId) => Promise<ChessStanding>;
   attest: (input: { username: string; mode: ClimbId; withName: boolean }) => Promise<AttestedClimbReading>;
   /** The identity pseudonym of the player, with the label of the house the climb is read on. */
   identity: (playerId: string, mode: ClimbId) => Hex;
@@ -152,7 +152,7 @@ function readingOf(giftId: string, purpose: ReadingPurpose, attested: AttestedCl
 }
 
 export async function runMilestoneReading(
-  input: { giftId: string; purpose: "start" | "reach"; force?: boolean },
+  input: { giftId: string; purpose: "start" | "reach"; force?: boolean; recentSeconds?: number },
   deps: MilestoneReadingDeps = liveMilestoneReadingDeps(),
 ): Promise<MilestoneOutcome> {
   const { giftId, purpose } = input;
@@ -199,7 +199,8 @@ export async function runMilestoneReading(
     return prove(record, state, contract, reading, "start", deps);
   }
 
-  if (!input.force && (await deps.readRecently(giftId, now - RECENT_READING_SECONDS))) return { kind: "already", giftId, reason: "read_recently" };
+  // A pass skips a gift read this recently; the frequent pass looks back less far than the nightly ones.
+  if (!input.force && (await deps.readRecently(giftId, now - (input.recentSeconds ?? RECENT_READING_SECONDS)))) return { kind: "already", giftId, reason: "read_recently" };
 
   // Look first. Below the target nothing can move, so no proof is paid for; any failure to look goes on to the proof.
   try {
@@ -220,7 +221,7 @@ export async function runMilestoneReading(
         outcome: "notYet",
         txHash: null,
       });
-      return { kind: "notYet", giftId, rating: standing.rating, target, attested: false, sourceUpdatedAt: standing.sourceUpdatedAt ?? null };
+      return { kind: "notYet", giftId, rating: standing.rating, target, attested: false };
     }
   } catch (error) {
     // A name that no longer resolves, or an account Chess.com has closed, is a fact about the account: the proof would

@@ -13,7 +13,7 @@ import {
   ratingHasSettled,
   ratingOfStats,
 } from "../src/chess-com";
-import { attestChessRating, ChessReadError, readChessStanding, type PlainFetch, lastModifiedOf } from "../src/chess-reading";
+import { attestChessRating, ChessReadError, readChessStanding, type PlainFetch } from "../src/chess-reading";
 import { CHESS_RATING } from "../src/conditions";
 import type { ZkFetchProof } from "../src/duolingo-public";
 import { CHESS_MILESTONE } from "../src/milestone-conditions";
@@ -148,9 +148,9 @@ test("the plain read answers who and where, and says which failure it met", asyn
     const page = pages[url] ?? { status: 503, body: null };
     return new Response(JSON.stringify(page.body), { status: page.status });
   };
-  assert.deepEqual(await readChessStanding("Erik", "rapid", fetcher), { username: "erik", playerId: "41", status: "staff", rating: 1904, ratedAt: 1764957051, rd: 80, best: 1904, sourceUpdatedAt: null });
-  assert.deepEqual(await readChessStanding("Erik", "bullet", fetcher), { username: "erik", playerId: "41", status: "staff", rating: 1712, ratedAt: 1782332751, rd: 42, best: 2071, sourceUpdatedAt: null });
-  assert.deepEqual(await readChessStanding("bar", "blitz", fetcher), { username: "bar", playerId: "347202211", status: "basic", rating: null, ratedAt: null, rd: null, best: null, sourceUpdatedAt: null });
+  assert.deepEqual(await readChessStanding("Erik", "rapid", fetcher), { username: "erik", playerId: "41", status: "staff", rating: 1904, ratedAt: 1764957051, rd: 80, best: 1904 });
+  assert.deepEqual(await readChessStanding("Erik", "bullet", fetcher), { username: "erik", playerId: "41", status: "staff", rating: 1712, ratedAt: 1782332751, rd: 42, best: 2071 });
+  assert.deepEqual(await readChessStanding("bar", "blitz", fetcher), { username: "bar", playerId: "347202211", status: "basic", rating: null, ratedAt: null, rd: null, best: null });
   await assert.rejects(readChessStanding("nobody-zz9", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "PROFILE_NOT_FOUND");
   await assert.rejects(readChessStanding("down", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "FETCH_FAILED");
   await assert.rejects(readChessStanding("flaky", "rapid", fetcher), (error: unknown) => error instanceof ChessReadError && error.code === "FETCH_FAILED", "a ratings page failing is not a player missing");
@@ -251,9 +251,3 @@ test("a rating has settled below the RD measured on 17 Sep 2026, and not at it, 
   assert.deepEqual(ratingOfStats({ chess_rapid: { last: { rating: 383, date: 1789673410, rd: 156 } } }, "rapid"), { rating: 383, ratedAt: 1789673410, rd: 156, best: null });
 });
 
-test("the source's last update is read from its own Last-Modified, in the form Chess.com writes it", () => {
-  assert.equal(lastModifiedOf("Monday, 28-Sep-2026 13:55:01 GMT+0000"), Date.UTC(2026, 8, 28, 13, 55, 1));
-  assert.equal(lastModifiedOf("Mon, 28 Sep 2026 13:55:01 GMT"), Date.UTC(2026, 8, 28, 13, 55, 1));
-  assert.equal(lastModifiedOf(null), null);
-  assert.equal(lastModifiedOf("not a date"), null);
-});

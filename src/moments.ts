@@ -36,26 +36,6 @@ export function momentInWords(atMs: number, nowMs: number, locale: string = PROD
   return `${WEEKDAYS[at.getDay()]} ${date} at ${time}`;
 }
 
-/** A moment already past, in the reader's own clock: "today at 13:55", "yesterday at 22:10", "on 27 Sep at 13:55". */
-export function pastMomentInWords(atMs: number, nowMs: number, locale: string = PRODUCT_LOCALE): string {
-  const at = new Date(atMs);
-  const time = at.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
-  const days = localDayNumber(nowMs) - localDayNumber(atMs);
-  if (days <= 0) return `today at ${time}`;
-  if (days === 1) return `yesterday at ${time}`;
-  return `on ${at.getDate()} ${MONTHS[at.getMonth()]} at ${time}`;
-}
-
-/** A moment to come, in the reader's own clock: "today at 09:00", "tomorrow at 02:30", "on 2 Oct at 02:30". */
-export function comingMomentInWords(atMs: number, nowMs: number, locale: string = PRODUCT_LOCALE): string {
-  const at = new Date(atMs);
-  const time = at.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
-  const days = localDayNumber(atMs) - localDayNumber(nowMs);
-  if (days <= 0) return `today at ${time}`;
-  if (days === 1) return `tomorrow at ${time}`;
-  return `on ${at.getDate()} ${MONTHS[at.getMonth()]} at ${time}`;
-}
-
 /** The next time a keeper's pass runs after now, in milliseconds. */
 export function nextPassMs(pass: PassTime, nowMs: number): number {
   const today = new Date(nowMs);

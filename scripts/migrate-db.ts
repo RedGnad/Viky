@@ -11,6 +11,7 @@ import { ensurePrivateSpaceSchema } from "../src/private-space-store";
 import { ensureRelayCeilingSchema } from "../src/relay-ceiling-store";
 import { ensurePushSchema } from "../src/push-store";
 import { ensureReachedSeenSchema } from "../src/reached-seen-store";
+import { ensurePassGuardSchema } from "../src/frequent-pass";
 import { ensureSendsSchema } from "../src/send-store";
 import { ensurePhoneOrderSchema } from "../src/phone-order-store";
 
@@ -31,6 +32,7 @@ async function main() {
   await ensureConnectionSchema();
   await ensurePushSchema();
   await ensureReachedSeenSchema();
+  await ensurePassGuardSchema();
   await ensurePassSchema();
   // The phone way out's ledger (D238).
   await ensurePhoneOrderSchema();

@@ -119,7 +119,7 @@ export function submitMilestoneGift(request: MilestoneGiftRequest): Promise<Crea
 export type MilestoneOutcome =
   | { kind: "started"; giftId: string; rating: number; hash: string; aboveAccepted: boolean; deadline: number }
   | { kind: "reached"; giftId: string; rating: number; hash: string }
-  | { kind: "notYet"; giftId: string; rating: number; target: number; attested: boolean; sourceUpdatedAt?: number | null }
+  | { kind: "notYet"; giftId: string; rating: number; target: number; attested: boolean }
   | { kind: "already"; giftId: string; reason: string }
   | { kind: "refused"; giftId: string; code: string; message: string; rating?: number };
 

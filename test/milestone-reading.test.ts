@@ -189,7 +189,7 @@ test("an account the recipient named needs its code: without it nothing is sent,
 test("below the target the keeper only looks, and pays for no proof", async () => {
   const run = harness(BOUND, CLIMBING);
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, run.deps);
-  assert.deepEqual(outcome, { kind: "notYet", giftId: "1000000", rating: 1904, target: 1954, attested: false, sourceUpdatedAt: null });
+  assert.deepEqual(outcome, { kind: "notYet", giftId: "1000000", rating: 1904, target: 1954, attested: false });
   assert.deepEqual(run.calls, ["plain"]);
   assert.deepEqual(run.recorded, ["look:plain:notYet"]);
 });

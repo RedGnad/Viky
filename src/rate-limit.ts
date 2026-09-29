@@ -135,6 +135,12 @@ export const rateLimitPolicies = {
   status: { limit: 180, windowMs: 10 * 60_000, maxEntries: 10_000 },
   verify: { limit: 10, windowMs: 10 * 60_000, maxEntries: 5_000 },
   relay: { limit: 20, windowMs: 10 * 60_000, maxEntries: 5_000 },
+  /**
+   * A milestone read live while its page is open (the founder, 29 Sep 2026): once a minute, which is `verify`'s whole
+   * allowance, so a second opening would have been refused. A plain look costs nothing; the proof it may lead to is paid
+   * only at or past the target, once.
+   */
+  reading: { limit: 30, windowMs: 10 * 60_000, maxEntries: 5_000 },
 } as const;
 
 export type RateLimitKind = keyof typeof rateLimitPolicies;
@@ -144,6 +150,7 @@ const limiters: Record<RateLimitKind, FixedWindowRateLimiter> = {
   status: new FixedWindowRateLimiter(rateLimitPolicies.status),
   verify: new FixedWindowRateLimiter(rateLimitPolicies.verify),
   relay: new FixedWindowRateLimiter(rateLimitPolicies.relay),
+  reading: new FixedWindowRateLimiter(rateLimitPolicies.reading),
 };
 
 export function checkRateLimit(kind: RateLimitKind, request: Request, signedScope?: string): RateLimitDecision {
