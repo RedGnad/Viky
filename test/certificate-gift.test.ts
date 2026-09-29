@@ -207,3 +207,24 @@ test("a gift made with a subject key is settled by its certificate and its key, 
   assert.match(route, /subjectKey,\n\s*\},/, "kept with the gift, never on chain");
   assert.match(readFileSync("src/shown-verification.ts", "utf8"), /const subject = open \? signedSubjectOf\(open, record\?\.subjectKey\) : open;/);
 });
+
+test("a certificate pasted without the recipient's yes is not read, and nothing is sent", async () => {
+  const sent: MilestoneProofMessage[] = [];
+  let read = false;
+  const outcome = await proveCertificate(
+    { giftId: "1000001", link: "https://certs.duolingo.com/abcd1234efgh5678" },
+    deps(
+      {
+        leave: async () => ({ allowed: false, reason: "no_agreement" }),
+        attest: async () => {
+          read = true;
+          throw new Error("not reached");
+        },
+      },
+      sent,
+    ),
+  );
+  assert.equal(outcome.kind === "refused" && outcome.code, "NO_AGREEMENT");
+  assert.equal(read, false);
+  assert.deepEqual(sent, []);
+});

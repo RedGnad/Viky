@@ -7,6 +7,7 @@ import {
 } from "@category-labs/mera";
 import { toViemAccount } from "@category-labs/mera/viem";
 import type { Address, LocalAccount } from "viem";
+import { consentWebAuthnClient, endConsentKey } from "../client/consent-key";
 import { deriveEvmPrivateKey } from "./derive";
 import { accountError, passkeyEnvironmentProblem, toAccountError } from "./errors";
 
@@ -123,7 +124,8 @@ export function sessionExpiresAtMs(): number | undefined {
 }
 
 function openSession(prfOutput: Uint8Array): Address {
-  signOut();
+  // The account's own key only: the consent key was just kept by the same ceremony and stays (src/client/consent-key.ts).
+  closeAccountSession();
   const privateKey = deriveEvmPrivateKey(prfOutput);
   prfOutput.fill(0);
   try {
@@ -150,6 +152,8 @@ export async function createAccount(displayName: string): Promise<Address> {
     const created = await createPasskeyWithPrfOutput({
       rp: { id: relyingPartyId(), name: RELYING_PARTY_NAME },
       user: { name, displayName: name },
+      // The consent key is asked in the same ceremony, as a second salt: no prompt is added.
+      webAuthnClient: consentWebAuthnClient,
     });
     rememberCredential({ credentialId: created.credentialId, transports: created.transports });
     return openSession(created.prfOutput);
@@ -163,7 +167,7 @@ export async function signIn(): Promise<Address> {
   requirePasskeyCapableBrowser();
   const known = storedCredential();
   try {
-    const result = await getPasskeyPrfOutput({ rpId: relyingPartyId(), credential: known });
+    const result = await getPasskeyPrfOutput({ rpId: relyingPartyId(), credential: known, webAuthnClient: consentWebAuthnClient });
     if (!known || known.credentialId !== result.credentialId) {
       rememberCredential({ credentialId: result.credentialId });
     }
@@ -200,6 +204,12 @@ export async function passkeyOutputFor(prfSalt: Uint8Array<ArrayBuffer>): Promis
  * about to load the landing as a new document must not redraw the page it leaves as a page for nobody first.
  */
 export function signOut({ quiet = false }: { quiet?: boolean } = {}): void {
+  closeAccountSession({ quiet });
+  // The consent key goes with the account, on a sign-out and after the idle minutes alike.
+  endConsentKey();
+}
+
+function closeAccountSession({ quiet = false }: { quiet?: boolean } = {}): void {
   if (idleTimer) {
     clearTimeout(idleTimer);
     idleTimer = undefined;

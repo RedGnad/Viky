@@ -1,4 +1,5 @@
 import { getAddress, type Hex } from "viem";
+import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { attestedRead, AttestedReadError, reclaimAttestedReadDeps, type AttestedReadDeps } from "./attested-read";
 import { attestedSource, GOOGLE_HEALTH_ACTIVE_MINUTES, STRAVA_DAY_ACTIVITIES } from "./attested-sources";
 import { conditionOfGoal } from "./conditions";
@@ -104,10 +105,13 @@ export type ConnectedCheckInDeps = {
   read: () => Promise<AttestedReadDeps>;
   refresh: (line: ConnectedLine, tokens: ConnectedTokens, nowSeconds: number) => Promise<ConnectedTokens>;
   configured: (line: ConnectedLine) => boolean;
+  /** Whether the recipient's agreement lets this gift be read (src/consent-guard.ts); a test that omits it reads. */
+  leave?: (giftId: string, fundedAt: number) => Promise<ReadingLeave>;
 };
 
 const defaultDeps: ConnectedCheckInDeps = {
   now: () => Math.floor(Date.now() / 1_000),
+  leave: readingLeave,
   read: async () => reclaimAttestedReadDeps(),
   refresh: (line, tokens, nowSeconds) => line.refresh(tokens, nowSeconds),
   // The source must be in the shared list the reading service runs (the founder's redeploy, OPERATIONS step 3):
@@ -161,6 +165,9 @@ export async function runConnectedCheckIn(input: { giftId: string; purpose: Publ
   const onChain = await readGift(escrow, giftId);
   if (onChain.cancelled) return { kind: "already", giftId, reason: "cancelled" };
   if (onChain.finalised) return { kind: "already", giftId, reason: "finished" };
+  // No reading that moves money without the recipient's yes, and none after their stop (the founder, 29 Sep 2026).
+  const leave = deps.leave ? await deps.leave(giftId, onChain.fundedAt) : null;
+  if (leave && !leave.allowed) return { kind: "refused", giftId, code: NO_AGREEMENT.code, message: NO_AGREEMENT.message };
   const now = deps.now();
   if (purpose === "count" && !input.force && (await countedToday(giftId, now))) return { kind: "already", giftId, reason: "counted_today" };
 

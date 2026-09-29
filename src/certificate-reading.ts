@@ -1,4 +1,5 @@
 import type { Hex } from "viem";
+import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { signedSubjectOf } from "./subject-key";
 import { COURSERA_GOAL_TYPE, COURSERA_HAS_IT, courseraProviderId } from "./coursera-certificate";
 import { attestCourseraCertificate, CourseraReadError } from "./coursera-reading";
@@ -43,6 +44,7 @@ export type CertificateOutcome =
   | { kind: "already"; giftId: string; reason: string };
 
 export type CertificateRefusal =
+  | "NO_AGREEMENT"
   | "INVALID_LINK"
   | "CERTIFICATE_PRIVATE"
   | "CERTIFICATE_EXPIRED"
@@ -81,6 +83,8 @@ export type CertificateReadingDeps = {
   attest: (goalType: number, link: string, signedSubject?: Hex, subjectKey?: string | null) => Promise<ReadCertificate>;
   /** The key the gift's subject was hashed with (src/subject-key.ts), or nothing for a gift made before keys. */
   subjectKey?: (giftId: string) => Promise<string | null>;
+  /** Whether the recipient's agreement lets this gift be read (src/consent-guard.ts); a test that omits it reads. */
+  leave?: (giftId: string, fundedAt: number) => Promise<ReadingLeave>;
   prove: (input: { contract: Hex; message: MilestoneProofMessage }) => Promise<{ hash: string }>;
   record: (reading: Parameters<typeof recordReading>[0]) => Promise<void>;
   now: () => number;
@@ -92,6 +96,7 @@ export function liveCertificateReadingDeps(): CertificateReadingDeps {
     readState: (contract, giftId) => readMilestoneGift(contract, giftId),
     attest: attestByGoal,
     subjectKey: (giftId) => loadMilestoneGift(giftId).then((gift) => gift?.subjectKey ?? null),
+    leave: readingLeave,
     prove: relayProve,
     record: recordReading,
     now: () => Math.floor(Date.now() / 1_000),
@@ -182,6 +187,9 @@ export async function proveCertificate(
   if (phase === "cancelled") return { kind: "already", giftId, reason: "cancelled" };
   if (phase === "reached" || phase === "returned") return { kind: "already", giftId, reason: "finished" };
   const words = certificate?.words.refusals;
+  // No reading that moves money without the recipient's yes, and none after their stop (the founder, 29 Sep 2026).
+  const leave = deps.leave ? await deps.leave(giftId, state.fundedAt) : null;
+  if (leave && !leave.allowed) return refuse(giftId, "NO_AGREEMENT", NO_AGREEMENT.message);
   const subjectKey = deps.subjectKey ? await deps.subjectKey(giftId) : null;
 
   let reading: ReadCertificate;

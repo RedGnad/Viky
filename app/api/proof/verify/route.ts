@@ -15,6 +15,7 @@ import { relayProve } from "@/src/milestone-relay";
 import { recordReading } from "@/src/milestone-store";
 import { isMilestoneGiftId } from "@/src/milestone-protocol";
 import { consumeAndSaveVerification, loadLatestEvidence, loadProofSession } from "@/src/proof-session-store";
+import { giftReadingLeave } from "@/src/consent-guard";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { admitRelay } from "@/src/relay-admission";
 import { escrowOf, RelayerError } from "@/src/relayer";
@@ -80,6 +81,7 @@ export async function POST(request: Request) {
         prove: relayProve,
         record: recordReading,
         milestoneRecordOf: loadMilestoneGift,
+        leave: giftReadingLeave,
         holdForReview,
         milestoneOf: async (giftId) => {
           if (!isMilestoneGiftId(giftId)) return null;

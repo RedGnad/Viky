@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { agreeFirst } from "@/src/client/consent";
 import { useMinute } from "../kit/clock";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useMoneySession } from "@/src/account/money-session";
@@ -30,7 +31,7 @@ import type { AnyGiftStatus } from "@/src/gift-status";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { contractDayInWords, contractRangeInWords, dateInWords, momentInWords, nextPassMs } from "@/src/moments";
 import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
-import { GIFT_LIVE as L, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
+import { CONSENT as C, GIFT_LIVE as L, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
 import { AskAgain } from "../kit/AskAgain";
 import { CertificateProof } from "../kit/CertificateProof";
 import { MarathonProof, MarathonStanding } from "../kit/MarathonProof";
@@ -41,6 +42,7 @@ import { ShowProof } from "../kit/ShowProof";
 import { CheckThisDay } from "../kit/CheckThisDay";
 import { CheckThisReading } from "../kit/CheckThisReading";
 import { ConnectTheAccount } from "../kit/ConnectTheAccount";
+import { ConsentLine, FunderConsent, useGiftConsent, type StopCost } from "../kit/Consent";
 import { ConnectTheSource, type ConnectWords } from "../kit/ConnectTheSource";
 import { DayRow } from "../kit/DayRow";
 import { charactersOf } from "../kit/DayStrip";
@@ -202,6 +204,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     },
   );
   const readingLine = readsLive ? <LiveLine state={liveState} source={source} /> : null;
+  /** The recipient's yes and stop (the founder, 29 Sep 2026): the line under the card, and the funder's sentence. */
+  const consent = useGiftConsent(giftId, (mine || readerIsFunder) && status.opened && !gift.finished);
   const recipientName = names?.recipientName ?? (milestone ? milestone.goalAccount.username : (daily?.goalAccount.source === "funder" ? daily.goalAccount.username : null));
 
   const account = milestone
@@ -345,8 +349,12 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       if (account.username) await nameGoalAccount(giftId, account.username);
       return null;
     });
+  // Starting is the gesture that asks for the first reading, so it is where the yes is signed (the founder, 29 Sep 2026).
   const start = () =>
-    run("starting", "start", async () => (milestone ? milestoneOutcome(await startMilestone(giftId)) : dailyOutcome(await bindGoalAccount(giftId))));
+    run("starting", "start", async () => {
+      await agreeFirst(giftId);
+      return milestone ? milestoneOutcome(await startMilestone(giftId)) : dailyOutcome(await bindGoalAccount(giftId));
+    });
   const countToday = () =>
     run("counting", "count", async () => (milestone ? milestoneOutcome(await checkMilestone(giftId)) : dailyOutcome(await countNow(giftId))));
   const take = () =>
@@ -584,6 +592,14 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         <p className={HELP}>{readerIsFunder ? M.ruleTheirs(milestone.target, milestoneBy(milestone, zone)) : M.ruleYours(milestone.target, milestoneBy(milestone, zone))}</p>
       ) : null}
       {daily && !stripFromRecordSafe(daily, nowMs) ? <p className={HELP}>{W.fromCountsNote}</p> : null}
+      {readerIsFunder ? (
+        <FunderConsent
+          answer={consent.answer}
+          recipientName={recipientName}
+          rest={milestone ? C.funderMilestoneRest(milestone.targetWords ?? (milestone.target === null ? null : String(milestone.target)), milestoneBy(milestone, zone), amountDisplay) : C.funderDailyRest}
+          zone={zone}
+        />
+      ) : null}
       {/* Asking for a reading now, and being told each morning: neither is the moment's action, so neither is
           offered beside it. They live here, with the rest of how a gift is checked. */}
       {/* A milestone is read as its page opens, so it has no button for it (the founder, 29 Sep 2026). */}
@@ -608,6 +624,16 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         {milestone ? <CheckThisReading giftId={giftId} /> : null}
       </>
     ) : null;
+
+  const stopCost: StopCost = milestone
+    ? {
+        kind: "milestone",
+        target: milestone.targetWords ?? (milestone.target === null ? null : String(milestone.target)),
+        by: milestoneBy(milestone, zone),
+        amount: amountDisplay,
+        funder: funderName ?? C.theFunder,
+      }
+    : { kind: "daily", funder: funderName ?? C.theFunder };
 
   const arriving = nowMs === 0 || !daily ? [] : charactersOf(daily, daily.catchUpSeconds, nowMs, daily.days);
 
@@ -643,6 +669,22 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
 
         {/* Being told the moment it is reached, outside the card in the ground's own voice (the mockup). */}
         {readsLive && milestone ? <ReachAlert giftId={giftId} target={String(milestone.targetWords ?? milestone.target)} yours={mine} /> : null}
+
+        {/* What Viky reads, and the stop, under the card in the same quiet manner (the mockup consent.html). */}
+        {mine ? (
+          <ConsentLine
+            giftId={giftId}
+            conditionId={condition?.id ?? ""}
+            answer={consent.answer}
+            underWay={moment === "counting" || moment === "climbing"}
+            cost={stopCost}
+            zone={zone}
+            onChanged={() => {
+              consent.reload();
+              void reload();
+            }}
+          />
+        ) : null}
 
         {/* The moment a gift is reached, to its two people and to nobody else (decision B): played here when this is
             where they arrive first, and again whenever they ask. */}

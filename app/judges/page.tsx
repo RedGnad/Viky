@@ -85,6 +85,13 @@ export default async function JudgesPage() {
             Mera&apos;s stateless test runs on this same account: sign out, then sign in from another browser or device
             with the same passkey. The account and its money come back; nothing was kept on the first device.
           </li>
+          <li>
+            One Passkey, Many Keys: the same sign-in asks the passkey&apos;s PRF for a second salt,
+            sha256(&quot;viky:consent:v1&quot;), and its output is an Ed25519 key held in memory. It signs the recipient&apos;s yes
+            to what a gift reads, and their stop, and nothing else: it cannot move money. Every reading that could move
+            money checks the latest signed yes first (src/consent-guard.ts), and the same passkey on a second device
+            gives the same public key, so the stop is honoured from anywhere.
+          </li>
         </ol>
       </section>
 

@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { agreeFirst } from "@/src/client/consent";
+import { CONSENT } from "@/src/sentences";
 import { ApiError } from "@/src/client/api";
 import { proveMarathon, readMarathonLine, saveBib, type MarathonLine } from "@/src/client/marathon";
 import { finishInWords, isValidBib } from "@/src/marathon";
@@ -32,6 +34,11 @@ export function MarathonProof({ giftId, status, yours, onChanged }: Readonly<{ g
       return;
     }
     setState({ at: "saving" });
+    // Naming the competition or the race is the yes, signed before anything is read (the founder, 29 Sep 2026).
+    if (!(await agreeFirst(giftId).then(() => true, () => false))) {
+      setState({ at: "refused", message: CONSENT.failed });
+      return;
+    }
     try {
       await saveBib(giftId, typed);
       setState({ at: "asking" });

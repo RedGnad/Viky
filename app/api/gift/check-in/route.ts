@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
+import { giftReadingLeave, NO_AGREEMENT } from "@/src/consent-guard";
 import { relayCheckIn } from "@/src/gift-relay";
 import { loadAttestation } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
@@ -32,6 +33,9 @@ export async function POST(request: Request) {
     }
     const gift = await loadGift(String(stored.message.giftId));
     if (!gift) throw new GiftApiError("UNKNOWN_SESSION", "Unknown check-in", 404);
+    // A stop signed since the proof was shown holds here too (src/consent-guard.ts).
+    const leave = await giftReadingLeave(gift.giftId);
+    if (!leave.allowed) throw new GiftApiError(NO_AGREEMENT.code, NO_AGREEMENT.message, 409);
     await admitRelay(request, auth.account);
     const relayed = await relayCheckIn(sessionId, escrowOf(gift));
     return NextResponse.json({ recorded: true, creditedDays: relayed.creditedDays, alreadyRecorded: relayed.alreadyRelayed }, { headers: NO_STORE });

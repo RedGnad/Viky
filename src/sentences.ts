@@ -1052,6 +1052,47 @@ export const MILESTONE_ACTIONS = {
  * only when the link carries its key; "Someone" otherwise, so a guessed gift number never names anybody.
  */
 /**
+ * The recipient's agreement to what Viky reads for a gift, and the stop (the founder, 29 Sep 2026). What is read is
+ * the register's (src/consent-terms.ts); these are the words around it. The yes is signed at the gesture that asks for
+ * a reading, so it has no screen of its own; the stop is as easy, one line and a sheet.
+ */
+export const CONSENT = {
+  failed: "Viky reads nothing until you agree, and your agreement could not be signed. Try again.",
+  stopFailed: "Your stop could not be signed. Nothing changed. Try again.",
+  line: (what: string, date: string) => `Viky reads ${what} for this gift. You agreed on ${date}.`,
+  stoppedLine: (what: string, date: string) => `Viky stopped reading ${what} on ${date}.`,
+  /** A gift that began before agreements existed: read as before until its person answers (the founder, 29 Sep 2026). */
+  askLine: (what: string) => `Viky reads ${what} for this gift. Do you agree?`,
+  nothingRead: "Viky reads nothing for this gift until you agree.",
+  stop: "Stop",
+  agree: "Agree",
+  agreeAgain: "Agree again",
+  sheetTitle: (what: string) => `Stop Viky reading ${what}?`,
+  /** The sheet's three sentences, the middle one said louder (the mockup): what stopping costs. */
+  sheetNow: "Viky stops now, on all your devices.",
+  sheetMilestone: (target: string | null, by: string, amount: string, funder: string) => `If ${target ?? "it"} is not read ${by}, the ${amount} goes back to ${funder}.`,
+  sheetDaily: (funder: string) => `Each day that is not read goes back to ${funder}.`,
+  sheetAgainBefore: "You can agree again before then.",
+  sheetAgainAnyTime: "You can agree again at any time.",
+  stopReading: "Stop reading",
+  keepGoing: "Keep going",
+  working: "One moment",
+  funderAgreed: (name: string, date: string, what: string) => `${name} agreed on ${date} that Viky reads ${what} for this gift. They can stop at any time.`,
+  funderBefore: (name: string, what: string) => `Viky reads ${what} for this gift. ${name} has not said yes to it yet, and can stop at any time.`,
+  funderMilestoneRest: (target: string | null, by: string, amount: string) => `If ${target ?? "it"} is not read ${by}, the ${amount} comes back to you.`,
+  funderDailyRest: "Each day that is not read comes back to you.",
+  funderStopped: (name: string, date: string) => `${name} stopped Viky reading on ${date}.`,
+  funderWaiting: (name: string) => `${name} has not agreed yet to what Viky reads for this gift. Nothing is read until they do.`,
+  someone: "The person it is for",
+  theFunder: "the person who offered it",
+  meTitle: "What Viky reads",
+  meLine: (what: string, whose: string) => `${what}, for ${whose}`,
+  meGift: (funder: string | null) => (funder ? `${funder}'s gift` : "a gift"),
+  meNothing: "Nothing, today.",
+  meStopped: (date: string) => `Stopped on ${date}.`,
+} as const;
+
+/**
  * The moment a gift is reached (the founder, 29 Sep 2026), over whatever screen the person arrives on, once for the
  * person it is for and once for the funder. The first says what is now theirs and gives the one action, taking it; the
  * second says they did it, and what that means for the money.

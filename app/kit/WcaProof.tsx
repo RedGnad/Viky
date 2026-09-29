@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { agreeFirst } from "@/src/client/consent";
+import { CONSENT } from "@/src/sentences";
 import { ApiError } from "@/src/client/api";
 import { checkRegistration, proveWca, readWcaLine } from "@/src/client/wca";
 import type { MilestoneStatus } from "@/src/milestone-view";
@@ -33,6 +35,11 @@ export function WcaProof({ giftId, status, yours, onChanged }: Readonly<{ giftId
       return;
     }
     setState({ at: "checking" });
+    // Naming the competition or the race is the yes, signed before anything is read (the founder, 29 Sep 2026).
+    if (!(await agreeFirst(giftId).then(() => true, () => false))) {
+      setState({ at: "refused", message: CONSENT.failed });
+      return;
+    }
     try {
       await checkRegistration(giftId, typed);
       setState({ at: "asking" });
