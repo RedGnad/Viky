@@ -56,6 +56,7 @@ let executor: SqlExecutor | undefined;
 
 export function configureMilestoneStore(custom: SqlExecutor | undefined): void {
   executor = custom;
+  subjectKeyColumn = undefined;
 }
 
 function sql(): SqlExecutor {
@@ -88,7 +89,23 @@ export type MilestoneRecord = Readonly<{
   subjectKey?: string | null;
 }>;
 
+/**
+ * The subject key's column, made the first time a gift is saved in a process (29 Sep 2026): the migration also makes
+ * it, and a deployment must never wait on one, since a milestone is saved right after its money has moved.
+ */
+let subjectKeyColumn: Promise<void> | undefined;
+function withSubjectKeyColumn(): Promise<void> {
+  subjectKeyColumn ??= (async () => {
+    await sql()`ALTER TABLE viky_milestone_gifts ADD COLUMN IF NOT EXISTS subject_key text`;
+  })().catch((error: unknown) => {
+    subjectKeyColumn = undefined;
+    throw error;
+  });
+  return subjectKeyColumn;
+}
+
 export async function saveMilestoneGift(input: { giftId: string; conditionId: string; mode: string; standingAtOffer: number; standingReadAt: Date; portal?: string | null; course?: string | null; gradeScale?: string | null; subjectKey?: string | null }): Promise<void> {
+  await withSubjectKeyColumn();
   await sql()`
     INSERT INTO viky_milestone_gifts (gift_id, condition_id, mode, standing_at_offer, standing_read_at, portal, course, grade_scale, subject_key)
     VALUES (${input.giftId}, ${input.conditionId}, ${input.mode}, ${input.standingAtOffer}, ${input.standingReadAt.toISOString()}, ${input.portal ?? null}, ${input.course ?? null}, ${input.gradeScale ?? null}, ${input.subjectKey ?? null})
