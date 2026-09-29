@@ -233,18 +233,22 @@ const ARMS: Record<ArmsPose, readonly Readonly<{ d: string; hand: readonly [numb
     { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13.37, 37.16] },
     { d: "M48.5 24.8 Q52.4 31 52 36", hand: [51.86, 37.79] },
   ],
+  // Raised, the arm bows the other way than when it hangs (the founder, 29 Sep 2026: turned up, the hanging arm's bow
+  // curved the wrong way), so it curves outward, as an arm raised to wave does.
   wave: [
-    { d: "M13 26 Q12 30.7 13 35.4", hand: [13.37, 37.16], turn: 150, over: true },
+    { d: "M13 26 Q14 30.7 13 35.4", hand: [12.63, 37.16], turn: 150, over: true },
     { d: "M48.5 24.8 Q52 30.7 51 35.4", hand: [50.63, 37.16] },
   ],
   run: [
     { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13.37, 37.16], turn: 75 },
     { d: "M48.5 24.8 Q52 30.7 51 35.4", hand: [50.63, 37.16], turn: -20 },
   ],
-  // The arm on the other's shoulder leaves from behind its own body, like any arm raised aslant (D301).
+  // The arm on the other's shoulder leaves from behind its own body, like any arm raised aslant (D301). About as long as
+  // a hanging arm (the founder, 29 Sep 2026: it reached twice as far, to the top of the other's head); it rests on the
+  // other's nearest corner instead, its hand on the edge there.
   shoulder: [
     { d: "M15.5 24.8 Q12 30.7 13 35.4", hand: [13.37, 37.16] },
-    { d: "M48.5 25.4 C57 24.5 65 19.5 72 16.5", hand: [72.8, 16.1] },
+    { d: "M48.5 25.4 C53.5 25.3 58.5 24.1 62.3 22.6", hand: [64, 21.9] },
   ],
   // Holding a book open in front (D268): the arms leave from under the body like the others (D302, the founder, 28 Sep
   // 2026) and pass behind the book; only the hands come over it, closing on its lower corners.
