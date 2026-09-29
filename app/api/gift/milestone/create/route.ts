@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getAddress, isAddress, type Hex } from "viem";
+import { getAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { isClimbReadError, readClimbStanding } from "@/src/climb-reading";
 import { climbOfGoal } from "@/src/climbs";
 import { NO_CONTACT_HASH } from "@/src/contact-hash";
 import { isOperator } from "@/src/dev-access";
-import { GiftApiError, NO_STORE } from "@/src/gift-api";
+import { GiftApiError, NO_STORE, refundDestination } from "@/src/gift-api";
 import { giftNameProblem, tidyGiftName } from "@/src/gift-names";
 import { giftSalt } from "@/src/gift-terms";
 import { loadCreation } from "@/src/gift-store";
@@ -105,8 +105,7 @@ export async function POST(request: Request) {
     if (amount < MILESTONE_MIN_AMOUNT || amount > MILESTONE_MAX_AMOUNT) throw new GiftApiError("INVALID_AMOUNT", "The gift must be between $1.00 and $1,000.00");
     const standingReadAt = new Date(String(body.standingReadAt ?? ""));
     if (Number.isNaN(standingReadAt.getTime()) || standingReadAt.getTime() > Date.now() + 60_000) throw new GiftApiError("INVALID_READING", "Read where they stand again.");
-    const refundToRaw = body.refundTo ? String(body.refundTo) : auth.account;
-    if (!isAddress(refundToRaw)) throw new GiftApiError("INVALID_REFUND", "The return destination is invalid");
+    const refundTo = refundDestination(body.refundTo, auth.account);
     const salt = String(body.salt ?? "");
     if (!HEX32.test(salt)) throw new GiftApiError("INVALID_SALT", "Please try again");
     const saltSeed = String(body.saltSeed ?? "");
@@ -124,7 +123,7 @@ export async function POST(request: Request) {
     const maximumStart = startingCeiling(milestone.shape, target);
     const params: MilestoneParams = {
       funder: getAddress(auth.account),
-      refundTo: getAddress(refundToRaw),
+      refundTo,
       recipientContactHash: NO_CONTACT_HASH,
       goalType: cadence.goalType,
       shape: SHAPE_CLIMB,

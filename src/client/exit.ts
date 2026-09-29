@@ -1,5 +1,6 @@
 import { getAddress, type Hex, type LocalAccount } from "viem";
 import { receiveAuthorizationTypedData, type ReceiveAuthorizationMessage } from "../ausd-authorization";
+import { EXIT_ROUTER } from "../viky-contracts";
 import { ApiError, postJson } from "./api";
 
 /**
@@ -90,9 +91,14 @@ async function oneAttempt(input: { account: LocalAccount; ticket: string }): Pro
     // Built literally rather than through the helper the gift path uses, because that one gives every
     // authorization an hour. This one has to die exactly when the terms do, so nothing spendable outlives the
     // window the contract itself enforces.
+    // Signed for the way out this code knows, never for an address a server answer names (the audit, 29 Sep 2026):
+    // an answer naming another one is refused before anything is signed.
+    if (getAddress(prepared.authorization.to) !== EXIT_ROUTER) {
+      throw new ApiError({ status: 409, code: "EXIT_ELSEWHERE", message: "The way out answered with another place to send your money, so nothing was signed and nothing moved." });
+    }
     const message: ReceiveAuthorizationMessage = {
       from: getAddress(input.account.address),
-      to: getAddress(prepared.authorization.to),
+      to: EXIT_ROUTER,
       value: BigInt(prepared.authorization.value),
       validAfter: BigInt(prepared.authorization.validAfter),
       validBefore: BigInt(prepared.authorization.validBefore),

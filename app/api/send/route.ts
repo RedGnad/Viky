@@ -10,6 +10,7 @@ import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { admitRelay, assertNotTooSmall } from "@/src/relay-admission";
 import { relayerClients, relayerPreflight, RelayerError } from "@/src/relayer";
 import { recordSend, sendReference } from "@/src/send-store";
+import { isVikyContract } from "@/src/viky-contracts";
 import { canonicalSignature } from "@/src/signature";
 
 export const runtime = "nodejs";
@@ -58,6 +59,8 @@ export async function POST(request: Request) {
     const body = await readJsonBody<{ to?: string; value?: string; validAfter?: string; validBefore?: string; nonce?: string; signature?: string; coin?: string }>(request, 4 * 1_024);
     const to = String(body.to ?? "");
     if (!isAddress(to)) throw new GiftApiError("INVALID_DESTINATION", "That destination is not valid.");
+    // One of Viky's own contracts takes a plain transfer and can never give it back (the audit, 29 Sep 2026).
+    if (isVikyContract(to)) throw new GiftApiError("VIKY_DESTINATION", "That code is Viky's own: money sent there could never be taken back out. Nothing was sent.");
     // Defaults to what a gift holds, so anything asking the way it always did keeps working unchanged.
     const coin = body.coin === undefined ? AUSD : coinAt(String(body.coin));
     if (!coin) throw new GiftApiError("UNKNOWN_COIN", "Viky cannot send that.");

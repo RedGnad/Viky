@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { isSubjectKey, keyedSubject } from "@/src/subject-key";
-import { getAddress, isAddress, type Hex } from "viem";
+import { getAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { NO_CONTACT_HASH } from "@/src/contact-hash";
 import { isOperator } from "@/src/dev-access";
-import { GiftApiError, NO_STORE } from "@/src/gift-api";
+import { GiftApiError, NO_STORE, refundDestination } from "@/src/gift-api";
 import { giftNameProblem, tidyGiftName } from "@/src/gift-names";
 import { makeMilestoneGift } from "@/src/milestone-creation";
 import { OFFERED_WHILE_BUILDING } from "@/src/conditions";
@@ -105,8 +105,7 @@ export async function POST(request: Request) {
       throw new GiftApiError("INVALID_AMOUNT", "The gift must be between $1.00 and $1,000.00");
     }
     if (amount < MILESTONE_MIN_AMOUNT || amount > MILESTONE_MAX_AMOUNT) throw new GiftApiError("INVALID_AMOUNT", "The gift must be between $1.00 and $1,000.00");
-    const refundToRaw = body.refundTo ? String(body.refundTo) : auth.account;
-    if (!isAddress(refundToRaw)) throw new GiftApiError("INVALID_REFUND", "The return destination is invalid");
+    const refundTo = refundDestination(body.refundTo, auth.account);
     const salt = String(body.salt ?? "");
     if (!HEX32.test(salt)) throw new GiftApiError("INVALID_SALT", "Please try again");
     // The key the subject is hashed with (src/subject-key.ts), drawn by the funder's browser: every gift made since 29
@@ -120,7 +119,7 @@ export async function POST(request: Request) {
 
     const params: MilestoneParams = {
       funder: getAddress(auth.account),
-      refundTo: getAddress(refundToRaw),
+      refundTo,
       recipientContactHash: NO_CONTACT_HASH,
       goalType: (course && certificate.goalTypeOf?.(course)) || certificate.goalType,
       shape: SHAPE_HAVE_OR_NOT,

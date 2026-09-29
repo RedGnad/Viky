@@ -20,9 +20,9 @@ test("the landing draws its four promises under the card, then the phone, then t
   assert.doesNotMatch(home, /<Install quiet \/>/);
 });
 
-test("a missed day goes back to the funder: the create routes default the refund to the account that pays", () => {
+test("a missed day goes back to the funder: the create routes send the refund to the account that pays, and nowhere else", () => {
   for (const route of ["app/api/gift/milestone/create/route.ts", "app/api/gift/certificate/create/route.ts"]) {
-    assert.match(readFileSync(route, "utf8"), /const refundToRaw = body\.refundTo \? String\(body\.refundTo\) : auth\.account;/);
+    assert.match(readFileSync(route, "utf8"), /const refundTo = refundDestination\(body\.refundTo, auth\.account\);/);
   }
   const screens = ["app/kit/offer/PaySheet.tsx", "app/kit/offer/OfferCard.tsx"].map((file) => readFileSync(file, "utf8")).join("\n");
   assert.doesNotMatch(screens, /refundTo/);

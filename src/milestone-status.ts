@@ -87,6 +87,9 @@ export function milestoneStatusOf(input: {
     phase: milestonePhase(state, input.nowSeconds),
     cadence: { id: cadence?.id ?? "", label: cadence?.label ?? "" },
     accountClosed: input.last?.outcome === "refused:ACCOUNT_CLOSED",
+    // A first reading above the cap, refused before anything was sent (the audit, 29 Sep 2026): said to the two people
+    // for as long as the gift has not started.
+    startAboveCap: insider && input.last?.outcome === "refused:START_TOO_HIGH" && milestonePhase(state, input.nowSeconds) === "opened" ? (input.last.rating ?? null) : null,
     maximumStart: Number(state.maximumStart),
     standingAtOffer: insider ? (input.milestone?.standingAtOffer ?? null) : null,
     marathon: marathonOf(input),

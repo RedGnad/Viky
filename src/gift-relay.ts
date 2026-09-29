@@ -2,6 +2,7 @@ import { parseEventLogs, type Abi, type Hex } from "viem";
 import type { ContractAuthorization } from "./ausd-authorization";
 import { ATTESTATION_TTL_SECONDS, signClaim, type GiftParams } from "./gift-attestation";
 import { giftEscrowAbi } from "./gift-escrow-abi";
+import { giftPublicClient, readGift } from "./gift-reader";
 import { settledDaysFromLogs } from "./day-record";
 import { recordRelayed, recordSettledDays, relayedForSession } from "./gift-store";
 import { tellAboutDays } from "./morning-send";
@@ -48,6 +49,51 @@ export async function relayClaim(input: { giftId: string; escrow: Hex; recipient
 
 export type RelayedCheckIn = Readonly<{ hash: Hex; creditedDays: number; alreadyRelayed: boolean }>;
 
+/** What the contract says of a gift's open days, and the last day whose catch-up window is over. */
+export type OpenDays = Readonly<{ startDay: number; endDay: number; settledThroughDay: number; cancelled: boolean; finalised: boolean; lastDrainableDay: number }>;
+
+export type ExpiredDaysDeps = Readonly<{
+  read: (giftId: string, escrow: Hex) => Promise<OpenDays>;
+  drain: (giftId: string, escrow: Hex) => Promise<unknown>;
+}>;
+
+export function liveExpiredDaysDeps(): ExpiredDaysDeps {
+  return {
+    read: async (giftId, escrow) => {
+      const [gift, lastDrainableDay] = await Promise.all([
+        readGift(escrow, giftId),
+        giftPublicClient().readContract({ address: escrow, abi, functionName: "lastDrainableDay" }) as Promise<number | bigint>,
+      ]);
+      return { ...gift, lastDrainableDay: Number(lastDrainableDay) };
+    },
+    drain: relayDrain,
+  };
+}
+
+/** Whether a gift still has an open day whose catch-up window is over: a day a reading must no longer pay. */
+export function expiredDayOpen(days: OpenDays): boolean {
+  if (days.startDay === 0 || days.cancelled || days.finalised) return false;
+  return Math.min(days.lastDrainableDay, days.endDay) > days.settledThroughDay;
+}
+
+/**
+ * Drains a gift's expired days before anything is signed or relayed for it (the audit, 29 Sep 2026). A day becomes
+ * drainable at 06:00 UTC, two days after it began, and the settling pass drains at 07:00: in between, a check-in could
+ * still pay a day that had already gone back. So every check-in is preceded by the drain, in the same passage, and a
+ * drain that fails stops the check-in rather than letting it through. Answers whether it drained.
+ */
+export async function drainExpiredDays(giftId: string, escrow: Hex, deps: ExpiredDaysDeps = liveExpiredDaysDeps()): Promise<boolean> {
+  if (!expiredDayOpen(await deps.read(giftId, escrow))) return false;
+  try {
+    await deps.drain(giftId, escrow);
+    return true;
+  } catch (error) {
+    // Drained by someone else between the reading and this call: the days are settled, which is all that was needed.
+    if (error instanceof RelayerError && error.code === "REVERTED" && error.contractError === "NothingToDrain") return false;
+    throw error;
+  }
+}
+
 /** Submits the attestation recorded for a verified session. Idempotent per session. */
 export async function relayCheckIn(sessionId: string, escrow: Hex): Promise<RelayedCheckIn> {
   const existing = await relayedForSession(sessionId);
@@ -56,6 +102,8 @@ export async function relayCheckIn(sessionId: string, escrow: Hex): Promise<Rela
   if (!stored) throw new RelayerError("NOT_CONFIGURED", "No verified attestation is recorded for this session");
   const m = stored.message;
   const giftId = String(m.giftId);
+  // An expired day is drained first, so this check-in can only pay days still inside their window.
+  await drainExpiredDays(giftId, escrow);
   const attestation = {
     recipient: String(m.recipient) as Hex,
     identityHash: String(m.identityHash) as Hex,

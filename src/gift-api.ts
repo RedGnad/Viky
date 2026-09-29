@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAddress, type Hex } from "viem";
 import { accountAuthErrorStatus, accountAuthPublicMessage } from "./account-auth-server";
 import { RelayerError } from "./relayer";
 import { RequestError } from "./request-error";
@@ -130,4 +131,17 @@ export function contractRefusal(name: string | undefined): { code: string; messa
   // next one is named rather than guessed at from a screenshot.
   console.error(`contract refusal with no message: ${name}`);
   return { code: "REFUSED", message: "This could not be recorded." };
+}
+
+/**
+ * Where unearned money goes back: the account that offers the gift, and no other (the audit, 29 Sep 2026). A request
+ * naming another destination is refused rather than quietly corrected, so nothing the browser sends can send a
+ * funder's money anywhere else.
+ */
+export function refundDestination(asked: unknown, account: string): Hex {
+  const named = asked !== undefined && asked !== null && asked !== "";
+  if (named && (typeof asked !== "string" || asked.toLowerCase() !== account.toLowerCase())) {
+    throw new GiftApiError("INVALID_REFUND", "Unearned money can only go back to the account that offers the gift.");
+  }
+  return getAddress(account);
 }

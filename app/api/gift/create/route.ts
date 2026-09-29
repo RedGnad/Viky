@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAddress, isAddress, type Hex } from "viem";
+import { getAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { conditionOfGoal } from "@/src/conditions";
 import { readJsonBody } from "@/src/api-guard";
@@ -9,7 +9,7 @@ import { DuolingoProfileError, resolvePublicDuolingoProfile } from "@/src/duolin
 import { giftNameProblem, tidyGiftName } from "@/src/gift-names";
 import { fundingNonce, type GiftParams } from "@/src/gift-attestation";
 import { giftSalt } from "@/src/gift-terms";
-import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
+import { GiftApiError, giftErrorResponse, NO_STORE, refundDestination } from "@/src/gift-api";
 import { makeGift } from "@/src/gift-creation";
 import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { liveCreationDeps } from "@/src/gift-creation-live";
@@ -101,8 +101,7 @@ export async function POST(request: Request) {
     // Until today this route had a floor and no ceiling, so only the contract's one hundred thousand stood above it
     // and the pilot's sentence on the amount step would have been false for a daily gift (mitigation b).
     if (amount > MAX_GIFT_UNITS) throw new GiftApiError("INVALID_AMOUNT", "The gift must be between $1.00 and $1,000.00");
-    const refundToRaw = body.refundTo ? String(body.refundTo) : auth.account;
-    if (!isAddress(refundToRaw)) throw new GiftApiError("INVALID_REFUND", "The return destination is invalid");
+    const refundTo = refundDestination(body.refundTo, auth.account);
     const salt = String(body.salt ?? "");
     if (!HEX32.test(salt)) throw new GiftApiError("INVALID_SALT", "Please try again");
     const saltSeed = String(body.saltSeed ?? "");
@@ -120,7 +119,7 @@ export async function POST(request: Request) {
 
     const params: GiftParams = {
       funder: getAddress(auth.account),
-      refundTo: getAddress(refundToRaw),
+      refundTo,
       recipientContactHash: contact ? contactHash(contact) : NO_CONTACT_HASH,
       goalType,
       dailyTarget,

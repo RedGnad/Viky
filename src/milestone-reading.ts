@@ -1,4 +1,5 @@
 import { getAddress, type Hex } from "viem";
+import { MILESTONE_ACTIONS } from "./sentences";
 import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { attestClimbRating, isClimbReadError, readClimbStanding, type AttestedClimbReading } from "./climb-reading";
 import { climbIdentityLabel, climbOfGoal, climbProviderId, type ClimbId } from "./climbs";
@@ -232,6 +233,26 @@ export async function runMilestoneReading(
       throw error;
     }
     if (provesItsOwn && !nameHasChessCode(reading.name, record.bindingCode ?? "")) return refused(giftId, "CODE_NOT_IN_NAME", reading.rating);
+    // Above the most the funder said it may start from, a start could never settle: nothing is sent and nothing is
+    // started (the audit, 29 Sep 2026). The reading is written down unsent, so the two people read why, and a later
+    // reading at the cap or below can still start it.
+    if (BigInt(reading.rating) > state.maximumStart) {
+      await deps.record({
+        giftId,
+        purpose: "look",
+        attested: false,
+        username: reading.username,
+        playerId: reading.playerId,
+        rating: reading.rating,
+        ratedAt: reading.ratedAt,
+        rd: reading.rd,
+        observedAt: reading.observedAt,
+        nullifier: null,
+        outcome: "refused:START_TOO_HIGH",
+        txHash: null,
+      });
+      return refused(giftId, "START_TOO_HIGH", reading.rating, MILESTONE_ACTIONS.startAboveCapMine(reading.rating, Number(state.maximumStart), null, null));
+    }
     return prove(record, state, contract, reading, "start", deps);
   }
 

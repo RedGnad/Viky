@@ -63,6 +63,8 @@ export type MilestoneStatus = Readonly<{
   cadence: { id: string; label: string };
   /** Chess.com has closed the account (U1): nothing more can be earned, and the gift goes back at the deadline. */
   accountClosed: boolean;
+  /** The first reading, when it stood above the highest start the funder accepted and was not recorded; nothing otherwise. */
+  startAboveCap?: number | null;
   /** The highest start the funder accepted: a start above it can never pay. */
   maximumStart: number;
   /** Where they stood when the funder chose, as the funder's screen read it. */
