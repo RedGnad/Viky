@@ -140,8 +140,11 @@ test("the charge line prints the way's own published fee, and never zero on a ra
   assert.equal(serviceChargeIsCeiling(100, WAY_IN_GIFT_COIN.fee), true);
   assert.equal(serviceChargeIsCeiling(29, WAY_IN_GIFT_COIN.fee), false, "the minimum is exact, so 'about'");
   assert.equal(serviceChargeIsCeiling(100, WAY_IN_CHAIN_COIN.fee), false, "a rate published as the rate itself");
-  assert.equal(PAY.upToDollars(4.43), "up to $4.43");
-  assert.match(sheet, /serviceChargeIsCeiling\(euros, way\.fee\) \? W\.upToDollars\(charge\) : W\.aboutDollars\(charge\)/);
+  assert.equal(PAY.upTo("€3.90"), "up to €3.90");
+  assert.equal(PAY.aboutAmount("€2.49"), "about €2.49");
+  // Read in the reader's own money, as the gift and the total are (the founder, 29 Sep 2026).
+  assert.match(sheet, /const chargeRead = charge === undefined \? undefined : money\.led\(BigInt\(Math\.round\(charge \* 1_000_000\)\)\)\.lead;/);
+  assert.match(sheet, /serviceChargeIsCeiling\(euros, way\.fee\) \? W\.upTo\(chargeRead\) : W\.aboutAmount\(chargeRead\)/);
   assert.equal(serviceChargeDollars(29, WAY_IN_CHAIN_COIN, undefined), undefined, "no rate, no figure, never a guess");
   assert.equal(serviceChargeEur(0, WAY_IN_GIFT_COIN.fee), 0, "nothing paid, nothing charged");
 });

@@ -151,7 +151,9 @@ export function PaySheet({
   const euros = units === undefined || !byCard ? 0 : offer.euros;
   /** What the service keeps, in dollars: its own published share or minimum at this amount, at the day's rate. */
   const charge = euros === undefined || euros === 0 ? undefined : serviceChargeDollars(euros, way, money.rates?.usdPerEur);
-  const chargeLine = charge === undefined ? W.about : euros && serviceChargeIsCeiling(euros, way.fee) ? W.upToDollars(charge) : W.aboutDollars(charge);
+  // In the reader's own money, like the gift above it and the total under it: the dollars led as every figure is.
+  const chargeRead = charge === undefined ? undefined : money.led(BigInt(Math.round(charge * 1_000_000))).lead;
+  const chargeLine = chargeRead === undefined ? W.about : euros && serviceChargeIsCeiling(euros, way.fee) ? W.upTo(chargeRead) : W.aboutAmount(chargeRead);
 
   /**
    * The passkey makes the account at the moment pay is pressed, which is what the sheet says it will do. After that
@@ -181,7 +183,8 @@ export function PaySheet({
   const line = (label: string, value: string) => (
     <div className="flex items-baseline justify-between gap-[var(--space-md)] border-b border-[var(--divider)] py-[var(--space-sm)] last:border-b-0">
       <span className={`${BODY} text-[var(--on-surface-body)]`}>{label}</span>
-      <span className={`${BODY} font-medium tabular-nums`}>{value}</span>
+      {/* A figure is read whole: the label wraps, never the amount ("about F CFA 646" split in two, 29 Sep 2026). */}
+      <span className={`${BODY} whitespace-nowrap font-medium tabular-nums`}>{value}</span>
     </div>
   );
 

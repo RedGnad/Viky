@@ -160,9 +160,13 @@ export const PAY = {
   },
   nothing: "nothing",
   about: "about",
-  aboutDollars: (dollars: number) => `about $${dollars.toFixed(2)}`,
+  /**
+   * What the card service keeps, in the money the gift and the total are read in (the founder, 29 Sep 2026: it was the
+   * one line in dollars on a sheet read in euros). Always "about": it is the service's published figure at a day's rate.
+   */
+  aboutAmount: (amount: string) => `about ${amount}`,
   /** When the service publishes its share as a ceiling and the ceiling is what applies at this amount. */
-  upToDollars: (dollars: number) => `up to $${dollars.toFixed(2)}`,
+  upTo: (amount: string) => `up to ${amount}`,
   youPay: "You pay about",
   euros: (euros: number) => `${euros} EUR`,
   /**
@@ -213,9 +217,9 @@ export const PAY = {
     link: (partner: string) => `${partner}'s terms`,
     after: ".",
   },
-  /** In the card's place, for a payer in a country its providers' terms exclude; every other way to pay stays. */
+  /** In the card's place, where no card partner serves the payer's country (the founder's words, 29 Sep 2026). */
   cardNotOffered: (country: string | null) =>
-    `Paying by card is not offered ${country ? `in ${country}` : "where you are"}. You can still pay from your account: money sent to your code arrives there.`,
+    `Card payment isn't available ${country ? `in ${country}` : "where you are"}. You can pay with money already in your Viky account, and anyone who uses Viky can send money to yours.`,
   pay: "Pay",
   payEuros: (euros: number) => `Pay ${euros} EUR`,
   payFromAccount: (amount: string) => `Put ${amount} in their name`,

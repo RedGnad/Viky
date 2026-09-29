@@ -3,7 +3,7 @@ import { NO_STORE } from "@/src/gift-api";
 import { reachOfWaysIn, reachOfWaysOut } from "@/src/rail-availability";
 import { countryCode, guessCountry, regionOfLocale } from "@/src/rail-country";
 import { readAccountAuthSession } from "@/src/account-auth-server";
-import { cardOffered, payerCountry } from "@/src/card-rail";
+import { cardOffered, cardReach, payerCountry } from "@/src/card-rail";
 import { loadPreferences } from "@/src/preferences-store";
 
 export const runtime = "nodejs";
@@ -21,18 +21,22 @@ export const dynamic = "force-dynamic";
  * somebody's country is wrong often enough that hiding on it would take money out of reach, and because the rail's own
  * identity check is the only thing that actually decides.
  *
- * One exception, for adding money by card only (the founder, 29 Sep 2026): `card` says whether it is offered, from the
- * account's own country when it has one, else the connection's. A payer in a country under a US embargo is not offered
- * the card, which its providers' terms exclude; nothing else changes for them.
+ * One exception, for adding money by card only (the founder, 29 Sep 2026): the ways in are answered for the payer's
+ * country, the account's own when it has one, else the connection's, each card partner by its own published list first,
+ * and `card` says whether any of them serves it. Nothing else changes for a payer no card partner serves.
  */
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const fromConnection = countryCode(request.headers.get("x-vercel-ip-country"));
   const fromDevice = regionOfLocale(params.get("locale")) ?? countryCode(params.get("region"));
   const guess = guessCountry({ fromConnection, fromDevice, answered: params.get("answered") });
-  const [waysOut, waysIn, accountCountry] = await Promise.all([reachOfWaysOut(guess.country), reachOfWaysIn(guess.country), countryOfAccount(request)]);
+  const accountCountry = await countryOfAccount(request);
+  // Adding money by card is decided for the payer's country (the account's, else the connection's), each partner by its
+  // own list first; paying out keeps the guess above.
   const payer = payerCountry({ account: accountCountry, connection: fromConnection });
-  return NextResponse.json({ ...guess, waysOut, waysIn, card: { offered: cardOffered(payer), country: payer } }, { headers: NO_STORE });
+  const [waysOut, live] = await Promise.all([reachOfWaysOut(guess.country), reachOfWaysIn(payer ?? guess.country)]);
+  const waysIn = cardReach(payer, live);
+  return NextResponse.json({ ...guess, waysOut, waysIn, card: { offered: cardOffered(waysIn), country: payer } }, { headers: NO_STORE });
 }
 
 /** The country the signed-in account keeps (D274), or nothing for a visitor, an account that has none, or a failed read. */

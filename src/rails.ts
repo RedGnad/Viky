@@ -19,10 +19,9 @@ import { USDC_ADDRESS } from "./monad/chain";
  */
 
 /**
- * Where the card rail serves nobody, read from its own availability page on 14 Sep 2026 (updated there 2 Sep).
- * This decides who a gift can be **sent** to, which is a different question from who can cash one out, and it
- * is the only place a list of countries is still kept: adding money happens on one rail only, so there is
- * nothing to choose between and nothing to show.
+ * Where Mercuryo serves nobody, by the names its own availability page gives them, read on 14 Sep 2026 and again on
+ * 29 Sep 2026 (updated there 15 Sep). `MERCURYO_CLOSED_IN` below is the same list as codes, which is what decides; Ramp
+ * has its own (`RAMP_CLOSED_IN`).
  *
  * Senegal and Ivory Coast are deliberately absent and were checked for: the cross-border gifts of the pilot
  * are aimed there, and at France and the rest of the union outside Hungary and Iceland.
@@ -36,6 +35,34 @@ export const RAIL_CLOSED_IN: readonly string[] = [
   "Libya", "Mali", "Morocco", "Myanmar", "Nepal", "Nicaragua", "North Korea", "Pakistan", "Palestine",
   "Panama", "Papua New Guinea", "Russian Federation", "Sierra Leone", "Somalia", "South Ossetia",
   "South Sudan", "Sudan", "Syria", "Tunisia", "Venezuela", "Western Sahara", "Yemen", "Zimbabwe",
+];
+
+/**
+ * Where Ramp serves nobody, as two-letter codes, from its own list: "Which countries and US states are unsupported for
+ * buying and selling crypto?" (https://support.rampnetwork.com/en/articles/433-which-countries-and-us-states-are-unsupported-for-buying-and-selling-crypto,
+ * read 29 Sep 2026, 132 countries and territories, "determined by your physical location"). Senegal and Ivory Coast
+ * are on it. Its eight US states (Louisiana, Minnesota, Nevada, New Jersey, New York, Pennsylvania, Vermont,
+ * Washington) cannot be told from a country, and are left to Ramp's own check.
+ */
+export const RAMP_CLOSED_IN: readonly string[] = [
+  "af", "ag", "ai", "am", "ao", "aw", "az", "ba", "bb", "bd", "bf", "bh", "bi", "bj", "bo", "bs", "by", "bz", "cf", "cg",
+  "ci", "cm", "cn", "cu", "cw", "dj", "dm", "dz", "ec", "eg", "er", "et", "fj", "fm", "ga", "gd", "gh", "gm", "gn", "gq",
+  "gt", "gw", "gy", "ht", "id", "iq", "ir", "jm", "jo", "jp", "ke", "kg", "kh", "ki", "km", "kn", "kp", "kr", "la", "lb",
+  "lc", "lk", "lr", "ls", "ly", "ma", "me", "mg", "ml", "mm", "mn", "mo", "mr", "ms", "mu", "mv", "mw", "mz", "na", "ne",
+  "ng", "ni", "np", "nu", "om", "pa", "pg", "pk", "pn", "pr", "ps", "pw", "qa", "ru", "rw", "sa", "sb", "sc", "sd", "sl",
+  "sn", "so", "sr", "ss", "sy", "sz", "tc", "td", "tg", "th", "tj", "tl", "tm", "tn", "to", "tt", "tv", "tw", "tz", "ua",
+  "ug", "uz", "vc", "ve", "vg", "vi", "vn", "vu", "ws", "xk", "ye", "zw",
+];
+
+/**
+ * Where Mercuryo serves nobody, as two-letter codes: `RAIL_CLOSED_IN` above, which its help centre still lists as it is
+ * ("Where Is Mercuryo Widget/Wallet Available?", updated 15 Sep 2026, read 29 Sep 2026; Senegal and Ivory Coast open).
+ * Abkhazia, South Ossetia and the occupied territories of Ukraine have no code of their own and are left to its check.
+ */
+export const MERCURYO_CLOSED_IN: readonly string[] = [
+  "af", "ao", "aq", "ax", "bb", "bd", "bi", "bo", "by", "cd", "cf", "cg", "cl", "cn", "co", "cr", "cu", "dz", "ec", "eh",
+  "gf", "gt", "gu", "gw", "hn", "ht", "hu", "iq", "ir", "is", "kh", "kp", "lb", "lr", "ly", "ma", "ml", "mm", "ni", "np",
+  "pa", "pf", "pg", "pk", "ps", "ru", "sd", "sl", "so", "ss", "sy", "tn", "ve", "xk", "ye", "zw",
 ];
 
 export type RailHandoff = Readonly<{
@@ -83,7 +110,10 @@ export type WayIn = Readonly<{
   /** Where the sentences above were read, and when. Shown on screen, so nobody has to take our word for it. */
   source: string;
   read: string;
-  /** Countries where this rail serves nobody, whatever else is true. */
+  /**
+   * Where this rail serves nobody, whatever else is true, as the two-letter codes a country is kept in: its own
+   * published list (the founder, 29 Sep 2026: each partner follows its own list, never the other's).
+   */
   closedIn: readonly string[];
   /** Their own terms for a person buying, on their official site: what the payer accepts by paying by card. */
   terms: string;
@@ -111,7 +141,7 @@ export const WAY_IN_GIFT_COIN: WayIn = {
   conditions: ["Identity check the first time, once.", "A card or a bank account in your name."],
   source: "Ramp's own asset list",
   read: "20 Sep 2026",
-  closedIn: RAIL_CLOSED_IN,
+  closedIn: RAMP_CLOSED_IN,
   // Their terms of service, where ramp.network now redirects; section 7 asks that a user be at least 18 (read 29 Sep 2026).
   terms: "https://rampnetwork.com/terms-of-service",
 };
@@ -140,7 +170,7 @@ export const WAY_IN_CHAIN_COIN: WayIn = {
   // Buying the coin is shut in the United Kingdom as well as selling it: their own currencies endpoint lists `gb`
   // under both `restricted_countries_onramp` and `restricted_countries_offramp` for MON on MONAD, read on 15 Sep
   // 2026 at https://api.mercuryo.io/v1.6/lib/currencies (D72), and again on 16 Sep for D77.
-  closedIn: [...RAIL_CLOSED_IN, "United Kingdom"],
+  closedIn: [...MERCURYO_CLOSED_IN, "gb"],
   // Their terms for individuals, the page that leads to the EEA version and the one for everywhere else; the EEA one
   // asks, in 3.1, that a user be at least 18 (read 29 Sep 2026).
   terms: "https://mercuryo.io/legal/terms/",
@@ -193,7 +223,7 @@ export const WAY_IN: RailHandoff = {
   smallest: `${WAY_IN_CHAIN_COIN.smallestEur} EUR`,
   fee: "about 3.8%",
   conditions: WAY_IN_CHAIN_COIN.conditions,
-  closedIn: WAY_IN_CHAIN_COIN.closedIn,
+  closedIn: [...RAIL_CLOSED_IN, "United Kingdom"],
   byHand: true,
 };
 
