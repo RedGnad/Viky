@@ -659,7 +659,15 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
           live={live}
           figureNode={figureNode}
           /* The source closed the account: said where the state is said, because it is the state now. */
-          closed={milestone?.accountClosed && !gift.finished ? (milestoneById(milestone.conditionId)?.words.accountClosed ?? null) : null}
+          closed={
+            milestone?.accountClosed && !gift.finished
+              ? (milestoneById(milestone.conditionId)?.words.accountClosed ?? null)
+              : milestone?.startAboveCap != null && !gift.finished
+                ? readerIsFunder
+                  ? A.startAboveCapTheirs(milestone.startAboveCap, milestone.maximumStart, connectBy, recipientName)
+                  : A.startAboveCapMine(milestone.startAboveCap, milestone.maximumStart, connectBy, funderName)
+                : null
+          }
           action={action}
           agreed={{ open: read.agreementOpen, children: agreed }}
           checked={checked}

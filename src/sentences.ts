@@ -1017,6 +1017,14 @@ export const MILESTONE_ACTIONS = {
   added: "I added it",
   removeAfter: "You can take the code out right after. It works for an hour.",
   newCode: "Get a new code",
+  /**
+   * A first reading above the most the funder said it may start from (the audit, 29 Sep 2026): nothing was recorded,
+   * the gift has not started, and it can still start lower; unstarted, it goes back by itself.
+   */
+  startAboveCapMine: (reading: number, cap: number, by: string | null, funder: string | null) =>
+    `You are at ${reading}, above the ${cap} this gift may start from, so nothing was recorded and it has not started. It starts with a reading at ${cap} or below${by ? `; if it has not started by ${by}, it goes back to ${funder ?? "the person who sent it"}` : ""}.`,
+  startAboveCapTheirs: (reading: number, cap: number, by: string | null, recipient: string | null) =>
+    `${recipient ? `${recipient} is` : "They are"} at ${reading}, above the ${cap} you set as the most it may start from, so nothing was recorded and it has not started${by ? `. If it has not started by ${by}, it comes back to you` : ""}.`,
   startTooHighMine: (start: number, target: number, funder: string | null) =>
     `You had already reached ${target} when you connected: you were at ${start}, so this gift cannot count it. Ask ${funder ?? "the person who sent it"} for a new one. It goes back to them at the end.`,
   startTooHighTheirs: (start: number, target: number, recipient: string | null) =>
@@ -1558,6 +1566,7 @@ export const CASH_OUT = {
   codeRefusals: {
     shape: (name: string) => `That is not a code ${name} gives. It starts with 0x and is 42 characters long.`,
     own: (name: string) => `That is your own code. Paste the one ${name} shows you to send to.`,
+    viky: (name: string) => `That code is Viky's own, not ${name}'s: money sent there could never be taken back out. Paste the one ${name} shows you.`,
   },
   /**
    * The review before sending: the star of the screen is what the gesture moves, so the amount is the figure, at
@@ -1595,6 +1604,7 @@ export const CASH_OUT = {
     refusals: {
       shape: "That is not a Viky code. It starts with 0x and is 42 characters long.",
       own: "That is this account's own code. Paste the other account's.",
+      viky: "That code is Viky's own, not an account's: money sent there could never be taken back out. Paste the other account's.",
     },
   },
 

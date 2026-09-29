@@ -7,7 +7,7 @@ import { readJsonBody } from "@/src/api-guard";
 import { VerificationError, type ReclaimStatus, type SdkVerification } from "@/src/duolingo-verification";
 import { contractRefusal, GiftApiError } from "@/src/gift-api";
 import { signCheckIn } from "@/src/gift-attestation";
-import { relayCheckIn } from "@/src/gift-relay";
+import { drainExpiredDays, relayCheckIn } from "@/src/gift-relay";
 import { loadGift } from "@/src/gift-store";
 import { readMilestoneGift } from "@/src/milestone-reader";
 import { loadMilestoneGift } from "@/src/milestone-store";
@@ -78,6 +78,9 @@ export async function POST(request: Request) {
           return verified as unknown as SdkVerification;
         },
         signCheckIn: (message) => signCheckIn(message, giftEscrow),
+        drainExpired: async (giftId) => {
+          await drainExpiredDays(giftId, giftEscrow);
+        },
         prove: relayProve,
         record: recordReading,
         milestoneRecordOf: loadMilestoneGift,

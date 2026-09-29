@@ -10,6 +10,7 @@ import { quoteWayOut, takeTheWayOut, type WayOutQuote } from "@/src/client/exit"
 import { sendOwnMoney, withdrawEarned } from "@/src/client/gift";
 import { totalEarned, type EarnedInGift } from "@/src/earned-shape";
 import { readCoinBalance, sendMon } from "@/src/client/onchain";
+import { isVikyContract } from "@/src/viky-contracts";
 import { AUSD, coinAt, COINS, exactly, isNative, USDC, type Coin } from "@/src/coins";
 import { rateDateInWords, whenInWords } from "@/src/display-currency";
 import { exitAmount, type ExitAmount } from "@/src/exit-amount";
@@ -374,6 +375,7 @@ export function CashOut() {
     if (!chosen || typed === "") return null;
     if (!isAddress(typed)) return W.codeRefusals.shape(chosen.name);
     if (address && getAddress(typed) === getAddress(address)) return W.codeRefusals.own(chosen.name);
+    if (isVikyContract(typed)) return W.codeRefusals.viky(chosen.name);
     return null;
   };
 
@@ -446,6 +448,7 @@ export function CashOut() {
     if (typed === "") return null;
     if (!isAddress(typed)) return W.own.refusals.shape;
     if (address && getAddress(typed) === getAddress(address)) return W.own.refusals.own;
+    if (isVikyContract(typed)) return W.own.refusals.viky;
     return null;
   };
   const sendOwn = async () => {

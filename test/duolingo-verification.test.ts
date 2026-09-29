@@ -253,3 +253,45 @@ test("missing configuration fails closed before any network call", async () => {
   await assert.rejects(verifyDuolingoSession(fixture({ escrowAddress: undefined }).deps, { sessionId: SESSION_ID, account: ACCOUNT }), code("NOT_CONFIGURED"));
   await assert.rejects(verifyDuolingoSession(fixture({ appId: "" }).deps, { sessionId: SESSION_ID, account: ACCOUNT }), code("NOT_CONFIGURED"));
 });
+
+test("nothing is signed while a day already gone back is still open, and the day is settled first", async () => {
+  // The audit, 29 Sep 2026: between 06:00 and the settling pass, a check-in could still pay an expired day.
+  const order: string[] = [];
+  const settled = fixture();
+  const signing = settled.deps.signCheckIn;
+  await verifyDuolingoSession(
+    {
+      ...settled.deps,
+      drainExpired: async () => {
+        order.push("drain");
+      },
+      signCheckIn: async (message) => {
+        order.push("sign");
+        return signing(message);
+      },
+    },
+    { sessionId: SESSION_ID, account: ACCOUNT },
+  );
+  assert.deepEqual(order, ["drain", "sign"]);
+
+  const failing = fixture();
+  let signed = false;
+  await assert.rejects(
+    verifyDuolingoSession(
+      {
+        ...failing.deps,
+        drainExpired: async () => {
+          throw new Error("relayer down");
+        },
+        signCheckIn: async () => {
+          signed = true;
+          return "0x" as `0x${string}`;
+        },
+      },
+      { sessionId: SESSION_ID, account: ACCOUNT },
+    ),
+    code("DAY_EXPIRED"),
+  );
+  assert.equal(signed, false, "a drain that failed stops the signature");
+  assert.equal(failing.saved.attestation, undefined);
+});

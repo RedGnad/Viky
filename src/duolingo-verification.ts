@@ -75,6 +75,11 @@ export type VerificationDeps = {
   fetchStatus(sessionId: string): Promise<ReclaimStatus>;
   verifyProofs(proofs: Proof[]): Promise<SdkVerification>;
   signCheckIn(message: CheckInMessage): Promise<Hex>;
+  /**
+   * Settles the gift's days whose catch-up window is over before anything is signed for it (the audit, 29 Sep 2026),
+   * so a signature can never pay a day already gone back. Throws when they could not be settled. A test may omit it.
+   */
+  drainExpired?(giftId: string): Promise<void>;
   appId: string;
   escrowAddress: Hex | undefined;
   now(): number;
@@ -188,6 +193,14 @@ export async function verifyDuolingoSession(deps: VerificationDeps, input: { ses
     issuedAt: BigInt(now),
     expiresAt: BigInt(now + ATTESTATION_TTL_SECONDS),
   };
+  // A day already drainable is never signed for: it is settled first, and nothing is signed if it cannot be.
+  if (deps.drainExpired) {
+    try {
+      await deps.drainExpired(session.giftId);
+    } catch {
+      throw new VerificationError("DAY_EXPIRED", "A day that has already gone back could not be settled first, so nothing was counted. Try again in a minute.", 503);
+    }
+  }
   const signature = await deps.signCheckIn(message);
 
   // Validation passed; commit the result, the attestation and the raw proofs, and consume the session
