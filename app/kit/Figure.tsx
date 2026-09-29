@@ -492,11 +492,14 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
         <Arm key={index} pose={arms} arm={arm} />
       ))}
       {/* The gloss: where the surface faces halfway between the light and the eye, slanted along the lit edge, and one dot
-          beside it. A third, smaller spot inside the gloss read as a second, lighter circle and was taken off (D243). */}
+          beside it. A third, smaller spot inside the gloss read as a second, lighter circle and was taken off (D243).
+          The edge is drawn again over it, so it never lies on the coloured edge (the founder, 29 Sep 2026), without a clip
+          (D288: a phone painted a clipped part apart inside a sheet's list). */}
       <g data-part="gloss">
         <ellipse cx={round(shine.gloss.cx)} cy={round(shine.gloss.cy)} rx={5.2} ry={3.2} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
         <circle cx={round(shine.dot.cx)} cy={round(shine.dot.cy)} r={1.9} style={{ fill: GLOSS }} />
       </g>
+      <path data-part="edge" d={DIAMOND} style={{ fill: "none", stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
       {props.includes("suit") ? <Suit /> : null}
       <g data-part="face">
         <EyesOf eyes={eyes} gaze={gaze} id={id} />

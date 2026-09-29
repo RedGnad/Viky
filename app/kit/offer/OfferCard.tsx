@@ -169,6 +169,8 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
           }
           /* A real choice, with families and a sentence under the one being considered: this one keeps its sheet. */
           under={
+            /* Centred in the card on a phone, at its own width; at the card's left on a large screen (the founder, 29 Sep 2026). */
+            <span className="flex justify-center [@media(min-width:1024px)]:justify-start">
             <button
               type="button"
               /* One line. It opens the four families (D233, the founder: pressing it is to change what they will do),
@@ -179,7 +181,7 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
               onClick={() => setChoosing(condition && !filled.will ? "questions" : "list")}
               /* Eight pixels more than a caption gets under a title: this one is a control, and at four it sat on
                  the name's own box (the founder, 21 Sep 2026). */
-              className={`${INLINE_BUTTON} mt-[var(--space-sm)] w-full justify-between text-left`}
+              className={`${INLINE_BUTTON} mt-[var(--space-sm)] justify-between text-left`}
             >
               <span className="flex min-w-0 flex-col">
                 <span className={CARD_LABEL}>{W.invites.will}</span>
@@ -189,6 +191,7 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                 <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
+            </span>
           }
           /* The shape of the gift in the middle of the card (D226, the founder's direction A of 24 Sep 2026): the days,
              drawn by the product's own pieces, one mark a day at 72, the row scrolling, and under it what one mark is
@@ -211,9 +214,8 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                     gift={{ startDay: 0, endDay: 0, durationDays: Number.isInteger(days) && days > 0 ? days : bounds.suggested, creditedDays: 0, missedDays: 0 }}
                     catchUpSeconds={0}
                     width={72}
-                    /* The first day opens its eyes when the card is whole, the name included: a gift with nobody's
-                       name on it can be sent (the register allows it), but the day does not wake for it. */
-                    wake={ready && filled.for}
+                    /* Every day of the row asleep, the first too (the founder, 29 Sep 2026): it used to open its eyes
+                       when the card was whole, and a row of one awake among the sleeping read as a mistake. */
                     /* And the days answer a new condition as they answer a new length: they arrive again, in turn (D230). */
                     changedOn={draft.conditionId}
                     /* What one mark is worth, small under each of them (D304): the figure follows the amount. */
@@ -260,7 +262,9 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                 {/* How long, on the card: the three lengths the register gives this condition, and no fourth (D130).
                     The chip that opened a field for any other number is gone: the founder asked for it on both sizes,
                     and a length outside the three is a length the register was never asked about. */}
-                <span className="flex flex-wrap items-center gap-[var(--tap-gap)]">
+                {/* Spread across the card on a phone, the first at its left edge and the last at its right, so the three are
+                    centred in it (the founder, 29 Sep 2026); side by side on a large screen. */}
+                <span className="flex w-full flex-wrap items-center justify-between gap-[var(--tap-gap)] [@media(min-width:1024px)]:w-auto [@media(min-width:1024px)]:justify-start">
                   {quick.map((count) => (
                   <button
                     key={count}

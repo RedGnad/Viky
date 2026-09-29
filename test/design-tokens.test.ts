@@ -204,8 +204,8 @@ test("the card stands off the ground it is on, by day and by night, and the nigh
   assert.ok(night.chroma >= 0.04, "a tint, not a grey");
   assert.ok(hueDistance(night.hue, day.hue) <= 20, `the night ground is ${hueDistance(night.hue, day.hue).toFixed(0)} degrees from the day's`);
   assert.ok(contrastRatio("#FFF6E2", COLOURS.light.background) >= 1.3, "the cream on the day ground");
-  assert.ok(contrastRatio("#2C2738", COLOURS.dark.background) >= 1.25, "and the night paper, the day's lavender at tone 17 on the night ground, the same step (D305)");
-  assert.ok(contrastRatio("#2C2738", COLOURS.dark.background) < 2, "a step, not a glow: the cream stood at 17:1 there");
+  assert.ok(contrastRatio("#373244", COLOURS.dark.background) >= 1.45, "and the night paper, the day's lavender at tone 22 on the night ground, a step that stands out (D305, 29 Sep 2026)");
+  assert.ok(contrastRatio("#373244", COLOURS.dark.background) < 2, "a step, not a glow: the cream stood at 17:1 there");
   // The surface the fields, the bar and the rail sit on is not a card: it stays near its ground, and the white one
   // of day sits at 1.41:1 on the lavender, which is a shade and not an object.
   for (const appearance of ["light", "dark"] as Appearance[]) {
@@ -294,7 +294,7 @@ test("the quiet button is filled, seen on both grounds, and its words clear 4.5:
   // One shut action, on the cream of the card by day and on its night paper after dark (D223), and its words readable
   // on it in both: the image's own #9A8B62 measured 2.64:1 on the cream.
   assert.ok(contrastRatio("#6F6133", "#EFE3C4") >= TEXT_CONTRAST_MINIMUM, "the words of the shut action are readable on it by day");
-  assert.ok(contrastRatio("#C7C4DA", "#433D52") >= TEXT_CONTRAST_MINIMUM, "and by night");
+  assert.ok(contrastRatio("#C7C4DA", "#4E485E") >= TEXT_CONTRAST_MINIMUM, "and by night");
   assert.match(css, /--action-off-ink: #6F6133;/);
   assert.equal((css.match(/--action-off-ink: #C7C4DA;/g) ?? []).length, 2, "the night's, in both night blocks");
   // The ink under it, not a darker yellow: the same slab every control stands on, and the only one that reads as a

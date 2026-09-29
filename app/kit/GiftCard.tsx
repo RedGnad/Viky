@@ -98,7 +98,7 @@ export function CardFace({
       {/* Whose gift it is, in the third voice, at the head of the card (the rendered mockups of 19 Sep 2026). */}
       {label ? <span className={`block ${CARD_LABEL}`}>{label}</span> : null}
       <span className="flex items-start justify-between gap-[var(--space-md)]">
-        <span className="flex min-w-0 flex-col gap-[var(--space-xs)]">
+        <span className="flex min-w-0 flex-1 flex-col gap-[var(--space-xs)]">
           <span className={`${CARD_TITLE} break-words`}>{title}</span>
           <span className={BODY}>{under}</span>
           {nature}
