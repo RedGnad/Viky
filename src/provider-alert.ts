@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import type { Portal, ProviderRequest } from "./portal-store";
+import type { Portal, PortalReview, ProviderRequest } from "./portal-store";
 import { countryInWords } from "./university-shown";
 
 /**
@@ -44,9 +44,41 @@ export async function sendProviderAlert(
   request: Pick<ProviderRequest, "sense" | "instruction" | "firstGiftId">,
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): Promise<AlertOutcome> {
+  return sendAlert(providerAlert(portal, request), env);
+}
+
+/**
+ * The alert for a first proof held for review (the founder, 29 Sep 2026): the person reads that it is checked within an
+ * hour, so the operator is told the moment it is held. It names the proof and the command, not what the page carried:
+ * `pnpm portal:pin` shows that, from the database, to the operator alone.
+ */
+export function reviewAlert(review: Pick<PortalReview, "sessionId" | "portalId" | "sense" | "giftId">, university: string | null): { subject: string; text: string } {
+  const where = university ? `${university} (${review.portalId})` : review.portalId;
+  return {
+    subject: `First proof to review within the hour: ${where}, ${review.sense}`,
+    text: [
+      `A first proof from ${where} is held for review, for the ${review.sense} of gift ${review.giftId}. The person reads that it is checked within an hour.`,
+      "",
+      "See what it read: pnpm portal:pin",
+      `Then pin it, or refuse it: pnpm portal:pin ${review.sessionId} ...`,
+      "",
+      "In production, with the operator's environment: VIKY_ALLOW_PRODUCTION_DATABASE=1 PROVEN_BY=<the operator account> before the command above.",
+    ].join("\n"),
+  };
+}
+
+/** Sends the review alert, or says why not. Never throws: the proof is held whether or not the email leaves. */
+export async function sendReviewAlert(
+  review: Pick<PortalReview, "sessionId" | "portalId" | "sense" | "giftId">,
+  university: string | null,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): Promise<AlertOutcome> {
+  return sendAlert(reviewAlert(review, university), env);
+}
+
+async function sendAlert({ subject, text }: { subject: string; text: string }, env: Readonly<Record<string, string | undefined>>): Promise<AlertOutcome> {
   const key = env.RESEND_API_KEY?.trim();
   if (!key) return "not configured";
-  const { subject, text } = providerAlert(portal, request);
   try {
     const { error } = await new Resend(key).emails.send({ from: env.ALERT_FROM?.trim() || DEFAULT_FROM, to: [ALERT_TO], subject, text });
     return error ? "failed" : "sent";

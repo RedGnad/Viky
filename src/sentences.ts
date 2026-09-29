@@ -1277,7 +1277,20 @@ export const UNIVERSITY_CHOICE = {
 export const SHOW_PROOF = {
   title: (source: string) => `Show it from your ${yourOwn(source)} account`,
   whatHappens: (source: string) =>
-    `A verification tab opens. You sign in to ${spokenTo(source)} there, in your own browser, and what that page shows is proved without Viky ever seeing your password. Viky keeps the score it proves and nothing else.`,
+    `A verification tab opens. You sign in to ${spokenTo(source)} there, in your own browser, and what that page shows is proved without Viky ever seeing your password.`,
+  /**
+   * What is kept of it, said per condition (the founder, 29 Sep 2026: "Viky keeps the score it proves" was false for an
+   * enrolment). True of the register (src/condition-privacy.ts): under the verdict rule the number is kept nowhere and
+   * only whether the target was reached is attested; otherwise the number read is kept.
+   */
+  kept: {
+    "university-enrollment-shown": "Viky keeps only whether you are enrolled.",
+    "university-year-passed-shown": "Viky keeps only whether the year is passed.",
+    "university-grade-shown": "Viky keeps only whether your grade reaches the one this gift is for.",
+    "toefl-mybest-shown": "Viky keeps only whether your score reaches the one this gift is for.",
+  } as Readonly<Record<string, string>>,
+  keptVerdict: "Viky keeps only whether it reaches what this gift is for.",
+  keptNumber: "Viky keeps what it proves and nothing else.",
   button: "Show it",
   opening: "Opening the verification",
   waiting: "Waiting for the proof",
@@ -1296,7 +1309,7 @@ export const SHOW_PROOF = {
    * A first proof from a university read through a witness with no pin yet (D312): checked on what is sure, held for
    * the operator's review, nothing relayed. True of `pnpm portal:pin`: the operator reads it and settles or refuses.
    */
-  held: "First proof from this university: checked within two days.",
+  held: "First proof from this university: checked within an hour.",
   /**
    * A university chosen for a sense it has no provider for yet (D313): the operator was asked when the gift was made and
    * builds it within two days. Nothing can be shown until then, and nothing is lost: the contract holds the money.

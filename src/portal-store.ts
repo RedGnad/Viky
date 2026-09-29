@@ -495,7 +495,7 @@ export async function loadReview(sessionId: string): Promise<PortalReview | null
   return rows[0] ? toReview(rows[0]) : null;
 }
 
-/** The latest review of a gift, for its page: pending says "checked within two days", refused says why. */
+/** The latest review of a gift, for its page: pending says "checked within an hour", refused says why. */
 export async function latestReviewOf(giftId: string): Promise<PortalReview | null> {
   const rows = await sql()`SELECT * FROM viky_portal_reviews WHERE gift_id = ${giftId} ORDER BY created_at DESC LIMIT 1`;
   return rows[0] ? toReview(rows[0]) : null;

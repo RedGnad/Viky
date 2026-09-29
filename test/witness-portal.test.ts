@@ -199,7 +199,7 @@ test("a first proof from a portal with no pin is checked on what is sure, held, 
   const run = deps([proofSync.good]);
   const outcome = await verifyShownSession(run.deps, { sessionId: SESSION_ID, account: ACCOUNT });
   assert.equal(outcome.kind, "held");
-  assert.equal(outcome.kind === "held" ? outcome.message : "", "First proof from this university: checked within two days.");
+  assert.equal(outcome.kind === "held" ? outcome.message : "", "First proof from this university: checked within an hour.");
   assert.equal(run.proved.length, 0, "nothing signed, nothing relayed");
   assert.equal(run.held.length, 1);
   assert.equal(run.held[0].providerVersion, AGENT_VERSION);
