@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Figure, LIGHT, Scene, lit } from "../app/kit/Figure";
+import { DOT_R, Figure, fromOutline, GLOSS_RX, GLOSS_RY, LIGHT, Scene, lit } from "../app/kit/Figure";
 
 /**
  * The rig of the figure (D236): one light that everything shining obeys, a face and limbs in named sets, props in
@@ -202,4 +202,30 @@ test("the preview's card grows with its words, the figure always on its edge (D2
 test("the first opening draws the icon's own drawing, written in and kept equal to it (pnpm make:icon)", async () => {
   const { iconModule } = await import("../scripts/look-figure");
   assert.equal(readFileSync("app/kit/figure-icon.ts", "utf8"), iconModule(), "run pnpm make:icon");
+});
+
+test("the gloss touches the edge's inner line without being cut or touching an eye, and the dot is never cut, whatever the lean", () => {
+  // The founder, 29 Sep 2026: the edge cut the gloss's round side. Half the edge (2.2 wide) lies inside the body, so a
+  // reflection 1.1 from the outline's middle line just meets the edge, and one nearer is cut by it.
+  for (const lean of [0, -8, 8, 15, -15, 45]) {
+    const shine = lit(LIGHT, lean);
+    const angle = (shine.gloss.angle * Math.PI) / 180;
+    let nearest = Infinity;
+    for (let step = 0; step < 720; step += 1) {
+      const t = (step * Math.PI) / 360;
+      const x = shine.gloss.cx + GLOSS_RX * Math.cos(t) * Math.cos(angle) - GLOSS_RY * Math.sin(t) * Math.sin(angle);
+      const y = shine.gloss.cy + GLOSS_RX * Math.cos(t) * Math.sin(angle) + GLOSS_RY * Math.sin(t) * Math.cos(angle);
+      nearest = Math.min(nearest, fromOutline({ x, y }));
+    }
+    assert.ok(nearest >= 1.08 && nearest <= 1.16, `lean ${lean}: the gloss meets the edge (${nearest.toFixed(3)} from its middle line)`);
+    let fromEye = Infinity;
+    for (let step = 0; step < 720; step += 1) {
+      const t = (step * Math.PI) / 360;
+      const x = shine.gloss.cx + GLOSS_RX * Math.cos(t) * Math.cos(angle) - GLOSS_RY * Math.sin(t) * Math.sin(angle);
+      const y = shine.gloss.cy + GLOSS_RX * Math.cos(t) * Math.sin(angle) + GLOSS_RY * Math.sin(t) * Math.cos(angle);
+      for (const [ex, ey] of [[26, 18], [38, 18]]) fromEye = Math.min(fromEye, Math.hypot(x - ex, y - ey) - 2.8);
+    }
+    assert.ok(fromEye >= 0.35, `lean ${lean}: the gloss leaves the eyes room (${fromEye.toFixed(2)})`);
+    assert.ok(fromOutline({ x: shine.dot.cx, y: shine.dot.cy }) - DOT_R >= 1.09, `lean ${lean}: the dot is inside the edge`);
+  }
 });

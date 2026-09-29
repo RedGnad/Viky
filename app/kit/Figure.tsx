@@ -93,17 +93,112 @@ function edges() {
   });
 }
 
+/** Half the edge's width: the part of the line drawn inside the body. */
+const EDGE_HALF = 1.1;
+/** How far along each side the corners' round reaches (app/kit/Character.tsx draws the diamond with radius 8). */
+const CORNER_ROUND = 8;
+/** The eyes' centres and their radius, open: where the gloss must leave room. */
+const EYES_AT: readonly (readonly [number, number])[] = [
+  [26, 18],
+  [38, 18],
+];
+const EYE_R = 2.8;
+/** The room the gloss leaves an eye at rest. */
+const EYE_CLEAR = 0.4;
+export const GLOSS_RX = 5.2;
+export const GLOSS_RY = 3.2;
+export const DOT_R = 1.9;
+
+/**
+ * The body's outline as the diamond draws it (app/kit/Character.tsx, corners rounded by 8 with one quadratic each),
+ * as points close enough together to measure a distance on: the straight sides and the round of each corner.
+ */
+const OUTLINE: readonly (readonly [number, number])[] = (() => {
+  const points: [number, number][] = [];
+  CORNERS.forEach(([x, y], index) => {
+    const [px, py] = CORNERS[(index + CORNERS.length - 1) % CORNERS.length];
+    const [nx, ny] = CORNERS[(index + 1) % CORNERS.length];
+    const toPrevious = Math.hypot(px - x, py - y);
+    const toNext = Math.hypot(nx - x, ny - y);
+    const start = [x + ((px - x) / toPrevious) * CORNER_ROUND, y + ((py - y) / toPrevious) * CORNER_ROUND];
+    const end = [x + ((nx - x) / toNext) * CORNER_ROUND, y + ((ny - y) / toNext) * CORNER_ROUND];
+    for (let step = 0; step <= 16; step += 1) {
+      const t = step / 16;
+      points.push([(1 - t) ** 2 * start[0] + 2 * (1 - t) * t * x + t * t * end[0], (1 - t) ** 2 * start[1] + 2 * (1 - t) * t * y + t * t * end[1]]);
+    }
+  });
+  return points;
+})();
+
+/** How far a point is from the body's outline, measured to the nearest of its segments. */
+export function fromOutline(point: Readonly<{ x: number; y: number }>): number {
+  let nearest = Infinity;
+  OUTLINE.forEach(([ax, ay], index) => {
+    const [bx, by] = OUTLINE[(index + 1) % OUTLINE.length];
+    const length = (bx - ax) ** 2 + (by - ay) ** 2 || 1;
+    const t = Math.max(0, Math.min(1, ((point.x - ax) * (bx - ax) + (point.y - ay) * (by - ay)) / length));
+    nearest = Math.min(nearest, Math.hypot(point.x - (ax + t * (bx - ax)), point.y - (ay + t * (by - ay))));
+  });
+  return nearest;
+}
+
+/** The least room between the gloss, slanted by `angle`, and either eye. */
+function fromEyes(cx: number, cy: number, angle: number): number {
+  let nearest = Infinity;
+  for (let step = 0; step < 90; step += 1) {
+    const t = (step * Math.PI) / 45;
+    const x = cx + GLOSS_RX * Math.cos(t) * Math.cos(angle) - GLOSS_RY * Math.sin(t) * Math.sin(angle);
+    const y = cy + GLOSS_RX * Math.cos(t) * Math.sin(angle) + GLOSS_RY * Math.sin(t) * Math.cos(angle);
+    for (const [ex, ey] of EYES_AT) nearest = Math.min(nearest, Math.hypot(x - ex, y - ey) - EYE_R);
+  }
+  return nearest;
+}
+
 /**
  * What the light does to the body: the gradient's two points, the gloss's place and slant, and the dot beside it.
  * All of it from one direction, so a pose never has to be lit by hand.
+ *
+ * Neither reflection is cut by the edge (the founder, 29 Sep 2026: the edge cut the gloss's round side). The gloss lies
+ * along the lit side and touches the edge's inner line: its short half-axis and half the edge from that side's line;
+ * pressed there, it would meet the left eye, so it slides along the side until it clears it, keeping its shape. The dot stays where the light puts it, and only moves toward the middle when the edge, or a corner's round, would
+ * cover part of it.
  */
 export function lit(light = LIGHT, lean = 0) {
   const l = turned(unit(light), lean);
   const gradient = { x1: 0.5 + 0.5 * l.x, y1: 0.5 + 0.5 * l.y, x2: 0.5 - 0.5 * l.x, y2: 0.5 - 0.5 * l.y };
-  const gloss = { cx: CENTRE.x + l.x * 12.7, cy: CENTRE.y + l.y * 9.9 };
-  const dot = { cx: CENTRE.x + l.x * 2, cy: CENTRE.y + l.y * 14.1 };
   const all = edges().map((edge) => ({ ...edge, facing: edge.normal.x * l.x + edge.normal.y * l.y }));
   const litEdge = all.reduce((best, edge) => (edge.facing > best.facing ? edge : best), all[0]);
+  const lightOn = { x: CENTRE.x + l.x * 12.7, y: CENTRE.y + l.y * 9.9 };
+  const inward = { x: -litEdge.normal.x, y: -litEdge.normal.y };
+  const fromSide = (lightOn.x - litEdge.from[0]) * inward.x + (lightOn.y - litEdge.from[1]) * inward.y;
+  const shift = GLOSS_RY + EDGE_HALF - fromSide;
+  const tangent = { x: lightOn.x + inward.x * shift, y: lightOn.y + inward.y * shift };
+  // Pressed against the edge, it would now meet an eye: it slides along the side, the least it takes, until it clears
+  // both, and never into a corner's round, where the side is no longer straight.
+  const along = unit({ x: litEdge.to[0] - litEdge.from[0], y: litEdge.to[1] - litEdge.from[1] });
+  const at = (tangent.x - litEdge.from[0]) * along.x + (tangent.y - litEdge.from[1]) * along.y;
+  const angle = (litEdge.angle * Math.PI) / 180;
+  let gloss = { cx: tangent.x, cy: tangent.y };
+  search: for (let slide = 0; slide <= litEdge.length; slide += 0.25) {
+    for (const way of [-1, 1]) {
+      const middle = at + way * slide;
+      if (middle - GLOSS_RX < CORNER_ROUND || middle + GLOSS_RX > litEdge.length - CORNER_ROUND) continue;
+      const cx = tangent.x + along.x * way * slide;
+      const cy = tangent.y + along.y * way * slide;
+      if (fromEyes(cx, cy, angle) >= EYE_CLEAR) {
+        gloss = { cx, cy };
+        break search;
+      }
+    }
+  }
+  const dot = { cx: CENTRE.x + l.x * 2, cy: CENTRE.y + l.y * 14.1 };
+  const toMiddle = unit({ x: CENTRE.x - dot.cx, y: CENTRE.y - dot.cy });
+  for (let step = 0; step < 3; step += 1) {
+    const short = DOT_R + EDGE_HALF - fromOutline({ x: dot.cx, y: dot.cy });
+    if (short <= 0) break;
+    dot.cx += toMiddle.x * short;
+    dot.cy += toMiddle.y * short;
+  }
   return { light: l, gradient, gloss: { ...gloss, angle: round(litEdge.angle) }, dot };
 }
 
@@ -229,10 +324,7 @@ function Limbs({ arms, legs, holding }: Readonly<{ arms: ArmsPose; legs: LegsPos
 
 /** The eyes, in their sets; a closed eye is the open one's pill, so one can open into the other (D226). */
 function EyesOf({ eyes, gaze, id }: Readonly<{ eyes: Eyes; gaze: Readonly<{ x: number; y: number }>; id: string }>) {
-  const at: readonly (readonly [number, number])[] = [
-    [26, 18],
-    [38, 18],
-  ];
+  const at = EYES_AT;
   if (eyes === "shades") return <Shades id={id} />;
   return (
     <g data-part="eyes" style={{ transform: `translate(${round(gaze.x * 1.6)}px, ${round(gaze.y * 1.2)}px)` }}>
@@ -241,7 +333,7 @@ function EyesOf({ eyes, gaze, id }: Readonly<{ eyes: Eyes; gaze: Readonly<{ x: n
         eyes === "open" ? (
           // The lid: what a blink closes (D301), around the eye so the eye's own transform stays its expression's.
           <g key={x} data-part="lid" style={FROM_MIDDLE}>
-            <circle data-part="eye" cx={x} cy={y} r={2.8} style={{ fill: INK, ...FROM_MIDDLE }} />
+            <circle data-part="eye" cx={x} cy={y} r={EYE_R} style={{ fill: INK, ...FROM_MIDDLE }} />
           </g>
         ) : eyes === "closed" ? (
           <rect key={x} data-part="eye" x={x - 3.4} y={y - 1.2} width={6.8} height={2.4} rx={3.4} ry={1.2} style={{ fill: INK, ...FROM_MIDDLE }} />
@@ -473,8 +565,8 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
         {/* The gloss: where the surface faces halfway between the light and the eye, slanted along the lit edge, and one
             dot beside it. A third, smaller spot inside the gloss read as a second, lighter circle and was taken off (D243). */}
         <g data-part="gloss">
-          <ellipse cx={round(shine.gloss.cx)} cy={round(shine.gloss.cy)} rx={5.2} ry={3.2} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
-          <circle cx={round(shine.dot.cx)} cy={round(shine.dot.cy)} r={1.9} style={{ fill: GLOSS }} />
+          <ellipse cx={round(shine.gloss.cx)} cy={round(shine.gloss.cy)} rx={GLOSS_RX} ry={GLOSS_RY} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
+          <circle cx={round(shine.dot.cx)} cy={round(shine.dot.cy)} r={DOT_R} style={{ fill: GLOSS }} />
         </g>
         {/* The edge again over the dots and the gloss, so both stop at its inner side (the founder, 29 Sep 2026: the gloss
             lay on the coloured edge), without a clip (D288). Inside the body's group, so what the figure holds in front of
