@@ -329,12 +329,13 @@
     --card-shadow: none;
     --card-placed-edge: #484360;
     /* The paper after dark (D305, the founder's direction A of 28 Sep 2026): the day's lavender at dark tones, one
-       family with the ground as by day (Material's tone scale in CIELAB L*: ground 6, paper 22, raised 25, field 29,
-       chosen 32, rules 40), where D223's sun overlay had made brown cards on a violet night. Raised five tones on 29
-       Sep 2026 (the founder: the night's cards stood too close to the ground): the paper at Material's highest
-       container tone, 1.5:1 on the ground where it was 1.28. The cream reads on it at 11.5:1, on a field at 9:1. */
-    --paper: #373244;
-    --paper-raised: #3E394A;
+       family with the ground as by day (Material's tone scale in CIELAB L*: ground 6, paper 20, raised 23, field 29,
+       chosen 32, rules 40), where D223's sun overlay had made brown cards on a violet night. Raised on 29 Sep 2026
+       (the founder: the night's cards stood too close to the ground), to 22 and then back to 20, between Material's
+       high and highest containers (17 and 22): 1.41:1 on the ground where it was 1.28, the field standing 1.35:1 on
+       it. The cream reads on it at 12.2:1, on a field at 9:1. */
+    --paper: #332E3F;
+    --paper-raised: #393446;
     --chosen: #4E485E;
     --paper-field: #484154; /* The filled field, a step above the paper: tone 29 (D252, D305, raised 29 Sep 2026). */
     --on-surface: #FFF6E2;
@@ -405,12 +406,13 @@
   --card-shadow: none;
   --card-placed-edge: #484360;
   /* The paper after dark (D305, the founder's direction A of 28 Sep 2026): the day's lavender at dark tones, one
-       family with the ground as by day (Material's tone scale in CIELAB L*: ground 6, paper 22, raised 25, field 29,
-       chosen 32, rules 40), where D223's sun overlay had made brown cards on a violet night. Raised five tones on 29
-       Sep 2026 (the founder: the night's cards stood too close to the ground): the paper at Material's highest
-       container tone, 1.5:1 on the ground where it was 1.28. The cream reads on it at 11.5:1, on a field at 9:1. */
-  --paper: #373244;
-  --paper-raised: #3E394A;
+       family with the ground as by day (Material's tone scale in CIELAB L*: ground 6, paper 20, raised 23, field 29,
+       chosen 32, rules 40), where D223's sun overlay had made brown cards on a violet night. Raised on 29 Sep 2026
+       (the founder: the night's cards stood too close to the ground), to 22 and then back to 20, between Material's
+       high and highest containers (17 and 22): 1.41:1 on the ground where it was 1.28, the field standing 1.35:1 on
+       it. The cream reads on it at 12.2:1, on a field at 9:1. */
+  --paper: #332E3F;
+  --paper-raised: #393446;
   --chosen: #4E485E;
   --paper-field: #484154; /* The filled field, a step above the paper: tone 29 (D252, D305, raised 29 Sep 2026). */
   --on-surface: #FFF6E2;

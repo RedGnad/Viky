@@ -204,8 +204,8 @@ test("the card stands off the ground it is on, by day and by night, and the nigh
   assert.ok(night.chroma >= 0.04, "a tint, not a grey");
   assert.ok(hueDistance(night.hue, day.hue) <= 20, `the night ground is ${hueDistance(night.hue, day.hue).toFixed(0)} degrees from the day's`);
   assert.ok(contrastRatio("#FFF6E2", COLOURS.light.background) >= 1.3, "the cream on the day ground");
-  assert.ok(contrastRatio("#373244", COLOURS.dark.background) >= 1.45, "and the night paper, the day's lavender at tone 22 on the night ground, a step that stands out (D305, 29 Sep 2026)");
-  assert.ok(contrastRatio("#373244", COLOURS.dark.background) < 2, "a step, not a glow: the cream stood at 17:1 there");
+  assert.ok(contrastRatio("#332E3F", COLOURS.dark.background) >= 1.4, "and the night paper, the day's lavender at tone 20 on the night ground, a step that stands out (D305, 29 Sep 2026)");
+  assert.ok(contrastRatio("#332E3F", COLOURS.dark.background) < 2, "a step, not a glow: the cream stood at 17:1 there");
   // The surface the fields, the bar and the rail sit on is not a card: it stays near its ground, and the white one
   // of day sits at 1.41:1 on the lavender, which is a shade and not an object.
   for (const appearance of ["light", "dark"] as Appearance[]) {
