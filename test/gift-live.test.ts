@@ -86,7 +86,9 @@ test("the figure says what it is, and the two people never read the other one's 
 test("a climb leads with what is left, and where they stand is the figure", () => {
   const live = liveOf(input({ moment: "climbing", todayReading: 1460, target: 1500 }));
   assert.equal(live.headline, "40 to go.");
-  assert.deepEqual(live.figure, { label: "Where you are", value: "1460" });
+  assert.deepEqual(live.figure, { label: "Today", value: "1460" });
+  // Read as the page opens (the founder, 29 Sep 2026): its own line says when, and there is no next time to announce.
+  assert.equal(live.next, null);
   // The target itself is not on the screen: it was read once, in the agreement, and it is folded there.
   assert.doesNotMatch(`${live.headline} ${live.figure?.value}`, /1500/);
   // A climb already at its target waits for the reading that settles it, and says so rather than "0 to go".

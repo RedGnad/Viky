@@ -232,11 +232,22 @@ export type GiftSummary = {
   takeable: string;
   /** Present on a milestone gift, whose card draws the climb rather than days (C2). */
   milestone?: MilestoneStatus;
+  /** On a reached gift: whether this account has had its moment (src/reached-seen-store.ts). */
+  reachedSeen?: boolean;
 };
 
 /** Every gift of the signed-in account, newest first, as funder or recipient. */
 export function loadMyGifts(): Promise<{ account: string; gifts: GiftSummary[] }> {
   return getJson("/api/gifts/mine");
+}
+
+/** Whether this account has had the moment of this reached gift, and the one write that says it has. */
+export function loadReachedSeen(giftId: string): Promise<{ seen: boolean }> {
+  return getJson(`/api/gift/${giftId}/reached-seen`);
+}
+
+export function markReachedSeen(giftId: string): Promise<{ seen: boolean }> {
+  return postJson(`/api/gift/${giftId}/reached-seen`, {});
 }
 
 /** The link's key, when the page was opened from it, is what lets the names come back with the gift. */

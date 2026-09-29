@@ -1142,6 +1142,14 @@ dialog.sheet[open] {
   margin-bottom: 4px;
 }
 
+/* When the source last updated what was read (the founder, 29 Sep 2026): quiet, under the figure's own label. */
+.gift-updated {
+  margin-top: 2px;
+  font-size: var(--type-help);
+  line-height: var(--type-help-leading);
+  color: var(--on-surface-muted);
+}
+
 .gift-next {
   font-size: var(--type-gift-next);
   line-height: var(--type-gift-next-leading);
@@ -1351,14 +1359,6 @@ dialog.sheet[open] {
 }
 
 /* The one confetti (app/kit/Confetti.tsx): a layer over the screen that takes no press, emptied once the pieces fall. */
-.confetti-layer {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 40;
-  overflow: hidden;
-}
-
 .confetti-piece {
   position: fixed;
   width: 10px;
@@ -1377,6 +1377,58 @@ dialog.sheet[open] {
 .confetti-triangle {
   clip-path: polygon(50% 6%, 96% 92%, 4% 92%);
   border-radius: 2px;
+}
+
+/*
+ * The moment a gift is reached (app/kit/ReachedMoment.tsx): the whole screen, on the page's own ground, above
+ * everything, the confetti falling inside it, and its one way out in the corner where a sheet's is.
+ */
+dialog.reached-moment {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow-y: auto;
+  background: var(--background);
+  color: var(--text);
+}
+
+dialog.reached-moment::backdrop {
+  background: var(--background);
+}
+
+.reached-rain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.reached-close {
+  position: fixed;
+  top: calc(var(--space-sm) + env(safe-area-inset-top, 0px));
+  right: var(--space-sm);
+  z-index: 1;
+  display: inline-flex;
+  min-width: var(--tap-target);
+  min-height: var(--tap-target);
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: inherit;
+  font-size: var(--type-title);
+}
+
+.reached-close:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
 }
 
 /*

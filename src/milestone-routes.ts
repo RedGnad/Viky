@@ -8,6 +8,8 @@ import { GiftApiError, NO_STORE } from "./gift-api";
 import { holdsGiftLink, loadGift, loadRelayed, markClaimed, type GiftRecord } from "./gift-store";
 import { milestoneById, cadenceOfGoal, CHESS_MILESTONE } from "./milestone-conditions";
 import { runMilestoneReading } from "./milestone-reading";
+import { tellAboutMilestone } from "./morning-send";
+import { liveTellingDeps } from "./morning-send-live";
 import { relayMilestoneClaim, relayMilestoneWithdraw } from "./milestone-relay";
 import { loadMilestoneStatus } from "./milestone-status";
 import type { MilestoneStatus } from "./milestone-view";
@@ -109,10 +111,19 @@ export async function milestoneBind(request: Request, giftId: string): Promise<N
   return NextResponse.json(await runMilestoneReading({ giftId, purpose: "start" }), { headers: NO_STORE });
 }
 
+/**
+ * A reading on opening the gift's page (the founder, 29 Sep 2026: the page reads the source each time it opens, and
+ * "Count now" is gone), asked by either of the gift's two people: a reading only ever pays the person it is for, so the
+ * funder watching it climb may start one too. When it is the reading that reaches the target, the two are told at once
+ * rather than at the next pass; `claimTelling` makes sure they are told once.
+ */
 export async function milestoneCount(request: Request, giftId: string): Promise<NextResponse> {
   const auth = readAccountAuthSession(request);
-  recipientRecord(await loadGift(giftId), auth.account);
-  return NextResponse.json(await runMilestoneReading({ giftId, purpose: "reach", force: true }), { headers: NO_STORE });
+  const record = await loadGift(giftId);
+  if (!record || record.funder.toLowerCase() !== auth.account.toLowerCase()) recipientRecord(record, auth.account);
+  const outcome = await runMilestoneReading({ giftId, purpose: "reach", force: true });
+  if (outcome.kind === "reached") await tellAboutMilestone(giftId, "reached", liveTellingDeps()).catch(() => 0);
+  return NextResponse.json(outcome, { headers: NO_STORE });
 }
 
 export async function milestoneWithdraw(input: {

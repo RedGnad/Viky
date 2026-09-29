@@ -10,7 +10,7 @@ import { milestonePhase, readMilestoneGift, type MilestoneState } from "./milest
 import { relayProve, type ProvedReading } from "./milestone-relay";
 import { readSince, recordReading, type MilestoneReading, type ReadingPurpose } from "./milestone-store";
 import { escrowOf, RelayerError } from "./relayer";
-import type { ChessStanding } from "./chess-com";
+import type { ReadStanding } from "./chess-reading";
 
 /**
  * Reading a milestone gift and acting on what the reading says (C2). Two purposes, as for Duolingo's public mode:
@@ -34,7 +34,7 @@ import type { ChessStanding } from "./chess-com";
 export type MilestoneOutcome =
   | Readonly<{ kind: "started"; giftId: string; rating: number; hash: Hex; aboveAccepted: boolean; deadline: number }>
   | Readonly<{ kind: "reached"; giftId: string; rating: number; hash: Hex }>
-  | Readonly<{ kind: "notYet"; giftId: string; rating: number; target: number; attested: boolean }>
+  | Readonly<{ kind: "notYet"; giftId: string; rating: number; target: number; attested: boolean; sourceUpdatedAt?: number | null }>
   | Readonly<{
       kind: "already";
       giftId: string;
@@ -70,7 +70,7 @@ const MESSAGES: Readonly<Record<string, string>> = {
 export type MilestoneReadingDeps = {
   loadGift: (giftId: string) => Promise<GiftRecord | null>;
   readState: (contract: Hex, giftId: string) => Promise<MilestoneState>;
-  plain: (username: string, mode: ClimbId) => Promise<ChessStanding>;
+  plain: (username: string, mode: ClimbId) => Promise<ReadStanding>;
   attest: (input: { username: string; mode: ClimbId; withName: boolean }) => Promise<AttestedClimbReading>;
   /** The identity pseudonym of the player, with the label of the house the climb is read on. */
   identity: (playerId: string, mode: ClimbId) => Hex;
@@ -220,7 +220,7 @@ export async function runMilestoneReading(
         outcome: "notYet",
         txHash: null,
       });
-      return { kind: "notYet", giftId, rating: standing.rating, target, attested: false };
+      return { kind: "notYet", giftId, rating: standing.rating, target, attested: false, sourceUpdatedAt: standing.sourceUpdatedAt ?? null };
     }
   } catch (error) {
     // A name that no longer resolves, or an account Chess.com has closed, is a fact about the account: the proof would

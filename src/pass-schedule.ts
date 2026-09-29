@@ -4,7 +4,7 @@
  * when a missed day comes back cannot drift from when it does. Browser safe.
  */
 
-import { PRODUCT_LOCALE } from "./moments";
+import { nextPassMs, PRODUCT_LOCALE } from "./moments";
 
 export type PassTime = Readonly<{ hour: number; minute: number }>;
 
@@ -13,6 +13,11 @@ export const COUNTING_PASS_UTC: PassTime = { hour: 0, minute: 30 };
 
 /** Settles missed days and sends them back, and sends back gifts that never started (SETTLING_PASS). */
 export const SETTLING_PASS_UTC: PassTime = { hour: 7, minute: 0 };
+
+/** The next time a climb is read by a pass: both passes read the milestones (src/daily-pass.ts), so the nearer one. */
+export function nextClimbReadingMs(nowMs: number): number {
+  return Math.min(nextPassMs(COUNTING_PASS_UTC, nowMs), nextPassMs(SETTLING_PASS_UTC, nowMs));
+}
 
 /** The cron expression the platform needs for a pass, every day at that time. */
 export function cronOf(time: PassTime): string {

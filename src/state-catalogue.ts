@@ -188,7 +188,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       { name: "Jamais ouvert", when: "nobody has opened the link: the promise with the first name, the day it goes back, and opening it", says: ["put this in your name.", "has not opened it yet.", "Yours day by day", "after 14 days unopened, it goes back to", "If not by", "Open my gift", "Create your account to open it. Nothing to install.", "This link is missing its key. Ask for the link again."] },
       { name: "Ouvert, pas relié", when: "opened, and nothing started: the one gesture, the agreement unfolded, and the day it goes back", says: ["and it starts.", "is not connected yet.", "or it goes back to", "Connect now: only what you reach after connecting counts."] },
       { name: "En cours, quotidien", when: "a daily gift counting: the last day judged, in words; no action", says: ["Yesterday counted.", "Today still counts.", "Next reading:", "Yours so far", "Theirs so far"] },
-      { name: "En cours, progression", when: "a climb under way: how far is left, and where they are today; no action", says: ["to go.", "Where you are", "Where they are"] },
+      { name: "En cours, progression", when: "a climb under way: how far is left, where they are today, and when the source last updated it, read as the page opened; no action", says: ["to go.", "Today", "Last updated"] },
       { name: "En cours, obtenu ou pas", when: "something granted once, waiting for its proof: the one gesture as the state", says: ["Share the page that proves it, and the gift is yours.", "account, and it is yours.", "not shown it yet."] },
       { name: "Départ trop haut", when: "the first reading stood above the highest start the funder accepted", says: ["when it started, so there is nothing to climb.", "when the time is up.", "for a new one", "Make a new gift"] },
       { name: "Atteint", when: "reached, or a habit finished with days earned: the money, theirs, and taking it out", says: ["It is yours.", "did it.", "Reached on", "Finished on"] },
@@ -239,7 +239,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
     file: "src/sentences.ts",
     states: [
       { name: "Before the first reading", when: "a milestone gift opened and not connected: its clock has not started", says: ["of connecting"] },
-      { name: "Before the deadline", when: "a milestone gift connected and read", says: ["Checked every day at about", "Started at", "If not, it"] },
+      { name: "Before the deadline", when: "a milestone gift connected and read", says: ["It is yours when you reach", "Started at", "If not, it"] },
       { name: "Reached or not", when: "the keeper read it reached, or the deadline passed (the moments of the gift's page say it since V4)", says: ["Reached on", "did not make it in time."] },
       { name: "Opening, connecting and taking a milestone gift", when: "the recipient's gestures on a milestone gift (C2)", says: ["Get my code", "I added it", "into your account"] },
       {

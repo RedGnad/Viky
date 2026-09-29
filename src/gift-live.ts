@@ -169,7 +169,8 @@ export function liveOf(input: LiveInput): Live {
           input.todayReading === null
             ? null
             : { label: yours ? L.climbing.label.yours : L.climbing.label.theirs, value: String(input.todayReading) },
-        next: input.nextReadingInWords,
+        // Read each time the page opens (the founder, 29 Sep 2026): the reading's own line says when, and no next time.
+        next: null,
         back,
       };
 

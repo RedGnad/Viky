@@ -28,14 +28,14 @@ import { notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
 import { milestoneById } from "@/src/milestone-conditions";
 import type { AnyGiftStatus } from "@/src/gift-status";
 import type { MilestoneStatus } from "@/src/milestone-view";
-import { contractDayInWords, contractRangeInWords, dateInWords, momentInWords, nextPassMs } from "@/src/moments";
-import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
+import { comingMomentInWords, contractDayInWords, contractRangeInWords, dateInWords, momentInWords, nextPassMs, pastMomentInWords } from "@/src/moments";
+import { COUNTING_PASS_UTC, nextClimbReadingMs, settlingTimeInWords } from "@/src/pass-schedule";
 import { GIFT_LIVE as L, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
 import { AskAgain } from "../kit/AskAgain";
 import { CertificateProof } from "../kit/CertificateProof";
 import { MarathonProof, MarathonStanding } from "../kit/MarathonProof";
 import { WcaProof, WcaStanding } from "../kit/WcaProof";
-import { Confetti } from "../kit/Confetti";
+import { ReachedOnItsPage, reachedOfStatus } from "../kit/ReachedMoment";
 import { Nature } from "../kit/Nature";
 import { ShowProof } from "../kit/ShowProof";
 import { CheckThisDay } from "../kit/CheckThisDay";
@@ -50,7 +50,7 @@ import { HeadCharacter } from "../kit/HeadCharacter";
 import { LinkAgain } from "../kit/LinkAgain";
 import { Climb } from "../kit/Climb";
 import { Stamp } from "../kit/Stamp";
-import { MorningMessage } from "../kit/MorningMessage";
+import { MorningMessage, ReachAlert } from "../kit/MorningMessage";
 import { Arrival, ArrivalAmount, useLastSeen } from "../kit/Motion";
 import { Shell } from "../kit/Shell";
 import { TakeItBack } from "../kit/TakeItBack";
@@ -88,7 +88,7 @@ function screenMessage(error: unknown): string {
  * one tree and then the entrance animation of another. What the browser still does is ask again after something
  * happens on the screen, which is a refresh of the same tree and not a second screen.
  */
-export function GiftPage({ giftId, linkKey, initialStatus }: Readonly<{ giftId: string; linkKey: string | null; initialStatus?: AnyGiftStatus | null }>) {
+export function GiftPage({ giftId, linkKey, initialStatus, openTake = false }: Readonly<{ giftId: string; linkKey: string | null; initialStatus?: AnyGiftStatus | null; openTake?: boolean }>) {
   const [status, setStatus] = useState<GiftStatus | MilestoneStatus | null>(initialStatus ?? null);
   const [loadError, setLoadError] = useState<string | null>(null);
   /** Whether the gift on screen is the one the server just read, which needs no second reading to be true. */
@@ -130,10 +130,10 @@ export function GiftPage({ giftId, linkKey, initialStatus }: Readonly<{ giftId: 
       </Shell>
     );
   }
-  return <LiveGift status={status} linkKey={linkKey} reload={reload} />;
+  return <LiveGift status={status} linkKey={linkKey} reload={reload} openTake={openTake} />;
 }
 
-function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void> }>) {
+function LiveGift({ status, linkKey, reload, openTake }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void>; openTake: boolean }>) {
   const { address, ensureSigner, status: accountStatus } = useAccount();
   useMoneySession();
   const money = useDisplayCurrency(address);
@@ -142,7 +142,8 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
   const nowMs = useMinute();
   const [busy, setBusy] = useState<Busy>("idle");
   const [answer, setAnswer] = useState<{ at: Where; text: string; failed: boolean } | null>(null);
-  const [reviewing, setReviewing] = useState(false);
+  // The moment's "Take" arrives here with the review open, which is the one press left (app/kit/ReachedMoment.tsx).
+  const [reviewing, setReviewing] = useState(openTake);
   /** A signed-out reader of an opened gift asked to sign in: the quiet line opens the door, it is not the moment's action. */
   const [signingIn, setSigningIn] = useState(false);
   const [taken, setTaken] = useState<{ amount: string; atMs: number; take: number } | null>(null);
@@ -173,6 +174,41 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
   const condition = milestone ? conditionById(milestone.conditionId) : conditionOfGoal(daily?.goalType ?? 0);
   const words = condition?.recipient;
   const source = condition?.source ?? "";
+
+  /**
+   * A climb is read each time its page opens (the founder, 29 Sep 2026), by either of its two people, within the
+   * counting route's own rate limit: a plain look, and a proof only at or past the target, as before. What the page
+   * then says about reading is one quiet line, when the source last updated what was read, when it says so.
+   */
+  const readsOnOpen = Boolean(milestone && milestone.shape !== "certificate" && moment === "climbing" && (voice === "recipient" || voice === "funder"));
+  const [readOnOpen, setReadOnOpen] = useState<{ state: "read"; atMs: number; sourceUpdatedAt: number | null } | { state: "failed" } | null>(null);
+  // A reading that failed says nothing: the figure is the last one read, and the page is read again when it opens.
+  useEffect(() => {
+    if (!readsOnOpen) return;
+    let live = true;
+    checkMilestone(giftId)
+      .then((outcome) => {
+        if (!live) return;
+        setReadOnOpen({ state: "read", atMs: Date.now(), sourceUpdatedAt: outcome.kind === "notYet" ? (outcome.sourceUpdatedAt ?? null) : null });
+        if (outcome.kind === "reached" || outcome.kind === "notYet") void reload();
+      })
+      .catch(() => {
+        if (live) setReadOnOpen({ state: "failed" });
+      });
+    return () => {
+      live = false;
+    };
+  }, [readsOnOpen, giftId, reload]);
+  // When the source last updated what was read, then when Viky reads it next by itself: the two times a person needs to
+  // know when a win will show (the founder, 29 Sep 2026). A reading that failed says only the next one.
+  const readingLine = !readsOnOpen || nowMs === 0
+    ? null
+    : [
+        readOnOpen?.state === "read" && readOnOpen.sourceUpdatedAt ? L.climbing.lastUpdated(pastMomentInWords(readOnOpen.sourceUpdatedAt, readOnOpen.atMs)) : null,
+        L.climbing.nextReading(comingMomentInWords(nextClimbReadingMs(nowMs), nowMs)),
+      ]
+        .filter(Boolean)
+        .join(" ");
   const recipientName = names?.recipientName ?? (milestone ? milestone.goalAccount.username : (daily?.goalAccount.source === "funder" ? daily.goalAccount.username : null));
 
   const account = milestone
@@ -552,12 +588,13 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
         <p className={HELP}>{voice === "recipient" ? (words?.reads ?? "") : (words?.readsTheirs ?? "")}</p>
       ) : null}
       {milestone ? (
-        <p className={HELP}>{readerIsFunder ? M.ruleTheirs(milestone.target, milestoneBy(milestone, zone), settlingTimeInWords(nowMs, zone)) : M.ruleYours(milestone.target, milestoneBy(milestone, zone), settlingTimeInWords(nowMs, zone))}</p>
+        <p className={HELP}>{readerIsFunder ? M.ruleTheirs(milestone.target, milestoneBy(milestone, zone)) : M.ruleYours(milestone.target, milestoneBy(milestone, zone))}</p>
       ) : null}
       {daily && !stripFromRecordSafe(daily, nowMs) ? <p className={HELP}>{W.fromCountsNote}</p> : null}
       {/* Asking for a reading now, and being told each morning: neither is the moment's action, so neither is
           offered beside it. They live here, with the rest of how a gift is checked. */}
-      {(mine || readerIsFunder) && !gift.finished && gift.connected && !gift.sourceClosed ? (
+      {/* A milestone is read as its page opens, so it has no button for it (the founder, 29 Sep 2026). */}
+      {(mine || readerIsFunder) && !milestone && !gift.finished && gift.connected && !gift.sourceClosed ? (
         <>
           <button type="button" onClick={countToday} disabled={working} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
             {busy === "counting" ? W.reading : W.countNow}
@@ -565,7 +602,8 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
           {answerAt("count")}
         </>
       ) : null}
-      <MorningMessage giftId={giftId} yours={mine || readerIsFunder} />
+      {/* Each morning is a habit's; a milestone is told once, when it is reached, from outside the card. */}
+      {milestone ? null : <MorningMessage giftId={giftId} yours={mine || readerIsFunder} />}
     </>
   );
 
@@ -588,16 +626,16 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
     >
       <Shell
         kind="task"
-        character={<HeadCharacter />}
+        /* No hero on a gift in progress (the founder, 29 Sep 2026): its one character is the drawing's, the climb or the days. */
+        character={moment === "counting" || moment === "climbing" || moment === "awaitingProof" ? null : <HeadCharacter />}
         {...(address || hadAccount ? { back: "/gifts", backLabel: W.backToGifts } : { back: "/", backLabel: W.aboutViky, backFollows: true })}
       >
-        {/* The one confetti of the app, on "Atteint", to the two people and to nobody else (decision B). */}
-        <Confetti giftId={giftId} play={moment === "won" && (mine || readerIsFunder)} />
         <GiftLive
           from={eyebrowOf(voice, funderName)}
           who={titleOf(voice, recipientName ?? account.username)}
           what={condition?.name ?? ""}
-          nature={condition ? <Nature nature={condition.nature} /> : null}
+          /* Not on a milestone's page (the founder, 29 Sep 2026): the line of reading says how it is read. */
+          nature={condition && !milestone ? <Nature nature={condition.nature} /> : null}
           shape={shape}
           live={live}
           figureNode={figureNode}
@@ -606,8 +644,18 @@ function LiveGift({ status, linkKey, reload }: Readonly<{ status: GiftStatus | M
           action={action}
           agreed={{ open: read.agreementOpen, children: agreed }}
           checked={checked}
+          reading={readingLine}
           beside={proof}
         />
+
+        {/* Being told the moment it is reached, outside the card in the ground's own voice (the mockup). */}
+        {readsOnOpen && milestone ? <ReachAlert giftId={giftId} target={String(milestone.targetWords ?? milestone.target)} yours={mine} /> : null}
+
+        {/* The moment a gift is reached, to its two people and to nobody else (decision B): played here when this is
+            where they arrive first, and again whenever they ask. */}
+        {milestone?.reached && (mine || readerIsFunder) ? (
+          <ReachedOnItsPage gift={reachedOfStatus(milestone, mine ? "recipient" : "funder", { recipientName, funderName })} />
+        ) : null}
 
         {/* Ending a gift nobody opened: the funder's second gesture, under the first, never beside it. */}
         {funderMayTakeItBack(gift, voice) ? (

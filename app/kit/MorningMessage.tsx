@@ -1,8 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { morningStep, type MorningStep } from "@/src/morning-message";
-import { MORNING as W } from "@/src/sentences";
-import { HELP, SECONDARY_BUTTON } from "../components/ui";
+import { GIFT_LIVE, MORNING as W } from "@/src/sentences";
+import { HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../components/ui";
+
+const L = GIFT_LIVE.climbing;
 
 /**
  * Being told each morning, on a gift's page (N1, 17 Sep 2026).
@@ -43,7 +45,8 @@ function told(subscription: PushSubscription): Told {
   return { endpoint: json.endpoint ?? subscription.endpoint, keys: { p256dh: json.keys?.p256dh ?? "", auth: json.keys?.auth ?? "" } };
 }
 
-export function MorningMessage({ giftId, yours }: { giftId: string; yours: boolean }) {
+/** Being told about one gift on this device: where it stands, and the two presses that change it. */
+function useTold(giftId: string, yours: boolean) {
   const onIOS = useSyncExternalStore(never, isIOS, serverFalse);
   const standalone = useSyncExternalStore(never, isStandalone, serverFalse);
   const supported = useSyncExternalStore(never, canPush, serverFalse);
@@ -136,8 +139,13 @@ export function MorningMessage({ giftId, yours }: { giftId: string; yours: boole
     }
   }, [giftId]);
 
-  if (!yours) return null;
   const step: MorningStep = morningStep({ supported, onIOS, standalone, permission, subscribed });
+  return { step, busy, refusal, start, stop, showHow, setShowHow };
+}
+
+export function MorningMessage({ giftId, yours }: { giftId: string; yours: boolean }) {
+  const { step, busy, refusal, start, stop, showHow, setShowHow } = useTold(giftId, yours);
+  if (!yours) return null;
   if (step === "unsupported") return null;
   if (step === "on") {
     return (
@@ -161,6 +169,37 @@ export function MorningMessage({ giftId, yours }: { giftId: string; yours: boole
       </button>
       {step === "install" && showHow ? <p className={HELP}>{W.installFirst}</p> : null}
       {step === "refused" ? <p className={HELP}>{W.refused}</p> : null}
+      {refusal ? <p className={HELP}>{refusal}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * Being told the moment a milestone is reached (the founder, 29 Sep 2026, the mockup of 19 Sep): one quiet line outside
+ * the card, and a small "Turn on". The same subscription as the morning message: a milestone gift's subscribers are
+ * told when it is reached (src/milestone-pass.ts, and the reading on opening in src/milestone-routes.ts), or when its
+ * time runs out. A phone that refused is told how to allow it, without a button that can do nothing.
+ */
+export function ReachAlert({ giftId, target, yours }: Readonly<{ giftId: string; target: string; yours: boolean }>) {
+  const { step, busy, refusal, start, stop } = useTold(giftId, true);
+  const side = yours ? "yours" : "theirs";
+  if (step === "unsupported") return null;
+  const line =
+    step === "on" ? L.alertOn[side](target) : step === "refused" ? L.alertRefused : step === "install" ? `${L.alert[side](target)} ${L.alertInstall}` : L.alert[side](target);
+  return (
+    <div className="gift-card-width flex flex-col gap-[var(--space-xs)]">
+      <div className="flex items-center justify-between gap-[var(--space-md)]">
+        <p className={HELP}>{line}</p>
+        {step === "ask" ? (
+          <button type="button" onClick={() => void start()} disabled={busy} className={`${INLINE_BUTTON} shrink-0`}>
+            {L.turnOn}
+          </button>
+        ) : step === "on" ? (
+          <button type="button" onClick={() => void stop()} disabled={busy} className={`${INLINE_BUTTON} shrink-0`}>
+            {L.turnOff}
+          </button>
+        ) : null}
+      </div>
       {refusal ? <p className={HELP}>{refusal}</p> : null}
     </div>
   );

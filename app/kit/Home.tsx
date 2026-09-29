@@ -18,6 +18,7 @@ import { SideCrowd } from "./SideCrowd";
 import { GoalsGoingBy } from "./GoalsGoingBy";
 import type { LandingGoals } from "@/src/landing-goals";
 import { MoneyHero } from "./MoneyHero";
+import { ReachedMoments, reachedOfSummary, type ReachedGift } from "./ReachedMoment";
 import { OfferCard } from "./offer/OfferCard";
 import { Shell } from "./Shell";
 import { useMyGifts } from "./my-gifts";
@@ -142,6 +143,8 @@ export function Home({
   }
 
   const moving = gifts?.slice(0, 3) ?? [];
+  // Every reached gift this account has not had the moment of, played over Home once it has loaded (the founder).
+  const owed = (gifts ?? []).filter((gift) => gift.reachedSeen === false).map(reachedOfSummary).filter((gift): gift is ReachedGift => gift !== null);
   // What changed since the last visit, per gift, which the arrival replays once and in order (brief, section 6).
   const arriving: ArrivalGift[] = moving.map((gift) => {
     const days = gift.milestone ? [] : charactersOf(gift, gift.catchUpSeconds, nowMs, gift.days);
@@ -157,6 +160,7 @@ export function Home({
       {/* Its title, like Gifts and You: without one the head's row was the character's own height and the character
           stood higher here than on the two other destinations (the founder, 24 Sep 2026, D230). */}
       <Shell kind="destination" active="home" width="card" title={NAV.home} character={<HeadCharacter scene="home" />}>
+        <ReachedMoments gifts={owed} />
         <MoneyHero address={address} holdings={holdings} />
         {/* The way out keeps its place while the balance is being read (D147), so the card under it does not jump
             down when the answer lands. The room is held only on a device that saw money here last time: a first

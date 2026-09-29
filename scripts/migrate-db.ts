@@ -10,6 +10,7 @@ import { ensurePreferencesSchema } from "../src/preferences-store";
 import { ensurePrivateSpaceSchema } from "../src/private-space-store";
 import { ensureRelayCeilingSchema } from "../src/relay-ceiling-store";
 import { ensurePushSchema } from "../src/push-store";
+import { ensureReachedSeenSchema } from "../src/reached-seen-store";
 import { ensureSendsSchema } from "../src/send-store";
 import { ensurePhoneOrderSchema } from "../src/phone-order-store";
 
@@ -29,6 +30,7 @@ async function main() {
   // The connected sources' sealed keys (D188): no route creates this table, so the migration does.
   await ensureConnectionSchema();
   await ensurePushSchema();
+  await ensureReachedSeenSchema();
   await ensurePassSchema();
   // The phone way out's ledger (D238).
   await ensurePhoneOrderSchema();
