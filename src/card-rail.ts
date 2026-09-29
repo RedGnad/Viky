@@ -1,13 +1,13 @@
-import { countryCode } from "./rail-country";
+import { countryCode, type RailReach } from "./rail-country";
+import { WAYS_IN } from "./rails";
 
 /**
- * Who the card rail is offered to (the founder, 29 Sep 2026). Nobody is kept out of Viky: only paying by card follows
- * its providers' terms, and those serve nobody in a country under a comprehensive United States embargo. Such a payer
- * reads, in the card's place, that the card is not offered there, and every other way to pay stays. Browser safe.
+ * Who paying by card is offered to (the founder, 29 Sep 2026). Each card partner follows its own published list of the
+ * countries it serves nobody in (`WayIn.closedIn`), for the payer's country: the account's when it has one, otherwise
+ * the connection's. The sheet offers the first partner that serves it; when none does, the card is not offered, one
+ * sentence says so, and every other way to pay stays. Nobody is kept out of Viky: only the card follows its partners.
+ * Browser safe.
  */
-
-/** Cuba, Iran, North Korea and Syria, as the account and the platform write a country: two letters, lower case. */
-export const CARD_CLOSED_BY_EMBARGO: readonly string[] = ["cu", "ir", "kp", "sy"];
 
 /**
  * The country the payer is taken to be in: the one the account keeps (D274) when it has one, otherwise the one the
@@ -17,7 +17,15 @@ export function payerCountry(input: Readonly<{ account: string | null | undefine
   return countryCode(input.account) ?? countryCode(input.connection);
 }
 
-/** Whether paying by card is offered to a payer in this country; with no country known, it is. */
-export function cardOffered(country: string | null): boolean {
-  return country === null || !CARD_CLOSED_BY_EMBARGO.includes(country);
+/**
+ * What each card partner says of the payer's country: its own list first, so a partner that names the country serves
+ * nobody there whatever else is read; otherwise what was read of it live (a pause, its own country answer), or nothing.
+ */
+export function cardReach(country: string | null, live: Readonly<Record<string, RailReach>> = {}): Record<string, RailReach> {
+  return Object.fromEntries(WAYS_IN.map((way) => [way.name, country && way.closedIn.includes(country) ? "does-not" : (live[way.name] ?? "unknown")]));
+}
+
+/** Whether any card partner serves this country; with no country known, the card is offered and the partner checks. */
+export function cardOffered(reach: Readonly<Record<string, RailReach>>): boolean {
+  return WAYS_IN.some((way) => reach[way.name] !== "does-not");
 }
