@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { conditionById, liveConditions } from "../src/conditions";
 import { MOTION } from "../src/design-tokens";
-import { landingGoals, nextGoal, racePhrases } from "../src/landing-goals";
+import { ADDED_PORTALS, DIRECTORY_PORTALS } from "../src/directory-portals";
+import { landingGoals, nextGoal, racePhrases, UNIVERSITIES_SAID } from "../src/landing-goals";
 import { racesOffered } from "../src/marathon";
 import { UNIVERSITIES } from "../src/universities";
 
@@ -14,18 +15,35 @@ import { UNIVERSITIES } from "../src/universities";
 
 const NOW = Date.parse("2026-09-27T12:00:00Z");
 
-test("three kinds: every school, every live goal read where it happens, every race still offered", () => {
+test("groups: every school, every live goal as its group says it, every race still offered", () => {
   const { first, kinds } = landingGoals(NOW, () => 0.3);
-  const [schools, goals, races] = kinds;
+  const schools = kinds[0];
+  const races = kinds[kinds.length - 1];
+  const goals = kinds.slice(1, -1).flat();
   assert.deepEqual(schools.toSorted(), UNIVERSITIES.map((school) => `a certificate from ${school.name}`).toSorted());
   const duolingo = conditionById("duolingo-daily")!;
   assert.ok(goals.includes(duolingo.name.charAt(0).toLowerCase() + duolingo.name.slice(1)), "a goal in the register's own words");
   assert.ok(goals.includes(`a rating on ${conditionById("codeforces-rating")!.source}`), "a goal said from its source when its name is not a thing to wait for");
-  const shown = liveConditions().filter((goal) => goal.nature === "shown");
-  for (const goal of shown) assert.ok(!goals.some((phrase) => phrase.includes(goal.name.toLowerCase())), `${goal.id} is shown, not read`);
+  // The founder's list of 29 Sep 2026: the chess modes, the university's own grades and enrolment, the Rubik's Cube.
+  for (const phrase of ["a rapid rating on Chess.com", "a blitz rating on Chess.com", "a bullet rating on Chess.com", "a daily chess rating on Chess.com", "a grade at Harvard", "the year passed at Sapienza", "an enrolment at the Université de Toulouse", "a Rubik's Cube time at a WCA competition", "a TOEFL score", "an edX certificate from Harvard, MIT and more"]) {
+    assert.ok(goals.includes(phrase), phrase);
+  }
+  assert.ok(kinds.every((kind) => kind.length > 0), "no empty group is drawn");
+  assert.ok(!goals.some((phrase) => / at university$/.test(phrase)), "universities by name, not the word");
   assert.deepEqual(races, [...new Set(racesOffered(NOW, false).flatMap(racePhrases))], "every race still offered, as it is said");
   assert.ok(kinds.flat().includes(first));
   assert.equal(new Set(kinds.flat()).size, kinds.flat().length, "each once");
+});
+
+test("every university named is one a funder can choose, and each sense is said", () => {
+  const listed = new Set<string>([
+    ...(JSON.parse(readFileSync("data/university-register.json", "utf8")) as { rows: { university: string }[] }).rows.map((row) => row.university),
+    ...DIRECTORY_PORTALS.map((portal) => portal.university),
+    ...ADDED_PORTALS.map((portal) => portal.university),
+  ]);
+  for (const one of UNIVERSITIES_SAID) assert.ok(listed.has(one.registered), `${one.registered} is not in the list a funder chooses from`);
+  assert.equal(new Set(UNIVERSITIES_SAID.map((one) => one.said)).size, UNIVERSITIES_SAID.length, "each once");
+  for (const sense of ["enrolment", "year", "grade"]) assert.ok(UNIVERSITIES_SAID.some((one) => one.sense === sense), sense);
 });
 
 test("a race is said as a runner says it, and never as the wrong race (D287)", () => {
@@ -38,7 +56,7 @@ test("a race is said as a runner says it, and never as the wrong race (D287)", (
   assert.deepEqual(racePhrases(race("Trail du Loup Vert 2026", "Jumièges", ["10k", "10km"])), ["a finish at Trail du Loup Vert"], "the name says trail");
   assert.deepEqual(racePhrases(race("Somewhere 2026", "Town", ["10k", "Trail 10 km"])), ["a 10 km trail at Somewhere"]);
   assert.deepEqual(racePhrases(race("Voie Royale 2026", "Saint-Denis", ["10k", "10km"])), ["a 10 km race at Voie Royale"]);
-  for (const phrase of landingGoals(NOW).kinds[2]) assert.doesNotMatch(phrase, /\bmarathon at .*marat/i, phrase);
+  for (const phrase of landingGoals(NOW).kinds.at(-1)!) assert.doesNotMatch(phrase, /\bmarathon at .*marat/i, phrase);
 });
 
 test("a race that has started is no longer said", () => {
