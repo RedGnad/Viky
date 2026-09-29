@@ -85,6 +85,8 @@ export type WayIn = Readonly<{
   read: string;
   /** Countries where this rail serves nobody, whatever else is true. */
   closedIn: readonly string[];
+  /** Their own terms for a person buying, on their official site: what the payer accepts by paying by card. */
+  terms: string;
 }>;
 
 /**
@@ -110,6 +112,8 @@ export const WAY_IN_GIFT_COIN: WayIn = {
   source: "Ramp's own asset list",
   read: "20 Sep 2026",
   closedIn: RAIL_CLOSED_IN,
+  // Their terms of service, where ramp.network now redirects; section 7 asks that a user be at least 18 (read 29 Sep 2026).
+  terms: "https://rampnetwork.com/terms-of-service",
 };
 
 /**
@@ -137,6 +141,9 @@ export const WAY_IN_CHAIN_COIN: WayIn = {
   // under both `restricted_countries_onramp` and `restricted_countries_offramp` for MON on MONAD, read on 15 Sep
   // 2026 at https://api.mercuryo.io/v1.6/lib/currencies (D72), and again on 16 Sep for D77.
   closedIn: [...RAIL_CLOSED_IN, "United Kingdom"],
+  // Their terms for individuals, the page that leads to the EEA version and the one for everywhere else; the EEA one
+  // asks, in 3.1, that a user be at least 18 (read 29 Sep 2026).
+  terms: "https://mercuryo.io/legal/terms/",
 };
 
 /**

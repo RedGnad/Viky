@@ -23,6 +23,7 @@ import { CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
+import { CardNotOffered, CardTermsLine } from "./CardTerms";
 import { JudgeCode } from "./JudgeCode";
 import { FieldRefusal } from "../FieldRefusal";
 import { Sheet } from "../Sheet";
@@ -71,6 +72,8 @@ export function PaySheet({
   const money = useDisplayCurrency(address);
   const [held, setHeld] = useState<bigint | null>(null);
   const [railIn, setRailIn] = useState<Readonly<Record<string, RailReach>>>({});
+  /** Whether the card is offered to this payer (src/card-rail.ts); until the server has said, it is. */
+  const [card, setCard] = useState<Readonly<{ offered: boolean; country: string | null }> | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copyRefused, setCopyRefused] = useState(false);
@@ -105,7 +108,9 @@ export function PaySheet({
     // The device's language goes with the call itself; nothing here is an answer from the person.
     whereTheRailsServe()
       .then((answer) => {
-        if (live) setRailIn(answer.waysIn);
+        if (!live) return;
+        setRailIn(answer.waysIn);
+        setCard(answer.card ?? null);
       })
       .catch(() => undefined);
     return () => {
@@ -140,7 +145,10 @@ export function PaySheet({
   const short = units === undefined ? 0n : units - inAccount;
   const offer = wayInFor(short, WAYS_IN, money.rates?.usdPerEur, railIn);
   const way = offer.way;
-  const euros = units === undefined || enough ? 0 : offer.euros;
+  /** Paying by card is not offered in the payer's country (the founder, 29 Sep 2026): the account is the way left. */
+  const cardClosed = card?.offered === false;
+  const byCard = !enough && !cardClosed;
+  const euros = units === undefined || !byCard ? 0 : offer.euros;
   /** What the service keeps, in dollars: its own published share or minimum at this amount, at the day's rate. */
   const charge = euros === undefined || euros === 0 ? undefined : serviceChargeDollars(euros, way, money.rates?.usdPerEur);
   const chargeLine = charge === undefined ? W.about : euros && serviceChargeIsCeiling(euros, way.fee) ? W.upToDollars(charge) : W.aboutDollars(charge);
@@ -188,9 +196,16 @@ export function PaySheet({
           {/* Only when the gift is paid from a balance no larger than the judge credit, with nothing gone out of the
               account since it arrived (D295): the balance is then the credit alone. */}
           {judgeLineIsTrue({ gift: units, held, untouchedCredit }) ? <p className={HELP}>{W.fromJudgeCredit}</p> : null}
-          <button type="button" className={PRIMARY_BUTTON} disabled={!ready || busy || status === "busy"} onClick={() => void pay()}>
-            {busy ? W.paying : enough ? W.payFromAccount(formatAusd(units ?? 0n)) : euros ? W.payEuros(euros) : W.pay}
-          </button>
+          {!enough && cardClosed ? (
+            <CardNotOffered country={card?.country ?? null} />
+          ) : (
+            <>
+              <button type="button" className={PRIMARY_BUTTON} disabled={!ready || busy || status === "busy"} onClick={() => void pay()}>
+                {busy ? W.paying : enough ? W.payFromAccount(formatAusd(units ?? 0n)) : euros ? W.payEuros(euros) : W.pay}
+              </button>
+              {byCard ? <CardTermsLine way={way} /> : null}
+            </>
+          )}
           {problem ? <FieldRefusal id="pay-refused">{problem}</FieldRefusal> : null}
           {/* The passkey is how an account is made here. When the device cannot, or the person waved the sheet away,
               the panel that creates one or signs an old one in appears in place, rather than on a screen of its own. */}
@@ -199,14 +214,14 @@ export function PaySheet({
       }
     >
       {line(W.rows.gift(recipient), spokenAmount(money.led(units ?? 0n)))}
-      {enough ? line(W.rows.fromAccount, spokenAmount(money.led(inAccount))) : line(W.rows.service, chargeLine)}
+      {enough || cardClosed ? line(W.rows.fromAccount, spokenAmount(money.led(inAccount))) : line(W.rows.service, chargeLine)}
       {line(W.rows.viky, W.nothing)}
 
       <div className="pt-[var(--space-sm)]">
-        <p className={CARD_LABEL}>{enough ? W.rows.fromAccount : W.youPay}</p>
+        <p className={CARD_LABEL}>{byCard ? W.youPay : W.rows.fromAccount}</p>
         {/* From the account, the person's currency leads and the dollars that leave are under it (the founder, 29 Sep
             2026); by card, the euros the service charges are exact, so they lead alone. */}
-        {enough || euros === undefined || euros === 0 ? (
+        {!byCard || euros === undefined || euros === 0 ? (
           <>
             <LedFigure amount={money.led(units ?? 0n)} className={`${CARD_AMOUNT} whitespace-nowrap`} />
             <ExactLine amount={money.led(units ?? 0n)} />
@@ -216,14 +231,14 @@ export function PaySheet({
         )}
       </div>
       {/* The rate, its source and why its day may be a Friday: one line, in full, rather than a label in a corner. */}
-      {money.rates && !enough ? <p className={HELP}>{W.atTheRate(rateDateInWords(money.rates.date))}</p> : null}
-      {offer.atFloor && !enough && euros ? <p className={HELP}>{W.floor(euros)}</p> : null}
+      {money.rates && byCard ? <p className={HELP}>{W.atTheRate(rateDateInWords(money.rates.date))}</p> : null}
+      {offer.atFloor && byCard && euros ? <p className={HELP}>{W.floor(euros)}</p> : null}
       {/* The first way refused this person, and the sheet says which, why and which this goes through instead (D239). */}
-      {offer.insteadOf && !enough ? <p className={HELP}>{insteadSentence(offer)}</p> : null}
+      {offer.insteadOf && byCard ? <p className={HELP}>{insteadSentence(offer)}</p> : null}
       {/* What the partner's page will be, before it opens (D289), said only where it is true: the page arrives filled in. */}
       {/* What the partner's page will ask, just before it opens (D289, D294): filled in with Ramp's key, and without it
           what to choose there and where the code goes, with the code one press away once the account exists. */}
-      {!enough ? <p className={BODY}>{wayInFillsIn(way) ? W.partnerFilledIn : W.partnerPaste(way.name, way.delivers.coin, way.delivers.network, way.arrives === "gift")}</p> : null}
+      {byCard ? <p className={BODY}>{wayInFillsIn(way) ? W.partnerFilledIn : W.partnerPaste(way.name, way.delivers.coin, way.delivers.network, way.arrives === "gift")}</p> : null}
       {/* A judge's code (D297): only while credits are open, and the gift is not yet covered. */}
       {address ? (
         <JudgeCode
@@ -233,7 +248,9 @@ export function PaySheet({
           onMakeIt={(dollars) => onChange({ ...draft, dollars, typedAmount: dollars, typedIn: "USD" })}
         />
       ) : null}
-      {!enough && !wayInFillsIn(way) && address ? (
+      {/* Where the card is not offered, an account is what money can be sent to: somebody without one makes it here. */}
+      {!enough && cardClosed && !address ? <AccountPanel /> : null}
+      {!enough && (cardClosed || !wayInFillsIn(way)) && address ? (
         <div className="flex flex-col gap-[var(--space-xs)]">
           <p className={CARD_LABEL}>{W.yourCode}</p>
           <p className={`${HELP} select-all break-all tabular-nums`}>{address}</p>
@@ -293,8 +310,12 @@ export function PaySheet({
         )}
         <p className={BODY}>{FUND.check.namesSeen(recipient, funder)}</p>
         <p className={BODY}>{milestone ? MILESTONE_FUND.check.fourteenDays : FUND.check.fourteenDays}</p>
-        <p className={HELP}>{feeSentence(way)}.</p>
-        <p className={HELP}>{CASH_OUT.sourceLine(way.source, way.read)}</p>
+        {cardClosed ? null : (
+          <>
+            <p className={HELP}>{feeSentence(way)}.</p>
+            <p className={HELP}>{CASH_OUT.sourceLine(way.source, way.read)}</p>
+          </>
+        )}
       </details>
     </Sheet>
   );

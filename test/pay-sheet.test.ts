@@ -65,7 +65,7 @@ test("one way in, one action, and no button to another (D239)", () => {
   assert.equal(PAY.instead.country("Ramp", "Mercuryo"), "Ramp does not serve your country, so this goes through Mercuryo.");
   assert.equal(PAY.instead.paused("Ramp", "Mercuryo"), "Ramp is not selling right now, so this goes through Mercuryo.");
   assert.equal(PAY.instead.floor("Ramp", 6, "Mercuryo"), "Ramp takes nothing under 6 EUR, so this goes through Mercuryo.");
-  assert.match(sheet, /\{offer\.insteadOf && !enough \? <p className=\{HELP\}>\{insteadSentence\(offer\)\}<\/p> : null\}/, "said on the sheet, and only while there is something to pay");
+  assert.match(sheet, /\{offer\.insteadOf && byCard \? <p className=\{HELP\}>\{insteadSentence\(offer\)\}<\/p> : null\}/, "said on the sheet, and only while there is something to pay by card");
   // The device's language goes with the call itself; the sheet passes nothing as if it were an answer from the person.
   assert.match(sheet, /whereTheRailsServe\(\)/);
 });
