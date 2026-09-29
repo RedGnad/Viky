@@ -169,6 +169,15 @@ export const PAY = {
   upTo: (amount: string) => `up to ${amount}`,
   youPay: "You pay about",
   euros: (euros: number) => `${euros} EUR`,
+  /** The card's total in the payer's own money, under the euros the card service charges (the founder, 29 Sep 2026). */
+  inYourMoney: (amount: string) => `About ${amount}.`,
+  /**
+   * Why a card that buys the chain's coin asks more than the gift and the charge (the founder, 29 Sep 2026): the coin is
+   * bought, then changed into what a gift holds, at a margin that covers its price moving meanwhile; some coin must also
+   * stay in the account (D53). What is not used stays in the account.
+   */
+  chainMargin: (gap: string) =>
+    `That is about ${gap} more than the gift and the charge: this card buys MON, which is changed into what your gift holds once it arrives, so a margin covers its price moving meanwhile. What is not used stays in your account.`,
   /**
    * The rate's source, named, and why its day can be a Friday on a Sunday: the European Central Bank sets one each
    * working day and none at the weekend (the founder, 20 Sep 2026: a line that looked stale becomes a proof of care).
@@ -1707,37 +1716,38 @@ export const PHONE_OUT = {
  */
 export const ADD_UNIVERSITY = {
   title: "Add your university",
-  intro: "About ten minutes, from home, with your own student account. You show Reclaim two pages of your portal, the one that says you are enrolled and your results, then send a few things. A gift can then pay when a student of your university shows they are enrolled, passed the year, or reached a grade.",
+  intro: "About ten minutes, from home. You make two checks on Reclaim with its AI option, one for the page of your student portal that says you are enrolled and one for your results, each described in a sentence, then send a few things. A gift can then pay when a student of your university shows they are enrolled, passed the year, or reached a grade.",
+  /**
+   * The AI option, the one that works today (the founder, 29 Sep 2026, D311, D312): Reclaim's manual builder is broken,
+   * and an AI check is accepted. It names no request when it is made; Reclaim's agent writes one the first time a
+   * student shows the page, and Viky reads that first proof and records it before any gift is paid on it.
+   */
   steps: [
     {
       title: "Get the login",
       body: "Ask the person who sent you here for the login of Viky's student account on Reclaim. Reclaim is the service that checks a page of your student portal for Viky.",
     },
     {
-      title: "Start a new check on Reclaim",
-      body: "Sign in at dev.reclaimprotocol.org with that login and create a new provider, which is Reclaim's word for one page it knows how to check. If you are offered an AI option, do not choose it: Viky only accepts a check recorded from your own sign-in.",
+      title: "Start a new check on Reclaim, with its AI option",
+      body: "Sign in at dev.reclaimprotocol.org with that login, create a new provider, which is Reclaim's word for one page it knows how to check, and choose the AI option. Give it the link of the page where you sign in to your student portal.",
     },
     {
-      title: "Sign in to your student portal, in Reclaim's window",
-      body: "Give the link to your university's student portal, then sign in as you always do. You type your password on your university's own page, in that window.",
+      title: "First check: the page that says you are enrolled",
+      body: "Say in one sentence what it should show, and nothing else: your status for this year, such as Enrolled or Inscrit, and the academic year. Not your student number, not your name. Publish it.",
     },
     {
-      title: "First page: the one that says you are enrolled",
-      body: "Open it and pick one line: your status for this year, such as Enrolled or Inscrit, or the academic year you are registered for. Nothing else: not your student number, not your name. Publish it.",
-    },
-    {
-      title: "Second page: your results",
-      body: "Create a second provider the same way, open your results page, and pick the overall lines only: the decision (Passed, Admis), the overall average or grade (14.50 / 20, a GPA of 3.2), and the academic year if the page prints it. Not each subject's mark. Publish it.",
+      title: "Second check: your results",
+      body: "Make a second provider the same way, and say in one sentence to show the overall lines only: the decision (Passed, Admis), the overall average or grade (14.50 / 20, a GPA of 3.2), and the academic year. Not each subject's mark. Publish it.",
     },
     {
       title: "Send us what you made",
-      body: "Send the person who sent you here: your university's full name, the link to its student portal, the ID Reclaim shows for each of the two pages (36 letters, numbers and dashes each), and how your university grades: out of 20, a GPA out of 4, or letters.",
+      body: "Send the person who sent you here: your university's full name, the link to its student portal, the ID Reclaim shows for each of the two checks (36 letters, numbers and dashes each), and how your university grades: out of 20, a GPA out of 4, or letters.",
     },
   ],
   neverTitle: "What Viky never receives",
-  never: "Your password, or any mark but the overall result you picked. That result is read only when a gift on it is shown, and Viky keeps whether it was reached, not the mark. This page sends nothing anywhere.",
+  never: "Your password, or any mark but the overall result the check shows. You type your password on your university's own page, in Reclaim's window, only when you show a page. That result is read only when a gift on it is shown, and Viky keeps whether it was reached, not the mark. This page sends nothing anywhere.",
   nextTitle: "What happens next",
-  next: "Viky adds your university from what you sent, and until then it is not in the list. The first student of it who shows a page confirms that the check works.",
+  next: "Gifts on your university work as soon as its check is recorded: the first time a student shows a page, Viky reads what the check read and records it, and every gift after that is checked the same way.",
 } as const;
 
 /**

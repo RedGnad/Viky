@@ -76,6 +76,17 @@ export function serviceChargeDollars(euros: number, way: WayIn, usdPerEur: numbe
 }
 
 /**
+ * What a card that buys the chain's coin asks beyond what the gift needs and its own charge, in euros (the founder,
+ * 29 Sep 2026): the tenth added for the coin's price (`RATE_MARGIN`), the coin that stays in the account
+ * (`UNSPENDABLE_COINS`) and the whole euro, less what the measured rate differs from the day's. Real money paid; what is
+ * not used stays in the account. Nothing for a card that sells what a gift holds, whose euros are the day's rate.
+ */
+export function chainMarginEur(euros: number, shortfallUnits: bigint, way: WayIn, usdPerEur: number | undefined): number {
+  if (way.arrives !== "chain" || !(usdPerEur !== undefined && usdPerEur > 0) || !(euros > 0)) return 0;
+  return euros - Number(shortfallUnits) / 1_000_000 / usdPerEur - serviceChargeEur(euros, way.fee);
+}
+
+/**
  * True when what the line prints is the service's published ceiling rather than its rate: a share published as "up
  * to", and larger than the minimum at this amount. The line then says "up to" rather than "about".
  */
