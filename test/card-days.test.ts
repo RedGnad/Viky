@@ -18,7 +18,7 @@ const strip = readFileSync("app/kit/DayStrip.tsx", "utf8");
 const css = readFileSync("app/globals.css", "utf8");
 
 test("the card is three groups: who and what, the days and the money, the action, told apart by air", () => {
-  const marks = ['title={', "under={", "shape={", 'width={72}', "wake={ready && filled.for}", "{W.aDay}", "bottom={", "<MoneyKey", "{quick.map(", "setPaying(true)", "{W.missedBack}"];
+  const marks = ['title={', "under={", "shape={", 'width={72}', "{W.aDay}", "bottom={", "<MoneyKey", "{quick.map(", "setPaying(true)", "{W.missedBack}"];
   const at = marks.map((mark) => card.indexOf(mark));
   assert.ok(at.every((i) => i > 0) && at.every((i, n) => n === 0 || i > at[n - 1]), "who, what, the days and their worth, the money, the lengths, the action, the promise");
   assert.match(card, /shape=\{\n\s*<div className="my-\[var\(--space-md\)\] flex flex-col items-center gap-\[var\(--space-sm\)\]">/, "the days' own group, 24 pixels from the others");
@@ -46,7 +46,8 @@ test("the days on the card are 72 wide, and the strip keeps 60 everywhere else",
   assert.doesNotMatch(page, /width=\{72\}/, "a gift read keeps its row at 60");
 });
 
-test("the first day opens its eyes when the card is ready: the state in the markup, the change played from it, once", () => {
+test("every day of the card's row sleeps, the first too, while the strip keeps the way to wake one", () => {
+  assert.doesNotMatch(readFileSync("app/kit/offer/OfferCard.tsx", "utf8"), /wake=\{/, "no day of the card wakes (the founder, 29 Sep 2026)");
   // A closed eye is a part that turns from its middle, so the drawing written into the page can open it.
   const sleeping = renderToStaticMarkup(createElement(Character, { state: "toCome", standing: false, drawn: "inline" }));
   assert.equal((sleeping.match(/<rect data-part="eye"/g) ?? []).length, 2, "two closed eyes, named");

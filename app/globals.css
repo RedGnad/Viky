@@ -39,8 +39,9 @@
   --paper-raised: #FFFBF0;
   /* What the chosen option of a list is filled with, on the paper it sits on. */
   --chosen: #FFF3D6;
-  /* A field edited on the paper: the paper pressed in, from desktop.html of 20 Sep 2026. */
-  --paper-field: #F6EACB;
+  /* A field edited on the paper, lighter than the paper it sits on (the founder, 29 Sep 2026): white, Material's lowest
+     container tone (100) on the paper's 97, where it was the paper pressed in (desktop.html of 20 Sep 2026). */
+  --paper-field: #FFFFFF;
   --on-surface: #151026;
   --on-surface-body: #4A4130;
   --on-surface-muted: #7C6C3F;
@@ -328,20 +329,21 @@
     --card-shadow: none;
     --card-placed-edge: #484360;
     /* The paper after dark (D305, the founder's direction A of 28 Sep 2026): the day's lavender at dark tones, one
-       family with the ground as by day (Material's tone scale in CIELAB L*: ground 6, paper 17, raised 20, field 24,
-       chosen 27, rules 35), where D223's sun overlay had made brown cards on a violet night. The cream still reads
-       on it at 13.4:1. */
-    --paper: #2C2738;
-    --paper-raised: #332E3F;
-    --chosen: #433D52;
-    --paper-field: #3C3648; /* The filled field, a step above the paper: tone 24 (D252, D305). */
+       family with the ground as by day (Material's tone scale in CIELAB L*: ground 6, paper 22, raised 25, field 29,
+       chosen 32, rules 40), where D223's sun overlay had made brown cards on a violet night. Raised five tones on 29
+       Sep 2026 (the founder: the night's cards stood too close to the ground): the paper at Material's highest
+       container tone, 1.5:1 on the ground where it was 1.28. The cream reads on it at 11.5:1, on a field at 9:1. */
+    --paper: #373244;
+    --paper-raised: #3E394A;
+    --chosen: #4E485E;
+    --paper-field: #484154; /* The filled field, a step above the paper: tone 29 (D252, D305, raised 29 Sep 2026). */
     --on-surface: #FFF6E2;
     --on-surface-body: #EAE4F2;
     --on-surface-muted: #C7C4DA;
-    --on-surface-faint: #A8A2BC;
-    --surface-rule: #554F62;
+    --on-surface-faint: #B9B2CD; /* Tone 74 since the field rose to 29: a placeholder at 4.8:1 on it (29 Sep 2026). */
+    --surface-rule: #625B6F;
     --paper-relief: #C7C4DA;
-    --action-off: #433D52;
+    --action-off: #4E485E;
     --action-off-deep: #221D30;
     --action-off-ink: #C7C4DA;
     /* By night the character's colours change places (D306, the founder, 28 Sep 2026): gold inside, the day's violet
@@ -403,20 +405,21 @@
   --card-shadow: none;
   --card-placed-edge: #484360;
   /* The paper after dark (D305, the founder's direction A of 28 Sep 2026): the day's lavender at dark tones, one
-       family with the ground as by day (Material's tone scale in CIELAB L*: ground 6, paper 17, raised 20, field 24,
-       chosen 27, rules 35), where D223's sun overlay had made brown cards on a violet night. The cream still reads
-       on it at 13.4:1. */
-  --paper: #2C2738;
-  --paper-raised: #332E3F;
-  --chosen: #433D52;
-  --paper-field: #3C3648; /* The filled field, a step above the paper: tone 24 (D252, D305). */
+       family with the ground as by day (Material's tone scale in CIELAB L*: ground 6, paper 22, raised 25, field 29,
+       chosen 32, rules 40), where D223's sun overlay had made brown cards on a violet night. Raised five tones on 29
+       Sep 2026 (the founder: the night's cards stood too close to the ground): the paper at Material's highest
+       container tone, 1.5:1 on the ground where it was 1.28. The cream reads on it at 11.5:1, on a field at 9:1. */
+  --paper: #373244;
+  --paper-raised: #3E394A;
+  --chosen: #4E485E;
+  --paper-field: #484154; /* The filled field, a step above the paper: tone 29 (D252, D305, raised 29 Sep 2026). */
   --on-surface: #FFF6E2;
   --on-surface-body: #EAE4F2;
   --on-surface-muted: #C7C4DA;
-  --on-surface-faint: #A8A2BC;
-  --surface-rule: #554F62;
+  --on-surface-faint: #B9B2CD; /* Tone 74 since the field rose to 29: a placeholder at 4.8:1 on it (29 Sep 2026). */
+  --surface-rule: #625B6F;
   --paper-relief: #C7C4DA;
-  --action-off: #433D52;
+  --action-off: #4E485E;
   --action-off-deep: #221D30;
   --action-off-ink: #C7C4DA;
   --character-hero-edge: #B79BFF;
@@ -594,6 +597,8 @@ video {
   background: var(--paper);
   color: var(--on-surface);
   box-shadow: var(--card-shadow);
+  /* On a card, a field and whatever takes the surface is lighter than the card, day and night (29 Sep 2026). */
+  --surface: var(--paper-field);
   --text: var(--on-surface);
   --muted: var(--on-surface-muted);
   --divider: var(--surface-rule);
@@ -659,12 +664,12 @@ video {
 
 /*
  * A field edited where it stands, on the paper: the name in the line that carries it, the amount in its own place
- * (the founder, 20 Sep 2026: a sheet is not opened to type a first name). It is the paper, pressed in, so it reads
- * as a place to write rather than as a control on a card.
+ * (the founder, 20 Sep 2026: a sheet is not opened to type a first name). It is lighter than the paper (29 Sep 2026),
+ * so it reads as a place to write rather than as a control on a card.
  *
  * What says "type here" is a hairline all around it (D256): Material's outlined text field, 1 dp in its outline role
  * (tones 50 by day, 60 at night), which our faint ink sits beside (56 and 65); WCAG 1.4.11 asks 3:1 of what
- * identifies a field, and it holds 3.1:1 on the field by day and 4.6:1 by night. A line under the field alone (D252)
+ * identifies a field, and it holds 3.7:1 on the white field by day and 4.8:1 on the tone 29 field by night. A line under the field alone (D252)
  * read as the relief under a key, which is what the founder saw: a field that looked like a button.
  */
 .on-paper-field {

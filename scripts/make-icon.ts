@@ -41,7 +41,11 @@ function icoAround(png: Buffer, size: number): Buffer {
  */
 // Every icon at its largest (D307, the founder, 28 Sep 2026: "the biggest"), the maskable ones included; a launcher that
 // crops to a circle may cut the diamond's two points, which was the price the founder chose.
-const FILLS: Readonly<Record<string, number>> = {};
+// The tab's icons are the character on nothing, so the drawing's own margin is all that is left around it: 54 of 64
+// pixels wide at 1 (measured 29 Sep 2026). A tab icon is tiny, so the character takes the width less a pixel each side
+// for its edge (the founder: "as much room as it can").
+const TAB_FILL = 1.16;
+const FILLS: Readonly<Record<string, number>> = { "app/icon.png": TAB_FILL, "public/icons/icon-64x64.png": TAB_FILL };
 const FULL = 1;
 
 /**
@@ -80,7 +84,7 @@ async function main() {
       const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
       await page.setContent(
         `<!doctype html><body style="margin:0;width:${size}px;height:${size}px;background:${transparent ? "transparent" : COLOURS.light.background};display:flex;align-items:center;justify-content:center">` +
-          `<div style="width:${Math.round(size * (FILLS[file] ?? FULL))}px">${svg}</div></body>`,
+          `<div style="flex:none;width:${Math.round(size * (FILLS[file] ?? FULL))}px">${svg}</div></body>`,
       );
       const picture = await page.screenshot({ clip: { x: 0, y: 0, width: size, height: size }, omitBackground: Boolean(transparent) });
       await page.close();

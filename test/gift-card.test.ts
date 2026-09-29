@@ -141,7 +141,7 @@ test("there is one card, and the one being filled in is drawn by it", () => {
   // And that one character stands in the middle of the card, not at its left margin (D133).
   assert.match(card, /<Character state="toCome" className="h-auto w-\[96px\]" standing=\{false\} \/>/, "one character, larger since D226");
   // The condition line is a control, so it gets more room under the name than a caption would (D133).
-  assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/);
+  assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] justify-between/);
   assert.equal(globSync("app/kit/offer/ShapePreview.tsx").length, 0, "the shape invented beside the product's own is gone");
 });
 
@@ -206,11 +206,13 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   assert.match(key, /min-w-\[var\(--tap-target\)\]/, "and never narrower than a thumb");
   // One line, not two (D137). It opens the four families (D233), except while the condition on the card is not answered:
   // then its own questions, where the person left them (the founder, 28 Sep 2026).
-  assert.equal((card.match(/\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/g) ?? []).length, 1, "one control for what they will do");
+  assert.equal((card.match(/\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] justify-between/g) ?? []).length, 1, "one control for what they will do");
+  // At its own width, centred in the card on a phone and at its left on a large screen (the founder, 29 Sep 2026).
+  assert.match(card, /<span className="flex justify-center \[@media\(min-width:1024px\)\]:justify-start">\s*<button/);
   assert.match(card, /onClick=\{\(\) => setChoosing\(condition && !filled\.will \? "questions" : "list"\)\}/, "the catalogue, or the questions left half answered; one value carries whether it opens and on which face (D150)");
   assert.doesNotMatch(card, /cardDetail|detail\.said/, "the line says the label and the name, and the rest lives in the step it opens (D138)");
   assert.match(card, /className=\{`\$\{CHIP\} /, "a chip is the inline button at the size of a choice");
-  assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] w-full/, "and the condition line is one too, so every control lifts the same way");
+  assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] justify-between/, "and the condition line is one too, so every control lifts the same way");
   // The two that are left, and both are a choice rather than a field.
   assert.match(card, /<WillSheet openAt=\{choosing\}/, "and the sheet opens on the face the card asks for (D136), in one prop (D150)");
   assert.match(card, /<PaySheet open=\{paying\}/);
@@ -234,25 +236,25 @@ test("a card is the object on the ground, as the rendered mockups draw it by day
   // Night: a paper of its own since D223, one step above the ink ground, no shadow and no edge at all. The cream it
   // replaced stood at 17:1 on that ground, the brightest thing on a screen somebody had set to dark.
   assert.match(css, /--paper: #FFF6E2;/);
-  assert.equal((css.match(/--paper: #2C2738;/g) ?? []).length, 2, "the night paper, in both night blocks");
-  assert.ok(contrastRatio("#2C2738", COLOURS.dark.background) >= 1.25, "the card and the ground are never the same value");
+  assert.equal((css.match(/--paper: #373244;/g) ?? []).length, 2, "the night paper, in both night blocks");
+  assert.ok(contrastRatio("#373244", COLOURS.dark.background) >= 1.25, "the card and the ground are never the same value");
   // A warm paper on a cool night (D231): the sun over the ground at 12 %, as Material brands a dark surface, so it
   // has more red than blue where the ground has more blue than red.
   // The ground's own family since D305 (the founder's direction A): lavender, blue above red, like the ground.
-  assert.ok(parseInt("#2C2738".slice(5, 7), 16) > parseInt("#2C2738".slice(1, 3), 16), "the lavender of the ground");
+  assert.ok(parseInt("#373244".slice(5, 7), 16) > parseInt("#373244".slice(1, 3), 16), "the lavender of the ground");
   assert.ok(parseInt(COLOURS.dark.background.slice(1, 3), 16) < parseInt(COLOURS.dark.background.slice(5, 7), 16), "on a cool ground");
   for (const [ink, on, least, what] of [
-    ["#FFF6E2", "#2C2738", 4.5, "the ink on the night paper"],
-    ["#C7C4DA", "#2C2738", 4.5, "the quiet voice on it"],
-    ["#A8A2BC", "#2C2738", 4.5, "and the faint one"],
-    ["#FFF6E2", "#3C3648", 4.5, "the ink in a field"],
-    ["#A8A2BC", "#3C3648", 4.5, "the placeholder in a field"],
-    ["#FFF6E2", "#433D52", 4.5, "the ink on a chosen row"],
-    ["#C7C4DA", "#433D52", 4.5, "the quiet voice on a chosen row and on the shut action"],
-    ["#FFC531", "#2C2738", 3, "the sun on it"],
-    ["#B79BFF", "#2C2738", 3, "the diamond's night edge on it"],
+    ["#FFF6E2", "#373244", 4.5, "the ink on the night paper"],
+    ["#C7C4DA", "#373244", 4.5, "the quiet voice on it"],
+    ["#B9B2CD", "#373244", 4.5, "and the faint one"],
+    ["#FFF6E2", "#484154", 4.5, "the ink in a field"],
+    ["#B9B2CD", "#484154", 4.5, "the placeholder in a field"],
+    ["#FFF6E2", "#4E485E", 4.5, "the ink on a chosen row"],
+    ["#C7C4DA", "#4E485E", 4.5, "the quiet voice on a chosen row and on the shut action"],
+    ["#FFC531", "#373244", 3, "the sun on it"],
+    ["#B79BFF", "#373244", 3, "the diamond's night edge on it"],
   ] as const) assert.ok(contrastRatio(ink, on) >= least, what);
-  for (const said of ["--paper-field: #3C3648;", "--chosen: #433D52;", "--on-surface: #FFF6E2;", "--on-surface-muted: #C7C4DA;", "--paper-relief: #C7C4DA;"]) {
+  for (const said of ["--paper-field: #484154;", "--chosen: #4E485E;", "--on-surface: #FFF6E2;", "--on-surface-muted: #C7C4DA;", "--paper-relief: #C7C4DA;"]) {
     assert.equal((css.match(new RegExp(said.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length, 2, `${said} in both night blocks`);
   }
   assert.match(css, /--control-relief-colour: var\(--paper-relief\);/, "a key on the paper stands on the paper's own relief");
