@@ -10,7 +10,7 @@ import { conditionById } from "@/src/conditions";
 import { certificateById, milestoneById } from "@/src/milestone-conditions";
 import { settlingTimeInWords } from "@/src/pass-schedule";
 import { draftToTerms, draftUnits, isComplete, type GiftDraft } from "@/src/gift-draft";
-import { serviceChargeDollars, serviceChargeIsCeiling, wayInFor, type WayInOffer } from "@/src/gift-amount";
+import { chainMarginEur, serviceChargeDollars, serviceChargeIsCeiling, wayInFor, type WayInOffer } from "@/src/gift-amount";
 import { tidyGiftName } from "@/src/gift-names";
 import { judgeLineIsTrue } from "@/src/judge-line";
 import { formatAusd } from "@/src/gift-reader";
@@ -153,6 +153,15 @@ export function PaySheet({
   const charge = euros === undefined || euros === 0 ? undefined : serviceChargeDollars(euros, way, money.rates?.usdPerEur);
   // In the reader's own money, like the gift above it and the total under it: the dollars led as every figure is.
   const chargeRead = charge === undefined ? undefined : money.led(BigInt(Math.round(charge * 1_000_000))).lead;
+  /** A figure in euros, as the dollars it is worth at the day's rate, so it can be read in the payer's own money. */
+  const usdPerEur = money.rates?.usdPerEur;
+  const eurosAsUnits = (value: number) => BigInt(Math.round(value * (usdPerEur ?? 0) * 1_000_000));
+  // The total in the payer's own money when that is not the euro (the founder, 29 Sep 2026: F CFA in Senegal).
+  const totalRead = byCard && euros && usdPerEur && money.currency !== "EUR" ? money.led(eurosAsUnits(euros)).lead : undefined;
+  // What a card buying the chain's coin asks beyond the gift and the charge: the margin on the coin's price, the coin
+  // that stays in the account and the whole euro. Real money paid, and what is not used stays in the account.
+  const margin = byCard && euros ? chainMarginEur(euros, short, way, usdPerEur) : 0;
+  const marginRead = margin >= 0.5 ? money.led(eurosAsUnits(margin)).lead : undefined;
   const chargeLine = chargeRead === undefined ? W.about : euros && serviceChargeIsCeiling(euros, way.fee) ? W.upTo(chargeRead) : W.aboutAmount(chargeRead);
 
   /**
@@ -230,11 +239,15 @@ export function PaySheet({
             <ExactLine amount={money.led(units ?? 0n)} />
           </>
         ) : (
-          <p className={`${CARD_AMOUNT} whitespace-nowrap`}>{W.euros(euros)}</p>
+          <>
+            <p className={`${CARD_AMOUNT} whitespace-nowrap`}>{W.euros(euros)}</p>
+            {totalRead ? <p className={HELP}>{W.inYourMoney(totalRead)}</p> : null}
+          </>
         )}
       </div>
       {/* The rate, its source and why its day may be a Friday: one line, in full, rather than a label in a corner. */}
       {money.rates && byCard ? <p className={HELP}>{W.atTheRate(rateDateInWords(money.rates.date))}</p> : null}
+      {marginRead ? <p className={HELP}>{W.chainMargin(marginRead)}</p> : null}
       {offer.atFloor && byCard && euros ? <p className={HELP}>{W.floor(euros)}</p> : null}
       {/* The first way refused this person, and the sheet says which, why and which this goes through instead (D239). */}
       {offer.insteadOf && byCard ? <p className={HELP}>{insteadSentence(offer)}</p> : null}

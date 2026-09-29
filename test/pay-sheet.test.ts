@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { eurosNeededOn, roughlyInDollars, serviceChargeDollars, serviceChargeEur, serviceChargeIsCeiling, wayInFor } from "../src/gift-amount";
+import { chainMarginEur, eurosNeededOn, roughlyInDollars, serviceChargeDollars, serviceChargeEur, serviceChargeIsCeiling, wayInFor } from "../src/gift-amount";
 import { PAY } from "../src/sentences";
 import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAYS_IN, type WayIn } from "../src/rails";
 
@@ -167,4 +167,22 @@ test("paying starts on the card, and the old way in to it is gone", () => {
     assert.ok(!pay.includes(said), `the paying screen still carries ${said}`);
   }
   assert.match(pay, /O\.nothingToPay\.title/, "somebody who lands there with nothing running is sent back to the card");
+});
+
+test("a card that buys the chain's coin says what it asks beyond the gift and the charge, and the total in the payer's money", () => {
+  // The founder, 29 Sep 2026, from the Senegal capture: F CFA 14,995 and F CFA 646 make 23.84 EUR, and the sheet asked 26.
+  const usdPerEur = 1.1355;
+  const short = BigInt(Math.round((14_995 / 655.957) * usdPerEur * 1_000_000));
+  const euros = eurosNeededOn(short, WAY_IN_CHAIN_COIN, usdPerEur)!;
+  assert.equal(euros, 26);
+  const margin = chainMarginEur(euros, short, WAY_IN_CHAIN_COIN, usdPerEur);
+  assert.ok(margin > 2 && margin < 2.3, `about 2.15 EUR beyond the gift and the charge (${margin.toFixed(2)})`);
+  assert.equal(chainMarginEur(33, 34_000_000n, WAY_IN_GIFT_COIN, usdPerEur), 0, "a card selling what a gift holds asks the day's rate, no margin");
+  assert.equal(
+    PAY.chainMargin("F CFA 1,414"),
+    "That is about F CFA 1,414 more than the gift and the charge: this card buys MON, which is changed into what your gift holds once it arrives, so a margin covers its price moving meanwhile. What is not used stays in your account.",
+  );
+  assert.equal(PAY.inYourMoney("F CFA 17,055"), "About F CFA 17,055.");
+  assert.match(sheet, /const totalRead = byCard && euros && usdPerEur && money\.currency !== "EUR" \? money\.led\(eurosAsUnits\(euros\)\)\.lead : undefined;/);
+  assert.match(sheet, /\{marginRead \? <p className=\{HELP\}>\{W\.chainMargin\(marginRead\)\}<\/p> : null\}/);
 });
