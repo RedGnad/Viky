@@ -4,7 +4,7 @@ The money is already in their name. Every day they miss, a piece comes back to y
 
 Viky is a conditional payment on Monad. A relative puts money behind someone's goal. The money is
 allocated in the recipient's name from day one, becomes theirs as verified progress accrues, and
-returns to the funder for whatever is not accomplished. Nobody else ever profits from a missed day.
+returns to the funder for whatever is not accomplished. Nobody ever profits from a missed day.
 
 Live app: [viky.cash](https://viky.cash). Built for Monad Metropolis, track Consumer Products & Payments.
 
