@@ -1,4 +1,5 @@
 import { getAddress, type Hex } from "viem";
+import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { attestClimbRating, isClimbReadError, readClimbStanding, type AttestedClimbReading } from "./climb-reading";
 import { climbIdentityLabel, climbOfGoal, climbProviderId, type ClimbId } from "./climbs";
 import { nameHasChessCode } from "./chess-reading";
@@ -8,7 +9,7 @@ import { milestoneRefusal } from "./milestone-api";
 import { MILESTONE_ATTESTATION_TTL_SECONDS, type MilestoneProofMessage } from "./milestone-protocol";
 import { milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
 import { relayProve, type ProvedReading } from "./milestone-relay";
-import { readSince, recordReading, type MilestoneReading, type ReadingPurpose } from "./milestone-store";
+import { lastReading, readSince, recordReading, type MilestoneReading, type ReadingPurpose } from "./milestone-store";
 import { escrowOf, RelayerError } from "./relayer";
 import type { ChessStanding } from "./chess-com";
 
@@ -68,6 +69,8 @@ const MESSAGES: Readonly<Record<string, string>> = {
 };
 
 export type MilestoneReadingDeps = {
+  /** Whether the recipient's agreement lets this gift be read (src/consent-guard.ts); a test that omits it reads. */
+  leave?: (giftId: string, fundedAt: number) => Promise<ReadingLeave>;
   loadGift: (giftId: string) => Promise<GiftRecord | null>;
   readState: (contract: Hex, giftId: string) => Promise<MilestoneState>;
   plain: (username: string, mode: ClimbId) => Promise<ChessStanding>;
@@ -78,11 +81,14 @@ export type MilestoneReadingDeps = {
   markBound: (giftId: string, playerId: string) => Promise<boolean>;
   record: (reading: MilestoneReading) => Promise<void>;
   readRecently: (giftId: string, sinceSeconds: number) => Promise<boolean>;
+  /** The gift's newest reading, so a refusal repeated by every pass is written once. */
+  last?: (giftId: string) => Promise<MilestoneReading | null>;
   now: () => number;
 };
 
 export function liveMilestoneReadingDeps(): MilestoneReadingDeps {
   return {
+    leave: readingLeave,
     loadGift,
     readState: (contract, giftId) => readMilestoneGift(contract, giftId),
     plain: (username, mode) => readClimbStanding(username, mode),
@@ -92,6 +98,7 @@ export function liveMilestoneReadingDeps(): MilestoneReadingDeps {
     markBound,
     record: recordReading,
     readRecently: readSince,
+    last: lastReading,
     now: () => Math.floor(Date.now() / 1_000),
   };
 }
@@ -109,6 +116,32 @@ export function refusalMessage(code: string): string {
 
 function refused(giftId: string, code: string, rating?: number, message?: string): MilestoneOutcome {
   return { kind: "refused", giftId, code, message: message ?? refusalMessage(code), rating };
+}
+
+/**
+ * Nothing read, for want of an agreement (the founder, 29 Sep 2026), written down where the journal of both people
+ * reads it: once, not at every pass, and never sent to the contract. The deadline does the rest: a target not read by
+ * then brings the whole gift back.
+ */
+async function noAgreement(giftId: string, username: string, deps: MilestoneReadingDeps): Promise<MilestoneOutcome> {
+  const last = deps.last ? await deps.last(giftId) : null;
+  if (last?.outcome !== `refused:${NO_AGREEMENT.code}`) {
+    await deps.record({
+      giftId,
+      purpose: "look",
+      attested: false,
+      username,
+      playerId: null,
+      rating: null,
+      ratedAt: null,
+      rd: null,
+      observedAt: deps.now(),
+      nullifier: null,
+      outcome: `refused:${NO_AGREEMENT.code}`,
+      txHash: null,
+    });
+  }
+  return refused(giftId, NO_AGREEMENT.code, undefined, NO_AGREEMENT.message);
 }
 
 /**
@@ -174,6 +207,9 @@ export async function runMilestoneReading(
     if (phase === "overdue") return { kind: "already", giftId, reason: "deadline_passed" };
     if (phase !== "climbing") return { kind: "already", giftId, reason: "not_bound" };
   }
+  // No reading that moves money without the recipient's yes, and none after their stop (the founder, 29 Sep 2026).
+  const leave = deps.leave ? await deps.leave(giftId, state.fundedAt) : null;
+  if (leave && !leave.allowed) return noAgreement(giftId, record.goalUsername, deps);
   const mode = climbOfGoal(state.goalType);
   if (!mode) return refused(giftId, "NOT_CONFIGURED");
   const username = record.goalUsername;

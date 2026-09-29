@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { agreeFirst } from "@/src/client/consent";
 import { ApiError } from "@/src/client/api";
 import { runShownProof } from "@/src/client/gift";
 import { conditionById } from "@/src/conditions";
@@ -35,6 +36,8 @@ export function ShowProof({
   const show = async () => {
     setState({ at: "opening" });
     try {
+      // Opening the portal is the yes, signed before anything is shown (the founder, 29 Sep 2026).
+      await agreeFirst(giftId);
       const outcome = await runShownProof({
         giftId,
         conditionId,

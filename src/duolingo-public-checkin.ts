@@ -1,4 +1,5 @@
 import { getAddress, type Hex } from "viem";
+import { NO_AGREEMENT, readingLeave, type ReadingLeave } from "./consent-guard";
 import { readDuolingoCourse, CourseReadError, type CourseReading } from "./duolingo-course-reading";
 import { fetchPublicProfile, PublicProfileError, reclaimPublicProfileDeps, type PublicProfile, type PublicProfileDeps } from "./duolingo-public";
 import { checkInSubject, displayNameHasCode, DUOLINGO_PUBLIC_PROVIDER_LABEL } from "./duolingo-public-terms";
@@ -32,12 +33,15 @@ export type PublicCheckInDeps = {
   /** One course's experience, for a gift made on a course rather than on the total (U1). */
   course: (username: string, courseId: string) => Promise<CourseReading>;
   now: () => number;
+  /** Whether the recipient's agreement lets this gift be read (src/consent-guard.ts); a test that omits it reads. */
+  leave?: (giftId: string, fundedAt: number) => Promise<ReadingLeave>;
 };
 
 const defaultDeps: PublicCheckInDeps = {
   profile: reclaimPublicProfileDeps,
   course: (username, courseId) => readDuolingoCourse({ username, courseId }),
   now: () => Math.floor(Date.now() / 1_000),
+  leave: readingLeave,
 };
 
 function refusal(giftId: string, code: string, message: string, xp?: number): PublicCheckInOutcome {
@@ -63,6 +67,9 @@ export async function runPublicCheckIn(input: { giftId: string; purpose: PublicC
   const onChain = await readGift(escrow, giftId);
   if (onChain.cancelled) return { kind: "already", giftId, reason: "cancelled" };
   if (onChain.finalised) return { kind: "already", giftId, reason: "finished" };
+  // No reading that moves money without the recipient's yes, and none after their stop (the founder, 29 Sep 2026).
+  const leave = deps.leave ? await deps.leave(giftId, onChain.fundedAt) : null;
+  if (leave && !leave.allowed) return refusal(giftId, NO_AGREEMENT.code, NO_AGREEMENT.message);
   const now = deps.now();
   if (purpose === "count" && !input.force && (await countedToday(giftId, now))) return { kind: "already", giftId, reason: "counted_today" };
   if (purpose === "bind" && record.usernameSource === "recipient") {

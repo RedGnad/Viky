@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { agreeFirst, signConsent } from "@/src/client/consent";
 import { ApiError, getJson, postJson } from "@/src/client/api";
 import { conditionById } from "@/src/conditions";
 import { GIFT_PAGE as W } from "@/src/sentences";
@@ -68,6 +69,8 @@ export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Rea
     setBusy("connecting");
     setRefusal(null);
     try {
+      // Connecting is the yes, signed before the source's own page opens (the founder, 29 Sep 2026).
+      await agreeFirst(giftId);
       const { url } = await postJson<{ url: string }>(`/api/connect/${source}/start`, { giftId });
       window.location.assign(url);
     } catch (error) {
@@ -94,6 +97,8 @@ export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Rea
     setBusy("erasing");
     setRefusal(null);
     try {
+      // The stop, signed by the same key, then the connection and its ids erased (the founder, 29 Sep 2026).
+      await signConsent(giftId, "stop");
       await postJson(`/api/connect/${source}/disconnect`, { giftId });
       setSaid(words.erased);
       await load();

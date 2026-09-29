@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { agreeFirst } from "@/src/client/consent";
+import { CONSENT } from "@/src/sentences";
 import { proveCertificateGift, readCertificate } from "@/src/client/certificate-gift";
 import { ApiError } from "@/src/client/api";
 import { certificateById, type CertificateCondition } from "@/src/milestone-conditions";
@@ -70,6 +72,12 @@ export function CertificateProof({
       return;
     }
     setState({ at: "proving" });
+    // Sharing the certificate is the yes, signed before it is read (the founder, 29 Sep 2026).
+    const agreed = await agreeFirst(giftId).then(() => true, () => false);
+    if (!agreed) {
+      setState({ at: "refused", message: CONSENT.failed });
+      return;
+    }
     const outcome = await proveCertificateGift(giftId, typed).catch(() => null);
     if (!outcome) {
       setState({ at: "refused", message: words.refusals.unavailable });

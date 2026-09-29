@@ -334,3 +334,19 @@ test("a page without the field is refused by its name, the person is told nothin
   assert.equal(row.txHash, null);
   assert.equal(row.proofs, undefined, "no proof, no number: the event by its name alone");
 });
+
+test("a proof shown without the recipient's yes, or after their stop, is refused before it is fetched", async () => {
+  let fetched = false;
+  const d = deps({
+    leave: async () => ({ allowed: false, reason: "stopped" }),
+    fetchStatus: async () => {
+      fetched = true;
+      throw new Error("not reached");
+    },
+  });
+  await refuses("NO_AGREEMENT", () => verifyShownSession(d, { sessionId: SESSION_ID, account: ACCOUNT }));
+  assert.equal(fetched, false);
+  assert.deepEqual(d.proved, []);
+  const agreed = deps({ leave: async () => ({ allowed: true, beforeAgreements: false }) });
+  assert.equal((await verifyShownSession(agreed, { sessionId: SESSION_ID, account: ACCOUNT })).kind, "reached");
+});

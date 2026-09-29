@@ -8,7 +8,12 @@ import { currencyOf } from "@/src/currencies";
 import { PRODUCT_LOCALE } from "@/src/moments";
 import { CATALOGUE, HOME as H, ME as W } from "@/src/sentences";
 import { AMOUNT_IN_TITLE, CARD, HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../components/ui";
+import { useReaderZone } from "@/src/client/reader-zone";
+import { conditionOfGoal } from "@/src/conditions";
+import { CONSENT } from "@/src/sentences";
+import { WhatVikyReads, type ReadForYou } from "./Consent";
 import { CurrencySheet } from "./CurrencySheet";
+import { milestoneBy } from "./GiftCard";
 import { HeadCharacter } from "./HeadCharacter";
 import { Install } from "./Install";
 import { MoneyKey } from "./MoneyKey";
@@ -45,6 +50,24 @@ export function Me() {
   const [saved, setSaved] = useState(false);
   const [until, setUntil] = useState<string | null>(null);
   const [copied, setCopied] = useState<"no" | "yes" | "refused">("no");
+  const zone = useReaderZone();
+  /** The gifts this account is the person of, still running: what Viky reads for them, each with its stop. */
+  const readForYou: ReadForYou[] = (gifts ?? []).flatMap((gift) => {
+    if (gift.role !== "recipient" || !gift.opened || gift.finished || gift.cancelled) return [];
+    const conditionId = gift.milestone?.conditionId ?? conditionOfGoal(gift.goalType)?.id ?? "";
+    const funder = gift.funderName ?? CONSENT.theFunder;
+    const status = gift.milestone;
+    return [
+      {
+        giftId: gift.giftId,
+        conditionId,
+        funderName: gift.funderName,
+        cost: status
+          ? { kind: "milestone" as const, target: status.targetWords ?? (status.target === null ? null : String(status.target)), by: milestoneBy(status, zone), amount: gift.amountDisplay, funder }
+          : { kind: "daily" as const, funder },
+      },
+    ];
+  });
 
   // The moment the session closes by itself, read again every half minute: a signature elsewhere pushes it back.
   useEffect(() => {
@@ -134,6 +157,9 @@ export function Me() {
           </button>
         </div>
       </section>
+
+      {/* What Viky reads, and the stop, for every gift this account is the person of (the founder, 29 Sep 2026). */}
+      <WhatVikyReads gifts={readForYou} zone={zone} />
 
       <Install />
 

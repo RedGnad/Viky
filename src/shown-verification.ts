@@ -1,5 +1,6 @@
 import type { Hex } from "viem";
 import { signedSubjectOf } from "./subject-key";
+import { NO_AGREEMENT, type ReadingLeave } from "./consent-guard";
 import type { Proof } from "@reclaimprotocol/js-sdk";
 import { MAX_PROOF_AGE_SECONDS, MAX_PROOF_FUTURE_SKEW_SECONDS, VerificationError, verifyDuolingoSession, type ReclaimStatus, type SdkVerification, type VerificationDeps } from "./duolingo-verification";
 import type { MilestoneReading } from "./milestone-store";
@@ -42,6 +43,8 @@ export type ShownVerificationDeps = VerificationDeps & {
   milestoneRecordOf(giftId: string): Promise<MilestoneRecord | null>;
   /** Holds the first proof of a witness portal with no pin for the operator's review (D312); false when already held. */
   holdForReview?(review: Omit<PortalReview, "status" | "reason">): Promise<boolean>;
+  /** Whether the recipient's agreement lets this gift be read (src/consent-guard.ts); a test that omits it reads. */
+  leave?(giftId: string): Promise<ReadingLeave>;
   /** Tests only: the witness a test key stands for. Production never sets it, and the pinned witness is required. */
   witnessAddress?: string;
 };
@@ -93,6 +96,9 @@ export async function verifyShownSession(deps: ShownVerificationDeps, input: { s
   if (!session || session.account.toLowerCase() !== input.account.toLowerCase()) throw new VerificationError("UNKNOWN_SESSION", "Unknown or expired Reclaim session");
   const entry = shownConditionById(session.conditionId);
   if (!entry) throw new VerificationError("UNKNOWN_CONDITION", "This session is for a condition Viky does not know");
+  // No reading that moves money without the recipient's yes, and none after their stop (the founder, 29 Sep 2026).
+  const leave = deps.leave ? await deps.leave(session.giftId) : null;
+  if (leave && !leave.allowed) throw new VerificationError(NO_AGREEMENT.code, NO_AGREEMENT.message, 409);
 
   if (entry.kind === "daily") {
     const result = await verifyDuolingoSession(deps, input);

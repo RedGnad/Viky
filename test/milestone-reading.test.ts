@@ -410,10 +410,32 @@ test("the account read and the figures of a climb go only where the names go: fu
 
 test("the public journal gives why a reading was refused to the funder and the recipient only; disconnecting erases the source's ids; counting reads by the condition's nature", () => {
   const journal = readFileSync("app/api/gift/[id]/journal/route.ts", "utf8");
-  assert.match(journal, /insider \? readings : readings\.map\(\(reading\) => \(\{ \.\.\.reading, outcome: reading\.outcome\.startsWith\("refused:"\) \? "refused" : reading\.outcome \}\)\)/);
+  assert.match(journal, /if \(!insider\) return NextResponse\.json\(\{ giftId: id, kind: "milestone", readings: readings\.map\(\(reading\) => \(\{ \.\.\.reading, outcome: reading\.outcome\.startsWith\("refused:"\) \? "refused" : reading\.outcome \}\)\) \}/);
   assert.match(journal, /account === record\.funder\.toLowerCase\(\) \|\| account === record\.recipient\?\.toLowerCase\(\)/);
   for (const file of ["src/connect-strava.ts", "src/connect-fitbit.ts"]) assert.match(readFileSync(file, "utf8"), /await eraseConnection\(giftId\);\n[^\n]*\n\s*await forgetConnectedAccount\(giftId\);/, file);
   assert.match(readFileSync("src/gift-store.ts", "utf8"), /SET goal_username = NULL, goal_profile_id = NULL/);
   const daily = readFileSync("src/gift-status.ts", "utf8");
   assert.match(daily, /username: names \? \(record\?\.goalUsername \?\? null\) : null,/);
+});
+
+test("without the recipient's yes nothing is read, and the journal says so once, however many passes come", async () => {
+  // The founder, 29 Sep 2026: no reading that moves money without a valid agreement, on every path.
+  const rows: string[] = [];
+  let last: MilestoneReading | null = null;
+  const run = harness(BOUND, CLIMBING, {
+    leave: async () => ({ allowed: false, reason: "stopped" }),
+    last: async () => last,
+    record: async (reading) => {
+      rows.push(reading.outcome);
+      last = reading;
+    },
+  });
+  const first = await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, run.deps);
+  assert.deepEqual(first, { kind: "refused", giftId: "1000000", code: "NO_AGREEMENT", message: "Not read: no agreement.", rating: undefined });
+  await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, run.deps);
+  assert.deepEqual(run.calls, [], "the source is not asked, and no proof is paid for");
+  assert.deepEqual(rows, ["refused:NO_AGREEMENT"], "written once, not at every pass");
+
+  const agreed = harness(BOUND, CLIMBING, { leave: async () => ({ allowed: true, beforeAgreements: false }) });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, agreed.deps)).kind, "notYet", "with the yes, it reads");
 });
