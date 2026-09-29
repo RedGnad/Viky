@@ -14,7 +14,6 @@ import { Install } from "./Install";
 import { MoneyKey } from "./MoneyKey";
 import { dollarsHeld, holdsAnything, useHoldings } from "./money";
 import { useMyGifts } from "./my-gifts";
-import { PrivateSpace } from "./PrivateSpace";
 import { SignInDoor } from "./SignInDoor";
 import { SpendOrWithdraw } from "./SpendOrWithdraw";
 import { Shell } from "./Shell";
@@ -135,8 +134,6 @@ export function Me() {
           </button>
         </div>
       </section>
-
-      <PrivateSpace address={address} />
 
       <Install />
 

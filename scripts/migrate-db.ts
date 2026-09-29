@@ -7,15 +7,21 @@ import { ensurePassSchema } from "../src/pass-log";
 import { ensurePortalSchema } from "../src/portal-store";
 import { ensureConnectionSchema } from "../src/connection-store";
 import { ensurePreferencesSchema } from "../src/preferences-store";
-import { ensurePrivateSpaceSchema } from "../src/private-space-store";
 import { ensureRelayCeilingSchema } from "../src/relay-ceiling-store";
 import { ensurePushSchema } from "../src/push-store";
 import { ensureReachedSeenSchema } from "../src/reached-seen-store";
 import { ensurePassGuardSchema } from "../src/frequent-pass";
 import { ensureSendsSchema } from "../src/send-store";
 import { ensurePhoneOrderSchema } from "../src/phone-order-store";
+import { neon } from "@neondatabase/serverless";
+import { databaseUrl } from "../src/database-guard";
 
 // Creates the tables the routes need on the Neon database named by DATABASE_URL. Idempotent.
+
+/** The sealed envelopes of "Private to you", which Viky no longer offers and nobody can open without it. */
+async function dropPrivateSpaces(): Promise<void> {
+  await neon(databaseUrl())`DROP TABLE IF EXISTS viky_private_spaces`;
+}
 
 async function main() {
   if (!process.env.DATABASE_URL?.trim()) throw new Error("DATABASE_URL is not configured");
@@ -25,7 +31,8 @@ async function main() {
   await ensureExitSchema();
   await ensureSendsSchema();
   await ensurePreferencesSchema();
-  await ensurePrivateSpaceSchema();
+  // "Private to you" is gone (the founder, 29 Sep 2026): its sealed envelopes go with it.
+  await dropPrivateSpaces();
   await ensureRelayCeilingSchema();
   await ensurePortalSchema();
   // The connected sources' sealed keys (D188): no route creates this table, so the migration does.

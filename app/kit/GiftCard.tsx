@@ -154,6 +154,7 @@ export function milestoneBy(status: Pick<MilestoneStatus, "deadlineMs" | "durati
 
 function milestoneStateInWords(status: MilestoneStatus): string {
   if (status.cancelled) return W.takenBack;
+  if (status.target === null) return status.finished ? W.milestoneEnded : status.opened ? W.milestoneUnderWay : W.notOpened;
   if (status.reached) return W.milestoneReached(status.target);
   if (status.finished) return W.milestoneMissed(status.target);
   if (!status.opened) return W.notOpened;

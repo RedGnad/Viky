@@ -549,7 +549,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     <>
       {milestone ? (
         <>
-          <p className={BODY}>{M.target(milestone.targetWords ?? milestone.target, source)}</p>
+          {milestone.target !== null ? <p className={BODY}>{M.target(milestone.targetWords ?? milestone.target, source)}</p> : null}
           <p className={BODY}>
             {readerIsFunder
               ? M.atDeadlineTheirs(milestoneBy(milestone, zone))
@@ -580,7 +580,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       {nextReading && !gift.finished ? (
         <p className={HELP}>{voice === "recipient" ? (words?.reads ?? "") : (words?.readsTheirs ?? "")}</p>
       ) : null}
-      {milestone ? (
+      {milestone && milestone.target !== null ? (
         <p className={HELP}>{readerIsFunder ? M.ruleTheirs(milestone.target, milestoneBy(milestone, zone)) : M.ruleYours(milestone.target, milestoneBy(milestone, zone))}</p>
       ) : null}
       {daily && !stripFromRecordSafe(daily, nowMs) ? <p className={HELP}>{W.fromCountsNote}</p> : null}

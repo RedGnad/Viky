@@ -6,7 +6,7 @@ import { eraseConnection, loadConnection, saveConnection } from "./connection-st
 import { exchangeFitbitCode, fitbitAuthorizeUrl, fitbitConfigured, fitbitCredentials, FitbitError, pkceChallenge, pkceVerifier, revokeFitbitToken } from "./fitbit";
 import { openSecret } from "./connect-vault";
 import { GiftApiError } from "./gift-api";
-import { loadGift, markConnectedAccount, type GiftRecord } from "./gift-store";
+import { forgetConnectedAccount, loadGift, markConnectedAccount, type GiftRecord } from "./gift-store";
 
 /**
  * The three gestures of a Fitbit connection, behind the routes of app/api/connect/fitbit (D188): start, which sends
@@ -96,5 +96,7 @@ export async function disconnectFitbit(giftId: string): Promise<{ erased: boolea
     revoked = false;
   }
   const erased = await eraseConnection(giftId);
+  // The source's ids kept on the gift go too: nothing of theirs stays (the founder, 29 Sep 2026).
+  await forgetConnectedAccount(giftId);
   return { erased, revoked };
 }

@@ -235,6 +235,19 @@ export async function markConnectedAccount(giftId: string, externalId: string): 
   return rows.length === 1;
 }
 
+/**
+ * "Disconnect and erase" (the founder, 29 Sep 2026): the source's own ids go with the connection, the account the gift
+ * counts and the profile it was bound to. Connecting again records them again.
+ */
+export async function forgetConnectedAccount(giftId: string): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE viky_gifts
+       SET goal_username = NULL, goal_profile_id = NULL
+     WHERE gift_id = ${giftId}
+     RETURNING gift_id`;
+  return rows.length === 1;
+}
+
 export async function markBound(giftId: string, profileId: string): Promise<boolean> {
   const rows = await sql()`
     UPDATE viky_gifts

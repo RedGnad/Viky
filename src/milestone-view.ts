@@ -35,7 +35,7 @@ export type MilestoneStatus = Readonly<{
   amountDisplay: string;
   /** Where the person stood when the gift was connected, and what they must reach. */
   startReading: number | null;
-  target: number;
+  target: number | null;
   /** The last reading the keeper made, and when. */
   todayReading: number | null;
   readAtMs: number | null;
@@ -117,7 +117,8 @@ export type MilestoneStatus = Readonly<{
  */
 export function milestoneProgress(status: Pick<MilestoneStatus, "target" | "todayReading" | "reached">): number {
   if (status.reached) return 1;
-  if (status.todayReading === null) return 0;
+  // Nothing read, or read and not shown to this reader (the figures go where the names go).
+  if (status.todayReading === null || status.target === null) return 0;
   if (status.target <= 0) return status.todayReading >= status.target ? 1 : 0;
   return Math.min(1, Math.max(0, status.todayReading / status.target));
 }

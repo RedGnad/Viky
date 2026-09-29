@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
-import { loadGift } from "@/src/gift-store";
+import { readAccountAuthSession } from "@/src/account-auth-server";
+import { loadGift, type GiftRecord } from "@/src/gift-store";
 import { isMilestoneGiftId } from "@/src/milestone-protocol";
 import { dailyJournal, milestoneJournal } from "@/src/proof-journal";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
@@ -16,6 +17,16 @@ export const dynamic = "force-dynamic";
  *
  * It needs no sign-in, like the gift's state: the contract is public and the page is reached by a link.
  */
+/** Whether the request is signed in as the gift's funder or the person it is for, as the gift's record names them. */
+function readerIsOneOfTwo(request: Request, record: GiftRecord): boolean {
+  try {
+    const account = readAccountAuthSession(request).account.toLowerCase();
+    return account === record.funder.toLowerCase() || account === record.recipient?.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const rate = checkRateLimit("status", request);
@@ -24,7 +35,16 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     if (!/^\d{1,78}$/.test(id)) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
     const record = await loadGift(id);
     if (!record) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
-    if (isMilestoneGiftId(id)) return NextResponse.json({ giftId: id, kind: "milestone", readings: await milestoneJournal(id) }, { headers: NO_STORE });
+    if (isMilestoneGiftId(id)) {
+      // Why a reading was refused ("NOT_ENROLLED"...) says something about the person: only the funder and the person it
+      // is for see it (the founder, 29 Sep 2026); anybody else sees that it was refused.
+      const readings = await milestoneJournal(id);
+      const insider = readerIsOneOfTwo(request, record);
+      return NextResponse.json(
+        { giftId: id, kind: "milestone", readings: insider ? readings : readings.map((reading) => ({ ...reading, outcome: reading.outcome.startsWith("refused:") ? "refused" : reading.outcome })) },
+        { headers: NO_STORE },
+      );
+    }
     return NextResponse.json({ giftId: id, kind: "daily", days: await dailyJournal(id) }, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);
