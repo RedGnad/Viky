@@ -1290,7 +1290,7 @@ export const UNIVERSITY_CHOICE = {
 export const SHOW_PROOF = {
   title: (source: string) => `Show it from your ${yourOwn(source)} account`,
   whatHappens: (source: string) =>
-    `A verification tab opens. You sign in to ${spokenTo(source)} there, in your own browser, and what that page shows is proved without Viky ever seeing your password.`,
+    `A verification page opens. You sign in to ${spokenTo(source)} there, and what that page shows is proved without Viky ever seeing your password.`,
   /**
    * What is kept of it, said per condition (the founder, 29 Sep 2026: "Viky keeps the score it proves" was false for an
    * enrolment). True of the register (src/condition-privacy.ts): under the verdict rule the number is kept nowhere and

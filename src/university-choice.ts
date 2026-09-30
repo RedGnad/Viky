@@ -38,8 +38,24 @@ export function inGroups(universities: readonly ListedUniversity[], words: strin
   return { tested: found.filter((one) => one.tested === true), others: found.filter((one) => one.tested !== true) };
 }
 
-/** The universities whose name carries every word typed, by name; all of them when nothing is typed. */
+/**
+ * What a university is sorted by (the founder, 29 Sep 2026): its own name, without the word every university's name
+ * starts with, in any of the list's languages, and the "de", "of" after it. "Université de Toulouse" sorts as
+ * "Toulouse", beside "Toulouse I Capitole University" and "University of Toulouse Jean Jaurès"; the line still reads
+ * the whole name.
+ */
+const GENERIC_START =
+  /^(?:the\s+)?(?:universit[eéaà]t?|university|universidad|universidade|universitat|universität|universiteit|universiti|universitas|college|école|ecole|institut|institute|instituto|istituto|school|hochschule)\s+(?:(?:of|de|du|des|d'|della|di|del|degli|der|für|van|la|le|les|the)\s+)*/i;
+
+export function sortName(title: string): string {
+  const own = title.trim().replace(GENERIC_START, "");
+  return folded(own || title);
+}
+
+/** The universities whose name carries every word typed, by their own name; all of them when nothing is typed. */
 export function matching(universities: readonly ListedUniversity[], words: string): readonly ListedUniversity[] {
   const wanted = folded(words).split(/\s+/).filter(Boolean);
-  return universities.filter((one) => wanted.every((word) => folded(one.title).includes(word))).sort((left, right) => left.title.localeCompare(right.title));
+  return universities
+    .filter((one) => wanted.every((word) => folded(one.title).includes(word)))
+    .sort((left, right) => sortName(left.title).localeCompare(sortName(right.title)) || left.title.localeCompare(right.title));
 }
