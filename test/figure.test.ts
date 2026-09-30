@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Figure, fromOutline, GLOSS_RX, GLOSS_RY, glossPath, LIGHT, Scene, lit } from "../app/kit/Figure";
+import { Figure, fromOutline, GLOSS_RX, GLOSS_RY, LIGHT, Scene, lit } from "../app/kit/Figure";
 
 /**
  * The rig of the figure (D236): one light that everything shining obeys, a face and limbs in named sets, props in
@@ -18,7 +18,7 @@ test("one light, and the reflections follow it rather than the body", () => {
   assert.ok(!("sparkle" in shine), "no spot inside the gloss: it read as a second, lighter circle (D243)");
   const face = renderToStaticMarkup(createElement(Figure, { id: "f" }));
   const gloss = face.slice(face.indexOf('data-part="gloss"'), face.indexOf("</g>", face.indexOf('data-part="gloss"')));
-  assert.equal((gloss.match(/<path d="M[^"]* A5\.2 [\d.]+ 0 0 1 [^"]* A5\.2 3\.2 0 0 1 [^"]*Z"/g) ?? []).length, 1, "the gloss, its two halves");
+  assert.equal((gloss.match(/<ellipse/g) ?? []).length, 1, "the gloss");
   assert.equal((gloss.match(/<circle/g) ?? []).length, 1, "and one dot beside it, nothing inside it");
   for (const mouth of ["smile", "grin"] as const) {
     const drawn = renderToStaticMarkup(createElement(Figure, { id: "m", mouth }));
@@ -42,7 +42,7 @@ test("the figure is drawn from named parts, in the character's palette and nothi
   assert.ok(!plain.includes('data-part="rim"'), "no rim (D237)");
   assert.match(plain, /stroke:url\(#t-edge\)/, "the edge is a gradient of its own colour");
   assert.ok(plain.includes("var(--character-hero-edge-light)") && plain.includes("var(--character-hero-edge-deep)"));
-  assert.match(plain, /data-part="gloss"><path d="[^"]*" transform="rotate\(-28\.?\d* /, "the gloss slants along the lit edge");
+  assert.match(plain, /data-part="gloss"><ellipse[^>]*transform="rotate\(-28\.?\d* /, "the gloss slants along the lit edge");
   const colours = new Set(plain.match(/#[0-9A-Fa-f]{6}\b/g) ?? []);
   assert.deepEqual([...colours], [], "every colour a token of the character's, and white only as rgba for what shines");
   assert.doesNotMatch(plain, /--accent/, "never the sun");
@@ -204,29 +204,25 @@ test("the first opening draws the icon's own drawing, written in and kept equal 
   assert.equal(readFileSync("app/kit/figure-icon.ts", "utf8"), iconModule(), "run pnpm make:icon");
 });
 
-test("the gloss stays where the light puts it, and its half on the lit side meets the edge instead of passing under it", () => {
-  // The founder, 29 Sep 2026: only the curve of the big gloss, where the edge cut it; its place, its length and the dot
-  // stay as they were. Half the edge (2.2 wide) lies inside the body, so a reflection 1.1 from the outline's middle line
-  // just meets the edge, and one nearer is cut by it.
+test("the gloss is a whole ellipse where the light puts it, and the coloured edge is drawn over it", () => {
+  // The founder, 30 Sep 2026: the cut shape, the ellipse passing under the edge, with the edge on top rather than the gloss.
   for (const lean of [0, -8, 8, 15, -15, 45]) {
     const shine = lit(LIGHT, lean);
     const l = shine.light;
     assert.deepEqual([shine.gloss.cx, shine.gloss.cy], [32 + l.x * 12.7, 20 + l.y * 9.9], `lean ${lean}: the gloss's place`);
     assert.deepEqual([shine.dot.cx, shine.dot.cy], [32 + l.x * 2, 20 + l.y * 14.1], `lean ${lean}: the dot's place`);
-    const angle = (shine.gloss.angle * Math.PI) / 180;
-    let nearest = Infinity;
-    for (let step = 0; step <= 360; step += 1) {
-      const t = (step * Math.PI) / 360;
-      // The half on the lit side (up in the gloss's own frame), then the other.
-      for (const [x0, y0] of [[GLOSS_RX * Math.cos(t), -shine.gloss.edgeRy * Math.sin(t)], [GLOSS_RX * Math.cos(t), GLOSS_RY * Math.sin(t)]]) {
-        const x = shine.gloss.cx + x0 * Math.cos(angle) - y0 * Math.sin(angle);
-        const y = shine.gloss.cy + x0 * Math.sin(angle) + y0 * Math.cos(angle);
-        nearest = Math.min(nearest, fromOutline({ x, y }));
-      }
-    }
-    assert.ok(nearest >= 1.07, `lean ${lean}: the gloss is not cut by the edge (${nearest.toFixed(3)} from its middle line)`);
-    if (shine.gloss.edgeRy < GLOSS_RY) assert.ok(nearest <= 1.16, `lean ${lean}: where it was flattened, it meets the edge (${nearest.toFixed(3)})`);
   }
-  assert.ok(lit(LIGHT, 0).gloss.edgeRy < GLOSS_RY, "at rest, the half the edge cut is the one flattened");
-  assert.equal(glossPath(10, 10, 2.44), "M4.8 10 A5.2 2.44 0 0 1 15.2 10 A5.2 3.2 0 0 1 4.8 10 Z");
+  // At rest the ellipse reaches under the edge (2.2 wide, half of it inside the body), which the edge then cuts.
+  const shine = lit(LIGHT, 0);
+  const angle = (shine.gloss.angle * Math.PI) / 180;
+  let nearest = Infinity;
+  for (let step = 0; step < 720; step += 1) {
+    const t = (step * Math.PI) / 360;
+    const [x0, y0] = [GLOSS_RX * Math.cos(t), GLOSS_RY * Math.sin(t)];
+    nearest = Math.min(nearest, fromOutline({ x: shine.gloss.cx + x0 * Math.cos(angle) - y0 * Math.sin(angle), y: shine.gloss.cy + x0 * Math.sin(angle) + y0 * Math.cos(angle) }));
+  }
+  assert.ok(nearest < 1.1, `at rest the gloss passes under the edge (${nearest.toFixed(3)} from its middle line)`);
+  const html = renderToStaticMarkup(createElement(Figure, { id: "g" }));
+  assert.match(html, new RegExp(`<g data-part="gloss"><ellipse [^>]*rx="${GLOSS_RX}" ry="${GLOSS_RY}"`), "a whole ellipse, both halves alike");
+  assert.ok(html.indexOf('data-part="edge"') > html.indexOf('data-part="gloss"'), "the edge drawn after the gloss, so over it");
 });
