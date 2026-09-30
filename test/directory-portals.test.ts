@@ -43,7 +43,7 @@ test("the corridor's universities: whole rows on https, each once, IHET and MIT 
 test("the Université de Toulouse is added by hand, on its ENT, and is neither Capitole nor Jean Jaurès (D313)", () => {
   const toulouse = ADDED_PORTALS.find((row) => row.portalId === "utoulouse-fr");
   assert.equal(rowProblem({ ...toulouse!, provenBy: OPERATOR }), undefined);
-  assert.equal(toulouse?.university, "Université de Toulouse");
+  assert.equal(toulouse?.university, "Université de Toulouse (Paul Sabatier)");
   assert.equal(toulouse?.loginUrl, "https://ent.utoulouse.fr/");
   assert.equal(toulouse?.sourceProviderId, "c560dffd-5f37-4b8a-94ed-106ce9e9ee27");
   const { rows } = JSON.parse(readFileSync("data/university-register.json", "utf8")) as { rows: { portalId: string; university: string }[] };

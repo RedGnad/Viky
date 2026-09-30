@@ -129,8 +129,9 @@ export const CORRIDOR_PORTALS: readonly CorridorPortal[] = [
  * (the founder, 29 Sep 2026): Paul Sabatier's until 1 January 2025, missing from Reclaim's directory under that name,
  * neither Toulouse Capitole nor Jean Jaurès. Its students sign in at ent.utoulouse.fr through auth.utoulouse.fr; its
  * enrolment provider `c560dffd` reads its own two domains, utoulouse.fr and univ-tlse3.fr, registered with
- * `pnpm provider:add`.
+ * `pnpm provider:add`. Its name carries "(Paul Sabatier)" (the founder, 29 Sep 2026), so a student of Paul Sabatier knows it
+ * beside Capitole and Jean Jaurès.
  */
 export const ADDED_PORTALS: readonly CorridorPortal[] = [
-  { portalId: "utoulouse-fr", name: "Université de Toulouse, ENT", university: "Université de Toulouse", country: "FR", sourceProviderId: "c560dffd-5f37-4b8a-94ed-106ce9e9ee27", loginUrl: "https://ent.utoulouse.fr/" },
+  { portalId: "utoulouse-fr", name: "Université de Toulouse, ENT", university: "Université de Toulouse (Paul Sabatier)", country: "FR", sourceProviderId: "c560dffd-5f37-4b8a-94ed-106ce9e9ee27", loginUrl: "https://ent.utoulouse.fr/" },
 ];

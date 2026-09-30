@@ -48,7 +48,7 @@ const CUBE_SAID: Readonly<Record<string, string>> = {
  * two with an enrolment provider (D267, D313) are said with enrolment; the others share the three senses in turn.
  */
 export const UNIVERSITIES_SAID: readonly Readonly<{ said: string; registered: string; sense: "enrolment" | "year" | "grade" }>[] = [
-  { said: "the Université de Toulouse", registered: "Université de Toulouse", sense: "enrolment" },
+  { said: "the Université de Toulouse", registered: "Université de Toulouse (Paul Sabatier)", sense: "enrolment" },
   { said: "the American University of Rome", registered: "The American University of Rome", sense: "enrolment" },
   { said: "Harvard", registered: "Harvard University", sense: "grade" },
   { said: "Stanford", registered: "Stanford University", sense: "year" },
