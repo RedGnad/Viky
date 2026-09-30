@@ -7,7 +7,7 @@ import { keyedSubject, newSubjectKey } from "../subject-key";
 import { getJson, postJson } from "./api";
 import { randomSalt, type CreatedGift } from "./gift";
 import { milestoneAddressFromEnv } from "./milestone";
-import type { ListedCountry, ListedUniversity } from "../university-choice";
+import type { ListedUniversity } from "../university-choice";
 
 /**
  * Browser-side steps of a gift on a supervised result (U3, C3).
@@ -126,24 +126,10 @@ export function loadOffered(): Promise<{ ids: string[]; preview: string[] }> {
 /** One line of a source's own search, as the sheet lists it: what to press, and what the terms then carry. */
 export type CertificationFound = Readonly<{ pair: string; title: string; issuer: string; path: string }>;
 
-/** The countries Viky lists universities in, and the one the chooser opens on (the founder, 29 Sep 2026). */
-export async function listUniversityCountries(): Promise<Readonly<{ countries: readonly ListedCountry[]; here: string | null }>> {
-  const answer = await getJson<{ countries: readonly ListedCountry[]; here?: string | null }>("/api/portals");
-  return { countries: answer.countries, here: answer.here ?? null };
-}
-
-/** One country's universities (D313): the world's list is read a country at a time. */
-export async function listUniversitiesIn(country: string): Promise<readonly ListedUniversity[]> {
-  const answer = await getJson<{ results: readonly ListedUniversity[] }>(`/api/portals?country=${encodeURIComponent(country)}`);
+/** The whole list, read once (the founder, 30 Sep 2026): the chooser opens on every country and searches it at once. */
+export async function listAllUniversities(): Promise<readonly ListedUniversity[]> {
+  const answer = await getJson<{ results: readonly ListedUniversity[] }>("/api/portals?all=1");
   return answer.results;
-}
-
-/** The whole list searched by name (the founder, 29 Sep 2026), leaving out the country already listed whole. */
-export async function searchUniversities(words: string, except: string | null): Promise<Readonly<{ found: readonly ListedUniversity[]; more: boolean }>> {
-  const params = new URLSearchParams({ q: words.trim() });
-  if (except) params.set("except", except);
-  const answer = await getJson<{ results: readonly ListedUniversity[]; more?: boolean }>(`/api/portals/search?${params}`);
-  return { found: answer.results, more: answer.more === true };
 }
 
 /**

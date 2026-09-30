@@ -14,8 +14,8 @@ import { Sheet } from "./Sheet";
  * with a search above it, because there are more than a hundred and fifty countries.
  *
  * Two triggers. The field, where the country is the answer asked for. The chip, where it only narrows a list already
- * shown (the founder, 29 Sep 2026: "Which university?" opens on the person's own country, and the country is a filter
- * drawn like the app's other buttons, not a step before the list).
+ * shown (the founder, 29 and 30 Sep 2026: "Which university?" opens on every country, and a country is a filter drawn
+ * like the app's other buttons, not a step before the list); its sheet then starts with the way back to every country.
  */
 export function CountryPicker({
   id,
@@ -25,6 +25,7 @@ export function CountryPicker({
   onChange,
   load = async () => (await loadOutCountries()).countries,
   chip,
+  everywhere,
 }: Readonly<{
   id: string;
   label: string;
@@ -35,6 +36,8 @@ export function CountryPicker({
   load?: () => Promise<readonly string[]>;
   /** Drawn as a chip whose words say the chosen country ("In France"), the label read aloud only. */
   chip?: (country: string) => string;
+  /** The first line of the sheet, which takes the filter off ("All countries"): chosen, `onChange` receives "". */
+  everywhere?: string;
 }>) {
   const [countries, setCountries] = useState<readonly { code: string; name: string }[] | null | "unreadable">(null);
   const [open, setOpen] = useState(false);
@@ -84,7 +87,7 @@ export function CountryPicker({
           disabled={countries === null}
           onClick={() => setOpen(true)}
         >
-          {chosen ? chip(chosen) : WORDS.choose}
+          {chosen ? chip(chosen) : (everywhere ?? WORDS.choose)}
           <svg aria-hidden focusable="false" width="16" height="16" viewBox="0 0 24 24">
             <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -102,12 +105,12 @@ export function CountryPicker({
           legend={label}
           legendHidden
           shape="lines"
-          value={value}
+          value={value ?? (everywhere ? "" : null)}
           onChange={(code) => {
             onChange(code);
             close();
           }}
-          options={shown.map((one) => ({ value: one.code, label: one.name }))}
+          options={[...(everywhere && !wanted ? [{ value: "", label: everywhere }] : []), ...shown.map((one) => ({ value: one.code, label: one.name }))]}
         />
       </Sheet>
     </div>
