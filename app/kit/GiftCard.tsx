@@ -43,7 +43,7 @@ export function GiftCard({ gift, milestone: given, example = false }: Readonly<{
       chevron={!example}
       /* A daily gift's card draws its days; a milestone has no days, so its character on its trail (D232: the same
          trail as the gift's own page, flat, where a bar had stayed on the card). On the gift's own page the card is
-         `GiftLive`, alive, and draws the climb or the stamp (V4). */
+         `GiftLive`, alive, and draws the climb or the character alone (V4). */
       shape={
         milestone ? (
           <Climb giftId={gift.giftId} status={milestone} />

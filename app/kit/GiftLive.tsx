@@ -10,7 +10,7 @@ import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE } from "../components/ui";
  * - who it came from, small and spaced, in capitals;
  * - who it is for, large, in the title face;
  * - what they do, from the register;
- * - the gift's own drawing, the row of days, the climb or the stamp;
+ * - the gift's own drawing, the row of days, the climb or the character alone;
  * - the state in one sentence, in the title face: the answer to this moment's question;
  * - the next moment, dated, under it;
  * - the money that counts now, large on the left, and what has gone back to the funder on the right, quieter;
@@ -46,7 +46,7 @@ export function GiftLive({
   what: string;
   /** The condition's nature, said under it in the meta voice (app/kit/Nature.tsx, D162), as the card on Home says it. */
   nature?: ReactNode;
-  /** The gift's own drawing, alive: the row of days, the climb, or the stamp. */
+  /** The gift's own drawing, alive: the row of days, the climb, or the character alone. */
   shape: ReactNode;
   live: Live;
   /** The figure as it arrives: counting from what this device last saw of it, or the value itself. */
