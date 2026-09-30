@@ -1271,19 +1271,17 @@ export const GRADE_SCALE = {
 } as const;
 
 export const UNIVERSITY_CHOICE = {
-  /** The one field (the founder, 29 Sep 2026): the whole list is searched, and the person's country is listed before a word is typed. */
+  /** The one field (the founder, 29 Sep 2026): the whole list is searched, every country at once. */
   search: "Search universities",
   /** The chip that narrows the list to one country: what it is called when read aloud, and its sheet's title. */
   country: "Which country",
+  /** What the chip says: every country, the default (the founder, 30 Sep 2026), or the one chosen. */
+  everywhere: "All countries",
   inCountry: (country: string) => `In ${country}`,
   /** Read aloud while the list is read; the eye sees empty lines instead of a sentence (the founder, 29 Sep 2026). */
   reading: "Reading the list",
   unreadable: "The list could not be read right now. Close this and try again in a moment.",
   nothing: "No university by that name in the list yet.",
-  /** Under a search of the whole list that stopped at its limit. */
-  more: "Type more of the name to see the others.",
-  /** What a search finds outside the country listed, with the country on each line. */
-  elsewhere: "Other countries",
   /** The two groups of a country's list (the founder, 29 Sep 2026): the tested first, and one line under the others. */
   tested: "Tested with a student",
   all: "All universities",

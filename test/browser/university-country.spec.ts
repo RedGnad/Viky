@@ -1,11 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * "Which university?" (D313, the founder, 29 Sep 2026): one line "At university" whose questions ask what they will
- * show; no country to choose before the list, which opens on the person's own; the country as a chip in its own sheet;
- * one field that searches the whole list. The defect the country sheet pins: choosing a country closed both sheets,
- * because React carries a nested dialog's close up to its parent's handler. The list is answered here, so the screen is
- * measured and not the table.
+ * "Which university?" (D313, the founder, 29 and 30 Sep 2026): one line "At university" whose questions ask what they
+ * will show; no country to choose before the list, which opens on every country, since the one paying is often not in
+ * the student's; a country as a chip in its own sheet; one field that searches the whole list. The defect the country
+ * sheet pins: choosing a country closed both sheets, because React carries a nested dialog's close up to its parent's
+ * handler. The list is answered here, so the screen is measured and not the table.
  */
 const sheet = (page: Page) => page.locator("dialog.sheet[open]");
 
@@ -15,17 +15,8 @@ const SENEGAL = [
 ];
 const LAGOS = { pair: "unilag-ng", title: "University of Lagos", issuer: "Nigeria", country: "NG", tested: false, scale: null };
 
-async function answerTheList(page: Page, senegal: readonly object[] = SENEGAL) {
-  await page.route(/\/api\/portals(\?.*)?$/, (route) => {
-    const country = new URL(route.request().url()).searchParams.get("country");
-    const body = country === "SN" ? { results: senegal } : country === "NG" ? { results: [LAGOS] } : { countries: [{ code: "NG", count: 156 }, { code: "SN", count: 9 }], here: "SN" };
-    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
-  });
-  await page.route(/\/api\/portals\/search\?/, (route) => {
-    const params = new URL(route.request().url()).searchParams;
-    const found = [LAGOS].filter((one) => one.country !== params.get("except") && one.title.toLowerCase().includes(String(params.get("q")).toLowerCase()));
-    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ results: found, more: false }) });
-  });
+async function answerTheList(page: Page, list: readonly object[] = [...SENEGAL, LAGOS]) {
+  await page.route(/\/api\/portals\?all=1$/, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ results: list }) }));
 }
 
 async function openAtUniversity(page: Page) {
@@ -44,33 +35,37 @@ async function openAtUniversity(page: Page) {
   await line.click();
 }
 
-test("the list opens on the person's country with no step before it, and one field searches the whole list", async ({ page }) => {
+test("the list opens on every country with no step before it, and one field searches the whole list", async ({ page }) => {
   await answerTheList(page);
   await openAtUniversity(page);
   await expect(sheet(page).getByRole("heading", { name: "Which university" })).toBeVisible();
   const modes = sheet(page).getByRole("group", { name: "What will they show?" });
   await expect(modes.getByRole("radio", { name: "Enrolled" })).toBeChecked();
-  // The country is a chip, already on the person's own, and the list is there.
-  await expect(sheet(page).getByRole("button", { name: /In Senegal/ })).toBeVisible();
+  // Every country, and every line says its own.
+  await expect(sheet(page).getByRole("button", { name: /All countries/ })).toBeVisible();
   const tested = sheet(page).getByRole("group", { name: "Tested with a student" });
   const all = sheet(page).getByRole("group", { name: "All universities" });
   await expect(tested.getByText("Université Cheikh Anta Diop")).toBeVisible();
+  await expect(tested.getByText("Senegal", { exact: true })).toBeVisible();
   await expect(all.getByText("Université Gaston Berger")).toBeVisible();
+  await expect(all.getByText("University of Lagos")).toBeVisible();
+  await expect(all.getByText("Nigeria", { exact: true })).toBeVisible();
   await expect(all.getByText("Set up on the first gift, within two days.")).toBeVisible();
   await expect(all.getByText("Université Cheikh Anta Diop")).toHaveCount(0);
-  // The search runs on both groups, and then on the rest of the world, with the country on each of those lines.
+  // The search runs on both groups, over every country.
   const search = sheet(page).getByLabel("Search universities");
   await search.fill("cheikh");
   await expect(sheet(page).getByText("Université Gaston Berger")).toHaveCount(0);
   await expect(tested.getByText("Université Cheikh Anta Diop")).toBeVisible();
   await expect(all).toHaveCount(0);
   await search.fill("lagos");
-  const elsewhere = sheet(page).getByRole("group", { name: "Other countries" });
-  await expect(elsewhere.getByText("University of Lagos")).toBeVisible();
-  await expect(elsewhere.getByText("Nigeria")).toBeVisible();
+  await expect(all.getByText("University of Lagos")).toBeVisible();
   await expect(tested).toHaveCount(0);
-  // Choosing folds the list into the one chosen, and Change opens it again.
-  await elsewhere.getByText("University of Lagos").click();
+  await search.fill("sorbonne");
+  await expect(sheet(page).getByText("No university by that name in the list yet.")).toBeVisible();
+  await search.fill("lagos");
+  // Choosing folds the list into the one chosen, and Change opens it again, on every country still.
+  await all.getByText("University of Lagos").click();
   const chosen = sheet(page).locator("[data-university-chosen]");
   await expect(chosen.getByText("University of Lagos")).toBeVisible();
   await expect(chosen.getByText("Nigeria")).toBeVisible();
@@ -80,18 +75,42 @@ test("the list opens on the person's country with no step before it, and one fie
   await expect(modes.getByRole("radio", { name: "The year passed" })).toBeChecked();
   await expect(chosen.getByText("University of Lagos")).toBeVisible();
   await chosen.getByRole("button", { name: /Change/ }).click();
-  await expect(sheet(page).getByRole("button", { name: /In Nigeria/ })).toBeVisible();
+  await expect(sheet(page).getByRole("button", { name: /All countries/ })).toBeVisible();
 });
 
-test("choosing a country in the chip's sheet closes that sheet only, and lists that country", async ({ page }) => {
+test("a country chosen in the chip's sheet narrows the list, closes that sheet only, and every country comes back first", async ({ page }) => {
   await answerTheList(page);
   await openAtUniversity(page);
-  await sheet(page).getByRole("button", { name: /In Senegal/ }).click();
+  await sheet(page).getByRole("button", { name: /All countries/ }).click();
   await expect(sheet(page)).toHaveCount(2);
+  await expect(sheet(page).last().getByRole("radio").first()).toBeChecked();
+  await expect(sheet(page).last().getByText("All countries", { exact: true })).toBeVisible();
   await sheet(page).last().getByText("Nigeria", { exact: true }).click();
   await expect(sheet(page)).toHaveCount(1);
   await expect(sheet(page).getByRole("button", { name: /In Nigeria/ })).toBeVisible();
-  await expect(sheet(page).getByRole("group", { name: "All universities" }).getByText("University of Lagos")).toBeVisible();
+  const all = sheet(page).getByRole("group", { name: "All universities" });
+  await expect(all.getByText("University of Lagos")).toBeVisible();
+  await expect(sheet(page).getByText("Université Gaston Berger")).toHaveCount(0);
+  await expect(all.getByText("Nigeria", { exact: true })).toHaveCount(0, { timeout: 1000 });
+  await sheet(page).getByRole("button", { name: /In Nigeria/ }).click();
+  await sheet(page).last().getByText("All countries", { exact: true }).click();
+  await expect(sheet(page).getByText("Université Gaston Berger")).toBeVisible();
+});
+
+test("every university is listed, drawn a hundred at a time as the end comes near, and searched whole at once", async ({ page }) => {
+  await answerTheList(page, Array.from({ length: 250 }, (_, index) => ({ ...SENEGAL[1], pair: `u${index}-sn`, title: `Université ${String(index).padStart(3, "0")}` })));
+  await openAtUniversity(page);
+  const rows = sheet(page).getByRole("group", { name: "All universities" }).getByRole("radio");
+  await expect(rows).toHaveCount(100);
+  for (let turn = 0; turn < 6 && (await rows.count()) < 250; turn += 1) {
+    await sheet(page).locator(".sheet-body").first().evaluate((body) => body.scrollTo({ top: body.scrollHeight }));
+    await page.waitForTimeout(300);
+  }
+  await expect(rows).toHaveCount(250);
+  await sheet(page).locator(".sheet-body").first().evaluate((body) => body.scrollTo({ top: 0 }));
+  await sheet(page).getByLabel("Search universities").fill("240");
+  await expect(rows).toHaveCount(1);
+  await expect(sheet(page).getByText("Université 240")).toBeVisible();
 });
 
 test("pressing the search field moves nothing under the pointer, so no university is chosen by it", async ({ page }) => {

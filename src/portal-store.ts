@@ -677,6 +677,16 @@ export async function portalCountries(): Promise<readonly { code: string; count:
   return rows.map((row) => ({ code: String(row.country), count: Number(row.n) }));
 }
 
+/**
+ * The whole list, by name, with each university's providers (the founder, 30 Sep 2026: the chooser opens on every
+ * country). The providers are read whole rather than by eleven thousand ids: there are a handful of them.
+ */
+export async function allPortals(): Promise<readonly Portal[]> {
+  const rows = await sql()`SELECT * FROM viky_portals ORDER BY university, name`;
+  const providers = (await sql()`SELECT * FROM viky_portal_providers`).map(toProvider);
+  return rows.map((row) => toPortal(row, providers));
+}
+
 /** One country's universities, by name: the chooser reads a country at a time, since the world's list is thousands long. */
 export async function portalsIn(country: string): Promise<readonly Portal[]> {
   if (!/^[A-Z]{2}$/.test(country)) return [];

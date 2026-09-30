@@ -7,11 +7,11 @@ import { GET as searchGet } from "../app/api/portals/search/route";
 import { configurePortalStore, ensurePortalSchema, FOLD_FROM, FOLD_TO, foldForSearch, savePortalRows } from "../src/portal-store";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { SHOW_PROOF, UNIVERSITY_CHOICE } from "../src/sentences";
-import { inGroups, matching, sortName, type ListedUniversity } from "../src/university-choice";
+import { indexUniversities, inGroups, matching, shownUniversities, sortName, type ListedUniversity } from "../src/university-choice";
 
 /**
- * "Which university?" (D247, D313, the founder, 29 Sep 2026): the world's list, read a country at a time. It opens on the
- * person's own country, the country is a chip that narrows it, and one field searches the whole list.
+ * "Which university?" (D247, D313, the founder, 29 and 30 Sep 2026): the world's list, read whole, opens on every
+ * country; a country chip narrows it, and one field searches it at once.
  */
 
 const one = (pair: string, title: string, issuer: string, country: string): ListedUniversity => ({ pair, title, issuer, country });
@@ -71,11 +71,12 @@ test("the chooser lists names alone, says nothing about checking, and invites th
   const sheet = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
   const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
   assert.match(sheet, /certificate\.course\?\.search\?\.listed \? \(/, "the university's question takes the list");
-  assert.match(chooser, /<CountryPicker[\s\S]*chip=\{W\.inCountry\}/, "the country as a chip that narrows the list, in the same sheet as \"Where you live\"");
+  assert.match(chooser, /<CountryPicker[\s\S]*chip=\{W\.inCountry\}\n\s*everywhere=\{W\.everywhere\}/, "the country as a chip that narrows the list, and every country first");
+  assert.match(chooser, /const \[country, setCountry\] = useState<string \| null>\(null\);/, "no country guessed: the one paying is often not in the student's country");
   assert.doesNotMatch(chooser, /W\.reading\}<\/p>|Reading the/, "no sentence while the list is read: empty lines hold its place");
   // Nothing about checking in the chooser: that is said folded on the gift's page, where the proof is shown.
   assert.doesNotMatch(chooser, /<details|<summary|navigator\.share|clipboard/);
-  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["addYours", "all", "allLine", "change", "country", "elsewhere", "inCountry", "more", "notListed", "nothing", "reading", "search", "tested", "unreadable"]);
+  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["addYours", "all", "allLine", "change", "country", "everywhere", "inCountry", "notListed", "nothing", "reading", "search", "tested", "unreadable"]);
   // The two groups' words, as the founder wrote them (29 Sep 2026), and nothing on each line.
   assert.equal(UNIVERSITY_CHOICE.tested, "Tested with a student");
   assert.equal(UNIVERSITY_CHOICE.all, "All universities");
@@ -102,15 +103,37 @@ test("the chosen university is its name and its country, and the gift's sentence
   assert.equal(universityNamed("", title), "This gift will be for University of Dhaka, Bangladesh.");
 });
 
-test("a country's list shows every university, never only the first twelve", () => {
-  // The founder, 29 Sep 2026: no list shows twelve and hides the rest; what is typed narrows it.
+test("the list shows every university, drawn a hundred at a time as its end comes near, never only the first ones", () => {
+  // The founder, 29 Sep 2026: no list shows twelve and hides the rest. Eleven thousand lines are drawn as they come
+  // near rather than at once, and nothing stops the next hundred.
   const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
-  assert.match(chooser, /options=\{here\.others\.map\(/);
+  assert.match(chooser, /const PAGE = 100;/);
+  assert.match(chooser, /options=\{shown\.others\.slice\(0, count\)\.map\(line\)\}/);
+  assert.match(chooser, /\{shown\.others\.length > count \? <MoreWhenNear onNear=\{\(\) => setDrawn\(\{ key: listKey, count: count \+ PAGE \}\)\} \/> : null\}/);
   assert.doesNotMatch(chooser, /slice\(0, \d+\)/);
   assert.equal(UNIVERSITY_CHOICE.inCountry("France"), "In France");
+  assert.equal(UNIVERSITY_CHOICE.everywhere, "All countries");
 });
 
-test("the list opens on the account's or the connection's country, and the search finds every word, accents aside, across the world", async () => {
+test("the whole list is indexed once by own name, and shown whole, narrowed by country and by every word typed", () => {
+  const list = [
+    one("ut1-fr", "Toulouse I Capitole University", "France", "FR"),
+    { ...one("ucad-sn", "Université Cheikh Anta Diop", "Senegal", "SN"), tested: true },
+    one("ut3-fr", "Université de Toulouse (Paul Sabatier)", "France", "FR"),
+    one("ugb-sn", "Université Gaston Berger", "Senegal", "SN"),
+  ];
+  const index = indexUniversities(list);
+  const pairs = (words: string, country: string | null) => {
+    const shown = shownUniversities(index, words, country);
+    return [shown.tested.map((u) => u.pair), shown.others.map((u) => u.pair)];
+  };
+  assert.deepEqual(pairs("", null), [["ucad-sn"], ["ugb-sn", "ut3-fr", "ut1-fr"]], "every country, the tested first, the others by own name");
+  assert.deepEqual(pairs("", "FR"), [[], ["ut3-fr", "ut1-fr"]], "Toulouse (Paul Sabatier) beside Toulouse I Capitole");
+  assert.deepEqual(pairs("toulouse universite", null), [[], ["ut3-fr"]], "every word, in any order, without its accent");
+  assert.deepEqual(pairs("cheikh", "FR"), [[], []], "a country narrows the search too");
+});
+
+test("the whole list comes in one answer kept five minutes at the edge, and the search route finds every word, accents aside", async () => {
   const db = new PGlite();
   const executor: SqlExecutor = async (strings, ...values) => {
     const text = strings.reduce((query, part, index) => `${query}${part}${index < values.length ? `$${index + 1}` : ""}`, "");
@@ -128,10 +151,11 @@ test("the list opens on the account's or the connection's country, and the searc
       row("uwr-pl", "Uniwersytet Wrocławski", "PL"),
       row("ucam-gb", "University of Cambridge", "GB"),
     ]);
-    const countries = async (headers: Record<string, string>) => (await (await listGet(new Request("https://viky.test/api/portals", { headers }))).json()) as { here: string | null };
-    assert.equal((await countries({ "x-vercel-ip-country": "SN" })).here, "SN", "the connection's country, when the list holds it");
-    assert.equal((await countries({ "x-vercel-ip-country": "JP" })).here, null, "a country the list has nothing in opens nowhere");
-    assert.equal((await countries({})).here, null);
+    const whole = await listGet(new Request("https://viky.test/api/portals?all=1"));
+    assert.match(String(whole.headers.get("cache-control")), /public, max-age=0, s-maxage=300/);
+    const everything = ((await whole.json()) as { results: ListedUniversity[] }).results;
+    assert.deepEqual(everything.map((u) => u.pair).sort(), ["ucad-sn", "ucam-gb", "ut1-fr", "ut3-fr", "uwr-pl"], "every country, every university");
+    assert.deepEqual(Object.keys(everything[0]).sort(), ["country", "issuer", "pair", "scale", "tested", "title"], "the shape of a country's list");
 
     const search = async (query: string) => (await (await searchGet(new Request(`https://viky.test/api/portals/search?${query}`))).json()) as { results: ListedUniversity[]; more: boolean };
     const pairs = async (query: string) => (await search(query)).results.map((u) => u.pair);
@@ -165,6 +189,8 @@ test("the list is sorted by each university's own name, so a city's universities
   assert.equal(sortName("Université Cheikh Anta Diop"), "cheikh anta diop");
   assert.equal(sortName("Toulouse I Capitole University"), "toulouse i capitole university");
   assert.equal(sortName("University"), "university", "a name that is only the word keeps it");
+  assert.equal(sortName('University "Petre Andrei" Iasi'), 'petre andrei" iasi', "a quote the name opens on is not what it sorts by");
+  assert.equal(sortName("'Konrad Wolf' Film University Babelsberg"), "konrad wolf' film university babelsberg");
   const one = (title: string): ListedUniversity => ({ pair: title, title, issuer: "France", country: "FR" });
   const sorted = matching([one("Université de Toulouse"), one("Angers University"), one("Toulouse I Capitole University"), one("University of Toulouse Jean Jaurès"), one("Université Paris-Saclay")], "").map((u) => u.title);
   assert.deepEqual(sorted, ["Angers University", "Université Paris-Saclay", "Université de Toulouse", "Toulouse I Capitole University", "University of Toulouse Jean Jaurès"]);

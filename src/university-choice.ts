@@ -1,9 +1,9 @@
 /**
  * How "Which university?" is asked (D247, D313). Browser safe.
  *
- * Since D313 the list is the world's, thousands of universities, so it is never read whole: the country first, in the
- * same sheet with a search as "Where you live" (app/kit/CountryPicker.tsx), then that country's universities, read on
- * their own and searched within. The names alone on every line (D264).
+ * Since D313 the list is the world's, eleven thousand universities. Since the founder's choice of 30 Sep 2026 it is
+ * read whole, once, and opens on every country: one field searches it at once, and a country chip narrows it
+ * (app/kit/CountryPicker.tsx). The names alone on every line (D264), with the country beside them when several are shown.
  */
 
 /** A university as the chooser lists it: the portal's id pressed, its name, its country in words and as a code. */
@@ -17,9 +17,6 @@ export type ListedUniversity = Readonly<{
   /** Tested with a student: a provider of it pinned from a reviewed first proof. Only for grouping, never said on the line. */
   tested?: boolean;
 }>;
-
-/** A country of the list, and how many universities it holds. */
-export type ListedCountry = Readonly<{ code: string; count: number }>;
 
 /** The chosen university as the gift's sentence reads it: its name and its country. */
 export function chosenUniversityTitle(one: ListedUniversity): string {
@@ -48,7 +45,9 @@ const GENERIC_START =
   /^(?:the\s+)?(?:universit[eéaà]t?|university|universidad|universidade|universitat|universität|universiteit|universiti|universitas|college|école|ecole|institut|institute|instituto|istituto|school|hochschule)\s+(?:(?:of|de|du|des|d'|della|di|del|degli|der|für|van|la|le|les|the)\s+)*/i;
 
 export function sortName(title: string): string {
-  const own = title.trim().replace(GENERIC_START, "");
+  // And without the quotes or marks a name can open on, which put "'Konrad Wolf'" and "\"Petre Andrei\"" at the top of
+  // the whole list (30 Sep 2026).
+  const own = title.trim().replace(GENERIC_START, "").replace(/^[^\p{L}\p{N}]+/u, "");
   return folded(own || title);
 }
 
@@ -58,4 +57,31 @@ export function matching(universities: readonly ListedUniversity[], words: strin
   return universities
     .filter((one) => wanted.every((word) => folded(one.title).includes(word)))
     .sort((left, right) => sortName(left.title).localeCompare(sortName(right.title)) || left.title.localeCompare(right.title));
+}
+
+/** A university ready to be searched: its own sort key and its folded name, worked out once and not on each keystroke. */
+export type IndexedUniversity = Readonly<{ one: ListedUniversity; name: string }>;
+
+/** The whole list sorted by each university's own name, once, with its name folded for the search. */
+export function indexUniversities(universities: readonly ListedUniversity[]): readonly IndexedUniversity[] {
+  return universities
+    .map((one) => ({ one, name: folded(one.title), key: sortName(one.title) }))
+    .sort((left, right) => left.key.localeCompare(right.key) || left.one.title.localeCompare(right.one.title))
+    .map(({ one, name }) => ({ one, name }));
+}
+
+/**
+ * What the chooser shows (the founder, 30 Sep 2026): every university, or one country's when a country is chosen, those
+ * whose name carries every word typed, the tested first and then all the others, each group by own name.
+ */
+export function shownUniversities(index: readonly IndexedUniversity[], words: string, country: string | null): Readonly<{ tested: readonly ListedUniversity[]; others: readonly ListedUniversity[] }> {
+  const wanted = folded(words).split(/\s+/).filter(Boolean);
+  const tested: ListedUniversity[] = [];
+  const others: ListedUniversity[] = [];
+  for (const entry of index) {
+    if (country && entry.one.country !== country) continue;
+    if (!wanted.every((word) => entry.name.includes(word))) continue;
+    (entry.one.tested === true ? tested : others).push(entry.one);
+  }
+  return { tested, others };
 }
