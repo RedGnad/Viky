@@ -51,7 +51,7 @@ import { GiftLive } from "../kit/GiftLive";
 import { HeadCharacter } from "../kit/HeadCharacter";
 import { LinkAgain } from "../kit/LinkAgain";
 import { Climb } from "../kit/Climb";
-import { Stamp } from "../kit/Stamp";
+import { HadOrNot } from "../kit/HadOrNot";
 import { MorningMessage, ReachAlert } from "../kit/MorningMessage";
 import { LiveLine, useLiveReading } from "../kit/LiveReading";
 import { Arrival, ArrivalAmount, useLastSeen } from "../kit/Motion";
@@ -540,11 +540,11 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     }
   })();
 
-  // The gift's own drawing, alive (V4): the row of days, the climb, or the stamp. What it shows is said in words beside
+  // The gift's own drawing, alive (V4): the row of days, the climb, or the character alone. What it shows is said in words beside
   // it, so none of the three repeats a figure the state or the money carries.
   const shape = milestone ? (
     milestone.shape === "certificate" ? (
-      <Stamp state={milestone.reached ? "stamped" : milestone.finished || milestone.cancelled ? "void" : "waiting"} asleep={!milestone.opened} />
+      <HadOrNot state={milestone.reached ? "reached" : milestone.finished || milestone.cancelled ? "void" : "waiting"} asleep={!milestone.opened} />
     ) : (
       <Climb giftId={giftId} status={milestone} />
     )

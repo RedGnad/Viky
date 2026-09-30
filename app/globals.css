@@ -1318,51 +1318,17 @@ dialog.sheet[open] {
 }
 
 /*
- * The stamp (V4): where the proof of a gift that is had or not goes. Waiting, a dashed ring with nothing in it beside
- * the gift's character; stamped, the same ring inked in the sun colour with its tick, turned a little as a stamp
- * lands; void, faded, when the time ran out without it (app/kit/Stamp.tsx).
+ * A gift that is had or not (app/kit/HadOrNot.tsx): its character alone, centred, at the 96 the offer card draws the
+ * same gift at (app/kit/offer/OfferCard.tsx), so the gift is the same picture from the card to its page.
  */
-.stamp-row {
+.had-or-not {
   display: flex;
-  align-items: center;
-  gap: var(--space-md);
+  justify-content: center;
 }
 
-.stamp-character {
+.had-or-not-character {
   display: block;
-  width: 56px;
-}
-
-.stamp-ring {
-  fill: none;
-  stroke: var(--on-surface);
-  stroke-width: 3;
-}
-
-.stamp-waiting .stamp-ring {
-  stroke: var(--on-surface-faint);
-  stroke-dasharray: 3 7;
-  stroke-linecap: round;
-}
-
-.stamp-stamped {
-  transform: rotate(-8deg);
-}
-
-.stamp-ink {
-  fill: var(--accent);
-}
-
-.stamp-tick {
-  fill: none;
-  stroke: var(--on-surface);
-  stroke-width: 5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.stamp-void {
-  opacity: 0.35;
+  width: 96px;
 }
 
 /* The one confetti (app/kit/Confetti.tsx): a layer over the screen that takes no press, emptied once the pieces fall. */
