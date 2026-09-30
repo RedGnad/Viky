@@ -46,6 +46,11 @@ export async function tellAboutDays(giftId: string, days: readonly SettledDay[],
   return await tell(giftId, { kind: "day", outcome: last.outcome, amount: "" }, deps, last.day);
 }
 
+/** Tells everyone subscribed to a gift how its first proof's review was decided, when it did not reach the gift. */
+export async function tellAboutReview(giftId: string, verdict: "refused" | "notYet", deps: TellingDeps): Promise<number> {
+  return await tell(giftId, { kind: "reviewed", verdict, amount: "" }, deps);
+}
+
 /** Tells everyone subscribed to a milestone gift that it was reached, or that its time ran out. */
 export async function tellAboutMilestone(giftId: string, kind: "reached" | "expired", deps: TellingDeps): Promise<number> {
   return await tell(giftId, { kind, amount: "" }, deps);

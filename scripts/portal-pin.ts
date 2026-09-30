@@ -9,6 +9,8 @@ import { decideReview, ensurePortalSchema, loadPortal, loadReview, pendingReview
 import { ENROLMENT_FIELD, RESULTS_FIELDS } from "../src/provider-instruction";
 import { escrowOf } from "../src/relayer";
 import { settleHeldReview, type SettleDeps } from "../src/shown-verification";
+import { tellAboutMilestone, tellAboutReview } from "../src/morning-send";
+import { liveTellingDeps } from "../src/morning-send-live";
 import { VerificationError } from "../src/duolingo-verification";
 import { enrolledBy, gradeScaleOf, gradeShownBy, LETTER_GRADES, letterRank, type PortalExtract } from "../src/university-shown";
 import type { WitnessPin } from "../src/witness-portal";
@@ -69,6 +71,15 @@ const deps: SettleDeps = {
   now: () => Math.floor(Date.now() / 1_000),
 };
 
+/**
+ * Tells the gift's two people how the review was decided, on the devices that asked (src/morning-send.ts): the same
+ * message a reading that reaches a gift sends, or the review's own when it did not. Never stops the command.
+ */
+async function told(giftId: string, verdict: "reached" | "refused" | "notYet"): Promise<void> {
+  const sent = await (verdict === "reached" ? tellAboutMilestone(giftId, "reached", liveTellingDeps()) : tellAboutReview(giftId, verdict, liveTellingDeps())).catch(() => 0);
+  console.log(JSON.stringify({ step: "told", gift: giftId, verdict, devices: sent }));
+}
+
 /** Settles one held proof on the portal's pin, and closes its review by what happened. */
 async function settle(review: PortalReview): Promise<void> {
   const portal = await loadPortal(review.portalId);
@@ -77,12 +88,15 @@ async function settle(review: PortalReview): Promise<void> {
     const outcome = await settleHeldReview(deps, { review, portal });
     await decideReview(review.sessionId, "pinned", null);
     console.log(JSON.stringify({ step: "settled", session: review.sessionId, gift: review.giftId, outcome }, (_key, value) => (typeof value === "bigint" ? value.toString() : value)));
+    // The answer the person was waiting for, on every device that asked to be told (the founder, 29 Sep 2026).
+    if (outcome.kind === "reached") await told(review.giftId, "reached");
   } catch (error) {
     // A grade read on the pinned scale and under the target: the provider works, the grade is not there yet, and the
     // person shows it again when it is (the gift's page offers "Show it" again).
     if (error instanceof VerificationError && error.code === "NOT_THERE_YET") {
       await decideReview(review.sessionId, "pinned", "NOT_THERE_YET");
       console.log(JSON.stringify({ step: "read, not there yet", session: review.sessionId, gift: review.giftId }));
+      await told(review.giftId, "notYet");
       return;
     }
     // A proof the pin does not fit, a page without the field, a gift already over: refused by its code, said to the
@@ -90,6 +104,7 @@ async function settle(review: PortalReview): Promise<void> {
     const final = error instanceof VerificationError && !["NOT_CONFIGURED", "UNKNOWN_GIFT"].includes(error.code);
     if (final) await decideReview(review.sessionId, "refused", (error as VerificationError).code);
     console.log(JSON.stringify({ step: final ? "refused" : "still held", session: review.sessionId, gift: review.giftId, reason: error instanceof Error ? error.message : String(error) }));
+    if (final) await told(review.giftId, "refused");
   }
 }
 
@@ -110,6 +125,7 @@ async function main() {
   if (refusal !== undefined) {
     console.log(JSON.stringify({ step: dry ? "would refuse" : "refusing", ...shown(review), note: refusal }, null, 2));
     if (!dry && !(await decideReview(sessionId, "refused", refusal.trim() || "refused on review"))) throw new Error("the review was decided meanwhile");
+    if (!dry) await told(review.giftId, "refused");
     return;
   }
 

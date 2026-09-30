@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { verdictOnly } from "../src/condition-privacy";
 import { ALERT_TO, reviewAlert, sendReviewAlert } from "../src/provider-alert";
-import { SHOW_PROOF, UNIVERSITY_CHOICE } from "../src/sentences";
+import { morningSentence, morningSubject } from "../src/morning-message";
+import { GIFT_LIVE, SHOW_PROOF, UNIVERSITY_CHOICE } from "../src/sentences";
 import { SHOWN_CONDITIONS } from "../src/shown-conditions";
 
 /**
@@ -38,4 +39,21 @@ test("the show-it block says what Viky keeps, by condition, and never a score it
     if (verdictOnly(id)) assert.match(said, /^Viky keeps only whether /, id);
   }
   assert.match(readFileSync("app/kit/ShowProof.tsx", "utf8"), /W\.kept\[conditionId\] \?\? \(verdictOnly\(conditionId\) \? W\.keptVerdict : W\.keptNumber\)/);
+});
+
+test("the two people are told how the review was decided, on the devices that asked", () => {
+  const names = { recipientName: "Boo", funderName: "Maman" };
+  assert.equal(morningSentence("recipient", { kind: "reviewed", verdict: "refused", amount: "" }, names), "Your page was checked: it does not show what this gift is for. Open the gift to see why.");
+  assert.equal(morningSentence("recipient", { kind: "reviewed", verdict: "notYet", amount: "" }, names), "Your page was checked and it works. The result is not there yet: show it again once it is.");
+  assert.equal(morningSentence("funder", { kind: "reviewed", verdict: "refused", amount: "" }, names), "Boo's page was checked: it does not show what the gift is for.");
+  assert.equal(morningSentence("recipient", { kind: "reached", amount: "$25.00" }, names), "You reached it. $25.00 is yours.", "reached by the review: the message any reached gift sends");
+  assert.equal(morningSubject({ kind: "reviewed", verdict: "refused", amount: "" }), "reviewed:refused", "told once");
+  const pin = readFileSync("scripts/portal-pin.ts", "utf8");
+  assert.match(pin, /if \(outcome\.kind === "reached"\) await told\(review\.giftId, "reached"\);/);
+  assert.match(pin, /await told\(review\.giftId, "notYet"\);/);
+  assert.match(pin, /if \(final\) await told\(review\.giftId, "refused"\);/);
+  assert.match(pin, /if \(!dry\) await told\(review\.giftId, "refused"\);/);
+  // Offered where the person waits for the answer: beside a first proof held for review.
+  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /milestone\?\.review\?\.status === "pending" && !gift\.finished && \(mine \|\| readerIsFunder\) \? <ReachAlert giftId=\{giftId\} target="" yours=\{mine\} review \/>/);
+  assert.equal(GIFT_LIVE.climbing.reviewAlert, "Get a message when it is checked.");
 });

@@ -175,17 +175,20 @@ export function MorningMessage({ giftId, yours }: { giftId: string; yours: boole
 }
 
 /**
- * Being told the moment a milestone is reached (the founder, 29 Sep 2026, the mockup of 19 Sep): one quiet line outside
+ * Being told the moment a milestone is reached, or its first proof checked (the founder, 29 Sep 2026, the mockup of 19 Sep): one quiet line outside
  * the card, and a small "Turn on". The same subscription as the morning message: a milestone gift's subscribers are
  * told when it is reached (src/milestone-pass.ts, and the reading on opening in src/milestone-routes.ts), or when its
  * time runs out. A phone that refused is told how to allow it, without a button that can do nothing.
  */
-export function ReachAlert({ giftId, target, yours }: Readonly<{ giftId: string; target: string; yours: boolean }>) {
+export function ReachAlert({ giftId, target, yours, review = false }: Readonly<{ giftId: string; target: string; yours: boolean; /** Told when a first proof's review is decided, rather than when a target is reached. */ review?: boolean }>) {
   const { step, busy, refusal, start, stop } = useTold(giftId, true);
   const side = yours ? "yours" : "theirs";
   if (step === "unsupported") return null;
-  const line =
-    step === "on" ? L.alertOn[side](target) : step === "refused" ? L.alertRefused : step === "install" ? `${L.alert[side](target)} ${L.alertInstall}` : L.alert[side](target);
+  // A first proof held for review (the founder, 29 Sep 2026): what the person waits for is the answer, so that is what
+  // they are offered to be told; the same subscription carries it (scripts/portal-pin.ts tells it).
+  const ask = review ? L.reviewAlert : L.alert[side](target);
+  const on = review ? L.reviewAlertOn : L.alertOn[side](target);
+  const line = step === "on" ? on : step === "refused" ? L.alertRefused : step === "install" ? `${ask} ${L.alertInstall}` : ask;
   return (
     <div className="gift-card-width flex flex-col gap-[var(--space-xs)]">
       <div className="flex items-center justify-between gap-[var(--space-md)]">

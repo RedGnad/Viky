@@ -677,6 +677,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
 
         {/* Being told the moment it is reached, outside the card in the ground's own voice (the mockup). */}
         {readsLive && milestone ? <ReachAlert giftId={giftId} target={String(milestone.targetWords ?? milestone.target)} yours={mine} /> : null}
+        {/* A first proof waiting for its review: the answer is the thing to be told (the founder, 29 Sep 2026). */}
+        {milestone?.review?.status === "pending" && !gift.finished && (mine || readerIsFunder) ? <ReachAlert giftId={giftId} target="" yours={mine} review /> : null}
 
         {/* What Viky reads, and the stop, under the card in the same quiet manner (the mockup consent.html). */}
         {mine ? (

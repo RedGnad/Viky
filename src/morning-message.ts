@@ -19,7 +19,9 @@ export type MorningSide = "recipient" | "funder";
 export type MorningNews =
   | Readonly<{ kind: "day"; outcome: DayOutcome; amount: string }>
   | Readonly<{ kind: "reached"; amount: string }>
-  | Readonly<{ kind: "expired"; amount: string }>;
+  | Readonly<{ kind: "expired"; amount: string }>
+  /** A first proof's review, decided without reaching the gift: refused, or read and not there yet. */
+  | Readonly<{ kind: "reviewed"; verdict: "refused" | "notYet"; amount: string }>;
 
 export type MorningWords = Readonly<{ yesterday?: string }>;
 
@@ -27,6 +29,11 @@ export type MorningWords = Readonly<{ yesterday?: string }>;
 export function morningSentence(side: MorningSide, news: MorningNews, names: GiftNames, words: MorningWords = {}): string {
   const them = names.recipientName?.trim() || null;
   const funder = names.funderName?.trim() || null;
+  if (news.kind === "reviewed") {
+    if (side === "recipient") return news.verdict === "refused" ? MORNING.recipient.reviewRefused : MORNING.recipient.reviewNotYet;
+    if (news.verdict === "refused") return them ? MORNING.funder.reviewRefusedNamed(them) : MORNING.funder.reviewRefused;
+    return them ? MORNING.funder.reviewNotYetNamed(them) : MORNING.funder.reviewNotYet;
+  }
   if (side === "recipient") {
     if (news.kind === "reached") return MORNING.recipient.reached(news.amount);
     if (news.kind === "expired") return funder ? MORNING.recipient.expiredTo(news.amount, funder) : MORNING.recipient.expired(news.amount);
@@ -51,6 +58,7 @@ export function morningPayload(giftId: string, side: MorningSide, news: MorningN
 /** What the subject of one telling is called, so a gift is told about a day once and once only. */
 export function morningSubject(news: MorningNews, day?: number): string {
   if (news.kind === "day") return `day:${day}`;
+  if (news.kind === "reviewed") return `reviewed:${news.verdict}`;
   return news.kind;
 }
 
