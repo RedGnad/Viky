@@ -5,8 +5,8 @@ import { PGlite } from "@electric-sql/pglite";
 import { GET as listGet } from "../app/api/portals/route";
 import { configurePortalStore, ensurePortalSchema, savePortalRows } from "../src/portal-store";
 import type { SqlExecutor } from "../src/proof-session-store";
-import { UNIVERSITY_CHOICE } from "../src/sentences";
-import { inGroups, matching, type ListedUniversity } from "../src/university-choice";
+import { SHOW_PROOF, UNIVERSITY_CHOICE } from "../src/sentences";
+import { inGroups, matching, sortName, type ListedUniversity } from "../src/university-choice";
 
 /**
  * "Which university?" (D247, D313): the world's list, read a country at a time. The country in the same sheet with a
@@ -107,4 +107,21 @@ test("a country's list shows every university, and says how many, never only the
   assert.doesNotMatch(chooser, /slice\(0, 12\)/);
   assert.equal(UNIVERSITY_CHOICE.inCountry(210, "France"), "210 universities in France. Type part of the name to find yours.");
   assert.equal(UNIVERSITY_CHOICE.found(7), "7 found. Choose one below.");
+});
+
+test("the list is sorted by each university's own name, so a city's universities stand together", () => {
+  // The founder, 29 Sep 2026: "Université de Toulouse" was at U, far from "Toulouse I Capitole University" at T.
+  assert.equal(sortName("Université de Toulouse"), "toulouse");
+  assert.equal(sortName("University of Toulouse Jean Jaurès"), "toulouse jean jaures");
+  assert.equal(sortName("Université Cheikh Anta Diop"), "cheikh anta diop");
+  assert.equal(sortName("Toulouse I Capitole University"), "toulouse i capitole university");
+  assert.equal(sortName("University"), "university", "a name that is only the word keeps it");
+  const one = (title: string): ListedUniversity => ({ pair: title, title, issuer: "France", country: "FR" });
+  const sorted = matching([one("Université de Toulouse"), one("Angers University"), one("Toulouse I Capitole University"), one("University of Toulouse Jean Jaurès"), one("Université Paris-Saclay")], "").map((u) => u.title);
+  assert.deepEqual(sorted, ["Angers University", "Université Paris-Saclay", "Université de Toulouse", "Toulouse I Capitole University", "University of Toulouse Jean Jaurès"]);
+});
+
+test("the show-it block says a page opens, and nothing about where it opens", () => {
+  // On a phone the verification opens in its own app, not a browser tab (the founder, 29 Sep 2026).
+  assert.equal(SHOW_PROOF.whatHappens("your university"), "A verification page opens. You sign in to your university there, and what that page shows is proved without Viky ever seeing your password.");
 });
