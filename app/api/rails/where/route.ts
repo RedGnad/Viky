@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { NO_STORE } from "@/src/gift-api";
 import { reachOfWaysIn, reachOfWaysOut } from "@/src/rail-availability";
 import { countryCode, guessCountry, regionOfLocale } from "@/src/rail-country";
-import { readAccountAuthSession } from "@/src/account-auth-server";
 import { cardOffered, cardReach, payerCountry } from "@/src/card-rail";
-import { loadPreferences } from "@/src/preferences-store";
+import { countryOfAccount } from "@/src/request-country";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,14 +36,4 @@ export async function GET(request: Request) {
   const [waysOut, live] = await Promise.all([reachOfWaysOut(guess.country), reachOfWaysIn(payer ?? guess.country)]);
   const waysIn = cardReach(payer, live);
   return NextResponse.json({ ...guess, waysOut, waysIn, card: { offered: cardOffered(waysIn), country: payer } }, { headers: NO_STORE });
-}
-
-/** The country the signed-in account keeps (D274), or nothing for a visitor, an account that has none, or a failed read. */
-async function countryOfAccount(request: Request): Promise<string | null> {
-  try {
-    const { account } = readAccountAuthSession(request);
-    return (await loadPreferences(account)).country;
-  } catch {
-    return null;
-  }
 }

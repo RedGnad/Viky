@@ -211,6 +211,19 @@ export function scaleKey(scale: GradeScale): string {
   return scale.step === 1 / GRADE_UNITS ? String(scale.max) : `${scale.max}/${scale.step}`;
 }
 
+/**
+ * Where a grade target starts on a scale: a passing grade, 12 out of 20, 3 out of 4, 60 out of 100, and B in letters
+ * (the founder's choices of 28 Sep 2026), three fifths of the top on any other. On no scale known yet, 12: the funder
+ * chooses the scale next, and the chip sets its own.
+ */
+export function suggestedGrade(key: string | null | undefined): string {
+  const scale = scaleOfKey(key ?? undefined);
+  if (!scale) return "12";
+  if (scale.kind === "letters") return String(letterRank("B"));
+  const known: Readonly<Record<number, string>> = { 20: "12", 4: "3", 100: "60" };
+  return known[scale.max] ?? String(Math.round(scale.max * 0.6 * 100) / 100);
+}
+
 /** A scale from its key, whether a funder's choice or a university's pinned one. */
 export function scaleOfKey(key: string | undefined): GradeScale | undefined {
   return scaleOfChoice(key) ?? (key ? gradeScaleOf(key) : undefined);

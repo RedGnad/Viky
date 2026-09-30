@@ -20,7 +20,6 @@ import {
   pinProvider,
   portalByRequestHash,
   portalCountries,
-  portalFound,
   portalListed,
   portalProblem,
   portalsIn,
@@ -112,7 +111,7 @@ test("a proved portal is read back by its id, by the request its proofs make, an
   assert.equal((await searchPortals("SN"))[0]?.portalId, "ucad-sn", "by country too");
   assert.deepEqual(await searchPortals("sorbonne"), []);
   assert.equal(await countPortals(), 1);
-  assert.deepEqual(portalFound(back!), { pair: "ucad-sn", title: "Université Cheikh Anta Diop", issuer: "Senegal", path: "" }, "what the chooser lists, and no sign-in address");
+  assert.deepEqual(portalListed(back!), { pair: "ucad-sn", title: "Université Cheikh Anta Diop", issuer: "Senegal", country: "SN", scale: null, tested: false }, "what the chooser lists, and no sign-in address");
 });
 
 test("proving a portal again replaces its row and its provider rather than adding a second one", async () => {
@@ -204,7 +203,7 @@ test("a row not yet shown by a student keeps the mark in the register, and the f
   await savePortal({ ...UCAD, unverified: true });
   const marked = await loadPortal("ucad-sn");
   assert.equal(marked?.unverified, true, "in the register");
-  assert.equal(portalFound(marked!).title, "Université Cheikh Anta Diop", "never on the line the funder presses");
+  assert.equal(portalListed(marked!).title, "Université Cheikh Anta Diop", "never on the line the funder presses");
   await savePortal(UCAD);
   assert.equal((await loadPortal("ucad-sn"))?.unverified, false);
 });
@@ -212,7 +211,7 @@ test("a row not yet shown by a student keeps the mark in the register, and the f
 test("the gift's sentence names the university and its country, and nothing about how it is read (D313)", async () => {
   const { universityNamed, UNIVERSITY_SHOWN_MILESTONE } = await import("../src/milestone-conditions");
   const { scanSource } = await import("../src/consumer-words");
-  const found = portalFound((await loadPortal("ucad-sn"))!);
+  const found = portalListed((await loadPortal("ucad-sn"))!);
   const said = universityNamed("staying enrolled at ", `${found.title}, ${found.issuer}`);
   assert.equal(said, "This gift will be for staying enrolled at Université Cheikh Anta Diop, Senegal.");
   assert.deepEqual(scanSource("sentence", said), [], "through the consumer words check");

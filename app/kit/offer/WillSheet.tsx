@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useAccount } from "@/src/account/provider";
-import { chooserSections, conditionById, liveConditions, type Condition, type ConditionFamily } from "@/src/conditions";
+import { CHOICE_GROUPS, chooserSections, conditionById, groupMembers, liveConditions, type Condition, type ConditionFamily } from "@/src/conditions";
 import { conditionAnswered, durationBounds, unanswered, type GiftDraft, type Unanswered } from "@/src/gift-draft";
 import { certificateById, cadenceOf, milestoneById } from "@/src/milestone-conditions";
 import { loadOfferedConditions, readStanding } from "@/src/client/milestone";
@@ -21,6 +21,7 @@ import { UniversityChooser } from "./UniversityChooser";
 import { MarathonChooser } from "./MarathonChooser";
 import { WcaChooser } from "./WcaChooser";
 import { chosenUniversityTitle } from "@/src/university-choice";
+import { suggestedGrade } from "@/src/university-shown";
 
 /**
  * The will case: what they will do, and everything that condition itself asks (the vision of 19 Sep 2026, section 6).
@@ -158,12 +159,23 @@ export function WillSheet({
   const cadence = milestone && draft.cadence ? cadenceOf(milestone, draft.cadence) : undefined;
   const ready = conditionAnswered(draft);
   const shownSection = sections?.find((section) => section.family === family);
+  /**
+   * The lines a list draws (the founder, 29 Sep 2026): a group of conditions of one service once, under the group's
+   * name, pressed whenever the one on the card is any of them; every other condition as itself.
+   */
+  const lines = (among: readonly Condition[]) =>
+    among.flatMap((option) => {
+      if (!option.group) return [{ option, name: option.name, chosen: draft.conditionId === option.id }];
+      if (among.find((other) => other.group?.id === option.group!.id) !== option) return [];
+      return [{ option, name: CHOICE_GROUPS[option.group.id].name, chosen: condition?.group?.id === option.group.id }];
+    });
 
   const choose = (id: string) => {
     // The one already chosen is not a new choice: pressing it again is a way into its own questions, and nothing
     // it has been told is thrown away. Choosing another one drops all of it, because a name on one source means
-    // nothing on another.
-    if (id === draft.conditionId) {
+    // nothing on another. A group's line is the one already chosen when the card holds any of its conditions.
+    const pressed = conditionById(id);
+    if (id === draft.conditionId || (pressed?.group && pressed.group.id === condition?.group?.id)) {
       setAskedFor("questions");
       return;
     }
@@ -193,6 +205,22 @@ export function WillSheet({
     setReading({ busy: false });
     setFamily(null);
     setAskedFor("questions");
+  };
+
+  /**
+   * Another condition of the same group (the founder, 29 Sep 2026): what they will show changes, and what the group
+   * shares stays, the university, its country and the length; the target starts again at the new one's own.
+   */
+  const switchMode = (id: string) => {
+    if (id === draft.conditionId) return;
+    const next = certificateById(id);
+    onChange({
+      ...draft,
+      conditionId: id,
+      target: next?.portal?.scaled ? suggestedGrade(draft.scaleFixed ? draft.scale : undefined) : String(next?.target.suggested ?? ""),
+      scale: draft.scaleFixed ? draft.scale : undefined,
+      scaleFixed: draft.scaleFixed,
+    });
   };
 
   /** The daily source: is there a public profile by that name, and which courses does it carry (U1). */
@@ -339,8 +367,7 @@ export function WillSheet({
                   said "pick one and stay", and pressing one went on anyway. The one on the card is marked. */}
               <div role="group" aria-label={shownSection.title} className="flex flex-col gap-[var(--space-sm)]">
                 <p className={CARD_LABEL}>{shownSection.title}</p>
-                {shownSection.conditions.map((option) => {
-                  const chosen = draft.conditionId === option.id;
+                {lines(shownSection.conditions).map(({ option, name, chosen }) => {
                   return (
                     <button
                       key={option.id}
@@ -350,7 +377,7 @@ export function WillSheet({
                       className={`${INLINE_BUTTON} w-full justify-between! text-left ${chosen ? "bg-[var(--chosen)]!" : ""}`}
                     >
                       <span className="flex min-w-0 flex-1 flex-col items-start text-left">
-                        <span className={`${CHOICE} break-words`}>{option.name}</span>
+                        <span className={`${CHOICE} break-words`}>{name}</span>
                         <Nature nature={option.nature} />
                         {/* Every line the same height, chosen or not (the founder, 28 Sep 2026): what it proves is said on
                             its questions, where the detail is decided, not in the button, which grew when pressed. */}
@@ -383,11 +410,11 @@ export function WillSheet({
             shape="lines"
             legend={W.sheets.will}
             legendHidden
-            value={draft.conditionId || null}
+            value={lines(offered).find((line) => line.chosen)?.option.id ?? null}
             onChange={choose}
-            options={offered.map((option) => ({
+            options={lines(offered).map(({ option, name }) => ({
               value: option.id,
-              label: option.name,
+              label: name,
               tag: <Nature nature={option.nature} />,
                 help: option.live ? option.help : `${option.help} ${M.building}.`,
             }))}
@@ -410,10 +437,23 @@ export function WillSheet({
               <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          {/* What it proves, under the questions' title, where the detail is decided (the founder, 28 Sep 2026). */}
-          <p data-condition-help="" className={HELP}>
-            {condition.help}
-          </p>
+          {/* A group's own question first (the founder, 29 Sep 2026): what they will show, as "Which rating?" asks a
+              cadence. The one pressed says what it proves, so the help is not printed twice. */}
+          {condition.group ? (
+            <ChoiceList
+              name="group-mode"
+              shape="lines"
+              legend={CHOICE_GROUPS[condition.group.id].question}
+              value={condition.id}
+              onChange={switchMode}
+              options={groupMembers(condition.group.id, offered).map((member) => ({ value: member.id, label: member.group?.mode ?? member.name, help: member.help }))}
+            />
+          ) : (
+            /* What it proves, under the questions' title, where the detail is decided (the founder, 28 Sep 2026). */
+            <p data-condition-help="" className={HELP}>
+              {condition.help}
+            </p>
+          )}
 
           {/* A climb: the account, the cadence, today's reading, then what they reach. */}
           {milestone ? (
@@ -510,19 +550,19 @@ export function WillSheet({
                   onChoose={(courseId, title) => onChange({ ...draft, course: courseId, courseTitle: title, target: String(certificate.target.suggested) })}
                 />
               ) : certificate.course?.search?.listed ? (
-                /* The university, asked as a list grouped by country, or by country first when it is long (D247). */
+                /* The university: the person's country listed, the whole list searched (the founder, 29 Sep 2026). */
                 <>
                   <UniversityChooser
                     open={open}
-                    label={certificate.course.label}
                     draft={draft}
-                    named={certificate.course.named}
                     onChoose={(one) =>
                       onChange({
                         ...draft,
                         course: one.pair,
                         courseTitle: chosenUniversityTitle(one),
-                        target: String(certificate.target.suggested),
+                        // A grade starts on the university's own scale when it is known: 12 read on a scale out of 4 was
+                        // refused the moment it was set (the audit of 29 Sep 2026).
+                        target: certificate.portal?.scaled ? suggestedGrade(one.scale) : String(certificate.target.suggested),
                         // The scale a grade is typed on: the university's own when pinned, the funder's choice otherwise.
                         scale: one.scale ?? undefined,
                         scaleFixed: Boolean(one.scale),
