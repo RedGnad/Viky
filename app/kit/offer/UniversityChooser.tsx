@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { listUniversitiesIn, listUniversityCountries } from "@/src/client/certificate-gift";
 import type { GiftDraft } from "@/src/gift-draft";
-import { MILESTONE_FUND as M, UNIVERSITY_CHOICE as W } from "@/src/sentences";
+import { UNIVERSITY_CHOICE as W } from "@/src/sentences";
 import { inGroups, type ListedUniversity } from "@/src/university-choice";
 import { HELP } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
@@ -101,7 +101,8 @@ export function UniversityChooser({
 /**
  * The search within one country, and its two groups (the founder, 29 Sep 2026): the universities tested with a student
  * first, then all the others with the one line that says how they are set up. The search runs on both; nothing is
- * written on a line. Twelve of the others at most, the way the sheet's other searches say it.
+ * written on a line. Every university of the country is listed, never only the first twelve (the founder, 29 Sep 2026:
+ * no list does that), and what is typed narrows it.
  */
 function CountrySearch({
   country,
@@ -113,11 +114,11 @@ function CountrySearch({
 }: Readonly<{ country: string; found: readonly ListedUniversity[]; words: string; onWords: (words: string) => void; value: string | null; onChange: (value: string) => void }>) {
   const { tested, others } = inGroups(found, words);
   const count = tested.length + others.length;
-  const shown = others.slice(0, 12);
+  const shown = others;
   return (
     <>
       <Field id="university-search" label={W.searchIn(country)} value={words} onChange={onWords} autoComplete="off" spellCheck={false} />
-      {count === 0 ? <p className={HELP}>{W.nothingThere}</p> : <p className={HELP}>{M.detail.found(count)}</p>}
+      {count === 0 ? <p className={HELP}>{W.nothingThere}</p> : <p className={HELP}>{words.trim() ? W.found(count) : W.inCountry(count, country)}</p>}
       {tested.length > 0 ? (
         <ChoiceList name="university" legend={W.tested} shape="lines" value={value} onChange={onChange} options={tested.map((one) => ({ value: one.pair, label: one.title }))} />
       ) : null}

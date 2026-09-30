@@ -97,14 +97,12 @@ function edges() {
 const EDGE_HALF = 1.1;
 /** How far along each side the corners' round reaches (app/kit/Character.tsx draws the diamond with radius 8). */
 const CORNER_ROUND = 8;
-/** The eyes' centres and their radius, open: where the gloss must leave room. */
+/** The eyes' centres and their radius, open. */
 const EYES_AT: readonly (readonly [number, number])[] = [
   [26, 18],
   [38, 18],
 ];
 const EYE_R = 2.8;
-/** The room the gloss leaves an eye at rest. */
-const EYE_CLEAR = 0.4;
 export const GLOSS_RX = 5.2;
 export const GLOSS_RY = 3.2;
 export const DOT_R = 1.9;
@@ -142,64 +140,31 @@ export function fromOutline(point: Readonly<{ x: number; y: number }>): number {
   return nearest;
 }
 
-/** The least room between the gloss, slanted by `angle`, and either eye. */
-function fromEyes(cx: number, cy: number, angle: number): number {
-  let nearest = Infinity;
-  for (let step = 0; step < 90; step += 1) {
-    const t = (step * Math.PI) / 45;
-    const x = cx + GLOSS_RX * Math.cos(t) * Math.cos(angle) - GLOSS_RY * Math.sin(t) * Math.sin(angle);
-    const y = cy + GLOSS_RX * Math.cos(t) * Math.sin(angle) + GLOSS_RY * Math.sin(t) * Math.cos(angle);
-    for (const [ex, ey] of EYES_AT) nearest = Math.min(nearest, Math.hypot(x - ex, y - ey) - EYE_R);
-  }
-  return nearest;
-}
-
 /**
  * What the light does to the body: the gradient's two points, the gloss's place and slant, and the dot beside it.
  * All of it from one direction, so a pose never has to be lit by hand.
  *
- * Neither reflection is cut by the edge (the founder, 29 Sep 2026: the edge cut the gloss's round side). The gloss lies
- * along the lit side and touches the edge's inner line: its short half-axis and half the edge from that side's line;
- * pressed there, it would meet the left eye, so it slides along the side until it clears it, keeping its shape. The dot stays where the light puts it, and only moves toward the middle when the edge, or a corner's round, would
- * cover part of it.
+ * The gloss lies along the lit side, where it always did. Where it would pass under the edge, its half on that side is
+ * flatter (the founder, 29 Sep 2026: its curve should meet the coloured edge, not be cut by it): `edgeRy` is that
+ * half's height, which brings its top to the edge's inner line and no further. The other half, its place, its length,
+ * its slant and the dot are what they were.
  */
 export function lit(light = LIGHT, lean = 0) {
   const l = turned(unit(light), lean);
   const gradient = { x1: 0.5 + 0.5 * l.x, y1: 0.5 + 0.5 * l.y, x2: 0.5 - 0.5 * l.x, y2: 0.5 - 0.5 * l.y };
+  const gloss = { cx: CENTRE.x + l.x * 12.7, cy: CENTRE.y + l.y * 9.9 };
+  const dot = { cx: CENTRE.x + l.x * 2, cy: CENTRE.y + l.y * 14.1 };
   const all = edges().map((edge) => ({ ...edge, facing: edge.normal.x * l.x + edge.normal.y * l.y }));
   const litEdge = all.reduce((best, edge) => (edge.facing > best.facing ? edge : best), all[0]);
-  const lightOn = { x: CENTRE.x + l.x * 12.7, y: CENTRE.y + l.y * 9.9 };
-  const inward = { x: -litEdge.normal.x, y: -litEdge.normal.y };
-  const fromSide = (lightOn.x - litEdge.from[0]) * inward.x + (lightOn.y - litEdge.from[1]) * inward.y;
-  const shift = GLOSS_RY + EDGE_HALF - fromSide;
-  const tangent = { x: lightOn.x + inward.x * shift, y: lightOn.y + inward.y * shift };
-  // Pressed against the edge, it would now meet an eye: it slides along the side, the least it takes, until it clears
-  // both, and never into a corner's round, where the side is no longer straight.
-  const along = unit({ x: litEdge.to[0] - litEdge.from[0], y: litEdge.to[1] - litEdge.from[1] });
-  const at = (tangent.x - litEdge.from[0]) * along.x + (tangent.y - litEdge.from[1]) * along.y;
-  const angle = (litEdge.angle * Math.PI) / 180;
-  let gloss = { cx: tangent.x, cy: tangent.y };
-  search: for (let slide = 0; slide <= litEdge.length; slide += 0.25) {
-    for (const way of [-1, 1]) {
-      const middle = at + way * slide;
-      if (middle - GLOSS_RX < CORNER_ROUND || middle + GLOSS_RX > litEdge.length - CORNER_ROUND) continue;
-      const cx = tangent.x + along.x * way * slide;
-      const cy = tangent.y + along.y * way * slide;
-      if (fromEyes(cx, cy, angle) >= EYE_CLEAR) {
-        gloss = { cx, cy };
-        break search;
-      }
-    }
-  }
-  const dot = { cx: CENTRE.x + l.x * 2, cy: CENTRE.y + l.y * 14.1 };
-  const toMiddle = unit({ x: CENTRE.x - dot.cx, y: CENTRE.y - dot.cy });
-  for (let step = 0; step < 3; step += 1) {
-    const short = DOT_R + EDGE_HALF - fromOutline({ x: dot.cx, y: dot.cy });
-    if (short <= 0) break;
-    dot.cx += toMiddle.x * short;
-    dot.cy += toMiddle.y * short;
-  }
-  return { light: l, gradient, gloss: { ...gloss, angle: round(litEdge.angle) }, dot };
+  const fromSide = (gloss.cx - litEdge.from[0]) * -litEdge.normal.x + (gloss.cy - litEdge.from[1]) * -litEdge.normal.y;
+  const edgeRy = round(Math.max(0.5, Math.min(GLOSS_RY, fromSide - EDGE_HALF)));
+  return { light: l, gradient, gloss: { ...gloss, angle: round(litEdge.angle), edgeRy }, dot };
+}
+
+/** The gloss's outline: its half toward the lit side `edgeRy` high, the other `GLOSS_RY`, joined where both meet the long axis. */
+export function glossPath(cx: number, cy: number, edgeRy: number): string {
+  const [x, y] = [round(cx), round(cy)];
+  return `M${round(x - GLOSS_RX)} ${y} A${GLOSS_RX} ${edgeRy} 0 0 1 ${round(x + GLOSS_RX)} ${y} A${GLOSS_RX} ${GLOSS_RY} 0 0 1 ${round(x - GLOSS_RX)} ${y} Z`;
 }
 
 /**
@@ -569,7 +534,7 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
         {/* The gloss: where the surface faces halfway between the light and the eye, slanted along the lit edge, and one
             dot beside it. A third, smaller spot inside the gloss read as a second, lighter circle and was taken off (D243). */}
         <g data-part="gloss">
-          <ellipse cx={round(shine.gloss.cx)} cy={round(shine.gloss.cy)} rx={GLOSS_RX} ry={GLOSS_RY} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
+          <path d={glossPath(shine.gloss.cx, shine.gloss.cy, shine.gloss.edgeRy)} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
           <circle cx={round(shine.dot.cx)} cy={round(shine.dot.cy)} r={DOT_R} style={{ fill: GLOSS }} />
         </g>
         {/* The edge again over the dots and the gloss, so both stop at its inner side (the founder, 29 Sep 2026: the gloss

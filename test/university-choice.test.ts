@@ -73,7 +73,7 @@ test("the chooser lists names alone, says nothing about checking, and invites th
   assert.match(chooser, /<CountryPicker/, "the country in the same sheet as \"Where you live\" (D313)");
   // Nothing about checking in the chooser: that is said folded on the gift's page, where the proof is shown.
   assert.doesNotMatch(chooser, /<details|<summary|navigator\.share|clipboard/);
-  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["addYours", "all", "allLine", "country", "none", "notListed", "nothingThere", "reading", "searchIn", "tested", "unreadable"]);
+  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["addYours", "all", "allLine", "country", "found", "inCountry", "none", "notListed", "nothingThere", "reading", "searchIn", "tested", "unreadable"]);
   // The two groups' words, as the founder wrote them (29 Sep 2026), and nothing on each line.
   assert.equal(UNIVERSITY_CHOICE.tested, "Tested with a student");
   assert.equal(UNIVERSITY_CHOICE.all, "All universities");
@@ -98,4 +98,13 @@ test("the chosen university is its name and its country, and the gift's sentence
   const { universityNamed } = await import("../src/milestone-conditions");
   const title = chosenUniversityTitle({ pair: "du-bd", title: "University of Dhaka", issuer: "Bangladesh", country: "BD" });
   assert.equal(universityNamed("", title), "This gift will be for University of Dhaka, Bangladesh.");
+});
+
+test("a country's list shows every university, and says how many, never only the first twelve", () => {
+  // The founder, 29 Sep 2026: no list shows twelve and hides the rest; what is typed narrows it.
+  const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
+  assert.match(chooser, /const shown = others;/);
+  assert.doesNotMatch(chooser, /slice\(0, 12\)/);
+  assert.equal(UNIVERSITY_CHOICE.inCountry(210, "France"), "210 universities in France. Type part of the name to find yours.");
+  assert.equal(UNIVERSITY_CHOICE.found(7), "7 found. Choose one below.");
 });
