@@ -126,14 +126,10 @@ export function loadOffered(): Promise<{ ids: string[]; preview: string[] }> {
 /** One line of a source's own search, as the sheet lists it: what to press, and what the terms then carry. */
 export type CertificationFound = Readonly<{ pair: string; title: string; issuer: string; path: string }>;
 
-/**
- * The certifications a source knows by some words, through Viky's own route (the register names it): the funder
- * types, reads each answer with who awards it, and chooses. Nothing is kept from the answer but the one chosen.
- */
-/** The countries Viky lists universities in, for "Which university?" asked country first (D313). */
-export async function listUniversityCountries(): Promise<readonly ListedCountry[]> {
-  const answer = await getJson<{ countries: readonly ListedCountry[] }>("/api/portals");
-  return answer.countries;
+/** The countries Viky lists universities in, and the one the chooser opens on (the founder, 29 Sep 2026). */
+export async function listUniversityCountries(): Promise<Readonly<{ countries: readonly ListedCountry[]; here: string | null }>> {
+  const answer = await getJson<{ countries: readonly ListedCountry[]; here?: string | null }>("/api/portals");
+  return { countries: answer.countries, here: answer.here ?? null };
 }
 
 /** One country's universities (D313): the world's list is read a country at a time. */
@@ -142,6 +138,18 @@ export async function listUniversitiesIn(country: string): Promise<readonly List
   return answer.results;
 }
 
+/** The whole list searched by name (the founder, 29 Sep 2026), leaving out the country already listed whole. */
+export async function searchUniversities(words: string, except: string | null): Promise<Readonly<{ found: readonly ListedUniversity[]; more: boolean }>> {
+  const params = new URLSearchParams({ q: words.trim() });
+  if (except) params.set("except", except);
+  const answer = await getJson<{ results: readonly ListedUniversity[]; more?: boolean }>(`/api/portals/search?${params}`);
+  return { found: answer.results, more: answer.more === true };
+}
+
+/**
+ * The certifications a source knows by some words, through Viky's own route (the register names it): the funder
+ * types, reads each answer with who awards it, and chooses. Nothing is kept from the answer but the one chosen.
+ */
 export async function searchCertifications(path: string, words: string): Promise<readonly CertificationFound[]> {
   const answer = await getJson<{ results: readonly CertificationFound[] }>(`${path}?q=${encodeURIComponent(words.trim())}`);
   return answer.results;

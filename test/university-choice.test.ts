@@ -3,14 +3,15 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { GET as listGet } from "../app/api/portals/route";
-import { configurePortalStore, ensurePortalSchema, savePortalRows } from "../src/portal-store";
+import { GET as searchGet } from "../app/api/portals/search/route";
+import { configurePortalStore, ensurePortalSchema, FOLD_FROM, FOLD_TO, foldForSearch, savePortalRows } from "../src/portal-store";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { SHOW_PROOF, UNIVERSITY_CHOICE } from "../src/sentences";
 import { inGroups, matching, sortName, type ListedUniversity } from "../src/university-choice";
 
 /**
- * "Which university?" (D247, D313): the world's list, read a country at a time. The country in the same sheet with a
- * search as "Where you live", then that country's universities searched within. One line of help, the rest folded.
+ * "Which university?" (D247, D313, the founder, 29 Sep 2026): the world's list, read a country at a time. It opens on the
+ * person's own country, the country is a chip that narrows it, and one field searches the whole list.
  */
 
 const one = (pair: string, title: string, issuer: string, country: string): ListedUniversity => ({ pair, title, issuer, country });
@@ -70,10 +71,11 @@ test("the chooser lists names alone, says nothing about checking, and invites th
   const sheet = readFileSync("app/kit/offer/WillSheet.tsx", "utf8");
   const card = readFileSync("app/kit/offer/OfferCard.tsx", "utf8");
   assert.match(sheet, /certificate\.course\?\.search\?\.listed \? \(/, "the university's question takes the list");
-  assert.match(chooser, /<CountryPicker/, "the country in the same sheet as \"Where you live\" (D313)");
+  assert.match(chooser, /<CountryPicker[\s\S]*chip=\{W\.inCountry\}/, "the country as a chip that narrows the list, in the same sheet as \"Where you live\"");
+  assert.doesNotMatch(chooser, /W\.reading\}<\/p>|Reading the/, "no sentence while the list is read: empty lines hold its place");
   // Nothing about checking in the chooser: that is said folded on the gift's page, where the proof is shown.
   assert.doesNotMatch(chooser, /<details|<summary|navigator\.share|clipboard/);
-  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["addYours", "all", "allLine", "country", "found", "inCountry", "none", "notListed", "nothingThere", "reading", "searchIn", "tested", "unreadable"]);
+  assert.deepEqual(Object.keys(UNIVERSITY_CHOICE).sort(), ["addYours", "all", "allLine", "change", "country", "elsewhere", "inCountry", "more", "notListed", "nothing", "reading", "search", "tested", "unreadable"]);
   // The two groups' words, as the founder wrote them (29 Sep 2026), and nothing on each line.
   assert.equal(UNIVERSITY_CHOICE.tested, "Tested with a student");
   assert.equal(UNIVERSITY_CHOICE.all, "All universities");
@@ -100,13 +102,60 @@ test("the chosen university is its name and its country, and the gift's sentence
   assert.equal(universityNamed("", title), "This gift will be for University of Dhaka, Bangladesh.");
 });
 
-test("a country's list shows every university, and says how many, never only the first twelve", () => {
+test("a country's list shows every university, never only the first twelve", () => {
   // The founder, 29 Sep 2026: no list shows twelve and hides the rest; what is typed narrows it.
   const chooser = readFileSync("app/kit/offer/UniversityChooser.tsx", "utf8");
-  assert.match(chooser, /const shown = others;/);
-  assert.doesNotMatch(chooser, /slice\(0, 12\)/);
-  assert.equal(UNIVERSITY_CHOICE.inCountry(210, "France"), "210 universities in France. Type part of the name to find yours.");
-  assert.equal(UNIVERSITY_CHOICE.found(7), "7 found. Choose one below.");
+  assert.match(chooser, /options=\{here\.others\.map\(/);
+  assert.doesNotMatch(chooser, /slice\(0, \d+\)/);
+  assert.equal(UNIVERSITY_CHOICE.inCountry("France"), "In France");
+});
+
+test("the list opens on the account's or the connection's country, and the search finds every word, accents aside, across the world", async () => {
+  const db = new PGlite();
+  const executor: SqlExecutor = async (strings, ...values) => {
+    const text = strings.reduce((query, part, index) => `${query}${part}${index < values.length ? `$${index + 1}` : ""}`, "");
+    return (await db.query<Record<string, unknown>>(text, values)).rows;
+  };
+  configurePortalStore(executor);
+  try {
+    await ensurePortalSchema();
+    const operator = "0x000000000000000000000000000000000000a11c";
+    const row = (portalId: string, university: string, country: string) => ({ portalId, name: portalId, university, country, loginUrl: `https://${portalId}.example/`, provenBy: operator });
+    await savePortalRows([
+      row("ut3-fr", "Université de Toulouse (Paul Sabatier)", "FR"),
+      row("ut1-fr", "Toulouse I Capitole University", "FR"),
+      row("ucad-sn", "Université Cheikh Anta Diop", "SN"),
+      row("uwr-pl", "Uniwersytet Wrocławski", "PL"),
+      row("ucam-gb", "University of Cambridge", "GB"),
+    ]);
+    const countries = async (headers: Record<string, string>) => (await (await listGet(new Request("https://viky.test/api/portals", { headers }))).json()) as { here: string | null };
+    assert.equal((await countries({ "x-vercel-ip-country": "SN" })).here, "SN", "the connection's country, when the list holds it");
+    assert.equal((await countries({ "x-vercel-ip-country": "JP" })).here, null, "a country the list has nothing in opens nowhere");
+    assert.equal((await countries({})).here, null);
+
+    const search = async (query: string) => (await (await searchGet(new Request(`https://viky.test/api/portals/search?${query}`))).json()) as { results: ListedUniversity[]; more: boolean };
+    const pairs = async (query: string) => (await search(query)).results.map((u) => u.pair);
+    assert.deepEqual(await pairs("q=toulouse"), ["ut1-fr", "ut3-fr"]);
+    assert.deepEqual(await pairs("q=sabatier%20universite"), ["ut3-fr"], "every word, in any order, without its accent");
+    assert.deepEqual(await pairs("q=UNIVERSITÉ%20cheikh"), ["ucad-sn"], "an accent typed where the name has one, in capitals");
+    assert.deepEqual(await pairs("q=wroclaw"), ["uwr-pl"], "a letter no accent rule folds");
+    assert.deepEqual(await pairs("q=toulouse&except=FR"), [], "the country already listed whole is left out");
+    assert.deepEqual(await pairs("q=cambridge&except=FR"), ["ucam-gb"]);
+    assert.deepEqual(await pairs("q=sn"), ["ucad-sn"], "a country's two letters");
+    const answer = await search("q=cambridge");
+    assert.deepEqual(Object.keys(answer.results[0]).sort(), ["country", "issuer", "pair", "scale", "tested", "title"], "the shape of a country's list");
+    assert.equal(answer.more, false);
+    assert.equal((await searchGet(new Request("https://viky.test/api/portals/search?q=%25"))).status, 400);
+  } finally {
+    configurePortalStore(undefined);
+    await db.close();
+  }
+});
+
+test("the table's names and the words typed are folded by the same pairs", () => {
+  assert.equal([...FOLD_FROM].length, [...FOLD_TO].length, "translate needs one letter for one letter");
+  assert.match(FOLD_TO, /^[a-z]+$/);
+  assert.equal(foldForSearch("Université Wrocławski ØSTFOLD"), "universite wroclawski ostfold");
 });
 
 test("the list is sorted by each university's own name, so a city's universities stand together", () => {

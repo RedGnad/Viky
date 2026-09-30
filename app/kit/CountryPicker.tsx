@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { loadOutCountries } from "@/src/client/account-country";
 import { countryInWords } from "@/src/rail-country";
 import { WHERE_YOU_LIVE as WORDS } from "@/src/sentences";
-import { FIELD, HELP } from "../components/ui";
+import { CHIP, FIELD, HELP } from "../components/ui";
 import { ChoiceList } from "./ChoiceList";
 import { Sheet } from "./Sheet";
 
@@ -12,6 +12,10 @@ import { Sheet } from "./Sheet";
  * under "Spend or withdraw", named in the words `Intl` gives and sorted by those names. Chosen in a sheet with Viky's own
  * list, as a currency is (the founder, 28 Sep 2026: the native select was the one list outside the art direction),
  * with a search above it, because there are more than a hundred and fifty countries.
+ *
+ * Two triggers. The field, where the country is the answer asked for. The chip, where it only narrows a list already
+ * shown (the founder, 29 Sep 2026: "Which university?" opens on the person's own country, and the country is a filter
+ * drawn like the app's other buttons, not a step before the list).
  */
 export function CountryPicker({
   id,
@@ -20,6 +24,7 @@ export function CountryPicker({
   value,
   onChange,
   load = async () => (await loadOutCountries()).countries,
+  chip,
 }: Readonly<{
   id: string;
   label: string;
@@ -28,6 +33,8 @@ export function CountryPicker({
   onChange: (country: string) => void;
   /** The countries to choose from: by default where a way out works; the universities' own list for "Which university?" (D313). */
   load?: () => Promise<readonly string[]>;
+  /** Drawn as a chip whose words say the chosen country ("In France"), the label read aloud only. */
+  chip?: (country: string) => string;
 }>) {
   const [countries, setCountries] = useState<readonly { code: string; name: string }[] | null | "unreadable">(null);
   const [open, setOpen] = useState(false);
@@ -64,12 +71,29 @@ export function CountryPicker({
   return (
     <div className="flex flex-col gap-[var(--space-xs)]">
       {/* Hidden where a heading above already asks the question: still read aloud, never printed twice. */}
-      <span id={`${id}-label`} className={hideLabel ? "sr-only" : "font-medium"}>
+      <span id={`${id}-label`} className={hideLabel || chip ? "sr-only" : "font-medium"}>
         {label}
       </span>
-      <button id={id} type="button" aria-labelledby={`${id}-label ${id}`} aria-haspopup="dialog" className={`${FIELD} text-left`} disabled={countries === null} onClick={() => setOpen(true)}>
-        {chosen ?? (countries === null ? WORDS.reading : WORDS.choose)}
-      </button>
+      {chip ? (
+        <button
+          id={id}
+          type="button"
+          aria-labelledby={`${id}-label ${id}`}
+          aria-haspopup="dialog"
+          className={`${CHIP} inline-flex items-center gap-[var(--space-xs)] self-start`}
+          disabled={countries === null}
+          onClick={() => setOpen(true)}
+        >
+          {chosen ? chip(chosen) : WORDS.choose}
+          <svg aria-hidden focusable="false" width="16" height="16" viewBox="0 0 24 24">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      ) : (
+        <button id={id} type="button" aria-labelledby={`${id}-label ${id}`} aria-haspopup="dialog" className={`${FIELD} text-left`} disabled={countries === null} onClick={() => setOpen(true)}>
+          {chosen ?? (countries === null ? WORDS.reading : WORDS.choose)}
+        </button>
+      )}
       <Sheet open={open} title={label} onClose={close} tall view={wanted}>
         <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={WORDS.search} aria-label={WORDS.search} className={FIELD} />
         {shown.length === 0 ? <p className={HELP}>{WORDS.noMatch}</p> : null}

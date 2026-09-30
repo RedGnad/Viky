@@ -72,6 +72,21 @@ export function familyOf(id: string): ConditionFamily | undefined {
   return Object.prototype.hasOwnProperty.call(RETIRED_FAMILIES, id) ? RETIRED_FAMILIES[id as RetiredFamily] : undefined;
 }
 
+/**
+ * The services the chooser lists once, whatever the number of their conditions (the founder, 29 Sep 2026): the three
+ * university lines share the university, its portal and its list, and differ only in what is shown, so they are one
+ * line, "At university", and its questions ask what they will show.
+ */
+export type ChoiceGroupId = "university";
+export const CHOICE_GROUPS: Readonly<Record<ChoiceGroupId, Readonly<{ name: string; question: string }>>> = {
+  university: { name: "At university", question: "What will they show?" },
+};
+
+/** The conditions of a group, in the register's order. */
+export function groupMembers(group: ChoiceGroupId, among: readonly Condition[] = CONDITIONS): readonly Condition[] {
+  return among.filter((condition) => condition.group?.id === group);
+}
+
 /** From this many conditions on offer, the chooser stops being one list and becomes one section per family. */
 export const SECTIONS_FROM = 6;
 
@@ -235,6 +250,11 @@ export type Condition = Readonly<{
   family: ConditionFamily;
   /** The condition in words, as the radio on "What will they do?" reads it. */
   name: string;
+  /**
+   * One line for several conditions of the same service (the founder, 29 Sep 2026): the chooser lists the group once,
+   * and its questions ask which of them, as "Which rating?" asks a chess cadence. `mode` is that answer's own words.
+   */
+  group?: Readonly<{ id: ChoiceGroupId; mode: string }>;
   /**
    * The one line under that radio, and the only other thing the chooser says about a condition: how it is verified and
    * by whom, in one sentence (design audit of 16 Sep 2026, section 3). The two used to be two lines, the register's and
@@ -710,6 +730,7 @@ export const UNIVERSITY_ENROLLMENT_SHOWN: Condition = {
   source: UNIVERSITY_SOURCE,
   family: "exam",
   name: "Enrolled at university, shown",
+  group: { id: "university", mode: "Enrolled" },
   help: "Shown by them from their own student portal: the page that says they are enrolled, no marks read. It proves the account, not who sits in class.",
   link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
   reading: "university-enrollment-shown",
@@ -739,6 +760,7 @@ export const UNIVERSITY_YEAR_PASSED_SHOWN: Condition = {
   source: UNIVERSITY_SOURCE,
   family: "exam",
   name: "Passed the year at university",
+  group: { id: "university", mode: "The year passed" },
   help: "The results page of their own student portal, shown by them, saying they passed the year or the semester: it proves the account, not who sat the exams.",
   link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
   reading: "university-year-passed-shown",
@@ -769,6 +791,7 @@ export const UNIVERSITY_GRADE_SHOWN: Condition = {
   source: UNIVERSITY_SOURCE,
   family: "exam",
   name: "Reached a grade at university",
+  group: { id: "university", mode: "A grade" },
   help: "The results page of their own student portal, shown by them, with the grade read on the university's own scale: it proves the account, not who sat the exams.",
   link: { kind: "link", label: "Show it from your student portal", help: "Press Show it on your gift's page and sign in to your university's portal in the tab that opens. Nothing to paste." },
   reading: "university-grade-shown",

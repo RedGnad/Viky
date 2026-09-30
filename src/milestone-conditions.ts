@@ -1050,7 +1050,7 @@ export const UNIVERSITY_SHOWN_MILESTONE: CertificateCondition = {
   },
   duration: UNIVERSITY_DURATION_DAYS,
   words: {
-    detailQuestion: "Which university, and how long",
+    detailQuestion: "Which university",
     nameLabel: "",
     nameHelp: "",
     linkLabel: "",
@@ -1132,7 +1132,7 @@ export const UNIVERSITY_YEAR_MILESTONE: CertificateCondition = {
   },
   duration: UNIVERSITY_RESULTS_DURATION_DAYS,
   words: {
-    detailQuestion: "Which university, and how long",
+    detailQuestion: "Which university",
     nameLabel: "",
     nameHelp: "",
     linkLabel: "",
@@ -1206,7 +1206,7 @@ export const UNIVERSITY_GRADE_MILESTONE: CertificateCondition = {
   },
   duration: UNIVERSITY_RESULTS_DURATION_DAYS,
   words: {
-    detailQuestion: "Which university, and the grade to reach",
+    detailQuestion: "Which university, and the grade",
     nameLabel: "",
     nameHelp: "",
     linkLabel: "",

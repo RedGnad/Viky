@@ -73,6 +73,7 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
   const units = draftUnits(draft);
   const condition = conditionById(draft.conditionId);
   const shape = shapeOf(draft.conditionId);
+  const lengthFor = shape === "stamp" || shape === "climb" ? W.lengthFor[shape] : undefined;
   const bounds = durationBounds(draft.conditionId);
   const filled = filledCases(draft);
   const ready = isComplete(draft) && units !== undefined;
@@ -237,7 +238,7 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                   a sentence carrying its rate's own day cannot fit beside a 39 pixel figure. */}
               {/* The money on one line when it fits (D226): the amount, then the three lengths beside it, wrapping under it
                   on a phone. */}
-              <span className="flex flex-wrap items-center gap-x-[var(--space-md)] gap-y-[var(--space-md)]">
+              <span className={`flex flex-wrap ${lengthFor ? "items-end" : "items-center"} gap-x-[var(--space-md)] gap-y-[var(--space-md)]`}>
                 {/* The key nests in the field at one inset on every side (D257): 48 inside, 54 for the field. */}
                 <span
                   className={`${CARD_AMOUNT} on-paper-field inline-flex min-h-[var(--tap-target)] items-center has-[input:focus]:outline-2 has-[input:focus]:outline-offset-2 has-[input:focus]:outline-[var(--accent-text)]`}
@@ -264,7 +265,15 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                     and a length outside the three is a length the register was never asked about. */}
                 {/* Spread across the card on a phone, the first at its left edge and the last at its right, so the three are
                     centred in it (the founder, 29 Sep 2026); side by side on a large screen. */}
-                <span className="flex w-full flex-wrap items-center justify-between gap-[var(--tap-gap)] [@media(min-width:1024px)]:w-auto [@media(min-width:1024px)]:justify-start">
+                {/* What the length sets, over it, where a number of days alone says nothing (the founder, 29 Sep 2026: "how
+                    long" asked of an enrolment): the time given to show it, or to reach it. A row of days says it itself. */}
+                <span role={lengthFor ? "group" : undefined} aria-label={lengthFor} className="flex w-full flex-col gap-[var(--space-xs)] [@media(min-width:1024px)]:w-auto">
+                  {lengthFor ? (
+                    <span aria-hidden className={CARD_LABEL}>
+                      {lengthFor}
+                    </span>
+                  ) : null}
+                  <span className="flex w-full flex-wrap items-center justify-between gap-[var(--tap-gap)] [@media(min-width:1024px)]:w-auto [@media(min-width:1024px)]:justify-start">
                   {quick.map((count) => (
                   <button
                     key={count}
@@ -277,6 +286,7 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
                       {W.someDays(count)}
                     </button>
                   ))}
+                  </span>
                 </span>
               </span>
               {amountRefusal ? <span className={`block ${HELP} text-[var(--on-surface)]`}>{amountRefusal}</span> : null}

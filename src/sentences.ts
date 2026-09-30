@@ -59,6 +59,8 @@ export const OFFER = {
   detailNeeded: "Not filled in yet",
   /** The three lengths the register gives the chosen condition, and there is no fourth on the card (D130). */
   someDays: (days: number) => `${days} ${days === 1 ? "day" : "days"}`,
+  /** Over those lengths when they are not a row of days: what the length sets (the founder, 29 Sep 2026). */
+  lengthFor: { stamp: "Time to show it", climb: "Time to reach it" },
   /** Under the action, for a gift counted by days: what one day of it is worth, and where the rest goes. */
   /** Under the row of days, what one mark is worth (D226): the figure in the title face, then this. */
   aDay: "a day",
@@ -1269,19 +1271,25 @@ export const GRADE_SCALE = {
 } as const;
 
 export const UNIVERSITY_CHOICE = {
-  country: "Which country is it in?",
-  searchIn: (country: string) => `Search in ${country}`,
+  /** The one field (the founder, 29 Sep 2026): the whole list is searched, and the person's country is listed before a word is typed. */
+  search: "Search universities",
+  /** The chip that narrows the list to one country: what it is called when read aloud, and its sheet's title. */
+  country: "Which country",
+  inCountry: (country: string) => `In ${country}`,
+  /** Read aloud while the list is read; the eye sees empty lines instead of a sentence (the founder, 29 Sep 2026). */
   reading: "Reading the list",
   unreadable: "The list could not be read right now. Close this and try again in a moment.",
-  none: "Viky cannot read any university yet.",
-  nothingThere: "No university of that name in this country yet.",
-  /** Above the whole list of a country (the founder, 29 Sep 2026: never only the first twelve), and above what a search finds. */
-  inCountry: (count: number, country: string) => `${count} ${count === 1 ? "university" : "universities"} in ${country}. Type part of the name to find yours.`,
-  found: (count: number) => `${count} found. Choose one below.`,
+  nothing: "No university by that name in the list yet.",
+  /** Under a search of the whole list that stopped at its limit. */
+  more: "Type more of the name to see the others.",
+  /** What a search finds outside the country listed, with the country on each line. */
+  elsewhere: "Other countries",
   /** The two groups of a country's list (the founder, 29 Sep 2026): the tested first, and one line under the others. */
   tested: "Tested with a student",
   all: "All universities",
   allLine: "Set up on the first gift, within two days.",
+  /** Beside the university chosen, which folds the list away so what comes after it is in reach. */
+  change: "Change",
   /** The one line under the list: a question, and the link that answers it. */
   notListed: "Yours isn't here?",
   addYours: "Add your university",

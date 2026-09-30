@@ -1,12 +1,9 @@
 "use client";
 import type { GiftDraft } from "@/src/gift-draft";
 import { GRADE_SCALE as W } from "@/src/sentences";
-import { gradeScaleInWords, gradeTargetProblem, LETTER_GRADES, letterRank, SCALE_CHOICES, scaleOfKey } from "@/src/university-shown";
+import { gradeScaleInWords, gradeTargetProblem, LETTER_GRADES, letterRank, SCALE_CHOICES, scaleOfKey, suggestedGrade } from "@/src/university-shown";
 import { CHIP, HELP } from "../../components/ui";
 import { Field } from "../Field";
-
-/** Where a target starts on each scale the funder can choose: a passing grade, and B in letters. */
-const SUGGESTED: Readonly<Record<string, string>> = { "20": "12", "4": "3", "100": "60", letters: String(letterRank("B")) };
 
 /**
  * "Reached a grade" once the university is chosen (the founder, 28 Sep 2026): the grade is typed on a scale. The
@@ -36,7 +33,7 @@ export function GradeTarget({
                 key={choice}
                 type="button"
                 aria-pressed={draft.scale === choice}
-                onClick={() => onChange({ ...draft, scale: choice, scaleFixed: false, target: SUGGESTED[choice] })}
+                onClick={() => onChange({ ...draft, scale: choice, scaleFixed: false, target: suggestedGrade(choice) })}
                 className={`${CHIP} ${draft.scale === choice ? "bg-[var(--chosen)] font-bold" : ""}`}
               >
                 {W.choices[choice]}

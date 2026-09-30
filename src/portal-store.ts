@@ -619,9 +619,9 @@ export function pageOfRequest(portal: Portal, requestHash: string): PortalSense 
   return null;
 }
 
-/** The words as they will be searched on: trimmed, with the two characters a pattern would read as its own removed. */
+/** The words as they will be searched on: trimmed, with the characters a pattern would read as its own removed. */
 function searchWords(words: string): string {
-  return words.replace(/[%_]/g, "").trim();
+  return words.replace(/[%_\\]/g, "").trim();
 }
 
 /** Whether words are enough to search on: two characters at least once the pattern characters are gone, eighty at most. */
@@ -630,25 +630,45 @@ export function isValidPortalSearch(words: string): boolean {
   return cleaned.length >= 2 && cleaned.length <= 80;
 }
 
-/** The universities whose name, university or country carries the words, twenty at most, by name. */
-export async function searchPortals(words: string): Promise<readonly Portal[]> {
-  if (!isValidPortalSearch(words)) return [];
-  const needle = `%${searchWords(words)}%`;
-  const rows = await sql()`
-    SELECT * FROM viky_portals
-     WHERE name ILIKE ${needle} OR university ILIKE ${needle} OR country ILIKE ${needle}
-     ORDER BY university, name
-     LIMIT 20`;
-  return withProviders(rows);
+/**
+ * Letters folded to their plain form, for a search that ignores accents on both sides: the table's names through
+ * Postgres's `translate`, the words typed through `foldForSearch`, with the same pairs. Both cases are listed, because
+ * `lower` leaves accented capitals as they are under the C collation.
+ */
+const FOLD_SPECIAL: Readonly<Record<string, string>> = { Ø: "o", ø: "o", Ł: "l", ł: "l", ı: "i", İ: "i", Đ: "d", đ: "d" };
+export const FOLD_FROM = "ÀÁÂÃÄÅĀĂĄàáâãäåāăąÇĆČçćčĎďĐđÈÉÊËĒĖĘĚèéêëēėęěĞğÌÍÎÏĪĮİìíîïīįıŁłŃÑŇńñňÒÓÔÕÖØŌŐòóôõöøōőŘřŚŞŠśşšŤŢťţÙÚÛÜŪŮŰŲùúûüūůűųÝŸýÿŹŻŽźżž";
+export const FOLD_TO = [...FOLD_FROM].map((letter) => FOLD_SPECIAL[letter] ?? letter.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase()).join("");
+
+/** Words as the search compares them: accents and case gone, the same folding the table's names go through. */
+export function foldForSearch(words: string): string {
+  return [...words].map((letter) => FOLD_SPECIAL[letter] ?? letter).join("").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 }
 
+/** How many universities a search answers at most: what is typed narrows it, and the answer says when there are more. */
+export const PORTAL_SEARCH_LIMIT = 100;
+
 /**
- * A university as the chooser lists it, in the shape every search of the sheet reads (`CertificationFound`): what is
- * pressed is the portal id, and the line reads "Université Cheikh Anta Diop, Senegal". Nothing about which of its
- * providers exist: a university without one is chosen all the same, and its provider is built within two days (D313).
+ * The universities of the whole list whose name carries every word typed, accents and case aside, in any order; a word
+ * that is a country's two letters also finds that country's (the founder, 29 Sep 2026: one field searches the world).
+ * `except` leaves out a country the chooser already lists whole. At most `limit`, by name.
  */
-export function portalFound(portal: Pick<Portal, "portalId" | "university" | "country">): Readonly<{ pair: string; title: string; issuer: string; path: string }> {
-  return { pair: portal.portalId, title: portal.university, issuer: countryInWords(portal.country), path: "" };
+export async function searchPortals(words: string, options: Readonly<{ except?: string; limit?: number }> = {}): Promise<readonly Portal[]> {
+  if (!isValidPortalSearch(words)) return [];
+  const wanted = foldForSearch(searchWords(words)).split(/\s+/).filter(Boolean);
+  const except = /^[A-Z]{2}$/.test(options.except ?? "") ? options.except! : "";
+  const limit = Math.max(1, Math.min(options.limit ?? PORTAL_SEARCH_LIMIT, PORTAL_SEARCH_LIMIT + 1));
+  const rows = await sql()`
+    SELECT * FROM viky_portals
+     WHERE country <> ${except}
+       AND NOT EXISTS (
+         SELECT 1 FROM unnest(${wanted}::text[]) AS w(word)
+          WHERE NOT (
+            lower(translate(university, ${FOLD_FROM}, ${FOLD_TO})) LIKE '%' || w.word || '%'
+            OR lower(translate(name, ${FOLD_FROM}, ${FOLD_TO})) LIKE '%' || w.word || '%'
+            OR country = upper(w.word)))
+     ORDER BY university, name
+     LIMIT ${limit}`;
+  return withProviders(rows);
 }
 
 /** The countries the list holds and how many universities each, for "Which university?" asked country first (D313). */
