@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { listUniversitiesIn, listUniversityCountries, searchUniversities } from "@/src/client/certificate-gift";
 import type { GiftDraft } from "@/src/gift-draft";
 import { countryInWords } from "@/src/rail-country";
@@ -59,6 +59,7 @@ export function UniversityChooser({
   const [words, setWords] = useState("");
   const [world, setWorld] = useState<Readonly<{ key: string; found: readonly ListedUniversity[]; more: boolean }> | null>(null);
   const [changing, setChanging] = useState(false);
+  const top = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open || countries !== null) return;
@@ -161,14 +162,21 @@ export function UniversityChooser({
   const found = (here ? here.tested.length + here.others.length : 0) + (elsewhere?.found.length ?? 0);
 
   return (
-    <div
-      className="flex scroll-mt-[var(--space-md)] flex-col gap-[var(--space-sm)]"
-      // Typing brings the field to the top of the sheet, so what it finds is under it and not under the keyboard.
-      onFocus={(event) => {
-        if (event.target.id === "university-search") event.currentTarget.scrollIntoView({ block: "start" });
-      }}
-    >
-      <Field id="university-search" label={W.search} value={words} onChange={setWords} autoComplete="off" spellCheck={false} />
+    <div ref={top} className="flex scroll-mt-[var(--space-md)] flex-col gap-[var(--space-sm)]">
+      <Field
+        id="university-search"
+        label={W.search}
+        value={words}
+        onChange={(typed) => {
+          // The first letter brings the field to the top of the sheet, so what it finds is under it and not under the
+          // keyboard. Never on focus: the list moved under a pointer still pressed, and the university it then stood
+          // on was chosen on release (the founder, 30 Sep 2026: the first one of France, chosen by nobody).
+          if (!words.trim() && typed.trim()) top.current?.scrollIntoView({ block: "start" });
+          setWords(typed);
+        }}
+        autoComplete="off"
+        spellCheck={false}
+      />
       {countries && countries.length > 0 ? (
         <CountryPicker
           id="university-country"

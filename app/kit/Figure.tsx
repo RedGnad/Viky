@@ -93,8 +93,6 @@ function edges() {
   });
 }
 
-/** Half the edge's width: the part of the line drawn inside the body. */
-const EDGE_HALF = 1.1;
 /** How far along each side the corners' round reaches (app/kit/Character.tsx draws the diamond with radius 8). */
 const CORNER_ROUND = 8;
 /** The eyes' centres and their radius, open. */
@@ -144,10 +142,8 @@ export function fromOutline(point: Readonly<{ x: number; y: number }>): number {
  * What the light does to the body: the gradient's two points, the gloss's place and slant, and the dot beside it.
  * All of it from one direction, so a pose never has to be lit by hand.
  *
- * The gloss lies along the lit side, where it always did. Where it would pass under the edge, its half on that side is
- * flatter (the founder, 29 Sep 2026: its curve should meet the coloured edge, not be cut by it): `edgeRy` is that
- * half's height, which brings its top to the edge's inner line and no further. The other half, its place, its length,
- * its slant and the dot are what they were.
+ * The gloss is a whole ellipse along the lit side, and the coloured edge is drawn over it, so the edge cuts it where
+ * it passes under (the founder, 30 Sep 2026: the cut shape of #378, preferred to its flattened curve).
  */
 export function lit(light = LIGHT, lean = 0) {
   const l = turned(unit(light), lean);
@@ -156,15 +152,7 @@ export function lit(light = LIGHT, lean = 0) {
   const dot = { cx: CENTRE.x + l.x * 2, cy: CENTRE.y + l.y * 14.1 };
   const all = edges().map((edge) => ({ ...edge, facing: edge.normal.x * l.x + edge.normal.y * l.y }));
   const litEdge = all.reduce((best, edge) => (edge.facing > best.facing ? edge : best), all[0]);
-  const fromSide = (gloss.cx - litEdge.from[0]) * -litEdge.normal.x + (gloss.cy - litEdge.from[1]) * -litEdge.normal.y;
-  const edgeRy = round(Math.max(0.5, Math.min(GLOSS_RY, fromSide - EDGE_HALF)));
-  return { light: l, gradient, gloss: { ...gloss, angle: round(litEdge.angle), edgeRy }, dot };
-}
-
-/** The gloss's outline: its half toward the lit side `edgeRy` high, the other `GLOSS_RY`, joined where both meet the long axis. */
-export function glossPath(cx: number, cy: number, edgeRy: number): string {
-  const [x, y] = [round(cx), round(cy)];
-  return `M${round(x - GLOSS_RX)} ${y} A${GLOSS_RX} ${edgeRy} 0 0 1 ${round(x + GLOSS_RX)} ${y} A${GLOSS_RX} ${GLOSS_RY} 0 0 1 ${round(x - GLOSS_RX)} ${y} Z`;
+  return { light: l, gradient, gloss: { ...gloss, angle: round(litEdge.angle) }, dot };
 }
 
 /**
@@ -534,11 +522,11 @@ export function FigureGroup({ eyes = "open", mouth = "smile", arms = "rest", leg
         {/* The gloss: where the surface faces halfway between the light and the eye, slanted along the lit edge, and one
             dot beside it. A third, smaller spot inside the gloss read as a second, lighter circle and was taken off (D243). */}
         <g data-part="gloss">
-          <path d={glossPath(shine.gloss.cx, shine.gloss.cy, shine.gloss.edgeRy)} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
+          <ellipse cx={round(shine.gloss.cx)} cy={round(shine.gloss.cy)} rx={GLOSS_RX} ry={GLOSS_RY} transform={`rotate(${shine.gloss.angle} ${round(shine.gloss.cx)} ${round(shine.gloss.cy)})`} style={{ fill: GLOSS }} />
           <circle cx={round(shine.dot.cx)} cy={round(shine.dot.cy)} r={DOT_R} style={{ fill: GLOSS }} />
         </g>
-        {/* The edge again over the dots and the gloss, so both stop at its inner side (the founder, 29 Sep 2026: the gloss
-            lay on the coloured edge), without a clip (D288). Inside the body's group, so what the figure holds in front of
+        {/* The edge again over the dots and the gloss, so both stop at its inner side (the founder, 29 and 30 Sep 2026: the
+            gloss lay on the coloured edge; the edge over it, cutting it), without a clip (D288). Inside the body's group, so what the figure holds in front of
             it, a book, crossed or raised arms, stays in front of the edge. */}
         <path data-part="edge" d={DIAMOND} style={{ fill: "none", stroke: `url(#${id}-edge)`, strokeWidth: 2.2, strokeLinejoin: "round" }} />
       </g>

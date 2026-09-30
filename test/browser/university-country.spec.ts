@@ -94,6 +94,25 @@ test("choosing a country in the chip's sheet closes that sheet only, and lists t
   await expect(sheet(page).getByRole("group", { name: "All universities" }).getByText("University of Lagos")).toBeVisible();
 });
 
+test("pressing the search field moves nothing under the pointer, so no university is chosen by it", async ({ page }) => {
+  // The founder, 30 Sep 2026: the list scrolled up on focus, under a pointer still pressed, and the university it then
+  // stood on was chosen on release, in Safari, the first one of the country every time.
+  await answerTheList(page, Array.from({ length: 30 }, (_, index) => ({ ...SENEGAL[1], pair: `u${index}-sn`, title: `Université ${index}` })));
+  await openAtUniversity(page);
+  await sheet(page).getByRole("group", { name: "All universities" }).waitFor();
+  const field = sheet(page).getByLabel("Search universities");
+  await field.evaluate((element) => element.scrollIntoView({ block: "center" }));
+  const box = (await field.boundingBox())!;
+  const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  expect(await page.evaluate(([px, py]) => document.elementFromPoint(px, py)?.id, [x, y])).toBe("university-search");
+  await page.mouse.up();
+  await expect(field).toBeFocused();
+  await expect(sheet(page).locator("[data-university-chosen]")).toHaveCount(0);
+  await expect(sheet(page).locator('input[name="university"]:checked')).toHaveCount(0);
+});
+
 /**
  * "A grade" (the founder, 28 Sep 2026): once the university is chosen, the grade is typed on a scale. Its own when
  * pinned, said in one line; before, the funder chooses it among four, and a letter is chosen rather than typed.
