@@ -871,6 +871,9 @@ export const GIFT_LIVE = {
     turnOn: "Turn on",
     turnOff: "Turn off",
     alertRefused: "Your phone is not letting Viky tell you. Turn notifications on for Viky in your phone's settings.",
+    /** Beside a first proof held for review (the founder, 29 Sep 2026): the answer is what the person is waiting for. */
+    reviewAlert: "Get a message when it is checked.",
+    reviewAlertOn: "Viky will tell you when it is checked.",
     alertInstall: "Add Viky to your Home Screen first, then open this page from there.",
   },
   /** Something granted once, waiting for the proof that it was. */
@@ -1194,6 +1197,9 @@ export const MORNING = {
     reached: (amount: string) => `You reached it. ${amount} is yours.`,
     expiredTo: (amount: string, funder: string) => `The time is up. ${amount} went back to ${funder}.`,
     expired: (amount: string) => `The time is up. ${amount} went back.`,
+    /** A first proof's review, decided (the founder, 29 Sep 2026): the answer the person was waiting for. */
+    reviewRefused: "Your page was checked: it does not show what this gift is for. Open the gift to see why.",
+    reviewNotYet: "Your page was checked and it works. The result is not there yet: show it again once it is.",
   },
   funder: {
     /** "Léa did yesterday's lesson.": the second half is the register's, so no sentence here names a source. */
@@ -1204,6 +1210,10 @@ export const MORNING = {
     reachedNamed: (name: string, amount: string) => `${name} reached it. ${amount} is theirs.`,
     reached: (amount: string) => `It is reached. ${amount} is theirs.`,
     expired: (amount: string) => `The time is up. ${amount} came back to you.`,
+    reviewRefusedNamed: (name: string) => `${name}'s page was checked: it does not show what the gift is for.`,
+    reviewRefused: "The page shown was checked: it does not show what the gift is for.",
+    reviewNotYetNamed: (name: string) => `${name}'s page was checked and it works. The result is not there yet.`,
+    reviewNotYet: "The page shown was checked and it works. The result is not there yet.",
   },
 } as const;
 
