@@ -117,3 +117,10 @@ test("the licences of what the worker calls are said beside MIT", () => {
   const manifest = JSON.parse(readFileSync("package.json", "utf8")) as { dependencies: Record<string, string> };
   assert.ok(manifest.dependencies["@reclaimprotocol/zk-fetch"], "a direct dependency");
 });
+
+test("the Foundry version named is the one the CI installs, and nothing is said of phones nobody recorded", () => {
+  const pinned = /foundry-toolchain@v1\s+with:\s+version: v([0-9.]+)/.exec(readFileSync(".github/workflows/ci.yml", "utf8"));
+  assert.ok(pinned, "the CI pins a Foundry version");
+  assert.ok(README.includes(`Foundry ${pinned[1]} with \`network = "monad"\``), `the README names Foundry ${pinned[1]}`);
+  assert.doesNotMatch(README, /tried the product himself on real phones/);
+});

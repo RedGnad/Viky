@@ -42,7 +42,8 @@ Viky was built with an AI coding tool, Claude Code (Anthropic). It wrote most of
 documentation in this repository from the author's written briefs, and it ran the checks before each merge: types,
 lint, the policy tests, the build and the browser tests. The author directed all of it: what the product is, how it
 looks, what every screen says, and every decision that touches money. Nothing was deployed to mainnet and no real
-payment was made without his explicit decision, and he tried the product himself on real phones.
+payment was made without his explicit decision. Two people from outside the project have each opened a gift, one
+of them on an iPhone, from Instagram.
 
 ### Pre-existing code
 
@@ -166,7 +167,7 @@ and the contract moves the money: to the recipient for what is verified, back to
   the text that was signed, the signature and the key's public half, with the gift, and checks them again at every
   reading that could move money (`src/consent-guard.ts`): no yes, or a stop, and nothing is read.
 - Asset: AUSD on Monad mainnet.
-- Contracts: Foundry 1.8 with `network = "monad"`.
+- Contracts: Foundry 1.8.1 with `network = "monad"`.
 - Tests: `node:test` through `tsx` for TypeScript, `forge test --network monad` for Solidity, Playwright for the
   screens.
 
