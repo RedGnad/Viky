@@ -691,7 +691,6 @@ export const FUND = {
     copy: "Copy the link",
     copied: "Copied",
     share: "Share",
-    shareText: (recipient: string) => (recipient.trim() ? `${recipient}, this is for you.` : "This is for you."),
     copyRefused: "Your browser would not let us copy it. Press and hold the link above, then choose Copy.",
     onlyThem: (recipient: string) => `Whoever opens this link takes the gift, so send it only to ${onlyTo(recipient)}.`,
     /** Because the link is lost the moment this tab closes, and only the gift's page can make another (gift 1000001). */
@@ -803,7 +802,6 @@ export const GIFT_PAGE = {
   takenBackLink: "The link no longer opens it, and nothing is left in the gift.",
   takeBackFailed: "That did not go through, and nothing was changed. The gift is where it was.",
   shareLink: "Share",
-  shareLinkText: (recipient: string | null) => (recipient ? `${recipient}, this is for you.` : "This is for you."),
   copyRefused: "Your browser would not let us copy it. Press and hold the code, then choose Copy.",
   validUntil: (moment: string) => `Valid until ${moment} your time. After that, ask for a new one here.`,
   expired: "This code has expired.",
@@ -1265,6 +1263,8 @@ export const LED_AMOUNT = {
 export const LINK_PREVIEW = {
   named: (funder: string, amount: string) => `${funder} put ${amount} in your name`,
   someone: (amount: string) => `Someone put ${amount} in your name`,
+  /** The words a funder who gave no name shares the link with: the amount, in their own currency. */
+  unnamedShare: (amount: string) => `This is for you: ${amount} in your name`,
   /** A converted amount in the title: the gift is held in dollars, so the funder's currency is never exact. */
   about: (figure: string) => `about ${figure}`,
   unknown: "A gift on Viky",
@@ -1281,6 +1281,9 @@ export const LINK_PREVIEW = {
  * it. A name appears only when the gift carries one, and no sentence here names a source: the word for what was done
  * comes from the register (src/conditions.ts).
  */
+/** An amount that opens a sentence: "About €3.05 is yours." where it is a conversion, the dollars as they are. */
+const opening = (amount: string) => amount.charAt(0).toUpperCase() + amount.slice(1);
+
 export const MORNING = {
   /** The notification's own title, above the sentence. Never a name: a lock screen shows it to whoever is looking. */
   title: "Viky",
@@ -1293,25 +1296,25 @@ export const MORNING = {
   /** iPhone outside the Home Screen: Safari has no push there, so installing comes first (webkit.org, 16 Feb 2023). */
   installFirst: "Add Viky to your Home Screen first. Then Viky can tell you each morning.",
   recipient: {
-    earned: (amount: string) => `Yesterday counted. ${amount} is yours.`,
+    earned: (amount: string) => `Yesterday counted. ${opening(amount)} is yours.`,
     returnedTo: (funder: string) => `Yesterday went back to ${funder}. Today still counts.`,
     returned: "Yesterday went back. Today still counts.",
-    reached: (amount: string) => `You reached it. ${amount} is yours.`,
-    expiredTo: (amount: string, funder: string) => `The time is up. ${amount} went back to ${funder}.`,
-    expired: (amount: string) => `The time is up. ${amount} went back.`,
+    reached: (amount: string) => `You reached it. ${opening(amount)} is yours.`,
+    expiredTo: (amount: string, funder: string) => `The time is up. ${opening(amount)} went back to ${funder}.`,
+    expired: (amount: string) => `The time is up. ${opening(amount)} went back.`,
     /** A first proof's review, decided (the founder, 29 Sep 2026): the answer the person was waiting for. */
     reviewRefused: "Your page was checked: it does not show what this gift is for. Open the gift to see why.",
     reviewNotYet: "Your page was checked and it works. The result is not there yet: show it again once it is.",
   },
   funder: {
     /** "Léa did yesterday's lesson.": the second half is the register's, so no sentence here names a source. */
-    didIt: (name: string, yesterday: string, amount: string) => `${name} did ${yesterday}. ${amount} is theirs.`,
-    countedNamed: (name: string, amount: string) => `${name} counted yesterday. ${amount} is theirs.`,
-    counted: (amount: string) => `Yesterday counted. ${amount} is theirs.`,
+    didIt: (name: string, yesterday: string, amount: string) => `${name} did ${yesterday}. ${opening(amount)} is theirs.`,
+    countedNamed: (name: string, amount: string) => `${name} counted yesterday. ${opening(amount)} is theirs.`,
+    counted: (amount: string) => `Yesterday counted. ${opening(amount)} is theirs.`,
     returned: (amount: string) => `Yesterday came back to you: ${amount}.`,
-    reachedNamed: (name: string, amount: string) => `${name} reached it. ${amount} is theirs.`,
-    reached: (amount: string) => `It is reached. ${amount} is theirs.`,
-    expired: (amount: string) => `The time is up. ${amount} came back to you.`,
+    reachedNamed: (name: string, amount: string) => `${name} reached it. ${opening(amount)} is theirs.`,
+    reached: (amount: string) => `It is reached. ${opening(amount)} is theirs.`,
+    expired: (amount: string) => `The time is up. ${opening(amount)} came back to you.`,
     reviewRefusedNamed: (name: string) => `${name}'s page was checked: it does not show what the gift is for.`,
     reviewRefused: "The page shown was checked: it does not show what the gift is for.",
     reviewNotYetNamed: (name: string) => `${name}'s page was checked and it works. The result is not there yet.`,

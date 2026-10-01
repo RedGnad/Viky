@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { aboutInDisplayCurrency, isDisplayCurrency, ledAmount, proposedDisplayCurrency, rateDateInWords, regionOf, SHOWN_IN_DOLLARS, whenInWords } from "../src/display-currency";
+import { aboutInDisplayCurrency, currencyOfCountry, isDisplayCurrency, ledAmount, proposedCurrency, proposedDisplayCurrency, rateDateInWords, regionOf, SHOWN_IN_DOLLARS, whenInWords } from "../src/display-currency";
 import { parseEcbRates } from "../src/rates";
 
 /**
@@ -24,15 +24,32 @@ test("the device gives a language tag, and only a tag with a region proposes any
   assert.equal(regionOf("zh-Hans-CN"), "CN", "a script subtag is skipped");
 });
 
-test("France reads euros, Senegal and Ivory Coast read CFA francs, everybody else reads dollars", () => {
+test("a place reads its own currency where Viky could offer it, and dollars everywhere else", () => {
   assert.equal(proposedDisplayCurrency("fr-FR"), "EUR");
   assert.equal(proposedDisplayCurrency("bg-BG"), "EUR", "Bulgaria, since 1 January 2026");
   assert.equal(proposedDisplayCurrency("fr-SN"), "XOF");
   assert.equal(proposedDisplayCurrency("fr-CI"), "XOF");
+  assert.equal(proposedDisplayCurrency("fr-CM"), "XAF", "the Central African franc");
   assert.equal(proposedDisplayCurrency("en-US"), "USD");
-  assert.equal(proposedDisplayCurrency("en-GB"), "USD", "the device proposes one of the three; the pound is chosen from the list (D152)");
+  // Every currency offered is proposed where it is the place's own (the founder, 1 Oct 2026); it was three until then.
+  assert.equal(proposedDisplayCurrency("en-GB"), "GBP");
+  assert.equal(proposedDisplayCurrency("ja-JP"), "JPY");
+  assert.equal(proposedDisplayCurrency("pt-BR"), "BRL");
+  assert.equal(proposedDisplayCurrency("de-CH"), "CHF");
   assert.equal(proposedDisplayCurrency("fr"), "USD", "no region, no guess");
   assert.equal(proposedDisplayCurrency(undefined), "USD");
+  // Only where it is offered today: a place whose currency no rail pays in reads dollars.
+  assert.equal(proposedDisplayCurrency("en-GB", (code) => code !== "GBP"), "USD");
+  assert.equal(proposedDisplayCurrency("ar-MA"), "USD", "the dirham has no rate in the file");
+  assert.equal(proposedDisplayCurrency("he-IL"), "USD", "the shekel is not offered (22 Sep 2026)");
+  // The country of each currency offered in production on 1 Oct 2026 has a place that proposes it.
+  const offered = ["AUD", "BRL", "GBP", "CAD", "XAF", "CZK", "DKK", "EUR", "HKD", "HUF", "ISK", "INR", "IDR", "JPY", "MYR", "MXN", "NZD", "NOK", "PHP", "PLN", "RON", "SGD", "ZAR", "KRW", "SEK", "CHF", "THB", "TRY", "USD", "XOF"];
+  const places = ["AU", "BR", "GB", "CA", "CM", "CZ", "DK", "FR", "HK", "HU", "IS", "IN", "ID", "JP", "MY", "MX", "NZ", "NO", "PH", "PL", "RO", "SG", "ZA", "KR", "SE", "CH", "TH", "TR", "US", "SN"];
+  assert.deepEqual(places.map((place) => currencyOfCountry(place)), offered);
+  assert.equal(currencyOfCountry("fr"), "EUR", "in either case");
+  assert.equal(currencyOfCountry("ZZ"), undefined);
+  assert.deepEqual(proposedCurrency({ country: "FR", language: "en-US" }), { currency: "EUR", decided: true }, "the connection before the language");
+  assert.deepEqual(proposedCurrency({ country: null, language: "fr" }), { currency: "USD", decided: false });
   // Any currency a rate and a rail agree on may be read in since D152, so what is refused is what is not one.
   assert.ok(isDisplayCurrency("EUR") && isDisplayCurrency("XOF") && isDisplayCurrency("USD") && isDisplayCurrency("GBP"));
   assert.equal(isDisplayCurrency("XXXX"), false);

@@ -59,7 +59,7 @@ export default function PrivacyPage() {
             <strong>Every visit:</strong> a session cookie (__Host-viky-session, 12 hours, signed, holds your account identifier) and a request counter keyed by the IP of your connection, held in memory for a few minutes to slow down abuse. Visits are counted anonymously, with no cookie, by Vercel, the service that hosts Viky: the page opened, never with the key of a gift&apos;s link nor a gift&apos;s number, the site you came from, your country and region, and the kind of device and browser. Vercel tells one visitor from another by a fingerprint of the request, which it discards after 24 hours. No advertising, no tracking cookies.
           </li>
           <li>
-            <strong>On your device:</strong> the technical id of your passkey, so the next sign-in can use it directly.
+            <strong>On your device:</strong> the technical id of your passkey, so the next sign-in can use it directly. And the currency you read money in (a cookie, viky.currency, one year): it is proposed, never asked, from the country your connection comes from, and from your device&apos;s language where the connection says nothing. When you make an account that currency is kept with it, so what Viky tells you outside the app speaks it too, and a gift keeps the currency its giver was reading in, for its link. You can change it wherever an amount is shown.
           </li>
         </ul>
       </section>

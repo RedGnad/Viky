@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { keepFunderCurrency } from "@/src/gift-store";
+import { readingCurrency } from "@/src/reader-money";
 import { isSubjectKey, keyedSubject } from "@/src/subject-key";
 import { getAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
@@ -185,6 +187,9 @@ export async function POST(request: Request) {
       }
     }
     const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin;
+    // The gift keeps the currency its funder is reading in now, for its link's title and picture. Never a reason to
+    // fail a gift that is made: without it the link speaks the currency the account reads in, as before.
+    await readingCurrency(auth.account).then((currency) => keepFunderCurrency(created.giftId, auth.account, currency)).catch(() => undefined);
     return NextResponse.json({ giftId: created.giftId, claimUrl: `${origin}/g/${created.giftId}?t=${created.claimToken}`, funded: true }, { headers: NO_STORE });
   } catch (error) {
     return milestoneErrorResponse(error, isOperator(account));

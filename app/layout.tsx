@@ -184,7 +184,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <Pressed />
           <AccountProvider initialAccount={signedIn}>
             <DoorProvider userAgent={userAgent} origin={origin}>
-            <MoneyStartProvider start={{ currency: money.currency, decided: money.decided, rates: money.rates, card: keptCard }}>
+            <MoneyStartProvider start={{ currency: money.currency, decided: money.decided, proposed: money.proposed, rates: money.rates, card: keptCard }}>
               <ReaderZoneProvider zone={zone}>
                 <SeenProvider initial={seen}>
                   <ServerMinuteProvider minute={minute}>{children}</ServerMinuteProvider>
