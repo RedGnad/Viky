@@ -4,13 +4,17 @@ import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { exitExchangeAddress, exitRouterAddress, heldAusd } from "@/src/exit-relay";
 import { issueExitTicket } from "@/src/exit-ticket";
-import { formatAusdExact } from "@/src/gift-reader";
+import { coinAt, exactly, isNative, USDC } from "@/src/coins";
+import { CONVERSION_RESERVE } from "@/src/funding-step";
+import { formatAusd } from "@/src/gift-reader";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { kuruQuote } from "@/src/kuru";
+import { afterTheReserve, cardSellLimits, dollarsForTheMinimum } from "@/src/mercuryo";
 import { AUSD_ADDRESS, USDC_ADDRESS } from "@/src/monad/chain";
 import { inFiat, payoutAsset, withinPayoutRange } from "@/src/ramp";
 import { WAYS_OUT } from "@/src/rails";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { relayerClients } from "@/src/relayer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,9 +70,8 @@ export async function POST(request: Request) {
     if (floor <= 0n) throw new GiftApiError("QUOTE_UNAVAILABLE", "No route for this right now. Try again shortly.", 503);
 
     // Whether this payout service would take a sale of this size today, asked of them, never remembered: they
-    // publish it in their own currency and it moves with the rate. Only one of the two publishes it somewhere
-    // we can read, so only that one is checked here; the other's own page refuses at the order, and its
-    // conditions are on the screen before anybody starts.
+    // publish it in their own currency and it moves with the rate. Each of the two publishes it somewhere we can
+    // read, so each is asked: the bank service below, the card service after it.
     let payout: { currency: string; worth: number; smallest: number; largest: number } | undefined;
     if (getAddress(way.coin) === getAddress(USDC_ADDRESS)) {
       const asset = await payoutAsset();
@@ -100,9 +103,35 @@ export async function POST(request: Request) {
       };
     }
 
-    const shown = formatAusdExact(floor);
+    // The card service buys the chain's own coin, and two things were missing here (the audit of 1 Oct 2026, D60).
+    // Its smallest sale: under it the sale is refused on its page, after the money has become a coin nothing else
+    // here takes, so it is refused now, in dollars. And the reserve: an account under it can send nothing (D53), so
+    // the first time it is kept out of what comes back, and the figure shown is what can really be sent.
+    const coin = coinAt(way.coin) ?? USDC;
+    let sendable = floor;
+    let kept: string | undefined;
+    if (isNative(coin)) {
+      const limits = await cardSellLimits();
+      const holding = await relayerClients().publicClient.getBalance({ address: account });
+      const reserve = afterTheReserve(floor, holding, CONVERSION_RESERVE);
+      if (reserve.sendable < limits.coinMin) {
+        const least = dollarsForTheMinimum({ amount, floor, kept: reserve.kept, coinMin: limits.coinMin });
+        throw new GiftApiError(
+          "BELOW_PAYOUT_MINIMUM",
+          `${way.name} pays a card from ${limits.fiatMin.toFixed(2)} ${limits.currency}, about ${formatAusd(least)} today. Send at least that.`,
+          409,
+        );
+      }
+      sendable = reserve.sendable;
+      // What stays, said as the dollars it was a moment ago at this quote's own rate, never as a quantity of a coin.
+      if (reserve.kept > 0n) kept = formatAusd((reserve.kept * amount) / floor);
+    }
+
+    // Written with the coin's own decimals: the dollar formatter on a figure with eighteen of them printed a number
+    // a million million times too large (the audit of 1 Oct 2026).
+    const shown = exactly(sendable, coin);
     return NextResponse.json(
-      { shown, sells: way.sells, name: way.name, payout, ticket: issueExitTicket({ account, amount, tokenOut: way.coin, floor, shown }) },
+      { shown, sells: way.sells, name: way.name, payout, kept, ticket: issueExitTicket({ account, amount, tokenOut: way.coin, floor, shown }) },
       { headers: NO_STORE },
     );
   } catch (error) {

@@ -9,7 +9,7 @@ import { wayInFor } from "../src/gift-amount";
 import { cardOffered, cardReach, payerCountry } from "../src/card-rail";
 import { configurePreferencesStore, saveCountry } from "../src/preferences-store";
 import type { SqlExecutor } from "../src/proof-session-store";
-import { MERCURYO_CLOSED_IN, RAMP_CLOSED_IN, WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAYS_IN } from "../src/rails";
+import { MERCURYO_CLOSED_IN, RAMP_CLOSED_IN, RAMP_NO_GIFT_COIN_IN, WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAYS_IN } from "../src/rails";
 import { PAY } from "../src/sentences";
 
 /**
@@ -62,7 +62,12 @@ test("each partner follows its own list: Ramp's shuts Senegal and Ivory Coast, M
   assert.equal(RAMP_CLOSED_IN.length, 132, "Ramp's page, read 29 Sep 2026");
   for (const country of ["sn", "ci", "cm", "ma", "ng", "ke", "jp", "ua"]) assert.ok(RAMP_CLOSED_IN.includes(country), `Ramp: ${country}`);
   for (const country of ["sn", "ci", "cm", "ng", "ke", "jp", "ua", "fr"]) assert.ok(!MERCURYO_CLOSED_IN.includes(country), `Mercuryo: ${country}`);
-  assert.equal(WAY_IN_GIFT_COIN.closedIn, RAMP_CLOSED_IN, "never the other partner's list");
+  // Ramp's two lists and nothing of the other partner's: where it serves nobody, and where it does not sell what a
+  // gift holds (twenty-six countries of the European Economic Area, its own answer of 1 Oct 2026).
+  assert.deepEqual(WAY_IN_GIFT_COIN.closedIn, [...RAMP_CLOSED_IN, ...RAMP_NO_GIFT_COIN_IN], "never the other partner's list");
+  assert.equal(RAMP_NO_GIFT_COIN_IN.length, 26);
+  for (const country of ["de", "es", "be", "pt", "hu", "is"]) assert.ok(RAMP_NO_GIFT_COIN_IN.includes(country), country);
+  for (const country of ["fr", "ie", "it", "nl", "gb", "us", "ch"]) assert.ok(!WAY_IN_GIFT_COIN.closedIn.includes(country), `${country} is left to the founder's own purchase`);
   assert.ok(WAY_IN_CHAIN_COIN.closedIn.includes("gb"), "Mercuryo does not sell the chain's coin in the United Kingdom (D72)");
   // The four countries under a US embargo need no rule of their own: both lists name them.
   for (const country of ["cu", "ir", "kp", "sy"]) for (const way of WAYS_IN) assert.ok(way.closedIn.includes(country), `${way.name}: ${country}`);
@@ -81,6 +86,28 @@ test("the first partner that serves the payer's country is offered, and none mea
   assert.equal(cardReach("fr", { Ramp: "paused" }).Ramp, "paused", "a live pause still counts where the list is silent");
   assert.equal(payerCountry({ account: "fr", connection: "IR" }), "fr", "the account's own country first");
   assert.equal(payerCountry({ account: null, connection: "SN" }), "sn", "then the connection's");
+});
+
+test("in the countries where Ramp does not sell what a gift holds, the sheet goes through Mercuryo, and says why", async () => {
+  // Germany: Ramp serves it and does not sell the coin there, Mercuryo does: the card stays, through the second way.
+  assert.equal(cardReach("de").Ramp, "does-not");
+  const germany = wayInFor(30_000_000n, WAYS_IN, 1.1355, cardReach("de"));
+  assert.equal(germany.way, WAY_IN_CHAIN_COIN);
+  assert.deepEqual(germany.insteadOf, { way: WAY_IN_GIFT_COIN, because: "country" });
+  assert.equal(PAY.instead.notSold("Ramp", germany.way.name), "Ramp does not sell what a gift holds in your country, so this goes through Mercuryo.");
+  // France is left as it was until a real purchase settles it.
+  assert.equal(wayInFor(30_000_000n, WAYS_IN, 1.1355, cardReach("fr")).way, WAY_IN_GIFT_COIN);
+  // Hungary and Iceland are on Mercuryo's own list too: no card partner is left, and the true sentence says so.
+  for (const country of ["hu", "is"]) {
+    assert.ok(MERCURYO_CLOSED_IN.includes(country));
+    assert.equal(cardOffered(cardReach(country)), false, country);
+  }
+  assert.deepEqual((await answerFor({ "x-vercel-ip-country": "HU" })).card, { offered: false, country: "hu" });
+  assert.deepEqual((await answerFor({ "x-vercel-ip-country": "DE" })).card, { offered: true, country: "de" });
+  assert.equal(
+    PAY.cardNotOffered("Hungary"),
+    "Card payment isn't available in Hungary. You can pay with money already in your Viky account, and anyone who uses Viky can send money to yours.",
+  );
 });
 
 test("the route answers for the account's country when it has one, and for the connection's otherwise", async () => {

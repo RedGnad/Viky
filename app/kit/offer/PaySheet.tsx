@@ -18,7 +18,7 @@ import { ExactLine, LedFigure } from "../LedAmount";
 import { savePendingGift } from "@/src/pending-gift";
 import { rateDateInWords, spokenAmount } from "@/src/display-currency";
 import type { RailReach } from "@/src/rail-country";
-import { feeSentence, wayInFillsIn, wayInPage, waysIn, WAY_IN_USDC } from "@/src/rails";
+import { feeSentence, RAMP_NO_GIFT_COIN_IN, wayInFillsIn, wayInPage, waysIn, WAY_IN_GIFT_COIN, WAY_IN_USDC } from "@/src/rails";
 import { CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
@@ -64,8 +64,11 @@ const thisMinute = () => Math.floor(Date.now() / 60_000) * 60_000;
 const noClock = () => 0;
 
 /** Which way refused, why, and which one stands instead, in our words. */
-function insteadSentence(offer: WayInOffer): string {
+function insteadSentence(offer: WayInOffer, country: string | null): string {
   const first = offer.insteadOf!.way;
+  // A service that serves the country and does not sell there what a gift holds is said as that, never as a country
+  // it does not serve (the audit of 1 Oct 2026: Ramp in twenty-six countries of the European Economic Area).
+  if (offer.insteadOf!.because === "country" && first === WAY_IN_GIFT_COIN && country && RAMP_NO_GIFT_COIN_IN.includes(country.toLowerCase())) return W.instead.notSold(first.name, offer.way.name);
   if (offer.insteadOf!.because === "country") return W.instead.country(first.name, offer.way.name);
   if (offer.insteadOf!.because === "paused") return W.instead.paused(first.name, offer.way.name);
   return W.instead.floor(first.name, first.smallestEur, offer.way.name);
@@ -274,9 +277,9 @@ export function PaySheet({
       {/* The rate, its source and why its day may be a Friday: one line, in full, rather than a label in a corner. */}
       {money.rates && byCard ? <p className={HELP}>{W.atTheRate(rateDateInWords(money.rates.date))}</p> : null}
       {marginRead ? <p className={HELP}>{W.chainMargin(marginRead)}</p> : null}
-      {offer.atFloor && byCard && euros ? <p className={HELP}>{W.floor(euros)}</p> : null}
+      {offer.atFloor && byCard && euros ? <p className={HELP}>{W.floor(way.smallestEur, euros)}</p> : null}
       {/* The first way refused this person, and the sheet says which, why and which this goes through instead (D239). */}
-      {offer.insteadOf && byCard ? <p className={HELP}>{insteadSentence(offer)}</p> : null}
+      {offer.insteadOf && byCard ? <p className={HELP}>{insteadSentence(offer, card?.country ?? null)}</p> : null}
       {/* What the partner's page will be, before it opens (D289), said only where it is true: the page arrives filled in. */}
       {/* What the partner's page will ask, just before it opens (D289, D294): filled in with Ramp's key, and without it
           what to choose there and where the code goes, with the code one press away once the account exists. */}

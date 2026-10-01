@@ -47,6 +47,21 @@ const RATE_MARGIN = 1.1;
  */
 export const DOLLAR_COIN_ALLOWANCE = 0.01;
 
+/**
+ * What the rail that sells the chain's coin keeps of a card payment, as it publishes it (`WAY_IN_CHAIN_COIN.fee`, 3.8 %).
+ * Written here as a figure because this file knows the rails by their type alone; a test holds the two together.
+ */
+export const CHAIN_RAIL_SHARE = 0.038;
+
+/**
+ * What is added to a payment on a rail that sells what a gift holds, so it does not land a little short: the larger of
+ * one euro and one part in a hundred (the audit of 1 Oct 2026). A payment of 50.80 dollars for a gift of 51.09 left the
+ * screen asking for 6 EUR more, under what that rail sells the coin for. What is not used stays in the account.
+ */
+export function shortfallMarginEur(euros: number): number {
+  return Math.max(1, euros / 100);
+}
+
 /** What a card payment is worth inside Viky, at the rate measured. An estimate, and named as one. */
 export function roughlyInDollars(euros: number): number {
   const coins = euros * COIN_PER_EURO - UNSPENDABLE_COINS;
@@ -125,10 +140,22 @@ export function eurosToBuy(shortfallUnits: bigint): number {
   return Math.max(SMALLEST_CARD_PAYMENT_EUR, eurosToCover(shortfallUnits));
 }
 
-/** The same figure before that rail's floor: what the gift needs of it, which decides whether it is offered (D125). */
-export function eurosToCover(shortfallUnits: bigint): number {
+/**
+ * The same figure before that rail's floor: what the gift needs of it, which decides whether it is offered (D125).
+ *
+ * With the day's rate, which the sheet already holds, the euros are the dollars at that rate once the rail has kept
+ * its share, the coin that cannot be spent added, then the tenth for the coin's own price (the audit of 1 Oct 2026).
+ * The model of 14 Sep 2026 alone gave 1.1507 dollars a euro after the rail's share; at the European Central Bank's
+ * rate of 30 Sep it was 1.0924, so the model asked about a twentieth too little and the tenth covered almost nothing:
+ * 29 EUR for a gift of 30 dollars, where 31 are needed. Without a rate the model stands, as it did.
+ */
+export function eurosToCover(shortfallUnits: bigint, usdPerEur?: number): number {
   if (shortfallUnits <= 0n) return 0;
   const dollars = Number(shortfallUnits) / 1_000_000;
+  if (usdPerEur !== undefined && usdPerEur > 0) {
+    const unspendable = UNSPENDABLE_COINS * DOLLARS_PER_COIN;
+    return Math.ceil(((dollars + unspendable) / (usdPerEur * (1 - CHAIN_RAIL_SHARE))) * RATE_MARGIN);
+  }
   const coins = dollars / DOLLARS_PER_COIN + UNSPENDABLE_COINS;
   return Math.ceil((coins / COIN_PER_EURO) * RATE_MARGIN);
 }
@@ -143,12 +170,14 @@ export function eurosToCover(shortfallUnits: bigint): number {
  */
 export function eurosNeededOn(shortfallUnits: bigint, way: WayIn, usdPerEur: number | undefined): number | undefined {
   if (shortfallUnits <= 0n) return 0;
-  if (way.arrives === "chain") return eurosToCover(shortfallUnits);
+  if (way.arrives === "chain") return eurosToCover(shortfallUnits, usdPerEur);
   if (!(usdPerEur !== undefined && usdPerEur > 0)) return undefined;
   const dollars = Number(shortfallUnits) / 1_000_000;
   // Another dollar coin is bought at that service's own rate and then changed: both are allowed for, so the gift is
-  // paid whole and what is left over stays in the account (the founder, 1 Oct 2026).
-  const euros = dollars / usdPerEur / (way.arrives === "usdc" ? 1 - DOLLAR_COIN_ALLOWANCE : 1);
+  // paid whole and what is left over stays in the account (the founder, 1 Oct 2026). What a gift holds is bought at the
+  // service's rate too, which is not the day's to the cent: a margin keeps the payment from landing a little short.
+  const atTheRate = dollars / usdPerEur;
+  const euros = way.arrives === "usdc" ? atTheRate / (1 - DOLLAR_COIN_ALLOWANCE) : atTheRate + shortfallMarginEur(atTheRate);
   // Their fee both ways round: the share is taken out of what is paid, so the amount grows by 1/(1 - share), after
   // the fixed part they take on every payment when they take one.
   const withShare = (euros + (way.fee.plus ?? 0)) / (1 - way.fee.percent / 100);
@@ -163,7 +192,8 @@ export function eurosNeededOn(shortfallUnits: bigint, way: WayIn, usdPerEur: num
 export function eurosToBuyOn(shortfallUnits: bigint, way: WayIn, usdPerEur: number | undefined): number | undefined {
   const needed = eurosNeededOn(shortfallUnits, way, usdPerEur);
   if (needed === undefined) return undefined;
-  return needed === 0 ? 0 : Math.max(way.smallestEur, needed);
+  // Whole euros, as the sheet says them: a floor that is not a whole number is paid at the next one.
+  return needed === 0 ? 0 : Math.ceil(Math.max(way.smallestEur, needed));
 }
 
 /** Why a way in refused this gift: its own answer about the country, its published floor, or its own asset list. */
@@ -216,5 +246,5 @@ export function wayInFor(
   if (next) return { way: next.way, euros: next.needed, atFloor: false, insteadOf };
   const lowest = priced.filter((entry) => entry.because === "floor").sort((left, right) => left.way.smallestEur - right.way.smallestEur)[0];
   if (!lowest) return { way: first.way, euros: first.needed, atFloor: false };
-  return { way: lowest.way, euros: lowest.way.smallestEur, atFloor: true, ...(lowest.way === first.way ? {} : { insteadOf }) };
+  return { way: lowest.way, euros: Math.ceil(lowest.way.smallestEur), atFloor: true, ...(lowest.way === first.way ? {} : { insteadOf }) };
 }

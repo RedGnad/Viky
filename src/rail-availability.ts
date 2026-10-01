@@ -1,5 +1,5 @@
 import { countryCode, type RailReach } from "./rail-country";
-import { swapperIntegratorId, WAY_IN_CHAIN_COIN, WAY_IN_EMBEDDED, WAY_IN_GIFT_COIN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "./rails";
+import { MERCURYO_CLOSED_IN, swapperIntegratorId, WAY_IN_CHAIN_COIN, WAY_IN_EMBEDDED, WAY_IN_GIFT_COIN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "./rails";
 
 /**
  * Whether a rail serves a country, asked of that rail at the moment it matters (R1). Server only.
@@ -50,6 +50,7 @@ const FAILURE_HELD_FOR_MS = 30 * 1_000;
 
 type Held<T> = { at: number; value: T };
 let rampCountries: Held<readonly string[] | null> | undefined;
+let rampMethods: Held<readonly PayoutMethod[] | null> | undefined;
 let cardRestricted: Held<readonly string[] | null> | undefined;
 let rampCurrencies: Held<readonly string[] | null> | undefined;
 let cardCurrencies: Held<readonly string[] | null> | undefined;
@@ -168,14 +169,56 @@ export async function cardRailRestricted(now = Date.now()): Promise<readonly str
   return value;
 }
 
-/** What each way out says about that country, read live, with "unknown" whenever nothing could be read. */
+/** One way the bank service pays, as it publishes it: its own name for the method, its currencies, its countries. */
+export type PayoutMethod = Readonly<{ name: string; currencies: readonly string[]; countries: readonly string[] }>;
+
+/** The bank service's payout methods, from its own list, or nothing when that list could not be read. */
+export async function euroRailMethods(now = Date.now()): Promise<readonly PayoutMethod[] | null> {
+  if (stillGood(rampMethods, now)) return rampMethods!.value;
+  const body = await readJson(RAMP_PAYOUT_METHODS);
+  const value = Array.isArray(body)
+    ? body.flatMap((one) => {
+        const method = one as { name?: unknown; currencies?: unknown; countries?: unknown };
+        if (typeof method.name !== "string" || !Array.isArray(method.currencies) || !Array.isArray(method.countries)) return [];
+        return [{ name: method.name, currencies: method.currencies.map((code) => String(code).toUpperCase()), countries: method.countries.map((code) => String(code).toLowerCase()) }];
+      })
+    : null;
+  rampMethods = { at: now, value: value && value.length > 0 ? value : null };
+  return rampMethods.value;
+}
+
+/**
+ * How the bank service pays in one country, by its own list (the audit of 1 Oct 2026: "a transfer in euros to your
+ * IBAN" was said to an account in the United States, which it pays by an American bank transfer in dollars). A method
+ * that pays a bank account comes before the card, since the card is called "Your bank" on the screen. Read 1 Oct 2026:
+ * SEPA in euros in 35 countries, `AMERICAN_BANK_TRANSFER` in dollars in the United States, PIX in Brazil, SPEI in
+ * Mexico, and a card in 119 countries.
+ */
+export function payoutMethodFor(country: string | null, methods: readonly PayoutMethod[] | null): Readonly<{ method: string; currency: string }> | null {
+  const asked = countryCode(country);
+  if (!asked || !methods) return null;
+  const offered = methods.filter((method) => method.countries.includes(asked));
+  const chosen = offered.find((method) => method.name !== "CARD") ?? offered[0];
+  if (!chosen || chosen.currencies.length === 0) return null;
+  // A method that pays in several currencies names none for one country: the euro when it is among them, else the first.
+  const currency = chosen.currencies.length === 1 ? chosen.currencies[0] : chosen.currencies.includes("EUR") ? "EUR" : chosen.currencies[0];
+  return { method: chosen.name, currency };
+}
+
+/**
+ * What each way out says about that country, read live, with "unknown" whenever nothing could be read.
+ *
+ * The card service's own list of countries it serves nobody in comes first, as it does for adding money (the audit of
+ * 1 Oct 2026): its currencies endpoint restricts selling in the United Kingdom alone, so a person in Mali was offered
+ * the card, had their money changed for it, and was refused on its page.
+ */
 export async function reachOfWaysOut(country: string | null): Promise<Readonly<Record<string, RailReach>>> {
   const asked = countryCode(country);
   if (!asked) return Object.fromEntries(WAYS_OUT.map((way) => [way.name, "unknown" as RailReach]));
   const [euro, restricted] = await Promise.all([euroRailCountries(), cardRailRestricted()]);
   const reach: Record<string, RailReach> = {};
   reach[WAY_OUT_EURO.name] = euro === null ? "unknown" : euro.includes(asked) ? "serves" : "does-not";
-  reach[WAY_OUT_CARD.name] = restricted === null ? "unknown" : restricted.includes(asked) ? "does-not" : "serves";
+  reach[WAY_OUT_CARD.name] = MERCURYO_CLOSED_IN.includes(asked) ? "does-not" : restricted === null ? "unknown" : restricted.includes(asked) ? "does-not" : "serves";
   for (const way of WAYS_OUT) reach[way.name] ??= "unknown";
   return reach;
 }

@@ -16,6 +16,11 @@ export type RailsWhere = Readonly<{
   waysIn: Readonly<Record<string, RailReach>>;
   /** Whether adding money by card is offered to this payer, and the country that decided it (src/card-rail.ts). */
   card?: Readonly<{ offered: boolean; country: string | null }>;
+  /**
+   * What the two ways out publish for that country today: the method and the currency the bank service pays by, and
+   * the card service's smallest sale. Each is absent when its service did not answer.
+   */
+  out?: Readonly<{ bank: Readonly<{ method: string; currency: string }> | null; cardSmallest: Readonly<{ amount: number; currency: string }> | null }>;
 }>;
 
 export function whereTheRailsServe(answered?: string | null): Promise<RailsWhere> {

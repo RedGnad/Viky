@@ -53,7 +53,6 @@ test("every sentence of the way out prints the amount it is given, and adds no s
   );
   assert.equal(CASH_OUT.sending(bank, "Ramp"), "Sending $9.99 to Ramp");
   assert.equal(CASH_OUT.ready(card), "Ready: about $3.24");
-  assert.equal(CASH_OUT.order(card, "Mercuryo"), "Order about $3.24 on Mercuryo");
   assert.equal(CASH_OUT.send(bank, "Ramp"), "Send $9.99 to Ramp");
   assert.equal(CASH_OUT.getReady(bank), "Get $9.99 ready");
   assert.equal(CASH_OUT.closedWhere(bank, "Ramp"), "You were at step 2 of 3: $9.99 is ready to send to Ramp.");

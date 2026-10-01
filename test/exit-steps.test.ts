@@ -146,12 +146,12 @@ test("the way out shows one accent surface at a time, on the action it is waitin
   // the account is part of that number, since the way out takes it first (D208).
   assert.match(screen, /const changeable = toTheCent\(ausd \+ giftsHold, AUSD\.decimals\);/);
   assert.match(screen, /const dollarsHeld = dollarsToTheCent\(ausd \+ giftsHold, held\(USDC\)\);/);
-  assert.match(screen, /netOfEverything\(changeable, way\.fee, money\.rates\)/);
+  assert.match(screen, /netOfEverything\(changeable, way\.fee, money\.rates, way === WAY_OUT_EURO \? \(bankPays\?\.currency \?\? "EUR"\) : undefined\)/);
   assert.doesNotMatch(screen, /netOfEverything\(ausd,/);
   // The card in Viky's words (D270): its name, its nature, its two lines, and no source on it; the sources are behind
   // the fold. The partner is named in the card's own sentence before the person goes to it, and never "crypto".
   assert.match(screen, /<h3 className=\{CARD_TITLE\}>\{words\.name\}<\/h3>/);
-  assert.match(screen, /<p className=\{BODY\}>\{words\.body\}<\/p>/);
+  assert.match(screen, /<p className=\{BODY\}>\{use === "bank" && bankPays \? U\.bankBy\(bankPays\.method, bankPays\.currency\) : words\.body\}<\/p>/);
   const cards = screen.slice(screen.indexOf("{uses.map((use, index) => {"), screen.indexOf("<details className={HELP}>"));
   assert.doesNotMatch(cards, /sourceLine|feeSentence|way\.conditions|way\.line/, "the card that decides carries no source, no fee sentence, no list, no partner's line");
   assert.match(USE_MONEY.bank.body, /Our partner Ramp asks for your ID, once\./);

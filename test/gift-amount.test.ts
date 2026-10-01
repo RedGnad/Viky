@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN } from "../src/rails.js";
-import { arrivesInDollars, eurosNeededOn, eurosToBuy, eurosToBuyOn, roughlyInDollars, SMALLEST_CARD_PAYMENT_EUR, SUGGESTED_GIFT_DOLLARS } from "../src/gift-amount.js";
+import { arrivesInDollars, CHAIN_RAIL_SHARE, eurosNeededOn, eurosToBuy, eurosToBuyOn, eurosToCover, roughlyInDollars, shortfallMarginEur, SMALLEST_CARD_PAYMENT_EUR, SUGGESTED_GIFT_DOLLARS } from "../src/gift-amount.js";
 import { feeSentence, RAIL_CLOSED_IN, WAY_IN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT } from "../src/rails.js";
 
 /**
@@ -106,16 +106,20 @@ test("the two ways out do not take the same coin", () => {
  * The second way in (D101): a rail that sells what a gift already holds. Nothing is swapped after it, so no reserve is
  * left behind and no second price applies; what a person pays, less that rail's own fee, becomes dollars at the day's
  * euro rate. Every figure below is theirs, read on 18 Sep 2026 at `https://api.ramp.network/api/host-api/assets`:
- * a 6 EUR floor, 0.99 % to 3.9 %, and a 2.49 EUR minimum fee.
+ * 0.99 % to 3.9 %, and a 2.49 EUR minimum fee; and the coin's own floor, 6.25 EUR, read 1 Oct 2026. Since that day a
+ * margin of the larger of one euro and one part in a hundred is added, so a payment does not land a little short.
  */
 test("the rail that sells what a gift holds costs its fee and its floor, and nothing else", () => {
   const rate = 1.1537; // dollars per euro, the ECB's of 16 Sep 2026, as the rates route answers it
   // A one dollar gift: the fee decides, not the amount, so the floor is what is paid.
-  assert.equal(eurosToBuyOn(1_000_000n, WAY_IN_GIFT_COIN, rate), 6);
-  // Ten dollars: 8.67 EUR of money plus their 2.49 minimum, rounded up to the whole euro.
-  assert.equal(eurosToBuyOn(10_000_000n, WAY_IN_GIFT_COIN, rate), 12);
+  assert.equal(eurosToBuyOn(1_000_000n, WAY_IN_GIFT_COIN, rate), 7, "the floor of 6.25 EUR, paid in whole euros");
+  // Ten dollars: 8.67 EUR of money, one euro of margin and their 2.49 minimum, rounded up to the whole euro.
+  assert.equal(eurosToBuyOn(10_000_000n, WAY_IN_GIFT_COIN, rate), 13);
   // A hundred: their 3.9 % share is larger than the minimum by then, so the share is what applies.
-  assert.equal(eurosToBuyOn(100_000_000n, WAY_IN_GIFT_COIN, rate), 91);
+  assert.equal(eurosToBuyOn(100_000_000n, WAY_IN_GIFT_COIN, rate), 92);
+  // The margin itself: one euro, until one part in a hundred is more.
+  assert.equal(shortfallMarginEur(26), 1);
+  assert.equal(shortfallMarginEur(250), 2.5);
   assert.equal(eurosToBuyOn(0n, WAY_IN_GIFT_COIN, rate), 0, "nothing short, nothing to buy");
   // No rate, no figure: nothing is guessed, and the screen says what it can instead.
   assert.equal(eurosToBuyOn(10_000_000n, WAY_IN_GIFT_COIN, undefined), undefined);
@@ -126,8 +130,8 @@ test("the rail that sells what a gift holds costs its fee and its floor, and not
   assert.equal(arrivesInDollars(2, WAY_IN_GIFT_COIN, rate), 0, "under their minimum fee nothing arrives at all");
 
   // What it needs before its floor, which is what decides whether it is offered at all (D125).
-  assert.equal(eurosNeededOn(1_000_000n, WAY_IN_GIFT_COIN, rate), 4);
-  assert.equal(eurosNeededOn(10_000_000n, WAY_IN_GIFT_COIN, rate), 12);
+  assert.equal(eurosNeededOn(1_000_000n, WAY_IN_GIFT_COIN, rate), 5);
+  assert.equal(eurosNeededOn(10_000_000n, WAY_IN_GIFT_COIN, rate), 13);
   assert.equal(eurosNeededOn(0n, WAY_IN_GIFT_COIN, rate), 0);
   assert.equal(eurosNeededOn(10_000_000n, WAY_IN_GIFT_COIN, undefined), undefined);
 
@@ -137,6 +141,11 @@ test("the rail that sells what a gift holds costs its fee and its floor, and not
   assert.equal(arrivesInDollars(25, WAY_IN_CHAIN_COIN, undefined), 28.51);
   assert.equal(WAY_IN_CHAIN_COIN.smallestEur, SMALLEST_CARD_PAYMENT_EUR);
 
+  // The chain rail reads the day's rate when the sheet has one (the audit of 1 Oct 2026): at the European Central
+  // Bank's 1.1355 a gift of thirty dollars takes 31 EUR, where the measurement of 14 Sep alone said 29.
+  assert.equal(eurosToCover(30_000_000n, 1.1355), 31);
+  assert.equal(eurosToCover(30_000_000n), 29, "with no rate, the model stands as it did");
+  assert.equal(CHAIN_RAIL_SHARE * 100, WAY_IN_CHAIN_COIN.fee.percent, "the share this file counts with is the one that rail publishes");
   // What a gift costs to fund, the two rails side by side, at the same gift: the reason the second one exists.
   assert.ok(eurosToBuyOn(1_000_000n, WAY_IN_GIFT_COIN, rate)! < eurosToBuyOn(1_000_000n, WAY_IN_CHAIN_COIN, rate)!);
 });

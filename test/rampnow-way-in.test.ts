@@ -110,10 +110,11 @@ test("the sheet says what the person meets, in the founder's words, and the term
   const said = PAY.partnerLocked("Rampnow");
   assert.equal(
     said,
-    "Our partner Rampnow takes your card. The first time, it asks who you are: your details, a code by text, and your ID. Your account and the amount are already filled in. Come back here to confirm the last step.",
+    "Our partner Rampnow takes your card. The first time, it asks who you are: your details, a code by text, and your ID. Your account and the amount are already filled in. Come back here afterwards: your gift starts by itself.",
   );
   assert.deepEqual(scanSource("sentence", said), [], "through the consumer words check");
-  assert.equal(FUND.waiting.thenConfirmed, "When it lands, you confirm one step that turns it into what the gift holds.");
+  // The founder's words of 1 Oct 2026, once the conversion needs no gesture (src/usdc-router.ts).
+  assert.equal(FUND.waiting.thenConfirmed, "When it lands, Viky turns it into what the gift holds and starts your gift.");
   assert.equal(`${PAY.cardTerms.before}${PAY.cardTerms.link(WAY_IN_USDC.name)}${PAY.cardTerms.after}`, "By paying by card, you confirm you are 18 or older and accept Rampnow's terms.");
   assert.equal(WAY_IN_USDC.terms, "https://rampnow.io/terms-and-conditions");
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");

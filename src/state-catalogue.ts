@@ -339,7 +339,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       {
         name: "Step 1, the review before getting it ready",
         when: "the price answered",
-        says: ["You will get at least", "Nothing leaves your account yet.", "This price holds for 4 minutes.", "Get "],
+        says: ["You will get at least", "Nothing leaves your account yet.", "This amount holds for 4 minutes.", "Get "],
       },
       {
         name: "Ready, with steps 2 and 3",
@@ -367,8 +367,8 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
         says: [
           "Two decimals at most, like 9.99.",
           "That is more than your $",
-          "The price changed before you confirmed. Nothing was taken.",
-          "The price kept changing and Viky stopped after three tries. Nothing was taken. Try again in a minute.",
+          "The amount changed before you confirmed. Nothing was taken.",
+          "The amount kept changing and Viky stopped after three tries. Nothing was taken. Try again in a minute.",
           "Viky cannot pay out yet. Nothing was taken.",
           "It starts with 0x and is 42 characters long.",
         ],

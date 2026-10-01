@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { getAddress, isAddress, type Hex } from "viem";
 import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
@@ -11,7 +11,7 @@ import { sendOwnMoney, withdrawEarned } from "@/src/client/gift";
 import { totalEarned, type EarnedInGift } from "@/src/earned-shape";
 import { readCoinBalance, sendMon } from "@/src/client/onchain";
 import { isVikyContract } from "@/src/viky-contracts";
-import { AUSD, coinAt, COINS, exactly, isNative, USDC, type Coin } from "@/src/coins";
+import { AUSD, coinAt, COINS, isNative, USDC, type Coin } from "@/src/coins";
 import { rateDateInWords, whenInWords } from "@/src/display-currency";
 import { exitAmount, type ExitAmount } from "@/src/exit-amount";
 import { dollarsToChange, dollarsToTheCent, feeApplied, floorToOrder, netOfEverything, readyFor, toTheCent, twoDecimalsDown, type Ready } from "@/src/exit-steps";
@@ -19,7 +19,7 @@ import { formatAusd } from "@/src/gift-reader";
 import { ExactLine, LedFigure } from "../kit/LedAmount";
 import { whereTheRailsServe, type RailsWhere } from "@/src/client/rails";
 import { countryInWords } from "@/src/rail-country";
-import { feeSentence, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "@/src/rails";
+import { feeSentence, RATE_SOURCE, WAY_OUT_CARD, WAY_OUT_EURO, wayOutFillsIn, wayOutPage, WAYS_OUT, type WayOut } from "@/src/rails";
 import { CASH_OUT as W, USE_MONEY as U, WHERE_YOU_LIVE as L } from "@/src/sentences";
 import { inTheSun, orderUses, usesFor, usesSentence } from "@/src/use-money";
 import { useAccountCountry } from "@/src/client/account-country";
@@ -52,11 +52,11 @@ type Stage = "base" | "phone" | "giftcard" | "gathering" | "amount" | "review" |
 /** Where a refusal is shown: under the element that caused it, never in a box at the bottom of the page. */
 type Where = "gather" | "amount" | "review" | "code" | "send" | "own";
 
-type Sent = Readonly<{ amount: string; exact?: string; name: string; when: string; reference: string; cost?: string }>;
+type Sent = Readonly<{ amount: string; exact?: string; name: string; when: string; reference: string; cost?: Readonly<{ dollars: string; underACent: boolean }> }>;
 
-/** A figure in the currency a payout service pays in, the euro with its sign and anything else with its code. */
+/** A figure in the currency a payout service pays in: the euro and the dollar with their signs, anything else with its code. */
 function figureIn(amount: number, currency: string): string {
-  return currency === "EUR" ? `€${amount.toFixed(2)}` : `${amount.toFixed(2)} ${currency}`;
+  return currency === "EUR" ? `€${amount.toFixed(2)}` : currency === "USD" ? `$${amount.toFixed(2)}` : `${amount.toFixed(2)} ${currency}`;
 }
 
 /** A session that closed while they were away is not a failure to report, it is a door to reopen (D74, D80). */
@@ -141,7 +141,6 @@ export function CashOut() {
   const readFor = answeredCountry ?? proposedCountry;
   /** Whether the person opened "change" under the title, to say where their number is from (D270). */
   const [picking, setPicking] = useState(false);
-  const resumed = useRef(false);
 
   useEffect(() => {
     let live = true;
@@ -178,16 +177,9 @@ export function CashOut() {
     setInGifts(gifts);
     // An account is back, so a session that had closed is closed no longer.
     setClosed(false);
-    // The exact resume: a way out already holding something ready opens on its second step, from the balances
-    // alone and only on the first read, so a person who chose "Not now" is not dragged back (flows W6, W11).
-    if (!resumed.current) {
-      resumed.current = true;
-      const ready = WAYS_OUT.find((way) => readyFor(way, coinOf(way), next[coinOf(way).symbol] ?? 0n) !== undefined);
-      if (ready) {
-        setChosen(ready);
-        setStage("ready");
-      }
-    }
+    // Nothing opens by itself any more (the audit of 1 Oct 2026). A way out holding something ready used to open on its
+    // second step at every visit, so whatever else the account held could not be spent or sent anywhere else. The first
+    // screen says what is ready and offers the way back to it (`W.continueReady`): the balances still decide the step.
     return next;
   }, [address]);
 
@@ -214,8 +206,17 @@ export function CashOut() {
   const amountOf = (way: WayOut, ready: Ready): ExitAmount =>
     exitAmount({ number: ready.number, native: isNative(coinOf(way)), worth: worthUnits });
 
+  /** How the bank service pays in this country, and the card service's smallest sale, as each publishes it today. */
+  const bankPays = where?.out?.bank ?? null;
+  const cardSmallest = where?.out?.cardSmallest ?? null;
   /** What each way out would leave of everything that can be changed, at the rate read today (src/exit-steps.ts). */
-  const netOf = (way: WayOut) => netOfEverything(changeable, way.fee, money.rates);
+  const netOf = (way: WayOut) => netOfEverything(changeable, way.fee, money.rates, way === WAY_OUT_EURO ? (bankPays?.currency ?? "EUR") : undefined);
+  /** The way back to money already made ready for a service, from the first screen. */
+  const continueWith = (way: WayOut) => {
+    setChosen(way);
+    setProblem(null);
+    setStage("ready");
+  };
   // Every way, in the order the screen shows them: the country may send one to the back (R1), then what reaches
   // the person decides, and nothing is ever removed.
 
@@ -400,7 +401,7 @@ export function CashOut() {
     setStage("sending");
     try {
       let reference: string;
-      let cost: string | undefined;
+      let cost: Sent["cost"];
       let atMs: number;
       if (isNative(coin)) {
         // Nobody can move the chain's own coin for somebody else: their own account sends it and the fee comes
@@ -408,7 +409,11 @@ export function CashOut() {
         // the transaction back before believing the browser.
         const result = await sendMon(account, to, leaving);
         atMs = Date.now();
-        cost = exactly(result.fee, coin);
+        // In dollars, at the rate the ready amount was priced at, or not at all: never in the coin it was paid in.
+        if (worthUnits !== undefined && cardOnlyUnits) {
+          const inDollars = (result.fee * worthUnits) / cardOnlyUnits;
+          cost = { dollars: formatAusd(inDollars), underACent: inDollars < 10_000n };
+        }
         reference = result.hash.slice(2, 10);
         try {
           reference = (await postJson<{ reference: string }>("/api/send/record", { hash: result.hash, to })).reference;
@@ -560,6 +565,12 @@ export function CashOut() {
       {firstReady && dollarsHeld > 0n && !isNative(coinOf(firstReady)) && stage !== "sent" ? (
         <p className={BODY}>{W.readyLine(firstReady.name, amountOf(firstReady, readyOf(firstReady)!).lead)}</p>
       ) : null}
+      {/* On the first screen the ready amount is the headline, and this is the way back to its second step. */}
+      {stage === "base" && firstReady ? (
+        <button type="button" onClick={() => continueWith(firstReady)} className={SECONDARY_BUTTON}>
+          {W.continueReady(firstReady.name)}
+        </button>
+      ) : null}
     </section>
   );
 
@@ -597,8 +608,13 @@ export function CashOut() {
             )}
             {led ? <ExactLine amount={led} /> : null}
             {led && !led.converted && money.unavailable ? <p className={HELP}>{money.unavailable}</p> : null}
-            {firstReady && dollarsHeld > 0n && !isNative(coinOf(firstReady)) ? (
-              <p className={HELP}>{W.readyLine(firstReady.name, amountOf(firstReady, readyOf(firstReady)!).lead)}</p>
+            {firstReady && dollarsHeld > 0n ? (
+              <>
+                <p className={HELP}>{W.readyLine(firstReady.name, amountOf(firstReady, readyOf(firstReady)!).lead)}</p>
+                <button type="button" onClick={() => continueWith(firstReady)} className={`${INLINE_BUTTON} self-start`}>
+                  {W.continueReady(firstReady.name)}
+                </button>
+              </>
             ) : null}
             {/* The gifts' part is in the figure above, and it is taken into the account first (D208). */}
             {giftsHold > 0n ? <p className={HELP}>{W.inYourGifts(formatAusd(giftsHold))}</p> : null}
@@ -635,6 +651,8 @@ export function CashOut() {
           </section>
         ) : null}
         {uses.length === 0 ? <p className={BODY}>{U.nothingHere}</p> : null}
+        {/* Neither the bank nor the card reaches this country: said here, with the uses that do stay under it. */}
+        {where !== null && countryNow && !uses.includes("bank") && !uses.includes("card") ? <p className={BODY}>{U.noWayOutThere(countryInWords(countryNow) ?? countryNow.toUpperCase())}</p> : null}
         {uses.map((use, index) => {
           const words = U[use];
           const way = use === "bank" ? WAY_OUT_EURO : use === "card" ? WAY_OUT_CARD : undefined;
@@ -650,7 +668,10 @@ export function CashOut() {
                 {figure ? <p className={`${CARD_TITLE} whitespace-nowrap tabular-nums`}>{figure}</p> : null}
               </div>
               <p className={CARD_LABEL}>{words.nature}</p>
-              <p className={BODY}>{words.body}</p>
+              {/* The bank's sentence follows the method its service publishes for this country, and the card says its
+                  smallest payout before anything is changed for it (the audit of 1 Oct 2026). */}
+              <p className={BODY}>{use === "bank" && bankPays ? U.bankBy(bankPays.method, bankPays.currency) : words.body}</p>
+              {use === "card" && cardSmallest ? <p className={HELP}>{U.cardFrom(figureIn(cardSmallest.amount, cardSmallest.currency))}</p> : null}
               <button type="button" onClick={act} disabled={holdings === null || changeable === 0n} className={inTheSun(use, index, eurosHeld) ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
                 {words.action}
               </button>
@@ -766,6 +787,7 @@ export function CashOut() {
                       : W.reviewGetting(formatAusd(changing.units ?? 0n), orderNumber, chosen.name)}
                   </p>
                   {bank ? null : <p className={BODY}>{payout}</p>}
+                  {quote.kept ? <p className={HELP}>{W.reviewKept(quote.kept)}</p> : null}
                   <p className={HELP}>
                     {W.reviewDollars(changing.units !== undefined ? twoDecimalsDown(changing.units, AUSD.decimals) : dollars)}
                     {money.about(changing.units ?? 0n) ? ` ${money.about(changing.units ?? 0n)}.` : ""}
@@ -833,8 +855,8 @@ export function CashOut() {
             <p className={BODY}>{W.sent(sent.amount, sent.name, sent.when, sent.reference)}</p>
             {sent.exact ? <p className={HELP}>{W.exactQuantity(sent.name, sent.exact)}</p> : null}
             <p className={HELP}>{W.sentPays(chosen.name, chosen.pays, !isNative(coin))}</p>
-            {sent.cost ? <p className={HELP}>{W.sendingCost(sent.cost)}</p> : null}
-            <a href={chosen.page} target="_blank" rel="noopener noreferrer" className={SECONDARY_BUTTON}>
+            {sent.cost ? <p className={HELP}>{W.sendingCost(sent.cost.dollars, sent.cost.underACent)}</p> : null}
+            <a href={wayOutPage(chosen)} target="_blank" rel="noopener noreferrer" className={SECONDARY_BUTTON}>
               {W.follow(chosen.name)}
             </a>
           </section>
@@ -853,19 +875,26 @@ export function CashOut() {
             {stage === "ready" ? (
               <>
                 <h2 className={TITLE}>{W.step2(chosen.name)}</h2>
-                {/* Steps 2 and 3 stand on one screen, so the accent marks the step the screen is waiting for: placing the
-                    order while nothing has been pasted, sending once the code is there. Never both at once. */}
-                <a href={chosen.page} target="_blank" rel="noopener noreferrer" className={sendable ? SECONDARY_BUTTON : PRIMARY_BUTTON}>
-                  {W.order(amount!.lead, chosen.name)}
-                </a>
+                {/* What to do on the service's page, which opens with nothing chosen; nothing to say once it arrives
+                    told what is sold and how much (`wayOutFillsIn`). */}
+                {wayOutFillsIn(chosen) ? null : <p className={BODY}>{W.onTheirPage(chosen.name, chosen.sells, ready.number, chosen === WAY_OUT_EURO)}</p>}
                 {exactLine}
                 <p className={BODY}>{W.giveThisCode(chosen.name)}</p>
                 {/* Whole and wrapping, so it can be compared with what was pasted on the service's page (decision 9). */}
                 <p className="break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--surface)] p-[var(--space-md)] text-[length:var(--type-help)] tabular-nums">{address}</p>
-                <button type="button" onClick={copyCode} className={SECONDARY_BUTTON}>
-                  {copied === "yes" ? W.copied : W.copy}
-                </button>
+                {/* One gesture (the audit of 1 Oct 2026): the code is copied by the press that opens the service's page,
+                    so nobody arrives there without it. Steps 2 and 3 stand on one screen, so the accent marks the step
+                    the screen is waiting for: this one while nothing has been pasted, sending once the code is there. */}
+                <a href={wayOutPage(chosen, { account: address, units: ready.units })} target="_blank" rel="noopener noreferrer" onClick={copyCode} className={sendable ? SECONDARY_BUTTON : PRIMARY_BUTTON}>
+                  {W.copyAndOpen(chosen.name)}
+                </a>
+                {copied === "yes" ? (
+                  <p role="status" className={HELP}>
+                    {W.copied}
+                  </p>
+                ) : null}
                 {copied === "refused" ? <p className={HELP}>{W.copyRefused}</p> : null}
+                <p className={HELP}>{W.comeBack(chosen.name)}</p>
                 <p className={HELP}>{W.itIsYours(chosen.name)}</p>
                 {/* What stops a person at the service itself, said here where its page opens and not on the card that
                     decides (D124): the identity check, and the name the account or the card must carry. */}

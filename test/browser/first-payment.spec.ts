@@ -1,5 +1,5 @@
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import { json, neverAskedToBeTold, profile, shot, sizesFor } from "./gift-kit";
+import { expect, test, type Page } from "@playwright/test";
+import { answerTheChain, json, neverAskedToBeTold, profile, shot, sizesFor, type Holdings } from "./gift-kit";
 import { signedIn } from "./virtual-passkey";
 
 /**
@@ -19,36 +19,6 @@ import { signedIn } from "./virtual-passkey";
 const SHOTS = process.env.VIKY_FIRST_PAYMENT_CAPTURES;
 const sheet = (page: Page) => page.locator("dialog.sheet[open]").last();
 const card = (page: Page) => page.locator('section[aria-labelledby="offer-card"]');
-
-type Holdings = { ausd: bigint; mon: bigint };
-
-/** A uint256 as the 32 byte word a balance read answers with. */
-const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}`;
-
-/** Every call to the chain is answered here from `holdings`; a broadcast is refused, whatever the screen tries. */
-async function answerTheChain(context: BrowserContext, holdings: Holdings): Promise<void> {
-  await context.route(
-    (url) => url.hostname !== "localhost" && url.hostname !== "127.0.0.1",
-    async (route) => {
-      const request = route.request();
-      let body: unknown;
-      try {
-        body = JSON.parse(request.postData() ?? "");
-      } catch {
-        return route.abort();
-      }
-      const calls = (Array.isArray(body) ? body : [body]) as Array<{ id: unknown; method?: string }>;
-      if (!calls.every((call) => typeof call?.method === "string")) return route.abort();
-      const answers = calls.map((call) => {
-        if (call.method === "eth_getBalance") return { jsonrpc: "2.0", id: call.id, result: `0x${holdings.mon.toString(16)}` };
-        if (call.method === "eth_call") return { jsonrpc: "2.0", id: call.id, result: word(holdings.ausd) };
-        if (call.method === "eth_chainId") return { jsonrpc: "2.0", id: call.id, result: "0x8f" };
-        return { jsonrpc: "2.0", id: call.id, error: { code: -32000, message: "refused by the test" } };
-      });
-      return route.fulfill(json(Array.isArray(body) ? answers : answers[0]));
-    },
-  );
-}
 
 /** Counts the system sheets the page asks for, and notes whether Home was ever drawn for an account. */
 const WATCH = `(() => {
