@@ -7,6 +7,7 @@ import { exchangeFitbitCode, fitbitAuthorizeUrl, fitbitConfigured, fitbitCredent
 import { openSecret } from "./connect-vault";
 import { GiftApiError } from "./gift-api";
 import { forgetConnectedAccount, loadGift, markConnectedAccount, type GiftRecord } from "./gift-store";
+import { isMilestoneGiftId } from "./milestone-protocol";
 
 /**
  * The three gestures of a Fitbit connection, behind the routes of app/api/connect/fitbit (D188): start, which sends
@@ -26,6 +27,8 @@ export function fitbitRedirectUri(requestUrl: string): string {
 /** The gift a connection is about, which must be the recipient's own and on the Fitbit line. */
 export async function fitbitGiftOf(giftId: string, account: string): Promise<GiftRecord> {
   if (!/^\d{1,78}$/.test(giftId)) throw new GiftApiError("UNKNOWN_GIFT", "No such gift", 404);
+  // A milestone gift counts its goals apart: the same number there is another condition, never a day on Fitbit.
+  if (isMilestoneGiftId(giftId)) throw new GiftApiError("NOT_THIS_CONDITION", "This gift is not on Fitbit.", 400);
   const gift = await loadGift(giftId);
   if (!gift || !gift.recipient || gift.recipient.toLowerCase() !== account.toLowerCase()) throw new GiftApiError("NOT_RECIPIENT", "Open the gift first.", 403);
   if (conditionOfGoal(gift.goalType)?.id !== "fitbit-daily") throw new GiftApiError("NOT_THIS_CONDITION", "This gift is not on Fitbit.", 400);

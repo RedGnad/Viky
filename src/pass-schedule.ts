@@ -15,6 +15,14 @@ export const COUNTING_PASS_UTC: PassTime = { hour: 0, minute: 30 };
 export const SETTLING_PASS_UTC: PassTime = { hour: 7, minute: 0 };
 
 /**
+ * Reads again, before the catch-up window closes at 06:00 UTC, the gifts the counting pass held because a reading failed
+ * on our side, or everything when the counting pass left no row at all (src/daily-pass.ts, RECOUNT_PASS; the audit of
+ * 1 Oct 2026). After 06:00 the day before yesterday can no longer be paid, so this is the last moment a second reading
+ * can still save it. Started anywhere inside the hour, like the others: by 03:59 at the latest.
+ */
+export const RECOUNT_PASS_UTC: PassTime = { hour: 3, minute: 30 };
+
+/**
  * Looks whether the morning's counting pass is in the journal, and tells the operator when it is not (src/watch.ts).
  * An hour and a half after the pass, because the platform starts a cron anywhere inside the hour its schedule names
  * (src/pass-log.ts): by 02:00 the pass of 00:30 has run, or it has not run at all.

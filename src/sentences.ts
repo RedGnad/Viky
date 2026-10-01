@@ -2047,6 +2047,9 @@ export const MARATHON_PROOF = {
   saving: "Keeping it",
   bibSet: (bib: string, race: string, distance: string) => `Bib ${bib}, ${race}, ${distance.toLowerCase()}.`,
   beforeTheRace: "Run. After the finish, come back here to read your result.",
+  /** Until the start, a bib typed wrong can be entered again (the audit of 1 Oct 2026). */
+  changeBib: "Change my bib number",
+  bibChangeHelp: (race: string) => `The number on your bib for the ${race}. It can be changed until the start.`,
   afterTheRace: "The race has been run. Read your line on the timing company's results page.",
   readMyResult: "Read my result",
   reading: "Reading the results page",

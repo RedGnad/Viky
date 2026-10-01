@@ -10,7 +10,7 @@ import {
   isValidDuolingoUsername,
   newBindingCode,
 } from "../src/duolingo-public-terms";
-import { fetchPublicProfile, profileFromProof, PROFILE_RESPONSE_MATCHES, PublicProfileError, type ZkFetchProof } from "../src/duolingo-public";
+import { fetchPublicProfile, MAX_PROOF_AGE_SECONDS, profileFromProof, PROFILE_RESPONSE_MATCHES, PublicProfileError, type ZkFetchProof } from "../src/duolingo-public";
 
 // A proof shaped like zkFetch's output, carrying the parameters Reclaim extracts with our regexes.
 function proofFor(username: string, extracted: Record<string, string>, overrides: Partial<ZkFetchProof["claimData"]> = {}): ZkFetchProof {
@@ -114,9 +114,42 @@ describe("profileFromProof", () => {
   });
 });
 
+describe("the proof is this reading's, read with our patterns (the audit of 1 Oct 2026)", () => {
+  const mismatch = (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_MISMATCH";
+  const withMatches = (matches: unknown) => proofFor("zia_learns", ZIA_LEARNS, { parameters: JSON.stringify({ url: duolingoProfileUrl("zia_learns"), method: "GET", responseMatches: matches }) });
+
+  it("refuses a proof read with other patterns than ours, in any way they differ", () => {
+    // The patterns decide which bytes of the page become the experience: these name the streak as "totalXp".
+    const swapped = PROFILE_RESPONSE_MATCHES.map((match) => (match.value.includes("totalXp") ? { type: "regex", value: '"streak":(?<totalXp>\\d+)' } : match));
+    assert.throws(() => profileFromProof(withMatches(swapped), "zia_learns"), mismatch);
+    assert.throws(() => profileFromProof(withMatches(PROFILE_RESPONSE_MATCHES.slice(0, 4)), "zia_learns"), mismatch, "one pattern fewer");
+    assert.throws(() => profileFromProof(withMatches([...PROFILE_RESPONSE_MATCHES, { type: "regex", value: "x" }]), "zia_learns"), mismatch, "one more");
+    assert.throws(() => profileFromProof(withMatches([...PROFILE_RESPONSE_MATCHES].reverse()), "zia_learns"), mismatch, "another order");
+    assert.throws(() => profileFromProof(withMatches(undefined), "zia_learns"), mismatch, "none at all");
+    assert.throws(() => profileFromProof(withMatches(PROFILE_RESPONSE_MATCHES.map((match) => ({ ...match, type: "contains" }))), "zia_learns"), mismatch);
+    // Ours, as a proof of production carries them (read on viky.cash on 1 Oct 2026: the keys in the other order).
+    assert.equal(profileFromProof(withMatches(PROFILE_RESPONSE_MATCHES.map((match) => ({ value: match.value, type: match.type }))), "zia_learns").totalXp, 156020);
+  });
+
+  it("refuses a proof more than ten minutes old, and takes one that is ten minutes old", async () => {
+    const at = 1_789_000_000;
+    const read = (now: number) => fetchPublicProfile("zia_learns", { zkFetch: async () => proofFor("zia_learns", ZIA_LEARNS), verify: async () => true, now: () => now });
+    assert.equal(MAX_PROOF_AGE_SECONDS, 600);
+    assert.equal((await read(at + 5)).totalXp, 156020);
+    assert.equal((await read(at + 600)).observedAt, at);
+    await assert.rejects(read(at + 601), mismatch);
+    await assert.rejects(read(at + 86_400), mismatch, "yesterday's proof says nothing of today");
+    // With no clock given it is the server's own: a proof stamped in 2026 and read now is long past.
+    await assert.rejects(fetchPublicProfile("zia_learns", { zkFetch: async () => proofFor("zia_learns", ZIA_LEARNS, { timestampS: 1_700_000_000 }), verify: async () => true }), mismatch);
+  });
+});
+
+/** The moment the fixtures' proofs are stamped with: the tests below read them five seconds later. */
+const SOON = () => 1_789_000_005;
+
 describe("fetchPublicProfile", () => {
   it("verifies before reading and types every failure", async () => {
-    const ok = await fetchPublicProfile("zia_learns", { zkFetch: async () => proofFor("zia_learns", ZIA_LEARNS), verify: async () => true });
+    const ok = await fetchPublicProfile("zia_learns", { zkFetch: async () => proofFor("zia_learns", ZIA_LEARNS), verify: async () => true, now: SOON });
     assert.equal(ok.totalXp, 156020);
     await assert.rejects(fetchPublicProfile("bad name", { zkFetch: async () => proofFor("zia_learns", ZIA_LEARNS), verify: async () => true }), (e: unknown) => e instanceof PublicProfileError && e.code === "INVALID_USERNAME");
     await assert.rejects(fetchPublicProfile("zia_learns", { zkFetch: async () => proofFor("zia_learns", ZIA_LEARNS), verify: async () => false }), (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_INVALID");
@@ -129,7 +162,7 @@ describe("fetchPublicProfile", () => {
     await assert.rejects(fetchPublicProfile("zia_learns", { zkFetch: async () => foreign, verify: async () => true }), (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_INVALID");
     const none = { ...proofFor("zia_learns", ZIA_LEARNS), witnesses: [] };
     await assert.rejects(fetchPublicProfile("zia_learns", { zkFetch: async () => none, verify: async () => true }), (e: unknown) => e instanceof PublicProfileError && e.code === "PROOF_INVALID");
-    const ok = await fetchPublicProfile("zia_learns", { zkFetch: async () => foreign, verify: async () => true, attestors: ["0x" + "11".repeat(20)] });
+    const ok = await fetchPublicProfile("zia_learns", { zkFetch: async () => foreign, verify: async () => true, attestors: ["0x" + "11".repeat(20)], now: SOON });
     assert.equal(ok.totalXp, 156020);
   });
 });

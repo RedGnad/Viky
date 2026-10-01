@@ -5,6 +5,7 @@ import { openSecret, sealSecret, vaultConfigured } from "./connect-vault";
 import { eraseConnection, loadConnection, saveConnection } from "./connection-store";
 import { GiftApiError } from "./gift-api";
 import { forgetConnectedAccount, loadGift, markConnectedAccount, type GiftRecord } from "./gift-store";
+import { isMilestoneGiftId } from "./milestone-protocol";
 import { exchangeStravaCode, revokeStravaToken, stravaAuthorizeUrl, stravaConfigured, stravaCredentials, StravaError, stravaScopeAllows } from "./strava";
 
 /**
@@ -27,6 +28,8 @@ export function stravaRedirectUri(requestUrl: string): string {
 /** The gift a connection is about, which must be the recipient's own and on the Strava line. */
 export async function stravaGiftOf(giftId: string, account: string): Promise<GiftRecord> {
   if (!/^\d{1,78}$/.test(giftId)) throw new GiftApiError("UNKNOWN_GIFT", "No such gift", 404);
+  // A milestone gift counts its goals apart: the same number there is another condition, never a day on Strava.
+  if (isMilestoneGiftId(giftId)) throw new GiftApiError("NOT_THIS_CONDITION", "This gift is not on Strava.", 400);
   const gift = await loadGift(giftId);
   if (!gift || !gift.recipient || gift.recipient.toLowerCase() !== account.toLowerCase()) throw new GiftApiError("NOT_RECIPIENT", "Open the gift first.", 403);
   if (conditionOfGoal(gift.goalType)?.id !== "strava-daily") throw new GiftApiError("NOT_THIS_CONDITION", "This gift is not on Strava.", 400);

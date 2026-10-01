@@ -13,7 +13,9 @@ export const MILESTONE_GAS_CEILING = {
   expire: 100_000, // observed max 80,579
   refundUnearned: 170_000, // observed max 84,714
   withdrawEarned: 160_000, // observed max 119,689
-  withdrawEarnedWithIntent: 170_000, // observed max 123,196
+  // Measured against the real AUSD by `eth_call` with an explicit limit (the audit of 1 Oct 2026): it fails at 182,750,
+  // which is what 170,000 declared with the margin, and passes at 188,743.
+  withdrawEarnedWithIntent: 190_000, // observed max 123,196 with the mock token
   cancel: 180_000, // observed max 120,078
   // The second version only (contracts/MilestoneGiftV2.sol). Measured on a mainnet fork with the real AUSD during the
   // audit of 1 Oct 2026: 191,716.

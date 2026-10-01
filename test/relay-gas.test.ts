@@ -27,18 +27,23 @@ function clients(estimate: bigint | Error) {
 }
 
 test("what the chain says, plus the margin, when that is more than the recorded figure", async () => {
-  // The real cost measured on 14 Sep against the live contract and the real token.
-  const limit = await relayGasLimit(clients(169_600n), call, FLOOR);
-  assert.equal(limit, 169_600n + (169_600n * 750n + 9_999n) / 10_000n);
-  assert.ok(limit > 172_000n, "and comfortably past the figure that was failing");
+  // An estimate above the recorded figure is what is declared, with the margin.
+  const limit = await relayGasLimit(clients(190_000n), call, FLOOR);
+  assert.equal(limit, 190_000n + (190_000n * 750n + 9_999n) / 10_000n);
+  assert.ok(limit > FLOOR);
 });
 
 test("never below the recorded figure, however small the estimate", async () => {
-  assert.equal(await relayGasLimit(clients(1_000n), call, FLOOR), 172_000n);
+  // The recorded figure was 172,000, the very limit a withdrawal failed at against the real token (the audit of
+  // 1 Oct 2026: it passes at 180,789). It is now above that cost, so a low estimate cannot under-declare either.
+  assert.equal(FLOOR, 195_650n);
+  assert.equal(await relayGasLimit(clients(1_000n), call, FLOOR), FLOOR);
+  // The cost measured on 14 Sep against the live contract, 169,600, is under the floor with its margin: the floor holds.
+  assert.equal(await relayGasLimit(clients(169_600n), call, FLOOR), FLOOR);
 });
 
 test("an estimate that cannot be taken falls back rather than refusing", async () => {
-  assert.equal(await relayGasLimit(clients(new Error("node said no")), call, FLOOR), 172_000n);
+  assert.equal(await relayGasLimit(clients(new Error("node said no")), call, FLOOR), FLOOR);
 });
 
 test("a runaway estimate is refused rather than paid for", async () => {

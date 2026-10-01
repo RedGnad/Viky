@@ -260,6 +260,18 @@ export async function markBound(giftId: string, profileId: string): Promise<bool
   return rows.length === 1;
 }
 
+/**
+ * Replaces the id a gift is bound to, for a gift already bound: a bib entered wrong and entered again before the race
+ * starts (the audit of 1 Oct 2026). The moment it was first bound stays. Answers whether the gift was bound.
+ */
+export async function replaceBoundProfile(giftId: string, profileId: string): Promise<boolean> {
+  const rows = await sql()`
+    UPDATE viky_gifts SET goal_profile_id = ${profileId}
+     WHERE gift_id = ${giftId} AND bound_at IS NOT NULL
+     RETURNING gift_id`;
+  return rows.length === 1;
+}
+
 /** Gifts the keeper reads every day: bound to an account, opened by a recipient. */
 export async function loadBoundGifts(): Promise<GiftRecord[]> {
   const rows = await sql()`SELECT * FROM viky_gifts WHERE bound_at IS NOT NULL AND recipient IS NOT NULL ORDER BY gift_id`;

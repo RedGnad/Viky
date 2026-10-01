@@ -4,7 +4,8 @@ import { PGlite } from "@electric-sql/pglite";
 import { COUNTING_PASS, dailyPass, SETTLING_PASS, type DailyPassDeps } from "../src/daily-pass";
 import { configureGiftStore, ensureGiftSchema, recordSettledDays } from "../src/gift-store";
 import { COUNTING_PASS_UTC, SETTLING_PASS_UTC } from "../src/pass-schedule";
-import { configurePassLog, ensurePassSchema, heldDays, passesSince, readingTotals, recordPass, refusalsByCode } from "../src/pass-log";
+import { configurePassLog, countingSince, ensurePassSchema, heldDays, passesSince, readingTotals, recordPass, refusalsByCode } from "../src/pass-log";
+import { RelayerError } from "../src/relayer";
 import type { SqlExecutor } from "../src/proof-session-store";
 
 let db: PGlite;
@@ -195,16 +196,45 @@ test("a pass that falls over part way still writes what it did, and counts its o
     },
   });
 
-  await assert.rejects(dailyPass(COUNTING_PASS, stopAt(new Error("the reader stopped answering"))), /the reader stopped answering/);
-  await assert.rejects(dailyPass(COUNTING_PASS, stopAt(Object.assign(new Error("the relayer refused"), { code: "REVERTED" }))), /the relayer refused/);
+  // What every later relay would meet as well still ends the pass: the relayer under its reserve.
+  await assert.rejects(dailyPass(COUNTING_PASS, stopAt(new RelayerError("RESERVE_TOO_LOW", "The relayer holds 9 MON"))), /The relayer holds 9 MON/);
+  // And so does a failure outside the readings: here the list of every gift cannot be read.
+  await assert.rejects(
+    dailyPass(COUNTING_PASS, { ...threeGifts(), allGifts: async () => Promise.reject(new Error("the database stopped answering")) }),
+    /the database stopped answering/,
+  );
 
   const rows = await passRows();
   assert.equal(rows.length, 2, "a run that threw is a run, and it is recorded");
   assert.equal(rows[0].readings_attempted, 2, "the reading it was taking when it stopped was attempted");
   assert.equal(rows[0].readings_succeeded, 1);
   assert.equal(rows[0].errors, 1);
-  assert.deepEqual(rows[0].failures, { PASS_FAILED: 1 }, "a failure with no code of its own is named for what it is");
-  assert.deepEqual(rows[1].failures, { REVERTED: 1 }, "a typed failure keeps its own code");
+  assert.deepEqual(rows[0].failures, { RESERVE_TOO_LOW: 1 }, "a typed failure keeps its own code");
+  assert.deepEqual(rows[1].failures, { FETCH_FAILED: 1, PASS_FAILED: 1 }, "a failure with no code of its own is named for what it is, beside the refusal that was ours");
+  // The second reading of the morning tells such a run from a whole one: more errors than gifts held.
+  assert.deepEqual(await countingSince(new Date(0)), { held: ["2"], stopped: true });
+});
+
+test("a reading that throws no longer ends the pass: it is that gift's refusal, and the journal says so (the audit of 1 Oct 2026)", async () => {
+  // Until then one connected source that threw stopped the morning's readings for every gift after it, and the row
+  // read "PASS_FAILED" for a pass whose other readings were never taken.
+  const report = await dailyPass(COUNTING_PASS, {
+    ...threeGifts(),
+    count: async (giftId: string) => {
+      if (giftId === "2") throw new Error("the reader stopped answering");
+      return { kind: "counted", giftId, xp: 320, creditedDays: 1, hash: "0xc" } as const;
+    },
+  });
+  assert.equal(report.lines.filter((line) => line.step === "count").length, 3, "the gift after the one that threw is still read");
+  const rows = await passRows();
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].readings_attempted, 3);
+  assert.equal(rows[0].readings_succeeded, 2);
+  assert.deepEqual(rows[0].failures, { READING_FAILED: 1 });
+  assert.deepEqual(rows[0].refusals, { READING_FAILED: 1 });
+  assert.deepEqual(rows[0].holds, [{ giftId: "2", day: HELD_DAY }]);
+  assert.deepEqual(await countingSince(new Date(0)), { held: ["2"], stopped: false }, "a whole run: the second reading reads gift 2 again and nothing else");
+  assert.equal(await countingSince(new Date(NOW * 1_000 + 1_000)), null, "and a moment after it began, no counting pass has run since");
 });
 
 test("a journal that cannot be written does not break the pass", async () => {

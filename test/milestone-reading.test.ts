@@ -237,6 +237,58 @@ test("when the plain read fails, the attested reading is taken anyway, so lookin
   assert.equal(outcome.kind, "reached", "exactly the target is enough");
 });
 
+test("the pass that runs every five minutes pays for no proof when the look itself fails, except in a gift's last day (the audit of 1 Oct 2026)", async () => {
+  // Two attested fetches per gift every five minutes, for as long as the source falters, used up the month's
+  // allowance; after it nothing attested could be read for anybody.
+  const failing = { plain: async () => Promise.reject(new ChessReadError("FETCH_FAILED", "Chess.com answered 429")), attest: async () => attested(1960) };
+  let run = harness(BOUND, CLIMBING, failing);
+  let outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach", lookMustSucceed: true }, run.deps);
+  assert.equal(outcome.kind === "refused" && outcome.code, "FETCH_FAILED");
+  assert.deepEqual(run.proved, [], "no proof was taken");
+  assert.deepEqual(run.recorded, [], "and nothing is written: the pass comes back in five minutes");
+
+  // A reading a person asks for carries no such flag: the proof is still taken, so looking never costs them.
+  run = harness(BOUND, CLIMBING, failing);
+  outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, run.deps);
+  assert.equal(outcome.kind, "reached");
+
+  // In the gift's last day the flag is lifted: a look that fails must not cost somebody a target reached in time.
+  run = harness(BOUND, { ...CLIMBING, deadline: NOW + 86_400 - 1 }, failing);
+  outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach", lookMustSucceed: true }, run.deps);
+  assert.equal(outcome.kind, "reached");
+  run = harness(BOUND, { ...CLIMBING, deadline: NOW + 86_400 + 60 }, failing);
+  outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach", lookMustSucceed: true }, run.deps);
+  assert.equal(outcome.kind, "refused", "a day and a minute before the deadline it still holds");
+
+  // A look that answers is unchanged by the flag: below the target nothing is paid for, at the target the proof is.
+  run = harness(BOUND, CLIMBING);
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "reach", lookMustSucceed: true }, run.deps)).kind, "notYet");
+  assert.deepEqual(run.calls, ["plain"]);
+  // And the frequent pass is the one that sets it.
+  assert.match(readFileSync("src/frequent-pass.ts", "utf8"), /runMilestoneReading\(\{ giftId, purpose: "reach", recentSeconds: FREQUENT_PASS_RECENT_SECONDS, lookMustSucceed: true \}\)/);
+});
+
+test("a look that finds what the last one found is not a new line of the journal", async () => {
+  const looks: number[] = [];
+  let same = true;
+  const run = harness(BOUND, CLIMBING, {
+    sameLookAgain: async (look) => {
+      looks.push(Number(look.rating));
+      assert.equal(look.purpose, "look");
+      assert.equal(look.observedAt, NOW);
+      return same;
+    },
+  });
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, run.deps)).kind, "notYet");
+  assert.deepEqual(run.recorded, [], "the newest row was brought up to now: nothing is added");
+  same = false;
+  assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, run.deps)).kind, "notYet");
+  assert.deepEqual(run.recorded, ["look:plain:notYet"], "a look that differs is written");
+  assert.deepEqual(looks, [1904, 1904]);
+  // The journal is never cut short to make room: the first reading of a gift is what its page reads.
+  assert.doesNotMatch(readFileSync("src/proof-journal.ts", "utf8"), /LIMIT 200/);
+});
+
 test("a reading that cannot be taken is a typed refusal the pass can hold on, and nothing is sent", async () => {
   const run = harness(BOUND, CLIMBING, {
     plain: async () => Promise.reject(new ChessReadError("FETCH_FAILED", "Chess.com is not answering")),

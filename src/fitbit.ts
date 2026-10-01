@@ -33,7 +33,7 @@ export const FITBIT_PROVIDER_LABEL = "fitbit";
 
 export class FitbitError extends Error {
   constructor(
-    readonly code: "NOT_CONFIGURED" | "EXCHANGE_REFUSED" | "REFRESH_REFUSED" | "REVOKE_FAILED" | "BAD_ANSWER" | "SCOPE_MISSING",
+    readonly code: "NOT_CONFIGURED" | "EXCHANGE_REFUSED" | "REFRESH_REFUSED" | "REFRESH_UNAVAILABLE" | "REVOKE_FAILED" | "BAD_ANSWER" | "SCOPE_MISSING",
     message: string,
   ) {
     super(message);
@@ -143,7 +143,10 @@ export async function refreshFitbitTokens(previous: FitbitTokens, nowSeconds: nu
   const credentials = fitbitCredentials(env);
   const body = new URLSearchParams({ client_id: credentials.clientId, client_secret: credentials.clientSecret, grant_type: "refresh_token", refresh_token: previous.refreshToken });
   const response = await fetchLike(FITBIT_TOKEN_URL, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: body.toString() });
-  if (response.status !== 200) throw new FitbitError("REFRESH_REFUSED", `Google refused the refresh (${response.status})`);
+  // Only 400 and 401 say the key is no longer honoured. Anything else, a 429 or a 5xx, is Google not answering just
+  // now: until 1 Oct 2026 it was read as a refusal too, and an hour's outage erased every person's connection.
+  if (response.status === 400 || response.status === 401) throw new FitbitError("REFRESH_REFUSED", `Google refused the refresh (${response.status})`);
+  if (response.status !== 200) throw new FitbitError("REFRESH_UNAVAILABLE", `Google did not answer the refresh (${response.status})`);
   return { ...tokensOf(await response.json(), nowSeconds, previous.userId, previous), userId: previous.userId };
 }
 

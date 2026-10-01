@@ -5,6 +5,7 @@ import type { Hex } from "viem";
 import type { ContractAuthorization } from "../src/ausd-authorization";
 import { COUNTING_PASS, dailyPass } from "../src/daily-pass";
 import { GiftApiError } from "../src/gift-api";
+import { RelayerError } from "../src/relayer";
 import type { GiftParams } from "../src/gift-attestation";
 import { completePendingCreations, CREATION_ABANDON_MS, CREATION_LEASE_MS, makeGift, type CreationDeps } from "../src/gift-creation";
 import {
@@ -60,7 +61,7 @@ function terms(n: number): { params: GiftParams; nonce: Hex } {
 let sequence = 100;
 
 /** The store's own functions, and a pretend chain: what was relayed, what each transaction made, whether a nonce is spent. */
-function world(options: { saveFailures?: number; relayFails?: "before" | "after"; gate?: Promise<void> } = {}) {
+function world(options: { saveFailures?: number; relayFails?: "before" | "after" | "accepted"; gate?: Promise<void>; spentUnreadable?: boolean; readBack?: "absent" } = {}) {
   let clock = Date.now();
   let saveFailures = options.saveFailures ?? 0;
   const chain = new Map<Hex, { giftId: string }>();
@@ -73,6 +74,11 @@ function world(options: { saveFailures?: number; relayFails?: "before" | "after"
     relay: async (params, authorization, onSubmitted) => {
       relays += 1;
       if (options.relayFails === "before") throw new Error("the simulation refused");
+      if (options.relayFails === "accepted") {
+        // The node took the transaction and its answer was lost: the money moves, and nothing says so to the caller.
+        spentNonces.add(authorization.nonce.toLowerCase());
+        throw new Error("the provider answered: overloaded");
+      }
       sequence += 1;
       const hash = `0x${String(sequence).padStart(8, "0")}${"ab".repeat(28)}` as Hex;
       await onSubmitted(hash);
@@ -84,9 +90,12 @@ function world(options: { saveFailures?: number; relayFails?: "before" | "after"
     },
     readBack: async (txHash) => {
       const made = chain.get(txHash);
-      return made ? { kind: "made", giftId: made.giftId, escrow: ESCROW } : { kind: "unknown" };
+      return made ? { kind: "made", giftId: made.giftId, escrow: ESCROW } : { kind: options.readBack ?? "unknown" };
     },
-    spent: async (_funder, nonce) => spentNonces.has(nonce.toLowerCase()),
+    spent: async (_funder, nonce) => {
+      if (options.spentUnreadable) throw new Error("the node did not answer");
+      return spentNonces.has(nonce.toLowerCase());
+    },
     save: async (input) => {
       if (saveFailures > 0) {
         saveFailures -= 1;
@@ -227,4 +236,68 @@ test("the pass calls a creation abandoned only when its money never moved, and a
   assert.match(String(lines.find((entry) => entry.nonce === paid.nonce)?.result), /^needs an operator/);
   assert.equal((await loadCreation(quiet.nonce))?.status, "abandoned");
   assert.equal((await loadCreation(paid.nonce))?.status, "pending");
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// The audit of 1 Oct 2026, F-09: a send that fails is not always a send that did not happen.
+// ---------------------------------------------------------------------------------------------------------------
+
+test("a send whose answer was lost after the money moved is not called abandoned, and nobody is told that nothing changed", async () => {
+  // The defect this pins: every error of the send was read as "nothing left", so the row went to abandoned while the
+  // money could be in the contract, the funder read "Nothing was changed", and a second try could fund a second gift.
+  const w = world({ relayFails: "accepted" });
+  const { params, nonce } = terms(8);
+  await assert.rejects(makeGift({ params, nonce, authorization: { ...AUTH, nonce } }, w.deps), (error) => code(error) === "BEING_RECORDED");
+  assert.equal((await loadCreation(nonce))?.status, "pending", "the creation is kept for the keeper and for an operator");
+  // The same terms again relay nothing: the money moved once.
+  await assert.rejects(makeGift({ params, nonce, authorization: { ...AUTH, nonce } }, w.deps), (error) => ["IN_PROGRESS", "BEING_RECORDED"].includes(code(error)));
+  assert.equal(w.relays(), 1);
+  w.advance(CREATION_ABANDON_MS + 1_000);
+  const lines = await completePendingCreations(w.deps);
+  assert.match(String(lines.find((entry) => entry.nonce === nonce)?.result), /^needs an operator/);
+});
+
+test("when the chain cannot say whether the money moved, the creation is not abandoned either", async () => {
+  const w = world({ relayFails: "before", spentUnreadable: true });
+  const { params, nonce } = terms(9);
+  await assert.rejects(makeGift({ params, nonce, authorization: { ...AUTH, nonce } }, w.deps), (error) => code(error) === "IN_PROGRESS");
+  assert.equal((await loadCreation(nonce))?.status, "pending", "an unreadable chain is never read as nothing having moved");
+
+  // The relayer's own refusal is raised before the wallet is asked for anything: what it says is passed on as it
+  // is, and the creation is still left for the chain to settle rather than abandoned on that word alone.
+  const refusing = world({ spentUnreadable: true });
+  const own = terms(12);
+  const deps = { ...refusing.deps, relay: async () => Promise.reject(new RelayerError("RESERVE_TOO_LOW", "The relayer holds 9 MON")) };
+  await assert.rejects(makeGift({ params: own.params, nonce: own.nonce, authorization: { ...AUTH, nonce: own.nonce } }, deps), (error) => error instanceof RelayerError && error.code === "RESERVE_TOO_LOW");
+  assert.equal((await loadCreation(own.nonce))?.status, "pending");
+});
+
+test("a transaction in no block keeps its creation in progress while the authorization is good, and frees the terms after", async () => {
+  // Submitted, recorded, and never included: the node says it holds no receipt, which is an answer.
+  const w = world({ saveFailures: 1, readBack: "absent" });
+  const { params, nonce } = terms(10);
+  const good = { ...AUTH, nonce, validBefore: BigInt(Math.floor(Date.now() / 1_000) + 3_600) };
+  await assert.rejects(makeGift({ params, nonce, authorization: good }, w.deps), /the database refused/);
+  // The pretend chain holds that transaction: forget it, as a node does for one that never entered a block.
+  const lost = world({ readBack: "absent" });
+  await assert.rejects(makeGift({ params, nonce, authorization: good }, lost.deps), (error) => code(error) === "IN_PROGRESS");
+  assert.equal(lost.relays(), 0);
+  // The keeper leaves it alone for the hour the authorization lasts, then calls it abandoned: its money never moved.
+  lost.advance(CREATION_LEASE_MS + 1_000);
+  assert.match(String((await completePendingCreations(lost.deps)).find((entry) => entry.nonce === nonce)?.result), /in no block yet/);
+  assert.equal((await loadCreation(nonce))?.status, "pending");
+  lost.advance(CREATION_ABANDON_MS);
+  assert.match(String((await completePendingCreations(lost.deps)).find((entry) => entry.nonce === nonce)?.result), /^abandoned/);
+
+  // The same for a retry of the terms: once the authorization has run out the transaction can never be included, so
+  // the attempt no longer answers "in progress" for ever.
+  const again = terms(11);
+  const first = world({ saveFailures: 1 });
+  const expiring = { ...AUTH, nonce: again.nonce, validBefore: BigInt(Math.floor(Date.now() / 1_000) + 600) };
+  await assert.rejects(makeGift({ params: again.params, nonce: again.nonce, authorization: expiring }, first.deps), /the database refused/);
+  const later = world({ readBack: "absent" });
+  await assert.rejects(makeGift({ params: again.params, nonce: again.nonce, authorization: expiring }, later.deps), (error) => code(error) === "IN_PROGRESS");
+  later.advance(CREATION_LEASE_MS + 601_000);
+  const made = await makeGift({ params: again.params, nonce: again.nonce, authorization: expiring }, later.deps);
+  assert.ok(await loadGift(made.giftId), "the pretend relay accepts it; the real one would refuse the expired authorization, and the terms are free");
 });

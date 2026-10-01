@@ -73,7 +73,16 @@ export type PublicProfileDeps = {
   verify: (proof: ZkFetchProof) => Promise<boolean>;
   /** Attestor addresses whose signature is accepted; defaults to Reclaim's production attestor. */
   attestors?: readonly string[];
+  /** The moment the proof is read, in seconds; the server's clock when absent. */
+  now?: () => number;
 };
+
+/**
+ * How old a proof may be when it is read: ten minutes from the attestor's own timestamp (the audit of 1 Oct 2026).
+ * A reading is asked for and used in the same breath; a proof older than that is another moment's answer, kept or
+ * replayed, and says nothing of the profile now.
+ */
+export const MAX_PROOF_AGE_SECONDS = 600;
 
 /**
  * Reclaim's production attestor, the same address the Duolingo session verifier pins on chain. Measured
@@ -114,6 +123,14 @@ export function claimFingerprint(identifier: string): Hex {
   return keccak256(stringToHex(`viky:zkfetch:${identifier.toLowerCase()}`));
 }
 
+function sameMatches(given: unknown, expected: readonly ResponseMatch[]): boolean {
+  if (!Array.isArray(given) || given.length !== expected.length) return false;
+  return expected.every((match, index) => {
+    const other = given[index] as { type?: unknown; value?: unknown } | undefined;
+    return other?.type === match.type && other?.value === match.value;
+  });
+}
+
 /**
  * Reads the profile out of a proof and checks the proof is about the expected request: the URL of the
  * public endpoint for that username, a GET, and a username that matches. Signature validity is the
@@ -125,6 +142,12 @@ export function profileFromProof(proof: ZkFetchProof, expectedUsername: string):
   const method = String(parameters.method ?? "GET").toUpperCase();
   if (url.toLowerCase() !== duolingoProfileUrl(expectedUsername).toLowerCase() || method !== "GET") {
     throw new PublicProfileError("PROOF_MISMATCH", "The proof is not about this profile");
+  }
+  // The patterns are part of what the attestor signed, and they decide which bytes of the page become "totalXp":
+  // a proof read with other patterns could name another number as the experience. They must be exactly ours, in
+  // our order (the audit of 1 Oct 2026; every other attested source already checked this, src/attested-read.ts).
+  if (!sameMatches(parameters.responseMatches, PROFILE_RESPONSE_MATCHES)) {
+    throw new PublicProfileError("PROOF_MISMATCH", "The proof was read with other patterns");
   }
   const context = parseJson(proof.claimData.context, "context");
   const extracted = (context.extractedParameters ?? {}) as Record<string, unknown>;
@@ -177,7 +200,10 @@ export async function fetchPublicProfile(username: string, deps: PublicProfileDe
   }
   if (!valid) throw new PublicProfileError("PROOF_INVALID", "The proof did not verify");
   if (!attestorAccepted(proof, deps.attestors ?? allowedAttestors())) throw new PublicProfileError("PROOF_INVALID", "The proof was not signed by a pinned attestor");
-  return profileFromProof(proof, username);
+  const profile = profileFromProof(proof, username);
+  const now = deps.now ? deps.now() : Math.floor(Date.now() / 1_000);
+  if (now - profile.observedAt > MAX_PROOF_AGE_SECONDS) throw new PublicProfileError("PROOF_MISMATCH", "The proof is of an earlier moment than this reading");
+  return profile;
 }
 
 /**

@@ -96,9 +96,11 @@ test("the pages and the route groups the README lists are the ones under app", (
   for (const found of groups.slice(0, groups.indexOf("Operator commands")).matchAll(/`([a-z-]+)`/g)) assert.ok(folders.includes(found[1]), `app/api/${found[1]} exists`);
   // The two passes are the crons vercel.json sets.
   const crons = (JSON.parse(readFileSync("vercel.json", "utf8")) as { crons: Array<{ path: string; schedule: string }> }).crons;
-  assert.deepEqual(crons.map((cron) => `${cron.path} ${cron.schedule}`), ["/api/cron/daily 30 0 * * *", "/api/cron/settle 0 7 * * *", "/api/cron/watch 0 2 * * *"]);
+  assert.deepEqual(crons.map((cron) => `${cron.path} ${cron.schedule}`), ["/api/cron/daily 30 0 * * *", "/api/cron/recount 30 3 * * *", "/api/cron/settle 0 7 * * *", "/api/cron/watch 0 2 * * *"]);
   assert.match(README, /`\/api\/cron\/daily` at 00:30 UTC and `\/api\/cron\/settle` at 07:00 UTC/);
   assert.match(README, /`\/api\/cron\/watch` at 02:00 UTC/);
+  assert.match(README, /`\/api\/cron\/recount` at 03:30 UTC/);
+  assert.ok(existsSync("app/api/cron/recount/route.ts"));
   assert.ok(existsSync("app/api/cron/watch/route.ts") && existsSync("app/api/health/route.ts"));
 });
 

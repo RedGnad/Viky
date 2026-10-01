@@ -141,7 +141,7 @@ test("the route answers 503 when a check fails, needs no secret, and keeps one a
 });
 
 test("the last passes are read from the journal and from the guard of the frequent pass", async () => {
-  assert.deepEqual(await lastPasses(), { counting: null, settling: null });
+  assert.deepEqual(await lastPasses(), { counting: null, settling: null, recount: null });
   const row = { readingsAttempted: 0, readingsSucceeded: 0, holds: [], failures: {}, refusals: {} };
   await recordPass({ plan: "counting", startedAt: new Date("2026-10-01T00:40:00Z"), endedAt: new Date("2026-10-01T00:41:00Z"), ...row });
   await recordPass({ plan: "counting", startedAt: new Date("2026-10-02T00:35:00Z"), endedAt: new Date("2026-10-02T00:36:00Z"), ...row });

@@ -137,6 +137,12 @@ test("the keys are exchanged with the client's secret, the account asked of the 
   const refused = async () => ({ status: 400, json: async () => ({ error: "invalid_grant" }) });
   await assert.rejects(exchangeFitbitCode({ code: "x", verifier: "y", redirectUri: "z", nowSeconds: 1 }, refused, env), (error: unknown) => error instanceof FitbitError && error.code === "EXCHANGE_REFUSED");
   await assert.rejects(refreshFitbitTokens(tokens, 1, refused, env), (error: unknown) => error instanceof FitbitError && error.code === "REFRESH_REFUSED");
+  // Only 400 and 401 say the key is refused. A limit met or an outage is Google not answering: the connection is not
+  // the person's to lose for it (the audit of 1 Oct 2026, F-23).
+  await assert.rejects(refreshFitbitTokens(tokens, 1, async () => ({ status: 401, json: async () => ({}) }), env), (error: unknown) => error instanceof FitbitError && error.code === "REFRESH_REFUSED");
+  for (const status of [429, 500, 502, 503, 504, 403]) {
+    await assert.rejects(refreshFitbitTokens(tokens, 1, async () => ({ status, json: async () => ({}) }), env), (error: unknown) => error instanceof FitbitError && error.code === "REFRESH_UNAVAILABLE", `Google answering ${status}`);
+  }
   await assert.rejects(revokeFitbitToken("x", refused, env), (error: unknown) => error instanceof FitbitError && error.code === "REVOKE_FAILED");
   await assert.rejects(exchangeFitbitCode({ code: "x", verifier: "y", redirectUri: "z", nowSeconds: 1 }, async () => ({ status: 200, json: async () => ({}) }), env), (error: unknown) => error instanceof FitbitError && error.code === "BAD_ANSWER");
   await assert.rejects(

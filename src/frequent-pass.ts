@@ -79,7 +79,8 @@ function frequentPassDeps(): MilestonePassDeps {
   const live = liveMilestonePassDeps();
   return {
     ...live,
-    reach: (giftId) => runMilestoneReading({ giftId, purpose: "reach", recentSeconds: FREQUENT_PASS_RECENT_SECONDS }),
+    // A look that fails costs no proof here: this pass comes back in five minutes (src/milestone-reading.ts).
+    reach: (giftId) => runMilestoneReading({ giftId, purpose: "reach", recentSeconds: FREQUENT_PASS_RECENT_SECONDS, lookMustSucceed: true }),
     // Creations left half made are the nightly passes' to complete.
     completeCreations: undefined,
   };

@@ -33,6 +33,7 @@
     "rehearse:v2": "tsx scripts/rehearse-v2-fork.ts",
     "check:gift-escrow": "tsx scripts/check-gift-escrow.ts",
     "check:signer": "tsx scripts/check-signer.ts",
+    "check:sources": "tsx scripts/check-sources.ts",
     "db:migrate": "tsx scripts/migrate-db.ts",
     "backfill:days": "tsx scripts/backfill-days.ts",
     "keeper": "tsx scripts/keeper.ts",

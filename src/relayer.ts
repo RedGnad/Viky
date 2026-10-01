@@ -24,7 +24,8 @@ import { MONAD_CHAIN_ID, monadChain, monadTransport, waitForFinality } from "./m
  * funder's own signature. It never holds user keys: it only submits attestations and signed intents
  * to the gift contract. Monad rules it follows (docs, DECISIONS.md D6): explicit gas limits with the
  * 7.5 % margin because the declared limit is charged; a balance kept above the 10 MON reserve;
- * nonces managed locally; nothing shown as done before finality (k = 3 blocks).
+ * the nonce read from the node at each send; nothing shown as done before the node's `finalized` tag
+ * covers the transaction's block (two rounds after it is proposed, docs.monad.xyz).
  */
 
 export const RELAYER_MIN_BALANCE = parseEther("12");

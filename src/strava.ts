@@ -23,7 +23,7 @@ export const STRAVA_PROVIDER_LABEL = "strava";
 
 export class StravaError extends Error {
   constructor(
-    readonly code: "NOT_CONFIGURED" | "EXCHANGE_REFUSED" | "REFRESH_REFUSED" | "REVOKE_FAILED" | "BAD_ANSWER",
+    readonly code: "NOT_CONFIGURED" | "EXCHANGE_REFUSED" | "REFRESH_REFUSED" | "REFRESH_UNAVAILABLE" | "REVOKE_FAILED" | "BAD_ANSWER",
     message: string,
   ) {
     super(message);
@@ -111,7 +111,10 @@ export async function refreshStravaTokens(previous: StravaTokens, nowSeconds: nu
   const credentials = stravaCredentials(env);
   const body = new URLSearchParams({ client_id: credentials.clientId, client_secret: credentials.clientSecret, grant_type: "refresh_token", refresh_token: previous.refreshToken });
   const response = await fetchLike(STRAVA_TOKEN_URL, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: body.toString() });
-  if (response.status !== 200) throw new StravaError("REFRESH_REFUSED", `Strava refused the refresh (${response.status})`);
+  // Only 400 and 401 say the key is no longer honoured. Anything else, a 429 or a 5xx, is Strava not answering just
+  // now: until 1 Oct 2026 it was read as a refusal too, and an hour's outage erased every person's connection.
+  if (response.status === 400 || response.status === 401) throw new StravaError("REFRESH_REFUSED", `Strava refused the refresh (${response.status})`);
+  if (response.status !== 200) throw new StravaError("REFRESH_UNAVAILABLE", `Strava did not answer the refresh (${response.status})`);
   return tokensOf(await response.json(), nowSeconds, previous.scope, previous);
 }
 

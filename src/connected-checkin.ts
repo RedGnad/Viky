@@ -181,6 +181,9 @@ export async function runConnectedCheckIn(input: { giftId: string; purpose: Publ
       return refusal(giftId, "KEY_REFUSED", `${line.name} no longer accepts the connection. Connect ${line.name} again from your gift's page.`);
     }
     if ((error instanceof FitbitError || error instanceof StravaError) && error.code === "NOT_CONFIGURED") return refusal(giftId, "NOT_CONFIGURED", "Counting is not switched on yet.");
+    // The source did not answer the refresh: its outage, or a limit we met. The connection is kept, and the pass
+    // holds the gift as it does for any failure of ours (src/daily-pass.ts).
+    if ((error instanceof FitbitError || error instanceof StravaError) && error.code === "REFRESH_UNAVAILABLE") return refusal(giftId, "REFRESH_UNAVAILABLE", `${line.name} could not be reached just now.`);
     throw error;
   }
 

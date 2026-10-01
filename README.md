@@ -318,7 +318,9 @@ so accounts created on a preview hostname stay on that hostname.
 
 The functions run in Vercel's Paris region (`vercel.json`), next to the Frankfurt database, and two crons run the
 passes: `/api/cron/daily` at 00:30 UTC and `/api/cron/settle` at 07:00 UTC. A third, `/api/cron/watch` at 02:00 UTC,
-emails the operator when the morning pass is not in the journal. `/api/health` answers 200 when the database, the
+emails the operator when the morning pass is not in the journal. A fourth, `/api/cron/recount` at 03:30 UTC, reads
+again the gifts whose reading failed on our side, before the day's catch-up window closes at 06:00 UTC, and runs the
+whole reading pass when the morning one left nothing in the journal. `/api/health` answers 200 when the database, the
 network, the reading worker, the relayer, the exchange's pin, the evidence key and the passes all hold, and 503 when
 one does not; it needs no secret and answers nothing of any gift.
 
@@ -344,12 +346,14 @@ the journal), `proof` (a proof shown from the person's own account), `connect` (
 key), one folder per source read (`duolingo`, `chess`, `codeforces`, `coursera`, `edx`, `mitx-online`, `credly`,
 `accredible`, `det`, `marathon`, `wca`, `portals`), `conditions` (what may be offered), `fund`, `exit`, `send`,
 `phone` and `giftcards` (money in and out), `rails` and `rates` (which partner serves where, and the day's rate),
-`cron` (the two passes and the watch), `health`, `judge` and `judges`, and `dev`.
+`cron` (the passes and the watch), `health`, `judge` and `judges`, and `dev`.
 
 Operator commands: `pnpm keeper` (the same passes from a terminal), `pnpm zkfetch:worker [port]` (the attested-fetch
 worker, deployed from `Dockerfile`), `pnpm portal:pin` (reviewing a first proof from a university), `pnpm pilot:report`
 (the pilot gift by gift, read only), `pnpm relayer:fees`, `pnpm check:signer` (the evidence key of the environment
-against the signer the contracts name, before a deployment).
+against the signer the contracts name, before a deployment), `pnpm check:sources` (every public source Viky reads,
+asked whether it still answers in the shape the readers expect: a few plain GETs each, no secret, to run once a day
+while gifts are read).
 
 ## Test
 

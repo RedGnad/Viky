@@ -1,4 +1,4 @@
-import { parseEventLogs, type Hex } from "viem";
+import { parseEventLogs, TransactionReceiptNotFoundError, type Hex } from "viem";
 import type { ContractAuthorization } from "./ausd-authorization";
 import { ATTESTATION_TTL_SECONDS, signClaim, type GiftParams } from "./gift-attestation";
 import { giftPublicClient, readGift } from "./gift-reader";
@@ -101,7 +101,16 @@ export async function relayClaim(input: { giftId: string; escrow: Hex; recipient
 export type RelayedCheckIn = Readonly<{ hash: Hex; creditedDays: number; alreadyRelayed: boolean }>;
 
 /** What the contract says of a gift's open days, and the last day whose catch-up window is over. */
-export type OpenDays = Readonly<{ startDay: number; endDay: number; settledThroughDay: number; cancelled: boolean; finalised: boolean; lastDrainableDay: number }>;
+export type OpenDays = Readonly<{
+  startDay: number;
+  endDay: number;
+  settledThroughDay: number;
+  cancelled: boolean;
+  finalised: boolean;
+  lastDrainableDay: number;
+  /** Check-ins are paused on the gift's contract: nobody can be read, so nothing is drained (the audit of 1 Oct 2026). */
+  paused?: boolean;
+}>;
 
 export type ExpiredDaysDeps = Readonly<{
   read: (giftId: string, escrow: Hex) => Promise<OpenDays>;
@@ -111,11 +120,12 @@ export type ExpiredDaysDeps = Readonly<{
 export function liveExpiredDaysDeps(): ExpiredDaysDeps {
   return {
     read: async (giftId, escrow) => {
-      const [gift, lastDrainableDay] = await Promise.all([
+      const [gift, lastDrainableDay, paused] = await Promise.all([
         readGift(escrow, giftId),
         giftPublicClient().readContract({ address: escrow, abi: dailyAbiOf(escrow), functionName: "lastDrainableDay" }) as Promise<number | bigint>,
+        giftPublicClient().readContract({ address: escrow, abi: dailyAbiOf(escrow), functionName: "checkInPaused" }) as Promise<boolean>,
       ]);
-      return { ...gift, lastDrainableDay: Number(lastDrainableDay) };
+      return { ...gift, lastDrainableDay: Number(lastDrainableDay), paused };
     },
     drain: relayDrain,
   };
@@ -124,6 +134,9 @@ export function liveExpiredDaysDeps(): ExpiredDaysDeps {
 /** Whether a gift still has an open day whose catch-up window is over: a day a reading must no longer pay. */
 export function expiredDayOpen(days: OpenDays): boolean {
   if (days.startDay === 0 || days.cancelled || days.finalised) return false;
+  // During a pause nobody can be read, and the check-in this drain would precede is refused by the contract anyway:
+  // draining then would only take days nobody could have earned.
+  if (days.paused) return false;
   return Math.min(days.lastDrainableDay, days.endDay) > days.settledThroughDay;
 }
 
@@ -233,13 +246,14 @@ export async function relayRefund(giftId: string, escrow: Hex): Promise<RelayRes
  * What a submitted creation came to, read back from the chain: the gift it made, a revert, or nothing yet. Used to
  * complete a creation whose record failed after its relay (D87).
  */
-export async function createdGiftOf(txHash: Hex): Promise<{ kind: "made"; giftId: string; escrow: Hex; blockNumber: bigint } | { kind: "reverted" } | { kind: "unknown" }> {
+export async function createdGiftOf(txHash: Hex): Promise<{ kind: "made"; giftId: string; escrow: Hex; blockNumber: bigint } | { kind: "reverted" } | { kind: "absent" } | { kind: "unknown" }> {
   const client = relayerClients().publicClient;
   let receipt;
   try {
     receipt = await client.getTransactionReceipt({ hash: txHash });
-  } catch {
-    return { kind: "unknown" };
+  } catch (error) {
+    // The node holding no receipt is an answer about the transaction; the node not answering is not.
+    return error instanceof TransactionReceiptNotFoundError ? { kind: "absent" } : { kind: "unknown" };
   }
   if (receipt.status !== "success") return { kind: "reverted" };
   // The creation's event has one shape per version: read with each, whichever contract the transaction went to.

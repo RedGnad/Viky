@@ -10,7 +10,7 @@ import { milestoneRefusal } from "./milestone-api";
 import { MILESTONE_ATTESTATION_TTL_SECONDS, type MilestoneProofMessage } from "./milestone-protocol";
 import { milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
 import { relayProve, type ProvedReading } from "./milestone-relay";
-import { lastReading, readSince, recordReading, type MilestoneReading, type ReadingPurpose } from "./milestone-store";
+import { lastReading, readSince, recordReading, touchSameLook, type MilestoneReading, type ReadingPurpose } from "./milestone-store";
 import { escrowOf, RelayerError } from "./relayer";
 import type { ChessStanding } from "./chess-com";
 
@@ -84,6 +84,12 @@ export type MilestoneReadingDeps = {
   readRecently: (giftId: string, sinceSeconds: number) => Promise<boolean>;
   /** The gift's newest reading, so a refusal repeated by every pass is written once. */
   last?: (giftId: string) => Promise<MilestoneReading | null>;
+  /**
+   * A look that found exactly what the gift's newest reading found: the newest row's moment is moved to now and no
+   * row is added. Answers whether there was such a row. A pass every five minutes wrote one identical row each time
+   * (the audit of 1 Oct 2026, F-02); the first reading of a gift, which the journal page reads, is never touched.
+   */
+  sameLookAgain?: (look: MilestoneReading) => Promise<boolean>;
   now: () => number;
 };
 
@@ -100,6 +106,7 @@ export function liveMilestoneReadingDeps(): MilestoneReadingDeps {
     record: recordReading,
     readRecently: readSince,
     last: lastReading,
+    sameLookAgain: touchSameLook,
     now: () => Math.floor(Date.now() / 1_000),
   };
 }
@@ -185,8 +192,27 @@ function readingOf(giftId: string, purpose: ReadingPurpose, attested: AttestedCl
   };
 }
 
+/**
+ * How close to its deadline a gift is read with a proof even when the look failed: its last day. Until then a pass that
+ * asks for it (`lookMustSucceed`) stops at a look that failed.
+ */
+export const LOOK_MAY_FAIL_IN_THE_LAST_SECONDS = 86_400;
+
 export async function runMilestoneReading(
-  input: { giftId: string; purpose: "start" | "reach"; force?: boolean; recentSeconds?: number },
+  input: {
+    giftId: string;
+    purpose: "start" | "reach";
+    force?: boolean;
+    recentSeconds?: number;
+    /**
+     * Set by the pass that runs every five minutes (src/frequent-pass.ts; the audit of 1 Oct 2026, F-08): when the
+     * look fails, a limit met, a wait that ran out, a body that cannot be read, no proof is paid for and the reading
+     * stops there. Otherwise a source that falters for an hour costs two attested fetches per gift every five minutes
+     * and uses up the month's allowance, after which nothing attested can be read for anybody. It is lifted in a
+     * gift's last day, and never set for a reading a person asks for: there the proof is still taken.
+     */
+    lookMustSucceed?: boolean;
+  },
   deps: MilestoneReadingDeps = liveMilestoneReadingDeps(),
 ): Promise<MilestoneOutcome> {
   const { giftId, purpose } = input;
@@ -264,7 +290,7 @@ export async function runMilestoneReading(
     const standing = await deps.plain(username, mode);
     if (standing.playerId !== record.goalProfileId) return refused(giftId, "OTHER_PLAYER", standing.rating ?? undefined);
     if (standing.rating !== null && standing.rating < target) {
-      await deps.record({
+      const look: MilestoneReading = {
         giftId,
         purpose: "look",
         attested: false,
@@ -277,7 +303,9 @@ export async function runMilestoneReading(
         nullifier: null,
         outcome: "notYet",
         txHash: null,
-      });
+      };
+      // The same look as the last one is not a new line of the journal: its moment is brought up to now.
+      if (!deps.sameLookAgain || !(await deps.sameLookAgain(look))) await deps.record(look);
       return { kind: "notYet", giftId, rating: standing.rating, target, attested: false };
     }
   } catch (error) {
@@ -286,6 +314,9 @@ export async function runMilestoneReading(
     if (isClimbReadError(error) && error.code === "PROFILE_NOT_FOUND") return refused(giftId, "PROFILE_NOT_FOUND");
     if (isClimbReadError(error) && error.code === "ACCOUNT_CLOSED") return accountClosed(giftId, username, deps);
     if (!isClimbReadError(error)) throw error;
+    // The look itself failed. A pass that asked for it stops here, except in the gift's last day.
+    const lastDay = state.deadline > 0 && now >= state.deadline - LOOK_MAY_FAIL_IN_THE_LAST_SECONDS;
+    if (input.lookMustSucceed && !lastDay) return refused(giftId, error.code);
   }
 
   let reading: AttestedClimbReading;

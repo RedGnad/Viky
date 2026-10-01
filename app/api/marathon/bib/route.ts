@@ -3,7 +3,7 @@ import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { isOperator } from "@/src/dev-access";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
-import { loadGift, markBound, markConnectedAccount } from "@/src/gift-store";
+import { loadGift, markBound, markConnectedAccount, replaceBoundProfile } from "@/src/gift-store";
 import { bibStillOpen, isValidBib, marathonEventById } from "@/src/marathon";
 import { loadMilestoneGift } from "@/src/milestone-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
@@ -15,6 +15,10 @@ export const dynamic = "force-dynamic";
  * The person's bib, entered on their gift's page before the race starts (D273): the second of the three ties. The
  * field closes at the start, so a bib entered after is not taken; an operator's account may enter one after, which is
  * how the founder's three proofs run on a race already run, and is written on the judges' page.
+ *
+ * Until the start, a bib already entered can be entered again (the audit of 1 Oct 2026): a number typed wrong was
+ * kept for good, and the gift would then have been read on somebody else's line, or on nobody's. Once the race has
+ * started the bib entered stands, for everybody: what the result is read against cannot move after the fact.
  */
 export async function POST(request: Request) {
   try {
@@ -32,11 +36,12 @@ export async function POST(request: Request) {
     const race = marathonEventById(String(milestone.course ?? ""))?.race;
     if (!race) throw new GiftApiError("UNKNOWN_RACE", "This gift names no race Viky reads.", 409);
     if (!isValidBib(bib, race.timer)) throw new GiftApiError("INVALID_BIB", "A bib number is one to six figures.");
-    if (gift.boundAt) throw new GiftApiError("BIB_ALREADY_SET", "Your bib is already entered for this gift.", 409);
+    if (gift.boundAt && !bibStillOpen(race, Date.now())) throw new GiftApiError("BIB_ALREADY_SET", "Your bib is already entered for this gift, and the race has started.", 409);
     if (!bibStillOpen(race, Date.now()) && !isOperator(auth.account)) throw new GiftApiError("RACE_STARTED", "The race has started, so a bib can no longer be entered for this gift.", 409);
     const kept = bib.toUpperCase();
     await markConnectedAccount(giftId, kept);
-    await markBound(giftId, kept);
+    if (gift.boundAt) await replaceBoundProfile(giftId, kept);
+    else await markBound(giftId, kept);
     return NextResponse.json({ bib: kept }, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);

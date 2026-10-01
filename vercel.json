@@ -9,6 +9,10 @@
       "schedule": "30 0 * * *"
     },
     {
+      "path": "/api/cron/recount",
+      "schedule": "30 3 * * *"
+    },
+    {
       "path": "/api/cron/settle",
       "schedule": "0 7 * * *"
     },

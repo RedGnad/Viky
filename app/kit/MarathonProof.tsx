@@ -7,7 +7,7 @@ import { proveMarathon, readMarathonLine, saveBib, type MarathonLine } from "@/s
 import { finishInWords, isValidBib } from "@/src/marathon";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { MARATHON_PROOF as W } from "@/src/sentences";
-import { BODY, CARD, FIELD, HELP, PRIMARY_BUTTON } from "../components/ui";
+import { BODY, CARD, FIELD, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
 
 /**
@@ -23,6 +23,8 @@ export function MarathonProof({ giftId, status, yours, onChanged }: Readonly<{ g
   const marathon = status.marathon;
   const [bib, setBib] = useState("");
   const [state, setState] = useState<State>({ at: "asking" });
+  // The field again, for a bib already entered, until the race starts (the audit of 1 Oct 2026).
+  const [changing, setChanging] = useState(false);
   if (!marathon) return null;
   const busy = state.at === "saving" || state.at === "reading" || state.at === "proving";
   const refusal = (error: unknown, fallback: string) => setState({ at: "refused", message: error instanceof ApiError ? error.message : fallback });
@@ -42,6 +44,8 @@ export function MarathonProof({ giftId, status, yours, onChanged }: Readonly<{ g
     try {
       await saveBib(giftId, typed);
       setState({ at: "asking" });
+      setChanging(false);
+      setBib("");
       await onChanged();
     } catch (error) {
       refusal(error, W.failed);
@@ -78,13 +82,13 @@ export function MarathonProof({ giftId, status, yours, onChanged }: Readonly<{ g
   }
   if (!yours) return null;
 
-  if (!marathon.bib) {
+  if (!marathon.bib || (changing && marathon.bibOpen)) {
     return (
       <section className={CARD}>
         <form className="flex flex-col gap-[var(--space-md)]" onSubmit={(event) => { event.preventDefault(); void save(); }}>
           <label className="flex flex-col gap-[var(--space-xs)]" htmlFor="marathon-bib">
             <span className="font-medium">{W.bibLabel}</span>
-            <span className={HELP}>{marathon.bibOpen ? W.bibHelp(marathon.raceName) : W.bibClosed(marathon.raceName)}</span>
+            <span className={HELP}>{!marathon.bibOpen ? W.bibClosed(marathon.raceName) : marathon.bib ? W.bibChangeHelp(marathon.raceName) : W.bibHelp(marathon.raceName)}</span>
           </label>
           {marathon.bibOpen ? (
             <>
@@ -104,6 +108,11 @@ export function MarathonProof({ giftId, status, yours, onChanged }: Readonly<{ g
     <section className={CARD}>
       <p className="font-medium">{W.bibSet(marathon.bib, marathon.raceName, marathon.distance)}</p>
       <p className={HELP}>{marathon.bibOpen ? W.beforeTheRace : W.afterTheRace}</p>
+      {marathon.bibOpen ? (
+        <button type="button" onClick={() => setChanging(true)} className={INLINE_BUTTON}>
+          {W.changeBib}
+        </button>
+      ) : null}
       {!marathon.bibOpen ? (
         <>
           <button type="button" onClick={() => void read()} disabled={busy} className={PRIMARY_BUTTON}>

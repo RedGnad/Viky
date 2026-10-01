@@ -69,10 +69,34 @@ export async function readRaceResultConfig(eventId: string, fetchImpl: PlainFetc
 }
 
 /** The account the attested read takes for this row: everything the URL needs, and the two columns the pattern captures. */
-export function raceResultAccount(config: Pick<RaceResultConfig, "key" | "server">, race: MarathonRace, chosen: MarathonEvent, bib: string): string {
+export function raceResultAccount(
+  config: Pick<RaceResultConfig, "key" | "server">,
+  race: MarathonRace,
+  chosen: MarathonEvent,
+  bib: string,
+  /** Where the name and the time are in the list as it is read now; the register's own places when not given. */
+  columns?: Readonly<{ name: number; time: number }>,
+): string {
   const list = race.raceResult;
   if (!list) throw new RaceResultError("UNKNOWN_LIST", "This race names no list to read");
-  return [config.server, race.ref, config.key, encodeURIComponent(list.listname), chosen.heat, bib.trim().toUpperCase(), String(list.columns.name), String(list.columns.time)].join("|");
+  const at = columns ?? list.columns;
+  return [config.server, race.ref, config.key, encodeURIComponent(list.listname), chosen.heat, bib.trim().toUpperCase(), String(at.name), String(at.time)].join("|");
+}
+
+/**
+ * Where the name and the time are in a list, found by the fields' own names when it is read (the audit of 1 Oct 2026).
+ *
+ * The register kept each column's place as it was the day the race was written down, and a timing company moves its
+ * columns: measured on 1 Oct 2026, one race's had moved the day after it was registered, so every runner of that race
+ * was refused, and told to check their bib. The fields' names are what the register really means; their places are
+ * looked up each time. Nothing when the list no longer publishes one of the two, or publishes them where the pattern
+ * the attested read is taken with cannot reach: the bib first, then the name, then the time.
+ */
+export function raceResultColumns(fields: readonly string[], list: Pick<NonNullable<MarathonRace["raceResult"]>, "fields">): Readonly<{ name: number; time: number }> | undefined {
+  if (fields[0] !== "BIB") return undefined;
+  const name = fields.indexOf(list.fields.name);
+  const time = fields.indexOf(list.fields.time);
+  return name >= 1 && time > name && time <= 99 ? { name, time } : undefined;
 }
 
 /** The rows of a list answer, flattened out of their groups: arrays of cells; the trailing count is not a row. */
@@ -91,24 +115,23 @@ export function raceResultRows(data: unknown): readonly (readonly string[])[] {
 export type RaceResultRow = Readonly<{ runner: string; official: string }>;
 
 /**
- * The row of the bib on the race's list, read plainly: the list must still publish the register's fields at the
- * register's columns, and the row must start with that bib. The time cell is empty for a DNF, a DNS or a DSQ.
+ * The row of the bib on the race's list, read plainly: the list must still publish the register's two fields, wherever
+ * its columns now are, and the row must start with that bib. The account answered carries the columns as they were
+ * found, so the attested read takes the same cells. The time cell is empty for a DNF, a DNS or a DSQ.
  */
 export async function readRaceResultRow(race: MarathonRace, chosen: MarathonEvent, bib: string, fetchImpl: PlainFetch = fetch): Promise<{ account: string; row: RaceResultRow }> {
   const list = race.raceResult;
   if (!list) throw new RaceResultError("UNKNOWN_LIST", "This race names no list to read");
   const config = await readRaceResultConfig(race.ref, fetchImpl);
-  const account = raceResultAccount(config, race, chosen, bib);
-  const answer = await raceResultJson<{ DataFields?: string[]; data?: unknown; error?: string }>(RACE_RESULT_ROW.url(account), fetchImpl);
+  // The address read does not depend on the columns: the list is asked first, and its columns found in its answer.
+  const answer = await raceResultJson<{ DataFields?: string[]; data?: unknown; error?: string }>(RACE_RESULT_ROW.url(raceResultAccount(config, race, chosen, bib)), fetchImpl);
   if (answer.error) throw new RaceResultError("UNKNOWN_LIST", `race result answered "${answer.error}" for that list`);
-  const fields = answer.DataFields ?? [];
-  if (fields[0] !== "BIB" || fields[list.columns.name] !== list.fields.name || fields[list.columns.time] !== list.fields.time) {
-    throw new RaceResultError("UNKNOWN_LIST", "That list no longer has the name and the time where the register says");
-  }
+  const columns = raceResultColumns(answer.DataFields ?? [], list);
+  if (!columns) throw new RaceResultError("UNKNOWN_LIST", "That list no longer publishes the name and the time the register reads");
   const wanted = bib.trim().toUpperCase();
   const row = raceResultRows(answer.data).find((cells) => cells[0]?.toUpperCase() === wanted);
   if (!row) throw new RaceResultError("NO_RESULT", "No runner answers to that bib in that race");
-  return { account, row: { runner: (row[list.columns.name] ?? "").trim(), official: (row[list.columns.time] ?? "").trim() } };
+  return { account: raceResultAccount(config, race, chosen, bib, columns), row: { runner: (row[columns.name] ?? "").trim(), official: (row[columns.time] ?? "").trim() } };
 }
 
 /** "2:08:24", "12:29.14", "1:05:32.5": seconds under a day, rounded down to the second; nothing for an empty cell or a status. */
