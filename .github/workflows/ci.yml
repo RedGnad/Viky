@@ -83,7 +83,10 @@ jobs:
       - name: Install the browser used by the screen tests
         run: pnpm exec playwright install --with-deps chromium
 
-      # Runs against the built app with no database and nobody signed in, which is the state of every
-      # first visit, so it needs no secret. It sees text that only exists once React has run.
+      # Runs against the built app with no database. Most screens are measured with nobody signed in, the state
+      # of every first visit. Two tests sign a passkey in, and a server signs nobody in without a session secret:
+      # this one is made up for the run, protects nothing, and exists nowhere else.
       - name: Test the screens in a browser
+        env:
+          SESSION_SIGNING_SECRET: ci-only-session-secret-that-protects-nothing
         run: pnpm test:browser
