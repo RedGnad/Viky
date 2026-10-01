@@ -226,6 +226,13 @@ export const PAY = {
    */
   partnerEmbedded: (name: string, euros: number | undefined) =>
     `The card payment opens next, by our partner ${name}. Enter ${euros ? `${euros} EUR` : "the amount"} there: it shows what your gift receives. A card service then takes your card in its own window, once with your ID, and calls the money USDC. Come back here: the gift starts by itself.`,
+  /**
+   * The same moment for a page that arrives filled in and locked, and delivers another dollar coin (the founder's
+   * words of 1 Oct 2026, from his own try to the last step before paying). The last sentence is the one a way that
+   * ends with a step to confirm has always carried (D101).
+   */
+  partnerLocked: (name: string) =>
+    `Our partner ${name} takes your card. The first time, it asks who you are: your details, a code by text, and your ID. Your account and the amount are already filled in. Come back here to confirm the last step.`,
   /** The sheet the card is paid in, and what its frame is called when read aloud. */
   card: { title: "Pay by card", frame: "Card payment" },
   yourCode: "Your code",
@@ -573,6 +580,8 @@ export const FUND = {
     /** What the wait ends with, which differs by rail (D101). */
     thenNothing: "When it lands, the gift is made straight away: there is nothing else to confirm.",
     thenChanged: "When it lands, you confirm one step that turns it into what the gift holds, and a little stays behind for it.",
+    /** The same for a dollar coin, changed one for one: nothing stays behind (the founder, 1 Oct 2026). */
+    thenConfirmed: "When it lands, you confirm one step that turns it into what the gift holds.",
     codeLabel: (name: string) => `The code to give ${name}`,
     copy: "Copy the code",
     copied: "Copied",

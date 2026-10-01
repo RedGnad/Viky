@@ -18,7 +18,7 @@ import { ExactLine, LedFigure } from "../LedAmount";
 import { savePendingGift } from "@/src/pending-gift";
 import { rateDateInWords, spokenAmount } from "@/src/display-currency";
 import type { RailReach } from "@/src/rail-country";
-import { feeSentence, wayInFillsIn, wayInPage, waysIn } from "@/src/rails";
+import { feeSentence, wayInFillsIn, wayInPage, waysIn, WAY_IN_USDC } from "@/src/rails";
 import { CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
@@ -264,7 +264,13 @@ export function PaySheet({
           what to choose there and where the code goes, with the code one press away once the account exists. */}
       {byCard ? (
         <p className={BODY}>
-          {way.embedded ? W.partnerEmbedded(way.name, euros) : wayInFillsIn(way) ? W.partnerFilledIn : W.partnerPaste(way.name, way.delivers.coin, way.delivers.network, way.arrives === "gift")}
+          {way.embedded
+            ? W.partnerEmbedded(way.name, euros)
+            : way === WAY_IN_USDC
+              ? W.partnerLocked(way.name)
+              : wayInFillsIn(way)
+                ? W.partnerFilledIn
+                : W.partnerPaste(way.name, way.delivers.coin, way.delivers.network, way.arrives === "gift")}
         </p>
       ) : null}
       {/* A judge's code (D297): only while credits are open, and the gift is not yet covered. */}

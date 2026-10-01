@@ -26,7 +26,7 @@ import { formatAusd } from "@/src/gift-reader";
 import { dollarsToUnits } from "@/src/money";
 import { settlingTimeInWords } from "@/src/pass-schedule";
 import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
-import { wayInPage, waysIn, type WayIn } from "@/src/rails";
+import { wayInAsksNothing, wayInPage, waysIn, type WayIn } from "@/src/rails";
 import { JudgeCode } from "../kit/offer/JudgeCode";
 import { CardNotOffered, CardTermsLine } from "../kit/offer/CardTerms";
 import { SwapperSheet } from "../kit/offer/SwapperSheet";
@@ -659,8 +659,8 @@ export function PayGift() {
           />
         </section>
         {problem ? <FieldRefusal id="waiting-refused">{problem}</FieldRefusal> : null}
-        {/* Nothing to set and no code to give where the card is paid inside Viky: that sheet is told all of it already. */}
-        {wayIn.embedded && !cardClosed ? null : (
+        {/* Nothing to set and no code to give where the card's page is told all of it already: inside Viky, or locked. */}
+        {wayInAsksNothing(wayIn) && !cardClosed ? null : (
         <section className={CARD}>
           {/* What to set on the card partner's page, only where that page is offered to this payer. */}
           {cardClosed ? null : (
@@ -685,6 +685,8 @@ export function PayGift() {
           <p className={HELP}>{W.waiting.startsEnds(start, end)}</p>
         </section>
         )}
+        {/* A dollar coin that arrives is changed by one step the person confirms: said before, as the other way says it. */}
+        {wayIn.arrives === "usdc" && !cardClosed ? <p className={HELP}>{W.waiting.thenConfirmed}</p> : null}
         <p className={BODY}>
           {wayIn.takes && !cardClosed ? `${W.check.delay(wayIn.name, wayIn.takes)} ` : ""}
           {keptOnDevice ? W.waiting.leave : W.waiting.stay}
