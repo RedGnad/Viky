@@ -208,8 +208,18 @@ behind (`sweep`).
 `contracts/verifiers` is not deployed. It holds the direct verifiers ported from Lock-in with their real-proof tests,
 kept fail-closed (`LIVE_SCHEMA_CONFIRMED = false`). The path in production is the evidence signer, below.
 
-`forge test --network monad` runs the unit suites, the accounting fuzz and the typehash parity pins; with
-`MONAD_RPC_URL` set it also runs the mainnet fork tests of the real AUSD funding path. `pnpm deploy:gift-escrow` deploys
+`contracts/GiftEscrowV2.sol`, `contracts/MilestoneGiftV2.sol` and `contracts/ConsentAnchor.sol` are written and
+tested, and **not deployed: no gift runs on them**. They are the second version of the two gift contracts, from the
+audit of 1 Oct 2026. Opening a gift takes the signature of a key made from the secret its link carries, whose address
+is in the terms the funder signed, so the evidence signer opens nothing (on the contracts above, that one key could
+open an unopened gift and prove it). The person a gift is for can end it: what was counted stays theirs and the rest
+goes back in the same transaction. The owner is bounded: ownership moves in two steps and cannot be given up, a new
+evidence signer stands a day after it is announced, a goal is added and never changed, and a pause ends by itself
+after seven days and holds the open days rather than taking them. `ConsentAnchor` holds no money: it records which
+consent key an account agrees with, bound by the account's own signature, and every yes and stop in order.
+
+`forge test --network monad` runs the unit suites, the accounting fuzz, the invariant campaigns of the second version
+and the typehash parity pins; with `MONAD_RPC_URL` set it also runs the mainnet fork tests against the real AUSD. `pnpm deploy:gift-escrow` deploys
 and `pnpm check:gift-escrow` verifies a deployment against the expected configuration.
 
 ## Verification path
