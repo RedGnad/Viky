@@ -19,7 +19,9 @@ const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
  */
 export async function JudgesVerify() {
   const accounts = [...operatorAccounts()];
-  const example = accounts.length === 0 ? null : await exampleForJudges(accounts);
+  // The one reading of the database on this page that was not guarded (the audit of 1 Oct 2026): a database that does
+  // not answer leaves the page without its example, never without the page.
+  const example = accounts.length === 0 ? null : await exampleForJudges(accounts).catch(() => null);
   return (
     <section className="space-y-[var(--space-sm)]">
       <h2 className={TITLE}>Verify a credited day yourself</h2>

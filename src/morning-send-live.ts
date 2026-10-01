@@ -47,15 +47,22 @@ export async function liveFacts(giftId: string): Promise<GiftFacts | null> {
   }
 }
 
+/**
+ * How long one push service may take to answer before its request is dropped (the audit of 1 Oct 2026). A sending runs
+ * inside the pass that has just settled a day, one subscriber after another: a service that never answers must not
+ * hold the others, nor the pass.
+ */
+export const PUSH_TIMEOUT_MS = 8_000;
+
 async function sendOne(subscription: { endpoint: string; p256dh: string; auth: string }, payload: string): Promise<PushSent | PushRefusal> {
   vapid();
   try {
-    await webPush.sendNotification({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } }, payload);
+    await webPush.sendNotification({ endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } }, payload, { timeout: PUSH_TIMEOUT_MS });
     return { ok: true };
   } catch (error) {
     // 404 and 410 are the push services' way of saying this browser is gone for good; anything else may be temporary.
     const status = error instanceof webPush.WebPushError ? error.statusCode : 0;
-    return { ok: false, gone: status === 404 || status === 410 };
+    return { ok: false, gone: status === 404 || status === 410, status };
   }
 }
 

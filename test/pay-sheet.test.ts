@@ -43,7 +43,8 @@ test("the account is made at the press, and the sheet says so before it happens"
   assert.match(PAY.passkeyMakesTheAccount, /creates your account when you press pay/);
   assert.match(PAY.passkeyMakesTheAccount, /Nothing was asked of you until now/);
   // Said only where it is true: a device that remembers a passkey opens it, and makes nothing.
-  assert.match(sheet, /\{address \|\| hasCredential \? W\.signedIn : W\.passkeyMakesTheAccount\}/);
+  // And only where it can happen: on another address of the app an account is not made, and the sheet says where it is.
+  assert.match(sheet, /\{address \|\| hasCredential \? W\.signedIn : madeHere \? W\.passkeyMakesTheAccount : ACCOUNT_DOOR\.madeOnTheMainSite\}/);
   // The passkey opens inside the press, then the terms are written, then the service's page opens: that order.
   const press = sheet.slice(sheet.indexOf("const pay = async"), sheet.indexOf("const signInFirst ="));
   assert.ok(press.indexOf("await ensureAccount()") > 0 && press.indexOf("await ensureAccount()") < press.indexOf("savePendingGift("), "the account comes before the terms are kept");

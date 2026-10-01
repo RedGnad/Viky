@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
+import { useMadeHere } from "@/src/account/door";
 import { useAccount } from "@/src/account/provider";
 import { getJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
@@ -19,7 +20,7 @@ import { savePendingGift } from "@/src/pending-gift";
 import { rateDateInWords, spokenAmount } from "@/src/display-currency";
 import type { RailReach } from "@/src/rail-country";
 import { feeSentence, RAMP_NO_GIFT_COIN_IN, wayInFillsIn, wayInPage, waysIn, WAY_IN_GIFT_COIN, WAY_IN_USDC } from "@/src/rails";
-import { CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
+import { ACCOUNT_DOOR, CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
@@ -82,6 +83,7 @@ export function PaySheet({
   onMaking,
 }: Readonly<{ open: boolean; draft: GiftDraft; onChange: (draft: GiftDraft) => void; onClose: () => void; /** A press on pay is making its account, or stopped making it. */ onMaking: (making: boolean) => void }>) {
   const { address, hasCredential, ensureAccount, status } = useAccount();
+  const madeHere = useMadeHere();
   const router = useRouter();
   const money = useDisplayCurrency(address);
   const [held, setHeld] = useState<bigint | null>(null);
@@ -342,7 +344,7 @@ export function PaySheet({
       />
 
       {/* What the press does, as it is true of this device: it makes an account only where none is remembered. */}
-      <p className={HELP}>{address || hasCredential ? W.signedIn : W.passkeyMakesTheAccount}</p>
+      <p className={HELP}>{address || hasCredential ? W.signedIn : madeHere ? W.passkeyMakesTheAccount : ACCOUNT_DOOR.madeOnTheMainSite}</p>
       {/* A passkey kept by another device is not known to this one, and pay would make a second account (1 Oct 2026). */}
       {!address && !hasCredential ? (
         <button type="button" className={`${INLINE_BUTTON} self-start`} disabled={busy || status === "busy"} onClick={() => void signInFirst()}>

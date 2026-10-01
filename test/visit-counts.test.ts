@@ -39,7 +39,8 @@ test("every count goes through the cleaning, and a page's address never travels 
   }
   assert.match(readFileSync("app/layout.tsx", "utf8"), /<VisitCounts \/>/);
   // The browser's own `Referer` on a same-site request carries the page's whole address unless the site says otherwise.
-  assert.match(readFileSync("next.config.mjs", "utf8"), /\{ source: "\/:path\*", headers: \[\{ key: "Referrer-Policy", value: "strict-origin" \}\] \}/);
+  const config = readFileSync("next.config.mjs", "utf8");
+  assert.match(config.slice(config.indexOf('source: "/:path*"')), /^source: "\/:path\*",\s+headers: \[\s+\{ key: "Referrer-Policy", value: "strict-origin" \},/);
   assert.equal(JSON.parse(readFileSync("package.json", "utf8")).dependencies["@vercel/analytics"], "2.0.1");
   const privacy = readFileSync("app/privacy/page.tsx", "utf8");
   assert.match(privacy, /Visits are counted anonymously, with no cookie, by Vercel/);

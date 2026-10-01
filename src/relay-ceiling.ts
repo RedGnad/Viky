@@ -11,18 +11,23 @@ import { RELAY_CEILING as W } from "./sentences";
  *
  * The numbers are the founder's defaults and read from the environment when it names others.
  */
-export type RelayCeilings = Readonly<{ perHour: number; perDay: number; minimumUnits: bigint; topUpsPerMinute: number; topUpsPerGift: number }>;
+export type RelayCeilings = Readonly<{ perHour: number; perDay: number; minimumUnits: bigint; topUpsPerMinute: number; topUpsPerGift: number; perDayAll: number }>;
 
 // Two top-ups a gift, for as long as it lives (the money path audit of 27 Sep 2026): a fee that rose between the
 // answer and the send may be readied once more, and a funder who sweeps the MON out cannot be readied in a loop.
-export const DEFAULT_RELAY_CEILINGS: RelayCeilings = { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1, topUpsPerGift: 2 };
+//
+// And one count for everybody together (the audit of 1 Oct 2026): the ceilings above are each account's and each
+// connection's, so many accounts on many connections had no ceiling at all, and what they cost is one relayer's coin.
+// Five hundred a day: a credited day costs the relayer about 0.018 of it (measured 1 Oct 2026) and a gift's creation
+// several times that, so a day at this ceiling costs it under thirty, which it holds above its reserve.
+export const DEFAULT_RELAY_CEILINGS: RelayCeilings = { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1, topUpsPerGift: 2, perDayAll: 500 };
 
 const wholeNumber = (value: string | undefined, fallback: number): number => {
   const parsed = Number(value?.trim());
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-/** `RELAY_PER_HOUR`, `RELAY_PER_DAY`, `RELAY_MINIMUM_CENTS` (100 is one dollar), `TOP_UPS_PER_MINUTE`, `TOP_UPS_PER_GIFT`. */
+/** `RELAY_PER_HOUR`, `RELAY_PER_DAY`, `RELAY_MINIMUM_CENTS` (100 is one dollar), `TOP_UPS_PER_MINUTE`, `TOP_UPS_PER_GIFT`, `RELAY_PER_DAY_ALL`. */
 export function relayCeilings(env: Readonly<Record<string, string | undefined>> = process.env): RelayCeilings {
   return {
     perHour: wholeNumber(env.RELAY_PER_HOUR, DEFAULT_RELAY_CEILINGS.perHour),
@@ -30,6 +35,7 @@ export function relayCeilings(env: Readonly<Record<string, string | undefined>> 
     minimumUnits: BigInt(wholeNumber(env.RELAY_MINIMUM_CENTS, Number(DEFAULT_RELAY_CEILINGS.minimumUnits / 10_000n))) * 10_000n,
     topUpsPerMinute: wholeNumber(env.TOP_UPS_PER_MINUTE, DEFAULT_RELAY_CEILINGS.topUpsPerMinute),
     topUpsPerGift: wholeNumber(env.TOP_UPS_PER_GIFT, DEFAULT_RELAY_CEILINGS.topUpsPerGift),
+    perDayAll: wholeNumber(env.RELAY_PER_DAY_ALL, DEFAULT_RELAY_CEILINGS.perDayAll),
   };
 }
 
@@ -52,9 +58,15 @@ export function windowEndsMs(window: Exclude<RelayWindow, "ever">, nowMs: number
 
 export const minutesUntil = (window: Exclude<RelayWindow, "ever">, nowMs: number): number => Math.max(1, Math.ceil((windowEndsMs(window, nowMs) - nowMs) / 60_000));
 
-export type RelayScope = Readonly<{ scope: string; window: RelayWindow; limit: number; who: "account" | "connection" | "gift" }>;
+export type RelayScope = Readonly<{ scope: string; window: RelayWindow; limit: number; who: "account" | "connection" | "gift" | "everybody" }>;
 
-/** The four counts a relayed action is held against: the account and the connection, each by the hour and by the day. */
+/** The one count every relayed action of a day is held against, whoever asks. */
+export const RELAY_DAY_ALL = "relay:day:all";
+
+/**
+ * The five counts a relayed action is held against: the account and the connection, each by the hour and by the day,
+ * and everybody together by the day.
+ */
 export function relayScopes(account: string, ip: string, ceilings: RelayCeilings): readonly RelayScope[] {
   const who = account.toLowerCase();
   return [
@@ -62,6 +74,7 @@ export function relayScopes(account: string, ip: string, ceilings: RelayCeilings
     { scope: `relay:day:account:${who}`, window: "day", limit: ceilings.perDay, who: "account" },
     { scope: `relay:hour:ip:${ip}`, window: "hour", limit: ceilings.perHour, who: "connection" },
     { scope: `relay:day:ip:${ip}`, window: "day", limit: ceilings.perDay, who: "connection" },
+    { scope: RELAY_DAY_ALL, window: "day", limit: ceilings.perDayAll, who: "everybody" },
   ];
 }
 
@@ -85,6 +98,7 @@ export function overTheCeiling(counted: readonly Counted[]): Counted | undefined
 }
 
 export function ceilingSentence(over: Counted, nowMs: number): string {
+  if (over.who === "everybody") return W.dayAll;
   if (over.window === "day") return W.day(over.who === "gift" ? "account" : over.who);
   if (over.window === "minute") return W.topUpTooSoon;
   if (over.window === "ever") return W.topUpsForGift;

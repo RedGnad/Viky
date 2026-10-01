@@ -2,10 +2,10 @@
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { CARD, FIELD, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./ui";
-import { useDoor } from "@/src/account/door";
+import { useDoor, useMadeHere } from "@/src/account/door";
 import { useAccount } from "@/src/account/provider";
 import { ACCOUNT_DOOR as W } from "@/src/sentences";
-import { CopyThisLink, Elsewhere, Outdated } from "../kit/AccountDoor";
+import { CopyThisLink, Elsewhere, MadeOnTheMainSite, Outdated } from "../kit/AccountDoor";
 
 /**
  * Creating an account, or coming back to one. Consumer words only.
@@ -33,6 +33,8 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
   const [displayName, setDisplayName] = useState("");
   const [naming, setNaming] = useState(false);
   const door = useDoor();
+  // No account is made on an address that is not Viky's own: there the panel offers signing in, and the way to viky.cash.
+  const madeHere = useMadeHere();
   // On a gift the link carries the gift's key, so it is the link that is named and copied, never the site.
   const onGift = (usePathname() ?? "").startsWith("/g/");
   const busy = status === "busy";
@@ -74,7 +76,9 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
     </button>
   );
 
-  const makeAnAccount = (
+  const makeAnAccount = !madeHere ? (
+    <MadeOnTheMainSite />
+  ) : (
     <form
       className="flex flex-col gap-[var(--space-md)]"
       onSubmit={(event) => {

@@ -13,6 +13,7 @@ export type AccountErrorCode =
   | "TIMED_OUT"
   | "RATE_LIMITED"
   | "OTHER_ACCOUNT"
+  | "MADE_ELSEWHERE"
   | "UNKNOWN";
 
 /**
@@ -48,6 +49,8 @@ const GUIDANCE: Record<AccountErrorCode, string> = {
   RATE_LIMITED: "Too many sign-ins in ten minutes. Wait a few minutes, then sign in again.",
   // The passkey that answered is not the one of the account this browser is signed in to (src/client/consent.ts).
   OTHER_ACCOUNT: "That passkey opens another account. Use the passkey of the account you are signed in to, then try again.",
+  // An address that is not Viky's own: no account is made there, since its passkey would open nowhere else.
+  MADE_ELSEWHERE: "Accounts are created on viky.cash. An account already made here still signs in.",
   UNKNOWN: "Something went wrong on our side. Nothing was changed. Please try again.",
 };
 

@@ -301,7 +301,10 @@ so accounts created on a preview hostname stay on that hostname.
 - **For the readings**: the Reclaim applications and the attested-fetch worker. A gift's condition is read and proved.
 
 The functions run in Vercel's Paris region (`vercel.json`), next to the Frankfurt database, and two crons run the
-passes: `/api/cron/daily` at 00:30 UTC and `/api/cron/settle` at 07:00 UTC.
+passes: `/api/cron/daily` at 00:30 UTC and `/api/cron/settle` at 07:00 UTC. A third, `/api/cron/watch` at 02:00 UTC,
+emails the operator when the morning pass is not in the journal. `/api/health` answers 200 when the database, the
+network, the reading worker, the relayer, the exchange's pin, the evidence key and the passes all hold, and 503 when
+one does not; it needs no secret and answers nothing of any gift.
 
 ## Pages and routes
 
@@ -325,11 +328,12 @@ the journal), `proof` (a proof shown from the person's own account), `connect` (
 key), one folder per source read (`duolingo`, `chess`, `codeforces`, `coursera`, `edx`, `mitx-online`, `credly`,
 `accredible`, `det`, `marathon`, `wca`, `portals`), `conditions` (what may be offered), `fund`, `exit`, `send`,
 `phone` and `giftcards` (money in and out), `rails` and `rates` (which partner serves where, and the day's rate),
-`cron` (the two passes), `judge` and `judges`, and `dev`.
+`cron` (the two passes and the watch), `health`, `judge` and `judges`, and `dev`.
 
 Operator commands: `pnpm keeper` (the same passes from a terminal), `pnpm zkfetch:worker [port]` (the attested-fetch
 worker, deployed from `Dockerfile`), `pnpm portal:pin` (reviewing a first proof from a university), `pnpm pilot:report`
-(the pilot gift by gift, read only), `pnpm relayer:fees`.
+(the pilot gift by gift, read only), `pnpm relayer:fees`, `pnpm check:signer` (the evidence key of the environment
+against the signer the contracts name, before a deployment).
 
 ## Test
 

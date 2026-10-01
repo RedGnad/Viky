@@ -43,6 +43,9 @@ function target(): { name: string; address: Address; abi: Abi } {
   throw new Error(`TARGET is escrow, earlier-escrow, milestone or router, and ${which} is none of them`);
 }
 
+/** The first four bytes of `renounceOwnership()`. */
+const RENOUNCE_OWNERSHIP = "0x715018a6";
+
 /** The action in words, turned into the one call it is. Anything else goes through ACTION=raw with its own data. */
 function actionCall(): { step: string; to: Address; data: Hex } {
   const action = (process.env.ACTION?.trim() ?? "").toLowerCase();
@@ -50,6 +53,9 @@ function actionCall(): { step: string; to: Address; data: Hex } {
     const to = getAddress(String(process.env.TO?.trim()));
     const data = String(process.env.DATA?.trim()) as Hex;
     if (!/^0x([0-9a-fA-F]{2})+$/.test(data)) throw new Error("DATA must be the call's own bytes, as 0x followed by an even number of hex figures");
+    // `renounceOwnership()`, by its selector: it leaves a contract with no owner for good, and no step of Viky's ever
+    // needs it. The contracts that refuse it say so themselves; this refuses before two people are asked to sign it.
+    if (data.toLowerCase().startsWith(RENOUNCE_OWNERSHIP)) throw new Error("Refusing to run: DATA is renounceOwnership(), which gives a contract's ownership up for good");
     return { step: `raw call to ${to}`, to, data };
   }
   const paused = process.env.PAUSED?.trim();

@@ -62,6 +62,14 @@ export async function claimPass(name: string, everySeconds: number, nowMs: numbe
   return rows.length > 0;
 }
 
+/** When a guarded pass last ran, or nothing when it never has. */
+export async function lastGuardedPass(name: string): Promise<Date | null> {
+  await ensurePassGuardSchema();
+  const rows = await sql()`SELECT ran_at FROM viky_pass_guard WHERE name = ${name}`;
+  const value = rows[0]?.ran_at;
+  return value === null || value === undefined ? null : value instanceof Date ? value : new Date(String(value));
+}
+
 /** The pass itself: every milestone still climbing, read one after another, and what is reached told. */
 export function frequentMilestonePass(deps: MilestonePassDeps = frequentPassDeps()): Promise<MilestonePassLine[]> {
   return milestonePass(false, deps);

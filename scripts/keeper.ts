@@ -14,6 +14,8 @@ async function main() {
   const report = await dailyPass(process.argv.includes("--settle") ? SETTLING_PASS : COUNTING_PASS);
   console.log(JSON.stringify({ relayer: report.relayer, balanceWei: report.balanceWei }));
   for (const line of report.lines) console.log(JSON.stringify(line));
+  for (const line of report.watch) console.log(JSON.stringify(line));
+  for (const line of report.unsent) console.log(JSON.stringify({ unsent: line }));
 }
 
 main().catch((error) => {

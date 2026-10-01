@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { installedOnTheHomeScreen } from "./mera";
-import { doorOf, readDoor, type Door } from "./passkey-support";
+import { accountsAreMadeAt, doorOf, readDoor, type Door } from "./passkey-support";
 
 /**
  * The account's door, read once for the whole page and known from its first image (the founder, 1 Oct 2026).
@@ -34,6 +34,13 @@ export function DoorProvider({ userAgent, origin, children }: Readonly<{ userAge
 
 export function useDoor(): Door {
   return useContext(DoorContext).door;
+}
+
+/** Whether an account may be made on the address this page is served from, known from its first image as the door is. */
+export function useMadeHere(): boolean {
+  const origin = useContext(DoorContext).origin;
+  // A screen drawn with no page around it names no address: the gesture itself still refuses (src/account/mera.ts).
+  return origin === "" || accountsAreMadeAt(origin);
 }
 
 /** Where the page is served from, as the server read it: the start of the link a page names as its own. */

@@ -60,6 +60,8 @@ const line = async (account: string) => (await loadJudgeCredits()).find((row) =>
 const total = () => moved.reduce((sum, m) => sum + m.units, 0n);
 async function seed(account: string, state: string, minutesAgo: number) {
   await db.query(`INSERT INTO viky_judge_credits (account, units, state, updated_at) VALUES ($1, 25000000, $2, now() - ($3 || ' minutes')::interval)`, [account.toLowerCase(), state, String(minutesAgo)]);
+  // A line the claim wrote is in the counter the ceiling is held by: so is one written here in its place.
+  if (state === "sending" || state === "sent" || state === "failed") await db.query("UPDATE viky_judge_credit_total SET units = units + 25000000");
 }
 
 before(async () => {
@@ -69,6 +71,7 @@ before(async () => {
 });
 beforeEach(async () => {
   await db.query("DELETE FROM viky_judge_credits");
+  await db.query("UPDATE viky_judge_credit_total SET units = 0");
   used.clear();
   moved.length = 0;
   sends = 0;

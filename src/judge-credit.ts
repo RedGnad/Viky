@@ -7,6 +7,9 @@ import { GiftApiError } from "./gift-api";
 import { AUSD_ADDRESS, createMonadPublicClient } from "./monad/chain";
 import { unsettledOrders } from "./phone-order-store";
 import { refundAusd, treasuryAddress, TreasuryError } from "./phone-treasury";
+import { sendAlert } from "./provider-alert";
+import { bucketOf } from "./relay-ceiling";
+import { countKey, countRelays } from "./relay-ceiling-store";
 import type { SqlExecutor } from "./proof-session-store";
 
 /**
@@ -20,6 +23,10 @@ import type { SqlExecutor } from "./proof-session-store";
  * - once per account: the row's key is the account, and the treasury's transfer authorization carries a nonce made
  *   from the account, so even a second row could not move money twice;
  * - the amount (`JUDGE_CREDIT_AUSD`) and a ceiling on all credits together (`JUDGE_CREDIT_CAP_AUSD`), both variables;
+ *   the ceiling is held by one counter row, raised in the same statement that writes the account's line, so two
+ *   requests at once cannot both pass under it (the audit of 1 Oct 2026);
+ * - ten tries a day from one connection, whatever the account (`admitJudgeTry`, src/relay-admission.ts);
+ * - an email to the operator at each credit, and once a day when a judge is refused at the ceiling;
  * - nothing after the end of 27 Oct 2026, UTC;
  * - five wrong codes and the account can no longer try;
  * - one line per credit in `viky_judge_credits`, which the operator reads with `pnpm judge:credits`, read back from the
@@ -49,7 +56,14 @@ CREATE TABLE IF NOT EXISTS viky_judge_credits (
   wrong_codes integer NOT NULL DEFAULT 0,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
-)
+);
+CREATE TABLE IF NOT EXISTS viky_judge_credit_total (
+  id integer PRIMARY KEY CHECK (id = 1),
+  units numeric NOT NULL
+);
+INSERT INTO viky_judge_credit_total (id, units)
+SELECT 1, COALESCE(SUM(units), 0) FROM viky_judge_credits WHERE state IN ('sending', 'sent', 'failed')
+ON CONFLICT (id) DO NOTHING
 `;
 
 export const JUDGE_REFUSALS = {
@@ -109,8 +123,13 @@ let schema: Promise<void> | undefined;
 /** Made on first use, so a deployment never serves the route before its table exists. Once per instance. */
 export function ensureJudgeCreditSchema(): Promise<void> {
   schema ??= (async () => {
-    const strings = Object.assign([JUDGE_CREDIT_SCHEMA], { raw: [JUDGE_CREDIT_SCHEMA] }) as unknown as TemplateStringsArray;
-    await sql()(strings);
+    // One statement at a time: the journal, then the one counter row the ceiling is held by, started from the journal.
+    for (const statement of JUDGE_CREDIT_SCHEMA.split(";")) {
+      const text = statement.trim();
+      if (!text) continue;
+      const strings = Object.assign([text], { raw: [text] }) as unknown as TemplateStringsArray;
+      await sql()(strings);
+    }
   })().catch((error: unknown) => {
     schema = undefined;
     throw error;
@@ -209,7 +228,7 @@ function why(error: unknown): string {
  */
 export async function giveJudgeCredit(
   input: Readonly<{ account: string; code: string }>,
-  deps: Readonly<{ config?: JudgeCreditConfig | null; nowMs?: number; send?: Send; authorizationUsed?: AuthorizationUsed; spendable?: Spendable }> = {},
+  deps: Readonly<{ config?: JudgeCreditConfig | null; nowMs?: number; send?: Send; authorizationUsed?: AuthorizationUsed; spendable?: Spendable; tell?: (news: JudgeNews) => Promise<void> }> = {},
 ): Promise<{ units: string; hash: Hex | null }> {
   const config = deps.config === undefined ? judgeCreditConfig() : deps.config;
   if (!config) throw new GiftApiError("JUDGE_CREDIT_CLOSED", JUDGE_REFUSALS.notOpen, 503);
@@ -261,22 +280,41 @@ export async function giveJudgeCredit(
   }
   if (spendable === null || spendable < config.units) throw new GiftApiError("JUDGE_CREDIT_TREASURY", JUDGE_REFUSALS.treasuryHeld, 503);
 
-  // Claimed in one statement: only while what is given, on its way, or on a failed line (which may have landed, and
-  // stays its judge's to try again), this credit included, stays under the ceiling. A "sending" line is taken back only
-  // once its authorization can no longer land, and by one request alone.
+  // Claimed in one statement, the counter first and the account's line after it (the audit of 1 Oct 2026). The
+  // ceiling used to be a sum read in the statement that inserted the line: two requests at once each read the sum
+  // before the other's line existed, and both passed. One row is now raised and compared in place, and a row is
+  // changed by one request at a time, the second seeing what the first left. What is counted is everything given, on
+  // its way, or on a failed line (which may have landed, and stays its judge's to try again); a line already counted
+  // adds nothing. And never more than what the treasury has given plus what it may still give, which a send leaves
+  // unchanged. A "sending" line is taken back only once its authorization can no longer land, and by one request alone.
   const units = config.units.toString();
-  const claimed = await sql()`
-    INSERT INTO viky_judge_credits (account, units, state)
-    SELECT ${account}, ${units}, 'sending'
-    WHERE (SELECT COALESCE(SUM(units), 0) FROM viky_judge_credits WHERE state IN ('sending', 'sent', 'failed') AND account <> ${account}) + ${units} <= ${config.capUnits.toString()}
-    ON CONFLICT (account) DO UPDATE SET units = EXCLUDED.units, state = 'sending', updated_at = now()
-      WHERE viky_judge_credits.state IN ('refused', 'failed')
-        OR (viky_judge_credits.state = 'sending' AND viky_judge_credits.updated_at < now() - ${SENDING_SETTLED}::interval)
-    RETURNING account`;
-  if (claimed.length === 0) {
+  const add = existing?.state === "sending" || existing?.state === "failed" ? "0" : units;
+  const given = BigInt(String((await sql()`SELECT COALESCE(SUM(units), 0) AS units FROM viky_judge_credits WHERE state = 'sent'`)[0]?.units ?? "0").split(".")[0]);
+  const within = (given + spendable).toString();
+  const claim = (
+    await sql()`
+      WITH counted AS (
+        UPDATE viky_judge_credit_total SET units = units + ${add}::numeric
+         WHERE id = 1 AND units + ${add}::numeric <= LEAST(${config.capUnits.toString()}::numeric, ${within}::numeric)
+        RETURNING units
+      ), written AS (
+        INSERT INTO viky_judge_credits (account, units, state)
+        SELECT ${account}, ${units}::numeric, 'sending' FROM counted
+        ON CONFLICT (account) DO UPDATE SET units = EXCLUDED.units, state = 'sending', updated_at = now()
+          WHERE viky_judge_credits.state IN ('refused', 'failed')
+            OR (viky_judge_credits.state = 'sending' AND viky_judge_credits.updated_at < now() - ${SENDING_SETTLED}::interval)
+        RETURNING account
+      )
+      SELECT (SELECT count(*) FROM counted)::int AS counted, (SELECT count(*) FROM written)::int AS written`
+  )[0];
+  if (Number(claim?.written ?? 0) === 0) {
+    // Counted and not written: another request holds this account's line. What this one added is taken back out.
+    if (Number(claim?.counted ?? 0) === 1 && add !== "0") await sql()`UPDATE viky_judge_credit_total SET units = units - ${add}::numeric WHERE id = 1`;
     const again = (await sql()`SELECT state, updated_at < now() - ${SENDING_SETTLED}::interval AS settled FROM viky_judge_credits WHERE account = ${account}`)[0];
     if (again?.state === "sent") throw new GiftApiError("JUDGE_ALREADY_CREDITED", JUDGE_REFUSALS.already, 409);
     if (again?.state === "sending" && again.settled !== true) throw new GiftApiError("JUDGE_CREDIT_SENDING", JUDGE_REFUSALS.sending, 409);
+    // Told once a day, so the operator knows the day a judge was turned away.
+    await (deps.tell ?? tellOperator)({ kind: "ceiling", account });
     throw new GiftApiError("JUDGE_CREDIT_CAP", JUDGE_REFUSALS.capReached, 409);
   }
 
@@ -306,5 +344,71 @@ export async function giveJudgeCredit(
   } catch (error) {
     console.error(`judge credit sent, its line not written: ${account} ${hash ?? "hash unknown"}: ${why(error)}`);
   }
+  await (deps.tell ?? tellOperator)({ kind: "given", account, units: config.units, hash, standing: await judgeCreditsStanding(config).catch(() => null) });
   return { units, hash };
+}
+
+export type JudgeStanding = Readonly<{ given: number; left: number }>;
+
+/**
+ * How many credits were given and how many are left under the ceiling, counted and never typed: the lines marked
+ * sent, and what the counter row leaves. Nothing when judge credits are not open on this deployment.
+ */
+export async function judgeCreditsStanding(config: JudgeCreditConfig | null = judgeCreditConfig()): Promise<JudgeStanding | null> {
+  if (!config) return null;
+  await ensureJudgeCreditSchema();
+  const row = (await sql()`SELECT (SELECT count(*) FROM viky_judge_credits WHERE state = 'sent')::int AS given, (SELECT units FROM viky_judge_credit_total WHERE id = 1) AS counted`)[0];
+  const counted = BigInt(String(row?.counted ?? "0").split(".")[0]);
+  const left = counted >= config.capUnits ? 0n : (config.capUnits - counted) / config.units;
+  return { given: Number(row?.given ?? 0), left: Number(left) };
+}
+
+/** The standing as the judges page says it, or that it could not be read: never a number nobody counted. */
+export function standingInWords(standing: JudgeStanding | null): string {
+  if (!standing) return "How many credits are left could not be read right now.";
+  const given = standing.given === 1 ? "1 credit has been given so far" : `${standing.given} credits have been given so far`;
+  return `${given}, ${standing.left} ${standing.left === 1 ? "is" : "are"} left under the ceiling.`;
+}
+
+export type JudgeNews = Readonly<{ kind: "given"; account: string; units: bigint; hash: Hex | null; standing: JudgeStanding | null }> | Readonly<{ kind: "ceiling"; account: string }>;
+
+const short = (account: string) => `${account.slice(0, 6)}…${account.slice(-4)}`;
+
+/** The email for each credit, and for a judge refused at the ceiling. The code is never in it. */
+export function judgeAlert(news: JudgeNews): { subject: string; text: string } {
+  if (news.kind === "ceiling") {
+    return {
+      subject: "Judge credits: the ceiling is reached",
+      text: [`A judge (${short(news.account)}) typed the right code and was told that no credit is left.`, "", "Raise JUDGE_CREDIT_CAP_AUSD if more are meant to be given. The journal: pnpm judge:credits"].join("\n"),
+    };
+  }
+  const amount = `$${(Number(news.units) / 1_000_000).toFixed(2)}`;
+  return {
+    subject: `Judge credit given: ${amount} to ${short(news.account)}`,
+    text: [
+      `A judge credit of ${amount} went to ${news.account}.`,
+      news.hash ? `Transfer: ${news.hash}` : "Its transfer's hash is unknown: the token shows it went out.",
+      news.standing ? `Given so far: ${news.standing.given}. Left under the ceiling: ${news.standing.left}.` : "",
+      "",
+      "The journal: pnpm judge:credits",
+    ]
+      .filter((line, index, lines) => line !== "" || lines[index - 1] !== "")
+      .join("\n"),
+  };
+}
+
+/**
+ * Tells the operator, and never fails the credit: at each credit, and once a day when a judge is refused at the
+ * ceiling, however many are (one row of the relayer's counts marks the day it was said).
+ */
+async function tellOperator(news: JudgeNews): Promise<void> {
+  try {
+    if (news.kind === "ceiling") {
+      const row = { scope: "judge:ceiling-told", bucket: bucketOf("day", Date.now()) };
+      if (((await countRelays([row])).get(countKey(row)) ?? 0) > 1) return;
+    }
+    await sendAlert(judgeAlert(news));
+  } catch (error) {
+    console.error(`judge credit: the operator could not be told: ${why(error)}`);
+  }
 }

@@ -3,7 +3,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useDoor, usePageOrigin } from "@/src/account/door";
 import type { EmbeddedApp, Handset } from "@/src/account/errors";
-import { wayOut, type OwnBrowser } from "@/src/account/passkey-support";
+import { ACCOUNT_HOST, wayOut, type OwnBrowser } from "@/src/account/passkey-support";
 import { ACCOUNT_DOOR as W } from "@/src/sentences";
 import { CARD, FIELD, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../components/ui";
 
@@ -65,6 +65,23 @@ export function Elsewhere({ handset, app }: Readonly<{ handset: Handset; app: Em
       ) : null}
       <CopyThisLink browser={way?.browser ?? null} />
     </section>
+  );
+}
+
+/**
+ * Where accounts are made, said on any other address this app answers on (the audit of 1 Oct 2026): the same page on
+ * Viky's own address, its key included, as a link the person presses. Signing in to an account made here stays beside it.
+ */
+export function MadeOnTheMainSite() {
+  const path = usePathname() ?? "/";
+  const query = useSearchParams()?.toString() ?? "";
+  return (
+    <div className="flex flex-col gap-[var(--space-sm)]" data-account-door="main-site">
+      <p className={HELP}>{W.madeOnTheMainSite}</p>
+      <a href={`https://${ACCOUNT_HOST}${path}${query ? `?${query}` : ""}`} className={`${PRIMARY_BUTTON} block text-center no-underline`}>
+        {W.createThere}
+      </a>
+    </div>
   );
 }
 
