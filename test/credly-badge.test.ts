@@ -24,7 +24,9 @@ import { SHAPE_HAVE_OR_NOT } from "../src/milestone-protocol";
 /**
  * A certification on Credly: two public records of one badge, read together (20 Sep 2026).
  *
- * Every fixture below is a real answer, measured that day on three live badges and on a badge id nobody has. What
+ * Every fixture below is a real answer, measured that day on three live badges and on a badge id nobody has, with an
+ * invented holder: the names, the badges' own ids and the hashed recipient are made up, each in the shape of the real
+ * one (a two-word name, a name with a double hyphen). The issuer's and the badge classes' ids are the public ones. What
  * these tests guard is the thing that would quietly pay the wrong gift: a badge is identified by its issuer's id
  * and its badge class's id, never by the words on its page, and the two halves must be about the same badge.
  */

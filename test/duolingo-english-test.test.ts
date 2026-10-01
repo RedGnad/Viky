@@ -59,7 +59,8 @@ test("the two addresses are the ones measured, and the alias is escaped into the
 });
 
 test("a name is the same whichever way round either side wrote it", () => {
-  // The certificate prints "Vantar, Elio Sam Noor"; a funder would type it the other way round.
+  // The certificate prints "Vantar, Elio Sam Noor" (an invented holder, in the shape a live one prints: the surname,
+  // a comma, three given names); a funder would type it the other way round.
   const onTheCertificate = "Vantar, Elio Sam Noor";
   const asTyped = "Elio Sam Noor Vantar";
   assert.equal(normaliseCertificateName(onTheCertificate), normaliseCertificateName(asTyped));

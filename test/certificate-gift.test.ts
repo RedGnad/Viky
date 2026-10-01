@@ -17,6 +17,7 @@ import type { MilestoneState } from "../src/milestone-reader";
  * pasted and nothing said.
  */
 
+/** An invented holder, in the shape a certificate prints: the surname, a comma, three given names. */
 const NAME = "Vantar, Elio Sam Noor";
 const SUBJECT = certificateSubject(DET_SOURCE, NAME);
 const RECIPIENT = "0x000000000000000000000000000000000000B0B0" as const;

@@ -59,7 +59,8 @@ export function detAliasOf(pasted: string): string | undefined {
 
 /**
  * A name as the two sides can both write it. The certificate prints a legal name, surname first and with a comma
- * ("Vantar, Elio Sam Noor", read on a live certificate on 18 Sep 2026), while a funder types the name they
+ * ("Vantar, Elio Sam Noor", the shape read on a live certificate on 18 Sep 2026, with an invented holder), while a
+ * funder types the name they
  * use. So accents, case, punctuation and the order of the parts are all removed: what is left is the set of words in
  * the name, in one order, which is the same whichever way round either side wrote it.
  *

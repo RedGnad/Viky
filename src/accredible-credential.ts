@@ -5,7 +5,8 @@ import { normaliseCertificateName } from "./duolingo-english-test";
  * A credential issued on Accredible (D213), read for the person like a Credly badge: the person shares the link of
  * their credential, `credential.net/<uuid>`, and Viky reads the public record its page is drawn from. Browser safe.
  *
- * **Measured on a live credential on 24 Sep 2026**, `credential.net/0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d`: the page is
+ * **Measured on a live credential on 24 Sep 2026**, at `credential.net/<uuid>` (its identifier is not kept here: a
+ * credential names its holder): the page is
  * a JavaScript application, and its data is `GET https://api.accredible.com/v1/credential-net/credentials/<uuid>` (the
  * path the page's own bundle builds, `credential-net/credentials/${id}`), public JSON, 8.5 KB. It carries the
  * credential's uuid and title, the day of issue, whether it is expired, revoked or private, the recipient's name, and

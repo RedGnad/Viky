@@ -43,6 +43,7 @@
     "check:universities": "tsx scripts/check-universities.ts",
     "test:browser": "playwright test",
     "pilot:report": "tsx scripts/pilot-report.ts",
+    "relayer:fees": "tsx scripts/relayer-fees.ts",
     "review:capture-connected": "tsx scripts/capture-connected.ts",
     "measure:words": "tsx scripts/measure-words.ts",
     "measure:contrast": "tsx scripts/measure-contrast.ts",
