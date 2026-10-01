@@ -1,12 +1,16 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-// Writes the ABIs of the two gift contracts from their Foundry artifacts into typed TypeScript modules, so the
-// relayer, the routes and the tests share one source of truth. Run after `forge build`.
+// Writes the ABIs of the gift contracts from their Foundry artifacts into typed TypeScript modules, so the relayer,
+// the routes and the tests share one source of truth. Run after `forge build`. The first version's two contracts
+// still hold gifts, so their ABIs stay beside the second version's.
 
 const contracts = [
   { name: "GiftEscrow", constant: "giftEscrowAbi", out: "src/gift-escrow-abi.ts" },
   { name: "MilestoneGift", constant: "milestoneGiftAbi", out: "src/milestone-gift-abi.ts" },
+  { name: "GiftEscrowV2", constant: "giftEscrowV2Abi", out: "src/gift-escrow-v2-abi.ts" },
+  { name: "MilestoneGiftV2", constant: "milestoneGiftV2Abi", out: "src/milestone-gift-v2-abi.ts" },
+  { name: "ConsentAnchor", constant: "consentAnchorAbi", out: "src/consent-anchor-abi.ts" },
 ] as const;
 
 for (const contract of contracts) {

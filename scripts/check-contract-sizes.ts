@@ -8,6 +8,9 @@ const MONAD_MAX_RUNTIME_BYTES = 128 * 1024;
 const productionArtifacts = [
   ["GiftEscrow", "out/GiftEscrow.sol/GiftEscrow.json"],
   ["MilestoneGift", "out/MilestoneGift.sol/MilestoneGift.json"],
+  ["GiftEscrowV2", "out/GiftEscrowV2.sol/GiftEscrowV2.json"],
+  ["MilestoneGiftV2", "out/MilestoneGiftV2.sol/MilestoneGiftV2.json"],
+  ["ConsentAnchor", "out/ConsentAnchor.sol/ConsentAnchor.json"],
   ["ExitRouter", "out/ExitRouter.sol/ExitRouter.json"],
   ["VikyReclaimVerifier", "out/VikyReclaimVerifier.sol/VikyReclaimVerifier.json"],
   ["VikyStravaClaimParser", "out/VikyStravaReclaimVerifier.sol/VikyStravaClaimParser.json"],
