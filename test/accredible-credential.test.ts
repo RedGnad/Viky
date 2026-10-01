@@ -9,7 +9,10 @@ import { ACCREDIBLE_CREDENTIAL as LINE, BUILDING, CONDITIONS, conditionById } fr
 import { ACCREDIBLE_MILESTONE, certificateById } from "../src/milestone-conditions";
 import { MILESTONE_GOALS } from "../src/milestone-goals";
 
-/** A credential on Accredible (D213). The record below is the live one measured on 24 Sep 2026, trimmed to what is read. */
+/**
+ * A credential on Accredible (D213). The record below is the live one measured on 24 Sep 2026, trimmed to what is read,
+ * with an invented holder: the name, the identifiers and the masked e-mail are made up, each in the shape of the real one.
+ */
 const ID = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
 const RECORD = `{"data":{"id":100000001,"private_key":null,"private":false,"grade":null,"issued_on":"2024-06-22","expired_on":null,"uuid":"${ID}","name":"Rearchitecting the Financial System","custom_type":{"course_name":"text"},"expired":false,"recipient":{"email":"e********@e*******.org","name":"Elio Vantar","id":"${ID}"},"revoked_at":null,"issuer":{"id":10312,"name":"issuer+t00000@example.com","url":"https://www.cfte.education?aad=BAhJ","description":"x"},"group":{"course_name":"Rearchitecting the Financial System"}}}`;
 

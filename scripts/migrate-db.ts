@@ -50,7 +50,10 @@ async function main() {
     if (!/^0x[0-9a-fA-F]{40}$/.test(backfill)) throw new Error("BACKFILL_ESCROW is not a contract identifier");
     console.log(`escrow recorded for ${await backfillEscrow(backfill as `0x${string}`)} earlier gift(s)`);
   }
-  console.log("schema ready: viky_proof_sessions, viky_gifts, viky_relayed, viky_days, viky_milestone_gifts, viky_milestone_readings, viky_connections, viky_exits, viky_sends, viky_accounts, viky_private_spaces, viky_relay_counts, viky_push, viky_told, viky_passes, viky_portals, viky_phone_orders");
+  // The tables as the database holds them now, read back rather than recited: the line used to name a table this
+  // very script drops (the audit of 1 Oct 2026).
+  const tables = (await neon(databaseUrl())`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name LIKE 'viky%' ORDER BY table_name`) as Array<{ table_name: string }>;
+  console.log(`schema ready: ${tables.map((table) => table.table_name).join(", ")}`);
 }
 
 main().catch((error) => {

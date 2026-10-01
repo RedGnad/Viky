@@ -12,7 +12,8 @@ import { MILESTONE_GOALS } from "../src/milestone-goals";
 
 /**
  * An edX verified certificate (D212). The page below is the live certificate measured on 24 Sep 2026, trimmed to the
- * block the patterns read, carriage returns kept as edX serves them.
+ * block the patterns read, carriage returns kept as edX serves them, with an invented holder: the name and the
+ * certificate's identifier are made up, each in the shape of the real one.
  */
 const PAGE = [
   "<title>GTx ISYE6501x Certificate | edX</title>",

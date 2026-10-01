@@ -6,8 +6,8 @@ import { normaliseCertificateName } from "./duolingo-english-test";
  * person shares the link of a certificate MITx Online issued, and Viky reads the page it publishes for it. MIT's
  * courses left edX for mitxonline.mit.edu, so an MIT course is read here and not there. Browser safe.
  *
- * **Measured on 24 Sep 2026** on two real public program certificates,
- * `mitxonline.mit.edu/certificate/program/2c3d4e5f-6071-4c8d-ae9f-1a2b3c4d5e6f/` and `…/3d4e5f60-7182-4d9e-bfa0-2b3c4d5e6f70/`,
+ * **Measured on 24 Sep 2026** on two real public program certificates, at
+ * `mitxonline.mit.edu/certificate/program/<uuid>/` (their identifiers are not kept here: a certificate names its holder),
  * 200, about 10 KB of server-rendered HTML: the title `MITx Online | Certificate for: <course or program>`, the holder
  * in `certify-name`, "Issued: Nov. 4, 2024", and the certificate's id again after "Valid Certificate ID". A course
  * certificate is served at `/certificate/<uuid>/` by the same template (mitodl/mitxonline, `cms/models.py`,

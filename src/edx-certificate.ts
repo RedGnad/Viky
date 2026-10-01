@@ -8,12 +8,13 @@ import { normaliseCertificateName } from "./duolingo-english-test";
  * Set aside on 18 Sep 2026 for identity (D100 chose the Duolingo English Test over it); it comes back on the founder's
  * reasoning of 24 Sep: the issuer attests, as Coursera's page does, and the same name binding applies (D49's gap).
  *
- * **Measured on a real public certificate on 24 Sep 2026**, `courses.edx.org/certificates/0a1b2c3d4e5f60718293a4b5c6d7e8f9`,
+ * **Measured on a real public certificate on 24 Sep 2026**, at `courses.edx.org/certificates/<32 hexadecimal characters>`
+ * (its identifier is not kept here: a certificate names its holder),
  * 200, 11 KB of server-rendered HTML: the title `GTx ISYE6501x Certificate | edX` (the organisation and the course
  * number), the track in the rendering's own class (`wrapper-accomplishment-title verified`), the holder in
  * `accomplishment-recipient`, the course's printed name in `accomplishment-course-name`, "Issued August 6, 2018", and
  * the certificate's id again in its own link. A certificate that does not exist, or no longer does, answers 404
- * (`f0e1d2c3…` the same day).
+ * (another identifier, the same day).
  */
 
 export const EDX_SOURCE = "edX";

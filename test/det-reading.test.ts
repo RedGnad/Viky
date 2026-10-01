@@ -14,6 +14,7 @@ import type { ZkFetchProof } from "../src/duolingo-public";
 
 const ATTESTOR = "0x244897572368eadf65bfbc5aec98d8e5443a9072";
 const ALIAS = "abcd1234efgh5678";
+/** The answer of the certificate's data address, in its own shape, with an invented holder: the name and the date of birth are made up. */
 const ANSWER = {
   rating: null,
   is_legacy: false,
