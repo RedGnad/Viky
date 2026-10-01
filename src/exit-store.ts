@@ -5,6 +5,7 @@ import { neon } from "@neondatabase/serverless";
 import type { SqlExecutor } from "./proof-session-store";
 import type { OpenExit } from "./exit-plan";
 import { GiftApiError } from "./gift-api";
+import { AUSD_ADDRESS } from "./monad/chain";
 
 /**
  * One way out at a time, per account, written down before anything is signed.
@@ -148,16 +149,35 @@ export function newExitId(): string {
   return randomBytes(12).toString("hex");
 }
 
+/** What a gift holds, as a row names it: the coin a conversion gives back, and one no way out ever does. */
+const GIFT_COIN = AUSD_ADDRESS.toLowerCase();
+
 /**
  * The one way out that is still alive for this account: not yet landed, and not yet expired. A set of terms
  * whose deadline has passed is harmless, because the contract refuses it and the token's own window has
  * closed with it.
+ *
+ * A conversion is written in the same table (src/usdc-router.ts), and the two never read each other: a way out gives
+ * back anything but what a gift holds, which its contract refuses (`SameToken`), and a conversion gives back nothing
+ * else. So the coin coming back says which of the two a row is, and no column was added for it.
  */
 export async function openExit(account: string, now: Date = new Date()): Promise<ExitRecord | null> {
   const rows = await sql()`
     SELECT * FROM viky_exits
      WHERE account = ${account.toLowerCase()} AND state IN ('prepared', 'signed')
        AND deadline > ${Math.floor(now.getTime() / 1000)}
+       AND token_out <> ${GIFT_COIN}
+     ORDER BY created_at DESC LIMIT 1`;
+  return rows.length === 1 ? toRecord(rows[0]) : null;
+}
+
+/** The one conversion still alive for this account, exactly as `openExit` reads a way out. */
+export async function openConversion(account: string, now: Date = new Date()): Promise<ExitRecord | null> {
+  const rows = await sql()`
+    SELECT * FROM viky_exits
+     WHERE account = ${account.toLowerCase()} AND state IN ('prepared', 'signed')
+       AND deadline > ${Math.floor(now.getTime() / 1000)}
+       AND token_out = ${GIFT_COIN}
      ORDER BY created_at DESC LIMIT 1`;
   return rows.length === 1 ? toRecord(rows[0]) : null;
 }

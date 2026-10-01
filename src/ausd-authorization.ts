@@ -98,9 +98,10 @@ export function receiveAuthorizationMessage(input: {
 }
 
 /** The typed-data request the browser hands to the passkey account's `signTypedData`. */
-export function receiveAuthorizationTypedData(message: ReceiveAuthorizationMessage) {
+export function receiveAuthorizationTypedData(message: ReceiveAuthorizationMessage, coin?: Coin) {
   return {
-    domain: AUSD_DOMAIN,
+    // What a gift holds unless another coin is named, so every existing caller signs under the domain it always did.
+    domain: coin ? domainFor(coin) : AUSD_DOMAIN,
     types: RECEIVE_WITH_AUTHORIZATION_TYPES,
     primaryType: "ReceiveWithAuthorization" as const,
     message,

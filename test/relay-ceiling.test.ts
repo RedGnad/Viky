@@ -161,6 +161,7 @@ test("every route that asks the relayer to pay goes through the door first; the 
     ["app/api/send/route.ts", /writeContract\(/],
     ["app/api/gift/withdraw/route.ts", /relayWithdraw\(/],
     ["app/api/exit/relay/route.ts", /relayExit\(/],
+    ["app/api/fund/convert/relay/route.ts", /relayExit\(/],
     ["app/api/gift/[id]/cancel/route.ts", /sendTransaction\(/],
     ["app/api/gift/claim/route.ts", /relayClaim\(/],
     ["app/api/gift/check-in/route.ts", /relayCheckIn\(/],

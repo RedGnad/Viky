@@ -10,7 +10,10 @@ import { prepareGift, submitGift, type CreatedGift } from "@/src/client/gift";
 import { prepareCertificateGift, submitCertificateGift } from "@/src/client/certificate-gift";
 import { prepareMilestoneGift, submitMilestoneGift } from "@/src/client/milestone";
 import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY, isCertificateRequest, isMilestoneRequest } from "@/src/gift-attempt";
-import { readAusdBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
+import { changeArrivedUsdc } from "@/src/client/convert";
+import { readAusdBalance, readCoinBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
+import { USDC } from "@/src/coins";
+import { usdcRouterAddress } from "@/src/usdc-router";
 import { conditionById } from "@/src/conditions";
 import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { cadenceOf, certificateById, milestoneById } from "@/src/milestone-conditions";
@@ -201,9 +204,11 @@ export function PayGift() {
 
   const refresh = useCallback(async () => {
     if (!address) return null;
-    const [held, arriving] = await Promise.all([readAusdBalance(address), readMonBalance(address)]);
+    // USDC is read only where the step that changes it exists (src/usdc-router.ts): without it nothing could be done
+    // with what was read, and the screen asks the chain nothing more than it did.
+    const [held, arriving, usdc] = await Promise.all([readAusdBalance(address), readMonBalance(address), usdcRouterAddress() ? readCoinBalance(USDC, address) : undefined]);
     setBalance(held);
-    return { held, arriving };
+    return { held, arriving, usdc };
   }, [address]);
 
   useEffect(() => {
@@ -342,7 +347,7 @@ export function PayGift() {
       try {
         const read = await refresh();
         if (!read) return;
-        const next = nextFundingStep({ held: read.held, arriving: read.arriving, wanted, failedAtMs: failedAtMs.current, nowMs: Date.now() });
+        const next = nextFundingStep({ held: read.held, arriving: read.arriving, arrivingUsdc: read.usdc, wanted, failedAtMs: failedAtMs.current, nowMs: Date.now() });
         if (next.do === "give") {
           working.current = true;
           setPhase("giving");
@@ -356,6 +361,37 @@ export function PayGift() {
             setPhase("failed");
           }
           working.current = false;
+          return;
+        }
+        if (next.do === "convertUsdc") {
+          // The other dollar coin a card can deliver (the founder, 1 Oct 2026): changed into what a gift holds on one
+          // signature the relayer carries, since this account holds none of the chain's coin and can call nothing.
+          working.current = true;
+          setPhase("converting");
+          let account;
+          try {
+            account = await ensureSigner();
+          } catch {
+            working.current = false;
+            return;
+          }
+          try {
+            await changeArrivedUsdc({ account, amount: next.amount });
+          } catch (error) {
+            // Kept from trying again at once, exactly as a conversion of the chain's coin is (src/funding-step.ts).
+            failedAtMs.current = Date.now();
+            setProblem(error instanceof ApiError && error.code !== "QUOTE_STALE" ? error.message : W.arrived.priceMoved);
+            setPhase("waiting");
+            working.current = false;
+            return;
+          }
+          failedAtMs.current = null;
+          const after = await readAusdBalance(address);
+          setBalance(after);
+          setArrivedFigure(formatAusd(after - read.held));
+          setProblem(null);
+          working.current = false;
+          setPhase(after >= wanted ? "giving" : "short");
           return;
         }
         if (next.do === "convert") {
