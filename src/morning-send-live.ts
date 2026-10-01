@@ -1,8 +1,11 @@
 import webPush from "web-push";
 import { conditionOfGoal } from "./conditions";
+import { ledAmount, spokenAmount } from "./display-currency";
 import { formatAusd, readGift } from "./gift-reader";
 import { loadGift } from "./gift-store";
 import { isMilestoneGiftId } from "./milestone-protocol";
+import { loadPreferences } from "./preferences-store";
+import { currentRates, ratesUsable } from "./rates";
 import type { GiftFacts, PushRefusal, PushSent, TellingDeps } from "./morning-send";
 import { forgetEndpoint, subscriptionsForGift, claimTelling } from "./push-store";
 import { escrowOf } from "./relayer";
@@ -34,13 +37,13 @@ export async function liveFacts(giftId: string): Promise<GiftFacts | null> {
   const words = { yesterday: isMilestoneGiftId(giftId) ? undefined : conditionOfGoal(record.goalType)?.words.yesterday };
   try {
     const gift = await readGift(escrowOf(record), giftId);
-    return { funder: record.funder, names, words, perDayDisplay: formatAusd(gift.perDay), amountDisplay: formatAusd(gift.amount) };
+    return { funder: record.funder, names, words, perDayDisplay: formatAusd(gift.perDay), amountDisplay: formatAusd(gift.amount), perDayUnits: gift.perDay, amountUnits: gift.amount };
   } catch {
     // A milestone gift lives on another contract, and a gift of a deployment we do not serve cannot be read at all.
     // The record's own amount is what the funder paid, so the whole-gift sentences stay true; a day's share does not
     // exist on a milestone gift, and its sentences never ask for one.
     const perDay = record.durationDays > 0 ? record.amount / BigInt(record.durationDays) : 0n;
-    return { funder: record.funder, names, words, perDayDisplay: formatAusd(perDay), amountDisplay: formatAusd(record.amount) };
+    return { funder: record.funder, names, words, perDayDisplay: formatAusd(perDay), amountDisplay: formatAusd(record.amount), perDayUnits: perDay, amountUnits: record.amount };
   }
 }
 
@@ -56,8 +59,20 @@ async function sendOne(subscription: { endpoint: string; p256dh: string; auth: s
   }
 }
 
+/**
+ * An amount in the currency an account reads in, "about" when it is a conversion, or the exact dollars: when the
+ * account keeps no currency, keeps the dollar, or the day's rate cannot be read.
+ */
+export async function spokenFor(account: string, units: bigint): Promise<string> {
+  const currency = await loadPreferences(account).then((kept) => kept.displayCurrency).catch(() => null);
+  if (!currency || currency === "USD") return formatAusd(units);
+  const rates = await currentRates().catch(() => undefined);
+  return spokenAmount(ledAmount(units, currency, ratesUsable(rates, Date.now()) ? rates : undefined));
+}
+
 export function liveTellingDeps(): TellingDeps {
   return {
+    speak: spokenFor,
     subscriptions: async (giftId) => (pushConfigured() ? await subscriptionsForGift(giftId) : []),
     claim: claimTelling,
     forgetEndpoint,

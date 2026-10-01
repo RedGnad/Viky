@@ -23,11 +23,12 @@ import {
 import { checkMilestone, requestMilestoneCode, startMilestone, type MilestoneOutcome } from "@/src/client/milestone";
 import { conditionById, conditionOfGoal } from "@/src/conditions";
 import { stripFromRecord } from "@/src/day-states";
-import { whenInWords } from "@/src/display-currency";
+import { spokenAmount, whenInWords } from "@/src/display-currency";
 import { giftOfMilestone, giftOfSummary, funderMayTakeItBack, readAs } from "@/src/gift-moment";
 import { eyebrowOf, liveOf, titleOf } from "@/src/gift-live";
 import { notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
 import { milestoneById } from "@/src/milestone-conditions";
+import { previewLine, sharedWith } from "@/src/preview-line";
 import { MILESTONE_LATE_PROOF_SECONDS } from "@/src/milestone-protocol";
 import type { AnyGiftStatus } from "@/src/gift-status";
 import type { MilestoneStatus } from "@/src/milestone-view";
@@ -567,7 +568,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
           </button>
         );
       case "linkAgain":
-        return <LinkAgain giftId={giftId} recipientName={recipientName} />;
+        // Shared with who gave it, how much in the reader's own currency (the funder's), and what it is.
+        return <LinkAgain giftId={giftId} shareText={sharedWith(funderName, spokenAmount(money.led(BigInt(status.amount))), previewLine(condition, Boolean(milestone)))} />;
       case "askAgain":
         return <AskAgain funderName={funderName} />;
       case "offerAgain":

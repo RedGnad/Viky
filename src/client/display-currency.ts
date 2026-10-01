@@ -9,8 +9,9 @@ import { useMoneyStart } from "./money-start";
 /**
  * The display currency of the account on this device, and the one line every money screen needs from it.
  *
- * The device proposes from its language tag, never by a question. A choice the account made on the account
- * page wins over the proposal and is read from the server, so it follows the account across devices. The rate
+ * The currency is proposed, never asked: from the country the connection comes from, then from the device's
+ * language. A choice the account made on the account page wins over the proposal and is read from the server, so it
+ * follows the account across devices; an account that has none takes the one its device kept. The rate
  * comes from Viky's own route, which answers nothing when the source has not for three days: then `about`
  * returns nothing and `unavailable` carries the one line to print instead (decision 1, 17 Sep 2026).
  */
@@ -49,6 +50,22 @@ function keepInTheTab(currency: DisplayCurrency): void {
   }
   for (const changed of [...listeners]) changed();
 }
+
+/** What this device kept: the cookie a press or a first proposal wrote, which is what the server draws with. */
+function keptOnTheDevice(): DisplayCurrency | null {
+  try {
+    const kept = document.cookie
+      .split("; ")
+      .find((one) => one.startsWith(`${CURRENCY_COOKIE}=`))
+      ?.slice(CURRENCY_COOKIE.length + 1);
+    return isDisplayCurrency(kept) ? kept : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The accounts this page already gave its currency to: every money screen asks at once, and one of them writes. */
+const givenToTheAccount = new Set<string>();
 
 export type DisplayMoney = Readonly<{
   currency: DisplayCurrency;
@@ -127,7 +144,15 @@ export function useDisplayCurrency(address: string | undefined): DisplayMoney {
     let live = true;
     getJson<PreferencesAnswer>("/api/account/preferences")
       .then((answer) => {
-        if (live) setChosenFor({ address, currency: answer.displayCurrency });
+        if (!live) return;
+        // An account with no currency of its own takes the one this device kept (the founder, 1 Oct 2026): the first
+        // proposal is written on the account when it is made, so it follows the person and their messages speak it.
+        const kept = answer.displayCurrency ?? keptOnTheDevice();
+        setChosenFor({ address, currency: kept });
+        if (answer.displayCurrency === null && kept && !givenToTheAccount.has(address)) {
+          givenToTheAccount.add(address);
+          void putJson<{ displayCurrency: DisplayCurrency }>("/api/account/preferences", { displayCurrency: kept }).catch(() => givenToTheAccount.delete(address));
+        }
       })
       .catch(() => {
         if (live) setChosenFor({ address, currency: null });
@@ -144,7 +169,7 @@ export function useDisplayCurrency(address: string | undefined): DisplayMoney {
    * already on the screen. `language` is nothing until the browser runs, so the server's answer is what holds the
    * first render together.
    */
-  const asked = forTheTab ?? chosen ?? (start.decided || !language ? start.currency : proposedDisplayCurrency(language));
+  const asked = forTheTab ?? chosen ?? (start.decided || !language ? start.currency : proposedDisplayCurrency(language, (code) => offered.includes(code)));
   /**
    * What the screens read in, and it is the dollar until a rate makes another currency true (D151).
    *

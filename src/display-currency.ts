@@ -11,8 +11,10 @@ import { formatAusd } from "./gift-reader";
  * PayPal's primary currency: one per account, proposed, changeable). Every converted figure carries "about" and
  * the date of the rate, and the dollar stays readable beside it wherever a gesture is irreversible.
  *
- * The device gives a language tag, not a country: `fr-FR` names France, `fr` names nobody. Only a tag with a
- * region proposes anything; without one the dollar shows, which is the honest default rather than a guess.
+ * The device gives a language tag, not a country: `fr-FR` names France, `fr` names nobody. So the country the
+ * connection comes from proposes first, and the language's region where the connection says nothing; with neither the
+ * dollar shows, which is the honest default rather than a guess. The first proposal is kept on the device, and written
+ * on the account when one is made, so it does not change under a person who travels (the founder, 1 Oct 2026).
  */
 
 /**
@@ -44,6 +46,33 @@ const CFA_FRANC_AREA: ReadonlySet<string> = new Set(["BJ", "BF", "CI", "GW", "ML
  */
 export const CURRENCY_COOKIE = "viky.currency";
 
+/** The six states of the Central African monetary union, whose franc the BEAC issues, fixed to the euro like the BCEAO's. */
+const CENTRAL_CFA_FRANC_AREA: ReadonlySet<string> = new Set(["CM", "CF", "TD", "CG", "GQ", "GA"]);
+
+/** Four states that use the euro by a monetary agreement with the Union, and two that use it without one. */
+const EURO_BY_AGREEMENT: ReadonlySet<string> = new Set(["AD", "MC", "SM", "VA", "ME", "XK"]);
+
+/**
+ * The currency a country's own law names, for the countries whose currency Viky could offer: those in the central
+ * bank's daily file and the two CFA francs (src/currencies.ts). A fact of each country, changed by law and years
+ * apart, like the euro area above; whether the currency is offered today is not written here, it is asked.
+ */
+const OWN_CURRENCY: Readonly<Record<string, string>> = {
+  AU: "AUD", BR: "BRL", CA: "CAD", CH: "CHF", LI: "CHF", CZ: "CZK", DK: "DKK", FO: "DKK", GL: "DKK", GB: "GBP", GG: "GBP", IM: "GBP", JE: "GBP",
+  HK: "HKD", HU: "HUF", ID: "IDR", IN: "INR", IS: "ISK", JP: "JPY", KR: "KRW", MX: "MXN", MY: "MYR", NO: "NOK", NZ: "NZD", PH: "PHP", PL: "PLN",
+  RO: "RON", SE: "SEK", SG: "SGD", TH: "THB", TR: "TRY", US: "USD", ZA: "ZAR",
+};
+
+/** The currency of a country, by its two letters, or nothing for a country whose currency Viky could not offer. */
+export function currencyOfCountry(country: string | null | undefined): DisplayCurrency | undefined {
+  const code = country?.trim().toUpperCase();
+  if (!code || !/^[A-Z]{2}$/.test(code)) return undefined;
+  if (EURO_AREA.has(code) || EURO_BY_AGREEMENT.has(code)) return "EUR";
+  if (CFA_FRANC_AREA.has(code)) return "XOF";
+  if (CENTRAL_CFA_FRANC_AREA.has(code)) return "XAF";
+  return OWN_CURRENCY[code];
+}
+
 /** The region of a language tag, upper case, or nothing: "fr-FR" gives FR, "fr" gives nothing. */
 export function regionOf(languageTag: string | undefined): string | undefined {
   if (!languageTag) return undefined;
@@ -52,13 +81,30 @@ export function regionOf(languageTag: string | undefined): string | undefined {
   return region?.toUpperCase();
 }
 
-/** What the device proposes. Dollars whenever the device says nothing usable. */
-export function proposedDisplayCurrency(languageTag: string | undefined): DisplayCurrency {
-  const region = regionOf(languageTag);
-  if (!region) return "USD";
-  if (EURO_AREA.has(region)) return "EUR";
-  if (CFA_FRANC_AREA.has(region)) return "XOF";
-  return "USD";
+/**
+ * What is proposed, never asked (the founder, 1 Oct 2026): the currency of the country the connection comes from,
+ * and where that is not known, of the region the device's language names. Measured in production before this:
+ * "fr-FR" and "en-FR" read in euros, but "fr" alone, "en-US" and "en-GB" read in dollars in France, because a language
+ * is not a place. The two may disagree, a phone in English in Dakar: the connection decides and nothing is asked.
+ *
+ * A country whose currency is not offered reads dollars: `mayRead` says which are, asked of the rails and the rate
+ * file by whoever calls this. `decided` says a place was known at all; without one the dollar is an assumption, and a
+ * device that knows better may say so.
+ */
+export function proposedCurrency(
+  signals: Readonly<{ country?: string | null; language?: string }>,
+  mayRead: (code: string) => boolean = isDisplayCurrency,
+): Readonly<{ currency: DisplayCurrency; decided: boolean }> {
+  const fromConnection = signals.country?.trim().toUpperCase();
+  const place = fromConnection && /^[A-Z]{2}$/.test(fromConnection) ? fromConnection : regionOf(signals.language);
+  if (!place) return { currency: "USD", decided: false };
+  const own = currencyOfCountry(place);
+  return { currency: own && mayRead(own) ? own : "USD", decided: true };
+}
+
+/** What the device's language alone proposes. Dollars whenever it names no place, or a place whose currency is not offered. */
+export function proposedDisplayCurrency(languageTag: string | undefined, mayRead?: (code: string) => boolean): DisplayCurrency {
+  return proposedCurrency({ language: languageTag }, mayRead).currency;
 }
 
 /** A currency somebody may read in: one the runtime knows, and not one the product does not offer (src/currencies.ts). */

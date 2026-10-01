@@ -20,7 +20,16 @@ export type PushRefusal = Readonly<{ ok: false; gone: boolean }>;
 export type PushSent = Readonly<{ ok: true }>;
 
 /** What a gift's sentences need: the two names, what a day is worth, and the register's word for what was done. */
-export type GiftFacts = Readonly<{ funder: string; names: GiftNames; perDayDisplay: string; amountDisplay: string; words: MorningWords }>;
+export type GiftFacts = Readonly<{
+  funder: string;
+  names: GiftNames;
+  perDayDisplay: string;
+  amountDisplay: string;
+  /** The same two amounts in the coin's units, so each person can be told in the currency their account reads in. */
+  perDayUnits?: bigint;
+  amountUnits?: bigint;
+  words: MorningWords;
+}>;
 
 export type TellingDeps = Readonly<{
   subscriptions: (giftId: string) => Promise<StoredSubscription[]>;
@@ -28,6 +37,11 @@ export type TellingDeps = Readonly<{
   forgetEndpoint: (endpoint: string) => Promise<unknown>;
   facts: (giftId: string) => Promise<GiftFacts | null>;
   send: (subscription: StoredSubscription, payload: string) => Promise<PushSent | PushRefusal>;
+  /**
+   * An amount as this account reads money: "about €3.05" in the currency the account keeps, or the exact dollars. A
+   * message sent outside the app speaks the account's currency, as the app does (the founder, 1 Oct 2026).
+   */
+  speak?: (account: string, units: bigint) => Promise<string>;
   log?: (line: string) => void;
 }>;
 
@@ -68,9 +82,12 @@ async function tell(giftId: string, news: MorningNews, deps: TellingDeps, day?: 
     if (!(await deps.claim(giftId, morningSubject(news, day)))) return 0;
     // A day is worth a day's share; a milestone reached or expired moves the whole gift.
     const amount = news.kind === "day" ? facts.perDayDisplay : facts.amountDisplay;
-    const told = { ...news, amount } as MorningNews;
+    const units = news.kind === "day" ? facts.perDayUnits : facts.amountUnits;
     let sent = 0;
     for (const subscription of subscriptions) {
+      // Each person is told in the currency their own account reads in; the exact dollars when that cannot be said.
+      const spoken = deps.speak && units !== undefined ? await deps.speak(subscription.account, units).catch(() => amount) : amount;
+      const told = { ...news, amount: spoken } as MorningNews;
       const payload = morningPayload(giftId, sideOf(subscription.account, facts.funder), told, facts.names, facts.words);
       let result: PushSent | PushRefusal;
       try {

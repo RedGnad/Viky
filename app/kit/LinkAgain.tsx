@@ -23,7 +23,7 @@ const never = () => () => {};
 const inBrowser = () => true;
 const onServer = () => false;
 
-export function LinkAgain({ giftId, recipientName }: Readonly<{ giftId: string; recipientName: string | null }>) {
+export function LinkAgain({ giftId, shareText }: Readonly<{ giftId: string; /** The words the link is shared with: who, how much, what it is. */ shareText: string }>) {
   const browser = useSyncExternalStore(never, inBrowser, onServer);
   const [made, setMade] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -79,7 +79,7 @@ export function LinkAgain({ giftId, recipientName }: Readonly<{ giftId: string; 
       {link && sharing ? (
         <button
           type="button"
-          onClick={() => void navigator.share({ title: "Viky", text: W.shareLinkText(recipientName), url: link }).catch(() => undefined)}
+          onClick={() => void navigator.share({ title: "Viky", text: shareText, url: link }).catch(() => undefined)}
           className={SECONDARY_BUTTON}
         >
           {W.shareLink}

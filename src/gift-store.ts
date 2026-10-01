@@ -46,6 +46,7 @@ ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS bound_at timestamptz;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS goal_profile_id text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS recipient_name text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS funder_name text;
+ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS funder_currency text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS goal_course text;
 ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS goal_course_title text;
 CREATE TABLE IF NOT EXISTS viky_creations (
@@ -124,6 +125,8 @@ export type GiftRecord = Readonly<{
   /** The first name of the person it is for, and the funder's name as they know them. Null on gifts made before 17 Sep. */
   recipientName: string | null;
   funderName: string | null;
+  /** The currency the funder was reading in when they made the gift (1 Oct 2026); nothing for a gift made before. */
+  funderCurrency?: string | null;
   /** The hash of the link's key, never the key: kept so a request can prove it holds the link. */
   claimTokenHash: string;
 }>;
@@ -286,6 +289,7 @@ function toRecord(row: Record<string, unknown>): GiftRecord {
     goalProfileId: row.goal_profile_id === null || row.goal_profile_id === undefined ? null : String(row.goal_profile_id),
     recipientName: row.recipient_name === null || row.recipient_name === undefined ? null : String(row.recipient_name),
     funderName: row.funder_name === null || row.funder_name === undefined ? null : String(row.funder_name),
+    funderCurrency: typeof row.funder_currency === "string" && /^[A-Z]{3}$/.test(row.funder_currency) ? row.funder_currency : null,
     claimTokenHash: String(row.claim_token_hash),
   };
 }
@@ -322,6 +326,36 @@ export async function rotateClaimToken(giftId: string, funder: string): Promise<
      WHERE gift_id = ${giftId} AND funder = ${funder.toLowerCase()} AND recipient IS NULL
      RETURNING gift_id`;
   return rows.length === 1 ? token : null;
+}
+
+/**
+ * The funder's currency column, made the first time a gift keeps one in a process (1 Oct 2026): production never runs
+ * the migration, and a route must never wait on one. Idempotent, once per instance.
+ */
+let funderCurrencyColumn: Promise<void> | undefined;
+function withFunderCurrencyColumn(): Promise<void> {
+  funderCurrencyColumn ??= (async () => {
+    await sql()`ALTER TABLE viky_gifts ADD COLUMN IF NOT EXISTS funder_currency text`;
+  })().catch((error: unknown) => {
+    funderCurrencyColumn = undefined;
+    throw error;
+  });
+  return funderCurrencyColumn;
+}
+
+/**
+ * Keeps on a gift the currency its funder was reading in when they made it, so the link's title and its picture go
+ * on saying the amount in that currency whatever the funder reads in later (the founder, 1 Oct 2026). Written once,
+ * by the funder's own creation, and never over what is already there.
+ */
+export async function keepFunderCurrency(giftId: string, funder: string, currency: string): Promise<boolean> {
+  if (!/^[A-Z]{3}$/.test(currency)) return false;
+  await withFunderCurrencyColumn();
+  const rows = await sql()`
+    UPDATE viky_gifts SET funder_currency = ${currency}
+     WHERE gift_id = ${giftId} AND funder = ${funder.toLowerCase()} AND funder_currency IS NULL
+     RETURNING gift_id`;
+  return rows.length === 1;
 }
 
 /** Records the claim once; a second claimant finds the row already taken. The transaction is null only when it is not known (`reconcileClaim`). */

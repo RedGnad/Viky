@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { FUND, MILESTONE_FUND, PAY } from "../src/sentences";
+import { sharedWith } from "../src/preview-line";
 
 /**
  * A card can be paid for without the recipient's name (the founder, 20 Sep 2026): a gift for whoever opens the link.
@@ -20,7 +21,7 @@ test("with no name, nothing reads 'for ,' or 's name', and with a name nothing c
     FUND.closed.keptWhileOpen("$30.00", ""),
     FUND.waitingGift.which("$30.00", ""),
     FUND.made.title("$30.00", ""),
-    FUND.made.shareText(""),
+    sharedWith("", "$30.00", "It becomes yours as you go."),
     FUND.made.onlyThem(""),
     MILESTONE_FUND.account.yourGift("$30.00", ""),
   ];

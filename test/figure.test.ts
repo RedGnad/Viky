@@ -188,14 +188,14 @@ test("every link to Viky carries the same picture, the day's figure on the paper
 
 test("the preview's card grows with its words, the figure always on its edge (D266)", () => {
   const preview = readFileSync("app/og/preview.tsx", "utf8");
-  assert.match(preview, /flexDirection: "column", justifyContent: "flex-end"/, "the figure and the card one column from the foot");
-  assert.match(preview, /minHeight: 200,/, "the card at least its height, taller when the words need it");
+  // One column from the foot (the mockup of 1 Oct 2026): the figure and the name over the card, so the card grows
+  // upward with what it says and the figure stands on its top edge whatever its height.
+  assert.match(preview, /left: PREVIEW_COLUMN\.left, width: PREVIEW_COLUMN\.width, bottom: PREVIEW_COLUMN\.bottom, display: "flex", flexDirection: "column"/);
   // Whole, with its four corners and the ground under it, and the figure's feet whole on its edge (28 Sep 2026).
-  assert.match(preview, /margin: "0 100px 44px",/);
-  assert.match(preview, /borderRadius: 40,/);
+  assert.match(preview, /borderRadius: 36,/);
   assert.doesNotMatch(preview, /borderBottom: "none"/);
-  assert.match(preview, /marginBottom: -2 \}\}/);
-  assert.doesNotMatch(preview, /bottom: 230/, "never a figure fixed above a card of a fixed height");
+  assert.match(preview, /marginLeft: 20, marginBottom: -2 \}\}/);
+  assert.doesNotMatch(preview, /minHeight|bottom: 230/, "never a figure fixed above a card of a fixed height");
   assert.match(readFileSync("app/api/gift/[id]/preview-image/route.tsx", "utf8"), /description: LONGEST_LINE/, "the gallery draws the longest line there is");
 });
 

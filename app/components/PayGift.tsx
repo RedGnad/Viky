@@ -38,6 +38,7 @@ import { FieldRefusal } from "../kit/FieldRefusal";
 import { Success } from "../kit/Motion";
 import { Shell } from "../kit/Shell";
 import { Working } from "../kit/Working";
+import { previewLine, sharedWith } from "@/src/preview-line";
 import { AccountPanel } from "./AccountPanel";
 import { DoorNotice } from "../kit/AccountDoor";
 import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
@@ -67,6 +68,8 @@ type Made = Readonly<{
   claimUrl: string;
   atMs: number;
   recipientName: string;
+  /** The giver's name as they gave it, for the words the link is shared with; nothing on a gift made before 1 Oct 2026. */
+  funderName?: string;
   conditionId: string;
   amount: string;
   days: number;
@@ -307,6 +310,7 @@ export function PayGift() {
       claimUrl: result.claimUrl,
       atMs: Date.now(),
       recipientName: recipient,
+      funderName: funder,
       conditionId: condition.id,
       amount: units.toString(),
       days,
@@ -481,7 +485,8 @@ export function PayGift() {
           {sharing ? (
             <button
               type="button"
-              onClick={() => void navigator.share({ title: "Viky", text: W.made.shareText(made.recipientName), url: made.claimUrl }).catch(() => undefined)}
+              // Who, how much in the giver's own currency, what it is; the link follows (the founder, 1 Oct 2026).
+              onClick={() => void navigator.share({ title: "Viky", text: sharedWith(made.funderName, spokenAmount(led), previewLine(madeCondition, madeMilestone)), url: made.claimUrl }).catch(() => undefined)}
               className={SECONDARY_BUTTON}
             >
               {W.made.share}
