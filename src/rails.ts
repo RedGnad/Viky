@@ -117,6 +117,11 @@ export type WayIn = Readonly<{
   closedIn: readonly string[];
   /** Their own terms for a person buying, on their official site: what the payer accepts by paying by card. */
   terms: string;
+  /**
+   * True for a way in that opens inside Viky, already told what to deliver and where (the founder, 1 Oct 2026): the
+   * person chooses no coin and pastes no code, and types the amount there, since its page takes none from us.
+   */
+  embedded?: true;
 }>;
 
 /**
@@ -177,10 +182,83 @@ export const WAY_IN_CHAIN_COIN: WayIn = {
 };
 
 /**
+ * Where Swapper's card gives nothing (read 1 Oct 2026, with no key and no account). Two reads, one list:
+ *
+ * - `GET https://swapper.finance/api/onramp/countries?accountFilter=true` lists 244 countries; China, Cuba, Iran, North
+ *   Korea, Syria and Zimbabwe are not among them.
+ * - `POST https://swapper.finance/api/onramp/quote` for 20 EUR by card, asked once of each of the 244: 207 answered at
+ *   least one quote, 37 none. Ivory Coast, Mali, Burkina Faso, Guinea, Nigeria and Tunisia are among the 37 (Ivory
+ *   Coast is quoted from 25 EUR, by Mercuryo alone, which Viky's own way in already offers from 25).
+ *
+ * The same route is asked again, live, for the payer's own country (`src/rail-availability.ts`): this list is what stands
+ * when that read fails.
+ */
+export const SWAPPER_CLOSED_IN: readonly string[] = [
+  "af", "am", "bf", "bi", "by", "cd", "cf", "ci", "cn", "cu", "er", "et", "ge", "gn", "gw", "ht", "iq", "ir", "kp", "kz",
+  "la", "lb", "lk", "lr", "ly", "md", "mk", "ml", "mm", "mn", "ng", "ni", "ru", "sd", "so", "ss", "sy", "tn", "ua", "uz",
+  "xk", "ye", "zw",
+];
+
+/**
+ * Adding money by card inside Viky (the founder, 1 Oct 2026): Swapper's widget, told to deliver what a gift holds to
+ * the payer's own account, so nothing is chosen and nothing is pasted. Its documentation is
+ * `https://docs.swapper.finance`, its widget `https://deposit.swapper.finance/`.
+ *
+ * What was read on 1 Oct 2026, on its demo (`https://demo.swapper.finance`) and its own routes, without paying:
+ *
+ * - It takes AUSD on Monad as a destination. The card itself is taken by one of the card services it offers (Revolut,
+ *   Banxa, Topper, Mercuryo, Stripe, by country), on that service's own page, in a window the widget opens. That
+ *   service sells USDC on Polygon to a wallet Swapper makes for the payment, and Swapper then changes it into AUSD on
+ *   Monad and sends it to the account (`POST /api/deposits/route`, Polygon to Monad, 0.02 USDC of fee on 22).
+ * - What 20 EUR bought, against the European Central Bank's 1.1355 of 30 Sep: 22.14 AUSD through Revolut in France
+ *   (2.5 % under), 21.9 through Topper in Senegal (3.6 % under), 20.8 through Banxa in both (8.5 % under); in the
+ *   United States 20 USD bought 19.36 (Topper), 18.76 (Stripe) and 18.35 (Banxa). Hence "up to 9 %", a measured
+ *   ceiling and not a figure it publishes: it publishes none.
+ * - The smallest payment: quotes at 10 EUR in France, Senegal and the United States; none at 7 and 8 EUR in Senegal.
+ * - Every quote carried `lowKyc: false`, and each service's page starts by signing in to an account with it (Banxa by
+ *   e-mail, Revolut with a Revolut account, Topper by signing in).
+ * - Its page takes no amount from us (its address reads no such word): the person types it there. Its
+ *   `minDepositUsd` did not stop a card payment under it (20 EUR against 30 USD went on to the card service), so it
+ *   is not relied on: a payment that falls short is met on the screen that waits, as on every way in.
+ *
+ * None of it has run end to end with real money: that waits for the integrator id (`swapperIntegratorId`).
+ */
+export const WAY_IN_EMBEDDED: WayIn = {
+  name: "Swapper",
+  page: "https://deposit.swapper.finance/",
+  arrives: "gift",
+  delivers: { coin: "AUSD", network: "Monad" },
+  smallestEur: 10,
+  fee: { percent: 9, upTo: true, minimum: 0, currency: "EUR" },
+  conditions: ["An account with the card service it sends you to, and its identity check the first time."],
+  source: "Swapper's own quotes",
+  read: "1 Oct 2026",
+  closedIn: SWAPPER_CLOSED_IN,
+  // The Terms of Use its own site links in its footer (read in the site's script, 1 Oct 2026). That day the address
+  // answered the site's home page and no document: the working address is to be asked of Swapper with the id.
+  terms: "https://swapper.finance/pdfs/SWAPPER_TERMS_OF_USE.pdf",
+  embedded: true,
+};
+
+/**
  * Both ways in, in the order the sheet tries them (D239): the one with nothing to swap first, the other only when the
  * first refuses. Typed as never empty, so the sheet always has a way to stand in front of its action.
  */
 export const WAYS_IN: readonly [WayIn, ...WayIn[]] = [WAY_IN_GIFT_COIN, WAY_IN_CHAIN_COIN];
+
+/**
+ * Swapper's integrator id: public by design, it goes in its widget's address. Asked of Swapper by a ticket; set on
+ * Vercel as `NEXT_PUBLIC_SWAPPER_INTEGRATOR_ID` once given. Until then it is absent, and nothing of Swapper is offered.
+ */
+export const swapperIntegratorId = (): string | undefined => process.env.NEXT_PUBLIC_SWAPPER_INTEGRATOR_ID?.trim() || undefined;
+
+/**
+ * The ways in the sheet tries, in order (the founder, 1 Oct 2026): with Swapper's id, Swapper first, where it serves
+ * the payer, then the two others; without it, the two others alone, exactly as before.
+ */
+export function waysIn(id: string | undefined = swapperIntegratorId()): readonly [WayIn, ...WayIn[]] {
+  return id ? [WAY_IN_EMBEDDED, ...WAYS_IN] : WAYS_IN;
+}
 
 /**
  * Ramp's partner key (D289): public by design, it goes in the page's own address, and Ramp names the partner with it.
@@ -281,7 +359,9 @@ export type WayOut = Readonly<{
 }>;
 
 /** "Ramp keeps 0.99 % with a minimum of 1.99 EUR", built from the published figures and never retyped. */
-export function feeSentence(way: { name: string; fee: PublishedFee }): string {
+export function feeSentence(way: { name: string; fee: PublishedFee; embedded?: true }): string {
+  // A way in that publishes no fee of its own: what was measured through it, said as measured.
+  if (way.embedded) return `Through ${way.name}, a card payment bought up to ${way.fee.percent} % less than the day's rate when it was read`;
   const share = `${way.fee.upTo ? "up to " : ""}${way.fee.percent} %`;
   // A service that publishes no floor for its fee gets no sentence about one: "a minimum of 0.00" would be a figure
   // nobody read (the card rail in, whose published figure is a share alone).

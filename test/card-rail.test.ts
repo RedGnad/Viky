@@ -109,7 +109,8 @@ test("each button or link that pays by card carries the line, and gives way to t
   assert.match(sheet, /\{!enough && cardClosed \? \(\s*<CardNotOffered country=\{card\?\.country \?\? null\} \/>/);
   const wait = readFileSync("app/components/PayGift.tsx", "utf8");
   // The two places the waiting screen opens the partner: paying the rest, and the partner's page itself.
-  assert.equal((wait.match(/<CardTermsLine way=\{wayIn\} \/>/g) ?? []).length, 2);
+  // And a third, under the button that opens a card paid inside Viky (the founder, 1 Oct 2026).
+  assert.equal((wait.match(/<CardTermsLine way=\{wayIn\} \/>/g) ?? []).length, 3);
   assert.equal((wait.match(/<CardNotOffered country=\{card\?\.country \?\? null\} \/>/g) ?? []).length, 2);
   assert.equal((wait.match(/window\.open\(wayInPage|href=\{wayInPage/g) ?? []).length, 2, "and no other way to the partner");
 });

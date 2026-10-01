@@ -26,9 +26,10 @@ import { formatAusd } from "@/src/gift-reader";
 import { dollarsToUnits } from "@/src/money";
 import { settlingTimeInWords } from "@/src/pass-schedule";
 import { forgetPendingGift, peekPendingGift, savePendingGift, type PendingGift } from "@/src/pending-gift";
-import { wayInPage, WAYS_IN, type WayIn } from "@/src/rails";
+import { wayInPage, waysIn, type WayIn } from "@/src/rails";
 import { JudgeCode } from "../kit/offer/JudgeCode";
 import { CardNotOffered, CardTermsLine } from "../kit/offer/CardTerms";
+import { SwapperSheet } from "../kit/offer/SwapperSheet";
 import { whereTheRailsServe } from "@/src/client/rails";
 import { FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
 import { ExactLine } from "../kit/LedAmount";
@@ -127,7 +128,7 @@ export function PayGift() {
   const params = useSearchParams();
   const asked = params.get("step");
   // Whether the pay press already opened the partner's page (D296): only when that page arrives filled in.
-  const [partnerOpened, setPartnerOpened] = useState(params.get("opened") === "1");
+  const [partnerOpened, setPartnerOpened] = useState(params.get("opened") === "1" || params.get("card") === "1");
   const step: Step = ALL_STEPS.includes(asked as Step) ? (asked as Step) : "pay";
 
   // The gift is read from the same store the card writes (src/card-draft.ts): one gift, in one place, on the device.
@@ -154,7 +155,9 @@ export function PayGift() {
   const chosenWay: WayIn | null = null;
   if (address && !hadAccount) setHadAccount(true);
 
-  const wayIn: WayIn = chosenWay ?? WAYS_IN.find((entry) => entry.name === kept?.wayIn) ?? WAYS_IN[0];
+  const wayIn: WayIn = chosenWay ?? waysIn().find((entry) => entry.name === kept?.wayIn) ?? waysIn()[0];
+  /** The card paid inside Viky (`SwapperSheet`), open over this screen: at once when the pay press sent the person here for it. */
+  const [cardOpen, setCardOpen] = useState(params.get("card") === "1");
   /** Whether the card is offered to this payer (src/card-rail.ts): not in a country its providers' terms exclude. */
   const [card, setCard] = useState<Readonly<{ offered: boolean; country: string | null }> | null>(null);
   useEffect(() => {
@@ -575,7 +578,8 @@ export function PayGift() {
               <button
                 type="button"
                 onClick={() => {
-                  window.open(wayInPage(wayIn, { account: address, euros: more }), "_blank", "noopener,noreferrer");
+                  if (wayIn.embedded) setCardOpen(true);
+                  else window.open(wayInPage(wayIn, { account: address, euros: more }), "_blank", "noopener,noreferrer");
                   setPhase("waiting");
                 }}
                 className={PRIMARY_BUTTON}
@@ -655,6 +659,8 @@ export function PayGift() {
           />
         </section>
         {problem ? <FieldRefusal id="waiting-refused">{problem}</FieldRefusal> : null}
+        {/* Nothing to set and no code to give where the card is paid inside Viky: that sheet is told all of it already. */}
+        {wayIn.embedded && !cardClosed ? null : (
         <section className={CARD}>
           {/* What to set on the card partner's page, only where that page is offered to this payer. */}
           {cardClosed ? null : (
@@ -678,12 +684,27 @@ export function PayGift() {
           {copyRefused === "code" ? <FieldRefusal id="code-refused">{W.waiting.copyRefused}</FieldRefusal> : null}
           <p className={HELP}>{W.waiting.startsEnds(start, end)}</p>
         </section>
+        )}
         <p className={BODY}>
           {wayIn.takes && !cardClosed ? `${W.check.delay(wayIn.name, wayIn.takes)} ` : ""}
           {keptOnDevice ? W.waiting.leave : W.waiting.stay}
         </p>
         {cardClosed ? (
           <CardNotOffered country={card?.country ?? null} />
+        ) : wayIn.embedded ? (
+          <>
+            <button
+              type="button"
+              className={PRIMARY_BUTTON}
+              onClick={() => {
+                setPartnerOpened(true);
+                setCardOpen(true);
+              }}
+            >
+              {partnerOpened ? W.waiting.openCardAgain : W.waiting.openCard}
+            </button>
+            <CardTermsLine way={wayIn} />
+          </>
         ) : (
           <>
             <a href={wayInPage(wayIn, { account: address, euros: toBuy })} target="_blank" rel="noopener noreferrer" className={PRIMARY_BUTTON} onClick={() => setPartnerOpened(true)}>
@@ -692,6 +713,15 @@ export function PayGift() {
             <CardTermsLine way={wayIn} />
           </>
         )}
+        <SwapperSheet
+          open={cardOpen}
+          account={address}
+          onArrived={() => {
+            setCardOpen(false);
+            void refresh();
+          }}
+          onClose={() => setCardOpen(false)}
+        />
         <div className="flex flex-col gap-[var(--space-xs)]">
           <button type="button" onClick={differentGift} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
             {W.waiting.different}

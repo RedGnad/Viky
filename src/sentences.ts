@@ -218,6 +218,16 @@ export const PAY = {
         `Our partner ${name} takes your card, once with your ID. Choose ${coin} on ${network} there: that is what your gift holds. Paste your code where it asks for an address. Come back here: the gift starts by itself.`
       : // consumer-words: allow "address" is the partner page's own word for the field, the founder's choice (D294)
         `Our partner ${name} takes your card, once with your ID. Choose ${coin} on ${network} there. Paste your code where it asks for an address. Come back here to confirm the last step.`,
+  /**
+   * The same moment when the card is paid inside Viky (the founder, 1 Oct 2026): nothing to choose and no code to
+   * paste, so neither is said. What is said is what the person meets (read 1 Oct 2026): the payment opens on the next
+   * screen; the amount is typed there, since that page takes none from us; a card service takes the card in its own
+   * window, with its identity check; and that window calls the money USDC, which reaches the gift as what it holds.
+   */
+  partnerEmbedded: (name: string, euros: number | undefined) =>
+    `The card payment opens next, by our partner ${name}. Enter ${euros ? `${euros} EUR` : "the amount"} there: it shows what your gift receives. A card service then takes your card in its own window, once with your ID, and calls the money USDC. Come back here: the gift starts by itself.`,
+  /** The sheet the card is paid in, and what its frame is called when read aloud. */
+  card: { title: "Pay by card", frame: "Card payment" },
   yourCode: "Your code",
   /**
    * Under every button or link that pays by card, for the payer alone (the founder, 29 Sep 2026): no box to tick and no
@@ -571,6 +581,9 @@ export const FUND = {
     leave: "You can leave this page: the gift is kept, and Viky picks it up when you come back.",
     stay: "Keep this page open: this device would not keep the gift.",
     openAgain: (name: string) => `Open ${name} again`,
+    /** The same two, for a card paid inside Viky (the founder, 1 Oct 2026): no page to name, the card payment itself. */
+    openCard: "Pay by card",
+    openCardAgain: "Open the card payment again",
     /** The first time, when the page was not opened by the pay press (D296): the code is on this screen first. */
     openFirst: (name: string) => `Open ${name}`,
     different: "Set up a different gift instead",

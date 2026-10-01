@@ -1,5 +1,5 @@
 import { countryCode, type RailReach } from "./rail-country";
-import { WAY_IN_CHAIN_COIN, WAY_IN_GIFT_COIN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "./rails";
+import { swapperIntegratorId, WAY_IN_CHAIN_COIN, WAY_IN_EMBEDDED, WAY_IN_GIFT_COIN, WAY_OUT_CARD, WAY_OUT_EURO, WAYS_OUT, type WayOut } from "./rails";
 
 /**
  * Whether a rail serves a country, asked of that rail at the moment it matters (R1). Server only.
@@ -36,6 +36,12 @@ const RAMP_COUNTRIES = "https://api.ramp.network/api/host-api/countries";
 /** The euro rail's asset list, where what a gift holds is `MONAD_AUSD`, `enabled` and not `hidden` (D101, D125). */
 const RAMP_ASSETS = "https://api.ramp.network/api/host-api/v3/assets?currencyCode=EUR";
 const MERCURYO_CURRENCIES = "https://api.mercuryo.io/v1.6/lib/currencies";
+/**
+ * The route Swapper's own widget asks its card quotes of, with no key (read in its script, 1 Oct 2026): a country's
+ * card services answer what 20 EUR buys, or an empty list where none of them sells there. What the card buys is what
+ * the widget buys for a gift on Monad, USDC on Polygon, which Swapper then changes (`WAY_IN_EMBEDDED`).
+ */
+const SWAPPER_QUOTE = "https://swapper.finance/api/onramp/quote";
 
 /** Long enough that a screen and its reload ask once, short enough that a change is met within minutes. */
 const HELD_FOR_MS = 10 * 60 * 1_000;
@@ -49,6 +55,7 @@ let rampCurrencies: Held<readonly string[] | null> | undefined;
 let cardCurrencies: Held<readonly string[] | null> | undefined;
 let rampBuyCountries: Held<readonly string[] | null> | undefined;
 let rampSellsGiftCoin: Held<boolean | null> | undefined;
+const swapperQuoted = new Map<string, Held<boolean | null>>();
 
 /** Held only while it is both recent and not from the future: a clock that moved must not freeze an old answer. */
 function stillGood(held: Held<unknown> | undefined, now: number): boolean {
@@ -183,9 +190,38 @@ export async function reachOfWaysOut(country: string | null): Promise<Readonly<R
  * - The rail that sells the chain's coin publishes what it will not sell, per coin and per country, in the same
  *   answer as its payouts (`restricted_countries_onramp`, `["gb"]` for MON on MONAD on 18 Sep 2026).
  */
+/**
+ * Whether any card service behind Swapper quotes 20 EUR in this country, or nothing when its route could not be read.
+ * Asked only while Swapper's id is set: without it Swapper is offered to nobody, and nothing is asked of it.
+ */
+export async function swapperQuotesIn(country: string, now = Date.now()): Promise<boolean | null> {
+  const held = swapperQuoted.get(country);
+  if (stillGood(held, now)) return held!.value;
+  let value: boolean | null = null;
+  try {
+    const response = await fetch(SWAPPER_QUOTE, {
+      method: "POST",
+      headers: { accept: "application/json", "content-type": "application/json" },
+      body: JSON.stringify({ sourceAmount: "20", sourceCurrencyCode: "EUR", destinationCurrencyCode: "USDC_POLYGON", countryCode: country.toUpperCase(), paymentMethodType: "CREDIT_DEBIT_CARD" }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(8_000),
+    });
+    const quotes = response.ok ? ((await response.json()) as { quotes?: unknown }).quotes : undefined;
+    if (Array.isArray(quotes)) value = quotes.length > 0;
+  } catch {
+    value = null;
+  }
+  swapperQuoted.set(country, { at: now, value });
+  return value;
+}
+
 export async function reachOfWaysIn(country: string | null): Promise<Readonly<Record<string, RailReach>>> {
   const asked = countryCode(country);
   const reach: Record<string, RailReach> = { [WAY_IN_GIFT_COIN.name]: "unknown", [WAY_IN_CHAIN_COIN.name]: "unknown" };
+  if (swapperIntegratorId()) {
+    const quoted = asked ? await swapperQuotesIn(asked) : null;
+    reach[WAY_IN_EMBEDDED.name] = quoted === null ? "unknown" : quoted ? "serves" : "does-not";
+  }
   const [countries, selling] = await Promise.all([asked ? euroRailBuyCountries() : null, euroRailSellsGiftCoin()]);
   if (asked && countries !== null) reach[WAY_IN_GIFT_COIN.name] = countries.includes(asked) ? "serves" : "does-not";
   if (reach[WAY_IN_GIFT_COIN.name] !== "does-not" && selling === false) reach[WAY_IN_GIFT_COIN.name] = "paused";

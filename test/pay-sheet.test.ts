@@ -32,7 +32,7 @@ test("three lines, and the third is that Viky keeps nothing", () => {
 });
 
 test("what this person pays is their own figure, at a dated rate", () => {
-  assert.match(sheet, /wayInFor\(short, WAYS_IN, money\.rates\?\.usdPerEur, railIn\)/, "the euros are the offer's, on the one way chosen for the person");
+  assert.match(sheet, /wayInFor\(short, waysIn\(\), money\.rates\?\.usdPerEur, railIn\)/, "the euros are the offer's, on the one way chosen for the person");
   assert.match(sheet, /serviceChargeDollars\(euros, way, money\.rates\?\.usdPerEur\)/, "and what the service charges is its own published figure on that way");
   assert.match(sheet, /W\.atTheRate\(rateDateInWords\(money\.rates\.date\)\)/);
   // The source named, and why a Friday's date stands on a Sunday: the line that looked stale says what it is.

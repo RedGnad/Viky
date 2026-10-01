@@ -26,6 +26,9 @@ importers:
       '@scure/bip39':
         specifier: 2.4.0
         version: 2.4.0
+      '@swapper-finance/deposit-sdk':
+        specifier: 0.4.1
+        version: 0.4.1
       dotenv:
         specifier: 17.4.2
         version: 17.4.2
@@ -1274,6 +1277,10 @@ packages:
 
   '@stablelib/base64@1.0.1':
     resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
+
+  '@swapper-finance/deposit-sdk@0.4.1':
+    resolution: {integrity: sha512-IsZhaFBxgNw2Kq8hyrokrbXL+GKSkz7MEzGgvP5Wjw59GxUBCgAuf6b/+fNeVSvSt5h1J0S6otdT1L2+AgvK7Q==}
+    engines: {node: '>=14.0.0'}
 
   '@swc/core-darwin-arm64@1.15.46':
     resolution: {integrity: sha512-IsISIT22EfktVJrlvIpnAxG2u/A9aob9l99HMlx80x72WlFmFPk1V3UhkEzx86eJP8hw049KTFv/RISho2cq2Q==}
@@ -6055,6 +6062,8 @@ snapshots:
       - browserslist
 
   '@stablelib/base64@1.0.1': {}
+
+  '@swapper-finance/deposit-sdk@0.4.1': {}
 
   '@swc/core-darwin-arm64@1.15.46':
     optional: true

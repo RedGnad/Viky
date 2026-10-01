@@ -1,5 +1,5 @@
 import { countryCode, type RailReach } from "./rail-country";
-import { WAYS_IN } from "./rails";
+import { waysIn, type WayIn } from "./rails";
 
 /**
  * Who paying by card is offered to (the founder, 29 Sep 2026). Each card partner follows its own published list of the
@@ -21,11 +21,11 @@ export function payerCountry(input: Readonly<{ account: string | null | undefine
  * What each card partner says of the payer's country: its own list first, so a partner that names the country serves
  * nobody there whatever else is read; otherwise what was read of it live (a pause, its own country answer), or nothing.
  */
-export function cardReach(country: string | null, live: Readonly<Record<string, RailReach>> = {}): Record<string, RailReach> {
-  return Object.fromEntries(WAYS_IN.map((way) => [way.name, country && way.closedIn.includes(country) ? "does-not" : (live[way.name] ?? "unknown")]));
+export function cardReach(country: string | null, live: Readonly<Record<string, RailReach>> = {}, ways: readonly WayIn[] = waysIn()): Record<string, RailReach> {
+  return Object.fromEntries(ways.map((way) => [way.name, country && way.closedIn.includes(country) ? "does-not" : (live[way.name] ?? "unknown")]));
 }
 
 /** Whether any card partner serves this country; with no country known, the card is offered and the partner checks. */
-export function cardOffered(reach: Readonly<Record<string, RailReach>>): boolean {
-  return WAYS_IN.some((way) => reach[way.name] !== "does-not");
+export function cardOffered(reach: Readonly<Record<string, RailReach>>, ways: readonly WayIn[] = waysIn()): boolean {
+  return ways.some((way) => reach[way.name] !== "does-not");
 }
