@@ -4,13 +4,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
-import { ApiError, postJson } from "@/src/client/api";
+import { ApiError } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
 import { linkOfMade, prepareGift, submitGift, type CreatedGift } from "@/src/client/gift";
 import { prepareCertificateGift, submitCertificateGift } from "@/src/client/certificate-gift";
 import { prepareMilestoneGift, submitMilestoneGift } from "@/src/client/milestone";
 import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY, isCertificateRequest, isMilestoneRequest } from "@/src/gift-attempt";
 import { changeArrivedUsdc } from "@/src/client/convert";
+import { fundingQuote } from "@/src/client/funding-quote";
 import { readAusdBalance, readCoinBalance, readMonBalance, sendWithExplicitGas } from "@/src/client/onchain";
 import { USDC } from "@/src/coins";
 import { usdcRouterAddress } from "@/src/usdc-router";
@@ -408,7 +409,8 @@ export function PayGift() {
             return;
           }
           try {
-            const quote = await postJson<{ to: `0x${string}`; data: `0x${string}`; value: string }>("/api/fund/quote", { amount: next.amount.toString() });
+            // Held to the amount asked for and to the one exchange, against the chain, before it is sent.
+            const quote = await fundingQuote(next.amount);
             await sendWithExplicitGas(account, { to: quote.to, data: quote.data, value: BigInt(quote.value) });
           } catch {
             // The phase goes back to waiting, which starts this watch again at once: the time of the failure is what

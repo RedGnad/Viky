@@ -14,6 +14,7 @@ import {
   recordReading,
   saveMilestoneGift,
   setMilestoneCode,
+  touchSameLook,
 } from "../src/milestone-store";
 import type { SqlExecutor } from "../src/proof-session-store";
 
@@ -109,4 +110,33 @@ test("readings are kept with what became of them, the latest is today, and a rec
   assert.equal(await readSince(GIFT, 1_789_590_000), true);
   const rows = await db.query<{ proofs: unknown }>("SELECT proofs FROM viky_milestone_readings WHERE purpose = 'start'");
   assert.deepEqual(rows.rows[0].proofs, [{ claimData: { identifier: "0x01" } }], "the proofs that moved money are kept");
+});
+
+test("the same look again moves the newest row's moment and adds no row; anything else is a row of its own (the audit of 1 Oct 2026)", async () => {
+  // A pass every five minutes wrote one identical row per gift each time: 288 a day for a rating that had not moved.
+  const gift = "1000777";
+  const look = { giftId: gift, purpose: "look", attested: false, username: "erik", playerId: "41", rating: 1911, ratedAt: 1_789_000_000, rd: 42, nullifier: null, outcome: "notYet", txHash: null } as const;
+  const count = async () => Number((await db.query<{ n: number }>("SELECT count(*)::int AS n FROM viky_milestone_readings WHERE gift_id = $1", [gift])).rows[0].n);
+
+  // Nothing read yet: there is no row to move, and the caller writes the look.
+  assert.equal(await touchSameLook({ ...look, observedAt: 1_789_700_000 }), false);
+  await recordReading({ ...look, observedAt: 1_789_700_000 });
+
+  // Five minutes later, the same answer: no new row, and the gift counts as read at the later moment.
+  assert.equal(await touchSameLook({ ...look, observedAt: 1_789_700_300 }), true);
+  assert.equal(await count(), 1);
+  assert.equal((await latestRating(gift))?.observedAt, 1_789_700_300);
+  assert.equal(await readSince(gift, 1_789_700_200), true, "the pass after it still skips a gift read this recently");
+
+  // The rating moved, or a game was played since: that is news, and a row of its own.
+  assert.equal(await touchSameLook({ ...look, rating: 1920, observedAt: 1_789_700_600 }), false);
+  assert.equal(await touchSameLook({ ...look, ratedAt: 1_789_700_500, observedAt: 1_789_700_600 }), false);
+  assert.equal(await count(), 1, "nothing was changed by a look that was not the same");
+
+  // The newest row is never moved when it is anything but an unattested "not yet": a start, a reach, a refusal stay
+  // where and when they were, and the first reading the journal page reads is never touched.
+  await recordReading({ ...look, purpose: "reach", attested: true, observedAt: 1_789_700_900, outcome: "notYet", nullifier: `0x${"ee".repeat(32)}` });
+  assert.equal(await touchSameLook({ ...look, observedAt: 1_789_701_200 }), false, "the newest row is an attested reading");
+  assert.equal(await touchSameLook({ ...look, purpose: "reach", attested: true, observedAt: 1_789_701_200 }), false, "and an attested reading is never folded into another");
+  assert.equal(await count(), 2);
 });

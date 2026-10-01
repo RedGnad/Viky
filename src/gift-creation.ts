@@ -3,6 +3,7 @@ import type { ContractAuthorization } from "./ausd-authorization";
 import { GiftApiError } from "./gift-api";
 import type { GiftParams } from "./gift-attestation";
 import type { CreationRow } from "./gift-store";
+import { RelayerError } from "./relayer";
 import { claimTokenHash, newClaimToken } from "./gift-store";
 
 /**
@@ -25,7 +26,12 @@ export const CREATION_LEASE_MS = 2 * 60_000;
 export const CREATION_ABANDON_MS = 60 * 60_000;
 
 export type CreatedGiftFacts = Readonly<{ giftId: string; hash: Hex; escrow: Hex }>;
-export type ReadBack = { kind: "made"; giftId: string; escrow: Hex } | { kind: "reverted" } | { kind: "unknown" };
+/**
+ * What a submitted transaction came to. `absent` is the node saying it holds no receipt for it: not in a block, yet or
+ * ever. `unknown` is the node not answering, which says nothing about the transaction (the audit of 1 Oct 2026: the
+ * two were one, so a creation whose transaction never entered a block stayed "being made" for ever).
+ */
+export type ReadBack = { kind: "made"; giftId: string; escrow: Hex } | { kind: "reverted" } | { kind: "absent" } | { kind: "unknown" };
 
 export type CreationDeps = Readonly<{
   begin: (row: Omit<CreationRow, "status" | "txHash" | "giftId" | "startedAt">) => Promise<{ inserted: true } | { inserted: false; existing: CreationRow }>;
@@ -144,7 +150,10 @@ export async function makeGift(input: CreationInput, deps: CreationDeps): Promis
         return { giftId: made.giftId, claimToken, hash: made.hash, escrow: made.escrow };
       }
       if (back.kind === "unknown") throw inProgress();
-      // Reverted: the money did not move under this transaction; the terms may be tried again below.
+      // In no block: it may still enter one for as long as the funder's authorization is good, and not after.
+      if (back.kind === "absent" && deps.now() < Number(input.authorization.validBefore) * 1_000) throw inProgress();
+      // Reverted, or never included while it could be: the money did not move under this transaction; the terms may
+      // be tried again below.
     } else if (deps.now() - existing.startedAt.getTime() < CREATION_LEASE_MS) {
       throw inProgress();
     }
@@ -165,10 +174,29 @@ export async function makeGift(input: CreationInput, deps: CreationDeps): Promis
       input.link?.openingKey,
     );
   } catch (error) {
-    // Refused before anything was submitted (the simulation, the relayer's own checks): no money moved, so the same
-    // terms may be tried again at once rather than after the lease.
-    if (!submitted) await deps.abandon(input.nonce).catch(() => undefined);
-    throw error;
+    if (submitted) throw error;
+    // Nothing was recorded as submitted. That is a refusal before the send (the simulation, the relayer's own
+    // checks), or a send whose answer was lost after the node took the transaction: the error alone does not say
+    // which, and its class is not to be trusted for it. The chain is: the authorization's nonce is spent only when
+    // the money moved. So the attempt is called abandoned, and the same terms may go again at once, only when that
+    // read answers that it is not; when it is spent, or cannot be read, the creation stays pending, and the person is
+    // not told that nothing changed (the audit of 1 Oct 2026, F-09).
+    let moved: boolean | null;
+    try {
+      moved = await deps.spent(input.params.funder, input.nonce);
+    } catch {
+      moved = null;
+    }
+    if (moved === false) {
+      await deps.abandon(input.nonce).catch(() => undefined);
+      throw error;
+    }
+    // The relayer's own refusals are raised by this code before the wallet is asked for anything (its preflight, its
+    // simulation, its gas reading), so what they say stays true even when the chain cannot be read: they are passed
+    // on as they are. The creation is still not called abandoned on their word alone: that is the chain's to say.
+    if (moved === null && error instanceof RelayerError) throw error;
+    console.error(`creation ${input.nonce}: the send failed and ${moved ? "the money moved" : "the money may have moved"}: ${error instanceof Error ? error.message.slice(0, 300) : String(error)}`);
+    throw moved ? beingRecorded() : inProgress();
   }
   // From here the money has moved. A failure below leaves the creation pending with its transaction, for a retry of
   // the same terms or for the keeper's pass to complete.
@@ -197,6 +225,12 @@ export async function completePendingCreations(deps: CreationDeps): Promise<Crea
       }
       if (back.kind === "unknown") {
         lines.push({ nonce: row.nonce, result: "skipped: its transaction is not final yet" });
+        continue;
+      }
+      // In no block: it can still enter one while the funder's authorization is good, which is an hour from its
+      // signature, so it is left alone until the abandon delay, the same hour, has passed.
+      if (back.kind === "absent" && now - row.startedAt.getTime() < CREATION_ABANDON_MS) {
+        lines.push({ nonce: row.nonce, result: "skipped: its transaction is in no block yet" });
         continue;
       }
     }

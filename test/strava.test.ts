@@ -88,6 +88,12 @@ test("the exchange, the refresh and the revoke against a fake Strava: the athlet
   const refusing = async () => ({ status: 401, json: async () => ({}) });
   await assert.rejects(() => exchangeStravaCode({ code: "x", scope: "activity:read", nowSeconds: NOW }, refusing, ENV), (error: unknown) => error instanceof StravaError && error.code === "EXCHANGE_REFUSED");
   await assert.rejects(() => refreshStravaTokens(tokens, NOW, refusing, ENV), (error: unknown) => error instanceof StravaError && error.code === "REFRESH_REFUSED");
+  // Only 400 and 401 say the key is refused. A limit met or an outage is Strava not answering: the connection is not
+  // the person's to lose for it (the audit of 1 Oct 2026, F-23).
+  await assert.rejects(() => refreshStravaTokens(tokens, NOW, async () => ({ status: 400, json: async () => ({}) }), ENV), (error: unknown) => error instanceof StravaError && error.code === "REFRESH_REFUSED");
+  for (const status of [429, 500, 502, 503, 504, 403]) {
+    await assert.rejects(() => refreshStravaTokens(tokens, NOW, async () => ({ status, json: async () => ({}) }), ENV), (error: unknown) => error instanceof StravaError && error.code === "REFRESH_UNAVAILABLE", `Strava answering ${status}`);
+  }
   await assert.rejects(() => revokeStravaToken("acc1", refusing, ENV), (error: unknown) => error instanceof StravaError && error.code === "REVOKE_FAILED");
   await assert.rejects(() => exchangeStravaCode({ code: "x", scope: "activity:read", nowSeconds: NOW }, fake, {} as NodeJS.ProcessEnv), (error: unknown) => error instanceof StravaError && error.code === "NOT_CONFIGURED");
 });

@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { databaseUrl } from "./database-guard";
-import { COUNTING_PASS_UTC, SETTLING_PASS_UTC, type PassTime } from "./pass-schedule";
+import { COUNTING_PASS_UTC, RECOUNT_PASS_UTC, SETTLING_PASS_UTC, type PassTime } from "./pass-schedule";
 import type { SqlExecutor } from "./proof-session-store";
 
 /**
@@ -54,8 +54,8 @@ export async function ensurePassSchema(): Promise<void> {
   }
 }
 
-/** Which of the two schedules a run was (src/pass-schedule.ts). */
-export type PassPlanName = "counting" | "settling";
+/** Which of the schedules a run was (src/pass-schedule.ts). */
+export type PassPlanName = "counting" | "settling" | "recount";
 
 /** A gift a pass held for a reason of ours, and the UTC day number the hold was about. */
 export type PassHold = Readonly<{ giftId: string; day: number }>;
@@ -142,9 +142,9 @@ export async function passesSince(): Promise<PassesSince> {
         SELECT plan,
                started_at,
                EXTRACT(HOUR FROM (started_at AT TIME ZONE 'UTC'))::int AS started_hour,
-               CASE plan WHEN 'counting' THEN ${COUNTING_PASS_UTC.hour}::int WHEN 'settling' THEN ${SETTLING_PASS_UTC.hour}::int END AS scheduled_hour,
+               CASE plan WHEN 'counting' THEN ${COUNTING_PASS_UTC.hour}::int WHEN 'settling' THEN ${SETTLING_PASS_UTC.hour}::int WHEN 'recount' THEN ${RECOUNT_PASS_UTC.hour}::int END AS scheduled_hour,
                abs(EXTRACT(EPOCH FROM (started_at AT TIME ZONE 'UTC')::time)
-                   - CASE plan WHEN 'counting' THEN ${secondOfDay(COUNTING_PASS_UTC)}::int WHEN 'settling' THEN ${secondOfDay(SETTLING_PASS_UTC)}::int END) AS gap
+                   - CASE plan WHEN 'counting' THEN ${secondOfDay(COUNTING_PASS_UTC)}::int WHEN 'settling' THEN ${secondOfDay(SETTLING_PASS_UTC)}::int WHEN 'recount' THEN ${secondOfDay(RECOUNT_PASS_UTC)}::int END) AS gap
           FROM viky_passes
       ) started
      GROUP BY plan
@@ -171,7 +171,27 @@ export async function lastPasses(): Promise<LastPasses> {
     const value = rows.find((row) => String(row.plan) === plan)?.last;
     return value === null || value === undefined ? null : value instanceof Date ? value : new Date(String(value));
   };
-  return { counting: last("counting"), settling: last("settling") };
+  return { counting: last("counting"), settling: last("settling"), recount: last("recount") };
+}
+
+/**
+ * What the latest counting pass since a moment left behind, for the second reading of the morning (src/daily-pass.ts,
+ * `recountPass`): the gifts it held, and whether it stopped part way. Nothing when no counting pass began since then.
+ *
+ * `stopped` is read from the row itself: a reading refused for a reason of ours adds one error and holds its gift, so
+ * a row with more errors than held gifts is a run that threw, and the gifts after the throw were never read.
+ */
+export type CountingLeft = Readonly<{ held: readonly string[]; stopped: boolean }>;
+
+export async function countingSince(since: Date): Promise<CountingLeft | null> {
+  const rows = await sql()`
+    SELECT errors, holds FROM viky_passes
+     WHERE plan = 'counting' AND started_at >= ${since.toISOString()}
+     ORDER BY started_at DESC, id DESC LIMIT 1`;
+  if (!rows[0]) return null;
+  const holds = (typeof rows[0].holds === "string" ? JSON.parse(rows[0].holds) : rows[0].holds) as PassHold[];
+  const held = [...new Set(holds.map((hold) => String(hold.giftId)))];
+  return { held, stopped: Number(rows[0].errors) > held.length };
 }
 
 export type ReadingTotals = Readonly<{ attempted: number; succeeded: number }>;

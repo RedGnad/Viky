@@ -21,7 +21,7 @@ import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadTransport, waitForFinali
 
 /**
  * Deploys GiftEscrow to Monad mainnet, registers the Duolingo goal and unpauses. Every transaction waits for
- * finality (k = 3 blocks) before the next one, and every gas limit is declared explicitly with the 7.5 %
+ * finality (the node's `finalized` tag) before the next one, and every gas limit is declared explicitly with the 7.5 %
  * Monad margin, because Monad charges the declared limit. Refuses to run below the 10 MON reserve plus a
  * working margin.
  *

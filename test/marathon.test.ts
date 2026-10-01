@@ -243,7 +243,13 @@ test("the routes build the account from the gift's race and bound bib, never fro
   }
   const bib = readFileSync("app/api/marathon/bib/route.ts", "utf8");
   assert.match(bib, /if \(!bibStillOpen\(race, Date\.now\(\)\) && !isOperator\(auth\.account\)\) throw new GiftApiError\("RACE_STARTED"/);
-  assert.match(bib, /if \(gift\.boundAt\) throw new GiftApiError\("BIB_ALREADY_SET"/, "a bib is entered once");
+  // A bib typed wrong can be entered again until the start, and stands once the race has started (the audit of 1 Oct 2026).
+  assert.match(bib, /if \(gift\.boundAt && !bibStillOpen\(race, Date\.now\(\)\)\) throw new GiftApiError\("BIB_ALREADY_SET"/, "after the start the bib entered stands, for an operator too");
+  assert.ok(bib.indexOf('"BIB_ALREADY_SET"') < bib.indexOf('"RACE_STARTED"'), "and that is checked before an operator's leave to enter one late");
+  assert.match(bib, /if \(gift\.boundAt\) await replaceBoundProfile\(giftId, kept\);\s*else await markBound\(giftId, kept\);/);
+  const proofScreen = readFileSync("app/kit/MarathonProof.tsx", "utf8");
+  assert.match(proofScreen, /if \(!marathon\.bib \|\| \(changing && marathon\.bibOpen\)\)/, "the field comes back only while the race has not started");
+  assert.match(proofScreen, /\{marathon\.bibOpen \? \(\s*<button type="button" onClick=\{\(\) => setChanging\(true\)\}/);
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
   assert.match(page, /if \(milestone\.conditionId === "marathon-finish"\) return <MarathonProof/);
   assert.match(page, /milestone\.marathon && read\.action !== "shareProof" \? <MarathonStanding/);
@@ -257,7 +263,7 @@ test("the routes build the account from the gift's race and bound bib, never fro
  */
 import { DISTANCE_LABELS, heatSlugOf, marathonCourseId, marathonEventById, marathonGoalTypeOf, marathonProviderIdOf, MIKA_TIMING_GOAL_TYPE, MIKA_TIMING_HOSTS, MIKA_TIMING_OPEN, mikaAccountOf, mikaRunnerName, RACE_RESULT_OPEN, raceResultAccountOf, racesOffered } from "../src/marathon";
 import { RACE_RESULT_ROW } from "../src/attested-sources";
-import { raceResultAccount, RaceResultError, raceResultRows, raceResultSeconds, readRaceResultConfig, readRaceResultRow } from "../src/race-result";
+import { raceResultAccount, raceResultColumns, RaceResultError, raceResultRows, raceResultSeconds, readRaceResultConfig, readRaceResultRow } from "../src/race-result";
 import { matchesOf, MIKA_TIMING_RUNNER } from "../src/attested-sources";
 import { mikaDetailAccount, mikaEventMatches, mikaRowsOf, mikaRunnerIdOf, mikaSearchUrl, mikaValuesOf } from "../src/mika-timing";
 import { certificateOfGoal } from "../src/milestone-conditions";
@@ -477,8 +483,23 @@ test("race result: the row is read plainly by bib, the list's columns are checke
   const found = await readRaceResultRow(BUENOS_AIRES.race, BUENOS_AIRES.event, "1", rrFetch({ "1": rrList([RR_ROW]) }));
   assert.deepEqual(found.row, { runner: "Bethwel Kibet Chumba", official: "2:08:24" });
   await assert.rejects(readRaceResultRow(BUENOS_AIRES.race, BUENOS_AIRES.event, "999", rrFetch({})), (error: unknown) => error instanceof RaceResultError && error.code === "NO_RESULT");
-  const moved = [...RR_FIELDS]; moved[7] = "[Final.GUN]";
-  await assert.rejects(readRaceResultRow(BUENOS_AIRES.race, BUENOS_AIRES.event, "1", rrFetch({ "1": rrList([RR_ROW], moved) })), (error: unknown) => error instanceof RaceResultError && error.code === "UNKNOWN_LIST", "a list whose columns moved is not trusted");
+  const gone = [...RR_FIELDS]; gone[7] = "[Final.GUN]";
+  await assert.rejects(readRaceResultRow(BUENOS_AIRES.race, BUENOS_AIRES.event, "1", rrFetch({ "1": rrList([RR_ROW], gone) })), (error: unknown) => error instanceof RaceResultError && error.code === "UNKNOWN_LIST", "a list that no longer publishes the time the register reads is not trusted");
+  // The columns moved, and both fields are still published (the audit of 1 Oct 2026: measured on a race the day after
+  // it was registered). They are found by their names, the row is read at its new places, and the account the
+  // attested read takes carries those places, so its pattern reads the same cells.
+  const shifted = ["BIB", "ID", "ConEstatus([ClasifGeneral.p])", "CLUB", ...RR_FIELDS.slice(3)];
+  const shiftedRow = [...RR_ROW.slice(0, 3), "Some Club", ...RR_ROW.slice(3)];
+  assert.deepEqual(raceResultColumns(shifted, BUENOS_AIRES.race.raceResult!), { name: 4, time: 8 });
+  assert.deepEqual(raceResultColumns(RR_FIELDS, BUENOS_AIRES.race.raceResult!), { name: 3, time: 7 }, "where the register wrote them, when nothing moved");
+  const again = await readRaceResultRow(BUENOS_AIRES.race, BUENOS_AIRES.event, "1", rrFetch({ "1": rrList([shiftedRow], shifted) }));
+  assert.deepEqual(again.row, { runner: "Bethwel Kibet Chumba", official: "2:08:24" });
+  assert.match(again.account, /\|1\|1\|4\|8$/);
+  assert.ok(RACE_RESULT_ROW.accepts(again.account));
+  assert.deepEqual({ ...new RegExp(matchesOf(RACE_RESULT_ROW, again.account)[0].value).exec(rrList([shiftedRow], shifted))?.groups }, { runner: "Bethwel Kibet Chumba", official: "2:08:24" }, "the attested pattern reads the moved cells");
+  // What the pattern cannot reach is refused rather than read wrong: the bib not first, or the time before the name.
+  assert.equal(raceResultColumns(["ID", ...RR_FIELDS], BUENOS_AIRES.race.raceResult!), undefined);
+  assert.equal(raceResultColumns(["BIB", "[Final.CHIP]", "correctSpelling([FLNAME])"], BUENOS_AIRES.race.raceResult!), undefined);
   const read = await readMarathonResult("423560|1|1", rrFetch({ "1": rrList([RR_ROW]) }));
   assert.equal(read.finishSeconds, 7_704);
   assert.equal(read.race.timer, "race-result");

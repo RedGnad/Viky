@@ -20,7 +20,9 @@ export const GIFT_GAS_CEILING = {
   finalise: 100_000, // observed max 73,934
   refundUnearned: 170_000, // observed max 138,150
   withdrawEarned: 150_000, // observed max 119,680
-  withdrawEarnedWithIntent: 160_000, // observed max 123,098
+  // Measured against the real AUSD by `eth_call` with an explicit limit (the audit of 1 Oct 2026): it fails at 172,000,
+  // which is what 160,000 declared with the margin, and passes at 180,789.
+  withdrawEarnedWithIntent: 182_000, // observed max 123,098 with the mock token
   cancel: 180_000, // observed max 153,780
   registerGoal: 80_000, // observed max 59,809
   setCreationPaused: 60_000, // observed max 51,088

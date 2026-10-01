@@ -177,6 +177,26 @@ export async function recordReading(reading: MilestoneReading): Promise<void> {
             ${reading.proofs === undefined ? null : JSON.stringify(reading.proofs)})`;
 }
 
+/**
+ * When a look finds exactly what the gift's newest reading found, that row's moment is moved to the look's and no row
+ * is added (the audit of 1 Oct 2026): the pass that runs every five minutes wrote one identical row per gift each
+ * time. Only an unattested look that said "not yet" is ever moved, and only when it is the gift's newest row: a start,
+ * a reading that reached, a refusal and every attested reading stay where and when they were. Answers whether a row
+ * was moved; when none was, the caller writes the look as a row of its own.
+ */
+export async function touchSameLook(look: MilestoneReading): Promise<boolean> {
+  if (look.purpose !== "look" || look.attested || look.outcome !== "notYet") return false;
+  const rows = await sql()`
+    UPDATE viky_milestone_readings SET observed_at = ${look.observedAt}
+     WHERE id = (SELECT id FROM viky_milestone_readings WHERE gift_id = ${look.giftId} ORDER BY observed_at DESC, id DESC LIMIT 1)
+       AND purpose = 'look' AND attested = false AND outcome = 'notYet'
+       AND rating = ${look.rating} AND username = ${look.username} AND player_id = ${look.playerId}
+       AND rated_at IS NOT DISTINCT FROM ${look.ratedAt} AND rd IS NOT DISTINCT FROM ${look.rd ?? null}
+       AND observed_at <= ${look.observedAt}
+    RETURNING id`;
+  return rows.length === 1;
+}
+
 function toReading(row: Record<string, unknown>): MilestoneReading {
   const optionalNumber = (value: unknown) => (value === null || value === undefined ? null : Number(value));
   return {

@@ -28,3 +28,14 @@ test("every ceiling sits above the observed maximum and the declared limit adds 
     assert.ok(limit > BigInt(ceiling), `${name}: margin applied`);
   }
 });
+
+test("the withdrawal's floor is above what the real token costs, on both contracts (the audit of 1 Oct 2026)", async () => {
+  // Measured by `eth_call` with an explicit limit against the real AUSD: the daily contract's withdrawal fails at
+  // 172,000 and passes at 180,789; the milestone contract's fails at 182,750 and passes at 188,743. The floor is what
+  // is declared when the estimate itself fails, so it must be above the cost, not above a mock token's.
+  const { milestoneGasLimit } = await import("../src/milestone-gas");
+  assert.ok(giftGasLimit("withdrawEarnedWithIntent") >= 182_000n);
+  assert.ok(giftGasLimit("withdrawEarnedWithIntent") > 180_789n);
+  assert.ok(milestoneGasLimit("withdrawEarnedWithIntent") >= 190_000n);
+  assert.ok(milestoneGasLimit("withdrawEarnedWithIntent") > 188_743n);
+});

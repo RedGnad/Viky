@@ -1,4 +1,4 @@
-import { getAddress, parseEventLogs, type Hex } from "viem";
+import { getAddress, parseEventLogs, TransactionReceiptNotFoundError, type Hex } from "viem";
 import type { ContractAuthorization } from "./ausd-authorization";
 import { recordRelayed } from "./gift-store";
 import { signMilestoneClaim, signMilestoneProof } from "./milestone-attestation";
@@ -27,13 +27,14 @@ function call(contract: Hex, functionName: MilestoneFunction, args: readonly unk
 }
 
 /** What a submitted milestone creation came to, read back from the chain, as `createdGiftOf` does for a daily one (D87). */
-export async function createdMilestoneOf(txHash: Hex): Promise<{ kind: "made"; giftId: string; escrow: Hex } | { kind: "reverted" } | { kind: "unknown" }> {
+export async function createdMilestoneOf(txHash: Hex): Promise<{ kind: "made"; giftId: string; escrow: Hex } | { kind: "reverted" } | { kind: "absent" } | { kind: "unknown" }> {
   const client = relayerClients().publicClient;
   let receipt;
   try {
     receipt = await client.getTransactionReceipt({ hash: txHash });
-  } catch {
-    return { kind: "unknown" };
+  } catch (error) {
+    // The node holding no receipt is an answer about the transaction; the node not answering is not.
+    return error instanceof TransactionReceiptNotFoundError ? { kind: "absent" } : { kind: "unknown" };
   }
   if (receipt.status !== "success") return { kind: "reverted" };
   // The creation's event has one shape per version: read with each, whichever contract the transaction went to.

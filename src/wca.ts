@@ -95,15 +95,26 @@ export function wcaTargetInWords(target: number): string {
   return `set a single under ${wcaResultInWords(WCA_MAX_CENTISECONDS - target, "333")}`;
 }
 
-/** The person, the competition and the event, as the funder signs them (`subject`): a result pays only when all match. */
-export function wcaSubject(name: string, courseId: string): Hex {
-  return keccak256(stringToHex(`viky:wca:v1:${normaliseCertificateName(name)}:${courseId.trim()}`));
+/**
+ * A competitor's name without what the WCA prints after it in parentheses, which is the same name in the person's own
+ * script: "Yiheng Wang (王艺衡)" is Yiheng Wang (the audit of 1 Oct 2026). A funder writes the name as people say it,
+ * the API prints both, and compared whole the two never matched, so such a person's result paid nothing. Only a
+ * parenthesis that ends the name is dropped, and a name that is nothing else is kept as it is.
+ */
+export function wcaNameOf(name: string): string {
+  const bare = name.replace(/\s*\([^()]*\)\s*$/u, "").trim();
+  return bare.length > 0 ? bare : name.trim();
 }
 
-/** Whether the name the API prints is the name the funder wrote: no case, no accents, no order. */
+/** The person, the competition and the event, as the funder signs them (`subject`): a result pays only when all match. */
+export function wcaSubject(name: string, courseId: string): Hex {
+  return keccak256(stringToHex(`viky:wca:v1:${normaliseCertificateName(wcaNameOf(name))}:${courseId.trim()}`));
+}
+
+/** Whether the name the API prints is the name the funder wrote: no case, no accents, no order, no local script after it. */
 export function sameCuber(printed: string, written: string): boolean {
-  const a = normaliseCertificateName(printed);
-  const b = normaliseCertificateName(written);
+  const a = normaliseCertificateName(wcaNameOf(printed));
+  const b = normaliseCertificateName(wcaNameOf(written));
   return a.length > 0 && a === b;
 }
 

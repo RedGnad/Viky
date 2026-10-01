@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAddress, type Hex } from "viem";
 import { accountAuthErrorStatus, accountAuthPublicMessage } from "./account-auth-server";
+import { FinalityTimeout } from "./monad/chain";
 import { RelayerError } from "./relayer";
 import { RequestError } from "./request-error";
 
@@ -100,6 +101,9 @@ const CONTRACT_REFUSALS: Record<string, { code: string; message: string; status:
  * `forOperator` adds the refusal exactly as the chain gave it. Only ever true for one of our own accounts
  * (src/dev-access.ts): it is technical text, and a person using Viky must never meet it.
  */
+/** What a person reads when what they asked was sent and its end is not known yet. */
+export const NOT_FINAL_YET = "This is taking longer than usual. Give it a minute, then look again before you try once more.";
+
 export function giftErrorResponse(error: unknown, forOperator = false): NextResponse {
   const authStatus = accountAuthErrorStatus(error);
   if (authStatus) return NextResponse.json({ error: accountAuthPublicMessage(error), code: "SIGN_IN_REQUIRED" }, { status: authStatus, headers: NO_STORE });
@@ -133,6 +137,12 @@ export function giftErrorResponse(error: unknown, forOperator = false): NextResp
       );
     }
     return NextResponse.json({ error: "Viky is not ready for this yet. Nothing was changed.", code: error.code }, { status: 503, headers: NO_STORE });
+  }
+  // Sent, and not known to be final within the wait: it may be a moment later. Neither "done" nor "nothing was
+  // changed" would be true, so the sentence says neither (the audit of 1 Oct 2026).
+  if (error instanceof FinalityTimeout) {
+    console.error(`not final within the wait: ${error.hash}`);
+    return NextResponse.json({ error: NOT_FINAL_YET, code: "NOT_FINAL_YET" }, { status: 504, headers: NO_STORE });
   }
   // Anything else is a library or infrastructure error: its text is for our logs, never for the person.
   console.error("gift route failed:", error);

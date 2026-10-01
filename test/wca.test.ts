@@ -7,7 +7,7 @@ import { proofOfCondition } from "../src/condition-proof";
 import { CONDITIONS, conditionById, WCA_TIME_LINE as LINE } from "../src/conditions";
 import { certificateById, certificateOfGoal, WCA_MILESTONE } from "../src/milestone-conditions";
 import { MILESTONE_GOALS } from "../src/milestone-goals";
-import { competitionStillOpen, isWcaId, sameCuber, wcaAccount, wcaAccountOf, wcaCourseOf, WCA_ANY_RESULT, WCA_GOAL_TYPE, WCA_MAX_CENTISECONDS, wcaMetricOf, wcaProviderId, wcaResultInWords, wcaSubject, wcaTargetInWords, wcaTargetUnderSeconds } from "../src/wca";
+import { competitionStillOpen, isWcaId, sameCuber, wcaAccount, wcaAccountOf, wcaCourseOf, WCA_ANY_RESULT, WCA_GOAL_TYPE, WCA_MAX_CENTISECONDS, wcaMetricOf, wcaProviderId, wcaNameOf, wcaResultInWords, wcaSubject, wcaTargetInWords, wcaTargetUnderSeconds } from "../src/wca";
 import { bestRowOf, listWcaCompetitions, readWcaRegistration, readWcaResult, WcaReadError, type WcaResultRow } from "../src/wca-reading";
 
 /**
@@ -51,6 +51,15 @@ test("the module: events, ids, the course, the metric in hundredths under an hou
   assert.equal(wcaSubject("ada EXAMPLE", "TestOpen2026/333"), wcaSubject("Example Ada", "TestOpen2026/333"), "no case, no order");
   assert.notEqual(wcaSubject("Ada Example", "TestOpen2026/333"), wcaSubject("Ada Example", "TestOpen2026/222"), "the event is signed");
   assert.ok(sameCuber("Alexandre Schoeffel", "schoeffel alexandre") && !sameCuber("Alexandre Schoeffel", "Alexandre Other"));
+  // The WCA prints a name in the person's own script after it, in parentheses; a funder writes the name people say
+  // (the audit of 1 Oct 2026: compared whole, the two never matched, so such a person's result paid nothing).
+  assert.ok(sameCuber("Ada Example (艾达)", "Ada Example"), "the API's printed name against the name written");
+  assert.ok(sameCuber("Ada Example", "Ada Example (艾达)") && sameCuber("Ada Example (艾达)", "example ada (艾达)"), "whichever side carries it");
+  assert.ok(!sameCuber("Ada Example (艾达)", "Ada Other"), "another person is still another person");
+  assert.equal(wcaNameOf("Ada Example (艾达)"), "Ada Example");
+  assert.equal(wcaNameOf("Ada (Addie) Example"), "Ada (Addie) Example", "only a parenthesis that ends the name is dropped");
+  assert.equal(wcaNameOf("(艾达)"), "(艾达)", "a name that is nothing else is kept");
+  assert.equal(wcaSubject("Ada Example (艾达)", "TestOpen2026/333"), wcaSubject("Ada Example", "TestOpen2026/333"), "and what is signed is the same person either way");
   assert.ok(competitionStillOpen("2026-10-17", new Date("2026-10-16T23:59:00Z").getTime()) && !competitionStillOpen("2026-10-17", new Date("2026-10-17T00:00:00Z").getTime()));
   assert.equal(wcaAccount(" 2019scho04 ", "SaintSymphorienSpeedcubing2026", "333", "f"), "2019SCHO04|SaintSymphorienSpeedcubing2026|333|f");
   assert.deepEqual(wcaAccountOf("2019SCHO04|SaintSymphorienSpeedcubing2026|333|f"), { wcaId: "2019SCHO04", competitionId: "SaintSymphorienSpeedcubing2026", eventId: "333", round: "f" });

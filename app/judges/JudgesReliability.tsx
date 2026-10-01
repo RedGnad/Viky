@@ -74,7 +74,11 @@ export async function JudgesReliability() {
         {since.plans.map((plan) => (
           <div key={plan.plan} className="contents">
             <dt className={MUTED}>
-              {plan.plan === "counting" ? "Readings pass, just after midnight" : "Settling pass, after the catch-up window"}
+              {plan.plan === "counting"
+                ? "Readings pass, just after midnight"
+                : plan.plan === "recount"
+                  ? "Second reading, before the catch-up window closes"
+                  : "Settling pass, after the catch-up window"}
             </dt>
             <dd className={HELP}>
               {plan.runs} {plan.runs === 1 ? "run" : "runs"}, {plan.onTime} inside the hour the schedule names

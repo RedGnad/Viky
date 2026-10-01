@@ -9,9 +9,11 @@ import { relayDrain, relayFinalise, relayRefund } from "./gift-relay";
 import { loadAllGifts, loadBoundGifts } from "./gift-store";
 import { milestonePass } from "./milestone-pass";
 import { isMilestoneGiftId } from "./milestone-protocol";
-import { recordPass, type NewPass, type PassHold, type PassPlanName } from "./pass-log";
+import { catchUpSecondsOf } from "./catch-up";
+import { countingSince, recordPass, type CountingLeft, type NewPass, type PassHold, type PassPlanName } from "./pass-log";
 import { gatheringNotes } from "./pass-notes";
 import { escrowOf, relayerClients, relayerPreflight, RelayerError } from "./relayer";
+import { dailyAbiOf } from "./v2";
 import { watchAtPassStart, type RelayerAtStart, type WatchLine } from "./watch";
 
 /**
@@ -25,6 +27,12 @@ import { watchAtPassStart, type RelayerAtStart, type WatchLine } from "./watch";
  * Settling cannot run then: a day only becomes drainable six hours later (D30), so draining at midnight
  * would leave it open another whole day and the next morning's reading could pay for a day whose catch-up
  * had expired. The second pass settles at the moment D13 allows, without making counting less forgiving.
+ *
+ * And a third run reads again (the audit of 1 Oct 2026). A reading that failed on our side at half past midnight was
+ * the last automatic chance for the day before yesterday: at 06:00 its catch-up window closes and at 07:00 the
+ * settling pass sends it back. So at 03:30 the gifts the counting pass held are read once more, while that day can
+ * still be paid; and if the counting pass left no row at all, or stopped part way, the whole reading pass is run.
+ * Reading again inside the settling pass would be of no use: every check-in drains the expired days first.
  */
 
 export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain" | "finalise" | "refund" | "read" | "expire" | "retire"; result: string; hash?: string };
@@ -37,10 +45,29 @@ export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain"
  * in the display name. Those are real answers about the person's own account, and holding the gift open for
  * them would let anyone stop the clock by hiding their profile.
  */
-const OURS_TO_FIX: ReadonlySet<string> = new Set(["FETCH_FAILED", "PROOF_INVALID", "PROOF_MISMATCH", "NOT_CONFIGURED"]);
+const OURS_TO_FIX: ReadonlySet<string> = new Set([
+  "FETCH_FAILED",
+  "PROOF_INVALID",
+  "PROOF_MISMATCH",
+  "NOT_CONFIGURED",
+  // The worker runs other sources than this build (src/attested-read.ts): every attested reading is refused until it
+  // is redeployed, which is nothing the person did.
+  "WORKER_OUT_OF_DATE",
+  // A connected source that did not answer the token refresh (src/strava.ts, src/fitbit.ts): an outage of theirs or
+  // a limit we met, not a connection the person took back.
+  "REFRESH_UNAVAILABLE",
+  // A reading that threw instead of answering (see `counted` below).
+  "READING_FAILED",
+]);
 
-/** Which of the pass's jobs a run does. Named, so the two schedules cannot drift apart by accident. */
-export type PassPlan = Readonly<{ name: PassPlanName; count: boolean; refund: boolean }>;
+/** Which of the pass's jobs a run does. Named, so the schedules cannot drift apart by accident. */
+export type PassPlan = Readonly<{
+  name: PassPlanName;
+  count: boolean;
+  refund: boolean;
+  /** The only gifts the run is about, when it is not about all of them: the second reading's held gifts. */
+  only?: ReadonlySet<string>;
+}>;
 
 /** Just after midnight UTC: read and credit. Settling anything here would be too early (D35). */
 export const COUNTING_PASS: PassPlan = { name: "counting", count: true, refund: false };
@@ -52,6 +79,9 @@ export const COUNTING_PASS: PassPlan = { name: "counting", count: true, refund: 
  */
 export const SETTLING_PASS: PassPlan = { name: "settling", count: false, refund: true };
 
+/** Before 06:00 UTC: reads again what the counting pass held, or everything when it left nothing (see above). */
+export const RECOUNT_PASS: PassPlan = { name: "recount", count: true, refund: false };
+
 /**
  * How long a gift may wait unopened, or opened and never connected, before its whole amount can go back to the funder:
  * the contract's `UNCLAIMED_REFUND_DELAY`, fourteen days, mirrored here and checked against the contract's source by a
@@ -61,7 +91,7 @@ export const SETTLING_PASS: PassPlan = { name: "settling", count: false, refund:
 export const UNCLAIMED_REFUND_DELAY_SECONDS = 14 * 86_400;
 
 type PassGift = Pick<GiftState, "cancelled" | "finalised" | "startDay" | "recipient" | "fundedAt" | "claimedAt"> &
-  Partial<Pick<GiftState, "refundable" | "refundedToFunder">>;
+  Partial<Pick<GiftState, "refundable" | "refundedToFunder" | "endDay" | "settledThroughDay">>;
 
 /**
  * What a gift already closed still owes its funder: what the contract made refundable and has not sent yet. The pass
@@ -91,6 +121,16 @@ export type DailyPassDeps = {
   refund: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
   start: () => Promise<{ address: string; balance: bigint }>;
   nowSeconds?: () => number;
+  /**
+   * Whether check-ins are paused on a contract. While they are, nobody can be read, so no day is drained and no gift
+   * finalised there: on the first version of the contract the clock runs through a pause, and draining then would
+   * take days nobody could have earned (the audit of 1 Oct 2026). Absent in the tests of the other steps.
+   */
+  paused?: (escrow: Hex) => Promise<boolean>;
+  /** How long after a day's end a reading can still pay it, on a contract. The contracts' own window when absent. */
+  catchUpSeconds?: (escrow: Hex) => number;
+  /** What the latest counting pass since a moment left (src/pass-log.ts), for the second reading. */
+  countingSince?: (since: Date) => Promise<CountingLeft | null>;
   /** Completes the creations whose record failed after their money moved (D87); absent in the tests of the other steps. */
   completeCreations?: () => Promise<readonly CreationLine[]>;
   /** The milestone gifts' own pass (src/milestone-pass.ts), told whether this pass settles. */
@@ -124,6 +164,9 @@ function liveDeps(): DailyPassDeps {
     finalise: relayFinalise,
     refund: relayRefund,
     start: async () => ({ address: clients.address, balance: (await relayerPreflight(clients)).balance }),
+    paused: (escrow) => clients.publicClient.readContract({ address: escrow, abi: dailyAbiOf(escrow), functionName: "checkInPaused" }) as Promise<boolean>,
+    catchUpSeconds: catchUpSecondsOf,
+    countingSince,
     completeCreations: () => completePendingCreations(liveCreationDeps()),
     milestones: (settle) => milestonePass(settle),
     journal: recordPass,
@@ -139,15 +182,31 @@ type RunTally = {
   failures: Record<string, number>;
   /** Every refusal a reading met, by its code, ours or not: the journal said nothing of the others (the audit's gap a). */
   refusals: Record<string, number>;
+  /** The gifts whose reading failed on our side in this run, and those of them whose held days are already named. */
+  unread: Set<string>;
+  held: Set<string>;
 };
 
+/** The window every contract but the earliest gives a day: the day after it, and six hours. */
+const CATCH_UP_SECONDS = 86_400 + 6 * 3_600;
+
 /**
- * The day a hold is about: the day that has just ended. The counting pass runs just after midnight UTC and credits
- * what was earned up to the end of yesterday, so yesterday is the day a failed reading leaves unproved, and the day
- * the rest of the pass would have settled against that missing reading.
+ * The days a hold is about: every day of the gift that a reading could still have paid when it failed.
+ *
+ * It was yesterday alone, and that looked at the wrong day (the audit of 1 Oct 2026). Just after midnight the day
+ * before yesterday is still inside its catch-up window, and it is the one the settling pass sends back seven hours
+ * later: the day a failed reading actually costs. So a hold names each day that is past, not yet settled, inside the
+ * gift's window and still inside its catch-up window, and "Days lost because of us" is then counted on the right ones.
+ * A gift whose days could not be read is held for yesterday, as before.
  */
-function heldDay(nowSeconds: number): number {
-  return utcDayOf(nowSeconds) - 1;
+export function heldDaysOf(gift: Partial<Pick<GiftState, "startDay" | "endDay" | "settledThroughDay">> | null, nowSeconds: number, catchUpSeconds: number = CATCH_UP_SECONDS): number[] {
+  const yesterday = utcDayOf(nowSeconds) - 1;
+  if (!gift || !gift.startDay || gift.endDay === undefined || gift.settledThroughDay === undefined) return [yesterday];
+  const days: number[] = [];
+  for (let day = Math.max(gift.settledThroughDay + 1, gift.startDay); day <= Math.min(yesterday, gift.endDay); day += 1) {
+    if (nowSeconds < (day + 1) * 86_400 + catchUpSeconds) days.push(day);
+  }
+  return days.length > 0 ? days : [yesterday];
 }
 
 /** The code a thrown failure is counted under: its own, when it carries one. */
@@ -212,7 +271,7 @@ export async function dailyPass(
 ): Promise<DailyPassReport> {
   const clock = () => (deps.nowSeconds ? deps.nowSeconds() : Math.floor(Date.now() / 1_000));
   const startedAt = clock();
-  const run: RunTally = { readingsAttempted: 0, readingsSucceeded: 0, holds: [], failures: {}, refusals: {} };
+  const run: RunTally = { readingsAttempted: 0, readingsSucceeded: 0, holds: [], failures: {}, refusals: {}, unread: new Set(), held: new Set() };
   try {
     const { value, notes } = await gatheringNotes(() => runPass(plan, deps, run, clock));
     return { ...value, unsent: notes };
@@ -220,6 +279,9 @@ export async function dailyPass(
     countFailure(run, failureCode(error));
     throw error;
   } finally {
+    // A gift whose reading failed and whose days were not named, because the run stopped before it reached it or the
+    // list of gifts did not hold it, is held all the same, for yesterday: the second reading must find it.
+    for (const giftId of run.unread) if (!run.held.has(giftId)) for (const day of heldDaysOf(null, clock())) run.holds.push({ giftId, day });
     await writeJournal(deps, plan, startedAt, clock(), run);
   }
 }
@@ -245,7 +307,7 @@ async function runPass(
 
   // First, a gift whose money moved and whose record failed becomes a gift, so the rest of this pass, and the
   // fourteen-day return, can see it (D87).
-  if (deps.completeCreations) {
+  if (deps.completeCreations && !plan.only) {
     for (const line of await deps.completeCreations()) {
       lines.push({ giftId: line.giftId ?? `creation ${line.nonce.slice(0, 10)}`, step: "create", result: line.result });
     }
@@ -255,24 +317,25 @@ async function runPass(
   // would take a day from someone who did the work, because our worker, the source, or the attestor was
   // down. Our failures are ours, never theirs to pay for (D57). The day stays open and the next working
   // reading can still credit it, because only a drain closes a day.
-  const unread = new Set<string>();
+  const unread = run.unread;
 
   // Milestone gifts live on their own contract and have their own pass, below. Read with this contract's ABI they
   // would fail, and one failure here stops the pass for every daily gift after it.
+  const about = (entry: { giftId: string }) => !isMilestoneGiftId(entry.giftId) && (!plan.only || plan.only.has(entry.giftId));
   if (plan.count) {
-    for (const gift of (await deps.boundGifts()).filter((entry) => !isMilestoneGiftId(entry.giftId))) {
+    for (const gift of (await deps.boundGifts()).filter(about)) {
       // Counted before the call so a pass that falls over still records the reading it was taking. A gift already
       // counted today, finished, cancelled or not yet connected is never asked of the source at all, so it is taken
       // back out: it is not a reading, and counting it as one would make the source look silent when nobody spoke.
       run.readingsAttempted += 1;
-      const outcome = await deps.count(gift.giftId);
+      const outcome = await counted(deps, gift.giftId);
       if (outcome.kind === "already") run.readingsAttempted -= 1;
       if (outcome.kind === "counted" || outcome.kind === "bound") run.readingsSucceeded += 1;
       if (outcome.kind === "refused") {
         countRefusal(run, outcome.code);
         if (OURS_TO_FIX.has(outcome.code)) {
+          // Held, and its days are named below, once the gift has been read on the contract.
           unread.add(gift.giftId);
-          run.holds.push({ giftId: gift.giftId, day: heldDay(clock()) });
           countFailure(run, outcome.code);
         }
       }
@@ -280,17 +343,30 @@ async function runPass(
     }
   }
 
-  for (const record of (await deps.allGifts()).filter((entry) => !isMilestoneGiftId(entry.giftId))) {
+  // One answer per contract and per run: a pause is the contract's, not a gift's.
+  const pauses = new Map<string, Promise<boolean>>();
+  const pausedOn = (escrow: Hex): Promise<boolean> => {
+    if (!deps.paused) return Promise.resolve(false);
+    const key = escrow.toLowerCase();
+    // A pause that cannot be read is treated as one: holding a day open costs nothing, draining it cannot be undone.
+    if (!pauses.has(key)) pauses.set(key, deps.paused(escrow).catch(() => true));
+    return pauses.get(key)!;
+  };
+  const held = run.held;
+  const hold = (giftId: string, gift: PassGift | null, escrow: Hex | null) => {
+    held.add(giftId);
+    const window = escrow && deps.catchUpSeconds ? deps.catchUpSeconds(escrow) : CATCH_UP_SECONDS;
+    for (const day of heldDaysOf(gift, clock(), window)) run.holds.push({ giftId, day });
+  };
+
+  for (const record of (await deps.allGifts()).filter(about)) {
     const giftId = record.giftId;
-    if (unread.has(giftId)) {
-      lines.push({ giftId, step: "drain", result: "held: today's reading failed on our side" });
-      continue;
-    }
     let escrow: Hex;
     try {
       escrow = escrowOf(record);
     } catch (error) {
       // One unreadable record must never stop the pass for every other gift.
+      if (unread.has(giftId)) hold(giftId, null, null);
       lines.push({ giftId, step: "drain", result: error instanceof Error ? error.message : "no contract recorded" });
       continue;
     }
@@ -299,7 +375,13 @@ async function runPass(
       gift = await deps.read(escrow, giftId);
     } catch (error) {
       // A gift the chain could not be read for is one line of the report; the others are still settled.
+      if (unread.has(giftId)) hold(giftId, null, escrow);
       lines.push({ giftId, step: "read", result: `failed: ${failureCode(error)}` });
+      continue;
+    }
+    if (unread.has(giftId)) {
+      hold(giftId, gift, escrow);
+      lines.push({ giftId, step: "drain", result: "held: today's reading failed on our side" });
       continue;
     }
     if (gift.cancelled || gift.finalised) {
@@ -313,10 +395,19 @@ async function runPass(
       if (plan.refund && unstartedAndOverdue(gift, clock())) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
       continue;
     }
+    if (await pausedOn(escrow)) {
+      // Nobody can be read during a pause, so nothing is settled against the days it covers. What an earlier pass
+      // already freed is still sent.
+      lines.push({ giftId, step: "drain", result: "held: check-ins are paused on this contract" });
+      if (plan.refund && stillOwedToFunder(gift) > 0n) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
+      continue;
+    }
     lines.push(await attempt(giftId, "drain", () => deps.drain(giftId, escrow)));
     lines.push(await attempt(giftId, "finalise", () => deps.finalise(giftId, escrow)));
     if (plan.refund) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
   }
+  // The second reading of held gifts is about those gifts alone: the milestones and the exits have their own passes.
+  if (plan.only) return { relayer: address, balanceWei: balance.toString(), lines, watch };
   if (deps.milestones) {
     try {
       lines.push(...(await deps.milestones(plan.refund)));
@@ -332,6 +423,42 @@ async function runPass(
     if (retired > 0) lines.push({ giftId: "exits", step: "retire", result: `${retired} set(s) of terms past their deadline` });
   }
   return { relayer: address, balanceWei: balance.toString(), lines, watch };
+}
+
+/**
+ * One gift's reading. A reading that throws instead of answering is a refusal of ours for that gift, and the pass
+ * goes on to the next one: until 1 Oct 2026 one connected source that threw stopped the morning's readings for every
+ * gift after it (the audit, F-23).
+ */
+async function counted(deps: DailyPassDeps, giftId: string): Promise<PublicCheckInOutcome> {
+  try {
+    return await deps.count(giftId);
+  } catch (error) {
+    if (stopsEveryRelay(error)) throw error;
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error(`reading failed for gift ${giftId}: ${reason.slice(0, 300)}`);
+    return { kind: "refused", giftId, code: "READING_FAILED", message: "The reading could not be taken." };
+  }
+}
+
+/**
+ * The second reading of the morning. With no counting pass in the journal since midnight UTC, or one that stopped
+ * part way, the whole reading pass runs: it is the pass that did not happen. Otherwise only the gifts that pass held
+ * are read again, so a reading the person's own account refused is not asked of the source twice. Journalled under
+ * its own name either way.
+ */
+export async function recountPass(deps: DailyPassDeps = liveDeps()): Promise<DailyPassReport> {
+  const now = deps.nowSeconds ? deps.nowSeconds() : Math.floor(Date.now() / 1_000);
+  const midnight = new Date(utcDayOf(now) * 86_400_000);
+  let left: CountingLeft | null = null;
+  try {
+    left = deps.countingSince ? await deps.countingSince(midnight) : null;
+  } catch (error) {
+    // A journal that cannot be read is treated as an empty one: reading everything again is the safe side.
+    console.error(`recount: the journal could not be read: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (!left || left.stopped) return dailyPass(RECOUNT_PASS, deps);
+  return dailyPass({ ...RECOUNT_PASS, only: new Set(left.held) }, deps);
 }
 
 function describe(outcome: PublicCheckInOutcome): DailyPassLine {

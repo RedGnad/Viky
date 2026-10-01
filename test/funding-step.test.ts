@@ -69,7 +69,8 @@ test("the screen keeps the time of the failure, and its watch still depends on t
   const screen = readFileSync("app/components/PayGift.tsx", "utf8");
   const watch = screen.slice(screen.indexOf("// While paying: watch the account"), screen.indexOf("const copy = "));
   assert.match(watch, /nextFundingStep\(\{ held: read\.held, arriving: read\.arriving, arrivingUsdc: read\.usdc, wanted, failedAtMs: failedAtMs\.current, nowMs: Date\.now\(\) \}\)/);
-  const failure = watch.slice(watch.indexOf('"/api/fund/quote"'), watch.lastIndexOf("const after = await readAusdBalance"));
+  const failure = watch.slice(watch.indexOf("await fundingQuote(next.amount)"), watch.lastIndexOf("const after = await readAusdBalance"));
+  assert.ok(watch.includes("await fundingQuote(next.amount)"), "the conversion is asked through the check that holds it to the amount and the exchange");
   assert.ok(failure.indexOf("failedAtMs.current = Date.now()") < failure.indexOf('setPhase("waiting")'), "the time is kept before the phase starts the watch again");
   assert.match(failure, /setProblem\(W\.arrived\.priceMoved\);\s+setPhase\("waiting"\)/, "the sentence is said with the phase it belongs to");
   assert.match(watch, /\}, \[step, address, units, phase, refresh, give, ensureSigner\]\);/, "the phase stays among what the watch depends on");

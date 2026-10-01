@@ -1,4 +1,4 @@
-import { createPublicClient, fallback, http, type Hash, type PublicClient, type TransactionReceipt, type Transport } from "viem";
+import { createPublicClient, fallback, http, WaitForTransactionReceiptTimeoutError, type Hash, type PublicClient, type TransactionReceipt, type Transport } from "viem";
 import { monad } from "viem/chains";
 
 export const MONAD_CHAIN_ID = 143;
@@ -16,9 +16,18 @@ export const USDC_ADDRESS = "0x754704Bc059F8C67012fEd69BC8A327a5aafb603" as cons
 export const USDC_DECIMALS = 6;
 export const PUBLIC_RPC_URL = "https://rpc.monad.xyz";
 
-/** Monad finalises k = 3 blocks after inclusion, about 1.2 s at 302 ms per block. */
+/**
+ * Monad finalises a block two rounds after it is proposed, about 600 ms at 300 ms a block (docs.monad.xyz, MonadBFT:
+ * "full finality in two rounds", read 1 Oct 2026). Nothing here counts blocks: `waitForFinality` asks the node for the
+ * `finalized` tag.
+ *
+ * The two waits are fifteen seconds each (the audit of 1 Oct 2026). The wait for the receipt had no limit of its own,
+ * so it was the library's three minutes inside functions that live one: the function was cut before any `catch` here
+ * could say what had happened.
+ */
 export const FINALITY_POLL_MS = 300;
-export const FINALITY_TIMEOUT_MS = 30_000;
+export const FINALITY_TIMEOUT_MS = 15_000;
+export const RECEIPT_TIMEOUT_MS = 15_000;
 
 export const monadChain = monad;
 
@@ -47,9 +56,14 @@ export function createMonadPublicClient(rpcUrl = monadRpcUrl()): PublicClient {
   return createPublicClient({ chain: monadChain, transport: monadTransport(rpcUrl) });
 }
 
+/**
+ * A transaction that was sent and is not known to be final: no receipt within `RECEIPT_TIMEOUT_MS`, or a receipt whose
+ * block was not finalised within `FINALITY_TIMEOUT_MS`. It says neither that the thing was done nor that nothing
+ * changed: the transaction may still be final a moment later.
+ */
 export class FinalityTimeout extends Error {
-  constructor(hash: Hash) {
-    super(`Transaction ${hash} was not finalised within ${FINALITY_TIMEOUT_MS} ms`);
+  constructor(readonly hash: Hash) {
+    super(`Transaction ${hash} was not final within the wait`);
     this.name = "FinalityTimeout";
   }
 }
@@ -59,7 +73,13 @@ export class FinalityTimeout extends Error {
  * the person sees as "done" waits for this; a receipt alone is not enough on Monad.
  */
 export async function waitForFinality(client: PublicClient, hash: Hash): Promise<TransactionReceipt> {
-  const receipt = await client.waitForTransactionReceipt({ hash });
+  let receipt: TransactionReceipt;
+  try {
+    receipt = await client.waitForTransactionReceipt({ hash, timeout: RECEIPT_TIMEOUT_MS });
+  } catch (error) {
+    if (error instanceof WaitForTransactionReceiptTimeoutError) throw new FinalityTimeout(hash);
+    throw error;
+  }
   const deadline = Date.now() + FINALITY_TIMEOUT_MS;
   while (Date.now() < deadline) {
     const finalized = await client.getBlock({ blockTag: "finalized" });
