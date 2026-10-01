@@ -290,36 +290,90 @@ export type ShownProofOutcome =
   | { kind: "held"; giftId: string; message: string };
 
 /**
- * Opens a Reclaim session for this gift's condition, hands the person to the verification tab, then polls the
- * verify route until Reclaim has returned a proof and the server has recorded it (or refused it, with a reason).
- * The source is the condition's, not this function's: a daily gift names the account it binds, a milestone names
- * nothing and takes its one proof.
+ * How a shown proof is waited for (the audit of 1 Oct 2026). The verify route allows ten calls in ten minutes
+ * (src/rate-limit.ts), and the wait used to ask every four seconds: the eleventh call, about 45 seconds in, answered
+ * "Too many attempts" to somebody still signing in to their source. So the looks are few and spread: the first after
+ * twenty seconds, each one later than the last, never more than eight in any ten minutes, which leaves two for the
+ * person's other gestures. The moment that matters costs no waiting: coming back to this page from the verification
+ * is itself a reason to look, at once.
  */
-export async function runShownProof(input: {
-  giftId: string;
-  conditionId: string;
-  phase: "baseline" | "check-in" | "reach";
-  dayIndex?: number;
-  username?: string;
-  openUrl: (url: string) => void;
-  onWaiting?: (attempt: number) => void;
-  signal?: AbortSignal;
-}): Promise<ShownProofOutcome> {
-  const session = await postJson<{ sessionId: string; requestUrl: string }>("/api/proof/session", {
+export const SHOWN_LOOK_GAPS_MS: readonly number[] = [20_000, 25_000, 35_000, 50_000, 70_000, 90_000, 120_000, 150_000];
+export const SHOWN_LOOKS_PER_WINDOW = 8;
+export const SHOWN_WINDOW_MS = 10 * 60_000;
+/** The least time between two looks, for a person who comes back to the page again and again. */
+export const SHOWN_LOOK_EARLY_MS = 10_000;
+/** How long a proof is waited for before the page says it took too long. */
+export const SHOWN_WAIT_MS = 10 * 60_000;
+
+/**
+ * When the next look may be made, in milliseconds from `now`, given when the wait started and the looks already made.
+ * `early` is the look a return to the page asks for: sooner than the schedule, and under the same count.
+ */
+export function nextShownLookMs(startedAt: number, looks: readonly number[], now: number, early: boolean): number {
+  const last = looks.length > 0 ? looks[looks.length - 1] : startedAt;
+  const gap = early ? SHOWN_LOOK_EARLY_MS : SHOWN_LOOK_GAPS_MS[Math.min(looks.length, SHOWN_LOOK_GAPS_MS.length - 1)];
+  let due = last + gap;
+  const recent = looks.filter((at) => at > now - SHOWN_WINDOW_MS);
+  if (recent.length >= SHOWN_LOOKS_PER_WINDOW) due = Math.max(due, recent[recent.length - SHOWN_LOOKS_PER_WINDOW] + SHOWN_WINDOW_MS + 1_000);
+  return Math.max(0, due - now);
+}
+
+const cancelled = () => new ApiError({ status: 499, code: "CANCELLED", message: "Cancelled." });
+
+/** Waits until the next look is due, or until the page comes back to the front and an early look is allowed. */
+function untilNextLook(startedAt: number, looks: readonly number[], signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timers: Array<ReturnType<typeof setTimeout>> = [];
+    const done = (settle: () => void) => {
+      timers.forEach(clearTimeout);
+      document.removeEventListener("visibilitychange", front);
+      signal.removeEventListener("abort", stop);
+      settle();
+    };
+    const stop = () => done(() => reject(cancelled()));
+    const front = () => {
+      if (document.visibilityState !== "visible") return;
+      timers.push(setTimeout(() => done(resolve), nextShownLookMs(startedAt, looks, Date.now(), true)));
+    };
+    if (signal.aborted) return stop();
+    signal.addEventListener("abort", stop);
+    document.addEventListener("visibilitychange", front);
+    timers.push(setTimeout(() => done(resolve), nextShownLookMs(startedAt, looks, Date.now(), false)));
+  });
+}
+
+/**
+ * Opens a Reclaim session for this gift's condition and answers the address of its verification page. Nothing is
+ * opened here: a window opened after the awaits of a press is outside the press, and Safari blocks it. The page shows
+ * the address as a link the person presses themselves (app/kit/ShowProof.tsx). The source is the condition's, not this
+ * function's: a daily gift names the account it binds, a milestone names nothing and takes its one proof.
+ */
+export function openShownProof(input: { giftId: string; conditionId: string; phase: "baseline" | "check-in" | "reach"; dayIndex?: number; username?: string }): Promise<{ sessionId: string; requestUrl: string }> {
+  return postJson<{ sessionId: string; requestUrl: string }>("/api/proof/session", {
     giftId: input.giftId,
     conditionId: input.conditionId,
     phase: input.phase,
     dayIndex: input.dayIndex ?? 0,
     ...(input.username ? { username: input.username } : {}),
   });
-  input.openUrl(session.requestUrl);
-  for (let attempt = 1; attempt <= 120; attempt += 1) {
-    if (input.signal?.aborted) throw new ApiError({ status: 499, code: "CANCELLED", message: "Cancelled." });
-    await new Promise((resolve) => setTimeout(resolve, 4_000));
-    input.onWaiting?.(attempt);
+}
+
+/**
+ * Waits for the proof of a session opened above: asks the verify route until Reclaim has returned a proof and the
+ * server has recorded it (or refused it, with a reason), at the pace `nextShownLookMs` sets, and stops when `signal`
+ * says so.
+ */
+export async function awaitShownProof(input: { sessionId: string; signal: AbortSignal; onLook?: (look: number) => void }): Promise<ShownProofOutcome> {
+  const startedAt = Date.now();
+  const looks: number[] = [];
+  while (Date.now() - startedAt < SHOWN_WAIT_MS) {
+    await untilNextLook(startedAt, looks, input.signal);
+    looks.push(Date.now());
+    input.onLook?.(looks.length);
     try {
-      return await postJson<ShownProofOutcome>("/api/proof/verify", { sessionId: session.sessionId });
+      return await postJson<ShownProofOutcome>("/api/proof/verify", { sessionId: input.sessionId });
     } catch (error) {
+      if (input.signal.aborted) throw cancelled();
       if (error instanceof ApiError && error.code === "NO_PROOF_YET") continue;
       throw error;
     }

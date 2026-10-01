@@ -39,6 +39,7 @@ import { Success } from "../kit/Motion";
 import { Shell } from "../kit/Shell";
 import { Working } from "../kit/Working";
 import { AccountPanel } from "./AccountPanel";
+import { DoorNotice } from "../kit/AccountDoor";
 import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
 
 /**
@@ -512,6 +513,8 @@ export function PayGift() {
   if (!address && kept?.wayIn && step !== "account" && !hadAccount) {
     return (
       <Shell kind="task" back="/" step={W.waitingGift.title}>
+        {/* Inside another app's page nobody signs in: said first, with the way out (the founder, 1 Oct 2026). */}
+        <DoorNotice />
         <p className={BODY}>{kept.recipientName ? W.waitingGift.which(formatAusd(dollarsToUnits(kept.dollars)), kept.recipientName) : W.waitingGift.whichUnnamed(formatAusd(dollarsToUnits(kept.dollars)))}</p>
         <button type="button" onClick={() => void signIn()} disabled={accountStatus === "busy"} className={PRIMARY_BUTTON}>
           {W.waitingGift.signIn}

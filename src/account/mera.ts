@@ -30,6 +30,11 @@ export const RELYING_PARTY_NAME = "Viky";
 export const DEFAULT_IDLE_MINUTES = 10;
 export const MONEY_SCREEN_IDLE_MINUTES = 30;
 
+/**
+ * The passkey this page signed in with, kept in memory beside the browser's storage (the audit of 1 Oct 2026): a
+ * browser whose storage refuses writes, or lost them, still knows which passkey is its own until the page goes.
+ */
+let remembered: PasskeyCredentialMetadata | undefined;
 let idleMinutes = DEFAULT_IDLE_MINUTES;
 let session: Secp256k1SigningSession | undefined;
 let account: LocalAccount | undefined;
@@ -56,10 +61,21 @@ function requireBrowser(): void {
   if (typeof window === "undefined") throw accountError("NOT_IN_BROWSER");
 }
 
+/** Whether this page is Viky's own app, installed on the phone's home screen: on an iPhone it names itself as no browser does. */
+export function installedOnTheHomeScreen(): boolean {
+  if (typeof window === "undefined") return false;
+  if ((window.navigator as Navigator & { standalone?: boolean }).standalone === true) return true;
+  try {
+    return typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches;
+  } catch {
+    return false;
+  }
+}
+
 /** Refuses, with guidance, the browsers where the passkey prompt would never come back. */
 function requirePasskeyCapableBrowser(): void {
   requireBrowser();
-  const problem = passkeyEnvironmentProblem(window.navigator.userAgent, typeof window.PublicKeyCredential !== "undefined");
+  const problem = passkeyEnvironmentProblem(window.navigator.userAgent, typeof window.PublicKeyCredential !== "undefined", installedOnTheHomeScreen());
   if (problem) throw accountError(problem);
 }
 
@@ -85,16 +101,17 @@ export function storedCredential(): PasskeyCredentialMetadata | undefined {
   if (typeof window === "undefined") return undefined;
   try {
     const raw = window.localStorage.getItem(CREDENTIAL_STORAGE_KEY);
-    if (!raw) return undefined;
+    if (!raw) return remembered;
     const parsed = JSON.parse(raw) as Partial<PasskeyCredentialMetadata>;
-    if (typeof parsed.credentialId !== "string" || parsed.credentialId.length === 0) return undefined;
+    if (typeof parsed.credentialId !== "string" || parsed.credentialId.length === 0) return remembered;
     return { credentialId: parsed.credentialId, transports: parsed.transports };
   } catch {
-    return undefined;
+    return remembered;
   }
 }
 
 function rememberCredential(credential: PasskeyCredentialMetadata): void {
+  remembered = credential;
   try {
     window.localStorage.setItem(CREDENTIAL_STORAGE_KEY, JSON.stringify(credential));
   } catch {
@@ -123,17 +140,30 @@ export function sessionExpiresAtMs(): number | undefined {
   return account ? idleDeadlineMs : undefined;
 }
 
-function openSession(prfOutput: Uint8Array): Address {
-  // The account's own key only: the consent key was just kept by the same ceremony and stays (src/client/consent-key.ts).
-  closeAccountSession();
+/**
+ * Opens the signing session from a passkey's output. `only` names the one account it may open: a passkey that derives
+ * another is refused before anything is opened or announced, and the consent key the same ceremony made is dropped
+ * with it, so no screen ever shows one account while a key signs for another.
+ */
+function openSession(prfOutput: Uint8Array, only?: Address): Address {
   const privateKey = deriveEvmPrivateKey(prfOutput);
   prfOutput.fill(0);
+  let opened: Secp256k1SigningSession;
   try {
-    session = createSecp256k1SigningSession({ privateKey });
+    opened = createSecp256k1SigningSession({ privateKey });
   } finally {
     privateKey.fill(0);
   }
-  account = toViemAccount(session);
+  const candidate = toViemAccount(opened);
+  if (only && candidate.address.toLowerCase() !== only.toLowerCase()) {
+    opened.end();
+    endConsentKey();
+    throw accountError("OTHER_ACCOUNT");
+  }
+  // The account's own key only: the consent key was just kept by the same ceremony and stays (src/client/consent-key.ts).
+  closeAccountSession();
+  session = opened;
+  account = candidate;
   armIdleTimer();
   notify();
   return account.address;
@@ -162,16 +192,33 @@ export async function createAccount(displayName: string): Promise<Address> {
   }
 }
 
-/** Reopens the account from an existing passkey. Falls back to the platform picker when nothing is stored. */
-export async function signIn(): Promise<Address> {
+/**
+ * Reopens the account from an existing passkey. Falls back to the platform picker when nothing is stored.
+ *
+ * `as` is the account the server's cookie names, asked for while the passkey answers, never before it: the prompt
+ * must open inside the press. With it, only that account is opened (`OTHER_ACCOUNT` otherwise), and a cookie that
+ * names nobody opens nothing (`SESSION_ENDED`). A passkey that is refused is not remembered either.
+ */
+export async function signIn(options: { as?: Promise<Address | null> } = {}): Promise<Address> {
   requirePasskeyCapableBrowser();
   const known = storedCredential();
   try {
     const result = await getPasskeyPrfOutput({ rpId: relyingPartyId(), credential: known, webAuthnClient: consentWebAuthnClient });
+    let only: Address | undefined;
+    if (options.as) {
+      const named = await options.as.catch(() => null);
+      if (!named) {
+        result.prfOutput.fill(0);
+        endConsentKey();
+        throw accountError("SESSION_ENDED");
+      }
+      only = named;
+    }
+    const address = openSession(result.prfOutput, only);
     if (!known || known.credentialId !== result.credentialId) {
       rememberCredential({ credentialId: result.credentialId });
     }
-    return openSession(result.prfOutput);
+    return address;
   } catch (error) {
     throw toAccountError(error);
   }
@@ -240,6 +287,7 @@ export function isSignedIn(): boolean {
 /** Forgets the stored credential on this device. The passkey itself stays with the authenticator. */
 export function forgetCredential(): void {
   signOut();
+  remembered = undefined;
   try {
     window.localStorage.removeItem(CREDENTIAL_STORAGE_KEY);
   } catch {

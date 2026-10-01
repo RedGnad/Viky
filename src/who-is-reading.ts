@@ -39,3 +39,23 @@ export async function zoneOfTheReader(): Promise<string> {
     return "UTC";
   }
 }
+
+/**
+ * Where this page is being served from, so an address built on the server (a preview's image, the same link opened in
+ * the phone's own browser) is one that can be fetched and opened.
+ */
+export async function originOfThePage(): Promise<string> {
+  const incoming = await headers();
+  const host = incoming.get("x-forwarded-host") ?? incoming.get("host") ?? "viky.cash";
+  const proto = incoming.get("x-forwarded-proto") ?? (host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
+/** Which browser asks for this page, as it names itself. */
+export async function browserOfTheReader(): Promise<string> {
+  try {
+    return (await headers()).get("user-agent") ?? "";
+  } catch {
+    return "";
+  }
+}

@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { giftPreview } from "@/src/gift-preview";
 import { giftStatusFor, type AnyGiftStatus } from "@/src/gift-status";
-import { signedInAccount } from "@/src/who-is-reading";
+import { originOfThePage, signedInAccount } from "@/src/who-is-reading";
 import { GiftPage } from "../../components/GiftPage";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ t?: string; take?: string }> };
@@ -11,14 +10,6 @@ type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ t?: stri
 /** The link's key as the page accepts it, or nothing. */
 function keyOf(t: string | undefined): string | null {
   return typeof t === "string" && /^[A-Za-z0-9_-]{16,64}$/.test(t) ? t : null;
-}
-
-/** Where this page is being served from, so the preview's image is named by an address a messaging app can fetch. */
-async function origin(): Promise<string> {
-  const incoming = await headers();
-  const host = incoming.get("x-forwarded-host") ?? incoming.get("host") ?? "viky.cash";
-  const proto = incoming.get("x-forwarded-proto") ?? (host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https");
-  return `${proto}://${host}`;
 }
 
 /**
@@ -36,7 +27,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   if (!/^\d{1,78}$/.test(id)) return {};
   const preview = await giftPreview(id, keyOf(t));
   const linkKey = keyOf(t);
-  const image = { url: `${await origin()}/api/gift/${id}/preview-image${linkKey ? `?t=${encodeURIComponent(linkKey)}` : ""}`, width: 1200, height: 630, alt: preview.title };
+  const image = { url: `${await originOfThePage()}/api/gift/${id}/preview-image${linkKey ? `?t=${encodeURIComponent(linkKey)}` : ""}`, width: 1200, height: 630, alt: preview.title };
   return {
     title: { absolute: preview.title },
     description: preview.description,
