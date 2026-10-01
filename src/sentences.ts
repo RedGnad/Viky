@@ -186,13 +186,18 @@ export const PAY = {
    */
   atTheRate: (day: string) => `At the European Central Bank's rate of ${day}. It sets one each working day.`,
   /** When the gift needs less than the smallest payment the card service takes (D125). */
-  floor: (euros: number) => `The card service takes nothing under ${euros} EUR, so that is what you pay. What is left over stays in your account for your next gift.`,
+  floor: (smallest: number, euros: number) =>
+    smallest === euros
+      ? `The card service takes nothing under ${euros} EUR, so that is what you pay. What is left over stays in your account for your next gift.`
+      : `The card service takes nothing under ${smallest} EUR, so you pay ${euros} EUR. What is left over stays in your account for your next gift.`,
   /**
    * The one time the two services are named on the sheet (D239): the first refused this person, and the sentence
    * says which one, why, and which one this goes through instead. In our words, never theirs.
    */
   instead: {
     country: (first: string, second: string) => `${first} does not serve your country, so this goes through ${second}.`,
+    /** A service that serves the country and does not sell there what a gift holds (the audit of 1 Oct 2026). */
+    notSold: (first: string, second: string) => `${first} does not sell what a gift holds in your country, so this goes through ${second}.`,
     paused: (first: string, second: string) => `${first} is not selling right now, so this goes through ${second}.`,
     floor: (first: string, euros: number, second: string) => `${first} takes nothing under ${euros} EUR, so this goes through ${second}.`,
   },
@@ -230,11 +235,11 @@ export const PAY = {
     `The card payment opens next, by our partner ${name}. Enter ${euros ? `${euros} EUR` : "the amount"} there: it shows what your gift receives. A card service then takes your card in its own window, once with your ID, and calls the money USDC. Come back here: the gift starts by itself.`,
   /**
    * The same moment for a page that arrives filled in and locked, and delivers another dollar coin (the founder's
-   * words of 1 Oct 2026, from his own try to the last step before paying). The last sentence is the one a way that
-   * ends with a step to confirm has always carried (D101).
+   * words of 1 Oct 2026, from his own try to the last step before paying). Its last sentence changed the same day:
+   * the coin that arrives is changed by the screen that waits, with nothing to confirm (src/usdc-router.ts).
    */
   partnerLocked: (name: string) =>
-    `Our partner ${name} takes your card. The first time, it asks who you are: your details, a code by text, and your ID. Your account and the amount are already filled in. Come back here to confirm the last step.`,
+    `Our partner ${name} takes your card. The first time, it asks who you are: your details, a code by text, and your ID. Your account and the amount are already filled in. Come back here afterwards: your gift starts by itself.`,
   /** The sheet the card is paid in, and what its frame is called when read aloud. */
   card: { title: "Pay by card", frame: "Card payment" },
   yourCode: "Your code",
@@ -639,8 +644,8 @@ export const FUND = {
     /** What the wait ends with, which differs by rail (D101). */
     thenNothing: "When it lands, the gift is made straight away: there is nothing else to confirm.",
     thenChanged: "When it lands, you confirm one step that turns it into what the gift holds, and a little stays behind for it.",
-    /** The same for a dollar coin, changed one for one: nothing stays behind (the founder, 1 Oct 2026). */
-    thenConfirmed: "When it lands, you confirm one step that turns it into what the gift holds.",
+    /** The same for a dollar coin, changed by the screen itself: nothing to confirm, nothing stays behind (the founder, 1 Oct 2026). */
+    thenConfirmed: "When it lands, Viky turns it into what the gift holds and starts your gift.",
     codeLabel: (name: string) => `The code to give ${name}`,
     copy: "Copy the code",
     copied: "Copied",
@@ -1613,6 +1618,20 @@ export const USE_MONEY = {
     body: "Shops, games and more, from Bitrefill. Some are for online shops abroad, and each card says where it works.",
     action: "Choose a card",
   },
+  /**
+   * How the bank service pays in the person's country, by its own published method (the audit of 1 Oct 2026): a
+   * transfer in euros to an IBAN was said to an account in the United States, which it pays in dollars.
+   */
+  bankBy: (method: string, currency: string) => {
+    if (method === "SEPA") return "A transfer in euros to your IBAN, within two working days. Our partner Ramp asks for your ID, once.";
+    if (method === "CARD") return "Onto your card. Our partner Ramp asks for your ID, once.";
+    const named: Readonly<Record<string, string>> = { USD: "dollars", BRL: "reais", MXN: "pesos" };
+    return `A transfer in ${named[currency] ?? currency} to your bank account. Our partner Ramp asks for your ID, once.`;
+  },
+  /** The card service's smallest payout, as it publishes it today, said on its card before anything is changed. */
+  cardFrom: (figure: string) => `From ${figure} at a time.`,
+  /** No bank and no card reaches the person's country: said, rather than left to be found out (the audit of 1 Oct 2026). */
+  noWayOutThere: (country: string) => `No way to take money out reaches ${country} yet. It stays yours here.`,
   keepHere: "Or keep it here: it stays yours from one gift to the next.",
   /**
    * The line under the title, built from the cards shown for the country and in their order (the founder, 29 Sep 2026):
@@ -1672,7 +1691,7 @@ export const CASH_OUT = {
   gathering: "Taking what your gifts hold into your account.",
   gatherFailed: "What your gifts hold could not be taken out just now. Nothing was lost: it is still yours, in the gift.",
   worthAbout: (dollars: string) => `about $${dollars}`,
-  worthLater: "Its value in dollars will show once the price answers.",
+  worthLater: "Its value in dollars will show in a moment.",
   sourceLine: (source: string, read: string) => `Read from ${source}, ${read}.`,
   anotherAccount: "Send to another Viky account of mine",
   /**
@@ -1694,7 +1713,7 @@ export const CASH_OUT = {
   howMuchCard: "How much do you want to send to your card?",
   upTo: (max: string, about: string | undefined) => `Up to $${max}, with two decimals at most.${about ? ` ${about[0].toUpperCase()}${about.slice(1)}.` : ""}`,
   seeWhatYouWillGet: "See what you will get",
-  asking: "Asking for the price",
+  asking: "Asking for the amount",
   refusals: {
     shape: "Two decimals at most, like 9.99.",
     tooMuch: (max: string) => `That is more than your $${max}.`,
@@ -1712,9 +1731,15 @@ export const CASH_OUT = {
   reviewPayout: (name: string, euros: string, fee: string, net: string) =>
     `${name} will turn that into about ${euros}, minus its ${fee} fee: about ${net} on your bank account.`,
   reviewCard: (name: string) => `What ${name} pays onto your card is shown on their page.`,
+  /**
+   * What stays in the account the first time money goes out this way (D53): an account that holds none of it can send
+   * nothing. Said in dollars, with "about", and without naming what it is counted in (the audit of 1 Oct 2026).
+   */
+  reviewKept: (dollars: string) => `About ${dollars} of it stays in your account, which it needs to be able to send.`,
   reviewDollars: (dollars: string) => `That is $${dollars} of your money.`,
-  priceHolds: "This price holds for 4 minutes.",
-  priceRefreshed: "The price was refreshed.",
+  /** "Amount", never "price" (the audit of 1 Oct 2026): a person taking their money out is buying nothing. */
+  priceHolds: "This amount holds for 4 minutes.",
+  priceRefreshed: "The amount was refreshed.",
   getReady: (amount: string) => `Get ${amount} ready`,
   gettingReady: (amount: string) => `Getting ${amount} ready. A few seconds.`,
 
@@ -1727,7 +1752,20 @@ export const CASH_OUT = {
   staysDollars: "Less than $0.01 stays in your account.",
   staysQuantity: (name: string) => `Less than 0.01 of what ${name} buys stays in your account.`,
   step2: (name: string) => `Step 2 of 3: Place your order with ${name}`,
-  order: (amount: string, name: string) => `Order ${amount} on ${name}`,
+  /**
+   * What to do on the service's own page, which opens with nothing chosen (the audit of 1 Oct 2026): the bank
+   * service's page opens on selling, the card service's on buying, so only the second is told to press Sell. The two
+   * words are the service's own for what is sold and where, quoted as it prints them.
+   */
+  onTheirPage: (name: string, sells: string, quantity: string, opensOnSelling: boolean) => {
+    const [coin, network] = sells.split(" on ");
+    return `On ${name}'s page, ${opensOnSelling ? "pick" : "tap Sell. Pick"} ${coin}, the one marked ${network}, and type ${quantity}.`;
+  },
+  /** One gesture where there were two, with the code copied before the page that asks for it opens. */
+  copyAndOpen: (name: string) => `Copy my code and open ${name}`,
+  comeBack: (name: string) => `${name} opens in a new tab and uses its own words. Come back to this tab with the code it gives you.`,
+  /** The way back to money already made ready, from the first screen, now that it no longer opens by itself. */
+  continueReady: (name: string) => `Continue with ${name}`,
   giveThisCode: (name: string) => `When ${name} asks where you are sending from, give them this code`,
   copy: "Copy",
   copied: "Copied",
@@ -1764,7 +1802,8 @@ export const CASH_OUT = {
   sent: (amount: string, name: string, when: string, reference: string) => `Sent ${amount} to ${name} on ${when}. Reference: ${reference}.`,
   sentPays: (name: string, pays: string, bank: boolean) => (bank ? `${name} pays your bank ${pays}.` : `${name} pays ${pays}.`),
   pasteFirst: (name: string) => `Paste the code from ${name} to send it.`,
-  sendingCost: (cost: string) => `Sending cost ${cost}.`,
+  /** In dollars, with "about" (the audit of 1 Oct 2026): it used to be said in the coin it was paid in. */
+  sendingCost: (dollars: string, underACent: boolean) => (underACent ? "Sending cost less than $0.01." : `Sending cost about ${dollars}.`),
   follow: (name: string) => `Open ${name} to follow it`,
 
   closedTitle: "Your session closed while you were away",
@@ -1791,11 +1830,11 @@ export const CASH_OUT = {
 
   failures: {
     notConfigured: "Viky cannot pay out yet. Nothing was taken.",
-    rateMoved: "The price changed before you confirmed. Nothing was taken.",
-    seeTheNewPrice: "See the new price",
-    keptChanging: "The price kept changing and Viky stopped after three tries. Nothing was taken. Try again in a minute.",
+    rateMoved: "The amount changed before you confirmed. Nothing was taken.",
+    seeTheNewPrice: "See the new amount",
+    keptChanging: "The amount kept changing and Viky stopped after three tries. Nothing was taken. Try again in a minute.",
     tryAgain: "Try again",
-    expired: "That price has expired. Ask for a new one.",
+    expired: "That amount has expired. Ask for a new one.",
     underWay: "You already have a payout waiting to finish. Give it a few minutes, then try again.",
     notSent: (name: string) => `${name} did not receive it and nothing left your account. Try again.`,
     other: "Viky could not finish this, and nothing was taken. Your money is where it was.",

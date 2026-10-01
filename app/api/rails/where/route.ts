@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { NO_STORE } from "@/src/gift-api";
-import { reachOfWaysIn, reachOfWaysOut } from "@/src/rail-availability";
+import { cardSellMinimum } from "@/src/mercuryo";
+import { euroRailMethods, payoutMethodFor, reachOfWaysIn, reachOfWaysOut } from "@/src/rail-availability";
 import { countryCode, guessCountry, regionOfLocale } from "@/src/rail-country";
 import { cardOffered, cardReach, payerCountry } from "@/src/card-rail";
 import { countryOfAccount } from "@/src/request-country";
@@ -33,7 +34,10 @@ export async function GET(request: Request) {
   // Adding money by card is decided for the payer's country (the account's, else the connection's), each partner by its
   // own list first; paying out keeps the guess above.
   const payer = payerCountry({ account: accountCountry, connection: fromConnection });
-  const [waysOut, live] = await Promise.all([reachOfWaysOut(guess.country), reachOfWaysIn(payer ?? guess.country)]);
+  const [waysOut, live, methods, cardSmallest] = await Promise.all([reachOfWaysOut(guess.country), reachOfWaysIn(payer ?? guess.country), euroRailMethods(), cardSellMinimum()]);
   const waysIn = cardReach(payer, live);
-  return NextResponse.json({ ...guess, waysOut, waysIn, card: { offered: cardOffered(waysIn), country: payer } }, { headers: NO_STORE });
+  // How the bank service pays in that country and the card service's smallest sale, each as its own service publishes
+  // it today, for the two cards of the way out to say (the audit of 1 Oct 2026). Nothing when it could not be read.
+  const out = { bank: payoutMethodFor(guess.country, methods), cardSmallest };
+  return NextResponse.json({ ...guess, waysOut, waysIn, card: { offered: cardOffered(waysIn), country: payer }, out }, { headers: NO_STORE });
 }

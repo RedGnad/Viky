@@ -27,6 +27,11 @@ export type WayOutQuote = Readonly<{
    * one that does not: a number nobody read is exactly what this project refuses to print.
    */
   payout?: Readonly<{ currency: string; worth: number; smallest: number; largest: number }>;
+  /**
+   * The dollars' worth that stays in the account, when the coin that comes back is one an account must keep some of
+   * to be able to send at all (D53). Already taken out of `shown`. Absent when nothing is kept.
+   */
+  kept?: string;
   /** Carries the floor and the coin back to the next step, signed by us so neither can be changed on the way. */
   ticket: string;
 }>;

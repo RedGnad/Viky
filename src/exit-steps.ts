@@ -103,12 +103,17 @@ export function netOfEverything(
   units: bigint,
   fee: PublishedFee,
   rates: { date: string; eurPerUsd: number } | undefined,
+  /** The currency the service pays this person in, when it is not the euro: a bank in the United States is paid dollars. */
+  paidIn: string = fee.currency,
 ): { net: number; currency: string; rateDate: string } | undefined {
   if (!rates || units <= 0n) return undefined;
   // Every payout service we carry publishes its fee in euros, and the conversion Viky reads is euros for dollars.
   if (fee.currency !== "EUR") return undefined;
   const euros = (Number(units) / 1_000_000) * rates.eurPerUsd;
-  return { net: feeApplied(euros, fee).net, currency: fee.currency, rateDate: rates.date };
+  const left = feeApplied(euros, fee).net;
+  if (paidIn === "EUR") return { net: left, currency: "EUR", rateDate: rates.date };
+  // Anything else is said in dollars, which is what the account holds: the same fee, counted back at the same rate.
+  return { net: Math.round((left / rates.eurPerUsd) * 100) / 100, currency: "USD", rateDate: rates.date };
 }
 
 /**

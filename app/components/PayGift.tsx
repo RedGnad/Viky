@@ -744,7 +744,7 @@ export function PayGift() {
           <p className={HELP}>{W.waiting.startsEnds(start, end)}</p>
         </section>
         )}
-        {/* A dollar coin that arrives is changed by one step the person confirms: said before, as the other way says it. */}
+        {/* A dollar coin that arrives is changed by this screen, with nothing to confirm: said before it lands. */}
         {wayIn.arrives === "usdc" && !cardClosed ? <p className={HELP}>{W.waiting.thenConfirmed}</p> : null}
         <p className={BODY}>
           {wayIn.takes && !cardClosed ? `${W.check.delay(wayIn.name, wayIn.takes)} ` : ""}

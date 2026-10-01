@@ -55,6 +55,24 @@ export const RAMP_CLOSED_IN: readonly string[] = [
 ];
 
 /**
+ * Where Ramp serves people and does not sell them what a gift holds: twenty-six countries of the European Economic
+ * Area. Its own article says so ("What cryptoassets does Ramp Network support?", article 432, modified 7 Jul 2026:
+ * AUSD is "not available to buy or sell in the EU/EEA"), and its widget's own answer says it per country:
+ * `GET https://api.rampnetwork.com/api/assets?mode=ONRAMP&tj=RAMP_IE&countryCode=<code>` gives AUSD on Monad
+ * `enabled: false, hidden: true, reason: "DISABLED_IN_TJ"` for each of these, read one by one on 1 Oct 2026 at 11:07
+ * UTC. The partner list the sheet reads live (`RAMP_ASSETS`) takes no country and says "enabled" for everybody, which
+ * is why these are written down.
+ *
+ * France, Ireland, Italy and the Netherlands are deliberately absent: the same answer gives them `enabled: true,
+ * hidden: true`, which contradicts the article, and no real purchase has settled it yet (the founder's own try is
+ * awaited). Where an aggregator quotes Ramp for one of the twenty-six, Ramp's own answer is the one followed.
+ */
+export const RAMP_NO_GIFT_COIN_IN: readonly string[] = [
+  "at", "be", "bg", "cy", "cz", "de", "dk", "ee", "es", "fi", "gr", "hr", "hu", "is", "li", "lt", "lu", "lv", "mt", "no",
+  "pl", "pt", "ro", "se", "si", "sk",
+];
+
+/**
  * Where Mercuryo serves nobody, as two-letter codes: `RAIL_CLOSED_IN` above, which its help centre still lists as it is
  * ("Where Is Mercuryo Widget/Wallet Available?", updated 15 Sep 2026, read 29 Sep 2026; Senegal and Ivory Coast open).
  * Abkhazia, South Ossetia and the occupied territories of Ukraine have no code of their own and are left to its check.
@@ -95,7 +113,7 @@ export type WayIn = Readonly<{
   page: string;
   /**
    * What lands in the account: what a gift holds; the chain's own coin, which must then be swapped; or another dollar
-   * coin, USDC, which is changed one for one into what a gift holds by one step the person confirms.
+   * coin, USDC, which the screen that waits changes into what a gift holds by itself (src/usdc-router.ts).
    */
   arrives: "gift" | "chain" | "usdc";
   /**
@@ -134,27 +152,30 @@ export type WayIn = Readonly<{
 
 /**
  * Adding money by buying what a gift already holds (D101). Their own asset list carries `MONAD_AUSD` at the address
- * this app pays gifts in, enabled, beside the chain's coin and the euro one, with a purchase floor of 6 EUR and fees
- * of 0.99 % to 3.9 % with a 2.49 EUR minimum, all read on 18 Sep 2026 at
- * `https://api.ramp.network/api/host-api/assets`. Nothing is swapped after it: what arrives is what a gift holds.
+ * this app pays gifts in, enabled, beside the chain's coin and the euro one, with fees of 0.99 % to 3.9 % and a 2.49
+ * EUR minimum, read on 18 Sep 2026 at `https://api.ramp.network/api/host-api/assets`. Nothing is swapped after it:
+ * what arrives is what a gift holds.
  *
- * What is not known here is which countries may buy: their per-country answer needs a key we do not have, and the
- * payout list is about paying out, which is a different question. So this rail says nothing about a country, and the
- * screen orders what it can and hides nothing (R1).
+ * Its floor is the asset's own, 6.25 EUR (`minPurchaseAmount` on the `MONAD_AUSD` row of
+ * `https://api.ramp.network/api/host-api/v3/assets?currencyCode=EUR`, read 1 Oct 2026), not the 6 EUR its list gives
+ * for every asset at once: a payment of 6 EUR is under what it sells this coin for (the audit of 1 Oct 2026).
+ *
+ * Where it sells is its own list of countries (`RAMP_CLOSED_IN`), and where it sells this coin is narrower
+ * (`RAMP_NO_GIFT_COIN_IN`): both shut it for a payer there, and the sheet goes to the next way.
  */
 export const WAY_IN_GIFT_COIN: WayIn = {
   name: "Ramp",
   page: "https://app.ramp.network/?swapAsset=MONAD_AUSD&flow=onramp",
   arrives: "gift",
   delivers: { coin: "AUSD", network: "Monad" },
-  // `minPurchaseAmountEur: 6`, `minFeePercent: 0.99`, `maxFeePercent: 3.9`, `minFeeAmountEur: 2.49`, the same figures
-  // on 18 Sep and on 20 Sep 2026 at the endpoint above, with `MONAD_AUSD` enabled and not hidden.
-  smallestEur: 6,
+  // `minFeePercent: 0.99`, `maxFeePercent: 3.9`, `minFeeAmount: 2.49`, the same figures on 18 Sep, 20 Sep and 1 Oct
+  // 2026 at the endpoint above, with `MONAD_AUSD` enabled and not hidden, and its own `minPurchaseAmount: 6.25`.
+  smallestEur: 6.25,
   fee: { percent: 3.9, upTo: true, minimum: 2.49, currency: "EUR" },
   conditions: ["Identity check the first time, once.", "A card or a bank account in your name."],
   source: "Ramp's own asset list",
-  read: "20 Sep 2026",
-  closedIn: RAMP_CLOSED_IN,
+  read: "1 Oct 2026",
+  closedIn: [...RAMP_CLOSED_IN, ...RAMP_NO_GIFT_COIN_IN],
   // Their terms of service, where ramp.network now redirects; section 7 asks that a user be at least 18 (read 29 Sep 2026).
   terms: "https://rampnetwork.com/terms-of-service",
 };
@@ -266,8 +287,8 @@ export const RAMPNOW_OPEN_IN: readonly string[] = [
 /**
  * Adding money by card through Rampnow's own public page (the founder, 1 Oct 2026), which arrives filled in and locked:
  * the amount, the euro, the card, USDC on Monad and the payer's own account (`wayInPage`). The person chooses nothing
- * and pastes nothing. What arrives is USDC, another dollar coin, which one step the person confirms changes into what
- * a gift holds.
+ * and pastes nothing. What arrives is USDC, another dollar coin, which the screen that waits changes into what a gift
+ * holds, with nothing to confirm.
  *
  * What was read on 1 Oct 2026, without paying, on `https://app.rampnow.io/order/quote` and the configuration its page
  * reads (`/api/ramp/v1/public/ramp_order/config`):
@@ -386,6 +407,39 @@ export function rampnowPage(fill: Readonly<{ account?: string; euros?: number }>
   return `${address.toString()}&lockFields=${locked.join(",")}&prefill=true`;
 }
 
+/**
+ * Ramp's own page for selling, which opens with nothing in its address (`https://rampnetwork.com/sell`, opened 1 Oct
+ * 2026: it lands on its "Sell crypto instantly" page, where searching "USDC monad" lists USDC marked Monad under
+ * "Available in your location"). Not `RAMP_BARE_PAGE`: that one now lands on its home page, open on buying.
+ */
+export const RAMP_SELL_PAGE = "https://rampnetwork.com/sell";
+
+/**
+ * The page a way out opens (the audit of 1 Oct 2026), the mirror of `wayInPage`. The address the way out used to open,
+ * Ramp's widget with `swapAsset` and `flow` and no partner key, answered "Integration issue detected" to somebody whose
+ * money had just been changed for it. So without the key Ramp's own selling page opens, where the person chooses what
+ * they sell; with it, the widget opens on selling, told which coin, how much of it and from which account, by the names
+ * its configuration page documents (`hostApiKey`, `enabledFlows`, `defaultFlow`, `swapAsset`, `swapAmount` in the coin's
+ * own units, `userAddress`, "for off-ramp ... a source address", read 1 Oct 2026). Mercuryo keeps its page: its address
+ * takes no filling in without a partner `widget_id`, and it opens on buying, so the step says to press Sell there.
+ */
+export function wayOutPage(way: WayOut, fill: Readonly<{ account?: string; units?: bigint }> = {}, key: string | undefined = rampHostApiKey()): string {
+  if (way !== WAY_OUT_EURO) return way.page;
+  if (!key) return RAMP_SELL_PAGE;
+  const address = new URL(way.page);
+  address.search = "";
+  address.searchParams.set("hostApiKey", key);
+  address.searchParams.set("enabledFlows", "OFFRAMP");
+  address.searchParams.set("defaultFlow", "OFFRAMP");
+  address.searchParams.set("swapAsset", "MONAD_USDC");
+  if (fill.units !== undefined && fill.units > 0n) address.searchParams.set("swapAmount", fill.units.toString());
+  if (fill.account) address.searchParams.set("userAddress", fill.account);
+  return address.toString();
+}
+
+/** Whether the page a way out opens is told what is sold and how much, so the person chooses nothing there. */
+export const wayOutFillsIn = (way: WayOut, key: string | undefined = rampHostApiKey()): boolean => way === WAY_OUT_EURO && key !== undefined;
+
 /** Whether the page a way in opens arrives filled in with the account and the amount. */
 export const wayInFillsIn = (way: WayIn, key: string | undefined = rampHostApiKey()): boolean => way === WAY_IN_USDC || (way === WAY_IN_GIFT_COIN && key !== undefined);
 
@@ -434,7 +488,10 @@ export type WayOut = Readonly<{
   title: string;
   /** Their own sell page, opened beside ours. */
   page: string;
-  /** What this service buys, and therefore the coin the router must hand back (D77). Never printed. */
+  /**
+   * What this service buys, and therefore the coin the router must hand back (D77), in the service's own two words.
+   * Printed in one place only, the step that says what to pick on its page (`CASH_OUT.onTheirPage`, 1 Oct 2026).
+   */
   sells: string;
   /** That coin on chain. Zero is the chain's own coin, which is how `ExitTerms.tokenOut` names it. */
   coin: Hex;

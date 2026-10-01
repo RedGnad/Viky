@@ -44,8 +44,9 @@ test("with the id, Swapper stands first where it serves, and gives way by its ow
     assert.deepEqual(ways.map((way) => way.name), ["Swapper", "Ramp", "Mercuryo"]);
     const france = wayInFor(30_000_000n, ways, 1.15, cardReach("fr"));
     assert.equal(france.way, WAY_IN_EMBEDDED);
-    // 30 dollars are 26.09 EUR at 1.15; the measured ceiling of 9 % makes it 28.67, and a whole euro 29.
-    assert.equal(france.euros, 29);
+    // 30 dollars are 26.09 EUR at 1.15, and one euro of margin since 1 Oct 2026, so a payment does not land a little
+    // short; the measured ceiling of 9 % makes it 29.77, and a whole euro 30.
+    assert.equal(france.euros, 30);
     assert.equal(france.insteadOf, undefined);
     assert.equal(wayInFor(30_000_000n, ways, 1.15, cardReach("sn")).way, WAY_IN_EMBEDDED, "Dakar is quoted");
     const abidjan = wayInFor(30_000_000n, ways, 1.15, cardReach("ci"));
