@@ -40,7 +40,18 @@ import { WillSheet } from "./WillSheet";
  */
 const GIFT_ID = "offer";
 
-export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }> = {}) {
+export function OfferCard({
+  holdings,
+  paying,
+  onPaying,
+  onMaking,
+}: Readonly<{
+  holdings?: Holdings | null;
+  /** Whether the pay sheet is open: Home's to keep, since Home draws this card anew when an account appears. */
+  paying: boolean;
+  onPaying: (open: boolean) => void;
+  onMaking: (making: boolean) => void;
+}>) {
   const { address } = useAccount();
   /**
    * The card itself, read from the device rather than copied into this screen (src/card-draft.ts). The server draws
@@ -67,7 +78,7 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
    */
   const [choosing, setChoosing] = useState<"list" | "questions" | null>(null);
   /** Paying is a sheet over the card, and the card stays behind it (D114, the mockup pay.html). */
-  const [paying, setPaying] = useState(false);
+  const setPaying = onPaying;
   /** The length, while somebody is typing one that is not on a chip. */
 
   const units = draftUnits(draft);
@@ -329,7 +340,7 @@ export function OfferCard({ holdings }: Readonly<{ holdings?: Holdings | null }>
         onChoose={readIn}
         onClose={() => setReading(false)}
       />
-      <PaySheet open={paying} draft={draft} onChange={change} onClose={() => setPaying(false)} />
+      <PaySheet open={paying} draft={draft} onChange={change} onClose={() => setPaying(false)} onMaking={onMaking} />
     </>
   );
 }

@@ -199,6 +199,8 @@ export const PAY = {
   /** Said before the action, because it is what pressing it does: nothing was asked of this person until now. */
   passkeyMakesTheAccount: "Your face or your fingerprint creates your account when you press pay. Nothing was asked of you until now.",
   signedIn: "Your face or your fingerprint is asked once, to sign what you are paying for.",
+  /** For a passkey made on another device, which this one does not know of: pay would make a second account. */
+  alreadyHaveAccount: "I already have an account",
   /**
    * Before the partner's page opens (D289, the founder's words of 27 Sep 2026), shown only when that page arrives filled
    * in with the account and the amount, which needs Ramp's partner key.
@@ -400,9 +402,18 @@ const BROWSER_NAME = { safari: "Safari", chrome: "Chrome", browser: "your browse
 /** The apps a person knows by another name than the one the test gives them. */
 const APP_NAME: Readonly<Record<string, string>> = { twitter: "X", gsa: "the Google app", messenger: "Messenger" };
 export const ACCOUNT_DOOR = {
-  /** Named when the app is known ("inside Instagram"), "another app" otherwise. */
-  insideApp: (app: Readonly<{ key: string; name: string | null }>) => `This page is open inside ${APP_NAME[app.key] ?? app.name ?? "another app"}, where an account cannot be made.`,
-  browserCannot: "This browser cannot make an account.",
+  /**
+   * The small line of the box, under a line that already says where to go (the founder, 1 Oct 2026): why here cannot,
+   * and nothing about an account that "cannot be made", which the line above it contradicted. Named when the app is
+   * known ("Instagram's own window"), "This app's own window" otherwise.
+   */
+  insideApp: (app: Readonly<{ key: string; name: string | null }>) => {
+    const name = APP_NAME[app.key] ?? app.name;
+    return `${name ? `${name.charAt(0).toUpperCase()}${name.slice(1)}'s` : "This app's"} own window cannot create an account.`;
+  },
+  browserCannot: "This browser cannot create an account.",
+  /** The line above the box on a gift, in that state only: the way on, by the name the button carries. */
+  continueIn: (browser: keyof typeof BROWSER_NAME | null) => `To open it, continue in ${browser ? BROWSER_NAME[browser] : "Chrome or Safari"}. Nothing to install.`,
   openIn: (browser: keyof typeof BROWSER_NAME) => `Open in ${BROWSER_NAME[browser]}`,
   /** After a press that opened nothing: where the app's own menu is, without quoting a label that changes with the app and the phone's language. */
   stayed: { iphone: "Nothing opened? Press \u22EF at the top, then choose to open it in your browser.", android: "Nothing opened? Press \u22EE at the top, then choose to open it in your browser." },
@@ -938,6 +949,13 @@ export const GIFT_LIVE = {
     /** "When", not "the moment": the message leaves when Viky sees the target reached, which can be hours after the game. */
     alert: { yours: (target: string) => `Get a message when you reach ${target}.`, theirs: (target: string) => `Get a message when they reach ${target}.` },
     alertOn: { yours: (target: string) => `Viky will tell you when you reach ${target}.`, theirs: (target: string) => `Viky will tell you when they reach ${target}.` },
+    /**
+     * A gift had or not (the founder, 1 Oct 2026): nothing is reached by degrees, so the two things to be told are the
+     * day it is theirs and the day its time runs out. True of the code: every path that reaches one tells its
+     * subscribers (`tellReached`), and the settling pass tells them when it expires (src/milestone-pass.ts).
+     */
+    alertHadOrNot: { yours: "Get a message when it is yours, or when the time is up.", theirs: "Get a message when it is theirs, or when the time is up." },
+    alertHadOrNotOn: { yours: "Viky will tell you when it is yours, or when the time is up.", theirs: "Viky will tell you when it is theirs, or when the time is up." },
     turnOn: "Turn on",
     turnOff: "Turn off",
     alertRefused: "Your phone is not letting Viky tell you. Turn notifications on for Viky in your phone's settings.",

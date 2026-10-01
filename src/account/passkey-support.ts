@@ -89,6 +89,13 @@ export type OwnBrowser = "safari" | "chrome" | "browser";
  * browser that is no app's page and cannot make a passkey is sent to Chrome by name, since the phone's own browser
  * may be that very one. Where the press opens nothing, the page stays and says where the app's own menu is.
  */
+/** The browser the way out goes to, by handset and app alone: the name the button carries, and the line above it. */
+export function ownBrowserOf(handset: Handset, app: EmbeddedApp | null): OwnBrowser | null {
+  if (handset === "iphone") return "safari";
+  if (handset === "android") return app ? "browser" : "chrome";
+  return null;
+}
+
 export function wayOut(href: string, handset: Handset, app: EmbeddedApp | null): Readonly<{ browser: OwnBrowser; href: string }> | null {
   let page: URL;
   try {

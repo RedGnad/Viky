@@ -60,6 +60,8 @@ export type ShownOutcome =
       shown: string;
       observedAt: number;
       hash: Hex;
+      /** Whether the contract said the gift was reached by this proof, rather than only started by it. */
+      arrived: boolean;
     }>
   /** A first proof from a witness portal with no pin (D312): checked on what is sure, held, nothing relayed. */
   | Readonly<{ kind: "held"; sessionId: string; giftId: string; message: string }>;
@@ -326,6 +328,7 @@ async function settleShown(
     shown: shownWords,
     observedAt: evidence.observedAt,
     hash: proved.hash,
+    arrived: proved.happened === "reached",
   };
 }
 

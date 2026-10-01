@@ -42,12 +42,45 @@ test("what this person pays is their own figure, at a dated rate", () => {
 test("the account is made at the press, and the sheet says so before it happens", () => {
   assert.match(PAY.passkeyMakesTheAccount, /creates your account when you press pay/);
   assert.match(PAY.passkeyMakesTheAccount, /Nothing was asked of you until now/);
-  assert.match(sheet, /W\.passkeyMakesTheAccount/);
+  // Said only where it is true: a device that remembers a passkey opens it, and makes nothing.
+  assert.match(sheet, /\{address \|\| hasCredential \? W\.signedIn : W\.passkeyMakesTheAccount\}/);
   // The passkey opens inside the press, then the terms are written, then the service's page opens: that order.
-  const press = sheet.slice(sheet.indexOf("const pay = async"), sheet.indexOf("const line ="));
-  assert.ok(press.indexOf("await ensureSigner()") < press.indexOf("savePendingGift("), "the account comes before the terms are kept");
+  const press = sheet.slice(sheet.indexOf("const pay = async"), sheet.indexOf("const signInFirst ="));
+  assert.ok(press.indexOf("await ensureAccount()") > 0 && press.indexOf("await ensureAccount()") < press.indexOf("savePendingGift("), "the account comes before the terms are kept");
   assert.ok(press.indexOf("savePendingGift(") < press.indexOf("window.open(wayInPage(way"), "and the terms before the page that takes the money");
   assert.match(press, /router\.push\("\/fund\?step=paying"\)/, "and the wait takes over");
+  assert.doesNotMatch(sheet, /ensureSigner/, "the press never asks for a passkey that may not exist");
+});
+
+/**
+ * What the sentence above rests on (the audit of 1 Oct 2026, P-01). The press used to call `ensureSigner`, which only
+ * opens a passkey that exists: on a new device the system asked for one that was not there, the sheet said "That did
+ * not go through", and making the account from the panel under it shut the sheet. Seven presses and two system
+ * sheets, where the sheet promised one. test/browser/first-payment.spec.ts walks it; this pins the three cases.
+ */
+test("ensureAccount opens the key, signs in with a remembered passkey, or makes one, and tells the server each time", () => {
+  const provider = readFileSync("src/account/provider.tsx", "utf8");
+  const made = provider.slice(provider.indexOf("const ensureAccount = useCallback"), provider.indexOf("const value = useMemo"));
+  assert.match(made, /const open = mera\.currentAccount\(\);/, "the key already open is used as it is");
+  assert.match(made, /if \(!open\) await withTimeout\(existing \|\| mera\.hasStoredCredential\(\) \? mera\.signIn\(\) : mera\.createAccount\(""\), CEREMONY_TIMEOUT_MS\);/);
+  assert.match(made, /if \(!open \|\| account\.address !== serverSessionFor\) await withTimeout\(signInToServer\(account\), SERVER_TIMEOUT_MS\);/);
+  assert.match(made, /const failure = toAccountError\(caught\);\s+setError\(failure\);\s+throw failure;/, "a failure is the typed error, thrown again");
+  // A key this opened is closed again when the server could not be told: nobody stands signed in on no session.
+  assert.match(made, /if \(!open\) \{\s+mera\.signOut\(\);\s+setServerSessionFor\(undefined\);\s+\}/);
+  // Somebody whose passkey is on another device: asked for it, never given a second account.
+  assert.equal(PAY.alreadyHaveAccount, "I already have an account");
+  assert.match(sheet, /\{!address && !hasCredential \? \(\s+<button type="button" className=\{`\$\{INLINE_BUTTON\} self-start`\}[^>]*onClick=\{\(\) => void signInFirst\(\)\}>/);
+  assert.match(sheet, /await ensureAccount\(\{ existing: true \}\);/);
+});
+
+test("Home keeps the pay sheet across the account being made, and the page it is drawing until the wait", () => {
+  const home = readFileSync("app/kit/Home.tsx", "utf8");
+  assert.match(home, /const \[paying, setPaying\] = useState\(false\);/);
+  assert.match(home, /const address = making \? undefined : account;/);
+  assert.equal((home.match(/<OfferCard [^>]*paying=\{paying\} onPaying=\{setPaying\} onMaking=\{setMaking\} \/>/g) ?? []).length, 2, "the card of both pages");
+  const press = sheet.slice(sheet.indexOf("const pay = async"), sheet.indexOf("const signInFirst ="));
+  assert.ok(press.indexOf("if (!address) onMaking(true);") < press.indexOf("await ensureAccount()"), "said before the passkey opens");
+  assert.match(press, /catch \{\s+onMaking\(false\);/, "and taken back when the account was not made");
 });
 
 test("one way in, one action, and no button to another (D239)", () => {

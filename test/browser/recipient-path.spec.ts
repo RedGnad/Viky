@@ -209,13 +209,17 @@ test.describe("the path of the person a gift is for", () => {
       // it. Read on Home, which the server draws whole (this gift is the test's own, so its page is drawn in the browser).
       const served = await (await instagram.context.request.get(`${instagram.baseURL}/`)).text();
       expect(served).toContain(`instagram://extbrowser/?url=${encodeURIComponent(`${instagram.baseURL}/`)}`);
-      expect(served).toContain("This page is open inside Instagram, where an account cannot be made.");
+      // The apostrophe is written as the page writes it, so the sentence is matched around it.
+      expect(served).toMatch(/Instagram(&#x27;|')s own window cannot create an account\./);
       // And never a jump the page makes by itself.
       expect(served).not.toMatch(/http-equiv="refresh"/i);
       await instagram.page.goto(`/g/${GIFT}?t=${KEY}`);
-      await expect(instagram.page.getByText("This page is open inside Instagram, where an account cannot be made.")).toBeVisible();
+      await expect(instagram.page.getByText("Instagram's own window cannot create an account.")).toBeVisible();
       const out = instagram.page.getByRole("link", { name: "Open in Safari" });
       await expect(out).toHaveAttribute("href", `instagram://extbrowser/?url=${encodeURIComponent(giftLink)}`);
+      // The line above the box says where to go, never to create here what the box says cannot be created here.
+      await expect(instagram.page.getByText("To open it, continue in Safari. Nothing to install.")).toBeVisible();
+      await expect(instagram.page.getByText("Create your account to open it. Nothing to install.")).toHaveCount(0);
       await expect(instagram.page.getByRole("button", { name: /Create my account|I already have an account|^Sign in$/ })).toHaveCount(0);
       await expect(instagram.page.getByRole("button", { name: "Copy this gift's link" })).toBeVisible();
       await expect(instagram.page.getByText(/computer|viky\.cash/i)).toHaveCount(0);
@@ -231,7 +235,7 @@ test.describe("the path of the person a gift is for", () => {
       await shot(instagram.page, size.name, "6b-nothing-opened");
       // The same door at the top of Home, before anything is filled in.
       await instagram.page.goto("/");
-      await expect(instagram.page.getByText("This page is open inside Instagram, where an account cannot be made.")).toBeVisible();
+      await expect(instagram.page.getByText("Instagram's own window cannot create an account.")).toBeVisible();
       await expect(instagram.page.getByRole("button", { name: "Copy this page's link" })).toBeVisible();
       await shot(instagram.page, size.name, "6c-home-inside-instagram");
       await instagram.context.close();
@@ -242,7 +246,8 @@ test.describe("the path of the person a gift is for", () => {
       await android.page.goto(`/g/${GIFT}?t=${KEY}`);
       const site = new URL(android.baseURL);
       await expect(android.page.getByRole("link", { name: "Open in your browser" })).toHaveAttribute("href", `intent://${site.host}/g/${GIFT}?t=${KEY}#Intent;scheme=${site.protocol.slice(0, -1)};end`);
-      await expect(android.page.getByText("This page is open inside another app, where an account cannot be made.")).toBeVisible();
+      await expect(android.page.getByText("This app's own window cannot create an account.")).toBeVisible();
+      await expect(android.page.getByText("To open it, continue in your browser. Nothing to install.")).toBeVisible();
       await shot(android.page, size.name, "6d-inside-an-android-app");
       await android.context.close();
 

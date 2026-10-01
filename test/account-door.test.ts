@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { embeddedIn, handsetOf, iosVersionOf, passkeyEnvironmentProblem } from "../src/account/errors";
-import { doorOf, wayOut } from "../src/account/passkey-support";
+import { doorOf, ownBrowserOf, wayOut } from "../src/account/passkey-support";
 import { ACCOUNT_DOOR } from "../src/sentences";
 
 const SAFARI_IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
@@ -134,9 +134,22 @@ test("never 'computer' on a phone, never the site's name in place of the gift's 
   for (const sentence of phone) assert.doesNotMatch(sentence, /computer/i, sentence);
   const all = [...phone, W.computer(true), W.computer(false), W.openItIn(true), W.copy(false), W.samePasskey, W.another];
   for (const sentence of all) assert.doesNotMatch(sentence, /viky\.cash/i, sentence);
-  assert.equal(W.insideApp(instagram), "This page is open inside Instagram, where an account cannot be made.");
-  assert.equal(W.insideApp({ key: "twitter", name: "Twitter" }), "This page is open inside X, where an account cannot be made.");
-  assert.equal(W.insideApp({ key: "app", name: null }), "This page is open inside another app, where an account cannot be made.");
+  // The box's small line says why here cannot, and never that an account "cannot be made" (the founder, 1 Oct 2026).
+  assert.equal(W.insideApp(instagram), "Instagram's own window cannot create an account.");
+  assert.equal(W.insideApp({ key: "twitter", name: "Twitter" }), "X's own window cannot create an account.");
+  assert.equal(W.insideApp({ key: "gsa", name: "Google" }), "The Google app's own window cannot create an account.");
+  assert.equal(W.insideApp({ key: "app", name: null }), "This app's own window cannot create an account.");
+  assert.equal(W.browserCannot, "This browser cannot create an account.");
+  // The line above it on a gift carries the name the button carries.
+  assert.equal(W.continueIn("safari"), "To open it, continue in Safari. Nothing to install.");
+  assert.equal(W.continueIn("browser"), "To open it, continue in your browser. Nothing to install.");
+  assert.equal(W.continueIn("chrome"), "To open it, continue in Chrome. Nothing to install.");
+  assert.equal(W.continueIn(null), "To open it, continue in Chrome or Safari. Nothing to install.");
+  for (const [handset, app] of [["iphone", instagram], ["iphone", null], ["android", instagram], ["android", null], ["other", null]] as const) {
+    assert.equal(ownBrowserOf(handset, app), wayOut("https://viky.cash/g/7?t=k", handset, app)?.browser ?? null, `${handset}: the line and the button name one browser`);
+  }
+  const gift = readFileSync("app/components/GiftPage.tsx", "utf8");
+  assert.match(gift, /\{door\.kind === "elsewhere" \? ACCOUNT_DOOR\.continueIn\(ownBrowserOf\(door\.handset, door\.app\)\) : W\.createToOpen\}/, "in that state only");
   assert.equal(W.copy(true), "Copy this gift's link");
   assert.equal(W.openIn("browser"), "Open in your browser");
   assert.match(W.computer(true), /open this gift's link on your phone/);

@@ -3,6 +3,7 @@ import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { proveCertificate } from "@/src/certificate-reading";
 import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
+import { tellReached } from "@/src/morning-send-live";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { wcaCourseOfGift } from "@/src/wca-gift";
 
@@ -22,7 +23,9 @@ export async function POST(request: Request) {
     const body = await readJsonBody<{ giftId?: unknown }>(request, 1_024);
     const { giftId, courseId, who } = await wcaCourseOfGift(String(body.giftId ?? ""), auth.account);
     try {
-      return NextResponse.json(await proveCertificate({ giftId, link: `${courseId}|${who}` }), { headers: NO_STORE });
+      const outcome = await proveCertificate({ giftId, link: `${courseId}|${who}` });
+      if (outcome.kind === "reached") await tellReached(giftId);
+      return NextResponse.json(outcome, { headers: NO_STORE });
     } catch (error) {
       console.error(`wca proof failed for gift ${giftId}: ${error instanceof Error ? error.message : String(error)}`);
       return NextResponse.json({ kind: "refused", giftId, code: "SOURCE_UNAVAILABLE", message: "That did not go through, and nothing was changed. Try again." }, { status: 502, headers: NO_STORE });

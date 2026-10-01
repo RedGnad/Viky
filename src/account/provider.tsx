@@ -46,6 +46,13 @@ export type AccountContextValue = {
    * a signature is needed and not before.
    */
   ensureSigner: () => Promise<LocalAccount>;
+  /**
+   * The account that can sign, made here when this device has none (the audit of 1 Oct 2026): the press that pays is
+   * the one that makes a first funder's account, which `ensureSigner` never did, since it only opens a passkey that
+   * exists. `existing` is somebody who says they already have one, on another device: the passkey is asked for and
+   * none is made.
+   */
+  ensureAccount: (options?: { existing?: boolean }) => Promise<LocalAccount>;
   createAccount: (displayName: string) => Promise<void>;
   signIn: () => Promise<void>;
   signOut: () => void;
@@ -190,12 +197,47 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
     }
   }, [serverSessionFor]);
 
+  /**
+   * The key already open; else the passkey this device remembers, or the one the person says they have; else a new
+   * passkey, which is a new account. The server's session is made to name it in all three, and a failure is the typed
+   * error, thrown again for the screen that asked. A key this opened is closed again when the server could not be
+   * told, so no screen stands signed in on a session that does not exist.
+   */
+  const ensureAccount = useCallback(
+    async ({ existing = false }: { existing?: boolean } = {}) => {
+      setStatus("busy");
+      setError(undefined);
+      const open = mera.currentAccount();
+      try {
+        if (!open) await withTimeout(existing || mera.hasStoredCredential() ? mera.signIn() : mera.createAccount(""), CEREMONY_TIMEOUT_MS);
+        const account = open ?? mera.currentAccount();
+        if (!account) throw accountError("TIMED_OUT");
+        // An open key whose session the server already names is asked nothing more; a passkey just answered always is.
+        if (!open || account.address !== serverSessionFor) await withTimeout(signInToServer(account), SERVER_TIMEOUT_MS);
+        setServerSessionFor(account.address);
+        return account;
+      } catch (caught) {
+        if (!open) {
+          mera.signOut();
+          setServerSessionFor(undefined);
+        }
+        const failure = toAccountError(caught);
+        setError(failure);
+        throw failure;
+      } finally {
+        setStatus("idle");
+      }
+    },
+    [serverSessionFor],
+  );
+
   const value = useMemo<AccountContextValue>(
     () => ({
       address,
       hasCredential,
       reach,
       ensureSigner,
+      ensureAccount,
       status,
       error,
       createAccount: (displayName) => run(() => mera.createAccount(displayName)),
@@ -228,7 +270,7 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
       },
       clearError: () => setError(undefined),
     }),
-    [address, hasCredential, reach, ensureSigner, status, error, run, serverForgot],
+    [address, hasCredential, reach, ensureSigner, ensureAccount, status, error, run, serverForgot],
   );
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
@@ -252,6 +294,7 @@ export function ExampleAccountProvider({ children }: { children: ReactNode }) {
       hasCredential: true,
       reach: "signing",
       ensureSigner: () => Promise.reject(accountError("NOT_IN_BROWSER")),
+      ensureAccount: () => Promise.reject(accountError("NOT_IN_BROWSER")),
       status: "idle",
       error: undefined,
       createAccount: async () => undefined,

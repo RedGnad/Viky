@@ -23,6 +23,7 @@ import { holdForReview, loadPortal } from "@/src/portal-store";
 import { sendReviewAlert } from "@/src/provider-alert";
 import { shownConditionById } from "@/src/shown-conditions";
 import { verifyShownSession } from "@/src/shown-verification";
+import { tellReached } from "@/src/morning-send-live";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -107,7 +108,11 @@ export async function POST(request: Request) {
       { sessionId, account: auth.account },
     );
 
-    if (result.kind === "reached") return NextResponse.json({ ...result, attested: true }, { headers: { "Cache-Control": "no-store" } });
+    if (result.kind === "reached") {
+      // Whoever asked to be told that it is theirs is told now, by the request that made it so (the founder, 1 Oct 2026).
+      if (result.arrived) await tellReached(result.giftId);
+      return NextResponse.json({ ...result, attested: true }, { headers: { "Cache-Control": "no-store" } });
+    }
     // A first proof held for review (D312): nothing attested, nothing relayed.
     if (result.kind === "held") return NextResponse.json({ ...result, attested: false }, { headers: { "Cache-Control": "no-store" } });
 
