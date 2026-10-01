@@ -7,6 +7,8 @@ import { keyedSubject, newSubjectKey } from "../subject-key";
 import { getJson, postJson } from "./api";
 import { randomSalt, type CreatedGift } from "./gift";
 import { milestoneAddressFromEnv } from "./milestone";
+import { milestoneFundingNonceV2 } from "../v2-protocol";
+import { linkForTerms, secondVersionOf } from "./v2";
 import type { ListedUniversity } from "../university-choice";
 
 /**
@@ -33,6 +35,9 @@ export type CertificateGiftRequest = Readonly<{
   subjectKey: Hex;
   recipientName?: string;
   funderName?: string;
+  /** The second version: the address of the key that opens the gift, and the fingerprint of its link. Never its secret. */
+  openingKey?: Hex;
+  linkFingerprint?: string;
   authorization: { validAfter: string; validBefore: string; nonce: Hex; v: number; r: Hex; s: Hex };
 }>;
 
@@ -51,7 +56,8 @@ export async function prepareCertificateGift(input: {
   /** The scale a grade is typed on while the university's own is not pinned (the founder, 28 Sep 2026). */
   scale?: string;
 }): Promise<CertificateGiftRequest> {
-  const contract = milestoneAddressFromEnv();
+  const second = secondVersionOf("milestone");
+  const contract = second ?? milestoneAddressFromEnv();
   const funder = getAddress(input.account.address);
   // Drawn here and sent with the request, so the subject on chain is a hash nobody can guess a name or a portal from.
   const subjectKey = newSubjectKey();
@@ -70,10 +76,16 @@ export async function prepareCertificateGift(input: {
     amount: input.amount,
     salt: randomSalt(),
   };
-  const message = receiveAuthorizationMessage({ funder, escrow: contract, amount: input.amount, nonce: milestoneFundingNonce(params) });
+  // Once the second version is set, the terms carry the key that opens the gift, made here (src/client/v2.ts).
+  const link = second ? await linkForTerms(input.account, params.salt) : null;
+  const { recipientContactHash: _contact, ...shared } = params;
+  void _contact;
+  const nonce = link ? milestoneFundingNonceV2({ ...shared, openingKey: link.openingKey }) : milestoneFundingNonce(params);
+  const message = receiveAuthorizationMessage({ funder, escrow: contract, amount: input.amount, nonce });
   const signature = await input.account.signTypedData(receiveAuthorizationTypedData(message));
   const authorization = toContractAuthorization(message, signature);
   return {
+    ...(link ?? {}),
     conditionId: input.certificate.condition.id,
     personName: input.personName,
     course: input.course,

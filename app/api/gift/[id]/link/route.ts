@@ -7,6 +7,7 @@ import { readMilestoneGift } from "@/src/milestone-reader";
 import { isMilestoneGiftId } from "@/src/milestone-protocol";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { escrowOf } from "@/src/relayer";
+import { termsSaltOf } from "@/src/v2-link";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,11 @@ export const maxDuration = 30;
  *
  * Two conditions, both checked, and the chain is asked rather than believed: the caller is the funder, and the gift
  * has no recipient yet. A gift somebody has already opened keeps the key they hold.
+ *
+ * A gift of the second version has no key to replace: the key that opens it is in the terms the funder signed, on the
+ * contract. Its link is found again instead, and it is the same link. The funder's account makes its secret from the
+ * gift's salt, in their own browser (src/v2-protocol.ts); this route answers the salt, which is public, and nothing
+ * that opens the gift.
  */
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -39,6 +45,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const escrow = escrowOf(record);
     const state = isMilestoneGiftId(id) ? await readMilestoneGift(escrow, id) : await readGift(escrow, id);
     if (state.cancelled) throw new GiftApiError("GIFT_CANCELLED", "This gift has been taken back, so it has no link.", 409);
+    if (state.version === 2) return NextResponse.json({ salt: await termsSaltOf(record, escrow) }, { headers: NO_STORE });
     if (state.recipient) throw new GiftApiError("ALREADY_OPENED", "This gift is already open, so its link cannot be changed.", 409);
 
     const token = await rotateClaimToken(id, auth.account);

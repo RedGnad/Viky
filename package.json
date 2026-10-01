@@ -29,6 +29,8 @@
     "deploy:exit-router": "tsx scripts/deploy-exit-router.ts",
     "deploy:usdc-router": "tsx scripts/deploy-exit-router.ts --takes=usdc",
     "deploy:milestone-gift": "tsx scripts/deploy-milestone-gift.ts",
+    "deploy:v2": "tsx scripts/deploy-v2.ts",
+    "rehearse:v2": "tsx scripts/rehearse-v2-fork.ts",
     "check:gift-escrow": "tsx scripts/check-gift-escrow.ts",
     "check:signer": "tsx scripts/check-signer.ts",
     "db:migrate": "tsx scripts/migrate-db.ts",

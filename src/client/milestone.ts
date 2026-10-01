@@ -8,6 +8,8 @@ import { startingCeiling } from "../milestone-terms";
 import { getJson, postJson } from "./api";
 import { randomSalt, type CreatedGift } from "./gift";
 import { giftSalt } from "../gift-terms";
+import { milestoneFundingNonceV2 } from "../v2-protocol";
+import { linkForTerms, secondVersionOf } from "./v2";
 
 /** Browser-side steps of a milestone gift (C2). Every step that moves money is signed by the person's own account. */
 
@@ -43,6 +45,9 @@ export type MilestoneGiftRequest = Readonly<{
   salt: Hex;
   /** The random half of the salt; the rest is the account, so the server rebuilds it or refuses (D102). */
   saltSeed: Hex;
+  /** The second version: the address of the key that opens the gift, and the fingerprint of its link. Never its secret. */
+  openingKey?: Hex;
+  linkFingerprint?: string;
   recipientName?: string;
   funderName?: string;
   authorization: { validAfter: string; validBefore: string; nonce: Hex; v: number; r: Hex; s: Hex };
@@ -66,7 +71,8 @@ export async function prepareMilestoneGift(input: {
   recipientName?: string;
   funderName?: string;
 }): Promise<MilestoneGiftRequest> {
-  const contract = milestoneAddressFromEnv();
+  const second = secondVersionOf("milestone");
+  const contract = second ?? milestoneAddressFromEnv();
   const funder = getAddress(input.account.address);
   const saltSeed = randomSalt();
   const params: MilestoneParams = {
@@ -83,10 +89,16 @@ export async function prepareMilestoneGift(input: {
     // The salt carries the account into what the funder signs (D102); the cadence is already in the goal type.
     salt: giftSalt({ account: input.username, seed: saltSeed }),
   };
-  const message = receiveAuthorizationMessage({ funder, escrow: contract, amount: input.amount, nonce: milestoneFundingNonce(params) });
+  // Once the second version is set, the terms carry the key that opens the gift, made here (src/client/v2.ts).
+  const link = second ? await linkForTerms(input.account, params.salt) : null;
+  const { recipientContactHash: _contact, ...shared } = params;
+  void _contact;
+  const nonce = link ? milestoneFundingNonceV2({ ...shared, openingKey: link.openingKey }) : milestoneFundingNonce(params);
+  const message = receiveAuthorizationMessage({ funder, escrow: contract, amount: input.amount, nonce });
   const signature = await input.account.signTypedData(receiveAuthorizationTypedData(message));
   const authorization = toContractAuthorization(message, signature);
   return {
+    ...(link ?? {}),
     conditionId: input.milestone.condition.id,
     username: input.username,
     cadence: input.cadence,

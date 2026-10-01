@@ -1,14 +1,14 @@
-import { parseEventLogs, type Abi, type Hex } from "viem";
+import { parseEventLogs, type Hex } from "viem";
 import type { ContractAuthorization } from "./ausd-authorization";
 import { ATTESTATION_TTL_SECONDS, signClaim, type GiftParams } from "./gift-attestation";
-import { giftEscrowAbi } from "./gift-escrow-abi";
 import { giftPublicClient, readGift } from "./gift-reader";
 import { settledDaysFromLogs } from "./day-record";
 import { recordRelayed, recordSettledDays, relayedForSession } from "./gift-store";
 import { tellAboutDays } from "./morning-send";
 import { liveTellingDeps } from "./morning-send-live";
 import { loadAttestation } from "./proof-session-store";
-import { escrowAddress, relay, RelayerError, relayerClients, type RelayResult } from "./relayer";
+import { newGiftsEscrow, escrowAddress, relay, RelayerError, relayerClients, type RelayResult } from "./relayer";
+import { DAILY_ABIS, dailyAbiOf, dailyVersionOf, giftEscrowV2Address } from "./v2";
 
 /**
  * The relayed operations of a gift, one function per contract entry point. Each submits with the
@@ -16,20 +16,71 @@ import { escrowAddress, relay, RelayerError, relayerClients, type RelayResult } 
  * for the judges page. A check-in is relayed at most once per verification session.
  */
 
-const abi = giftEscrowAbi as unknown as Abi;
-
 export type CreatedGift = Readonly<{ giftId: string; hash: Hex; blockNumber: bigint; escrow: Hex }>;
 
-/** New gifts are always created on the current contract; the record keeps which one. */
-export async function relayCreateGift(params: GiftParams, authorization: ContractAuthorization, onSubmitted?: (hash: Hex) => Promise<void>): Promise<CreatedGift> {
-  const escrow = escrowAddress();
-  const result = await relay("createGift", [params, authorization], escrow, undefined, onSubmitted);
-  const giftId = eventArg(result, "GiftCreated", "giftId");
+/**
+ * New gifts are always created on the current contract; the record keeps which one.
+ *
+ * Terms that carry an opening key are the second version's (src/v2-protocol.ts): they go to the second version's
+ * contract and nowhere else, and are refused while it is not set. Terms without one go to the first version's, and are
+ * refused once the second is set: from then a gift the evidence signer could open is no longer made.
+ */
+export async function relayCreateGift(params: GiftParams, authorization: ContractAuthorization, onSubmitted?: (hash: Hex) => Promise<void>, openingKey?: Hex): Promise<CreatedGift> {
+  const second = giftEscrowV2Address();
+  if (openingKey && !second) throw new RelayerError("NOT_CONFIGURED", "The second version of the gift contract is not configured");
+  if (!openingKey && second) throw new RelayerError("NOT_CONFIGURED", "This gift was prepared for an earlier version. Reload the page and try again.");
+  const escrow = openingKey ? newGiftsEscrow() : escrowAddress();
+  const terms = openingKey
+    ? { funder: params.funder, refundTo: params.refundTo, openingKey, goalType: params.goalType, dailyTarget: params.dailyTarget, durationDays: params.durationDays, amount: params.amount, salt: params.salt }
+    : params;
+  const result = await relay("createGift", [terms, authorization], escrow, undefined, onSubmitted);
+  const giftId = eventArg(result, "GiftCreated", "giftId", escrow);
   await recordRelayed({ giftId, kind: "create", txHash: result.hash, blockNumber: result.receipt.blockNumber });
   return { giftId, hash: result.hash, blockNumber: result.receipt.blockNumber, escrow };
 }
 
+/**
+ * Opens a gift of the second version: the key of its link signed which account it opens for, in that person's browser
+ * (src/v2-protocol.ts, `openTypedData`). The relayer carries the signature and adds nothing: the evidence signer is not
+ * asked, and the contract compares the signature against the opening key the funder's terms carry.
+ */
+export async function relayOpen(input: { giftId: string; escrow: Hex; recipient: Hex; deadline: bigint; signature: Hex }): Promise<RelayResult> {
+  const result = await relay("claim", [input.giftId, { recipient: input.recipient, deadline: input.deadline, signature: input.signature }], input.escrow);
+  await recordRelayed({ giftId: input.giftId, kind: "claim", txHash: result.hash, blockNumber: result.receipt.blockNumber });
+  return result;
+}
+
+/**
+ * Ends a gift of the second version, on the signed intent of the person it is for: what was counted stays theirs, the
+ * rest goes back to the funder in this transaction, and the contract refuses if either amount is not the one signed.
+ */
+export async function relayEnd(input: { giftId: string; escrow: Hex; keep: bigint; giveBack: bigint; nonce: bigint; deadline: bigint; signature: Hex }): Promise<RelayResult> {
+  const result = await relay("endGiftWithIntent", [input.giftId, { keep: input.keep, giveBack: input.giveBack, nonce: input.nonce, deadline: input.deadline, signature: input.signature }], input.escrow);
+  await recordRelayed({ giftId: input.giftId, kind: "end", txHash: result.hash, blockNumber: result.receipt.blockNumber });
+  await recordEndedDays(input.giftId, input.escrow, result);
+  return result;
+}
+
+/**
+ * Writes the days an ending settled: those the contract said were already missed, from the receipt, and those it gave
+ * back, which are the last days of the gift's window (a gift settles its days in order). A day given back is drawn as
+ * a day that went back, never as a day still to come. Nobody is sent a message for them: the person ended the gift
+ * themselves. As for every day record, a failed write is logged and never turns a final transaction into a failure.
+ */
+async function recordEndedDays(giftId: string, escrow: Hex, result: RelayResult): Promise<void> {
+  try {
+    const missed = settledDaysFromLogs(giftId, result.receipt.logs);
+    const gift = await readGift(escrow, giftId);
+    const givenBack = gift.startDay === 0 ? [] : Array.from({ length: gift.givenBackDays }, (_, index) => ({ day: gift.endDay - gift.givenBackDays + 1 + index, outcome: "returned" as const }));
+    await recordSettledDays(giftId, [...missed, ...givenBack], result.hash);
+  } catch (error) {
+    console.error(`day record not written for the ending of gift ${giftId}, ${result.hash}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 export async function relayClaim(input: { giftId: string; escrow: Hex; recipient: Hex; contactHash: Hex; nowSeconds?: number }): Promise<RelayResult> {
+  // The first version only: there the evidence signer attests the opening. On the second it has no say (`relayOpen`).
+  if (dailyVersionOf(input.escrow) === 2) throw new RelayerError("NOT_CONFIGURED", "This gift is opened with the key of its link");
   const now = input.nowSeconds ?? Math.floor(Date.now() / 1_000);
   const message = {
     giftId: BigInt(input.giftId),
@@ -62,7 +113,7 @@ export function liveExpiredDaysDeps(): ExpiredDaysDeps {
     read: async (giftId, escrow) => {
       const [gift, lastDrainableDay] = await Promise.all([
         readGift(escrow, giftId),
-        giftPublicClient().readContract({ address: escrow, abi, functionName: "lastDrainableDay" }) as Promise<number | bigint>,
+        giftPublicClient().readContract({ address: escrow, abi: dailyAbiOf(escrow), functionName: "lastDrainableDay" }) as Promise<number | bigint>,
       ]);
       return { ...gift, lastDrainableDay: Number(lastDrainableDay) };
     },
@@ -116,7 +167,7 @@ export async function relayCheckIn(sessionId: string, escrow: Hex): Promise<Rela
     signature: stored.signature,
   };
   const result = await relay("checkIn", [giftId, attestation], escrow);
-  const credited = Number(eventArg(result, "CheckInAccepted", "creditedDays"));
+  const credited = Number(eventArg(result, "CheckInAccepted", "creditedDays", escrow));
   await recordRelayed({ giftId, kind: "check-in", sessionId, txHash: result.hash, blockNumber: result.receipt.blockNumber });
   await recordDays(giftId, result, sessionId);
   return { hash: result.hash, creditedDays: credited, alreadyRelayed: false };
@@ -191,14 +242,17 @@ export async function createdGiftOf(txHash: Hex): Promise<{ kind: "made"; giftId
     return { kind: "unknown" };
   }
   if (receipt.status !== "success") return { kind: "reverted" };
-  const logs = parseEventLogs({ abi, logs: receipt.logs, eventName: "GiftCreated" });
-  const first = logs[0] as { args?: Record<string, unknown>; address?: string } | undefined;
-  if (!first?.args?.giftId) return { kind: "reverted" };
-  return { kind: "made", giftId: String(first.args.giftId), escrow: String(first.address) as Hex, blockNumber: receipt.blockNumber };
+  // The creation's event has one shape per version: read with each, whichever contract the transaction went to.
+  for (const abi of DAILY_ABIS) {
+    const logs = parseEventLogs({ abi, logs: receipt.logs, eventName: "GiftCreated" });
+    const first = logs[0] as { args?: Record<string, unknown>; address?: string } | undefined;
+    if (first?.args?.giftId) return { kind: "made", giftId: String(first.args.giftId), escrow: String(first.address) as Hex, blockNumber: receipt.blockNumber };
+  }
+  return { kind: "reverted" };
 }
 
-function eventArg(result: RelayResult, eventName: string, argument: string): string {
-  const logs = parseEventLogs({ abi, logs: result.receipt.logs, eventName });
+function eventArg(result: RelayResult, eventName: string, argument: string, escrow: Hex): string {
+  const logs = parseEventLogs({ abi: dailyAbiOf(escrow), logs: result.receipt.logs, eventName });
   const first = logs[0] as { args?: Record<string, unknown> } | undefined;
   const value = first?.args?.[argument];
   if (value === undefined) throw new RelayerError("NOT_FINALISED", `The ${eventName} event was not found in the receipt`);

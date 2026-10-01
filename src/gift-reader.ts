@@ -1,6 +1,7 @@
-import { createPublicClient, type Abi, type Hex, type PublicClient } from "viem";
-import { giftEscrowAbi } from "./gift-escrow-abi";
+import { createPublicClient, type Hex, type PublicClient } from "viem";
+import { NO_CONTACT_HASH } from "./contact-hash";
 import { monadChain, monadTransport } from "./monad/chain";
+import { dailyAbiOf, dailyVersionOf, type ContractVersion } from "./v2";
 
 /** Read-only view of a gift as the contract holds it. Numbers stay raw here; screens format them. */
 export type GiftState = Readonly<{
@@ -32,6 +33,14 @@ export type GiftState = Readonly<{
   earnedBalance: bigint;
   refundableBalance: bigint;
   withdrawNonce: bigint;
+  /** Which version of the daily contract holds the gift (src/v2.ts). What follows exists on the second only. */
+  version: ContractVersion;
+  /** The address of the key that opens the gift, made from its link's secret. Nothing on the first version. */
+  openingKey: Hex | null;
+  /** When the person it is for ended it, or zero: on the first version nobody can. */
+  endedAt: number;
+  /** The days neither counted nor missed when it was ended: given back. */
+  givenBackDays: number;
 }>;
 
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -44,7 +53,9 @@ export function giftPublicClient(): PublicClient {
 }
 
 export async function readGift(escrow: Hex, giftId: string, client: PublicClient = giftPublicClient()): Promise<GiftState> {
-  const abi = giftEscrowAbi as unknown as Abi;
+  // The first version and the second answer `getGift` with two different shapes: each is read with its own ABI.
+  const abi = dailyAbiOf(escrow);
+  const version = dailyVersionOf(escrow);
   const id = BigInt(giftId);
   const [gift, earnedBalance, refundableBalance, withdrawNonce] = await Promise.all([
     client.readContract({ address: escrow, abi, functionName: "getGift", args: [id] }) as Promise<Record<string, unknown>>,
@@ -58,7 +69,8 @@ export async function readGift(escrow: Hex, giftId: string, client: PublicClient
     funder: gift.funder as Hex,
     refundTo: gift.refundTo as Hex,
     recipient: recipient.toLowerCase() === ZERO ? null : recipient,
-    recipientContactHash: gift.recipientContactHash as Hex,
+    // The second version carries an opening key where the first carried a contact hash that named nobody (D72).
+    recipientContactHash: version === 2 ? NO_CONTACT_HASH : (gift.recipientContactHash as Hex),
     goalType: Number(gift.goalType),
     dailyTarget: Number(gift.dailyTarget),
     durationDays: Number(gift.durationDays),
@@ -82,6 +94,10 @@ export async function readGift(escrow: Hex, giftId: string, client: PublicClient
     earnedBalance,
     refundableBalance,
     withdrawNonce,
+    version,
+    openingKey: version === 2 ? (gift.openingKey as Hex) : null,
+    endedAt: version === 2 ? Number(gift.endedAt) : 0,
+    givenBackDays: version === 2 ? Number(gift.givenBackDays) : 0,
   };
 }
 

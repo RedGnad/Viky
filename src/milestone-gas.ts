@@ -15,6 +15,9 @@ export const MILESTONE_GAS_CEILING = {
   withdrawEarned: 160_000, // observed max 119,689
   withdrawEarnedWithIntent: 170_000, // observed max 123,196
   cancel: 180_000, // observed max 120,078
+  // The second version only (contracts/MilestoneGiftV2.sol). Measured on a mainnet fork with the real AUSD during the
+  // audit of 1 Oct 2026: 191,716.
+  endGiftWithIntent: 210_000,
 } as const;
 
 export type MilestoneFunction = keyof typeof MILESTONE_GAS_CEILING;

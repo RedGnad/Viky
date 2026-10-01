@@ -14,7 +14,9 @@ import {
   type MilestoneCreationFacts,
 } from "./gift-store";
 import { createdMilestoneOf, relayCreateMilestone } from "./milestone-relay";
+import { NO_CONTACT_HASH } from "./contact-hash";
 import type { MilestoneParams } from "./milestone-protocol";
+import type { MilestoneParamsV2 } from "./v2-protocol";
 import { saveMilestoneGift } from "./milestone-store";
 
 /**
@@ -25,7 +27,10 @@ import { saveMilestoneGift } from "./milestone-store";
  */
 
 export type MilestoneCreationInput = Readonly<{
-  params: MilestoneParams;
+  /** The first version's terms, or the second's, which carry the opening key of the gift's link (src/v2-protocol.ts). */
+  params: MilestoneParams | MilestoneParamsV2;
+  /** The second version only: the fingerprint of the link the funder's browser made. */
+  linkFingerprint?: string;
   authorization: ContractAuthorization;
   nonce: Hex;
   goalUsername: string;
@@ -38,7 +43,7 @@ export type MilestoneCreationInput = Readonly<{
  * The dependencies of a milestone creation. `params` is the milestone's own terms, which the relay sends; the shared
  * creation code sees the columns every gift has, and a milestone has no daily bar, so that one is zero.
  */
-export function liveMilestoneCreationDeps(params?: MilestoneParams, facts?: MilestoneCreationFacts): CreationDeps {
+export function liveMilestoneCreationDeps(params?: MilestoneParams | MilestoneParamsV2, facts?: MilestoneCreationFacts): CreationDeps {
   return {
     begin: (row) => beginCreation({ ...row, kind: "milestone", milestone: facts ?? null }),
     restart: restartCreation,
@@ -67,9 +72,12 @@ export function liveMilestoneCreationDeps(params?: MilestoneParams, facts?: Mile
 
 export async function makeMilestoneGift(input: MilestoneCreationInput, deps: CreationDeps = liveMilestoneCreationDeps(input.params, input.facts)) {
   const p = input.params;
+  const second = "openingKey" in p;
+  if (second && !input.linkFingerprint) throw new Error("A gift of the second version is made with the fingerprint of its link");
   return makeGift(
     {
-      params: { funder: p.funder, refundTo: p.refundTo, recipientContactHash: p.recipientContactHash, goalType: p.goalType, dailyTarget: 0, durationDays: p.durationDays, amount: p.amount, salt: p.salt },
+      params: { funder: p.funder, refundTo: p.refundTo, recipientContactHash: second ? NO_CONTACT_HASH : p.recipientContactHash, goalType: p.goalType, dailyTarget: 0, durationDays: p.durationDays, amount: p.amount, salt: p.salt },
+      link: second ? { openingKey: p.openingKey, fingerprint: String(input.linkFingerprint) } : undefined,
       authorization: input.authorization,
       nonce: input.nonce,
       goalUsername: input.goalUsername,

@@ -18,6 +18,8 @@ import { liveCreationDeps } from "@/src/gift-creation-live";
 import { MAX_GIFT_UNITS, MIN_GIFT_UNITS } from "@/src/money";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { admitRelay } from "@/src/relay-admission";
+import { fundingNonceV2 } from "@/src/v2-protocol";
+import { answeredLink, requestedLink } from "@/src/v2-request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +40,9 @@ type CreateBody = {
   amount?: string;
   refundTo?: string;
   salt?: string;
+  /** The second version: the address of the key that opens the gift, and the fingerprint of its link (src/v2-request.ts). */
+  openingKey?: string;
+  linkFingerprint?: string;
   authorization?: { validAfter?: string; validBefore?: string; nonce?: string; v?: number; r?: string; s?: string };
 };
 
@@ -129,7 +134,12 @@ export async function POST(request: Request) {
       amount,
       salt: salt as Hex,
     };
-    if (String(a.nonce).toLowerCase() !== fundingNonce(params).toLowerCase()) {
+    // The link the funder's browser made, on the second version: its opening key is part of what was signed.
+    const link = requestedLink(body, "daily");
+    const signedFor = link
+      ? fundingNonceV2({ funder: params.funder, refundTo: params.refundTo, openingKey: link.openingKey, goalType, dailyTarget, durationDays, amount, salt: params.salt })
+      : fundingNonce(params);
+    if (String(a.nonce).toLowerCase() !== signedFor.toLowerCase()) {
       throw new GiftApiError("TERMS_MISMATCH", "The signed terms do not match the gift");
     }
     // The salt is the account and the course (D102): rebuilt here from what this request says they are, and the
@@ -180,17 +190,18 @@ export async function POST(request: Request) {
         goalCourseTitle: courseTitle,
         recipientName,
         funderName,
+        link: link ?? undefined,
       },
       liveCreationDeps(),
     );
-    const claimToken = created.claimToken;
 
     const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin;
     // The gift keeps the currency its funder is reading in now, for its link's title and picture. Never a reason to
     // fail a gift that is made: without it the link speaks the currency the account reads in, as before.
     await readingCurrency(auth.account).then((currency) => keepFunderCurrency(created.giftId, auth.account, currency)).catch(() => undefined);
     return NextResponse.json(
-      { giftId: created.giftId, claimUrl: `${origin}/g/${created.giftId}?t=${claimToken}`, funded: true },
+      // On the second version the server was never given the link's secret: the browser that made it builds the link.
+      { giftId: created.giftId, claimUrl: answeredLink(origin, created.giftId, created.claimToken), funded: true },
       { headers: NO_STORE },
     );
   } catch (error) {

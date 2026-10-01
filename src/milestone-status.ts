@@ -1,3 +1,4 @@
+import { milestoneEnded, milestoneEndOffer } from "./gift-ending";
 import type { Hex } from "viem";
 import { formatAusd } from "./gift-reader";
 import type { GiftRecord } from "./gift-store";
@@ -97,6 +98,9 @@ export function milestoneStatusOf(input: {
     targetWords: insider ? (input.targetWords ?? null) : null,
     asked: insider && certificate ? askedInWords(certificate, Number(state.target)) : null,
     review: !reached && input.review && input.review.status !== "pinned" ? { status: input.review.status, ...(input.review.message ? { message: input.review.message } : {}) } : null,
+    version: state.version,
+    end: milestoneEndOffer(state, viewer.isRecipient),
+    ended: milestoneEnded(state),
   };
 }
 
