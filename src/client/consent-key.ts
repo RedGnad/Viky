@@ -1,4 +1,4 @@
-import { createEd25519SigningSession, type Ed25519SigningSession, type WebAuthnClient } from "@category-labs/mera";
+import { createEd25519SigningSession, MeraError, type Ed25519SigningSession, type WebAuthnClient } from "@category-labs/mera";
 
 /**
  * The key a recipient's yes and stop are signed with (the founder, 29 Sep 2026, Mera's "One Passkey, Many Keys").
@@ -25,10 +25,16 @@ export function consentSalt(): Uint8Array<ArrayBuffer> {
 let held: Ed25519SigningSession | null = null;
 const listeners = new Set<() => void>();
 
-function keep(output: ArrayBuffer | ArrayBufferView | undefined): void {
-  if (!output) return;
-  const bytes = output instanceof ArrayBuffer ? new Uint8Array(output) : new Uint8Array(output.buffer, output.byteOffset, output.byteLength);
-  if (bytes.length !== 32) return;
+function keep(output: PrfOutput | undefined): void {
+  // A second answer that cannot be read gives no consent key, and never stops the account from opening: the key is
+  // then asked for by itself at the first agreement.
+  let bytes: Uint8Array | undefined;
+  try {
+    bytes = bytesOf(output);
+  } catch {
+    return;
+  }
+  if (!bytes || bytes.length !== 32) return;
   const copy = new Uint8Array(bytes);
   held?.end();
   held = createEd25519SigningSession({ privateKey: copy });
@@ -58,31 +64,61 @@ export function onConsentKey(changed: () => void): () => void {
   return () => listeners.delete(changed);
 }
 
-type PrfResults = { first?: ArrayBuffer | ArrayBufferView; second?: ArrayBuffer | ArrayBufferView };
+/** What an authenticator may answer a PRF evaluation with: a buffer, a view on one, or, from some, a plain list of bytes. */
+type PrfOutput = ArrayBuffer | ArrayBufferView | ArrayLike<number>;
+type PrfResults = { first?: PrfOutput; second?: PrfOutput };
 
 function prfOf(credential: PublicKeyCredential): { enabled?: boolean; results?: PrfResults } | undefined {
   return (credential.getClientExtensionResults() as { prf?: { enabled?: boolean; results?: PrfResults } }).prf;
 }
 
-function bytesOf(value: ArrayBuffer | ArrayBufferView | undefined): Uint8Array | undefined {
+/**
+ * The bytes of a PRF output, normalised exactly as Mera's own client does it (its `normalizeByteArray`; the audit of
+ * 1 Oct 2026, S-15): a view over a view's or a buffer's bytes, and anything else read as a list whose every element
+ * must be a byte. Until then a list was taken for a view, so an authenticator answering one broke every sign-in.
+ */
+function bytesOf(value: PrfOutput | undefined): Uint8Array | undefined {
   if (!value) return undefined;
-  return value instanceof ArrayBuffer ? new Uint8Array(value) : new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  if (ArrayBuffer.isView(value)) return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  return Uint8Array.from(value, (byte) => {
+    if (!Number.isInteger(byte) || byte < 0 || byte > 255) throw new MeraError("PRF_UNAVAILABLE", "PRF output must contain only byte values (integers 0-255)");
+    return byte;
+  });
 }
 
-function publicKeyCredential(credential: Credential | null): PublicKeyCredential {
-  if (!credential || credential.type !== "public-key" || !("rawId" in credential)) throw new Error("WebAuthn returned no usable public key credential");
+/** As Mera's client asserts it, with its own error, so both fail the same way for the same answer. */
+function publicKeyCredential(credential: Credential | null | undefined): PublicKeyCredential {
+  if (credential?.type !== "public-key" || !("rawId" in credential) || !("getClientExtensionResults" in credential) || typeof credential.getClientExtensionResults !== "function") {
+    throw new MeraError("PASSKEY_OPERATION_FAILED", "WebAuthn returned no usable public key credential");
+  }
   return credential as PublicKeyCredential;
+}
+
+/**
+ * Whether the two ceremonies are left to Mera's own client (`NEXT_PUBLIC_MERA_OWN_CLIENT=1`), the way back if a
+ * release of Mera and the client below ever disagree. The account opens exactly as before; the consent key is then
+ * asked once more, for its salt alone, at the first agreement a person signs (`keyForSigning`, src/client/consent.ts).
+ */
+export function meraOwnClient(value: string | undefined = process.env.NEXT_PUBLIC_MERA_OWN_CLIENT): boolean {
+  return value?.trim() === "1";
+}
+
+/** The client the account's ceremonies run through: the one below, or Mera's own when the switch says so. */
+export function ceremonyClient(): WebAuthnClient | undefined {
+  return meraOwnClient() ? undefined : consentWebAuthnClient;
 }
 
 /**
  * Mera's own browser client, the same ceremonies with the same parameters, asking the account's salt first and the
  * consent salt second, and keeping the second answer as the consent key. Mera's `browserWebAuthnClient` is not exported,
- * so this is its code with one field added; test/consent-key.test.ts holds the two to the same requests.
+ * so this is its code with one field added; test/consent-key.test.ts holds the two to the same requests, the same
+ * answers and the same refusals.
  */
 export const consentWebAuthnClient: WebAuthnClient = {
   async createCredential(request) {
     const credential = publicKeyCredential(
-      await navigator.credentials.create({
+      await globalThis.navigator?.credentials?.create({
         publicKey: {
           rp: request.rp,
           user: request.user,
@@ -110,7 +146,7 @@ export const consentWebAuthnClient: WebAuthnClient = {
   async getCredential(request) {
     const { allowCredential } = request;
     const credential = publicKeyCredential(
-      await navigator.credentials.get({
+      await globalThis.navigator?.credentials?.get({
         publicKey: {
           rpId: request.rpId,
           challenge: request.challenge,

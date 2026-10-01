@@ -251,6 +251,20 @@ async function signIn(page: Page, context: BrowserContext, create: boolean): Pro
 /** How many passkey prompts the page has asked for since it loaded. A string, not a function: see the suite's notes on tsx. */
 const promptsOf = (page: Page) => page.evaluate("window.__vikyPrompts || 0") as Promise<number>;
 
+/**
+ * The agreement key as the judges page prints it for this device (the audit of 1 Oct 2026), reached by links only:
+ * the key lives in the page's memory, and a load would drop it.
+ */
+async function agreementKeyOnJudges(page: Page): Promise<string> {
+  if ((await page.locator('a[href="/me"]').count()) === 0) await page.locator('a[href="/gifts"]').first().click();
+  await page.locator('a[href="/me"]:visible').first().click();
+  await page.locator('a[href="/judges"]:visible').first().click();
+  const line = page.locator("[data-agreement-key]");
+  await expect(line).toBeVisible({ timeout: 30_000 });
+  await expect(line).toContainText("Your agreement key: ed25519 ");
+  return (await line.getAttribute("data-agreement-key")) ?? "";
+}
+
 /** The gift's page, reached by a click: the consent key lives in the page's memory, as the account's own does. */
 async function openTheGift(page: Page) {
   await page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
@@ -336,6 +350,15 @@ test.describe("the recipient's yes and stop, on two devices", () => {
     await openTheGift(first.page);
     await expect(first.page.getByText(/^Viky stopped reading your rapid rating on /)).toBeVisible();
     await hold(first.page);
+
+    // What a judge compares by eye: the judges page prints the same agreement key on both devices, and it is the
+    // very key the yes and the stop were signed with.
+    const onFirst = await agreementKeyOnJudges(first.page);
+    const onSecond = await agreementKeyOnJudges(second.page);
+    expect(onFirst).toMatch(/^[0-9a-f]{64}$/);
+    expect(onSecond, "the same passkey, the same key, on another device").toBe(onFirst);
+    expect(`0x${onFirst}`).toBe(server.kept[0].publicKey);
+    await hold(second.page);
 
     await first.context.close();
     await second.context.close();
