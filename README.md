@@ -218,6 +218,12 @@ evidence signer stands a day after it is announced, a goal is added and never ch
 after seven days and holds the open days rather than taking them. `ConsentAnchor` holds no money: it records which
 consent key an account agrees with, bound by the account's own signature, and every yes and stop in order.
 
+The server side of the anchor is written too, and off until the anchor's address is set: the browser signs the short
+anchored message with the consent key it already holds, in the same gesture as the agreement, and the relayer writes
+it (`src/consent-anchoring.ts`). `pnpm verify:consent` then holds every reading that moved money on the second
+version against a yes anchored before it, checking each Ed25519 signature itself; it needs a Monad RPC and nothing
+else. Both have run on a local fork of mainnet (`pnpm rehearse:v2`) and never on mainnet.
+
 `forge test --network monad` runs the unit suites, the accounting fuzz, the invariant campaigns of the second version
 and the typehash parity pins; with `MONAD_RPC_URL` set it also runs the mainnet fork tests against the real AUSD. `pnpm deploy:gift-escrow` deploys
 and `pnpm check:gift-escrow` verifies a deployment against the expected configuration.

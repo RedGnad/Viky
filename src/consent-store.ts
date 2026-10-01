@@ -33,6 +33,12 @@ const SCHEMA = [
     public_key text NOT NULL,
     first_signed_at timestamptz NOT NULL DEFAULT now()
   )`,
+  // The public record of a yes and of a stop (the audit of 1 Oct 2026, ConsentAnchor): the place the row takes in its
+  // gift's sequence on the anchor and the consent key's signature over the anchored message, kept until the relayer
+  // has written them. The account's own signature binding its consent key is kept the same way, until it is written.
+  `ALTER TABLE viky_consents ADD COLUMN IF NOT EXISTS anchor_sequence integer`,
+  `ALTER TABLE viky_consents ADD COLUMN IF NOT EXISTS anchor_signature text`,
+  `ALTER TABLE viky_consent_keys ADD COLUMN IF NOT EXISTS binding_signature text`,
 ];
 
 let executor: SqlExecutor | undefined;
@@ -86,7 +92,21 @@ export async function keepConsentKey(account: string, publicKey: string): Promis
   return (await consentKeyOf(account)) ?? publicKey.toLowerCase();
 }
 
-export type ConsentRow = Readonly<{ id: number; giftId: string; account: string; kind: ConsentKind; text: string; publicKey: string; signature: string; signedAt: Date; anchorTx: string | null }>;
+export type ConsentRow = Readonly<{
+  id: number;
+  giftId: string;
+  account: string;
+  kind: ConsentKind;
+  text: string;
+  publicKey: string;
+  signature: string;
+  signedAt: Date;
+  /** The transaction that wrote this row on the anchor, once it has. */
+  anchorTx: string | null;
+  /** The place it was signed for in its gift's sequence on the anchor, and the consent key's signature for it: there while it waits to be written. */
+  anchorSequence: number | null;
+  anchorSignature: string | null;
+}>;
 
 function rowOf(row: Record<string, unknown>): ConsentRow {
   return {
@@ -99,16 +119,56 @@ function rowOf(row: Record<string, unknown>): ConsentRow {
     signature: String(row.signature),
     signedAt: row.signed_at instanceof Date ? row.signed_at : new Date(String(row.signed_at)),
     anchorTx: row.anchor_tx === null || row.anchor_tx === undefined ? null : String(row.anchor_tx),
+    anchorSequence: row.anchor_sequence === null || row.anchor_sequence === undefined ? null : Number(row.anchor_sequence),
+    anchorSignature: row.anchor_signature === null || row.anchor_signature === undefined ? null : String(row.anchor_signature),
   };
 }
 
-export async function keepConsent(input: { giftId: string; account: string; kind: ConsentKind; text: string; publicKey: string; signature: string }): Promise<ConsentRow> {
+export async function keepConsent(input: {
+  giftId: string;
+  account: string;
+  kind: ConsentKind;
+  text: string;
+  publicKey: string;
+  signature: string;
+  /** What the anchor is to be given for this row, when it was signed for one. */
+  anchor?: { sequence: number; signature: string } | null;
+}): Promise<ConsentRow> {
   await ensureConsentSchema();
   const rows = await sql()`
-    INSERT INTO viky_consents (gift_id, account, kind, text, public_key, signature)
-    VALUES (${input.giftId}, ${input.account.toLowerCase()}, ${input.kind}, ${input.text}, ${input.publicKey.toLowerCase()}, ${input.signature.toLowerCase()})
+    INSERT INTO viky_consents (gift_id, account, kind, text, public_key, signature, anchor_sequence, anchor_signature)
+    VALUES (${input.giftId}, ${input.account.toLowerCase()}, ${input.kind}, ${input.text}, ${input.publicKey.toLowerCase()}, ${input.signature.toLowerCase()},
+            ${input.anchor?.sequence ?? null}, ${input.anchor?.signature.toLowerCase() ?? null})
     RETURNING *`;
   return rowOf(rows[0]);
+}
+
+/** The row is on the anchor: the transaction that wrote it. */
+export async function noteAnchored(id: number, txHash: string): Promise<void> {
+  await ensureConsentSchema();
+  await sql()`UPDATE viky_consents SET anchor_tx = ${txHash.toLowerCase()} WHERE id = ${id}`;
+}
+
+/**
+ * The row stops waiting for the anchor: its place in the sequence was taken, so the signature made for that place can
+ * never be written. The row itself stands as it did: it is the anchor's record of it that will not exist.
+ */
+export async function stopWaitingForAnchor(id: number): Promise<void> {
+  await ensureConsentSchema();
+  await sql()`UPDATE viky_consents SET anchor_signature = NULL WHERE id = ${id} AND anchor_tx IS NULL`;
+}
+
+/** Keeps the account's signature binding its consent key, until the anchor has it. A second one changes nothing. */
+export async function keepBinding(account: string, signature: string): Promise<void> {
+  await ensureConsentSchema();
+  await sql()`UPDATE viky_consent_keys SET binding_signature = ${signature.toLowerCase()} WHERE account = ${account.toLowerCase()} AND binding_signature IS NULL`;
+}
+
+export async function bindingOf(account: string): Promise<string | null> {
+  await ensureConsentSchema();
+  const rows = await sql()`SELECT binding_signature FROM viky_consent_keys WHERE account = ${account.toLowerCase()}`;
+  const value = rows[0]?.binding_signature;
+  return value === null || value === undefined ? null : String(value);
 }
 
 /** The latest yes or stop of a gift, which is its state: agreed, stopped, or nothing yet. */
