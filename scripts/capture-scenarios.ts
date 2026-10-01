@@ -1,10 +1,18 @@
 import { mnemonicToAccount } from "viem/accounts";
 import type { Session } from "./capture-connected";
+import { consentTermsFor } from "../src/consent-terms";
+
+/**
+ * Whether the run may ask viky.cash itself for Bitrefill's list (`CAPTURE_LIVE_GIFT_CARDS=1`). Off unless asked for
+ * (the audit of 1 Oct 2026): it signs in on the production site and calls its API, which a capture run should not do
+ * by itself, and a run with no network, or on a day the site is being deployed, used to miss a scenario for it.
+ */
+const LIVE_GIFT_CARDS = process.env.CAPTURE_LIVE_GIFT_CARDS === "1";
 
 /**
  * Bitrefill's list for a country as viky.cash serves it now, read signed in as the public Foundry/Hardhat test account
  * (its key is published everywhere and it holds nothing). A local server has no Bitrefill key, so this is how a
- * capture shows the real list without anyone handling one.
+ * capture shows the real list without anyone handling one. Only with `CAPTURE_LIVE_GIFT_CARDS=1`.
  */
 async function giftCardsServed(country: string): Promise<unknown> {
   const base = "https://viky.cash";
@@ -43,7 +51,13 @@ export type Scenario = { name: string; run: (s: Session) => Promise<void> };
 const exact = (value: string) => new RegExp(`^${value.replace(/[.*+?^${}()|[\]\\$]/g, "\\$&")}$`);
 
 const TODAY = Math.floor(Date.now() / 86_400_000);
-const GIFT_ID = "3";
+/**
+ * A gift number nobody holds. The page of a gift that exists is drawn by the server from the gift itself, so the
+ * answers a scenario replaces in the browser would never be read: until 1 Oct 2026 this was gift 3, which exists, and
+ * every scenario of a gift's page photographed that gift instead of its own state. A number below the first milestone
+ * number, so the page reads it as a daily gift unless the answer says otherwise.
+ */
+const GIFT_ID = "999903";
 const CLAIM_TOKEN = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6";
 const ESCROW = "0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233";
 const DEPOSIT = "0x000000000000000000000000000000000000dEaD";
@@ -157,51 +171,34 @@ function card(over: Record<string, unknown> = {}) {
 
 const HOME = "Signed in, on the home page";
 
-/** The way to the check, as a person clicks it. */
-const TO_THE_CHECK = "Léa and Maman, Continue, A Duolingo lesson each day, Continue, ama_learns, Continue, Spanish, Continue, Continue (the check)";
-
 /**
- * The public read of a Duolingo name, answered as Duolingo answers for a name that exists: the name as it spells it,
- * the courses that profile carries, and the one it says is current (U1).
+ * The agreement of a gift's person to what is read for it (29 Sep 2026), answered as its route answers. A gift's page
+ * asks it as soon as it opens, and a local server knows nothing of a gift nobody holds: until 1 Oct 2026 no scenario
+ * replaced it. `state` is where the agreement stands when the page opens; a yes or a stop sent from the page is kept,
+ * as the route keeps it, without its signature being checked.
  */
-const COURSES = [
-  { id: "DUOLINGO_ES_EN", title: "Spanish", xp: 1200 },
-  { id: "DUOLINGO_IT_EN", title: "Italian", xp: 40 },
-];
-const RAILS_IN = {
-  country: "fr",
-  ask: false,
-  fromConnection: "fr",
-  fromDevice: "fr",
-  waysOut: { Ramp: "serves", Mercuryo: "serves" },
-  waysIn: { Ramp: "unknown", Mercuryo: "serves" },
-};
-
-async function nameCheck(s: Session): Promise<void> {
-  await s.api("GET", /\/api\/rails\/where/, () => ({ status: 200, body: RAILS_IN }), "GET /api/rails/where");
+async function agreement(s: Session, state: "yes" | "stop" | null = "yes", conditionId = "duolingo-daily", cadence = ""): Promise<void> {
+  let kept: { kind: "yes" | "stop"; signedAt: string } | null = state ? { kind: state, signedAt: new Date(Date.now() - 2 * 86_400_000).toISOString() } : null;
+  const terms = consentTermsFor(conditionId, "yours", cadence);
+  const route = new RegExp(`/api/gift/${GIFT_ID}/consent$`);
   await s.api(
     "GET",
-    /\/api\/duolingo\/profile\?/,
-    () => ({ status: 200, body: { username: "ama_learns", courses: COURSES, currentCourseId: "DUOLINGO_ES_EN" } }),
-    "GET /api/duolingo/profile",
+    route,
+    () => ({
+      status: 200,
+      body: { giftId: GIFT_ID, state: kept, reading: kept?.kind === "yes" ? "agreed" : "no_agreement", opened: true, finished: false, terms, until: "the gift's last day", texts: { yes: "Viky agreement, for a capture", stop: "Viky stop, for a capture" } },
+    }),
+    "GET /api/gift/[id]/consent",
   );
-}
-
-/** From the first question to the check, with the terms every funder scenario uses. */
-async function toTheCheck(s: Session): Promise<void> {
-  await s.page.getByLabel("Their first name").fill("Léa");
-  await s.page.getByLabel("Your name, as they know you").fill("Maman");
-  await s.click(exact("Continue"));
-  await s.page.getByLabel("A Duolingo lesson each day").check();
-  await s.click(exact("Continue"));
-  await s.page.getByLabel("Their Duolingo name, if you know it").fill("ama_learns");
-  await s.click(exact("Continue"));
-  // The name read answers with the profile's courses, so the step asks which one counts before it goes on (U1).
-  await s.text("Which course counts?");
-  await s.click(exact("Continue"));
-  await s.text("How much, and for how long?");
-  await s.click(exact("Continue"));
-  await s.text("Check this over");
+  await s.api(
+    "POST",
+    route,
+    ({ body }) => {
+      kept = { kind: (body as { kind?: string } | null)?.kind === "stop" ? "stop" : "yes", signedAt: new Date().toISOString() };
+      return { status: 200, body: { giftId: GIFT_ID, state: kept } };
+    },
+    "POST /api/gift/[id]/consent",
+  );
 }
 
 export const SCENARIOS: Scenario[] = [
@@ -212,27 +209,10 @@ export const SCENARIOS: Scenario[] = [
     run: async (s) => {
       await s.reset();
       await s.api("GET", GIFT_READ, () => ({ status: 200, body: gift() }), "GET /api/gift/[id]");
+      await agreement(s, null);
       await s.goto(`/g/${GIFT_ID}?t=${CLAIM_TOKEN}`);
       await s.text("Create your account to open it. Nothing to install.");
       await s.shot("recipient", "link opened, no account", "Opened from the link the funder sent (a link, not a click from home), with no account on this device");
-    },
-  },
-  {
-    name: "funder: the account step, and making the account there",
-    run: async (s) => {
-      await s.reset();
-      await nameCheck(s);
-      await s.goto("/");
-      await s.click("Offer a gift");
-      await s.text("Who is it for?");
-      await toTheCheck(s);
-      await s.click(exact("Continue"));
-      await s.text("One account, and then you can pay");
-      await s.shot("funder", "account step", `Not signed in, on the home page: Offer a gift, ${TO_THE_CHECK}, Continue`);
-      await s.budgetSignIn();
-      await s.click("Create my account");
-      await s.text("Check this over", 40_000);
-      await s.forgetKept();
     },
   },
 
@@ -297,252 +277,7 @@ export const SCENARIOS: Scenario[] = [
 
   // ---------------------------------------------------------------------------------------------------------
   // Funder.
-  {
-    name: "funder: who, what, their name, how much, check, waiting, expired, picked up",
-    run: async (s) => {
-      await s.reset();
-      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
-      await nameCheck(s);
-      await s.signIn();
-      await s.click("Offer a gift");
-      await s.text("Who is it for?");
-      await s.shot("funder", "who", `${HOME}: Offer a gift`);
-      await s.page.getByLabel("Their first name").fill("Léa");
-      await s.page.getByLabel("Your name, as they know you").fill("Maman");
-      await s.click(exact("Continue"));
-      await s.text("What will they do?");
-      await s.shot("funder", "what will they do", `${HOME}: Offer a gift, Léa and Maman, Continue`);
-      await s.page.getByLabel("A Duolingo lesson each day").check();
-      await s.click(exact("Continue"));
-      await s.page.getByLabel("Their Duolingo name, if you know it").fill("ama_learns");
-      await s.text("Their Duolingo, and what counts as a day");
-      await s.shot("funder", "their duolingo and what counts as a day", `${HOME}: Offer a gift, Léa and Maman, Continue, A Duolingo lesson each day, Continue, ama_learns typed`);
-      await s.click(exact("Continue"));
-      await s.text("Which course counts?");
-      await s.shot("funder", "which course counts", `${HOME}: Offer a gift, Léa and Maman, Continue, A Duolingo lesson each day, Continue, ama_learns, Continue`);
-      await s.click(exact("Continue"));
-      await s.text("How much, and for how long?");
-      await s.shot("funder", "how much", `${HOME}: ${TO_THE_CHECK.replace(", Continue, Continue (the check)", "")}`);
-      await s.click(exact("Continue"));
-      await s.text("Check this over");
-      await s.shot("funder", "check, paying by card", `${HOME}: Offer a gift, ${TO_THE_CHECK}`);
 
-      await s.click("Pay 25 EUR with Ramp");
-      await s.text("Waiting for your 25 EUR payment");
-      await s.shot("funder", "waiting for the payment", `${HOME}: Offer a gift, ${TO_THE_CHECK}, Pay 25 EUR with Ramp (the service's page opens in a new tab, closed here)`);
-
-      /**
-       * The session that ends here is the reading one, and it ends by expiring rather than by a quiet clock: since D98
-       * the account lives twelve hours in a cookie and the key that signs lives in the page, so thirty-one idle minutes
-       * take the key and leave the account. Dropping the cookie is what twelve hours do to it, and the screen a person
-       * meets on their next look is the gift still waiting for its payment.
-       *
-       * What was photographed here before, "Your session closed while you were paying", is not reachable any more:
-       * nothing on the funding screen drops the account in place. It is reported, not staged (relecture, line 4).
-       */
-      await s.page.context().clearCookies();
-      await s.page.reload();
-      await s.settle();
-      await s.text("A gift is waiting for your payment");
-      await s.shot("funder", "picked up after the session expired", "On the waiting screen, with the twelve-hour session expired: reload the page");
-      await s.budgetSignIn();
-      await s.click("Sign in to pick it up");
-      await s.text("Waiting for your 25 EUR payment", 40_000);
-      await s.shot("funder", "picked up after signing in again", "After the reload: Sign in to pick it up");
-      await s.forgetKept();
-    },
-  },
-  {
-    name: "funder refusals: names, their duolingo name, the days",
-    run: async (s) => {
-      await s.reset();
-      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
-      await s.api("GET", /\/api\/duolingo\/profile\?/, () => ({ status: 404, body: { error: "No public Duolingo profile goes by that name.", code: "NO_SUCH_PROFILE" } }), "GET /api/duolingo/profile, no such name");
-      await s.signIn();
-      await s.click("Offer a gift");
-      await s.page.getByLabel("Their first name").focus();
-      await s.page.getByLabel("Your name, as they know you").focus();
-      await s.page.getByLabel("Their first name").focus();
-      await s.settle();
-      await s.text("Write their first name.");
-      await s.shot("funder", "who, both names refused", `${HOME}: Offer a gift, into each name field and out again, empty`);
-      await s.page.getByLabel("Their first name").fill("Léa");
-      await s.page.getByLabel("Your name, as they know you").fill("Maman");
-      await s.click(exact("Continue"));
-      await s.page.getByLabel("A Duolingo lesson each day").check();
-      await s.click(exact("Continue"));
-      await s.page.getByLabel("Their Duolingo name, if you know it").fill("ama learns!");
-      await s.settle();
-      await s.text(/A Duolingo name has letters/);
-      await s.shot("funder", "their duolingo name, the wrong shape", `${HOME}: Offer a gift, Léa and Maman, a Duolingo lesson each day, "ama learns!" typed`);
-      await s.page.getByLabel("Their Duolingo name, if you know it").fill("nobody_here_at_all");
-      await s.click(exact("Continue"));
-      await s.text(/No public Duolingo profile goes by that name/);
-      await s.shot("funder", "their duolingo name, nobody by that name", `${HOME}: Offer a gift, Léa and Maman, a Duolingo lesson each day, "nobody_here_at_all", Continue`);
-      await s.page.getByLabel("Their Duolingo name, if you know it").fill("");
-      await s.click(exact("Continue"));
-      await s.page.getByLabel("For how many days").fill("6");
-      await s.settle();
-      await s.text("7 days at least.");
-      await s.shot("funder", "how much, too few days", `${HOME}: Offer a gift, Léa and Maman, a Duolingo lesson each day, no name, Continue, 6 days typed`);
-      await s.forgetKept();
-    },
-  },
-  {
-    name: "funder: payment arrived",
-    run: async (s) => {
-      await s.reset({ AUSD: 0n, USDC: 0n, MON: 50_000_000_000_000_000_000n });
-      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
-      await nameCheck(s);
-      // The first quote values the payment on the check; the second, the conversion itself, is held unanswered, so the
-      // screen stays on "getting it ready" and nothing is ever signed or sent.
-      let quotes = 0;
-      await s.page.route(new URL("/api/fund/quote", s.base).href, async (route) => {
-        quotes += 1;
-        if (quotes > 1) return;
-        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ output: "28510000", minOut: "28400000", to: DEPOSIT, data: "0x", value: "0" }) });
-      });
-      await s.signIn();
-      await s.click("Offer a gift");
-      await toTheCheck(s);
-      await s.text("A card payment is in your account: about $28.51.");
-      await s.shot("funder", "check, a payment arrived", `${HOME}, with 50 MON arrived: Offer a gift, ${TO_THE_CHECK} (the value is the exchange's quote, replaced)`);
-      await s.click("Use the payment that arrived");
-      await s.text("Getting it ready, a few seconds.", 30_000);
-      await s.shot("funder", "payment arrived, getting it ready", "On that screen: Use the payment that arrived (the exchange quote is held unanswered, so nothing is signed or sent)");
-      await s.forgetKept();
-    },
-  },
-  {
-    name: "funder: enough in the account, gift created with its link",
-    run: async (s) => {
-      await s.reset({ AUSD: 30_000_000n, USDC: 0n, MON: 0n });
-      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
-      await nameCheck(s);
-      await s.api(
-        "POST",
-        "/api/gift/create",
-        () => ({ status: 200, body: { giftId: GIFT_ID, claimUrl: `${s.base}/g/${GIFT_ID}?t=${CLAIM_TOKEN}`, funded: true } }),
-        "POST /api/gift/create",
-      );
-      await s.signIn();
-      await s.click("Offer a gift");
-      await toTheCheck(s);
-      await s.text("It comes from your account, which holds $30.00.");
-      await s.shot("funder", "check, enough in the account", `${HOME}, with $30.00 in the account: Offer a gift, ${TO_THE_CHECK}`);
-      await s.click("Put $25.00 in Léa's name");
-      await s.text("$25.00 is in Léa's name.", 40_000);
-      await s.shot("funder", "gift created with the link", `${HOME}, with $30.00 in the account: Offer a gift, ${TO_THE_CHECK}, Put $25.00 in Léa's name`);
-      await s.forgetKept();
-    },
-  },
-
-  {
-    name: "funder milestone: what, their chess.com and the rating, how much, check, made",
-    run: async (s) => {
-      await s.reset({ AUSD: 30_000_000n, USDC: 0n, MON: 0n });
-      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
-      // The chess rating is offered to everybody since D108, so nothing is replaced here: the chooser is drawn from
-      // the register as any account reads it. The answer that was given instead, written when the condition was
-      // behind the operator door, added it a second time to a list that already held it.
-      await s.api("GET", /\/api\/chess\/standing\?/, ({ hit }) =>
-        hit === 1
-          ? { status: 404, body: { error: "No rating in that cadence yet.", code: "NO_RATING" } }
-          : { status: 200, body: { username: "lea_plays", mode: "rapid", rating: 1450, rd: 45, best: 1510, settled: true, readAt: new Date().toISOString() } },
-        "GET /api/chess/standing, as Chess.com answers: no blitz rating, then 1450 in rapid",
-      );
-      await s.api(
-        "POST",
-        "/api/gift/milestone/create",
-        () => ({ status: 200, body: { giftId: "1000000", claimUrl: `${s.base}/g/1000000?t=${CLAIM_TOKEN}`, funded: true } }),
-        "POST /api/gift/milestone/create",
-      );
-      await s.signIn();
-      await s.click("Offer a gift");
-      await s.page.getByLabel("Their first name").fill("Léa");
-      await s.page.getByLabel("Your name, as they know you").fill("Maman");
-      await s.click(exact("Continue"));
-      await s.text("Reach a chess rating on Chess.com");
-      await s.shot("funder milestone", "what will they do", `${HOME}: Offer a gift, Léa and Maman, Continue`);
-      await s.page.getByLabel("Reach a chess rating on Chess.com").check();
-      await s.click(exact("Continue"));
-      await s.text("Their Chess.com, and the rating they reach");
-      await s.page.getByLabel("Their Chess.com name").fill("lea_plays");
-      await s.page.getByLabel("Blitz").check();
-      await s.click(exact("Read their rating"));
-      await s.text("They have no blitz rating yet.");
-      await s.shot("funder milestone", "no rating in that cadence", "On that step: lea_plays, Blitz, Read their rating");
-      await s.page.getByLabel("Rapid").check();
-      await s.click(exact("Read their rating"));
-      await s.text("Today they are at 1450 in rapid.");
-      await s.page.getByLabel("The rating they reach").fill("1470");
-      await s.page.getByLabel("The rating they reach").blur();
-      await s.text("Choose 1500 or more");
-      await s.shot("funder milestone", "target too close", "On that step: Rapid, Read their rating, 1470 typed");
-      await s.page.getByLabel("The rating they reach").fill("1500");
-      await s.text("The gift is theirs when they reach 1500.");
-      await s.shot("funder milestone", "today's reading and the target", "On that step: 1500 typed");
-      await s.click(exact("Continue"));
-      await s.text("How much, and how long do they have?");
-      await s.shot("funder milestone", "how much and how long", "On that step: Continue");
-      await s.click(exact("Continue"));
-      await s.text("Check this over");
-      await s.shot("funder milestone", "check", "On that step: Continue, with $30.00 in the account");
-      await s.click("Put $25.00 in Léa's name");
-      await s.text("$25.00 is in Léa's name.", 40_000);
-      await s.shot("funder milestone", "made, with the link", "On the check: Put $25.00 in Léa's name");
-      await s.forgetKept();
-    },
-  },
-  {
-    /**
-     * A course certificate (C3): the one condition that asks for a course instead of a score. It is offered to
-     * nobody today, because goal 10 is not on the contract, so the chooser is staged here through the door that
-     * exists for what is wired and not live. Everything else on the screen is the register's own.
-     */
-    name: "funder coursera: the name and the course, then the check",
-    run: async (s) => {
-      await s.reset({ AUSD: 30_000_000n, USDC: 0n, MON: 0n });
-      await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [] } }), "GET /api/gifts/mine");
-      await s.api(
-        "GET",
-        "/api/conditions",
-        () => ({ status: 200, body: { ids: ["duolingo-daily", "chess-rating", "duolingo-english-test"], preview: ["coursera-certificate"] } }),
-        "GET /api/conditions, with the course certificate behind the operator door",
-      );
-      await s.signIn();
-      // The gift is a card of four cases on Home, and each one opens its own sheet (D110).
-      await s.click("who it is for");
-      await s.page.getByLabel("Their first name").fill("Léa");
-      await s.page.getByLabel("Your name, as they know you").fill("Maman");
-      await s.click(exact("Done"));
-      await s.click("what they will do");
-      await s.text("Get a Coursera certificate");
-      await s.shot("funder coursera", "the four conditions offered", `${HOME}: the gift card, who it is for filled, then what they will do`);
-
-      // The option is below the fold of the sheet, so it is reached the way a thumb reaches it.
-      await s.page.getByText("Get a Coursera certificate", { exact: true }).scrollIntoViewIfNeeded();
-      await s.page.getByText("Get a Coursera certificate", { exact: true }).click();
-      await s.text("Their name, as Coursera prints it on a certificate");
-      await s.page.getByLabel("Their name, as Coursera prints it on a certificate").fill("Léa Martin");
-      await s.page.getByLabel("The course, by its link").fill("https://www.coursera.org/learn/introduction-git-github");
-      await s.page.getByLabel("The course, by its link").blur();
-      await s.shot("funder coursera", "the name and the course", "On the will sheet: Get a Coursera certificate, the name, then the course link pasted");
-      await s.click(exact("Done"));
-
-      // The other two cases, so the card can be paid for and the check screen reads the course back.
-      await s.click("how much");
-      for (const figure of ["2", "5"]) await s.page.getByRole("button", { name: exact(figure) }).click();
-      await s.click(exact("Done"));
-      await s.click("how long");
-      await s.page.getByRole("button", { name: "120 days" }).click();
-      await s.click(exact("Done"));
-      await s.click(/^Pay \$25\.00$/);
-      await s.text("Which course", 30_000);
-      await s.shot("funder coursera", "the check, with the course read back", "On the card, once the four are filled: Pay $25.00");
-      await s.forgetKept();
-    },
-  },
 
   // ---------------------------------------------------------------------------------------------------------
   // Recipient, from the link to counting.
@@ -552,6 +287,7 @@ export const SCENARIOS: Scenario[] = [
       await s.reset();
       let current = gift();
       await s.api("GET", GIFT_READ, () => ({ status: 200, body: current }), "GET /api/gift/[id]");
+      await agreement(s, null);
       await s.api("POST", "/api/gift/claim", () => {
         current = gift({ opened: true, youAreTheRecipient: true, claimedAtChain: Math.floor(Date.now() / 1000) });
         return { status: 200, body: { giftId: GIFT_ID, opened: true } };
@@ -601,6 +337,7 @@ export const SCENARIOS: Scenario[] = [
       let current = gift({ opened: true, youAreTheRecipient: true, goalAccount: { username: "ama_learns", source: "recipient", bound: false, code: "K7PX2M", codeExpiresAt: new Date(Date.now() - 60_000).toISOString() } });
       await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card({ opened: true, counting: false, creditedDays: 0, missedDays: 0, startDay: 0, endDay: 0 })] } }), "GET /api/gifts/mine");
       await s.api("GET", GIFT_READ, () => ({ status: 200, body: current }), "GET /api/gift/[id]");
+      await agreement(s);
       await s.signIn();
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
@@ -619,28 +356,23 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
-    name: "recipient: every day state, then taking what is earned",
+    /**
+     * It went on to "Take $2.00" on the gift's own page until 1 Oct 2026. Since D208 what a daily gift has earned is
+     * used from Home, and the page says so ("It is yours already. Use it from Home whenever you like."): there is no
+     * such button here any more, and the way out has its own scenarios below.
+     */
+    name: "recipient: every day state",
     run: async (s) => {
       await s.reset();
-      let current = gift({ ...EVERY_DAY, youAreTheRecipient: true });
       await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card({ days: EVERY_DAY.days })] } }), "GET /api/gifts/mine");
-      await s.api("GET", GIFT_READ, () => ({ status: 200, body: current }), "GET /api/gift/[id]");
-      await s.api("POST", "/api/gift/withdraw", () => {
-        current = gift({ ...EVERY_DAY, youAreTheRecipient: true, earned: "0", earnedDisplay: "$0.00", takenDisplay: "$2.00", withdrawNonce: "1" });
-        return { status: 200, body: { giftId: GIFT_ID, sent: true, amount: "2000000", hash: HASH } };
-      }, "POST /api/gift/withdraw");
+      await s.api("GET", GIFT_READ, () => ({ status: 200, body: gift({ ...EVERY_DAY, youAreTheRecipient: true }) }), "GET /api/gift/[id]");
+      await agreement(s);
       await s.signIn();
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
       await s.page.getByRole("list", { name: "Every day of this gift" }).waitFor({ state: "visible", timeout: 30_000 });
+      await s.text("It is yours already. Use it from Home whenever you like.");
       await s.shot("recipient", "every day state", `${HOME}: the gift under "What's moving"`);
-      await s.click("Take $2.00");
-      await s.text("Take $2.00 into your account.", 30_000);
-      await s.shot("recipient", "take, the review", 'On the gift: Take $2.00');
-      await s.page.getByRole("button", { name: "Take $2.00" }).last().click();
-      await s.settle();
-      await s.text(/Reference: gift 3, take 1\./, 30_000);
-      await s.shot("recipient", "earned money taken", "On the review: Take $2.00");
     },
   },
   {
@@ -675,6 +407,7 @@ export const SCENARIOS: Scenario[] = [
       });
       await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card({ finished: true, counting: true, startDay: TODAY - 9, endDay: TODAY - 3, creditedDays: 6, missedDays: 1, theirsDisplay: "$6.00", returnedDisplay: "$1.00" })] } }), "GET /api/gifts/mine");
       await s.api("GET", GIFT_READ, () => ({ status: 200, body: finished }), "GET /api/gift/[id]");
+      await agreement(s);
       await s.signIn();
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
@@ -703,6 +436,7 @@ export const SCENARIOS: Scenario[] = [
         () => ({ status: 200, body: gift({ ...EVERY_DAY, youAreTheRecipient: false, youAreTheFunder: true, lastReturnAtMs: Date.now() - 20 * 3_600_000 }) }),
         "GET /api/gift/[id]",
       );
+      await agreement(s);
       await s.signIn();
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
@@ -718,6 +452,7 @@ export const SCENARIOS: Scenario[] = [
       const waiting = gift({ youAreTheFunder: true, opened: false, startDay: 0, endDay: 0 });
       await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card({ role: "funder", opened: false, counting: false, creditedDays: 0, missedDays: 0, days: [] })] } }), "GET /api/gifts/mine");
       await s.api("GET", GIFT_READ, () => ({ status: 200, body: waiting }), "GET /api/gift/[id]");
+      await agreement(s, null);
       // The origin of the walk, never a host written here: the route builds the link from the host it answers on, and
       // a stub naming another one puts a link in the picture that this run could not have produced. Read beside the
       // screen that creates a gift, the two looked like two different origins in one journey, and only the stub was.
@@ -851,10 +586,11 @@ function milestone(): Scenario[] {
     // replaced by the simulated milestone gift.
     await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card()] } }), "GET /api/gifts/mine");
     await s.api("GET", GIFT_READ, () => ({ status: 200, body }), "GET /api/gift/[id], a simulated milestone gift");
+    await agreement(s, body.connected === false ? null : "yes", "chess-rating", "rapid");
     await s.signIn();
     await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
     await s.settle();
-    await s.text(/Reach a chess rating on Chess\.com/, 30_000);
+    await s.text(/A chess rating on Chess\.com/, 30_000);
   };
   return [
     {
@@ -905,6 +641,7 @@ function milestone(): Scenario[] {
         }, "POST /api/gift/[id]/bind");
         await s.api("GET", "/api/gifts/mine", () => ({ status: 200, body: { gifts: [card()] } }), "GET /api/gifts/mine");
         await s.api("GET", GIFT_READ, () => ({ status: 200, body: current }), "GET /api/gift/[id], a simulated milestone gift");
+        await agreement(s, null, "chess-rating", "rapid");
         await s.signIn();
         await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
         await s.settle();
@@ -1030,8 +767,9 @@ function withdrawal(): Scenario[] {
         await currency(s, null);
         await s.signIn();
         await s.click("Spend or withdraw");
-        await s.text("Where is your bank or card?");
-        await s.shot("withdrawal", "where is your bank or card", `${WAY}, with the two signals disagreeing`);
+        // The question's words since the audit of 1 Oct 2026: where the person lives, not where a bank or a card is.
+        await s.text("Where do you live?");
+        await s.shot("withdrawal", "where do you live", `${WAY}, with the two signals disagreeing`);
       },
     },
     {
@@ -1121,9 +859,11 @@ function withdrawal(): Scenario[] {
         await s.text("Ready: $9.99", 40_000);
         await s.shot("withdrawal", "ready, steps 2 and 3", `${WAY}, Send to my bank, type 10, See what you will get, Get $9.99 ready`);
 
-        await s.click(exact("Copy"));
+        // One gesture where there were two (the audit of 1 Oct 2026): the code is copied and the service's page opens
+        // in a new tab, which this run closes at once.
+        await s.click("Copy my code and open Ramp");
         await s.text(exact("Copied"));
-        await s.shot("withdrawal", "the code copied", "On the ready screen: Copy", { scrollTo: /^Copied$/ });
+        await s.shot("withdrawal", "the code copied", "On the ready screen: Copy my code and open Ramp", { scrollTo: /^Copied$/ });
 
         await s.page.getByLabel("Paste the code Ramp gives you to send to").fill(DEPOSIT);
         await s.shot("withdrawal", "step 3, the code pasted", "On the ready screen: paste the code Ramp gives", { scrollTo: "Step 3 of 3: Send it" });
@@ -1139,7 +879,7 @@ function withdrawal(): Scenario[] {
       },
     },
     {
-      name: "withdrawal: reloaded with 9.99 ready, resumed at step 2",
+      name: "withdrawal: reloaded with 9.99 ready, then continued at step 2",
       run: async (s) => {
         await s.reset(after);
         await gifts(s);
@@ -1149,13 +889,18 @@ function withdrawal(): Scenario[] {
         await s.signIn();
         await s.text("$9.99 of it is ready to send to Ramp.");
         await s.shot("withdrawal", "home with 9.99 ready", `${HOME}, after a change left 9.99 ready for Ramp`);
+        // The steps no longer open by themselves on money already made ready (the audit of 1 Oct 2026): the first
+        // screen says it is ready and offers the way back to it, and everything else stays within reach.
         await s.click("Spend or withdraw");
+        await s.text("Continue with Ramp");
+        await s.shot("withdrawal", "the first screen with 9.99 ready", `${WAY}, after a change left 9.99 ready for Ramp`);
+        await s.click("Continue with Ramp");
         await s.text("Ready: $9.99");
-        await s.shot("withdrawal", "resumed at step 2", `${WAY}, after a change left 9.99 ready: the steps open on the second`);
+        await s.shot("withdrawal", "resumed at step 2", `${WAY}, after a change left 9.99 ready: Continue with Ramp`);
       },
     },
     {
-      name: "withdrawal: the card branch, resumed at step 2",
+      name: "withdrawal: the card branch, continued at step 2",
       run: async (s) => {
         // Above the eleven the account cannot spend (the reserve), 138.436143573911778147 of the chain's own coin.
         await s.reset({ AUSD: 0n, USDC: 0n, MON: 11_000_000_000_000_000_000n + 138_436_143_573_911_778_147n });
@@ -1167,10 +912,13 @@ function withdrawal(): Scenario[] {
         await s.api("POST", "/api/fund/quote", () => ({ status: 200, body: { output: "3240000", minOut: "3230000", to: ESCROW, data: "0x", value: "0" } }), "POST /api/fund/quote");
         await s.signIn();
         await s.click("Spend or withdraw");
+        await s.text("Continue with Mercuryo");
+        await s.shot("withdrawal", "the card branch, the first screen", `${WAY}, with only what the card service buys in the account, on an account whose display currency is the CFA franc`);
+        await s.click("Continue with Mercuryo");
         // The money leads and the quantity follows (D104): "Ready: about $3.24", with 138.43 said under the action.
         await s.text("Ready: about $3.24");
         await s.text(/asks for the exact quantity: 138\.43/);
-        await s.shot("withdrawal", "the card branch, ready", `${WAY}, with only what the card service buys in the account, on an account whose display currency is the CFA franc`);
+        await s.shot("withdrawal", "the card branch, ready", `${WAY}, Continue with Mercuryo`);
       },
     },
     {
@@ -1190,7 +938,7 @@ function withdrawal(): Scenario[] {
       },
     },
     {
-      name: "withdrawal refusal: the price moved",
+      name: "withdrawal refusal: the amount moved",
       run: async (s) => {
         await s.reset(before);
         await gifts(s);
@@ -1201,12 +949,12 @@ function withdrawal(): Scenario[] {
         await s.api("POST", "/api/exit/prepare", () => ({ status: 409, body: { error: "The rate moved, so this would have paid you less than you were shown. Nothing was taken.", code: "RATE_MOVED" } }), "POST /api/exit/prepare");
         await toReview(s);
         await s.click("Get $9.99 ready");
-        await s.text("The price changed before you confirmed. Nothing was taken.");
-        await s.shot("withdrawal", "refused, the price moved", `${WAY}, Send to my bank, type 10, See what you will get, Get $9.99 ready`, { scrollTo: "See the new price" });
+        await s.text("The amount changed before you confirmed. Nothing was taken.");
+        await s.shot("withdrawal", "refused, the amount moved", `${WAY}, Send to my bank, type 10, See what you will get, Get $9.99 ready`, { scrollTo: "See the new amount" });
       },
     },
     {
-      name: "withdrawal refusal: the price kept changing, three times",
+      name: "withdrawal refusal: the amount kept changing, three times",
       run: async (s) => {
         await s.reset(before);
         await gifts(s);
@@ -1221,8 +969,8 @@ function withdrawal(): Scenario[] {
         }), "POST /api/exit/relay");
         await toReview(s);
         await s.click("Get $9.99 ready");
-        await s.text("The price kept changing and Viky stopped after three tries.", 60_000);
-        await s.shot("withdrawal", "refused, the price kept changing", `${WAY}, Send to my bank, type 10, See what you will get, Get $9.99 ready (asked again twice by itself)`, { scrollTo: /^Try again$/ });
+        await s.text(/The amount kept changing and Viky stopped after three tries\./, 60_000);
+        await s.shot("withdrawal", "refused, the amount kept changing", `${WAY}, Send to my bank, type 10, See what you will get, Get $9.99 ready (asked again twice by itself)`, { scrollTo: /^Try again$/ });
       },
     },
     {
@@ -1309,27 +1057,32 @@ function withdrawal(): Scenario[] {
         await s.shot("use your money", "gift card amounts beyond the balance", `${WAY}, Choose a card, Amazon.fr, with $20.99 held`);
       },
     },
-    {
-      name: "use your money: Bitrefill's real list for France, only the balance invented",
-      run: async (s) => {
-        // Nothing but the balance ($20.99) and the country (France) is invented: the cards and their amounts are Bitrefill's
-        // as viky.cash serves them at the time of the run, the rates and the countries what the local server reads.
-        const served = await giftCardsServed("fr");
-        await s.reset(before);
-        await gifts(s);
-        await rails(s, RAILS_FRANCE);
-        await currency(s, null);
-        await s.api("GET", /\/api\/giftcards\?country=/, () => ({ status: 200, body: served }), "GET /api/giftcards, as viky.cash served it at the run");
-        await s.signIn();
-        await s.click("Spend or withdraw");
-        await s.click(exact("Choose a card"));
-        const first = s.page.getByRole("dialog").locator("label").first();
-        await first.waitFor({ state: "visible", timeout: 40_000 });
-        await s.shot("use your money", "real list for France", `${WAY}, Choose a card, Bitrefill's list as read at the run`);
-        await first.click();
-        await s.page.getByRole("dialog").waitFor({ state: "hidden" });
-        await s.shot("use your money", "real list, the first card", `${WAY}, Choose a card, the first card of Bitrefill's list, with $20.99 held`);
-      },
-    },
+    // Asked of the production site itself, so only when the run is told it may (see `LIVE_GIFT_CARDS`).
+    ...(LIVE_GIFT_CARDS
+      ? [
+        {
+          name: "use your money: Bitrefill's real list for France, only the balance invented",
+          run: async (s: Session) => {
+            // Nothing but the balance ($20.99) and the country (France) is invented: the cards and their amounts are Bitrefill's
+            // as viky.cash serves them at the time of the run, the rates and the countries what the local server reads.
+            const served = await giftCardsServed("fr");
+            await s.reset(before);
+            await gifts(s);
+            await rails(s, RAILS_FRANCE);
+            await currency(s, null);
+            await s.api("GET", /\/api\/giftcards\?country=/, () => ({ status: 200, body: served }), "GET /api/giftcards, as viky.cash served it at the run");
+            await s.signIn();
+            await s.click("Spend or withdraw");
+            await s.click(exact("Choose a card"));
+            const first = s.page.getByRole("dialog").locator("label").first();
+            await first.waitFor({ state: "visible", timeout: 40_000 });
+            await s.shot("use your money", "real list for France", `${WAY}, Choose a card, Bitrefill's list as read at the run`);
+            await first.click();
+            await s.page.getByRole("dialog").waitFor({ state: "hidden" });
+            await s.shot("use your money", "real list, the first card", `${WAY}, Choose a card, the first card of Bitrefill's list, with $20.99 held`);
+          },
+        },
+        ]
+      : []),
   ];
 }

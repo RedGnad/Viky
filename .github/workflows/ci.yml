@@ -21,7 +21,9 @@ jobs:
   validate:
     name: Validate
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The job takes 24 to 25 minutes. At 30, one slow download of the browser (6 minutes instead of 30 seconds, on
+    # 1 Oct 2026) cut a run that had failed nothing, nine tests from its end.
+    timeout-minutes: 40
 
     steps:
       - name: Check out repository
