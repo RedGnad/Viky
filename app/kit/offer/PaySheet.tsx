@@ -18,7 +18,7 @@ import { ExactLine, LedFigure } from "../LedAmount";
 import { savePendingGift } from "@/src/pending-gift";
 import { rateDateInWords, spokenAmount } from "@/src/display-currency";
 import type { RailReach } from "@/src/rail-country";
-import { feeSentence, wayInFillsIn, wayInPage, WAYS_IN } from "@/src/rails";
+import { feeSentence, wayInFillsIn, wayInPage, waysIn } from "@/src/rails";
 import { CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
 import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
@@ -45,6 +45,12 @@ import { Sheet } from "../Sheet";
  * refused, why, and which this goes through instead. That sentence is the only place the sheet names a company: on
  * its lines and its button the person is paying by card, and the service is named where it is met, on the page that
  * opens. "What the card service charges" is that service's own published figure at this amount (`serviceChargeEur`).
+ *
+ * With Swapper's id set (the founder, 1 Oct 2026), a third way stands first where it serves the payer: the card is
+ * paid inside Viky, with nothing to choose and no code to paste. The press on pay opens it on the screen that waits
+ * (`SwapperSheet`, in app/components/PayGift.tsx), not over this sheet: the press is also what makes a first funder's
+ * account, and Home is drawn again for somebody signed in, which shuts every sheet standing on it (measured 1 Oct
+ * 2026). Without the id, nothing here changes.
  */
 function everyMinute(changed: () => void): () => void {
   const timer = setInterval(changed, 60_000);
@@ -143,7 +149,7 @@ export function PaySheet({
   const inAccount = held ?? 0n;
   const enough = units !== undefined && inAccount >= units;
   const short = units === undefined ? 0n : units - inAccount;
-  const offer = wayInFor(short, WAYS_IN, money.rates?.usdPerEur, railIn);
+  const offer = wayInFor(short, waysIn(), money.rates?.usdPerEur, railIn);
   const way = offer.way;
   /** Paying by card is not offered in the payer's country (the founder, 29 Sep 2026): the account is the way left. */
   const cardClosed = card?.offered === false;
@@ -175,6 +181,8 @@ export function PaySheet({
     try {
       const account = address ?? (await ensureSigner()).address;
       savePendingGift({ ...draftToTerms(draft, account), wayIn: way.name });
+      // A card paid inside Viky opens on the wait, in a sheet of its own, by this same press.
+      if (!enough && way.embedded) return router.push("/fund?step=paying&card=1");
       // The partner's page opens in this press only when it arrives filled in (D289). Otherwise the person has not seen
       // their code yet, a first funder has only just made it: the waiting screen shows it, with its copy, and opens the
       // page when they press (D296).
@@ -254,7 +262,11 @@ export function PaySheet({
       {/* What the partner's page will be, before it opens (D289), said only where it is true: the page arrives filled in. */}
       {/* What the partner's page will ask, just before it opens (D289, D294): filled in with Ramp's key, and without it
           what to choose there and where the code goes, with the code one press away once the account exists. */}
-      {byCard ? <p className={BODY}>{wayInFillsIn(way) ? W.partnerFilledIn : W.partnerPaste(way.name, way.delivers.coin, way.delivers.network, way.arrives === "gift")}</p> : null}
+      {byCard ? (
+        <p className={BODY}>
+          {way.embedded ? W.partnerEmbedded(way.name, euros) : wayInFillsIn(way) ? W.partnerFilledIn : W.partnerPaste(way.name, way.delivers.coin, way.delivers.network, way.arrives === "gift")}
+        </p>
+      ) : null}
       {/* A judge's code (D297): only while credits are open, and the gift is not yet covered. */}
       {address ? (
         <JudgeCode
@@ -266,7 +278,8 @@ export function PaySheet({
       ) : null}
       {/* Where the card is not offered, an account is what money can be sent to: somebody without one makes it here. */}
       {!enough && cardClosed && !address ? <AccountPanel /> : null}
-      {!enough && (cardClosed || !wayInFillsIn(way)) && address ? (
+      {/* No code where the card is paid inside Viky: that sheet is already told whose account it is. */}
+      {!enough && (cardClosed || (!wayInFillsIn(way) && !way.embedded)) && address ? (
         <div className="flex flex-col gap-[var(--space-xs)]">
           <p className={CARD_LABEL}>{W.yourCode}</p>
           <p className={`${HELP} select-all break-all tabular-nums`}>{address}</p>
