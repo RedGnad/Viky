@@ -4,6 +4,7 @@ import { agreeFirst } from "@/src/client/consent";
 import { useMinute } from "../kit/clock";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useMoneySession } from "@/src/account/money-session";
+import { isAccountError } from "@/src/account/errors";
 import { useAccount } from "@/src/account/provider";
 import { catchUpDay } from "@/src/catch-up";
 import { ApiError } from "@/src/client/api";
@@ -82,6 +83,8 @@ type Where = "open" | "name" | "start" | "count" | "take";
 /** Our own typed sentences verbatim; anything else as one plain line, so no library's words reach a person. */
 function screenMessage(error: unknown): string {
   if (error instanceof ApiError) return error.detail ? `${error.message} (${error.detail})` : error.message;
+  // A passkey that did not answer, or answered for another account, says so in the account's own words.
+  if (isAccountError(error)) return error.guidance;
   return A.failed;
 }
 
@@ -121,13 +124,20 @@ export function GiftPage({ giftId, linkKey, initialStatus, openTake = false }: R
     [giftId, linkKey],
   );
 
+  /**
+   * Read again whenever the account reading it changes (the audit of 1 Oct 2026): the gift says who its reader is,
+   * the funder, the person it is for or neither, and somebody who signs in on this page is not who the page was built
+   * for. A funder who signed in on their own link kept the page of a stranger, with "Open my gift" on it. The first
+   * image is still the server's (D160): it was read for the account the cookie names, which is the one announced here.
+   */
+  const { address } = useAccount();
   useEffect(() => {
     if (asTheServerRead.current) {
       asTheServerRead.current = false;
       return;
     }
     void reload();
-  }, [reload]);
+  }, [reload, address]);
 
   if (loadError) {
     return (
@@ -147,7 +157,7 @@ export function GiftPage({ giftId, linkKey, initialStatus, openTake = false }: R
 }
 
 function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void>; refresh: () => Promise<void>; openTake: boolean }>) {
-  const { address, ensureSigner, status: accountStatus } = useAccount();
+  const { address, hasCredential, ensureSigner, status: accountStatus } = useAccount();
   useMoneySession();
   const money = useDisplayCurrency(address);
   /** The clock this reader keeps, so a date says their day and not the server's (D160). */
@@ -276,13 +286,23 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     <ArrivalAmount from={seenMoney ?? figureMoney.value} to={figureMoney.value} symbol={figureMoney.symbol} after={figureMoney.after} />
   ) : undefined;
 
+  /**
+   * The agreement, then the gift (the audit of 1 Oct 2026): a gesture that signed the yes is followed by the yes on
+   * the page, so the line under the card never says nothing is read while the reading has begun, and "Agree" is
+   * never offered for a yes already given. Every gesture of the page and of the blocks it mounts ends here.
+   */
+  const reloadAll = async () => {
+    await consent.reload();
+    await reload();
+  };
+
   const run = async (kind: Busy, where: Where, action: () => Promise<string | null>) => {
     setBusy(kind);
     setAnswer(null);
     try {
       const message = await action();
       if (message) setAnswer({ at: where, text: message, failed: false });
-      await reload();
+      await reloadAll();
     } catch (error) {
       setAnswer({ at: where, text: screenMessage(error), failed: true });
     } finally {
@@ -439,7 +459,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         return (
           <div className="flex flex-col gap-[var(--space-md)]">
             <p className="font-medium">{W.createToOpen}</p>
-            <AccountPanel />
+            {/* A device that remembers a passkey is somebody coming back: signing in leads, so no second account is made. */}
+            <AccountPanel returning={hasCredential} />
           </div>
         );
       }
@@ -474,7 +495,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         );
       case "connect":
         // A condition of the third nature is connected, not named (D189): the source's own page, one gesture.
-        if (condition?.link.kind === "connect") return <ConnectTheAccount giftId={giftId} conditionId={condition.id} yours={mine} onChanged={reload} />;
+        if (condition?.link.kind === "connect") return <ConnectTheAccount giftId={giftId} conditionId={condition.id} yours={mine} onChanged={reloadAll} />;
         return connectWords ? (
           <ConnectTheSource
             words={connectWords}
@@ -495,12 +516,12 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         if (!milestone) return null;
         // A shown condition takes its one proof from the person's own account; a certificate takes a pasted link (D162).
         // A marathon takes a bib before the start and a reading after the finish, on its own screen (D273).
-        if (milestone.conditionId === "marathon-finish") return <MarathonProof giftId={giftId} status={milestone} yours={mine} onChanged={reload} />;
-        if (milestone.conditionId === "wca-time") return <WcaProof giftId={giftId} status={milestone} yours={mine} onChanged={reload} />;
+        if (milestone.conditionId === "marathon-finish") return <MarathonProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
+        if (milestone.conditionId === "wca-time") return <WcaProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
         return conditionById(milestone.conditionId)?.nature === "shown" ? (
-          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={milestone.review?.status ?? null} reviewMessage={milestone.review?.message ?? null} onShown={reload} />
+          <ShowProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} review={milestone.review?.status ?? null} reviewMessage={milestone.review?.message ?? null} onShown={reloadAll} />
         ) : (
-          <CertificateProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onProved={reload} />
+          <CertificateProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onProved={reloadAll} />
         );
       case "take":
         return reviewing ? (
@@ -689,17 +710,14 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
             underWay={moment === "counting" || moment === "climbing"}
             cost={stopCost}
             zone={zone}
-            onChanged={() => {
-              consent.reload();
-              void reload();
-            }}
+            onChanged={() => void reloadAll()}
           />
         ) : null}
 
         {/* The moment a gift is reached, to its two people and to nobody else (decision B): played here when this is
             where they arrive first, and again whenever they ask. */}
         {milestone?.reached && (mine || readerIsFunder) ? (
-          <ReachedOnItsPage gift={reachedOfStatus(milestone, mine ? "recipient" : "funder", { recipientName, funderName })} />
+          <ReachedOnItsPage gift={reachedOfStatus(milestone, mine ? "recipient" : "funder", { recipientName, funderName })} onTake={() => setReviewing(true)} />
         ) : null}
 
         {/* Ending a gift nobody opened: the funder's second gesture, under the first, never beside it. */}

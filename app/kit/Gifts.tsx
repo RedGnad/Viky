@@ -15,7 +15,7 @@ import type { GiftSummary } from "@/src/client/gift";
 
 /** Gifts: everything given and received, in two groups, each card opening its gift (structure, section 4). */
 export function Gifts({ initialGifts }: Readonly<{ initialGifts?: GiftSummary[] | null }> = {}) {
-  const { address } = useAccount();
+  const { address, hasCredential } = useAccount();
   const { gifts, problem } = useMyGifts(address, initialGifts);
   const nowMs = useMinute();
 
@@ -23,7 +23,7 @@ export function Gifts({ initialGifts }: Readonly<{ initialGifts?: GiftSummary[] 
     return (
       <Shell kind="destination" active="gifts" title={W.title} character={<HeadCharacter scene="gifts" />}>
         <p className={BODY}>{W.signInFirst}</p>
-        <AccountPanel />
+        <AccountPanel returning={hasCredential} />
       </Shell>
     );
   }

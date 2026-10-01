@@ -389,6 +389,40 @@ export const DOOR = {
   title: "Sign in or create account",
 } as const;
 
+/**
+ * The account's door where the account is made elsewhere, or where the device did not say it can make one (the
+ * founder, 1 Oct 2026). "This gift's link" on a gift, whose key is in the link itself; never the site's name in its
+ * place, and never "computer" on a phone. Nothing here promises that a press leaves the app: the press is offered,
+ * and what to do when it opens nothing is said.
+ */
+const linkOf = (gift: boolean) => (gift ? "this gift's link" : "this page's link");
+const BROWSER_NAME = { safari: "Safari", chrome: "Chrome", browser: "your browser" } as const;
+/** The apps a person knows by another name than the one the test gives them. */
+const APP_NAME: Readonly<Record<string, string>> = { twitter: "X", gsa: "the Google app", messenger: "Messenger" };
+export const ACCOUNT_DOOR = {
+  /** Named when the app is known ("inside Instagram"), "another app" otherwise. */
+  insideApp: (app: Readonly<{ key: string; name: string | null }>) => `This page is open inside ${APP_NAME[app.key] ?? app.name ?? "another app"}, where an account cannot be made.`,
+  browserCannot: "This browser cannot make an account.",
+  openIn: (browser: keyof typeof BROWSER_NAME) => `Open in ${BROWSER_NAME[browser]}`,
+  /** After a press that opened nothing: where the app's own menu is, without quoting a label that changes with the app and the phone's language. */
+  stayed: { iphone: "Nothing opened? Press \u22EF at the top, then choose to open it in your browser.", android: "Nothing opened? Press \u22EE at the top, then choose to open it in your browser." },
+  openItIn: (gift: boolean) => `Open ${linkOf(gift)} in Chrome or Safari.`,
+  copy: (gift: boolean) => `Copy ${linkOf(gift)}`,
+  copied: (browser: keyof typeof BROWSER_NAME | null) => (browser ? `Copied. Paste it in ${BROWSER_NAME[browser]}.` : "Copied."),
+  copyRefused: "This browser would not copy it. Press and hold the link, then choose Copy.",
+  linkLabel: "The link",
+  how: "Your face or your fingerprint, and nothing to remember.",
+  computer: (gift: boolean) => `This computer did not find a fingerprint reader or Windows Hello. Use a security key, or open ${linkOf(gift)} on your phone.`,
+  ifItKeepsFailing: {
+    iphone: (gift: boolean) => `If it keeps failing on this iPhone: in Settings, turn on AutoFill Passwords and Passkeys, and open ${linkOf(gift)} in Safari.`,
+    android: (gift: boolean) => `If it keeps failing on this phone: set a screen lock on it, and open ${linkOf(gift)} in Chrome.`,
+  },
+  /** An iPhone below iOS 18: the passkey an account is made from does not exist there (Mera's authenticator table). */
+  outdated: "Update your iPhone to create your account. Viky needs iOS 18 or later.",
+  samePasskey: "The same passkey you made your account with.",
+  another: "A second account would not hold what the first one does.",
+} as const;
+
 /** Gifts: everything given and received. */
 export const GIFTS = {
   title: "Gifts",
@@ -1333,8 +1367,11 @@ export const SHOW_PROOF = {
   keptVerdict: "Viky keeps only whether it reaches what this gift is for.",
   keptNumber: "Viky keeps what it proves and nothing else.",
   button: "Show it",
-  opening: "Opening the verification",
-  waiting: "Waiting for the proof",
+  preparing: "Preparing the verification",
+  /** The link the person presses themselves, named after where they sign in: it opens the verification page in a new tab. */
+  signInTo: (source: string) => `Sign in to ${spokenTo(source)}`,
+  waiting: "Waiting for the proof. Come back to this page when you are done there.",
+  stopWaiting: "Stop waiting",
   shown: (score: string) => `Shown: ${score}. It is yours.`,
   /**
    * Under the target (D185): said with the number, to the person who showed it and to nobody else, since the number

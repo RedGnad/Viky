@@ -324,13 +324,39 @@ export async function rotateClaimToken(giftId: string, funder: string): Promise<
   return rows.length === 1 ? token : null;
 }
 
-/** Records the claim once; a second claimant finds the row already taken. */
-export async function markClaimed(giftId: string, recipient: string, claimedTx: Hex): Promise<boolean> {
+/** Records the claim once; a second claimant finds the row already taken. The transaction is null only when it is not known (`reconcileClaim`). */
+export async function markClaimed(giftId: string, recipient: string, claimedTx: Hex | null): Promise<boolean> {
+  // The same recipient may be written twice, once without its transaction by a reading that found the opening on the
+  // contract first: the second writing then only adds the transaction.
   const rows = await sql()`
-    UPDATE viky_gifts SET recipient = ${recipient.toLowerCase()}, claimed_tx = ${claimedTx}, claimed_at = now()
-     WHERE gift_id = ${giftId} AND recipient IS NULL
+    UPDATE viky_gifts SET recipient = ${recipient.toLowerCase()}, claimed_tx = COALESCE(${claimedTx}, claimed_tx), claimed_at = COALESCE(claimed_at, now())
+     WHERE gift_id = ${giftId} AND (recipient IS NULL OR (recipient = ${recipient.toLowerCase()} AND claimed_tx IS NULL))
      RETURNING gift_id`;
   return rows.length === 1;
+}
+
+/**
+ * An opening that succeeded on the contract is always written down (the audit of 1 Oct 2026). The route relays the
+ * opening and then records it; when the second step fails, a timeout or a database that did not answer, the contract
+ * names a recipient the database does not know: the person is told to "open the gift first" on a gift that is theirs,
+ * and its link still looks unused. So whoever reads the gift mends it: where the contract names a recipient and the
+ * record has none, the record takes the contract's. The contract is the truth here; nothing is ever unwritten.
+ *
+ * Answers the record as it now stands. A write that fails changes nothing and is tried again at the next reading.
+ */
+export async function reconcileClaim(
+  record: GiftRecord,
+  chainRecipient: string | null,
+  claimedTx: Hex | null,
+  write: (giftId: string, recipient: string, claimedTx: Hex | null) => Promise<boolean> = markClaimed,
+): Promise<GiftRecord> {
+  if (!chainRecipient || record.recipient) return record;
+  try {
+    await write(record.giftId, chainRecipient, claimedTx);
+  } catch {
+    return record;
+  }
+  return { ...record, recipient: chainRecipient.toLowerCase(), claimedTx: claimedTx ?? record.claimedTx };
 }
 
 export async function loadGiftsOf(account: string): Promise<GiftRecord[]> {

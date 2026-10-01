@@ -4,8 +4,8 @@ import { readAccountAuthSession } from "./account-auth-server";
 import { assertNotTooSmall } from "./relay-admission";
 import { newChessCode } from "./chess-reading";
 import { attestClimbRating, isClimbReadError } from "./climb-reading";
-import { GiftApiError, NO_STORE } from "./gift-api";
-import { holdsGiftLink, loadGift, loadRelayed, markClaimed, type GiftRecord } from "./gift-store";
+import { GiftApiError, NO_STORE, refuseOwnGift } from "./gift-api";
+import { holdsGiftLink, loadGift, loadRelayed, markClaimed, reconcileClaim, type GiftRecord } from "./gift-store";
 import { milestoneById, cadenceOfGoal, CHESS_MILESTONE } from "./milestone-conditions";
 import { runMilestoneReading } from "./milestone-reading";
 import { tellAboutMilestone } from "./morning-send";
@@ -50,7 +50,9 @@ export async function milestoneStatusFor(
   const isRecipient = viewer !== null && state.recipient !== null && viewer === state.recipient.toLowerCase();
   const isFunder = viewer !== null && viewer === state.funder.toLowerCase();
   const holdsTheLink = holdsGiftLink(record, reader.linkKey);
-  const { status } = await loadMilestoneStatus(record, { isRecipient, isFunder, holdsTheLink });
+  // An opening the contract holds and the database missed is written down as the gift is read.
+  const kept = await reconcileClaim(record, state.recipient, relayed.find((entry) => entry.kind === "claim")?.txHash ?? null);
+  const { status } = await loadMilestoneStatus(kept, { isRecipient, isFunder, holdsTheLink });
   return { ...status, recorded: relayed.map((entry) => ({ kind: entry.kind, txHash: entry.txHash, blockNumber: entry.blockNumber?.toString() ?? null })) };
 }
 
@@ -60,6 +62,7 @@ export async function milestoneStatusResponse(request: Request, record: GiftReco
 }
 
 export async function milestoneClaim(input: { record: GiftRecord; recipient: string }): Promise<NextResponse> {
+  refuseOwnGift(input.record, input.recipient);
   const result = await relayMilestoneClaim({ giftId: input.record.giftId, contract: escrowOf(input.record), recipient: getAddress(input.recipient), contactHash: input.record.contactHash });
   await markClaimed(input.record.giftId, input.recipient, result.hash);
   return NextResponse.json({ giftId: input.record.giftId, opened: true }, { headers: NO_STORE });

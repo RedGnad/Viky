@@ -3,13 +3,14 @@ import { Trace } from "./kit/Trace";
 import { VisitCounts } from "./kit/VisitCounts";
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { signedInAccount, zoneOfTheReader } from "@/src/who-is-reading";
+import { browserOfTheReader, originOfThePage, signedInAccount, zoneOfTheReader } from "@/src/who-is-reading";
 import { ReaderZoneProvider } from "@/src/client/reader-zone";
 import { APPEARANCE_COOKIE } from "@/src/theme";
 import { loadPreferences } from "@/src/preferences-store";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { dmSans, fredoka } from "./fonts";
+import { DoorProvider } from "@/src/account/door";
 import { AccountProvider } from "@/src/account/provider";
 import { MoneyStartProvider } from "@/src/client/money-start";
 import { CARD_COOKIE, cardFromCookie } from "@/src/card-cookie";
@@ -151,6 +152,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const seen = seenFromCookie((await cookies()).get(SEEN_COOKIE)?.value);
   /** The minute this page is drawn at, so dated things are in the first image and hydration reads the same one. */
   const minute = renderMinute();
+  /** Which browser asks, so a page opened inside another app says where the account is made from its first image. */
+  const userAgent = await browserOfTheReader();
+  const origin = await originOfThePage();
   return (
     // The look's font variables sit on the document itself, because app/globals.css reads them from :root.
     <html lang="en" dir="ltr" className={`${fredoka.variable} ${dmSans.variable}`} {...(chosen ? { "data-theme": chosen } : {})}>
@@ -179,6 +183,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           {/* A press a finger can see, on every control, once (D154). */}
           <Pressed />
           <AccountProvider initialAccount={signedIn}>
+            <DoorProvider userAgent={userAgent} origin={origin}>
             <MoneyStartProvider start={{ currency: money.currency, decided: money.decided, rates: money.rates, card: keptCard }}>
               <ReaderZoneProvider zone={zone}>
                 <SeenProvider initial={seen}>
@@ -186,6 +191,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                 </SeenProvider>
               </ReaderZoneProvider>
             </MoneyStartProvider>
+            </DoorProvider>
           </AccountProvider>
         </SerwistProvider>
       </body>

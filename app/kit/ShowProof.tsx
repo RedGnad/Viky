@@ -1,22 +1,27 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { agreeFirst } from "@/src/client/consent";
 import { ApiError } from "@/src/client/api";
-import { runShownProof } from "@/src/client/gift";
+import { awaitShownProof, openShownProof } from "@/src/client/gift";
 import { verdictOnly } from "@/src/condition-privacy";
 import { conditionById } from "@/src/conditions";
 import { SHOW_PROOF as W } from "@/src/sentences";
-import { BODY, HELP, PRIMARY_BUTTON } from "../components/ui";
+import { BODY, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../components/ui";
 
 /**
- * The one gesture of a shown condition (D162): the person the gift is for presses "Show it", a verification tab
- * opens on the source's own sign-in, and the proof comes back to Viky's server, which checks it and relays it. The
- * funder has no gesture here, and a reader who is neither has none anywhere.
+ * The one gesture of a shown condition (D162): the person the gift is for presses "Show it", signs in to the source on
+ * a verification page, and the proof comes back to Viky's server, which checks it and relays it. The funder has no
+ * gesture here, and a reader who is neither has none anywhere.
+ *
+ * In two steps (the audit of 1 Oct 2026). The press signs the yes and opens the session, and those take a moment: a
+ * window opened after them is no longer the press's own, and Safari blocks it. So the press prepares, and the
+ * verification page is then a real link, named after where the person signs in, that they press themselves. It stays
+ * on the screen to be opened again, with the wait under it and a way to stop waiting.
  *
  * The character at the head of the page answers a proof shown as it answers a day earned: once, from the button,
  * the happy face (app/kit/mood.ts), and back to rest by itself.
  */
-type State = { at: "asking" } | { at: "opening" } | { at: "waiting"; attempt: number } | { at: "done"; score: string } | { at: "held" } | { at: "refused"; message: string };
+type State = { at: "asking" } | { at: "preparing" } | { at: "waiting"; requestUrl: string } | { at: "done"; score: string } | { at: "held" } | { at: "refused"; message: string };
 
 const CARD = "on-paper flex flex-col gap-[var(--space-md)] rounded-[var(--radius-card)] p-[var(--space-lg)]";
 
@@ -30,22 +35,22 @@ export function ShowProof({
 }: Readonly<{ giftId: string; conditionId: string; yours: boolean; /** A first proof under review, or refused by it (D312). */ review?: "building" | "pending" | "refused" | null; /** A refusal in its own words, where it has them. */ reviewMessage?: string | null; onShown: () => Promise<void> | void }>) {
   const condition = conditionById(conditionId);
   const [state, setState] = useState<State>({ at: "asking" });
-  const button = useRef<HTMLButtonElement>(null);
+  const waiting = useRef<AbortController | null>(null);
+  // A wait still running when the page is left asks nothing more.
+  useEffect(() => () => waiting.current?.abort(), []);
   if (!yours || !condition || condition.nature !== "shown") return null;
-  const busy = state.at === "opening" || state.at === "waiting";
 
   const show = async () => {
-    setState({ at: "opening" });
+    setState({ at: "preparing" });
+    const stop = new AbortController();
+    waiting.current = stop;
     try {
       // Opening the portal is the yes, signed before anything is shown (the founder, 29 Sep 2026).
       await agreeFirst(giftId);
-      const outcome = await runShownProof({
-        giftId,
-        conditionId,
-        phase: "reach",
-        openUrl: (url) => window.open(url, "_blank", "noopener"),
-        onWaiting: (attempt) => setState({ at: "waiting", attempt }),
-      });
+      const session = await openShownProof({ giftId, conditionId, phase: "reach" });
+      if (stop.signal.aborted) return;
+      setState({ at: "waiting", requestUrl: session.requestUrl });
+      const outcome = await awaitShownProof({ sessionId: session.sessionId, signal: stop.signal });
       if (outcome.kind === "reached") {
         setState({ at: "done", score: outcome.shown });
         await onShown();
@@ -63,6 +68,7 @@ export function ShowProof({
         NOT_CONFIGURED: W.refusals.notConfigured,
         PROOF_TOO_OLD: W.refusals.tooOld,
         TIMED_OUT: W.refusals.tooOld,
+        // Stopped by the person: the button is back, and the page says nothing was changed.
         CANCELLED: W.refusals.cancelled,
       };
       setState({ at: "refused", message: said[code] ?? (error instanceof ApiError && error.message ? error.message : W.refusals.unavailable) });
@@ -92,9 +98,23 @@ export function ShowProof({
       <p className={HELP}>
         {W.whatHappens(condition.source)} {W.kept[conditionId] ?? (verdictOnly(conditionId) ? W.keptVerdict : W.keptNumber)}
       </p>
-      <button ref={button} type="button" onClick={() => void show()} disabled={busy} className={PRIMARY_BUTTON}>
-        {state.at === "opening" ? W.opening : state.at === "waiting" ? W.waiting : W.button}
-      </button>
+      {state.at === "waiting" ? (
+        <>
+          <a href={state.requestUrl} target="_blank" rel="noopener" className={`${PRIMARY_BUTTON} block text-center no-underline`}>
+            {W.signInTo(condition.source)}
+          </a>
+          <p className={HELP} role="status">
+            {W.waiting}
+          </p>
+          <button type="button" onClick={() => waiting.current?.abort()} className={`${INLINE_BUTTON} self-start`}>
+            {W.stopWaiting}
+          </button>
+        </>
+      ) : (
+        <button type="button" onClick={() => void show()} disabled={state.at === "preparing"} className={PRIMARY_BUTTON}>
+          {state.at === "preparing" ? W.preparing : W.button}
+        </button>
+      )}
       {state.at === "refused" ? (
         <p className={BODY} role="alert">
           {state.message}

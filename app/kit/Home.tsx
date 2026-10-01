@@ -20,6 +20,7 @@ import type { LandingGoals } from "@/src/landing-goals";
 import { MoneyHero } from "./MoneyHero";
 import { SpendOrWithdraw } from "./SpendOrWithdraw";
 import { ReachedMoments, reachedOfSummary, type ReachedGift } from "./ReachedMoment";
+import { DoorNotice } from "./AccountDoor";
 import { OfferCard } from "./offer/OfferCard";
 import { Shell } from "./Shell";
 import { useMyGifts } from "./my-gifts";
@@ -86,6 +87,8 @@ export function Home({
       <Shell kind="destination" active="home" action={<SignInDoor />} bare wide>
         {/* The day characters beside the top, on a screen with room beside the column (the founder, 28 Sep 2026). */}
         <SideCrowd />
+        {/* Inside another app's page no account can be made: said here, before anything is filled in (1 Oct 2026). */}
+        <DoorNotice />
         {/* Home without an account, in the order of the founder's sketch of 24 Sep 2026 (D214, D221): the promise,
             its sentence, the way to the card, the hero moment, then the card. The first four are the first screen, as
             tall as the viewport less what of the card it shows, so the card's top is cut by the fold on every phone

@@ -1,7 +1,7 @@
 import { catchUpSecondsOf } from "./catch-up";
 import { GiftApiError } from "./gift-api";
 import { checkInDayIndex, formatAusd, readGift, utcDayOf } from "./gift-reader";
-import { holdsGiftLink, lastRefundAt, loadGift, loadRelayed, loadSettledDays } from "./gift-store";
+import { holdsGiftLink, lastRefundAt, loadGift, loadRelayed, loadSettledDays, reconcileClaim } from "./gift-store";
 import { isMilestoneGiftId } from "./milestone-protocol";
 import { milestoneStatusFor } from "./milestone-routes";
 import { escrowOf } from "./relayer";
@@ -32,6 +32,8 @@ export async function giftStatusFor(id: string, reader: GiftReader): Promise<Any
 
   const escrow = escrowOf(record);
   const gift = await readGift(escrow, id);
+  // An opening the contract holds and the database missed is written down as the gift is read.
+  await reconcileClaim(record, gift.recipient, relayed.find((entry) => entry.kind === "claim")?.txHash ?? null);
   const now = Math.floor(Date.now() / 1_000);
   const today = utcDayOf(now);
   const missedSoFar = gift.drainedDays;

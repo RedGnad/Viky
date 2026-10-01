@@ -19,6 +19,17 @@ export class GiftApiError extends Error {
   }
 }
 
+/**
+ * A gift is opened by the person it is for, never by the account that made it (the audit of 1 Oct 2026): a funder who
+ * signed in on their own link was shown "Open my gift" and the route let them, which binds the money to its own giver
+ * and leaves nothing to send. Refused before anything is relayed, with what to do instead.
+ */
+export function refuseOwnGift(gift: Readonly<{ funder: string }>, account: string): void {
+  if (gift.funder.toLowerCase() === account.toLowerCase()) {
+    throw new GiftApiError("OWN_GIFT", "This is the gift you made. Send its link to the person it is for.", 409);
+  }
+}
+
 /** What the contract's typed errors mean to a person. Unknown names fall back to the name itself. */
 const CONTRACT_REFUSALS: Record<string, { code: string; message: string; status: 400 | 404 | 409 | 503 }> = {
   InsufficientProgress: { code: "NOT_ENOUGH_PROGRESS", message: "Not enough yet for a full day. One more lesson and it counts.", status: 409 },

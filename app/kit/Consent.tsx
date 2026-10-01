@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { isAccountError } from "@/src/account/errors";
 import { postJson } from "@/src/client/api";
 import { loadConsent, signConsent, type GiftConsentAnswer } from "@/src/client/consent";
 import { conditionById } from "@/src/conditions";
@@ -18,10 +19,13 @@ import { Sheet } from "./Sheet";
  * "How this is checked", and nothing else. A connected source keeps its own "Disconnect and erase", which is its stop.
  */
 
-/** The gift's agreement as the server holds it, for either of its two people, and a way to read it again. */
-export function useGiftConsent(giftId: string, enabled: boolean): { answer: GiftConsentAnswer | null; reload: () => void } {
+/**
+ * The gift's agreement as the server holds it, for either of its two people, and a way to read it again. Reading it
+ * again answers when it is read: the page reads the agreement and then the gift after a gesture that signed the yes,
+ * so it never says "reads nothing" over a gift it has just begun to read (the audit of 1 Oct 2026).
+ */
+export function useGiftConsent(giftId: string, enabled: boolean): { answer: GiftConsentAnswer | null; reload: () => Promise<void> } {
   const [answer, setAnswer] = useState<GiftConsentAnswer | null>(null);
-  const [asked, setAsked] = useState(0);
   useEffect(() => {
     if (!enabled) return;
     let live = true;
@@ -37,8 +41,15 @@ export function useGiftConsent(giftId: string, enabled: boolean): { answer: Gift
     return () => {
       live = false;
     };
-  }, [giftId, enabled, asked]);
-  const reload = useCallback(() => setAsked((count) => count + 1), []);
+  }, [giftId, enabled]);
+  const reload = useCallback(
+    () =>
+      loadConsent(giftId).then(
+        (loaded) => setAnswer(loaded),
+        () => setAnswer(null),
+      ),
+    [giftId],
+  );
   return { answer: enabled ? answer : null, reload };
 }
 
@@ -129,8 +140,8 @@ export function ConsentLine({
     try {
       await signConsent(giftId, "yes", answer);
       onChanged();
-    } catch {
-      setProblem(C.failed);
+    } catch (error) {
+      setProblem(isAccountError(error) && error.code === "OTHER_ACCOUNT" ? error.guidance : C.failed);
     } finally {
       setBusy(false);
     }
@@ -142,8 +153,8 @@ export function ConsentLine({
       await stopReading(giftId, conditionId, answer);
       setSheet(false);
       onChanged();
-    } catch {
-      setProblem(C.stopFailed);
+    } catch (error) {
+      setProblem(isAccountError(error) && error.code === "OTHER_ACCOUNT" ? error.guidance : C.stopFailed);
     } finally {
       setBusy(false);
     }

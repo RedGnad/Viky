@@ -88,7 +88,7 @@ export function useLoaded(): boolean {
  * The moments this screen owes, played one after another once the page has loaded. Each is written as seen on the
  * account the moment it is shown, so a reload, another tab or another device does not play it again.
  */
-export function ReachedMoments({ gifts }: Readonly<{ gifts: readonly ReachedGift[] }>) {
+export function ReachedMoments({ gifts, here }: Readonly<{ gifts: readonly ReachedGift[]; here?: OnItsPage }>) {
   const loaded = useLoaded();
   // Held once owed: the list read again after the first is written seen no longer carries it, and a moment playing
   // must not be taken off the screen by its own write.
@@ -101,14 +101,22 @@ export function ReachedMoments({ gifts }: Readonly<{ gifts: readonly ReachedGift
     if (now) void markReachedSeen(now.giftId).catch(() => undefined);
   }, [now]);
   if (!now) return null;
-  return <ReachedMoment key={now.giftId} gift={now} onClose={() => setDone((was) => [...was, now.giftId])} />;
+  return <ReachedMoment key={now.giftId} gift={now} here={here} onClose={() => setDone((was) => [...was, now.giftId])} />;
 }
+
+/**
+ * What the moment's one action does when the moment is played over the gift's own page. There, a link to the gift is a
+ * link to the page one is already on: nothing closed the moment and two presses did nothing (the audit of 1 Oct 2026).
+ * So the action is a button: it closes the moment, and for the person the gift is for it then opens the review of the
+ * take. Whatever replaces the animation keeps this: the gesture belongs to the page, not to the drawing.
+ */
+export type OnItsPage = Readonly<{ onTake: () => void }>;
 
 /**
  * On the gift's own page: the moment, when this account arrives here before it has had it (from a notification, a
  * link), and "See it again", which replays it whenever asked and writes nothing.
  */
-export function ReachedOnItsPage({ gift }: Readonly<{ gift: ReachedGift }>) {
+export function ReachedOnItsPage({ gift, onTake }: Readonly<{ gift: ReachedGift; onTake: () => void }>) {
   const [owed, setOwed] = useState(false);
   const [again, setAgain] = useState(false);
   useEffect(() => {
@@ -124,11 +132,11 @@ export function ReachedOnItsPage({ gift }: Readonly<{ gift: ReachedGift }>) {
   }, [gift.giftId]);
   return (
     <>
-      <ReachedMoments gifts={owed ? [gift] : []} />
+      <ReachedMoments gifts={owed ? [gift] : []} here={{ onTake }} />
       <button type="button" onClick={() => setAgain(true)} className={`${INLINE_BUTTON} self-start`}>
         {W.seeItAgain}
       </button>
-      {again ? <ReachedMoment gift={gift} onClose={() => setAgain(false)} /> : null}
+      {again ? <ReachedMoment gift={gift} here={{ onTake }} onClose={() => setAgain(false)} /> : null}
     </>
   );
 }
@@ -168,7 +176,7 @@ function rain(layer: HTMLElement): Animation[] {
   return animations;
 }
 
-export function ReachedMoment({ gift, onClose }: Readonly<{ gift: ReachedGift; onClose: () => void }>) {
+export function ReachedMoment({ gift, here, onClose }: Readonly<{ gift: ReachedGift; /** Set when the moment plays over the gift's own page. */ here?: OnItsPage; onClose: () => void }>) {
   const { address } = useAccount();
   const money = useDisplayCurrency(address);
   const zone = useReaderZone();
@@ -248,7 +256,18 @@ export function ReachedMoment({ gift, onClose }: Readonly<{ gift: ReachedGift; o
           <ExactLine amount={led} />
         </div>
         <div className="mt-[var(--space-md)] w-full">
-          {recipient ? (
+          {here ? (
+            <button
+              type="button"
+              className={PRIMARY_BUTTON}
+              onClick={() => {
+                close();
+                if (recipient) here.onTake();
+              }}
+            >
+              {recipient ? W.take(gift.takeDisplay) : W.seeTheGift}
+            </button>
+          ) : recipient ? (
             <Link href={`/g/${gift.giftId}?take=1`} className={`${PRIMARY_BUTTON} block text-center no-underline`}>
               {W.take(gift.takeDisplay)}
             </Link>
