@@ -14,6 +14,7 @@ import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain"
 import { JudgesConditions } from "./JudgesConditions";
 import { JudgesContracts } from "./JudgesContracts";
 import { JudgesEarlyGifts } from "./JudgesEarlyGifts";
+import { JudgesIndex } from "./JudgesIndex";
 import { JudgesReliability } from "./JudgesReliability";
 import { JudgesVerify } from "./JudgesVerify";
 
@@ -91,9 +92,23 @@ export default async function JudgesPage() {
           <li>
             One Passkey, Many Keys: the same sign-in asks the passkey&apos;s PRF for a second salt,
             sha256(&quot;viky:consent:v1&quot;), and its output is an Ed25519 key held in memory. It signs the recipient&apos;s yes
-            to what a gift reads, and their stop, and nothing else: it cannot move money. Every reading that could move
-            money checks the latest signed yes first (src/consent-guard.ts), and the same passkey on a second device
-            gives the same public key, so the stop is honoured from anywhere.
+            to what a gift reads, and their stop, and nothing else: it cannot move money. In six gestures:
+            <ol className="list-decimal space-y-[var(--space-xs)] pl-[var(--space-lg)] pt-[var(--space-xs)]">
+              <li>Sign in on this device. The one prompt asks the passkey for both salts.</li>
+              <li>
+                Read &quot;Your agreement key&quot; at the foot of this page: the public half of that Ed25519 key, from this
+                page&apos;s memory.
+              </li>
+              <li>
+                Open a gift made for you and press Agree on the line under its card: that yes is signed by this key.
+              </li>
+              <li>On a second device, sign in with the same passkey.</li>
+              <li>Read &quot;Your agreement key&quot; there: it is the same key.</li>
+              <li>
+                Press Stop on the gift from the second device. Back on the first, the gift says Viky stopped reading:
+                every reading that could move money checks the latest signed yes first (src/consent-guard.ts).
+              </li>
+            </ol>
           </li>
         </ol>
       </section>
@@ -181,6 +196,8 @@ export default async function JudgesPage() {
       <JudgesContracts />
 
       <JudgesEarlyGifts />
+
+      <JudgesIndex />
 
       {/* How money comes in (D289): through a licensed partner, the asset named, and the next step said as it is. */}
       <section className="space-y-[var(--space-sm)]">

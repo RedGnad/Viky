@@ -7,7 +7,7 @@ import {
 } from "@category-labs/mera";
 import { toViemAccount } from "@category-labs/mera/viem";
 import type { Address, LocalAccount } from "viem";
-import { consentWebAuthnClient, endConsentKey } from "../client/consent-key";
+import { ceremonyClient, endConsentKey } from "../client/consent-key";
 import { deriveEvmPrivateKey } from "./derive";
 import { accountError, passkeyEnvironmentProblem, toAccountError } from "./errors";
 import { accountsAreMadeOn } from "./passkey-support";
@@ -186,7 +186,7 @@ export async function createAccount(displayName: string): Promise<Address> {
       rp: { id: relyingPartyId(), name: RELYING_PARTY_NAME },
       user: { name, displayName: name },
       // The consent key is asked in the same ceremony, as a second salt: no prompt is added.
-      webAuthnClient: consentWebAuthnClient,
+      webAuthnClient: ceremonyClient(),
     });
     rememberCredential({ credentialId: created.credentialId, transports: created.transports });
     return openSession(created.prfOutput);
@@ -206,7 +206,7 @@ export async function signIn(options: { as?: Promise<Address | null> } = {}): Pr
   requirePasskeyCapableBrowser();
   const known = storedCredential();
   try {
-    const result = await getPasskeyPrfOutput({ rpId: relyingPartyId(), credential: known, webAuthnClient: consentWebAuthnClient });
+    const result = await getPasskeyPrfOutput({ rpId: relyingPartyId(), credential: known, webAuthnClient: ceremonyClient() });
     let only: Address | undefined;
     if (options.as) {
       const named = await options.as.catch(() => null);
