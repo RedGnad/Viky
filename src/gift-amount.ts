@@ -39,6 +39,14 @@ const UNSPENDABLE_COINS = 11;
  */
 const RATE_MARGIN = 1.1;
 
+/**
+ * What a card that buys another dollar coin is allowed to lose between the euros paid and what a gift holds: one part
+ * in a hundred. It covers that service's own rate, read 0.3 % under the European Central Bank's on 1 Oct 2026, the
+ * network's share of the purchase, and the change into what a gift holds, read at 0.04 % at worst the same day. Not a
+ * margin on a moving price, since a dollar coin does not move against the dollar: what is not used stays in the account.
+ */
+export const DOLLAR_COIN_ALLOWANCE = 0.01;
+
 /** What a card payment is worth inside Viky, at the rate measured. An estimate, and named as one. */
 export function roughlyInDollars(euros: number): number {
   const coins = euros * COIN_PER_EURO - UNSPENDABLE_COINS;
@@ -66,7 +74,7 @@ export function giftCoinDollars(euros: number, way: WayIn, usdPerEur: number): n
  */
 export function serviceChargeEur(euros: number, fee: PublishedFee): number {
   if (!(euros > 0)) return 0;
-  return Math.max((euros * fee.percent) / 100, fee.minimum);
+  return Math.max((euros * fee.percent) / 100 + (fee.plus ?? 0), fee.minimum);
 }
 
 /** The same figure in dollars at the day's rate, for the line on the sheet, and nothing without a rate. */
@@ -100,6 +108,7 @@ export function serviceChargeIsCeiling(euros: number, fee: PublishedFee): boolea
  */
 export function arrivesInDollars(euros: number, way: WayIn, usdPerEur: number | undefined): number | undefined {
   if (way.arrives === "chain") return roughlyInDollars(euros);
+  if (way.arrives === "usdc") return usdPerEur === undefined ? undefined : Math.max(0, (euros - serviceChargeEur(euros, way.fee)) * usdPerEur * (1 - DOLLAR_COIN_ALLOWANCE));
   return usdPerEur === undefined ? undefined : giftCoinDollars(euros, way, usdPerEur);
 }
 
@@ -137,9 +146,12 @@ export function eurosNeededOn(shortfallUnits: bigint, way: WayIn, usdPerEur: num
   if (way.arrives === "chain") return eurosToCover(shortfallUnits);
   if (!(usdPerEur !== undefined && usdPerEur > 0)) return undefined;
   const dollars = Number(shortfallUnits) / 1_000_000;
-  const euros = dollars / usdPerEur;
-  // Their fee both ways round: the share is taken out of what is paid, so the amount grows by 1/(1 - share).
-  const withShare = way.fee.percent > 0 ? euros / (1 - way.fee.percent / 100) : euros;
+  // Another dollar coin is bought at that service's own rate and then changed: both are allowed for, so the gift is
+  // paid whole and what is left over stays in the account (the founder, 1 Oct 2026).
+  const euros = dollars / usdPerEur / (way.arrives === "usdc" ? 1 - DOLLAR_COIN_ALLOWANCE : 1);
+  // Their fee both ways round: the share is taken out of what is paid, so the amount grows by 1/(1 - share), after
+  // the fixed part they take on every payment when they take one.
+  const withShare = (euros + (way.fee.plus ?? 0)) / (1 - way.fee.percent / 100);
   const withMinimum = euros + way.fee.minimum;
   return Math.ceil(Math.max(withShare, withMinimum));
 }

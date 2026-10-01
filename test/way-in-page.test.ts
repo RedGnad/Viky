@@ -28,7 +28,7 @@ test("without the key, Ramp opens bare, where it works, and nothing says it is f
   assert.equal(wayInPage(WAY_IN_GIFT_COIN, { account: ACCOUNT, euros: 26 }, undefined), RAMP_BARE_PAGE);
   assert.equal(wayInFillsIn(WAY_IN_GIFT_COIN, undefined), false);
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.match(sheet, /wayInFillsIn\(way\) \? W\.partnerFilledIn : W\.partnerPaste\(way\.name, way\.delivers\.coin, way\.delivers\.network, way\.arrives === "gift"\)/);
+  assert.match(sheet, /wayInFillsIn\(way\)\n\s*\? W\.partnerFilledIn\n\s*: W\.partnerPaste\(way\.name, way\.delivers\.coin, way\.delivers\.network, way\.arrives === "gift"\)/);
   assert.match(PAY.partnerFilledIn, /Your account is already filled in\./);
 });
 

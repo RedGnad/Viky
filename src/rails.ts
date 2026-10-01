@@ -93,8 +93,11 @@ export type WayIn = Readonly<{
   name: string;
   /** Their own page, opened beside ours. */
   page: string;
-  /** What lands in the account: what a gift holds, or the chain's own coin, which must then be swapped. */
-  arrives: "gift" | "chain";
+  /**
+   * What lands in the account: what a gift holds; the chain's own coin, which must then be swapped; or another dollar
+   * coin, USDC, which is changed one for one into what a gift holds by one step the person confirms.
+   */
+  arrives: "gift" | "chain" | "usdc";
   /**
    * The two words that rail's own page asks the person to set. They are that service's names for a coin and a
    * network, not ours: a data contract with a page we do not control (D32), quoted and never explained away.
@@ -115,6 +118,11 @@ export type WayIn = Readonly<{
    * published list (the founder, 29 Sep 2026: each partner follows its own list, never the other's).
    */
   closedIn: readonly string[];
+  /**
+   * For a rail that publishes where it serves rather than where it does not: the only countries it is offered in.
+   * Absent, the rail is offered wherever `closedIn` does not shut it.
+   */
+  openIn?: readonly string[];
   /** Their own terms for a person buying, on their official site: what the payer accepts by paying by card. */
   terms: string;
   /**
@@ -241,10 +249,73 @@ export const WAY_IN_EMBEDDED: WayIn = {
 };
 
 /**
+ * The countries Rampnow lists as fully supported (`https://docs.rampnow.io/quickstart/resources/supported-countries`,
+ * read 1 Oct 2026): 103 of them. France, the United Kingdom and the United States are among them. Senegal and Ivory
+ * Coast are not: with Canada, Morocco, Nigeria and some forty others they stand under "Restricted", "limited
+ * availability" that "may require additional review and approval", and Rampnow is not offered there.
+ */
+export const RAMPNOW_OPEN_IN: readonly string[] = [
+  "ad", "ae", "am", "ar", "at", "au", "aw", "az", "ba", "bb", "be", "bh", "bm", "bn", "br", "bs", "bt", "bz", "ch", "cl",
+  "co", "cr", "cw", "cy", "cz", "de", "dk", "do", "ec", "ee", "es", "fi", "fj", "fm", "fo", "fr", "gb", "ge", "gg", "gi",
+  "gl", "gr", "gy", "hk", "hr", "hu", "id", "ie", "il", "im", "in", "is", "it", "je", "jo", "jp", "ke", "kg", "kr", "kw",
+  "kz", "li", "lk", "lt", "lu", "lv", "me", "mn", "mo", "mt", "mu", "mx", "my", "nl", "no", "nz", "om", "pa", "pe", "pg",
+  "ph", "pl", "pt", "py", "qa", "ro", "rw", "sa", "se", "sg", "si", "sk", "sm", "sv", "th", "tr", "tw", "us", "uy", "uz",
+  "vn", "za", "zm",
+];
+
+/**
+ * Adding money by card through Rampnow's own public page (the founder, 1 Oct 2026), which arrives filled in and locked:
+ * the amount, the euro, the card, USDC on Monad and the payer's own account (`wayInPage`). The person chooses nothing
+ * and pastes nothing. What arrives is USDC, another dollar coin, which one step the person confirms changes into what
+ * a gift holds.
+ *
+ * What was read on 1 Oct 2026, without paying, on `https://app.rampnow.io/order/quote` and the configuration its page
+ * reads (`/api/ramp/v1/public/ramp_order/config`):
+ *
+ * - A card payment in euros keeps 7 % plus 0.40 EUR, and never less than 1.00 EUR: fourteen amounts from 5 to 500 EUR
+ *   answered exactly that (20 EUR: 1.80; 30 EUR: 2.50; 100 EUR: 7.40), with 0.004 EUR for the network. 30 EUR bought
+ *   31.13 USDC. Its rate was 1.1323 dollars a euro when the European Central Bank's was 1.1355, 0.3 % under.
+ * - The smallest card payment is 5 EUR (`paymentModeConfigs.card.minAmount`).
+ * - Its page locks five fields by its address (`lockFields`, read in its script): what is paid, how much, what is
+ *   bought, how, and to whom. Its documentation names the others (`https://docs.rampnow.io/api-reference/widget-mode`).
+ * - It has no AUSD on Monad, and no franc CFA.
+ * - The founder's own try, to the last step before paying: signing in by e-mail and a code, then the recipient shown as
+ *   his account, greyed like the amount and the coin; then a form of identity, a code by text, and an identity check.
+ *
+ * No payment has run through it yet, and the step that changes USDC is not deployed: `rampnowWayIn` keeps it off.
+ */
+export const WAY_IN_USDC: WayIn = {
+  name: "Rampnow",
+  page: "https://app.rampnow.io/order/quote",
+  arrives: "usdc",
+  delivers: { coin: "USDC", network: "Monad" },
+  smallestEur: 5,
+  fee: { percent: 7, upTo: false, plus: 0.4, minimum: 1, currency: "EUR" },
+  conditions: ["The first time: your details, a code by text, and your ID.", "A card in your name."],
+  source: "Rampnow's own quotes",
+  read: "1 Oct 2026",
+  closedIn: [],
+  openIn: RAMPNOW_OPEN_IN,
+  // Its Terms and Conditions of Service, last updated 1 July 2026 (opened 1 Oct 2026).
+  terms: "https://rampnow.io/terms-and-conditions",
+};
+
+/**
  * Both ways in, in the order the sheet tries them (D239): the one with nothing to swap first, the other only when the
  * first refuses. Typed as never empty, so the sheet always has a way to stand in front of its action.
  */
 export const WAYS_IN: readonly [WayIn, ...WayIn[]] = [WAY_IN_GIFT_COIN, WAY_IN_CHAIN_COIN];
+
+/**
+ * Whether Rampnow is offered (the founder, 1 Oct 2026: nothing is turned on before a real payment has run). Two
+ * settings, and both are needed: `NEXT_PUBLIC_RAMPNOW_WAY_IN` set to "on", and the address of the contract that changes
+ * the USDC that arrives into what a gift holds (`NEXT_PUBLIC_USDC_ROUTER_ADDRESS`). Without that contract a new
+ * account could do nothing with its USDC: it holds none of the chain's coin, and under ten of it an account can call no
+ * contract at all (D53). So the way in cannot be offered before the step that finishes it exists.
+ */
+export function rampnowWayIn(): boolean {
+  return process.env.NEXT_PUBLIC_RAMPNOW_WAY_IN?.trim() === "on" && /^0x[0-9a-fA-F]{40}$/.test(process.env.NEXT_PUBLIC_USDC_ROUTER_ADDRESS?.trim() ?? "");
+}
 
 /**
  * Swapper's integrator id: public by design, it goes in its widget's address. Asked of Swapper by a ticket; set on
@@ -253,11 +324,12 @@ export const WAYS_IN: readonly [WayIn, ...WayIn[]] = [WAY_IN_GIFT_COIN, WAY_IN_C
 export const swapperIntegratorId = (): string | undefined => process.env.NEXT_PUBLIC_SWAPPER_INTEGRATOR_ID?.trim() || undefined;
 
 /**
- * The ways in the sheet tries, in order (the founder, 1 Oct 2026): with Swapper's id, Swapper first, where it serves
- * the payer, then the two others; without it, the two others alone, exactly as before.
+ * The ways in the sheet tries, in order (the founder, 1 Oct 2026): Rampnow first where it is turned on and serves the
+ * payer, then Swapper with its id, then the two there were; with neither, those two alone, exactly as before.
  */
-export function waysIn(id: string | undefined = swapperIntegratorId()): readonly [WayIn, ...WayIn[]] {
-  return id ? [WAY_IN_EMBEDDED, ...WAYS_IN] : WAYS_IN;
+export function waysIn(on: Readonly<{ rampnow?: boolean; swapper?: string }> = { rampnow: rampnowWayIn(), swapper: swapperIntegratorId() }): readonly [WayIn, ...WayIn[]] {
+  if (!on.rampnow && !on.swapper) return WAYS_IN;
+  return [...(on.rampnow ? [WAY_IN_USDC] : []), ...(on.swapper ? [WAY_IN_EMBEDDED] : []), ...WAYS_IN] as unknown as readonly [WayIn, ...WayIn[]];
 }
 
 /**
@@ -279,6 +351,7 @@ export const RAMP_BARE_PAGE = "https://app.ramp.network/";
  * opens bare, where it works. Mercuryo keeps its page: filling it in needs a partner `widget_id`.
  */
 export function wayInPage(way: WayIn, fill: Readonly<{ account?: string; euros?: number }> = {}, key: string | undefined = rampHostApiKey()): string {
+  if (way === WAY_IN_USDC) return rampnowPage(fill);
   if (way !== WAY_IN_GIFT_COIN) return way.page;
   if (!key) return RAMP_BARE_PAGE;
   const address = new URL(way.page);
@@ -291,8 +364,33 @@ export function wayInPage(way: WayIn, fill: Readonly<{ account?: string; euros?:
   return address.toString();
 }
 
+/**
+ * Rampnow's public page, filled in and locked (the founder, 1 Oct 2026): a card payment in euros of this amount, for
+ * USDC on Monad, to this account. `lockFields` names the five fields its page can lock, and `prefill` is the word its
+ * page reads to take them from the address (both read in its script, 1 Oct 2026). No key of ours: its page adds its own.
+ */
+export function rampnowPage(fill: Readonly<{ account?: string; euros?: number }>): string {
+  const address = new URL(WAY_IN_USDC.page);
+  const set = (name: string, value: string) => address.searchParams.set(name, value);
+  set("orderType", "buy");
+  set("srcChain", "fiat");
+  set("srcCurrency", "EUR");
+  if (fill.euros && fill.euros > 0) set("srcAmount", String(Math.ceil(fill.euros)));
+  set("paymentMode", "card");
+  set("dstCurrency", "USDC");
+  set("dstChain", "monad");
+  if (fill.account) set("walletAddress", fill.account);
+  // Only what is filled in is locked: a field locked empty could not be filled by the person either.
+  const locked = ["srcAsset", ...(fill.euros && fill.euros > 0 ? ["srcAmount"] : []), "dstAsset", "paymentMode", ...(fill.account ? ["walletAddress"] : [])];
+  // Written as its own page writes it, with bare commas: the form opened and read on 1 Oct 2026.
+  return `${address.toString()}&lockFields=${locked.join(",")}&prefill=true`;
+}
+
 /** Whether the page a way in opens arrives filled in with the account and the amount. */
-export const wayInFillsIn = (way: WayIn, key: string | undefined = rampHostApiKey()): boolean => way === WAY_IN_GIFT_COIN && key !== undefined;
+export const wayInFillsIn = (way: WayIn, key: string | undefined = rampHostApiKey()): boolean => way === WAY_IN_USDC || (way === WAY_IN_GIFT_COIN && key !== undefined);
+
+/** Whether the person has nothing to set and no code to give on the page a way in opens: it is told all of it already. */
+export const wayInAsksNothing = (way: WayIn): boolean => way.embedded === true || way === WAY_IN_USDC;
 
 /** The rail money was added through before there were two, kept for what still reads a single one. */
 export const WAY_IN: RailHandoff = {
@@ -318,6 +416,8 @@ export type PublishedFee = Readonly<{
   upTo: boolean;
   /** Never less than this much, in `currency`. */
   minimum: number;
+  /** A fixed part taken on every payment beside the share, in `currency`, when they take one. */
+  plus?: number;
   currency: string;
 }>;
 
@@ -362,7 +462,7 @@ export type WayOut = Readonly<{
 export function feeSentence(way: { name: string; fee: PublishedFee; embedded?: true }): string {
   // A way in that publishes no fee of its own: what was measured through it, said as measured.
   if (way.embedded) return `Through ${way.name}, a card payment bought up to ${way.fee.percent} % less than the day's rate when it was read`;
-  const share = `${way.fee.upTo ? "up to " : ""}${way.fee.percent} %`;
+  const share = `${way.fee.upTo ? "up to " : ""}${way.fee.percent} %${way.fee.plus ? ` plus ${way.fee.plus.toFixed(2)} ${way.fee.currency}` : ""}`;
   // A service that publishes no floor for its fee gets no sentence about one: "a minimum of 0.00" would be a figure
   // nobody read (the card rail in, whose published figure is a share alone).
   if (way.fee.minimum <= 0) return `${way.name} keeps ${share}`;

@@ -22,7 +22,9 @@ export function payerCountry(input: Readonly<{ account: string | null | undefine
  * nobody there whatever else is read; otherwise what was read of it live (a pause, its own country answer), or nothing.
  */
 export function cardReach(country: string | null, live: Readonly<Record<string, RailReach>> = {}, ways: readonly WayIn[] = waysIn()): Record<string, RailReach> {
-  return Object.fromEntries(ways.map((way) => [way.name, country && way.closedIn.includes(country) ? "does-not" : (live[way.name] ?? "unknown")]));
+  // A partner that publishes where it serves is offered there alone; one that publishes where it does not, everywhere else.
+  const shut = (way: WayIn) => Boolean(country) && (way.closedIn.includes(country!) || (way.openIn !== undefined && !way.openIn.includes(country!)));
+  return Object.fromEntries(ways.map((way) => [way.name, shut(way) ? "does-not" : (live[way.name] ?? "unknown")]));
 }
 
 /** Whether any card partner serves this country; with no country known, the card is offered and the partner checks. */
