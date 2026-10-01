@@ -1,5 +1,6 @@
 import { SerwistProvider } from "@serwist/turbopack/react";
 import { Trace } from "./kit/Trace";
+import { VisitCounts } from "./kit/VisitCounts";
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { signedInAccount, zoneOfTheReader } from "@/src/who-is-reading";
@@ -173,6 +174,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <SerwistProvider swUrl="/serwist/sw.js" register={false} reloadOnOnline={false}>
           <Register />
           <Trace />
+          {/* Anonymous visit counts, with every address cleaned of its key and its gift number before it leaves. */}
+          <VisitCounts />
           {/* A press a finger can see, on every control, once (D154). */}
           <Pressed />
           <AccountProvider initialAccount={signedIn}>

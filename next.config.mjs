@@ -48,7 +48,15 @@ const nextConfig = {
    * for a year and asks again only when a drawing changes: a reload then paints every character from its own memory.
    */
   async headers() {
-    return [{ source: "/characters.svg", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] }];
+    return [
+      { source: "/characters.svg", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
+      /**
+       * A page's address never travels with a request it makes, only the site's name (the founder, 1 Oct 2026). A
+       * browser puts the whole address of the page, key of a gift's link included, in the `Referer` of every request
+       * that page sends to its own site, and the visit count is one of them. Nothing in Viky reads that header.
+       */
+      { source: "/:path*", headers: [{ key: "Referrer-Policy", value: "strict-origin" }] },
+    ];
   },
   // The repository is the workspace root; a lockfile higher up the tree must not be picked up.
   turbopack: {
