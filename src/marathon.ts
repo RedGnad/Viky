@@ -1,6 +1,7 @@
 import { keccak256, stringToHex, type Hex } from "viem";
 import { normaliseCertificateName } from "./duolingo-english-test";
 import { RACE_RESULT_RACES } from "./race-result-races";
+import { MILESTONE_MAX_DURATION_DAYS } from "./milestone-protocol";
 
 /**
  * "Finish a marathon" (D273, the founder's decision of 26 Sep 2026): a milestone of the Move family, read for the
@@ -330,7 +331,7 @@ export function finishInWords(finishSeconds: number): string {
   return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export const MARATHON_DURATION_DAYS = Object.freeze({ min: 7, max: 400, suggested: 120 });
+export const MARATHON_DURATION_DAYS = Object.freeze({ min: 7, max: MILESTONE_MAX_DURATION_DAYS, suggested: 120 });
 
 /** Goal 30 on `MilestoneGift`, after MITx Online's 29: Breizh Chrono. MikaTiming's is 31 (`MARATHON_TIMERS`). */
 export const MARATHON_GOAL_TYPE = MARATHON_TIMERS["breizh-chrono"].goalType;

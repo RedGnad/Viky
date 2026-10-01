@@ -5,8 +5,8 @@ import { COUNTING_PASS, dailyPass, SETTLING_PASS, type DailyPassDeps } from "../
 import { canExpire, milestonePhase, type MilestoneState } from "../src/milestone-reader";
 import { milestonePass, type MilestonePassDeps } from "../src/milestone-pass";
 import type { MilestoneOutcome } from "../src/milestone-reading";
-import { MILESTONE_DORMANT_SECONDS, MILESTONE_PROOF_GRACE_SECONDS, ZERO_SUBJECT } from "../src/milestone-protocol";
-import { MILESTONE_ACTIONS, MILESTONE_FUND } from "../src/sentences";
+import { MILESTONE_DORMANT_SECONDS, MILESTONE_LATE_PROOF_SECONDS, MILESTONE_PROOF_GRACE_SECONDS, SHAPE_HAVE_OR_NOT, ZERO_SUBJECT } from "../src/milestone-protocol";
+import { FUND, MILESTONE_ACTIONS, MILESTONE_FUND } from "../src/sentences";
 
 const CONTRACT = "0x00000000000000000000000000000000000000c2" as const;
 const ZERO = `0x${"0".repeat(64)}` as const;
@@ -214,7 +214,10 @@ test("before connecting, the recipient is told that only what comes after counts
     MILESTONE_FUND.check.fourteenDays,
     "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
   );
-  assert.match(readFileSync("app/kit/offer/PaySheet.tsx", "utf8"), /milestone \? MILESTONE_FUND\.check\.fourteenDays : FUND\.check\.fourteenDays/);
+  // Something had or not is never connected, so its sentence stops at the fourteen days; when it comes back once
+  // opened is said by its own "if not", dated (the audit of 1 Oct 2026).
+  assert.match(readFileSync("app/kit/offer/PaySheet.tsx", "utf8"), /milestone \? MILESTONE_FUND\.check\.fourteenDays : certificate \? FUND\.check\.fourteenDaysUnopened : FUND\.check\.fourteenDays/);
+  assert.equal(FUND.check.fourteenDaysUnopened, "If nobody opens it within 14 days, it all comes back to you.");
 });
 
 test("the delays mirrored here are the contract's own", () => {
@@ -259,4 +262,90 @@ test("the daily pass leaves milestone gifts to their own pass, on both schedules
   assert.deepEqual(seen, ["count:7", "read:7", "read:7"], "the daily contract is never asked about a milestone gift");
   assert.deepEqual(settles, [false, true]);
   assert.ok(counting.lines.some((line) => line.giftId === "1000000" && line.step === "read"));
+});
+
+/**
+ * The second shape (a certificate, a university, an exam, a race, a competition), which is the student test's. Until
+ * 1 Oct 2026 the keeper never closed one: `canExpire` answered no for anything that was not a climb, while every
+ * screen said "it comes back to you". Its clock runs from the funding, it never has a first reading, and what was
+ * granted in time may still be shown for fourteen days after the last day.
+ */
+const HAD_OR_NOT: MilestoneState = { ...CLIMBING, giftId: "1000007", shape: SHAPE_HAVE_OR_NOT, target: 1n, maximumStart: 0n, identityHash: ZERO, startingValue: 0n, lastProofAt: 0, deadline: FUNDED + 30 * 86_400 };
+const LAST_DAY = HAD_OR_NOT.deadline;
+const nothingRead: MilestoneOutcome = { kind: "already", giftId: "1000007", reason: "deadline_passed" };
+
+test("a had-or-not gift nobody opened comes back after fourteen days and the grace, like any gift", async () => {
+  const unopened = { ...HAD_OR_NOT, recipient: null, claimedAt: 0 };
+  const wait = MILESTONE_DORMANT_SECONDS + MILESTONE_PROOF_GRACE_SECONDS;
+  assert.equal(canExpire(unopened, FUNDED + wait - 1), false);
+  assert.equal(canExpire(unopened, FUNDED + wait), true, "the funder never waits the whole length, which may be a year");
+  const run = world(unopened, nothingRead, FUNDED + wait);
+  const lines = await milestonePass(true, run.deps);
+  assert.deepEqual(run.calls, ["expire:1000007", "refund:1000007"]);
+  assert.deepEqual(lines.map((line) => `${line.step}:${line.result}`), ["expire:sent", "refund:sent"]);
+});
+
+test("a had-or-not gift opened and never proved goes back two weeks after its last day, and not a second before", async () => {
+  assert.equal(MILESTONE_LATE_PROOF_SECONDS, 14 * 86_400);
+  assert.match(readFileSync("contracts/MilestoneGift.sol", "utf8"), /uint256 public constant LATE_PROOF_WINDOW = 14 days;/, "pinned against the contract's own window");
+  // The last day has passed, the late window has not: what was granted in time can still be shown.
+  assert.equal(canExpire(HAD_OR_NOT, LAST_DAY + MILESTONE_PROOF_GRACE_SECONDS + 1), false, "the climb's grace is not this shape's");
+  assert.equal(canExpire(HAD_OR_NOT, LAST_DAY + MILESTONE_LATE_PROOF_SECONDS), false);
+  assert.equal(canExpire(HAD_OR_NOT, LAST_DAY + MILESTONE_LATE_PROOF_SECONDS + 1), true);
+  let run = world(HAD_OR_NOT, nothingRead, LAST_DAY + 13 * 86_400);
+  await milestonePass(true, run.deps);
+  assert.deepEqual(run.calls, [], "nothing is taken back inside the window");
+  // Overdue by fifteen days: the pass asks the contract to close it, then sends the whole amount back.
+  run = world(HAD_OR_NOT, nothingRead, LAST_DAY + 15 * 86_400);
+  const lines = await milestonePass(true, run.deps);
+  assert.deepEqual(run.calls, ["expire:1000007", "refund:1000007"]);
+  assert.equal(run.state().refundedToFunder, 25_000_000n, "all of it went back");
+  assert.deepEqual(lines.map((line) => `${line.step}:${line.result}`), ["expire:sent", "refund:sent"]);
+  // The counting pass never sends money back.
+  run = world(HAD_OR_NOT, nothingRead, LAST_DAY + 15 * 86_400);
+  await milestonePass(false, run.deps);
+  assert.deepEqual(run.calls, []);
+  // The branch is asked before the first reading's: this shape never has one, and in the other order the keeper
+  // would send, every day from the fourteenth after the opening, an expire the contract refuses as too early.
+  const justOpened = { ...HAD_OR_NOT, deadline: FUNDED + 300 * 86_400 };
+  assert.equal(canExpire(justOpened, justOpened.claimedAt + MILESTONE_DORMANT_SECONDS + MILESTONE_PROOF_GRACE_SECONDS + 86_400), false);
+});
+
+test("a pause across the last day moves a had-or-not gift's window to the pause's end", () => {
+  assert.equal(canExpire({ ...HAD_OR_NOT, proofPaused: true }, LAST_DAY + 60 * 86_400), false, "never during a pause");
+  const resumed = LAST_DAY + 3 * 86_400;
+  assert.equal(canExpire({ ...HAD_OR_NOT, proofResumedAt: resumed }, LAST_DAY + MILESTONE_LATE_PROOF_SECONDS + 1), false);
+  assert.equal(canExpire({ ...HAD_OR_NOT, proofResumedAt: resumed }, resumed + MILESTONE_LATE_PROOF_SECONDS), false);
+  assert.equal(canExpire({ ...HAD_OR_NOT, proofResumedAt: resumed }, resumed + MILESTONE_LATE_PROOF_SECONDS + 1), true);
+  // A pause that ended before the last day changes nothing.
+  assert.equal(canExpire({ ...HAD_OR_NOT, proofResumedAt: LAST_DAY - 86_400 }, LAST_DAY + MILESTONE_LATE_PROOF_SECONDS + 1), true);
+});
+
+test("a had-or-not gift whose first proof is held for review is not taken back, and the report says why", async () => {
+  const run = world(HAD_OR_NOT, nothingRead, LAST_DAY + 15 * 86_400);
+  const asked: string[] = [];
+  run.deps.inReview = async (giftId) => {
+    asked.push(giftId);
+    return true;
+  };
+  const lines = await milestonePass(true, run.deps);
+  assert.deepEqual(asked, ["1000007"]);
+  assert.deepEqual(run.calls, [], "neither closed nor refunded");
+  assert.deepEqual(lines.map((line) => `${line.step}:${line.result}`), ["expire:held: a first proof is under review, decide it (pnpm portal:pin)"]);
+  // Once the review is decided the pass closes it as any other.
+  run.deps.inReview = async () => false;
+  await milestonePass(true, run.deps);
+  assert.deepEqual(run.calls, ["expire:1000007", "refund:1000007"]);
+  // The review is only asked of a gift that could be closed, and never of a climb or of a gift nobody opened.
+  const early = world(HAD_OR_NOT, nothingRead, LAST_DAY);
+  early.deps.inReview = async () => {
+    throw new Error("not asked");
+  };
+  await milestonePass(true, early.deps);
+  const climb = world(CLIMBING, { kind: "already", giftId: "1000000", reason: "deadline_passed" }, DEADLINE + MILESTONE_PROOF_GRACE_SECONDS + 1);
+  climb.deps.inReview = async () => {
+    throw new Error("not asked");
+  };
+  await milestonePass(true, climb.deps);
+  assert.deepEqual(climb.calls, ["expire:1000000", "refund:1000000"]);
 });

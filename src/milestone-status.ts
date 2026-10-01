@@ -1,7 +1,7 @@
 import type { Hex } from "viem";
 import { formatAusd } from "./gift-reader";
 import type { GiftRecord } from "./gift-store";
-import { cadenceOfGoal, certificateById, certificateOfGoal, CHESS_MILESTONE, milestoneById } from "./milestone-conditions";
+import { askedInWords, cadenceOfGoal, certificateById, certificateOfGoal, CHESS_MILESTONE, milestoneById } from "./milestone-conditions";
 import { milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
 import { SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
 import { attestedReadings, lastReading, latestRating, loadMilestoneGift, type MilestoneRecord, type MilestoneReading } from "./milestone-store";
@@ -95,6 +95,7 @@ export function milestoneStatusOf(input: {
     marathon: marathonOf(input),
     wca: wcaOf(input),
     targetWords: insider ? (input.targetWords ?? null) : null,
+    asked: insider && certificate ? askedInWords(certificate, Number(state.target)) : null,
     review: !reached && input.review && input.review.status !== "pinned" ? { status: input.review.status, ...(input.review.message ? { message: input.review.message } : {}) } : null,
   };
 }

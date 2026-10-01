@@ -28,6 +28,7 @@ import { giftOfMilestone, giftOfSummary, funderMayTakeItBack, readAs } from "@/s
 import { eyebrowOf, liveOf, titleOf } from "@/src/gift-live";
 import { notTheirs, voiceOf, type Voice } from "@/src/gift-voice";
 import { milestoneById } from "@/src/milestone-conditions";
+import { MILESTONE_LATE_PROOF_SECONDS } from "@/src/milestone-protocol";
 import type { AnyGiftStatus } from "@/src/gift-status";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { contractDayInWords, contractRangeInWords, dateInWords, momentInWords, nextPassMs } from "@/src/moments";
@@ -254,6 +255,21 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   const connectBy = moment === "openedNotConnected" && status.claimedAtChain > 0 ? dateInWords((status.claimedAtChain + 14 * 86_400) * 1000, zone) : null;
   const cameBackOn = milestone?.reachedAtMs ? dateInWords(milestone.reachedAtMs, zone) : daily?.lastReturnAtMs ? dateInWords(daily.lastReturnAtMs, zone) : null;
 
+  /**
+   * Something had or not (the audit of 1 Oct 2026): its target on the contract is 1, or a count nobody reads, and is
+   * never printed; and once it has a proof, or its last day has passed, the page says where that stands. What was
+   * granted by the last day may be shown for the contract's late window after it.
+   */
+  const hadOrNot = milestone?.shape === "certificate" ? milestone : null;
+  const lateUntilMs = hadOrNot && hadOrNot.deadlineMs !== null ? hadOrNot.deadlineMs + MILESTONE_LATE_PROOF_SECONDS * 1000 : null;
+  // The contract compares days: the whole of the last day counts, so "past" is the day after it, on its own clock.
+  const pastTheLastDay = Boolean(hadOrNot && hadOrNot.deadlineMs !== null && nowMs !== 0 && Math.floor(nowMs / 86_400_000) > Math.floor(hadOrNot.deadlineMs / 86_400_000));
+  // Where a source dates what it grants, what was had in time can still be proved; where the showing is what is dated,
+  // nothing shown after the last day can pay (src/shown-verification.ts: the day shown is the day sent to the contract).
+  const proofStands = !hadOrNot || gift.finished || !hadOrNot.opened ? null : (hadOrNot.review?.status ?? (pastTheLastDay ? (condition?.nature === "shown" ? "ended" : "late") : null));
+  /** The target as a sentence may name it: a climb's number, a grade's words, and nothing for something had or not. */
+  const targetToName = !milestone ? null : hadOrNot ? (milestone.targetWords ?? null) : (milestone.targetWords ?? (milestone.target === null ? null : String(milestone.target)));
+
   const live = liveOf({
     moment,
     voice,
@@ -276,6 +292,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     nextReadingInWords: moment === "counting" || moment === "climbing" ? nextReading : null,
     cameBackOnInWords: cameBackOn,
     takeableFromHome: !milestone && earned > 0n,
+    proof: proofStands,
+    lateUntilInWords: lateUntilMs === null ? null : dateInWords(lateUntilMs, zone),
   });
 
   // The money on the card counts from what this device last saw of it, last in the arrival and once (the brief,
@@ -514,6 +532,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         ) : null;
       case "shareProof":
         if (!milestone) return null;
+        // Nothing shown after the last day can pay, so no gesture is offered for it: the title says when it goes back.
+        if (proofStands === "ended") return null;
         // A shown condition takes its one proof from the person's own account; a certificate takes a pasted link (D162).
         // A marathon takes a bib before the start and a reading after the finish, on its own screen (D273).
         if (milestone.conditionId === "marathon-finish") return <MarathonProof giftId={giftId} status={milestone} yours={mine} onChanged={reloadAll} />;
@@ -578,11 +598,24 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     <>
       {milestone ? (
         <>
-          {milestone.target !== null ? <p className={BODY}>{M.target(milestone.targetWords ?? milestone.target, source)}</p> : null}
+          {hadOrNot ? (
+            // What it asks in the register's words, or a grade's own; never "Reach 1 on their university".
+            hadOrNot.asked ? (
+              <p className={BODY}>{M.asked(hadOrNot.asked)}</p>
+            ) : hadOrNot.targetWords ? (
+              <p className={BODY}>{M.target(hadOrNot.targetWords, source)}</p>
+            ) : null
+          ) : milestone.target !== null ? (
+            <p className={BODY}>{M.target(milestone.targetWords ?? milestone.target, source)}</p>
+          ) : null}
           <p className={BODY}>
-            {readerIsFunder
-              ? M.atDeadlineTheirs(milestoneBy(milestone, zone))
-              : M.atDeadlineYours(milestoneBy(milestone, zone), funderName)}
+            {hadOrNot
+              ? readerIsFunder
+                ? M.provedByTheirs(milestoneBy(milestone, zone))
+                : M.provedByYours(milestoneBy(milestone, zone), funderName)
+              : readerIsFunder
+                ? M.atDeadlineTheirs(milestoneBy(milestone, zone))
+                : M.atDeadlineYours(milestoneBy(milestone, zone), funderName)}
           </p>
           {milestone.startReading !== null ? <p className={HELP}>{M.startedAt(milestone.startReading)}</p> : null}
           {/* A marathon's bib and the line read, to whoever is not at the moment of entering or reading them (D273). */}
@@ -609,7 +642,9 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       {nextReading && !gift.finished ? (
         <p className={HELP}>{voice === "recipient" ? (words?.reads ?? "") : (words?.readsTheirs ?? "")}</p>
       ) : null}
-      {milestone && milestone.target !== null ? (
+      {hadOrNot ? (
+        <p className={HELP}>{readerIsFunder ? M.ruleProvedTheirs(milestoneBy(hadOrNot, zone)) : M.ruleProvedYours(milestoneBy(hadOrNot, zone))}</p>
+      ) : milestone && milestone.target !== null ? (
         <p className={HELP}>{readerIsFunder ? M.ruleTheirs(milestone.target, milestoneBy(milestone, zone)) : M.ruleYours(milestone.target, milestoneBy(milestone, zone))}</p>
       ) : null}
       {daily && !stripFromRecordSafe(daily, nowMs) ? <p className={HELP}>{W.fromCountsNote}</p> : null}
@@ -617,7 +652,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         <FunderConsent
           answer={consent.answer}
           recipientName={recipientName}
-          rest={milestone ? C.funderMilestoneRest(milestone.targetWords ?? (milestone.target === null ? null : String(milestone.target)), milestoneBy(milestone, zone), amountDisplay) : C.funderDailyRest}
+          rest={milestone ? C.funderMilestoneRest(targetToName, milestoneBy(milestone, zone), amountDisplay) : C.funderDailyRest}
           zone={zone}
         />
       ) : null}
@@ -649,7 +684,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   const stopCost: StopCost = milestone
     ? {
         kind: "milestone",
-        target: milestone.targetWords ?? (milestone.target === null ? null : String(milestone.target)),
+        target: targetToName,
         by: milestoneBy(milestone, zone),
         amount: amountDisplay,
         funder: funderName ?? C.theFunder,

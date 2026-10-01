@@ -98,6 +98,11 @@ export type MilestoneStatus = Readonly<{
    * The contract holds hundredths, which are no words to read. Nothing for any other gift.
    */
   targetWords?: string | null;
+  /**
+   * What a gift had or not asks, in the register's words: "enrolled at that university", "finish the race". Its
+   * target on the contract is 1, or a count nobody reads, and is never printed. Nothing for a climb or a grade.
+   */
+  asked?: string | null;
   review: Readonly<{ status: "building" | "pending" | "refused"; /** The refusal in its own words, where it has them: a scale that does not match. */ message?: string }> | null;
   wca: {
     competitionId: string;

@@ -51,6 +51,11 @@ export const MILESTONE_ATTESTATION_TTL_SECONDS = 10 * 60;
 export const MILESTONE_PROOF_GRACE_SECONDS = 6 * 60 * 60;
 /** `DORMANT_REFUND_DELAY`: a gift nobody opens, or opens and never starts, comes back after this. */
 export const MILESTONE_DORMANT_SECONDS = 14 * 86_400;
+/**
+ * `LATE_PROOF_WINDOW`: something granted before the deadline may still be shown this long after it. Only then can a
+ * gift of the second shape, opened and never proved, go back to its funder.
+ */
+export const MILESTONE_LATE_PROOF_SECONDS = 14 * 86_400;
 
 export const MILESTONE_CLAIM_TYPES = {
   Claim: [

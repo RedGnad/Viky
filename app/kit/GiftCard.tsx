@@ -11,6 +11,7 @@ import { GIFT_CARD as W, MILESTONE_PAGE as M } from "@/src/sentences";
 import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP } from "../components/ui";
 import { DayStrip } from "./DayStrip";
 import { Climb } from "./Climb";
+import { HadOrNot } from "./HadOrNot";
 
 /**
  * The one card for a gift, wherever it appears: Home, Gifts, and the head of the gift's own page (structure of 17 Sep,
@@ -46,7 +47,12 @@ export function GiftCard({ gift, milestone: given, example = false }: Readonly<{
          `GiftLive`, alive, and draws the climb or the character alone (V4). */
       shape={
         milestone ? (
-          <Climb giftId={gift.giftId} status={milestone} />
+          // Something had or not has no trail and no flag: its character alone, as on its own page (1 Oct 2026).
+          milestone.shape === "certificate" ? (
+            <HadOrNot state={milestone.reached ? "reached" : milestone.finished || milestone.cancelled ? "void" : "waiting"} asleep={!milestone.opened} />
+          ) : (
+            <Climb giftId={gift.giftId} status={milestone} />
+          )
         ) : (
           <DayStrip id={gift.giftId} gift={gift} catchUpSeconds={gift.catchUpSeconds} records={gift.days} />
         )
@@ -154,6 +160,14 @@ export function milestoneBy(status: Pick<MilestoneStatus, "deadlineMs" | "durati
 
 function milestoneStateInWords(status: MilestoneStatus): string {
   if (status.cancelled) return W.takenBack;
+  // Something had or not says where its one proof stands, and never its target, which is 1 or a count nobody reads.
+  if (status.shape === "certificate") {
+    if (status.reached) return W.hadOrNot.proved;
+    if (status.finished) return W.hadOrNot.missed;
+    if (!status.opened) return W.notOpened;
+    if (status.review) return W.hadOrNot[status.review.status === "pending" ? "checking" : status.review.status];
+    return W.hadOrNot.waiting;
+  }
   if (status.target === null) return status.finished ? W.milestoneEnded : status.opened ? W.milestoneUnderWay : W.notOpened;
   if (status.reached) return W.milestoneReached(status.target);
   if (status.finished) return W.milestoneMissed(status.target);

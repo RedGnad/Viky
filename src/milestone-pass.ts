@@ -7,7 +7,8 @@ import { MILESTONE_OURS_TO_FIX, runMilestoneReading, type MilestoneOutcome } fro
 import { relayExpire, relayMilestoneRefund } from "./milestone-relay";
 import { tellAboutMilestone } from "./morning-send";
 import { liveTellingDeps } from "./morning-send-live";
-import { isMilestoneGiftId } from "./milestone-protocol";
+import { isMilestoneGiftId, SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
+import { latestReviewOf } from "./portal-store";
 import { escrowOf, RelayerError } from "./relayer";
 
 /**
@@ -20,7 +21,8 @@ import { escrowOf, RelayerError } from "./relayer";
  * reading on demand for the same reason).
  *
  * The settling pass then closes what can no longer be reached, by the contract's own rules (`canExpire`), and sends the
- * whole amount back. A gift whose reading failed on our side in this pass is held: it is not closed on a pass that
+ * whole amount back: a climb past its deadline, and since 1 Oct 2026 a gift of the second shape (a certificate, a
+ * university, an exam, a race, a competition) nobody opened, or opened and never proved once the late window has passed. A gift whose reading failed on our side in this pass is held: it is not closed on a pass that
  * could not read it (D57), even though a reading after the deadline could not have saved it, so that nobody has to
  * reason about which of our failures were harmless.
  */
@@ -36,6 +38,8 @@ export type MilestonePassDeps = {
   now: () => number;
   /** Completes the milestone creations whose record failed after their money moved (D87). */
   completeCreations?: () => Promise<readonly CreationLine[]>;
+  /** Whether a first proof of this gift is held for the operator's review (D312): shown, and not yet settled or refused. */
+  inReview?: (giftId: string) => Promise<boolean>;
 };
 
 export function liveMilestonePassDeps(): MilestonePassDeps {
@@ -47,6 +51,7 @@ export function liveMilestonePassDeps(): MilestonePassDeps {
     refund: relayMilestoneRefund,
     now: () => Math.floor(Date.now() / 1_000),
     completeCreations: () => completePendingMilestoneCreations(),
+    inReview: async (giftId) => (await latestReviewOf(giftId))?.status === "pending",
   };
 }
 
@@ -118,6 +123,12 @@ async function passOne(record: { giftId: string; escrow: Hex | null }, settle: b
     return lines;
   }
   if (canExpire(state, deps.now())) {
+    // A proof shown in time and still waiting for the operator is not the recipient's lateness: the gift is not taken
+    // back on it. The report says so every day until the review is decided, which is the operator's to do.
+    if (state.shape === SHAPE_HAVE_OR_NOT && state.recipient !== null && (await deps.inReview?.(giftId))) {
+      lines.push({ giftId, step: "expire", result: "held: a first proof is under review, decide it (pnpm portal:pin)" });
+      return lines;
+    }
     const line = await attempt(giftId, "expire", () => deps.expire(giftId, contract));
     lines.push(line);
     if (line.result !== "sent") return lines;

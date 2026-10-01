@@ -63,7 +63,7 @@ export function Me() {
         conditionId,
         funderName: gift.funderName,
         cost: status
-          ? { kind: "milestone" as const, target: status.targetWords ?? (status.target === null ? null : String(status.target)), by: milestoneBy(status, zone), amount: gift.amountDisplay, funder }
+          ? { kind: "milestone" as const, target: status.targetWords ?? (status.shape === "certificate" || status.target === null ? null : String(status.target)), by: milestoneBy(status, zone), amount: gift.amountDisplay, funder }
           : { kind: "daily" as const, funder },
       },
     ];

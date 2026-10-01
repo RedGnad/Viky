@@ -472,6 +472,18 @@ export const GIFT_CARD = {
   milestoneEnded: "It has ended.",
   milestoneReached: (target: number) => `Reached ${target}.`,
   milestoneMissed: (target: number) => `Did not reach ${target} in time.`,
+  /**
+   * Something had or not, on the card: its target on the contract is 1, or a count nobody reads, and is never printed
+   * (the audit of 1 Oct 2026: "Target 1. Not read yet."). What is said is where its one proof stands.
+   */
+  hadOrNot: {
+    waiting: "Not proved yet.",
+    checking: "Shown. Viky is checking it.",
+    refused: "Checked: it did not show what the gift asks.",
+    building: "Waiting for the university's page to be set up.",
+    proved: "Proved.",
+    missed: "Not proved in time.",
+  },
   /** "$25.00, by 1 Oct 2026" once started; "$25.00, within 30 days of connecting" before. */
   milestoneAmount: (total: string, by: string) => `${total}, ${by}`,
   milestoneStartTooHigh: (start: number, target: number) => `Already at ${target} when it was connected (${start}): it cannot count it, and goes back at the end.`,
@@ -560,6 +572,8 @@ export const FUND = {
     namesSeen: (recipient: string, funder: string) => `${recipient} and ${funder} show on the gift, to whoever opens its link.`,
     linkRisk: (recipient: string) => `The link you will get opens the gift for whoever opens it first. Send it only to ${onlyTo(recipient)}.`,
     fourteenDays: "If nobody opens it within 14 days, it all comes back to you, and the same if it is opened and never connected.",
+    /** The same for something had or not, which is never connected: opened, it comes back as its own sentence says. */
+    fourteenDaysUnopened: "If nobody opens it within 14 days, it all comes back to you.",
     /** The two disclosures of the check (GOV.UK Details): what only some readers need, out of everybody's way. */
     elseTitle: "What else this means",
     feeTitle: (name: string) => `How ${name} charges`,
@@ -941,6 +955,29 @@ export const GIFT_LIVE = {
     /** A proof the person shows from their own account (D162): the gesture is "show", never "share a page". */
     shownYours: (source: string) => `Show it from your own ${yourOwn(source)} account, and it is yours.`,
     shownTheirs: (recipient: string | null) => `${recipient ? `${recipient} has` : "They have"} not shown it yet.`,
+    /**
+     * Where a proof stands once there is one, or once the last day has passed (the audit of 1 Oct 2026: the title stayed
+     * "Show it" and the funder read "has not shown it yet" over a proof held, refused, waited for or late).
+     */
+    checkingYours: "Shown. Viky is checking it.",
+    checkingTheirs: (recipient: string | null) => `${recipient ?? "They"} showed it. Viky is checking it.`,
+    refused: "It was checked and did not show what the gift asks.",
+    buildingYours: "Your university's page is being set up. Then you show it here.",
+    buildingTheirs: (recipient: string | null) => `${recipient ? `${recipient}'s` : "Their"} university page is being set up.`,
+    /**
+     * Past the last day. True of the contract: what a source dates itself (a certificate granted, a test taken, a race
+     * run) may be proved for fourteen days more if its date is in time, and then the gift goes back.
+     */
+    lateYours: (until: string) => `The last day has passed. What you had by then can still be proved until ${until}.`,
+    lateTheirs: (until: string) => `The last day has passed. If nothing from before it is proved by ${until}, it comes back to you.`,
+    lateReading: (until: string) => `The last day has passed. What was had by then can still be proved until ${until}.`,
+    /**
+     * Past the last day, for something shown: the day it is shown is the day that counts, so nothing shown now can
+     * pay. The contract still waits the same fourteen days before the gift goes back.
+     */
+    endedYours: (funder: string | null, after: string) => `The last day passed without it. It goes back to ${funder ?? "the person who offered it"} after ${after}.`,
+    endedTheirs: (after: string) => `The last day passed without it. It comes back to you after ${after}.`,
+    endedReading: "The last day passed without it.",
     label: { yours: "In your name", theirs: "In their name" },
   },
   /** The first reading stood above what a climb may start from, so nothing can be earned: the reason, and the money. */
@@ -1015,6 +1052,13 @@ export const MILESTONE_PAGE = {
   withinDays: (days: number) => `within ${days} ${days === 1 ? "day" : "days"} of connecting`,
   ruleYours: (target: number, by: string) => `It is yours when you reach ${target}, ${by}.`,
   ruleTheirs: (target: number, by: string) => `It is theirs when they reach ${target}, ${by}.`,
+  /** Something had or not: what it asks in the register's words, and never the contract's 1. */
+  asked: (words: string) => `This gift is for: ${words}.`,
+  ruleProvedYours: (by: string) => `It is yours when it is proved, ${by}.`,
+  ruleProvedTheirs: (by: string) => `It is theirs when it is proved, ${by}.`,
+  /** Dated as the contract dates it: what was granted in time can be shown for two weeks more, then it goes back. */
+  provedByYours: (by: string, funder: string | null) => `Prove it ${by} and it is yours. If not, it goes back to ${funder ?? "them"} two weeks later.`,
+  provedByTheirs: (by: string) => `If they prove it ${by} it is theirs. If not, it comes back to you two weeks later.`,
   startedAt: (reading: number) => `Started at ${reading}.`,
   atDeadlineYours: (by: string, funder: string | null) => `Reach it ${by} and it is yours. If not, it goes back to ${funder ?? "them"}.`,
   atDeadlineTheirs: (by: string) => `If they reach it ${by} it is theirs. If not, it comes back to you.`,
