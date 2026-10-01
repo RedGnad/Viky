@@ -73,7 +73,7 @@ test("a yes counts only as it was signed: by the account's own key, over its own
 });
 
 test("the journal marks each reading by what held at its moment", () => {
-  const row = (kind: "yes" | "stop", at: number): ConsentRow => ({ id: at, giftId: "2000009", account: ACCOUNT, kind, text: "", publicKey: "", signature: "", signedAt: new Date(at * 1_000), anchorTx: null });
+  const row = (kind: "yes" | "stop", at: number): ConsentRow => ({ id: at, giftId: "2000009", account: ACCOUNT, kind, text: "", publicKey: "", signature: "", signedAt: new Date(at * 1_000), anchorTx: null, anchorSequence: null, anchorSignature: null });
   const history = [row("yes", AFTER + 100), row("stop", AFTER + 200), row("yes", AFTER + 300)];
   assert.equal(agreementAt(history, AFTER, AFTER + 50), "no_agreement", "before the first yes of a new gift");
   assert.equal(agreementAt(history, AFTER, AFTER + 150), "agreed");

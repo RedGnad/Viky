@@ -1,7 +1,8 @@
-import type { Address } from "viem";
-import { isSignedIn, passkeyOutputFor, signIn } from "../account/mera";
+import type { Address, Hex } from "viem";
+import { currentAccount, isSignedIn, passkeyOutputFor, signIn } from "../account/mera";
 import { consentBytes, toHex, type ConsentKind } from "../consent";
 import type { ConsentTerms } from "../consent-terms";
+import { consentAnchorMessage, consentKeyTypedData, consentTextDigest } from "../v2-protocol";
 import { getJson, postJson } from "./api";
 import { consentKey, consentSalt, keepConsentOutput } from "./consent-key";
 import { currentServerSession } from "./server-session";
@@ -27,6 +28,11 @@ export type GiftConsentAnswer = Readonly<{
   terms: ConsentTerms;
   until: string;
   texts?: Readonly<{ yes: string; stop: string }>;
+  /**
+   * Where the yes and the stop are written down in public, once that exists (the audit of 1 Oct 2026): the contract, the
+   * account, whether its consent key is bound there, and the place the next one takes for this gift.
+   */
+  anchor?: Readonly<{ contract: Hex; account: Hex; bound: boolean; sequence: number }>;
 }>;
 
 export function loadConsent(giftId: string): Promise<GiftConsentAnswer> {
@@ -71,8 +77,34 @@ export async function signConsent(giftId: string, kind: ConsentKind, loaded?: Gi
   if (!text) throw new Error("Only the person the gift is for can agree or stop.");
   const key = await keyForSigning();
   const signature = await key.signMessage(consentBytes(text));
-  const kept = await postJson<{ state: ConsentState }>(`/api/gift/${giftId}/consent`, { kind, publicKey: toHex(key.publicKey), signature: toHex(signature) });
+  const anchor = answer.anchor ? await signedForTheAnchor(answer.anchor, giftId, kind, text, key) : undefined;
+  const kept = await postJson<{ state: ConsentState }>(`/api/gift/${giftId}/consent`, { kind, publicKey: toHex(key.publicKey), signature: toHex(signature), ...(anchor ? { anchor } : {}) });
   return kept.state;
+}
+
+/**
+ * What the public record is given with a yes or a stop, signed in the same breath and with no prompt: the consent key
+ * signs the short message that names the contract, the account, the gift, the kind, the place and the text's digest,
+ * and, the first time, the account's own key signs for the consent key. Both keys are already held: the passkey made
+ * them in one ceremony. Nothing here may fail the agreement itself, so a signature that cannot be made is left out.
+ */
+async function signedForTheAnchor(
+  anchor: NonNullable<GiftConsentAnswer["anchor"]>,
+  giftId: string,
+  kind: ConsentKind,
+  text: string,
+  key: NonNullable<ReturnType<typeof consentKey>>,
+): Promise<{ sequence: number; signature: string; binding?: string } | undefined> {
+  try {
+    const message = consentAnchorMessage({ anchor: anchor.contract, account: anchor.account, giftId, kind, sequence: anchor.sequence, digest: consentTextDigest(text) });
+    const signature = toHex(await key.signMessage(new TextEncoder().encode(message)));
+    const account = anchor.bound ? undefined : currentAccount();
+    // The account binds its key only as itself: a page open as another account signs nothing for this one.
+    const binding = account && account.address.toLowerCase() === anchor.account.toLowerCase() ? await account.signTypedData(consentKeyTypedData(anchor.contract, account.address, toHex(key.publicKey) as Hex)) : undefined;
+    return { sequence: anchor.sequence, signature, ...(binding ? { binding } : {}) };
+  } catch {
+    return undefined;
+  }
 }
 
 /** The yes, at the gesture that asks for a reading: signed once, and not again while it holds. */

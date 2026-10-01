@@ -1,4 +1,5 @@
 import { consentBytes, fromHex } from "./consent";
+import { anchorRow } from "./consent-anchoring";
 import { consentKeyOf, ed25519Verifies, latestConsent, type ConsentRow } from "./consent-store";
 import { readGift } from "./gift-reader";
 import { loadGift } from "./gift-store";
@@ -30,9 +31,18 @@ async function stands(row: ConsentRow, giftId: string): Promise<boolean> {
   return (await consentKeyOf(row.account)) === row.publicKey.toLowerCase();
 }
 
-export async function readingLeave(giftId: string, fundedAt: number): Promise<ReadingLeave> {
+/**
+ * @param anchor Tries once more to write a yes that still waits for the anchor, before the reading it allows (the
+ *   audit of 1 Oct 2026): the public record then holds the yes before the reading that moved money. The reading never
+ *   waits on the outcome. A caller that only reads the state, and takes no reading, passes `false`.
+ */
+export async function readingLeave(giftId: string, fundedAt: number, anchor = true): Promise<ReadingLeave> {
   const latest = await latestConsent(giftId);
-  if (latest?.kind === "yes") return (await stands(latest, giftId)) ? { allowed: true, beforeAgreements: false } : { allowed: false, reason: "no_agreement" };
+  if (latest?.kind === "yes") {
+    if (!(await stands(latest, giftId))) return { allowed: false, reason: "no_agreement" };
+    if (anchor && latest.anchorTx === null && latest.anchorSignature !== null) await anchorRow(latest);
+    return { allowed: true, beforeAgreements: false };
+  }
   if (latest?.kind === "stop") return { allowed: false, reason: "stopped" };
   return fundedAt > 0 && fundedAt < AGREEMENTS_FROM ? { allowed: true, beforeAgreements: true } : { allowed: false, reason: "no_agreement" };
 }

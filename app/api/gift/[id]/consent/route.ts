@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { consentBytes, fromHex } from "@/src/consent";
 import { giftConsent, giftConsentText, termsFor } from "@/src/consent-server";
+import { anchorContract, anchorOffer, anchorRow, anchorSignatureStands, bindingStands, requestedAnchor } from "@/src/consent-anchoring";
 import { readingLeave, type ReadingLeave } from "@/src/consent-guard";
-import { ed25519Verifies, keepConsent, keepConsentKey, latestConsent } from "@/src/consent-store";
+import { ed25519Verifies, keepBinding, keepConsent, keepConsentKey, latestConsent } from "@/src/consent-store";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { admitRelay } from "@/src/relay-admission";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +19,10 @@ export const dynamic = "force-dynamic";
  * reader's own voice; to the person it is for, also the exact texts to sign. POST takes a yes or a stop signed by the
  * person's consent key: the server writes the text itself, checks the signature against it and against the key the
  * account first signed with, and keeps it. It applies at once, on every device, since every device reads it here.
+ *
+ * Once the anchor is set (src/consent-anchoring.ts), the person it is for is also told what to sign for the public
+ * record, and a yes or a stop that comes with it is written there by the relayer once it is kept. The agreement never
+ * waits on that: a row that could not be written stays kept, and applies.
  */
 
 function viewerOf(request: Request): string | null {
@@ -49,7 +55,8 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const isRecipient = viewer !== null && viewer === consent.recipient?.toLowerCase();
     const isFunder = viewer !== null && viewer === consent.funder.toLowerCase();
     if (!isRecipient && !isFunder) throw new GiftApiError("NOT_YOURS", "This gift is not yours.", 403);
-    const [latest, leave] = await Promise.all([latestConsent(id), readingLeave(id, consent.fundedAt)]);
+    // The state is read here and no reading is taken: nothing is sent to the anchor by a page being opened.
+    const [latest, leave, anchor] = await Promise.all([latestConsent(id), readingLeave(id, consent.fundedAt, false), isRecipient ? anchorOffer(viewer, id) : null]);
     return NextResponse.json(
       {
         giftId: id,
@@ -60,6 +67,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         terms: termsFor(consent, isRecipient ? "yours" : "theirs"),
         until: consent.until,
         ...(isRecipient ? { texts: { yes: giftConsentText("yes", consent, viewer), stop: giftConsentText("stop", consent, viewer) } } : {}),
+        ...(anchor ? { anchor } : {}),
       },
       { headers: NO_STORE },
     );
@@ -75,7 +83,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
     const { id } = await context.params;
     if (!/^\d{1,78}$/.test(id)) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
-    const body = (await request.json().catch(() => ({}))) as { kind?: unknown; publicKey?: unknown; signature?: unknown };
+    const body = (await request.json().catch(() => ({}))) as { kind?: unknown; publicKey?: unknown; signature?: unknown; anchor?: unknown };
     const kind = body.kind === "stop" ? "stop" : body.kind === "yes" ? "yes" : null;
     if (!kind) throw new GiftApiError("INVALID_REQUEST", "Please try again");
     const publicKey = typeof body.publicKey === "string" ? fromHex(body.publicKey) : null;
@@ -90,9 +98,29 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (!ed25519Verifies(publicKey, consentBytes(text), signature)) throw new GiftApiError("INVALID_SIGNATURE", "The signature does not match what this gift's agreement says.");
     // The key the account first signed with, and no other: the same passkey makes it on every device.
     const publicKeyHex = String(body.publicKey).toLowerCase();
+    // What came for the public record is checked before anything is kept, so a row never waits with a signature
+    // the anchor's readers would find wrong. Without the anchor set, whatever came is left aside.
+    const contract = anchorContract();
+    const signed = contract ? requestedAnchor(body.anchor) : null;
+    if (signed === false) throw new GiftApiError("INVALID_SIGNATURE", "The signature is malformed");
+    if (contract && signed) {
+      if (!anchorSignatureStands(contract, { account, giftId: id, kind, text, publicKey: publicKeyHex }, signed)) throw new GiftApiError("INVALID_SIGNATURE", "The signature does not match what this gift's agreement says.");
+      if (signed.binding && !(await bindingStands(contract, account, publicKeyHex, signed.binding))) throw new GiftApiError("INVALID_SIGNATURE", "The signature does not match what this gift's agreement says.");
+    }
     const kept = await keepConsentKey(account, publicKeyHex);
     if (kept !== publicKeyHex) throw new GiftApiError("ANOTHER_KEY", "This was signed with another passkey than the one this account agrees with.", 403);
-    const row = await keepConsent({ giftId: id, account, kind, text, publicKey: publicKeyHex, signature: String(body.signature) });
+    const row = await keepConsent({ giftId: id, account, kind, text, publicKey: publicKeyHex, signature: String(body.signature), anchor: signed ? { sequence: signed.sequence, signature: signed.signature } : null });
+    if (signed) {
+      // Kept, and so in force. Writing it on the anchor is the relayer's cost, counted like any other, and a refusal
+      // or a failure there changes nothing for the person: the row waits, and a yes is tried again before a reading.
+      try {
+        if (signed.binding) await keepBinding(account, signed.binding);
+        await admitRelay(request, account);
+        await anchorRow(row);
+      } catch (error) {
+        console.error(`consent anchor: gift ${id}, row ${row.id}: left waiting: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
     return NextResponse.json({ giftId: id, state: stateOf(row) }, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);

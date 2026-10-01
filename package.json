@@ -42,6 +42,7 @@
     "register:goal": "tsx scripts/register-goal.ts",
     "count:gift": "tsx scripts/count-gift.ts",
     "verify:day": "tsx scripts/verify-day.ts",
+    "verify:consent": "tsx scripts/verify-consent.ts",
     "zkfetch:worker": "tsx scripts/zkfetch-worker.ts",
     "check:words": "tsx scripts/check-consumer-words.ts",
     "check:universities": "tsx scripts/check-universities.ts",

@@ -1,8 +1,10 @@
 import "../src/load-env";
 import { execSync } from "node:child_process";
 import { PGlite } from "@electric-sql/pglite";
+import { createEd25519SigningSession } from "@category-labs/mera";
 import { createPublicClient, createTestClient, encodeFunctionData, getAddress, http, keccak256, parseEther, toHex, type Abi, type Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { GET as consentRoute, POST as consentPostRoute } from "../app/api/gift/[id]/consent/route";
 import { POST as endRoute } from "../app/api/gift/[id]/end/route";
 import { POST as linkRoute } from "../app/api/gift/[id]/link/route";
 import { GET as statusRoute } from "../app/api/gift/[id]/route";
@@ -16,6 +18,10 @@ import { readChessStanding } from "../src/chess-reading";
 import { linkOfMade, prepareGift } from "../src/client/gift";
 import { prepareMilestoneGift } from "../src/client/milestone";
 import { giftLinkOf } from "../src/client/v2";
+import { consentBytes, toHex as bytesToHex } from "../src/consent";
+import { consentAnchorAbi } from "../src/consent-anchor-abi";
+import { configureConsentStore, consentHistory } from "../src/consent-store";
+import { logsBetween, readingsIn, verdictOf } from "../src/consent-verify";
 import { DUOLINGO_PUBLIC_PROVIDER_ID } from "../src/duolingo-public-terms";
 import { signCheckIn } from "../src/gift-attestation";
 import { giftEscrowAbi } from "../src/gift-escrow-abi";
@@ -32,7 +38,7 @@ import { monadChain } from "../src/monad/chain";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { relay, RelayerError } from "../src/relayer";
 import { configureRelayCeilingStore, ensureRelayCeilingSchema } from "../src/relay-ceiling-store";
-import { endTypedData, openingAccount, openTypedData, withdrawTypedDataV2 } from "../src/v2-protocol";
+import { consentAnchorMessage, consentKeyTypedData, consentTextDigest, endTypedData, openingAccount, openTypedData, withdrawTypedDataV2 } from "../src/v2-protocol";
 import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-contracts";
 
 /**
@@ -48,7 +54,10 @@ import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-co
  *   3. the owner accepts the three;
  *   4. a daily gift: made with a link the funder's code makes, found again as on another device, refused to the
  *      evidence key, opened with the link's key, read, paid out, then ended by the person it is for;
- *   5. a milestone gift: made, opened with the link's key, started, then ended; and a second one reached and paid.
+ *   5. a milestone gift: made, opened with the link's key, started, then ended; and a second one reached and paid;
+ *   6. the recipient's yes and stop, written on the anchor by the consent route with no step of its own, and then
+ *      `pnpm verify:consent`'s own check over the whole fork: the gift read under a yes passes, and a gift read with
+ *      no yes anchored before it is named, even once a yes is anchored after the fact.
  *
  * No key of production is used: the relayer, the evidence signer, the deployer, the funder and the recipient are all
  * made here. It refuses any node but the local fork.
@@ -115,6 +124,8 @@ async function main() {
   const publicClient = createPublicClient({ chain: monadChain, transport: http(RPC) });
   const test = createTestClient({ chain: monadChain, mode: "anvil", transport: http(RPC) });
   if ((await publicClient.getChainId()) !== 143) throw new Error("Refusing: the local node is not a fork of Monad mainnet");
+  // Where the fork begins: the public check of step 6 reads every log from here.
+  const firstBlock = await publicClient.getBlockNumber();
   const chainNow = async () => Number((await publicClient.getBlock()).timestamp);
   const warpTo = async (timestamp: number) => {
     await test.setNextBlockTimestamp({ timestamp: BigInt(timestamp) });
@@ -181,6 +192,7 @@ async function main() {
   configureGiftStore(exec);
   configureMilestoneStore(exec);
   configureRelayCeilingStore(exec);
+  configureConsentStore(exec);
   await ensureGiftSchema();
   await ensureMilestoneSchema();
   await ensureRelayCeilingSchema();
@@ -202,6 +214,34 @@ async function main() {
     const deadline = BigInt(Math.floor(Date.now() / 1_000) + 600);
     return { deadline: deadline.toString(), signature: await openingAccount(secret).signTypedData(openTypedData(kind, contract, { giftId: BigInt(id), recipient: who, deadline })) };
   };
+
+  /**
+   * The recipient's yes or stop as their browser makes it (src/client/consent.ts): the consent key signs the text the
+   * server wrote and the short message for the anchor, and, the first time, the account signs for the consent key.
+   */
+  const consentKey = createEd25519SigningSession({ privateKey: crypto.getRandomValues(new Uint8Array(32)) });
+  const consentKeyHex = bytesToHex(consentKey.publicKey) as Hex;
+  const say = async (kind: "yes" | "stop", id: string) => {
+    const asked = await consentRoute(new Request(`${ORIGIN}/api/gift/${id}/consent`, { headers: headers(recipientCookie) }), { params: Promise.resolve({ id }) });
+    const answer = (await asked.json()) as { texts?: { yes: string; stop: string }; anchor?: { contract: Hex; account: Hex; bound: boolean; sequence: number }; error?: string };
+    if (asked.status !== 200 || !answer.texts || !answer.anchor) throw new Error(`the agreement of gift ${id} could not be read: ${answer.error ?? asked.status}`);
+    const text = answer.texts[kind];
+    const offered = answer.anchor;
+    const message = consentAnchorMessage({ anchor: offered.contract, account: offered.account, giftId: id, kind, sequence: offered.sequence, digest: consentTextDigest(text) });
+    const sent = await postFor(consentPostRoute, id, `/api/gift/${id}/consent`, recipientCookie, {
+      kind,
+      publicKey: consentKeyHex,
+      signature: bytesToHex(await consentKey.signMessage(consentBytes(text))),
+      anchor: {
+        sequence: offered.sequence,
+        signature: bytesToHex(await consentKey.signMessage(new TextEncoder().encode(message))),
+        ...(offered.bound ? {} : { binding: await recipient.signTypedData(consentKeyTypedData(offered.contract, recipient.address, consentKeyHex)) }),
+      },
+    });
+    if (sent.status !== 200) throw new Error(`the ${kind} of gift ${id} was not kept: ${await sent.text()}`);
+    return offered;
+  };
+  const anchored = (id: string) => publicClient.readContract({ address: anchor, abi: consentAnchorAbi as unknown as Abi, functionName: "entryCount", args: [recipient.address, BigInt(id)] }) as Promise<bigint>;
 
   console.log("STEP 4: a daily gift on the second version");
   const request = await prepareGift({ account: funder, goalType: GOAL_TYPE_DUOLINGO_XP, dailyTarget: 10, durationDays: 7, amount: 7_000_004n });
@@ -235,6 +275,12 @@ async function main() {
   let status = await statusOf(giftId, recipientCookie);
   expect(status.version === 2 && (status.end as { keep: string; giveBack: string }).giveBack === "7000004", "its status offers the ending: nothing kept yet, 7.000004 would go back");
 
+  // The recipient's yes, before anything is read: the route keeps it and writes it on the anchor, key first.
+  const firstOffer = await say("yes", giftId);
+  expect(firstOffer.bound === false && firstOffer.sequence === 0, "the first yes is offered the anchor: no key bound yet, place 0");
+  expect(String(await publicClient.readContract({ address: anchor, abi: consentAnchorAbi as unknown as Abi, functionName: "consentKeyOf", args: [recipient.address] })).toLowerCase() === consentKeyHex.toLowerCase(), "the anchor holds the consent key, bound by the account's own signature");
+  expect((await anchored(giftId)) === 1n && /^0x[0-9a-f]{64}$/.test((await consentHistory(giftId))[0].anchorTx ?? ""), "the yes is on the anchor, and its row names the transaction");
+
   console.log("STEP 4b: two milestone gifts made and opened on the second version");
   const player = process.env.REHEARSAL_PLAYER?.trim() || "magnuscarlsen";
   const cadence = (process.env.REHEARSAL_CADENCE?.trim() || "bullet") as ChessMode;
@@ -257,6 +303,8 @@ async function main() {
   // Made and opened now, before the fork's clock is moved: what a funder signs is good for minutes of real time.
   const ended = await climb(5_000_000n);
   const reached = await climb(3_000_000n);
+  // A yes for the first of the two. The second is read with none, on purpose: step 6 must name it.
+  expect((await say("yes", ended)).bound === true && (await anchored(ended)) === 1n, "a second gift's yes is anchored with the key already bound");
   expect((await readMilestoneGift(milestone, ended)).version === 2 && (await ausdOf(milestone)) === 8_000_000n, "two milestone gifts are made and opened on the second version");
 
   /** A reading, attested by the evidence signer under the second version's domain, at the fork's own time. */
@@ -347,6 +395,37 @@ async function main() {
   response = await postFor(endRoute, reached, `/api/gift/${reached}/end`, recipientCookie, { ...stringsOf(notEndable), signature: await recipient.signTypedData(endTypedData("milestone", milestone, notEndable)) });
   expect(response.status === 409, "a gift already reached cannot be ended: it is theirs");
   expect((await ausdOf(milestone)) === 0n, "the milestone contract holds nothing of either gift");
+
+  console.log("STEP 6: the yes and the stop on the anchor, checked from the chain alone");
+  expect((await say("stop", giftId)).sequence === 1 && (await anchored(giftId)) === 2n, "a stop takes the next place of its gift");
+  const contracts = { daily, milestone, anchor };
+  const check = async () => {
+    const readings = await readingsIn(publicClient, contracts, await logsBetween(publicClient, contracts, firstBlock, await publicClient.getBlockNumber(), 500n));
+    const verdict = (kind: "daily" | "milestone", id: string, counted: number) => verdictOf(publicClient, anchor, { kind, giftId: id, recipient: recipient.address, counted }, readings);
+    return { daily: await verdict("daily", giftId, (await readGift(daily, giftId)).creditedDays), ended: await verdict("milestone", ended, 0), reached: await verdict("milestone", reached, 1) };
+  };
+  let checked = await check();
+  expect(checked.daily.problems.length === 0 && checked.daily.found === 2 && checked.daily.readings.every((reading) => reading.held === "yes"), "the daily gift passes: its two counted days were read under a yes anchored before them");
+  expect(checked.daily.entries.map((entry) => `${entry.kind}:${entry.stands}`).join() === "yes:true,stop:true", "its yes and its stop are both signed by the bound key");
+  expect(checked.ended.problems.length === 0 && checked.ended.readings.length === 0, "the gift that was ended passes: nothing read for it moved money");
+  expect(checked.reached.problems.some((problem) => problem.includes("no yes anchored before it")), "the gift reached with no yes is named: a reading moved money with no yes anchored before it");
+  await say("yes", reached);
+  checked = await check();
+  expect(checked.reached.entries.length === 1 && checked.reached.problems.some((problem) => problem.includes("no yes anchored before it")), "and a yes anchored after the reading does not cover it");
+
+  // The command itself, as anybody runs it, reading the chain alone.
+  const command = (more: string) => {
+    try {
+      return { code: 0, out: execSync(`npx tsx scripts/verify-consent.ts --from-block ${firstBlock} --piece 500 --daily ${daily} --milestone ${milestone} --anchor ${anchor} ${more}`, { env: { ...process.env, MONAD_RPC_URL: RPC }, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }) };
+    } catch (error) {
+      const failed = error as { status?: number; stdout?: string; stderr?: string };
+      return { code: failed.status ?? 1, out: `${failed.stdout ?? ""}${failed.stderr ?? ""}` };
+    }
+  };
+  const one = command(`--gift ${giftId}`);
+  expect(one.code === 0 && one.out.includes("PASSED: 1 gift"), "pnpm verify:consent passes the daily gift, from the chain alone");
+  const all = command("");
+  expect(all.code === 1 && all.out.includes(`FAIL gift ${reached} (milestone)`) && all.out.includes(`ok   gift ${giftId} (daily)`) && all.out.includes("VERIFY_FAILED: 1 of 3 gifts did not pass"), "and over every gift it fails, naming the one read with no yes");
 
   await db.close();
   console.log("\nREHEARSAL PASSED: every step above ran on the fork, with the real AUSD.");

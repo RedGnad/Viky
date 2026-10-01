@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { expect, test, type Browser, type BrowserContext, type Page, type Route } from "@playwright/test";
 import { consentBytes, consentText, fromHex, KEPT_AFTER } from "../../src/consent";
+import { anchorSignatureStands, bindingStands, requestedAnchor } from "../../src/consent-anchoring";
 import { AGREEMENTS_FROM, readingLeave } from "../../src/consent-guard";
 import { consentTermsFor } from "../../src/consent-terms";
 import { configureConsentStore, ed25519Verifies, keepConsent, keepConsentKey, latestConsent } from "../../src/consent-store";
@@ -24,8 +25,17 @@ import { configureConsentStore, ed25519Verifies, keepConsent, keepConsentKey, la
  * PRF secret across an export (measured on 23 Sep 2026): a script in each profile answers the same output for the same
  * passkey and salt, as a synced passkey does on a phone.
  *
+ * The same walk is made a second time with the public record of agreements set (the audit of 1 Oct 2026, ConsentAnchor):
+ * the browser is then told what to sign for it, and signs with no prompt added. The first yes carries the consent key's
+ * signature for place 0 and the account's own signature binding that key; the stop from the second device carries the
+ * signature for place 1 and no binding. Both are checked by the server's own functions (src/consent-anchoring.ts); the
+ * anchor itself is stood in for by what it would answer, and runs for real in the fork rehearsal.
+ *
  * VIKY_CONSENT_VIDEO=<folder> records both profiles.
  */
+
+/** Where agreements would be written down in public, in the walk that has it set. */
+const ANCHOR = "0x00000000000000000000000000000000000a2c04" as const;
 
 const AUTHENTICATOR = { protocol: "ctap2", ctap2Version: "ctap2_1", transport: "internal", hasResidentKey: true, hasUserVerification: true, hasPrf: true, isUserVerified: true, automaticPresenceSimulation: true } as const;
 
@@ -44,6 +54,8 @@ const prfStandIn = (seed: string) => `(() => {
   for (const method of ["create", "get"]) {
     const real = navigator.credentials[method].bind(navigator.credentials);
     navigator.credentials[method] = async (options) => {
+      // Every ceremony the page asks for is a prompt a person sees: counted, so a test can say none was added.
+      window.__vikyPrompts = (window.__vikyPrompts || 0) + 1;
       const credential = await real(options);
       const asked = options && options.publicKey && options.publicKey.extensions && options.publicKey.extensions.prf && options.publicKey.extensions.prf.eval;
       if (credential && asked && asked.first) {
@@ -133,8 +145,11 @@ function card() {
 }
 
 /** The consent route, with the server's own store and guard behind it; only the gift's recipient is not read from the contract. */
-function consentServer(account: () => string) {
+function consentServer(account: () => string, anchor: typeof ANCHOR | null) {
   const kept: Array<{ kind: string; publicKey: string }> = [];
+  /** What the anchor would hold: whether the account's key is bound, and each entry in its place. */
+  const anchored: Array<{ kind: string; sequence: number; withBinding: boolean }> = [];
+  let bound = false;
   const texts = (who: string) => {
     const input = { account: who, giftId: GIFT_ID, terms: consentTermsFor("chess-rating", "yours", "rapid")!, until: "the gift's last day", kept: KEPT_AFTER };
     return { yes: consentText("yes", input), stop: consentText("stop", input) };
@@ -150,6 +165,7 @@ function consentServer(account: () => string) {
       terms: consentTermsFor("chess-rating", "yours", "rapid"),
       until: "the gift's last day",
       texts: texts(account()),
+      ...(anchor ? { anchor: { contract: anchor, account: account(), bound, sequence: anchored.length } } : {}),
     };
   };
   const handle = async (route: Route) => {
@@ -157,18 +173,31 @@ function consentServer(account: () => string) {
     if (request.method() === "GET") return route.fulfill({ contentType: "application/json", body: JSON.stringify(await answer()) });
     // What the real route does with a POST: the text rebuilt here, the signature checked against it, the key checked
     // against the one the account first signed with, and the row kept.
-    const body = JSON.parse(request.postData() ?? "{}") as { kind: "yes" | "stop"; publicKey: string; signature: string };
+    const body = JSON.parse(request.postData() ?? "{}") as { kind: "yes" | "stop"; publicKey: string; signature: string; anchor?: unknown };
     const text = texts(account())[body.kind];
     const key = fromHex(body.publicKey);
     const signature = fromHex(body.signature);
     if (!key || !signature || !ed25519Verifies(key, consentBytes(text), signature)) return route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "INVALID_SIGNATURE" }) });
     const registered = await keepConsentKey(account(), body.publicKey);
     if (registered !== body.publicKey.toLowerCase()) return route.fulfill({ status: 403, contentType: "application/json", body: JSON.stringify({ error: "ANOTHER_KEY" }) });
+    if (anchor) {
+      // What the real route checks before it keeps anything, and what the anchor itself would then enforce: the consent
+      // key signed for this place, and an account whose key is not bound yet signed for that key itself.
+      const signed = requestedAnchor(body.anchor);
+      const refuse = (error: string) => route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error }) });
+      if (!signed) return refuse("NO_ANCHOR_SIGNATURE");
+      if (signed.sequence !== anchored.length || !anchorSignatureStands(anchor, { account: account(), giftId: GIFT_ID, kind: body.kind, text, publicKey: body.publicKey }, signed)) return refuse("ANCHOR_SIGNATURE");
+      if (!bound && (!signed.binding || !(await bindingStands(anchor, account(), body.publicKey, signed.binding)))) return refuse("BINDING");
+      anchored.push({ kind: body.kind, sequence: signed.sequence, withBinding: signed.binding !== null });
+      bound = true;
+    } else if (body.anchor !== undefined) {
+      return route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "ANCHOR_NOT_SET" }) });
+    }
     const row = await keepConsent({ giftId: GIFT_ID, account: account(), kind: body.kind, text, publicKey: body.publicKey, signature: body.signature });
     kept.push({ kind: body.kind, publicKey: body.publicKey.toLowerCase() });
     return route.fulfill({ contentType: "application/json", body: JSON.stringify({ giftId: GIFT_ID, state: { kind: row.kind, signedAt: row.signedAt.toISOString() } }) });
   };
-  return { handle, kept };
+  return { handle, kept, anchored };
 }
 
 type Profile = { context: BrowserContext; page: Page; authenticatorId: string; cdp: Awaited<ReturnType<BrowserContext["newCDPSession"]>>; startedAt: number };
@@ -219,6 +248,9 @@ async function signIn(page: Page, context: BrowserContext, create: boolean): Pro
   return (account as string).toLowerCase();
 }
 
+/** How many passkey prompts the page has asked for since it loaded. A string, not a function: see the suite's notes on tsx. */
+const promptsOf = (page: Page) => page.evaluate("window.__vikyPrompts || 0") as Promise<number>;
+
 /** The gift's page, reached by a click: the consent key lives in the page's memory, as the account's own does. */
 async function openTheGift(page: Page) {
   await page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
@@ -240,17 +272,24 @@ test.describe("the recipient's yes and stop, on two devices", () => {
     configureConsentStore(undefined);
     await db.close();
   });
+  // Each walk starts from a gift nobody has answered for.
+  test.beforeEach(async () => {
+    await db.query("DELETE FROM viky_consents").catch(() => undefined);
+    await db.query("DELETE FROM viky_consent_keys").catch(() => undefined);
+  });
 
-  test("the same passkey makes the same consent key on a second device, and the stop it signs there holds for the gift", async ({ browser, baseURL: served }) => {
+  for (const anchor of [null, ANCHOR]) {
+  test(`the same passkey makes the same consent key on a second device, and the stop it signs there holds for the gift${anchor ? ", both signed for the public record with no prompt added" : ""}`, async ({ browser, baseURL: served }) => {
     test.setTimeout(180_000);
     const address = new URL(served ?? "http://127.0.0.1:3000");
     // A passkey refuses an IP address as its site.
     if (address.hostname === "127.0.0.1") address.hostname = "localhost";
     const baseURL = address.origin;
     const seed = `device-${Date.now()}`;
-    const video = VIDEO;
+    // One recording is enough: the walk a person sees is the same with the public record set.
+    const video = anchor ? undefined : VIDEO;
     let account = "";
-    const server = consentServer(() => account);
+    const server = consentServer(() => account, anchor);
 
     // The first device: a new passkey, a new account, and the yes from the line under the card.
     const first = await profile(browser, baseURL, seed, video, server.handle);
@@ -258,8 +297,10 @@ test.describe("the recipient's yes and stop, on two devices", () => {
     await openTheGift(first.page);
     await expect(first.page.getByText("Viky reads your rapid rating for this gift. Do you agree?")).toBeVisible();
     await hold(first.page);
+    const promptsBeforeYes = await promptsOf(first.page);
     await first.page.getByRole("button", { name: /^Agree$/ }).click();
     await expect(first.page.getByText(/^Viky reads your rapid rating for this gift\. You agreed on /)).toBeVisible();
+    expect(await promptsOf(first.page), "the yes asks the passkey for nothing more, with or without the public record").toBe(promptsBeforeYes);
     await hold(first.page);
     expect(server.kept.map((row) => row.kind)).toEqual(["yes"]);
     expect((await readingLeave(GIFT_ID, FUNDED_AT)).allowed, "with the yes, the gift is read").toBe(true);
@@ -277,11 +318,16 @@ test.describe("the recipient's yes and stop, on two devices", () => {
     await expect(second.page.getByRole("dialog", { name: "Stop Viky reading your rapid rating?" })).toBeVisible();
     await expect(second.page.getByText(/If 1500 is not read by .+, the \$50\.00 goes back to Maman\./)).toBeVisible();
     await hold(second.page);
+    const promptsBeforeStop = await promptsOf(second.page);
     await second.page.getByRole("button", { name: /^Stop reading$/ }).click();
     await expect(second.page.getByText(/^Viky stopped reading your rapid rating on /)).toBeVisible();
+    expect(await promptsOf(second.page), "nor does the stop").toBe(promptsBeforeStop);
     await hold(second.page);
     expect(server.kept.map((row) => row.kind)).toEqual(["yes", "stop"]);
     expect(server.kept[1].publicKey, "the second device's key is the first one's").toBe(server.kept[0].publicKey);
+    // With the public record set: the yes took place 0 and bound the key, the stop took place 1 on the other device
+    // and bound nothing, since the key is bound once. Without it, nothing was signed for it at all.
+    expect(server.anchored).toEqual(anchor ? [{ kind: "yes", sequence: 0, withBinding: true }, { kind: "stop", sequence: 1, withBinding: false }] : []);
     expect((await latestConsent(GIFT_ID))?.kind).toBe("stop");
     expect(await readingLeave(GIFT_ID, FUNDED_AT), "from the stop, nothing is read, whichever device reads").toEqual({ allowed: false, reason: "stopped" });
 
@@ -299,4 +345,5 @@ test.describe("the recipient's yes and stop, on two devices", () => {
       writeFileSync(join(video, "manifest.json"), JSON.stringify({ first: await recorded(first), second: await recorded(second) }, null, 2));
     }
   });
+  }
 });
