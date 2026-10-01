@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { readAccountAuthSession } from "@/src/account-auth-server";
+import { assertSameOrigin } from "@/src/api-guard";
 import { NO_STORE } from "@/src/gift-api";
 import { loadGift } from "@/src/gift-store";
 import { pushConfigured } from "@/src/morning-send-live";
+import { endpointOf } from "@/src/push-endpoint";
 import { forgetSubscription, isSubscribed, rememberSubscription } from "@/src/push-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
@@ -24,21 +26,17 @@ type Body = Readonly<{ intent?: unknown; subscription?: { endpoint?: unknown; ke
 
 const KEY = /^[A-Za-z0-9_-]{16,512}$/;
 
-function endpointOf(value: unknown): string | null {
-  if (typeof value !== "string" || value.length > 1_024) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" ? value : null;
-  } catch {
-    return null;
-  }
-}
-
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const rate = checkRateLimit("session", request);
   if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
   const { id } = await context.params;
   if (!/^\d{1,78}$/.test(id)) return NextResponse.json({ error: "UNKNOWN_GIFT" }, { status: 404, headers: NO_STORE });
+  // Asked by Viky's own pages alone, as every route that reads a body is (src/api-guard.ts).
+  try {
+    assertSameOrigin(request);
+  } catch {
+    return NextResponse.json({ error: "CROSS_ORIGIN" }, { status: 403, headers: NO_STORE });
+  }
 
   let account: string;
   try {

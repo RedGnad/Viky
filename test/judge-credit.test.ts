@@ -41,6 +41,8 @@ before(async () => {
 });
 beforeEach(async () => {
   await db.query("DELETE FROM viky_judge_credits");
+  // The one counter row the ceiling is held by starts each test from nothing, as the journal does.
+  await db.query("UPDATE viky_judge_credit_total SET units = 0");
   sent.length = 0;
 });
 after(async () => {

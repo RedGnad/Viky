@@ -397,6 +397,16 @@ export const DOOR = {
 } as const;
 
 /**
+ * The two pages a wrong address or a failure used to leave to the framework's own (the audit of 1 Oct 2026): one
+ * sentence each, and the way back to Viky.
+ */
+export const LOST = {
+  missing: "This page does not exist.",
+  failed: "This page could not be shown. Nothing was changed.",
+  home: "Back to Viky",
+} as const;
+
+/**
  * The account's door where the account is made elsewhere, or where the device did not say it can make one (the
  * founder, 1 Oct 2026). "This gift's link" on a gift, whose key is in the link itself; never the site's name in its
  * place, and never "computer" on a phone. Nothing here promises that a press leaves the app: the press is offered,
@@ -435,6 +445,12 @@ export const ACCOUNT_DOOR = {
   },
   /** An iPhone below iOS 18: the passkey an account is made from does not exist there (Mera's authenticator table). */
   outdated: "Update your iPhone to create your account. Viky needs iOS 18 or later.",
+  /**
+   * On any address but Viky's own (the audit of 1 Oct 2026): a passkey belongs to the address it was made on for good,
+   * so an account made on another one could never be opened on viky.cash. Signing in to one made there stays.
+   */
+  madeOnTheMainSite: "Accounts are created on viky.cash.",
+  createThere: "Create my account on viky.cash",
   samePasskey: "The same passkey you made your account with.",
   another: "A second account would not hold what the first one does.",
 } as const;
@@ -1548,6 +1564,9 @@ export const RELAY_CEILING = {
   hour: (who: "account" | "connection", minutes: number) =>
     `That is as many actions as Viky sends for one ${who} in an hour. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`,
   day: (who: "account" | "connection") => `That is as many actions as Viky sends for one ${who} in a day. Try again tomorrow.`,
+  /** Everybody's count together: said as what it is, and that nothing of theirs moved. */
+  dayAll: "Viky has sent as many actions as it sends in a day, for everybody. Nothing of yours was changed. Try again tomorrow.",
+  judgeTries: "That is as many judge codes as Viky takes from one connection in a day. Try again tomorrow.",
   tooSmallToSend: (least: string) => `Viky sends ${least} or more at a time. Below that, send everything you have at once.`,
   tooSmallToTakeOut: (least: string) => `Viky takes out ${least} or more at a time. Below that, take out everything that is yours at once.`,
   topUpTooSoon: "Viky readied this account for a cancel less than a minute ago. Try again in a moment.",

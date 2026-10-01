@@ -29,6 +29,28 @@ export type Door =
   /** The device did not say it can make a passkey. The button stays, and the gesture decides. */
   | Readonly<{ kind: "unsure"; handset: Handset }>;
 
+/**
+ * The one address accounts are made on (the audit of 1 Oct 2026). A passkey is bound for good to the address it was
+ * made on, so an account made on an earlier address, or on the address of one deployment, opens there alone and is
+ * stranded the day that address goes. Signing in to an account already made there stays possible; making one does not.
+ * A developer's own machine makes accounts too, which never leave it.
+ */
+export const ACCOUNT_HOST = "viky.cash";
+
+export function accountsAreMadeOn(hostname: string): boolean {
+  const host = hostname.trim().toLowerCase();
+  return host === ACCOUNT_HOST || host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host.endsWith(".localhost") || host.endsWith(".test");
+}
+
+/** The same question of a whole origin, as the server and the browser both name it. An origin that cannot be read makes none. */
+export function accountsAreMadeAt(origin: string): boolean {
+  try {
+    return accountsAreMadeOn(new URL(origin).hostname);
+  } catch {
+    return false;
+  }
+}
+
 /** The first iOS whose passkeys carry what an account is derived from. */
 export const FIRST_IOS = 18;
 

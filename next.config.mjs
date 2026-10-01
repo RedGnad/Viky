@@ -4,6 +4,8 @@ import { withSerwist } from "@serwist/turbopack";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Nothing says which framework answers (the audit of 1 Oct 2026).
+  poweredByHeader: false,
   // Without this, `next dev` started by an AI agent writes Next's own rules block into CLAUDE.md.
   agentRules: false,
   // Reclaim's zkFetch stack (attestor core, zk circuits, optional native re2) is loaded at runtime from
@@ -55,7 +57,21 @@ const nextConfig = {
        * browser puts the whole address of the page, key of a gift's link included, in the `Referer` of every request
        * that page sends to its own site, and the visit count is one of them. Nothing in Viky reads that header.
        */
-      { source: "/:path*", headers: [{ key: "Referrer-Policy", value: "strict-origin" }] },
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Referrer-Policy", value: "strict-origin" },
+          /**
+           * Three more for every page (the audit of 1 Oct 2026). A file is what its type says and nothing a browser
+           * guesses. No other site may draw Viky inside a frame of its own, which is how a press meant for one page is
+           * taken by another: said twice, since older browsers read the first and newer ones the second. And the only
+           * frame Viky itself draws is the card service's, off until its id is set (`SwapperSheet`).
+           */
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'; frame-src 'self' https://deposit.swapper.finance" },
+        ],
+      },
     ];
   },
   // The repository is the workspace root; a lockfile higher up the tree must not be picked up.

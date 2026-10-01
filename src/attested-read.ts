@@ -176,14 +176,23 @@ const agreedAt = new Map<string, number>();
  * proof coming back would be judged against patterns the worker never fetched, which is what happened that night and
  * what was shown as "try again in a minute". Nothing is fetched and nobody is told to retry.
  */
+/**
+ * The fingerprint of the sources the worker runs, as it says it itself, or nothing when it says none. Throws when the
+ * worker does not answer. Asked afresh each time: the health route (src/health.ts) reads it too, and must not be told
+ * what was true a quarter of an hour ago.
+ */
+export async function workerFingerprint(base: string, timeoutMs = 10_000): Promise<string | undefined> {
+  const response = await fetch(`${base}/health`, { cache: "no-store", signal: AbortSignal.timeout(timeoutMs) });
+  const body = (await response.json().catch(() => ({}))) as { reading?: { fingerprint?: string } };
+  return body.reading?.fingerprint;
+}
+
 async function workerIsCurrent(base: string): Promise<void> {
   const agreed = agreedAt.get(base) ?? 0;
   if (Date.now() - agreed < AGREEMENT_HOLDS_MS) return;
   let theirs: string | undefined;
   try {
-    const response = await fetch(`${base}/health`, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
-    const body = (await response.json().catch(() => ({}))) as { reading?: { fingerprint?: string } };
-    theirs = body.reading?.fingerprint;
+    theirs = await workerFingerprint(base);
   } catch (error) {
     // A worker that does not answer at all is a worker that is down, which is its own refusal and not this one.
     throw new AttestedReadError("FETCH_FAILED", "The attested fetch worker did not answer", undefined, { cause: error });

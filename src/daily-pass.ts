@@ -10,7 +10,9 @@ import { loadAllGifts, loadBoundGifts } from "./gift-store";
 import { milestonePass } from "./milestone-pass";
 import { isMilestoneGiftId } from "./milestone-protocol";
 import { recordPass, type NewPass, type PassHold, type PassPlanName } from "./pass-log";
+import { gatheringNotes } from "./pass-notes";
 import { escrowOf, relayerClients, relayerPreflight, RelayerError } from "./relayer";
+import { watchAtPassStart, type RelayerAtStart, type WatchLine } from "./watch";
 
 /**
  * The keeper's pass (D27): read every bound gift from its public profile and credit what is owed, then
@@ -97,7 +99,18 @@ export type DailyPassDeps = {
   journal?: (pass: NewPass) => Promise<void>;
   /** Retires the exit terms whose deadline has passed, so no row says `signed` of a signature nothing can use. */
   retireExits?: () => Promise<number>;
+  /**
+   * Tells the operator what the start of the pass shows (src/watch.ts): a relayer running low or refusing, the
+   * exchange's pin, the evidence key. Absent in the tests of the other steps. It never stops the pass.
+   */
+  watch?: (relayer: RelayerAtStart, pass: PassPlanName) => Promise<readonly WatchLine[]>;
 };
+
+/**
+ * What a run reports: one line per step, what the watch saw at the start, and what did not leave while it ran (a
+ * morning message a push service refused, an alert Resend refused), each of which is also a line in the logs.
+ */
+export type DailyPassReport = { relayer: string; balanceWei: string; lines: DailyPassLine[]; watch: readonly WatchLine[]; unsent: string[] };
 
 function liveDeps(): DailyPassDeps {
   const clients = relayerClients();
@@ -114,6 +127,7 @@ function liveDeps(): DailyPassDeps {
     completeCreations: () => completePendingCreations(liveCreationDeps()),
     milestones: (settle) => milestonePass(settle),
     journal: recordPass,
+    watch: (relayer, pass) => watchAtPassStart(relayer, pass),
   };
 }
 
@@ -157,6 +171,17 @@ function countRefusal(run: RunTally, code: string): void {
   run.refusals[code] = (run.refusals[code] ?? 0) + 1;
 }
 
+/** The watch at the start of a pass. Whatever it meets, the pass goes on: telling the operator is not a step of it. */
+async function watching(deps: DailyPassDeps, relayer: RelayerAtStart, pass: PassPlanName): Promise<readonly WatchLine[]> {
+  if (!deps.watch) return [];
+  try {
+    return await deps.watch(relayer, pass);
+  } catch (error) {
+    console.error(`watch failed at the start of the ${pass} pass: ${error instanceof Error ? error.message : String(error)}`);
+    return [];
+  }
+}
+
 async function writeJournal(deps: DailyPassDeps, plan: PassPlan, startedAt: number, endedAt: number, run: RunTally): Promise<void> {
   if (!deps.journal) return;
   try {
@@ -184,12 +209,13 @@ async function writeJournal(deps: DailyPassDeps, plan: PassPlan, startedAt: numb
 export async function dailyPass(
   plan: PassPlan = COUNTING_PASS,
   deps: DailyPassDeps = liveDeps(),
-): Promise<{ relayer: string; balanceWei: string; lines: DailyPassLine[] }> {
+): Promise<DailyPassReport> {
   const clock = () => (deps.nowSeconds ? deps.nowSeconds() : Math.floor(Date.now() / 1_000));
   const startedAt = clock();
   const run: RunTally = { readingsAttempted: 0, readingsSucceeded: 0, holds: [], failures: {}, refusals: {} };
   try {
-    return await runPass(plan, deps, run, clock);
+    const { value, notes } = await gatheringNotes(() => runPass(plan, deps, run, clock));
+    return { ...value, unsent: notes };
   } catch (error) {
     countFailure(run, failureCode(error));
     throw error;
@@ -203,8 +229,18 @@ async function runPass(
   deps: DailyPassDeps,
   run: RunTally,
   clock: () => number,
-): Promise<{ relayer: string; balanceWei: string; lines: DailyPassLine[] }> {
-  const { address, balance } = await deps.start();
+): Promise<Omit<DailyPassReport, "unsent">> {
+  let started: { address: string; balance: bigint };
+  try {
+    started = await deps.start();
+  } catch (error) {
+    // A pass that cannot start says so to the operator before it gives up: until 1 Oct 2026 a relayer under its
+    // reserve was a line in the logs of a run nobody was looking at.
+    await watching(deps, { refused: error instanceof Error ? error.message : String(error) }, plan.name);
+    throw error;
+  }
+  const { address, balance } = started;
+  const watch = await watching(deps, started, plan.name);
   const lines: DailyPassLine[] = [];
 
   // First, a gift whose money moved and whose record failed becomes a gift, so the rest of this pass, and the
@@ -295,7 +331,7 @@ async function runPass(
     const retired = await deps.retireExits();
     if (retired > 0) lines.push({ giftId: "exits", step: "retire", result: `${retired} set(s) of terms past their deadline` });
   }
-  return { relayer: address, balanceWei: balance.toString(), lines };
+  return { relayer: address, balanceWei: balance.toString(), lines, watch };
 }
 
 function describe(outcome: PublicCheckInOutcome): DailyPassLine {

@@ -22,7 +22,8 @@ const ENV = { SESSION_SIGNING_SECRET: "test-account-session-secret-that-is-longe
 const FUNDER = privateKeyToAccount("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
 const RECIPIENT = privateKeyToAccount("0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d");
 const STRANGER = privateKeyToAccount("0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a");
-const ENDPOINT = "https://push.example/browser-one";
+// One of the push services a browser really uses: the route takes no other host (src/push-endpoint.ts).
+const ENDPOINT = "https://fcm.googleapis.com/fcm/send/browser-one";
 const KEYS = { p256dh: "p".repeat(60), auth: "a".repeat(22) };
 
 process.env.SESSION_SIGNING_SECRET = ENV.SESSION_SIGNING_SECRET;
@@ -119,15 +120,26 @@ test("a browser can ask whether it is already being told, without changing anyth
   const cookie = await cookieFor(FUNDER);
   const known = await notify(...ask("1", { intent: "check", subscription: { endpoint: `${ENDPOINT}-funder` } }, cookie));
   assert.deepEqual(await known.json(), { on: true, possible: true });
-  const unknown = await notify(...ask("1", { intent: "check", subscription: { endpoint: "https://push.example/never-seen" } }, cookie));
+  const unknown = await notify(...ask("1", { intent: "check", subscription: { endpoint: "https://fcm.googleapis.com/fcm/send/never-seen" } }, cookie));
   assert.deepEqual(await unknown.json(), { on: false, possible: true });
-  assert.equal(await isSubscribed("https://push.example/never-seen", "1"), false, "asking wrote nothing");
+  assert.equal(await isSubscribed("https://fcm.googleapis.com/fcm/send/never-seen", "1"), false, "asking wrote nothing");
+});
+
+test("a request another site makes with the person's session is refused", async () => {
+  const [request, context] = ask("1", { intent: "on", subscription: { endpoint: `${ENDPOINT}-elsewhere`, keys: KEYS } }, await cookieFor(FUNDER));
+  request.headers.set("origin", "https://elsewhere.example");
+  const answer = await notify(request, context);
+  assert.equal(answer.status, 403);
+  assert.equal(((await answer.json()) as { error?: string }).error, "CROSS_ORIGIN");
+  assert.equal(await isSubscribed(`${ENDPOINT}-elsewhere`, "1"), false);
 });
 
 test("a request that is not a browser's own subscription is refused before anything is written", async () => {
   const cookie = await cookieFor(FUNDER);
   for (const body of [
-    { intent: "on", subscription: { endpoint: "http://push.example/not-https", keys: KEYS } },
+    { intent: "on", subscription: { endpoint: "http://fcm.googleapis.com/fcm/send/not-https", keys: KEYS } },
+    // A host that is no push service: the server would later send a request to it on every settled day.
+    { intent: "on", subscription: { endpoint: "https://push.example/any-host", keys: KEYS } },
     { intent: "on", subscription: { endpoint: "not a url", keys: KEYS } },
     { intent: "on", subscription: { endpoint: `${ENDPOINT}-bad`, keys: { p256dh: "short", auth: KEYS.auth } } },
     { intent: "on", subscription: { endpoint: `${ENDPOINT}-bad`, keys: { p256dh: KEYS.p256dh, auth: "<script>" } } },

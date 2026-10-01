@@ -2,9 +2,11 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import * as mera from "@/src/account/mera";
+import { useMadeHere } from "@/src/account/door";
 import { useAccount } from "@/src/account/provider";
 import { DOOR as W } from "@/src/sentences";
 import { CARD, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
+import { MadeOnTheMainSite } from "./AccountDoor";
 
 /**
  * The one door into an account (the art direction brief of 17 Sep 2026, section 7): a small outlined button in the
@@ -23,6 +25,7 @@ export function SignInDoor() {
   const panel = useRef<HTMLDivElement>(null);
   const door = useRef<HTMLButtonElement>(null);
   const busy = status === "busy";
+  const madeHere = useMadeHere();
 
   useEffect(() => {
     if (!open) return;
@@ -88,9 +91,14 @@ export function SignInDoor() {
           className={`${CARD} absolute top-[calc(100%+var(--space-sm))] right-0 z-50 flex w-[min(320px,calc(100vw-2*var(--page-margin)))] flex-col`}
         >
           <p className={HELP}>{W.how}</p>
-          <button type="button" onClick={() => void make()} disabled={busy} className={PRIMARY_BUTTON}>
-            {busy ? W.busy : W.create}
-          </button>
+          {/* On an address that is not Viky's own no account is made: the way to viky.cash stands in the button's place. */}
+          {madeHere ? (
+            <button type="button" onClick={() => void make()} disabled={busy} className={PRIMARY_BUTTON}>
+              {busy ? W.busy : W.create}
+            </button>
+          ) : (
+            <MadeOnTheMainSite />
+          )}
           <button type="button" onClick={() => void tryPasskey()} disabled={busy} className={SECONDARY_BUTTON}>
             {W.again}
           </button>

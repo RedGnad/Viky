@@ -1,6 +1,7 @@
 import type { SettledDay } from "./day-record";
 import type { GiftNames } from "./gift-names";
 import { morningPayload, morningSubject, type MorningNews, type MorningSide, type MorningWords } from "./morning-message";
+import { passNote } from "./pass-notes";
 import type { StoredSubscription } from "./push-store";
 
 /**
@@ -16,7 +17,8 @@ import type { StoredSubscription } from "./push-store";
  * Everything the outside world does is a dependency, so the tests are the real thing minus the network.
  */
 
-export type PushRefusal = Readonly<{ ok: false; gone: boolean }>;
+/** A sending the push service did not take: what it answered (0 when it never answered), and whether the browser is gone. */
+export type PushRefusal = Readonly<{ ok: false; gone: boolean; status?: number }>;
 export type PushSent = Readonly<{ ok: true }>;
 
 /** What a gift's sentences need: the two names, what a day is worth, and the register's word for what was done. */
@@ -70,8 +72,20 @@ export async function tellAboutMilestone(giftId: string, kind: "reached" | "expi
   return await tell(giftId, { kind, amount: "" }, deps);
 }
 
+/** Why a push service did not take a message, for the operator: its own status, and what was done about it. */
+function refusalInWords(refusal: PushRefusal): string {
+  if (refusal.gone) return `the push service answered ${refusal.status ?? "gone"}, that browser no longer listens and is forgotten`;
+  return refusal.status ? `the push service answered ${refusal.status}` : "the push service did not answer";
+}
+
 async function tell(giftId: string, news: MorningNews, deps: TellingDeps, day?: number): Promise<number> {
-  const log = deps.log ?? ((line: string) => console.error(line));
+  // Every refusal is a line in the logs and a note in the pass under way (src/pass-notes.ts): a message that did not
+  // leave used to leave nothing behind unless the sending itself threw (the audit of 1 Oct 2026).
+  const say = deps.log ?? ((line: string) => console.error(line));
+  const log = (line: string) => {
+    say(line);
+    passNote(line);
+  };
   try {
     const subscriptions = await deps.subscriptions(giftId);
     if (subscriptions.length === 0) return 0;
@@ -100,6 +114,7 @@ async function tell(giftId: string, news: MorningNews, deps: TellingDeps, day?: 
         sent += 1;
         continue;
       }
+      log(`morning message refused for gift ${giftId}: ${refusalInWords(result)}`);
       // A push service answering that the browser is gone is the only signal there is: the row goes, at once.
       if (result.gone) await deps.forgetEndpoint(subscription.endpoint);
     }

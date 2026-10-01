@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { passNote } from "./pass-notes";
 import type { Portal, PortalReview, ProviderRequest } from "./portal-store";
 import { countryInWords } from "./university-shown";
 
@@ -76,13 +77,26 @@ export async function sendReviewAlert(
   return sendAlert(reviewAlert(review, university), env);
 }
 
-async function sendAlert({ subject, text }: { subject: string; text: string }, env: Readonly<Record<string, string | undefined>>): Promise<AlertOutcome> {
+/** An alert Resend did not take: a line in the logs, and a note in the pass under way when there is one. */
+function notSent(subject: string, why: string): void {
+  const line = `alert not sent ("${subject}"): ${why.slice(0, 200)}`;
+  console.error(line);
+  passNote(line);
+}
+
+/**
+ * One email to the operator, or why not. Never throws. A failure is logged with its reason (the audit of 1 Oct 2026):
+ * an alert that did not leave used to leave no trace either, and the one person it was for could not know.
+ */
+export async function sendAlert({ subject, text }: { subject: string; text: string }, env: Readonly<Record<string, string | undefined>> = process.env): Promise<AlertOutcome> {
   const key = env.RESEND_API_KEY?.trim();
   if (!key) return "not configured";
   try {
     const { error } = await new Resend(key).emails.send({ from: env.ALERT_FROM?.trim() || DEFAULT_FROM, to: [ALERT_TO], subject, text });
+    if (error) notSent(subject, `${error.name ?? "refused"}: ${String(error.message ?? "")}`);
     return error ? "failed" : "sent";
-  } catch {
+  } catch (failure) {
+    notSent(subject, failure instanceof Error ? failure.message : String(failure));
     return "failed";
   }
 }

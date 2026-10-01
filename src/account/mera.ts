@@ -10,6 +10,7 @@ import type { Address, LocalAccount } from "viem";
 import { consentWebAuthnClient, endConsentKey } from "../client/consent-key";
 import { deriveEvmPrivateKey } from "./derive";
 import { accountError, passkeyEnvironmentProblem, toAccountError } from "./errors";
+import { accountsAreMadeOn } from "./passkey-support";
 
 /**
  * The whole account layer: a passkey (Face ID, fingerprint, security key) whose PRF output derives
@@ -175,6 +176,8 @@ export const DEFAULT_PASSKEY_LABEL = "Viky account";
 
 export async function createAccount(displayName: string): Promise<Address> {
   requirePasskeyCapableBrowser();
+  // Whatever screen asks: no passkey is made on an address that is not Viky's own (src/account/passkey-support.ts).
+  if (!accountsAreMadeOn(window.location.hostname)) throw accountError("MADE_ELSEWHERE");
   // The label only lives in the passkey provider (iCloud Keychain, Google Password Manager); it is
   // never sent to Viky's server, never stored by the app and never written on chain.
   const name = displayName.trim() || DEFAULT_PASSKEY_LABEL;

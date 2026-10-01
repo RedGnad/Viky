@@ -1,5 +1,5 @@
 import { formatAusd } from "@/src/gift-reader";
-import { judgeCreditConfig } from "@/src/judge-credit";
+import { judgeCreditConfig, judgeCreditsStanding, standingInWords } from "@/src/judge-credit";
 import { rampHostApiKey } from "@/src/rails";
 import type { Metadata } from "next";
 import { Shell } from "../kit/Shell";
@@ -49,6 +49,8 @@ export default async function JudgesPage() {
   const earlierEscrow = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
   // The judge credit's amount, said on the page; its code is never read here (D291).
   const judgeCredit = judgeCreditConfig();
+  // How many were given and how many the ceiling still allows, counted from the journal at each reading of the page.
+  const judgeStanding = judgeCredit ? await judgeCreditsStanding(judgeCredit).catch(() => null) : null;
   return (
     <Shell kind="document" back="/me">
       <header className="space-y-[var(--space-lg)]">
@@ -72,6 +74,7 @@ export default async function JudgesPage() {
             Offer a gift from the home page. On the pay sheet, press &quot;Have a code?&quot; and type the judge code from the
             submission portal&apos;s instructions. Your account receives {judgeCredit ? formatAusd(judgeCredit.units) : "a set amount"}: a judge credit from
             Viky&apos;s treasury, once per account. A real funder pays by card through Ramp, shown in the video.
+            {judgeCredit ? <span data-judge-standing> {standingInWords(judgeStanding)}</span> : null}
           </li>
           <li>
             The sheet then pays from your account and opens no card service; if the gift is more than the credit, it

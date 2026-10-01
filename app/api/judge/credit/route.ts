@@ -4,6 +4,7 @@ import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { giveJudgeCredit, isJudgeCredited, judgeCreditOpen } from "@/src/judge-credit";
 import { untouchedJudgeCredit } from "@/src/judge-credit-untouched";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { admitJudgeTry } from "@/src/relay-admission";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,8 @@ export async function POST(request: Request) {
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
     const body = (await request.json().catch(() => ({}))) as { code?: unknown };
     const code = typeof body.code === "string" ? body.code.slice(0, 200) : "";
+    // Ten tries a day from one connection, whatever the account: a wrong code is counted as a right one is.
+    await admitJudgeTry(request);
     return NextResponse.json(await giveJudgeCredit({ account: auth.account, code }), { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);

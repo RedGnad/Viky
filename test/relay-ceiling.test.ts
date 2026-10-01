@@ -55,8 +55,8 @@ after(async () => {
 
 test("the founder's defaults, and the environment's numbers when it names them", () => {
   assert.deepEqual(relayCeilings({}), DEFAULT_RELAY_CEILINGS);
-  assert.deepEqual(DEFAULT_RELAY_CEILINGS, { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1, topUpsPerGift: 2 });
-  assert.deepEqual(relayCeilings({ RELAY_PER_HOUR: "5", RELAY_PER_DAY: "40", RELAY_MINIMUM_CENTS: "250", TOP_UPS_PER_MINUTE: "2", TOP_UPS_PER_GIFT: "3" }), { perHour: 5, perDay: 40, minimumUnits: 2_500_000n, topUpsPerMinute: 2, topUpsPerGift: 3 });
+  assert.deepEqual(DEFAULT_RELAY_CEILINGS, { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1, topUpsPerGift: 2, perDayAll: 500 });
+  assert.deepEqual(relayCeilings({ RELAY_PER_HOUR: "5", RELAY_PER_DAY: "40", RELAY_MINIMUM_CENTS: "250", TOP_UPS_PER_MINUTE: "2", TOP_UPS_PER_GIFT: "3", RELAY_PER_DAY_ALL: "300" }), { perHour: 5, perDay: 40, minimumUnits: 2_500_000n, topUpsPerMinute: 2, topUpsPerGift: 3, perDayAll: 300 });
   // Nonsense keeps the default rather than opening the door or closing it.
   assert.deepEqual(relayCeilings({ RELAY_PER_HOUR: "0", RELAY_PER_DAY: "many", RELAY_MINIMUM_CENTS: "-1" }), DEFAULT_RELAY_CEILINGS);
 });
@@ -70,7 +70,7 @@ test("windows are UTC buckets every server agrees on, and the wait is said in wh
   assert.equal(minutesUntil("hour", Date.UTC(2026, 8, 23, 14, 59, 30)), 1);
 });
 
-test("four counts for a relayed action, two for a top-up, and the first over its ceiling is the one refused", () => {
+test("five counts for a relayed action, three for a top-up, and the first over its ceiling is the one refused", () => {
   const scopes = relayScopes(ACCOUNT, "203.0.113.9", DEFAULT_RELAY_CEILINGS);
   assert.deepEqual(
     scopes.map((one) => [one.scope, one.window, one.limit]),
@@ -79,8 +79,14 @@ test("four counts for a relayed action, two for a top-up, and the first over its
       [`relay:day:account:${ACCOUNT.toLowerCase()}`, "day", 100],
       ["relay:hour:ip:203.0.113.9", "hour", 20],
       ["relay:day:ip:203.0.113.9", "day", 100],
+      // One count for everybody together (the audit of 1 Oct 2026): many accounts on many connections had none.
+      ["relay:day:all", "day", 500],
     ],
   );
+  assert.equal(relayCeilings({ RELAY_PER_DAY_ALL: "40" }).perDayAll, 40);
+  const everybody = overTheCeiling(scopes.map((one, index) => ({ ...one, count: index === 4 ? 501 : 1 })));
+  assert.equal(everybody?.scope, "relay:day:all");
+  assert.equal(ceilingSentence(everybody!, NOW), "Viky has sent as many actions as it sends in a day, for everybody. Nothing of yours was changed. Try again tomorrow.");
   assert.equal(topUpScopes(ACCOUNT, "203.0.113.9", DEFAULT_RELAY_CEILINGS, "1").length, 3);
   assert.equal(overTheCeiling(scopes.map((one) => ({ ...one, count: one.limit }))), undefined, "at the ceiling is within it");
   const over = overTheCeiling(scopes.map((one, index) => ({ ...one, count: index === 3 ? 101 : 1 })));

@@ -162,6 +162,18 @@ export async function passesSince(): Promise<PassesSince> {
   };
 }
 
+/** When the latest recorded run of each schedule began, or nothing for a schedule that has never run. */
+export type LastPasses = Readonly<Record<PassPlanName, Date | null>>;
+
+export async function lastPasses(): Promise<LastPasses> {
+  const rows = await sql()`SELECT plan, max(started_at) AS last FROM viky_passes GROUP BY plan`;
+  const last = (plan: PassPlanName): Date | null => {
+    const value = rows.find((row) => String(row.plan) === plan)?.last;
+    return value === null || value === undefined ? null : value instanceof Date ? value : new Date(String(value));
+  };
+  return { counting: last("counting"), settling: last("settling") };
+}
+
 export type ReadingTotals = Readonly<{ attempted: number; succeeded: number }>;
 
 /** Every reading the recorded passes asked for, and every one that answered. */

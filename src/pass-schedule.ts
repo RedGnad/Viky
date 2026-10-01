@@ -14,6 +14,13 @@ export const COUNTING_PASS_UTC: PassTime = { hour: 0, minute: 30 };
 /** Settles missed days and sends them back, and sends back gifts that never started (SETTLING_PASS). */
 export const SETTLING_PASS_UTC: PassTime = { hour: 7, minute: 0 };
 
+/**
+ * Looks whether the morning's counting pass is in the journal, and tells the operator when it is not (src/watch.ts).
+ * An hour and a half after the pass, because the platform starts a cron anywhere inside the hour its schedule names
+ * (src/pass-log.ts): by 02:00 the pass of 00:30 has run, or it has not run at all.
+ */
+export const WATCH_UTC: PassTime = { hour: 2, minute: 0 };
+
 /** The cron expression the platform needs for a pass, every day at that time. */
 export function cronOf(time: PassTime): string {
   return `${time.minute} ${time.hour} * * *`;
