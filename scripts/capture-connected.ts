@@ -23,7 +23,15 @@ import { chromium, devices, type Page, type Route } from "@playwright/test";
  * Usage: `pnpm build`, then `pnpm review:capture-connected`. It starts a production server of the build for each
  * size and appearance on ports 3101 to 3104. Options: `--only=390x844-day`, `--scenario=<words>`, `--serial`, or
  * `http://localhost:<port>` to use a server of your own (never an IP address: a passkey refuses one as its domain).
- * docs/CAPTURES.md says the same, with the manifest of the first run.
+ * `CAPTURE_LIVE_GIFT_CARDS=1` adds the one scenario that asks viky.cash itself for Bitrefill's list; without it the
+ * run talks to nothing but the local server and the public RPC.
+ *
+ * The funder's side, from the card on Home to the link, is walked by `pnpm review:capture-funder`
+ * (scripts/audit-funder-walk.ts), which uses this file's session.
+ *
+ * A scenario that misses leaves a picture of where it stopped, `…--stopped.png`, in the run's folder: it says more
+ * than the line in the log. A gift's page is photographed on a gift number nobody holds: a gift that exists is drawn
+ * by the server from the gift itself, and none of the answers replaced in the browser would be read.
  */
 
 const SIZES = [
