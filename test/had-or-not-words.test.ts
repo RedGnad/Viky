@@ -1,0 +1,121 @@
+// What a gift had or not says (the audit of 1 Oct 2026). Its target on the contract is 1, or a count nobody reads,
+// and the pages printed it: "Reach 1 on their university", "Target 1. Not read yet.", a flag marked "1" on a trail.
+// And once a proof was held, refused, waited for or late, the title stayed "Show it" and the funder still read "has
+// not shown it yet".
+
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+import { CONDITIONS } from "../src/conditions";
+import { liveOf, type LiveInput } from "../src/gift-live";
+import { askedInWords, certificateById } from "../src/milestone-conditions";
+import { marathonTargetUnderHours } from "../src/marathon";
+import { GIFT_CARD, MILESTONE_PAGE } from "../src/sentences";
+
+test("what it asks is said in the register's words, from the contract's own target", () => {
+  const asked = (id: string, units: number) => askedInWords(certificateById(id)!, units);
+  assert.equal(asked("university-enrollment-shown", 1), "enrolled at that university");
+  assert.equal(asked("university-year-passed-shown", 1), "the year passed at that university");
+  assert.equal(asked("toefl-mybest-shown", 90), "90 on the TOEFL");
+  assert.equal(asked("coursera-certificate", 1), "the certificate of that course");
+  assert.equal(asked("marathon-finish", 1), "finish the race");
+  assert.match(asked("marathon-finish", marathonTargetUnderHours(4.5))!, /^finish in under 4 h 30$/);
+  assert.equal(asked("wca-time", 1), "set a result");
+  // A grade is on a scale of its own, and has its own words ("14.50 out of 20").
+  assert.equal(asked("university-grade-shown", 1450), null);
+  // Every condition of this shape has words, or is the grade: none falls back on the number.
+  for (const condition of CONDITIONS) {
+    const certificate = certificateById(condition.id);
+    if (!certificate || condition.id === "university-grade-shown") continue;
+    const words = askedInWords(certificate, certificate.targetUnits ? certificate.targetUnits(certificate.target.suggested) : certificate.target.suggested);
+    assert.ok(words && words.length > 3 && !/^\d+$/.test(words), `${condition.id}: ${words}`);
+  }
+  assert.match(readFileSync("src/milestone-status.ts", "utf8"), /asked: insider && certificate \? askedInWords\(certificate, Number\(state\.target\)\) : null,/, "only to whoever is shown the gift's own figures");
+  assert.equal(MILESTONE_PAGE.asked("enrolled at that university"), "This gift is for: enrolled at that university.");
+});
+
+test("the gift's page never prints the contract's target for this shape, and dates the return", () => {
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
+  const agreed = page.slice(page.indexOf("const agreed = ("), page.indexOf("const checked = ("));
+  assert.match(agreed, /\{hadOrNot \? \(/);
+  assert.match(agreed, /hadOrNot\.asked \? \(\s*<p className=\{BODY\}>\{M\.asked\(hadOrNot\.asked\)\}<\/p>/);
+  assert.match(agreed, /M\.provedByTheirs\(milestoneBy\(milestone, zone\)\)/);
+  const checked = page.slice(page.indexOf("const checked = ("), page.indexOf("const proof ="));
+  assert.match(checked, /\{hadOrNot \? \(\s*<p className=\{HELP\}>\{readerIsFunder \? M\.ruleProvedTheirs/);
+  // The sentences that name a target name a climb's number or a grade's words, and "it" for the rest.
+  assert.match(page, /const targetToName = !milestone \? null : hadOrNot \? \(milestone\.targetWords \?\? null\)/);
+  assert.equal(MILESTONE_PAGE.provedByTheirs("by 17 Oct 2026"), "If they prove it by 17 Oct 2026 it is theirs. If not, it comes back to you two weeks later.");
+  assert.equal(MILESTONE_PAGE.provedByYours("by 17 Oct 2026", "Maman"), "Prove it by 17 Oct 2026 and it is yours. If not, it goes back to Maman two weeks later.");
+  assert.equal(MILESTONE_PAGE.ruleProvedYours("by 17 Oct 2026"), "It is yours when it is proved, by 17 Oct 2026.");
+});
+
+test("the card draws no trail and no flag for it, and says where its proof stands", () => {
+  const card = readFileSync("app/kit/GiftCard.tsx", "utf8");
+  assert.match(card, /milestone\.shape === "certificate" \? \(\s*<HadOrNot state=/);
+  assert.match(card, /if \(status\.shape === "certificate"\) \{/);
+  assert.deepEqual(GIFT_CARD.hadOrNot, {
+    waiting: "Not proved yet.",
+    checking: "Shown. Viky is checking it.",
+    refused: "Checked: it did not show what the gift asks.",
+    building: "Waiting for the university's page to be set up.",
+    proved: "Proved.",
+    missed: "Not proved in time.",
+  });
+  for (const sentence of Object.values(GIFT_CARD.hadOrNot)) assert.doesNotMatch(sentence, /\d/, "no target, no number");
+});
+
+const WAITING: LiveInput = {
+  moment: "awaitingProof",
+  voice: "recipient",
+  funderName: "Maman",
+  recipientName: "Boo",
+  source: "their university",
+  amountDisplay: "$25.00",
+  theirsDisplay: "$0.00",
+  returnedDisplay: "$0.00",
+  todayReading: null,
+  target: 1,
+  started: true,
+  shown: true,
+  shape: "stamp",
+  lastJudged: null,
+  openBy: null,
+  connectBy: null,
+  nextReadingInWords: null,
+  cameBackOnInWords: null,
+};
+
+test("the title says where the proof stands, to each of the two people", () => {
+  const title = (over: Partial<LiveInput>) => liveOf({ ...WAITING, ...over }).headline;
+  // Nothing yet: the gesture, as before.
+  assert.equal(title({}), "Show it from your own university account, and it is yours.");
+  assert.equal(title({ voice: "funder" }), "Boo has not shown it yet.");
+  // Held for review.
+  assert.equal(title({ proof: "pending" }), "Shown. Viky is checking it.");
+  assert.equal(title({ proof: "pending", voice: "funder" }), "Boo showed it. Viky is checking it.");
+  // Refused by it.
+  assert.equal(title({ proof: "refused" }), "It was checked and did not show what the gift asks.");
+  assert.equal(title({ proof: "refused", voice: "funder" }), "It was checked and did not show what the gift asks.");
+  // The university's page still being built.
+  assert.equal(title({ proof: "building" }), "Your university's page is being set up. Then you show it here.");
+  assert.equal(title({ proof: "building", voice: "funder" }), "Boo's university page is being set up.");
+  // Past the last day, where the source dates what it grants: what was had in time can still be proved.
+  assert.equal(title({ proof: "late", lateUntilInWords: "31 Oct 2026" }), "The last day has passed. What you had by then can still be proved until 31 Oct 2026.");
+  assert.equal(title({ proof: "late", lateUntilInWords: "31 Oct 2026", voice: "funder" }), "The last day has passed. If nothing from before it is proved by 31 Oct 2026, it comes back to you.");
+  // Past the last day, where the showing itself is what is dated: nothing shown now can pay, and the return is dated.
+  assert.equal(title({ proof: "ended", lateUntilInWords: "31 Oct 2026" }), "The last day passed without it. It goes back to Maman after 31 Oct 2026.");
+  assert.equal(title({ proof: "ended", lateUntilInWords: "31 Oct 2026", voice: "funder" }), "The last day passed without it. It comes back to you after 31 Oct 2026.");
+  assert.equal(title({ proof: "ended", lateUntilInWords: "31 Oct 2026", voice: "reader" }), "The last day passed without it.");
+  // The figure is still said once, under the title.
+  assert.deepEqual(liveOf({ ...WAITING, proof: "pending" }).figure, { label: "In your name", value: "$25.00" });
+  // The page hands it what the contract and the review say, and the late window is the contract's.
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
+  assert.match(page, /hadOrNot\.review\?\.status \?\? \(pastTheLastDay \? \(condition\?\.nature === "shown" \? "ended" : "late"\) : null\)/);
+  // The contract compares days, so the whole last day counts; and what is shown is dated the day it is shown.
+  assert.match(page, /Math\.floor\(nowMs \/ 86_400_000\) > Math\.floor\(hadOrNot\.deadlineMs \/ 86_400_000\)/);
+  assert.match(readFileSync("src/shown-verification.ts", "utf8"), /eventAt: BigInt\(evidence\.reading\.eventAt \?\? evidence\.observedAt\)/);
+  assert.match(readFileSync("contracts/MilestoneGift.sol", "utf8"), /if \(_dayOf\(a\.eventAt\) > _dayOf\(g\.deadline\)\) revert DeadlinePassed\(\);/);
+  // No gesture is offered for a showing that can no longer pay.
+  assert.match(page, /if \(proofStands === "ended"\) return null;/);
+  assert.match(page, /hadOrNot\.deadlineMs \+ MILESTONE_LATE_PROOF_SECONDS \* 1000/);
+});

@@ -1,0 +1,134 @@
+import { expect, test, type Page } from "@playwright/test";
+import { DAY, gift, json, makeAnAccount, now, profile, shot as capture, sizesFor, type Who } from "./gift-kit";
+
+/**
+ * A gift had or not, as its two people read it (the audit of 1 Oct 2026). Its target on the contract is 1, and the
+ * pages printed it: "Reach 1 on their university", "Target 1. Not read yet.", a flag marked 1 on a trail. And once a
+ * proof was held, refused, waited for or late, the title stayed "Show it".
+ *
+ * The gift is the test's own, answered as the gift route answers it; the pages, the sign-in and every press are real.
+ *
+ * VIKY_HAD_OR_NOT_CAPTURES=<folder> also photographs each state, at 390 by 844 and at 1440 by 900.
+ */
+const SHOTS = process.env.VIKY_HAD_OR_NOT_CAPTURES;
+const SIZES = sizesFor(SHOTS);
+const shot = (page: Page, size: string, name: string) => capture(SHOTS, page, size, name);
+
+const GIFT = "1999993";
+const LAST_DAY_MS = (now() + 20 * DAY) * 1000;
+
+/** An enrolment gift, opened, with no proof yet: what the contract holds is a target of 1. */
+const enrolment = (who: Who, over: Record<string, unknown> = {}) =>
+  gift(GIFT, who, { conditionId: "university-enrollment-shown", target: 1, asked: "enrolled at that university", deadlineMs: LAST_DAY_MS, ...over });
+
+async function answer(page: Page, status: () => unknown) {
+  await page.route(new RegExp(`/api/gift/${GIFT}(\\?.*)?$`), (route) => route.fulfill(json(status())));
+  await page.route(`**/api/gift/${GIFT}/consent`, (route) =>
+    route.fulfill(json({ giftId: GIFT, state: null, reading: "no_agreement", opened: true, finished: false, terms: { what: "your enrolment" }, until: "the gift's last day", texts: { yes: "yes", stop: "stop" } })),
+  );
+  await page.route(`**/api/gift/${GIFT}/journal`, (route) => route.fulfill(json({ giftId: GIFT, kind: "milestone", readings: [] })));
+}
+
+const title = (page: Page) => page.locator("main h1, main h2").first();
+
+test.describe("a gift had or not, as its two people read it", () => {
+  test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each test opens its own windows");
+
+  for (const size of SIZES) {
+    test(`the person it is for never reads the contract's 1, and reads where their proof stands (${size.name})`, async ({ browser, baseURL }) => {
+      test.setTimeout(120_000);
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page } = device;
+      let state: Record<string, unknown> = {};
+      await answer(page, () => enrolment("recipient", state));
+      await makeAnAccount(device);
+
+      // Nothing shown yet: the gesture, and what was agreed in the register's words.
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText("Show it from your own university account, and it is yours.")).toBeVisible();
+      await page.getByText("What was agreed").click();
+      await expect(page.getByText("This gift is for: enrolled at that university.")).toBeVisible();
+      await expect(page.getByText(/^Prove it by .+ and it is yours\. If not, it goes back to Maman two weeks later\.$/)).toBeVisible();
+      await page.getByText("How this is checked").click();
+      await expect(page.getByText(/^It is yours when it is proved, by .+\.$/)).toBeVisible();
+      await expect(page.getByText(/Reach 1 on|reach 1,|Target 1/)).toHaveCount(0);
+      await shot(page, size.name, "3a-yours-what-was-agreed");
+
+      // Held for review.
+      state = { review: { status: "pending" } };
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText("Shown. Viky is checking it.").first()).toBeVisible();
+      await expect(page.getByText("Show it from your own university account, and it is yours.")).toHaveCount(0);
+      await shot(page, size.name, "3b-yours-held-for-review");
+
+      // Refused by the review.
+      state = { review: { status: "refused" } };
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText("It was checked and did not show what the gift asks.")).toBeVisible();
+      await shot(page, size.name, "3c-yours-refused");
+
+      // The university's page still being built.
+      state = { review: { status: "building" } };
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText("Your university's page is being set up. Then you show it here.")).toBeVisible();
+      await shot(page, size.name, "3d-yours-being-built");
+
+      // The last day has passed. An enrolment is dated the day it is shown, so nothing shown now can pay: no gesture
+      // is offered, and the page says when it goes back.
+      state = { phase: "overdue", deadlineMs: (now() - 3 * DAY) * 1000 };
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText(/^The last day passed without it\. It goes back to Maman after .+\.$/)).toBeVisible();
+      await expect(page.getByRole("button", { name: /^Show it$/ })).toHaveCount(0);
+      await shot(page, size.name, "3e-yours-past-the-last-day");
+      await device.context.close();
+    });
+
+    test(`the funder reads what the person did, and when it comes back (${size.name})`, async ({ browser, baseURL }) => {
+      test.setTimeout(120_000);
+      const device = await profile(browser, baseURL, size.viewport);
+      const { page } = device;
+      let state: Record<string, unknown> = {};
+      await answer(page, () => enrolment("funder", state));
+      // The card of Gifts: no trail, no flag marked 1, and where the proof stands.
+      await page.unroute("**/api/gifts/mine");
+      await page.route("**/api/gifts/mine", (route) =>
+        route.fulfill(
+          json({
+            account: "",
+            gifts: [
+              { giftId: GIFT, role: "funder", goalType: 40, goalUsername: null, usernameSource: null, recipientName: "Boo", funderName: "Maman", catchUpSeconds: 108_000, days: [], fundedAt: now() - 5 * DAY, startDay: 0, endDay: 0, amountDisplay: "$25.00", perDayDisplay: "$0.00", durationDays: 30, creditedDays: 0, missedDays: 0, opened: true, counting: true, finished: false, cancelled: false, earnedDisplay: "$0.00", theirsDisplay: "$0.00", returnedDisplay: "$0.00", milestone: enrolment("funder", state) },
+            ],
+          }),
+        ),
+      );
+      await makeAnAccount(device);
+      await page.goto("/gifts");
+      const card = page.locator(`a[href="/g/${GIFT}"]`);
+      await expect(card.getByText("Not proved yet.")).toBeVisible();
+      await expect(card.getByText(/Target 1/)).toHaveCount(0);
+      await expect(card.locator(".had-or-not")).toHaveCount(1);
+      await shot(page, size.name, "3f-the-card-in-gifts");
+
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText("Boo has not shown it yet.")).toBeVisible();
+      await page.getByText("What was agreed").click();
+      await expect(page.getByText("This gift is for: enrolled at that university.")).toBeVisible();
+      await expect(page.getByText(/^If they prove it by .+ it is theirs\. If not, it comes back to you two weeks later\.$/)).toBeVisible();
+      await expect(page.getByText(/Reach 1 on|reach 1,|Target 1/)).toHaveCount(0);
+      await shot(page, size.name, "3g-theirs-what-was-agreed");
+
+      state = { review: { status: "pending" } };
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText("Boo showed it. Viky is checking it.")).toBeVisible();
+      await expect(page.getByText("Boo has not shown it yet.")).toHaveCount(0);
+      await shot(page, size.name, "3h-theirs-held-for-review");
+
+      state = { phase: "overdue", deadlineMs: (now() - 3 * DAY) * 1000 };
+      await page.goto(`/g/${GIFT}`);
+      await expect(page.getByText(/^The last day passed without it\. It comes back to you after .+\.$/)).toBeVisible();
+      await shot(page, size.name, "3i-theirs-past-the-last-day");
+      expect(await title(page).count()).toBeGreaterThan(0);
+      await device.context.close();
+    });
+  }
+});

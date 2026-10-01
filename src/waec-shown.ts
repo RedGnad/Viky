@@ -1,5 +1,6 @@
 import { keccak256, stringToHex, type Hex } from "viem";
 import { refuseShown, type ShownReading } from "./shown-proof";
+import { MILESTONE_MAX_DURATION_DAYS } from "./milestone-protocol";
 
 /**
  * A WASSCE result, shown from WAEC's own result checker (D217): the West African school certificate of Nigeria, Ghana,
@@ -41,7 +42,7 @@ export const WAEC_NOT_REGISTERED = "This condition's provider is not registered 
 export const WAEC_LOGIN_URL = "https://www.waecdirect.org/";
 
 export const WAEC_CREDITS = Object.freeze({ min: 1, max: 9, suggested: 5 });
-export const WAEC_DURATION_DAYS = Object.freeze({ min: 30, max: 400, suggested: 240 });
+export const WAEC_DURATION_DAYS = Object.freeze({ min: 30, max: MILESTONE_MAX_DURATION_DAYS, suggested: 240 });
 
 const CREDIT_GRADES = new Set(["A1", "B2", "B3", "C4", "C5", "C6"]);
 

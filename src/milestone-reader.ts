@@ -1,7 +1,7 @@
 import { getAddress, type Abi, type Hex, type PublicClient } from "viem";
 import { giftPublicClient } from "./gift-reader";
 import { milestoneGiftAbi } from "./milestone-gift-abi";
-import { MILESTONE_DORMANT_SECONDS, MILESTONE_PROOF_GRACE_SECONDS, SHAPE_CLIMB } from "./milestone-protocol";
+import { MILESTONE_DORMANT_SECONDS, MILESTONE_LATE_PROOF_SECONDS, MILESTONE_PROOF_GRACE_SECONDS, SHAPE_CLIMB, SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
 
 /**
  * A milestone gift as `MilestoneGift` holds it, and what state that is in words a screen and the keeper can act on.
@@ -127,19 +127,26 @@ export function canStillReach(gift: PhaseInput, nowSeconds: number): boolean {
 }
 
 /**
- * Whether `expire` would be accepted now, for a climb, by the contract's own rules: never while readings are paused; a
- * gift nobody opened after the dormant delay and the grace; a gift opened and never started likewise from the claim;
- * a started one once its deadline and the grace have passed. A window a pause ran across is counted from the pause's
- * end, as the contract counts it (`_afterPauses`), so the keeper never takes back what a reading taken in time can
- * still reach.
+ * Whether `expire` would be accepted now, by the contract's own rules and in the contract's own order: never while
+ * readings are paused. A gift nobody opened, of either shape, after the dormant delay and the grace. A gift of the
+ * second shape that was opened, once what was granted in time can no longer be shown: the deadline and the late
+ * window. That one comes before the question of a first reading, because the second shape never has one: asked in the
+ * other order, the keeper would send an `expire` the contract refuses as too early, every day. Then a climb under way,
+ * once its deadline and the grace have passed; and a climb opened and never started, from the claim. A window a pause
+ * ran across is counted from the pause's end, as the contract counts it (`_afterPauses`), so the keeper never takes
+ * back what a reading taken in time can still reach.
+ *
+ * Until 1 Oct 2026 this answered no for every gift that was not a climb, so a certificate, a university gift, an exam,
+ * a race or a competition never came back to its funder, while its screens said it would (the audit of that day).
  */
 export function canExpire(
   gift: Pick<MilestoneState, "cancelled" | "settled" | "recipient" | "identityHash" | "fundedAt" | "claimedAt" | "deadline" | "shape" | "proofPaused" | "proofResumedAt">,
   nowSeconds: number,
 ): boolean {
-  if (gift.proofPaused || gift.cancelled || gift.settled || gift.shape !== SHAPE_CLIMB) return false;
+  if (gift.proofPaused || gift.cancelled || gift.settled) return false;
   const afterPauses = (moment: number) => Math.max(moment, gift.proofResumedAt);
   if (gift.recipient === null) return nowSeconds >= gift.fundedAt + MILESTONE_DORMANT_SECONDS + MILESTONE_PROOF_GRACE_SECONDS;
-  if (gift.identityHash === ZERO_HASH) return nowSeconds >= afterPauses(gift.claimedAt + MILESTONE_DORMANT_SECONDS) + MILESTONE_PROOF_GRACE_SECONDS;
-  return nowSeconds > afterPauses(gift.deadline) + MILESTONE_PROOF_GRACE_SECONDS;
+  if (gift.shape === SHAPE_HAVE_OR_NOT) return nowSeconds > afterPauses(gift.deadline) + MILESTONE_LATE_PROOF_SECONDS;
+  if (gift.identityHash !== ZERO_HASH) return nowSeconds > afterPauses(gift.deadline) + MILESTONE_PROOF_GRACE_SECONDS;
+  return nowSeconds >= afterPauses(gift.claimedAt + MILESTONE_DORMANT_SECONDS) + MILESTONE_PROOF_GRACE_SECONDS;
 }

@@ -30,6 +30,14 @@ export type LiveInput = Readonly<{
   started: boolean;
   /** Whether the proof is shown by the person from their own account (D162) rather than a page they share. */
   shown?: boolean;
+  /**
+   * Where the one proof of a gift had or not stands, when that is not "nothing yet": held for review, refused by it,
+   * waiting for the university's page to be built, or past the last day: "late" where the source dates what it grants,
+   * so what was had in time can still be proved, and "ended" where the showing itself is what is dated.
+   */
+  proof?: "pending" | "refused" | "building" | "late" | "ended" | null;
+  /** The last day of the late window, in the reader's clock: fourteen days after the gift's last day. */
+  lateUntilInWords?: string | null;
   /** Which of the three drawings the gift has, which says what its promise is: day by day, at a target, with a proof. */
   shape?: "days" | "climb" | "stamp";
   /** What the last day Viky judged did, when a record of it exists. Nothing when the gift predates the record. */
@@ -86,6 +94,23 @@ export function titleOf(voice: Voice, name: string | null): string {
   if (voice === "recipient") return W_CARD.forYou;
   if (name && name.trim()) return W_CARD.forName(name);
   return voice === "funder" ? W_CARD.forWhoever : L.forSomebody;
+}
+
+/** Where a proof stands, to each of the three readers. A reader who is neither of the two reads the third person. */
+function proofHeadline(proof: NonNullable<LiveInput["proof"]>, voice: Voice, recipientName: string | null, funderName: string | null, until: string | null): string {
+  const yours = voice === "recipient";
+  switch (proof) {
+    case "pending":
+      return yours ? L.awaitingProof.checkingYours : L.awaitingProof.checkingTheirs(recipientName);
+    case "refused":
+      return L.awaitingProof.refused;
+    case "building":
+      return yours ? L.awaitingProof.buildingYours : L.awaitingProof.buildingTheirs(recipientName);
+    case "late":
+      return yours ? L.awaitingProof.lateYours(until ?? "") : voice === "funder" ? L.awaitingProof.lateTheirs(until ?? "") : L.awaitingProof.lateReading(until ?? "");
+    case "ended":
+      return yours ? L.awaitingProof.endedYours(funderName, until ?? "") : voice === "funder" ? L.awaitingProof.endedTheirs(until ?? "") : L.awaitingProof.endedReading;
+  }
 }
 
 /** Whether this reader is the person the gift is for. A reader who is neither of the two reads the third person. */
@@ -176,8 +201,11 @@ export function liveOf(input: LiveInput): Live {
 
     case "awaitingProof":
       return {
-        // The one gesture, said as the headline: sharing a page, or showing it from their own account (D162).
-        headline: input.shown
+        // The one gesture, said as the headline: sharing a page, or showing it from their own account (D162). Once
+        // there is a proof, or once the last day has passed, the headline says where it stands instead.
+        headline: input.proof
+          ? proofHeadline(input.proof, voice, recipientName, funderName, input.lateUntilInWords ?? null)
+          : input.shown
           ? yours
             ? L.awaitingProof.shownYours(source)
             : L.awaitingProof.shownTheirs(recipientName)

@@ -344,7 +344,7 @@ export function PaySheet({
           nowMs === 0 ? null : <p className={BODY}>{FUND.check.missed(settlingTimeInWords(nowMs))}</p>
         )}
         <p className={BODY}>{FUND.check.namesSeen(recipient, funder)}</p>
-        <p className={BODY}>{milestone ? MILESTONE_FUND.check.fourteenDays : FUND.check.fourteenDays}</p>
+        <p className={BODY}>{milestone ? MILESTONE_FUND.check.fourteenDays : certificate ? FUND.check.fourteenDaysUnopened : FUND.check.fourteenDays}</p>
         {cardClosed ? null : (
           <>
             <p className={HELP}>{feeSentence(way)}.</p>

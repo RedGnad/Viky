@@ -14,7 +14,7 @@ import { ChoiceList } from "../ChoiceList";
  * among the ones the competition holds. What the draft carries is the competition and the event in one id,
  * `GanOpen2026/333`.
  */
-export function WcaChooser({ open, draft, named, onChoose }: Readonly<{ open: boolean; draft: GiftDraft; named: (course: string) => string; onChoose: (courseId: string, title: string) => void }>) {
+export function WcaChooser({ open, draft, named, onChoose }: Readonly<{ open: boolean; draft: GiftDraft; named: (course: string) => string; /** The course, its title, and the competition's last day as the WCA dates it. */ onChoose: (courseId: string, title: string, endDate: string) => void }>) {
   const [competitions, setCompetitions] = useState<readonly ListedCompetition[] | null | "unreadable">(null);
   const [picked, setPicked] = useState<string | null>(null);
   const [country, setCountry] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export function WcaChooser({ open, draft, named, onChoose }: Readonly<{ open: bo
   const shown = inCountryOrAll(competitions, country);
   const choose = (one: ListedCompetition, eventId: string) => {
     const event = one.events.find((each) => each.id === eventId);
-    if (event) onChoose(`${one.competitionId}/${eventId}`, `${one.name}, ${event.label}`);
+    if (event) onChoose(`${one.competitionId}/${eventId}`, `${one.name}, ${event.label}`, one.endDate);
   };
   const day = (startsAt: string) => new Date(startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
   const chip = (pressed: boolean) => `${CHIP} ${pressed ? "bg-[var(--chosen)] font-bold" : ""}`;

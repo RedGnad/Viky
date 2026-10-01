@@ -1,5 +1,6 @@
 import { keccak256, stringToHex, type Hex } from "viem";
 import { normaliseCertificateName } from "./duolingo-english-test";
+import { MILESTONE_MAX_DURATION_DAYS } from "./milestone-protocol";
 
 /**
  * "Set a time at a WCA competition" (the founder's decision of 27 Sep 2026): a milestone of the Play family, read
@@ -115,7 +116,7 @@ export function wcaAccountOf(account: string): { wcaId: string; competitionId: s
   return match && match[3] in WCA_EVENTS ? { wcaId: match[1], competitionId: match[2], eventId: match[3], round: match[4] } : undefined;
 }
 
-export const WCA_DURATION_DAYS = Object.freeze({ min: 7, max: 400, suggested: 120 });
+export const WCA_DURATION_DAYS = Object.freeze({ min: 7, max: MILESTONE_MAX_DURATION_DAYS, suggested: 120 });
 
 /** Goal 32 on `MilestoneGift`, after MikaTiming's 31. */
 export const WCA_GOAL_TYPE = 32;

@@ -18,6 +18,7 @@ import { Field } from "../Field";
 import { Sheet } from "../Sheet";
 import { GradeTarget } from "./GradeTarget";
 import { UniversityChooser } from "./UniversityChooser";
+import { competitionReadableAtMs, lengthForTheEvent, raceReadableAtMs } from "@/src/event-length";
 import { MarathonChooser } from "./MarathonChooser";
 import { WcaChooser } from "./WcaChooser";
 import { chosenUniversityTitle } from "@/src/university-choice";
@@ -539,7 +540,10 @@ export function WillSheet({
                   open={open}
                   draft={draft}
                   named={certificate.course.named}
-                  onChoose={(courseId, title) => onChange({ ...draft, course: courseId, courseTitle: title, target: String(certificate.target.suggested) })}
+                  // The length pressed is the first that outlasts the competition (the audit of 1 Oct 2026).
+                  onChoose={(courseId, title, endDate) =>
+                    onChange({ ...draft, course: courseId, courseTitle: title, target: String(certificate.target.suggested), days: String(lengthForTheEvent(certificate.duration, competitionReadableAtMs(endDate))) })
+                  }
                 />
               ) : certificate.course?.search?.races ? (
                 /* The race, asked as a list from the register (D273): the marathon's own chooser. */
@@ -547,7 +551,10 @@ export function WillSheet({
                   open={open}
                   draft={draft}
                   named={certificate.course.named}
-                  onChoose={(courseId, title) => onChange({ ...draft, course: courseId, courseTitle: title, target: String(certificate.target.suggested) })}
+                  // The length pressed is the first that outlasts the race.
+                  onChoose={(courseId, title, startsAt) =>
+                    onChange({ ...draft, course: courseId, courseTitle: title, target: String(certificate.target.suggested), days: String(lengthForTheEvent(certificate.duration, raceReadableAtMs(startsAt))) })
+                  }
                 />
               ) : certificate.course?.search?.listed ? (
                 /* The university: the person's country listed, the whole list searched (the founder, 29 Sep 2026). */

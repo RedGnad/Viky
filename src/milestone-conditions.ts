@@ -471,6 +471,10 @@ export type CertificateCondition = Readonly<{
     durationShape: (min: number, max: number) => string;
     durationInWords: (days: number) => string;
     whenReached: string;
+    /**
+     * When it comes back, dated (the audit of 1 Oct 2026): a gift of this shape that was opened goes back once what
+     * was granted in time can no longer be shown, the contract's late window, two weeks after the last day.
+     */
     ifNot: string;
     refusals: Readonly<{
       targetShape: string;
@@ -528,7 +532,7 @@ export const DET_MILESTONE: CertificateCondition = {
     durationShape: (min, max) => `Between ${min} and ${max} days.`,
     durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
     whenReached: "When they reach that score, all of this becomes theirs",
-    ifNot: "If they do not reach it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    ifNot: "If they do not reach it in time, all of it comes back to you two weeks after the last day. Nothing is kept by anybody else.",
     refusals: {
       targetShape: `A score between ${DET_MIN_SCORE} and ${DET_MAX_SCORE}, in fives.`,
       nameShape: "Type their name as it will appear on the certificate.",
@@ -598,7 +602,7 @@ export const COURSERA_MILESTONE: CertificateCondition = {
     durationShape: (min, max) => `Between ${min} and ${max} days.`,
     durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
     whenReached: "When they get it, all of this becomes theirs",
-    ifNot: "If they do not get it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    ifNot: "If they do not get it in time, all of it comes back to you two weeks after the last day. Nothing is kept by anybody else.",
     refusals: {
       targetShape: "A Coursera certificate is granted or it is not, so there is nothing to set here.",
       nameShape: "Type their name as Coursera prints it on a certificate.",
@@ -882,7 +886,7 @@ export const CREDLY_MILESTONE: CertificateCondition = {
     durationShape: (min, max) => `Between ${min} and ${max} days.`,
     durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
     whenReached: "When they get it, all of this becomes theirs",
-    ifNot: "If they do not get it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    ifNot: "If they do not get it in time, all of it comes back to you two weeks after the last day. Nothing is kept by anybody else.",
     refusals: {
       targetShape: "A certification is issued or it is not, so there is nothing to set here.",
       nameShape: "Type their name as Credly prints it on a badge.",
@@ -981,7 +985,7 @@ export const TOEFL_SHOWN_MILESTONE: CertificateCondition = {
     durationShape: (min, max) => `Between ${min} and ${max} days.`,
     durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
     whenReached: "When they show that score, all of this becomes theirs",
-    ifNot: "If they do not show it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    ifNot: "If they do not show it in time, all of it comes back to you two weeks after the last day. Nothing is kept by anybody else.",
     refusals: {
       targetShape: `A score between ${TOEFL_MIN_SCORE} and ${TOEFL_MAX_SCORE}.`,
       nameShape: "",
@@ -1065,7 +1069,7 @@ export const UNIVERSITY_SHOWN_MILESTONE: CertificateCondition = {
     durationShape: (min, max) => `Between ${min} and ${max} days.`,
     durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
     whenReached: "When they show they are enrolled, all of this becomes theirs",
-    ifNot: "If they do not show it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    ifNot: "If they do not show it in time, all of it comes back to you two weeks after the last day. Nothing is kept by anybody else.",
     refusals: {
       targetShape: "",
       nameShape: "",
@@ -1147,7 +1151,7 @@ export const UNIVERSITY_YEAR_MILESTONE: CertificateCondition = {
     durationShape: (min, max) => `Between ${min} and ${max} days.`,
     durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
     whenReached: "When they show they passed, all of this becomes theirs",
-    ifNot: "If they do not show it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    ifNot: "If they do not show it in time, all of it comes back to you two weeks after the last day. Nothing is kept by anybody else.",
     refusals: {
       targetShape: "",
       nameShape: "",
@@ -1221,7 +1225,7 @@ export const UNIVERSITY_GRADE_MILESTONE: CertificateCondition = {
     durationShape: (min, max) => `Between ${min} and ${max} days.`,
     durationInWords: (days) => `${days} ${days === 1 ? "day" : "days"} from today`,
     whenReached: "When they show that grade, all of this becomes theirs",
-    ifNot: "If they do not show it in time, all of it comes back to you. Nothing is kept by anybody else.",
+    ifNot: "If they do not show it in time, all of it comes back to you two weeks after the last day. Nothing is kept by anybody else.",
     refusals: {
       targetShape: "Write the grade as a number on the university's scale, with a dot for decimals, like 14.5.",
       nameShape: "",
@@ -1270,7 +1274,7 @@ const EXAM_DURATION_WORDS = {
   durationHelp: "The result has to be shown inside that time, and the day it is shown is what counts.",
   durationShape: (min: number, max: number) => `Between ${min} and ${max} days.`,
   durationInWords: (days: number) => `${days} ${days === 1 ? "day" : "days"} from today`,
-  ifNot: "If they do not show it in time, all of it comes back to you. Nothing is kept by anybody else.",
+  ifNot: "If they do not show it in time, all of it comes back to you two weeks after the last day. Nothing is kept by anybody else.",
 } as const;
 
 /**
@@ -1541,6 +1545,19 @@ const CERTIFICATES: readonly CertificateCondition[] = [
 export function certificateOf(condition: Condition | undefined): CertificateCondition | undefined {
   if (!condition || condition.kind !== "milestone") return undefined;
   return CERTIFICATES.find((entry) => entry.condition.id === condition.id);
+}
+
+/**
+ * What a gift of this shape asks, from the contract's own target, in the register's words: "enrolled at that
+ * university", "90 on the TOEFL", "finish the race". The contract's number is no words to read: it is 1 for something
+ * had or not, and a count of seconds turned over for a race (the audit of 1 Oct 2026: "Reach 1 on their university",
+ * "Target 1. Not read yet."). Nothing for a target on a scale of its own, a grade, which has its own words.
+ */
+export function askedInWords(certificate: CertificateCondition, targetUnits: number): string | null {
+  if (certificate.condition.id === "marathon-finish") return marathonTargetInWords(targetUnits);
+  if (certificate.condition.id === "wca-time") return wcaTargetInWords(targetUnits);
+  if (certificate.targetUnits) return null;
+  return certificate.target.inWords(targetUnits);
 }
 
 export function certificateById(conditionId: string): CertificateCondition | undefined {

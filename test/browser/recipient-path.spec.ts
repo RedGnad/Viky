@@ -1,7 +1,6 @@
-import { mkdirSync } from "node:fs";
-import { join } from "node:path";
-import { expect, test, type Browser, type BrowserContext, type Page, type Route } from "@playwright/test";
-import { holdAPasskey, passkeySite, signedIn } from "./virtual-passkey";
+import { expect, test, type Page } from "@playwright/test";
+import { agreement, DAY, gift, json, KEY, makeAnAccount, now, profile, shot as capture, sizesFor } from "./gift-kit";
+import { signedIn } from "./virtual-passkey";
 
 /**
  * The path of the person a gift is for (the audit of 1 Oct 2026, and the founder's account door of the same day).
@@ -16,108 +15,8 @@ import { holdAPasskey, passkeySite, signedIn } from "./virtual-passkey";
  * VIKY_RECIPIENT_CAPTURES=<folder> also photographs each point, at 390 by 844 and at 1440 by 900.
  */
 const SHOTS = process.env.VIKY_RECIPIENT_CAPTURES;
-const SIZES = SHOTS
-  ? [
-      { name: "390", viewport: { width: 390, height: 844 } },
-      { name: "1440", viewport: { width: 1440, height: 900 } },
-    ]
-  : [{ name: "390", viewport: { width: 390, height: 844 } }];
-
-const KEY = "AbCdEfGhIjKlMnOpQrStUv";
-const now = () => Math.floor(Date.now() / 1000);
-const DAY = 86_400;
-
-type Who = "recipient" | "funder" | "link";
-
-/** A milestone gift as the gift route answers it. */
-function gift(giftId: string, who: Who, over: Record<string, unknown>) {
-  return {
-    kind: "milestone",
-    shape: "certificate",
-    giftId,
-    conditionId: "toefl-mybest-shown",
-    youAreTheRecipient: who === "recipient",
-    youAreTheFunder: who === "funder",
-    names: { recipientName: "Boo", funderName: "Maman" },
-    goalAccount: { username: null, bound: true, code: null, codeExpiresAt: null, namedByFunder: true },
-    amount: "25000000",
-    amountDisplay: "$25.00",
-    startReading: null,
-    target: 90,
-    targetWords: null,
-    todayReading: null,
-    readAtMs: null,
-    deadlineMs: (now() + 20 * DAY) * 1000,
-    durationDays: 30,
-    opened: true,
-    connected: true,
-    reached: false,
-    reachedAtMs: null,
-    finished: false,
-    cancelled: false,
-    earned: "0",
-    earnedDisplay: "$0.00",
-    takenDisplay: "$0.00",
-    returnedDisplay: "$0.00",
-    createdAtChain: now() - 5 * DAY,
-    claimedAtChain: now() - 4 * DAY,
-    withdrawNonce: "0",
-    escrow: "0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e",
-    phase: "climbing",
-    cadence: { id: "certificate", label: "Certificate" },
-    accountClosed: false,
-    maximumStart: 0,
-    standingAtOffer: null,
-    marathon: null,
-    wca: null,
-    review: null,
-    recorded: [],
-    ...over,
-  };
-}
-
-const json = (body: unknown, status = 200) => ({ status, contentType: "application/json", body: JSON.stringify(body) });
-
-/** The agreement's route: nothing agreed until a yes is sent, and the yes kept from then on. */
-function agreement(giftId: string, what: string) {
-  let state: { kind: "yes" | "stop"; signedAt: string } | null = null;
-  const handle = async (route: Route) => {
-    if (route.request().method() === "POST") {
-      const sent = JSON.parse(route.request().postData() ?? "{}") as { kind: "yes" | "stop" };
-      state = { kind: sent.kind, signedAt: new Date().toISOString() };
-      return route.fulfill(json({ giftId, state }));
-    }
-    return route.fulfill(json({ giftId, state, reading: state?.kind === "yes" ? "agreed" : "no_agreement", opened: true, finished: false, terms: { what }, until: "the gift's last day", texts: { yes: `I agree that Viky reads ${what}.`, stop: `Viky stops reading ${what}.` } }));
-  };
-  return { handle, agreed: () => state?.kind === "yes" };
-}
-
-type Profile = { context: BrowserContext; page: Page; baseURL: string };
-
-async function profile(browser: Browser, served: string | undefined, viewport: { width: number; height: number }, options: { passkey?: boolean; userAgent?: string } = {}): Promise<Profile> {
-  const baseURL = passkeySite(served);
-  const context = await browser.newContext({ baseURL, serviceWorkers: "block", viewport, ...(options.userAgent ? { userAgent: options.userAgent } : {}) });
-  const page = await context.newPage();
-  page.setDefaultTimeout(30_000);
-  if (options.passkey !== false) await holdAPasskey(context, page, `recipient-${Date.now()}-${Math.random()}`);
-  await page.route("**/api/gifts/mine", (route) => route.fulfill(json({ account: "", gifts: [] })));
-  return { context, page, baseURL };
-}
-
-/** Makes an account by the one door of Home, and waits for the server's cookie. */
-async function makeAnAccount({ page, context }: Profile): Promise<void> {
-  await page.goto("/");
-  await page.getByRole("button", { name: /^Sign in$/ }).first().click();
-  await page.getByRole("button", { name: /^Create (your|my) account$/ }).first().click();
-  await expect.poll(() => signedIn(context), { timeout: 30_000 }).toBe(true);
-}
-
-async function shot(page: Page, size: string, name: string): Promise<void> {
-  if (!SHOTS) return;
-  mkdirSync(SHOTS, { recursive: true });
-  await page.waitForTimeout(600);
-  await page.screenshot({ path: join(SHOTS, `${name}-${size}.png`) });
-}
+const SIZES = sizesFor(SHOTS);
+const shot = (page: Page, size: string, name: string) => capture(SHOTS, page, size, name);
 
 test.describe("the path of the person a gift is for", () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) !== 375, "measured once: each test opens its own windows");
@@ -328,6 +227,7 @@ test.describe("the path of the person a gift is for", () => {
       await instagram.page.getByRole("button", { name: "Copy this gift's link" }).click();
       await expect(instagram.page.getByText("Copied. Paste it in Safari.")).toBeVisible();
       expect(await instagram.page.evaluate(() => navigator.clipboard.readText())).toBe(giftLink);
+      await instagram.page.getByText("Copied. Paste it in Safari.").scrollIntoViewIfNeeded();
       await shot(instagram.page, size.name, "6b-nothing-opened");
       // The same door at the top of Home, before anything is filled in.
       await instagram.page.goto("/");
@@ -373,6 +273,7 @@ test.describe("the path of the person a gift is for", () => {
       await create.click();
       await expect(chrome.page.getByText("If it keeps failing on this iPhone: in Settings, turn on AutoFill Passwords and Passkeys, and open this gift's link in Safari.")).toBeVisible();
       await expect(chrome.page.getByRole("button", { name: "Copy this gift's link" })).toBeVisible();
+      await chrome.page.getByRole("button", { name: "Copy this gift's link" }).scrollIntoViewIfNeeded();
       await shot(chrome.page, size.name, "6g-the-try-failed");
       await chrome.context.close();
 

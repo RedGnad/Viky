@@ -4,6 +4,7 @@ import { getAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { NO_CONTACT_HASH } from "@/src/contact-hash";
 import { isOperator } from "@/src/dev-access";
+import { endsBeforeTheEvent, eventToOutlast, outlastsTheEvent } from "@/src/event-length";
 import { GiftApiError, NO_STORE, refundDestination } from "@/src/gift-api";
 import { giftNameProblem, tidyGiftName } from "@/src/gift-names";
 import { makeMilestoneGift } from "@/src/milestone-creation";
@@ -15,6 +16,7 @@ import { providerInstruction } from "@/src/provider-instruction";
 import { milestoneErrorResponse } from "@/src/milestone-api";
 import { MILESTONE_MAX_AMOUNT, MILESTONE_MIN_AMOUNT, milestoneFundingNonce, SHAPE_HAVE_OR_NOT, type MilestoneParams } from "@/src/milestone-protocol";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
+import { readWcaCompetition } from "@/src/wca-reading";
 import { admitRelay } from "@/src/relay-admission";
 
 export const runtime = "nodejs";
@@ -98,6 +100,12 @@ export async function POST(request: Request) {
     if (!Number.isSafeInteger(durationDays) || durationDays < min || durationDays > max) {
       throw new GiftApiError("INVALID_DURATION", certificate.words.durationShape(min, max));
     }
+    // A gift on a race or a competition must still be running when the result can be read (the audit of 1 Oct 2026):
+    // a shorter one could never pay. Refused here, before anything is signed for or relayed.
+    const event = await eventToOutlast(certificate.condition.id, course, async (competitionId) => (await readWcaCompetition(competitionId)).endDate).catch(() => {
+      throw new GiftApiError("SOURCE_UNREADABLE", "The competition's dates could not be read just now. Try again in a moment. Nothing was taken.", 503);
+    });
+    if (event && !outlastsTheEvent(durationDays, event.readableAtMs, Date.now())) throw new GiftApiError("INVALID_DURATION", endsBeforeTheEvent(event.what));
     let amount: bigint;
     try {
       amount = BigInt(String(body.amount ?? ""));

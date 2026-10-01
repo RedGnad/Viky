@@ -15,7 +15,7 @@ import { ChoiceList } from "../ChoiceList";
  * can be made on, the distance. What the draft carries is the race and the distance in one id,
  * `marathon-vert-rennes-2026/10k`. A race already run is listed to an operator's account alone.
  */
-export function MarathonChooser({ open, draft, named, onChoose }: Readonly<{ open: boolean; draft: GiftDraft; named: (course: string) => string; onChoose: (courseId: string, title: string) => void }>) {
+export function MarathonChooser({ open, draft, named, onChoose }: Readonly<{ open: boolean; draft: GiftDraft; named: (course: string) => string; /** The course, its title, and when the race starts. */ onChoose: (courseId: string, title: string, startsAt: string) => void }>) {
   const [races, setRaces] = useState<readonly ListedRace[] | null | "unreadable">(null);
   const [picked, setPicked] = useState<string | null>(null);
   const [country, setCountry] = useState<string | null>(null);
@@ -42,7 +42,7 @@ export function MarathonChooser({ open, draft, named, onChoose }: Readonly<{ ope
   const shown = inCountryOrAll(races, country);
   const choose = (one: ListedRace, distance: string) => {
     const heat = one.events.find((each) => each.distance === distance);
-    if (heat) onChoose(`${one.raceId}/${distance}`, `${one.name}, ${heat.label.toLowerCase()}`);
+    if (heat) onChoose(`${one.raceId}/${distance}`, `${one.name}, ${heat.label.toLowerCase()}`, one.startsAt);
   };
   const day = (startsAt: string) => new Date(startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const chip = (pressed: boolean) => `${CHIP} ${pressed ? "bg-[var(--chosen)] font-bold" : ""}`;
