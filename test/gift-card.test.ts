@@ -324,7 +324,8 @@ test("nothing on the card asks for an account, and the sheet that pays makes it 
   // And that sheet says what pressing it will do before it does it (the mockup pay.html). The panel that makes an
   // account by hand is its fallback, for a device the passkey could not serve, and it appears in place.
   const paySheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
-  assert.match(paySheet, /await ensureSigner\(\)/);
+  // `ensureAccount`, which makes the account on a device that remembers none (the audit of 1 Oct 2026).
+  assert.match(paySheet, /await ensureAccount\(\)/);
   assert.match(paySheet, /W\.passkeyMakesTheAccount/);
   assert.match(paySheet, /\{problem && !address \? <AccountPanel \/> : null\}/);
   // On the paying screen the passkey is opened at the signature and nowhere earlier.
@@ -358,7 +359,7 @@ test("the page without an account is the character, the title, the sentence and 
   assert.match(signedOut, /<HeroMoment played=\{heroPlayed\} \/>/);
   assert.match(signedOut, /<h1 className=\{HERO\}>\{W\.promise\}<\/h1>/);
   assert.match(signedOut, /<p className=\{`\$\{LEAD\}[^`]*max-w-\[460px\][^`]*`\}>\{W\.promiseUnder\}<\/p>/, "the sentence in the quiet voice");
-  const order = ["<h1 className={HERO}>", "{W.promiseUnder}", "<HeroMoment", "<OfferCard />"].map((mark) => signedOut.indexOf(mark));
+  const order = ["<h1 className={HERO}>", "{W.promiseUnder}", "<HeroMoment", "<OfferCard paying="].map((mark) => signedOut.indexOf(mark));
   assert.deepEqual(order, [...order].sort((left, right) => left - right), "the title, the sentence, the character, the card");
   assert.ok(order.every((at) => at > 0));
   // One column: nothing turns the block into a row and nothing reorders it at any width.

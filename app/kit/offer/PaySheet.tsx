@@ -48,9 +48,13 @@ import { Sheet } from "../Sheet";
  *
  * With Swapper's id set (the founder, 1 Oct 2026), a third way stands first where it serves the payer: the card is
  * paid inside Viky, with nothing to choose and no code to paste. The press on pay opens it on the screen that waits
- * (`SwapperSheet`, in app/components/PayGift.tsx), not over this sheet: the press is also what makes a first funder's
- * account, and Home is drawn again for somebody signed in, which shuts every sheet standing on it (measured 1 Oct
- * 2026). Without the id, nothing here changes.
+ * (`SwapperSheet`, in app/components/PayGift.tsx), not over this sheet. Without the id, nothing here changes.
+ *
+ * The press on pay makes a first funder's account (the audit of 1 Oct 2026). It used to open a passkey that did not
+ * exist yet, which could only fail, and making the account from the panel that followed shut the sheet: Home draws
+ * one page for nobody and another for an account. So the press tells Home an account is being made (`onMaking`), Home
+ * keeps the page it is drawing, and the terms are kept and the wait opened by this same press. Whether the sheet is
+ * open is Home's to know as well, so signing in from it, by "I already have an account", leaves it open.
  */
 function everyMinute(changed: () => void): () => void {
   const timer = setInterval(changed, 60_000);
@@ -72,8 +76,9 @@ export function PaySheet({
   draft,
   onChange,
   onClose,
-}: Readonly<{ open: boolean; draft: GiftDraft; onChange: (draft: GiftDraft) => void; onClose: () => void }>) {
-  const { address, ensureSigner, status } = useAccount();
+  onMaking,
+}: Readonly<{ open: boolean; draft: GiftDraft; onChange: (draft: GiftDraft) => void; onClose: () => void; /** A press on pay is making its account, or stopped making it. */ onMaking: (making: boolean) => void }>) {
+  const { address, hasCredential, ensureAccount, status } = useAccount();
   const router = useRouter();
   const money = useDisplayCurrency(address);
   const [held, setHeld] = useState<bigint | null>(null);
@@ -171,15 +176,17 @@ export function PaySheet({
   const chargeLine = chargeRead === undefined ? W.about : euros && serviceChargeIsCeiling(euros, way.fee) ? W.upTo(chargeRead) : W.aboutAmount(chargeRead);
 
   /**
-   * The passkey makes the account at the moment pay is pressed, which is what the sheet says it will do. After that
-   * the terms are written to the device, the service's page opens inside the same press, and the wait takes over.
+   * The passkey makes the account at the moment pay is pressed, which is what the sheet says it will do: a new one on
+   * a device that remembers none, the remembered one otherwise (`ensureAccount`). After that the terms are written to
+   * the device, the service's page opens inside the same press, and the wait takes over.
    */
   const pay = async () => {
     if (!ready || units === undefined) return;
     setProblem(null);
     setBusy(true);
+    if (!address) onMaking(true);
     try {
-      const account = address ?? (await ensureSigner()).address;
+      const account = address ?? (await ensureAccount()).address;
       savePendingGift({ ...draftToTerms(draft, account), wayIn: way.name });
       // A card paid inside Viky opens on the wait, in a sheet of its own, by this same press.
       if (!enough && way.embedded) return router.push("/fund?step=paying&card=1");
@@ -190,10 +197,21 @@ export function PaySheet({
         window.open(wayInPage(way, { account, euros }), "_blank", "noopener,noreferrer");
         router.push("/fund?step=paying&opened=1");
       } else router.push("/fund?step=paying");
+      // Still busy on purpose: the sheet stands as it is until the wait has replaced the page.
+    } catch {
+      onMaking(false);
+      setProblem(W.notMade);
+      setBusy(false);
+    }
+  };
+
+  /** Somebody whose account was made on another device: their passkey is asked for, and none is made. The sheet stays. */
+  const signInFirst = async () => {
+    setProblem(null);
+    try {
+      await ensureAccount({ existing: true });
     } catch {
       setProblem(W.notMade);
-    } finally {
-      setBusy(false);
     }
   };
 
@@ -320,7 +338,14 @@ export function PaySheet({
         autoComplete="off"
       />
 
-      <p className={HELP}>{address ? W.signedIn : W.passkeyMakesTheAccount}</p>
+      {/* What the press does, as it is true of this device: it makes an account only where none is remembered. */}
+      <p className={HELP}>{address || hasCredential ? W.signedIn : W.passkeyMakesTheAccount}</p>
+      {/* A passkey kept by another device is not known to this one, and pay would make a second account (1 Oct 2026). */}
+      {!address && !hasCredential ? (
+        <button type="button" className={`${INLINE_BUTTON} self-start`} disabled={busy || status === "busy"} onClick={() => void signInFirst()}>
+          {W.alreadyHaveAccount}
+        </button>
+      ) : null}
 
       {/* The one sentence that changes what a person does next stays in front of everybody: a link opens the gift
           for whoever opens it first. Everything else only some readers need, and it is one press away (GOV.UK). */}

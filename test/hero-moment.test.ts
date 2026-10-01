@@ -112,7 +112,7 @@ test("the first image is the starting state, the choreography is on the tokens i
   assert.ok(rig.indexOf('data-part="figure"') < rig.indexOf('data-part="whirl"'), "the whirl inside what leaps");
   assert.deepEqual(MOTION.hero.settle, { damping: 0.6, stiffness: 800 });
   const home = readFileSync("app/kit/Home.tsx", "utf8");
-  const order = ["<h1 className={HERO}>", "{W.promiseUnder}", 'href="#offer"', "<HeroMoment played={heroPlayed} />", '<div id="offer"', "<OfferCard />"].map((mark) => home.indexOf(mark));
+  const order = ["<h1 className={HERO}>", "{W.promiseUnder}", 'href="#offer"', "<HeroMoment played={heroPlayed} />", '<div id="offer"', "<OfferCard paying="].map((mark) => home.indexOf(mark));
   assert.ok(order.every((at) => at > 0) && order.every((at, i) => i === 0 || at > order[i - 1]), "the promise, its sentence, the way to the card, the moment, the card");
   assert.match(home, /<a href="#offer" className=\{`\$\{PRIMARY_BUTTON\}/, "the way to the card carries the accent: the first screen's one action, the card's own a screen below");
 });

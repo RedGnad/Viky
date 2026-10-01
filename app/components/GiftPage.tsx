@@ -5,6 +5,8 @@ import { useMinute } from "../kit/clock";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useMoneySession } from "@/src/account/money-session";
 import { isAccountError } from "@/src/account/errors";
+import { useDoor } from "@/src/account/door";
+import { ownBrowserOf } from "@/src/account/passkey-support";
 import { useAccount } from "@/src/account/provider";
 import { catchUpDay } from "@/src/catch-up";
 import { ApiError } from "@/src/client/api";
@@ -34,7 +36,7 @@ import type { AnyGiftStatus } from "@/src/gift-status";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { contractDayInWords, contractRangeInWords, dateInWords, momentInWords, nextPassMs } from "@/src/moments";
 import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
-import { CONSENT as C, GIFT_LIVE as L, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
+import { ACCOUNT_DOOR, CONSENT as C, GIFT_LIVE as L, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
 import { AskAgain } from "../kit/AskAgain";
 import { CertificateProof } from "../kit/CertificateProof";
 import { MarathonProof, MarathonStanding } from "../kit/MarathonProof";
@@ -160,6 +162,7 @@ export function GiftPage({ giftId, linkKey, initialStatus, openTake = false }: R
 
 function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void>; refresh: () => Promise<void>; openTake: boolean }>) {
   const { address, hasCredential, ensureSigner, status: accountStatus } = useAccount();
+  const door = useDoor();
   useMoneySession();
   const money = useDisplayCurrency(address);
   /** The clock this reader keeps, so a date says their day and not the server's (D160). */
@@ -477,7 +480,9 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       if (!status.opened) {
         return (
           <div className="flex flex-col gap-[var(--space-md)]">
-            <p className="font-medium">{W.createToOpen}</p>
+            {/* Inside another app's page no account is made here: the line says where to go, as the button under it
+                does, rather than asking for what the box then refuses (the founder, 1 Oct 2026). */}
+            <p className="font-medium">{door.kind === "elsewhere" ? ACCOUNT_DOOR.continueIn(ownBrowserOf(door.handset, door.app)) : W.createToOpen}</p>
             {/* A device that remembers a passkey is somebody coming back: signing in leads, so no second account is made. */}
             <AccountPanel returning={hasCredential} />
           </div>
@@ -658,8 +663,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
           zone={zone}
         />
       ) : null}
-      {/* Asking for a reading now, and being told each morning: neither is the moment's action, so neither is
-          offered beside it. They live here, with the rest of how a gift is checked. */}
+      {/* Asking for a reading now is not the moment's action, so it is not offered beside it: it lives here, with the
+          rest of how a gift is checked. Being told is offered in the open, under the card (the founder, 1 Oct 2026). */}
       {/* A milestone is read as its page opens, so it has no button for it (the founder, 29 Sep 2026). */}
       {(mine || readerIsFunder) && !milestone && !gift.finished && gift.connected && !gift.sourceClosed ? (
         <>
@@ -669,8 +674,6 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
           {answerAt("count")}
         </>
       ) : null}
-      {/* Each morning is a habit's; a milestone is told once, when it is reached, from outside the card. */}
-      {milestone ? null : <MorningMessage giftId={giftId} yours={mine || readerIsFunder} />}
     </>
   );
 
@@ -733,8 +736,14 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
           beside={proof}
         />
 
-        {/* Being told the moment it is reached, outside the card in the ground's own voice (the mockup). */}
+        {/* Being told, offered in the open to the gift's two people once it is opened, never inside a fold (the founder,
+            1 Oct 2026): each morning for a habit, the moment it is reached for a climb, and for a gift had or not the day
+            it is theirs or its time is up. Nothing here for a reader with no account: neither side is theirs. */}
+        {daily && status.opened && !gift.finished && !gift.cancelled ? <MorningMessage giftId={giftId} yours={mine || readerIsFunder} /> : null}
         {readsLive && milestone ? <ReachAlert giftId={giftId} target={String(milestone.targetWords ?? milestone.target)} yours={mine} /> : null}
+        {hadOrNot && status.opened && !gift.finished && !gift.cancelled && hadOrNot.review?.status !== "pending" && (mine || readerIsFunder) ? (
+          <ReachAlert giftId={giftId} target="" yours={mine} hadOrNot />
+        ) : null}
         {/* A first proof waiting for its review: the answer is the thing to be told (the founder, 29 Sep 2026). */}
         {milestone?.review?.status === "pending" && !gift.finished && (mine || readerIsFunder) ? <ReachAlert giftId={giftId} target="" yours={mine} review /> : null}
 

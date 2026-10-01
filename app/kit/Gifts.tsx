@@ -4,6 +4,7 @@ import { GIFTS as W, HOME } from "@/src/sentences";
 import { AccountPanel } from "../components/AccountPanel";
 import { BODY, HELP, TITLE } from "../components/ui";
 import { EmptyState } from "./EmptyState";
+import { FinishTheGift } from "./FinishTheGift";
 import { useMinute } from "./clock";
 import { charactersOf } from "./DayStrip";
 import { GiftCard } from "./GiftCard";
@@ -22,6 +23,7 @@ export function Gifts({ initialGifts }: Readonly<{ initialGifts?: GiftSummary[] 
   if (!address) {
     return (
       <Shell kind="destination" active="gifts" title={W.title} character={<HeadCharacter scene="gifts" />}>
+        <FinishTheGift />
         <p className={BODY}>{W.signInFirst}</p>
         <AccountPanel returning={hasCredential} />
       </Shell>
@@ -37,6 +39,8 @@ export function Gifts({ initialGifts }: Readonly<{ initialGifts?: GiftSummary[] 
   return (
     <Arrival storageKey="viky.seen.days" gifts={arriving}>
     <Shell kind="destination" active="gifts" title={W.title} character={<HeadCharacter scene="gifts" />}>
+      {/* A gift whose payment was started and which is not made yet is no line of either list: it is said above them. */}
+      <FinishTheGift />
       {problem ? <p className={BODY}>{problem}</p> : null}
       {!problem && gifts === null ? <p className={HELP}>{HOME.loading}</p> : null}
       {gifts !== null ? (

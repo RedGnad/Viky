@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { DAY, gift, json, makeAnAccount, now, profile, shot as capture, sizesFor, type Who } from "./gift-kit";
+import { DAY, gift, json, makeAnAccount, neverAskedToBeTold, now, profile, shot as capture, sizesFor, type Who } from "./gift-kit";
 
 /**
  * A gift had or not, as its two people read it (the audit of 1 Oct 2026). Its target on the contract is 1, and the
@@ -41,11 +41,18 @@ test.describe("a gift had or not, as its two people read it", () => {
       const { page } = device;
       let state: Record<string, unknown> = {};
       await answer(page, () => enrolment("recipient", state));
+      await neverAskedToBeTold(device.context);
       await makeAnAccount(device);
 
       // Nothing shown yet: the gesture, and what was agreed in the register's words.
       await page.goto(`/g/${GIFT}`);
       await expect(page.getByText("Show it from your own university account, and it is yours.")).toBeVisible();
+      // Being told is offered in the open, under the card, never inside a fold (the founder, 1 Oct 2026).
+      await expect(page.getByText("Get a message when it is yours, or when the time is up.")).toBeVisible();
+      await expect(page.locator("[data-told]").getByRole("button", { name: "Turn on" })).toBeVisible();
+      await expect(page.locator("details [data-told]")).toHaveCount(0);
+      await page.locator("[data-told]").scrollIntoViewIfNeeded();
+      await shot(page, size.name, "3a0-yours-told-under-the-card");
       await page.getByText("What was agreed").click();
       await expect(page.getByText("This gift is for: enrolled at that university.")).toBeVisible();
       await expect(page.getByText(/^Prove it by .+ and it is yours\. If not, it goes back to Maman two weeks later\.$/)).toBeVisible();
@@ -59,6 +66,9 @@ test.describe("a gift had or not, as its two people read it", () => {
       await page.goto(`/g/${GIFT}`);
       await expect(page.getByText("Shown. Viky is checking it.").first()).toBeVisible();
       await expect(page.getByText("Show it from your own university account, and it is yours.")).toHaveCount(0);
+      // While it is checked, the answer is the one thing to be told, and it is offered once.
+      await expect(page.getByText("Get a message when it is checked.")).toBeVisible();
+      await expect(page.locator("[data-told]")).toHaveCount(1);
       await shot(page, size.name, "3b-yours-held-for-review");
 
       // Refused by the review.
@@ -109,8 +119,11 @@ test.describe("a gift had or not, as its two people read it", () => {
       await expect(card.locator(".had-or-not")).toHaveCount(1);
       await shot(page, size.name, "3f-the-card-in-gifts");
 
+      await neverAskedToBeTold(device.context);
       await page.goto(`/g/${GIFT}`);
       await expect(page.getByText("Boo has not shown it yet.")).toBeVisible();
+      // The funder is offered it too: the day it is theirs, or the day it comes back, without opening Viky.
+      await expect(page.getByText("Get a message when it is theirs, or when the time is up.")).toBeVisible();
       await page.getByText("What was agreed").click();
       await expect(page.getByText("This gift is for: enrolled at that university.")).toBeVisible();
       await expect(page.getByText(/^If they prove it by .+ it is theirs\. If not, it comes back to you two weeks later\.$/)).toBeVisible();

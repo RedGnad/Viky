@@ -6,7 +6,7 @@ import { loadGift } from "./gift-store";
 import { isMilestoneGiftId } from "./milestone-protocol";
 import { loadPreferences } from "./preferences-store";
 import { currentRates, ratesUsable } from "./rates";
-import type { GiftFacts, PushRefusal, PushSent, TellingDeps } from "./morning-send";
+import { tellAboutMilestone, type GiftFacts, type PushRefusal, type PushSent, type TellingDeps } from "./morning-send";
 import { forgetEndpoint, subscriptionsForGift, claimTelling } from "./push-store";
 import { escrowOf } from "./relayer";
 
@@ -79,4 +79,16 @@ export function liveTellingDeps(): TellingDeps {
     facts: liveFacts,
     send: sendOne,
   };
+}
+
+/**
+ * Tells a milestone gift's subscribers that it was reached, from the request that reached it (the founder, 1 Oct 2026).
+ *
+ * A gift had or not is reached by its own person showing or pasting what proves it, and none of those requests told
+ * anybody: only the passes and the reading on opening did, which never reach such a gift. A funder offered "Get a
+ * message when it is theirs" would have heard nothing. Told once whoever tells (`claimTelling`), and never a reason
+ * for the request to fail: the money has moved by then.
+ */
+export async function tellReached(giftId: string): Promise<void> {
+  await tellAboutMilestone(giftId, "reached", liveTellingDeps()).catch(() => 0);
 }

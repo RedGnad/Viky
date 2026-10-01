@@ -102,3 +102,46 @@ test("nothing asks for the permission except a press", () => {
   assert.doesNotMatch(component.slice(0, component.indexOf("const start")), /requestPermission/, "nothing asks before the press");
   assert.ok(asks.length > 0);
 });
+
+/**
+ * Being told, offered in the open after the first thing that worked (the founder, 1 Oct 2026, the audit's P-31). It
+ * sat in the fold "How this is checked", was never offered to the funder, a gift had or not offered nothing at all,
+ * and on an iPhone it took a press to learn that installing came first.
+ */
+test("the messages are offered under the card and under the funder's link, never in a fold, and only behind an account", () => {
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
+  const fold = page.slice(page.indexOf("const checked = ("), page.indexOf("const proof ="));
+  assert.doesNotMatch(fold, /MorningMessage|ReachAlert/, "nothing of it inside the fold");
+  const open = page.slice(page.indexOf("<GiftLive"));
+  assert.match(open, /\{daily && status\.opened && !gift\.finished && !gift\.cancelled \? <MorningMessage giftId=\{giftId\} yours=\{mine \|\| readerIsFunder\} \/> : null\}/);
+  assert.match(open, /hadOrNot && status\.opened && !gift\.finished && !gift\.cancelled && hadOrNot\.review\?\.status !== "pending" && \(mine \|\| readerIsFunder\)/);
+  assert.match(open, /<ReachAlert giftId=\{giftId\} target="" yours=\{mine\} hadOrNot \/>/);
+  // Under the link the funder has just been given, the three shapes of gift each with their own.
+  const link = readFileSync("app/components/PayGift.tsx", "utf8");
+  const made = link.slice(link.indexOf("W.made.findItAgain"), link.indexOf("W.made.nextTitle"));
+  assert.match(made, /<MorningMessage giftId=\{made\.giftId\} yours \/>/);
+  assert.match(made, /<ReachAlert giftId=\{made\.giftId\} target="" yours=\{false\} hadOrNot \/>/);
+  assert.match(made, /<ReachAlert giftId=\{made\.giftId\} target=\{String\(made\.target\)\} yours=\{false\} \/>/);
+  // An iPhone outside the Home Screen: the sentence and its two steps, in full, and no button that could grant nothing.
+  const component = readFileSync("app/kit/MorningMessage.tsx", "utf8");
+  const install = component.slice(component.indexOf('if (step === "install") {'), component.indexOf('data-told="ask"'));
+  assert.match(install, /<p className=\{HELP\}>\{W\.installFirst\}<\/p>\s+<p className=\{HELP\}>\{ME\.installHow\}<\/p>/);
+  assert.doesNotMatch(install, /<button/);
+  assert.match(component, /\{step === "install" \? <p className=\{HELP\}>\{ME\.installHow\}<\/p> : null\}/, "the reach alert says the steps too");
+  // Nobody without an account: the route refuses, and neither place is drawn for them.
+  assert.match(readFileSync("app/api/gift/[id]/notify/route.ts", "utf8"), /SIGN_IN_REQUIRED/);
+});
+
+test("a gift had or not tells its subscribers when it is reached, from every request that reaches one", () => {
+  // The sentence offered: "Get a message when it is theirs, or when the time is up."
+  const live = readFileSync("src/morning-send-live.ts", "utf8");
+  assert.match(live, /export async function tellReached\(giftId: string\): Promise<void> \{\s+await tellAboutMilestone\(giftId, "reached", liveTellingDeps\(\)\)\.catch\(\(\) => 0\);/);
+  for (const route of ["app/api/gift/[id]/certificate/route.ts", "app/api/wca/prove/route.ts", "app/api/marathon/prove/route.ts"]) {
+    assert.match(readFileSync(route, "utf8"), /if \(outcome\.kind === "reached"\) await tellReached\(/, route);
+  }
+  // A proof shown: only when the contract said the gift was reached by it, not when it only started one.
+  assert.match(readFileSync("app/api/proof/verify/route.ts", "utf8"), /if \(result\.arrived\) await tellReached\(result\.giftId\);/);
+  assert.match(readFileSync("src/shown-verification.ts", "utf8"), /arrived: proved\.happened === "reached",/);
+  // Its time running out is the settling pass's to tell, as for every milestone.
+  assert.match(readFileSync("src/milestone-pass.ts", "utf8"), /await tellAboutMilestone\(giftId, "expired", liveTellingDeps\(\)\);/);
+});

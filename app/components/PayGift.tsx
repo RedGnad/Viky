@@ -16,7 +16,7 @@ import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { cadenceOf, certificateById, milestoneById } from "@/src/milestone-conditions";
 import { spokenAmount, whenInWords } from "@/src/display-currency";
 import { twoDecimalsDown } from "@/src/exit-steps";
-import { nextFundingStep } from "@/src/funding-step";
+import { nextFundingStep, POLL_MS } from "@/src/funding-step";
 import { eurosToBuyOn } from "@/src/gift-amount";
 import { draftToTerms, isComplete, type GiftDraft } from "@/src/gift-draft";
 import { cardDraft, clearedCardDraft, startingCardDraft, subscribeToCardDraft, writeCardDraft } from "@/src/card-draft";
@@ -30,6 +30,7 @@ import { wayInAsksNothing, wayInPage, waysIn, type WayIn } from "@/src/rails";
 import { JudgeCode } from "../kit/offer/JudgeCode";
 import { CardNotOffered, CardTermsLine } from "../kit/offer/CardTerms";
 import { SwapperSheet } from "../kit/offer/SwapperSheet";
+import { MorningMessage, ReachAlert } from "../kit/MorningMessage";
 import { whereTheRailsServe } from "@/src/client/rails";
 import { FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
 import { ExactLine } from "../kit/LedAmount";
@@ -56,7 +57,6 @@ import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP, PRIMARY_BUTTON, SECONDARY_BUT
  * nothing to pay for, and this screen says so rather than asking the questions again: they are asked on the card.
  */
 
-const POLL_MS = 8_000;
 const MADE_KEY = "viky.giftMade";
 
 type Step = "pay" | "account" | "paying" | "done";
@@ -153,6 +153,8 @@ export function PayGift() {
   const [copyRefused, setCopyRefused] = useState<"code" | "link" | null>(null);
   const [keptOnDevice, setKeptOnDevice] = useState(true);
   const working = useRef(false);
+  /** When the last conversion failed, so the watch leaves it alone for a pause rather than trying again at once. */
+  const failedAtMs = useRef<number | null>(null);
   const [hadAccount, setHadAccount] = useState(false);
   /** The way in the funder pressed, so the wait tells them what to set on the page they actually opened (D101). */
   /** The way in the kept payment names, which is the one the sheet on the card opened (D101). */
@@ -340,7 +342,7 @@ export function PayGift() {
       try {
         const read = await refresh();
         if (!read) return;
-        const next = nextFundingStep({ held: read.held, arriving: read.arriving, wanted });
+        const next = nextFundingStep({ held: read.held, arriving: read.arriving, wanted, failedAtMs: failedAtMs.current, nowMs: Date.now() });
         if (next.do === "give") {
           working.current = true;
           setPhase("giving");
@@ -370,11 +372,15 @@ export function PayGift() {
             const quote = await postJson<{ to: `0x${string}`; data: `0x${string}`; value: string }>("/api/fund/quote", { amount: next.amount.toString() });
             await sendWithExplicitGas(account, { to: quote.to, data: quote.data, value: BigInt(quote.value) });
           } catch {
+            // The phase goes back to waiting, which starts this watch again at once: the time of the failure is what
+            // keeps that first look, and every look inside the pause, from converting again (src/funding-step.ts).
+            failedAtMs.current = Date.now();
             setProblem(W.arrived.priceMoved);
             setPhase("waiting");
             working.current = false;
             return;
           }
+          failedAtMs.current = null;
           const after = await readAusdBalance(address);
           setBalance(after);
           setArrivedFigure(formatAusd(after - read.held));
@@ -495,6 +501,15 @@ export function PayGift() {
           <p className={HELP}>{W.made.onlyThem(made.recipientName)}</p>
           <p className={HELP}>{W.made.findItAgain}</p>
         </section>
+        {/* Being told how it goes, offered here, right after the link exists (the founder, 1 Oct 2026): the funder was
+            never offered it, and it is how "what they miss comes back to you" reaches them without opening Viky. */}
+        {!madeMilestone ? (
+          <MorningMessage giftId={made.giftId} yours />
+        ) : certificateById(made.conditionId) ? (
+          <ReachAlert giftId={made.giftId} target="" yours={false} hadOrNot />
+        ) : (
+          <ReachAlert giftId={made.giftId} target={String(made.target)} yours={false} />
+        )}
         <section className="flex flex-col gap-[var(--space-md)]">
           <h2 className={TITLE}>{W.made.nextTitle}</h2>
           <ol className={`flex list-decimal flex-col gap-[var(--space-sm)] pl-[var(--space-lg)] ${BODY}`}>

@@ -4,6 +4,7 @@ import { proveCertificate } from "@/src/certificate-reading";
 import { NO_STORE } from "@/src/gift-api";
 import { loadGift } from "@/src/gift-store";
 import { loadMilestoneGift } from "@/src/milestone-store";
+import { tellReached } from "@/src/morning-send-live";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 
 export const runtime = "nodejs";
@@ -52,7 +53,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
 
   try {
-    return NextResponse.json(await proveCertificate({ giftId: id, link }), { headers: NO_STORE });
+    const outcome = await proveCertificate({ giftId: id, link });
+    // Whoever asked to be told that it is theirs is told now, by the request that made it so.
+    if (outcome.kind === "reached") await tellReached(id);
+    return NextResponse.json(outcome, { headers: NO_STORE });
   } catch (error) {
     // A relay that failed is ours, and it is said as such: nothing about the certificate was wrong.
     console.error(`certificate proof failed for gift ${id}: ${error instanceof Error ? error.message : String(error)}`);

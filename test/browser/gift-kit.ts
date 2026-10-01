@@ -88,9 +88,25 @@ export function agreement(giftId: string, what: string) {
 
 export type Profile = { context: BrowserContext; page: Page; baseURL: string };
 
+/**
+ * An address of its own for each window, as the platform would name it. The server keeps its sign-in limit per
+ * address (thirty in ten minutes), and every window of a run would otherwise share this machine's: the suite reached
+ * it on 1 Oct 2026, and the accounts made after that were refused for a reason no test was measuring.
+ */
+let windows = 0;
+function ownAddress(): string {
+  windows += 1;
+  return `10.${process.pid % 250}.${Math.floor(windows / 250) % 250}.${(windows % 250) + 1}`;
+}
+
+/** A browser that was never asked about notifications. One with nobody in front of it answers "denied" by itself. */
+export async function neverAskedToBeTold(context: BrowserContext): Promise<void> {
+  await context.addInitScript(`Object.defineProperty(Notification, "permission", { get: () => "default" });`);
+}
+
 export async function profile(browser: Browser, served: string | undefined, viewport: { width: number; height: number }, options: { passkey?: boolean; userAgent?: string } = {}): Promise<Profile> {
   const baseURL = passkeySite(served);
-  const context = await browser.newContext({ baseURL, serviceWorkers: "block", viewport, ...(options.userAgent ? { userAgent: options.userAgent } : {}) });
+  const context = await browser.newContext({ baseURL, serviceWorkers: "block", viewport, extraHTTPHeaders: { "x-vercel-forwarded-for": ownAddress() }, ...(options.userAgent ? { userAgent: options.userAgent } : {}) });
   const page = await context.newPage();
   page.setDefaultTimeout(30_000);
   if (options.passkey !== false) await holdAPasskey(context, page, `recipient-${Date.now()}-${Math.random()}`);

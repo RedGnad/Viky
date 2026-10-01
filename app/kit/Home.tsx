@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAccount } from "@/src/account/provider";
 import { CATALOGUE, HOME as W, ME, NAV } from "@/src/sentences";
 import { BODY, HELP, HERO, LEAD, PRIMARY_BUTTON, TITLE } from "../components/ui";
@@ -21,6 +21,7 @@ import { MoneyHero } from "./MoneyHero";
 import { SpendOrWithdraw } from "./SpendOrWithdraw";
 import { ReachedMoments, reachedOfSummary, type ReachedGift } from "./ReachedMoment";
 import { DoorNotice } from "./AccountDoor";
+import { FinishTheGift } from "./FinishTheGift";
 import { OfferCard } from "./offer/OfferCard";
 import { Shell } from "./Shell";
 import { useMyGifts } from "./my-gifts";
@@ -67,7 +68,19 @@ export function Home({
    * the signed-in page with three dots where their money would be, no promise, no character and no way in. The page
    * waits for the answer to the question it is actually asking.
    */
-  const { address } = useAccount();
+  const { address: account } = useAccount();
+  /**
+   * The pay sheet, open or shut, kept here and not on the card (the audit of 1 Oct 2026). This page has two trees, one
+   * for nobody and one for an account, and the card is drawn anew when one gives way to the other: an account made or
+   * signed in from the sheet shut the sheet, and the person had to find the card's action and press it again.
+   */
+  const [paying, setPaying] = useState(false);
+  /**
+   * A press on pay is making its account: the page for nobody stays, under its sheet, until the wait has replaced it.
+   * Without this the page for an account showed between the passkey and the wait, with the sheet gone.
+   */
+  const [making, setMaking] = useState(false);
+  const address = making ? undefined : account;
   const holdings = useHoldings(address, fromTheServer);
   const { gifts, problem } = useMyGifts(address, initialGifts);
   const nowMs = useMinute();
@@ -89,6 +102,8 @@ export function Home({
         <SideCrowd />
         {/* Inside another app's page no account can be made: said here, before anything is filled in (1 Oct 2026). */}
         <DoorNotice />
+        {/* A payment started on this device for a gift never made: the way back to it, before anything else (D74). */}
+        <FinishTheGift />
         {/* Home without an account, in the order of the founder's sketch of 24 Sep 2026 (D214, D221): the promise,
             its sentence, the way to the card, the hero moment, then the card. The first four are the first screen, as
             tall as the viewport less what of the card it shows, so the card's top is cut by the fold on every phone
@@ -122,7 +137,7 @@ export function Home({
           {/* Above the character, so the card's paper hides what of it is still behind. Focusable by the way to it, so
               the keyboard carries on from the card, and without a ring of its own: the card's controls have theirs. */}
           <div id="offer" tabIndex={-1} className="relative z-[1] w-full outline-none [@media(min-width:1024px)]:flex [@media(min-width:1024px)]:justify-center">
-            <OfferCard />
+            <OfferCard paying={paying} onPaying={setPaying} onMaking={setMaking} />
           </div>
         </div>
         {/* What a gift can wait for, one thing at a time, from the register (D285, over D225's four still names). */}
@@ -165,6 +180,8 @@ export function Home({
           stood higher here than on the two other destinations (the founder, 24 Sep 2026, D230). */}
       <Shell kind="destination" active="home" width="card" title={NAV.home} character={<HeadCharacter scene="home" />}>
         <ReachedMoments gifts={owed} />
+        {/* A payment started for a gift never made: said first, since the money for it may be what stands below (D74). */}
+        <FinishTheGift />
         <MoneyHero address={address} holdings={holdings} />
         {/* The balance's own action, small and under it (the founder, 29 Sep 2026). It keeps its place while the
             balance is being read (D147), so the card under it does not jump down when the answer lands. The room is
@@ -174,7 +191,7 @@ export function Home({
         {/* The gift form under its own title, apart from the money above it: nothing between the two reads as one. */}
         <h2 className={`${TITLE} mt-[var(--space-lg)]`}>{W.offer}</h2>
         {/* The card starts on the account's own money when it holds any (D157). */}
-        <OfferCard holdings={holdings} />
+        <OfferCard holdings={holdings} paying={paying} onPaying={setPaying} onMaking={setMaking} />
         {/* The gifts land one after another rather than all at once (D154). */}
         <section className="arrives-in-turn flex flex-col gap-[var(--space-md)]">
           <h2 className={TITLE}>{W.moving}</h2>

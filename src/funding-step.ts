@@ -17,6 +17,24 @@ export const CONVERSION_RESERVE = 11_000_000_000_000_000_000n;
 /** Below this much above the reserve, an arriving balance is not a card payment worth converting. */
 export const ARRIVAL_FLOOR = 1_000_000_000_000_000_000n;
 
+/** How often the waiting screen looks at the account. */
+export const POLL_MS = 8_000;
+/**
+ * How long a conversion that failed is left alone before it is tried again: shorter than a look, so the look after a
+ * failure tries, and no look before it does.
+ *
+ * The defect it answers (the audit of 1 Oct 2026): the screen's phase is what its watch depends on, a failed
+ * conversion puts the phase back to waiting, and the watch started again at once and converted again at once. With
+ * the price not answering, that was 596 to 717 requests in twelve seconds, the screen flickering between three
+ * states and the account's 180 readings spent. The money never moved; the screen did.
+ */
+export const RETRY_PAUSE_MS = 6_000;
+
+/** Whether a conversion that failed at `failedAtMs` is still being left alone at `nowMs`. Never failed: never paused. */
+export function pausedAfterFailure(failedAtMs: number | null, nowMs: number): boolean {
+  return failedAtMs !== null && nowMs >= failedAtMs && nowMs - failedAtMs < RETRY_PAUSE_MS;
+}
+
 export type FundingStep =
   | { do: "give" }
   | { do: "convert"; amount: bigint }
@@ -30,11 +48,13 @@ export function paymentArrived(arriving: bigint): boolean {
   return arriving > ARRIVAL_FLOOR + CONVERSION_RESERVE;
 }
 
-export function nextFundingStep(input: { held: bigint; arriving: bigint; wanted: bigint }): FundingStep {
+export function nextFundingStep(input: { held: bigint; arriving: bigint; wanted: bigint; failedAtMs?: number | null; nowMs?: number }): FundingStep {
   // Enough already: the gift can be made, and nothing else should be converted.
   if (input.held >= input.wanted) return { do: "give" };
   // Something arrived, and enough of it that converting leaves more than it costs.
   if (paymentArrived(input.arriving)) {
+    // A conversion that has just failed is not tried again at once: the screen waits, and the next look tries.
+    if (pausedAfterFailure(input.failedAtMs ?? null, input.nowMs ?? 0)) return { do: "wait", sawSomething: true };
     return { do: "convert", amount: input.arriving - CONVERSION_RESERVE };
   }
   // Nothing worth acting on. `sawSomething` only changes what the person is told, never what is done.

@@ -4,6 +4,7 @@ import { readJsonBody } from "@/src/api-guard";
 import { proveCertificate } from "@/src/certificate-reading";
 import { giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { marathonAccountOfGift } from "@/src/marathon-gift";
+import { tellReached } from "@/src/morning-send-live";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { admitPacedReading } from "@/src/reading-admission";
 
@@ -25,7 +26,9 @@ export async function POST(request: Request) {
     // A paced platform's readings are shared by everybody: one account, or one connection, takes a few a day at most.
     await admitPacedReading(request, auth.account);
     try {
-      return NextResponse.json(await proveCertificate({ giftId, link: account }), { headers: NO_STORE });
+      const outcome = await proveCertificate({ giftId, link: account });
+      if (outcome.kind === "reached") await tellReached(giftId);
+      return NextResponse.json(outcome, { headers: NO_STORE });
     } catch (error) {
       console.error(`marathon proof failed for gift ${giftId}: ${error instanceof Error ? error.message : String(error)}`);
       return NextResponse.json({ kind: "refused", giftId, code: "SOURCE_UNAVAILABLE", message: "That did not go through, and nothing was changed. Try again." }, { status: 502, headers: NO_STORE });
