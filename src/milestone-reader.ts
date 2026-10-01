@@ -1,6 +1,7 @@
-import { getAddress, type Abi, type Hex, type PublicClient } from "viem";
+import { getAddress, type Hex, type PublicClient } from "viem";
+import { NO_CONTACT_HASH } from "./contact-hash";
 import { giftPublicClient } from "./gift-reader";
-import { milestoneGiftAbi } from "./milestone-gift-abi";
+import { milestoneAbiOf, milestoneVersionOf, type ContractVersion } from "./v2";
 import { MILESTONE_DORMANT_SECONDS, MILESTONE_LATE_PROOF_SECONDS, MILESTONE_PROOF_GRACE_SECONDS, SHAPE_CLIMB, SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
 
 /**
@@ -38,23 +39,34 @@ export type MilestoneState = Readonly<{
   settled: boolean;
   earnedBalance: bigint;
   withdrawNonce: bigint;
-  /** The contract's switch for readings, and when it was last reopened after a pause (the fourth review). */
+  /**
+   * Whether readings are paused, and the moment every window a pause could have shut is counted from: when readings
+   * were last reopened on the first version (the fourth review), the end of the last pause on the second, which is
+   * still ahead while one runs.
+   */
   proofPaused: boolean;
   proofResumedAt: number;
+  /** Which version of the milestone contract holds the gift (src/v2.ts). What follows exists on the second only. */
+  version: ContractVersion;
+  openingKey: Hex | null;
+  /** When the person it is for ended it, or zero: on the first version nobody can. */
+  endedAt: number;
 }>;
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ZERO_HASH = `0x${"0".repeat(64)}`;
 
 export async function readMilestoneGift(contract: Hex, giftId: string, client: PublicClient = giftPublicClient()): Promise<MilestoneState> {
-  const abi = milestoneGiftAbi as unknown as Abi;
+  const abi = milestoneAbiOf(contract);
+  const version = milestoneVersionOf(contract);
   const id = BigInt(giftId);
   const [gift, earnedBalance, withdrawNonce, proofPaused, proofResumedAt] = await Promise.all([
     client.readContract({ address: contract, abi, functionName: "getGift", args: [id] }) as Promise<Record<string, unknown>>,
     client.readContract({ address: contract, abi, functionName: "earnedBalance", args: [id] }) as Promise<bigint>,
     client.readContract({ address: contract, abi, functionName: "withdrawNonces", args: [id] }) as Promise<bigint>,
     client.readContract({ address: contract, abi, functionName: "proofPaused" }) as Promise<boolean>,
-    client.readContract({ address: contract, abi, functionName: "proofResumedAt" }) as Promise<bigint | number>,
+    // The same question under each version's own name: where the windows a pause ran across are counted from.
+    client.readContract({ address: contract, abi, functionName: version === 2 ? "proofPausedUntil" : "proofResumedAt" }) as Promise<bigint | number>,
   ]);
   const recipient = getAddress(String(gift.recipient));
   return {
@@ -62,7 +74,7 @@ export async function readMilestoneGift(contract: Hex, giftId: string, client: P
     funder: gift.funder as Hex,
     refundTo: gift.refundTo as Hex,
     recipient: recipient === ZERO_ADDRESS ? null : recipient,
-    recipientContactHash: gift.recipientContactHash as Hex,
+    recipientContactHash: version === 2 ? NO_CONTACT_HASH : (gift.recipientContactHash as Hex),
     goalType: Number(gift.goalType),
     shape: Number(gift.shape),
     target: BigInt(gift.target as bigint),
@@ -86,6 +98,9 @@ export async function readMilestoneGift(contract: Hex, giftId: string, client: P
     withdrawNonce,
     proofPaused: Boolean(proofPaused),
     proofResumedAt: Number(proofResumedAt),
+    version,
+    openingKey: version === 2 ? (gift.openingKey as Hex) : null,
+    endedAt: version === 2 ? Number(gift.endedAt) : 0,
   };
 }
 
@@ -140,12 +155,19 @@ export function canStillReach(gift: PhaseInput, nowSeconds: number): boolean {
  * a race or a competition never came back to its funder, while its screens said it would (the audit of that day).
  */
 export function canExpire(
-  gift: Pick<MilestoneState, "cancelled" | "settled" | "recipient" | "identityHash" | "fundedAt" | "claimedAt" | "deadline" | "shape" | "proofPaused" | "proofResumedAt">,
+  gift: Pick<MilestoneState, "cancelled" | "settled" | "recipient" | "identityHash" | "fundedAt" | "claimedAt" | "deadline" | "shape" | "proofPaused" | "proofResumedAt"> &
+    Partial<Pick<MilestoneState, "version">>,
   nowSeconds: number,
 ): boolean {
+  // On the second version no switch refuses `expire` under a pause: its windows do, each counted from the pause's end,
+  // which is ahead while it runs. The answer is the same no.
   if (gift.proofPaused || gift.cancelled || gift.settled) return false;
   const afterPauses = (moment: number) => Math.max(moment, gift.proofResumedAt);
-  if (gift.recipient === null) return nowSeconds >= gift.fundedAt + MILESTONE_DORMANT_SECONDS + MILESTONE_PROOF_GRACE_SECONDS;
+  // A gift nobody opened: the second version counts its wait past a pause too, since a pause shuts the opening there.
+  if (gift.recipient === null) {
+    const waited = gift.fundedAt + MILESTONE_DORMANT_SECONDS;
+    return nowSeconds >= (gift.version === 2 ? afterPauses(waited) : waited) + MILESTONE_PROOF_GRACE_SECONDS;
+  }
   if (gift.shape === SHAPE_HAVE_OR_NOT) return nowSeconds > afterPauses(gift.deadline) + MILESTONE_LATE_PROOF_SECONDS;
   if (gift.identityHash !== ZERO_HASH) return nowSeconds > afterPauses(gift.deadline) + MILESTONE_PROOF_GRACE_SECONDS;
   return nowSeconds >= afterPauses(gift.claimedAt + MILESTONE_DORMANT_SECONDS) + MILESTONE_PROOF_GRACE_SECONDS;

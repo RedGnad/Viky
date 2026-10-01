@@ -401,7 +401,7 @@ export async function loadGiftsOf(account: string): Promise<GiftRecord[]> {
 }
 
 /** `prove` and `expire` are the milestone contract's (C2): a reading that started or settled a climb, and a gift sent back. */
-export type RelayedKind = "create" | "claim" | "check-in" | "withdraw" | "drain" | "finalise" | "refund" | "prove" | "expire";
+export type RelayedKind = "create" | "claim" | "check-in" | "withdraw" | "drain" | "finalise" | "refund" | "prove" | "expire" | "end";
 
 export async function recordRelayed(input: { giftId: string; kind: RelayedKind; sessionId?: string; txHash: Hex; blockNumber?: bigint }): Promise<void> {
   await sql()`

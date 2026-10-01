@@ -1,5 +1,6 @@
 import { catchUpSecondsOf } from "./catch-up";
 import { GiftApiError } from "./gift-api";
+import { dailyEnded, dailyEndOffer } from "./gift-ending";
 import { checkInDayIndex, formatAusd, readGift, utcDayOf } from "./gift-reader";
 import { holdsGiftLink, lastRefundAt, loadGift, loadRelayed, loadSettledDays, reconcileClaim } from "./gift-store";
 import { isMilestoneGiftId } from "./milestone-protocol";
@@ -106,5 +107,8 @@ export async function giftStatusFor(id: string, reader: GiftReader): Promise<Any
     recorded: relayed.map((entry) => ({ kind: entry.kind, txHash: entry.txHash, blockNumber: entry.blockNumber?.toString() ?? null })),
     createdAtChain: gift.fundedAt,
     hasRecord: record !== null,
+    version: gift.version,
+    end: dailyEndOffer(gift, viewerIsRecipient),
+    ended: dailyEnded(gift),
   } as GiftStatus;
 }

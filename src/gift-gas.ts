@@ -25,6 +25,9 @@ export const GIFT_GAS_CEILING = {
   registerGoal: 80_000, // observed max 59,809
   setCreationPaused: 60_000, // observed max 51,088
   setCheckInPaused: 60_000, // observed max 51,009
+  // The second version only (contracts/GiftEscrowV2.sol). Measured on a mainnet fork with the real AUSD during the
+  // audit of 1 Oct 2026: 227,485 to 230,454.
+  endGiftWithIntent: 250_000,
 } as const;
 
 export type GiftFunction = keyof typeof GIFT_GAS_CEILING;

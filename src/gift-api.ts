@@ -76,6 +76,11 @@ const CONTRACT_REFUSALS: Record<string, { code: string; message: string; status:
   InvalidEvidenceSigner: { code: "REFUSED", message: "That reading was not signed by Viky. Nothing was changed.", status: 409 },
   InvalidTokenDecimals: { code: "NOT_CONFIGURED", message: "Viky is not ready for this yet. Nothing was changed.", status: 503 },
   TransferShortfall: { code: "REFUSED", message: "The money did not move as expected, so nothing was changed.", status: 409 },
+  // The second version of the two gift contracts (the audit of 1 Oct 2026).
+  InvalidOpeningSignature: { code: "CLAIM_LINK_INVALID", message: "This link does not open this gift.", status: 409 },
+  InvalidOpeningKey: { code: "OUT_OF_DATE", message: "This page is out of date. Load it again and send the gift from there. Nothing was taken.", status: 400 },
+  RecipientIsFunder: { code: "OWN_GIFT", message: "This is the gift you made. Send its link to the person it is for.", status: 409 },
+  EndTermsChanged: { code: "END_CHANGED", message: "The amounts have changed since they were shown. Look at them again. Nothing was changed.", status: 409 },
   // The way out. Its refusals all end the same way on purpose: their money did not move.
   TooLittleBack: { code: "RATE_MOVED", message: "The rate moved, so this would have paid you less than you were shown. Nothing was taken.", status: 409 },
   DeadlinePassed: { code: "TOO_SLOW", message: "This took too long. Nothing was taken. Ask for a new quote.", status: 409 },

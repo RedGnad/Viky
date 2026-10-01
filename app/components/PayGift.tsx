@@ -6,7 +6,7 @@ import { useMoneySession } from "@/src/account/money-session";
 import { useAccount } from "@/src/account/provider";
 import { ApiError, postJson } from "@/src/client/api";
 import { useDisplayCurrency } from "@/src/client/display-currency";
-import { prepareGift, submitGift, type CreatedGift } from "@/src/client/gift";
+import { linkOfMade, prepareGift, submitGift, type CreatedGift } from "@/src/client/gift";
 import { prepareCertificateGift, submitCertificateGift } from "@/src/client/certificate-gift";
 import { prepareMilestoneGift, submitMilestoneGift } from "@/src/client/milestone";
 import { attemptFor, forgetsAttempt, GIFT_ATTEMPT_KEY, isCertificateRequest, isMilestoneRequest } from "@/src/gift-attempt";
@@ -312,9 +312,12 @@ export function PayGift() {
       throw error;
     }
     writeSession(GIFT_ATTEMPT_KEY, null);
+    // The gift's link: the server's answer, or on the second version of the contracts the one this browser makes from
+    // the funder's own signature, since the server was never given what opens the gift (src/client/v2.ts).
+    const claimUrl = await linkOfMade(account, result, request.salt);
     const record: Made = {
       giftId: result.giftId,
-      claimUrl: result.claimUrl,
+      claimUrl,
       atMs: Date.now(),
       recipientName: recipient,
       funderName: funder,
@@ -326,7 +329,7 @@ export function PayGift() {
     };
     writeSession(MADE_KEY, record);
     // This device keeps the link, so the gift's page can offer it again long after this screen is gone.
-    rememberGiftLink(result.giftId, result.claimUrl);
+    rememberGiftLink(result.giftId, claimUrl);
     // Made, so nothing is left on this device to pick up or to fill in again (D74).
     forgetPendingGift();
     clearedCardDraft();

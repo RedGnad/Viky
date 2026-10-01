@@ -1,3 +1,4 @@
+import type { EndOffer, Ended } from "../gift-ending";
 import { getAddress, type Hex, type LocalAccount } from "viem";
 import {
   receiveAuthorizationMessage,
@@ -12,6 +13,8 @@ import { fundingNonce, giftSalt, withdrawIntentTypedData, type GiftParams } from
 import { ApiError, getJson, postJson } from "./api";
 import { isMilestoneGiftId, milestoneWithdrawTypedData } from "../milestone-protocol";
 import type { MilestoneStatus } from "../milestone-view";
+import { fundingNonceV2, withdrawTypedDataV2 } from "../v2-protocol";
+import { giftLinkOf, linkForTerms, openWithLinkKey, secondVersionOf, versionOf } from "./v2";
 
 /** Browser-side flows of a gift. Every step that moves money is signed by the person's own account. */
 
@@ -43,7 +46,16 @@ export type CreateGiftInput = {
   refundTo?: Hex;
 };
 
-export type CreatedGift = { giftId: string; claimUrl: string; funded: boolean };
+/** `claimUrl` is nothing for a gift of the second version: the server never held its link, and the browser builds it (`linkOfMade`). */
+export type CreatedGift = { giftId: string; claimUrl: string | null; funded: boolean };
+
+/**
+ * The link of a gift just made: the server's answer on the first version, and on the second the one this browser
+ * makes from the funder's own signature over the gift's salt (src/client/v2.ts).
+ */
+export async function linkOfMade(account: LocalAccount, made: CreatedGift, salt: Hex): Promise<string> {
+  return made.claimUrl ?? (await giftLinkOf(account, salt, made.giftId));
+}
 
 /**
  * Whether a public profile goes by this name on the condition's source, how that source spells it, and the courses it
@@ -71,15 +83,22 @@ export type GiftRequest = Readonly<{
   amount: string;
   refundTo: string;
   salt: Hex;
+  /** The second version: the address of the key that opens the gift, and the fingerprint of its link. Never its secret. */
+  openingKey?: Hex;
+  linkFingerprint?: string;
   authorization: { validAfter: string; validBefore: string; nonce: Hex; v: number; r: Hex; s: Hex };
 }>;
 
 /**
  * One passkey-derived signature: the EIP-3009 authorization whose nonce is the hash of these exact
  * terms. The server recomputes the nonce from the same inputs and refuses anything else.
+ *
+ * Once the second version of the contract is set, the terms also carry the address of the key that opens the gift,
+ * made here from the funder's own signature over the salt (src/client/v2.ts).
  */
 export async function prepareGift(input: CreateGiftInput): Promise<GiftRequest> {
-  const escrow = escrowAddressFromEnv();
+  const second = secondVersionOf("daily");
+  const escrow = second ?? escrowAddressFromEnv();
   const funder = getAddress(input.account.address);
   // The salt is what carries the account and the course into what the funder signs (D102). Its random half is sent
   // with the request so the server rebuilds exactly this salt, or refuses to make the gift.
@@ -95,10 +114,15 @@ export async function prepareGift(input: CreateGiftInput): Promise<GiftRequest> 
     amount: input.amount,
     salt: giftSalt({ account: input.duolingoUsername, course: input.course, seed: saltSeed }),
   };
-  const message = receiveAuthorizationMessage({ funder, escrow, amount: input.amount, nonce: fundingNonce(params) });
+  const link = second ? await linkForTerms(input.account, params.salt) : null;
+  const nonce = link
+    ? fundingNonceV2({ funder, refundTo: params.refundTo, openingKey: link.openingKey, goalType: params.goalType, dailyTarget: params.dailyTarget, durationDays: params.durationDays, amount: params.amount, salt: params.salt })
+    : fundingNonce(params);
+  const message = receiveAuthorizationMessage({ funder, escrow, amount: input.amount, nonce });
   const signature = await input.account.signTypedData(receiveAuthorizationTypedData(message));
   const authorization = toContractAuthorization(message, signature);
   return {
+    ...(link ?? {}),
     duolingoUsername: input.duolingoUsername,
     course: input.course,
     saltSeed,
@@ -126,8 +150,10 @@ export function submitGift(request: GiftRequest): Promise<CreatedGift> {
   return postJson<CreatedGift>("/api/gift/create", request);
 }
 
-export async function createGift(input: CreateGiftInput): Promise<CreatedGift> {
-  return submitGift(await prepareGift(input));
+export async function createGift(input: CreateGiftInput): Promise<CreatedGift & { claimUrl: string }> {
+  const request = await prepareGift(input);
+  const made = await submitGift(request);
+  return { ...made, claimUrl: await linkOfMade(input.account, made, request.salt) };
 }
 
 /** The recipient's account for the public mode (D27); the code is only ever sent to the signed-in recipient. */
@@ -195,6 +221,12 @@ export type GiftStatus = {
   recorded: Array<{ kind: string; txHash: string; blockNumber: string | null }>;
   /** Given only to whoever holds the link, or to the funder or the recipient signed in. */
   names: { recipientName: string | null; funderName: string | null } | null;
+  /** Which version of its contract holds the gift (src/v2.ts). Absent on an answer made before the second existed. */
+  version?: 1 | 2;
+  /** The second version only: what ending the gift now would do, for the person it is for (src/gift-ending.ts). */
+  end?: EndOffer | null;
+  /** The second version only: the ending, once the person it is for has ended it. */
+  ended?: Ended | null;
 };
 
 /** A gift as the list of the account's gifts describes it, which is what a card draws on. */
@@ -255,7 +287,13 @@ export function loadGiftStatus(giftId: string, linkKey?: string | null): Promise
   return getJson<GiftStatus>(`/api/gift/${giftId}${linkKey ? `?t=${encodeURIComponent(linkKey)}` : ""}`);
 }
 
-export function claimGift(giftId: string, token: string): Promise<{ giftId: string; opened: boolean }> {
+/**
+ * Opens a gift for the signed-in account. On the first version the server is sent the link's key and the evidence
+ * signer attests the opening. On the second the key of the link signs it here, and the server is sent the signature
+ * alone (src/client/v2.ts): `opening` names the contract the gift is on and the account it opens for.
+ */
+export function claimGift(giftId: string, token: string, opening?: { contract: Hex; recipient: string }): Promise<{ giftId: string; opened: boolean }> {
+  if (opening && versionOf(giftId, opening.contract) === 2) return openWithLinkKey({ giftId, contract: opening.contract, recipient: opening.recipient, linkSecret: token });
   return postJson(`/api/gift/claim`, { giftId, token });
 }
 
@@ -265,6 +303,16 @@ export function claimGift(giftId: string, token: string): Promise<{ giftId: stri
  */
 export function giftLinkAgain(giftId: string): Promise<{ claimUrl: string }> {
   return postJson(`/api/gift/${giftId}/link`, {});
+}
+
+/**
+ * The link of a gift of the second version, found again by the account that made it, on any device. Nothing is
+ * replaced: the server answers the gift's salt, which is public, and the same account signing it makes the same
+ * secret, so this is the link that was sent, and it still works.
+ */
+export async function giftLinkFound(account: LocalAccount, giftId: string): Promise<{ claimUrl: string }> {
+  const { salt } = await postJson<{ salt: Hex }>(`/api/gift/${giftId}/link`, { find: true });
+  return { claimUrl: await giftLinkOf(account, salt, giftId) };
 }
 
 /** What a shown proof ended as: a day of a daily gift, or a milestone reached (D162). */
@@ -386,8 +434,15 @@ export async function withdrawEarned(input: { account: LocalAccount; giftId: str
   const escrow = input.escrow;
   const deadline = BigInt(Math.floor(Date.now() / 1_000) + 10 * 60);
   const message = { giftId: BigInt(input.giftId), to: getAddress(input.account.address), amount: input.amount, nonce: input.nonce, deadline };
-  // Each contract signs under its own name, so the gift's number decides the domain (C2).
-  const typedData = isMilestoneGiftId(input.giftId) ? milestoneWithdrawTypedData(escrow, message) : withdrawIntentTypedData(escrow, message);
+  // Each contract signs under its own name, so the gift's number decides the domain (C2), and each version under its
+  // own, so the contract's address decides that (src/v2.ts).
+  const milestone = isMilestoneGiftId(input.giftId);
+  const typedData =
+    versionOf(input.giftId, escrow) === 2
+      ? withdrawTypedDataV2(milestone ? "milestone" : "daily", escrow, message)
+      : milestone
+        ? milestoneWithdrawTypedData(escrow, message)
+        : withdrawIntentTypedData(escrow, message);
   const signature = await input.account.signTypedData(typedData);
   return postJson("/api/gift/withdraw", {
     giftId: input.giftId,

@@ -18,7 +18,7 @@ export function liveCreationDeps(): CreationDeps {
     begin: beginCreation,
     restart: restartCreation,
     submitted: markCreationSubmitted,
-    relay: (params, authorization, onSubmitted) => relayCreateGift(params, authorization, onSubmitted),
+    relay: (params, authorization, onSubmitted, openingKey) => relayCreateGift(params, authorization, onSubmitted, openingKey),
     readBack: async (txHash: Hex) => {
       const back = await createdGiftOf(txHash);
       return back.kind === "made" ? { kind: "made", giftId: back.giftId, escrow: back.escrow } : back;

@@ -19,6 +19,8 @@ import { MILESTONE_MAX_AMOUNT, MILESTONE_MIN_AMOUNT, milestoneFundingNonce, SHAP
 import { checkTarget, MilestoneTermsError, startingCeiling } from "@/src/milestone-terms";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { admitRelay } from "@/src/relay-admission";
+import { milestoneFundingNonceV2, type MilestoneParamsV2 } from "@/src/v2-protocol";
+import { answeredLink, requestedLink } from "@/src/v2-request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +40,9 @@ type CreateBody = {
   salt?: string;
   /** The random half of the salt, so the terms signed can be rebuilt here (D102). */
   saltSeed?: string;
+  /** The second version: the address of the key that opens the gift, and the fingerprint of its link (src/v2-request.ts). */
+  openingKey?: string;
+  linkFingerprint?: string;
   recipientName?: string;
   funderName?: string;
   authorization?: { validAfter?: string; validBefore?: string; nonce?: string; v?: number; r?: string; s?: string };
@@ -136,7 +141,12 @@ export async function POST(request: Request) {
       amount,
       salt: salt as Hex,
     };
-    if (String(a.nonce).toLowerCase() !== milestoneFundingNonce(params).toLowerCase()) {
+    // The link the funder's browser made, on the second version: its opening key is part of what was signed.
+    const link = requestedLink(body, "milestone");
+    const { recipientContactHash: _contact, ...shared } = params;
+    void _contact;
+    const second: MilestoneParamsV2 | null = link ? { ...shared, openingKey: link.openingKey } : null;
+    if (String(a.nonce).toLowerCase() !== (second ? milestoneFundingNonceV2(second) : milestoneFundingNonce(params)).toLowerCase()) {
       throw new GiftApiError("TERMS_MISMATCH", "The signed terms do not match the gift");
     }
 
@@ -171,7 +181,8 @@ export async function POST(request: Request) {
     // creation declares the most gas of any relayed step, and was the one step that went around the door.
     await admitRelay(request, auth.account);
     const created = await makeMilestoneGift({
-      params,
+      params: second ?? params,
+      linkFingerprint: link?.fingerprint,
       nonce,
       authorization: {
         validAfter: BigInt(String(a.validAfter ?? "0")),
@@ -186,13 +197,12 @@ export async function POST(request: Request) {
       funderName,
       facts: { conditionId: milestone.condition.id, mode: cadence.id, standingAtOffer: standing, standingReadAt: standingReadAt.toISOString() },
     });
-    const claimToken = created.claimToken;
-
     const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin;
     // The gift keeps the currency its funder is reading in now, for its link's title and picture. Never a reason to
     // fail a gift that is made: without it the link speaks the currency the account reads in, as before.
     await readingCurrency(auth.account).then((currency) => keepFunderCurrency(created.giftId, auth.account, currency)).catch(() => undefined);
-    return NextResponse.json({ giftId: created.giftId, claimUrl: `${origin}/g/${created.giftId}?t=${claimToken}`, funded: true }, { headers: NO_STORE });
+    // On the second version the server was never given the link's secret: the browser that made it builds the link.
+    return NextResponse.json({ giftId: created.giftId, claimUrl: answeredLink(origin, created.giftId, created.claimToken), funded: true }, { headers: NO_STORE });
   } catch (error) {
     return milestoneErrorResponse(error, isOperator(account));
   }

@@ -375,7 +375,10 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   const open = () =>
     run("opening", "open", async () => {
       if (!linkKey) throw new ApiError({ status: 400, code: "NO_KEY", message: W.missingKey });
-      await claimGift(giftId, linkKey);
+      // On the second version of the contracts the link's own key signs the opening, here, for the signed-in account:
+      // the contract the gift is on and that account are what it needs (src/client/v2.ts).
+      const contract = milestone ? milestone.escrow : daily?.escrow;
+      await claimGift(giftId, linkKey, contract && address ? { contract, recipient: address } : undefined);
       return null;
     });
   const name = (username: string) => run("naming", "name", async () => {

@@ -73,6 +73,9 @@ const OPENED: MilestoneState = {
   withdrawNonce: 0n,
   proofPaused: false,
   proofResumedAt: 1_700_000_000,
+  version: 1,
+  openingKey: null,
+  endedAt: 0,
 };
 
 const CLIMBING: MilestoneState = { ...OPENED, identityHash: IDENTITY, startingValue: 1904n, lastProofAt: NOW - 86_400, deadline: NOW + 29 * 86_400 };

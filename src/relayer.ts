@@ -15,6 +15,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { giftEscrowAbi } from "./gift-escrow-abi";
 import { giftGasLimit, type GiftFunction } from "./gift-gas";
+import { dailyAbiOf, giftEscrowV2Address } from "./v2";
 import { addMonadGasBuffer } from "./monad-gas";
 import { MONAD_CHAIN_ID, monadChain, monadTransport, waitForFinality } from "./monad/chain";
 
@@ -65,7 +66,15 @@ export function relayerClients(): RelayerClients {
   return cached;
 }
 
-/** The contract new gifts are created on. Existing gifts are served by the contract that holds them. */
+/**
+ * The second version of the daily contract when it is set, and the contract new gifts are created on from then
+ * (src/v2.ts). Nothing while it is not: new gifts stay on `escrowAddress()`.
+ */
+export function newGiftsEscrow(): Hex {
+  return giftEscrowV2Address() ?? escrowAddress();
+}
+
+/** The contract new gifts are created on until the second version is set. Existing gifts are served by the contract that holds them. */
 export function escrowAddress(): Hex {
   const value = process.env.GIFT_ESCROW_ADDRESS?.trim();
   if (!value || !/^0x[0-9a-fA-F]{40}$/.test(value)) throw new RelayerError("NOT_CONFIGURED", "The gift contract is not configured");
@@ -192,7 +201,8 @@ export async function relay(
   /** Called with the transaction's hash as soon as it is submitted, before finality: a caller that records it can find the transaction again if anything after fails (D87). */
   onSubmitted?: (hash: Hash) => Promise<void>,
 ): Promise<RelayResult> {
-  return relayCall({ address: escrow, abi: giftEscrowAbi as unknown as Abi, floor: giftGasLimit(functionName) }, functionName, args, clients, onSubmitted);
+  // The contract a gift is on says what it speaks: the first version's ABI, or the second's (src/v2.ts).
+  return relayCall({ address: escrow, abi: dailyAbiOf(escrow), floor: giftGasLimit(functionName) }, functionName, args, clients, onSubmitted);
 }
 
 /** The contract a relayed call goes to: where it is, what it speaks, and the recorded figure its gas stays above. */

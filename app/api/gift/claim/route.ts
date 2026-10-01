@@ -4,13 +4,14 @@ import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { GiftApiError, giftErrorResponse, NO_STORE, refuseOwnGift } from "@/src/gift-api";
 import { relayClaim } from "@/src/gift-relay";
-import { loadGiftForClaim, markClaimed } from "@/src/gift-store";
+import { loadGift, loadGiftForClaim, markClaimed } from "@/src/gift-store";
 import { milestoneErrorResponse } from "@/src/milestone-api";
 import { isMilestoneGiftId } from "@/src/milestone-protocol";
 import { milestoneClaim } from "@/src/milestone-routes";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { admitRelay } from "@/src/relay-admission";
 import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
+import { openingOf, openWithTheLinkKey, versionOfGift } from "@/src/v2-opening";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,21 +21,42 @@ export const maxDuration = 60;
  * Binds the signed-in account to the gift its claim link points to. The link secret is all that is
  * checked, so whoever holds the link takes the gift (D58, D72); the evidence signer attests it and the
  * relayer submits. The money is already in the recipient's name; this is where it gets an account.
+ *
+ * A gift of the second version is opened by the key of its link instead (src/v2-opening.ts): the person's browser
+ * signs with it, the server is sent the signature and never the secret, and the evidence signer attests nothing.
  */
 export async function POST(request: Request) {
   try {
     const auth = readAccountAuthSession(request);
     const rate = checkRateLimit("relay", request, auth.account);
     if (!rate.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429, headers: rateLimitResponseHeaders(rate) });
-    const body = await readJsonBody<{ giftId?: string; token?: string }>(request, 2 * 1_024);
+    const body = await readJsonBody<{ giftId?: string; token?: string; opening?: { deadline?: string; signature?: string } }>(request, 2 * 1_024);
     const giftId = String(body.giftId ?? "").trim();
-    const token = String(body.token ?? "").trim();
-    if (!/^\d{1,78}$/.test(giftId) || !/^[A-Za-z0-9_-]{16,64}$/.test(token)) {
-      throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid", 404);
+    if (!/^\d{1,78}$/.test(giftId)) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid", 404);
+    // The second version: the opening is the link key's own signature, and the server takes no secret for it.
+    if (body.opening !== undefined) {
+      const opening = openingOf(body.opening);
+      assertGiftContractConfigured();
+      const known = await loadGift(giftId);
+      if (!known || versionOfGift(known) !== 2 || known.recipient) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid or was already used", 404);
+      refuseOwnGift(known, auth.account);
+      await admitRelay(request, auth.account);
+      // A milestone gift's own refusals are said in its own words, as on the first version.
+      const opened = isMilestoneGiftId(giftId)
+        ? await openWithTheLinkKey(known, auth.account, opening).catch((error: unknown) => milestoneErrorResponse(error))
+        : await openWithTheLinkKey(known, auth.account, opening);
+      if (opened instanceof NextResponse) return opened;
+      await markClaimed(giftId, auth.account, opened.hash);
+      return NextResponse.json({ giftId, opened: true }, { headers: NO_STORE });
     }
+    const token = String(body.token ?? "").trim();
+    if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid", 404);
     assertGiftContractConfigured();
     const gift = await loadGiftForClaim(giftId, token);
     if (!gift) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid or was already used", 404);
+    // A gift of the second version is never opened by the server's own attestation: a page loaded before the second
+    // version was set sends the link's key here, and is asked to load again rather than told its link is bad.
+    if (versionOfGift(gift) === 2) throw new GiftApiError("OUT_OF_DATE", "This page is out of date. Load it again to open your gift. Nothing was changed.", 409);
     refuseOwnGift(gift, auth.account);
     await admitRelay(request, auth.account);
     // A milestone gift is opened on its own contract (C2), with the same link and the same rule.

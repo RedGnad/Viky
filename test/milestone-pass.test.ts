@@ -44,6 +44,9 @@ const CLIMBING: MilestoneState = {
   withdrawNonce: 0n,
   proofPaused: false,
   proofResumedAt: 1_700_000_000,
+  version: 1,
+  openingKey: null,
+  endedAt: 0,
 };
 
 /** A chain of one gift that moves as the pass acts on it, and the list of what the pass did. */

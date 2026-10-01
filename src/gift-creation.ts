@@ -31,7 +31,8 @@ export type CreationDeps = Readonly<{
   begin: (row: Omit<CreationRow, "status" | "txHash" | "giftId" | "startedAt">) => Promise<{ inserted: true } | { inserted: false; existing: CreationRow }>;
   restart: (nonce: Hex, claimTokenHashOfAttempt: string, previousStart: Date) => Promise<boolean>;
   submitted: (nonce: Hex, txHash: Hex) => Promise<void>;
-  relay: (params: GiftParams, authorization: ContractAuthorization, onSubmitted: (hash: Hex) => Promise<void>) => Promise<CreatedGiftFacts>;
+  /** With an opening key, the terms are the second version's and go to its contract (src/gift-relay.ts). */
+  relay: (params: GiftParams, authorization: ContractAuthorization, onSubmitted: (hash: Hex) => Promise<void>, openingKey?: Hex) => Promise<CreatedGiftFacts>;
   readBack: (txHash: Hex) => Promise<ReadBack>;
   spent: (funder: Hex, nonce: Hex) => Promise<boolean>;
   save: (input: {
@@ -67,6 +68,12 @@ export type CreationInput = Readonly<{
   goalCourseTitle?: string;
   recipientName?: string;
   funderName?: string;
+  /**
+   * The second version (the audit of 1 Oct 2026): the link was made in the funder's browser, which sends the address
+   * of the key that opens the gift, signed into the terms, and the fingerprint of the link. The server is never given
+   * the link's secret, so it makes none and answers none: the browser builds the link itself.
+   */
+  link?: Readonly<{ openingKey: Hex; fingerprint: string }>;
 }>;
 
 const alreadyMade = () => new GiftApiError("ALREADY_MADE", "This gift is already made. It is in your gifts.", 409);
@@ -100,10 +107,13 @@ async function record(row: Omit<CreationRow, "status" | "txHash" | "giftId" | "s
  * Makes one gift: records the creation, relays the money, records the gift. Answers the gift's number and the link's
  * key, which exists nowhere else. A retry of the same terms completes a creation whose record failed, with a fresh key:
  * the attempt that failed ended in an error, so its key never reached anybody.
+ *
+ * On the second version the key is the funder's browser's and is part of the signed terms: the answer carries no key
+ * (an empty one), and a retry of the same terms is a retry of the same link.
  */
 export async function makeGift(input: CreationInput, deps: CreationDeps): Promise<{ giftId: string; claimToken: string; hash: Hex; escrow: Hex }> {
-  const claimToken = newClaimToken();
-  const keyHash = claimTokenHash(claimToken);
+  const claimToken = input.link ? "" : newClaimToken();
+  const keyHash = input.link ? input.link.fingerprint : claimTokenHash(claimToken);
   const row = {
     nonce: input.nonce,
     funder: input.params.funder,
@@ -145,10 +155,15 @@ export async function makeGift(input: CreationInput, deps: CreationDeps): Promis
   let submitted = false;
   let made: CreatedGiftFacts;
   try {
-    made = await deps.relay(input.params, input.authorization, async (hash) => {
-      submitted = true;
-      await deps.submitted(input.nonce, hash);
-    });
+    made = await deps.relay(
+      input.params,
+      input.authorization,
+      async (hash) => {
+        submitted = true;
+        await deps.submitted(input.nonce, hash);
+      },
+      input.link?.openingKey,
+    );
   } catch (error) {
     // Refused before anything was submitted (the simulation, the relayer's own checks): no money moved, so the same
     // terms may be tried again at once rather than after the lease.
