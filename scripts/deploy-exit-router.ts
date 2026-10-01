@@ -27,8 +27,16 @@ import { AUSD_ADDRESS, MONAD_CHAIN_ID, monadChain, monadTransport, USDC_ADDRESS,
  * that; the contract then checks it again on every payout and refuses if it has moved. Nothing here is taken
  * on trust: the exchange must be the one a live quote actually targets, and it must have code.
  *
- * Inputs (.env): DEPLOYER_PRIVATE_KEY, optional OWNER_ADDRESS (a multisig to hand ownership to),
- * optional MONAD_RPC_URL. Prints what to add to .env.local.
+ * Inputs (.env): DEPLOYER_PRIVATE_KEY, OWNER_ADDRESS (the multisig ownership is handed to), optional MONAD_RPC_URL.
+ * Prints what to add to .env.local.
+ *
+ * `--takes=usdc` deploys the second copy (the founder, 1 Oct 2026): the same contract set on USDC, which changes USDC
+ * a card payment delivered into what a gift holds (src/usdc-router.ts). One corridor then, USDC in and AUSD out, and
+ * the exchange a live quote names for it must be the one the app already names. Without the flag, everything here is
+ * what it was.
+ *
+ * `DRY_RUN=1` sends nothing, so it needs no key: `DEPLOYER_ADDRESS` alone answers every read, and the whole plan can
+ * be inspected by somebody who holds no secret.
  */
 
 function required(name: string): string {
@@ -48,8 +56,15 @@ const FORWARDER_ABI = [
   { type: "function", name: "getRouter", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
 ] as const satisfies Abi;
 
+/** Which coin the router takes from the person: what a gift holds for the way out, USDC for the conversion. */
+const TAKES_USDC = process.argv.includes("--takes=usdc");
+
 async function main() {
-  const deployerKey = required("DEPLOYER_PRIVATE_KEY");
+  const dryRun = Boolean(process.env.DRY_RUN);
+  const deployerKey = process.env.DEPLOYER_PRIVATE_KEY?.trim();
+  const deployerOnly = process.env.DEPLOYER_ADDRESS?.trim();
+  if (!deployerKey && !(dryRun && deployerOnly && isAddress(deployerOnly))) required("DEPLOYER_PRIVATE_KEY");
+  const takes = TAKES_USDC ? USDC_ADDRESS : AUSD_ADDRESS;
   const ownerRaw = process.env.OWNER_ADDRESS?.trim();
   if (ownerRaw && !isAddress(ownerRaw)) throw new Error("OWNER_ADDRESS is invalid");
   const owner = ownerRaw ? getAddress(ownerRaw) : undefined;
@@ -60,10 +75,11 @@ async function main() {
   };
   const abi: Abi = artifact.abi;
 
-  const account = privateKeyToAccount((deployerKey.startsWith("0x") ? deployerKey : `0x${deployerKey}`) as Hex);
+  const signer = deployerKey ? privateKeyToAccount((deployerKey.startsWith("0x") ? deployerKey : `0x${deployerKey}`) as Hex) : undefined;
+  // With no key, only a dry run gets this far, and an address is all its reads need.
+  const account = { address: signer ? signer.address : getAddress(deployerOnly!) };
   const transport = monadTransport();
   const publicClient = createPublicClient({ chain: monadChain, transport });
-  const walletClient = createWalletClient({ account, chain: monadChain, transport });
 
   const chainId = await publicClient.getChainId();
   if (chainId !== MONAD_CHAIN_ID) throw new Error(`Refusing to deploy: chain id ${chainId} is not Monad mainnet (${MONAD_CHAIN_ID})`);
@@ -79,10 +95,11 @@ async function main() {
   if (owner === account.address) {
     throw new Error(`Refusing to deploy: OWNER_ADDRESS is the deployer ${account.address}, so ownership would stay on the deployment key`);
   }
+  // Both coins, whichever way round: the one the router takes is fixed for good at deployment, and the other is
+  // what it hands back (D76). Deploying against an address with no code would produce a router that can never pay
+  // anybody and cannot be pointed elsewhere afterwards.
   const tokenCode = await publicClient.getCode({ address: AUSD_ADDRESS });
   if (!tokenCode || tokenCode === "0x") throw new Error("AUSD has no code at the pinned address");
-  // The coin the router hands back (D76). Checked here because deploying against an address with no code
-  // would produce a router that can never pay anybody and cannot be pointed elsewhere afterwards.
   const outCode = await publicClient.getCode({ address: USDC_ADDRESS });
   if (!outCode || outCode === "0x") throw new Error("USDC has no code at the pinned address");
 
@@ -90,10 +107,12 @@ async function main() {
   // for both corridors, because the two payout services take different coins and the exchange that serves one
   // need not be the one that serves the other. Allowing only the coin we happen to be testing today would
   // leave the other corridor dead on arrival, with no way to open it but another owner transaction.
-  const corridors = [
-    { name: "euro rail, stablecoin", tokenOut: USDC_ADDRESS as string },
-    { name: "card rail, the chain's own coin", tokenOut: NATIVE_MON as string },
-  ];
+  const corridors = TAKES_USDC
+    ? [{ name: "a card payment in USDC, changed into what a gift holds", tokenOut: AUSD_ADDRESS as string }]
+    : [
+        { name: "euro rail, stablecoin", tokenOut: USDC_ADDRESS as string },
+        { name: "card rail, the chain's own coin", tokenOut: NATIVE_MON as string },
+      ];
   const exchanges = new Map<Hex, string[]>();
   for (const corridor of corridors) {
     // Spaced and retried, because the exchange rate limits per address and answers a burst with "no route",
@@ -105,7 +124,7 @@ async function main() {
     for (let attempt = 1; attempt <= PROBE_ATTEMPTS && !quoted; attempt += 1) {
       if (attempt > 1) await new Promise((resolve) => setTimeout(resolve, PROBE_SPACING_MS));
       try {
-        quoted = await kuruQuote({ userAddress: account.address, tokenIn: AUSD_ADDRESS, tokenOut: corridor.tokenOut, amount: PROBE_AMOUNT });
+        quoted = await kuruQuote({ userAddress: account.address, tokenIn: takes, tokenOut: corridor.tokenOut, amount: PROBE_AMOUNT });
       } catch (error) {
         refusal = error;
         console.log(`${corridor.name}: attempt ${attempt} of ${PROBE_ATTEMPTS} was refused, waiting`);
@@ -131,6 +150,9 @@ async function main() {
   }
   const exchange = [...exchanges.keys()][0];
   const declared = process.env.EXIT_EXCHANGE_ADDRESS?.trim();
+  // The conversion's routes name the exchange by the same setting as the way out's (app/api/fund/convert), so for the
+  // second copy the setting must exist already: a copy opened to an exchange the app does not name could serve nobody.
+  if (TAKES_USDC && !declared) throw new Error("Refusing to deploy: set EXIT_EXCHANGE_ADDRESS, the exchange the app names, before the copy that takes USDC");
   if (declared && getAddress(declared) !== exchange) {
     throw new Error(`Refusing to deploy: a live quote targets ${exchange}, but EXIT_EXCHANGE_ADDRESS says ${getAddress(declared)}`);
   }
@@ -165,7 +187,7 @@ async function main() {
       {
         deployer: account.address,
         balanceMon: formatEther(balance),
-        takes: AUSD_ADDRESS,
+        takes,
         // No single coin comes back any more: each exit names its own, so both corridors run through one
         // router (D77). What is printed is which coins the corridors probed above actually asked for.
         givesBack: corridors.map((corridor) => corridor.tokenOut),
@@ -182,20 +204,22 @@ async function main() {
   // Everything above this line is a read. With DRY_RUN set, nothing below it happens: the one irreversible
   // step in this project can be inspected in full, with real addresses and a real pin target, before anybody
   // approves it. Without that, the only way to see the plan was to carry it out.
-  if (process.env.DRY_RUN) {
+  if (dryRun) {
     console.log("\nDRY_RUN: every check passed and nothing was sent. Unset DRY_RUN to deploy for real.");
     return;
   }
+  if (!signer) throw new Error("Missing DEPLOYER_PRIVATE_KEY in .env");
+  const walletClient = createWalletClient({ account: signer, chain: monadChain, transport });
 
   // One argument again: the coin coming back is named per exit inside the signed terms, because the two
   // payout services take different ones and a router pinned to either would close the other's corridor (D77).
   const deployGas = addMonadGasBuffer(
     await publicClient.estimateGas({
       account: account.address,
-      data: (artifact.bytecode.object + AUSD_ADDRESS.slice(2).padStart(64, "0")) as Hex,
+      data: (artifact.bytecode.object + takes.slice(2).padStart(64, "0")) as Hex,
     }),
   );
-  const deployHash = await walletClient.deployContract({ abi, bytecode: artifact.bytecode.object, args: [AUSD_ADDRESS], gas: deployGas });
+  const deployHash = await walletClient.deployContract({ abi, bytecode: artifact.bytecode.object, args: [takes], gas: deployGas });
   const deployReceipt = await waitForFinality(publicClient, deployHash);
   const address = deployReceipt.contractAddress;
   if (!address) throw new Error("Deployment produced no contract address");
@@ -220,6 +244,12 @@ async function main() {
     console.log(JSON.stringify({ step: step.name, txHash: hash }));
   }
 
+  if (TAKES_USDC) {
+    // Public on purpose: the browser signs for this address and no other (src/usdc-router.ts).
+    console.log("\nSet where the app is built, and in .env.local:");
+    console.log(`NEXT_PUBLIC_USDC_ROUTER_ADDRESS=${address}`);
+    return;
+  }
   console.log("\nAdd to .env.local:");
   console.log(`EXIT_ROUTER_ADDRESS=${address}`);
   console.log(`EXIT_EXCHANGE_ADDRESS=${exchange}`);

@@ -68,8 +68,8 @@ test("the pause holds a conversion only, only after a failure, and only for its 
 test("the screen keeps the time of the failure, and its watch still depends on the phase", () => {
   const screen = readFileSync("app/components/PayGift.tsx", "utf8");
   const watch = screen.slice(screen.indexOf("// While paying: watch the account"), screen.indexOf("const copy = "));
-  assert.match(watch, /nextFundingStep\(\{ held: read\.held, arriving: read\.arriving, wanted, failedAtMs: failedAtMs\.current, nowMs: Date\.now\(\) \}\)/);
-  const failure = watch.slice(watch.indexOf('"/api/fund/quote"'), watch.indexOf("const after = await readAusdBalance"));
+  assert.match(watch, /nextFundingStep\(\{ held: read\.held, arriving: read\.arriving, arrivingUsdc: read\.usdc, wanted, failedAtMs: failedAtMs\.current, nowMs: Date\.now\(\) \}\)/);
+  const failure = watch.slice(watch.indexOf('"/api/fund/quote"'), watch.lastIndexOf("const after = await readAusdBalance"));
   assert.ok(failure.indexOf("failedAtMs.current = Date.now()") < failure.indexOf('setPhase("waiting")'), "the time is kept before the phase starts the watch again");
   assert.match(failure, /setProblem\(W\.arrived\.priceMoved\);\s+setPhase\("waiting"\)/, "the sentence is said with the phase it belongs to");
   assert.match(watch, /\}, \[step, address, units, phase, refresh, give, ensureSigner\]\);/, "the phase stays among what the watch depends on");

@@ -38,6 +38,8 @@ export function pausedAfterFailure(failedAtMs: number | null, nowMs: number): bo
 export type FundingStep =
   | { do: "give" }
   | { do: "convert"; amount: bigint }
+  /** USDC arrived, the other dollar coin a card can deliver: all of it is changed, by a signature the relayer carries. */
+  | { do: "convertUsdc"; amount: bigint }
   | { do: "wait"; sawSomething: boolean };
 
 /**
@@ -48,9 +50,25 @@ export function paymentArrived(arriving: bigint): boolean {
   return arriving > ARRIVAL_FLOOR + CONVERSION_RESERVE;
 }
 
-export function nextFundingStep(input: { held: bigint; arriving: bigint; wanted: bigint; failedAtMs?: number | null; nowMs?: number }): FundingStep {
+/** Under one dollar of USDC nothing is changed (`SMALLEST_CONVERSION` in src/usdc-router.ts, the same figure). */
+export const USDC_ARRIVAL_FLOOR = 1_000_000n;
+
+export function nextFundingStep(input: {
+  held: bigint;
+  arriving: bigint;
+  wanted: bigint;
+  failedAtMs?: number | null;
+  nowMs?: number;
+  /** The USDC in the account, read only where the step that changes it exists; nothing otherwise. */
+  arrivingUsdc?: bigint;
+}): FundingStep {
   // Enough already: the gift can be made, and nothing else should be converted.
   if (input.held >= input.wanted) return { do: "give" };
+  // USDC before the chain's coin: it is a dollar already, so nothing of it is lost to a price, and none is kept back.
+  if ((input.arrivingUsdc ?? 0n) >= USDC_ARRIVAL_FLOOR) {
+    if (pausedAfterFailure(input.failedAtMs ?? null, input.nowMs ?? 0)) return { do: "wait", sawSomething: true };
+    return { do: "convertUsdc", amount: input.arrivingUsdc! };
+  }
   // Something arrived, and enough of it that converting leaves more than it costs.
   if (paymentArrived(input.arriving)) {
     // A conversion that has just failed is not tried again at once: the screen waits, and the next look tries.
@@ -58,7 +76,7 @@ export function nextFundingStep(input: { held: bigint; arriving: bigint; wanted:
     return { do: "convert", amount: input.arriving - CONVERSION_RESERVE };
   }
   // Nothing worth acting on. `sawSomething` only changes what the person is told, never what is done.
-  return { do: "wait", sawSomething: input.arriving > 0n };
+  return { do: "wait", sawSomething: input.arriving > 0n || (input.arrivingUsdc ?? 0n) > 0n };
 }
 
 /** The steps of giving before any money moves: who, how much, the check, and an account when there is none. */

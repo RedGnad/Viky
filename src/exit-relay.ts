@@ -80,10 +80,13 @@ const AUTHORIZATION_STATE_ABI = [
   },
 ] as const satisfies Abi;
 
-/** Whether this exact set of terms has already been paid for. The token, not our own record, is the truth. */
-export async function alreadySpent(payer: Hex, nonce: Hex, clients: RelayerClients = relayerClients()): Promise<boolean> {
+/**
+ * Whether this exact set of terms has already been paid for. The token, not our own record, is the truth: the token
+ * the router takes, which is what a gift holds for the way out and USDC for the conversion (src/usdc-router.ts).
+ */
+export async function alreadySpent(payer: Hex, nonce: Hex, clients: RelayerClients = relayerClients(), token: Hex = AUSD_ADDRESS): Promise<boolean> {
   return (await clients.publicClient.readContract({
-    address: AUSD_ADDRESS,
+    address: token,
     abi: AUTHORIZATION_STATE_ABI,
     functionName: "authorizationState",
     args: [getAddress(payer), nonce],
@@ -91,7 +94,12 @@ export async function alreadySpent(payer: Hex, nonce: Hex, clients: RelayerClien
 }
 
 export async function heldAusd(account: Hex, clients: RelayerClients = relayerClients()): Promise<bigint> {
-  return (await clients.publicClient.readContract({ address: AUSD_ADDRESS, abi: erc20Abi, functionName: "balanceOf", args: [getAddress(account)] })) as bigint;
+  return heldOf(AUSD_ADDRESS, account, clients);
+}
+
+/** What an account holds of one token, read by the relayer's own client. */
+export async function heldOf(token: Hex, account: Hex, clients: RelayerClients = relayerClients()): Promise<bigint> {
+  return (await clients.publicClient.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [getAddress(account)] })) as bigint;
 }
 
 export type ExitAuthorization = Readonly<{ validAfter: bigint; validBefore: bigint; v: number; r: Hex; s: Hex }>;
@@ -110,10 +118,12 @@ export async function relayExit(input: {
   clients?: RelayerClients;
   /** Told the transaction's hash the moment it is submitted, before finality, as `relayCall` is (D87). */
   onSubmitted?: (hash: Hex) => Promise<void>;
+  /** Which copy of the router carries it: the way out's when nothing is said, the one that takes USDC for a conversion. */
+  router?: Hex;
 }): Promise<{ hash: Hex }> {
   const clients = input.clients ?? relayerClients();
   await relayerPreflight(clients);
-  const address = exitRouterAddress();
+  const address = input.router ?? exitRouterAddress();
   const abi = exitRouterAbi as unknown as Abi;
   const args = [input.terms, input.authorization, input.callData] as const;
   try {
