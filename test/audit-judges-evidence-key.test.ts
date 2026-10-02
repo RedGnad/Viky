@@ -63,8 +63,34 @@ test("the item says what the key can do: open a waiting gift for itself, and tip
     said,
   );
   assert.ok(said.includes("the whole amount at once on a milestone, a day at a time on a daily gift"), said);
-  assert.ok(said.includes("which pays the recipient what the funder should have had back"), said);
-  assert.ok(said.includes("a reading after which no real one counts, which sends what was not yet earned back to the funder"), said);
+  assert.ok(said.includes("which pays the recipient what the funder should have had back: there the funder loses"), said);
+  // The second way is said with who loses by it (the review of 2 Oct 2026, R-15): the recipient, whose days are counted
+  // as missed though they did them.
+  assert.ok(said.includes("Or it could sign one reading far above the truth, after which no real reading counts, under this key or any later one: there the recipient loses."), said);
+  assert.ok(said.includes("On a daily gift the days they go on doing are counted as missed and their money goes back to the funder as each day passes; on a milestone the whole amount goes back at the deadline."), said);
+});
+
+test("the second version's contract says the judges page discloses this, and the page does, with what that version changes said only once it is set", () => {
+  // The contract is final and names this page: the two say the same thing.
+  const contract = readFileSync("contracts/GiftEscrowV2.sol", "utf8").replace(/\n\/\/\/\s+/g, " ");
+  assert.ok(contract.includes("could stop a gift under way for good: one reading far above the truth credits the days that are open and moves the baseline where no real reading reaches it again, under any later signer."), "the contract's own sentence");
+  assert.ok(contract.includes("The judges page discloses this trust assumption."));
+  const page = readFileSync("app/judges/page.tsx", "utf8");
+  assert.match(page, /const secondVersionSet = giftEscrowV2Address\(\) !== null && milestoneGiftV2Address\(\) !== null;/);
+  assert.match(page, /\{secondVersionSet\s+\? " On the second version of the contracts the first reading of a gift is signed by the recipient too, so the key alone cannot do this to a milestone, and the recipient can end a daily gift it was done to: what was counted stays theirs and the rest goes back at once\."\s+: null\}/);
+  // What the sentence rests on, in the code of both versions of the daily contract: a reading that pays every open day
+  // sets the baseline to its own figure, a lower figure is refused, and nothing else writes the baseline.
+  for (const file of ["contracts/GiftEscrow.sol", "contracts/GiftEscrowV2.sol"]) {
+    const checkIn = body(code(file), "checkIn");
+    assert.match(checkIn, /if \(a\.metricValue < g\.baselineValue\) revert MetricDecreased\(\);/, `${file}: a figure below the baseline is refused`);
+    assert.match(checkIn, /if \(possible > elapsed\) \{\s*g\.baselineValue = a\.metricValue;/, `${file}: the baseline takes the reading's own figure`);
+    assert.equal(code(file).match(/g\.baselineValue (\+)?= /g)?.length, 3, `${file}: the baseline is written at the first reading and at a credit, nowhere else`);
+  }
+  // On the second version the first reading takes the recipient's own signature, on both contracts, and a gift can be ended.
+  for (const file of ["contracts/GiftEscrowV2.sol", "contracts/MilestoneGiftV2.sol"]) {
+    assert.match(code(file), /_verifyStartSignature\(giftId, g\.recipient, a\);/, file);
+    assert.match(code(file), /function endGiftWithIntent\(/, file);
+  }
 });
 
 test("the item says what the key cannot do, and no more than the contracts guarantee", () => {

@@ -10,6 +10,7 @@ import { readOwnership, ownershipWords } from "@/src/judges-owner";
 import { portalsListedAndRead, providerCounts, witnessProviders } from "@/src/portal-store";
 import { countryInWords } from "@/src/university-shown";
 import { usesDelivered } from "@/src/phone-order-store";
+import { giftEscrowV2Address, milestoneGiftV2Address } from "@/src/v2";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain";
 import { JudgesConditions } from "./JudgesConditions";
 import { JudgesContracts } from "./JudgesContracts";
@@ -44,6 +45,9 @@ export default async function JudgesPage() {
   const witnessLines = await witnessProviders();
   // How many times each Bitrefill use was used (D271): said here, as for the conditions, and never in the flow.
   const uses = await usesDelivered();
+  // What the second version changes for our own key is said only once its contracts are set (src/v2.ts): until then no
+  // gift is on them, and this page says nothing it cannot show.
+  const secondVersionSet = giftEscrowV2Address() !== null && milestoneGiftV2Address() !== null;
   const used = (count: number | undefined) => (uses === null || count === undefined ? "the count could not be read right now" : count === 0 ? "Open. Nobody has used it yet." : count === 1 ? "Open. Used once." : `Open. Used ${count} times.`);
   // Gifts created before the D30 corrections keep running on the contract that holds them, and every
   // gift record names its own contract, so both are listed here for as long as the older one holds one.
@@ -567,11 +571,17 @@ export default async function JudgesPage() {
             owner can put another key in its place, could open a gift still waiting for its recipient into an account of
             their own, sign readings for it and take it: the whole amount at once on a milestone, a day at a time on a
             daily gift. On a gift someone has already opened, money leaves only at that person&apos;s own signed request or
-            to the refund address the funder signed, and the key can still tip it either way: it could sign readings
-            nobody made, which pays the recipient what the funder should have had back, or a reading after which no real
-            one counts, which sends what was not yet earned back to the funder. It cannot change the terms a funder
-            signed or take back what was already credited. The journal on this page is what makes a signature without a
-            real reading behind it detectable, for the readings whose proof is kept.
+            to the refund address the funder signed, and the key can still tip it either way. It could sign readings
+            nobody made, which pays the recipient what the funder should have had back: there the funder loses. Or it
+            could sign one reading far above the truth, after which no real reading counts, under this key or any later
+            one: there the recipient loses. On a daily gift the days they go on doing are counted as missed and their
+            money goes back to the funder as each day passes; on a milestone the whole amount goes back at the
+            deadline.
+            {secondVersionSet
+              ? " On the second version of the contracts the first reading of a gift is signed by the recipient too, so the key alone cannot do this to a milestone, and the recipient can end a daily gift it was done to: what was counted stays theirs and the rest goes back at once."
+              : null}{" "}
+            It cannot change the terms a funder signed or take back what was already credited. The journal on this page
+            is what makes a signature without a real reading behind it detectable, for the readings whose proof is kept.
           </li>
         </ul>
       </section>

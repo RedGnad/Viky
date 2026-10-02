@@ -31,8 +31,11 @@ interface IERC3009Receiver {
 /// @dev    One contract, many gifts. Verification is off-chain: the server verifies a Reclaim proof with its TEE
 ///         attestation and the evidence signer attests the result (EIP-712 `CheckIn`); the contract checks the
 ///         signer, the freshness window, the nullifier, the identity binding and does the day arithmetic. A
-///         compromised evidence signer could attest progress that never happened on a gift that is open; the
-///         judges page discloses this trust assumption in one sentence.
+///         compromised evidence signer could attest progress that never happened on a gift that is open, and
+///         could stop a gift under way for good: one reading far above the truth credits the days that are open
+///         and moves the baseline where no real reading reaches it again, under any later signer. The days left
+///         then go back to the funder as they pass, or at once if the recipient ends the gift. The judges page
+///         discloses this trust assumption.
 ///
 ///         What the second version changes, each from the audit of 1 Oct 2026:
 ///
