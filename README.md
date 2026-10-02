@@ -218,6 +218,17 @@ evidence signer stands a day after it is announced, a goal is added and never ch
 after seven days and holds the open days rather than taking them. `ConsentAnchor` holds no money: it records which
 consent key an account agrees with, bound by the account's own signature, and every yes and stop in order.
 
+An independent review of 2 Oct 2026 was read before any deployment, and the contracts were corrected from it. A
+pause cannot be sent again while it runs, nor for seven days after it ended, so it cannot hold a funder's unearned
+money or stop the clock of missed days. On the milestone contract a pause sent after a window closed reopens
+nothing, a window that was open has after the pause the time it had left, and a climb whose deadline fell inside a
+pause is judged on a reading taken until the pause ended. The first reading of a gift, which binds an identity for
+good, is signed by the recipient's own account beside the evidence signer. And a signer announced before ownership
+changes hands never stands after it. The reviewer's own tests are in `test/review`: those that proved a defect are
+kept, each with a test that requires it to fail now. What the review left as declared, not corrected: once a gift is
+under way, the evidence signer alone can still attest a reading that never happened, in the recipient's favour or
+against them.
+
 The server side of the anchor is written too, and off until the anchor's address is set: the browser signs the short
 anchored message with the consent key it already holds, in the same gesture as the agreement, and the relayer writes
 it (`src/consent-anchoring.ts`). `pnpm verify:consent` then holds every reading that moved money on the second

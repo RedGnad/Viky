@@ -19,6 +19,7 @@ contract V2TypehashParityTest {
 
     bytes32 private constant PIN_OPEN_TH = 0xc04f410f844e05bb80e2244e4132269824ec9cef30df4ff39c994fff894ff348;
     bytes32 private constant PIN_END_TH = 0xe350fd57abfb620d7e481dc2480c7d476343ce19cf7460bd586c7b0f6b563468;
+    bytes32 private constant PIN_START_TH = 0x41aee35b19513d4cfd00e8f1c0357e40ec42efe363c9ec295262ea25a03e509a;
     bytes32 private constant PIN_FUND_TAG = 0x49fb844f043b01c05dcd937faae3fbc842cc045c7ff721fc9b9aa42e1e7030e5;
     bytes32 private constant PIN_MILESTONE_FUND_TAG =
         0xee77a665ab5d2ae1fca00b3d90f467d42246a1bd70af954c88254551761f6f64;
@@ -35,6 +36,7 @@ contract V2TypehashParityTest {
     bytes32 private constant PIN_CLIMB_NONCE = 0x1b6199c91b7cd2b9effdb8e147b527024732a55a9a713a367cc135e9dbfc09a9;
     bytes32 private constant PIN_OPEN_STRUCT = 0xc85c263b170f997da2fd082a3451f57123b07ab088b84af1fc08c61c2d336fe0;
     bytes32 private constant PIN_END_STRUCT = 0x8a6ff1bcda58ec2ddf303e89f8008a97b59a58237c136344b1924ff055e56a06;
+    bytes32 private constant PIN_START_STRUCT = 0xe3fb84415047bf8d0c7a75a0bb025cf4ca7808e6e8d856a7762a6cf46b6e0ef6;
     bytes32 private constant PIN_CONSENT_STRUCT = 0x939d1d5f290262fe9769a2a4153985279ccb2bf13f9336ba43f173a23ad9822d;
     address private constant PIN_FUNDER = 0x00000000000000000000000000000000000A11cE;
 
@@ -55,6 +57,10 @@ contract V2TypehashParityTest {
             escrow.OPEN_TYPEHASH() == PIN_OPEN_TH && milestone.OPEN_TYPEHASH() == PIN_OPEN_TH, "open typehash drift"
         );
         require(escrow.END_TYPEHASH() == PIN_END_TH && milestone.END_TYPEHASH() == PIN_END_TH, "end typehash drift");
+        require(
+            escrow.START_TYPEHASH() == PIN_START_TH && milestone.START_TYPEHASH() == PIN_START_TH,
+            "start typehash drift"
+        );
         require(escrow.CHECK_IN_TYPEHASH() == PIN_CHECK_IN_TH, "check-in typehash drift");
         require(milestone.PROOF_TYPEHASH() == PIN_PROOF_TH, "proof typehash drift");
         require(
@@ -115,6 +121,18 @@ contract V2TypehashParityTest {
                 )
             ) == PIN_END_STRUCT,
             "end struct drift"
+        );
+        require(
+            keccak256(
+                abi.encode(
+                    PIN_START_TH,
+                    uint256(7),
+                    bytes32(0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd),
+                    uint64(1_000),
+                    uint64(1_800_000_000)
+                )
+            ) == PIN_START_STRUCT,
+            "start struct drift"
         );
         bytes32 key = 0xabababababababababababababababababababababababababababababababab;
         require(

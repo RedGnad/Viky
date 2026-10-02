@@ -44,6 +44,7 @@ const CLIMBING: MilestoneState = {
   withdrawNonce: 0n,
   proofPaused: false,
   proofResumedAt: 1_700_000_000,
+  proofPauseBegan: 0,
   version: 1,
   openingKey: null,
   endedAt: 0,

@@ -48,6 +48,34 @@ abstract contract V2Kit {
     uint256 private kitNullifiers;
     uint256 private kitSalts;
 
+    /// @dev The key of an account a suite signs as, or zero for an account the kit holds no key of. The first
+    ///      reading of a gift is signed by the account it is for beside the evidence signer, so a reading the kit
+    ///      builds carries that signature whenever the kit can make it; the contracts read it on a first reading
+    ///      and on no other.
+    function _accountKey(address who) internal returns (uint256) {
+        uint256[7] memory keys = [RECIPIENT_KEY, OTHER_KEY, FUNDER_KEY, uint256(0xBAD), 0xC0FFEE, 0xF00E, LINK_KEY];
+        for (uint256 i = 0; i < keys.length; ++i) {
+            if (VM.addr(keys[i]) == who) return keys[i];
+        }
+        return 0;
+    }
+
+    /// @dev What the account a gift is for signs on its first reading: `Start`, the same type on both contracts.
+    function _startSignature(
+        string memory name,
+        address verifying,
+        bytes32 typehash,
+        uint256 giftId,
+        address who,
+        bytes32 identity,
+        uint64 metric,
+        uint64 observedAt
+    ) internal returns (bytes memory) {
+        uint256 key = _accountKey(who);
+        if (key == 0) return "";
+        return _signed(name, verifying, key, keccak256(abi.encode(typehash, giftId, identity, metric, observedAt)));
+    }
+
     function _salt() internal returns (bytes32) {
         return keccak256(abi.encode("kit salt", ++kitSalts));
     }
@@ -137,7 +165,10 @@ abstract contract V2Kit {
             nullifier: _nullifier(),
             issuedAt: issuedAt,
             expiresAt: issuedAt + 5 minutes,
-            signature: ""
+            signature: "",
+            recipientSignature: _startSignature(
+                "Viky Gift", address(escrow), escrow.START_TYPEHASH(), giftId, who, identity, metric, observedAt
+            )
         });
         a.signature = _signed(
             "Viky Gift",
@@ -284,7 +315,10 @@ abstract contract V2Kit {
             nullifier: _nullifier(),
             issuedAt: issuedAt,
             expiresAt: issuedAt + 5 minutes,
-            signature: ""
+            signature: "",
+            recipientSignature: _startSignature(
+                "Viky Milestone", address(gift), gift.START_TYPEHASH(), giftId, who, identity, metric, observedAt
+            )
         });
         a.signature = _signed(
             "Viky Milestone",

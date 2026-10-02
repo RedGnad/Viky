@@ -36,7 +36,11 @@ import {
   OPEN_TYPES,
   openingAccount,
   openTypedData,
+  PAUSE_REST_SECONDS,
   SIGNER_DELAY_SECONDS,
+  START_TYPEHASH,
+  START_TYPES,
+  startTypedData,
   withdrawTypedDataV2,
 } from "../src/v2-protocol";
 
@@ -53,6 +57,7 @@ const anchor = readFileSync("contracts/ConsentAnchor.sol", "utf8");
 test("the typehashes and the tags match the Solidity pin, and the first version's never fund the second", () => {
   assert.equal(OPEN_TYPEHASH, "0xc04f410f844e05bb80e2244e4132269824ec9cef30df4ff39c994fff894ff348");
   assert.equal(END_TYPEHASH, "0xe350fd57abfb620d7e481dc2480c7d476343ce19cf7460bd586c7b0f6b563468");
+  assert.equal(START_TYPEHASH, "0x41aee35b19513d4cfd00e8f1c0357e40ec42efe363c9ec295262ea25a03e509a");
   assert.equal(FUND_NONCE_TAG_V2, "0x49fb844f043b01c05dcd937faae3fbc842cc045c7ff721fc9b9aa42e1e7030e5");
   assert.equal(MILESTONE_FUND_NONCE_TAG_V2, "0xee77a665ab5d2ae1fca00b3d90f467d42246a1bd70af954c88254551761f6f64");
   assert.equal(CONSENT_KEY_TYPEHASH, "0x8e2674bed6524066ecb8ac2080be24b484f38b0933235c8f1a6fbd254d47eeaf");
@@ -90,6 +95,35 @@ test("the structs a browser signs match the Solidity pin", () => {
     "0x8a6ff1bcda58ec2ddf303e89f8008a97b59a58237c136344b1924ff055e56a06",
   );
   assert.equal(hashStruct({ data: { account: FUNDER, key: `0x${"ab".repeat(32)}` }, primaryType: "ConsentKey", types: CONSENT_KEY_TYPES }), "0x939d1d5f290262fe9769a2a4153985279ccb2bf13f9336ba43f173a23ad9822d");
+  assert.equal(
+    hashStruct({ data: { giftId: 7n, identityHash: `0x${"cd".repeat(32)}`, metricValue: 1_000n, observedAt: 1_800_000_000n }, primaryType: "Start", types: START_TYPES }),
+    "0xe3fb84415047bf8d0c7a75a0bb025cf4ca7808e6e8d856a7762a6cf46b6e0ef6",
+  );
+});
+
+test("the first reading of a gift is signed by the recipient's own account, and the signature carries that reading and no other", async () => {
+  const recipient = privateKeyToAccount("0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d");
+  const identityHash: Hex = `0x${"cd".repeat(32)}`;
+  const reading = { giftId: 7n, identityHash, metricValue: 1_000n, observedAt: 1_800_000_000n };
+  const typed = startTypedData("daily", CONTRACT, reading);
+  assert.deepEqual([typed.domain.name, typed.domain.version], ["Viky Gift", "2"]);
+  const signature = await recipient.signTypedData(typed);
+  assert.equal(await recoverTypedDataAddress({ ...typed, signature }), recipient.address);
+  // Another identity, another value, another moment, another gift, the other contract: each is somebody else's.
+  for (const other of [
+    startTypedData("daily", CONTRACT, { ...reading, identityHash: `0x${"ce".repeat(32)}` }),
+    startTypedData("daily", CONTRACT, { ...reading, metricValue: 1_001n }),
+    startTypedData("daily", CONTRACT, { ...reading, observedAt: 1_800_000_001n }),
+    startTypedData("daily", CONTRACT, { ...reading, giftId: 8n }),
+    startTypedData("milestone", CONTRACT, reading),
+  ]) {
+    assert.notEqual(await recoverTypedDataAddress({ ...other, signature }), recipient.address);
+  }
+  // The contracts ask for it on a first reading only, and name the same type.
+  for (const source of [daily, milestone]) {
+    assert.match(source, /"Start\(uint256 giftId,bytes32 identityHash,uint64 metricValue,uint64 observedAt\)"/);
+    assert.match(source, /_verifyStartSignature\(giftId, g\.recipient, a\);/);
+  }
 });
 
 test("whoever holds the link makes the key that opens the gift, and what it signs names one account", async () => {
@@ -150,6 +184,9 @@ test("the constants a screen says are the contracts' own", () => {
   assert.equal(MAX_PAUSE_SECONDS, 7 * 86_400);
   assert.match(daily, /MAX_PAUSE = 7 days;/);
   assert.match(milestone, /MAX_PAUSE = 7 days;/);
+  assert.equal(PAUSE_REST_SECONDS, 7 * 86_400);
+  assert.match(daily, /PAUSE_REST = 7 days;/);
+  assert.match(milestone, /PAUSE_REST = 7 days;/);
   assert.equal(SIGNER_DELAY_SECONDS, 24 * 3_600);
   assert.match(daily, /SIGNER_DELAY = 24 hours;/);
   assert.match(milestone, /SIGNER_DELAY = 24 hours;/);

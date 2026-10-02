@@ -40,9 +40,17 @@ interface IERC3009Receiver {
 ///         carries, `claim` takes that key's signature, and the evidence signer opens nothing (on the first
 ///         version it could open an unopened gift in its own name and prove it in the same block). The person
 ///         the gift is for can end it before the target is read, and the whole amount goes back at once. The
-///         owner is bounded: ownership moves in two steps and cannot be given up, a new evidence signer is
-///         announced and stands a day later, a goal is added and never changed, and a pause of proofs covers
-///         opening too and ends by itself after seven days, every window counted from its end.
+///         owner is bounded: ownership moves in two steps and cannot be given up, a signer one owner announced
+///         never stands under the next, a new evidence signer is announced and stands a day later, a goal is
+///         added and never changed, and a pause of proofs covers opening too, ends by itself after seven days
+///         and cannot be sent again while it runs nor for seven days after it ended.
+///
+///         What a pause does to a gift, from the review of 2 Oct 2026. A window that was still open when the
+///         pause began has, once the pause is over, the time it had left; a window that had closed stays
+///         closed. A climb whose deadline fell inside the pause is judged on a reading taken until the pause
+///         ended, because nothing could be proved meanwhile. And the first reading of a climb, which binds an
+///         identity and a starting point for good, is signed by the account the gift is for beside the evidence
+///         signer: that one key alone could otherwise record a start nobody stood at.
 ///
 ///         There are two shapes of milestone, because there are two shapes of thing to prove.
 ///
@@ -76,6 +84,11 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
     bytes32 public constant PROOF_TYPEHASH = keccak256(
         "Proof(uint256 giftId,address recipient,bytes32 identityHash,bytes32 providerId,uint64 metricValue,uint64 eventAt,uint64 observedAt,bytes32 nullifier,uint64 issuedAt,uint64 expiresAt)"
     );
+    /// @dev What the account the gift is for signs beside the evidence signer on the reading that starts a climb,
+    ///      and on that one only: the identity it binds, where it starts from and the moment it was read. The type
+    ///      is the daily contract's on purpose, so one signing path serves both.
+    bytes32 public constant START_TYPEHASH =
+        keccak256("Start(uint256 giftId,bytes32 identityHash,uint64 metricValue,uint64 observedAt)");
     bytes32 public constant WITHDRAW_TYPEHASH =
         keccak256("Withdraw(uint256 giftId,address to,uint256 amount,uint256 nonce,uint64 deadline)");
     /// @dev What the person the gift is for signs to end it: the two amounts their screen showed. On this contract
@@ -110,8 +123,12 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
     /// @dev Milestone gifts are numbered from here up, so an id can never mean two different gifts across the
     ///      two contracts. Records elsewhere key on the id alone, and a collision would merge two gifts.
     uint256 public constant FIRST_ID_FLOOR = 1_000_000;
-    /// @dev The longest a pause of proofs can run without the owner sending it again.
+    /// @dev The longest a pause of proofs can run. One that runs cannot be sent again.
     uint256 public constant MAX_PAUSE = 7 days;
+    /// @dev How long after the end of a pause the next one must wait. It is also the most a pause ever gives back
+    ///      to a window, so no window a pause moved is still open when the next pause can begin: a gift is never
+    ///      held from one pause to the next (the review of 2 Oct 2026, R-02).
+    uint256 public constant PAUSE_REST = 7 days;
     /// @dev How long an announced evidence signer waits before it stands.
     uint256 public constant SIGNER_DELAY = 24 hours;
 
@@ -174,6 +191,9 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
         uint64 issuedAt;
         uint64 expiresAt;
         bytes signature;
+        /// @dev The recipient's own signature over `Start`, on the reading that starts a climb. Empty on every
+        ///      other proof.
+        bytes recipientSignature;
     }
 
     struct WithdrawIntent {
@@ -225,11 +245,13 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
     /// @dev Milestone gifts carry their own numbering, distinct from the daily contract's.
     uint256 public nextGiftId;
     bool public creationPaused;
-    /// @dev The end of the last pause of proofs: in the future while one runs, never further than `MAX_PAUSE`
-    ///      from the moment it was set. Every window a pause could have shut, the grace after a climb's deadline,
-    ///      a certificate's late window, the wait for a first reading and the wait for somebody to open the gift,
-    ///      is counted from the later of its own moment and this one, so a pause never takes a gift that was earned
-    ///      in time, and no pause is for ever: an owner who is gone cannot hold one, and `expire` needs no switch.
+    /// @dev The last pause of proofs: when it began, and when it ends (in the future while one runs, never further
+    ///      than `MAX_PAUSE` from the moment it was set). Both are zero until the first pause: a new contract
+    ///      holds no gift, so it has nothing to pause. Every window a pause could have shut, the grace after a
+    ///      climb's deadline, a certificate's late window, the wait for a first reading and the wait for somebody
+    ///      to open the gift, is read through `_closes`: a pause gives back what it took and reopens nothing, and
+    ///      no pause is for ever, so an owner who is gone cannot hold one and `expire` needs no switch.
+    uint64 public proofPauseBegan;
     uint64 public proofPausedUntil;
     /// @dev A new evidence signer is announced here, and stands only after `SIGNER_DELAY`.
     address public pendingEvidenceSigner;
@@ -329,6 +351,7 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
     error GoalAlreadyRegistered();
     error NoSignerPending();
     error SignerNotReady();
+    error PauseTooSoon();
 
     constructor(IERC20 token_, address evidenceSigner_, uint256 firstGiftId_) EIP712("Viky Milestone", "2") {
         if (address(token_) == address(0) || evidenceSigner_ == address(0)) revert InvalidAddress();
@@ -337,13 +360,14 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
         token = token_;
         evidenceSigner = evidenceSigner_;
         nextGiftId = firstGiftId_;
-        // Fail closed: the deployer opens it once the deployment has been checked.
+        // Fail closed: no gift can be made until the deployer opens creation, once the deployment has been
+        // checked. Proofs are not paused here: there is no gift to prove yet, and a pause spent on an empty
+        // contract would leave it without its brake for the seven days of rest that follow.
         creationPaused = true;
-        proofPausedUntil = uint64(block.timestamp + MAX_PAUSE);
     }
 
     /// @notice Whether proofs and openings are paused right now. A pause ends when the owner ends it, or by itself
-    ///         `MAX_PAUSE` after it was last sent.
+    ///         `MAX_PAUSE` after it was sent.
     function proofPaused() public view returns (bool) {
         return block.timestamp < proofPausedUntil;
     }
@@ -522,7 +546,7 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
             // the same thing for ever, so waiting gains the recipient nothing, and a short window would take
             // the whole gift away for being slow to open the app. The climb's grace is short because a
             // reading is a snapshot that goes stale; this is not one.
-            if (block.timestamp > _afterPauses(g.deadline) + LATE_PROOF_WINDOW) revert DeadlinePassed();
+            if (block.timestamp > _closes(g.deadline, LATE_PROOF_WINDOW)) revert DeadlinePassed();
             if (a.metricValue < g.target) revert NotThereYet();
             g.lastProofAt = a.observedAt;
             g.settled = true;
@@ -533,7 +557,9 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
 
         if (g.identityHash == bytes32(0)) {
             // Recorded whatever it says. Refusing here would revert, leaving no memory of the reading, and the
-            // recipient could keep trying until one suited them. This is the rule the climb rests on.
+            // recipient could keep trying until one suited them. This is the rule the climb rests on. And since
+            // what it records is recorded for good, the account the gift is for signs it too.
+            _verifyStartSignature(giftId, g.recipient, a);
             g.identityHash = a.identityHash;
             g.startingValue = a.metricValue;
             g.lastProofAt = a.observedAt;
@@ -546,9 +572,11 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
         if (a.identityHash != g.identityHash) revert IdentityMismatch();
         // The deadline judges the reading; the grace judges the transaction. A reading taken in time is not
         // lost because the keeper submitted it a moment late, and `expire` cannot open until the grace ends.
-        if (uint256(a.observedAt) > g.deadline) revert DeadlinePassed();
-        // Counted from the end of a pause that ran past the deadline, so the grace is whole once proofs reopen.
-        if (block.timestamp > _afterPauses(g.deadline) + PROOF_GRACE) revert DeadlinePassed();
+        // A deadline that fell inside a pause is read at the end of that pause: nothing could be proved meanwhile,
+        // so a target reached the day before the deadline would otherwise be lost to the pause.
+        if (uint256(a.observedAt) > _readBy(g.deadline)) revert DeadlinePassed();
+        // The grace is whole again once proofs reopen, when the pause ran past the deadline.
+        if (block.timestamp > _closes(g.deadline, PROOF_GRACE)) revert DeadlinePassed();
         g.lastProofAt = a.observedAt;
         // The climb the funder signed for. A start above it can never settle, so the gift returns at its
         // deadline; the screens say so as soon as the start is recorded.
@@ -566,8 +594,9 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
     ///         or nobody ever opened the gift or started it. Anyone may call it; the keeper does, daily.
     function expire(uint256 giftId) external nonReentrant {
         // No switch here. While proofs are paused nothing can be saved, so nothing may be taken back either, and
-        // that follows from the windows themselves: each is counted from the end of the pause, which is still
-        // ahead while it runs. A pause ends by itself, so a gift can always settle, whoever owns the contract.
+        // that follows from the windows themselves: one that a pause shut closes after the end of that pause,
+        // which is still ahead while it runs. A window that had closed before the pause began stays closed. A
+        // pause ends by itself and cannot be sent again at once, so a gift always settles, whoever owns the contract.
         Gift storage g = _gift(giftId);
         if (g.cancelled) revert GiftIsCancelled();
         if (g.settled) revert AlreadySettled();
@@ -575,23 +604,19 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
         if (g.recipient == address(0)) {
             // Nobody ever opened it. The funder waits the dormant delay, never the whole deadline, which for a
             // certificate could be a year away.
-            // Counted from the end of a pause that shut the opening out when the wait ran out.
-            if (block.timestamp < _afterPauses(uint256(g.fundedAt) + DORMANT_REFUND_DELAY) + PROOF_GRACE) {
-                revert TooEarly();
-            }
+            // Past a pause that shut the opening out when the wait ran out.
+            if (block.timestamp < _closes(uint256(g.fundedAt) + DORMANT_REFUND_DELAY, PROOF_GRACE)) revert TooEarly();
         } else if (g.shape == SHAPE_HAVE_OR_NOT) {
             // Not until a certificate granted in time can no longer be submitted.
-            if (block.timestamp <= _afterPauses(g.deadline) + LATE_PROOF_WINDOW) revert TooEarly();
+            if (block.timestamp <= _closes(g.deadline, LATE_PROOF_WINDOW)) revert TooEarly();
         } else if (g.identityHash != bytes32(0)) {
             // A climb under way: not until a reading taken before the deadline can no longer arrive.
-            if (block.timestamp <= _afterPauses(g.deadline) + PROOF_GRACE) revert TooEarly();
+            if (block.timestamp <= _closes(g.deadline, PROOF_GRACE)) revert TooEarly();
         } else {
             // A climb nobody ever started, measured from the day it was opened, so opening the link late never
-            // leaves a recipient with no time at all to take a first reading, and from the end of a pause that
-            // shut that first reading out when its wait ran out.
-            if (block.timestamp < _afterPauses(uint256(g.claimedAt) + DORMANT_REFUND_DELAY) + PROOF_GRACE) {
-                revert TooEarly();
-            }
+            // leaves a recipient with no time at all to take a first reading, and past a pause that shut that
+            // first reading out when its wait ran out.
+            if (block.timestamp < _closes(uint256(g.claimedAt) + DORMANT_REFUND_DELAY, PROOF_GRACE)) revert TooEarly();
         }
 
         g.settled = true;
@@ -731,9 +756,12 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
     }
 
     /// @notice Pauses proofs and openings, or reopens them. A pause runs `MAX_PAUSE` at most from the moment it is
-    ///         sent, and sending it again starts that count again.
+    ///         sent. It cannot be sent again while it runs, nor for `PAUSE_REST` after it ended, so the funder's
+    ///         money always comes back when its milestone was missed.
     function setProofPaused(bool paused) external onlyOwner {
         if (paused) {
+            if (block.timestamp <= uint256(proofPausedUntil) + PAUSE_REST) revert PauseTooSoon();
+            proofPauseBegan = uint64(block.timestamp);
             proofPausedUntil = uint64(block.timestamp + MAX_PAUSE);
         } else if (block.timestamp < proofPausedUntil) {
             // Only the end of a running pause is recorded: reopening what was already open moves no window.
@@ -815,11 +843,48 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
         if (token.balanceOf(to) != balanceBefore + amount) revert TransferShortfall();
     }
 
-    /// @dev The later of a moment and the end of the last pause. A pause that ended before the moment changes nothing;
-    ///      one that ran past it moves the moment to its end, so the window after it is whole (the fourth review).
-    ///      While a pause runs its end is still ahead, so no window that it shuts can close.
-    function _afterPauses(uint256 moment) private view returns (uint256) {
-        return moment > proofPausedUntil ? moment : proofPausedUntil;
+    /// @dev When a window of `window` after `moment` closes, the last pause counted.
+    ///
+    ///      A window that had closed before the pause began stays closed: a pause sent weeks later used to reopen
+    ///      it (the review of 2 Oct 2026, R-04). One that was still open has, once the pause is over, the time it
+    ///      had left when the pause began, and the whole of it when the pause began before `moment`. Never more
+    ///      than `PAUSE_REST`, which is all a pause can take and the soonest another can begin: so a window this
+    ///      moved has closed before the next pause, and reading the last pause alone is exact. While a pause runs
+    ///      its end is still ahead, so no window that it shut can close.
+    function _closes(uint256 moment, uint256 window) private view returns (uint256 close) {
+        close = moment + window;
+        uint256 began = proofPauseBegan;
+        if (began > close) return close;
+        uint256 left = close - (began > moment ? began : moment);
+        uint256 reopened = uint256(proofPausedUntil) + (left < PAUSE_REST ? left : PAUSE_REST);
+        if (reopened > close) close = reopened;
+    }
+
+    /// @dev Until when a climb's reading may have been taken: its deadline, or the end of the pause the deadline
+    ///      fell inside. The grace after it stays what judges the transaction.
+    function _readBy(uint256 deadline) private view returns (uint256) {
+        return proofPauseBegan <= deadline && deadline < proofPausedUntil ? uint256(proofPausedUntil) : deadline;
+    }
+
+    /// @dev The reading that starts a climb, signed by the account the gift is for. A signature that is missing or
+    ///      malformed is refused as one that is not theirs.
+    function _verifyStartSignature(uint256 giftId, address recipient, ProofAttestation calldata a) private view {
+        bytes32 structHash = keccak256(abi.encode(START_TYPEHASH, giftId, a.identityHash, a.metricValue, a.observedAt));
+        (address signer, ECDSA.RecoverError error) =
+            ECDSA.tryRecover(_hashTypedDataV4(structHash), a.recipientSignature);
+        if (error != ECDSA.RecoverError.NoError || signer != recipient) revert InvalidRecipientSignature();
+    }
+
+    /// @dev A signer announced by one owner never stands under the next. Between the hand-over and its acceptance
+    ///      the outgoing owner could announce one that stood a day later, whoever owned the contract by then (the
+    ///      review of 2 Oct 2026, R-05).
+    function _transferOwnership(address newOwner) internal override {
+        if (pendingEvidenceSigner != address(0)) {
+            pendingEvidenceSigner = address(0);
+            evidenceSignerReadyAt = 0;
+            emit EvidenceSignerAnnounced(address(0), 0);
+        }
+        super._transferOwnership(newOwner);
     }
 
     /// @dev The UTC day a moment falls in, as the daily contract computes it. A granting day is a day, and

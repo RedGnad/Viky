@@ -9,6 +9,7 @@ import { liveTellingDeps } from "./morning-send-live";
 import { loadAttestation } from "./proof-session-store";
 import { newGiftsEscrow, escrowAddress, relay, RelayerError, relayerClients, type RelayResult } from "./relayer";
 import { DAILY_ABIS, dailyAbiOf, dailyVersionOf, giftEscrowV2Address } from "./v2";
+import { isStartSignedBy, NO_START_SIGNATURE, StartNotSigned } from "./v2-start";
 
 /**
  * The relayed operations of a gift, one function per contract entry point. Each submits with the
@@ -158,14 +159,30 @@ export async function drainExpiredDays(giftId: string, escrow: Hex, deps: Expire
   }
 }
 
-/** Submits the attestation recorded for a verified session. Idempotent per session. */
-export async function relayCheckIn(sessionId: string, escrow: Hex): Promise<RelayedCheckIn> {
+/**
+ * Submits the attestation recorded for a verified session. Idempotent per session.
+ *
+ * On the second version the first reading of a gift is sent only with the signature of the account the gift is for
+ * (src/v2-start.ts): without one it is not sent at all, and `StartNotSigned` says what is to be signed. A signature
+ * that is not theirs over this reading is refused here, before the relayer pays for a transaction the contract would
+ * refuse. Every later reading goes as it always did.
+ */
+export async function relayCheckIn(sessionId: string, escrow: Hex, startSignature?: Hex): Promise<RelayedCheckIn> {
   const existing = await relayedForSession(sessionId);
   if (existing) return { hash: existing, creditedDays: 0, alreadyRelayed: true };
   const stored = await loadAttestation(sessionId);
   if (!stored) throw new RelayerError("NOT_CONFIGURED", "No verified attestation is recorded for this session");
   const m = stored.message;
   const giftId = String(m.giftId);
+  let recipientSignature = NO_START_SIGNATURE;
+  if (dailyVersionOf(escrow) === 2 && (await readGift(escrow, giftId)).startDay === 0) {
+    const start = { giftId: BigInt(giftId), identityHash: String(m.identityHash) as Hex, metricValue: BigInt(m.metricValue), observedAt: BigInt(m.observedAt) };
+    if (!startSignature) throw new StartNotSigned("daily", escrow, start);
+    if (!(await isStartSignedBy({ kind: "daily", contract: escrow, start, recipient: String(m.recipient), signature: startSignature }))) {
+      throw new RelayerError("REVERTED", "The first reading is not signed by the account the gift is for", "InvalidRecipientSignature");
+    }
+    recipientSignature = startSignature;
+  }
   // An expired day is drained first, so this check-in can only pay days still inside their window.
   await drainExpiredDays(giftId, escrow);
   const attestation = {
@@ -178,6 +195,7 @@ export async function relayCheckIn(sessionId: string, escrow: Hex): Promise<Rela
     issuedAt: BigInt(m.issuedAt),
     expiresAt: BigInt(m.expiresAt),
     signature: stored.signature,
+    recipientSignature,
   };
   const result = await relay("checkIn", [giftId, attestation], escrow);
   const credited = Number(eventArg(result, "CheckInAccepted", "creditedDays", escrow));

@@ -38,7 +38,8 @@ import { monadChain } from "../src/monad/chain";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { relay, RelayerError } from "../src/relayer";
 import { configureRelayCeilingStore, ensureRelayCeilingSchema } from "../src/relay-ceiling-store";
-import { consentAnchorMessage, consentKeyTypedData, consentTextDigest, endTypedData, openingAccount, openTypedData, withdrawTypedDataV2 } from "../src/v2-protocol";
+import { consentAnchorMessage, consentKeyTypedData, consentTextDigest, endTypedData, openingAccount, openTypedData, startTypedData, withdrawTypedDataV2 } from "../src/v2-protocol";
+import { StartNotSigned } from "../src/v2-start";
 import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-contracts";
 
 /**
@@ -53,8 +54,12 @@ import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-co
  *   2. `scripts/deploy-v2.ts` deploys the three new contracts, registers every goal, opens them and hands them over;
  *   3. the owner accepts the three;
  *   4. a daily gift: made with a link the funder's code makes, found again as on another device, refused to the
- *      evidence key, opened with the link's key, read, paid out, then ended by the person it is for;
- *   5. a milestone gift: made, opened with the link's key, started, then ended; and a second one reached and paid;
+ *      evidence key, opened with the link's key, its first reading refused to the evidence key alone and taken with
+ *      the recipient's own signature, read, paid out, then ended by the person it is for;
+ *   5. a milestone gift: made, opened with the link's key, started with the recipient's own signature, then ended; and
+ *      a second one reached and paid;
+ *   5b. the owner's pause on the second version: sent once, refused a second time, and refused again for the week
+ *      that follows its end (the review of 2 Oct 2026);
  *   6. the recipient's yes and stop, written on the anchor by the consent route with no step of its own, and then
  *      `pnpm verify:consent`'s own check over the whole fork: the gift read under a yes passes, and a gift read with
  *      no yes anchored before it is named, even once a yes is anchored after the fact.
@@ -307,8 +312,11 @@ async function main() {
   expect((await say("yes", ended)).bound === true && (await anchored(ended)) === 1n, "a second gift's yes is anchored with the key already bound");
   expect((await readMilestoneGift(milestone, ended)).version === 2 && (await ausdOf(milestone)) === 8_000_000n, "two milestone gifts are made and opened on the second version");
 
-  /** A reading, attested by the evidence signer under the second version's domain, at the fork's own time. */
-  const read = async (metric: bigint) => {
+  /**
+   * A reading, attested by the evidence signer under the second version's domain, at the fork's own time. `signedBy`
+   * is who signs it beside the evidence signer: the recipient's account on the first reading, nobody on the others.
+   */
+  const read = async (metric: bigint, signedBy?: Account) => {
     const now = await chainNow();
     const message = {
       giftId: BigInt(giftId),
@@ -317,13 +325,21 @@ async function main() {
       providerId: DUOLINGO_PUBLIC_PROVIDER_ID,
       metricValue: metric,
       observedAt: BigInt(now),
-      nullifier: keccak256(toHex(`rehearsal ${now} ${metric}`)),
+      nullifier: keccak256(toHex(`rehearsal ${now} ${metric} ${signedBy?.address ?? ""}`)),
       issuedAt: BigInt(now),
       expiresAt: BigInt(now + 300),
     };
-    return relay("checkIn", [giftId, { ...message, signature: await signCheckIn(message, daily) }], daily);
+    const start = { giftId: message.giftId, identityHash: message.identityHash, metricValue: message.metricValue, observedAt: message.observedAt };
+    const recipientSignature = signedBy ? await signedBy.signTypedData(startTypedData("daily", daily, start)) : "0x";
+    return relay("checkIn", [giftId, { ...message, signature: await signCheckIn(message, daily), recipientSignature }], daily);
   };
-  await read(1_000n);
+  // The review of 2 Oct 2026, R-15: the evidence key alone, or with any account but the recipient's, binds nothing.
+  for (const [who, signer] of [["alone", undefined], ["with its own signature in the recipient's place", evidence], ["with a stranger's", thief]] as const) {
+    const refused = await read(1_000n, signer).then(() => null, (error: unknown) => error);
+    expect(refused instanceof RelayerError && refused.contractError === "InvalidRecipientSignature", `the first reading is refused to the evidence key ${who}: InvalidRecipientSignature`);
+  }
+  await read(1_000n, recipient);
+  expect((await readGift(daily, giftId)).startDay !== 0, "and taken with the recipient's own signature beside it");
   const day0 = Math.floor((await chainNow()) / DAY);
   // Two days done, read by the pass of the third morning.
   await warpTo((day0 + 3) * DAY + 30 * 60);
@@ -360,14 +376,18 @@ async function main() {
   expect((await ausdOf(daily)) === 1_000_000n, "the contract holds exactly the day that is still theirs to take");
 
   console.log("STEP 5: the two milestone gifts, started, ended and reached");
-  const prove = async (id: string, rating: number) => {
+  /** A proof as the server sends it. `signedBy` signs the start beside the evidence signer: the recipient, on the first. */
+  const prove = async (id: string, rating: number, signedBy?: Account) => {
     const now = await chainNow();
-    return relayProve({
-      contract: milestone,
-      message: { giftId: BigInt(id), recipient: recipient.address, identityHash: keccak256(toHex("rehearsal player")), providerId: chessProviderId(cadence), metricValue: BigInt(rating), eventAt: 0n, observedAt: BigInt(now), nullifier: keccak256(toHex(`proof ${id} ${now} ${rating}`)), issuedAt: BigInt(now), expiresAt: BigInt(now + 300) },
-    });
+    const message = { giftId: BigInt(id), recipient: recipient.address, identityHash: keccak256(toHex("rehearsal player")), providerId: chessProviderId(cadence), metricValue: BigInt(rating), eventAt: 0n, observedAt: BigInt(now), nullifier: keccak256(toHex(`proof ${id} ${now} ${rating} ${signedBy?.address ?? ""}`)), issuedAt: BigInt(now), expiresAt: BigInt(now + 300) };
+    const start = { giftId: message.giftId, identityHash: message.identityHash, metricValue: message.metricValue, observedAt: message.observedAt };
+    return relayProve({ contract: milestone, message, startSignature: signedBy ? await signedBy.signTypedData(startTypedData("milestone", milestone, start)) : undefined });
   };
-  expect((await prove(ended, standing.rating)).happened === "started", "a first reading starts the climb");
+  const unsigned = await prove(ended, standing.rating).then(() => null, (error: unknown) => error);
+  expect(unsigned instanceof StartNotSigned && unsigned.start.metricValue === BigInt(standing.rating), "the start of a climb is not sent without the recipient's signature: the relay says what is to be signed");
+  const notTheirs = await prove(ended, standing.rating, thief).then(() => null, (error: unknown) => error);
+  expect(notTheirs instanceof RelayerError && notTheirs.contractError === "InvalidRecipientSignature", "nor with anybody else's: refused before a transaction is paid for");
+  expect((await prove(ended, standing.rating, recipient)).happened === "started", "a first reading the recipient signed starts the climb");
 
   const before = await ausdOf(funder.address);
   nonce = (await readMilestoneGift(milestone, ended)).withdrawNonce;
@@ -377,8 +397,8 @@ async function main() {
   expect(response.status === 200 && (await ausdOf(funder.address)) === before + 5_000_000n, "ended by the person it is for: the whole 5.00 came back at once");
   expect((await statusOf(ended, recipientCookie)).ended !== null, "and its status says it was ended");
 
-  await prove(reached, standing.rating);
-  expect((await prove(reached, target + 6)).happened === "reached", "the other one is reached");
+  await prove(reached, standing.rating, recipient);
+  expect((await prove(reached, target + 6)).happened === "reached", "the other one is reached, on the evidence signer's reading alone");
   nonce = (await readMilestoneGift(milestone, reached)).withdrawNonce;
   intentDeadline = BigInt((await chainNow()) + 600);
   const balanceBefore = await ausdOf(recipient.address);
@@ -395,6 +415,26 @@ async function main() {
   response = await postFor(endRoute, reached, `/api/gift/${reached}/end`, recipientCookie, { ...stringsOf(notEndable), signature: await recipient.signTypedData(endTypedData("milestone", milestone, notEndable)) });
   expect(response.status === 409, "a gift already reached cannot be ended: it is theirs");
   expect((await ausdOf(milestone)) === 0n, "the milestone contract holds nothing of either gift");
+
+  console.log("STEP 5b: the owner's pause on the second version");
+  const pauseAbi = [
+    { type: "function", name: "setCheckInPaused", stateMutability: "nonpayable", inputs: [{ type: "bool" }], outputs: [] },
+    { type: "function", name: "setProofPaused", stateMutability: "nonpayable", inputs: [{ type: "bool" }], outputs: [] },
+    { type: "function", name: "checkInPaused", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
+    { type: "function", name: "proofPaused", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
+    { type: "function", name: "pendingEvidenceSigner", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  ] as const;
+  for (const [name, address, set, paused] of [["daily", daily, "setCheckInPaused", "checkInPaused"], ["milestone", milestone, "setProofPaused", "proofPaused"]] as const) {
+    expect(/^0x0{40}$/.test(String(await publicClient.readContract({ address, abi: pauseAbi, functionName: "pendingEvidenceSigner" }))), `${name}: no signer is waiting after the hand-over`);
+    expect(!(await publicClient.readContract({ address, abi: pauseAbi, functionName: paused })), `${name}: a new contract is not paused, so its pause is unspent`);
+    await as(SAFE, address, encodeFunctionData({ abi: pauseAbi, functionName: set, args: [true] }));
+    expect(await publicClient.readContract({ address, abi: pauseAbi, functionName: paused }), `${name}: the owner pauses it`);
+    const again = await as(SAFE, address, encodeFunctionData({ abi: pauseAbi, functionName: set, args: [true] })).then(() => null, (error: unknown) => error);
+    expect(again !== null, `${name}: the pause cannot be sent again while it runs`);
+    await as(SAFE, address, encodeFunctionData({ abi: pauseAbi, functionName: set, args: [false] }));
+    const soon = await as(SAFE, address, encodeFunctionData({ abi: pauseAbi, functionName: set, args: [true] })).then(() => null, (error: unknown) => error);
+    expect(soon !== null && !(await publicClient.readContract({ address, abi: pauseAbi, functionName: paused })), `${name}: nor in the week that follows its end`);
+  }
 
   console.log("STEP 6: the yes and the stop on the anchor, checked from the chain alone");
   expect((await say("stop", giftId)).sequence === 1 && (await anchored(giftId)) === 2n, "a stop takes the next place of its gift");

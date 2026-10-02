@@ -45,10 +45,16 @@ interface IERC3009Receiver {
 ///         **The person the gift is for can end it.** What was counted stays theirs; everything else goes back
 ///         to the refund destination in the same transaction, and the ending cannot be undone.
 ///
-///         **The owner is bounded.** Ownership moves in two steps and cannot be given up. A new evidence signer
-///         is announced and stands a day later. A goal is added and never changed. A pause of check-ins covers
-///         opening too, ends by itself after seven days, and holds every open day rather than taking it: no
-///         day is settled as missed from the start of a pause until one catch-up window after its end.
+///         **The owner is bounded.** Ownership moves in two steps and cannot be given up, and a signer one owner
+///         announced never stands under the next. A new evidence signer is announced and stands a day later. A
+///         goal is added and never changed. A pause of check-ins covers opening too, ends by itself after seven
+///         days, cannot be sent again while it runs nor for seven days after it ended, and holds every open day
+///         rather than taking it: no day is settled as missed from the start of a pause until one catch-up
+///         window after its end.
+///
+///         **The first reading is the recipient's too.** It binds an identity and a baseline for good, so the
+///         account the gift is for signs it beside the evidence signer (the review of 2 Oct 2026): that one key
+///         alone could otherwise bind an identity nobody holds, and no real reading would ever count.
 ///
 ///         **The catch-up window is the contract's own rule.** A check-in first settles the days whose window
 ///         has elapsed, so it can never credit one of them, and a reading more than thirty minutes old is refused.
@@ -61,6 +67,11 @@ contract GiftEscrowV2 is Ownable2Step, ReentrancyGuard, EIP712 {
     bytes32 public constant CHECK_IN_TYPEHASH = keccak256(
         "CheckIn(uint256 giftId,address recipient,bytes32 identityHash,bytes32 providerId,uint64 metricValue,uint64 observedAt,bytes32 nullifier,uint64 issuedAt,uint64 expiresAt)"
     );
+    /// @dev What the account the gift is for signs beside the evidence signer on the first reading, and on that one
+    ///      only: the identity it binds, the value it starts from and the moment it was read. It names the reading
+    ///      to the unit, so whoever sees the signature on its way can send that reading and no other.
+    bytes32 public constant START_TYPEHASH =
+        keccak256("Start(uint256 giftId,bytes32 identityHash,uint64 metricValue,uint64 observedAt)");
     bytes32 public constant WITHDRAW_TYPEHASH =
         keccak256("Withdraw(uint256 giftId,address to,uint256 amount,uint256 nonce,uint64 deadline)");
     /// @dev What the person the gift is for signs to end it: the two amounts their screen showed, to the unit. The
@@ -88,8 +99,13 @@ contract GiftEscrowV2 is Ownable2Step, ReentrancyGuard, EIP712 {
     uint256 public constant READING_GRACE = 6 hours;
     uint256 public constant CATCH_UP_WINDOW = 1 days + READING_GRACE;
     uint256 public constant UNCLAIMED_REFUND_DELAY = 14 days;
-    /// @dev The longest a pause of check-ins can run without the owner sending it again.
+    /// @dev The longest a pause of check-ins can run. One that runs cannot be sent again.
     uint256 public constant MAX_PAUSE = 7 days;
+    /// @dev How long after the end of a pause the next one must wait. An announced signer stands in a day, so
+    ///      seven days of pause are enough for an emergency; without the rest a pause sent again and again held
+    ///      the funder's unearned money for as long as the owner wished, and one flicked on and off stopped the
+    ///      clock of missed days for good (the review of 2 Oct 2026, R-02 and R-03).
+    uint256 public constant PAUSE_REST = 7 days;
     /// @dev How long an announced evidence signer waits before it stands.
     uint256 public constant SIGNER_DELAY = 24 hours;
     uint256 private constant DAY = 1 days;
@@ -138,6 +154,9 @@ contract GiftEscrowV2 is Ownable2Step, ReentrancyGuard, EIP712 {
         uint64 issuedAt;
         uint64 expiresAt;
         bytes signature;
+        /// @dev The recipient's own signature over `Start`, on the first reading of a gift. Empty on every other:
+        ///      the readings that follow are taken each morning with nobody there to sign.
+        bytes recipientSignature;
     }
 
     struct WithdrawIntent {
@@ -197,7 +216,8 @@ contract GiftEscrowV2 is Ownable2Step, ReentrancyGuard, EIP712 {
     bool public creationPaused;
     /// @dev A pause of check-ins: when it began, and when it ends (in the future while one runs, never further
     ///      than `MAX_PAUSE` from the moment it was set). No day becomes drainable from the start of a pause until
-    ///      one catch-up window after its end, so a pause holds a day open and can never take one back.
+    ///      one catch-up window after its end, so a pause holds a day open and can never take one back. Both are
+    ///      zero until the first pause: a new contract holds no gift, so it has nothing to pause.
     uint64 public checkInPauseBegan;
     uint64 public checkInPausedUntil;
     /// @dev A new evidence signer is announced here, and stands only after `SIGNER_DELAY`.
@@ -294,6 +314,7 @@ contract GiftEscrowV2 is Ownable2Step, ReentrancyGuard, EIP712 {
     error GoalAlreadyRegistered();
     error NoSignerPending();
     error SignerNotReady();
+    error PauseTooSoon();
 
     constructor(IERC20 token_, address evidenceSigner_, uint256 firstGiftId_) EIP712("Viky Gift", "2") {
         if (address(token_) == address(0) || evidenceSigner_ == address(0)) revert InvalidAddress();
@@ -302,14 +323,14 @@ contract GiftEscrowV2 is Ownable2Step, ReentrancyGuard, EIP712 {
         token = token_;
         evidenceSigner = evidenceSigner_;
         nextGiftId = firstGiftId_;
-        // Fail closed: the deployer unpauses once the deployment has been checked.
+        // Fail closed: no gift can be made until the deployer opens creation, once the deployment has been
+        // checked. Check-ins are not paused here: there is no gift to read yet, and a pause spent on an empty
+        // contract would leave it without its brake for the seven days of rest that follow.
         creationPaused = true;
-        checkInPauseBegan = uint64(block.timestamp);
-        checkInPausedUntil = uint64(block.timestamp + MAX_PAUSE);
     }
 
     /// @notice Whether check-ins and openings are paused right now. A pause ends when the owner ends it, or by
-    ///         itself `MAX_PAUSE` after it was last sent.
+    ///         itself `MAX_PAUSE` after it was sent.
     function checkInPaused() public view returns (bool) {
         return block.timestamp < checkInPausedUntil;
     }
@@ -422,6 +443,8 @@ contract GiftEscrowV2 is Ownable2Step, ReentrancyGuard, EIP712 {
         usedNullifiers[a.nullifier] = true;
 
         if (g.identityHash == bytes32(0)) {
+            // What this reading binds is bound for good, so the account the gift is for signs it too.
+            _verifyStartSignature(giftId, g.recipient, a);
             g.identityHash = a.identityHash;
             g.baselineValue = a.metricValue;
             g.lastCheckInAt = a.observedAt;
@@ -654,13 +677,12 @@ contract GiftEscrowV2 is Ownable2Step, ReentrancyGuard, EIP712 {
     }
 
     /// @notice Pauses check-ins and openings, or reopens them. A pause runs `MAX_PAUSE` at most from the moment
-    ///         it is sent; sending it again extends it without moving its beginning.
+    ///         it is sent. It cannot be sent again while it runs, nor for `PAUSE_REST` after it ended: the clock
+    ///         of missed days always moves again, and the funder's unearned money always comes back.
     function setCheckInPaused(bool paused) external onlyOwner {
         if (paused) {
-            // A pause sent inside the stand-still of the one before keeps that one's beginning.
-            if (block.timestamp >= uint256(checkInPausedUntil) + CATCH_UP_WINDOW) {
-                checkInPauseBegan = uint64(block.timestamp);
-            }
+            if (block.timestamp <= uint256(checkInPausedUntil) + PAUSE_REST) revert PauseTooSoon();
+            checkInPauseBegan = uint64(block.timestamp);
             checkInPausedUntil = uint64(block.timestamp + MAX_PAUSE);
         } else if (block.timestamp < checkInPausedUntil) {
             // Only the end of a running pause is recorded: reopening what was already open moves nothing.
@@ -748,6 +770,27 @@ contract GiftEscrowV2 is Ownable2Step, ReentrancyGuard, EIP712 {
             )
         );
         if (ECDSA.recover(_hashTypedDataV4(structHash), a.signature) != evidenceSigner) revert InvalidEvidenceSigner();
+    }
+
+    /// @dev The first reading, signed by the account the gift is for. A signature that is missing or malformed is
+    ///      refused as one that is not theirs.
+    function _verifyStartSignature(uint256 giftId, address recipient, CheckInAttestation calldata a) private view {
+        bytes32 structHash = keccak256(abi.encode(START_TYPEHASH, giftId, a.identityHash, a.metricValue, a.observedAt));
+        (address signer, ECDSA.RecoverError error) =
+            ECDSA.tryRecover(_hashTypedDataV4(structHash), a.recipientSignature);
+        if (error != ECDSA.RecoverError.NoError || signer != recipient) revert InvalidRecipientSignature();
+    }
+
+    /// @dev A signer announced by one owner never stands under the next. Between the hand-over and its acceptance
+    ///      the outgoing owner could announce one that stood a day later, whoever owned the contract by then (the
+    ///      review of 2 Oct 2026, R-05).
+    function _transferOwnership(address newOwner) internal override {
+        if (pendingEvidenceSigner != address(0)) {
+            pendingEvidenceSigner = address(0);
+            evidenceSignerReadyAt = 0;
+            emit EvidenceSignerAnnounced(address(0), 0);
+        }
+        super._transferOwnership(newOwner);
     }
 
     function _validateAttestationWindow(uint64 issuedAt, uint64 expiresAt) private view {

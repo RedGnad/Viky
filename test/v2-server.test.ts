@@ -35,7 +35,7 @@ import { relayClaim, relayCreateGift } from "../src/gift-relay";
 import { abandonCreation, beginCreation, completeCreation, configureGiftStore, ensureGiftSchema, holdsGiftLink, loadGift, loadPendingCreations, markCreationSubmitted, restartCreation, saveGift } from "../src/gift-store";
 import { fundingNonce, type GiftParams } from "../src/gift-terms";
 import { MILESTONE_GOALS } from "../src/milestone-goals";
-import { canExpire, type MilestoneState } from "../src/milestone-reader";
+import { canExpire, closesAfterPause, milestonePhase, readingTakenBy, type MilestoneState } from "../src/milestone-reader";
 import { MILESTONE_DORMANT_SECONDS, MILESTONE_PROOF_GRACE_SECONDS } from "../src/milestone-protocol";
 import { relayCreateMilestone } from "../src/milestone-relay";
 import type { SqlExecutor } from "../src/proof-session-store";
@@ -362,6 +362,7 @@ const CLIMB: MilestoneState = {
   withdrawNonce: 0n,
   proofPaused: false,
   proofResumedAt: 1_700_000_000,
+  proofPauseBegan: 1_699_900_000,
   version: 2,
   openingKey: FUNDER.address,
   endedAt: 0,
@@ -399,17 +400,63 @@ test("the end route refuses a gift of the first version, a stranger's request an
 
 // --- what the keeper and the deployment read ---------------------------------------------------------------------------
 
-test("on the second version a gift nobody opened waits past a pause that shut its opening", () => {
+test("on the second version a window closes where the contract says: a pause gives back what it took, and reopens nothing", () => {
   const unopened = { ...CLIMB, recipient: null, identityHash: `0x${"00".repeat(32)}` as Hex, deadline: 0, claimedAt: 0 };
-  const due = unopened.fundedAt + MILESTONE_DORMANT_SECONDS + MILESTONE_PROOF_GRACE_SECONDS;
+  const waited = unopened.fundedAt + MILESTONE_DORMANT_SECONDS;
+  const due = waited + MILESTONE_PROOF_GRACE_SECONDS;
   assert.equal(canExpire(unopened, due), true);
-  // A pause that ended two days after the wait ran out: the second version counts the grace from its end.
-  const pausedUntil = unopened.fundedAt + MILESTONE_DORMANT_SECONDS + 2 * 86_400;
-  assert.equal(canExpire({ ...unopened, proofResumedAt: pausedUntil }, due), false);
-  assert.equal(canExpire({ ...unopened, proofResumedAt: pausedUntil }, pausedUntil + MILESTONE_PROOF_GRACE_SECONDS), true);
-  // The first version did not, and the keeper still reads it as it is.
-  assert.equal(canExpire({ ...unopened, version: 1, proofResumedAt: pausedUntil }, due), true);
-  assert.match(readFileSync("contracts/MilestoneGiftV2.sol", "utf8"), /_afterPauses\(uint256\(g\.fundedAt\) \+ DORMANT_REFUND_DELAY\) \+ PROOF_GRACE/);
+  // A pause that began the day before the wait ran out and ended two days after it: the grace is counted from its end.
+  const across = { proofPauseBegan: waited - 86_400, proofResumedAt: waited + 2 * 86_400 };
+  assert.equal(canExpire({ ...unopened, ...across }, due), false);
+  assert.equal(canExpire({ ...unopened, ...across }, across.proofResumedAt + MILESTONE_PROOF_GRACE_SECONDS - 1), false);
+  assert.equal(canExpire({ ...unopened, ...across }, across.proofResumedAt + MILESTONE_PROOF_GRACE_SECONDS), true);
+  // The first version did not move this wait, and the keeper still reads it as it is.
+  assert.equal(canExpire({ ...unopened, version: 1, proofPauseBegan: 0, proofResumedAt: across.proofResumedAt }, due), true);
+
+  // The review of 2 Oct 2026, R-04: a pause sent weeks after a window closed reopens nothing, even while it runs.
+  const late = { proofPauseBegan: due + 20 * 86_400, proofResumedAt: due + 27 * 86_400, proofPaused: true };
+  assert.equal(canExpire({ ...unopened, ...late }, due + 21 * 86_400), true);
+  const climb = { ...CLIMB, deadline: 1_800_900_000 };
+  const lateForClimb = { proofPauseBegan: climb.deadline + 30 * 86_400, proofResumedAt: climb.deadline + 30 * 86_400 };
+  assert.equal(canExpire({ ...climb, ...lateForClimb }, climb.deadline + 30 * 86_400 + 60), true);
+
+  // A pause that began two hours into the six of the grace gives back the four that were left, and no more.
+  const inGrace = { proofPauseBegan: climb.deadline + 2 * 3_600, proofResumedAt: climb.deadline + 2 * 3_600 + 3 * 86_400 };
+  assert.equal(closesAfterPause(climb.deadline, MILESTONE_PROOF_GRACE_SECONDS, { began: inGrace.proofPauseBegan, until: inGrace.proofResumedAt }), inGrace.proofResumedAt + 4 * 3_600);
+  assert.equal(canExpire({ ...climb, ...inGrace }, inGrace.proofResumedAt + 4 * 3_600), false);
+  assert.equal(canExpire({ ...climb, ...inGrace }, inGrace.proofResumedAt + 4 * 3_600 + 1), true);
+  // While the pause runs its end is still ahead, so the window it shut cannot close.
+  assert.equal(canExpire({ ...climb, proofPaused: true, proofPauseBegan: climb.deadline - 3_600, proofResumedAt: climb.deadline + 6 * 86_400 }, climb.deadline + 2 * 86_400), false);
+
+  // A certificate's fourteen late days: what was left comes back, a week at most, and a pause across the deadline
+  // leaves more than a week by itself, so nothing moves.
+  const late14 = 14 * 86_400;
+  const d = 1_800_900_000;
+  assert.equal(closesAfterPause(d, late14, { began: d + 13 * 86_400, until: d + 20 * 86_400 }), d + 21 * 86_400);
+  assert.equal(closesAfterPause(d, late14, { began: d + 2 * 86_400, until: d + 9 * 86_400 }), d + 16 * 86_400);
+  assert.equal(closesAfterPause(d, late14, { began: d - 86_400, until: d + 6 * 86_400 }), d + late14);
+  assert.equal(closesAfterPause(d, late14, { began: 0, until: 0 }), d + late14, "a contract never paused");
+
+  // R-14: a deadline that fell inside a pause is read at the end of that pause, and no other deadline moves.
+  assert.equal(readingTakenBy(d, { began: d - 2 * 86_400, until: d + 3 * 86_400 }), d + 3 * 86_400);
+  assert.equal(readingTakenBy(d, { began: d + 3_600, until: d + 2 * 86_400 }), d);
+  assert.equal(readingTakenBy(d, { began: d - 5 * 86_400, until: d - 4 * 86_400 }), d);
+  const started = { ...climb, identityHash: `0x${"aa".repeat(32)}` as Hex, startingValue: 1_200n, deadline: d };
+  const covering = { proofPauseBegan: d - 2 * 86_400, proofResumedAt: d + 3 * 86_400 };
+  assert.equal(milestonePhase({ ...started, ...covering }, d + 86_400), "climbing", "still read while the pause that covers its deadline runs");
+  assert.equal(milestonePhase({ ...started, ...covering }, d + 3 * 86_400 + 1), "overdue");
+  assert.equal(milestonePhase(started, d + 1), "overdue", "with no pause across it, the deadline is the deadline");
+  assert.equal(milestonePhase({ ...started, ...covering, version: 1 }, d + 86_400), "overdue", "the first version has no such rule");
+
+  // The contract's own lines, so this mirror and the contract cannot drift apart unseen.
+  const contract = readFileSync("contracts/MilestoneGiftV2.sol", "utf8");
+  assert.match(contract, /_closes\(uint256\(g\.fundedAt\) \+ DORMANT_REFUND_DELAY, PROOF_GRACE\)/);
+  assert.match(contract, /_closes\(uint256\(g\.claimedAt\) \+ DORMANT_REFUND_DELAY, PROOF_GRACE\)/);
+  assert.match(contract, /if \(block\.timestamp <= _closes\(g\.deadline, LATE_PROOF_WINDOW\)\) revert TooEarly\(\);/);
+  assert.match(contract, /if \(block\.timestamp <= _closes\(g\.deadline, PROOF_GRACE\)\) revert TooEarly\(\);/);
+  assert.match(contract, /if \(began > close\) return close;\s+uint256 left = close - \(began > moment \? began : moment\);\s+uint256 reopened = uint256\(proofPausedUntil\) \+ \(left < PAUSE_REST \? left : PAUSE_REST\);\s+if \(reopened > close\) close = reopened;/);
+  assert.match(contract, /return proofPauseBegan <= deadline && deadline < proofPausedUntil \? uint256\(proofPausedUntil\) : deadline;/);
+  assert.match(contract, /if \(uint256\(a\.observedAt\) > _readBy\(g\.deadline\)\) revert DeadlinePassed\(\);/);
 });
 
 test("the goals a deployment registers are the register's, each number once", () => {
