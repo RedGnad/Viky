@@ -9,12 +9,14 @@ import { contractRefusal, GiftApiError } from "@/src/gift-api";
 import { signCheckIn } from "@/src/gift-attestation";
 import { drainExpiredDays, relayCheckIn } from "@/src/gift-relay";
 import { loadGift } from "@/src/gift-store";
+import { holdTheStart, type StartAsked } from "@/src/held-start";
+import { StartNotSigned } from "@/src/v2-start";
 import { readMilestoneGift } from "@/src/milestone-reader";
 import { loadMilestoneGift } from "@/src/milestone-store";
 import { relayProve } from "@/src/milestone-relay";
 import { recordReading } from "@/src/milestone-store";
 import { isMilestoneGiftId } from "@/src/milestone-protocol";
-import { consumeAndSaveVerification, loadLatestEvidence, loadProofSession } from "@/src/proof-session-store";
+import { consumeAndSaveVerification, loadAttestation, loadLatestEvidence, loadProofSession } from "@/src/proof-session-store";
 import { giftReadingLeave } from "@/src/consent-guard";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { admitRelay } from "@/src/relay-admission";
@@ -120,13 +122,18 @@ export async function POST(request: Request) {
     // reason, not hidden behind a generic failure.
     let relayed: { hash: string; creditedDays: number } | null = null;
     let refusal: { code: string; message: string } | null = null;
+    /** The second version: a first reading waits for the recipient's own signature, and the browser is told what to sign. */
+    let sign: StartAsked | null = null;
     if (process.env.RELAYER_PRIVATE_KEY?.trim()) {
       try {
         await admitRelay(request, auth.account);
         const submitted = await relayCheckIn(result.sessionId, giftEscrow);
         relayed = { hash: submitted.hash, creditedDays: submitted.creditedDays };
       } catch (error) {
-        if (error instanceof RelayerError && error.code === "REVERTED") {
+        if (error instanceof StartNotSigned) {
+          const stored = await loadAttestation(result.sessionId);
+          sign = stored ? await holdTheStart(error, { account: auth.account, message: stored.message, sessionId: result.sessionId, after: {} }) : null;
+        } else if (error instanceof RelayerError && error.code === "REVERTED") {
           refusal = contractRefusal(error.contractError) ?? { code: "REFUSED", message: "This could not be recorded." };
         } else if (error instanceof GiftApiError) {
           // The ceiling (D204): the proof stands, attested; the day is not relayed now, and the person reads why.
@@ -136,7 +143,7 @@ export async function POST(request: Request) {
         }
       }
     }
-    return NextResponse.json({ ...result, attested: true, relayed, refusal }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ...result, attested: true, relayed, refusal, ...(sign ? { sign } : {}) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const authStatus = accountAuthErrorStatus(error);
     if (authStatus) return NextResponse.json({ error: accountAuthPublicMessage(error) }, { status: authStatus, headers: { "Cache-Control": "no-store" } });

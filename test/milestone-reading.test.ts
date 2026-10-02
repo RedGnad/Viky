@@ -13,6 +13,7 @@ import { milestoneStatusOf } from "../src/milestone-status";
 import type { MilestoneReading } from "../src/milestone-store";
 import { CHESS_MILESTONE } from "../src/milestone-conditions";
 import { RelayerError } from "../src/relayer";
+import { StartNotSigned } from "../src/v2-start";
 
 const NOW = 1_789_650_000;
 const CONTRACT = "0x00000000000000000000000000000000000000c2" as const;
@@ -153,6 +154,36 @@ test("the funder named the account, so the first reading binds it with no code a
   // Even a code that expired an hour ago: nothing here is waiting on it.
   const stale = harness({ ...RECORD, bindingCodeExpiresAt: new Date((NOW - 3_600) * 1_000) }, OPENED, { attest: async () => attested(1904, { name: null }) });
   assert.equal((await runMilestoneReading({ giftId: "1000000", purpose: "start" }, stale.deps)).kind, "started");
+});
+
+test("on the second version the start is read, held and not sent: it waits for the recipient's own signature (the review of 2 Oct 2026, R-15)", async () => {
+  const held: Array<{ account: string; message: Record<string, string | number>; after: { bindTo?: string; reading?: Record<string, unknown>; maximumStart?: string } }> = [];
+  const run = harness(RECORD, OPENED, {
+    attest: async () => attested(1904, { name: null }),
+    // What the relay answers for a climb with no start and no signature of the recipient (src/milestone-relay.ts).
+    prove: async (input) => {
+      run.calls.push("prove");
+      throw new StartNotSigned("milestone", CONTRACT, { giftId: input.message.giftId, identityHash: input.message.identityHash, metricValue: input.message.metricValue, observedAt: input.message.observedAt });
+    },
+    hold: async (error, kept) => {
+      held.push(kept);
+      return { kind: "sign", giftId: error.start.giftId.toString(), start: { of: error.kind, contract: error.contract, identityHash: error.start.identityHash, metricValue: error.start.metricValue.toString(), observedAt: error.start.observedAt.toString() } };
+    },
+  });
+  const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps);
+  assert.deepEqual(outcome, { kind: "sign", giftId: "1000000", start: { of: "milestone", contract: CONTRACT, identityHash: IDENTITY, metricValue: "1904", observedAt: String(NOW - 5) } });
+  // Read once and asked for: nothing is bound and nothing is written in the journal until the contract has taken it.
+  assert.deepEqual(run.calls, ["prove"]);
+  assert.deepEqual(run.recorded, []);
+  assert.equal(held.length, 1);
+  assert.equal(held[0].account, RECORD.recipient);
+  // What is held is the reading itself, every number as text, with what its path writes once it is sent.
+  assert.equal(held[0].message.metricValue, "1904");
+  assert.equal(held[0].message.observedAt, String(NOW - 5));
+  assert.equal(held[0].message.nullifier, `0x${"ee".repeat(32)}`);
+  assert.equal(held[0].after.bindTo, "41");
+  assert.equal(held[0].after.maximumStart, OPENED.maximumStart.toString());
+  assert.deepEqual({ purpose: held[0].after.reading?.purpose, rating: held[0].after.reading?.rating, attested: held[0].after.reading?.attested }, { purpose: "start", rating: 1904, attested: true });
 });
 
 test("the recipient named their own account, so the code in the name is what binds it, and the start is recorded whatever it says", async () => {

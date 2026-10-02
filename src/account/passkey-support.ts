@@ -131,7 +131,12 @@ export function wayOut(href: string, handset: Handset, app: EmbeddedApp | null):
     return { browser: "safari", href: `x-safari-${page.href}` };
   }
   if (handset === "android") {
-    const intent = `intent://${page.host}${page.pathname}${page.search}#Intent;scheme=${page.protocol.slice(0, -1)}`;
+    // The page's own `#` goes before `#Intent;`: a gift's link carries after it the secret that opens the gift (the
+    // review of 2 Oct 2026, R-01). Android reads the address up to the LAST `#` as the page to open and puts the scheme
+    // back on it, whatever it holds (`Intent.parseUriInternal`: `i = uri.lastIndexOf("#")`, then
+    // `data = uri.substring(0, i)`; read on 2 Oct 2026 at android.googlesource.com/platform/frameworks/base,
+    // core/java/android/content/Intent.java). A secret is letters, figures, `-` and `_`, so it holds no `#` of its own.
+    const intent = `intent://${page.host}${page.pathname}${page.search}${page.hash}#Intent;scheme=${page.protocol.slice(0, -1)}`;
     return app ? { browser: "browser", href: `${intent};end` } : { browser: "chrome", href: `${intent};package=com.android.chrome;end` };
   }
   return null;

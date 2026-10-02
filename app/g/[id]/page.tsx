@@ -7,7 +7,12 @@ import { GiftPage } from "../../components/GiftPage";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ t?: string; take?: string }> };
 
-/** The link's key as the page accepts it, or nothing. */
+/**
+ * What the link carries in `?t=` as the page accepts it, or nothing: the link's key on the first version of the
+ * contracts, and on the second a preview token made from the link's secret, which names the reader as holding the link
+ * and opens nothing. The secret itself is after the link's `#`: no server is sent it, and the page reads it in the
+ * browser (the review of 2 Oct 2026, R-01).
+ */
 function keyOf(t: string | undefined): string | null {
   return typeof t === "string" && /^[A-Za-z0-9_-]{16,64}$/.test(t) ? t : null;
 }

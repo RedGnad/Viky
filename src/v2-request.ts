@@ -4,8 +4,10 @@ import { giftEscrowV2Address, milestoneGiftV2Address } from "./v2";
 
 /**
  * What a creation request of the second version carries beside the terms (the audit of 1 Oct 2026): the address of the
- * key that opens the gift, which the funder signed into the terms, and the fingerprint of the link. Never the link's
- * secret: it was made in the funder's browser and stays there, so nothing the server is sent can open the gift.
+ * key that opens the gift, which the funder signed into the terms, and the fingerprint of the link's preview token,
+ * which is what the link sends in `?t=`. Never the link's secret: it was made in the funder's browser, it travels after
+ * the `#` of the link, and no request of Viky's code carries it (the review of 2 Oct 2026, R-01). A secret that reaches
+ * the server all the same, in `?t=` or in a request's body, is refused (src/v2-opening.ts).
  *
  * Server only. The two versions never mix: a request without a link is refused once the second version is set, since
  * the page that sent it was loaded before; a request with one is refused while it is not set.

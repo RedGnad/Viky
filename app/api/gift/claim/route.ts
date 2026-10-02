@@ -23,7 +23,8 @@ export const maxDuration = 60;
  * relayer submits. The money is already in the recipient's name; this is where it gets an account.
  *
  * A gift of the second version is opened by the key of its link instead (src/v2-opening.ts): the person's browser
- * signs with it, the server is sent the signature and never the secret, and the evidence signer attests nothing.
+ * makes that key from the secret after the link's `#` and signs with it, the server is sent the signature alone, and
+ * the evidence signer attests nothing. A key in the body of such a request is refused, whatever it is.
  */
 export async function POST(request: Request) {
   try {
@@ -35,6 +36,8 @@ export async function POST(request: Request) {
     if (!/^\d{1,78}$/.test(giftId)) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid", 404);
     // The second version: the opening is the link key's own signature, and the server takes no secret for it.
     if (body.opening !== undefined) {
+      // The signature is all an opening carries. A key beside it is one the server should never have been sent.
+      if (body.token !== undefined) throw new GiftApiError("OUT_OF_DATE", "This page is out of date. Load it again to open your gift. Nothing was changed.", 409);
       const opening = openingOf(body.opening);
       assertGiftContractConfigured();
       const known = await loadGift(giftId);
@@ -52,11 +55,14 @@ export async function POST(request: Request) {
     const token = String(body.token ?? "").trim();
     if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid", 404);
     assertGiftContractConfigured();
+    // A gift of the second version is never opened by the server's own attestation, and takes no key in a request's
+    // body, whatever that key is: its preview token, or the secret of its link, which no request should carry (the
+    // review of 2 Oct 2026, R-01). A page loaded before the second version was set sends one here, and is asked to load
+    // again rather than told its link is bad. Refused before the key is compared with anything.
+    const named = await loadGift(giftId);
+    if (named && versionOfGift(named) === 2) throw new GiftApiError("OUT_OF_DATE", "This page is out of date. Load it again to open your gift. Nothing was changed.", 409);
     const gift = await loadGiftForClaim(giftId, token);
     if (!gift) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid or was already used", 404);
-    // A gift of the second version is never opened by the server's own attestation: a page loaded before the second
-    // version was set sends the link's key here, and is asked to load again rather than told its link is bad.
-    if (versionOfGift(gift) === 2) throw new GiftApiError("OUT_OF_DATE", "This page is out of date. Load it again to open your gift. Nothing was changed.", 409);
     refuseOwnGift(gift, auth.account);
     await admitRelay(request, auth.account);
     // A milestone gift is opened on its own contract (C2), with the same link and the same rule.

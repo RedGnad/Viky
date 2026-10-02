@@ -5,7 +5,8 @@ import { assertNotTooSmall } from "./relay-admission";
 import { newChessCode } from "./chess-reading";
 import { attestClimbRating, isClimbReadError } from "./climb-reading";
 import { GiftApiError, NO_STORE, refuseOwnGift } from "./gift-api";
-import { holdsGiftLink, loadGift, loadRelayed, markClaimed, reconcileClaim, type GiftRecord } from "./gift-store";
+import { loadGift, loadRelayed, markClaimed, reconcileClaim, type GiftRecord } from "./gift-store";
+import { holdsTheLinkOf } from "./v2-opening";
 import { milestoneById, cadenceOfGoal, CHESS_MILESTONE } from "./milestone-conditions";
 import { runMilestoneReading } from "./milestone-reading";
 import { tellAboutMilestone } from "./morning-send";
@@ -49,7 +50,7 @@ export async function milestoneStatusFor(
   const [state, relayed] = await Promise.all([readMilestoneGift(escrowOf(record), record.giftId), loadRelayed(record.giftId)]);
   const isRecipient = viewer !== null && state.recipient !== null && viewer === state.recipient.toLowerCase();
   const isFunder = viewer !== null && viewer === state.funder.toLowerCase();
-  const holdsTheLink = holdsGiftLink(record, reader.linkKey);
+  const holdsTheLink = holdsTheLinkOf(record, reader.linkKey);
   // An opening the contract holds and the database missed is written down as the gift is read.
   const kept = await reconcileClaim(record, state.recipient, relayed.find((entry) => entry.kind === "claim")?.txHash ?? null);
   const { status } = await loadMilestoneStatus(kept, { isRecipient, isFunder, holdsTheLink });

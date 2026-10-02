@@ -23,7 +23,9 @@ function viewerOf(request: Request): string | null {
  *
  * The two names are not public. Gift numbers follow each other, so anyone could read gift after gift; the names go
  * only to a request that carries the link's key, or to the funder or the recipient signed in. That is what the check
- * screen promises the funder: the names show to whoever has the link.
+ * screen promises the funder: the names show to whoever has the link. On the second version of the contracts what the
+ * link carries in `?t=` is a preview token, and the secret that opens the gift is refused here should it ever be sent
+ * (src/v2-opening.ts).
  *
  * What it answers is built in `src/gift-status.ts`, which the gift's page reads directly while it renders (D160).
  * This route is what the browser asks when it comes back to a page it already has.

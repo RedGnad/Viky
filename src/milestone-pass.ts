@@ -67,6 +67,9 @@ function describe(outcome: MilestoneOutcome): string {
       return `skipped: ${outcome.reason}`;
     case "refused":
       return `refused: ${outcome.code}${outcome.rating !== undefined ? ` (${outcome.rating})` : ""}`;
+    // A pass reads towards the target, it never starts a climb: named all the same, should one ever answer it.
+    case "sign":
+      return "held: the start waits for the recipient's signature";
   }
 }
 

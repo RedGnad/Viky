@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { agreeFirst } from "@/src/client/consent";
 import { useMinute } from "../kit/clock";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { openingSecretOf } from "@/src/v2-protocol";
 import { useMoneySession } from "@/src/account/money-session";
 import { isAccountError } from "@/src/account/errors";
 import { useDoor } from "@/src/account/door";
@@ -160,8 +161,23 @@ export function GiftPage({ giftId, linkKey, initialStatus, openTake = false }: R
   return <LiveGift status={status} linkKey={linkKey} reload={reload} refresh={refresh} openTake={openTake} />;
 }
 
+const onHashChange = (changed: () => void) => {
+  window.addEventListener("hashchange", changed);
+  return () => window.removeEventListener("hashchange", changed);
+};
+
+/**
+ * The secret after the `#` of the link this page was opened by, or nothing (the review of 2 Oct 2026, R-01). It opens
+ * a gift of the second version, and it is read here and nowhere else: a browser sends what follows a `#` to no server,
+ * so the page as the server renders it has none, and it is known once the browser has the page.
+ */
+function useOpeningSecret(): string | null {
+  return useSyncExternalStore(onHashChange, () => openingSecretOf(window.location.hash), () => null);
+}
+
 function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ status: GiftStatus | MilestoneStatus; linkKey: string | null; reload: () => Promise<void>; refresh: () => Promise<void>; openTake: boolean }>) {
   const { address, hasCredential, ensureSigner, status: accountStatus } = useAccount();
+  const openingSecret = useOpeningSecret();
   const door = useDoor();
   useMoneySession();
   const money = useDisplayCurrency(address);
@@ -372,13 +388,16 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     }
   };
 
+  // What opens the gift: on the first version the key the link carries in `?t=`, which the server compares; on the
+  // second the secret after the link's `#`, which no server is sent and which signs the opening here.
+  const openingKey = status.version === 2 ? openingSecret : linkKey;
   const open = () =>
     run("opening", "open", async () => {
-      if (!linkKey) throw new ApiError({ status: 400, code: "NO_KEY", message: W.missingKey });
+      if (!openingKey) throw new ApiError({ status: 400, code: "NO_KEY", message: W.missingKey });
       // On the second version of the contracts the link's own key signs the opening, here, for the signed-in account:
       // the contract the gift is on and that account are what it needs (src/client/v2.ts).
       const contract = milestone ? milestone.escrow : daily?.escrow;
-      await claimGift(giftId, linkKey, contract && address ? { contract, recipient: address } : undefined);
+      await claimGift(giftId, openingKey, contract && address ? { contract, recipient: address } : undefined);
       return null;
     });
   const name = (username: string) => run("naming", "name", async () => {
@@ -398,7 +417,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   const start = () =>
     run("starting", "start", async () => {
       await agreeFirst(giftId);
-      return milestone ? milestoneOutcome(await startMilestone(giftId)) : dailyOutcome(await bindGoalAccount(giftId));
+      // On the second version the account signs the first reading too: with no gesture when its session is open.
+      return milestone ? milestoneOutcome(await startMilestone(giftId, ensureSigner)) : dailyOutcome(await bindGoalAccount(giftId, ensureSigner));
     });
   const countToday = () =>
     run("counting", "count", async () => (milestone ? milestoneOutcome(await checkMilestone(giftId)) : dailyOutcome(await countNow(giftId))));
@@ -514,10 +534,10 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       case "open":
         return (
           <>
-            <button type="button" onClick={open} disabled={working || !linkKey} className={PRIMARY_BUTTON}>
+            <button type="button" onClick={open} disabled={working || !openingKey} className={PRIMARY_BUTTON}>
               {busy === "opening" ? W.opening : W.openMyGift}
             </button>
-            {linkKey ? answerAt("open") : <FieldRefusal id="gift-no-key">{W.missingKey}</FieldRefusal>}
+            {openingKey ? answerAt("open") : <FieldRefusal id="gift-no-key">{W.missingKey}</FieldRefusal>}
           </>
         );
       case "connect":

@@ -471,6 +471,9 @@ function describe(outcome: PublicCheckInOutcome): DailyPassLine {
       return { giftId: outcome.giftId, step: "count", result: `skipped: ${outcome.reason}` };
     case "refused":
       return { giftId: outcome.giftId, step: "count", result: `refused: ${outcome.code}${outcome.xp !== undefined ? ` (${outcome.xp} XP)` : ""}` };
+    // A pass counts, it never takes a first reading: named all the same, should one ever answer it.
+    case "sign":
+      return { giftId: outcome.giftId, step: "count", result: "held: the first reading waits for the recipient's signature" };
   }
 }
 

@@ -2,7 +2,8 @@ import { catchUpSecondsOf } from "./catch-up";
 import { GiftApiError } from "./gift-api";
 import { dailyEnded, dailyEndOffer } from "./gift-ending";
 import { checkInDayIndex, formatAusd, readGift, utcDayOf } from "./gift-reader";
-import { holdsGiftLink, lastRefundAt, loadGift, loadRelayed, loadSettledDays, reconcileClaim } from "./gift-store";
+import { lastRefundAt, loadGift, loadRelayed, loadSettledDays, reconcileClaim } from "./gift-store";
+import { holdsTheLinkOf } from "./v2-opening";
 import { isMilestoneGiftId } from "./milestone-protocol";
 import { milestoneStatusFor } from "./milestone-routes";
 import { escrowOf } from "./relayer";
@@ -43,7 +44,7 @@ export async function giftStatusFor(id: string, reader: GiftReader): Promise<Any
   const account = reader.account?.toLowerCase() ?? null;
   const viewerIsRecipient = account !== null && gift.recipient !== null && account === gift.recipient.toLowerCase();
   const viewerIsFunder = account !== null && account === gift.funder.toLowerCase();
-  const holdsTheLink = holdsGiftLink(record, reader.linkKey);
+  const holdsTheLink = holdsTheLinkOf(record, reader.linkKey);
   const names = viewerIsRecipient || viewerIsFunder || holdsTheLink ? { recipientName: record.recipientName, funderName: record.funderName } : null;
   // The account read goes only where the names go: gift numbers follow each other (the founder, 29 Sep 2026).
   const goalAccount = {

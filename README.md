@@ -229,6 +229,12 @@ kept, each with a test that requires it to fail now. What the review left as dec
 under way, the evidence signer alone can still attest a reading that never happened, in the recipient's favour or
 against them.
 
+The same review found that the link's secret was in `?t=`, so the server was sent it at every visit, and the key that
+opens a gift is made from that secret alone. The secret is now after the `#` of the link, which a browser sends to no
+server; `?t=` carries a preview token made from it by a hash, enough to print the two names and no use to open the
+gift, and a secret that reaches the server all the same is refused. The limit that stays: the page that reads the `#`
+is served by Viky, and a server that served other code could read it there.
+
 The server side of the anchor is written too, and off until the anchor's address is set: the browser signs the short
 anchored message with the consent key it already holds, in the same gesture as the agreement, and the relayer writes
 it (`src/consent-anchoring.ts`). `pnpm verify:consent` then holds every reading that moved money on the second

@@ -11,6 +11,8 @@ import { contractRefusal } from "./gift-api";
 import { ATTESTATION_TTL_SECONDS, FITBIT_CONNECTED_PROVIDER_ID, identityPseudonym, serialiseMessage, signCheckIn, STRAVA_CONNECTED_PROVIDER_ID, type CheckInMessage } from "./gift-attestation";
 import { checkInDayIndex, readGift, utcDayOf, type GiftState } from "./gift-reader";
 import { relayCheckIn } from "./gift-relay";
+import { holdTheStart } from "./held-start";
+import { StartNotSigned } from "./v2-start";
 import { loadGift, loadRelayed, markBound, type GiftRecord } from "./gift-store";
 import { consumeAndSaveVerification, saveProofSession } from "./proof-session-store";
 import { escrowOf, RelayerError } from "./relayer";
@@ -249,6 +251,10 @@ export async function runConnectedCheckIn(input: { giftId: string; purpose: Publ
     }
     return { kind: "counted", giftId, xp: met ? 1 : 0, creditedDays: relayed.creditedDays, hash: relayed.hash, unit: "verdicts" };
   } catch (error) {
+    // The second version takes a first reading only with the recipient's own signature: it is held, and asked for.
+    if (error instanceof StartNotSigned) {
+      return holdTheStart(error, { account: recipient, message: serialiseMessage(message), sessionId, after: { bindTo: tokens.externalId, xp: 0, unit: "verdicts" } });
+    }
     if (error instanceof RelayerError && error.code === "REVERTED") {
       const mapped = contractRefusal(error.contractError);
       return refusal(giftId, mapped?.code ?? error.contractError ?? "REFUSED", mapped?.message ?? "The contract refused this reading.");

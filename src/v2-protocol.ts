@@ -15,6 +15,12 @@ import { MILESTONE_PROOF_TYPES, MILESTONE_WITHDRAW_TYPES } from "./milestone-pro
  * - **The terms carry the address of an opening key** where the first version carried a contact hash that named
  *   nobody. The key is made in the funder's browser from the secret the gift's link carries (`openingAccount`), and
  *   only its address ever leaves that browser.
+ * - **The secret is after the `#` of the link** (`giftLink`, the review of 2 Oct 2026, R-01). A browser sends what
+ *   follows a `#` to nobody. What `?t=` carries, and so what Viky's server and a messaging app's robot are sent, is a
+ *   preview token made from the secret by a hash that cannot be run backwards (`previewTokenOf`): enough to print the
+ *   two names, and no use to open the gift. Before, the secret itself was in `?t=`, so the server was sent it at every
+ *   visit, and with the evidence key it could have opened a gift nobody had opened yet. The limit that stays: the
+ *   page that reads the `#` is served by Viky, and a server that served other code could read it there.
  * - **Opening is signed by that key**, in the browser of whoever holds the link (`openTypedData`). The evidence
  *   signer opens nothing any more.
  * - **The person a gift is for can end it** (`endTypedData`), signing the two amounts their screen shows.
@@ -160,6 +166,12 @@ export const LINK_SECRET = /^[A-Za-z0-9_-]{16,64}$/;
 
 const OPENING_KEY_TAG = "viky:open:v2:";
 
+function base64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 /**
  * The key that opens a gift, made from the secret its link carries. Whoever holds the link makes the same key, in
  * their own browser, and nobody else can: the secret is in the link and nowhere else. Its address is what the funder's
@@ -170,12 +182,37 @@ export function openingAccount(linkSecret: string) {
   return privateKeyToAccount(keccak256(stringToHex(`${OPENING_KEY_TAG}${linkSecret}`)));
 }
 
+const PREVIEW_TOKEN_TAG = "viky:preview:v2:";
+
 /**
- * The fingerprint of a link, which is all Viky keeps of it (src/gift-store.ts, `claimTokenHash`, the same value byte for
- * byte): enough to tell that a reader holds the link, and useless to open the gift with.
+ * What a link of the second version carries in `?t=`: 24 bytes of a hash of its secret, written as the secret is. The
+ * server is sent this at every visit, and a messaging app's robot fetches it. It tells that a reader holds the link, so
+ * the two names can be printed; the secret cannot be found from it, so it opens nothing. Its tag is not the opening
+ * key's, so neither is ever the other.
  */
-export function linkFingerprint(linkSecret: string): string {
-  return sha256(stringToHex(`viky:claim:v1:${linkSecret}`)).slice(2);
+export function previewTokenOf(linkSecret: string): string {
+  if (!LINK_SECRET.test(linkSecret)) throw new Error("This is not the key of a gift's link");
+  return base64Url(hexToBytes(sha256(stringToHex(`${PREVIEW_TOKEN_TAG}${linkSecret}`))).slice(0, 24));
+}
+
+/**
+ * The fingerprint Viky keeps of what a link sends it (src/gift-store.ts, `claimTokenHash`, the same value byte for
+ * byte): of the link's key on the first version, of the preview token on the second. Enough to tell that a reader
+ * holds the link, and useless to open the gift with.
+ */
+export function linkFingerprint(sentToTheServer: string): string {
+  return sha256(stringToHex(`viky:claim:v1:${sentToTheServer}`)).slice(2);
+}
+
+/** The link of a gift of the second version: the preview token where a server reads, the secret where none does. */
+export function giftLink(origin: string, giftId: string, linkSecret: string): string {
+  return `${origin}/g/${giftId}?t=${previewTokenOf(linkSecret)}#${linkSecret}`;
+}
+
+/** The secret a link carries after its `#`, as a browser's `location.hash` gives it, or nothing when it is not one. */
+export function openingSecretOf(hash: string | null | undefined): string | null {
+  const secret = (hash ?? "").replace(/^#/, "");
+  return LINK_SECRET.test(secret) ? secret : null;
 }
 
 /**
@@ -193,12 +230,6 @@ export const GIFT_LINK_TYPES = { GiftLink: [{ name: "salt", type: "bytes32" }] }
 /** What the funder's account signs to make, or find again, the secret of a gift's link. */
 export function giftLinkTypedData(salt: Hex) {
   return { domain: GIFT_LINK_DOMAIN, types: GIFT_LINK_TYPES, primaryType: "GiftLink" as const, message: { salt } };
-}
-
-function base64Url(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 /** The secret of the link from the funder's signature: 24 bytes of its hash, written as a link carries them. */
