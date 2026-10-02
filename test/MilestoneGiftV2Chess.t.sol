@@ -283,8 +283,12 @@ contract MilestoneGiftV2ChessTest {
             nullifier: keccak256(abi.encode("chess nullifier", ++nullifierSeed)),
             issuedAt: _now(),
             expiresAt: _now() + 5 minutes,
-            signature: ""
+            signature: "",
+            recipientSignature: ""
         });
+        a.recipientSignature = _signWith(
+            RECIPIENT_KEY, keccak256(abi.encode(gift.START_TYPEHASH(), id, a.identityHash, a.metricValue, a.observedAt))
+        );
         a.signature = _sign(
             keccak256(
                 abi.encode(

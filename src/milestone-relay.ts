@@ -7,6 +7,7 @@ import { MILESTONE_ATTESTATION_TTL_SECONDS, type MilestoneParams, type Milestone
 import { relayCall, RelayerError, relayerClients, type RelayResult } from "./relayer";
 import { MILESTONE_ABIS, milestoneAbiOf, milestoneGiftV2Address, milestoneVersionOf } from "./v2";
 import type { MilestoneParamsV2 } from "./v2-protocol";
+import { isStartSignedBy, NO_START_SIGNATURE, StartNotSigned } from "./v2-start";
 
 /**
  * The relayed operations of a milestone gift, one function per entry point of `MilestoneGift`, as src/gift-relay.ts
@@ -108,11 +109,32 @@ export async function relayMilestoneClaim(input: { giftId: string; contract: Hex
 
 export type ProvedReading = Readonly<{ hash: Hex; happened: "started" | "reached"; deadline?: number }>;
 
-/** Signs a verified reading as the evidence signer and submits it. What it did is read from the event, not assumed. */
-export async function relayProve(input: { contract: Hex; message: MilestoneProofMessage }): Promise<ProvedReading> {
-  const signature = await signMilestoneProof(input.message, input.contract);
+/** Whether this reading would start a climb: a gift of the first shape with nothing bound yet. Read from the contract. */
+async function startsAClimb(contract: Hex, giftId: string): Promise<boolean> {
+  const gift = (await relayerClients().publicClient.readContract({ address: contract, abi: milestoneAbiOf(contract), functionName: "getGift", args: [BigInt(giftId)] })) as { shape: number | bigint; identityHash: Hex };
+  return Number(gift.shape) === 0 && /^0x0{64}$/.test(gift.identityHash);
+}
+
+/**
+ * Signs a verified reading as the evidence signer and submits it. What it did is read from the event, not assumed.
+ *
+ * On the second version the reading that starts a climb is sent only with the signature of the account the gift is for
+ * (src/v2-start.ts): without one it is not sent at all, and `StartNotSigned` says what is to be signed. A certificate
+ * has no such reading, and every proof after a start goes as it always did.
+ */
+export async function relayProve(input: { contract: Hex; message: MilestoneProofMessage; startSignature?: Hex }): Promise<ProvedReading> {
   const m = input.message;
   const giftId = m.giftId.toString();
+  let recipientSignature = NO_START_SIGNATURE;
+  if (milestoneVersionOf(input.contract) === 2 && (await startsAClimb(input.contract, giftId))) {
+    const start = { giftId: m.giftId, identityHash: m.identityHash, metricValue: m.metricValue, observedAt: m.observedAt };
+    if (!input.startSignature) throw new StartNotSigned("milestone", input.contract, start);
+    if (!(await isStartSignedBy({ kind: "milestone", contract: input.contract, start, recipient: m.recipient, signature: input.startSignature }))) {
+      throw new RelayerError("REVERTED", "The first reading is not signed by the account the gift is for", "InvalidRecipientSignature");
+    }
+    recipientSignature = input.startSignature;
+  }
+  const signature = await signMilestoneProof(input.message, input.contract);
   const result = await call(input.contract, "prove", [
     giftId,
     {
@@ -126,6 +148,7 @@ export async function relayProve(input: { contract: Hex; message: MilestoneProof
       issuedAt: m.issuedAt,
       expiresAt: m.expiresAt,
       signature,
+      recipientSignature,
     },
   ]);
   await recordRelayed({ giftId, kind: "prove", txHash: result.hash, blockNumber: result.receipt.blockNumber });

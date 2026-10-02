@@ -28,12 +28,16 @@ contract DailyHandler is V2Kit {
     uint256[] public ids;
     mapping(uint256 => uint64) private metric;
     uint256 public created;
+    /// @dev Set if a pause was ever accepted while one ran, or inside the rest that follows one.
+    bool public pausedTooSoon;
 
     constructor() {
+        // A real moment: the rest between two pauses is counted from the end of the last one, which is zero on a
+        // contract never paused, so a campaign begun at the first second of 1970 would spend a week unable to pause.
+        VM.warp(1_800_000_000);
         token = new MockAUSD();
         escrow = new GiftEscrowV2(token, VM.addr(EVIDENCE_KEY), 1);
         escrow.setCreationPaused(false);
-        escrow.setCheckInPaused(false);
         escrow.registerGoal(GOAL, PROVIDER);
         token.mint(VM.addr(FUNDER_KEY), type(uint128).max);
     }
@@ -168,8 +172,14 @@ contract DailyHandler is V2Kit {
     /// @dev One call in eight pauses and three in eight reopen: a campaign spent mostly under a pause would read
     ///      nothing, and it is the days read, paid and sent back that the invariants are about.
     function pause(uint8 seed) external {
-        if (seed % 8 == 0) escrow.setCheckInPaused(true);
-        else if (seed % 8 < 4) escrow.setCheckInPaused(false);
+        if (seed % 8 == 0) {
+            uint256 lastEnd = escrow.checkInPausedUntil();
+            try escrow.setCheckInPaused(true) {
+                if (lastEnd != 0 && VM.getBlockTimestamp() <= lastEnd + 7 days) pausedTooSoon = true;
+            } catch {}
+        } else if (seed % 8 < 4) {
+            escrow.setCheckInPaused(false);
+        }
     }
 
     function wait(uint32 seconds_) external {
@@ -234,6 +244,20 @@ contract GiftEscrowV2InvariantTest {
         require(held <= handler.created(), "and never more than was ever paid in");
     }
 
+    /// @notice The owner cannot hold the clock of missed days (the review of 2 Oct 2026, R-02 and R-03). A pause runs
+    ///         seven days at most and is never sent twice in a row, so the clock stands still for one pause and one
+    ///         catch-up window at most, and the days it decides are never further behind than that.
+    function invariant_TheClockOfMissedDaysIsNeverHeldLongerThanOnePause() public view {
+        require(!handler.pausedTooSoon(), "a pause was accepted while one ran, or inside the rest after one");
+        require(
+            uint256(escrow.checkInPausedUntil()) <= uint256(escrow.checkInPauseBegan()) + 7 days,
+            "a pause never runs past seven days"
+        );
+        uint256 heldAtMost = 7 days + escrow.CATCH_UP_WINDOW();
+        uint256 slowest = (block.timestamp - heldAtMost - escrow.CATCH_UP_WINDOW()) / 1 days - 1;
+        require(escrow.lastDrainableDay() >= slowest, "the clock of missed days is held longer than one pause");
+    }
+
     /// @notice A counted day is the recipient's and nobody else's: they never take more than was counted, and the
     ///         funder never receives a counted day.
     function invariant_ACountedDayIsNeverTheFunders() public view {
@@ -290,12 +314,16 @@ contract MilestoneHandler is V2Kit {
     MilestoneGiftV2 public immutable gift;
     uint256[] public ids;
     uint256 public created;
+    /// @dev Set if a pause was ever accepted while one ran, or inside the rest that follows one.
+    bool public pausedTooSoon;
+    /// @dev Set if a gift could not be sent back two weeks after its own window closed.
+    bool public heldTooLong;
 
     constructor() {
+        VM.warp(1_800_000_000);
         token = new MockAUSD();
         gift = new MilestoneGiftV2(token, VM.addr(EVIDENCE_KEY), 1_000_000);
         gift.setCreationPaused(false);
-        gift.setProofPaused(false);
         gift.registerGoal(GOAL_CLIMB, CLIMB_PROVIDER, 0);
         gift.registerGoal(GOAL_HAVE, HAVE_PROVIDER, 1);
         token.mint(VM.addr(FUNDER_KEY), type(uint128).max);
@@ -353,9 +381,25 @@ contract MilestoneHandler is V2Kit {
         }
     }
 
+    /// @dev When a gift's own window closes, no pause counted: what its funder was told when they paid.
+    function _closesByItself(MilestoneGiftV2.Gift memory g) private pure returns (uint256) {
+        if (g.recipient == address(0)) return uint256(g.fundedAt) + 14 days + 6 hours;
+        if (g.shape == 1) return uint256(g.deadline) + 14 days;
+        if (g.identityHash != bytes32(0)) return uint256(g.deadline) + 6 hours;
+        return uint256(g.claimedAt) + 14 days + 6 hours;
+    }
+
+    /// @dev A pause moves a window only if it began while the window was open, runs seven days at most and gives
+    ///      back seven days at most: two weeks after its own close, every gift not reached must go back.
     function expire(uint256 seed) external {
         (uint256 id, bool any) = _one(seed);
-        if (any) gift.expire(id);
+        if (!any) return;
+        MilestoneGiftV2.Gift memory g = gift.getGift(id);
+        bool due = !g.settled && !g.cancelled && VM.getBlockTimestamp() > _closesByItself(g) + 14 days;
+        try gift.expire(id) {}
+        catch {
+            if (due) heldTooLong = true;
+        }
     }
 
     function refund(uint256 seed) external {
@@ -397,8 +441,14 @@ contract MilestoneHandler is V2Kit {
     }
 
     function pause(uint8 seed) external {
-        if (seed % 8 == 0) gift.setProofPaused(true);
-        else if (seed % 8 < 4) gift.setProofPaused(false);
+        if (seed % 8 == 0) {
+            uint256 lastEnd = gift.proofPausedUntil();
+            try gift.setProofPaused(true) {
+                if (lastEnd != 0 && VM.getBlockTimestamp() <= lastEnd + 7 days) pausedTooSoon = true;
+            } catch {}
+        } else if (seed % 8 < 4) {
+            gift.setProofPaused(false);
+        }
     }
 
     function wait(uint32 seconds_) external {
@@ -457,6 +507,18 @@ contract MilestoneGiftV2InvariantTest {
         }
         require(token.balanceOf(address(gift)) == held, "the contract holds exactly what its gifts still hold");
         require(held <= handler.created(), "and never more than was ever paid in");
+    }
+
+    /// @notice The owner cannot hold a gift (the review of 2 Oct 2026, R-02 and R-04): a pause is never sent twice
+    ///         in a row, and whatever the owner sent, a gift not reached goes back at the latest two weeks after
+    ///         its own window closed.
+    function invariant_NoGiftIsHeldByThePause() public view {
+        require(!handler.pausedTooSoon(), "a pause was accepted while one ran, or inside the rest after one");
+        require(
+            uint256(gift.proofPausedUntil()) <= uint256(gift.proofPauseBegan()) + 7 days,
+            "a pause never runs past seven days"
+        );
+        require(!handler.heldTooLong(), "a gift could not go back two weeks after its own window closed");
     }
 
     /// @notice A milestone is all or nothing, and it is one person's or the other's: reached, the whole amount is the

@@ -8,7 +8,9 @@ import {V2Kit} from "./kit/V2Kit.sol";
 
 /// @notice What the owner of the daily contract can and cannot do (the audit of 1 Oct 2026, section 3.1.2). On the
 ///         first version the owner could give the contract up, replace the evidence signer at once, move a goal
-///         under the gifts made on it, and hold a pause for ever. Each of those is bounded here.
+///         under the gifts made on it, and hold a pause for ever. Each of those is bounded here, and the review of
+///         2 Oct 2026 bounded the pause again: it is not sent twice in a row (R-02, R-03), and a signer announced
+///         before a hand-over does not stand after it (R-05).
 contract GiftEscrowV2OwnerBoundsTest is V2Kit {
     uint256 private constant DAY = 1 days;
     // 08:00 UTC on some day.
@@ -30,8 +32,7 @@ contract GiftEscrowV2OwnerBoundsTest is V2Kit {
 
     function setUp() public {
         VM.chainId(143);
-        // Deployed and opened two days before the tests begin, so the stand-still that follows the opening of a new
-        // contract is over and every clock a test reads is the plain one.
+        // Deployed and opened two days before the tests begin.
         VM.warp(START - 2 days);
         funder = VM.addr(FUNDER_KEY);
         recipient = VM.addr(RECIPIENT_KEY);
@@ -39,7 +40,6 @@ contract GiftEscrowV2OwnerBoundsTest is V2Kit {
         token = new MockAUSD();
         escrow = new GiftEscrowV2(token, VM.addr(EVIDENCE_KEY), 1);
         escrow.setCreationPaused(false);
-        escrow.setCheckInPaused(false);
         escrow.registerGoal(GOAL, PROVIDER);
         token.mint(funder, 1_000_000_000);
         VM.warp(START);
@@ -48,13 +48,19 @@ contract GiftEscrowV2OwnerBoundsTest is V2Kit {
 
     // --- ownership --------------------------------------------------------------------------------------------
 
-    function testANewContractIsClosedUntilItsDeployerOpensItAndOpensByItselfAfterSevenDays() public {
+    function testANewContractMakesNoGiftUntilItsDeployerOpensItAndItsPauseIsReadyFromTheFirstDay() public {
         GiftEscrowV2 fresh = new GiftEscrowV2(token, VM.addr(EVIDENCE_KEY), 1);
-        require(fresh.creationPaused() && fresh.checkInPaused(), "closed at first");
-        require(fresh.checkInPausedUntil() == START + 7 days, "for seven days at most");
-        VM.warp(START + 7 days);
-        // Check-ins reopen by themselves; creation is a plain switch and stays shut, so no gift exists to be read.
-        require(!fresh.checkInPaused() && fresh.creationPaused(), "check-ins lapse, creation does not");
+        fresh.registerGoal(GOAL, PROVIDER);
+        require(fresh.creationPaused(), "closed at first");
+        GiftEscrowV2.GiftParams memory p = _dailyParams(funder, GOAL, AMOUNT, DURATION, TARGET);
+        GiftEscrowV2.Authorization memory a = _dailyAuthorization(fresh, p, FUNDER_KEY);
+        VM.expectRevert(GiftEscrowV2.CreationIsPaused.selector);
+        fresh.createGift(p, a);
+        // No pause of check-ins is spent on a contract that holds no gift: the brake is whole the day gifts begin.
+        require(!fresh.checkInPaused() && fresh.checkInPausedUntil() == 0 && fresh.checkInPauseBegan() == 0, "unspent");
+        fresh.setCreationPaused(false);
+        fresh.setCheckInPaused(true);
+        require(fresh.checkInPaused() && fresh.checkInPausedUntil() == START + 7 days, "paused the day it opens");
     }
 
     function testOwnershipMovesInTwoStepsAndCannotBeGivenUp() public {
@@ -72,6 +78,32 @@ contract GiftEscrowV2OwnerBoundsTest is V2Kit {
         VM.expectRevert(GiftEscrowV2.OwnershipIsNotRenounceable.selector);
         escrow.renounceOwnership();
         require(escrow.owner() == safe, "still owned");
+    }
+
+    /// @dev The review of 2 Oct 2026, R-05. Between a hand-over and its acceptance the outgoing owner is still the
+    ///      owner: a signer it announced then stood a day later, under an owner that never announced it.
+    function testASignerAnnouncedBeforeAHandOverNeverStandsAfterIt() public {
+        address safe = address(0x5AFE);
+        escrow.transferOwnership(safe);
+        escrow.setEvidenceSigner(VM.addr(0xBAD));
+        require(escrow.pendingEvidenceSigner() == VM.addr(0xBAD), "announced by the outgoing owner");
+        VM.prank(safe);
+        escrow.acceptOwnership();
+        require(
+            escrow.pendingEvidenceSigner() == address(0) && escrow.evidenceSignerReadyAt() == 0,
+            "called off by the hand-over"
+        );
+        VM.warp(START + 24 hours);
+        VM.expectRevert(GiftEscrowV2.NoSignerPending.selector);
+        escrow.applyEvidenceSigner();
+        require(escrow.evidenceSigner() == VM.addr(EVIDENCE_KEY), "the signer in place never changed");
+
+        // The new owner's own announcement stands a day later, as any does.
+        VM.prank(safe);
+        escrow.setEvidenceSigner(other);
+        VM.warp(START + 48 hours);
+        escrow.applyEvidenceSigner();
+        require(escrow.evidenceSigner() == other, "announced by the owner it stands under");
     }
 
     function testOnlyTheOwnerHoldsTheSwitches() public {
@@ -225,32 +257,100 @@ contract GiftEscrowV2OwnerBoundsTest is V2Kit {
         );
     }
 
-    function testAPauseSentAgainRunsLongerAndKeepsItsBeginning() public {
+    function testAPauseCannotBeSentAgainWhileItRunsNorForSevenDaysAfterItEnded() public {
         uint256 began = START + 1 hours;
         VM.warp(began);
         escrow.setCheckInPaused(true);
         require(escrow.checkInPauseBegan() == began && escrow.checkInPausedUntil() == began + 7 days, "a pause");
-        VM.warp(began + 6 days);
+        // While it runs it cannot be made longer.
+        VM.warp(began + 5 days);
+        VM.expectRevert(GiftEscrowV2.PauseTooSoon.selector);
         escrow.setCheckInPaused(true);
-        require(escrow.checkInPauseBegan() == began, "its beginning has not moved");
-        require(escrow.checkInPausedUntil() == began + 13 days, "it runs seven days from when it was sent again");
+        require(escrow.checkInPausedUntil() == began + 7 days, "its end has not moved");
 
-        // Ended, then sent again inside the stand-still that follows it: still the same pause.
-        VM.warp(began + 8 days);
+        // Ended by the owner. Reopening what is open moves nothing.
         escrow.setCheckInPaused(false);
-        require(escrow.checkInPausedUntil() == began + 8 days && !escrow.checkInPaused(), "ended by the owner");
+        require(escrow.checkInPausedUntil() == began + 5 days && !escrow.checkInPaused(), "ended by the owner");
         escrow.setCheckInPaused(false);
-        require(escrow.checkInPausedUntil() == began + 8 days, "reopening what is open moves nothing");
-        VM.warp(began + 8 days + 1 hours);
-        escrow.setCheckInPaused(true);
-        require(escrow.checkInPauseBegan() == began, "one stand-still, one beginning");
-        escrow.setCheckInPaused(false);
+        require(escrow.checkInPausedUntil() == began + 5 days, "reopening what is open moves nothing");
 
-        // Sent once the stand-still is over, it is a new pause with its own beginning.
-        uint256 later = began + 8 days + 1 hours + 30 hours;
-        VM.warp(later);
+        // For seven days after its end, no pause.
+        VM.warp(began + 5 days + 1);
+        VM.expectRevert(GiftEscrowV2.PauseTooSoon.selector);
         escrow.setCheckInPaused(true);
-        require(escrow.checkInPauseBegan() == later, "a new pause");
+        VM.warp(began + 12 days);
+        VM.expectRevert(GiftEscrowV2.PauseTooSoon.selector);
+        escrow.setCheckInPaused(true);
+        require(escrow.checkInPauseBegan() == began && !escrow.checkInPaused(), "nothing moved");
+
+        // Then it is a new pause, with its own beginning.
+        VM.warp(began + 12 days + 1);
+        escrow.setCheckInPaused(true);
+        require(
+            escrow.checkInPauseBegan() == began + 12 days + 1 && escrow.checkInPausedUntil() == began + 19 days + 1,
+            "a new pause"
+        );
+    }
+
+    function testAPauseThatLapsedByItselfIsFollowedBySevenDaysOfRestToo() public {
+        escrow.setCheckInPaused(true);
+        VM.warp(START + 14 days);
+        require(!escrow.checkInPaused(), "lapsed a week ago");
+        VM.expectRevert(GiftEscrowV2.PauseTooSoon.selector);
+        escrow.setCheckInPaused(true);
+        VM.warp(START + 14 days + 1);
+        escrow.setCheckInPaused(true);
+        require(escrow.checkInPaused(), "paused again, a week after the first one lapsed");
+    }
+
+    /// @dev The review of 2 Oct 2026, R-02. A pause sent again every six days held the funder's unearned money for
+    ///      as long as the owner wished: nothing was drained, nothing finalised. Sent as often as the contract now
+    ///      lets it, one pause stands, and what was not earned goes back a catch-up window after it.
+    function testTheFundersUnearnedMoneyComesBackHoweverOftenTheOwnerSendsThePause() public {
+        uint256 id = _baselined();
+        uint256 began = _dayStart(day0 + 2) + 12 hours;
+        VM.warp(began);
+        escrow.setCheckInPaused(true);
+        uint256 accepted;
+        for (uint256 day = 1; day <= 8; ++day) {
+            VM.warp(began + day * 1 days);
+            try escrow.setCheckInPaused(true) {
+                ++accepted;
+            } catch {}
+        }
+        require(accepted == 0 && escrow.checkInPausedUntil() == began + 7 days, "one pause, seven days");
+
+        // One catch-up window after it lapsed the clock is the plain one, and the gift's seven days are long over.
+        VM.warp(began + 7 days + 30 hours);
+        escrow.drain(id);
+        escrow.finalise(id);
+        escrow.refundUnearned(id);
+        require(token.balanceOf(funder) == 1_000_000_000, "the funder has the whole unearned amount back");
+    }
+
+    /// @dev The review of 2 Oct 2026, R-03. A pause flicked on and off every 29 hours kept the clock of missed days
+    ///      where the first flick found it, with check-ins open, so twenty idle days were all credited from one late
+    ///      reading. The second flick is refused now, the clock moves again, and the same reading credits two.
+    function testAPauseFlickedOnAndOffNoLongerStopsTheClockOfMissedDays() public {
+        uint256 id = _createFor(30, 300_000_000);
+        escrow.claim(id, _dailyOpen(escrow, id, recipient, LINK_KEY));
+        escrow.checkIn(id, _dailyReading(escrow, id, recipient, IDENTITY, PROVIDER, 1000, uint64(START)));
+        VM.warp(_dayStart(day0 + 1) + 10 minutes);
+        escrow.setCheckInPaused(true);
+        escrow.setCheckInPaused(false);
+        for (uint256 i = 0; i < 17; ++i) {
+            VM.warp(VM.getBlockTimestamp() + 29 hours);
+            if (VM.getBlockTimestamp() <= _dayStart(day0 + 1) + 10 minutes + 7 days) {
+                VM.expectRevert(GiftEscrowV2.PauseTooSoon.selector);
+                escrow.setCheckInPaused(true);
+            }
+        }
+        VM.warp(_readAt(day0 + 22));
+        escrow.checkIn(id, _dailyReading(escrow, id, recipient, IDENTITY, PROVIDER, 1200, uint64(_readAt(day0 + 22))));
+        GiftEscrowV2.Gift memory g = escrow.getGift(id);
+        require(
+            g.creditedDays == 2 && g.drainedDays == 19, "two days counted, nineteen missed, as with no pause at all"
+        );
     }
 
     function testTheWaitOfAnUnopenedGiftRunsPastAPauseThatShutItsOpening() public {
@@ -300,7 +400,11 @@ contract GiftEscrowV2OwnerBoundsTest is V2Kit {
     // --- helpers ----------------------------------------------------------------------------------------------
 
     function _create() private returns (uint256) {
-        GiftEscrowV2.GiftParams memory p = _dailyParams(funder, GOAL, AMOUNT, DURATION, TARGET);
+        return _createFor(DURATION, AMOUNT);
+    }
+
+    function _createFor(uint32 duration, uint256 amount) private returns (uint256) {
+        GiftEscrowV2.GiftParams memory p = _dailyParams(funder, GOAL, amount, duration, TARGET);
         return escrow.createGift(p, _dailyAuthorization(escrow, p, FUNDER_KEY));
     }
 
@@ -323,7 +427,10 @@ contract GiftEscrowV2OwnerBoundsTest is V2Kit {
 }
 
 /// @notice The same bounds on the milestone contract, where a pause that never ended used to freeze every gift under
-///         way once the owner was gone.
+///         way once the owner was gone. The review of 2 Oct 2026 added four: a pause is not sent twice in a row
+///         (R-02), one sent after a window closed reopens nothing (R-04), a climb whose deadline fell inside a pause
+///         is judged on a reading taken until the pause ended (R-14), and a signer announced before a hand-over
+///         does not stand after it (R-05).
 contract MilestoneGiftV2OwnerBoundsTest is V2Kit {
     uint256 private constant START = 1_800_000_000;
     uint256 private constant AMOUNT = 100_000_000;
@@ -334,6 +441,7 @@ contract MilestoneGiftV2OwnerBoundsTest is V2Kit {
     bytes32 private constant CHESS_PROVIDER = keccak256("viky:provider:chess-public:v1");
     bytes32 private constant CERTIFICATE_PROVIDER = keccak256("viky:provider:coursera-certificate:v1");
     bytes32 private constant IDENTITY = keccak256("identity:ama");
+    bytes32 private constant SUBJECT = keccak256("subject:ama:a course");
 
     MockAUSD private token;
     MilestoneGiftV2 private gift;
@@ -350,17 +458,25 @@ contract MilestoneGiftV2OwnerBoundsTest is V2Kit {
         token = new MockAUSD();
         gift = new MilestoneGiftV2(token, VM.addr(EVIDENCE_KEY), 1_000_000);
         gift.setCreationPaused(false);
-        gift.setProofPaused(false);
         gift.registerGoal(GOAL_CHESS, CHESS_PROVIDER, 0);
         gift.registerGoal(GOAL_CERTIFICATE, CERTIFICATE_PROVIDER, 1);
         token.mint(funder, 1_000_000_000);
     }
 
-    function testANewContractIsClosedUntilItsDeployerOpensItAndOpensByItselfAfterSevenDays() public {
+    function testANewContractMakesNoGiftUntilItsDeployerOpensItAndItsPauseIsReadyFromTheFirstDay() public {
         MilestoneGiftV2 fresh = new MilestoneGiftV2(token, VM.addr(EVIDENCE_KEY), 1_000_000);
-        require(fresh.creationPaused() && fresh.proofPaused(), "closed at first");
-        VM.warp(START + 7 days);
-        require(!fresh.proofPaused() && fresh.creationPaused(), "proofs lapse, creation does not");
+        fresh.registerGoal(GOAL_CHESS, CHESS_PROVIDER, 0);
+        require(fresh.creationPaused(), "closed at first");
+        MilestoneGiftV2.MilestoneParams memory p =
+            _climbParams(funder, GOAL_CHESS, AMOUNT, DURATION, TARGET, TARGET - 200);
+        MilestoneGiftV2.Authorization memory a = _milestoneAuthorization(fresh, p, FUNDER_KEY);
+        VM.expectRevert(MilestoneGiftV2.CreationIsPaused.selector);
+        fresh.createGift(p, a);
+        // No pause of proofs is spent on a contract that holds no gift: the brake is whole the day gifts begin.
+        require(!fresh.proofPaused() && fresh.proofPausedUntil() == 0 && fresh.proofPauseBegan() == 0, "unspent");
+        fresh.setCreationPaused(false);
+        fresh.setProofPaused(true);
+        require(fresh.proofPaused() && fresh.proofPausedUntil() == START + 7 days, "paused the day it opens");
     }
 
     /// @dev The Medium of 29 Sep, replayed: a pause, and the owner is gone for good. On the first version a climb
@@ -413,13 +529,283 @@ contract MilestoneGiftV2OwnerBoundsTest is V2Kit {
         require(gift.earnedBalance(id) == AMOUNT, "earned in time, paid after the pause");
     }
 
-    function testAPauseSentAgainRunsSevenDaysFromThen() public {
+    function testAPauseCannotBeSentAgainWhileItRunsNorForSevenDaysAfterItEnded() public {
         gift.setProofPaused(true);
+        require(gift.proofPauseBegan() == START && gift.proofPausedUntil() == START + 7 days, "a pause");
         VM.warp(START + 6 days);
+        VM.expectRevert(MilestoneGiftV2.PauseTooSoon.selector);
         gift.setProofPaused(true);
-        require(gift.proofPausedUntil() == START + 13 days, "seven days from when it was sent again");
-        VM.warp(START + 13 days);
+        require(gift.proofPausedUntil() == START + 7 days, "its end has not moved");
+        VM.warp(START + 7 days);
         require(!gift.proofPaused(), "and no longer");
+
+        VM.warp(START + 14 days);
+        VM.expectRevert(MilestoneGiftV2.PauseTooSoon.selector);
+        gift.setProofPaused(true);
+        VM.warp(START + 14 days + 1);
+        gift.setProofPaused(true);
+        require(gift.proofPauseBegan() == START + 14 days + 1, "a new pause, a week after the first one lapsed");
+
+        // Ended by the owner at once: the week of rest is counted from that end.
+        gift.setProofPaused(false);
+        require(gift.proofPausedUntil() == START + 14 days + 1 && !gift.proofPaused(), "ended by the owner");
+        VM.warp(START + 21 days + 1);
+        VM.expectRevert(MilestoneGiftV2.PauseTooSoon.selector);
+        gift.setProofPaused(true);
+        VM.warp(START + 21 days + 2);
+        gift.setProofPaused(true);
+    }
+
+    /// @dev The review of 2 Oct 2026, R-04. A certificate whose fourteen late days ran out weeks ago, a climb a
+    ///      month past its deadline, a gift nobody opened and one nobody started, none of them expired yet. A pause
+    ///      sent then, and lifted at once, used to count every one of those windows again from that moment.
+    function testAPauseSentAfterAWindowClosedReopensNothing() public {
+        uint256 certificate = _certificate(10);
+        uint256 climb = _startedFor(10, 1200);
+        uint256 unopened = _createFor(10);
+        uint256 unstarted = _claimedFor(10);
+        uint64 granted = uint64(START + 5 days);
+        uint64 inTime = uint64(START + 9 days);
+
+        VM.warp(START + 44 days);
+        gift.setProofPaused(true);
+        // Even while the pause runs: these windows had closed before it began, so it holds nothing of them.
+        gift.expire(certificate);
+        gift.expire(unopened);
+        gift.setProofPaused(false);
+
+        MilestoneGiftV2.ProofAttestation memory late =
+            _milestoneProof(gift, climb, recipient, IDENTITY, CHESS_PROVIDER, TARGET, 0, inTime);
+        VM.expectRevert(MilestoneGiftV2.DeadlinePassed.selector);
+        gift.prove(climb, late);
+        gift.expire(climb);
+        gift.expire(unstarted);
+
+        // A gift made after that pause is untouched by it: its own late days, and no more.
+        uint256 other_ = _certificateAt(START + 44 days, 10);
+        VM.warp(START + 44 days + 10 days + 14 days + 1);
+        MilestoneGiftV2.ProofAttestation memory tooLate = _milestoneProof(
+            gift, other_, recipient, SUBJECT, CERTIFICATE_PROVIDER, 1, granted + 44 days, uint64(VM.getBlockTimestamp())
+        );
+        VM.expectRevert(MilestoneGiftV2.DeadlinePassed.selector);
+        gift.prove(other_, tooLate);
+
+        gift.refundUnearned(certificate);
+        gift.refundUnearned(climb);
+        gift.refundUnearned(unopened);
+        gift.refundUnearned(unstarted);
+        require(token.balanceOf(funder) == 1_000_000_000 - AMOUNT, "four gifts back, one still to expire");
+    }
+
+    /// @dev A window that was open when the pause began has, after it, the time it had left: no more, no less.
+    function testAPauseThatBeganInsideTheGraceGivesBackWhatTheGraceHadLeft() public {
+        uint256 paid = _startedFor(10, 1200);
+        uint256 late = _startedFor(10, 1200);
+        uint256 deadline = START + 10 days;
+        // Two hours into the six of the grace, proofs are paused, for three days.
+        VM.warp(deadline + 2 hours);
+        gift.setProofPaused(true);
+        uint256 reopened = deadline + 2 hours + 3 days;
+        VM.warp(reopened);
+        VM.expectRevert(MilestoneGiftV2.TooEarly.selector);
+        gift.expire(paid);
+        gift.setProofPaused(false);
+
+        // Four hours were left. A reading taken before the deadline is taken until four hours after the reopening.
+        VM.warp(reopened + 4 hours);
+        VM.expectRevert(MilestoneGiftV2.TooEarly.selector);
+        gift.expire(paid);
+        gift.prove(
+            paid,
+            _milestoneProof(gift, paid, recipient, IDENTITY, CHESS_PROVIDER, TARGET, 0, uint64(deadline - 1 hours))
+        );
+        require(gift.earnedBalance(paid) == AMOUNT, "read in time, sent inside what the grace had left");
+
+        VM.warp(reopened + 4 hours + 1);
+        MilestoneGiftV2.ProofAttestation memory after_ =
+            _milestoneProof(gift, late, recipient, IDENTITY, CHESS_PROVIDER, TARGET, 0, uint64(deadline - 1 hours));
+        VM.expectRevert(MilestoneGiftV2.DeadlinePassed.selector);
+        gift.prove(late, after_);
+        gift.expire(late);
+    }
+
+    function testAPauseInsideACertificatesLateDaysGivesBackWhatWasLeftUpToSevenDays() public {
+        uint256 id = _certificate(10);
+        uint256 deadline = START + 10 days;
+        uint64 granted = uint64(START + 5 days);
+        // One late day is left when the pause begins. It lapses a week later, and that day is whole again.
+        VM.warp(deadline + 13 days);
+        gift.setProofPaused(true);
+        VM.warp(deadline + 20 days);
+        require(!gift.proofPaused(), "lapsed");
+        VM.warp(deadline + 21 days);
+        VM.expectRevert(MilestoneGiftV2.TooEarly.selector);
+        gift.expire(id);
+        gift.prove(
+            id,
+            _milestoneProof(gift, id, recipient, SUBJECT, CERTIFICATE_PROVIDER, 1, granted, uint64(deadline + 21 days))
+        );
+        require(gift.earnedBalance(id) == AMOUNT, "granted in time, shown on the day the pause gave back");
+    }
+
+    function testAPauseEarlyInACertificatesLateDaysLeavesAWeekAfterIt() public {
+        uint256 id = _certificate(10);
+        uint256 deadline = START + 10 days;
+        // Twelve late days are left when the pause begins, five when it lapses: a week is counted from its end.
+        VM.warp(deadline + 2 days);
+        gift.setProofPaused(true);
+        VM.warp(deadline + 16 days);
+        VM.expectRevert(MilestoneGiftV2.TooEarly.selector);
+        gift.expire(id);
+        VM.warp(deadline + 16 days + 1);
+        gift.expire(id);
+    }
+
+    function testAPauseAcrossACertificatesDeadlineLeavesItsLateDaysWhereTheyWere() public {
+        uint256 id = _certificate(10);
+        uint256 deadline = START + 10 days;
+        // The pause lapses six days into the fourteen: eight are left, more than a pause can take. Nothing moves.
+        VM.warp(deadline - 1 days);
+        gift.setProofPaused(true);
+        VM.warp(deadline + 14 days);
+        VM.expectRevert(MilestoneGiftV2.TooEarly.selector);
+        gift.expire(id);
+        VM.warp(deadline + 14 days + 1);
+        gift.expire(id);
+    }
+
+    /// @dev The review of 2 Oct 2026, R-02, on this contract: `expire` was refused for as long as the pause was
+    ///      sent again. Sent as often as the contract lets it, no gift is held from one pause to the next: whatever a
+    ///      pause moved has closed before another can begin.
+    function testNoGiftIsHeldFromOnePauseToTheNextHoweverOftenTheOwnerSendsIt() public {
+        uint256 climb = _startedFor(10, 1200);
+        uint256 certificate = _certificate(10);
+        uint256 deadline = START + 10 days;
+
+        // The first pause begins the day before the deadline and lapses six days after it.
+        VM.warp(deadline - 1 days);
+        gift.setProofPaused(true);
+        VM.warp(deadline + 6 days);
+        VM.expectRevert(MilestoneGiftV2.PauseTooSoon.selector);
+        gift.setProofPaused(true);
+        // The climb: its six hours of grace follow the pause, and then it goes back.
+        VM.warp(deadline + 6 days + 6 hours + 1);
+        gift.expire(climb);
+
+        // The second pause begins the first second the contract allows, inside the certificate's late days.
+        VM.warp(deadline + 13 days);
+        VM.expectRevert(MilestoneGiftV2.PauseTooSoon.selector);
+        gift.setProofPaused(true);
+        VM.warp(deadline + 13 days + 1);
+        gift.setProofPaused(true);
+        // The certificate had a day less a second left: it has it again after the pause, and no third pause can
+        // begin before that day is over.
+        VM.warp(deadline + 21 days);
+        VM.expectRevert(MilestoneGiftV2.TooEarly.selector);
+        gift.expire(certificate);
+        VM.expectRevert(MilestoneGiftV2.PauseTooSoon.selector);
+        gift.setProofPaused(true);
+        VM.warp(deadline + 21 days + 1);
+        VM.expectRevert(MilestoneGiftV2.PauseTooSoon.selector);
+        gift.setProofPaused(true);
+        gift.expire(certificate);
+
+        gift.refundUnearned(climb);
+        gift.refundUnearned(certificate);
+        require(token.balanceOf(funder) == 1_000_000_000, "both went back to the funder");
+    }
+
+    /// @dev The review of 2 Oct 2026, R-14. A pause from two days before a climb's deadline. The person reaches the
+    ///      target the day before the deadline and cannot prove it: proofs are paused. When they reopened only a
+    ///      reading taken before the deadline was accepted, and nobody held one, so the gift went back.
+    function testAClimbWhoseDeadlineFellInsideAPauseIsJudgedOnAReadingTakenUntilThePauseEnded() public {
+        uint256 id = _startedFor(10, 1200);
+        uint256 afterIt = _startedFor(10, 1200);
+        uint256 deadline = START + 10 days;
+        VM.warp(deadline - 2 days);
+        gift.setProofPaused(true);
+        VM.warp(deadline - 1 days);
+        MilestoneGiftV2.ProofAttestation memory reached =
+            _milestoneProof(gift, id, recipient, IDENTITY, CHESS_PROVIDER, TARGET, 0, uint64(deadline - 1 days));
+        VM.expectRevert(MilestoneGiftV2.ProofIsPaused.selector);
+        gift.prove(id, reached);
+
+        // The owner reopens three days after the deadline.
+        uint256 reopened = deadline + 3 days;
+        VM.warp(reopened);
+        gift.setProofPaused(false);
+
+        // A reading taken once proofs are open again is past the deadline, as it would be with no pause.
+        VM.warp(reopened + 1 hours);
+        MilestoneGiftV2.ProofAttestation memory fresh =
+            _milestoneProof(gift, afterIt, recipient, IDENTITY, CHESS_PROVIDER, TARGET, 0, uint64(reopened + 1 hours));
+        VM.expectRevert(MilestoneGiftV2.DeadlinePassed.selector);
+        gift.prove(afterIt, fresh);
+
+        // One taken while they were paused counts, the deadline included in the pause, inside the grace that follows.
+        gift.prove(
+            id, _milestoneProof(gift, id, recipient, IDENTITY, CHESS_PROVIDER, TARGET, 0, uint64(deadline + 2 days))
+        );
+        require(gift.earnedBalance(id) == AMOUNT, "reached while proofs were paused, paid when they reopened");
+
+        // The grace is six hours from the reopening, for this reading as for any.
+        VM.warp(reopened + 6 hours + 1);
+        MilestoneGiftV2.ProofAttestation memory slow =
+            _milestoneProof(gift, afterIt, recipient, IDENTITY, CHESS_PROVIDER, TARGET, 0, uint64(deadline - 1 days));
+        VM.expectRevert(MilestoneGiftV2.DeadlinePassed.selector);
+        gift.prove(afterIt, slow);
+        gift.expire(afterIt);
+    }
+
+    function testADeadlineOutsideAPauseStaysTheDeadline() public {
+        uint256 before = _startedFor(10, 1200);
+        uint256 deadline = START + 10 days;
+        // A pause that ended before the deadline moves nothing.
+        VM.warp(deadline - 5 days);
+        gift.setProofPaused(true);
+        VM.warp(deadline - 4 days);
+        gift.setProofPaused(false);
+        VM.warp(deadline + 1 hours);
+        MilestoneGiftV2.ProofAttestation memory pastIt =
+            _milestoneProof(gift, before, recipient, IDENTITY, CHESS_PROVIDER, TARGET, 0, uint64(deadline + 1));
+        VM.expectRevert(MilestoneGiftV2.DeadlinePassed.selector);
+        gift.prove(before, pastIt);
+        gift.prove(
+            before, _milestoneProof(gift, before, recipient, IDENTITY, CHESS_PROVIDER, TARGET, 0, uint64(deadline))
+        );
+        require(gift.earnedBalance(before) == AMOUNT, "a reading of the deadline itself still pays inside the grace");
+    }
+
+    function testAPauseThatBeganAfterTheDeadlineMovesTheGraceAndNotTheDeadline() public {
+        uint256 id = _startedFor(10, 1200);
+        uint256 deadline = START + 10 days;
+        VM.warp(deadline + 1 hours);
+        gift.setProofPaused(true);
+        VM.warp(deadline + 2 days);
+        gift.setProofPaused(false);
+        MilestoneGiftV2.ProofAttestation memory during =
+            _milestoneProof(gift, id, recipient, IDENTITY, CHESS_PROVIDER, TARGET, 0, uint64(deadline + 1 days));
+        VM.expectRevert(MilestoneGiftV2.DeadlinePassed.selector);
+        gift.prove(id, during);
+        gift.prove(id, _milestoneProof(gift, id, recipient, IDENTITY, CHESS_PROVIDER, TARGET, 0, uint64(deadline)));
+        require(gift.earnedBalance(id) == AMOUNT, "read in time, sent once proofs reopened");
+    }
+
+    /// @dev The review of 2 Oct 2026, R-05, as on the daily contract.
+    function testASignerAnnouncedBeforeAHandOverNeverStandsAfterIt() public {
+        address safe = address(0x5AFE);
+        gift.transferOwnership(safe);
+        gift.setEvidenceSigner(VM.addr(0xBAD));
+        VM.prank(safe);
+        gift.acceptOwnership();
+        require(
+            gift.pendingEvidenceSigner() == address(0) && gift.evidenceSignerReadyAt() == 0,
+            "called off by the hand-over"
+        );
+        VM.warp(START + 24 hours);
+        VM.expectRevert(MilestoneGiftV2.NoSignerPending.selector);
+        gift.applyEvidenceSigner();
+        require(gift.evidenceSigner() == VM.addr(EVIDENCE_KEY), "the signer in place never changed");
     }
 
     function testANewSignerWaitsADayAndTheOneInPlaceStandsMeanwhile() public {
@@ -521,20 +907,44 @@ contract MilestoneGiftV2OwnerBoundsTest is V2Kit {
     // --- helpers ----------------------------------------------------------------------------------------------
 
     function _create() private returns (uint256) {
+        return _createFor(DURATION);
+    }
+
+    function _createFor(uint32 duration) private returns (uint256) {
         MilestoneGiftV2.MilestoneParams memory p =
-            _climbParams(funder, GOAL_CHESS, AMOUNT, DURATION, TARGET, TARGET - 200);
+            _climbParams(funder, GOAL_CHESS, AMOUNT, duration, TARGET, TARGET - 200);
         return gift.createGift(p, _milestoneAuthorization(gift, p, FUNDER_KEY));
     }
 
     function _claimed() private returns (uint256 id) {
-        id = _create();
+        return _claimedFor(DURATION);
+    }
+
+    function _claimedFor(uint32 duration) private returns (uint256 id) {
+        id = _createFor(duration);
         gift.claim(id, _milestoneOpen(gift, id, recipient, LINK_KEY));
     }
 
     function _started(uint64 from) private returns (uint256 id) {
-        id = _claimed();
+        return _startedFor(DURATION, from);
+    }
+
+    function _startedFor(uint32 duration, uint64 from) private returns (uint256 id) {
+        id = _claimedFor(duration);
         gift.prove(
             id, _milestoneProof(gift, id, recipient, IDENTITY, CHESS_PROVIDER, from, 0, uint64(VM.getBlockTimestamp()))
         );
+    }
+
+    function _certificate(uint32 duration) private returns (uint256 id) {
+        MilestoneGiftV2.MilestoneParams memory p = _haveParams(funder, GOAL_CERTIFICATE, AMOUNT, duration, SUBJECT);
+        id = gift.createGift(p, _milestoneAuthorization(gift, p, FUNDER_KEY));
+        gift.claim(id, _milestoneOpen(gift, id, recipient, LINK_KEY));
+    }
+
+    /// @dev A certificate gift made later than the suite's start, which is where the block already stands.
+    function _certificateAt(uint256 moment, uint32 duration) private returns (uint256 id) {
+        require(VM.getBlockTimestamp() == moment, "made at the moment the test says");
+        return _certificate(duration);
     }
 }

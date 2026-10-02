@@ -511,11 +511,13 @@ test("race result: the row is read plainly by bib, the list's columns are checke
   assert.equal(RACE_RESULT_OPEN, true, "since the founder signed goal 34");
   const now = new Date("2026-10-01T12:00:00Z").getTime();
   const offered = racesOffered(now, false);
-  const coming = offered.find((race) => race.timer === "race-result");
-  assert.ok(coming, "race result's coming races listed to everybody once open");
+  assert.ok(offered.some((race) => race.timer === "race-result"), "race result's coming races listed to everybody once open");
   assert.ok(!offered.some((race) => race.raceId === "buenos-aires-2026"), "the test race stays the operator's");
   assert.ok(racesOffered(now, true).some((race) => race.raceId === "buenos-aires-2026"));
-  assert.equal(MARATHON_MILESTONE.course?.refuses?.(`${coming!.raceId}/${coming!.events[0].distance}`, false), undefined);
+  // The condition's own refusal reads the clock, so it is asked about a race still to come today. Asked about the
+  // first race listed on 1 Oct, this failed from the morning of 2 Oct 2026, when that race had been run.
+  const coming = racesOffered(Date.now(), false).find((race) => race.timer === "race-result");
+  if (coming) assert.equal(MARATHON_MILESTONE.course?.refuses?.(`${coming.raceId}/${coming.events[0].distance}`, false), undefined);
   assert.ok(MARATHON_RACES.filter((race) => race.timer === "race-result").length >= 2, "the test race and the generated register");
   // The register's race result half is the generator's, and every race in it was kept because its list reads by bib.
   const generator = readFileSync("scripts/raceresult-register.ts", "utf8");

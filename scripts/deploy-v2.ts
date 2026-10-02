@@ -15,7 +15,8 @@ import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-co
 /**
  * Deploys the second version of the gift contracts to Monad mainnet (the audit of 1 Oct 2026): `GiftEscrowV2`,
  * `MilestoneGiftV2` and `ConsentAnchor`, in one run. It registers every goal that has a condition behind it, opens
- * creation and readings, and hands the three to the owner, who then accepts them (ownership moves in two steps).
+ * creation, and hands the three to the owner, who then accepts them (ownership moves in two steps). Readings need no
+ * opening: a new contract holds no pause, so its owner's brake is whole from the first gift (the review of 2 Oct 2026).
  *
  * Nothing of this can be undone once sent, and on these contracts a goal is added and never changed. So everything
  * that can be checked is checked first, and the whole plan is printed with DRY_RUN before anybody approves it.
@@ -147,13 +148,11 @@ async function main() {
   const dailySteps: Step[] = [
     ...DAILY_GOALS.map((goal) => ({ name: `daily: register goal ${goal.goalType} (${goal.source}, ${goal.detail})`, functionName: "registerGoal", args: [goal.goalType, goal.providerId] as const, ceiling: 80_000 })),
     { name: "daily: open creation", functionName: "setCreationPaused", args: [false], ceiling: 60_000 },
-    { name: "daily: open check-ins and openings", functionName: "setCheckInPaused", args: [false], ceiling: 60_000 },
     { name: "daily: hand ownership to the owner, who accepts it", functionName: "transferOwnership", args: [owner], ceiling: 70_000 },
   ];
   const milestoneSteps: Step[] = [
     ...MILESTONE_GOALS.map((goal) => ({ name: `milestone: register goal ${goal.goalType} (${goal.source}, ${goal.detail})`, functionName: "registerGoal", args: [goal.goalType, goal.providerId, goal.shape] as const, ceiling: 95_000 })),
     { name: "milestone: open creation", functionName: "setCreationPaused", args: [false], ceiling: 60_000 },
-    { name: "milestone: open proofs and openings", functionName: "setProofPaused", args: [false], ceiling: 60_000 },
     { name: "milestone: hand ownership to the owner, who accepts it", functionName: "transferOwnership", args: [owner], ceiling: 70_000 },
   ];
   const anchorSteps: Step[] = [{ name: "anchor: hand ownership to the owner, who accepts it", functionName: "transferOwnership", args: [owner], ceiling: 70_000 }];

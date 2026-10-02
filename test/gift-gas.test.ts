@@ -39,3 +39,13 @@ test("the withdrawal's floor is above what the real token costs, on both contrac
   assert.ok(milestoneGasLimit("withdrawEarnedWithIntent") >= 190_000n);
   assert.ok(milestoneGasLimit("withdrawEarnedWithIntent") > 188_743n);
 });
+
+test("the first reading of the second version, which checks one signature more, still sits under the floors", async () => {
+  // `forge test --gas-report` on 2 Oct 2026, mock token (a reading moves no token): the daily contract's check-in at
+  // most 145,548, the first reading and the days it settles included; the milestone contract's proof at most 126,059.
+  // The declared limit is the chain's own estimate plus the margin; the floor only keeps a low estimate from
+  // under-declaring, and must stay above what the call can cost.
+  const { MILESTONE_GAS_CEILING } = await import("../src/milestone-gas");
+  assert.ok(GIFT_GAS_CEILING.checkIn > 145_548);
+  assert.ok(MILESTONE_GAS_CEILING.prove > 126_059);
+});

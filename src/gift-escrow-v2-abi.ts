@@ -206,6 +206,19 @@ export const giftEscrowV2Abi = [
   },
   {
     "type": "function",
+    "name": "PAUSE_REST",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "READING_GRACE",
     "inputs": [],
     "outputs": [
@@ -226,6 +239,19 @@ export const giftEscrowV2Abi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "START_TYPEHASH",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
@@ -339,6 +365,11 @@ export const giftEscrowV2Abi = [
           },
           {
             "name": "signature",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "recipientSignature",
             "type": "bytes",
             "internalType": "bytes"
           }
@@ -2042,6 +2073,11 @@ export const giftEscrowV2Abi = [
   {
     "type": "error",
     "name": "OwnershipIsNotRenounceable",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PauseTooSoon",
     "inputs": []
   },
   {

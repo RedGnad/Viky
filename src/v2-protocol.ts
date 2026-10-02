@@ -18,6 +18,9 @@ import { MILESTONE_PROOF_TYPES, MILESTONE_WITHDRAW_TYPES } from "./milestone-pro
  * - **Opening is signed by that key**, in the browser of whoever holds the link (`openTypedData`). The evidence
  *   signer opens nothing any more.
  * - **The person a gift is for can end it** (`endTypedData`), signing the two amounts their screen shows.
+ * - **The first reading of a gift is theirs too** (`startTypedData`, the review of 2 Oct 2026): the account the gift is
+ *   for signs the identity it binds, the value it starts from and the moment it was read, beside the evidence signer.
+ *   Every reading after it is signed by the evidence signer alone, as before.
  *
  * The readings (`CheckIn`, `Proof`) and the withdrawal (`Withdraw`) keep their types; what changes for them is the
  * domain's version, "2", so nothing signed for one version is ever valid on the other.
@@ -51,7 +54,18 @@ export const END_TYPES = {
   ],
 } as const;
 
+/** What the recipient's account signs on the first reading of a gift: the same type on both contracts. */
+export const START_TYPES = {
+  Start: [
+    { name: "giftId", type: "uint256" },
+    { name: "identityHash", type: "bytes32" },
+    { name: "metricValue", type: "uint64" },
+    { name: "observedAt", type: "uint64" },
+  ],
+} as const;
+
 export const OPEN_TYPEHASH = keccak256(stringToHex("Open(uint256 giftId,address recipient,uint64 deadline)"));
+export const START_TYPEHASH = keccak256(stringToHex("Start(uint256 giftId,bytes32 identityHash,uint64 metricValue,uint64 observedAt)"));
 export const END_TYPEHASH = keccak256(stringToHex("End(uint256 giftId,uint256 keep,uint256 giveBack,uint256 nonce,uint64 deadline)"));
 
 export const FUND_NONCE_TAG_V2 = keccak256(stringToHex("viky.fund.v2"));
@@ -59,8 +73,10 @@ export const MILESTONE_FUND_NONCE_TAG_V2 = keccak256(stringToHex("viky.milestone
 
 /** `GiftEscrowV2.MAX_OBSERVATION_AGE`: a reading more than thirty minutes old is refused. */
 export const MAX_OBSERVATION_AGE_SECONDS = 30 * 60;
-/** `MAX_PAUSE` of both contracts: a pause ends by itself seven days after it was last sent. */
+/** `MAX_PAUSE` of both contracts: a pause ends by itself seven days after it was sent, and cannot be sent again while it runs. */
 export const MAX_PAUSE_SECONDS = 7 * 86_400;
+/** `PAUSE_REST` of both contracts: how long after the end of a pause the next one must wait, and the most a pause gives back to a window. */
+export const PAUSE_REST_SECONDS = 7 * 86_400;
 /** `SIGNER_DELAY` of both contracts: an announced evidence signer stands a day later. */
 export const SIGNER_DELAY_SECONDS = 24 * 60 * 60;
 
@@ -203,6 +219,18 @@ export const OPEN_TTL_SECONDS = 10 * 60;
 /** Signed by the recipient's own account: the two amounts their screen shows, to the unit. */
 export function endTypedData(kind: V2Kind, contract: Hex, message: { giftId: bigint; keep: bigint; giveBack: bigint; nonce: bigint; deadline: bigint }) {
   return { domain: v2Domain(kind, contract), types: END_TYPES, primaryType: "End" as const, message };
+}
+
+/** What the first reading of a gift says, as the contract and the recipient's signature both name it. */
+export type StartMessage = { giftId: bigint; identityHash: Hex; metricValue: bigint; observedAt: bigint };
+
+/**
+ * Signed by the recipient's own account, on the first reading of a gift and on no other: the identity that reading
+ * binds, the value it starts from and the moment it was read. It names the reading to the unit, so nobody who sees the
+ * signature on its way can send another reading with it.
+ */
+export function startTypedData(kind: V2Kind, contract: Hex, message: StartMessage) {
+  return { domain: v2Domain(kind, contract), types: START_TYPES, primaryType: "Start" as const, message };
 }
 
 /** The recipient's withdrawal, as on the first version but under the second version's domain. */

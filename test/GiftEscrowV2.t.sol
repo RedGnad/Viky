@@ -61,9 +61,8 @@ contract GiftEscrowV2Test {
         openingKey = VM.addr(LINK_KEY);
         token = new MockAUSD();
         escrow = new GiftEscrowV2(token, evidenceSigner, 1);
-        require(escrow.creationPaused() && escrow.checkInPaused(), "not fail-closed");
+        require(escrow.creationPaused() && !escrow.checkInPaused(), "not closed to gifts, or its pause is spent");
         escrow.setCreationPaused(false);
-        escrow.setCheckInPaused(false);
         escrow.registerGoal(GOAL_DUOLINGO, DUOLINGO_PROVIDER);
         token.mint(funder, 1_000_000_000);
         day0 = uint32(START / DAY);
@@ -811,9 +810,16 @@ contract GiftEscrowV2Test {
             nullifier: keccak256(abi.encode("nullifier", ++nullifierSeed)),
             issuedAt: issuedAt,
             expiresAt: issuedAt + 5 minutes,
-            signature: ""
+            signature: "",
+            recipientSignature: ""
         });
         a.signature = _sign(key, _checkInStructHash(giftId, a));
+        // The account the reading names signs it too: the contract asks for that on a first reading only.
+        a.recipientSignature = _sign(who == other ? OTHER_KEY : RECIPIENT_KEY, _startStructHash(giftId, a));
+    }
+
+    function _startStructHash(uint256 giftId, GiftEscrowV2.CheckInAttestation memory a) private view returns (bytes32) {
+        return keccak256(abi.encode(escrow.START_TYPEHASH(), giftId, a.identityHash, a.metricValue, a.observedAt));
     }
 
     function _checkInStructHash(uint256 giftId, GiftEscrowV2.CheckInAttestation memory a)

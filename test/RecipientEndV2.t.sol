@@ -441,8 +441,13 @@ contract RecipientEndDailyTest {
             nullifier: keccak256(abi.encode("nullifier", ++nullifierSeed)),
             issuedAt: issuedAt,
             expiresAt: issuedAt + 5 minutes,
-            signature: ""
+            signature: "",
+            recipientSignature: ""
         });
+        a.recipientSignature = _sign(
+            RECIPIENT_KEY,
+            keccak256(abi.encode(escrow.START_TYPEHASH(), giftId, a.identityHash, a.metricValue, a.observedAt))
+        );
         a.signature = _sign(
             EVIDENCE_KEY,
             keccak256(
@@ -774,8 +779,12 @@ contract RecipientEndMilestoneTest {
             nullifier: keccak256(abi.encode("nullifier", ++nullifierSeed)),
             issuedAt: issuedAt,
             expiresAt: issuedAt + 5 minutes,
-            signature: ""
+            signature: "",
+            recipientSignature: ""
         });
+        a.recipientSignature = _sign(
+            RECIPIENT_KEY, keccak256(abi.encode(gift.START_TYPEHASH(), id, a.identityHash, a.metricValue, a.observedAt))
+        );
         a.signature = _sign(
             EVIDENCE_KEY,
             keccak256(

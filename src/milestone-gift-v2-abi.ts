@@ -206,6 +206,19 @@ export const milestoneGiftV2Abi = [
   },
   {
     "type": "function",
+    "name": "PAUSE_REST",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "PROOF_GRACE",
     "inputs": [],
     "outputs": [
@@ -265,6 +278,19 @@ export const milestoneGiftV2Abi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "START_TYPEHASH",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
@@ -1048,6 +1074,19 @@ export const milestoneGiftV2Abi = [
   },
   {
     "type": "function",
+    "name": "proofPauseBegan",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "proofPaused",
     "inputs": [],
     "outputs": [
@@ -1133,6 +1172,11 @@ export const milestoneGiftV2Abi = [
           },
           {
             "name": "signature",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "recipientSignature",
             "type": "bytes",
             "internalType": "bytes"
           }
@@ -2028,6 +2072,11 @@ export const milestoneGiftV2Abi = [
   {
     "type": "error",
     "name": "OwnershipIsNotRenounceable",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PauseTooSoon",
     "inputs": []
   },
   {
