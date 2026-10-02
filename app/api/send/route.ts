@@ -94,8 +94,6 @@ export async function POST(request: Request) {
     // The sender is the signed-in account and nobody else: a signature for someone else's money is not
     // ours to relay, whatever the token would make of it.
     const from = getAddress(auth.account);
-    // Counted against the account's and the connection's ceilings before the relayer is asked for anything (D204).
-    await admitRelay(request, auth.account);
     const clients = relayerClients();
     await relayerPreflight(clients);
 
@@ -109,6 +107,10 @@ export async function POST(request: Request) {
     } catch {
       throw new GiftApiError("REFUSED", "That could not be sent. Please try again.", 409);
     }
+    // Counted against the account's and the connection's ceilings once everything that costs nothing has passed, the
+    // token's own answer to this authorization included (D204; the review of 2 Oct 2026, R-16): a signature that moves
+    // nothing is counted against nobody.
+    await admitRelay(request, auth.account);
     const estimate = await clients.publicClient.estimateContractGas({ address: coin.address, abi: TRANSFER_ABI, functionName: "transferWithAuthorization", args, account: clients.address });
     const hash = await clients.walletClient.writeContract({
       address: coin.address,

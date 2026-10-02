@@ -8,7 +8,7 @@ import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { AUSD_ADDRESS, USDC_ADDRESS } from "@/src/monad/chain";
 import { RelayerError } from "@/src/relayer";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { admitRelay } from "@/src/relay-admission";
+import { admitRelay, countedIfSent } from "@/src/relay-admission";
 import { canonicalSignature } from "@/src/signature";
 import { usdcRouterAddress } from "@/src/usdc-router";
 
@@ -75,8 +75,8 @@ export async function POST(request: Request) {
     let hash: Hex;
     let submitted: Hex | undefined;
     try {
-      await admitRelay(request, auth.account);
-      ({ hash } = await relayExit({
+      const admitted = await admitRelay(request, auth.account);
+      ({ hash } = await countedIfSent(admitted, () => relayExit({
         router,
         onSubmitted: async (sent) => {
           submitted = sent;
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
         },
         authorization: toExitAuthorization(0n, record.deadline, record.signature!),
         callData: record.callData,
-      }));
+      })));
     } catch (error) {
       // A route that moved is a retry to offer: these terms are set aside so the next attempt may quote again (D81).
       if (error instanceof RelayerError && error.contractError === "ExchangeFailed") {

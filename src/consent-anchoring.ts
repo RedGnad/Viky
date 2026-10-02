@@ -18,9 +18,15 @@ import { CONSENT_KIND, consentAnchorMessage, consentKeyTypedData, consentTextDig
  * It is off until the anchor's address is set (src/v2.ts): no offer is made, nothing is signed for it, nothing is sent.
  *
  * The agreement never waits on the chain. A row is kept first and applies at once, a stop above all; the anchor is
- * written after it, and a failure there leaves the row waiting with its signature. A yes still waiting is tried again
- * before a reading is taken (src/consent-guard.ts), which is the moment it matters: `pnpm verify:consent` holds every
- * reading that moved money against a yes anchored before it.
+ * written after it, and a failure there leaves the row waiting with its signature. Whatever still waits is tried again
+ * each time the gift is asked whether it may be read (src/consent-guard.ts), which every pass does: a yes, because
+ * `pnpm verify:consent` holds every reading that moved money against a yes anchored before it; and a stop too (the
+ * review of 2 Oct 2026, R-07), which used to be tried once and never again, so the public record went on showing a
+ * yes the person had taken back.
+ *
+ * What this cannot do: a yes or a stop signed while the anchor could not be read carries no signature for it, and is
+ * never written there. It is kept and applies all the same. The anchor is a public record of the agreement, not what
+ * the reading is decided on: that is still the row.
  */
 
 const ZERO_KEY = `0x${"00".repeat(32)}` as Hex;
@@ -128,6 +134,21 @@ export async function bindingStands(contract: Hex, account: string, publicKey: s
   }
 }
 
+/**
+ * Writes every row of a gift that still waits for the anchor, in the order their places were signed: the anchor takes
+ * a place only after the one before it, so a stop cannot be written while the yes before it waits. It stops at the
+ * first that still waits, and never throws.
+ */
+export async function anchorWaitingRows(rows: readonly ConsentRow[], deps: AnchorDeps = anchorDeps()): Promise<AnchorOutcome[]> {
+  const outcomes: AnchorOutcome[] = [];
+  for (const row of rows) {
+    const outcome = await anchorRow(row, deps);
+    outcomes.push(outcome);
+    if (outcome === "waiting") break;
+  }
+  return outcomes;
+}
+
 export type AnchorOutcome =
   /** Written now, or found written already. */
   | "anchored"
@@ -155,6 +176,12 @@ export async function anchorRow(row: ConsentRow, deps: AnchorDeps = anchorDeps()
       return "never";
     }
     const count = await deps.entryCount(contract, account, row.giftId);
+    if (count < row.anchorSequence) {
+      // The place before it is not written yet: a yes that still waits, then the stop that took it back. It waits its
+      // turn. Until 2 Oct 2026 it was given up here, for good, and the public record kept the yes.
+      say(`signed for place ${row.anchorSequence}, and the anchor is at ${count}: it waits for what comes before it`);
+      return "waiting";
+    }
     if (count !== row.anchorSequence) {
       // Its place is taken. By this very row, when a transaction went through and its answer was lost: then it is
       // written, and only the transaction's hash is unknown here.

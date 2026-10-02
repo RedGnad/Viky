@@ -7,7 +7,7 @@ import { attachSignature, claimExitRelay, loadExit, markExitSent, markExitStale,
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { RelayerError } from "@/src/relayer";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { admitRelay } from "@/src/relay-admission";
+import { admitRelay, countedIfSent } from "@/src/relay-admission";
 import { canonicalSignature } from "@/src/signature";
 
 export const runtime = "nodejs";
@@ -83,8 +83,8 @@ export async function POST(request: Request) {
     let hash: Hex;
     let submitted: Hex | undefined;
     try {
-      await admitRelay(request, auth.account);
-      ({ hash } = await relayExit({
+      const admitted = await admitRelay(request, auth.account);
+      ({ hash } = await countedIfSent(admitted, () => relayExit({
         onSubmitted: async (sent) => {
           submitted = sent;
           await noteExitHash(id, sent);
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
         },
         authorization: toExitAuthorization(0n, record.deadline, record.signature!),
         callData: record.callData,
-      }));
+      })));
     } catch (error) {
       if (error instanceof RelayerError && error.contractError === "ExchangeFailed") {
         await markExitStale(id);

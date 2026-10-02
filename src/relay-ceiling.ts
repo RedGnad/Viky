@@ -11,7 +11,7 @@ import { RELAY_CEILING as W } from "./sentences";
  *
  * The numbers are the founder's defaults and read from the environment when it names others.
  */
-export type RelayCeilings = Readonly<{ perHour: number; perDay: number; minimumUnits: bigint; topUpsPerMinute: number; topUpsPerGift: number; perDayAll: number }>;
+export type RelayCeilings = Readonly<{ perHour: number; perDay: number; minimumUnits: bigint; topUpsPerMinute: number; topUpsPerGift: number; perDayAll: number; reservedForWaysOut: number }>;
 
 // Two top-ups a gift, for as long as it lives (the money path audit of 27 Sep 2026): a fee that rose between the
 // answer and the send may be readied once more, and a funder who sweeps the MON out cannot be readied in a loop.
@@ -20,22 +20,30 @@ export type RelayCeilings = Readonly<{ perHour: number; perDay: number; minimumU
 // connection's, so many accounts on many connections had no ceiling at all, and what they cost is one relayer's coin.
 // Five hundred a day: a credited day costs the relayer about 0.018 of it (measured 1 Oct 2026) and a gift's creation
 // several times that, so a day at this ceiling costs it under thirty, which it holds above its reserve.
-export const DEFAULT_RELAY_CEILINGS: RelayCeilings = { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1, topUpsPerGift: 2, perDayAll: 500 };
+//
+// A part of that one count is kept for the ways out of a gift (the review of 2 Oct 2026, R-16): opening it, ending it,
+// taking out what is earned, and the funder taking back a gift nobody opened. Everything else, making a gift, counting
+// a day, writing an agreement down, is refused once the count reaches what is not kept. So a day in which everybody's
+// count is used up still opens, ends and pays out. A hundred of the five hundred.
+export const DEFAULT_RELAY_CEILINGS: RelayCeilings = { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1, topUpsPerGift: 2, perDayAll: 500, reservedForWaysOut: 100 };
 
 const wholeNumber = (value: string | undefined, fallback: number): number => {
   const parsed = Number(value?.trim());
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-/** `RELAY_PER_HOUR`, `RELAY_PER_DAY`, `RELAY_MINIMUM_CENTS` (100 is one dollar), `TOP_UPS_PER_MINUTE`, `TOP_UPS_PER_GIFT`, `RELAY_PER_DAY_ALL`. */
+/** `RELAY_PER_HOUR`, `RELAY_PER_DAY`, `RELAY_MINIMUM_CENTS` (100 is one dollar), `TOP_UPS_PER_MINUTE`, `TOP_UPS_PER_GIFT`, `RELAY_PER_DAY_ALL`, `RELAY_RESERVED_FOR_WAYS_OUT`. */
 export function relayCeilings(env: Readonly<Record<string, string | undefined>> = process.env): RelayCeilings {
+  const perDayAll = wholeNumber(env.RELAY_PER_DAY_ALL, DEFAULT_RELAY_CEILINGS.perDayAll);
   return {
+    // Never more than half of everybody's count: a reserve that took it all would leave nothing to make a gift with.
+    reservedForWaysOut: Math.min(wholeNumber(env.RELAY_RESERVED_FOR_WAYS_OUT, DEFAULT_RELAY_CEILINGS.reservedForWaysOut), Math.floor(perDayAll / 2)),
     perHour: wholeNumber(env.RELAY_PER_HOUR, DEFAULT_RELAY_CEILINGS.perHour),
     perDay: wholeNumber(env.RELAY_PER_DAY, DEFAULT_RELAY_CEILINGS.perDay),
     minimumUnits: BigInt(wholeNumber(env.RELAY_MINIMUM_CENTS, Number(DEFAULT_RELAY_CEILINGS.minimumUnits / 10_000n))) * 10_000n,
     topUpsPerMinute: wholeNumber(env.TOP_UPS_PER_MINUTE, DEFAULT_RELAY_CEILINGS.topUpsPerMinute),
     topUpsPerGift: wholeNumber(env.TOP_UPS_PER_GIFT, DEFAULT_RELAY_CEILINGS.topUpsPerGift),
-    perDayAll: wholeNumber(env.RELAY_PER_DAY_ALL, DEFAULT_RELAY_CEILINGS.perDayAll),
+    perDayAll,
   };
 }
 
@@ -65,16 +73,18 @@ export const RELAY_DAY_ALL = "relay:day:all";
 
 /**
  * The five counts a relayed action is held against: the account and the connection, each by the hour and by the day,
- * and everybody together by the day.
+ * and everybody together by the day. A way out of a gift is held against the whole of everybody's count; anything else
+ * against the part that is not kept for the ways out.
  */
-export function relayScopes(account: string, ip: string, ceilings: RelayCeilings): readonly RelayScope[] {
+export function relayScopes(account: string, ip: string, ceilings: RelayCeilings, wayOut = false): readonly RelayScope[] {
   const who = account.toLowerCase();
+  const everybody = wayOut ? ceilings.perDayAll : ceilings.perDayAll - ceilings.reservedForWaysOut;
   return [
     { scope: `relay:hour:account:${who}`, window: "hour", limit: ceilings.perHour, who: "account" },
     { scope: `relay:day:account:${who}`, window: "day", limit: ceilings.perDay, who: "account" },
     { scope: `relay:hour:ip:${ip}`, window: "hour", limit: ceilings.perHour, who: "connection" },
     { scope: `relay:day:ip:${ip}`, window: "day", limit: ceilings.perDay, who: "connection" },
-    { scope: RELAY_DAY_ALL, window: "day", limit: ceilings.perDayAll, who: "everybody" },
+    { scope: RELAY_DAY_ALL, window: "day", limit: everybody, who: "everybody" },
   ];
 }
 

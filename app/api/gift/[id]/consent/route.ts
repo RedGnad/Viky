@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { readAccountAuthSession } from "@/src/account-auth-server";
 import { consentBytes, fromHex } from "@/src/consent";
 import { giftConsent, giftConsentText, termsFor } from "@/src/consent-server";
-import { anchorContract, anchorOffer, anchorRow, anchorSignatureStands, bindingStands, requestedAnchor } from "@/src/consent-anchoring";
+import { anchorContract, anchorOffer, anchorSignatureStands, anchorWaitingRows, bindingStands, requestedAnchor } from "@/src/consent-anchoring";
 import { readingLeave, type ReadingLeave } from "@/src/consent-guard";
-import { ed25519Verifies, keepBinding, keepConsent, keepConsentKey, latestConsent } from "@/src/consent-store";
+import { consentsWaitingForAnchor, ed25519Verifies, keepBinding, keepConsent, keepConsentKey, latestConsent } from "@/src/consent-store";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { admitRelay } from "@/src/relay-admission";
+import { admitRelay, countedIfSent } from "@/src/relay-admission";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -115,8 +115,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       // or a failure there changes nothing for the person: the row waits, and a yes is tried again before a reading.
       try {
         if (signed.binding) await keepBinding(account, signed.binding);
-        await admitRelay(request, account);
-        await anchorRow(row);
+        const admitted = await admitRelay(request, account);
+        // Whatever of this gift still waits is written first, in the order the places were signed: a stop cannot take
+        // its place on the anchor before the yes it follows (the review of 2 Oct 2026, R-07).
+        await countedIfSent(admitted, async () => {
+          await anchorWaitingRows(await consentsWaitingForAnchor(id));
+        });
       } catch (error) {
         console.error(`consent anchor: gift ${id}, row ${row.id}: left waiting: ${error instanceof Error ? error.message : String(error)}`);
       }

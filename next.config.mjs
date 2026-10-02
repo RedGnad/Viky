@@ -1,6 +1,19 @@
 import { fileURLToPath } from "node:url";
 import { withSerwist } from "@serwist/turbopack";
 
+/**
+ * The second version of the gift contracts is set by three addresses, together or not at all (the review of 2 Oct
+ * 2026, R-08; `secondVersionProblem` in src/v2.ts says why, and test/v2-server.test.ts holds the two to the same
+ * answer). A browser's copy of them is fixed here, when the app is built, so this is where a half-set second version
+ * is refused first: the build fails, and nothing is served.
+ */
+const SECOND_VERSION_SETTINGS = ["NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS", "NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS", "NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS"];
+const secondVersion = SECOND_VERSION_SETTINGS.map((name) => (process.env[name] ?? "").trim());
+const secondVersionSet = secondVersion.filter((value) => value !== "");
+if (secondVersionSet.length > 0 && (secondVersionSet.length < 3 || secondVersionSet.some((value) => !/^0x[0-9a-fA-F]{40}$/.test(value)) || new Set(secondVersionSet.map((value) => value.toLowerCase())).size < 3)) {
+  throw new Error(`Refusing to build: ${SECOND_VERSION_SETTINGS.join(", ")} are set together, each an address of its own, or none is.`);
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,

@@ -9,6 +9,7 @@ import {
   anchorOffer,
   anchorRow,
   anchorSignatureStands,
+  anchorWaitingRows,
   bindingStands,
   configureConsentAnchor,
   requestedAnchor,
@@ -16,7 +17,7 @@ import {
   type AnchorEntry,
 } from "../src/consent-anchoring";
 import { AGREEMENTS_FROM, readingLeave } from "../src/consent-guard";
-import { bindingOf, configureConsentStore, consentHistory, keepBinding, keepConsent, keepConsentKey, noteAnchored, stopWaitingForAnchor, type ConsentRow } from "../src/consent-store";
+import { bindingOf, configureConsentStore, consentHistory, consentsWaitingForAnchor, keepBinding, keepConsent, keepConsentKey, noteAnchored, stopWaitingForAnchor, type ConsentRow } from "../src/consent-store";
 import { consentTermsFor } from "../src/consent-terms";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { consentAnchorMessage, consentKeyTypedData, consentTextDigest } from "../src/v2-protocol";
@@ -284,10 +285,59 @@ test("a yes that still waits is tried again before a reading, and the reading is
   assert.deepEqual(await readingLeave("3000013", AFTER), { allowed: true, beforeAgreements: false });
   assert.equal(anchor.sent.length, 2);
 
-  // The chain refusing does not refuse the reading: the yes is in force since it was kept.
+  // A stop is written by the same question, since the review of 2 Oct 2026 (R-07): it used to be tried once.
   await kept("stop", "3000013", 1);
   assert.deepEqual(await readingLeave("3000013", AFTER), { allowed: false, reason: "stopped" });
+  assert.deepEqual(anchor.sent.map((one) => one.functionName), ["bind", "anchor", "anchor"]);
+  // The chain refusing does not refuse the reading: the yes is in force since it was kept.
   anchor.fail("the chain did not answer");
-  await kept("yes", "3000013", 1);
+  await kept("yes", "3000013", 2);
   assert.deepEqual(await readingLeave("3000013", AFTER), { allowed: true, beforeAgreements: false });
+});
+
+test("a stop the anchor missed is tried again at every pass until it is written, after the yes that waited before it (the review of 2 Oct 2026, R-07)", async () => {
+  const anchor = chain();
+  configureConsentAnchor(anchor.deps);
+  const AFTER = AGREEMENTS_FROM + 86_400;
+  await keepConsentKey(ACCOUNT, KEY);
+  await keepBinding(ACCOUNT, await bindingBy());
+  // The chain does not answer when the yes is given, nor when it is taken back: neither is written.
+  anchor.fail("the chain did not answer");
+  assert.equal(await anchorRow(await kept("yes", "3000014", 0)), "waiting");
+  assert.equal(await anchorRow(await kept("stop", "3000014", 1)), "waiting");
+
+  // The stop holds from the moment it was signed, written or not. A pass asks, and the chain still does not answer.
+  assert.deepEqual(await readingLeave("3000014", AFTER), { allowed: false, reason: "stopped" });
+  assert.equal(anchor.entries(ACCOUNT, "3000014").length, 0);
+  assert.equal((await consentsWaitingForAnchor("3000014")).length, 2, "both still hold what the anchor is to be given");
+
+  // A page that only reads the state sends nothing, even now that the chain answers.
+  anchor.fail(null);
+  assert.deepEqual(await readingLeave("3000014", AFTER, false), { allowed: false, reason: "stopped" });
+  assert.equal(anchor.sent.length, 0);
+
+  // The next pass: both are written, in the order their places were signed. Before, the stop was never tried again,
+  // and the public record went on showing a yes.
+  assert.deepEqual(await readingLeave("3000014", AFTER), { allowed: false, reason: "stopped" });
+  assert.deepEqual(anchor.sent.map((one) => one.functionName), ["bind", "anchor", "anchor"]);
+  assert.deepEqual(anchor.entries(ACCOUNT, "3000014").map((entry) => entry.kind), [1, 2], "a yes, then the stop that took it back");
+  assert.equal((await consentsWaitingForAnchor("3000014")).length, 0);
+
+  // And the pass after that sends nothing more.
+  assert.deepEqual(await readingLeave("3000014", AFTER), { allowed: false, reason: "stopped" });
+  assert.equal(anchor.sent.length, 3);
+});
+
+test("a stop is not written before the yes it follows: what waits is tried in order, and stops at the first that still waits", async () => {
+  const anchor = chain();
+  await keepConsentKey(ACCOUNT, KEY);
+  // No binding yet, so the yes cannot be written; the stop signed after it must not take its place.
+  const yes = await kept("yes", "3000015", 0);
+  await kept("stop", "3000015", 1);
+  assert.deepEqual(await anchorWaitingRows(await consentsWaitingForAnchor("3000015"), anchor.deps), ["waiting"]);
+  assert.equal(anchor.sent.length, 0);
+  assert.equal(yes.anchorSequence, 0);
+  await keepBinding(ACCOUNT, await bindingBy());
+  assert.deepEqual(await anchorWaitingRows(await consentsWaitingForAnchor("3000015"), anchor.deps), ["anchored", "anchored"]);
+  assert.deepEqual(anchor.entries(ACCOUNT, "3000015").map((entry) => entry.kind), [1, 2]);
 });

@@ -9,7 +9,7 @@ import { milestoneErrorResponse } from "@/src/milestone-api";
 import { isMilestoneGiftId } from "@/src/milestone-protocol";
 import { milestoneClaim } from "@/src/milestone-routes";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { admitRelay } from "@/src/relay-admission";
+import { admitWayOut, countedIfSent } from "@/src/relay-admission";
 import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
 import { openingOf, openWithTheLinkKey, versionOfGift } from "@/src/v2-opening";
 
@@ -43,11 +43,13 @@ export async function POST(request: Request) {
       const known = await loadGift(giftId);
       if (!known || versionOfGift(known) !== 2 || known.recipient) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid or was already used", 404);
       refuseOwnGift(known, auth.account);
-      await admitRelay(request, auth.account);
+      // Counted once the signature has been held to the gift's own opening key, and held against the part of
+      // everybody's count kept for the ways out (the review of 2 Oct 2026, R-16).
+      const admit = () => admitWayOut(request, auth.account);
       // A milestone gift's own refusals are said in its own words, as on the first version.
       const opened = isMilestoneGiftId(giftId)
-        ? await openWithTheLinkKey(known, auth.account, opening).catch((error: unknown) => milestoneErrorResponse(error))
-        : await openWithTheLinkKey(known, auth.account, opening);
+        ? await openWithTheLinkKey(known, auth.account, opening, admit).catch((error: unknown) => milestoneErrorResponse(error))
+        : await openWithTheLinkKey(known, auth.account, opening, admit);
       if (opened instanceof NextResponse) return opened;
       await markClaimed(giftId, auth.account, opened.hash);
       return NextResponse.json({ giftId, opened: true }, { headers: NO_STORE });
@@ -64,11 +66,11 @@ export async function POST(request: Request) {
     const gift = await loadGiftForClaim(giftId, token);
     if (!gift) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid or was already used", 404);
     refuseOwnGift(gift, auth.account);
-    await admitRelay(request, auth.account);
+    const admitted = await admitWayOut(request, auth.account);
     // A milestone gift is opened on its own contract (C2), with the same link and the same rule.
-    if (isMilestoneGiftId(giftId)) return await milestoneClaim({ record: gift, recipient: auth.account }).catch((error: unknown) => milestoneErrorResponse(error));
+    if (isMilestoneGiftId(giftId)) return await countedIfSent(admitted, () => milestoneClaim({ record: gift, recipient: auth.account })).catch((error: unknown) => milestoneErrorResponse(error));
 
-    const result = await relayClaim({ giftId, escrow: escrowOf(gift), recipient: getAddress(auth.account), contactHash: gift.contactHash });
+    const result = await countedIfSent(admitted, () => relayClaim({ giftId, escrow: escrowOf(gift), recipient: getAddress(auth.account), contactHash: gift.contactHash }));
     await markClaimed(giftId, auth.account, result.hash);
     return NextResponse.json({ giftId, opened: true }, { headers: NO_STORE });
   } catch (error) {

@@ -18,7 +18,7 @@ import { makeMilestoneGift } from "@/src/milestone-creation";
 import { MILESTONE_MAX_AMOUNT, MILESTONE_MIN_AMOUNT, milestoneFundingNonce, SHAPE_CLIMB, ZERO_SUBJECT, type MilestoneParams } from "@/src/milestone-protocol";
 import { checkTarget, MilestoneTermsError, startingCeiling } from "@/src/milestone-terms";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { admitRelay } from "@/src/relay-admission";
+import { admitRelay, countedIfSent } from "@/src/relay-admission";
 import { milestoneFundingNonceV2, type MilestoneParamsV2 } from "@/src/v2-protocol";
 import { answeredLink, requestedLink } from "@/src/v2-request";
 
@@ -179,8 +179,8 @@ export async function POST(request: Request) {
 
     // Counted against the account's and the connection's ceilings before the relayer is asked for anything (D204): a
     // creation declares the most gas of any relayed step, and was the one step that went around the door.
-    await admitRelay(request, auth.account);
-    const created = await makeMilestoneGift({
+    const admitted = await admitRelay(request, auth.account);
+    const created = await countedIfSent(admitted, () => makeMilestoneGift({
       params: second ?? params,
       linkFingerprint: link?.fingerprint,
       nonce,
@@ -196,7 +196,7 @@ export async function POST(request: Request) {
       recipientName,
       funderName,
       facts: { conditionId: milestone.condition.id, mode: cadence.id, standingAtOffer: standing, standingReadAt: standingReadAt.toISOString() },
-    });
+    }));
     const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin;
     // The gift keeps the currency its funder is reading in now, for its link's title and picture. Never a reason to
     // fail a gift that is made: without it the link speaks the currency the account reads in, as before.

@@ -7,7 +7,7 @@ import { MILESTONE_OURS_TO_FIX, runMilestoneReading, type MilestoneOutcome } fro
 import { relayExpire, relayMilestoneRefund } from "./milestone-relay";
 import { tellAboutMilestone } from "./morning-send";
 import { liveTellingDeps } from "./morning-send-live";
-import { isMilestoneGiftId, SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
+import { SHAPE_CLIMB, isMilestoneGiftId, SHAPE_HAVE_OR_NOT } from "./milestone-protocol";
 import { latestReviewOf } from "./portal-store";
 import { escrowOf, RelayerError } from "./relayer";
 
@@ -111,7 +111,10 @@ async function passOne(record: { giftId: string; escrow: Hex | null }, settle: b
   }
   let state = await deps.read(contract, giftId);
   let held = false;
-  if (milestonePhase(state, deps.now()) === "climbing") {
+  const phase = milestonePhase(state, deps.now());
+  // A climb past its deadline and still inside its grace is asked too (the review of 2 Oct 2026, R-14): nothing read
+  // now can count for it, but a reading a pause kept from being sent can, and this is where it is sent.
+  if (phase === "climbing" || (phase === "overdue" && state.shape === SHAPE_CLIMB && !canExpire(state, deps.now()))) {
     const outcome = await deps.reach(giftId);
     lines.push({ giftId, step: "read", result: describe(outcome), hash: "hash" in outcome ? outcome.hash : undefined });
     held = outcome.kind === "refused" && MILESTONE_OURS_TO_FIX.has(outcome.code);

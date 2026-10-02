@@ -1,4 +1,5 @@
 import { getAddress, type Hex } from "viem";
+import { consentAnchorAddress, giftEscrowV2Address, milestoneGiftV2Address } from "./v2";
 
 /**
  * Viky's own contracts on Monad mainnet, each read on chain on 29 Sep 2026 (owner: the project's Safe). Browser safe.
@@ -19,8 +20,17 @@ export const EXIT_ROUTER = getAddress("0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB622
 
 export const VIKY_CONTRACTS: readonly Hex[] = [GIFT_ESCROW, EARLIER_GIFT_ESCROW, MILESTONE_GIFT, EXIT_ROUTER];
 
+/**
+ * The three contracts of the second version, once their addresses are set (src/v2.ts), and none before (the review
+ * of 2 Oct 2026, R-09). None of the three has a way to give back money sent to it by a plain transfer, the anchor no
+ * more than the two that hold gifts.
+ */
+export function secondVersionContracts(): readonly Hex[] {
+  return [giftEscrowV2Address(), milestoneGiftV2Address(), consentAnchorAddress()].filter((address): address is Hex => address !== null);
+}
+
 /** Whether an address is one of Viky's own contracts, where money sent by hand would be lost. */
 export function isVikyContract(address: string): boolean {
   const lowered = address.toLowerCase();
-  return VIKY_CONTRACTS.some((contract) => contract.toLowerCase() === lowered);
+  return [...VIKY_CONTRACTS, ...secondVersionContracts()].some((contract) => contract.toLowerCase() === lowered);
 }

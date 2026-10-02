@@ -39,6 +39,40 @@ export function consentAnchorAddress(): Hex | null {
   return addressOf(process.env.NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS);
 }
 
+/** The three settings of the second version: they are set together, or not at all. */
+export const SECOND_VERSION_SETTINGS = ["NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS", "NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS", "NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS"] as const;
+
+/**
+ * What is wrong with the three settings, or nothing (the review of 2 Oct 2026, R-08). Each is read on its own, so one
+ * left out was a silence, not an error: with the anchor's address forgotten, gifts were made on the second version and
+ * no agreement was ever written down in public; with a gift contract's forgotten, its gifts were read with the first
+ * version's words and every reading was refused. So: all three, each an address, or none.
+ */
+export function secondVersionProblem(env: Readonly<Record<string, string | undefined>> = process.env): string | null {
+  const given = SECOND_VERSION_SETTINGS.map((name) => ({ name, value: env[name]?.trim() ?? "" }));
+  const set = given.filter((one) => one.value !== "");
+  if (set.length === 0) return null;
+  const malformed = set.filter((one) => !/^0x[0-9a-fA-F]{40}$/.test(one.value));
+  if (malformed.length > 0) return `${malformed.map((one) => one.name).join(", ")} ${malformed.length === 1 ? "is" : "are"} set and ${malformed.length === 1 ? "is" : "are"} not an address`;
+  const missing = given.filter((one) => one.value === "");
+  if (missing.length > 0) return `${set.map((one) => one.name).join(", ")} ${set.length === 1 ? "is" : "are"} set and ${missing.map((one) => one.name).join(", ")} ${missing.length === 1 ? "is" : "are"} not: the three are set together, or none is`;
+  if (new Set(set.map((one) => one.value.toLowerCase())).size !== set.length) return "two of the three settings of the second version name the same address";
+  return null;
+}
+
+export class SecondVersionHalfSet extends Error {
+  constructor(problem: string) {
+    super(`Refusing to start: ${problem}. A second version that is half set serves its gifts wrongly without saying so.`);
+    this.name = "SecondVersionHalfSet";
+  }
+}
+
+/** Refuses a half-set second version, by name. Asked when the app is built and when a server starts. */
+export function assertSecondVersionWhole(env: Readonly<Record<string, string | undefined>> = process.env): void {
+  const problem = secondVersionProblem(env);
+  if (problem) throw new SecondVersionHalfSet(problem);
+}
+
 function same(a: string | null | undefined, b: string | null | undefined): boolean {
   return Boolean(a) && Boolean(b) && String(a).toLowerCase() === String(b).toLowerCase();
 }

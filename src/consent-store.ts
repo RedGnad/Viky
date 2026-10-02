@@ -178,6 +178,16 @@ export async function latestConsent(giftId: string): Promise<ConsentRow | null> 
   return rows[0] ? rowOf(rows[0]) : null;
 }
 
+/**
+ * The rows of a gift that were signed for the anchor and are not on it yet, oldest first: the order their places were
+ * signed in, which is the order the anchor takes them in.
+ */
+export async function consentsWaitingForAnchor(giftId: string): Promise<ConsentRow[]> {
+  await ensureConsentSchema();
+  const rows = await sql()`SELECT * FROM viky_consents WHERE gift_id = ${giftId} AND anchor_tx IS NULL AND anchor_signature IS NOT NULL ORDER BY signed_at ASC, id ASC`;
+  return rows.map(rowOf);
+}
+
 /** Every yes and stop of a gift, oldest first: what its journal is marked by. */
 export async function consentHistory(giftId: string): Promise<ConsentRow[]> {
   await ensureConsentSchema();

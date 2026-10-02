@@ -6,7 +6,8 @@ import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { readGift } from "@/src/gift-reader";
 import { relayWithdraw } from "@/src/gift-relay";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { admitRelay, assertNotTooSmall } from "@/src/relay-admission";
+import { admitWayOut, assertNotTooSmall, countedIfSent } from "@/src/relay-admission";
+import { assertWithdrawStands } from "@/src/relay-free-checks";
 import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
 import { loadGift } from "@/src/gift-store";
 import { isOperator } from "@/src/dev-access";
@@ -58,10 +59,12 @@ export async function POST(request: Request) {
     }
 
     assertGiftContractConfigured();
-    await admitRelay(request, auth.account);
+    // Counted last (the review of 2 Oct 2026, R-16): only a withdrawal the contract would take is counted, once the
+    // gift is known, the account is its recipient and the intent is theirs, with the gift's nonce and not run out.
+    const admit = () => admitWayOut(request, auth.account);
     // A milestone gift is taken from its own contract, under its own signing domain (C2).
     if (isMilestoneGiftId(giftId)) {
-      return await milestoneWithdraw({ account: auth.account, giftId, to, amount, nonce, deadline, signature }).catch((error: unknown) =>
+      return await milestoneWithdraw({ account: auth.account, giftId, to, amount, nonce, deadline, signature }, admit).catch((error: unknown) =>
         milestoneErrorResponse(error, isOperator(operatorAccount)),
       );
     }
@@ -74,8 +77,9 @@ export async function POST(request: Request) {
     }
     if (amount <= 0n || amount > gift.earnedBalance) throw new GiftApiError("NOT_ENOUGH_EARNED", "That is more than what is yours so far", 409);
     assertNotTooSmall("takeOut", amount, gift.earnedBalance);
+    await assertWithdrawStands({ giftId, contract: escrow, recipient: auth.account, to: getAddress(to), amount, nonce, deadline, signature }, gift.withdrawNonce);
 
-    const result = await relayWithdraw({ giftId, escrow, to: getAddress(to), amount, nonce, deadline, signature });
+    const result = await countedIfSent(await admit(), () => relayWithdraw({ giftId, escrow, to: getAddress(to), amount, nonce, deadline, signature }));
     return NextResponse.json({ giftId, sent: true, amount: amount.toString(), hash: result.hash }, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error, isOperator(operatorAccount));

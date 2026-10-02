@@ -6,6 +6,7 @@ import { holdsGiftLink, type GiftRecord } from "./gift-store";
 import { isMilestoneGiftId } from "./milestone-protocol";
 import { readMilestoneGift } from "./milestone-reader";
 import { relayMilestoneOpen } from "./milestone-relay";
+import { countedIfSent, type Admission } from "./relay-admission";
 import { escrowOf, type RelayResult } from "./relayer";
 import { dailyVersionOf, milestoneVersionOf, type ContractVersion } from "./v2";
 import { LINK_SECRET, openTypedData, OPEN_TTL_SECONDS, previewTokenOf } from "./v2-protocol";
@@ -71,8 +72,12 @@ export function openingOf(body: unknown, nowSeconds: number = Math.floor(Date.no
   return { deadline: until, signature: signature as Hex };
 }
 
-/** Opens the gift for `recipient` with the signature its link's key made, after checking it against the contract's own key. */
-export async function openWithTheLinkKey(record: GiftRecord, recipient: string, opening: OpeningRequest): Promise<RelayResult> {
+/**
+ * Opens the gift for `recipient` with the signature its link's key made, after checking it against the contract's own
+ * key. `admit` counts the request, and is asked only once that check has passed: an opening that cannot open the gift
+ * costs the relayer nothing and is counted against nobody (the review of 2 Oct 2026, R-16).
+ */
+export async function openWithTheLinkKey(record: GiftRecord, recipient: string, opening: OpeningRequest, admit?: () => Promise<Admission>): Promise<RelayResult> {
   const contract = escrowOf(record);
   const account = getAddress(recipient);
   const milestone = isMilestoneGiftId(record.giftId);
@@ -84,5 +89,6 @@ export async function openWithTheLinkKey(record: GiftRecord, recipient: string, 
   }).catch(() => null);
   if (!signer || !state.openingKey || signer.toLowerCase() !== state.openingKey.toLowerCase()) throw new GiftApiError("CLAIM_LINK_INVALID", "This link is not valid", 404);
   const input = { giftId: record.giftId, recipient: account, deadline: opening.deadline, signature: opening.signature };
-  return milestone ? relayMilestoneOpen({ ...input, contract }) : relayOpen({ ...input, escrow: contract });
+  const relayIt = () => (milestone ? relayMilestoneOpen({ ...input, contract }) : relayOpen({ ...input, escrow: contract }));
+  return admit ? countedIfSent(await admit(), relayIt) : relayIt();
 }
