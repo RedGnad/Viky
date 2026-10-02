@@ -1,17 +1,26 @@
 import "../src/load-env";
-import { createPublicClient, createWalletClient, encodeFunctionData, getAddress, recoverAddress, type Abi, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, getAddress, recoverAddress, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { exitRouterAbi } from "../src/exit-router-abi";
-import { giftEscrowAbi } from "../src/gift-escrow-abi";
-import { milestoneGiftAbi } from "../src/milestone-gift-abi";
 import { addMonadGasBuffer } from "../src/monad-gas";
-import { MONAD_CHAIN_ID, monadChain, monadTransport, waitForFinality } from "../src/monad/chain";
+import { MONAD_CHAIN_ID, monadChain, monadRpcUrl, scriptTransport, waitForFinality } from "../src/monad/chain";
+import { decodeContractError } from "../src/relayer";
+import { safeActionCall } from "../src/safe-actions";
 import { execTransactionData, packSafeSignatures, safeAbi, safeCall, safeTxHash, SAFE_VERSION, type SafeTransaction } from "../src/safe";
 import { signWithHiddenPhrase } from "../src/safe-phrase";
 
 /**
- * One owner action, signed by both keys of the Safe and executed (mitigation a). It is the whole of what the four
- * contracts' owner can still do once the Safe holds them: pausing, registering a goal, changing the evidence signer.
+ * One owner action, signed by both keys of the Safe and executed (mitigation a). It is the whole of what the
+ * contracts' owner can still do once the Safe holds them: pausing, changing the evidence signer, and, for a contract
+ * of the second version, accepting its ownership (src/safe-actions.ts names every action and every target).
+ *
+ *   TARGET=escrow | earlier-escrow | milestone | router | escrow-v2 | milestone-v2 | anchor
+ *   ACTION=creation-paused | checkin-paused | proof-paused (with PAUSED=true|false), evidence-signer | anchorer (with
+ *          VALUE=0x…), accept-ownership, raw (with TO and DATA)
+ *   TARGET_ADDRESS=0x…  a contract of the second version the app does not know yet, as its deployment printed it
+ *
+ * Before anything is printed to sign, the call is run as the Safe against the chain's own state: one the contract would
+ * refuse (a pause sent too soon, an ownership that was not handed to this Safe) is refused here, with the contract's
+ * own word, and not after two people have signed it.
  *
  * It runs in three passes, and each pass can happen on a different machine:
  *   1. build:   ACTION=… pnpm safe:action                          prints the transaction and the hash to sign
@@ -26,56 +35,18 @@ import { signWithHiddenPhrase } from "../src/safe-phrase";
  * another.
  */
 
-const escrowAbi = giftEscrowAbi as unknown as Abi;
-const milestoneAbi = milestoneGiftAbi as unknown as Abi;
-
-function target(): { name: string; address: Address; abi: Abi } {
-  const which = (process.env.TARGET?.trim() ?? "escrow").toLowerCase();
-  const of = (name: string, value: string | undefined, abi: Abi) => {
-    if (!value?.trim()) throw new Error(`No address for ${name}`);
-    return { name, address: getAddress(value.trim()), abi };
-  };
-  if (which === "escrow") return of("gift escrow", process.env.GIFT_ESCROW_ADDRESS, escrowAbi);
-  if (which === "earlier-escrow") return of("earlier gift escrow", process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS, escrowAbi);
-  if (which === "milestone") return of("milestone gift", process.env.MILESTONE_GIFT_ADDRESS, milestoneAbi);
-  // The router holds none of the named actions below (it pauses nothing and signs no evidence): reach it with raw data.
-  if (which === "router") return of("exit router", process.env.EXIT_ROUTER_ADDRESS, exitRouterAbi as unknown as Abi);
-  throw new Error(`TARGET is escrow, earlier-escrow, milestone or router, and ${which} is none of them`);
-}
-
-/** The first four bytes of `renounceOwnership()`. */
-const RENOUNCE_OWNERSHIP = "0x715018a6";
-
-/** The action in words, turned into the one call it is. Anything else goes through ACTION=raw with its own data. */
-function actionCall(): { step: string; to: Address; data: Hex } {
-  const action = (process.env.ACTION?.trim() ?? "").toLowerCase();
-  if (action === "raw") {
-    const to = getAddress(String(process.env.TO?.trim()));
-    const data = String(process.env.DATA?.trim()) as Hex;
-    if (!/^0x([0-9a-fA-F]{2})+$/.test(data)) throw new Error("DATA must be the call's own bytes, as 0x followed by an even number of hex figures");
-    // `renounceOwnership()`, by its selector: it leaves a contract with no owner for good, and no step of Viky's ever
-    // needs it. The contracts that refuse it say so themselves; this refuses before two people are asked to sign it.
-    if (data.toLowerCase().startsWith(RENOUNCE_OWNERSHIP)) throw new Error("Refusing to run: DATA is renounceOwnership(), which gives a contract's ownership up for good");
-    return { step: `raw call to ${to}`, to, data };
-  }
-  const paused = process.env.PAUSED?.trim();
-  const said = (value: string | undefined) => (value === "true" ? true : value === "false" ? false : undefined);
-  const { name, address, abi } = target();
-  if (action === "creation-paused" || action === "checkin-paused" || action === "proof-paused") {
-    const value = said(paused);
-    if (value === undefined) throw new Error("PAUSED must be true or false");
-    const functionName = action === "creation-paused" ? "setCreationPaused" : action === "checkin-paused" ? "setCheckInPaused" : "setProofPaused";
-    return { step: `${value ? "pause" : "unpause"} ${action.replace("-paused", "")} on the ${name}`, to: address, data: encodeFunctionData({ abi, functionName, args: [value] }) };
-  }
-  if (action === "evidence-signer") {
-    const signer = getAddress(String(process.env.VALUE?.trim()));
-    return { step: `set the evidence signer of the ${name} to ${signer}`, to: address, data: encodeFunctionData({ abi, functionName: "setEvidenceSigner", args: [signer] }) };
-  }
-  throw new Error("ACTION is creation-paused, checkin-paused, proof-paused, evidence-signer or raw");
-}
+const ownership = [
+  { type: "function", name: "owner", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  { type: "function", name: "pendingOwner", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  { type: "function", name: "pendingEvidenceSigner", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+] as const;
 
 async function main() {
-  const publicClient = createPublicClient({ chain: monadChain, transport: monadTransport() });
+  // A rehearsal speaks to its local node and to nothing else, and a local node is taken for nothing but a rehearsal
+  // (the review of 2 Oct 2026, R-10): the ordinary transport falls back to the public endpoint when its first
+  // provider fails, which for a rehearsal would be mainnet.
+  const transport = scriptTransport(monadRpcUrl(), Boolean(process.env.REHEARSAL));
+  const publicClient = createPublicClient({ chain: monadChain, transport });
   const chainId = await publicClient.getChainId();
   if (chainId !== MONAD_CHAIN_ID) throw new Error(`Refusing to run: chain id ${chainId} is not Monad mainnet (${MONAD_CHAIN_ID})`);
 
@@ -89,7 +60,23 @@ async function main() {
   const threshold = Number(thresholdRead);
   const nonce = process.env.NONCE?.trim() ? BigInt(process.env.NONCE.trim()) : (nonceRead as bigint);
 
-  const call = actionCall();
+  const call = safeActionCall(process.env);
+  // An ownership is accepted by the one it was handed to, and by nobody else: read before anybody signs.
+  if (call.action === "accept-ownership") {
+    const [owner, pending] = await Promise.all([
+      publicClient.readContract({ address: call.to, abi: ownership, functionName: "owner" }),
+      publicClient.readContract({ address: call.to, abi: ownership, functionName: "pendingOwner" }),
+    ]);
+    if (getAddress(owner) === safe) throw new Error(`Nothing to accept: ${safe} already owns ${call.to}`);
+    if (getAddress(pending) !== safe) throw new Error(`Refusing to run: the ownership of ${call.to} is offered to ${pending}, not to this Safe ${safe}. Its owner today is ${owner}`);
+  }
+  // Run as the Safe against the chain's own state: what the contract would refuse is refused here, in its own word.
+  try {
+    await publicClient.call({ account: safe, to: call.to, data: call.data });
+  } catch (error) {
+    const refusal = call.target ? decodeContractError(error, call.target.abi) : undefined;
+    throw new Error(`Refusing to run: the contract would refuse this${refusal ? ` (${refusal})` : ""}. Nothing was signed`);
+  }
   const tx: SafeTransaction = safeCall(call.to, call.data, nonce);
   const hash = safeTxHash(safe, MONAD_CHAIN_ID, tx);
   console.log(
@@ -155,12 +142,23 @@ async function main() {
   const key = process.env.EXECUTOR_PRIVATE_KEY?.trim();
   if (!key) throw new Error("SEND=1 needs EXECUTOR_PRIVATE_KEY in your own shell");
   const account = privateKeyToAccount((key.startsWith("0x") ? key : `0x${key}`) as Hex);
-  const walletClient = createWalletClient({ account, chain: monadChain, transport: monadTransport() });
+  const walletClient = createWalletClient({ account, chain: monadChain, transport });
   const sent = await walletClient.sendTransaction({ to: safe, data, gas });
   const receipt = await waitForFinality(publicClient, sent);
   if (receipt.status !== "success") throw new Error(`The Safe transaction reverted in ${sent}`);
   const after = (await read("nonce")) as bigint;
   console.log(JSON.stringify({ step: call.step, txHash: sent, block: receipt.blockNumber.toString(), safeNonce: after.toString() }, null, 2));
+  // Read back, never taken from the receipt: the Safe owns it, nobody else is offered it, and no signer is waiting.
+  if (call.action === "accept-ownership") {
+    const [owner, pending] = await Promise.all([
+      publicClient.readContract({ address: call.to, abi: ownership, functionName: "owner" }),
+      publicClient.readContract({ address: call.to, abi: ownership, functionName: "pendingOwner" }),
+    ]);
+    if (getAddress(owner) !== safe || !/^0x0{40}$/.test(pending)) throw new Error(`The ownership of ${call.to} did not move: its owner is ${owner}`);
+    const waiting = call.target?.key === "anchor" ? null : await publicClient.readContract({ address: call.to, abi: ownership, functionName: "pendingEvidenceSigner" });
+    if (waiting && !/^0x0{40}$/.test(waiting)) throw new Error(`A signer is waiting on ${call.to}: ${waiting}. Call it off before anything else (ACTION=evidence-signer VALUE=0x0000000000000000000000000000000000000000)`);
+    console.log(JSON.stringify({ step: "read back", contract: call.to, owner, pendingOwner: pending, ...(waiting ? { pendingEvidenceSigner: waiting } : {}) }, null, 2));
+  }
 }
 
 main().catch((error) => {

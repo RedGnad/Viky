@@ -505,9 +505,12 @@ test("a page that does not exist, and a page that failed, say one sentence and l
 });
 
 test("the Safe's raw mode refuses renounceOwnership by its selector", () => {
-  const script = readFileSync("scripts/safe-action.ts", "utf8");
-  assert.match(script, /RENOUNCE_OWNERSHIP = "0x715018a6"/);
-  assert.match(script, /data\.toLowerCase\(\)\.startsWith\(RENOUNCE_OWNERSHIP\)\) throw new Error/);
+  // The actions live in src/safe-actions.ts since the review of 2 Oct 2026, where each is pinned by a test; the
+  // script asks there and builds nothing itself.
+  const actions = readFileSync("src/safe-actions.ts", "utf8");
+  assert.match(actions, /RENOUNCE_OWNERSHIP = "0x715018a6"/);
+  assert.match(actions, /data\.toLowerCase\(\)\.startsWith\(RENOUNCE_OWNERSHIP\)\) throw new Error/);
+  assert.match(readFileSync("scripts/safe-action.ts", "utf8"), /const call = safeActionCall\(process\.env\);/);
 });
 
 test("the judges page guards its one unguarded database read", () => {

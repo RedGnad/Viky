@@ -541,5 +541,7 @@ test("the goals a deployment registers are the register's, each number once", ()
   const deploy = readFileSync("scripts/deploy-v2.ts", "utf8");
   assert.match(deploy, /creation is still open on/);
   assert.match(deploy, /if \(owner === deployer\) throw new Error/);
-  assert.match(deploy, /const transport = rehearsal \? http\(rpc\) : monadTransport\(rpc\);/);
+  // One rule for every script that sends (src/monad/chain.ts, pinned in test/safe-actions.test.ts): a rehearsal speaks
+  // to its local node alone, and a local node is nothing but a rehearsal.
+  assert.match(deploy, /const transport = scriptTransport\(rpc, rehearsal\);/);
 });
