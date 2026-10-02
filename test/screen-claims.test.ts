@@ -318,7 +318,23 @@ test("the legal notice says exactly what the program lets the operator do, and n
   // The four things, and the fact that there is no fifth: every function the owner alone may call.
   const ownerOnly = [...contract.matchAll(/function (\w+)\([^)]*\)[^{]*onlyOwner/g)].map((m) => m[1]).sort();
   assert.deepEqual(ownerOnly, ["registerGoal", "setCheckInPaused", "setCreationPaused", "setEvidenceSigner"]);
-  assert.match(legal, /stop new\s+gifts being offered, stop the daily readings, change the key that signs what a reading found,\s+and add a goal a gift can be made on/);
+  assert.match(legal, /stop new gifts being offered, pause the readings, change the key that signs what a\s+reading found, and add a goal a gift can be made on/);
+  // The second version's owner can do the same four and one thing more by name, applying the signer it announced,
+  // which anybody may call; and its bounds are the ones the notice says (the review of 2 Oct 2026).
+  for (const file of ["contracts/GiftEscrowV2.sol", "contracts/MilestoneGiftV2.sol"]) {
+    const second = readFileSync(file, "utf8");
+    const owners = [...second.matchAll(/function (\w+)\([^)]*\)[^{]*onlyOwner/g)].map((m) => m[1]).sort();
+    const pause = file.includes("Milestone") ? "setProofPaused" : "setCheckInPaused";
+    assert.deepEqual(owners, ["registerGoal", "renounceOwnership", pause, "setCreationPaused", "setEvidenceSigner"].sort(), file);
+    assert.match(second, /MAX_PAUSE = 7 days/);
+    assert.match(second, /PAUSE_REST = 7 days/);
+    assert.match(second, /SIGNER_DELAY = 24 hours/);
+    assert.match(second, /function renounceOwnership\(\) public view override onlyOwner \{\s*revert OwnershipIsNotRenounceable\(\);/);
+  }
+  assert.match(legal, /a pause ends by itself after seven days and cannot be sent again for seven more, a new key stands a day after it is announced, and a goal once added is never changed/);
+  // What the notice no longer says: that nothing can be done to a gift's money, when the evidence key can tip it.
+  assert.doesNotMatch(legal, /They can never move money/);
+  assert.match(legal, /One limit to that, said in full on the judges page under &quot;Our own key&quot;/);
 
   // Moving money is not among them: the two ways out of the program check who is asking, not who owns it.
   assert.match(contract, /function withdrawEarned\(uint256 giftId, address to, uint256 amount\) external nonReentrant \{[\s\S]*?if \(msg\.sender != g\.recipient\) revert NotRecipient\(\);/);
@@ -330,7 +346,7 @@ test("the legal notice says exactly what the program lets the operator do, and n
   );
   assert.match(contract, /_push\(g\.refundTo, amount\);/, "the refund pays the destination the funder signed, and nothing else");
   assert.match(legal, /anyone at\s+all can ask for that: the program will send it nowhere else/);
-  assert.match(legal, /What is earned leaves only when\s+the person the gift is for asks for it, signed by them/);
+  assert.match(legal, /What is earned leaves only when the person the\s+gift is for asks for it, signed by them/);
 
   // The countries are the rails' own words, not a claim of our own.
   const rails = readFileSync("src/rails.ts", "utf8");

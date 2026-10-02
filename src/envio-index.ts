@@ -2,7 +2,8 @@
  * What Viky's index says, read from its GraphQL endpoint for the judges page (the audit of 1 Oct 2026, D-14). Server
  * only.
  *
- * The index is a second repository (Viky-index, Envio HyperIndex): the contracts' own events, gift by gift, summed.
+ * The index is a second repository (Viky-index, Envio HyperIndex): the contracts' own events, gift by gift, summed,
+ * with who funded each gift and who opened it, and what the anchor of agreements has written down.
  * Nothing that moves money reads it. This is one POST to `ENVIO_GRAPHQL_URL`, cut at four seconds, and it answers
  * nothing at the slightest doubt: no setting, an endpoint that does not answer, an answer of another shape. The page
  * then says the index could not be read, rather than showing a figure it cannot stand behind.
@@ -12,16 +13,37 @@ export type IndexedGift = Readonly<{
   contract: string;
   giftId: string;
   kind: "daily" | "milestone";
+  /** 1 or 2: which version of its contract holds it. */
+  version: 1 | 2;
   status: string;
+  /** The account that funded it, and the account that opened it, or nothing while nobody has. */
+  funder: string;
+  recipient: string | null;
   amount: bigint;
   fundedAmount: bigint;
+  /** What the gift has put in its recipient's name so far. */
+  amountEarned: bigint;
   amountWithdrawn: bigint;
   amountRefunded: bigint;
   createdInTransaction: string;
   createdAt: string;
 }>;
 
-export type IndexTotals = Readonly<{ giftsCreated: number; giftsClaimed: number; daysEarned: number; daysReturned: number; milestonesReached: number; amountEarned: bigint; amountWithdrawn: bigint; amountRefunded: bigint; eventsIndexed: number }>;
+export type IndexTotals = Readonly<{
+  giftsCreated: number;
+  giftsClaimed: number;
+  daysEarned: number;
+  daysReturned: number;
+  milestonesReached: number;
+  amountEarned: bigint;
+  amountWithdrawn: bigint;
+  amountRefunded: bigint;
+  /** The anchor of agreements: accounts that bound their agreement key, and every yes and stop written down. */
+  consentKeysBound: number;
+  yesAnchored: number;
+  stopsAnchored: number;
+  eventsIndexed: number;
+}>;
 
 export type IndexRead = Readonly<{
   /** The last block the index has processed, and the head it knew of then. */
@@ -34,8 +56,8 @@ export type IndexRead = Readonly<{
 
 const QUERY = `{
   _meta { chainId progressBlock sourceBlock }
-  GlobalStat(where: {id: {_eq: "global"}}) { giftsCreated giftsClaimed daysEarned daysReturned milestonesReached amountEarned amountWithdrawn amountRefunded eventsIndexed }
-  Gift(order_by: {createdAt: asc}, limit: 500) { contract giftId kind status amount fundedAmount amountWithdrawn amountRefunded createdInTransaction createdAt }
+  GlobalStat(where: {id: {_eq: "global"}}) { giftsCreated giftsClaimed daysEarned daysReturned milestonesReached amountEarned amountWithdrawn amountRefunded consentKeysBound yesAnchored stopsAnchored eventsIndexed }
+  Gift(order_by: {createdAt: asc}, limit: 500) { contract giftId kind version status funder recipient amount fundedAmount amountEarned amountWithdrawn amountRefunded createdInTransaction createdAt }
 }`;
 
 export const INDEX_TIMEOUT_MS = 4_000;
@@ -96,6 +118,9 @@ export async function readIndex(fetchImpl: typeof fetch = fetch, url: string | n
         amountEarned: units(global.amountEarned),
         amountWithdrawn: units(global.amountWithdrawn),
         amountRefunded: units(global.amountRefunded),
+        consentKeysBound: count(global.consentKeysBound),
+        yesAnchored: count(global.yesAnchored),
+        stopsAnchored: count(global.stopsAnchored),
         eventsIndexed: count(global.eventsIndexed),
       },
       gifts: body.data.Gift.map((entry) => {
@@ -104,9 +129,14 @@ export async function readIndex(fetchImpl: typeof fetch = fetch, url: string | n
           contract: text(gift.contract, /^0x[0-9a-fA-F]{40}$/).toLowerCase(),
           giftId: text(String(gift.giftId), /^\d{1,78}$/),
           kind: gift.kind === "milestone" ? "milestone" : "daily",
+          version: count(gift.version) === 2 ? 2 : 1,
           status: text(gift.status, /^[a-z]{1,20}$/),
+          // An account is printed and linked on the page: anything that is not one refuses the whole reading.
+          funder: text(gift.funder, /^0x[0-9a-fA-F]{40}$/).toLowerCase(),
+          recipient: gift.recipient === null || gift.recipient === undefined ? null : text(gift.recipient, /^0x[0-9a-fA-F]{40}$/).toLowerCase(),
           amount: units(gift.amount),
           fundedAmount: units(gift.fundedAmount),
+          amountEarned: units(gift.amountEarned),
           amountWithdrawn: units(gift.amountWithdrawn),
           amountRefunded: units(gift.amountRefunded),
           createdInTransaction: text(gift.createdInTransaction, /^0x[0-9a-fA-F]{64}$/),

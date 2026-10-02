@@ -1,4 +1,4 @@
-import { heldPerContract, readIndex, type IndexRead } from "@/src/envio-index";
+import { heldPerContract, type IndexRead } from "@/src/envio-index";
 import { formatAusd, formatAusdExact } from "@/src/gift-reader";
 import { AUSD_ADDRESS, createMonadPublicClient } from "@/src/monad/chain";
 import { dateInWords } from "@/src/moments";
@@ -34,11 +34,11 @@ const dayOf = (iso: string) => dateInWords(new Date(iso).getTime(), "UTC");
  * block the index has reached beside the chain's head, and, for each contract, what the index's events say it holds
  * beside what the token says it holds. The last one is the check a stranger can make without reading an event.
  *
- * No movement of money depends on the index, and the app does not read it anywhere else. When it cannot be read, or
- * no endpoint is set for this deployment, the block says so and shows no figure.
+ * No movement of money depends on the index, and the app reads it on this page only (once, in page.tsx, for this
+ * block and for "Who has used Viky"). When it cannot be read, or no endpoint is set for this deployment, the block
+ * says so in a sentence and shows no figure: the reading answers nothing rather than an error (src/envio-index.ts).
  */
-export async function JudgesIndex() {
-  const index = await readIndex();
+export async function JudgesIndex({ index }: Readonly<{ index: IndexRead | null }>) {
   if (!index) {
     return (
       <section className="space-y-[var(--space-sm)]">
@@ -60,7 +60,8 @@ export async function JudgesIndex() {
       <p className={HELP}>
         The contracts&apos; events are indexed with Envio HyperIndex, in the repository RedGnad/Viky-index, and read here
         as this page is served. No movement of money depends on it: it is a second reading of the same events, set
-        beside the chain so that anybody can see whether the two agree.
+        beside the chain so that anybody can see whether the two agree. It follows seven contracts: the two gift
+        contracts of each version, the earlier gift contract, the way out and the anchor of agreements.
       </p>
       <dl className="grid grid-cols-1 gap-x-[var(--space-md)] gap-y-[var(--space-xs)] [@media(min-width:600px)]:grid-cols-[14rem_1fr]">
         <dt className={MUTED}>Where the index stands</dt>
@@ -75,6 +76,11 @@ export async function JudgesIndex() {
           {index.totals.daysEarned} {index.totals.daysEarned === 1 ? "day" : "days"} earned, {index.totals.daysReturned} gone back,{" "}
           {index.totals.milestonesReached} {index.totals.milestonesReached === 1 ? "milestone" : "milestones"} reached. {formatAusd(index.totals.amountEarned)} earned,{" "}
           {formatAusd(index.totals.amountWithdrawn)} taken out by the people the gifts were for.
+        </dd>
+        <dt className={MUTED}>The anchor of agreements</dt>
+        <dd className={HELP} data-index="anchor">
+          {index.totals.consentKeysBound} {index.totals.consentKeysBound === 1 ? "account has" : "accounts have"} bound an agreement key,{" "}
+          {index.totals.yesAnchored} yes and {index.totals.stopsAnchored} {index.totals.stopsAnchored === 1 ? "stop" : "stops"} are written down.
         </dd>
         <dt className={MUTED}>The index beside the token</dt>
         <dd className={HELP}>

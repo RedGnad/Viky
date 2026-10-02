@@ -303,6 +303,8 @@ test("a held proof is held once, by its sense, and a decision drops its proofs; 
   assert.equal(await decideReview("session-held-1", "refused", "WITNESS_OTHER_PATTERN"), true);
   assert.equal(await decideReview("session-held-1", "pinned", null), false, "decided once");
   assert.equal((await loadReview("session-held-1"))?.proofs, null);
+  // And what was read from the page goes with them (the audit of 1 Oct 2026, V-02): Privacy says it is erased at the decision.
+  assert.deepEqual((await loadReview("session-held-1"))?.reading, {});
   await db.query(`INSERT INTO viky_milestone_gifts (gift_id, portal) VALUES ('1000043', 'uni-b-br')`);
   await assert.rejects(removePortal("uni-b-br"), /named by a gift/);
   assert.equal(await removePortal("uni-a-br"), true);

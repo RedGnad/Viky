@@ -354,6 +354,16 @@ export function waysIn(on: Readonly<{ rampnow?: boolean; swapper?: string }> = {
 }
 
 /**
+ * "Ramp or Mercuryo", "Swapper, Ramp or Mercuryo": the card services of this deployment, by their own names, for the
+ * legal notice and the privacy page (the audit of 1 Oct 2026, V-01: both named one service by hand, whichever services
+ * were on).
+ */
+export function cardServices(names: readonly string[] = waysIn().map((way) => way.name)): string {
+  const each = [...new Set(names)];
+  return each.length <= 1 ? (each[0] ?? "") : `${each.slice(0, -1).join(", ")} or ${each[each.length - 1]}`;
+}
+
+/**
  * Ramp's partner key (D289): public by design, it goes in the page's own address, and Ramp names the partner with it.
  * Set on Vercel as `NEXT_PUBLIC_RAMP_HOST_API_KEY` once Ramp gives one; until then it is absent.
  */

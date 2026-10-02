@@ -5,7 +5,7 @@ import { monadTransport } from "./monad/chain";
  * Who owns the contracts, asked of the chain as the judges page is served (D187, item 10 of the money path review
  * of 23 Sep 2026): the page used to say one wallet, the founder's, owned all four, and the chain had answered the
  * Safe since 20 Sep 2026. Nothing about the owner is written down here: each contract is asked `owner()`, and when
- * all four answer the same address, that address is asked what it is (a Safe's version, its keys and how many must
+ * all of them answer the same address, that address is asked what it is (a Safe's version, its keys and how many must
  * sign). What could not be read is said so, never filled in from memory.
  */
 
@@ -47,10 +47,16 @@ export function chainOwnerReader(): OwnerReader {
 
 /** The contracts the product runs on, by the names the page uses; one not configured is left out. */
 export function ownedContracts(env: NodeJS.ProcessEnv = process.env): ReadonlyArray<{ label: string; address: Hex }> {
+  // The second version is asked first, since a gift made today is on it; its three settings are set together or not
+  // at all (src/v2.ts), and the first version's contracts are then named as such.
+  const second = Boolean(env.NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS?.trim());
   const named: Array<{ label: string; key: string }> = [
-    { label: "gifts", key: "NEXT_PUBLIC_GIFT_ESCROW_ADDRESS" },
+    { label: "second-version gifts", key: "NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS" },
+    { label: "second-version milestone gifts", key: "NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS" },
+    { label: "the anchor of agreements", key: "NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS" },
+    { label: second ? "first-version gifts" : "gifts", key: "NEXT_PUBLIC_GIFT_ESCROW_ADDRESS" },
     { label: "the earlier gift contract that still runs the first gifts", key: "NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS" },
-    { label: "milestone gifts", key: "NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS" },
+    { label: second ? "first-version milestone gifts" : "milestone gifts", key: "NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS" },
     { label: "the way out", key: "EXIT_ROUTER_ADDRESS" },
   ];
   const out: Array<{ label: string; address: Hex }> = [];

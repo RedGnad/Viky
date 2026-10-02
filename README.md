@@ -196,21 +196,27 @@ behind (`sweep`).
 
 | Contract | On Monad mainnet (chain 143) |
 |---|---|
-| `GiftEscrow` | `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233` |
-| `GiftEscrow`, the earlier deployment, which still runs the gifts it holds | `0xE04CD59bB93765333200a9da01df83149D4C4d67` |
-| `MilestoneGift` | `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e` |
+| `GiftEscrowV2`, where a daily gift is made since 2 Oct 2026 | `0xC83d8028347967Fc84D0e36Ae5876d9b29EAEc51` |
+| `MilestoneGiftV2`, where a milestone gift is made since 2 Oct 2026 | `0x493c87A27E637bBc7179C17bE2B215fC18523CC0` |
+| `ConsentAnchor` | `0x2a15DF23fF62120700f14D1E5d5d56CA0dAd027e` |
+| `GiftEscrow`, closed to new gifts, which runs the gifts it holds | `0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233` |
+| `GiftEscrow`, the earlier deployment, closed to new gifts, which runs the gifts it holds | `0xE04CD59bB93765333200a9da01df83149D4C4d67` |
+| `MilestoneGift`, closed to new gifts, which runs the gifts it holds | `0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e` |
 | `ExitRouter` | `0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223` |
-| Owner of the four, a Safe 1.4.1 that signs with 2 of its 3 keys | `0xE08D926c148A5065F4Df2892702785a183de86F9` |
+| Owner of the seven, a Safe 1.4.1 that signs with 2 of its 3 keys | `0xE08D926c148A5065F4Df2892702785a183de86F9` |
 | AUSD | `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` |
 
-`cast call <contract> "owner()(address)" --rpc-url https://rpc.monad.xyz` answers the Safe for each of the four.
+`cast call <contract> "owner()(address)" --rpc-url https://rpc.monad.xyz` answers the Safe for each of the seven.
 
 `contracts/verifiers` is not deployed. It holds the direct verifiers ported from Lock-in with their real-proof tests,
 kept fail-closed (`LIVE_SCHEMA_CONFIRMED = false`). The path in production is the evidence signer, below.
 
-`contracts/GiftEscrowV2.sol`, `contracts/MilestoneGiftV2.sol` and `contracts/ConsentAnchor.sol` are written and
-tested, and **not deployed: no gift runs on them**. They are the second version of the two gift contracts, from the
-audit of 1 Oct 2026. Opening a gift takes the signature of a key made from the secret its link carries, whose address
+`contracts/GiftEscrowV2.sol`, `contracts/MilestoneGiftV2.sol` and `contracts/ConsentAnchor.sol` were deployed on
+2 Oct 2026 at the addresses above, their sources verified through Sourcify, and handed to the Safe the same day. A gift
+made since then is made on them; the three contracts of the first version were closed to new gifts that day and run
+the gifts they hold to the end. Whether a gift has run on the second version yet is counted on the judges page, from
+the index: nothing here says it works before one has, end to end. They are the second version of the two gift
+contracts, from the audit of 1 Oct 2026. Opening a gift takes the signature of a key made from the secret its link carries, whose address
 is in the terms the funder signed, so the evidence signer opens nothing (on the contracts above, that one key could
 open an unopened gift and prove it). The person a gift is for can end it: what was counted stays theirs and the rest
 goes back in the same transaction. The owner is bounded: ownership moves in two steps and cannot be given up, a new
@@ -306,11 +312,12 @@ check exists: a signed reading with no claim behind it cannot be re-verified by 
 ## Indexer
 
 The contracts' events are indexed with Envio HyperIndex in a separate repository,
-[RedGnad/Viky-index](https://github.com/RedGnad/Viky-index): `config.yaml` names the four contracts above and the
+[RedGnad/Viky-index](https://github.com/RedGnad/Viky-index): `config.yaml` names the seven contracts above and the
 events read from each, `schema.graphql` the entities (every gift, check-in, drained day, payout and refund, and the
 aggregates per day, per condition and in all). It answers GraphQL at
-`https://indexer.dev.hyperindex.xyz/8213f52/v1/graphql`. The product does not read it: no movement of money depends on
-it, and every figure the app shows comes from the contracts themselves.
+an endpoint that changes with each hosted deployment: that repository's README gives the one in service. The app reads
+it in one place, the judges page (who has used Viky, and the index set beside the chain); no movement of money depends
+on it, and every figure a funder or a recipient sees comes from the contracts themselves.
 
 ## Run
 

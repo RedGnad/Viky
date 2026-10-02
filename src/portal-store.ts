@@ -506,10 +506,14 @@ export async function pendingReviews(): Promise<readonly PortalReview[]> {
   return rows.map(toReview);
 }
 
-/** Closes a review, once: the proofs are dropped with it, since they carry one person's account. */
+/**
+ * Closes a review, once: the proofs are dropped with it, since they carry one person's account, and so is what was
+ * read from the page, the fields and the address, which the operator needed only to decide (the audit of 1 Oct 2026,
+ * V-02: it stayed in the row for good while Privacy said nothing was kept).
+ */
 export async function decideReview(sessionId: string, status: "pinned" | "refused", reason: string | null): Promise<boolean> {
   const rows = await sql()`
-    UPDATE viky_portal_reviews SET status = ${status}, reason = ${reason}, decided_at = now(), proofs = 'null'::jsonb
+    UPDATE viky_portal_reviews SET status = ${status}, reason = ${reason}, decided_at = now(), proofs = 'null'::jsonb, reading = '{}'::jsonb
      WHERE session_id = ${sessionId} AND status = 'pending'
      RETURNING session_id`;
   return rows.length > 0;
