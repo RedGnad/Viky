@@ -156,7 +156,7 @@ test("the way out offers what works where the person lives, read from the accoun
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
   // The founder's decision of 26 Sep 2026: nothing is offered that does not work there. The uses come from the rails'
   // own answers for the country, and nothing is ordered until the person has answered when the signals disagree.
-  assert.match(screen, /orderUses\(usesFor\(countryNow, where\?\.waysOut \?\? \{\}, true, true\), eurosHeld,/);
+  assert.match(screen, /orderUses\(usesFor\(countryNow, where\?\.waysOut \?\? \{\}, true, true, mobileOffered !== null\), eurosHeld,/);
   // Nothing waits on a question (27 Sep 2026): when the signals disagree and the account has not said, the uses are
   // read and shown for the connection's country, proposed and never kept, and "change" stays beside it.
   assert.match(screen, /const uses = orderUses\(/);

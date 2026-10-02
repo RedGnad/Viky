@@ -11,7 +11,7 @@ import { USE_MONEY } from "./sentences";
  * (Mercuryo). Every one whose code is complete is offered to everybody the day it is deployed (the founder, 26 Sep
  * 2026): what is missing is said where it is missing, by the route that refuses.
  */
-export type Use = "phone" | "giftcard" | "bank" | "card";
+export type Use = "phone" | "giftcard" | "mobile" | "bank" | "card";
 
 /**
  * Where the card rail pays no card, whatever its currencies endpoint says: France, the rest of the European Economic
@@ -29,8 +29,10 @@ export const CARD_PAYOUT_CLOSED: readonly string[] = [
  * card always, the gift card with a country to list cards for; the bank unless its own payout list says it pays nobody there; the card unless its
  * own list restricts that country or it is one the card rail pays no card in. A country nobody knows yet hides nothing.
  */
-export function usesFor(country: string | null, reach: Readonly<Record<string, RailReach>>, phoneOffered: boolean, giftCardsOffered = false): readonly Use[] {
+export function usesFor(country: string | null, reach: Readonly<Record<string, RailReach>>, phoneOffered: boolean, giftCardsOffered = false, mobileMoneyOffered = false): readonly Use[] {
   const uses: Use[] = [];
+  // Mobile money only where Switch pays the country, as its coverage answers now (src/mobile-money-server.ts).
+  if (mobileMoneyOffered && country) uses.push("mobile");
   if (phoneOffered) uses.push("phone");
   // A gift card is chosen from the cards Bitrefill lists for the number's country, so it needs one (D271).
   if (giftCardsOffered && country) uses.push("giftcard");
@@ -55,6 +57,9 @@ export function smallFor(fee: PublishedFee, euros: number | undefined): boolean 
  * offered; otherwise the phone. The rest follow, rails by what they leave, then the phone.
  */
 export function orderUses(uses: readonly Use[], euros: number | undefined, net: (use: "bank" | "card") => number | undefined): readonly Use[] {
+  // Where mobile money is offered it goes first: money on the person's own number, in their own currency, within
+  // minutes, which is what the countries Switch covers use (the founder, 2 Oct 2026). The others follow in their order.
+  if (uses.includes("mobile")) return ["mobile", ...orderUses(uses.filter((use) => use !== "mobile"), euros, net)];
   const fee = (use: "bank" | "card") => (use === "bank" ? WAY_OUT_EURO.fee : WAY_OUT_CARD.fee);
   const rails = uses.filter((use): use is "bank" | "card" => use === "bank" || use === "card").sort((left, right) => (net(right) ?? 0) - (net(left) ?? 0));
   const worth = rails.filter((use) => !smallFor(fee(use), euros));

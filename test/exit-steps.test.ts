@@ -151,7 +151,8 @@ test("the way out shows one accent surface at a time, on the action it is waitin
   // The card in Viky's words (D270): its name, its nature, its two lines, and no source on it; the sources are behind
   // the fold. The partner is named in the card's own sentence before the person goes to it, and never "crypto".
   assert.match(screen, /<h3 className=\{CARD_TITLE\}>\{words\.name\}<\/h3>/);
-  assert.match(screen, /<Said text=\{use === "bank" && bankPays \? U\.bankBy\(bankPays\.method, bankPays\.currency\) : words\.body\} \/>/);
+  assert.match(screen, /const body = use === "mobile" \? \(mobileOffered \? U\.mobileBody\(operatorsInWords\(mobileOffered\.operators\.map\(\(operator\) => operator\.name\)\), delayInWords\(mobileOffered\.settlement\)\) : ""\) : use === "bank" && bankPays \? U\.bankBy\(bankPays\.method, bankPays\.currency\) : U\[use\]\.body;/);
+  assert.match(screen, /<Said text=\{body\} \/>/);
   const cards = screen.slice(screen.indexOf("{uses.map((use, index) => {"), screen.indexOf('<details className="said-fold">'));
   assert.doesNotMatch(cards, /sourceLine|feeSentence|way\.conditions|way\.line/, "the card that decides carries no source, no fee sentence, no list, no partner's line");
   assert.match(USE_MONEY.bank.body, /Our partner Ramp asks for your ID, once\./);

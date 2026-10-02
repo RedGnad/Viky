@@ -1741,6 +1741,16 @@ export const USE_MONEY = {
     body: "Onto your Visa or Mastercard. Our partner Mercuryo asks for your ID and your card, once.",
     action: "Send to my card",
   },
+  mobile: {
+    name: "Your mobile money",
+    nature: "From your balance",
+    action: "Send to my mobile money",
+  },
+  /**
+   * The mobile money card's line (the founder, 2 Oct 2026): the operators and the time are Switch's own, read for the
+   * country while the person looks. The second sentence is folded under "How it works".
+   */
+  mobileBody: (operators: string, delay: string) => `To your ${operators} number, within ${delay}. Our partner Switch pays it, at its own rate.`,
   giftcard: {
     name: "A gift card",
     nature: "A code, sent here",
@@ -1766,7 +1776,7 @@ export const USE_MONEY = {
    * The line under the title, built from the cards shown for the country and in their order (the founder, 29 Sep 2026):
    * never a way that is not offered there. The bank and the card are one transfer when both are offered.
    */
-  ways: { giftcard: "a gift card", phone: "credit for your phone", bank: "a transfer to your bank", card: "a transfer to your card", bankOrCard: "a transfer to your bank or card" },
+  ways: { giftcard: "a gift card", phone: "credit for your phone", mobile: "cash on your mobile money", bank: "a transfer to your bank", card: "a transfer to your card", bankOrCard: "a transfer to your bank or card" },
   nothingHere: "Nothing works for a number there yet. It stays yours here.",
 } as const;
 
@@ -2000,6 +2010,39 @@ export const YOUR_CODE = {
  * Your phone, the third way out (D238): three screens, where, how much, done. Every amount on them is the order's
  * own, priced by Bitrefill before anything moves (docs/SCREEN-CLAIMS.md).
  */
+/**
+ * Your mobile money (the founder, 2 Oct 2026): the operator, the number, the name on the account, how much, the figure
+ * it gives with the moment it was priced, one button; then the wait, said with the time Switch publishes; then arrived,
+ * or that it failed and the money comes back. No word of the coin, no page of anybody else's.
+ */
+export const MOBILE_OUT = {
+  title: "Your mobile money",
+  operator: "Operator",
+  number: "Number",
+  numberHelp: "Digits only, as your operator gives it.",
+  holder: "Name on the account",
+  holderHelp: "As your operator has it.",
+  amount: "How much",
+  amountHelp: (least: string) => `In dollars, from ${least}.`,
+  about: (figure: string) => `about ${figure}`,
+  pricedAt: (when: string) => `At the rate of ${when}.`,
+  pricing: "Pricing it",
+  unpriced: "It cannot be priced right now. Nothing was changed.",
+  send: (operator: string) => `Send to my ${operator}`,
+  steps: { changing: "Changing it", placing: "Placing it", sending: "Sending it" },
+  waitingTitle: "On its way",
+  waiting: (operator: string, end: string, delay: string) => `To your ${operator} number ending ${end}. It usually takes ${delay}.`,
+  arrivedTitle: "Arrived",
+  arrived: (operator: string, end: string) => `On your ${operator} number ending ${end}.`,
+  failedTitle: "It did not go through",
+  failed: "It did not reach the number. The money comes back to your account.",
+  expiredTitle: "Nothing was sent",
+  expired: "The time to send it ran out. Your money is still in your account.",
+  checkAgain: "Check again",
+  back: "Back",
+  failedSend: "That did not go through. Nothing was taken.",
+} as const;
+
 export const PHONE_OUT = {
   /** Beside an amount whose face value alone is more than the person holds (src/out-of-reach.ts). */
   outOfReach: "More than you have",

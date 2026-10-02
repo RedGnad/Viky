@@ -28,6 +28,9 @@ import { FoldChevron } from "../kit/GiftLive";
 import { Said } from "../kit/Said";
 import { AccountPanel } from "./AccountPanel";
 import { PhoneTopUp } from "./PhoneTopUp";
+import { MobileMoneyOut } from "./MobileMoneyOut";
+import { mobileMoneyOffer, type MobileOffer } from "@/src/client/mobile-money";
+import { delayInWords, operatorsInWords } from "@/src/mobile-money";
 import { GiftCardOut } from "./GiftCardOut";
 import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, FIELD, HELP, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE, TITLE_IN_FACE } from "./ui";
 
@@ -49,7 +52,7 @@ import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, FIELD, HELP, META,
  * figure says by how much. The published figures and their sources are behind a fold under the cards.
  */
 
-type Stage = "base" | "phone" | "giftcard" | "gathering" | "amount" | "review" | "getting" | "ready" | "confirm" | "sending" | "sent" | "own" | "ownConfirm" | "ownSending" | "ownSent";
+type Stage = "base" | "phone" | "mobile" | "giftcard" | "gathering" | "amount" | "review" | "getting" | "ready" | "confirm" | "sending" | "sent" | "own" | "ownConfirm" | "ownSending" | "ownSent";
 
 /** Where a refusal is shown: under the element that caused it, never in a box at the bottom of the page. */
 type Where = "gather" | "amount" | "review" | "code" | "send" | "own";
@@ -164,6 +167,22 @@ export function CashOut() {
   }, [readFor]);
 
   const countryNow = answeredCountry ?? where?.country ?? null;
+
+  // Whether mobile money is offered where the person lives, and with what, asked of the server, which asks Switch: a
+  // country it does not cover, the way switched off, or Switch silent, and there is no card for it at all.
+  const [mobile, setMobile] = useState<MobileOffer | null>(null);
+  useEffect(() => {
+    if (!countryNow) return;
+    let current = true;
+    mobileMoneyOffer(countryNow).then(
+      (offer) => current && setMobile(offer),
+      () => current && setMobile({ offered: false }),
+    );
+    return () => {
+      current = false;
+    };
+  }, [countryNow]);
+  const mobileOffered = mobile?.offered === true && mobile.country === countryNow?.toUpperCase() ? mobile : null;
 
   const coinOf = (way: WayOut): Coin => coinAt(way.coin) ?? USDC;
 
@@ -309,6 +328,13 @@ export function CashOut() {
     if (!now) return;
     setProblem(null);
     setStage("phone");
+  };
+
+  const startMobile = async () => {
+    const now = await gather();
+    if (!now) return;
+    setProblem(null);
+    setStage("mobile");
   };
 
   const askPrice = async (again = false) => {
@@ -498,7 +524,7 @@ export function CashOut() {
   // The uses for the number's country, ordered by the amount (D270): only what works there, the first in the sun.
   const asking = picking;
   const eurosHeld = money.rates?.usdPerEur ? Number(changeable) / 1_000_000 / money.rates.usdPerEur : undefined;
-  const uses = orderUses(usesFor(countryNow, where?.waysOut ?? {}, true, true), eurosHeld, (use) => netOf(use === "bank" ? WAY_OUT_EURO : WAY_OUT_CARD)?.net);
+  const uses = orderUses(usesFor(countryNow, where?.waysOut ?? {}, true, true, mobileOffered !== null), eurosHeld, (use) => netOf(use === "bank" ? WAY_OUT_EURO : WAY_OUT_CARD)?.net);
 
   // W11 and W12. The session closes itself; the balances decide the step, so nothing is remembered here and
   // nothing is lost. Signing in leads, and nothing else is offered: a second account would strand the money.
@@ -654,7 +680,7 @@ export function CashOut() {
         ) : null}
         {uses.length === 0 ? <p className={BODY}>{U.nothingHere}</p> : null}
         {/* Neither the bank nor the card reaches this country: said here, with the uses that do stay under it. */}
-        {where !== null && countryNow && !uses.includes("bank") && !uses.includes("card") ? <p className={BODY}>{U.noWayOutThere(countryInWords(countryNow) ?? countryNow.toUpperCase())}</p> : null}
+        {where !== null && countryNow && !uses.includes("bank") && !uses.includes("card") && !uses.includes("mobile") ? <p className={BODY}>{U.noWayOutThere(countryInWords(countryNow) ?? countryNow.toUpperCase())}</p> : null}
         {uses.map((use, index) => {
           const words = U[use];
           const way = use === "bank" ? WAY_OUT_EURO : use === "card" ? WAY_OUT_CARD : undefined;
@@ -662,7 +688,9 @@ export function CashOut() {
           // The phone's figure is the balance itself, in the person's currency: what the top-up is taken from, since what
           // reaches the phone is priced once the number and the amount are known (D238).
           const figure = way ? (net ? figureIn(net.net, net.currency) : undefined) : holdings === null ? undefined : (money.figure(dollarsHeld)?.text ?? formatAusd(dollarsHeld));
-          const act = () => (way ? start(way) : use === "giftcard" ? void startGiftCard() : void startPhone());
+          const act = () => (way ? start(way) : use === "giftcard" ? void startGiftCard() : use === "mobile" ? void startMobile() : void startPhone());
+          // Mobile money's line names the operators Switch pays in the country and the time it publishes for them.
+          const body = use === "mobile" ? (mobileOffered ? U.mobileBody(operatorsInWords(mobileOffered.operators.map((operator) => operator.name)), delayInWords(mobileOffered.settlement)) : "") : use === "bank" && bankPays ? U.bankBy(bankPays.method, bankPays.currency) : U[use].body;
           return (
             <section key={use} className={CARD}>
               <div className="flex items-baseline justify-between gap-[var(--space-md)]">
@@ -673,7 +701,7 @@ export function CashOut() {
               {/* The bank's sentence follows the method its service publishes for this country, and the card says its
                   smallest payout before anything is changed for it (the audit of 1 Oct 2026). */}
               {/* One sentence in the open, the rest folded under "How it works" (the founder's rule 4 of 1 Oct 2026). */}
-              <Said text={use === "bank" && bankPays ? U.bankBy(bankPays.method, bankPays.currency) : words.body} />
+              <Said text={body} />
               {use === "card" && cardSmallest ? <p className={HELP}>{U.cardFrom(figureIn(cardSmallest.amount, cardSmallest.currency))}</p> : null}
               <button type="button" onClick={act} disabled={holdings === null || changeable === 0n} className={inTheSun(use, index, eurosHeld) ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
                 {words.action}
@@ -711,6 +739,16 @@ export function CashOut() {
       <div className="flex flex-col gap-[var(--space-xl)]">
         {moneyCard}
         <GiftCardOut country={countryNow} rates={money.rates} countryName={countryNow ? (countryInWords(countryNow) ?? countryNow.toUpperCase()) : null} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
+      </div>
+    );
+  }
+
+  if (stage === "mobile" && mobileOffered) {
+    return (
+      <div className="flex flex-col gap-[var(--space-xl)]">
+        {heading}
+        {moneyCard}
+        <MobileMoneyOut offer={mobileOffered} ausd={ausd} ensureSigner={ensureSigner} onSessionClosed={closeSession} onChanged={refresh} onBack={() => { setProblem(null); setStage("base"); }} />
       </div>
     );
   }

@@ -60,6 +60,9 @@ export default function PrivacyPage() {
             <strong>Every visit:</strong> a session cookie (__Host-viky-session, 12 hours, signed, holds your account identifier) and a request counter keyed by the IP of your connection, held in memory for a few minutes to slow down abuse. Visits are counted anonymously, with no cookie, by Vercel, the service that hosts Viky: the page opened, never with the key of a gift&apos;s link nor a gift&apos;s number, the site you came from, your country and region, and the kind of device and browser. Vercel tells one visitor from another by a fingerprint of the request, which it discards after 24 hours. No advertising, no tracking cookies.
           </li>
           <li>
+            <strong>If you send money to your mobile money:</strong> the operator, the country and the last four digits of the number, with the amounts and the payout&apos;s reference, so the screen can follow it to its end. The whole number and the name on the account go to Switch with the payout and are not kept by Viky.
+          </li>
+          <li>
             <strong>On your device:</strong> the technical id of your passkey, so the next sign-in can use it directly. And the currency you read money in (a cookie, viky.currency, one year): it is proposed, never asked, from the country your connection comes from, and from your device&apos;s language where the connection says nothing. When you make an account that currency is kept with it, so what Viky tells you outside the app speaks it too, and a gift keeps the currency its giver was reading in, for its link. You can change it wherever an amount is shown.
           </li>
         </ul>
@@ -91,6 +94,7 @@ export default function PrivacyPage() {
           <li><strong>Reclaim Protocol</strong> runs the verification of your Duolingo progress and of what you show from your own accounts; its attestation service sees that session in the way its protocol describes, and Viky receives only the proof.</li>
           <li><strong>Duolingo</strong> answers a public profile lookup for the username you enter.</li>
           <li><strong>{cardServices()}</strong>: the card service your country is served by handles the card purchase on its own page, with its own account and identity checks.</li>
+          <li><strong>Switch Labs</strong> pays a mobile money payout: it receives the number, the operator, the name on the account and the amount.</li>
           <li><strong>Kuru</strong> provides the exchange used to convert between currencies; it sees your account identifier and the amount.</li>
           <li><strong>The Monad network</strong> is public and permanent: account identifiers, gift terms, the contact fingerprint of gifts made before 15 September 2026, the identity pseudonym, every check-in and every amount moved can be read by anyone and cannot be erased.</li>
         </ul>

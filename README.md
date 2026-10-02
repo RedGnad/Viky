@@ -369,7 +369,8 @@ Every route is a file under `app/api` (`find app/api -name "route.ts*"` lists th
 the journal), `proof` (a proof shown from the person's own account), `connect` (a source connected with the person's
 key), one folder per source read (`duolingo`, `chess`, `codeforces`, `coursera`, `edx`, `mitx-online`, `credly`,
 `accredible`, `det`, `marathon`, `wca`, `portals`), `conditions` (what may be offered), `fund`, `exit`, `send`,
-`phone` and `giftcards` (money in and out), `rails` and `rates` (which partner serves where, and the day's rate),
+`phone`, `giftcards` and `mobile-money` (money in and out; mobile money is switched off until a first real payout),
+`rails` and `rates` (which partner serves where, and the day's rate),
 `cron` (the passes and the watch), `health`, `judge` and `judges`, and `dev`.
 
 Operator commands: `pnpm keeper` (the same passes from a terminal), `pnpm zkfetch:worker [port]` (the attested-fetch

@@ -96,7 +96,8 @@ test("the card is not offered where its service says it serves nobody, and a cou
   assert.ok(!uses.includes("bank") && !uses.includes("card"));
   assert.equal(USE_MONEY.noWayOutThere("Mali"), "No way to take money out reaches Mali yet. It stays yours here.");
   const screen = readFileSync("app/components/CashOut.tsx", "utf8");
-  assert.match(screen, /where !== null && countryNow && !uses\.includes\("bank"\) && !uses\.includes\("card"\) \? <p className=\{BODY\}>\{U\.noWayOutThere\(/);
+  // Mobile money is a way out too: a country it reaches is not told that nothing does (2 Oct 2026).
+  assert.match(screen, /where !== null && countryNow && !uses\.includes\("bank"\) && !uses\.includes\("card"\) && !uses\.includes\("mobile"\) \? <p className=\{BODY\}>\{U\.noWayOutThere\(/);
 });
 
 test("how the bank service pays in a country is its own published method, a bank account before a card", () => {
