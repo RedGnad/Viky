@@ -6,7 +6,7 @@ import { NO_STORE } from "@/src/gift-api";
 import { phoneErrorResponse } from "@/src/phone-api";
 import { payPhoneTopUp, PhoneOrderError, PHONE_REFUSALS } from "@/src/phone-order";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { admitRelay } from "@/src/relay-admission";
+import { admitRelay, countedIfSent } from "@/src/relay-admission";
 import { canonicalSignature } from "@/src/signature";
 
 export const runtime = "nodejs";
@@ -33,8 +33,8 @@ export async function POST(request: Request) {
       throw new PhoneOrderError("INVALID_AUTHORIZATION", PHONE_REFUSALS.invalidAuthorization, 400);
     }
     // Counted against the account's and the connection's ceilings before the relayer is asked for anything (D204).
-    await admitRelay(request, auth.account);
-    const status = await payPhoneTopUp({ account: auth.account as Hex, orderId, authorization });
+    const admitted = await admitRelay(request, auth.account);
+    const status = await countedIfSent(admitted, () => payPhoneTopUp({ account: auth.account as Hex, orderId, authorization }));
     return NextResponse.json(status, { headers: NO_STORE });
   } catch (error) {
     return phoneErrorResponse(error);

@@ -6,7 +6,7 @@ import { giftReadingLeave, NO_AGREEMENT } from "@/src/consent-guard";
 import { relayCheckIn } from "@/src/gift-relay";
 import { loadAttestation } from "@/src/proof-session-store";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { admitRelay } from "@/src/relay-admission";
+import { admitRelay, countedIfSent } from "@/src/relay-admission";
 import { loadGift } from "@/src/gift-store";
 import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
 
@@ -36,8 +36,8 @@ export async function POST(request: Request) {
     // A stop signed since the proof was shown holds here too (src/consent-guard.ts).
     const leave = await giftReadingLeave(gift.giftId);
     if (!leave.allowed) throw new GiftApiError(NO_AGREEMENT.code, NO_AGREEMENT.message, 409);
-    await admitRelay(request, auth.account);
-    const relayed = await relayCheckIn(sessionId, escrowOf(gift));
+    const admitted = await admitRelay(request, auth.account);
+    const relayed = await countedIfSent(admitted, () => relayCheckIn(sessionId, escrowOf(gift)));
     return NextResponse.json({ recorded: true, creditedDays: relayed.creditedDays, alreadyRecorded: relayed.alreadyRelayed }, { headers: NO_STORE });
   } catch (error) {
     return giftErrorResponse(error);

@@ -17,7 +17,7 @@ import { GOAL_TYPE_DUOLINGO_COURSE_XP } from "@/src/gift-terms";
 import { liveCreationDeps } from "@/src/gift-creation-live";
 import { MAX_GIFT_UNITS, MIN_GIFT_UNITS } from "@/src/money";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { admitRelay } from "@/src/relay-admission";
+import { admitRelay, countedIfSent } from "@/src/relay-admission";
 import { fundingNonceV2 } from "@/src/v2-protocol";
 import { answeredLink, requestedLink } from "@/src/v2-request";
 
@@ -172,8 +172,8 @@ export async function POST(request: Request) {
 
     // Recorded before the money moves, relayed, then recorded as a gift (D87): a failure between the relay and the
     // record leaves a pending creation that a retry of these terms, or the keeper's pass, completes.
-    await admitRelay(request, auth.account);
-    const created = await makeGift(
+    const admitted = await admitRelay(request, auth.account);
+    const created = await countedIfSent(admitted, () => makeGift(
       {
         params,
         nonce: String(a.nonce) as Hex,
@@ -193,7 +193,7 @@ export async function POST(request: Request) {
         link: link ?? undefined,
       },
       liveCreationDeps(),
-    );
+    ));
 
     const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin;
     // The gift keeps the currency its funder is reading in now, for its link's title and picture. Never a reason to

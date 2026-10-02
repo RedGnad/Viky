@@ -40,7 +40,8 @@ import { MILESTONE_DORMANT_SECONDS, MILESTONE_PROOF_GRACE_SECONDS } from "../src
 import { relayCreateMilestone } from "../src/milestone-relay";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { RelayerError } from "../src/relayer";
-import { dailyAbiOf, dailyVersionOf, giftEscrowV2Address, milestoneGiftV2Address, milestoneVersionOf } from "../src/v2";
+import { assertSecondVersionWhole, dailyAbiOf, dailyVersionOf, giftEscrowV2Address, milestoneGiftV2Address, milestoneVersionOf, SECOND_VERSION_SETTINGS, SecondVersionHalfSet, secondVersionProblem } from "../src/v2";
+import { isVikyContract, secondVersionContracts } from "../src/viky-contracts";
 import { holdsTheLinkOf, isTheOpeningSecret, openingOf, versionOfGift } from "../src/v2-opening";
 import { fundingNonceV2, giftLink, linkFingerprint, openingAccount, openingSecretOf, openTypedData, previewTokenOf } from "../src/v2-protocol";
 import { answeredLink, requestedLink } from "../src/v2-request";
@@ -527,6 +528,67 @@ test("on the second version a window closes where the contract says: a pause giv
   assert.match(contract, /if \(began > close\) return close;\s+uint256 left = close - \(began > moment \? began : moment\);\s+uint256 reopened = uint256\(proofPausedUntil\) \+ \(left < PAUSE_REST \? left : PAUSE_REST\);\s+if \(reopened > close\) close = reopened;/);
   assert.match(contract, /return proofPauseBegan <= deadline && deadline < proofPausedUntil \? uint256\(proofPausedUntil\) : deadline;/);
   assert.match(contract, /if \(uint256\(a\.observedAt\) > _readBy\(g\.deadline\)\) revert DeadlinePassed\(\);/);
+});
+
+test("the three addresses of the second version are set together or not at all: a half-set one refuses to build and to start (the review of 2 Oct 2026, R-08)", () => {
+  const all = { NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS: V2, NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS: V2_MILESTONE, NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS: "0x00000000000000000000000000000000000000A4" };
+  assert.equal(secondVersionProblem({}), null, "none of the three: the second version is off");
+  assert.equal(secondVersionProblem(all), null, "the three: it is on");
+  assert.doesNotThrow(() => assertSecondVersionWhole(all));
+  // One left out was a silence: the anchor's, and no agreement was ever written down; a gift contract's, and its gifts
+  // were read with the first version's words.
+  for (const left of SECOND_VERSION_SETTINGS) {
+    const two = { ...all, [left]: undefined };
+    assert.match(String(secondVersionProblem(two)), new RegExp(`${left} is not: the three are set together, or none is`), left);
+    assert.throws(() => assertSecondVersionWhole(two), (error: unknown) => error instanceof SecondVersionHalfSet && error.message.startsWith("Refusing to start: "));
+    const one = { [left]: all[left] };
+    assert.match(String(secondVersionProblem(one)), new RegExp(`^${left} is set and `), left);
+  }
+  // Set and not an address is not "unset": it used to be read as nothing, without a word.
+  assert.match(String(secondVersionProblem({ ...all, NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS: "0x1234" })), /NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS is set and is not an address/);
+  assert.match(String(secondVersionProblem({ ...all, NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS: V2 })), /name the same address/);
+  assert.equal(secondVersionProblem({ ...all, NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS: "  " }) === null, false, "blank is left out");
+
+  // Where it is asked: when the app is built, since a browser's copy of the three is fixed then, and when a server starts.
+  const config = readFileSync("next.config.mjs", "utf8");
+  assert.match(config, /throw new Error\(`Refusing to build: \$\{SECOND_VERSION_SETTINGS\.join\(", "\)\} are set together, each an address of its own, or none is\.`\);/);
+  for (const name of SECOND_VERSION_SETTINGS) assert.ok(config.includes(`"${name}"`), `${name} is one of the three the build checks`);
+  // The build's own check is plain JavaScript: held to the same answer as the one a server starts with.
+  const buildRefuses = (env: Record<string, string | undefined>) => {
+    const given = SECOND_VERSION_SETTINGS.map((name) => (env[name] ?? "").trim()).filter((value) => value !== "");
+    return given.length > 0 && (given.length < 3 || given.some((value) => !/^0x[0-9a-fA-F]{40}$/.test(value)) || new Set(given.map((value) => value.toLowerCase())).size < 3);
+  };
+  assert.match(config, /secondVersionSet\.length > 0 && \(secondVersionSet\.length < 3 \|\| secondVersionSet\.some\(\(value\) => !\/\^0x\[0-9a-fA-F\]\{40\}\$\/\.test\(value\)\) \|\| new Set\(secondVersionSet\.map\(\(value\) => value\.toLowerCase\(\)\)\)\.size < 3\)/);
+  for (const env of [{}, all, { ...all, NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS: undefined }, { NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS: V2 }, { ...all, NEXT_PUBLIC_MILESTONE_GIFT_V2_ADDRESS: "nope" }, { ...all, NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS: V2 }]) {
+    assert.equal(buildRefuses(env), secondVersionProblem(env) !== null, JSON.stringify(env));
+  }
+  assert.match(readFileSync("instrumentation.ts", "utf8"), /refuseHalfSetSecondVersion\(\);\s+refuseProductionDatabase\(\);/);
+  assert.match(readFileSync("src/database-guard-start.ts", "utf8"), /assertSecondVersionWhole\(\);\s+\} catch \(error\) \{\s+if \(!\(error instanceof SecondVersionHalfSet\)\) throw error;\s+console\.error\(error\.message\);\s+process\.exit\(1\);/);
+});
+
+test("the three contracts of the second version are Viky's own: money is never sent to one by hand (the review of 2 Oct 2026, R-09)", async () => {
+  const anchor = "0x00000000000000000000000000000000000000A4";
+  // Off, they are nobody's: no address is known.
+  for (const address of [V2, V2_MILESTONE, anchor]) assert.equal(isVikyContract(address), false);
+  assert.deepEqual(secondVersionContracts(), []);
+  process.env.NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS = anchor;
+  try {
+    await withTheSecondVersion(() => {
+      assert.deepEqual(secondVersionContracts().map((address) => address.toLowerCase()), [V2, V2_MILESTONE, anchor].map((address) => address.toLowerCase()));
+      for (const address of [V2, V2_MILESTONE, anchor]) {
+        assert.equal(isVikyContract(address), true, address);
+        assert.equal(isVikyContract(address.toLowerCase()), true, address);
+      }
+      // The four in service are still refused, and a person's own address still is not.
+      assert.equal(isVikyContract(V1), true);
+      assert.equal(isVikyContract(FUNDER.address), false);
+    });
+  } finally {
+    delete process.env.NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS;
+  }
+  // The same question is asked where money is sent by hand: the send route, and the two fields of the way out.
+  assert.match(readFileSync("app/api/send/route.ts", "utf8"), /if \(isVikyContract\(to\)\) throw new GiftApiError\("VIKY_DESTINATION"/);
+  assert.equal((readFileSync("app/components/CashOut.tsx", "utf8").match(/isVikyContract\(typed\)/g) ?? []).length, 2);
 });
 
 test("the goals a deployment registers are the register's, each number once", () => {

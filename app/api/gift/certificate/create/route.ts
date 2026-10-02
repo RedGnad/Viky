@@ -19,7 +19,7 @@ import { milestoneErrorResponse } from "@/src/milestone-api";
 import { MILESTONE_MAX_AMOUNT, MILESTONE_MIN_AMOUNT, milestoneFundingNonce, SHAPE_HAVE_OR_NOT, type MilestoneParams } from "@/src/milestone-protocol";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
 import { readWcaCompetition } from "@/src/wca-reading";
-import { admitRelay } from "@/src/relay-admission";
+import { admitRelay, countedIfSent } from "@/src/relay-admission";
 import { milestoneFundingNonceV2, type MilestoneParamsV2 } from "@/src/v2-protocol";
 import { answeredLink, requestedLink } from "@/src/v2-request";
 
@@ -155,8 +155,8 @@ export async function POST(request: Request) {
     const nonce = String(a.nonce) as Hex;
     // Counted against the account's and the connection's ceilings before the relayer is asked for anything (D204): a
     // creation declares the most gas of any relayed step, and was the one step that went around the door.
-    await admitRelay(request, auth.account);
-    const created = await makeMilestoneGift({
+    const admitted = await admitRelay(request, auth.account);
+    const created = await countedIfSent(admitted, () => makeMilestoneGift({
       params: second ?? params,
       linkFingerprint: link?.fingerprint,
       nonce,
@@ -184,7 +184,7 @@ export async function POST(request: Request) {
         ...(gradeScale ? { gradeScale } : {}),
         subjectKey,
       },
-    });
+    }));
 
     // Which gift asked first, for the operator who builds the provider, and the operator's email, once per request (the
     // founder, 28 Sep 2026): best effort both, the request itself is already written and the gift made.

@@ -186,6 +186,99 @@ test("on the second version the start is read, held and not sent: it waits for t
   assert.deepEqual({ purpose: held[0].after.reading?.purpose, rating: held[0].after.reading?.rating, attested: held[0].after.reading?.attested }, { purpose: "start", rating: 1904, attested: true });
 });
 
+/**
+ * The review of 2 Oct 2026, R-14. A pause from two days before a climb's deadline; the person reaches the target the
+ * day before the deadline and it cannot be proved, readings are paused. When they reopened, the server answered that
+ * the deadline had passed, and six hours later the whole gift went back to its funder.
+ */
+test("a reading a pause kept from being sent is kept, paid for once, and sent when readings reopen", async () => {
+  const deadline = NOW - 86_400;
+  const journal: MilestoneReading[] = [];
+  const keeps = (run: ReturnType<typeof harness>): Partial<MilestoneReadingDeps> => ({
+    attested: async () => journal.filter((reading) => reading.attested),
+    last: async () => journal.at(-1) ?? null,
+    record: async (reading) => {
+      journal.push(reading);
+      run.recorded.push(`${reading.purpose}:${reading.attested ? "attested" : "plain"}:${reading.outcome}`);
+    },
+  });
+  const atTarget = { plain: async () => ({ username: "erik", playerId: "41", status: "basic", rating: 1960, ratedAt: NOW - 7_200, rd: 42, best: 1960 }), attest: async () => attested(1960, { observedAt: NOW - 3_600 }) };
+
+  // While the pause runs: its deadline fell inside it, so the gift is still read. The target is reached, the contract
+  // refuses the proof, and the reading is written down.
+  const paused: MilestoneState = { ...CLIMBING, version: 2, deadline, proofPaused: true, proofPauseBegan: deadline - 86_400, proofResumedAt: NOW + 4 * 86_400 };
+  let run = harness(BOUND, paused);
+  Object.assign(run.deps, keeps(run), atTarget, {
+    prove: async () => {
+      run.calls.push("prove");
+      throw new RelayerError("REVERTED", "The contract refused: ProofIsPaused", "ProofIsPaused");
+    },
+  });
+  let outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, run.deps);
+  assert.equal(outcome.kind === "refused" && outcome.code, "PAUSED");
+  assert.deepEqual(run.calls, ["prove"]);
+  assert.deepEqual(run.recorded, ["reach:attested:refused:ProofIsPaused"]);
+
+  // The next pass, five minutes later, still paused: that reading is enough. No proof is paid for again.
+  run = harness(BOUND, paused);
+  Object.assign(run.deps, keeps(run), { plain: async () => assert.fail("no look"), attest: async () => assert.fail("no second proof while the first is kept") });
+  outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach", force: true }, run.deps);
+  assert.deepEqual(outcome, { kind: "refused", giftId: "1000000", code: "PAUSED", message: "Readings are paused for a moment. Try again later.", rating: 1960 });
+  assert.deepEqual(run.calls, []);
+
+  // Readings reopen. The deadline is behind, so nothing read now can count; the reading that was kept is signed again
+  // and sent as it was read: its value, its moment, its nullifier.
+  const reopened: MilestoneState = { ...paused, proofPaused: false, proofResumedAt: NOW - 600 };
+  run = harness(BOUND, reopened);
+  Object.assign(run.deps, keeps(run), { plain: async () => assert.fail("no look past the deadline"), attest: async () => assert.fail("no new proof past the deadline") });
+  outcome = await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, run.deps);
+  assert.deepEqual(outcome, { kind: "reached", giftId: "1000000", rating: 1960, hash: "0x52" });
+  assert.equal(run.proved.length, 1);
+  assert.deepEqual(
+    { metricValue: run.proved[0].metricValue, observedAt: run.proved[0].observedAt, nullifier: run.proved[0].nullifier, issuedAt: run.proved[0].issuedAt },
+    { metricValue: 1960n, observedAt: BigInt(NOW - 3_600), nullifier: `0x${"ee".repeat(32)}`, issuedAt: BigInt(NOW) },
+  );
+  assert.deepEqual(run.recorded, ["reach:attested:reached"]);
+});
+
+test("only a reading the contract would still take is sent again: taken by the moment it judges by, newer than its last, of the gift's own player", async () => {
+  const deadline = NOW - 86_400;
+  const kept = (extra: Partial<MilestoneReading>): MilestoneReading => ({ giftId: "1000000", purpose: "reach", attested: true, username: "erik", playerId: "41", rating: 1960, ratedAt: NOW - 7_200, rd: 42, observedAt: NOW - 3_600, nullifier: `0x${"ee".repeat(32)}`, outcome: "refused:ProofIsPaused", txHash: null, ...extra });
+  const second: MilestoneState = { ...CLIMBING, version: 2, deadline, proofPaused: false, proofPauseBegan: deadline - 86_400, proofResumedAt: NOW - 600 };
+  const sent = async (state: MilestoneState, readings: MilestoneReading[], more: Partial<MilestoneReadingDeps> = {}) => {
+    const run = harness(BOUND, state, { attested: async () => readings, plain: async () => assert.fail("no look"), attest: async () => assert.fail("no proof"), ...more });
+    return { outcome: await runMilestoneReading({ giftId: "1000000", purpose: "reach" }, run.deps), run };
+  };
+  const passed = { kind: "already", giftId: "1000000", reason: "deadline_passed" };
+  // Nothing kept: the deadline has passed, as before.
+  assert.deepEqual((await sent(second, [])).outcome, passed);
+  // Taken after the pause ended: past the moment the contract judges a reading by.
+  assert.deepEqual((await sent(second, [kept({ observedAt: NOW - 300 })])).outcome, passed);
+  // Short of the target, refused for another reason, of another player, older than the contract's last reading: none is sent.
+  assert.deepEqual((await sent(second, [kept({ rating: 1950 })])).outcome, passed);
+  assert.deepEqual((await sent(second, [kept({ outcome: "refused:NotThereYet" })])).outcome, passed);
+  assert.deepEqual((await sent(second, [kept({ playerId: "42" })])).outcome, passed);
+  assert.deepEqual((await sent(second, [kept({ observedAt: second.lastProofAt })])).outcome, passed);
+  // A stop signed since holds it back, and still paused nothing is sent.
+  assert.deepEqual((await sent(second, [kept({})], { leave: async () => ({ allowed: false, reason: "stopped" }) })).outcome, passed);
+  // The newest that qualifies is the one sent.
+  const two = await sent(second, [kept({ observedAt: NOW - 7_200, nullifier: `0x${"aa".repeat(32)}`, rating: 1955 }), kept({})]);
+  assert.equal(two.outcome.kind, "reached");
+  assert.equal(two.run.proved[0].nullifier, `0x${"ee".repeat(32)}`);
+
+  // On the first version the deadline never moves: only a reading taken before it is sent, as the contract takes it.
+  const first: MilestoneState = { ...CLIMBING, version: 1, deadline, lastProofAt: deadline - 3_600, proofPaused: false, proofPauseBegan: 0, proofResumedAt: NOW - 600 };
+  assert.deepEqual((await sent(first, [kept({ observedAt: deadline + 60 })])).outcome, passed);
+  assert.equal((await sent(first, [kept({ observedAt: deadline - 60 })])).outcome.kind, "reached");
+  // What the contract then refuses, because the grace has run out, is said and written as any refusal is.
+  const late = await sent(first, [kept({ observedAt: deadline - 60 })], {
+    prove: async () => {
+      throw new RelayerError("REVERTED", "The contract refused: DeadlinePassed", "DeadlinePassed");
+    },
+  });
+  assert.deepEqual(late.outcome, { kind: "refused", giftId: "1000000", code: "TIME_IS_UP", message: "The time for this gift is over.", rating: 1960 });
+});
+
 test("the recipient named their own account, so the code in the name is what binds it, and the start is recorded whatever it says", async () => {
   const run = harness(THEIR_OWN, OPENED);
   const outcome = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, run.deps);

@@ -13,7 +13,8 @@ import { isMilestoneGiftId } from "@/src/milestone-protocol";
 import { readMilestoneGift } from "@/src/milestone-reader";
 import { relayMilestoneEnd } from "@/src/milestone-relay";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { admitRelay } from "@/src/relay-admission";
+import { admitWayOut, countedIfSent } from "@/src/relay-admission";
+import { assertEndStands } from "@/src/relay-free-checks";
 import { assertGiftContractConfigured, escrowOf } from "@/src/relayer";
 import { canonicalSignature } from "@/src/signature";
 import { versionOfGift } from "@/src/v2-opening";
@@ -79,10 +80,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (BigInt(offer.keep) !== keep || BigInt(offer.giveBack) !== giveBack) {
       throw new GiftApiError("END_CHANGED", "The amounts have changed since they were shown. Look at them again. Nothing was changed.", 409);
     }
-    await admitRelay(request, auth.account);
-    const result = milestone
-      ? await relayMilestoneEnd({ giftId: id, contract, giveBack, nonce, deadline, signature })
-      : await relayEnd({ giftId: id, escrow: contract, keep, giveBack, nonce, deadline, signature });
+    // Counted last (the review of 2 Oct 2026, R-16): the intent is theirs over these two amounts, with the gift's
+    // nonce, and has not run out. An ending is one of the ways out that keep a part of everybody's count.
+    await assertEndStands({ giftId: id, contract, recipient: auth.account, keep, giveBack, nonce, deadline, signature }, BigInt(offer.nonce));
+    const result = await countedIfSent(await admitWayOut(request, auth.account), () =>
+      milestone ? relayMilestoneEnd({ giftId: id, contract, giveBack, nonce, deadline, signature }) : relayEnd({ giftId: id, escrow: contract, keep, giveBack, nonce, deadline, signature }),
+    );
     return NextResponse.json({ giftId: id, ended: true, keep: keep.toString(), giveBack: giveBack.toString(), hash: result.hash }, { headers: NO_STORE });
   } catch (error) {
     return isMilestoneGiftId(id) ? milestoneErrorResponse(error, isOperator(account)) : giftErrorResponse(error, isOperator(account));

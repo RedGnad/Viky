@@ -9,9 +9,9 @@ import { holdTheStart, type StartAsked } from "./held-start";
 import { loadGift, markBound, type GiftRecord } from "./gift-store";
 import { milestoneRefusal } from "./milestone-api";
 import { MILESTONE_ATTESTATION_TTL_SECONDS, type MilestoneProofMessage } from "./milestone-protocol";
-import { milestonePhase, readMilestoneGift, type MilestoneState } from "./milestone-reader";
+import { milestonePhase, readingTakenBy, readMilestoneGift, type MilestoneState } from "./milestone-reader";
 import { relayProve, type ProvedReading } from "./milestone-relay";
-import { lastReading, readSince, recordReading, touchSameLook, type MilestoneReading, type ReadingPurpose } from "./milestone-store";
+import { attestedReadings, lastReading, readSince, recordReading, touchSameLook, type MilestoneReading, type ReadingPurpose } from "./milestone-store";
 import { escrowOf, RelayerError } from "./relayer";
 import { StartNotSigned } from "./v2-start";
 import type { ChessStanding } from "./chess-com";
@@ -31,6 +31,13 @@ import type { ChessStanding } from "./chess-com";
  * an attested reading there would cost a proof and change nothing. At or past the target, or when the plain read
  * fails for any reason, an attested reading is taken, and only that one is ever sent. The plain read can therefore
  * cost the recipient nothing: it never stops an attested reading, it only skips one that could not have mattered.
+ *
+ * A reading a pause kept from being sent is not lost (the review of 2 Oct 2026, R-14). While readings are paused the
+ * contract takes none, so a reading that reached the target then was refused and written down here. When they
+ * reopen, that reading is signed again and sent, inside the grace the contract counts from the reopening: on the
+ * second version a deadline that fell inside the pause is judged on a reading taken until the pause ended. Before,
+ * the server answered that the deadline had passed, and the whole gift went back to its funder six hours later. And
+ * while the pause runs, one such reading is enough: no proof is paid for again at every pass.
  *
  * Every outcome is typed, refusals included, so the screen and the keeper's report say why.
  */
@@ -90,6 +97,8 @@ export type MilestoneReadingDeps = {
   readRecently: (giftId: string, sinceSeconds: number) => Promise<boolean>;
   /** The gift's newest reading, so a refusal repeated by every pass is written once. */
   last?: (giftId: string) => Promise<MilestoneReading | null>;
+  /** The gift's attested readings, oldest first: where one that a pause kept from being sent is found again. */
+  attested?: (giftId: string) => Promise<MilestoneReading[]>;
   /**
    * A look that found exactly what the gift's newest reading found: the newest row's moment is moved to now and no
    * row is added. Answers whether there was such a row. A pass every five minutes wrote one identical row each time
@@ -113,6 +122,7 @@ export function liveMilestoneReadingDeps(): MilestoneReadingDeps {
     record: recordReading,
     readRecently: readSince,
     last: lastReading,
+    attested: attestedReadings,
     sameLookAgain: touchSameLook,
     now: () => Math.floor(Date.now() / 1_000),
   };
@@ -199,6 +209,27 @@ function readingOf(giftId: string, purpose: ReadingPurpose, attested: AttestedCl
   };
 }
 
+/** How the journal names a reading the contract refused because readings were paused. */
+export const HELD_BY_A_PAUSE = "refused:ProofIsPaused";
+
+/**
+ * The newest reading a pause kept from being sent that could still settle the gift: attested, of the player the gift is
+ * bound to, at or past the target, newer than the last reading the contract took, and taken by the moment the contract
+ * judges a reading by, which on the second version is the end of the pause when the deadline fell inside it.
+ */
+async function heldByAPause(record: GiftRecord, state: MilestoneState, target: number, deps: MilestoneReadingDeps): Promise<MilestoneReading | null> {
+  if (!deps.attested) return null;
+  const takenBy = state.version === 2 ? readingTakenBy(state.deadline, { began: state.proofPauseBegan, until: state.proofResumedAt }) : state.deadline;
+  const readings = await deps.attested(record.giftId);
+  for (const reading of [...readings].reverse()) {
+    if (reading.outcome !== HELD_BY_A_PAUSE || reading.rating === null || reading.nullifier === null || reading.playerId === null) continue;
+    if (reading.playerId !== record.goalProfileId || reading.rating < target) continue;
+    if (reading.observedAt > takenBy || reading.observedAt <= state.lastProofAt) continue;
+    return reading;
+  }
+  return null;
+}
+
 /**
  * How close to its deadline a gift is read with a proof even when the look failed: its last day. Until then a pass that
  * asks for it (`lookMustSucceed`) stops at a look that failed.
@@ -238,16 +269,28 @@ export async function runMilestoneReading(
   if (purpose === "start" && phase !== "opened") return { kind: "already", giftId, reason: "already_bound" };
   if (purpose === "reach") {
     if (phase === "startTooHigh") return { kind: "already", giftId, reason: "start_too_high" };
-    if (phase === "overdue") return { kind: "already", giftId, reason: "deadline_passed" };
-    if (phase !== "climbing") return { kind: "already", giftId, reason: "not_bound" };
+    if (phase !== "climbing" && phase !== "overdue") return { kind: "already", giftId, reason: "not_bound" };
   }
   // No reading that moves money without the recipient's yes, and none after their stop (the founder, 29 Sep 2026).
   const leave = deps.leave ? await deps.leave(giftId, state.fundedAt) : null;
-  if (leave && !leave.allowed) return noAgreement(giftId, record.goalUsername, deps);
+  if (leave && !leave.allowed) return phase === "overdue" ? { kind: "already", giftId, reason: "deadline_passed" } : noAgreement(giftId, record.goalUsername, deps);
   const mode = climbOfGoal(state.goalType);
   if (!mode) return refused(giftId, "NOT_CONFIGURED");
   const username = record.goalUsername;
   const target = Number(state.target);
+
+  if (purpose === "reach" && (phase === "overdue" || state.proofPaused)) {
+    const held = await heldByAPause(record, state, target, deps);
+    // While readings are paused, one reading that reached the target is enough: it is kept, and no proof is paid for
+    // again at every pass. Nothing can be sent until they reopen.
+    if (state.proofPaused && held) return refused(giftId, "PAUSED", held.rating ?? undefined, milestoneRefusal("ProofIsPaused")?.message);
+    if (phase === "overdue") {
+      // Past the moment a reading is judged by, nothing read now can count. What a pause kept from being sent can:
+      // signed again and sent, and the contract says whether it is still inside the grace.
+      if (state.proofPaused || !held) return { kind: "already", giftId, reason: "deadline_passed" };
+      return prove(record, state, contract, { username: held.username, playerId: held.playerId as string, status: "", name: null, mode, rating: held.rating as number, ratedAt: held.ratedAt ?? 0, rd: held.rd ?? null, observedAt: held.observedAt, nullifier: held.nullifier as Hex, proofs: [] }, "reach", deps);
+    }
+  }
 
   if (purpose === "start") {
     // D27, the rule both sources share: a code proves control only when the recipient named the account themselves.

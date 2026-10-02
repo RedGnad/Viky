@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getAddress, isAddress, type Hex } from "viem";
 import { readAccountAuthSession } from "./account-auth-server";
-import { assertNotTooSmall } from "./relay-admission";
+import { assertNotTooSmall, countedIfSent, type Admission } from "./relay-admission";
 import { newChessCode } from "./chess-reading";
 import { attestClimbRating, isClimbReadError } from "./climb-reading";
 import { GiftApiError, NO_STORE, refuseOwnGift } from "./gift-api";
 import { loadGift, loadRelayed, markClaimed, reconcileClaim, type GiftRecord } from "./gift-store";
+import { assertWithdrawStands } from "./relay-free-checks";
 import { holdsTheLinkOf } from "./v2-opening";
 import { milestoneById, cadenceOfGoal, CHESS_MILESTONE } from "./milestone-conditions";
 import { runMilestoneReading } from "./milestone-reading";
@@ -130,15 +131,19 @@ export async function milestoneCount(request: Request, giftId: string): Promise<
   return NextResponse.json(outcome, { headers: NO_STORE });
 }
 
-export async function milestoneWithdraw(input: {
-  account: string;
-  giftId: string;
-  to: string;
-  amount: bigint;
-  nonce: bigint;
-  deadline: bigint;
-  signature: Hex;
-}): Promise<NextResponse> {
+export async function milestoneWithdraw(
+  input: {
+    account: string;
+    giftId: string;
+    to: string;
+    amount: bigint;
+    nonce: bigint;
+    deadline: bigint;
+    signature: Hex;
+  },
+  /** Counts the request, once everything that costs nothing has been checked (src/relay-admission.ts). */
+  admit: () => Promise<Admission>,
+): Promise<NextResponse> {
   const record = await loadGift(input.giftId);
   if (!record) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);
   if (!isAddress(input.to)) throw new GiftApiError("INVALID_DESTINATION", "The destination is invalid");
@@ -147,6 +152,7 @@ export async function milestoneWithdraw(input: {
   if (!state.recipient || state.recipient.toLowerCase() !== input.account.toLowerCase()) throw new GiftApiError("NOT_YOURS", "Only the person the gift is for can take it", 403);
   if (input.amount <= 0n || input.amount > state.earnedBalance) throw new GiftApiError("NOT_ENOUGH_EARNED", "That is more than what is yours so far", 409);
   assertNotTooSmall("takeOut", input.amount, state.earnedBalance);
-  const result = await relayMilestoneWithdraw({ ...input, contract, to: getAddress(input.to) });
+  await assertWithdrawStands({ giftId: input.giftId, contract, recipient: input.account, to: getAddress(input.to), amount: input.amount, nonce: input.nonce, deadline: input.deadline, signature: input.signature }, state.withdrawNonce);
+  const result = await countedIfSent(await admit(), () => relayMilestoneWithdraw({ ...input, contract, to: getAddress(input.to) }));
   return NextResponse.json({ giftId: input.giftId, sent: true, amount: input.amount.toString(), hash: result.hash }, { headers: NO_STORE });
 }

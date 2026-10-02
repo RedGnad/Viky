@@ -1,6 +1,6 @@
 import { consentBytes, fromHex } from "./consent";
-import { anchorRow } from "./consent-anchoring";
-import { consentKeyOf, ed25519Verifies, latestConsent, type ConsentRow } from "./consent-store";
+import { anchorContract, anchorWaitingRows } from "./consent-anchoring";
+import { consentKeyOf, consentsWaitingForAnchor, ed25519Verifies, latestConsent, type ConsentRow } from "./consent-store";
 import { readGift } from "./gift-reader";
 import { loadGift } from "./gift-store";
 import { readMilestoneGift } from "./milestone-reader";
@@ -31,19 +31,30 @@ async function stands(row: ConsentRow, giftId: string): Promise<boolean> {
   return (await consentKeyOf(row.account)) === row.publicKey.toLowerCase();
 }
 
+/** Tries once more whatever of this gift still waits for the anchor, oldest first. Nothing while the anchor is off. */
+async function anchorWhatWaits(latest: ConsentRow): Promise<void> {
+  if (latest.anchorTx !== null || latest.anchorSignature === null || !anchorContract()) return;
+  await anchorWaitingRows(await consentsWaitingForAnchor(latest.giftId));
+}
+
 /**
- * @param anchor Tries once more to write a yes that still waits for the anchor, before the reading it allows (the
- *   audit of 1 Oct 2026): the public record then holds the yes before the reading that moved money. The reading never
- *   waits on the outcome. A caller that only reads the state, and takes no reading, passes `false`.
+ * @param anchor Tries once more to write what still waits for the anchor (the audit of 1 Oct 2026). A yes, before the
+ *   reading it allows: the public record then holds the yes before the reading that moved money. And a stop (the
+ *   review of 2 Oct 2026, R-07): it holds from the moment it is signed, and every pass asks here, so a stop the anchor
+ *   missed once is tried again at each pass until it is written. The answer never waits on the outcome. A caller that
+ *   only reads the state, and takes no reading, passes `false`.
  */
 export async function readingLeave(giftId: string, fundedAt: number, anchor = true): Promise<ReadingLeave> {
   const latest = await latestConsent(giftId);
   if (latest?.kind === "yes") {
     if (!(await stands(latest, giftId))) return { allowed: false, reason: "no_agreement" };
-    if (anchor && latest.anchorTx === null && latest.anchorSignature !== null) await anchorRow(latest);
+    if (anchor) await anchorWhatWaits(latest);
     return { allowed: true, beforeAgreements: false };
   }
-  if (latest?.kind === "stop") return { allowed: false, reason: "stopped" };
+  if (latest?.kind === "stop") {
+    if (anchor) await anchorWhatWaits(latest);
+    return { allowed: false, reason: "stopped" };
+  }
   return fundedAt > 0 && fundedAt < AGREEMENTS_FROM ? { allowed: true, beforeAgreements: true } : { allowed: false, reason: "no_agreement" };
 }
 

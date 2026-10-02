@@ -10,7 +10,7 @@ import { readMilestoneGift } from "@/src/milestone-reader";
 import { isMilestoneGiftId } from "@/src/milestone-protocol";
 import { monadChain, waitForFinality } from "@/src/monad/chain";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { admitRelay, admitTopUp } from "@/src/relay-admission";
+import { admitWayOut, admitTopUp } from "@/src/relay-admission";
 import { escrowOf, relayerClients, relayerPreflight } from "@/src/relayer";
 
 export const runtime = "nodejs";
@@ -64,7 +64,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     // Monad charges the limit that is declared, not what is used, so what this account needs is the whole limit at
     // today's price, and a third again so a rise between this answer and the send does not strand the gesture.
-    await admitRelay(request, auth.account);
+    // The funder taking back a gift nobody opened is one of the ways out that keep a part of everybody's count.
+    await admitWayOut(request, auth.account);
     const clients = relayerClients();
     await relayerPreflight(clients);
     const fees = await clients.publicClient.estimateFeesPerGas();

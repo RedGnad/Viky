@@ -4,7 +4,8 @@ import { after, before, beforeEach, test } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import { GiftApiError } from "../src/gift-api";
 import type { SqlExecutor } from "../src/proof-session-store";
-import { admitRelay, admitTopUp, assertNotTooSmall } from "../src/relay-admission";
+import { admitRelay, admitTopUp, admitWayOut, assertNotTooSmall, countedIfSent, nothingWasSent } from "../src/relay-admission";
+import { RelayerError } from "../src/relayer";
 import { bucketOf, ceilingSentence, DEFAULT_RELAY_CEILINGS, minutesUntil, overTheCeiling, relayCeilings, relayScopes, tooSmallToRelay, topUpScopes, windowEndsMs } from "../src/relay-ceiling";
 import { configureRelayCeilingStore, countKey, countRelays, ensureRelayCeilingSchema, forgetRelayCountsBefore, uncountRelays } from "../src/relay-ceiling-store";
 
@@ -28,7 +29,7 @@ const NOW = Date.UTC(2026, 8, 23, 14, 20, 0);
 
 const from = (ip: string) => new Request("https://viky.test/api/send", { method: "POST", headers: { "x-forwarded-for": ip } });
 
-async function refused(action: () => Promise<void>): Promise<GiftApiError> {
+async function refused(action: () => Promise<unknown>): Promise<GiftApiError> {
   try {
     await action();
   } catch (error) {
@@ -55,8 +56,11 @@ after(async () => {
 
 test("the founder's defaults, and the environment's numbers when it names them", () => {
   assert.deepEqual(relayCeilings({}), DEFAULT_RELAY_CEILINGS);
-  assert.deepEqual(DEFAULT_RELAY_CEILINGS, { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1, topUpsPerGift: 2, perDayAll: 500 });
-  assert.deepEqual(relayCeilings({ RELAY_PER_HOUR: "5", RELAY_PER_DAY: "40", RELAY_MINIMUM_CENTS: "250", TOP_UPS_PER_MINUTE: "2", TOP_UPS_PER_GIFT: "3", RELAY_PER_DAY_ALL: "300" }), { perHour: 5, perDay: 40, minimumUnits: 2_500_000n, topUpsPerMinute: 2, topUpsPerGift: 3, perDayAll: 300 });
+  assert.deepEqual(DEFAULT_RELAY_CEILINGS, { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1, topUpsPerGift: 2, perDayAll: 500, reservedForWaysOut: 100 });
+  assert.deepEqual(relayCeilings({ RELAY_PER_HOUR: "5", RELAY_PER_DAY: "40", RELAY_MINIMUM_CENTS: "250", TOP_UPS_PER_MINUTE: "2", TOP_UPS_PER_GIFT: "3", RELAY_PER_DAY_ALL: "300", RELAY_RESERVED_FOR_WAYS_OUT: "60" }), { perHour: 5, perDay: 40, minimumUnits: 2_500_000n, topUpsPerMinute: 2, topUpsPerGift: 3, perDayAll: 300, reservedForWaysOut: 60 });
+  // The part kept for the ways out is never more than half of everybody's count, whatever is asked.
+  assert.equal(relayCeilings({ RELAY_PER_DAY_ALL: "40" }).reservedForWaysOut, 20);
+  assert.equal(relayCeilings({ RELAY_RESERVED_FOR_WAYS_OUT: "9000" }).reservedForWaysOut, 250);
   // Nonsense keeps the default rather than opening the door or closing it.
   assert.deepEqual(relayCeilings({ RELAY_PER_HOUR: "0", RELAY_PER_DAY: "many", RELAY_MINIMUM_CENTS: "-1" }), DEFAULT_RELAY_CEILINGS);
 });
@@ -79,10 +83,12 @@ test("five counts for a relayed action, three for a top-up, and the first over i
       [`relay:day:account:${ACCOUNT.toLowerCase()}`, "day", 100],
       ["relay:hour:ip:203.0.113.9", "hour", 20],
       ["relay:day:ip:203.0.113.9", "day", 100],
-      // One count for everybody together (the audit of 1 Oct 2026): many accounts on many connections had none.
-      ["relay:day:all", "day", 500],
+      // One count for everybody together (the audit of 1 Oct 2026): many accounts on many connections had none. A
+      // hundred of its five hundred are kept for the ways out of a gift (the review of 2 Oct 2026, R-16).
+      ["relay:day:all", "day", 400],
     ],
   );
+  assert.deepEqual(relayScopes(ACCOUNT, "203.0.113.9", DEFAULT_RELAY_CEILINGS, true).map((one) => one.limit), [20, 100, 20, 100, 500], "a way out is held against the whole of it");
   assert.equal(relayCeilings({ RELAY_PER_DAY_ALL: "40" }).perDayAll, 40);
   const everybody = overTheCeiling(scopes.map((one, index) => ({ ...one, count: index === 4 ? 501 : 1 })));
   assert.equal(everybody?.scope, "relay:day:all");
@@ -178,7 +184,8 @@ test("every route that asks the relayer to pay goes through the door first; the 
   ];
   for (const [file, relays] of routes) {
     const source = readFileSync(file, "utf8");
-    const door = source.indexOf("await admitRelay(request, auth.account)");
+    // A way out of a gift goes through the door that keeps its part of everybody's count (`admitWayOut`).
+    const door = Math.max(source.indexOf("await admitRelay(request, auth.account)"), source.indexOf("admitWayOut(request, auth.account)"));
     const paid = source.search(relays);
     assert.ok(door > 0, `${file}: goes through the door`);
     assert.ok(paid > door, `${file}: the door comes before the relayer is asked`);
@@ -188,4 +195,91 @@ test("every route that asks the relayer to pay goes through the door first; the 
   assert.match(readFileSync("app/api/gift/withdraw/route.ts", "utf8"), /assertNotTooSmall\("takeOut", amount, gift\.earnedBalance\)/);
   assert.match(readFileSync("src/milestone-routes.ts", "utf8"), /assertNotTooSmall\("takeOut", input\.amount, state\.earnedBalance\)/);
   for (const file of ["src/daily-pass.ts", "scripts/keeper.ts"]) assert.ok(!readFileSync(file, "utf8").includes("relay-admission"), `${file}: the operator's own relaying is not counted`);
+});
+
+/**
+ * The review of 2 Oct 2026, R-16. Everybody's count for the day was used up for nothing: a request was counted before
+ * it was checked, so twenty-five free accounts asking twenty times each for a gift that does not exist reached five
+ * hundred, spent no gas, and nobody could open a gift, end one or be paid until midnight UTC.
+ */
+test("the ways out of a gift keep a part of everybody's count: a day used up by everything else still opens, ends and pays out", async () => {
+  // Four hundred actions of every other kind, by twenty accounts on twenty connections: everybody's count is at what
+  // is not kept, and nobody is near their own ceiling.
+  for (let who = 0; who < 20; who += 1) {
+    const account = `0x${(who + 1).toString(16).padStart(40, "0")}`;
+    for (let i = 0; i < 20; i += 1) await admitRelay(from(`10.0.0.${who + 1}`), account, NOW + i);
+  }
+  const all = async () => Number((await db.query<{ count: number }>("SELECT count FROM viky_relay_counts WHERE scope = 'relay:day:all'")).rows[0].count);
+  assert.equal(await all(), 400);
+  // One more gift to make, one more day to count: refused for everybody, and not counted.
+  const full = await refused(() => admitRelay(from("10.0.9.9"), OTHER, NOW + 50));
+  assert.equal(full.code, "RELAY_CEILING");
+  assert.equal(full.message, "Viky has sent as many actions as it sends in a day, for everybody. Nothing of yours was changed. Try again tomorrow.");
+  assert.equal(await all(), 400);
+  // The person holding a link still opens their gift, ends it, takes out what is theirs: a hundred times that day.
+  for (let i = 0; i < 100; i += 1) await admitWayOut(from(`10.1.${Math.floor(i / 20)}.${i % 20}`), `0x${(i + 100).toString(16).padStart(40, "0")}`, NOW + 100 + i);
+  assert.equal(await all(), 500);
+  assert.equal((await refused(() => admitWayOut(from("10.2.0.1"), OTHER, NOW + 300))).code, "RELAY_CEILING", "and the whole count is still a ceiling");
+});
+
+test("only what the relayer pays for stays counted: a call the contract refuses when run for nothing is taken back", async () => {
+  const request = from("203.0.113.40");
+  const count = async (scope: string) => Number((await db.query<{ count: number }>("SELECT count FROM viky_relay_counts WHERE scope = $1", [scope])).rows[0]?.count ?? 0);
+  const mine = `relay:day:account:${ACCOUNT.toLowerCase()}`;
+  // Sent: counted.
+  assert.equal(await countedIfSent(await admitRelay(request, ACCOUNT, NOW), async () => "sent"), "sent");
+  assert.deepEqual([await count(mine), await count("relay:day:all")], [1, 1]);
+  // Refused by the contract in simulation, before anything was sent: the failure goes on as it was, the count comes back.
+  const unsent = new RelayerError("REVERTED", "The contract refused: InvalidIntentNonce", "InvalidIntentNonce", undefined, true);
+  await assert.rejects(countedIfSent(await admitRelay(request, ACCOUNT, NOW), async () => Promise.reject(unsent)), (error: unknown) => error === unsent);
+  assert.deepEqual([await count(mine), await count("relay:day:all"), await count("relay:hour:ip:203.0.113.40")], [1, 1, 1]);
+  // The relayer could not send at all: the same.
+  for (const code of ["RESERVE_TOO_LOW", "WRONG_CHAIN", "NOT_CONFIGURED"] as const) {
+    await assert.rejects(countedIfSent(await admitRelay(request, ACCOUNT, NOW), async () => Promise.reject(new RelayerError(code, "no"))));
+    assert.equal(await count("relay:day:all"), 1, code);
+  }
+  // Sent and then reverted, or not known final: the relayer paid, and it stays counted.
+  await assert.rejects(countedIfSent(await admitRelay(request, ACCOUNT, NOW), async () => Promise.reject(new RelayerError("REVERTED", "reverted once mined"))));
+  await assert.rejects(countedIfSent(await admitRelay(request, ACCOUNT, NOW), async () => Promise.reject(new Error("not final within the wait"))));
+  assert.deepEqual([await count(mine), await count("relay:day:all")], [3, 3]);
+  assert.equal(nothingWasSent(unsent), true);
+  assert.equal(nothingWasSent(new RelayerError("REVERTED", "reverted once mined")), false);
+  assert.equal(nothingWasSent(new GiftApiError("NOT_ENOUGH", "no", 409)), false);
+  // A count is taken back once, however often it is asked.
+  const admitted = await admitWayOut(request, ACCOUNT, NOW);
+  await admitted.takeBack();
+  await admitted.takeBack();
+  assert.equal(await count("relay:day:all"), 3);
+  // The relayer itself says which refusals cost nothing: the one it meets when it runs the call for nothing first.
+  assert.match(readFileSync("src/relayer.ts", "utf8"), /"The contract refused the transaction", name, raw, true\);/);
+});
+
+test("a request is counted last: after the gift is known, the account is its own, and the signature is theirs over what is sent", () => {
+  // The reviewer's flood: withdrawals for a gift that does not exist. Nothing of it reaches the door any more.
+  const withdraw = readFileSync("app/api/gift/withdraw/route.ts", "utf8");
+  const order = (source: string, steps: string[]) => steps.map((step) => source.indexOf(step));
+  const inOrder = (positions: number[]) => positions.every((at, index) => at >= 0 && (index === 0 || at > positions[index - 1]));
+  assert.ok(inOrder(order(withdraw, ['throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);\n    const escrow', 'throw new GiftApiError("NOT_YOURS"', 'throw new GiftApiError("NOT_ENOUGH_EARNED"', "await assertWithdrawStands(", "await countedIfSent(await admit(), () => relayWithdraw("])), "the daily withdrawal");
+  const milestone = readFileSync("src/milestone-routes.ts", "utf8");
+  assert.ok(inOrder(order(milestone, ['if (!record) throw new GiftApiError("UNKNOWN_GIFT", "Unknown gift", 404);\n  if (!isAddress(input.to))', "Only the person the gift is for can take it", "await assertWithdrawStands(", "await countedIfSent(await admit(), () => relayMilestoneWithdraw("])), "the milestone withdrawal");
+  const end = readFileSync("app/api/gift/[id]/end/route.ts", "utf8");
+  assert.ok(inOrder(order(end, ['throw new GiftApiError("NOT_YOURS"', 'throw new GiftApiError("END_CHANGED"', "await assertEndStands(", "await countedIfSent(await admitWayOut(request, auth.account), () =>"])), "the ending");
+  const opening = readFileSync("src/v2-opening.ts", "utf8");
+  assert.ok(inOrder(order(opening, ["signer.toLowerCase() !== state.openingKey.toLowerCase()", "return admit ? countedIfSent(await admit(), relayIt) : relayIt();"])), "the opening");
+  const send = readFileSync("app/api/send/route.ts", "utf8");
+  assert.ok(inOrder(order(send, ["simulateContract(", "await admitRelay(request, auth.account);", "writeContract("])), "a send is counted once the token itself would take it");
+  // Every other relaying route takes its count back when nothing was sent.
+  for (const [file, relays] of [
+    ["app/api/gift/create/route.ts", "countedIfSent(admitted, () => makeGift("],
+    ["app/api/gift/milestone/create/route.ts", "countedIfSent(admitted, () => makeMilestoneGift("],
+    ["app/api/gift/certificate/create/route.ts", "countedIfSent(admitted, () => makeMilestoneGift("],
+    ["app/api/exit/relay/route.ts", "countedIfSent(admitted, () => relayExit("],
+    ["app/api/fund/convert/relay/route.ts", "countedIfSent(admitted, () => relayExit("],
+    ["app/api/phone/pay/route.ts", "countedIfSent(admitted, () => payPhoneTopUp("],
+    ["app/api/gift/check-in/route.ts", "countedIfSent(admitted, () => relayCheckIn("],
+    ["app/api/proof/verify/route.ts", "countedIfSent(admitted, () => relayCheckIn("],
+    ["app/api/gift/claim/route.ts", "countedIfSent(admitted, () => relayClaim("],
+  ] as const) {
+    assert.ok(readFileSync(file, "utf8").includes(relays), file);
+  }
 });

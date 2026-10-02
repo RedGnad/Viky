@@ -470,6 +470,24 @@ async function main() {
   });
   expect(response.status === 200 && earned === 2_000_000n && (await ausdOf(recipient.address)) === 1_000_000n, "one day is paid out on the recipient's signed intent");
 
+  // The review of 2 Oct 2026, R-16: a request is counted against everybody's day only once what costs nothing has been
+  // checked. The reviewer's flood, withdrawals for a gift that does not exist, and two more that the contract would
+  // refuse, leave the count where it was.
+  const countedForEverybody = async () => Number((await db.query<{ count: number }>("SELECT count FROM viky_relay_counts WHERE scope = 'relay:day:all'")).rows[0]?.count ?? 0);
+  const countedBefore = await countedForEverybody();
+  const freshNonce = (await readGift(daily, giftId)).withdrawNonce;
+  const again = { giftId: BigInt(giftId), to: recipient.address, amount: 1_000_000n, nonce: freshNonce, deadline: BigInt((await chainNow()) + 600) };
+  const withdrawal = (id: string, message: typeof again, signature: Hex, cookie = recipientCookie) =>
+    post(withdrawRoute, "/api/gift/withdraw", cookie, { giftId: id, to: message.to, amount: message.amount.toString(), nonce: message.nonce.toString(), deadline: message.deadline.toString(), signature });
+  response = await withdrawal("999", { ...again, giftId: 999n }, await recipient.signTypedData(withdrawTypedDataV2("daily", daily, { ...again, giftId: 999n })));
+  expect(response.status === 404, "a withdrawal for a gift that does not exist is refused");
+  response = await withdrawal(giftId, again, await thief.signTypedData(withdrawTypedDataV2("daily", daily, again)));
+  expect(response.status === 400 && ((await response.json()) as { code?: string }).code === "INVALID_SIGNATURE", "so is one the recipient did not sign");
+  const stale = { ...again, nonce: freshNonce - 1n };
+  response = await withdrawal(giftId, stale, await recipient.signTypedData(withdrawTypedDataV2("daily", daily, stale)));
+  expect(response.status === 409 && ((await response.json()) as { code?: string }).code === "STALE_REQUEST", "and one signed for a nonce the gift has left behind");
+  expect((await countedForEverybody()) === countedBefore, "and none of the three was counted against anybody's day");
+
   status = await statusOf(giftId, recipientCookie);
   const offer = status.end as { keep: string; giveBack: string; nonce: string };
   expect(offer.keep === "2000000" && offer.giveBack === "5000004", "the ending now says: keep 2.00, 5.000004 goes back");

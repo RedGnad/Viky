@@ -39,6 +39,11 @@ export class RelayerError extends Error {
     readonly contractError?: string,
     /** The refusal exactly as the chain gave it, when it carried no typed error to name. Operators only. */
     readonly rawReason?: string,
+    /**
+     * The contract refused the call when it was run for nothing, before anything was sent: the relayer paid nothing.
+     * A request refused this way is taken back out of the ceilings (src/relay-admission.ts).
+     */
+    readonly unsent: boolean = false,
   ) {
     super(message);
     this.name = "RelayerError";
@@ -229,7 +234,7 @@ export async function relayCall(
     // whole reason used to vanish on its way to the person. Keep it on the error itself.
     const raw = name ? undefined : (error instanceof Error ? error.message : String(error)).slice(0, 400).replace(/\s+/g, " ");
     if (raw) console.error(`contract refused without a typed error: ${raw}`);
-    throw new RelayerError("REVERTED", name ? `The contract refused: ${name}` : "The contract refused the transaction", name, raw);
+    throw new RelayerError("REVERTED", name ? `The contract refused: ${name}` : "The contract refused the transaction", name, raw, true);
   }
   // Monad charges the limit that is declared, not what is used, so the docs ask for an accurate one rather
   // than a generous one. Ours came from a Foundry suite running against a mock token, and the real AUSD is a

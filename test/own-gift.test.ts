@@ -73,9 +73,9 @@ test("the account that made a gift cannot open it: refused with what to do, and 
   // And the refusal comes before anything is spent: before the relay is admitted and before the claim is signed.
   const route = readFileSync("app/api/gift/claim/route.ts", "utf8");
   // On both versions of the contracts: the second, opened by the link's own key, comes first in the route.
-  assert.ok(route.indexOf("refuseOwnGift(known, auth.account)") < route.indexOf("await admitRelay("));
-  assert.ok(route.indexOf("refuseOwnGift(gift, auth.account)") < route.lastIndexOf("await admitRelay("));
-  assert.ok(route.indexOf("await admitRelay(") < route.indexOf("refuseOwnGift(gift, auth.account)"), "two paths, each with its own refusal first");
+  assert.ok(route.indexOf("refuseOwnGift(known, auth.account)") < route.indexOf("admitWayOut(request, auth.account)"));
+  assert.ok(route.indexOf("refuseOwnGift(gift, auth.account)") < route.lastIndexOf("admitWayOut(request, auth.account)"));
+  assert.ok(route.indexOf("admitWayOut(request, auth.account)") < route.indexOf("refuseOwnGift(gift, auth.account)"), "two paths, each with its own refusal first");
 });
 
 test("a milestone gift refuses its own funder the same way, before its contract is asked anything", async () => {

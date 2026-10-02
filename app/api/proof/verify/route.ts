@@ -19,7 +19,7 @@ import { isMilestoneGiftId } from "@/src/milestone-protocol";
 import { consumeAndSaveVerification, loadAttestation, loadLatestEvidence, loadProofSession } from "@/src/proof-session-store";
 import { giftReadingLeave } from "@/src/consent-guard";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { admitRelay } from "@/src/relay-admission";
+import { admitRelay, countedIfSent } from "@/src/relay-admission";
 import { escrowOf, RelayerError } from "@/src/relayer";
 import { holdForReview, loadPortal } from "@/src/portal-store";
 import { sendReviewAlert } from "@/src/provider-alert";
@@ -126,8 +126,8 @@ export async function POST(request: Request) {
     let sign: StartAsked | null = null;
     if (process.env.RELAYER_PRIVATE_KEY?.trim()) {
       try {
-        await admitRelay(request, auth.account);
-        const submitted = await relayCheckIn(result.sessionId, giftEscrow);
+        const admitted = await admitRelay(request, auth.account);
+        const submitted = await countedIfSent(admitted, () => relayCheckIn(result.sessionId, giftEscrow));
         relayed = { hash: submitted.hash, creditedDays: submitted.creditedDays };
       } catch (error) {
         if (error instanceof StartNotSigned) {

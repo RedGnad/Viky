@@ -99,10 +99,18 @@ test("short of the target nothing moves, on either pass", async () => {
 
 test("once the deadline and the grace have passed, the settling pass sends the whole amount back", async () => {
   const unused: MilestoneOutcome = { kind: "already", giftId: "1000000", reason: "deadline_passed" };
-  // Past the deadline but inside the grace: a reading taken in time could still arrive, so nothing is closed.
+  // Past the deadline but inside the grace: a reading taken in time could still arrive, so nothing is closed. The
+  // reading is asked all the same (the review of 2 Oct 2026, R-14): nothing read now can count, but a reading a pause
+  // kept from being sent can, and asking is where it is sent (src/milestone-reading.ts).
   let run = world(CLIMBING, unused, DEADLINE + MILESTONE_PROOF_GRACE_SECONDS);
-  await milestonePass(true, run.deps);
-  assert.deepEqual(run.calls, [], "no reading after the deadline, and no expiry inside the grace");
+  let inGrace = await milestonePass(true, run.deps);
+  assert.deepEqual(run.calls, ["reach:1000000"], "asked for a reading kept by a pause, and no expiry inside the grace");
+  assert.deepEqual(inGrace.map((line) => `${line.step}:${line.result}`), ["read:skipped: deadline_passed"]);
+  // And when that reading is there, the gift is the recipient's, inside the grace, with nothing sent back.
+  run = world(CLIMBING, { kind: "reached", giftId: "1000000", rating: 1503, hash: "0xabc" }, DEADLINE + MILESTONE_PROOF_GRACE_SECONDS);
+  inGrace = await milestonePass(true, run.deps);
+  assert.deepEqual(run.calls, ["reach:1000000"]);
+  assert.equal(run.state().earnedBalance, 25_000_000n, "reached on a reading kept from before, sent inside the grace");
 
   run = world(CLIMBING, unused, DEADLINE + MILESTONE_PROOF_GRACE_SECONDS + 1);
   const lines = await milestonePass(true, run.deps);
