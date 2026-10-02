@@ -9,6 +9,7 @@ import { CONVERSION_RESERVE } from "@/src/funding-step";
 import { formatAusd } from "@/src/gift-reader";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { kuruQuote } from "@/src/kuru";
+import { assertWithinCorridor, offerIn } from "@/src/mobile-money-server";
 import { afterTheReserve, cardSellLimits, dollarsForTheMinimum } from "@/src/mercuryo";
 import { AUSD_ADDRESS, USDC_ADDRESS } from "@/src/monad/chain";
 import { inFiat, payoutAsset, withinPayoutRange } from "@/src/ramp";
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     const router = exitRouterAddress();
     const exchange = exitExchangeAddress();
 
-    const body = await readJsonBody<{ amount?: string; coin?: string }>(request, 1_024);
+    const body = await readJsonBody<{ amount?: string; coin?: string; purpose?: string; country?: string }>(request, 1_024);
     let amount: bigint;
     try {
       amount = BigInt(String(body.amount ?? ""));
@@ -73,7 +74,15 @@ export async function POST(request: Request) {
     // publish it in their own currency and it moves with the rate. Each of the two publishes it somewhere we can
     // read, so each is asked: the bank service below, the card service after it.
     let payout: { currency: string; worth: number; smallest: number; largest: number } | undefined;
-    if (getAddress(way.coin) === getAddress(USDC_ADDRESS)) {
+    // The same dollars bound for a mobile money number (the founder, 2 Oct 2026): it is that country's corridor at
+    // Switch that has limits to keep, read from Switch now, and the bank service's own limits have nothing to say.
+    const mobileMoney = body.purpose === "mobile-money";
+    if (mobileMoney) {
+      if (getAddress(way.coin) !== getAddress(USDC_ADDRESS)) throw new GiftApiError("UNKNOWN_WAY_OUT", "Choose how you want to be paid.");
+      const offer = await offerIn(String(body.country ?? ""));
+      if (!offer.offered) throw new GiftApiError("NOT_OFFERED", "Mobile money is not offered for this country. Nothing was taken.", 409);
+      assertWithinCorridor(floor, offer);
+    } else if (getAddress(way.coin) === getAddress(USDC_ADDRESS)) {
       const asset = await payoutAsset();
       // They name the coin's own contract in that list, and it must be the one this router hands back. If they
       // ever move to another, the swap would still work and the payout would be watched for somewhere else.

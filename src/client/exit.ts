@@ -36,9 +36,13 @@ export type WayOutQuote = Readonly<{
   ticket: string;
 }>;
 
-/** What an exchange would give for this much, down the corridor they chose. */
-export function quoteWayOut(input: { amount: bigint; coin: Hex }): Promise<WayOutQuote> {
-  return postJson<WayOutQuote>("/api/exit/quote", { amount: input.amount.toString(), coin: input.coin });
+/** What an exchange would give for this much, down the corridor they chose: for a mobile money payout, its country's. */
+export function quoteWayOut(input: { amount: bigint; coin: Hex; mobileMoneyIn?: string }): Promise<WayOutQuote> {
+  return postJson<WayOutQuote>("/api/exit/quote", {
+    amount: input.amount.toString(),
+    coin: input.coin,
+    ...(input.mobileMoneyIn ? { purpose: "mobile-money", country: input.mobileMoneyIn } : {}),
+  });
 }
 
 type PreparedTerms = {
