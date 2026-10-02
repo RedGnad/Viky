@@ -4,6 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { createEd25519SigningSession } from "@category-labs/mera";
 import { createPublicClient, createTestClient, encodeFunctionData, getAddress, http, keccak256, parseEther, toHex, type Abi, type Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { POST as bindRoute } from "../app/api/gift/[id]/bind/route";
 import { GET as consentRoute, POST as consentPostRoute } from "../app/api/gift/[id]/consent/route";
 import { POST as endRoute } from "../app/api/gift/[id]/end/route";
 import { POST as linkRoute } from "../app/api/gift/[id]/link/route";
@@ -28,6 +29,8 @@ import { giftEscrowAbi } from "../src/gift-escrow-abi";
 import { readGift } from "../src/gift-reader";
 import { relayOpen } from "../src/gift-relay";
 import { configureGiftStore, ensureGiftSchema } from "../src/gift-store";
+import { holdTheStart } from "../src/held-start";
+import { configureHeldStartStore } from "../src/held-start-store";
 import { GOAL_TYPE_DUOLINGO_XP } from "../src/gift-terms";
 import { CHESS_MILESTONE } from "../src/milestone-conditions";
 import { milestoneGiftAbi } from "../src/milestone-gift-abi";
@@ -38,7 +41,7 @@ import { monadChain } from "../src/monad/chain";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { relay, RelayerError } from "../src/relayer";
 import { configureRelayCeilingStore, ensureRelayCeilingSchema } from "../src/relay-ceiling-store";
-import { consentAnchorMessage, consentKeyTypedData, consentTextDigest, endTypedData, openingAccount, openTypedData, startTypedData, withdrawTypedDataV2 } from "../src/v2-protocol";
+import { consentAnchorMessage, consentKeyTypedData, consentTextDigest, endTypedData, openingAccount, openingSecretOf, openTypedData, previewTokenOf, startTypedData, withdrawTypedDataV2 } from "../src/v2-protocol";
 import { StartNotSigned } from "../src/v2-start";
 import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-contracts";
 
@@ -56,8 +59,8 @@ import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-co
  *   4. a daily gift: made with a link the funder's code makes, found again as on another device, refused to the
  *      evidence key, opened with the link's key, its first reading refused to the evidence key alone and taken with
  *      the recipient's own signature, read, paid out, then ended by the person it is for;
- *   5. a milestone gift: made, opened with the link's key, started with the recipient's own signature, then ended; and
- *      a second one reached and paid;
+ *   5. a milestone gift: made, opened with the link's key, its start read, held, signed by the recipient's account
+ *      and sent by the route, then ended; and a second one reached and paid;
  *   5b. the owner's pause on the second version: sent once, refused a second time, and refused again for the week
  *      that follows its end (the review of 2 Oct 2026);
  *   6. the recipient's yes and stop, written on the anchor by the consent route with no step of its own, and then
@@ -198,6 +201,7 @@ async function main() {
   configureMilestoneStore(exec);
   configureRelayCeilingStore(exec);
   configureConsentStore(exec);
+  configureHeldStartStore(exec);
   await ensureGiftSchema();
   await ensureMilestoneSchema();
   await ensureRelayCeilingSchema();
@@ -256,7 +260,15 @@ async function main() {
   expect(response.status === 200 && made.claimUrl === null, `the gift is made (${made.giftId}) and the server answers no link: it never held one${made.error ? ` (${made.error})` : ""}`);
   const giftId = made.giftId;
   const link = await linkOfMade(funder, made, request.salt);
-  const secret = String(new URL(link).searchParams.get("t"));
+  // The secret is what follows the link's `#`, which no server is sent. `?t=` carries the preview token made from it.
+  const secret = String(openingSecretOf(new URL(link).hash));
+  const token = String(new URL(link).searchParams.get("t"));
+  expect(token === previewTokenOf(secret) && !`${new URL(link).pathname}${new URL(link).search}`.includes(secret), "the link carries its secret after the #, and a preview token in ?t=");
+  const readAs = async (t: string) => statusRoute(new Request(`${ORIGIN}/api/gift/${giftId}?t=${t}`, { headers: headers() }), { params: Promise.resolve({ id: giftId }) });
+  expect(((await (await readAs(token)).json()) as { names: unknown }).names !== null, "the preview token names the reader as holding the link");
+  const refusedSecret = await readAs(secret);
+  expect(refusedSecret.status === 400 && ((await refusedSecret.json()) as { code?: string }).code === "LINK_OUT_OF_DATE", "the secret itself, sent in ?t=, is refused: LINK_OUT_OF_DATE");
+  expect(openingAccount(token).address.toLowerCase() !== openingAccount(secret).address.toLowerCase(), "and the key the preview token makes is not the gift's");
   const state = await readGift(daily, giftId);
   expect(state.version === 2 && state.openingKey?.toLowerCase() === openingAccount(secret).address.toLowerCase(), "the contract holds the address of the key the link makes");
   expect((await ausdOf(daily)) === 7_000_004n, "the real AUSD arrived on the second version's contract");
@@ -300,7 +312,7 @@ async function main() {
     const body = (await answer.json()) as { giftId: string; claimUrl: string | null; funded: boolean; error?: string };
     if (answer.status !== 200) throw new Error(`the milestone gift was not made: ${body.error}`);
     const itsLink = await linkOfMade(funder, body, prepared.salt);
-    const itsSecret = String(new URL(itsLink).searchParams.get("t"));
+    const itsSecret = String(openingSecretOf(new URL(itsLink).hash));
     const opened = await post(claimRoute, "/api/gift/claim", recipientCookie, { giftId: body.giftId, opening: await opening("milestone", milestone, body.giftId, recipient.address, itsSecret) });
     if (opened.status !== 200) throw new Error(`the milestone gift was not opened: ${await opened.text()}`);
     return body.giftId;
@@ -311,6 +323,31 @@ async function main() {
   // A yes for the first of the two. The second is read with none, on purpose: step 6 must name it.
   expect((await say("yes", ended)).bound === true && (await anchored(ended)) === 1n, "a second gift's yes is anchored with the key already bound");
   expect((await readMilestoneGift(milestone, ended)).version === 2 && (await ausdOf(milestone)) === 8_000_000n, "two milestone gifts are made and opened on the second version");
+
+  // The first reading as the app makes it (the review of 2 Oct 2026, R-15), before the fork's clock is moved: the
+  // server reads and the relay will not send it, it is held, the recipient's account signs it as their browser would,
+  // and the route sends what is held with that signature.
+  const startedAt = await chainNow();
+  const startOfEnded = { giftId: BigInt(ended), recipient: recipient.address, identityHash: keccak256(toHex("rehearsal player")), providerId: chessProviderId(cadence), metricValue: BigInt(standing.rating), eventAt: 0n, observedAt: BigInt(startedAt), nullifier: keccak256(toHex(`start ${ended}`)), issuedAt: BigInt(startedAt), expiresAt: BigInt(startedAt + 300) };
+  const waiting = await relayProve({ contract: milestone, message: startOfEnded }).then(() => null, (error: unknown) => error);
+  expect(waiting instanceof StartNotSigned && waiting.start.metricValue === BigInt(standing.rating), "the start of a climb is not sent without the recipient's signature: the relay says what is to be signed");
+  const askedStart = await holdTheStart(waiting as StartNotSigned, {
+    account: recipient.address,
+    message: Object.fromEntries(Object.entries(startOfEnded).map(([key, value]) => [key, typeof value === "bigint" ? value.toString() : value])),
+    after: { bindTo: "rehearsal-player", maximumStart: String(target) },
+  });
+  const signStart = (who: Account) =>
+    who.signTypedData(startTypedData(askedStart.start.of, askedStart.start.contract, { giftId: BigInt(ended), identityHash: askedStart.start.identityHash, metricValue: BigInt(askedStart.start.metricValue), observedAt: BigInt(askedStart.start.observedAt) }));
+  response = await postFor(bindRoute, ended, `/api/gift/${ended}/bind`, await cookieFor(thief), { startSignature: await signStart(thief) });
+  expect(response.status === 403, "the route takes that signature from the person the gift is for, and from nobody else");
+  response = await postFor(bindRoute, ended, `/api/gift/${ended}/bind`, recipientCookie, { startSignature: await signStart(thief) });
+  expect(((await response.json()) as { kind?: string; code?: string }).code === "NOT_SIGNED_BY_YOU" && /^0x0{64}$/.test((await readMilestoneGift(milestone, ended)).identityHash), "a signature that is not theirs sends nothing");
+  response = await postFor(bindRoute, ended, `/api/gift/${ended}/bind`, recipientCookie, { startSignature: await signStart(recipient) });
+  const startedOutcome = (await response.json()) as { kind?: string; rating?: number; code?: string; message?: string };
+  expect(response.status === 200 && startedOutcome.kind === "started" && startedOutcome.rating === standing.rating, `signed by the recipient's account, the held reading is sent and the climb starts${startedOutcome.message ? ` (${startedOutcome.code}: ${startedOutcome.message})` : ""}`);
+  expect((await readMilestoneGift(milestone, ended)).startingValue === BigInt(standing.rating), "the contract holds the start they signed");
+  response = await postFor(bindRoute, ended, `/api/gift/${ended}/bind`, recipientCookie, { startSignature: await signStart(recipient) });
+  expect(((await response.json()) as { code?: string }).code === "NOTHING_HELD", "and nothing is held any more");
 
   /**
    * A reading, attested by the evidence signer under the second version's domain, at the fork's own time. `signedBy`
@@ -383,11 +420,8 @@ async function main() {
     const start = { giftId: message.giftId, identityHash: message.identityHash, metricValue: message.metricValue, observedAt: message.observedAt };
     return relayProve({ contract: milestone, message, startSignature: signedBy ? await signedBy.signTypedData(startTypedData("milestone", milestone, start)) : undefined });
   };
-  const unsigned = await prove(ended, standing.rating).then(() => null, (error: unknown) => error);
-  expect(unsigned instanceof StartNotSigned && unsigned.start.metricValue === BigInt(standing.rating), "the start of a climb is not sent without the recipient's signature: the relay says what is to be signed");
-  const notTheirs = await prove(ended, standing.rating, thief).then(() => null, (error: unknown) => error);
-  expect(notTheirs instanceof RelayerError && notTheirs.contractError === "InvalidRecipientSignature", "nor with anybody else's: refused before a transaction is paid for");
-  expect((await prove(ended, standing.rating, recipient)).happened === "started", "a first reading the recipient signed starts the climb");
+  const notTheirs = await prove(reached, standing.rating, thief).then(() => null, (error: unknown) => error);
+  expect(notTheirs instanceof RelayerError && notTheirs.contractError === "InvalidRecipientSignature", "a start signed by anybody else is refused before a transaction is paid for");
 
   const before = await ausdOf(funder.address);
   nonce = (await readMilestoneGift(milestone, ended)).withdrawNonce;
@@ -397,8 +431,8 @@ async function main() {
   expect(response.status === 200 && (await ausdOf(funder.address)) === before + 5_000_000n, "ended by the person it is for: the whole 5.00 came back at once");
   expect((await statusOf(ended, recipientCookie)).ended !== null, "and its status says it was ended");
 
-  await prove(reached, standing.rating, recipient);
-  expect((await prove(reached, target + 6)).happened === "reached", "the other one is reached, on the evidence signer's reading alone");
+  expect((await prove(reached, standing.rating, recipient)).happened === "started", "a first reading the recipient signed starts the other climb");
+  expect((await prove(reached, target + 6)).happened === "reached", "and it is reached, on the evidence signer's reading alone");
   nonce = (await readMilestoneGift(milestone, reached)).withdrawNonce;
   intentDeadline = BigInt((await chainNow()) + 600);
   const balanceBefore = await ausdOf(recipient.address);

@@ -230,7 +230,10 @@ test("a gift keeps its two names beside the link, and only the link's key proves
   // The rule lives with the reading now (D160), which both the route and the gift's own page go through.
   const status = readFileSync("src/gift-status.ts", "utf8");
   assert.match(status, /const names = viewerIsRecipient \|\| viewerIsFunder \|\| holdsTheLink \? \{ recipientName: record\.recipientName, funderName: record\.funderName \} : null;/);
-  assert.match(status, /const holdsTheLink = holdsGiftLink\(record, reader\.linkKey\);/);
+  // Through the one comparison that also refuses a gift's opening secret sent where its link's key belongs (the
+  // review of 2 Oct 2026, R-01; src/v2-opening.ts), which compares exactly as before for everything else.
+  assert.match(status, /const holdsTheLink = holdsTheLinkOf\(record, reader\.linkKey\);/);
+  assert.match(readFileSync("src/v2-opening.ts", "utf8"), /if \(isTheOpeningSecret\(record, sent\)\) throw openingSecretRefused\(\);\s+return holdsGiftLink\(record, sent \?\? null\);/);
   assert.match(readFileSync("app/api/gift/[id]/route.ts", "utf8"), /giftStatusFor\(id, \{ account: viewerOf\(request\), linkKey: new URL\(request\.url\)\.searchParams\.get\("t"\) \}\)/);
   assert.match(readFileSync("app/g/[id]/page.tsx", "utf8"), /giftStatusFor\(id, \{ account: \(await signedInAccount\(\)\) \?\? null, linkKey \}\)/, "the page reads it the same way, with the same key");
 });

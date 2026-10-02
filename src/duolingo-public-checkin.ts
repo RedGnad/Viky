@@ -9,8 +9,10 @@ import { ATTESTATION_TTL_SECONDS, identityPseudonym, serialiseMessage, signCheck
 import { checkInDayIndex, readGift, utcDayOf } from "./gift-reader";
 import { relayCheckIn } from "./gift-relay";
 import { loadGift, loadRelayed, markBound, type GiftRecord } from "./gift-store";
+import { holdTheStart, type StartAsked } from "./held-start";
 import { consumeAndSaveVerification, saveProofSession } from "./proof-session-store";
 import { escrowOf, RelayerError } from "./relayer";
+import { StartNotSigned } from "./v2-start";
 
 /**
  * The public mode (D27): one attested read of the recipient's public Duolingo profile becomes one
@@ -26,7 +28,9 @@ export type PublicCheckInOutcome =
   | Readonly<{ kind: "bound"; giftId: string; xp: number; hash: Hex; unit?: string }>
   | Readonly<{ kind: "counted"; giftId: string; xp: number; creditedDays: number; hash: Hex; unit?: string }>
   | Readonly<{ kind: "already"; giftId: string; reason: "counted_today" | "not_bound" | "not_opened" | "no_account" | "already_bound" | "finished" | "cancelled" }>
-  | Readonly<{ kind: "refused"; giftId: string; code: string; message: string; xp?: number }>;
+  | Readonly<{ kind: "refused"; giftId: string; code: string; message: string; xp?: number }>
+  /** The second version: the first reading was taken, and waits for the recipient's own signature (src/held-start.ts). */
+  | StartAsked;
 
 export type PublicCheckInDeps = {
   profile: () => Promise<PublicProfileDeps>;
@@ -159,6 +163,10 @@ export async function runPublicCheckIn(input: { giftId: string; purpose: PublicC
     }
     return { kind: "counted", giftId, xp: read.xp, creditedDays: relayed.creditedDays, hash: relayed.hash };
   } catch (error) {
+    // The second version takes a first reading only with the recipient's own signature: it is held, and asked for.
+    if (error instanceof StartNotSigned) {
+      return holdTheStart(error, { account: recipient, message: serialiseMessage(message), sessionId, after: { bindTo: read.profileId, xp: read.xp } });
+    }
     if (error instanceof RelayerError && error.code === "REVERTED") {
       const mapped = contractRefusal(error.contractError);
       return refusal(giftId, mapped?.code ?? error.contractError ?? "REFUSED", mapped?.message ?? "The contract refused this reading.", read.xp);

@@ -112,6 +112,28 @@ test("the way out reopens the same link, its key included, by the address each a
   assert.equal(wayOut("javascript:alert(1)", "android", null), null);
 });
 
+test("the way out keeps what follows the link's #, whole: on a gift of the second version it is what opens the gift", () => {
+  // The review of 2 Oct 2026, R-01: the secret travels after the `#`, which no server is sent. The address handed to
+  // the phone's own browser must still hold it, or the gift cannot be opened there.
+  const secret = "AbCdEfGhIjKlMnOpQrStUvWxYz012345";
+  const link = `https://viky.cash/g/41?t=IUOs-GN-QhXIXYM_n1HKcieBUkRAqMIq#${secret}`;
+  const instagram = wayOut(link, "iphone", embeddedIn(INSTAGRAM_IPHONE));
+  assert.equal(decodeURIComponent(instagram!.href.slice("instagram://extbrowser/?url=".length)), link);
+  assert.equal(wayOut(link, "iphone", embeddedIn(WHATSAPP_IPHONE))!.href, `x-safari-${link}`);
+  // Android reads the address up to the last `#` as the page to open (Intent.parseUriInternal), so the page's own `#`
+  // goes before `#Intent;`.
+  for (const [app, tail] of [[embeddedIn(INSTAGRAM_ANDROID), "#Intent;scheme=https;end"], [null, "#Intent;scheme=https;package=com.android.chrome;end"]] as const) {
+    const href = wayOut(link, "android", app)!.href;
+    assert.equal(href, `intent://viky.cash/g/41?t=IUOs-GN-QhXIXYM_n1HKcieBUkRAqMIq#${secret}${tail}`);
+    // As Android reads it: everything before the last `#`, with the scheme put back.
+    const data = href.slice(0, href.lastIndexOf("#"));
+    assert.equal(`https:${data.slice("intent:".length)}`, link);
+  }
+  // The link the door hands over, and the one it copies, are read with what follows the `#` once the browser has it.
+  const door = readFileSync("app/kit/AccountDoor.tsx", "utf8");
+  assert.match(door, /const hash = useSyncExternalStore\(onHashChange, \(\) => window\.location\.hash, \(\) => ""\);\s+return `\$\{origin\}\$\{path\}\$\{query \? `\?\$\{query\}` : ""\}\$\{hash\}`;/);
+});
+
 test("always a link the person presses: the page never leaves by itself, and says where the menu is if nothing opened", () => {
   const door = readFileSync("app/kit/AccountDoor.tsx", "utf8");
   assert.match(door, /<a\s+href=\{way\.href\}/, "a real link");

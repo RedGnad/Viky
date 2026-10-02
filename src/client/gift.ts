@@ -14,7 +14,7 @@ import { ApiError, getJson, postJson } from "./api";
 import { isMilestoneGiftId, milestoneWithdrawTypedData } from "../milestone-protocol";
 import type { MilestoneStatus } from "../milestone-view";
 import { fundingNonceV2, withdrawTypedDataV2 } from "../v2-protocol";
-import { giftLinkOf, linkForTerms, openWithLinkKey, secondVersionOf, versionOf } from "./v2";
+import { giftLinkOf, linkForTerms, openWithLinkKey, secondVersionOf, versionOf, withTheStartSigned, type StartAsked } from "./v2";
 
 /** Browser-side flows of a gift. Every step that moves money is signed by the person's own account. */
 
@@ -175,8 +175,9 @@ export function nameGoalAccount(giftId: string, username: string): Promise<{ gif
   return postJson(`/api/gift/${giftId}/account`, { username });
 }
 
-export function bindGoalAccount(giftId: string): Promise<PublicOutcome> {
-  return postJson(`/api/gift/${giftId}/bind`, {});
+/** The first reading. On the second version the recipient's account signs it too, which `signer` gives when asked (src/client/v2.ts). */
+export async function bindGoalAccount(giftId: string, signer: () => Promise<LocalAccount>): Promise<PublicOutcome> {
+  return withTheStartSigned<PublicOutcome>(giftId, await postJson<PublicOutcome | StartAsked>(`/api/gift/${giftId}/bind`, {}), signer);
 }
 
 export function countNow(giftId: string): Promise<PublicOutcome> {
@@ -288,9 +289,10 @@ export function loadGiftStatus(giftId: string, linkKey?: string | null): Promise
 }
 
 /**
- * Opens a gift for the signed-in account. On the first version the server is sent the link's key and the evidence
- * signer attests the opening. On the second the key of the link signs it here, and the server is sent the signature
- * alone (src/client/v2.ts): `opening` names the contract the gift is on and the account it opens for.
+ * Opens a gift for the signed-in account. On the first version `token` is the link's key: the server is sent it and
+ * the evidence signer attests the opening. On the second it is the secret after the link's `#`: the key made from it
+ * signs the opening here, and the server is sent the signature alone (src/client/v2.ts). `opening` names the contract
+ * the gift is on and the account it opens for.
  */
 export function claimGift(giftId: string, token: string, opening?: { contract: Hex; recipient: string }): Promise<{ giftId: string; opened: boolean }> {
   if (opening && versionOf(giftId, opening.contract) === 2) return openWithLinkKey({ giftId, contract: opening.contract, recipient: opening.recipient, linkSecret: token });

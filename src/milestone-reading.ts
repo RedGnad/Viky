@@ -5,6 +5,7 @@ import { attestClimbRating, isClimbReadError, readClimbStanding, type AttestedCl
 import { climbIdentityLabel, climbOfGoal, climbProviderId, type ClimbId } from "./climbs";
 import { nameHasChessCode } from "./chess-reading";
 import { identityPseudonym } from "./gift-attestation";
+import { holdTheStart, type StartAsked } from "./held-start";
 import { loadGift, markBound, type GiftRecord } from "./gift-store";
 import { milestoneRefusal } from "./milestone-api";
 import { MILESTONE_ATTESTATION_TTL_SECONDS, type MilestoneProofMessage } from "./milestone-protocol";
@@ -12,6 +13,7 @@ import { milestonePhase, readMilestoneGift, type MilestoneState } from "./milest
 import { relayProve, type ProvedReading } from "./milestone-relay";
 import { lastReading, readSince, recordReading, touchSameLook, type MilestoneReading, type ReadingPurpose } from "./milestone-store";
 import { escrowOf, RelayerError } from "./relayer";
+import { StartNotSigned } from "./v2-start";
 import type { ChessStanding } from "./chess-com";
 
 /**
@@ -42,7 +44,9 @@ export type MilestoneOutcome =
       giftId: string;
       reason: "not_opened" | "no_account" | "not_bound" | "already_bound" | "read_recently" | "finished" | "cancelled" | "start_too_high" | "deadline_passed";
     }>
-  | Readonly<{ kind: "refused"; giftId: string; code: string; message: string; rating?: number }>;
+  | Readonly<{ kind: "refused"; giftId: string; code: string; message: string; rating?: number }>
+  /** The second version: the start was read, and waits for the recipient's own signature (src/held-start.ts). */
+  | StartAsked;
 
 /**
  * Refusals that say something broke on our side rather than anything about the person's account. The pass holds a
@@ -79,6 +83,8 @@ export type MilestoneReadingDeps = {
   /** The identity pseudonym of the player, with the label of the house the climb is read on. */
   identity: (playerId: string, mode: ClimbId) => Hex;
   prove: (input: { contract: Hex; message: MilestoneProofMessage }) => Promise<ProvedReading>;
+  /** Holds a start the relay would not send without the recipient's signature; a test that omits it lets the refusal through. */
+  hold?: typeof holdTheStart;
   markBound: (giftId: string, playerId: string) => Promise<boolean>;
   record: (reading: MilestoneReading) => Promise<void>;
   readRecently: (giftId: string, sinceSeconds: number) => Promise<boolean>;
@@ -102,6 +108,7 @@ export function liveMilestoneReadingDeps(): MilestoneReadingDeps {
     attest: (input) => attestClimbRating(input),
     identity: (playerId, mode) => identityPseudonym(climbIdentityLabel(mode), playerId),
     prove: relayProve,
+    hold: holdTheStart,
     markBound,
     record: recordReading,
     readRecently: readSince,
@@ -369,6 +376,15 @@ async function prove(
     }
     return { kind: "reached", giftId, rating: reading.rating, hash: proved.hash };
   } catch (error) {
+    // The second version takes the start of a climb only with the recipient's own signature: it is held, with the
+    // row its journal will carry once it is sent, and asked for.
+    if (error instanceof StartNotSigned && deps.hold) {
+      return deps.hold(error, {
+        account: message.recipient,
+        message: Object.fromEntries(Object.entries(message).map(([key, value]) => [key, typeof value === "bigint" ? value.toString() : value])),
+        after: { bindTo: reading.playerId, reading: readingOf(giftId, purpose, reading, "started", null) as unknown as Record<string, unknown>, maximumStart: state.maximumStart.toString() },
+      });
+    }
     if (error instanceof RelayerError && error.code === "REVERTED") {
       const name = error.contractError ?? "REFUSED";
       await deps.record(readingOf(giftId, purpose, reading, `refused:${name}`, null));

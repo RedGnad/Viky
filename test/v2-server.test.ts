@@ -41,8 +41,8 @@ import { relayCreateMilestone } from "../src/milestone-relay";
 import type { SqlExecutor } from "../src/proof-session-store";
 import { RelayerError } from "../src/relayer";
 import { dailyAbiOf, dailyVersionOf, giftEscrowV2Address, milestoneGiftV2Address, milestoneVersionOf } from "../src/v2";
-import { openingOf, versionOfGift } from "../src/v2-opening";
-import { fundingNonceV2, linkFingerprint, openingAccount, openTypedData } from "../src/v2-protocol";
+import { holdsTheLinkOf, isTheOpeningSecret, openingOf, versionOfGift } from "../src/v2-opening";
+import { fundingNonceV2, giftLink, linkFingerprint, openingAccount, openingSecretOf, openTypedData, previewTokenOf } from "../src/v2-protocol";
 import { answeredLink, requestedLink } from "../src/v2-request";
 
 const ORIGIN = "https://viky.test";
@@ -160,7 +160,9 @@ test("once the second version is set, the funder's browser makes the link and se
     const request = await prepareGift({ account: FUNDER, goalType: 1, dailyTarget: 10, durationDays: 7, amount: 5_000_000n });
     const secret = await linkSecretOf(FUNDER, request.salt);
     assert.equal(request.openingKey, openingAccount(secret).address);
-    assert.equal(request.linkFingerprint, linkFingerprint(secret));
+    // The fingerprint is of the preview token, which is what the link sends in `?t=`: never of the secret itself.
+    assert.equal(request.linkFingerprint, linkFingerprint(previewTokenOf(secret)));
+    assert.notEqual(request.linkFingerprint, linkFingerprint(secret));
     // Nothing in the request is the secret, or carries it.
     assert.ok(!JSON.stringify(request).includes(secret));
     // The one signature pays for these terms, opening key included, on the second version's contract.
@@ -220,18 +222,75 @@ test("a creation with the browser's link keeps its fingerprint, relays its openi
       params: { funder: FUNDER.address, refundTo: FUNDER.address, recipientContactHash: NO_CONTACT_HASH, goalType: 1, dailyTarget: 10, durationDays: 7, amount: 5_000_000n, salt: `0x${"01".repeat(32)}` },
       nonce,
       authorization: { ...AUTH, nonce },
-      link: { openingKey, fingerprint: linkFingerprint(secret) },
+      link: { openingKey, fingerprint: linkFingerprint(previewTokenOf(secret)) },
     },
     deps,
   );
   assert.equal(made.claimToken, "", "no key was made on the server");
   assert.deepEqual(relayed, [openingKey]);
   const record = await loadGift("41");
-  assert.equal(record?.claimTokenHash, linkFingerprint(secret));
-  assert.equal(holdsGiftLink(record!, secret), true, "whoever holds the link is still told apart from whoever does not");
+  assert.equal(record?.claimTokenHash, linkFingerprint(previewTokenOf(secret)));
+  assert.equal(holdsGiftLink(record!, previewTokenOf(secret)), true, "whoever holds the link is still told apart from whoever does not");
   assert.equal(holdsGiftLink(record!, "AbCdEfGhIjKlMnOpQrStUvWxYz012346"), false);
   // The fingerprint opens nothing: the key is made from the secret alone.
-  assert.notEqual(openingAccount(linkFingerprint(secret)).address, openingKey);
+  assert.notEqual(openingAccount(linkFingerprint(previewTokenOf(secret))).address, openingKey);
+});
+
+/**
+ * The review of 2 Oct 2026, R-01. The link was `/g/<id>?t=<secret>`: the server was sent the secret at every visit,
+ * a messaging app's robot fetched it, and the key that opens the gift is made from that secret alone. Whoever ran the
+ * server, or read what it was sent, and held the evidence key could open a gift nobody had opened yet.
+ */
+test("the link's secret is after its #: what the server is sent names the reader as holding the link, and opens nothing", async () => {
+  const secret = "AbCdEfGhIjKlMnOpQrStUvWxYz012345";
+  const link = new URL(giftLink(ORIGIN, "41", secret));
+  // What a browser sends: the path and the query. What follows the `#` goes to no server.
+  const sent = `${link.pathname}${link.search}`;
+  assert.equal(link.hash, `#${secret}`);
+  assert.ok(!sent.includes(secret), "the secret is in nothing the server is sent");
+  const token = String(link.searchParams.get("t"));
+  assert.equal(token, previewTokenOf(secret));
+  assert.equal(token, "IUOs-GN-QhXIXYM_n1HKcieBUkRAqMIq", "pinned: the same token in every browser, for the same secret");
+  assert.match(token, /^[A-Za-z0-9_-]{32}$/);
+  // The reviewer's theft, with everything the server is sent: the key it makes is not the gift's.
+  const openingKey = openingAccount(secret).address;
+  assert.notEqual(openingAccount(token).address, openingKey, "the preview token makes another key");
+  assert.notEqual(openingAccount(linkFingerprint(token)).address, openingKey);
+  assert.notEqual(previewTokenOf(token), token);
+  // And the secret is read back from the address in the browser alone.
+  assert.equal(openingSecretOf(link.hash), secret);
+  assert.equal(openingSecretOf(""), null);
+  assert.equal(openingSecretOf("#short"), null);
+  assert.equal(openingSecretOf("#with a space in it, and more"), null);
+  assert.throws(() => previewTokenOf("short"));
+
+  // The server keeps the fingerprint of the token, and tells a holder of the link by it, as it always did.
+  await saveGift({ giftId: "41", funder: FUNDER.address, contactHash: NO_CONTACT_HASH, claimTokenHash: linkFingerprint(token), goalType: 1, dailyTarget: 10, durationDays: 7, amount: 5_000_000n, createdTx: `0x${"a2".repeat(32)}`, escrow: V2 });
+  const record = (await loadGift("41"))!;
+  assert.equal(holdsTheLinkOf(record, token), true);
+  assert.equal(holdsTheLinkOf(record, null), false);
+  assert.equal(holdsTheLinkOf(record, "AbCdEfGhIjKlMnOpQrStUvWxYz012346"), false);
+  // The secret itself, sent where the token belongs, is refused and never taken for the link.
+  assert.equal(isTheOpeningSecret(record, secret), true);
+  assert.equal(isTheOpeningSecret(record, token), false);
+  assert.throws(() => holdsTheLinkOf(record, secret), (error: unknown) => error instanceof GiftApiError && error.code === "LINK_OUT_OF_DATE" && error.status === 400 && !error.message.includes(secret));
+  // A gift of the first version keeps the fingerprint of its key, which is what its link carries: nothing is refused.
+  await saveGift({ giftId: "3", funder: FUNDER.address, contactHash: NO_CONTACT_HASH, claimToken: "first-version-key-0123456789", goalType: 1, dailyTarget: 10, durationDays: 7, amount: 5_000_000n, createdTx: `0x${"a1".repeat(32)}`, escrow: V1 });
+  const first = (await loadGift("3"))!;
+  assert.equal(isTheOpeningSecret(first, "first-version-key-0123456789"), false);
+  assert.equal(holdsTheLinkOf(first, "first-version-key-0123456789"), true);
+
+  // Every place the server reads a reader's `?t=` goes through that refusal, and the page opens with the `#` alone.
+  assert.match(readFileSync("src/gift-status.ts", "utf8"), /const holdsTheLink = holdsTheLinkOf\(record, reader\.linkKey\);/);
+  assert.match(readFileSync("src/milestone-routes.ts", "utf8"), /const holdsTheLink = holdsTheLinkOf\(record, reader\.linkKey\);/);
+  assert.match(readFileSync("src/gift-preview.ts", "utf8"), /const holds = !isTheOpeningSecret\(record, linkKey\) && holdsGiftLink\(record, linkKey\);/);
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
+  assert.match(page, /useSyncExternalStore\(onHashChange, \(\) => openingSecretOf\(window\.location\.hash\), \(\) => null\)/);
+  assert.match(page, /const openingKey = status\.version === 2 \? openingSecret : linkKey;/);
+  // No request the browser's code makes carries the secret: it is given to the key that signs, and to nothing else.
+  const client = readFileSync("src/client/v2.ts", "utf8");
+  assert.match(client, /openingAccount\(input\.linkSecret\)\.signTypedData\(/);
+  assert.match(client, /return postJson\("\/api\/gift\/claim", \{ giftId: input\.giftId, opening: \{ deadline: deadline\.toString\(\), signature \} \}\);/);
 });
 
 // --- the opening -----------------------------------------------------------------------------------------------------
@@ -259,7 +318,7 @@ test("what the link's key signs names the account, and anybody checks it against
 
 test("the claim route keeps the two versions apart: a first version gift takes no opening, a second takes nothing else", async () => {
   await saveGift({ giftId: "3", funder: FUNDER.address, contactHash: NO_CONTACT_HASH, claimToken: "first-version-key-0123456789", goalType: 1, dailyTarget: 10, durationDays: 7, amount: 5_000_000n, createdTx: `0x${"a1".repeat(32)}`, escrow: V1 });
-  await saveGift({ giftId: "41", funder: FUNDER.address, contactHash: NO_CONTACT_HASH, claimTokenHash: linkFingerprint("second-version-secret-0123456789"), goalType: 1, dailyTarget: 10, durationDays: 7, amount: 5_000_000n, createdTx: `0x${"a2".repeat(32)}`, escrow: V2 });
+  await saveGift({ giftId: "41", funder: FUNDER.address, contactHash: NO_CONTACT_HASH, claimTokenHash: linkFingerprint(previewTokenOf("second-version-secret-0123456789")), goalType: 1, dailyTarget: 10, durationDays: 7, amount: 5_000_000n, createdTx: `0x${"a2".repeat(32)}`, escrow: V2 });
   const cookie = await cookieFor(RECIPIENT);
   const opening = { deadline: String(Math.floor(Date.now() / 1_000) + 600), signature: `0x${"11".repeat(65)}` };
   await withTheSecondVersion(async () => {
@@ -273,6 +332,17 @@ test("the claim route keeps the two versions apart: a first version gift takes n
     answer = await claimRoute(post("/api/gift/claim", { giftId: "41", token: "second-version-secret-0123456789" }, cookie));
     assert.equal(answer.status, 409);
     assert.equal(((await answer.json()) as { code?: string }).code, "OUT_OF_DATE");
+    // Any key in the body is refused for a gift of the second version, its preview token as much as its secret, and a
+    // key sent beside a signed opening too: the signature is all an opening carries (the review of 2 Oct 2026, R-01).
+    for (const body of [
+      { giftId: "41", token: previewTokenOf("second-version-secret-0123456789") },
+      { giftId: "41", token: "another-key-altogether-0123456789" },
+      { giftId: "41", opening, token: "second-version-secret-0123456789" },
+    ]) {
+      answer = await claimRoute(post("/api/gift/claim", body, cookie));
+      assert.equal(answer.status, 409);
+      assert.equal(((await answer.json()) as { code?: string }).code, "OUT_OF_DATE");
+    }
     // The funder cannot open their own gift, whatever key signs.
     answer = await claimRoute(post("/api/gift/claim", { giftId: "41", opening }, await cookieFor(FUNDER)));
     assert.equal(((await answer.json()) as { code?: string }).code, "OWN_GIFT");

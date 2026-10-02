@@ -3,6 +3,7 @@ import { figureIn, markOf } from "./currencies";
 import { figureInDisplayCurrency, type DisplayCurrency } from "./display-currency";
 import { formatAusd } from "./gift-reader";
 import { holdsGiftLink, loadGift, type GiftRecord } from "./gift-store";
+import { isTheOpeningSecret } from "./v2-opening";
 import { isMilestoneGiftId } from "./milestone-protocol";
 import { loadMilestoneGift } from "./milestone-store";
 import { loadPreferences } from "./preferences-store";
@@ -79,7 +80,8 @@ export async function giftPreview(giftId: string, linkKey: string | null): Promi
     const record = await loadGift(giftId);
     if (!record) return { title: W.unknown, description: W.asYouGo };
     const terms = milestone ? await loadMilestoneGift(giftId) : null;
-    const holds = holdsGiftLink(record, linkKey);
+    // A gift's opening secret is not its link's key: sent here, it names nobody (src/v2-opening.ts).
+    const holds = !isTheOpeningSecret(record, linkKey) && holdsGiftLink(record, linkKey);
     const money = holds && record.funderName ? await funderMoney(record) : null;
     return previewOf(record, holds, { milestone, conditionId: terms?.conditionId ?? null }, money);
   } catch {

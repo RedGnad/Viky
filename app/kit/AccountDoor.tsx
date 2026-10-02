@@ -1,6 +1,6 @@
 "use client";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useDoor, usePageOrigin } from "@/src/account/door";
 import type { EmbeddedApp, Handset } from "@/src/account/errors";
 import { ACCOUNT_HOST, wayOut, type OwnBrowser } from "@/src/account/passkey-support";
@@ -19,12 +19,24 @@ import { CARD, FIELD, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../components/
 /** How long after a press the page is taken to have stayed, if it is still in front. */
 const STAYED_AFTER_MS = 1_500;
 
-/** This page's own link, key included, the same on the server and in the browser so the first image already carries it. */
+const onHashChange = (changed: () => void) => {
+  window.addEventListener("hashchange", changed);
+  return () => window.removeEventListener("hashchange", changed);
+};
+
+/**
+ * This page's own link, key included, the same on the server and in the browser so the first image already carries it.
+ *
+ * What follows the `#` is added once the browser has the page: no server is ever sent it, so the first image cannot
+ * carry it. On a gift of the second version it is the secret that opens the gift (the review of 2 Oct 2026, R-01), and
+ * the link carried to the phone's own browser, or copied, must hold it whole.
+ */
 function usePageLink(): string {
   const origin = usePageOrigin();
   const path = usePathname() ?? "/";
   const query = useSearchParams()?.toString() ?? "";
-  return `${origin}${path}${query ? `?${query}` : ""}`;
+  const hash = useSyncExternalStore(onHashChange, () => window.location.hash, () => "");
+  return `${origin}${path}${query ? `?${query}` : ""}${hash}`;
 }
 
 /** Whether the page being read is a gift's, whose link is the thing to carry elsewhere. */

@@ -1,7 +1,9 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { useAccount } from "@/src/account/provider";
 import { agreeFirst, signConsent } from "@/src/client/consent";
 import { ApiError, getJson, postJson } from "@/src/client/api";
+import { withTheStartSigned, type StartAsked } from "@/src/client/v2";
 import { conditionById } from "@/src/conditions";
 import { GIFT_PAGE as W } from "@/src/sentences";
 import { BODY, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
@@ -27,6 +29,7 @@ export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Rea
   const condition = conditionById(conditionId);
   const link = condition?.link;
   const source = link?.kind === "connect" ? condition?.source.toLowerCase() : null;
+  const { ensureSigner } = useAccount();
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState<Busy>("loading");
   // Fitbit sends the person back with `?connect=done`, or a reason: read once, when the screen is first drawn.
@@ -83,7 +86,10 @@ export function ConnectTheAccount({ giftId, conditionId, yours, onChanged }: Rea
     setBusy("starting");
     setRefusal(null);
     try {
-      const outcome = await postJson<{ kind: string; code?: string; message?: string }>(`/api/gift/${giftId}/bind`, {});
+      // On the second version the account signs the first reading too (src/client/v2.ts): the press that starts the
+      // gift is the one its passkey is asked on, when the page was loaded again on the way back from the source.
+      type Outcome = { kind: string; code?: string; message?: string };
+      const outcome = await withTheStartSigned<Outcome>(giftId, await postJson<Outcome | StartAsked>(`/api/gift/${giftId}/bind`, {}), ensureSigner);
       if (outcome.kind === "refused") setRefusal(outcome.message ?? W.connectFailed);
       else await onChanged();
     } catch (error) {
