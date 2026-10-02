@@ -20,7 +20,7 @@ export function Made() {
                   <Character drawn="inline" state="gift" className="h-auto w-[120px] self-center" />
               </Success>
       <section className="flex flex-col gap-[var(--space-sm)]">
-        <p className={BODY}>{W.made.terms(TO_NOE.amount, TO_NOE.days, TO_NOE.perDay, true, condition.source)}</p>
+        <p className={BODY}>{W.made.firstDay(condition.source)}</p>
         <p className={HELP}>{W.made.reference(TO_NOE.made, TO_NOE.giftId)}</p>
       </section>
       <section className={CARD}>

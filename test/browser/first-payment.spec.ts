@@ -176,13 +176,15 @@ test.describe("the first payment, and the way back to it", () => {
       await made({});
       await page.goto("/fund?step=done");
       await expect(page.getByRole("button", { name: "Copy the link" })).toBeVisible();
-      // A browser that can be told: one press, offered in the open, under the link's card.
+      // A browser that can be told: a round button in the open, under the link's card, and one press in its sheet.
+      const messages = page.locator('[data-decide="messages"]');
+      await expect(messages).toHaveText("MessagesOff");
+      const linkCard = page.getByRole("button", { name: "Copy the link" });
+      expect((await messages.boundingBox())!.y, "under the link").toBeGreaterThan((await linkCard.boundingBox())!.y);
+      await messages.click();
       const told = page.locator("[data-told]");
       await expect(told).toHaveAttribute("data-told", "ask");
-      await expect(told.getByRole("button", { name: "Tell me each morning" })).toBeEnabled();
-      const linkCard = page.getByRole("button", { name: "Copy the link" });
-      expect((await told.boundingBox())!.y, "under the link").toBeGreaterThan((await linkCard.boundingBox())!.y);
-      await told.scrollIntoViewIfNeeded();
+      await expect(page.getByRole("dialog", { name: "Messages" }).getByRole("button", { name: "Tell me each morning" })).toBeEnabled();
       await shot(SHOTS, page, size.name, "3a-link-screen-messages-offered");
       await context.close();
 
@@ -199,12 +201,13 @@ test.describe("the first payment, and the way back to it", () => {
         { giftId: "7", claimUrl: `${iphone.baseURL}/g/7?t=AbCdEfGhIjKlMnOpQrStUv`, atMs: Date.now(), recipientName: "Boo", funderName: "Maman", conditionId: "duolingo-daily", amount: "30000000", days: 30 },
       );
       await iphone.page.goto("/fund?step=done");
+      await iphone.page.locator('[data-decide="messages"]').click();
       const first = iphone.page.locator("[data-told]");
       await expect(first).toHaveAttribute("data-told", "install");
       await expect(first.getByText("Add Viky to your Home Screen first. Then Viky can tell you each morning.")).toBeVisible();
       await expect(first.getByText("On iPhone: tap Share, then Add to Home Screen.")).toBeVisible();
-      await expect(first.getByRole("button")).toHaveCount(0);
-      await first.scrollIntoViewIfNeeded();
+      // No button that could grant nothing: the sheet has its way out and nothing else to press.
+      await expect(iphone.page.getByRole("dialog", { name: "Messages" }).getByRole("button")).toHaveCount(1);
       await shot(SHOTS, iphone.page, size.name, "3b-link-screen-iphone-install-first");
       await iphone.context.close();
     });

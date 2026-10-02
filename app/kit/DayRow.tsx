@@ -4,7 +4,7 @@ import { useMinute } from "./clock";
 import { giftDays, stripOf } from "@/src/day-states";
 import { contractDayInWords } from "@/src/moments";
 import { Character } from "./Character";
-import { characterOf, endsHidden, fadeOf, rowCarriesOn, useHiddenEdges } from "./DayStrip";
+import { characterOf, endsHidden, fadeOf, useHiddenEdges } from "./DayStrip";
 import { ArrivalDay } from "./Motion";
 import { GIFT_LIVE as L, GIFT_PAGE as W } from "@/src/sentences";
 import { CARD_LABEL } from "../components/ui";
@@ -24,7 +24,7 @@ import { CARD_LABEL } from "../components/ui";
  * It opens on today rather than on the first day, because today is what a person came to see.
  */
 
-type Shape = Readonly<{ startDay: number; endDay: number; durationDays: number; creditedDays: number; missedDays: number }>;
+type Shape = Readonly<{ startDay: number; endDay: number; durationDays: number; creditedDays: number; missedDays: number; givenBackDays?: number }>;
 
 
 export function DayRow({
@@ -33,6 +33,7 @@ export function DayRow({
   catchUpSeconds,
   records,
   voice,
+  silent = false,
 }: Readonly<{
   id: string;
   gift: Shape;
@@ -40,6 +41,8 @@ export function DayRow({
   records: readonly { day: number; outcome: "earned" | "returned" }[];
   /** Who is reading: a day that went back went back to them, to you, or, for a reader of neither side, just back. */
   voice: "funder" | "recipient" | "reader";
+  /** The row alone, without the line under it: the card says something else there (the day a gift was ended). */
+  silent?: boolean;
 }>) {
   const nowMs = useMinute();
   const drawn = nowMs !== 0 && gift.startDay !== 0;
@@ -50,10 +53,9 @@ export function DayRow({
   const states = drawn ? stripOf(gift, catchUpSeconds, nowMs, records) : [];
   const row = useRef<HTMLOListElement>(null);
   const today = useRef<HTMLLIElement>(null);
-  // Which side still hides a day, which is both the fade at that edge and the only honest way to say "scroll for the
-  // rest": seven days fit on a wide screen and not on a narrow one, and the number of days does not tell.
+  // Which side still hides a day, which is the fade at that edge, and the fade is what says there is more that way:
+  // seven days fit on a wide screen and not on a narrow one, and the number of days does not tell.
   const hidden = useHiddenEdges(row, states.length);
-  const more = rowCarriesOn(hidden);
   // Moved to today when the row appears and whenever its length changes: a gift connects while the page is open, and
   // the row that was not there a second ago is the one to look at.
   useEffect(() => {
@@ -82,7 +84,10 @@ export function DayRow({
   // Which day it opens on: today, if the gift has one. A gift that has not started yet opens on its first day, and
   // one that has finished on its last, because that is the day the person came to see.
   const now = states.findIndex((state) => state === "today" || state === "catchable" || state === "aboutToReturn");
-  const at = now >= 0 ? now : states.every((state) => state === "toCome") ? 0 : states.length - 1;
+  // A gift its recipient ended opens on the day it stopped at, the first of the days given back: "Day 3 of 7" is then
+  // where the gift stands, and the days after it are the ones that went back.
+  const stoppedAt = gift.givenBackDays ? Math.min(states.length - 1, gift.creditedDays + gift.missedDays) : -1;
+  const at = now >= 0 ? now : stoppedAt >= 0 ? stoppedAt : states.every((state) => state === "toCome") ? 0 : states.length - 1;
   return (
     <div className="day-row">
       <ol ref={row} data-more={endsHidden(hidden)} style={fadeOf(hidden)} className="day-row-days" aria-label={W.daysLabel}>
@@ -101,10 +106,7 @@ export function DayRow({
           </li>
         ))}
       </ol>
-      <p className={`${CARD_LABEL} day-row-where`}>
-        {L.dayOfDays(at + 1, states.length)}
-        {more ? ` · ${L.scrollForTheRest}` : ""}
-      </p>
+      {silent ? null : <p className={`${CARD_LABEL} day-row-where`}>{L.dayOfDays(at + 1, states.length)}</p>}
     </div>
   );
 }

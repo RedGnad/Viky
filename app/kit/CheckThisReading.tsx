@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { HELP } from "../components/ui";
+import { HELP, SMALL_BUTTON } from "../components/ui";
 
 /**
  * "Check this reading yourself", the milestone half of what a gift's page offers its two people (U2).
@@ -18,6 +18,8 @@ const WHAT_FOR: Record<string, string> = {
   reach: "the reading sent to the contract",
   look: "a reading that only looked",
 };
+
+const capitalised = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 export function CheckThisReading({ giftId }: Readonly<{ giftId: string }>) {
   const [readings, setReadings] = useState<readonly JournalReading[]>([]);
@@ -38,18 +40,19 @@ export function CheckThisReading({ giftId }: Readonly<{ giftId: string }>) {
   const kept = readings.filter((reading) => reading.proofKept);
   if (kept.length === 0) return null;
   return (
-    <details>
-      <summary className="cursor-pointer underline underline-offset-[3px]">Check this reading yourself</summary>
+    <details className="gift-check">
+      <summary className={SMALL_BUTTON}>Check this reading yourself</summary>
       <p className={HELP}>
         Take a reading this gift rests on, and check it yourself: that the source itself answered it, that nobody
         rewrote it, and that the contract accepted that one answer, which can never be used twice.
       </p>
-      <ul className={`${HELP} flex flex-wrap gap-[var(--space-md)]`}>
+      <ul className="flex flex-col gap-[var(--space-md)]">
         {kept.map((reading) => (
-          <li key={reading.id}>
-            <a className="underline" href={`/api/gift/${giftId}/proof?reading=${reading.id}`} download={`viky-reading-${reading.id}.json`}>
-              Reading {reading.id}, {WHAT_FOR[reading.purpose] ?? reading.purpose}
+          <li key={reading.id} className="flex items-center gap-[var(--space-md)]">
+            <a className={SMALL_BUTTON} href={`/api/gift/${giftId}/proof?reading=${reading.id}`} download={`viky-reading-${reading.id}.json`}>
+              Reading {reading.id}
             </a>
+            <span className={HELP}>{capitalised(WHAT_FOR[reading.purpose] ?? reading.purpose)}</span>
           </li>
         ))}
       </ul>

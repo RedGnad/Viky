@@ -61,13 +61,14 @@
    */
   --action-relief-depth: var(--control-relief-depth);
   /*
-   * The one action, shut. The mockups draw it filled and relieved rather than hollow, which is the opposite of what
-   * the tokens of that morning said, and the founder settled it on the image (D113). Its words are darker than the
-   * image's #9A8B62, which measures 2.64:1 on this fill where a word needs 4.5:1.
+   * A button that waits (the founder's rule 3 of 1 Oct 2026, the mockup kit-rules.html): its own shape and its own
+   * colour, faded, with no relief under it. It was a beige pill standing on a relief, and read as a third kind of
+   * button. The three values are the mockup's: the sun at 38 %, the ink at 45 % for the words and at 28 % for the edge.
+   * A control that cannot be pressed is outside WCAG 1.4.3 and 1.4.11, which is what lets its words fade.
    */
-  --action-off: #EFE3C4;
-  --action-off-deep: #DCCFA8;
-  --action-off-ink: #6F6133;
+  --waiting-fill: rgba(255, 197, 49, 0.38);
+  --waiting-ink: rgba(30, 22, 51, 0.45);
+  --waiting-edge: rgba(30, 22, 51, 0.28);
 
   /*
    * Every text size in this file is a step of the one scale, 13 16 20 25 31 39 49 61 76, and nothing between two
@@ -344,9 +345,8 @@
     --on-surface-faint: #B9B2CD; /* Tone 74 since the field rose to 29: a placeholder at 4.8:1 on it (29 Sep 2026). */
     --surface-rule: #625B6F;
     --paper-relief: #C7C4DA;
-    --action-off: #4E485E;
-    --action-off-deep: #221D30;
-    --action-off-ink: #C7C4DA;
+    --waiting-ink: rgba(255, 246, 226, 0.55);
+    --waiting-edge: rgba(255, 246, 226, 0.28);
     /* By night the character's colours change places (D306, the founder, 28 Sep 2026): gold inside, the day's violet
        at its edge, the halftone the gold multiplied by itself; limbs in the day's field cream. */
     --character-hero-edge: #B79BFF;
@@ -421,9 +421,8 @@
   --on-surface-faint: #B9B2CD; /* Tone 74 since the field rose to 29: a placeholder at 4.8:1 on it (29 Sep 2026). */
   --surface-rule: #625B6F;
   --paper-relief: #C7C4DA;
-  --action-off: #4E485E;
-  --action-off-deep: #221D30;
-  --action-off-ink: #C7C4DA;
+  --waiting-ink: rgba(255, 246, 226, 0.55);
+  --waiting-edge: rgba(255, 246, 226, 0.28);
   --character-hero-edge: #B79BFF;
   --character-hero-edge-light: #B79BFF;
   --character-hero-edge-deep: #835EFF;
@@ -499,8 +498,54 @@ video {
   box-shadow: none;
 }
 
+/* A button that waits stands on nothing (rule 3, kit-rules.html of 1 Oct 2026): its relief is what says it can be pressed. */
+.control-relief:disabled,
+.action-relief:disabled {
+  box-shadow: none;
+}
+
+/*
+ * The one small button (rule 2): 40 high on a relief of three, as the mockup draws it, and 44 to the touch, which is
+ * what its own box cannot give at that height: the area a finger reaches is drawn over it, four pixels past it above
+ * and below, and nothing is painted there.
+ */
+.small-button {
+  box-shadow: 0 3px 0 var(--control-relief-colour);
+  transition:
+    transform var(--press-duration) var(--press-easing),
+    box-shadow var(--press-duration) var(--press-easing);
+}
+
+.small-button::before {
+  content: "";
+  position: absolute;
+  inset: -4px 0;
+}
+
+.small-button:active:not(:disabled),
+.small-button[data-pressed]:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: none;
+}
+
+.small-button:disabled {
+  box-shadow: none;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .control-relief:hover:not(:active):not(:disabled) {
+    transform: translateY(calc(-1 * var(--hover-lift)));
+    box-shadow: 0 calc(var(--control-relief-depth) + var(--hover-lift)) 0 var(--control-relief-colour);
+    transition-duration: var(--hover-duration);
+  }
+
+  .small-button:hover:not(:active):not(:disabled) {
+    transform: translateY(calc(-1 * var(--hover-lift)));
+    box-shadow: 0 calc(3px + var(--hover-lift)) 0 var(--control-relief-colour);
+    transition-duration: var(--hover-duration);
+  }
+
+  .you-decide-act:hover:not(:active):not(:disabled) .you-decide-disc {
     transform: translateY(calc(-1 * var(--hover-lift)));
     box-shadow: 0 calc(var(--control-relief-depth) + var(--hover-lift)) 0 var(--control-relief-colour);
     transition-duration: var(--hover-duration);
@@ -912,13 +957,17 @@ dialog.sheet[open] {
     scroll-behavior: auto !important;
   }
 
-  .control-relief {
+  .control-relief,
+  .small-button,
+  .you-decide-disc {
     transition: none;
   }
 
   .control-relief:is(:active, :hover):not(:disabled),
   .control-relief[data-pressed]:not(:disabled),
-  .action-relief[data-pressed]:not(:disabled) {
+  .action-relief[data-pressed]:not(:disabled),
+  .small-button:is(:active, :hover):not(:disabled),
+  .you-decide-act:is(:active, :hover) .you-decide-disc {
     transform: none;
   }
 
@@ -1185,9 +1234,15 @@ dialog.sheet[open] {
   margin-top: 5px;
 }
 
-/* The label above what came back sits over its figure, so the two columns read as two columns. */
-.gift-figures > div:last-child .gift-meta {
-  margin: 0 0 3px;
+/* The day a gift was ended, a label above the state, where the row of days says which day is in view. */
+.gift-when {
+  margin: 0 0 14px;
+  line-height: var(--type-gift-meta-leading);
+}
+
+.day-row + .gift-when,
+.gift-shape + .gift-when {
+  margin-top: -8px;
 }
 
 .gift-action {
@@ -1218,14 +1273,28 @@ dialog.sheet[open] {
   min-height: var(--tap-target);
 }
 
-/* No marker of the browser's own, on either fold: the chevron is the mark. */
+/* No marker of the browser's own, on a fold or on the proof it holds: the chevron is the mark of one, and the other
+   opens from a button. */
 .gift-fold-name::-webkit-details-marker,
-.gift-beside summary::-webkit-details-marker {
+.gift-check summary::-webkit-details-marker {
   display: none;
 }
 .gift-fold-name,
-.gift-beside summary {
+.gift-check summary {
   list-style: none;
+}
+
+/* The proof a person may take away, at the foot of "How this is checked": a small button, and what it opens under it. */
+.gift-check summary {
+  cursor: pointer;
+}
+
+.gift-check[open] summary {
+  margin-bottom: var(--space-md);
+}
+
+.gift-check > * + * {
+  margin-top: var(--space-sm);
 }
 
 .gift-fold-body {
@@ -1235,13 +1304,6 @@ dialog.sheet[open] {
   padding-bottom: var(--space-sm);
 }
 
-/* What stands outside the card, under it, in the ground's own voice. */
-.gift-beside {
-  margin-top: 26px;
-  font-size: var(--type-help);
-  line-height: var(--type-help-leading);
-  color: var(--muted);
-}
 
 
 
@@ -1329,6 +1391,207 @@ dialog.sheet[open] {
 .had-or-not-character {
   display: block;
   width: 96px;
+}
+
+/*
+ * "You decide" (app/kit/YouDecide.tsx, the founder's mockup you-decide.html of 1 Oct 2026): the standing controls of
+ * the person a gift is for, under the card, on the ground. Three round buttons with two words each and never a
+ * sentence (rule 6): a white disc of 64 with the ink outline and the relief every key stands on, its name under it in
+ * the body's size at the label weight, and its state in the small capitals.
+ */
+.you-decide {
+  margin-top: 20px;
+}
+
+.you-decide-acts {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-md);
+  padding: 0 6px;
+}
+
+.you-decide-act {
+  display: flex;
+  width: 104px;
+  flex-direction: column;
+  align-items: center;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.you-decide-act:focus-visible {
+  outline: none;
+}
+
+.you-decide-act:focus-visible .you-decide-disc {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+
+.you-decide-disc {
+  display: flex;
+  width: 64px;
+  height: 64px;
+  align-items: center;
+  justify-content: center;
+  border: var(--control-border-width) solid var(--control-border);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 var(--control-relief-depth) 0 var(--control-relief-colour);
+  transition:
+    transform var(--press-duration) var(--press-easing),
+    box-shadow var(--press-duration) var(--press-easing);
+}
+
+.you-decide-act:active .you-decide-disc,
+.you-decide-act[data-pressed] .you-decide-disc {
+  transform: translateY(var(--control-relief-depth));
+  box-shadow: none;
+}
+
+.you-decide-name {
+  margin-top: 11px;
+  font-size: var(--type-body);
+  line-height: var(--type-choice-leading);
+  font-weight: 600;
+}
+
+.you-decide-state {
+  margin-top: 3px;
+}
+
+/*
+ * A choice in the sheet "Stop" opens (the mockup's second frame): two of the same weight, each a key with a
+ * character, its name in the title face and one line or two figures under it.
+ */
+.decide-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 14px;
+  border: var(--control-border-width) solid var(--control-border);
+  border-radius: var(--radius-card);
+  background: var(--tonal);
+  padding: 14px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.decide-option + .decide-option {
+  margin-top: 14px;
+}
+
+.decide-option-character {
+  display: block;
+  width: 52px;
+  flex: none;
+}
+
+.decide-option-name {
+  font-family: var(--font-title);
+  font-weight: var(--font-title-weight);
+  font-size: var(--type-title);
+  line-height: var(--type-title-leading);
+}
+
+.decide-option-help {
+  margin-top: 2px;
+  font-size: var(--type-gift-next);
+  line-height: var(--type-gift-next-leading);
+  color: var(--on-surface-body);
+}
+
+.decide-option-go {
+  margin-left: auto;
+  flex: none;
+  color: var(--on-surface-muted);
+}
+
+.decide-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.decide-chip {
+  border: 1px solid var(--surface-rule);
+  border-radius: 9999px;
+  background: var(--paper);
+  padding: 5px 10px;
+  font-size: var(--type-help);
+  line-height: var(--type-help-leading);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* An ending in two figures (the third frame): what stays theirs and what goes back, side by side, each in its box. */
+.decide-two {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.decide-two > div {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--surface-rule);
+  border-radius: var(--radius-card);
+  background: var(--paper-raised);
+  padding: 14px 14px 12px;
+}
+
+.decide-amount {
+  font-family: var(--font-title);
+  font-weight: var(--font-title-weight);
+  font-size: var(--type-money);
+  line-height: 1;
+  letter-spacing: var(--type-card-amount-tracking);
+  font-variant-numeric: tabular-nums;
+}
+
+.decide-two .decide-label {
+  margin-top: 6px;
+}
+
+.decide-warning {
+  text-align: center;
+}
+
+/* The funder's page as the funder sees it, small, in the sheet that says what they see (the fifth frame). */
+.decide-view {
+  border: 1px solid var(--surface-rule);
+  border-radius: var(--radius-card);
+  background: var(--paper-raised);
+  padding: 14px var(--space-lg);
+}
+
+.decide-view-shape {
+  margin-top: 10px;
+}
+
+.decide-view-days {
+  display: flex;
+  gap: 9px;
+  overflow: hidden;
+}
+
+.decide-view-days > span {
+  display: block;
+  width: 38px;
+  flex: none;
+}
+
+.decide-view-state {
+  margin: 10px 0 2px;
+  font-family: var(--font-title);
+  font-weight: var(--font-title-weight);
+  font-size: var(--type-title);
+  line-height: var(--type-title-leading);
 }
 
 /* The one confetti (app/kit/Confetti.tsx): a layer over the screen that takes no press, emptied once the pieces fall. */

@@ -247,7 +247,8 @@ export function ReachedMoment({ gift, here, onClose }: Readonly<{ gift: ReachedG
         <h1 ref={title} id="reached-title" tabIndex={-1} className={`${HERO} outline-none`}>
           {recipient ? W.youDidIt : W.theyDidIt}
         </h1>
-        <p className={`${BODY} [text-wrap:balance]`}>{recipient ? (when ? W.reached(gift.what, when) : gift.what) : W.theirsNow(gift.recipientName, when || "")}</p>
+        <p className={`${BODY} [text-wrap:balance]`}>{recipient ? (when ? W.reached(gift.what, when) : gift.what) : W.theyReached(gift.recipientName, when || "")}</p>
+        {recipient ? null : <p className={`${BODY} [text-wrap:balance]`}>{W.theirsNow}</p>}
         <div ref={amount} className="flex flex-col items-center gap-[var(--space-xs)]">
           <LedFigure amount={led} className={`money-display ${AMOUNT_IN_TITLE} tracking-[-0.02em]`} style={{ "--amount-chars": led.lead.length } as CSSProperties} />
           <p className={CARD_LABEL} data-became={became ? "yes" : "no"}>

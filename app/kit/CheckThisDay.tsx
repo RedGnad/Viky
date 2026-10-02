@@ -1,5 +1,5 @@
 "use client";
-import { HELP } from "../components/ui";
+import { HELP, SMALL_BUTTON } from "../components/ui";
 import { dateOfDay } from "@/src/day-record";
 
 /**
@@ -9,22 +9,25 @@ import { dateOfDay } from "@/src/day-record";
  * its display name and its points. From it, one command re-verifies the day against Reclaim's attestor and against the
  * chain, with no key and no account. The sentence under it says what a pass proves and what it does not, because a
  * proof that is read as more than it is would be worse than none.
+ *
+ * It opens from a small button at the foot of "How this is checked", and each day is a small button too (the
+ * founder's rule 1 of 1 Oct 2026: an action is a button, never a link in the text).
  */
 
 export function CheckThisDay({ giftId, days }: Readonly<{ giftId: string; days: readonly { day: number; outcome: "earned" | "returned" }[] }>) {
   const earned = days.filter((day) => day.outcome === "earned");
   if (earned.length === 0) return null;
   return (
-    <details>
-      <summary className="cursor-pointer underline underline-offset-[3px]">Check this day yourself</summary>
+    <details className="gift-check">
+      <summary className={SMALL_BUTTON}>Check this day yourself</summary>
       <p className={HELP}>
         Take the reading behind a day that counted, and check it yourself: that the source answered it, that nobody
         rewrote it, and that this gift was settled against that one answer, which can never be used twice.
       </p>
-      <ul className={`${HELP} flex flex-wrap gap-[var(--space-md)]`}>
+      <ul className="flex flex-wrap gap-[var(--space-md)]">
         {earned.map((day) => (
           <li key={day.day}>
-            <a className="underline" href={`/api/gift/${giftId}/proof?day=${day.day}`} download={`viky-day-${day.day}.json`}>
+            <a className={SMALL_BUTTON} href={`/api/gift/${giftId}/proof?day=${day.day}`} download={`viky-day-${day.day}.json`}>
               {dateOfDay(day.day)}
             </a>
           </li>

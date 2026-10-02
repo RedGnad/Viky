@@ -145,11 +145,14 @@ test.describe("the path of the person a gift is for", () => {
       await expect(start).toBeVisible();
       await shot(page, size.name, "2a-before-the-start");
       await start.click();
-      await expect(page.getByText(/^Viky reads your rapid rating for this gift\. You agreed on /)).toBeVisible();
+      // The yes was signed by the start: the stop is one of the round controls, and nothing asks to agree again.
+      await expect(page.locator('[data-decide="stop"]')).toBeVisible();
       expect(yes.agreed()).toBe(true);
       await expect(page.getByText("Viky reads nothing for this gift until you agree.")).toHaveCount(0);
       await expect(page.getByRole("button", { name: /^Agree$/ })).toHaveCount(0);
-      await page.getByText(/^Viky reads your rapid rating for this gift\. You agreed on /).scrollIntoViewIfNeeded();
+      await page.getByText("How this is checked", { exact: true }).click();
+      await expect(page.getByText(/^Viky reads your rapid rating for this gift\. You agreed on /)).toBeVisible();
+      await page.locator('[data-decide="stop"]').scrollIntoViewIfNeeded();
       await shot(page, size.name, "2b-after-the-start");
       await device.context.close();
     });

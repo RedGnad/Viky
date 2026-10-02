@@ -139,3 +139,32 @@ test("a recorded day is drawn at its date, and unrecorded days fall back to the 
   assert.equal(strip.filter((day) => day === "earned").length, 2);
   assert.equal(strip.filter((day) => day === "returned").length, 1);
 });
+
+/**
+ * A gift its recipient ended (the second version of the contracts): the days after the ending are given back, which
+ * the contract counts apart from a missed day. They are settled, so none of them is drawn as a day still to come.
+ */
+test("the days an ending gave back are drawn as days that went back, on the day of the ending and after it", () => {
+  // Ended on day three with two days counted: five days went back, today among them.
+  const ended = gift({ creditedDays: 2, missedDays: 0, givenBackDays: 5 });
+  const { days } = giftDays(ended, CATCH_UP, noonOn(START + 2));
+  assert.ok(days.every((day) => day.state === "settled"), "no day is today, behind or to come once the gift is ended");
+  assert.deepEqual(stripOf(ended, CATCH_UP, noonOn(START + 2), []), ["earned", "earned", "returned", "returned", "returned", "returned", "returned"]);
+
+  // With the keeper's record of each day, the same picture, and nothing counted twice.
+  const records = [
+    { day: START, outcome: "earned" as const },
+    { day: START + 1, outcome: "earned" as const },
+    ...[2, 3, 4, 5, 6].map((offset) => ({ day: START + offset, outcome: "returned" as const })),
+  ];
+  assert.deepEqual(stripOf(ended, CATCH_UP, noonOn(START + 2), records), ["earned", "earned", "returned", "returned", "returned", "returned", "returned"]);
+
+  // A missed day before the ending and the days given back by it are both days that went back.
+  const withAMiss = gift({ creditedDays: 1, missedDays: 1, givenBackDays: 5 });
+  const strip = stripOf(withAMiss, CATCH_UP, noonOn(START + 2), []);
+  assert.equal(strip.filter((state) => state === "earned").length, 1);
+  assert.equal(strip.filter((state) => state === "returned").length, 6);
+
+  // A gift nobody ended is read exactly as before.
+  assert.equal(giftDays(gift(), CATCH_UP, noonOn(START + 2)).days[3].state, "toCome");
+});

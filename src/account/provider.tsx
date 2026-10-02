@@ -53,6 +53,12 @@ export type AccountContextValue = {
    * none is made.
    */
   ensureAccount: (options?: { existing?: boolean }) => Promise<LocalAccount>;
+  /**
+   * The passkey asked again, whatever is already open, for a gesture that cannot be undone (ending a gift, the audit
+   * of 1 Oct 2026). It answers the key only if the passkey is the signed-in account's: another person holding the
+   * phone with the session open cannot end somebody's gift with a press.
+   */
+  confirmWithPasskey: () => Promise<LocalAccount>;
   createAccount: (displayName: string) => Promise<void>;
   signIn: () => Promise<void>;
   signOut: () => void;
@@ -231,6 +237,24 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
     [serverSessionFor],
   );
 
+  const confirmWithPasskey = useCallback(async () => {
+    setStatus("busy");
+    setError(undefined);
+    try {
+      // Always a ceremony, and only as the account the server names: `OTHER_ACCOUNT` for any other passkey.
+      await withTimeout(mera.signIn({ as: currentServerSession().then((session) => (session ? (session.account as Address) : null)) }), CEREMONY_TIMEOUT_MS);
+      const account = mera.currentAccount();
+      if (!account) throw accountError("TIMED_OUT");
+      return account;
+    } catch (caught) {
+      const failure = toAccountError(caught);
+      setError(failure);
+      throw failure;
+    } finally {
+      setStatus("idle");
+    }
+  }, []);
+
   const value = useMemo<AccountContextValue>(
     () => ({
       address,
@@ -238,6 +262,7 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
       reach,
       ensureSigner,
       ensureAccount,
+      confirmWithPasskey,
       status,
       error,
       createAccount: (displayName) => run(() => mera.createAccount(displayName)),
@@ -270,7 +295,7 @@ export function AccountProvider({ initialAccount, children }: { initialAccount?:
       },
       clearError: () => setError(undefined),
     }),
-    [address, hasCredential, reach, ensureSigner, ensureAccount, status, error, run, serverForgot],
+    [address, hasCredential, reach, ensureSigner, ensureAccount, confirmWithPasskey, status, error, run, serverForgot],
   );
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
@@ -295,6 +320,7 @@ export function ExampleAccountProvider({ children }: { children: ReactNode }) {
       reach: "signing",
       ensureSigner: () => Promise.reject(accountError("NOT_IN_BROWSER")),
       ensureAccount: () => Promise.reject(accountError("NOT_IN_BROWSER")),
+      confirmWithPasskey: () => Promise.reject(accountError("NOT_IN_BROWSER")),
       status: "idle",
       error: undefined,
       createAccount: async () => undefined,

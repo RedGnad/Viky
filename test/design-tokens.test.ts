@@ -267,36 +267,39 @@ test("the quiet button is filled, seen on both grounds, and its words clear 4.5:
   assert.match(ui, /PRIMARY_BUTTON = `[^`]*bg-\[var\(--accent\)\]/, "the one action stopped carrying the accent");
   // The outline every button carries comes from one constant, so it cannot be dropped from one of them alone.
   assert.match(ui, /const OUTLINE = "border-\[length:var\(--control-border-width\)\] border-\[var\(--control-border\)\]"/);
-  for (const name of ["SECONDARY_BUTTON", "INLINE_BUTTON", "PRIMARY_BUTTON"]) {
+  for (const name of ["SECONDARY_BUTTON", "INLINE_BUTTON", "SMALL_BUTTON", "PRIMARY_BUTTON"]) {
     const from = ui.indexOf(`${name} = \``);
     const button = ui.slice(from, ui.indexOf("`;", from));
     assert.match(button, /\$\{OUTLINE\}/, `${name} lost the outline WCAG 1.4.11 asks for`);
-    assert.doesNotMatch(button, /disabled:opacity/, `${name} fades instead of saying it cannot be pressed`);
-    // Shut, every one of them keeps its filled shape and its relief and loses its colour (the mockups, and the
-    // founder on 19 Sep). A fill at half strength made a live button and a dead one one pair of pills at a squint.
-    assert.match(button, /disabled:bg-\[var\(--action-off\)\]/, `${name} loses its shape rather than its colour`);
-    assert.match(button, /disabled:text-\[var\(--action-off-ink\)\]/, `${name} keeps words nobody measured`);
-    assert.match(
-      button,
-      /disabled:\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--action-off-deep\)\]/,
-      `${name} gives up its relief when it cannot be pressed`,
-    );
+    assert.doesNotMatch(button, /disabled:opacity/, `${name} fades whole, its outline with its fill`);
+    // Waiting, every one of them keeps its shape and its colour, faded, on no relief (the founder's rule 3 of
+    // 1 Oct 2026, kit-rules.html). The beige pill of 19 Sep read as a third kind of button.
+    assert.match(button, /\$\{WAITING\}/, `${name} does not wait the way the others do`);
+    assert.doesNotMatch(button, /action-off/, `${name} turns into the beige pill again`);
   }
+  const waiting = ui.match(/const WAITING = "([^"]+)"/);
+  assert.ok(waiting, "the waiting look has no class");
+  assert.match(waiting[1], /disabled:border-\[var\(--waiting-edge\)\]/, "its edge fades");
+  assert.match(waiting[1], /disabled:text-\[var\(--waiting-ink\)\]/, "its words fade");
+  assert.match(waiting[1], /disabled:\[box-shadow:none\]/, "and it stands on nothing");
 
-  /*
-   * The one action is the exception, and it is the rendered mockups of 19 Sep 2026 that made it one (D113): shut, it
-   * is still a filled, relieved button saying what it is waiting for, because on a card it is the shape a person is
-   * waiting to press. What it may not be is unreadable: the image's own words on that fill measure 2.64:1.
-   */
+  // The one action waits in its own sun, at the strength the mockup draws: 38 % of it, the ink at 45 % on its words
+  // and at 28 % on its edge. No fill of its own replaces the sun.
   const primary = ui.slice(ui.indexOf("PRIMARY_BUTTON = `"), ui.indexOf("`;", ui.indexOf("PRIMARY_BUTTON = `")));
-  assert.match(primary, /disabled:bg-\[var\(--action-off\)\]/);
-  assert.match(primary, /disabled:\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--action-off-deep\)\]/);
-  // One shut action, on the cream of the card by day and on its night paper after dark (D223), and its words readable
-  // on it in both: the image's own #9A8B62 measured 2.64:1 on the cream.
-  assert.ok(contrastRatio("#6F6133", "#EFE3C4") >= TEXT_CONTRAST_MINIMUM, "the words of the shut action are readable on it by day");
-  assert.ok(contrastRatio("#C7C4DA", "#4E485E") >= TEXT_CONTRAST_MINIMUM, "and by night");
-  assert.match(css, /--action-off-ink: #6F6133;/);
-  assert.equal((css.match(/--action-off-ink: #C7C4DA;/g) ?? []).length, 2, "the night's, in both night blocks");
+  assert.match(primary, /disabled:bg-\[var\(--waiting-fill\)\]/);
+  assert.match(css, /--waiting-fill: rgba\(255, 197, 49, 0\.38\);/);
+  assert.match(css, /--waiting-ink: rgba\(30, 22, 51, 0\.45\);/);
+  assert.match(css, /--waiting-edge: rgba\(30, 22, 51, 0\.28\);/);
+  assert.equal((css.match(/--waiting-ink: rgba\(255, 246, 226, 0\.55\);/g) ?? []).length, 2, "the night's words, in both night blocks");
+  assert.equal((css.match(/--waiting-edge: rgba\(255, 246, 226, 0\.28\);/g) ?? []).length, 2, "and the night's edge");
+  assert.doesNotMatch(css, /--action-off/, "the beige pill's three colours are gone from the stylesheet");
+  // The relief of a waiting button is taken away where it is drawn, for the keys that draw it in the stylesheet.
+  assert.match(css, /\.control-relief:disabled,\n\.action-relief:disabled \{\n  box-shadow: none;\n\}/);
+  // The one small button: 40 high, 44 to the touch, on a relief of three.
+  const small = ui.slice(ui.indexOf("SMALL_BUTTON = `"), ui.indexOf("`;", ui.indexOf("SMALL_BUTTON = `")));
+  assert.match(small, /h-\[40px\]/, "40 high");
+  assert.match(css, /\.small-button::before \{\n  content: "";\n  position: absolute;\n  inset: -4px 0;\n\}/, "and 44 to the touch: its own 36 inside the outline, and four past it above and below");
+  assert.match(css, /\.small-button \{\n  box-shadow: 0 3px 0 var\(--control-relief-colour\);/);
   // The ink under it, not a darker yellow: the same slab every control stands on, and the only one that reads as a
   // thickness against a sun fill (D142).
   assert.match(primary, /\[box-shadow:0_var\(--action-relief-depth\)_0_var\(--control-relief-colour\)\]/, "the ink is under it when it can be pressed");

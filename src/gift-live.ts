@@ -1,6 +1,6 @@
 import type { Voice } from "./gift-voice";
 import type { Moment } from "./gift-moment";
-import { GIFT_CARD as W_CARD, GIFT_LIVE as L, GIFT_PAGE as W } from "./sentences";
+import { END_GIFT as E, GIFT_CARD as W_CARD, GIFT_LIVE as L, GIFT_PAGE as W } from "./sentences";
 
 /**
  * What a gift's page leads with, at one moment, for one reader (document J, section 2).
@@ -50,6 +50,8 @@ export type LiveInput = Readonly<{
   openBy: string | null;
   connectBy: string | null;
   nextReadingInWords: string | null;
+  /** The hour of the next reading alone, in the reader's clock: "20:30". Drawn as a figure where nothing has gone back. */
+  nextReadingAt?: string | null;
   cameBackOnInWords: string | null;
   /** The day it was reached, or the last day of a habit that finished with days earned, in the reader's clock. */
   endedOnInWords?: string | null;
@@ -57,6 +59,8 @@ export type LiveInput = Readonly<{
   deadlineInWords?: string | null;
   /** The gift holds some of what the person it is for earned, which Home's way out takes first (D208). */
   takeableFromHome?: boolean;
+  /** The gift was ended by the person it is for: the day, in the reader's clock, and the two amounts the ending moved. */
+  ended?: Readonly<{ onInWords: string; keptDisplay: string; givenBackDisplay: string }> | null;
 }>;
 
 export type Live = Readonly<{
@@ -71,8 +75,18 @@ export type Live = Readonly<{
    * Nothing while nothing has gone back, because a zero there would be a fact about nothing.
    */
   back: Readonly<{ label: string; value: string }> | null;
-  /** One quiet line under the figures, with no gesture of its own: where money already theirs goes (D208). */
+  /**
+   * Where money already theirs goes (D208), with no gesture of its own. It is a sentence, so it is read in the fold
+   * "What was agreed" and no longer on the card in small capitals (the founder's rule 5 of 1 Oct 2026).
+   */
   quiet?: string | null;
+  /** A label above the state, four words at most: the day a gift was ended. Nothing on every other moment. */
+  when?: string | null;
+  /**
+   * The next reading as a figure, in the right column, while nothing has gone back to take that column: the hour and
+   * its label, where a sentence stood (the mockup you-decide.html, first frame). `next` is then nothing.
+   */
+  nextAt?: Readonly<{ label: string; value: string }> | null;
 }>;
 
 /**
@@ -97,7 +111,7 @@ export function titleOf(voice: Voice, name: string | null): string {
 }
 
 /** Where a proof stands, to each of the three readers. A reader who is neither of the two reads the third person. */
-function proofHeadline(proof: NonNullable<LiveInput["proof"]>, voice: Voice, recipientName: string | null, funderName: string | null, until: string | null): string {
+function proofHeadline(proof: NonNullable<LiveInput["proof"]>, voice: Voice, recipientName: string | null): string {
   const yours = voice === "recipient";
   switch (proof) {
     case "pending":
@@ -107,10 +121,18 @@ function proofHeadline(proof: NonNullable<LiveInput["proof"]>, voice: Voice, rec
     case "building":
       return yours ? L.awaitingProof.buildingYours : L.awaitingProof.buildingTheirs(recipientName);
     case "late":
-      return yours ? L.awaitingProof.lateYours(until ?? "") : voice === "funder" ? L.awaitingProof.lateTheirs(until ?? "") : L.awaitingProof.lateReading(until ?? "");
+      return L.awaitingProof.late;
     case "ended":
-      return yours ? L.awaitingProof.endedYours(funderName, until ?? "") : voice === "funder" ? L.awaitingProof.endedTheirs(until ?? "") : L.awaitingProof.endedReading;
+      return L.awaitingProof.ended;
   }
+}
+
+/** What follows from a last day that has passed, under the state: until when, and where the money goes then. */
+function proofNext(proof: NonNullable<LiveInput["proof"]>, voice: Voice, funderName: string | null, until: string | null): string | null {
+  if (until === null) return null;
+  if (proof === "late") return voice === "recipient" ? L.awaitingProof.lateNextYours(until) : voice === "funder" ? L.awaitingProof.lateNextTheirs(until) : L.awaitingProof.lateNextReading(until);
+  if (proof === "ended") return voice === "recipient" ? L.awaitingProof.endedNextYours(funderName, until) : voice === "funder" ? L.awaitingProof.endedNextTheirs(until) : null;
+  return null;
 }
 
 /** Whether this reader is the person the gift is for. A reader who is neither of the two reads the third person. */
@@ -181,7 +203,10 @@ export function liveOf(input: LiveInput): Live {
                 : L.counting.wentBack(funderName)
               : L.counting.running,
         figure: { label: yours ? W.yoursSoFar : W.theirsSoFar, value: input.theirsDisplay },
-        next: input.nextReadingInWords,
+        // The next reading is the hour beside the money while that column is free, and the dated sentence once what
+        // has gone back takes it: said once either way.
+        next: back === null && input.nextReadingAt ? null : input.nextReadingInWords,
+        nextAt: back === null && input.nextReadingAt && input.nextReadingInWords ? { label: L.nextReading, value: input.nextReadingAt } : null,
         back,
         // Only to the person it is for, and only while the contract holds some of it: the figure already says how much.
         quiet: voice === "recipient" && input.takeableFromHome ? L.counting.takeFromHome : null,
@@ -204,7 +229,7 @@ export function liveOf(input: LiveInput): Live {
         // The one gesture, said as the headline: sharing a page, or showing it from their own account (D162). Once
         // there is a proof, or once the last day has passed, the headline says where it stands instead.
         headline: input.proof
-          ? proofHeadline(input.proof, voice, recipientName, funderName, input.lateUntilInWords ?? null)
+          ? proofHeadline(input.proof, voice, recipientName)
           : input.shown
           ? yours
             ? L.awaitingProof.shownYours(source)
@@ -213,7 +238,7 @@ export function liveOf(input: LiveInput): Live {
             ? L.awaitingProof.yours
             : L.awaitingProof.theirs(recipientName),
         figure: { label: yours ? L.awaitingProof.label.yours : L.awaitingProof.label.theirs, value: input.amountDisplay },
-        next: null,
+        next: input.proof ? proofNext(input.proof, voice, funderName, input.lateUntilInWords ?? null) : null,
         back,
       };
 
@@ -238,6 +263,22 @@ export function liveOf(input: LiveInput): Live {
         next: input.endedOnInWords ? (input.shape === "days" ? L.won.finishedOn(input.endedOnInWords) : L.won.reachedOn(input.endedOnInWords)) : null,
         back,
       };
+
+    case "ended": {
+      const ending = input.ended;
+      const kept = ending ? !isNothing(ending.keptDisplay) : false;
+      const givenBack = { label: voice === "funder" ? L.cameBackToYou : L.cameBackTo(funderName), value: ending?.givenBackDisplay ?? input.amountDisplay };
+      return {
+        // The day is a label and who ended it is the headline (the mockup's fourth frame): no sentence carries a date.
+        when: ending ? E.endedOn(ending.onInWords) : null,
+        headline: yours ? E.endedYours : voice === "funder" ? E.endedTheirs(recipientName) : E.endedReading,
+        // Two figures side by side: what stayed theirs, and what went back. When nothing stayed, what went back is
+        // the one figure, and a zero is never printed beside it.
+        figure: kept ? { label: yours ? E.label.yours : E.label.theirs, value: ending?.keptDisplay ?? "" } : givenBack,
+        next: null,
+        back: kept ? givenBack : null,
+      };
+    }
 
     case "over":
       return {

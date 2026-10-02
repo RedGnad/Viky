@@ -1,25 +1,25 @@
 "use client";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { morningStep, type MorningStep } from "@/src/morning-message";
-import { GIFT_LIVE, ME, MORNING as W } from "@/src/sentences";
-import { HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../components/ui";
+import { GIFT_LIVE, ME, MORNING as W, YOU_DECIDE as Y } from "@/src/sentences";
+import { BODY, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
+import { Sheet } from "./Sheet";
 
 const L = GIFT_LIVE.climbing;
 
 /**
- * Being told each morning, on a gift's page (N1, 17 Sep 2026).
+ * Being told about a gift (N1, 17 Sep 2026): each morning for a habit, the moment it is reached for a climb, the day
+ * it is theirs or its time is up for a gift had or not, and the answer of a first proof's review.
  *
  * Viky asks for no daily gesture, so the day's outcome has to arrive without one. The person is asked only ever after
  * a press: iOS grants push to an installed web app alone, and only when the request answers a press (webkit.org, 16 Feb
  * 2023), so nothing is asked on load, on any phone. On an iPhone still in Safari there is nothing to press, because
  * there the browser has nothing to grant: installing comes first, and the two steps of it are said in full.
  *
- * Offered in the open, after the first thing that worked (the founder, 1 Oct 2026, the audit's finding P-31): under the
- * gift's card for its two people, and under the link the funder has just been given. It used to sit inside the fold
- * "How this is checked", was never offered to a funder, and on an iPhone took a press to say that installing was
- * needed. Nothing is offered to anybody without an account: both places are behind one.
- *
- * Self-contained on purpose: one line puts it on a page, and nothing outside it knows it exists.
+ * Offered in the open to a gift's two people (the founder, 1 Oct 2026, the audit's finding P-31), and since his rule 6
+ * of the same day as one of the round controls under the card and under the link the funder has just been given
+ * (app/kit/YouDecide.tsx, app/kit/FunderControls.tsx): "Messages", and this sheet after the press. It was a wide
+ * button or a line with a small button, and a paragraph about the phone standing on every page.
  */
 
 const isIOS = () => typeof window !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -51,7 +51,7 @@ function told(subscription: PushSubscription): Told {
 }
 
 /** Being told about one gift on this device: where it stands, and the two presses that change it. */
-function useTold(giftId: string, yours: boolean) {
+export function useTold(giftId: string, yours: boolean) {
   const onIOS = useSyncExternalStore(never, isIOS, serverFalse);
   const standalone = useSyncExternalStore(never, isStandalone, serverFalse);
   const supported = useSyncExternalStore(never, canPush, serverFalse);
@@ -147,86 +147,52 @@ function useTold(giftId: string, yours: boolean) {
   return { step, busy, refusal, start, stop };
 }
 
-export function MorningMessage({ giftId, yours }: { giftId: string; yours: boolean }) {
-  const { step, busy, refusal, start, stop } = useTold(giftId, yours);
-  if (!yours) return null;
-  if (step === "unsupported") return null;
-  if (step === "on") {
-    return (
-      <div className="gift-card-width flex flex-col gap-[var(--space-xs)]" data-told="on">
-        <p className={HELP}>{W.asked}</p>
-        <button type="button" onClick={() => void stop()} disabled={busy} className={SECONDARY_BUTTON}>
-          {W.stop}
-        </button>
-      </div>
-    );
-  }
-  // An iPhone outside the Home Screen: no button, since no press there can be granted. What to do first, and how.
-  if (step === "install") {
-    return (
-      <div className="gift-card-width flex flex-col gap-[var(--space-xs)]" data-told="install">
-        <p className={HELP}>{W.installFirst}</p>
-        <p className={HELP}>{ME.installHow}</p>
-      </div>
-    );
-  }
-  return (
-    <div className="gift-card-width flex flex-col gap-[var(--space-xs)]" data-told="ask">
-      <button type="button" onClick={() => void start()} disabled={busy || step === "refused"} className={SECONDARY_BUTTON}>
-        {W.ask}
-      </button>
-      {step === "refused" ? <p className={HELP}>{W.refused}</p> : null}
-      {refusal ? <p className={HELP}>{refusal}</p> : null}
-    </div>
-  );
-}
+/** What a gift's messages are about: each morning for a habit, or one moment for a gift reached, had or checked. */
+export type ToldAbout = Readonly<{ kind: "morning" } | { kind: "reach"; target: string } | { kind: "hadOrNot" } | { kind: "review" }>;
 
 /**
- * Being told the moment a milestone is reached, or its first proof checked (the founder, 29 Sep 2026, the mockup of 19 Sep): one quiet line outside
- * the card, and a small "Turn on". The same subscription as the morning message: a milestone gift's subscribers are
- * told when it is reached (src/milestone-pass.ts, and the reading on opening in src/milestone-routes.ts), or when its
- * time runs out. A phone that refused is told how to allow it, without a button that can do nothing.
+ * "Messages", in the sheet its round button opens (the founder's rule 6 of 1 Oct 2026, you-decide.html): where being
+ * told stands, and the one press that changes it. What the phone itself refuses is said here, once, after the press
+ * that opened the sheet, and no longer as a paragraph standing on every page; on an iPhone outside the Home Screen
+ * the two steps of installing are said here too. The words are the ones the open line under the card said.
  */
-export function ReachAlert({
-  giftId,
-  target,
+export function MessagesSheet({
+  open,
+  onClose,
+  told,
+  about,
   yours,
-  review = false,
-  hadOrNot = false,
-}: Readonly<{
-  giftId: string;
-  target: string;
-  yours: boolean;
-  /** Told when a first proof's review is decided, rather than when a target is reached. */
-  review?: boolean;
-  /** A gift had or not: told the day it is theirs or the day its time is up, since nothing there is reached by degrees. */
-  hadOrNot?: boolean;
-}>) {
-  const { step, busy, refusal, start, stop } = useTold(giftId, true);
+}: Readonly<{ open: boolean; onClose: () => void; told: ReturnType<typeof useTold>; about: ToldAbout; yours: boolean }>) {
+  const { step, busy, refusal, start, stop } = told;
   const side = yours ? "yours" : "theirs";
-  if (step === "unsupported") return null;
-  // A first proof held for review (the founder, 29 Sep 2026): what the person waits for is the answer, so that is what
-  // they are offered to be told; the same subscription carries it (scripts/portal-pin.ts tells it).
-  const ask = review ? L.reviewAlert : hadOrNot ? L.alertHadOrNot[side] : L.alert[side](target);
-  const on = review ? L.reviewAlertOn : hadOrNot ? L.alertHadOrNotOn[side] : L.alertOn[side](target);
-  const line = step === "on" ? on : step === "refused" ? L.alertRefused : step === "install" ? `${ask} ${L.alertInstall}` : ask;
+  const morning = about.kind === "morning";
+  const ask = about.kind === "review" ? L.reviewAlert : about.kind === "hadOrNot" ? L.alertHadOrNot[side] : about.kind === "reach" ? L.alert[side](about.target) : W.stopped;
+  const on = about.kind === "review" ? L.reviewAlertOn : about.kind === "hadOrNot" ? L.alertHadOrNotOn[side] : about.kind === "reach" ? L.alertOn[side](about.target) : W.asked;
+  const installFirst = morning ? W.installFirst : `${ask} ${L.alertInstall}`;
   return (
-    <div className="gift-card-width flex flex-col gap-[var(--space-xs)]" data-told={step}>
-      <div className="flex items-center justify-between gap-[var(--space-md)]">
-        <p className={HELP}>{line}</p>
-        {step === "ask" ? (
-          <button type="button" onClick={() => void start()} disabled={busy} className={`${INLINE_BUTTON} shrink-0`}>
-            {L.turnOn}
+    <Sheet
+      open={open}
+      title={Y.messages}
+      onClose={onClose}
+      footer={
+        step === "install" ? undefined : step === "on" ? (
+          <button type="button" onClick={() => void stop()} disabled={busy} className={SECONDARY_BUTTON}>
+            {morning ? W.stop : L.turnOff}
           </button>
-        ) : step === "on" ? (
-          <button type="button" onClick={() => void stop()} disabled={busy} className={`${INLINE_BUTTON} shrink-0`}>
-            {L.turnOff}
+        ) : (
+          <button type="button" onClick={() => void start()} disabled={busy || step === "refused"} className={PRIMARY_BUTTON}>
+            {morning ? W.ask : L.turnOn}
           </button>
-        ) : null}
+        )
+      }
+    >
+      <div data-told={step} className="flex flex-col gap-[var(--space-sm)]">
+        <p className={BODY}>{step === "on" ? on : step === "install" ? installFirst : ask}</p>
+        {/* An iPhone outside the Home Screen: the two steps of installing, said in full under what it is for. */}
+        {step === "install" ? <p className={HELP}>{ME.installHow}</p> : null}
+        {step === "refused" ? <p className={HELP}>{morning ? W.refused : L.alertRefused}</p> : null}
+        {refusal && step !== "refused" ? <p className={HELP}>{refusal}</p> : null}
       </div>
-      {/* An iPhone outside the Home Screen: the two steps of installing, said in full under what it is for. */}
-      {step === "install" ? <p className={HELP}>{ME.installHow}</p> : null}
-      {refusal ? <p className={HELP}>{refusal}</p> : null}
-    </div>
+    </Sheet>
   );
 }

@@ -81,6 +81,8 @@ export async function giftsOf(account: string): Promise<GiftSummary[]> {
         counting: record.boundAt !== null,
         finished: gift.finalised,
         cancelled: gift.cancelled,
+        ended: gift.endedAt !== 0,
+        givenBackDays: gift.givenBackDays,
         earnedDisplay: formatAusd(gift.earnedBalance),
         theirsDisplay: formatAusd(theirsSoFar(gift)),
         takeable: role === "recipient" ? gift.earnedBalance.toString() : "0",

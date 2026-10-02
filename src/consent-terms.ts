@@ -18,6 +18,11 @@ export type ConsentTerms = Readonly<{
   funderSees: string;
   /** The short name of it, for the stop line and the funder's line: "your rapid rating". */
   what: string;
+  /**
+   * How many things that is, for the round button that says it in two words (app/kit/YouDecide.tsx): one where the
+   * funder sees whether it counted, two where they also see the figure read. Counted here, beside the words it counts.
+   */
+  things: 1 | 2;
 }>;
 
 const your = (voice: Voice) => (voice === "yours" ? "your" : "their");
@@ -28,56 +33,67 @@ const byCondition: Readonly<Record<string, Terms>> = {
   "university-enrollment-shown": (_, v) => ({
     reads: `whether ${your(v)} own student portal says ${v === "yours" ? "you are" : "they are"} enrolled this academic year: yes or no, from the page ${v === "yours" ? "you open" : "they open"} and nothing else on it`,
     funderSees: "yes or no",
+    things: 1,
     what: `${your(v)} enrolment`,
   }),
   "university-year-passed-shown": (_, v) => ({
     reads: `whether ${your(v)} own student portal says the year is passed: yes or no, from the page ${v === "yours" ? "you open" : "they open"} and nothing else on it`,
     funderSees: "yes or no",
+    things: 1,
     what: `${your(v)} year's result`,
   }),
   "university-grade-shown": (_, v) => ({
     reads: `${your(v)} overall grade on ${your(v)} own student portal, from the page ${v === "yours" ? "you open" : "they open"} and nothing else on it`,
     funderSees: "whether the grade reaches the target, and the grade",
+    things: 2,
     what: `${your(v)} grade`,
   }),
   "toefl-mybest-shown": (source, v) => ({
     reads: `${your(v)} score from ${source}, shown from ${your(v)} own account, and nothing else on it`,
     funderSees: "whether the score reaches the target, and the score",
+    things: 2,
     what: `${your(v)} score`,
   }),
   "duolingo-english-test": (source, v) => ({
     reads: `the ${source} certificate page ${v === "yours" ? "you share" : "they share"}: the score, the day of the test and the name printed on it`,
     funderSees: "whether the score reaches the target, and the score",
+    things: 2,
     what: `${your(v)} certificate`,
   }),
   "duolingo-daily": (source, v) => ({
     reads: `${your(v)} lessons on ${source}, each day, from ${your(v)} public profile: whether the day has one`,
     funderSees: "for each day, whether it counted",
+    things: 1,
     what: `${your(v)} lessons`,
   }),
   "codeforces-rating": (source, v) => ({
     reads: `${your(v)} rating on ${source}, from ${your(v)} public profile, each time it is read`,
     funderSees: "the rating read, and whether it reaches the target",
+    things: 2,
     what: `${your(v)} rating`,
   }),
   "chess-rating": (source, v, cadence) => ({
     reads: `${your(v)} ${cadence ? `${cadence} ` : ""}rating on ${source}, from ${your(v)} public profile, each time it is read`,
     funderSees: "the rating read, and whether it reaches the target",
+    things: 2,
     what: `${your(v)} ${cadence ? `${cadence} ` : ""}rating`,
   }),
   "chess-tactics": (source, v) => ({
     reads: `${your(v)} puzzle rating on ${source}, from ${your(v)} public profile, each time it is read`,
     funderSees: "the rating read, and whether it reaches the target",
+    things: 2,
     what: `${your(v)} puzzle rating`,
   }),
   "wca-time": (source, v) => ({
     reads: `${your(v)} results at the competition named in this gift, on ${source}'s public results: the event and the time`,
     funderSees: "whether the time reaches the target, and the time",
+    things: 2,
     what: `${your(v)} results`,
   }),
   "marathon-finish": (_, v) => ({
     reads: `${your(v)} finish at the race named in this gift, on its official results: the distance and whether it was finished`,
     funderSees: "whether it was finished",
+    things: 1,
     what: `${your(v)} race result`,
   }),
 };
@@ -87,6 +103,7 @@ const certificate: Terms = (source, v) => ({
   reads: `the ${source} certificate page ${v === "yours" ? "you share" : "they share"}: the course or certification, the day it was granted and the name printed on it`,
   funderSees: "whether it is the certificate the gift is for",
   what: `${your(v)} certificate`,
+  things: 1,
 });
 
 /** A connected source reads what its own consent pane says, in its own words. */
@@ -100,6 +117,8 @@ function connected(condition: Condition, voice: Voice): ConsentTerms | null {
     reads: said(pane.sees),
     funderSees: said(pane.never),
     what: voice === "yours" ? `your ${condition.source}` : `their ${condition.source}`,
+    // Yes or no for the day, and nothing else: the pane's own first sentence.
+    things: 1,
   };
 }
 

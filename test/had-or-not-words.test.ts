@@ -100,12 +100,22 @@ test("the title says where the proof stands, to each of the two people", () => {
   assert.equal(title({ proof: "building" }), "Your university's page is being set up. Then you show it here.");
   assert.equal(title({ proof: "building", voice: "funder" }), "Boo's university page is being set up.");
   // Past the last day, where the source dates what it grants: what was had in time can still be proved.
-  assert.equal(title({ proof: "late", lateUntilInWords: "31 Oct 2026" }), "The last day has passed. What you had by then can still be proved until 31 Oct 2026.");
-  assert.equal(title({ proof: "late", lateUntilInWords: "31 Oct 2026", voice: "funder" }), "The last day has passed. If nothing from before it is proved by 31 Oct 2026, it comes back to you.");
+  // The state is the title and what follows from it is the line under it (1 Oct 2026): one title said both before.
+  const under = (over: Partial<LiveInput>) => liveOf({ ...WAITING, ...over }).next;
+  assert.equal(title({ proof: "late", lateUntilInWords: "31 Oct 2026" }), "The last day has passed.");
+  assert.equal(under({ proof: "late", lateUntilInWords: "31 Oct 2026" }), "What you had by then can still be proved until 31 Oct 2026.");
+  assert.equal(title({ proof: "late", lateUntilInWords: "31 Oct 2026", voice: "funder" }), "The last day has passed.");
+  assert.equal(under({ proof: "late", lateUntilInWords: "31 Oct 2026", voice: "funder" }), "If nothing from before it is proved by 31 Oct 2026, it comes back to you.");
+  assert.equal(under({ proof: "late", lateUntilInWords: "31 Oct 2026", voice: "reader" }), "What was had by then can still be proved until 31 Oct 2026.");
   // Past the last day, where the showing itself is what is dated: nothing shown now can pay, and the return is dated.
-  assert.equal(title({ proof: "ended", lateUntilInWords: "31 Oct 2026" }), "The last day passed without it. It goes back to Maman after 31 Oct 2026.");
-  assert.equal(title({ proof: "ended", lateUntilInWords: "31 Oct 2026", voice: "funder" }), "The last day passed without it. It comes back to you after 31 Oct 2026.");
+  assert.equal(title({ proof: "ended", lateUntilInWords: "31 Oct 2026" }), "The last day passed without it.");
+  assert.equal(under({ proof: "ended", lateUntilInWords: "31 Oct 2026" }), "It goes back to Maman after 31 Oct 2026.");
+  assert.equal(title({ proof: "ended", lateUntilInWords: "31 Oct 2026", voice: "funder" }), "The last day passed without it.");
+  assert.equal(under({ proof: "ended", lateUntilInWords: "31 Oct 2026", voice: "funder" }), "It comes back to you after 31 Oct 2026.");
   assert.equal(title({ proof: "ended", lateUntilInWords: "31 Oct 2026", voice: "reader" }), "The last day passed without it.");
+  assert.equal(under({ proof: "ended", lateUntilInWords: "31 Oct 2026", voice: "reader" }), null);
+  // Nothing follows while the last day has not passed.
+  for (const proof of ["pending", "refused", "building"] as const) assert.equal(under({ proof }), null, proof);
   // The figure is still said once, under the title.
   assert.deepEqual(liveOf({ ...WAITING, proof: "pending" }).figure, { label: "In your name", value: "$25.00" });
   // The page hands it what the contract and the review say, and the late window is the contract's.
