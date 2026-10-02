@@ -184,7 +184,7 @@ test("every route that asks the relayer to pay goes through the door first; the 
   ];
   for (const [file, relays] of routes) {
     const source = readFileSync(file, "utf8");
-    // A way out of a gift goes through the door that keeps its part of everybody's count (`admitWayOut`).
+    // A way out, of a gift or to a bank, goes through the door that keeps its part of everybody's count (`admitWayOut`).
     const door = Math.max(source.indexOf("await admitRelay(request, auth.account)"), source.indexOf("admitWayOut(request, auth.account)"));
     const paid = source.search(relays);
     assert.ok(door > 0, `${file}: goes through the door`);
@@ -197,12 +197,27 @@ test("every route that asks the relayer to pay goes through the door first; the 
   for (const file of ["src/daily-pass.ts", "scripts/keeper.ts"]) assert.ok(!readFileSync(file, "utf8").includes("relay-admission"), `${file}: the operator's own relaying is not counted`);
 });
 
+test("the part kept for the ways out is drawn on by the ways out of a gift and the way out to a bank, and by nothing else", () => {
+  const door = (file: string) => {
+    const source = readFileSync(file, "utf8");
+    return { kept: source.includes("admitWayOut(request, auth.account)"), other: /admitRelay\(request, (auth\.)?account\)/.test(source) };
+  };
+  // Opening, ending, taking out, the funder taking back, and the way out of the account to a bank (the founder, 2 Oct 2026).
+  for (const file of ["app/api/gift/claim/route.ts", "app/api/gift/[id]/end/route.ts", "app/api/gift/withdraw/route.ts", "app/api/gift/[id]/cancel/route.ts", "app/api/exit/relay/route.ts"]) {
+    assert.deepEqual(door(file), { kept: true, other: false }, `${file}: a way out`);
+  }
+  // Making a gift, counting a day, writing an agreement down, the way in from another coin, a send, a phone top-up.
+  for (const file of ["app/api/gift/create/route.ts", "app/api/gift/milestone/create/route.ts", "app/api/gift/certificate/create/route.ts", "app/api/gift/check-in/route.ts", "app/api/proof/verify/route.ts", "app/api/gift/[id]/consent/route.ts", "app/api/fund/convert/relay/route.ts", "app/api/send/route.ts", "app/api/phone/pay/route.ts"]) {
+    assert.deepEqual(door(file), { kept: false, other: true }, `${file}: not a way out`);
+  }
+});
+
 /**
  * The review of 2 Oct 2026, R-16. Everybody's count for the day was used up for nothing: a request was counted before
  * it was checked, so twenty-five free accounts asking twenty times each for a gift that does not exist reached five
  * hundred, spent no gas, and nobody could open a gift, end one or be paid until midnight UTC.
  */
-test("the ways out of a gift keep a part of everybody's count: a day used up by everything else still opens, ends and pays out", async () => {
+test("the ways out keep a part of everybody's count: a day used up by everything else still opens, ends, pays out and reaches a bank", async () => {
   // Four hundred actions of every other kind, by twenty accounts on twenty connections: everybody's count is at what
   // is not kept, and nobody is near their own ceiling.
   for (let who = 0; who < 20; who += 1) {
@@ -216,7 +231,8 @@ test("the ways out of a gift keep a part of everybody's count: a day used up by 
   assert.equal(full.code, "RELAY_CEILING");
   assert.equal(full.message, "Viky has sent as many actions as it sends in a day, for everybody. Nothing of yours was changed. Try again tomorrow.");
   assert.equal(await all(), 400);
-  // The person holding a link still opens their gift, ends it, takes out what is theirs: a hundred times that day.
+  // The person holding a link still opens their gift, ends it, takes out what is theirs, and sends it to their bank: a
+  // hundred times that day.
   for (let i = 0; i < 100; i += 1) await admitWayOut(from(`10.1.${Math.floor(i / 20)}.${i % 20}`), `0x${(i + 100).toString(16).padStart(40, "0")}`, NOW + 100 + i);
   assert.equal(await all(), 500);
   assert.equal((await refused(() => admitWayOut(from("10.2.0.1"), OTHER, NOW + 300))).code, "RELAY_CEILING", "and the whole count is still a ceiling");

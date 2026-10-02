@@ -72,8 +72,10 @@ test("the workflow runs three jobs side by side, marks a tree only after a green
   };
   // The three jobs wait for the scope and for nothing else, so they run side by side.
   for (const name of ["contracts", "policy", "browser"]) assert.match(job(name), /\n {4}needs: scope\n/, `${name} waits for another job`);
-  assert.match(job("browser"), /part: \[1, 2, 3\]/, "the screens in three parts");
-  assert.match(job("browser"), /pnpm test:browser --shard=\$\{\{ matrix\.part \}\}\/3/);
+  // Two parts since 2 Oct 2026 (the founder): the policy tests are the longest job, so a third part bought no time.
+  assert.match(job("browser"), /part: \[1, 2\]\n/, "the screens in two parts");
+  assert.match(job("browser"), /pnpm test:browser --shard=\$\{\{ matrix\.part \}\}\/2\n/);
+  assert.match(job("browser"), /name: Screens in a browser \(\$\{\{ matrix\.part \}\} of 2\)/);
   // The policy tests run on every pass that is not stopped by the mark; the two others also ask the scope.
   assert.match(job("policy"), /if: needs\.scope\.outputs\.validated != 'true'\n/);
   assert.match(job("contracts"), /if: needs\.scope\.outputs\.validated != 'true' && needs\.scope\.outputs\.contracts == 'true'\n/);
