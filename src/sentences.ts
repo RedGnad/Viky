@@ -716,8 +716,14 @@ export const FUND = {
 
   made: {
     title: (amount: string, recipient: string) => `${amount} is in ${their(recipient)} name.`,
-    terms: (amount: string, days: number, perDay: string, exact: boolean, source: string) =>
-      `${amount} over ${days} days, ${exact ? "" : "about "}${perDay} a day, first day counted the day after they connect ${source}.`,
+    /**
+     * The day's share and the days are two figures side by side, each with a label (the founder's rule 5 of 1 Oct
+     * 2026); the whole amount is the title's. One sentence said the three, and when the first day counts.
+     */
+    about: "about ",
+    aDay: "A day",
+    days: (count: number) => (count === 1 ? "Day" : "Days"),
+    firstDay: (source: string) => `First day counted the day after they connect ${source}.`,
     reference: (when: string, giftId: string) => `Made ${when}. Reference: gift ${giftId}.`,
     linkTitle: "The link",
     copy: "Copy the link",
@@ -813,13 +819,20 @@ export const GIFT_PAGE = {
   gettingLink: "Making a new link",
   linkAgainDone: "Here is the new link. The one you had before no longer opens this gift.",
   linkAgainFailed: "The link could not be made just now. Nothing was changed: the link you had still works.",
+  /**
+   * A gift of the second version of the contracts (the audit of 1 Oct 2026): its link is found again, not replaced. The
+   * key that opens the gift is in what was signed, so the link sent before is this one, and it still works.
+   */
+  linkFindWhy: "Lost the link, or sent it from another device? Find it again here. It is the same link: the one you sent still works.",
+  linkFind: "Find the link again",
+  linkFound: "Here is the link. It is the one you had: it still opens this gift.",
+  linkFindFailed: "The link could not be found just now. Nothing was changed: the link you sent still works.",
 
   /**
    * Taking a gift back before anybody opened it. The contract has always allowed it and no screen offered it, so a
    * funder who never sent the link waited fourteen days (gift 1000001, 19 Sep 2026). Irreversible, so the amount is
    * said before and after, with the date after, and the link's death is said in the same breath.
    */
-  takeBack: "Take this gift back",
   /**
    * Whose gift it is, on the card itself: on a phone the decision sits at the foot of a long page, and the name at
    * the top of it is three screens away (ui review, 19 Sep 2026).
@@ -863,6 +876,8 @@ export const GIFT_PAGE = {
   } as Record<string, string>,
 
   take: (amount: string) => `Take ${amount}`,
+  /** The sheet the action opens, where the one sentence of taking is read before the press that signs it. */
+  takeTitle: (amount: string) => `Take ${amount}?`,
   takeReview: "It goes into your account, and it stays yours: from there you can send it to your bank. Nothing to pay.",
   notNow: "Not now",
   taking: "Taking it",
@@ -1003,18 +1018,20 @@ export const GIFT_LIVE = {
     buildingTheirs: (recipient: string | null) => `${recipient ? `${recipient}'s` : "Their"} university page is being set up.`,
     /**
      * Past the last day. True of the contract: what a source dates itself (a certificate granted, a test taken, a race
-     * run) may be proved for fourteen days more if its date is in time, and then the gift goes back.
+     * run) may be proved for fourteen days more if its date is in time, and then the gift goes back. The state is the
+     * headline and what follows from it is the line under it (1 Oct 2026): they were one headline of two sentences.
      */
-    lateYours: (until: string) => `The last day has passed. What you had by then can still be proved until ${until}.`,
-    lateTheirs: (until: string) => `The last day has passed. If nothing from before it is proved by ${until}, it comes back to you.`,
-    lateReading: (until: string) => `The last day has passed. What was had by then can still be proved until ${until}.`,
+    late: "The last day has passed.",
+    lateNextYours: (until: string) => `What you had by then can still be proved until ${until}.`,
+    lateNextTheirs: (until: string) => `If nothing from before it is proved by ${until}, it comes back to you.`,
+    lateNextReading: (until: string) => `What was had by then can still be proved until ${until}.`,
     /**
      * Past the last day, for something shown: the day it is shown is the day that counts, so nothing shown now can
      * pay. The contract still waits the same fourteen days before the gift goes back.
      */
-    endedYours: (funder: string | null, after: string) => `The last day passed without it. It goes back to ${funder ?? "the person who offered it"} after ${after}.`,
-    endedTheirs: (after: string) => `The last day passed without it. It comes back to you after ${after}.`,
-    endedReading: "The last day passed without it.",
+    ended: "The last day passed without it.",
+    endedNextYours: (funder: string | null, after: string) => `It goes back to ${funder ?? "the person who offered it"} after ${after}.`,
+    endedNextTheirs: (after: string) => `It comes back to you after ${after}.`,
     label: { yours: "In your name", theirs: "In their name" },
   },
   /** The first reading stood above what a climb may start from, so nothing can be earned: the reason, and the money. */
@@ -1059,15 +1076,16 @@ export const GIFT_LIVE = {
     on: (date: string) => `On ${date}.`,
   },
   /** What came back to the funder, said beside the money that is theirs, in the meta voice (the mockup's right column). */
-  cameBackTo: (funder: string | null) => (funder ? `Came back to ${funder}` : "Came back"),
-  cameBackToYou: "Came back to you",
+  cameBackTo: (funder: string | null) => (funder ? `Back to ${funder}` : "Gone back"),
+  cameBackToYou: "Back to you",
   /**
    * Where the row of days stands, under it, in the meta voice (the mockup of 19 Sep 2026). The row keeps one size
-   * whatever the count and scrolls rather than shrinking, so this line says which day is in view and that there is
-   * more of it to the right.
+   * whatever the count and scrolls rather than shrinking, so this line says which day is in view. That there is more
+   * of it is said by the row's own fade and by nothing else since 1 Oct 2026: a label is four words at most (rule 5).
    */
   dayOfDays: (day: number, total: number) => `Day ${day} of ${total}`,
-  scrollForTheRest: "Scroll for the rest",
+  /** The next reading as a figure beside the money, where nothing has gone back yet: the hour, and what it is. */
+  nextReading: "Next reading",
   /** The line above the name, to a reader nobody gave the names to: neither "your" nor anybody's. */
   aGift: "A gift",
   /** The card's title, to a reader given no name for the person it is for. */
@@ -1143,8 +1161,8 @@ export const MILESTONE_FUND = {
     yourGift: (amount: string, recipient: string) => `Your gift: ${amount}${forThem(recipient)}.`,
   },
   made: {
-    terms: (amount: string, goal: string, days: number, source: string) =>
-      `${amount} when they reach ${goal}, within ${days} ${days === 1 ? "day" : "days"} of connecting ${source}. All of it, at once, or all of it back to you.`,
+    terms: (amount: string, goal: string, days: number, source: string) => `${amount} when they reach ${goal}, within ${days} ${days === 1 ? "day" : "days"} of connecting ${source}.`,
+    allOrNothing: "All of it, at once, or all of it back to you.",
     /**
      * What the recipient is asked for depends on who named the account (D27, D104 bis): one the funder named binds on its
      * first reading and asks nothing of the profile, and only an account they name themselves carries a code. This
@@ -1186,12 +1204,17 @@ export const MILESTONE_ACTIONS = {
   newCode: "Get a new code",
   /**
    * A first reading above the most the funder said it may start from (the audit, 29 Sep 2026): nothing was recorded,
-   * the gift has not started, and it can still start lower; unstarted, it goes back by itself.
+   * the gift has not started, and it can still start lower. Two lines under the state, each short (1 Oct 2026); the
+   * day it goes back unstarted is the dated line under them, which this sentence used to say a second time.
    */
-  startAboveCapMine: (reading: number, cap: number, by: string | null, funder: string | null) =>
-    `You are at ${reading}, above the ${cap} this gift may start from, so nothing was recorded and it has not started. It starts with a reading at ${cap} or below${by ? `; if it has not started by ${by}, it goes back to ${funder ?? "the person who sent it"}` : ""}.`,
-  startAboveCapTheirs: (reading: number, cap: number, by: string | null, recipient: string | null) =>
-    `${recipient ? `${recipient} is` : "They are"} at ${reading}, above the ${cap} you set as the most it may start from, so nothing was recorded and it has not started${by ? `. If it has not started by ${by}, it comes back to you` : ""}.`,
+  startAboveCapMine: (reading: number, cap: number) => [
+    `You are at ${reading}, above the ${cap} this gift may start from.`,
+    `Nothing was recorded and it has not started. It starts with a reading at ${cap} or below.`,
+  ],
+  startAboveCapTheirs: (reading: number, cap: number, recipient: string | null) => [
+    `${recipient ? `${recipient} is` : "They are"} at ${reading}, above the ${cap} you set as the most it may start from.`,
+    "Nothing was recorded and it has not started.",
+  ],
   startTooHighMine: (start: number, target: number, funder: string | null) =>
     `You had already reached ${target} when you connected: you were at ${start}, so this gift cannot count it. Ask ${funder ?? "the person who sent it"} for a new one. It goes back to them at the end.`,
   startTooHighTheirs: (start: number, target: number, recipient: string | null) =>
@@ -1241,7 +1264,6 @@ export const CONSENT = {
   nothingRead: "Viky reads nothing for this gift until you agree.",
   stop: "Stop",
   agree: "Agree",
-  agreeAgain: "Agree again",
   sheetTitle: (what: string) => `Stop Viky reading ${what}?`,
   /** The sheet's three sentences, the middle one said louder (the mockup): what stopping costs. */
   sheetNow: "Viky stops now, on all your devices.",
@@ -1268,6 +1290,77 @@ export const CONSENT = {
 } as const;
 
 /**
+ * The person a gift is for ends it (the audit of 1 Oct 2026, section 3.6, in the founder's words). Only a gift of the
+ * second version of the contracts can be ended, and there the rest goes back in the ending's own transaction, so the
+ * sentences say "goes back" and never "as the days pass".
+ *
+ * The words of an ending: ended, keep, goes back, came back, given back. Never gave up, quit, failed or lost.
+ */
+export const END_GIFT = {
+  working: "One moment",
+  failed: "The gift could not be ended. Nothing was changed. Try again.",
+  /** The funder's side, in the fold "What was agreed", before as after. */
+  funderMay: (name: string | null) => `${name ?? "The person it is for"} can end this gift at any time. What they have earned stays theirs, and the rest comes back to you.`,
+  /**
+   * The gift's page once it is ended (the founder's mockup you-decide.html of 1 Oct 2026, fourth frame): the day as a
+   * label, who ended it as the headline, and the two amounts as two figures. Three sentences said this before.
+   */
+  endedOn: (date: string) => `Ended ${date}`,
+  endedYours: "You ended this gift.",
+  endedTheirs: (name: string | null) => `${name ?? "They"} ended this gift.`,
+  endedReading: "This gift was ended.",
+  label: { yours: "Yours", theirs: "Theirs" },
+  /** The card of Home and of Gifts, in a line. */
+  card: { yours: "You ended this gift.", theirs: "They ended this gift." },
+} as const;
+
+/**
+ * "You decide" (the founder, 1 Oct 2026, the mockup you-decide.html): the standing controls of the person a gift is
+ * for, under the card. Three round buttons with two words each, and the sheets they open. A round button never
+ * carries a sentence; what there is to say is said in its sheet, after the press.
+ */
+export const YOU_DECIDE = {
+  title: "You decide",
+  messages: "Messages",
+  on: "On",
+  off: "Off",
+  sees: (funder: string | null) => (funder ? `${funder} sees` : "They see"),
+  things: { 1: "One thing", 2: "Two things" },
+  stop: "Stop",
+  anytime: "Anytime",
+  onABreak: "On a break",
+  /** The sheet "Stop" opens: two choices of the same weight, the one that can be undone first. */
+  yourCall: "Your gift, your call.",
+  takeABreak: "Take a break",
+  breakHelp: {
+    daily: "Viky stops reading. Start again when you like.",
+    milestone: "Viky stops reading. Start again before the last day.",
+    connected: "Viky stops reading and erases the connection.",
+  },
+  startAgain: "Start again",
+  endTheGift: "End the gift",
+  chipYours: (amount: string) => `${amount} yours`,
+  chipBack: (amount: string, funder: string | null) => `${amount} back to ${funder ?? "them"}`,
+  keepGoing: "Keep going",
+  /** The break, confirmed: what it costs is the founder's three sentences of 29 Sep 2026, the middle one said louder. */
+  breakTitle: "Take a break?",
+  /** The ending, confirmed: two figures and a label where a sentence stood. */
+  endTitle: "End the gift?",
+  yours: "Yours",
+  backTo: (funder: string | null) => `Back to ${funder ?? "them"}`,
+  cannotBeUndone: "This can't be undone",
+  notNow: "Not now",
+  /** What the person who offered the gift sees: their page, small, and the agreement's own words for it. */
+  seesTitle: (funder: string | null, things: 1 | 2) => `${funder ?? "The person who offered it"} sees ${things === 1 ? "one thing" : "two things"}.`,
+  theirPage: (funder: string | null) => (funder ? `${funder}'s page` : "Their page"),
+  seesLine: (funder: string | null, sees: string) => `${funder ?? "The person who offered it"} sees: ${sees}.`,
+  gotIt: "Got it",
+  /** The funder's own round button, while nobody has opened the gift (app/kit/FunderControls.tsx). */
+  takeBack: "Take back",
+  unopened: "Unopened",
+} as const;
+
+/**
  * The moment a gift is reached (the founder, 29 Sep 2026), over whatever screen the person arrives on, once for the
  * person it is for and once for the funder. The first says what is now theirs and gives the one action, taking it; the
  * second says they did it, and what that means for the money.
@@ -1278,8 +1371,8 @@ export const REACHED_MOMENT = {
   youDidIt: "You did it.",
   theyDidIt: "They did it.",
   reached: (what: string, when: string) => `${what}: reached on ${when}.`,
-  theirsNow: (recipient: string | null, when: string) =>
-    `${recipient?.trim() ? recipient : "They"} reached it on ${when}. What you put in their name is theirs now, and none of it comes back.`,
+  theyReached: (recipient: string | null, when: string) => `${recipient?.trim() ? recipient : "They"} reached it on ${when}.`,
+  theirsNow: "What you put in their name is theirs now, and none of it comes back.",
   inYourName: "In your name",
   yours: "Yours",
   inTheirName: "In their name",

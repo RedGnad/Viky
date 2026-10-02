@@ -111,5 +111,6 @@ export async function giftStatusFor(id: string, reader: GiftReader): Promise<Any
     version: gift.version,
     end: dailyEndOffer(gift, viewerIsRecipient),
     ended: dailyEnded(gift),
+    givenBackDays: gift.givenBackDays,
   } as GiftStatus;
 }

@@ -22,7 +22,7 @@ import { ArrivalDay, reduced } from "./Motion";
  * plays it only if it changed since the last visit (app/kit/Motion.tsx).
  */
 
-type Shape = Readonly<{ startDay: number; endDay: number; durationDays: number; creditedDays: number; missedDays: number }>;
+type Shape = Readonly<{ startDay: number; endDay: number; durationDays: number; creditedDays: number; missedDays: number; givenBackDays?: number }>;
 
 /** The minute, stepped once a minute, and nothing on the server: the days depend on the reader's clock. */
 function everyMinute(changed: () => void): () => void {
@@ -56,9 +56,6 @@ export function fadeOf(hidden: HiddenEdges): CSSProperties {
   const [left, right] = hidden.split(",");
   return { "--fade-left": `${left}px`, "--fade-right": `${right}px` } as CSSProperties;
 }
-
-/** Whether either end still hides a day, which is what says "scroll for the rest" and nothing else. */
-export const rowCarriesOn = (hidden: HiddenEdges) => hidden !== "0,0";
 
 /** Which ends hide something, for a capture and a test to read: "none", "left", "right" or "both". */
 export function endsHidden(hidden: HiddenEdges): "none" | "left" | "right" | "both" {

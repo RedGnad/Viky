@@ -228,6 +228,8 @@ export type GiftStatus = {
   end?: EndOffer | null;
   /** The second version only: the ending, once the person it is for has ended it. */
   ended?: Ended | null;
+  /** The days an ending gave back: settled, and drawn as days that went back (src/day-states.ts). */
+  givenBackDays?: number;
 };
 
 /** A gift as the list of the account's gifts describes it, which is what a card draws on. */
@@ -255,6 +257,10 @@ export type GiftSummary = {
   counting: boolean;
   finished: boolean;
   cancelled: boolean;
+  /** The person it is for ended it (the second version of the contracts). Absent or false on any other gift. */
+  ended?: boolean;
+  /** The days an ending gave back: settled, and drawn as days that went back (src/day-states.ts). */
+  givenBackDays?: number;
   earnedDisplay: string;
   theirsDisplay: string;
   returnedDisplay: string;

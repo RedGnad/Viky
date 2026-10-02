@@ -327,7 +327,7 @@ export async function runMilestoneReading(
         outcome: "refused:START_TOO_HIGH",
         txHash: null,
       });
-      return refused(giftId, "START_TOO_HIGH", reading.rating, MILESTONE_ACTIONS.startAboveCapMine(reading.rating, Number(state.maximumStart), null, null));
+      return refused(giftId, "START_TOO_HIGH", reading.rating, MILESTONE_ACTIONS.startAboveCapMine(reading.rating, Number(state.maximumStart)).join(" "));
     }
     return prove(record, state, contract, reading, "start", deps);
   }

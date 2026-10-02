@@ -119,8 +119,8 @@ test("a day counted is said in the morning message's own words, without its mone
 
 test("what came back is said beside what is theirs, never as a zero, and never where it is the whole story", () => {
   // The mockup's right column: what has gone back to the funder so far, in the meta voice.
-  assert.deepEqual(liveOf(input({ moment: "counting" })).back, { label: "Came back to Maman", value: "$1.00" });
-  assert.deepEqual(liveOf(input({ moment: "counting", voice: "funder" })).back, { label: "Came back to you", value: "$1.00" });
+  assert.deepEqual(liveOf(input({ moment: "counting" })).back, { label: "Back to Maman", value: "$1.00" });
+  assert.deepEqual(liveOf(input({ moment: "counting", voice: "funder" })).back, { label: "Back to you", value: "$1.00" });
   // Nothing has gone back: the column is not drawn rather than drawn as nothing.
   assert.equal(liveOf(input({ moment: "counting", returnedDisplay: "$0.00" })).back, null);
   // And on the two moments that are themselves about what came back, the figure is the headline's own.
@@ -210,5 +210,65 @@ test("while a daily gift counts, its recipient reads where money already theirs 
   assert.deepEqual(figuresIn(line), []);
   for (const moment of MOMENTS.filter((one) => one !== "counting")) {
     assert.equal(liveOf(input({ moment, voice: "recipient", takeableFromHome: true })).quiet ?? null, null, moment);
+  }
+});
+
+/**
+ * The next reading is a figure beside the money while that column is free (the founder's mockup you-decide.html of
+ * 1 Oct 2026, first frame), and the dated sentence once what has gone back takes the column: said once either way.
+ */
+test("the next reading is the hour beside the money, or the dated sentence once something has gone back", () => {
+  const sentence = "Next reading: today, 1 Oct, at 20:30 your time.";
+  const free = liveOf(input({ moment: "counting", returnedDisplay: "$0.00", nextReadingInWords: sentence, nextReadingAt: "20:30" }));
+  assert.deepEqual(free.nextAt, { label: "Next reading", value: "20:30" });
+  assert.equal(free.next, null, "the hour is not said twice");
+  const taken = liveOf(input({ moment: "counting", nextReadingInWords: sentence, nextReadingAt: "20:30" }));
+  assert.equal(taken.nextAt, null, "what has gone back has the column");
+  assert.equal(taken.next, sentence);
+  // A page drawn before the reader's clock is known has no hour to print: the sentence, or nothing.
+  assert.equal(liveOf(input({ moment: "counting", returnedDisplay: "$0.00", nextReadingInWords: sentence })).next, sentence);
+  for (const moment of MOMENTS.filter((one) => one !== "counting")) assert.equal(liveOf(input({ moment, nextReadingAt: "20:30" })).nextAt ?? null, null, moment);
+});
+
+/**
+ * The audit of 1 Oct 2026, section 3.6: what the page says once the person the gift is for ended it. Since the mockup
+ * you-decide.html (fourth frame) it is a label, a headline and two figures, where three sentences stood.
+ */
+test("an ended gift says who ended it, when, and where the money went, each figure once and nobody blamed", () => {
+  const ended = { onInWords: "1 Oct 2026", keptDisplay: "$2.00", givenBackDisplay: "$5.00" };
+  const said = (live: ReturnType<typeof liveOf>) => [live.when ?? "", live.headline, live.figure?.label ?? "", live.figure?.value ?? "", live.back?.label ?? "", live.back?.value ?? "", live.next ?? ""].join(" ");
+
+  const yours = liveOf(input({ moment: "ended", voice: "recipient", ended }));
+  assert.equal(yours.when, "Ended 1 Oct 2026", "the day is a label of four words at most");
+  assert.equal(yours.headline, "You ended this gift.");
+  assert.deepEqual(yours.figure, { label: "Yours", value: "$2.00" });
+  assert.deepEqual(yours.back, { label: "Back to Maman", value: "$5.00" }, "what went back is a figure beside it, not a sentence");
+  assert.equal(yours.next, null);
+
+  const theirs = liveOf(input({ moment: "ended", voice: "funder", ended }));
+  assert.equal(theirs.headline, "Léa ended this gift.");
+  assert.deepEqual(theirs.figure, { label: "Theirs", value: "$2.00" });
+  assert.deepEqual(theirs.back, { label: "Back to you", value: "$5.00" });
+
+  const reading = liveOf(input({ moment: "ended", voice: "reader", ended }));
+  assert.equal(reading.headline, "This gift was ended.");
+  assert.deepEqual(reading.back, { label: "Back to Maman", value: "$5.00" });
+
+  // Nothing kept: the whole amount, once, as the one figure, and no figure that would read "$0.00".
+  const nothing = { onInWords: "1 Oct 2026", keptDisplay: "$0.00", givenBackDisplay: "$7.00" };
+  const allBack = liveOf(input({ moment: "ended", voice: "recipient", ended: nothing }));
+  assert.deepEqual(allBack.figure, { label: "Back to Maman", value: "$7.00" });
+  assert.equal(allBack.back, null);
+  assert.deepEqual(liveOf(input({ moment: "ended", voice: "funder", ended: nothing })).figure, { label: "Back to you", value: "$7.00" });
+  for (const live of [yours, theirs, reading, allBack]) assert.ok((live.when ?? "").split(" ").length <= 4, "a label is four words at most");
+
+  for (const voice of VOICES) {
+    for (const ending of [ended, nothing]) {
+      const text = said(liveOf(input({ moment: "ended", voice, ended: ending })));
+      const seen = new Map<string, number>();
+      for (const figure of figuresIn(text)) seen.set(figure, (seen.get(figure) ?? 0) + 1);
+      for (const [figure, times] of seen) assert.equal(times, 1, `ended as ${voice} says ${figure} ${times} times: "${text.trim()}"`);
+      assert.doesNotMatch(text, /gave up|quit|failed|lost|\$0\.00/i);
+    }
   }
 });

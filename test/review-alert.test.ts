@@ -54,6 +54,10 @@ test("the two people are told how the review was decided, on the devices that as
   assert.match(pin, /if \(final\) await told\(review\.giftId, "refused"\);/);
   assert.match(pin, /if \(!dry\) await told\(review\.giftId, "refused"\);/);
   // Offered where the person waits for the answer: beside a first proof held for review.
-  assert.match(readFileSync("app/components/GiftPage.tsx", "utf8"), /milestone\?\.review\?\.status === "pending" && !gift\.finished && \(mine \|\| readerIsFunder\) \? <ReachAlert giftId=\{giftId\} target="" yours=\{mine\} review \/>/);
+  // Either of the two people finds it behind "Messages", one of the round controls under the card.
+  const page = readFileSync("app/components/GiftPage.tsx", "utf8");
+  assert.match(page, /milestone\?\.review\?\.status === "pending"\s+\? \{ kind: "review" \}/);
+  assert.match(page, /<FunderControls giftId=\{giftId\} about=\{about\}/);
+  assert.match(readFileSync("app/kit/MorningMessage.tsx", "utf8"), /about\.kind === "review" \? L\.reviewAlert :/);
   assert.equal(GIFT_LIVE.climbing.reviewAlert, "Get a message when it is checked.");
 });

@@ -140,5 +140,7 @@ test("the page decides who may do what in one place, and not in ten conditions o
   assert.match(page, /voice=\{voice\}/, "the row of days still speaks in one fixed voice");
   assert.match(page, /voice === "recipient" \? \(words\?\.reads \?\? ""\) : \(words\?\.readsTheirs \?\? ""\)/, "the reading sentence is back in the second person for everybody");
   // And the words of every moment are one module's, not the screen's: `liveOf` composes them for this reader.
-  assert.match(page, /const live = liveOf\(\{/);
+  assert.match(page, /const live = liveOf\(liveInput\);/);
+  // The funder's page, small, in the sheet that says what they see, is the same module in their voice.
+  assert.match(page, /const theirs = liveOf\(\{ \.\.\.liveInput, voice: "funder" \}\);/);
 });

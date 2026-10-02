@@ -35,9 +35,9 @@ import { previewLine, sharedWith } from "@/src/preview-line";
 import { MILESTONE_LATE_PROOF_SECONDS } from "@/src/milestone-protocol";
 import type { AnyGiftStatus } from "@/src/gift-status";
 import type { MilestoneStatus } from "@/src/milestone-view";
-import { contractDayInWords, contractRangeInWords, dateInWords, momentInWords, nextPassMs } from "@/src/moments";
+import { contractDayInWords, contractRangeInWords, dateInWords, hourInWords, momentInWords, nextPassMs } from "@/src/moments";
 import { COUNTING_PASS_UTC, settlingTimeInWords } from "@/src/pass-schedule";
-import { ACCOUNT_DOOR, CONSENT as C, GIFT_LIVE as L, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
+import { ACCOUNT_DOOR, CONSENT as C, END_GIFT as E, GIFT_LIVE as L, GIFT_PAGE as W, MILESTONE_ACTIONS as A, MILESTONE_PAGE as M } from "@/src/sentences";
 import { AskAgain } from "../kit/AskAgain";
 import { CertificateProof } from "../kit/CertificateProof";
 import { MarathonProof, MarathonStanding } from "../kit/MarathonProof";
@@ -48,23 +48,26 @@ import { ShowProof } from "../kit/ShowProof";
 import { CheckThisDay } from "../kit/CheckThisDay";
 import { CheckThisReading } from "../kit/CheckThisReading";
 import { ConnectTheAccount } from "../kit/ConnectTheAccount";
-import { ConsentLine, FunderConsent, useGiftConsent, type StopCost } from "../kit/Consent";
+import { Character } from "../kit/Character";
+import { ConsentLine, FunderConsent, RecipientConsent, useGiftConsent, type StopCost } from "../kit/Consent";
 import { ConnectTheSource, type ConnectWords } from "../kit/ConnectTheSource";
 import { DayRow } from "../kit/DayRow";
 import { charactersOf } from "../kit/DayStrip";
 import { FieldRefusal } from "../kit/FieldRefusal";
+import { FunderControls } from "../kit/FunderControls";
 import { GiftLive } from "../kit/GiftLive";
 import { HeadCharacter } from "../kit/HeadCharacter";
 import { LinkAgain } from "../kit/LinkAgain";
 import { Climb } from "../kit/Climb";
 import { HadOrNot } from "../kit/HadOrNot";
-import { MorningMessage, ReachAlert } from "../kit/MorningMessage";
+import type { ToldAbout } from "../kit/MorningMessage";
 import { LiveLine, useLiveReading } from "../kit/LiveReading";
 import { Arrival, ArrivalAmount, useLastSeen } from "../kit/Motion";
+import { Sheet } from "../kit/Sheet";
 import { Shell } from "../kit/Shell";
-import { TakeItBack } from "../kit/TakeItBack";
+import { YouDecide } from "../kit/YouDecide";
 import { AccountPanel } from "./AccountPanel";
-import { BODY, CARD, HELP, PRIMARY_BUTTON } from "./ui";
+import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "./ui";
 
 /**
  * A gift's page: the card of Home, alive (the vision of 19 Sep 2026, section 5; document J).
@@ -290,7 +293,8 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
   /** The target as a sentence may name it: a climb's number, a grade's words, and nothing for something had or not. */
   const targetToName = !milestone ? null : hadOrNot ? (milestone.targetWords ?? null) : (milestone.targetWords ?? (milestone.target === null ? null : String(milestone.target)));
 
-  const live = liveOf({
+  const nextPass = nowMs === 0 || gift.finished || gift.cancelled ? null : nextPassMs(COUNTING_PASS_UTC, nowMs);
+  const liveInput = {
     moment,
     voice,
     funderName,
@@ -310,11 +314,15 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     endedOnInWords: milestone?.reachedAtMs ? dateInWords(milestone.reachedAtMs, zone) : daily && daily.finished && daily.endDay > 0 ? contractDayInWords(daily.endDay) : null,
     deadlineInWords: milestone?.deadlineMs ? dateInWords(milestone.deadlineMs, zone) : null,
     nextReadingInWords: moment === "counting" || moment === "climbing" ? nextReading : null,
+    nextReadingAt: moment === "counting" && nextPass !== null ? hourInWords(nextPass) : null,
     cameBackOnInWords: cameBackOn,
     takeableFromHome: !milestone && earned > 0n,
     proof: proofStands,
     lateUntilInWords: lateUntilMs === null ? null : dateInWords(lateUntilMs, zone),
-  });
+    // Ended by the person it is for: the day in this reader's clock, and the two amounts the ending moved.
+    ended: status.ended ? { onInWords: dateInWords(status.ended.atMs, zone), keptDisplay: status.ended.keptDisplay, givenBackDisplay: status.ended.givenBackDisplay } : null,
+  } as const;
+  const live = liveOf(liveInput);
 
   // The money on the card counts from what this device last saw of it, last in the arrival and once (the brief,
   // section 6). Only money counts: a rating is a reading, not an amount.
@@ -573,31 +581,39 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
           <CertificateProof giftId={giftId} conditionId={milestone.conditionId} yours={mine} onProved={reloadAll} />
         );
       case "take":
-        return reviewing ? (
-          <div className="flex flex-col gap-[var(--space-md)]">
-            <p className={BODY}>{W.takeReview}</p>
-            {money.about(earned) ? <p className={HELP}>{money.about(earned)}</p> : null}
-            <button type="button" onClick={take} disabled={working} className={PRIMARY_BUTTON}>
-              {busy === "taking" ? W.taking : W.take(earnedDisplay)}
+        // The one sentence of taking is read in a sheet, over the card (rule 4: a sentence that long is not left in
+        // the open), and the press that signs is there, with "Not now" under it.
+        return (
+          <>
+            <button type="button" onClick={() => setReviewing(true)} disabled={working} className={PRIMARY_BUTTON}>
+              {W.take(earnedDisplay)}
             </button>
-            {answerAt("take")}
-            <button
-              type="button"
-              onClick={() => setReviewing(false)}
-              disabled={working}
-              className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}
+            <Sheet
+              open={reviewing}
+              title={W.takeTitle(earnedDisplay)}
+              onClose={() => {
+                if (busy !== "taking") setReviewing(false);
+              }}
+              footer={
+                <>
+                  <button type="button" onClick={take} disabled={working} className={PRIMARY_BUTTON}>
+                    {busy === "taking" ? W.taking : W.take(earnedDisplay)}
+                  </button>
+                  <button type="button" onClick={() => setReviewing(false)} disabled={working} className={SECONDARY_BUTTON}>
+                    {W.notNow}
+                  </button>
+                  {answerAt("take")}
+                </>
+              }
             >
-              {W.notNow}
-            </button>
-          </div>
-        ) : (
-          <button type="button" onClick={() => setReviewing(true)} disabled={working} className={PRIMARY_BUTTON}>
-            {W.take(earnedDisplay)}
-          </button>
+              <p className={BODY}>{W.takeReview}</p>
+              {money.about(earned) ? <p className={HELP}>{money.about(earned)}</p> : null}
+            </Sheet>
+          </>
         );
       case "linkAgain":
         // Shared with who gave it, how much in the reader's own currency (the funder's), and what it is.
-        return <LinkAgain giftId={giftId} shareText={sharedWith(funderName, spokenAmount(money.led(BigInt(status.amount))), previewLine(condition, Boolean(milestone)))} />;
+        return <LinkAgain giftId={giftId} found={status.version === 2} shareText={sharedWith(funderName, spokenAmount(money.led(BigInt(status.amount))), previewLine(condition, Boolean(milestone)))} />;
       case "askAgain":
         return <AskAgain funderName={funderName} />;
       case "offerAgain":
@@ -620,7 +636,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       <Climb giftId={giftId} status={milestone} />
     )
   ) : daily ? (
-    <DayRow id={giftId} gift={daily} catchUpSeconds={daily.catchUpSeconds} records={daily.days} voice={voice} />
+    <DayRow id={giftId} gift={daily} catchUpSeconds={daily.catchUpSeconds} records={daily.days} voice={voice} silent={Boolean(live.when)} />
   ) : null;
 
   /** What was agreed: the amount, what it counts, how long, and what happens to what is not earned. Read once. */
@@ -663,6 +679,12 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         </>
       ) : null}
       {readerIsFunder ? <p className={HELP}>{W.made(dateInWords(status.createdAtChain * 1000, zone), giftId)}</p> : null}
+      {/* The ending (the audit of 1 Oct 2026): only a gift of the second version of the contracts has one. The funder
+          reads here that it can happen, before as after the gift is opened; the person it is for has the gesture,
+          under the card, in "You decide". */}
+      {readerIsFunder && status.version === 2 && !gift.finished && !gift.cancelled ? <p className={HELP}>{E.funderMay(recipientName)}</p> : null}
+      {/* Where money already theirs goes: a sentence, so it is read here and not in the card's small capitals (rule 5). */}
+      {live.quiet ? <p className={HELP}>{live.quiet}</p> : null}
     </>
   );
 
@@ -678,6 +700,9 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         <p className={HELP}>{readerIsFunder ? M.ruleTheirs(milestone.target, milestoneBy(milestone, zone)) : M.ruleYours(milestone.target, milestoneBy(milestone, zone))}</p>
       ) : null}
       {daily && !stripFromRecordSafe(daily, nowMs) ? <p className={HELP}>{W.fromCountsNote}</p> : null}
+      {/* How an account the funder named is read, at the moment it is connected: it stood above the action (rule 4). */}
+      {mine && moment === "openedNotConnected" && account.namedByFunder && words ? <p className={HELP}>{words.namedHow}</p> : null}
+      {mine ? <RecipientConsent answer={consent.answer} zone={zone} /> : null}
       {readerIsFunder ? (
         <FunderConsent
           answer={consent.answer}
@@ -691,23 +716,22 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       {/* A milestone is read as its page opens, so it has no button for it (the founder, 29 Sep 2026). */}
       {(mine || readerIsFunder) && !milestone && !gift.finished && gift.connected && !gift.sourceClosed ? (
         <>
-          <button type="button" onClick={countToday} disabled={working} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+          <button type="button" onClick={countToday} disabled={working} className={`${SMALL_BUTTON} self-start`}>
             {busy === "counting" ? W.reading : W.countNow}
           </button>
           {answerAt("count")}
         </>
       ) : null}
+      {/* The reading behind a day, to take away and check: with the rest of how a gift is checked since 1 Oct 2026
+          (rule 6: nothing stands under the card but the round controls). */}
+      {mine || readerIsFunder ? (
+        <>
+          {daily ? <CheckThisDay giftId={giftId} days={daily.days} /> : null}
+          {milestone ? <CheckThisReading giftId={giftId} /> : null}
+        </>
+      ) : null}
     </>
   );
-
-  /** The reading behind a day, to take away and check: outside the card, in the ground's own voice (the mockup). */
-  const proof =
-    mine || readerIsFunder ? (
-      <>
-        {daily ? <CheckThisDay giftId={giftId} days={daily.days} /> : null}
-        {milestone ? <CheckThisReading giftId={giftId} /> : null}
-      </>
-    ) : null;
 
   const stopCost: StopCost = milestone
     ? {
@@ -720,6 +744,39 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
     : { kind: "daily", funder: funderName ?? C.theFunder };
 
   const arriving = nowMs === 0 || !daily ? [] : charactersOf(daily, daily.catchUpSeconds, nowMs, daily.days);
+
+  /** The gift is the reader's own and still theirs to decide about: opened, and neither over nor taken back. */
+  const decides = mine && status.opened && !gift.finished && !gift.cancelled;
+  /** What this gift's messages are about now: each morning for a habit, one moment for everything else. */
+  const about: ToldAbout | null = !status.opened || gift.finished || gift.cancelled
+    ? null
+    : daily
+      ? { kind: "morning" }
+      : milestone?.review?.status === "pending"
+        ? { kind: "review" }
+        : hadOrNot
+          ? { kind: "hadOrNot" }
+          : readsLive && milestone
+            ? { kind: "reach", target: String(milestone.targetWords ?? milestone.target) }
+            : null;
+  // The funder's page as the funder reads it now, for the sheet that says what they see: the same moment in their
+  // voice, and the days up to today, drawn small. A climb and a gift had or not are their state and their figure.
+  const theirs = liveOf({ ...liveInput, voice: "funder" });
+  const upToToday = daily && daily.startDay !== 0 ? arriving.slice(0, Math.max(1, arriving.findLastIndex((day) => day !== "toCome") + 1)).slice(-6) : [];
+  const theirView = {
+    shape:
+      upToToday.length > 0 ? (
+        <span aria-hidden className="decide-view-days">
+          {upToToday.map((day, index) => (
+            <span key={index}>
+              <Character state={day} variant={index} standing={false} className="h-auto w-full" />
+            </span>
+          ))}
+        </span>
+      ) : null,
+    headline: theirs.headline,
+    figure: theirs.figure ? `${theirs.figure.value} ${theirs.figure.label}` : null,
+  };
 
   return (
     <Arrival
@@ -745,53 +802,50 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
           /* The source closed the account: said where the state is said, because it is the state now. */
           closed={
             milestone?.accountClosed && !gift.finished
-              ? (milestoneById(milestone.conditionId)?.words.accountClosed ?? null)
+              ? [milestoneById(milestone.conditionId)?.words.accountClosed ?? ""].filter(Boolean)
               : milestone?.startAboveCap != null && !gift.finished
                 ? readerIsFunder
-                  ? A.startAboveCapTheirs(milestone.startAboveCap, milestone.maximumStart, connectBy, recipientName)
-                  : A.startAboveCapMine(milestone.startAboveCap, milestone.maximumStart, connectBy, funderName)
+                  ? A.startAboveCapTheirs(milestone.startAboveCap, milestone.maximumStart, recipientName)
+                  : A.startAboveCapMine(milestone.startAboveCap, milestone.maximumStart)
                 : null
           }
           action={action}
           agreed={{ open: read.agreementOpen, children: agreed }}
           checked={checked}
           reading={readingLine}
-          beside={proof}
         />
 
-        {/* Being told, offered in the open to the gift's two people once it is opened, never inside a fold (the founder,
-            1 Oct 2026): each morning for a habit, the moment it is reached for a climb, and for a gift had or not the day
-            it is theirs or its time is up. Nothing here for a reader with no account: neither side is theirs. */}
-        {daily && status.opened && !gift.finished && !gift.cancelled ? <MorningMessage giftId={giftId} yours={mine || readerIsFunder} /> : null}
-        {readsLive && milestone ? <ReachAlert giftId={giftId} target={String(milestone.targetWords ?? milestone.target)} yours={mine} /> : null}
-        {hadOrNot && status.opened && !gift.finished && !gift.cancelled && hadOrNot.review?.status !== "pending" && (mine || readerIsFunder) ? (
-          <ReachAlert giftId={giftId} target="" yours={mine} hadOrNot />
-        ) : null}
-        {/* A first proof waiting for its review: the answer is the thing to be told (the founder, 29 Sep 2026). */}
-        {milestone?.review?.status === "pending" && !gift.finished && (mine || readerIsFunder) ? <ReachAlert giftId={giftId} target="" yours={mine} review /> : null}
+        {/* A gift that is not read and waits for its person: the one line that stays in the open, with its button. */}
+        {decides ? <ConsentLine giftId={giftId} conditionId={condition?.id ?? ""} answer={consent.answer} underWay={moment === "counting" || moment === "climbing"} zone={zone} onChanged={() => void reloadAll()} /> : null}
 
-        {/* What Viky reads, and the stop, under the card in the same quiet manner (the mockup consent.html). */}
-        {mine ? (
-          <ConsentLine
+        {/* The standing controls of the person it is for, under the card (the founder, 1 Oct 2026, you-decide.html):
+            being told, what the funder sees, and the stop, each a round button and a sheet. */}
+        {decides ? (
+          <YouDecide
             giftId={giftId}
             conditionId={condition?.id ?? ""}
+            funderName={funderName}
             answer={consent.answer}
             underWay={moment === "counting" || moment === "climbing"}
             cost={stopCost}
             zone={zone}
-            onChanged={() => void reloadAll()}
+            about={about}
+            end={status.end ? { contract: milestone ? milestone.escrow : daily!.escrow, offer: status.end } : null}
+            theirView={theirView}
+            onChanged={reloadAll}
           />
+        ) : null}
+
+        {/* The funder's own controls, the same round buttons (the founder's rule 6): being told how it goes once the
+            gift is opened, and taking it back while nobody has opened it. */}
+        {readerIsFunder ? (
+          <FunderControls giftId={giftId} about={about} takeBack={funderMayTakeItBack(gift, voice) ? { amountDisplay, recipientName } : null} onTakenBack={reload} />
         ) : null}
 
         {/* The moment a gift is reached, to its two people and to nobody else (decision B): played here when this is
             where they arrive first, and again whenever they ask. */}
         {milestone?.reached && (mine || readerIsFunder) ? (
           <ReachedOnItsPage gift={reachedOfStatus(milestone, mine ? "recipient" : "funder", { recipientName, funderName })} onTake={() => setReviewing(true)} />
-        ) : null}
-
-        {/* Ending a gift nobody opened: the funder's second gesture, under the first, never beside it. */}
-        {funderMayTakeItBack(gift, voice) ? (
-          <TakeItBack giftId={giftId} amountDisplay={amountDisplay} recipientName={recipientName} onTakenBack={reload} />
         ) : null}
 
         {taken ? (

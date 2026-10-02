@@ -32,9 +32,15 @@ const OUTLINE = "border-[length:var(--control-border-width)] border-[var(--contr
 const RELIEF = "control-relief";
 
 /**
- * The action a screen is asking for. One per screen, at most, so it means something. Shut, it gives the accent back:
- * a faded accent is a fourth colour at night (a brown on the indigo ground), so a button that cannot be pressed yet is
- * a surface with muted words and no relief, and it takes the accent the moment it can.
+ * A button that waits (the founder's rule 3 of 1 Oct 2026, kit-rules.html): it keeps its shape and its colour, faded,
+ * and stands on no relief. The edge and the words fade here; the one action also fades its sun, and the relief is
+ * taken away in the stylesheet, where it is drawn (`:disabled` under `.control-relief` in globals.css).
+ */
+const WAITING = "disabled:border-[var(--waiting-edge)] disabled:text-[var(--waiting-ink)] disabled:[box-shadow:none]";
+
+/**
+ * The action a screen is asking for. One per screen, at most, so it means something. Waiting, it is still the sun
+ * button, faded and flat (rule 3): the beige pill it turned into before read as a third kind of button.
  *
  * Since the rendered mockups of 19 Sep 2026 it is the sun, full width, and a press puts it down onto its relief.
  * That relief is the ink, four pixels of it, the same slab every other control stands on (D142): the mockup drew
@@ -42,7 +48,7 @@ const RELIEF = "control-relief";
  * amended the brief on the image (D113). It keeps its ink outline, which the mockup does not draw: the sun on the
  * cream of a card measures 1.47:1, and WCAG 1.4.11 asks 3:1 of whatever identifies a control.
  */
-export const PRIMARY_BUTTON = `${TAP} ${FOCUS} action-relief w-full rounded-full ${OUTLINE} bg-[var(--accent)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-action)] font-bold tracking-[var(--tracking-label)] text-[var(--on-accent)] [box-shadow:0_var(--action-relief-depth)_0_var(--control-relief-colour)] active:translate-y-[var(--action-relief-depth)] active:[box-shadow:none] disabled:bg-[var(--action-off)] disabled:text-[var(--action-off-ink)] disabled:[box-shadow:0_var(--action-relief-depth)_0_var(--action-off-deep)]`;
+export const PRIMARY_BUTTON = `${TAP} ${FOCUS} action-relief w-full rounded-full ${OUTLINE} bg-[var(--accent)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-action)] font-bold tracking-[var(--tracking-label)] text-[var(--on-accent)] [box-shadow:0_var(--action-relief-depth)_0_var(--control-relief-colour)] active:translate-y-[var(--action-relief-depth)] active:[box-shadow:none] ${WAITING} disabled:bg-[var(--waiting-fill)]`;
 
 /**
  * Everything else a person may do from here: filled with a quiet tone rather than left hollow (K, rule 10, 19 Sep
@@ -50,17 +56,17 @@ export const PRIMARY_BUTTON = `${TAP} ${FOCUS} action-relief w-full rounded-full
  * emphasis). The ink outline stays, because that is what identifies a control (WCAG 1.4.11), and the accent stays on
  * the one action a screen is asking for.
  */
-export const SECONDARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] tracking-[var(--tracking-label)] disabled:bg-[var(--action-off)] disabled:text-[var(--action-off-ink)] disabled:[box-shadow:0_var(--action-relief-depth)_0_var(--action-off-deep)]`;
-
-/**
- * What a control that cannot be pressed looks like, and it is the same answer for all three (the rendered mockups of
- * 19 Sep 2026, and the founder on 19 Sep): it keeps its filled shape and its relief, and it loses its colour. That
- * replaces the rule of the morning, where a shut control gave its fill back: the image won, and a fill at half
- * strength, which was the version before either, made a live button and a dead one one pair of pills at a squint.
- */
+export const SECONDARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] tracking-[var(--tracking-label)] ${WAITING}`;
 
 /** A secondary action that sits beside others rather than filling the width. */
-export const INLINE_BUTTON = `${TAP} ${FOCUS} rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-lg)] py-[var(--space-sm)] text-[length:var(--type-help)] tracking-[var(--tracking-label)] disabled:bg-[var(--action-off)] disabled:text-[var(--action-off-ink)] disabled:[box-shadow:0_var(--action-relief-depth)_0_var(--action-off-deep)]`;
+export const INLINE_BUTTON = `${TAP} ${FOCUS} rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-lg)] py-[var(--space-sm)] text-[length:var(--type-help)] tracking-[var(--tracking-label)] ${WAITING}`;
+
+/**
+ * The one small button (the founder's rule 2 of 1 Oct 2026, kit-rules.html): 40 high, its words in the help size at
+ * the label weight, and a capital on its first word. The area a finger reaches is 44 at least, which Apple asks of
+ * every control, and the stylesheet gives it (`.small-button::before`) so the drawing stays 40.
+ */
+export const SMALL_BUTTON = `${FOCUS} small-button relative inline-flex h-[40px] shrink-0 items-center justify-center gap-[var(--space-sm)] rounded-full ${OUTLINE} bg-[var(--tonal)] px-[var(--space-lg)] text-[length:var(--type-help)] font-semibold tracking-[var(--tracking-label)] ${WAITING}`;
 
 /** One of several choices on a row, a chip: the inline button, and the one pressed takes the chosen fill. */
 export const CHIP = `${TAP} ${FOCUS} rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-md)] text-[length:var(--type-help)] tracking-[var(--tracking-label)]`;

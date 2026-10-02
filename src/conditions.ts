@@ -319,6 +319,8 @@ export type RecipientWords = Readonly<{
   slowToShow: string;
   /** When the funder named the account. */
   namedBy: (username: string, funder: string) => string;
+  /** How an account the funder named is read, said in "How this is checked" at the moment it is connected. */
+  namedHow: string;
   notMine: string;
   /** Connected. */
   countingFrom: (firstDay: string) => string;
@@ -399,8 +401,9 @@ export const DUOLINGO_DAILY: Condition = {
     proveTitle: (username) => `Prove ${username} is yours`,
     proveSteps: "In Duolingo, open Profile, then Settings, then Name, and add this code to your name:",
     slowToShow: "Duolingo can take a minute to show a new name. If Viky cannot see the code yet, wait a minute and press again.",
-    namedBy: (username, funder) => `Your Duolingo: ${username}. Named by ${funder}. Nothing to sign in to, nothing to install: your lessons are read from your public profile.`,
-    notMine: "That is not my Duolingo name",
+    namedBy: (username, funder) => `Your Duolingo: ${username}. Named by ${funder}.`,
+    namedHow: "Nothing to sign in to, nothing to install: your lessons are read from your public profile.",
+    notMine: "Not my name",
     countingFrom: (firstDay) => `Done. From tomorrow, ${firstDay}, every day with your lesson is yours, counted by itself.`,
     reads: "Viky reads your Duolingo every day at that time and counts the day before.",
     readsTheirs: "Viky reads their Duolingo every day at that time and counts the day before.",

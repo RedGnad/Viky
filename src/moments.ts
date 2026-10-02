@@ -36,6 +36,11 @@ export function momentInWords(atMs: number, nowMs: number, locale: string = PROD
   return `${WEEKDAYS[at.getDay()]} ${date} at ${time}`;
 }
 
+/** The hour alone, in the reader's own clock: "20:30". For a figure that says when, beside a label that says what. */
+export function hourInWords(atMs: number, locale: string = PRODUCT_LOCALE): string {
+  return new Date(atMs).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+}
+
 /** The next time a keeper's pass runs after now, in milliseconds. */
 export function nextPassMs(pass: PassTime, nowMs: number): number {
   const today = new Date(nowMs);

@@ -35,7 +35,9 @@ export type Moment =
   /** The deadline passed, or the days ran out: what is left goes back. */
   | "over"
   /** Taken back before anybody opened it, or returned in full. */
-  | "cameBack";
+  | "cameBack"
+  /** Ended by the person it is for (the second version of the contracts): what was counted is theirs, the rest went back. */
+  | "ended";
 
 /**
  * The one action a moment offers, at most. A moment with none is a page that is read, not used, and most moments
@@ -77,6 +79,8 @@ type Gift = Readonly<{
   sourceClosed: boolean;
   /** There is money in it that the person it is for may take out now. */
   moneyToTake: boolean;
+  /** The person it is for ended it. Absent on a gift of the first version of the contracts, where nobody can. */
+  ended?: boolean;
 }>;
 
 /** A money figure with something in it: the summary carries what a person reads, never units. */
@@ -96,8 +100,10 @@ export function giftOfSummary(gift: Readonly<{
   creditedDays: number;
   missedDays: number;
   earnedDisplay: string;
+  ended?: unknown;
 }>): Gift {
   return {
+    ended: Boolean(gift.ended),
     opened: gift.opened,
     cancelled: gift.cancelled,
     finished: gift.finished,
@@ -113,6 +119,7 @@ export function giftOfSummary(gift: Readonly<{
 /** A milestone gift, of either shape. */
 export function giftOfMilestone(status: MilestoneStatus): Gift {
   return {
+    ended: Boolean(status.ended),
     opened: status.opened,
     cancelled: status.cancelled,
     finished: status.finished,
@@ -131,6 +138,8 @@ export function giftOfMilestone(status: MilestoneStatus): Gift {
  */
 export function momentOf(gift: Gift): Moment {
   if (gift.cancelled) return "cameBack";
+  // Ended by the person it is for: neither reached nor out of time, whatever was counted before.
+  if (gift.ended) return "ended";
   if (gift.finished) return gift.earnedAnything ? "won" : "over";
   if (!gift.opened) return "unopened";
   if (gift.startTooHigh) return "startTooHigh";
@@ -170,7 +179,9 @@ export function readAs(gift: Gift, voice: Voice, moment: Moment = momentOf(gift)
     case "startTooHigh":
       return { moment, action: "askAgain", agreementOpen };
     case "won":
-      // Nothing to take once it is taken: the moment stays, and the page is read.
+    case "ended":
+      // Nothing to take once it is taken: the moment stays, and the page is read. What was counted before an ending
+      // is theirs to take exactly as before.
       return { moment, action: gift.moneyToTake ? "take" : null, agreementOpen };
     default:
       // Counting, climbing, over, came back: a page that is looked at. Whatever a person may still do here is said

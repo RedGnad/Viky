@@ -351,15 +351,15 @@ export const SCENARIOS: Scenario[] = [
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
       await s.text(/Named by Maman/, 30_000);
-      await s.click("That is not my Duolingo name");
-      await s.shot("recipient", "named by the funder", `${HOME}: the gift under "What's moving", named by the funder: That is not my Duolingo name`);
+      await s.click("Not my name");
+      await s.shot("recipient", "named by the funder", `${HOME}: the gift under "What's moving", named by the funder: Not my name`);
     },
   },
   {
     /**
      * It went on to "Take $2.00" on the gift's own page until 1 Oct 2026. Since D208 what a daily gift has earned is
-     * used from Home, and the page says so ("It is yours already. Use it from Home whenever you like."): there is no
-     * such button here any more, and the way out has its own scenarios below.
+     * used from Home, and the page says so at the foot of "What was agreed" ("It is yours already. Use it from Home
+     * whenever you like."): there is no such button here any more, and the way out has its own scenarios below.
      */
     name: "recipient: every day state",
     run: async (s) => {
@@ -371,8 +371,9 @@ export const SCENARIOS: Scenario[] = [
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
       await s.page.getByRole("list", { name: "Every day of this gift" }).waitFor({ state: "visible", timeout: 30_000 });
+      await s.click("What was agreed");
       await s.text("It is yours already. Use it from Home whenever you like.");
-      await s.shot("recipient", "every day state", `${HOME}: the gift under "What's moving"`);
+      await s.shot("recipient", "every day state", `${HOME}: the gift under "What's moving", What was agreed`);
     },
   },
   {
@@ -463,18 +464,19 @@ export const SCENARIOS: Scenario[] = [
       await s.text("Get the link again", 30_000);
       await s.shot("donor", "nobody opened it, the link can be had again", `${HOME}: a gift nobody has opened yet`);
 
+      // The gesture is confirmed in a sheet, which says what it does to the link already sent.
       await s.click("Get the link again");
+      await s.page.getByRole("dialog", { name: "Get the link again" }).getByRole("button", { name: "Get the link again" }).click();
       await s.text(/no longer opens this gift/, 30_000);
       await s.shot("donor", "a new link, and the old one dead", "On the funder's own gift page: Get the link again");
 
       // And the other way out of a gift nobody opened: taking it back, which the contract always allowed and no
       // screen offered until 19 Sep 2026. The reading before it is what is photographed; nothing is sent.
-      await s.click("Take this gift back");
+      await s.page.locator('[data-decide="back"]').click();
       await s.text(/This cannot be undone/, 30_000);
-      // Photographed where the person is looking after the press, not from the top of the page: the card carries an
-      // irreversible decision and opens at the foot of a long page, so what matters is that the whole of it, escape
-      // included, is on the screen once it has opened (ui review, 19 Sep 2026).
-      await s.shot("donor", "taking the gift back, before confirming", "On the funder's own gift page: Take this gift back", { scrollTo: /This cannot be undone/ });
+      // The reading before an irreversible decision is a sheet over the page since 1 Oct 2026: the whole of it, way
+      // out included, is on the screen wherever the page stood.
+      await s.shot("donor", "taking the gift back, before confirming", "On the funder's own gift page: Take back");
     },
   },
 

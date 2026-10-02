@@ -185,3 +185,27 @@ test("a reader who is neither of the two people is offered nothing, at every mom
     "cameBack",
   ]);
 });
+
+/** The audit of 1 Oct 2026, section 3.6: the person a gift is for may end it, on the second version of the contracts. */
+test("a gift its recipient ended is its own moment: never won, never over, and what was counted is still theirs to take", () => {
+  const kept = giftOfSummary(daily({ opened: true, finished: true, creditedDays: 2, earnedDisplay: "$2.00", ended: true }));
+  assert.equal(momentOf(kept), "ended", "two days counted and then ended is not a gift that was won");
+  assert.equal(readAs(kept, "recipient").action, "take");
+  assert.equal(readAs(kept, "funder").action, null);
+  assert.equal(readAs(kept, "reader").action, null);
+  assert.equal(funderMayTakeItBack(kept, "funder"), false, "the rest went back in the ending itself");
+
+  const nothingKept = giftOfSummary(daily({ opened: true, finished: true, ended: true }));
+  assert.equal(momentOf(nothingKept), "ended", "nothing counted and then ended is not a gift that ran out");
+  assert.equal(readAs(nothingKept, "recipient").action, null);
+
+  const milestone = giftOfMilestone(climb({ opened: true, connected: true, finished: true, ended: { atMs: 1, keptDisplay: "$0.00", givenBackDisplay: "$50.00" } }));
+  assert.equal(momentOf(milestone), "ended");
+  assert.equal(readAs(milestone, "recipient").action, null);
+
+  // A gift nobody ended reads as it always did, with the field absent or false.
+  assert.equal(momentOf(giftOfSummary(daily({ opened: true, finished: true, creditedDays: 5, missedDays: 2 }))), "won");
+  assert.equal(momentOf(giftOfSummary(daily({ opened: true, finished: true, creditedDays: 5, missedDays: 2, ended: false }))), "won");
+  // And a gift taken back stays taken back, whatever else is said of it.
+  assert.equal(momentOf(giftOfSummary(daily({ cancelled: true, ended: true }))), "cameBack");
+});

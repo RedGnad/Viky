@@ -299,7 +299,7 @@ test("a first reading above the most the funder accepted records no start, and s
   const high = harness(THEIR_OWN, OPENED, { attest: async () => attested(1990, { name: "KXQPRT" }) });
   const above = await runMilestoneReading({ giftId: "1000000", purpose: "start" }, high.deps);
   assert.equal(above.kind === "refused" && above.code, "START_TOO_HIGH");
-  assert.equal(above.kind === "refused" && above.message, "You are at 1990, above the 1914 this gift may start from, so nothing was recorded and it has not started. It starts with a reading at 1914 or below.");
+  assert.equal(above.kind === "refused" && above.message, "You are at 1990, above the 1914 this gift may start from. Nothing was recorded and it has not started. It starts with a reading at 1914 or below.");
   assert.deepEqual(high.proved, [], "nothing is sent to the contract");
   assert.deepEqual(high.calls, [], "nothing is proved and nothing is bound");
   assert.deepEqual(high.recorded, ["look:plain:refused:START_TOO_HIGH"], "written down unsent, so both pages can say it");
@@ -534,7 +534,7 @@ test("a closed account is what both pages read, and neither side is offered a ge
   assert.match(moment, /sourceClosed: status\.accountClosed/);
   assert.match(moment, /if \(gift\.sourceClosed && !gift\.finished\) return \{ moment, action: null, agreementOpen \};/);
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  assert.match(page, /milestone\?\.accountClosed && !gift\.finished\s*\? \(milestoneById\(milestone\.conditionId\)\?\.words\.accountClosed \?\? null\)\s*:/);
+  assert.match(page, /milestone\?\.accountClosed && !gift\.finished\s*\? \[milestoneById\(milestone\.conditionId\)\?\.words\.accountClosed \?\? ""\]\.filter\(Boolean\)\s*:/);
   assert.match(page, /&& !gift\.sourceClosed/, "the quiet reading gesture is a gesture too");
 });
 

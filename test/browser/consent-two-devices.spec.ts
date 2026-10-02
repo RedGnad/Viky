@@ -313,6 +313,10 @@ test.describe("the recipient's yes and stop, on two devices", () => {
     await hold(first.page);
     const promptsBeforeYes = await promptsOf(first.page);
     await first.page.getByRole("button", { name: /^Agree$/ }).click();
+    // The yes is read where a gift is checked, and the stop becomes one of the round controls under the card.
+    await expect(first.page.locator("[data-consent-line]")).toHaveCount(0);
+    await expect(first.page.locator('[data-decide="stop"]')).toBeVisible();
+    await first.page.getByText("How this is checked", { exact: true }).click();
     await expect(first.page.getByText(/^Viky reads your rapid rating for this gift\. You agreed on /)).toBeVisible();
     expect(await promptsOf(first.page), "the yes asks the passkey for nothing more, with or without the public record").toBe(promptsBeforeYes);
     await hold(first.page);
@@ -326,14 +330,16 @@ test.describe("the recipient's yes and stop, on two devices", () => {
     await second.cdp.send("WebAuthn.addCredential", { authenticatorId: second.authenticatorId, credential: credentials[0] });
     expect(await signIn(second.page, second.context, false), "the same passkey is the same account").toBe(account);
     await openTheGift(second.page);
+    await second.page.getByText("How this is checked", { exact: true }).click();
     await expect(second.page.getByText(/^Viky reads your rapid rating for this gift\. You agreed on /), "the yes signed on the first device").toBeVisible();
     await hold(second.page);
-    await second.page.getByRole("button", { name: /^Stop$/ }).click();
-    await expect(second.page.getByRole("dialog", { name: "Stop Viky reading your rapid rating?" })).toBeVisible();
+    await second.page.locator('[data-decide="stop"]').click();
+    await second.page.locator('[data-option="break"]').click();
+    await expect(second.page.getByRole("dialog", { name: "Take a break?" })).toBeVisible();
     await expect(second.page.getByText(/If 1500 is not read by .+, the \$50\.00 goes back to Maman\./)).toBeVisible();
     await hold(second.page);
     const promptsBeforeStop = await promptsOf(second.page);
-    await second.page.getByRole("button", { name: /^Stop reading$/ }).click();
+    await second.page.getByRole("dialog", { name: "Take a break?" }).getByRole("button", { name: "Take a break" }).click();
     await expect(second.page.getByText(/^Viky stopped reading your rapid rating on /)).toBeVisible();
     expect(await promptsOf(second.page), "nor does the stop").toBe(promptsBeforeStop);
     await hold(second.page);

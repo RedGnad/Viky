@@ -7,7 +7,7 @@ import { conditionById, conditionOfGoal } from "@/src/conditions";
 import type { GiftSummary } from "@/src/client/gift";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { dateInWords } from "@/src/moments";
-import { GIFT_CARD as W, MILESTONE_PAGE as M } from "@/src/sentences";
+import { END_GIFT as E, GIFT_CARD as W, MILESTONE_PAGE as M } from "@/src/sentences";
 import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP } from "../components/ui";
 import { DayStrip } from "./DayStrip";
 import { Climb } from "./Climb";
@@ -143,6 +143,8 @@ export function amountsInWords(gift: GiftSummary, started: boolean): string {
 /** One sentence for the state of a gift, the same whichever side of it a person is on. */
 export function stateInWords(gift: GiftSummary, connect: string | undefined): string {
   if (gift.cancelled) return W.takenBack;
+  // Ended by the person it is for: said as that, never as a gift that ran out with days missed.
+  if (gift.ended) return gift.role === "recipient" ? E.card.yours : E.card.theirs;
   if (gift.finished) return W.finished(gift.creditedDays, gift.durationDays, gift.missedDays);
   if (!gift.opened) return W.notOpened;
   if (!gift.counting) return connect ?? "";
@@ -160,6 +162,8 @@ export function milestoneBy(status: Pick<MilestoneStatus, "deadlineMs" | "durati
 
 function milestoneStateInWords(status: MilestoneStatus): string {
   if (status.cancelled) return W.takenBack;
+  // Ended by the person it is for: neither missed nor out of time.
+  if (status.ended) return status.youAreTheRecipient ? E.card.yours : E.card.theirs;
   // Something had or not says where its one proof stands, and never its target, which is 1 or a count nobody reads.
   if (status.shape === "certificate") {
     if (status.reached) return W.hadOrNot.proved;

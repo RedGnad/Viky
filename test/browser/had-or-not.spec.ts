@@ -47,12 +47,15 @@ test.describe("a gift had or not, as its two people read it", () => {
       // Nothing shown yet: the gesture, and what was agreed in the register's words.
       await page.goto(`/g/${GIFT}`);
       await expect(page.getByText("Show it from your own university account, and it is yours.")).toBeVisible();
-      // Being told is offered in the open, under the card, never inside a fold (the founder, 1 Oct 2026).
-      await expect(page.getByText("Get a message when it is yours, or when the time is up.")).toBeVisible();
-      await expect(page.locator("[data-told]").getByRole("button", { name: "Turn on" })).toBeVisible();
-      await expect(page.locator("details [data-told]")).toHaveCount(0);
-      await page.locator("[data-told]").scrollIntoViewIfNeeded();
+      // Being told is offered in the open, under the card, never inside a fold (the founder, 1 Oct 2026): a round
+      // button, and what it is for in the sheet it opens.
+      await expect(page.locator("details [data-decide]")).toHaveCount(0);
+      await page.locator('[data-decide="messages"]').click();
+      const messages = page.getByRole("dialog", { name: "Messages" });
+      await expect(messages.getByText("Get a message when it is yours, or when the time is up.")).toBeVisible();
+      await expect(messages.getByRole("button", { name: "Turn on" })).toBeVisible();
       await shot(page, size.name, "3a0-yours-told-under-the-card");
+      await messages.getByRole("button", { name: "Close" }).click();
       await page.getByText("What was agreed").click();
       await expect(page.getByText("This gift is for: enrolled at that university.")).toBeVisible();
       await expect(page.getByText(/^Prove it by .+ and it is yours\. If not, it goes back to Maman two weeks later\.$/)).toBeVisible();
@@ -67,9 +70,11 @@ test.describe("a gift had or not, as its two people read it", () => {
       await expect(page.getByText("Shown. Viky is checking it.").first()).toBeVisible();
       await expect(page.getByText("Show it from your own university account, and it is yours.")).toHaveCount(0);
       // While it is checked, the answer is the one thing to be told, and it is offered once.
-      await expect(page.getByText("Get a message when it is checked.")).toBeVisible();
+      await page.locator('[data-decide="messages"]').click();
+      await expect(page.getByRole("dialog", { name: "Messages" }).getByText("Get a message when it is checked.")).toBeVisible();
       await expect(page.locator("[data-told]")).toHaveCount(1);
       await shot(page, size.name, "3b-yours-held-for-review");
+      await page.getByRole("dialog", { name: "Messages" }).getByRole("button", { name: "Close" }).click();
 
       // Refused by the review.
       state = { review: { status: "refused" } };
@@ -87,7 +92,8 @@ test.describe("a gift had or not, as its two people read it", () => {
       // is offered, and the page says when it goes back.
       state = { phase: "overdue", deadlineMs: (now() - 3 * DAY) * 1000 };
       await page.goto(`/g/${GIFT}`);
-      await expect(page.getByText(/^The last day passed without it\. It goes back to Maman after .+\.$/)).toBeVisible();
+      await expect(page.getByText("The last day passed without it.", { exact: true })).toBeVisible();
+      await expect(page.getByText(/^It goes back to Maman after .+\.$/)).toBeVisible();
       await expect(page.getByRole("button", { name: /^Show it$/ })).toHaveCount(0);
       await shot(page, size.name, "3e-yours-past-the-last-day");
       await device.context.close();
@@ -123,7 +129,9 @@ test.describe("a gift had or not, as its two people read it", () => {
       await page.goto(`/g/${GIFT}`);
       await expect(page.getByText("Boo has not shown it yet.")).toBeVisible();
       // The funder is offered it too: the day it is theirs, or the day it comes back, without opening Viky.
-      await expect(page.getByText("Get a message when it is theirs, or when the time is up.")).toBeVisible();
+      await page.locator('[data-decide="messages"]').click();
+      await expect(page.getByRole("dialog", { name: "Messages" }).getByText("Get a message when it is theirs, or when the time is up.")).toBeVisible();
+      await page.getByRole("dialog", { name: "Messages" }).getByRole("button", { name: "Close" }).click();
       await page.getByText("What was agreed").click();
       await expect(page.getByText("This gift is for: enrolled at that university.")).toBeVisible();
       await expect(page.getByText(/^If they prove it by .+ it is theirs\. If not, it comes back to you two weeks later\.$/)).toBeVisible();
@@ -138,7 +146,8 @@ test.describe("a gift had or not, as its two people read it", () => {
 
       state = { phase: "overdue", deadlineMs: (now() - 3 * DAY) * 1000 };
       await page.goto(`/g/${GIFT}`);
-      await expect(page.getByText(/^The last day passed without it\. It comes back to you after .+\.$/)).toBeVisible();
+      await expect(page.getByText("The last day passed without it.", { exact: true })).toBeVisible();
+      await expect(page.getByText(/^It comes back to you after .+\.$/)).toBeVisible();
       await shot(page, size.name, "3i-theirs-past-the-last-day");
       expect(await title(page).count()).toBeGreaterThan(0);
       await device.context.close();

@@ -53,6 +53,11 @@ type GiftShape = {
   durationDays: number;
   creditedDays: number;
   missedDays: number;
+  /**
+   * The days given back when the person the gift is for ended it (the second version of the contracts): neither
+   * counted nor missed, and settled all the same. Absent on a gift nobody ended.
+   */
+  givenBackDays?: number;
 };
 
 /**
@@ -63,7 +68,8 @@ export function giftDays(gift: GiftShape, catchUpSeconds: number, nowMs: number)
   if (gift.startDay === 0) return { days: [], earned: gift.creditedDays, returned: gift.missedDays };
 
   const today = Math.floor(nowMs / 86_400_000);
-  const settled = gift.creditedDays + gift.missedDays;
+  // A day given back by an ending is settled like any other: it is never drawn as a day still to come.
+  const settled = gift.creditedDays + gift.missedDays + (gift.givenBackDays ?? 0);
   const catchUp = catchUpDay(gift, catchUpSeconds, nowMs);
   const days: Day[] = [];
 
@@ -105,7 +111,7 @@ export function stripOf(gift: GiftShape, catchUpSeconds: number, nowMs: number, 
   const days = giftDays(gift, catchUpSeconds, nowMs).days;
   const known = new Map(records.map((entry) => [entry.day, entry.outcome]));
   let earnedLeft = Math.max(0, gift.creditedDays - days.filter((day) => day.state === "settled" && known.get(day.dayNumber) === "earned").length);
-  let returnedLeft = Math.max(0, gift.missedDays - days.filter((day) => day.state === "settled" && known.get(day.dayNumber) === "returned").length);
+  let returnedLeft = Math.max(0, gift.missedDays + (gift.givenBackDays ?? 0) - days.filter((day) => day.state === "settled" && known.get(day.dayNumber) === "returned").length);
   return days.map((day) => {
     if (day.state !== "settled") return day.state;
     const recorded = known.get(day.dayNumber);

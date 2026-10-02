@@ -5,18 +5,20 @@ import { postJson } from "@/src/client/api";
 import { loadConsent, signConsent, type GiftConsentAnswer } from "@/src/client/consent";
 import { conditionById } from "@/src/conditions";
 import { dateInWords } from "@/src/moments";
-import { CONSENT as C } from "@/src/sentences";
-import { BODY, CARD, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
+import { CONSENT as C, YOU_DECIDE as Y } from "@/src/sentences";
+import { BODY, CARD, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
 import { Sheet } from "./Sheet";
 
 /**
- * The recipient's yes and stop, where the gift is (the founder, 29 Sep 2026, the mockup consent.html).
+ * The recipient's yes and stop, where the gift is (the founder, 29 Sep 2026, the mockup consent.html; redrawn on
+ * 1 Oct 2026 from you-decide.html).
  *
- * Under the card, one quiet line in the manner of "Get a message": what Viky reads and since when, with "Stop"; the
- * stop opens a sheet that says what it costs, and is signed by the key the passkey made for agreements alone. After a
- * stop, "Agree again". A gift that began before agreements asks, in the same line. The funder reads one sentence in
- * "How this is checked", and nothing else. A connected source keeps its own "Disconnect and erase", which is its stop.
+ * The stop is one of the standing controls under the card (app/kit/YouDecide.tsx): "Stop", then "Take a break", which
+ * says what it costs and is signed by the key the passkey made for agreements alone. What Viky reads and since when is
+ * one sentence in "How this is checked", for the person it is for as for the funder. The one thing left in the open
+ * is a gift that is not read and waits for its person: a line and a small button, "Agree" or "Start again". A
+ * connected source is started again by connecting again, in its own block. Me keeps its own list, with the first sheet.
  */
 
 /**
@@ -105,15 +107,15 @@ export async function stopReading(giftId: string, conditionId: string, loaded?: 
 }
 
 /**
- * The recipient's line under the card. Nothing while the gift waits for its first gesture (that gesture is the yes),
- * nothing once it is over, and nothing for a connected source that agreed (its own block carries the stop).
+ * A gift that is not read and waits for its person, under the card: stopped, never agreed to, or begun before
+ * agreements existed. One line and one small button. Nothing while a yes stands (the stop is a standing control, in
+ * "You decide"), nothing while the gift waits for its first gesture (that gesture is the yes), nothing once it is over.
  */
 export function ConsentLine({
   giftId,
   conditionId,
   answer,
   underWay,
-  cost,
   zone,
   onChanged,
 }: Readonly<{
@@ -122,15 +124,12 @@ export function ConsentLine({
   answer: GiftConsentAnswer | null;
   /** Whether the gift is being read without a gesture now: counting or climbing. */
   underWay: boolean;
-  cost: StopCost;
   zone: string;
   onChanged: () => void;
 }>) {
-  const [sheet, setSheet] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   if (!answer || !answer.texts || answer.finished) return null;
-  const connected = connectsItsSource(conditionId);
   const what = answer.terms.what;
   const state = answer.state;
 
@@ -146,60 +145,41 @@ export function ConsentLine({
       setBusy(false);
     }
   };
-  const stop = async () => {
-    setBusy(true);
-    setProblem(null);
-    try {
-      await stopReading(giftId, conditionId, answer);
-      setSheet(false);
-      onChanged();
-    } catch (error) {
-      setProblem(isAccountError(error) && error.code === "OTHER_ACCOUNT" ? error.guidance : C.stopFailed);
-    } finally {
-      setBusy(false);
-    }
-  };
 
   let line: string;
-  let buttons: Array<{ label: string; press: () => void }>;
-  if (state?.kind === "yes") {
-    if (connected) return null;
-    line = C.line(what, dateInWords(Date.parse(state.signedAt), zone));
-    buttons = [{ label: C.stop, press: () => setSheet(true) }];
-  } else if (state?.kind === "stop") {
+  let label: string;
+  if (state?.kind === "stop") {
     // A connected source is agreed again by connecting again, in its own block.
-    if (connected) return null;
+    if (connectsItsSource(conditionId)) return null;
     line = C.stoppedLine(what, dateInWords(Date.parse(state.signedAt), zone));
-    buttons = [{ label: C.agreeAgain, press: () => void agree() }];
-  } else if (underWay && answer.reading === "before_agreements") {
+    label = Y.startAgain;
+  } else if (state === null && underWay && answer.reading === "before_agreements") {
     line = C.askLine(what);
-    buttons = [
-      { label: C.agree, press: () => void agree() },
-      { label: C.stop, press: () => setSheet(true) },
-    ];
-  } else if (underWay) {
+    label = C.agree;
+  } else if (state === null && underWay) {
     line = C.nothingRead;
-    buttons = [{ label: C.agree, press: () => void agree() }];
+    label = C.agree;
   } else {
     return null;
   }
 
   return (
-    <div className="gift-card-width flex flex-col gap-[var(--space-xs)]">
+    <div className="gift-card-width flex flex-col gap-[var(--space-xs)]" data-consent-line>
       <div className="flex items-center justify-between gap-[var(--space-md)]">
         <p className={HELP}>{line}</p>
-        <span className="flex shrink-0 gap-[var(--space-xs)]">
-          {buttons.map((button) => (
-            <button key={button.label} type="button" onClick={button.press} disabled={busy} className={`${INLINE_BUTTON} shrink-0`}>
-              {busy && !sheet ? C.working : button.label}
-            </button>
-          ))}
-        </span>
+        <button type="button" onClick={() => void agree()} disabled={busy} className={SMALL_BUTTON}>
+          {busy ? C.working : label}
+        </button>
       </div>
-      {problem && !sheet ? <p className={HELP}>{problem}</p> : null}
-      <StopSheet open={sheet} what={what} cost={cost} busy={busy} problem={problem} onStop={() => void stop()} onClose={() => setSheet(false)} />
+      {problem ? <p className={HELP}>{problem}</p> : null}
     </div>
   );
+}
+
+/** The recipient's one sentence, in "How this is checked": what Viky reads for this gift, and the day they agreed. */
+export function RecipientConsent({ answer, zone }: Readonly<{ answer: GiftConsentAnswer | null; zone: string }>) {
+  if (!answer || answer.finished || answer.state?.kind !== "yes") return null;
+  return <p className={HELP}>{C.line(answer.terms.what, dateInWords(Date.parse(answer.state.signedAt), zone))}</p>;
 }
 
 /** The funder's one sentence, in "How this is checked" (the mockup, screen 2): agreed on, stopped on, or not yet. */

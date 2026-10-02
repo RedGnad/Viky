@@ -34,7 +34,8 @@ import { wayInAsksNothing, wayInPage, waysIn, type WayIn } from "@/src/rails";
 import { JudgeCode } from "../kit/offer/JudgeCode";
 import { CardNotOffered, CardTermsLine } from "../kit/offer/CardTerms";
 import { SwapperSheet } from "../kit/offer/SwapperSheet";
-import { MorningMessage, ReachAlert } from "../kit/MorningMessage";
+import { FunderControls } from "../kit/FunderControls";
+import { FoldChevron } from "../kit/GiftLive";
 import { whereTheRailsServe } from "@/src/client/rails";
 import { FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
 import { ExactLine } from "../kit/LedAmount";
@@ -46,7 +47,7 @@ import { Working } from "../kit/Working";
 import { previewLine, sharedWith } from "@/src/preview-line";
 import { AccountPanel } from "./AccountPanel";
 import { DoorNotice } from "../kit/AccountDoor";
-import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
+import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
 
 /**
  * Paying for the gift that was filled in on the card (the product vision of 19 Sep 2026, section 5, surface Pay).
@@ -515,11 +516,28 @@ export function PayGift() {
       >
         <section className="flex flex-col gap-[var(--space-sm)]">
           <ExactLine amount={led} />
-          <p className={BODY}>
-            {madeMilestone
-              ? M.made.terms(spokenAmount(led, true), made.goal ?? "", made.days, madeCondition?.source ?? "")
-              : W.made.terms(spokenAmount(led, true), made.days, spokenAmount(perDay), perDay.converted || day * BigInt(made.days) === madeUnits, madeCondition?.source ?? "")}
-          </p>
+          {madeMilestone ? (
+            <>
+              <p className={BODY}>{M.made.terms(spokenAmount(led, true), made.goal ?? "", made.days, madeCondition?.source ?? "")}</p>
+              <p className={BODY}>{M.made.allOrNothing}</p>
+            </>
+          ) : (
+            <>
+              {/* The day's share and the days, two figures side by side where a sentence said them (the founder's
+                  rule 5 of 1 Oct 2026). The whole amount is the title's. */}
+              <div className="flex gap-[var(--space-xxl)]" data-made-figures>
+                <div>
+                  <p className={MONEY}>{`${perDay.converted || day * BigInt(made.days) === madeUnits ? "" : W.made.about}${spokenAmount(perDay)}`}</p>
+                  <p className={META}>{W.made.aDay}</p>
+                </div>
+                <div>
+                  <p className={MONEY}>{made.days}</p>
+                  <p className={META}>{W.made.days(made.days)}</p>
+                </div>
+              </div>
+              <p className={BODY}>{W.made.firstDay(madeCondition?.source ?? "")}</p>
+            </>
+          )}
           <p className={HELP}>{W.made.reference(whenInWords(made.atMs), made.giftId)}</p>
         </section>
         <section className={CARD}>
@@ -540,28 +558,33 @@ export function PayGift() {
             </button>
           ) : null}
           <p className={HELP}>{W.made.onlyThem(made.recipientName)}</p>
-          <p className={HELP}>{W.made.findItAgain}</p>
+          {/* What happens next, folded under its name: three steps and the way back to a lost link (rule 4). */}
+          <details className="gift-fold" data-made-next>
+            <summary className="gift-fold-name">
+              {W.made.nextTitle}
+              <FoldChevron />
+            </summary>
+            <div className="gift-fold-body">
+              <ol className="flex list-decimal flex-col gap-[var(--space-sm)] pl-[var(--space-lg)]">
+                {(madeMilestone
+                  ? M.made.next(made.recipientName, madeCondition?.source ?? "", made.target ?? 0, made.days, settlingTimeInWords(made.atMs), made.namedByFunder === true)
+                  : W.made.next(made.recipientName, madeCondition?.words.theyConnect ?? W.made.theyConnectAny, madeCondition?.words.eachDay ?? "", spokenAmount(perDay), settlingTimeInWords(made.atMs))
+                ).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ol>
+              <p className={HELP}>{W.made.findItAgain}</p>
+            </div>
+          </details>
         </section>
         {/* Being told how it goes, offered here, right after the link exists (the founder, 1 Oct 2026): the funder was
-            never offered it, and it is how "what they miss comes back to you" reaches them without opening Viky. */}
-        {!madeMilestone ? (
-          <MorningMessage giftId={made.giftId} yours />
-        ) : certificateById(made.conditionId) ? (
-          <ReachAlert giftId={made.giftId} target="" yours={false} hadOrNot />
-        ) : (
-          <ReachAlert giftId={made.giftId} target={String(made.target)} yours={false} />
-        )}
-        <section className="flex flex-col gap-[var(--space-md)]">
-          <h2 className={TITLE}>{W.made.nextTitle}</h2>
-          <ol className={`flex list-decimal flex-col gap-[var(--space-sm)] pl-[var(--space-lg)] ${BODY}`}>
-            {(madeMilestone
-              ? M.made.next(made.recipientName, madeCondition?.source ?? "", made.target ?? 0, made.days, settlingTimeInWords(made.atMs), made.namedByFunder === true)
-              : W.made.next(made.recipientName, madeCondition?.words.theyConnect ?? W.made.theyConnectAny, madeCondition?.words.eachDay ?? "", spokenAmount(perDay), settlingTimeInWords(made.atMs))
-            ).map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ol>
-        </section>
+            never offered it, and it is how "what they miss comes back to you" reaches them without opening Viky. It
+            is the funder's round button, as on the gift's own page. */}
+        <FunderControls
+          giftId={made.giftId}
+          about={!madeMilestone ? { kind: "morning" } : certificateById(made.conditionId) ? { kind: "hadOrNot" } : { kind: "reach", target: String(made.target) }}
+          takeBack={null}
+        />
         <Link href={`/g/${made.giftId}`} className={SECONDARY_BUTTON}>
           {W.made.seeIt}
         </Link>

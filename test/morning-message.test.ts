@@ -105,29 +105,42 @@ test("nothing asks for the permission except a press", () => {
 
 /**
  * Being told, offered in the open after the first thing that worked (the founder, 1 Oct 2026, the audit's P-31). It
- * sat in the fold "How this is checked", was never offered to the funder, a gift had or not offered nothing at all,
- * and on an iPhone it took a press to learn that installing came first.
+ * sat in the fold "How this is checked", was never offered to the funder, and a gift had or not offered nothing at all.
+ *
+ * Since the founder's rule 6 of the same day (you-decide.html) the person a gift is for finds it behind "Messages",
+ * one of the round controls under the card: still in the open, never in a fold, and what the phone refuses or what an
+ * iPhone needs first is said in its sheet, after the press, rather than standing on every page.
  */
 test("the messages are offered under the card and under the funder's link, never in a fold, and only behind an account", () => {
   const page = readFileSync("app/components/GiftPage.tsx", "utf8");
-  const fold = page.slice(page.indexOf("const checked = ("), page.indexOf("const proof ="));
-  assert.doesNotMatch(fold, /MorningMessage|ReachAlert/, "nothing of it inside the fold");
+  const fold = page.slice(page.indexOf("const checked = ("), page.indexOf("const stopCost"));
+  assert.doesNotMatch(fold, /MorningMessage|ReachAlert|YouDecide/, "nothing of it inside the fold");
   const open = page.slice(page.indexOf("<GiftLive"));
-  assert.match(open, /\{daily && status\.opened && !gift\.finished && !gift\.cancelled \? <MorningMessage giftId=\{giftId\} yours=\{mine \|\| readerIsFunder\} \/> : null\}/);
-  assert.match(open, /hadOrNot && status\.opened && !gift\.finished && !gift\.cancelled && hadOrNot\.review\?\.status !== "pending" && \(mine \|\| readerIsFunder\)/);
-  assert.match(open, /<ReachAlert giftId=\{giftId\} target="" yours=\{mine\} hadOrNot \/>/);
+  // The person it is for: a round button, drawn for every opened gift that is neither over nor taken back.
+  assert.match(page, /const decides = mine && status\.opened && !gift\.finished && !gift\.cancelled;/);
+  assert.match(open, /\{decides \? \(\s+<YouDecide/);
+  assert.match(open, /about=\{about\}/);
+  assert.match(page, /: daily\s+\? \{ kind: "morning" \}/, "a habit tells each morning");
+  assert.match(page, /: hadOrNot\s+\? \{ kind: "hadOrNot" \}/, "a gift had or not tells the day it is theirs or its time is up");
+  // The funder: the same round button, under the card.
+  assert.match(open, /\{readerIsFunder \? \(\s+<FunderControls giftId=\{giftId\} about=\{about\}/);
+  // The sheet says where it stands, what the phone refuses and what an iPhone needs first, in the words of before.
+  const decide = readFileSync("app/kit/YouDecide.tsx", "utf8");
+  assert.match(decide, /<Act name=\{Y\.messages\} state=\{told\.step === "on" \? Y\.on : Y\.off\}/);
+  assert.match(decide, /const tells = about !== null && told\.step !== "unsupported";/, "no button where the browser has nothing to grant at all");
   // Under the link the funder has just been given, the three shapes of gift each with their own.
   const link = readFileSync("app/components/PayGift.tsx", "utf8");
-  const made = link.slice(link.indexOf("W.made.findItAgain"), link.indexOf("W.made.nextTitle"));
-  assert.match(made, /<MorningMessage giftId=\{made\.giftId\} yours \/>/);
-  assert.match(made, /<ReachAlert giftId=\{made\.giftId\} target="" yours=\{false\} hadOrNot \/>/);
-  assert.match(made, /<ReachAlert giftId=\{made\.giftId\} target=\{String\(made\.target\)\} yours=\{false\} \/>/);
+  const made = link.slice(link.indexOf("W.made.findItAgain"), link.indexOf("W.made.seeIt"));
+  assert.match(made, /<FunderControls\s+giftId=\{made\.giftId\}\s+about=\{!madeMilestone \? \{ kind: "morning" \} : certificateById\(made\.conditionId\) \? \{ kind: "hadOrNot" \} : \{ kind: "reach", target: String\(made\.target\) \}\}/);
+  const funder = readFileSync("app/kit/FunderControls.tsx", "utf8");
+  assert.match(funder, /<MessagesSheet open=\{open === "messages"\} onClose=\{\(\) => setOpen\(null\)\} told=\{told\} about=\{about\} yours=\{false\} \/>/);
   // An iPhone outside the Home Screen: the sentence and its two steps, in full, and no button that could grant nothing.
   const component = readFileSync("app/kit/MorningMessage.tsx", "utf8");
-  const install = component.slice(component.indexOf('if (step === "install") {'), component.indexOf('data-told="ask"'));
-  assert.match(install, /<p className=\{HELP\}>\{W\.installFirst\}<\/p>\s+<p className=\{HELP\}>\{ME\.installHow\}<\/p>/);
-  assert.doesNotMatch(install, /<button/);
-  assert.match(component, /\{step === "install" \? <p className=\{HELP\}>\{ME\.installHow\}<\/p> : null\}/, "the reach alert says the steps too");
+  assert.match(component, /const installFirst = morning \? W\.installFirst : `\$\{ask\} \$\{L\.alertInstall\}`;/);
+  assert.match(component, /\{step === "install" \? <p className=\{HELP\}>\{ME\.installHow\}<\/p> : null\}/, "the two steps of installing, in full");
+  const sheet = component.slice(component.indexOf("export function MessagesSheet"));
+  assert.match(sheet, /step === "install" \? undefined :/, "and the sheet has no button there either");
+  assert.match(sheet, /\{step === "refused" \? <p className=\{HELP\}>\{morning \? W\.refused : L\.alertRefused\}<\/p> : null\}/, "what the phone refuses is said in the sheet, after the press");
   // Nobody without an account: the route refuses, and neither place is drawn for them.
   assert.match(readFileSync("app/api/gift/[id]/notify/route.ts", "utf8"), /SIGN_IN_REQUIRED/);
 });

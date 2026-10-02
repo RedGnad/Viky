@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { GIFT_PAGE as W } from "@/src/sentences";
-import { BODY, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
+import { BODY, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
 
 /**
@@ -99,12 +99,8 @@ export function ConnectTheSource({
         {refusalAt("start")}
         {words.notMine ? (
           <>
-            <button
-              type="button"
-              onClick={() => setNotMineOpen((isOpen) => !isOpen)}
-              aria-expanded={notMineOpen}
-              className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}
-            >
+            {/* A second pill under the one action, never a link in the text (the founder's rule 1 of 1 Oct 2026). */}
+            <button type="button" onClick={() => setNotMineOpen((isOpen) => !isOpen)} aria-expanded={notMineOpen} className={SECONDARY_BUTTON}>
               {words.notMine}
             </button>
             {notMineOpen ? <p className={HELP}>{W.namedWrong(funderName)}</p> : null}
@@ -161,11 +157,7 @@ export function ConnectTheSource({
           </>
         )}
         {onName && words.notMine ? (
-          <button
-            type="button"
-            onClick={() => setRenaming(true)}
-            className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}
-          >
+          <button type="button" onClick={() => setRenaming(true)} className={SECONDARY_BUTTON}>
             {words.notMine}
           </button>
         ) : null}
@@ -220,12 +212,7 @@ export function ConnectTheSource({
             </button>
           ) : (
             <>
-              <button
-                type="button"
-                onClick={() => setNotYetOpen((isOpen) => !isOpen)}
-                aria-expanded={notYetOpen}
-                className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}
-              >
+              <button type="button" onClick={() => setNotYetOpen((isOpen) => !isOpen)} aria-expanded={notYetOpen} className={`${SMALL_BUTTON} self-start`}>
                 {field.notYet}
               </button>
               {notYetOpen ? <p className={HELP}>{W.notYetBody(funderName)}</p> : null}
