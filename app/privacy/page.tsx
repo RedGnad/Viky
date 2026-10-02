@@ -101,6 +101,9 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)]">
           <li>A verification session that is never completed is deleted after 24 hours.</li>
           <li>Completed verifications and gift records are kept as long as the gift exists and afterwards as its record, until you ask for their deletion.</li>
+          <li>
+            A gift read from Fitbit or Strava: when the gift is over, because its last day has passed, because it was cancelled or because you ended it, the access you gave is returned to Fitbit or Strava and erased, with the name of that account, its id at the source, and the rows of the morning readings. It is done when you end the gift, and otherwise by the next morning&apos;s pass. What stays is the record of each day, earned or gone back, your signed yes and stop, and what is on the public ledger.
+          </li>
           <li>The session cookie expires after 12 hours; request counters after a few minutes.</li>
           <li>What is on the public ledger stays there.</li>
         </ul>

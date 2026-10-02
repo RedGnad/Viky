@@ -120,6 +120,20 @@ export async function loadProofSession(sessionId: string): Promise<ProofSession 
   };
 }
 
+/**
+ * Deletes the rows of a gift's morning readings from a connected source (src/connected-checkin.ts names them
+ * `connected:<gift>:...`), once the gift is over (src/gift-end-erasure.ts). Each held a day, a yes or a no and the
+ * message signed for the contract, which the chain keeps; nothing reads them after the gift's end. Returns how many.
+ */
+export async function deleteConnectedReadings(giftId: string): Promise<number> {
+  if (!/^\d{1,78}$/.test(giftId)) return 0;
+  const rows = await sql()`
+    DELETE FROM viky_proof_sessions
+    WHERE gift_id = ${giftId} AND session_id LIKE ${`connected:${giftId}:%`}
+    RETURNING session_id`;
+  return rows.length;
+}
+
 /** Deletes sessions old enough that neither their outcome nor a replay attempt matters any more. */
 export async function pruneExpiredProofSessions(): Promise<void> {
   await sql()`

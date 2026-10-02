@@ -95,7 +95,8 @@ export async function disconnectStrava(giftId: string): Promise<{ erased: boolea
   if (!connection) return { erased: false, revoked: false };
   let revoked = false;
   try {
-    await revokeStravaToken(openSecret(connection.accessToken));
+    // The refresh key: an access key lives a few hours, and revoking the refresh key revokes those made from it (V-10).
+    await revokeStravaToken(openSecret(connection.refreshToken));
     revoked = true;
   } catch {
     revoked = false;

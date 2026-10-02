@@ -443,7 +443,10 @@ export default async function JudgesPage() {
             Terms and its Developer and User Data Policy (24 Mar 2026, read 23 Sep 2026) ask that the data serve the feature
             the person asked for, reach a third party only to provide it and with their consent, be preceded by a disclosure
             immediately before the consent, and be deleted on request: the consent screen in Viky&apos;s words, the yes or
-            no the funder learns, and the erase button that gives the key back first. The risk: the funder&apos;s daily yes
+            no the funder learns, and the erase button that gives the key back first. The same erasing runs by itself
+            once a gift is over, finished, cancelled or ended by its person: the key given back, its row deleted, and
+            with it the account&apos;s id and the rows of the morning readings (<code>src/gift-end-erasure.ts</code>);
+            the journal of the days and the signed yes and stop are kept. The risk: the funder&apos;s daily yes
             or no is itself one bit about the person given to a third party, under the consent they gave. The client is
             published in production, so a connection does not lapse each week; past a hundred people, Google&apos;s app
             verification and its third party security review (CASA) apply.
@@ -455,7 +458,7 @@ export default async function JudgesPage() {
             the list dropped. Strava&apos;s API Agreement (read 23 Sep 2026) asks that Strava Data serve the person who
             authorised it and nobody else, that it be neither aggregated across people nor shown to others, and that it
             be deleted when they ask: the consent screen, the verdict-only reading and the erase button that gives the
-            key back first are those three. Two things it also says are written here rather than settled: a new
+            key back first are those three, and the erasing runs by itself once a gift is over, as for Fitbit. Two things it also says are written here rather than settled: a new
             application is in single-player mode, so until Strava raises the athlete limit only the founder&apos;s own
             account can connect; and Strava&apos;s brand guidelines ask for &quot;Powered by Strava&quot; where Strava data
             is shown, and Viky shows none, only a yes or a no, which is the founder&apos;s call to settle with Strava.

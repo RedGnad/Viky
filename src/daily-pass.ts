@@ -1,9 +1,11 @@
 import type { Hex } from "viem";
 import { retireExpiredExits } from "./exit-store";
 import { readDailyGift } from "./daily-count";
+import { connectedLineOf } from "./connected-checkin";
 import type { PublicCheckInOutcome } from "./duolingo-public-checkin";
 import { completePendingCreations, type CreationLine } from "./gift-creation";
 import { liveCreationDeps } from "./gift-creation-live";
+import { erasureLine } from "./gift-end-erasure";
 import { readGift, utcDayOf, type GiftState } from "./gift-reader";
 import { relayDrain, relayFinalise, relayRefund } from "./gift-relay";
 import { loadAllGifts, loadBoundGifts } from "./gift-store";
@@ -35,7 +37,7 @@ import { watchAtPassStart, type RelayerAtStart, type WatchLine } from "./watch";
  * Reading again inside the settling pass would be of no use: every check-in drains the expired days first.
  */
 
-export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain" | "finalise" | "refund" | "read" | "expire" | "retire"; result: string; hash?: string };
+export type DailyPassLine = { giftId: string; step: "create" | "count" | "drain" | "finalise" | "refund" | "read" | "expire" | "retire" | "erase"; result: string; hash?: string };
 
 /**
  * Refusals that say something broke on our side rather than something the person did. A reading refused for
@@ -113,7 +115,7 @@ export function unstartedAndOverdue(gift: PassGift, nowSeconds: number): boolean
 
 export type DailyPassDeps = {
   boundGifts: () => Promise<ReadonlyArray<{ giftId: string }>>;
-  allGifts: () => Promise<ReadonlyArray<{ giftId: string; escrow: Hex | null }>>;
+  allGifts: () => Promise<ReadonlyArray<{ giftId: string; escrow: Hex | null; goalType?: number }>>;
   read: (escrow: Hex, giftId: string) => Promise<PassGift>;
   count: (giftId: string) => Promise<PublicCheckInOutcome>;
   drain: (giftId: string, escrow: Hex) => Promise<{ hash: string }>;
@@ -144,6 +146,12 @@ export type DailyPassDeps = {
    * exchange's pin, the evidence key. Absent in the tests of the other steps. It never stops the pass.
    */
   watch?: (relayer: RelayerAtStart, pass: PassPlanName) => Promise<readonly WatchLine[]>;
+  /**
+   * Erases what a gift on a connected source kept, once the gift is over (src/gift-end-erasure.ts): the access, the
+   * account's name and id, the morning readings. It answers one line for the report, or nothing when nothing was left;
+   * it never throws. Absent in the tests of the other steps.
+   */
+  eraseAtEnd?: (giftId: string) => Promise<string | null>;
 };
 
 /**
@@ -171,6 +179,7 @@ function liveDeps(): DailyPassDeps {
     milestones: (settle) => milestonePass(settle),
     journal: recordPass,
     watch: (relayer, pass) => watchAtPassStart(relayer, pass),
+    eraseAtEnd: (giftId) => erasureLine(giftId),
   };
 }
 
@@ -387,6 +396,9 @@ async function runPass(
     if (gift.cancelled || gift.finalised) {
       // Closed, and nothing to drain or finalise; but what it still owes its funder is sent, by the settling pass.
       if (plan.refund && stillOwedToFunder(gift) > 0n) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
+      // And what a connected source's gift kept is erased, each morning until nothing is left: a gift its person
+      // ended is finalised on the contract, so the three ways a gift is over all come through here.
+      if (plan.refund) await eraseIfConnected(deps, record, lines);
       continue;
     }
     if (gift.startDay === 0) {
@@ -403,8 +415,11 @@ async function runPass(
       continue;
     }
     lines.push(await attempt(giftId, "drain", () => deps.drain(giftId, escrow)));
-    lines.push(await attempt(giftId, "finalise", () => deps.finalise(giftId, escrow)));
+    const finalised = await attempt(giftId, "finalise", () => deps.finalise(giftId, escrow));
+    lines.push(finalised);
     if (plan.refund) lines.push(await attempt(giftId, "refund", () => deps.refund(giftId, escrow)));
+    // The gift this pass has just closed is erased by this pass, not by tomorrow's.
+    if (plan.refund && finalised.result === "sent") await eraseIfConnected(deps, record, lines);
   }
   // The second reading of held gifts is about those gifts alone: the milestones and the exits have their own passes.
   if (plan.only) return { relayer: address, balanceWei: balance.toString(), lines, watch };
@@ -423,6 +438,17 @@ async function runPass(
     if (retired > 0) lines.push({ giftId: "exits", step: "retire", result: `${retired} set(s) of terms past their deadline` });
   }
   return { relayer: address, balanceWei: balance.toString(), lines, watch };
+}
+
+/**
+ * Erases what a gift that is over kept of a connected source, and says so in the report when something was there.
+ * Asked only of a gift whose goal is on a connected source: the others hold no access, and the name their funder gave
+ * is the gift's own term.
+ */
+async function eraseIfConnected(deps: DailyPassDeps, record: { giftId: string; goalType?: number }, lines: DailyPassLine[]): Promise<void> {
+  if (!deps.eraseAtEnd || record.goalType === undefined || !connectedLineOf(record.goalType)) return;
+  const result = await deps.eraseAtEnd(record.giftId);
+  if (result) lines.push({ giftId: record.giftId, step: "erase", result });
 }
 
 /**
