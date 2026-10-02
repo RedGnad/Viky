@@ -7,9 +7,11 @@ import { readJsonBody } from "@/src/api-guard";
 import { VerificationError, type ReclaimStatus, type SdkVerification } from "@/src/duolingo-verification";
 import { contractRefusal, GiftApiError } from "@/src/gift-api";
 import { signCheckIn } from "@/src/gift-attestation";
+import { readGift } from "@/src/gift-reader";
 import { drainExpiredDays, relayCheckIn } from "@/src/gift-relay";
 import { loadGift } from "@/src/gift-store";
 import { holdTheStart, type StartAsked } from "@/src/held-start";
+import { assertReadingInProportion, ReadingOutOfProportion } from "@/src/reading-proportion";
 import { StartNotSigned } from "@/src/v2-start";
 import { readMilestoneGift } from "@/src/milestone-reader";
 import { loadMilestoneGift } from "@/src/milestone-store";
@@ -81,7 +83,11 @@ export async function POST(request: Request) {
           } as never);
           return verified as unknown as SdkVerification;
         },
-        signCheckIn: (message) => signCheckIn(message, giftEscrow),
+        // A figure out of all proportion with the target is not signed for (src/reading-proportion.ts).
+        signCheckIn: async (message) => {
+          await assertReadingInProportion(giftEscrow, await readGift(giftEscrow, message.giftId.toString()), message);
+          return signCheckIn(message, giftEscrow);
+        },
         drainExpired: async (giftId) => {
           await drainExpiredDays(giftId, giftEscrow);
         },
@@ -147,6 +153,8 @@ export async function POST(request: Request) {
   } catch (error) {
     const authStatus = accountAuthErrorStatus(error);
     if (authStatus) return NextResponse.json({ error: accountAuthPublicMessage(error) }, { status: authStatus, headers: { "Cache-Control": "no-store" } });
+    // A figure out of all proportion with the gift's target: nothing was signed, and the operator was told.
+    if (error instanceof ReadingOutOfProportion) return NextResponse.json({ error: error.message, code: error.code }, { status: 409, headers: { "Cache-Control": "no-store" } });
     if (error instanceof VerificationError) {
       // The reason is the product here: every refusal is typed and demonstrable.
       return NextResponse.json({ error: error.message, code: error.code }, { status: error.status, headers: { "Cache-Control": "no-store" } });

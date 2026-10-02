@@ -129,6 +129,11 @@ async function main() {
   process.env.NEXT_PUBLIC_MONAD_RPC_URL = RPC;
   process.env.RELAYER_PRIVATE_KEY = relayerKey;
   process.env.EVIDENCE_SIGNER_PRIVATE_KEY = evidenceKey;
+  // The contracts in service, which the fork holds as mainnet does: named here, from the repository's own list, and
+  // never left to whatever .env.local holds. Without them the opening route answers "not configured", and the
+  // rehearsal passed only on a machine whose own file named them (the delta re-read of 2 Oct 2026).
+  process.env.GIFT_ESCROW_ADDRESS = GIFT_ESCROW;
+  process.env.MILESTONE_GIFT_ADDRESS = MILESTONE_GIFT;
   delete process.env.DATABASE_URL;
   delete process.env.ZKFETCH_WORKER_URL;
   delete process.env.RESEND_API_KEY;
@@ -234,9 +239,9 @@ async function main() {
   expect(!/open (check-ins|proofs)/.test(deployed), "no pause was spent at deployment: readings need no opening");
 
   console.log("STEP 3: the Safe accepts the three, with its own tool, and the hand-over is read before the app is told");
-  const handover = (ownerSaid: string = SAFE) => {
+  const handover = (said: Record<string, string> = {}) => {
     try {
-      return { ok: true, out: execSync("npx tsx scripts/check-v2-handover.ts", { env: { ...process.env, REHEARSAL: "1", MONAD_RPC_URL: RPC, NEXT_PUBLIC_MONAD_RPC_URL: RPC, DAILY_V2: daily, MILESTONE_V2: milestone, ANCHOR: anchor, OWNER_ADDRESS: ownerSaid, EVIDENCE_SIGNER_ADDRESS: evidence.address }, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }) };
+      return { ok: true, out: execSync("npx tsx scripts/check-v2-handover.ts", { env: { ...process.env, REHEARSAL: "1", MONAD_RPC_URL: RPC, NEXT_PUBLIC_MONAD_RPC_URL: RPC, DAILY_V2: daily, MILESTONE_V2: milestone, ANCHOR: anchor, OWNER_ADDRESS: SAFE, EVIDENCE_SIGNER_ADDRESS: evidence.address, RELAYER_ADDRESS: relayer.address, ...said }, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }) };
     } catch (error) {
       const failed = error as { stdout?: string; stderr?: string };
       return { ok: false, out: `${failed.stdout ?? ""}${failed.stderr ?? ""}` };
@@ -260,6 +265,10 @@ async function main() {
   expect(!twice.ok && twice.out.includes("Nothing to accept"), "and an ownership already accepted is not asked for again");
   const handed = handover();
   expect(handed.ok && handed.out.includes(`NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS=${daily}`) && handed.out.includes(`NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS=${anchor}`), "the hand-over check passes: the Safe owns the three, no signer is waiting, and only now are the three settings printed");
+  expect(handed.out.includes("no pause was sent, and the anchor names the relayer"), "and it read that no pause was sent and that the anchor names the relayer");
+  // The relayer's address is the one thing the deployment takes on somebody's word: the check holds it to the anchor.
+  const otherRelayer = handover({ RELAYER_ADDRESS: thiefOfOwnership });
+  expect(!otherRelayer.ok && otherRelayer.out.includes(`ConsentAnchor: its anchorer is ${relayer.address}, not the relayer ${thiefOfOwnership}`) && !otherRelayer.out.includes("NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS="), "an anchor that names another address than the relayer is said, and no setting is printed");
 
   // From here the app is told where the second version is, as the three settings will tell it.
   process.env.NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS = daily;
@@ -562,6 +571,13 @@ async function main() {
     const soon = safeAction({ ACTION: action, TARGET: target, PAUSED: "true" });
     expect(!soon.ok && soon.out.includes("PauseTooSoon"), `${name}: and a pause in the week that follows its end is refused the same way`);
   }
+  // A pause sent before the app is told leaves the owner without its brake for the week that follows: the hand-over
+  // check reads it, which is how one sent by the deploying key would be seen (the delta re-read of 2 Oct 2026).
+  const spent = handover();
+  expect(
+    !spent.ok && ["GiftEscrowV2", "MilestoneGiftV2"].every((name) => spent.out.includes(`${name}: a pause of its readings was sent`)) && spent.out.includes("the Safe cannot pause this contract before") && !spent.out.includes("NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS="),
+    "once a pause was sent, the hand-over check says the contract has no brake until its rest is over, and prints no setting",
+  );
 
   console.log("STEP 6: the yes and the stop on the anchor, checked from the chain alone");
   expect((await say("stop", giftId)).sequence === 1 && (await anchored(giftId)) === 2n, "a stop takes the next place of its gift");

@@ -19,7 +19,7 @@ import { endpointOf } from "../src/push-endpoint";
 import { READING_FINGERPRINT } from "../src/reading-fingerprint";
 import { admitJudgeTry, JUDGE_TRIES_PER_CONNECTION } from "../src/relay-admission";
 import { configureRelayCeilingStore, ensureRelayCeilingSchema } from "../src/relay-ceiling-store";
-import { absentPassAlert, evidenceKeyAlert, pinAlert, relayerAlert, testAlert, watchAfterMorning, watchAtPassStart, type Alert, type WatchDeps } from "../src/watch";
+import { absentPassAlert, announcedSignerAlert, evidenceKeyAlert, pinAlert, relayerAlert, testAlert, watchAfterMorning, watchAtPassStart, type Alert, type WatchDeps } from "../src/watch";
 
 /**
  * Holding during the judging (the audit of 1 Oct 2026, PR 6): the health answer, the alerts, the judge credit's ceiling
@@ -202,6 +202,7 @@ test("the watch after the morning sends what it sees, and what it cannot read ne
     { watched: "morning pass", result: "holds" },
     { watched: "exit pin", result: "holds" },
     { watched: "evidence key", result: "holds" },
+    { watched: "announced signer", result: "holds" },
   ]);
   assert.equal(quiet.length, 0);
   const sent: Alert[] = [];
@@ -214,8 +215,43 @@ test("the watch after the morning sends what it sees, and what it cannot read ne
       evidenceKeys: async () => ({ ours: KEY, named: [{ contract: A, signer: B }] }),
     }),
   );
-  assert.deepEqual(lines.map((line) => line.result), ["alert sent", "not read", "alert sent"]);
+  assert.deepEqual(lines.map((line) => line.result), ["alert sent", "not read", "alert sent", "holds"]);
   assert.deepEqual(sent.map((alert) => alert.subject), ["The morning pass has not run today", "The evidence key of this environment is not the one the contracts name"]);
+});
+
+test("a signer announced on a contract of the second version is told while it waits, whoever announced it", async () => {
+  // The delta re-read of 2 Oct 2026: a new signer stands a day after it is announced, and nothing looked at the day.
+  const readyAt = Date.UTC(2026, 9, 3, 2, 0, 0) / 1_000;
+  assert.equal(announcedSignerAlert({ ours: KEY, named: [{ contract: A, signer: KEY }, { contract: B, signer: KEY }] }), null, "nothing waits");
+  const announced = announcedSignerAlert({ ours: KEY, named: [{ contract: A, signer: KEY }, { contract: B, signer: KEY, announced: { signer: PINNED, readyAt } }] });
+  assert.equal(announced?.subject, "A new evidence signer is announced on a gift contract");
+  assert.match(String(announced?.text), new RegExp(`${B} has ${PINNED} announced as its evidence signer\\. Anybody may make it stand from 2026-10-03T02:00:00\\.000Z\\. Its signer today is ${KEY}\\.`));
+  assert.doesNotMatch(String(announced?.text), new RegExp(`${A} has`), "a contract where nothing waits is not listed");
+  assert.match(String(announced?.text), /ACTION=evidence-signer VALUE=0x0000000000000000000000000000000000000000 pnpm safe:action, with TARGET=escrow-v2 or milestone-v2/);
+  // Our own key announced is told too: an announcement nobody remembers making is the one that matters.
+  assert.ok(announcedSignerAlert({ ours: KEY, named: [{ contract: B, signer: A, announced: { signer: KEY, readyAt } }] }));
+  // The watch says it at every run, beside the key in place, from one read of the contracts.
+  const sent: Alert[] = [];
+  let reads = 0;
+  const lines = await watchAfterMorning(
+    watchDeps(sent, {
+      evidenceKeys: async () => {
+        reads += 1;
+        return { ours: KEY, named: [{ contract: B, signer: KEY, announced: { signer: PINNED, readyAt } }] };
+      },
+    }),
+  );
+  assert.deepEqual(lines.slice(-2), [{ watched: "evidence key", result: "holds" }, { watched: "announced signer", result: "alert sent" }]);
+  assert.deepEqual(sent.map((alert) => alert.subject), ["A new evidence signer is announced on a gift contract"]);
+  assert.equal(reads, 1);
+  // The contracts that could not be read are said so twice, and nothing is thrown.
+  const unread = await watchAfterMorning(watchDeps([], { evidenceKeys: async () => Promise.reject(new Error("the network did not answer")) }));
+  assert.deepEqual(unread.slice(-2).map((line) => line.result), ["not read", "not read"]);
+  // What reads them: the two contracts of the second version alone, once they are set, by the views both expose.
+  const health = readFileSync("src/health.ts", "utf8");
+  assert.match(health, /if \(!second\.includes\(contract\)\) return \{ contract, signer \};/);
+  assert.match(health, /functionName: "pendingEvidenceSigner"/);
+  assert.match(health, /functionName: "evidenceSignerReadyAt"/);
 });
 
 test("the watch's cron is the one vercel.json sets, behind the cron secret", () => {
@@ -256,7 +292,7 @@ test("a pass tells the operator of a low relayer at its start, and goes on whate
   const sent: Alert[] = [];
   const report = await dailyPass(COUNTING_PASS, passDeps({ watch: (relayer, pass) => watchAtPassStart(relayer, pass, watchDeps(sent)) }));
   assert.deepEqual(sent.map((alert) => alert.subject), ["Relayer under 25.00 MON: 20.00 MON left"]);
-  assert.deepEqual(report.watch.map((line) => line.result), ["alert sent", "holds", "holds"]);
+  assert.deepEqual(report.watch.map((line) => line.result), ["alert sent", "holds", "holds", "holds"]);
   const broken = await dailyPass(
     COUNTING_PASS,
     passDeps({

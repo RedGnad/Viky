@@ -1,7 +1,7 @@
 import { GiftApiError } from "./gift-api";
 import { formatAusd } from "./gift-reader";
 import { clientIpFromRequest } from "./rate-limit";
-import { bucketOf, ceilingSentence, overTheCeiling, relayCeilings, relayScopes, tooSmallToRelay, topUpScopes, type RelayCeilings, type RelayScope } from "./relay-ceiling";
+import { bucketOf, ceilingSentence, overTheCeiling, RELAY_DAY_ALL, relayCeilings, relayScopes, tooSmallToRelay, topUpScopes, type RelayCeilings, type RelayScope } from "./relay-ceiling";
 import { countKey, countRelays, forgetRelayCountsBefore, uncountRelays, type CountRow } from "./relay-ceiling-store";
 import { RelayerError } from "./relayer";
 import { RELAY_CEILING as W } from "./sentences";
@@ -17,17 +17,27 @@ import { RELAY_CEILING as W } from "./sentences";
  * counted first: twenty-five free accounts asking twenty times each for a gift that does not exist used up
  * everybody's count for the day and spent nothing, and nobody could open, end or be paid until midnight UTC.
  *
- * **And only what the relayer pays for stays counted** (`countedIfSent`). Every relay is run for nothing first, and a
- * call the contract refuses there is never sent: its count is taken back. So is one the relayer could not send at all.
- * A creation with a signature that pays for nothing, a send the token would refuse: none of these uses up anybody's
- * day any more.
+ * **And only what the relayer pays for stays counted against everybody** (`countedIfSent`). Every relay is run for
+ * nothing first, and a call the contract refuses there is never sent: it is taken back out of everybody's count. A
+ * creation with a signature that pays for nothing, a send the token would refuse: none of these uses up anybody
+ * else's day any more.
+ *
+ * **The one who asked keeps their own count of it** (the delta re-read of 2 Oct 2026). A refusal took back the
+ * account's and the connection's counts too, so attempts the contract refuses had no durable ceiling at all: five
+ * hundred in an hour from one account left every count at zero, each one a simulation, some reads and, for a creation,
+ * a row. They are held against the account and the connection that made them, by the hour and by the day, as any
+ * other action is. When it is the relayer that could not send at all, nothing of the request's own doing, every
+ * count is given back.
  *
  * And the ways out keep a part of everybody's count to themselves (`admitWayOut`): opening a gift, ending it, taking
  * out what is earned, the funder taking back, and the way out of the account to a bank.
  */
 
-/** A request that was counted, and the way to take that count back when nothing came of it. */
-export type Admission = Readonly<{ takeBack: () => Promise<void> }>;
+/**
+ * A request that was counted, and the way to take that count back when nothing came of it: out of everybody's count
+ * alone when the contract refused the request, out of every count when the relayer itself could not send.
+ */
+export type Admission = Readonly<{ takeBack: (which?: "everybody's" | "every count") => Promise<void> }>;
 
 const TWO_DAYS_MS = 2 * 86_400_000;
 
@@ -44,12 +54,18 @@ async function admit(scopes: readonly RelayScope[], nowMs: number, code: "RELAY_
   if (counted[0]?.count === 1) await forgetRelayCountsBefore(new Date(nowMs - TWO_DAYS_MS));
   let taken = false;
   return {
-    takeBack: async () => {
+    takeBack: async (which = "everybody's") => {
       if (taken) return;
       taken = true;
-      await uncountRelays(rows);
+      const back = which === "every count" ? rows : rows.filter((row) => row.scope === RELAY_DAY_ALL);
+      if (back.length > 0) await uncountRelays(back);
     },
   };
+}
+
+/** Whether a failure is the relayer's own, before it looked at the request: not set, on another chain, under its reserve. */
+function relayerCouldNotSend(error: unknown): boolean {
+  return error instanceof RelayerError && (error.code === "NOT_CONFIGURED" || error.code === "WRONG_CHAIN" || error.code === "RESERVE_TOO_LOW");
 }
 
 /** Whether a failure says the relayer was never asked to pay: refused when run for nothing, or it could not send at all. */
@@ -58,15 +74,17 @@ export function nothingWasSent(error: unknown): boolean {
 }
 
 /**
- * Runs what a request was counted for, and takes the count back when nothing was sent. The failure itself goes on to
- * the route as it was: this changes what is counted, never what the person is told.
+ * Runs what a request was counted for, and takes it back out of everybody's count when nothing was sent. The account
+ * and the connection keep their own count of a request the contract refused; they are given it back when the relayer
+ * itself could not send. The failure goes on to the route as it was: this changes what is counted, never what the
+ * person is told.
  */
 export async function countedIfSent<T>(admission: Admission, run: () => Promise<T>): Promise<T> {
   try {
     return await run();
   } catch (error) {
     if (nothingWasSent(error)) {
-      await admission.takeBack().catch((failure: unknown) => console.error(`a relay's count could not be taken back: ${failure instanceof Error ? failure.message : String(failure)}`));
+      await admission.takeBack(relayerCouldNotSend(error) ? "every count" : "everybody's").catch((failure: unknown) => console.error(`a relay's count could not be taken back: ${failure instanceof Error ? failure.message : String(failure)}`));
     }
     throw error;
   }

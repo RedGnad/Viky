@@ -7,6 +7,7 @@ import { DUOLINGO_DAILY } from "./conditions";
 import { contractRefusal } from "./gift-api";
 import { ATTESTATION_TTL_SECONDS, identityPseudonym, serialiseMessage, signCheckIn, type CheckInMessage } from "./gift-attestation";
 import { checkInDayIndex, readGift, utcDayOf } from "./gift-reader";
+import { assertReadingInProportion, ReadingOutOfProportion } from "./reading-proportion";
 import { relayCheckIn } from "./gift-relay";
 import { loadGift, loadRelayed, markBound, type GiftRecord } from "./gift-store";
 import { holdTheStart, type StartAsked } from "./held-start";
@@ -127,6 +128,13 @@ export async function runPublicCheckIn(input: { giftId: string; purpose: PublicC
     issuedAt: BigInt(now),
     expiresAt: BigInt(now + ATTESTATION_TTL_SECONDS),
   };
+  // A figure out of all proportion with the target is not signed for (src/reading-proportion.ts).
+  try {
+    await assertReadingInProportion(escrow, onChain, message);
+  } catch (error) {
+    if (error instanceof ReadingOutOfProportion) return refusal(giftId, error.code, error.message);
+    throw error;
+  }
   const signature = await signCheckIn(message, escrow);
   const sessionId = `public:${giftId}:${purpose}:${utcDayOf(now)}:${read.nullifier.slice(2, 18)}`;
   await saveProofSession({

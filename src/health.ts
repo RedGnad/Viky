@@ -7,6 +7,7 @@ import { exitRouterAbi } from "./exit-router-abi";
 import { lastGuardedPass } from "./frequent-pass";
 import { evidenceSignerAddress } from "./gift-attestation";
 import { giftEscrowAbi } from "./gift-escrow-abi";
+import { giftEscrowV2Abi } from "./gift-escrow-v2-abi";
 import { createMonadPublicClient } from "./monad/chain";
 import { lastPasses } from "./pass-log";
 import { READING_FINGERPRINT } from "./reading-fingerprint";
@@ -55,7 +56,9 @@ export type Health = Readonly<{
 }>;
 
 export type ExitPin = Readonly<{ pinned: Hex; pointsAt: Hex }>;
-export type EvidenceKeys = Readonly<{ ours: Hex; named: readonly Readonly<{ contract: Hex; signer: Hex }>[] }>;
+/** A new evidence signer announced on a contract of the second version, and the moment from which anybody may make it stand. */
+export type AnnouncedSigner = Readonly<{ signer: Hex; readyAt: number }>;
+export type EvidenceKeys = Readonly<{ ours: Hex; named: readonly Readonly<{ contract: Hex; signer: Hex; announced?: AnnouncedSigner }>[] }>;
 
 export type HealthDeps = Readonly<{
   database: () => Promise<unknown>;
@@ -163,11 +166,18 @@ export async function readEvidenceKeys(ours: Hex = evidenceSignerAddress()): Pro
   // The second version's two contracts take evidence too, once they are set (src/v2.ts).
   const second = [giftEscrowV2Address(), milestoneGiftV2Address()].filter((address): address is Hex => address !== null);
   const named = await Promise.all(
-    [GIFT_ESCROW, EARLIER_GIFT_ESCROW, MILESTONE_GIFT, ...second].map(async (contract) => ({
-      contract,
+    [GIFT_ESCROW, EARLIER_GIFT_ESCROW, MILESTONE_GIFT, ...second].map(async (contract) => {
       // Every one of them exposes the same view; the daily contract's ABI reads it on each.
-      signer: (await client.readContract({ address: contract, abi: giftEscrowAbi, functionName: "evidenceSigner" })) as Hex,
-    })),
+      const signer = (await client.readContract({ address: contract, abi: giftEscrowAbi, functionName: "evidenceSigner" })) as Hex;
+      if (!second.includes(contract)) return { contract, signer };
+      // On the second version a new signer is announced and stands a day later: what waits is read too, so the day is
+      // one somebody is told of (the delta re-read of 2 Oct 2026). Both contracts expose the same two views.
+      const [waiting, readyAt] = await Promise.all([
+        client.readContract({ address: contract, abi: giftEscrowV2Abi, functionName: "pendingEvidenceSigner" }) as Promise<Hex>,
+        client.readContract({ address: contract, abi: giftEscrowV2Abi, functionName: "evidenceSignerReadyAt" }) as Promise<bigint | number>,
+      ]);
+      return /^0x0{40}$/.test(waiting) ? { contract, signer } : { contract, signer, announced: { signer: waiting, readyAt: Number(readyAt) } };
+    }),
   );
   return { ours, named };
 }

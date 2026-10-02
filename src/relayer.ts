@@ -41,7 +41,8 @@ export class RelayerError extends Error {
     readonly rawReason?: string,
     /**
      * The contract refused the call when it was run for nothing, before anything was sent: the relayer paid nothing.
-     * A request refused this way is taken back out of the ceilings (src/relay-admission.ts).
+     * A request refused this way is taken back out of everybody's count, and stays counted against the account and
+     * the connection that made it (src/relay-admission.ts).
      */
     readonly unsent: boolean = false,
   ) {

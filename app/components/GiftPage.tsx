@@ -3,6 +3,7 @@ import Link from "next/link";
 import { agreeFirst } from "@/src/client/consent";
 import { useMinute } from "../kit/clock";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { openWithTheLinkSecret } from "@/src/client/v2";
 import { openingSecretOf } from "@/src/v2-protocol";
 import { useMoneySession } from "@/src/account/money-session";
 import { isAccountError } from "@/src/account/errors";
@@ -405,7 +406,9 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       // On the second version of the contracts the link's own key signs the opening, here, for the signed-in account:
       // the contract the gift is on and that account are what it needs (src/client/v2.ts).
       const contract = milestone ? milestone.escrow : daily?.escrow;
-      await claimGift(giftId, openingKey, contract && address ? { contract, recipient: address } : undefined);
+      // The secret after the `#` signs here or goes nowhere: it is never handed to the function that posts a key.
+      if (status.version === 2) await openWithTheLinkSecret({ giftId, linkSecret: openingKey, contract, recipient: address });
+      else await claimGift(giftId, openingKey);
       return null;
     });
   const name = (username: string) => run("naming", "name", async () => {

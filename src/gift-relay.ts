@@ -7,6 +7,7 @@ import { recordRelayed, recordSettledDays, relayedForSession } from "./gift-stor
 import { tellAboutDays } from "./morning-send";
 import { liveTellingDeps } from "./morning-send-live";
 import { loadAttestation } from "./proof-session-store";
+import { tellOfARefusedBaseline } from "./reading-proportion";
 import { newGiftsEscrow, escrowAddress, relay, RelayerError, relayerClients, type RelayResult } from "./relayer";
 import { DAILY_ABIS, dailyAbiOf, dailyVersionOf, giftEscrowV2Address } from "./v2";
 import { isStartSignedBy, NO_START_SIGNATURE, StartNotSigned } from "./v2-start";
@@ -175,7 +176,8 @@ export async function relayCheckIn(sessionId: string, escrow: Hex, startSignatur
   const m = stored.message;
   const giftId = String(m.giftId);
   let recipientSignature = NO_START_SIGNATURE;
-  if (dailyVersionOf(escrow) === 2 && (await readGift(escrow, giftId)).startDay === 0) {
+  const second = dailyVersionOf(escrow) === 2 ? await readGift(escrow, giftId) : null;
+  if (second && second.startDay === 0) {
     const start = { giftId: BigInt(giftId), identityHash: String(m.identityHash) as Hex, metricValue: BigInt(m.metricValue), observedAt: BigInt(m.observedAt) };
     if (!startSignature) throw new StartNotSigned("daily", escrow, start);
     if (!(await isStartSignedBy({ kind: "daily", contract: escrow, start, recipient: String(m.recipient), signature: startSignature }))) {
@@ -197,7 +199,12 @@ export async function relayCheckIn(sessionId: string, escrow: Hex, startSignatur
     signature: stored.signature,
     recipientSignature,
   };
-  const result = await relay("checkIn", [giftId, attestation], escrow);
+  const result = await relay("checkIn", [giftId, attestation], escrow).catch(async (error: unknown) => {
+    // A reading below the gift's baseline is the one trace a baseline set too high leaves (the review of 2 Oct 2026,
+    // R-15): the operator is told, and the refusal goes on as it was.
+    if (second && error instanceof RelayerError && error.contractError === "MetricDecreased") await tellOfARefusedBaseline(escrow, giftId, second.baselineValue, attestation.metricValue);
+    throw error;
+  });
   const credited = Number(eventArg(result, "CheckInAccepted", "creditedDays", escrow));
   await recordRelayed({ giftId, kind: "check-in", sessionId, txHash: result.hash, blockNumber: result.receipt.blockNumber });
   await recordDays(giftId, result, sessionId);

@@ -46,8 +46,8 @@ import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-co
  *   1. read on each of the three what the script prints: the deploying key is the owner, the Safe is offered it;
  *   2. the Safe accepts the three, with `pnpm safe:action` (ACTION=accept-ownership, TARGET=escrow-v2, milestone-v2
  *      and anchor, each with TARGET_ADDRESS as printed here);
- *   3. `pnpm check:v2-handover` reads `owner()` on the three and that no signer is waiting on the two gift contracts,
- *      and only then prints the three settings;
+ *   3. `pnpm check:v2-handover` reads `owner()` on the three, that no signer is waiting and no pause was sent on the two
+ *      gift contracts, and that the anchor names the relayer, and only then prints the three settings;
  *   4. the three settings are set in the app together, and the app is built again. From the first gift made on the
  *      second version they are never changed, and creation is never reopened on a contract it replaced.
  *
@@ -293,8 +293,9 @@ async function main() {
   console.log(`       ACTION=accept-ownership TARGET=escrow-v2 TARGET_ADDRESS=${dailyAt} pnpm safe:action`);
   console.log(`       ACTION=accept-ownership TARGET=milestone-v2 TARGET_ADDRESS=${milestoneAt} pnpm safe:action`);
   console.log(`       ACTION=accept-ownership TARGET=anchor TARGET_ADDRESS=${anchorAt} pnpm safe:action`);
-  console.log(`  2. DAILY_V2=${dailyAt} MILESTONE_V2=${milestoneAt} ANCHOR=${anchorAt} OWNER_ADDRESS=${owner} EVIDENCE_SIGNER_ADDRESS=${evidenceSigner} pnpm check:v2-handover`);
-  console.log("     It reads owner() on the three and that no signer is waiting, and only then prints the three settings to set.");
+  console.log(`  2. DAILY_V2=${dailyAt} MILESTONE_V2=${milestoneAt} ANCHOR=${anchorAt} OWNER_ADDRESS=${owner} EVIDENCE_SIGNER_ADDRESS=${evidenceSigner} RELAYER_ADDRESS=${anchorer} pnpm check:v2-handover`);
+  console.log("     It reads owner() on the three, that no signer is waiting and no pause was sent, and that the anchor names the relayer, and only then prints the three settings to set.");
+  console.log("     RELAYER_ADDRESS above is the one given to this script: compare it once more with the relayer in service before running the check.");
   console.log("  3. Set the three in the app together, and build it again. Empty the deploying key.");
 }
 

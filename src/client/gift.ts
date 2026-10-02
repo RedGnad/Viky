@@ -14,7 +14,7 @@ import { ApiError, getJson, postJson } from "./api";
 import { isMilestoneGiftId, milestoneWithdrawTypedData } from "../milestone-protocol";
 import type { MilestoneStatus } from "../milestone-view";
 import { fundingNonceV2, withdrawTypedDataV2 } from "../v2-protocol";
-import { giftLinkOf, linkForTerms, openWithLinkKey, secondVersionOf, versionOf, withTheStartSigned, type StartAsked } from "./v2";
+import { giftLinkOf, linkForTerms, secondVersionOf, versionOf, withTheStartSigned, type StartAsked } from "./v2";
 
 /** Browser-side flows of a gift. Every step that moves money is signed by the person's own account. */
 
@@ -295,13 +295,15 @@ export function loadGiftStatus(giftId: string, linkKey?: string | null): Promise
 }
 
 /**
- * Opens a gift for the signed-in account. On the first version `token` is the link's key: the server is sent it and
- * the evidence signer attests the opening. On the second it is the secret after the link's `#`: the key made from it
- * signs the opening here, and the server is sent the signature alone (src/client/v2.ts). `opening` names the contract
- * the gift is on and the account it opens for.
+ * Opens a gift of the first version for the signed-in account: `token` is the key its link carries in `?t=`, the
+ * server is sent it and the evidence signer attests the opening.
+ *
+ * Never called with the secret after a link's `#`: a gift of the second version is opened by `openWithTheLinkSecret`
+ * (src/client/v2.ts), which signs here or refuses. This function used to take both, and chose by what the server's
+ * status answered: an answer naming another contract, or none, made it post the secret (the delta re-read of 2 Oct
+ * 2026).
  */
-export function claimGift(giftId: string, token: string, opening?: { contract: Hex; recipient: string }): Promise<{ giftId: string; opened: boolean }> {
-  if (opening && versionOf(giftId, opening.contract) === 2) return openWithLinkKey({ giftId, contract: opening.contract, recipient: opening.recipient, linkSecret: token });
+export function claimGift(giftId: string, token: string): Promise<{ giftId: string; opened: boolean }> {
   return postJson(`/api/gift/claim`, { giftId, token });
 }
 

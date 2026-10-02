@@ -10,6 +10,7 @@ import { activeMinutesOf, fitbitConfigured, fitbitDateOfUtcDay, fitbitDayMet, FI
 import { contractRefusal } from "./gift-api";
 import { ATTESTATION_TTL_SECONDS, FITBIT_CONNECTED_PROVIDER_ID, identityPseudonym, serialiseMessage, signCheckIn, STRAVA_CONNECTED_PROVIDER_ID, type CheckInMessage } from "./gift-attestation";
 import { checkInDayIndex, readGift, utcDayOf, type GiftState } from "./gift-reader";
+import { assertReadingInProportion, ReadingOutOfProportion } from "./reading-proportion";
 import { relayCheckIn } from "./gift-relay";
 import { holdTheStart } from "./held-start";
 import { StartNotSigned } from "./v2-start";
@@ -224,6 +225,13 @@ export async function runConnectedCheckIn(input: { giftId: string; purpose: Publ
     issuedAt: BigInt(now),
     expiresAt: BigInt(now + ATTESTATION_TTL_SECONDS),
   };
+  // A figure out of all proportion with the target is not signed for (src/reading-proportion.ts).
+  try {
+    await assertReadingInProportion(escrow, onChain, message);
+  } catch (error) {
+    if (error instanceof ReadingOutOfProportion) return refusal(giftId, error.code, error.message);
+    throw error;
+  }
   const signature = await signCheckIn(message, escrow);
   const sessionId = `connected:${giftId}:${purpose}:${utcDayOf(now)}:${reading.nullifier.slice(2, 18)}`;
   await saveProofSession({
