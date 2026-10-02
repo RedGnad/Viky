@@ -22,8 +22,8 @@ import { RELAY_CEILING as W } from "./sentences";
  * A creation with a signature that pays for nothing, a send the token would refuse: none of these uses up anybody's
  * day any more.
  *
- * And the ways out of a gift keep a part of everybody's count to themselves (`admitWayOut`): opening, ending, taking
- * out, and the funder taking back.
+ * And the ways out keep a part of everybody's count to themselves (`admitWayOut`): opening a gift, ending it, taking
+ * out what is earned, the funder taking back, and the way out of the account to a bank.
  */
 
 /** A request that was counted, and the way to take that count back when nothing came of it. */
@@ -78,8 +78,10 @@ export async function admitRelay(request: Request, account: string, nowMs = Date
 }
 
 /**
- * The same door for a way out of a gift: opening it, ending it, taking out what is earned, the funder taking it back.
- * Held against the whole of everybody's count, where anything else stops at the part that is not kept for these.
+ * The same door for a way out: opening a gift, ending it, taking out what is earned, the funder taking it back, and
+ * the way out of the account to a bank (the founder, 2 Oct 2026). Held against the whole of everybody's count, where
+ * anything else stops at the part that is not kept for these. A send to another account and a phone top-up are not
+ * ways out to a bank: they are counted like making a gift.
  */
 export async function admitWayOut(request: Request, account: string, nowMs = Date.now(), ceilings: RelayCeilings = relayCeilings()): Promise<Admission> {
   return admit(relayScopes(account, clientIpFromRequest(request), ceilings, true), nowMs, "RELAY_CEILING");

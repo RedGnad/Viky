@@ -21,10 +21,11 @@ export type RelayCeilings = Readonly<{ perHour: number; perDay: number; minimumU
 // Five hundred a day: a credited day costs the relayer about 0.018 of it (measured 1 Oct 2026) and a gift's creation
 // several times that, so a day at this ceiling costs it under thirty, which it holds above its reserve.
 //
-// A part of that one count is kept for the ways out of a gift (the review of 2 Oct 2026, R-16): opening it, ending it,
-// taking out what is earned, and the funder taking back a gift nobody opened. Everything else, making a gift, counting
-// a day, writing an agreement down, is refused once the count reaches what is not kept. So a day in which everybody's
-// count is used up still opens, ends and pays out. A hundred of the five hundred.
+// A part of that one count is kept for the ways out (the review of 2 Oct 2026, R-16): opening a gift, ending it,
+// taking out what is earned, the funder taking back a gift nobody opened, and the way out of the account to a bank
+// (the founder, 2 Oct 2026). Everything else, making a gift, counting a day, writing an agreement down, sending to
+// another account, topping up a phone, is refused once the count reaches what is not kept. So a day in which
+// everybody's count is used up still opens, ends, pays out and reaches a bank. A hundred of the five hundred.
 export const DEFAULT_RELAY_CEILINGS: RelayCeilings = { perHour: 20, perDay: 100, minimumUnits: 1_000_000n, topUpsPerMinute: 1, topUpsPerGift: 2, perDayAll: 500, reservedForWaysOut: 100 };
 
 const wholeNumber = (value: string | undefined, fallback: number): number => {
@@ -73,8 +74,8 @@ export const RELAY_DAY_ALL = "relay:day:all";
 
 /**
  * The five counts a relayed action is held against: the account and the connection, each by the hour and by the day,
- * and everybody together by the day. A way out of a gift is held against the whole of everybody's count; anything else
- * against the part that is not kept for the ways out.
+ * and everybody together by the day. A way out, of a gift or to a bank, is held against the whole of everybody's
+ * count; anything else against the part that is not kept for the ways out.
  */
 export function relayScopes(account: string, ip: string, ceilings: RelayCeilings, wayOut = false): readonly RelayScope[] {
   const who = account.toLowerCase();

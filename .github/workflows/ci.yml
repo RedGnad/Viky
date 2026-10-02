@@ -24,7 +24,8 @@ env:
 # One pass was one job of 21 minutes, run twice on the same code: on the pull request, then again on main once it
 # was merged (measured on 1 Oct 2026: 47 passes, 990 minutes, 431 of them on main). Since 2 Oct 2026:
 #
-# - three jobs side by side, the contracts, the policy tests, and the screens in a browser cut in three parts;
+# - three jobs side by side, the contracts, the policy tests, and the screens in a browser cut in two parts (three
+#   until 2 Oct 2026: the policy tests are the longest job, so a third part bought no time and cost its own set-up);
 # - a tree a green pass already walked is not walked again: the pass leaves a mark named after the tree it tested,
 #   and the next pass on the same tree reads it and stops. A pull request is tested as merged into main, so the
 #   commit main receives carries the same tree whenever the branch was up to date, and its pass is one job of seconds;
@@ -175,16 +176,17 @@ jobs:
         run: pnpm test:policy
 
   browser:
-    name: Screens in a browser (${{ matrix.part }} of 3)
+    name: Screens in a browser (${{ matrix.part }} of 2)
     needs: scope
     if: needs.scope.outputs.validated != 'true' && needs.scope.outputs.browser == 'true'
     runs-on: ubuntu-latest
-    # A part takes 5 to 6 minutes. One slow download of the browser (6 minutes instead of 30 seconds, on 1 Oct 2026)
-    # cut a run that had failed nothing, so the limit leaves room for one.
-    timeout-minutes: 20
+    # In three parts a part took 6 to 7 minutes (measured 2 Oct 2026); in two each carries half the suite. One slow
+    # download of the browser (6 minutes instead of 30 seconds, on 1 Oct 2026) cut a run that had failed nothing, so
+    # the limit leaves room for one.
+    timeout-minutes: 25
     strategy:
       matrix:
-        part: [1, 2, 3]
+        part: [1, 2]
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -217,7 +219,7 @@ jobs:
       - name: Test the screens in a browser
         env:
           SESSION_SIGNING_SECRET: ci-only-session-secret-that-protects-nothing
-        run: pnpm test:browser --shard=${{ matrix.part }}/3
+        run: pnpm test:browser --shard=${{ matrix.part }}/2
 
   validated:
     name: Mark the tree as walked

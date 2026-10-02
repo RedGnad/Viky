@@ -7,7 +7,7 @@ import { attachSignature, claimExitRelay, loadExit, markExitSent, markExitStale,
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
 import { RelayerError } from "@/src/relayer";
 import { checkRateLimit, rateLimitResponseHeaders } from "@/src/rate-limit";
-import { admitRelay, countedIfSent } from "@/src/relay-admission";
+import { admitWayOut, countedIfSent } from "@/src/relay-admission";
 import { canonicalSignature } from "@/src/signature";
 
 export const runtime = "nodejs";
@@ -83,7 +83,8 @@ export async function POST(request: Request) {
     let hash: Hex;
     let submitted: Hex | undefined;
     try {
-      const admitted = await admitRelay(request, auth.account);
+      // The way out to a bank draws on the part of everybody's count kept for the ways out (the founder, 2 Oct 2026).
+      const admitted = await admitWayOut(request, auth.account);
       ({ hash } = await countedIfSent(admitted, () => relayExit({
         onSubmitted: async (sent) => {
           submitted = sent;
