@@ -14,7 +14,7 @@ import { assertReadingInProportion, ReadingOutOfProportion } from "./reading-pro
 import { relayCheckIn } from "./gift-relay";
 import { holdTheStart } from "./held-start";
 import { StartNotSigned } from "./v2-start";
-import { loadGift, loadRelayed, markBound, type GiftRecord } from "./gift-store";
+import { forgetConnectedAccount, loadGift, loadRelayed, markBound, type GiftRecord } from "./gift-store";
 import { consumeAndSaveVerification, saveProofSession } from "./proof-session-store";
 import { escrowOf, RelayerError } from "./relayer";
 import { distanceOfDay, refreshStravaTokens, stravaConfigured, stravaDayMet, STRAVA_PROVIDER_LABEL, StravaError } from "./strava";
@@ -181,6 +181,9 @@ export async function runConnectedCheckIn(input: { giftId: string; purpose: Publ
     if (line.keyRefused(error)) {
       // The source no longer honours the key: nothing of it is worth keeping, and the person connects again (rule 3).
       await eraseConnection(giftId);
+      // The source's own ids go with it, as they do when the person disconnects (the audit of 1 Oct 2026, V-04):
+      // connecting again records them again.
+      await forgetConnectedAccount(giftId);
       return refusal(giftId, "KEY_REFUSED", `${line.name} no longer accepts the connection. Connect ${line.name} again from your gift's page.`);
     }
     if ((error instanceof FitbitError || error instanceof StravaError) && error.code === "NOT_CONFIGURED") return refusal(giftId, "NOT_CONFIGURED", "Counting is not switched on yet.");

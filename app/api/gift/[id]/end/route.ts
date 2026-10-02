@@ -4,6 +4,7 @@ import { readAccountAuthSession } from "@/src/account-auth-server";
 import { readJsonBody } from "@/src/api-guard";
 import { isOperator } from "@/src/dev-access";
 import { GiftApiError, giftErrorResponse, NO_STORE } from "@/src/gift-api";
+import { erasureLine } from "@/src/gift-end-erasure";
 import { dailyEndOffer, milestoneEndOffer } from "@/src/gift-ending";
 import { readGift } from "@/src/gift-reader";
 import { relayEnd } from "@/src/gift-relay";
@@ -86,6 +87,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const result = await countedIfSent(await admitWayOut(request, auth.account), () =>
       milestone ? relayMilestoneEnd({ giftId: id, contract, giveBack, nonce, deadline, signature }) : relayEnd({ giftId: id, escrow: contract, keep, giveBack, nonce, deadline, signature }),
     );
+    // The gift is over: what it kept of a connected source goes now (src/gift-end-erasure.ts). It never fails the
+    // ending, which is done and cannot be undone; an erasing that did not run is done by the next settling pass.
+    const erased = await erasureLine(id);
+    if (erased) console.log(`gift ${id} ended by its person: ${erased}`);
     return NextResponse.json({ giftId: id, ended: true, keep: keep.toString(), giveBack: giveBack.toString(), hash: result.hash }, { headers: NO_STORE });
   } catch (error) {
     return isMilestoneGiftId(id) ? milestoneErrorResponse(error, isOperator(account)) : giftErrorResponse(error, isOperator(account));
