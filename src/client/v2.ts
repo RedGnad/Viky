@@ -3,6 +3,7 @@ import type { EndOffer } from "../gift-ending";
 import { isMilestoneGiftId } from "../milestone-protocol";
 import { dailyVersionOf, giftEscrowV2Address, milestoneGiftV2Address, milestoneVersionOf, type ContractVersion } from "../v2";
 import { endTypedData, giftLink, giftLinkTypedData, linkFingerprint, linkSecretFrom, openingAccount, OPEN_TTL_SECONDS, openTypedData, previewTokenOf, startTypedData, type V2Kind } from "../v2-protocol";
+import { GIFT_PAGE } from "../sentences";
 import { ApiError, postJson } from "./api";
 
 /**
@@ -20,7 +21,8 @@ import { ApiError, postJson } from "./api";
  *   sends the secret in no request. What it cannot promise is the code itself: the page is served by Viky, and a
  *   server that served other code could read the `#`.
  * - **The recipient's browser opens the gift.** It makes the opening key from the secret after the `#` and signs which
- *   account the gift opens for. The server relays that signature; the secret is not sent with it.
+ *   account the gift opens for. The server relays that signature; the secret is not sent with it, and it is not sent
+ *   instead of it either: when the page cannot sign here, it refuses (`openWithTheLinkSecret`).
  * - **The recipient's account signs the first reading** (the review of 2 Oct 2026, R-15). The server reads, holds what
  *   it read and answers what there is to sign; the account signs it here and the reading is sent with that signature.
  *   With the signing session open it takes no gesture; otherwise the passkey is asked for once.
@@ -73,6 +75,22 @@ export async function openWithLinkKey(input: { giftId: string; contract: Hex; re
     openTypedData(kindOf(input.giftId), input.contract, { giftId: BigInt(input.giftId), recipient: getAddress(input.recipient), deadline }),
   );
   return postJson("/api/gift/claim", { giftId: input.giftId, opening: { deadline: deadline.toString(), signature } });
+}
+
+/**
+ * Opens a gift of the second version with the secret after its link's `#`, or refuses. The secret signs here or goes
+ * nowhere: it is never posted in place of a signature (the delta re-read of 2 Oct 2026).
+ *
+ * Where the gift is, is this build's own setting, never the server's answer alone. The page used to choose between
+ * signing here and posting the link's key from what the status answered, its version and its contract: an answer that
+ * said "second version" and named another contract, or none, made this code post the secret. Now such an answer is
+ * refused before anything is signed, and so is a page with no account to open the gift for.
+ */
+export async function openWithTheLinkSecret(input: { giftId: string; linkSecret: string; contract: string | null | undefined; recipient: string | null | undefined; nowMs?: number }): Promise<{ giftId: string; opened: boolean }> {
+  const ours = secondVersionOf(kindOf(input.giftId));
+  const named = input.contract && /^0x[0-9a-fA-F]{40}$/.test(input.contract) ? getAddress(input.contract) : null;
+  if (!ours || named !== ours || !input.recipient) throw new ApiError({ status: 409, code: "OUT_OF_DATE", message: GIFT_PAGE.cannotOpenHere });
+  return openWithLinkKey({ giftId: input.giftId, contract: ours, recipient: input.recipient, linkSecret: input.linkSecret, nowMs: input.nowMs });
 }
 
 /**

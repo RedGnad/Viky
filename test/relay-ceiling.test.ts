@@ -238,26 +238,27 @@ test("the ways out keep a part of everybody's count: a day used up by everything
   assert.equal((await refused(() => admitWayOut(from("10.2.0.1"), OTHER, NOW + 300))).code, "RELAY_CEILING", "and the whole count is still a ceiling");
 });
 
-test("only what the relayer pays for stays counted: a call the contract refuses when run for nothing is taken back", async () => {
+test("only what the relayer pays for stays counted against everybody: a call the contract refuses when run for nothing is taken back, and the one who asked keeps their own count of it", async () => {
   const request = from("203.0.113.40");
   const count = async (scope: string) => Number((await db.query<{ count: number }>("SELECT count FROM viky_relay_counts WHERE scope = $1", [scope])).rows[0]?.count ?? 0);
   const mine = `relay:day:account:${ACCOUNT.toLowerCase()}`;
   // Sent: counted.
   assert.equal(await countedIfSent(await admitRelay(request, ACCOUNT, NOW), async () => "sent"), "sent");
   assert.deepEqual([await count(mine), await count("relay:day:all")], [1, 1]);
-  // Refused by the contract in simulation, before anything was sent: the failure goes on as it was, the count comes back.
+  // Refused by the contract in simulation, before anything was sent: the failure goes on as it was, and everybody's
+  // count comes back. The account and the connection that asked keep theirs (the delta re-read of 2 Oct 2026).
   const unsent = new RelayerError("REVERTED", "The contract refused: InvalidIntentNonce", "InvalidIntentNonce", undefined, true);
   await assert.rejects(countedIfSent(await admitRelay(request, ACCOUNT, NOW), async () => Promise.reject(unsent)), (error: unknown) => error === unsent);
-  assert.deepEqual([await count(mine), await count("relay:day:all"), await count("relay:hour:ip:203.0.113.40")], [1, 1, 1]);
-  // The relayer could not send at all: the same.
+  assert.deepEqual([await count(mine), await count("relay:day:all"), await count("relay:hour:ip:203.0.113.40")], [2, 1, 2]);
+  // The relayer could not send at all, which is nothing of the request's doing: every count comes back.
   for (const code of ["RESERVE_TOO_LOW", "WRONG_CHAIN", "NOT_CONFIGURED"] as const) {
     await assert.rejects(countedIfSent(await admitRelay(request, ACCOUNT, NOW), async () => Promise.reject(new RelayerError(code, "no"))));
-    assert.equal(await count("relay:day:all"), 1, code);
+    assert.deepEqual([await count(mine), await count("relay:day:all"), await count("relay:hour:ip:203.0.113.40")], [2, 1, 2], code);
   }
   // Sent and then reverted, or not known final: the relayer paid, and it stays counted.
   await assert.rejects(countedIfSent(await admitRelay(request, ACCOUNT, NOW), async () => Promise.reject(new RelayerError("REVERTED", "reverted once mined"))));
   await assert.rejects(countedIfSent(await admitRelay(request, ACCOUNT, NOW), async () => Promise.reject(new Error("not final within the wait"))));
-  assert.deepEqual([await count(mine), await count("relay:day:all")], [3, 3]);
+  assert.deepEqual([await count(mine), await count("relay:day:all")], [4, 3]);
   assert.equal(nothingWasSent(unsent), true);
   assert.equal(nothingWasSent(new RelayerError("REVERTED", "reverted once mined")), false);
   assert.equal(nothingWasSent(new GiftApiError("NOT_ENOUGH", "no", 409)), false);
@@ -268,6 +269,23 @@ test("only what the relayer pays for stays counted: a call the contract refuses 
   assert.equal(await count("relay:day:all"), 3);
   // The relayer itself says which refusals cost nothing: the one it meets when it runs the call for nothing first.
   assert.match(readFileSync("src/relayer.ts", "utf8"), /"The contract refused the transaction", name, raw, true\);/);
+});
+
+test("attempts the contract refuses are held against the one who makes them, and never against everybody", async () => {
+  // The delta re-read of 2 Oct 2026: a refusal gave back the account's own counts too, so five hundred refused attempts
+  // in an hour, from one account on one connection, left every count at zero.
+  const request = from("203.0.113.77");
+  const refusedAtOnce = new RelayerError("REVERTED", "The contract refused: InvalidAuthorizationNonce", "InvalidAuthorizationNonce", undefined, true);
+  for (let i = 0; i < 20; i += 1) await countedIfSent(await admitRelay(request, ACCOUNT, NOW + i), async () => Promise.reject(refusedAtOnce)).catch(() => undefined);
+  const count = async (scope: string) => Number((await db.query<{ count: number }>("SELECT count FROM viky_relay_counts WHERE scope = $1", [scope])).rows[0]?.count ?? 0);
+  assert.deepEqual([await count(`relay:hour:account:${ACCOUNT.toLowerCase()}`), await count("relay:hour:ip:203.0.113.77"), await count("relay:day:all")], [20, 20, 0]);
+  // The twenty-first of the hour is refused by name before anything is run, and counted against nobody.
+  const over = await refused(() => admitRelay(request, ACCOUNT, NOW + 30));
+  assert.equal(over.code, "RELAY_CEILING");
+  assert.deepEqual([await count(`relay:hour:account:${ACCOUNT.toLowerCase()}`), await count("relay:day:all")], [20, 0]);
+  // Somebody else, on another connection, is refused nothing by it.
+  await admitRelay(from("198.51.100.77"), OTHER, NOW + 40);
+  assert.equal(await count("relay:day:all"), 1);
 });
 
 test("a request is counted last: after the gift is known, the account is its own, and the signature is theirs over what is sent", () => {

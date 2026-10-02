@@ -800,6 +800,8 @@ export const GIFT_PAGE = {
   openMyGift: "Open my gift",
   opening: "Opening",
   missingKey: "This link is missing its key. Ask for the link again.",
+  /** Said when the page cannot sign the opening here. The key after the link's `#` is never sent in its place. */
+  cannotOpenHere: "This page is out of date. Load it again to open your gift. Nothing was changed.",
   readingWhose: (funder: string | null, recipient: string | null) =>
     `It is between ${funder ?? "the person who offered it"} and ${recipient ?? "the person it is for"}.`,
 

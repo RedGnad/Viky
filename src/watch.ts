@@ -8,7 +8,8 @@ import { sendAlert, type AlertOutcome } from "./provider-alert";
  * What the operator is told without having to look (the audit of 1 Oct 2026). Four things could go wrong in silence
  * until a person met them: the relayer running out, the exchange moving away from where the exit router pinned it, the
  * evidence key of the environment no longer being the one the contracts name, and the morning pass not running at all.
- * Each is now one email through `sendAlert` (src/provider-alert.ts), sent when it is seen.
+ * Each is now one email through `sendAlert` (src/provider-alert.ts), sent when it is seen. A fifth since the delta
+ * re-read of 2 Oct 2026: a new evidence signer announced on a contract of the second version, told while it waits.
  *
  * They are looked at when a nightly pass starts, and once more at 02:00 UTC by its own cron, which is also the only one
  * that can see a pass that never started. Nothing here may stop a pass: every read is caught, and what could not be
@@ -86,6 +87,25 @@ export function evidenceKeyAlert(keys: EvidenceKeys): Alert | null {
   };
 }
 
+/**
+ * The alert of a new evidence signer announced on a contract of the second version, or none while nothing waits. A
+ * signer is announced in public and stands a day later, and from then anybody may apply it: that day protects only if
+ * somebody is told. It is said every time the watch runs, for as long as the announcement waits, whoever made it and
+ * whichever key it names: the owner calls it off, or applies it.
+ */
+export function announcedSignerAlert(keys: EvidenceKeys): Alert | null {
+  const waiting = keys.named.filter((entry) => entry.announced);
+  if (waiting.length === 0) return null;
+  return {
+    subject: "A new evidence signer is announced on a gift contract",
+    text: [
+      ...waiting.map((entry) => `${entry.contract} has ${entry.announced?.signer} announced as its evidence signer. Anybody may make it stand from ${new Date((entry.announced?.readyAt ?? 0) * 1_000).toISOString()}. Its signer today is ${entry.signer}.`),
+      `This environment signs evidence as ${keys.ours}.`,
+      "If the Safe did not announce it on purpose, call it off before that moment: ACTION=evidence-signer VALUE=0x0000000000000000000000000000000000000000 pnpm safe:action, with TARGET=escrow-v2 or milestone-v2. A signer that stands can attest progress that never happened on every open gift of that contract.",
+    ].join("\n"),
+  };
+}
+
 /** The first second of the UTC day `nowMs` falls in. */
 function startOfUtcDay(nowMs: number): number {
   return Math.floor(nowMs / 86_400_000) * 86_400_000;
@@ -120,9 +140,16 @@ async function look(watched: string, deps: WatchDeps, read: () => Promise<Alert 
   }
 }
 
-/** The pin and the evidence key, looked at whenever the watch runs. */
+/** The pin, the evidence key and a signer that waits to replace it, looked at whenever the watch runs. */
 function standing(deps: WatchDeps): Promise<WatchLine>[] {
-  return [look("exit pin", deps, async () => pinAlert(await deps.exitPin())), look("evidence key", deps, async () => evidenceKeyAlert(await deps.evidenceKeys()))];
+  // Read once for the two things that are said of it. A read that failed is told by each of them as "not read".
+  const keys = deps.evidenceKeys();
+  keys.catch(() => undefined);
+  return [
+    look("exit pin", deps, async () => pinAlert(await deps.exitPin())),
+    look("evidence key", deps, async () => evidenceKeyAlert(await keys)),
+    look("announced signer", deps, async () => announcedSignerAlert(await keys)),
+  ];
 }
 
 /** What is looked at when a nightly pass starts: the relayer as the pass found it, the pin, the evidence key. */
