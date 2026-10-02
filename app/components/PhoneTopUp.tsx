@@ -9,7 +9,8 @@ import { findPhoneOperators, followPhone, payPhone, phoneKindOf, pricePhone, typ
 import { AUSD } from "@/src/coins";
 import { twoDecimalsDown } from "@/src/exit-steps";
 import { PHONE_OUT as W } from "@/src/sentences";
-import { BODY, CARD, CARD_AMOUNT, CARD_LABEL, FIELD, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
+import { BODY, CARD, CARD_AMOUNT, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
+import { Said } from "../kit/Said";
 
 /**
  * Your phone, the third way out (D238), in three screens at most: where (the number and its phone company), how much
@@ -159,16 +160,16 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
       <section className={CARD}>
         <h2 className={TITLE}>{title}</h2>
         {status.state === "delivered" ? <p className={BODY}>{W.delivered(local(price.localAmount, price.localCurrency), price.operatorName)}</p> : null}
-        {status.state === "on_its_way" ? <p className={BODY}>{W.onItsWay}</p> : null}
+        {status.state === "on_its_way" ? <Said text={W.onItsWay} /> : null}
         {status.state === "refunded" ? <p className={BODY}>{W.refunded(status.amount)}</p> : null}
         {status.state === "refund_pending" ? <p className={BODY}>{W.refundPending(status.amount)}</p> : null}
         <div className="flex flex-wrap gap-[var(--tap-gap)]">
           {onItsWay ? (
-            <button type="button" onClick={() => void followPhone(status.orderId).then(setStatus, (error) => refusal(error))} className={INLINE_BUTTON}>
+            <button type="button" onClick={() => void followPhone(status.orderId).then(setStatus, (error) => refusal(error))} className={SMALL_BUTTON}>
               {W.checkAgain}
             </button>
           ) : null}
-          <button type="button" onClick={props.onBack} className={INLINE_BUTTON}>
+          <button type="button" onClick={props.onBack} className={SMALL_BUTTON}>
             {W.back}
           </button>
         </div>
@@ -204,7 +205,8 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
         ) : null}
         {price ? (
           <div>
-            <p className={CARD_LABEL}>{W.priced(local(price.localAmount, price.localCurrency), price.operatorName)}</p>
+            {/* A sentence, so it is said in the help voice and not in small capitals (the founder's rule 5 of 1 Oct 2026). */}
+            <p className={HELP}>{W.priced(local(price.localAmount, price.localCurrency), price.operatorName)}</p>
             <p className={CARD_AMOUNT}>{dollars(price.ausdUnits)}</p>
             <p className={HELP}>{W.costs(dollars(price.ausdUnits), dollars(props.ausd > price.ausdUnits ? props.ausd - price.ausdUnits : 0n), price.feeUnits > 0n ? dollars(price.feeUnits) : undefined)}</p>
           </div>
@@ -220,7 +222,7 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
               {busy ? W.pricing : W.getPrice}
             </button>
           )}
-          <button type="button" onClick={() => { setScreen("where"); setProblem(null); setPrice(null); }} disabled={busy} className={INLINE_BUTTON}>
+          <button type="button" onClick={() => { setScreen("where"); setProblem(null); setPrice(null); }} disabled={busy} className={SMALL_BUTTON}>
             {W.back}
           </button>
         </div>
@@ -244,8 +246,9 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
       <label className="flex flex-col gap-[var(--space-xs)]">
         <span className={BODY}>{W.number}</span>
         <input value={phone} onChange={(event) => { setPhone(event.target.value); setOperators(null); setProblem(null); }} inputMode="tel" autoComplete="tel" className={FIELD} disabled={busy} />
-        <span className={HELP}>{W.numberHelp}</span>
       </label>
+      {/* One line under the field, the rest folded (the founder's rule 4 of 1 Oct 2026). */}
+      <Said under className={HELP} text={W.numberHelp} />
       {operators && ofKind.length > 1 ? (
         <div className="flex flex-col gap-[var(--tap-gap)]">
           <p className={BODY}>{W.whichCompany}</p>
@@ -262,7 +265,7 @@ export function PhoneTopUp(props: Readonly<{ rates?: Rates; ausd: bigint; ensure
         <button type="button" onClick={() => void find()} disabled={busy || phone.trim().length < 8} className={PRIMARY_BUTTON}>
           {busy ? W.finding : W.find}
         </button>
-        <button type="button" onClick={props.onBack} disabled={busy} className={INLINE_BUTTON}>
+        <button type="button" onClick={props.onBack} disabled={busy} className={SMALL_BUTTON}>
           {W.back}
         </button>
       </div>

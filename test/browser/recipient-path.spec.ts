@@ -294,7 +294,7 @@ test.describe("the path of the person a gift is for", () => {
       })();`);
       await unopened(computer.page);
       await computer.page.goto(`/g/${GIFT}?t=${KEY}`);
-      await expect(computer.page.getByText("This computer did not find a fingerprint reader or Windows Hello. Use a security key, or open this gift's link on your phone.")).toBeVisible();
+      await expect(computer.page.getByText("This computer did not find a fingerprint reader or Windows Hello.", { exact: true })).toBeVisible();
       await expect(computer.page.getByRole("button", { name: "Create my account" })).toBeEnabled();
       await shot(computer.page, size.name, "6h-a-computer-with-no-sensor");
       await computer.context.close();

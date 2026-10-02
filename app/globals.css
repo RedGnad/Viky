@@ -505,9 +505,10 @@ video {
 }
 
 /*
- * The one small button (rule 2): 40 high on a relief of three, as the mockup draws it, and 44 to the touch, which is
- * what its own box cannot give at that height: the area a finger reaches is drawn over it, four pixels past it above
- * and below, and nothing is painted there.
+ * The one small button (rule 2): 40 high on a relief of three, as the mockup draws it. The rule asks 44 to the touch
+ * at least, and the product's own floor is 48 (WCAG 2.5.5 at its strictest level, Material): the area a finger
+ * reaches is drawn over the button, six pixels past its inner box above and below, which makes it 48, and nothing is
+ * painted there.
  */
 .small-button {
   box-shadow: 0 3px 0 var(--control-relief-colour);
@@ -519,7 +520,7 @@ video {
 .small-button::before {
   content: "";
   position: absolute;
-  inset: -4px 0;
+  inset: -6px 0;
 }
 
 .small-button:active:not(:disabled),
@@ -1391,6 +1392,54 @@ dialog.sheet[open] {
 .had-or-not-character {
   display: block;
   width: 96px;
+}
+
+/*
+ * A fold that holds what a block says beyond its first sentence (app/kit/Said.tsx, rule 4): a name and the card's own
+ * chevron, quiet, as tall as a thumb, with a hairline over it. On the ground the hairline is the ground's divider, on
+ * the paper the paper's rule: `--divider` is re-pointed there.
+ */
+.said-fold {
+  border-top: 1px solid var(--divider);
+}
+
+.said-fold-name {
+  font-size: var(--type-help);
+  line-height: var(--type-help-leading);
+  color: var(--muted);
+  display: flex;
+  min-height: var(--tap-target);
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  list-style: none;
+}
+
+.said-fold-name::-webkit-details-marker {
+  display: none;
+}
+
+/* Its chevron is the fold's own ink, whatever it stands on, and every fold's chevron turns when it opens. */
+.said-fold .gift-chevron {
+  color: currentColor;
+}
+
+details[open] > summary .gift-chevron {
+  transform: rotate(180deg);
+}
+
+/* A fold that is a card of its own (Me's code): the same name and chevron, and no marker of the browser's. */
+details > summary.gift-fold-name {
+  list-style: none;
+}
+
+details > summary.gift-fold-name::-webkit-details-marker {
+  display: none;
+}
+
+.said-fold-body {
+  padding-bottom: var(--space-sm);
 }
 
 /*

@@ -129,7 +129,7 @@ test("on that path nothing is chosen and nothing is pasted, and the sentences sa
 
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   assert.match(sheet, /if \(!enough && way\.embedded\) return router\.push\("\/fund\?step=paying&card=1"\);/, "the same press opens the card on the wait, after the account is made and the gift kept");
-  assert.match(sheet, /\{way\.embedded\n\s*\? W\.partnerEmbedded\(way\.name, euros\)\n/);
+  assert.match(sheet, /way\.embedded\n\s*\? W\.partnerEmbedded\(way\.name, euros\)\n/);
   assert.match(sheet, /\{byCard \? <CardTermsLine way=\{way\} \/> : null\}/, "the terms line follows, with the way's own name and link");
   const wait = readFileSync("app/components/PayGift.tsx", "utf8");
   assert.match(wait, /\{wayInAsksNothing\(wayIn\) && !cardClosed \? null : \(\n\s*<section className=\{CARD\}>/, "no settings and no code to give on the wait either");

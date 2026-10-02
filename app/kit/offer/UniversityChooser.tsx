@@ -6,7 +6,7 @@ import type { GiftDraft } from "@/src/gift-draft";
 import { countryInWords } from "@/src/rail-country";
 import { UNIVERSITY_CHOICE as W } from "@/src/sentences";
 import { indexUniversities, shownUniversities, type IndexedUniversity, type ListedUniversity } from "@/src/university-choice";
-import { CHOICE, HELP, INLINE_BUTTON, META } from "../../components/ui";
+import { CHOICE, HELP, META, SMALL_BUTTON } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { CountryPicker } from "../CountryPicker";
 import { Field } from "../Field";
@@ -120,7 +120,7 @@ export function UniversityChooser({
           <span className={`${CHOICE} break-words`}>{name}</span>
           {where ? <span className={META}>{where}</span> : null}
         </span>
-        <button type="button" className={`${INLINE_BUTTON} shrink-0`} aria-label={`${W.change}: ${name}`} onClick={() => setChanging(true)}>
+        <button type="button" className={`${SMALL_BUTTON} shrink-0`} aria-label={`${W.change}: ${name}`} onClick={() => setChanging(true)}>
           {W.change}
         </button>
       </div>
@@ -182,12 +182,12 @@ export function UniversityChooser({
       )}
       {/* One line under the list (D264): an invitation, and nothing about how a university is checked, which the gift's
           page says where the proof is shown. */}
-      <p className={HELP}>
-        {W.notListed}{" "}
-        <Link href="/add-your-university" className="font-medium text-[var(--on-surface)] underline underline-offset-2">
+      <div className="flex items-center justify-between gap-[var(--space-md)]">
+        <p className={HELP}>{W.notListed}</p>
+        <Link href="/add-your-university" className={`${SMALL_BUTTON} no-underline`}>
           {W.addYours}
         </Link>
-      </p>
+      </div>
     </div>
   );
 }

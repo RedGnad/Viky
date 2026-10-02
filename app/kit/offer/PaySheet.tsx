@@ -21,12 +21,14 @@ import { rateDateInWords, spokenAmount } from "@/src/display-currency";
 import type { RailReach } from "@/src/rail-country";
 import { feeSentence, RAMP_NO_GIFT_COIN_IN, wayInFillsIn, wayInPage, waysIn, WAY_IN_GIFT_COIN, WAY_IN_USDC } from "@/src/rails";
 import { ACCOUNT_DOOR, CASH_OUT, FUND, MILESTONE_FUND, PAY as W } from "@/src/sentences";
-import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
+import { BODY, CARD_AMOUNT, CARD_LABEL, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../../components/ui";
 import { AccountPanel } from "../../components/AccountPanel";
 import { Field } from "../Field";
 import { CardNotOffered, CardTermsLine } from "./CardTerms";
 import { JudgeCode } from "./JudgeCode";
 import { FieldRefusal } from "../FieldRefusal";
+import { FoldChevron } from "../GiftLive";
+import { Said } from "../Said";
 import { Sheet } from "../Sheet";
 
 /**
@@ -286,15 +288,19 @@ export function PaySheet({
       {/* What the partner's page will ask, just before it opens (D289, D294): filled in with Ramp's key, and without it
           what to choose there and where the code goes, with the code one press away once the account exists. */}
       {byCard ? (
-        <p className={BODY}>
-          {way.embedded
-            ? W.partnerEmbedded(way.name, euros)
-            : way === WAY_IN_USDC
-              ? W.partnerLocked(way.name)
-              : wayInFillsIn(way)
-                ? W.partnerFilledIn
-                : W.partnerPaste(way.name, way.delivers.coin, way.delivers.network, way.arrives === "gift")}
-        </p>
+        /* One sentence in the open, who takes the card, and what its page asks folded under it (rule 4): the wait
+           says the same settings again, one by one, where they are needed. */
+        <Said
+          text={
+            way.embedded
+              ? W.partnerEmbedded(way.name, euros)
+              : way === WAY_IN_USDC
+                ? W.partnerLocked(way.name)
+                : wayInFillsIn(way)
+                  ? W.partnerFilledIn
+                  : W.partnerPaste(way.name, way.delivers.coin, way.delivers.network, way.arrives === "gift")
+          }
+        />
       ) : null}
       {/* A judge's code (D297): only while credits are open, and the gift is not yet covered. */}
       {address ? (
@@ -315,7 +321,7 @@ export function PaySheet({
           <button
             type="button"
             // A small key and not a second action (D239): the sheet's one action stays "Pay".
-            className={`${INLINE_BUTTON} self-start`}
+            className={`${SMALL_BUTTON} self-start`}
             onClick={() =>
               void navigator.clipboard.writeText(address).then(
                 () => {
@@ -347,7 +353,7 @@ export function PaySheet({
       <p className={HELP}>{address || hasCredential ? W.signedIn : madeHere ? W.passkeyMakesTheAccount : ACCOUNT_DOOR.madeOnTheMainSite}</p>
       {/* A passkey kept by another device is not known to this one, and pay would make a second account (1 Oct 2026). */}
       {!address && !hasCredential ? (
-        <button type="button" className={`${INLINE_BUTTON} self-start`} disabled={busy || status === "busy"} onClick={() => void signInFirst()}>
+        <button type="button" className={`${SMALL_BUTTON} self-start`} disabled={busy || status === "busy"} onClick={() => void signInFirst()}>
           {W.alreadyHaveAccount}
         </button>
       ) : null}
@@ -355,8 +361,12 @@ export function PaySheet({
       {/* The one sentence that changes what a person does next stays in front of everybody: a link opens the gift
           for whoever opens it first. Everything else only some readers need, and it is one press away (GOV.UK). */}
       <p className="font-medium">{FUND.check.linkRisk(recipient)}</p>
-      <details>
-        <summary className="cursor-pointer font-medium">{W.whatHappens}</summary>
+      <details className="said-fold" data-what-happens="">
+        <summary className="said-fold-name">
+          {W.whatHappens}
+          <FoldChevron />
+        </summary>
+        <div className="said-fold-body flex flex-col gap-[var(--space-sm)]">
         {milestone ? (
           <>
             {/* The hour is the reader's own, and the server has no idea which clock that is (D151): it is printed
@@ -381,6 +391,7 @@ export function PaySheet({
             <p className={HELP}>{CASH_OUT.sourceLine(way.source, way.read)}</p>
           </>
         )}
+        </div>
       </details>
     </Sheet>
   );

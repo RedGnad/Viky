@@ -38,6 +38,8 @@ export type ConnectWords = Readonly<{
    */
   connectNow?: string;
   firstReading?: string;
+  /** What to do about it, a line of its own: the two were one sentence, too long to stand in the open. */
+  firstReadingThen?: string;
   /**
    * The label of the gesture that takes the first reading, and they are not the same gesture in words: where the
    * funder named the account nothing was asked of the person, so it starts; where a code is waiting in their own
@@ -93,6 +95,7 @@ export function ConnectTheSource({
         {words.named ? <p className={BODY}>{words.named}</p> : null}
         {words.connectNow ? <p className="font-medium">{words.connectNow}</p> : null}
         {words.firstReading ? <p className={HELP}>{words.firstReading}</p> : null}
+            {words.firstReadingThen ? <p className={HELP}>{words.firstReadingThen}</p> : null}
         <button type="button" onClick={onStart} disabled={working} className={PRIMARY_BUTTON}>
           {busy === "starting" ? W.reading : words.start}
         </button>
@@ -121,6 +124,7 @@ export function ConnectTheSource({
             {account.codeExpired ? <p className={BODY}>{W.expired}</p> : null}
             {words.connectNow ? <p className="font-medium">{words.connectNow}</p> : null}
             {words.firstReading ? <p className={HELP}>{words.firstReading}</p> : null}
+            {words.firstReadingThen ? <p className={HELP}>{words.firstReadingThen}</p> : null}
             <button type="button" onClick={onAskCode} disabled={working} className={PRIMARY_BUTTON}>
               {busy === "naming" ? W.checking : account.codeExpired ? words.newCode : words.getCode}
             </button>
@@ -148,6 +152,7 @@ export function ConnectTheSource({
             {validUntil ? <p className={HELP}>{W.validUntil(validUntil)}</p> : null}
             {words.connectNow ? <p className="font-medium">{words.connectNow}</p> : null}
             {words.firstReading ? <p className={HELP}>{words.firstReading}</p> : null}
+            {words.firstReadingThen ? <p className={HELP}>{words.firstReadingThen}</p> : null}
             <button type="button" onClick={onStart} disabled={working} className={PRIMARY_BUTTON}>
               {busy === "starting" ? W.reading : words.added}
             </button>

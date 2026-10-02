@@ -1,7 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { CARD, FIELD, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "./ui";
+import { CARD, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "./ui";
 import { useDoor, useMadeHere } from "@/src/account/door";
 import { useAccount } from "@/src/account/provider";
 import { ACCOUNT_DOOR as W } from "@/src/sentences";
@@ -51,10 +51,10 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
           Your account is protected by your passkey. Nothing to remember, nothing to write down.
         </p>
         <div className="flex flex-wrap gap-[var(--space-sm)]">
-          <button type="button" onClick={signOut} className={INLINE_BUTTON}>
+          <button type="button" onClick={signOut} className={SMALL_BUTTON}>
             Sign out
           </button>
-          <button type="button" onClick={useAnotherAccount} className={INLINE_BUTTON}>
+          <button type="button" onClick={useAnotherAccount} className={SMALL_BUTTON}>
             Use another account
           </button>
         </div>
@@ -89,10 +89,13 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
       <button type="submit" disabled={busy} className={returning ? SECONDARY_BUTTON : PRIMARY_BUTTON}>
         {busy ? "One moment" : "Create my account"}
       </button>
-      <p className={HELP}>
-        {/* One sentence, not two saying the same thing: what it is, rather than what it is not (NN/g, concise). */}
-        {noSensor ? W.computer(onGift) : W.how}
-      </p>
+      {/* One sentence, not two saying the same thing: what it is, rather than what it is not (NN/g, concise). Where
+          the computer has nothing to make a passkey with, what it lacks and what to do, a line each. */}
+      {(noSensor ? W.computer(onGift) : [W.how]).map((line) => (
+        <p key={line} className={HELP}>
+          {line}
+        </p>
+      ))}
       {noSensor ? <CopyThisLink browser={null} /> : null}
 
       {naming ? (
@@ -116,7 +119,7 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
           <p className={HELP}>Only your device uses it, to label your passkey. Viky never receives it.</p>
         </>
       ) : (
-        <button type="button" onClick={() => setNaming(true)} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+        <button type="button" onClick={() => setNaming(true)} className={`${SMALL_BUTTON} self-start`}>
           Name this device (optional)
         </button>
       )}
@@ -150,7 +153,7 @@ export function AccountPanel({ returning = false, signInOnly = false }: Readonly
           type="button"
           onClick={useAnotherAccount}
           disabled={busy}
-          className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}
+          className={`${SMALL_BUTTON} self-start`}
         >
           Use another account
         </button>

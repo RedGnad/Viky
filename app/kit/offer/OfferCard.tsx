@@ -13,7 +13,7 @@ import { startingFigure } from "@/src/starting-amount";
 import { dollarsHeld, type Holdings } from "../money";
 import { AmountError } from "@/src/money";
 import { OFFER as W } from "@/src/sentences";
-import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../../components/ui";
+import { CARD, CARD_AMOUNT, CARD_LABEL, CARD_TITLE, CHIP, HELP, PRIMARY_BUTTON, ROW_BUTTON } from "../../components/ui";
 import { CardFace } from "../GiftCard";
 import { Character } from "../Character";
 import { CurrencySheet } from "../CurrencySheet";
@@ -193,7 +193,7 @@ export function OfferCard({
               onClick={() => setChoosing(condition && !filled.will ? "questions" : "list")}
               /* Eight pixels more than a caption gets under a title: this one is a control, and at four it sat on
                  the name's own box (the founder, 21 Sep 2026). */
-              className={`${INLINE_BUTTON} mt-[var(--space-sm)] justify-between text-left`}
+              className={`${ROW_BUTTON} mt-[var(--space-sm)] justify-between text-left`}
             >
               <span className="flex min-w-0 flex-col">
                 <span className={CARD_LABEL}>{W.invites.will}</span>

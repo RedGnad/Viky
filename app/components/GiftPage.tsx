@@ -477,6 +477,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
         proveSteps: milestoneById(milestone.conditionId)?.words.codeSteps ?? "",
         connectNow: A.connectNow,
         firstReading: A.firstReading,
+        firstReadingThen: A.firstReadingThen,
         start: A.startReading(source),
         added: A.added,
         getCode: A.getCode,
@@ -525,7 +526,7 @@ function LiveGift({ status, linkKey, reload, refresh, openTake }: Readonly<{ sta
       return signingIn ? (
         <AccountPanel returning signInOnly />
       ) : (
-        <button type="button" onClick={() => setSigningIn(true)} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+        <button type="button" onClick={() => setSigningIn(true)} className={`${SMALL_BUTTON} self-start`}>
           {W.signInToSee}
         </button>
       );

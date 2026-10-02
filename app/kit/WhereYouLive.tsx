@@ -4,7 +4,7 @@ import { countryOfNumber, lastNumber, loadOutCountries, useAccountCountry } from
 import { whereTheRailsServe } from "@/src/client/rails";
 import { countryInWords } from "@/src/rail-country";
 import { WHERE_YOU_LIVE as W } from "@/src/sentences";
-import { CARD, HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../components/ui";
+import { CARD, HELP, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { CountryPicker } from "./CountryPicker";
 
 /**
@@ -42,7 +42,7 @@ export function WhereYouLive({ address }: Readonly<{ address: string }>) {
           <span className="font-medium">{W.label}</span>
           <span className="flex items-center gap-[var(--space-sm)]">
             <span>{countryInWords(country) ?? country.toUpperCase()}</span>
-            <button type="button" onClick={() => setChanging(true)} className={INLINE_BUTTON}>
+            <button type="button" onClick={() => setChanging(true)} className={SMALL_BUTTON}>
               {W.change}
             </button>
           </span>

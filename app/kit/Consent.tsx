@@ -6,7 +6,7 @@ import { loadConsent, signConsent, type GiftConsentAnswer } from "@/src/client/c
 import { conditionById } from "@/src/conditions";
 import { dateInWords } from "@/src/moments";
 import { CONSENT as C, YOU_DECIDE as Y } from "@/src/sentences";
-import { BODY, CARD, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
+import { BODY, CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { FieldRefusal } from "./FieldRefusal";
 import { Sheet } from "./Sheet";
 
@@ -258,7 +258,7 @@ export function WhatVikyReads({ gifts, zone }: Readonly<{ gifts: readonly ReadFo
               {answer.state?.kind === "stop" ? ` ${C.meStopped(dateInWords(Date.parse(answer.state.signedAt), zone))}` : ""}
             </p>
             {reading ? (
-              <button type="button" onClick={() => setStopping(gift)} disabled={busy} className={`${INLINE_BUTTON} shrink-0`}>
+              <button type="button" onClick={() => setStopping(gift)} disabled={busy} className={`${SMALL_BUTTON} shrink-0`}>
                 {C.stop}
               </button>
             ) : null}

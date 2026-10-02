@@ -50,7 +50,7 @@ test("every link of the screen opens the page this builds, and one gesture copie
   assert.doesNotMatch(screen, /chosen\.page/, "never the way's bare address");
   assert.match(screen, /<a href=\{wayOutPage\(chosen, \{ account: address, units: ready\.units \}\)\} target="_blank" rel="noopener noreferrer" onClick=\{copyCode\}/);
   assert.equal(CASH_OUT.copyAndOpen("Ramp"), "Copy my code and open Ramp");
-  assert.equal(CASH_OUT.comeBack("Ramp"), "Ramp opens in a new tab and uses its own words. Come back to this tab with the code it gives you.");
+  assert.deepEqual(CASH_OUT.comeBack("Ramp"), ["Ramp opens in a new tab and uses its own words.", "Come back to this tab with the code it gives you."]);
   assert.ok(!("order" in CASH_OUT), "the separate button that opened the page is gone");
   // The code is still shown whole, above the gesture, so it can be compared with what was pasted (decision 9).
   const step = screen.slice(screen.indexOf("W.step2(chosen.name)"), screen.indexOf("W.itIsYours(chosen.name)"));

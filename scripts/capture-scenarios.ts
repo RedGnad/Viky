@@ -371,7 +371,7 @@ export const SCENARIOS: Scenario[] = [
       await s.page.locator(`a[href="/g/${GIFT_ID}"]`).first().click();
       await s.settle();
       await s.page.getByRole("list", { name: "Every day of this gift" }).waitFor({ state: "visible", timeout: 30_000 });
-      await s.click("What was agreed");
+      await s.page.getByText("What was agreed", { exact: true }).click();
       await s.text("It is yours already. Use it from Home whenever you like.");
       await s.shot("recipient", "every day state", `${HOME}: the gift under "What's moving", What was agreed`);
     },
@@ -728,7 +728,7 @@ function withdrawal(): Scenario[] {
     await s.click("Send to my bank");
     await s.page.getByLabel("How much do you want to send to your bank?").fill("10");
     await s.click("See what you will get");
-    await s.text("You will get at least $9.99 to send.");
+    await s.text("To send, at least");
   };
 
   return [
@@ -854,7 +854,7 @@ function withdrawal(): Scenario[] {
 
         await s.page.getByLabel("How much do you want to send to your bank?").fill("10");
         await s.click("See what you will get");
-        await s.text("You will get at least $9.99 to send.");
+        await s.text("To send, at least");
         await s.shot("withdrawal", "step 1, the review", `${WAY}, Send to my bank, type 10, See what you will get`);
 
         await s.click("Get $9.99 ready");
@@ -1043,7 +1043,7 @@ function withdrawal(): Scenario[] {
         await s.api("GET", "/api/giftcards/codes", () => ({ status: 200, body: { cards: [] } }), "GET /api/giftcards/codes");
         await s.signIn();
         await s.click("Spend or withdraw");
-        await s.click(exact("change"));
+        await s.click(exact("Change"));
         await s.page.locator("#use-where-you-live").click();
         await s.page.getByRole("dialog").waitFor({ state: "visible" });
         await s.shot("use your money", "where you live, the sheet", `${WAY}, change, then the country`);

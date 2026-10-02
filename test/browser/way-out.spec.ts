@@ -66,13 +66,16 @@ test.describe("taking money out", () => {
       await expect(page.getByText("$9.99 of it is ready to send to Ramp.")).toBeVisible();
       await expect(page.getByRole("heading", { name: /^Step 2 of 3/ })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Send to my bank" })).toBeEnabled();
-      await expect(page.getByText("A transfer in euros to your IBAN, within two working days. Our partner Ramp asks for your ID, once.")).toBeVisible();
+      // One sentence in the open on the card that decides, and the partner's ID check folded under it (rule 4).
+      await expect(page.getByText("A transfer in euros to your IBAN, within two working days.", { exact: true })).toBeVisible();
+      await expect(page.locator(".said-fold").getByText("Our partner Ramp asks for your ID, once.", { exact: true })).toHaveCount(1);
       await shot(page, size.name, "1a-first-screen-with-money-ready");
 
       await page.getByRole("button", { name: "Continue with Ramp" }).click();
       await expect(page.getByRole("heading", { name: "Step 2 of 3: Place your order with Ramp" })).toBeVisible();
       await expect(page.getByText("On Ramp's page, pick USDC, the one marked Monad, and type 9.99.")).toBeVisible();
-      await expect(page.getByText("Ramp opens in a new tab and uses its own words. Come back to this tab with the code it gives you.")).toBeVisible();
+      await expect(page.getByText("Ramp opens in a new tab and uses its own words.", { exact: true })).toBeVisible();
+      await expect(page.getByText("Come back to this tab with the code it gives you.", { exact: true })).toBeVisible();
       const open = page.getByRole("link", { name: "Copy my code and open Ramp" });
       await expect(open).toHaveAttribute("href", "https://rampnetwork.com/sell");
       await expect(open).toHaveAttribute("target", "_blank");
@@ -128,7 +131,8 @@ test.describe("taking money out", () => {
       await person(american, { ausd: 100_000_000n, usdc: 0n, mon: 0n }, { country: "us", bank: "serves", card: "does-not", method: { method: "AMERICAN_BANK_TRANSFER", currency: "USD" } });
       await american.page.goto("/cash-out");
       const bank = american.page.locator("section", { has: american.page.getByRole("heading", { name: "Your bank" }) });
-      await expect(bank.getByText("A transfer in dollars to your bank account. Our partner Ramp asks for your ID, once.")).toBeVisible();
+      await expect(bank.getByText("A transfer in dollars to your bank account.", { exact: true })).toBeVisible();
+      await expect(bank.locator(".said-fold").getByText("Our partner Ramp asks for your ID, once.", { exact: true })).toHaveCount(1);
       await expect(bank.getByText(/IBAN|euros/)).toHaveCount(0);
       // A hundred dollars less the service's 1.99 EUR minimum, counted back at the day's rate: said in dollars.
       await expect(bank.getByText("$97.74")).toBeVisible();

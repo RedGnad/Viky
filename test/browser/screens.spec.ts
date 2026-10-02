@@ -235,7 +235,7 @@ test.describe("the screens a person meets", () => {
     await openTheFamily(page, /School & studies/);
     const other = sheet.getByRole("button", { name: /A Duolingo English Test score/i });
     await other.click();
-    await expect(sheet.locator("[data-condition-help]")).toBeVisible();
+    await expect(sheet.locator("[data-how-checked] [data-condition-help]")).toHaveCount(1);
     await sheet.getByRole("button", { name: /change/i }).click();
     await expect(sheet.locator("[data-family-art]")).toHaveCount(0);
     await expect(sheet.getByRole("button", { name: /A Duolingo English Test score/i })).toHaveAttribute("aria-current", "true");
@@ -265,8 +265,13 @@ test.describe("the screens a person meets", () => {
       const box = await targets.nth(index).boundingBox();
       if (!box) continue;
       const label = (await targets.nth(index).innerText()).slice(0, 40);
+      // What a finger reaches: the box, and the area the one small button lays past its 40 pixels, above and below.
+      const past = await targets.nth(index).evaluate((element) => {
+        const reach = getComputedStyle(element, "::before");
+        return reach.content !== "none" && reach.position === "absolute" ? Math.max(0, -parseFloat(reach.top)) + Math.max(0, -parseFloat(reach.bottom)) : 0;
+      });
       // The floor platform guidance gives for a thumb, rather than a number we invented.
-      expect(box.height, `"${label}" is too short to tap`).toBeGreaterThanOrEqual(44);
+      expect(box.height + past, `"${label}" is too short to tap`).toBeGreaterThanOrEqual(44);
     }
   });
 });

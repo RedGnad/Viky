@@ -58,17 +58,22 @@ export const PRIMARY_BUTTON = `${TAP} ${FOCUS} action-relief w-full rounded-full
  */
 export const SECONDARY_BUTTON = `${TAP} ${FOCUS} w-full rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-lg)] py-[var(--space-md)] text-[length:var(--type-body)] tracking-[var(--tracking-label)] ${WAITING}`;
 
-/** A secondary action that sits beside others rather than filling the width. */
-export const INLINE_BUTTON = `${TAP} ${FOCUS} rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-lg)] py-[var(--space-sm)] text-[length:var(--type-help)] tracking-[var(--tracking-label)] ${WAITING}`;
+/**
+ * A row that is a key: a line of the chooser, the condition's line on the card. As tall as a thumb, with the outline,
+ * the relief and the quiet fill of every key that is not the one action, and room for two lines of words. It was the
+ * "inline button", which small actions wore too until the founder's rule 2 of 1 Oct 2026 gave those one size of their
+ * own (SMALL_BUTTON below).
+ */
+export const ROW_BUTTON = `${TAP} ${FOCUS} rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-lg)] py-[var(--space-sm)] text-[length:var(--type-help)] tracking-[var(--tracking-label)] ${WAITING}`;
 
 /**
  * The one small button (the founder's rule 2 of 1 Oct 2026, kit-rules.html): 40 high, its words in the help size at
- * the label weight, and a capital on its first word. The area a finger reaches is 44 at least, which Apple asks of
- * every control, and the stylesheet gives it (`.small-button::before`) so the drawing stays 40.
+ * the label weight, and a capital on its first word. The area a finger reaches is 48, the product's floor for every
+ * control (Apple asks 44), and the stylesheet gives it (`.small-button::before`) so the drawing stays 40.
  */
 export const SMALL_BUTTON = `${FOCUS} small-button relative inline-flex h-[40px] shrink-0 items-center justify-center gap-[var(--space-sm)] rounded-full ${OUTLINE} bg-[var(--tonal)] px-[var(--space-lg)] text-[length:var(--type-help)] font-semibold tracking-[var(--tracking-label)] ${WAITING}`;
 
-/** One of several choices on a row, a chip: the inline button, and the one pressed takes the chosen fill. */
+/** One of several choices on a row, a chip: a small key, and the one pressed takes the chosen fill. */
 export const CHIP = `${TAP} ${FOCUS} rounded-full ${OUTLINE} ${RELIEF} bg-[var(--tonal)] px-[var(--space-md)] text-[length:var(--type-help)] tracking-[var(--tracking-label)]`;
 
 /**

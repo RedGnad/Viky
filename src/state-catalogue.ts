@@ -339,7 +339,7 @@ export const RECIPIENT_JOURNEY: readonly CatalogueScreen[] = [
       {
         name: "Step 1, the review before getting it ready",
         when: "the price answered",
-        says: ["You will get at least", "Nothing leaves your account yet.", "This amount holds for 4 minutes.", "Get "],
+        says: ["To send, at least", "On your bank, about", "Nothing leaves your account yet.", "This amount holds for 4 minutes.", "Get "],
       },
       {
         name: "Ready, with steps 2 and 3",

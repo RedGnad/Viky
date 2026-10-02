@@ -151,8 +151,8 @@ test("the way out shows one accent surface at a time, on the action it is waitin
   // The card in Viky's words (D270): its name, its nature, its two lines, and no source on it; the sources are behind
   // the fold. The partner is named in the card's own sentence before the person goes to it, and never "crypto".
   assert.match(screen, /<h3 className=\{CARD_TITLE\}>\{words\.name\}<\/h3>/);
-  assert.match(screen, /<p className=\{BODY\}>\{use === "bank" && bankPays \? U\.bankBy\(bankPays\.method, bankPays\.currency\) : words\.body\}<\/p>/);
-  const cards = screen.slice(screen.indexOf("{uses.map((use, index) => {"), screen.indexOf("<details className={HELP}>"));
+  assert.match(screen, /<Said text=\{use === "bank" && bankPays \? U\.bankBy\(bankPays\.method, bankPays\.currency\) : words\.body\} \/>/);
+  const cards = screen.slice(screen.indexOf("{uses.map((use, index) => {"), screen.indexOf('<details className="said-fold">'));
   assert.doesNotMatch(cards, /sourceLine|feeSentence|way\.conditions|way\.line/, "the card that decides carries no source, no fee sentence, no list, no partner's line");
   assert.match(USE_MONEY.bank.body, /Our partner Ramp asks for your ID, once\./);
   assert.match(USE_MONEY.card.body, /Our partner Mercuryo asks for your ID and your card, once\./);
@@ -163,7 +163,9 @@ test("the way out shows one accent surface at a time, on the action it is waitin
   }
   // What stops a person at the service is said at step 2, where its page opens.
   const step2 = screen.slice(screen.indexOf("W.step2(chosen.name)"), screen.indexOf("W.step3"));
-  assert.match(step2, /chosen\.conditions\.map/);
+  // What stops a person at the service itself is said on this step, folded under its first line (rule 4).
+  assert.match(step2, /<Said whole className=\{HELP\} text=\{\[W\.itIsYours\(chosen\.name\), \.\.\.chosen\.conditions,/);
+  assert.match(step2, /\{W\.comeBack\(chosen\.name\)\.map\(\(line\) => \(/, "what opens and what to come back with stay in the open");
   // Steps 2 and 3 share a screen: placing the order leads until a code can be sent to, and then sending does.
   assert.match(screen, /const sendable = deposit\.trim\(\) !== "" && problemWithCode === null;/);
   assert.match(screen, /className=\{sendable \? SECONDARY_BUTTON : PRIMARY_BUTTON\}/, "the order button steps back");

@@ -93,7 +93,14 @@ test.describe("what the design pass promised", () => {
            * control that is exactly 48 tall reads 47.999999999999996 and fails a rule it passes. The rule is
            * 48 CSS pixels, and that figure is 48.
            */
-          const height = Math.round(box.height * 100) / 100;
+          /**
+           * What a finger reaches, which is what the rule is about: the control's own box, and the area drawn past it
+           * where there is one. The one small button is 40 high (the founder's rule 2 of 1 Oct 2026) and reaches 48
+           * through an area laid over it, above and below.
+           */
+          const reach = getComputedStyle(element, "::before");
+          const past = reach.content !== "none" && reach.position === "absolute" ? Math.max(0, -parseFloat(reach.top)) + Math.max(0, -parseFloat(reach.bottom)) : 0;
+          const height = Math.round((box.height + past) * 100) / 100;
           const width = Math.round(box.width * 100) / 100;
           if (height < 48 || width < 48) {
             const label = (element.textContent || element.getAttribute("placeholder") || "field").trim().slice(0, 40);

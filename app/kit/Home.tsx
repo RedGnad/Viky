@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAccount } from "@/src/account/provider";
 import { CATALOGUE, HOME as W, ME, NAV } from "@/src/sentences";
-import { BODY, HELP, HERO, LEAD, PRIMARY_BUTTON, TITLE } from "../components/ui";
+import { BODY, HELP, HERO, LEAD, PRIMARY_BUTTON, SMALL_BUTTON, TITLE } from "../components/ui";
 import { Arrival, Reveal, type ArrivalGift } from "./Motion";
 import { SignInDoor } from "./SignInDoor";
 import { EmptyState } from "./EmptyState";
@@ -204,7 +204,7 @@ export function Home({
             </Reveal>
           ))}
           {gifts !== null && gifts.length > 0 ? (
-            <Link href="/gifts" className={`${BODY} inline-flex min-h-[var(--tap-target)] items-center self-start text-[var(--accent-text)] underline`}>
+            <Link href="/gifts" className={`${SMALL_BUTTON} self-start no-underline`}>
               {W.seeAll}
             </Link>
           ) : null}

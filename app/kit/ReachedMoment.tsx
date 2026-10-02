@@ -11,7 +11,7 @@ import type { MilestoneStatus } from "@/src/milestone-view";
 import { dateInWords } from "@/src/moments";
 import { springEasing } from "@/src/motion";
 import { REACHED_MOMENT as W } from "@/src/sentences";
-import { AMOUNT_IN_TITLE, BODY, CARD_LABEL, HERO, INLINE_BUTTON, PRIMARY_BUTTON } from "../components/ui";
+import { AMOUNT_IN_TITLE, BODY, CARD_LABEL, HERO, PRIMARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { ExactLine, LedFigure } from "./LedAmount";
 import { reduced } from "./Motion";
 
@@ -133,7 +133,7 @@ export function ReachedOnItsPage({ gift, onTake }: Readonly<{ gift: ReachedGift;
   return (
     <>
       <ReachedMoments gifts={owed ? [gift] : []} here={{ onTake }} />
-      <button type="button" onClick={() => setAgain(true)} className={`${INLINE_BUTTON} self-start`}>
+      <button type="button" onClick={() => setAgain(true)} className={`${SMALL_BUTTON} self-start`}>
         {W.seeItAgain}
       </button>
       {again ? <ReachedMoment gift={gift} here={{ onTake }} onClose={() => setAgain(false)} /> : null}

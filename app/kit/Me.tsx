@@ -7,7 +7,7 @@ import { useDisplayCurrency } from "@/src/client/display-currency";
 import { currencyOf } from "@/src/currencies";
 import { PRODUCT_LOCALE } from "@/src/moments";
 import { CATALOGUE, HOME as H, ME as W } from "@/src/sentences";
-import { AMOUNT_IN_TITLE, CARD, HELP, INLINE_BUTTON, SECONDARY_BUTTON } from "../components/ui";
+import { AMOUNT_IN_TITLE, CARD, HELP, SECONDARY_BUTTON } from "../components/ui";
 import { useReaderZone } from "@/src/client/reader-zone";
 import { conditionOfGoal } from "@/src/conditions";
 import { CONSENT } from "@/src/sentences";
@@ -15,8 +15,10 @@ import { WhatVikyReads, type ReadForYou } from "./Consent";
 import { CurrencySheet } from "./CurrencySheet";
 import { milestoneBy } from "./GiftCard";
 import { HeadCharacter } from "./HeadCharacter";
-import { Install } from "./Install";
+import { FoldChevron } from "./GiftLive";
+import { InstallAct } from "./Install";
 import { MoneyKey } from "./MoneyKey";
+import { Act, RoundControls } from "./RoundControls";
 import { dollarsHeld, holdsAnything, useHoldings } from "./money";
 import { useMyGifts } from "./my-gifts";
 import { SignInDoor } from "./SignInDoor";
@@ -137,34 +139,16 @@ export function Me() {
       <section className={CARD}>
         <p className="font-medium">{reach === "signing" && until ? W.signedInUntil(until) : reach === "signed-out" ? W.signedOut : W.signedIn}</p>
         {reach === "reading" ? <p className={HELP}>{W.passkeyWhenMoneyMoves}</p> : null}
-        <div className="flex flex-wrap gap-[var(--tap-gap)]">
-          {/* Signing out on the page that needs an account left a screen with nothing on it (D139): it lands on the
-              page anybody can read, which is the one with the card, and nothing for nobody is drawn on the way
-              (D258: this page stays until the landing is ready to be painted). */}
-          <button
-            type="button"
-            disabled={leaving}
-            onClick={() => {
-              setLeaving(true);
-              void leave();
-            }}
-            className={INLINE_BUTTON}
-          >
-            {leaving ? W.leaving : W.signOut}
-          </button>
-          <button type="button" onClick={useAnotherAccount} className={INLINE_BUTTON}>
-            {W.anotherAccount}
-          </button>
-        </div>
       </section>
 
       {/* What Viky reads, and the stop, for every gift this account is the person of (the founder, 29 Sep 2026). */}
       <WhatVikyReads gifts={readForYou} zone={zone} />
 
-      <Install />
-
-      <details className={CARD}>
-        <summary className="cursor-pointer font-medium">{W.codeQuestion}</summary>
+      <details className={`${CARD} me-code`}>
+        <summary className="gift-fold-name font-medium">
+          {W.codeQuestion}
+          <FoldChevron />
+        </summary>
         <p className={HELP}>{W.codeUse}</p>
         <p className="break-all rounded-[var(--radius-control)] border-[length:var(--card-border-width)] border-[var(--card-border)] bg-[var(--background)] p-[var(--space-md)] text-[length:var(--type-help)] tabular-nums">{address}</p>
         <button
@@ -176,6 +160,37 @@ export function Me() {
         </button>
         {copied === "refused" ? <p className={HELP}>Your browser would not let us copy it. Press and hold the code, then choose Copy.</p> : null}
       </details>
+
+      {/* The standing controls of the account, round, with two words each (the founder's rule 6 of 1 Oct 2026):
+          signing out, another account, and installing. They were two small buttons in a card and a wide one. No
+          label is printed above them (the founder, 2 Oct 2026): "You decide" is a gift's, and this page is titled. */}
+      <RoundControls label={W.controls} untitled>
+        {/* Signing out on the page that needs an account left a screen with nothing on it (D139): it lands on the
+            page anybody can read, which is the one with the card, and nothing for nobody is drawn on the way
+            (D258: this page stays until the landing is ready to be painted). */}
+        <Act
+          name={leaving ? W.leaving : W.signOut}
+          disabled={leaving}
+          onPress={() => {
+            setLeaving(true);
+            void leave();
+          }}
+          data-decide="sign-out"
+        >
+          <svg aria-hidden focusable="false" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 5H6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h4" />
+            <path d="M14 8l4 4-4 4" />
+            <path d="M18 12H10" />
+          </svg>
+        </Act>
+        <Act name={W.otherAccount} onPress={useAnotherAccount} data-decide="other-account">
+          <svg aria-hidden focusable="false" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="9" r="3.5" />
+            <path d="M5 20a7 7 0 0 1 14 0" />
+          </svg>
+        </Act>
+        <InstallAct />
+      </RoundControls>
 
       <Links signedIn />
     </Shell>

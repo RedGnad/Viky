@@ -263,11 +263,13 @@ test("the quiet button is filled, seen on both grounds, and its words clear 4.5:
   }
   const ui = readFileSync("app/components/ui.ts", "utf8");
   assert.match(ui, /SECONDARY_BUTTON = `[^`]*bg-\[var\(--tonal\)\]/, "the quiet button is hollow again");
-  assert.match(ui, /INLINE_BUTTON = `[^`]*bg-\[var\(--tonal\)\]/);
+  assert.match(ui, /ROW_BUTTON = `[^`]*bg-\[var\(--tonal\)\]/);
+  assert.match(ui, /SMALL_BUTTON = `[^`]*bg-\[var\(--tonal\)\]/);
+  assert.doesNotMatch(ui, /INLINE_BUTTON/, "one small button, and no second size of it (rule 2)");
   assert.match(ui, /PRIMARY_BUTTON = `[^`]*bg-\[var\(--accent\)\]/, "the one action stopped carrying the accent");
   // The outline every button carries comes from one constant, so it cannot be dropped from one of them alone.
   assert.match(ui, /const OUTLINE = "border-\[length:var\(--control-border-width\)\] border-\[var\(--control-border\)\]"/);
-  for (const name of ["SECONDARY_BUTTON", "INLINE_BUTTON", "SMALL_BUTTON", "PRIMARY_BUTTON"]) {
+  for (const name of ["SECONDARY_BUTTON", "ROW_BUTTON", "SMALL_BUTTON", "PRIMARY_BUTTON"]) {
     const from = ui.indexOf(`${name} = \``);
     const button = ui.slice(from, ui.indexOf("`;", from));
     assert.match(button, /\$\{OUTLINE\}/, `${name} lost the outline WCAG 1.4.11 asks for`);
@@ -298,7 +300,7 @@ test("the quiet button is filled, seen on both grounds, and its words clear 4.5:
   // The one small button: 40 high, 44 to the touch, on a relief of three.
   const small = ui.slice(ui.indexOf("SMALL_BUTTON = `"), ui.indexOf("`;", ui.indexOf("SMALL_BUTTON = `")));
   assert.match(small, /h-\[40px\]/, "40 high");
-  assert.match(css, /\.small-button::before \{\n  content: "";\n  position: absolute;\n  inset: -4px 0;\n\}/, "and 44 to the touch: its own 36 inside the outline, and four past it above and below");
+  assert.match(css, /\.small-button::before \{\n  content: "";\n  position: absolute;\n  inset: -6px 0;\n\}/, "and 48 to the touch: its own 36 inside the outline, and six past it above and below");
   assert.match(css, /\.small-button \{\n  box-shadow: 0 3px 0 var\(--control-relief-colour\);/);
   // The ink under it, not a darker yellow: the same slab every control stands on, and the only one that reads as a
   // thickness against a sun fill (D142).
