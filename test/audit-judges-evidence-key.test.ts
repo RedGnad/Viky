@@ -56,13 +56,25 @@ test("the item no longer says the key cannot move money or take anything back", 
 
 test("the item says what the key can do: open a waiting gift for itself, and tip an opened one either way", () => {
   const said = ourOwnKey();
-  assert.ok(said.includes("and so does the opening of a gift"), said);
+  // The opening is the first version's (the audit of 1 Oct 2026, S-01): on the second the link's own key opens a gift.
+  assert.ok(said.includes("On the first version of the contracts so does the opening of a gift"), said);
   assert.ok(said.includes("the owner can put another key in its place"), said);
   assert.ok(
     said.includes("could open a gift still waiting for its recipient into an account of their own, sign readings for it and take it"),
     said,
   );
-  assert.ok(said.includes("the whole amount at once on a milestone, a day at a time on a daily gift"), said);
+  // A daily gift nobody opened is taken in one block too (testN1_EvidenceKeyTakesAnUnclaimedDailyGiftInOneBlock).
+  assert.ok(said.includes("the whole amount at once, on a milestone and on a daily gift alike"), said);
+  assert.doesNotMatch(said, /a day at a time on a daily gift/);
+  // What the second version changes for the opening is said only once it is set, and from its own contract.
+  const page = readFileSync("app/judges/page.tsx", "utf8");
+  assert.match(page, /\{secondVersionSet\s+\? " That stays true of a gift made on the first version and never opened\. On the second version, where every gift is made since 2 Oct 2026, that key opens nothing: a gift is opened by the key its link carries/);
+  for (const file of ["contracts/GiftEscrowV2.sol", "contracts/MilestoneGiftV2.sol"]) {
+    const claim = body(code(file), "claim");
+    assert.match(claim, /InvalidOpeningSignature/, `${file}: the opening is checked against the link's key`);
+    assert.doesNotMatch(claim, /evidenceSigner/, `${file}: the evidence signer has no say in an opening`);
+    assert.match(code(file), /SIGNER_DELAY = 24 hours/, file);
+  }
   assert.ok(said.includes("which pays the recipient what the funder should have had back: there the funder loses"), said);
   // The second way is said with who loses by it (the review of 2 Oct 2026, R-15): the recipient, whose days are counted
   // as missed though they did them.
@@ -76,7 +88,8 @@ test("the second version's contract says the judges page discloses this, and the
   assert.ok(contract.includes("could stop a gift under way for good: one reading far above the truth credits the days that are open and moves the baseline where no real reading reaches it again, under any later signer."), "the contract's own sentence");
   assert.ok(contract.includes("The judges page discloses this trust assumption."));
   const page = readFileSync("app/judges/page.tsx", "utf8");
-  assert.match(page, /const secondVersionSet = giftEscrowV2Address\(\) !== null && milestoneGiftV2Address\(\) !== null;/);
+  assert.match(page, /const escrowV2 = giftEscrowV2Address\(\);\s+const milestoneV2 = milestoneGiftV2Address\(\);/);
+  assert.match(page, /const secondVersionSet = escrowV2 !== null && milestoneV2 !== null;/);
   assert.match(page, /\{secondVersionSet\s+\? " On the second version of the contracts the first reading of a gift is signed by the recipient too, so the key alone cannot do this to a milestone, and the recipient can end a daily gift it was done to: what was counted stays theirs and the rest goes back at once\."\s+: null\}/);
   // What the sentence rests on, in the code of both versions of the daily contract: a reading that pays every open day
   // sets the baseline to its own figure, a lower figure is refused, and nothing else writes the baseline.

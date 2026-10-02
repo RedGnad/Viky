@@ -48,6 +48,9 @@ export const PRIVACY: Readonly<Record<string, ConditionPrivacy>> = {
   "strava-daily": { kept: "verdict", read: "yesterday's activities, their distances added and judged against the target each morning" },
 };
 
+/** The conditions a university's own portal proves: the first proof from a portal with no pinned page yet is held for review. */
+export const HELD_FOR_REVIEW: ReadonlySet<string> = new Set(["university-enrollment-shown", "university-year-passed-shown", "university-grade-shown"]);
+
 /** The rule a condition falls under; a condition with no line is a defect the register's test catches. */
 export function privacyOf(condition: Pick<Condition, "id">): ConditionPrivacy {
   const line = PRIVACY[condition.id];
@@ -68,7 +71,21 @@ export function privacyWords(condition: Pick<Condition, "id" | "source" | "natur
       return `Read for you from ${condition.source}'s public page: ${line.read}. Kept in our database with each reading, and the number read is written into the public program, where anyone can see it.`;
     case "fact":
       return `Read for you from a public page you share: ${line.read}. Kept in our database with the gift, and the public program receives that it was found, and the day.`;
-    case "verdict":
-      return `${condition.nature === "connected" ? "Read each morning from the" : "Shown by you, from your own"} ${condition.source} account${condition.nature === "connected" ? " you connected" : ""}: ${line.read}. It is seen once, on your own screen, and by nobody else. Viky keeps neither the number nor the page's answer, only whether what the gift is for was reached, and the public program receives that alone. The person who funds the gift is told that it was reached and knows the target they chose; they do not see the number.`;
+    case "verdict": {
+      const kept = "Viky keeps neither the number nor the page's answer, only whether what the gift is for was reached, and the public program receives that alone. The person who funds the gift is told that it was reached and knows the target they chose; they do not see the number.";
+      // A source the person connected is read by the server each morning, never on their screen (the audit of 1 Oct
+      // 2026, V-02): the sentence says who reads it.
+      if (condition.nature === "connected") {
+        return `Read each morning by Viky's reading service from the ${condition.source} account you connected: ${line.read}. It is read by that service, never shown to a person, and dropped once judged. ${kept}`;
+      }
+      // "their university" is the funder's word for it; on the privacy page the person reads about their own.
+      const theirs = condition.source.replace(/^their /, "");
+      // A university's first proof is held for a person at Viky to read (src/shown-verification.ts, D312), which
+      // "by nobody else" denied for exactly the student it happens to.
+      const held = HELD_FOR_REVIEW.has(condition.id)
+        ? " One exception: the first proof ever shown from a university's page is held until a person at Viky has read what was read from it, the fields and which page it was, and pinned that page or refused it. What they read is erased when they decide."
+        : "";
+      return `Shown by you, from your own ${theirs} account: ${line.read}. It is seen once, on your own screen, and by nobody else.${held} ${kept}`;
+    }
   }
 }

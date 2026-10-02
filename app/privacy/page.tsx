@@ -4,6 +4,7 @@ import Link from "next/link";
 import { privacyWords } from "@/src/condition-privacy";
 import { BUILDING, CONDITIONS } from "@/src/conditions";
 import { DISPLAY, TITLE } from "../components/ui";
+import { cardServices } from "@/src/rails";
 
 export const metadata: Metadata = {
   title: "Privacy",
@@ -17,8 +18,8 @@ export default function PrivacyPage() {
       <header className="space-y-[var(--space-lg)]">
         <h1 className={DISPLAY}>Privacy</h1>
         <p className="text-[length:var(--type-help)] text-[var(--muted)]" >
-          What Viky keeps about you, where it goes, and for how long. This describes the current test
-          version and is updated before anyone outside the team uses Viky.
+          What Viky keeps about you, where it goes, and for how long. This describes Viky as it runs
+          today, an early product being tested with a handful of people.
         </p>
       </header>
 
@@ -27,7 +28,7 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-[var(--space-xs)] pl-[var(--space-lg)]">
           <li>The name you give your account: it stays in your device&apos;s passkey manager (iCloud Keychain, Google Password Manager, 1Password) as a label. Viky has no copy.</li>
           <li>Your Duolingo password: you sign in to Duolingo inside Reclaim&apos;s verification page, never on Viky.</li>
-          <li>Your card number or identity documents: card purchases happen on Mercuryo, which runs its own identity checks under its own privacy policy.</li>
+          <li>Your card number or identity documents: card purchases happen on the card service&apos;s own page ({cardServices()}, by country), which runs its own identity checks under its own privacy policy.</li>
         </ul>
       </section>
 
@@ -89,7 +90,7 @@ export default function PrivacyPage() {
           <li><strong>Neon</strong> hosts the database (Frankfurt, Germany).</li>
           <li><strong>Reclaim Protocol</strong> runs the verification of your Duolingo progress and of what you show from your own accounts; its attestation service sees that session in the way its protocol describes, and Viky receives only the proof.</li>
           <li><strong>Duolingo</strong> answers a public profile lookup for the username you enter.</li>
-          <li><strong>Mercuryo</strong> handles card purchases, with its own account and identity checks.</li>
+          <li><strong>{cardServices()}</strong>: the card service your country is served by handles the card purchase on its own page, with its own account and identity checks.</li>
           <li><strong>Kuru</strong> provides the exchange used to convert between currencies; it sees your account identifier and the amount.</li>
           <li><strong>The Monad network</strong> is public and permanent: account identifiers, gift terms, the contact fingerprint of gifts made before 15 September 2026, the identity pseudonym, every check-in and every amount moved can be read by anyone and cannot be erased.</li>
         </ul>

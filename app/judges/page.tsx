@@ -10,14 +10,18 @@ import { readOwnership, ownershipWords } from "@/src/judges-owner";
 import { portalsListedAndRead, providerCounts, witnessProviders } from "@/src/portal-store";
 import { countryInWords } from "@/src/university-shown";
 import { usesDelivered } from "@/src/phone-order-store";
-import { giftEscrowV2Address, milestoneGiftV2Address } from "@/src/v2";
+import { consentAnchorAddress, giftEscrowV2Address, milestoneGiftV2Address } from "@/src/v2";
 import { AUSD_ADDRESS, MONAD_CHAIN_ID, PUBLIC_RPC_URL } from "@/src/monad/chain";
+import { readIndex } from "@/src/envio-index";
+import { JudgesAgora } from "./JudgesAgora";
 import { JudgesConditions } from "./JudgesConditions";
 import { JudgesContracts } from "./JudgesContracts";
 import { JudgesEarlyGifts } from "./JudgesEarlyGifts";
 import { JudgesIndex } from "./JudgesIndex";
+import { JudgesMera } from "./JudgesMera";
 import { JudgesReliability } from "./JudgesReliability";
 import { JudgesVerify } from "./JudgesVerify";
+import { JudgesWhoUsed } from "./JudgesWhoUsed";
 
 export const metadata: Metadata = {
   title: "For judges",
@@ -29,6 +33,15 @@ export const dynamic = "force-dynamic";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
+
+/** A transaction as this page links one: its head and its tail, on the explorer. */
+function Tx({ hash }: Readonly<{ hash: string }>) {
+  return (
+    <a className="underline" href={`https://monadvision.com/tx/${hash}`}>
+      {hash.slice(0, 10)}…{hash.slice(-4)}
+    </a>
+  );
+}
 
 // The only page where contract addresses appear. Consumer screens never show them. They are set in the text face
 // like every other word: a monospace face would be the system's, and hex has no letter a text face confuses.
@@ -47,7 +60,13 @@ export default async function JudgesPage() {
   const uses = await usesDelivered();
   // What the second version changes for our own key is said only once its contracts are set (src/v2.ts): until then no
   // gift is on them, and this page says nothing it cannot show.
-  const secondVersionSet = giftEscrowV2Address() !== null && milestoneGiftV2Address() !== null;
+  const escrowV2 = giftEscrowV2Address();
+  const milestoneV2 = milestoneGiftV2Address();
+  const anchor = consentAnchorAddress();
+  const secondVersionSet = escrowV2 !== null && milestoneV2 !== null;
+  // The index of the contracts' events, read once for the two blocks that show it. It answers nothing rather than an
+  // error (src/envio-index.ts), and each block then says so in a sentence.
+  const index = await readIndex();
   const used = (count: number | undefined) => (uses === null || count === undefined ? "the count could not be read right now" : count === 0 ? "Open. Nobody has used it yet." : count === 1 ? "Open. Used once." : `Open. Used ${count} times.`);
   // Gifts created before the D30 corrections keep running on the contract that holds them, and every
   // gift record names its own contract, so both are listed here for as long as the older one holds one.
@@ -61,7 +80,7 @@ export default async function JudgesPage() {
       <header className="space-y-[var(--space-lg)]">
         <h1 className={DISPLAY}>For judges</h1>
         <p className={MUTED}>
-          Everything verifiable about Viky in one screen, and everything that is not, written as it is. Nothing here is
+          Everything verifiable about Viky on one page, and everything that is not, written as it is. Nothing here is
           shown to funders or recipients.
         </p>
       </header>
@@ -78,7 +97,8 @@ export default async function JudgesPage() {
           <li>
             Offer a gift from the home page. On the pay sheet, press &quot;Have a code?&quot; and type the judge code from the
             submission portal&apos;s instructions. Your account receives {judgeCredit ? formatAusd(judgeCredit.units) : "a set amount"}: a judge credit from
-            Viky&apos;s treasury, once per account. A real funder pays by card through Ramp, shown in the video.
+            Viky&apos;s treasury, once per account. A real funder pays by card instead, on the page of the card service
+            their country is served by (&quot;How money comes in&quot;, below).
             {judgeCredit ? <span data-judge-standing> {standingInWords(judgeStanding)}</span> : null}
           </li>
           <li>
@@ -86,8 +106,21 @@ export default async function JudgesPage() {
             offers to make the gift that amount.
           </li>
           <li>
-            Or open the gift the founder made for you from the operator account: it is in your name, and you can take
-            it out as phone credit or as a gift card from Spend or withdraw.
+            To see the other side on this device: copy the link, press Me, then Use another account, open the link and
+            press Create my account. Press Open my gift, then connect the source. With one account you only ever see
+            the funder&apos;s side of your own gift.
+          </li>
+          <li>
+            What you will see, and when: a day counts the morning after it ends (the readings pass of 00:30 UTC); a
+            missed day comes back to the funder 31 hours after it ends (the settling pass of 07:00 UTC, two mornings
+            later). To see a settlement in one sitting, offer a Chess.com rating one point above the account&apos;s
+            own: the first reading is the start, and a reading at the target, asked from the gift&apos;s page, settles
+            it at once.
+          </li>
+          <li>
+            If the portal&apos;s instructions give you the link of a gift made for you, open it instead of making one. Money
+            leaves a gift only once a reading has credited it: an opened gift with nothing credited has nothing to take
+            out yet.
           </li>
           <li>
             Mera&apos;s stateless test runs on this same account: sign out, then sign in from another browser or device
@@ -117,6 +150,8 @@ export default async function JudgesPage() {
         </ol>
       </section>
 
+      <JudgesWhoUsed index={index} />
+
       <section className="space-y-[var(--space-sm)]">
         <h2 className={TITLE}>Network</h2>
         {/* On a phone each label sits above its value: two columns there left a value 198 pixels, and breaking
@@ -130,7 +165,31 @@ export default async function JudgesPage() {
           <dd className="[overflow-wrap:anywhere]">{PUBLIC_RPC_URL}</dd>
           <dt className="text-[var(--muted)]">AUSD</dt>
           <dd className="[overflow-wrap:anywhere]">{AUSD_ADDRESS}</dd>
-          <dt className="text-[var(--muted)]">Gift contract</dt>
+          {escrowV2 && milestoneV2 && anchor ? (
+            <>
+              <dt className="text-[var(--muted)]">Where a gift is made today</dt>
+              <dd className="[overflow-wrap:anywhere]" data-second-version>
+                The second version of the contracts, deployed on 2 Oct 2026. A habit, day by day: {escrowV2} (<a className="underline" href={`https://monadvision.com/address/${escrowV2}`}>MonadVision</a>, deployed in{" "}
+                <Tx hash="0x8be062b29a506c17b581587f2ba0b2f8d1460cd5fc2705e0aa191a2f9c8ac409" />). One thing reached: {milestoneV2} (
+                <a className="underline" href={`https://monadvision.com/address/${milestoneV2}`}>MonadVision</a>, deployed in{" "}
+                <Tx hash="0x15c355472e145a6d70e3d25af7bcee2bcc1c1560e80e0940e3a460bd7678bd4c" />). The anchor of agreements, which holds no
+                money: {anchor} (<a className="underline" href={`https://monadvision.com/address/${anchor}`}>MonadVision</a>, deployed in{" "}
+                <Tx hash="0xe0a2b4127067d5c24282254886a8e32da9667e835c24dd98461e4e4a3c90d412" />). The source of the three is verified through
+                Sourcify, an exact match. They were deployed by a key made for that day alone,
+                0xEFc6820AA6EFafb824f6e9c102079c8f81845840, which handed each to the Safe; the Safe accepted them in{" "}
+                <Tx hash="0x5a8dca52982b71dba715feb187e33f0494f4412c3cbb984147d97d4bf63aeae9" />,{" "}
+                <Tx hash="0xb5b8b17b735fffb5a0323ee52b3eccbe0ee58c24ecf2703bdf6bee0c1222921e" /> and{" "}
+                <Tx hash="0x4125aef710d8017a09fcc8c842ce9808d2b7def366dfc0befaa61f05413b171b" />, and that key owns nothing. The same day the
+                Safe closed new gifts on the three first-version contracts, in{" "}
+                <Tx hash="0x0c2e70edd97c91d010527ef930d60c2e12fd25578109a3e4cd94e0f57cec5397" />,{" "}
+                <Tx hash="0x10e8d50ec6c88d9492cbcc7d826b6afc5b7753cb046c033ae4898411131457b5" /> and{" "}
+                <Tx hash="0x32ec292bd099897081bac962f95efacc40fdfbb87e0092cd58f8d75537ab181a" />: they go on running the gifts they hold, to
+                the end. Whether a gift has run on the second version yet is counted from the index under &quot;Who has used
+                Viky&quot;: nothing is claimed as working on it before one has, end to end, with real amounts.
+              </dd>
+            </>
+          ) : null}
+          <dt className="text-[var(--muted)]">{secondVersionSet ? "Gift contract, first version" : "Gift contract"}</dt>
           <dd className="[overflow-wrap:anywhere]">
             {escrow ? (
               <>
@@ -146,7 +205,7 @@ export default async function JudgesPage() {
           <dt className="text-[var(--muted)]">Who owns the contracts</dt>
           <dd className="[overflow-wrap:anywhere]">
             {ownership ? ownershipWords(ownership) : "The chain could not be read just now, so nothing is said here about who owns the contracts rather than something out of date."}{" "}
-            The four were handed to the Safe on 20 Sep 2026, in{" "}
+            The four of the first version were handed to the Safe on 20 Sep 2026, in{" "}
             <a className="underline" href="https://monadvision.com/tx/0x1aa2887ef13988fd86efffe992651e6b9b2294161e2bbdc75c5e1466051f47d3">
               0x1aa2887e…47d3
             </a>{" "}
@@ -201,7 +260,11 @@ export default async function JudgesPage() {
 
       <JudgesEarlyGifts />
 
-      <JudgesIndex />
+      <JudgesIndex index={index} />
+
+      <JudgesAgora />
+
+      <JudgesMera index={index} />
 
       {/* How money comes in (D289): through a licensed partner, the asset named, and the next step said as it is. */}
       <section className="space-y-[var(--space-sm)]">
@@ -228,12 +291,13 @@ export default async function JudgesPage() {
         <p className={HELP}>
           Duolingo runs in public mode: once a day, Viky&apos;s keeper reads the recipient&apos;s public profile through
           an attested fetch (Reclaim zkFetch through Reclaim&apos;s TEE client). The attestor signs Duolingo&apos;s
-          response; Viky verifies that signature, pins the attestor&apos;s address (the same one the on-chain Duolingo
-          verifier pins) and checks the proof is about the right URL and username; the evidence signer then turns the
+          response; Viky verifies that signature, pins the attestor&apos;s address (the one in <code>src/reclaim-proof-set.ts</code>)
+          and checks the proof is about the right URL and username; the evidence signer then turns the
           signed reading into an EIP-712 check-in, and the contract credits or refuses it. What is not verified: the
           attestor&apos;s own TEE attestation, which zk-fetch 1.1.0 does not put in the proof. The person signs in to
-          nothing and installs nothing; account ownership is proved once, either by the funder naming the account or by
-          a short code the recipient places in their Duolingo display name.
+          nothing and installs nothing. The account is tied to the gift once: by the funder naming it, which proves
+          nothing about whose it is, or, when the recipient names it themselves, by a short code they place in their
+          Duolingo display name.
         </p>
         <p className={HELP}>
           Hardened on 18 Sep 2026, from Duolingo&apos;s own public profile (U1): a gift can be counted on one course rather
@@ -273,7 +337,9 @@ export default async function JudgesPage() {
             again each time the person connects it or asks for a count. The risk is
             accepted and spread by having several conditions rather than one; the shape of that endpoint is pinned by
             the tests, like any other source that could drift, and if it changes or closes, the reading fails on our
-            side, which holds the day open rather than taking it away from anybody.
+            side. The day then stays open until its catch-up window closes, 30 hours after it ends, and goes back to
+            the funder like a missed day: a failure of ours does not hold it longer. Only a pause of readings by the
+            owner holds the open days, and on the second version of the daily contract alone.
           </li>
           <li>
             <strong>University portals&apos; terms.</strong> A proof of enrolment is shown by the person from their own
@@ -436,8 +502,8 @@ export default async function JudgesPage() {
             federation to be removed from them. Viky reads one runner&apos;s page per gift and keeps three fields, written
             here with the risk assumed as for edX. The race&apos;s date is the register&apos;s; the bib entered before the
             start ties the reading to the race, and the day the result is read is the day the gift is judged by. One
-            door stays open for the operator&apos;s accounts alone: a bib entered after the start, which is how the test
-            gift runs on the 2023 result and how the three proofs are shown here.
+            door stays open for the operator&apos;s accounts alone: a bib entered after the start, which is how a test
+            gift can run on the 2023 result. No proof of this line is shown on this page.
           </li>
           <li>
             <strong>MikaTiming&apos;s results sites.</strong> The same line reads the marathons MikaTiming times (Chicago,
@@ -505,23 +571,28 @@ export default async function JudgesPage() {
             card&apos;s uses, which the person bought.
           </li>
           <li>
-            <strong>Coursera, when it comes.</strong> Nothing published says a certificate was earned under supervision:
-            Coursera verifies identity once per account, and says some programmes require it while others only check a
-            name. That condition is not open yet, and this is what it will prove when it is.
+            <strong>Coursera.</strong> Nothing published says a certificate was earned under supervision: Coursera
+            verifies identity once per account, and says some programmes require it while others only check a name.
+            The condition is open, and that is all it proves: a certificate with that course and that day, on the page
+            the person shares.
           </li>
           <li>
             <strong>The homonym.</strong> A gift is bound to an account on the source, not to a person. Two people can
-            share a display name, and the funder can name the wrong account when they offer the gift. The code in the
-            display name proves that whoever put it there controls that account; it does not prove they are the person
-            the funder had in mind. A gift sent to the wrong account with the right name would count that account&apos;s
-            work.
+            share a display name, and the funder can name the wrong account when they offer the gift. When the funder names
+            the account, on Duolingo, Chess.com or Codeforces, that naming is the whole tie: no code is asked, so whoever
+            opens the link is paid when that account gets there, and a recipient who gave the funder the name of an
+            active player who is not them would be paid for that player&apos;s games. The code in the display name is
+            asked only of an account the recipient names themselves; it proves that whoever put it there controls that
+            account, not that they are the person the funder had in mind. A gift sent to the wrong account with the right
+            name would count that account&apos;s work.
           </li>
           <li>
             <strong>The milestone, two limits.</strong> A target reached before the account is connected pays nothing:
             the first reading is recorded as the starting point whatever it says, so the climb is measured from there.
             And a rating that drops back before the reading that would have paid it does not pay either, because the
-            contract judges the reading, not the game: it reads twice a day, and a rating reached and lost between two
-            readings never settles.
+            contract judges the reading, not the game: Viky looks at each climb every five minutes, when an outside
+            scheduler calls its pass, and whenever the recipient asks from the gift&apos;s page, and a rating reached and
+            lost between two readings never settles.
           </li>
           <li>
             <strong>The relayer&apos;s one key, found by the audit of 27 Sep 2026.</strong> Every relayed step is sent by one
@@ -566,11 +637,15 @@ export default async function JudgesPage() {
             data: {used(uses?.data)} A gift card: {used(uses?.gift_card)}
           </li>
           <li>
-            <strong>Our own key.</strong> A reading counts because Viky&apos;s evidence signer signed it, and so does the
-            opening of a gift: that key is what tells the contract which account opened it. So whoever holds it, and the
-            owner can put another key in its place, could open a gift still waiting for its recipient into an account of
-            their own, sign readings for it and take it: the whole amount at once on a milestone, a day at a time on a
-            daily gift. On a gift someone has already opened, money leaves only at that person&apos;s own signed request or
+            <strong>Our own key.</strong> A reading counts because Viky&apos;s evidence signer signed it. On the first
+            version of the contracts so does the opening of a gift: that key is what tells the contract which account
+            opened it. So whoever holds it, and the owner can put another key in its place, could open a gift still
+            waiting for its recipient into an account of their own, sign readings for it and take it: the whole amount at
+            once, on a milestone and on a daily gift alike.
+            {secondVersionSet
+              ? " That stays true of a gift made on the first version and never opened. On the second version, where every gift is made since 2 Oct 2026, that key opens nothing: a gift is opened by the key its link carries, made in the funder's browser and never sent to Viky, so only somebody who holds the link can open it. And a new evidence key stands 24 hours after the owner announces it, never at once."
+              : null}{" "}
+            On a gift someone has already opened, money leaves only at that person&apos;s own signed request or
             to the refund address the funder signed, and the key can still tip it either way. It could sign readings
             nobody made, which pays the recipient what the funder should have had back: there the funder loses. Or it
             could sign one reading far above the truth, after which no real reading counts, under this key or any later

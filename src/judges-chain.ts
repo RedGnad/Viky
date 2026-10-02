@@ -1,7 +1,11 @@
 import { BaseError, ContractFunctionRevertedError, createPublicClient, type Abi, type Hex } from "viem";
+import { consentAnchorAbi } from "./consent-anchor-abi";
 import { giftEscrowAbi } from "./gift-escrow-abi";
+import { giftEscrowV2Abi } from "./gift-escrow-v2-abi";
 import { milestoneGiftAbi } from "./milestone-gift-abi";
+import { milestoneGiftV2Abi } from "./milestone-gift-v2-abi";
 import { monadTransport, PUBLIC_RPC_URL } from "./monad/chain";
+import { consentAnchorAddress, giftEscrowV2Address, milestoneGiftV2Address } from "./v2";
 
 /**
  * What the chain itself says about Viky's contracts, read when the judges page is served (U2, S5).
@@ -12,6 +16,11 @@ import { monadTransport, PUBLIC_RPC_URL } from "./monad/chain";
  *
  * The refusal is a real one: a view that asks for a gift number nobody has ever created, which the contract answers
  * with its own error. It is a read, so it costs nothing and changes nothing, and a judge can reproduce it.
+ *
+ * Since the second version was deployed (2 Oct 2026) there are seven lines to read: the two contracts new gifts are
+ * made on, the anchor of agreements, and the first version's three, which run the gifts they hold. Each gift contract
+ * is also asked the key whose signature it accepts for a reading, and the second version the key it has been told
+ * will replace it, so a signer announced and not yet standing shows here the day it is announced.
  */
 
 export type ContractFacts = Readonly<{
@@ -21,6 +30,10 @@ export type ContractFacts = Readonly<{
   owner: string | null;
   /** What the contract is pausing right now, as a list of "what: yes or no", read from the chain. */
   pauses: ReadonlyArray<{ what: string; paused: boolean }>;
+  /** Other keys the contract answers by name: the evidence signer, one announced, the account that writes on the anchor. */
+  keys: ReadonlyArray<{ what: string; address: string }>;
+  /** False for a contract that holds no gift, the anchor: there is no gift number to ask it for, so no refusal to show. */
+  holdsGifts: boolean;
   /** One real call anybody can repeat, with the command and what it answered. */
   call: Readonly<{ command: string; answer: string }>;
   /** One real refusal anybody can repeat: the error the contract returned, with its command. */
@@ -43,7 +56,22 @@ function revertName(error: unknown): string | null {
   return reverted.data?.errorName ?? reverted.reason ?? null;
 }
 
-async function factsFor(label: string, address: Hex, abi: Abi, pauses: ReadonlyArray<{ what: string; getter: string }>): Promise<ContractFacts> {
+const ZERO = "0x0000000000000000000000000000000000000000";
+
+/** A key the contract names: the getter, what the page calls it, and whether the zero address means "none" and is left out. */
+type KeyRead = Readonly<{ what: string; getter: string; noneIsZero?: true }>;
+
+const EVIDENCE_SIGNER: KeyRead = { what: "Evidence signer, right now", getter: "evidenceSigner" };
+const ANNOUNCED_SIGNER: KeyRead = { what: "Evidence signer announced, not standing yet", getter: "pendingEvidenceSigner", noneIsZero: true };
+
+async function factsFor(
+  label: string,
+  address: Hex,
+  abi: Abi,
+  pauses: ReadonlyArray<{ what: string; getter: string }>,
+  keyReads: readonly KeyRead[] = [EVIDENCE_SIGNER],
+  holdsGifts = true,
+): Promise<ContractFacts> {
   const chain = client();
   const unread: string[] = [];
   let owner: string | null = null;
@@ -61,8 +89,18 @@ async function factsFor(label: string, address: Hex, abi: Abi, pauses: ReadonlyA
     }
   }
 
+  const keys: Array<{ what: string; address: string }> = [];
+  for (const key of keyReads) {
+    try {
+      const answered = String(await chain.readContract({ address, abi, functionName: key.getter }));
+      if (!(key.noneIsZero && answered.toLowerCase() === ZERO)) keys.push({ what: key.what, address: answered });
+    } catch {
+      unread.push(key.what.toLowerCase());
+    }
+  }
+
   let refusal: ContractFacts["refusal"] = null;
-  try {
+  if (holdsGifts) try {
     await chain.readContract({ address, abi, functionName: "getGift", args: [UNKNOWN_GIFT] });
     unread.push("a refusal: asking for a gift nobody created was answered rather than refused");
   } catch (error) {
@@ -78,6 +116,8 @@ async function factsFor(label: string, address: Hex, abi: Abi, pauses: ReadonlyA
     address,
     owner,
     pauses: read,
+    keys,
+    holdsGifts,
     call: {
       command: `cast call ${address} "owner()(address)" --rpc-url ${PUBLIC_RPC_URL}`,
       answer: owner ?? "could not be read just now",
@@ -92,8 +132,21 @@ export async function contractFacts(): Promise<ContractFacts[]> {
   const escrow = process.env.NEXT_PUBLIC_GIFT_ESCROW_ADDRESS?.trim();
   const earlier = process.env.NEXT_PUBLIC_EARLIER_GIFT_ESCROW_ADDRESS?.trim();
   const milestone = process.env.NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS?.trim();
+  const escrowV2 = giftEscrowV2Address();
+  const milestoneV2 = milestoneGiftV2Address();
+  const anchor = consentAnchorAddress();
   const jobs: Array<Promise<ContractFacts>> = [];
-  if (escrow) jobs.push(factsFor("The gift contract, for a habit", escrow as Hex, giftEscrowAbi as unknown as Abi, [
+  // The second version first: it is where a gift made today goes.
+  if (escrowV2) jobs.push(factsFor("The gift contract, for a habit, second version: new gifts are made here", escrowV2, giftEscrowV2Abi as unknown as Abi, [
+    { what: "new gifts", getter: "creationPaused" },
+    { what: "readings and openings", getter: "checkInPaused" },
+  ], [EVIDENCE_SIGNER, ANNOUNCED_SIGNER]));
+  if (milestoneV2) jobs.push(factsFor("The milestone contract, for one thing reached, second version: new gifts are made here", milestoneV2, milestoneGiftV2Abi as unknown as Abi, [
+    { what: "new gifts", getter: "creationPaused" },
+    { what: "readings and openings", getter: "proofPaused" },
+  ], [EVIDENCE_SIGNER, ANNOUNCED_SIGNER]));
+  if (anchor) jobs.push(factsFor("The anchor of agreements: it holds no money", anchor, consentAnchorAbi as unknown as Abi, [], [{ what: "The one account that may write a yes or a stop here", getter: "anchorer" }], false));
+  if (escrow) jobs.push(factsFor(escrowV2 ? "The gift contract, for a habit, first version: it runs the gifts it holds" : "The gift contract, for a habit", escrow as Hex, giftEscrowAbi as unknown as Abi, [
     { what: "new gifts", getter: "creationPaused" },
     { what: "readings", getter: "checkInPaused" },
   ]));
@@ -101,7 +154,7 @@ export async function contractFacts(): Promise<ContractFacts[]> {
     { what: "new gifts", getter: "creationPaused" },
     { what: "readings", getter: "checkInPaused" },
   ]));
-  if (milestone) jobs.push(factsFor("The milestone contract, for one thing reached", milestone as Hex, milestoneGiftAbi as unknown as Abi, [
+  if (milestone) jobs.push(factsFor(milestoneV2 ? "The milestone contract, for one thing reached, first version: it runs the gifts it holds" : "The milestone contract, for one thing reached", milestone as Hex, milestoneGiftAbi as unknown as Abi, [
     { what: "new gifts", getter: "creationPaused" },
     { what: "readings", getter: "proofPaused" },
   ]));

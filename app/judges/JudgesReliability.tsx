@@ -108,9 +108,12 @@ export async function JudgesReliability() {
         </dd>
         <dt className={MUTED}>Days lost because of us</dt>
         <dd className={HELP}>
-          {held.lost}. The rule in the code is that this is zero: a reading that fails for a reason of ours holds the
-          gift instead of draining it, and the next working reading can still credit the day. This is the measured
-          number, not the rule.
+          {held.lost}. This is the measured number. What the code does: a reading that fails for a reason of ours is
+          tried again at 03:30 UTC, and any working reading can still credit the day until its catch-up window closes,
+          30 hours after the day ends (06:00 UTC). Past that hour the day goes back to the funder, whoever was at
+          fault: the settling pass of 07:00 UTC sends it, and on the second version of the daily contract the next
+          check-in settles it by itself. A failure of ours does not hold a day past its window. Only the owner pausing
+          readings before that hour does, on the second version alone.
         </dd>
       </dl>
     </section>

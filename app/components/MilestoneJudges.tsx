@@ -2,6 +2,7 @@ import { CHESS_MODES, chessGoalType, chessProviderId } from "@/src/chess-com";
 import { MILESTONE_EVIDENCE as E } from "@/src/milestone-evidence";
 import { PUBLIC_RPC_URL } from "@/src/monad/chain";
 import { PINNED_RECLAIM_WITNESS } from "@/src/reclaim-proof-set";
+import { milestoneGiftV2Address } from "@/src/v2";
 import { TITLE } from "./ui";
 
 const HELP = "text-[length:var(--type-help)]";
@@ -23,6 +24,8 @@ function Explorer({ tx }: Readonly<{ tx: string }>) {
 export function MilestoneJudges() {
   const address = process.env.NEXT_PUBLIC_MILESTONE_GIFT_ADDRESS?.trim();
   if (!address) return null;
+  // Where a milestone gift is made today, once the second version is set: what follows is the first version's record.
+  const second = milestoneGiftV2Address();
   return (
     <section className="space-y-[var(--space-sm)]">
       <h2 className={TITLE}>A milestone: a Chess.com rating</h2>
@@ -38,9 +41,12 @@ export function MilestoneJudges() {
             , deployed in <Explorer tx={E.deployTx} />
           </>
         ) : null}
-        . Owned by the same Safe as the other three contracts, two signatures of three, read from the chain at the head of this page
+        . Owned by the same Safe as the other contracts, two signatures of three, read from the chain at the head of this page
         and in the contracts section, and never by the key that deployed it. Gift numbers start at 1,000,000, so no number can mean a daily gift
         and a milestone gift at once.
+        {second
+          ? ` This is the first version, where the first real milestone gifts ran: it takes no new gift since 2 Oct 2026. A milestone gift made today is on the second version, ${second}, which keeps the rule below and continues the numbers.`
+          : ""}
       </p>
       <p className={HELP}>
         The rule it rests on (DECISIONS.md D44): the funder signs the target and the highest start they pay a climb from; the first reading
@@ -58,8 +64,10 @@ export function MilestoneJudges() {
         How a reading is made: two attested reads through Reclaim zkFetch and Reclaim&apos;s TEE client, api.chess.com/pub/player/&lt;name&gt; for
         the player id (the identity a gift is bound to, which survives a change of name) and /stats for the cadence&apos;s rating. Viky verifies
         the attestor&apos;s signature, pins its address, and checks each proof is about exactly that page and exactly those patterns; the
-        evidence signer then signs an EIP-712 Proof under the domain &quot;Viky Milestone&quot;, and the contract accepts or refuses it. The first
-        reading also reads the profile&apos;s name, where the recipient puts a one-hour code to prove the account is theirs.
+        evidence signer then signs an EIP-712 Proof under the domain &quot;Viky Milestone&quot;, and the contract accepts or refuses it. The funder
+        names the Chess.com account when they offer the gift, and that naming is the whole tie: no code is asked, so whoever opens the link
+        is paid when that account gets there. Only an account the recipient names themselves is asked for a one-hour code in the
+        profile&apos;s name, which the first reading reads.
       </p>
       {E.giftId ? (
         <>
@@ -96,7 +104,10 @@ export function MilestoneJudges() {
           <code className={CODE}>{E.refusal.command}</code>
         </>
       ) : null}
-      <p className={HELP}>What the owner can do, and what it cannot, read from the contract:</p>
+      <p className={HELP}>
+        What the owner of this first-version contract can do, and what it cannot, read from the contract
+        {second ? " (the second version bounds its owner further: the contracts section says how)" : ""}:
+      </p>
       <ul className={`${MUTED} list-disc pl-[var(--space-lg)]`}>
         <li>Pause and reopen new gifts, and pause and reopen readings. While readings are paused nothing can be taken back, and every window a pause ran across (the grace after a deadline, the wait for a first reading) counts again from the moment readings reopen.</li>
         <li>Replace the evidence signer, and register a goal or change the provider id its readings must carry, which applies to gifts already made on that goal.</li>
@@ -131,8 +142,8 @@ export function MilestoneJudges() {
         <li>The attestor&apos;s own TEE attestation is not in the proof zk-fetch returns, so it is not verified; its signature and address are.</li>
         <li>The evidence signer is a key Viky holds. The contract trusts its signature, and anyone holding that key could sign a reading.</li>
         <li>
-          The contract judges when a reading was taken, not when the rated game was played. Viky reads twice a day, and the recipient can ask
-          for a reading at any time; a rating reached and then lost again between two readings, or reached in the last hours and first read
+          The contract judges when a reading was taken, not when the rated game was played. Viky looks at each climb every five minutes, when
+          an outside scheduler calls its pass, and the recipient can ask for a reading at any time; a rating reached and then lost again between two readings, or reached in the last hours and first read
           after the deadline, does not pay (DECISIONS.md D48).
         </li>
         <li>

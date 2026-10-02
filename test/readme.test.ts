@@ -59,6 +59,12 @@ test("the three contracts, the four deployments and their owner are named, and t
   for (const source of ["contracts/GiftEscrow.sol", "contracts/MilestoneGift.sol", "contracts/ExitRouter.sol"]) {
     assert.ok(contracts.includes(`\`${source}\``) && existsSync(source), source);
   }
+  // The second version, deployed on 2 Oct 2026: its three addresses, and nothing saying it is not deployed.
+  for (const address of ["0xC83d8028347967Fc84D0e36Ae5876d9b29EAEc51", "0x493c87A27E637bBc7179C17bE2B215fC18523CC0", "0x2a15DF23fF62120700f14D1E5d5d56CA0dAd027e"]) {
+    assert.ok(contracts.includes(`\`${address}\``), address);
+  }
+  assert.doesNotMatch(contracts, /not deployed: no gift runs on them/);
+  assert.match(contracts, /were deployed on\s+2 Oct 2026 at the addresses above/);
   for (const address of ["0x995Ab09d8B20511d057E9E87D00fa1f41fC0e233", "0xE04CD59bB93765333200a9da01df83149D4C4d67", "0x8dc281Ac8a1c789fdb65a063b9225E98eC522F0e", "0x8a1790DfD10CF1599bDaeD5eC8BB46B2A6eB6223", "0xE08D926c148A5065F4Df2892702785a183de86F9"]) {
     assert.ok(contracts.includes(address), address);
   }

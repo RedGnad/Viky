@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Shell } from "../kit/Shell";
 import Link from "next/link";
+import { cardServices } from "@/src/rails";
+import { giftEscrowV2Address } from "@/src/v2";
 import { DISPLAY, TITLE } from "../components/ui";
 
 export const metadata: Metadata = {
@@ -12,6 +14,9 @@ export const metadata: Metadata = {
 // publishers (LCEN, article 6-III-2). Until a company exists, only the host and a contact are public.
 export default function LegalPage() {
   const contact = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim();
+  // The contracts gifts are made on since 2 Oct 2026 bound their owner where the earlier ones did not: each is said of
+  // the version it is true of, and of the second only once it is set (src/v2.ts).
+  const second = giftEscrowV2Address() !== null;
   return (
     <Shell kind="document" back="/me">
       <header className="space-y-[var(--space-lg)]">
@@ -36,7 +41,9 @@ export default function LegalPage() {
               {contact}
             </a>
           ) : (
-            "a way to reach the publisher will be published here before the first person outside the team uses Viky."
+            // People who are not of the team use Viky (the audit of 1 Oct 2026, V-01): the promise to publish a
+            // contact "before" they did was false. What is true is said until one is set.
+            "none is published here yet."
           )}
         </p>
       </section>
@@ -53,7 +60,7 @@ export default function LegalPage() {
           Viky is not a bank, a payment institution or an investment service, and nothing on it is
           financial advice. Money placed behind a goal is held by a published program on the Monad
           network under rules both people can read on the <Link className="underline" href="/judges">judges page</Link>.
-          Buying with a card is done by Mercuryo under Mercuryo&apos;s own terms.
+          Buying with a card is done by {cardServices()}, on that service&apos;s own page and under its own terms.
         </p>
         <p>
           Viky is software, not a service that keeps your money. Everybody signs in with their own
@@ -61,17 +68,35 @@ export default function LegalPage() {
           person who offered it signed. Nobody here signs for you.
         </p>
         <p>
-          The people who run Viky can do four things, and the program allows them nothing else: stop new
-          gifts being offered, stop the daily readings, change the key that signs what a reading found,
-          and add a goal a gift can be made on. Each of those is public, and the judges page reads them
-          from the program itself.
+          The people who run Viky hold the program through an account that needs two of its three keys to sign. With it
+          they can do four things: stop new gifts being offered, pause the readings, change the key that signs what a
+          reading found, and add a goal a gift can be made on.{" "}
+          {second
+            ? "On the program gifts are made on since 2 October 2026, each is bounded: a pause ends by itself after seven days and cannot be sent again for seven more, a new key stands a day after it is announced, and a goal once added is never changed. On the earlier program, which runs the gifts it still holds, none of those bounds exists."
+            : "On the program as it runs today none of those is bounded in time."}{" "}
+          Each of those is public, and the judges page reads them from the program itself.
         </p>
         <p>
-          They can never move money, keep it, or send it somewhere else. What is not earned goes back to
-          the person who offered the gift, to the account they named when they offered it, and anyone at
-          all can ask for that: the program will send it nowhere else. What is earned leaves only when
-          the person the gift is for asks for it, signed by them. So the worst a pause can do is hold a
-          day open. It cannot take a day away, and it cannot send a penny anywhere.
+          No part of the program lets them move a gift&apos;s money, keep it, or send it somewhere else. What is not earned
+          goes back to the person who offered the gift, to the account they named when they offered it, and anyone at
+          all can ask for that: the program will send it nowhere else. What is earned leaves only when the person the
+          gift is for asks for it, signed by them.
+        </p>
+        <p>
+          One limit to that, said in full on the judges page under &quot;Our own key&quot;. A reading counts because
+          Viky&apos;s own key signed it. Whoever holds that key could sign a reading nobody made, which pays the person the
+          gift is for what should have gone back to the person who offered it; or sign one far above the truth, after
+          which no real reading counts and the rest goes back to the person who offered it.{" "}
+          {second
+            ? "On the earlier program that key could also open a gift nobody had opened yet and take it; on the program gifts are made on since 2 October 2026 it opens nothing, and a gift's first reading is signed by the person it is for as well."
+            : "That key can also open a gift nobody has opened yet and take it."}
+        </p>
+        <p>
+          What a pause does to a day.{" "}
+          {second
+            ? "On the program gifts are made on since 2 October 2026, a pause holds every open day and cannot take one away. On the earlier program a pause only stops the readings of a daily gift: a day whose time to be caught up has passed still goes back to the person who offered it, pause or not."
+            : "A pause only stops the readings of a daily gift: a day whose time to be caught up has passed still goes back to the person who offered it, pause or not."}{" "}
+          A pause never sends money anywhere else.
         </p>
         <p>
           Where money can leave depends on the service that pays it, and the way out names each one as it

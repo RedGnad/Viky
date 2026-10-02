@@ -51,7 +51,7 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     supervised: false,
     inShort: "Read from Chess.com, which polices cheating itself. Viky never pays an account it has closed.",
     data: "Chess.com's public API, read every day through an attested fetch and checked the same way as Duolingo. The rating read is the one Chess.com publishes for that cadence, with its own reliability figure beside it.",
-    account: "The funder names the Chess.com account, and the person proves it is theirs with a short code when they open the gift.",
+    account: "The funder names the Chess.com account when they offer the gift, and that naming is the whole tie: no code is asked, so whoever opens the link is paid when that account gets there.",
     whoActed: "Unknown here too: the rating belongs to the account. What is different is that Chess.com hunts exactly that, and says so publicly.",
     sourcePolicing: "Chess.com polices engine use, outside help, account sharing and arranged results itself, publishes the sanction in the same API Viky reads (`status: closed:fair_play_violations`), and Viky refuses a closed account at every reading, so a gift is never paid on an account its own source has closed.",
   },
@@ -60,7 +60,7 @@ export const CONDITION_PROOFS: readonly ConditionProof[] = [
     supervised: false,
     inShort: "Read from Chess.com, which says nothing about policing puzzles. It only goes up, and never comes back down.",
     data: "Chess.com's public API, the same page as the rating, read through an attested fetch and checked the same way. What is read is `tactics.highest`, the best puzzle rating that account ever reached: it never goes down, so nothing the person does after beating their record can take the gift away from them.",
-    account: "The funder names the Chess.com account, and the person proves it is theirs with a short code when they open the gift.",
+    account: "The funder names the Chess.com account when they offer the gift, and that naming is the whole tie: no code is asked, so whoever opens the link is paid when that account gets there.",
     whoActed: "Unknown, and less watched here than in a game: a puzzle is solved alone against a clock, with no opponent and no game anybody can examine afterwards. The reading proves what that account reached, never who was at the keyboard.",
     sourcePolicing:
       "Chess.com closes an account for a Fair Play violation and publishes it in the same API Viky reads (`status: closed:fair_play_violations`), and Viky refuses a closed account at every reading. What it does not publish is anything about puzzles: read on 20 Sep 2026, neither its Fair Play policy nor its help centre article on Fair Play mentions the puzzle rating, and what they forbid is written about play. So nothing tells us this number is policed the way a rating is, and this condition is the weaker of the two on that question.",

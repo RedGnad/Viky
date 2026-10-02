@@ -115,7 +115,7 @@ test("the code is never in the repository, the route reads the signed-in account
   assert.match(route, /giveJudgeCredit\(\{ account: auth\.account, code \}\)/);
   const page = readFileSync("app/judges/page.tsx", "utf8");
   assert.doesNotMatch(page, /judgeCredit\.code|JUDGE_CODE/);
-  assert.match(page, /a judge\s+credit\s+from\s+Viky&apos;s\s+treasury,\s+once\s+per\s+account\.\s+A\s+real\s+funder\s+pays\s+by\s+card\s+through\s+Ramp,\s+shown\s+in\s+the\s+video\./);
+  assert.match(page, /a judge\s+credit\s+from\s+Viky&apos;s\s+treasury,\s+once\s+per\s+account\.\s+A\s+real\s+funder\s+pays\s+by\s+card\s+instead,\s+on\s+the\s+page\s+of\s+the\s+card\s+service/);
   assert.match(page, /press &quot;Have a code\?&quot;/, "the page points to the pay sheet, where the code is typed (D297)");
   assert.match(page, /Mera&apos;s stateless test runs on this same account/);
 });
