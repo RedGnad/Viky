@@ -10,22 +10,29 @@ import { META } from "../components/ui";
  * The person a gift is for has three (app/kit/YouDecide.tsx); the person who offered it has theirs
  * (app/kit/FunderControls.tsx). The look is the stylesheet's (`.you-decide`), so both rows are one drawing.
  */
-export function RoundControls({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
+export function RoundControls({ label, untitled = false, children }: Readonly<{ label: string; /** The row is named for a screen reader and prints no label: Me's, whose page is already titled (the founder, 2 Oct 2026). */ untitled?: boolean; children: ReactNode }>) {
   return (
     <section className="you-decide gift-card-width" aria-label={label}>
-      <p className={META}>{label}</p>
+      {untitled ? null : <p className={META}>{label}</p>}
       <div className="you-decide-acts">{children}</div>
     </section>
   );
 }
 
 /** One round button: a disc with its drawing, its name in two words, and its state in the small capitals. */
-export function Act({ name, state, onPress, children, ...rest }: Readonly<{ name: string; state: string; onPress: () => void; children: ReactNode; "data-decide": string }>) {
+export function Act({
+  name,
+  state,
+  onPress,
+  disabled = false,
+  children,
+  ...rest
+}: Readonly<{ name: string; /** Where it stands, in a label; nothing for a control that has no state. */ state?: string; onPress: () => void; disabled?: boolean; children: ReactNode; "data-decide": string }>) {
   return (
-    <button type="button" className="you-decide-act" onClick={onPress} {...rest}>
+    <button type="button" className="you-decide-act" onClick={onPress} disabled={disabled} {...rest}>
       <span className="you-decide-disc">{children}</span>
       <span className="you-decide-name">{name}</span>
-      <span className={`${META} you-decide-state`}>{state}</span>
+      {state ? <span className={`${META} you-decide-state`}>{state}</span> : null}
     </button>
   );
 }

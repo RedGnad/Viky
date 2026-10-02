@@ -44,7 +44,7 @@ test("the chooser opens on the four tiles from six conditions, every time, and t
   assert.match(sheet, /setFamily\(null\);\n\s*setPressedDone\(false\);\n\s*\}\n\s*\}/, "every opening starts on the four (D233), with nothing said yet about Done");
   // The way back to the four is an arrow above a family's list, named for a reader (D304); each condition is a button
   // with the card's chevron, since pressing one goes on to its questions.
-  assert.match(sheet, /<button type="button" aria-label=\{W\.families\} className=\{`\$\{INLINE_BUTTON\} self-start`\} onClick=\{\(\) => setFamily\(null\)\}>/, "the way back to the four above a family's list");
+  assert.match(sheet, /<button type="button" aria-label=\{W\.families\} className=\{`\$\{SMALL_BUTTON\} self-start`\} onClick=\{\(\) => setFamily\(null\)\}>/, "the way back to the four above a family's list");
   assert.match(sheet, /onClick=\{\(\) => choose\(option\.id\)\}/);
   assert.match(sheet, /aria-current=\{chosen \? "true" : undefined\}/, "the one on the card is marked");
   // From a condition's questions, an arrow back to the list it was chosen in, the screen before (the founder, 28 Sep

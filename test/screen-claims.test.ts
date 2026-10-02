@@ -351,10 +351,10 @@ test("the legal notice says exactly what the program lets the operator do, and n
 test("on the sheet that pays, the link warning is in the body and the rest is one press away", () => {
   const sheet = readFileSync("app/kit/offer/PaySheet.tsx", "utf8");
   // The sentence that changes what a person does next is read without pressing anything.
-  assert.match(sheet, /\{FUND\.check\.linkRisk\(recipient\)\}<\/p>\s*<details>/);
+  assert.match(sheet, /\{FUND\.check\.linkRisk\(recipient\)\}<\/p>\s*<details className="said-fold" data-what-happens="">/);
   // What only some readers need is inside the disclosure the mockup draws as a second, quiet button, and all of it
   // is still there: what this condition promises, the two names, the fourteen days, the fee and where it was read.
-  const inside = sheet.slice(sheet.indexOf("<details>"), sheet.indexOf("</details>"));
+  const inside = sheet.slice(sheet.indexOf('<details className="said-fold" data-what-happens="">'), sheet.indexOf("</details>"));
   assert.match(inside, /FUND\.check\.namesSeen/);
   assert.match(inside, /fourteenDays/);
   assert.match(inside, /feeSentence\(way\)/);

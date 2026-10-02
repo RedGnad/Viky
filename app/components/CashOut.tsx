@@ -24,10 +24,12 @@ import { CASH_OUT as W, USE_MONEY as U, WHERE_YOU_LIVE as L } from "@/src/senten
 import { inTheSun, orderUses, usesFor, usesSentence } from "@/src/use-money";
 import { useAccountCountry } from "@/src/client/account-country";
 import { CountryPicker } from "../kit/CountryPicker";
+import { FoldChevron } from "../kit/GiftLive";
+import { Said } from "../kit/Said";
 import { AccountPanel } from "./AccountPanel";
 import { PhoneTopUp } from "./PhoneTopUp";
 import { GiftCardOut } from "./GiftCardOut";
-import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, FIELD, HELP, INLINE_BUTTON, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE, TITLE_IN_FACE } from "./ui";
+import { AMOUNT_IN_TITLE, BODY, CARD, CARD_LABEL, CARD_TITLE, FIELD, HELP, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE, TITLE_IN_FACE } from "./ui";
 
 /**
  * The way out, rebuilt from docs/design/flows.md (states W1 to W13) on 17 Sep 2026.
@@ -508,7 +510,7 @@ export function CashOut() {
         {heading}
         <section className={CARD}>
           <h1 className={TITLE}>{closed ? W.closedTitle : W.signInToSee}</h1>
-          <p className={BODY}>{closed ? W.closedBody : W.signedOutBody}</p>
+          <Said text={closed ? W.closedBody : W.signedOutBody} />
           {closed && ready && way ? (
             <>
               <p className={HELP}>{W.closedWhere(amountOf(way, ready).lead, way.name)}</p>
@@ -611,7 +613,7 @@ export function CashOut() {
             {firstReady && dollarsHeld > 0n ? (
               <>
                 <p className={HELP}>{W.readyLine(firstReady.name, amountOf(firstReady, readyOf(firstReady)!).lead)}</p>
-                <button type="button" onClick={() => continueWith(firstReady)} className={`${INLINE_BUTTON} self-start`}>
+                <button type="button" onClick={() => continueWith(firstReady)} className={`${SMALL_BUTTON} self-start`}>
                   {W.continueReady(firstReady.name)}
                 </button>
               </>
@@ -631,7 +633,7 @@ export function CashOut() {
           {/* "change" is the same key as Me's (the founder did not see it as a link in the label, 27 Sep 2026). */}
           <div className="flex flex-wrap items-center justify-between gap-[var(--space-sm)]">
             <p className={CARD_LABEL}>{countryNow ? U.forWhereYouLive(countryInWords(countryNow) ?? countryNow.toUpperCase()) : U.forYourNumber}</p>
-            <button type="button" onClick={() => setPicking((was) => !was)} aria-expanded={asking} className={INLINE_BUTTON}>
+            <button type="button" onClick={() => setPicking((was) => !was)} aria-expanded={asking} className={SMALL_BUTTON}>
               {U.change}
             </button>
           </div>
@@ -670,7 +672,8 @@ export function CashOut() {
               <p className={CARD_LABEL}>{words.nature}</p>
               {/* The bank's sentence follows the method its service publishes for this country, and the card says its
                   smallest payout before anything is changed for it (the audit of 1 Oct 2026). */}
-              <p className={BODY}>{use === "bank" && bankPays ? U.bankBy(bankPays.method, bankPays.currency) : words.body}</p>
+              {/* One sentence in the open, the rest folded under "How it works" (the founder's rule 4 of 1 Oct 2026). */}
+              <Said text={use === "bank" && bankPays ? U.bankBy(bankPays.method, bankPays.currency) : words.body} />
               {use === "card" && cardSmallest ? <p className={HELP}>{U.cardFrom(figureIn(cardSmallest.amount, cardSmallest.currency))}</p> : null}
               <button type="button" onClick={act} disabled={holdings === null || changeable === 0n} className={inTheSun(use, index, eurosHeld) ? PRIMARY_BUTTON : SECONDARY_BUTTON}>
                 {words.action}
@@ -680,22 +683,24 @@ export function CashOut() {
           );
         })}
         {/* The two gestures left, in one line (the README's seventh rule): keep it here, or send it to another account. */}
-        <p className={HELP}>
-          {U.keepHere}
-          {" · "}
-          <button type="button" onClick={() => { setProblem(null); setOwnAmount(ownMax); setStage("own"); }} disabled={holdings === null || dollarsHeld === 0n} className="inline underline underline-offset-2 disabled:no-underline">
-            {W.anotherAccount}
-          </button>
-        </p>
+        <p className={HELP}>{U.keepHere}</p>
+        <button type="button" onClick={() => { setProblem(null); setOwnAmount(ownMax); setStage("own"); }} disabled={holdings === null || dollarsHeld === 0n} className={`${SMALL_BUTTON} self-start`}>
+          {W.anotherAccount}
+        </button>
         {/* The published figures and where each was read, for whoever asks: one press away, under everything. */}
-        <details className={HELP}>
-          <summary className="min-h-[var(--tap-target)] cursor-pointer py-[var(--space-sm)] font-medium">{W.whereFrom}</summary>
-          {WAYS_OUT.map((way) => (
-            <p key={way.name}>
-              {feeSentence(way)}, and pays {way.pays}. {W.sourceLine(way.source, way.read)}
-            </p>
-          ))}
-          {money.rates ? <p>{W.rateLine(RATE_SOURCE.name, rateDateInWords(money.rates.date))}</p> : null}
+        <details className="said-fold">
+          <summary className="said-fold-name">
+            {W.whereFrom}
+            <FoldChevron />
+          </summary>
+          <div className={`${HELP} said-fold-body flex flex-col gap-[var(--space-xs)]`}>
+            {WAYS_OUT.map((way) => (
+              <p key={way.name}>
+                {feeSentence(way)}, and pays {way.pays}. {W.sourceLine(way.source, way.read)}
+              </p>
+            ))}
+            {money.rates ? <p>{W.rateLine(RATE_SOURCE.name, rateDateInWords(money.rates.date))}</p> : null}
+          </div>
         </details>
       </div>
     );
@@ -724,15 +729,8 @@ export function CashOut() {
     const bank = chosen.coin === USDC.address;
     const orderNumber = quote ? floorToOrder(quote.shown) : "";
     const applied = quote?.payout ? feeApplied(quote.payout.worth, chosen.fee) : undefined;
-    const payout =
-      quote?.payout && applied
-        ? W.reviewPayout(
-            chosen.name,
-            `${quote.payout.worth.toFixed(2)} ${quote.payout.currency}`,
-            `${applied.fee.toFixed(2)} ${quote.payout.currency}`,
-            `${applied.net.toFixed(2)} ${quote.payout.currency}`,
-          )
-        : W.reviewCard(chosen.name);
+    // What the bank account receives, when the service publishes it: the figure, and the line that says what it took.
+    const payout = quote?.payout && applied ? { net: `${applied.net.toFixed(2)} ${quote.payout.currency}`, line: W.reviewTurns(chosen.name, `${quote.payout.worth.toFixed(2)} ${quote.payout.currency}`, `${applied.fee.toFixed(2)} ${quote.payout.currency}`) } : null;
     const priceRefused = problem?.where === "review" && (problem.code === "RATE_MOVED" || problem.code === "QUOTE_STALE");
     return (
       <div className="flex flex-col gap-[var(--space-xl)]">
@@ -750,14 +748,17 @@ export function CashOut() {
                 </span>
               </label>
               {dollars.trim() !== "" && changing.refusal ? (
-                <p role="alert" className={`${HELP} font-medium`}>
-                  {changing.refusal}{" "}
+                <>
+                  <p role="alert" className={`${HELP} font-medium`}>
+                    {changing.refusal}
+                  </p>
+                  {/* The way out of the refusal is a button under it, never a link inside its sentence (rule 1). */}
                   {changing.refusal === W.refusals.tooMuch(maxToChange) ? (
-                    <button type="button" onClick={() => setDollars(maxToChange)} className="underline">
+                    <button type="button" onClick={() => setDollars(maxToChange)} className={`${SMALL_BUTTON} self-start`}>
                       {W.refusals.sendAllOfIt}
                     </button>
                   ) : null}
-                </p>
+                </>
               ) : (
                 <p className={HELP}>{W.upTo(maxToChange, money.about(ausd))}</p>
               )}
@@ -766,7 +767,7 @@ export function CashOut() {
                 <button type="button" onClick={() => void askPrice()} disabled={busy || changing.units === undefined} className={PRIMARY_BUTTON}>
                   {busy ? W.asking : W.seeWhatYouWillGet}
                 </button>
-                <button type="button" onClick={() => { setStage("base"); setChosen(null); setProblem(null); }} className={INLINE_BUTTON}>
+                <button type="button" onClick={() => { setStage("base"); setChosen(null); setProblem(null); }} className={SMALL_BUTTON}>
                   {W.notNow}
                 </button>
               </div>
@@ -781,12 +782,29 @@ export function CashOut() {
                   {/* The dollars a person is spending lead, whichever coin the service buys: on the bank rail the
                       number ready to send is those dollars, on the card rail it is a quantity of the chain's own
                       coin, and the quantity is said after the money rather than in its place (D104). */}
-                  <p className={BODY}>
-                    {bank
-                      ? W.review(`$${orderNumber}`, chosen.name, payout)
-                      : W.reviewGetting(formatAusd(changing.units ?? 0n), orderNumber, chosen.name)}
-                  </p>
-                  {bank ? null : <p className={BODY}>{payout}</p>}
+                  {/* Figures side by side, each under a label of four words (rule 5): on the bank rail what will be ready
+                      to send and what the bank account receives; on the card rail the money spent and the quantity. */}
+                  <div className="decide-two" data-review-figures>
+                    {bank ? null : (
+                      <div>
+                        <p className="decide-amount">{formatAusd(changing.units ?? 0n)}</p>
+                        <p className={`${CARD_LABEL} decide-label`}>{W.reviewOfYours}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="decide-amount">{bank ? `$${orderNumber}` : orderNumber}</p>
+                      <p className={`${CARD_LABEL} decide-label`}>{W.reviewToSend}</p>
+                    </div>
+                    {bank && payout ? (
+                      <div>
+                        <p className="decide-amount">{payout.net}</p>
+                        <p className={`${CARD_LABEL} decide-label`}>{W.reviewOnBank}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                  {bank ? null : <p className={BODY}>{W.reviewQuantity(chosen.name)}</p>}
+                  {payout ? <p className={BODY}>{payout.line}</p> : bank ? null : <p className={BODY}>{W.reviewCard(chosen.name)}</p>}
+                  {bank ? <p className={BODY}>{W.nothingLeavesYet}</p> : null}
                   {quote.kept ? <p className={HELP}>{W.reviewKept(quote.kept)}</p> : null}
                   <p className={HELP}>
                     {W.reviewDollars(changing.units !== undefined ? twoDecimalsDown(changing.units, AUSD.decimals) : dollars)}
@@ -813,7 +831,7 @@ export function CashOut() {
                   </button>
                 )}
                 {stage !== "getting" ? (
-                  <button type="button" onClick={() => { setStage("amount"); setQuote(null); setProblem(null); }} className={INLINE_BUTTON}>
+                  <button type="button" onClick={() => { setStage("amount"); setQuote(null); setProblem(null); }} className={SMALL_BUTTON}>
                     {W.notNow}
                   </button>
                 ) : null}
@@ -839,7 +857,7 @@ export function CashOut() {
     const amount = ready ? amountOf(chosen, ready) : undefined;
     const exactLine = amount?.exact ? (
       <>
-        <p className={HELP}>{W.exactQuantity(chosen.name, amount.exact)}</p>
+        <Said className={HELP} text={W.exactQuantity(chosen.name, amount.exact)} />
         {amount.unpriced ? <p className={HELP}>{W.worthLater}</p> : null}
       </>
     ) : null;
@@ -853,7 +871,7 @@ export function CashOut() {
         {stage === "sent" && sent ? (
           <section className={CARD}>
             <p className={BODY}>{W.sent(sent.amount, sent.name, sent.when, sent.reference)}</p>
-            {sent.exact ? <p className={HELP}>{W.exactQuantity(sent.name, sent.exact)}</p> : null}
+            {sent.exact ? <Said className={HELP} text={W.exactQuantity(sent.name, sent.exact)} /> : null}
             <p className={HELP}>{W.sentPays(chosen.name, chosen.pays, !isNative(coin))}</p>
             {sent.cost ? <p className={HELP}>{W.sendingCost(sent.cost.dollars, sent.cost.underACent)}</p> : null}
             <a href={wayOutPage(chosen)} target="_blank" rel="noopener noreferrer" className={SECONDARY_BUTTON}>
@@ -894,16 +912,16 @@ export function CashOut() {
                   </p>
                 ) : null}
                 {copied === "refused" ? <p className={HELP}>{W.copyRefused}</p> : null}
-                <p className={HELP}>{W.comeBack(chosen.name)}</p>
-                <p className={HELP}>{W.itIsYours(chosen.name)}</p>
-                {/* What stops a person at the service itself, said here where its page opens and not on the card that
-                    decides (D124): the identity check, and the name the account or the card must carry. */}
-                {chosen.conditions.map((condition) => (
-                  <p key={condition} className={HELP}>
-                    {condition}
+                {/* What opens and what to come back with stay in the open, a line each: they are what the person does
+                    next. The rest is folded (rule 4): the question the service asks, and what stops a person at the
+                    service itself, said here where its page opens and not on the card that decides (D124): the
+                    identity check, and the name the account or the card must carry. */}
+                {W.comeBack(chosen.name).map((line) => (
+                  <p key={line} className={HELP}>
+                    {line}
                   </p>
                 ))}
-                {isNative(coin) ? <p className={HELP}>{W.sixHours(chosen.name)}</p> : null}
+                <Said whole className={HELP} text={[W.itIsYours(chosen.name), ...chosen.conditions, isNative(coin) ? W.sixHours(chosen.name) : ""].filter(Boolean).join(" ")} />
               </>
             ) : null}
 
@@ -928,7 +946,7 @@ export function CashOut() {
                   {W.send(amount!.lead, chosen.name)}
                 </button>
                 {deposit.trim() === "" ? <p className={HELP}>{W.pasteFirst(chosen.name)}</p> : null}
-                <Link href="/" className={INLINE_BUTTON}>
+                <Link href="/" className={SMALL_BUTTON}>
                   {W.notNow}
                 </Link>
               </>
@@ -952,7 +970,7 @@ export function CashOut() {
                     {stage === "sending" ? W.sending(amount!.lead, chosen.name) : W.sendButton}
                   </button>
                   {stage !== "sending" ? (
-                    <button type="button" onClick={() => { setStage("ready"); setProblem(null); }} className={INLINE_BUTTON}>
+                    <button type="button" onClick={() => { setStage("ready"); setProblem(null); }} className={SMALL_BUTTON}>
                       {W.notNow}
                     </button>
                   ) : null}
@@ -1002,14 +1020,16 @@ export function CashOut() {
                   </span>
                 </label>
                 {ownAmount.trim() !== "" && ownSending.refusal ? (
-                  <p role="alert" className={`${HELP} font-medium`}>
-                    {ownSending.refusal}{" "}
+                  <>
+                    <p role="alert" className={`${HELP} font-medium`}>
+                      {ownSending.refusal}
+                    </p>
                     {ownSending.refusal === W.refusals.tooMuch(ownMax) ? (
-                      <button type="button" onClick={() => setOwnAmount(ownMax)} className="underline">
+                      <button type="button" onClick={() => setOwnAmount(ownMax)} className={`${SMALL_BUTTON} self-start`}>
                         {W.refusals.sendAllOfIt}
                       </button>
                     ) : null}
-                  </p>
+                  </>
                 ) : (
                   <p className={HELP}>{W.upTo(ownMax, money.about(held(ownCoin)))}</p>
                 )}
@@ -1018,7 +1038,7 @@ export function CashOut() {
                     {W.own.send(ownNumber)}
                   </button>
                   {ownCode.trim() === "" ? <p className={HELP}>{W.own.pasteFirst}</p> : null}
-                  <button type="button" onClick={() => { setStage("base"); setProblem(null); }} className={INLINE_BUTTON}>
+                  <button type="button" onClick={() => { setStage("base"); setProblem(null); }} className={SMALL_BUTTON}>
                     {W.notNow}
                   </button>
                 </div>
@@ -1035,7 +1055,7 @@ export function CashOut() {
                     {stage === "ownSending" ? W.sending(ownNumber, "your other account") : W.sendButton}
                   </button>
                   {stage !== "ownSending" ? (
-                    <button type="button" onClick={() => { setStage("own"); setProblem(null); }} className={INLINE_BUTTON}>
+                    <button type="button" onClick={() => { setStage("own"); setProblem(null); }} className={SMALL_BUTTON}>
                       {W.notNow}
                     </button>
                   ) : null}

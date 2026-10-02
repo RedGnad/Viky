@@ -85,5 +85,5 @@ test("the screen hands the sentences an amount, never the raw quantity", () => {
   assert.doesNotMatch(screen, /W\.sent\(sent\.number/, "the confirmation is back to the quantity");
   assert.doesNotMatch(screen, /W\.closedWhere\(ready\.number/, "the closed session is back to the quantity");
   // The one number that is dollars by construction still is: the bank rail's order figure.
-  assert.match(screen, /W\.review\(`\$\$\{orderNumber\}`/);
+  assert.match(screen, /<p className="decide-amount">\{bank \? `\$\$\{orderNumber\}` : orderNumber\}<\/p>\s*<p className=\{`\$\{CARD_LABEL\} decide-label`\}>\{W\.reviewToSend\}<\/p>/);
 });

@@ -9,12 +9,14 @@ import { checkSourceName } from "@/src/client/gift";
 import { searchCertifications, type CertificationFound } from "@/src/client/certificate-gift";
 import { ApiError } from "@/src/client/api";
 import { suggestedTarget } from "@/src/milestone-terms";
-import { FUND, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
-import { CARD_LABEL, CHOICE, HELP, INLINE_BUTTON, META, PRIMARY_BUTTON, SECONDARY_BUTTON, TILE } from "../../components/ui";
+import { helpLine } from "@/src/help-line";
+import { FUND, GIFT_LIVE, GRADE_SCALE, MILESTONE_FUND as M, OFFER as W } from "@/src/sentences";
+import { CARD_LABEL, CHOICE, HELP, META, PRIMARY_BUTTON, ROW_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TILE } from "../../components/ui";
 import { ChoiceList } from "../ChoiceList";
 import { FamilyArt } from "../FamilyArt";
 import { Nature } from "../Nature";
 import { Field } from "../Field";
+import { FoldChevron } from "../GiftLive";
 import { Sheet } from "../Sheet";
 import { GradeTarget } from "./GradeTarget";
 import { UniversityChooser } from "./UniversityChooser";
@@ -331,6 +333,23 @@ export function WillSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, readingFor]);
 
+  /**
+   * What goes down into "How this is checked", at the foot of a condition's questions (the founder's rule 4 of 1 Oct
+   * 2026): what the condition proves, and the rest of every help longer than the one line a field keeps under it.
+   * Filled as the questions are drawn, in their order, and read by the fold drawn after them. Nothing is cut: a
+   * sentence that leaves a field is read here.
+   */
+  const folded: string[] = [];
+  const under = (help: string | undefined): string | undefined => {
+    const { line, rest } = helpLine(help);
+    if (rest) folded.push(rest);
+    return line ?? undefined;
+  };
+  const down = (text: string | undefined): null => {
+    if (text) folded.push(text);
+    return null;
+  };
+
   return (
     <Sheet
       open={open}
@@ -359,7 +378,7 @@ export function WillSheet({
           shownSection ? (
             <>
               {/* The way back to the four, as an arrow (D304, the founder, 28 Sep 2026), named for a reader of the screen. */}
-              <button type="button" aria-label={W.families} className={`${INLINE_BUTTON} self-start`} onClick={() => setFamily(null)}>
+              <button type="button" aria-label={W.families} className={`${SMALL_BUTTON} self-start`} onClick={() => setFamily(null)}>
                 <svg aria-hidden focusable="false" width="20" height="20" viewBox="0 0 24 24">
                   <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -375,7 +394,7 @@ export function WillSheet({
                       type="button"
                       aria-current={chosen ? "true" : undefined}
                       onClick={() => choose(option.id)}
-                      className={`${INLINE_BUTTON} w-full justify-between! text-left ${chosen ? "bg-[var(--chosen)]!" : ""}`}
+                      className={`${ROW_BUTTON} w-full justify-between! text-left ${chosen ? "bg-[var(--chosen)]!" : ""}`}
                     >
                       <span className="flex min-w-0 flex-1 flex-col items-start text-left">
                         <span className={`${CHOICE} break-words`}>{name}</span>
@@ -428,7 +447,7 @@ export function WillSheet({
           <button
             type="button"
             aria-label={W.change(W.slots.will.label)}
-            className={`${INLINE_BUTTON} self-start`}
+            className={`${SMALL_BUTTON} self-start`}
             onClick={() => {
               setFamily(condition.family);
               setAskedFor("list");
@@ -450,10 +469,9 @@ export function WillSheet({
               options={groupMembers(condition.group.id, offered).map((member) => ({ value: member.id, label: member.group?.mode ?? member.name, help: member.help }))}
             />
           ) : (
-            /* What it proves, under the questions' title, where the detail is decided (the founder, 28 Sep 2026). */
-            <p data-condition-help="" className={HELP}>
-              {condition.help}
-            </p>
+            /* What it proves is read in "How this is checked", the first line of it (rule 4): it stood here, a
+               paragraph over the questions. */
+            down(condition.help)
           )}
 
           {/* A climb: the account, the cadence, today's reading, then what they reach. */}
@@ -462,7 +480,8 @@ export function WillSheet({
               <Field
                 id="source-name"
                 label={milestone.condition.link.kind === "username" ? milestone.condition.link.label : milestone.words.targetLabel}
-                help={milestone.condition.link.kind === "username" ? milestone.condition.link.help : undefined}
+                help={milestone.condition.link.kind === "username" ? under(milestone.condition.link.help) : undefined}
+                placeholder={milestone.condition.link.kind === "username" ? milestone.condition.link.example : undefined}
                 value={draft.subject}
                 onChange={(value) => {
                   // The reading belongs to a name: it goes only when the name itself changes, not with a space or a
@@ -504,7 +523,7 @@ export function WillSheet({
                 <Field
                   id="gift-target"
                   label={milestone.words.targetLabel}
-                  help={`${milestone.words.today(draft.standing, cadence?.label ?? "")} ${M.detail.smallest(suggestedTarget(milestone.shape, draft.standing))}`}
+                  help={under(`${milestone.words.today(draft.standing, cadence?.label ?? "")} ${M.detail.smallest(suggestedTarget(milestone.shape, draft.standing))}`)}
                   value={draft.target}
                   onChange={(value) => onChange({ ...draft, target: value })}
                   refusal={ready || draft.target.trim().length === 0 ? undefined : milestone.words.refusals.targetShape}
@@ -527,7 +546,7 @@ export function WillSheet({
                 <Field
                   id="person-name"
                   label={certificate.words.nameLabel}
-                  help={certificate.words.nameHelp}
+                  help={under(certificate.words.nameHelp)}
                   value={draft.subject}
                   onChange={(value) => onChange({ ...draft, subject: value })}
                   refusal={draft.subject.trim().length === 0 || certificate.validName(draft.subject) ? undefined : certificate.words.refusals.nameShape}
@@ -577,7 +596,11 @@ export function WillSheet({
                     }
                   />
                   {certificate.portal?.scaled && draft.course ? (
-                    <GradeTarget draft={draft} label={certificate.target.label} help={certificate.target.help} refusal={certificate.words.refusals.targetShape} onChange={onChange} />
+                    <>
+                      <GradeTarget draft={draft} label={certificate.target.label} help={under(certificate.target.help)} refusal={certificate.words.refusals.targetShape} onChange={onChange} />
+                      {/* How a scale the funder chose is confirmed: read with the rest of how it is checked. */}
+                      {draft.scaleFixed ? null : down(GRADE_SCALE.help)}
+                    </>
                   ) : null}
                 </>
               ) : certificate.course?.search ? (
@@ -587,7 +610,7 @@ export function WillSheet({
                   <Field
                     id="certificate-search"
                     label={certificate.course.label}
-                    help={certificate.course.help}
+                    help={under(certificate.course.help)}
                     value={search.words}
                     onChange={(value) => setSearch((was) => ({ ...was, words: value, nothing: false }))}
                     refusal={search.nothing && !search.busy ? certificate.course.search.nothing : undefined}
@@ -625,7 +648,7 @@ export function WillSheet({
                 <Field
                   id="certificate-course"
                   label={certificate.course.label}
-                  help={certificate.course.help}
+                  help={under(certificate.course.help)}
                   value={draft.courseTitle ?? ""}
                   onChange={(value) => {
                     const slug = certificate.course?.slugOf(value);
@@ -639,7 +662,7 @@ export function WillSheet({
                 <Field
                   id="certificate-target"
                   label={certificate.target.label}
-                  help={certificate.target.help}
+                  help={under(certificate.target.help)}
                   value={draft.target}
                   onChange={(value) => onChange({ ...draft, target: value })}
                   refusal={draft.target.trim().length === 0 || ready ? undefined : certificate.words.refusals.targetShape}
@@ -652,7 +675,7 @@ export function WillSheet({
               {/* A proof the recipient shows themselves: what Viky keeps of it, in the register's words, so the face
                   says what there is to say when there is little to fill in (D233). */}
               {/* The university's chooser folds this under "How this is checked" instead (D247). */}
-              {condition.nature === "shown" && !certificate.course?.search?.listed ? <p className={HELP}>{certificate.words.whatIsRead}</p> : null}
+              {condition.nature === "shown" && !certificate.course?.search?.listed ? down(certificate.words.whatIsRead) : null}
             </>
           ) : null}
 
@@ -664,7 +687,10 @@ export function WillSheet({
                   <Field
                     id="source-name"
                     label={nameLink.label}
-                    help={nameLink.help}
+                    /* The line the register gives for under the field, with the help read whole below; or the
+                       help's own first sentence. An example of the name is the field's placeholder. */
+                    help={nameLink.line ?? under(nameLink.help)}
+                    placeholder={nameLink.example}
                     value={draft.subject}
                     onChange={(value) => {
                       setNameCheck({ busy: false });
@@ -676,7 +702,8 @@ export function WillSheet({
                     autoComplete="off"
                     spellCheck={false}
                   />
-                  {nameLink.why ? <p className={HELP}>{nameLink.why}</p> : null}
+                  {nameLink.line ? down(nameLink.help) : null}
+                  {down(nameLink.why)}
                   {nameCheck.busy ? <p className={HELP}>{FUND.detail.checking}</p> : null}
                 </>
               ) : null}
@@ -702,7 +729,7 @@ export function WillSheet({
                     ]}
                   />
                 ) : (
-                  <p className={HELP}>{FUND.detail.courseAfterName}</p>
+                  <p className={HELP}>{under(FUND.detail.courseAfterName)}</p>
                 )
               ) : null}
               {condition.target ? (
@@ -716,6 +743,23 @@ export function WillSheet({
                 />
               ) : null}
             </>
+          ) : null}
+          {/* Drawn last, so every sentence the questions sent down is in it (rule 4): folded under the name a gift's
+              own page gives it. */}
+          {folded.length > 0 ? (
+            <details className="gift-fold" data-how-checked="">
+              <summary className="gift-fold-name">
+                {GIFT_LIVE.checked}
+                <FoldChevron />
+              </summary>
+              <div className="gift-fold-body">
+                {folded.map((text, index) => (
+                  <p key={text} className={HELP} {...(index === 0 && text === condition.help ? { "data-condition-help": "" } : {})}>
+                    {text}
+                  </p>
+                ))}
+              </div>
+            </details>
           ) : null}
         </>
       )}

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ApiError, getJson, postJson } from "@/src/client/api";
 import { formatAusd } from "@/src/gift-reader";
 import { PAY as W } from "@/src/sentences";
-import { HELP, INLINE_BUTTON } from "../../components/ui";
+import { HELP, SMALL_BUTTON } from "../../components/ui";
 import { Field } from "../Field";
 import { FieldRefusal } from "../FieldRefusal";
 
@@ -91,7 +91,7 @@ export function JudgeCode({
   if (covered || !open || credited) return null;
   if (!shown) {
     return (
-      <button type="button" className={`${INLINE_BUTTON} self-start`} onClick={() => setShown(true)}>
+      <button type="button" className={`${SMALL_BUTTON} self-start`} onClick={() => setShown(true)}>
         {W.code.have}
       </button>
     );
@@ -100,7 +100,7 @@ export function JudgeCode({
     <div className="flex flex-col gap-[var(--space-xs)]">
       <Field id="gift-code" label={W.code.label} value={code} onChange={setCode} autoComplete="off" spellCheck={false} />
       {problem ? <FieldRefusal id="gift-code-refused">{problem}</FieldRefusal> : null}
-      <button type="button" className={`${INLINE_BUTTON} self-start`} disabled={busy || code.trim().length === 0} onClick={() => void redeem()}>
+      <button type="button" className={`${SMALL_BUTTON} self-start`} disabled={busy || code.trim().length === 0} onClick={() => void redeem()}>
         {busy ? W.code.using : W.code.use}
       </button>
     </div>

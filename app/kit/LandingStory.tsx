@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useSyncExternalStore, type ReactNode } from "react";
 import { DUOLINGO_DAILY } from "@/src/conditions";
 import { CATALOGUE, HOME, LANDING_STORY as W } from "@/src/sentences";
-import { BODY, CARD, PRIMARY_BUTTON, SAY } from "../components/ui";
+import { BODY, CARD, PRIMARY_BUTTON, SAY, SMALL_BUTTON } from "../components/ui";
 import { Character, type CharacterState } from "./Character";
 import { Figure, Scene } from "./Figure";
 import { Install, isStandalone } from "./Install";
@@ -68,7 +68,7 @@ export function LandingStory() {
       {W.blocks.map((block, index) => (
         <Block key={block.key} title={block.title} body={typeof block.body === "function" ? block.body(DUOLINGO_DAILY.source) : block.body} art={ART[block.key]} flip={index % 2 === 1}>
           {block.key === "checked" ? (
-            <Link href="/what-viky-can-check" className={`${BODY} inline-flex min-h-[var(--tap-target)] items-center self-center underline [@media(min-width:1024px)]:self-start`}>
+            <Link href="/what-viky-can-check" className={`${SMALL_BUTTON} self-center no-underline [@media(min-width:1024px)]:self-start`}>
               {CATALOGUE.title}
             </Link>
           ) : null}

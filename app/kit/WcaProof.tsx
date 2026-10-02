@@ -9,6 +9,7 @@ import { WCA_PROOF as W } from "@/src/sentences";
 import { WCA_MILESTONE } from "@/src/milestone-conditions";
 import { wcaResultInWords } from "@/src/wca";
 import { BODY, CARD, FIELD, HELP, PRIMARY_BUTTON } from "../components/ui";
+import { Said } from "./Said";
 import { FieldRefusal } from "./FieldRefusal";
 
 /**
@@ -82,11 +83,12 @@ export function WcaProof({ giftId, status, yours, onChanged }: Readonly<{ giftId
     return (
       <section className={CARD}>
         <form className="flex flex-col gap-[var(--space-md)]" onSubmit={(event) => { event.preventDefault(); void check(); }}>
-          <label className="flex flex-col gap-[var(--space-xs)]" htmlFor="wca-who">
-            <span className="font-medium">{W.whoLabel}</span>
-            <span className={HELP}>{W.whoHelp(wca.title)}</span>
+          <label className="font-medium" htmlFor="wca-who">
+            {W.whoLabel}
           </label>
           <input id="wca-who" className={FIELD} value={who} onChange={(event) => { setWho(event.target.value); if (state.at === "refused") setState({ at: "asking" }); }} autoComplete="off" />
+          {/* One line of help under the field, the rest folded (the founder's rule 4 of 1 Oct 2026). */}
+          <Said under className={HELP} text={W.whoHelp(wca.title)} />
           <FieldRefusal id="wca-who-refusal">{state.at === "refused" ? state.message : undefined}</FieldRefusal>
           <button type="submit" className={PRIMARY_BUTTON} disabled={busy || who.trim() === ""}>
             {state.at === "checking" ? W.checking : W.checkRegistration}

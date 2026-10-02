@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { HOME as W } from "@/src/sentences";
-import { INLINE_BUTTON } from "../components/ui";
+import { SMALL_BUTTON } from "../components/ui";
 
 /**
  * The balance's own action (the founder, 29 Sep 2026, the mockup withdraw.html): small, tonal, left under the figure it
@@ -19,7 +19,7 @@ export function SpendOrWithdraw({ holding = false }: Readonly<{ holding?: boolea
       {W.takeItOut}
     </>
   );
-  const look = `${INLINE_BUTTON} self-start font-bold no-underline`;
+  const look = `${SMALL_BUTTON} self-start font-bold no-underline`;
   return holding ? (
     <span aria-hidden className={`${look} invisible`}>
       {inside}

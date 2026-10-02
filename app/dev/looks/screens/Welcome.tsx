@@ -6,7 +6,7 @@ import { exampleGift } from "@/app/kit/example-gift";
 import { GiftCard } from "@/app/kit/GiftCard";
 import { Reveal } from "@/app/kit/Motion";
 import { Shell } from "@/app/kit/Shell";
-import { BODY, DISPLAY, HELP, INLINE_BUTTON, PRIMARY_BUTTON, PROSE, TITLE } from "@/app/components/ui";
+import { BODY, DISPLAY, HELP, SMALL_BUTTON, PRIMARY_BUTTON, PROSE, TITLE } from "@/app/components/ui";
 import { DOOR, HOME, ME } from "@/src/sentences";
 import { labHref } from "../example";
 
@@ -25,7 +25,7 @@ export function Welcome() {
       kind="destination"
       active="home"
       action={
-        <Link href={labHref("home")} className={INLINE_BUTTON}>
+        <Link href={labHref("home")} className={SMALL_BUTTON}>
           {DOOR.open}
         </Link>
       }

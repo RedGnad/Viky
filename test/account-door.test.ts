@@ -154,7 +154,7 @@ test("never 'computer' on a phone, never the site's name in place of the gift's 
   const instagram = { key: "instagram", name: "Instagram" };
   const phone = [W.insideApp(instagram), W.insideApp({ key: "app", name: null }), W.browserCannot, W.openIn("safari"), W.openIn("browser"), W.stayed.iphone, W.stayed.android, W.copy(true), W.copied("safari"), W.copyRefused, W.ifItKeepsFailing.iphone(true), W.ifItKeepsFailing.android(true), W.how, W.outdated];
   for (const sentence of phone) assert.doesNotMatch(sentence, /computer/i, sentence);
-  const all = [...phone, W.computer(true), W.computer(false), W.openItIn(true), W.copy(false), W.samePasskey, W.another];
+  const all = [...phone, ...W.computer(true), ...W.computer(false), W.openItIn(true), W.copy(false), W.samePasskey, W.another];
   for (const sentence of all) assert.doesNotMatch(sentence, /viky\.cash/i, sentence);
   // The box's small line says why here cannot, and never that an account "cannot be made" (the founder, 1 Oct 2026).
   assert.equal(W.insideApp(instagram), "Instagram's own window cannot create an account.");
@@ -174,5 +174,6 @@ test("never 'computer' on a phone, never the site's name in place of the gift's 
   assert.match(gift, /\{door\.kind === "elsewhere" \? ACCOUNT_DOOR\.continueIn\(ownBrowserOf\(door\.handset, door\.app\)\) : W\.createToOpen\}/, "in that state only");
   assert.equal(W.copy(true), "Copy this gift's link");
   assert.equal(W.openIn("browser"), "Open in your browser");
-  assert.match(W.computer(true), /open this gift's link on your phone/);
+  // Two lines: what the computer lacks, then what to do, each short enough to stand in the open.
+  assert.deepEqual(W.computer(true), ["This computer did not find a fingerprint reader or Windows Hello.", "Use a security key, or open this gift's link on your phone."]);
 });

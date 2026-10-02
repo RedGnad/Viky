@@ -141,7 +141,7 @@ test("there is one card, and the one being filled in is drawn by it", () => {
   // And that one character stands in the middle of the card, not at its left margin (D133).
   assert.match(card, /<Character state="toCome" className="h-auto w-\[96px\]" standing=\{false\} \/>/, "one character, larger since D226");
   // The condition line is a control, so it gets more room under the name than a caption would (D133).
-  assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] justify-between/);
+  assert.match(card, /className=\{`\$\{ROW_BUTTON\} mt-\[var\(--space-sm\)\] justify-between/);
   assert.equal(globSync("app/kit/offer/ShapePreview.tsx").length, 0, "the shape invented beside the product's own is gone");
 });
 
@@ -206,13 +206,13 @@ test("the name, the amount and the length are typed on the card, and nothing ope
   assert.match(key, /min-w-\[var\(--tap-target\)\]/, "and never narrower than a thumb");
   // One line, not two (D137). It opens the four families (D233), except while the condition on the card is not answered:
   // then its own questions, where the person left them (the founder, 28 Sep 2026).
-  assert.equal((card.match(/\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] justify-between/g) ?? []).length, 1, "one control for what they will do");
+  assert.equal((card.match(/\$\{ROW_BUTTON\} mt-\[var\(--space-sm\)\] justify-between/g) ?? []).length, 1, "one control for what they will do");
   // At its own width, centred in the card on a phone and at its left on a large screen (the founder, 29 Sep 2026).
   assert.match(card, /<span className="flex justify-center \[@media\(min-width:1024px\)\]:justify-start">\s*<button/);
   assert.match(card, /onClick=\{\(\) => setChoosing\(condition && !filled\.will \? "questions" : "list"\)\}/, "the catalogue, or the questions left half answered; one value carries whether it opens and on which face (D150)");
   assert.doesNotMatch(card, /cardDetail|detail\.said/, "the line says the label and the name, and the rest lives in the step it opens (D138)");
   assert.match(card, /className=\{`\$\{CHIP\} /, "a chip is the inline button at the size of a choice");
-  assert.match(card, /className=\{`\$\{INLINE_BUTTON\} mt-\[var\(--space-sm\)\] justify-between/, "and the condition line is one too, so every control lifts the same way");
+  assert.match(card, /className=\{`\$\{ROW_BUTTON\} mt-\[var\(--space-sm\)\] justify-between/, "and the condition line is one too, so every control lifts the same way");
   // The two that are left, and both are a choice rather than a field.
   assert.match(card, /<WillSheet openAt=\{choosing\}/, "and the sheet opens on the face the card asks for (D136), in one prop (D150)");
   assert.match(card, /<PaySheet open=\{paying\}/);

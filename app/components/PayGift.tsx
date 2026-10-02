@@ -35,6 +35,7 @@ import { JudgeCode } from "../kit/offer/JudgeCode";
 import { CardNotOffered, CardTermsLine } from "../kit/offer/CardTerms";
 import { SwapperSheet } from "../kit/offer/SwapperSheet";
 import { FunderControls } from "../kit/FunderControls";
+import { Said } from "../kit/Said";
 import { FoldChevron } from "../kit/GiftLive";
 import { whereTheRailsServe } from "@/src/client/rails";
 import { FUND as W, MILESTONE_FUND as M, OFFER, OFFER as O, PAY as P } from "@/src/sentences";
@@ -47,7 +48,7 @@ import { Working } from "../kit/Working";
 import { previewLine, sharedWith } from "@/src/preview-line";
 import { AccountPanel } from "./AccountPanel";
 import { DoorNotice } from "../kit/AccountDoor";
-import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
+import { BODY, CARD, CARD_LABEL, CARD_TITLE, HELP, META, MONEY, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
 
 /**
  * Paying for the gift that was filled in on the card (the product vision of 19 Sep 2026, section 5, surface Pay).
@@ -604,7 +605,7 @@ export function PayGift() {
           {W.waitingGift.signIn}
         </button>
         <div className="flex flex-col gap-[var(--space-xs)]">
-          <button type="button" onClick={differentGift} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+          <button type="button" onClick={differentGift} className={`${SMALL_BUTTON} self-start`}>
             {W.waiting.different}
           </button>
           <p className={HELP}>{W.waitingGift.staysInAccount}</p>
@@ -617,8 +618,8 @@ export function PayGift() {
   if (!address && step === "paying") {
     return (
       <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.closed.title}>
-        <p className={BODY}>{keptOnDevice ? W.closed.kept(formatAusd(units ?? 0n), recipient) : W.closed.keptWhileOpen(formatAusd(units ?? 0n), recipient)}</p>
-        <p className={HELP}>{W.closed.signInAgain}</p>
+        {/* One sentence in the open, the rest folded (the founder's rule 4 of 1 Oct 2026). */}
+        <Said text={`${keptOnDevice ? W.closed.kept(formatAusd(units ?? 0n), recipient) : W.closed.keptWhileOpen(formatAusd(units ?? 0n), recipient)} ${W.closed.signInAgain}`} />
         <AccountPanel returning signInOnly />
       </Shell>
     );
@@ -628,7 +629,7 @@ export function PayGift() {
   if (!ready || units === null || !condition) {
     return (
       <Shell kind="task" back="/" step={O.nothingToPay.title}>
-        <p className={BODY}>{O.nothingToPay.body}</p>
+        <Said text={O.nothingToPay.body} />
         <Link href="/" className={PRIMARY_BUTTON}>
           {O.nothingToPay.action}
         </Link>
@@ -647,7 +648,7 @@ export function PayGift() {
         <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows>
           {/* The whole screen while a gift is being made (the mockup paying.html): the ring, what is being done,
               how long it takes, and the gift itself small underneath, so it never leaves the screen. */}
-          <Working says={phase === "converting" ? W.arrived.gettingReady : P.putting(gift, recipient)} and={P.takesSeconds} large />
+          <Working says={phase === "converting" ? W.arrived.gettingReady : P.putting(gift, recipient)} and={P.takesSeconds} then={P.mayClose} large />
           <MiniGift recipient={recipient} what={condition.name} line={P.mini(condition.name, gift, days)} />
         </Shell>
       );
@@ -657,7 +658,7 @@ export function PayGift() {
       const makeIt = twoDecimalsDown(held, 6);
       return (
         <Shell kind="task" back="/gifts" backLabel={W.backToGifts} backFollows step={W.arrived.title}>
-          <p className={BODY}>{W.arrived.short(arrivedFigure, gift, more, `$${makeIt}`)}</p>
+          <Said text={W.arrived.short(arrivedFigure, gift, more, `$${makeIt}`)} />
           {cardClosed ? (
             <CardNotOffered country={card?.country ?? null} />
           ) : (
@@ -758,9 +759,10 @@ export function PayGift() {
                   <li key={line}>{line}</li>
                 ))}
               </ul>
-              <p className={HELP}>{W.waiting.theirWords(wayIn.name, wayIn.delivers)}</p>
-              {/* What the wait ends with: money a gift can hold at once, or a step the person confirms (D101). */}
+              {/* What the wait ends with, in the open: money a gift can hold at once, or a step the person confirms
+                  (D101). The partner's two words, and what stays behind, are folded under it (rule 4). */}
               <p className={HELP}>{wayIn.arrives === "gift" ? W.waiting.thenNothing : W.waiting.thenChanged}</p>
+              <Said whole className={HELP} text={[wayIn.arrives === "gift" ? "" : W.waiting.thenChangedRest, W.waiting.theirWords(wayIn.name, wayIn.delivers)].filter(Boolean).join(" ")} />
             </>
           )}
           <p className="font-medium">{W.waiting.codeLabel(wayIn.name)}</p>
@@ -812,7 +814,7 @@ export function PayGift() {
           onClose={() => setCardOpen(false)}
         />
         <div className="flex flex-col gap-[var(--space-xs)]">
-          <button type="button" onClick={differentGift} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+          <button type="button" onClick={differentGift} className={`${SMALL_BUTTON} self-start`}>
             {W.waiting.different}
           </button>
           <p className={HELP}>{W.waiting.staysInAccount}</p>

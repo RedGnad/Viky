@@ -1,7 +1,8 @@
 import { countryInWords } from "@/src/rail-country";
 import type { WayIn } from "@/src/rails";
 import { PAY as W } from "@/src/sentences";
-import { BODY, HELP } from "../../components/ui";
+import { HELP } from "../../components/ui";
+import { Said } from "../Said";
 
 /**
  * The line under a button or a link that pays by card (the founder, 29 Sep 2026): who the card goes to, and its terms on
@@ -21,5 +22,6 @@ export function CardTermsLine({ way }: Readonly<{ way: WayIn }>) {
 
 /** In the card's place, where its providers' terms exclude the payer's country (src/card-rail.ts). */
 export function CardNotOffered({ country }: Readonly<{ country: string | null }>) {
-  return <p className={BODY}>{W.cardNotOffered(countryInWords(country))}</p>;
+  // One sentence in the open, the rest folded: it also stands on the page of a payment that landed short (rule 4).
+  return <Said text={W.cardNotOffered(countryInWords(country))} />;
 }

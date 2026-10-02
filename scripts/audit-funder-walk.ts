@@ -250,7 +250,7 @@ async function sceneCard(w: Walk): Promise<void> {
   await shot(w, "05 will, the Learn list", "what they will do, Learn");
   await press(w, sheet(w).getByRole("button", { name: /A Duolingo lesson each day/ }).first());
   await shot(w, "06 daily, its questions", "what they will do, Learn, A Duolingo lesson each day");
-  const duolingo = sheet(w).getByLabel("Their Duolingo name, if you know it");
+  const duolingo = sheet(w).getByLabel("Their Duolingo name");
   await duolingo.fill("nobody_here_at_all");
   await duolingo.blur();
   await w.s.text(/No public Duolingo profile goes by that name/);
@@ -295,7 +295,7 @@ async function sceneCard(w: Walk): Promise<void> {
   // What the pay sheet says of a gift that waits for a rating: whether the rating itself is said before paying.
   await openPaySheet(w);
   await shot(w, "11b pay sheet, chess rating", "On the card with a chess rating: Send");
-  const about = sheet(w).locator("summary").first();
+  const about = sheet(w).locator("[data-what-happens] > summary");
   await about.click();
   await w.page.waitForTimeout(300);
   await sheetTo(w, "bottom");
@@ -450,7 +450,7 @@ async function photographPaySheet(w: Walk, number: string, how: string): Promise
   await shot(w, `${number}a pay sheet`, how);
   await sheetTo(w, "bottom");
   await shot(w, `${number}b pay sheet, its end`, "The same sheet, scrolled to its end");
-  const more = sheet(w).locator("summary").first();
+  const more = sheet(w).locator("[data-what-happens] > summary");
   if ((await more.count()) > 0) {
     await more.click();
     await w.page.waitForTimeout(300);

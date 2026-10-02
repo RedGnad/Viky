@@ -147,7 +147,12 @@ export type ConditionLink =
       /** The question on the funder's step, which is also its title. */
       label: string;
       help: string;
-      /** Why giving it protects the gift, said once under the field. */
+      /**
+       * The one line under the field, where it is not the help's own first sentence (the founder's rule 4 of 1 Oct
+       * 2026, kit-rules.html): the help is then read whole in "How this is checked".
+       */
+      line?: string;
+      /** Why giving it protects the gift, read in "How this is checked". */
       why?: string;
       example: string;
       /** The line of the check screen, and what it says when the funder left the name empty. */
@@ -347,8 +352,9 @@ export const DUOLINGO_DAILY: Condition = {
   help: "Read each morning from their public Duolingo profile, with nothing to install: it proves the account did the lesson, not who held the phone.",
   link: {
     kind: "username",
-    label: "Their Duolingo name, if you know it",
-    help: "The name under their picture in Duolingo, like ama_learns. Leave it empty and they name their own.",
+    label: "Their Duolingo name",
+    help: "The name under their picture in Duolingo, like ama_learns.",
+    line: "Empty? They name their own.",
     why: "Naming it is the surest thing you can do: only that Duolingo can then earn this gift, whoever opens the link.",
     example: "ama_learns",
     row: "Their Duolingo name",

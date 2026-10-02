@@ -14,7 +14,7 @@ import { BODY, HELP, SAY } from "../components/ui";
  * how long and what happens if the page goes. A device asking for reduced motion keeps the two sentences and stops the
  * ring, which is what that setting asks for.
  */
-export function Working({ says, and, large = false }: Readonly<{ says: string; and?: string; large?: boolean }>) {
+export function Working({ says, and, then, large = false }: Readonly<{ says: string; and?: string; /** A second line under the first: what happens if the page goes. */ then?: string; large?: boolean }>) {
   // While a gift is being made the whole screen is this (the mockup paying.html): the ring above, what is being
   // done in the title face under it, and how long it takes under that. Everywhere else it is a line.
   if (large) {
@@ -23,6 +23,7 @@ export function Working({ says, and, large = false }: Readonly<{ says: string; a
         <span className="working-ring working-ring-large" aria-hidden="true" />
         <p className={`${SAY} max-w-[280px]`}>{says}</p>
         {and ? <p className={`${HELP} max-w-[300px]`}>{and}</p> : null}
+        {then ? <p className={`${HELP} max-w-[300px]`}>{then}</p> : null}
       </div>
     );
   }
@@ -33,6 +34,7 @@ export function Working({ says, and, large = false }: Readonly<{ says: string; a
         <p className={BODY}>{says}</p>
       </div>
       {and ? <p className={HELP}>{and}</p> : null}
+      {then ? <p className={HELP}>{then}</p> : null}
     </div>
   );
 }

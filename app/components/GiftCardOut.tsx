@@ -12,7 +12,8 @@ import { GIFT_CARD_OUT as W } from "@/src/sentences";
 import { ChoiceList } from "../kit/ChoiceList";
 import { CopyLine } from "../kit/CopyLine";
 import { Sheet } from "../kit/Sheet";
-import { BODY, CARD, CARD_AMOUNT, CARD_LABEL, FIELD, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON, TITLE } from "./ui";
+import { BODY, CARD, CARD_AMOUNT, CARD_LABEL, FIELD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON, TITLE } from "./ui";
+import { Said } from "../kit/Said";
 
 /**
  * A gift card, the Bitrefill way's second use (D271): the card chosen in a sheet, as "Which university?" is, from the
@@ -43,12 +44,9 @@ export function GiftCardCodeLines({ code }: Readonly<{ code: GiftCardCode }>) {
       {code.code ? <CopyLine command={code.code} label={W.code} /> : null}
       {code.pin ? <CopyLine command={code.pin} label={W.pin} /> : null}
       {code.link ? (
-        <p className={HELP}>
-          {W.link}:{" "}
-          <a href={code.link} target="_blank" rel="noopener noreferrer" className="underline [overflow-wrap:anywhere]">
-            {code.link}
-          </a>
-        </p>
+        <a href={code.link} target="_blank" rel="noopener noreferrer" className={`${SMALL_BUTTON} self-start no-underline`}>
+          {W.link}
+        </a>
       ) : null}
       {code.instructions ? <p className={HELP}>{code.instructions}</p> : null}
       {code.expires ? <p className={HELP}>{W.expires(code.expires)}</p> : null}
@@ -177,7 +175,7 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
         {kept.map((one) => (
           <div key={one.orderId} className="flex flex-col gap-[var(--space-xs)] border-t border-[var(--divider)] pt-[var(--space-sm)]">
             <p className={BODY}>{W.historyLine(one.name, local(one.localAmount, one.localCurrency), new Date(one.at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }))}</p>
-            {one.code ? <GiftCardCodeLines code={one.code} /> : <p className={HELP}>{W.onItsWay}</p>}
+            {one.code ? <GiftCardCodeLines code={one.code} /> : <Said className={HELP} text={W.onItsWay} />}
           </div>
         ))}
       </section>
@@ -190,16 +188,16 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
         <section className={CARD}>
           <h2 className={TITLE}>{title}</h2>
           {status.state === "delivered" && status.code ? <GiftCardCodeLines code={status.code} /> : null}
-          {status.state === "on_its_way" ? <p className={BODY}>{W.onItsWay}</p> : null}
+          {status.state === "on_its_way" ? <Said text={W.onItsWay} /> : null}
           {status.state === "refunded" ? <p className={BODY}>{W.refunded(status.amount)}</p> : null}
           {status.state === "refund_pending" ? <p className={BODY}>{W.refundPending(status.amount)}</p> : null}
           <div className="flex flex-wrap gap-[var(--tap-gap)]">
             {waiting ? (
-              <button type="button" onClick={() => void followPhone(status.orderId).then(setStatus, (error) => refusal(error))} className={INLINE_BUTTON}>
+              <button type="button" onClick={() => void followPhone(status.orderId).then(setStatus, (error) => refusal(error))} className={SMALL_BUTTON}>
                 {W.checkAgain}
               </button>
             ) : null}
-            <button type="button" onClick={props.onBack} className={INLINE_BUTTON}>
+            <button type="button" onClick={props.onBack} className={SMALL_BUTTON}>
               {W.back}
             </button>
           </div>
@@ -241,7 +239,8 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
         ) : null}
         {price && card ? (
           <div>
-            <p className={CARD_LABEL}>{W.priced(local(price.localAmount, price.localCurrency), card.name)}</p>
+            {/* A sentence, so it is said in the help voice and not in small capitals (the founder's rule 5 of 1 Oct 2026). */}
+            <p className={HELP}>{W.priced(local(price.localAmount, price.localCurrency), card.name)}</p>
             <p className={CARD_AMOUNT}>{dollars(price.ausdUnits)}</p>
             <p className={HELP}>{W.costs(dollars(price.ausdUnits), dollars(props.ausd > price.ausdUnits ? props.ausd - price.ausdUnits : 0n), price.feeUnits > 0n ? dollars(price.feeUnits) : undefined)}</p>
           </div>
@@ -260,11 +259,11 @@ export function GiftCardOut(props: Readonly<{ rates?: Rates; country: string | n
             )
           ) : null}
           {props.country ? (
-            <button type="button" onClick={() => setSheetOpen(true)} disabled={busy} className={card ? INLINE_BUTTON : PRIMARY_BUTTON}>
+            <button type="button" onClick={() => setSheetOpen(true)} disabled={busy} className={card ? SMALL_BUTTON : PRIMARY_BUTTON}>
               {card ? W.change : W.choose}
             </button>
           ) : null}
-          <button type="button" onClick={props.onBack} disabled={busy} className={INLINE_BUTTON}>
+          <button type="button" onClick={props.onBack} disabled={busy} className={SMALL_BUTTON}>
             {W.back}
           </button>
         </div>

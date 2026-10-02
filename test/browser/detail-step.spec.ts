@@ -70,7 +70,8 @@ test.describe("the line that opens what they will do", () => {
         await expect(sheet(page).locator("[data-family-art]")).toHaveCount(4);
       } else {
         // Half answered: its own questions, where the person left them, with the way back to its list.
-        await expect(sheet(page).locator("[data-condition-help]")).toBeVisible();
+        // What it proves is at the foot of its questions, folded under "How this is checked" (rule 4).
+        await expect(sheet(page).locator("[data-how-checked] [data-condition-help]")).toHaveCount(1);
         await expect(sheet(page).getByRole("button", { name: /^Change/i })).toHaveCount(1);
       }
       await sheet(page).getByRole("button", { name: "Close" }).click();
@@ -85,8 +86,8 @@ test.describe("the line that opens what they will do", () => {
     const step = sheet(page);
     await step.getByRole("button", { name: /^Learn/ }).click();
     await step.getByRole("button", { name: /Duolingo lesson each day/i }).click();
-    await step.getByLabel(/name, if you know it/i).fill("Luis");
-    await step.getByLabel(/name, if you know it/i).blur();
+    await step.getByLabel(/^Their Duolingo name$/i).fill("Luis");
+    await step.getByLabel(/^Their Duolingo name$/i).blur();
     await expect(step.getByRole("radio", { name: /Any course on that profile/i })).toBeChecked();
     const courses = step.getByRole("radio");
     await expect(courses).toHaveCount(6);
@@ -105,7 +106,7 @@ test.describe("the line that opens what they will do", () => {
     await line.click();
     await sheet(page).getByRole("button", { name: /^Learn/ }).click();
     await sheet(page).getByRole("button", { name: /Duolingo lesson each day/i }).click();
-    await expect(sheet(page).getByLabel(/name, if you know it/i)).toBeVisible();
+    await expect(sheet(page).getByLabel(/^Their Duolingo name$/i)).toBeVisible();
     await expect(sheet(page).getByText(/the courses appear here/i)).toBeVisible();
     await expect(sheet(page).getByRole("button", { name: /^Done$/ })).toBeEnabled();
   });

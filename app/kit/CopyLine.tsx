@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { JUDGES } from "@/src/sentences";
+import { SMALL_BUTTON } from "../components/ui";
 
 /**
  * A command somebody is meant to run, with a button that copies it.
@@ -29,7 +30,7 @@ export function CopyLine({ command, label }: { command: string; label?: string }
               () => setCopied("refused"),
             );
           }}
-          className="inline-flex min-h-[var(--tap-target)] shrink-0 items-center text-[length:var(--type-help)] text-[var(--accent-text)] underline"
+          className={SMALL_BUTTON}
         >
           {JUDGES.copy}
         </button>

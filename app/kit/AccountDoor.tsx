@@ -5,7 +5,7 @@ import { useDoor, usePageOrigin } from "@/src/account/door";
 import type { EmbeddedApp, Handset } from "@/src/account/errors";
 import { ACCOUNT_HOST, wayOut, type OwnBrowser } from "@/src/account/passkey-support";
 import { ACCOUNT_DOOR as W } from "@/src/sentences";
-import { CARD, FIELD, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../components/ui";
+import { CARD, FIELD, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 
 /**
  * Where an account cannot be made on this page (src/account/passkey-support.ts, the founder, 1 Oct 2026).
@@ -118,7 +118,7 @@ export function CopyThisLink({ browser }: Readonly<{ browser: OwnBrowser | null 
   };
   return (
     <>
-      <button type="button" onClick={copy} className={`${INLINE_BUTTON} self-start`}>
+      <button type="button" onClick={copy} className={`${SMALL_BUTTON} self-start`}>
         {W.copy(gift)}
       </button>
       {copied === "yes" ? (

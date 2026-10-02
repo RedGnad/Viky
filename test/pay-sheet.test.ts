@@ -70,7 +70,7 @@ test("ensureAccount opens the key, signs in with a remembered passkey, or makes 
   assert.match(made, /if \(!open\) \{\s+mera\.signOut\(\);\s+setServerSessionFor\(undefined\);\s+\}/);
   // Somebody whose passkey is on another device: asked for it, never given a second account.
   assert.equal(PAY.alreadyHaveAccount, "I already have an account");
-  assert.match(sheet, /\{!address && !hasCredential \? \(\s+<button type="button" className=\{`\$\{INLINE_BUTTON\} self-start`\}[^>]*onClick=\{\(\) => void signInFirst\(\)\}>/);
+  assert.match(sheet, /\{!address && !hasCredential \? \(\s+<button type="button" className=\{`\$\{SMALL_BUTTON\} self-start`\}[^>]*onClick=\{\(\) => void signInFirst\(\)\}>/);
   assert.match(sheet, /await ensureAccount\(\{ existing: true \}\);/);
 });
 
@@ -94,7 +94,7 @@ test("one way in, one action, and no button to another (D239)", () => {
   const body = sheet.slice(sheet.indexOf("</>", sheet.indexOf("footer={")), sheet.indexOf("</Sheet>"));
   const buttons = body.match(/<button[^>]*>/g) ?? [];
   assert.ok(buttons.length >= 1);
-  for (const button of buttons) assert.match(button, /INLINE_BUTTON/, button);
+  for (const button of buttons) assert.match(button, /SMALL_BUTTON/, button);
   // The sentence is the one place the sheet names the two services: which refused, why, and which this goes through.
   assert.equal(PAY.instead.country("Ramp", "Mercuryo"), "Ramp does not serve your country, so this goes through Mercuryo.");
   assert.equal(PAY.instead.paused("Ramp", "Mercuryo"), "Ramp is not selling right now, so this goes through Mercuryo.");
@@ -200,10 +200,11 @@ test("the sheet stands where the mockup stands it, and the wait is the whole scr
   assert.match(sheet, /tall\n/, "and this is that sheet");
   // The wait: the ring at the size paying.html draws it, what is being done in the title face, and the gift under it.
   assert.match(css, /\.working-ring-large \{[\s\S]*?width: 54px;/);
-  assert.match(pay, /<Working says=\{phase === "converting" \? W\.arrived\.gettingReady : P\.putting\(gift, recipient\)\} and=\{P\.takesSeconds\} large \/>/);
+  assert.match(pay, /<Working says=\{phase === "converting" \? W\.arrived\.gettingReady : P\.putting\(gift, recipient\)\} and=\{P\.takesSeconds\} then=\{P\.mayClose\} large \/>/);
   assert.match(pay, /<MiniGift recipient=\{recipient\}/);
   assert.equal(PAY.putting("$30.00", "Noah"), "Putting $30.00 in Noah's name.");
-  assert.match(PAY.takesSeconds, /You can close this page/);
+  assert.equal(PAY.takesSeconds, "It takes a few seconds.");
+  assert.match(PAY.mayClose, /^You can close this page/);
 });
 
 test("paying starts on the card, and the old way in to it is gone", () => {

@@ -9,6 +9,7 @@ import { Field } from "../Field";
  * "Reached a grade" once the university is chosen (the founder, 28 Sep 2026): the grade is typed on a scale. The
  * university's own when its first results page has been reviewed, said in one line; before, the funder chooses it
  * among four, and the first results page shown confirms it or refuses the gift. A letter is chosen, a number typed.
+ * How a chosen scale is confirmed is read in the sheet's "How this is checked" (the founder's rule 4 of 1 Oct 2026).
  */
 export function GradeTarget({
   draft,
@@ -16,7 +17,7 @@ export function GradeTarget({
   help,
   refusal,
   onChange,
-}: Readonly<{ draft: GiftDraft; label: string; help: string; refusal: string; onChange: (draft: GiftDraft) => void }>) {
+}: Readonly<{ draft: GiftDraft; label: string; help: string | undefined; refusal: string; onChange: (draft: GiftDraft) => void }>) {
   const scale = scaleOfKey(draft.scale);
   const target = Number(draft.target);
   const onScale = scale !== undefined && draft.target.trim().length > 0 && gradeTargetProblem(scale, target) === undefined;
@@ -40,7 +41,6 @@ export function GradeTarget({
               </button>
             ))}
           </div>
-          <p className={HELP}>{W.help}</p>
         </>
       )}
       {scale?.kind === "letters" ? (

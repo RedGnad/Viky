@@ -7,7 +7,8 @@ import { proveMarathon, readMarathonLine, saveBib, type MarathonLine } from "@/s
 import { finishInWords, isValidBib } from "@/src/marathon";
 import type { MilestoneStatus } from "@/src/milestone-view";
 import { MARATHON_PROOF as W } from "@/src/sentences";
-import { BODY, CARD, FIELD, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../components/ui";
+import { BODY, CARD, FIELD, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../components/ui";
+import { Said } from "./Said";
 import { FieldRefusal } from "./FieldRefusal";
 
 /**
@@ -86,10 +87,11 @@ export function MarathonProof({ giftId, status, yours, onChanged }: Readonly<{ g
     return (
       <section className={CARD}>
         <form className="flex flex-col gap-[var(--space-md)]" onSubmit={(event) => { event.preventDefault(); void save(); }}>
-          <label className="flex flex-col gap-[var(--space-xs)]" htmlFor="marathon-bib">
-            <span className="font-medium">{W.bibLabel}</span>
-            <span className={HELP}>{!marathon.bibOpen ? W.bibClosed(marathon.raceName) : marathon.bib ? W.bibChangeHelp(marathon.raceName) : W.bibHelp(marathon.raceName)}</span>
+          <label className="font-medium" htmlFor="marathon-bib">
+            {W.bibLabel}
           </label>
+          {/* One line of help, the rest folded (the founder's rule 4 of 1 Oct 2026). */}
+          <Said under className={HELP} text={!marathon.bibOpen ? W.bibClosed(marathon.raceName) : marathon.bib ? W.bibChangeHelp(marathon.raceName) : W.bibHelp(marathon.raceName)} />
           {marathon.bibOpen ? (
             <>
               <input id="marathon-bib" className={FIELD} value={bib} onChange={(event) => { setBib(event.target.value); if (state.at === "refused") setState({ at: "asking" }); }} inputMode="numeric" autoComplete="off" />
@@ -109,7 +111,7 @@ export function MarathonProof({ giftId, status, yours, onChanged }: Readonly<{ g
       <p className="font-medium">{W.bibSet(marathon.bib, marathon.raceName, marathon.distance)}</p>
       <p className={HELP}>{marathon.bibOpen ? W.beforeTheRace : W.afterTheRace}</p>
       {marathon.bibOpen ? (
-        <button type="button" onClick={() => setChanging(true)} className={INLINE_BUTTON}>
+        <button type="button" onClick={() => setChanging(true)} className={SMALL_BUTTON}>
           {W.changeBib}
         </button>
       ) : null}

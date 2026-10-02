@@ -6,7 +6,8 @@ import { awaitShownProof, openShownProof } from "@/src/client/gift";
 import { verdictOnly } from "@/src/condition-privacy";
 import { conditionById } from "@/src/conditions";
 import { SHOW_PROOF as W } from "@/src/sentences";
-import { BODY, HELP, INLINE_BUTTON, PRIMARY_BUTTON } from "../components/ui";
+import { BODY, HELP, PRIMARY_BUTTON, SMALL_BUTTON } from "../components/ui";
+import { Said } from "./Said";
 
 /**
  * The one gesture of a shown condition (D162): the person the gift is for presses "Show it", signs in to the source on
@@ -79,7 +80,7 @@ export function ShowProof({
   if (state.at === "held" || review) {
     return (
       <section className={CARD} role="status">
-        <p className="font-medium">{state.at === "held" ? W.held : review === "refused" ? (reviewMessage ?? W.reviewRefused) : review === "building" ? W.building : W.held}</p>
+        <Said className="font-medium" text={state.at === "held" ? W.held : review === "refused" ? (reviewMessage ?? W.reviewRefused) : review === "building" ? W.building : W.held} />
       </section>
     );
   }
@@ -95,9 +96,8 @@ export function ShowProof({
   return (
     <section className={CARD}>
       <p className="font-medium">{W.title(condition.source)}</p>
-      <p className={HELP}>
-        {W.whatHappens(condition.source)} {W.kept[conditionId] ?? (verdictOnly(conditionId) ? W.keptVerdict : W.keptNumber)}
-      </p>
+      {/* One sentence in the open, what opens; where the person signs in and what Viky keeps are folded (rule 4). */}
+      <Said className={HELP} text={`${W.whatHappens(condition.source)} ${W.kept[conditionId] ?? (verdictOnly(conditionId) ? W.keptVerdict : W.keptNumber)}`} />
       {state.at === "waiting" ? (
         <>
           <a href={state.requestUrl} target="_blank" rel="noopener" className={`${PRIMARY_BUTTON} block text-center no-underline`}>
@@ -106,7 +106,7 @@ export function ShowProof({
           <p className={HELP} role="status">
             {W.waiting}
           </p>
-          <button type="button" onClick={() => waiting.current?.abort()} className={`${INLINE_BUTTON} self-start`}>
+          <button type="button" onClick={() => waiting.current?.abort()} className={`${SMALL_BUTTON} self-start`}>
             {W.stopWaiting}
           </button>
         </>

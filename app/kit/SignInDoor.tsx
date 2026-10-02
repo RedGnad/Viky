@@ -5,7 +5,7 @@ import * as mera from "@/src/account/mera";
 import { useMadeHere } from "@/src/account/door";
 import { useAccount } from "@/src/account/provider";
 import { DOOR as W } from "@/src/sentences";
-import { CARD, HELP, INLINE_BUTTON, PRIMARY_BUTTON, SECONDARY_BUTTON } from "../components/ui";
+import { CARD, HELP, PRIMARY_BUTTON, SECONDARY_BUTTON, SMALL_BUTTON } from "../components/ui";
 import { MadeOnTheMainSite } from "./AccountDoor";
 
 /**
@@ -77,7 +77,7 @@ export function SignInDoor() {
         aria-haspopup="dialog"
         disabled={busy}
         onClick={() => void tryPasskey()}
-        className={INLINE_BUTTON}
+        className={SMALL_BUTTON}
       >
         {/* One width whatever it says (the founder, 21 Sep 2026): "Sign in" and "One moment" are the same button,
             and a header control that grows while it works moves the mark beside it. */}
@@ -107,7 +107,7 @@ export function SignInDoor() {
               {error.guidance}
             </p>
           ) : null}
-          <button type="button" onClick={() => setOpen(false)} className={`${HELP} inline-flex min-h-[var(--tap-target)] items-center self-start underline`}>
+          <button type="button" onClick={() => setOpen(false)} className={`${SMALL_BUTTON} self-start`}>
             {W.notNow}
           </button>
         </div>

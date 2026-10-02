@@ -277,7 +277,9 @@ export const PAY = {
   notMade: "That did not go through, and nothing was taken. Try again.",
   /** The wait, while the gift is being made: what is happening, how long, and what closing the page costs. */
   putting: (amount: string, recipient: string) => `Putting ${amount} in ${their(recipient)} name.`,
-  takesSeconds: "It takes a few seconds. You can close this page: the gift will be in your gifts, with its link.",
+  /** Two lines under the ring since 2 Oct 2026: how long, then what happens if the page goes. */
+  takesSeconds: "It takes a few seconds.",
+  mayClose: "You can close this page: the gift will be in your gifts, with its link.",
   /** The card, small, under the wait: what is being made, in one line. */
   mini: (condition: string, amount: string, days: number) => `${condition} · ${amount} for ${days} ${days === 1 ? "day" : "days"}`,
 } as const;
@@ -438,7 +440,8 @@ export const ACCOUNT_DOOR = {
   copyRefused: "This browser would not copy it. Press and hold the link, then choose Copy.",
   linkLabel: "The link",
   how: "Your face or your fingerprint, and nothing to remember.",
-  computer: (gift: boolean) => `This computer did not find a fingerprint reader or Windows Hello. Use a security key, or open ${linkOf(gift)} on your phone.`,
+  /** Two lines: what the computer lacks, then what to do. */
+  computer: (gift: boolean) => ["This computer did not find a fingerprint reader or Windows Hello.", `Use a security key, or open ${linkOf(gift)} on your phone.`],
   ifItKeepsFailing: {
     iphone: (gift: boolean) => `If it keeps failing on this iPhone: in Settings, turn on AutoFill Passwords and Passkeys, and open ${linkOf(gift)} in Safari.`,
     android: (gift: boolean) => `If it keeps failing on this phone: set a screen lock on it, and open ${linkOf(gift)} in Chrome.`,
@@ -518,7 +521,7 @@ export const GIFT_CARD = {
   },
   /** "$25.00, by 1 Oct 2026" once started; "$25.00, within 30 days of connecting" before. */
   milestoneAmount: (total: string, by: string) => `${total}, ${by}`,
-  milestoneStartTooHigh: (start: number, target: number) => `Already at ${target} when it was connected (${start}): it cannot count it, and goes back at the end.`,
+  milestoneStartTooHigh: (start: number, target: number) => `Already at ${target} when it was connected (${start}): it goes back at the end.`,
 } as const;
 
 /** "Léa's", for a name the funder typed. */
@@ -659,7 +662,8 @@ export const FUND = {
       `${delivers.coin} and ${delivers.network} are the two words ${name} uses for the money it delivers to Viky. You never have to understand them.`,
     /** What the wait ends with, which differs by rail (D101). */
     thenNothing: "When it lands, the gift is made straight away: there is nothing else to confirm.",
-    thenChanged: "When it lands, you confirm one step that turns it into what the gift holds, and a little stays behind for it.",
+    thenChanged: "When it lands, you confirm one step that turns it into what the gift holds.",
+    thenChangedRest: "A little stays behind for it.",
     /** The same for a dollar coin, changed by the screen itself: nothing to confirm, nothing stays behind (the founder, 1 Oct 2026). */
     thenConfirmed: "When it lands, Viky turns it into what the gift holds and starts your gift.",
     codeLabel: (name: string) => `The code to give ${name}`,
@@ -1039,7 +1043,7 @@ export const GIFT_LIVE = {
     yours: (reading: number) => `You were already at ${reading} when it started, so there is nothing to climb.`,
     theirs: (recipient: string | null, reading: number) =>
       `${recipient ? `${recipient} was` : "They were"} already at ${reading} when it started, so there is nothing to climb.`,
-    label: (funder: string | null) => `Goes back to ${funder ?? "the person who offered it"}`,
+    label: (funder: string | null) => `Goes back to ${funder ?? "them"}`,
     labelToFunder: "Comes back to you",
     /** When the money moves: at the gift's own deadline, by itself. */
     on: (date: string) => `On ${date}, when the time is up.`,
@@ -1064,7 +1068,7 @@ export const GIFT_LIVE = {
     yours: "The time is up.",
     /** The funder's question is "what do I get back?": the headline says why, the figure says what. */
     theirs: (recipient: string | null) => `${recipient ?? "They"} did not make it in time.`,
-    label: { yours: (funder: string | null) => `Back to ${funder ?? "the person who offered it"}`, theirs: "Back to you" },
+    label: { yours: (funder: string | null) => `Back to ${funder ?? "them"}`, theirs: "Back to you" },
     byItself: { yours: "Nothing to do: it goes back by itself.", theirs: "Nothing to do: it comes back to you by itself." },
     backOn: (date: string) => `Back on ${date}.`,
   },
@@ -1196,7 +1200,8 @@ export const MILESTONE_ACTIONS = {
   startReading: (source: string) => `Start reading my ${source}`,
   /** How long they then have is in what was agreed, unfolded on this one moment (V4): it is not said twice. */
   connectNow: "Connect now: only what you reach after connecting counts.",
-  firstReading: "If you have already reached it when you connect, this gift cannot count it, so connect before you play.",
+  firstReading: "If you have already reached it when you connect, this gift cannot count it.",
+  firstReadingThen: "So connect before you play.",
   getCode: "Get my code",
   proveTitle: (username: string) => `Prove ${username} is yours`,
   added: "I added it",
@@ -1312,6 +1317,11 @@ export const END_GIFT = {
   label: { yours: "Yours", theirs: "Theirs" },
   /** The card of Home and of Gifts, in a line. */
   card: { yours: "You ended this gift.", theirs: "They ended this gift." },
+} as const;
+
+/** The name of a fold that holds what a block says beyond its first sentence (app/kit/Said.tsx, the founder's rule 4). */
+export const KIT = {
+  how: "How it works",
 } as const;
 
 /**
@@ -1635,6 +1645,11 @@ export const ME = {
   /** While the session closes, before the landing is painted (D258). */
   leaving: "Signing out",
   anotherAccount: "Use another account",
+  /** What a screen reader calls the row of Me's round controls. Nothing is printed above them (the founder, 2 Oct 2026). */
+  controls: "Your account",
+  /** The two words of Me's round controls (the founder's rule 6 of 1 Oct 2026): the sentences above are their sheets' and the door's. */
+  otherAccount: "Other account",
+  installShort: "Install",
   install: "Install Viky on this phone",
   installHow: "On iPhone: tap Share, then Add to Home Screen.",
   /** When the browser offers us no prompt of its own, which is where it keeps the same thing (D138). */
@@ -1703,12 +1718,12 @@ export const HELP = {
 export const USE_MONEY = {
   yours: "Yours",
   /** The line under the title: where the person lives, the account's own fact that orders the uses (D274). */
-  forWhereYouLive: (country: string) => `Where you live: ${country}`,
+  forWhereYouLive: (country: string) => `You live in ${country}`,
   forYourNumber: "Where do you live?",
-  change: "change",
+  change: "Change",
   phone: {
     name: "Your phone",
-    nature: "Credit or data, from your balance",
+    nature: "From your balance",
     body: "Credit or mobile data on your number, from your own phone company. Nothing to sign up for, no ID.",
     action: "Top up my phone",
   },
@@ -1726,7 +1741,7 @@ export const USE_MONEY = {
   },
   giftcard: {
     name: "A gift card",
-    nature: "A code, sent to this page",
+    nature: "A code, sent here",
     body: "Shops, games and more, from Bitrefill. Some are for online shops abroad, and each card says where it works.",
     action: "Choose a card",
   },
@@ -1763,7 +1778,7 @@ export const WHERE_YOU_LIVE = {
   keep: "Keep this country",
   label: "Where you live",
   youLive: (country: string) => `You live in ${country}.`,
-  change: "change",
+  change: "Change",
   reading: "Reading the countries",
   choose: "Choose a country",
   search: "Search a country",
@@ -1832,16 +1847,21 @@ export const CASH_OUT = {
     sendAllOfIt: "Send all of it",
   },
 
-  review: (amount: string, name: string, payout: string | undefined) =>
-    `You will get at least ${amount} to send.${payout ? ` ${payout}` : ""} Nothing leaves your account yet.`,
+  /**
+   * The review of step 1, in figures side by side since 2 Oct 2026 (the founder's rule 5: money is said in figures):
+   * what will be ready to send, and what the bank account receives, each under a label of four words. One sentence
+   * said three amounts before. What the service takes on the way is one line under them.
+   */
+  reviewToSend: "To send, at least",
+  reviewOnBank: "On your bank, about",
+  reviewOfYours: "Of your money",
+  reviewTurns: (name: string, worth: string, fee: string) => `${name} will turn that into about ${worth}, minus its ${fee} fee.`,
+  reviewQuantity: (name: string) => `It is the quantity ${name} asks for.`,
+  nothingLeavesYet: "Nothing leaves your account yet.",
   /**
    * The card service buys the chain's own coin, so what a person gets there is a quantity of it and not dollars. The
    * money they are spending leads, the quantity follows, and neither is left to be guessed (D104).
    */
-  reviewGetting: (dollars: string, exact: string, name: string) =>
-    `You are sending ${dollars} of your money, and you will get at least ${exact} to send, which is the quantity ${name} asks for.`,
-  reviewPayout: (name: string, euros: string, fee: string, net: string) =>
-    `${name} will turn that into about ${euros}, minus its ${fee} fee: about ${net} on your bank account.`,
   reviewCard: (name: string) => `What ${name} pays onto your card is shown on their page.`,
   /**
    * What stays in the account the first time money goes out this way (D53): an account that holds none of it can send
@@ -1875,7 +1895,8 @@ export const CASH_OUT = {
   },
   /** One gesture where there were two, with the code copied before the page that asks for it opens. */
   copyAndOpen: (name: string) => `Copy my code and open ${name}`,
-  comeBack: (name: string) => `${name} opens in a new tab and uses its own words. Come back to this tab with the code it gives you.`,
+  /** Two lines under the action that opens the service: what opens, then what to come back with. */
+  comeBack: (name: string) => [`${name} opens in a new tab and uses its own words.`, "Come back to this tab with the code it gives you."],
   /** The way back to money already made ready, from the first screen, now that it no longer opens by itself. */
   continueReady: (name: string) => `Continue with ${name}`,
   giveThisCode: (name: string) => `When ${name} asks where you are sending from, give them this code`,

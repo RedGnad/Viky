@@ -84,7 +84,8 @@ test("the chooser lists names alone, says nothing about checking, and invites th
   assert.doesNotMatch(JSON.stringify(Object.values(UNIVERSITY_CHOICE).filter((v) => typeof v === "string")), /unverified|password|proof|checked|connected/i);
   // One line under the list: the question and the link to the page a student adds theirs from.
   assert.equal(`${UNIVERSITY_CHOICE.notListed} ${UNIVERSITY_CHOICE.addYours}`, "Yours isn't here? Add your university");
-  assert.match(chooser, /\{W\.notListed\}\{" "\}\n\s*<Link href="\/add-your-university"/);
+  // The question, and beside it a small button to the page a student adds theirs from: never a link in the text.
+  assert.match(chooser, /<p className=\{HELP\}>\{W\.notListed\}<\/p>\n\s*<Link href="\/add-your-university" className=\{`\$\{SMALL_BUTTON\} no-underline`\}>/);
   assert.ok(existsSync("app/add-your-university/page.tsx"), "the page the link opens");
   assert.doesNotMatch(card, /UNIVERSITY_CHOICE/, "no coming-soon line on the card since D258");
 });
