@@ -1873,3 +1873,16 @@ html[data-intro] .launch-intro.launch-intro-leaving {
     transform: translateY(calc(var(--depth) * -480px)) rotate(var(--tilt));
   }
 }
+
+/*
+ * The judges page's sections (app/judges/Fold.tsx): each is its title until it is pressed. The title keeps the
+ * section's own size and takes the row, the chevron stays at its right; a section reached from the contents list
+ * stops a little under the top of the screen rather than against it.
+ */
+.judges-section {
+  scroll-margin-top: var(--space-lg);
+}
+.judges-section > details > summary h2,
+.judges-subfold > summary h3 {
+  min-width: 0;
+}

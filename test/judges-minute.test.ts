@@ -1,0 +1,81 @@
+import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
+import test from "node:test";
+import { JUDGES_CONTENTS } from "../app/judges/JudgesContents";
+
+/**
+ * The judges page for a judge in a hurry (the audit of 1 Oct 2026, D-11; the founder, 2 Oct 2026): a block that says
+ * the page in one minute, a list of its sections with anchors, and every section folded under its title. Nothing is
+ * removed, everything folds.
+ */
+
+const read = (file: string) => readFileSync(file, "utf8");
+const SOURCES = [...readdirSync("app/judges").filter((name) => name.endsWith(".tsx")).map((name) => `app/judges/${name}`), "app/components/MilestoneJudges.tsx", "app/components/JudgesAccount.tsx"];
+const folds = SOURCES.flatMap((file) => [...read(file).matchAll(/<Fold id="([\w-]+)" title="([^"]+)"( open)?/g)].map((found) => ({ file, id: found[1], title: found[2], open: Boolean(found[3]) })));
+
+test("the page opens on the minute, then the contents, then the sections", () => {
+  const page = read("app/judges/page.tsx");
+  const minute = page.indexOf("<JudgesMinute");
+  const contents = page.indexOf("<JudgesContents />");
+  const first = page.indexOf("<Fold ");
+  assert.ok(minute > page.indexOf("</header>") && contents > minute && first > contents, "the minute, the contents, then the first section");
+});
+
+test("every section is a fold with an anchor, the contents list names each one once, and no link leads nowhere", () => {
+  // No section is left that is not a fold: the judges page's blocks all go through app/judges/Fold.tsx.
+  for (const file of SOURCES.filter((name) => !/Fold|Minute|Contents/.test(name))) assert.doesNotMatch(read(file), /<section/, `${file} still draws a section of its own`);
+  const ids = [...new Set(folds.map((fold) => fold.id))].sort();
+  assert.deepEqual([...JUDGES_CONTENTS.map((entry) => entry.id)].sort(), ids, "the contents and the folds name the same sections");
+  assert.equal(new Set(JUDGES_CONTENTS.map((entry) => entry.id)).size, JUDGES_CONTENTS.length);
+  // A block drawn in two states (read, or not read) carries one id and one title in both.
+  for (const id of ids) assert.equal(new Set(folds.filter((fold) => fold.id === id).map((fold) => fold.title)).size, 1, id);
+  // The links inside the minute block lead to sections that exist.
+  for (const anchor of read("app/judges/JudgesMinute.tsx").matchAll(/href="#([\w-]+)"/g)) assert.ok(ids.includes(anchor[1]), `#${anchor[1]}`);
+  // The order of the list is the order of the page.
+  const page = read("app/judges/page.tsx");
+  const order = ["how to try it", "<JudgesWhoUsed", 'title="Network"', "<JudgesVerify", "<JudgesConditions", "<JudgesReliability", "<JudgesContracts", "<JudgesEarlyGifts", "<JudgesIndex", "<JudgesAgora", "<JudgesMera", 'title="How money comes in"', 'title="How a day is read"', 'title="Risks and holes', "<MilestoneJudges", "<JudgesAccount"].map((mark) => page.indexOf(mark));
+  assert.ok(order.every((at) => at > 0), "every section is on the page");
+  assert.deepEqual(order, [...order].sort((a, b) => a - b));
+  assert.deepEqual(JUDGES_CONTENTS.map((entry) => entry.id), ["try", "who", "network", "verify", "conditions", "reliability", "contracts", "first-gifts", "index", "agora", "mera", "money-in", "reading", "risks", "milestone", "account"]);
+});
+
+test("every section of detail is folded: only the judge's own path and their own account open by themselves", () => {
+  assert.deepEqual([...new Set(folds.filter((fold) => fold.open).map((fold) => fold.id))].sort(), ["account", "try"]);
+  // The long passages are folded inside their section too: the gift by gift list, and those of AUSD and of Mera.
+  assert.match(read("app/judges/JudgesWhoUsed.tsx"), /<SubFold title=\{`Gift by gift \(\$\{usage\.gifts\}\)`\}>/);
+  const agora = read("app/judges/JudgesAgora.tsx");
+  for (const title of ["What its issuer can do to a gift", "A plain send, with no gift", "What a gift costs, who pays it, and how fast it settles"]) assert.ok(agora.includes(`<SubFold title="${title}">`), title);
+  const mera = read("app/judges/JudgesMera.tsx");
+  for (const title of ["The seconds, and what they are", "Where the key is tied on Monad, and what the anchor is not"]) assert.ok(mera.includes(`<SubFold title="${title}">`), title);
+  // What a hurried judge is meant to run stays in the open: the command is outside the fold.
+  assert.ok(mera.indexOf('<CopyLine command="pnpm verify:consent" />') > mera.lastIndexOf("</SubFold>"));
+});
+
+test("a fold is a plain details under the section's own heading, so it opens without a script and is found by a search", () => {
+  const fold = read("app/judges/Fold.tsx");
+  assert.match(fold, /<section id=\{id\} className="judges-section">\s*<details open=\{open\}>\s*<summary className="gift-fold-name">\s*<h2 className=\{TITLE\}>\{title\}<\/h2>/);
+  assert.doesNotMatch(fold, /"use client"|useState|useEffect/);
+  // The contents list is anchors: a link leads to its section with no script, and with one it opens it.
+  const contents = read("app/judges/JudgesContents.tsx");
+  assert.match(contents, /<a className="underline" href=\{`#\$\{entry\.id\}`\} onClick=\{\(\) => openSection\(entry\.id\)\}>/);
+  assert.match(contents, /const named = decodeURIComponent\(window\.location\.hash\.slice\(1\)\);/);
+});
+
+test("the minute says what Viky is, for whom, who used it, where it runs, why Monad in three lines and one command, and adds no figure of its own", () => {
+  const minute = read("app/judges/JudgesMinute.tsx").replace(/\s+/g, " ");
+  for (const label of ["What it is", "Who it is for", "Who has used it", "Where it runs", "Why Monad", "One command"]) assert.ok(minute.includes(`<dt className={MUTED}>${label}</dt>`), label);
+  // Who it is for is the README's own sentence, so the two never say two things.
+  const readme = read("README.md").replace(/\s+/g, " ");
+  assert.ok(readme.includes("the person who pays for somebody else's effort from a distance and cannot check it themselves"));
+  assert.ok(minute.includes("The person who pays for somebody else&apos;s effort from a distance and cannot check it themselves"));
+  // The figures of use are counted, the same count as the section's; the figures of Monad are the measured ones.
+  assert.ok(minute.includes("const usage = index ? usageOf(index.gifts, founderAccounts(operatorAccounts())) : null;"));
+  assert.ok(minute.includes("{monWords(creditedDayMon())}") && minute.includes("{BLOCK_TIME.seconds} s") && minute.includes("{FINALITY_GAP.fewestBlocks} or {FINALITY_GAP.mostBlocks} blocks"));
+  assert.doesNotMatch(minute, /\$\d|\d MON|\d+ gifts/, "no figure is typed into the block");
+  // The three addresses are the page's own settings, and the command is one anybody can run with no key.
+  const page = read("app/judges/page.tsx");
+  assert.ok(page.includes("{ daily: escrowV2, milestone: milestoneV2, anchor, version: 2 }"));
+  assert.ok(minute.includes('<CopyLine command={`cast call ${contracts.daily} "owner()(address)" --rpc-url ${PUBLIC_RPC_URL}`} />'));
+  // Never the claims the product rules forbid.
+  assert.doesNotMatch(minute, /cheaper than a bank|nobody does this|no licen[cs]e/i);
+});

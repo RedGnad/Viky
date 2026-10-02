@@ -2,8 +2,8 @@ import { operatorAccounts } from "@/src/dev-access";
 import { exampleForJudges } from "@/src/proof-journal";
 import { JUDGES as J } from "@/src/sentences";
 import { CopyLine } from "../kit/CopyLine";
-import { TITLE } from "../components/ui";
 import { dateOfDay } from "@/src/day-record";
+import { Fold } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -23,8 +23,7 @@ export async function JudgesVerify() {
   // not answer leaves the page without its example, never without the page.
   const example = accounts.length === 0 ? null : await exampleForJudges(accounts).catch(() => null);
   return (
-    <section className="space-y-[var(--space-sm)]">
-      <h2 className={TITLE}>Verify a credited day yourself</h2>
+    <Fold id="verify" title="Verify a credited day yourself">
       {/* The founder's note, written as dictated (18 Sep 2026). It says what is true today and promises nothing about
           where the key is held: an enclave was costed on 18 Sep and set aside, and no sentence here implies one. */}
       <p className="font-medium">{J.ourKey}</p>
@@ -84,6 +83,6 @@ export async function JudgesVerify() {
         were on the phone. Reclaim writes the same thing about its attestor: a third party must trust that it did not
         collude with the user.
       </p>
-    </section>
+    </Fold>
   );
 }

@@ -1,5 +1,5 @@
 import { daysSince, heldDays, passesSince, readingTotals, refusalsByCode } from "@/src/pass-log";
-import { TITLE } from "../components/ui";
+import { Fold } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -35,30 +35,27 @@ export async function JudgesReliability() {
   const read = await Promise.all([passesSince(), readingTotals(), heldDays(), refusalsByCode()]).catch(() => null);
   if (!read) {
     return (
-      <section className="space-y-[var(--space-sm)]">
-        <h2 className={TITLE}>How reliable the readings are</h2>
+      <Fold id="reliability" title="How reliable the readings are">
         <p className={HELP}>
           The journal could not be read just now, so no figure is shown here rather than an old one.
         </p>
-      </section>
+      </Fold>
     );
   }
   const [since, readings, held, refusals] = read;
   if (!since.firstPassAt) {
     return (
-      <section className="space-y-[var(--space-sm)]">
-        <h2 className={TITLE}>How reliable the readings are</h2>
+      <Fold id="reliability" title="How reliable the readings are">
         <p className={HELP}>
           The journal is in place and empty: no pass has run since it was switched on, so there is nothing to show yet.
           Every figure here comes from that journal, so none can appear before a pass has written one.
         </p>
-      </section>
+      </Fold>
     );
   }
   const elapsed = daysSince(since.firstPassAt);
   return (
-    <section className="space-y-[var(--space-sm)]">
-      <h2 className={TITLE}>How reliable the readings are</h2>
+    <Fold id="reliability" title="How reliable the readings are">
       <p className={HELP}>
         Since {day(since.firstPassAt)}, the day each pass started writing a record of itself, which is{" "}
         {elapsed === 0 ? "today" : `${elapsed} ${elapsed === 1 ? "day" : "days"} ago`}. Passes before that day left no
@@ -116,6 +113,6 @@ export async function JudgesReliability() {
           readings before that hour does, on the second version alone.
         </dd>
       </dl>
-    </section>
+    </Fold>
   );
 }

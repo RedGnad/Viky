@@ -2,7 +2,7 @@ import { operatorAccounts } from "@/src/dev-access";
 import type { IndexRead } from "@/src/envio-index";
 import { formatAusd } from "@/src/gift-reader";
 import { between, founderAccounts, shortOf, usageOf, type GiftBetween } from "@/src/pilot-accounts";
-import { TITLE } from "../components/ui";
+import { Fold, SubFold } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -39,23 +39,21 @@ function Account({ account, founders }: Readonly<{ account: string; founders: Re
 export function JudgesWhoUsed({ index }: Readonly<{ index: IndexRead | null }>) {
   if (!index) {
     return (
-      <section className="space-y-[var(--space-sm)]" id="who">
-        <h2 className={TITLE}>Who has used Viky</h2>
+      <Fold id="who" title="Who has used Viky">
         <p className={HELP} data-who-used="unread">
           The gifts, who funded them and who opened them are counted from the index of the contracts&apos; events, and
           the index could not be read just now, or no endpoint is set for this deployment. So no count is shown here
           rather than an old one. The gifts themselves are on the contracts listed under Network, where anybody can
           read them.
         </p>
-      </section>
+      </Fold>
     );
   }
   const founders = founderAccounts(operatorAccounts());
   const usage = usageOf(index.gifts, founders);
   const others = (side: { all: number; founders: number }) => side.all - side.founders;
   return (
-    <section className="space-y-[var(--space-sm)]" id="who">
-      <h2 className={TITLE}>Who has used Viky</h2>
+    <Fold id="who" title="Who has used Viky">
       <p className={HELP}>
         Counted from the index of the contracts&apos; events as this page is served, at block{" "}
         {index.block.toLocaleString("en-US")}. The founder&apos;s own test accounts are named as his: they are the five
@@ -91,8 +89,10 @@ export function JudgesWhoUsed({ index }: Readonly<{ index: IndexRead | null }>) 
           {formatAusd(usage.earned)} earned by the people the gifts were for, {formatAusd(usage.sentBack)} sent back to
           the people who funded them.
         </dd>
-        <dt className={MUTED}>Gift by gift</dt>
-        <dd className={HELP}>
+      </dl>
+      {/* The long list, one line per gift, under its own fold: the figures above are what a hurried reader needs. */}
+      <SubFold title={`Gift by gift (${usage.gifts})`}>
+        <p className={HELP}>
           {index.gifts.map((gift) => (
             <span key={`${gift.contract}-${gift.giftId}`} className="block" data-who-used-gift={gift.giftId}>
               Gift {gift.giftId}, {formatAusd(gift.amount)}, {gift.status}: from <Account account={gift.funder} founders={founders} />{" "}
@@ -106,8 +106,8 @@ export function JudgesWhoUsed({ index }: Readonly<{ index: IndexRead | null }>) 
               ; {BETWEEN_WORDS[between(gift, founders)]}. {formatAusd(gift.amountEarned)} earned, {formatAusd(gift.amountRefunded)} sent back.
             </span>
           ))}
-        </dd>
-      </dl>
-    </section>
+        </p>
+      </SubFold>
+    </Fold>
   );
 }

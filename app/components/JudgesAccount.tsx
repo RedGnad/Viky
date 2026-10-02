@@ -2,7 +2,7 @@
 import { useSyncExternalStore } from "react";
 import { useAccount } from "@/src/account/provider";
 import { consentKey, onConsentKey } from "@/src/client/consent-key";
-import { TITLE } from "./ui";
+import { Fold } from "../judges/Fold";
 
 /** The agreement key this page holds in memory, as hexadecimal, or nothing. Read from the session itself, never from the server. */
 function keyHeld(): string {
@@ -21,8 +21,7 @@ export function JudgesAccount() {
   const { address } = useAccount();
   const key = useSyncExternalStore(onConsentKey, keyHeld, noKey);
   return (
-    <section className="space-y-[var(--space-sm)]">
-      <h2 className={TITLE}>Your account on this device</h2>
+    <Fold id="account" title="Your account on this device" open>
       {address ? (
         <>
           <p className="break-all text-[length:var(--type-help)]">{address}</p>
@@ -49,6 +48,6 @@ export function JudgesAccount() {
           Not signed in. Create or open an account on the home page, then come back through You, For judges.
         </p>
       )}
-    </section>
+    </Fold>
   );
 }

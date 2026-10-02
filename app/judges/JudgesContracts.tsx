@@ -1,6 +1,6 @@
 import { contractFacts } from "@/src/judges-chain";
 import { giftEscrowV2Address } from "@/src/v2";
-import { TITLE } from "../components/ui";
+import { Fold } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -22,20 +22,18 @@ export async function JudgesContracts() {
     facts = await contractFacts();
   } catch (error) {
     return (
-      <section className="space-y-[var(--space-sm)]">
-        <h2 className={TITLE}>The contracts, as the chain answers now</h2>
+      <Fold id="contracts" title="The contracts, as the chain answers now">
         <p className={HELP}>
           The chain could not be read just now ({error instanceof Error ? error.message.split("\n")[0] : "no answer"}), so
           nothing is shown here rather than something out of date.
         </p>
-      </section>
+      </Fold>
     );
   }
   if (facts.length === 0) return null;
   const secondVersion = giftEscrowV2Address() !== null;
   return (
-    <section className="space-y-[var(--space-md)]">
-      <h2 className={TITLE}>The contracts, as the chain answers now</h2>
+    <Fold id="contracts" title="The contracts, as the chain answers now" space="md">
       <p className={HELP}>
         Read while this page was served, never copied from the repository. Every command below is one you can run with
         the same public endpoint, and the refusal is a real one: asking for a gift number nobody has created.
@@ -141,6 +139,6 @@ export async function JudgesContracts() {
           cannot be re-verified by anybody.
         </li>
       </ul>
-    </section>
+    </Fold>
   );
 }

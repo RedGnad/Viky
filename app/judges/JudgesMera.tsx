@@ -2,7 +2,7 @@ import type { IndexRead } from "@/src/envio-index";
 import { ARRIVAL } from "@/src/measured";
 import { consentAnchorAddress } from "@/src/v2";
 import { CopyLine } from "../kit/CopyLine";
-import { TITLE } from "../components/ui";
+import { Fold, SubFold } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 
@@ -20,8 +20,7 @@ export function JudgesMera({ index }: Readonly<{ index: IndexRead | null }>) {
   const anchor = consentAnchorAddress();
   const { linkShown, accountMade, giftOpened } = ARRIVAL.seconds;
   return (
-    <section className="space-y-[var(--space-sm)]" id="mera">
-      <h2 className={TITLE}>Mera: from a link to a first transaction, and one passkey with two keys</h2>
+    <Fold id="mera" title="Mera: from a link to a first transaction, and one passkey with two keys">
       <h3 className="font-medium">From the link to the first transaction</h3>
       <p className={HELP} data-arrival="gestures">
         A person receives a gift&apos;s link and has no account. {ARRIVAL.gestures.length} gestures take them to their first
@@ -30,6 +29,7 @@ export function JudgesMera({ index }: Readonly<{ index: IndexRead | null }>) {
         for them. On the second version of the contracts the opening is signed in the browser by the key the link carries,
         with no gesture more.
       </p>
+      <SubFold title="The seconds, and what they are">
       <p className={HELP} data-arrival="seconds">
         Counted and timed on {ARRIVAL.measuredOn} by the capture tool (<code>test/browser/arrival-measure.spec.ts</code>), at 390 by
         844, {ARRIVAL.runs.length} runs: {ARRIVAL.runs.map(seconds).join(", ")} in all. The slowest, moment by moment:{" "}
@@ -40,6 +40,7 @@ export function JudgesMera({ index }: Readonly<{ index: IndexRead | null }>) {
         in them: on Monad the opening is one relayed transaction, final one or two blocks after the block that carries it (the
         AUSD section above). Not measured: a real phone on a real network.
       </p>
+      </SubFold>
       <h3 className="font-medium">One passkey, two keys</h3>
       <p className={HELP}>
         One prompt asks the passkey&apos;s PRF for two salts. The first makes the account&apos;s key, which signs everything
@@ -49,6 +50,7 @@ export function JudgesMera({ index }: Readonly<{ index: IndexRead | null }>) {
       </p>
       {anchor ? (
         <>
+          <SubFold title="Where the key is tied on Monad, and what the anchor is not">
           <p className={HELP}>
             Where that key is tied to the account on Monad: the anchor of agreements,{" "}
             <a className="underline [overflow-wrap:anywhere]" href={`https://monadvision.com/address/${anchor}`}>
@@ -70,7 +72,11 @@ export function JudgesMera({ index }: Readonly<{ index: IndexRead | null }>) {
             Viky&apos;s database, which applies at once, a stop above all. An entry that could not be written is tried again
             each time the gift is asked whether it may be read, a yes and a stop alike; a yes or a stop signed while the
             anchor could not be read carries no signature for it and is never written there. So the anchor does not prevent a
-            reading without a yes: it lets anybody see one. The command reads, for every gift of the second version, the key
+            reading without a yes: it lets anybody see one.
+          </p>
+          </SubFold>
+          <p className={HELP}>
+            The command reads, for every gift of the second version, the key
             the account bound and every yes and stop anchored, checks each Ed25519 signature itself, and checks that every
             reading that moved money came after a yes and before any stop:
           </p>
@@ -82,6 +88,6 @@ export function JudgesMera({ index }: Readonly<{ index: IndexRead | null }>) {
           which writes the tie and every yes and stop on Monad, is not set here.
         </p>
       )}
-    </section>
+    </Fold>
   );
 }

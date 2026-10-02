@@ -2,7 +2,7 @@ import { heldPerContract, type IndexRead } from "@/src/envio-index";
 import { formatAusd, formatAusdExact } from "@/src/gift-reader";
 import { AUSD_ADDRESS, createMonadPublicClient } from "@/src/monad/chain";
 import { dateInWords } from "@/src/moments";
-import { TITLE } from "../components/ui";
+import { Fold } from "./Fold";
 
 const HELP = "text-[length:var(--type-help)]";
 const MUTED = "text-[length:var(--type-help)] text-[var(--muted)]";
@@ -41,22 +41,20 @@ const dayOf = (iso: string) => dateInWords(new Date(iso).getTime(), "UTC");
 export async function JudgesIndex({ index }: Readonly<{ index: IndexRead | null }>) {
   if (!index) {
     return (
-      <section className="space-y-[var(--space-sm)]">
-        <h2 className={TITLE}>The index of the contracts&apos; events</h2>
+      <Fold id="index" title="The index of the contracts' events">
         <p className={HELP} data-index="unread">
           The contracts&apos; events are indexed with Envio HyperIndex, in the repository RedGnad/Viky-index. The index could
           not be read just now, or no endpoint is set for this deployment, so no figure of it is shown here rather than
           an old one. No movement of money depends on it: every figure elsewhere on this page comes from the contracts
           themselves.
         </p>
-      </section>
+      </Fold>
     );
   }
   const chain = await chainBeside(index);
   const held = heldPerContract(index.gifts);
   return (
-    <section className="space-y-[var(--space-sm)]">
-      <h2 className={TITLE}>The index of the contracts&apos; events</h2>
+    <Fold id="index" title="The index of the contracts' events">
       <p className={HELP}>
         The contracts&apos; events are indexed with Envio HyperIndex, in the repository RedGnad/Viky-index, and read here
         as this page is served. No movement of money depends on it: it is a second reading of the same events, set
@@ -111,6 +109,6 @@ export async function JudgesIndex({ index }: Readonly<{ index: IndexRead | null 
           ))}
         </dd>
       </dl>
-    </section>
+    </Fold>
   );
 }
