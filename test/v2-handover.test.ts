@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import type { Hex } from "viem";
-import { handoverProblems, type AnchorRead, type GiftContractRead, type HandoverExpected } from "../src/v2-handover";
+import { DAILY_GOALS } from "../src/daily-goals";
+import { MILESTONE_GOALS } from "../src/milestone-goals";
+import { GOAL_NUMBERS, goalProblems, handoverProblems, type AnchorRead, type GiftContractRead, type GoalExpected, type GoalsHeld, type HandoverExpected } from "../src/v2-handover";
 
 /**
  * What the hand-over check holds the three new contracts to before the app is told where they are (the review of
@@ -17,6 +19,21 @@ const OTHER = "0x000000000000000000000000000000000000B0b0" as Hex;
 const NOBODY = "0x0000000000000000000000000000000000000000" as Hex;
 const NOW = Date.UTC(2026, 9, 10, 9, 0, 0) / 1_000;
 const DAY = 86_400;
+
+const NO_PROVIDER = `0x${"0".repeat(64)}` as Hex;
+const ROGUE = `0x${"ab".repeat(32)}` as Hex;
+/** A contract's 255 goal numbers as it holds them when exactly the register was registered. */
+function held(register: readonly GoalExpected[], shaped: boolean): GoalsHeld {
+  const providers = Array.from({ length: GOAL_NUMBERS }, (_unused, index) => register.find((goal) => goal.goalType === index + 1)?.providerId ?? NO_PROVIDER);
+  const shapes = Array.from({ length: GOAL_NUMBERS }, (_unused, index) => register.find((goal) => goal.goalType === index + 1)?.shape ?? 0);
+  return shaped ? { providers, shapes } : { providers };
+}
+/** The same, with one number changed. */
+function withGoal(goals: GoalsHeld, goalType: number, change: Readonly<{ provider?: Hex; shape?: number }>): GoalsHeld {
+  const providers = goals.providers.map((provider, index) => (index === goalType - 1 && change.provider ? change.provider : provider));
+  const shapes = goals.shapes?.map((shape, index) => (index === goalType - 1 && change.shape !== undefined ? change.shape : shape));
+  return shapes ? { providers, shapes } : { providers };
+}
 
 const expected: HandoverExpected = { owner: SAFE, signer: SIGNER, relayer: RELAYER, nowSeconds: NOW };
 const daily: GiftContractRead = {
@@ -35,6 +52,8 @@ const daily: GiftContractRead = {
     { name: "the daily contract", address: "0x00000000000000000000000000000000000000a1", nextGiftId: 4n, creationPaused: true },
     { name: "the earlier daily contract", address: "0x00000000000000000000000000000000000000a0", nextGiftId: 2n, creationPaused: true },
   ],
+  goals: held(DAILY_GOALS, false),
+  register: DAILY_GOALS,
 };
 const milestone: GiftContractRead = {
   ...daily,
@@ -44,6 +63,8 @@ const milestone: GiftContractRead = {
   address: "0x00000000000000000000000000000000000000d2",
   nextGiftId: 1_000_006n,
   replaces: [{ name: "the milestone contract", address: "0x00000000000000000000000000000000000000a2", nextGiftId: 1_000_006n, creationPaused: true }],
+  goals: held(MILESTONE_GOALS, true),
+  register: MILESTONE_GOALS,
 };
 const anchor: AnchorRead = { name: "ConsentAnchor", address: "0x00000000000000000000000000000000000000d3", owner: SAFE, pendingOwner: NOBODY, anchorer: RELAYER };
 
@@ -101,12 +122,55 @@ test("creation closed on a new contract, open on one it replaces, and a numberin
   assert.match(ahead.notes[0], /GiftEscrowV2: 2 gift\(s\) were already made on it, by somebody speaking to the contract itself/);
 });
 
+test("every one of the 255 goal numbers is held to the register: a goal is added and never changed", () => {
+  // The two registers as the deployment writes them: nothing to say.
+  assert.deepEqual(goalProblems("GiftEscrowV2", held(DAILY_GOALS, false), DAILY_GOALS), []);
+  assert.deepEqual(goalProblems("MilestoneGiftV2", held(MILESTONE_GOALS, true), MILESTONE_GOALS), []);
+  assert.equal(GOAL_NUMBERS, 255);
+  assert.ok(DAILY_GOALS.length > 0 && MILESTONE_GOALS.length > 0);
+
+  // A number the register does not hold, written by the deploying key before the Safe accepted: there for good.
+  const free = Array.from({ length: GOAL_NUMBERS }, (_unused, index) => index + 1).find((goalType) => !MILESTONE_GOALS.some((goal) => goal.goalType === goalType)) as number;
+  const added = goalProblems("MilestoneGiftV2", withGoal(held(MILESTONE_GOALS, true), free, { provider: ROGUE, shape: 1 }), MILESTONE_GOALS);
+  assert.deepEqual(added, [`MilestoneGiftV2: goal ${free} is registered (${ROGUE}, having it or not) and the register holds no goal ${free}. A goal is added and never changed: this contract cannot be put right. Set nothing, and deploy again`]);
+  // The last number of all is read like the first.
+  assert.equal(goalProblems("GiftEscrowV2", withGoal(held(DAILY_GOALS, false), 255, { provider: ROGUE }), DAILY_GOALS).length, 1);
+
+  // A climb registered in the shape of a certificate: the whole gift on a single reading.
+  const climb = MILESTONE_GOALS.find((goal) => goal.shape === 0) as (typeof MILESTONE_GOALS)[number];
+  const reshaped = goalProblems("MilestoneGiftV2", withGoal(held(MILESTONE_GOALS, true), climb.goalType, { shape: 1 }), MILESTONE_GOALS);
+  assert.deepEqual(reshaped, [`MilestoneGiftV2: goal ${climb.goalType} is registered as having it or not, and the register says a climb: it would pay a whole gift on a single reading. A goal is added and never changed: this contract cannot be put right. Set nothing, and deploy again`]);
+  // The other way round is named too, without that clause.
+  const certificate = MILESTONE_GOALS.find((goal) => goal.shape === 1) as (typeof MILESTONE_GOALS)[number];
+  assert.match(goalProblems("MilestoneGiftV2", withGoal(held(MILESTONE_GOALS, true), certificate.goalType, { shape: 0 }), MILESTONE_GOALS)[0], /is registered as a climb, and the register says having it or not\. A goal is added/);
+
+  // Another provider under a number of the register.
+  const first = DAILY_GOALS[0];
+  assert.deepEqual(goalProblems("GiftEscrowV2", withGoal(held(DAILY_GOALS, false), first.goalType, { provider: ROGUE }), DAILY_GOALS), [
+    `GiftEscrowV2: goal ${first.goalType} is registered with the provider ${ROGUE}, and the register says ${first.providerId}. A goal is added and never changed: this contract cannot be put right. Set nothing, and deploy again`,
+  ]);
+  // A goal of the register that is missing is the one thing that can still be put right.
+  assert.deepEqual(goalProblems("GiftEscrowV2", withGoal(held(DAILY_GOALS, false), first.goalType, { provider: NO_PROVIDER }), DAILY_GOALS), [`GiftEscrowV2: goal ${first.goalType} of the register is not registered. The owner can still add it, with the register's own provider`]);
+  // A register that was not read whole is never taken for a clean one.
+  assert.deepEqual(goalProblems("GiftEscrowV2", { providers: held(DAILY_GOALS, false).providers.slice(0, 200) }, DAILY_GOALS), ["GiftEscrowV2: its 255 goal numbers were not all read"]);
+
+  // And the hand-over refuses on it, with everything else in order.
+  assert.equal(problemsOf([daily, { ...milestone, goals: withGoal(milestone.goals, free, { provider: ROGUE, shape: 0 }) }]).length, 1);
+});
+
 test("the script reads each of these on the chain, asks for the relayer by name, and prints the settings last", () => {
   const script = readFileSync("scripts/check-v2-handover.ts", "utf8");
   for (const view of ["owner", "pendingOwner", "pendingEvidenceSigner", "evidenceSigner", "checkInPausedUntil", "proofPausedUntil", "creationPaused", "nextGiftId", "anchorer"]) {
     assert.match(script, new RegExp(`view\\("${view}", `), view);
   }
   assert.match(script, /relayer: named\("RELAYER_ADDRESS"\)/);
+  // The 255 goal numbers of each contract, and their shapes on the milestone contract, against the two tables the
+  // deployment registers.
+  assert.match(script, /for \(let from = 1; from <= GOAL_NUMBERS; from \+= GOALS_AT_ONCE\)/);
+  assert.match(script, /functionName: "goalProviders", args: \[goalType\]/);
+  assert.match(script, /if \(shaped\) shapes\.push\([\s\S]*?functionName: "goalShapes", args: \[goalType\]/);
+  assert.match(script, /\], false, DAILY_GOALS\),/);
+  assert.match(script, /\], true, MILESTONE_GOALS\),/);
   // The moment is the chain's own, so a rehearsal that moved the fork's clock is judged by that clock.
   assert.match(script, /nowSeconds: Number\(\(await client\.getBlock\(\)\)\.timestamp\)/);
   assert.match(script, /replaced\("the daily contract", GIFT_ESCROW\), await replaced\("the earlier daily contract", EARLIER_GIFT_ESCROW\)/);

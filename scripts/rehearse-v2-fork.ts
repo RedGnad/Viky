@@ -33,6 +33,8 @@ import { holdTheStart } from "../src/held-start";
 import { configureHeldStartStore } from "../src/held-start-store";
 import { GOAL_TYPE_DUOLINGO_XP } from "../src/gift-terms";
 import { CHESS_MILESTONE } from "../src/milestone-conditions";
+import { DAILY_GOALS } from "../src/daily-goals";
+import { MILESTONE_GOALS } from "../src/milestone-goals";
 import { milestoneGiftAbi } from "../src/milestone-gift-abi";
 import { readMilestoneGift } from "../src/milestone-reader";
 import { relayProve } from "../src/milestone-relay";
@@ -67,7 +69,8 @@ import { EARLIER_GIFT_ESCROW, GIFT_ESCROW, MILESTONE_GIFT } from "../src/viky-co
  *      refused by the tool before anybody signs it, while it runs and in the week that follows its end;
  *   6. the recipient's yes and stop, written on the anchor by the consent route with no step of its own, and then
  *      `pnpm verify:consent`'s own check over the whole fork: the gift read under a yes passes, and a gift read with
- *      no yes anchored before it is named, even once a yes is anchored after the fact.
+ *      no yes anchored before it is named, even once a yes is anchored after the fact;
+ *   7. last, a goal registered outside the register, which the hand-over check names among the 255 numbers it reads.
  *
  * No key of production is used: the relayer, the evidence signer, the deployer, the funder and the recipient are all
  * made here. So are the two keys that sign for the Safe: on the fork, and nowhere else, the Safe's own list of owners
@@ -265,7 +268,8 @@ async function main() {
   expect(!twice.ok && twice.out.includes("Nothing to accept"), "and an ownership already accepted is not asked for again");
   const handed = handover();
   expect(handed.ok && handed.out.includes(`NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS=${daily}`) && handed.out.includes(`NEXT_PUBLIC_CONSENT_ANCHOR_ADDRESS=${anchor}`), "the hand-over check passes: the Safe owns the three, no signer is waiting, and only now are the three settings printed");
-  expect(handed.out.includes("no pause was sent, and the anchor names the relayer"), "and it read that no pause was sent and that the anchor names the relayer");
+  expect(handed.out.includes("no pause was sent, the anchor names the relayer, and every goal is the register's"), "and it read that no pause was sent, that the anchor names the relayer, and that each of the 255 goal numbers is the register's");
+  expect(handed.out.includes(`"goals":"${DAILY_GOALS.length} registered of 255 numbers read"`) && handed.out.includes(`"goals":"${MILESTONE_GOALS.length} registered of 255 numbers read"`), `${DAILY_GOALS.length} daily goals and ${MILESTONE_GOALS.length} milestone goals were found among the 255 numbers of each contract`);
   // The relayer's address is the one thing the deployment takes on somebody's word: the check holds it to the anchor.
   const otherRelayer = handover({ RELAYER_ADDRESS: thiefOfOwnership });
   expect(!otherRelayer.ok && otherRelayer.out.includes(`ConsentAnchor: its anchorer is ${relayer.address}, not the relayer ${thiefOfOwnership}`) && !otherRelayer.out.includes("NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS="), "an anchor that names another address than the relayer is said, and no setting is printed");
@@ -609,6 +613,20 @@ async function main() {
   expect(one.code === 0 && one.out.includes("PASSED: 1 gift"), "pnpm verify:consent passes the daily gift, from the chain alone");
   const all = command("");
   expect(all.code === 1 && all.out.includes(`FAIL gift ${reached} (milestone)`) && all.out.includes(`ok   gift ${giftId} (daily)`) && all.out.includes("VERIFY_FAILED: 1 of 3 gifts did not pass"), "and over every gift it fails, naming the one read with no yes");
+
+  console.log("STEP 7: a goal the register does not hold, and the hand-over check");
+  // Last, because it cannot be undone: a goal is added and never changed. A number the register leaves free is
+  // registered in the shape of a certificate, as a deploying key could have before the Safe accepted, and the check
+  // names it among the 255 it reads (the reviewer's delta re-read of 2 Oct 2026).
+  const freeGoal = Array.from({ length: 255 }, (_unused, index) => index + 1).find((goalType) => !MILESTONE_GOALS.some((goal) => goal.goalType === goalType)) as number;
+  const rogueProvider = keccak256(toHex("a provider nobody chose"));
+  const register = [{ type: "function", name: "registerGoal", stateMutability: "nonpayable", inputs: [{ type: "uint8" }, { type: "bytes32" }, { type: "uint8" }], outputs: [] }] as const;
+  await as(SAFE, milestone, encodeFunctionData({ abi: register, functionName: "registerGoal", args: [freeGoal, rogueProvider, 1] }));
+  const rogue = handover();
+  expect(
+    !rogue.ok && rogue.out.includes(`MilestoneGiftV2: goal ${freeGoal} is registered (${rogueProvider}, having it or not) and the register holds no goal ${freeGoal}`) && rogue.out.includes("this contract cannot be put right") && !rogue.out.includes("NEXT_PUBLIC_GIFT_ESCROW_V2_ADDRESS="),
+    `a goal registered outside the register (number ${freeGoal}) is named by the hand-over check, and no setting is printed`,
+  );
 
   await db.close();
   console.log("\nREHEARSAL PASSED: every step above ran on the fork, with the real AUSD.");

@@ -45,9 +45,13 @@ interface IERC3009Receiver {
 ///         added and never changed, and a pause of proofs covers opening too, ends by itself after seven days
 ///         and cannot be sent again while it runs nor for seven days after it ended.
 ///
-///         What a pause does to a gift, from the review of 2 Oct 2026. A window that was still open when the
-///         pause began has, once the pause is over, the time it had left; a window that had closed stays
-///         closed. A climb whose deadline fell inside the pause is judged on a reading taken until the pause
+///         What a pause does to a gift, from the review of 2 Oct 2026. A window for a proof, the grace after a
+///         climb's deadline or a certificate's late window, that was still open when the pause began keeps, once
+///         the pause is over, at least the time it had left, or seven days if it had more, and never more than
+///         it had; one that had closed stays closed. The two waits before a gift is under way, for somebody to
+///         open it and for a first reading, are not given back what a pause took: one the pause ran across ends
+///         six hours after the pause at the latest, and one that ends later ends when it would have. A climb
+///         whose deadline fell inside the pause is judged on a reading taken until the pause
 ///         ended, because nothing could be proved meanwhile. And the first reading of a climb, which binds an
 ///         identity and a starting point for good, is signed by the account the gift is for beside the evidence
 ///         signer: that one key alone could otherwise record a start nobody stood at.
@@ -247,10 +251,12 @@ contract MilestoneGiftV2 is Ownable2Step, ReentrancyGuard, EIP712 {
     bool public creationPaused;
     /// @dev The last pause of proofs: when it began, and when it ends (in the future while one runs, never further
     ///      than `MAX_PAUSE` from the moment it was set). Both are zero until the first pause: a new contract
-    ///      holds no gift, so it has nothing to pause. Every window a pause could have shut, the grace after a
-    ///      climb's deadline, a certificate's late window, the wait for a first reading and the wait for somebody
-    ///      to open the gift, is read through `_closes`: a pause gives back what it took and reopens nothing, and
-    ///      no pause is for ever, so an owner who is gone cannot hold one and `expire` needs no switch.
+    ///      holds no gift, so it has nothing to pause. Every window a pause could have shut is read through
+    ///      `_closes`, which reopens nothing. The grace after a climb's deadline and a certificate's late window
+    ///      keep, past the pause, at least the time they had left when it began, or seven days if they had more.
+    ///      The wait for somebody to open the gift and the wait for a first reading get back six hours at most,
+    ///      and only when the pause ran across their end. No pause is for ever, so an owner who is gone cannot
+    ///      hold one and `expire` needs no switch.
     uint64 public proofPauseBegan;
     uint64 public proofPausedUntil;
     /// @dev A new evidence signer is announced here, and stands only after `SIGNER_DELAY`.
